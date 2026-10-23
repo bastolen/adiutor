@@ -5,6 +5,11 @@
  * classes such as `bg-primary`, `font-sans` and `text-5xl`. SCSS can use the
  * same values through `_brand.scss`.
  *
+ * The page supports light and dark mode. UI should use the mode-aware colours
+ * (`background`, `surface`, `foreground`, `highlight`) rather than fixed ones
+ * like `white` or `ink`, and the `dark:` variant for anything else that has
+ * to change.
+ *
  * @see https://tailwindcss.com/docs/theme
  */
 
@@ -75,3 +80,66 @@
     var(--color-gradient-end)
   );
 }
+
+/**
+ * Colours that change between light and dark mode.
+ *
+ * `src/lib/theme.ts` sets `data-theme="light"` or `data-theme="dark"` on
+ * `<html>` before the page paints. Without JavaScript, the media query below
+ * follows the system setting instead.
+ */
+:root {
+  /** Page background. */
+  --background: #fff;
+
+  /** Cards, inputs and other raised areas. */
+  --surface: #fff;
+
+  /** Body text. */
+  --foreground: var(--color-ink);
+
+  /** Brand colour for links, success messages and focus rings on the page. */
+  --highlight: var(--color-primary);
+
+  color-scheme: light;
+}
+
+/** Dark mode values, based on the brand's dark navy. */
+:root[data-theme='dark'] {
+  --background: var(--color-ink);
+  --surface: #17173f;
+  --foreground: #f1f1f6;
+  --highlight: var(--color-secondary);
+
+  color-scheme: dark;
+}
+
+/** Dark mode from the system setting, used only when no theme is set (e.g. without JavaScript). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --background: var(--color-ink);
+    --surface: #17173f;
+    --foreground: #f1f1f6;
+    --highlight: var(--color-secondary);
+
+    color-scheme: dark;
+  }
+}
+
+/**
+ * Tailwind classes for the mode-aware colours (`bg-background`,
+ * `bg-surface`, `text-foreground`, `text-highlight`, ...). `inline` makes the
+ * classes use the variables above directly, so they switch with the mode.
+ */
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-highlight: var(--highlight);
+}
+
+/**
+ * `dark:` variant: applies when dark mode is active, whether chosen by the
+ * user or taken from the system setting.
+ */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));

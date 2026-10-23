@@ -27,6 +27,22 @@ The dev server runs at <http://localhost:3000>.
 | `pnpm test:watch`   | Run the unit tests in watch mode                                 |
 | `pnpm test:e2e`     | Run the end-to-end tests (Playwright)                            |
 
+## Dark mode
+
+The site supports light and dark mode. A floating button in the bottom-right corner lets visitors
+choose **System** (the default, following their device), **Light** or **Dark**.
+
+- **Stored choice:** saved in `localStorage` (`adiutor-theme`) and kept in sync across tabs. With
+  System, the page follows device changes live.
+- **No flicker:** a small inline script in `<head>` (`themeScript` in `src/lib/theme.ts`) sets
+  `data-theme="light"` or `"dark"` on `<html>` before the page paints, so the first frame already has
+  the right colours. Without JavaScript, CSS follows the system setting.
+- **Styling:** use the mode-aware colours `background`, `surface`, `foreground` and `highlight`
+  (e.g. `bg-surface text-foreground`, `text-highlight` for links) instead of fixed colours like
+  `bg-white` or `text-ink`. For anything else, use the `dark:` variant (e.g. `dark:hidden`). In SCSS,
+  use `brand.$background`, `brand.$surface`, `brand.$foreground` and `brand.$highlight`.
+- **Logo:** use `logo.svg` in light mode and `logo-on-dark.svg` in dark mode.
+
 ## Tests
 
 - **Unit and component tests** use [Vitest](https://vitest.dev) and
@@ -105,7 +121,7 @@ Logos and icons live in `public/brand/`, cropped to their content with no backgr
 | `logo-on-dark.svg`                 | Dark backgrounds (ink)              |
 | `logo-white.svg`, `icon-white.svg` | The brand gradient or accent colour |
 
-`src/styles/theme.css` is the Tailwind theme: `primary`, `secondary`, `accent` and `ink` colours, the `bg-brand-gradient` utility, the Facundo font stack, and text sizes with line height = font size + 8px.
+`src/styles/theme.css` is the Tailwind theme: `primary`, `secondary`, `accent` and `ink` colours, the `bg-brand-gradient` utility, the Facundo font stack, and text sizes with line height = font size + 8px. It also defines the mode-aware colours described under [Dark mode](#dark-mode).
 
 In SCSS, `@use "brand";` (from `src/styles/_brand.scss`) gives the same values as Sass variables, e.g. `brand.$primary` or `brand.$brand-gradient`.
 
