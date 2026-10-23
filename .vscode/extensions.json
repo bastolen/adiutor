@@ -1,0 +1,22 @@
+/**
+ * VS Code extensions this project needs. VS Code offers to install them when
+ * the project is opened. Keep this list in sync with the project's tooling.
+ */
+{
+  "recommendations": [
+    /** ESLint: shows lint errors (Airbnb, JSDoc, Tailwind) while you type. */
+    "dbaeumer.vscode-eslint",
+    /** Prettier: formats files on save with prettier.config.mjs. */
+    "esbenp.prettier-vscode",
+    /** Stylelint: shows CSS and SCSS lint errors while you type. */
+    "stylelint.vscode-stylelint",
+    /** Tailwind CSS IntelliSense: class autocomplete, hover previews and theme colours. */
+    "bradlc.vscode-tailwindcss",
+    /** EditorConfig: applies .editorconfig (indentation, line endings). */
+    "editorconfig.editorconfig",
+    /** Vitest: run and debug unit tests from the editor. */
+    "vitest.explorer",
+    /** Playwright Test: run, debug and record end-to-end tests. */
+    "ms-playwright.playwright"
+  ]
+}

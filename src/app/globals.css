@@ -1,0 +1,7 @@
+/**
+ * @file Global stylesheet, loaded once by the root layout.
+ *
+ * Imports Tailwind CSS and the Adiutor brand theme.
+ */
+@import 'tailwindcss';
+@import '../styles/theme.css';

@@ -1,0 +1,5 @@
+# Pre-commit hook: formats and lints only the staged changes (see
+# lint-staged.config.mjs). Unstaged changes are set aside while it runs, so
+# only what is being committed is touched. The commit stops if an error can't
+# be fixed automatically.
+pnpm exec lint-staged

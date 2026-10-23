@@ -1,0 +1,77 @@
+/**
+ * @file Adiutor brand theme for Tailwind CSS, from the Adiutor brand guidelines.
+ *
+ * Each `--color-*`, `--font-*` and `--text-*` variable becomes Tailwind
+ * classes such as `bg-primary`, `font-sans` and `text-5xl`. SCSS can use the
+ * same values through `_brand.scss`.
+ *
+ * @see https://tailwindcss.com/docs/theme
+ */
+
+/**
+ * Theme tokens.
+ *
+ * `static` makes Tailwind output every variable even when no Tailwind class
+ * uses it, so SCSS can always read them.
+ */
+@theme static {
+  /** Brand colours. */
+  --color-primary: #0e5655;
+  --color-secondary: #25dc89;
+  --color-accent: #f13800;
+  --color-ink: #0e0e2d;
+
+  /** Gradient stops used in the logo and brand backgrounds. */
+  --color-gradient-start: #015555;
+  --color-gradient-end: #05de85;
+
+  /**
+   * Facundo is the logo and business font. The font files are not part of
+   * the brand package, so this falls back until they are added.
+   */
+  --font-sans:
+    'Facundo', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+
+  /**
+   * Font sizes. Per the brand guidelines, each line height is the font size
+   * plus 8px (e.g. `text-5xl` is 48px on 56px).
+   */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.375rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.625rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 2.375rem;
+  --text-4xl: 2.25rem;
+  --text-4xl--line-height: 2.75rem;
+  --text-5xl: 3rem;
+  --text-5xl--line-height: 3.5rem;
+  --text-6xl: 3.75rem;
+  --text-6xl--line-height: 4.25rem;
+  --text-7xl: 4.5rem;
+  --text-7xl--line-height: 5rem;
+  --text-8xl: 6rem;
+  --text-8xl--line-height: 6.5rem;
+  --text-9xl: 8rem;
+  --text-9xl--line-height: 8.5rem;
+}
+
+/**
+ * `bg-brand-gradient`: the brand gradient, dark teal to green from left to
+ * right.
+ */
+@utility bg-brand-gradient {
+  background-image: linear-gradient(
+    to right,
+    var(--color-gradient-start),
+    var(--color-gradient-end)
+  );
+}

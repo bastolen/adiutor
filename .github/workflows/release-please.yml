@@ -1,0 +1,23 @@
+# Release Please: keeps a release PR open that bumps the version and updates
+# CHANGELOG.md from the Conventional Commit messages on main. Merging that PR
+# tags the release and creates a GitHub release.
+#
+# Requires: Settings → Actions → General → "Allow GitHub Actions to create and
+# approve pull requests".
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v5
+        with:
+          release-type: node

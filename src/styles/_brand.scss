@@ -1,0 +1,39 @@
+/**
+ * @file Sass names for the Tailwind brand theme in `theme.css`.
+ *
+ * Each value is a CSS variable, so `theme.css` stays the single source of
+ * truth. Because they are CSS variables, Sass colour functions such as
+ * `darken()` do not work on them; use CSS `color-mix()` instead.
+ *
+ * @example
+ * @use "brand";
+ *
+ * .card {
+ *   color: brand.$ink;
+ *   background: brand.$brand-gradient;
+ * }
+ */
+
+/** Dark teal, the main brand colour (`#0E5655`). */
+$primary: var(--color-primary);
+
+/** Bright green (`#25DC89`). */
+$secondary: var(--color-secondary);
+
+/** Orange, for highlights and calls to action (`#F13800`). */
+$accent: var(--color-accent);
+
+/** Dark navy, the colour of the logo text (`#0E0E2D`). */
+$ink: var(--color-ink);
+
+/** Start (left) colour of the brand gradient (`#015555`). */
+$gradient-start: var(--color-gradient-start);
+
+/** End (right) colour of the brand gradient (`#05DE85`). */
+$gradient-end: var(--color-gradient-end);
+
+/** The brand gradient, dark teal to green from left to right. */
+$brand-gradient: linear-gradient(to right, $gradient-start, $gradient-end);
+
+/** Brand font stack, Facundo with system fallbacks. */
+$font-sans: var(--font-sans);

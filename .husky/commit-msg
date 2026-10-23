@@ -1,0 +1,3 @@
+# Commit-msg hook: checks the commit message follows Conventional Commits
+# (see commitlint.config.mjs).
+pnpm exec commitlint --edit "$1"
