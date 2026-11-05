@@ -1,0 +1,57 @@
+# PR title: checks that a pull request's title follows Conventional Commits,
+# with the same commitlint rules as the commit-msg hook (commitlint.config.mjs).
+# A squash merge lands on main with the PR title, and Release Please builds the
+# changelog and the next version from the messages on main, so a title the hook
+# never saw must pass the same check.
+#
+# Runs on `pull_request` (a fork's PR gets a read-only token and no secrets),
+# again when the title is edited, and on every new commit, so it can be a
+# required check. It's its own workflow, so editing a title doesn't re-run CI.
+#
+# Actions are pinned to exact commits (version in a comment); Dependabot keeps
+# them up to date.
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+# Cancel an older check of the same pull request.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  title:
+    name: Conventional Commits title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Nothing is pushed, so the token isn't kept in .git/config.
+          persist-credentials: false
+
+      # pnpm version comes from "packageManager" in package.json.
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+      # Node version comes from .nvmrc.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # commitlint and its config at the versions in the lockfile.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The title comes in through the environment, never pasted into the script, so it can't
+      # run as shell code.
+      - name: Check the title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$PR_TITLE" | pnpm exec commitlint

@@ -1,0 +1,28 @@
+# Dependabot: keeps the GitHub Actions in .github/workflows up to date. They're
+# pinned to exact commits with the version in a comment; Dependabot updates
+# both. npm packages and container images are Renovate's (renovate.json5), so
+# the two never update the same thing, as long as the repository's "Dependabot
+# security updates" stay off (they'd open npm pull requests too).
+# Docs: https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    # Once a week, like Renovate.
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Amsterdam
+    # Wait 3 days after a release before updating, in case it's pulled or compromised (like
+    # Renovate's minimumReleaseAge).
+    cooldown:
+      default-days: 3
+    # Conventional Commit messages ("ci(deps): …"), matching commitlint.
+    commit-message:
+      prefix: ci
+      include: scope
+    # All action updates in one pull request.
+    groups:
+      github-actions:
+        patterns: ['*']

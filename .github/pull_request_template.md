@@ -12,5 +12,5 @@ Closes #<!-- issue number, if there is one -->
 
 - [ ] The PR title follows Conventional Commits (e.g. `feat: add login page`)
 - [ ] Tests are added or updated
-- [ ] All code is documented with JSDoc comments, and the README is updated if needed
+- [ ] All code is documented with JSDoc comments, and the README and `docs/` are updated if needed
 - [ ] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass
