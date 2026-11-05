@@ -2,22 +2,48 @@
 # CHANGELOG.md from the Conventional Commit messages on main. Merging that PR
 # tags the release and creates a GitHub release.
 #
-# Requires: Settings → Actions → General → "Allow GitHub Actions to create and
-# approve pull requests".
+# It works as a small GitHub App ("Releases" in docs/ci-and-releases.md), not
+# with the built-in GITHUB_TOKEN: the repository doesn't have to let GitHub Actions
+# create and approve pull requests, and the release PR's checks run (pull
+# requests opened with GITHUB_TOKEN don't start workflows). Needs the
+# repository variable RELEASE_APP_CLIENT_ID and the secret
+# RELEASE_APP_PRIVATE_KEY; until the variable is set, the job is skipped.
+#
+# Actions are pinned to exact commits (version in a comment); Dependabot keeps
+# them up to date.
 name: Release Please
 
 on:
   push:
     branches: [main]
 
-permissions:
-  contents: write
-  pull-requests: write
+# The built-in token gets no access at all; the app token does the writing.
+permissions: {}
+
+# Never two runs at once: a newer push waits for the running one.
+concurrency:
+  group: release-please
+  cancel-in-progress: false
 
 jobs:
   release-please:
+    # Skipped (not failed) until the release app is set up.
+    if: ${{ vars.RELEASE_APP_CLIENT_ID != '' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v5
+      - name: Get a token for the release app
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          # Only what Release Please needs, even if the app was given more: the release commit
+          # and tag, the release PR, and its "autorelease" labels (creating a label needs Issues).
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           release-type: node
+          token: ${{ steps.app-token.outputs.token }}

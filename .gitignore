@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+# Vitest's JSON reporter output (e.g. from the editor extension)
+/.vitest/
 
 # next.js
 /.next/
@@ -45,3 +47,16 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+!.env.example
+
+# local database files (the docker folder itself is committed)
+/docker/*
+!/docker/.gitkeep
+
+# end-to-end test emails
+/e2e/.outbox/
+
+
+# Personal notes or local files
+/.personal/
+/.local/

@@ -20,10 +20,10 @@ const config = {
    */
   '*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}': [
     'eslint --fix --max-warnings=0 --no-warn-ignored',
-    'vitest related --run --passWithNoTests',
+    'vitest related --run --passWithNoTests --project unit',
   ],
   /** Stylelint fixes and formats (Prettier runs inside it), then fails on errors it can't fix. */
-  '*.{css,scss}': 'stylelint --fix --allow-empty-input',
+  '*.{css,scss}': 'stylelint --fix --allow-empty-input --max-warnings=0',
   /** Everything else Prettier understands: JSON, Markdown, YAML and so on. */
   '*.{json,jsonc,json5,md,yml,yaml}': 'prettier --write --ignore-unknown',
 };

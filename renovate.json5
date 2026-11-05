@@ -1,6 +1,13 @@
 /**
- * Renovate configuration: opens pull requests to keep dependencies up to date.
- * Requires the Renovate GitHub app to be installed on the repository.
+ * Renovate configuration: opens pull requests to keep the npm packages, the
+ * container images (workflows and compose.yaml), `.nvmrc` and the pnpm
+ * version up to date. GitHub Actions are Dependabot's (.github/dependabot.yml). Requires the Renovate GitHub app to be installed
+ * on the repository.
+ *
+ * Renovate uses pnpm, like local development: it finds `pnpm-lock.yaml`, and
+ * runs the pnpm version from `packageManager` in package.json (which pnpm
+ * also switches to locally), with the settings in pnpm-workspace.yaml. When
+ * it updates `packageManager`, everyone's pnpm follows.
  *
  * @see https://docs.renovatebot.com/configuration-options/
  */
@@ -9,8 +16,6 @@
   extends: [
     /** Renovate's recommended defaults. */
     'config:recommended',
-    /** Pin GitHub Actions to exact commits, for supply-chain safety. */
-    'helpers:pinGitHubActionDigests',
   ],
   /** Open update PRs once a week, so they arrive in batches. */
   schedule: ['before 6am on monday'],
@@ -22,6 +27,18 @@
   /** Conventional Commit messages, matching commitlint. */
   semanticCommits: 'enabled',
   packageRules: [
+    {
+      /** Actions and reusable workflows are updated by Dependabot. */
+      matchManagers: ['github-actions'],
+      matchDepTypes: ['action', 'workflow'],
+      enabled: false,
+    },
+    {
+      /** Workflow container images (CI's PostgreSQL) stay pinned to a digest. */
+      matchManagers: ['github-actions'],
+      matchDatasources: ['docker'],
+      pinDigests: true,
+    },
     {
       /** Group all minor and patch updates into one PR. */
       matchUpdateTypes: ['minor', 'patch'],

@@ -1,0 +1,5 @@
+# Line endings: LF in the repository and in every checkout, whatever the
+# contributor's system, as EditorConfig and Prettier expect. Git works out
+# which files are text; images are marked binary so they're never touched.
+* text=auto eol=lf
+*.png binary
