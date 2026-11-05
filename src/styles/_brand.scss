@@ -26,6 +26,18 @@ $accent: var(--color-accent);
 /** Dark navy, the colour of the logo text (`#0E0E2D`). */
 $ink: var(--color-ink);
 
+/** Page background; switches between light and dark mode. */
+$background: var(--background);
+
+/** Cards, inputs and other raised areas; switches between light and dark mode. */
+$surface: var(--surface);
+
+/** Body text; switches between light and dark mode. */
+$foreground: var(--foreground);
+
+/** Links, success messages and focus rings; teal in light mode, green in dark mode. */
+$highlight: var(--highlight);
+
 /** Start (left) colour of the brand gradient (`#015555`). */
 $gradient-start: var(--color-gradient-start);
 

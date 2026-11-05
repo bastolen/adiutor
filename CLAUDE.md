@@ -14,3 +14,8 @@
 - Add or update tests with every change: Vitest `*.test.ts(x)` files next to the code in `src/`, Playwright specs in `e2e/`. Delete the placeholder tests once real ones exist.
 - Commit messages follow Conventional Commits (checked by commitlint).
 - Keep `.github/workflows/ci.yml` running every check script; update it when scripts change.
+
+## Dark mode
+
+- Every UI change must work in light and dark mode. Use the mode-aware colours (`background`, `surface`, `foreground`, `highlight`) instead of fixed ones like `white` or `ink`, and the `dark:` variant for anything else.
+- Never read the theme on the server (cookies would make every page dynamic); it is applied by the inline `themeScript` in the root layout.

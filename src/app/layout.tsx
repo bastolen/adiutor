@@ -2,6 +2,10 @@
  * @file Root layout: the HTML shell shared by every page.
  */
 import type { Metadata } from 'next';
+
+import ThemeSwitcher from '@/components/theme/theme-switcher';
+import { themeScript } from '@/lib/theme';
+
 import './globals.css';
 
 /**
@@ -12,8 +16,12 @@ export const metadata: Metadata = {
 };
 
 /**
- * Wraps every page in the `<html>` and `<body>` elements and loads the
- * global styles.
+ * Wraps every page in the `<html>` and `<body>` elements, loads the global
+ * styles, and adds the theme switcher.
+ *
+ * The inline theme script sets `data-theme` on `<html>` before the page
+ * paints, so `suppressHydrationWarning` tells React that this attribute is
+ * expected to differ from the server-rendered HTML.
  *
  * @param props - Layout props from Next.js.
  * @param props.children - The page or nested layout to render.
@@ -21,8 +29,15 @@ export const metadata: Metadata = {
  */
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* eslint-disable-next-line react/no-danger -- Static script from our own code; it must run before the first paint. */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className="bg-background text-foreground antialiased">
+        {children}
+        <ThemeSwitcher />
+      </body>
     </html>
   );
 }
