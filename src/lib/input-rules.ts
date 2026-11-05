@@ -1,0 +1,40 @@
+/**
+ * @file The parts of the input rules that client components need too: input
+ * limits and the slug suggestion. Client components import them from here,
+ * not from `validation.ts`, so zod and the schemas stay on the server; keep
+ * this file free of zod (`src/client-imports.test.ts` checks it).
+ */
+
+/** The minimum length of a new password (`passwordSchema`, and Better Auth's `minPasswordLength`). */
+export const MIN_PASSWORD_LENGTH = 12;
+
+/** The longest passkey name (`passkeyNameSchema`, and the name field on the Security page). */
+export const PASSKEY_NAME_MAX_LENGTH = 64;
+
+/** The most addresses one bulk invitation may contain (`inviteManyByEmail` and the invite form). */
+export const MAX_BULK_INVITES = 20;
+
+/**
+ * The longest name: a person's, a company's or the staff's (`nameSchema`,
+ * `companyNameSchema`, `staffNameSchema`, and those fields' `maxLength`).
+ */
+export const NAME_MAX_LENGTH = 100;
+
+/** The longest URL name (`slugSchema`, `slugify`, and the URL name field's `maxLength`). */
+export const SLUG_MAX_LENGTH = 60;
+
+/**
+ * Turns a company name into a slug suggestion, e.g. "Adiutor B.V." → "adiutor-b-v".
+ *
+ * @param name - The company name.
+ * @returns A slug made of lower-case letters, digits and dashes.
+ */
+export function slugify(name: string): string {
+  return name
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, SLUG_MAX_LENGTH);
+}
