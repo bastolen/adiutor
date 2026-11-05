@@ -1,0 +1,257 @@
+# Design, accessibility and dark mode
+
+How the interface is built and kept accessible, how light and dark mode work, and the brand
+assets. Back to the [documentation](README.md).
+
+## Design and accessibility
+
+The interface aims to feel calm and trustworthy, and to meet
+[WCAG 2.2](https://www.w3.org/TR/WCAG22/) level AA everywhere, in light and dark mode, with full
+keyboard support.
+
+- **Components:** build UI from `src/components/ui/` (`Button`, `TextField`, `SelectField`,
+  `Card`, `PageHeader`, `AuthHeading`, `AuthDivider`, `Table`, `Badge`, `Alert` (optionally
+  dismissible), `Banner` (a notice with an icon, title and actions, e.g. on the dashboard),
+  `ResultAlert`, `ConfirmDialog`, `DropdownMenu`, `Sheet` (a slide-over panel), `EmptyState`,
+  `IconRow`, `Skeleton`, `Pagination`, `SortMenu`, ...). Menus, selects, dialogs and sheets are
+  built on [Radix UI](https://www.radix-ui.com), and only `src/components/ui/` imports it. Radix
+  follows the WAI-ARIA patterns: arrow keys, typeahead, Escape to close, focus kept inside
+  dialogs and returned to the button that opened them. In a menu, `MenuRadioRow` with
+  `MenuIconRadioItem`s shows a choice as a segmented row of icons (like the theme in the account
+  menu); ArrowLeft and ArrowRight also move within it. `MenuRadioLinkItem` is a radio item that is
+  a link (the sorts in `SortMenu`). A `Badge`'s tone says what kind of status it is: `success` for
+  active or verified, `warning` for something that needs attention (expired, not verified),
+  `danger` for deactivated or revoked. A status keeps one tone on every screen, which
+  `src/components/ui/badge-tones.test.ts` checks. Icons come from
+  [Lucide](https://lucide.dev) and are hidden from screen readers; icon-only buttons have an
+  `aria-label`. Join classes with `cn()` (`src/lib/cn.ts`).
+- **Tables** of records sort and paginate (`src/lib/tables/table-state.ts`, with each table defined in
+  `src/lib/tables/tables.ts`):
+  - **Sorting:** every table sorts from its Sort menu (`SortMenu`) in the card header or next to
+    the filters, at every width. The button says how the table is sorted ("Name, A to Z"; just
+    "Sort" on phones) and lists each sort both ways, A to Z or newest first at the top.
+    Column headers are plain text: the column the table is sorted by has `aria-sort`
+    (`TableLinks.ariaSort`) for screen readers, and the caption says how it's sorted. People and
+    companies are sorted by name until another order is chosen; invitations, invite links and
+    devices newest first. People tables (users, staff, members) sort by name, email, last
+    active and joined.
+  - **Pages:** 25, 50 or 100 rows per page, chosen in the table's footer (`Pagination`: "Showing
+    26–50 of 132", Previous, the page numbers and Next). The footer only shows with more than 10
+    rows.
+  - **In the address:** each table keeps its state in the query string with its own prefix
+    (`sort`, `dir`, `page` and `size` for a page's main table; `inv-…`, `links-…`, `companies-…`
+    and `devices-…` for the others), leaving defaults out, so a sorted page can be bookmarked and
+    Back restores it. Links are built only from known parameters, so one-off messages (such as
+    "GitHub is now connected") don't come back. They don't scroll the page (`scroll={false}`), so
+    the control you used stays under the pointer and keeps keyboard focus; the old rows stay on
+    screen until the new ones arrive, and the caption says how the table is sorted and which page
+    it shows. Unknown values fall back to the defaults, and a page past the end shows the last one.
+    Search (`SearchForm`, on `next/form`) and filter links (`SegmentedNav`) work the same way:
+    they load the list within the app without scrolling, keep focus and the pages kept alive, and
+    show a busy state (a spinner in the Search button, or in the followed filter link) until the
+    list arrives; without JavaScript, search is a plain GET.
+  - **Widths:** no table scrolls sideways. The content area stops growing at 1280px (`xl`,
+    `max-w-5xl` in the app layout), so a table gets no more columns past that. Columns that don't
+    fit move under the name instead:
+    - **Activity:** people tables show when someone was last active and when they joined in
+      one Activity column from 1280px, and under the name below that
+      (`src/app/(app)/_people/activity.tsx`).
+    - **Users:** the MFA status and companies always show under the name, the address from
+      768px in its own column.
+    - **Staff and members:** the address always shows under the name (unless it is the name),
+      and the role from 768px in its own column.
+    - **Long values:** names, addresses and company names wrap (`wrap-anywhere`) rather than
+      widening the table.
+    - **Check:** `e2e/tables.spec.ts` checks every table at 640, 768, 1024, 1280, 1536 and
+      1920px, with a seeded staff member who has no name and a long address.
+  - **List services** take the table's state and return one page with the total
+    (`Paged<T>`); each sort ends with the row's ID, so pages don't overlap and reversing is exact.
+- **Cards** have 24px padding on every side. Settings with actions use full-width rows (what it does
+  on the left, the button on the right). Destructive settings that can't be undone, like deleting or
+  deactivating an account, get their own `Card` with `tone="danger"`.
+- **Messages don't outlive the page:** with Cache Components, Next.js keeps the last few pages alive
+  (hidden with React's `<Activity>`) instead of unmounting them, so their state survives navigation.
+  Typed input should, but a "Saved" or error message, or an open dialog, shouldn't still be there when
+  you come back. Forms use `useTransientActionState` instead of `useActionState`, and status
+  messages and dialog open state use `useTransientState` instead of `useState`
+  (`src/components/ui/use-transient-state.ts`); both reset when the page is hidden.
+- **A refused submit keeps the input:** React 19 resets a `<form action>` after every submit,
+  whatever the result. Forms pass both the action and the hook's `onSubmit`
+  (`<form action={formAction} onSubmit={onSubmit}>`), which runs the action itself and clears the
+  form only after a successful result (`resetOnSuccess`, on by default). A bulk invite that sent
+  some invitations keeps just the addresses that weren't sent. The sign-in
+  pages are the exception to keeping typed input: the sign-in form and the code step keep their
+  fields, busy state and "Trust this device" in `useTransientState` too, because they come back
+  after signing out, and the next person on the browser mustn't find the last user's details or a
+  button still busy. They also reset a busy button when the browser restores them from its
+  back/forward cache (`pageshow`).
+- **Illustrations** (like the example request on the sign-in pages) are `inert`, and use
+  `<Button decorative>` for buttons that only look like buttons: no hover, focus or press effects.
+- **Colours:** semantic tokens in `src/styles/theme.css`, each checked for contrast (at least 4.5:1
+  for text, 3:1 for input borders) in both modes:
+
+  | Token                                            | Use                                            |
+  | ------------------------------------------------ | ---------------------------------------------- |
+  | `background`, `surface`, `muted`                 | Page, cards and panels, subtle fills           |
+  | `raised`, `raised-muted`                         | Dialogs, menus, selects, toasts; fills in them |
+  | `overlay`                                        | The dim behind dialogs                         |
+  | `border`, `border-strong`                        | Dividers; borders of inputs and controls       |
+  | `foreground`, `muted-foreground`                 | Body text; secondary text                      |
+  | `primary`, `primary-hover`, `primary-foreground` | Main actions and the text on them              |
+  | `highlight`, `ring`                              | Links and highlights; focus rings              |
+  | `danger`, `success`, `warning` (+ `-soft` fills) | Errors and destructive actions; statuses       |
+
+  Layers that float above the page use `raised`, a step lighter than `surface` in dark mode so they
+  stand apart (white in light mode), and fills inside them `raised-muted`, not `muted`, which would
+  vanish on them. `src/styles/theme.test.ts` checks their contrast in both modes.
+
+  Never make text lighter with opacity (`text-foreground/60`): contrast can't be guaranteed that
+  way. Brand orange is too light for small text on white, so errors use the darker `danger`.
+
+- **Font:** the device's own sans-serif font (`system-ui`), with line height = font size + 8px.
+- **Layout:** signed-in pages have a sidebar that becomes a menu button and slide-over panel
+  (`Sheet`) on small screens; signed-out pages use `AuthLayout`, with a decorative brand panel on wide screens.
+  The 404 page uses `CenteredLayout`: the logo top left (where the sidebar has it) and the message
+  centered, with "Go to your dashboard" and a "Go back" button (`BackButton`, shown only when the
+  tab has a previous page).
+  Every page has a "Skip to main content" link, one `h1` and `header`/`nav`/`main` landmarks.
+- **Errors:** when a page or server action fails unexpectedly, an error page takes the page's
+  place, built like the 404 pages: "Something went wrong", "This page couldn't load. Try again, or
+  go to your dashboard.", **Try again** (busy while the page loads again), **Go to your dashboard**
+  and the reference box (`ErrorReference`: the reference, its time and **Copy reference**, shared
+  with the sign-in error page). Focus moves to the heading, so screen readers announce it. Inside
+  the signed-in app (`src/app/(app)/error.tsx`) it's a `Card` with an `EmptyState`, like the app's
+  404 page, and the navigation, account menu and theme stay. Elsewhere, and when the app's layout
+  itself fails (`src/app/error.tsx`), it uses `CenteredLayout` and adds "Go back". When even the
+  root layout fails, `src/app/global-error.tsx` shows the same page in a document of its own and
+  applies the saved theme itself, since the inline theme script isn't there.
+  The reference appears once it's known: worked out from Next's digest for errors from the server,
+  or returned by the report the page sends for errors in the browser; when that report fails, the
+  page simply shows no reference.
+- **Interaction:** every control has hover, pressed, focus-visible (a 2px ring), disabled and busy
+  states. Clickable things show a pointer cursor, disabled ones a not-allowed cursor and busy ones
+  a wait cursor (base rules in `src/app/globals.css`). Buttons disable and show a spinner while
+  their action runs, so nothing is submitted twice. Destructive actions ask for confirmation in a
+  `ConfirmDialog`. A role select only saves when an option is picked (Enter or click), never while
+  arrowing through the list; on the user's own row it asks first (`confirmChange`), and cancelling
+  puts it back and returns focus to it. While it saves it's busy (`SelectField`'s `busy`:
+  `aria-busy`, the wait cursor, and it doesn't open) rather than disabled, and it stays mounted, so
+  keyboard focus stays on it before and after the result. `ConfirmDialog` usually opens from its
+  trigger; without one the caller opens it (`open`, `onOpenChange`, with the open state in
+  `useTransientState`) and returns focus itself (`onCloseAutoFocus`). When an action removes the
+  control that had focus (a removed row, "Make staff" becoming "Remove staff access", turning
+  two-step verification off, a dismissed notice), focus moves to the heading of its card (card
+  headings take focus from script, `tabIndex={-1}`) or, outside a card, to the main content
+  (`restoreFocusIfLost` in `src/components/ui/focus-fallback.ts`), never to `<body>`.
+  - **Card anchors.** A `Card` whose controls can send the user away and back (a confirmation, a
+    provider, an emailed link) gets an `id`, a section ID like `invitations` (see
+    [Coming back to where you were](authentication.md#coming-back-to-where-you-were)). The
+    return addresses its controls send end in it. A table that isn't a page's main table names its
+    card in its definition (`TableDefinition.section`, `table.section`), and its sort and page
+    links end in that anchor too, which only matters in a new tab, since in the app they don't
+    scroll.
+  - **Landing.** When the user comes back to the page with that anchor in the URL, the card
+    (`AnchoredSection` in `src/components/ui/anchored-section.tsx`) lands them on it. That is on
+    mount or when `<Activity>` shows the page again, one frame later, because Next.js scrolls to
+    an anchor only when the card is already on the page and never moves focus.
+    - With focus nowhere (on `<body>`, or on a control of the page left behind), it scrolls the
+      card into view and focuses its heading.
+    - With focus already inside the card (a result `Alert` with `focusOnShow`), it only scrolls.
+    - Otherwise it leaves the page alone.
+  - **Sticky header.** Cards scroll to 5rem from the top below `lg`, clear of the sticky header,
+    and 2.5rem from `lg` up (`scroll-mt-20 lg:scroll-mt-10`).
+
+  Pages with section tabs (a company's Overview, Members and Settings; the account's Profile and
+  Security) get their header and tabs from a layout (`companies/[companyId]/layout.tsx`,
+  `account/layout.tsx`), which stays mounted while the page under it changes: the tab you chose
+  keeps focus and the header doesn't reload. `SegmentTabNav` marks the current tab from the URL
+  (`useSelectedLayoutSegment`), and each page still checks its own permission.
+
+- **Results:** in the signed-in app every success is a toast and every error is shown inline and as
+  a toast (`src/components/ui/toast.tsx`, on Radix UI's Toast; the app layout mounts its `Toaster`
+  next to the content, not around it). Toasts sit at the bottom right
+  (bottom centre on phones) in a region named "Notifications (F8)" that F8 jumps to. Successes stay
+  6 seconds and errors 10, both pausing while hovered or focused, and each can be dismissed or
+  swiped away. A success toast is announced; an error toast isn't announced again, because the
+  inline error already is (or takes focus). `RowAction`, `ActionDialog` and `RoleSelect` toast
+  as soon as their action returns, so the toast outlasts a row the refresh removes (`RowAction`'s
+  `doneMessage` names the row, e.g. "Invitation to jane@adiutor.dev revoked."); `ResultAlert`
+  toasts a form's result, `Alert`'s `alsoToast` an error a component shows itself, and
+  `ToastOnArrival` a confirmation that comes with a redirect ("User deleted."). Results to act on
+  stay inline: a new company's "Open the company", a new invite link to copy. The signed-out
+  pages (sign in, the code step, password reset, invitations, `/setup`) show their results inline
+  only.
+- **Forms:** labels are always visible and help text is linked with `aria-describedby`. Fields
+  don't show errors themselves: a failed submit shows an `Alert` (`ResultAlert`) and moves focus
+  to it, and in the signed-in app a toast too.
+  Inline confirmations use `role="status"` and errors `role="alert"`, so screen readers announce
+  them.
+- **Page titles:** "Page · Adiutor", most specific part first. Next's route announcer reads the
+  title after each client-side navigation (only when it changed), so pages that differ get
+  different titles: a company's pages add the company ("Members · Adiutor Tests · Adiutor", the
+  overview just "Adiutor Tests · Adiutor"), from the company layout's `generateMetadata`, after the
+  same access check as the pages. Titles never name a person (a user's page is "User · Adiutor"):
+  they end up in the browser history, which holds no personal data. Someone who may not see a page
+  (a missing permission, a company they're not in, a user that doesn't exist) gets the 404 page,
+  and its title too: "Not found · Adiutor" (`NOT_FOUND_TITLE` in `src/lib/not-found-metadata.ts`).
+  Pages and layouts that require a permission therefore export their `generateMetadata` from
+  `src/server/page-metadata.ts`, with the same check as the page: `globalPermissionMetadata`
+  (with `requireGlobalPermission`, plus an `exists` check for a page about one record, like a
+  user's) or `companyPermissionMetadata` (with `requireCompanyAccess` and a permission).
+  `src/app/permission-titles.test.ts` fails when one of them has a static title instead.
+- **Motion:** short transitions only, and none at all when the device asks for reduced motion.
+
+Two end-to-end specs keep this true: `e2e/a11y.spec.ts` scans every page (and open menus, selects,
+dialogs and the mobile menu) with [axe](https://github.com/dequelabs/axe-core) against the WCAG 2.2
+A and AA rules in light and dark mode and checks that no page scrolls sideways on a 320px-wide
+screen, and `e2e/keyboard.spec.ts` checks the skip link, menus, selects, dialogs, the mobile menu and
+cursors using only the keyboard.
+
+## Dark mode
+
+The site supports light and dark mode. Visitors choose **System** (the default, following their
+device), **Light** or **Dark**:
+
+- **Signed out** (`AuthLayout`, and `CenteredLayout` for the 404, sign-in error and error pages): a
+  floating button in the bottom-right corner (`ThemeSwitcher`), on every page without the account
+  menu.
+- **Signed in:** a row of three icons in the account menu (`src/app/(app)/account-menu.tsx`).
+  Choosing one keeps the menu open so the result shows at once.
+
+Both use the same hook (`useThemePreference`) and the same labels and icons
+(`src/components/theme/theme-options.ts`), so a choice made before signing in carries over.
+
+- **Stored choice:** saved in `localStorage` (`adiutor-theme`) and kept in sync across tabs. With
+  System, the page follows device changes live.
+- **No flicker:** a small inline script in `<head>` (`themeScript` in `src/lib/theme.ts`) sets
+  `data-theme="light"` or `"dark"` on `<html>` before the page paints, so the first frame already has
+  the right colours. Without JavaScript, CSS follows the system setting.
+- **Colours:** each semantic colour is defined once in `src/styles/theme.css` as
+  `light-dark(<light>, <dark>)`, so both values sit side by side when you check contrast.
+- **Styling:** use the semantic colours (see [Design and accessibility](#design-and-accessibility))
+  such as `bg-surface text-foreground` instead of fixed colours like `bg-white` or `text-ink`; they
+  switch with the mode. For anything else, use the `dark:` variant (e.g. `dark:hidden`). In SCSS,
+  use the matching Sass variables, e.g. `brand.$surface` and `brand.$foreground`.
+- **Logo:** use the `Logo` component (`src/components/brand/logo.tsx`), which shows `logo.svg` in
+  light mode and `logo-on-dark.svg` in dark mode.
+
+## Brand
+
+Logos and icons live in `public/brand/`, cropped to their content with no background:
+
+| File                               | Use on                              |
+| ---------------------------------- | ----------------------------------- |
+| `logo.svg`, `icon.svg`             | Light backgrounds                   |
+| `logo-on-dark.svg`                 | Dark backgrounds (ink)              |
+| `logo-white.svg`, `icon-white.svg` | The brand gradient or accent colour |
+
+`src/styles/theme.css` is the Tailwind theme: the brand colours (`brand-teal`, `brand-green`,
+`brand-orange`, `ink`), the `bg-brand-gradient` utility, the system font stack, text sizes with
+line height = font size + 8px, short entrance animations, and the semantic colours described under
+[Design and accessibility](#design-and-accessibility). Use the brand colours for brand moments
+only; UI uses the semantic colours.
+
+In SCSS, `@use "brand";` (from `src/styles/_brand.scss`) gives the same values as Sass variables,
+e.g. `brand.$primary` or `brand.$brand-gradient`.
+
+The brand assets aren't covered by the code's MIT License; see [License](../README.md#license).

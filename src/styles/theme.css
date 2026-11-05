@@ -1,41 +1,43 @@
 /**
- * @file Adiutor brand theme for Tailwind CSS, from the Adiutor brand guidelines.
+ * @file Adiutor theme for Tailwind CSS: brand colours, mode-aware semantic
+ * colours, type scale and motion.
  *
  * Each `--color-*`, `--font-*` and `--text-*` variable becomes Tailwind
- * classes such as `bg-primary`, `font-sans` and `text-5xl`. SCSS can use the
- * same values through `_brand.scss`.
+ * classes such as `bg-surface`, `text-muted-foreground` and `text-2xl`. SCSS
+ * can use the same values through `_brand.scss`.
  *
- * The page supports light and dark mode. UI should use the mode-aware colours
- * (`background`, `surface`, `foreground`, `highlight`) rather than fixed ones
- * like `white` or `ink`, and the `dark:` variant for anything else that has
- * to change.
+ * UI uses the semantic colours (`background`, `surface`, `foreground`,
+ * `primary`, `danger`, ...), which switch between light and dark mode and all
+ * meet WCAG AA contrast (4.5:1 for text, 3:1 for borders of inputs). Never
+ * build text colours from opacity; contrast can't be guaranteed that way.
  *
  * @see https://tailwindcss.com/docs/theme
  */
 
 /**
- * Theme tokens.
+ * Fixed tokens.
  *
  * `static` makes Tailwind output every variable even when no Tailwind class
  * uses it, so SCSS can always read them.
  */
 @theme static {
-  /** Brand colours. */
-  --color-primary: #0e5655;
-  --color-secondary: #25dc89;
-  --color-accent: #f13800;
+  /** Brand colours from the brand guidelines. Use the semantic colours for UI. */
+  --color-brand-teal: #0e5655;
+  --color-brand-green: #25dc89;
+  --color-brand-orange: #f13800;
   --color-ink: #0e0e2d;
 
   /** Gradient stops used in the logo and brand backgrounds. */
   --color-gradient-start: #015555;
   --color-gradient-end: #05de85;
 
-  /**
-   * Facundo is the logo and business font. The font files are not part of
-   * the brand package, so this falls back until they are added.
-   */
+  /** The device's own sans-serif font. */
   --font-sans:
-    'Facundo', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial',
+    sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+
+  /** Monospaced font, for links and codes. */
+  --font-mono: ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', 'Liberation Mono', monospace;
 
   /**
    * Font sizes. Per the brand guidelines, each line height is the font size
@@ -70,6 +72,35 @@
 }
 
 /**
+ * Short entrance animations for overlays (`animate-fade-in`, `animate-pop-in`).
+ * They're switched off when reduced motion is requested (see `globals.css`).
+ */
+@theme {
+  --animate-fade-in: fade-in 150ms ease-out;
+  --animate-pop-in: pop-in 150ms ease-out;
+  --animate-slide-in: slide-in 200ms ease-out;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      scale: 0.97;
+    }
+  }
+
+  @keyframes slide-in {
+    from {
+      translate: -100% 0;
+    }
+  }
+}
+
+/**
  * `bg-brand-gradient`: the brand gradient, dark teal to green from left to
  * right.
  */
@@ -82,60 +113,114 @@
 }
 
 /**
- * Colours that change between light and dark mode.
+ * Mode-aware colours: `light-dark(light, dark)` picks the value for the
+ * page's colour scheme. Dark mode is based on the brand's dark navy.
  *
  * `src/lib/theme.ts` sets `data-theme="light"` or `data-theme="dark"` on
- * `<html>` before the page paints. Without JavaScript, the media query below
- * follows the system setting instead.
+ * `<html>` before the page paints, which fixes the scheme. Without
+ * JavaScript, the scheme follows the system setting.
  */
 :root {
-  /** Page background. */
-  --background: #fff;
+  /** Page background behind cards. */
+  --background: light-dark(#f7f7f9, #0b0b22);
 
-  /** Cards, inputs and other raised areas. */
-  --surface: #fff;
+  /** Cards, panels, inputs and menus. */
+  --surface: light-dark(#fff, #14143a);
+
+  /** Subtle fills: hover backgrounds, table headers. */
+  --muted: light-dark(#f1f1f4, #1c1c47);
+
+  /**
+   * Layers that float above the page: dialogs, the menu sheet, menus,
+   * selects and toasts. In dark mode a step lighter than `surface`, which
+   * is how elevation shows on a dark background; white in light mode.
+   */
+  --raised: light-dark(#fff, #1d1d4b);
+
+  /** Subtle fills inside a raised layer (`muted` would vanish on it in dark mode). */
+  --raised-muted: light-dark(#f1f1f4, #2b2b5e);
+
+  /** The dim behind dialogs: darker in dark mode, so a dialog stands out from the page. */
+  --overlay: light-dark(rgb(14 14 45 / 50%), rgb(3 3 12 / 72%));
+
+  /** Dividers and card borders. */
+  --border: light-dark(#e4e4e9, #2a2a58);
+
+  /** Borders of inputs and other controls (3:1 against surfaces). */
+  --border-strong: light-dark(#8c8ca3, #70709f);
 
   /** Body text. */
-  --foreground: var(--color-ink);
+  --foreground: light-dark(var(--color-ink), #f1f1f6);
 
-  /** Brand colour for links, success messages and focus rings on the page. */
-  --highlight: var(--color-primary);
+  /** Secondary text (6.4:1 or more on every surface). */
+  --muted-foreground: light-dark(#55556d, #a3a3c2);
 
+  /** Main actions, and the text on them. */
+  --primary: light-dark(var(--color-brand-teal), var(--color-brand-green));
+  --primary-hover: light-dark(#0b4544, #4ae39e);
+  --primary-foreground: light-dark(#fff, var(--color-ink));
+
+  /** Links, highlights and success text. */
+  --highlight: light-dark(var(--color-brand-teal), var(--color-brand-green));
+
+  /** Focus rings. */
+  --ring: light-dark(var(--color-brand-teal), var(--color-brand-green));
+
+  /** Errors and destructive actions (in light mode a darker brand orange, for contrast). */
+  --danger: light-dark(#b42a00, #ff7a50);
+  --danger-hover: light-dark(#932200, #ff9473);
+  --danger-foreground: light-dark(#fff, var(--color-ink));
+  --danger-soft: light-dark(#fdeee8, #3a1c22);
+
+  /** Positive states. */
+  --success: light-dark(#0b6b4c, #4ae39e);
+  --success-soft: light-dark(#e3f6ee, #0f3330);
+
+  /** States that need attention. */
+  --warning: light-dark(#8a5000, #ffc266);
+  --warning-soft: light-dark(#fcf1dc, #3a2e18);
+
+  color-scheme: light dark;
+}
+
+/** A chosen (or detected) theme fixes the colour scheme. */
+:root[data-theme='light'] {
   color-scheme: light;
 }
 
-/** Dark mode values, based on the brand's dark navy. */
 :root[data-theme='dark'] {
-  --background: var(--color-ink);
-  --surface: #17173f;
-  --foreground: #f1f1f6;
-  --highlight: var(--color-secondary);
-
   color-scheme: dark;
 }
 
-/** Dark mode from the system setting, used only when no theme is set (e.g. without JavaScript). */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    --background: var(--color-ink);
-    --surface: #17173f;
-    --foreground: #f1f1f6;
-    --highlight: var(--color-secondary);
-
-    color-scheme: dark;
-  }
-}
-
 /**
- * Tailwind classes for the mode-aware colours (`bg-background`,
- * `bg-surface`, `text-foreground`, `text-highlight`, ...). `inline` makes the
- * classes use the variables above directly, so they switch with the mode.
+ * Tailwind classes for the mode-aware colours (`bg-surface`,
+ * `text-muted-foreground`, `ring-ring`, ...). `inline` makes the classes use
+ * the variables above directly, so they switch with the mode.
  */
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-raised: var(--raised);
+  --color-raised-muted: var(--raised-muted);
+  --color-overlay: var(--overlay);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
   --color-highlight: var(--highlight);
+  --color-ring: var(--ring);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
 }
 
 /**

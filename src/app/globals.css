@@ -1,7 +1,91 @@
 /**
  * @file Global stylesheet, loaded once by the root layout.
  *
- * Imports Tailwind CSS and the Adiutor brand theme.
+ * Imports Tailwind CSS and the Adiutor theme, then sets base behaviour that
+ * applies everywhere: cursors, text selection, motion preferences and
+ * autofill colours.
  */
 @import 'tailwindcss';
 @import '../styles/theme.css';
+
+@layer base {
+  /**
+   * Tailwind resets buttons to the default arrow cursor; every clickable
+   * control shows a pointer, disabled ones a "not allowed" cursor.
+   */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='menuitem'],
+  [role='menuitemradio'],
+  [role='option'],
+  [role='tab'],
+  summary,
+  label[for],
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled='true'],
+  select:disabled,
+  input:disabled {
+    cursor: not-allowed;
+  }
+
+  /** A button whose action is running. */
+  [aria-busy='true'] {
+    cursor: wait;
+  }
+
+  /** Text selection and the text cursor use the brand colour. */
+  ::selection {
+    background-color: color-mix(in oklab, var(--primary) 25%, transparent);
+    color: var(--foreground);
+  }
+
+  input,
+  textarea {
+    caret-color: var(--primary);
+  }
+
+  html {
+    /** No grey flash on tap; focus styles show what's active instead. */
+    -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizelegibility;
+  }
+
+  /** Smooth scrolling for in-page links, unless reduced motion is requested. */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  /** Turn off animations and transitions when reduced motion is requested. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /** Keep the theme's colours in autofilled inputs instead of the browser's. */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--foreground);
+    box-shadow: 0 0 0 1000px var(--surface) inset;
+    transition: background-color 9999s ease-out 0s;
+  }
+
+  /** Headings are slightly tighter, for a crisper look. */
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.015em;
+  }
+}
