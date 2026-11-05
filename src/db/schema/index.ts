@@ -1,0 +1,7 @@
+/**
+ * @file All database tables, for Drizzle and its migrations.
+ */
+export * from './auth';
+export * from './companies';
+export * from './security';
+export * from './staff';

@@ -1,0 +1,37 @@
+# Local development services. Start with `pnpm services:up`, stop with `pnpm services:down`.
+services:
+  # PostgreSQL for all app data. Matches DATABASE_URL in .env.example.
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: adiutor
+      POSTGRES_PASSWORD: adiutor
+      POSTGRES_DB: adiutor
+    # Only reachable from this computer, not from others on the network.
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      # Data lives in ./docker/database (git-ignored), so it's easy to find, back up or delete.
+      - ./docker/database:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U adiutor -d adiutor']
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  # Mailpit catches every email the app sends in development (SMTP on port 1025, matching SMTP_URL in
+  # .env.example) and shows them at http://localhost:8025. Nothing is delivered to real inboxes.
+  mail:
+    image: axllent/mailpit:v1.31.6
+    environment:
+      # Keep the most recent emails only.
+      MP_MAX_MESSAGES: 500
+    # Only reachable from this computer: the emails contain sign-in links.
+    ports:
+      - '127.0.0.1:1025:1025'
+      - '127.0.0.1:8025:8025'
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 2s
+      timeout: 5s
+      retries: 15

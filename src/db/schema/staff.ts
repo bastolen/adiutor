@@ -1,0 +1,32 @@
+/**
+ * @file Drizzle schema for the staff settings: one row, created by the
+ * first-run setup. Its existence means Adiutor is set up. Staff roles live on
+ * `user.platform_role`.
+ */
+
+import { sql } from 'drizzle-orm';
+import { boolean, check, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
+
+import { createdAt, id, timestampTz } from './columns';
+
+/** Settings for the staff (the people who handle requests from companies). Always a single row. */
+export const staffSettings = pgTable(
+  'staff_settings',
+  {
+    id: id(),
+    /** How the staff are named to users and in invitations, e.g. "Adiutor". */
+    name: text('name').notNull(),
+    /** Always `true`; with the unique index and check below, it allows only one row. */
+    singleton: boolean('singleton').default(true).notNull(),
+    createdAt: createdAt(),
+    updatedAt: timestampTz('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    /** There is exactly one settings row. */
+    uniqueIndex('staff_settings_singleton_idx').on(table.singleton),
+    check('staff_settings_singleton_true', sql`${table.singleton}`),
+  ],
+);
