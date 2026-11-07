@@ -1,134 +1,127 @@
-# Adiutor
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="public/brand/logo-on-dark.svg" />
+    <img src="public/brand/logo.svg" alt="Adiutor" width="280" />
+  </picture>
+</h1>
 
-Next.js app using pnpm, TypeScript, Tailwind CSS and SCSS.
+[![CI](https://github.com/bastolen/adiutor/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bastolen/adiutor/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Requires Node.js 24.18 or newer (see `.nvmrc`) and pnpm.
+Adiutor is a shared service desk: a ticketing system where companies raise requests with your staff
+and work them through together by commenting, explaining, approving and reporting, without chasing
+emails.
+
+It's for staff who support several companies, such as IT service providers, agencies and
+consultants: the companies raise requests, and the staff work them through with them. Each company
+manages its own users, and the staff see every company.
+
+**Status:** early development. Accounts, companies, roles, invitations and sign-in security are
+built; requests, the tickets themselves, come next.
+
+## Features
+
+- **Companies and staff.** Staff add companies and invite each company's first Admin. Users can
+  belong to several companies, with a role in each (Admin, Client or Watcher), and staff have their
+  own roles (Admin, Manager, Finance and Support). See
+  [Companies, users and roles](docs/companies-and-roles.md).
+- **Invitations.** Invite people by email or with a single-use invite link, up to 20 addresses at
+  once, with a reminder before an invitation expires. There's no public sign-up.
+- **Sign-in.** Email and password, passkeys, email links, and GitHub or Google accounts. See
+  [Sign-in and accounts](docs/authentication.md).
+- **Multi-factor authentication.** Authenticator apps, passkeys, email codes and backup codes.
+  Required for staff Admins and Managers and for company Admins, and changing a sign-in method
+  needs a recent confirmation. See [Multi-factor authentication](docs/mfa.md).
+- **Account security.** Users see their recent activity and signed-in devices, and get an email
+  about every security change. Staff Admins can reset two-step verification, sign users out and
+  deactivate accounts. A searchable audit log, rate limits and a strict Content Security Policy
+  guard the rest, and staff Admins can look up the error references people send them. See
+  [Security measures](docs/security-measures.md).
+- **Accessible, in light and dark mode.** Built to meet WCAG 2.2 AA, with full keyboard support.
+  See [Design, accessibility and dark mode](docs/design.md).
+
+**Coming next: requests.** Companies will raise requests, comment on them and approve them, and
+follow them through with the staff. The company roles are already set up for it.
+
+## Tech stack
+
+- **App:** [Next.js](https://nextjs.org) 16 (App Router, Cache Components), React 19 and
+  TypeScript
+- **Interface:** Tailwind CSS 4 and SCSS, [Radix UI](https://www.radix-ui.com) and
+  [Lucide](https://lucide.dev) icons
+- **Sign-in:** [Better Auth](https://www.better-auth.com), with passkeys, two-factor
+  authentication, email links and GitHub and Google sign-in
+- **Data:** PostgreSQL 18 with [Drizzle ORM](https://orm.drizzle.team), and Zod for validation
+- **Email:** [React Email](https://react.email) templates sent over SMTP, with
+  [Mailpit](https://mailpit.axllent.org) catching them in development
+- **Tests:** Vitest with Testing Library, and Playwright with axe
+- **Tooling:** pnpm, Docker Compose, ESLint (Airbnb style), Prettier, Stylelint, Husky and
+  commitlint
+- **Automation:** GitHub Actions, Release Please, Renovate and Dependabot
+
+## Quick start
+
+You need Node.js 24.18 or newer (see `.nvmrc`), pnpm (`corepack enable` installs the version the
+project pins) and Docker (for the local database and mail viewer).
 
 ```bash
 pnpm install
+cp .env.example .env    # then set BETTER_AUTH_SECRET (openssl rand -base64 32)
+pnpm services:up        # start PostgreSQL and Mailpit in Docker
+pnpm db:migrate         # create the tables
 pnpm dev
 ```
 
-The dev server runs at <http://localhost:3000>.
+Open <http://localhost:3000>. On the first run it goes to `/setup`, where you choose the name users
+see and create your Admin account. After that, sign in at `/auth`. Every email the app sends shows
+up in Mailpit at <http://localhost:8025>.
 
-## Scripts
+To try every role, `pnpm db:seed --yes` replaces the local data with test companies and accounts
+(`scripts/seed-dev.ts` lists them); add `--admin-mail you@adiutor.dev` to also get a staff Admin
+you can sign in to with your own GitHub or Google account. [Local development](docs/development.md)
+has more on the first run, the test accounts, starting over and every script.
 
-| Command             | What it does                                                     |
-| ------------------- | ---------------------------------------------------------------- |
-| `pnpm dev`          | Start the dev server                                             |
-| `pnpm build`        | Build for production                                             |
-| `pnpm start`        | Serve the production build                                       |
-| `pnpm lint`         | Check JS/TS with ESLint and CSS/SCSS with Stylelint              |
-| `pnpm lint:fix`     | Fix and format JS/TS, CSS and SCSS where possible                |
-| `pnpm format`       | Format every file type with Prettier (CSS, SCSS, JSON, Markdown) |
-| `pnpm format:check` | Check formatting without changing files                          |
-| `pnpm typecheck`    | Generate Next.js route types, then type-check with TypeScript    |
-| `pnpm test`         | Run the unit and component tests (Vitest)                        |
-| `pnpm test:watch`   | Run the unit tests in watch mode                                 |
-| `pnpm test:e2e`     | Run the end-to-end tests (Playwright)                            |
+### Running the tests
 
-## Dark mode
+```bash
+pnpm test                               # unit and component tests
+pnpm test:integration                   # service tests against the test database
+pnpm exec playwright install chromium   # once, for the end-to-end tests
+pnpm test:e2e                           # end-to-end tests
+pnpm lint && pnpm format:check && pnpm typecheck
+```
 
-The site supports light and dark mode. A floating button in the bottom-right corner lets visitors
-choose **System** (the default, following their device), **Light** or **Dark**.
+The integration and end-to-end tests need `pnpm services:up` running. See [Testing](docs/testing.md).
 
-- **Stored choice:** saved in `localStorage` (`adiutor-theme`) and kept in sync across tabs. With
-  System, the page follows device changes live.
-- **No flicker:** a small inline script in `<head>` (`themeScript` in `src/lib/theme.ts`) sets
-  `data-theme="light"` or `"dark"` on `<html>` before the page paints, so the first frame already has
-  the right colours. Without JavaScript, CSS follows the system setting.
-- **Styling:** use the mode-aware colours `background`, `surface`, `foreground` and `highlight`
-  (e.g. `bg-surface text-foreground`, `text-highlight` for links) instead of fixed colours like
-  `bg-white` or `text-ink`. For anything else, use the `dark:` variant (e.g. `dark:hidden`). In SCSS,
-  use `brand.$background`, `brand.$surface`, `brand.$foreground` and `brand.$highlight`.
-- **Logo:** use `logo.svg` in light mode and `logo-on-dark.svg` in dark mode.
+## Documentation
 
-## Tests
+The [docs](docs/README.md) go into detail, one topic each:
 
-- **Unit and component tests** use [Vitest](https://vitest.dev) and
-  [Testing Library](https://testing-library.com), as `*.test.ts(x)` files next to the code in
-  `src/` (`vitest.config.mts`).
-- **End-to-end tests** use [Playwright](https://playwright.dev), in `e2e/` (`playwright.config.ts`).
-  They start the dev server automatically, or reuse one that is running. Install the browser once
-  with `pnpm exec playwright install chromium`.
-
-Both have a placeholder test for now; delete it when the first real test is added.
-
-## Code style
-
-- **ESLint** (`eslint.config.mjs`) uses the Airbnb style guide through
-  [`eslint-config-airbnb-extended`](https://eslint-airbnb-extended.nishargshah.dev), which adds
-  TypeScript, React, React Hooks, accessibility and Next.js rules. The official
-  `eslint-config-airbnb` does not support ESLint 9.
-- **JSDoc** is required: every file starts with a `/** @file ... */` block, and every function,
-  component, class and exported value has a `/** */` comment. `eslint-plugin-jsdoc` enforces this
-  for JS/TS. In CSS and SCSS, Stylelint rejects any comment that is not `/** */` (including `//`),
-  but cannot check that a file header or a comment exists.
-- **Prettier** (`prettier.config.mjs`) handles formatting with settings that match Airbnb (single
-  quotes, semicolons, trailing commas, 100-character lines). It runs inside ESLint and Stylelint,
-  and sorts Tailwind classes.
-- **Stylelint** (`stylelint.config.mjs`) checks CSS and SCSS with the standard SCSS rules, allows
-  Tailwind's at-rules (`@theme`, `@utility`, `@apply`, ...) and enforces JSDoc-style comments.
-- **Tailwind classes** are sorted by Prettier's Tailwind plugin, in `className` and in helpers like
-  `clsx()` and `cn()`, and in `@apply` in CSS/SCSS. Because Prettier runs inside ESLint and
-  Stylelint, `pnpm lint` reports classes in the wrong order and `pnpm lint:fix` sorts them.
-  `eslint-plugin-better-tailwindcss` also reports unknown, duplicate, conflicting and deprecated
-  classes, using the brand theme so classes like `bg-primary` count as valid.
-- **Commit messages** follow [Conventional Commits](https://www.conventionalcommits.org), checked by
-  commitlint (`commitlint.config.mjs`).
-- **EditorConfig** (`.editorconfig`) gives every editor the same basics: UTF-8, LF line endings,
-  2-space indentation and a final newline.
-
-## Editor setup (VS Code)
-
-Opening the project in VS Code prompts you to install the recommended extensions
-(`.vscode/extensions.json`): ESLint, Prettier, Stylelint, Tailwind CSS IntelliSense,
-EditorConfig, Vitest and Playwright Test. The shared settings (`.vscode/settings.json`) format on save with Prettier, apply
-ESLint and Stylelint fixes on save, and use the project's TypeScript version.
-
-## Git hooks
-
-`pnpm install` sets up a [Husky](https://typicode.github.io/husky) pre-commit hook that runs
-[lint-staged](https://github.com/lint-staged/lint-staged) (`lint-staged.config.mjs`) on the files
-being committed:
-
-- JS/TS: `eslint --fix` (formats with Prettier and sorts Tailwind classes, then checks lint rules),
-  then the Vitest tests related to the changed files
-- CSS/SCSS: `stylelint --fix` (same, for styles)
-- JSON, Markdown and YAML: `prettier --write`
-
-Only staged changes are touched: unstaged edits in the same file are set aside while the hook runs.
-Fixes are added to the commit; errors that can't be fixed automatically stop the commit.
-
-A commit-msg hook checks the commit message with commitlint.
-
-## CI, releases and dependencies
-
-- **CI** (`.github/workflows/ci.yml`) runs lint, format check, type-check, unit tests, build and
-  end-to-end tests on every pull request and push to `main`.
-- **Releases** (`.github/workflows/release-please.yml`): Release Please keeps a release pull request
-  open that bumps the version and updates `CHANGELOG.md` from the commit messages. Merging it
-  publishes a GitHub release.
-- **Dependency updates** (`renovate.json5`): Renovate opens grouped update pull requests weekly.
-
-## Brand
-
-Logos and icons live in `public/brand/`, cropped to their content with no background:
-
-| File                               | Use on                              |
-| ---------------------------------- | ----------------------------------- |
-| `logo.svg`, `icon.svg`             | Light backgrounds                   |
-| `logo-on-dark.svg`                 | Dark backgrounds (ink)              |
-| `logo-white.svg`, `icon-white.svg` | The brand gradient or accent colour |
-
-`src/styles/theme.css` is the Tailwind theme: `primary`, `secondary`, `accent` and `ink` colours, the `bg-brand-gradient` utility, the Facundo font stack, and text sizes with line height = font size + 8px. It also defines the mode-aware colours described under [Dark mode](#dark-mode).
-
-In SCSS, `@use "brand";` (from `src/styles/_brand.scss`) gives the same values as Sass variables, e.g. `brand.$primary` or `brand.$brand-gradient`.
+| Page                                                      | What it covers                                                           |
+| --------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [Local development](docs/development.md)                  | First run, test accounts, starting over, every script                    |
+| [Where the code lives](docs/project-structure.md)         | The folders of the repository                                            |
+| [Testing](docs/testing.md)                                | Unit, integration and end-to-end tests                                   |
+| [Code style and tooling](docs/code-style.md)              | Linters, formatting, JSDoc, editor setup, Git hooks                      |
+| [CI, releases and dependencies](docs/ci-and-releases.md)  | CI, security advisories, releases, dependency updates                    |
+| [Companies, users and roles](docs/companies-and-roles.md) | Roles and permissions, staff screens, invitations                        |
+| [Sign-in and accounts](docs/authentication.md)            | Sign-in methods, sessions, account pages, security emails                |
+| [Multi-factor authentication](docs/mfa.md)                | Second steps, who needs them, confirming sessions                        |
+| [Security measures](docs/security-measures.md)            | Audit log, rate limits, tokens, names, lock order, headers, CSP          |
+| [Email](docs/email.md)                                    | Templates, previews, Mailpit, how emails are sent                        |
+| [Design, accessibility and dark mode](docs/design.md)     | Components, tables, colours, keyboard support, dark mode, brand          |
+| [Deploying and running](docs/deploying.md)                | Install and upgrade, server setup, client IP, jobs, logs, secrets, leaks |
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Please follow the [Code of Conduct](CODE_OF_CONDUCT.md),
-and report security issues privately as described in [SECURITY.md](SECURITY.md).
+Contributions are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) explains how to set up the project,
+the code style and how to get a change merged. Please follow the
+[Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Security
+
+Please don't report security issues in public issues or pull requests. Report them privately as
+described in [SECURITY.md](SECURITY.md).
 
 ## License
 

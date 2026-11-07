@@ -1,0 +1,291 @@
+/**
+ * @file The audit log, served at `/admin/logs`: every security event by or
+ * about anyone, newest first, with who acted, whom it was about, the company
+ * and the browser and IP address it came from. Staff who may see the audit
+ * log (Admins and Managers) narrow it with a search (people's names and
+ * emails, company names), a group of event types and a range of days.
+ */
+import { ScrollText } from 'lucide-react';
+import { Suspense } from 'react';
+
+import Alert from '@/components/ui/alert';
+import Card from '@/components/ui/card';
+import DateRangeForm from '@/components/ui/date-range-form';
+import EmptyState from '@/components/ui/empty-state';
+import Pagination from '@/components/ui/pagination';
+import RelativeTime from '@/components/ui/relative-time';
+import SearchForm from '@/components/ui/search-form';
+import SegmentedNav from '@/components/ui/segmented-nav';
+import { PageSkeleton } from '@/components/ui/skeleton';
+import SortMenu from '@/components/ui/sort-menu';
+import { Table, Td, Th, Tr } from '@/components/ui/table';
+import TextLink from '@/components/ui/text-link';
+import {
+  AUDIT_GROUP_KEYS,
+  AUDIT_GROUPS,
+  type AuditGroup,
+  describeAuditEvent,
+  isAuditGroup,
+} from '@/lib/audit-actions';
+import { parseDayRange } from '@/lib/day-range';
+import displayName from '@/lib/display-name';
+import { formatDateTime } from '@/lib/format';
+import formatIpAddress from '@/lib/request/ip-address';
+import { describeUserAgent } from '@/lib/request/user-agent';
+import { type SearchParams, searchParam } from '@/lib/tables/search-params';
+import { createPageUrl, parseTableState, showsPagination } from '@/lib/tables/table-state';
+import { AUDIT_LOG_TABLE } from '@/lib/tables/tables';
+import appContext from '@/server/app-context';
+import { type AuditEntry, listAuditLog } from '@/server/audit';
+import { requireGlobalPermission } from '@/server/authz';
+import { globalPermissionMetadata } from '@/server/page-metadata';
+
+/**
+ * Page metadata: "Audit log · Adiutor" for those who may see the page (`audit:view`), and
+ * the 404 page's title for everyone else, who get the 404 page.
+ */
+export const generateMetadata = globalPermissionMetadata('audit:view', {
+  title: 'Audit log · Adiutor',
+});
+
+/** The group filter's choices: everything, then each group. */
+const GROUP_FILTERS: readonly { value: AuditGroup | 'all'; label: string }[] = [
+  { value: 'all', label: 'All' },
+  ...AUDIT_GROUP_KEYS.map((key) => ({ value: key, label: AUDIT_GROUPS[key].label })),
+];
+
+/**
+ * Who acted, whom it was about and which company, as a line of links under
+ * an event's description.
+ *
+ * @param props - Component props.
+ * @param props.event - The event.
+ * @returns The line, or nothing when the event involves no one.
+ */
+function Involved({ event }: { event: AuditEntry }) {
+  const { actor, target, company } = event;
+  const parts = [];
+  if (actor) {
+    parts.push(
+      <span key="actor">
+        by <TextLink href={`/admin/users/${actor.id}`}>{displayName(actor)}</TextLink>
+      </span>,
+    );
+  }
+  if (target && target.id !== actor?.id) {
+    parts.push(
+      <span key="target">
+        about <TextLink href={`/admin/users/${target.id}`}>{displayName(target)}</TextLink>
+      </span>,
+    );
+  }
+  if (company) {
+    parts.push(
+      <span key="company">
+        <TextLink href={`/companies/${company.id}`}>{company.name}</TextLink>
+      </span>,
+    );
+  } else if (event.details.staff === true) {
+    parts.push(<span key="staff">Staff</span>);
+  }
+  if (parts.length === 0) {
+    return null;
+  }
+  return (
+    <span className="flex flex-wrap gap-x-1.5 text-sm wrap-anywhere text-muted-foreground">
+      {parts.flatMap((part, index) =>
+        // Each part has its own key; its separator takes it too.
+        index === 0 ? [part] : [<span key={`before-${part.key}`}>·</span>, part],
+      )}
+    </span>
+  );
+}
+
+/**
+ * The browser and IP address an event came from.
+ *
+ * @param props - Component props.
+ * @param props.event - The event.
+ * @returns The text, or a dash when neither is known.
+ */
+function Origin({ event }: { event: AuditEntry }) {
+  if (!event.userAgent && !event.ip) {
+    return <span aria-label="Not recorded">–</span>;
+  }
+  return (
+    <span className="flex flex-wrap gap-x-1.5">
+      {event.userAgent && <span>{describeUserAgent(event.userAgent).label}</span>}
+      {event.ip && <span className="font-mono">{formatIpAddress(event.ip)}</span>}
+    </span>
+  );
+}
+
+/**
+ * Loads the audit log for the current filters and shows it.
+ *
+ * @param props - Component props.
+ * @param props.searchParams - Query parameters: `q`, `group`, `from`, `to` and the table's state.
+ * @returns The page content.
+ */
+async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const actor = await requireGlobalPermission('audit:view');
+  const params = await searchParams;
+  const search = searchParam(params.q)?.trim() ?? '';
+  const groupParam = searchParam(params.group);
+  const group = isAuditGroup(groupParam) ? groupParam : undefined;
+  const from = searchParam(params.from) ?? '';
+  const to = searchParam(params.to) ?? '';
+  const dates = parseDayRange(from || undefined, to || undefined);
+  const requested = parseTableState(AUDIT_LOG_TABLE, params);
+  const events = await listAuditLog(appContext, actor, {
+    search,
+    group,
+    start: dates.range.start,
+    end: dates.range.end,
+    ...requested,
+  });
+
+  // The page's own parameters, in the order they appear in links.
+  const pageParams = { group, q: search, from, to };
+  const table = createPageUrl('/admin/logs', pageParams).table(AUDIT_LOG_TABLE, {
+    ...requested,
+    page: events.page,
+  });
+  /**
+   * The page's own parameters to keep in a form, leaving out the ones it sets itself.
+   *
+   * @param own - The parameters the form sets.
+   * @returns The others, with values.
+   */
+  const keep = (...own: (keyof typeof pageParams)[]) =>
+    Object.fromEntries(
+      Object.entries(pageParams).filter(
+        (entry): entry is [string, string] =>
+          !own.includes(entry[0] as keyof typeof pageParams) && Boolean(entry[1]),
+      ),
+    );
+
+  const groupLabel = group ? AUDIT_GROUPS[group].label : null;
+  const datesApplied = dates.ok && Boolean(from || to);
+  let empty = {
+    title: 'Nothing recorded yet',
+    description: 'Sign-ins, changes to accounts and roles, and invitations will show up here.',
+  };
+  if (search) {
+    empty = {
+      title: 'Nothing matches',
+      description: `No events by or about anyone matching “${search}”${groupLabel ? ` in ${groupLabel}` : ''}. Try part of a name, an email address or a company.`,
+    };
+  } else if (groupLabel || datesApplied) {
+    empty = {
+      title: 'Nothing in this selection',
+      description: 'No events match these filters. Try another group or a wider range of days.',
+    };
+  }
+
+  return (
+    <>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
+          <SearchForm
+            id="audit-search"
+            label="Search people or companies"
+            placeholder="Search by name, email or company"
+            defaultValue={search}
+            hiddenFields={{ ...keep('q'), ...table.hiddenFields() }}
+          />
+          <DateRangeForm
+            label="Filter by date"
+            from={from}
+            to={to}
+            hiddenFields={{ ...keep('from', 'to'), ...table.hiddenFields() }}
+            clearHref={table.withParams({ from: undefined, to: undefined })}
+          />
+        </div>
+        {!dates.ok && <Alert tone="error">{dates.message}</Alert>}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <SegmentedNav
+            label="Filter events"
+            items={GROUP_FILTERS.map(({ value, label }) => ({
+              href: table.withParams({ group: value === 'all' ? undefined : value }),
+              label,
+              current: value === (group ?? 'all'),
+            }))}
+          />
+          {events.total > 0 && <SortMenu label="events" options={table.sortOptions()} />}
+        </div>
+      </div>
+
+      <Card
+        flush
+        footer={
+          showsPagination(events.total) && <Pagination {...table.pagination(events, 'events')} />
+        }
+      >
+        {events.total === 0 ? (
+          <EmptyState icon={ScrollText} title={empty.title} description={empty.description} />
+        ) : (
+          <Table
+            caption={table.caption(
+              `${groupLabel ? `Audit log: ${groupLabel}` : 'Audit log'}${search ? ` matching "${search}"` : ''}`,
+              events,
+            )}
+          >
+            <thead>
+              <tr>
+                <Th>Event</Th>
+                <Th aria-sort={table.ariaSort('time')} className="hidden sm:table-cell">
+                  When
+                </Th>
+                <Th className="hidden lg:table-cell">Browser and IP address</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {events.items.map((event) => (
+                <Tr key={event.id}>
+                  <Td>
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium text-foreground">
+                        {describeAuditEvent(event.action, event.details)}
+                      </span>
+                      <Involved event={event} />
+                      {/* Below the wider widths, when and where it came from go here. */}
+                      <span className="text-xs text-muted-foreground sm:hidden">
+                        <RelativeTime date={event.at} />
+                      </span>
+                      <span className="text-xs text-muted-foreground lg:hidden">
+                        <Origin event={event} />
+                      </span>
+                    </div>
+                  </Td>
+                  <Td className="hidden whitespace-nowrap text-muted-foreground sm:table-cell">
+                    <RelativeTime date={event.at} />
+                    <span className="sr-only">, {formatDateTime(event.at)}</span>
+                  </Td>
+                  <Td className="hidden text-sm text-muted-foreground lg:table-cell">
+                    <Origin event={event} />
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </Card>
+    </>
+  );
+}
+
+/**
+ * The audit log page.
+ *
+ * @param props - Page props from Next.js.
+ * @param props.searchParams - Query parameters.
+ * @returns The page.
+ */
+export default function AuditLogPage({ searchParams }: PageProps<'/admin/logs'>) {
+  return (
+    <Suspense fallback={<PageSkeleton header={false} />}>
+      <AuditLog searchParams={searchParams} />
+    </Suspense>
+  );
+}
