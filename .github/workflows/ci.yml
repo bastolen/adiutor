@@ -1,5 +1,9 @@
 # CI: runs every check on pull requests and on pushes to main. Branch
 # protection on main should require this workflow to pass before merging.
+#
+# Actions and images are pinned to exact commits and digests (with the
+# version in a comment), so a moved tag can't change what runs; Dependabot
+# (.github/dependabot.yml) and Renovate keep them up to date.
 name: CI
 
 on:
@@ -19,20 +23,72 @@ jobs:
   verify:
     name: Lint, test and build
     runs-on: ubuntu-latest
+    # A normal run takes well under this; it only ends a hung step (GitHub's default is 6 hours).
+    timeout-minutes: 45
+
+    # PostgreSQL for the auth tables, like `pnpm services:up` locally.
+    services:
+      postgres:
+        image: postgres:18-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5
+        env:
+          POSTGRES_USER: adiutor
+          POSTGRES_PASSWORD: adiutor
+          POSTGRES_DB: adiutor
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U adiutor -d adiutor"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+
+    # Test-only values (not real secrets), so the app can build and run.
+    env:
+      DATABASE_URL: postgresql://adiutor:adiutor@localhost:5432/adiutor
+      # Integration and end-to-end tests create and use this database.
+      DATABASE_URL_TEST: postgresql://adiutor:adiutor@localhost:5432/adiutor_test
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-anywhere-else-0123456789
+      BETTER_AUTH_URL: http://localhost:3000
+
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Later steps don't push, so the token isn't kept in .git/config.
+          persist-credentials: false
 
       # pnpm version comes from "packageManager" in package.json.
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
 
       # Node version comes from .nvmrc.
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # Better Auth's tables must be what its config generates (`pnpm auth:schema`), and the
+      # committed migrations must match src/db/schema (`pnpm db:generate`): generating again
+      # must change nothing. A schema-only index, constraint, default or onDelete change would
+      # otherwise pass CI and never reach the database. Neither connects to the database; the
+      # timeouts end a hang on a question drizzle-kit can't ask here (an ambiguous rename).
+      - name: Check Better Auth's tables match its config
+        timeout-minutes: 2
+        run: |
+          pnpm auth:schema
+          git diff --exit-code src/db/schema/auth.ts
+
+      - name: Check migrations match the schema
+        timeout-minutes: 2
+        run: |
+          pnpm db:generate
+          test -z "$(git status --porcelain drizzle/)" || { git status --porcelain drizzle/; exit 1; }
+
+      # Fails on a new advisory in a production dependency. Ones found unreachable are listed, with
+      # why, under `auditConfig.ignoreGhsas` in pnpm-workspace.yaml.
+      - name: Audit production dependencies
+        run: pnpm audit --prod
 
       - name: Lint (ESLint and Stylelint)
         run: pnpm lint
@@ -43,22 +99,39 @@ jobs:
       - name: Type-check
         run: pnpm typecheck
 
-      - name: Unit tests
+      - name: Unit and component tests
         run: pnpm test
+
+      - name: Integration tests
+        run: pnpm test:integration
+
+      # Turbopack's build cache (Next's CI guide): a warm start when the dependencies match, and a
+      # new entry whenever the source changes. The key names the app's own files, since `**/*.ts`
+      # would walk node_modules. Pull requests start from main's cache and only write their own.
+      - name: Cache the Next.js build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ github.workspace }}/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**', 'public/**', 'next.config.ts', 'tsconfig.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-
 
       - name: Build
         run: pnpm build
 
+      - name: Apply migrations to a fresh database
+        run: pnpm db:migrate
+
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps chromium
 
-      # Runs against the production build from the previous step.
+      # Starts the production build from the earlier step on port 3100, using the test database.
       - name: End-to-end tests
         run: pnpm test:e2e
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-report
           path: playwright-report/

@@ -1,0 +1,17 @@
+/**
+ * Tasks the debug configurations in launch.json run before they start. See
+ * "Debugging in VS Code" in docs/development.md.
+ */
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      /** Starts PostgreSQL and Mailpit (Docker). Does nothing when they're already running. */
+      "label": "Start services",
+      "type": "shell",
+      "command": "pnpm services:up",
+      "problemMatcher": [],
+      "presentation": { "reveal": "silent" }
+    }
+  ]
+}
