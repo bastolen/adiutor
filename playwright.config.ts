@@ -1,39 +1,76 @@
 /**
  * @file Playwright configuration for end-to-end tests in `e2e/`.
  *
- * Starts the app automatically: the dev server locally (reusing one that is
- * already running), or the production build in CI.
+ * The tests run against their own server on port 3100, using the test
+ * database (prepared and seeded by `e2e/support/global-setup.ts`) and writing emails
+ * to `e2e/.outbox` instead of sending them. Locally the app is built first,
+ * unless nothing the build reads changed since the last one
+ * (`tests/build/build-state.ts`; `E2E_REBUILD=1` builds anyway); in CI the
+ * build from the earlier step is reused. Your `pnpm dev` server and
+ * development database are never touched.
  * @see https://playwright.dev/docs/test-configuration
  */
 import { defineConfig, devices } from '@playwright/test';
 
+import { E2E_AUTH_SECRET, E2E_BASE_URL, E2E_PORT, OUTBOX_DIR } from './e2e/support/fixtures';
+import { buildIsCurrent } from './tests/build/build-state';
+import getTestDatabaseUrl from './tests/database/database-url';
+
 /** Whether the tests run in CI (GitHub Actions sets `CI=true`). */
 const isCI = Boolean(process.env.CI);
 
-/** Address the app is served on. */
-const baseURL = 'http://localhost:3000';
+/**
+ * Whether to start the last production build without building first: in CI
+ * (an earlier step builds), and locally when nothing the build reads changed
+ * since (`E2E_REBUILD=1` builds anyway).
+ */
+const reuseBuild = isCI || (!process.env.E2E_REBUILD && buildIsCurrent());
 
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: true,
+  globalSetup: './e2e/support/global-setup.ts',
+  /** Tests share one database, so they run one at a time. */
+  fullyParallel: false,
+  workers: 1,
   /** Fail the CI run if a `test.only` was left in the code. */
   forbidOnly: isCI,
-  /** Retry flaky tests in CI only. */
+  /**
+   * Retry flaky tests in CI only. `e2e/security.spec.ts` never retries: its
+   * tests use up state, so a retry could only fail at an earlier test.
+   */
   retries: isCI ? 2 : 0,
-  /** One worker in CI for stable results; as many as possible locally. */
-  workers: isCI ? 1 : undefined,
   /** Annotate GitHub pull requests in CI; HTML report locally. */
   reporter: isCI ? [['github'], ['html', { open: 'never' }]] : 'html',
   use: {
-    baseURL,
-    /** Record a trace when a test is retried, for debugging. */
+    baseURL: E2E_BASE_URL,
+    /**
+     * Record a trace when a test is retried, for debugging (in the HTML
+     * report). `e2e/security.spec.ts` keeps one of its first failure instead.
+     */
     trace: 'on-first-retry',
   },
   /** Browsers to test in. Add Firefox and WebKit here when needed. */
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: isCI ? 'pnpm start' : 'pnpm dev',
-    url: baseURL,
-    reuseExistingServer: !isCI,
+    command: reuseBuild
+      ? `pnpm start --port ${E2E_PORT}`
+      : `pnpm build && pnpm start --port ${E2E_PORT}`,
+    url: E2E_BASE_URL,
+    reuseExistingServer: false,
+    timeout: 300_000,
+    env: {
+      DATABASE_URL: getTestDatabaseUrl(),
+      BETTER_AUTH_URL: E2E_BASE_URL,
+      BETTER_AUTH_SECRET: E2E_AUTH_SECRET,
+      EMAIL_OUTBOX_DIR: OUTBOX_DIR,
+      // Allows the email outbox in this production build.
+      E2E_TESTS: '1',
+      // OAuth isn't tested end to end; hide the buttons even if .env configures them (every
+      // provider in `OAUTH_PROVIDERS` needs its credentials blanked here).
+      GITHUB_CLIENT_ID: '',
+      GITHUB_CLIENT_SECRET: '',
+      GOOGLE_CLIENT_ID: '',
+      GOOGLE_CLIENT_SECRET: '',
+    },
   },
 });

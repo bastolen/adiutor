@@ -6,9 +6,59 @@
 import type { NextConfig } from 'next';
 
 /**
+ * The Content Security Policy for the static files the proxy skips (logos and
+ * icons, see the matcher in `src/proxy.ts`): no scripts at all, even in an
+ * SVG opened directly.
+ */
+const STATIC_FILE_POLICY =
+  "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox";
+
+/**
+ * Security headers sent with every response. The Content Security Policy for
+ * pages isn't here: it needs a fresh nonce per request, so the proxy sets it
+ * (`src/proxy.ts`, `src/lib/request/csp.ts`).
+ */
+const securityHeaders = [
+  /** Never shown inside another site's frame (clickjacking); `frame-ancestors` for older browsers. */
+  { key: 'X-Frame-Options', value: 'DENY' },
+  /** Files are only used as the type the server says. */
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  /** Other sites see only the origin, never paths (invite links carry tokens). */
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  /** Browser features the app doesn't use are off; passkeys work on this site only. */
+  {
+    key: 'Permissions-Policy',
+    value:
+      'camera=(), microphone=(), geolocation=(), payment=(), usb=(), publickey-credentials-get=(self), publickey-credentials-create=(self)',
+  },
+  /** HTTPS only for two years, subdomains included (browsers ignore it over plain HTTP). */
+  { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+];
+
+/**
  * Project-wide Next.js settings.
  */
 const nextConfig: NextConfig = {
+  /** Don't announce the framework in an `X-Powered-By` header. */
+  poweredByHeader: false,
+
+  /**
+   * Adds the security headers to every response, and a fixed Content
+   * Security Policy to the static files the proxy skips.
+   *
+   * @returns The header rules.
+   */
+  async headers() {
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      // The static files the proxy doesn't handle: nothing in them may run.
+      ...['/brand/:path*', '/icon.svg'].map((source) => ({
+        source,
+        headers: [{ key: 'Content-Security-Policy', value: STATIC_FILE_POLICY }],
+      })),
+    ];
+  },
+
   /** Enables Cache Components (part of the create-next-app defaults). */
   cacheComponents: true,
 

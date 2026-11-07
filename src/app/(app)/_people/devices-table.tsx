@@ -1,0 +1,120 @@
+/**
+ * @file The table of signed-in devices, shared by the Security page (a
+ * user's own devices) and the user detail page (what staff Admins see):
+ * browser and system, IP address, when it signed in and whether that sign-in
+ * was MFA verified. The card around it (title, sort menu, pagination and the
+ * sign-out buttons) is the page's.
+ */
+import type { ReactNode } from 'react';
+
+import Badge from '@/components/ui/badge';
+import RelativeTime from '@/components/ui/relative-time';
+import { Table, Td, Th, Tr } from '@/components/ui/table';
+import formatIpAddress from '@/lib/request/ip-address';
+import { describeUserAgent } from '@/lib/request/user-agent';
+import type { Paged, TableLinks } from '@/lib/tables/table-state';
+import type { DeviceSort } from '@/lib/tables/tables';
+import type { UserSession } from '@/server/people/user-admin';
+
+/**
+ * Props for {@link DevicesTable}.
+ */
+interface DevicesTableProps {
+  /** A page of the signed-in devices. */
+  devices: Paged<UserSession>;
+  /** The table's sort and page links (`DEVICES_TABLE`). */
+  table: TableLinks<DeviceSort>;
+  /** What the table shows, for screen readers, e.g. "Your signed-in devices". */
+  caption: string;
+  /**
+   * The current session's ID: its device is marked "This device" and gets no
+   * row action (it can't be signed out from here). Leave out when the viewer
+   * is looking at someone else's devices.
+   */
+  currentSessionId?: string | null;
+  /**
+   * Renders the action for a device, e.g. a "Sign out" button, in an extra
+   * Actions column. Without it the table has no actions column.
+   *
+   * @param device - The device.
+   * @param label - The device's browser and system, for the button's accessible name.
+   * @returns The action.
+   */
+  renderAction?: (device: UserSession, label: string) => ReactNode;
+}
+
+/**
+ * A sortable table of signed-in devices. The IP address and the sign-in time
+ * have their own columns from tablet width and move under the device name
+ * before that, so the table never scrolls sideways.
+ *
+ * @param props - Table props.
+ * @param props.devices - The devices.
+ * @param props.table - The table's links.
+ * @param props.caption - What the table shows.
+ * @param props.currentSessionId - The current session, if the viewer's own.
+ * @param props.renderAction - Renders a row's action.
+ * @returns The table.
+ */
+export default function DevicesTable({
+  devices,
+  table,
+  caption,
+  currentSessionId = null,
+  renderAction = undefined,
+}: DevicesTableProps) {
+  return (
+    <Table caption={table.caption(caption, devices)}>
+      <thead>
+        <tr>
+          <Th>Device</Th>
+          <Th className="hidden sm:table-cell">IP address</Th>
+          <Th aria-sort={table.ariaSort('signed-in')} className="hidden md:table-cell">
+            Signed in
+          </Th>
+          {renderAction && (
+            <Th className="text-right">
+              <span className="sr-only">Actions</span>
+            </Th>
+          )}
+        </tr>
+      </thead>
+      <tbody>
+        {devices.items.map((device) => {
+          const current = device.id === currentSessionId;
+          const { label } = describeUserAgent(device.userAgent);
+          return (
+            <Tr key={device.id}>
+              <Td>
+                <div className="flex flex-col gap-1">
+                  <span className="flex flex-wrap items-center gap-2 font-medium">
+                    {label}
+                    {current && <Badge tone="brand">This device</Badge>}
+                    {device.mfaVerified && <Badge tone="success">MFA Verified</Badge>}
+                  </span>
+                  {/* When it signed in goes here below tablet width, its IP on phones. */}
+                  <span className="text-xs text-muted-foreground md:hidden">
+                    Signed in <RelativeTime date={device.createdAt} />
+                    <span className="sm:hidden">
+                      {' · '}
+                      <span className="font-mono">{formatIpAddress(device.ipAddress)}</span>
+                    </span>
+                  </span>
+                </div>
+              </Td>
+              <Td className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
+                {formatIpAddress(device.ipAddress)}
+              </Td>
+              <Td className="hidden text-muted-foreground md:table-cell">
+                <RelativeTime date={device.createdAt} />
+              </Td>
+              {renderAction && (
+                <Td className="text-right">{current ? null : renderAction(device, label)}</Td>
+              )}
+            </Tr>
+          );
+        })}
+      </tbody>
+    </Table>
+  );
+}

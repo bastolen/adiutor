@@ -1,0 +1,77 @@
+/**
+ * @file Tests for turning on email codes: sending the first code is busy, a
+ * new one waits half a code's lifetime, checking the code is busy on its own,
+ * and a code sent a moment ago counts as sent.
+ */
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
+
+import EmailCodesSetup from './email-codes-setup';
+
+/** The mocked auth client and router. */
+const { sendOtp, verifyOtp, push, refresh } = vi.hoisted(() => ({
+  sendOtp: vi.fn(),
+  verifyOtp: vi.fn(),
+  push: vi.fn(),
+  refresh: vi.fn(),
+}));
+
+vi.mock('@/lib/sign-in/auth-client', () => ({ default: { twoFactor: { sendOtp, verifyOtp } } }));
+
+vi.mock('next/navigation', () => ({
+  /**
+   * Mocked router.
+   *
+   * @returns A router whose calls are recorded.
+   */
+  useRouter: () => ({ push, refresh }),
+}));
+
+describe('EmailCodesSetup', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('is busy while sending the first code, then waits before a new one', async () => {
+    const user = userEvent.setup();
+    /** Settles the first code's request, which the test holds back while it checks the busy state. */
+    let sent: (result: unknown) => void = () => {};
+    sendOtp.mockReturnValue(
+      new Promise((resolve) => {
+        sent = resolve;
+      }),
+    );
+    render(<EmailCodesSetup open onOpenChange={() => {}} email="jane@adiutor.test" />);
+
+    await user.click(screen.getByRole('button', { name: 'Send a code to check it works' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Send a code to check it works' })).toHaveAttribute(
+        'aria-busy',
+        'true',
+      ),
+    );
+    sent({ data: { status: true }, error: null });
+
+    expect(await screen.findByText(/We sent a code to jane@adiutor.test/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Send a new code in 2:30' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Turn on' })).not.toHaveAttribute('aria-busy');
+  });
+
+  it('treats a code sent a moment ago as sent, not as an error', async () => {
+    const user = userEvent.setup();
+    sendOtp.mockResolvedValue({
+      data: null,
+      error: { status: 429, code: EMAIL_CODE_SENT_RECENTLY.code },
+    });
+    render(<EmailCodesSetup open onOpenChange={() => {}} email="jane@adiutor.test" />);
+
+    await user.click(screen.getByRole('button', { name: 'Send a code to check it works' }));
+
+    expect(await screen.findByText(EMAIL_CODE_SENT_RECENTLY.message)).toBeInTheDocument();
+    expect(screen.getByLabelText('Code')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});

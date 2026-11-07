@@ -1,0 +1,325 @@
+/**
+ * @file Tests for the sign-in form.
+ */
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { Activity, type ReactNode, useState } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import SignInForm from './sign-in-form';
+
+/** Mocked Better Auth client methods. */
+const {
+  signInEmail,
+  signInMagicLink,
+  signInSocial,
+  signInPasskey,
+  getLastUsedLoginMethod,
+  push,
+  replace,
+} = vi.hoisted(() => ({
+  signInEmail: vi.fn(),
+  signInMagicLink: vi.fn(),
+  signInSocial: vi.fn(),
+  signInPasskey: vi.fn(),
+  getLastUsedLoginMethod: vi.fn(),
+  push: vi.fn(),
+  replace: vi.fn(),
+}));
+
+/** Query string the mocked `useSearchParams` returns. */
+let searchParams = new URLSearchParams();
+
+vi.mock('next/navigation', () => ({
+  /**
+   * Mocked router; `push` and `replace` are recorded.
+   *
+   * @returns The router.
+   */
+  useRouter: () => ({ push, replace, refresh: vi.fn() }),
+  /**
+   * Mocked query string.
+   *
+   * @returns The current test's `searchParams`.
+   */
+  useSearchParams: () => searchParams,
+}));
+
+vi.mock('@/lib/sign-in/auth-client', () => ({
+  default: {
+    signIn: {
+      email: signInEmail,
+      magicLink: signInMagicLink,
+      social: signInSocial,
+      passkey: signInPasskey,
+    },
+    getLastUsedLoginMethod,
+  },
+}));
+
+/**
+ * Wraps content in an `<Activity>` that a "Leave" / "Return" button hides and
+ * shows, like Next.js does with a page when you navigate away and back.
+ *
+ * @param props - Harness props.
+ * @param props.children - The page content.
+ * @returns The harness.
+ */
+function Page({ children }: { children: ReactNode }) {
+  const [visible, setVisible] = useState(true);
+  return (
+    <>
+      <button type="button" onClick={() => setVisible((value) => !value)}>
+        {visible ? 'Leave' : 'Return'}
+      </button>
+      <Activity mode={visible ? 'visible' : 'hidden'}>{children}</Activity>
+    </>
+  );
+}
+
+describe('SignInForm', () => {
+  beforeEach(() => {
+    searchParams = new URLSearchParams();
+    vi.clearAllMocks();
+    getLastUsedLoginMethod.mockReturnValue(null);
+  });
+
+  it('marks the method used last time without changing button names', () => {
+    getLastUsedLoginMethod.mockReturnValue('github');
+    render(<SignInForm providers={['github', 'google']} />);
+
+    const github = screen.getByRole('button', { name: 'Continue with GitHub' });
+    expect(github).toHaveAccessibleDescription('Last used');
+    expect(
+      screen.getByRole('button', { name: 'Continue with Google' }),
+    ).not.toHaveAccessibleDescription();
+    expect(github).toHaveTextContent('Last used');
+    expect(screen.getByRole('button', { name: 'Continue with Google' })).not.toHaveTextContent(
+      'Last used',
+    );
+  });
+
+  it('marks the password option for a password sign-in', () => {
+    getLastUsedLoginMethod.mockReturnValue('email');
+    render(<SignInForm providers={[]} />);
+    expect(screen.getByRole('button', { name: 'Sign in' })).toHaveAccessibleDescription(
+      'Last used',
+    );
+  });
+
+  it('only offers the OAuth providers that are configured', () => {
+    render(<SignInForm providers={['github']} />);
+    expect(screen.getByRole('button', { name: 'Continue with GitHub' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Continue with Google' })).not.toBeInTheDocument();
+  });
+
+  it('shows the message for an error code in the URL', () => {
+    searchParams = new URLSearchParams({ error: 'signup_disabled' });
+    render(<SignInForm providers={[]} />);
+    expect(screen.getByRole('alert')).toHaveTextContent('no Adiutor account');
+  });
+
+  it('shows the note another page sent the user here with, and nothing for an unknown one', () => {
+    searchParams = new URLSearchParams({ notice: 'joined-mfa-required' });
+    const { unmount } = render(<SignInForm providers={[]} />);
+    expect(screen.getByText(/You’ve joined\. Your new role requires MFA/)).toBeInTheDocument();
+    unmount();
+
+    searchParams = new URLSearchParams({ notice: 'something-else' });
+    render(<SignInForm providers={[]} />);
+    expect(screen.queryByText(/You’ve joined/)).not.toBeInTheDocument();
+  });
+
+  it('shows a clear message for a wrong password', async () => {
+    signInEmail.mockResolvedValue({ error: { status: 401, message: 'Invalid email or password' } });
+    render(<SignInForm providers={[]} />);
+
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'jane@adiutor.test' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'wrong-password' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'That email and password combination is incorrect.',
+    );
+  });
+
+  it('sends a magic link back to the requested page', async () => {
+    searchParams = new URLSearchParams({ callbackURL: '/dashboard/settings' });
+    signInMagicLink.mockResolvedValue({ error: null });
+    render(<SignInForm providers={[]} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in with an email link instead' }));
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'jane@adiutor.test' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Email me a sign-in link' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('a sign-in link is on its way');
+    expect(signInMagicLink).toHaveBeenCalledWith({
+      email: 'jane@adiutor.test',
+      callbackURL: '/dashboard/settings',
+      errorCallbackURL: '/auth?callbackURL=%2Fdashboard%2Fsettings',
+    });
+  });
+
+  describe('the anchor the browser kept from the page first asked for', () => {
+    afterEach(() => {
+      window.history.replaceState(null, '', '/');
+    });
+
+    it('goes on to that card after signing in', async () => {
+      // The proxy sent `/admin/staff#invitations` here; the browser kept the anchor.
+      searchParams = new URLSearchParams({ callbackURL: '/admin/staff' });
+      window.history.replaceState(null, '', '/auth?callbackURL=%2Fadmin%2Fstaff#invitations');
+      signInPasskey.mockResolvedValue({ data: {}, error: null });
+      render(<SignInForm providers={[]} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }));
+
+      await vi.waitFor(() => expect(replace).toHaveBeenCalledWith('/admin/staff#invitations'));
+    });
+
+    it('keeps it through the code step, an email link and a provider', async () => {
+      searchParams = new URLSearchParams({ callbackURL: '/admin/staff' });
+      window.history.replaceState(null, '', '/auth?callbackURL=%2Fadmin%2Fstaff#invitations');
+      signInEmail.mockResolvedValue({
+        data: { twoFactorRedirect: true, twoFactorMethods: ['totp'] },
+        error: null,
+      });
+      signInSocial.mockResolvedValue({ error: null });
+      signInMagicLink.mockResolvedValue({ error: null });
+      // Each sign-in leaves the page busy, so each gets a page of its own.
+      const first = render(<SignInForm providers={[]} />);
+      fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'jane@adiutor.test' } });
+      fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret-password' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+      await vi.waitFor(() =>
+        expect(push).toHaveBeenCalledWith(
+          '/auth/two-factor?callbackURL=%2Fadmin%2Fstaff%23invitations&methods=totp',
+        ),
+      );
+      first.unmount();
+
+      const second = render(<SignInForm providers={[]} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in with an email link instead' }));
+      fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'jane@adiutor.test' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Email me a sign-in link' }));
+      await vi.waitFor(() =>
+        expect(signInMagicLink).toHaveBeenCalledWith({
+          email: 'jane@adiutor.test',
+          callbackURL: '/admin/staff#invitations',
+          errorCallbackURL: '/auth?callbackURL=%2Fadmin%2Fstaff%23invitations',
+        }),
+      );
+      second.unmount();
+
+      render(<SignInForm providers={['github']} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Continue with GitHub' }));
+      await vi.waitFor(() =>
+        expect(signInSocial).toHaveBeenCalledWith({
+          provider: 'github',
+          callbackURL: '/admin/staff#invitations',
+          errorCallbackURL: '/auth?callbackURL=%2Fadmin%2Fstaff%23invitations',
+        }),
+      );
+    });
+
+    it("leaves a callbackURL's own anchor alone", async () => {
+      searchParams = new URLSearchParams({ callbackURL: '/admin/staff#invite' });
+      window.history.replaceState(null, '', '/auth#invitations');
+      signInPasskey.mockResolvedValue({ data: {}, error: null });
+      render(<SignInForm providers={[]} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }));
+
+      await vi.waitFor(() => expect(replace).toHaveBeenCalledWith('/admin/staff#invite'));
+    });
+
+    it.each(['#:~:text=secret', '#100%', '#top'])(
+      'ignores %j, which names no section',
+      async (hash) => {
+        searchParams = new URLSearchParams({ callbackURL: '/admin/staff' });
+        window.history.replaceState(null, '', `/auth${hash}`);
+        signInPasskey.mockResolvedValue({ data: {}, error: null });
+        render(<SignInForm providers={[]} />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }));
+
+        await vi.waitFor(() => expect(replace).toHaveBeenCalledWith('/admin/staff'));
+      },
+    );
+  });
+
+  it('continues on the code step when two-step verification is on', async () => {
+    signInEmail.mockResolvedValue({
+      data: { twoFactorRedirect: true, twoFactorMethods: ['totp', 'otp'] },
+      error: null,
+    });
+    render(<SignInForm providers={[]} />);
+
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'jane@adiutor.test' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret-password' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await vi.waitFor(() =>
+      expect(push).toHaveBeenCalledWith(
+        '/auth/two-factor?callbackURL=%2Fdashboard&methods=totp%2Cotp',
+      ),
+    );
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('signs in with a passkey', async () => {
+    signInPasskey.mockResolvedValue({ data: {}, error: null });
+    render(<SignInForm providers={[]} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }));
+
+    await vi.waitFor(() => expect(replace).toHaveBeenCalledWith('/dashboard'));
+  });
+
+  it('explains a cancelled passkey prompt', async () => {
+    signInPasskey.mockResolvedValue({
+      data: null,
+      error: { code: 'AUTH_CANCELLED', status: 400, statusText: 'BAD_REQUEST' },
+    });
+    render(<SignInForm providers={[]} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('passkey was cancelled');
+  });
+  it('starts over when the page is hidden, so the next person finds an empty form', async () => {
+    signInEmail.mockResolvedValue({ data: {}, error: null });
+    render(
+      <Page>
+        <SignInForm providers={[]} />
+      </Page>,
+    );
+
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'jane@adiutor.test' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret-password' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    await vi.waitFor(() => expect(replace).toHaveBeenCalledWith('/dashboard'));
+
+    // Signed in, the page is left; signing out shows it again.
+    fireEvent.click(screen.getByRole('button', { name: 'Leave' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Return' }));
+
+    expect(screen.getByLabelText('Email')).toHaveValue('');
+    expect(screen.getByLabelText('Password')).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Sign in with a passkey' })).toBeEnabled();
+  });
+
+  it('is usable again when the browser shows the page from its back/forward cache', async () => {
+    signInSocial.mockResolvedValue({ data: { url: 'https://github.com/login' }, error: null });
+    render(<SignInForm providers={['github']} />);
+    const github = screen.getByRole('button', { name: 'Continue with GitHub' });
+
+    fireEvent.click(github);
+    await vi.waitFor(() => expect(github).toBeDisabled());
+    act(() => {
+      window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+    });
+
+    expect(github).toBeEnabled();
+  });
+});
