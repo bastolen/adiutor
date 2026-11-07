@@ -1,0 +1,96 @@
+/**
+ * @file Proxy (formerly middleware): every page requires a signed-in user,
+ * except the public ones listed below (sign-in, invitations, invite links and
+ * first-run setup).
+ *
+ * Signed-out visitors are sent to the sign-in page (API routes get a 401).
+ * This only checks that a session cookie exists, which is fast but not secure
+ * on its own: pages and server actions still verify the session on the server
+ * through `src/server/authz.ts`.
+ *
+ * New pages are protected automatically. Add a path here only if it must be
+ * reachable without signing in.
+ *
+ * It also sets the Content Security Policy, with a fresh nonce per request
+ * (`src/lib/request/csp.ts`), on every response it handles.
+ * @see https://nextjs.org/docs/app/api-reference/file-conventions/proxy
+ */
+import { getSessionCookie } from 'better-auth/cookies';
+import { type NextRequest, NextResponse } from 'next/server';
+
+import { contentSecurityPolicy, createNonce, NONCE_HEADER } from '@/lib/request/csp';
+import PATHNAME_HEADER from '@/lib/request/pathname-header';
+
+/** Path prefixes reachable without signing in. */
+export const PUBLIC_PATHS = [
+  '/auth',
+  '/invite',
+  '/join',
+  '/setup',
+  '/sign-in-error',
+  '/api/auth',
+] as const;
+
+/**
+ * Checks whether a path is public: one of {@link PUBLIC_PATHS} or below it.
+ *
+ * @param pathname - The request path.
+ * @returns Whether it can be visited signed out.
+ */
+export function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATHS.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
+/**
+ * Lets public paths and signed-in visitors through; sends everyone else to
+ * sign in, remembering the page so they return to it afterwards.
+ *
+ * @param request - The incoming request.
+ * @returns A pass-through, a redirect to sign-in, or a 401 for API routes.
+ */
+export default function proxy(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+  const nonce = createNonce();
+  const policy = contentSecurityPolicy(nonce);
+  /**
+   * Adds the policy to a response.
+   *
+   * @param response - The response.
+   * @returns The same response.
+   */
+  const withPolicy = (response: NextResponse) => {
+    response.headers.set('Content-Security-Policy', policy);
+    return response;
+  };
+
+  if (isPublicPath(pathname) || getSessionCookie(request)) {
+    const requestHeaders = new Headers(request.headers);
+    // Pages can't read their own URL on the server; pass it on, so the MFA
+    // step-up can send the user back where they were.
+    requestHeaders.set(PATHNAME_HEADER, `${pathname}${search}`);
+    // Next.js reads the nonce from the policy in the request; the root layout from NONCE_HEADER.
+    requestHeaders.set('Content-Security-Policy', policy);
+    requestHeaders.set(NONCE_HEADER, nonce);
+    return withPolicy(NextResponse.next({ request: { headers: requestHeaders } }));
+  }
+
+  if (pathname.startsWith('/api/')) {
+    return withPolicy(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
+  }
+
+  const signInUrl = new URL('/auth', request.url);
+  if (pathname !== '/') {
+    signInUrl.searchParams.set('callbackURL', `${pathname}${search}`);
+  }
+  return withPolicy(NextResponse.redirect(signInUrl));
+}
+
+/**
+ * Runs on every request except Next.js's own files and the static files in
+ * `public/brand/` and the app icons (those get a fixed policy from
+ * `next.config.ts`). Paths aren't skipped by their extension: a page URL
+ * like `/companies/x.png` still renders the app and must get the policy.
+ */
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|icon\\.svg|brand/).*)'],
+};

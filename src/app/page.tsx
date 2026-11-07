@@ -1,12 +1,12 @@
 /**
- * @file Home page, served at `/`.
+ * @file Home page, served at `/`. Sends signed-in users to their dashboard;
+ * the proxy has already sent everyone else to sign in.
  */
+import { redirect } from 'next/navigation';
 
 /**
- * Renders the home page. Empty until the app has content.
- *
- * @returns The home page.
+ * Redirects to the dashboard.
  */
 export default function Home() {
-  return <main />;
+  redirect('/dashboard');
 }

@@ -1,0 +1,242 @@
+/**
+ * @file Tests for the second sign-in step.
+ */
+import { act, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { Activity, type ReactNode, useState } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { EMAIL_CODE_RESEND_SECONDS } from '@/lib/authz/mfa';
+import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
+
+import TwoFactorForm from './two-factor-form';
+
+/** Mocked Better Auth client methods and router. */
+const { verifyTotp, verifyOtp, verifyBackupCode, sendOtp, replace } = vi.hoisted(() => ({
+  verifyTotp: vi.fn(),
+  verifyOtp: vi.fn(),
+  verifyBackupCode: vi.fn(),
+  sendOtp: vi.fn(),
+  replace: vi.fn(),
+}));
+
+/** Query string the mocked `useSearchParams` returns. */
+let searchParams = new URLSearchParams();
+
+vi.mock('next/navigation', () => ({
+  /**
+   * Mocked router; `replace` is recorded.
+   *
+   * @returns The router.
+   */
+  useRouter: () => ({ replace, refresh: vi.fn() }),
+  /**
+   * Mocked query string.
+   *
+   * @returns The current test's `searchParams`.
+   */
+  useSearchParams: () => searchParams,
+}));
+
+vi.mock('@/lib/sign-in/auth-client', () => ({
+  default: { twoFactor: { verifyTotp, verifyOtp, verifyBackupCode, sendOtp } },
+}));
+
+/**
+ * Wraps content in an `<Activity>` that a "Leave" / "Return" button hides and
+ * shows, like Next.js does with a page when you navigate away and back.
+ *
+ * @param props - Harness props.
+ * @param props.children - The page content.
+ * @returns The harness.
+ */
+function Page({ children }: { children: ReactNode }) {
+  const [visible, setVisible] = useState(true);
+  return (
+    <>
+      <button type="button" onClick={() => setVisible((value) => !value)}>
+        {visible ? 'Leave' : 'Return'}
+      </button>
+      <Activity mode={visible ? 'visible' : 'hidden'}>{children}</Activity>
+    </>
+  );
+}
+
+describe('TwoFactorForm', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sendOtp.mockResolvedValue({ data: { status: true }, error: null });
+    searchParams = new URLSearchParams({ callbackURL: '/companies/x', methods: 'totp,otp' });
+  });
+
+  it('checks an authenticator code, trusting the device when asked, then continues', async () => {
+    const user = userEvent.setup();
+    verifyTotp.mockResolvedValue({ data: {}, error: null });
+    render(<TwoFactorForm />);
+
+    await user.type(screen.getByLabelText('Code'), '123456');
+    await user.click(screen.getByLabelText('Trust this device for 30 days'));
+    await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
+
+    expect(verifyTotp).toHaveBeenCalledWith({ code: '123456', trustDevice: true });
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/companies/x'));
+    expect(sendOtp).not.toHaveBeenCalled();
+  });
+
+  it("doesn't offer email codes when an authenticator app is set up", () => {
+    render(<TwoFactorForm />);
+
+    expect(screen.queryByRole('button', { name: 'Email code' })).not.toBeInTheDocument();
+    expect(sendOtp).not.toHaveBeenCalled();
+  });
+
+  it('sends a code straight away when email is the only method, and checks it', async () => {
+    const user = userEvent.setup();
+    searchParams = new URLSearchParams({ methods: 'otp' });
+    verifyOtp.mockResolvedValue({ data: {}, error: null });
+    render(<TwoFactorForm />);
+
+    await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(/We sent a code to your email address/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Use a backup code' })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Code'), '654321');
+    await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
+    expect(verifyOtp).toHaveBeenCalledWith({ code: '654321', trustDevice: false });
+  });
+
+  it('waits half a code’s lifetime before another, and says when a new one went out', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    searchParams = new URLSearchParams({ methods: 'otp' });
+    render(<TwoFactorForm />);
+
+    await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(1));
+    expect(await screen.findByRole('button', { name: 'Send a new code in 2:30' })).toBeDisabled();
+
+    act(() => {
+      vi.advanceTimersByTime(EMAIL_CODE_RESEND_SECONDS * 1000);
+    });
+    await user.click(screen.getByRole('button', { name: 'Send a new code' }));
+    expect(sendOtp).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText(/We sent a new code to your email address/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Send a new code in 2:30' })).toBeDisabled();
+    vi.useRealTimers();
+  });
+
+  it('treats a code sent a moment ago as still usable, not as an error', async () => {
+    searchParams = new URLSearchParams({ methods: 'otp' });
+    sendOtp.mockResolvedValue({
+      data: null,
+      error: { status: 429, code: EMAIL_CODE_SENT_RECENTLY.code },
+    });
+    render(<TwoFactorForm />);
+
+    expect(await screen.findByText(EMAIL_CODE_SENT_RECENTLY.message)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Send a new code in/ })).toBeDisabled();
+  });
+
+  it('accepts a backup code instead', async () => {
+    const user = userEvent.setup();
+    verifyBackupCode.mockResolvedValue({ data: {}, error: null });
+    render(<TwoFactorForm />);
+
+    await user.click(screen.getByRole('button', { name: 'Use a backup code' }));
+    await user.type(screen.getByLabelText('Backup code'), 'ABCDE-12345');
+    await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
+
+    expect(verifyBackupCode).toHaveBeenCalledWith({ code: 'ABCDE-12345', trustDevice: false });
+  });
+
+  it('explains a wrong code', async () => {
+    const user = userEvent.setup();
+    verifyTotp.mockResolvedValue({
+      data: null,
+      error: { code: 'INVALID_CODE', status: 401, statusText: 'UNAUTHORIZED' },
+    });
+    render(<TwoFactorForm />);
+
+    await user.type(screen.getByLabelText('Code'), '000000');
+    await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent("That code isn't right");
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('offers to start again when the pending sign-in expired', async () => {
+    const user = userEvent.setup();
+    verifyTotp.mockResolvedValue({
+      data: null,
+      error: { code: 'INVALID_TWO_FACTOR_COOKIE', status: 401, statusText: 'UNAUTHORIZED' },
+    });
+    render(<TwoFactorForm />);
+
+    await user.type(screen.getByLabelText('Code'), '123456');
+    await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your sign-in has expired');
+    expect(screen.getByRole('link', { name: 'Start again' })).toHaveAttribute(
+      'href',
+      '/auth?callbackURL=%2Fcompanies%2Fx',
+    );
+  });
+  it('starts over once a code is accepted, and sends the first emailed code again next time', async () => {
+    const user = userEvent.setup();
+    searchParams = new URLSearchParams({ callbackURL: '/companies/x', methods: 'otp' });
+    verifyOtp.mockResolvedValue({ data: {}, error: null });
+    render(
+      <Page>
+        <TwoFactorForm />
+      </Page>,
+    );
+    await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(1));
+
+    await user.type(screen.getByLabelText('Code'), '123456');
+    await user.click(screen.getByLabelText('Trust this device for 30 days'));
+    await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/companies/x'));
+
+    // The page comes back at the next sign-in on this browser.
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    await user.click(screen.getByRole('button', { name: 'Return' }));
+
+    expect(screen.getByLabelText('Code')).toHaveValue('');
+    expect(screen.getByLabelText('Trust this device for 30 days')).not.toBeChecked();
+    expect(screen.getByRole('button', { name: 'Verify and sign in' })).toBeEnabled();
+    await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(2));
+  });
+
+  it('starts over when the page is hidden before a code is accepted', async () => {
+    const user = userEvent.setup();
+    render(
+      <Page>
+        <TwoFactorForm />
+      </Page>,
+    );
+
+    await user.type(screen.getByLabelText('Code'), '123456');
+    await user.click(screen.getByLabelText('Trust this device for 30 days'));
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    await user.click(screen.getByRole('button', { name: 'Return' }));
+
+    expect(screen.getByLabelText('Code')).toHaveValue('');
+    expect(screen.getByLabelText('Trust this device for 30 days')).not.toBeChecked();
+  });
+
+  it('is usable again when the browser shows the page from its back/forward cache', async () => {
+    const user = userEvent.setup();
+    verifyTotp.mockReturnValue(new Promise(() => {}));
+    render(<TwoFactorForm />);
+    const verify = screen.getByRole('button', { name: 'Verify and sign in' });
+
+    await user.type(screen.getByLabelText('Code'), '123456');
+    await user.click(verify);
+    expect(verify).toBeDisabled();
+    act(() => {
+      window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+    });
+
+    expect(verify).toBeEnabled();
+  });
+});

@@ -100,7 +100,9 @@ export default function useThemePreference() {
   }, []);
 
   useEffect(() => {
-    if (preference !== 'system') {
+    // While hydrating, `preference` is still the server's `system`: check what's actually stored,
+    // so a chosen theme isn't replaced by the system's.
+    if (preference !== 'system' || readPreference() !== 'system') {
       return undefined;
     }
     const media = window.matchMedia(DARK_MEDIA_QUERY);
@@ -108,6 +110,9 @@ export default function useThemePreference() {
     const handleChange = () => {
       applyPreference('system');
     };
+    // Catch up first: the system setting may have changed after the inline script ran but before
+    // this listener existed (while the page was loading).
+    handleChange();
     media.addEventListener('change', handleChange);
     return () => media.removeEventListener('change', handleChange);
   }, [preference]);

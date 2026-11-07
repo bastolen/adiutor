@@ -1,0 +1,45 @@
+/**
+ * @file The part of the sign-in error page that depends on the error: what
+ * went wrong, and the reference to send to an admin (recorded with
+ * `recordSignInError`, shown in the shared `ErrorReference` box).
+ */
+import ErrorReference from '@/components/ui/error-reference';
+import { type SearchParams, searchParam } from '@/lib/tables/search-params';
+import appContext from '@/server/app-context';
+import { cleanErrorCode, recordSignInError } from '@/server/auth/sign-in-errors';
+import { getOptionalActor } from '@/server/authz';
+
+import signInErrorMessage from './messages';
+
+/**
+ * Records the error and shows what went wrong and its reference. Rendered at
+ * request time (it reads the query string and who is signed in), so each
+ * visit gets a reference of its own.
+ *
+ * @param props - Component props.
+ * @param props.searchParams - Query parameters: Better Auth's `error` and `error_description`.
+ * @returns The message and the reference.
+ */
+export default async function SignInErrorDetails({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
+  const code = cleanErrorCode(searchParam(params.error));
+  const actor = await getOptionalActor();
+  const { reference, at } = await recordSignInError(appContext, {
+    code,
+    description: searchParam(params.error_description) ?? null,
+    userId: actor?.id ?? null,
+  });
+
+  return (
+    <>
+      <p className="max-w-sm text-base text-balance text-muted-foreground">
+        {signInErrorMessage(code)}
+      </p>
+      <ErrorReference reference={reference} at={at} />
+    </>
+  );
+}
