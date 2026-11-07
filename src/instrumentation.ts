@@ -21,9 +21,11 @@ import type { Instrumentation } from 'next';
  */
 export async function register(): Promise<void> {
   // A block rather than an early return, so other runtimes' bundles leave the database code out.
+  // eslint-disable-next-line no-restricted-properties -- Next.js replaces NEXT_RUNTIME per runtime at build time; importing `env` would load the configuration into every runtime.
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { installLogRedaction } = await import('./lib/log-redaction');
     installLogRedaction();
+    // eslint-disable-next-line no-restricted-properties -- Next.js sets NODE_ENV and replaces it at build time, before anything here imports `env`.
     if (process.env.NODE_ENV === 'development') {
       void import('./server/migration-check')
         .then(({ checkMigrations }) => checkMigrations())
@@ -46,6 +48,7 @@ export async function register(): Promise<void> {
  */
 export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {
   // A block rather than an early return, so other runtimes' bundles leave the database code out.
+  // eslint-disable-next-line no-restricted-properties -- Next.js replaces NEXT_RUNTIME per runtime at build time; importing `env` would load the configuration into every runtime.
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     try {
       const { default: recordRequestError } = await import('./server/request-errors');

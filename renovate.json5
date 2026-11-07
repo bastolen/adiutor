@@ -1,7 +1,7 @@
 /**
  * Renovate configuration: opens pull requests to keep the npm packages, the
- * container images (workflows and compose.yaml), `.nvmrc` and the pnpm
- * version up to date. GitHub Actions are Dependabot's (.github/dependabot.yml). Requires the Renovate GitHub app to be installed
+ * container images (workflows, compose.yaml and the Dockerfile), `.nvmrc` and
+ * the pnpm version up to date. GitHub Actions are Dependabot's (.github/dependabot.yml). Requires the Renovate GitHub app to be installed
  * on the repository.
  *
  * Renovate uses pnpm, like local development: it finds `pnpm-lock.yaml`, and
@@ -37,6 +37,11 @@
       /** Workflow container images (CI's PostgreSQL) stay pinned to a digest. */
       matchManagers: ['github-actions'],
       matchDatasources: ['docker'],
+      pinDigests: true,
+    },
+    {
+      /** The Dockerfile's base image (Node.js) stays pinned to a digest, its version in the tag. */
+      matchManagers: ['dockerfile'],
       pinDigests: true,
     },
     {

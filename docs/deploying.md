@@ -1,14 +1,16 @@
 # Deploying and running Adiutor
 
-What to set up on a server, and how to run and look after it: installing and upgrading, the
-client IP address, background jobs, logs, looking up the reference of an error, rotating the auth
-secret, and what to do after a suspected leak. Back to the [documentation](README.md).
+What to set up on a server, and how to run and look after it: installing and upgrading, the Docker
+image and health check, the client IP address, background jobs, logs, looking up the reference of
+an error, rotating the auth secret, and what to do after a suspected leak. Back to the
+[documentation](README.md).
 
 ## Installing and upgrading
 
-**What's needed:** Node.js 24.18 or newer (`engines` in `package.json`, and `.nvmrc`), pnpm in the
-version `packageManager` names (Corepack installs it: `corepack enable`), and PostgreSQL 18, as
-the local services and CI use.
+**What's needed:** Node.js 26.13 or newer, the current LTS (`engines` in `package.json`, and
+`.nvmrc`), pnpm in the version `packageManager` names, and PostgreSQL 18, as the local services and
+CI use. Node.js no longer ships Corepack: install pnpm once with `npm install --global pnpm`, and it
+switches to that version by itself.
 
 **First install**, in the folder the app runs from:
 
@@ -31,6 +33,64 @@ Commands you run on the server need them: `pnpm db:migrate` runs drizzle-kit, an
 `pnpm setup:platform`, `pnpm jobs:run` and `pnpm sessions:revoke-all` run through tsx. Without
 them, migrations, the hourly jobs, the first-run setup and signing everyone out after a leak all
 fail, possibly in the middle of an incident.
+
+## Docker
+
+The `Dockerfile` builds one image with the whole application: the built app, its source, scripts
+and migrations, and every dependency (development ones included, for the reasons above). It runs
+the app by default and every command below as a one-off, so the same image serves the site, the
+hourly jobs and the first-run setup. Why one image instead of a small server image plus a tools
+image is in [decision 0013](decisions/0013-one-docker-image-with-the-whole-application.md).
+
+```bash
+docker build -t adiutor .
+```
+
+`.dockerignore` keeps your `node_modules`, builds, test output, database files and `.env` out of
+the image; the build uses placeholder settings and connects to nothing. Give the real settings when
+you run it, never at build time, so they don't end up in the image:
+
+```bash
+docker run -d --name adiutor --env-file .env -p 127.0.0.1:3000:3000 adiutor
+```
+
+The image sets `NODE_ENV=production` and runs as the unprivileged `node` user on port 3000 (`PORT`
+changes it). The settings are the same as without Docker (see the checklist below); when the
+database runs on the host, `DATABASE_URL` points at the host's address (such as
+`host.docker.internal` on Docker Desktop), not `localhost`.
+
+**The database is yours to provide and look after**: the image contains no database, and it never
+migrates on its own. Migrate as part of each release, before the new image serves traffic, with
+your own process or with the image itself. The same goes for the other commands:
+
+```bash
+docker run --rm --env-file .env adiutor pnpm db:migrate
+docker run --rm --env-file .env adiutor pnpm setup:platform --staff-name "Adiutor" --email you@adiutor.dev --name "Your Name"
+docker run --rm --env-file .env adiutor pnpm jobs:run
+docker run --rm --env-file .env adiutor pnpm sessions:revoke-all
+```
+
+Run `pnpm jobs:run` from cron every hour, as in [Background jobs](#background-jobs).
+
+**Health check:** `GET /api/health` answers `200 {"status":"ok"}` when the database answers and has
+every migration in `drizzle/` applied, and `503 {"status":"unavailable"}` otherwise, so a load
+balancer or platform holds traffic from a server that can't reach its database or wasn't migrated.
+The image's `HEALTHCHECK` uses it (`docker ps` shows the container as healthy or unhealthy). It
+works signed out and tells nobody more than that; the reason it's unhealthy goes to the logs, as
+the migration state or an error code, never connection details. Not cached.
+
+**Published images:** every release publishes the image for amd64 and arm64, tagged with its
+version, its minor line and `latest` (see [Docker image](ci-and-releases.md#docker-image)). While
+the repository is private, so are they, so log in first:
+
+```bash
+docker login
+docker pull bastolen/adiutor:0.1.0
+```
+
+From GitHub's registry instead, log in with a personal access token that can read packages
+(`docker login ghcr.io`) and pull `ghcr.io/bastolen/adiutor:0.1.0`. Pull requests don't build the
+image, so build it once yourself after changing the `Dockerfile`, the dependencies or the build.
 
 ## Before sharing the address
 

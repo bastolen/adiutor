@@ -1,8 +1,8 @@
 /**
  * @file Vitest configuration, with two projects:
  * - `unit`: unit and component tests (`*.test.ts(x)` next to the code in
- *   `src/`, the test helpers' own tests in `tests/`, and the scripts' in
- *   `scripts/`), in a simulated browser DOM.
+ *   `src/`), in a simulated browser DOM. Tests cover the application only, so
+ *   the test helpers in `tests/` and the scripts in `scripts/` have none.
  * - `integration`: service tests against a real PostgreSQL test database
  *   (`*.int.test.ts`), run one file at a time.
  *
@@ -27,7 +27,7 @@ export default defineConfig({
           environment: 'jsdom',
           /** Adds DOM matchers such as `toBeInTheDocument()`. */
           setupFiles: ['./vitest.setup.ts'],
-          include: ['src/**/*.test.{ts,tsx}', 'tests/**/*.test.ts', 'scripts/**/*.test.ts'],
+          include: ['src/**/*.test.{ts,tsx}'],
           exclude: ['src/**/*.int.test.ts'],
         },
       },

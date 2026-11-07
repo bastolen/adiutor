@@ -2,6 +2,12 @@
 # CHANGELOG.md from the Conventional Commit messages on main. Merging that PR
 # tags the release and creates a GitHub release.
 #
+# How versions move is set in release-please-config.json (0.x until 1.0.0 is
+# chosen on purpose, tags like v0.1.0) and the released version is kept in
+# .release-please-manifest.json; see "Versions" in docs/ci-and-releases.md.
+# Both are strict JSON, so they can't carry comments. The action only reads
+# them while `release-type` is left out below: setting it would ignore them.
+#
 # It works as a small GitHub App ("Releases" in docs/ci-and-releases.md), not
 # with the built-in GITHUB_TOKEN: the repository doesn't have to let GitHub Actions
 # create and approve pull requests, and the release PR's checks run (pull
@@ -44,6 +50,6 @@ jobs:
           permission-issues: write
 
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        # No `release-type`: the release type and versioning come from release-please-config.json.
         with:
-          release-type: node
           token: ${{ steps.app-token.outputs.token }}

@@ -65,6 +65,21 @@ const nextConfig: NextConfig = {
   /** Enables Partial Prefetching (part of the create-next-app defaults). */
   partialPrefetching: true,
 
+  experimental: {
+    /**
+     * In development, Next.js checks every navigation for instant loading in
+     * the background, rendering each page again in a worker. That makes a
+     * breakpoint in a Server Component stop many times per page load, so the
+     * server's debug configurations in `.vscode/launch.json` set
+     * `SKIP_INSTANT_VALIDATION` to only check pages that ask for it
+     * (`'manual-warning'`). Everywhere else this is Next's default
+     * (`'warning'`). See "Debugging in VS Code" in docs/development.md.
+     */
+    instantInsights: {
+      validationLevel: process.env.SKIP_INSTANT_VALIDATION ? 'manual-warning' : 'warning',
+    },
+  },
+
   /** Options passed to the Sass compiler for `.scss` files. */
   sassOptions: {
     /**

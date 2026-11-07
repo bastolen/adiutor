@@ -8,8 +8,10 @@ the [security policy](SECURITY.md), not public issues.
 
 ## Getting started
 
-You need Node.js 24.18 or newer (see `.nvmrc`; with nvm, run `nvm use`) and pnpm (`corepack enable` installs
-the version the project pins).
+You need Node.js 26.13 or newer, the current LTS (see `.nvmrc`; with nvm, run `nvm use`, or with
+pnpm managing Node, `pnpm env use --global 26.13`) and pnpm. Node.js no longer ships Corepack, so
+install pnpm once with `npm install --global pnpm`; it switches to the version the project pins
+(`packageManager` in `package.json`) by itself.
 
 You also need Docker for the local PostgreSQL database and the Mailpit mail viewer.
 
@@ -34,7 +36,9 @@ prompted. [Local development](docs/development.md#scripts) lists every script, a
 
 1. For anything bigger than a small fix, open an issue first so we can agree on the approach.
 2. Create a branch from `main`.
-3. Make your change, following the code style below, and add or update tests.
+3. Make your change, following the code style below, and add or update tests. Before changing how
+   something fundamental works, read its [decision record](docs/decisions/README.md); a change to
+   such a decision gets a new record.
 4. Commit using [Conventional Commits](https://www.conventionalcommits.org) (see below).
 5. Open a pull request and fill in the template. CI must pass before it can be merged.
 
@@ -70,7 +74,8 @@ More about the linters, the editor setup and the Git hooks is in
   accessibility scan of every page (`e2e/a11y.spec.ts`) and keyboard checks
   (`e2e/keyboard.spec.ts`); add new pages and interactive patterns there.
 
-More about each kind of test is in [Testing](docs/testing.md).
+More about each kind of test is in [Testing](docs/testing.md). To step through a test, or the app
+itself, in VS Code, see [Debugging in VS Code](docs/development.md#debugging-in-vs-code).
 
 ## Database changes
 
@@ -98,4 +103,5 @@ titles follow the same format, since a squash merge lands with the title; CI che
 
 Releases are automated by Release Please: it keeps a release pull request open that bumps the
 version and updates `CHANGELOG.md`. Merging it publishes the release. It runs as a small GitHub
-App; see [Releases](docs/ci-and-releases.md#releases) for the one-time setup.
+App; see [Releases](docs/ci-and-releases.md#releases) for the one-time setup. Versions stay
+below 1.0.0 until Adiutor is ready for real use (see [Versions](docs/ci-and-releases.md#versions)).

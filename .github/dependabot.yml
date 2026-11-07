@@ -1,4 +1,5 @@
-# Dependabot: keeps the GitHub Actions in .github/workflows up to date. They're
+# Dependabot: keeps the GitHub Actions in .github/workflows and in the local
+# actions under .github/actions up to date. They're
 # pinned to exact commits with the version in a comment; Dependabot updates
 # both. npm packages and container images are Renovate's (renovate.json5), so
 # the two never update the same thing, as long as the repository's "Dependabot
@@ -7,7 +8,10 @@
 version: 2
 updates:
   - package-ecosystem: github-actions
-    directory: /
+    # The workflows, and the local actions they use (like CI's shared setup).
+    directories:
+      - /
+      - /.github/actions/*
     # Once a week, like Renovate.
     schedule:
       interval: weekly

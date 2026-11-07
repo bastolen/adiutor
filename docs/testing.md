@@ -3,10 +3,14 @@
 The three kinds of tests, where they live and what they need. Back to the
 [documentation](README.md).
 
+Tests cover the application. Config, tooling, the scripts in `scripts/` and the test helpers in
+`tests/` have no tests of their own. To stop at a breakpoint in a test, use the "current file"
+configurations in VS Code, which turn the time limit off (see
+[Debugging in VS Code](development.md#debugging-in-vs-code)).
+
 - **Unit and component tests** use [Vitest](https://vitest.dev) and
   [Testing Library](https://testing-library.com), as `*.test.ts(x)` files next to the code in
-  `src/` (`vitest.config.mts`); the test helpers in `tests/` have theirs next to them too. Run them
-  with `pnpm test` (or `pnpm test:watch`). Checks on types use Vitest's `expectTypeOf` in such a
+  `src/` (`vitest.config.mts`). Run them with `pnpm test` (or `pnpm test:watch`). Checks on types use Vitest's `expectTypeOf` in such a
   file: `pnpm typecheck` enforces them, not the test run (e.g.
   `src/server/auth/hook-contexts.test.ts`, which checks that the parts of Better Auth's context the
   app's hooks read still fit Better Auth's types).

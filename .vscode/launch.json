@@ -9,8 +9,10 @@
  * `notFound()`. In the server's configurations, `runtimeSourcemapPausePatterns`
  * pauses at each of Next's compiled files until its breakpoints are set; without
  * it, code that runs as soon as it loads (like `register()` in
- * `src/instrumentation.ts`) is already done by then. See "Debugging in VS Code"
- * in docs/development.md.
+ * `src/instrumentation.ts`) is already done by then. They also set
+ * `SKIP_INSTANT_VALIDATION`, so Next.js doesn't render every page again in a
+ * background worker (`next.config.ts`), which made a breakpoint stop dozens of
+ * times per page load. See "Debugging in VS Code" in docs/development.md.
  */
 {
   "version": "0.2.0",
@@ -22,6 +24,7 @@
       "request": "launch",
       "command": "pnpm dev",
       "preLaunchTask": "Start services",
+      "env": { "SKIP_INSTANT_VALIDATION": "1" },
       "runtimeSourcemapPausePatterns": ["${workspaceFolder}/.next/dev/server/**/*.js"],
       "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
       "serverReadyAction": {
@@ -40,6 +43,7 @@
       "request": "launch",
       "command": "pnpm dev",
       "preLaunchTask": "Start services",
+      "env": { "SKIP_INSTANT_VALIDATION": "1" },
       "runtimeSourcemapPausePatterns": ["${workspaceFolder}/.next/dev/server/**/*.js"],
       "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
       "presentation": { "group": "1. App", "order": 2 }
@@ -55,7 +59,11 @@
       "presentation": { "group": "1. App", "order": 3 }
     },
     {
-      /** A server you started yourself in a terminal with `pnpm dev --inspect`. */
+      /**
+       * A server you started yourself in a terminal with `pnpm dev --inspect`
+       * (`SKIP_INSTANT_VALIDATION=1 pnpm dev --inspect` for the fewer stops of
+       * the two configurations above).
+       */
       "name": "App: attach to running server",
       "type": "node",
       "request": "attach",

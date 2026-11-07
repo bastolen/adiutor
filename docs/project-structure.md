@@ -54,6 +54,6 @@ The folders of the repository and what belongs in each. Back to the [documentati
 - `src/emails/`: the email templates (see [Email](email.md)).
 - `e2e/support/`: what the Playwright specs in `e2e/` share (fixtures, database, seed, outbox, axe,
   TOTP and global setup).
-- `tests/`: helpers the test runners share, each with its own tests next to it: `database/` (which
+- `tests/`: helpers the test runners share: `database/` (which
   database the tests use, and preparing it), `integration/` (the integration tests' setup and
   helpers) and `build/` (whether a local e2e run can reuse the last build).

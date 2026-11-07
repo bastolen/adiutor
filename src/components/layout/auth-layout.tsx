@@ -57,6 +57,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
 
       <div
         aria-hidden="true"
+        // eslint-disable-next-line better-tailwindcss/no-restricted-classes -- The brand panel is the same dark ink in light and dark mode.
         className="relative hidden overflow-hidden bg-ink lg:flex lg:flex-col lg:justify-between lg:p-12"
       >
         <div className="absolute -top-40 -right-40 size-[36rem] rounded-full bg-brand-green/20 blur-3xl" />
@@ -73,9 +74,11 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         <div className="h-8" />
         <RequestPreview />
         <div className="relative flex max-w-md flex-col gap-4">
+          {/* eslint-disable-next-line better-tailwindcss/no-restricted-classes -- White on the ink brand panel, which doesn't change with the mode. */}
           <p className="text-3xl font-semibold tracking-tight text-white">
             Get help without chasing emails.
           </p>
+          {/* eslint-disable-next-line better-tailwindcss/no-restricted-classes -- On the fixed ink panel, white at 75% still has a contrast of about 10:1. */}
           <p className="text-base text-white/75">
             Report a problem or ask for something new, follow its progress, and approve the work,
             all in one place.

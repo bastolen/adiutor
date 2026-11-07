@@ -9,8 +9,9 @@
     "url": "git+https://github.com/bastolen/adiutor.git"
   },
   "engines": {
-    "node": ">=24.18"
+    "node": ">=26.13"
   },
+  "packageManager": "pnpm@12.15.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -68,7 +69,7 @@
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
-    "@types/node": "^24.19.2",
+    "@types/node": "^26.6.6",
     "@types/pg": "^8.23.1",
     "@types/qrcode": "1.5.6",
     "@types/react": "^19",
@@ -95,6 +96,5 @@
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.5"
-  },
-  "packageManager": "pnpm@12.15.0"
+  }
 }

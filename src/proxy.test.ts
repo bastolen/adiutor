@@ -17,7 +17,7 @@ function signedOut(path: string) {
 }
 
 describe('isPublicPath', () => {
-  it('allows the sign-in, invitation, join and setup pages and the auth API', () => {
+  it('allows the sign-in, invitation, join and setup pages, the auth API and the health check', () => {
     [
       '/auth',
       '/auth/forgot-password',
@@ -25,6 +25,7 @@ describe('isPublicPath', () => {
       '/join/abc',
       '/setup',
       '/api/auth/sign-in/email',
+      '/api/health',
     ].forEach((path) => expect(isPublicPath(path), path).toBe(true));
   });
 
@@ -38,6 +39,7 @@ describe('isPublicPath', () => {
       '/authors',
       '/setups',
       '/api/other',
+      '/api/healthy',
     ].forEach((path) => expect(isPublicPath(path), path).toBe(false));
   });
 });

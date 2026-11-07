@@ -61,8 +61,9 @@ follow them through with the staff. The company roles are already set up for it.
 
 ## Quick start
 
-You need Node.js 24.18 or newer (see `.nvmrc`), pnpm (`corepack enable` installs the version the
-project pins) and Docker (for the local database and mail viewer).
+You need Node.js 26.13 or newer, the current LTS (see `.nvmrc`), pnpm (install it once with
+`npm install --global pnpm`; it switches to the version the project pins by itself) and Docker (for
+the local database and mail viewer).
 
 ```bash
 pnpm install
@@ -103,14 +104,15 @@ The [docs](docs/README.md) go into detail, one topic each:
 | [Where the code lives](docs/project-structure.md)         | The folders of the repository                                            |
 | [Testing](docs/testing.md)                                | Unit, integration and end-to-end tests                                   |
 | [Code style and tooling](docs/code-style.md)              | Linters, formatting, JSDoc, editor setup, Git hooks                      |
-| [CI, releases and dependencies](docs/ci-and-releases.md)  | CI, security advisories, releases, dependency updates                    |
+| [CI, releases and dependencies](docs/ci-and-releases.md)  | CI, protecting `main`, security advisories, releases, dependency updates |
 | [Companies, users and roles](docs/companies-and-roles.md) | Roles and permissions, staff screens, invitations                        |
 | [Sign-in and accounts](docs/authentication.md)            | Sign-in methods, sessions, account pages, security emails                |
 | [Multi-factor authentication](docs/mfa.md)                | Second steps, who needs them, confirming sessions                        |
 | [Security measures](docs/security-measures.md)            | Audit log, rate limits, tokens, names, lock order, headers, CSP          |
 | [Email](docs/email.md)                                    | Templates, previews, Mailpit, how emails are sent                        |
 | [Design, accessibility and dark mode](docs/design.md)     | Components, tables, colours, keyboard support, dark mode, brand          |
-| [Deploying and running](docs/deploying.md)                | Install and upgrade, server setup, client IP, jobs, logs, secrets, leaks |
+| [Deploying and running](docs/deploying.md)                | Install and upgrade, Docker, server setup, client IP, jobs, logs, leaks  |
+| [Decision records](docs/decisions/README.md)              | Why Adiutor works the way it does, one decision per page                 |
 
 ## Contributing
 

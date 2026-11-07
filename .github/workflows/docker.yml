@@ -1,0 +1,107 @@
+# Docker image: builds the image (Dockerfile) for every release and pushes it to Docker Hub
+# (bastolen/adiutor) and GitHub's container registry (ghcr.io/bastolen/adiutor), for amd64 and
+# arm64, tagged with the version (0.1.0), its minor line (0.1) and `latest`. Pull requests don't
+# build it.
+#
+# Release Please publishes releases with its app's token, and only events made with the built-in
+# GITHUB_TOKEN can't start other workflows, so its releases start this one. Running it by hand
+# (Actions → Docker image → Run workflow) publishes an existing release again, e.g. after a failed
+# push, without moving `latest`.
+#
+# Needs the repository variable DOCKERHUB_USERNAME and the secret DOCKERHUB_TOKEN (a Docker Hub
+# access token with Read & Write on the repository); without them the job fails rather than
+# releasing without an image. GitHub's registry uses the built-in token. See "Docker image" in
+# docs/ci-and-releases.md.
+#
+# Actions are pinned to exact commits (version in a comment); Dependabot keeps them up to date.
+name: Docker image
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The release tag to publish again, such as v0.1.0
+        required: true
+        type: string
+
+# Nothing by default; the job asks for what it needs.
+permissions: {}
+
+# One run per release at a time; a second one waits instead of pushing over it.
+concurrency:
+  group: docker-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build and publish
+    # Forks can't push to these registries.
+    if: ${{ github.repository == 'bastolen/adiutor' }}
+    runs-on: ubuntu-latest
+    # The arm64 half is built under emulation, which takes a while.
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      # Pushes to GitHub's container registry.
+      packages: write
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          # Later steps don't push to git, so the token isn't kept in .git/config.
+          persist-credentials: false
+
+      # GitHub's free runners for private repositories are amd64, so arm64 is emulated.
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GitHub's container registry
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The tags (0.1.0, 0.1, and `latest` for a new release only) and the standard labels. The
+      # source label links the GitHub package to this repository, so it gets the repository's access.
+      - name: Image names, tags and labels
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: |
+            docker.io/bastolen/adiutor
+            ghcr.io/bastolen/adiutor
+          flavor: |
+            latest=${{ github.event_name == 'release' }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ env.TAG }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ env.TAG }}
+
+      # From the checked-out release, so .dockerignore applies. The build cache lives in GitHub
+      # Actions' cache; provenance and an SBOM are attached to the image.
+      - name: Build and push
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: mode=max
+          sbom: true
