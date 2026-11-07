@@ -12,8 +12,9 @@ detail, one topic each.
 - [Testing](testing.md): unit, integration and end-to-end tests.
 - [Code style and tooling](code-style.md): ESLint, Prettier, Stylelint, JSDoc, the editor setup
   and the Git hooks.
-- [CI, releases and dependencies](ci-and-releases.md): what CI checks, security advisories, pinned
-  actions, releases and dependency updates.
+- [CI, releases and dependencies](ci-and-releases.md): what CI checks, protecting `main`, security
+  advisories, pinned actions, releases, versions and the published Docker image, and dependency
+  updates.
 
 ## How it works
 
@@ -32,11 +33,13 @@ detail, one topic each.
 
 ## Running it
 
-- [Deploying and running Adiutor](deploying.md): installing and upgrading, what to set up on a
-  server, the client IP address, background jobs, logs, rotating the auth secret, and what to do
-  after a suspected leak.
+- [Deploying and running Adiutor](deploying.md): installing and upgrading, the Docker image and
+  health check, what to set up on a server, the client IP address, background jobs, logs, rotating
+  the auth secret, and what to do after a suspected leak.
 
 ## The project
 
+- [Decision records](decisions/README.md): why Adiutor works the way it does, one significant
+  decision per page, from invitation-only sign-up to the Docker image.
 - [Contributing](../CONTRIBUTING.md), the [Code of Conduct](../CODE_OF_CONDUCT.md) and the
   [security policy](../SECURITY.md).

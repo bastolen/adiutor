@@ -21,7 +21,10 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { contentSecurityPolicy, createNonce, NONCE_HEADER } from '@/lib/request/csp';
 import PATHNAME_HEADER from '@/lib/request/pathname-header';
 
-/** Path prefixes reachable without signing in. */
+/**
+ * Path prefixes reachable without signing in. `/api/health` is for load
+ * balancers and monitors, and says only whether the app is up.
+ */
 export const PUBLIC_PATHS = [
   '/auth',
   '/invite',
@@ -29,6 +32,7 @@ export const PUBLIC_PATHS = [
   '/setup',
   '/sign-in-error',
   '/api/auth',
+  '/api/health',
 ] as const;
 
 /**

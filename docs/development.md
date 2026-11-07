@@ -76,15 +76,30 @@ extension.
 | `Integration test: current file` | The open `*.int.test.ts` file, against the test database, without a time limit                                | Yes                                 |
 | `E2E test: current spec`         | The open spec in `e2e/` and its helpers, with a visible browser and no time limit                             | Yes                                 |
 
-Two things can look like a problem but aren't:
+The Vitest and Playwright extensions' own debug buttons, next to each test, are the other way to
+debug a single test.
 
-- **A breakpoint on a line with JSX stops many times.** In a Server Component it stopped about 19
-  times per page load when we measured it: once for the real render, which has
-  `renderFunctionComponent` in its call stack, and the rest for React rebuilding stack traces, most
-  of them in the `[worker 1]` thread where Next.js validates the page. Email previews repeat the
-  same way.
+**Fewer stops in Server Components.** In development, Next.js checks every page for instant
+navigation by rendering it again in a background worker (`[worker 1]` in the Call Stack panel), so a
+breakpoint on a line with JSX used to stop dozens of times per page load: 69 times on the sign-in
+page when measured. `App: server and browser` and `App: server` set `SKIP_INSTANT_VALIDATION`,
+which makes `next.config.ts` check only pages that ask for it (`instantInsights.validationLevel:
+'manual-warning'`), and the same breakpoint stops 7 times, all in the real render. The price is that
+these two configurations don't show Next's instant-navigation warnings; `pnpm dev` without the
+debugger still does. For the attach configuration, start the server with
+`SKIP_INSTANT_VALIDATION=1 pnpm dev --inspect`.
+
+Things that can look like a problem but aren't:
+
+- **A breakpoint on a line with JSX still stops more than once.** The real render is the stop with
+  `renderFunctionComponent` in its call stack; the others are React rebuilding stack traces. Email
+  previews repeat the same way.
 - **A breakpoint on the `NEXT_RUNTIME` check in `src/instrumentation.ts` never stops**, because
   Next.js compiles that condition away. Put it on a line inside the block.
+- **A page that only fails in the production build** (while prerendering) can't be debugged with
+  these configurations, since the build has no server source maps. Run `pnpm build --debug-prerender`
+  instead: it leaves the server code unminified, adds server source maps for readable stack traces,
+  and keeps one failing page from stopping the rest of the build. Never deploy a build made this way.
 
 ## Scripts
 

@@ -1,30 +1,52 @@
 # CI, releases and dependencies
 
-What CI checks, how security advisories and actions are handled, how releases are published and
-how dependencies are kept up to date. Back to the [documentation](README.md).
+What CI checks, how `main` is protected, how security advisories and actions are handled, how
+releases are published and how dependencies are kept up to date. Back to the
+[documentation](README.md).
 
 ## CI
 
-CI (`.github/workflows/ci.yml`) runs an audit of the production dependencies, lint, format
-check, type-check, unit and integration tests, build and end-to-end tests on every pull request
-and push to `main`, with a PostgreSQL service and test-only auth settings. Its token is read-only,
-and checkout doesn't keep it in `.git`.
+CI (`.github/workflows/ci.yml`) runs on every pull request and push to `main`, as jobs that run at
+the same time, with test-only auth settings. Its token is read-only, and checkout doesn't keep it in
+`.git`. Each job starts with the same setup, a local action (`.github/actions/setup/action.yml`):
+pnpm, Node from `.nvmrc` with pnpm's store cached, and `pnpm install --frozen-lockfile`.
 
-It keeps Next's build cache (`.next/cache`) between runs, following
+| Job                           | What it runs                                                                                        | Database   |
+| ----------------------------- | --------------------------------------------------------------------------------------------------- | ---------- |
+| Static checks                 | the schema checks below, `pnpm audit --prod`, lint, format check and type-check                     | none       |
+| Unit tests                    | `pnpm test`                                                                                         | none       |
+| Integration tests             | `pnpm test:integration`, then the migrations applied to a fresh database                            | PostgreSQL |
+| End-to-end tests (1/2), (2/2) | a production build, then half the specs each (`pnpm test:e2e --shard=1/2`), with a report per shard | PostgreSQL |
+| CI passed                     | fails when any other job failed or was cancelled                                                    | none       |
+
+**CI passed** is the one check protecting `main` requires (see [Protecting main](#protecting-main)),
+so jobs and shards can change without touching the rules. Each job has its own time limit (15 to 30
+minutes), so a hung step can't hold a runner for GitHub's default of 6 hours.
+
+The end-to-end specs run in two shards, split by spec file, so a file whose tests build on each other
+(like `e2e/security.spec.ts`) stays together. Each shard has its own PostgreSQL service, which the
+Playwright global setup migrates and seeds, and makes its own production build. That build starts
+warm from Next's build cache (`.next/cache`), following
 [Next's CI guide](https://nextjs.org/docs/app/guides/ci-build-caching): keyed on the lockfile and
-the app's own files (`src/`, `public/`, `next.config.ts`, `tsconfig.json`), so a build starts
-warm, and a new entry is saved whenever the source changes. Pull requests start from `main`'s
-cache and only write their own. The job stops after 45 minutes, so a hung step can't hold a
-runner for GitHub's default of 6 hours.
+the app's own files (`src/`, `public/`, `next.config.ts`, `tsconfig.json`). Both shards restore it,
+and the first saves a new entry when the source changed. Pull requests start from `main`'s cache and
+only write their own.
+
+Release Please's pull requests, and the release commits that merging them puts on `main`, only
+change `CHANGELOG.md`, `.release-please-manifest.json` and the version in `package.json`. For those,
+the first job (Decide what runs) skips the unit, integration and end-to-end tests, and **CI passed**
+counts a skipped job as passed. A pull request only counts as a release pull request when the
+release app opened it, from a branch in this repository whose name starts with `release-please--`:
+a fork can copy the branch name, but not the author.
 
 **PR titles** (`.github/workflows/pr-title.yml`): a squash merge lands on `main` with the pull
 request's title, and Release Please reads it, but the commit-msg hook never sees it. So every pull
 request's title is checked with the same commitlint rules (`commitlint.config.mjs`) when it's
 opened or edited and on every new commit. Renovate's, Dependabot's and Release Please's titles
-(`chore(deps): …`, `ci(deps): …`, `chore(main): release …`) already pass. It can be a required
-check once branch protection is available for the repository.
+(`chore(deps): …`, `ci(deps): …`, `chore(main): release …`) already pass. Its check, **Conventional
+Commits title**, is the other one protecting `main` requires.
 
-Right after installing, it checks that the database schema and the committed migrations agree:
+The static checks start by checking that the database schema and the committed migrations agree:
 `pnpm auth:schema` must leave `src/db/schema/auth.ts` unchanged (Better Auth's tables match its
 config), and `pnpm db:generate` must write nothing in `drizzle/` (the migrations match
 `src/db/schema/`). Otherwise a schema-only unique index, constraint, default or `onDelete` change
@@ -32,6 +54,36 @@ would pass CI and never reach the database. If either fails, run the same comman
 (`pnpm auth:schema` first after changing Better Auth's config, then `pnpm db:generate`) and
 commit what they change. drizzle-kit asks about ambiguous renames, which CI can't answer, so
 generate such a migration locally.
+
+## Protecting main
+
+`.github/rulesets/main.json` holds the rules for `main`, ready to switch on. GitHub only enforces
+rulesets on private repositories with GitHub Pro (or Team), so they wait until the repository is
+public or upgraded. The file is strict JSON (no comments) in the format GitHub's ruleset import and
+API take, so this section explains it:
+
+- `main` (the default branch, `~DEFAULT_BRANCH`) can't be deleted or force-pushed, and its history
+  stays linear.
+- Changes arrive through a pull request, merged by squashing only, with every conversation
+  resolved. No approval is required: GitHub doesn't let you approve your own pull request, so with
+  one maintainer a required approval would block every merge.
+- **CI passed** and **Conventional Commits title** must pass, and both must come from GitHub Actions
+  (`integration_id` 15368, the app that reports this repository's checks). A branch doesn't have
+  to be up to date with `main` first, so Renovate's pull requests don't need a rebase and a second
+  run before merging.
+- Repository admins can bypass the rules (`actor_id` 5 is the admin role). That's for emergencies,
+  and for the empty `Release-As` commit in [Versions](#versions), which goes straight to `main`.
+
+To switch it on, either import the file in the repository's Settings → Rules → Rulesets → New
+ruleset → Import a ruleset, check it and click Create, or run:
+
+```bash
+gh api --method POST repos/bastolen/adiutor/rulesets --input .github/rulesets/main.json
+```
+
+If the import doesn't recognise the bypass entry, add **Repository admin** to the bypass list in
+the form before creating it. When a job in CI is renamed, the rules don't change; only renaming
+**CI passed** or the PR title check means updating the file and the ruleset on GitHub.
 
 ## Security advisories
 
@@ -44,7 +96,8 @@ was checked and can't be reached from the app is listed under `auditConfig.ignor
 
 Every action is pinned to a full commit SHA with its version in a comment
 (`uses: actions/checkout@<commit SHA> # vX.Y.Z`), and the PostgreSQL image to its digest, so a moved
-or hijacked tag can't change what runs. Pin new actions the same way.
+or hijacked tag can't change what runs. Pin new actions the same way, also inside the local actions
+in `.github/actions/`, which Dependabot updates along with the workflows.
 
 ## Releases
 
@@ -66,6 +119,69 @@ approve pull requests, and CI runs on the release pull request. To set it up onc
    requests", and set the default workflow permissions to read-only.
 
 Until then, the workflow is skipped.
+
+### Versions
+
+`release-please-config.json` sets how the version moves, and `.release-please-manifest.json` holds
+the last released version (Release Please updates it with every release; it starts empty). Both are
+strict JSON, so they can't carry comments; this section explains them instead.
+
+Adiutor stays below 1.0.0 until it's ready for real use. The first release is 0.1.0
+(`initial-version`), and after that:
+
+| Change on `main`                                | Next version (from 0.1.0) |
+| ----------------------------------------------- | ------------------------- |
+| A feature (`feat:`)                             | 0.2.0                     |
+| A fix (`fix:`, including `fix(deps):`)          | 0.1.1                     |
+| A breaking change (`feat!:`, `BREAKING CHANGE`) | 0.2.0                     |
+
+A breaking change only bumps the minor version (`bump-minor-pre-major`), so 1.0.0 never happens by
+accident. To release 1.0.0, push an empty commit to `main` with a `Release-As` footer, and Release
+Please opens a release pull request for that version:
+
+```bash
+git commit --allow-empty -m "chore: release 1.0.0" -m "Release-As: 1.0.0"
+```
+
+Tags are `v0.1.0`, `v0.2.0` and so on, without the package name (`include-component-in-tag`). The
+workflow leaves out the action's `release-type` input on purpose: with it set, the action ignores
+both files.
+
+### Docker image
+
+Every release also publishes the Docker image (`.github/workflows/docker.yml`, built from the
+`Dockerfile`; see [Docker](deploying.md#docker)) to Docker Hub as `bastolen/adiutor` and to GitHub's
+container registry as `ghcr.io/bastolen/adiutor`. Release Please publishes releases with its app's
+token, so they start this workflow (events made with the built-in token don't start workflows).
+
+- **Platforms:** `linux/amd64` and `linux/arm64`. GitHub's free runners for private repositories
+  are amd64, so the arm64 half is built under emulation and a release build takes a while (up to
+  about 25 minutes).
+- **Tags:** the version (`0.1.0`), its minor line (`0.1`, which moves to `0.1.1` when that's out)
+  and `latest`. There's no `0` tag while Adiutor is below 1.0.0, since a new minor can break things.
+- **What's attached:** build provenance and an SBOM (the list of what's in the image), and the
+  standard labels (source, version, commit).
+- **Pull requests** don't build the image; build it locally after changing the `Dockerfile`, the
+  dependencies or the build.
+
+To set it up once, before the first release:
+
+1. On Docker Hub, create an access token (Account settings → Personal access tokens) with **Read &
+   Write** access to `bastolen/adiutor`.
+2. In this repository's Settings → Secrets and variables → Actions, add the variable
+   `DOCKERHUB_USERNAME` (your Docker Hub username) and the secret `DOCKERHUB_TOKEN` (the token).
+
+Without them the workflow fails, rather than finishing a release without an image. GitHub's registry
+needs no setup: the workflow pushes with its own token.
+
+To publish a release again (after a failed push, say), run the workflow by hand: Actions → Docker
+image → Run workflow, with the release's tag (`v0.1.0`). That doesn't move `latest`.
+
+**Visibility:** both images are private while the repository is. The Docker Hub repository's
+visibility is set on Docker Hub. GitHub's package is linked to this repository (through the image's
+source label), so it gets the repository's access, but its visibility is a separate setting that
+GitHub doesn't keep in step: when you make the repository public, also make the package public (the
+package's settings → Change visibility).
 
 ## Dependency updates
 

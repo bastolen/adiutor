@@ -1,0 +1,48 @@
+# What `docker build` leaves out of the image. Docker never reads .gitignore, and without this
+# file it would send this whole folder to the build and `COPY . .` would copy all of it: your
+# node_modules (built for your machine, over the image's own install), the database files in
+# docker/ and your .env with its secrets, into a layer anyone with the image can read. So this
+# follows .gitignore, plus git's own folder; keep the two in step.
+
+# Git and the editor
+.git
+.github
+.vscode
+.husky/_
+
+# Dependencies and builds (the image installs and builds its own)
+node_modules
+.pnp
+.pnp.*
+.next
+out
+build
+*.tsbuildinfo
+next-env.d.ts
+
+# Secrets and local configuration
+.env*
+*.pem
+
+# Local database files
+docker
+
+# Test output
+coverage
+.vitest
+test-results
+playwright-report
+blob-report
+playwright/.cache
+e2e/.outbox
+
+# Logs and system files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.DS_Store
+
+# Personal notes and local files
+.personal
+.local

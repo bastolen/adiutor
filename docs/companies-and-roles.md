@@ -59,7 +59,7 @@ Admins and Managers who aren't members can still add themselves with any role, a
   every service behind a server action, and the page loaders that check roles, on their own
   company, another company, the staff and another user, down to the kind of refusal.
 - **Protected by default:** `src/proxy.ts` sends signed-out visitors of every page to `/auth`, except
-  the public `/auth`, `/invite`, `/join`, `/setup` and `/api/auth` paths. Pages and server actions still check
+  the public `/auth`, `/invite`, `/join`, `/setup` and `/api/auth` paths and the health check (`/api/health`). Pages and server actions still check
   the session and permissions on the server through `src/server/authz.ts`. Someone without the
   permission gets the 404 page, titled "Not found · Adiutor" like it, so the browser tab doesn't
   name the page they may not see (see "Page titles" in [Design](design.md)).

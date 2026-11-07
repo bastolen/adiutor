@@ -17,6 +17,19 @@ The linters and formatters, the JSDoc rule, the editor setup and the Git hooks. 
   (`@eslint-community/eslint-plugin-eslint-comments`); `pnpm lint:fix` removes those. `pnpm lint`
   fails on warnings as well as errors (`--max-warnings=0`, also in the pre-commit hook). In `e2e/`
   it also refuses fixed waits (`waitForTimeout`; see [Testing](testing.md)).
+- **Rules from `CLAUDE.md` that ESLint checks** (`restrictedImportsConfig` and `claudeRulesConfig`
+  in `eslint.config.mjs`), so a review doesn't have to:
+  - fixed colours (`bg-white`, `text-ink`, ...) and text lightened with opacity (`text-foreground/70`)
+    in `src/app` and `src/components`; a font size with a line height (`text-sm/6`) is fine;
+  - `useActionState`, outside `useTransientActionState` (`src/components/ui/use-transient-state.ts`);
+  - `test` and `expect` imported from `@playwright/test` in a spec, instead of `e2e/support/test.ts`;
+  - a provider ID (`'github'`, `'google'`) outside the files that declare the providers;
+  - a role compared with a string (`role === 'admin'`) in a page or component;
+  - `process.env` in `src/`, outside `src/lib/env.ts` and `src/lib/env-schema.ts`.
+
+  A deliberate exception, like the brand panel's fixed colours, gets an `eslint-disable` comment with
+  its reason. `window.confirm` was already refused (Airbnb's `no-alert`).
+
 - **TypeScript** runs `strict` with `noUncheckedIndexedAccess`, so `list[0]` and `map.get(key)`
   may be `undefined` until checked. ESLint refuses `any` and non-null assertions (`value!`): check
   the value, or use `defined(value, 'what')` and `firstRow(rows, 'what')` (`src/lib/defined.ts`),
@@ -69,7 +82,10 @@ The linters and formatters, the JSDoc rule, the editor setup and the Git hooks. 
 Opening the project in VS Code prompts you to install the recommended extensions
 (`.vscode/extensions.json`): ESLint, Prettier, Stylelint, Tailwind CSS IntelliSense,
 EditorConfig, Vitest and Playwright Test. The shared settings (`.vscode/settings.json`) format on save with Prettier, apply
-ESLint and Stylelint fixes on save, and use the project's TypeScript version.
+ESLint and Stylelint fixes on save, and use the project's TypeScript version. Debug configurations
+for the server, the browser, scripts, email previews and every kind of test are in
+`.vscode/launch.json`, with the task they start first in `.vscode/tasks.json`: see
+[Debugging in VS Code](development.md#debugging-in-vs-code).
 
 ## Git hooks
 

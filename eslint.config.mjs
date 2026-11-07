@@ -330,21 +330,190 @@ const FOLDER_MODULES = [
  * never a file inside the folder, by `@/` path or a relative one. Files
  * inside import each other as `./file`, which this leaves alone.
  */
-const moduleBoundariesConfig = [
+const folderModulePatterns = [
   {
-    name: 'adiutor/module-boundaries',
+    regex: `^(@/(${FOLDER_MODULES.join('|')})|(\\.{1,2}/)+(.*/)?(${FOLDER_MODULES.map((module) =>
+      module.split('/').pop(),
+    ).join('|')}))/.+`,
+    message:
+      'Import the module itself (its index.ts is the public API), not a file inside its folder.',
+  },
+];
+
+/**
+ * Forms use `useTransientActionState` (CLAUDE.md, "UI and accessibility"):
+ * `useActionState` alone keeps an old result on screen when someone comes back
+ * to a page that `<Activity>` kept alive.
+ */
+const useActionStatePath = {
+  name: 'react',
+  importNames: ['useActionState'],
+  message:
+    'Use `useTransientActionState` (src/components/ui/use-transient-state.ts), so a result is gone when someone comes back to the page.',
+};
+
+/**
+ * Specs import `test` and `expect` from `e2e/support/test.ts` (CLAUDE.md, "UI
+ * and accessibility"), which fails a test on the CSP violations its pages
+ * report. Types still come from `@playwright/test`.
+ */
+const playwrightTestPath = {
+  name: '@playwright/test',
+  importNames: ['test', 'expect'],
+  message:
+    'Import `test` and `expect` from `./support/test` (e2e/support/test.ts), which fails on CSP violations.',
+};
+
+/**
+ * `no-restricted-imports`, built from the lists above. ESLint keeps only the
+ * last setting of a rule for a file, so each block repeats every list that
+ * applies to its files instead of adding to an earlier one.
+ */
+const restrictedImportsConfig = [
+  {
+    name: 'adiutor/restricted-imports',
     files: ['**/*.{ts,tsx,mts,cts}'],
     rules: {
       'no-restricted-imports': [
         'error',
+        { patterns: folderModulePatterns, paths: [useActionStatePath] },
+      ],
+    },
+  },
+  {
+    name: 'adiutor/restricted-imports/transient-state',
+    files: ['src/components/ui/use-transient-state.ts'],
+    rules: {
+      /** The wrapper itself is built on `useActionState`. */
+      'no-restricted-imports': ['error', { patterns: folderModulePatterns }],
+    },
+  },
+  {
+    name: 'adiutor/restricted-imports/e2e-specs',
+    files: ['e2e/**/*.spec.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: folderModulePatterns, paths: [useActionStatePath, playwrightTestPath] },
+      ],
+    },
+  },
+];
+
+/** Unit, integration and component tests, and their shared helpers. */
+const TEST_FILES = ['**/*.test.{ts,tsx}', '**/test-helpers.ts'];
+
+/**
+ * Provider IDs are never compared inline (CLAUDE.md, "Authentication and
+ * permissions"): `isMfaProvider`, the configured lists and `PROVIDER_LABELS`
+ * say which providers exist. A string `'github'` or `'google'` outside the
+ * files that declare the providers is such a comparison. Types (`'github'` in
+ * a type) are left alone.
+ */
+const providerIdSyntax = {
+  selector: ':not(TSLiteralType) > Literal[value=/^(github|google)$/]',
+  message:
+    'Use the provider lists and helpers in src/lib/sign-in/oauth-providers.ts (isMfaProvider, PROVIDER_LABELS, ...) instead of a provider ID.',
+};
+
+/**
+ * Pages and components never compare roles inline (CLAUDE.md, "Authentication
+ * and permissions"): permissions come from `src/lib/authz` and
+ * `src/server/authz.ts`. Catches `role === 'admin'` and `x.platformRole !==
+ * 'support'`, either way round; a check against `null` is left alone.
+ */
+const roleComparisonSyntax = [
+  {
+    selector:
+      'BinaryExpression[operator=/^[!=]==$/]:matches([left.name=/[Rr]ole$/], [left.property.name=/[Rr]ole$/])[right.raw=/^[\'"`]/]',
+    message: 'Check a permission (src/lib/authz, src/server/authz.ts) instead of comparing a role.',
+  },
+  {
+    selector:
+      'BinaryExpression[operator=/^[!=]==$/]:matches([right.name=/[Rr]ole$/], [right.property.name=/[Rr]ole$/])[left.raw=/^[\'"`]/]',
+    message: 'Check a permission (src/lib/authz, src/server/authz.ts) instead of comparing a role.',
+  },
+];
+
+/**
+ * The rules from CLAUDE.md that ESLint can check, each block saying which.
+ * Like `no-restricted-imports`, `no-restricted-syntax` and
+ * `no-restricted-properties` keep only their last setting per file, so the
+ * blocks repeat Airbnb's own entries.
+ */
+const claudeRulesConfig = [
+  {
+    name: 'adiutor/claude-rules/provider-ids',
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: [
+      ...TEST_FILES,
+      'src/lib/sign-in/oauth-providers.ts',
+      'src/lib/sign-in/providers.ts',
+      'src/server/auth/provider-mfa.ts',
+    ],
+    rules: {
+      'no-restricted-syntax': ['error', ...airbnbRestrictedSyntaxWithoutForOf, providerIdSyntax],
+    },
+  },
+  {
+    name: 'adiutor/claude-rules/roles-in-ui',
+    files: ['src/app/**/*.{ts,tsx}', 'src/components/**/*.{ts,tsx}'],
+    ignores: TEST_FILES,
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        ...airbnbRestrictedSyntaxWithoutForOf,
+        providerIdSyntax,
+        ...roleComparisonSyntax,
+      ],
+    },
+  },
+  {
+    /**
+     * Configuration is read through `env` (src/lib/env.ts), validated once at
+     * startup, never from `process.env` directly.
+     */
+    name: 'adiutor/claude-rules/env',
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: [...TEST_FILES, 'src/lib/env.ts', 'src/lib/env-schema.ts'],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        ...airbnbRestrictedProperties,
         {
-          patterns: [
+          object: 'process',
+          property: 'env',
+          message:
+            'Import `env` from src/lib/env.ts, which validates the configuration once at startup.',
+        },
+      ],
+    },
+  },
+  {
+    /**
+     * Semantic colours (CLAUDE.md, "UI and accessibility" and "Dark mode"):
+     * never a fixed `white`, `black` or `ink`, and never text lightened with
+     * opacity (`text-foreground/70`), which fails contrast in one of the modes.
+     * A font size with a line height (`text-sm/6`) is fine.
+     */
+    name: 'adiutor/claude-rules/colours',
+    files: ['src/app/**/*.{ts,tsx}', 'src/components/**/*.{ts,tsx}'],
+    ignores: TEST_FILES,
+    rules: {
+      'better-tailwindcss/no-restricted-classes': [
+        'error',
+        {
+          restrict: [
             {
-              regex: `^(@/(${FOLDER_MODULES.join('|')})|(\\.{1,2}/)+(.*/)?(${FOLDER_MODULES.map(
-                (module) => module.split('/').pop(),
-              ).join('|')}))/.+`,
+              pattern:
+                '^(?:.*:)?(?:bg|text|border|ring|outline|fill|stroke|divide|from|via|to|shadow|decoration|caret|accent|placeholder)-(?:white|black|ink)(?:\\/\\d+)?$',
               message:
-                'Import the module itself (its index.ts is the public API), not a file inside its folder.',
+                'Use a semantic colour (background, surface, foreground, highlight, ...) that works in light and dark mode.',
+            },
+            {
+              pattern: '^(?:.*:)?text-(?!(?:xs|sm|base|lg|[0-9]*xl)\\/)[a-z]+(?:-[a-z]+)*\\/\\d+$',
+              message:
+                'Never lighten text with opacity; use `text-muted-foreground` or another semantic colour.',
             },
           ],
         },
@@ -365,5 +534,6 @@ export default defineConfig([
   ...disableCommentsConfig,
   ...prettierConfig,
   ...bracesConfig,
-  ...moduleBoundariesConfig,
+  ...restrictedImportsConfig,
+  ...claudeRulesConfig,
 ]);

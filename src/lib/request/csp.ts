@@ -35,6 +35,7 @@ export function createNonce(): string {
  */
 export function contentSecurityPolicy(
   nonce: string,
+  // eslint-disable-next-line no-restricted-properties -- The proxy builds this on every request without the app's configuration; Next.js replaces NODE_ENV at build time.
   isDevelopment = process.env.NODE_ENV === 'development',
 ): string {
   return [

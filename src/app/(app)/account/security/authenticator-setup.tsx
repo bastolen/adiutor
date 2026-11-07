@@ -169,6 +169,7 @@ function AuthenticatorSteps({
                   alt="QR code to add Adiutor to your authenticator app"
                   width={192}
                   height={192}
+                  // eslint-disable-next-line better-tailwindcss/no-restricted-classes -- A QR code needs a white background to scan, in dark mode too.
                   className="mt-2 rounded-lg border border-border bg-white p-2"
                 />
               )}
