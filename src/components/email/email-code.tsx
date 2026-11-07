@@ -1,0 +1,52 @@
+/**
+ * @file A one-time code in emails, shown large in a soft box so it's easy to
+ * read and type over.
+ */
+import { Section, Text } from 'react-email';
+
+import { colors, monoFontFamily } from './theme';
+
+/**
+ * Props for {@link EmailCode}.
+ */
+interface EmailCodeProps {
+  /** The code, e.g. "482915". */
+  code: string;
+}
+
+/**
+ * The code centred in a bordered box on the email's background colour, in
+ * large, widely spaced monospace digits.
+ *
+ * @param props - Code props.
+ * @param props.code - The code.
+ * @returns The code block.
+ */
+export default function EmailCode({ code }: EmailCodeProps) {
+  return (
+    <Section
+      style={{
+        margin: '0 0 24px',
+        padding: '16px',
+        backgroundColor: colors.background,
+        border: `1px solid ${colors.border}`,
+        borderRadius: '8px',
+        textAlign: 'center',
+      }}
+    >
+      <Text
+        style={{
+          margin: 0,
+          color: colors.foreground,
+          fontFamily: monoFontFamily,
+          fontSize: '32px',
+          fontWeight: 700,
+          letterSpacing: '0.3em',
+          lineHeight: '40px',
+        }}
+      >
+        {code}
+      </Text>
+    </Section>
+  );
+}

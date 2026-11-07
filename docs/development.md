@@ -1,7 +1,8 @@
 # Local development
 
 Running Adiutor on your machine after the [quick start](../README.md#quick-start): the first run,
-migrations, test data, starting over, and every script. Back to the [documentation](README.md).
+migrations, test data, starting over, debugging, and every script. Back to the
+[documentation](README.md).
 
 ## First run
 
@@ -56,6 +57,34 @@ Google. To sign in with your own provider account, add `--admin-mail` with its v
 no password. Sign in as it with an email link (it arrives in Mailpit) or with GitHub or Google. It
 starts without MFA, so unless your GitHub account has two-factor authentication on, the Security
 page asks you to set it up, as for any staff Admin.
+
+## Debugging in VS Code
+
+Open the Run and Debug panel (⇧⌘D, or Ctrl+Shift+D), choose a configuration and press F5. They're in
+`.vscode/launch.json` and run on VS Code's built-in JavaScript debugger, so they need no extra
+extension.
+
+| Configuration                    | What it reaches                                                                                               | Starts PostgreSQL and Mailpit first |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `App: server and browser`        | The whole app: runs `pnpm dev`, then opens Chrome with the debugger attached once it's ready                  | Yes                                 |
+| `App: server`                    | Server Components, Server Actions, route handlers, `proxy`, `instrumentation` and services                    | Yes                                 |
+| `App: browser`                   | Client components in Chrome, against a server that's already running                                          | No                                  |
+| `App: attach to running server`  | A server you started yourself with `pnpm dev --inspect`                                                       | No                                  |
+| `Script: current file`           | The open file in `scripts/`, with the arguments you type (`seed-dev.ts` still refuses to run without `--yes`) | Yes                                 |
+| `Emails: preview`                | The templates in `src/emails/`, as `pnpm email:dev` previews them                                             | No                                  |
+| `Unit test: current file`        | The open `*.test.ts(x)` file, without a time limit                                                            | No                                  |
+| `Integration test: current file` | The open `*.int.test.ts` file, against the test database, without a time limit                                | Yes                                 |
+| `E2E test: current spec`         | The open spec in `e2e/` and its helpers, with a visible browser and no time limit                             | Yes                                 |
+
+Two things can look like a problem but aren't:
+
+- **A breakpoint on a line with JSX stops many times.** In a Server Component it stopped about 19
+  times per page load when we measured it: once for the real render, which has
+  `renderFunctionComponent` in its call stack, and the rest for React rebuilding stack traces, most
+  of them in the `[worker 1]` thread where Next.js validates the page. Email previews repeat the
+  same way.
+- **A breakpoint on the `NEXT_RUNTIME` check in `src/instrumentation.ts` never stops**, because
+  Next.js compiles that condition away. Put it on a line inside the block.
 
 ## Scripts
 

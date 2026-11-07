@@ -1,0 +1,145 @@
+/**
+ * Debug configurations: open the Run and Debug panel (⇧⌘D, or Ctrl+Shift+D),
+ * choose one and press F5. VS Code's built-in JavaScript debugger runs them all,
+ * so they need no extra extension. Together they reach everywhere code runs in
+ * this project: the server, the browser, `scripts/`, email previews and all three
+ * kinds of tests.
+ * Stepping skips Node's internals and `node_modules`, which also keeps "Caught
+ * Exceptions" from stopping at the errors Next.js throws for `redirect()` and
+ * `notFound()`. In the server's configurations, `runtimeSourcemapPausePatterns`
+ * pauses at each of Next's compiled files until its breakpoints are set; without
+ * it, code that runs as soon as it loads (like `register()` in
+ * `src/instrumentation.ts`) is already done by then. See "Debugging in VS Code"
+ * in docs/development.md.
+ */
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      /** The whole app: runs `pnpm dev`, then opens Chrome with the debugger attached once it's ready. */
+      "name": "App: server and browser",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "pnpm dev",
+      "preLaunchTask": "Start services",
+      "runtimeSourcemapPausePatterns": ["${workspaceFolder}/.next/dev/server/**/*.js"],
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "serverReadyAction": {
+        "action": "debugWithChrome",
+        "pattern": "- Local:.+(https?://\\S+)",
+        "uriFormat": "%s",
+        "webRoot": "${workspaceFolder}",
+        "killOnServerStop": true
+      },
+      "presentation": { "group": "1. App", "order": 1 }
+    },
+    {
+      /** Server Components, Server Actions, route handlers, `proxy`, `instrumentation` and services. */
+      "name": "App: server",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "pnpm dev",
+      "preLaunchTask": "Start services",
+      "runtimeSourcemapPausePatterns": ["${workspaceFolder}/.next/dev/server/**/*.js"],
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "presentation": { "group": "1. App", "order": 2 }
+    },
+    {
+      /** Client components in Chrome, against a server that's already running. */
+      "name": "App: browser",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}",
+      "skipFiles": ["**/node_modules/**"],
+      "presentation": { "group": "1. App", "order": 3 }
+    },
+    {
+      /** A server you started yourself in a terminal with `pnpm dev --inspect`. */
+      "name": "App: attach to running server",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "restart": true,
+      "runtimeSourcemapPausePatterns": ["${workspaceFolder}/.next/dev/server/**/*.js"],
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "presentation": { "group": "1. App", "order": 4 }
+    },
+    {
+      /**
+       * The open file in `scripts/`, run the way package.json runs them, with the
+       * arguments you type. `seed-dev.ts` still refuses to run without `--yes`.
+       */
+      "name": "Script: current file",
+      "type": "node",
+      "request": "launch",
+      "program": "${file}",
+      "args": "${input:scriptArguments}",
+      "runtimeArgs": ["--env-file-if-exists=.env", "--import", "tsx"],
+      "console": "integratedTerminal",
+      "preLaunchTask": "Start services",
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "presentation": { "group": "2. Scripts and emails", "order": 1 }
+    },
+    {
+      /** The email templates in `src/emails/`, as `pnpm email:dev` previews them at http://localhost:3001. */
+      "name": "Emails: preview",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "pnpm email:dev",
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "presentation": { "group": "2. Scripts and emails", "order": 2 }
+    },
+    {
+      /** The open `*.test.ts(x)` file. Without a time limit, so a test can wait at a breakpoint. */
+      "name": "Unit test: current file",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
+      "args": ["run", "--project", "unit", "--testTimeout=0", "--hookTimeout=0", "${relativeFile}"],
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "presentation": { "group": "3. Tests", "order": 1 }
+    },
+    {
+      /** The open `*.int.test.ts` file, against the test database. Without a time limit, too. */
+      "name": "Integration test: current file",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
+      "args": [
+        "run",
+        "--project",
+        "integration",
+        "--testTimeout=0",
+        "--hookTimeout=0",
+        "${relativeFile}"
+      ],
+      "console": "integratedTerminal",
+      "preLaunchTask": "Start services",
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "presentation": { "group": "3. Tests", "order": 2 }
+    },
+    {
+      /** The open spec in `e2e/` and its helpers, with a visible browser and no time limit. */
+      "name": "E2E test: current spec",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/@playwright/test/cli.js",
+      "args": ["test", "--headed", "--timeout=0", "${relativeFile}"],
+      "console": "integratedTerminal",
+      "preLaunchTask": "Start services",
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "presentation": { "group": "3. Tests", "order": 3 }
+    }
+  ],
+  "inputs": [
+    {
+      /** What "Script: current file" passes on to the script. */
+      "id": "scriptArguments",
+      "type": "promptString",
+      "description": "Arguments for the script (leave empty for none)",
+      "default": ""
+    }
+  ]
+}

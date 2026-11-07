@@ -1,0 +1,275 @@
+/**
+ * @file Limits on attempts: wrong passwords per address, wrong step-up codes per
+ * user and emailed codes per address or user, counted before the check and
+ * settled by the reactions after the request.
+ */
+import { APIError } from 'better-auth/api';
+
+import { db } from '@/db';
+import { EMAIL_CODE_RESEND_SECONDS } from '@/lib/authz/mfa';
+import { EMAIL_CODE_SENT_RECENTLY, TOO_MANY_ATTEMPTS } from '@/lib/sign-in/sign-in-refusals';
+
+import {
+  failedSignInsKey,
+  formatWait,
+  hitRateLimit,
+  type RateLimitRule,
+  releaseRateLimitHit,
+  resetRateLimit,
+  tooManyAttemptsMessage,
+} from '../../rate-limit';
+import { requestState, takeRequestState } from '../request-state';
+import type { AuthGuardContext } from './paths';
+
+/** The limits applied here. */
+export const AUTH_GUARD_LIMITS = {
+  /** Wrong passwords per email address. */
+  failedSignInsPerEmail: { limit: 10, windowSeconds: 15 * 60 },
+  /** Email links and password reset emails per email address. */
+  emailsPerAddress: { limit: 5, windowSeconds: 60 * 60 },
+  /** Wrong codes when confirming a signed-in session, per user. */
+  failedStepUpsPerUser: { limit: 5, windowSeconds: 15 * 60 },
+  /** Email codes sent, per user (not counting setting up email codes). */
+  emailCodesPerUser: { limit: 5, windowSeconds: 15 * 60 },
+  /**
+   * One emailed code per user per half a code's lifetime, setting up
+   * included: a new one can't be asked for while the last still works for a
+   * while. Using a code ends the wait (`endEmailCodeCooldown`).
+   */
+  emailCodeCooldown: { limit: 1, windowSeconds: EMAIL_CODE_RESEND_SECONDS },
+} as const satisfies Record<string, RateLimitRule>;
+
+/**
+ * Rate limit keys. Other modules settle failures through `settlePasswordAttempt` and
+ * `settleStepUpAttempt` (and lift a pause with `clearFailedSignIns`) rather than using the keys
+ * directly.
+ */
+const KEYS = {
+  /**
+   * Wrong passwords for an address.
+   *
+   * @param email - The lower-cased address.
+   * @returns The key.
+   */
+  failedSignIns: failedSignInsKey,
+  /**
+   * Wrong step-up codes of a user.
+   *
+   * @param userId - The user.
+   * @returns The key.
+   */
+  failedStepUps: (userId: string) => `step-up-failed:user:${userId}`,
+  /**
+   * Email codes sent to a user.
+   *
+   * @param userId - The user.
+   * @returns The key.
+   */
+  emailCodes: (userId: string) => `email-code:user:${userId}`,
+  /**
+   * The wait before a user may ask for another emailed code.
+   *
+   * @param userId - The user.
+   * @returns The key.
+   */
+  emailCodeCooldown: (userId: string) => `email-code-cooldown:user:${userId}`,
+};
+
+/**
+ * Refuses a request for a used-up limit.
+ *
+ * @param retryAfterSeconds - When the window resets.
+ * @throws {APIError} `TOO_MANY_REQUESTS` with code `TOO_MANY_ATTEMPTS`.
+ */
+function tooManyAttempts(retryAfterSeconds: number): never {
+  throw new APIError('TOO_MANY_REQUESTS', {
+    message: tooManyAttemptsMessage(retryAfterSeconds),
+    code: TOO_MANY_ATTEMPTS.code,
+  });
+}
+
+/**
+ * Counts a hit and refuses the request when the limit is reached (for
+ * requests that send an email, which count whether or not they succeed).
+ *
+ * @param key - What's limited.
+ * @param rule - The limit.
+ * @throws {APIError} `TOO_MANY_REQUESTS` with code `TOO_MANY_ATTEMPTS`.
+ */
+export async function limit(key: string, rule: RateLimitRule): Promise<void> {
+  const { allowed, retryAfterSeconds } = await hitRateLimit({ db }, key, rule);
+  if (!allowed) {
+    tooManyAttempts(retryAfterSeconds);
+  }
+}
+
+/**
+ * Lets an emailed code through only once the wait since the user's last one
+ * is over (`EMAIL_CODE_RESEND_SECONDS`), and counts it towards their limit
+ * unless they're setting up email codes. The wait comes first, so a refused
+ * request doesn't use up one of the codes.
+ *
+ * @param userId - Who the code is for.
+ * @param counted - Whether it counts towards the user's limit of email codes.
+ * @throws {APIError} `TOO_MANY_REQUESTS`: `EMAIL_CODE_SENT_RECENTLY` within the wait,
+ *   `TOO_MANY_ATTEMPTS` past the limit.
+ */
+export async function limitEmailCode(userId: string, counted: boolean): Promise<void> {
+  const { allowed } = await hitRateLimit(
+    { db },
+    KEYS.emailCodeCooldown(userId),
+    AUTH_GUARD_LIMITS.emailCodeCooldown,
+  );
+  if (!allowed) {
+    throw new APIError('TOO_MANY_REQUESTS', { ...EMAIL_CODE_SENT_RECENTLY });
+  }
+  if (counted) {
+    await limit(KEYS.emailCodes(userId), AUTH_GUARD_LIMITS.emailCodesPerUser);
+  }
+}
+
+/**
+ * Ends the wait for a new emailed code once a code was used (the after hook,
+ * for a code Better Auth accepted): the wait is there so no one asks for
+ * codes while one is still out, and a used code isn't.
+ *
+ * @param userId - Whose code was used.
+ */
+export async function endEmailCodeCooldown(userId: string): Promise<void> {
+  await resetRateLimit(db, KEYS.emailCodeCooldown(userId));
+}
+
+/**
+ * An email address as the limits key it: trimmed and lower-cased.
+ *
+ * @param value - The address as sent, if any.
+ * @returns The address, or `null` without one.
+ */
+export function normalizeEmail(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null;
+}
+
+/**
+ * Counts a wrong password for an address, for a failed sign-in that took no
+ * attempt beforehand (and for tests).
+ *
+ * @param email - The address, as typed.
+ * @returns Whether this one paused password sign-in for the address.
+ */
+export async function countFailedSignIn(email: string): Promise<boolean> {
+  const { hits } = await hitRateLimit(
+    { db },
+    KEYS.failedSignIns(email),
+    AUTH_GUARD_LIMITS.failedSignInsPerEmail,
+  );
+  return hits === AUTH_GUARD_LIMITS.failedSignInsPerEmail.limit;
+}
+
+/**
+ * Takes one of an address's wrong-password attempts before its password is
+ * checked, so requests sent at the same moment can't all get past the limit
+ * (one atomic count, not a check and a later count). Refuses the sign-in once
+ * they're used up: the message is the same for every address, whether or not
+ * it has an account, and points to the ways in that still work.
+ *
+ * @param ctx - The endpoint context.
+ * @param email - The normalized address.
+ * @throws {APIError} `TOO_MANY_REQUESTS` with code `PASSWORD_SIGN_IN_PAUSED`.
+ */
+export async function reservePasswordAttempt(ctx: AuthGuardContext, email: string): Promise<void> {
+  const rule = AUTH_GUARD_LIMITS.failedSignInsPerEmail;
+  const { hits, retryAfterSeconds } = await hitRateLimit({ db }, KEYS.failedSignIns(email), rule);
+  if (hits > rule.limit) {
+    throw new APIError('TOO_MANY_REQUESTS', {
+      message: `Password sign-in for this address is paused for ${formatWait(retryAfterSeconds)} after too many wrong passwords. Sign in with an email link or a passkey, or reset your password to lift the pause.`,
+      code: 'PASSWORD_SIGN_IN_PAUSED',
+    });
+  }
+  requestState(ctx.context).reservedPasswordAttempt = { email, hits };
+}
+
+/**
+ * Settles the attempt a password sign-in took (called after it): a wrong
+ * password keeps it, anything else (the right password, or a request Better
+ * Auth refused before checking one) gives it back. Without one taken (it
+ * shouldn't happen), a wrong password is counted now.
+ *
+ * @param ctx - The endpoint context (its `context` is shared with the checks before).
+ * @param ctx.context - Better Auth's request state.
+ * @param email - The normalized address, if any.
+ * @param wrongPassword - Whether Better Auth refused the email and password.
+ * @returns Whether this sign-in paused password sign-in for the address:
+ *   once per window, as sign-ins refused while paused never get that far.
+ */
+export async function settlePasswordAttempt(
+  ctx: { context: object },
+  email: string | null,
+  wrongPassword: boolean,
+): Promise<boolean> {
+  const reserved = takeRequestState(ctx.context, 'reservedPasswordAttempt');
+  if (!reserved) {
+    return wrongPassword && email ? countFailedSignIn(email) : false;
+  }
+  if (wrongPassword) {
+    return reserved.hits === AUTH_GUARD_LIMITS.failedSignInsPerEmail.limit;
+  }
+  await releaseRateLimitHit({ db }, KEYS.failedSignIns(reserved.email));
+  return false;
+}
+
+/**
+ * Counts a wrong code on the step-up page, for a failed check that took no
+ * attempt beforehand (codes entered while setting up two-step verification).
+ *
+ * @param userId - The user.
+ */
+async function countFailedStepUp(userId: string): Promise<void> {
+  await hitRateLimit({ db }, KEYS.failedStepUps(userId), AUTH_GUARD_LIMITS.failedStepUpsPerUser);
+}
+
+/**
+ * Takes one of a user's wrong-code attempts on the step-up page before the
+ * code is checked (one atomic count), so codes sent at the same moment can't
+ * all get past the limit. Refuses the check once they're used up.
+ *
+ * @param ctx - The endpoint context.
+ * @param userId - The signed-in user.
+ * @throws {APIError} `TOO_MANY_REQUESTS` with code `TOO_MANY_ATTEMPTS`.
+ */
+export async function reserveStepUpAttempt(ctx: AuthGuardContext, userId: string): Promise<void> {
+  const rule = AUTH_GUARD_LIMITS.failedStepUpsPerUser;
+  const { hits, retryAfterSeconds } = await hitRateLimit({ db }, KEYS.failedStepUps(userId), rule);
+  if (hits > rule.limit) {
+    tooManyAttempts(retryAfterSeconds);
+  }
+  requestState(ctx.context).reservedStepUpAttempt = userId;
+}
+
+/**
+ * Settles the attempt a step-up code check took (called after it): a wrong
+ * code keeps it; anything else gives it back (a right code, or a request
+ * Better Auth refused without comparing a code, such as an expired email
+ * code). A wrong code that took none (setting up two-step verification) is
+ * counted now.
+ *
+ * @param ctx - The endpoint context (its `context` is shared with the checks before).
+ * @param ctx.context - Better Auth's request state.
+ * @param userId - The signed-in user.
+ * @param wrongCode - Whether Better Auth refused the code as wrong (401).
+ */
+export async function settleStepUpAttempt(
+  ctx: { context: object },
+  userId: string,
+  wrongCode: boolean,
+): Promise<void> {
+  const reserved = takeRequestState(ctx.context, 'reservedStepUpAttempt');
+  if (!reserved) {
+    if (wrongCode) {
+      await countFailedStepUp(userId);
+    }
+    return;
+  }
+  if (!wrongCode) {
+    await releaseRateLimitHit({ db }, KEYS.failedStepUps(reserved));
+  }
+}
