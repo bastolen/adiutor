@@ -13,10 +13,6 @@ auditConfig:
     # old esbuild 0.18 (through @esbuild-kit) has it, and nothing starts that server. Drops out with
     # drizzle-kit 1.0, which Renovate will propose once it's stable.
     - GHSA-67mh-4wv8-2f99
-    # deepmerge 4.2.0 to 4.3.1 (no fix yet): merging an object with a `__proto__` key poisons the result.
-    # Only html-to-text uses it (through @react-email/render), to merge its own defaults with fixed
-    # options (src/emails/render.ts); email content never goes through it.
-    - GHSA-gcqx-w48m-w2h4
     # glob 9.0.0 to 14.0.1 (cancelling a walk doesn't stop it) and minimatch < 11.0.1 (crafted
     # patterns take very long): only react-email's command-line tool loads glob (`pnpm email:dev`,
     # the local preview server, with fixed patterns); the app's emails import react-email's
