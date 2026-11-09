@@ -42,9 +42,12 @@ a fork can copy the branch name, but not the author.
 **PR titles** (`.github/workflows/pr-title.yml`): a squash merge lands on `main` with the pull
 request's title, and Release Please reads it, but the commit-msg hook never sees it. So every pull
 request's title is checked with the same commitlint rules (`commitlint.config.mjs`) when it's
-opened or edited and on every new commit. Renovate's, Dependabot's and Release Please's titles
-(`chore(deps): …`, `ci(deps): …`, `chore(main): release …`) already pass. Its check, **Conventional
-Commits title**, is the other one protecting `main` requires.
+opened or edited and on every new commit. Renovate's and Release Please's titles
+(`chore(deps): …`, `fix(deps): …`, `chore(main): release …`) already pass. Dependabot's
+(`ci(deps): bump …`) are skipped: Dependabot doesn't let us choose them, its group wording ("… in the
+github-actions group across 1 directory") can run past the 100-character limit, and their `ci` type
+keeps them out of the release notes anyway. Its check, **Conventional Commits title**, is the other
+one protecting `main` requires.
 
 The static checks start by checking that the database schema and the committed migrations agree:
 `pnpm auth:schema` must leave `src/db/schema/auth.ts` unchanged (Better Auth's tables match its

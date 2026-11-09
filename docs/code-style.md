@@ -83,7 +83,8 @@ The linters and formatters, the JSDoc rule, the editor setup and the Git hooks. 
   cover, sharing a `test-helpers.ts` in the folder (see [Testing](testing.md)).
 - **Commit messages** follow [Conventional Commits](https://www.conventionalcommits.org), checked by
   commitlint (`commitlint.config.mjs`) in the commit-msg hook, and pull request titles in CI
-  (`.github/workflows/pr-title.yml`).
+  (`.github/workflows/pr-title.yml`). Dependabot's own titles (`ci(deps): bump …`) are skipped,
+  since they can run past the 100-character limit.
 - **EditorConfig** (`.editorconfig`) gives every editor the same basics: UTF-8, LF line endings,
   2-space indentation and a final newline. `.gitattributes` keeps LF line endings in the repository
   and in every checkout, whatever the contributor's system (images are binary).
