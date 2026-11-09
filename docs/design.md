@@ -79,9 +79,11 @@ keyboard support.
 - **A refused submit keeps the input:** React 19 resets a `<form action>` after every submit,
   whatever the result. Forms pass both the action and the hook's `onSubmit`
   (`<form action={formAction} onSubmit={onSubmit}>`), which runs the action itself and clears the
-  form only after a successful result (`resetOnSuccess`, on by default). A bulk invite that sent
-  some invitations keeps just the addresses that weren't sent. The sign-in
-  pages are the exception to keeping typed input: the sign-in form and the code step keep their
+  form only after a successful result (`resetOnSuccess`, on by default). Forms that edit a saved
+  setting (the staff page's default language) pass `resetOnSuccess: false`: there's nothing to
+  clear, and a cleared `SelectField` goes back to the value it showed when the page loaded (Radix
+  Select restores that on a form reset), not the one just saved. A bulk invite that sent some
+  invitations keeps just the addresses that weren't sent. The sign-in pages are the exception to keeping typed input: the sign-in form and the code step keep their
   fields, busy state and "Trust this device" in `useTransientState` too, because they come back
   after signing out, and the next person on the browser mustn't find the last user's details or a
   button still busy. They also reset a busy button when the browser restores them from its

@@ -3,9 +3,11 @@
  */
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { defined } from '@/lib/defined';
+import { isLocale, type Locale } from '@/lib/i18n/locales';
 
 import { saveDefaultLanguageAction } from './actions';
 import DefaultLanguageForm from './default-language-form';
@@ -44,6 +46,39 @@ describe('DefaultLanguageForm', () => {
     await waitFor(() => expect(saveDefaultLanguageAction).toHaveBeenCalledTimes(1));
     const formData = defined(vi.mocked(saveDefaultLanguageAction).mock.calls[0], 'the call')[1];
     expect(formData.get('defaultLocale')).toBe('nl-NL');
+  });
+
+  it('shows the language just saved, not the one before', async () => {
+    /** Shows a new default on the page, as the action's refresh does. */
+    let showSaved: (locale: Locale) => void = () => {};
+    /**
+     * The staff page's card, re-rendered with the saved default.
+     *
+     * @returns The form.
+     */
+    function Card() {
+      const [saved, setSaved] = useState<Locale>('en-US');
+      showSaved = setSaved;
+      return <DefaultLanguageForm defaultLocale={saved} />;
+    }
+    vi.mocked(saveDefaultLanguageAction).mockImplementation(async (_previous, formData) => {
+      const chosen = formData.get('defaultLocale');
+      if (isLocale(chosen)) {
+        showSaved(chosen);
+      }
+      return { ok: true, message: 'Default language saved.' };
+    });
+    const user = userEvent.setup();
+    renderInLocale('en-US', <Card />);
+
+    await user.click(screen.getByRole('combobox', { name: 'Default language' }));
+    await user.click(screen.getByRole('option', { name: 'Nederlands' }));
+    await user.click(screen.getByRole('button', { name: 'Save default language' }));
+
+    expect(await screen.findByText('Default language saved.')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Default language' })).toHaveTextContent(
+      'Nederlands',
+    );
   });
 
   it('speaks the reader’s language', () => {

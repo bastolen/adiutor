@@ -1,9 +1,11 @@
 /**
  * @file Tests for the select field, including its busy state.
  */
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+
+import { defined } from '@/lib/defined';
 
 import SelectField from './select-field';
 
@@ -83,6 +85,22 @@ describe('SelectField', () => {
 
     expect(onValueChange).toHaveBeenCalledWith('client');
     expect(screen.getByRole('combobox', { name: 'Role' })).toHaveTextContent('Client');
+  });
+
+  it('goes back to the value it started with when its form is reset', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <form>
+        <SelectField label="Role" name="role" options={options} defaultValue="watcher" />
+      </form>,
+    );
+
+    await user.click(screen.getByRole('combobox', { name: 'Role' }));
+    await user.click(screen.getByRole('option', { name: /^Client/ }));
+    act(() => defined(container.querySelector('form'), 'the form').reset());
+
+    // Forms that edit a saved setting therefore aren't cleared after a save (`resetOnSuccess`).
+    expect(screen.getByRole('combobox', { name: 'Role' })).toHaveTextContent('Watcher');
   });
 
   it('stays focusable but closed while busy, and opens again once it is not', async () => {

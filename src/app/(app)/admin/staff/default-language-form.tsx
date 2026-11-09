@@ -17,6 +17,11 @@ import { saveDefaultLanguageAction } from './actions';
  * The default language select with a save button. Saving says so in a toast;
  * errors stay in the form, as alert and toast.
  *
+ * The form isn't cleared after a save (`resetOnSuccess: false`): it edits a
+ * saved setting, so there's nothing to clear, and clearing would put the
+ * select back on the language it showed when the page loaded (Radix Select
+ * restores that on a form reset), not the one just saved.
+ *
  * @param props - Form props.
  * @param props.defaultLocale - Adiutor's default language now.
  * @returns The form.
@@ -26,6 +31,7 @@ export default function DefaultLanguageForm({ defaultLocale }: { defaultLocale: 
   const [result, formAction, pending, onSubmit] = useTransientActionState(
     saveDefaultLanguageAction,
     null,
+    { resetOnSuccess: false },
   );
 
   return (
