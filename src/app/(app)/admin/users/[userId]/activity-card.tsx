@@ -2,8 +2,10 @@
  * @file The "Recent activity" card on the user detail page, for staff who
  * may see the audit log: security events by or about the user, newest first,
  * naming who acted when it was someone else and the company or staff change
- * it was about.
+ * it was about. Text from `admin.user.activity` and the `audit` namespace.
  */
+import { useTranslations } from 'next-intl';
+
 import ActivityList from '@/components/ui/activity-list';
 import Card from '@/components/ui/card';
 import { describeAuditEvent } from '@/lib/audit-actions';
@@ -32,18 +34,16 @@ interface ActivityCardProps {
  * @returns The card.
  */
 export default function ActivityCard({ userId, userName, activity }: ActivityCardProps) {
+  const t = useTranslations('admin.user.activity');
+  const tAudit = useTranslations('audit');
   return (
     <Card
-      title="Recent activity"
-      description={
-        activity.length === 0
-          ? 'Nothing recorded yet.'
-          : 'Security events by or about this user, newest first.'
-      }
+      title={t('title')}
+      description={activity.length === 0 ? t('descriptionNone') : t('descriptionSome')}
     >
       {activity.length > 0 && (
         <ActivityList
-          label={`Recent activity of ${userName}`}
+          label={t('label', { name: userName })}
           items={activity.map((event) => ({
             id: event.id,
             at: event.at,
@@ -51,15 +51,18 @@ export default function ActivityCard({ userId, userName, activity }: ActivityCar
             ip: event.ip,
             description: (
               <>
-                {describeAuditEvent(event.action, event.details)}
+                {tAudit(describeAuditEvent(event.action, event.details))}
                 {event.actor && event.actor.id !== userId && (
-                  <span className="text-muted-foreground"> by {displayName(event.actor)}</span>
+                  <span className="text-muted-foreground">
+                    {' '}
+                    {t('by', { name: displayName(event.actor) })}
+                  </span>
                 )}
                 {event.company && (
                   <span className="text-muted-foreground"> · {event.company.name}</span>
                 )}
                 {!event.company && event.details.staff === true && (
-                  <span className="text-muted-foreground"> · Staff</span>
+                  <span className="text-muted-foreground"> · {t('staff')}</span>
                 )}
               </>
             ),

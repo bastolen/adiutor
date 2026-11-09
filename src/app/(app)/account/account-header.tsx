@@ -2,6 +2,8 @@
  * @file Heading and tabs shown at the top of the account pages, rendered by
  * the account layout (`layout.tsx`), so they stay while the tabs change.
  */
+import { useTranslations } from 'next-intl';
+
 import Avatar from '@/components/ui/avatar';
 import PageHeader from '@/components/ui/page-header';
 import SegmentTabNav from '@/components/ui/segment-tab-nav';
@@ -27,17 +29,18 @@ interface AccountHeaderProps {
  * @returns The header.
  */
 export default function AccountHeader({ name, email }: AccountHeaderProps) {
+  const t = useTranslations('account');
   return (
     <PageHeader
-      title="Account"
-      description="Your profile, sign-in methods and security."
+      title={t('header.title')}
+      description={t('header.description')}
       leading={<Avatar name={displayName({ name, email })} size="lg" />}
     >
       <SegmentTabNav
-        label="Account sections"
+        label={t('header.sections')}
         items={[
-          { href: '/account', label: 'Profile', segment: null },
-          { href: '/account/security', label: 'Security', segment: 'security' },
+          { href: '/account', label: t('header.profile'), segment: null },
+          { href: '/account/security', label: t('header.security'), segment: 'security' },
         ]}
       />
     </PageHeader>

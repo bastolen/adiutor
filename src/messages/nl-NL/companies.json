@@ -1,0 +1,93 @@
+{
+  "companies": {
+    "members": {
+      "title": "Leden",
+      "description": "{count, plural, one {# persoon heeft} other {# mensen hebben}} toegang tot {company}.",
+      "rows": "leden",
+      "caption": "Leden van {company}",
+      "empty": {
+        "title": "Nog geen leden",
+        "inviteDescription": "Nodig mensen uit om te beginnen.",
+        "waitDescription": "Mensen verschijnen hier zodra ze hun uitnodiging accepteren."
+      },
+      "columns": {
+        "name": "Naam",
+        "role": "Rol",
+        "activity": "Activiteit",
+        "actions": "Acties"
+      },
+      "you": "(jij)",
+      "changeOwnRole": {
+        "title": "Je eigen rol wijzigen naar {role}?",
+        "description": "Alleen beheerders beheren de leden van {company}. Een andere beheerder kan je weer beheerder maken.",
+        "confirm": "Mijn rol wijzigen"
+      },
+      "leave": {
+        "label": "Verlaten",
+        "ariaLabel": "{company} verlaten",
+        "title": "{company} verlaten?",
+        "confirm": "Bedrijf verlaten",
+        "description": "Je bent daarna geen lid meer van {company}. Je account blijft bestaan, en de beheerders van het bedrijf kunnen je opnieuw uitnodigen."
+      },
+      "remove": {
+        "label": "Verwijderen",
+        "ariaLabel": "{user} verwijderen",
+        "done": "{user} is verwijderd uit {company}.",
+        "title": "{user} verwijderen?",
+        "confirm": "Lid verwijderen",
+        "description": "Deze persoon verliest de toegang tot {company}. Het account blijft bestaan, en je kunt de persoon later opnieuw uitnodigen."
+      },
+      "invite": {
+        "title": "Uitnodigen per e-mail",
+        "description": "Ze krijgen een e-mail met een link om mee te doen. De link werkt één keer en verloopt na {days, plural, one {# dag} other {# dagen}}."
+      }
+    },
+    "settings": {
+      "title": "Instellingen",
+      "saved": "Opgeslagen.",
+      "details": {
+        "title": "Gegevens",
+        "description": "De naam die in Adiutor wordt getoond, en het adres van de pagina's."
+      },
+      "form": {
+        "name": "Naam",
+        "slug": "URL-naam",
+        "slugDescription": "Kleine letters, cijfers en streepjes. De pagina's van het bedrijf staan op /companies/{slug}; als je dit wijzigt, verandert dat adres en werken links met het oude adres niet meer.",
+        "save": "Wijzigingen opslaan"
+      },
+      "danger": {
+        "title": "Gevarenzone",
+        "deactivatedDescription": "Dit bedrijf is gedeactiveerd. Als je het weer activeert, krijgen de mensen van het bedrijf opnieuw toegang; er is niets verwijderd.",
+        "activeDescription": "De mensen van het bedrijf verliezen de toegang en kunnen geen verzoeken indienen totdat het weer is geactiveerd. Er wordt niets verwijderd.",
+        "reactivate": {
+          "label": "Bedrijf activeren",
+          "title": "{company} weer activeren?",
+          "description": "De mensen van het bedrijf krijgen weer toegang.",
+          "confirm": "Activeren",
+          "done": "Bedrijf geactiveerd."
+        },
+        "deactivate": {
+          "label": "Bedrijf deactiveren",
+          "title": "{company} deactiveren?",
+          "confirm": "Deactiveren",
+          "done": "Bedrijf gedeactiveerd."
+        }
+      }
+    },
+    "titleTemplate": "%s · {company} · Adiutor",
+    "header": {
+      "overview": "Overzicht",
+      "staffAccess": "Toegang als medewerker",
+      "deactivated": "Gedeactiveerd",
+      "sections": "Onderdelen van het bedrijf"
+    },
+    "overview": {
+      "title": "Verzoeken komen eraan",
+      "description": "Straks dien je hier verzoeken in, volg je de voortgang en keur je het werk goed.",
+      "staffDescription": "Verzoeken van {company} verschijnen hier.",
+      "viewOnlyTitle": "Alleen-lezentoegang",
+      "viewOnlyDescription": "Je hebt alleen-lezentoegang tot dit bedrijf. Je kunt hier straks verzoeken volgen.",
+      "deactivated": "Dit bedrijf is gedeactiveerd. De mensen van het bedrijf kunnen Adiutor niet gebruiken totdat het weer is geactiveerd."
+    }
+  }
+}

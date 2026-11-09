@@ -3,26 +3,28 @@
  * own access and lost the page they did it on: stepping down from staff
  * Admin, leaving the staff, leaving a company, or stepping down in one. The
  * actions in `src/app/(app)/_people/` send them there (`withAccessNotice`)
- * instead of to that page's 404, and `AccessNotice` shows the note.
+ * instead of to that page's 404, and `AccessNotice` shows the note
+ * (`common.accessNotice`, since the dashboard and company pages show it).
  */
 
-/** Each note by its code. Only these codes are shown: the address bar is the user's to change. */
-export const ACCESS_NOTICES = {
-  /** A staff Admin gave themselves a lower staff role. */
-  'stepped-down':
-    'You stepped down from staff Admin. Another staff Admin can give you the role back.',
-  /** Someone took themselves off the staff. */
-  'left-staff':
-    'You’re no longer on the staff. Your account stays, and a staff Admin can invite you again.',
-  /** A member removed themselves from a company they can no longer see. */
-  'left-company': 'You left the company. Your account stays, and its Admins can invite you again.',
-  /** A company Admin gave themselves a role that doesn't manage members. */
-  'company-stepped-down':
-    'You’re no longer an Admin of this company, so you don’t manage its members. Another Admin can make you one again.',
-} as const;
+/**
+ * The notice codes, each with a note in `common.accessNotice`:
+ * - `stepped-down`: a staff Admin gave themselves a lower staff role.
+ * - `left-staff`: someone took themselves off the staff.
+ * - `left-company`: a member removed themselves from a company they can no longer see.
+ * - `company-stepped-down`: a company Admin gave themselves a role that doesn't manage members.
+ *
+ * Only these codes are shown: the address bar is the user's to change.
+ */
+export const ACCESS_NOTICE_CODES = [
+  'stepped-down',
+  'left-staff',
+  'left-company',
+  'company-stepped-down',
+] as const;
 
 /** A known notice code. */
-export type AccessNoticeCode = keyof typeof ACCESS_NOTICES;
+export type AccessNoticeCode = (typeof ACCESS_NOTICE_CODES)[number];
 
 /**
  * Builds the address of a page with a notice.
@@ -36,13 +38,11 @@ export function withAccessNotice(path: string, code: AccessNoticeCode): string {
 }
 
 /**
- * Returns the note for a notice code.
+ * Reads a notice code.
  *
  * @param code - The `notice` query parameter, if any.
- * @returns The note, or `null` for none or an unknown code.
+ * @returns The code, or `null` for none or an unknown one.
  */
-export function getAccessNotice(code: string | null | undefined): string | null {
-  return code && Object.hasOwn(ACCESS_NOTICES, code)
-    ? ACCESS_NOTICES[code as AccessNoticeCode]
-    : null;
+export function getAccessNotice(code: string | null | undefined): AccessNoticeCode | null {
+  return ACCESS_NOTICE_CODES.find((known) => known === code) ?? null;
 }

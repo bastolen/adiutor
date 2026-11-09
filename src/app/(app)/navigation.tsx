@@ -1,6 +1,8 @@
 /**
- * @file Loads the signed-in user for the navigation.
+ * @file Loads the signed-in user for the navigation, with its text
+ * (`navigation`).
  */
+import ClientMessages from '@/lib/i18n/client-messages';
 import { getActor, getGlobalPermissions } from '@/server/authz';
 
 import AppNavigation from './app-navigation';
@@ -15,12 +17,14 @@ export default async function Navigation() {
   const actor = await getActor({ allowMissingMfa: true });
   const permissions = getGlobalPermissions(actor);
   return (
-    <AppNavigation
-      name={actor.name}
-      email={actor.email}
-      isStaff={permissions.has('users:view')}
-      canManageStaff={permissions.has('staff:manage')}
-      canViewLogs={permissions.has('audit:view')}
-    />
+    <ClientMessages namespaces={['navigation']}>
+      <AppNavigation
+        name={actor.name}
+        email={actor.email}
+        isStaff={permissions.has('users:view')}
+        canManageStaff={permissions.has('staff:manage')}
+        canViewLogs={permissions.has('audit:view')}
+      />
+    </ClientMessages>
   );
 }

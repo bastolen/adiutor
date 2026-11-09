@@ -7,7 +7,6 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { account, company, invitation, membership, rateLimitBucket, user } from '@/db/schema';
-import { INVITE_LINKS_NOT_ALLOWED } from '@/lib/authz/permissions';
 import { defined, firstRow } from '@/lib/defined';
 
 import { acceptInvitation, acceptInvitationWithNewAccount, getInvitationPreview } from './accept';
@@ -152,7 +151,7 @@ describe('accepting', () => {
     expect(await getInvitationPreview(ctx, linkToken)).toMatchObject({ fromInviteLink: true });
     await expect(acceptInvitation(ctx, linkToken, support)).rejects.toMatchObject({
       code: 'forbidden',
-      message: INVITE_LINKS_NOT_ALLOWED,
+      key: 'errors.inviteLinks.notAllowed',
     });
 
     // An invitation someone sends them by email still works.

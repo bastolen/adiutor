@@ -3,8 +3,12 @@
  * (`staff:manage`) on someone else's page: make the user staff, change their
  * staff role or remove their staff access. Giving a staff role needs the
  * Admin's recent confirmation, so the dialog and role select ask first, and
- * come back to this card (`staff-access`).
+ * come back to this card (`staff-access`). Text from `admin.user.staffAccess`; the
+ * role select in it translates with `people`, which the page passes with
+ * `ClientMessages`.
  */
+import { useTranslations } from 'next-intl';
+
 import ActionDialog from '@/components/ui/action-dialog';
 import Card from '@/components/ui/card';
 import RowAction from '@/components/ui/row-action';
@@ -36,29 +40,26 @@ interface StaffAccessCardProps {
  * @returns The card.
  */
 export default function StaffAccessCard({ userId, userName, staffRole }: StaffAccessCardProps) {
+  const t = useTranslations('admin.user.staffAccess');
+  const tRoles = useTranslations('roles');
   const fields = { userId };
-  const staffRoleOptions = roleOptions(PLATFORM_ROLES);
+  const staffRoleOptions = roleOptions(PLATFORM_ROLES, tRoles);
   return (
     <Card
       id="staff-access"
-      title="Staff access"
-      description={
-        staffRole
-          ? 'Their staff role applies to every company.'
-          : 'Not staff. Staff work with every company.'
-      }
+      title={t('title')}
+      description={staffRole ? t('descriptionStaff') : t('descriptionNone')}
       actions={
         staffRole ? (
           <RowAction
             action={removeFromStaffAction}
             fields={fields}
-            label="Remove staff access"
+            label={t('remove.label')}
             variant="danger-subtle"
             confirm={{
-              title: `Remove ${userName}'s staff access?`,
-              description:
-                'They can no longer work with your companies. Their account and any company memberships stay, and they get an email.',
-              confirmLabel: 'Remove staff access',
+              title: t('remove.title', { name: userName }),
+              description: t('remove.description'),
+              confirmLabel: t('remove.confirmLabel'),
             }}
           />
         ) : (
@@ -67,14 +68,14 @@ export default function StaffAccessCard({ userId, userName, staffRole }: StaffAc
             fields={fields}
             // Every staff role needs a recent confirmation: ask before the dialog opens.
             confirmFirst
-            triggerLabel="Make staff"
-            title={`Make ${userName} staff?`}
-            description="They can work with every company, and get an email. Admins and Managers must set up a second sign-in step before they continue."
-            confirmLabel="Make staff"
+            triggerLabel={t('make.label')}
+            title={t('make.title', { name: userName })}
+            description={t('make.description')}
+            confirmLabel={t('make.confirmLabel')}
             tone="primary"
           >
             <SelectField
-              label="Staff role"
+              label={t('staffRole')}
               name="role"
               options={staffRoleOptions}
               defaultValue="support"
@@ -85,7 +86,7 @@ export default function StaffAccessCard({ userId, userName, staffRole }: StaffAc
     >
       {staffRole && (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="text-sm text-muted-foreground">Staff role</span>
+          <span className="text-sm text-muted-foreground">{t('staffRole')}</span>
           <RoleSelect
             action={changeStaffRoleAction}
             fields={fields}

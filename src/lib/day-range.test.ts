@@ -1,7 +1,7 @@
 /**
  * @file Tests for reading a day range from two date fields: UTC days with
  * both days included, either side optional, and invalid or reversed dates
- * refused with a message.
+ * refused with the problem.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -45,7 +45,7 @@ describe('parseDayRange', () => {
   ])('refuses a date that isn’t a real day (%j, %j), limiting nothing', (from, to) => {
     expect(parseDayRange(from, to)).toEqual({
       ok: false,
-      message: 'Enter the dates as real days, e.g. 2026-11-03.',
+      problem: 'invalidDay',
       range: { start: null, end: null },
     });
   });
@@ -53,7 +53,7 @@ describe('parseDayRange', () => {
   it('refuses a from date after the to date', () => {
     expect(parseDayRange('2026-11-04', '2026-11-03')).toEqual({
       ok: false,
-      message: 'Choose a “from” date on or before the “to” date.',
+      problem: 'fromAfterTo',
       range: { start: null, end: null },
     });
   });

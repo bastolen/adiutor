@@ -12,9 +12,10 @@ import { parseArgs } from 'node:util';
 import { db } from '../src/db';
 import { sendEmail } from '../src/lib/email';
 import { appUrl } from '../src/lib/env';
+import { DEFAULT_LOCALE } from '../src/lib/i18n/locales';
 import { installLogRedaction } from '../src/lib/log-redaction';
 import { revokeAllSessions } from '../src/server/auth/sessions';
-import { ServiceError } from '../src/server/errors';
+import { ServiceError, serviceErrorMessage } from '../src/server/errors';
 
 /** How to call the script. */
 const USAGE =
@@ -52,8 +53,9 @@ async function main(): Promise<number> {
     }
     return 0;
   } catch (error) {
+    // Said in English (US), like the rest of the script's output.
     if (error instanceof ServiceError) {
-      console.error(error.message);
+      console.error(serviceErrorMessage(error, DEFAULT_LOCALE));
       return 1;
     }
     throw error;

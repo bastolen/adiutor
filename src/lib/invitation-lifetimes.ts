@@ -1,7 +1,8 @@
 /**
  * @file How long invitations and invite links stay valid. Pure and
  * client-safe, so the services that enforce these and the pages and forms
- * that describe them share one source.
+ * that describe them share one source. Pages word a number of days with an
+ * ICU plural in their own messages.
  */
 
 /** How many days an invitation link stays valid. */
@@ -21,14 +22,4 @@ export type InviteLinkValidity = (typeof INVITE_LINK_VALIDITY_DAYS)[number];
  */
 export function isInviteLinkValidity(days: number): days is InviteLinkValidity {
   return (INVITE_LINK_VALIDITY_DAYS as readonly number[]).includes(days);
-}
-
-/**
- * Words a number of days, e.g. "1 day" or "7 days".
- *
- * @param days - The number of days.
- * @returns The wording.
- */
-export function daysLabel(days: number): string {
-  return days === 1 ? '1 day' : `${days} days`;
 }

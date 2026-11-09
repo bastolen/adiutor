@@ -8,6 +8,7 @@
 import { MailCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useEffect, useSyncExternalStore } from 'react';
 
 import Alert from '@/components/ui/alert';
@@ -80,6 +81,7 @@ function sameName(first: NamedAccount, second: NamedAccount): boolean {
  * @returns The form.
  */
 export default function EmailLinkForm({ account, signedIn }: EmailLinkFormProps) {
+  const t = useTranslations('auth');
   const searchParams = useSearchParams();
   const [pending, setPending] = useTransientState(false);
   const inBrowser = useSyncExternalStore(
@@ -134,12 +136,12 @@ export default function EmailLinkForm({ account, signedIn }: EmailLinkFormProps)
       <div className="flex flex-col gap-6">
         {icon}
         <AuthHeading
-          title="You're already signed in"
-          description="This sign-in link is for the account you're signed in with on this device."
+          title={t('emailLink.alreadySignedIn')}
+          description={t('emailLink.alreadySignedInDescription')}
         />
         <AccountSummary {...account} />
         <Button fullWidth asChild>
-          <Link href={callbackURL}>Continue</Link>
+          <Link href={callbackURL}>{t('emailLink.continue')}</Link>
         </Button>
       </div>
     );
@@ -148,17 +150,15 @@ export default function EmailLinkForm({ account, signedIn }: EmailLinkFormProps)
   return (
     <div className="flex flex-col gap-6">
       {icon}
-      <AuthHeading
-        title="Continue signing in"
-        description="You opened a sign-in link from your email. Continue to sign in to Adiutor on this device with this account. If you didn't ask for it, you can close this page."
-      />
+      <AuthHeading title={t('emailLink.heading')} description={t('emailLink.description')} />
       <AccountSummary {...account} />
       {signedIn && (
         <Alert tone="info">
-          You&apos;re signed in as {accountLabel(signedIn)} in this browser. Continuing switches
-          this browser to {accountLabel(account)}.
-          {sameName(signedIn, account) &&
-            " They have the same name, but they're different accounts: check the address."}
+          {t('emailLink.switching', {
+            signedIn: accountLabel(signedIn),
+            account: accountLabel(account),
+            sameName: sameName(signedIn, account) ? 'true' : 'false',
+          })}
         </Alert>
       )}
       <form method="get" action={MAGIC_LINK_VERIFY_PATH} onSubmit={() => setPending(true)}>
@@ -167,7 +167,7 @@ export default function EmailLinkForm({ account, signedIn }: EmailLinkFormProps)
             <input key={name} type="hidden" name={name} value={value} />
           ))}
         <Button type="submit" fullWidth loading={pending} disabled={!inBrowser}>
-          Continue signing in
+          {t('emailLink.submit')}
         </Button>
       </form>
     </div>

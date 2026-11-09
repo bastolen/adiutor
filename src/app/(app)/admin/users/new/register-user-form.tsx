@@ -5,6 +5,7 @@
 
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
 import EmailLanguageField from '@/components/language/email-language-field';
@@ -18,11 +19,14 @@ import registerUserAction from './actions';
 
 /**
  * An email field with a submit button. Afterwards it says what happened, with
- * a link to the user (new or existing) and a way to add another.
+ * a link to the user (new or existing) and a way to add another. Its text
+ * comes from the `admin.addUser` messages: the page passes them with
+ * `ClientMessages` (namespace `admin`).
  *
  * @returns The form.
  */
 export default function RegisterUserForm() {
+  const t = useTranslations('admin.addUser.form');
   const [result, formAction, pending, onSubmit] = useTransientActionState(registerUserAction, null);
   // A new form after "Add another", so the old result doesn't show again.
   const [attempt, setAttempt] = useState(0);
@@ -37,7 +41,7 @@ export default function RegisterUserForm() {
         <div className="flex flex-wrap gap-3">
           <Button asChild>
             <Link href={`/admin/users/${result.data.userId}`}>
-              Open user
+              {t('openUser')}
               <ArrowRight aria-hidden="true" className="size-4" />
             </Link>
           </Button>
@@ -48,7 +52,7 @@ export default function RegisterUserForm() {
               setAttempt((value) => value + 1);
             }}
           >
-            Add another
+            {t('addAnother')}
           </Button>
         </div>
       </div>
@@ -67,18 +71,18 @@ export default function RegisterUserForm() {
     >
       {showResult && <ResultAlert result={result} errorsOnly />}
       <TextField
-        label="Email"
+        label={t('email')}
         type="email"
         name="email"
         autoComplete="off"
-        placeholder="colleague@adiutor.dev"
-        description="They'll get an email with a link to choose a password. They aren't added to any company or given staff access."
+        placeholder={t('placeholder')}
+        description={t('description')}
         required
       />
       <EmailLanguageField purpose="account" />
       <div>
         <Button type="submit" loading={pending}>
-          Add user
+          {t('submit')}
         </Button>
       </div>
     </form>

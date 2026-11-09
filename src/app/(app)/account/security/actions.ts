@@ -5,7 +5,7 @@
  * freshness, recent confirmation, the MFA a role requires) apply. When one
  * needs a recent confirmation the user doesn't have, it sends them to the
  * step-up page, which comes back to the form's page and card (its `returnTo`
- * field, `ReturnToField`).
+ * field, `ReturnToField`). Their messages are in the request's language.
  */
 'use server';
 
@@ -13,12 +13,13 @@ import { isAPIError } from 'better-auth/api';
 import { refresh } from 'next/cache';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 
 import type { ActionResult } from '@/lib/action-result';
 import { auth } from '@/lib/auth';
 import { needsRecentConfirmation } from '@/lib/authz/mfa';
 import field from '@/lib/form-data';
-import { signInChangeRefusalMessage } from '@/lib/sign-in/auth-error-messages';
+import { signInChangeRefusalText } from '@/lib/sign-in/auth-error-messages';
 import { confirmChangeUrlFor } from '@/lib/sign-in/confirm-url';
 import { MFA_VERIFICATION_REQUIRED } from '@/lib/sign-in/sign-in-refusals';
 import { passwordSchema } from '@/lib/validation';
@@ -67,8 +68,9 @@ export async function passwordAction(
   return runAction(async () => {
     const actor = await getActor({ allowMissingMfa: true });
     const newPassword = passwordSchema.parse(field(formData, 'newPassword'));
+    const t = await getTranslations('account');
     if (newPassword !== field(formData, 'confirmation')) {
-      return { ok: false, message: "The new passwords don't match." };
+      return { ok: false, message: t('security.password.mismatch') };
     }
 
     const changing = await hasPassword(appContext.db, actor.id);
@@ -97,7 +99,7 @@ export async function passwordAction(
       }
     } catch (error) {
       if (isAPIError(error)) {
-        const refusal = signInChangeRefusalMessage(error.body?.code);
+        const refusal = signInChangeRefusalText(await getTranslations('auth'), error.body?.code);
         if (refusal) {
           return { ok: false, message: refusal };
         }
@@ -105,12 +107,12 @@ export async function passwordAction(
         if (error.status === 'UNAUTHORIZED') {
           redirect('/auth');
         }
-        return { ok: false, message: 'Saving the password failed. Please try again.' };
+        return { ok: false, message: t('security.password.failed') };
       }
       throw error;
     }
     refresh();
-    return { ok: true, message: 'Password saved.' };
+    return { ok: true, message: t('security.password.saved') };
   });
 }
 
@@ -134,7 +136,8 @@ export async function confirmProviderAction(
     }
     await confirmConnectedProvider(appContext, actor, field(formData, 'accountId'));
     refresh();
-    return { ok: true, message: 'Confirmed.' };
+    const t = await getTranslations('account');
+    return { ok: true, message: t('security.connected.confirmed') };
   });
 }
 
@@ -155,9 +158,13 @@ export async function disconnectAction(
   return runAction(async () => {
     const actor = await getActor({ allowMissingMfa: true });
     const accountId = field(formData, 'accountId');
-    const connected = await listConnectedProviders(appContext.db, actor.id);
+    const [connected, t, tAuth] = await Promise.all([
+      listConnectedProviders(appContext.db, actor.id),
+      getTranslations('account'),
+      getTranslations('auth'),
+    ]);
     if (!connected.some((item) => item.id === accountId)) {
-      return { ok: false, message: 'That account is no longer connected.' };
+      return { ok: false, message: t('security.connected.noLongerConnected') };
     }
 
     try {
@@ -167,10 +174,7 @@ export async function disconnectAction(
         if (error.body?.code === MFA_VERIFICATION_REQUIRED.code) {
           redirect(confirmChangeUrlFor(formData, SECURITY_PAGE));
         }
-        return {
-          ok: false,
-          message: disconnectFailureMessage(error.body?.code),
-        };
+        return { ok: false, message: disconnectFailureMessage(t, tAuth, error.body?.code) };
       }
       throw error;
     }
@@ -225,7 +229,8 @@ export async function revokeSessionAction(
     const actor = await getActor({ allowMissingMfa: true });
     await revokeOwnSession(appContext, actor, field(formData, 'sessionId'));
     refresh();
-    return { ok: true, message: 'Signed out.' };
+    const t = await getTranslations('account');
+    return { ok: true, message: t('security.sessions.signedOut') };
   });
 }
 
@@ -239,10 +244,7 @@ export async function revokeOtherSessionsAction(): Promise<ActionResult> {
     const actor = await getActor({ allowMissingMfa: true });
     const count = await revokeOtherOwnSessions(appContext, actor);
     refresh();
-    return {
-      ok: true,
-      message:
-        count === 1 ? 'Signed out on 1 other device.' : `Signed out on ${count} other devices.`,
-    };
+    const t = await getTranslations('account');
+    return { ok: true, message: t('security.sessions.signedOutOthers', { count }) };
   });
 }

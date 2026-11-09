@@ -72,10 +72,10 @@ export async function checkCodeStep(ctx: AuthGuardContext, path: string): Promis
     refuseUnfinishedBackupCodes();
   }
   if (EMAIL_CODE_PATHS.has(path) && mfa && !allowsEmailCodesAtSignIn(mfa.state)) {
-    refuseEmailCodes();
+    refuseEmailCodes(ctx);
   }
   if (path === '/two-factor/send-otp') {
-    await limitEmailCode(userId, true);
+    await limitEmailCode(ctx, userId, true);
     return;
   }
   // Last, so only a code Better Auth goes on to check is handed over.

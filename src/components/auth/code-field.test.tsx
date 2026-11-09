@@ -5,14 +5,20 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import CodeField, { AUTHENTICATOR_CODE_DESCRIPTION } from './code-field';
+import CodeField from './code-field';
 
 /** Ignores typing: these tests only look at the field. */
 const ignore = () => {};
 
 describe('CodeField', () => {
   it.each([
-    ['totp', 'Code', 'one-time-code', 'numeric', AUTHENTICATOR_CODE_DESCRIPTION],
+    [
+      'totp',
+      'Code',
+      'one-time-code',
+      'numeric',
+      'The 6-digit code shown in your authenticator app.',
+    ],
     ['otp', 'Code', 'one-time-code', 'numeric', ''],
     ['backup', 'Backup code', 'off', 'text', ''],
   ] as const)(

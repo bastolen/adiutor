@@ -1,0 +1,20 @@
+{
+  "navigation": {
+    "dashboardLink": "Panel de Adiutor",
+    "main": "Principal",
+    "items": {
+      "dashboard": "Panel",
+      "users": "Usuarios",
+      "companies": "Empresas",
+      "staff": "Personal",
+      "logs": "Registros"
+    },
+    "openMenu": "Abrir menú",
+    "menu": "Menú",
+    "menuDescription": "Navegación y opciones de la cuenta.",
+    "closeMenu": "Cerrar menú",
+    "accountMenu": "Menú de la cuenta:",
+    "accountSettings": "Ajustes de la cuenta",
+    "signOut": "Cerrar sesión"
+  }
+}

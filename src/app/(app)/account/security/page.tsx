@@ -12,7 +12,7 @@
  * it went).
  */
 import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
@@ -25,8 +25,9 @@ import {
   mfaGivingProviders,
   mustSetUpMfa,
 } from '@/lib/authz/mfa';
+import ClientMessages from '@/lib/i18n/client-messages';
 import { confirmationWindow } from '@/lib/sign-in/confirm-url';
-import { type OAuthProvider, providerNames } from '@/lib/sign-in/oauth-providers';
+import { providerList } from '@/lib/sign-in/oauth-providers';
 import { availableProviders, signInProviders } from '@/lib/sign-in/providers';
 import type { SearchParams } from '@/lib/tables/search-params';
 import { createPageUrl, parseTableState } from '@/lib/tables/table-state';
@@ -35,7 +36,8 @@ import appContext from '@/server/app-context';
 import { listConnectedProviders } from '@/server/auth/accounts';
 import { getSecurityOverview } from '@/server/auth/security';
 import { getActor } from '@/server/authz';
-import { describeSoleAdmin, listUserSessions, soleAdminOf } from '@/server/people/user-admin';
+import { serviceErrorMessage } from '@/server/errors';
+import { listUserSessions, soleAdminError, soleAdminOf } from '@/server/people/user-admin';
 
 import accountMessage from '../account-messages';
 import ConnectedAccountsCard from './connected-accounts-card';
@@ -46,38 +48,14 @@ import SessionsCard from './sessions-card';
 import TwoFactorCard from './two-factor-card';
 
 /**
- * Page metadata.
- */
-export const metadata: Metadata = {
-  title: 'Security',
-};
-
-/** Shown where removing the last passkey would break a role's MFA requirement. */
-const KEEP_LAST_PASSKEY =
-  "Your role requires MFA, so keep this passkey until you've added another passkey or an authenticator app.";
-
-/** Shown where turning off the only authenticator app would break a role's MFA requirement. */
-const KEEP_AUTHENTICATOR =
-  'Your role requires MFA, so your authenticator app stays on. To move it to a new phone, add a passkey first, then turn this off and set it up again.';
-
-/**
- * Shown where disconnecting the account that gives a role its MFA is refused.
+ * Page metadata: "Security", in the request's language.
  *
- * @param providers - The providers whose accounts give it (e.g. GitHub).
- * @returns The reason.
+ * @returns The metadata.
  */
-const keepMfaProvider = (providers: readonly OAuthProvider[]) =>
-  `Your role requires MFA, and your ${providerNames(providers)} account with two-factor authentication gives you it. Add a passkey or an authenticator app before disconnecting it.`;
-
-/**
- * Shown where a password or another connected account would stop provider
- * MFA counting as the MFA a role requires.
- *
- * @param providers - The providers whose accounts give it (e.g. GitHub).
- * @returns The reason.
- */
-const providerMfaOnly = (providers: readonly OAuthProvider[]) =>
-  `Your role requires MFA, and ${providerNames(providers)} with two-factor authentication only counts while you have no password and every connected account has it. Add a passkey or an authenticator app first.`;
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('account');
+  return { title: t('security.title') };
+}
 
 /**
  * Loads the user's security settings and shows them.
@@ -89,7 +67,11 @@ const providerMfaOnly = (providers: readonly OAuthProvider[]) =>
  */
 async function Security({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const actor = await getActor({ allowMissingMfa: true });
-  const params = await searchParams;
+  const [params, t, locale] = await Promise.all([
+    searchParams,
+    getTranslations('account'),
+    getLocale(),
+  ]);
   const devicesRequested = parseTableState(DEVICES_TABLE, params);
   const [overview, connected, sessions, lastAdminOf] = await Promise.all([
     getSecurityOverview(appContext.db, actor),
@@ -104,7 +86,7 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
     ...devicesRequested,
     page: sessions.page,
   });
-  const message = accountMessage(params);
+  const message = accountMessage(t, params);
   // The same check that sent them here (`getActor`).
   const mustSetUp = mustSetUpMfa(actor);
   const setup = {
@@ -125,7 +107,12 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
     availableProviders,
     unconfirmed,
   );
-  const giving = mfaGivingProviders(overview.mfaState, availableProviders);
+  const giving = providerList(mfaGivingProviders(overview.mfaState, availableProviders), locale);
+  // Shown where a password or another connected account would stop provider MFA counting as the
+  // MFA a role requires.
+  const providerMfaOnly = t('security.providerMfaOnly', { providers: giving });
+  // Why deactivating is refused while the user is the last Admin of something.
+  const soleAdmin = soleAdminError('self', lastAdminOf);
 
   // After connecting GitHub or Google, the Connected accounts card says how it went.
   const showsConnectedAccounts = signInProviders.length > 0;
@@ -139,16 +126,11 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
       )}
       {mustSetUp && (
         <Alert tone="info" focusOnShow>
-          Your role requires MFA. Add a passkey or set up an authenticator app to continue using
-          Adiutor.
-          {overview.twoFactorEnabled && ' Email codes aren’t enough for your role.'}
+          {t('security.mustSetUp', { emailCodes: overview.twoFactorEnabled ? 'true' : 'false' })}
         </Alert>
       )}
       {!actor.mfaEnabled && !actor.mfaRequired && (
-        <Alert tone="info">
-          Recommended: add a passkey or turn on two-step verification, so a stolen password
-          isn&apos;t enough to get into your account.
-        </Alert>
+        <Alert tone="info">{t('security.recommended')}</Alert>
       )}
       <RecentConfirmationProvider
         required={actor.canConfirmSessions}
@@ -158,7 +140,7 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
       >
         <PasskeysCard
           passkeys={overview.passkeys}
-          removeLastBlockedReason={blocked.lastPasskey ? KEEP_LAST_PASSKEY : null}
+          removeLastBlockedReason={blocked.lastPasskey ? t('security.keepLastPasskey') : null}
         />
         <TwoFactorCard
           email={actor.email}
@@ -166,7 +148,7 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
           authenticatorSetUp={overview.authenticatorSetUp}
           emailCodes={emailCodeStatus(setup, actor.mfaRole)}
           hasPassword={overview.hasPassword}
-          turnOffBlockedReason={blocked.turnOffTwoFactor ? KEEP_AUTHENTICATOR : null}
+          turnOffBlockedReason={blocked.turnOffTwoFactor ? t('security.keepAuthenticator') : null}
         />
         {showsConnectedAccounts && (
           <ConnectedAccountsCard
@@ -174,30 +156,30 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
             providers={signInProviders}
             connected={links}
             disconnectBlocked={blocked.disconnect}
-            disconnectBlockedReason={keepMfaProvider(giving)}
+            disconnectBlockedReason={t('security.keepMfaProvider', { providers: giving })}
             connectBlocked={blocked.connectProvider}
             confirmBlocked={blocked.confirm}
-            connectBlockedReason={providerMfaOnly(giving)}
+            connectBlockedReason={providerMfaOnly}
           />
         )}
         <Card
           id="password"
-          title="Password"
+          title={t('security.password.title')}
           description={
             overview.hasPassword
-              ? 'Changing it signs you out on your other devices.'
-              : "You don't have a password yet; you sign in with an email link or another provider. Set one to also sign in with your email and password."
+              ? t('security.password.descriptionChange')
+              : t('security.password.descriptionSet')
           }
         >
           <PasswordForm
             hasPassword={overview.hasPassword}
-            blockedReason={blocked.setPassword ? providerMfaOnly(giving) : null}
+            blockedReason={blocked.setPassword ? providerMfaOnly : null}
           />
         </Card>
         <SessionsCard sessions={sessions} table={devicesTable} currentSessionId={actor.sessionId} />
         <DeactivateCard
           hasPassword={overview.hasPassword}
-          blockedReason={describeSoleAdmin("You're", lastAdminOf)}
+          blockedReason={soleAdmin ? serviceErrorMessage(soleAdmin, locale) : null}
         />
       </RecentConfirmationProvider>
     </>
@@ -205,7 +187,8 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
 }
 
 /**
- * The Security page of the account.
+ * The Security page of the account. Its cards' text comes with it
+ * (`account`, and `auth` for the messages of refused sign-in changes).
  *
  * @param props - Page props from Next.js.
  * @param props.searchParams - Query parameters.
@@ -214,7 +197,9 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
 export default function SecurityPage({ searchParams }: PageProps<'/account/security'>) {
   return (
     <Suspense fallback={<PageSkeleton header={false} />}>
-      <Security searchParams={searchParams} />
+      <ClientMessages namespaces={['account', 'auth']}>
+        <Security searchParams={searchParams} />
+      </ClientMessages>
     </Suspense>
   );
 }

@@ -1,6 +1,7 @@
 /**
  * @file The endpoint context the checks read, the groups of Better Auth endpoint
- * paths they treat alike, and the refusals more than one check uses.
+ * paths they treat alike, and the refusals more than one check uses (worded
+ * in the request's language, `refusal-messages.ts`).
  */
 import { APIError } from 'better-auth/api';
 
@@ -8,6 +9,8 @@ import {
   EMAIL_CODES_NOT_ALLOWED,
   SIGN_IN_CHANGE_IN_PROGRESS,
 } from '@/lib/sign-in/sign-in-refusals';
+
+import { refusalBody } from './refusal-messages';
 
 /** The parts of a Better Auth endpoint context the checks use. */
 export interface AuthGuardContext {
@@ -77,14 +80,17 @@ export const EMAIL_CODE_PATHS = new Set(['/two-factor/send-otp', '/two-factor/ve
 /**
  * Refuses email codes where they don't count.
  *
+ * @param ctx - The endpoint context, for the request's language.
  * @throws {APIError} `FORBIDDEN` with code `EMAIL_CODES_NOT_ALLOWED`.
  */
-export function refuseEmailCodes(): never {
-  throw new APIError('FORBIDDEN', { ...EMAIL_CODES_NOT_ALLOWED });
+export function refuseEmailCodes(ctx: AuthGuardContext): never {
+  throw new APIError('FORBIDDEN', refusalBody(ctx, EMAIL_CODES_NOT_ALLOWED.code));
 }
 
 /**
- * Refuses backup codes of an authenticator app that was never set up.
+ * Refuses backup codes of an authenticator app that was never set up, with
+ * Better Auth's own refusal of a wrong backup code (its English message
+ * included), so it can't be told apart from one.
  *
  * @throws {APIError} Always.
  */
@@ -98,8 +104,9 @@ export function refuseUnfinishedBackupCodes(): never {
 /**
  * Refuses a sign-in change while another one of the same user is still being made.
  *
+ * @param ctx - The endpoint context, for the request's language.
  * @throws {APIError} `CONFLICT` with code `SIGN_IN_CHANGE_IN_PROGRESS`.
  */
-export function refuseSignInChangeInProgress(): never {
-  throw new APIError('CONFLICT', { ...SIGN_IN_CHANGE_IN_PROGRESS });
+export function refuseSignInChangeInProgress(ctx: AuthGuardContext): never {
+  throw new APIError('CONFLICT', refusalBody(ctx, SIGN_IN_CHANGE_IN_PROGRESS.code));
 }

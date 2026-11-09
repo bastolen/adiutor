@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AccessNotice from './access-notice';
-import { ACCESS_NOTICES, getAccessNotice, withAccessNotice } from './access-notices';
+import { getAccessNotice, withAccessNotice } from './access-notices';
 
 /** The address's query string, as the page was opened with. */
 const { search } = vi.hoisted(() => ({ search: { current: '' } }));
@@ -32,7 +32,9 @@ describe('AccessNotice', () => {
     render(<AccessNotice />);
 
     const note = screen.getByRole('status');
-    expect(note).toHaveTextContent(ACCESS_NOTICES['left-staff']);
+    expect(note).toHaveTextContent(
+      'You’re no longer on the staff. Your account stays, and a staff Admin can invite you again.',
+    );
     expect(note).toHaveFocus();
 
     await user.click(screen.getByRole('button', { name: 'Dismiss this note' }));
@@ -52,7 +54,7 @@ describe('AccessNotice', () => {
 describe('access notices', () => {
   it('builds the address with the code and reads only known codes back', () => {
     expect(withAccessNotice('/dashboard', 'stepped-down')).toBe('/dashboard?notice=stepped-down');
-    expect(getAccessNotice('company-stepped-down')).toBe(ACCESS_NOTICES['company-stepped-down']);
+    expect(getAccessNotice('company-stepped-down')).toBe('company-stepped-down');
     expect(getAccessNotice('hasOwnProperty')).toBeNull();
     expect(getAccessNotice(null)).toBeNull();
   });

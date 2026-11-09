@@ -1,7 +1,10 @@
 /**
- * @file Form to create a single-use invite link, which is shown once.
+ * @file Form to create a single-use invite link, which is shown once. Text
+ * from the `people` namespace, which the page passes with `ClientMessages`.
  */
 'use client';
+
+import { useTranslations } from 'next-intl';
 
 import { ConfirmFirstNote, ReturnToField } from '@/components/auth/recent-confirmation';
 import Button from '@/components/ui/button';
@@ -11,16 +14,10 @@ import SelectField, { type SelectOption } from '@/components/ui/select-field';
 import { fieldControl } from '@/components/ui/styles';
 import { useTransientActionState, useTransientState } from '@/components/ui/use-transient-state';
 import cn from '@/lib/cn';
-import { daysLabel, INVITE_LINK_VALIDITY_DAYS } from '@/lib/invitation-lifetimes';
+import { INVITE_LINK_VALIDITY_DAYS } from '@/lib/invitation-lifetimes';
 
 import { createInviteLinkAction } from './invitation-actions';
-import useConfirmBeforeGrant, { CONFIRM_BEFORE_GRANT_NOTE } from './use-confirm-before-grant';
-
-/** How long a link can stay valid, from the lifetimes the server accepts. */
-const VALIDITY_OPTIONS: readonly SelectOption[] = INVITE_LINK_VALIDITY_DAYS.map((days) => ({
-  value: String(days),
-  label: daysLabel(days),
-}));
+import useConfirmBeforeGrant from './use-confirm-before-grant';
 
 /**
  * Props for {@link InviteLinkForm}.
@@ -28,7 +25,7 @@ const VALIDITY_OPTIONS: readonly SelectOption[] = INVITE_LINK_VALIDITY_DAYS.map(
 interface InviteLinkFormProps {
   /** The company the link is for, or `null` for staff. */
   companyId: string | null;
-  /** Roles that can be given. */
+  /** Roles that can be given, named in the reader's language. */
   roles: readonly SelectOption[];
 }
 
@@ -45,6 +42,12 @@ interface InviteLinkFormProps {
  * @returns The form.
  */
 export default function InviteLinkForm({ companyId, roles }: InviteLinkFormProps) {
+  const t = useTranslations('people');
+  // How long a link can stay valid, from the lifetimes the server accepts.
+  const validityOptions: readonly SelectOption[] = INVITE_LINK_VALIDITY_DAYS.map((days) => ({
+    value: String(days),
+    label: t('inviteLinkForm.validity', { days }),
+  }));
   const [result, formAction, pending, onSubmit] = useTransientActionState(
     createInviteLinkAction,
     null,
@@ -63,41 +66,41 @@ export default function InviteLinkForm({ companyId, roles }: InviteLinkFormProps
       {url && (
         <div className="flex flex-col gap-2 rounded-lg border border-success/30 bg-success-soft p-4">
           <p role="status" className="text-sm font-medium text-success">
-            Link created. Copy it now: for safety it won&apos;t be shown again. It works once.
+            {t('inviteLinkForm.created')}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <input
-              aria-label="Invite link"
+              aria-label={t('inviteLinkForm.link')}
               readOnly
               value={url}
               onFocus={(event) => event.currentTarget.select()}
               className={cn(fieldControl, 'h-10 min-w-0 flex-1 font-mono text-xs')}
             />
-            <CopyButton value={url} label="Copy link" />
+            <CopyButton value={url} label={t('inviteLinkForm.copy')} />
           </div>
         </div>
       )}
       <div className="grid gap-4 sm:grid-cols-2">
         <SelectField
-          label="Role"
+          label={t('inviteLinkForm.role')}
           name="role"
           options={roles}
           value={role}
           onValueChange={setRole}
         />
         <SelectField
-          label="Valid for"
+          label={t('inviteLinkForm.validFor')}
           name="validDays"
-          options={VALIDITY_OPTIONS}
+          options={validityOptions}
           defaultValue="7"
         />
       </div>
       {confirmFirst ? (
-        <ConfirmFirstNote>{CONFIRM_BEFORE_GRANT_NOTE}</ConfirmFirstNote>
+        <ConfirmFirstNote>{t('confirmBeforeGrant')}</ConfirmFirstNote>
       ) : (
         <div>
           <Button type="submit" variant="secondary" loading={pending}>
-            Create invite link
+            {t('inviteLinkForm.submit')}
           </Button>
         </div>
       )}

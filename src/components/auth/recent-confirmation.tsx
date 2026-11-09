@@ -13,12 +13,14 @@
  * also when a server action sends the user there: forms inside the provider
  * send that address in a hidden `returnTo` field ({@link ReturnToField}).
  * Every page with such changes renders the provider with its own address;
- * outside a provider nothing asks.
+ * outside a provider nothing asks. Its text is in `common`
+ * (`common.recentConfirmation`), since pages all over the app use it.
  */
 'use client';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   createContext,
   type ReactNode,
@@ -254,6 +256,7 @@ export function ReturnToField() {
  * @returns The note, or nothing.
  */
 export function ConfirmFirstNote({ children }: { children: ReactNode }) {
+  const t = useTranslations('common');
   const { confirmUrl } = useReturnAddress();
   if (confirmUrl === null) {
     return null;
@@ -263,7 +266,7 @@ export function ConfirmFirstNote({ children }: { children: ReactNode }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p>{children}</p>
         <Button asChild size="sm">
-          <Link href={confirmUrl}>Confirm it&apos;s you</Link>
+          <Link href={confirmUrl}>{t('recentConfirmation.confirm')}</Link>
         </Button>
       </div>
     </Alert>

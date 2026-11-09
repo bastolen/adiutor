@@ -18,6 +18,7 @@ import {
 } from '@/lib/sign-in/oauth-providers';
 
 import StepUpForm, { type StepUpFormProps } from './step-up-form';
+import renderInLocale from '../../../../tests/i18n/render';
 
 /** Mocked Better Auth client methods and router. */
 const { verifyTotp, verifyOtp, verifyBackupCode, sendOtp, passkey, social, replace } = vi.hoisted(
@@ -496,6 +497,35 @@ describe('StepUpForm', () => {
       ).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Confirm with a passkey' })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Confirm with GitHub' })).not.toBeInTheDocument();
+    });
+
+    it.each([
+      [
+        'nl-NL',
+        'Om te wijzigen hoe je inlogt, is een bevestiging van de afgelopen 15 minuten nodig. GitHub of Google kan geen wijzigingen aan hoe je inlogt bevestigen zolang je een passkey of authenticator-app hebt. Bevestig dat jij het bent om verder te gaan.',
+      ],
+      [
+        'es-ES',
+        'Para cambiar cómo inicias sesión hace falta una confirmación de los últimos 15 minutos. GitHub o Google no puede confirmar cambios en cómo inicias sesión mientras tengas una llave de acceso o una app de autenticación. Confirma que eres tú para continuar.',
+      ],
+    ] as const)('says the same in %s, naming the providers in its own words', (locale, text) => {
+      renderInLocale(
+        locale,
+        <StepUpForm
+          // Named by the real provider list, which only knows the configured providers' names.
+          methods={{
+            ...none,
+            passkey: true,
+            providersHeldBack: ['github', 'google' as MfaProvider],
+          }}
+          callbackURL="/account/security"
+          roleRequiresMfa
+          accountHasMfa
+          confirmedBefore
+        />,
+      );
+
+      expect(screen.getByText(text)).toBeInTheDocument();
     });
   });
 

@@ -1,0 +1,20 @@
+{
+  "navigation": {
+    "dashboardLink": "Adiutor dashboard",
+    "main": "Main",
+    "items": {
+      "dashboard": "Dashboard",
+      "users": "Users",
+      "companies": "Companies",
+      "staff": "Staff",
+      "logs": "Logs"
+    },
+    "openMenu": "Open menu",
+    "menu": "Menu",
+    "menuDescription": "Navigation and account options.",
+    "closeMenu": "Close menu",
+    "accountMenu": "Account menu:",
+    "accountSettings": "Account settings",
+    "signOut": "Sign out"
+  }
+}

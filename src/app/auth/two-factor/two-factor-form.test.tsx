@@ -10,6 +10,7 @@ import { EMAIL_CODE_RESEND_SECONDS } from '@/lib/authz/mfa';
 import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 
 import TwoFactorForm from './two-factor-form';
+import renderInLocale from '../../../../tests/i18n/render';
 
 /** Mocked Better Auth client methods and router. */
 const { verifyTotp, verifyOtp, verifyBackupCode, sendOtp, replace } = vi.hoisted(() => ({
@@ -122,6 +123,48 @@ describe('TwoFactorForm', () => {
     expect(await screen.findByText(/We sent a new code to your email address/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Send a new code in 2:30' })).toBeDisabled();
     vi.useRealTimers();
+  });
+
+  it.each([
+    [
+      'nl-NL',
+      'We hebben een code naar je e-mailadres gestuurd. De code is 5 minuten geldig.',
+      'Nieuwe code sturen over 2:30',
+    ],
+    [
+      'es-ES',
+      'Hemos enviado un código a tu dirección de correo. Caduca en 5 minutos.',
+      'Enviar un código nuevo en 2:30',
+    ],
+  ] as const)(
+    'says in %s that a code went out and how long it works',
+    async (locale, sent, resend) => {
+      searchParams = new URLSearchParams({ methods: 'otp' });
+      renderInLocale(locale, <TwoFactorForm />);
+
+      expect(await screen.findByText(sent)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: resend })).toBeDisabled();
+    },
+  );
+
+  it('shows how long to wait as the server words it', async () => {
+    const user = userEvent.setup();
+    verifyTotp.mockResolvedValue({
+      data: null,
+      error: {
+        status: 429,
+        code: 'TOO_MANY_ATTEMPTS',
+        message: 'Te veel pogingen. Probeer het over 12 minuten opnieuw.',
+      },
+    });
+    renderInLocale('nl-NL', <TwoFactorForm />);
+
+    await user.type(screen.getByLabelText('Code'), '000000');
+    await user.click(screen.getByRole('button', { name: 'Verifiëren en inloggen' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Te veel pogingen. Probeer het over 12 minuten opnieuw.',
+    );
   });
 
   it('treats a code sent a moment ago as still usable, not as an error', async () => {

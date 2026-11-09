@@ -1,0 +1,52 @@
+{
+  "validation": {
+    "checkInput": "Revisa los datos introducidos.",
+    "email": "Introduce una dirección de correo válida.",
+    "id": "ID no válido.",
+    "role": "Elige un rol válido.",
+    "companyRole": "Elige un rol adecuado para esta empresa.",
+    "staffRole": "Elige un rol del personal.",
+    "name": {
+      "empty": "Introduce tu nombre.",
+      "tooLong": "Tu nombre puede tener como máximo {maximum, number} caracteres.",
+      "controlCharacters": "Quita los saltos de línea y los caracteres de control de tu nombre.",
+      "hiddenCharacters": "Quita los caracteres invisibles y las marcas de dirección del texto de tu nombre.",
+      "webAddress": "Quita las direcciones web de tu nombre."
+    },
+    "password": {
+      "tooShort": "La contraseña debe tener al menos {minimum, number} caracteres.",
+      "tooLong": "La contraseña puede tener como máximo {maximum, number} caracteres."
+    },
+    "companyName": {
+      "tooShort": "El nombre de la empresa debe tener al menos {minimum, number} caracteres.",
+      "tooLong": "El nombre de la empresa puede tener como máximo {maximum, number} caracteres.",
+      "controlCharacters": "Quita los saltos de línea y los caracteres de control del nombre de la empresa.",
+      "hiddenCharacters": "Quita los caracteres invisibles y las marcas de dirección del texto del nombre de la empresa.",
+      "webAddress": "Quita las direcciones web del nombre de la empresa."
+    },
+    "staffName": {
+      "tooShort": "El nombre visible para los usuarios debe tener al menos {minimum, number} caracteres.",
+      "tooLong": "El nombre visible para los usuarios puede tener como máximo {maximum, number} caracteres.",
+      "controlCharacters": "Quita los saltos de línea y los caracteres de control del nombre visible para los usuarios.",
+      "hiddenCharacters": "Quita los caracteres invisibles y las marcas de dirección del texto del nombre visible para los usuarios.",
+      "webAddress": "Quita las direcciones web del nombre visible para los usuarios."
+    },
+    "passkeyName": {
+      "empty": "Introduce un nombre para la llave de acceso.",
+      "tooLong": "El nombre de la llave de acceso puede tener como máximo {maximum, number} caracteres.",
+      "controlCharacters": "Quita los saltos de línea y los caracteres de control del nombre de la llave de acceso.",
+      "hiddenCharacters": "Quita los caracteres invisibles y las marcas de dirección del texto del nombre de la llave de acceso."
+    },
+    "slug": {
+      "format": "Usa letras minúsculas, números y guiones en el nombre de URL, por ejemplo adiutor.",
+      "looksLikeId": "Elige un nombre de URL que no parezca un ID.",
+      "tooLong": "El nombre de URL puede tener como máximo {maximum, number} caracteres."
+    },
+    "emailList": {
+      "invalid": "{count, plural, one {Esta dirección de correo no es válida: {emails}.} other {Estas direcciones de correo no son válidas: {emails}.}}",
+      "empty": "Introduce al menos una dirección de correo.",
+      "tooMany": "Puedes invitar como máximo a {max, number} personas a la vez. Divide la lista y vuelve a intentarlo."
+    },
+    "locale": "Elige uno de los idiomas."
+  }
+}

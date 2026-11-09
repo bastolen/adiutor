@@ -2,12 +2,14 @@
  * @file Server actions for staff roles, shared by the staff page and the user
  * detail page: giving someone a staff role (or changing it) and taking them
  * off the staff. Renaming the staff stays with the staff page, and company
- * memberships use `member-actions.ts`.
+ * memberships use `member-actions.ts`. Messages are in the request's
+ * language (`people.actions`).
  */
 'use server';
 
 import { refresh } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 
 import type { ActionResult } from '@/lib/action-result';
 import field from '@/lib/form-data';
@@ -47,7 +49,8 @@ export async function changeStaffRoleAction(
       redirect(withAccessNotice('/dashboard', 'stepped-down'));
     }
     refresh();
-    return { ok: true, message: 'Staff role saved.' };
+    const t = await getTranslations('people.actions');
+    return { ok: true, message: t('staffRoleSaved') };
   });
 }
 
@@ -71,6 +74,7 @@ export async function removeFromStaffAction(
       redirect(withAccessNotice('/dashboard', 'left-staff'));
     }
     refresh();
-    return { ok: true, message: 'Staff access removed.' };
+    const t = await getTranslations('people.actions');
+    return { ok: true, message: t('staffAccessRemoved') };
   });
 }

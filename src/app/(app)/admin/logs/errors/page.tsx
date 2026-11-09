@@ -7,7 +7,7 @@
  * reference" in docs/deploying.md).
  */
 import { SearchX, ShieldCheck } from 'lucide-react';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { Fragment, type ReactNode, Suspense } from 'react';
 
@@ -35,21 +35,23 @@ import { findErrorReference, listRecentErrors, type RecordedError } from '@/serv
  * Page metadata: "Errors · Adiutor" for those who may see the page (`errors:view`), and
  * the 404 page's title for everyone else, who get the 404 page.
  */
-export const generateMetadata = globalPermissionMetadata('errors:view', {
-  title: 'Errors',
-});
+// i18n-check t('admin.errors.title')
+export const generateMetadata = globalPermissionMetadata('errors:view', 'admin.errors.title');
 
 /**
- * What kind of error it was, for its badge.
+ * What kind of error it was, as a badge ("Server error", "Browser error" or
+ * "Sign-in error"; text from `admin.errors.kinds`).
  *
- * @param error - The error.
- * @returns "Server error", "Browser error" or "Sign-in error".
+ * @param props - Component props.
+ * @param props.error - The error.
+ * @returns The badge.
  */
-function kindLabel(error: RecordedError): string {
+function KindBadge({ error }: { error: RecordedError }) {
+  const t = useTranslations('admin.errors.kinds');
   if (error.kind === 'sign-in') {
-    return 'Sign-in error';
+    return <Badge>{t('signIn')}</Badge>;
   }
-  return error.source === 'browser' ? 'Browser error' : 'Server error';
+  return <Badge>{error.source === 'browser' ? t('browser') : t('server')}</Badge>;
 }
 
 /**
@@ -57,13 +59,14 @@ function kindLabel(error: RecordedError): string {
  * error's code and description.
  *
  * @param error - The error.
+ * @param noMessage - What to show when the error has no message.
  * @returns The summary.
  */
-function summary(error: RecordedError): string {
+function summary(error: RecordedError, noMessage: string): string {
   if (error.kind === 'sign-in') {
     return [error.code, error.description].filter(Boolean).join(': ');
   }
-  return [error.name, error.message].filter(Boolean).join(': ') || 'No message recorded';
+  return [error.name, error.message].filter(Boolean).join(': ') || noMessage;
 }
 
 /**
@@ -84,7 +87,8 @@ function Detail({ term, children }: { term: string; children: ReactNode }) {
 }
 
 /**
- * Everything recorded about one occurrence of an error.
+ * Everything recorded about one occurrence of an error (text from
+ * `admin.errors`).
  *
  * @param props - Component props.
  * @param props.error - The error.
@@ -92,16 +96,17 @@ function Detail({ term, children }: { term: string; children: ReactNode }) {
  */
 function ErrorDetails({ error }: { error: RecordedError }) {
   const locale = useLocale();
+  const t = useTranslations('admin.errors');
   return (
     <dl className="divide-y divide-border">
-      <Detail term="When">{formatDateTime(error.at, locale)}</Detail>
-      <Detail term="Kind">
-        <Badge>{kindLabel(error)}</Badge>
+      <Detail term={t('details.when')}>{formatDateTime(error.at, locale)}</Detail>
+      <Detail term={t('details.kind')}>
+        <KindBadge error={error} />
       </Detail>
       {error.kind === 'app' && (
         <>
           {error.routePath && (
-            <Detail term="Where">
+            <Detail term={t('details.where')}>
               <span className="font-mono">
                 {error.routeType ? `${error.routeType} ` : ''}
                 {error.routePath}
@@ -109,13 +114,13 @@ function ErrorDetails({ error }: { error: RecordedError }) {
             </Detail>
           )}
           {error.path && (
-            <Detail term="Page">
+            <Detail term={t('details.page')}>
               <span className="font-mono">{error.path}</span>
             </Detail>
           )}
-          <Detail term="Error">{summary(error)}</Detail>
+          <Detail term={t('details.error')}>{summary(error, t('noMessage'))}</Detail>
           {error.digest && (
-            <Detail term="Digest">
+            <Detail term={t('details.digest')}>
               <span className="font-mono">{error.digest}</span>
             </Detail>
           )}
@@ -123,17 +128,19 @@ function ErrorDetails({ error }: { error: RecordedError }) {
       )}
       {error.kind === 'sign-in' && (
         <>
-          <Detail term="Code">
+          <Detail term={t('details.code')}>
             <span className="font-mono">{error.code}</span>
           </Detail>
-          {error.description && <Detail term="Description">{error.description}</Detail>}
+          {error.description && (
+            <Detail term={t('details.description')}>{error.description}</Detail>
+          )}
         </>
       )}
-      <Detail term="Signed in">
+      <Detail term={t('details.signedIn')}>
         {error.user ? (
           <TextLink href={`/admin/users/${error.user.id}`}>{displayName(error.user)}</TextLink>
         ) : (
-          'No one'
+          t('details.noOne')
         )}
       </Detail>
     </dl>
@@ -141,7 +148,8 @@ function ErrorDetails({ error }: { error: RecordedError }) {
 }
 
 /**
- * The result of looking a reference up: its errors, or why there are none.
+ * The result of looking a reference up: its errors, or why there are none
+ * (text from `admin.errors.lookup`).
  *
  * @param props - Component props.
  * @param props.input - The reference as typed.
@@ -155,14 +163,15 @@ function LookupResult({
   input: string;
   lookup: Awaited<ReturnType<typeof findErrorReference>>;
 }) {
+  const t = useTranslations('admin.errors.lookup');
   const { reference, errors } = lookup;
   if (!reference) {
     return (
       <Card flush>
         <EmptyState
           icon={SearchX}
-          title="That isn’t a reference"
-          description={`“${input}” can’t be one: references look like 7KQ2-M9XD, eight letters and digits.`}
+          title={t('invalidTitle')}
+          description={t('invalidDescription', { input })}
         />
       </Card>
     );
@@ -172,21 +181,14 @@ function LookupResult({
       <Card flush>
         <EmptyState
           icon={SearchX}
-          title={`Nothing recorded under ${reference}`}
-          description="Errors are kept for 7 days; older ones, and ones over the limit of 20 an hour per address, are only in the server log."
+          title={t('noneTitle', { reference })}
+          description={t('noneDescription')}
         />
       </Card>
     );
   }
   return (
-    <Card
-      title={`Reference ${reference}`}
-      description={
-        errors.length === 1
-          ? 'Recorded once.'
-          : `Recorded ${errors.length} times: the same error on the server, newest first.`
-      }
-    >
+    <Card title={t('title', { reference })} description={t('recorded', { count: errors.length })}>
       <div className="flex flex-col gap-6">
         {errors.map((error, index) => (
           <Fragment key={error.id}>
@@ -209,6 +211,7 @@ function LookupResult({
  */
 async function Errors({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const locale = await getLocale();
+  const t = await getTranslations('admin.errors');
   const actor = await requireGlobalPermission('errors:view');
   const params = await searchParams;
   const input = searchParam(params.q)?.trim() ?? '';
@@ -230,8 +233,8 @@ async function Errors({ searchParams }: { searchParams: Promise<SearchParams> })
     <>
       <SearchForm
         id="error-reference"
-        label="Look up a reference"
-        placeholder="e.g. 7KQ2-M9XD"
+        label={t('searchLabel')}
+        placeholder={t('searchPlaceholder')}
         defaultValue={input}
         hiddenFields={table.hiddenFields()}
       />
@@ -239,28 +242,32 @@ async function Errors({ searchParams }: { searchParams: Promise<SearchParams> })
       {lookup && <LookupResult input={input} lookup={lookup} />}
 
       <Card
-        title="Last 7 days"
-        description="Errors on the server, in the browser and at sign-in, newest first."
-        actions={recent.total > 0 && <SortMenu label="errors" options={table.sortOptions()} />}
+        title={t('recent.title')}
+        description={t('recent.description')}
+        actions={
+          recent.total > 0 && <SortMenu label={t('recent.rows')} options={table.sortOptions()} />
+        }
         flush={recent.total > 0}
         footer={
-          showsPagination(recent.total) && <Pagination {...table.pagination(recent, 'errors')} />
+          showsPagination(recent.total) && (
+            <Pagination {...table.pagination(recent, t('recent.rows'))} />
+          )
         }
       >
         {recent.total === 0 ? (
           <EmptyState
             icon={ShieldCheck}
-            title="No errors in the last 7 days"
-            description="When someone runs into an error, it shows up here with the reference their page showed."
+            title={t('recent.emptyTitle')}
+            description={t('recent.emptyDescription')}
           />
         ) : (
-          <Table caption={table.caption('Errors in the last 7 days', recent)}>
+          <Table caption={table.caption(t('recent.caption'), recent)}>
             <thead>
               <tr>
-                <Th>Reference</Th>
-                <Th className="hidden md:table-cell">What happened</Th>
+                <Th>{t('table.reference')}</Th>
+                <Th className="hidden md:table-cell">{t('table.whatHappened')}</Th>
                 <Th aria-sort={table.ariaSort('time')} className="hidden sm:table-cell">
-                  When
+                  {t('table.when')}
                 </Th>
               </tr>
             </thead>
@@ -272,14 +279,14 @@ async function Errors({ searchParams }: { searchParams: Promise<SearchParams> })
                       <TextLink
                         href={table.withParams({ q: error.reference })}
                         className="font-mono"
-                        aria-label={`Look up ${error.reference}`}
+                        aria-label={t('lookup.ariaLabel', { reference: error.reference })}
                       >
                         {error.reference}
                       </TextLink>
-                      <Badge>{kindLabel(error)}</Badge>
+                      <KindBadge error={error} />
                       {/* Below the wider widths, what happened and when go here. */}
                       <span className="text-sm wrap-anywhere text-muted-foreground md:hidden">
-                        {summary(error)}
+                        {summary(error, t('noMessage'))}
                       </span>
                       <span className="text-xs text-muted-foreground sm:hidden">
                         <RelativeTime date={error.at} />
@@ -287,7 +294,7 @@ async function Errors({ searchParams }: { searchParams: Promise<SearchParams> })
                     </div>
                   </Td>
                   <Td className="hidden text-sm wrap-anywhere text-muted-foreground md:table-cell">
-                    {summary(error)}
+                    {summary(error, t('noMessage'))}
                     {error.path && <span className="block font-mono text-xs">{error.path}</span>}
                   </Td>
                   <Td className="hidden whitespace-nowrap text-muted-foreground sm:table-cell">

@@ -6,24 +6,29 @@
  */
 import { ShieldAlert } from 'lucide-react';
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import CenteredLayout from '@/components/layout/centered-layout';
 import BackButton from '@/components/ui/back-button';
-import Button from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
+import { SignInAgainButton, SignInErrorHeading } from './shell-text';
 import SignInErrorDetails from './sign-in-error-details';
 
 /**
- * Page metadata. The page is only reached through a failed sign-in, so it's
- * kept out of search engines.
+ * Page metadata: "Sign-in problem", in the request's language. The page is
+ * only reached through a failed sign-in, so it's kept out of search engines.
+ *
+ * @returns The metadata.
  */
-export const metadata: Metadata = {
-  title: 'Sign-in problem',
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('auth');
+  return {
+    title: t('signInError.title'),
+    robots: { index: false, follow: false },
+  };
+}
 
 /**
  * Placeholder while the error is recorded: the message and the reference box.
@@ -40,7 +45,9 @@ function DetailsSkeleton() {
 }
 
 /**
- * The sign-in error page.
+ * The sign-in error page. The heading and the buttons are in its static
+ * shell (`shell-text.tsx`); what went wrong and the reference come per
+ * request.
  *
  * @param props - Page props from Next.js.
  * @param props.searchParams - Query parameters: Better Auth's `error` and `error_description`.
@@ -56,17 +63,13 @@ export default function SignInErrorPage({ searchParams }: PageProps<'/sign-in-er
             strokeWidth={1.5}
             className="size-20 text-muted-foreground"
           />
-          <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
-            Signing in didn&apos;t work
-          </h1>
+          <SignInErrorHeading />
           <Suspense fallback={<DetailsSkeleton />}>
             <SignInErrorDetails searchParams={searchParams} />
           </Suspense>
         </div>
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-          <Button asChild className="w-full sm:w-auto">
-            <Link href="/auth">Sign in again</Link>
-          </Button>
+          <SignInAgainButton />
           <BackButton className="w-full sm:w-auto" />
         </div>
       </div>

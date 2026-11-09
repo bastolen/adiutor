@@ -4,10 +4,10 @@
  * (see `mayUseInviteLinks` in `src/lib/authz/permissions.ts`).
  */
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 import Alert from '@/components/ui/alert';
 import Button from '@/components/ui/button';
-import { INVITE_LINKS_NOT_ALLOWED } from '@/lib/authz/permissions';
 
 /**
  * Explains that the signed-in account can't use invite links, with a way back
@@ -16,11 +16,13 @@ import { INVITE_LINKS_NOT_ALLOWED } from '@/lib/authz/permissions';
  * @returns The explanation.
  */
 export default function InviteLinksNotAllowed() {
+  const t = useTranslations('auth');
+  const tCommon = useTranslations('common');
   return (
     <div className="flex flex-col gap-5">
-      <Alert tone="info">{INVITE_LINKS_NOT_ALLOWED}</Alert>
+      <Alert tone="info">{t('invitation.notAllowed')}</Alert>
       <Button variant="secondary" fullWidth asChild>
-        <Link href="/dashboard">Go to your dashboard</Link>
+        <Link href="/dashboard">{tCommon('actions.goToDashboard')}</Link>
       </Button>
     </div>
   );

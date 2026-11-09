@@ -1,10 +1,13 @@
 /**
- * @file Form to add a company and invite its first admin.
+ * @file Form to add a company and invite its first admin. Its text comes from
+ * `admin.addCompany.form` and `people.confirmBeforeGrant`, so the page passes
+ * `admin` and `people` through `ClientMessages`.
  */
 'use client';
 
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 import { ConfirmFirstNote } from '@/components/auth/recent-confirmation';
 import EmailLanguageField from '@/components/language/email-language-field';
@@ -16,9 +19,7 @@ import { useTransientState, useTransientActionState } from '@/components/ui/use-
 import { NAME_MAX_LENGTH, SLUG_MAX_LENGTH, slugify } from '@/lib/input-rules';
 
 import registerCompanyAction from './actions';
-import useConfirmBeforeGrant, {
-  CONFIRM_BEFORE_GRANT_NOTE,
-} from '../../../_people/use-confirm-before-grant';
+import useConfirmBeforeGrant from '../../../_people/use-confirm-before-grant';
 
 /**
  * Name, URL name (suggested from the name until edited) and admin email.
@@ -30,6 +31,8 @@ import useConfirmBeforeGrant, {
  * @returns The form.
  */
 export default function RegisterCompanyForm() {
+  const t = useTranslations('admin.addCompany.form');
+  const tPeople = useTranslations('people');
   const [result, formAction, pending, onSubmit] = useTransientActionState(
     registerCompanyAction,
     null,
@@ -48,7 +51,7 @@ export default function RegisterCompanyForm() {
         </Alert>
         <Button asChild>
           <Link href={`/companies/${result.data.slug}/members`}>
-            Open the company
+            {t('open')}
             <ArrowRight aria-hidden className="size-4" />
           </Link>
         </Button>
@@ -58,15 +61,15 @@ export default function RegisterCompanyForm() {
 
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-4">
-      {confirmFirst && <ConfirmFirstNote>{CONFIRM_BEFORE_GRANT_NOTE}</ConfirmFirstNote>}
+      {confirmFirst && <ConfirmFirstNote>{tPeople('confirmBeforeGrant')}</ConfirmFirstNote>}
       <ResultAlert result={result} errorsOnly />
       <TextField
-        label="Company name"
+        label={t('nameLabel')}
         name="name"
         maxLength={NAME_MAX_LENGTH}
         required
         autoComplete="off"
-        placeholder="Adiutor"
+        placeholder={t('namePlaceholder')}
         value={name}
         onChange={(event) => {
           setName(event.target.value);
@@ -76,13 +79,13 @@ export default function RegisterCompanyForm() {
         }}
       />
       <TextField
-        label="URL name"
+        label={t('slugLabel')}
         name="slug"
         maxLength={SLUG_MAX_LENGTH}
         required
         autoComplete="off"
         spellCheck={false}
-        description={`Suggested from the name. Lowercase letters, numbers and dashes. Its pages will be at /companies/${slug || 'adiutor'}.`}
+        description={t('slugDescription', { slug: slug || 'adiutor' })}
         value={slug}
         onChange={(event) => {
           setSlug(event.target.value);
@@ -90,19 +93,19 @@ export default function RegisterCompanyForm() {
         }}
       />
       <TextField
-        label="Email of the company's admin"
+        label={t('emailLabel')}
         type="email"
         name="adminEmail"
         autoComplete="off"
-        placeholder="admin@adiutor.dev"
-        description="They'll get an invitation to join as the company's Admin."
+        placeholder={t('emailPlaceholder')}
+        description={t('emailDescription')}
         required
       />
       <EmailLanguageField purpose="invitation" />
       {!confirmFirst && (
         <div>
           <Button type="submit" loading={pending}>
-            Add company
+            {t('submit')}
           </Button>
         </div>
       )}

@@ -5,6 +5,7 @@
 
 import { Mail, Smartphone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useId, useRef } from 'react';
 
 import { useRecentConfirmation } from '@/components/auth/recent-confirmation';
@@ -76,6 +77,7 @@ export default function TwoFactorCard({
   hasPassword,
   turnOffBlockedReason,
 }: TwoFactorCardProps) {
+  const t = useTranslations('account');
   const router = useRouter();
   const showToast = useToast();
   // Around "Turn off", which turning it off removes: focus then moves to the card's heading.
@@ -111,9 +113,15 @@ export default function TwoFactorCard({
   return (
     <Card
       id={SECTION}
-      title="Two-step verification"
-      description="After your password, enter a code from an authenticator app or from an email. You also confirm with it after signing in with an email link, or with a connected account that can't prove two-factor authentication."
-      actions={enabled ? <Badge tone="success">On</Badge> : <Badge>Off</Badge>}
+      title={t('security.twoFactor.title')}
+      description={t('security.twoFactor.description')}
+      actions={
+        enabled ? (
+          <Badge tone="success">{t('security.twoFactor.on')}</Badge>
+        ) : (
+          <Badge>{t('security.twoFactor.off')}</Badge>
+        )
+      }
       flush={enabled}
       footer={
         enabled && (
@@ -122,7 +130,7 @@ export default function TwoFactorCard({
             className="flex w-full flex-wrap items-center justify-between gap-3"
           >
             <span id={turnOffNoteId} className="text-xs text-muted-foreground">
-              {turnOffBlockedReason ?? 'Turning it off makes your password enough to sign in.'}
+              {turnOffBlockedReason ?? t('security.twoFactor.turnOffNote')}
             </span>
             <Button
               variant="danger-subtle"
@@ -131,7 +139,7 @@ export default function TwoFactorCard({
               aria-describedby={turnOffNoteId}
               onClick={() => start('turn-off')}
             >
-              Turn off
+              {t('security.twoFactor.turnOff')}
             </Button>
           </div>
         )
@@ -142,55 +150,54 @@ export default function TwoFactorCard({
           <IconRow
             icon={<Mail className="size-4" />}
             iconClassName="text-muted-foreground"
-            title="Email codes"
+            title={t('security.twoFactor.emailCodes')}
             control={
               {
-                available: <Badge tone="success">Available</Badge>,
-                replaced: <Badge>Not used</Badge>,
-                'not-for-role': <Badge tone="warning">Not enough</Badge>,
+                available: <Badge tone="success">{t('security.twoFactor.available')}</Badge>,
+                replaced: <Badge>{t('security.twoFactor.notUsed')}</Badge>,
+                'not-for-role': <Badge tone="warning">{t('security.twoFactor.notEnough')}</Badge>,
               }[emailCodes]
             }
           >
             {
               {
-                available: `Codes are sent to ${email}.`,
-                replaced: 'Your authenticator app replaces them, so your inbox alone can’t get in.',
-                'not-for-role':
-                  'They don’t count for your role. Set up an authenticator app or add a passkey.',
+                available: t('security.twoFactor.emailAvailable', { email }),
+                replaced: t('security.twoFactor.emailReplaced'),
+                'not-for-role': t('security.twoFactor.emailNotForRole'),
               }[emailCodes]
             }
           </IconRow>
           <IconRow
             icon={<Smartphone className="size-4" />}
             iconClassName="text-muted-foreground"
-            title="Authenticator app"
+            title={t('security.twoFactor.authenticator')}
             control={
               authenticatorSetUp ? (
                 <Button variant="secondary" size="sm" onClick={() => start('backup')}>
-                  New backup codes
+                  {t('security.twoFactor.newBackupCodes')}
                 </Button>
               ) : (
                 <Button variant="secondary" size="sm" onClick={() => start('authenticator')}>
-                  Set up
+                  {t('security.twoFactor.setUp')}
                 </Button>
               )
             }
           >
             {authenticatorSetUp
-              ? 'Set up, with backup codes for when you lose your phone.'
-              : 'Codes that work offline, plus backup codes.'}
+              ? t('security.twoFactor.authenticatorSetUp')
+              : t('security.twoFactor.authenticatorNotSetUp')}
           </IconRow>
         </ul>
       ) : (
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => start('authenticator')}>
             <Smartphone aria-hidden="true" />
-            Use an authenticator app
+            {t('security.twoFactor.useAuthenticator')}
           </Button>
           {emailCodes === 'available' && (
             <Button variant="secondary" onClick={() => start('email')}>
               <Mail aria-hidden="true" />
-              Use email codes
+              {t('security.twoFactor.useEmailCodes')}
             </Button>
           )}
         </div>
@@ -205,9 +212,9 @@ export default function TwoFactorCard({
       <PasswordActionDialog
         open={dialog === 'backup'}
         onOpenChange={toggle('backup')}
-        title="Get new backup codes?"
-        description="Your current backup codes stop working."
-        confirmLabel="Get new codes"
+        title={t('security.twoFactor.backupTitle')}
+        description={t('security.twoFactor.backupDescription')}
+        confirmLabel={t('security.twoFactor.backupConfirm')}
         hasPassword={hasPassword}
         action={async (password) => {
           const authClient = await loadAuthClient();
@@ -217,33 +224,37 @@ export default function TwoFactorCard({
           if (result.data) {
             setNewCodes(result.data.backupCodes);
           }
-          return { error: result.error ? { code: result.error.code } : null };
+          return {
+            error: result.error ? { code: result.error.code, message: result.error.message } : null,
+          };
         }}
         onDone={() => setDialog(null)}
       />
       <Modal
         open={newCodes !== null}
         onOpenChange={(open) => !open && setNewCodes(null)}
-        title="Your new backup codes"
+        title={t('security.twoFactor.newCodesTitle')}
       >
         <BackupCodes codes={newCodes ?? []} onDone={() => setNewCodes(null)} />
       </Modal>
       <PasswordActionDialog
         open={dialog === 'turn-off'}
         onOpenChange={toggle('turn-off')}
-        title="Turn off two-step verification?"
-        description="Your password alone will be enough to sign in. Your authenticator app and backup codes stop working."
-        confirmLabel="Turn off"
+        title={t('security.twoFactor.turnOffTitle')}
+        description={t('security.twoFactor.turnOffDescription')}
+        confirmLabel={t('security.twoFactor.turnOff')}
         confirmVariant="danger"
         hasPassword={hasPassword}
         action={async (password) => {
           const authClient = await loadAuthClient();
           const result = await authClient.twoFactor.disable(password ? { password } : {});
-          return { error: result.error ? { code: result.error.code } : null };
+          return {
+            error: result.error ? { code: result.error.code, message: result.error.message } : null,
+          };
         }}
         onDone={() => {
           setDialog(null);
-          showToast?.('Two-step verification is off.');
+          showToast?.(t('security.twoFactor.turnedOff'));
           restoreFocusIfLost(turnOffRef.current);
           router.refresh();
         }}

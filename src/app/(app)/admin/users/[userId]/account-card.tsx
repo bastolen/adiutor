@@ -1,9 +1,9 @@
 /**
  * @file The "Account" card on the user detail page: the user's email address
  * and whether it's verified, whether the account is active, when they were
- * last active and when the account was created.
+ * last active and when the account was created. Text from `admin.user.account`.
  */
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
@@ -40,24 +40,25 @@ export default function AccountCard({
   createdAt,
 }: AccountCardProps) {
   const locale = useLocale();
+  const t = useTranslations('admin.user.account');
   return (
-    <Card title="Account">
+    <Card title={t('title')}>
       <dl className="divide-y divide-border">
-        <DetailRow term="Email">
+        <DetailRow term={t('email')}>
           {email}
           {emailVerified ? (
-            <Badge tone="success">Verified</Badge>
+            <Badge tone="success">{t('verified')}</Badge>
           ) : (
-            <Badge tone="warning">Not verified</Badge>
+            <Badge tone="warning">{t('notVerified')}</Badge>
           )}
         </DetailRow>
-        <DetailRow term="Status">
-          {deactivatedAt ? <Badge tone="danger">Deactivated</Badge> : 'Active'}
+        <DetailRow term={t('status')}>
+          {deactivatedAt ? <Badge tone="danger">{t('deactivated')}</Badge> : t('active')}
         </DetailRow>
-        <DetailRow term="Last active">
+        <DetailRow term={t('lastActive')}>
           <RelativeTime date={lastActiveAt} />
         </DetailRow>
-        <DetailRow term="Account created">{formatDate(createdAt, locale)}</DetailRow>
+        <DetailRow term={t('created')}>{formatDate(createdAt, locale)}</DetailRow>
       </dl>
     </Card>
   );

@@ -1,0 +1,68 @@
+{
+  "errors": {
+    "notFound": "This page doesn't exist or you don't have access to it.",
+    "forbidden": "You don't have permission to do that.",
+    "concurrentChange": "Someone changed this at the same moment. Try again.",
+    "companyDeactivated": "This company is deactivated. Reactivate it first.",
+    "tooManyAttempts": "{minutes, plural, one {Too many attempts. Try again in # minute.} other {Too many attempts. Try again in # minutes.}}",
+    "grantConfirmationRequired": "Confirm it’s you with your second step before giving someone this role.",
+    "setup": {
+      "alreadySetUp": "Adiutor is already set up. Sign in instead.",
+      "accountDeactivated": "That account is deactivated, so it could not sign in. Use another address."
+    },
+    "signIn": {
+      "mfaVerificationRequired": "Confirm it’s you with your second step before changing how you sign in.",
+      "sessionNotFresh": "For your security, sign out and in again before changing this.",
+      "mfaRequiredForRole": "Your role requires MFA, and this would leave you without it. Add a passkey first, then try again.",
+      "changeInProgress": "Another change to how you sign in is still in progress. Try again in a moment.",
+      "passwordAlreadySet": "You have a password already. Change it instead."
+    },
+    "wrongPassword": {
+      "change_password": "Your current password is incorrect.",
+      "deactivate": "That password is incorrect."
+    },
+    "sessions": {
+      "currentDevice": "To sign out of this device, use Sign out in the menu.",
+      "emailRequired": "Give the email address of the user to sign out.",
+      "noAccount": "No account has the address {email}."
+    },
+    "members": {
+      "selfRaise": "You can't give yourself a higher role.",
+      "lastAdmin": "A company needs at least one admin. Make someone else an admin first.",
+      "accountDeactivated": "This account is deactivated. Reactivate it first.",
+      "alreadyMember": "They're already a member of {company}."
+    },
+    "staff": {
+      "selfRaise": "You can't give yourself a higher staff role.",
+      "lastAdmin": "There must always be at least one staff Admin. Make someone else an Admin first."
+    },
+    "users": {
+      "ownAccount": "Use your Security page to change your own account.",
+      "alreadyDeactivated": "This account is already deactivated.",
+      "alreadyActive": "This account is already active.",
+      "confirmEmail": "Type the email address exactly to confirm."
+    },
+    "soleAdmin": {
+      "self": {
+        "staff": "You are the only staff Admin. Make someone else an Admin first.",
+        "companies": "You are the only Admin of {companies}. Make someone else an Admin first.",
+        "staffAndCompanies": "You are the only staff Admin and the only Admin of {companies}. Make someone else an Admin first."
+      },
+      "user": {
+        "staff": "This user is the only staff Admin. Make someone else an Admin first.",
+        "companies": "This user is the only Admin of {companies}. Make someone else an Admin first.",
+        "staffAndCompanies": "This user is the only staff Admin and the only Admin of {companies}. Make someone else an Admin first."
+      }
+    },
+    "companies": {
+      "slugTaken": "That URL name is already in use. Choose another one.",
+      "alreadyActive": "This company is already active.",
+      "alreadyDeactivated": "This company is already deactivated."
+    },
+    "inviteLinks": {
+      "validity": "Choose how long the link stays valid.",
+      "claimLimited": "This invite link can't be used right now. Try again later.",
+      "notAllowed": "Finance and Support can't use invite links. Ask whoever sent it to invite you by email instead."
+    }
+  }
+}

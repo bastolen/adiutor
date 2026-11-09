@@ -4,38 +4,41 @@
  */
 import { LinkIcon } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 import AuthHeading from '@/components/ui/auth-heading';
 import Button from '@/components/ui/button';
-
-/** What invitation and invite link pages say. */
-const INVITATION_DESCRIPTION =
-  'It may have expired, been used already or been revoked. Ask whoever invited you for a new one.';
 
 /**
  * Explains that the link doesn't work, without saying why (expired, used,
  * revoked or never valid all look the same).
  *
  * @param props - Component props.
- * @param props.description - What may have happened and what to do (by default, for invitations).
+ * @param props.description - What may have happened and what to do (by
+ *   default, for invitations: "It may have expired, been used already or been
+ *   revoked. …").
  * @param props.href - Where "Go to sign in" goes (by default, the sign-in page).
  * @returns The message.
  */
 export default function UnusableLink({
-  description = INVITATION_DESCRIPTION,
+  description = null,
   href = '/auth',
 }: {
-  description?: string;
+  description?: string | null;
   href?: string;
 }) {
+  const t = useTranslations('auth');
   return (
     <div className="flex flex-col gap-6">
       <span className="flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
         <LinkIcon aria-hidden="true" className="size-5" />
       </span>
-      <AuthHeading title="This link can't be used" description={description} />
+      <AuthHeading
+        title={t('unusableLink.heading')}
+        description={description ?? t('unusableLink.invitation')}
+      />
       <Button variant="secondary" fullWidth asChild>
-        <Link href={href}>Go to sign in</Link>
+        <Link href={href}>{t('actions.goToSignIn')}</Link>
       </Button>
     </div>
   );

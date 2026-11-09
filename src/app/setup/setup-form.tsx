@@ -22,49 +22,50 @@ import setupAction from './actions';
  * @returns The form.
  */
 export default function SetupForm() {
+  const t = useTranslations('auth');
   const [result, formAction, pending, onSubmit] = useTransientActionState(setupAction, null);
-  const t = useTranslations('common.language');
+  const language = useTranslations('common.language');
   const locale = useLocale();
 
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-5">
       <ResultAlert result={result} errorsOnly />
       <TextField
-        label="Name shown to users"
+        label={t('setup.staffName')}
         name="staffName"
         maxLength={NAME_MAX_LENGTH}
         autoComplete="organization"
-        placeholder="Adiutor"
-        description="Used in invitations and wherever users see who's helping them. You can change it later."
+        placeholder={t('setup.staffNamePlaceholder')}
+        description={t('setup.staffNameHint')}
         required
       />
-      <DefaultLanguageField defaultValue={locale} description={t('defaultHint')} />
+      <DefaultLanguageField defaultValue={locale} description={language('defaultHint')} />
       <TextField
-        label="Your name"
+        label={t('fields.yourName')}
         name="name"
         autoComplete="name"
         required
         maxLength={NAME_MAX_LENGTH}
       />
       <TextField
-        label="Email"
+        label={t('fields.email')}
         type="email"
         name="email"
         autoComplete="email"
-        placeholder="you@adiutor.dev"
+        placeholder={t('fields.emailPlaceholder')}
         required
       />
       <TextField
-        label="Password"
+        label={t('fields.password')}
         type="password"
         name="password"
         autoComplete="new-password"
         minLength={MIN_PASSWORD_LENGTH}
-        description={`At least ${MIN_PASSWORD_LENGTH} characters.`}
+        description={t('fields.passwordHint', { min: MIN_PASSWORD_LENGTH })}
         required
       />
       <Button type="submit" fullWidth loading={pending}>
-        Set up Adiutor
+        {t('setup.submit')}
       </Button>
     </form>
   );

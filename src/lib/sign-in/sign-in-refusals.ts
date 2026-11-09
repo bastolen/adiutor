@@ -2,28 +2,36 @@
  * @file Refusals of a sign-in or of a change to how someone signs in that
  * the browser reacts to: the error code the auth guards
  * (`src/server/auth/auth-guards/`), the auth reactions
- * (`src/server/auth/auth-events/`) and the sign-in services return for each,
- * with the message the browser shows. Pure and client-safe, so the server
- * that refuses and the pages and forms that react to a code
- * (`src/lib/sign-in/auth-error-messages.ts`, the Security page) share one source,
- * and renaming a code can't break one side silently. Refusals whose message
- * the server words itself and the browser shows as it is (e.g. a paused
- * password sign-in) stay in the guards.
+ * (`src/server/auth/auth-events/`) and the sign-in services return for each.
+ * Pure and client-safe, so the server that refuses and the pages and forms
+ * that react to a code (`src/lib/sign-in/auth-error-messages.ts`, the
+ * Security page) share one source, and renaming a code can't break one side
+ * silently.
+ *
+ * The codes are what counts: forms turn a code into its message in the
+ * reader's language (`auth.codes.errors` in the catalogues, through
+ * `authErrorText`), except the refusals in {@link SERVER_WORDED_CODES},
+ * whose message has details only the server knows (how long to wait, which
+ * provider) and which the guards word in the request's language. Each
+ * refusal's `message` is its English (US) text, for code that hasn't moved
+ * to the catalogues yet. See docs/authentication.md, "How refusals reach the
+ * user".
  */
-import { type OAuthProvider, providerNames } from './oauth-providers';
 import { PASSKEY_NAME_MAX_LENGTH } from '../input-rules';
 
 /** A refusal: the error code and the message that goes with it. */
 export interface SignInRefusal {
   /** The error code, as Better Auth returns it in `error.code`. */
   readonly code: string;
-  /** What the user is told. */
+  /** What the user is told, in English (US); forms translate the code instead. */
   readonly message: string;
 }
 
 /**
  * Too many sign-ins, emails or codes for this account or address. The
- * guards' own message also says how long to wait; the browser shows this one.
+ * guards word their own message, which says how long to wait
+ * ({@link SERVER_WORDED_CODES}); this one, without the wait, is for when
+ * there's none.
  */
 export const TOO_MANY_ATTEMPTS = {
   code: 'TOO_MANY_ATTEMPTS',
@@ -86,45 +94,32 @@ export const UNSAFE_RETURN_ADDRESS = {
 } as const satisfies SignInRefusal;
 
 /**
- * Says why a password reset link can't set an account's first password: the
- * account's MFA is a provider account with two-factor authentication, which
- * only counts while there's no password (`wouldEndMfa`), so the reset would
- * end it, and whoever reads the inbox would get in with the password alone.
- * The user signs in with the provider instead and sets a password on the
- * Security page, where it needs a recent confirmation. Roles that require MFA
- * can't set one there next to provider MFA alone (`setFirstPassword`), so
- * they're told to add a passkey or an authenticator app first.
- *
- * @param providers - The providers whose accounts give the account its MFA
- *   (`mfaGivingProviders`); with none, the wording doesn't name one.
- * @param mfaRequired - Whether the user's role requires MFA (`requiresMfa`).
- * @returns The message, e.g. "This account signs in with GitHub as its second step, …".
- */
-export function resetEndsProviderMfaMessage(
-  providers: readonly OAuthProvider[],
-  mfaRequired: boolean,
-): string {
-  const names = providerNames(providers);
-  const step = names || 'a provider account';
-  const signIn = names ? `Sign in with ${names}` : 'Sign in with that account';
-  const next = mfaRequired
-    ? `${signIn}, add a passkey or an authenticator app on the Security page, then set a password there.`
-    : `${signIn}, then set a password on the Security page.`;
-  return `This account signs in with ${step} as its second step, so a password can't be set from a reset link. Nothing was changed. ${next}`;
-}
-
-/**
  * A password reset link (or welcome link) would give an account its first
  * password while its MFA is a provider account with two-factor
- * authentication, which a password ends (`wouldEndMfa`); refused for every
- * role by the guards before Better Auth sets it. The guards' message names the
- * provider ({@link resetEndsProviderMfaMessage}) and the reset page shows it
- * as it is; this one doesn't.
+ * authentication, which only counts while there's no password
+ * (`wouldEndMfa`): the reset would end it, and whoever reads the inbox would
+ * get in with the password alone. Refused for every role by the guards before
+ * Better Auth sets it. The user signs in with the provider instead and sets a
+ * password on the Security page, where it needs a recent confirmation; roles
+ * that require MFA add a passkey or an authenticator app there first. The
+ * guards' message names the providers and the reset page shows it as it is
+ * ({@link SERVER_WORDED_CODES}); this one doesn't.
  */
 export const RESET_ENDS_PROVIDER_MFA = {
   code: 'RESET_ENDS_PROVIDER_MFA',
-  message: resetEndsProviderMfaMessage([], false),
+  message:
+    "This account signs in with a provider account as its second step, so a password can't be set from a reset link. Nothing was changed. Sign in with that account, then set a password on the Security page.",
 } as const satisfies SignInRefusal;
+
+/**
+ * Password sign-in for an address is paused after too many wrong passwords
+ * (`reservePasswordAttempt` in the guards). Only the guards word it, with how
+ * long the pause lasts ({@link SERVER_WORDED_CODES}): the same for every
+ * address, whether or not it has an account.
+ */
+export const PASSWORD_SIGN_IN_PAUSED = {
+  code: 'PASSWORD_SIGN_IN_PAUSED',
+} as const satisfies Pick<SignInRefusal, 'code'>;
 
 /**
  * Two-step verification is off already, so there's nothing to turn off. The
@@ -165,9 +160,11 @@ export const SESSION_NOT_FRESH = {
 } as const satisfies SignInRefusal;
 
 /**
- * Says that a provider couldn't confirm the session on the step-up page,
- * because the user signed in there with another account than their own
- * confirmed one ({@link REVERIFY_WRONG_ACCOUNT}).
+ * Says in English (US) that a provider couldn't confirm the session on the
+ * step-up page, because the user signed in there with another account than
+ * their own confirmed one ({@link REVERIFY_WRONG_ACCOUNT}). The step-up page
+ * says it in the reader's language (`reverifyErrorText`); the end-to-end
+ * tests compare with this.
  *
  * @param provider - The provider's display name (`PROVIDER_LABELS`), or
  *   `null` when it isn't known: the wording then doesn't name one.
@@ -187,10 +184,34 @@ export function reverifyWrongAccountMessage(provider: string | null): string {
  * that isn't confirmed as a second step (`mayReverifyWith`). It's refused
  * before anything is connected or any session is created
  * (`checkReverify` in `src/server/auth/auth-events/reverify.ts`). The message here
- * doesn't name the provider; the step-up page names it
- * ({@link reverifyWrongAccountMessage}, through `reverifyErrorMessage`).
+ * doesn't name the provider; the step-up page names it (`reverifyErrorText`).
  */
 export const REVERIFY_WRONG_ACCOUNT = {
   code: 'REVERIFY_WRONG_ACCOUNT',
   message: reverifyWrongAccountMessage(null),
 } as const satisfies SignInRefusal;
+
+/**
+ * Refusals whose message has details only the server knows: how long to wait
+ * ({@link TOO_MANY_ATTEMPTS}, {@link PASSWORD_SIGN_IN_PAUSED}) and which
+ * providers to sign in with ({@link RESET_ENDS_PROVIDER_MFA}). The guards
+ * word them in the request's language, and forms show their `message` as it
+ * comes (`authErrorText`). Every other code is turned into its message in the
+ * browser, so Better Auth's English never reaches the user.
+ */
+export const SERVER_WORDED_CODES = [
+  TOO_MANY_ATTEMPTS.code,
+  PASSWORD_SIGN_IN_PAUSED.code,
+  RESET_ENDS_PROVIDER_MFA.code,
+] as const;
+
+/**
+ * Checks whether a refusal's message is worded by the server
+ * ({@link SERVER_WORDED_CODES}).
+ *
+ * @param code - The error's code, if any.
+ * @returns Whether the form shows the error's own message.
+ */
+export function isServerWorded(code: string | null | undefined): boolean {
+  return SERVER_WORDED_CODES.some((worded) => worded === code);
+}

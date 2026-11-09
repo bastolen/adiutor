@@ -21,7 +21,7 @@ import type { ServiceContext } from '../context';
  * @param actor - The signed-in user.
  * @param locale - The language, as the form sent it.
  * @returns The saved language.
- * @throws {ZodError} When it isn't one of the languages.
+ * @throws {ZodError} When it isn't one of the languages (`validation.locale`).
  */
 export default async function setOwnLocale(
   ctx: ServiceContext,

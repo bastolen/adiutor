@@ -3,12 +3,14 @@
  * (two-step verification, sign-out, deactivating and deleting); memberships
  * use `src/app/(app)/_people/member-actions.ts` and the staff role
  * `src/app/(app)/_people/staff-actions.ts`. Each one checks the session and
- * lets the service check permissions, then refreshes the page.
+ * lets the service check permissions, then refreshes the page. Success
+ * messages come from the `admin.user.actions` messages.
  */
 'use server';
 
 import { refresh } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 
 import type { ActionResult } from '@/lib/action-result';
 import { needsRecentConfirmation } from '@/lib/authz/mfa';
@@ -52,7 +54,8 @@ export async function resetMfaAction(
       removePasskeys: formData.get('removePasskeys') === 'on',
     });
     refresh();
-    return { ok: true, message: 'Two-step verification was reset.' };
+    const t = await getTranslations('admin.user.actions');
+    return { ok: true, message: t('mfaReset') };
   });
 }
 
@@ -71,7 +74,8 @@ export async function signOutEverywhereAction(
     const actor = await getActor();
     await signOutUserEverywhere(appContext, actor, field(formData, 'userId'));
     refresh();
-    return { ok: true, message: 'Signed out everywhere.' };
+    const t = await getTranslations('admin.user.actions');
+    return { ok: true, message: t('signedOut') };
   });
 }
 
@@ -90,7 +94,8 @@ export async function deactivateUserAction(
     const actor = await getActor();
     await deactivateUser(appContext, actor, field(formData, 'userId'));
     refresh();
-    return { ok: true, message: 'Account deactivated.' };
+    const t = await getTranslations('admin.user.actions');
+    return { ok: true, message: t('deactivated') };
   });
 }
 
@@ -109,7 +114,8 @@ export async function reactivateUserAction(
     const actor = await getActor();
     await reactivateUser(appContext, actor, field(formData, 'userId'));
     refresh();
-    return { ok: true, message: 'Account reactivated.' };
+    const t = await getTranslations('admin.user.actions');
+    return { ok: true, message: t('reactivated') };
   });
 }
 

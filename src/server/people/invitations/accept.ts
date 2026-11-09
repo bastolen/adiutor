@@ -7,13 +7,12 @@ import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 
 import type { DatabaseOrTransaction } from '@/db';
 import { company, invitation, inviteLink, membership, user } from '@/db/schema';
-import { INVITE_LINKS_NOT_ALLOWED, mayUseInviteLinks } from '@/lib/authz/permissions';
+import { mayUseInviteLinks } from '@/lib/authz/permissions';
 import {
   isCompanyRole,
   isPlatformRole,
   PLATFORM_ADMIN_ROLE,
   type PlatformRole,
-  ROLE_LABELS,
   type Role,
 } from '@/lib/authz/roles';
 import { firstRow } from '@/lib/defined';
@@ -66,8 +65,8 @@ async function findUsableInvitation(tx: DatabaseOrTransaction, token: string, lo
 export interface InvitationPreview {
   /** Name of the company, or of the staff. */
   companyName: string;
-  /** Display name of the role. */
-  roleLabel: string;
+  /** The role offered; the page names it in the reader's language (`roles.<role>.label`). */
+  role: Role;
 }
 
 /** An invitation as shown on its public page. */
@@ -83,7 +82,7 @@ export interface InvitationDetails extends InvitationPreview {
  * @returns The error.
  */
 export function inviteLinksNotAllowedError(): ServiceError {
-  return new ServiceError('forbidden', INVITE_LINKS_NOT_ALLOWED);
+  return new ServiceError('forbidden', 'errors.inviteLinks.notAllowed');
 }
 
 /**
@@ -123,7 +122,7 @@ export async function getInvitationPreview(
     found.company?.name ?? getStaffName(ctx.db),
     isFromInviteLink(ctx.db, found.invitation.id),
   ]);
-  return { companyName, roleLabel: ROLE_LABELS[found.invitation.role], fromInviteLink };
+  return { companyName, role: found.invitation.role, fromInviteLink };
 }
 
 /**

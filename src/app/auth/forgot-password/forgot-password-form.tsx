@@ -5,6 +5,7 @@
 
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { type FormEvent, useState } from 'react';
 
 import Alert from '@/components/ui/alert';
@@ -13,15 +14,18 @@ import Button from '@/components/ui/button';
 import TextField from '@/components/ui/text-field';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import authClient from '@/lib/sign-in/auth-client';
+import { authErrorText } from '@/lib/sign-in/auth-error-messages';
 
 /**
  * Asks for an email address and sends a reset link to it. The confirmation
  * is the same whether or not the account exists, so the form can't be used to
- * find out who has an account.
+ * find out who has an account. A refusal is worded from its code
+ * (`authErrorText`), or as the server words it when it says how long to wait.
  *
  * @returns The form.
  */
 export default function ForgotPasswordForm() {
+  const t = useTranslations('auth');
   const [email, setEmail] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useTransientState<string | null>(null);
@@ -42,7 +46,7 @@ export default function ForgotPasswordForm() {
     });
     setPending(false);
     if (result.error) {
-      setError(result.error.message ?? 'Sending the link failed. Please try again.');
+      setError(authErrorText(t, result.error, t('forgotPassword.failed')));
       return;
     }
     setSent(true);
@@ -51,37 +55,35 @@ export default function ForgotPasswordForm() {
   return (
     <div className="flex flex-col gap-8">
       <AuthHeading
-        title="Forgot your password?"
-        description="Enter your email address and we'll send you a link to choose a new one."
+        title={t('forgotPassword.heading')}
+        description={t('forgotPassword.description')}
       />
 
       <Alert tone="error" focusOnShow>
         {error}
       </Alert>
-      <Alert tone="success">
-        {sent ? `If ${email} has an account, a reset link is on its way. Check your inbox.` : null}
-      </Alert>
+      <Alert tone="success">{sent ? t('forgotPassword.sent', { email }) : null}</Alert>
 
       <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
         <TextField
-          label="Email"
+          label={t('fields.email')}
           type="email"
           name="email"
           autoComplete="email"
-          placeholder="you@adiutor.dev"
+          placeholder={t('fields.emailPlaceholder')}
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
         />
         <Button type="submit" fullWidth loading={pending}>
-          Send reset link
+          {t('forgotPassword.submit')}
         </Button>
       </form>
 
       <Button variant="ghost" fullWidth asChild>
         <Link href="/auth">
           <ArrowLeft aria-hidden="true" />
-          Back to sign in
+          {t('actions.backToSignIn')}
         </Link>
       </Button>
     </div>

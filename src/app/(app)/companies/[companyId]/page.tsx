@@ -4,6 +4,7 @@
  * (the company layout's default title).
  */
 import { Eye, Inbox } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import Alert from '@/components/ui/alert';
@@ -18,7 +19,7 @@ import AccessNotice from '../../access-notice';
  * The overview for a company the user may see. Requests will live here; until
  * they're built, it explains what's coming, worded for whoever is looking:
  * staff viewing a company, a company member, or a
- * Watcher.
+ * Watcher. Its text comes from the `companies` namespace.
  *
  * @param props - Component props.
  * @param props.params - Route parameters.
@@ -26,23 +27,23 @@ import AccessNotice from '../../access-notice';
  */
 async function Overview({ params }: { params: Promise<{ companyId: string }> }) {
   const { companyId } = await params;
+  const t = await getTranslations('companies.overview');
   const { company, permissions, actor } = await requireCompanyAccess(companyId);
   const role = actor.memberships[company.id] ?? null;
   // Staff (in a company they aren't a member of) and company members who
   // can work on requests see what's coming; other company members (Watchers) can only follow.
   let empty = {
     icon: Inbox,
-    title: 'Requests are on their way',
-    description: "Soon you'll raise requests here, follow their progress and approve the work.",
+    title: t('title'),
+    description: t('description'),
   };
   if (!role) {
-    empty = { ...empty, description: `Requests from ${company.name} will appear here.` };
+    empty = { ...empty, description: t('staffDescription', { company: company.name }) };
   } else if (!permissions.has('app:use')) {
     empty = {
       icon: Eye,
-      title: 'View-only access',
-      description:
-        "You have view-only access to this company. You'll be able to follow requests here.",
+      title: t('viewOnlyTitle'),
+      description: t('viewOnlyDescription'),
     };
   }
 
@@ -50,12 +51,7 @@ async function Overview({ params }: { params: Promise<{ companyId: string }> }) 
     <>
       {/* After stepping down on the Members page, which only Admins see. */}
       <AccessNotice />
-      {company.deactivatedAt && (
-        <Alert tone="info">
-          This company is deactivated. Its people can&apos;t use Adiutor until it&apos;s
-          reactivated.
-        </Alert>
-      )}
+      {company.deactivatedAt && <Alert tone="info">{t('deactivated')}</Alert>}
       <Card flush>
         <EmptyState icon={empty.icon} title={empty.title} description={empty.description} />
       </Card>

@@ -5,6 +5,7 @@
 
 import { refresh } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 
 import type { ActionResult } from '@/lib/action-result';
 import field from '@/lib/form-data';
@@ -39,7 +40,8 @@ export async function updateCompanyAction(
       redirect(`/companies/${slug}/settings?saved=1`);
     }
     refresh();
-    return { ok: true, message: 'Saved.' };
+    const t = await getTranslations('companies.settings');
+    return { ok: true, message: t('saved') };
   });
 }
 
@@ -59,6 +61,10 @@ export async function setActiveAction(
     const active = field(formData, 'active') === 'true';
     await setCompanyActive(appContext, actor, { companyId: field(formData, 'companyId'), active });
     refresh();
-    return { ok: true, message: active ? 'Company reactivated.' : 'Company deactivated.' };
+    const t = await getTranslations('companies.settings.danger');
+    return {
+      ok: true,
+      message: active ? t('reactivate.done') : t('deactivate.done'),
+    };
   });
 }

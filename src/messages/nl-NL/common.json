@@ -53,6 +53,55 @@
       "copyText": "Referentie {reference} ({when})",
       "copy": "Referentie kopiëren"
     },
+    "codeField": {
+      "code": "Code",
+      "backupCode": "Back-upcode",
+      "authenticatorHint": "De 6-cijferige code in je authenticator-app."
+    },
+    "resendCode": {
+      "send": "Nieuwe code sturen",
+      "wait": "Nieuwe code sturen over {wait}"
+    },
+    "providerStepUp": {
+      "region": "Bevestiging met {provider}",
+      "dismiss": "Melding over de bevestiging met {provider} sluiten",
+      "mfaOff": "{provider} kon niet bevestigen dat jij het bent: tweefactorauthenticatie staat uit voor je {provider}-account. Zet het aan bij {provider}, of gebruik een andere tweede stap.",
+      "unchecked": "{provider} kon niet bevestigen dat jij het bent: we konden de tweefactorauthenticatie van je {provider}-account nu even niet controleren. Probeer het zo opnieuw."
+    },
+    "providerLinked": {
+      "region": "{provider} gekoppeld",
+      "dismiss": "Melding over {provider} sluiten",
+      "named": "Je {provider}-account <name>{account}</name> is nu gekoppeld aan je Adiutor-account, omdat je ermee bent ingelogd. Was jij dit niet? <link>Ontkoppel het op de pagina Beveiliging</link>.",
+      "unnamed": "Je {provider}-account is nu gekoppeld aan je Adiutor-account, omdat je ermee bent ingelogd. Was jij dit niet? <link>Ontkoppel het op de pagina Beveiliging</link>."
+    },
+    "accessNotice": {
+      "dismiss": "Deze melding sluiten",
+      "steppedDown": "Je hebt je rol als Beheerder van de medewerkers neergelegd. Een andere Beheerder kan je de rol teruggeven.",
+      "leftStaff": "Je hoort niet meer bij de medewerkers. Je account blijft bestaan, en een Beheerder kan je opnieuw uitnodigen.",
+      "leftCompany": "Je hebt het bedrijf verlaten. Je account blijft bestaan, en de Beheerders van het bedrijf kunnen je opnieuw uitnodigen.",
+      "companySteppedDown": "Je bent geen Beheerder van dit bedrijf meer, dus je beheert de leden niet meer. Een andere Beheerder kan je weer Beheerder maken."
+    },
+    "recentConfirmation": {
+      "confirm": "Bevestig dat jij het bent"
+    },
+    "brandPanel": {
+      "headline": "Hulp krijgen zonder achter e-mails aan te zitten.",
+      "pitch": "Meld een probleem of vraag iets nieuws aan, volg de voortgang en keur het werk goed, allemaal op één plek.",
+      "preview": {
+        "status": "Wacht op je goedkeuring",
+        "title": "Openingstijden op de website aanpassen",
+        "you": "Jij",
+        "staff": "Adiutor Support",
+        "question": "Onze openingstijden veranderen volgende maand. Kunnen jullie ze op de website aanpassen?",
+        "answer": "Staat klaar op de testsite. Kijk je even en keur je het goed? Dan zetten we het live.",
+        "reply": "Reageren",
+        "approve": "Goedkeuren"
+      }
+    },
+    "signInError": {
+      "heading": "Inloggen is niet gelukt",
+      "signInAgain": "Opnieuw inloggen"
+    },
     "theme": {
       "label": "Thema",
       "system": "Systeem",

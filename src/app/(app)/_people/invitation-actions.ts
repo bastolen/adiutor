@@ -3,10 +3,12 @@
  * company's Members page and the staff page. The `companyId` field is empty
  * for staff. Each action checks the session and lets the service check
  * permissions (`members:manage` or `staff:manage`), then refreshes the page.
+ * Messages are in the request's language (`people`).
  */
 'use server';
 
 import { refresh } from 'next/cache';
+import { getLocale, getTranslations } from 'next-intl/server';
 
 import type { ActionResult } from '@/lib/action-result';
 import field, { localeField } from '@/lib/form-data';
@@ -14,6 +16,7 @@ import inviteStatusMessage from '@/lib/invite-status';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
 import { getActor } from '@/server/authz';
+import { serviceErrorMessage } from '@/server/errors';
 import { inviteManyByEmail, resendInvitation, revokeInvitation } from '@/server/people/invitations';
 import { createInviteLink, revokeInviteLink } from '@/server/people/invite-links';
 
@@ -53,6 +56,7 @@ interface InviteResultLine {
 
 /**
  * Invites one or more people by email (up to 20), all with the same role.
+ * The summary and each address's line are in the request's language.
  *
  * @param _previous - The previous result (unused).
  * @param formData - Fields `companyId`, `emails`, `role` and `locale` (the emails' language).
@@ -75,10 +79,13 @@ export async function inviteAction(
       }),
     );
     refresh();
+    const [locale, t] = await Promise.all([getLocale(), getTranslations('people')]);
     const lines = results.map((result) => ({
       email: result.email,
       ok: result.ok,
-      message: result.ok ? inviteStatusMessage(result.email, result.status) : result.message,
+      message: result.ok
+        ? inviteStatusMessage(result.email, result.status, locale)
+        : serviceErrorMessage(result.error, locale),
     }));
     const sent = lines.filter((line) => line.ok).length;
     const [only] = lines;
@@ -87,8 +94,8 @@ export async function inviteAction(
     }
     const summary =
       sent === lines.length
-        ? `Sent ${sent} invitations.`
-        : `Sent ${sent} of ${lines.length} invitations. Check the addresses below.`;
+        ? t('inviteResults.sentAll', { sent })
+        : t('inviteResults.sentSome', { sent, total: lines.length });
     return { ok: true, message: summary, data: { lines } };
   });
 }
@@ -137,7 +144,8 @@ export async function revokeInviteLinkAction(
       linkId: field(formData, 'linkId'),
     });
     refresh();
-    return { ok: true, message: 'Invite link revoked.' };
+    const t = await getTranslations('people.actions');
+    return { ok: true, message: t('inviteLinkRevoked') };
   });
 }
 
@@ -162,7 +170,8 @@ export async function resendInvitationAction(
       }),
     );
     refresh();
-    return { ok: true, message: 'Sent again.' };
+    const t = await getTranslations('people.actions');
+    return { ok: true, message: t('invitationResent') };
   });
 }
 
@@ -184,6 +193,7 @@ export async function revokeInvitationAction(
       invitationId: field(formData, 'invitationId'),
     });
     refresh();
-    return { ok: true, message: 'Invitation revoked.' };
+    const t = await getTranslations('people.actions');
+    return { ok: true, message: t('invitationRevoked') };
   });
 }

@@ -6,6 +6,7 @@
 
 import { ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useSyncExternalStore } from 'react';
 
 import Banner from '@/components/ui/banner';
@@ -66,13 +67,15 @@ const getServerDismissed = () => true;
 
 /**
  * A calm banner with a link to the Security page and a dismiss button. The
- * dismissal is remembered in this browser only, for this user only.
+ * dismissal is remembered in this browser only, for this user only. Its text
+ * comes from the `dashboard` namespace.
  *
  * @param props - Component props.
  * @param props.userId - The signed-in user.
  * @returns The banner, or nothing once dismissed.
  */
 export default function MfaRecommendation({ userId }: { userId: string }) {
+  const t = useTranslations('dashboard.mfaRecommendation');
   const dismissed = useSyncExternalStore(
     subscribe,
     () => readDismissed(userId),
@@ -94,14 +97,14 @@ export default function MfaRecommendation({ userId }: { userId: string }) {
 
   return (
     <Banner
-      label="Account security"
+      label={t('label')}
       icon={ShieldCheck}
       tone="success"
-      title="Protect your account"
-      description="Add a passkey or two-step verification, so a stolen password isn't enough to get in."
+      title={t('title')}
+      description={t('description')}
       actions={
         <Button asChild size="sm">
-          <Link href="/account/security">Set up</Link>
+          <Link href="/account/security">{t('setUp')}</Link>
         </Button>
       }
       onDismiss={dismiss}

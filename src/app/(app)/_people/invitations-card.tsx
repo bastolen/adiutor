@@ -1,9 +1,9 @@
 /**
  * @file The "Open invitations" card, shared by a company's Members page and
- * the staff page.
+ * the staff page. Text from the `people` namespace, role names from `roles`.
  */
 import { MailPlus } from 'lucide-react';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
@@ -12,7 +12,6 @@ import Pagination from '@/components/ui/pagination';
 import RowAction from '@/components/ui/row-action';
 import SortMenu from '@/components/ui/sort-menu';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
-import { ROLE_LABELS } from '@/lib/authz/roles';
 import formatDate from '@/lib/format';
 import { type Paged, showsPagination, type TableLinks } from '@/lib/tables/table-state';
 import type { InvitationSort } from '@/lib/tables/tables';
@@ -54,40 +53,44 @@ export default function InvitationsCard({
   canManage,
   companyId,
 }: InvitationsCardProps) {
+  const t = useTranslations('people');
+  const tRoles = useTranslations('roles');
   const locale = useLocale();
   return (
     <Card
       id={table.section}
-      title="Open invitations"
+      title={t('invitations.title')}
       actions={
-        invitations.total > 0 && <SortMenu label="invitations" options={table.sortOptions()} />
+        invitations.total > 0 && (
+          <SortMenu label={t('invitations.rows')} options={table.sortOptions()} />
+        )
       }
       flush
       footer={
         showsPagination(invitations.total) && (
-          <Pagination {...table.pagination(invitations, 'invitations')} />
+          <Pagination {...table.pagination(invitations, t('invitations.rows'))} />
         )
       }
     >
       {invitations.total === 0 ? (
         <EmptyState
           icon={MailPlus}
-          title="No open invitations"
-          description="Invitations you send appear here until they're accepted."
+          title={t('invitations.emptyTitle')}
+          description={t('invitations.emptyDescription')}
         />
       ) : (
-        <Table caption={table.caption('Open invitations', invitations)}>
+        <Table caption={table.caption(t('invitations.title'), invitations)}>
           <thead>
             <tr>
-              <Th aria-sort={table.ariaSort('email')}>Email</Th>
-              <Th className="hidden sm:table-cell">Role</Th>
+              <Th aria-sort={table.ariaSort('email')}>{t('columns.email')}</Th>
+              <Th className="hidden sm:table-cell">{t('columns.role')}</Th>
               <Th aria-sort={table.ariaSort('sent')} className="hidden md:table-cell">
-                Sent
+                {t('columns.sent')}
               </Th>
-              <Th className="hidden md:table-cell">Status</Th>
+              <Th className="hidden md:table-cell">{t('columns.status')}</Th>
               {canManage && (
                 <Th className="text-right">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t('columns.actions')}</span>
                 </Th>
               )}
             </tr>
@@ -99,28 +102,34 @@ export default function InvitationsCard({
                   <div className="flex min-w-0 flex-col">
                     <span className="font-medium wrap-anywhere">{invitation.email}</span>
                     {invitation.fromInviteLink && (
-                      <span className="text-xs text-muted-foreground">From an invite link</span>
+                      <span className="text-xs text-muted-foreground">
+                        {t('invitations.fromInviteLink')}
+                      </span>
                     )}
                     {/* Below tablet width, the role, date and expiry go here. */}
                     <span className="flex flex-wrap items-center gap-x-1 gap-y-1 text-xs text-muted-foreground md:hidden">
-                      <span className="sm:hidden">{ROLE_LABELS[invitation.role]} · </span>
-                      Sent {formatDate(invitation.createdAt, locale)}
-                      {invitation.expired && <Badge tone="warning">Expired</Badge>}
+                      <span className="sm:hidden">{tRoles(`${invitation.role}.label`)} · </span>
+                      {t('invitations.sent', { date: formatDate(invitation.createdAt, locale) })}
+                      {invitation.expired && (
+                        <Badge tone="warning">{t('invitations.expired')}</Badge>
+                      )}
                     </span>
                   </div>
                 </Td>
                 <Td className="hidden sm:table-cell">
-                  <Badge>{ROLE_LABELS[invitation.role]}</Badge>
+                  <Badge>{tRoles(`${invitation.role}.label`)}</Badge>
                 </Td>
                 <Td className="hidden whitespace-nowrap text-muted-foreground md:table-cell">
                   {formatDate(invitation.createdAt, locale)}
                 </Td>
                 <Td className="hidden md:table-cell">
                   {invitation.expired ? (
-                    <Badge tone="warning">Expired</Badge>
+                    <Badge tone="warning">{t('invitations.expired')}</Badge>
                   ) : (
                     <span className="text-muted-foreground">
-                      Expires {formatDate(invitation.expiresAt, locale)}
+                      {t('invitations.expires', {
+                        date: formatDate(invitation.expiresAt, locale),
+                      })}
                     </span>
                   )}
                 </Td>
@@ -130,21 +139,23 @@ export default function InvitationsCard({
                       <RowAction
                         action={resendInvitationAction}
                         fields={{ companyId: companyId ?? '', invitationId: invitation.id }}
-                        label="Resend"
-                        ariaLabel={`Resend invitation to ${invitation.email}`}
-                        doneMessage={`Invitation sent to ${invitation.email} again.`}
+                        label={t('invitations.resend')}
+                        ariaLabel={t('invitations.resendLabel', { email: invitation.email })}
+                        doneMessage={t('invitations.resent', { email: invitation.email })}
                       />
                       <RowAction
                         action={revokeInvitationAction}
                         fields={{ companyId: companyId ?? '', invitationId: invitation.id }}
-                        label="Revoke"
-                        ariaLabel={`Revoke invitation to ${invitation.email}`}
-                        doneMessage={`Invitation to ${invitation.email} revoked.`}
+                        label={t('invitations.revoke')}
+                        ariaLabel={t('invitations.revokeLabel', { email: invitation.email })}
+                        doneMessage={t('invitations.revoked', { email: invitation.email })}
                         variant="danger-subtle"
                         confirm={{
-                          title: 'Revoke this invitation?',
-                          confirmLabel: 'Revoke invitation',
-                          description: `The link sent to ${invitation.email} will stop working.`,
+                          title: t('invitations.revokeConfirm.title'),
+                          confirmLabel: t('invitations.revokeConfirm.confirm'),
+                          description: t('invitations.revokeConfirm.description', {
+                            email: invitation.email,
+                          }),
                         }}
                       />
                     </div>

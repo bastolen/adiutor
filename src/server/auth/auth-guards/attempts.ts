@@ -7,19 +7,18 @@ import { APIError } from 'better-auth/api';
 
 import { db } from '@/db';
 import { EMAIL_CODE_RESEND_SECONDS } from '@/lib/authz/mfa';
-import { EMAIL_CODE_SENT_RECENTLY, TOO_MANY_ATTEMPTS } from '@/lib/sign-in/sign-in-refusals';
+import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 
 import {
   failedSignInsKey,
-  formatWait,
   hitRateLimit,
   type RateLimitRule,
   releaseRateLimitHit,
   resetRateLimit,
-  tooManyAttemptsMessage,
 } from '../../rate-limit';
 import { requestState, takeRequestState } from '../request-state';
 import type { AuthGuardContext } from './paths';
+import { passwordSignInPausedBody, refusalBody, tooManyAttemptsBody } from './refusal-messages';
 
 /** The limits applied here. */
 export const AUTH_GUARD_LIMITS = {
@@ -76,30 +75,34 @@ const KEYS = {
 };
 
 /**
- * Refuses a request for a used-up limit.
+ * Refuses a request for a used-up limit, saying how long to wait in the
+ * request's language.
  *
+ * @param ctx - The endpoint context.
  * @param retryAfterSeconds - When the window resets.
  * @throws {APIError} `TOO_MANY_REQUESTS` with code `TOO_MANY_ATTEMPTS`.
  */
-function tooManyAttempts(retryAfterSeconds: number): never {
-  throw new APIError('TOO_MANY_REQUESTS', {
-    message: tooManyAttemptsMessage(retryAfterSeconds),
-    code: TOO_MANY_ATTEMPTS.code,
-  });
+function tooManyAttempts(ctx: AuthGuardContext, retryAfterSeconds: number): never {
+  throw new APIError('TOO_MANY_REQUESTS', tooManyAttemptsBody(ctx, retryAfterSeconds));
 }
 
 /**
  * Counts a hit and refuses the request when the limit is reached (for
  * requests that send an email, which count whether or not they succeed).
  *
+ * @param ctx - The endpoint context.
  * @param key - What's limited.
  * @param rule - The limit.
  * @throws {APIError} `TOO_MANY_REQUESTS` with code `TOO_MANY_ATTEMPTS`.
  */
-export async function limit(key: string, rule: RateLimitRule): Promise<void> {
+export async function limit(
+  ctx: AuthGuardContext,
+  key: string,
+  rule: RateLimitRule,
+): Promise<void> {
   const { allowed, retryAfterSeconds } = await hitRateLimit({ db }, key, rule);
   if (!allowed) {
-    tooManyAttempts(retryAfterSeconds);
+    tooManyAttempts(ctx, retryAfterSeconds);
   }
 }
 
@@ -109,22 +112,27 @@ export async function limit(key: string, rule: RateLimitRule): Promise<void> {
  * unless they're setting up email codes. The wait comes first, so a refused
  * request doesn't use up one of the codes.
  *
+ * @param ctx - The endpoint context.
  * @param userId - Who the code is for.
  * @param counted - Whether it counts towards the user's limit of email codes.
  * @throws {APIError} `TOO_MANY_REQUESTS`: `EMAIL_CODE_SENT_RECENTLY` within the wait,
  *   `TOO_MANY_ATTEMPTS` past the limit.
  */
-export async function limitEmailCode(userId: string, counted: boolean): Promise<void> {
+export async function limitEmailCode(
+  ctx: AuthGuardContext,
+  userId: string,
+  counted: boolean,
+): Promise<void> {
   const { allowed } = await hitRateLimit(
     { db },
     KEYS.emailCodeCooldown(userId),
     AUTH_GUARD_LIMITS.emailCodeCooldown,
   );
   if (!allowed) {
-    throw new APIError('TOO_MANY_REQUESTS', { ...EMAIL_CODE_SENT_RECENTLY });
+    throw new APIError('TOO_MANY_REQUESTS', refusalBody(ctx, EMAIL_CODE_SENT_RECENTLY.code));
   }
   if (counted) {
-    await limit(KEYS.emailCodes(userId), AUTH_GUARD_LIMITS.emailCodesPerUser);
+    await limit(ctx, KEYS.emailCodes(userId), AUTH_GUARD_LIMITS.emailCodesPerUser);
   }
 }
 
@@ -170,7 +178,8 @@ export async function countFailedSignIn(email: string): Promise<boolean> {
  * checked, so requests sent at the same moment can't all get past the limit
  * (one atomic count, not a check and a later count). Refuses the sign-in once
  * they're used up: the message is the same for every address, whether or not
- * it has an account, and points to the ways in that still work.
+ * it has an account, says how long the pause lasts and points to the ways in
+ * that still work.
  *
  * @param ctx - The endpoint context.
  * @param email - The normalized address.
@@ -180,10 +189,7 @@ export async function reservePasswordAttempt(ctx: AuthGuardContext, email: strin
   const rule = AUTH_GUARD_LIMITS.failedSignInsPerEmail;
   const { hits, retryAfterSeconds } = await hitRateLimit({ db }, KEYS.failedSignIns(email), rule);
   if (hits > rule.limit) {
-    throw new APIError('TOO_MANY_REQUESTS', {
-      message: `Password sign-in for this address is paused for ${formatWait(retryAfterSeconds)} after too many wrong passwords. Sign in with an email link or a passkey, or reset your password to lift the pause.`,
-      code: 'PASSWORD_SIGN_IN_PAUSED',
-    });
+    throw new APIError('TOO_MANY_REQUESTS', passwordSignInPausedBody(ctx, retryAfterSeconds));
   }
   requestState(ctx.context).reservedPasswordAttempt = { email, hits };
 }
@@ -240,7 +246,7 @@ export async function reserveStepUpAttempt(ctx: AuthGuardContext, userId: string
   const rule = AUTH_GUARD_LIMITS.failedStepUpsPerUser;
   const { hits, retryAfterSeconds } = await hitRateLimit({ db }, KEYS.failedStepUps(userId), rule);
   if (hits > rule.limit) {
-    tooManyAttempts(retryAfterSeconds);
+    tooManyAttempts(ctx, retryAfterSeconds);
   }
   requestState(ctx.context).reservedStepUpAttempt = userId;
 }

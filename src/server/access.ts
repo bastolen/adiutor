@@ -7,11 +7,7 @@ import { and, asc, eq, inArray } from 'drizzle-orm';
 
 import type { Database, DatabaseTransaction } from '@/db';
 import { company, membership, user } from '@/db/schema';
-import {
-  GRANT_CONFIRMATION_REQUIRED_MESSAGE,
-  grantNeedsConfirmation,
-  type RoleGrant,
-} from '@/lib/authz/guards';
+import { grantNeedsConfirmation, type RoleGrant } from '@/lib/authz/guards';
 import { needsRecentConfirmation } from '@/lib/authz/mfa';
 import { getPermissions, type Permission } from '@/lib/authz/permissions';
 import type { PlatformRole } from '@/lib/authz/roles';
@@ -208,11 +204,11 @@ export async function getTargetAccess(
  *
  * @param actor - The acting user.
  * @param grant - The role being given.
- * @throws {ServiceError} `confirmation_required` with {@link GRANT_CONFIRMATION_REQUIRED_MESSAGE}.
+ * @throws {ServiceError} `confirmation_required` with `errors.grantConfirmationRequired`.
  */
 export function assertConfirmedForGrant(actor: Actor, grant: RoleGrant): void {
   if (grantNeedsConfirmation(grant) && needsRecentConfirmation(actor)) {
-    throw new ServiceError('confirmation_required', GRANT_CONFIRMATION_REQUIRED_MESSAGE);
+    throw new ServiceError('confirmation_required', 'errors.grantConfirmationRequired');
   }
 }
 

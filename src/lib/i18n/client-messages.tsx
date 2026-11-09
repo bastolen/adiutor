@@ -7,12 +7,15 @@ import { getLocale, getMessages } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
 import IntlClientProvider from './intl-client-provider';
-import { type Messages, pickMessages } from './messages';
+import { type MessagesGroup, pickMessages } from './messages';
 
 /** Props of {@link ClientMessages}. */
 interface ClientMessagesProps {
-  /** The namespaces the client components below use; `common` always comes along. */
-  namespaces: readonly (keyof Messages)[];
+  /**
+   * The namespaces the client components below use, or just the groups
+   * inside them they use (`admin.staff.name`); `common` always comes along.
+   */
+  namespaces: readonly MessagesGroup[];
   /** The part of the page with those client components. */
   children: ReactNode;
 }
@@ -23,7 +26,7 @@ interface ClientMessagesProps {
  * the smallest part that needs it.
  *
  * @param props - The namespaces and the children.
- * @param props.namespaces - The namespaces to pass, besides `common`.
+ * @param props.namespaces - The namespaces (or groups) to pass, besides `common`.
  * @param props.children - The part of the page that uses them.
  * @returns The provider around the children.
  */

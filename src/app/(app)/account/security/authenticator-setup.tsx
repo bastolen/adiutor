@@ -5,14 +5,15 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { type FormEvent, useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
 
 import CodeField from '@/components/auth/code-field';
 import { useRecentConfirmation } from '@/components/auth/recent-confirmation';
 import Alert from '@/components/ui/alert';
 import Button from '@/components/ui/button';
 import Modal from '@/components/ui/modal';
-import { authErrorMessage } from '@/lib/sign-in/auth-error-messages';
+import { authErrorText } from '@/lib/sign-in/auth-error-messages';
 import loadAuthClient from '@/lib/sign-in/load-auth-client';
 import verifyCode from '@/lib/sign-in/verify-code';
 
@@ -45,6 +46,18 @@ function groupKey(secret: string): string {
 }
 
 /**
+ * Shows the setup key in its sentence (the `<code>` tag), easy to select.
+ *
+ * @param chunks - The key, where the sentence places it.
+ * @returns The key, as code.
+ */
+function codeTag(chunks: ReactNode) {
+  return (
+    <code className="font-mono font-medium break-all text-foreground select-all">{chunks}</code>
+  );
+}
+
+/**
  * The setup steps. Rendered only while the dialog is open, so each opening
  * starts fresh.
  *
@@ -63,6 +76,8 @@ function AuthenticatorSteps({
   onStepChange: (step: Step) => void;
   onFinish: () => void;
 }) {
+  const t = useTranslations('account');
+  const tAuth = useTranslations('auth');
   const { askToConfirmOnRefusal } = useRecentConfirmation();
   const [step, setStep] = useState<Step>('password');
   const [password, setPassword] = useState('');
@@ -113,7 +128,7 @@ function AuthenticatorSteps({
     setPending(false);
     if (result.error) {
       if (!askToConfirmOnRefusal(result.error.code)) {
-        setError(authErrorMessage(result.error));
+        setError(authErrorText(tAuth, result.error));
       }
       return;
     }
@@ -137,7 +152,7 @@ function AuthenticatorSteps({
     setPending(false);
     if (result.error) {
       if (!askToConfirmOnRefusal(result.error.code)) {
-        setError(authErrorMessage(result.error));
+        setError(authErrorText(tAuth, result.error));
       }
       return;
     }
@@ -153,7 +168,7 @@ function AuthenticatorSteps({
         <form className="flex flex-col gap-4" onSubmit={start}>
           {hasPassword && <PasswordField value={password} onChange={setPassword} />}
           <Button type="submit" loading={pending}>
-            Continue
+            {t('security.authenticator.continue')}
           </Button>
         </form>
       )}
@@ -161,12 +176,12 @@ function AuthenticatorSteps({
         <form className="flex flex-col gap-4" onSubmit={submitCode}>
           <ol className="flex list-decimal flex-col gap-3 pl-5 text-sm text-foreground">
             <li>
-              Scan this QR code with your app.
+              {t('security.authenticator.scan')}
               {qrCode && (
                 // eslint-disable-next-line @next/next/no-img-element -- A generated data URL, not a static asset.
                 <img
                   src={qrCode}
-                  alt="QR code to add Adiutor to your authenticator app"
+                  alt={t('security.authenticator.qrAlt')}
                   width={192}
                   height={192}
                   // eslint-disable-next-line better-tailwindcss/no-restricted-classes -- A QR code needs a white background to scan, in dark mode too.
@@ -174,13 +189,13 @@ function AuthenticatorSteps({
                 />
               )}
               <p className="mt-2 text-xs text-muted-foreground">
-                Can&apos;t scan it? Enter this key instead:{' '}
-                <code className="font-mono font-medium break-all text-foreground select-all">
-                  {groupKey(secret)}
-                </code>
+                {t.rich('security.authenticator.manualKey', {
+                  key: groupKey(secret),
+                  code: codeTag,
+                })}
               </p>
             </li>
-            <li>Enter the 6-digit code the app shows.</li>
+            <li>{t('security.authenticator.enterCode')}</li>
           </ol>
           <CodeField
             kind="totp"
@@ -189,7 +204,7 @@ function AuthenticatorSteps({
             onChange={(event) => setCode(event.target.value)}
           />
           <Button type="submit" loading={pending}>
-            Turn on
+            {t('security.authenticator.turnOn')}
           </Button>
         </form>
       )}
@@ -215,6 +230,7 @@ export default function AuthenticatorSetup({
   onOpenChange,
   hasPassword,
 }: AuthenticatorSetupProps) {
+  const t = useTranslations('account');
   const router = useRouter();
   const [step, setStep] = useState<Step>('password');
 
@@ -236,11 +252,15 @@ export default function AuthenticatorSetup({
         }
         onOpenChange(next);
       }}
-      title={step === 'backup' ? 'Save your backup codes' : 'Set up an authenticator app'}
+      title={
+        step === 'backup'
+          ? t('security.authenticator.backupTitle')
+          : t('security.authenticator.title')
+      }
       description={
         step === 'backup'
-          ? 'Your authenticator app is set up.'
-          : 'Use an app like 1Password, Google Authenticator or Microsoft Authenticator.'
+          ? t('security.authenticator.backupDescription')
+          : t('security.authenticator.description')
       }
     >
       <AuthenticatorSteps hasPassword={hasPassword} onStepChange={setStep} onFinish={finish} />

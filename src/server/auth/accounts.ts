@@ -23,11 +23,6 @@ import {
   type OAuthProvider,
 } from '@/lib/sign-in/oauth-providers';
 import { availableProviders } from '@/lib/sign-in/providers';
-import {
-  MFA_REQUIRED_FOR_ROLE,
-  MFA_VERIFICATION_REQUIRED,
-  SESSION_NOT_FRESH,
-} from '@/lib/sign-in/sign-in-refusals';
 
 import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
@@ -48,15 +43,15 @@ const INVALID_PASSWORD_CODE = 'INVALID_PASSWORD';
  * in. The same rules the guards apply to Better Auth's endpoints.
  *
  * @param actor - The signed-in user.
- * @throws {ServiceError} `forbidden` with `MFA_VERIFICATION_REQUIRED`'s message (the Security
- *   page's actions send the user to the step-up page for it first) or `SESSION_NOT_FRESH`'s.
+ * @throws {ServiceError} `forbidden` with `errors.signIn.mfaVerificationRequired` (the Security
+ *   page's actions send the user to the step-up page for it first) or `errors.signIn.sessionNotFresh`.
  */
 function assertMayChangeSignIn(actor: Actor): void {
   if (needsRecentConfirmation(actor)) {
-    throw new ServiceError('forbidden', MFA_VERIFICATION_REQUIRED.message);
+    throw new ServiceError('forbidden', 'errors.signIn.mfaVerificationRequired');
   }
   if (needsFreshSignIn(actor)) {
-    throw new ServiceError('forbidden', SESSION_NOT_FRESH.message);
+    throw new ServiceError('forbidden', 'errors.signIn.sessionNotFresh');
   }
 }
 
@@ -212,7 +207,7 @@ export async function confirmConnectedProvider(
       mfaVerified: found.mfaVerified === true,
     });
     if (mfa && wouldRemoveRequiredMfa(mfa.state, mfa.mfaRole, change, availableProviders)) {
-      throw new ServiceError('forbidden', MFA_REQUIRED_FOR_ROLE.message);
+      throw new ServiceError('forbidden', 'errors.signIn.mfaRequiredForRole');
     }
     const [updated] = await ctx.db
       .update(account)
@@ -260,14 +255,14 @@ export async function setFirstPassword(
   assertMayChangeSignIn(actor);
   await withSignInChangeLock(ctx, actor.id, async () => {
     if (await hasPassword(ctx.db, actor.id)) {
-      throw new ServiceError('conflict', 'You have a password already. Change it instead.');
+      throw new ServiceError('conflict', 'errors.signIn.passwordAlreadySet');
     }
     const mfa = await loadMfaContext(ctx.db, actor.id);
     if (
       mfa &&
       wouldRemoveRequiredMfa(mfa.state, mfa.mfaRole, { kind: 'set_password' }, availableProviders)
     ) {
-      throw new ServiceError('forbidden', MFA_REQUIRED_FOR_ROLE.message);
+      throw new ServiceError('forbidden', 'errors.signIn.mfaRequiredForRole');
     }
     await setPassword();
   });

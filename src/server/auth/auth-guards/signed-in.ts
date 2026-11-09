@@ -40,6 +40,7 @@ import {
   CODE_PATHS,
   refuseSignInChangeInProgress,
 } from './paths';
+import { refusalBody } from './refusal-messages';
 
 /**
  * Checks whether a request's code finished setting up an authenticator app
@@ -56,19 +57,21 @@ export function finishesAuthenticatorSetup(ctx: { context: object }): boolean {
 /**
  * Refuses a change that would leave a role that requires MFA without it.
  *
+ * @param ctx - The endpoint context, for the request's language.
  * @throws {APIError} Always.
  */
-function refuseMfaDowngrade(): never {
-  throw new APIError('FORBIDDEN', { ...MFA_REQUIRED_FOR_ROLE });
+function refuseMfaDowngrade(ctx: AuthGuardContext): never {
+  throw new APIError('FORBIDDEN', refusalBody(ctx, MFA_REQUIRED_FOR_ROLE.code));
 }
 
 /**
  * Refuses turning off two-step verification that's off already.
  *
+ * @param ctx - The endpoint context, for the request's language.
  * @throws {APIError} Always: `BAD_REQUEST` with code `TWO_FACTOR_ALREADY_OFF`.
  */
-function refuseTwoFactorAlreadyOff(): never {
-  throw new APIError('BAD_REQUEST', { ...TWO_FACTOR_ALREADY_OFF });
+function refuseTwoFactorAlreadyOff(ctx: AuthGuardContext): never {
+  throw new APIError('BAD_REQUEST', refusalBody(ctx, TWO_FACTOR_ALREADY_OFF.code));
 }
 
 /** A session as the checks for a signed-in request see it. */
@@ -133,7 +136,7 @@ async function checkSignedInRequest(
   // app (`mfaConfirmedUntil`). Without one, there's nothing to protect yet.
   const hasSecondStep = canConfirmSessions(state, mfaRole, availableProviders);
   if (settingUp && hasSecondStep && !confirmed) {
-    throw new APIError('FORBIDDEN', { ...MFA_VERIFICATION_REQUIRED });
+    throw new APIError('FORBIDDEN', refusalBody(ctx, MFA_VERIFICATION_REQUIRED.code));
   }
   const signedInAt = session.session.createdAt ? new Date(session.session.createdAt) : null;
   // Without a second step, a sign-in from the last hour instead (`needsFreshSignIn`), so an old
@@ -141,25 +144,25 @@ async function checkSignedInRequest(
   // `setFirstPassword`, which applies this rule itself: Better Auth's `setPassword` is server-only
   // and never reaches these checks.)
   if (settingUp && needsFreshSignIn({ canConfirmSessions: hasSecondStep, signedInAt })) {
-    throw new APIError('FORBIDDEN', { ...SESSION_NOT_FRESH });
+    throw new APIError('FORBIDDEN', refusalBody(ctx, SESSION_NOT_FRESH.code));
   }
   // Only once the session may make the change at all, like the refusals below: nothing to turn off.
   if (path === '/two-factor/disable' && !state.twoFactorEnabled) {
-    refuseTwoFactorAlreadyOff();
+    refuseTwoFactorAlreadyOff(ctx);
   }
   if (change && wouldRemoveRequiredMfa(state, mfaRole, change, availableProviders)) {
-    refuseMfaDowngrade();
+    refuseMfaDowngrade(ctx);
   }
   if (finishesSetup && session.user.twoFactorEnabled) {
     requestState(ctx.context).finishingAuthenticatorSetup = true;
   }
   if (EMAIL_CODE_PATHS.has(path) && !allowsEmailCodes(state, mfaRole)) {
-    refuseEmailCodes();
+    refuseEmailCodes(ctx);
   }
   // An emailed code waits for the last one (setting up too), and on the step-up page counts
   // towards the user's limit; setting up email codes doesn't count.
   if (path === '/two-factor/send-otp') {
-    await limitEmailCode(session.user.id, !settingUp);
+    await limitEmailCode(ctx, session.user.id, !settingUp);
   }
   if (settingUp) {
     return;
@@ -192,7 +195,7 @@ export async function checkSignedIn(
   const change = signInChangeOf(path, ctx.body);
   const lock = change ? await takeSignInChangeLock({ db }, session.user.id) : null;
   if (change && !lock) {
-    refuseSignInChangeInProgress();
+    refuseSignInChangeInProgress(ctx);
   }
   try {
     await checkSignedInRequest(ctx, path, session, change);

@@ -1,11 +1,16 @@
 /**
  * @file Describes audit events about a user's own account from their point
  * of view ("Signed in with a passkey", "Staff role changed to Manager
- * by Alex"), for the Recent activity card on their account page.
+ * by Alex"), for the Recent activity card on their account page, in the
+ * reader's language (`account.ownActivity`). Every description is one whole
+ * message: the way someone signed in, and who made a change, are choices
+ * within it (`select`), never pieces glued on.
  */
-import { AUDIT_ACTION_LABELS, type AuditAction } from '@/lib/audit-actions';
+import type { useTranslations } from 'next-intl';
+
+import type { AuditAction } from '@/lib/audit-actions';
 import type { SignInMethod } from '@/lib/authz/mfa';
-import { isRole, ROLE_LABELS } from '@/lib/authz/roles';
+import { isRole } from '@/lib/authz/roles';
 import {
   isOAuthProvider,
   type OAuthProvider,
@@ -25,156 +30,251 @@ export interface OwnActivityEntry {
 }
 
 /**
- * How each sign-in method the audit log records (`SignInMethod` in
- * `src/lib/authz/mfa/`) is mentioned after "Signed in", apart from the
- * OAuth providers (named by their label) and `other` (nothing more). A new
- * method that isn't listed here is a compile error.
+ * The translations a description needs, from `useTranslations` or
+ * `getTranslations` for each namespace.
  */
-const SIGN_IN_METHODS = {
-  password: 'with a password',
-  password_and_authenticator: 'with a password and an authenticator code',
-  password_and_email_code: 'with a password and an email code',
-  backup_code: 'with a backup code',
-  passkey: 'with a passkey',
-  email_link: 'with an email link',
-} as const satisfies Record<Exclude<SignInMethod, OAuthProvider | 'other'>, string>;
-
-/**
- * Words how someone signed in, after "Signed in".
- *
- * @param method - The recorded `method` detail.
- * @returns E.g. "with a passkey" or "with GitHub", or `null` for an unknown or `other` method.
- */
-function signInMethodLabel(method: unknown): string | null {
-  if (isOAuthProvider(method)) {
-    return `with ${PROVIDER_LABELS[method]}`;
-  }
-  return typeof method === 'string' && Object.hasOwn(SIGN_IN_METHODS, method)
-    ? SIGN_IN_METHODS[method as keyof typeof SIGN_IN_METHODS]
-    : null;
+export interface OwnActivityTranslators {
+  /** The `account` namespace, for the descriptions. */
+  account: ReturnType<typeof useTranslations<'account'>>;
+  /** The `audit` namespace, for actions described the same way everywhere. */
+  audit: ReturnType<typeof useTranslations<'audit'>>;
+  /** The `roles` namespace, for role names. */
+  roles: ReturnType<typeof useTranslations<'roles'>>;
 }
 
 /**
- * Describes an event for the person whose account it is, without who did it.
+ * Who made a change, as the descriptions' `by` choice: the user themself
+ * (or no one: a failed sign-in), another account with a name (`other`, with
+ * `name`), or one without a name (`admin`: "by an administrator").
+ */
+interface ByValues {
+  /** The choice. */
+  by: 'self' | 'admin' | 'other';
+  /** The other account's name, for `other`. */
+  name: string;
+}
+
+/**
+ * The sign-in methods the audit log records (`SignInMethod` in
+ * `src/lib/authz/mfa/`) that `account.ownActivity.signIn` names with a
+ * choice of their own, apart from the OAuth providers (`provider`, named by
+ * their label) and `other` (nothing more). A new method that isn't listed
+ * here is a compile error, and needs its choice in the message.
+ */
+const SIGN_IN_METHODS = {
+  password: true,
+  password_and_authenticator: true,
+  password_and_email_code: true,
+  backup_code: true,
+  passkey: true,
+  email_link: true,
+} as const satisfies Record<Exclude<SignInMethod, OAuthProvider | 'other'>, true>;
+
+/**
+ * Says how someone signed in, as the `method` and `provider` of
+ * `account.ownActivity.signIn`.
+ *
+ * @param method - The recorded `method` detail.
+ * @returns The values: a provider's label, a known method, or `other` for an
+ *   unknown or `other` method.
+ */
+function signInMethodValues(method: unknown): { method: string; provider: string } {
+  if (isOAuthProvider(method)) {
+    return { method: 'provider', provider: PROVIDER_LABELS[method] };
+  }
+  const known = typeof method === 'string' && Object.hasOwn(SIGN_IN_METHODS, method);
+  return { method: known ? method : 'other', provider: '' };
+}
+
+/**
+ * Names a provider for the descriptions' `provider` choice.
+ *
+ * @param providerId - The recorded provider ID.
+ * @returns Its label, or `unknown` (the messages then say "a sign-in provider").
+ */
+function providerValue(providerId: unknown): string {
+  return isOAuthProvider(providerId) ? PROVIDER_LABELS[providerId] : 'unknown';
+}
+
+/**
+ * Describes the events about memberships (being added, joining, being
+ * removed, a new role), and the rest with the audit log's own words (e.g.
+ * "Added a passkey"). Events about a company that's gone, or with a role
+ * that isn't one any more, fall back on those words too.
  *
  * @param entry - The event.
  * @param entry.action - What happened.
  * @param entry.details - Extra facts.
  * @param entry.company - The company it was about.
+ * @param by - Who made the change.
+ * @param t - Translates the `account` namespace.
+ * @param translators - The translations of roles and the audit log's words.
  * @returns The description.
  */
-function describeAction({ action, details, company }: OwnActivityEntry): string {
+function describeMembership(
+  { action, details, company }: Omit<OwnActivityEntry, 'actor'>,
+  by: ByValues,
+  t: ReturnType<typeof useTranslations<'account'>>,
+  translators: OwnActivityTranslators,
+): string {
+  const onStaff = details.staff === true;
+  const general = translators.audit(`actions.${action}`);
+  if (!onStaff && !company) {
+    return general;
+  }
+  const companyName = company?.name ?? '';
+  switch (action) {
+    case 'member_added': {
+      if (!isRole(details.role)) {
+        return general;
+      }
+      const role = translators.roles(`${details.role}.label`);
+      return onStaff
+        ? t('ownActivity.addedToStaff', { ...by, role })
+        : t('ownActivity.addedToCompany', { ...by, role, company: companyName });
+    }
+    case 'member_joined':
+      return onStaff
+        ? t('ownActivity.joinedStaff')
+        : t('ownActivity.joinedCompany', { company: companyName });
+    case 'member_removed':
+      return onStaff
+        ? t('ownActivity.removedFromStaff', { ...by })
+        : t('ownActivity.removedFromCompany', { ...by, company: companyName });
+    case 'role_changed': {
+      if (!isRole(details.to)) {
+        return general;
+      }
+      const role = translators.roles(`${details.to}.label`);
+      return onStaff
+        ? t('ownActivity.staffRoleChanged', { ...by, role })
+        : t('ownActivity.companyRoleChanged', { ...by, role, company: companyName });
+    }
+    default:
+      // The general labels already read well for the rest (e.g. "Added a passkey"); these are
+      // only ever done by the user themselves.
+      return general;
+  }
+}
+
+/**
+ * Describes an event for the person whose account it is.
+ *
+ * @param entry - The event.
+ * @param entry.action - What happened.
+ * @param entry.details - Extra facts.
+ * @param entry.company - The company it was about.
+ * @param by - Who made the change, for the descriptions that can name them.
+ * @param t - Translates the `account` namespace.
+ * @param others - The other translations, for the events {@link describeMembership} describes.
+ * @returns The description.
+ */
+function describeAction(
+  { action, details, company }: OwnActivityEntry,
+  by: ByValues,
+  t: ReturnType<typeof useTranslations<'account'>>,
+  others: OwnActivityTranslators,
+): string {
   // Staff events have no company; they're marked `staff: true` in the details.
   const onStaff = details.staff === true;
-  const companyName = company?.name ?? 'a company';
-  const provider = isOAuthProvider(details.providerId)
-    ? PROVIDER_LABELS[details.providerId]
-    : 'a sign-in provider';
+  const provider = providerValue(details.providerId);
   switch (action) {
     case 'sign_in':
-      return ['Signed in', signInMethodLabel(details.method)].filter(Boolean).join(' ');
+      return t('ownActivity.signIn', signInMethodValues(details.method));
     case 'sign_in_failed':
-      return 'Failed sign-in attempt with a wrong password';
+      return t('ownActivity.signInFailed');
     case 'sign_in_code_pending':
       // Recorded without an actor: whoever typed the password may not be the user.
-      return 'Entered your password; the sign-in then asked for your code';
+      return t('ownActivity.codePending');
     case 'mfa_verified':
-      return 'Verified a sign-in with MFA';
+      return t('ownActivity.mfaVerified');
     case 'mfa_failed':
       // "Confirm with GitHub" answered with another account than the user's own confirmed one.
       if (details.reason === 'different_account') {
-        return isOAuthProvider(details.method)
-          ? `Failed MFA confirmation with a different ${PROVIDER_LABELS[details.method]} account`
-          : 'Failed MFA confirmation with a different account';
+        return t('ownActivity.mfaFailedDifferentAccount', {
+          provider: providerValue(details.method),
+        });
       }
       // At a password sign-in's code step, recorded without an actor: whoever typed it may not be
       // the user.
       if (details.atSignIn === true) {
-        return 'Wrong two-step verification code entered at sign-in';
+        return t('ownActivity.mfaFailedAtSignIn');
       }
-      return 'Failed MFA confirmation with a wrong code';
+      return t('ownActivity.mfaFailedWrongCode');
     case 'password_changed':
-      return details.first ? 'Set a password' : 'Changed your password';
+      return details.first ? t('ownActivity.passwordSet') : t('ownActivity.passwordChanged');
     case 'password_reset':
-      return 'Reset your password with an email link';
+      return t('ownActivity.passwordReset');
     case 'password_check_failed':
       // Typed in a signed-in session (`checkCurrentPassword`), for what it was asked for.
       if (details.purpose === 'change_password') {
-        return 'Wrong password entered when changing your password';
+        return t('ownActivity.passwordCheckChanging');
       }
       if (details.purpose === 'deactivate') {
-        return 'Wrong password entered when deactivating your account';
+        return t('ownActivity.passwordCheckDeactivating');
       }
-      return 'Wrong password entered';
+      return t('ownActivity.passwordCheck');
     case 'provider_connected':
       return details.atSignIn
-        ? `Connected ${provider} by signing in with it`
-        : `Connected ${provider}`;
+        ? t('ownActivity.providerConnectedAtSignIn', { provider })
+        : t('ownActivity.providerConnected', { provider });
     case 'provider_confirmed':
       // Only an account that gave MFA when it was confirmed is a second step (see `givesMfa`).
       return details.givesMfa === true
-        ? `Confirmed ${provider} as a second step`
-        : `Confirmed ${provider}`;
+        ? t('ownActivity.providerConfirmedAsSecondStep', { provider })
+        : t('ownActivity.providerConfirmed', { provider });
     case 'provider_disconnected':
-      return `Disconnected ${provider}`;
+      return t('ownActivity.providerDisconnected', { provider });
     case 'email_verified':
       return details.providerId
-        ? `Verified your email address by signing in with ${provider}`
-        : 'Verified your email address';
+        ? t('ownActivity.emailVerifiedWithProvider', { provider })
+        : t('ownActivity.emailVerified');
     case 'sessions_revoked':
       if (details.others) {
-        return 'Signed out your other devices';
+        return t('ownActivity.signedOutOthers');
       }
       // The role now requires MFA (`withMfaPromotion`): only sessions without it ended.
       if (details.mfaRequired) {
         return onStaff || !company
-          ? 'Signed out where you hadn’t confirmed with an authenticator app, a passkey or a provider with two-factor authentication, which your role now requires'
-          : `Signed out where you hadn’t confirmed with an authenticator app, a passkey or a provider with two-factor authentication, which your role in ${companyName} now requires`;
+          ? t('ownActivity.signedOutWithoutMfa', { ...by })
+          : t('ownActivity.signedOutWithoutMfaInCompany', { ...by, company: company.name });
       }
       // From the command line (`pnpm sessions:revoke-all`): there's no account to name.
       return details.commandLine
-        ? 'Signed out everywhere by an administrator'
-        : 'Signed out everywhere';
+        ? t('ownActivity.signedOutByCommandLine')
+        : t('ownActivity.signedOutEverywhere', { ...by });
     case 'account_deactivated':
-      return 'Account deactivated';
+      return t('ownActivity.accountDeactivated', { ...by });
     case 'account_reactivated':
-      return 'Account reactivated';
+      return t('ownActivity.accountReactivated', { ...by });
     case 'mfa_reset':
-      return 'Two-step verification reset';
+      return t('ownActivity.mfaReset', { ...by });
     case 'account_created':
-      return 'Account created';
-    case 'member_added': {
-      const role = isRole(details.role) ? ROLE_LABELS[details.role] : 'a member';
-      return onStaff ? `Added to staff as ${role}` : `Added to ${companyName} as ${role}`;
-    }
-    case 'member_joined':
-      return onStaff ? 'Added to staff' : `Joined ${companyName}`;
-    case 'member_removed':
-      return onStaff ? 'Removed from staff' : `Removed from ${companyName}`;
-    case 'role_changed': {
-      const role = isRole(details.to) ? ROLE_LABELS[details.to] : 'a new role';
-      return onStaff
-        ? `Staff role changed to ${role}`
-        : `Role in ${companyName} changed to ${role}`;
-    }
+      return t('ownActivity.accountCreated', { ...by });
     default:
-      // The general labels already read well for the rest (e.g. "Added a passkey").
-      return AUDIT_ACTION_LABELS[action];
+      return describeMembership({ action, details, company }, by, t, others);
   }
 }
 
 /**
  * Describes an event about the user's own account. Changes made by someone
- * else end with who did it ("by Alex Admin"), by name only.
+ * else say who did it ("by Alex Admin"), by name only, or "by an
+ * administrator" for an account without a name.
  *
  * @param entry - The event.
  * @param userId - The user whose account it is.
+ * @param translators - The translations, in the reader's language.
  * @returns The description.
  */
-export default function describeOwnActivity(entry: OwnActivityEntry, userId: string): string {
-  const text = describeAction(entry);
-  if (!entry.actor || entry.actor.id === userId) {
-    return text;
+export default function describeOwnActivity(
+  entry: OwnActivityEntry,
+  userId: string,
+  translators: OwnActivityTranslators,
+): string {
+  let by: ByValues = { by: 'self', name: '' };
+  if (entry.actor && entry.actor.id !== userId) {
+    const name = entry.actor.name.trim();
+    by = name ? { by: 'other', name } : { by: 'admin', name: '' };
   }
-  return `${text} by ${entry.actor.name.trim() || 'an administrator'}`;
+  return describeAction(entry, by, translators.account, translators);
 }

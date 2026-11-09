@@ -1,0 +1,68 @@
+{
+  "errors": {
+    "notFound": "Deze pagina bestaat niet, of je hebt er geen toegang toe.",
+    "forbidden": "Je hebt geen toestemming om dat te doen.",
+    "concurrentChange": "Iemand anders wijzigde dit op hetzelfde moment. Probeer het opnieuw.",
+    "companyDeactivated": "Dit bedrijf is gedeactiveerd. Activeer het eerst opnieuw.",
+    "tooManyAttempts": "{minutes, plural, one {Te veel pogingen. Probeer het over # minuut opnieuw.} other {Te veel pogingen. Probeer het over # minuten opnieuw.}}",
+    "grantConfirmationRequired": "Bevestig met je tweede stap dat jij het bent, voordat je iemand deze rol geeft.",
+    "setup": {
+      "alreadySetUp": "Adiutor is al ingesteld. Log gewoon in.",
+      "accountDeactivated": "Dat account is gedeactiveerd, dus het kon niet inloggen. Gebruik een ander adres."
+    },
+    "signIn": {
+      "mfaVerificationRequired": "Bevestig met je tweede stap dat jij het bent, voordat je wijzigt hoe je inlogt.",
+      "sessionNotFresh": "Log voor je veiligheid uit en opnieuw in voordat je dit wijzigt.",
+      "mfaRequiredForRole": "Je rol vereist MFA, en hierdoor zou je die niet meer hebben. Voeg eerst een passkey toe en probeer het dan opnieuw.",
+      "changeInProgress": "Er loopt nog een andere wijziging in hoe je inlogt. Probeer het zo opnieuw.",
+      "passwordAlreadySet": "Je hebt al een wachtwoord. Wijzig dat in plaats daarvan."
+    },
+    "wrongPassword": {
+      "change_password": "Je huidige wachtwoord is onjuist.",
+      "deactivate": "Dat wachtwoord is onjuist."
+    },
+    "sessions": {
+      "currentDevice": "Gebruik Uitloggen in het menu om op dit apparaat uit te loggen.",
+      "emailRequired": "Geef het e-mailadres op van de gebruiker die je wilt uitloggen.",
+      "noAccount": "Er is geen account met het adres {email}."
+    },
+    "members": {
+      "selfRaise": "Je kunt jezelf geen hogere rol geven.",
+      "lastAdmin": "Een bedrijf heeft minstens één beheerder nodig. Maak eerst iemand anders beheerder.",
+      "accountDeactivated": "Dit account is gedeactiveerd. Activeer het eerst opnieuw.",
+      "alreadyMember": "Deze persoon is al lid van {company}."
+    },
+    "staff": {
+      "selfRaise": "Je kunt jezelf geen hogere medewerkersrol geven.",
+      "lastAdmin": "De medewerkers hebben altijd minstens één beheerder nodig. Maak eerst iemand anders beheerder."
+    },
+    "users": {
+      "ownAccount": "Gebruik je Beveiligingspagina om je eigen account te wijzigen.",
+      "alreadyDeactivated": "Dit account is al gedeactiveerd.",
+      "alreadyActive": "Dit account is al actief.",
+      "confirmEmail": "Typ het e-mailadres precies over om te bevestigen."
+    },
+    "soleAdmin": {
+      "self": {
+        "staff": "Je bent de enige beheerder van de medewerkers. Maak eerst iemand anders beheerder.",
+        "companies": "Je bent de enige beheerder van {companies}. Maak eerst iemand anders beheerder.",
+        "staffAndCompanies": "Je bent de enige beheerder van de medewerkers en de enige beheerder van {companies}. Maak eerst iemand anders beheerder."
+      },
+      "user": {
+        "staff": "Deze gebruiker is de enige beheerder van de medewerkers. Maak eerst iemand anders beheerder.",
+        "companies": "Deze gebruiker is de enige beheerder van {companies}. Maak eerst iemand anders beheerder.",
+        "staffAndCompanies": "Deze gebruiker is de enige beheerder van de medewerkers en de enige beheerder van {companies}. Maak eerst iemand anders beheerder."
+      }
+    },
+    "companies": {
+      "slugTaken": "Die URL-naam is al in gebruik. Kies een andere.",
+      "alreadyActive": "Dit bedrijf is al actief.",
+      "alreadyDeactivated": "Dit bedrijf is al gedeactiveerd."
+    },
+    "inviteLinks": {
+      "validity": "Kies hoe lang de link geldig blijft.",
+      "claimLimited": "Deze uitnodigingslink kan nu niet worden gebruikt. Probeer het later opnieuw.",
+      "notAllowed": "Financiën en Support kunnen geen uitnodigingslinks gebruiken. Vraag degene die de link stuurde om je per e-mail uit te nodigen."
+    }
+  }
+}

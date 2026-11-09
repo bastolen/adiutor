@@ -33,12 +33,12 @@ import { listCompanies } from '@/server/people/companies';
  * Page metadata: "Companies · Adiutor" for those who may see the page (`company:view`), and
  * the 404 page's title for everyone else, who get the 404 page.
  */
-export const generateMetadata = globalPermissionMetadata('company:view', {
-  title: 'Companies',
-});
+// i18n-check t('admin.companies.title')
+export const generateMetadata = globalPermissionMetadata('company:view', 'admin.companies.title');
 
 /**
- * Searchable, sortable and paginated table of companies.
+ * Searchable, sortable and paginated table of companies. Its text comes from
+ * `admin.companies`.
  *
  * @param props - Component props.
  * @param props.searchParams - Query parameters: `q` is the search text; the
@@ -47,6 +47,7 @@ export const generateMetadata = globalPermissionMetadata('company:view', {
  */
 async function CompanyList({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const locale = await getLocale();
+  const t = await getTranslations('admin.companies');
   const actor = await requireGlobalPermission('company:view');
   const params = await searchParams;
   const search = searchParam(params.q)?.trim() ?? '';
@@ -65,65 +66,57 @@ async function CompanyList({ searchParams }: { searchParams: Promise<SearchParam
     <Button asChild>
       <Link href="/admin/companies/new">
         <Plus aria-hidden className="size-4" />
-        Add company
+        {t('add')}
       </Link>
     </Button>
   );
 
   return (
     <>
-      <PageHeader
-        title="Companies"
-        description="Every company you help. Open one to manage its people and settings."
-        actions={registerButton}
-      />
+      <PageHeader title={t('title')} description={t('description')} actions={registerButton} />
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <SearchForm
           id="company-search"
-          label="Search companies"
-          placeholder="Search by name"
+          label={t('searchLabel')}
+          placeholder={t('searchPlaceholder')}
           defaultValue={search}
           hiddenFields={table.hiddenFields()}
         />
-        {companies.total > 0 && <SortMenu label="companies" options={table.sortOptions()} />}
+        {companies.total > 0 && <SortMenu label={t('rows')} options={table.sortOptions()} />}
       </div>
 
       <Card
         flush
         footer={
           showsPagination(companies.total) && (
-            <Pagination {...table.pagination(companies, 'companies')} />
+            <Pagination {...table.pagination(companies, t('rows'))} />
           )
         }
       >
         {companies.total === 0 ? (
           <EmptyState
             icon={Building2}
-            title={search ? 'No matching companies' : 'No companies yet'}
-            description={
-              search
-                ? `Nothing matches "${search}". Try another name.`
-                : 'Companies you add appear here.'
-            }
+            title={search ? t('noMatchTitle') : t('noneTitle')}
+            description={search ? t('noMatchDescription', { search }) : t('noneDescription')}
             action={search ? undefined : registerButton || undefined}
           />
         ) : (
           <Table
             caption={table.caption(
-              search ? `Companies matching "${search}"` : 'All companies',
+              search ? t('captionSearch', { search }) : t('captionAll'),
               companies,
             )}
           >
             <thead>
               <tr>
-                <Th aria-sort={table.ariaSort('name')}>Company</Th>
-                <Th>Status</Th>
+                <Th aria-sort={table.ariaSort('name')}>{t('company')}</Th>
+                <Th>{t('status')}</Th>
                 <Th aria-sort={table.ariaSort('added')} className="hidden md:table-cell">
-                  Added
+                  {t('added')}
                 </Th>
                 <Th>
-                  <span className="sr-only">Open</span>
+                  <span className="sr-only">{t('open')}</span>
                 </Th>
               </tr>
             </thead>
@@ -149,16 +142,16 @@ async function CompanyList({ searchParams }: { searchParams: Promise<SearchParam
                         </span>
                         {/* Below tablet width, when it was added goes here. */}
                         <span className="text-xs text-muted-foreground md:hidden">
-                          Added {formatDate(company.createdAt, locale)}
+                          {t('addedOn', { date: formatDate(company.createdAt, locale) })}
                         </span>
                       </div>
                     </div>
                   </Td>
                   <Td>
                     {company.deactivatedAt ? (
-                      <Badge tone="danger">Deactivated</Badge>
+                      <Badge tone="danger">{t('deactivated')}</Badge>
                     ) : (
-                      <Badge tone="success">Active</Badge>
+                      <Badge tone="success">{t('active')}</Badge>
                     )}
                   </Td>
                   <Td className="hidden text-muted-foreground md:table-cell">

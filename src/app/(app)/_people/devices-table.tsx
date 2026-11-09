@@ -3,7 +3,8 @@
  * user's own devices) and the user detail page (what staff Admins see):
  * browser and system, IP address, when it signed in and whether that sign-in
  * was MFA verified. The card around it (title, sort menu, pagination and the
- * sign-out buttons) is the page's.
+ * sign-out buttons) is the page's, in the page's words; the table's own text
+ * comes from the `people` namespace.
  */
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
@@ -17,6 +18,8 @@ import type { Paged, TableLinks } from '@/lib/tables/table-state';
 import type { DeviceSort } from '@/lib/tables/tables';
 import type { UserSession } from '@/server/people/user-admin';
 
+import { timeTag } from './rich-tags';
+
 /**
  * Props for {@link DevicesTable}.
  */
@@ -25,7 +28,10 @@ interface DevicesTableProps {
   devices: Paged<UserSession>;
   /** The table's sort and page links (`DEVICES_TABLE`). */
   table: TableLinks<DeviceSort>;
-  /** What the table shows, for screen readers, e.g. "Your signed-in devices". */
+  /**
+   * What the table shows, for screen readers, in the reader's language, e.g.
+   * "Your signed-in devices".
+   */
   caption: string;
   /**
    * The current session's ID: its device is marked "This device" and gets no
@@ -38,7 +44,8 @@ interface DevicesTableProps {
    * Actions column. Without it the table has no actions column.
    *
    * @param device - The device.
-   * @param label - The device's browser and system, for the button's accessible name.
+   * @param label - The device's browser and system in the reader's language, for the button's
+   *   accessible name.
    * @returns The action.
    */
   renderAction?: (device: UserSession, label: string) => ReactNode;
@@ -64,19 +71,20 @@ export default function DevicesTable({
   currentSessionId = null,
   renderAction = undefined,
 }: DevicesTableProps) {
+  const t = useTranslations('people');
   const tCommon = useTranslations('common');
   return (
     <Table caption={table.caption(caption, devices)}>
       <thead>
         <tr>
-          <Th>Device</Th>
-          <Th className="hidden sm:table-cell">IP address</Th>
+          <Th>{t('columns.device')}</Th>
+          <Th className="hidden sm:table-cell">{t('columns.ipAddress')}</Th>
           <Th aria-sort={table.ariaSort('signed-in')} className="hidden md:table-cell">
-            Signed in
+            {t('columns.signedIn')}
           </Th>
           {renderAction && (
             <Th className="text-right">
-              <span className="sr-only">Actions</span>
+              <span className="sr-only">{t('columns.actions')}</span>
             </Th>
           )}
         </tr>
@@ -91,12 +99,12 @@ export default function DevicesTable({
                 <div className="flex flex-col gap-1">
                   <span className="flex flex-wrap items-center gap-2 font-medium">
                     {label}
-                    {current && <Badge tone="brand">This device</Badge>}
-                    {device.mfaVerified && <Badge tone="success">MFA Verified</Badge>}
+                    {current && <Badge tone="brand">{t('devices.thisDevice')}</Badge>}
+                    {device.mfaVerified && <Badge tone="success">{t('devices.mfaVerified')}</Badge>}
                   </span>
                   {/* When it signed in goes here below tablet width, its IP on phones. */}
                   <span className="text-xs text-muted-foreground md:hidden">
-                    Signed in <RelativeTime date={device.createdAt} />
+                    {t.rich('devices.signedInAgo', { time: timeTag(device.createdAt) })}
                     <span className="sm:hidden">
                       {' · '}
                       <span className="font-mono">{formatIpAddress(device.ipAddress)}</span>

@@ -1,0 +1,37 @@
+{
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welkom, {name}",
+    "staffDescription": "Open een bedrijf, of bekijk iedereen die Adiutor gebruikt.",
+    "mfaRecommendation": {
+      "label": "Accountbeveiliging",
+      "title": "Beveilig je account",
+      "description": "Voeg een passkey of verificatie in twee stappen toe, zodat een gestolen wachtwoord niet genoeg is om binnen te komen.",
+      "setUp": "Instellen"
+    },
+    "providerMfaWarning": {
+      "label": "Gebruikers zonder MFA",
+      "title": "Inloggen met {providers} is niet ingesteld op deze server",
+      "description": "{count, plural, one {# gebruiker met een rol die MFA vereist heeft} other {# gebruikers met een rol die MFA vereist hebben}} nu geen MFA meer: die kwam van {providers} met tweefactorauthenticatie, en dat telt alleen mee zolang inloggen met {providers} hier is ingesteld. Tot die tijd wordt hun gevraagd een passkey of authenticator-app toe te voegen, en dat geldt ook voor iedereen met toegang tot hun inbox. Stel het opnieuw in, of laat hen een passkey of authenticator-app toevoegen.",
+      "action": "Bekijk gebruikers zonder MFA"
+    },
+    "shortcuts": {
+      "users": {
+        "title": "Gebruikers",
+        "description": "Medewerkers en de mensen van elk bedrijf."
+      },
+      "companies": {
+        "title": "Bedrijven",
+        "description": "Bekijk en beheer elk bedrijf."
+      },
+      "staff": {
+        "title": "Medewerkers",
+        "description": "Nodig medewerkers uit en beheer hun rollen."
+      },
+      "logs": {
+        "title": "Logs",
+        "description": "Het auditlog en de fouten waar mensen tegenaan liepen."
+      }
+    }
+  }
+}

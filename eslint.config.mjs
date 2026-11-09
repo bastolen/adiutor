@@ -475,33 +475,6 @@ const literalTextPropSyntax = [
 }));
 
 /**
- * Folders whose text hasn't moved to the catalogues yet; the hard-coded text
- * rules skip them until it has. The list only shrinks.
- */
-const NOT_YET_TRANSLATED = [
-  'src/app/(app)/_people/**',
-  'src/app/(app)/account/**',
-  'src/app/(app)/admin/**',
-  'src/app/(app)/companies/**',
-  'src/app/(app)/dashboard/**',
-  'src/app/(app)/access-notice.tsx',
-  'src/app/(app)/account-menu.tsx',
-  'src/app/(app)/app-navigation.tsx',
-  'src/app/(app)/layout.tsx',
-  'src/app/(app)/nav-links.tsx',
-  'src/app/(app)/navigation.tsx',
-  'src/app/(app)/provider-linked-notice.tsx',
-  'src/app/auth/**',
-  'src/app/invite/**',
-  'src/app/join/**',
-  'src/app/setup/**',
-  'src/app/sign-in-error/**',
-  'src/components/auth/**',
-  'src/components/layout/auth-layout.tsx',
-  'src/components/layout/request-preview.tsx',
-];
-
-/**
  * The rules from CLAUDE.md that ESLint can check, each block saying which.
  * Like `no-restricted-imports`, `no-restricted-syntax` and
  * `no-restricted-properties` keep only their last setting per file, so the
@@ -548,7 +521,7 @@ const claudeRulesConfig = [
      */
     name: 'adiutor/claude-rules/ui-text',
     files: ['src/app/**/*.tsx', 'src/components/**/*.tsx'],
-    ignores: [...TEST_FILES, ...NOT_YET_TRANSLATED],
+    ignores: TEST_FILES,
     rules: {
       'react/jsx-no-literals': [
         'error',

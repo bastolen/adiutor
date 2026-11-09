@@ -191,24 +191,27 @@ export async function clearFailedSignIns(
 }
 
 /**
- * How long until a limit's window resets, in whole minutes.
+ * How long until a limit's window resets, in whole minutes, for messages
+ * that say how long to wait (`{minutes, plural, ...}`).
  *
  * @param retryAfterSeconds - When the window resets.
- * @returns E.g. "1 minute" or "14 minutes" (at least 1 minute).
+ * @returns The minutes, rounded up (at least 1).
  */
-export function formatWait(retryAfterSeconds: number): string {
-  const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
-  return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
+export function waitMinutes(retryAfterSeconds: number): number {
+  return Math.max(1, Math.ceil(retryAfterSeconds / 60));
 }
 
 /**
- * The message for a used-up limit.
+ * The error for a used-up limit: "Too many attempts. Try again in N
+ * minutes." (`errors.tooManyAttempts`, at least 1 minute).
  *
  * @param retryAfterSeconds - When the window resets.
- * @returns "Too many attempts. Try again in N minutes." (at least 1 minute).
+ * @returns The error (`rate_limited`).
  */
-export function tooManyAttemptsMessage(retryAfterSeconds: number): string {
-  return `Too many attempts. Try again in ${formatWait(retryAfterSeconds)}.`;
+export function tooManyAttemptsError(retryAfterSeconds: number): ServiceError {
+  return new ServiceError('rate_limited', 'errors.tooManyAttempts', {
+    minutes: waitMinutes(retryAfterSeconds),
+  });
 }
 
 /**
@@ -228,7 +231,7 @@ export async function assertRateLimit(
 ): Promise<void> {
   const { allowed, retryAfterSeconds } = await hitRateLimit(ctx, key, rule);
   if (!allowed) {
-    throw new ServiceError('rate_limited', tooManyAttemptsMessage(retryAfterSeconds));
+    throw tooManyAttemptsError(retryAfterSeconds);
   }
 }
 

@@ -1,10 +1,12 @@
 /**
- * @file Server actions for accepting an invitation.
+ * @file Server actions for accepting an invitation. Their messages are in
+ * the request's language.
  */
 'use server';
 
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 
 import type { ActionResult } from '@/lib/action-result';
 import { auth } from '@/lib/auth';
@@ -17,9 +19,6 @@ import {
   acceptInvitationWithNewAccount,
   joinedPath,
 } from '@/server/people/invitations';
-
-/** Message for an invitation that stopped working in the meantime. */
-const UNUSABLE = 'This invitation can no longer be used. Ask for a new one.';
 
 /**
  * Accepts the invitation as the signed-in user and opens the company (or the
@@ -39,12 +38,10 @@ export async function acceptAction(
     if (result.status === 'joined') {
       redirect(joinedPath(result.companyId));
     }
+    const t = await getTranslations('auth');
     return {
       ok: false,
-      message:
-        result.status === 'wrong_account'
-          ? 'This invitation is for a different account. Sign out, then open the link again.'
-          : UNUSABLE,
+      message: result.status === 'wrong_account' ? t('invite.wrongAccount') : t('invite.unusable'),
     };
   });
 }
@@ -74,12 +71,10 @@ export async function createAccountAction(
       });
       redirect(joinedPath(result.companyId));
     }
+    const t = await getTranslations('auth');
     if (result.status === 'account_exists') {
-      return {
-        ok: false,
-        message: 'You already have an Adiutor account. Sign in to accept the invitation.',
-      };
+      return { ok: false, message: t('invite.accountExists') };
     }
-    return { ok: false, message: UNUSABLE };
+    return { ok: false, message: t('invite.unusable') };
   });
 }

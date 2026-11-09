@@ -1,13 +1,15 @@
 /**
  * @file Server actions for the Profile page of the account (name, language
- * and email verification). They go through Better Auth, so its rules apply.
- * The Security page's actions are in `./security/actions.ts`.
+ * and email verification). They go through Better Auth, so its rules apply. Their
+ * messages are in the request's language. The Security page's actions are in
+ * `./security/actions.ts`.
  */
 'use server';
 
 import { isAPIError } from 'better-auth/api';
 import { refresh } from 'next/cache';
 import { cookies, headers } from 'next/headers';
+import { getTranslations } from 'next-intl/server';
 
 import type { ActionResult } from '@/lib/action-result';
 import { auth } from '@/lib/auth';
@@ -65,7 +67,8 @@ export async function updateNameAction(
     const name = nameSchema.parse(field(formData, 'name'));
     await auth.api.updateUser({ body: { name }, headers: await headers() });
     refresh();
-    return { ok: true, message: 'Name saved.' };
+    const t = await getTranslations('account');
+    return { ok: true, message: t('profile.nameSaved') };
   });
 }
 
@@ -79,8 +82,9 @@ export async function updateNameAction(
 export async function sendVerificationAction(): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor({ allowMissingMfa: true });
+    const t = await getTranslations('account');
     if (actor.emailVerified) {
-      return { ok: true, message: 'Your email address is already verified.' };
+      return { ok: true, message: t('profile.alreadyVerified') };
     }
     await assertRateLimit(
       appContext,
@@ -94,13 +98,10 @@ export async function sendVerificationAction(): Promise<ActionResult> {
       });
     } catch (error) {
       if (isAPIError(error)) {
-        return { ok: false, message: 'Sending the email failed. Please try again.' };
+        return { ok: false, message: t('profile.verificationFailed') };
       }
       throw error;
     }
-    return {
-      ok: true,
-      message: `We've sent a verification link to ${actor.email}. It expires in 1 hour.`,
-    };
+    return { ok: true, message: t('profile.verificationSent', { email: actor.email }) };
   });
 }

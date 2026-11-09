@@ -5,6 +5,7 @@
  */
 import { ArrowRight, Building2, type LucideIcon, ScrollText, UserCog, Users } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 import { focusRing } from '@/components/ui/styles';
 import cn from '@/lib/cn';
@@ -25,38 +26,43 @@ interface Shortcut {
  * The staff shortcuts, in order. Admins also get "Staff"; Admins and Managers
  * "Logs".
  *
+ * @param t - Translates the `dashboard` namespace.
  * @param canManageStaff - Whether the user may manage the staff (Admins).
  * @param canViewLogs - Whether the user may see the audit log (Admins and Managers).
  * @returns The shortcuts.
  */
-function shortcuts(canManageStaff: boolean, canViewLogs: boolean): Shortcut[] {
+function shortcuts(
+  t: ReturnType<typeof useTranslations<'dashboard'>>,
+  canManageStaff: boolean,
+  canViewLogs: boolean,
+): Shortcut[] {
   const items: Shortcut[] = [
     {
       href: '/admin/users',
-      title: 'Users',
-      description: 'Staff and the people of each company.',
+      title: t('shortcuts.users.title'),
+      description: t('shortcuts.users.description'),
       icon: Users,
     },
     {
       href: '/admin/companies',
-      title: 'Companies',
-      description: 'View and manage every company.',
+      title: t('shortcuts.companies.title'),
+      description: t('shortcuts.companies.description'),
       icon: Building2,
     },
   ];
   if (canManageStaff) {
     items.push({
       href: '/admin/staff',
-      title: 'Staff',
-      description: 'Invite staff and manage their roles.',
+      title: t('shortcuts.staff.title'),
+      description: t('shortcuts.staff.description'),
       icon: UserCog,
     });
   }
   if (canViewLogs) {
     items.push({
       href: '/admin/logs',
-      title: 'Logs',
-      description: 'The audit log, and the errors people ran into.',
+      title: t('shortcuts.logs.title'),
+      description: t('shortcuts.logs.description'),
       icon: ScrollText,
     });
   }
@@ -76,7 +82,8 @@ interface StaffShortcutsProps {
 /**
  * A grid of shortcut tiles, each a link with an icon, title and description.
  * One column on phones, and never more than two from 640px, however many
- * tiles there are: an odd last tile keeps the others' width.
+ * tiles there are: an odd last tile keeps the others' width. Its text comes
+ * from the `dashboard` namespace.
  *
  * @param props - Shortcuts props.
  * @param props.canManageStaff - Show "Staff".
@@ -84,7 +91,8 @@ interface StaffShortcutsProps {
  * @returns The list of tiles.
  */
 export default function StaffShortcuts({ canManageStaff, canViewLogs }: StaffShortcutsProps) {
-  const items = shortcuts(canManageStaff, canViewLogs);
+  const t = useTranslations('dashboard');
+  const items = shortcuts(t, canManageStaff, canViewLogs);
 
   return (
     <ul className="grid gap-4 sm:grid-cols-2">

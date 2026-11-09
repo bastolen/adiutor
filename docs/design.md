@@ -22,7 +22,8 @@ keyboard support.
   a link (the sorts in `SortMenu`). A `Badge`'s tone says what kind of status it is: `success` for
   active or verified, `warning` for something that needs attention (expired, not verified),
   `danger` for deactivated or revoked. A status keeps one tone on every screen, which
-  `src/components/ui/badge-tones.test.ts` checks. Icons come from
+  `src/components/ui/badge-tones.test.ts` checks (it reads a badge whose label is one message,
+  `{t('deactivated')}`, as its English text). Icons come from
   [Lucide](https://lucide.dev) and are hidden from screen readers; icon-only buttons have an
   `aria-label`. Join classes with `cn()` (`src/lib/cn.ts`).
 - **Tables** of records sort and paginate (`src/lib/tables/table-state.ts`, with each table defined in
@@ -133,8 +134,9 @@ keyboard support.
   a wait cursor (base rules in `src/app/globals.css`). Buttons disable and show a spinner while
   their action runs, so nothing is submitted twice. Destructive actions ask for confirmation in a
   `ConfirmDialog`. A role select only saves when an option is picked (Enter or click), never while
-  arrowing through the list; on the user's own row it asks first (`confirmChange`), and cancelling
-  puts it back and returns focus to it. While it saves it's busy (`SelectField`'s `busy`:
+  arrowing through the list; on the user's own row it asks first (`confirmChange`, with the
+  question for each role worded by the page, e.g. "Step down to Manager?"), and cancelling puts it
+  back and returns focus to it. While it saves it's busy (`SelectField`'s `busy`:
   `aria-busy`, the wait cursor, and it doesn't open) rather than disabled, and it stays mounted, so
   keyboard focus stays on it before and after the result. `ConfirmDialog` usually opens from its
   trigger; without one the caller opens it (`open`, `onOpenChange`, with the open state in
@@ -197,7 +199,9 @@ keyboard support.
   Pages and layouts that require a permission therefore export their `generateMetadata` from
   `src/server/page-metadata.ts`, with the same check as the page: `globalPermissionMetadata`
   (with `requireGlobalPermission`, plus an `exists` check for a page about one record, like a
-  user's) or `companyPermissionMetadata` (with `requireCompanyAccess` and a permission).
+  user's) or `companyPermissionMetadata` (with `requireCompanyAccess` and a permission). Both take
+  the title as a message key (`'admin.users.title'`), translated in the request's language; the
+  company layout's template ("%s · {company} · Adiutor") is the message `companies.titleTemplate`.
   `src/app/permission-titles.test.ts` fails when one of them has a static title instead.
 - **Motion:** short transitions only, and none at all when the device asks for reduced motion.
 
@@ -225,9 +229,9 @@ device), **Light** or **Dark**:
 Choosing a theme keeps the menu open, so the result shows at once.
 
 Both use the same hook (`useThemePreference`) and the same labels and icons
-(`src/components/theme/theme-options.ts`: half sun, half moon for **System**, so it reads as a
-theme; a sun; a moon), so a choice made before signing in carries over. The row's "Theme" label
-has a palette icon, apart from the options.
+(`common.theme` in the catalogues, icons in `src/components/theme/theme-options.ts`: half sun, half
+moon for **System**, so it reads as a theme; a sun; a moon), so a choice made before signing in
+carries over. The row's "Theme" label has a palette icon, apart from the options.
 
 - **Stored choice:** saved in `localStorage` (`adiutor-theme`) and kept in sync across tabs. With
   System, the page follows device changes live.

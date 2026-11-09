@@ -13,16 +13,20 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 import { focusRing } from '@/components/ui/styles';
 import cn from '@/lib/cn';
+
+/** The navigation items, by the key of their label in `navigation.items`. */
+type NavKey = 'dashboard' | 'users' | 'companies' | 'staff' | 'logs';
 
 /** A navigation item. */
 interface NavItem {
   /** Where it goes. The item is current on this path and everything under it. */
   href: string;
-  /** Visible label. */
-  label: string;
+  /** Its label (`navigation.items`). */
+  key: NavKey;
   /** Decorative icon. */
   icon: LucideIcon;
 }
@@ -37,15 +41,15 @@ interface NavItem {
  */
 function staffItems(canManageStaff: boolean, canViewLogs: boolean): NavItem[] {
   const items: NavItem[] = [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/admin/users', label: 'Users', icon: Users },
-    { href: '/admin/companies', label: 'Companies', icon: Building2 },
+    { href: '/dashboard', key: 'dashboard', icon: LayoutDashboard },
+    { href: '/admin/users', key: 'users', icon: Users },
+    { href: '/admin/companies', key: 'companies', icon: Building2 },
   ];
   if (canManageStaff) {
-    items.push({ href: '/admin/staff', label: 'Staff', icon: UserCog });
+    items.push({ href: '/admin/staff', key: 'staff', icon: UserCog });
   }
   if (canViewLogs) {
-    items.push({ href: '/admin/logs', label: 'Logs', icon: ScrollText });
+    items.push({ href: '/admin/logs', key: 'logs', icon: ScrollText });
   }
   return items;
 }
@@ -77,11 +81,19 @@ export default function NavLinks({
   canViewLogs,
   onNavigate = undefined,
 }: NavLinksProps) {
+  const t = useTranslations('navigation');
   const pathname = usePathname();
+  const labels: Record<NavKey, string> = {
+    dashboard: t('items.dashboard'),
+    users: t('items.users'),
+    companies: t('items.companies'),
+    staff: t('items.staff'),
+    logs: t('items.logs'),
+  };
 
   return (
     <ul className="flex flex-col gap-0.5">
-      {staffItems(canManageStaff, canViewLogs).map(({ href, label, icon: Icon }) => {
+      {staffItems(canManageStaff, canViewLogs).map(({ href, key, icon: Icon }) => {
         const current = pathname === href || pathname.startsWith(`${href}/`);
         return (
           <li key={href}>
@@ -98,7 +110,7 @@ export default function NavLinks({
               )}
             >
               <Icon aria-hidden="true" className={cn('size-4', current && 'text-highlight')} />
-              {label}
+              {labels[key]}
             </Link>
           </li>
         );

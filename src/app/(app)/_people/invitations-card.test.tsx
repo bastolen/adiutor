@@ -7,11 +7,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { defined } from '@/lib/defined';
 import translator from '@/lib/i18n/translator';
-import { createPageUrl } from '@/lib/tables/table-state';
+import { createPageUrl, type Paged } from '@/lib/tables/table-state';
 import { INVITATIONS_TABLE } from '@/lib/tables/tables';
 import type { PendingInvitation } from '@/server/people/invitations';
 
 import InvitationsCard from './invitations-card';
+import renderInLocale from '../../../../tests/i18n/render';
 
 /** Mocked server actions. */
 const { resendInvitationAction, revokeInvitationAction } = vi.hoisted(() => ({
@@ -90,6 +91,35 @@ describe('InvitationsCard', () => {
     expect(
       within(linked).getByRole('button', { name: 'Resend invitation to linked@adiutor.test' }),
     ).toBeEnabled();
+  });
+
+  it('names the role and the address in whole sentences in Dutch and Spanish', () => {
+    const invitations: Paged<PendingInvitation> = {
+      items: [pending({ email: 'invited@adiutor.test', role: 'watcher' })],
+      total: 1,
+      page: 1,
+      size: 25,
+    };
+    const { unmount } = renderInLocale(
+      'nl-NL',
+      <InvitationsCard invitations={invitations} table={TABLE} canManage companyId="company-1" />,
+    );
+    expect(screen.getByRole('table', { name: /^Openstaande uitnodigingen/ })).toBeInTheDocument();
+    expect(screen.getAllByText('Meekijker').length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole('button', { name: 'Uitnodiging voor invited@adiutor.test intrekken' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Verloopt op 9 jan 2026')).toBeInTheDocument();
+    unmount();
+
+    renderInLocale(
+      'es-ES',
+      <InvitationsCard invitations={invitations} table={TABLE} canManage companyId="company-1" />,
+    );
+    expect(
+      screen.getByRole('button', { name: 'Reenviar la invitación a invited@adiutor.test' }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText('Observador').length).toBeGreaterThan(0);
   });
 
   it('shows an empty state without invitations', () => {

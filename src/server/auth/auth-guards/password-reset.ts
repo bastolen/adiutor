@@ -7,15 +7,12 @@ import { APIError } from 'better-auth/api';
 import { db } from '@/db';
 import { mfaGivingProviders, requiresMfa, wouldEndMfa } from '@/lib/authz/mfa';
 import { availableProviders } from '@/lib/sign-in/providers';
-import {
-  RESET_ENDS_PROVIDER_MFA,
-  resetEndsProviderMfaMessage,
-} from '@/lib/sign-in/sign-in-refusals';
 
 import { loadMfaContext } from '../mfa-state';
 import { requestState } from '../request-state';
 import { releaseSignInChangeLock, takeSignInChangeLock } from '../sign-in-change-lock';
 import { type AuthGuardContext, refuseSignInChangeInProgress } from './paths';
+import { resetEndsProviderMfaBody } from './refusal-messages';
 
 /**
  * Reads a reset link's token from a request field, as Better Auth's
@@ -60,10 +57,11 @@ async function resetLinkUser(ctx: AuthGuardContext): Promise<string | null> {
  * a passkey or an authenticator app keep what they have, so their reset goes
  * ahead.
  *
+ * @param ctx - The endpoint context, for the request's language.
  * @param userId - The user the link is for.
  * @throws {APIError} `FORBIDDEN` with code `RESET_ENDS_PROVIDER_MFA`, naming the providers.
  */
-async function refuseResetEndingMfa(userId: string): Promise<void> {
+async function refuseResetEndingMfa(ctx: AuthGuardContext, userId: string): Promise<void> {
   const mfa = await loadMfaContext(db, userId);
   if (!mfa) {
     return;
@@ -75,13 +73,14 @@ async function refuseResetEndingMfa(userId: string): Promise<void> {
   if (!wouldEndMfa(state, mfaRole, { kind: 'set_password' }, availableProviders)) {
     return;
   }
-  throw new APIError('FORBIDDEN', {
-    code: RESET_ENDS_PROVIDER_MFA.code,
-    message: resetEndsProviderMfaMessage(
+  throw new APIError(
+    'FORBIDDEN',
+    resetEndsProviderMfaBody(
+      ctx,
       mfaGivingProviders(state, availableProviders),
       requiresMfa(mfaRole),
     ),
-  });
+  );
 }
 
 /**
@@ -106,10 +105,10 @@ export async function checkPasswordReset(ctx: AuthGuardContext): Promise<void> {
   }
   const lock = await takeSignInChangeLock({ db }, userId);
   if (!lock) {
-    refuseSignInChangeInProgress();
+    refuseSignInChangeInProgress(ctx);
   }
   try {
-    await refuseResetEndingMfa(userId);
+    await refuseResetEndingMfa(ctx, userId);
   } catch (error) {
     await releaseSignInChangeLock({ db }, lock);
     throw error;

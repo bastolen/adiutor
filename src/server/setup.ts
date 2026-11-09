@@ -36,7 +36,7 @@ import { isUniqueViolation, ServiceError } from './errors';
  * @returns The error.
  */
 function alreadySetUpError(): ServiceError {
-  return new ServiceError('conflict', 'Adiutor is already set up. Sign in instead.');
+  return new ServiceError('conflict', 'errors.setup.alreadySetUp');
 }
 
 /**
@@ -180,10 +180,7 @@ export async function setUpPlatform(
         : [];
       if (existing) {
         if (existing.deactivatedAt) {
-          throw new ServiceError(
-            'conflict',
-            'That account is deactivated, so it could not sign in. Use another address.',
-          );
+          throw new ServiceError('conflict', 'errors.setup.accountDeactivated');
         }
         // Their sessions without MFA that counts for an Admin end (`withMfaPromotion`).
         await withMfaPromotion({ db }, tx, [existing.id], async () => {

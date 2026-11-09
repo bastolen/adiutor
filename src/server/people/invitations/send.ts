@@ -69,9 +69,14 @@ export async function inviteByEmail(
   return { status: visibleStatus(actor, created.status) };
 }
 
-/** The outcome of inviting one address in a bulk invitation. */
+/**
+ * The outcome of inviting one address in a bulk invitation: the status the
+ * actor may see, or why it was refused (translated where it's shown, with
+ * `serviceErrorMessage`).
+ */
 export type BulkInviteResult =
-  { email: string; ok: true; status: InviteStatus } | { email: string; ok: false; message: string };
+  | { email: string; ok: true; status: InviteStatus }
+  | { email: string; ok: false; error: ServiceError };
 
 /**
  * Invites several addresses with the same role, one after another, so rate
@@ -108,21 +113,16 @@ export async function inviteManyByEmail(
 ): Promise<BulkInviteResult[]> {
   const { emails, invalid } = parseEmailList(input.emails);
   if (invalid.length > 0) {
-    throw new ServiceError(
-      'invalid',
-      invalid.length === 1
-        ? `This isn’t a valid email address: ${invalid[0]}.`
-        : `These aren’t valid email addresses: ${invalid.join(', ')}.`,
-    );
+    throw new ServiceError('invalid', 'validation.emailList.invalid', {
+      count: invalid.length,
+      emails: invalid.join(', '),
+    });
   }
   if (emails.length === 0) {
-    throw new ServiceError('invalid', 'Enter at least one email address.');
+    throw new ServiceError('invalid', 'validation.emailList.empty');
   }
   if (emails.length > MAX_BULK_INVITES) {
-    throw new ServiceError(
-      'invalid',
-      `You can invite up to ${MAX_BULK_INVITES} people at once. Split the list and try again.`,
-    );
+    throw new ServiceError('invalid', 'validation.emailList.tooMany', { max: MAX_BULK_INVITES });
   }
   // The same for every address, so refused once, as for one address, not once per address.
   const access = await getTargetAccess(ctx.db, actor, input.companyId);
@@ -143,7 +143,7 @@ export async function inviteManyByEmail(
         console.warn(
           'A bulk invitation hit a database deadlock; that address was reported as a conflict.',
         );
-        results.push({ email, ok: false, message: concurrentChangeError().message });
+        results.push({ email, ok: false, error: concurrentChangeError() });
         return;
       }
       // Refusals about the actor, not the address, stop the whole list.
@@ -154,7 +154,7 @@ export async function inviteManyByEmail(
       ) {
         throw error;
       }
-      results.push({ email, ok: false, message: error.message });
+      results.push({ email, ok: false, error });
     }
   }, Promise.resolve());
   return results;

@@ -1,8 +1,11 @@
 /**
  * @file The "Delete account" card on the user detail page, for Admins
  * (`users:delete`) on someone else's page: deletes the account for good,
- * after the Admin types its email address to confirm.
+ * after the Admin types its email address to confirm. Text from
+ * `admin.user.deleteAccount`.
  */
+import { useTranslations } from 'next-intl';
+
 import ActionDialog from '@/components/ui/action-dialog';
 import Card from '@/components/ui/card';
 import TextField from '@/components/ui/text-field';
@@ -31,23 +34,24 @@ interface DeleteAccountCardProps {
  * @returns The card.
  */
 export default function DeleteAccountCard({ userId, userName, email }: DeleteAccountCardProps) {
+  const t = useTranslations('admin.user.deleteAccount');
   return (
     <Card
-      title="Delete account"
+      title={t('title')}
       tone="danger"
-      description="Permanently removes the account, its sign-in methods and memberships, revokes the open invitations and invite links they sent and the open invitations addressed to them, and emails them that it was deleted. This can't be undone."
+      description={t('description')}
       actions={
         <ActionDialog
           action={deleteUserAction}
           fields={{ userId }}
-          triggerLabel="Delete"
+          triggerLabel={t('label')}
           triggerVariant="danger-subtle"
-          title={`Delete ${userName}'s account?`}
-          description="This permanently removes the account, revokes the open invitations and invite links they sent and those addressed to them, and emails them that it was deleted. Type their email address to confirm."
-          confirmLabel="Delete account"
+          title={t('dialogTitle', { name: userName })}
+          description={t('dialogDescription')}
+          confirmLabel={t('confirmLabel')}
         >
           <TextField
-            label="Email address"
+            label={t('emailLabel')}
             name="confirmEmail"
             type="email"
             autoComplete="off"

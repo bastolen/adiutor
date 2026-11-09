@@ -3,10 +3,7 @@
  * for, the theme and language menu on the signed-out pages, the account's language
  * (saved, kept at sign-out, winning at sign-in) and an invitation sent in
  * the language its sender picked. Specs that sign in here use fresh accounts,
- * so the seeded users keep English (US) for the other specs. Most screens
- * aren't translated yet (docs/i18n.md, "Not translated yet"), so these check
- * `<html lang>`, the theme and language menu, the Language card, the 404 page and the
- * email.
+ * so the seeded users keep English (US) for the other specs.
  */
 import { type Page } from '@playwright/test';
 
@@ -71,8 +68,7 @@ test.describe('a browser that asks for Dutch', () => {
     await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
 
     await chooseLanguage(page, 'Theme and language: System, English (US)', 'Nederlands', 'nl-NL');
-    await page.goto('/auth/does-not-exist');
-    await expect(page.getByRole('heading', { name: 'Pagina niet gevonden' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Inloggen bij Adiutor' })).toBeVisible();
   });
 });
 
@@ -81,11 +77,10 @@ test('the theme and language menu on the sign-in page remembers the choice', asy
   await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
 
   await chooseLanguage(page, 'Theme and language: System, English (US)', 'Español', 'es-ES');
-  await expect(page.getByRole('button', { name: 'Tema e idioma: Sistema, Español' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Inicia sesión en Adiutor' })).toBeVisible();
 
   await page.reload();
-  await expect(page.locator('html')).toHaveAttribute('lang', 'es-ES');
-  await expect(page.getByRole('button', { name: 'Tema e idioma: Sistema, Español' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Inicia sesión en Adiutor' })).toBeVisible();
   const cookies = await page.context().cookies();
   expect(cookies.find(({ name }) => name === 'adiutor.locale')?.value).toBe('es-ES');
 });
@@ -120,16 +115,15 @@ test("an account's language: saved on the account page, kept at sign-out, winnin
   await expect(toasts(page)).toContainText('Idioma guardado.');
   await expect(page.getByRole('button', { name: 'Guardar idioma' })).toBeEnabled();
   // Pages visited before the change are in Spanish too.
-  await page.getByRole('link', { name: 'Adiutor dashboard' }).first().click();
+  await page.getByRole('link', { name: 'Panel de Adiutor' }).first().click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.locator('html')).toHaveAttribute('lang', 'es-ES');
 
   // Signing out keeps the browser's language for the sign-in page.
-  await page.getByRole('button', { name: /^Account menu/ }).click();
-  await page.getByRole('menuitem', { name: 'Sign out' }).click();
+  await page.getByRole('button', { name: /^Menú de la cuenta/ }).click();
+  await page.getByRole('menuitem', { name: 'Cerrar sesión' }).click();
   await expect(page).toHaveURL(/\/auth/);
-  await expect(page.locator('html')).toHaveAttribute('lang', 'es-ES');
-  await expect(page.getByRole('button', { name: 'Tema e idioma: Sistema, Español' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Inicia sesión en Adiutor' })).toBeVisible();
 
   // On a browser that chose English, the account's Spanish wins once signed in.
   const english = await browser.newContext();

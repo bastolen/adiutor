@@ -6,9 +6,11 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { connection } from 'next/server';
+import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import { FormSkeleton } from '@/components/ui/skeleton';
+import ClientMessages from '@/lib/i18n/client-messages';
 import { signedInPath } from '@/lib/redirect';
 import { signInProviders } from '@/lib/sign-in/providers';
 import { type SearchParams, searchParam } from '@/lib/tables/search-params';
@@ -19,11 +21,14 @@ import { isWebSetupOpen } from '@/server/setup';
 import SignInForm from './sign-in-form';
 
 /**
- * Page metadata.
+ * Page metadata: "Sign in", in the request's language.
+ *
+ * @returns The metadata.
  */
-export const metadata: Metadata = {
-  title: 'Sign in',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('auth');
+  return { title: t('signIn.title') };
+}
 
 /**
  * Renders the sign-in form with the providers configured on the server.
@@ -55,7 +60,7 @@ async function SignInOptions({ searchParams }: { searchParams: Promise<SearchPar
 }
 
 /**
- * The sign-in page.
+ * The sign-in page. The form's text comes with it (`auth`).
  *
  * @param props - Page props from Next.js.
  * @param props.searchParams - The query string.
@@ -64,7 +69,9 @@ async function SignInOptions({ searchParams }: { searchParams: Promise<SearchPar
 export default function SignInPage({ searchParams }: PageProps<'/auth'>) {
   return (
     <Suspense fallback={<FormSkeleton />}>
-      <SignInOptions searchParams={searchParams} />
+      <ClientMessages namespaces={['auth']}>
+        <SignInOptions searchParams={searchParams} />
+      </ClientMessages>
     </Suspense>
   );
 }

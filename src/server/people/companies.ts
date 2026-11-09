@@ -36,7 +36,7 @@ import containsPattern from '../search';
  * @returns The error.
  */
 function slugTakenError(): ServiceError {
-  return new ServiceError('conflict', 'That URL name is already in use. Choose another one.');
+  return new ServiceError('conflict', 'errors.companies.slugTaken');
 }
 
 /** What {@link listCompanies} can be asked for: a search, and the table's sort and page. */
@@ -236,7 +236,7 @@ export async function setCompanyActive(
     if ((locked.deactivatedAt === null) === input.active) {
       throw new ServiceError(
         'conflict',
-        input.active ? 'This company is already active.' : 'This company is already deactivated.',
+        input.active ? 'errors.companies.alreadyActive' : 'errors.companies.alreadyDeactivated',
       );
     }
     const admins = await tx

@@ -8,6 +8,7 @@
 
 import { KeyRound } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useId, useSyncExternalStore } from 'react';
 
 import PROVIDER_ICONS from '@/components/brand/provider-icons';
@@ -21,9 +22,10 @@ import TextLink from '@/components/ui/text-link';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import { getSafeRedirectPath, sectionFromHash, withSection } from '@/lib/redirect';
 import authClient from '@/lib/sign-in/auth-client';
-import getAuthErrorMessage, {
-  authErrorMessage,
-  getSignInNotice,
+import {
+  authErrorText,
+  signInErrorText,
+  signInNoticeText,
 } from '@/lib/sign-in/auth-error-messages';
 import { type OAuthProvider, PROVIDER_LABELS } from '@/lib/sign-in/oauth-providers';
 
@@ -77,12 +79,13 @@ function useLastUsedMethod(): string | null {
  * @returns The badge, or nothing.
  */
 function LastUsedBadge({ show, onPrimary = false }: { show: boolean; onPrimary?: boolean }) {
+  const t = useTranslations('auth');
   if (!show) {
     return null;
   }
   return (
     <span aria-hidden="true" className="ml-1 inline-flex">
-      <Badge tone={onPrimary ? 'neutral' : 'brand'}>Last used</Badge>
+      <Badge tone={onPrimary ? 'neutral' : 'brand'}>{t('signIn.lastUsed')}</Badge>
     </span>
   );
 }
@@ -108,11 +111,17 @@ function LastUsedBadge({ show, onPrimary = false }: { show: boolean; onPrimary?:
  * or a button still busy from that sign-in. A page the browser restores from
  * its back/forward cache (e.g. Back from GitHub) is made usable again too.
  *
+ * Errors are worded in the reader's language from their code
+ * (`authErrorText`), never Better Auth's English message, except the
+ * refusals the server words itself (a paused password sign-in, too many
+ * attempts with how long to wait).
+ *
  * @param props - Which OAuth providers to offer.
  * @param props.providers - A "Continue with …" button for each.
  * @returns The sign-in form.
  */
 export default function SignInForm({ providers }: SignInFormProps) {
+  const t = useTranslations('auth');
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackURL = getSafeRedirectPath(searchParams.get('callbackURL'));
@@ -142,9 +151,9 @@ export default function SignInForm({ providers }: SignInFormProps) {
   const [email, setEmail] = useTransientState('');
   const [password, setPassword] = useTransientState('');
   const [pending, setPending] = useTransientState(false);
-  const [error, setError] = useTransientState(getAuthErrorMessage(searchParams.get('error')));
+  const [error, setError] = useTransientState(signInErrorText(t, searchParams.get('error')));
   /** A note another page sent the user here with (`?notice=`), then the result of sending a link. */
-  const [success, setSuccess] = useTransientState(getSignInNotice(searchParams.get('notice')));
+  const [success, setSuccess] = useTransientState(signInNoticeText(t, searchParams.get('notice')));
   const lastUsed = useLastUsedMethod();
   const lastUsedId = useId();
   /**
@@ -215,9 +224,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
       const result = await authClient.signIn.email({ email, password });
       if (result.error) {
         setError(
-          result.error.status === 401
-            ? 'That email and password combination is incorrect.'
-            : (result.error.message ?? 'Signing in failed. Please try again.'),
+          result.error.status === 401 ? t('signIn.wrongPassword') : authErrorText(t, result.error),
         );
         setPending(false);
         return;
@@ -240,10 +247,10 @@ export default function SignInForm({ providers }: SignInFormProps) {
     });
     setPending(false);
     if (result.error) {
-      setError(result.error.message ?? 'Sending the link failed. Please try again.');
+      setError(authErrorText(t, result.error, t('signIn.linkFailed')));
       return;
     }
-    setSuccess(`If ${email} has an account, a sign-in link is on its way. Check your inbox.`);
+    setSuccess(t('signIn.linkSent', { email }));
   };
 
   /** Signs in with a passkey, letting the browser ask which one. */
@@ -253,7 +260,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
     setSuccess(null);
     const result = await authClient.signIn.passkey();
     if (result?.error) {
-      setError(authErrorMessage(result.error));
+      setError(authErrorText(t, result.error));
       setPending(false);
       return;
     }
@@ -275,7 +282,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
       errorCallbackURL: errorPageFor(target),
     });
     if (result.error) {
-      setError(result.error.message ?? 'Signing in failed. Please try again.');
+      setError(authErrorText(t, result.error));
       setPending(false);
     }
   };
@@ -284,17 +291,14 @@ export default function SignInForm({ providers }: SignInFormProps) {
 
   return (
     <div className="flex flex-col gap-8">
-      <AuthHeading
-        title="Sign in to Adiutor"
-        description="Welcome back. Choose how you want to sign in."
-      />
+      <AuthHeading title={t('signIn.heading')} description={t('signIn.description')} />
 
       <Alert tone="error" focusOnShow>
         {error}
       </Alert>
       {/* Description of the button of the option used last time. */}
       <span id={lastUsedId} hidden>
-        Last used
+        {t('signIn.lastUsed')}
       </span>
       <Alert tone="success">{success}</Alert>
 
@@ -307,7 +311,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
           aria-describedby={describedBy('passkey')}
         >
           <KeyRound aria-hidden="true" />
-          Sign in with a passkey
+          {t('signIn.passkey')}
           <LastUsedBadge show={lastUsed === 'passkey'} />
         </Button>
         {providers.map((provider) => {
@@ -322,22 +326,22 @@ export default function SignInForm({ providers }: SignInFormProps) {
               aria-describedby={describedBy(provider)}
             >
               <Icon />
-              Continue with {PROVIDER_LABELS[provider]}
+              {t('signIn.continueWith', { provider: PROVIDER_LABELS[provider] })}
               <LastUsedBadge show={lastUsed === provider} />
             </Button>
           );
         })}
-        <AuthDivider>or continue with email</AuthDivider>
+        <AuthDivider>{t('signIn.orEmail')}</AuthDivider>
       </div>
 
       <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
         <TextField
-          label="Email"
+          label={t('fields.email')}
           type="email"
           name="email"
           // `webauthn` lets the browser suggest saved passkeys here.
           autoComplete="username webauthn"
-          placeholder="you@adiutor.dev"
+          placeholder={t('fields.emailPlaceholder')}
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
@@ -345,7 +349,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
         {method === 'password' && (
           <div className="flex flex-col gap-2">
             <TextField
-              label="Password"
+              label={t('fields.password')}
               type="password"
               name="password"
               autoComplete="current-password"
@@ -354,7 +358,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
               onChange={(event) => setPassword(event.target.value)}
             />
             <TextLink href="/auth/forgot-password" className="self-end text-sm">
-              Forgot password?
+              {t('signIn.forgotPassword')}
             </TextLink>
           </div>
         )}
@@ -364,7 +368,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
           loading={pending}
           aria-describedby={describedBy(lastUsedName[method])}
         >
-          {method === 'password' ? 'Sign in' : 'Email me a sign-in link'}
+          {method === 'password' ? t('signIn.submitPassword') : t('signIn.submitLink')}
           <LastUsedBadge show={lastUsed === lastUsedName[method]} onPrimary />
         </Button>
       </form>
@@ -378,9 +382,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
         }}
         aria-describedby={describedBy(lastUsedName[otherMethod])}
       >
-        {method === 'password'
-          ? 'Sign in with an email link instead'
-          : 'Sign in with a password instead'}
+        {method === 'password' ? t('signIn.useLink') : t('signIn.usePassword')}
         <LastUsedBadge show={lastUsed === lastUsedName[otherMethod]} />
       </Button>
     </div>

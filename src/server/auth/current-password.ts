@@ -17,7 +17,7 @@ import {
   hitRateLimit,
   RATE_LIMITS,
   releaseRateLimitHit,
-  tooManyAttemptsMessage,
+  tooManyAttemptsError,
 } from '../rate-limit';
 
 /**
@@ -25,14 +25,6 @@ import {
  * (`password_check_failed`'s `purpose`).
  */
 export type PasswordCheckPurpose = 'change_password' | 'deactivate';
-
-/** What a wrong password is told, per purpose: the wording each form used before. */
-const WRONG_PASSWORD_MESSAGES: Record<PasswordCheckPurpose, string> = {
-  /** The Security page's password form. */
-  change_password: 'Your current password is incorrect.',
-  /** The Security page's "Deactivate account" dialog. */
-  deactivate: 'That password is incorrect.',
-};
 
 /**
  * The key counting a user's wrong current passwords
@@ -76,7 +68,7 @@ export async function checkCurrentPassword(
     RATE_LIMITS.wrongCurrentPasswordsPerUser,
   );
   if (!allowed) {
-    throw new ServiceError('rate_limited', tooManyAttemptsMessage(retryAfterSeconds));
+    throw tooManyAttemptsError(retryAfterSeconds);
   }
 
   let right: boolean;
@@ -97,5 +89,7 @@ export async function checkCurrentPassword(
     targetUserId: actor.id,
     details: { purpose },
   });
-  throw new ServiceError('invalid', WRONG_PASSWORD_MESSAGES[purpose]);
+  // The wording each form used before: `errors.wrongPassword.change_password` on the Security
+  // page's password form, `errors.wrongPassword.deactivate` in its "Deactivate account" dialog.
+  throw new ServiceError('invalid', `errors.wrongPassword.${purpose}`);
 }

@@ -11,12 +11,11 @@ import { user, verification } from '@/db/schema';
 import { emailLinkVerificationIdentifier } from '@/lib/sign-in/tokens';
 
 import type { ServiceContext } from '../context';
-import { ServiceError } from '../errors';
 import {
   hitRateLimit,
   RATE_LIMITS,
   releaseRateLimitHit,
-  tooManyAttemptsMessage,
+  tooManyAttemptsError,
 } from '../rate-limit';
 
 /** The account a sign-in link signs in to, as the page shows it. */
@@ -75,7 +74,7 @@ export async function getEmailLinkPreview(
     RATE_LIMITS.emailLinkMissesPerIp,
   );
   if (!allowed) {
-    throw new ServiceError('rate_limited', tooManyAttemptsMessage(retryAfterSeconds));
+    throw tooManyAttemptsError(retryAfterSeconds);
   }
 
   const [link] = await ctx.db

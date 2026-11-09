@@ -268,7 +268,7 @@ async function setStaffRole(
     }
     // Nobody raises their own staff role, even with rights from before a demotion they missed.
     if (target.id === actor.id && isStaffRoleRaise(target.role, newRole)) {
-      throw new ServiceError('forbidden', "You can't give yourself a higher staff role.");
+      throw new ServiceError('forbidden', 'errors.staff.selfRaise');
     }
     // Making someone staff, or raising their role, needs a recent confirmation (stepping down doesn't).
     if (newRole !== null) {
@@ -299,10 +299,7 @@ async function setStaffRole(
         newRole,
       })
     ) {
-      throw new ServiceError(
-        'conflict',
-        'There must always be at least one staff Admin. Make someone else an Admin first.',
-      );
+      throw new ServiceError('conflict', 'errors.staff.lastAdmin');
     }
 
     let kind: keyof typeof STAFF_NOTICES = 'changed';

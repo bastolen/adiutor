@@ -14,10 +14,12 @@
  */
 import { parseArgs } from 'node:util';
 
+import { ZodError } from 'zod';
+
 import { db } from '../src/db';
-import { isLocale, LOCALES } from '../src/lib/i18n/locales';
+import { DEFAULT_LOCALE, isLocale, LOCALES } from '../src/lib/i18n/locales';
 import { installLogRedaction } from '../src/lib/log-redaction';
-import { ServiceError } from '../src/server/errors';
+import { ServiceError, serviceErrorMessage, validationErrorMessage } from '../src/server/errors';
 import { setUpPlatform } from '../src/server/setup';
 
 /** How to call the script. */
@@ -61,8 +63,13 @@ async function main(): Promise<number> {
     console.info('Sign in at /auth with an email link, or set a password with "Forgot password?".');
     return 0;
   } catch (error) {
+    // Said in English (US), like the rest of the script's output.
     if (error instanceof ServiceError) {
-      console.error(error.message);
+      console.error(serviceErrorMessage(error, DEFAULT_LOCALE));
+      return 1;
+    }
+    if (error instanceof ZodError) {
+      console.error(validationErrorMessage(error, DEFAULT_LOCALE));
       return 1;
     }
     throw error;

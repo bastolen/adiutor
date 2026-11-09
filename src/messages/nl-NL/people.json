@@ -1,0 +1,107 @@
+{
+  "people": {
+    "inviteResults": {
+      "status": "{status, select, sent_existing_user {Uitnodiging verstuurd naar {email}. Diegene heeft al een Adiutor-account.} already_member {{email} is al lid. We hebben diegene een e-mail gestuurd om dat te laten weten.} other {Uitnodiging verstuurd naar {email}.}}",
+      "companyAdded": "{status, select, sent_existing_user {Bedrijf toegevoegd. Uitnodiging verstuurd naar {email}. Diegene heeft al een Adiutor-account.} already_member {Bedrijf toegevoegd. {email} is al lid. We hebben diegene een e-mail gestuurd om dat te laten weten.} other {Bedrijf toegevoegd. Uitnodiging verstuurd naar {email}.}}",
+      "sentAll": "{sent, plural, one {# uitnodiging verstuurd.} other {# uitnodigingen verstuurd.}}",
+      "sentSome": "{sent, plural, one {Van de {total, number} uitnodigingen is er # verstuurd. Controleer de adressen hieronder.} other {Van de {total, number} uitnodigingen zijn er # verstuurd. Controleer de adressen hieronder.}}"
+    },
+    "confirmBeforeGrant": "Om deze rol te geven, bevestig je eerst dat jij het bent (hooguit eens per 15 minuten).",
+    "roleSelect": {
+      "label": "Rol van {name}",
+      "saving": "Opslaan…"
+    },
+    "columns": {
+      "email": "E-mailadres",
+      "role": "Rol",
+      "sent": "Verstuurd",
+      "status": "Status",
+      "created": "Gemaakt",
+      "details": "Details",
+      "device": "Apparaat",
+      "ipAddress": "IP-adres",
+      "signedIn": "Ingelogd",
+      "actions": "Acties"
+    },
+    "activity": {
+      "lastActive": "<hidden>Laatst actief: </hidden><time></time>",
+      "lastActiveShort": "Laatst actief <time></time>",
+      "neverActive": "Nog nooit actief",
+      "joined": "Lid sinds {date}"
+    },
+    "devices": {
+      "thisDevice": "Dit apparaat",
+      "mfaVerified": "Met MFA bevestigd",
+      "signedInAgo": "Ingelogd <time></time>"
+    },
+    "invitations": {
+      "title": "Openstaande uitnodigingen",
+      "rows": "uitnodigingen",
+      "emptyTitle": "Geen openstaande uitnodigingen",
+      "emptyDescription": "Uitnodigingen die je verstuurt, staan hier tot ze zijn geaccepteerd.",
+      "fromInviteLink": "Via een uitnodigingslink",
+      "sent": "Verstuurd op {date}",
+      "expired": "Verlopen",
+      "expires": "Verloopt op {date}",
+      "resend": "Opnieuw sturen",
+      "resendLabel": "Uitnodiging opnieuw sturen naar {email}",
+      "resent": "Uitnodiging opnieuw verstuurd naar {email}.",
+      "revoke": "Intrekken",
+      "revokeLabel": "Uitnodiging voor {email} intrekken",
+      "revoked": "Uitnodiging voor {email} ingetrokken.",
+      "revokeConfirm": {
+        "title": "Deze uitnodiging intrekken?",
+        "confirm": "Uitnodiging intrekken",
+        "description": "De link die naar {email} is gestuurd, werkt dan niet meer."
+      }
+    },
+    "inviteForm": {
+      "results": "Resultaat van de uitnodigingen",
+      "sentLine": "<hidden>Verstuurd: </hidden>{message}",
+      "notSentLine": "<hidden>Niet verstuurd: </hidden>{email}: {message}",
+      "emails": "E-mailadressen",
+      "emailsPlaceholder": "collega@adiutor.dev",
+      "emailsHint": "Eén per regel of gescheiden door komma's, maximaal {max, number}.",
+      "role": "Rol",
+      "submit": "Uitnodigingen versturen"
+    },
+    "inviteLinkForm": {
+      "validity": "{days, plural, one {# dag} other {# dagen}}",
+      "created": "Link gemaakt. Kopieer hem nu: voor je veiligheid tonen we hem niet nog een keer. Hij werkt één keer.",
+      "link": "Uitnodigingslink",
+      "copy": "Link kopiëren",
+      "role": "Rol",
+      "validFor": "Geldig voor",
+      "submit": "Uitnodigingslink maken"
+    },
+    "inviteLinks": {
+      "title": "Uitnodigingslinks",
+      "description": "Elke link werkt één keer: wie hem als eerste opent, vult een e-mailadres in en krijgt een uitnodiging.",
+      "rows": "uitnodigingslinks",
+      "emptyTitle": "Geen uitnodigingslinks",
+      "emptyDescription": "Links die je maakt, staan hier.",
+      "status": "{status, select, active {Actief} used {Gebruikt} expired {Verlopen} other {Ingetrokken}}",
+      "created": "Gemaakt op {date}",
+      "expires": "Verloopt op {date}",
+      "usedBy": "Gebruikt door {email}",
+      "expired": "Verlopen op {date}",
+      "noDetails": "Geen details",
+      "revoke": "Intrekken",
+      "revokeLabel": "Link voor {role} van {date} intrekken",
+      "revokeConfirm": {
+        "title": "Deze uitnodigingslink intrekken?",
+        "description": "De link werkt dan niet meer, voor niemand die hem heeft."
+      }
+    },
+    "actions": {
+      "inviteLinkRevoked": "Uitnodigingslink ingetrokken.",
+      "invitationResent": "Opnieuw verstuurd.",
+      "invitationRevoked": "Uitnodiging ingetrokken.",
+      "roleUpdated": "Rol bijgewerkt.",
+      "memberRemoved": "Lid verwijderd.",
+      "memberAdded": "{who, select, self {Toegevoegd aan het bedrijf. We hebben je een e-mail gestuurd.} other {Toegevoegd aan het bedrijf. We hebben diegene een e-mail gestuurd.}}",
+      "staffRoleSaved": "Medewerkersrol opgeslagen.",
+      "staffAccessRemoved": "Toegang als medewerker verwijderd."
+    }
+  }
+}

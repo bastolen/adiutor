@@ -110,9 +110,6 @@ export async function listMembers(
   );
 }
 
-/** Why adding a deactivated account to a company is refused. */
-const ACCOUNT_DEACTIVATED_MESSAGE = 'This account is deactivated. Reactivate it first.';
-
 /**
  * Changes a member's role or removes them, refusing anything that would leave
  * the company without an active admin, and anything in a deactivated company
@@ -236,7 +233,7 @@ async function changeMembership(
     }
     // Nobody raises their own role, even with rights from before a demotion they missed.
     if (target.userId === actor.id && isCompanyRoleRaise(target.role, newRole)) {
-      throw new ServiceError('forbidden', "You can't give yourself a higher role.");
+      throw new ServiceError('forbidden', 'errors.members.selfRaise');
     }
     // Making someone the company's Admin needs a recent confirmation.
     if (newRole !== null) {
@@ -275,10 +272,7 @@ async function changeMembership(
         newRole,
       })
     ) {
-      throw new ServiceError(
-        'conflict',
-        'A company needs at least one admin. Make someone else an admin first.',
-      );
+      throw new ServiceError('conflict', 'errors.members.lastAdmin');
     }
 
     const where = and(eq(membership.id, target.id), eq(membership.companyId, access.company.id));
@@ -428,7 +422,7 @@ export async function addMember(
     throw notFoundError();
   }
   if (target.deactivatedAt) {
-    throw new ServiceError('invalid', ACCOUNT_DEACTIVATED_MESSAGE);
+    throw new ServiceError('invalid', 'errors.members.accountDeactivated');
   }
   await assertInviteSenderLimit(ctx, actor.id);
 
@@ -443,7 +437,7 @@ export async function addMember(
       throw notFoundError();
     }
     if (added.deactivatedAt) {
-      throw new ServiceError('invalid', ACCOUNT_DEACTIVATED_MESSAGE);
+      throw new ServiceError('invalid', 'errors.members.accountDeactivated');
     }
     // Added as Admin: their sessions without MFA that counts for that end (`withMfaPromotion`).
     await withMfaPromotion(
@@ -457,7 +451,9 @@ export async function addMember(
           .onConflictDoNothing({ target: [membership.companyId, membership.userId] })
           .returning({ id: membership.id });
         if (inserted.length === 0) {
-          throw new ServiceError('conflict', `They're already a member of ${access.company.name}.`);
+          throw new ServiceError('conflict', 'errors.members.alreadyMember', {
+            company: access.company.name,
+          });
         }
         await recordEvent(
           ctx,

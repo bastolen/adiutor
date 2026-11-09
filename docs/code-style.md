@@ -57,9 +57,8 @@ The linters and formatters, the JSDoc rule, the editor setup and the Git hooks. 
   classes, using the brand theme so classes like `bg-primary` count as valid.
 - **Text** comes from the translation catalogues, in every language (see [Languages](i18n.md)).
   ESLint refuses text written straight into JSX (`react/jsx-no-literals`) or into a text prop
-  (`aria-label`, `title`, `label`, `placeholder`, ...) in the folders that have moved to the
-  catalogues (everything but `NOT_YET_TRANSLATED` in `eslint.config.mjs`, a list that only shrinks),
-  and a translation call inside a template literal or a `+` anywhere in `src/`: a message is one
+  (`aria-label`, `title`, `label`, `placeholder`, ...) in `src/app`, `src/components` and
+  `src/emails`, and a translation call inside a template literal or a `+` anywhere in `src/`: a message is one
   whole sentence with named arguments. `pnpm lint:messages` (part of `pnpm lint`) checks the
   catalogues themselves: every language complete, the same arguments as English, no unused or
   undefined keys.

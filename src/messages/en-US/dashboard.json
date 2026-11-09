@@ -1,0 +1,37 @@
+{
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome, {name}",
+    "staffDescription": "Open a company, or see everyone who uses Adiutor.",
+    "mfaRecommendation": {
+      "label": "Account security",
+      "title": "Protect your account",
+      "description": "Add a passkey or two-step verification, so a stolen password isn't enough to get in.",
+      "setUp": "Set up"
+    },
+    "providerMfaWarning": {
+      "label": "Users without MFA",
+      "title": "{providers} sign-in isn't configured on this server",
+      "description": "{count, plural, one {# user whose role requires MFA has} other {# users whose role requires MFA have}} no MFA now: theirs came from {providers} with two-factor authentication, which only counts while {providers} sign-in is set up here. Until then they're asked to add a passkey or an authenticator app, and so is anyone with access to their inbox. Set it up again, or have them add a passkey or an authenticator app.",
+      "action": "See users without MFA"
+    },
+    "shortcuts": {
+      "users": {
+        "title": "Users",
+        "description": "Staff and the people of each company."
+      },
+      "companies": {
+        "title": "Companies",
+        "description": "View and manage every company."
+      },
+      "staff": {
+        "title": "Staff",
+        "description": "Invite staff and manage their roles."
+      },
+      "logs": {
+        "title": "Logs",
+        "description": "The audit log, and the errors people ran into."
+      }
+    }
+  }
+}

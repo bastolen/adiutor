@@ -8,7 +8,7 @@
 import { ScrollText } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { Suspense } from 'react';
+import { type ReactNode, Suspense } from 'react';
 
 import Alert from '@/components/ui/alert';
 import Card from '@/components/ui/card';
@@ -22,13 +22,7 @@ import { PageSkeleton } from '@/components/ui/skeleton';
 import SortMenu from '@/components/ui/sort-menu';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
 import TextLink from '@/components/ui/text-link';
-import {
-  AUDIT_GROUP_KEYS,
-  AUDIT_GROUPS,
-  type AuditGroup,
-  describeAuditEvent,
-  isAuditGroup,
-} from '@/lib/audit-actions';
+import { AUDIT_GROUP_KEYS, describeAuditEvent, isAuditGroup } from '@/lib/audit-actions';
 import { parseDayRange } from '@/lib/day-range';
 import displayName from '@/lib/display-name';
 import { formatDateTime } from '@/lib/format';
@@ -46,38 +40,50 @@ import { globalPermissionMetadata } from '@/server/page-metadata';
  * Page metadata: "Audit log · Adiutor" for those who may see the page (`audit:view`), and
  * the 404 page's title for everyone else, who get the 404 page.
  */
-export const generateMetadata = globalPermissionMetadata('audit:view', {
-  title: 'Audit log',
-});
+// i18n-check t('admin.logs.title')
+export const generateMetadata = globalPermissionMetadata('audit:view', 'admin.logs.title');
 
-/** The group filter's choices: everything, then each group. */
-const GROUP_FILTERS: readonly { value: AuditGroup | 'all'; label: string }[] = [
-  { value: 'all', label: 'All' },
-  ...AUDIT_GROUP_KEYS.map((key) => ({ value: key, label: AUDIT_GROUPS[key].label })),
-];
+/**
+ * Makes the `<link>` tag of a rich message a link to a user's page.
+ *
+ * @param userId - The user's ID.
+ * @returns The renderer `t.rich` takes for the tag.
+ */
+function userLink(userId: string) {
+  return function UserLink(chunks: ReactNode) {
+    return <TextLink href={`/admin/users/${userId}`}>{chunks}</TextLink>;
+  };
+}
 
 /**
  * Who acted, whom it was about and which company, as a line of links under
- * an event's description.
+ * an event's description. Its text comes from `admin.logs`.
  *
  * @param props - Component props.
  * @param props.event - The event.
  * @returns The line, or nothing when the event involves no one.
  */
 function Involved({ event }: { event: AuditEntry }) {
+  const t = useTranslations('admin.logs');
   const { actor, target, company } = event;
   const parts = [];
   if (actor) {
     parts.push(
       <span key="actor">
-        by <TextLink href={`/admin/users/${actor.id}`}>{displayName(actor)}</TextLink>
+        {t.rich('by', {
+          name: displayName(actor),
+          link: userLink(actor.id),
+        })}
       </span>,
     );
   }
   if (target && target.id !== actor?.id) {
     parts.push(
       <span key="target">
-        about <TextLink href={`/admin/users/${target.id}`}>{displayName(target)}</TextLink>
+        {t.rich('about', {
+          name: displayName(target),
+          link: userLink(target.id),
+        })}
       </span>,
     );
   }
@@ -88,7 +94,7 @@ function Involved({ event }: { event: AuditEntry }) {
       </span>,
     );
   } else if (event.details.staff === true) {
-    parts.push(<span key="staff">Staff</span>);
+    parts.push(<span key="staff">{t('staff')}</span>);
   }
   if (parts.length === 0) {
     return null;
@@ -111,9 +117,10 @@ function Involved({ event }: { event: AuditEntry }) {
  * @returns The text, or a dash when neither is known.
  */
 function Origin({ event }: { event: AuditEntry }) {
+  const t = useTranslations('admin.logs');
   const tCommon = useTranslations('common');
   if (!event.userAgent && !event.ip) {
-    return <span aria-label="Not recorded">–</span>;
+    return <span aria-label={t('notRecorded')}>–</span>;
   }
   return (
     <span className="flex flex-wrap gap-x-1.5">
@@ -132,6 +139,11 @@ function Origin({ event }: { event: AuditEntry }) {
  */
 async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const locale = await getLocale();
+  const t = await getTranslations('admin.logs');
+  const tAudit = await getTranslations('audit');
+  const tDates = await getTranslations('admin.dateRange');
+  // i18n-check t('invalidDay')
+  // i18n-check t('fromAfterTo')
   const actor = await requireGlobalPermission('audit:view');
   const params = await searchParams;
   const search = searchParam(params.q)?.trim() ?? '';
@@ -172,21 +184,36 @@ async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> 
       ),
     );
 
-  const groupLabel = group ? AUDIT_GROUPS[group].label : null;
+  const groupLabel = group ? tAudit(`groups.${group}`) : null;
+  /** The group filter's choices: everything, then each group. */
+  const groupFilters = [
+    { value: 'all', label: t('all') },
+    ...AUDIT_GROUP_KEYS.map((key) => ({ value: key, label: tAudit(`groups.${key}`) })),
+  ];
+  let captionKind = 'other';
+  if (groupLabel) {
+    captionKind = search ? 'groupSearch' : 'group';
+  } else if (search) {
+    captionKind = 'search';
+  }
   const datesApplied = dates.ok && Boolean(from || to);
   let empty = {
-    title: 'Nothing recorded yet',
-    description: 'Sign-ins, changes to accounts and roles, and invitations will show up here.',
+    title: t('empty.noneTitle'),
+    description: t('empty.noneDescription'),
   };
   if (search) {
     empty = {
-      title: 'Nothing matches',
-      description: `No events by or about anyone matching “${search}”${groupLabel ? ` in ${groupLabel}` : ''}. Try part of a name, an email address or a company.`,
+      title: t('empty.noMatchTitle'),
+      description: t('empty.noMatchDescription', {
+        kind: groupLabel ? 'withGroup' : 'other',
+        search,
+        group: groupLabel ?? '',
+      }),
     };
   } else if (groupLabel || datesApplied) {
     empty = {
-      title: 'Nothing in this selection',
-      description: 'No events match these filters. Try another group or a wider range of days.',
+      title: t('empty.filteredTitle'),
+      description: t('empty.filteredDescription'),
     };
   }
 
@@ -196,37 +223,37 @@ async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> 
         <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
           <SearchForm
             id="audit-search"
-            label="Search people or companies"
-            placeholder="Search by name, email or company"
+            label={t('searchLabel')}
+            placeholder={t('searchPlaceholder')}
             defaultValue={search}
             hiddenFields={{ ...keep('q'), ...table.hiddenFields() }}
           />
           <DateRangeForm
-            label="Filter by date"
+            label={t('dateLabel')}
             from={from}
             to={to}
             hiddenFields={{ ...keep('from', 'to'), ...table.hiddenFields() }}
             clearHref={table.withParams({ from: undefined, to: undefined })}
           />
         </div>
-        {!dates.ok && <Alert tone="error">{dates.message}</Alert>}
+        {!dates.ok && <Alert tone="error">{tDates(dates.problem)}</Alert>}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SegmentedNav
-            label="Filter events"
-            items={GROUP_FILTERS.map(({ value, label }) => ({
+            label={t('filterLabel')}
+            items={groupFilters.map(({ value, label }) => ({
               href: table.withParams({ group: value === 'all' ? undefined : value }),
               label,
               current: value === (group ?? 'all'),
             }))}
           />
-          {events.total > 0 && <SortMenu label="events" options={table.sortOptions()} />}
+          {events.total > 0 && <SortMenu label={t('rows')} options={table.sortOptions()} />}
         </div>
       </div>
 
       <Card
         flush
         footer={
-          showsPagination(events.total) && <Pagination {...table.pagination(events, 'events')} />
+          showsPagination(events.total) && <Pagination {...table.pagination(events, t('rows'))} />
         }
       >
         {events.total === 0 ? (
@@ -234,17 +261,17 @@ async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> 
         ) : (
           <Table
             caption={table.caption(
-              `${groupLabel ? `Audit log: ${groupLabel}` : 'Audit log'}${search ? ` matching "${search}"` : ''}`,
+              t('caption', { kind: captionKind, group: groupLabel ?? '', search }),
               events,
             )}
           >
             <thead>
               <tr>
-                <Th>Event</Th>
+                <Th>{t('table.event')}</Th>
                 <Th aria-sort={table.ariaSort('time')} className="hidden sm:table-cell">
-                  When
+                  {t('table.when')}
                 </Th>
-                <Th className="hidden lg:table-cell">Browser and IP address</Th>
+                <Th className="hidden lg:table-cell">{t('table.origin')}</Th>
               </tr>
             </thead>
             <tbody>
@@ -253,7 +280,7 @@ async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> 
                   <Td>
                     <div className="flex flex-col gap-1">
                       <span className="font-medium text-foreground">
-                        {describeAuditEvent(event.action, event.details)}
+                        {tAudit(describeAuditEvent(event.action, event.details))}
                       </span>
                       <Involved event={event} />
                       {/* Below the wider widths, when and where it came from go here. */}

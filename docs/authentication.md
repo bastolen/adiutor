@@ -106,8 +106,8 @@ a click, so there's no card to come back to.
 When signing in fails with nowhere to go back to (a GitHub or Google sign-in that took too
 long or was started in another tab, an account that couldn't be connected), Better Auth sends
 people to `/sign-in-error` (`onAPIError.errorURL` in `src/lib/auth.ts`, public in
-`src/proxy.ts`). Built like the 404 page, it explains what happened in plain words
-(`src/app/sign-in-error/messages.ts`, never the error code itself), offers "Sign in again" and
+`src/proxy.ts`). Built like the 404 page, it explains what happened in plain words, in the reader's
+language (`src/app/sign-in-error/messages.ts`, never the error code itself), offers "Sign in again" and
 "Go back", and shows a reference such as `7KQ2-M9XD` with the time, which users can copy and
 send to an administrator (`ErrorReference`, the box the app's other error pages show too; see
 [Looking up an error reference](deploying.md#looking-up-an-error-reference)). `recordSignInError` (`src/server/auth/sign-in-errors.ts`) logs one line,
@@ -116,6 +116,35 @@ and description and the signed-in user, if any, in the `sign_in_error` table for
 (`SIGN_IN_ERROR_RETENTION_DAYS`), at most 20 per IP address per hour. To look a reference up,
 search the server log for it, or query `sign_in_error` by `reference`; there's no screen for it
 yet.
+
+## How refusals reach the user
+
+Every refusal of a sign-in, or of a change to how someone signs in, carries an error code: Better
+Auth's own, or one of the app's (`src/lib/sign-in/sign-in-refusals.ts`). Forms turn the code into a
+message in the reader's language with `authErrorText` (`src/lib/sign-in/auth-error-messages.ts`,
+with the messages in `auth.codes` of the [catalogues](i18n.md)), so Better Auth's English, written
+for developers, never reaches the user:
+
+1. A refusal whose message has details only the server knows (`SERVER_WORDED_CODES`: how long a
+   pause or a limit lasts, `PASSWORD_SIGN_IN_PAUSED` and `TOO_MANY_ATTEMPTS`; which providers to
+   sign in with, `RESET_ENDS_PROVIDER_MFA`) is worded by the auth guards in the request's language
+   (its language cookie, else Adiutor's default language, noted once as the guards start:
+   `noteRefusalLocale` in `src/server/auth/auth-guards/refusal-messages.ts`), and the form
+   shows it as it comes, e.g. "Too many attempts. Try again in 12 minutes."
+2. Any other code with a message of its own gets that message.
+3. Any other rate limit, such as Better Auth's per-IP limit, gets "Too many requests. Wait a few
+   seconds and try again."
+4. Anything else gets the form's own fallback ("Sending the link failed. Please try again.") or
+   "Signing in failed. Please try again."
+
+The guards word the other refusals they throw in the request's language too, for clients other
+than the app's forms. A code in the URL (`?error=` after a GitHub or Google sign-in or an email
+link) gets its message from `signInErrorText`, a refused "Confirm with GitHub" on the step-up page
+from `reverifyErrorText`, and the sign-in error page tries the provider errors first
+(`src/app/sign-in-error/messages.ts`). The Security page's forms use the same functions
+(`authErrorText`, `signInChangeRefusalText`), so a refused change there reads the same as on the
+sign-in pages. Client components that show these messages need the `auth` namespace from their
+page (`ClientMessages`).
 
 ## Automatic linking
 
@@ -244,7 +273,8 @@ ones, or right ones whose sign-in then asked for the code) and wrong codes typed
 ("Wrong two-step verification code entered at sign-in", see
 [Two-step verification](mfa.md#two-step-verification)), which may be anyone's (staff see
 those in the audit log) (`listOwnActivity` in
-`src/server/audit.ts`, worded by `src/app/(app)/account/own-activity.ts`).
+`src/server/audit.ts`, worded in your language by `src/app/(app)/account/own-activity.ts`: one
+whole sentence per event, with who made the change, if not you, where each language puts it).
 
 ### Security (`/account/security`)
 
@@ -305,8 +335,9 @@ those in the audit log) (`listOwnActivity` in
   your password, if you have one (wrong ones are recorded and limited, as for changing it), and
   without a password or a second step a sign-in from the last hour (`deactivateOwnAccount` in
   `src/server/people/user-admin.ts`). It's blocked while you're the only Admin of the staff or a
-  company; that's checked before the password, so the refusal is the same with a right or a wrong
-  one. Only Admins delete accounts.
+  company, and the card says so with the service's own refusal ("You are the only staff Admin.
+  Make someone else an Admin first.", `soleAdminError`); that's checked before the password, so
+  the refusal is the same with a right or a wrong one. Only Admins delete accounts.
 
 ## Security emails
 

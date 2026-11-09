@@ -4,6 +4,7 @@
 'use client';
 
 import { Download } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import Button from '@/components/ui/button';
 import CopyButton from '@/components/ui/copy-button';
@@ -18,11 +19,12 @@ import CopyButton from '@/components/ui/copy-button';
  * @returns The codes.
  */
 export default function BackupCodes({ codes, onDone }: { codes: string[]; onDone: () => void }) {
+  const t = useTranslations('account');
   const text = codes.join('\n');
 
-  /** Saves the codes as a text file. */
+  /** Saves the codes as a text file, under a heading. */
   const download = () => {
-    const url = URL.createObjectURL(new Blob([`Adiutor backup codes\n\n${text}\n`]));
+    const url = URL.createObjectURL(new Blob([t('security.backupCodes.file', { codes: text })]));
     const link = document.createElement('a');
     link.href = url;
     link.download = 'adiutor-backup-codes.txt';
@@ -32,12 +34,9 @@ export default function BackupCodes({ codes, onDone }: { codes: string[]; onDone
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-muted-foreground">
-        Use one of these if you can&apos;t use your authenticator app. Each works once. Keep them
-        somewhere safe, like a password manager: they won&apos;t be shown again.
-      </p>
+      <p className="text-sm text-muted-foreground">{t('security.backupCodes.intro')}</p>
       <ul
-        aria-label="Backup codes"
+        aria-label={t('security.backupCodes.label')}
         className="grid grid-cols-2 gap-2 rounded-lg border border-border bg-raised-muted p-4 font-mono text-sm"
       >
         {codes.map((code) => (
@@ -47,13 +46,13 @@ export default function BackupCodes({ codes, onDone }: { codes: string[]; onDone
         ))}
       </ul>
       <div className="flex flex-wrap gap-2">
-        <CopyButton value={text} label="Copy codes" />
+        <CopyButton value={text} label={t('security.backupCodes.copy')} />
         <Button variant="secondary" size="sm" onClick={download}>
           <Download aria-hidden="true" />
-          Download
+          {t('security.backupCodes.download')}
         </Button>
       </div>
-      <Button onClick={onDone}>I&apos;ve saved these codes</Button>
+      <Button onClick={onDone}>{t('security.backupCodes.saved')}</Button>
     </div>
   );
 }

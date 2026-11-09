@@ -4,6 +4,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { type FormEvent, useState } from 'react';
 
 import CodeField from '@/components/auth/code-field';
@@ -14,7 +15,7 @@ import Alert from '@/components/ui/alert';
 import Button from '@/components/ui/button';
 import Modal from '@/components/ui/modal';
 import { EMAIL_CODE_MINUTES } from '@/lib/authz/mfa';
-import { authErrorMessage } from '@/lib/sign-in/auth-error-messages';
+import { authCodeText, authErrorText } from '@/lib/sign-in/auth-error-messages';
 import loadAuthClient from '@/lib/sign-in/load-auth-client';
 import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 import verifyCode from '@/lib/sign-in/verify-code';
@@ -41,6 +42,8 @@ interface EmailCodesSetupProps {
  * @returns The steps.
  */
 function EmailCodesSteps({ email, onDone }: { email: string; onDone: () => void }) {
+  const t = useTranslations('account');
+  const tAuth = useTranslations('auth');
   const { askToConfirmOnRefusal } = useRecentConfirmation();
   const [sent, setSent] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -65,20 +68,22 @@ function EmailCodesSteps({ email, onDone }: { email: string; onDone: () => void 
     setSending(false);
     if (result.error?.code === EMAIL_CODE_SENT_RECENTLY.code) {
       setSent(true);
-      setNotice(EMAIL_CODE_SENT_RECENTLY.message);
+      setNotice(authCodeText(tAuth, EMAIL_CODE_SENT_RECENTLY.code));
       cooldown.start();
       return;
     }
     if (result.error) {
       if (!askToConfirmOnRefusal(result.error.code)) {
-        setError(authErrorMessage(result.error));
+        setError(authErrorText(tAuth, result.error));
       }
       return;
     }
     setSent(true);
     cooldown.start();
     setNotice(
-      `We sent ${again ? 'a new code' : 'a code'} to ${email}. It expires in ${EMAIL_CODE_MINUTES} minutes.`,
+      again
+        ? t('security.emailCodes.sentAgain', { email, minutes: EMAIL_CODE_MINUTES })
+        : t('security.emailCodes.sent', { email, minutes: EMAIL_CODE_MINUTES }),
     );
   };
 
@@ -95,7 +100,7 @@ function EmailCodesSteps({ email, onDone }: { email: string; onDone: () => void 
     setPending(false);
     if (result.error) {
       if (!askToConfirmOnRefusal(result.error.code)) {
-        setError(authErrorMessage(result.error));
+        setError(authErrorText(tAuth, result.error));
       }
       return;
     }
@@ -112,7 +117,7 @@ function EmailCodesSteps({ email, onDone }: { email: string; onDone: () => void 
           <Alert tone="info">{notice}</Alert>
           <CodeField kind="otp" value={code} onChange={(event) => setCode(event.target.value)} />
           <Button type="submit" loading={pending}>
-            Turn on
+            {t('security.emailCodes.turnOn')}
           </Button>
           <ResendCodeButton
             onClick={() => send(true)}
@@ -122,7 +127,7 @@ function EmailCodesSteps({ email, onDone }: { email: string; onDone: () => void 
         </form>
       ) : (
         <Button loading={sending} onClick={() => send()}>
-          Send a code to check it works
+          {t('security.emailCodes.send')}
         </Button>
       )}
     </>
@@ -140,13 +145,14 @@ function EmailCodesSteps({ email, onDone }: { email: string; onDone: () => void 
  * @returns The dialog.
  */
 export default function EmailCodesSetup({ open, onOpenChange, email }: EmailCodesSetupProps) {
+  const t = useTranslations('account');
   const router = useRouter();
   return (
     <Modal
       open={open}
       onOpenChange={onOpenChange}
-      title="Use email codes"
-      description={`After your password, you'll enter a code we email to ${email}.`}
+      title={t('security.emailCodes.title')}
+      description={t('security.emailCodes.description', { email })}
     >
       <EmailCodesSteps
         email={email}

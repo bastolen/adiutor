@@ -152,7 +152,7 @@ describe('display names (person and company)', () => {
       const result = nameSchema.safeParse(name);
       expect(result.success, name).toBe(false);
       expect(result.error?.issues.map((issue) => issue.message)).toContain(
-        'Remove invisible characters and text direction marks from your name.',
+        'validation.name.hiddenCharacters',
       );
       expect(companyNameSchema.safeParse(name).success, name).toBe(false);
     });
@@ -242,55 +242,81 @@ describe('slugs', () => {
 
 describe('messages', () => {
   /**
-   * The first message a schema refuses a value with.
+   * The first issue a schema refuses a value with: its message is a key in
+   * the `validation` catalogue, and a length check carries its limit.
    *
    * @param schema - The schema.
    * @param value - The value.
-   * @returns The message, or `undefined` when the value passed.
+   * @returns The issue, or `undefined` when the value passed.
    */
-  const messageFor = (schema: z.ZodType, value: string) =>
-    schema.safeParse(value).error?.issues[0]?.message;
+  const issueFor = (schema: z.ZodType, value: string) => schema.safeParse(value).error?.issues[0];
 
   it('name the field, since forms show one message above all their fields', () => {
     const tooLong = 'a'.repeat(NAME_MAX_LENGTH + 1);
-    expect(messageFor(companyNameSchema, 'A')).toBe(
-      'Use at least 2 characters for the company name.',
+    expect(issueFor(companyNameSchema, 'A')).toMatchObject({
+      message: 'validation.companyName.tooShort',
+      minimum: 2,
+    });
+    expect(issueFor(companyNameSchema, tooLong)).toMatchObject({
+      message: 'validation.companyName.tooLong',
+      maximum: NAME_MAX_LENGTH,
+    });
+    expect(issueFor(staffNameSchema, tooLong)).toMatchObject({
+      message: 'validation.staffName.tooLong',
+      maximum: NAME_MAX_LENGTH,
+    });
+    expect(issueFor(nameSchema, tooLong)).toMatchObject({
+      message: 'validation.name.tooLong',
+      maximum: NAME_MAX_LENGTH,
+    });
+    expect(issueFor(nameSchema, '  ')?.message).toBe('validation.name.empty');
+    expect(issueFor(slugSchema, 'a'.repeat(SLUG_MAX_LENGTH + 1))).toMatchObject({
+      message: 'validation.slug.tooLong',
+      maximum: SLUG_MAX_LENGTH,
+    });
+    expect(issueFor(slugSchema, 'Adiutor Tests')?.message).toBe('validation.slug.format');
+    expect(issueFor(passwordSchema, 'short')).toMatchObject({
+      message: 'validation.password.tooShort',
+      minimum: 12,
+    });
+    expect(issueFor(passwordSchema, 'a'.repeat(129))).toMatchObject({
+      message: 'validation.password.tooLong',
+      maximum: 128,
+    });
+    expect(issueFor(passkeyNameSchema, 'a'.repeat(PASSKEY_NAME_MAX_LENGTH + 1))).toMatchObject({
+      message: 'validation.passkeyName.tooLong',
+      maximum: PASSKEY_NAME_MAX_LENGTH,
+    });
+    expect(issueFor(passkeyNameSchema, ' ')?.message).toBe('validation.passkeyName.empty');
+    expect(issueFor(passkeyNameSchema, 'Work\nlaptop')?.message).toBe(
+      'validation.passkeyName.controlCharacters',
     );
-    expect(messageFor(companyNameSchema, tooLong)).toBe(
-      'Use at most 100 characters for the company name.',
-    );
-    expect(messageFor(staffNameSchema, tooLong)).toBe(
-      'Use at most 100 characters for the name shown to users.',
-    );
-    expect(messageFor(nameSchema, tooLong)).toBe('Use at most 100 characters for your name.');
-    expect(messageFor(nameSchema, '  ')).toBe('Enter your name.');
-    expect(messageFor(slugSchema, 'a'.repeat(SLUG_MAX_LENGTH + 1))).toBe(
-      'Use at most 60 characters for the URL name.',
-    );
-    expect(messageFor(slugSchema, 'Adiutor Tests')).toBe(
-      'Use lower-case letters, numbers and dashes in the URL name, e.g. adiutor.',
-    );
-    expect(messageFor(passwordSchema, 'short')).toBe(
-      'Use at least 12 characters for the password.',
-    );
-    expect(messageFor(passkeyNameSchema, 'a'.repeat(PASSKEY_NAME_MAX_LENGTH + 1))).toBe(
-      'Use at most 64 characters for the passkey name.',
-    );
+    expect(issueFor(emailSchema, 'nope')?.message).toBe('validation.email');
+    expect(issueFor(idSchema, 'nope')?.message).toBe('validation.id');
+    expect(issueFor(roleSchema, 'owner')?.message).toBe('validation.role');
   });
 
   it('refuse a URL name that looks like an ID, since the company’s address takes both', () => {
-    expect(messageFor(slugSchema, '01900000-0000-7000-8000-000000000000')).toBe(
-      'Choose a URL name that doesn’t look like an ID.',
+    expect(issueFor(slugSchema, '01900000-0000-7000-8000-000000000000')?.message).toBe(
+      'validation.slug.looksLikeId',
     );
-    expect(messageFor(slugSchema, 'adiutor-tests')).toBeUndefined();
+    expect(issueFor(slugSchema, 'adiutor-tests')).toBeUndefined();
   });
 
   it('call the staff name the name shown to users, not a company name', () => {
-    expect(messageFor(staffNameSchema, 'Adiutor.dev')).toBe(
-      'Remove web addresses from the name shown to users.',
+    expect(issueFor(staffNameSchema, 'Adiutor.dev')?.message).toBe(
+      'validation.staffName.webAddress',
     );
-    expect(messageFor(companyNameSchema, 'Adiutor.dev')).toBe(
-      'Remove web addresses from the company name.',
+    expect(issueFor(companyNameSchema, 'Adiutor.dev')?.message).toBe(
+      'validation.companyName.webAddress',
     );
+    expect(issueFor(companyNameSchema, 'Adiutor\tTests')?.message).toBe(
+      'validation.companyName.controlCharacters',
+    );
+  });
+
+  it('refuse roles with keys that service errors use too', () => {
+    expect(CHOOSE_COMPANY_ROLE_MESSAGE).toBe('validation.companyRole');
+    expect(CHOOSE_STAFF_ROLE_MESSAGE).toBe('validation.staffRole');
   });
 });

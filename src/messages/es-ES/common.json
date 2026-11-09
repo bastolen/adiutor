@@ -53,6 +53,55 @@
       "copyText": "Referencia {reference} ({when})",
       "copy": "Copiar referencia"
     },
+    "codeField": {
+      "code": "Código",
+      "backupCode": "Código de respaldo",
+      "authenticatorHint": "El código de 6 dígitos que muestra tu app de autenticación."
+    },
+    "resendCode": {
+      "send": "Enviar un código nuevo",
+      "wait": "Enviar un código nuevo en {wait}"
+    },
+    "providerStepUp": {
+      "region": "Confirmación con {provider}",
+      "dismiss": "Descartar el mensaje de confirmación con {provider}",
+      "mfaOff": "{provider} no ha podido confirmar que eres tú: la autenticación en dos factores está desactivada en tu cuenta de {provider}. Actívala en {provider} o usa otro segundo paso.",
+      "unchecked": "{provider} no ha podido confirmar que eres tú: ahora mismo no hemos podido comprobar la autenticación en dos factores de tu cuenta de {provider}. Vuelve a intentarlo en un momento."
+    },
+    "providerLinked": {
+      "region": "{provider} conectado",
+      "dismiss": "Descartar el aviso de {provider}",
+      "named": "Tu cuenta de {provider} <name>{account}</name> ya está conectada a tu cuenta de Adiutor, porque has iniciado sesión con ella. ¿No has sido tú? <link>Desconéctala en la página Seguridad</link>.",
+      "unnamed": "Tu cuenta de {provider} ya está conectada a tu cuenta de Adiutor, porque has iniciado sesión con ella. ¿No has sido tú? <link>Desconéctala en la página Seguridad</link>."
+    },
+    "accessNotice": {
+      "dismiss": "Descartar este aviso",
+      "steppedDown": "Has dejado el rol de Administrador del personal. Otro Administrador del personal puede devolvértelo.",
+      "leftStaff": "Ya no formas parte del personal. Tu cuenta se mantiene y un Administrador del personal puede volver a invitarte.",
+      "leftCompany": "Has salido de la empresa. Tu cuenta se mantiene y sus Administradores pueden volver a invitarte.",
+      "companySteppedDown": "Ya no eres Administrador de esta empresa, así que no gestionas sus miembros. Otro Administrador puede volver a darte el rol."
+    },
+    "recentConfirmation": {
+      "confirm": "Confirma que eres tú"
+    },
+    "brandPanel": {
+      "headline": "Consigue ayuda sin perseguir correos.",
+      "pitch": "Informa de un problema o pide algo nuevo, sigue su progreso y aprueba el trabajo, todo en un mismo lugar.",
+      "preview": {
+        "status": "Esperando tu aprobación",
+        "title": "Actualizar el horario en la web",
+        "you": "Tú",
+        "staff": "Soporte Adiutor",
+        "question": "Nuestro horario cambia el mes que viene. ¿Podéis actualizarlo en la web?",
+        "answer": "Hecho en la web de pruebas. Revísalo y apruébalo, y lo publicaremos.",
+        "reply": "Responder",
+        "approve": "Aprobar"
+      }
+    },
+    "signInError": {
+      "heading": "No se ha podido iniciar sesión",
+      "signInAgain": "Volver a iniciar sesión"
+    },
     "theme": {
       "label": "Tema",
       "system": "Sistema",

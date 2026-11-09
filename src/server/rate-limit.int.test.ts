@@ -26,7 +26,8 @@ describe('rate limits', () => {
     await expect(hitRateLimit(ctx, 'test:key', rule)).resolves.toMatchObject({ allowed: true });
     await expect(assertRateLimit(ctx, 'test:key', rule)).rejects.toMatchObject({
       code: 'rate_limited',
-      message: 'Too many attempts. Try again in 1 minute.',
+      key: 'errors.tooManyAttempts',
+      values: { minutes: 1 },
     });
     // Other keys are counted separately.
     await expect(hitRateLimit(ctx, 'test:other', rule)).resolves.toMatchObject({ allowed: true });

@@ -3,6 +3,8 @@
  */
 'use server';
 
+import { getLocale } from 'next-intl/server';
+
 import type { ActionResult } from '@/lib/action-result';
 import field, { localeField } from '@/lib/form-data';
 import inviteStatusMessage from '@/lib/invite-status';
@@ -42,7 +44,7 @@ export default async function registerCompanyAction(
     );
     return {
       ok: true,
-      message: `Company added. ${inviteStatusMessage(adminEmail, inviteStatus)}`,
+      message: inviteStatusMessage(adminEmail, inviteStatus, await getLocale(), 'companyAdded'),
       data: { companyId, slug },
     };
   });

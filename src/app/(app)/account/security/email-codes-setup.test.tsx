@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 
 import EmailCodesSetup from './email-codes-setup';
+import renderInLocale from '../../../../../tests/i18n/render';
 
 /** The mocked auth client and router. */
 const { sendOtp, verifyOtp, push, refresh } = vi.hoisted(() => ({
@@ -74,4 +75,31 @@ describe('EmailCodesSetup', () => {
     expect(screen.getByLabelText('Code')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
+
+  it.each([
+    [
+      'nl-NL',
+      'Stuur een code om te testen of het werkt',
+      'We hebben een code naar jane@adiutor.test gestuurd. De code is 5 minuten geldig.',
+    ],
+    [
+      'es-ES',
+      'Enviar un código para comprobar que funciona',
+      'Hemos enviado un código a jane@adiutor.test. Caduca en 5 minutos.',
+    ],
+  ] as const)(
+    'says in %s where the code went and how long it works',
+    async (locale, send, sent) => {
+      const user = userEvent.setup();
+      sendOtp.mockResolvedValue({ data: { status: true }, error: null });
+      renderInLocale(
+        locale,
+        <EmailCodesSetup open onOpenChange={() => {}} email="jane@adiutor.test" />,
+      );
+
+      await user.click(screen.getByRole('button', { name: send }));
+
+      expect(await screen.findByText(sent)).toBeInTheDocument();
+    },
+  );
 });

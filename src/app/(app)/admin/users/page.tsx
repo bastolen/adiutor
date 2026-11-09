@@ -6,11 +6,11 @@
  */
 import { Plus, Users } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import { Fragment, Suspense } from 'react';
 
 import Avatar from '@/components/ui/avatar';
-import Badge from '@/components/ui/badge';
 import Button from '@/components/ui/button';
 import Card from '@/components/ui/card';
 import EmptyState from '@/components/ui/empty-state';
@@ -23,7 +23,6 @@ import SortMenu from '@/components/ui/sort-menu';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
 import TextLink from '@/components/ui/text-link';
 import ToastOnArrival from '@/components/ui/toast-on-arrival';
-import { ROLE_LABELS } from '@/lib/authz/roles';
 import displayName from '@/lib/display-name';
 import { type SearchParams, searchParam } from '@/lib/tables/search-params';
 import { createPageUrl, parseTableState, showsPagination } from '@/lib/tables/table-state';
@@ -33,25 +32,18 @@ import { getGlobalPermissions, requireGlobalPermission } from '@/server/authz';
 import { globalPermissionMetadata } from '@/server/page-metadata';
 import { isUserFilter, listUsers, type UserFilter, type UserListItem } from '@/server/people/users';
 
-import { AccountStateBadges, MfaBadge } from './user-badges';
+import { AccountStateBadges, MfaBadge, StaffBadge } from './user-badges';
 import { ActivityColumn, ActivityLine } from '../../_people/activity';
 
 /**
  * Page metadata: "Users · Adiutor" for those who may see the page (`users:view`), and
  * the 404 page's title for everyone else, who get the 404 page.
  */
-export const generateMetadata = globalPermissionMetadata('users:view', {
-  title: 'Users',
-});
+// i18n-check t('admin.users.title')
+export const generateMetadata = globalPermissionMetadata('users:view', 'admin.users.title');
 
-/** The filter choices, in order. */
-const FILTERS: readonly { value: UserFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'staff', label: 'Staff' },
-  { value: 'not_staff', label: 'Not staff' },
-  { value: 'without_mfa', label: 'Without MFA' },
-  { value: 'deactivated', label: 'Deactivated' },
-];
+/** The filter choices, in order; their names are `admin.users.filters.option`. */
+const FILTERS: readonly UserFilter[] = ['all', 'staff', 'not_staff', 'without_mfa', 'deactivated'];
 
 /**
  * A user's companies as comma-separated links, or a dash when there are
@@ -62,13 +54,14 @@ const FILTERS: readonly { value: UserFilter; label: string }[] = [
  * @returns The links.
  */
 function CompanyLinks({ companies }: { companies: UserListItem['companies'] }) {
+  const t = useTranslations('admin.users');
   if (companies.length === 0) {
     return (
       <>
         <span aria-hidden="true" className="text-muted-foreground">
           —
         </span>
-        <span className="sr-only">No companies</span>
+        <span className="sr-only">{t('noCompanies')}</span>
       </>
     );
   }
@@ -103,6 +96,7 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
   const filter: UserFilter = isUserFilter(filterParam) ? filterParam : 'all';
   // Set by the redirect after a user was deleted; not part of any link on this page.
   const deleted = searchParam(params.deleted) === '1';
+  const t = await getTranslations('admin.users');
   const requested = parseTableState(USERS_TABLE, params);
   const users = await listUsers(appContext, actor, { search, filter, ...requested });
   // Filter before search in links, the order the search form submits them in.
@@ -114,78 +108,77 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
     },
     await getTranslations('tables'),
   ).table(USERS_TABLE, { ...requested, page: users.page });
-  const filterLabel = FILTERS.find(({ value }) => value === filter)?.label ?? 'All';
 
   let empty = {
-    title: 'No users yet',
-    description: 'People appear here once they have an account.',
+    title: t('empty.default.title'),
+    description: t('empty.default.description'),
   };
   if (search) {
     empty = {
-      title: 'No matching users',
-      description: `Nothing matches "${search}". Try another name or email address.`,
+      title: t('empty.search.title'),
+      description: t('empty.search.description', { search }),
     };
   } else if (filter === 'not_staff') {
     empty = {
-      title: 'No users yet',
-      description: 'People you add or invite to a company appear here.',
+      title: t('empty.notStaff.title'),
+      description: t('empty.notStaff.description'),
     };
   } else if (filter === 'without_mfa') {
     empty = {
-      title: 'Everyone has MFA',
-      description: 'Every account is protected with a second sign-in step.',
+      title: t('empty.withoutMfa.title'),
+      description: t('empty.withoutMfa.description'),
     };
   } else if (filter === 'deactivated') {
     empty = {
-      title: 'No deactivated accounts',
-      description: 'Accounts that are deactivated appear here until an Admin reactivates them.',
+      title: t('empty.deactivated.title'),
+      description: t('empty.deactivated.description'),
     };
   }
 
   return (
     <>
       <PageHeader
-        title="Users"
-        description="Everyone with an account: staff and the people of each company."
+        title={t('title')}
+        description={t('description')}
         actions={
           getGlobalPermissions(actor).has('users:create') && (
             <Button asChild>
               <Link href="/admin/users/new">
                 <Plus aria-hidden="true" className="size-4" />
-                Add user
+                {t('addUser')}
               </Link>
             </Button>
           )
         }
       />
 
-      {deleted && <ToastOnArrival message="User deleted." />}
+      {deleted && <ToastOnArrival message={t('deleted')} />}
 
       <div className="flex flex-col gap-4">
         <SearchForm
           id="user-search"
-          label="Search users"
-          placeholder="Search by name or email"
+          label={t('search.label')}
+          placeholder={t('search.placeholder')}
           defaultValue={search}
           hiddenFields={{ ...(filter === 'all' ? {} : { filter }), ...table.hiddenFields() }}
         />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SegmentedNav
-            label="Filter users"
-            items={FILTERS.map(({ value, label }) => ({
+            label={t('filters.label')}
+            items={FILTERS.map((value) => ({
               href: table.withParams({ filter: value === 'all' ? undefined : value }),
-              label,
+              label: t('filters.option', { filter: value }),
               current: value === filter,
             }))}
           />
-          {users.total > 0 && <SortMenu label="users" options={table.sortOptions()} />}
+          {users.total > 0 && <SortMenu label={t('rows')} options={table.sortOptions()} />}
         </div>
       </div>
 
       <Card
         flush
         footer={
-          showsPagination(users.total) && <Pagination {...table.pagination(users, 'users')} />
+          showsPagination(users.total) && <Pagination {...table.pagination(users, t('rows'))} />
         }
       >
         {users.total === 0 ? (
@@ -193,21 +186,21 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
         ) : (
           <Table
             caption={table.caption(
-              `${filterLabel === 'All' ? 'All users' : `Users: ${filterLabel}`}${search ? ` matching "${search}"` : ''}`,
+              t('caption', { filter, matching: search ? 'yes' : 'no', search }),
               users,
             )}
           >
             <thead>
               <tr>
-                <Th aria-sort={table.ariaSort('name')}>Name</Th>
+                <Th aria-sort={table.ariaSort('name')}>{t('columns.name')}</Th>
                 <Th aria-sort={table.ariaSort('email')} className="hidden md:table-cell">
-                  Email
+                  {t('columns.email')}
                 </Th>
                 <Th
                   aria-sort={table.ariaSort('last-active', 'joined')}
                   className="hidden xl:table-cell"
                 >
-                  Activity
+                  {t('columns.activity')}
                 </Th>
               </tr>
             </thead>
@@ -227,9 +220,7 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
                             >
                               {shownName}
                             </TextLink>
-                            {listed.staffRole && (
-                              <Badge tone="brand">Staff · {ROLE_LABELS[listed.staffRole]}</Badge>
-                            )}
+                            {listed.staffRole && <StaffBadge role={listed.staffRole} />}
                             <AccountStateBadges
                               deactivated={listed.deactivatedAt !== null}
                               emailVerified={listed.emailVerified}
@@ -240,7 +231,7 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
                             {listed.email}
                           </span>
                           <span className="mt-1 text-xs">
-                            <span className="text-muted-foreground">Companies: </span>
+                            <span className="text-muted-foreground">{t('companies')} </span>
                             <CompanyLinks companies={listed.companies} />
                           </span>
                           {/* MFA always goes here, and the activity below the width where it gets

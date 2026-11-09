@@ -1,0 +1,68 @@
+{
+  "errors": {
+    "notFound": "Esta página no existe o no tienes acceso a ella.",
+    "forbidden": "No tienes permiso para hacer eso.",
+    "concurrentChange": "Otra persona cambió esto en el mismo momento. Vuelve a intentarlo.",
+    "companyDeactivated": "Esta empresa está desactivada. Reactívala primero.",
+    "tooManyAttempts": "{minutes, plural, one {Demasiados intentos. Vuelve a intentarlo dentro de # minuto.} other {Demasiados intentos. Vuelve a intentarlo dentro de # minutos.}}",
+    "grantConfirmationRequired": "Confirma que eres tú con tu segundo paso antes de dar este rol a alguien.",
+    "setup": {
+      "alreadySetUp": "Adiutor ya está configurado. Inicia sesión.",
+      "accountDeactivated": "Esa cuenta está desactivada, así que no ha podido iniciar sesión. Usa otra dirección."
+    },
+    "signIn": {
+      "mfaVerificationRequired": "Confirma que eres tú con tu segundo paso antes de cambiar cómo inicias sesión.",
+      "sessionNotFresh": "Por tu seguridad, cierra sesión y vuelve a iniciarla antes de cambiar esto.",
+      "mfaRequiredForRole": "Tu rol exige MFA y con esto te quedarías sin ella. Añade primero una llave de acceso y vuelve a intentarlo.",
+      "changeInProgress": "Todavía hay otro cambio en curso en cómo inicias sesión. Vuelve a intentarlo en un momento.",
+      "passwordAlreadySet": "Ya tienes una contraseña. Cámbiala en su lugar."
+    },
+    "wrongPassword": {
+      "change_password": "Tu contraseña actual no es correcta.",
+      "deactivate": "Esa contraseña no es correcta."
+    },
+    "sessions": {
+      "currentDevice": "Para cerrar sesión en este dispositivo, usa Cerrar sesión en el menú.",
+      "emailRequired": "Indica la dirección de correo del usuario cuya sesión quieres cerrar.",
+      "noAccount": "Ninguna cuenta tiene la dirección {email}."
+    },
+    "members": {
+      "selfRaise": "No puedes darte a ti mismo un rol superior.",
+      "lastAdmin": "Una empresa necesita al menos un administrador. Haz administrador a otra persona primero.",
+      "accountDeactivated": "Esta cuenta está desactivada. Reactívala primero.",
+      "alreadyMember": "Esta persona ya es miembro de {company}."
+    },
+    "staff": {
+      "selfRaise": "No puedes darte a ti mismo un rol superior en el personal.",
+      "lastAdmin": "Siempre debe haber al menos un administrador del personal. Haz administrador a otra persona primero."
+    },
+    "users": {
+      "ownAccount": "Usa tu página de Seguridad para cambiar tu propia cuenta.",
+      "alreadyDeactivated": "Esta cuenta ya está desactivada.",
+      "alreadyActive": "Esta cuenta ya está activa.",
+      "confirmEmail": "Escribe la dirección de correo exactamente igual para confirmar."
+    },
+    "soleAdmin": {
+      "self": {
+        "staff": "Eres el único administrador del personal. Haz administrador a otra persona primero.",
+        "companies": "Eres el único administrador de {companies}. Haz administrador a otra persona primero.",
+        "staffAndCompanies": "Eres el único administrador del personal y el único administrador de {companies}. Haz administrador a otra persona primero."
+      },
+      "user": {
+        "staff": "Este usuario es el único administrador del personal. Haz administrador a otra persona primero.",
+        "companies": "Este usuario es el único administrador de {companies}. Haz administrador a otra persona primero.",
+        "staffAndCompanies": "Este usuario es el único administrador del personal y el único administrador de {companies}. Haz administrador a otra persona primero."
+      }
+    },
+    "companies": {
+      "slugTaken": "Ese nombre de URL ya está en uso. Elige otro.",
+      "alreadyActive": "Esta empresa ya está activa.",
+      "alreadyDeactivated": "Esta empresa ya está desactivada."
+    },
+    "inviteLinks": {
+      "validity": "Elige cuánto tiempo sigue siendo válido el enlace.",
+      "claimLimited": "Este enlace de invitación no se puede usar ahora. Vuelve a intentarlo más tarde.",
+      "notAllowed": "Finanzas y Soporte no pueden usar enlaces de invitación. Pide a quien te lo envió que te invite por correo."
+    }
+  }
+}

@@ -10,6 +10,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { PROVIDER_LINKED_COOKIE } from '@/lib/sign-in/oauth-providers';
 
 import ProviderLinkedNotice from './provider-linked-notice';
+import renderInLocale from '../../../tests/i18n/render';
 
 /**
  * Sets the cookie that `afterAccountCreate` leaves after connecting a
@@ -121,5 +122,26 @@ describe('ProviderLinkedNotice', () => {
     expect(document.cookie).toBe(`${OTHER_COOKIE}=1`);
     expect(screen.queryByRole('region', { name: 'GitHub connected' })).not.toBeInTheDocument();
     expect(screen.queryByText(/is now connected/)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    [
+      'nl-NL',
+      'Google gekoppeld',
+      'Je Google-account jane@adiutor.test is nu gekoppeld aan je Adiutor-account, omdat je ermee bent ingelogd. Was jij dit niet? Ontkoppel het op de pagina Beveiliging.',
+      'Ontkoppel het op de pagina Beveiliging',
+    ],
+    [
+      'es-ES',
+      'Google conectado',
+      'Tu cuenta de Google jane@adiutor.test ya está conectada a tu cuenta de Adiutor, porque has iniciado sesión con ella. ¿No has sido tú? Desconéctala en la página Seguridad.',
+      'Desconéctala en la página Seguridad',
+    ],
+  ] as const)('says it in %s, with the link inside the sentence', (locale, region, text, link) => {
+    setLinkedCookie(encodeURIComponent('google:jane@adiutor.test'));
+    renderInLocale(locale, <ProviderLinkedNotice />);
+
+    expect(screen.getByRole('region', { name: region })).toHaveTextContent(text);
+    expect(screen.getByRole('link', { name: link })).toHaveAttribute('href', '/account/security');
   });
 });

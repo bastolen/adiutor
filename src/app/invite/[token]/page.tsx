@@ -12,6 +12,7 @@ import UnusableLink from '@/components/auth/unusable-link';
 import { FormSkeleton } from '@/components/ui/skeleton';
 import { mustSetUpMfa } from '@/lib/authz/mfa';
 import { mayUseInviteLinks } from '@/lib/authz/permissions';
+import ClientMessages from '@/lib/i18n/client-messages';
 import appContext from '@/server/app-context';
 import { getOptionalActor } from '@/server/authz';
 import { getInvitationPreview } from '@/server/people/invitations';
@@ -46,14 +47,14 @@ async function Invitation({ params }: { params: Promise<{ token: string }> }) {
 
   return (
     <div className="flex flex-col gap-8">
-      <InvitationHeading companyName={preview.companyName} roleLabel={preview.roleLabel} />
+      <InvitationHeading companyName={preview.companyName} roleId={preview.role} />
       {step}
     </div>
   );
 }
 
 /**
- * The invitation page.
+ * The invitation page. Its forms' text comes with it (`auth`).
  *
  * @param props - Page props from Next.js.
  * @param props.params - Route parameters.
@@ -62,7 +63,9 @@ async function Invitation({ params }: { params: Promise<{ token: string }> }) {
 export default function InvitationPage({ params }: PageProps<'/invite/[token]'>) {
   return (
     <Suspense fallback={<FormSkeleton />}>
-      <Invitation params={params} />
+      <ClientMessages namespaces={['auth']}>
+        <Invitation params={params} />
+      </ClientMessages>
     </Suspense>
   );
 }

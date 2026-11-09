@@ -34,4 +34,17 @@ describe('pickMessages', () => {
     expect(Object.keys(picked)).toEqual(['common']);
     expect(picked.common?.loading).toBe('Laden…');
   });
+
+  it('keeps just a group inside a namespace, in its place', () => {
+    const picked = pickMessages(messagesFor('nl-NL'), ['common', 'admin.staff.name']);
+    expect(Object.keys(picked)).toEqual(['common', 'admin']);
+    expect(Object.keys(picked.admin ?? {})).toEqual(['staff']);
+    expect(Object.keys(picked.admin?.staff ?? {})).toEqual(['name']);
+    expect(picked.admin?.staff.name.save).toBe('Naam opslaan');
+  });
+
+  it('merges groups of the same namespace', () => {
+    const picked = pickMessages(messagesFor('en-US'), ['people.roleSelect', 'people.inviteForm']);
+    expect(Object.keys(picked.people ?? {})).toEqual(['roleSelect', 'inviteForm']);
+  });
 });

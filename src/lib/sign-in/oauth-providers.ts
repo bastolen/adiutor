@@ -51,20 +51,6 @@ export function isMfaProvider(value: unknown): value is MfaProvider {
 }
 
 /**
- * Joins provider names for a sentence: "GitHub", "GitHub or GitLab",
- * "GitHub, GitLab or Bitbucket".
- *
- * @param providers - The providers.
- * @returns Their labels, joined with "or".
- */
-export function providerNames(providers: readonly OAuthProvider[]): string {
-  const labels = providers.map((provider) => PROVIDER_LABELS[provider]);
-  return labels.length > 1
-    ? `${labels.slice(0, -1).join(', ')} or ${labels[labels.length - 1]}`
-    : (labels[0] ?? '');
-}
-
-/**
  * Joins provider names for a sentence in the reader's language: "GitHub",
  * "GitHub or Google" ("GitHub of Google", "GitHub o Google"). Pass the result
  * as a named argument of a whole-sentence message.
@@ -210,17 +196,6 @@ export function accountIdFromProfile(provider: OAuthProvider, profile: unknown):
  * the hint, it's a plain sign-in with the provider.
  */
 export const REVERIFY_HINT = 'adiutorReverify';
-
-/**
- * Names a provider account in running text.
- *
- * @param provider - The provider.
- * @param accountName - The account's name there, if known.
- * @returns E.g. "GitHub (octocat)", or "GitHub" without a name.
- */
-export function providerAccountLabel(provider: OAuthProvider, accountName?: string | null): string {
-  return accountName ? `${PROVIDER_LABELS[provider]} (${accountName})` : PROVIDER_LABELS[provider];
-}
 
 /**
  * Cookie that tells the next page a provider account was connected while

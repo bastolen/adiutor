@@ -43,7 +43,7 @@ describe('setOwnLocale', () => {
     const admin = await staffActor(db, 'platform_admin');
 
     await expect(setOwnLocale(ctx, admin, 'fr-FR')).rejects.toThrow(ZodError);
-    await expect(setOwnLocale(ctx, admin, 'fr-FR')).rejects.toThrow('Choose one of the languages.');
+    await expect(setOwnLocale(ctx, admin, 'fr-FR')).rejects.toThrow('validation.locale');
     expect(await savedLocale(admin.id)).toBeNull();
   });
 });

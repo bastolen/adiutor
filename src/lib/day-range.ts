@@ -12,9 +12,15 @@ export interface DayRange {
   end: Date | null;
 }
 
+/**
+ * Why a day range can't be used: a date that isn't a real day, or a "from"
+ * after the "to". The page that shows it words it in the reader's language.
+ */
+export type DayRangeProblem = 'invalidDay' | 'fromAfterTo';
+
 /** What {@link parseDayRange} found. */
 export type DayRangeResult =
-  { ok: true; range: DayRange } | { ok: false; message: string; range: DayRange };
+  { ok: true; range: DayRange } | { ok: false; problem: DayRangeProblem; range: DayRange };
 
 /** A date as date fields send it. */
 const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -45,8 +51,8 @@ function startOfDay(value: string): Date | null {
 
 /**
  * Reads a day range from two optional dates. An empty date means no limit on
- * that side; an invalid one, or a "from" after the "to", is refused with a
- * message to show, and then nothing is limited.
+ * that side; an invalid one, or a "from" after the "to", is refused with
+ * the problem for the page to explain, and then nothing is limited.
  *
  * @param from - The first day (`yyyy-mm-dd`), if any.
  * @param to - The last day (`yyyy-mm-dd`), if any.
@@ -57,14 +63,10 @@ export function parseDayRange(from: string | undefined, to: string | undefined):
   const start = from ? startOfDay(from) : null;
   const lastDay = to ? startOfDay(to) : null;
   if ((from && !start) || (to && !lastDay)) {
-    return { ok: false, message: 'Enter the dates as real days, e.g. 2026-11-03.', range: none };
+    return { ok: false, problem: 'invalidDay', range: none };
   }
   if (start && lastDay && start > lastDay) {
-    return {
-      ok: false,
-      message: 'Choose a “from” date on or before the “to” date.',
-      range: none,
-    };
+    return { ok: false, problem: 'fromAfterTo', range: none };
   }
   return {
     ok: true,

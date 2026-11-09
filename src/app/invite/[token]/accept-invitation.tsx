@@ -5,6 +5,8 @@
 'use client';
 
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
 
 import AuthDivider from '@/components/ui/auth-divider';
 import Button from '@/components/ui/button';
@@ -26,6 +28,17 @@ interface AcceptInvitationProps {
 }
 
 /**
+ * Shows the signed-in account's address in a sentence, emphasised (the
+ * `<account>` tag of `auth.invite.signedInAs`).
+ *
+ * @param chunks - The address, where the sentence places it.
+ * @returns The emphasised address.
+ */
+function accountTag(chunks: ReactNode) {
+  return <span className="font-medium text-foreground">{chunks}</span>;
+}
+
+/**
  * The join button for a signed-in user.
  *
  * @param props - Component props.
@@ -34,16 +47,17 @@ interface AcceptInvitationProps {
  * @returns The form.
  */
 function JoinAsSignedInUser({ token, email }: { token: string; email: string }) {
+  const t = useTranslations('auth');
   const [result, formAction, pending, onSubmit] = useTransientActionState(acceptAction, null);
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-5">
       <input type="hidden" name="token" value={token} />
       <ResultAlert result={result} errorsOnly />
       <p className="text-sm text-muted-foreground">
-        You&apos;re signed in as <span className="font-medium text-foreground">{email}</span>.
+        {t.rich('invite.signedInAs', { email, account: accountTag })}
       </p>
       <Button type="submit" fullWidth loading={pending}>
-        Accept invitation
+        {t('invite.accept')}
       </Button>
     </form>
   );
@@ -57,6 +71,7 @@ function JoinAsSignedInUser({ token, email }: { token: string; email: string }) 
  * @returns The options.
  */
 function SignInOrCreateAccount({ token }: { token: string }) {
+  const t = useTranslations('auth');
   const [result, formAction, pending, onSubmit] = useTransientActionState(
     createAccountAction,
     null,
@@ -67,35 +82,35 @@ function SignInOrCreateAccount({ token }: { token: string }) {
     <div className="flex flex-col gap-6">
       <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-5">
         <input type="hidden" name="token" value={token} />
-        <h2 className="text-base font-semibold text-foreground">Create your account</h2>
+        <h2 className="text-base font-semibold text-foreground">{t('invite.createAccount')}</h2>
         <ResultAlert result={result} errorsOnly />
         <TextField
-          label="Your name"
+          label={t('fields.yourName')}
           name="name"
           autoComplete="name"
           required
           maxLength={NAME_MAX_LENGTH}
         />
         <TextField
-          label="Password"
+          label={t('fields.password')}
           type="password"
           name="password"
           autoComplete="new-password"
           minLength={MIN_PASSWORD_LENGTH}
-          description={`At least ${MIN_PASSWORD_LENGTH} characters.`}
+          description={t('fields.passwordHint', { min: MIN_PASSWORD_LENGTH })}
           required
         />
         <Button type="submit" fullWidth loading={pending}>
-          Create account and join
+          {t('invite.createAndJoin')}
         </Button>
       </form>
 
-      <AuthDivider>or</AuthDivider>
+      <AuthDivider>{t('invite.or')}</AuthDivider>
 
       <div className="flex flex-col gap-3">
-        <p className="text-sm text-muted-foreground">Already have an Adiutor account?</p>
+        <p className="text-sm text-muted-foreground">{t('invite.haveAccount')}</p>
         <Button variant="secondary" fullWidth asChild>
-          <Link href={signInHref}>Sign in to accept</Link>
+          <Link href={signInHref}>{t('invite.signInToAccept')}</Link>
         </Button>
       </div>
     </div>

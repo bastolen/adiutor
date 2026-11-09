@@ -99,7 +99,7 @@ describe('registerCompany by staff demoted while the request was under way', () 
       status: 'rejected',
       reason: expect.objectContaining({
         code: 'forbidden',
-        message: "You don't have permission to do that.",
+        key: 'errors.forbidden',
       }),
     });
     expect(await db.select().from(company)).toEqual([]);
@@ -291,7 +291,7 @@ describe('deactivation', () => {
 
     await expect(
       setCompanyActive(ctx, manager, { companyId: testCompany.id, active: false }),
-    ).rejects.toMatchObject({ code: 'conflict', message: 'This company is already deactivated.' });
+    ).rejects.toMatchObject({ code: 'conflict', key: 'errors.companies.alreadyDeactivated' });
 
     expect(await deactivatedAtOf(testCompany.id)).toEqual(deactivatedAt);
     expect((await companyEvents()).map(({ action }) => action)).toEqual(['company_deactivated']);
@@ -302,7 +302,7 @@ describe('deactivation', () => {
 
     await expect(
       setCompanyActive(ctx, manager, { companyId: testCompany.id, active: true }),
-    ).rejects.toMatchObject({ code: 'conflict', message: 'This company is already active.' });
+    ).rejects.toMatchObject({ code: 'conflict', key: 'errors.companies.alreadyActive' });
 
     expect(await companyEvents()).toEqual([]);
   });
@@ -364,7 +364,7 @@ describe('updateCompany', () => {
       }),
     ).rejects.toMatchObject({
       code: 'conflict',
-      message: 'That URL name is already in use. Choose another one.',
+      key: 'errors.companies.slugTaken',
     });
     expect((await getCompanyAccess(db, manager, testCompany.id)).company).toMatchObject({
       name: testCompany.name,

@@ -1,0 +1,52 @@
+{
+  "validation": {
+    "checkInput": "Controleer wat je hebt ingevuld.",
+    "email": "Vul een geldig e-mailadres in.",
+    "id": "Ongeldig ID.",
+    "role": "Kies een geldige rol.",
+    "companyRole": "Kies een rol die bij dit bedrijf past.",
+    "staffRole": "Kies een medewerkersrol.",
+    "name": {
+      "empty": "Vul je naam in.",
+      "tooLong": "Gebruik maximaal {maximum, number} tekens voor je naam.",
+      "controlCharacters": "Haal regeleinden en besturingstekens uit je naam.",
+      "hiddenCharacters": "Haal onzichtbare tekens en tekens voor de tekstrichting uit je naam.",
+      "webAddress": "Haal webadressen uit je naam."
+    },
+    "password": {
+      "tooShort": "Gebruik minstens {minimum, number} tekens voor het wachtwoord.",
+      "tooLong": "Gebruik maximaal {maximum, number} tekens voor het wachtwoord."
+    },
+    "companyName": {
+      "tooShort": "Gebruik minstens {minimum, number} tekens voor de bedrijfsnaam.",
+      "tooLong": "Gebruik maximaal {maximum, number} tekens voor de bedrijfsnaam.",
+      "controlCharacters": "Haal regeleinden en besturingstekens uit de bedrijfsnaam.",
+      "hiddenCharacters": "Haal onzichtbare tekens en tekens voor de tekstrichting uit de bedrijfsnaam.",
+      "webAddress": "Haal webadressen uit de bedrijfsnaam."
+    },
+    "staffName": {
+      "tooShort": "Gebruik minstens {minimum, number} tekens voor de naam die gebruikers zien.",
+      "tooLong": "Gebruik maximaal {maximum, number} tekens voor de naam die gebruikers zien.",
+      "controlCharacters": "Haal regeleinden en besturingstekens uit de naam die gebruikers zien.",
+      "hiddenCharacters": "Haal onzichtbare tekens en tekens voor de tekstrichting uit de naam die gebruikers zien.",
+      "webAddress": "Haal webadressen uit de naam die gebruikers zien."
+    },
+    "passkeyName": {
+      "empty": "Vul een naam in voor de passkey.",
+      "tooLong": "Gebruik maximaal {maximum, number} tekens voor de naam van de passkey.",
+      "controlCharacters": "Haal regeleinden en besturingstekens uit de naam van de passkey.",
+      "hiddenCharacters": "Haal onzichtbare tekens en tekens voor de tekstrichting uit de naam van de passkey."
+    },
+    "slug": {
+      "format": "Gebruik kleine letters, cijfers en streepjes in de URL-naam, bijvoorbeeld adiutor.",
+      "looksLikeId": "Kies een URL-naam die niet op een ID lijkt.",
+      "tooLong": "Gebruik maximaal {maximum, number} tekens voor de URL-naam."
+    },
+    "emailList": {
+      "invalid": "{count, plural, one {Dit is geen geldig e-mailadres: {emails}.} other {Dit zijn geen geldige e-mailadressen: {emails}.}}",
+      "empty": "Vul minstens één e-mailadres in.",
+      "tooMany": "Je kunt maximaal {max, number} mensen tegelijk uitnodigen. Splits de lijst en probeer het opnieuw."
+    },
+    "locale": "Kies een van de talen."
+  }
+}

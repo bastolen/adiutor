@@ -6,15 +6,15 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { INVITE_LINKS_NOT_ALLOWED } from '@/lib/authz/permissions';
-
 import InviteLinksNotAllowed from './invite-links-not-allowed';
 
 describe('InviteLinksNotAllowed', () => {
   it('says Finance and Support can’t use invite links, and what to do instead', () => {
     render(<InviteLinksNotAllowed />);
 
-    expect(screen.getByRole('status')).toHaveTextContent(INVITE_LINKS_NOT_ALLOWED);
+    expect(screen.getByRole('status')).toHaveTextContent(
+      "Finance and Support can't use invite links. Ask whoever sent it to invite you by email instead.",
+    );
   });
 
   it('offers a way back to the dashboard instead of joining', () => {

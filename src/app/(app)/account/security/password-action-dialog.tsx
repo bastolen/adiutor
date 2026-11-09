@@ -4,19 +4,21 @@
  */
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { type FormEvent, type ReactNode, useState } from 'react';
 
 import { useRecentConfirmation } from '@/components/auth/recent-confirmation';
 import Alert from '@/components/ui/alert';
 import Button, { type ButtonProps } from '@/components/ui/button';
 import Modal from '@/components/ui/modal';
-import { authErrorMessage } from '@/lib/sign-in/auth-error-messages';
+import { authErrorText } from '@/lib/sign-in/auth-error-messages';
 
 import PasswordField from './password-field';
 
 /** What the action returns: nothing when it worked, or Better Auth's error. */
 interface ActionOutcome {
-  error: { code?: string } | null;
+  /** The error's code (and message, shown only for refusals the server words), or `null`. */
+  error: { code?: string; message?: string } | null;
 }
 
 /**
@@ -75,6 +77,8 @@ function PasswordActionForm({
   onDone,
   onCancel,
 }: PasswordActionFormProps) {
+  const tCommon = useTranslations('common');
+  const tAuth = useTranslations('auth');
   const { askToConfirmOnRefusal } = useRecentConfirmation();
   const [password, setPassword] = useState('');
   const [pending, setPending] = useState(false);
@@ -93,7 +97,7 @@ function PasswordActionForm({
     setPending(false);
     if (result.error) {
       if (!askToConfirmOnRefusal(result.error.code)) {
-        setError(authErrorMessage(result.error));
+        setError(authErrorText(tAuth, result.error));
       }
       return;
     }
@@ -108,7 +112,7 @@ function PasswordActionForm({
       {hasPassword && <PasswordField value={password} onChange={setPassword} />}
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button variant="secondary" onClick={onCancel}>
-          Cancel
+          {tCommon('actions.cancel')}
         </Button>
         <Button type="submit" variant={confirmVariant} loading={pending}>
           {confirmLabel}

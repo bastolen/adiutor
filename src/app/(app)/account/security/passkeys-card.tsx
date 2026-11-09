@@ -5,7 +5,7 @@
 
 import { KeyRound, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { type FormEvent, useId, useRef, useState } from 'react';
 
 import { useRecentConfirmation } from '@/components/auth/recent-confirmation';
@@ -21,7 +21,7 @@ import { useToast } from '@/components/ui/toast';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import formatDate from '@/lib/format';
 import { PASSKEY_NAME_MAX_LENGTH } from '@/lib/input-rules';
-import getAuthErrorMessage, { authErrorMessage } from '@/lib/sign-in/auth-error-messages';
+import { authErrorText, signInErrorText } from '@/lib/sign-in/auth-error-messages';
 import loadAuthClient from '@/lib/sign-in/load-auth-client';
 import type { PasskeySummary } from '@/server/auth/security';
 
@@ -42,10 +42,11 @@ interface PasskeysCardProps {
  * The name to show for a passkey.
  *
  * @param passkey - The passkey.
- * @returns Its name, or "Passkey".
+ * @param fallback - What to call one without a name ("Passkey").
+ * @returns Its name, or the fallback.
  */
-function passkeyName(passkey: PasskeySummary): string {
-  return passkey.name?.trim() || 'Passkey';
+function passkeyName(passkey: PasskeySummary, fallback: string): string {
+  return passkey.name?.trim() || fallback;
 }
 
 /**
@@ -80,6 +81,8 @@ function NameDialog({
   submitLabel: string;
   onSubmit: (name: string) => Promise<string | null>;
 }) {
+  const t = useTranslations('account');
+  const tAuth = useTranslations('auth');
   const [name, setName] = useState(initialName);
   const [pending, setPending] = useState(false);
   const [error, setError] = useTransientState<string | null>(null);
@@ -93,10 +96,10 @@ function NameDialog({
     event.preventDefault();
     setPending(true);
     setError(null);
-    const errorCode = await onSubmit(name.trim() || 'Passkey');
+    const errorCode = await onSubmit(name.trim() || t('security.passkeys.defaultName'));
     setPending(false);
     if (errorCode) {
-      setError(getAuthErrorMessage(errorCode));
+      setError(signInErrorText(tAuth, errorCode));
     }
   };
 
@@ -107,10 +110,10 @@ function NameDialog({
           {error}
         </Alert>
         <TextField
-          label="Name"
+          label={t('security.passkeys.nameLabel')}
           name="name"
           autoComplete="off"
-          description="So you can tell your passkeys apart, e.g. “Work laptop” or “iPhone”."
+          description={t('security.passkeys.nameHint')}
           value={name}
           onChange={(event) => setName(event.target.value)}
           maxLength={PASSKEY_NAME_MAX_LENGTH}
@@ -135,7 +138,10 @@ function NameDialog({
  * @returns The card.
  */
 export default function PasskeysCard({ passkeys, removeLastBlockedReason }: PasskeysCardProps) {
+  const t = useTranslations('account');
+  const tAuth = useTranslations('auth');
   const locale = useLocale();
+  const defaultName = t('security.passkeys.defaultName');
   const router = useRouter();
   const { askToConfirm, askToConfirmOnRefusal } = useRecentConfirmation(SECTION);
   const [adding, setAdding] = useTransientState(false);
@@ -176,11 +182,11 @@ export default function PasskeysCard({ passkeys, removeLastBlockedReason }: Pass
     if (result.error) {
       setRemoving(null);
       if (!askToConfirmOnRefusal(result.error.code)) {
-        setError(authErrorMessage(result.error));
+        setError(authErrorText(tAuth, result.error));
       }
       return;
     }
-    report(`${passkeyName(passkey)} was removed.`);
+    report(t('security.passkeys.removed', { name: passkeyName(passkey, defaultName) }));
     // The row goes with the refresh: focus moves to the card's heading instead of <body>.
     restoreFocusIfLost(listRef.current);
     router.refresh();
@@ -189,8 +195,8 @@ export default function PasskeysCard({ passkeys, removeLastBlockedReason }: Pass
   return (
     <Card
       id={SECTION}
-      title="Passkeys"
-      description="Sign in with your fingerprint, face or device PIN instead of a password. A passkey can't be phished and counts as two-step protection on its own."
+      title={t('security.passkeys.title')}
+      description={t('security.passkeys.description')}
       actions={
         <Button
           size="sm"
@@ -201,7 +207,7 @@ export default function PasskeysCard({ passkeys, removeLastBlockedReason }: Pass
           }}
         >
           <Plus aria-hidden="true" />
-          Add passkey
+          {t('security.passkeys.add')}
         </Button>
       }
       flush
@@ -214,7 +220,7 @@ export default function PasskeysCard({ passkeys, removeLastBlockedReason }: Pass
       </div>
       {passkeys.length === 0 ? (
         <p className="border-t border-border px-6 py-4 text-sm text-muted-foreground">
-          No passkeys yet.
+          {t('security.passkeys.none')}
         </p>
       ) : (
         <ul ref={listRef} className="divide-y divide-border border-t border-border">
@@ -223,24 +229,28 @@ export default function PasskeysCard({ passkeys, removeLastBlockedReason }: Pass
               key={passkey.id}
               icon={<KeyRound className="size-4" />}
               iconClassName="text-muted-foreground"
-              title={passkeyName(passkey)}
+              title={passkeyName(passkey, defaultName)}
               truncateTitle
               control={
                 <div className="flex gap-2">
                   <Button
                     variant="secondary"
                     size="sm"
-                    aria-label={`Rename ${passkeyName(passkey)}`}
+                    aria-label={t('security.passkeys.renameNamed', {
+                      name: passkeyName(passkey, defaultName),
+                    })}
                     onClick={() => setRenaming(passkey)}
                   >
-                    Rename
+                    {t('security.passkeys.rename')}
                   </Button>
                   <ConfirmDialog
                     trigger={
                       <Button
                         variant="danger-subtle"
                         size="sm"
-                        aria-label={`Remove ${passkeyName(passkey)}`}
+                        aria-label={t('security.passkeys.removeNamed', {
+                          name: passkeyName(passkey, defaultName),
+                        })}
                         disabled={removeBlocked !== null}
                         loading={removing === passkey.id}
                         aria-describedby={removeBlocked ? removeBlockedId : undefined}
@@ -250,19 +260,26 @@ export default function PasskeysCard({ passkeys, removeLastBlockedReason }: Pass
                           }
                         }}
                       >
-                        Remove
+                        {t('security.passkeys.remove')}
                       </Button>
                     }
-                    title={`Remove ${passkeyName(passkey)}?`}
-                    description="You won't be able to sign in with this passkey anymore. Also remove it from your device or password manager."
-                    confirmLabel="Remove passkey"
+                    title={t('security.passkeys.removeTitle', {
+                      name: passkeyName(passkey, defaultName),
+                    })}
+                    description={t('security.passkeys.removeDescription')}
+                    confirmLabel={t('security.passkeys.removeConfirm')}
                     onConfirm={() => remove(passkey)}
                   />
                 </div>
               }
             >
-              {passkey.backedUp ? 'Synced across your devices' : 'On this device only'}
-              {passkey.createdAt && ` · Added ${formatDate(passkey.createdAt, locale)}`}
+              {passkey.backedUp ? t('security.passkeys.synced') : t('security.passkeys.deviceOnly')}
+              {passkey.createdAt && (
+                <>
+                  {' · '}
+                  {t('security.passkeys.added', { date: formatDate(passkey.createdAt, locale) })}
+                </>
+              )}
             </IconRow>
           ))}
         </ul>
@@ -280,10 +297,10 @@ export default function PasskeysCard({ passkeys, removeLastBlockedReason }: Pass
         key={adding ? 'adding' : 'idle'}
         open={adding}
         onOpenChange={setAdding}
-        title="Add a passkey"
-        description="Give it a name, then follow your browser's prompt."
-        initialName="Passkey"
-        submitLabel="Create passkey"
+        title={t('security.passkeys.addTitle')}
+        description={t('security.passkeys.addDescription')}
+        initialName={defaultName}
+        submitLabel={t('security.passkeys.create')}
         onSubmit={async (name) => {
           const authClient = await loadAuthClient();
           const result = await authClient.passkey.addPasskey({ name });
@@ -296,7 +313,7 @@ export default function PasskeysCard({ passkeys, removeLastBlockedReason }: Pass
             return null;
           }
           setAdding(false);
-          report(`${name} was added. You can now sign in with it.`);
+          report(t('security.passkeys.created', { name }));
           router.refresh();
           return null;
         }}
@@ -305,10 +322,10 @@ export default function PasskeysCard({ passkeys, removeLastBlockedReason }: Pass
         key={renaming?.id ?? 'none'}
         open={renaming !== null}
         onOpenChange={(open) => !open && setRenaming(null)}
-        title="Rename passkey"
-        description="Only you see this name."
-        initialName={renaming ? passkeyName(renaming) : ''}
-        submitLabel="Save name"
+        title={t('security.passkeys.renameTitle')}
+        description={t('security.passkeys.renameDescription')}
+        initialName={renaming ? passkeyName(renaming, defaultName) : ''}
+        submitLabel={t('security.passkeys.save')}
         onSubmit={async (name) => {
           if (!renaming) {
             return null;

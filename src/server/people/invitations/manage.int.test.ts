@@ -52,7 +52,7 @@ describe('re-inviting, resending and revoking', () => {
     expect(await getInvitationPreview(ctx, defined(first, 'the first token'))).toBeNull();
     expect(await getInvitationPreview(ctx, defined(second, 'the second token'))).toEqual({
       companyName: 'Adiutor Tests',
-      roleLabel: 'Client',
+      role: 'client',
       fromInviteLink: false,
     });
     expect((await listPendingInvitations(ctx, companyAdmin, testCompany.id)).items).toHaveLength(1);
@@ -211,7 +211,7 @@ describe.each([
       status: 'rejected',
       reason: expect.objectContaining({
         code: 'forbidden',
-        message: "You don't have permission to do that.",
+        key: 'errors.forbidden',
       }),
     });
     expect(await openInvitations()).toEqual(before);

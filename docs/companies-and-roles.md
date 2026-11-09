@@ -46,9 +46,10 @@ Nobody can give themselves a higher company role either (`isCompanyRoleRaise` in
 but nobody raises their own role in a company, not even staff who may manage its members. (Staff
 Admins and Managers who aren't members can still add themselves with any role, as above.)
 
-- **Role descriptions** (`ROLE_DESCRIPTIONS` in `src/lib/authz/roles.ts`) are shown when choosing a
-  role, and describe the intended request workflow. `roleOptions()` in the same file turns a list of
-  roles into the options of a role picker.
+- **Role descriptions** (`roles.<role>.description` in the `roles` catalogue) are shown when
+  choosing a role, and describe the intended request workflow. `roleOptions(roles, t)` in
+  `src/lib/authz/roles.ts` turns a list of roles into the options of a role picker, named in the
+  reader's language (`t` translates the `roles` namespace).
 - **Permissions** come from roles only, defined in `src/lib/authz/permissions.ts`. Staff act on every
   company through their platform role, without being members. Members of a deactivated
   company lose access; staff keep it. Deactivating a deactivated company, or reactivating an active
@@ -91,16 +92,16 @@ Admins and Managers who aren't members can still add themselves with any role, a
   (`company_id` is null) and give a platform role; a database check keeps staff rows on platform
   roles and company rows on company roles.
 - **Logs** (`/admin/logs`, `audit:view`, Admins and Managers): the whole audit log, newest first
-  until the Sort menu says otherwise, in pages. Each event says what happened, who did it,
-  whom it was about and which company (each a link), when, and the browser and IP address it came
-  from. It can be searched by a person's name or email or a company's name, filtered to a group of
-  events (Sign-ins, Sign-in methods, Accounts, People, Companies and staff; `AUDIT_GROUPS` in
-  `src/lib/audit-actions.ts`) and limited to a range of days (UTC, both days included). Admins
-  (`errors:view`) also get an **Errors** tab (`/admin/logs/errors`): look up the reference an
-  error page showed, typed in any case, with or without the dash, and see the errors of the last
-  7 days, newest first (see
-  [Looking up an error reference](deploying.md#looking-up-an-error-reference)). Managers see the
-  audit log without tabs; the errors page is "not found" for them.
+  until the Sort menu says otherwise, in pages. Each event says what happened, who did it, whom it
+  was about and which company (each a link), when, and the browser and IP address it came from. It
+  can be searched by a person's name or email or a company's name, filtered to a group of events
+  (Sign-ins, Sign-in methods, Accounts, People, Companies and staff; `AUDIT_GROUPS` in
+  `src/lib/audit-actions.ts`, named by `audit.groups.*`) and limited to a range of days (UTC, both
+  days included). Admins (`errors:view`) also get an **Errors** tab (`/admin/logs/errors`): look up
+  the reference an error page showed, typed in any case, with or without the dash, and see the
+  errors of the last 7 days, newest first (see [Looking up an error
+  reference](deploying.md#looking-up-an-error-reference)). Managers see the audit log without tabs;
+  the errors page is "not found" for them.
 - **Users page** (`/admin/users`, `users:view`): every account in a table, sorted by name
   until another order is chosen from the Sort menu (email, last active or joined), with staff marked with a
   brand-coloured avatar and a "Staff · role" badge. Under each name it lists the user's

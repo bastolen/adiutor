@@ -6,6 +6,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import ProviderMfaWarning from './provider-mfa-warning';
+import renderInLocale from '../../../../tests/i18n/render';
 
 describe('ProviderMfaWarning', () => {
   it('names the provider, how many users, and links to them', () => {
@@ -26,5 +27,25 @@ describe('ProviderMfaWarning', () => {
     render(<ProviderMfaWarning warning={{ count: 1, providers: ['github'] }} />);
 
     expect(screen.getByText(/^1 user whose role requires MFA has no MFA now/)).toBeInTheDocument();
+  });
+
+  it('words the whole warning in Dutch and Spanish', () => {
+    renderInLocale('nl-NL', <ProviderMfaWarning warning={{ count: 1, providers: ['github'] }} />);
+    expect(
+      screen.getByText('Inloggen met GitHub is niet ingesteld op deze server'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/^1 gebruiker met een rol die MFA vereist heeft nu geen MFA meer/),
+    ).toBeInTheDocument();
+  });
+
+  it('words the warning in Spanish with the plural', () => {
+    renderInLocale('es-ES', <ProviderMfaWarning warning={{ count: 3, providers: ['github'] }} />);
+    expect(
+      screen.getByText('El inicio de sesión con GitHub no está configurado en este servidor'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/^3 usuarios cuyo rol requiere MFA se han quedado sin MFA/),
+    ).toBeInTheDocument();
   });
 });

@@ -30,7 +30,8 @@ export default async function renameStaffAction(
     const actor = await getActor();
     await renameStaff(appContext, actor, field(formData, 'name'));
     refresh();
-    return { ok: true, message: 'Name saved.' };
+    const t = await getTranslations('admin.staff.name');
+    return { ok: true, message: t('saved') };
   });
 }
 

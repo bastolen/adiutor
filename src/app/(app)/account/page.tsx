@@ -35,11 +35,14 @@ import NameForm from './name-form';
 import describeOwnActivity from './own-activity';
 
 /**
- * Page metadata.
+ * Page metadata: "Account", in the request's language.
+ *
+ * @returns The metadata.
  */
-export const metadata: Metadata = {
-  title: 'Account',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('account');
+  return { title: t('title') };
+}
 
 /**
  * Loads the user and shows their settings.
@@ -50,43 +53,48 @@ export const metadata: Metadata = {
  */
 async function AccountSettings({ searchParams }: { searchParams: Promise<AccountParams> }) {
   const actor = await getActor({ allowMissingMfa: true });
-  const t = await getTranslations('account');
-  const [params, activity] = await Promise.all([searchParams, listOwnActivity(appContext, actor)]);
-  const message = accountMessage(params);
+  const [params, activity, t, tAudit, tRoles] = await Promise.all([
+    searchParams,
+    listOwnActivity(appContext, actor),
+    getTranslations('account'),
+    getTranslations('audit'),
+    getTranslations('roles'),
+  ]);
+  const message = accountMessage(t, params);
 
   return (
     <>
       <Card
-        title="Sign-in security"
+        title={t('profile.securityTitle')}
         description={
-          actor.mfaEnabled
-            ? 'Protected with MFA: a passkey, two-step verification or a connected account with two-factor authentication. Your password and connected accounts are on the Security page too.'
-            : "Add a passkey or two-step verification so a stolen password isn't enough to get in. Your password and connected accounts are on the Security page."
+          actor.mfaEnabled ? t('profile.securityProtected') : t('profile.securityUnprotected')
         }
         actions={
           <Button asChild variant={actor.mfaEnabled ? 'secondary' : 'primary'} size="sm">
-            <Link href="/account/security">{actor.mfaEnabled ? 'Manage' : 'Set up'}</Link>
+            <Link href="/account/security">
+              {actor.mfaEnabled ? t('profile.manage') : t('profile.setUp')}
+            </Link>
           </Button>
         }
       >
         {actor.mfaEnabled ? (
-          <Badge tone="success">Protected</Badge>
+          <Badge tone="success">{t('profile.protected')}</Badge>
         ) : (
-          <Badge tone="warning">Password only</Badge>
+          <Badge tone="warning">{t('profile.passwordOnly')}</Badge>
         )}
       </Card>
       <Card
         // The verification link comes back here, saying whether it worked.
         id={EMAIL_SECTION}
-        title="Email"
+        title={t('profile.emailTitle')}
         description={
           actor.emailVerified
-            ? 'The address you sign in with and get emails on.'
-            : 'The address you sign in with and get emails on. Verify it, so we know it reaches you.'
+            ? t('profile.emailVerifiedDescription')
+            : t('profile.emailUnverifiedDescription')
         }
         footer={
           actor.emailVerified ? undefined : (
-            <RowAction action={sendVerificationAction} label="Send verification email" />
+            <RowAction action={sendVerificationAction} label={t('profile.sendVerification')} />
           )
         }
       >
@@ -99,15 +107,17 @@ async function AccountSettings({ searchParams }: { searchParams: Promise<Account
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm font-medium break-all">{actor.email}</span>
             {actor.emailVerified ? (
-              <Badge tone="success">Verified</Badge>
+              <Badge tone="success">{t('profile.verified')}</Badge>
             ) : (
-              <Badge tone="warning">Not verified</Badge>
+              <Badge tone="warning">{t('profile.notVerified')}</Badge>
             )}
           </div>
         </div>
       </Card>
-      <Card title="Name" description="How you're shown to others in Adiutor.">
-        <NameForm name={actor.name} />
+      <Card title={t('profile.nameTitle')} description={t('profile.nameDescription')}>
+        <ClientMessages namespaces={['account']}>
+          <NameForm name={actor.name} />
+        </ClientMessages>
       </Card>
       <Card
         // The page reloads here after the language changed.
@@ -121,29 +131,31 @@ async function AccountSettings({ searchParams }: { searchParams: Promise<Account
         </ClientMessages>
       </Card>
       <Card
-        title="Recent activity"
+        title={t('profile.activityTitle')}
         description={
-          activity.length === 0
-            ? 'Sign-ins and changes to your account will show up here.'
-            : "Sign-ins and changes to your account, newest first. Don't recognise something? Change your password and sign out your other devices."
+          activity.length === 0 ? t('profile.activityEmpty') : t('profile.activityDescription')
         }
         actions={
           activity.length > 0 ? (
             <Button asChild variant="secondary" size="sm">
-              <Link href="/account/security">Review security</Link>
+              <Link href="/account/security">{t('profile.reviewSecurity')}</Link>
             </Button>
           ) : undefined
         }
       >
         {activity.length > 0 && (
           <ActivityList
-            label="Your recent activity"
+            label={t('profile.activityLabel')}
             items={activity.map((event) => ({
               id: event.id,
               at: event.at,
               userAgent: event.userAgent,
               ip: event.ip,
-              description: describeOwnActivity(event, actor.id),
+              description: describeOwnActivity(event, actor.id, {
+                account: t,
+                audit: tAudit,
+                roles: tRoles,
+              }),
             }))}
           />
         )}

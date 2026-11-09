@@ -3,14 +3,14 @@
  * invite links, setup): the form on the left and, on large screens, a brand
  * panel on the right that shows what Adiutor is for.
  */
-import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 import Logo from '@/components/brand/logo';
 import { focusRing } from '@/components/ui/styles';
 
+import BrandPanel from './brand-panel';
+import HomeLink from './home-link';
 import PreferencesMenu from './preferences-menu';
-import RequestPreview from './request-preview';
 import SkipLink from './skip-link';
 
 /**
@@ -24,9 +24,13 @@ interface AuthLayoutProps {
 /**
  * Two columns on large screens: the content in a narrow, centred column, and
  * a decorative brand panel with an example request and the product pitch,
- * written for company users. On small screens, only the content column.
- * These pages have no account menu, so the floating theme and language
+ * written for companies (`BrandPanel`). On small screens, only the content
+ * column. These pages have no account menu, so the floating theme and language
  * button is here, last in tab order.
+ *
+ * The layout is in each page's static shell, so its text comes from client
+ * components that read the root provider (`HomeLink`, `BrandPanel`), never
+ * from the request (docs/i18n.md).
  *
  * @param props - Layout props.
  * @param props.children - The page content.
@@ -38,13 +42,9 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
       <SkipLink />
       <div className="flex flex-col px-6 py-8 sm:px-12">
         <header>
-          <Link
-            href="/"
-            aria-label="Adiutor home"
-            className={`inline-flex rounded-md ${focusRing}`}
-          >
+          <HomeLink className={`inline-flex rounded-md ${focusRing}`}>
             <Logo height={32} priority />
-          </Link>
+          </HomeLink>
         </header>
         <main
           id="main"
@@ -55,36 +55,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         </main>
       </div>
 
-      <div
-        aria-hidden="true"
-        // eslint-disable-next-line better-tailwindcss/no-restricted-classes -- The brand panel is the same dark ink in light and dark mode.
-        className="relative hidden overflow-hidden bg-ink lg:flex lg:flex-col lg:justify-between lg:p-12"
-      >
-        <div className="absolute -top-40 -right-40 size-[36rem] rounded-full bg-brand-green/20 blur-3xl" />
-        <div className="absolute -bottom-48 -left-32 size-[32rem] rounded-full bg-brand-teal/50 blur-3xl" />
-        <div
-          className="absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage:
-              'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
-            backgroundSize: '48px 48px',
-          }}
-        />
-        {/* Spacer as tall as the logo row on the left, so the example request stays centred. */}
-        <div className="h-8" />
-        <RequestPreview />
-        <div className="relative flex max-w-md flex-col gap-4">
-          {/* eslint-disable-next-line better-tailwindcss/no-restricted-classes -- White on the ink brand panel, which doesn't change with the mode. */}
-          <p className="text-3xl font-semibold tracking-tight text-white">
-            Get help without chasing emails.
-          </p>
-          {/* eslint-disable-next-line better-tailwindcss/no-restricted-classes -- On the fixed ink panel, white at 75% still has a contrast of about 10:1. */}
-          <p className="text-base text-white/75">
-            Report a problem or ask for something new, follow its progress, and approve the work,
-            all in one place.
-          </p>
-        </div>
-      </div>
+      <BrandPanel />
       <PreferencesMenu />
     </div>
   );

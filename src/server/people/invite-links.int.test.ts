@@ -20,7 +20,6 @@ import {
   rateLimitBucket,
   user,
 } from '@/db/schema';
-import { INVITE_LINKS_NOT_ALLOWED } from '@/lib/authz/permissions';
 import { defined, firstRow } from '@/lib/defined';
 import { hashToken } from '@/lib/sign-in/tokens';
 
@@ -138,7 +137,7 @@ describe('invite links', () => {
     const token = await newLinkToken();
     expect(await getInviteLinkPreview(ctx, token)).toEqual({
       companyName: 'Adiutor Tests',
-      roleLabel: 'Client',
+      role: 'client',
     });
 
     expect(await claimInviteLink(ctx, token, 'New@Adiutor.test')).toEqual({ status: 'sent' });
@@ -148,7 +147,7 @@ describe('invite links', () => {
     expect(confirmation.subject).toBe('Confirm your email to join Adiutor Tests');
     expect(await getInvitationPreview(ctx, tokenFrom(confirmation))).toEqual({
       companyName: 'Adiutor Tests',
-      roleLabel: 'Client',
+      role: 'client',
       fromInviteLink: true,
     });
 
@@ -210,7 +209,7 @@ describe('invite links', () => {
     expect(link).toMatchObject({ usedByEmail: email, invitationId: null });
     expect(await getInvitationPreview(ctx, tokenFrom(kept))).toEqual({
       companyName: 'Adiutor Tests',
-      roleLabel: 'Admin',
+      role: 'admin',
       fromInviteLink: false,
     });
   });
@@ -289,7 +288,7 @@ describe('invite links', () => {
     ).toEqual([{ id: before.id }]);
     expect(await getInvitationPreview(ctx, adminToken)).toEqual({
       companyName: 'Adiutor Tests',
-      roleLabel: 'Admin',
+      role: 'admin',
       fromInviteLink: false,
     });
     const alreadyInvited = defined(
@@ -371,7 +370,7 @@ describe('invite links', () => {
         const viewer = await staffActor(db, role);
         await expect(joinWithInviteLink(ctx, token, viewer)).rejects.toMatchObject({
           code: 'forbidden',
-          message: INVITE_LINKS_NOT_ALLOWED,
+          key: 'errors.inviteLinks.notAllowed',
         });
       }),
     );
@@ -554,7 +553,7 @@ describe('invite links', () => {
     /** The refusal for an actor whose rights are gone by the time the change is made. */
     const FORBIDDEN = expect.objectContaining({
       code: 'forbidden',
-      message: "You don't have permission to do that.",
+      key: 'errors.forbidden',
     });
 
     /**
@@ -664,7 +663,7 @@ describe('invite link claims and the invitation limits', () => {
   /** The refusal past a limit, the same whatever address was entered. */
   const LIMITED = expect.objectContaining({
     code: 'rate_limited',
-    message: LINK_CLAIM_LIMITED_MESSAGE,
+    key: LINK_CLAIM_LIMITED_MESSAGE,
   });
 
   it('count each claim like an invitation its creator sends, for them and the company', async () => {
@@ -751,7 +750,7 @@ describe('resending an invitation that came from an invite link', () => {
     expect(await getInvitationPreview(ctx, token)).toMatchObject({ fromInviteLink: true });
     await expect(acceptInvitation(ctx, token, support)).rejects.toMatchObject({
       code: 'forbidden',
-      message: INVITE_LINKS_NOT_ALLOWED,
+      key: 'errors.inviteLinks.notAllowed',
     });
 
     // Someone else, invited from a link and resent, can still accept it.

@@ -1,0 +1,107 @@
+{
+  "people": {
+    "inviteResults": {
+      "status": "{status, select, sent_existing_user {Invitation sent to {email}. They already have an Adiutor account.} already_member {{email} is already a member. We've emailed them to let them know.} other {Invitation sent to {email}.}}",
+      "companyAdded": "{status, select, sent_existing_user {Company added. Invitation sent to {email}. They already have an Adiutor account.} already_member {Company added. {email} is already a member. We've emailed them to let them know.} other {Company added. Invitation sent to {email}.}}",
+      "sentAll": "{sent, plural, one {Sent # invitation.} other {Sent # invitations.}}",
+      "sentSome": "{sent, plural, one {Sent # of {total, number} invitations. Check the addresses below.} other {Sent # of {total, number} invitations. Check the addresses below.}}"
+    },
+    "confirmBeforeGrant": "Giving this role needs you to confirm it’s you first (at most once every 15 minutes).",
+    "roleSelect": {
+      "label": "Role of {name}",
+      "saving": "Saving…"
+    },
+    "columns": {
+      "email": "Email",
+      "role": "Role",
+      "sent": "Sent",
+      "status": "Status",
+      "created": "Created",
+      "details": "Details",
+      "device": "Device",
+      "ipAddress": "IP address",
+      "signedIn": "Signed in",
+      "actions": "Actions"
+    },
+    "activity": {
+      "lastActive": "<hidden>Last active: </hidden><time></time>",
+      "lastActiveShort": "Last active <time></time>",
+      "neverActive": "Last active never",
+      "joined": "Joined {date}"
+    },
+    "devices": {
+      "thisDevice": "This device",
+      "mfaVerified": "MFA Verified",
+      "signedInAgo": "Signed in <time></time>"
+    },
+    "invitations": {
+      "title": "Open invitations",
+      "rows": "invitations",
+      "emptyTitle": "No open invitations",
+      "emptyDescription": "Invitations you send appear here until they're accepted.",
+      "fromInviteLink": "From an invite link",
+      "sent": "Sent {date}",
+      "expired": "Expired",
+      "expires": "Expires {date}",
+      "resend": "Resend",
+      "resendLabel": "Resend invitation to {email}",
+      "resent": "Invitation sent to {email} again.",
+      "revoke": "Revoke",
+      "revokeLabel": "Revoke invitation to {email}",
+      "revoked": "Invitation to {email} revoked.",
+      "revokeConfirm": {
+        "title": "Revoke this invitation?",
+        "confirm": "Revoke invitation",
+        "description": "The link sent to {email} will stop working."
+      }
+    },
+    "inviteForm": {
+      "results": "Invitation results",
+      "sentLine": "<hidden>Sent: </hidden>{message}",
+      "notSentLine": "<hidden>Not sent: </hidden>{email}: {message}",
+      "emails": "Email addresses",
+      "emailsPlaceholder": "colleague@adiutor.dev",
+      "emailsHint": "One per line or separated by commas, up to {max, number}.",
+      "role": "Role",
+      "submit": "Send invitations"
+    },
+    "inviteLinkForm": {
+      "validity": "{days, plural, one {# day} other {# days}}",
+      "created": "Link created. Copy it now: for safety it won't be shown again. It works once.",
+      "link": "Invite link",
+      "copy": "Copy link",
+      "role": "Role",
+      "validFor": "Valid for",
+      "submit": "Create invite link"
+    },
+    "inviteLinks": {
+      "title": "Invite links",
+      "description": "Each link works once: the first person to open it enters their email and gets an invitation.",
+      "rows": "invite links",
+      "emptyTitle": "No invite links",
+      "emptyDescription": "Links you create appear here.",
+      "status": "{status, select, active {Active} used {Used} expired {Expired} other {Revoked}}",
+      "created": "Created {date}",
+      "expires": "Expires {date}",
+      "usedBy": "Used by {email}",
+      "expired": "Expired {date}",
+      "noDetails": "No details",
+      "revoke": "Revoke",
+      "revokeLabel": "Revoke {role} link created {date}",
+      "revokeConfirm": {
+        "title": "Revoke this invite link?",
+        "description": "The link will stop working for anyone who has it."
+      }
+    },
+    "actions": {
+      "inviteLinkRevoked": "Invite link revoked.",
+      "invitationResent": "Sent again.",
+      "invitationRevoked": "Invitation revoked.",
+      "roleUpdated": "Role updated.",
+      "memberRemoved": "Member removed.",
+      "memberAdded": "{who, select, self {Added to the company. We emailed you.} other {Added to the company. We emailed them.}}",
+      "staffRoleSaved": "Staff role saved.",
+      "staffAccessRemoved": "Staff access removed."
+    }
+  }
+}

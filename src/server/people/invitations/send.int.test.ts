@@ -109,7 +109,8 @@ describe('inviteManyByEmail', () => {
       }),
     ).rejects.toMatchObject({
       code: 'invalid',
-      message: 'This isn’t a valid email address: nope.',
+      key: 'validation.emailList.invalid',
+      values: { count: 1, emails: 'nope' },
     });
     await expect(
       inviteManyByEmail(ctx, companyAdmin, {
@@ -119,7 +120,8 @@ describe('inviteManyByEmail', () => {
       }),
     ).rejects.toMatchObject({
       code: 'invalid',
-      message: 'These aren’t valid email addresses: nope, nada.',
+      key: 'validation.emailList.invalid',
+      values: { count: 2, emails: 'nope, nada' },
     });
     const many = Array.from({ length: 21 }, (_, index) => `user${index}@adiutor.test`).join(',');
     await expect(
@@ -128,7 +130,11 @@ describe('inviteManyByEmail', () => {
         emails: many,
         role: 'client',
       }),
-    ).rejects.toMatchObject({ code: 'invalid', message: expect.stringContaining('up to 20') });
+    ).rejects.toMatchObject({
+      code: 'invalid',
+      key: 'validation.emailList.tooMany',
+      values: { max: 20 },
+    });
     expect(sent).toEqual([]);
   });
 
@@ -215,7 +221,7 @@ describe('inviteManyByEmail', () => {
           {
             email: second,
             ok: false,
-            message: 'Someone changed this at the same moment. Try again.',
+            error: expect.objectContaining({ code: 'conflict', key: 'errors.concurrentChange' }),
           },
           { email: 'third@adiutor.test', ok: true, status: 'sent' },
         ],

@@ -47,48 +47,6 @@ export const AUDIT_ACTIONS = [
 /** One audit event type. */
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
-/** How each event type is described in the activity timeline. */
-export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
-  sign_in: 'Signed in',
-  sign_in_failed: 'Failed sign-in attempt',
-  sign_in_code_pending: 'Password accepted, code step started',
-  mfa_verified: 'Verified a sign-in with MFA',
-  mfa_failed: 'Failed MFA confirmation',
-  two_factor_enabled: 'Turned on two-step verification',
-  two_factor_disabled: 'Turned off two-step verification',
-  backup_codes_regenerated: 'Created new backup codes',
-  passkey_added: 'Added a passkey',
-  passkey_removed: 'Removed a passkey',
-  password_changed: 'Changed the password',
-  password_reset: 'Reset the password',
-  password_check_failed: 'Wrong current password entered',
-  provider_connected: 'Connected a sign-in provider',
-  provider_confirmed: 'Confirmed a sign-in provider',
-  provider_disconnected: 'Disconnected a sign-in provider',
-  email_verified: 'Verified the email address',
-  session_revoked: 'Signed out a device',
-  sessions_revoked: 'Signed out everywhere',
-  account_deactivated: 'Deactivated the account',
-  account_reactivated: 'Reactivated the account',
-  account_deleted: 'Deleted the account',
-  account_created: 'Created the account',
-  mfa_reset: 'Reset two-step verification',
-  member_joined: 'Joined a company',
-  member_added: 'Added a member',
-  member_removed: 'Removed a member',
-  role_changed: 'Changed a role',
-  invitation_sent: 'Sent an invitation',
-  invitation_revoked: 'Revoked an invitation',
-  invite_link_created: 'Created an invite link',
-  invite_link_claimed: 'Used an invite link',
-  invite_link_revoked: 'Revoked an invite link',
-  company_created: 'Added a company',
-  company_updated: 'Changed company details',
-  company_deactivated: 'Deactivated a company',
-  company_reactivated: 'Reactivated a company',
-  staff_renamed: 'Changed the name shown to users',
-};
-
 /** The groups the staff audit log can be narrowed to, in the order they're offered. */
 export const AUDIT_GROUP_KEYS = [
   'sign-ins',
@@ -102,70 +60,64 @@ export const AUDIT_GROUP_KEYS = [
 export type AuditGroup = (typeof AUDIT_GROUP_KEYS)[number];
 
 /**
- * Each group's label and event types, for the audit log's filter. Every
- * event type belongs to exactly one group.
+ * Each group's event types; the audit log's filter names the group with
+ * `audit.groups.<group>`. Every event type belongs to exactly one group.
  */
-export const AUDIT_GROUPS: Record<AuditGroup, { label: string; actions: readonly AuditAction[] }> =
-  {
-    'sign-ins': {
-      label: 'Sign-ins',
-      actions: [
-        'sign_in',
-        'sign_in_failed',
-        'sign_in_code_pending',
-        'mfa_verified',
-        'mfa_failed',
-        'password_check_failed',
-        'session_revoked',
-        'sessions_revoked',
-      ],
-    },
-    'sign-in-methods': {
-      label: 'Sign-in methods',
-      actions: [
-        'two_factor_enabled',
-        'two_factor_disabled',
-        'backup_codes_regenerated',
-        'passkey_added',
-        'passkey_removed',
-        'password_changed',
-        'password_reset',
-        'provider_connected',
-        'provider_confirmed',
-        'provider_disconnected',
-        'email_verified',
-        'mfa_reset',
-      ],
-    },
-    accounts: {
-      label: 'Accounts',
-      actions: ['account_created', 'account_deactivated', 'account_reactivated', 'account_deleted'],
-    },
-    people: {
-      label: 'People',
-      actions: [
-        'member_joined',
-        'member_added',
-        'member_removed',
-        'role_changed',
-        'invitation_sent',
-        'invitation_revoked',
-        'invite_link_created',
-        'invite_link_claimed',
-        'invite_link_revoked',
-      ],
-    },
-    companies: {
-      label: 'Companies and staff',
-      actions: [
-        'company_created',
-        'company_updated',
-        'company_deactivated',
-        'company_reactivated',
-        'staff_renamed',
-      ],
-    },
-  };
+export const AUDIT_GROUPS: Record<AuditGroup, { actions: readonly AuditAction[] }> = {
+  'sign-ins': {
+    actions: [
+      'sign_in',
+      'sign_in_failed',
+      'sign_in_code_pending',
+      'mfa_verified',
+      'mfa_failed',
+      'password_check_failed',
+      'session_revoked',
+      'sessions_revoked',
+    ],
+  },
+  'sign-in-methods': {
+    actions: [
+      'two_factor_enabled',
+      'two_factor_disabled',
+      'backup_codes_regenerated',
+      'passkey_added',
+      'passkey_removed',
+      'password_changed',
+      'password_reset',
+      'provider_connected',
+      'provider_confirmed',
+      'provider_disconnected',
+      'email_verified',
+      'mfa_reset',
+    ],
+  },
+  accounts: {
+    actions: ['account_created', 'account_deactivated', 'account_reactivated', 'account_deleted'],
+  },
+  people: {
+    actions: [
+      'member_joined',
+      'member_added',
+      'member_removed',
+      'role_changed',
+      'invitation_sent',
+      'invitation_revoked',
+      'invite_link_created',
+      'invite_link_claimed',
+      'invite_link_revoked',
+    ],
+  },
+  companies: {
+    actions: [
+      'company_created',
+      'company_updated',
+      'company_deactivated',
+      'company_reactivated',
+      'staff_renamed',
+    ],
+  },
+};
 
 /**
  * Whether a value names an audit group, e.g. from a query parameter.
@@ -178,32 +130,53 @@ export function isAuditGroup(value: unknown): value is AuditGroup {
 }
 
 /**
+ * The more precise descriptions some events get, keys of `audit.events`
+ * (see {@link describeAuditEvent}).
+ */
+type AuditEventDescription =
+  | 'sessionsRevokedMfaRequired'
+  | 'sessionsRevokedOthers'
+  | 'mfaFailedAtSignIn'
+  | 'passwordCheckFailedChangePassword'
+  | 'passwordCheckFailedDeactivate';
+
+/**
+ * How an event is described: a key in the `audit` namespace, its label
+ * (`actions.<action>`) or a more precise description (`events.<name>`).
+ */
+export type AuditEventMessageKey = `actions.${AuditAction}` | `events.${AuditEventDescription}`;
+
+/**
  * Describes an event for the staff audit log: its label, or a more precise
  * one where the details change what happened (a sign-out that ended only
  * some sessions, a wrong code at sign-in rather than on the step-up page,
- * what a wrong current password was typed for).
+ * what a wrong current password was typed for). The caller translates the
+ * key in the reader's language, `getTranslations('audit')`.
  *
  * @param action - What happened.
  * @param details - The event's details.
- * @returns The description.
+ * @returns The description's key in the `audit` namespace, e.g. `actions.sign_in`.
  */
-export function describeAuditEvent(action: AuditAction, details: Record<string, unknown>): string {
+export function describeAuditEvent(
+  action: AuditAction,
+  details: Record<string, unknown>,
+): AuditEventMessageKey {
   if (action === 'sessions_revoked' && details.mfaRequired) {
-    return 'Signed out of sessions without MFA, which the role now requires';
+    return 'events.sessionsRevokedMfaRequired';
   }
   if (action === 'sessions_revoked' && details.others) {
-    return 'Signed out of other devices';
+    return 'events.sessionsRevokedOthers';
   }
   // A wrong code at a password sign-in's code step, rather than on the step-up page.
   if (action === 'mfa_failed' && details.atSignIn === true) {
-    return 'Wrong two-step verification code entered at sign-in';
+    return 'events.mfaFailedAtSignIn';
   }
   // Recorded by `checkCurrentPassword`, with what the password was asked for.
   if (action === 'password_check_failed' && details.purpose === 'change_password') {
-    return 'Wrong current password entered when changing the password';
+    return 'events.passwordCheckFailedChangePassword';
   }
   if (action === 'password_check_failed' && details.purpose === 'deactivate') {
-    return 'Wrong current password entered when deactivating the account';
+    return 'events.passwordCheckFailedDeactivate';
   }
-  return AUDIT_ACTION_LABELS[action];
+  return `actions.${action}`;
 }

@@ -15,10 +15,3 @@ export const THEME_ICONS: Record<ThemePreference, LucideIcon> = {
   light: Sun,
   dark: Moon,
 };
-
-/** Labels per option. */
-export const THEME_LABELS: Record<ThemePreference, string> = {
-  system: 'System',
-  light: 'Light',
-  dark: 'Dark',
-};
