@@ -23,7 +23,7 @@ async function registerUser(page: Page, email: string): Promise<void> {
   await page.goto('/admin/users');
   await page.getByRole('link', { name: 'Add user' }).click();
   await expect(page).toHaveURL('/admin/users/new');
-  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByRole('button', { name: 'Add user' }).click();
   await expect(page.getByRole('status')).toContainText(`Account created for ${email}.`);
 }
@@ -37,7 +37,7 @@ test('an Admin registers a user, who chooses a password from the welcome email',
 
   // Registering the same address again only says it exists.
   await page.getByRole('button', { name: 'Add another' }).click();
-  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByRole('button', { name: 'Add user' }).click();
   await expect(page.getByRole('status')).toContainText(`${email} already has an account.`);
   await signOut(page);

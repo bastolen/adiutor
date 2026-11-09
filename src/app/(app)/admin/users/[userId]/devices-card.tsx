@@ -2,8 +2,10 @@
  * @file The "Signed-in devices" card on the user detail page: the browsers
  * where the account is signed in, sorted and paginated (`DEVICES_TABLE`).
  * Admins (`users:manage`) on someone else's page also sign them out
- * everywhere.
+ * everywhere. Text from `admin.user.devices`.
  */
+import { useTranslations } from 'next-intl';
+
 import Card from '@/components/ui/card';
 import Pagination from '@/components/ui/pagination';
 import RowAction from '@/components/ui/row-action';
@@ -49,30 +51,26 @@ export default function DevicesCard({
   table,
   canSignOut,
 }: DevicesCardProps) {
+  const t = useTranslations('admin.user.devices');
   return (
     <Card
       id={table.section}
-      title="Signed-in devices"
-      description={
-        sessions.total === 0
-          ? 'Not signed in anywhere.'
-          : 'Browsers where this account is signed in.'
-      }
+      title={t('title')}
+      description={sessions.total === 0 ? t('descriptionNone') : t('descriptionSome')}
       actions={
         (canSignOut || sessions.total > 0) && (
           <>
-            {sessions.total > 0 && <SortMenu label="devices" options={table.sortOptions()} />}
+            {sessions.total > 0 && <SortMenu label={t('rows')} options={table.sortOptions()} />}
             {canSignOut && (
               <RowAction
                 action={signOutEverywhereAction}
                 fields={{ userId }}
-                label="Sign out everywhere"
+                label={t('signOut.label')}
                 disabled={sessions.total === 0}
                 confirm={{
-                  title: `Sign ${userName} out everywhere?`,
-                  description:
-                    'They are signed out on every device and have to sign in again. Their account stays active.',
-                  confirmLabel: 'Sign out everywhere',
+                  title: t('signOut.title', { name: userName }),
+                  description: t('signOut.description'),
+                  confirmLabel: t('signOut.confirmLabel'),
                 }}
               />
             )}
@@ -81,15 +79,11 @@ export default function DevicesCard({
       }
       flush={sessions.total > 0}
       footer={
-        showsPagination(sessions.total) && <Pagination {...table.pagination(sessions, 'devices')} />
+        showsPagination(sessions.total) && <Pagination {...table.pagination(sessions, t('rows'))} />
       }
     >
       {sessions.total > 0 && (
-        <DevicesTable
-          devices={sessions}
-          table={table}
-          caption={`Signed-in devices of ${userName}`}
-        />
+        <DevicesTable devices={sessions} table={table} caption={t('caption', { name: userName })} />
       )}
     </Card>
   );

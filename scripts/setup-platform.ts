@@ -1,8 +1,10 @@
 /**
- * @file Names the staff and creates its first Admin from the command line,
- * for scripted deployments. The same can be done in the browser at `/setup`.
+ * @file Names the staff, sets Adiutor's default language and creates its
+ * first Admin from the command line, for scripted deployments. The same can
+ * be done in the browser at `/setup`.
  *
- * Usage: `pnpm setup:platform --staff-name "Adiutor" --email you@adiutor.dev --name "Your Name"`
+ * Usage: `pnpm setup:platform --staff-name "Adiutor" --email you@adiutor.dev --name "Your Name"
+ * [--default-language nl-NL]` (the default language is English (US) unless given).
  *
  * Works only once: if the staff already exists, it refuses. Unlike the web
  * form, it may make an existing account the Admin (to recover an
@@ -12,13 +14,17 @@
  */
 import { parseArgs } from 'node:util';
 
+import { ZodError } from 'zod';
+
 import { db } from '../src/db';
+import { DEFAULT_LOCALE, isLocale, LOCALES } from '../src/lib/i18n/locales';
 import { installLogRedaction } from '../src/lib/log-redaction';
-import { ServiceError } from '../src/server/errors';
+import { ServiceError, serviceErrorMessage, validationErrorMessage } from '../src/server/errors';
 import { setUpPlatform } from '../src/server/setup';
 
 /** How to call the script. */
-const USAGE = 'Usage: pnpm setup:platform --staff-name <name> --email <email> --name <your name>';
+const USAGE =
+  'Usage: pnpm setup:platform --staff-name <name> --email <email> --name <your name> [--default-language <language>]';
 
 /**
  * Reads the options, runs setup and reports the result.
@@ -31,17 +37,23 @@ async function main(): Promise<number> {
       'staff-name': { type: 'string' },
       email: { type: 'string' },
       name: { type: 'string' },
+      'default-language': { type: 'string' },
     },
   });
   if (!values['staff-name'] || !values.email || !values.name) {
     console.error(USAGE);
     return 1;
   }
+  const defaultLocale = values['default-language'];
+  if (defaultLocale !== undefined && !isLocale(defaultLocale)) {
+    console.error(`--default-language must be one of: ${LOCALES.join(', ')}.`);
+    return 1;
+  }
 
   try {
     const result = await setUpPlatform(
       db,
-      { staffName: values['staff-name'], email: values.email, name: values.name },
+      { staffName: values['staff-name'], email: values.email, name: values.name, defaultLocale },
       // Unlike the web form, may make an existing account the Admin (to recover).
       { allowExistingAccount: true },
     );
@@ -51,8 +63,13 @@ async function main(): Promise<number> {
     console.info('Sign in at /auth with an email link, or set a password with "Forgot password?".');
     return 0;
   } catch (error) {
+    // Said in English (US), like the rest of the script's output.
     if (error instanceof ServiceError) {
-      console.error(error.message);
+      console.error(serviceErrorMessage(error, DEFAULT_LOCALE));
+      return 1;
+    }
+    if (error instanceof ZodError) {
+      console.error(validationErrorMessage(error, DEFAULT_LOCALE));
       return 1;
     }
     throw error;

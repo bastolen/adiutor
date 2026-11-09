@@ -19,10 +19,9 @@ import {
   PROVIDER_ACCOUNT_ID_CLAIMS,
   PROVIDER_ACCOUNT_NAME_CLAIMS,
   PROVIDER_STEP_UP_OUTCOMES,
-  providerAccountLabel,
   providerLabel,
   providerLinkedCookieValue,
-  providerNames,
+  providerList,
   providerStepUpCookieValue,
   providerStepUpMessage,
 } from './oauth-providers';
@@ -37,12 +36,14 @@ describe('MFA_PROVIDERS', () => {
   });
 });
 
-describe('providerNames', () => {
-  it('joins the labels with "or"', () => {
-    expect(providerNames([])).toBe('');
-    expect(providerNames(['github'])).toBe('GitHub');
-    expect(providerNames(['github', 'google'])).toBe('GitHub or Google');
-    expect(providerNames(['google', 'github', 'google'])).toBe('Google, GitHub or Google');
+describe('providerList', () => {
+  it.each([
+    ['en-US', 'GitHub or Google'],
+    ['nl-NL', 'GitHub of Google'],
+    ['es-ES', 'GitHub o Google'],
+  ] as const)('joins names with the "or" of %s', (locale, expected) => {
+    expect(providerList(['github', 'google'], locale)).toBe(expected);
+    expect(providerList(['github'], locale)).toBe('GitHub');
   });
 });
 
@@ -97,11 +98,6 @@ describe('account names', () => {
     );
     expect(cleanAccountName('a'.repeat(MAX_ACCOUNT_NAME_LENGTH + 1))).toBeNull();
     expect(cleanAccountName(undefined)).toBeNull();
-  });
-
-  it('are named with their provider in running text', () => {
-    expect(providerAccountLabel('github', 'adiutor-tests')).toBe('GitHub (adiutor-tests)');
-    expect(providerAccountLabel('google', null)).toBe('Google');
   });
 });
 

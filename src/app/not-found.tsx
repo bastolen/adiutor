@@ -4,18 +4,24 @@
  */
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 import CenteredLayout from '@/components/layout/centered-layout';
 import BackButton from '@/components/ui/back-button';
 import Button from '@/components/ui/button';
-import { NOT_FOUND_TITLE } from '@/lib/not-found-metadata';
+import notFoundMetadata from '@/lib/not-found-metadata';
 
 /**
  * Page metadata: the title pages the user may not see give them too.
  */
-export const metadata: Metadata = {
-  title: NOT_FOUND_TITLE,
-};
+/**
+ * The page's title: "Not found · Adiutor", in the request's language.
+ *
+ * @returns The metadata.
+ */
+export function generateMetadata(): Promise<Metadata> {
+  return notFoundMetadata();
+}
 
 /**
  * A large, quiet "404", what happened, and the way out: the dashboard (which
@@ -25,21 +31,24 @@ export const metadata: Metadata = {
  * @returns The 404 page.
  */
 export default function NotFound() {
+  const t = useTranslations('common');
   return (
     <CenteredLayout>
       <div className="flex flex-col items-center gap-8 text-center">
         <div className="flex flex-col items-center gap-3">
           <p className="text-8xl leading-none font-semibold tracking-tighter text-muted-foreground tabular-nums">
-            404
+            {404}
           </p>
-          <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">Page not found</h1>
+          <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
+            {t('notFound.heading')}
+          </h1>
           <p className="max-w-sm text-base text-balance text-muted-foreground">
-            This page doesn&apos;t exist, or you don&apos;t have access to it.
+            {t('notFound.description')}
           </p>
         </div>
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
           <Button asChild className="w-full sm:w-auto">
-            <Link href="/dashboard">Go to your dashboard</Link>
+            <Link href="/dashboard">{t('actions.goToDashboard')}</Link>
           </Button>
           <BackButton className="w-full sm:w-auto" />
         </div>

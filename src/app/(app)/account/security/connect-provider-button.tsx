@@ -4,10 +4,12 @@
  */
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 import { useRecentConfirmation } from '@/components/auth/recent-confirmation';
 import Button from '@/components/ui/button';
 import { useTransientState } from '@/components/ui/use-transient-state';
-import { signInChangeRefusalMessage } from '@/lib/sign-in/auth-error-messages';
+import { signInChangeRefusalText } from '@/lib/sign-in/auth-error-messages';
 import loadAuthClient from '@/lib/sign-in/load-auth-client';
 import type { OAuthProvider } from '@/lib/sign-in/oauth-providers';
 
@@ -64,6 +66,8 @@ export default function ConnectProviderButton({
   disabled = false,
   describedBy = undefined,
 }: ConnectProviderButtonProps) {
+  const t = useTranslations('account');
+  const tAuth = useTranslations('auth');
   const { askToConfirm, askToConfirmOnRefusal, returnTo } = useRecentConfirmation();
   // Gone when the user leaves the page and comes back, like every status message.
   const [pending, setPending] = useTransientState(false);
@@ -89,7 +93,7 @@ export default function ConnectProviderButton({
         return;
       }
       setFailure(
-        signInChangeRefusalMessage(result.error.code) ?? 'Connecting failed. Please try again.',
+        signInChangeRefusalText(tAuth, result.error.code) ?? t('security.connected.connectFailed'),
       );
     }
   };
@@ -107,9 +111,9 @@ export default function ConnectProviderButton({
         disabled={disabled}
         aria-describedby={describedBy}
         onClick={connect}
-        aria-label={`Connect ${label}`}
+        aria-label={t('security.connected.connectNamed', { provider: label })}
       >
-        Connect
+        {t('security.connected.connect')}
       </Button>
     </div>
   );

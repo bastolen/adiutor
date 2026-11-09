@@ -3,11 +3,36 @@
  */
 import { describe, expect, it } from 'vitest';
 
+import type { Locale } from '@/lib/i18n/locales';
+import translator from '@/lib/i18n/translator';
 import { OAUTH_PROVIDERS, PROVIDER_LABELS } from '@/lib/sign-in/oauth-providers';
 
 import describeOwnActivity, { type OwnActivityEntry } from './own-activity';
 
+/** The user whose account it is. */
 const ME = 'user-1';
+
+/**
+ * The translations a description needs, in a language.
+ *
+ * @param locale - The language.
+ * @returns The translators.
+ */
+const translatorsIn = (locale: Locale) => ({
+  account: translator(locale, 'account'),
+  audit: translator(locale, 'audit'),
+  roles: translator(locale, 'roles'),
+});
+
+/**
+ * Describes an event in English (US).
+ *
+ * @param entry - The event.
+ * @param userId - The user whose account it is.
+ * @returns The description.
+ */
+const describeInEnglish = (entry: OwnActivityEntry, userId: string) =>
+  describeOwnActivity(entry, userId, translatorsIn('en-US'));
 
 /**
  * Builds an event about the user.
@@ -25,16 +50,16 @@ const event = (entry: Partial<OwnActivityEntry> & Pick<OwnActivityEntry, 'action
 describe('describeOwnActivity', () => {
   it('names the sign-in method', () => {
     expect(
-      describeOwnActivity(event({ action: 'sign_in', details: { method: 'passkey' } }), ME),
+      describeInEnglish(event({ action: 'sign_in', details: { method: 'passkey' } }), ME),
     ).toBe('Signed in with a passkey');
-    expect(
-      describeOwnActivity(event({ action: 'sign_in', details: { method: 'other' } }), ME),
-    ).toBe('Signed in');
+    expect(describeInEnglish(event({ action: 'sign_in', details: { method: 'other' } }), ME)).toBe(
+      'Signed in',
+    );
   });
 
   it('says a password sign-in asked for a code, without counting it as signed in', () => {
     expect(
-      describeOwnActivity(
+      describeInEnglish(
         event({ action: 'sign_in_code_pending', actor: null, details: { method: 'password' } }),
         ME,
       ),
@@ -42,30 +67,30 @@ describe('describeOwnActivity', () => {
   });
 
   it('calls a confirmed sign-in MFA verified', () => {
-    expect(describeOwnActivity(event({ action: 'mfa_verified' }), ME)).toBe(
+    expect(describeInEnglish(event({ action: 'mfa_verified' }), ME)).toBe(
       'Verified a sign-in with MFA',
     );
   });
 
   it('describes failed attempts without anyone to blame', () => {
-    expect(describeOwnActivity(event({ action: 'sign_in_failed', actor: null }), ME)).toBe(
+    expect(describeInEnglish(event({ action: 'sign_in_failed', actor: null }), ME)).toBe(
       'Failed sign-in attempt with a wrong password',
     );
   });
 
   it('tells a wrong code from "Confirm with GitHub" with a different account', () => {
     expect(
-      describeOwnActivity(event({ action: 'mfa_failed', details: { method: 'email_code' } }), ME),
+      describeInEnglish(event({ action: 'mfa_failed', details: { method: 'email_code' } }), ME),
     ).toBe('Failed MFA confirmation with a wrong code');
     expect(
-      describeOwnActivity(
+      describeInEnglish(
         event({ action: 'mfa_failed', details: { method: 'github', reason: 'different_account' } }),
         ME,
       ),
     ).toBe('Failed MFA confirmation with a different GitHub account');
     // A provider that was since removed.
     expect(
-      describeOwnActivity(
+      describeInEnglish(
         event({ action: 'mfa_failed', details: { method: 'gitlab', reason: 'different_account' } }),
         ME,
       ),
@@ -74,7 +99,7 @@ describe('describeOwnActivity', () => {
 
   it('tells a wrong code at sign-in from one on the step-up page', () => {
     expect(
-      describeOwnActivity(
+      describeInEnglish(
         event({
           action: 'mfa_failed',
           details: { method: 'authenticator', atSignIn: true },
@@ -84,35 +109,32 @@ describe('describeOwnActivity', () => {
       ),
     ).toBe('Wrong two-step verification code entered at sign-in');
     expect(
-      describeOwnActivity(
-        event({ action: 'mfa_failed', details: { method: 'authenticator' } }),
-        ME,
-      ),
+      describeInEnglish(event({ action: 'mfa_failed', details: { method: 'authenticator' } }), ME),
     ).toBe('Failed MFA confirmation with a wrong code');
   });
 
   it('calls a confirmed account a second step only when it gave MFA', () => {
     expect(
-      describeOwnActivity(
+      describeInEnglish(
         event({ action: 'provider_confirmed', details: { providerId: 'github', givesMfa: true } }),
         ME,
       ),
     ).toBe('Confirmed GitHub as a second step');
     // GitHub without two-factor authentication, or an event from before `givesMfa` was recorded.
     expect(
-      describeOwnActivity(
+      describeInEnglish(
         event({ action: 'provider_confirmed', details: { providerId: 'github', givesMfa: false } }),
         ME,
       ),
     ).toBe('Confirmed GitHub');
     expect(
-      describeOwnActivity(
+      describeInEnglish(
         event({ action: 'provider_confirmed', details: { providerId: 'github' } }),
         ME,
       ),
     ).toBe('Confirmed GitHub');
     expect(
-      describeOwnActivity(
+      describeInEnglish(
         event({ action: 'provider_confirmed', details: { providerId: 'google', givesMfa: false } }),
         ME,
       ),
@@ -121,22 +143,22 @@ describe('describeOwnActivity', () => {
 
   it.each(OAUTH_PROVIDERS)('names a sign-in with %s', (providerId) => {
     expect(
-      describeOwnActivity(event({ action: 'sign_in', details: { method: providerId } }), ME),
+      describeInEnglish(event({ action: 'sign_in', details: { method: providerId } }), ME),
     ).toBe(`Signed in with ${PROVIDER_LABELS[providerId]}`);
   });
 
   it('says who signed the user out', () => {
     expect(
-      describeOwnActivity(event({ action: 'sessions_revoked', details: { others: true } }), ME),
+      describeInEnglish(event({ action: 'sessions_revoked', details: { others: true } }), ME),
     ).toBe('Signed out your other devices');
     expect(
-      describeOwnActivity(
+      describeInEnglish(
         event({ action: 'sessions_revoked', actor: null, details: { commandLine: true } }),
         ME,
       ),
     ).toBe('Signed out everywhere by an administrator');
     expect(
-      describeOwnActivity(
+      describeInEnglish(
         event({ action: 'sessions_revoked', actor: null, details: { mfaRequired: true } }),
         ME,
       ),
@@ -144,7 +166,7 @@ describe('describeOwnActivity', () => {
       'Signed out where you hadn’t confirmed with an authenticator app, a passkey or a provider with two-factor authentication, which your role now requires',
     );
     expect(
-      describeOwnActivity(
+      describeInEnglish(
         event({
           action: 'sessions_revoked',
           actor: null,
@@ -160,13 +182,13 @@ describe('describeOwnActivity', () => {
 
   it('tells a first password apart from a change, and names providers', () => {
     expect(
-      describeOwnActivity(event({ action: 'password_changed', details: { first: true } }), ME),
+      describeInEnglish(event({ action: 'password_changed', details: { first: true } }), ME),
     ).toBe('Set a password');
-    expect(describeOwnActivity(event({ action: 'password_changed' }), ME)).toBe(
+    expect(describeInEnglish(event({ action: 'password_changed' }), ME)).toBe(
       'Changed your password',
     );
     expect(
-      describeOwnActivity(
+      describeInEnglish(
         event({ action: 'provider_connected', details: { providerId: 'github' } }),
         ME,
       ),
@@ -175,43 +197,37 @@ describe('describeOwnActivity', () => {
 
   it('says what a wrong current password was typed for', () => {
     expect(
-      describeOwnActivity(
+      describeInEnglish(
         event({ action: 'password_check_failed', details: { purpose: 'change_password' } }),
         ME,
       ),
     ).toBe('Wrong password entered when changing your password');
     expect(
-      describeOwnActivity(
+      describeInEnglish(
         event({ action: 'password_check_failed', details: { purpose: 'deactivate' } }),
         ME,
       ),
     ).toBe('Wrong password entered when deactivating your account');
-    expect(describeOwnActivity(event({ action: 'password_check_failed' }), ME)).toBe(
+    expect(describeInEnglish(event({ action: 'password_check_failed' }), ME)).toBe(
       'Wrong password entered',
     );
   });
 
   it('says how the email address was verified', () => {
     expect(
-      describeOwnActivity(
-        event({ action: 'email_verified', details: { providerId: 'github' } }),
-        ME,
-      ),
+      describeInEnglish(event({ action: 'email_verified', details: { providerId: 'github' } }), ME),
     ).toBe('Verified your email address by signing in with GitHub');
     expect(
-      describeOwnActivity(
-        event({ action: 'email_verified', details: { providerId: 'google' } }),
-        ME,
-      ),
+      describeInEnglish(event({ action: 'email_verified', details: { providerId: 'google' } }), ME),
     ).toBe('Verified your email address by signing in with Google');
-    expect(describeOwnActivity(event({ action: 'email_verified' }), ME)).toBe(
+    expect(describeInEnglish(event({ action: 'email_verified' }), ME)).toBe(
       'Verified your email address',
     );
   });
 
   it('says who made changes for the user, by name only', () => {
     expect(
-      describeOwnActivity(
+      describeInEnglish(
         event({
           action: 'role_changed',
           company: { name: 'Adiutor Tests' },
@@ -222,13 +238,13 @@ describe('describeOwnActivity', () => {
       ),
     ).toBe('Role in Adiutor Tests changed to Admin by Alex Admin');
     expect(
-      describeOwnActivity(event({ action: 'mfa_reset', actor: { id: 'admin-1', name: ' ' } }), ME),
+      describeInEnglish(event({ action: 'mfa_reset', actor: { id: 'admin-1', name: ' ' } }), ME),
     ).toBe('Two-step verification reset by an administrator');
   });
 
   it('describes staff events without a company', () => {
     expect(
-      describeOwnActivity(
+      describeInEnglish(
         event({
           action: 'role_changed',
           details: { staff: true, from: 'support', to: 'manager' },
@@ -238,17 +254,17 @@ describe('describeOwnActivity', () => {
       ),
     ).toBe('Staff role changed to Manager by Alex Admin');
     expect(
-      describeOwnActivity(event({ action: 'member_joined', details: { staff: true } }), ME),
+      describeInEnglish(event({ action: 'member_joined', details: { staff: true } }), ME),
     ).toBe('Added to staff');
   });
 
   it('describes accounts and memberships created by staff', () => {
     const admin = { id: 'admin-1', name: 'Alex Admin' };
-    expect(describeOwnActivity(event({ action: 'account_created', actor: admin }), ME)).toBe(
+    expect(describeInEnglish(event({ action: 'account_created', actor: admin }), ME)).toBe(
       'Account created by Alex Admin',
     );
     expect(
-      describeOwnActivity(
+      describeInEnglish(
         event({
           action: 'member_added',
           company: { name: 'Adiutor Tests Alpha' },
@@ -259,7 +275,7 @@ describe('describeOwnActivity', () => {
       ),
     ).toBe('Added to Adiutor Tests Alpha as Client by Alex Admin');
     expect(
-      describeOwnActivity(
+      describeInEnglish(
         event({ action: 'member_added', details: { staff: true, role: 'manager' }, actor: admin }),
         ME,
       ),
@@ -267,8 +283,63 @@ describe('describeOwnActivity', () => {
   });
 
   it('falls back to the general label', () => {
-    expect(describeOwnActivity(event({ action: 'company_updated' }), ME)).toBe(
+    expect(describeInEnglish(event({ action: 'company_updated' }), ME)).toBe(
       'Changed company details',
     );
+  });
+
+  it.each([
+    [
+      'nl-NL',
+      'Alex Admin heeft je rol bij Adiutor Tests gewijzigd in Beheerder',
+      'Een beheerder heeft je verificatie in twee stappen gereset',
+      'Ingelogd met GitHub',
+    ],
+    [
+      'es-ES',
+      'Alex Admin cambió tu rol en Adiutor Tests a Administrador',
+      'Un administrador restableció tu verificación en dos pasos',
+      'Sesión iniciada con GitHub',
+    ],
+  ] as const)(
+    'says in %s who made a change where the language puts it',
+    (locale, roleChanged, mfaReset, signedIn) => {
+      const translators = translatorsIn(locale);
+      expect(
+        describeOwnActivity(
+          event({
+            action: 'role_changed',
+            details: { to: 'admin' },
+            company: { name: 'Adiutor Tests' },
+            actor: { id: 'admin-1', name: 'Alex Admin' },
+          }),
+          ME,
+          translators,
+        ),
+      ).toBe(roleChanged);
+      expect(
+        describeOwnActivity(
+          event({ action: 'mfa_reset', actor: { id: 'admin-1', name: ' ' } }),
+          ME,
+          translators,
+        ),
+      ).toBe(mfaReset);
+      expect(
+        describeOwnActivity(
+          event({ action: 'sign_in', details: { method: 'github' } }),
+          ME,
+          translators,
+        ),
+      ).toBe(signedIn);
+    },
+  );
+
+  it('falls back on the audit log’s words for a role or a company it can’t name', () => {
+    expect(
+      describeInEnglish(event({ action: 'member_added', details: { role: 'emperor' } }), ME),
+    ).toBe('Added a member');
+    expect(
+      describeInEnglish(event({ action: 'role_changed', details: { staff: true, to: 'x' } }), ME),
+    ).toBe('Changed a role');
   });
 });

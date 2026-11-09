@@ -1,0 +1,52 @@
+{
+  "validation": {
+    "checkInput": "Check your input.",
+    "email": "Enter a valid email address.",
+    "id": "Invalid ID.",
+    "role": "Choose a valid role.",
+    "companyRole": "Choose a role that fits this company.",
+    "staffRole": "Choose a staff role.",
+    "name": {
+      "empty": "Enter your name.",
+      "tooLong": "Use at most {maximum, number} characters for your name.",
+      "controlCharacters": "Remove line breaks and control characters from your name.",
+      "hiddenCharacters": "Remove invisible characters and text direction marks from your name.",
+      "webAddress": "Remove web addresses from your name."
+    },
+    "password": {
+      "tooShort": "Use at least {minimum, number} characters for the password.",
+      "tooLong": "Use at most {maximum, number} characters for the password."
+    },
+    "companyName": {
+      "tooShort": "Use at least {minimum, number} characters for the company name.",
+      "tooLong": "Use at most {maximum, number} characters for the company name.",
+      "controlCharacters": "Remove line breaks and control characters from the company name.",
+      "hiddenCharacters": "Remove invisible characters and text direction marks from the company name.",
+      "webAddress": "Remove web addresses from the company name."
+    },
+    "staffName": {
+      "tooShort": "Use at least {minimum, number} characters for the name shown to users.",
+      "tooLong": "Use at most {maximum, number} characters for the name shown to users.",
+      "controlCharacters": "Remove line breaks and control characters from the name shown to users.",
+      "hiddenCharacters": "Remove invisible characters and text direction marks from the name shown to users.",
+      "webAddress": "Remove web addresses from the name shown to users."
+    },
+    "passkeyName": {
+      "empty": "Enter a name for the passkey.",
+      "tooLong": "Use at most {maximum, number} characters for the passkey name.",
+      "controlCharacters": "Remove line breaks and control characters from the passkey name.",
+      "hiddenCharacters": "Remove invisible characters and text direction marks from the passkey name."
+    },
+    "slug": {
+      "format": "Use lower-case letters, numbers and dashes in the URL name, e.g. adiutor.",
+      "looksLikeId": "Choose a URL name that doesn’t look like an ID.",
+      "tooLong": "Use at most {maximum, number} characters for the URL name."
+    },
+    "emailList": {
+      "invalid": "{count, plural, one {This isn’t a valid email address: {emails}.} other {These aren’t valid email addresses: {emails}.}}",
+      "empty": "Enter at least one email address.",
+      "tooMany": "You can invite up to {max, number} people at once. Split the list and try again."
+    },
+    "locale": "Choose one of the languages."
+  }
+}

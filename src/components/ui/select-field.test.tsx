@@ -1,9 +1,11 @@
 /**
  * @file Tests for the select field, including its busy state.
  */
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+
+import { defined } from '@/lib/defined';
 
 import SelectField from './select-field';
 
@@ -40,6 +42,32 @@ describe('SelectField', () => {
     expect(screen.getByRole('option', { name: 'Watcher' })).toBeInTheDocument();
   });
 
+  it("shows an option's icon in the list and when chosen, keeping the label as its name", async () => {
+    const user = userEvent.setup();
+    render(
+      <SelectField
+        label="Language"
+        options={[
+          {
+            value: 'nl-NL',
+            label: 'Nederlands',
+            icon: <svg aria-hidden="true" data-testid="nl" />,
+          },
+          { value: 'es-ES', label: 'Español', icon: <svg aria-hidden="true" data-testid="es" /> },
+        ]}
+        defaultValue="nl-NL"
+      />,
+    );
+
+    const select = screen.getByRole('combobox', { name: 'Language' });
+    expect(select).toHaveTextContent('Nederlands');
+    expect(select.querySelector('[data-testid="nl"]')).not.toBeNull();
+
+    await user.click(select);
+    const option = screen.getByRole('option', { name: 'Español' });
+    expect(option.querySelector('[data-testid="es"]')).not.toBeNull();
+  });
+
   it('reports the chosen value', async () => {
     const user = userEvent.setup();
     const onValueChange = vi.fn();
@@ -57,6 +85,22 @@ describe('SelectField', () => {
 
     expect(onValueChange).toHaveBeenCalledWith('client');
     expect(screen.getByRole('combobox', { name: 'Role' })).toHaveTextContent('Client');
+  });
+
+  it('goes back to the value it started with when its form is reset', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <form>
+        <SelectField label="Role" name="role" options={options} defaultValue="watcher" />
+      </form>,
+    );
+
+    await user.click(screen.getByRole('combobox', { name: 'Role' }));
+    await user.click(screen.getByRole('option', { name: /^Client/ }));
+    act(() => defined(container.querySelector('form'), 'the form').reset());
+
+    // Forms that edit a saved setting therefore aren't cleared after a save (`resetOnSuccess`).
+    expect(screen.getByRole('combobox', { name: 'Role' })).toHaveTextContent('Watcher');
   });
 
   it('stays focusable but closed while busy, and opens again once it is not', async () => {
@@ -78,5 +122,22 @@ describe('SelectField', () => {
     expect(select).not.toHaveAttribute('aria-busy');
     await user.click(select);
     expect(await screen.findByRole('listbox')).toBeInTheDocument();
+  });
+});
+
+describe('SelectField with a description', () => {
+  it('links its help text to the field', () => {
+    render(
+      <SelectField
+        label="Email language"
+        options={[{ value: 'en-US', label: 'English (US)' }]}
+        defaultValue="en-US"
+        description="The invitation and its reminder are sent in this language."
+      />,
+    );
+
+    expect(screen.getByRole('combobox', { name: 'Email language' })).toHaveAccessibleDescription(
+      'The invitation and its reminder are sent in this language.',
+    );
   });
 });

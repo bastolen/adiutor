@@ -3,6 +3,8 @@
  */
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
 import TextField from '@/components/ui/text-field';
@@ -19,13 +21,14 @@ import { updateNameAction } from './actions';
  * @returns The form.
  */
 export default function NameForm({ name }: { name: string }) {
+  const t = useTranslations('account');
   const [result, formAction, pending, onSubmit] = useTransientActionState(updateNameAction, null);
 
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-4">
       <ResultAlert result={result} />
       <TextField
-        label="Name"
+        label={t('profile.nameLabel')}
         name="name"
         autoComplete="name"
         defaultValue={name}
@@ -34,7 +37,7 @@ export default function NameForm({ name }: { name: string }) {
       />
       <div>
         <Button type="submit" loading={pending}>
-          Save name
+          {t('profile.saveName')}
         </Button>
       </div>
     </form>

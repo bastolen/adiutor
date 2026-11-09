@@ -28,6 +28,7 @@ import {
   minutesAgo,
   storeSessionMfa,
   sessionVerifiedAt,
+  cookiesBesidesLanguage,
 } from './test-helpers';
 import {
   createSession,
@@ -150,7 +151,7 @@ describe('confirming a session with GitHub on the step-up page', () => {
     expect(await sessionExists(previous)).toBe(false);
     expectSetSince(await lastActiveAt(db, jane), start);
     // Nothing for the next page to say.
-    expect(setCookie).not.toHaveBeenCalled();
+    expect(cookiesBesidesLanguage(setCookie)).toEqual([]);
   });
 
   it('removes what an earlier attempt left for the next page, once GitHub confirmed the session', async () => {
@@ -203,7 +204,7 @@ describe('confirming a session with GitHub on the step-up page', () => {
         afterRequest: [['sign_in', jane, { method: 'github' }]],
       });
       expect(await sessionMfa(created.sessionId)).toEqual({ mfaVerified: false, mfaMethod: null });
-      expect(setCookie).toHaveBeenCalledOnce();
+      expect(cookiesBesidesLanguage(setCookie)).toHaveLength(1);
       expect(setCookie).toHaveBeenCalledWith(
         PROVIDER_STEP_UP_COOKIE,
         `github:${outcome}`,
@@ -335,7 +336,10 @@ describe('confirming a session with GitHub on the step-up page', () => {
       markReverify(jane, reverified);
       const created = { sessionId: await createSession(db, jane), userId: jane };
       const { ctx, setCookie } = githubCallback(headers, created);
-      return { ...(await runCallback(ctx, created)), cookiesSet: setCookie.mock.calls.length };
+      return {
+        ...(await runCallback(ctx, created)),
+        cookiesSet: cookiesBesidesLanguage(setCookie).length,
+      };
     });
 
     // A sign-in, not a step-up: nothing for the next page to say.
@@ -360,7 +364,7 @@ describe('confirming a session with GitHub on the step-up page', () => {
     // GitHub's 2FA still confirms the new session, as at any GitHub sign-in.
     expect(await sessionMfa(created.sessionId)).toEqual({ mfaVerified: true, mfaMethod: 'github' });
     expect(await sessionExists(previous)).toBe(false);
-    expect(setCookie).not.toHaveBeenCalled();
+    expect(cookiesBesidesLanguage(setCookie)).toEqual([]);
   });
 
   it('never treats a re-verify started by another user as this user’s step-up', async () => {
@@ -404,7 +408,7 @@ describe('confirming a session with GitHub on the step-up page', () => {
 
     const signIn = [['sign_in', jane, { method: 'google' }]];
     expect(await runCallback(ctx, created)).toEqual({ atOnce: signIn, afterRequest: signIn });
-    expect(setCookie).not.toHaveBeenCalled();
+    expect(cookiesBesidesLanguage(setCookie)).toEqual([]);
   });
 
   it('records no session for a connection from the Security page, which creates none', async () => {
@@ -419,7 +423,7 @@ describe('confirming a session with GitHub on the step-up page', () => {
 
     expect(await recorded()).toEqual([]);
     expect(await sessionExists(current)).toBe(true);
-    expect(setCookie).not.toHaveBeenCalled();
+    expect(cookiesBesidesLanguage(setCookie)).toEqual([]);
   });
 
   it('records a sign-in when a plain sign-in connected a new GitHub account', async () => {
@@ -440,6 +444,6 @@ describe('confirming a session with GitHub on the step-up page', () => {
     const signIn = [['sign_in', jane, { method: 'github' }]];
     expect(await runCallback(ctx, created)).toEqual({ atOnce: signIn, afterRequest: signIn });
     expect((await recorded()).map(([action]) => action)).toEqual(['provider_connected', 'sign_in']);
-    expect(setCookie).not.toHaveBeenCalled();
+    expect(cookiesBesidesLanguage(setCookie)).toEqual([]);
   });
 });

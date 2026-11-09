@@ -1,21 +1,17 @@
 /**
  * @file Icons and labels of the theme options, shared by the floating theme
- * button and the theme row in the account menu.
+ * and language button and the theme row in the account menu.
  */
-import { type LucideIcon, Monitor, Moon, Sun } from 'lucide-react';
+import { type LucideIcon, Moon, Sun, SunMoon } from 'lucide-react';
 
 import type { ThemePreference } from '@/lib/theme';
 
-/** Icons per option: a monitor, a sun and a moon. */
+/**
+ * Icons per option: half sun, half moon for following the device (so it reads
+ * as a theme, unlike a monitor), a sun and a moon.
+ */
 export const THEME_ICONS: Record<ThemePreference, LucideIcon> = {
-  system: Monitor,
+  system: SunMoon,
   light: Sun,
   dark: Moon,
-};
-
-/** Labels per option. */
-export const THEME_LABELS: Record<ThemePreference, string> = {
-  system: 'System',
-  light: 'Light',
-  dark: 'Dark',
 };

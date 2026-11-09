@@ -3,18 +3,23 @@
  */
 import { Section, Text } from 'react-email';
 
-import { ROLE_DESCRIPTIONS, ROLE_LABELS, type Role } from '@/lib/authz/roles';
+import type { Role } from '@/lib/authz/roles';
+import type { Locale } from '@/lib/i18n/locales';
+import translator from '@/lib/i18n/translator';
 
 import { colors } from './theme';
 
 /**
- * The role's name and what it can do, in a soft panel.
+ * The role's name and what it can do, in a soft panel, in the recipient's
+ * language (the `roles` catalogue).
  *
  * @param props - Component props.
  * @param props.role - The role.
+ * @param props.locale - The recipient's language.
  * @returns The panel.
  */
-export default function RoleSummary({ role }: { role: Role }) {
+export default function RoleSummary({ role, locale }: { role: Role; locale: Locale }) {
+  const t = translator(locale, 'roles');
   return (
     <Section
       style={{
@@ -26,8 +31,8 @@ export default function RoleSummary({ role }: { role: Role }) {
       }}
     >
       <Text style={{ margin: 0, color: colors.foreground, fontSize: '14px', lineHeight: '22px' }}>
-        <strong>{ROLE_LABELS[role]}</strong>
-        <span style={{ color: colors.muted }}> · {ROLE_DESCRIPTIONS[role]}</span>
+        <strong>{t(`${role}.label`)}</strong>
+        <span style={{ color: colors.muted }}> · {t(`${role}.description`)}</span>
       </Text>
     </Section>
   );

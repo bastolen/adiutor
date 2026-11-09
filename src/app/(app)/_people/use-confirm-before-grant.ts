@@ -2,17 +2,14 @@
  * @file Whether a form that gives a role must ask the user to confirm it's
  * them before it's sent: the role needs a recent confirmation
  * (`grantNeedsConfirmation`) and the page's window is closed
- * (`RecentConfirmationProvider`).
+ * (`RecentConfirmationProvider`). The note shown instead of the submit
+ * button is `people.confirmBeforeGrant`.
  */
 'use client';
 
 import { useRecentConfirmation } from '@/components/auth/recent-confirmation';
 import { grantNeedsConfirmation } from '@/lib/authz/guards';
 import { isRole, type Role } from '@/lib/authz/roles';
-
-/** The text of the note shown instead of the submit button. */
-export const CONFIRM_BEFORE_GRANT_NOTE =
-  'Giving this role needs you to confirm it’s you first (at most once every 15 minutes).';
 
 /**
  * Checks whether a role grant must be confirmed before it's sent.

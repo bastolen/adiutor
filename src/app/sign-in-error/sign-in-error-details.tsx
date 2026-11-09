@@ -1,8 +1,11 @@
 /**
  * @file The part of the sign-in error page that depends on the error: what
  * went wrong, and the reference to send to an admin (recorded with
- * `recordSignInError`, shown in the shared `ErrorReference` box).
+ * `recordSignInError`, shown in the shared `ErrorReference` box), in the
+ * request's language.
  */
+import { getTranslations } from 'next-intl/server';
+
 import ErrorReference from '@/components/ui/error-reference';
 import { type SearchParams, searchParam } from '@/lib/tables/search-params';
 import appContext from '@/server/app-context';
@@ -25,9 +28,12 @@ export default async function SignInErrorDetails({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const params = await searchParams;
+  const [params, actor, t] = await Promise.all([
+    searchParams,
+    getOptionalActor(),
+    getTranslations('auth'),
+  ]);
   const code = cleanErrorCode(searchParam(params.error));
-  const actor = await getOptionalActor();
   const { reference, at } = await recordSignInError(appContext, {
     code,
     description: searchParam(params.error_description) ?? null,
@@ -37,7 +43,7 @@ export default async function SignInErrorDetails({
   return (
     <>
       <p className="max-w-sm text-base text-balance text-muted-foreground">
-        {signInErrorMessage(code)}
+        {signInErrorMessage(t, code)}
       </p>
       <ErrorReference reference={reference} at={at} />
     </>

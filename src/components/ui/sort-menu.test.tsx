@@ -61,10 +61,12 @@ describe('SortMenu', () => {
       render(<SortMenu label="members" options={OPTIONS} />);
 
       const trigger = screen.getByRole('button', { name: TRIGGER_NAME });
-      expect(trigger).toHaveTextContent('Sort members: Name, A to Z');
-      // "Sort" is only seen on phones; from 640px (`sm`) the current sort is.
-      expect(within(trigger).getByText('Sort')).toHaveClass('sm:sr-only');
-      expect(within(trigger).getByText('Name, A to Z')).toHaveClass('sr-only', 'sm:not-sr-only');
+      // "Sort" is only seen on phones; from 640px (`sm`) the current sort is. Both are part of
+      // the name, which screen readers hear whole.
+      expect(within(trigger).getByText('Sort')).toHaveClass('sm:hidden');
+      expect(within(trigger).getByText('Sort')).toHaveAttribute('aria-hidden', 'true');
+      expect(within(trigger).getByText('Name, A to Z')).toHaveClass('max-sm:hidden');
+      expect(within(trigger).getByText('Sort members: Name, A to Z')).toHaveClass('sr-only');
       expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
       expect(trigger).toHaveAttribute('aria-expanded', 'false');
     });
@@ -86,7 +88,7 @@ describe('SortMenu', () => {
       );
 
       const trigger = screen.getByRole('button', { name: /^Sort\s*members$/ });
-      expect(within(trigger).getByText('Sort')).not.toHaveClass('sm:sr-only');
+      expect(within(trigger).getByText('Sort')).not.toHaveClass('sm:hidden');
     });
 
     it('hides its icon from assistive technology', () => {

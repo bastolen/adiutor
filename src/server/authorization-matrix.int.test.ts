@@ -54,12 +54,14 @@ import {
   listMembers,
   removeMember,
 } from './people/members';
+import setOwnLocale from './people/own-locale';
 import {
   changeStaffRole,
   getStaffSettings,
   listStaff,
   removeFromStaff,
   renameStaff,
+  setDefaultLocale,
 } from './people/staff';
 import {
   deactivateUser,
@@ -343,7 +345,9 @@ function listOperations(): Operation[] {
     ['list staff invitations', (w) => listPendingInvitations(ctx, w.actor, null)],
     ['list staff', (w) => listStaff(ctx, w.actor)],
     ['view staff settings', (w) => getStaffSettings(ctx, w.actor)],
+    ['choose own language', (w) => setOwnLocale(ctx, w.actor, 'nl-NL')],
     ['rename staff', (w) => renameStaff(ctx, w.actor, 'Adiutor Tests')],
+    ['set default language', (w) => setDefaultLocale(ctx, w.actor, 'nl-NL')],
     [
       'change staff role',
       (w) => changeStaffRole(ctx, w.actor, { userId: w.staffMember, role: 'finance' }),
@@ -431,7 +435,10 @@ const EXPECTED: Record<string, string> = {
   'list staff invitations': 'FFFFFFA',
   'list staff': 'FFFFFFA',
   'view staff settings': 'FFFFFFA',
+  // Everyone chooses their own language, and nobody else's.
+  'choose own language': 'AAAAAAA',
   'rename staff': 'FFFFFFA',
+  'set default language': 'FFFFFFA',
   'change staff role': 'FFFFFFA',
   'remove from staff': 'FFFFFFA',
   'list users': 'FFFAAAA',

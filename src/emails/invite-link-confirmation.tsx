@@ -10,8 +10,9 @@ import {
   LinkFallback,
 } from '@/components/email/email-text';
 import RoleSummary from '@/components/email/role-summary';
-import { ROLE_LABELS, type Role } from '@/lib/authz/roles';
+import type { Role } from '@/lib/authz/roles';
 import type { Email } from '@/lib/email';
+import translator from '@/lib/i18n/translator';
 
 import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
 import renderEmail from './render';
@@ -40,6 +41,7 @@ export interface InviteLinkConfirmationEmailProps extends EmailBaseProps {
  * @param props.role - The role.
  * @param props.url - Join link.
  * @param props.validDays - Days the link stays valid.
+ * @param props.locale - The recipient's language.
  * @param props.logoSrc - Logo URL override.
  * @returns The email.
  */
@@ -49,24 +51,25 @@ export default function InviteLinkConfirmationEmail({
   role,
   url,
   validDays,
+  locale,
   logoSrc = undefined,
 }: InviteLinkConfirmationEmailProps) {
+  const t = translator(locale, 'emails.inviteLinkConfirmation');
+  const values = { company: companyName, role: translator(locale, 'roles')(`${role}.label`) };
   return (
     <EmailLayout
-      preview={`One more step to join ${companyName} on Adiutor`}
+      preview={t('preview', values)}
       appUrl={appUrl}
+      locale={locale}
       logoSrc={logoSrc}
-      reason={`You're receiving this because someone used an invite link for ${companyName} with this email address. If that wasn't you, you can ignore this email.`}
+      reason={t('reason', values)}
     >
-      <EmailHeading>Confirm your email address</EmailHeading>
-      <EmailParagraph>
-        You opened an invite link for {companyName}. Confirm this is your email address to join as{' '}
-        {ROLE_LABELS[role]}.
-      </EmailParagraph>
-      <RoleSummary role={role} />
-      <EmailButton href={url}>Join {companyName}</EmailButton>
-      <EmailNote>The link works once and expires in {validDays} days.</EmailNote>
-      <LinkFallback url={url} />
+      <EmailHeading>{t('heading')}</EmailHeading>
+      <EmailParagraph>{t('body', values)}</EmailParagraph>
+      <RoleSummary role={role} locale={locale} />
+      <EmailButton href={url}>{t('button', values)}</EmailButton>
+      <EmailNote>{t('note', { days: validDays })}</EmailNote>
+      <LinkFallback url={url} locale={locale} />
     </EmailLayout>
   );
 }
@@ -93,7 +96,9 @@ export function inviteLinkConfirmationEmail(
 ): Promise<Email> {
   return renderEmail(
     to,
-    `Confirm your email to join ${props.companyName}`,
+    translator(props.locale, 'emails.inviteLinkConfirmation')('subject', {
+      company: props.companyName,
+    }),
     <InviteLinkConfirmationEmail {...props} />,
   );
 }

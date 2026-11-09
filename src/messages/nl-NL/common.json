@@ -1,0 +1,138 @@
+{
+  "common": {
+    "app": {
+      "description": "Hulp krijgen zonder achter e-mails aan te zitten. Meld een probleem of vraag iets nieuws aan, volg de voortgang en keur het werk goed, allemaal op één plek."
+    },
+    "documentTitle": "{page} · Adiutor",
+    "loading": "Laden…",
+    "skipToContent": "Direct naar de inhoud",
+    "homeLink": "Startpagina van Adiutor",
+    "actions": {
+      "cancel": "Annuleren",
+      "close": "Sluiten",
+      "dismiss": "Sluiten",
+      "dismissNotification": "Melding sluiten",
+      "goBack": "Ga terug",
+      "search": "Zoeken",
+      "apply": "Toepassen",
+      "clear": "Wissen",
+      "copy": "Kopiëren",
+      "copied": "Gekopieerd",
+      "tryAgain": "Opnieuw proberen",
+      "goToDashboard": "Naar je dashboard"
+    },
+    "relativeTime": {
+      "justNow": "zojuist",
+      "never": "Nooit"
+    },
+    "pagination": {
+      "showing": "{first, number}–{last, number} van {total, number}",
+      "pages": "Pagina's met {rows}",
+      "perPageGroup": "Per pagina, {rows}",
+      "perPage": "Per pagina",
+      "perPageOption": "{size, number} per pagina",
+      "previous": "Vorige",
+      "previousPage": "Vorige pagina",
+      "next": "Volgende",
+      "nextPage": "Volgende pagina",
+      "page": "Pagina {page, number}",
+      "pageOf": "Pagina {page, number} van {pages, number}"
+    },
+    "sort": {
+      "button": "Sorteren",
+      "trigger": "Sorteer {rows}",
+      "triggerSorted": "Sorteer {rows}: {sort}",
+      "sortBy": "Sorteren op"
+    },
+    "dateRange": {
+      "from": "Van",
+      "to": "Tot en met"
+    },
+    "errorReference": {
+      "intro": "Blijft het gebeuren? Stuur deze referentie naar een beheerder:",
+      "copyText": "Referentie {reference} ({when})",
+      "copy": "Referentie kopiëren"
+    },
+    "codeField": {
+      "code": "Code",
+      "backupCode": "Back-upcode",
+      "authenticatorHint": "De 6-cijferige code in je authenticator-app."
+    },
+    "resendCode": {
+      "send": "Nieuwe code sturen",
+      "wait": "Nieuwe code sturen over {wait}"
+    },
+    "providerStepUp": {
+      "region": "Bevestiging met {provider}",
+      "dismiss": "Melding over de bevestiging met {provider} sluiten",
+      "mfaOff": "{provider} kon niet bevestigen dat jij het bent: tweefactorauthenticatie staat uit voor je {provider}-account. Zet het aan bij {provider}, of gebruik een andere tweede stap.",
+      "unchecked": "{provider} kon niet bevestigen dat jij het bent: we konden de tweefactorauthenticatie van je {provider}-account nu even niet controleren. Probeer het zo opnieuw."
+    },
+    "providerLinked": {
+      "region": "{provider} gekoppeld",
+      "dismiss": "Melding over {provider} sluiten",
+      "named": "Je {provider}-account <name>{account}</name> is nu gekoppeld aan je Adiutor-account, omdat je ermee bent ingelogd. Was jij dit niet? <link>Ontkoppel het op de pagina Beveiliging</link>.",
+      "unnamed": "Je {provider}-account is nu gekoppeld aan je Adiutor-account, omdat je ermee bent ingelogd. Was jij dit niet? <link>Ontkoppel het op de pagina Beveiliging</link>."
+    },
+    "accessNotice": {
+      "dismiss": "Deze melding sluiten",
+      "steppedDown": "Je hebt je rol als Beheerder van de medewerkers neergelegd. Een andere Beheerder kan je de rol teruggeven.",
+      "leftStaff": "Je hoort niet meer bij de medewerkers. Je account blijft bestaan, en een Beheerder kan je opnieuw uitnodigen.",
+      "leftCompany": "Je hebt het bedrijf verlaten. Je account blijft bestaan, en de Beheerders van het bedrijf kunnen je opnieuw uitnodigen.",
+      "companySteppedDown": "Je bent geen Beheerder van dit bedrijf meer, dus je beheert de leden niet meer. Een andere Beheerder kan je weer Beheerder maken."
+    },
+    "recentConfirmation": {
+      "confirm": "Bevestig dat jij het bent"
+    },
+    "brandPanel": {
+      "headline": "Hulp krijgen zonder achter e-mails aan te zitten.",
+      "pitch": "Meld een probleem of vraag iets nieuws aan, volg de voortgang en keur het werk goed, allemaal op één plek.",
+      "preview": {
+        "status": "Wacht op je goedkeuring",
+        "title": "Openingstijden op de website aanpassen",
+        "you": "Jij",
+        "staff": "Adiutor Support",
+        "question": "Onze openingstijden veranderen volgende maand. Kunnen jullie ze op de website aanpassen?",
+        "answer": "Staat klaar op de testsite. Kijk je even en keur je het goed? Dan zetten we het live.",
+        "reply": "Reageren",
+        "approve": "Goedkeuren"
+      }
+    },
+    "signInError": {
+      "heading": "Inloggen is niet gelukt",
+      "signInAgain": "Opnieuw inloggen"
+    },
+    "theme": {
+      "label": "Thema",
+      "system": "Systeem",
+      "light": "Licht",
+      "dark": "Donker"
+    },
+    "notFound": {
+      "title": "Niet gevonden",
+      "heading": "Pagina niet gevonden",
+      "description": "Deze pagina bestaat niet, of je hebt er geen toegang toe."
+    },
+    "error": {
+      "title": "Er ging iets mis",
+      "description": "Deze pagina kon niet laden. Probeer het opnieuw, of ga naar je dashboard."
+    },
+    "device": "{browser, select, unknown {Onbekende browser} other {{browser}}} op {os, select, unknown {onbekend systeem} other {{os}}}",
+    "language": {
+      "label": "Taal",
+      "emailField": "Taal van de e-mail",
+      "emailHintInvitation": "De uitnodiging en de herinnering worden in deze taal verstuurd.",
+      "emailHintAccount": "De welkomstmail en het account gebruiken deze taal, tot de gebruiker zelf een taal kiest.",
+      "defaultLabel": "Standaardtaal",
+      "defaultHint": "Voor iedereen die nog geen taal heeft gekozen. Je kunt dit later wijzigen.",
+      "defaultDescription": "Adiutor gebruikt deze taal voor iedereen die nog geen eigen taal heeft gekozen, ook in de e-mails die ze ontvangen.",
+      "saveDefault": "Standaardtaal opslaan",
+      "defaultSaved": "Standaardtaal opgeslagen.",
+      "followDefault": "Standaard",
+      "followDefaultDescription": "Volgt de standaardtaal van Adiutor, nu {language}."
+    },
+    "preferences": {
+      "button": "Thema en taal: {theme, select, light {Licht} dark {Donker} other {Systeem}}, {language}"
+    }
+  }
+}

@@ -20,7 +20,6 @@ import {
   rateLimitBucket,
   user,
 } from '@/db/schema';
-import { INVITE_LINKS_NOT_ALLOWED } from '@/lib/authz/permissions';
 import { defined, firstRow } from '@/lib/defined';
 import { hashToken } from '@/lib/sign-in/tokens';
 
@@ -29,7 +28,9 @@ import {
   atTheSameMoment,
   createCompany,
   createUser,
+  emailLanguage,
   fillRateLimitBucket,
+  inLanguage,
   memberActor,
   rateLimitHits,
   setupTestContext,
@@ -125,6 +126,7 @@ async function claimIn(tx: DatabaseTransaction, linkId: string, email: string) {
     invitedBy: used.createdBy,
     fromLink: true,
     baseUrl: ctx.baseUrl,
+    locale: 'en-US',
   });
   await tx.update(inviteLink).set({ invitationId }).where(eq(inviteLink.id, linkId));
   return defined(invitationId, 'the new invitation');
@@ -135,7 +137,7 @@ describe('invite links', () => {
     const token = await newLinkToken();
     expect(await getInviteLinkPreview(ctx, token)).toEqual({
       companyName: 'Adiutor Tests',
-      roleLabel: 'Client',
+      role: 'client',
     });
 
     expect(await claimInviteLink(ctx, token, 'New@Adiutor.test')).toEqual({ status: 'sent' });
@@ -145,7 +147,7 @@ describe('invite links', () => {
     expect(confirmation.subject).toBe('Confirm your email to join Adiutor Tests');
     expect(await getInvitationPreview(ctx, tokenFrom(confirmation))).toEqual({
       companyName: 'Adiutor Tests',
-      roleLabel: 'Client',
+      role: 'client',
       fromInviteLink: true,
     });
 
@@ -207,7 +209,7 @@ describe('invite links', () => {
     expect(link).toMatchObject({ usedByEmail: email, invitationId: null });
     expect(await getInvitationPreview(ctx, tokenFrom(kept))).toEqual({
       companyName: 'Adiutor Tests',
-      roleLabel: 'Admin',
+      role: 'admin',
       fromInviteLink: false,
     });
   });
@@ -286,7 +288,7 @@ describe('invite links', () => {
     ).toEqual([{ id: before.id }]);
     expect(await getInvitationPreview(ctx, adminToken)).toEqual({
       companyName: 'Adiutor Tests',
-      roleLabel: 'Admin',
+      role: 'admin',
       fromInviteLink: false,
     });
     const alreadyInvited = defined(
@@ -309,6 +311,31 @@ describe('invite links', () => {
       .from(auditEvent)
       .where(eq(auditEvent.action, 'invite_link_claimed'));
     expect(claims.map(({ details }) => details.status).sort()).toEqual(['already_invited', 'sent']);
+  });
+
+  it('write the confirmation and an “already invited” email in the language of whoever opened the link', async () => {
+    await inviteByEmail(ctx, admin, {
+      companyId: testCompany.id,
+      email: 'invited@adiutor.test',
+      role: 'admin',
+      locale: 'en-US',
+    });
+    sent.length = 0;
+
+    const spanish = inLanguage(ctx, 'es-ES');
+    await claimInviteLink(spanish, await newLinkToken(), 'new@adiutor.test');
+    await claimInviteLink(spanish, await newLinkToken(), 'invited@adiutor.test');
+
+    expect(sent.map((email) => [email.to, emailLanguage(email), email.subject])).toEqual([
+      ['new@adiutor.test', 'es-ES', 'Confirma tu correo para unirte a Adiutor Tests'],
+      ['invited@adiutor.test', 'es-ES', 'Ya tienes una invitación a Adiutor Tests en Adiutor'],
+    ]);
+    // The invitation the link turned into keeps that language, for its resends and reminder.
+    const [claimed] = await db
+      .select({ locale: invitation.locale })
+      .from(invitation)
+      .where(eq(invitation.email, 'new@adiutor.test'));
+    expect(claimed?.locale).toBe('es-ES');
   });
 
   it('respond the same when the email is already a member', async () => {
@@ -343,7 +370,7 @@ describe('invite links', () => {
         const viewer = await staffActor(db, role);
         await expect(joinWithInviteLink(ctx, token, viewer)).rejects.toMatchObject({
           code: 'forbidden',
-          message: INVITE_LINKS_NOT_ALLOWED,
+          key: 'errors.inviteLinks.notAllowed',
         });
       }),
     );
@@ -526,7 +553,7 @@ describe('invite links', () => {
     /** The refusal for an actor whose rights are gone by the time the change is made. */
     const FORBIDDEN = expect.objectContaining({
       code: 'forbidden',
-      message: "You don't have permission to do that.",
+      key: 'errors.forbidden',
     });
 
     /**
@@ -636,7 +663,7 @@ describe('invite link claims and the invitation limits', () => {
   /** The refusal past a limit, the same whatever address was entered. */
   const LIMITED = expect.objectContaining({
     code: 'rate_limited',
-    message: LINK_CLAIM_LIMITED_MESSAGE,
+    key: LINK_CLAIM_LIMITED_MESSAGE,
   });
 
   it('count each claim like an invitation its creator sends, for them and the company', async () => {
@@ -723,7 +750,7 @@ describe('resending an invitation that came from an invite link', () => {
     expect(await getInvitationPreview(ctx, token)).toMatchObject({ fromInviteLink: true });
     await expect(acceptInvitation(ctx, token, support)).rejects.toMatchObject({
       code: 'forbidden',
-      message: INVITE_LINKS_NOT_ALLOWED,
+      key: 'errors.inviteLinks.notAllowed',
     });
 
     // Someone else, invited from a link and resent, can still accept it.

@@ -20,7 +20,10 @@ import {
   createCompany,
   createStaffSettings,
   createUser,
+  emailLanguage,
+  inLanguage,
   memberActor,
+  setUserLocale,
   staffActor,
   tokenFrom,
 } from '../../../../tests/integration/helpers';
@@ -49,7 +52,7 @@ describe('re-inviting, resending and revoking', () => {
     expect(await getInvitationPreview(ctx, defined(first, 'the first token'))).toBeNull();
     expect(await getInvitationPreview(ctx, defined(second, 'the second token'))).toEqual({
       companyName: 'Adiutor Tests',
-      roleLabel: 'Client',
+      role: 'client',
       fromInviteLink: false,
     });
     expect((await listPendingInvitations(ctx, companyAdmin, testCompany.id)).items).toHaveLength(1);
@@ -85,6 +88,42 @@ describe('re-inviting, resending and revoking', () => {
       await getInvitationPreview(ctx, tokenFrom(defined(sent[1], 'the second email'))),
     ).toBeNull();
     expect((await listPendingInvitations(ctx, companyAdmin, testCompany.id)).items).toHaveLength(0);
+  });
+
+  it('resends in the invitation’s language, not the resender’s, unless the invitee saved one', async () => {
+    const input = { companyId: testCompany.id, role: 'client', locale: 'nl-NL' } as const;
+    await inviteByEmail(ctx, companyAdmin, { ...input, email: 'new@adiutor.test' });
+    await inviteByEmail(ctx, companyAdmin, { ...input, email: 'existing@adiutor.test' });
+    const [existing] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, 'existing@adiutor.test'));
+    await setUserLocale(db, defined(existing, 'the existing user').id, 'es-ES');
+    sent.length = 0;
+
+    const pending = (await listPendingInvitations(ctx, companyAdmin, testCompany.id)).items;
+    await Promise.all(
+      pending.map((found) =>
+        resendInvitation(inLanguage(ctx, 'en-US'), companyAdmin, {
+          companyId: testCompany.id,
+          invitationId: found.id,
+        }),
+      ),
+    );
+
+    expect(
+      sent
+        .map((email) => [email.to, emailLanguage(email)])
+        .sort(([a], [b]) => (a ?? '').localeCompare(b ?? '')),
+    ).toEqual([
+      ['existing@adiutor.test', 'es-ES'],
+      ['new@adiutor.test', 'nl-NL'],
+    ]);
+    const open = await db
+      .select({ locale: invitation.locale })
+      .from(invitation)
+      .where(isNull(invitation.revokedAt));
+    expect(open.map(({ locale }) => locale)).toEqual(['nl-NL', 'nl-NL']);
   });
 });
 
@@ -172,7 +211,7 @@ describe.each([
       status: 'rejected',
       reason: expect.objectContaining({
         code: 'forbidden',
-        message: "You don't have permission to do that.",
+        key: 'errors.forbidden',
       }),
     });
     expect(await openInvitations()).toEqual(before);

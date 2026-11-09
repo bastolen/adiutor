@@ -2,11 +2,12 @@
  * @file Messages of the account pages: after coming back from an email
  * verification link (shown in the Profile page's Email card) or from
  * connecting GitHub/Google (in the Security page's Connected accounts card),
- * and for a refused disconnect.
+ * and for a refused disconnect, in the reader's language (`account.messages`).
  */
-import ownValue from '@/lib/own-value';
+import type { useTranslations } from 'next-intl';
+
 import { withSection } from '@/lib/redirect';
-import getAuthErrorMessage from '@/lib/sign-in/auth-error-messages';
+import { type AuthTranslator, signInErrorText } from '@/lib/sign-in/auth-error-messages';
 import { isOAuthProvider, PROVIDER_LABELS } from '@/lib/sign-in/oauth-providers';
 import {
   MFA_REQUIRED_FOR_ROLE,
@@ -26,6 +27,9 @@ export interface AccountMessage {
 /** The anchor of the Profile page's Email card, where verifying the address starts and ends. */
 export const EMAIL_SECTION = 'email';
 
+/** The anchor of the Profile page's Language card, where the page reloads after a change. */
+export const LANGUAGE_SECTION = 'language';
+
 /**
  * Where the email verification link comes back to: the Email card on the
  * Profile page, saying it worked (Better Auth adds `error=<code>` before the
@@ -41,39 +45,59 @@ export interface AccountParams {
   connected?: string | string[];
   /** Better Auth's error code when verifying or connecting failed. */
   error?: string | string[];
+  /** Set by us after saving the language (`saved`), once the page reloaded in it. */
+  language?: string | string[];
 }
 
-/** Messages per Better Auth error code. */
-const ERROR_MESSAGES: Record<string, string> = {
-  TOKEN_EXPIRED: 'This verification link has expired. Send a new one.',
-  INVALID_TOKEN: 'This verification link is invalid. Send a new one.',
-  account_already_linked_to_different_user:
-    'That account is already connected to another Adiutor account.',
-  email_not_verified: "The provider hasn't verified that account's email address.",
-};
+/**
+ * Explains Better Auth's error code after verifying an address or connecting
+ * an account failed.
+ *
+ * @param t - Translates the `account` namespace (`useTranslations` or `getTranslations`).
+ * @param code - The code.
+ * @returns The message; a general one for codes without their own.
+ */
+function errorText(t: ReturnType<typeof useTranslations<'account'>>, code: string): string {
+  switch (code) {
+    case 'TOKEN_EXPIRED':
+      return t('messages.verificationExpired');
+    case 'INVALID_TOKEN':
+      return t('messages.verificationInvalid');
+    case 'account_already_linked_to_different_user':
+      return t('messages.linkedToOther');
+    case 'email_not_verified':
+      return t('messages.emailNotVerified');
+    default:
+      return t('messages.failed');
+  }
+}
 
 /**
  * Works out the message from the query parameters. Better Auth appends
  * `error=<code>` to our return URL when something fails, so an error wins
  * over our success parameters.
  *
+ * @param t - Translates the `account` namespace (`useTranslations` or `getTranslations`).
  * @param params - The page's query parameters.
  * @returns The message, or `null` when there's nothing to say.
  */
-export default function accountMessage(params: AccountParams): AccountMessage | null {
+export default function accountMessage(
+  t: ReturnType<typeof useTranslations<'account'>>,
+  params: AccountParams,
+): AccountMessage | null {
   const error = searchParam(params.error);
   if (error) {
-    return {
-      tone: 'error',
-      text: ownValue(ERROR_MESSAGES, error) ?? 'That didn’t work. Please try again.',
-    };
+    return { tone: 'error', text: errorText(t, error) };
   }
   if (params.verified) {
-    return { tone: 'success', text: 'Your email address is verified.' };
+    return { tone: 'success', text: t('messages.verified') };
   }
   const connected = searchParam(params.connected);
   if (isOAuthProvider(connected)) {
-    return { tone: 'success', text: `${PROVIDER_LABELS[connected]} is now connected.` };
+    return {
+      tone: 'success',
+      text: t('messages.connected', { provider: PROVIDER_LABELS[connected] }),
+    };
   }
   return null;
 }
@@ -81,18 +105,24 @@ export default function accountMessage(params: AccountParams): AccountMessage | 
 /**
  * The message for a refused disconnect.
  *
+ * @param t - Translates the `account` namespace (`useTranslations` or `getTranslations`).
+ * @param tAuth - Translates the `auth` namespace, for a sign-in change still in progress.
  * @param code - Better Auth's error code, if any.
  * @returns The message.
  */
-export function disconnectFailureMessage(code: string | undefined): string {
+export function disconnectFailureMessage(
+  t: ReturnType<typeof useTranslations<'account'>>,
+  tAuth: AuthTranslator,
+  code: string | undefined,
+): string {
   if (code === SESSION_NOT_FRESH.code) {
-    return 'For your safety, sign out and in again before disconnecting.';
+    return t('messages.disconnectNotFresh');
   }
   if (code === MFA_REQUIRED_FOR_ROLE.code) {
-    return 'Your role requires MFA, and this account gives you it. Add a passkey first, then try again.';
+    return t('messages.disconnectMfaRequired');
   }
   if (code === SIGN_IN_CHANGE_IN_PROGRESS.code) {
-    return getAuthErrorMessage(code) ?? 'Disconnecting failed. Please try again.';
+    return signInErrorText(tAuth, code) ?? t('messages.disconnectFailed');
   }
-  return 'Disconnecting failed. Please try again.';
+  return t('messages.disconnectFailed');
 }

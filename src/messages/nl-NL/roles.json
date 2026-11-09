@@ -1,0 +1,32 @@
+{
+  "roles": {
+    "platform_admin": {
+      "label": "Beheerder",
+      "description": "Beheert medewerkers, bedrijven en instellingen."
+    },
+    "manager": {
+      "label": "Manager",
+      "description": "Beheert bedrijven en hun mensen."
+    },
+    "finance": {
+      "label": "Financiën",
+      "description": "Bekijkt alle bedrijven."
+    },
+    "support": {
+      "label": "Support",
+      "description": "Werkt aan verzoeken."
+    },
+    "admin": {
+      "label": "Beheerder",
+      "description": "Dient verzoeken in en beheert wie in het bedrijf toegang heeft."
+    },
+    "client": {
+      "label": "Klant",
+      "description": "Dient verzoeken in, reageert erop en keurt werk goed."
+    },
+    "watcher": {
+      "label": "Meekijker",
+      "description": "Volgt verzoeken zonder mee te doen."
+    }
+  }
+}

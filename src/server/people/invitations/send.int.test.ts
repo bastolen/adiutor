@@ -1,11 +1,11 @@
 /**
  * @file Integration tests for inviting people by email: privacy, many addresses
- * at once, and who may invite.
+ * at once, the invitation's language, and who may invite.
  */
 import { eq, sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { company, invitation, user } from '@/db/schema';
+import { company, invitation, staffSettings, user } from '@/db/schema';
 import { defined } from '@/lib/defined';
 
 import { listPendingInvitations } from './manage';
@@ -15,8 +15,11 @@ import {
   createCompany,
   createStaffSettings,
   createUser,
+  emailLanguage,
+  inLanguage,
   inSequence,
   memberActor,
+  setUserLocale,
   staffActor,
 } from '../../../../tests/integration/helpers';
 import type { Actor } from '../../actor';
@@ -106,7 +109,8 @@ describe('inviteManyByEmail', () => {
       }),
     ).rejects.toMatchObject({
       code: 'invalid',
-      message: 'This isn’t a valid email address: nope.',
+      key: 'validation.emailList.invalid',
+      values: { count: 1, emails: 'nope' },
     });
     await expect(
       inviteManyByEmail(ctx, companyAdmin, {
@@ -116,7 +120,8 @@ describe('inviteManyByEmail', () => {
       }),
     ).rejects.toMatchObject({
       code: 'invalid',
-      message: 'These aren’t valid email addresses: nope, nada.',
+      key: 'validation.emailList.invalid',
+      values: { count: 2, emails: 'nope, nada' },
     });
     const many = Array.from({ length: 21 }, (_, index) => `user${index}@adiutor.test`).join(',');
     await expect(
@@ -125,7 +130,11 @@ describe('inviteManyByEmail', () => {
         emails: many,
         role: 'client',
       }),
-    ).rejects.toMatchObject({ code: 'invalid', message: expect.stringContaining('up to 20') });
+    ).rejects.toMatchObject({
+      code: 'invalid',
+      key: 'validation.emailList.tooMany',
+      values: { max: 20 },
+    });
     expect(sent).toEqual([]);
   });
 
@@ -212,7 +221,7 @@ describe('inviteManyByEmail', () => {
           {
             email: second,
             ok: false,
-            message: 'Someone changed this at the same moment. Try again.',
+            error: expect.objectContaining({ code: 'conflict', key: 'errors.concurrentChange' }),
           },
           { email: 'third@adiutor.test', ok: true, status: 'sent' },
         ],
@@ -229,6 +238,66 @@ describe('inviteManyByEmail', () => {
       'A bulk invitation hit a database deadlock; that address was reported as a conflict.',
     );
     warn.mockRestore();
+  });
+});
+
+describe('the invitation’s language', () => {
+  it('is the one chosen, else Adiutor’s default (never the sender’s), and is stored with it', async () => {
+    await db.update(staffSettings).set({ defaultLocale: 'es-ES' });
+    const input = { companyId: testCompany.id, role: 'client' };
+    await inviteByEmail(ctx, companyAdmin, { ...input, email: 'nl@adiutor.test', locale: 'nl-NL' });
+    await inviteByEmail(inLanguage(ctx, 'en-US'), companyAdmin, {
+      ...input,
+      email: 'es@adiutor.test',
+    });
+
+    expect(sent.map((email) => [email.to, emailLanguage(email)])).toEqual([
+      ['nl@adiutor.test', 'nl-NL'],
+      ['es@adiutor.test', 'es-ES'],
+    ]);
+    expect(defined(sent[0], 'the Dutch invitation').subject).toMatch(
+      / nodigt je uit voor Adiutor Tests op Adiutor$/,
+    );
+    const stored = await db
+      .select({ email: invitation.email, locale: invitation.locale })
+      .from(invitation)
+      .orderBy(invitation.email);
+    expect(stored).toEqual([
+      { email: 'es@adiutor.test', locale: 'es-ES' },
+      { email: 'nl@adiutor.test', locale: 'nl-NL' },
+    ]);
+  });
+
+  it('gives someone with an account their own language, a member’s “already a member” too', async () => {
+    const [existing, member] = await Promise.all(
+      ['existing@adiutor.test', 'member@adiutor.test'].map(async (address) =>
+        defined(
+          (await db.select({ id: user.id }).from(user).where(eq(user.email, address)))[0],
+          address,
+        ),
+      ),
+    );
+    await setUserLocale(db, defined(existing, 'existing').id, 'nl-NL');
+    await setUserLocale(db, defined(member, 'member').id, 'es-ES');
+
+    await inviteManyByEmail(ctx, companyAdmin, {
+      companyId: testCompany.id,
+      emails: 'existing@adiutor.test, member@adiutor.test, new@adiutor.test',
+      role: 'client',
+      locale: 'en-US',
+    });
+
+    expect(sent.map((email) => [email.to, emailLanguage(email)])).toEqual([
+      ['existing@adiutor.test', 'nl-NL'],
+      ['member@adiutor.test', 'es-ES'],
+      ['new@adiutor.test', 'en-US'],
+    ]);
+    // The invitation keeps the language it was sent with.
+    const [stored] = await db
+      .select({ locale: invitation.locale })
+      .from(invitation)
+      .where(eq(invitation.email, 'existing@adiutor.test'));
+    expect(stored?.locale).toBe('en-US');
   });
 });
 

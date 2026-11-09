@@ -6,6 +6,8 @@
  */
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 import { useRecentConfirmation } from '@/components/auth/recent-confirmation';
 import ActionDialog from '@/components/ui/action-dialog';
 import Card from '@/components/ui/card';
@@ -22,7 +24,10 @@ const SECTION = 'deactivate';
 interface DeactivateCardProps {
   /** Whether the user has a password, which they then type to confirm. */
   hasPassword: boolean;
-  /** Why they can't deactivate (they're the last Admin of something), or `null`. */
+  /**
+   * Why they can't deactivate (they're the last Admin of something) and what
+   * to do first, or `null`.
+   */
   blockedReason: string | null;
 }
 
@@ -39,27 +44,24 @@ interface DeactivateCardProps {
  * @returns The card.
  */
 export default function DeactivateCard({ hasPassword, blockedReason }: DeactivateCardProps) {
+  const t = useTranslations('account');
   const { askToConfirm } = useRecentConfirmation(SECTION);
   const blocked = blockedReason !== null;
   return (
     <Card
       id={SECTION}
-      title="Deactivate account"
+      title={t('security.deactivate.title')}
       tone="danger"
-      description={
-        blocked
-          ? `${blockedReason} Make someone else an Admin before you deactivate your account.`
-          : "You're signed out everywhere and can't sign in until an Admin reactivates your account. Nothing is deleted."
-      }
+      description={blockedReason ?? t('security.deactivate.description')}
       actions={
         blocked ? undefined : (
           <ActionDialog
             action={deactivateAccountAction}
-            triggerLabel="Deactivate"
+            triggerLabel={t('security.deactivate.trigger')}
             triggerVariant="danger-subtle"
-            title="Deactivate your account?"
-            description="You're signed out on every device right away. To use Adiutor again, ask an Admin to reactivate your account."
-            confirmLabel="Deactivate my account"
+            title={t('security.deactivate.dialogTitle')}
+            description={t('security.deactivate.dialogDescription')}
+            confirmLabel={t('security.deactivate.confirm')}
             onTriggerClick={(event) => {
               if (askToConfirm()) {
                 event.preventDefault();
@@ -68,7 +70,7 @@ export default function DeactivateCard({ hasPassword, blockedReason }: Deactivat
           >
             {hasPassword && (
               <TextField
-                label="Current password"
+                label={t('security.currentPassword')}
                 name="password"
                 type="password"
                 autoComplete="current-password"

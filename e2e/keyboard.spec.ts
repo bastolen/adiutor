@@ -508,22 +508,48 @@ test.describe('signed in', () => {
 test.describe('signed out', () => {
   test.use({ reducedMotion: 'reduce' });
 
-  test('the theme button shows a pointer, opens with Enter and returns focus on Escape', async ({
+  test('the theme and language button shows a pointer, works with the keyboard and returns focus on Escape', async ({
     page,
   }) => {
     await page.goto('/auth');
-    const trigger = page.getByRole('button', { name: 'Theme: System' });
+    const trigger = page.getByRole('button', {
+      name: 'Theme and language: System, English (US)',
+    });
     expect(await cursorOf(trigger)).toBe('pointer');
 
     await trigger.focus();
     await page.keyboard.press('Enter');
+    // The theme row comes first; left and right move within it.
     await expect(page.getByRole('menuitemradio', { name: 'System' })).toBeFocused();
-    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('menuitemradio', { name: 'Light' })).toBeFocused();
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.getByRole('menuitemradio', { name: 'System' })).toBeFocused();
+    // Down goes through the row, then on to the languages, Default first.
+    for (const name of ['Light', 'Dark', 'Default', 'English (US)']) {
+      // eslint-disable-next-line no-await-in-loop -- Each key moves on from where the last one went.
+      await page.keyboard.press('ArrowDown');
+      // eslint-disable-next-line no-await-in-loop -- Checked before the next key is pressed.
+      await expect(page.getByRole('menuitemradio', { name })).toBeFocused();
+    }
     await page.keyboard.press('Escape');
-
     await expect(page.getByRole('menu')).toHaveCount(0);
     await expect(trigger).toBeFocused();
+
+    // Enter on another language reloads the page in it.
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('menuitemradio', { name: 'System' })).toBeFocused();
+    for (const name of ['Light', 'Dark', 'Default', 'English (US)', 'Nederlands']) {
+      // eslint-disable-next-line no-await-in-loop -- Each key moves on from where the last one went.
+      await page.keyboard.press('ArrowDown');
+      // eslint-disable-next-line no-await-in-loop -- Checked before the next key is pressed.
+      await expect(page.getByRole('menuitemradio', { name })).toBeFocused();
+    }
+    await page.keyboard.press('Enter');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'nl-NL');
+    await expect(
+      page.getByRole('button', { name: 'Thema en taal: Systeem, Nederlands' }),
+    ).toBeVisible();
   });
 });
 

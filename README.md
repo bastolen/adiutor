@@ -39,6 +39,10 @@ built; requests, the tickets themselves, come next.
   [Security measures](docs/security-measures.md).
 - **Accessible, in light and dark mode.** Built to meet WCAG 2.2 AA, with full keyboard support.
   See [Design, accessibility and dark mode](docs/design.md).
+- **English, Dutch and Spanish.** The staff choose Adiutor's default language, which everyone
+  follows until they choose their own on the sign-in page or their account, without the address
+  changing; emails reach them in it. Invitations go out in the language the sender picks. See
+  [Languages](docs/i18n.md).
 
 **Coming next: requests.** Companies will raise requests, comment on them and approve them, and
 follow them through with the staff. The company roles are already set up for it.
@@ -46,7 +50,7 @@ follow them through with the staff. The company roles are already set up for it.
 ## Tech stack
 
 - **App:** [Next.js](https://nextjs.org) 16 (App Router, Cache Components), React 19 and
-  TypeScript
+  TypeScript, with [next-intl](https://next-intl.dev) for languages
 - **Interface:** Tailwind CSS 4 and SCSS, [Radix UI](https://www.radix-ui.com) and
   [Lucide](https://lucide.dev) icons
 - **Sign-in:** [Better Auth](https://www.better-auth.com), with passkeys, two-factor
@@ -111,6 +115,7 @@ The [docs](docs/README.md) go into detail, one topic each:
 | [Security measures](docs/security-measures.md)            | Audit log, rate limits, tokens, names, lock order, headers, CSP          |
 | [Email](docs/email.md)                                    | Templates, previews, Mailpit, how emails are sent                        |
 | [Design, accessibility and dark mode](docs/design.md)     | Components, tables, colours, keyboard support, dark mode, brand          |
+| [Languages](docs/i18n.md)                                 | Choosing a language, translation catalogues, formatting, checks          |
 | [Deploying and running](docs/deploying.md)                | Install and upgrade, Docker, server setup, client IP, jobs, logs, leaks  |
 | [Decision records](docs/decisions/README.md)              | Why Adiutor works the way it does, one decision per page                 |
 

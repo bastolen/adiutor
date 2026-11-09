@@ -2,12 +2,14 @@
  * @file Company settings, served at `/companies/[companyId]/settings`:
  * rename, and deactivate or reactivate (staff only).
  */
+import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import Card from '@/components/ui/card';
 import RowAction from '@/components/ui/row-action';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import ToastOnArrival from '@/components/ui/toast-on-arrival';
+import ClientMessages from '@/lib/i18n/client-messages';
 import { type SearchParams, searchParam } from '@/lib/tables/search-params';
 import { requireCompanyAccess } from '@/server/authz';
 import { companyPermissionMetadata } from '@/server/page-metadata';
@@ -20,10 +22,16 @@ import CompanyForm from './company-form';
  * rest) for those who may see the page (`company:update`), and the 404 page's title
  * for everyone else, who get the 404 page.
  */
-export const generateMetadata = companyPermissionMetadata('company:update', { title: 'Settings' });
+// i18n-check t('companies.settings.title')
+export const generateMetadata = companyPermissionMetadata(
+  'company:update',
+  'companies.settings.title',
+);
 
 /**
- * Shows the settings the user may change.
+ * Shows the settings the user may change. Its text comes from the
+ * `companies` namespace (the form, a client component, gets it through
+ * `ClientMessages`).
  *
  * @param props - Component props.
  * @param props.params - Route parameters: the company's ID or URL name.
@@ -37,7 +45,11 @@ async function Settings({
   params: Promise<{ companyId: string }>;
   searchParams: Promise<SearchParams>;
 }) {
-  const [{ companyId }, query] = await Promise.all([params, searchParams]);
+  const [{ companyId }, query, t] = await Promise.all([
+    params,
+    searchParams,
+    getTranslations('companies.settings'),
+  ]);
   const { company, permissions } = await requireCompanyAccess(companyId, 'company:update');
   const deactivated = company.deactivatedAt !== null;
   // Set by the redirect after a new URL name; not part of any link on this page.
@@ -45,38 +57,37 @@ async function Settings({
 
   return (
     <>
-      {saved && <ToastOnArrival message="Saved." />}
-      <Card title="Details" description="The name shown in Adiutor, and the address of its pages.">
-        <CompanyForm companyId={company.id} name={company.name} slug={company.slug} />
+      {saved && <ToastOnArrival message={t('saved')} />}
+      <Card title={t('details.title')} description={t('details.description')}>
+        <ClientMessages namespaces={['companies.settings.form']}>
+          <CompanyForm companyId={company.id} name={company.name} slug={company.slug} />
+        </ClientMessages>
       </Card>
       {permissions.has('company:deactivate') && (
         <Card
-          title="Danger zone"
+          title={t('danger.title')}
           tone={deactivated ? 'default' : 'danger'}
           description={
-            deactivated
-              ? 'This company is deactivated. Reactivating gives its people access again; nothing was deleted.'
-              : "Its people lose access and can't raise requests until it's reactivated. Nothing is deleted."
+            deactivated ? t('danger.deactivatedDescription') : t('danger.activeDescription')
           }
         >
           <div>
             <RowAction
               action={setActiveAction}
               fields={{ companyId: company.id, active: String(deactivated) }}
-              label={deactivated ? 'Reactivate company' : 'Deactivate company'}
+              label={deactivated ? t('danger.reactivate.label') : t('danger.deactivate.label')}
               variant={deactivated ? 'secondary' : 'danger'}
               confirm={
                 deactivated
                   ? {
-                      title: `Reactivate ${company.name}?`,
-                      description: 'Its people get access again.',
-                      confirmLabel: 'Reactivate',
+                      title: t('danger.reactivate.title', { company: company.name }),
+                      description: t('danger.reactivate.description'),
+                      confirmLabel: t('danger.reactivate.confirm'),
                     }
                   : {
-                      title: `Deactivate ${company.name}?`,
-                      description:
-                        "Its people lose access and can't raise requests until it's reactivated. Nothing is deleted.",
-                      confirmLabel: 'Deactivate',
+                      title: t('danger.deactivate.title', { company: company.name }),
+                      description: t('danger.activeDescription'),
+                      confirmLabel: t('danger.deactivate.confirm'),
                     }
               }
             />

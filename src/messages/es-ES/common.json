@@ -1,0 +1,138 @@
+{
+  "common": {
+    "app": {
+      "description": "Consigue ayuda sin perseguir correos. Informa de un problema o pide algo nuevo, sigue su progreso y aprueba el trabajo, todo en un mismo lugar."
+    },
+    "documentTitle": "{page} · Adiutor",
+    "loading": "Cargando…",
+    "skipToContent": "Saltar al contenido principal",
+    "homeLink": "Inicio de Adiutor",
+    "actions": {
+      "cancel": "Cancelar",
+      "close": "Cerrar",
+      "dismiss": "Descartar",
+      "dismissNotification": "Descartar notificación",
+      "goBack": "Volver",
+      "search": "Buscar",
+      "apply": "Aplicar",
+      "clear": "Borrar",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "tryAgain": "Volver a intentarlo",
+      "goToDashboard": "Ir a tu panel"
+    },
+    "relativeTime": {
+      "justNow": "hace un momento",
+      "never": "Nunca"
+    },
+    "pagination": {
+      "showing": "{first, number}–{last, number} de {total, number}",
+      "pages": "Páginas de {rows}",
+      "perPageGroup": "Por página, {rows}",
+      "perPage": "Por página",
+      "perPageOption": "{size, number} por página",
+      "previous": "Anterior",
+      "previousPage": "Página anterior",
+      "next": "Siguiente",
+      "nextPage": "Página siguiente",
+      "page": "Página {page, number}",
+      "pageOf": "Página {page, number} de {pages, number}"
+    },
+    "sort": {
+      "button": "Ordenar",
+      "trigger": "Ordenar {rows}",
+      "triggerSorted": "Ordenar {rows}: {sort}",
+      "sortBy": "Ordenar por"
+    },
+    "dateRange": {
+      "from": "Desde",
+      "to": "Hasta"
+    },
+    "errorReference": {
+      "intro": "Si sigue ocurriendo, envía esta referencia a un administrador:",
+      "copyText": "Referencia {reference} ({when})",
+      "copy": "Copiar referencia"
+    },
+    "codeField": {
+      "code": "Código",
+      "backupCode": "Código de respaldo",
+      "authenticatorHint": "El código de 6 dígitos que muestra tu app de autenticación."
+    },
+    "resendCode": {
+      "send": "Enviar un código nuevo",
+      "wait": "Enviar un código nuevo en {wait}"
+    },
+    "providerStepUp": {
+      "region": "Confirmación con {provider}",
+      "dismiss": "Descartar el mensaje de confirmación con {provider}",
+      "mfaOff": "{provider} no ha podido confirmar que eres tú: la autenticación en dos factores está desactivada en tu cuenta de {provider}. Actívala en {provider} o usa otro segundo paso.",
+      "unchecked": "{provider} no ha podido confirmar que eres tú: ahora mismo no hemos podido comprobar la autenticación en dos factores de tu cuenta de {provider}. Vuelve a intentarlo en un momento."
+    },
+    "providerLinked": {
+      "region": "{provider} conectado",
+      "dismiss": "Descartar el aviso de {provider}",
+      "named": "Tu cuenta de {provider} <name>{account}</name> ya está conectada a tu cuenta de Adiutor, porque has iniciado sesión con ella. ¿No has sido tú? <link>Desconéctala en la página Seguridad</link>.",
+      "unnamed": "Tu cuenta de {provider} ya está conectada a tu cuenta de Adiutor, porque has iniciado sesión con ella. ¿No has sido tú? <link>Desconéctala en la página Seguridad</link>."
+    },
+    "accessNotice": {
+      "dismiss": "Descartar este aviso",
+      "steppedDown": "Has dejado el rol de Administrador del personal. Otro Administrador del personal puede devolvértelo.",
+      "leftStaff": "Ya no formas parte del personal. Tu cuenta se mantiene y un Administrador del personal puede volver a invitarte.",
+      "leftCompany": "Has salido de la empresa. Tu cuenta se mantiene y sus Administradores pueden volver a invitarte.",
+      "companySteppedDown": "Ya no eres Administrador de esta empresa, así que no gestionas sus miembros. Otro Administrador puede volver a darte el rol."
+    },
+    "recentConfirmation": {
+      "confirm": "Confirma que eres tú"
+    },
+    "brandPanel": {
+      "headline": "Consigue ayuda sin perseguir correos.",
+      "pitch": "Informa de un problema o pide algo nuevo, sigue su progreso y aprueba el trabajo, todo en un mismo lugar.",
+      "preview": {
+        "status": "Esperando tu aprobación",
+        "title": "Actualizar el horario en la web",
+        "you": "Tú",
+        "staff": "Soporte Adiutor",
+        "question": "Nuestro horario cambia el mes que viene. ¿Podéis actualizarlo en la web?",
+        "answer": "Hecho en la web de pruebas. Revísalo y apruébalo, y lo publicaremos.",
+        "reply": "Responder",
+        "approve": "Aprobar"
+      }
+    },
+    "signInError": {
+      "heading": "No se ha podido iniciar sesión",
+      "signInAgain": "Volver a iniciar sesión"
+    },
+    "theme": {
+      "label": "Tema",
+      "system": "Sistema",
+      "light": "Claro",
+      "dark": "Oscuro"
+    },
+    "notFound": {
+      "title": "No encontrada",
+      "heading": "Página no encontrada",
+      "description": "Esta página no existe o no tienes acceso a ella."
+    },
+    "error": {
+      "title": "Algo ha ido mal",
+      "description": "Esta página no se ha podido cargar. Vuelve a intentarlo o ve a tu panel."
+    },
+    "device": "{browser, select, unknown {Navegador desconocido} other {{browser}}} en {os, select, unknown {sistema desconocido} other {{os}}}",
+    "language": {
+      "label": "Idioma",
+      "emailField": "Idioma del correo",
+      "emailHintInvitation": "La invitación y su recordatorio se envían en este idioma.",
+      "emailHintAccount": "El correo de bienvenida y la cuenta usan este idioma hasta que elija el suyo.",
+      "defaultLabel": "Idioma predeterminado",
+      "defaultHint": "Para quien aún no haya elegido un idioma. Puedes cambiarlo más adelante.",
+      "defaultDescription": "Adiutor usa este idioma para quien aún no haya elegido el suyo, también en los correos que le envía.",
+      "saveDefault": "Guardar idioma predeterminado",
+      "defaultSaved": "Idioma predeterminado guardado.",
+      "followDefault": "Predeterminado",
+      "followDefaultDescription": "Sigue el idioma predeterminado de Adiutor, ahora {language}."
+    },
+    "preferences": {
+      "button": "Tema e idioma: {theme, select, light {Claro} dark {Oscuro} other {Sistema}}, {language}"
+    }
+  }
+}

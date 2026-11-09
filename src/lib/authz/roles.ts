@@ -26,45 +26,29 @@ export type CompanyRole = (typeof COMPANY_ROLES)[number];
 /** Any role. */
 export type Role = (typeof ROLE_IDS)[number];
 
-/** Display names per role. Both admin roles are shown as "Admin". */
-export const ROLE_LABELS: Record<Role, string> = {
-  platform_admin: 'Admin',
-  manager: 'Manager',
-  finance: 'Finance',
-  support: 'Support',
-  admin: 'Admin',
-  client: 'Client',
-  watcher: 'Watcher',
-};
-
 /**
- * One-line explanation per role, shown when choosing a role. They describe
- * the intended request (ticket) workflow, which isn't built yet.
+ * Translates the `roles` namespace: `getTranslations('roles')` on a page,
+ * `translator(locale, 'roles')` elsewhere.
  */
-export const ROLE_DESCRIPTIONS: Record<Role, string> = {
-  platform_admin: 'Manages staff, companies and settings.',
-  manager: 'Manages companies and their people.',
-  finance: 'Views all companies.',
-  support: 'Works on requests.',
-  admin: 'Raises requests and manages who in the company has access.',
-  client: 'Raises requests, comments on them and approves work.',
-  watcher: 'Follows requests without taking part.',
-};
+export type RolesTranslator = (key: `${Role}.label` | `${Role}.description`) => string;
 
 /**
- * Turns roles into options for a role picker, with what each role does.
- * Display data only: it says nothing about who may give a role.
+ * Turns roles into options for a role picker, with what each role does, in
+ * the reader's language. Display data only: it says nothing about who may
+ * give a role.
  *
  * @param roles - The roles to offer, in the order to show them.
+ * @param t - Translates the `roles` namespace (`roles.<role>.label` and `.description`).
  * @returns One option per role: its ID, label and description.
  */
 export function roleOptions(
   roles: readonly Role[],
+  t: RolesTranslator,
 ): { value: Role; label: string; description: string }[] {
   return roles.map((role) => ({
     value: role,
-    label: ROLE_LABELS[role],
-    description: ROLE_DESCRIPTIONS[role],
+    label: t(`${role}.label`),
+    description: t(`${role}.description`),
   }));
 }
 

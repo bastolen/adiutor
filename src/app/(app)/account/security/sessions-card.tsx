@@ -1,8 +1,12 @@
 /**
  * @file The "Signed-in devices" card on the Security page: where the user
  * is signed in, with sign-out per device and for every other device. Both
- * also forget every browser the user trusted at the code step.
+ * also forget every browser the user trusted at the code step. A server
+ * component: the texts it gives the table and the buttons are translated
+ * here.
  */
+import { useTranslations } from 'next-intl';
+
 import Card from '@/components/ui/card';
 import Pagination from '@/components/ui/pagination';
 import RowAction from '@/components/ui/row-action';
@@ -41,46 +45,48 @@ interface SessionsCardProps {
  * @returns The card.
  */
 export default function SessionsCard({ sessions, table, currentSessionId }: SessionsCardProps) {
+  const t = useTranslations('account');
   // This device is always among the sessions (it's signed in), so the others are the rest.
   const others = sessions.total - (currentSessionId ? 1 : 0);
   return (
     <Card
       id={table.section}
-      title="Signed-in devices"
-      description="Browsers where you're signed in. If you don't recognise one, sign it out and change your password. Signing out a device also makes every browser you trusted ask for your code again, this one included."
+      title={t('security.sessions.title')}
+      description={t('security.sessions.description')}
       actions={
         <>
-          <SortMenu label="devices" options={table.sortOptions()} />
+          <SortMenu label={t('security.sessions.rows')} options={table.sortOptions()} />
           <RowAction
             action={revokeOtherSessionsAction}
-            label="Sign out other devices"
+            label={t('security.sessions.signOutOthers')}
             disabled={others <= 0}
             confirm={{
-              title: 'Sign out on all other devices?',
-              description:
-                "You stay signed in here. Everywhere else you'll have to sign in again, and browsers you trusted, this one included, will ask for your code again.",
-              confirmLabel: 'Sign out other devices',
+              title: t('security.sessions.signOutOthersTitle'),
+              description: t('security.sessions.signOutOthersDescription'),
+              confirmLabel: t('security.sessions.signOutOthers'),
             }}
           />
         </>
       }
       flush
       footer={
-        showsPagination(sessions.total) && <Pagination {...table.pagination(sessions, 'devices')} />
+        showsPagination(sessions.total) && (
+          <Pagination {...table.pagination(sessions, t('security.sessions.rows'))} />
+        )
       }
     >
       <DevicesTable
         devices={sessions}
         table={table}
-        caption="Your signed-in devices"
+        caption={t('security.sessions.caption')}
         currentSessionId={currentSessionId}
         renderAction={(device, label) => (
           <RowAction
             action={revokeSessionAction}
             fields={{ sessionId: device.id }}
-            label="Sign out"
-            ariaLabel={`Sign out ${label}`}
-            doneMessage={`Signed out of ${label}.`}
+            label={t('security.sessions.signOut')}
+            ariaLabel={t('security.sessions.signOutNamed', { device: label })}
+            doneMessage={t('security.sessions.signedOutOf', { device: label })}
           />
         )}
       />

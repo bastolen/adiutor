@@ -11,6 +11,7 @@ import { INVALID_PASSKEY_NAME, UNSAFE_RETURN_ADDRESS } from '@/lib/sign-in/sign-
 import { passkeyNameSchema } from '@/lib/validation';
 
 import type { AuthGuardContext } from './paths';
+import { refusalBody } from './refusal-messages';
 
 /**
  * Sends a sign-in link that wasn't opened through the "Continue signing in"
@@ -97,7 +98,7 @@ export function refuseUnsafeReturnAddresses(ctx: AuthGuardContext, path: string)
     const location = `${SIGN_IN_ERROR_PATH}?${new URLSearchParams({ error: UNSAFE_RETURN_ADDRESS.code })}`;
     throw new APIError('FOUND', undefined, new Headers({ location }));
   }
-  throw new APIError('BAD_REQUEST', { ...UNSAFE_RETURN_ADDRESS });
+  throw new APIError('BAD_REQUEST', refusalBody(ctx, UNSAFE_RETURN_ADDRESS.code));
 }
 
 /**
@@ -133,6 +134,6 @@ export function refuseInvalidPasskeyName(ctx: AuthGuardContext, path: string): v
     return;
   }
   if (!passkeyNameSchema.safeParse(name).success) {
-    throw new APIError('BAD_REQUEST', { ...INVALID_PASSKEY_NAME });
+    throw new APIError('BAD_REQUEST', refusalBody(ctx, INVALID_PASSKEY_NAME.code));
   }
 }

@@ -33,6 +33,7 @@ import {
 } from './browser-cleanup';
 import { type FinishedRequest, finishedRequest } from './finished-request';
 import { type AuthHookContext, safely, audit, notify } from './hook-context';
+import rememberLanguage from './language';
 import { refreshProviderMfa, stepUpOutcomeOf, forgetProviderTokens } from './provider-accounts';
 import { reactToFailure } from './refused-attempts';
 import { recordRefusedReverify } from './reverify';
@@ -231,6 +232,11 @@ async function reactToSuccess(
         userId: newSession.user.id,
       }),
     );
+    // The browser gets the account's language. A password sign-in's session may still be deleted
+    // for the code step, so `afterPasswordSignIn` does it once the session stays.
+    if (path !== '/sign-in/email') {
+      await safely('remember the language', () => rememberLanguage(ctx, newSession.user.id));
+    }
   }
 
   // A password sign-in's session (and a trusted device) is only settled after Better Auth's

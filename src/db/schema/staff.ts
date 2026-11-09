@@ -8,6 +8,7 @@ import { sql } from 'drizzle-orm';
 import { boolean, check, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
 
 import { createdAt, id, timestampTz } from './columns';
+import { DEFAULT_LOCALE, LOCALES } from '../../lib/i18n/locales';
 
 /** Settings for the staff (the people who handle requests from companies). Always a single row. */
 export const staffSettings = pgTable(
@@ -16,6 +17,11 @@ export const staffSettings = pgTable(
     id: id(),
     /** How the staff are named to users and in invitations, e.g. "Adiutor". */
     name: text('name').notNull(),
+    /**
+     * Adiutor's own language for everyone who hasn't chosen one (no language
+     * cookie): chosen at setup, changeable on the staff page. See docs/i18n.md.
+     */
+    defaultLocale: text('default_locale', { enum: LOCALES }).notNull().default(DEFAULT_LOCALE),
     /** Always `true`; with the unique index and check below, it allows only one row. */
     singleton: boolean('singleton').default(true).notNull(),
     createdAt: createdAt(),

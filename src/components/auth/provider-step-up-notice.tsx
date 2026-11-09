@@ -7,16 +7,18 @@
  * step-up page, the Security page's MFA setup, or the page they came for)
  * until dismissed or the session is confirmed, from a short-lived cookie set
  * by `recordProviderSession` in `src/server/auth/auth-events/session-hooks.ts` (read with
- * `useNextPageCookie`). Used by the step-up form and the app layout.
+ * `useNextPageCookie`). Used by the step-up form and the app layout, so its
+ * text is in `common` (`common.providerStepUp`).
  */
 'use client';
+
+import { useTranslations } from 'next-intl';
 
 import Alert from '@/components/ui/alert';
 import {
   parseProviderStepUpCookie,
   PROVIDER_LABELS,
   PROVIDER_STEP_UP_COOKIE,
-  providerStepUpMessage,
 } from '@/lib/sign-in/oauth-providers';
 
 import { clearNextPageCookie, useNextPageCookie } from './use-next-page-cookie';
@@ -33,11 +35,16 @@ export function clearProviderStepUpNotice(): void {
 /**
  * The notice: an error `Alert` (announced when it appears, without moving
  * focus, so a code field or another message on the page keeps it) with a
- * dismiss button, in a region named after the provider.
+ * dismiss button, in a region named after the provider. It says why the
+ * provider didn't confirm the session and what the user can do, worded to
+ * fit wherever they land. The session keeps any earlier confirmation it had
+ * (Better Auth replaces the session, which keeps it: `beforeSessionCreate`),
+ * so it never says one ended.
  *
  * @returns The notice, or nothing.
  */
 export default function ProviderStepUpNotice() {
+  const t = useTranslations('common');
   const stepUp = parseProviderStepUpCookie(useNextPageCookie(PROVIDER_STEP_UP_COOKIE));
   if (!stepUp) {
     return null;
@@ -46,13 +53,17 @@ export default function ProviderStepUpNotice() {
   const label = PROVIDER_LABELS[provider];
 
   return (
-    <section aria-label={`${label} confirmation`}>
+    <section aria-label={t('providerStepUp.region', { provider: label })}>
       <Alert
         tone="error"
         onDismiss={clearProviderStepUpNotice}
-        dismissLabel={`Dismiss the ${label} confirmation message`}
+        dismissLabel={t('providerStepUp.dismiss', { provider: label })}
       >
-        <p>{providerStepUpMessage(provider, outcome)}</p>
+        <p>
+          {outcome === 'mfa-off'
+            ? t('providerStepUp.mfaOff', { provider: label })
+            : t('providerStepUp.unchecked', { provider: label })}
+        </p>
       </Alert>
     </section>
   );

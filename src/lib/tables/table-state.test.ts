@@ -7,13 +7,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { defined } from '@/lib/defined';
+import translator from '@/lib/i18n/translator';
 
 import type { SearchParams } from './search-params';
 import {
   clampPage,
   createPageUrl,
   DEFAULT_PAGE_SIZE,
-  describeSort,
   PAGE_SIZES,
   type PageSize,
   type Paged,
@@ -31,6 +31,9 @@ import { INVITATIONS_TABLE, type InvitationSort, type PeopleSort, USERS_TABLE } 
 
 /** The path of the page the links are built for. */
 const PATH = '/admin/users';
+
+/** Sort names and captions in English (US), as a page would pass them. */
+const T = translator('en-US', 'tables');
 
 /**
  * Passes a value on as any type, to test how the code copes with what callers
@@ -97,7 +100,7 @@ function pageLinks(setup: PageSetup = {}): {
   users: TableLinks<PeopleSort>;
   invitations: TableLinks<InvitationSort>;
 } {
-  const url = createPageUrl(PATH, setup.params);
+  const url = createPageUrl(PATH, setup.params ?? {}, T);
   return {
     users: url.table(USERS_TABLE, resolveTableState(USERS_TABLE, setup.users)),
     invitations: url.table(
@@ -525,29 +528,52 @@ describe('pageWindow', () => {
   });
 });
 
-describe('describeSort', () => {
+describe('the sort in a caption', () => {
+  /**
+   * The caption of a one-page users table in a state.
+   *
+   * @param params - The table's query parameters.
+   * @returns The caption.
+   */
+  const usersCaption = (params: SearchParams) =>
+    createPageUrl(PATH, {}, T)
+      .table(USERS_TABLE, parseTableState(USERS_TABLE, params))
+      .caption('Users', pagedOf(7));
+
   it('says how a table is sorted, in the words of its column', () => {
-    expect(describeSort(USERS_TABLE, parseTableState(USERS_TABLE, {}))).toBe(
-      'sorted by Name, A to Z',
+    expect(usersCaption({})).toBe('Users, sorted by Name, A to Z');
+    expect(usersCaption({ dir: 'desc' })).toBe('Users, sorted by Name, Z to A');
+    expect(usersCaption({ sort: 'last-active' })).toBe(
+      'Users, sorted by Last active, most recent first',
     );
-    expect(describeSort(USERS_TABLE, parseTableState(USERS_TABLE, { dir: 'desc' }))).toBe(
-      'sorted by Name, Z to A',
+    expect(usersCaption({ sort: 'last-active', dir: 'asc' })).toBe(
+      'Users, sorted by Last active, least recent first',
     );
-    expect(describeSort(USERS_TABLE, parseTableState(USERS_TABLE, { sort: 'last-active' }))).toBe(
-      'sorted by Last active, most recent first',
+    expect(usersCaption({ sort: 'joined' })).toBe('Users, sorted by Joined, newest first');
+    /**
+     * The caption of a one-page invitations table in a state.
+     *
+     * @param params - The table's query parameters.
+     * @returns The caption.
+     */
+    const invitations = (params: SearchParams) =>
+      createPageUrl(PATH, {}, T)
+        .table(INVITATIONS_TABLE, parseTableState(INVITATIONS_TABLE, params))
+        .caption('Open invitations', pagedOf(7));
+    expect(invitations({})).toBe('Open invitations, sorted by Sent, newest first');
+    expect(invitations({ 'inv-dir': 'asc' })).toBe(
+      'Open invitations, sorted by Sent, oldest first',
     );
-    expect(
-      describeSort(USERS_TABLE, parseTableState(USERS_TABLE, { sort: 'last-active', dir: 'asc' })),
-    ).toBe('sorted by Last active, least recent first');
-    expect(describeSort(USERS_TABLE, parseTableState(USERS_TABLE, { sort: 'joined' }))).toBe(
-      'sorted by Joined, newest first',
-    );
-    expect(describeSort(INVITATIONS_TABLE, parseTableState(INVITATIONS_TABLE, {}))).toBe(
-      'sorted by Sent, newest first',
-    );
-    expect(
-      describeSort(INVITATIONS_TABLE, parseTableState(INVITATIONS_TABLE, { 'inv-dir': 'asc' })),
-    ).toBe('sorted by Sent, oldest first');
+  });
+
+  it.each([
+    ['nl-NL', 'Gebruikers, gesorteerd op Naam, A tot Z, pagina 2 van 6'],
+    ['es-ES', 'Usuarios (orden: Nombre, de la A a la Z; página 2 de 6)'],
+  ] as const)('speaks %s', (locale, expected) => {
+    const caption = createPageUrl(PATH, {}, translator(locale, 'tables'))
+      .table(USERS_TABLE, parseTableState(USERS_TABLE, { page: '2' }))
+      .caption(locale === 'nl-NL' ? 'Gebruikers' : 'Usuarios', pagedOf(132, 2));
+    expect(caption).toBe(expected);
   });
 });
 
@@ -569,7 +595,7 @@ describe('createPageUrl', () => {
     });
 
     it('use the path they were given', () => {
-      const url = createPageUrl('/companies/adiutor-tests/members');
+      const url = createPageUrl('/companies/adiutor-tests/members', {}, T);
       const links = url.table(USERS_TABLE, resolveTableState(USERS_TABLE));
       expect(links.pageHref(1)).toBe('/companies/adiutor-tests/members');
       expect(links.pageHref(2)).toBe('/companies/adiutor-tests/members?page=2');
@@ -605,7 +631,7 @@ describe('createPageUrl', () => {
         deleted: '1',
         connected: 'github',
       };
-      const url = createPageUrl(PATH, { q: 'amy@adiutor.test' });
+      const url = createPageUrl(PATH, { q: 'amy@adiutor.test' }, T);
       const users = url.table(USERS_TABLE, parseTableState(USERS_TABLE, query));
       const href = users.pageHref(2);
       expect(href).toBe(`${PATH}?${BUSY_SEARCH}&sort=email&page=2`);
@@ -613,14 +639,14 @@ describe('createPageUrl', () => {
       expect(href).not.toContain('connected');
       // Unless the page passes one as its own.
       expect(
-        createPageUrl(PATH, { connected: 'github' })
+        createPageUrl(PATH, { connected: 'github' }, T)
           .table(USERS_TABLE, parseTableState(USERS_TABLE, query))
           .pageHref(2),
       ).toBe(`${PATH}?connected=github&sort=email&page=2`);
     });
 
     it('list the tables in the order they were added to the page', () => {
-      const url = createPageUrl(PATH);
+      const url = createPageUrl(PATH, {}, T);
       const invitations = url.table(
         INVITATIONS_TABLE,
         resolveTableState(INVITATIONS_TABLE, { page: 2 }),
@@ -655,14 +681,14 @@ describe('createPageUrl', () => {
 
   describe('current', () => {
     it('is the page with its own parameters and every table as it is, without an anchor', () => {
-      const url = createPageUrl(PATH, BUSY.params);
+      const url = createPageUrl(PATH, BUSY.params ?? {}, T);
       url.table(USERS_TABLE, resolveTableState(USERS_TABLE, BUSY.users));
       url.table(INVITATIONS_TABLE, resolveTableState(INVITATIONS_TABLE, BUSY.invitations));
       expect(url.current()).toBe(`${PATH}?${BUSY_SEARCH}&page=3&size=50&${BUSY_INVITATIONS}`);
     });
 
     it('is the bare path with every table in its default state', () => {
-      const url = createPageUrl(PATH);
+      const url = createPageUrl(PATH, {}, T);
       url.table(INVITATIONS_TABLE, resolveTableState(INVITATIONS_TABLE));
       expect(url.current()).toBe(PATH);
     });

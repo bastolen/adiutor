@@ -17,7 +17,7 @@ describe('ErrorReference', () => {
 
     expect(screen.getByText(/send this reference to an administrator/)).toBeInTheDocument();
     expect(screen.getByText('7KQ2-M9XD')).toBeInTheDocument();
-    expect(screen.getByText('28 Oct 2026, 18:40 UTC')).toHaveAttribute(
+    expect(screen.getByText('Oct 28, 2026, 6:40 PM UTC')).toHaveAttribute(
       'datetime',
       AT.toISOString(),
     );
@@ -30,7 +30,7 @@ describe('ErrorReference', () => {
     await user.click(screen.getByRole('button', { name: 'Copy reference' }));
 
     expect(await navigator.clipboard.readText()).toBe(
-      'Reference 7KQ2-M9XD (28 Oct 2026, 18:40 UTC)',
+      'Reference 7KQ2-M9XD (Oct 28, 2026, 6:40 PM UTC)',
     );
     expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
   });

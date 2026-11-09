@@ -2,6 +2,8 @@
  * @file Heading and tabs of the Logs pages, rendered by their layout
  * (`layout.tsx`), so they stay while the tabs change.
  */
+import { useTranslations } from 'next-intl';
+
 import PageHeader from '@/components/ui/page-header';
 import SegmentTabNav from '@/components/ui/segment-tab-nav';
 
@@ -16,28 +18,25 @@ interface LogsHeaderProps {
 /**
  * The "Logs" heading, with tabs for the audit log and the errors when the
  * viewer may see both (staff Admins); Managers only get the audit log, so no
- * tabs.
+ * tabs. Its text comes from `admin.logs.header`.
  *
  * @param props - Header props.
  * @param props.canViewErrors - Whether the viewer may see recorded errors.
  * @returns The header.
  */
 export default function LogsHeader({ canViewErrors }: LogsHeaderProps) {
+  const t = useTranslations('admin.logs.header');
   return (
     <PageHeader
-      title="Logs"
-      description={
-        canViewErrors
-          ? 'Security events by and about everyone, and the errors people ran into.'
-          : 'Security events by and about everyone.'
-      }
+      title={t('title')}
+      description={canViewErrors ? t('descriptionWithErrors') : t('description')}
     >
       {canViewErrors && (
         <SegmentTabNav
-          label="Log sections"
+          label={t('tabsLabel')}
           items={[
-            { href: '/admin/logs', label: 'Audit log', segment: null },
-            { href: '/admin/logs/errors', label: 'Errors', segment: 'errors' },
+            { href: '/admin/logs', label: t('auditTab'), segment: null },
+            { href: '/admin/logs/errors', label: t('errorsTab'), segment: 'errors' },
           ]}
         />
       )}

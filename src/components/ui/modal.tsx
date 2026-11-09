@@ -5,6 +5,7 @@
 'use client';
 
 import { X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Dialog } from 'radix-ui';
 import { type ReactNode, useRef } from 'react';
 
@@ -47,6 +48,7 @@ export default function Modal({
   description = undefined,
   children,
 }: ModalProps) {
+  const t = useTranslations('common.actions');
   /** What had focus when the dialog opened, to return focus to on close. */
   const opener = useRef<HTMLElement | null>(null);
 
@@ -78,7 +80,7 @@ export default function Modal({
               )}
             </div>
             <Dialog.Close asChild>
-              <Button variant="ghost" size="sm" aria-label="Close" className="-mt-1 -mr-2">
+              <Button variant="ghost" size="sm" aria-label={t('close')} className="-mt-1 -mr-2">
                 <X aria-hidden="true" />
               </Button>
             </Dialog.Close>

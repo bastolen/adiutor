@@ -7,7 +7,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { backdateMfaConfirmation } from './support/db';
+import { backdateMfaConfirmation, setDefaultLocale } from './support/db';
 import { COMPANY_SLUG, PLATFORM_ADMIN, STAFF_NAME } from './support/fixtures';
 import {
   createAccountFromInvitation,
@@ -54,6 +54,44 @@ test('an Admin changes the name shown to users', async ({ page }) => {
   await page.goForward();
   await expect(page.getByRole('heading', { level: 1, name: 'Staff' })).toBeVisible();
   await expect(page.getByRole('main').getByText('Name saved.')).toHaveCount(0);
+});
+
+test("an Admin changes Adiutor's default language, which visitors without a choice get", async ({
+  browser,
+  page,
+}) => {
+  await signIn(page, PLATFORM_ADMIN);
+  await page.goto('/admin/staff');
+  try {
+    const select = page.getByRole('combobox', { name: 'Default language' });
+    await expect(select).toHaveText('English (US)');
+    await select.click();
+    await page.getByRole('option', { name: 'Español' }).click();
+    await page.getByRole('button', { name: 'Save default language' }).click();
+    // The Admin hasn't chosen a language of their own (they're on Default), so they follow it too.
+    await expect(toasts(page)).toContainText('Idioma predeterminado guardado.');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'es-ES');
+    // The select shows the language just saved, not the one from before the save.
+    await expect(page.getByRole('combobox', { name: 'Idioma predeterminado' })).toHaveText(
+      'Español',
+    );
+
+    // Someone without a choice gets Spanish, whatever their browser asks for.
+    const visitor = await browser.newContext({ locale: 'nl-NL' });
+    try {
+      const other = await visitor.newPage();
+      await other.goto('/auth');
+      await expect(other.locator('html')).toHaveAttribute('lang', 'es-ES');
+      await expect(
+        other.getByRole('button', { name: 'Tema e idioma: Sistema, Español' }),
+      ).toBeVisible();
+    } finally {
+      await visitor.close();
+    }
+  } finally {
+    // Put it back for the other tests, even if a step failed.
+    await setDefaultLocale(getTestDatabaseUrl(), 'en-US');
+  }
 });
 
 test('an Admin invites a Manager by email, changes their role, and keeps an Admin', async ({

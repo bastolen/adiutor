@@ -12,6 +12,7 @@ import { account, auditEvent, passkey, session, user, verification } from '@/db/
 import type { MfaMethod } from '@/lib/authz/mfa';
 import { firstRow } from '@/lib/defined';
 import { sendEmail } from '@/lib/email';
+import { LOCALE_COOKIE } from '@/lib/i18n/locales';
 
 import type { AuthHookContext } from './hook-context';
 import { setupTestContext } from '../../../../tests/integration/helpers';
@@ -287,6 +288,18 @@ export function githubCallback(
     },
   };
   return { ctx, setCookie };
+}
+
+/**
+ * The cookies a request set besides the language cookie, which every sign-in
+ * sets from the account's language (`rememberLanguage`); for tests about the
+ * other cookies.
+ *
+ * @param setCookie - The request's `setCookie` mock.
+ * @returns The other `setCookie` calls, in order.
+ */
+export function cookiesBesidesLanguage(setCookie: ReturnType<typeof githubCallback>['setCookie']) {
+  return setCookie.mock.calls.filter(([name]) => name !== LOCALE_COOKIE);
 }
 
 /**

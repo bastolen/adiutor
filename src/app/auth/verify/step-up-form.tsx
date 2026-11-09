@@ -10,6 +10,7 @@
 
 import { KeyRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 
 import CodeField from '@/components/auth/code-field';
@@ -27,11 +28,11 @@ import { useTransientState } from '@/components/ui/use-transient-state';
 import type { StepUpMethods } from '@/lib/authz/mfa';
 import { EMAIL_CODE_MINUTES } from '@/lib/authz/mfa';
 import authClient from '@/lib/sign-in/auth-client';
-import { authErrorMessage, codeStepErrorMessage } from '@/lib/sign-in/auth-error-messages';
+import { authCodeText, authErrorText } from '@/lib/sign-in/auth-error-messages';
 import {
   type MfaProvider,
   PROVIDER_LABELS,
-  providerNames,
+  providerList,
   REVERIFY_HINT,
 } from '@/lib/sign-in/oauth-providers';
 import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
@@ -40,44 +41,29 @@ import verifyCode, { type CodeKind } from '@/lib/sign-in/verify-code';
 import type { TwoFactorMethod } from '../two-factor/two-factor-path';
 
 /**
- * Says why the session needs confirming.
+ * Why the session needs confirming, as the `reason` of `auth.stepUp.reason`.
  *
  * @param roleRequiresMfa - Whether the role requires MFA.
  * @param accountHasMfa - Whether the account has MFA.
  * @param confirmedBefore - Whether this session was confirmed already, but
  *   too long ago to change how the user signs in.
- * @returns The sentence.
+ * @returns The reason, e.g. `roleRequiresMfa`.
  */
 function stepUpReason(
   roleRequiresMfa: boolean,
   accountHasMfa: boolean,
   confirmedBefore: boolean,
-): string {
+): 'confirmedBefore' | 'roleRequiresMfa' | 'accountHasMfa' | 'secondStep' {
   if (confirmedBefore) {
-    return 'Changing how you sign in needs a confirmation from the last 15 minutes.';
+    return 'confirmedBefore';
   }
   if (roleRequiresMfa) {
-    return 'Your role requires MFA, and this sign-in isn’t MFA verified yet.';
+    return 'roleRequiresMfa';
   }
   if (accountHasMfa) {
-    return 'You turned on MFA, and this sign-in didn’t use it yet.';
+    return 'accountHasMfa';
   }
-  return 'Changing how you sign in needs your second step.';
-}
-
-/**
- * Says why providers the user could confirm with aren't offered: confirming a
- * change to how they sign in, GitHub doesn't open the window for it next to
- * a passkey or an authenticator app (`windowOpeningMethods`).
- *
- * @param providers - The providers left out (`StepUpMethods.providersHeldBack`).
- * @returns The sentence, or `null` when none were left out.
- */
-function heldBackReason(providers: readonly MfaProvider[] | undefined): string | null {
-  if (!providers?.length) {
-    return null;
-  }
-  return `${providerNames(providers)} can’t confirm changes to how you sign in while you have a passkey or an authenticator app.`;
+  return 'secondStep';
 }
 
 /**
@@ -118,6 +104,10 @@ export interface StepUpFormProps {
  * can't confirm a change next to a passkey or an authenticator app, the
  * heading says so.
  *
+ * Errors are worded in the reader's language from their code
+ * (`authErrorText`), except the refusals the server words itself (too many
+ * attempts, with how long to wait).
+ *
  * @param props - Form props.
  * @param props.methods - Available methods.
  * @param props.callbackURL - Where to go afterwards.
@@ -135,6 +125,8 @@ export default function StepUpForm({
   accountHasMfa = true,
   confirmedBefore = false,
 }: StepUpFormProps) {
+  const t = useTranslations('auth');
+  const locale = useLocale();
   const router = useRouter();
   // An authenticator app and email codes never count at the same time (see `stepUpMethods`).
   let codeMethod: TwoFactorMethod | null = null;
@@ -181,9 +173,10 @@ export default function StepUpForm({
    * @param failure - Better Auth's error.
    * @param failure.status - HTTP status.
    * @param failure.code - Error code, if any.
+   * @param failure.message - The server's message, shown only for refusals it words itself.
    */
-  const showError = (failure: { status: number; code?: string }) => {
-    setError(codeStepErrorMessage(failure));
+  const showError = (failure: { status: number; code?: string; message?: string }) => {
+    setError(authErrorText(t, failure));
   };
 
   /**
@@ -201,7 +194,7 @@ export default function StepUpForm({
     setSending(false);
     if (result.error?.code === EMAIL_CODE_SENT_RECENTLY.code) {
       setCodeSent(true);
-      setNotice(EMAIL_CODE_SENT_RECENTLY.message);
+      setNotice(authCodeText(t, EMAIL_CODE_SENT_RECENTLY.code));
       cooldown.start();
       return;
     }
@@ -212,7 +205,9 @@ export default function StepUpForm({
     setCodeSent(true);
     cooldown.start();
     setNotice(
-      `We sent ${again ? 'a new code' : 'a code'} to your email address. It expires in ${EMAIL_CODE_MINUTES} minutes.`,
+      again
+        ? t('emailCode.sentAgain', { minutes: EMAIL_CODE_MINUTES })
+        : t('emailCode.sent', { minutes: EMAIL_CODE_MINUTES }),
     );
   };
 
@@ -267,7 +262,7 @@ export default function StepUpForm({
     setError(null);
     const result = await authClient.signIn.passkey();
     if (result?.error) {
-      setError(authErrorMessage(result.error));
+      setError(authErrorText(t, result.error));
       setPending(false);
       return;
     }
@@ -295,8 +290,11 @@ export default function StepUpForm({
     });
     if (result.error) {
       setError(
-        result.error.message ??
-          `Signing in with ${PROVIDER_LABELS[provider]} failed. Please try again.`,
+        authErrorText(
+          t,
+          result.error,
+          t('stepUp.providerFailed', { provider: PROVIDER_LABELS[provider] }),
+        ),
       );
       setPending(false);
     }
@@ -310,16 +308,23 @@ export default function StepUpForm({
   };
 
   const showCodeForm = mode === 'totp' || mode === 'backup' || (mode === 'otp' && codeSent);
-  const heldBack = heldBackReason(methods.providersHeldBack);
+  // Providers left out because they can't confirm a change next to a passkey or an authenticator
+  // app (`windowOpeningMethods`).
+  const heldBack = methods.providersHeldBack?.length ? methods.providersHeldBack : null;
 
   return (
     <div className="flex flex-col gap-8">
       <AuthHeading
-        title="Confirm it's you"
+        title={t('stepUp.heading')}
         description={
           <>
-            {stepUpReason(roleRequiresMfa, accountHasMfa, confirmedBefore)}{' '}
-            {heldBack && `${heldBack} `}Confirm it&apos;s you to continue.
+            {t('stepUp.reason', {
+              reason: stepUpReason(roleRequiresMfa, accountHasMfa, confirmedBefore),
+            })}{' '}
+            {heldBack && (
+              <>{t('stepUp.heldBack', { providers: providerList(heldBack, locale) })} </>
+            )}
+            {t('stepUp.confirmToContinue')}
           </>
         }
       />
@@ -336,7 +341,7 @@ export default function StepUpForm({
           {methods.passkey && (
             <Button variant="secondary" fullWidth disabled={pending} onClick={confirmWithPasskey}>
               <KeyRound aria-hidden="true" />
-              Confirm with a passkey
+              {t('stepUp.passkey')}
             </Button>
           )}
           {methods.providers.map((provider) => {
@@ -350,11 +355,11 @@ export default function StepUpForm({
                 onClick={() => confirmWithProvider(provider)}
               >
                 <Icon />
-                Confirm with {PROVIDER_LABELS[provider]}
+                {t('stepUp.provider', { provider: PROVIDER_LABELS[provider] })}
               </Button>
             );
           })}
-          {mode && <AuthDivider>or enter a code</AuthDivider>}
+          {mode && <AuthDivider>{t('stepUp.orCode')}</AuthDivider>}
         </div>
       )}
 
@@ -371,7 +376,7 @@ export default function StepUpForm({
                 onChange={(event) => setCode(event.target.value)}
               />
               <Button type="submit" fullWidth loading={pending}>
-                Confirm
+                {t('stepUp.submit')}
               </Button>
             </form>
           ) : (
@@ -382,7 +387,7 @@ export default function StepUpForm({
               loading={sending}
               onClick={() => sendCode()}
             >
-              Email me a code
+              {t('stepUp.emailMe')}
             </Button>
           )}
         </div>
@@ -402,11 +407,11 @@ export default function StepUpForm({
             size="sm"
             onClick={() => choose(mode === 'backup' ? 'totp' : 'backup')}
           >
-            {mode === 'backup' ? 'Use a code instead' : 'Use a backup code'}
+            {mode === 'backup' ? t('actions.useCode') : t('actions.useBackupCode')}
           </Button>
         )}
         <Button variant="ghost" size="sm" onClick={signOut}>
-          Sign out
+          {t('actions.signOut')}
         </Button>
       </div>
     </div>

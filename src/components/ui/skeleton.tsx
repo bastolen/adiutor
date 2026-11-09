@@ -4,6 +4,8 @@
  */
 import cn from '@/lib/cn';
 
+import LoadingStatus from './loading-status';
+
 /**
  * A grey placeholder block. Decorative.
  *
@@ -32,9 +34,7 @@ export function Skeleton({ className = '' }: { className?: string }) {
 export function PageSkeleton({ header = true }: { header?: boolean } = {}) {
   return (
     <div aria-busy="true" className="flex flex-col gap-6">
-      <span className="sr-only" role="status">
-        Loading…
-      </span>
+      <LoadingStatus />
       {header && (
         <div className="flex flex-col gap-2">
           <Skeleton className="h-8 w-56" />
@@ -77,9 +77,7 @@ export function PageHeaderSkeleton() {
 export function FormSkeleton() {
   return (
     <div aria-busy="true" className="flex flex-col gap-6">
-      <span className="sr-only" role="status">
-        Loading…
-      </span>
+      <LoadingStatus />
       <div className="flex flex-col gap-2">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-4 w-64 max-w-full" />

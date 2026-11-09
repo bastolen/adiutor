@@ -6,6 +6,7 @@
  */
 'use client';
 
+import { useTranslations } from 'next-intl';
 import {
   type MouseEvent,
   type ReactNode,
@@ -93,6 +94,7 @@ function ActionDialogForm({
   onCancel: () => void;
 }) {
   // Through the shared hook's `onSubmit`, so a refused submit (a wrong password) keeps the input.
+  const t = useTranslations('common.actions');
   const [result, formAction, pending, onSubmit] = useTransientActionState(action, null);
 
   useEffect(() => {
@@ -112,7 +114,7 @@ function ActionDialogForm({
       {children}
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button variant="secondary" onClick={onCancel} disabled={pending}>
-          Cancel
+          {t('cancel')}
         </Button>
         <Button type="submit" variant={tone} loading={pending}>
           {confirmLabel}

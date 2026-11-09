@@ -1,0 +1,107 @@
+{
+  "people": {
+    "inviteResults": {
+      "status": "{status, select, sent_existing_user {Invitación enviada a {email}. Ya tiene una cuenta de Adiutor.} already_member {{email} ya es miembro. Le hemos enviado un correo para avisarle.} other {Invitación enviada a {email}.}}",
+      "companyAdded": "{status, select, sent_existing_user {Empresa añadida. Invitación enviada a {email}. Ya tiene una cuenta de Adiutor.} already_member {Empresa añadida. {email} ya es miembro. Le hemos enviado un correo para avisarle.} other {Empresa añadida. Invitación enviada a {email}.}}",
+      "sentAll": "{sent, plural, one {Se ha enviado # invitación.} other {Se han enviado # invitaciones.}}",
+      "sentSome": "{sent, plural, one {De {total, number} invitaciones, se ha enviado #. Revisa las direcciones de abajo.} other {De {total, number} invitaciones, se han enviado #. Revisa las direcciones de abajo.}}"
+    },
+    "confirmBeforeGrant": "Para dar este rol, primero confirma que eres tú (como mucho una vez cada 15 minutos).",
+    "roleSelect": {
+      "label": "Rol de {name}",
+      "saving": "Guardando…"
+    },
+    "columns": {
+      "email": "Correo electrónico",
+      "role": "Rol",
+      "sent": "Enviada",
+      "status": "Estado",
+      "created": "Creado",
+      "details": "Detalles",
+      "device": "Dispositivo",
+      "ipAddress": "Dirección IP",
+      "signedIn": "Inicio de sesión",
+      "actions": "Acciones"
+    },
+    "activity": {
+      "lastActive": "<hidden>Última actividad: </hidden><time></time>",
+      "lastActiveShort": "Última actividad <time></time>",
+      "neverActive": "Sin actividad todavía",
+      "joined": "Se unió el {date}"
+    },
+    "devices": {
+      "thisDevice": "Este dispositivo",
+      "mfaVerified": "Verificado con MFA",
+      "signedInAgo": "Sesión iniciada <time></time>"
+    },
+    "invitations": {
+      "title": "Invitaciones pendientes",
+      "rows": "invitaciones",
+      "emptyTitle": "No hay invitaciones pendientes",
+      "emptyDescription": "Las invitaciones que envíes aparecen aquí hasta que se acepten.",
+      "fromInviteLink": "Desde un enlace de invitación",
+      "sent": "Enviada el {date}",
+      "expired": "Caducada",
+      "expires": "Caduca el {date}",
+      "resend": "Reenviar",
+      "resendLabel": "Reenviar la invitación a {email}",
+      "resent": "Invitación reenviada a {email}.",
+      "revoke": "Revocar",
+      "revokeLabel": "Revocar la invitación a {email}",
+      "revoked": "Invitación a {email} revocada.",
+      "revokeConfirm": {
+        "title": "¿Revocar esta invitación?",
+        "confirm": "Revocar invitación",
+        "description": "El enlace enviado a {email} dejará de funcionar."
+      }
+    },
+    "inviteForm": {
+      "results": "Resultado de las invitaciones",
+      "sentLine": "<hidden>Enviada: </hidden>{message}",
+      "notSentLine": "<hidden>No enviada: </hidden>{email}: {message}",
+      "emails": "Direcciones de correo",
+      "emailsPlaceholder": "colega@adiutor.dev",
+      "emailsHint": "Una por línea o separadas por comas, hasta {max, number}.",
+      "role": "Rol",
+      "submit": "Enviar invitaciones"
+    },
+    "inviteLinkForm": {
+      "validity": "{days, plural, one {# día} other {# días}}",
+      "created": "Enlace creado. Cópialo ahora: por seguridad, no se volverá a mostrar. Funciona una sola vez.",
+      "link": "Enlace de invitación",
+      "copy": "Copiar enlace",
+      "role": "Rol",
+      "validFor": "Válido durante",
+      "submit": "Crear enlace de invitación"
+    },
+    "inviteLinks": {
+      "title": "Enlaces de invitación",
+      "description": "Cada enlace funciona una sola vez: la primera persona que lo abre introduce su correo y recibe una invitación.",
+      "rows": "enlaces de invitación",
+      "emptyTitle": "No hay enlaces de invitación",
+      "emptyDescription": "Los enlaces que crees aparecen aquí.",
+      "status": "{status, select, active {Activo} used {Usado} expired {Caducado} other {Revocado}}",
+      "created": "Creado el {date}",
+      "expires": "Caduca el {date}",
+      "usedBy": "Usado por {email}",
+      "expired": "Caducó el {date}",
+      "noDetails": "Sin detalles",
+      "revoke": "Revocar",
+      "revokeLabel": "Revocar el enlace de {role} creado el {date}",
+      "revokeConfirm": {
+        "title": "¿Revocar este enlace de invitación?",
+        "description": "El enlace dejará de funcionar para cualquiera que lo tenga."
+      }
+    },
+    "actions": {
+      "inviteLinkRevoked": "Enlace de invitación revocado.",
+      "invitationResent": "Enviada de nuevo.",
+      "invitationRevoked": "Invitación revocada.",
+      "roleUpdated": "Rol actualizado.",
+      "memberRemoved": "Miembro quitado.",
+      "memberAdded": "{who, select, self {Se ha añadido a la empresa. Te hemos enviado un correo.} other {Se ha añadido a la empresa. Le hemos enviado un correo.}}",
+      "staffRoleSaved": "Rol de personal guardado.",
+      "staffAccessRemoved": "Acceso como personal quitado."
+    }
+  }
+}

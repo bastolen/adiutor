@@ -23,6 +23,7 @@ import {
   storedGitHubMfa,
   markReverify,
   events,
+  cookiesBesidesLanguage,
 } from './test-helpers';
 import { createSession, createUser } from '../../../../tests/integration/helpers';
 
@@ -324,7 +325,7 @@ describe('checking GitHub two-factor authentication', () => {
       expect(await storedGitHubMfa(github)).toBe(true);
       expect(await sessionMfa(newSession)).toEqual({ mfaVerified: false, mfaMethod: null });
       // No answer isn't "2FA off", whatever an error response says.
-      expect(setCookie).toHaveBeenCalledOnce();
+      expect(cookiesBesidesLanguage(setCookie)).toHaveLength(1);
       expect(setCookie).toHaveBeenCalledWith(
         PROVIDER_STEP_UP_COOKIE,
         'github:unchecked',

@@ -6,6 +6,8 @@
  */
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 import { ReturnToField, useRecentConfirmation } from '@/components/auth/recent-confirmation';
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
@@ -34,6 +36,7 @@ export default function PasswordForm({
    */
   blockedReason?: string | null;
 }) {
+  const t = useTranslations('account');
   const [result, formAction, pending, onSubmit] = useTransientActionState(passwordAction, null);
   const { askToConfirm } = useRecentConfirmation();
 
@@ -60,7 +63,7 @@ export default function PasswordForm({
       <ResultAlert result={result} />
       {hasPassword && (
         <TextField
-          label="Current password"
+          label={t('security.currentPassword')}
           type="password"
           name="currentPassword"
           autoComplete="current-password"
@@ -68,16 +71,16 @@ export default function PasswordForm({
         />
       )}
       <TextField
-        label="New password"
+        label={t('security.password.newPassword')}
         type="password"
         name="newPassword"
         autoComplete="new-password"
         minLength={MIN_PASSWORD_LENGTH}
-        description={`At least ${MIN_PASSWORD_LENGTH} characters.`}
+        description={t('security.password.hint', { min: MIN_PASSWORD_LENGTH })}
         required
       />
       <TextField
-        label="Confirm new password"
+        label={t('security.password.confirmNew')}
         type="password"
         name="confirmation"
         autoComplete="new-password"
@@ -86,7 +89,7 @@ export default function PasswordForm({
       />
       <div>
         <Button type="submit" loading={pending}>
-          {hasPassword ? 'Change password' : 'Set password'}
+          {hasPassword ? t('security.password.change') : t('security.password.set')}
         </Button>
       </div>
     </form>

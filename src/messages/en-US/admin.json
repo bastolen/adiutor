@@ -1,0 +1,397 @@
+{
+  "admin": {
+    "users": {
+      "title": "Users",
+      "description": "Everyone with an account: staff and the people of each company.",
+      "addUser": "Add user",
+      "deleted": "User deleted.",
+      "rows": "users",
+      "search": {
+        "label": "Search users",
+        "placeholder": "Search by name or email"
+      },
+      "filters": {
+        "label": "Filter users",
+        "option": "{filter, select, staff {Staff} not_staff {Not staff} without_mfa {Without MFA} deactivated {Deactivated} other {All}}"
+      },
+      "caption": "{filter, select, staff {{matching, select, yes {Users: Staff matching \"{search}\"} other {Users: Staff}}} not_staff {{matching, select, yes {Users: Not staff matching \"{search}\"} other {Users: Not staff}}} without_mfa {{matching, select, yes {Users: Without MFA matching \"{search}\"} other {Users: Without MFA}}} deactivated {{matching, select, yes {Users: Deactivated matching \"{search}\"} other {Users: Deactivated}}} other {{matching, select, yes {All users matching \"{search}\"} other {All users}}}}",
+      "empty": {
+        "default": {
+          "title": "No users yet",
+          "description": "People appear here once they have an account."
+        },
+        "search": {
+          "title": "No matching users",
+          "description": "Nothing matches \"{search}\". Try another name or email address."
+        },
+        "notStaff": {
+          "title": "No users yet",
+          "description": "People you add or invite to a company appear here."
+        },
+        "withoutMfa": {
+          "title": "Everyone has MFA",
+          "description": "Every account is protected with a second sign-in step."
+        },
+        "deactivated": {
+          "title": "No deactivated accounts",
+          "description": "Accounts that are deactivated appear here until an Admin reactivates them."
+        }
+      },
+      "columns": {
+        "name": "Name",
+        "email": "Email",
+        "activity": "Activity"
+      },
+      "companies": "Companies:",
+      "noCompanies": "No companies",
+      "badges": {
+        "mfa": "{status, select, protected {MFA on} optional {No MFA} other {Needs MFA}}",
+        "deactivated": "Deactivated",
+        "emailNotVerified": "Email not verified",
+        "staff": "Staff · {role}"
+      }
+    },
+    "user": {
+      "title": "User",
+      "back": "Users",
+      "deactivatedNotice": "This account was deactivated on {date}. It can't sign in until an Admin reactivates it.",
+      "self": {
+        "signInOnly": "This is your own account. Change your sign-in methods on your <security>Security page</security>.",
+        "signInAndStaff": "This is your own account. Change your sign-in methods on your <security>Security page</security>, and your staff role on the <staff>Staff page</staff>."
+      },
+      "account": {
+        "title": "Account",
+        "email": "Email",
+        "verified": "Verified",
+        "notVerified": "Not verified",
+        "status": "Status",
+        "active": "Active",
+        "deactivated": "Deactivated",
+        "lastActive": "Last active",
+        "created": "Account created"
+      },
+      "security": {
+        "title": "Sign-in security",
+        "descriptionRequired": "Their role requires a second sign-in step.",
+        "descriptionRecommended": "A second sign-in step is recommended for their role.",
+        "status": "Status",
+        "twoFactor": "Two-step verification",
+        "twoFactorValue": "{state, select, authenticator {On: authenticator app and email codes} emailCodes {On: email codes} other {Off}}",
+        "passkeys": "Passkeys",
+        "passkeyCount": "{count, plural, =0 {None} other {#}}",
+        "password": "Password",
+        "passwordState": "{set, select, yes {Set} other {Not set}}",
+        "connected": "Connected",
+        "twoFactorOn": "2FA on at {provider}",
+        "twoFactorOff": "No 2FA at {provider}"
+      },
+      "staffAccess": {
+        "title": "Staff access",
+        "descriptionStaff": "Their staff role applies to every company.",
+        "descriptionNone": "Not staff. Staff work with every company.",
+        "staffRole": "Staff role",
+        "remove": {
+          "label": "Remove staff access",
+          "title": "Remove {name}'s staff access?",
+          "description": "They can no longer work with your companies. Their account and any company memberships stay, and they get an email.",
+          "confirmLabel": "Remove staff access"
+        },
+        "make": {
+          "label": "Make staff",
+          "title": "Make {name} staff?",
+          "description": "They can work with every company, and get an email. Admins and Managers must set up a second sign-in step before they continue.",
+          "confirmLabel": "Make staff"
+        }
+      },
+      "companies": {
+        "title": "Companies",
+        "descriptionNone": "Not a member of any company.",
+        "descriptionSome": "The companies they belong to.",
+        "rows": "companies",
+        "add": {
+          "label": "Add to company",
+          "titleSelf": "Add yourself to a company",
+          "title": "Add {name} to a company",
+          "descriptionSelf": "You become a member right away, with the role you choose, and get an email.",
+          "description": "They become a member right away, with the role you choose, and get an email.",
+          "confirmLabel": "Add to company",
+          "company": "Company",
+          "role": "Role"
+        },
+        "caption": "Companies of {name}",
+        "columns": {
+          "company": "Company",
+          "role": "Role",
+          "joined": "Joined",
+          "actions": "Actions"
+        },
+        "joinedOn": "Joined {date}",
+        "deactivated": "Deactivated",
+        "memberName": "{user} in {company}",
+        "remove": {
+          "label": "Remove",
+          "ariaLabel": "Remove {user} from {company}",
+          "done": "{user} was removed from {company}.",
+          "confirmLabel": "Remove member",
+          "titleSelf": "Remove yourself from {company}?",
+          "descriptionSelf": "You'll no longer be a member of {company}. Your staff role still lets you work with it, and you can add yourself again later.",
+          "title": "Remove {user} from {company}?",
+          "description": "They'll lose access to {company}. Their account stays, and you can add them again later."
+        }
+      },
+      "devices": {
+        "title": "Signed-in devices",
+        "descriptionNone": "Not signed in anywhere.",
+        "descriptionSome": "Browsers where this account is signed in.",
+        "rows": "devices",
+        "caption": "Signed-in devices of {name}",
+        "signOut": {
+          "label": "Sign out everywhere",
+          "title": "Sign {name} out everywhere?",
+          "description": "They are signed out on every device and have to sign in again. Their account stays active.",
+          "confirmLabel": "Sign out everywhere"
+        }
+      },
+      "activity": {
+        "title": "Recent activity",
+        "descriptionNone": "Nothing recorded yet.",
+        "descriptionSome": "Security events by or about this user, newest first.",
+        "label": "Recent activity of {name}",
+        "by": "by {name}",
+        "staff": "Staff"
+      },
+      "accountAccess": {
+        "title": "Account access",
+        "description": "Each change is recorded in the activity log, and the user gets an email.",
+        "reset": {
+          "title": "Reset two-step verification",
+          "descriptionAvailable": "For a lost phone, or a GitHub or Google account that isn’t theirs: turns off two-step verification and disconnects GitHub and Google, so they can sign in and set it up again.",
+          "descriptionNone": "Nothing to reset: they have no two-step verification, passkeys or connected GitHub or Google accounts.",
+          "label": "Reset",
+          "dialogTitle": "Reset two-step verification for {name}?",
+          "dialogDescriptionWithAccounts": "Their authenticator app and backup codes stop working, their connected GitHub and Google accounts are disconnected, and they're signed out everywhere. If their role requires it, they're asked to set up MFA again at their next sign-in.",
+          "dialogDescription": "Their authenticator app and backup codes stop working, and they're signed out everywhere. If their role requires it, they're asked to set up MFA again at their next sign-in.",
+          "confirmLabel": "Reset two-step verification",
+          "removePasskeys": "{count, plural, one {Also remove their passkey} other {Also remove their # passkeys}}",
+          "removePasskeysHint": "Only when a passkey may be lost or stolen."
+        },
+        "deactivate": {
+          "title": "Deactivate account",
+          "description": "Signs them out everywhere and blocks sign-in until reactivated. Their memberships and data stay.",
+          "label": "Deactivate",
+          "confirmTitle": "Deactivate {name}?",
+          "confirmDescription": "They are signed out everywhere and can’t sign in until an Admin reactivates the account.",
+          "confirmLabel": "Deactivate"
+        },
+        "reactivate": {
+          "title": "Reactivate account",
+          "description": "They can sign in again with their existing sign-in methods.",
+          "label": "Reactivate",
+          "confirmTitle": "Reactivate {name}?",
+          "confirmDescription": "They can sign in again and get back their access.",
+          "confirmLabel": "Reactivate"
+        }
+      },
+      "deleteAccount": {
+        "title": "Delete account",
+        "description": "Permanently removes the account, its sign-in methods and memberships, revokes the open invitations and invite links they sent and the open invitations addressed to them, and emails them that it was deleted. This can't be undone.",
+        "label": "Delete",
+        "dialogTitle": "Delete {name}'s account?",
+        "dialogDescription": "This permanently removes the account, revokes the open invitations and invite links they sent and those addressed to them, and emails them that it was deleted. Type their email address to confirm.",
+        "confirmLabel": "Delete account",
+        "emailLabel": "Email address"
+      },
+      "actions": {
+        "mfaReset": "Two-step verification was reset.",
+        "signedOut": "Signed out everywhere.",
+        "deactivated": "Account deactivated.",
+        "reactivated": "Account reactivated."
+      }
+    },
+    "addUser": {
+      "title": "Add user",
+      "heading": "Add a user",
+      "description": "Create an account and email them a link to choose a password. Add them to companies or give them staff access afterwards, from their page.",
+      "back": "Users",
+      "form": {
+        "email": "Email",
+        "placeholder": "colleague@adiutor.dev",
+        "description": "They'll get an email with a link to choose a password. They aren't added to any company or given staff access.",
+        "submit": "Add user",
+        "openUser": "Open user",
+        "addAnother": "Add another"
+      },
+      "created": "Account created for {email}. We've emailed them a link to choose a password.",
+      "existing": "{email} already has an account. Nothing was changed."
+    },
+    "staff": {
+      "title": "Staff",
+      "description": "The people who handle requests from companies, and how users see you.",
+      "name": {
+        "title": "Name shown to users",
+        "description": "Used in invitations and wherever users see who's helping them.",
+        "label": "Name",
+        "example": "For example “Adiutor Support”.",
+        "save": "Save name",
+        "saved": "Name saved."
+      },
+      "people": {
+        "title": "People",
+        "description": "{count, plural, one {# person has} other {# people have}} staff access.",
+        "rows": "staff",
+        "caption": "Staff",
+        "name": "Name",
+        "role": "Role",
+        "activity": "Activity",
+        "actions": "Actions",
+        "you": "(you)",
+        "deactivated": "Deactivated"
+      },
+      "stepDown": {
+        "title": "Step down to {role}?",
+        "description": "You can't raise your own role again: another staff Admin would have to. Only staff Admins manage the staff, so you'll go to the dashboard.",
+        "confirmLabel": "Step down"
+      },
+      "leave": {
+        "label": "Leave",
+        "ariaLabel": "Leave the staff",
+        "title": "Leave the staff?",
+        "confirmLabel": "Leave the staff",
+        "description": "You lose staff access straight away, and only another staff Admin can give it back. Your account and company memberships stay."
+      },
+      "remove": {
+        "label": "Remove",
+        "ariaLabel": "Remove {name} from staff",
+        "done": "{name} was removed from staff.",
+        "title": "Remove {name} from staff?",
+        "confirmLabel": "Remove from staff",
+        "description": "They lose staff access. Their account stays (with any company memberships), and you can invite them again later."
+      },
+      "invite": {
+        "title": "Invite by email",
+        "description": "They'll get an email with a link to join as staff. The link works once and expires in {days, plural, one {# day} other {# days}}."
+      }
+    },
+    "companies": {
+      "title": "Companies",
+      "description": "Every company you help. Open one to manage its people and settings.",
+      "add": "Add company",
+      "searchLabel": "Search companies",
+      "searchPlaceholder": "Search by name",
+      "rows": "companies",
+      "noMatchTitle": "No matching companies",
+      "noMatchDescription": "Nothing matches \"{search}\". Try another name.",
+      "noneTitle": "No companies yet",
+      "noneDescription": "Companies you add appear here.",
+      "captionSearch": "Companies matching \"{search}\"",
+      "captionAll": "All companies",
+      "company": "Company",
+      "status": "Status",
+      "added": "Added",
+      "open": "Open",
+      "addedOn": "Added {date}",
+      "active": "Active",
+      "deactivated": "Deactivated"
+    },
+    "addCompany": {
+      "title": "Add company",
+      "heading": "Add a company",
+      "description": "Create a company and invite its first admin. They can invite their colleagues and start raising requests.",
+      "form": {
+        "nameLabel": "Company name",
+        "namePlaceholder": "Adiutor",
+        "slugLabel": "URL name",
+        "slugDescription": "Suggested from the name. Lowercase letters, numbers and dashes. Its pages will be at /companies/{slug}.",
+        "emailLabel": "Email of the company's admin",
+        "emailPlaceholder": "admin@adiutor.dev",
+        "emailDescription": "They'll get an invitation to join as the company's Admin.",
+        "submit": "Add company",
+        "open": "Open the company"
+      }
+    },
+    "logs": {
+      "title": "Audit log",
+      "header": {
+        "title": "Logs",
+        "descriptionWithErrors": "Security events by and about everyone, and the errors people ran into.",
+        "description": "Security events by and about everyone.",
+        "tabsLabel": "Log sections",
+        "auditTab": "Audit log",
+        "errorsTab": "Errors"
+      },
+      "searchLabel": "Search people or companies",
+      "searchPlaceholder": "Search by name, email or company",
+      "dateLabel": "Filter by date",
+      "filterLabel": "Filter events",
+      "all": "All",
+      "rows": "events",
+      "caption": "{kind, select, groupSearch {Audit log: {group} matching \"{search}\"} group {Audit log: {group}} search {Audit log matching \"{search}\"} other {Audit log}}",
+      "empty": {
+        "noneTitle": "Nothing recorded yet",
+        "noneDescription": "Sign-ins, changes to accounts and roles, and invitations will show up here.",
+        "noMatchTitle": "Nothing matches",
+        "noMatchDescription": "{kind, select, withGroup {No events by or about anyone matching “{search}” in {group}. Try part of a name, an email address or a company.} other {No events by or about anyone matching “{search}”. Try part of a name, an email address or a company.}}",
+        "filteredTitle": "Nothing in this selection",
+        "filteredDescription": "No events match these filters. Try another group or a wider range of days."
+      },
+      "table": {
+        "event": "Event",
+        "when": "When",
+        "origin": "Browser and IP address"
+      },
+      "by": "by <link>{name}</link>",
+      "about": "about <link>{name}</link>",
+      "staff": "Staff",
+      "notRecorded": "Not recorded"
+    },
+    "errors": {
+      "title": "Errors",
+      "searchLabel": "Look up a reference",
+      "searchPlaceholder": "e.g. 7KQ2-M9XD",
+      "kinds": {
+        "signIn": "Sign-in error",
+        "browser": "Browser error",
+        "server": "Server error"
+      },
+      "noMessage": "No message recorded",
+      "details": {
+        "when": "When",
+        "kind": "Kind",
+        "where": "Where",
+        "page": "Page",
+        "error": "Error",
+        "digest": "Digest",
+        "code": "Code",
+        "description": "Description",
+        "signedIn": "Signed in",
+        "noOne": "No one"
+      },
+      "lookup": {
+        "invalidTitle": "That isn’t a reference",
+        "invalidDescription": "“{input}” can’t be one: references look like 7KQ2-M9XD, eight letters and digits.",
+        "noneTitle": "Nothing recorded under {reference}",
+        "noneDescription": "Errors are kept for 7 days; older ones, and ones over the limit of 20 an hour per address, are only in the server log.",
+        "title": "Reference {reference}",
+        "recorded": "{count, plural, one {Recorded once.} other {Recorded # times: the same error on the server, newest first.}}",
+        "ariaLabel": "Look up {reference}"
+      },
+      "recent": {
+        "title": "Last 7 days",
+        "description": "Errors on the server, in the browser and at sign-in, newest first.",
+        "rows": "errors",
+        "caption": "Errors in the last 7 days",
+        "emptyTitle": "No errors in the last 7 days",
+        "emptyDescription": "When someone runs into an error, it shows up here with the reference their page showed."
+      },
+      "table": {
+        "reference": "Reference",
+        "whatHappened": "What happened",
+        "when": "When"
+      }
+    },
+    "dateRange": {
+      "invalidDay": "Enter the dates as real days, e.g. 2026-11-03.",
+      "fromAfterTo": "Choose a “from” date on or before the “to” date."
+    }
+  }
+}

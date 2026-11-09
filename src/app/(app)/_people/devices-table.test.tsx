@@ -5,6 +5,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import translator from '@/lib/i18n/translator';
 import { createPageUrl } from '@/lib/tables/table-state';
 import { DEVICES_TABLE } from '@/lib/tables/tables';
 import type { UserSession } from '@/server/people/user-admin';
@@ -46,12 +47,15 @@ const DEVICES = {
 };
 
 /** The table's links in its default state. */
-const TABLE = createPageUrl('/account/security').table(DEVICES_TABLE, {
-  sort: 'signed-in',
-  dir: 'desc',
-  page: 1,
-  size: 25,
-});
+const TABLE = createPageUrl('/account/security', {}, translator('en-US', 'tables')).table(
+  DEVICES_TABLE,
+  {
+    sort: 'signed-in',
+    dir: 'desc',
+    page: 1,
+    size: 25,
+  },
+);
 
 describe('DevicesTable', () => {
   it('shows a row per device with its label, IP address and badges', () => {

@@ -10,8 +10,9 @@ import {
   LinkFallback,
 } from '@/components/email/email-text';
 import RoleSummary from '@/components/email/role-summary';
-import { ROLE_LABELS, type Role } from '@/lib/authz/roles';
+import type { Role } from '@/lib/authz/roles';
 import type { Email } from '@/lib/email';
+import translator from '@/lib/i18n/translator';
 
 import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
 import renderEmail from './render';
@@ -43,6 +44,7 @@ export interface InvitationEmailProps extends EmailBaseProps {
  * @param props.role - The role.
  * @param props.url - Accept link.
  * @param props.validDays - Days the link stays valid.
+ * @param props.locale - The recipient's language.
  * @param props.logoSrc - Logo URL override.
  * @returns The email.
  */
@@ -53,26 +55,29 @@ export default function InvitationEmail({
   role,
   url,
   validDays,
+  locale,
   logoSrc = undefined,
 }: InvitationEmailProps) {
+  const t = translator(locale, 'emails.invitation');
+  const values = {
+    inviter: inviterName,
+    company: companyName,
+    role: translator(locale, 'roles')(`${role}.label`),
+  };
   return (
     <EmailLayout
-      preview={`Join ${companyName} on Adiutor as ${ROLE_LABELS[role]}`}
+      preview={t('preview', values)}
       appUrl={appUrl}
+      locale={locale}
       logoSrc={logoSrc}
-      reason={`You're receiving this because ${inviterName} invited this email address to ${companyName}. If you weren't expecting it, you can ignore this email.`}
+      reason={t('reason', values)}
     >
-      <EmailHeading>Join {companyName}</EmailHeading>
-      <EmailParagraph>
-        {inviterName} invited you to join {companyName} on Adiutor as {ROLE_LABELS[role]}.
-      </EmailParagraph>
-      <RoleSummary role={role} />
-      <EmailButton href={url}>Accept invitation</EmailButton>
-      <EmailNote>
-        The link works once and expires in {validDays} days. You can sign in with an existing
-        account or create one.
-      </EmailNote>
-      <LinkFallback url={url} />
+      <EmailHeading>{t('heading', values)}</EmailHeading>
+      <EmailParagraph>{t('body', values)}</EmailParagraph>
+      <RoleSummary role={role} locale={locale} />
+      <EmailButton href={url}>{t('button')}</EmailButton>
+      <EmailNote>{t('note', { days: validDays })}</EmailNote>
+      <LinkFallback url={url} locale={locale} />
     </EmailLayout>
   );
 }
@@ -97,7 +102,10 @@ InvitationEmail.PreviewProps = {
 export function invitationEmail(to: string, props: InvitationEmailProps): Promise<Email> {
   return renderEmail(
     to,
-    `${props.inviterName} invited you to join ${props.companyName} on Adiutor`,
+    translator(props.locale, 'emails.invitation')('subject', {
+      inviter: props.inviterName,
+      company: props.companyName,
+    }),
     <InvitationEmail {...props} />,
   );
 }

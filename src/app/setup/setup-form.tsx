@@ -1,8 +1,12 @@
 /**
- * @file First-run form: the staff name and its first Admin.
+ * @file First-run form: the staff name, Adiutor's default language and its
+ * first Admin.
  */
 'use client';
 
+import { useLocale, useTranslations } from 'next-intl';
+
+import DefaultLanguageField from '@/components/language/default-language-field';
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
 import TextField from '@/components/ui/text-field';
@@ -12,52 +16,56 @@ import { MIN_PASSWORD_LENGTH, NAME_MAX_LENGTH } from '@/lib/input-rules';
 import setupAction from './actions';
 
 /**
- * Name shown to users, name, email and password, with a button that sets
- * everything up and signs in.
+ * Name shown to users, default language (the page's to begin with), name,
+ * email and password, with a button that sets everything up and signs in.
  *
  * @returns The form.
  */
 export default function SetupForm() {
+  const t = useTranslations('auth');
   const [result, formAction, pending, onSubmit] = useTransientActionState(setupAction, null);
+  const language = useTranslations('common.language');
+  const locale = useLocale();
 
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-5">
       <ResultAlert result={result} errorsOnly />
       <TextField
-        label="Name shown to users"
+        label={t('setup.staffName')}
         name="staffName"
         maxLength={NAME_MAX_LENGTH}
         autoComplete="organization"
-        placeholder="Adiutor"
-        description="Used in invitations and wherever users see who's helping them. You can change it later."
+        placeholder={t('setup.staffNamePlaceholder')}
+        description={t('setup.staffNameHint')}
         required
       />
+      <DefaultLanguageField defaultValue={locale} description={language('defaultHint')} />
       <TextField
-        label="Your name"
+        label={t('fields.yourName')}
         name="name"
         autoComplete="name"
         required
         maxLength={NAME_MAX_LENGTH}
       />
       <TextField
-        label="Email"
+        label={t('fields.email')}
         type="email"
         name="email"
         autoComplete="email"
-        placeholder="you@adiutor.dev"
+        placeholder={t('fields.emailPlaceholder')}
         required
       />
       <TextField
-        label="Password"
+        label={t('fields.password')}
         type="password"
         name="password"
         autoComplete="new-password"
         minLength={MIN_PASSWORD_LENGTH}
-        description={`At least ${MIN_PASSWORD_LENGTH} characters.`}
+        description={t('fields.passwordHint', { min: MIN_PASSWORD_LENGTH })}
         required
       />
       <Button type="submit" fullWidth loading={pending}>
-        Set up Adiutor
+        {t('setup.submit')}
       </Button>
     </form>
   );

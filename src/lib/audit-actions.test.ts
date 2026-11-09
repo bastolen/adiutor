@@ -4,8 +4,9 @@
  */
 import { describe, expect, it } from 'vitest';
 
+import translator from '@/lib/i18n/translator';
+
 import {
-  AUDIT_ACTION_LABELS,
   AUDIT_ACTIONS,
   AUDIT_GROUP_KEYS,
   AUDIT_GROUPS,
@@ -13,49 +14,60 @@ import {
   isAuditGroup,
 } from './audit-actions';
 
+/** Describes an event in English (US), as the audit log shows it. */
+const t = translator('en-US', 'audit');
+
 describe('describeAuditEvent', () => {
+  it('gives a key in the audit catalogue, for the reader to translate', () => {
+    expect(describeAuditEvent('sign_in', {})).toBe('actions.sign_in');
+    expect(describeAuditEvent('sessions_revoked', { others: true })).toBe(
+      'events.sessionsRevokedOthers',
+    );
+    expect(translator('nl-NL', 'audit')(describeAuditEvent('sign_in', {}))).not.toBe('Signed in');
+  });
+
   it('says when a sign-out only ended some sessions', () => {
-    expect(describeAuditEvent('sessions_revoked', { mfaRequired: true, count: 2 })).toBe(
+    expect(t(describeAuditEvent('sessions_revoked', { mfaRequired: true, count: 2 }))).toBe(
       'Signed out of sessions without MFA, which the role now requires',
     );
-    expect(describeAuditEvent('sessions_revoked', { others: true, count: 1 })).toBe(
+    expect(t(describeAuditEvent('sessions_revoked', { others: true, count: 1 }))).toBe(
       'Signed out of other devices',
     );
-    expect(describeAuditEvent('sessions_revoked', { byAdmin: true })).toBe('Signed out everywhere');
+    expect(t(describeAuditEvent('sessions_revoked', { byAdmin: true }))).toBe(
+      'Signed out everywhere',
+    );
   });
 
   it('tells a password whose sign-in waits for its code apart from a sign-in', () => {
-    expect(describeAuditEvent('sign_in_code_pending', {})).toBe(
+    expect(t(describeAuditEvent('sign_in_code_pending', {}))).toBe(
       'Password accepted, code step started',
     );
-    expect(describeAuditEvent('sign_in', { method: 'password' })).toBe('Signed in');
+    expect(t(describeAuditEvent('sign_in', { method: 'password' }))).toBe('Signed in');
   });
 
   it('tells a wrong code at sign-in from one on the step-up page', () => {
-    expect(describeAuditEvent('mfa_failed', { method: 'authenticator', atSignIn: true })).toBe(
+    expect(t(describeAuditEvent('mfa_failed', { method: 'authenticator', atSignIn: true }))).toBe(
       'Wrong two-step verification code entered at sign-in',
     );
-    expect(describeAuditEvent('mfa_failed', { method: 'authenticator' })).toBe(
-      AUDIT_ACTION_LABELS.mfa_failed,
+    expect(t(describeAuditEvent('mfa_failed', { method: 'authenticator' }))).toBe(
+      'Failed MFA confirmation',
     );
   });
 
   it('says what a wrong current password was typed for', () => {
-    expect(describeAuditEvent('password_check_failed', { purpose: 'change_password' })).toBe(
+    expect(t(describeAuditEvent('password_check_failed', { purpose: 'change_password' }))).toBe(
       'Wrong current password entered when changing the password',
     );
-    expect(describeAuditEvent('password_check_failed', { purpose: 'deactivate' })).toBe(
+    expect(t(describeAuditEvent('password_check_failed', { purpose: 'deactivate' }))).toBe(
       'Wrong current password entered when deactivating the account',
     );
-    expect(describeAuditEvent('password_check_failed', {})).toBe(
-      AUDIT_ACTION_LABELS.password_check_failed,
+    expect(t(describeAuditEvent('password_check_failed', {}))).toBe(
+      'Wrong current password entered',
     );
   });
 
   it('uses the label for everything else', () => {
-    expect(describeAuditEvent('role_changed', { mfaRequired: true })).toBe(
-      AUDIT_ACTION_LABELS.role_changed,
-    );
+    expect(t(describeAuditEvent('role_changed', { mfaRequired: true }))).toBe('Changed a role');
   });
 });
 

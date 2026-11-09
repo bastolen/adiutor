@@ -3,8 +3,11 @@
  * belongs to, sorted and paginated (`USER_COMPANIES_TABLE`). Staff who may
  * manage members (`members:manage`) also add them to a company, change their
  * role in one and remove them from one, on their own page too (worded for
- * themselves).
+ * themselves). Text from `admin.user.companies`; the role selects in it
+ * translate with `people`, which the page passes with `ClientMessages`.
  */
+import { useLocale, useTranslations } from 'next-intl';
+
 import ActionDialog from '@/components/ui/action-dialog';
 import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
@@ -14,7 +17,7 @@ import SelectField from '@/components/ui/select-field';
 import SortMenu from '@/components/ui/sort-menu';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
 import TextLink from '@/components/ui/text-link';
-import { COMPANY_ROLES, ROLE_LABELS, roleOptions } from '@/lib/authz/roles';
+import { COMPANY_ROLES, roleOptions } from '@/lib/authz/roles';
 import formatDate from '@/lib/format';
 import { type Paged, showsPagination, type TableLinks } from '@/lib/tables/table-state';
 import type { UserCompanySort } from '@/lib/tables/tables';
@@ -70,42 +73,39 @@ export default function CompaniesCard({
   canManageMembers,
   addable,
 }: CompaniesCardProps) {
-  const companyRoleOptions = roleOptions(COMPANY_ROLES);
+  const locale = useLocale();
+  const t = useTranslations('admin.user.companies');
+  const tRoles = useTranslations('roles');
+  const companyRoleOptions = roleOptions(COMPANY_ROLES, tRoles);
   return (
     <Card
       id={table.section}
-      title="Companies"
-      description={
-        companies.total === 0 ? 'Not a member of any company.' : 'The companies they belong to.'
-      }
+      title={t('title')}
+      description={companies.total === 0 ? t('descriptionNone') : t('descriptionSome')}
       actions={
         (canManageMembers || companies.total > 0) && (
           <>
-            {companies.total > 0 && <SortMenu label="companies" options={table.sortOptions()} />}
+            {companies.total > 0 && <SortMenu label={t('rows')} options={table.sortOptions()} />}
             {canManageMembers && (
               // Stays (disabled) when there's no company left, so its last message stays visible.
               <ActionDialog
                 disabled={addable.length === 0}
                 action={addMemberAction}
                 fields={{ userId }}
-                triggerLabel="Add to company"
-                title={isSelf ? 'Add yourself to a company' : `Add ${userName} to a company`}
-                description={
-                  isSelf
-                    ? 'You become a member right away, with the role you choose, and get an email.'
-                    : 'They become a member right away, with the role you choose, and get an email.'
-                }
-                confirmLabel="Add to company"
+                triggerLabel={t('add.label')}
+                title={isSelf ? t('add.titleSelf') : t('add.title', { name: userName })}
+                description={isSelf ? t('add.descriptionSelf') : t('add.description')}
+                confirmLabel={t('add.confirmLabel')}
                 tone="primary"
               >
                 <SelectField
-                  label="Company"
+                  label={t('add.company')}
                   name="companyId"
                   options={addable.map((company) => ({ value: company.id, label: company.name }))}
                   defaultValue={addable[0]?.id}
                 />
                 <SelectField
-                  label="Role"
+                  label={t('add.role')}
                   name="role"
                   options={companyRoleOptions}
                   defaultValue="client"
@@ -118,22 +118,22 @@ export default function CompaniesCard({
       flush={companies.total > 0}
       footer={
         showsPagination(companies.total) && (
-          <Pagination {...table.pagination(companies, 'companies')} />
+          <Pagination {...table.pagination(companies, t('rows'))} />
         )
       }
     >
       {companies.total > 0 && (
-        <Table caption={table.caption(`Companies of ${userName}`, companies)}>
+        <Table caption={table.caption(t('caption', { name: userName }), companies)}>
           <thead>
             <tr>
-              <Th aria-sort={table.ariaSort('name')}>Company</Th>
-              <Th className="hidden sm:table-cell">Role</Th>
+              <Th aria-sort={table.ariaSort('name')}>{t('columns.company')}</Th>
+              <Th className="hidden sm:table-cell">{t('columns.role')}</Th>
               <Th aria-sort={table.ariaSort('joined')} className="hidden md:table-cell">
-                Joined
+                {t('columns.joined')}
               </Th>
               {canManageMembers && (
                 <Th className="text-right">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t('columns.actions')}</span>
                 </Th>
               )}
             </tr>
@@ -149,13 +149,13 @@ export default function CompaniesCard({
                 <RoleSelect
                   action={changeRoleAction}
                   fields={membershipFields}
-                  memberName={`${userName} in ${membership.name}`}
+                  memberName={t('memberName', { user: userName, company: membership.name })}
                   currentRole={membership.role}
                   roles={companyRoleOptions}
                   target="company"
                 />
               ) : (
-                <Badge>{ROLE_LABELS[membership.role]}</Badge>
+                <Badge>{tRoles(`${membership.role}.label`)}</Badge>
               );
               return (
                 <Tr key={membership.id}>
@@ -165,40 +165,48 @@ export default function CompaniesCard({
                         <TextLink href={`/companies/${membership.slug}`} className="wrap-anywhere">
                           {membership.name}
                         </TextLink>
-                        {membership.deactivated && <Badge tone="danger">Deactivated</Badge>}
+                        {membership.deactivated && <Badge tone="danger">{t('deactivated')}</Badge>}
                       </span>
                       {/* Below tablet width, when they joined goes here. */}
                       <span className="text-xs text-muted-foreground md:hidden">
-                        Joined {formatDate(membership.joinedAt)}
+                        {t('joinedOn', { date: formatDate(membership.joinedAt, locale) })}
                       </span>
                       <div className="sm:hidden">{role}</div>
                     </div>
                   </Td>
                   <Td className="hidden sm:table-cell">{role}</Td>
                   <Td className="hidden text-muted-foreground md:table-cell">
-                    {formatDate(membership.joinedAt)}
+                    {formatDate(membership.joinedAt, locale)}
                   </Td>
                   {canManageMembers && (
                     <Td className="text-right">
                       <RowAction
                         action={removeMemberAction}
                         fields={membershipFields}
-                        label="Remove"
-                        ariaLabel={`Remove ${userName} from ${membership.name}`}
-                        doneMessage={`${userName} was removed from ${membership.name}.`}
+                        label={t('remove.label')}
+                        ariaLabel={t('remove.ariaLabel', {
+                          user: userName,
+                          company: membership.name,
+                        })}
+                        doneMessage={t('remove.done', { user: userName, company: membership.name })}
                         variant="danger-subtle"
                         confirm={
                           isSelf
                             ? {
-                                title: `Remove yourself from ${membership.name}?`,
-                                confirmLabel: 'Remove member',
+                                title: t('remove.titleSelf', { company: membership.name }),
+                                confirmLabel: t('remove.confirmLabel'),
                                 // Staff keep working with every company through their staff role.
-                                description: `You'll no longer be a member of ${membership.name}. Your staff role still lets you work with it, and you can add yourself again later.`,
+                                description: t('remove.descriptionSelf', {
+                                  company: membership.name,
+                                }),
                               }
                             : {
-                                title: `Remove ${userName} from ${membership.name}?`,
-                                confirmLabel: 'Remove member',
-                                description: `They'll lose access to ${membership.name}. Their account stays, and you can add them again later.`,
+                                title: t('remove.title', {
+                                  user: userName,
+                                  company: membership.name,
+                                }),
+                                confirmLabel: t('remove.confirmLabel'),
+                                description: t('remove.description', { company: membership.name }),
                               }
                         }
                       />

@@ -1,7 +1,7 @@
 /**
  * @file Helpers for integration tests: a service context on the test
  * database that captures emails, a reset between tests, a switch for GitHub
- * sign-in, and factories.
+ * sign-in, factories, and reading an email's language.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -24,6 +24,7 @@ import type { MfaMethod } from '@/lib/authz/mfa';
 import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { defined, firstRow } from '@/lib/defined';
 import type { Email } from '@/lib/email';
+import type { Locale } from '@/lib/i18n/locales';
 import { MFA_PROVIDERS, type MfaProvider } from '@/lib/sign-in/oauth-providers';
 import { availableProviders, configuredProviders } from '@/lib/sign-in/providers';
 import { type Actor, loadActor } from '@/server/actor';
@@ -266,9 +267,14 @@ export async function addPassword(db: Database, userId: string): Promise<void> {
  *
  * @param db - Test database.
  * @param name - The name shown to users; defaults to "Adiutor Tests".
+ * @param defaultLocale - Adiutor's default language; defaults to English (US).
  */
-export async function createStaffSettings(db: Database, name = 'Adiutor Tests'): Promise<void> {
-  await db.insert(staffSettings).values({ name });
+export async function createStaffSettings(
+  db: Database,
+  name = 'Adiutor Tests',
+  defaultLocale: Locale = 'en-US',
+): Promise<void> {
+  await db.insert(staffSettings).values({ name, defaultLocale });
 }
 
 /**
@@ -435,6 +441,53 @@ export async function inSequence<T, R>(
     async (previous, item) => [...(await previous), await run(item)],
     Promise.resolve([]),
   );
+}
+
+/**
+ * Reads the language an email is written in, from its `<html lang>`.
+ *
+ * @param email - The email.
+ * @returns The locale, e.g. `nl-NL`.
+ */
+export function emailLanguage(email: Email): string {
+  const match = /<html[^>]*\slang="([^"]+)"/.exec(email.html);
+  return defined(match?.[1], `the language of the email "${email.subject}"`);
+}
+
+/**
+ * Saves a user's language (`user.locale`), as choosing one on the account
+ * page will.
+ *
+ * @param db - Test database.
+ * @param userId - The user.
+ * @param locale - The language, or `null` for none.
+ */
+export async function setUserLocale(
+  db: Database,
+  userId: string,
+  locale: Locale | null,
+): Promise<void> {
+  await db.update(user).set({ locale }).where(eq(user.id, userId));
+}
+
+/**
+ * A service context whose request is in a language, as the app's is when
+ * the browser asked for one (`requestLocale`).
+ *
+ * @param ctx - The test context.
+ * @param locale - The request's language.
+ * @returns The context, with `requestLocale`.
+ */
+export function inLanguage<C extends ServiceContext>(ctx: C, locale: Locale): C {
+  return {
+    ...ctx,
+    /**
+     * The request's language.
+     *
+     * @returns The locale.
+     */
+    requestLocale: async () => locale,
+  };
 }
 
 /**

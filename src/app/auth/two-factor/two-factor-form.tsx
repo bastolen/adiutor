@@ -4,6 +4,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useRef } from 'react';
 
 import CodeField from '@/components/auth/code-field';
@@ -18,7 +19,7 @@ import { useTransientState } from '@/components/ui/use-transient-state';
 import { EMAIL_CODE_MINUTES } from '@/lib/authz/mfa';
 import { getSafeRedirectPath } from '@/lib/redirect';
 import authClient from '@/lib/sign-in/auth-client';
-import { codeStepErrorMessage } from '@/lib/sign-in/auth-error-messages';
+import { authCodeText, authErrorText } from '@/lib/sign-in/auth-error-messages';
 import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 import verifyCode, { type CodeKind } from '@/lib/sign-in/verify-code';
 
@@ -41,6 +42,7 @@ import { parseTwoFactorMethod } from './two-factor-path';
  * @returns The form.
  */
 export default function TwoFactorForm() {
+  const t = useTranslations('auth');
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackURL = getSafeRedirectPath(searchParams.get('callbackURL'));
@@ -63,9 +65,10 @@ export default function TwoFactorForm() {
    * @param failure - Better Auth's error.
    * @param failure.status - HTTP status.
    * @param failure.code - Error code, if any.
+   * @param failure.message - The server's message, shown only for refusals it words itself.
    */
-  const showError = (failure: { status: number; code?: string }) => {
-    setError(codeStepErrorMessage(failure));
+  const showError = (failure: { status: number; code?: string; message?: string }) => {
+    setError(authErrorText(t, failure));
     setExpired(failure.code === 'INVALID_TWO_FACTOR_COOKIE');
   };
 
@@ -83,7 +86,7 @@ export default function TwoFactorForm() {
     const result = await authClient.twoFactor.sendOtp();
     setSending(false);
     if (result.error?.code === EMAIL_CODE_SENT_RECENTLY.code) {
-      setNotice(EMAIL_CODE_SENT_RECENTLY.message);
+      setNotice(authCodeText(t, EMAIL_CODE_SENT_RECENTLY.code));
       cooldown.start();
       return;
     }
@@ -93,7 +96,9 @@ export default function TwoFactorForm() {
     }
     cooldown.start();
     setNotice(
-      `We sent ${again ? 'a new code' : 'a code'} to your email address. It expires in ${EMAIL_CODE_MINUTES} minutes.`,
+      again
+        ? t('emailCode.sentAgain', { minutes: EMAIL_CODE_MINUTES })
+        : t('emailCode.sent', { minutes: EMAIL_CODE_MINUTES }),
     );
   };
 
@@ -174,11 +179,9 @@ export default function TwoFactorForm() {
   return (
     <div className="flex flex-col gap-8">
       <AuthHeading
-        title="Confirm it's you"
+        title={t('twoFactor.heading')}
         description={
-          mode === 'backup'
-            ? 'Enter one of the backup codes you saved when you set up your authenticator app. Each works once.'
-            : 'Your account has two-step verification. Enter the code to finish signing in.'
+          mode === 'backup' ? t('twoFactor.backupDescription') : t('twoFactor.description')
         }
       />
 
@@ -188,7 +191,7 @@ export default function TwoFactorForm() {
       {expired && (
         <Button asChild variant="secondary">
           <TextLink href={`/auth?callbackURL=${encodeURIComponent(callbackURL)}`}>
-            Start again
+            {t('actions.startAgain')}
           </TextLink>
         </Button>
       )}
@@ -203,13 +206,13 @@ export default function TwoFactorForm() {
           onChange={(event) => setCode(event.target.value)}
         />
         <CheckboxField
-          label="Trust this device for 30 days"
-          description="Skip this step when you sign in again on this browser, until you sign out. Don't use this on a shared computer."
+          label={t('twoFactor.trustDevice')}
+          description={t('twoFactor.trustDeviceHint')}
           checked={trustDevice}
           onChange={(event) => setTrustDevice(event.target.checked)}
         />
         <Button type="submit" fullWidth loading={pending}>
-          Verify and sign in
+          {t('twoFactor.submit')}
         </Button>
       </form>
 
@@ -227,10 +230,10 @@ export default function TwoFactorForm() {
             size="sm"
             onClick={() => choose(mode === 'backup' ? 'totp' : 'backup')}
           >
-            {mode === 'backup' ? 'Use a code instead' : 'Use a backup code'}
+            {mode === 'backup' ? t('actions.useCode') : t('actions.useBackupCode')}
           </Button>
         )}
-        <TextLink href="/auth">Back to sign in</TextLink>
+        <TextLink href="/auth">{t('actions.backToSignIn')}</TextLink>
       </div>
     </div>
   );

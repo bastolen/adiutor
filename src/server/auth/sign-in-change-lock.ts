@@ -18,7 +18,6 @@
 import { and, eq, sql } from 'drizzle-orm';
 
 import { rateLimitBucket } from '@/db/schema';
-import { SIGN_IN_CHANGE_IN_PROGRESS } from '@/lib/sign-in/sign-in-refusals';
 
 import type { ServiceContext } from '../context';
 import { ServiceError } from '../errors';
@@ -100,7 +99,7 @@ export async function withSignInChangeLock<T>(
 ): Promise<T> {
   const lock = await takeSignInChangeLock(ctx, userId);
   if (!lock) {
-    throw new ServiceError('conflict', SIGN_IN_CHANGE_IN_PROGRESS.message);
+    throw new ServiceError('conflict', 'errors.signIn.changeInProgress');
   }
   try {
     return await change();

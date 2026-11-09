@@ -1,9 +1,11 @@
 /**
- * @file Server actions for using an invite link.
+ * @file Server actions for using an invite link. Their messages are in the
+ * request's language.
  */
 'use server';
 
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 
 import type { ActionResult } from '@/lib/action-result';
 import field from '@/lib/form-data';
@@ -13,9 +15,6 @@ import appContext from '@/server/app-context';
 import { getActor } from '@/server/authz';
 import { joinedPath } from '@/server/people/invitations';
 import { claimInviteLink, joinWithInviteLink } from '@/server/people/invite-links';
-
-/** Message for a link that stopped working in the meantime. */
-const UNUSABLE = 'This link can no longer be used. Ask for a new one.';
 
 /**
  * Uses the link with an email address: an invitation is emailed to it. The
@@ -32,12 +31,10 @@ export async function claimAction(
   return runAction(async () => {
     const email = emailSchema.parse(field(formData, 'email'));
     const result = await claimInviteLink(appContext, field(formData, 'token'), email);
+    const t = await getTranslations('auth');
     return result.status === 'sent'
-      ? {
-          ok: true,
-          message: `Check your inbox: we've sent an email to ${email}. Open the link in it to continue.`,
-        }
-      : { ok: false, message: UNUSABLE };
+      ? { ok: true, message: t('join.sent', { email }) }
+      : { ok: false, message: t('join.unusable') };
   });
 }
 
@@ -66,6 +63,7 @@ export async function joinAction(
     if (result.status === 'joined') {
       redirect(joinedPath(result.companyId));
     }
-    return { ok: false, message: UNUSABLE };
+    const t = await getTranslations('auth');
+    return { ok: false, message: t('join.unusable') };
   });
 }

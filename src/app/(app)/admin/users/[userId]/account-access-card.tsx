@@ -2,8 +2,10 @@
  * @file The "Account access" card on the user detail page, for Admins
  * (`users:manage`) on someone else's page: reset two-step verification (which
  * also disconnects their GitHub and Google accounts, and can remove their
- * passkeys), and deactivate or reactivate the account.
+ * passkeys), and deactivate or reactivate the account. Text from
+ * `admin.user.accountAccess`.
  */
+import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
 import ActionDialog from '@/components/ui/action-dialog';
@@ -78,77 +80,66 @@ export default function AccountAccessCard({
   connectedAccounts,
   deactivatedAt,
 }: AccountAccessCardProps) {
+  const t = useTranslations('admin.user.accountAccess');
   const fields = { userId };
   // What an MFA reset can take away: two-step verification, passkeys and connected accounts.
   const hasSomethingToReset = mfa.twoFactorEnabled || mfa.passkeyCount > 0 || connectedAccounts > 0;
   return (
-    <Card
-      id="account-access"
-      title="Account access"
-      description="Each change is recorded in the activity log, and the user gets an email."
-      flush
-    >
+    <Card id="account-access" title={t('title')} description={t('description')} flush>
       <div className="divide-y divide-border border-t border-border">
         <ManageRow
-          title="Reset two-step verification"
+          title={t('reset.title')}
           description={
-            hasSomethingToReset
-              ? 'For a lost phone, or a GitHub or Google account that isn’t theirs: turns off two-step verification and disconnects GitHub and Google, so they can sign in and set it up again.'
-              : 'Nothing to reset: they have no two-step verification, passkeys or connected GitHub or Google accounts.'
+            hasSomethingToReset ? t('reset.descriptionAvailable') : t('reset.descriptionNone')
           }
         >
           <ActionDialog
             disabled={!hasSomethingToReset}
             action={resetMfaAction}
             fields={fields}
-            triggerLabel="Reset"
-            title={`Reset two-step verification for ${userName}?`}
+            triggerLabel={t('reset.label')}
+            title={t('reset.dialogTitle', { name: userName })}
             description={
               connectedAccounts > 0
-                ? "Their authenticator app and backup codes stop working, their connected GitHub and Google accounts are disconnected, and they're signed out everywhere. If their role requires it, they're asked to set up MFA again at their next sign-in."
-                : "Their authenticator app and backup codes stop working, and they're signed out everywhere. If their role requires it, they're asked to set up MFA again at their next sign-in."
+                ? t('reset.dialogDescriptionWithAccounts')
+                : t('reset.dialogDescription')
             }
-            confirmLabel="Reset two-step verification"
+            confirmLabel={t('reset.confirmLabel')}
           >
             {mfa.passkeyCount > 0 && (
               <CheckboxField
                 name="removePasskeys"
-                label={`Also remove their ${mfa.passkeyCount === 1 ? 'passkey' : `${mfa.passkeyCount} passkeys`}`}
-                description="Only when a passkey may be lost or stolen."
+                label={t('reset.removePasskeys', { count: mfa.passkeyCount })}
+                description={t('reset.removePasskeysHint')}
               />
             )}
           </ActionDialog>
         </ManageRow>
         <ManageRow
-          title={deactivatedAt ? 'Reactivate account' : 'Deactivate account'}
-          description={
-            deactivatedAt
-              ? 'They can sign in again with their existing sign-in methods.'
-              : 'Signs them out everywhere and blocks sign-in until reactivated. Their memberships and data stay.'
-          }
+          title={deactivatedAt ? t('reactivate.title') : t('deactivate.title')}
+          description={deactivatedAt ? t('reactivate.description') : t('deactivate.description')}
         >
           {deactivatedAt ? (
             <RowAction
               action={reactivateUserAction}
               fields={fields}
-              label="Reactivate"
+              label={t('reactivate.label')}
               confirm={{
-                title: `Reactivate ${userName}?`,
-                description: 'They can sign in again and get back their access.',
-                confirmLabel: 'Reactivate',
+                title: t('reactivate.confirmTitle', { name: userName }),
+                description: t('reactivate.confirmDescription'),
+                confirmLabel: t('reactivate.confirmLabel'),
               }}
             />
           ) : (
             <RowAction
               action={deactivateUserAction}
               fields={fields}
-              label="Deactivate"
+              label={t('deactivate.label')}
               variant="danger-subtle"
               confirm={{
-                title: `Deactivate ${userName}?`,
-                description:
-                  'They are signed out everywhere and can’t sign in until an Admin reactivates the account.',
-                confirmLabel: 'Deactivate',
+                title: t('deactivate.confirmTitle', { name: userName }),
+                description: t('deactivate.confirmDescription'),
+                confirmLabel: t('deactivate.confirmLabel'),
               }}
             />
           )}

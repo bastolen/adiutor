@@ -66,7 +66,7 @@ export async function revokeOwnSession(
 ): Promise<void> {
   const id = parseId(sessionId);
   if (id === actor.sessionId) {
-    throw new ServiceError('invalid', 'To sign out of this device, use Sign out in the menu.');
+    throw new ServiceError('invalid', 'errors.sessions.currentDevice');
   }
   await ctx.db.transaction(async (tx) => {
     const deleted = await tx
@@ -142,14 +142,14 @@ export async function revokeAllSessions(
 ): Promise<RevokeAllResult> {
   const email = options.email?.trim().toLowerCase();
   if (options.email !== undefined && !email) {
-    throw new ServiceError('invalid', 'Give the email address of the user to sign out.');
+    throw new ServiceError('invalid', 'errors.sessions.emailRequired');
   }
   const result = await ctx.db.transaction(async (tx) => {
     const [target] = email
       ? await tx.select({ id: user.id, email: user.email }).from(user).where(eq(user.email, email))
       : [];
     if (email && !target) {
-      throw new ServiceError('not_found', `No account has the address ${email}.`);
+      throw new ServiceError('not_found', 'errors.sessions.noAccount', { email });
     }
     let count: number;
     if (target) {

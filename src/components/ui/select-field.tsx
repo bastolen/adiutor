@@ -5,7 +5,7 @@
 
 import { Check, ChevronDown } from 'lucide-react';
 import { Select } from 'radix-ui';
-import { useId, useState } from 'react';
+import { type ReactNode, useId, useState } from 'react';
 
 import cn from '@/lib/cn';
 
@@ -19,6 +19,12 @@ export interface SelectOption {
   label: string;
   /** Short explanation shown under the label in the list, e.g. what a role can do. Read out after the label. */
   description?: string;
+  /**
+   * A small decorative picture before the label, in the list and in the closed
+   * select, e.g. a language's flag. Hide it from screen readers (`aria-hidden`):
+   * the label names the option.
+   */
+  icon?: ReactNode;
 }
 
 /**
@@ -49,6 +55,8 @@ interface SelectFieldProps {
    * `aria-disabled` and the wait cursor.
    */
   busy?: boolean;
+  /** Help text under the field, linked to it for screen readers (`aria-describedby`). */
+  description?: string;
   /** Extra classes for the trigger. */
   className?: string;
 }
@@ -72,6 +80,7 @@ interface SelectFieldProps {
  * @param props.hideLabel - Hide the label visually.
  * @param props.disabled - Disabled state.
  * @param props.busy - Busy state: focusable, but doesn't open.
+ * @param props.description - Help text under the field.
  * @param props.className - Extra trigger classes.
  * @returns The labelled select.
  */
@@ -86,9 +95,11 @@ export default function SelectField({
   hideLabel = false,
   disabled = false,
   busy = false,
+  description = '',
   className = '',
 }: SelectFieldProps) {
   const id = useId();
+  const descriptionId = `${id}-description`;
   // Kept here, so it can refuse to open while busy.
   const [open, setOpen] = useState(false);
 
@@ -110,6 +121,7 @@ export default function SelectField({
           id={id}
           aria-busy={busy || undefined}
           aria-disabled={busy || undefined}
+          aria-describedby={description ? descriptionId : undefined}
           className={cn(
             fieldControl,
             'flex h-10 items-center justify-between gap-2 text-left data-placeholder:text-muted-foreground',
@@ -135,6 +147,7 @@ export default function SelectField({
                   <Select.Item
                     key={option.value}
                     value={option.value}
+                    textValue={option.label}
                     // With a description, the option's name is the label followed by the
                     // description, so it contains all of its visible text (WCAG 2.5.3).
                     aria-labelledby={
@@ -146,7 +159,16 @@ export default function SelectField({
                       <Check aria-hidden="true" className="size-4 text-highlight" />
                     </Select.ItemIndicator>
                     <span id={optionLabelId}>
-                      <Select.ItemText>{option.label}</Select.ItemText>
+                      <Select.ItemText>
+                        {option.icon ? (
+                          <span className="inline-flex items-center gap-2">
+                            {option.icon}
+                            {option.label}
+                          </span>
+                        ) : (
+                          option.label
+                        )}
+                      </Select.ItemText>
                     </span>
                     {/* A space between label and description in the text (not visible in the column layout). */}
                     {option.description && ' '}
@@ -162,6 +184,11 @@ export default function SelectField({
           </Select.Content>
         </Select.Portal>
       </Select.Root>
+      {description && (
+        <p id={descriptionId} className="text-xs text-muted-foreground">
+          {description}
+        </p>
+      )}
     </div>
   );
 }

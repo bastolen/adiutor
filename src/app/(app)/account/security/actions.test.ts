@@ -13,11 +13,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { auth } from '@/lib/auth';
 import confirmChangeUrl from '@/lib/sign-in/confirm-url';
 import { changeOwnPassword, hasPassword, setFirstPassword } from '@/server/auth/accounts';
+import { revokeOtherOwnSessions } from '@/server/auth/sessions';
 import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
 import { deactivateOwnAccount } from '@/server/people/user-admin';
 
-import { deactivateAccountAction, passwordAction } from './actions';
+import { deactivateAccountAction, passwordAction, revokeOtherSessionsAction } from './actions';
+import { testLocale } from '../../../../../tests/i18n/next-intl-mocks';
 
 vi.mock('next/headers', () => ({ headers: vi.fn(async () => new Headers()) }));
 vi.mock('next/cache', () => ({ refresh: vi.fn() }));
@@ -45,7 +47,7 @@ vi.mock('@/server/auth/accounts', () => ({
   listConnectedProviders: vi.fn(),
   setFirstPassword: vi.fn(),
 }));
-vi.mock('@/server/auth/sessions', () => ({}));
+vi.mock('@/server/auth/sessions', () => ({ revokeOtherOwnSessions: vi.fn() }));
 vi.mock('@/server/people/user-admin', () => ({ deactivateOwnAccount: vi.fn() }));
 
 /** The signed-in user, without a second step. */
@@ -112,12 +114,13 @@ describe('passwordAction', () => {
 
   it("doesn't set it when the service refuses, and says why", async () => {
     vi.mocked(setFirstPassword).mockRejectedValue(
-      new ServiceError('forbidden', 'Your role requires MFA, and this would leave you without it.'),
+      new ServiceError('forbidden', 'errors.signIn.mfaRequiredForRole'),
     );
 
     expect(await passwordAction(null, firstPassword)).toEqual({
       ok: false,
-      message: 'Your role requires MFA, and this would leave you without it.',
+      message:
+        'Your role requires MFA, and this would leave you without it. Add a passkey first, then try again.',
     });
     expect(auth.api.setPassword).not.toHaveBeenCalled();
   });
@@ -183,7 +186,7 @@ describe('passwordAction when changing the password', () => {
 
   it('shows a wrong password and the limit as the service words them', async () => {
     vi.mocked(changeOwnPassword).mockRejectedValueOnce(
-      new ServiceError('invalid', 'Your current password is incorrect.'),
+      new ServiceError('invalid', 'errors.wrongPassword.change_password'),
     );
     expect(await passwordAction(null, changedPassword)).toEqual({
       ok: false,
@@ -191,7 +194,7 @@ describe('passwordAction when changing the password', () => {
     });
 
     vi.mocked(changeOwnPassword).mockRejectedValueOnce(
-      new ServiceError('rate_limited', 'Too many attempts. Try again in 15 minutes.'),
+      new ServiceError('rate_limited', 'errors.tooManyAttempts', { minutes: 15 }),
     );
     expect(await passwordAction(null, changedPassword)).toEqual({
       ok: false,
@@ -275,10 +278,7 @@ describe('deactivateAccountAction', () => {
 
   it("shows the service's refusal, e.g. a sign-in that's too old", async () => {
     vi.mocked(deactivateOwnAccount).mockRejectedValue(
-      new ServiceError(
-        'forbidden',
-        'For your security, sign out and in again before changing this.',
-      ),
+      new ServiceError('forbidden', 'errors.signIn.sessionNotFresh'),
     );
 
     expect(await deactivateAccountAction(null, form({ password: '' }))).toEqual({
@@ -286,5 +286,20 @@ describe('deactivateAccountAction', () => {
       message: 'For your security, sign out and in again before changing this.',
     });
     expect(redirect).not.toHaveBeenCalled();
+  });
+});
+
+describe('revokeOtherSessionsAction', () => {
+  it.each([
+    ['en-US', 1, 'Signed out on 1 other device.'],
+    ['en-US', 3, 'Signed out on 3 other devices.'],
+    ['nl-NL', 1, 'Uitgelogd op 1 ander apparaat.'],
+    ['nl-NL', 3, 'Uitgelogd op 3 andere apparaten.'],
+    ['es-ES', 3, 'Sesión cerrada en 3 dispositivos más.'],
+  ] as const)('counts the devices in %s (%i)', async (locale, count, message) => {
+    testLocale.current = locale;
+    vi.mocked(revokeOtherOwnSessions).mockResolvedValue(count);
+
+    expect(await revokeOtherSessionsAction()).toEqual({ ok: true, message });
   });
 });

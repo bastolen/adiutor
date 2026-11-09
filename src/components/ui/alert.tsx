@@ -5,6 +5,7 @@
 'use client';
 
 import { CircleAlert, CircleCheck, Info, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { type ReactNode, useEffect, useRef } from 'react';
 
 import cn from '@/lib/cn';
@@ -38,7 +39,7 @@ interface AlertProps {
    * button on the right. The caller hides the message.
    */
   onDismiss?: () => void;
-  /** The dismiss button's name for screen readers. Defaults to "Dismiss". */
+  /** The dismiss button's name for screen readers. Defaults to "Dismiss" in the reader's language. */
   dismissLabel?: string;
   /**
    * Also show the message as a toast when it appears (in the signed-in app,
@@ -69,9 +70,10 @@ export default function Alert({
   children,
   focusOnShow = false,
   onDismiss = undefined,
-  dismissLabel = 'Dismiss',
+  dismissLabel = undefined,
   alsoToast = false,
 }: AlertProps) {
+  const t = useTranslations('common.actions');
   const ref = useRef<HTMLDivElement>(null);
   const showToast = useToast();
   // The message last toasted; cleared when the message goes, so the same one shows again later.
@@ -116,7 +118,7 @@ export default function Alert({
         <Button
           variant="ghost"
           size="sm"
-          aria-label={dismissLabel}
+          aria-label={dismissLabel ?? t('dismiss')}
           onClick={(event) => {
             // The message (and this button) goes away: focus moves on instead of to <body>.
             restoreFocusIfLost(event.currentTarget);

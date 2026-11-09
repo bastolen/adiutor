@@ -36,6 +36,21 @@ describe('Button', () => {
     expect(screen.getByRole('button', { name: 'Save' })).not.toHaveAttribute('aria-busy');
   });
 
+  it('keeps a label on one line, unless it stretches to the full width, where it may wrap', () => {
+    render(
+      <>
+        <Button>Save</Button>
+        <Button fullWidth>Liever inloggen met een e-maillink</Button>
+      </>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveClass('h-10', 'whitespace-nowrap');
+    const wide = screen.getByRole('button', { name: 'Liever inloggen met een e-maillink' });
+    // Growing from the usual height rather than spilling past a narrow screen's edge.
+    expect(wide).toHaveClass('w-full', 'min-h-10', 'whitespace-normal');
+    expect(wide).not.toHaveClass('h-10', 'whitespace-nowrap');
+  });
+
   it('can render a link that looks like a button', () => {
     render(
       <Button asChild>

@@ -109,7 +109,7 @@ describe('EmailLinkStep', () => {
 
   it('offers no way to continue after too many links that could not be used', async () => {
     vi.mocked(getEmailLinkPreview).mockRejectedValue(
-      new ServiceError('rate_limited', 'Too many attempts. Try again in 12 minutes.'),
+      new ServiceError('rate_limited', 'errors.tooManyAttempts', { minutes: 12 }),
     );
     await renderStep({ token: 'abc', callbackURL: 'https://evil.adiutor.test' });
 

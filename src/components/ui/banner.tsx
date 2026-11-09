@@ -4,6 +4,7 @@
  * dashboard. For a short message inside a form or card, use `Alert`.
  */
 import { type LucideIcon, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
 import cn from '@/lib/cn';
@@ -45,7 +46,7 @@ interface BannerProps {
    * dismissal where it should).
    */
   onDismiss?: () => void;
-  /** The dismiss button's name for screen readers. Defaults to "Dismiss". */
+  /** The dismiss button's name for screen readers. Defaults to "Dismiss" in the reader's language. */
   dismissLabel?: string;
 }
 
@@ -78,8 +79,9 @@ export default function Banner({
   description,
   actions = null,
   onDismiss = undefined,
-  dismissLabel = 'Dismiss',
+  dismissLabel = undefined,
 }: BannerProps) {
+  const t = useTranslations('common.actions');
   return (
     <section
       aria-label={label}
@@ -105,7 +107,7 @@ export default function Banner({
             <Button
               variant="ghost"
               size="sm"
-              aria-label={dismissLabel}
+              aria-label={dismissLabel ?? t('dismiss')}
               onClick={(event) => {
                 // The banner (and this button) goes away: focus moves on instead of to <body>.
                 restoreFocusIfLost(event.currentTarget);

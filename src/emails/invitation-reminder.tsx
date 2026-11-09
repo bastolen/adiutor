@@ -9,8 +9,10 @@ import {
   EmailParagraph,
   LinkFallback,
 } from '@/components/email/email-text';
-import { ROLE_LABELS, type Role } from '@/lib/authz/roles';
+import type { Role } from '@/lib/authz/roles';
 import type { Email } from '@/lib/email';
+import { formatDateTime } from '@/lib/format';
+import translator from '@/lib/i18n/translator';
 
 import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
 import renderEmail from './render';
@@ -27,8 +29,8 @@ export interface InvitationReminderEmailProps extends EmailBaseProps {
   role: Role;
   /** Link to accept the invitation (replaces the earlier one). */
   url: string;
-  /** When the invitation expires, already formatted. */
-  expires: string;
+  /** When the invitation expires (shown in the recipient's language, in UTC). */
+  expiresAt: Date;
 }
 
 /**
@@ -41,7 +43,8 @@ export interface InvitationReminderEmailProps extends EmailBaseProps {
  * @param props.companyName - The company.
  * @param props.role - The role.
  * @param props.url - Accept link.
- * @param props.expires - When it expires.
+ * @param props.expiresAt - When it expires.
+ * @param props.locale - The recipient's language.
  * @param props.logoSrc - Logo URL override.
  * @returns The email.
  */
@@ -51,26 +54,30 @@ export default function InvitationReminderEmail({
   companyName,
   role,
   url,
-  expires,
+  expiresAt,
+  locale,
   logoSrc = undefined,
 }: InvitationReminderEmailProps) {
+  const t = translator(locale, 'emails.invitationReminder');
+  const values = {
+    inviter: inviterName,
+    company: companyName,
+    role: translator(locale, 'roles')(`${role}.label`),
+    expires: formatDateTime(expiresAt, locale),
+  };
   return (
     <EmailLayout
-      preview={`Your invitation to ${companyName} expires soon`}
+      preview={t('preview', values)}
       appUrl={appUrl}
+      locale={locale}
       logoSrc={logoSrc}
-      reason={`You're receiving this because ${inviterName} invited this email address to ${companyName} and the invitation hasn't been accepted yet. If you weren't expecting it, you can ignore this email.`}
+      reason={t('reason', values)}
     >
-      <EmailHeading>Your invitation expires soon</EmailHeading>
-      <EmailParagraph>
-        {inviterName} invited you to join {companyName} on Adiutor as {ROLE_LABELS[role]}. The
-        invitation is still open until {expires}.
-      </EmailParagraph>
-      <EmailButton href={url}>Accept invitation</EmailButton>
-      <EmailNote>
-        This link replaces the one in the earlier email, which no longer works. It works once.
-      </EmailNote>
-      <LinkFallback url={url} />
+      <EmailHeading>{t('heading')}</EmailHeading>
+      <EmailParagraph>{t('body', values)}</EmailParagraph>
+      <EmailButton href={url}>{t('button')}</EmailButton>
+      <EmailNote>{t('note')}</EmailNote>
+      <LinkFallback url={url} locale={locale} />
     </EmailLayout>
   );
 }
@@ -82,7 +89,7 @@ InvitationReminderEmail.PreviewProps = {
   companyName: 'Adiutor',
   role: 'client',
   url: 'https://adiutor.dev/invite/example',
-  expires: '25 Oct 2026, 14:05 UTC',
+  expiresAt: new Date('2026-10-25T14:05:00Z'),
 } satisfies InvitationReminderEmailProps;
 
 /**
@@ -98,7 +105,9 @@ export function invitationReminderEmail(
 ): Promise<Email> {
   return renderEmail(
     to,
-    `Reminder: join ${props.companyName} on Adiutor`,
+    translator(props.locale, 'emails.invitationReminder')('subject', {
+      company: props.companyName,
+    }),
     <InvitationReminderEmail {...props} />,
   );
 }

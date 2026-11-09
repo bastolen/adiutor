@@ -5,6 +5,7 @@
  */
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { startTransition, useCallback, useRef } from 'react';
 
 import { ReturnToField, useRecentConfirmation } from '@/components/auth/recent-confirmation';
@@ -17,10 +18,17 @@ import type { ActionResult } from '@/lib/action-result';
 import { grantNeedsConfirmation } from '@/lib/authz/guards';
 import { isRole } from '@/lib/authz/roles';
 
-/** The question to ask before saving a change to the user's own role. */
+/**
+ * The question to ask before saving a change to the user's own role, already
+ * in the reader's language.
+ */
 export interface RoleChangeConfirmation {
-  /** The question; `{role}` becomes the picked role's label, e.g. "Step down to {role}?". */
-  title: string;
+  /**
+   * The question for each role that can be picked, by role ID, e.g.
+   * `{ manager: 'Step down to Manager?' }`: the page words each one as a
+   * whole sentence with the role's name in it.
+   */
+  titles: Readonly<Record<string, string>>;
   /** What will happen. */
   description: string;
   /** Text of the confirming button, e.g. "Step down". */
@@ -73,6 +81,9 @@ interface RoleSelectProps {
  * confirming saves the picked role, cancelling (or Escape) puts the select
  * back and returns focus to it. Leaving the page cancels it too.
  *
+ * Its own text comes from the `people` namespace: the page passes it with
+ * `ClientMessages`.
+ *
  * @param props - Select props.
  * @param props.action - The saving server action.
  * @param props.fields - Hidden fields.
@@ -92,6 +103,7 @@ export default function RoleSelect({
   confirmChange = undefined,
   target = undefined,
 }: RoleSelectProps) {
+  const t = useTranslations('people.roleSelect');
   const { askToConfirm } = useRecentConfirmation();
   const showToast = useToast();
   // Toasts as soon as the action returns, like `RowAction`.
@@ -157,8 +169,6 @@ export default function RoleSelect({
     formRef.current?.querySelector<HTMLElement>('[role="combobox"]')?.focus();
   };
 
-  const pickedLabel = roles.find((role) => role.value === picked?.role)?.label ?? '';
-
   return (
     <form ref={formRef} action={formAction} onSubmit={onSubmit} className="flex flex-col gap-1">
       {Object.entries(fields).map(([name, value]) => (
@@ -169,7 +179,7 @@ export default function RoleSelect({
       <div className="flex items-center gap-2">
         <div className="w-36">
           <SelectField
-            label={`Role of ${memberName}`}
+            label={t('label', { name: memberName })}
             hideLabel
             name="role"
             options={roles}
@@ -205,7 +215,7 @@ export default function RoleSelect({
           <>
             <Spinner className="text-muted-foreground" />
             <span className="sr-only" role="status">
-              Saving…
+              {t('saving')}
             </span>
           </>
         )}
@@ -225,7 +235,7 @@ export default function RoleSelect({
           open={confirming}
           onOpenChange={changeConfirming}
           onCloseAutoFocus={focusSelect}
-          title={confirmChange.title.replace('{role}', pickedLabel)}
+          title={(picked && confirmChange.titles[picked.role]) ?? ''}
           description={confirmChange.description}
           confirmLabel={confirmChange.confirmLabel}
           onConfirm={() => {

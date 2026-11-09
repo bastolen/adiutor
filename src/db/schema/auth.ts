@@ -36,6 +36,7 @@ export const user = pgTable('user', {
   platformRole: text('platform_role', {
     enum: ['platform_admin', 'manager', 'finance', 'support'],
   }),
+  locale: text('locale', { enum: ['en-US', 'nl-NL', 'es-ES'] }),
 });
 
 /** Better Auth's `session` table. */

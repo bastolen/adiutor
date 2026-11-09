@@ -1,6 +1,8 @@
 /**
  * @file Password field for confirming a security change.
  */
+import { useTranslations } from 'next-intl';
+
 import TextField from '@/components/ui/text-field';
 
 /**
@@ -20,13 +22,14 @@ export default function PasswordField({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const t = useTranslations('account');
   return (
     <TextField
-      label="Current password"
+      label={t('security.currentPassword')}
       type="password"
       name="password"
       autoComplete="current-password"
-      description="To keep your account safe, confirm it's you."
+      description={t('security.currentPasswordHint')}
       required
       value={value}
       onChange={(event) => onChange(event.target.value)}

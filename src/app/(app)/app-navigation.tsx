@@ -6,6 +6,7 @@
 
 import { Menu } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 import Logo from '@/components/brand/logo';
 import Button from '@/components/ui/button';
@@ -53,18 +54,19 @@ function NavigationPanel({
   canViewLogs,
   onNavigate = undefined,
 }: AppNavigationProps & { onNavigate?: () => void }) {
+  const t = useTranslations('navigation');
   return (
     <div className="flex h-full flex-col gap-6 p-4">
       <Link
         href="/dashboard"
-        aria-label="Adiutor dashboard"
+        aria-label={t('dashboardLink')}
         onClick={onNavigate}
         className={`inline-flex w-fit rounded-md px-1.5 py-1 ${focusRing}`}
       >
         <Logo height={26} />
       </Link>
       {isStaff ? (
-        <nav aria-label="Main" className="flex-1">
+        <nav aria-label={t('main')} className="flex-1">
           <NavLinks
             canManageStaff={canManageStaff}
             canViewLogs={canViewLogs}
@@ -101,6 +103,7 @@ export default function AppNavigation({
   canManageStaff,
   canViewLogs,
 }: AppNavigationProps) {
+  const t = useTranslations('navigation');
   const [open, setOpen] = useTransientState(false);
 
   return (
@@ -118,7 +121,7 @@ export default function AppNavigation({
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-surface/90 px-4 backdrop-blur-sm lg:hidden">
         <Link
           href="/dashboard"
-          aria-label="Adiutor dashboard"
+          aria-label={t('dashboardLink')}
           className={`rounded-md ${focusRing}`}
         >
           <Logo height={24} />
@@ -127,13 +130,13 @@ export default function AppNavigation({
           open={open}
           onOpenChange={setOpen}
           trigger={
-            <Button variant="ghost" size="sm" aria-label="Open menu">
+            <Button variant="ghost" size="sm" aria-label={t('openMenu')}>
               <Menu aria-hidden="true" />
             </Button>
           }
-          title="Menu"
-          description="Navigation and account options."
-          closeLabel="Close menu"
+          title={t('menu')}
+          description={t('menuDescription')}
+          closeLabel={t('closeMenu')}
         >
           <NavigationPanel
             name={name}

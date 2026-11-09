@@ -1,0 +1,20 @@
+{
+  "navigation": {
+    "dashboardLink": "Dashboard van Adiutor",
+    "main": "Hoofdmenu",
+    "items": {
+      "dashboard": "Dashboard",
+      "users": "Gebruikers",
+      "companies": "Bedrijven",
+      "staff": "Medewerkers",
+      "logs": "Logboek"
+    },
+    "openMenu": "Menu openen",
+    "menu": "Menu",
+    "menuDescription": "Navigatie en accountopties.",
+    "closeMenu": "Menu sluiten",
+    "accountMenu": "Accountmenu:",
+    "accountSettings": "Accountinstellingen",
+    "signOut": "Uitloggen"
+  }
+}

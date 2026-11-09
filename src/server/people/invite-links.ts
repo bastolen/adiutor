@@ -18,7 +18,7 @@ import { and, eq, gt, isNull, or, sql } from 'drizzle-orm';
 import type { DatabaseOrTransaction, DatabaseTransaction } from '@/db';
 import { company, inviteLink, session, user } from '@/db/schema';
 import { mayUseInviteLinks } from '@/lib/authz/permissions';
-import { type PlatformRole, ROLE_LABELS, type Role } from '@/lib/authz/roles';
+import { type PlatformRole, type Role } from '@/lib/authz/roles';
 import { firstRow } from '@/lib/defined';
 import { isInviteLinkValidity } from '@/lib/invitation-lifetimes';
 import { generateToken, hashToken } from '@/lib/sign-in/tokens';
@@ -36,7 +36,13 @@ import type { Actor } from '../actor';
 import notifyStaffAdminAdded from './staff-admin-notice';
 import { recordEvent } from '../audit';
 import type { ServiceContext } from '../context';
-import { forbiddenError, notFoundError, ServiceError, parseId } from '../errors';
+import {
+  type ErrorMessageKey,
+  forbiddenError,
+  notFoundError,
+  ServiceError,
+  parseId,
+} from '../errors';
 import {
   assertCanManage,
   assertInvitable,
@@ -54,6 +60,7 @@ import {
   assertRateLimit,
   RATE_LIMITS,
 } from '../rate-limit';
+import { requesterLocale } from '../recipient-locale';
 import getStaffName from './staff-name';
 
 /** A link's state. */
@@ -98,7 +105,7 @@ export async function createInviteLink(
 ): Promise<{ url: string; expiresAt: Date }> {
   const role = roleSchema.parse(input.role);
   if (!isInviteLinkValidity(input.validDays)) {
-    throw new ServiceError('invalid', 'Choose how long the link stays valid.');
+    throw new ServiceError('invalid', 'errors.inviteLinks.validity');
   }
   const access = await getTargetAccess(ctx.db, actor, input.companyId);
   assertCanManage(access);
@@ -295,7 +302,7 @@ export async function getInviteLinkPreview(
   }
   return {
     companyName: found.companyName ?? (await getStaffName(ctx.db)),
-    roleLabel: ROLE_LABELS[found.role],
+    role: found.role,
   };
 }
 
@@ -318,11 +325,11 @@ async function useLink(tx: DatabaseOrTransaction, token: string, email: string) 
 
 /**
  * Why a claim is refused when its link's creator, or its company (or the
- * staff), has sent as many invitations as the limits allow for now. Says
- * nothing about the address entered.
+ * staff), has sent as many invitations as the limits allow for now: the
+ * message key. Says nothing about the address entered.
  */
 export const LINK_CLAIM_LIMITED_MESSAGE =
-  "This invite link can't be used right now. Try again later.";
+  'errors.inviteLinks.claimLimited' satisfies ErrorMessageKey;
 
 /**
  * Counts a claim like an invitation its link's creator sends: against the
@@ -391,6 +398,8 @@ export async function claimInviteLink(
 ): Promise<{ status: 'sent' | 'invalid' }> {
   const email = emailSchema.parse(rawEmail);
   const request = ctx.requestInfo ? await ctx.requestInfo() : null;
+  // The confirmation is in the language of whoever opened the link, and so is the invitation.
+  const locale = await requesterLocale(ctx);
   await assertRateLimit(
     ctx,
     `invite-link-claim:ip:${request?.ip ?? 'unknown'}`,
@@ -434,6 +443,7 @@ export async function claimInviteLink(
       invitedBy: used.createdBy,
       fromLink: true,
       baseUrl: ctx.baseUrl,
+      locale,
     });
     // `null` when it created no invitation: the link is used up, pointing at nothing.
     await tx

@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import field from './form-data';
+import field, { localeField } from './form-data';
 
 describe('field', () => {
   it('returns a text value unchanged, without trimming', () => {
@@ -20,5 +20,20 @@ describe('field', () => {
     const formData = new FormData();
     formData.set('avatar', new File(['content'], 'avatar.txt', { type: 'text/plain' }));
     expect(field(formData, 'avatar')).toBe('');
+  });
+});
+
+describe('localeField', () => {
+  it('reads one of the languages', () => {
+    const formData = new FormData();
+    formData.set('locale', 'es-ES');
+    expect(localeField(formData)).toBe('es-ES');
+  });
+
+  it('ignores anything else, or nothing', () => {
+    const formData = new FormData();
+    formData.set('locale', 'fr-FR');
+    expect(localeField(formData)).toBeUndefined();
+    expect(localeField(new FormData())).toBeUndefined();
   });
 });

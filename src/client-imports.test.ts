@@ -42,7 +42,57 @@ const RULES: ImportRule[] = [
     instead: 'outside the sign-in pages, load it with `loadAuthClient()` when an action needs it.',
     allowedFrom: ['src/app/auth/'],
   },
+  {
+    module: 'next-intl/server',
+    instead:
+      'translate with `useTranslations` (the root provider or `ClientMessages` passes the messages).',
+  },
+  {
+    module: 'src/messages',
+    instead:
+      'take messages from the root provider or `ClientMessages`, which pass only the namespaces the page needs.',
+    // It has no provider to ask: the root layout is what failed.
+    allowedFrom: ['src/app/global-error.tsx'],
+  },
+  {
+    module: 'src/lib/i18n/messages.ts',
+    instead: 'take messages from the root provider or `ClientMessages`.',
+  },
+  {
+    module: 'src/lib/i18n/translator.ts',
+    instead: 'translate with `useTranslations`.',
+  },
+  {
+    module: 'src/lib/i18n/request.ts',
+    instead: 'read the language with `useLocale()`.',
+  },
+  {
+    module: 'src/lib/i18n/request-locale.ts',
+    instead: 'read the language with `useLocale()`.',
+  },
+  {
+    module: 'src/lib/i18n/default-locale.ts',
+    instead: "read the language with `useLocale()`; Adiutor's default comes from the database.",
+  },
+  {
+    module: 'src/lib/i18n/resolve-locale.ts',
+    instead:
+      'read the language with `useLocale()`; `isLocale` and `localeForLanguages` (`src/lib/i18n/locales.ts`) need no libraries.',
+  },
 ];
+
+/**
+ * Whether an import reaches a rule's module: the module itself, a file in
+ * it when it's a folder (`src/messages`), or one of its subpaths when it's a
+ * package (`zod/v4` for `zod`).
+ *
+ * @param target - The import, resolved (see {@link resolve}).
+ * @param module - The rule's module.
+ * @returns Whether it's that module.
+ */
+function reaches(target: string, module: string): boolean {
+  return target === module || target.startsWith(`${module}/`);
+}
 
 /**
  * Lists the source files under a folder, tests left out.
@@ -75,11 +125,11 @@ function hasDirective(source: string, directive: string): boolean {
 const STATIC_IMPORT = /^\s*(?:import|export)\s+(?!type\s)(?:[\s\S]*?\s+from\s+)?['"]([^'"]+)['"]/gm;
 
 /**
- * Resolves an import to a file in `src/`, or to a package name.
+ * Resolves an import to a file in `src/`, or to a package specifier (with its subpath).
  *
  * @param from - The importing file.
  * @param specifier - What it imports.
- * @returns The file's path from the root, or the package name.
+ * @returns The file's path from the root, or the package specifier.
  */
 function resolve(from: string, specifier: string): string {
   let base: string | null = null;
@@ -89,10 +139,8 @@ function resolve(from: string, specifier: string): string {
     base = path.resolve(path.dirname(from), specifier);
   }
   if (!base) {
-    const parts = specifier.split('/');
-    return specifier.startsWith('@')
-      ? parts.slice(0, 2).join('/')
-      : defined(parts[0], 'the package name');
+    // The whole specifier, so a rule can name a package's subpath (`next-intl/server`).
+    return specifier;
   }
   const candidates = ['', '.ts', '.tsx', '/index.ts', '/index.tsx'].map((ext) => base + ext);
   const found = candidates.find((candidate) => /\.tsx?$/.test(candidate) && existsSync(candidate));
@@ -158,7 +206,7 @@ describe('what client components load with the page', () => {
   it.each(RULES)('never loads $module with the page', ({ module, instead, allowedFrom = [] }) => {
     const broken = clientFiles
       .filter((file) => !allowedFrom.some((prefix) => file.startsWith(prefix)))
-      .map((file) => reachedFrom(file).get(module))
+      .map((file) => [...reachedFrom(file)].find(([target]) => reaches(target, module))?.[1])
       .filter((chain): chain is string[] => chain !== undefined)
       .map((chain) => chain.join(' → '));
 

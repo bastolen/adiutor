@@ -13,7 +13,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { account, auditEvent, rateLimitBucket } from '@/db/schema';
 import type { MfaMethod } from '@/lib/authz/mfa';
 import { defined, firstRow } from '@/lib/defined';
-import { MFA_VERIFICATION_REQUIRED, SESSION_NOT_FRESH } from '@/lib/sign-in/sign-in-refusals';
 
 import {
   addPasskey,
@@ -340,7 +339,7 @@ describe('confirmConnectedProvider', () => {
         await signedIn(userId, null, 'authenticator', minutesAgo(61)),
         github,
       ),
-    ).rejects.toMatchObject({ code: 'forbidden', message: SESSION_NOT_FRESH.message });
+    ).rejects.toMatchObject({ code: 'forbidden', key: 'errors.signIn.sessionNotFresh' });
     expect(await isConfirmed(github)).toBe(false);
     expect(await events()).toEqual([]);
 
@@ -417,7 +416,7 @@ describe('confirmConnectedProvider for a role that requires MFA', () => {
 
     await expect(confirmConnectedProvider(ctx, actor, google)).rejects.toMatchObject({
       code: 'forbidden',
-      message: expect.stringContaining('Your role requires MFA'),
+      key: 'errors.signIn.mfaRequiredForRole',
     });
 
     expect(await isConfirmed(google)).toBe(false);
@@ -469,7 +468,7 @@ describe('confirmConnectedProvider for a role that requires MFA', () => {
 
     await expect(confirmConnectedProvider(ctx, actor, second)).rejects.toMatchObject({
       code: 'forbidden',
-      message: expect.stringContaining('Your role requires MFA'),
+      key: 'errors.signIn.mfaRequiredForRole',
     });
 
     expect(await isConfirmed(second)).toBe(false);
@@ -515,7 +514,7 @@ describe('setFirstPassword', () => {
       setFirstPassword(ctx, await signedIn(manager.id, new Date(), 'github'), setPassword),
     ).rejects.toMatchObject({
       code: 'forbidden',
-      message: expect.stringContaining('requires MFA'),
+      key: 'errors.signIn.mfaRequiredForRole',
     });
     expect(setPassword).not.toHaveBeenCalled();
 
@@ -523,7 +522,7 @@ describe('setFirstPassword', () => {
     // GitHub no longer confirms changes then: the passkey does.
     await expect(
       setFirstPassword(ctx, await signedIn(manager.id, new Date(), 'github'), setPassword),
-    ).rejects.toMatchObject({ code: 'forbidden', message: MFA_VERIFICATION_REQUIRED.message });
+    ).rejects.toMatchObject({ code: 'forbidden', key: 'errors.signIn.mfaVerificationRequired' });
     await setFirstPassword(ctx, await signedIn(manager.id, new Date(), 'passkey'), setPassword);
     expect(setPassword).toHaveBeenCalledTimes(1);
     expect(await lockTaken(manager.id)).toBe(false);
@@ -557,12 +556,12 @@ describe('setFirstPassword', () => {
         await signedIn(newcomer, null, 'authenticator', minutesAgo(61)),
         setPassword,
       ),
-    ).rejects.toMatchObject({ code: 'forbidden', message: SESSION_NOT_FRESH.message });
+    ).rejects.toMatchObject({ code: 'forbidden', key: 'errors.signIn.sessionNotFresh' });
     // A session whose sign-in time is unknown counts as too old.
     const unknown = { ...(await signedIn(newcomer, null)), signedInAt: null };
     await expect(setFirstPassword(ctx, unknown, setPassword)).rejects.toMatchObject({
       code: 'forbidden',
-      message: SESSION_NOT_FRESH.message,
+      key: 'errors.signIn.sessionNotFresh',
     });
     expect(setPassword).not.toHaveBeenCalled();
     expect(await lockTaken(newcomer)).toBe(false);
@@ -597,7 +596,7 @@ describe('setFirstPassword', () => {
       setFirstPassword(ctx, await signedIn(userId, null), setPassword),
     ).rejects.toMatchObject({
       code: 'conflict',
-      message: expect.stringContaining('password already'),
+      key: 'errors.signIn.passwordAlreadySet',
     });
 
     expect(setPassword).not.toHaveBeenCalled();
@@ -659,13 +658,14 @@ describe('changeOwnPassword', () => {
 
     await expect(changeOwnPassword(ctx, actor, change)).rejects.toMatchObject({
       code: 'invalid',
-      message: 'Your current password is incorrect.',
+      key: 'errors.wrongPassword.change_password',
     });
     expect(await attempts(4, actor, change)).toEqual(['invalid', 'invalid', 'invalid', 'invalid']);
     const right = vi.fn(async () => undefined);
     await expect(changeOwnPassword(ctx, actor, right)).rejects.toMatchObject({
       code: 'rate_limited',
-      message: expect.stringMatching(/^Too many attempts\. Try again in \d+ minutes?\.$/),
+      key: 'errors.tooManyAttempts',
+      values: { minutes: expect.any(Number) },
     });
 
     expect(change).toHaveBeenCalledTimes(5);

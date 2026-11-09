@@ -2,8 +2,10 @@
  * @file The "Sign-in security" card on the user detail page: the user's MFA
  * status, two-step verification, passkeys, password and connected provider
  * accounts. Which account it is at a provider is shown only when the viewer
- * may see it (staff Admins).
+ * may see it (staff Admins). Text from `admin.user.security`.
  */
+import { useTranslations } from 'next-intl';
+
 import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
 import { isMfaProvider, providerLabel } from '@/lib/sign-in/oauth-providers';
@@ -28,26 +30,25 @@ export default function SecurityCard({
   mfa: UserDetail['mfa'];
   accountNames: UserDetail['accountNames'];
 }) {
-  let twoFactor = 'Off';
+  const t = useTranslations('admin.user.security');
+  let twoFactor = 'off';
   if (mfa.twoFactorEnabled) {
-    twoFactor = mfa.authenticator ? 'On: authenticator app and email codes' : 'On: email codes';
+    twoFactor = mfa.authenticator ? 'authenticator' : 'emailCodes';
   }
   return (
     <Card
-      title="Sign-in security"
-      description={
-        mfa.required
-          ? 'Their role requires a second sign-in step.'
-          : 'A second sign-in step is recommended for their role.'
-      }
+      title={t('title')}
+      description={mfa.required ? t('descriptionRequired') : t('descriptionRecommended')}
     >
       <dl className="divide-y divide-border">
-        <DetailRow term="Status">
+        <DetailRow term={t('status')}>
           <MfaBadge status={mfa.status} />
         </DetailRow>
-        <DetailRow term="Two-step verification">{twoFactor}</DetailRow>
-        <DetailRow term="Passkeys">{mfa.passkeyCount === 0 ? 'None' : mfa.passkeyCount}</DetailRow>
-        <DetailRow term="Password">{mfa.hasPassword ? 'Set' : 'Not set'}</DetailRow>
+        <DetailRow term={t('twoFactor')}>{t('twoFactorValue', { state: twoFactor })}</DetailRow>
+        <DetailRow term={t('passkeys')}>{t('passkeyCount', { count: mfa.passkeyCount })}</DetailRow>
+        <DetailRow term={t('password')}>
+          {t('passwordState', { set: mfa.hasPassword ? 'yes' : 'no' })}
+        </DetailRow>
         {mfa.providerAccounts.map((provider) => (
           <DetailRow
             key={provider.id ?? provider.providerId}
@@ -57,14 +58,14 @@ export default function SecurityCard({
             {provider.id && accountNames?.[provider.id] ? (
               <span className="min-w-0 break-all">{accountNames[provider.id]}</span>
             ) : (
-              'Connected'
+              t('connected')
             )}
             {/* Only providers that can prove MFA say whether the account has it. */}
             {isMfaProvider(provider.providerId) && (
               <Badge tone={provider.mfaVerified ? 'success' : 'neutral'}>
                 {provider.mfaVerified
-                  ? `2FA on at ${providerLabel(provider.providerId)}`
-                  : `No 2FA at ${providerLabel(provider.providerId)}`}
+                  ? t('twoFactorOn', { provider: providerLabel(provider.providerId) })
+                  : t('twoFactorOff', { provider: providerLabel(provider.providerId) })}
               </Badge>
             )}
           </DetailRow>

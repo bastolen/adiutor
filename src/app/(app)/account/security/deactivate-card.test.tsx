@@ -96,13 +96,11 @@ describe('DeactivateCard', () => {
   });
 
   it('only says why while the user is the last Admin of something', () => {
-    renderCard({ hasPassword: true, blockedReason: 'You’re the only staff Admin.' }, true);
+    // The page gives the reason and what to do first (`soleAdminError`, in the reader's language).
+    const reason = 'You are the only staff Admin. Make someone else an Admin first.';
+    renderCard({ hasPassword: true, blockedReason: reason }, true);
 
-    expect(
-      screen.getByText(
-        'You’re the only staff Admin. Make someone else an Admin before you deactivate your account.',
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText(reason)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Deactivate' })).not.toBeInTheDocument();
   });
 });

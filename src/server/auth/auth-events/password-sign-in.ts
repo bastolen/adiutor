@@ -11,6 +11,7 @@ import { signInMethodFromPath } from '@/lib/authz/mfa';
 import { recordEvent } from '../../audit';
 import { normalizeEmail } from '../auth-guards';
 import { type AuthHookContext, safely, auditContext } from './hook-context';
+import rememberLanguage from './language';
 import { recordSignIn } from './session-hooks';
 import { markSessionVerified } from './session-records';
 
@@ -69,6 +70,7 @@ export async function afterPasswordSignIn(ctx: AuthHookContext): Promise<void> {
         await recordSignIn(created, method);
       }
     });
+    await safely('remember the language', () => rememberLanguage(ctx, created.userId));
     return;
   }
   if (!startedCodeStep(returned)) {

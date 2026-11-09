@@ -11,6 +11,7 @@ import UnusableLink from '@/components/auth/unusable-link';
 import { FormSkeleton } from '@/components/ui/skeleton';
 import { mustSetUpMfa } from '@/lib/authz/mfa';
 import { mayUseInviteLinks } from '@/lib/authz/permissions';
+import ClientMessages from '@/lib/i18n/client-messages';
 import appContext from '@/server/app-context';
 import { getOptionalActor } from '@/server/authz';
 import { getInviteLinkPreview } from '@/server/people/invite-links';
@@ -44,14 +45,14 @@ async function Join({ params }: { params: Promise<{ token: string }> }) {
 
   return (
     <div className="flex flex-col gap-8">
-      <InvitationHeading companyName={preview.companyName} roleLabel={preview.roleLabel} />
+      <InvitationHeading companyName={preview.companyName} roleId={preview.role} />
       {step}
     </div>
   );
 }
 
 /**
- * The invite link page.
+ * The invite link page. Its form's text comes with it (`auth`).
  *
  * @param props - Page props from Next.js.
  * @param props.params - Route parameters.
@@ -60,7 +61,9 @@ async function Join({ params }: { params: Promise<{ token: string }> }) {
 export default function JoinPage({ params }: PageProps<'/join/[token]'>) {
   return (
     <Suspense fallback={<FormSkeleton />}>
-      <Join params={params} />
+      <ClientMessages namespaces={['auth']}>
+        <Join params={params} />
+      </ClientMessages>
     </Suspense>
   );
 }

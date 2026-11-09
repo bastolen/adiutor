@@ -2,6 +2,7 @@
  * @file A list of things that happened, newest first, each with when, from
  * which device and from where.
  */
+import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
 import formatIpAddress from '@/lib/request/ip-address';
@@ -43,10 +44,11 @@ interface ActivityListProps {
  * @returns The list.
  */
 export default function ActivityList({ items, label }: ActivityListProps) {
+  const t = useTranslations('common');
   return (
     <ol aria-label={label} className="divide-y divide-border">
       {items.map((item) => {
-        const device = item.userAgent ? describeUserAgent(item.userAgent).label : null;
+        const device = item.userAgent ? t('device', describeUserAgent(item.userAgent)) : null;
         return (
           <li
             key={item.id}

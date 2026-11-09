@@ -44,6 +44,7 @@ import {
   listStaff,
   removeFromStaff,
   renameStaff,
+  setDefaultLocale,
 } from './staff';
 
 const { ctx, db, sent } = setupTestContext();
@@ -75,7 +76,10 @@ async function platformRoleOf(userId: string) {
 describe('staff settings and people', () => {
   it('renames the staff, recorded in the audit log', async () => {
     await renameStaff(ctx, admin, '  Adiutor Support ');
-    expect(await getStaffSettings(ctx, admin)).toEqual({ name: 'Adiutor Support' });
+    expect(await getStaffSettings(ctx, admin)).toEqual({
+      name: 'Adiutor Support',
+      defaultLocale: 'en-US',
+    });
     const entry = firstRow(
       await db.select().from(auditEvent).where(eq(auditEvent.action, 'staff_renamed')),
       'the audit event',
@@ -86,12 +90,34 @@ describe('staff settings and people', () => {
   it('creates the settings again when they were lost', async () => {
     await db.delete(staffSettings);
     await renameStaff(ctx, admin, 'Adiutor Support');
-    expect(await getStaffSettings(ctx, admin)).toEqual({ name: 'Adiutor Support' });
+    expect(await getStaffSettings(ctx, admin)).toEqual({
+      name: 'Adiutor Support',
+      defaultLocale: 'en-US',
+    });
     const entry = firstRow(
       await db.select().from(auditEvent).where(eq(auditEvent.action, 'staff_renamed')),
       'the audit event',
     );
     expect(entry.details).toMatchObject({ from: null, to: 'Adiutor Support' });
+  });
+
+  it("sets Adiutor's default language, keeping the name", async () => {
+    await expect(setDefaultLocale(ctx, admin, 'nl-NL')).resolves.toBe('nl-NL');
+
+    expect(await getStaffSettings(ctx, admin)).toEqual({
+      name: 'Adiutor Tests',
+      defaultLocale: 'nl-NL',
+    });
+    await expect(setDefaultLocale(ctx, admin, 'fr-FR')).rejects.toThrow('validation.locale');
+    expect((await getStaffSettings(ctx, admin)).defaultLocale).toBe('nl-NL');
+  });
+
+  it('creates the settings again with the default language when they were lost', async () => {
+    await db.delete(staffSettings);
+
+    await setDefaultLocale(ctx, admin, 'es-ES');
+
+    expect(await getStaffSettings(ctx, admin)).toEqual({ name: 'Adiutor', defaultLocale: 'es-ES' });
   });
 
   it('lists the staff by name, with their role', async () => {
@@ -111,7 +137,7 @@ describe('staff settings and people', () => {
     await expect(
       changeStaffRole(ctx, admin, { userId: manager.id, role: 'client' }),
     ).rejects.toMatchObject({
-      issues: [expect.objectContaining({ message: 'Choose a staff role.' })],
+      issues: [expect.objectContaining({ message: 'validation.staffRole' })],
     });
 
     await expect(
@@ -141,7 +167,7 @@ describe('staff settings and people', () => {
       changeStaffRole(ctx, admin, { userId: admin.id, role: 'platform_admin' }),
     ).rejects.toMatchObject({
       code: 'forbidden',
-      message: "You can't give yourself a higher staff role.",
+      key: 'errors.staff.selfRaise',
     });
     expect(await platformRoleOf(admin.id)).toBe('manager');
 
@@ -150,7 +176,7 @@ describe('staff settings and people', () => {
       changeStaffRole(ctx, admin, { userId: admin.id, role: 'support' }),
     ).rejects.toMatchObject({
       code: 'forbidden',
-      message: "You don't have permission to do that.",
+      key: 'errors.forbidden',
     });
     await expect(removeFromStaff(ctx, admin, admin.id)).rejects.toMatchObject({
       code: 'forbidden',
@@ -174,7 +200,7 @@ describe('staff settings and people', () => {
       status: 'rejected',
       reason: expect.objectContaining({
         code: 'forbidden',
-        message: "You don't have permission to do that.",
+        key: 'errors.forbidden',
       }),
     });
     expect(await platformRoleOf(manager.id)).toBe('manager');
@@ -291,7 +317,7 @@ describe('joining the staff by email', () => {
     const token = tokenFrom(invitationEmail);
     expect(await getInvitationPreview(ctx, token)).toEqual({
       companyName: 'Adiutor Tests',
-      roleLabel: 'Support',
+      role: 'support',
       fromInviteLink: false,
     });
     expect((await listPendingInvitations(ctx, admin, null)).items).toHaveLength(1);
@@ -356,7 +382,7 @@ describe('joining the staff by invite link', () => {
     const token = defined(url.split('/').at(-1), 'the link token');
     expect(await getInviteLinkPreview(ctx, token)).toEqual({
       companyName: 'Adiutor Tests',
-      roleLabel: 'Support',
+      role: 'support',
     });
 
     expect(await claimInviteLink(ctx, token, 'linked@adiutor.test')).toEqual({ status: 'sent' });

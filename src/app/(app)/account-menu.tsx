@@ -4,11 +4,12 @@
  */
 'use client';
 
-import { ChevronsUpDown, LogOut, SunMoon, UserRound } from 'lucide-react';
+import { ChevronsUpDown, LogOut, Palette, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
-import { THEME_ICONS, THEME_LABELS } from '@/components/theme/theme-options';
+import { THEME_ICONS } from '@/components/theme/theme-options';
 import useThemePreference from '@/components/theme/use-theme-preference';
 import Avatar from '@/components/ui/avatar';
 import {
@@ -25,7 +26,7 @@ import { focusRing } from '@/components/ui/styles';
 import cn from '@/lib/cn';
 import displayName from '@/lib/display-name';
 import loadAuthClient from '@/lib/sign-in/load-auth-client';
-import { isThemePreference, THEME_PREFERENCES } from '@/lib/theme';
+import { isThemePreference, THEME_PREFERENCES, type ThemePreference } from '@/lib/theme';
 
 /**
  * Props for {@link AccountMenu}.
@@ -59,9 +60,16 @@ interface AccountMenuProps {
  * @returns The account menu.
  */
 export default function AccountMenu({ name, email }: AccountMenuProps) {
+  const t = useTranslations('navigation');
+  const tCommon = useTranslations('common');
   const router = useRouter();
   const { preference, setPreference } = useThemePreference();
   const shownName = displayName({ name, email });
+  const themeLabels: Record<ThemePreference, string> = {
+    system: tCommon('theme.system'),
+    light: tCommon('theme.light'),
+    dark: tCommon('theme.dark'),
+  };
 
   /** Ends the session, then loads the sign-in page with a fresh cache. */
   const signOut = async () => {
@@ -90,7 +98,7 @@ export default function AccountMenu({ name, email }: AccountMenuProps) {
         <Avatar name={shownName} size="sm" />
         <span className="flex min-w-0 flex-1 flex-col">
           {/* Part of the button's name, which then contains its visible text (WCAG 2.5.3). */}
-          <span className="sr-only">Account menu:</span>
+          <span className="sr-only">{t('accountMenu')}</span>
           <span className="truncate text-sm font-medium text-foreground">{shownName}</span>
           <span className="truncate text-xs text-muted-foreground">{email}</span>
         </span>
@@ -101,13 +109,13 @@ export default function AccountMenu({ name, email }: AccountMenuProps) {
         <MenuItem asChild>
           <Link href="/account">
             <UserRound aria-hidden="true" />
-            Account settings
+            {t('accountSettings')}
           </Link>
         </MenuItem>
         <MenuSeparator />
         <MenuRadioRow
-          label="Theme"
-          icon={SunMoon}
+          label={tCommon('theme.label')}
+          icon={Palette}
           value={preference}
           onValueChange={(value) => {
             if (isThemePreference(value)) {
@@ -119,7 +127,7 @@ export default function AccountMenu({ name, email }: AccountMenuProps) {
             <MenuIconRadioItem
               key={option}
               value={option}
-              label={THEME_LABELS[option]}
+              label={themeLabels[option]}
               icon={THEME_ICONS[option]}
             />
           ))}
@@ -127,7 +135,7 @@ export default function AccountMenu({ name, email }: AccountMenuProps) {
         <MenuSeparator />
         <MenuItem onSelect={signOut}>
           <LogOut aria-hidden="true" />
-          Sign out
+          {t('signOut')}
         </MenuItem>
       </MenuContent>
     </MenuRoot>

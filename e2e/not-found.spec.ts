@@ -99,7 +99,7 @@ test('signed in, an unknown page offers the dashboard and going back', async ({
   await expect(page.getByText('404', { exact: true })).toBeVisible();
   // No account menu here, so the floating theme button is.
   await expect(page.getByRole('button', { name: /^Account menu/ })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: /^Theme:/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Theme and language:/ })).toBeVisible();
 
   await page.getByRole('button', { name: 'Go back' }).click();
   await expect(page).toHaveURL('/dashboard');

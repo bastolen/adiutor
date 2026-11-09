@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import InviteLinkForm from './invite-link-form';
+import renderInLocale from '../../../../tests/i18n/render';
 
 vi.mock('next/navigation', () => ({
   /**
@@ -36,6 +37,20 @@ describe('InviteLinkForm', () => {
       '1 day',
       '7 days',
       '30 days',
+    ]);
+  });
+
+  it('words the lifetimes with the plural of each language', async () => {
+    const user = userEvent.setup();
+    renderInLocale('es-ES', <InviteLinkForm companyId="company-1" roles={roles} />);
+
+    const validity = screen.getByRole('combobox', { name: 'Válido durante' });
+    expect(validity).toHaveTextContent('7 días');
+    await user.click(validity);
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      '1 día',
+      '7 días',
+      '30 días',
     ]);
   });
 });

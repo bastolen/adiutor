@@ -3,6 +3,8 @@
  */
 import { describe, expect, it } from 'vitest';
 
+import translator from '@/lib/i18n/translator';
+
 import {
   COMPANY_ROLES,
   isCompanyRole,
@@ -10,8 +12,6 @@ import {
   isRole,
   isRoleAllowedFor,
   PLATFORM_ROLES,
-  ROLE_DESCRIPTIONS,
-  ROLE_LABELS,
   roleOptions,
   rolesForTarget,
 } from './roles';
@@ -37,17 +37,34 @@ describe('roles', () => {
 
 describe('roleOptions', () => {
   it('lists the roles in order, with their label and description', () => {
-    expect(roleOptions(COMPANY_ROLES)).toEqual(
-      COMPANY_ROLES.map((role) => ({
-        value: role,
-        label: ROLE_LABELS[role],
-        description: ROLE_DESCRIPTIONS[role],
-      })),
+    expect(roleOptions(COMPANY_ROLES, translator('en-US', 'roles'))).toEqual([
+      {
+        value: 'admin',
+        label: 'Admin',
+        description: 'Raises requests and manages who in the company has access.',
+      },
+      {
+        value: 'client',
+        label: 'Client',
+        description: 'Raises requests, comments on them and approves work.',
+      },
+      { value: 'watcher', label: 'Watcher', description: 'Follows requests without taking part.' },
+    ]);
+    expect(
+      roleOptions(PLATFORM_ROLES, translator('en-US', 'roles')).map((option) => option.value),
+    ).toEqual([...PLATFORM_ROLES]);
+  });
+
+  it("names the roles in the reader's language", () => {
+    expect(roleOptions(['watcher'], translator('nl-NL', 'roles'))).toEqual([
+      { value: 'watcher', label: 'Meekijker', description: expect.any(String) },
+    ]);
+    expect(roleOptions(['platform_admin'], translator('es-ES', 'roles'))[0]?.label).toBe(
+      'Administrador',
     );
-    expect(roleOptions(PLATFORM_ROLES).map((option) => option.value)).toEqual([...PLATFORM_ROLES]);
   });
 
   it('gives nothing for no roles', () => {
-    expect(roleOptions([])).toEqual([]);
+    expect(roleOptions([], translator('en-US', 'roles'))).toEqual([]);
   });
 });

@@ -13,7 +13,12 @@
  * `?connected=github` don't come back after a sort. Links that change a table
  * with a `section` end in that card's anchor (`#invitations`), and
  * `PageUrl.current()` is the page as it is, for return addresses.
+ *
+ * Sort names, directions and captions come from the `tables` catalogue, in
+ * the reader's language: definitions hold message keys, and the page passes
+ * its translator to {@link createPageUrl}.
  */
+import type { Messages } from '@/lib/i18n/messages';
 import { withSection } from '@/lib/redirect';
 
 import { type SearchParams, searchParam } from './search-params';
@@ -33,22 +38,38 @@ export const PAGINATION_THRESHOLD = 10;
 /** Sort direction. */
 export type SortDirection = 'asc' | 'desc';
 
+/** The name of a sort, a key of `tables.sorts` (e.g. `name` for "Name"). */
+export type SortLabel = keyof Messages['tables']['sorts'];
+
+/** How a direction is said, a key of `tables.directions` (e.g. `aToZ` for "A to Z"). */
+export type DirectionLabel = keyof Messages['tables']['directions'];
+
+/**
+ * Translates the `tables` namespace: `getTranslations('tables')` on a page,
+ * `translator(locale, 'tables')` elsewhere.
+ */
+export type TablesTranslator = (
+  key:
+    'option' | 'caption' | 'captionPaged' | `sorts.${SortLabel}` | `directions.${DirectionLabel}`,
+  values?: Record<string, string | number>,
+) => string;
+
 /** One way a table can be sorted, e.g. by name. */
 export interface SortDefinition {
   /**
-   * What the sort is called in the Sort menu and the caption, e.g. "Name"
-   * (not always a column's header: the Activity column shows "Last active"
-   * and "Joined").
+   * What the sort is called in the Sort menu and the caption, e.g. `name`
+   * for "Name" (not always a column's header: the Activity column shows
+   * "Last active" and "Joined").
    */
-  label: string;
+  label: SortLabel;
   /**
    * The direction it's sorted in unless the viewer picks the other one, and
    * the one listed first in the Sort menu: A to Z for text, newest first for
    * dates.
    */
   first: SortDirection;
-  /** How each direction is said, e.g. `{ asc: 'A to Z', desc: 'Z to A' }`. */
-  directions: Readonly<Record<SortDirection, string>>;
+  /** How each direction is said, e.g. `{ asc: 'aToZ', desc: 'zToA' }`. */
+  directions: Readonly<Record<SortDirection, DirectionLabel>>;
 }
 
 /** A table's sorting options and where its state lives in the URL. */
@@ -158,31 +179,31 @@ export interface SortOption {
 }
 
 /** The ways of saying a text column's directions. */
-const TEXT_DIRECTIONS = { asc: 'A to Z', desc: 'Z to A' } as const;
+const TEXT_DIRECTIONS = { asc: 'aToZ', desc: 'zToA' } as const;
 
 /** The ways of saying a date column's directions. */
-const DATE_DIRECTIONS = { asc: 'oldest first', desc: 'newest first' } as const;
+const DATE_DIRECTIONS = { asc: 'oldestFirst', desc: 'newestFirst' } as const;
 
 /**
  * Defines a sort on text, first A to Z.
  *
- * @param label - What the sort is called, e.g. "Name".
+ * @param label - What the sort is called, e.g. `name`.
  * @returns The sort.
  */
-export function textSort(label: string): SortDefinition {
+export function textSort(label: SortLabel): SortDefinition {
   return { label, first: 'asc', directions: TEXT_DIRECTIONS };
 }
 
 /**
  * Defines a sort on a date, first newest first.
  *
- * @param label - What the sort is called, e.g. "Name".
+ * @param label - What the sort is called, e.g. `joined`.
  * @param directions - How the directions are said (by default "newest first" and "oldest first").
  * @returns The sort.
  */
 export function dateSort(
-  label: string,
-  directions: Readonly<Record<SortDirection, string>> = DATE_DIRECTIONS,
+  label: SortLabel,
+  directions: Readonly<Record<SortDirection, DirectionLabel>> = DATE_DIRECTIONS,
 ): SortDefinition {
   return { label, first: 'desc', directions };
 }
@@ -358,18 +379,19 @@ export function pageWindow(page: number, count: number): (number | 'gap-start' |
 }
 
 /**
- * Says how a table is sorted, for its caption.
+ * Names a sort and its direction, for the Sort menu and the caption.
  *
- * @param def - The table.
- * @param state - Its state.
- * @returns E.g. "sorted by Name, A to Z".
+ * @param t - Translates the `tables` namespace.
+ * @param sort - The sort.
+ * @param dir - Its direction.
+ * @returns The two names, e.g. `{ sort: 'Name', direction: 'A to Z' }`.
  */
-export function describeSort<K extends string>(
-  def: TableDefinition<K>,
-  state: TableState<K>,
-): string {
-  const sort = def.sorts[state.sort];
-  return `sorted by ${sort.label}, ${sort.directions[state.dir]}`;
+function sortWords(
+  t: TablesTranslator,
+  sort: SortDefinition,
+  dir: SortDirection,
+): { sort: string; direction: string } {
+  return { sort: t(`sorts.${sort.label}`), direction: t(`directions.${sort.directions[dir]}`) };
 }
 
 /** The links that change one table's state, keeping everything else on the page. */
@@ -488,12 +510,14 @@ class OneTableLinks<K extends string> implements TableLinks<K> {
    * @param pageParams - The page's own parameters.
    * @param def - The table.
    * @param state - Its state.
+   * @param t - Translates the `tables` namespace, for sort names and captions.
    */
   constructor(
     private readonly href: PageHref,
     private readonly pageParams: Readonly<Record<string, string | undefined>>,
     private readonly def: TableDefinition<K>,
     readonly state: TableState<K>,
+    private readonly t: TablesTranslator,
   ) {}
 
   /**
@@ -579,7 +603,7 @@ class OneTableLinks<K extends string> implements TableLinks<K> {
       const order: SortDirection[] = sort.first === 'asc' ? ['asc', 'desc'] : ['desc', 'asc'];
       return order.map((dir) => ({
         value: `${key}-${dir}`,
-        label: `${sort.label}, ${sort.directions[dir]}`,
+        label: this.t('option', sortWords(this.t, sort, dir)),
         href: this.withState({ ...this.state, sort: key, dir, page: 1 }),
         current: this.state.sort === key && this.state.dir === dir,
       }));
@@ -626,8 +650,10 @@ class OneTableLinks<K extends string> implements TableLinks<K> {
    */
   caption(base: string, paged: Paged<unknown>): string {
     const count = pageCount(paged.total, paged.size);
-    const page = count > 1 ? `, page ${paged.page} of ${count}` : '';
-    return `${base}, ${describeSort(this.def, this.state)}${page}`;
+    const words = sortWords(this.t, this.def.sorts[this.state.sort], this.state.dir);
+    return count > 1
+      ? this.t('captionPaged', { table: base, ...words, page: paged.page, pages: count })
+      : this.t('caption', { table: base, ...words });
   }
 }
 
@@ -636,12 +662,14 @@ class OneTableLinks<K extends string> implements TableLinks<K> {
  *
  * @param pathname - The page's path, e.g. `/admin/users`.
  * @param pageParams - The page's own parameters, in the order they appear in
- *   links (e.g. `{ filter, q }`); empty ones are left out.
+ *   links (e.g. `{ filter, q }`); empty ones are left out. Pass `{}` for none.
+ * @param t - Translates the `tables` namespace (`getTranslations('tables')`).
  * @returns The page's links.
  */
 export function createPageUrl(
   pathname: string,
-  pageParams: Record<string, string | undefined> = {},
+  pageParams: Record<string, string | undefined>,
+  t: TablesTranslator,
 ): PageUrl {
   const tables: { def: TableDefinition; state: TableState }[] = [];
 
@@ -680,7 +708,7 @@ export function createPageUrl(
    */
   const table = <K extends string>(def: TableDefinition<K>, state: TableState<K>) => {
     tables.push({ def, state });
-    return new OneTableLinks(href, pageParams, def, state);
+    return new OneTableLinks(href, pageParams, def, state, t);
   };
 
   /**

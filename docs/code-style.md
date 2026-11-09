@@ -42,7 +42,9 @@ The linters and formatters, the JSDoc rule, the editor setup and the Git hooks. 
   component, class and exported value has a `/** */` comment, which says something: an empty block
   (as `lint:fix` inserts) fails until it's written (`jsdoc/require-description`).
   `eslint-plugin-jsdoc` enforces this for JS/TS. In CSS and SCSS, Stylelint rejects any comment that is not `/** */` (including `//`),
-  but cannot check that a file header or a comment exists.
+  but cannot check that a file header or a comment exists. The translation catalogues
+  (`src/messages/**/*.json`) are the one exception: JSON can't hold comments, so
+  [Languages](i18n.md) and the loader's JSDoc (`src/lib/i18n/messages.ts`) give their context.
 - **Prettier** (`prettier.config.mjs`) handles formatting with settings that match Airbnb (single
   quotes, semicolons, trailing commas, 100-character lines). It runs inside ESLint and Stylelint,
   and sorts Tailwind classes.
@@ -53,12 +55,21 @@ The linters and formatters, the JSDoc rule, the editor setup and the Git hooks. 
   Stylelint, `pnpm lint` reports classes in the wrong order and `pnpm lint:fix` sorts them.
   `eslint-plugin-better-tailwindcss` also reports unknown, duplicate, conflicting and deprecated
   classes, using the brand theme so classes like `bg-primary` count as valid.
+- **Text** comes from the translation catalogues, in every language (see [Languages](i18n.md)).
+  ESLint refuses text written straight into JSX (`react/jsx-no-literals`) or into a text prop
+  (`aria-label`, `title`, `label`, `placeholder`, ...) in `src/app`, `src/components` and
+  `src/emails`, and a translation call inside a template literal or a `+` anywhere in `src/`: a message is one
+  whole sentence with named arguments. `pnpm lint:messages` (part of `pnpm lint`) checks the
+  catalogues themselves: every language complete, the same arguments as English, no unused or
+  undefined keys.
 - **Browser bundle:** client components ship only what the page needs when it loads. zod and the
   schemas in `src/lib/validation.ts` stay on the server (the limits forms need are in
   `src/lib/input-rules.ts`); pages outside the sign-in pages load the Better Auth client with
   `loadAuthClient()` (`src/lib/sign-in/load-auth-client.ts`) when an action needs it; and
   libraries needed only for an action are loaded with `import()` when it happens, like `qrcode`
-  when an authenticator app is set up. `src/client-imports.test.ts` follows every client
+  when an authenticator app is set up; messages reach client components through the root provider
+  and `ClientMessages`, never from the catalogues or `next-intl/server` directly.
+  `src/client-imports.test.ts` follows every client
   component's static imports (not into server actions, which the browser only references) and
   fails, naming the chain, when one reaches a module on its list; add new heavy libraries there.
 - **Modules that outgrow one file** (around 500 lines, or several jobs in one file) become a folder
@@ -94,7 +105,9 @@ for the server, the browser, scripts, email previews and every kind of test are 
 being committed:
 
 - JS/TS: `eslint --fix` (formats with Prettier and sorts Tailwind classes, then checks lint rules),
-  then the Vitest tests related to the changed files
+  then the Vitest tests related to the changed files, then `pnpm lint:messages` (code can stop
+  using a message, or use one that doesn't exist)
+- The translation catalogues (`src/messages/`): `pnpm lint:messages`
 - CSS/SCSS: `stylelint --fix` (same, for styles)
 - JSON, Markdown and YAML: `prettier --write`
 

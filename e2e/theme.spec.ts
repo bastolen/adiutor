@@ -80,13 +80,15 @@ test('a chosen theme is remembered and applied before the app loads', async ({ p
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/auth');
 
-  await page.getByRole('button', { name: 'Theme: System' }).click();
+  await page.getByRole('button', { name: 'Theme and language: System, English (US)' }).click();
   await page.getByRole('menuitemradio', { name: 'Light' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
 
   // After a reload, the app takes over the page without switching back to the system's theme.
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Theme: Light' })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Theme and language: Light, English (US)' }),
+  ).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
 
   // Block the app's JavaScript, so only the inline script in <head> can set the theme.
@@ -120,14 +122,16 @@ test('signed in, the theme is chosen in the account menu, sharing the choice wit
   await useOwnClientIp(page);
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/auth');
-  await page.getByRole('button', { name: 'Theme: System' }).click();
+  await page.getByRole('button', { name: 'Theme and language: System, English (US)' }).click();
   await page.getByRole('menuitemradio', { name: 'Dark' }).click();
+  // Choosing a theme keeps the menu open; Escape closes it.
+  await page.keyboard.press('Escape');
 
   await signIn(page, PLATFORM_ADMIN);
   const html = page.locator('html');
   await expect(html).toHaveAttribute('data-theme', 'dark');
   // Signed in, the account menu takes the floating button's place.
-  await expect(page.getByRole('button', { name: /^Theme:/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Theme and language:/ })).toHaveCount(0);
 
   const accountMenu = page.getByRole('button', { name: /^Account menu/ });
   await accountMenu.click();

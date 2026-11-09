@@ -1,0 +1,27 @@
+{
+  "tables": {
+    "sorts": {
+      "name": "Naam",
+      "email": "E-mail",
+      "lastActive": "Laatst actief",
+      "joined": "Lid sinds",
+      "company": "Bedrijf",
+      "added": "Toegevoegd",
+      "sent": "Verstuurd",
+      "created": "Aangemaakt",
+      "signedIn": "Ingelogd",
+      "time": "Tijd"
+    },
+    "directions": {
+      "aToZ": "A tot Z",
+      "zToA": "Z tot A",
+      "newestFirst": "nieuwste eerst",
+      "oldestFirst": "oudste eerst",
+      "mostRecentFirst": "meest recent eerst",
+      "leastRecentFirst": "minst recent eerst"
+    },
+    "option": "{sort}, {direction}",
+    "caption": "{table}, gesorteerd op {sort}, {direction}",
+    "captionPaged": "{table}, gesorteerd op {sort}, {direction}, pagina {page, number} van {pages, number}"
+  }
+}

@@ -5,6 +5,7 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { type FormEvent, useState } from 'react';
 
 import Alert from '@/components/ui/alert';
@@ -14,24 +15,25 @@ import TextField from '@/components/ui/text-field';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import { MIN_PASSWORD_LENGTH } from '@/lib/input-rules';
 import authClient from '@/lib/sign-in/auth-client';
-import getAuthErrorMessage from '@/lib/sign-in/auth-error-messages';
+import { authErrorText, signInErrorText } from '@/lib/sign-in/auth-error-messages';
 
 /**
  * Sets a new password using the `token` from the reset link. Better Auth
  * sends invalid or expired links here with `?error=INVALID_TOKEN`. With
  * `?welcome=1` (the link in the welcome email of a registered account), the
- * texts talk about choosing a first password. A refused password shows the
- * server's message as it is: e.g. a link that would end the account's
- * provider MFA (`RESET_ENDS_PROVIDER_MFA`), whose message names the provider
- * and says what to do instead.
+ * texts talk about choosing a first password. A refused password is worded
+ * from its code (`authErrorText`), except a link that would end the
+ * account's provider MFA (`RESET_ENDS_PROVIDER_MFA`), whose message the
+ * server words with the provider's name and what to do instead.
  *
  * @returns The form.
  */
 export default function ResetPasswordForm() {
+  const t = useTranslations('auth');
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const welcome = searchParams.get('welcome') === '1';
-  const linkError = getAuthErrorMessage(searchParams.get('error'));
+  const linkError = signInErrorText(t, searchParams.get('error'));
 
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -47,7 +49,7 @@ export default function ResetPasswordForm() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (password !== confirmation) {
-      setError("The passwords don't match.");
+      setError(t('resetPassword.mismatch'));
       return;
     }
     if (!token) {
@@ -59,7 +61,7 @@ export default function ResetPasswordForm() {
     const result = await authClient.resetPassword({ newPassword: password, token });
     setPending(false);
     if (result.error) {
-      setError(result.error.message ?? 'Saving the password failed. Please try again.');
+      setError(authErrorText(t, result.error, t('resetPassword.failed')));
       return;
     }
     setDone(true);
@@ -68,10 +70,12 @@ export default function ResetPasswordForm() {
   if (linkError || !token) {
     return (
       <div className="flex flex-col gap-6">
-        <h1 className="text-2xl font-semibold text-foreground">Reset password</h1>
-        <Alert tone="error">{linkError ?? 'This reset link is incomplete.'}</Alert>
+        <h1 className="text-2xl font-semibold text-foreground">
+          {t('resetPassword.invalidHeading')}
+        </h1>
+        <Alert tone="error">{linkError ?? t('resetPassword.incomplete')}</Alert>
         <Button variant="secondary" fullWidth asChild>
-          <Link href="/auth/forgot-password">Request a new link</Link>
+          <Link href="/auth/forgot-password">{t('resetPassword.requestNew')}</Link>
         </Button>
       </div>
     );
@@ -81,15 +85,13 @@ export default function ResetPasswordForm() {
     return (
       <div className="flex flex-col gap-6">
         <h1 className="text-2xl font-semibold text-foreground">
-          {welcome ? 'Password saved' : 'Password changed'}
+          {welcome ? t('resetPassword.savedHeading') : t('resetPassword.changedHeading')}
         </h1>
         <Alert tone="success">
-          {welcome
-            ? 'Your password is saved. Sign in with your email address and password.'
-            : "Your password has been changed. For safety, you've been signed out on all devices."}
+          {welcome ? t('resetPassword.saved') : t('resetPassword.changed')}
         </Alert>
         <Button fullWidth asChild>
-          <Link href="/auth">Sign in</Link>
+          <Link href="/auth">{t('resetPassword.signIn')}</Link>
         </Button>
       </div>
     );
@@ -98,10 +100,8 @@ export default function ResetPasswordForm() {
   return (
     <div className="flex flex-col gap-8">
       <AuthHeading
-        title={welcome ? 'Choose your password' : 'Choose a new password'}
-        description={
-          <>Use at least {MIN_PASSWORD_LENGTH} characters. A longer passphrase is safer.</>
-        }
+        title={welcome ? t('resetPassword.chooseFirst') : t('resetPassword.chooseNew')}
+        description={t('resetPassword.rules', { min: MIN_PASSWORD_LENGTH })}
       />
 
       <Alert tone="error" focusOnShow>
@@ -110,7 +110,7 @@ export default function ResetPasswordForm() {
 
       <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
         <TextField
-          label={welcome ? 'Password' : 'New password'}
+          label={welcome ? t('fields.password') : t('resetPassword.newPassword')}
           type="password"
           name="password"
           autoComplete="new-password"
@@ -120,7 +120,7 @@ export default function ResetPasswordForm() {
           onChange={(event) => setPassword(event.target.value)}
         />
         <TextField
-          label={welcome ? 'Confirm password' : 'Confirm new password'}
+          label={welcome ? t('resetPassword.confirm') : t('resetPassword.confirmNew')}
           type="password"
           name="confirmation"
           autoComplete="new-password"
@@ -130,7 +130,7 @@ export default function ResetPasswordForm() {
           onChange={(event) => setConfirmation(event.target.value)}
         />
         <Button type="submit" fullWidth loading={pending}>
-          Save password
+          {t('resetPassword.submit')}
         </Button>
       </form>
     </div>

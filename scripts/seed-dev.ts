@@ -65,6 +65,7 @@ import { firstRow } from '../src/lib/defined';
 import devSeedRefusal from '../src/lib/dev-seed-guard';
 import { sendEmail } from '../src/lib/email';
 import { appUrl, env } from '../src/lib/env';
+import { DEFAULT_LOCALE } from '../src/lib/i18n/locales';
 import { INVITATION_VALID_DAYS } from '../src/lib/invitation-lifetimes';
 import { installLogRedaction } from '../src/lib/log-redaction';
 import { encryptionKey, parseAuthSecrets } from '../src/lib/sign-in/auth-secrets';
@@ -194,8 +195,9 @@ async function main(): Promise<number> {
   const passwordHash = await hashPassword(PASSWORD);
   const openLinks: string[] = [];
   /** Open invitations to email once the data is saved. */
-  const invitationEmails: (Omit<InvitationEmailProps, 'appUrl' | 'validDays'> & { to: string })[] =
-    [];
+  const invitationEmails: (Omit<InvitationEmailProps, 'appUrl' | 'validDays' | 'locale'> & {
+    to: string;
+  })[] = [];
 
   try {
     await db.transaction(async (tx) => {
@@ -580,7 +582,13 @@ async function main(): Promise<number> {
     await Promise.all(
       invitationEmails.map(async ({ to, ...props }) =>
         sendEmail(
-          await invitationEmail(to, { ...props, appUrl, validDays: INVITATION_VALID_DAYS }),
+          // In English (US), the language seeded invitations have (`invitation.locale`'s default).
+          await invitationEmail(to, {
+            ...props,
+            appUrl,
+            locale: DEFAULT_LOCALE,
+            validDays: INVITATION_VALID_DAYS,
+          }),
         ),
       ),
     );

@@ -4,6 +4,7 @@
  * sortable and paginated. Managing needs `members:manage`.
  */
 import { Users } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
@@ -16,9 +17,10 @@ import RowAction from '@/components/ui/row-action';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import SortMenu from '@/components/ui/sort-menu';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
-import { COMPANY_ROLES, ROLE_LABELS, roleOptions } from '@/lib/authz/roles';
+import { COMPANY_ROLES, roleOptions } from '@/lib/authz/roles';
 import displayName from '@/lib/display-name';
-import { daysLabel, INVITATION_VALID_DAYS } from '@/lib/invitation-lifetimes';
+import ClientMessages from '@/lib/i18n/client-messages';
+import { INVITATION_VALID_DAYS } from '@/lib/invitation-lifetimes';
 import { confirmationWindow } from '@/lib/sign-in/confirm-url';
 import type { SearchParams } from '@/lib/tables/search-params';
 import { createPageUrl, parseTableState, showsPagination } from '@/lib/tables/table-state';
@@ -42,10 +44,17 @@ import RoleSelect from '../../../_people/role-select';
  * rest) for those who may see the page (`members:view`), and the 404 page's title
  * for everyone else, who get the 404 page.
  */
-export const generateMetadata = companyPermissionMetadata('members:view', { title: 'Members' });
+// i18n-check t('companies.members.title')
+export const generateMetadata = companyPermissionMetadata(
+  'members:view',
+  'companies.members.title',
+);
 
 /**
- * Loads and shows the members, invitations and links.
+ * Loads and shows the members, invitations and links. Its text comes from the
+ * `companies` and `roles` namespaces; the client components below (the invite
+ * form, the invite link form and the role selects) get `people` through
+ * `ClientMessages`.
  *
  * @param props - Component props.
  * @param props.params - Route parameters.
@@ -60,7 +69,12 @@ async function Members({
   params: Promise<{ companyId: string }>;
   searchParams: Promise<SearchParams>;
 }) {
-  const [{ companyId }, query] = await Promise.all([params, searchParams]);
+  const [{ companyId }, query, t, tRoles] = await Promise.all([
+    params,
+    searchParams,
+    getTranslations('companies.members'),
+    getTranslations('roles'),
+  ]);
   const { company, permissions, actor } = await requireCompanyAccess(companyId, 'members:view');
   const canManage = permissions.has('members:manage') && !company.deactivatedAt;
   const membersRequested = parseTableState(MEMBERS_TABLE, query);
@@ -71,189 +85,208 @@ async function Members({
     listPendingInvitations(appContext, actor, company.id, invitationsRequested),
     listInviteLinks(appContext, actor, company.id, linksRequested),
   ]);
-  const url = createPageUrl(`/companies/${company.slug}/members`);
+  const url = createPageUrl(
+    `/companies/${company.slug}/members`,
+    {},
+    await getTranslations('tables'),
+  );
   const table = url.table(MEMBERS_TABLE, { ...membersRequested, page: members.page });
   const invitationsTable = url.table(INVITATIONS_TABLE, {
     ...invitationsRequested,
     page: invitations.page,
   });
   const linksTable = url.table(INVITE_LINKS_TABLE, { ...linksRequested, page: links.page });
-  const roles = roleOptions(COMPANY_ROLES);
+  const roles = roleOptions(COMPANY_ROLES, tRoles);
 
   return (
-    <RecentConfirmationProvider
-      required={actor.canConfirmSessions}
-      // The page with its tables; each control adds its card's anchor.
-      returnTo={url.current()}
-      {...confirmationWindow(actor.mfaConfirmedUntil)}
-    >
-      <Card
-        id="members"
-        title="Members"
-        description={`${members.total} ${members.total === 1 ? 'person has' : 'people have'} access to ${company.name}.`}
-        actions={members.total > 0 && <SortMenu label="members" options={table.sortOptions()} />}
-        flush
-        footer={
-          showsPagination(members.total) && <Pagination {...table.pagination(members, 'members')} />
-        }
+    <ClientMessages namespaces={['people']}>
+      <RecentConfirmationProvider
+        required={actor.canConfirmSessions}
+        // The page with its tables; each control adds its card's anchor.
+        returnTo={url.current()}
+        {...confirmationWindow(actor.mfaConfirmedUntil)}
       >
-        {members.total === 0 ? (
-          <EmptyState
-            icon={Users}
-            title="No members yet"
-            description={
-              canManage
-                ? 'Invite people to get started.'
-                : 'People appear here once they accept their invitation.'
-            }
-          />
-        ) : (
-          <Table caption={table.caption(`Members of ${company.name}`, members)}>
-            <thead>
-              <tr>
-                <Th aria-sort={table.ariaSort('name', 'email')}>Name</Th>
-                <Th className="hidden md:table-cell">Role</Th>
-                <Th
-                  aria-sort={table.ariaSort('last-active', 'joined')}
-                  className="hidden xl:table-cell"
-                >
-                  Activity
-                </Th>
-                {canManage && (
-                  <Th className="text-right">
-                    <span className="sr-only">Actions</span>
-                  </Th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {members.items.map((member) => {
-                const shownName = displayName(member);
-                const isSelf = member.userId === actor.id;
-                // Shown in its own column from tablet width, and below the name before that.
-                const role = canManage ? (
-                  <RoleSelect
-                    action={changeRoleAction}
-                    fields={{ companyId: company.id, membershipId: member.id }}
-                    memberName={shownName}
-                    currentRole={member.role}
-                    roles={roles}
-                    target="company"
-                    // Your own role: stepping down can take away this page.
-                    confirmChange={
-                      isSelf
-                        ? {
-                            title: 'Change your own role to {role}?',
-                            description: `Only Admins manage ${company.name}'s members. Another Admin can make you one again.`,
-                            confirmLabel: 'Change my role',
-                          }
-                        : undefined
-                    }
-                  />
-                ) : (
-                  <Badge>{ROLE_LABELS[member.role]}</Badge>
-                );
-                return (
-                  <Tr key={member.id}>
-                    <Td>
-                      <div className="flex items-center gap-3">
-                        <Avatar name={shownName} size="sm" />
-                        <div className="flex min-w-0 flex-col">
-                          <span className="font-medium wrap-anywhere">
-                            {shownName}
-                            {isSelf && (
-                              <span className="font-normal text-muted-foreground"> (you)</span>
-                            )}
-                          </span>
-                          {/* The address, at every width, unless it is the name. */}
-                          {shownName !== member.email && (
-                            <span className="text-xs wrap-anywhere text-muted-foreground">
-                              {member.email}
-                            </span>
-                          )}
-                          <div className="mt-2 md:hidden">{role}</div>
-                          {/* Below the width where it gets its column, the activity goes here. */}
-                          <span className="mt-1 flex flex-wrap gap-x-2 text-xs text-muted-foreground xl:hidden">
-                            <ActivityLine
-                              lastActiveAt={member.lastActiveAt}
-                              joinedAt={member.createdAt}
-                            />
-                          </span>
-                        </div>
-                      </div>
-                    </Td>
-                    <Td className="hidden md:table-cell">{role}</Td>
-                    <Td className="hidden whitespace-nowrap text-muted-foreground xl:table-cell">
-                      <ActivityColumn
-                        lastActiveAt={member.lastActiveAt}
-                        joinedAt={member.createdAt}
-                      />
-                    </Td>
-                    {canManage && (
-                      <Td className="text-right">
-                        {isSelf ? (
-                          <RowAction
-                            action={removeMemberAction}
-                            fields={{ companyId: company.id, membershipId: member.id }}
-                            label="Leave"
-                            ariaLabel={`Leave ${company.name}`}
-                            variant="danger-subtle"
-                            confirm={{
-                              title: `Leave ${company.name}?`,
-                              confirmLabel: 'Leave company',
-                              description: `You'll no longer be a member of ${company.name}. Your account stays, and its Admins can invite you again.`,
-                            }}
-                          />
-                        ) : (
-                          <RowAction
-                            action={removeMemberAction}
-                            fields={{ companyId: company.id, membershipId: member.id }}
-                            label="Remove"
-                            ariaLabel={`Remove ${shownName}`}
-                            doneMessage={`${shownName} was removed from ${company.name}.`}
-                            variant="danger-subtle"
-                            confirm={{
-                              title: `Remove ${shownName}?`,
-                              confirmLabel: 'Remove member',
-                              description: `They'll lose access to ${company.name}. Their account stays, and you can invite them again later.`,
-                            }}
-                          />
-                        )}
-                      </Td>
-                    )}
-                  </Tr>
-                );
-              })}
-            </tbody>
-          </Table>
-        )}
-      </Card>
-
-      {canManage && (
         <Card
-          id="invite"
-          title="Invite by email"
-          description={`They'll get an email with a link to join. The link works once and expires in ${daysLabel(INVITATION_VALID_DAYS)}.`}
+          id="members"
+          title={t('title')}
+          description={t('description', { count: members.total, company: company.name })}
+          actions={
+            members.total > 0 && <SortMenu label={t('rows')} options={table.sortOptions()} />
+          }
+          flush
+          footer={
+            showsPagination(members.total) && (
+              <Pagination {...table.pagination(members, t('rows'))} />
+            )
+          }
         >
-          <InviteForm companyId={company.id} roles={roles} />
+          {members.total === 0 ? (
+            <EmptyState
+              icon={Users}
+              title={t('empty.title')}
+              description={canManage ? t('empty.inviteDescription') : t('empty.waitDescription')}
+            />
+          ) : (
+            <Table caption={table.caption(t('caption', { company: company.name }), members)}>
+              <thead>
+                <tr>
+                  <Th aria-sort={table.ariaSort('name', 'email')}>{t('columns.name')}</Th>
+                  <Th className="hidden md:table-cell">{t('columns.role')}</Th>
+                  <Th
+                    aria-sort={table.ariaSort('last-active', 'joined')}
+                    className="hidden xl:table-cell"
+                  >
+                    {t('columns.activity')}
+                  </Th>
+                  {canManage && (
+                    <Th className="text-right">
+                      <span className="sr-only">{t('columns.actions')}</span>
+                    </Th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {members.items.map((member) => {
+                  const shownName = displayName(member);
+                  const isSelf = member.userId === actor.id;
+                  // Shown in its own column from tablet width, and below the name before that.
+                  const role = canManage ? (
+                    <RoleSelect
+                      action={changeRoleAction}
+                      fields={{ companyId: company.id, membershipId: member.id }}
+                      memberName={shownName}
+                      currentRole={member.role}
+                      roles={roles}
+                      target="company"
+                      // Your own role: stepping down can take away this page.
+                      confirmChange={
+                        isSelf
+                          ? {
+                              titles: Object.fromEntries(
+                                roles.map(({ value, label }) => [
+                                  value,
+                                  t('changeOwnRole.title', { role: label }),
+                                ]),
+                              ),
+                              description: t('changeOwnRole.description', {
+                                company: company.name,
+                              }),
+                              confirmLabel: t('changeOwnRole.confirm'),
+                            }
+                          : undefined
+                      }
+                    />
+                  ) : (
+                    <Badge>{tRoles(`${member.role}.label`)}</Badge>
+                  );
+                  return (
+                    <Tr key={member.id}>
+                      <Td>
+                        <div className="flex items-center gap-3">
+                          <Avatar name={shownName} size="sm" />
+                          <div className="flex min-w-0 flex-col">
+                            <span className="font-medium wrap-anywhere">
+                              {shownName}
+                              {isSelf && (
+                                <span className="font-normal text-muted-foreground">
+                                  {' '}
+                                  {t('you')}
+                                </span>
+                              )}
+                            </span>
+                            {/* The address, at every width, unless it is the name. */}
+                            {shownName !== member.email && (
+                              <span className="text-xs wrap-anywhere text-muted-foreground">
+                                {member.email}
+                              </span>
+                            )}
+                            <div className="mt-2 md:hidden">{role}</div>
+                            {/* Below the width where it gets its column, the activity goes here. */}
+                            <span className="mt-1 flex flex-wrap gap-x-2 text-xs text-muted-foreground xl:hidden">
+                              <ActivityLine
+                                lastActiveAt={member.lastActiveAt}
+                                joinedAt={member.createdAt}
+                              />
+                            </span>
+                          </div>
+                        </div>
+                      </Td>
+                      <Td className="hidden md:table-cell">{role}</Td>
+                      <Td className="hidden whitespace-nowrap text-muted-foreground xl:table-cell">
+                        <ActivityColumn
+                          lastActiveAt={member.lastActiveAt}
+                          joinedAt={member.createdAt}
+                        />
+                      </Td>
+                      {canManage && (
+                        <Td className="text-right">
+                          {isSelf ? (
+                            <RowAction
+                              action={removeMemberAction}
+                              fields={{ companyId: company.id, membershipId: member.id }}
+                              label={t('leave.label')}
+                              ariaLabel={t('leave.ariaLabel', { company: company.name })}
+                              variant="danger-subtle"
+                              confirm={{
+                                title: t('leave.title', { company: company.name }),
+                                confirmLabel: t('leave.confirm'),
+                                description: t('leave.description', { company: company.name }),
+                              }}
+                            />
+                          ) : (
+                            <RowAction
+                              action={removeMemberAction}
+                              fields={{ companyId: company.id, membershipId: member.id }}
+                              label={t('remove.label')}
+                              ariaLabel={t('remove.ariaLabel', { user: shownName })}
+                              doneMessage={t('remove.done', {
+                                user: shownName,
+                                company: company.name,
+                              })}
+                              variant="danger-subtle"
+                              confirm={{
+                                title: t('remove.title', { user: shownName }),
+                                confirmLabel: t('remove.confirm'),
+                                description: t('remove.description', { company: company.name }),
+                              }}
+                            />
+                          )}
+                        </Td>
+                      )}
+                    </Tr>
+                  );
+                })}
+              </tbody>
+            </Table>
+          )}
         </Card>
-      )}
 
-      <InvitationsCard
-        invitations={invitations}
-        table={invitationsTable}
-        canManage={canManage}
-        companyId={company.id}
-      />
+        {canManage && (
+          <Card
+            id="invite"
+            title={t('invite.title')}
+            description={t('invite.description', { days: INVITATION_VALID_DAYS })}
+          >
+            <InviteForm companyId={company.id} roles={roles} />
+          </Card>
+        )}
 
-      <InviteLinksCard
-        links={links}
-        table={linksTable}
-        canManage={canManage}
-        companyId={company.id}
-        roles={roles}
-      />
-    </RecentConfirmationProvider>
+        <InvitationsCard
+          invitations={invitations}
+          table={invitationsTable}
+          canManage={canManage}
+          companyId={company.id}
+        />
+
+        <InviteLinksCard
+          links={links}
+          table={linksTable}
+          canManage={canManage}
+          companyId={company.id}
+          roles={roles}
+        />
+      </RecentConfirmationProvider>
+    </ClientMessages>
   );
 }
 

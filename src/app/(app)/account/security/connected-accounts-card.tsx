@@ -6,6 +6,7 @@
  */
 'use client';
 
+import { useLocale, useTranslations } from 'next-intl';
 import { type MouseEvent, useId } from 'react';
 
 import { useRecentConfirmation } from '@/components/auth/recent-confirmation';
@@ -15,12 +16,8 @@ import Card from '@/components/ui/card';
 import IconRow from '@/components/ui/icon-row';
 import RowAction from '@/components/ui/row-action';
 import formatDate from '@/lib/format';
-import {
-  type OAuthProvider,
-  providerAccountLabel,
-  PROVIDER_LABELS,
-  providerNames,
-} from '@/lib/sign-in/oauth-providers';
+import { type Locale } from '@/lib/i18n/locales';
+import { type OAuthProvider, PROVIDER_LABELS, providerList } from '@/lib/sign-in/oauth-providers';
 import type { ConnectedProvider } from '@/server/auth/accounts';
 
 import type { AccountMessage } from '../account-messages';
@@ -35,18 +32,23 @@ const SECTION = 'connected-accounts';
  * while signing in with it, that it needs confirming (as a second step, when
  * it gives MFA: see `ConnectedProvider.givesMfa`).
  *
+ * @param t - Translates the `account` namespace.
  * @param link - The connected account.
+ * @param locale - The reader's language, for the date.
  * @returns The description.
  */
-function describeLink(link: ConnectedProvider): string {
-  const connected = `Connected ${formatDate(link.connectedAt)}`;
+function describeLink(
+  t: ReturnType<typeof useTranslations<'account'>>,
+  link: ConnectedProvider,
+  locale: Locale,
+): string {
+  const date = formatDate(link.connectedAt, locale);
   if (link.confirmed) {
-    return connected;
+    return t('security.connected.connectedOn', { date });
   }
-  const confirm = link.givesMfa
-    ? 'Confirm it to use it as your second step'
-    : "Confirm it if it's yours";
-  return `${connected} when you signed in with it. ${confirm}, or disconnect it if it isn't yours.`;
+  return link.givesMfa
+    ? t('security.connected.unconfirmedMfa', { date })
+    : t('security.connected.unconfirmed', { date });
 }
 
 /** A row of the card: a connected account, or a provider to connect. */
@@ -68,19 +70,27 @@ interface AccountRow {
  * the provider when known, and by when it was connected when that's needed to
  * tell it apart ({@link AccountRow.dated}).
  *
+ * @param t - Translates the `account` namespace.
  * @param link - The connected account.
  * @param dated - Whether to say when it was connected.
- * @returns E.g. "GitHub (octocat)", "GitHub (connected 23 Oct 2026)", or "GitHub".
+ * @param locale - The reader's language, for the date.
+ * @returns E.g. "GitHub (octocat)", "GitHub (connected Oct 23, 2026)", or "GitHub".
  */
-function accountLabel(link: ConnectedProvider, dated: boolean): string {
-  if (!dated) {
-    return providerAccountLabel(link.provider, link.accountName);
+function accountLabel(
+  t: ReturnType<typeof useTranslations<'account'>>,
+  link: ConnectedProvider,
+  dated: boolean,
+  locale: Locale,
+): string {
+  const provider = PROVIDER_LABELS[link.provider];
+  const account = link.accountName;
+  if (dated) {
+    const date = formatDate(link.connectedAt, locale);
+    return account
+      ? t('security.connected.accountNamedDated', { provider, account, date })
+      : t('security.connected.accountDated', { provider, date });
   }
-  const connected = `connected ${formatDate(link.connectedAt)}`;
-  return providerAccountLabel(
-    link.provider,
-    link.accountName ? `${link.accountName}, ${connected}` : connected,
-  );
+  return account ? t('security.connected.accountNamed', { provider, account }) : provider;
 }
 
 /**
@@ -153,6 +163,8 @@ export default function ConnectedAccountsCard({
   confirmBlocked = [],
   connectBlockedReason = '',
 }: ConnectedAccountsCardProps) {
+  const t = useTranslations('account');
+  const locale = useLocale();
   const { askToConfirm } = useRecentConfirmation(SECTION);
 
   /**
@@ -208,8 +220,11 @@ export default function ConnectedAccountsCard({
   return (
     <Card
       id={SECTION}
-      title="Connected accounts"
-      description={`Connect ${providerNames(providers)} to sign in with ${providers.length > 1 ? 'them' : 'it'}. The account's email may differ from yours.`}
+      title={t('security.connected.title')}
+      description={t('security.connected.description', {
+        providers: providerList(providers, locale),
+        count: providers.length,
+      })}
       flush
     >
       {message && (
@@ -224,7 +239,7 @@ export default function ConnectedAccountsCard({
           const label = PROVIDER_LABELS[provider];
           const Icon = PROVIDER_ICONS[provider];
           // Accounts are told apart by their name at the provider, and when needed by date.
-          const name = link ? accountLabel(link, dated) : label;
+          const name = link ? accountLabel(t, link, dated, locale) : label;
           // The row's Connect or Confirm button, when it has one.
           const addBlocked = connectOrConfirmBlocked(link);
           const addDescribedBy = connectNote && addBlocked ? connectNoteId : undefined;
@@ -241,8 +256,8 @@ export default function ConnectedAccountsCard({
                       <RowAction
                         action={confirmProviderAction}
                         fields={{ accountId: link.id }}
-                        label="Confirm"
-                        ariaLabel={`Confirm ${name}`}
+                        label={t('security.connected.confirm')}
+                        ariaLabel={t('security.connected.confirmNamed', { account: name })}
                         disabled={addBlocked}
                         describedBy={addDescribedBy}
                         onClick={confirmFirst}
@@ -251,8 +266,8 @@ export default function ConnectedAccountsCard({
                     <RowAction
                       action={disconnectAction}
                       fields={{ accountId: link.id }}
-                      label="Disconnect"
-                      ariaLabel={`Disconnect ${name}`}
+                      label={t('security.connected.disconnect')}
+                      ariaLabel={t('security.connected.disconnectNamed', { account: name })}
                       variant="danger-subtle"
                       disabled={disconnectBlocked.includes(link.id)}
                       describedBy={
@@ -262,9 +277,11 @@ export default function ConnectedAccountsCard({
                       }
                       onClick={confirmFirst}
                       confirm={{
-                        title: `Disconnect ${name}?`,
-                        description: `You can't sign in with this ${label} account until you connect it again.`,
-                        confirmLabel: 'Disconnect',
+                        title: t('security.connected.disconnectTitle', { account: name }),
+                        description: t('security.connected.disconnectDescription', {
+                          provider: label,
+                        }),
+                        confirmLabel: t('security.connected.disconnect'),
                       }}
                     />
                   </div>
@@ -278,7 +295,7 @@ export default function ConnectedAccountsCard({
                 )
               }
             >
-              {link ? describeLink(link) : 'Not connected'}
+              {link ? describeLink(t, link, locale) : t('security.connected.notConnected')}
             </IconRow>
           );
         })}

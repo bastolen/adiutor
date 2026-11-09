@@ -1,0 +1,138 @@
+{
+  "common": {
+    "app": {
+      "description": "Get help without chasing emails. Report a problem or ask for something new, follow its progress, and approve the work, all in one place."
+    },
+    "documentTitle": "{page} · Adiutor",
+    "loading": "Loading…",
+    "skipToContent": "Skip to main content",
+    "homeLink": "Adiutor home",
+    "actions": {
+      "cancel": "Cancel",
+      "close": "Close",
+      "dismiss": "Dismiss",
+      "dismissNotification": "Dismiss notification",
+      "goBack": "Go back",
+      "search": "Search",
+      "apply": "Apply",
+      "clear": "Clear",
+      "copy": "Copy",
+      "copied": "Copied",
+      "tryAgain": "Try again",
+      "goToDashboard": "Go to your dashboard"
+    },
+    "relativeTime": {
+      "justNow": "just now",
+      "never": "Never"
+    },
+    "pagination": {
+      "showing": "Showing {first, number}–{last, number} of {total, number}",
+      "pages": "Pages of {rows}",
+      "perPageGroup": "Per page, {rows}",
+      "perPage": "Per page",
+      "perPageOption": "{size, number} per page",
+      "previous": "Previous",
+      "previousPage": "Previous page",
+      "next": "Next",
+      "nextPage": "Next page",
+      "page": "Page {page, number}",
+      "pageOf": "Page {page, number} of {pages, number}"
+    },
+    "sort": {
+      "button": "Sort",
+      "trigger": "Sort {rows}",
+      "triggerSorted": "Sort {rows}: {sort}",
+      "sortBy": "Sort by"
+    },
+    "dateRange": {
+      "from": "From",
+      "to": "To"
+    },
+    "errorReference": {
+      "intro": "If it keeps happening, send this reference to an administrator:",
+      "copyText": "Reference {reference} ({when})",
+      "copy": "Copy reference"
+    },
+    "codeField": {
+      "code": "Code",
+      "backupCode": "Backup code",
+      "authenticatorHint": "The 6-digit code shown in your authenticator app."
+    },
+    "resendCode": {
+      "send": "Send a new code",
+      "wait": "Send a new code in {wait}"
+    },
+    "providerStepUp": {
+      "region": "{provider} confirmation",
+      "dismiss": "Dismiss the {provider} confirmation message",
+      "mfaOff": "{provider} couldn't confirm it's you: two-factor authentication is off for your {provider} account. Turn it on at {provider}, or use another second step.",
+      "unchecked": "{provider} couldn't confirm it's you: we couldn't check your {provider} account's two-factor authentication just now. Try again in a moment."
+    },
+    "providerLinked": {
+      "region": "{provider} connected",
+      "dismiss": "Dismiss the {provider} notice",
+      "named": "Your {provider} account <name>{account}</name> is now connected to your Adiutor account, because you signed in with it. Not you? <link>Disconnect it on the Security page</link>.",
+      "unnamed": "Your {provider} account is now connected to your Adiutor account, because you signed in with it. Not you? <link>Disconnect it on the Security page</link>."
+    },
+    "accessNotice": {
+      "dismiss": "Dismiss this note",
+      "steppedDown": "You stepped down from staff Admin. Another staff Admin can give you the role back.",
+      "leftStaff": "You’re no longer on the staff. Your account stays, and a staff Admin can invite you again.",
+      "leftCompany": "You left the company. Your account stays, and its Admins can invite you again.",
+      "companySteppedDown": "You’re no longer an Admin of this company, so you don’t manage its members. Another Admin can make you one again."
+    },
+    "recentConfirmation": {
+      "confirm": "Confirm it's you"
+    },
+    "brandPanel": {
+      "headline": "Get help without chasing emails.",
+      "pitch": "Report a problem or ask for something new, follow its progress, and approve the work, all in one place.",
+      "preview": {
+        "status": "Waiting for your approval",
+        "title": "Update the opening hours on the website",
+        "you": "You",
+        "staff": "Adiutor Support",
+        "question": "Our opening hours change next month. Can you update them on the website?",
+        "answer": "Done on the test site. Please check it and approve, and we'll publish it.",
+        "reply": "Reply",
+        "approve": "Approve"
+      }
+    },
+    "signInError": {
+      "heading": "Signing in didn't work",
+      "signInAgain": "Sign in again"
+    },
+    "theme": {
+      "label": "Theme",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "notFound": {
+      "title": "Not found",
+      "heading": "Page not found",
+      "description": "This page doesn't exist, or you don't have access to it."
+    },
+    "error": {
+      "title": "Something went wrong",
+      "description": "This page couldn't load. Try again, or go to your dashboard."
+    },
+    "device": "{browser, select, unknown {Unknown browser} other {{browser}}} on {os, select, unknown {unknown system} other {{os}}}",
+    "language": {
+      "label": "Language",
+      "emailField": "Email language",
+      "emailHintInvitation": "The invitation and its reminder are sent in this language.",
+      "emailHintAccount": "The welcome email and the account use this language until they choose their own.",
+      "defaultLabel": "Default language",
+      "defaultHint": "For everyone who hasn't chosen a language. You can change it later.",
+      "defaultDescription": "Adiutor uses this language for everyone who hasn't chosen their own, and in the emails it sends them.",
+      "saveDefault": "Save default language",
+      "defaultSaved": "Default language saved.",
+      "followDefault": "Default",
+      "followDefaultDescription": "Follows Adiutor's default language, now {language}."
+    },
+    "preferences": {
+      "button": "Theme and language: {theme, select, light {Light} dark {Dark} other {System}}, {language}"
+    }
+  }
+}

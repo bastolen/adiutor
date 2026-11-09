@@ -4,11 +4,14 @@
  */
 import { APIError, getSessionFromCtx } from 'better-auth/api';
 
+import { db } from '@/db';
+
 import { markReverify } from '../reverify-marker';
 import { normalizeEmail, reservePasswordAttempt, limit, AUTH_GUARD_LIMITS } from './attempts';
 import { checkCodeStep } from './code-step';
 import { checkPasswordReset } from './password-reset';
 import { type AuthGuardContext, CREDENTIAL_PATHS, STEP_PATHS } from './paths';
+import { noteRefusalLocale, twoFactorMethodNotAllowedBody } from './refusal-messages';
 import {
   confirmSignInLinkFirst,
   refuseUnsafeReturnAddresses,
@@ -37,6 +40,9 @@ export async function beforeAuthRequest(ctx: AuthGuardContext): Promise<void> {
   if (!path) {
     return;
   }
+  // Any refusal below is worded in the request's language, with Adiutor's default for a
+  // browser that chose none.
+  await noteRefusalLocale(ctx, db);
 
   if (path === '/magic-link/verify') {
     // The confirmation page first: it passes only safe return addresses on.
@@ -57,7 +63,7 @@ export async function beforeAuthRequest(ctx: AuthGuardContext): Promise<void> {
   if (path === '/sign-in/magic-link' || path === '/request-password-reset') {
     const email = emailOf(ctx);
     if (email) {
-      await limit(`${path}:email:${email}`, AUTH_GUARD_LIMITS.emailsPerAddress);
+      await limit(ctx, `${path}:email:${email}`, AUTH_GUARD_LIMITS.emailsPerAddress);
     }
     return;
   }
@@ -81,10 +87,7 @@ export async function beforeAuthRequest(ctx: AuthGuardContext): Promise<void> {
   // `/two-factor/enable` would turn on email codes without proving one arrives (`method: 'otp'`).
   const method = ctx.body?.method;
   if (path === '/two-factor/enable' && method !== undefined && method !== 'totp') {
-    throw new APIError('BAD_REQUEST', {
-      message: 'Turn on email codes with a code sent to you.',
-      code: 'TWO_FACTOR_METHOD_NOT_ALLOWED',
-    });
+    throw new APIError('BAD_REQUEST', twoFactorMethodNotAllowedBody(ctx));
   }
 
   const session = await getSessionFromCtx(

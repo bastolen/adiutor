@@ -3,8 +3,10 @@
  */
 'use server';
 
+import { getTranslations } from 'next-intl/server';
+
 import type { ActionResult } from '@/lib/action-result';
-import field from '@/lib/form-data';
+import field, { localeField } from '@/lib/form-data';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
 import { getActor } from '@/server/authz';
@@ -16,7 +18,9 @@ import { registerUser } from '@/server/people/user-registration';
  * may see this).
  *
  * @param _previous - The previous result (unused).
- * @param formData - Field `email`.
+ * The success messages come from the `admin.addUser` messages, in the request's language.
+ *
+ * @param formData - Fields `email` and `locale` (the account's and the welcome email's language).
  * @returns The user and whether they were created, or why it failed.
  */
 export default async function registerUserAction(
@@ -26,16 +30,19 @@ export default async function registerUserAction(
   return runAction<{ userId: string; created: boolean }>(async () => {
     const actor = await getActor();
     const email = field(formData, 'email').trim();
-    const result = await registerUser(appContext, actor, email);
+    const result = await registerUser(appContext, actor, email, {
+      locale: localeField(formData),
+    });
+    const t = await getTranslations('admin.addUser');
     return result.status === 'created'
       ? {
           ok: true,
-          message: `Account created for ${email}. We've emailed them a link to choose a password.`,
+          message: t('created', { email }),
           data: { userId: result.userId, created: true },
         }
       : {
           ok: true,
-          message: `${email} already has an account. Nothing was changed.`,
+          message: t('existing', { email }),
           data: { userId: result.userId, created: false },
         };
   });

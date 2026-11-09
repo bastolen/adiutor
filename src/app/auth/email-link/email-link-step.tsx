@@ -5,18 +5,20 @@
  * the link failed while someone else was signed in in this browser.
  */
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { getLocale, getTranslations } from 'next-intl/server';
 
 import UnusableLink from '@/components/auth/unusable-link';
 import Alert from '@/components/ui/alert';
 import Button from '@/components/ui/button';
 import { getSafeRedirectPath } from '@/lib/redirect';
-import { knownAuthErrorMessage } from '@/lib/sign-in/auth-error-messages';
+import { type AuthTranslator, knownAuthErrorText } from '@/lib/sign-in/auth-error-messages';
 import { EMAIL_LINK_MINUTES } from '@/lib/sign-in/email-link';
 import { type SearchParams, searchParam } from '@/lib/tables/search-params';
 import appContext from '@/server/app-context';
 import { getEmailLinkPreview } from '@/server/auth/email-links';
 import { getOptionalActor } from '@/server/authz';
-import { ServiceError } from '@/server/errors';
+import { ServiceError, serviceErrorMessage } from '@/server/errors';
 
 import EmailLinkForm from './email-link-form';
 
@@ -29,12 +31,13 @@ import EmailLinkForm from './email-link-form';
  * @returns The message.
  */
 function LinkProblem({ message, signInHref }: { message: string; signInHref: string }) {
+  const t = useTranslations('auth');
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold text-foreground">Sign in</h1>
+      <h1 className="text-2xl font-semibold text-foreground">{t('emailLink.problemHeading')}</h1>
       <Alert tone="error">{message}</Alert>
       <Button variant="secondary" fullWidth asChild>
-        <Link href={signInHref}>Go to sign in</Link>
+        <Link href={signInHref}>{t('actions.goToSignIn')}</Link>
       </Button>
     </div>
   );
@@ -44,12 +47,13 @@ function LinkProblem({ message, signInHref }: { message: string; signInHref: str
  * Says why a link Better Auth refused can't be used, when that's more than
  * the usual "expired or used" (e.g. its account was deleted meanwhile).
  *
+ * @param t - Translates the `auth` namespace.
  * @param code - The `error` query parameter, if any.
  * @returns The message, or `null` for none, an unknown code, or a used or
  *   expired link (`INVALID_TOKEN`), which the usual text explains best.
  */
-function refusalMessage(code: string | undefined): string | null {
-  return code && code !== 'INVALID_TOKEN' ? knownAuthErrorMessage(code) : null;
+function refusalMessage(t: AuthTranslator, code: string | undefined): string | null {
+  return code && code !== 'INVALID_TOKEN' ? knownAuthErrorText(t, code) : null;
 }
 
 /**
@@ -66,19 +70,14 @@ export default async function EmailLinkStep({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const params = await searchParams;
+  const [params, t] = await Promise.all([searchParams, getTranslations('auth')]);
   const token = searchParam(params.token);
   // A new link asked for from there goes to the same page as this one would have.
   const signInHref = `/auth?callbackURL=${encodeURIComponent(
     getSafeRedirectPath(searchParam(params.callbackURL)),
   )}`;
   if (!token) {
-    return (
-      <LinkProblem
-        message="This sign-in link is incomplete. Request a new one."
-        signInHref={signInHref}
-      />
-    );
+    return <LinkProblem message={t('emailLink.incomplete')} signInHref={signInHref} />;
   }
 
   let preview;
@@ -86,7 +85,12 @@ export default async function EmailLinkStep({
     preview = await getEmailLinkPreview(appContext, token);
   } catch (error) {
     if (error instanceof ServiceError && error.code === 'rate_limited') {
-      return <LinkProblem message={error.message} signInHref={signInHref} />;
+      return (
+        <LinkProblem
+          message={serviceErrorMessage(error, await getLocale())}
+          signInHref={signInHref}
+        />
+      );
     }
     throw error;
   }
@@ -94,8 +98,8 @@ export default async function EmailLinkStep({
     return (
       <UnusableLink
         description={
-          refusalMessage(searchParam(params.error)) ??
-          `It may have expired or been used already: sign-in links work once, for ${EMAIL_LINK_MINUTES} minutes. Request a new one from the sign-in page.`
+          refusalMessage(t, searchParam(params.error)) ??
+          t('emailLink.unusable', { minutes: EMAIL_LINK_MINUTES })
         }
         href={signInHref}
       />

@@ -7,6 +7,7 @@
 
 import { ArrowUpDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useTransition } from 'react';
 
 import type { SortOption } from '@/lib/tables/table-state';
@@ -49,6 +50,7 @@ interface SortMenuProps {
  * @returns The menu's button (the menu itself opens in a portal).
  */
 export default function SortMenu({ label, options }: SortMenuProps) {
+  const t = useTranslations('common.sort');
   const [open, setOpen] = useTransientState(false);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -58,18 +60,25 @@ export default function SortMenu({ label, options }: SortMenuProps) {
       <MenuTrigger asChild>
         <Button variant="secondary" size="sm" aria-busy={pending || undefined}>
           {pending ? <Spinner /> : <ArrowUpDown aria-hidden="true" />}
-          {/* On phones the button says Sort; from 640px (`sm`), how the table is sorted. */}
-          <span className={current ? 'sm:sr-only' : undefined}>Sort</span>
-          <span className="sr-only">
-            {' '}
-            {label}
-            {current && ': '}
+          {/* On phones the button says Sort; from 640px (`sm`), how the table is sorted. Both
+              are part of its name, which says what's sorted too. */}
+          <span aria-hidden="true" className={current ? 'sm:hidden' : undefined}>
+            {t('button')}
           </span>
-          {current && <span className="sr-only sm:not-sr-only">{current.label}</span>}
+          {current && (
+            <span aria-hidden="true" className="max-sm:hidden">
+              {current.label}
+            </span>
+          )}
+          <span className="sr-only">
+            {current
+              ? t('triggerSorted', { rows: label, sort: current.label })
+              : t('trigger', { rows: label })}
+          </span>
         </Button>
       </MenuTrigger>
       <MenuContent align="end">
-        <MenuLabel>Sort by</MenuLabel>
+        <MenuLabel>{t('sortBy')}</MenuLabel>
         <MenuRadioGroup value={current?.value}>
           {options.map((option) => (
             <MenuRadioLinkItem

@@ -2,9 +2,12 @@
  * @file The "Send a new code" button of every form that emails a code (the
  * sign-in code step, the step-up page and setting up email codes): busy while
  * a code is being sent, and counting down while the last one is too recent
- * for a new one (`useResendCooldown`).
+ * for a new one (`useResendCooldown`). Its text is in `common`
+ * (`common.resendCode`), since the Security page uses it too.
  */
 'use client';
+
+import { useTranslations } from 'next-intl';
 
 import Button from '@/components/ui/button';
 
@@ -39,6 +42,7 @@ export function formatCountdown(seconds: number): string {
  * @returns The button.
  */
 export default function ResendCodeButton({ onClick, sending, waitSeconds }: ResendCodeButtonProps) {
+  const t = useTranslations('common');
   return (
     <Button
       variant="ghost"
@@ -47,7 +51,9 @@ export default function ResendCodeButton({ onClick, sending, waitSeconds }: Rese
       disabled={waitSeconds > 0}
       onClick={onClick}
     >
-      {waitSeconds > 0 ? `Send a new code in ${formatCountdown(waitSeconds)}` : 'Send a new code'}
+      {waitSeconds > 0
+        ? t('resendCode.wait', { wait: formatCountdown(waitSeconds) })
+        : t('resendCode.send')}
     </Button>
   );
 }

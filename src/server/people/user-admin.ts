@@ -33,7 +33,6 @@ import {
 } from '@/lib/authz/roles';
 import { OAUTH_PROVIDERS } from '@/lib/sign-in/oauth-providers';
 import { availableProviders } from '@/lib/sign-in/providers';
-import { MFA_VERIFICATION_REQUIRED, SESSION_NOT_FRESH } from '@/lib/sign-in/sign-in-refusals';
 import { type Paged, resolveTableState, type TableState } from '@/lib/tables/table-state';
 import {
   DEVICES_TABLE,
@@ -565,19 +564,36 @@ export async function soleAdminOf(
 }
 
 /**
- * Explains why someone can't lose access, e.g. "You're the only staff Admin
- * and the only Admin of Adiutor Tests Alpha."
- *
- * @param subject - How to refer to them, e.g. "You're" or "This user is".
- * @param sole - What they're the last Admin of.
- * @returns The explanation, or `null` when nothing would be left without an Admin.
+ * Who a refusal about the last Admin is about: the acting user themself
+ * ("You are the only staff Admin.") or the user they act on ("This user is
+ * ...").
  */
-export function describeSoleAdmin(subject: string, sole: SoleAdminOf): string | null {
-  const parts = [
-    ...(sole.staff ? ['the only staff Admin'] : []),
-    ...(sole.companies.length > 0 ? [`the only Admin of ${sole.companies.join(', ')}`] : []),
-  ];
-  return parts.length > 0 ? `${subject} ${parts.join(' and ')}.` : null;
+export type SoleAdminSubject = 'self' | 'user';
+
+/**
+ * The error for a change that would leave the staff or companies without an
+ * Admin, e.g. "This user is the only Admin of Adiutor Tests. Make someone
+ * else an Admin first." (`errors.soleAdmin.<subject>.<what>`, with the
+ * companies' names as `{companies}`).
+ *
+ * @param subject - Who it's about.
+ * @param sole - What they're the last Admin of.
+ * @returns The error (`conflict`), or `null` when nothing would be left without an Admin.
+ */
+export function soleAdminError(subject: SoleAdminSubject, sole: SoleAdminOf): ServiceError | null {
+  const companies = sole.companies.join(', ');
+  if (sole.staff && sole.companies.length > 0) {
+    return new ServiceError('conflict', `errors.soleAdmin.${subject}.staffAndCompanies`, {
+      companies,
+    });
+  }
+  if (sole.staff) {
+    return new ServiceError('conflict', `errors.soleAdmin.${subject}.staff`);
+  }
+  if (sole.companies.length > 0) {
+    return new ServiceError('conflict', `errors.soleAdmin.${subject}.companies`, { companies });
+  }
+  return null;
 }
 
 /**
@@ -588,21 +604,21 @@ export function describeSoleAdmin(subject: string, sole: SoleAdminOf): string | 
  *
  * @param db - Database client or transaction.
  * @param userId - The user who'd lose access.
- * @param subject - How to refer to them, e.g. "You are" or "This user is".
+ * @param subject - Who it's about: the acting user themself, or the user they act on.
  * @param options - How to read (see {@link soleAdminOf}).
  * @param options.lock - Lock first; on by default.
- * @throws {ServiceError} `conflict` naming the companies (or asking to try again when something
- *   changed while the locks were taken), `not_found` when the user is gone.
+ * @throws {ServiceError} `conflict` naming the companies ({@link soleAdminError}; or asking to try
+ *   again when something changed while the locks were taken), `not_found` when the user is gone.
  */
 async function assertNotSoleAdmin(
   db: DatabaseOrTransaction,
   userId: string,
-  subject: string,
+  subject: SoleAdminSubject,
   options: { lock?: boolean } = {},
 ): Promise<void> {
-  const reason = describeSoleAdmin(subject, await soleAdminOf(db, userId, options));
-  if (reason) {
-    throw new ServiceError('conflict', `${reason} Make someone else an Admin first.`);
+  const refusal = soleAdminError(subject, await soleAdminOf(db, userId, options));
+  if (refusal) {
+    throw refusal;
   }
 }
 
@@ -618,7 +634,7 @@ async function assertNotSoleAdmin(
 function targetIdOf(actor: Actor, userId: string): string {
   const id = parseId(userId);
   if (id === actor.id) {
-    throw new ServiceError('invalid', 'Use your Security page to change your own account.');
+    throw new ServiceError('invalid', 'errors.users.ownAccount');
   }
   return id;
 }
@@ -675,7 +691,7 @@ async function loadTarget(db: DatabaseOrTransaction, actor: Actor, userId: strin
  * @param options - What to reset.
  * @param options.removePasskeys - Also remove all their passkeys.
  * @throws {ServiceError} `forbidden` without `users:manage` or a recent confirmation
- *   (`MFA_VERIFICATION_REQUIRED`'s message), `invalid` on yourself, `not_found` for unknown users,
+ *   (`errors.signIn.mfaVerificationRequired`), `invalid` on yourself, `not_found` for unknown users,
  *   `conflict` while another change to how the user signs in is being made.
  */
 export async function resetUserMfa(
@@ -686,7 +702,7 @@ export async function resetUserMfa(
 ): Promise<void> {
   assertPermission(getGlobalPermissions(actor), 'users:manage');
   if (needsRecentConfirmation(actor)) {
-    throw new ServiceError('forbidden', MFA_VERIFICATION_REQUIRED.message);
+    throw new ServiceError('forbidden', 'errors.signIn.mfaVerificationRequired');
   }
   const targetId = targetIdOf(actor, userId);
   const { email } = await withSignInChangeLock(ctx, targetId, () =>
@@ -795,9 +811,9 @@ export async function deactivateUser(
   const { email } = await ctx.db.transaction(async (tx) => {
     const target = await loadTarget(tx, actor, userId);
     if (target.deactivatedAt) {
-      throw new ServiceError('conflict', 'This account is already deactivated.');
+      throw new ServiceError('conflict', 'errors.users.alreadyDeactivated');
     }
-    await assertNotSoleAdmin(tx, target.id, 'This user is');
+    await assertNotSoleAdmin(tx, target.id, 'user');
     await deactivate(ctx, tx, target.id);
     await recordEvent(
       ctx,
@@ -826,7 +842,7 @@ export async function reactivateUser(
   const { email } = await ctx.db.transaction(async (tx) => {
     const target = await loadTarget(tx, actor, userId);
     if (!target.deactivatedAt) {
-      throw new ServiceError('conflict', 'This account is already active.');
+      throw new ServiceError('conflict', 'errors.users.alreadyActive');
     }
     await tx.update(user).set({ deactivatedAt: null }).where(eq(user.id, target.id));
     await recordEvent(
@@ -872,17 +888,17 @@ export async function deleteUser(
   confirmEmail: string,
 ): Promise<void> {
   assertPermission(getGlobalPermissions(actor), 'users:delete');
-  const { email } = await ctx.db.transaction(async (tx) => {
+  const { email, locale } = await ctx.db.transaction(async (tx) => {
     const target = await loadTarget(tx, actor, userId);
     if (confirmEmail.trim().toLowerCase() !== target.email.toLowerCase()) {
-      throw new ServiceError('invalid', 'Type the email address exactly to confirm.');
+      throw new ServiceError('invalid', 'errors.users.confirmEmail');
     }
     // Locks their row first, so nothing they create meanwhile escapes the revoke below.
-    await assertNotSoleAdmin(tx, target.id, 'This user is');
+    await assertNotSoleAdmin(tx, target.id, 'user');
     // Their address as it is now that the row is locked (a new statement): it can't change
-    // before the deletion commits, and the security email goes to it.
+    // before the deletion commits, and the security email goes to it, in their language.
     const [locked] = await tx
-      .select({ email: user.email })
+      .select({ email: user.email, locale: user.locale })
       .from(user)
       .where(eq(user.id, target.id));
     if (!locked) {
@@ -903,10 +919,11 @@ export async function deleteUser(
       tx,
     );
     await tx.delete(user).where(eq(user.id, target.id));
-    return { email: locked.email };
+    return { email: locked.email, locale: locked.locale };
   });
-  // Only once the deletion has committed: a refused one sends nothing.
-  await sendSecurityNotice(ctx, { email }, 'account_deleted');
+  // Only once the deletion has committed: a refused one sends nothing. The account is gone, so its
+  // language comes along.
+  await sendSecurityNotice(ctx, { email }, 'account_deleted', { locale });
 }
 
 /**
@@ -929,8 +946,8 @@ export async function deleteUser(
  * @param ctx - Service context.
  * @param actor - The signed-in user.
  * @param password - Their current password, required when they have one.
- * @throws {ServiceError} `forbidden` without a recent confirmation (`MFA_VERIFICATION_REQUIRED`'s
- *   message) or a fresh sign-in (`SESSION_NOT_FRESH`'s), `conflict` when they're the last Admin
+ * @throws {ServiceError} `forbidden` without a recent confirmation
+ *   (`errors.signIn.mfaVerificationRequired`) or a fresh sign-in (`errors.signIn.sessionNotFresh`), `conflict` when they're the last Admin
  *   of the staff or a company, `invalid` for a wrong password, `rate_limited` after too many.
  */
 export async function deactivateOwnAccount(
@@ -939,10 +956,10 @@ export async function deactivateOwnAccount(
   password: string,
 ): Promise<void> {
   if (needsRecentConfirmation(actor)) {
-    throw new ServiceError('forbidden', MFA_VERIFICATION_REQUIRED.message);
+    throw new ServiceError('forbidden', 'errors.signIn.mfaVerificationRequired');
   }
   // Without locks: it only answers early, and the transaction below checks again with them.
-  await assertNotSoleAdmin(ctx.db, actor.id, 'You are', { lock: false });
+  await assertNotSoleAdmin(ctx.db, actor.id, 'self', { lock: false });
   const [credential] = await ctx.db
     .select({ password: account.password })
     .from(account)
@@ -959,10 +976,10 @@ export async function deactivateOwnAccount(
     await checkCurrentPassword(ctx, actor, 'deactivate', () => verifyPassword({ hash, password }));
   } else if (needsFreshSignIn(actor)) {
     // No password and no second step (with one, the confirmation above was needed).
-    throw new ServiceError('forbidden', SESSION_NOT_FRESH.message);
+    throw new ServiceError('forbidden', 'errors.signIn.sessionNotFresh');
   }
   await ctx.db.transaction(async (tx) => {
-    await assertNotSoleAdmin(tx, actor.id, 'You are');
+    await assertNotSoleAdmin(tx, actor.id, 'self');
     await deactivate(ctx, tx, actor.id);
     await recordEvent(
       ctx,

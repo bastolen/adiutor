@@ -7,6 +7,7 @@ import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph } from '@/components/email/email-text';
 import type { Email } from '@/lib/email';
+import translator from '@/lib/i18n/translator';
 
 import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
 import renderEmail from './render';
@@ -28,30 +29,30 @@ export interface AlreadyInvitedEmailProps extends EmailBaseProps {
  * @param props - Template props.
  * @param props.appUrl - Public app URL.
  * @param props.companyName - The company, or the staff's name.
+ * @param props.locale - The recipient's language.
  * @param props.logoSrc - Logo URL override.
  * @returns The email.
  */
 export default function AlreadyInvitedEmail({
   appUrl,
   companyName,
+  locale,
   logoSrc = undefined,
 }: AlreadyInvitedEmailProps) {
+  const t = translator(locale, 'emails.alreadyInvited');
+  const values = { company: companyName };
   return (
     <EmailLayout
-      preview={`Use your earlier invitation to ${companyName}`}
+      preview={t('preview', values)}
       appUrl={appUrl}
+      locale={locale}
       logoSrc={logoSrc}
-      reason={`You're receiving this because someone used an invite link for ${companyName} with this email address. If that wasn't you, you can ignore this email.`}
+      reason={t('reason', values)}
     >
-      <EmailHeading>You already have an invitation</EmailHeading>
-      <EmailParagraph>
-        You opened an invite link for {companyName} on Adiutor, but this email address already has
-        an open invitation there. Use the invitation email you received earlier to join.
-      </EmailParagraph>
-      <EmailParagraph>
-        If that invitation has expired, ask whoever invited you to send you a new one.
-      </EmailParagraph>
-      <EmailButton href={`${appUrl}/auth`}>Go to Adiutor</EmailButton>
+      <EmailHeading>{t('heading')}</EmailHeading>
+      <EmailParagraph>{t('body', values)}</EmailParagraph>
+      <EmailParagraph>{t('expired')}</EmailParagraph>
+      <EmailButton href={`${appUrl}/auth`}>{t('button')}</EmailButton>
     </EmailLayout>
   );
 }
@@ -72,7 +73,7 @@ AlreadyInvitedEmail.PreviewProps = {
 export function alreadyInvitedEmail(to: string, props: AlreadyInvitedEmailProps): Promise<Email> {
   return renderEmail(
     to,
-    `You already have an invitation to ${props.companyName} on Adiutor`,
+    translator(props.locale, 'emails.alreadyInvited')('subject', { company: props.companyName }),
     <AlreadyInvitedEmail {...props} />,
   );
 }

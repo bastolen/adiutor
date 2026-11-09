@@ -25,10 +25,13 @@ import {
   createSession,
   createStaffSettings,
   createUser,
+  emailLanguage,
   fillRateLimitBucket,
+  inLanguage,
   inSequence,
   memberActor,
   rateLimitHits,
+  setUserLocale,
   setupTestContext,
   staffActor,
   tokenFrom,
@@ -151,7 +154,8 @@ describe('last admin guard at the same moment', () => {
   /** The refusal for the last admin, from the account actions. */
   const SOLE_ADMIN = expect.objectContaining({
     code: 'conflict',
-    message: 'This user is the only Admin of Adiutor Tests. Make someone else an Admin first.',
+    key: 'errors.soleAdmin.user.companies',
+    values: { companies: 'Adiutor Tests' },
   });
 
   it('refuses the second of two admins deactivated at once', async () => {
@@ -169,7 +173,7 @@ describe('last admin guard at the same moment', () => {
     const secondId = await membershipOf(companyAdmin, testCompany.id, secondAdmin.id);
     const lastAdmin = expect.objectContaining({
       code: 'conflict',
-      message: 'A company needs at least one admin. Make someone else an admin first.',
+      key: 'errors.members.lastAdmin',
     });
 
     const demoted = await atTheSameMoment(
@@ -221,7 +225,7 @@ describe('last admin guard at the same moment', () => {
       status: 'rejected',
       reason: expect.objectContaining({
         code: 'invalid',
-        message: 'This company is deactivated. Reactivate it first.',
+        key: 'errors.companyDeactivated',
       }),
     });
     const unchanged = firstRow(
@@ -271,7 +275,7 @@ describe('your own role', () => {
           }),
         ).rejects.toMatchObject({
           code: 'forbidden',
-          message: "You can't give yourself a higher role.",
+          key: 'errors.members.selfRaise',
         });
         const own = firstRow(
           await db
@@ -290,7 +294,7 @@ describe('rights taken away while the request is under way', () => {
   /** The refusal for an actor whose rights are gone by the time the change is made. */
   const FORBIDDEN = expect.objectContaining({
     code: 'forbidden',
-    message: "You don't have permission to do that.",
+    key: 'errors.forbidden',
   });
 
   /**
@@ -331,7 +335,7 @@ describe('rights taken away while the request is under way', () => {
       status: 'rejected',
       reason: expect.objectContaining({
         code: 'forbidden',
-        message: "You can't give yourself a higher role.",
+        key: 'errors.members.selfRaise',
       }),
     });
     const own = firstRow(
@@ -400,7 +404,7 @@ describe('rights taken away while the request is under way', () => {
       status: 'rejected',
       reason: expect.objectContaining({
         code: 'invalid',
-        message: 'This account is deactivated. Reactivate it first.',
+        key: 'errors.members.accountDeactivated',
       }),
     });
     expect(
@@ -463,6 +467,23 @@ describe('adding existing users', () => {
     ).rejects.toMatchObject({ code: 'conflict' });
   });
 
+  it('tells someone added in the language they saved, not the adder’s', async () => {
+    const manager = await staffActor(db, 'manager');
+    const jane = await createUser(db, 'jane@adiutor.test');
+    await setUserLocale(db, jane, 'es-ES');
+
+    await addMember(inLanguage(ctx, 'nl-NL'), manager, {
+      companyId: testCompany.id,
+      userId: jane,
+      role: 'client',
+    });
+
+    const added = defined(sent.at(-1), 'the email to Jane');
+    expect(emailLanguage(added)).toBe('es-ES');
+    expect(added.subject).toBe(`Te han añadido a ${testCompany.name} en Adiutor`);
+    expect(added.text).toContain('como Cliente.');
+  });
+
   it('lets staff Admins and Managers add themselves, like anyone else', async () => {
     await inSequence(['platform_admin', 'manager'] as const, async (role) => {
       const staff = await staffActor(db, role, `self-${role}@adiutor.test`);
@@ -520,7 +541,7 @@ describe('adding existing users', () => {
     await expect(
       addMember(ctx, manager, { companyId: testCompany.id, userId: jane, role: 'manager' }),
     ).rejects.toMatchObject({
-      issues: [expect.objectContaining({ message: 'Choose a role that fits this company.' })],
+      issues: [expect.objectContaining({ message: 'validation.companyRole' })],
     });
 
     const closed = await createCompany(db, { deactivated: true });
@@ -766,7 +787,7 @@ describe('security emails to members', () => {
         role: 'manager',
       }),
     ).rejects.toMatchObject({
-      issues: [expect.objectContaining({ message: 'Choose a role that fits this company.' })],
+      issues: [expect.objectContaining({ message: 'validation.companyRole' })],
     });
 
     const row = firstRow(
@@ -862,7 +883,7 @@ describe('the limit on role changes', () => {
         membershipId: id,
         role: 'watcher',
       }),
-    ).rejects.toMatchObject({ code: 'rate_limited', message: /^Too many attempts/ });
+    ).rejects.toMatchObject({ code: 'rate_limited', key: 'errors.tooManyAttempts' });
     const row = firstRow(
       await db.select({ role: membership.role }).from(membership).where(eq(membership.id, id)),
       'the membership',

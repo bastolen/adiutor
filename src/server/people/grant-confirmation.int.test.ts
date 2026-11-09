@@ -18,7 +18,9 @@ import {
   createCompany,
   createStaffSettings,
   createUser,
+  emailLanguage,
   enableTwoFactor,
+  setUserLocale,
   setupTestContext,
   tokenFrom,
 } from '../../../tests/integration/helpers';
@@ -301,6 +303,28 @@ describe('a new staff Admin', () => {
     );
     // Named by their name and address, and who made the change (test users are named after their address).
     expect(told.text).toContain('fresh.admin made sam (sam@adiutor.test) a staff Admin');
+  });
+
+  it('is emailed to each staff Admin in their own language', async () => {
+    const actor = await freshAdmin();
+    await setUserLocale(
+      db,
+      await staffMember('platform_admin', 'dutch.admin@adiutor.test'),
+      'nl-NL',
+    );
+    await staffMember('platform_admin', 'other.admin@adiutor.test');
+    const manager = await staffMember('manager', 'sam@adiutor.test');
+
+    await changeStaffRole(ctx, actor, { userId: manager, role: 'platform_admin' });
+
+    const told = sent
+      .filter((email) => email.to.endsWith('.admin@adiutor.test'))
+      .map((email) => [email.to, emailLanguage(email)])
+      .sort(([a], [b]) => (a ?? '').localeCompare(b ?? ''));
+    expect(told).toEqual([
+      ['dutch.admin@adiutor.test', 'nl-NL'],
+      ['other.admin@adiutor.test', 'en-US'],
+    ]);
   });
 
   it('is emailed when an invitation or invite link makes someone a staff Admin', async () => {

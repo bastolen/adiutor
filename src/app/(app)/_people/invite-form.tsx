@@ -1,12 +1,16 @@
 /**
  * @file Form to invite one or more people by email, to a company or staff.
+ * Text from the `people` namespace, which the page passes with
+ * `ClientMessages`.
  */
 'use client';
 
 import { CircleAlert, CircleCheck } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useLayoutEffect, useRef } from 'react';
 
 import { ConfirmFirstNote, ReturnToField } from '@/components/auth/recent-confirmation';
+import EmailLanguageField from '@/components/language/email-language-field';
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
 import SelectField, { type SelectOption } from '@/components/ui/select-field';
@@ -15,7 +19,8 @@ import { useTransientActionState, useTransientState } from '@/components/ui/use-
 import { MAX_BULK_INVITES } from '@/lib/input-rules';
 
 import { inviteAction } from './invitation-actions';
-import useConfirmBeforeGrant, { CONFIRM_BEFORE_GRANT_NOTE } from './use-confirm-before-grant';
+import { hiddenTag } from './rich-tags';
+import useConfirmBeforeGrant from './use-confirm-before-grant';
 
 /**
  * Props for {@link InviteForm}.
@@ -23,7 +28,7 @@ import useConfirmBeforeGrant, { CONFIRM_BEFORE_GRANT_NOTE } from './use-confirm-
 interface InviteFormProps {
   /** The company to invite to, or `null` for staff. */
   companyId: string | null;
-  /** Roles that can be given. */
+  /** Roles that can be given, named in the reader's language. */
   roles: readonly SelectOption[];
 }
 
@@ -47,6 +52,7 @@ interface InviteFormProps {
  * @returns The form.
  */
 export default function InviteForm({ companyId, roles }: InviteFormProps) {
+  const t = useTranslations('people');
   const [result, formAction, pending, onSubmit] = useTransientActionState(inviteAction, null);
   const lines = result?.ok ? (result.data?.lines ?? []) : [];
   const emailsRef = useRef<HTMLTextAreaElement>(null);
@@ -69,7 +75,7 @@ export default function InviteForm({ companyId, roles }: InviteFormProps) {
       <ReturnToField />
       <ResultAlert result={result} />
       {lines.length > 0 && (
-        <ul aria-label="Invitation results" className="flex flex-col gap-1.5 text-sm">
+        <ul aria-label={t('inviteForm.results')} className="flex flex-col gap-1.5 text-sm">
           {lines.map((line) => (
             <li
               key={line.email}
@@ -81,8 +87,13 @@ export default function InviteForm({ companyId, roles }: InviteFormProps) {
                 <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
               )}
               <span>
-                <span className="sr-only">{line.ok ? 'Sent: ' : 'Not sent: '}</span>
-                {line.ok ? line.message : `${line.email}: ${line.message}`}
+                {line.ok
+                  ? t.rich('inviteForm.sentLine', { hidden: hiddenTag, message: line.message })
+                  : t.rich('inviteForm.notSentLine', {
+                      hidden: hiddenTag,
+                      email: line.email,
+                      message: line.message,
+                    })}
               </span>
             </li>
           ))}
@@ -91,28 +102,31 @@ export default function InviteForm({ companyId, roles }: InviteFormProps) {
       <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_12rem] sm:items-start">
         <TextAreaField
           ref={emailsRef}
-          label="Email addresses"
+          label={t('inviteForm.emails')}
           name="emails"
           autoComplete="off"
           spellCheck={false}
-          placeholder="colleague@adiutor.dev"
-          description={`One per line or separated by commas, up to ${MAX_BULK_INVITES}.`}
+          placeholder={t('inviteForm.emailsPlaceholder')}
+          description={t('inviteForm.emailsHint', { max: MAX_BULK_INVITES })}
           required
         />
-        <SelectField
-          label="Role"
-          name="role"
-          options={roles}
-          value={role}
-          onValueChange={setRole}
-        />
+        <div className="flex flex-col gap-4">
+          <SelectField
+            label={t('inviteForm.role')}
+            name="role"
+            options={roles}
+            value={role}
+            onValueChange={setRole}
+          />
+          <EmailLanguageField purpose="invitation" />
+        </div>
       </div>
       {confirmFirst ? (
-        <ConfirmFirstNote>{CONFIRM_BEFORE_GRANT_NOTE}</ConfirmFirstNote>
+        <ConfirmFirstNote>{t('confirmBeforeGrant')}</ConfirmFirstNote>
       ) : (
         <div>
           <Button type="submit" loading={pending}>
-            Send invitations
+            {t('inviteForm.submit')}
           </Button>
         </div>
       )}

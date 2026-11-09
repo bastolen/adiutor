@@ -27,7 +27,9 @@ import {
   createCompany,
   createSession,
   createUser,
+  emailLanguage,
   memberActor,
+  setUserLocale,
   setupTestContext,
   staffActor,
   tokenFrom,
@@ -181,6 +183,30 @@ describe('sendInvitationReminders', () => {
     );
     expect(reminded.tokenHash).toBe(hashToken(tokenFrom(defined(sent[0], 'the reminder email'))));
     expect(reminded.reminderSentAt).toBeInstanceOf(Date);
+  });
+
+  it('reminds in the invitation’s language, or the invitee’s own when they saved one', async () => {
+    const input = { companyId: testCompany.id, role: 'client', locale: 'nl-NL' } as const;
+    await inviteByEmail(ctx, companyAdmin, { ...input, email: 'new@adiutor.test' });
+    await inviteByEmail(ctx, companyAdmin, { ...input, email: 'known@adiutor.test' });
+    // Signed up meanwhile (without joining the company), with Spanish saved.
+    await setUserLocale(db, await createUser(db, 'known@adiutor.test'), 'es-ES');
+    await age('new@adiutor.test', '1 day');
+    await age('known@adiutor.test', '1 day');
+    sent.length = 0;
+
+    await expect(sendInvitationReminders(ctx)).resolves.toEqual({ sent: 2, failed: 0 });
+
+    const byAddress = Object.fromEntries(sent.map((email) => [email.to, email]));
+    expect(emailLanguage(defined(byAddress['new@adiutor.test'], 'the Dutch reminder'))).toBe(
+      'nl-NL',
+    );
+    expect(defined(byAddress['new@adiutor.test'], 'the Dutch reminder').subject).toBe(
+      'Herinnering: word lid van Adiutor Tests Client op Adiutor',
+    );
+    expect(emailLanguage(defined(byAddress['known@adiutor.test'], 'the Spanish reminder'))).toBe(
+      'es-ES',
+    );
   });
 
   it('skips fresh, revoked and deactivated-company invitations, but not a due one beside them', async () => {

@@ -22,7 +22,8 @@ keyboard support.
   a link (the sorts in `SortMenu`). A `Badge`'s tone says what kind of status it is: `success` for
   active or verified, `warning` for something that needs attention (expired, not verified),
   `danger` for deactivated or revoked. A status keeps one tone on every screen, which
-  `src/components/ui/badge-tones.test.ts` checks. Icons come from
+  `src/components/ui/badge-tones.test.ts` checks (it reads a badge whose label is one message,
+  `{t('deactivated')}`, as its English text). Icons come from
   [Lucide](https://lucide.dev) and are hidden from screen readers; icon-only buttons have an
   `aria-label`. Join classes with `cn()` (`src/lib/cn.ts`).
 - **Tables** of records sort and paginate (`src/lib/tables/table-state.ts`, with each table defined in
@@ -78,15 +79,21 @@ keyboard support.
 - **A refused submit keeps the input:** React 19 resets a `<form action>` after every submit,
   whatever the result. Forms pass both the action and the hook's `onSubmit`
   (`<form action={formAction} onSubmit={onSubmit}>`), which runs the action itself and clears the
-  form only after a successful result (`resetOnSuccess`, on by default). A bulk invite that sent
-  some invitations keeps just the addresses that weren't sent. The sign-in
-  pages are the exception to keeping typed input: the sign-in form and the code step keep their
+  form only after a successful result (`resetOnSuccess`, on by default). Forms that edit a saved
+  setting (the staff page's default language) pass `resetOnSuccess: false`: there's nothing to
+  clear, and a cleared `SelectField` goes back to the value it showed when the page loaded (Radix
+  Select restores that on a form reset), not the one just saved. A bulk invite that sent some
+  invitations keeps just the addresses that weren't sent. The sign-in pages are the exception to keeping typed input: the sign-in form and the code step keep their
   fields, busy state and "Trust this device" in `useTransientState` too, because they come back
   after signing out, and the next person on the browser mustn't find the last user's details or a
   button still busy. They also reset a busy button when the browser restores them from its
   back/forward cache (`pageshow`).
 - **Illustrations** (like the example request on the sign-in pages) are `inert`, and use
   `<Button decorative>` for buttons that only look like buttons: no hover, focus or press effects.
+- **Button labels** stay on one line, except on full-width buttons (`fullWidth`, like the sign-in
+  page's), whose label wraps and makes the button taller when it doesn't fit. Longer languages,
+  wider fonts (Linux browsers use DejaVu Sans for the system font) and a "Last used" badge then
+  never make a narrow screen scroll sideways.
 - **Colours:** semantic tokens in `src/styles/theme.css`, each checked for contrast (at least 4.5:1
   for text, 3:1 for input borders) in both modes:
 
@@ -133,8 +140,9 @@ keyboard support.
   a wait cursor (base rules in `src/app/globals.css`). Buttons disable and show a spinner while
   their action runs, so nothing is submitted twice. Destructive actions ask for confirmation in a
   `ConfirmDialog`. A role select only saves when an option is picked (Enter or click), never while
-  arrowing through the list; on the user's own row it asks first (`confirmChange`), and cancelling
-  puts it back and returns focus to it. While it saves it's busy (`SelectField`'s `busy`:
+  arrowing through the list; on the user's own row it asks first (`confirmChange`, with the
+  question for each role worded by the page, e.g. "Step down to Manager?"), and cancelling puts it
+  back and returns focus to it. While it saves it's busy (`SelectField`'s `busy`:
   `aria-busy`, the wait cursor, and it doesn't open) rather than disabled, and it stays mounted, so
   keyboard focus stays on it before and after the result. `ConfirmDialog` usually opens from its
   trigger; without one the caller opens it (`open`, `onOpenChange`, with the open state in
@@ -197,14 +205,17 @@ keyboard support.
   Pages and layouts that require a permission therefore export their `generateMetadata` from
   `src/server/page-metadata.ts`, with the same check as the page: `globalPermissionMetadata`
   (with `requireGlobalPermission`, plus an `exists` check for a page about one record, like a
-  user's) or `companyPermissionMetadata` (with `requireCompanyAccess` and a permission).
+  user's) or `companyPermissionMetadata` (with `requireCompanyAccess` and a permission). Both take
+  the title as a message key (`'admin.users.title'`), translated in the request's language; the
+  company layout's template ("%s · {company} · Adiutor") is the message `companies.titleTemplate`.
   `src/app/permission-titles.test.ts` fails when one of them has a static title instead.
 - **Motion:** short transitions only, and none at all when the device asks for reduced motion.
 
 Two end-to-end specs keep this true: `e2e/a11y.spec.ts` scans every page (and open menus, selects,
 dialogs and the mobile menu) with [axe](https://github.com/dequelabs/axe-core) against the WCAG 2.2
 A and AA rules in light and dark mode and checks that no page scrolls sideways on a 320px-wide
-screen, and `e2e/keyboard.spec.ts` checks the skip link, menus, selects, dialogs, the mobile menu and
+screen, in every language (with the sign-in page's widest buttons, "Last used" badge included), and
+`e2e/keyboard.spec.ts` checks the skip link, menus, selects, dialogs, the mobile menu and
 cursors using only the keyboard.
 
 ## Dark mode
@@ -212,14 +223,23 @@ cursors using only the keyboard.
 The site supports light and dark mode. Visitors choose **System** (the default, following their
 device), **Light** or **Dark**:
 
-- **Signed out** (`AuthLayout`, and `CenteredLayout` for the 404, sign-in error and error pages): a
-  floating button in the bottom-right corner (`ThemeSwitcher`), on every page without the account
-  menu.
+- **Signed out** (`AuthLayout`, and `CenteredLayout` for the 404, sign-in error and error pages): one
+  floating button in the bottom-right corner for the theme and the language (`PreferencesMenu` in
+  `src/components/layout/preferences-menu.tsx`), on every page without the account menu. It shows
+  two icons split by a thin line, the current theme's and the language's flag, and is named in
+  full for screen readers ("Theme and language: System, English (US)"). Its Radix menu has the
+  theme as the same row of three icons as the account menu, then the language: Default first (a
+  globe where the flags go; it follows Adiutor's default language), then the languages, each with
+  its flag, named in itself and marked with its `lang` (see
+  [Languages](i18n.md#how-the-language-is-chosen)).
 - **Signed in:** a row of three icons in the account menu (`src/app/(app)/account-menu.tsx`).
-  Choosing one keeps the menu open so the result shows at once.
+
+Choosing a theme keeps the menu open, so the result shows at once.
 
 Both use the same hook (`useThemePreference`) and the same labels and icons
-(`src/components/theme/theme-options.ts`), so a choice made before signing in carries over.
+(`common.theme` in the catalogues, icons in `src/components/theme/theme-options.ts`: half sun, half
+moon for **System**, so it reads as a theme; a sun; a moon), so a choice made before signing in
+carries over. The row's "Theme" label has a palette icon, apart from the options.
 
 - **Stored choice:** saved in `localStorage` (`adiutor-theme`) and kept in sync across tabs. With
   System, the page follows device changes live.

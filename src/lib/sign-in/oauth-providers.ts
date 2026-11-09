@@ -16,6 +16,7 @@
  * `src/lib/auth.ts`; its icon in `src/components/brand/provider-icons.tsx`;
  * and, for an MFA provider, its check in `src/server/auth/provider-mfa.ts`.
  */
+import type { Locale } from '@/lib/i18n/locales';
 
 /** OAuth providers a user can connect. */
 export const OAUTH_PROVIDERS = ['github', 'google'] as const;
@@ -50,17 +51,18 @@ export function isMfaProvider(value: unknown): value is MfaProvider {
 }
 
 /**
- * Joins provider names for a sentence: "GitHub", "GitHub or GitLab",
- * "GitHub, GitLab or Bitbucket".
+ * Joins provider names for a sentence in the reader's language: "GitHub",
+ * "GitHub or Google" ("GitHub of Google", "GitHub o Google"). Pass the result
+ * as a named argument of a whole-sentence message.
  *
  * @param providers - The providers.
- * @returns Their labels, joined with "or".
+ * @param locale - The reader's language.
+ * @returns Their labels, joined with the language's "or".
  */
-export function providerNames(providers: readonly OAuthProvider[]): string {
-  const labels = providers.map((provider) => PROVIDER_LABELS[provider]);
-  return labels.length > 1
-    ? `${labels.slice(0, -1).join(', ')} or ${labels[labels.length - 1]}`
-    : (labels[0] ?? '');
+export function providerList(providers: readonly OAuthProvider[], locale: Locale): string {
+  return new Intl.ListFormat(locale, { type: 'disjunction' }).format(
+    providers.map((provider) => PROVIDER_LABELS[provider]),
+  );
 }
 
 /**
@@ -194,17 +196,6 @@ export function accountIdFromProfile(provider: OAuthProvider, profile: unknown):
  * the hint, it's a plain sign-in with the provider.
  */
 export const REVERIFY_HINT = 'adiutorReverify';
-
-/**
- * Names a provider account in running text.
- *
- * @param provider - The provider.
- * @param accountName - The account's name there, if known.
- * @returns E.g. "GitHub (octocat)", or "GitHub" without a name.
- */
-export function providerAccountLabel(provider: OAuthProvider, accountName?: string | null): string {
-  return accountName ? `${PROVIDER_LABELS[provider]} (${accountName})` : PROVIDER_LABELS[provider];
-}
 
 /**
  * Cookie that tells the next page a provider account was connected while

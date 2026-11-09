@@ -10,6 +10,7 @@ import { user, verification } from '@/db/schema';
 import { accountCreatedEmail } from '@/emails/account-created';
 import { firstRow } from '@/lib/defined';
 import displayName from '@/lib/display-name';
+import type { Locale } from '@/lib/i18n/locales';
 import { generateToken, hashVerificationIdentifier } from '@/lib/sign-in/tokens';
 import { emailSchema } from '@/lib/validation';
 
@@ -19,6 +20,7 @@ import { recordEvent } from '../audit';
 import type { ServiceContext } from '../context';
 import { isUniqueViolation } from '../errors';
 import { assertInviteSenderLimit } from '../rate-limit';
+import recipientLocale from '../recipient-locale';
 import getStaffName from './staff-name';
 
 /** How many days the "choose your password" link stays valid. */
@@ -50,6 +52,10 @@ export type RegisterResult =
  * @param ctx - Service context.
  * @param actor - The acting user; needs `users:create` (staff Admins and Managers).
  * @param rawEmail - The email address.
+ * @param options - How to set the account up.
+ * @param options.locale - The new user's language: saved as theirs (`user.locale`) and used for
+ *   the welcome email. Without it, nothing is saved and the email is in the request's language,
+ *   else English (US).
  * @returns What happened.
  * @throws {ServiceError} `forbidden` without `users:create`, `rate_limited` when sending too many.
  */
@@ -57,6 +63,7 @@ export async function registerUser(
   ctx: ServiceContext,
   actor: Actor,
   rawEmail: string,
+  options: { locale?: Locale } = {},
 ): Promise<RegisterResult> {
   assertPermission(getGlobalPermissions(actor), 'users:create');
   const email = emailSchema.parse(rawEmail);
@@ -74,7 +81,7 @@ export async function registerUser(
       const created = firstRow(
         await tx
           .insert(user)
-          .values({ name: '', email, emailVerified: false })
+          .values({ name: '', email, emailVerified: false, locale: options.locale ?? null })
           .returning({ id: user.id }),
         'the new user',
       );
@@ -111,6 +118,7 @@ export async function registerUser(
   await ctx.sendEmail(
     await accountCreatedEmail(email, {
       appUrl: ctx.baseUrl,
+      locale: await recipientLocale(ctx, options.locale),
       creatorName: displayName(actor),
       staffName: await getStaffName(ctx.db),
       url: `${ctx.baseUrl}/auth/reset-password?token=${token}&welcome=1`,

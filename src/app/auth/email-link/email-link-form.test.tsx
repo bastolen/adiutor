@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defined } from '@/lib/defined';
 
 import EmailLinkForm, { type SignedInAccount } from './email-link-form';
+import renderInLocale from '../../../../tests/i18n/render';
 
 /** The account the test link signs in to. */
 const JANE = { name: 'Jane Tester', email: 'jane@adiutor.test' };
@@ -171,6 +172,22 @@ describe('EmailLinkForm', () => {
     expect(screen.getByRole('status')).toHaveTextContent(
       "They have the same name, but they're different accounts: check the address.",
     );
+  });
+
+  it.each([
+    [
+      'nl-NL',
+      'Je bent in deze browser ingelogd als Alex Tester (alex@adiutor.test). Als je doorgaat, wisselt deze browser naar Jane Tester (jane@adiutor.test).',
+    ],
+    [
+      'es-ES',
+      'Has iniciado sesión como Alex Tester (alex@adiutor.test) en este navegador. Si continúas, este navegador cambiará a Jane Tester (jane@adiutor.test).',
+    ],
+  ] as const)('warns about the switch in %s, naming both accounts', (locale, warning) => {
+    searchParams = new URLSearchParams({ token: 'abc' });
+    renderInLocale(locale, <EmailLinkForm account={JANE} signedIn={ALEX} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent(warning);
   });
 
   it("doesn't point out names that differ, or that are both empty", () => {

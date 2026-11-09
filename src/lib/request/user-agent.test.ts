@@ -3,7 +3,12 @@
  */
 import { describe, expect, it } from 'vitest';
 
+import translator from '@/lib/i18n/translator';
+
 import { describeUserAgent } from './user-agent';
+
+/** The device message in English (US), as the pages show it. */
+const t = translator('en-US', 'common');
 
 describe('describeUserAgent', () => {
   it.each([
@@ -25,10 +30,22 @@ describe('describeUserAgent', () => {
       'Chrome on Android',
     ],
   ])('describes %s', (userAgent, label) => {
-    expect(describeUserAgent(userAgent).label).toBe(label);
+    expect(t('device', describeUserAgent(userAgent))).toBe(label);
   });
 
   it('says unknown without a user agent', () => {
-    expect(describeUserAgent(null).label).toBe('Unknown browser on unknown system');
+    expect(describeUserAgent(null)).toEqual({ browser: 'unknown', os: 'unknown' });
+    expect(t('device', describeUserAgent(null))).toBe('Unknown browser on unknown system');
+  });
+
+  it.each([
+    ['nl-NL', 'Firefox op Linux', 'Onbekende browser op onbekend systeem'],
+    ['es-ES', 'Firefox en Linux', 'Navegador desconocido en sistema desconocido'],
+  ] as const)('speaks %s', (locale, known, unknown) => {
+    const tIn = translator(locale, 'common');
+    expect(tIn('device', describeUserAgent('Mozilla/5.0 (X11; Linux x86_64) Firefox/144.0'))).toBe(
+      known,
+    );
+    expect(tIn('device', describeUserAgent(null))).toBe(unknown);
   });
 });

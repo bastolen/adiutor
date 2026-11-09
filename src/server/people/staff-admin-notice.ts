@@ -12,6 +12,7 @@ import { PLATFORM_ADMIN_ROLE } from '@/lib/authz/roles';
 import displayName from '@/lib/display-name';
 
 import type { ServiceContext } from '../context';
+import recipientLocale from '../recipient-locale';
 import sendFailureOf from '../send-failure';
 
 /** Who became a staff Admin, and how. */
@@ -27,7 +28,8 @@ export interface StaffAdminAdded {
 /**
  * Emails every other active staff Admin that someone became a staff Admin:
  * not the new Admin, and not whoever gave the role or sent the invitation.
- * Never throws: a failure is logged (without addresses).
+ * Each in their own language (`recipientLocale`). Never throws: a failure is
+ * logged (without addresses).
  *
  * @param ctx - Service context (database, email, app URL).
  * @param added - Who became a staff Admin, and how.
@@ -43,7 +45,13 @@ export default async function notifyStaffAdminAdded(
   try {
     const named = byUserId ? [newAdminId, byUserId] : [newAdminId];
     const people = await ctx.db
-      .select({ id: user.id, name: user.name, email: user.email, role: user.platformRole })
+      .select({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.platformRole,
+        locale: user.locale,
+      })
       .from(user)
       .where(
         or(
@@ -67,6 +75,7 @@ export default async function notifyStaffAdminAdded(
           await ctx.sendEmail(
             await staffAdminAddedEmail(recipient.email, {
               appUrl: ctx.baseUrl,
+              locale: await recipientLocale(ctx, recipient.locale),
               newAdminName: displayName(newAdmin),
               newAdminEmail: newAdmin.email,
               how,

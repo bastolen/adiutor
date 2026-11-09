@@ -23,11 +23,6 @@ import {
   verification,
 } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
-import {
-  MFA_VERIFICATION_REQUIRED,
-  SESSION_NOT_FRESH,
-  SIGN_IN_CHANGE_IN_PROGRESS,
-} from '@/lib/sign-in/sign-in-refusals';
 import type { Paged } from '@/lib/tables/table-state';
 
 import {
@@ -41,8 +36,11 @@ import {
   createSession,
   createStaffSettings,
   createUser,
+  emailLanguage,
   enableTwoFactor,
+  inLanguage,
   inSequence,
+  setUserLocale,
   setupTestContext,
   staffActor,
   tokenFrom,
@@ -431,7 +429,7 @@ describe('admin actions', () => {
     await inSequence([null, minutesAgo(16)], async (confirmedAt) =>
       expect(resetUserMfa(ctx, await adminConfirmedAt(confirmedAt), jane)).rejects.toMatchObject({
         code: 'forbidden',
-        message: MFA_VERIFICATION_REQUIRED.message,
+        key: 'errors.signIn.mfaVerificationRequired',
       }),
     );
 
@@ -463,7 +461,7 @@ describe('admin actions', () => {
 
     await expect(resetUserMfa(ctx, actor, jane)).rejects.toMatchObject({
       code: 'conflict',
-      message: SIGN_IN_CHANGE_IN_PROGRESS.message,
+      key: 'errors.signIn.changeInProgress',
     });
     expect(await providersOf(jane)).toEqual(['github']);
     expect(await actionsAbout(jane)).toEqual([]);
@@ -577,13 +575,25 @@ describe('admin actions', () => {
     });
   });
 
+  it('tells a deleted user in the language they saved, read before the account went', async () => {
+    await setUserLocale(db, jane, 'nl-NL');
+
+    // The Admin's own language doesn't count: Jane saved hers.
+    await deleteUser(inLanguage(ctx, 'es-ES'), admin, jane, 'jane@adiutor.test');
+
+    expect(sent.map((email) => [email.to, emailLanguage(email), email.subject])).toEqual([
+      ['jane@adiutor.test', 'nl-NL', 'Je Adiutor-account is verwijderd'],
+    ]);
+  });
+
   it('refuses to remove the last Admin of a company who can sign in', async () => {
     const companyAdmin = await createUser(db, 'boss@adiutor.test');
     await addMember(db, testCompany.id, companyAdmin, 'admin');
 
     await expect(deactivateUser(ctx, admin, companyAdmin)).rejects.toMatchObject({
       code: 'conflict',
-      message: expect.stringContaining('Adiutor Tests Client'),
+      key: 'errors.soleAdmin.user.companies',
+      values: { companies: 'Adiutor Tests Client' },
     });
 
     // A second Admin who is deactivated doesn't count.
@@ -674,7 +684,7 @@ describe('deactivateOwnAccount', () => {
 
     await expect(deactivateOwnAccount(ctx, actor, 'wrong')).rejects.toMatchObject({
       code: 'invalid',
-      message: 'That password is incorrect.',
+      key: 'errors.wrongPassword.deactivate',
     });
     expect(await deactivatedAt(jane)).toBeNull();
     await deactivateOwnAccount(ctx, actor, PASSWORD);
@@ -706,7 +716,7 @@ describe('deactivateOwnAccount', () => {
   it('refuses the only staff Admin', async () => {
     await expect(deactivateOwnAccount(ctx, admin, '')).rejects.toMatchObject({
       code: 'conflict',
-      message: expect.stringContaining('You are the only staff Admin.'),
+      key: 'errors.soleAdmin.self.staff',
     });
   });
 
@@ -724,8 +734,8 @@ describe('deactivateOwnAccount', () => {
       Array.from({ length: 3 }, () =>
         expect.objectContaining({
           code: 'conflict',
-          message:
-            'You are the only Admin of Adiutor Tests Client. Make someone else an Admin first.',
+          key: 'errors.soleAdmin.self.companies',
+          values: { companies: 'Adiutor Tests Client' },
         }),
       ),
     );
@@ -742,7 +752,8 @@ describe('deactivateOwnAccount', () => {
     expect(await attempts(5, actor, 'wrong')).toEqual(Array.from({ length: 5 }, () => 'invalid'));
     await expect(deactivateOwnAccount(ctx, actor, PASSWORD)).rejects.toMatchObject({
       code: 'rate_limited',
-      message: expect.stringMatching(/^Too many attempts\. Try again in \d+ minutes?\.$/),
+      key: 'errors.tooManyAttempts',
+      values: { minutes: expect.any(Number) },
     });
 
     expect(await deactivatedAt(jane)).toBeNull();
@@ -758,7 +769,7 @@ describe('deactivateOwnAccount', () => {
     await inSequence([null, minutesAgo(16)], async (confirmedAt) =>
       expect(
         deactivateOwnAccount(ctx, await signedIn(jane, { confirmedAt }), ''),
-      ).rejects.toMatchObject({ code: 'forbidden', message: MFA_VERIFICATION_REQUIRED.message }),
+      ).rejects.toMatchObject({ code: 'forbidden', key: 'errors.signIn.mfaVerificationRequired' }),
     );
     expect(await deactivatedAt(jane)).toBeNull();
 
@@ -776,7 +787,7 @@ describe('deactivateOwnAccount', () => {
     await inSequence([minutesAgo(61), null], async (signedInAt) =>
       expect(
         deactivateOwnAccount(ctx, await signedIn(jane, { signedInAt }), ''),
-      ).rejects.toMatchObject({ code: 'forbidden', message: SESSION_NOT_FRESH.message }),
+      ).rejects.toMatchObject({ code: 'forbidden', key: 'errors.signIn.sessionNotFresh' }),
     );
     expect(await deactivatedAt(jane)).toBeNull();
 

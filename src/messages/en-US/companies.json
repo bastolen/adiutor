@@ -1,0 +1,93 @@
+{
+  "companies": {
+    "members": {
+      "title": "Members",
+      "description": "{count, plural, one {# person has} other {# people have}} access to {company}.",
+      "rows": "members",
+      "caption": "Members of {company}",
+      "empty": {
+        "title": "No members yet",
+        "inviteDescription": "Invite people to get started.",
+        "waitDescription": "People appear here once they accept their invitation."
+      },
+      "columns": {
+        "name": "Name",
+        "role": "Role",
+        "activity": "Activity",
+        "actions": "Actions"
+      },
+      "you": "(you)",
+      "changeOwnRole": {
+        "title": "Change your own role to {role}?",
+        "description": "Only Admins manage {company}'s members. Another Admin can make you one again.",
+        "confirm": "Change my role"
+      },
+      "leave": {
+        "label": "Leave",
+        "ariaLabel": "Leave {company}",
+        "title": "Leave {company}?",
+        "confirm": "Leave company",
+        "description": "You'll no longer be a member of {company}. Your account stays, and its Admins can invite you again."
+      },
+      "remove": {
+        "label": "Remove",
+        "ariaLabel": "Remove {user}",
+        "done": "{user} was removed from {company}.",
+        "title": "Remove {user}?",
+        "confirm": "Remove member",
+        "description": "They'll lose access to {company}. Their account stays, and you can invite them again later."
+      },
+      "invite": {
+        "title": "Invite by email",
+        "description": "They'll get an email with a link to join. The link works once and expires in {days, plural, one {# day} other {# days}}."
+      }
+    },
+    "settings": {
+      "title": "Settings",
+      "saved": "Saved.",
+      "details": {
+        "title": "Details",
+        "description": "The name shown in Adiutor, and the address of its pages."
+      },
+      "form": {
+        "name": "Name",
+        "slug": "URL name",
+        "slugDescription": "Lowercase letters, numbers and dashes. The company's pages are at /companies/{slug}; changing it changes that address, and links with the old one stop working.",
+        "save": "Save changes"
+      },
+      "danger": {
+        "title": "Danger zone",
+        "deactivatedDescription": "This company is deactivated. Reactivating gives its people access again; nothing was deleted.",
+        "activeDescription": "Its people lose access and can't raise requests until it's reactivated. Nothing is deleted.",
+        "reactivate": {
+          "label": "Reactivate company",
+          "title": "Reactivate {company}?",
+          "description": "Its people get access again.",
+          "confirm": "Reactivate",
+          "done": "Company reactivated."
+        },
+        "deactivate": {
+          "label": "Deactivate company",
+          "title": "Deactivate {company}?",
+          "confirm": "Deactivate",
+          "done": "Company deactivated."
+        }
+      }
+    },
+    "titleTemplate": "%s · {company} · Adiutor",
+    "header": {
+      "overview": "Overview",
+      "staffAccess": "Staff access",
+      "deactivated": "Deactivated",
+      "sections": "Company sections"
+    },
+    "overview": {
+      "title": "Requests are on their way",
+      "description": "Soon you'll raise requests here, follow their progress and approve the work.",
+      "staffDescription": "Requests from {company} will appear here.",
+      "viewOnlyTitle": "View-only access",
+      "viewOnlyDescription": "You have view-only access to this company. You'll be able to follow requests here.",
+      "deactivated": "This company is deactivated. Its people can't use Adiutor until it's reactivated."
+    }
+  }
+}

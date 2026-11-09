@@ -4,15 +4,18 @@
  * "Add to company" disabled once no company is left), the wording on the
  * viewer's own page, and role badges without the controls for everyone else.
  */
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { Locale } from '@/lib/i18n/locales';
+import translator from '@/lib/i18n/translator';
 import { createPageUrl, parseTableState } from '@/lib/tables/table-state';
 import { USER_COMPANIES_TABLE } from '@/lib/tables/tables';
 import type { UserCompany } from '@/server/people/user-admin';
 
 import CompaniesCard from './companies-card';
+import renderInLocale from '../../../../../../tests/i18n/render';
 
 /** Mocked server actions. */
 const { addMemberAction, changeRoleAction, removeMemberAction } = vi.hoisted(() => ({
@@ -48,7 +51,7 @@ const MEMBERSHIP: UserCompany = {
 };
 
 /** The table's links in its default state. */
-const TABLE = createPageUrl('/admin/users/user-1').table(
+const TABLE = createPageUrl('/admin/users/user-1', {}, translator('en-US', 'tables')).table(
   USER_COMPANIES_TABLE,
   parseTableState(USER_COMPANIES_TABLE, {}),
 );
@@ -61,19 +64,23 @@ const TABLE = createPageUrl('/admin/users/user-1').table(
  * @param options.canManageMembers - Whether the viewer may manage memberships.
  * @param options.isSelf - Whether it's the viewer's own page.
  * @param options.addable - The companies they can still be added to.
+ * @param options.locale - The language to render in.
  */
 function renderCard({
   memberships = [MEMBERSHIP],
   canManageMembers = true,
   isSelf = false,
   addable = [{ id: '01970000-0000-7000-8000-000000000103', name: 'Adiutor Tests Paging' }],
+  locale = 'en-US',
 }: {
   memberships?: UserCompany[];
   canManageMembers?: boolean;
   isSelf?: boolean;
   addable?: { id: string; name: string }[];
+  locale?: Locale;
 } = {}) {
-  render(
+  renderInLocale(
+    locale,
     <CompaniesCard
       userId="user-1"
       userName="Ada Tester"
@@ -148,4 +155,22 @@ describe('CompaniesCard', () => {
     expect(within(table).queryByRole('button', { name: /^Remove / })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add to company' })).not.toBeInTheDocument();
   });
+
+  it.each([
+    [
+      'nl-NL',
+      'Ada Tester verwijderen uit Adiutor Tests',
+      'Ada Tester verwijderen uit Adiutor Tests?',
+    ],
+    ['es-ES', 'Quitar a Ada Tester de Adiutor Tests', '¿Quitar a Ada Tester de Adiutor Tests?'],
+  ] as const)(
+    'words removing a member in %s as a whole sentence',
+    async (locale, button, title) => {
+      const user = userEvent.setup();
+      renderCard({ locale });
+
+      await user.click(screen.getByRole('button', { name: button }));
+      expect(screen.getByRole('alertdialog', { name: title })).toBeInTheDocument();
+    },
+  );
 });

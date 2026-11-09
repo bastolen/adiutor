@@ -3,14 +3,14 @@
  * backup code. Every form that asks for one uses it (the sign-in code step,
  * the step-up page and the Security page's setups), so its label and the
  * attributes browsers and password managers rely on are the same everywhere.
+ * Its text is in `common` (`common.codeField`), since the Security page uses
+ * it too.
  */
+import { useTranslations } from 'next-intl';
 import type { ChangeEventHandler } from 'react';
 
 import TextField from '@/components/ui/text-field';
 import type { CodeKind } from '@/lib/sign-in/verify-code';
-
-/** The help text an authenticator app code gets unless the form says it already. */
-export const AUTHENTICATOR_CODE_DESCRIPTION = 'The 6-digit code shown in your authenticator app.';
 
 /** Props for {@link CodeField}. */
 interface CodeFieldProps {
@@ -23,11 +23,11 @@ interface CodeFieldProps {
   /** Whether it takes focus when it appears. */
   autoFocus?: boolean;
   /**
-   * Help text read out with the field. By default
-   * {@link AUTHENTICATOR_CODE_DESCRIPTION} for an authenticator app code and
-   * none otherwise; an empty string leaves it out.
+   * Help text read out with the field. By default (`null`) "The 6-digit code
+   * shown in your authenticator app." for an authenticator app code and none
+   * otherwise; an empty string leaves it out.
    */
-  description?: string;
+  description?: string | null;
 }
 
 /**
@@ -48,19 +48,21 @@ export default function CodeField({
   value,
   onChange,
   autoFocus = false,
-  description = kind === 'totp' ? AUTHENTICATOR_CODE_DESCRIPTION : '',
+  description = null,
 }: CodeFieldProps) {
+  const t = useTranslations('common');
   const backup = kind === 'backup';
+  const help = description ?? (kind === 'totp' ? t('codeField.authenticatorHint') : '');
   return (
     <TextField
-      label={backup ? 'Backup code' : 'Code'}
+      label={backup ? t('codeField.backupCode') : t('codeField.code')}
       name="code"
       required
       autoFocus={autoFocus}
       autoComplete={backup ? 'off' : 'one-time-code'}
       inputMode={backup ? 'text' : 'numeric'}
       spellCheck={false}
-      description={description}
+      description={help}
       value={value}
       onChange={onChange}
       className="font-mono tracking-widest"

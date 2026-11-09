@@ -100,6 +100,46 @@ describe('setUpPlatform', () => {
     const { userId } = await setUpPlatform(db, { ...input, password: undefined });
     expect(await db.select().from(account).where(eq(account.userId, userId))).toHaveLength(0);
   });
+
+  it("sets Adiutor's default language, English (US) unless chosen", async () => {
+    await setUpPlatform(db, input);
+
+    expect(
+      await db.select({ defaultLocale: staffSettings.defaultLocale }).from(staffSettings),
+    ).toEqual([{ defaultLocale: 'en-US' }]);
+  });
+
+  it("keeps the Admin in the language they set up in, whatever Adiutor's default", async () => {
+    const { userId } = await setUpPlatform(db, {
+      ...input,
+      defaultLocale: 'nl-NL',
+      adminLocale: 'es-ES',
+    });
+
+    expect(
+      await db.select({ defaultLocale: staffSettings.defaultLocale }).from(staffSettings),
+    ).toEqual([{ defaultLocale: 'nl-NL' }]);
+    const admin = firstRow(await db.select().from(user).where(eq(user.id, userId)), 'the Admin');
+    expect(admin.locale).toBe('es-ES');
+  });
+
+  it('starts the Admin on Default when they set up in the default language they chose', async () => {
+    const { userId } = await setUpPlatform(db, {
+      ...input,
+      defaultLocale: 'nl-NL',
+      adminLocale: 'nl-NL',
+    });
+
+    const admin = firstRow(await db.select().from(user).where(eq(user.id, userId)), 'the Admin');
+    expect(admin.locale).toBeNull();
+  });
+
+  it('refuses a default language it doesn’t know, and sets nothing up', async () => {
+    await expect(setUpPlatform(db, { ...input, defaultLocale: 'fr-FR' })).rejects.toThrow(
+      'validation.locale',
+    );
+    expect(await isSetUp(db)).toBe(false);
+  });
 });
 
 describe('the web setup form', () => {
@@ -121,7 +161,7 @@ describe('the web setup form', () => {
 
     await expect(setUpPlatform(db, input)).rejects.toMatchObject({
       code: 'conflict',
-      message: 'Adiutor is already set up. Sign in instead.',
+      key: 'errors.setup.alreadySetUp',
     });
 
     expect(await isSetUp(db)).toBe(false);
@@ -191,7 +231,7 @@ describe('the command line', () => {
 
     await expect(setUpPlatform(db, input, { allowExistingAccount: true })).rejects.toMatchObject({
       code: 'conflict',
-      message: expect.stringContaining('deactivated'),
+      key: 'errors.setup.accountDeactivated',
     });
     expect(await isSetUp(db)).toBe(false);
     const found = firstRow(await db.select().from(user).where(eq(user.id, userId)), 'the user');

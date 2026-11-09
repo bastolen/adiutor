@@ -5,6 +5,8 @@
 'use client';
 
 import { MailCheck } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
 
 import Alert from '@/components/ui/alert';
 import Button from '@/components/ui/button';
@@ -25,6 +27,17 @@ interface JoinFormProps {
 }
 
 /**
+ * Shows the signed-in account's address in a sentence, emphasised (the
+ * `<account>` tag of `auth.join.joinAs`).
+ *
+ * @param chunks - The address, where the sentence places it.
+ * @returns The emphasised address.
+ */
+function accountTag(chunks: ReactNode) {
+  return <span className="font-medium text-foreground">{chunks}</span>;
+}
+
+/**
  * A join button when signed in; otherwise an email field. After entering an
  * email, the person gets an invitation there, which proves they own it.
  *
@@ -34,6 +47,7 @@ interface JoinFormProps {
  * @returns The form.
  */
 export default function JoinForm({ token, signedInEmail }: JoinFormProps) {
+  const t = useTranslations('auth');
   const [result, formAction, pending, onSubmit] = useTransientActionState(
     signedInEmail ? joinAction : claimAction,
     null,
@@ -56,21 +70,21 @@ export default function JoinForm({ token, signedInEmail }: JoinFormProps) {
       <ResultAlert result={result} errorsOnly />
       {signedInEmail ? (
         <p className="text-sm text-muted-foreground">
-          You&apos;ll join as <span className="font-medium text-foreground">{signedInEmail}</span>.
+          {t.rich('join.joinAs', { email: signedInEmail, account: accountTag })}
         </p>
       ) : (
         <TextField
-          label="Email"
+          label={t('fields.email')}
           type="email"
           name="email"
           autoComplete="email"
-          placeholder="you@adiutor.dev"
-          description="We'll email you a link to finish joining. This invite link works only once."
+          placeholder={t('fields.emailPlaceholder')}
+          description={t('join.emailHint')}
           required
         />
       )}
       <Button type="submit" fullWidth loading={pending}>
-        {signedInEmail ? 'Join' : 'Continue'}
+        {signedInEmail ? t('join.join') : t('join.continue')}
       </Button>
     </form>
   );

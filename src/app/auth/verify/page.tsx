@@ -25,12 +25,14 @@
  */
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import { FormSkeleton } from '@/components/ui/skeleton';
 import { needsRecentConfirmation } from '@/lib/authz/mfa';
+import ClientMessages from '@/lib/i18n/client-messages';
 import { getSafeRedirectPath } from '@/lib/redirect';
-import { reverifyErrorMessage } from '@/lib/sign-in/auth-error-messages';
+import { reverifyErrorText } from '@/lib/sign-in/auth-error-messages';
 import { type SearchParams, searchParam } from '@/lib/tables/search-params';
 import appContext from '@/server/app-context';
 import { getStepUpMethods } from '@/server/auth/security';
@@ -39,11 +41,14 @@ import { getOptionalActor } from '@/server/authz';
 import StepUpForm from './step-up-form';
 
 /**
- * Page metadata.
+ * Page metadata: "Confirm it’s you", in the request's language.
+ *
+ * @returns The metadata.
  */
-export const metadata: Metadata = {
-  title: 'Confirm it’s you · Adiutor',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('auth');
+  return { title: t('stepUp.title') };
+}
 
 /**
  * Loads the user's methods, or sends them on when there's nothing to
@@ -73,8 +78,9 @@ async function StepUp({ searchParams }: { searchParams: Promise<SearchParams> })
   // the methods that open its window.
   const methods = await getStepUpMethods(appContext.db, actor.id, actor.mfaRole, { forChange });
   // A different account than the user's own confirmed one names the provider, and never says
-  // whether an address has an account (`reverifyErrorMessage`).
-  const initialError = reverifyErrorMessage(
+  // whether an address has an account (`reverifyErrorText`).
+  const initialError = reverifyErrorText(
+    await getTranslations('auth'),
     searchParam(params.error),
     searchParam(params.provider),
   );
@@ -97,7 +103,7 @@ async function StepUp({ searchParams }: { searchParams: Promise<SearchParams> })
 }
 
 /**
- * The step-up page.
+ * The step-up page. The form's text comes with it (`auth`).
  *
  * @param props - Page props from Next.js.
  * @param props.searchParams - Query parameters.
@@ -106,7 +112,9 @@ async function StepUp({ searchParams }: { searchParams: Promise<SearchParams> })
 export default function VerifyPage({ searchParams }: PageProps<'/auth/verify'>) {
   return (
     <Suspense fallback={<FormSkeleton />}>
-      <StepUp searchParams={searchParams} />
+      <ClientMessages namespaces={['auth']}>
+        <StepUp searchParams={searchParams} />
+      </ClientMessages>
     </Suspense>
   );
 }

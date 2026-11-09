@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PageLinkItem, PaginationLinks } from '@/lib/tables/table-state';
 
 import Pagination from './pagination';
+import renderInLocale from '../../../tests/i18n/render';
 
 // Next's Link only calls `onNavigate` once the app router is mounted, which it isn't in these
 // tests: this stand-in calls it for every plain click, as a client navigation would.
@@ -287,19 +288,17 @@ describe('Pagination', () => {
       );
     });
 
-    it('keeps the space before the screen-reader-only text of each link', () => {
+    it('names each link in full, and hides the short visible label from screen readers', () => {
       render(<Pagination {...SECOND_PAGE} />);
 
-      expect(screen.getByRole('link', { name: named('Previous page') })).toHaveTextContent(
-        /^Previous page$/,
-      );
-      expect(screen.getByRole('link', { name: named('Next page') })).toHaveTextContent(
-        /^Next page$/,
-      );
-      expect(screen.getByRole('link', { name: named('Page 3') })).toHaveTextContent(/^Page 3$/);
-      expect(screen.getByRole('link', { name: named('50 per page') })).toHaveTextContent(
-        /^50 per page$/,
-      );
+      const previous = screen.getByRole('link', { name: named('Previous page') });
+      expect(within(previous).getByText('Previous')).toHaveAttribute('aria-hidden', 'true');
+      const next = screen.getByRole('link', { name: named('Next page') });
+      expect(within(next).getByText('Next')).toHaveAttribute('aria-hidden', 'true');
+      const page = screen.getByRole('link', { name: named('Page 3') });
+      expect(within(page).getByText('3')).toHaveAttribute('aria-hidden', 'true');
+      const size = screen.getByRole('link', { name: named('50 per page') });
+      expect(within(size).getByText('50')).toHaveAttribute('aria-hidden', 'true');
     });
 
     it('hides the gaps from assistive technology', () => {
@@ -554,5 +553,19 @@ describe('Pagination', () => {
 
       expect(document.body).toHaveFocus();
     });
+  });
+});
+
+describe('Pagination in other languages', () => {
+  it.each([
+    ['nl-NL', '26–50 van 132', 'Vorige pagina', 'Pagina 3', '50 per pagina'],
+    ['es-ES', '26–50 de 132', 'Página anterior', 'Página 3', '50 por página'],
+  ] as const)('speaks %s', (locale, status, previous, page, size) => {
+    renderInLocale(locale, <Pagination {...SECOND_PAGE} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent(status);
+    expect(screen.getByRole('link', { name: named(previous) })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: named(page) })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: named(size) })).toBeInTheDocument();
   });
 });

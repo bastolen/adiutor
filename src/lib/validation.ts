@@ -4,10 +4,18 @@
  * practice: client components take the limits they need from
  * `input-rules.ts`, so zod never ships to the browser
  * (`src/client-imports.test.ts`).
+ *
+ * Every issue's message is a key in the `validation` catalogue, one whole
+ * sentence per field and problem; a limit's number comes from the issue
+ * (`minimum`, `maximum`). `runAction` translates the first issue into the
+ * reader's language (`validationErrorMessage` in `src/server/errors.ts`).
  */
+import type { MessageKeys, NestedKeyOf } from 'use-intl/core';
 import { z } from 'zod';
 
 import { COMPANY_ROLES, isRole, PLATFORM_ROLES } from './authz/roles';
+import { FOLLOW_DEFAULT, LOCALES } from './i18n/locales';
+import type { Messages } from './i18n/messages';
 import {
   MIN_PASSWORD_LENGTH,
   NAME_MAX_LENGTH,
@@ -15,24 +23,55 @@ import {
   SLUG_MAX_LENGTH,
 } from './input-rules';
 
+/**
+ * A message of the `validation` catalogue, by its full key (e.g.
+ * `validation.email`): what an issue's message, or a service error about
+ * input, says. TypeScript checks it against the English (US) catalogue.
+ */
+export type ValidationMessageKey = `validation.${MessageKeys<
+  Messages['validation'],
+  NestedKeyOf<Messages['validation']>
+>}`;
+
 /** An email address, trimmed and lower-cased so it matches stored addresses. */
 export const emailSchema = z
   .string()
   .trim()
   .toLowerCase()
-  .pipe(z.email({ error: 'Enter a valid email address.' }));
+  .pipe(z.email({ error: 'validation.email' satisfies ValidationMessageKey }));
 
 /** A database ID (UUID). */
-export const idSchema = z.uuid({ error: 'Invalid ID.' });
+export const idSchema = z.uuid({ error: 'validation.id' satisfies ValidationMessageKey });
 
 /** A role ID. Whether it fits the company is checked separately. */
-export const roleSchema = z.string().refine(isRole, { error: 'Choose a valid role.' });
+export const roleSchema = z
+  .string()
+  .refine(isRole, { error: 'validation.role' satisfies ValidationMessageKey });
 
-/** Why a role that isn't a company role is refused where a company role is needed. */
-export const CHOOSE_COMPANY_ROLE_MESSAGE = 'Choose a role that fits this company.';
+/**
+ * Why a role that isn't a company role is refused where a company role is
+ * needed: the message key, for zod and for service errors alike.
+ */
+export const CHOOSE_COMPANY_ROLE_MESSAGE = 'validation.companyRole' satisfies ValidationMessageKey;
 
-/** Why a role that isn't a staff role is refused where a staff role is needed. */
-export const CHOOSE_STAFF_ROLE_MESSAGE = 'Choose a staff role.';
+/**
+ * Why a role that isn't a staff role is refused where a staff role is
+ * needed: the message key, for zod and for service errors alike.
+ */
+export const CHOOSE_STAFF_ROLE_MESSAGE = 'validation.staffRole' satisfies ValidationMessageKey;
+
+/** A language (one of `LOCALES`), e.g. from an invite form or the staff page's default language. */
+export const localeSchema = z.enum(LOCALES, {
+  error: 'validation.locale' satisfies ValidationMessageKey,
+});
+
+/**
+ * A language choice: a language, or `FOLLOW_DEFAULT` to follow Adiutor's
+ * default language, e.g. from the account's Language card.
+ */
+export const languageChoiceSchema = z.enum([FOLLOW_DEFAULT, ...LOCALES], {
+  error: 'validation.locale' satisfies ValidationMessageKey,
+});
 
 /** A company role (Admin, Client or Watcher), e.g. from a member's role select. */
 export const companyRoleSchema = z.enum(COMPANY_ROLES, { error: CHOOSE_COMPANY_ROLE_MESSAGE });
@@ -134,21 +173,28 @@ function containsWebAddress(value: string): boolean {
 }
 
 /**
+ * The names people choose, each with its own messages in the `validation`
+ * catalogue (`validation.<field>.controlCharacters`, ...), since forms show
+ * one message above all their fields, so it must say which one it's about.
+ */
+type NameField = 'name' | 'companyName' | 'staffName' | 'passkeyName';
+
+/**
  * Adds the shared character rules to a string schema: no control characters
  * and nothing that hides or reorders text. For every name people choose
  * (display names, company names, the staff name and passkey names).
  *
  * @param schema - The length-checked schema.
- * @param subject - What the value is, for the messages (e.g. `your name`).
+ * @param field - Which name it is, for the messages (e.g. `companyName`).
  * @returns The schema with the extra checks.
  */
-function withCharacterSafety<T extends z.ZodType<string>>(schema: T, subject: string) {
+function withCharacterSafety<T extends z.ZodType<string>>(schema: T, field: NameField) {
   return schema
     .refine((value) => !hasControlCharacter(value), {
-      error: `Remove line breaks and control characters from ${subject}.`,
+      error: `validation.${field}.controlCharacters` satisfies ValidationMessageKey,
     })
     .refine((value) => !hasHiddenCharacter(value), {
-      error: `Remove invisible characters and text direction marks from ${subject}.`,
+      error: `validation.${field}.hiddenCharacters` satisfies ValidationMessageKey,
     });
 }
 
@@ -158,54 +204,71 @@ function withCharacterSafety<T extends z.ZodType<string>>(schema: T, subject: st
  * quoted in emails.
  *
  * @param schema - The length-checked name schema.
- * @param subject - What the name is, for the messages (e.g. `your name`).
+ * @param field - Which name it is, for the messages (e.g. `name`).
  * @returns The schema with the extra checks.
  */
-function withNameSafety<T extends z.ZodType<string>>(schema: T, subject: string) {
-  return withCharacterSafety(schema, subject).refine((value) => !containsWebAddress(value), {
-    error: `Remove web addresses from ${subject}.`,
+function withNameSafety<T extends z.ZodType<string>>(
+  schema: T,
+  field: Exclude<NameField, 'passkeyName'>,
+) {
+  return withCharacterSafety(schema, field).refine((value) => !containsWebAddress(value), {
+    error: `validation.${field}.webAddress` satisfies ValidationMessageKey,
   });
 }
 
 /**
- * A trimmed string between two lengths, whose messages name the field: forms
- * show one message above all their fields, so it must say which one it's
- * about (e.g. "Use at most 100 characters for the company name.").
+ * A trimmed string between two lengths, whose messages name the field (e.g.
+ * "Use at most 100 characters for the company name."). The messages get the
+ * limit from the issue (`{minimum}`, `{maximum}`).
  *
- * @param subject - What the value is, for the messages (e.g. `the company name`).
- * @param limits - The lengths.
+ * @param limits - The lengths and their messages.
  * @param limits.min - The shortest allowed.
  * @param limits.max - The longest allowed.
- * @param limits.empty - The message when it's empty, where the shortest is 1 (e.g. "Enter your name.").
+ * @param limits.tooShort - The message when it's shorter (e.g. "Enter your name." where the shortest is 1).
+ * @param limits.tooLong - The message when it's longer.
  * @returns The schema.
  */
-function lengthLimited(subject: string, limits: { min: number; max: number; empty?: string }) {
-  const tooShort = limits.empty ?? `Use at least ${limits.min} characters for ${subject}.`;
+function lengthLimited(limits: {
+  min: number;
+  max: number;
+  tooShort: ValidationMessageKey;
+  tooLong: ValidationMessageKey;
+}) {
   return z
     .string()
     .trim()
-    .min(limits.min, { error: tooShort })
-    .max(limits.max, { error: `Use at most ${limits.max} characters for ${subject}.` });
+    .min(limits.min, { error: limits.tooShort })
+    .max(limits.max, { error: limits.tooLong });
 }
 
 /** A person's display name. */
 export const nameSchema = withNameSafety(
-  lengthLimited('your name', { min: 1, max: NAME_MAX_LENGTH, empty: 'Enter your name.' }),
-  'your name',
+  lengthLimited({
+    min: 1,
+    max: NAME_MAX_LENGTH,
+    tooShort: 'validation.name.empty',
+    tooLong: 'validation.name.tooLong',
+  }),
+  'name',
 );
 
 /** A new password: at least `MIN_PASSWORD_LENGTH` characters, at most Better Auth's 128. */
 export const passwordSchema = z
   .string()
   .min(MIN_PASSWORD_LENGTH, {
-    error: `Use at least ${MIN_PASSWORD_LENGTH} characters for the password.`,
+    error: 'validation.password.tooShort' satisfies ValidationMessageKey,
   })
-  .max(128, { error: 'Use at most 128 characters for the password.' });
+  .max(128, { error: 'validation.password.tooLong' satisfies ValidationMessageKey });
 
 /** A company name. */
 export const companyNameSchema = withNameSafety(
-  lengthLimited('the company name', { min: 2, max: NAME_MAX_LENGTH }),
-  'the company name',
+  lengthLimited({
+    min: 2,
+    max: NAME_MAX_LENGTH,
+    tooShort: 'validation.companyName.tooShort',
+    tooLong: 'validation.companyName.tooLong',
+  }),
+  'companyName',
 );
 
 /**
@@ -213,8 +276,13 @@ export const companyNameSchema = withNameSafety(
  * messages that name it as the forms do ("the name shown to users").
  */
 export const staffNameSchema = withNameSafety(
-  lengthLimited('the name shown to users', { min: 2, max: NAME_MAX_LENGTH }),
-  'the name shown to users',
+  lengthLimited({
+    min: 2,
+    max: NAME_MAX_LENGTH,
+    tooShort: 'validation.staffName.tooShort',
+    tooLong: 'validation.staffName.tooLong',
+  }),
+  'staffName',
 );
 
 /**
@@ -225,12 +293,13 @@ export const staffNameSchema = withNameSafety(
  * check it where Better Auth's passkey plugin takes a name.
  */
 export const passkeyNameSchema = withCharacterSafety(
-  lengthLimited('the passkey name', {
+  lengthLimited({
     min: 1,
     max: PASSKEY_NAME_MAX_LENGTH,
-    empty: 'Enter a name for the passkey.',
+    tooShort: 'validation.passkeyName.empty',
+    tooLong: 'validation.passkeyName.tooLong',
   }),
-  'the passkey name',
+  'passkeyName',
 );
 
 /**
@@ -243,10 +312,10 @@ export const slugSchema = z
   .trim()
   .toLowerCase()
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
-    error: 'Use lower-case letters, numbers and dashes in the URL name, e.g. adiutor.',
+    error: 'validation.slug.format' satisfies ValidationMessageKey,
   })
   // The company's address takes its ID or its URL name, so a URL name can't look like an ID.
   .refine((value) => !idSchema.safeParse(value).success, {
-    error: 'Choose a URL name that doesn’t look like an ID.',
+    error: 'validation.slug.looksLikeId' satisfies ValidationMessageKey,
   })
-  .max(SLUG_MAX_LENGTH, { error: `Use at most ${SLUG_MAX_LENGTH} characters for the URL name.` });
+  .max(SLUG_MAX_LENGTH, { error: 'validation.slug.tooLong' satisfies ValidationMessageKey });

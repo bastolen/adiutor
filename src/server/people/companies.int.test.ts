@@ -5,13 +5,15 @@
 import { eq, sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { auditEvent, company, invitation, rateLimitBucket, user } from '@/db/schema';
+import { auditEvent, company, invitation, rateLimitBucket, staffSettings, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
 import {
   atTheSameMoment,
   createCompany,
   createStaffSettings,
+  emailLanguage,
+  inLanguage,
   inSequence,
   memberActor,
   setupTestContext,
@@ -48,6 +50,27 @@ describe('registerCompany', () => {
 
     const [pending] = (await listPendingInvitations(ctx, manager, companyId)).items;
     expect(pending).toMatchObject({ email: 'boss@adiutor.test', role: 'admin' });
+  });
+
+  it('invites the first admin in the chosen language, or on Default in Adiutor’s default', async () => {
+    await db.update(staffSettings).set({ defaultLocale: 'es-ES' });
+    await registerCompany(ctx, manager, {
+      name: 'Adiutor Tests Dutch',
+      slug: 'adiutor-tests-dutch',
+      adminEmail: 'nl@adiutor.test',
+      locale: 'nl-NL',
+    });
+    // Default: no language from the form. The sender's own language doesn't count.
+    await registerCompany(inLanguage(ctx, 'en-US'), manager, {
+      name: 'Adiutor Tests Default',
+      slug: 'adiutor-tests-default',
+      adminEmail: 'default@adiutor.test',
+    });
+
+    expect(sent.map((email) => [email.to, emailLanguage(email)])).toEqual([
+      ['nl@adiutor.test', 'nl-NL'],
+      ['default@adiutor.test', 'es-ES'],
+    ]);
   });
 
   it('refuses a URL name that is taken', async () => {
@@ -99,7 +122,7 @@ describe('registerCompany by staff demoted while the request was under way', () 
       status: 'rejected',
       reason: expect.objectContaining({
         code: 'forbidden',
-        message: "You don't have permission to do that.",
+        key: 'errors.forbidden',
       }),
     });
     expect(await db.select().from(company)).toEqual([]);
@@ -291,7 +314,7 @@ describe('deactivation', () => {
 
     await expect(
       setCompanyActive(ctx, manager, { companyId: testCompany.id, active: false }),
-    ).rejects.toMatchObject({ code: 'conflict', message: 'This company is already deactivated.' });
+    ).rejects.toMatchObject({ code: 'conflict', key: 'errors.companies.alreadyDeactivated' });
 
     expect(await deactivatedAtOf(testCompany.id)).toEqual(deactivatedAt);
     expect((await companyEvents()).map(({ action }) => action)).toEqual(['company_deactivated']);
@@ -302,7 +325,7 @@ describe('deactivation', () => {
 
     await expect(
       setCompanyActive(ctx, manager, { companyId: testCompany.id, active: true }),
-    ).rejects.toMatchObject({ code: 'conflict', message: 'This company is already active.' });
+    ).rejects.toMatchObject({ code: 'conflict', key: 'errors.companies.alreadyActive' });
 
     expect(await companyEvents()).toEqual([]);
   });
@@ -364,7 +387,7 @@ describe('updateCompany', () => {
       }),
     ).rejects.toMatchObject({
       code: 'conflict',
-      message: 'That URL name is already in use. Choose another one.',
+      key: 'errors.companies.slugTaken',
     });
     expect((await getCompanyAccess(db, manager, testCompany.id)).company).toMatchObject({
       name: testCompany.name,

@@ -1,0 +1,397 @@
+{
+  "admin": {
+    "users": {
+      "title": "Gebruikers",
+      "description": "Iedereen met een account: medewerkers en de mensen van elk bedrijf.",
+      "addUser": "Gebruiker toevoegen",
+      "deleted": "Gebruiker verwijderd.",
+      "rows": "gebruikers",
+      "search": {
+        "label": "Gebruikers zoeken",
+        "placeholder": "Zoek op naam of e-mailadres"
+      },
+      "filters": {
+        "label": "Gebruikers filteren",
+        "option": "{filter, select, staff {Medewerkers} not_staff {Geen medewerkers} without_mfa {Zonder MFA} deactivated {Gedeactiveerd} other {Alle}}"
+      },
+      "caption": "{filter, select, staff {{matching, select, yes {Gebruikers: medewerkers die overeenkomen met “{search}”} other {Gebruikers: medewerkers}}} not_staff {{matching, select, yes {Gebruikers: geen medewerkers die overeenkomen met “{search}”} other {Gebruikers: geen medewerkers}}} without_mfa {{matching, select, yes {Gebruikers: zonder MFA die overeenkomen met “{search}”} other {Gebruikers: zonder MFA}}} deactivated {{matching, select, yes {Gebruikers: gedeactiveerd die overeenkomen met “{search}”} other {Gebruikers: gedeactiveerd}}} other {{matching, select, yes {Alle gebruikers die overeenkomen met “{search}”} other {Alle gebruikers}}}}",
+      "empty": {
+        "default": {
+          "title": "Nog geen gebruikers",
+          "description": "Mensen verschijnen hier zodra ze een account hebben."
+        },
+        "search": {
+          "title": "Geen gebruikers gevonden",
+          "description": "Niets komt overeen met “{search}”. Probeer een andere naam of een ander e-mailadres."
+        },
+        "notStaff": {
+          "title": "Nog geen gebruikers",
+          "description": "Mensen die je toevoegt aan of uitnodigt voor een bedrijf verschijnen hier."
+        },
+        "withoutMfa": {
+          "title": "Iedereen heeft MFA",
+          "description": "Elk account is beveiligd met een tweede inlogstap."
+        },
+        "deactivated": {
+          "title": "Geen gedeactiveerde accounts",
+          "description": "Gedeactiveerde accounts verschijnen hier tot een beheerder ze weer activeert."
+        }
+      },
+      "columns": {
+        "name": "Naam",
+        "email": "E-mail",
+        "activity": "Activiteit"
+      },
+      "companies": "Bedrijven:",
+      "noCompanies": "Geen bedrijven",
+      "badges": {
+        "mfa": "{status, select, protected {MFA aan} optional {Geen MFA} other {MFA nodig}}",
+        "deactivated": "Gedeactiveerd",
+        "emailNotVerified": "E-mailadres niet bevestigd",
+        "staff": "Medewerker · {role}"
+      }
+    },
+    "user": {
+      "title": "Gebruiker",
+      "back": "Gebruikers",
+      "deactivatedNotice": "Dit account is gedeactiveerd op {date}. Er kan niet mee worden ingelogd tot een beheerder het weer activeert.",
+      "self": {
+        "signInOnly": "Dit is je eigen account. Wijzig je inlogmethoden op je <security>beveiligingspagina</security>.",
+        "signInAndStaff": "Dit is je eigen account. Wijzig je inlogmethoden op je <security>beveiligingspagina</security> en je rol als medewerker op de <staff>pagina Medewerkers</staff>."
+      },
+      "account": {
+        "title": "Account",
+        "email": "E-mail",
+        "verified": "Bevestigd",
+        "notVerified": "Niet bevestigd",
+        "status": "Status",
+        "active": "Actief",
+        "deactivated": "Gedeactiveerd",
+        "lastActive": "Laatst actief",
+        "created": "Account aangemaakt"
+      },
+      "security": {
+        "title": "Inlogbeveiliging",
+        "descriptionRequired": "Hun rol vereist een tweede inlogstap.",
+        "descriptionRecommended": "Voor hun rol wordt een tweede inlogstap aanbevolen.",
+        "status": "Status",
+        "twoFactor": "Verificatie in twee stappen",
+        "twoFactorValue": "{state, select, authenticator {Aan: authenticator-app en e-mailcodes} emailCodes {Aan: e-mailcodes} other {Uit}}",
+        "passkeys": "Passkeys",
+        "passkeyCount": "{count, plural, =0 {Geen} other {#}}",
+        "password": "Wachtwoord",
+        "passwordState": "{set, select, yes {Ingesteld} other {Niet ingesteld}}",
+        "connected": "Gekoppeld",
+        "twoFactorOn": "2FA aan bij {provider}",
+        "twoFactorOff": "Geen 2FA bij {provider}"
+      },
+      "staffAccess": {
+        "title": "Toegang als medewerker",
+        "descriptionStaff": "Hun rol als medewerker geldt voor elk bedrijf.",
+        "descriptionNone": "Geen medewerker. Medewerkers werken met elk bedrijf.",
+        "staffRole": "Rol als medewerker",
+        "remove": {
+          "label": "Toegang als medewerker intrekken",
+          "title": "Toegang als medewerker van {name} intrekken?",
+          "description": "Diegene kan niet meer met jullie bedrijven werken. Het account en eventuele lidmaatschappen van bedrijven blijven bestaan, en diegene krijgt een e-mail.",
+          "confirmLabel": "Toegang intrekken"
+        },
+        "make": {
+          "label": "Medewerker maken",
+          "title": "{name} medewerker maken?",
+          "description": "Diegene kan met elk bedrijf werken en krijgt een e-mail. Beheerders en managers moeten een tweede inlogstap instellen voordat ze verder kunnen.",
+          "confirmLabel": "Medewerker maken"
+        }
+      },
+      "companies": {
+        "title": "Bedrijven",
+        "descriptionNone": "Geen lid van een bedrijf.",
+        "descriptionSome": "De bedrijven waartoe diegene behoort.",
+        "rows": "bedrijven",
+        "add": {
+          "label": "Aan bedrijf toevoegen",
+          "titleSelf": "Jezelf aan een bedrijf toevoegen",
+          "title": "{name} aan een bedrijf toevoegen",
+          "descriptionSelf": "Je wordt meteen lid, met de rol die je kiest, en krijgt een e-mail.",
+          "description": "Diegene wordt meteen lid, met de rol die je kiest, en krijgt een e-mail.",
+          "confirmLabel": "Aan bedrijf toevoegen",
+          "company": "Bedrijf",
+          "role": "Rol"
+        },
+        "caption": "Bedrijven van {name}",
+        "columns": {
+          "company": "Bedrijf",
+          "role": "Rol",
+          "joined": "Lid sinds",
+          "actions": "Acties"
+        },
+        "joinedOn": "Lid sinds {date}",
+        "deactivated": "Gedeactiveerd",
+        "memberName": "{user} bij {company}",
+        "remove": {
+          "label": "Verwijderen",
+          "ariaLabel": "{user} verwijderen uit {company}",
+          "done": "{user} is verwijderd uit {company}.",
+          "confirmLabel": "Lid verwijderen",
+          "titleSelf": "Jezelf verwijderen uit {company}?",
+          "descriptionSelf": "Je bent dan geen lid meer van {company}. Met je rol als medewerker kun je er nog steeds mee werken, en je kunt jezelf later weer toevoegen.",
+          "title": "{user} verwijderen uit {company}?",
+          "description": "Diegene verliest de toegang tot {company}. Het account blijft bestaan en je kunt diegene later weer toevoegen."
+        }
+      },
+      "devices": {
+        "title": "Ingelogde apparaten",
+        "descriptionNone": "Nergens ingelogd.",
+        "descriptionSome": "Browsers waarin dit account is ingelogd.",
+        "rows": "apparaten",
+        "caption": "Ingelogde apparaten van {name}",
+        "signOut": {
+          "label": "Overal uitloggen",
+          "title": "{name} overal uitloggen?",
+          "description": "Diegene wordt op elk apparaat uitgelogd en moet opnieuw inloggen. Het account blijft actief.",
+          "confirmLabel": "Overal uitloggen"
+        }
+      },
+      "activity": {
+        "title": "Recente activiteit",
+        "descriptionNone": "Nog niets vastgelegd.",
+        "descriptionSome": "Beveiligingsgebeurtenissen door of over deze gebruiker, nieuwste eerst.",
+        "label": "Recente activiteit van {name}",
+        "by": "door {name}",
+        "staff": "Medewerkers"
+      },
+      "accountAccess": {
+        "title": "Accounttoegang",
+        "description": "Elke wijziging wordt vastgelegd in het activiteitenlogboek en de gebruiker krijgt een e-mail.",
+        "reset": {
+          "title": "Verificatie in twee stappen resetten",
+          "descriptionAvailable": "Voor een kwijtgeraakte telefoon, of een GitHub- of Google-account dat niet van diegene is: zet verificatie in twee stappen uit en ontkoppelt GitHub en Google, zodat diegene kan inloggen en het opnieuw kan instellen.",
+          "descriptionNone": "Niets om te resetten: er is geen verificatie in twee stappen, geen passkeys en geen gekoppeld GitHub- of Google-account.",
+          "label": "Resetten",
+          "dialogTitle": "Verificatie in twee stappen van {name} resetten?",
+          "dialogDescriptionWithAccounts": "De authenticator-app en back-upcodes werken niet meer, de gekoppelde GitHub- en Google-accounts worden ontkoppeld en diegene wordt overal uitgelogd. Als de rol het vereist, wordt diegene bij de volgende keer inloggen gevraagd MFA opnieuw in te stellen.",
+          "dialogDescription": "De authenticator-app en back-upcodes werken niet meer en diegene wordt overal uitgelogd. Als de rol het vereist, wordt diegene bij de volgende keer inloggen gevraagd MFA opnieuw in te stellen.",
+          "confirmLabel": "Verificatie in twee stappen resetten",
+          "removePasskeys": "{count, plural, one {Verwijder ook de passkey} other {Verwijder ook de # passkeys}}",
+          "removePasskeysHint": "Alleen als een passkey kwijt of gestolen kan zijn."
+        },
+        "deactivate": {
+          "title": "Account deactiveren",
+          "description": "Logt diegene overal uit en blokkeert inloggen tot het account weer is geactiveerd. Lidmaatschappen en gegevens blijven bestaan.",
+          "label": "Deactiveren",
+          "confirmTitle": "{name} deactiveren?",
+          "confirmDescription": "Diegene wordt overal uitgelogd en kan niet meer inloggen tot een beheerder het account weer activeert.",
+          "confirmLabel": "Deactiveren"
+        },
+        "reactivate": {
+          "title": "Account opnieuw activeren",
+          "description": "Diegene kan weer inloggen met de bestaande inlogmethoden.",
+          "label": "Opnieuw activeren",
+          "confirmTitle": "{name} opnieuw activeren?",
+          "confirmDescription": "Diegene kan weer inloggen en krijgt de toegang terug.",
+          "confirmLabel": "Opnieuw activeren"
+        }
+      },
+      "deleteAccount": {
+        "title": "Account verwijderen",
+        "description": "Verwijdert het account, de inlogmethoden en lidmaatschappen definitief, trekt de openstaande uitnodigingen en uitnodigingslinks in die diegene heeft verstuurd en de openstaande uitnodigingen aan diegene, en laat diegene per e-mail weten dat het account is verwijderd. Dit kan niet ongedaan worden gemaakt.",
+        "label": "Verwijderen",
+        "dialogTitle": "Account van {name} verwijderen?",
+        "dialogDescription": "Dit verwijdert het account definitief, trekt de openstaande uitnodigingen en uitnodigingslinks in die diegene heeft verstuurd en die aan diegene zijn gericht, en laat diegene per e-mail weten dat het account is verwijderd. Typ het e-mailadres ter bevestiging.",
+        "confirmLabel": "Account verwijderen",
+        "emailLabel": "E-mailadres"
+      },
+      "actions": {
+        "mfaReset": "Verificatie in twee stappen is gereset.",
+        "signedOut": "Overal uitgelogd.",
+        "deactivated": "Account gedeactiveerd.",
+        "reactivated": "Account opnieuw geactiveerd."
+      }
+    },
+    "addUser": {
+      "title": "Gebruiker toevoegen",
+      "heading": "Gebruiker toevoegen",
+      "description": "Maak een account aan en stuur diegene een e-mail met een link om een wachtwoord te kiezen. Voeg diegene daarna toe aan bedrijven of geef toegang als medewerker, vanaf de pagina van die gebruiker.",
+      "back": "Gebruikers",
+      "form": {
+        "email": "E-mail",
+        "placeholder": "collega@adiutor.dev",
+        "description": "Diegene krijgt een e-mail met een link om een wachtwoord te kiezen. Er wordt niemand aan een bedrijf toegevoegd of als medewerker ingesteld.",
+        "submit": "Gebruiker toevoegen",
+        "openUser": "Gebruiker openen",
+        "addAnother": "Nog een toevoegen"
+      },
+      "created": "Account aangemaakt voor {email}. We hebben diegene een e-mail gestuurd met een link om een wachtwoord te kiezen.",
+      "existing": "{email} heeft al een account. Er is niets gewijzigd."
+    },
+    "staff": {
+      "title": "Medewerkers",
+      "description": "De mensen die verzoeken van bedrijven afhandelen, en hoe gebruikers jullie zien.",
+      "name": {
+        "title": "Naam die gebruikers zien",
+        "description": "Gebruikt in uitnodigingen en overal waar gebruikers zien wie hen helpt.",
+        "label": "Naam",
+        "example": "Bijvoorbeeld “Adiutor Support”.",
+        "save": "Naam opslaan",
+        "saved": "Naam opgeslagen."
+      },
+      "people": {
+        "title": "Mensen",
+        "description": "{count, plural, one {# persoon heeft} other {# mensen hebben}} toegang als medewerker.",
+        "rows": "medewerkers",
+        "caption": "Medewerkers",
+        "name": "Naam",
+        "role": "Rol",
+        "activity": "Activiteit",
+        "actions": "Acties",
+        "you": "(jij)",
+        "deactivated": "Gedeactiveerd"
+      },
+      "stepDown": {
+        "title": "Terugstappen naar {role}?",
+        "description": "Je kunt je eigen rol niet weer verhogen: daarvoor is een andere beheerder van de medewerkers nodig. Alleen beheerders beheren de medewerkers, dus je gaat naar het dashboard.",
+        "confirmLabel": "Terugstappen"
+      },
+      "leave": {
+        "label": "Stoppen",
+        "ariaLabel": "Stoppen als medewerker",
+        "title": "Stoppen als medewerker?",
+        "confirmLabel": "Stoppen als medewerker",
+        "description": "Je verliest meteen je toegang als medewerker, en alleen een andere beheerder kan die teruggeven. Je account en je lidmaatschappen van bedrijven blijven bestaan."
+      },
+      "remove": {
+        "label": "Verwijderen",
+        "ariaLabel": "{name} verwijderen als medewerker",
+        "done": "{name} is verwijderd als medewerker.",
+        "title": "{name} verwijderen als medewerker?",
+        "confirmLabel": "Verwijderen als medewerker",
+        "description": "Diegene verliest de toegang als medewerker. Het account blijft bestaan (met eventuele lidmaatschappen van bedrijven), en je kunt diegene later opnieuw uitnodigen."
+      },
+      "invite": {
+        "title": "Uitnodigen per e-mail",
+        "description": "Diegene krijgt een e-mail met een link om als medewerker mee te doen. De link werkt één keer en verloopt na {days, plural, one {# dag} other {# dagen}}."
+      }
+    },
+    "companies": {
+      "title": "Bedrijven",
+      "description": "Alle bedrijven die je helpt. Open er een om de mensen en instellingen te beheren.",
+      "add": "Bedrijf toevoegen",
+      "searchLabel": "Bedrijven zoeken",
+      "searchPlaceholder": "Zoeken op naam",
+      "rows": "bedrijven",
+      "noMatchTitle": "Geen bedrijven gevonden",
+      "noMatchDescription": "Niets komt overeen met \"{search}\". Probeer een andere naam.",
+      "noneTitle": "Nog geen bedrijven",
+      "noneDescription": "Bedrijven die je toevoegt, verschijnen hier.",
+      "captionSearch": "Bedrijven die overeenkomen met \"{search}\"",
+      "captionAll": "Alle bedrijven",
+      "company": "Bedrijf",
+      "status": "Status",
+      "added": "Toegevoegd",
+      "open": "Openen",
+      "addedOn": "Toegevoegd op {date}",
+      "active": "Actief",
+      "deactivated": "Gedeactiveerd"
+    },
+    "addCompany": {
+      "title": "Bedrijf toevoegen",
+      "heading": "Een bedrijf toevoegen",
+      "description": "Maak een bedrijf aan en nodig de eerste beheerder uit. Die kan collega's uitnodigen en verzoeken indienen.",
+      "form": {
+        "nameLabel": "Bedrijfsnaam",
+        "namePlaceholder": "Adiutor",
+        "slugLabel": "URL-naam",
+        "slugDescription": "Voorgesteld op basis van de naam. Kleine letters, cijfers en streepjes. De pagina's staan op /companies/{slug}.",
+        "emailLabel": "E-mailadres van de beheerder van het bedrijf",
+        "emailPlaceholder": "admin@adiutor.dev",
+        "emailDescription": "Diegene krijgt een uitnodiging om als beheerder van het bedrijf mee te doen.",
+        "submit": "Bedrijf toevoegen",
+        "open": "Het bedrijf openen"
+      }
+    },
+    "logs": {
+      "title": "Auditlog",
+      "header": {
+        "title": "Logs",
+        "descriptionWithErrors": "Beveiligingsgebeurtenissen van en over iedereen, en de fouten waar mensen tegenaan liepen.",
+        "description": "Beveiligingsgebeurtenissen van en over iedereen.",
+        "tabsLabel": "Onderdelen van de logs",
+        "auditTab": "Auditlog",
+        "errorsTab": "Fouten"
+      },
+      "searchLabel": "Mensen of bedrijven zoeken",
+      "searchPlaceholder": "Zoeken op naam, e-mailadres of bedrijf",
+      "dateLabel": "Filteren op datum",
+      "filterLabel": "Gebeurtenissen filteren",
+      "all": "Alles",
+      "rows": "gebeurtenissen",
+      "caption": "{kind, select, groupSearch {Auditlog: {group}, met \"{search}\"} group {Auditlog: {group}} search {Auditlog met \"{search}\"} other {Auditlog}}",
+      "empty": {
+        "noneTitle": "Nog niets vastgelegd",
+        "noneDescription": "Inlogacties, wijzigingen van accounts en rollen en uitnodigingen verschijnen hier.",
+        "noMatchTitle": "Niets gevonden",
+        "noMatchDescription": "{kind, select, withGroup {Geen gebeurtenissen van of over iemand die overeenkomen met “{search}” in {group}. Probeer een deel van een naam, een e-mailadres of een bedrijf.} other {Geen gebeurtenissen van of over iemand die overeenkomen met “{search}”. Probeer een deel van een naam, een e-mailadres of een bedrijf.}}",
+        "filteredTitle": "Niets in deze selectie",
+        "filteredDescription": "Geen gebeurtenissen die bij deze filters passen. Probeer een andere groep of een ruimere periode."
+      },
+      "table": {
+        "event": "Gebeurtenis",
+        "when": "Wanneer",
+        "origin": "Browser en IP-adres"
+      },
+      "by": "door <link>{name}</link>",
+      "about": "over <link>{name}</link>",
+      "staff": "Medewerkers",
+      "notRecorded": "Niet vastgelegd"
+    },
+    "errors": {
+      "title": "Fouten",
+      "searchLabel": "Een referentie opzoeken",
+      "searchPlaceholder": "bijv. 7KQ2-M9XD",
+      "kinds": {
+        "signIn": "Inlogfout",
+        "browser": "Browserfout",
+        "server": "Serverfout"
+      },
+      "noMessage": "Geen melding vastgelegd",
+      "details": {
+        "when": "Wanneer",
+        "kind": "Soort",
+        "where": "Waar",
+        "page": "Pagina",
+        "error": "Fout",
+        "digest": "Digest",
+        "code": "Code",
+        "description": "Beschrijving",
+        "signedIn": "Ingelogd",
+        "noOne": "Niemand"
+      },
+      "lookup": {
+        "invalidTitle": "Dat is geen referentie",
+        "invalidDescription": "“{input}” kan er geen zijn: referenties zien eruit als 7KQ2-M9XD, acht letters en cijfers.",
+        "noneTitle": "Niets vastgelegd onder {reference}",
+        "noneDescription": "Fouten worden 7 dagen bewaard; oudere fouten, en fouten boven de limiet van 20 per uur per adres, staan alleen in het serverlog.",
+        "title": "Referentie {reference}",
+        "recorded": "{count, plural, one {Eén keer vastgelegd.} other {# keer vastgelegd: dezelfde fout op de server, nieuwste eerst.}}",
+        "ariaLabel": "{reference} opzoeken"
+      },
+      "recent": {
+        "title": "Laatste 7 dagen",
+        "description": "Fouten op de server, in de browser en bij het inloggen, nieuwste eerst.",
+        "rows": "fouten",
+        "caption": "Fouten in de laatste 7 dagen",
+        "emptyTitle": "Geen fouten in de laatste 7 dagen",
+        "emptyDescription": "Als iemand een fout tegenkomt, verschijnt die hier met de referentie die de pagina liet zien."
+      },
+      "table": {
+        "reference": "Referentie",
+        "whatHappened": "Wat er gebeurde",
+        "when": "Wanneer"
+      }
+    },
+    "dateRange": {
+      "invalidDay": "Vul de datums in als bestaande dagen, bijvoorbeeld 2026-11-03.",
+      "fromAfterTo": "Kies een “van”-datum op of vóór de “tot”-datum."
+    }
+  }
+}

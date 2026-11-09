@@ -1,7 +1,8 @@
 /**
  * @file Creating an invitation's record: checks for a member or an open
  * invitation, replaces an older one, and builds the email to send, for
- * invitations sent by email and those an invite link sends.
+ * invitations sent by email and those an invite link sends, in the
+ * invitation's language (or the invitee's own, when they have an account).
  */
 import { and, eq, isNull, notExists, sql } from 'drizzle-orm';
 
@@ -15,6 +16,7 @@ import { type Role } from '@/lib/authz/roles';
 import { firstRow } from '@/lib/defined';
 import displayName from '@/lib/display-name';
 import type { Email } from '@/lib/email';
+import { isLocale, type Locale } from '@/lib/i18n/locales';
 import { INVITATION_VALID_DAYS } from '@/lib/invitation-lifetimes';
 import type { InviteStatus } from '@/lib/invite-status';
 import { generateToken, hashToken } from '@/lib/sign-in/tokens';
@@ -24,6 +26,7 @@ import { type InviteDestination, joinedPath, sameTarget, auditTarget } from './r
 import type { Actor } from '../../actor';
 import { recordEvent } from '../../audit';
 import type { ServiceContext } from '../../context';
+import recipientLocale from '../../recipient-locale';
 
 /**
  * What claiming an invite link can come to: an {@link InviteStatus}, or
@@ -62,6 +65,12 @@ interface InvitationRecordInput {
   invitedBy: string | null;
   /** App URL for the link. */
   baseUrl: string;
+  /**
+   * The invitation's language (`invitation.locale`): its email, resends and
+   * reminder are written in it, unless the invitee has an account with a
+   * saved language.
+   */
+  locale: Locale;
 }
 
 /** An invitation someone sends by email: the recipient gets an invitation naming them. */
@@ -162,14 +171,16 @@ export async function createInvitationRecord(
   tx: DatabaseTransaction,
   input: SentInvitationInput | LinkInvitationInput,
 ): Promise<CreatedInvitation<LinkClaimStatus>> {
-  const { target, email, role, invitedBy, baseUrl } = input;
+  const { target, email, role, invitedBy, baseUrl, locale } = input;
   // One request per target and address at a time, until its transaction ends (see above).
   await lockInvitationsOf(tx, target.companyId, email);
 
   const [existingUser] = await tx
-    .select({ id: user.id, platformRole: user.platformRole })
+    .select({ id: user.id, platformRole: user.platformRole, locale: user.locale })
     .from(user)
     .where(eq(user.email, email));
+  // Someone with an account reads their own language; anyone else the invitation's.
+  const inviteeLocale = isLocale(existingUser?.locale) ? existingUser.locale : locale;
 
   if (existingUser) {
     let alreadyIn = existingUser.platformRole !== null;
@@ -194,6 +205,7 @@ export async function createInvitationRecord(
         renderEmail: () =>
           alreadyMemberEmail(email, {
             appUrl: baseUrl,
+            locale: inviteeLocale,
             companyName: target.name,
             url: `${baseUrl}${joinedPath(target.companyId)}`,
           }),
@@ -226,12 +238,13 @@ export async function createInvitationRecord(
         status: 'already_invited',
         invitationId: null,
         /**
-         * Renders the "already invited" email, once the transaction has committed.
+         * Renders the "already invited" email, once the transaction has committed, in the
+         * language of whoever claimed the link.
          *
          * @returns The email.
          */
         renderEmail: () =>
-          alreadyInvitedEmail(email, { appUrl: baseUrl, companyName: target.name }),
+          alreadyInvitedEmail(email, { appUrl: baseUrl, locale, companyName: target.name }),
       };
     }
   }
@@ -258,6 +271,7 @@ export async function createInvitationRecord(
         role,
         tokenHash: hashToken(token),
         invitedBy,
+        locale,
         expiresAt: sql`now() + make_interval(days => ${INVITATION_VALID_DAYS})`,
       })
       .returning({ id: invitation.id }),
@@ -274,9 +288,15 @@ export async function createInvitationRecord(
   return {
     status: existingUser ? 'sent_existing_user' : 'sent',
     invitationId: created.id,
+    // A link's confirmation is in the language of whoever claimed it (they just did).
     renderEmail: input.fromLink
-      ? () => inviteLinkConfirmationEmail(email, details)
-      : () => invitationEmail(email, { ...details, inviterName: input.inviterName }),
+      ? () => inviteLinkConfirmationEmail(email, { ...details, locale })
+      : () =>
+          invitationEmail(email, {
+            ...details,
+            locale: inviteeLocale,
+            inviterName: input.inviterName,
+          }),
   };
 }
 
@@ -294,13 +314,21 @@ export async function createInvitationRecord(
  * @param input.email - Normalized email address.
  * @param input.role - Role to give; must fit the company.
  * @param input.resent - Whether it replaces an earlier invitation.
+ * @param input.locale - The invitation's language; by default Adiutor's default
+ *   language, else English (US).
  * @returns What happened and the email to send.
  */
 export async function createSentInvitation(
   ctx: ServiceContext,
   tx: DatabaseTransaction,
   actor: Actor,
-  input: { target: InviteDestination; email: string; role: Role; resent?: boolean },
+  input: {
+    target: InviteDestination;
+    email: string;
+    role: Role;
+    resent?: boolean;
+    locale?: Locale;
+  },
 ): Promise<CreatedInvitation> {
   const { target, email, role } = input;
   const created = await createInvitationRecord(tx, {
@@ -311,6 +339,7 @@ export async function createSentInvitation(
     fromLink: false,
     inviterName: displayName(actor),
     baseUrl: ctx.baseUrl,
+    locale: input.locale ?? (await recipientLocale(ctx)),
   });
   await recordEvent(
     ctx,

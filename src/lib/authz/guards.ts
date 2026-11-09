@@ -122,13 +122,6 @@ export function isCompanyRoleRaise(
   return companyRoleRank(newRole) > companyRoleRank(currentRole);
 }
 
-/**
- * What the giver is told when a role grant needs a recent confirmation they
- * don't have (see {@link grantNeedsConfirmation}).
- */
-export const GRANT_CONFIRMATION_REQUIRED_MESSAGE =
-  'Confirm it’s you with your second step before giving someone this role.';
-
 /** A role being given to someone, for {@link grantNeedsConfirmation}. */
 export interface RoleGrant {
   /** Whether it's a staff role or a role in a company. */

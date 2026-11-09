@@ -3,6 +3,8 @@
  */
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
 import TextField from '@/components/ui/text-field';
@@ -24,7 +26,8 @@ interface CompanyFormProps {
 }
 
 /**
- * Name and URL name fields with a save button.
+ * Name and URL name fields with a save button. Its text comes from the
+ * `companies` namespace, which the settings page passes with `ClientMessages`.
  *
  * @param props - Form props.
  * @param props.companyId - The company.
@@ -33,6 +36,7 @@ interface CompanyFormProps {
  * @returns The form.
  */
 export default function CompanyForm({ companyId, name, slug }: CompanyFormProps) {
+  const t = useTranslations('companies.settings.form');
   const [result, formAction, pending, onSubmit] = useTransientActionState(
     updateCompanyAction,
     null,
@@ -44,7 +48,7 @@ export default function CompanyForm({ companyId, name, slug }: CompanyFormProps)
       <ResultAlert result={result} />
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField
-          label="Name"
+          label={t('name')}
           name="name"
           maxLength={NAME_MAX_LENGTH}
           defaultValue={name}
@@ -52,11 +56,11 @@ export default function CompanyForm({ companyId, name, slug }: CompanyFormProps)
           required
         />
         <TextField
-          label="URL name"
+          label={t('slug')}
           name="slug"
           maxLength={SLUG_MAX_LENGTH}
           defaultValue={slug}
-          description={`Lowercase letters, numbers and dashes. The company's pages are at /companies/${slug}; changing it changes that address, and links with the old one stop working.`}
+          description={t('slugDescription', { slug })}
           autoComplete="off"
           spellCheck={false}
           required
@@ -64,7 +68,7 @@ export default function CompanyForm({ companyId, name, slug }: CompanyFormProps)
       </div>
       <div>
         <Button type="submit" loading={pending}>
-          Save changes
+          {t('save')}
         </Button>
       </div>
     </form>

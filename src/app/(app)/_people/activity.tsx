@@ -1,11 +1,15 @@
 /**
  * @file A person's activity in the people tables (users, staff, members):
  * when they were last active and when they joined. Shown in one "Activity"
- * column, and under their name where that column is hidden.
+ * column, and under their name where that column is hidden. Text from the
+ * `people` namespace.
  */
-import RelativeTime from '@/components/ui/relative-time';
+import { useLocale, useTranslations } from 'next-intl';
+
 import cn from '@/lib/cn';
 import formatDate from '@/lib/format';
+
+import { hiddenTag, timeTag } from './rich-tags';
 
 /** Props for {@link ActivityColumn} and {@link ActivityLine}. */
 interface ActivityProps {
@@ -26,11 +30,15 @@ interface ActivityProps {
  * @returns The cell's content.
  */
 export function ActivityColumn({ lastActiveAt, joinedAt }: ActivityProps) {
+  const t = useTranslations('people.activity');
+  const locale = useLocale();
   return (
     <>
-      <span className="sr-only">Last active: </span>
-      <RelativeTime date={lastActiveAt} />
-      <span className="block text-xs">Joined {formatDate(joinedAt)}</span>
+      {t.rich('lastActive', {
+        hidden: hiddenTag,
+        time: timeTag(lastActiveAt),
+      })}
+      <span className="block text-xs">{t('joined', { date: formatDate(joinedAt, locale) })}</span>
     </>
   );
 }
@@ -51,12 +59,16 @@ export function ActivityLine({
   joinedAt,
   className = '',
 }: ActivityProps & { className?: string }) {
+  const t = useTranslations('people.activity');
+  const locale = useLocale();
   return (
     <span className={cn('contents', className)}>
       <span>
-        Last active <RelativeTime date={lastActiveAt} never="never" />
+        {lastActiveAt
+          ? t.rich('lastActiveShort', { time: timeTag(lastActiveAt) })
+          : t('neverActive')}
       </span>
-      <span>Joined {formatDate(joinedAt)}</span>
+      <span>{t('joined', { date: formatDate(joinedAt, locale) })}</span>
     </span>
   );
 }

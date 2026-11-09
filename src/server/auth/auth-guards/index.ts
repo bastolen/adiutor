@@ -79,9 +79,13 @@
  * so requests sent at the same moment can't all get past the limit, and
  * successful ones (or ones Better Auth refused before checking) don't count.
  *
- * Refusals are `APIError`s with a `code` that the pages turn into messages
- * (`src/lib/sign-in/auth-error-messages.ts`); the refusals the browser reacts to are
- * declared once, with their messages, in `src/lib/sign-in/sign-in-refusals.ts`.
+ * Refusals are `APIError`s with a `code` that the pages turn into messages in
+ * the reader's language (`authErrorText` in `src/lib/sign-in/auth-error-messages.ts`);
+ * the refusals the browser reacts to are declared once in
+ * `src/lib/sign-in/sign-in-refusals.ts`. Each refusal's message is worded in
+ * the request's language (`refusal-messages.ts`, from its language cookie):
+ * forms show it as it comes only for the refusals with details the browser
+ * can't know (`SERVER_WORDED_CODES`: how long to wait, which providers).
  *
  * This is the module's public API: the checks live in the files next to it,
  * and nothing outside this folder imports them directly.

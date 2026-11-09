@@ -6,6 +6,7 @@
 
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useSyncExternalStore } from 'react';
 
 import Button, { type ButtonProps } from './button';
@@ -47,6 +48,7 @@ const canGoBackOnServer = () => false;
  * @returns The button, or nothing.
  */
 export default function BackButton(props: Omit<ButtonProps, 'onClick' | 'children' | 'asChild'>) {
+  const t = useTranslations('common.actions');
   const router = useRouter();
   const visible = useSyncExternalStore(subscribe, canGoBack, canGoBackOnServer);
 
@@ -56,7 +58,7 @@ export default function BackButton(props: Omit<ButtonProps, 'onClick' | 'childre
   return (
     <Button variant="secondary" {...props} onClick={() => router.back()}>
       <ArrowLeft aria-hidden="true" />
-      Go back
+      {t('goBack')}
     </Button>
   );
 }

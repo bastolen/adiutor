@@ -16,7 +16,8 @@ test.describe('first run', () => {
     await seedTestDatabase(getTestDatabaseUrl());
   });
 
-  test('sign-in redirects to setup, which names the staff and creates its Admin', async ({
+  test('sign-in redirects to setup, which names the staff, sets the default language and creates its Admin', async ({
+    browser,
     page,
   }) => {
     await emptyTestDatabase(getTestDatabaseUrl());
@@ -32,14 +33,30 @@ test.describe('first run', () => {
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
     await expectAccessible(page);
 
+    // Before setup there's no default language, so a page follows what the browser asks for.
+    const dutchBrowser = await browser.newContext({ locale: 'nl-NL' });
+    try {
+      const dutchPage = await dutchBrowser.newPage();
+      await dutchPage.goto('/setup');
+      await expect(dutchPage.locator('html')).toHaveAttribute('lang', 'nl-NL');
+    } finally {
+      await dutchBrowser.close();
+    }
+
     await page.getByLabel('Name shown to users').fill(STAFF_NAME);
+    const defaultLanguage = page.getByRole('combobox', { name: 'Default language' });
+    await expect(defaultLanguage).toHaveText('English (US)');
+    await defaultLanguage.click();
+    await page.getByRole('option', { name: 'Nederlands' }).click();
     await page.getByLabel('Your name').fill('Setup Admin');
     await page.getByLabel('Email').fill('setup@adiutor.test');
     await page.getByLabel('Password').fill('setup-password-1');
     await page.getByRole('button', { name: 'Set up Adiutor' }).click();
 
-    // Admins must protect their account first, so they land on the Security page.
+    // Admins must protect their account first, so they land on the Security page, in the
+    // language they set up in.
     await expect(page).toHaveURL('/account/security?setup=required');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
     const nav = page.getByRole('navigation', { name: 'Main' });
     await expect(nav.getByRole('link', { name: 'Users' })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Companies' })).toBeVisible();
@@ -48,6 +65,16 @@ test.describe('first run', () => {
     // Setup is now disabled.
     await page.goto('/setup');
     await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+
+    // Visitors without a choice get the default language chosen at setup.
+    const visitor = await browser.newContext();
+    try {
+      const visitorPage = await visitor.newPage();
+      await visitorPage.goto('/auth');
+      await expect(visitorPage.locator('html')).toHaveAttribute('lang', 'nl-NL');
+    } finally {
+      await visitor.close();
+    }
   });
 
   test("isn't offered once accounts exist, even if nothing is set up", async ({ page }) => {

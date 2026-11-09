@@ -6,6 +6,7 @@ import { Activity, type ReactNode, useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import SignInForm from './sign-in-form';
+import renderInLocale from '../../../tests/i18n/render';
 
 /** Mocked Better Auth client methods. */
 const {
@@ -141,6 +142,67 @@ describe('SignInForm', () => {
       'That email and password combination is incorrect.',
     );
   });
+
+  it('shows the refusals the server words itself as they come', async () => {
+    const paused =
+      'Password sign-in for this address is paused for 15 minutes after too many wrong passwords. Sign in with an email link or a passkey, or reset your password to lift the pause.';
+    signInEmail.mockResolvedValue({
+      error: { status: 429, code: 'PASSWORD_SIGN_IN_PAUSED', message: paused },
+    });
+    render(<SignInForm providers={[]} />);
+
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'jane@adiutor.test' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret-password' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(paused);
+  });
+
+  it("never shows Better Auth's own English message", async () => {
+    signInMagicLink.mockResolvedValue({
+      error: { status: 400, code: 'SOMETHING_NEW', message: 'Something new went wrong' },
+    });
+    render(<SignInForm providers={[]} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in with an email link instead' }));
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'jane@adiutor.test' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Email me a sign-in link' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Sending the link failed. Please try again.',
+    );
+  });
+
+  it.each([
+    [
+      'nl-NL',
+      'Liever inloggen met een e-maillink',
+      'E-mailadres',
+      'Stuur me een inloglink',
+      'Als jan@adiutor.test een account heeft, is er een inloglink onderweg. Kijk in je inbox.',
+    ],
+    [
+      'es-ES',
+      'Usar un enlace por correo',
+      'Correo electrónico',
+      'Enviarme un enlace de acceso',
+      'Si jan@adiutor.test tiene una cuenta, le llegará un enlace para iniciar sesión. Revisa tu bandeja de entrada.',
+    ],
+  ] as const)(
+    'says in %s that a link is on its way, with the address where the language puts it',
+    async (locale, useLink, emailLabel, submit, sent) => {
+      signInMagicLink.mockResolvedValue({ error: null });
+      renderInLocale(locale, <SignInForm providers={['github']} />);
+
+      fireEvent.click(screen.getByRole('button', { name: useLink }));
+      fireEvent.change(screen.getByLabelText(emailLabel), {
+        target: { value: 'jan@adiutor.test' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: submit }));
+
+      expect(await screen.findByRole('status')).toHaveTextContent(sent);
+    },
+  );
 
   it('sends a magic link back to the requested page', async () => {
     searchParams = new URLSearchParams({ callbackURL: '/dashboard/settings' });

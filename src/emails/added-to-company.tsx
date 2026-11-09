@@ -5,8 +5,9 @@ import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph } from '@/components/email/email-text';
 import RoleSummary from '@/components/email/role-summary';
-import { ROLE_LABELS, type Role } from '@/lib/authz/roles';
+import type { Role } from '@/lib/authz/roles';
 import type { Email } from '@/lib/email';
+import translator from '@/lib/i18n/translator';
 
 import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
 import renderEmail from './render';
@@ -35,6 +36,7 @@ export interface AddedToCompanyEmailProps extends EmailBaseProps {
  * @param props.companyName - The company.
  * @param props.role - Their role.
  * @param props.url - Link to the company.
+ * @param props.locale - The recipient's language.
  * @param props.logoSrc - Logo URL override.
  * @returns The email.
  */
@@ -44,21 +46,27 @@ export default function AddedToCompanyEmail({
   companyName,
   role,
   url,
+  locale,
   logoSrc = undefined,
 }: AddedToCompanyEmailProps) {
+  const t = translator(locale, 'emails.addedToCompany');
+  const values = {
+    adder: adderName,
+    company: companyName,
+    role: translator(locale, 'roles')(`${role}.label`),
+  };
   return (
     <EmailLayout
-      preview={`You now have access to ${companyName} on Adiutor`}
+      preview={t('preview', values)}
       appUrl={appUrl}
+      locale={locale}
       logoSrc={logoSrc}
-      reason={`You're receiving this because ${adderName} added your account to ${companyName}.`}
+      reason={t('reason', values)}
     >
-      <EmailHeading>You were added to {companyName}</EmailHeading>
-      <EmailParagraph>
-        {adderName} added you to {companyName} on Adiutor as {ROLE_LABELS[role]}.
-      </EmailParagraph>
-      <RoleSummary role={role} />
-      <EmailButton href={url}>Open {companyName}</EmailButton>
+      <EmailHeading>{t('heading', values)}</EmailHeading>
+      <EmailParagraph>{t('body', values)}</EmailParagraph>
+      <RoleSummary role={role} locale={locale} />
+      <EmailButton href={url}>{t('button', values)}</EmailButton>
     </EmailLayout>
   );
 }
@@ -82,7 +90,7 @@ AddedToCompanyEmail.PreviewProps = {
 export function addedToCompanyEmail(to: string, props: AddedToCompanyEmailProps): Promise<Email> {
   return renderEmail(
     to,
-    `You were added to ${props.companyName} on Adiutor`,
+    translator(props.locale, 'emails.addedToCompany')('subject', { company: props.companyName }),
     <AddedToCompanyEmail {...props} />,
   );
 }

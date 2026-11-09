@@ -5,13 +5,15 @@
 import { eq, like } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { auditEvent, membership, user, verification } from '@/db/schema';
+import { auditEvent, membership, staffSettings, user, verification } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 import { hashVerificationIdentifier } from '@/lib/sign-in/tokens';
 
 import {
   createStaffSettings,
   createUser,
+  emailLanguage,
+  inLanguage,
   setupTestContext,
   staffActor,
 } from '../../../tests/integration/helpers';
@@ -75,6 +77,35 @@ describe('registerUser', () => {
       .from(auditEvent)
       .where(eq(auditEvent.action, 'account_created'));
     expect(entry).toMatchObject({ actorUserId: manager.id, targetUserId: result.userId });
+  });
+
+  it('saves the language chosen for the new user, and welcomes them in it', async () => {
+    const { userId } = await registerUser(inLanguage(ctx, 'en-US'), manager, 'nl@adiutor.test', {
+      locale: 'nl-NL',
+    });
+
+    const created = firstRow(
+      await db.select({ locale: user.locale }).from(user).where(eq(user.id, userId)),
+      'the new user',
+    );
+    expect(created.locale).toBe('nl-NL');
+    const welcome = defined(sent[0], 'the welcome email');
+    expect(emailLanguage(welcome)).toBe('nl-NL');
+    expect(welcome.subject).toBe('Je Adiutor-account staat klaar');
+  });
+
+  it('on Default, saves no language and welcomes them in Adiutor’s default, not the sender’s', async () => {
+    await db.update(staffSettings).set({ defaultLocale: 'nl-NL' });
+    const { userId } = await registerUser(inLanguage(ctx, 'es-ES'), manager, 'nl@adiutor.test');
+
+    const created = firstRow(
+      await db.select({ locale: user.locale }).from(user).where(eq(user.id, userId)),
+      'the new user',
+    );
+    expect(created.locale).toBeNull();
+    expect(sent.map((email) => [email.to, emailLanguage(email)])).toEqual([
+      ['nl@adiutor.test', 'nl-NL'],
+    ]);
   });
 
   it('reports an existing account without changing anything', async () => {

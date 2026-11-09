@@ -191,10 +191,3 @@ const VIEW_ONLY_STAFF_ROLES: readonly PlatformRole[] = ['finance', 'support'];
 export function mayUseInviteLinks(platformRole: PlatformRole | null): boolean {
   return platformRole === null || !VIEW_ONLY_STAFF_ROLES.includes(platformRole);
 }
-
-/**
- * Why Finance and Support can't use an invite link ({@link mayUseInviteLinks}),
- * as the invitations service refuses it and the invite and join pages explain it.
- */
-export const INVITE_LINKS_NOT_ALLOWED =
-  "Finance and Support can't use invite links. Ask whoever sent it to invite you by email instead.";

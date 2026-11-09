@@ -14,6 +14,12 @@ configurations in VS Code, which turn the time limit off (see
   file: `pnpm typecheck` enforces them, not the test run (e.g.
   `src/server/auth/hook-contexts.test.ts`, which checks that the parts of Better Auth's context the
   app's hooks read still fit Better Auth's types).
+- **Languages:** unit tests render in English (US) without a request or a provider:
+  `vitest.setup.ts` stands in for next-intl (`tests/i18n/next-intl-mocks.ts`), so `useTranslations`,
+  `getTranslations`, `getLocale` and `requestLocale()` give English. To check Dutch or Spanish text
+  (word order, plurals), render with `renderInLocale(locale, ui)` from `tests/i18n/render.tsx`, or
+  translate outside React with `translator(locale, namespace)`. End-to-end tests run in English
+  (US) (`locale` in `playwright.config.ts`).
 - **A module split into a folder** (see "Modules that outgrow one file" in
   [Code style](code-style.md)) has a test file next to each of its files, and the helpers they
   share in the folder's `test-helpers.ts`. When the tests share a database test context, that file

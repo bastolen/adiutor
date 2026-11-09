@@ -1,0 +1,37 @@
+{
+  "dashboard": {
+    "title": "Panel",
+    "welcome": "Te damos la bienvenida, {name}",
+    "staffDescription": "Abre una empresa o consulta a todas las personas que usan Adiutor.",
+    "mfaRecommendation": {
+      "label": "Seguridad de la cuenta",
+      "title": "Protege tu cuenta",
+      "description": "Añade una llave de acceso o la verificación en dos pasos, para que una contraseña robada no baste para entrar.",
+      "setUp": "Configurar"
+    },
+    "providerMfaWarning": {
+      "label": "Usuarios sin MFA",
+      "title": "El inicio de sesión con {providers} no está configurado en este servidor",
+      "description": "{count, plural, one {# usuario cuyo rol requiere MFA se ha quedado} other {# usuarios cuyo rol requiere MFA se han quedado}} sin MFA: el que tenían venía de {providers} con autenticación en dos factores, que solo cuenta mientras el inicio de sesión con {providers} esté configurado aquí. Hasta entonces se les pedirá añadir una llave de acceso o una aplicación de autenticación, y lo mismo a cualquiera con acceso a su bandeja de entrada. Vuelve a configurarlo, o pídeles que añadan una llave de acceso o una aplicación de autenticación.",
+      "action": "Ver usuarios sin MFA"
+    },
+    "shortcuts": {
+      "users": {
+        "title": "Usuarios",
+        "description": "El personal y las personas de cada empresa."
+      },
+      "companies": {
+        "title": "Empresas",
+        "description": "Consulta y gestiona todas las empresas."
+      },
+      "staff": {
+        "title": "Personal",
+        "description": "Invita al personal y gestiona sus roles."
+      },
+      "logs": {
+        "title": "Registros",
+        "description": "El registro de auditoría y los errores que encontró la gente."
+      }
+    }
+  }
+}

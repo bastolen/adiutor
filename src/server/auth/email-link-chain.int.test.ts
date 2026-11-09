@@ -2,7 +2,8 @@
  * @file Runs Better Auth's real email-link sign-in (`auth.handler`, with the
  * app's guards and reactions) to check what only a whole request shows:
  * - a sign-in link is emailed to the account's stored address, whatever case
- *   the address was typed in (`sendMagicLink` in `src/lib/auth.ts`);
+ *   the address was typed in (`sendMagicLink` in `src/lib/auth.ts`), in the
+ *   account's language, else the browser's;
  * - a sign-in link can't go on to a second `/magic-link/verify`, which the
  *   browser would open as part of the same click and so sign the user in to
  *   whoever made the second link: asking for a link with such a return
@@ -24,7 +25,12 @@ import { sendEmail } from '@/lib/email';
 import { env } from '@/lib/env';
 import { emailLinkVerificationIdentifier, generateToken } from '@/lib/sign-in/tokens';
 
-import { createUser, setupTestContext } from '../../../tests/integration/helpers';
+import {
+  createUser,
+  emailLanguage,
+  setUserLocale,
+  setupTestContext,
+} from '../../../tests/integration/helpers';
 
 vi.mock('@/db', async (importOriginal) =>
   (await import('../../../tests/integration/app-modules')).default(await importOriginal()),
@@ -90,13 +96,17 @@ function chainedTo(token: string): string {
  * Asks for a sign-in link, as the sign-in form does.
  *
  * @param body - The JSON body: the address and the return addresses.
+ * @param headers - More request headers, e.g. the language cookie.
  * @returns The response.
  */
-function askForLink(body: Record<string, unknown>): Promise<Response> {
+function askForLink(
+  body: Record<string, unknown>,
+  headers: Record<string, string> = {},
+): Promise<Response> {
   return auth.handler(
     new Request(`${env.BETTER_AUTH_URL}/api/auth/sign-in/magic-link`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', origin: env.BETTER_AUTH_URL },
+      headers: { 'content-type': 'application/json', origin: env.BETTER_AUTH_URL, ...headers },
       body: JSON.stringify(body),
     }),
   );
@@ -164,6 +174,32 @@ describe('sending a sign-in link', () => {
     expect(sent.subject).toBe('Your Adiutor sign-in link');
     expect(sent.to).toBe('jane@adiutor.test');
     expect(vi.mocked(sendEmail)).toHaveBeenCalledTimes(1);
+  });
+
+  it('writes it in the language the account saved, else the browser’s', async () => {
+    await setUserLocale(db, await createUser(db, 'jane@adiutor.test'), 'nl-NL');
+    await createUser(db, 'sam@adiutor.test');
+    const spanishBrowser = { cookie: 'adiutor.locale=es-ES' };
+
+    await askForLink({ email: 'jane@adiutor.test', callbackURL: '/dashboard' }, spanishBrowser);
+    await askForLink({ email: 'sam@adiutor.test', callbackURL: '/dashboard' }, spanishBrowser);
+
+    // Sent after the responses.
+    const sent = await vi.waitFor(() => {
+      const emails = vi.mocked(sendEmail).mock.calls.map(([call]) => call);
+      if (emails.length < 2) {
+        throw new Error('The sign-in emails have not been sent yet');
+      }
+      return emails;
+    }, 10_000);
+    expect(
+      sent
+        .map((email) => [email.to, emailLanguage(email)])
+        .sort(([a], [b]) => (a ?? '').localeCompare(b ?? '')),
+    ).toEqual([
+      ['jane@adiutor.test', 'nl-NL'],
+      ['sam@adiutor.test', 'es-ES'],
+    ]);
   });
 });
 

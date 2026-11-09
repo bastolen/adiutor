@@ -2,12 +2,14 @@
  * @file Server actions for company memberships: changing roles and removing
  * members, shared by a company's Members page and the user detail page, and
  * adding an existing user, which only the user detail page offers.
- * Invitations and invite links use `invitation-actions.ts`.
+ * Invitations and invite links use `invitation-actions.ts`. Messages are in
+ * the request's language (`people.actions`).
  */
 'use server';
 
 import { refresh } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 
 import type { ActionResult } from '@/lib/action-result';
 import field from '@/lib/form-data';
@@ -73,7 +75,8 @@ export async function changeRoleAction(
     );
     await leaveIfMembersPageLost(actor, companyId);
     refresh();
-    return { ok: true, message: 'Role updated.' };
+    const t = await getTranslations('people.actions');
+    return { ok: true, message: t('roleUpdated') };
   });
 }
 
@@ -97,7 +100,8 @@ export async function removeMemberAction(
     });
     await leaveIfMembersPageLost(actor, companyId);
     refresh();
-    return { ok: true, message: 'Member removed.' };
+    const t = await getTranslations('people.actions');
+    return { ok: true, message: t('memberRemoved') };
   });
 }
 
@@ -123,8 +127,11 @@ export async function addMemberAction(
       }),
     );
     refresh();
+    const t = await getTranslations('people.actions');
     // Staff can add themselves from their own page; the email then goes to them.
-    const emailed = userId === actor.id ? 'We emailed you.' : 'We emailed them.';
-    return { ok: true, message: `Added to the company. ${emailed}` };
+    return {
+      ok: true,
+      message: t('memberAdded', { who: userId === actor.id ? 'self' : 'other' }),
+    };
   });
 }

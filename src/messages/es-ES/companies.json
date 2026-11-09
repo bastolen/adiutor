@@ -1,0 +1,93 @@
+{
+  "companies": {
+    "members": {
+      "title": "Miembros",
+      "description": "{count, plural, one {# persona tiene} other {# personas tienen}} acceso a {company}.",
+      "rows": "miembros",
+      "caption": "Miembros de {company}",
+      "empty": {
+        "title": "Aún no hay miembros",
+        "inviteDescription": "Invita a personas para empezar.",
+        "waitDescription": "Las personas aparecerán aquí cuando acepten su invitación."
+      },
+      "columns": {
+        "name": "Nombre",
+        "role": "Rol",
+        "activity": "Actividad",
+        "actions": "Acciones"
+      },
+      "you": "(tú)",
+      "changeOwnRole": {
+        "title": "¿Cambiar tu propio rol a {role}?",
+        "description": "Solo los administradores gestionan los miembros de {company}. Otro administrador puede volver a hacerte administrador.",
+        "confirm": "Cambiar mi rol"
+      },
+      "leave": {
+        "label": "Salir",
+        "ariaLabel": "Salir de {company}",
+        "title": "¿Salir de {company}?",
+        "confirm": "Salir de la empresa",
+        "description": "Dejarás de ser miembro de {company}. Tu cuenta se mantiene y sus administradores pueden volver a invitarte."
+      },
+      "remove": {
+        "label": "Quitar",
+        "ariaLabel": "Quitar a {user}",
+        "done": "Se ha quitado a {user} de {company}.",
+        "title": "¿Quitar a {user}?",
+        "confirm": "Quitar miembro",
+        "description": "Perderá el acceso a {company}. Su cuenta se mantiene y podrás invitarle de nuevo más adelante."
+      },
+      "invite": {
+        "title": "Invitar por correo",
+        "description": "Recibirán un correo con un enlace para unirse. El enlace funciona una vez y caduca en {days, plural, one {# día} other {# días}}."
+      }
+    },
+    "settings": {
+      "title": "Ajustes",
+      "saved": "Guardado.",
+      "details": {
+        "title": "Datos",
+        "description": "El nombre que se muestra en Adiutor y la dirección de sus páginas."
+      },
+      "form": {
+        "name": "Nombre",
+        "slug": "Nombre en la URL",
+        "slugDescription": "Letras minúsculas, números y guiones. Las páginas de la empresa están en /companies/{slug}; si lo cambias, cambia esa dirección y los enlaces con la anterior dejan de funcionar.",
+        "save": "Guardar cambios"
+      },
+      "danger": {
+        "title": "Zona de peligro",
+        "deactivatedDescription": "Esta empresa está desactivada. Al reactivarla, su gente vuelve a tener acceso; no se ha eliminado nada.",
+        "activeDescription": "Su gente pierde el acceso y no puede crear solicitudes hasta que se reactive. No se elimina nada.",
+        "reactivate": {
+          "label": "Reactivar empresa",
+          "title": "¿Reactivar {company}?",
+          "description": "Su gente vuelve a tener acceso.",
+          "confirm": "Reactivar",
+          "done": "Empresa reactivada."
+        },
+        "deactivate": {
+          "label": "Desactivar empresa",
+          "title": "¿Desactivar {company}?",
+          "confirm": "Desactivar",
+          "done": "Empresa desactivada."
+        }
+      }
+    },
+    "titleTemplate": "%s · {company} · Adiutor",
+    "header": {
+      "overview": "Resumen",
+      "staffAccess": "Acceso como personal",
+      "deactivated": "Desactivada",
+      "sections": "Secciones de la empresa"
+    },
+    "overview": {
+      "title": "Las solicitudes están en camino",
+      "description": "Pronto podrás crear solicitudes aquí, seguir su progreso y aprobar el trabajo.",
+      "staffDescription": "Las solicitudes de {company} aparecerán aquí.",
+      "viewOnlyTitle": "Acceso de solo lectura",
+      "viewOnlyDescription": "Tienes acceso de solo lectura a esta empresa. Podrás seguir las solicitudes aquí.",
+      "deactivated": "Esta empresa está desactivada. Su gente no puede usar Adiutor hasta que se reactive."
+    }
+  }
+}

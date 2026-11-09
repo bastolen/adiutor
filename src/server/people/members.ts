@@ -9,7 +9,7 @@ import { company, membership, user } from '@/db/schema';
 import { addedToCompanyEmail } from '@/emails/added-to-company';
 import { isCompanyRoleRaise, wouldLeaveNoAdmin } from '@/lib/authz/guards';
 import { getPermissions } from '@/lib/authz/permissions';
-import { COMPANY_ADMIN_ROLE, type CompanyRole, ROLE_LABELS } from '@/lib/authz/roles';
+import { COMPANY_ADMIN_ROLE, type CompanyRole } from '@/lib/authz/roles';
 import displayName from '@/lib/display-name';
 import { type Paged, resolveTableState, type TableState } from '@/lib/tables/table-state';
 import { MEMBERS_TABLE, type PeopleSort } from '@/lib/tables/tables';
@@ -26,8 +26,6 @@ import {
 } from '../access';
 import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
-import { sendSecurityNotice } from '../auth/security-notices';
-import type { ServiceContext } from '../context';
 import {
   companyDeactivatedError,
   forbiddenError,
@@ -37,8 +35,11 @@ import {
 } from '../errors';
 import { revokeInvitationsTo, revokeInvitesWithoutManager } from './invitations';
 import { withMfaPromotion } from '../auth/mfa-promotion';
+import { sendSecurityNotice } from '../auth/security-notices';
+import type { ServiceContext } from '../context';
 import { paginate, peopleOrder } from '../pagination';
 import { assertInviteSenderLimit, assertRoleChangeLimit } from '../rate-limit';
+import recipientLocale from '../recipient-locale';
 
 /** A member as shown on the members page. */
 export interface Member {
@@ -108,9 +109,6 @@ export async function listMembers(
         .offset(offset),
   );
 }
-
-/** Why adding a deactivated account to a company is refused. */
-const ACCOUNT_DEACTIVATED_MESSAGE = 'This account is deactivated. Reactivate it first.';
 
 /**
  * Changes a member's role or removes them, refusing anything that would leave
@@ -235,7 +233,7 @@ async function changeMembership(
     }
     // Nobody raises their own role, even with rights from before a demotion they missed.
     if (target.userId === actor.id && isCompanyRoleRaise(target.role, newRole)) {
-      throw new ServiceError('forbidden', "You can't give yourself a higher role.");
+      throw new ServiceError('forbidden', 'errors.members.selfRaise');
     }
     // Making someone the company's Admin needs a recent confirmation.
     if (newRole !== null) {
@@ -274,10 +272,7 @@ async function changeMembership(
         newRole,
       })
     ) {
-      throw new ServiceError(
-        'conflict',
-        'A company needs at least one admin. Make someone else an admin first.',
-      );
+      throw new ServiceError('conflict', 'errors.members.lastAdmin');
     }
 
     const where = and(eq(membership.id, target.id), eq(membership.companyId, access.company.id));
@@ -323,7 +318,7 @@ async function changeMembership(
           email: targetUser.email,
           kind: 'company_role_changed' as const,
           company: locked.name,
-          role: ROLE_LABELS[newRole],
+          role: newRole,
         }
       : { email: targetUser.email, kind: 'removed_from_company' as const, company: locked.name };
   });
@@ -415,14 +410,19 @@ export async function addMember(
   }
   const id = parseId(input.userId);
   const [target] = await ctx.db
-    .select({ id: user.id, email: user.email, deactivatedAt: user.deactivatedAt })
+    .select({
+      id: user.id,
+      email: user.email,
+      locale: user.locale,
+      deactivatedAt: user.deactivatedAt,
+    })
     .from(user)
     .where(eq(user.id, id));
   if (!target) {
     throw notFoundError();
   }
   if (target.deactivatedAt) {
-    throw new ServiceError('invalid', ACCOUNT_DEACTIVATED_MESSAGE);
+    throw new ServiceError('invalid', 'errors.members.accountDeactivated');
   }
   await assertInviteSenderLimit(ctx, actor.id);
 
@@ -437,7 +437,7 @@ export async function addMember(
       throw notFoundError();
     }
     if (added.deactivatedAt) {
-      throw new ServiceError('invalid', ACCOUNT_DEACTIVATED_MESSAGE);
+      throw new ServiceError('invalid', 'errors.members.accountDeactivated');
     }
     // Added as Admin: their sessions without MFA that counts for that end (`withMfaPromotion`).
     await withMfaPromotion(
@@ -451,7 +451,9 @@ export async function addMember(
           .onConflictDoNothing({ target: [membership.companyId, membership.userId] })
           .returning({ id: membership.id });
         if (inserted.length === 0) {
-          throw new ServiceError('conflict', `They're already a member of ${access.company.name}.`);
+          throw new ServiceError('conflict', 'errors.members.alreadyMember', {
+            company: access.company.name,
+          });
         }
         await recordEvent(
           ctx,
@@ -472,6 +474,7 @@ export async function addMember(
   await ctx.sendEmail(
     await addedToCompanyEmail(target.email, {
       appUrl: ctx.baseUrl,
+      locale: await recipientLocale(ctx, target.locale),
       adderName: displayName(actor),
       companyName: access.company.name,
       role,

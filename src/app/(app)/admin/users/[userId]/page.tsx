@@ -16,18 +16,18 @@
  * its own component next to it (`*-card.tsx`), taking only what it shows.
  */
 import { notFound } from 'next/navigation';
-import { Suspense } from 'react';
+import { getLocale, getTranslations } from 'next-intl/server';
+import { type ReactNode, Suspense } from 'react';
 
 import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
 import Alert from '@/components/ui/alert';
 import Avatar from '@/components/ui/avatar';
-import Badge from '@/components/ui/badge';
 import PageHeader from '@/components/ui/page-header';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import TextLink from '@/components/ui/text-link';
-import { ROLE_LABELS } from '@/lib/authz/roles';
 import displayName from '@/lib/display-name';
 import { formatDateTime } from '@/lib/format';
+import ClientMessages from '@/lib/i18n/client-messages';
 import { confirmationWindow } from '@/lib/sign-in/confirm-url';
 import type { SearchParams } from '@/lib/tables/search-params';
 import { createPageUrl, parseTableState } from '@/lib/tables/table-state';
@@ -43,7 +43,7 @@ import { globalPermissionMetadata } from '@/server/page-metadata';
 import { type AddableCompany, listAddableCompanies } from '@/server/people/members';
 import { getUserDetail, type UserDetail, userExists } from '@/server/people/user-admin';
 
-import { AccountStateBadges } from '../user-badges';
+import { AccountStateBadges, StaffBadge } from '../user-badges';
 import AccountAccessCard from './account-access-card';
 import AccountCard from './account-card';
 import ActivityCard from './activity-card';
@@ -59,12 +59,33 @@ import StaffAccessCard from './staff-access-card';
  * the 404 page. Unlike a company's pages, it doesn't name the user: titles
  * end up in the browser history, which holds no personal data.
  */
+// i18n-check t('admin.user.title')
 export const generateMetadata = globalPermissionMetadata(
   'users:view',
-  { title: 'User · Adiutor' },
+  'admin.user.title',
   async (actor, { params }: PageProps<'/admin/users/[userId]'>) =>
     userExists(appContext, actor, (await params).userId),
 );
+
+/**
+ * The link to the viewer's Security page inside the "your own account" notice.
+ *
+ * @param chunks - The link's text.
+ * @returns The link.
+ */
+function securityLink(chunks: ReactNode) {
+  return <TextLink href="/account/security">{chunks}</TextLink>;
+}
+
+/**
+ * The link to the Staff page inside the "your own account" notice.
+ *
+ * @param chunks - The link's text.
+ * @returns The link.
+ */
+function staffLink(chunks: ReactNode) {
+  return <TextLink href="/admin/staff">{chunks}</TextLink>;
+}
 
 /**
  * Loads and shows a user. On the viewer's own page it shows the companies
@@ -84,6 +105,8 @@ async function UserDetailContent({
   params: Promise<{ userId: string }>;
   searchParams: Promise<SearchParams>;
 }) {
+  const locale = await getLocale();
+  const t = await getTranslations('admin.user');
   const actor = await requireGlobalPermission('users:view');
   const [{ userId }, query] = await Promise.all([params, searchParams]);
   const companiesRequested = parseTableState(USER_COMPANIES_TABLE, query);
@@ -108,7 +131,7 @@ async function UserDetailContent({
     }
     throw error;
   }
-  const url = createPageUrl(`/admin/users/${detail.id}`);
+  const url = createPageUrl(`/admin/users/${detail.id}`, {}, await getTranslations('tables'));
 
   const permissions = getGlobalPermissions(actor);
   const isSelf = detail.id === actor.id;
@@ -136,13 +159,13 @@ async function UserDetailContent({
       {...confirmationWindow(actor.mfaConfirmedUntil)}
     >
       <PageHeader
-        back={{ href: '/admin/users', label: 'Users' }}
+        back={{ href: '/admin/users', label: t('back') }}
         leading={<Avatar name={userName} size="lg" brand={detail.staffRole !== null} />}
         title={userName}
         description={detail.email}
       >
         <div className="flex flex-wrap items-center gap-2">
-          {detail.staffRole && <Badge tone="brand">Staff · {ROLE_LABELS[detail.staffRole]}</Badge>}
+          {detail.staffRole && <StaffBadge role={detail.staffRole} />}
           <AccountStateBadges
             deactivated={detail.deactivatedAt !== null}
             emailVerified={detail.emailVerified}
@@ -152,20 +175,14 @@ async function UserDetailContent({
 
       {detail.deactivatedAt && (
         <Alert tone="error">
-          This account was deactivated on {formatDateTime(detail.deactivatedAt)}. It can&apos;t sign
-          in until an Admin reactivates it.
+          {t('deactivatedNotice', { date: formatDateTime(detail.deactivatedAt, locale) })}
         </Alert>
       )}
       {isSelf && (
         <Alert tone="info">
-          This is your own account. Change your sign-in methods on your{' '}
-          <TextLink href="/account/security">Security page</TextLink>
-          {permissions.has('staff:manage') && (
-            <>
-              , and your staff role on the <TextLink href="/admin/staff">Staff page</TextLink>
-            </>
-          )}
-          .
+          {permissions.has('staff:manage')
+            ? t.rich('self.signInAndStaff', { security: securityLink, staff: staffLink })
+            : t.rich('self.signInOnly', { security: securityLink })}
         </Alert>
       )}
 
@@ -180,18 +197,24 @@ async function UserDetailContent({
       <SecurityCard mfa={detail.mfa} accountNames={detail.accountNames} />
 
       {canManageStaff && (
-        <StaffAccessCard userId={detail.id} userName={userName} staffRole={detail.staffRole} />
+        // The role select in the card translates with `people`.
+        <ClientMessages namespaces={['people.roleSelect']}>
+          <StaffAccessCard userId={detail.id} userName={userName} staffRole={detail.staffRole} />
+        </ClientMessages>
       )}
 
-      <CompaniesCard
-        userId={detail.id}
-        userName={userName}
-        isSelf={isSelf}
-        companies={detail.companies}
-        table={companiesTable}
-        canManageMembers={canManageMembers}
-        addable={addable}
-      />
+      {/* The role selects in the card translate with `people`. */}
+      <ClientMessages namespaces={['people.roleSelect']}>
+        <CompaniesCard
+          userId={detail.id}
+          userName={userName}
+          isSelf={isSelf}
+          companies={detail.companies}
+          table={companiesTable}
+          canManageMembers={canManageMembers}
+          addable={addable}
+        />
+      </ClientMessages>
 
       {sessions && devicesTable && (
         <DevicesCard

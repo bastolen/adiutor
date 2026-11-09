@@ -12,6 +12,7 @@ import { Toaster } from '@/components/ui/toast';
 import { defined } from '@/lib/defined';
 
 import RoleSelect from './role-select';
+import renderInLocale from '../../../../tests/i18n/render';
 
 /** Mocked router. */
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
@@ -35,9 +36,13 @@ const roles = [
   { value: 'watcher', label: 'Watcher' },
 ];
 
-/** The question on the user's own row. */
+/** The question on the user's own row, per role. */
 const ownRow = {
-  title: 'Change your own role to {role}?',
+  titles: {
+    admin: 'Change your own role to Admin?',
+    client: 'Change your own role to Client?',
+    watcher: 'Change your own role to Watcher?',
+  },
   description: "Only Admins manage Adiutor Tests's members. Another Admin can make you one again.",
   confirmLabel: 'Change my role',
 };
@@ -195,6 +200,20 @@ describe('RoleSelect', () => {
     await user.click(screen.getByRole('option', { name: 'Client' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('at least one admin');
     expect(toasts).toHaveTextContent('at least one admin');
+  });
+
+  it("names the select in the reader's language", () => {
+    renderInLocale(
+      'nl-NL',
+      <RoleSelect
+        action={changeRoleAction}
+        fields={{ companyId: 'company-1', membershipId: 'membership-1' }}
+        memberName="Jane"
+        currentRole="admin"
+        roles={roles}
+      />,
+    );
+    expect(screen.getByRole('combobox', { name: 'Rol van Jane' })).toBeInTheDocument();
   });
 
   describe('on the user’s own row', () => {

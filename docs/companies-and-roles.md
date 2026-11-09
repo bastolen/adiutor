@@ -5,7 +5,8 @@ invitations. Back to the [documentation](README.md).
 
 Adiutor is run by its **staff** (the people who handle requests), who add **companies** (the
 customers, who raise requests). Staff have a **platform role** on their account (`user.platform_role`),
-and the name users see lives in the single-row `staff_settings` table (`src/db/schema/staff.ts`).
+and the name users see and Adiutor's default language live in the single-row `staff_settings` table
+(`src/db/schema/staff.ts`).
 **Users** can belong to several companies, with one company role (Admin, Client or Watcher) in
 each. Staff can also be members of companies. The request (ticket) features aren't built yet; the roles below are
 ready for them.
@@ -45,9 +46,10 @@ Nobody can give themselves a higher company role either (`isCompanyRoleRaise` in
 but nobody raises their own role in a company, not even staff who may manage its members. (Staff
 Admins and Managers who aren't members can still add themselves with any role, as above.)
 
-- **Role descriptions** (`ROLE_DESCRIPTIONS` in `src/lib/authz/roles.ts`) are shown when choosing a
-  role, and describe the intended request workflow. `roleOptions()` in the same file turns a list of
-  roles into the options of a role picker.
+- **Role descriptions** (`roles.<role>.description` in the `roles` catalogue) are shown when
+  choosing a role, and describe the intended request workflow. `roleOptions(roles, t)` in
+  `src/lib/authz/roles.ts` turns a list of roles into the options of a role picker, named in the
+  reader's language (`t` translates the `roles` namespace).
 - **Permissions** come from roles only, defined in `src/lib/authz/permissions.ts`. Staff act on every
   company through their platform role, without being members. Members of a deactivated
   company lose access; staff keep it. Deactivating a deactivated company, or reactivating an active
@@ -83,22 +85,23 @@ Admins and Managers who aren't members can still add themselves with any role, a
 ## Staff screens
 
 - **Staff page** (`/admin/staff`, `staff:manage`, Admins): change the name shown to users (in
-  invitations and wherever users see who's helping them), see the staff with their role, when
+  invitations and wherever users see who's helping them) and Adiutor's default language (for
+  everyone who hasn't chosen one; see [Languages](i18n.md#how-the-language-is-chosen)), see the staff with their role, when
   they were last active and when their account was created ("Joined"), change roles, remove people from staff (their account stays), and invite
   staff by email or single-use invite link. Staff invitations and links have no company
   (`company_id` is null) and give a platform role; a database check keeps staff rows on platform
   roles and company rows on company roles.
 - **Logs** (`/admin/logs`, `audit:view`, Admins and Managers): the whole audit log, newest first
-  until the Sort menu says otherwise, in pages. Each event says what happened, who did it,
-  whom it was about and which company (each a link), when, and the browser and IP address it came
-  from. It can be searched by a person's name or email or a company's name, filtered to a group of
-  events (Sign-ins, Sign-in methods, Accounts, People, Companies and staff; `AUDIT_GROUPS` in
-  `src/lib/audit-actions.ts`) and limited to a range of days (UTC, both days included). Admins
-  (`errors:view`) also get an **Errors** tab (`/admin/logs/errors`): look up the reference an
-  error page showed, typed in any case, with or without the dash, and see the errors of the last
-  7 days, newest first (see
-  [Looking up an error reference](deploying.md#looking-up-an-error-reference)). Managers see the
-  audit log without tabs; the errors page is "not found" for them.
+  until the Sort menu says otherwise, in pages. Each event says what happened, who did it, whom it
+  was about and which company (each a link), when, and the browser and IP address it came from. It
+  can be searched by a person's name or email or a company's name, filtered to a group of events
+  (Sign-ins, Sign-in methods, Accounts, People, Companies and staff; `AUDIT_GROUPS` in
+  `src/lib/audit-actions.ts`, named by `audit.groups.*`) and limited to a range of days (UTC, both
+  days included). Admins (`errors:view`) also get an **Errors** tab (`/admin/logs/errors`): look up
+  the reference an error page showed, typed in any case, with or without the dash, and see the
+  errors of the last 7 days, newest first (see [Looking up an error
+  reference](deploying.md#looking-up-an-error-reference)). Managers see the audit log without tabs;
+  the errors page is "not found" for them.
 - **Users page** (`/admin/users`, `users:view`): every account in a table, sorted by name
   until another order is chosen from the Sort menu (email, last active or joined), with staff marked with a
   brand-coloured avatar and a "Staff · role" badge. Under each name it lists the user's
@@ -181,8 +184,10 @@ email address; a first password chosen that way sends no security email.
 ### First run
 
 On a fresh install (no `staff_settings` row and no accounts), `/auth` redirects to
-`/setup`. There, the first person chooses the name users see and becomes the first staff Admin
-(or use `pnpm setup:platform`); a new account's email address counts as verified. Until then `/setup` is
+`/setup`. There, the first person chooses the name users see and Adiutor's default language (the
+setup page's own to begin with) and becomes the first staff Admin, keeping the language they set up
+in for themselves, or starting on Default when it's the default they chose (or use `pnpm setup:platform`, with `--default-language`); a new account's email
+address counts as verified. Until then `/setup` is
 open to anyone who can reach the site, so complete it right after deploying. Once set up, or once
 any account exists, `/setup` shows the not-found page, so it can never promote an existing account.
 The command refuses once set up; if the settings row were ever lost, it can make an existing
@@ -207,7 +212,12 @@ staff page also recreates the row. A fresh setup itself isn't recorded in the au
 
 - **By email:** company admins (and staff Admins and Managers) invite people from a company's
   Members page, and Admins invite staff from the staff page. Staff add a company
-  (`/admin/companies/new`) by naming it and inviting its first Admin. The link works once and
+  (`/admin/companies/new`) by naming it and inviting its first Admin. The invitation, its resend and
+  its reminder go out in the form's **Email language** (an invitee who already has an account gets
+  their own). On the Members and staff pages it starts as the sender's language; Add company
+  starts on Default, Adiutor's default language. Add user's welcome email works the same way,
+  starting on Default too: a new account on Default keeps following Adiutor's default language
+  until its user chooses one, and one given a language keeps that. The link works once and
   expires in 7 days. Inviting an address again, or resending, replaces its open invitation, so
   only the newest link works; two requests at the same moment take turns, and the newest wins.
 - **By invite link:** a single-use link for a role, valid for 1, 7 or 30 days. Whoever opens it
@@ -237,6 +247,10 @@ staff page also recreates the row. A fresh setup itself isn't recorded in the au
   `pnpm jobs:run`. Addresses that are already members of the company (or, for staff invitations,
   on the staff) get none: they joined some other way meanwhile. A reminder that can't be sent keeps
   the old link working, and the next run tries again.
+- **Language:** an invitation remembers the language it was sent in (`invitation.locale`, the
+  form's Email language), and its resends and reminder use it, unless the address has an account
+  with a saved language (`user.locale`), which wins. An invite link's invitation takes the language of
+  whoever opened the link. See [Which language](email.md#which-language).
 - **Accepting** (`/invite/…`): signed in with the invited address, you join directly. Signed out,
   you can sign in or create an account (name and password). Joining as staff sets the platform role
   (someone who's already staff keeps theirs) and opens the dashboard.
