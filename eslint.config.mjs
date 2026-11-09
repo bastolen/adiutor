@@ -436,6 +436,72 @@ const roleComparisonSyntax = [
 ];
 
 /**
+ * Translated text is never glued together (CLAUDE.md, "Languages"): each
+ * message is a whole sentence whose named arguments a language may move, so
+ * a translation call (`t(...)`, `t.rich(...)`, `tCommon(...)`) never sits in
+ * a template literal or a `+`. See "Writing messages" in docs/i18n.md.
+ */
+const translationJoinSyntax = [
+  'TemplateLiteral > CallExpression[callee.name=/^t([A-Z]\\w*)?$/]',
+  'TemplateLiteral > CallExpression[callee.object.name=/^t([A-Z]\\w*)?$/]',
+  "BinaryExpression[operator='+'] > CallExpression[callee.name=/^t([A-Z]\\w*)?$/]",
+  "BinaryExpression[operator='+'] > CallExpression[callee.object.name=/^t([A-Z]\\w*)?$/]",
+].map((selector) => ({
+  selector,
+  message:
+    'Write the whole sentence as one message with named arguments, so each language can order it (docs/i18n.md, "Writing messages").',
+}));
+
+/**
+ * Props that hold text people see or hear: names (`aria-label`,
+ * `closeLabel`, ...), titles, placeholders, descriptions. Their text comes
+ * from the catalogues, never a literal or a template literal.
+ */
+const TEXT_PROPS =
+  '/^(aria-label|aria-description|alt|title|placeholder|label|description|heading|hint|[a-z]+Label)$/';
+
+/**
+ * Text written straight into a text prop instead of coming from the
+ * catalogues (CLAUDE.md, "Languages").
+ */
+const literalTextPropSyntax = [
+  `JSXAttribute[name.name=${TEXT_PROPS}] > Literal[value=/[A-Za-z]/]`,
+  `JSXAttribute[name.name=${TEXT_PROPS}] > JSXExpressionContainer > Literal[value=/[A-Za-z]/]`,
+  `JSXAttribute[name.name=${TEXT_PROPS}] > JSXExpressionContainer > TemplateLiteral`,
+].map((selector) => ({
+  selector,
+  message:
+    'Put the text in the catalogues (src/messages/, every language) and use t(...) (docs/i18n.md).',
+}));
+
+/**
+ * Folders whose text hasn't moved to the catalogues yet; the hard-coded text
+ * rules skip them until it has. The list only shrinks.
+ */
+const NOT_YET_TRANSLATED = [
+  'src/app/(app)/_people/**',
+  'src/app/(app)/account/**',
+  'src/app/(app)/admin/**',
+  'src/app/(app)/companies/**',
+  'src/app/(app)/dashboard/**',
+  'src/app/(app)/access-notice.tsx',
+  'src/app/(app)/account-menu.tsx',
+  'src/app/(app)/app-navigation.tsx',
+  'src/app/(app)/layout.tsx',
+  'src/app/(app)/nav-links.tsx',
+  'src/app/(app)/navigation.tsx',
+  'src/app/(app)/provider-linked-notice.tsx',
+  'src/app/auth/**',
+  'src/app/invite/**',
+  'src/app/join/**',
+  'src/app/setup/**',
+  'src/app/sign-in-error/**',
+  'src/components/auth/**',
+  'src/components/layout/auth-layout.tsx',
+  'src/components/layout/request-preview.tsx',
+];
+
+/**
  * The rules from CLAUDE.md that ESLint can check, each block saying which.
  * Like `no-restricted-imports`, `no-restricted-syntax` and
  * `no-restricted-properties` keep only their last setting per file, so the
@@ -452,7 +518,12 @@ const claudeRulesConfig = [
       'src/server/auth/provider-mfa.ts',
     ],
     rules: {
-      'no-restricted-syntax': ['error', ...airbnbRestrictedSyntaxWithoutForOf, providerIdSyntax],
+      'no-restricted-syntax': [
+        'error',
+        ...airbnbRestrictedSyntaxWithoutForOf,
+        providerIdSyntax,
+        ...translationJoinSyntax,
+      ],
     },
   },
   {
@@ -465,6 +536,62 @@ const claudeRulesConfig = [
         ...airbnbRestrictedSyntaxWithoutForOf,
         providerIdSyntax,
         ...roleComparisonSyntax,
+        ...translationJoinSyntax,
+      ],
+    },
+  },
+  {
+    /**
+     * Text people see comes from the catalogues (CLAUDE.md, "Languages"):
+     * no text written straight into JSX or into a text prop. Punctuation and
+     * symbols between translated parts are fine.
+     */
+    name: 'adiutor/claude-rules/ui-text',
+    files: ['src/app/**/*.tsx', 'src/components/**/*.tsx'],
+    ignores: [...TEST_FILES, ...NOT_YET_TRANSLATED],
+    rules: {
+      'react/jsx-no-literals': [
+        'error',
+        {
+          noStrings: false,
+          ignoreProps: true,
+          allowedStrings: ['·', '–', '—', '…', '(', ')', ',', ':', '/', '%', '|'],
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        ...airbnbRestrictedSyntaxWithoutForOf,
+        providerIdSyntax,
+        ...roleComparisonSyntax,
+        ...translationJoinSyntax,
+        ...literalTextPropSyntax,
+      ],
+    },
+  },
+  {
+    /**
+     * Email templates speak the recipient's language (CLAUDE.md, "Email" and
+     * "Languages"): their text comes from the `emails` catalogue, like the
+     * UI's, never written straight into JSX or a text prop.
+     */
+    name: 'adiutor/claude-rules/email-text',
+    files: ['src/emails/**/*.tsx'],
+    ignores: TEST_FILES,
+    rules: {
+      'react/jsx-no-literals': [
+        'error',
+        {
+          noStrings: false,
+          ignoreProps: true,
+          allowedStrings: ['·', '–', '—', '…', '(', ')', ',', ':', '/', '%', '|'],
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        ...airbnbRestrictedSyntaxWithoutForOf,
+        providerIdSyntax,
+        ...translationJoinSyntax,
+        ...literalTextPropSyntax,
       ],
     },
   },

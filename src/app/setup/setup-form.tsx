@@ -1,8 +1,12 @@
 /**
- * @file First-run form: the staff name and its first Admin.
+ * @file First-run form: the staff name, Adiutor's default language and its
+ * first Admin.
  */
 'use client';
 
+import { useLocale, useTranslations } from 'next-intl';
+
+import DefaultLanguageField from '@/components/language/default-language-field';
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
 import TextField from '@/components/ui/text-field';
@@ -12,13 +16,15 @@ import { MIN_PASSWORD_LENGTH, NAME_MAX_LENGTH } from '@/lib/input-rules';
 import setupAction from './actions';
 
 /**
- * Name shown to users, name, email and password, with a button that sets
- * everything up and signs in.
+ * Name shown to users, default language (the page's to begin with), name,
+ * email and password, with a button that sets everything up and signs in.
  *
  * @returns The form.
  */
 export default function SetupForm() {
   const [result, formAction, pending, onSubmit] = useTransientActionState(setupAction, null);
+  const t = useTranslations('common.language');
+  const locale = useLocale();
 
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-5">
@@ -32,6 +38,7 @@ export default function SetupForm() {
         description="Used in invitations and wherever users see who's helping them. You can change it later."
         required
       />
+      <DefaultLanguageField defaultValue={locale} description={t('defaultHint')} />
       <TextField
         label="Your name"
         name="name"

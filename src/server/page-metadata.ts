@@ -20,7 +20,7 @@ import 'server-only';
 import type { Metadata } from 'next';
 
 import type { Permission } from '@/lib/authz/permissions';
-import { NOT_FOUND_METADATA } from '@/lib/not-found-metadata';
+import notFoundMetadata from '@/lib/not-found-metadata';
 
 import type { Actor } from './actor';
 import { findCompanyAccess, getActor, getGlobalPermissions } from './authz';
@@ -56,10 +56,10 @@ export function globalPermissionMetadata<Props = unknown>(
   return async (props) => {
     const actor = await getActor();
     if (!getGlobalPermissions(actor).has(permission)) {
-      return NOT_FOUND_METADATA;
+      return notFoundMetadata();
     }
     if (exists && !(await exists(actor, props))) {
-      return NOT_FOUND_METADATA;
+      return notFoundMetadata();
     }
     return metadata;
   };
@@ -84,6 +84,6 @@ export function companyPermissionMetadata(
   return async ({ params }) => {
     const { companyId } = await params;
     const access = await findCompanyAccess(companyId);
-    return access?.permissions.has(permission) ? metadata : NOT_FOUND_METADATA;
+    return access?.permissions.has(permission) ? metadata : notFoundMetadata();
   };
 }

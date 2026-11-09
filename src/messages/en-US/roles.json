@@ -1,0 +1,32 @@
+{
+  "roles": {
+    "platform_admin": {
+      "label": "Admin",
+      "description": "Manages staff, companies and settings."
+    },
+    "manager": {
+      "label": "Manager",
+      "description": "Manages companies and their people."
+    },
+    "finance": {
+      "label": "Finance",
+      "description": "Views all companies."
+    },
+    "support": {
+      "label": "Support",
+      "description": "Works on requests."
+    },
+    "admin": {
+      "label": "Admin",
+      "description": "Raises requests and manages who in the company has access."
+    },
+    "client": {
+      "label": "Client",
+      "description": "Raises requests, comments on them and approves work."
+    },
+    "watcher": {
+      "label": "Watcher",
+      "description": "Follows requests without taking part."
+    }
+  }
+}

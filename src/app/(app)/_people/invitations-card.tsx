@@ -3,6 +3,7 @@
  * the staff page.
  */
 import { MailPlus } from 'lucide-react';
+import { useLocale } from 'next-intl';
 
 import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
@@ -53,6 +54,7 @@ export default function InvitationsCard({
   canManage,
   companyId,
 }: InvitationsCardProps) {
+  const locale = useLocale();
   return (
     <Card
       id={table.section}
@@ -102,7 +104,7 @@ export default function InvitationsCard({
                     {/* Below tablet width, the role, date and expiry go here. */}
                     <span className="flex flex-wrap items-center gap-x-1 gap-y-1 text-xs text-muted-foreground md:hidden">
                       <span className="sm:hidden">{ROLE_LABELS[invitation.role]} · </span>
-                      Sent {formatDate(invitation.createdAt)}
+                      Sent {formatDate(invitation.createdAt, locale)}
                       {invitation.expired && <Badge tone="warning">Expired</Badge>}
                     </span>
                   </div>
@@ -111,14 +113,14 @@ export default function InvitationsCard({
                   <Badge>{ROLE_LABELS[invitation.role]}</Badge>
                 </Td>
                 <Td className="hidden whitespace-nowrap text-muted-foreground md:table-cell">
-                  {formatDate(invitation.createdAt)}
+                  {formatDate(invitation.createdAt, locale)}
                 </Td>
                 <Td className="hidden md:table-cell">
                   {invitation.expired ? (
                     <Badge tone="warning">Expired</Badge>
                   ) : (
                     <span className="text-muted-foreground">
-                      Expires {formatDate(invitation.expiresAt)}
+                      Expires {formatDate(invitation.expiresAt, locale)}
                     </span>
                   )}
                 </Td>

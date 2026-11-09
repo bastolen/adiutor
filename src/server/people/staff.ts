@@ -9,10 +9,12 @@ import { and, asc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import type { DatabaseOrTransaction } from '@/db';
 import { staffSettings, user } from '@/db/schema';
 import { isStaffRoleRaise, wouldLeaveNoAdmin } from '@/lib/authz/guards';
-import { PLATFORM_ADMIN_ROLE, type PlatformRole, ROLE_LABELS } from '@/lib/authz/roles';
+import { PLATFORM_ADMIN_ROLE, type PlatformRole } from '@/lib/authz/roles';
+import { loadDefaultLocale } from '@/lib/i18n/default-locale';
+import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/locales';
 import { type Paged, resolveTableState, type TableState } from '@/lib/tables/table-state';
 import { type PeopleSort, STAFF_TABLE } from '@/lib/tables/tables';
-import { staffNameSchema, staffRoleSchema } from '@/lib/validation';
+import { localeSchema, staffNameSchema, staffRoleSchema } from '@/lib/validation';
 
 import { assertConfirmedForGrant, assertPermission, getGlobalPermissions } from '../access';
 import type { Actor } from '../actor';
@@ -50,14 +52,49 @@ export interface StaffMember {
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `staff:manage`.
- * @returns The name.
+ * @returns The name, and Adiutor's default language (English (US) if the settings row is missing).
  */
 export async function getStaffSettings(
   ctx: ServiceContext,
   actor: Actor,
-): Promise<{ name: string }> {
+): Promise<{ name: string; defaultLocale: Locale }> {
   assertPermission(getGlobalPermissions(actor), 'staff:manage');
-  return { name: await getStaffName(ctx.db) };
+  const [name, defaultLocale] = await Promise.all([
+    getStaffName(ctx.db),
+    loadDefaultLocale(ctx.db),
+  ]);
+  return { name, defaultLocale: defaultLocale ?? DEFAULT_LOCALE };
+}
+
+/**
+ * Sets Adiutor's default language: the language of everyone who hasn't
+ * chosen one (no language cookie), and of emails to people without a saved
+ * language outside a request. If the settings row is missing (it was lost),
+ * this creates it again, with the name users then see ("Adiutor"). Not a
+ * security change, so no audit event, like a person's own language.
+ *
+ * @param ctx - Service context.
+ * @param actor - The acting user; needs `staff:manage`.
+ * @param locale - The language, as the form sent it.
+ * @returns The saved language.
+ * @throws {ZodError} When it isn't one of the languages.
+ */
+export async function setDefaultLocale(
+  ctx: ServiceContext,
+  actor: Actor,
+  locale: unknown,
+): Promise<Locale> {
+  assertPermission(getGlobalPermissions(actor), 'staff:manage');
+  const defaultLocale = localeSchema.parse(locale);
+  await ctx.db.transaction(async (tx) => {
+    const [found] = await tx.select({ id: staffSettings.id }).from(staffSettings).for('update');
+    if (found) {
+      await tx.update(staffSettings).set({ defaultLocale });
+    } else {
+      await tx.insert(staffSettings).values({ name: await getStaffName(tx), defaultLocale });
+    }
+  });
+  return defaultLocale;
 }
 
 /**
@@ -304,7 +341,7 @@ async function setStaffRole(
 
   if (change) {
     await sendSecurityNotice(ctx, { email: change.email }, STAFF_NOTICES[change.kind], {
-      role: newRole ? ROLE_LABELS[newRole] : undefined,
+      role: newRole ?? undefined,
     });
     // The other staff Admins hear about a new one (not the actor, who made the change).
     if (change.becameAdmin) {

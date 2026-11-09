@@ -8,6 +8,7 @@
  */
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import ActivityList from '@/components/ui/activity-list';
@@ -17,12 +18,19 @@ import Button from '@/components/ui/button';
 import Card from '@/components/ui/card';
 import RowAction from '@/components/ui/row-action';
 import { PageSkeleton } from '@/components/ui/skeleton';
+import ToastOnArrival from '@/components/ui/toast-on-arrival';
+import ClientMessages from '@/lib/i18n/client-messages';
 import appContext from '@/server/app-context';
 import { listOwnActivity } from '@/server/audit';
 import { getActor } from '@/server/authz';
 
-import accountMessage, { type AccountParams, EMAIL_SECTION } from './account-messages';
+import accountMessage, {
+  type AccountParams,
+  EMAIL_SECTION,
+  LANGUAGE_SECTION,
+} from './account-messages';
 import { sendVerificationAction } from './actions';
+import LanguageForm from './language-form';
 import NameForm from './name-form';
 import describeOwnActivity from './own-activity';
 
@@ -30,7 +38,7 @@ import describeOwnActivity from './own-activity';
  * Page metadata.
  */
 export const metadata: Metadata = {
-  title: 'Account · Adiutor',
+  title: 'Account',
 };
 
 /**
@@ -42,6 +50,7 @@ export const metadata: Metadata = {
  */
 async function AccountSettings({ searchParams }: { searchParams: Promise<AccountParams> }) {
   const actor = await getActor({ allowMissingMfa: true });
+  const t = await getTranslations('account');
   const [params, activity] = await Promise.all([searchParams, listOwnActivity(appContext, actor)]);
   const message = accountMessage(params);
 
@@ -99,6 +108,17 @@ async function AccountSettings({ searchParams }: { searchParams: Promise<Account
       </Card>
       <Card title="Name" description="How you're shown to others in Adiutor.">
         <NameForm name={actor.name} />
+      </Card>
+      <Card
+        // The page reloads here after the language changed.
+        id={LANGUAGE_SECTION}
+        title={t('profile.languageTitle')}
+        description={t('profile.languageDescription')}
+      >
+        {params.language === 'saved' && <ToastOnArrival message={t('profile.languageSaved')} />}
+        <ClientMessages namespaces={['account']}>
+          <LanguageForm />
+        </ClientMessages>
       </Card>
       <Card
         title="Recent activity"

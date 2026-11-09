@@ -10,6 +10,7 @@
 
 import { TriangleAlert } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useTransition } from 'react';
 
 import CenteredLayout from '@/components/layout/centered-layout';
@@ -41,6 +42,7 @@ export interface ErrorPageProps {
  * @returns The error page.
  */
 export default function RootError({ error, retry }: ErrorPageProps) {
+  const t = useTranslations('common');
   const reference = useErrorReference(error);
   const [retrying, startRetry] = useTransition();
   const heading = useRef<HTMLHeadingElement>(null);
@@ -63,19 +65,19 @@ export default function RootError({ error, retry }: ErrorPageProps) {
             tabIndex={-1}
             className="text-2xl font-semibold text-foreground outline-none sm:text-3xl"
           >
-            Something went wrong
+            {t('error.title')}
           </h1>
           <p className="max-w-sm text-base text-balance text-muted-foreground">
-            This page couldn&apos;t load. Try again, or go to your dashboard.
+            {t('error.description')}
           </p>
           {reference && <ErrorReference reference={reference.reference} at={reference.at} />}
         </div>
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
           <Button loading={retrying} onClick={() => startRetry(retry)} className="w-full sm:w-auto">
-            Try again
+            {t('actions.tryAgain')}
           </Button>
           <Button asChild variant="secondary" className="w-full sm:w-auto">
-            <Link href="/dashboard">Go to your dashboard</Link>
+            <Link href="/dashboard">{t('actions.goToDashboard')}</Link>
           </Button>
           <BackButton className="w-full sm:w-auto" />
         </div>

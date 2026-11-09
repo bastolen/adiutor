@@ -1,0 +1,58 @@
+{
+  "audit": {
+    "actions": {
+      "sign_in": "Signed in",
+      "sign_in_failed": "Failed sign-in attempt",
+      "sign_in_code_pending": "Password accepted, code step started",
+      "mfa_verified": "Verified a sign-in with MFA",
+      "mfa_failed": "Failed MFA confirmation",
+      "two_factor_enabled": "Turned on two-step verification",
+      "two_factor_disabled": "Turned off two-step verification",
+      "backup_codes_regenerated": "Created new backup codes",
+      "passkey_added": "Added a passkey",
+      "passkey_removed": "Removed a passkey",
+      "password_changed": "Changed the password",
+      "password_reset": "Reset the password",
+      "password_check_failed": "Wrong current password entered",
+      "provider_connected": "Connected a sign-in provider",
+      "provider_confirmed": "Confirmed a sign-in provider",
+      "provider_disconnected": "Disconnected a sign-in provider",
+      "email_verified": "Verified the email address",
+      "session_revoked": "Signed out a device",
+      "sessions_revoked": "Signed out everywhere",
+      "account_deactivated": "Deactivated the account",
+      "account_reactivated": "Reactivated the account",
+      "account_deleted": "Deleted the account",
+      "account_created": "Created the account",
+      "mfa_reset": "Reset two-step verification",
+      "member_joined": "Joined a company",
+      "member_added": "Added a member",
+      "member_removed": "Removed a member",
+      "role_changed": "Changed a role",
+      "invitation_sent": "Sent an invitation",
+      "invitation_revoked": "Revoked an invitation",
+      "invite_link_created": "Created an invite link",
+      "invite_link_claimed": "Used an invite link",
+      "invite_link_revoked": "Revoked an invite link",
+      "company_created": "Added a company",
+      "company_updated": "Changed company details",
+      "company_deactivated": "Deactivated a company",
+      "company_reactivated": "Reactivated a company",
+      "staff_renamed": "Changed the name shown to users"
+    },
+    "events": {
+      "sessionsRevokedMfaRequired": "Signed out of sessions without MFA, which the role now requires",
+      "sessionsRevokedOthers": "Signed out of other devices",
+      "mfaFailedAtSignIn": "Wrong two-step verification code entered at sign-in",
+      "passwordCheckFailedChangePassword": "Wrong current password entered when changing the password",
+      "passwordCheckFailedDeactivate": "Wrong current password entered when deactivating the account"
+    },
+    "groups": {
+      "sign-ins": "Sign-ins",
+      "sign-in-methods": "Sign-in methods",
+      "accounts": "Accounts",
+      "people": "People",
+      "companies": "Companies and staff"
+    }
+  }
+}

@@ -18,7 +18,7 @@ The folders of the repository and what belongs in each. Back to the [documentati
 - `src/server/`: services. Each takes an explicit context and checks permissions itself, so it can
   be tested against a real database. The services every topic shares (access and permission checks,
   actor and context, the metadata of pages someone may not see, audit log, recorded errors, rate
-  limits, pagination, search, jobs, setup) sit at its root;
+  limits, pagination, search, jobs, setup, the language an email goes out in) sit at its root;
   the rest are grouped by topic, and each file's tests sit next to it. A module that outgrew one
   file is a folder whose `index.ts` is its public API (see "Modules that outgrow one file" in
   [Code style](code-style.md)):
@@ -41,6 +41,9 @@ The folders of the repository and what belongs in each. Back to the [documentati
     secrets, OAuth providers, sign-in refusals, tokens and email links. It isn't called `auth/` because `src/lib/auth.ts` is the
     Better Auth configuration.
   - `src/lib/tables/`: table state, the table definitions and search parameters.
+  - `src/lib/i18n/`: the languages and the request's language, the catalogue loader, next-intl's
+    request configuration, the translator for code outside React, and the providers that pass
+    messages to client components (see [Languages](i18n.md)).
   - `src/lib/request/`: the client IP address, user agent, request info, CSP and pathname header.
 - `src/lib/auth.ts`: Better Auth configuration; its hooks call `src/server/auth/auth-events/` (audit log,
   session MFA level, deactivated accounts, provider MFA, the re-verify check, security emails) and
@@ -52,8 +55,11 @@ The folders of the repository and what belongs in each. Back to the [documentati
 - `src/lib/form-data.ts`: `field()`, which server actions use to read a text field from a submitted
   form. It isn't in an action file because a `'use server'` file may only export async functions.
 - `src/emails/`: the email templates (see [Email](email.md)).
+- `src/messages/`: the translation catalogues, one folder per language and one JSON file per area
+  (see [Languages](i18n.md)).
 - `e2e/support/`: what the Playwright specs in `e2e/` share (fixtures, database, seed, outbox, axe,
   TOTP and global setup).
 - `tests/`: helpers the test runners share: `database/` (which
   database the tests use, and preparing it), `integration/` (the integration tests' setup and
-  helpers) and `build/` (whether a local e2e run can reuse the last build).
+  helpers), `i18n/` (next-intl's stand-ins for unit tests, and rendering in another language) and
+  `build/` (whether a local e2e run can reuse the last build).

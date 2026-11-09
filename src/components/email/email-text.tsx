@@ -5,6 +5,9 @@
 import type { ReactNode } from 'react';
 import { Heading, Link, Text } from 'react-email';
 
+import type { Locale } from '@/lib/i18n/locales';
+import translator from '@/lib/i18n/translator';
+
 import { colors, paragraph, small } from './theme';
 
 /**
@@ -55,19 +58,33 @@ export function EmailNote({ children }: { children: ReactNode }) {
 }
 
 /**
+ * The button's link, for the `<link>` tag of `emails.linkFallback`.
+ *
+ * @param href - The link.
+ * @returns The tag's renderer.
+ */
+function fallbackLinkTag(href: string) {
+  return function linkTag(chunks: ReactNode) {
+    return (
+      <Link href={href} style={{ color: colors.primary }}>
+        {chunks}
+      </Link>
+    );
+  };
+}
+
+/**
  * The button's link written out, for when the button doesn't work.
  *
  * @param props - Fallback props.
  * @param props.url - The button's link.
+ * @param props.locale - The recipient's language.
  * @returns The paragraph.
  */
-export function LinkFallback({ url }: { url: string }) {
+export function LinkFallback({ url, locale }: { url: string; locale: Locale }) {
   return (
     <Text style={{ ...small, wordBreak: 'break-all' }}>
-      Button not working? Copy this link into your browser:{' '}
-      <Link href={url} style={{ color: colors.primary }}>
-        {url}
-      </Link>
+      {translator(locale, 'emails').rich('linkFallback', { url, link: fallbackLinkTag(url) })}
     </Text>
   );
 }

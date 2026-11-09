@@ -21,7 +21,7 @@ import SignInErrorDetails from './sign-in-error-details';
  * kept out of search engines.
  */
 export const metadata: Metadata = {
-  title: 'Sign-in problem · Adiutor',
+  title: 'Sign-in problem',
   robots: { index: false, follow: false },
 };
 

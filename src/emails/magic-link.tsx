@@ -5,6 +5,7 @@ import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph, LinkFallback } from '@/components/email/email-text';
 import type { Email } from '@/lib/email';
+import translator from '@/lib/i18n/translator';
 import { EMAIL_LINK_MINUTES } from '@/lib/sign-in/email-link';
 
 import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
@@ -25,24 +26,29 @@ export interface MagicLinkEmailProps extends EmailBaseProps {
  * @param props - Template props.
  * @param props.appUrl - Public app URL.
  * @param props.url - The sign-in link.
+ * @param props.locale - The recipient's language.
  * @param props.logoSrc - Logo URL override.
  * @returns The email.
  */
-export default function MagicLinkEmail({ appUrl, url, logoSrc = undefined }: MagicLinkEmailProps) {
+export default function MagicLinkEmail({
+  appUrl,
+  url,
+  locale,
+  logoSrc = undefined,
+}: MagicLinkEmailProps) {
+  const t = translator(locale, 'emails.magicLink');
   return (
     <EmailLayout
-      preview="Your link to sign in to Adiutor"
+      preview={t('preview')}
       appUrl={appUrl}
+      locale={locale}
       logoSrc={logoSrc}
-      reason="You're receiving this because someone asked to sign in to Adiutor with this email address. If that wasn't you, you can ignore this email: nobody can sign in without this link."
+      reason={t('reason')}
     >
-      <EmailHeading>Sign in to Adiutor</EmailHeading>
-      <EmailParagraph>
-        Use the button below to sign in. The link works once and expires in {EMAIL_LINK_MINUTES}{' '}
-        minutes.
-      </EmailParagraph>
-      <EmailButton href={url}>Sign in</EmailButton>
-      <LinkFallback url={url} />
+      <EmailHeading>{t('heading')}</EmailHeading>
+      <EmailParagraph>{t('body', { minutes: EMAIL_LINK_MINUTES })}</EmailParagraph>
+      <EmailButton href={url}>{t('button')}</EmailButton>
+      <LinkFallback url={url} locale={locale} />
     </EmailLayout>
   );
 }
@@ -61,5 +67,9 @@ MagicLinkEmail.PreviewProps = {
  * @returns The email, ready to send.
  */
 export function magicLinkEmail(to: string, props: MagicLinkEmailProps): Promise<Email> {
-  return renderEmail(to, 'Your Adiutor sign-in link', <MagicLinkEmail {...props} />);
+  return renderEmail(
+    to,
+    translator(props.locale, 'emails.magicLink')('subject'),
+    <MagicLinkEmail {...props} />,
+  );
 }

@@ -44,6 +44,11 @@ export default defineConfig({
   use: {
     baseURL: E2E_BASE_URL,
     /**
+     * The browser asks for English (US), the default language, so the specs
+     * find their text in English; a spec about other languages sets its own.
+     */
+    locale: 'en-US',
+    /**
      * Record a trace when a test is retried, for debugging (in the HTML
      * report). `e2e/security.spec.ts` keeps one of its first failure instead.
      */

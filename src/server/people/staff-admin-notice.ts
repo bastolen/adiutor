@@ -12,6 +12,7 @@ import { PLATFORM_ADMIN_ROLE } from '@/lib/authz/roles';
 import displayName from '@/lib/display-name';
 
 import type { ServiceContext } from '../context';
+import recipientLocale from '../recipient-locale';
 import sendFailureOf from '../send-failure';
 
 /** Who became a staff Admin, and how. */
@@ -27,9 +28,10 @@ export interface StaffAdminAdded {
 /**
  * Emails every other active staff Admin that someone became a staff Admin:
  * not the new Admin, and not whoever gave the role or sent the invitation.
- * Never throws: a failure is logged (without addresses).
+ * Each in their own language (`recipientLocale`). Never throws: a failure is
+ * logged (without addresses).
  *
- * @param ctx - Service context (database, email, app URL).
+ * @param ctx - Service context (database, email, app URL, the request's language).
  * @param added - Who became a staff Admin, and how.
  * @param added.newAdminId - The new staff Admin.
  * @param added.how - Given the role, or joined from an invitation or link.
@@ -37,13 +39,19 @@ export interface StaffAdminAdded {
  * @returns How many Admins were emailed.
  */
 export default async function notifyStaffAdminAdded(
-  ctx: Pick<ServiceContext, 'db' | 'sendEmail' | 'baseUrl'>,
+  ctx: Pick<ServiceContext, 'db' | 'sendEmail' | 'baseUrl' | 'requestLocale'>,
   { newAdminId, how, byUserId }: StaffAdminAdded,
 ): Promise<number> {
   try {
     const named = byUserId ? [newAdminId, byUserId] : [newAdminId];
     const people = await ctx.db
-      .select({ id: user.id, name: user.name, email: user.email, role: user.platformRole })
+      .select({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.platformRole,
+        locale: user.locale,
+      })
       .from(user)
       .where(
         or(
@@ -67,6 +75,7 @@ export default async function notifyStaffAdminAdded(
           await ctx.sendEmail(
             await staffAdminAddedEmail(recipient.email, {
               appUrl: ctx.baseUrl,
+              locale: await recipientLocale(ctx, recipient.locale),
               newAdminName: displayName(newAdmin),
               newAdminEmail: newAdmin.email,
               how,

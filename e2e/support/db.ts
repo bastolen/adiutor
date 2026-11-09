@@ -15,6 +15,7 @@ import { Client } from 'pg';
 
 import * as schema from '../../src/db/schema';
 import { firstRow } from '../../src/lib/defined';
+import type { Locale } from '../../src/lib/i18n/locales';
 import {
   emailLinkVerificationIdentifier,
   generateToken,
@@ -161,6 +162,23 @@ export async function removeStaffSettings(databaseUrl: string): Promise<void> {
   await client.connect();
   try {
     await drizzle(client, { schema }).delete(schema.staffSettings);
+  } finally {
+    await client.end();
+  }
+}
+
+/**
+ * Sets Adiutor's default language directly, e.g. to put it back after a test
+ * changed it on the staff page.
+ *
+ * @param databaseUrl - Connection string of the test database.
+ * @param locale - The language.
+ */
+export async function setDefaultLocale(databaseUrl: string, locale: Locale): Promise<void> {
+  const client = new Client({ connectionString: databaseUrl });
+  await client.connect();
+  try {
+    await drizzle(client, { schema }).update(schema.staffSettings).set({ defaultLocale: locale });
   } finally {
     await client.end();
   }

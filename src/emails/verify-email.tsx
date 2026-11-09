@@ -5,6 +5,7 @@ import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph, LinkFallback } from '@/components/email/email-text';
 import type { Email } from '@/lib/email';
+import translator from '@/lib/i18n/translator';
 
 import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
 import renderEmail from './render';
@@ -24,29 +25,29 @@ export interface VerifyEmailEmailProps extends EmailBaseProps {
  * @param props - Template props.
  * @param props.appUrl - Public app URL.
  * @param props.url - The verification link.
+ * @param props.locale - The recipient's language.
  * @param props.logoSrc - Logo URL override.
  * @returns The email.
  */
 export default function VerifyEmailEmail({
   appUrl,
   url,
+  locale,
   logoSrc = undefined,
 }: VerifyEmailEmailProps) {
+  const t = translator(locale, 'emails.verifyEmail');
   return (
     <EmailLayout
-      preview="Confirm this is your email address"
+      preview={t('preview')}
       appUrl={appUrl}
+      locale={locale}
       logoSrc={logoSrc}
-      reason="You're receiving this because someone asked to verify this email address for an Adiutor account. If that wasn't you, you can ignore this email."
+      reason={t('reason')}
     >
-      <EmailHeading>Verify your email address</EmailHeading>
-      <EmailParagraph>
-        Confirm that this email address belongs to you. Once it&apos;s verified, accounts with the
-        same address at a provider you can sign in with (such as GitHub) can connect to your account
-        automatically. The link expires in 1 hour.
-      </EmailParagraph>
-      <EmailButton href={url}>Verify email address</EmailButton>
-      <LinkFallback url={url} />
+      <EmailHeading>{t('heading')}</EmailHeading>
+      <EmailParagraph>{t('body')}</EmailParagraph>
+      <EmailButton href={url}>{t('button')}</EmailButton>
+      <LinkFallback url={url} locale={locale} />
     </EmailLayout>
   );
 }
@@ -65,5 +66,9 @@ VerifyEmailEmail.PreviewProps = {
  * @returns The email, ready to send.
  */
 export function verifyEmailEmail(to: string, props: VerifyEmailEmailProps): Promise<Email> {
-  return renderEmail(to, 'Verify your Adiutor email address', <VerifyEmailEmail {...props} />);
+  return renderEmail(
+    to,
+    translator(props.locale, 'emails.verifyEmail')('subject'),
+    <VerifyEmailEmail {...props} />,
+  );
 }

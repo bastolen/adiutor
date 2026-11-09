@@ -14,7 +14,7 @@ import ResetPasswordForm from './reset-password-form';
  * Page metadata. The address holds the reset token, so it isn't sent along
  * to other pages, and the page is kept out of search engines.
  */
-export const metadata: Metadata = { ...secretLinkMetadata, title: 'Reset password · Adiutor' };
+export const metadata: Metadata = { ...secretLinkMetadata, title: 'Reset password' };
 
 /**
  * The reset-password page. The form reads the token from the URL, so it

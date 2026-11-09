@@ -2,6 +2,8 @@
  * @file Shows when something happened as relative time ("5 minutes ago"),
  * with the exact moment for assistive technology and on hover.
  */
+import { useLocale, useTranslations } from 'next-intl';
+
 import { formatDateTime, formatRelative } from '@/lib/format';
 
 /**
@@ -10,7 +12,7 @@ import { formatDateTime, formatRelative } from '@/lib/format';
 interface RelativeTimeProps {
   /** When it happened, or `null` if it never did. */
   date: Date | null;
-  /** Text when `date` is `null`. Defaults to "Never". */
+  /** Text when `date` is `null`. Defaults to "Never" in the reader's language. */
   never?: string;
 }
 
@@ -23,14 +25,16 @@ interface RelativeTimeProps {
  * @param props.never - Text without a moment.
  * @returns The time.
  */
-export default function RelativeTime({ date, never = 'Never' }: RelativeTimeProps) {
+export default function RelativeTime({ date, never = undefined }: RelativeTimeProps) {
+  const t = useTranslations('common.relativeTime');
+  const locale = useLocale();
   if (!date) {
-    return <span>{never}</span>;
+    return <span>{never ?? t('never')}</span>;
   }
-  const exact = formatDateTime(date);
+  const exact = formatDateTime(date, locale);
   return (
     <time dateTime={date.toISOString()} title={exact}>
-      {formatRelative(date)}
+      {formatRelative(date, locale, { justNow: t('justNow') })}
     </time>
   );
 }

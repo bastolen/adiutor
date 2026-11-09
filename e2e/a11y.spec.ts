@@ -14,6 +14,7 @@ import { findCompanyId, storeInvitation, storeInviteLink, storeSignInLink } from
 import {
   CLIENT_WATCHER,
   COMPANY_SLUG,
+  E2E_BASE_URL,
   PAGING_COMPANY_SLUG,
   PLATFORM_ADMIN,
 } from './support/fixtures';
@@ -215,7 +216,7 @@ test.describe('on a 320px wide screen', () => {
 
     test('the theme menu, signed out', async ({ page }) => {
       await page.goto('/auth');
-      await page.getByRole('button', { name: /^Theme:/ }).click();
+      await page.getByRole('button', { name: /^Theme and language:/ }).click();
       await expect(page.getByRole('menu')).toBeVisible();
       await expectAccessible(page, '[role="menu"]');
     });
@@ -420,6 +421,56 @@ test.describe('on a 320px wide screen', () => {
         await expectAccessible(page, '[role="menu"]');
         await context.close();
       });
+    });
+  });
+});
+
+/**
+ * Dutch and Spanish run about a third longer than English, so every page is
+ * scanned in both, on a 320px wide screen where longer words would overflow
+ * first. Colours don't depend on the language, so light mode covers it.
+ */
+(['nl-NL', 'es-ES'] as const).forEach((locale) => {
+  test.describe(`in ${locale}, on a 320px wide screen`, () => {
+    test.use({ viewport: { width: 320, height: 640 }, reducedMotion: 'reduce' });
+
+    /** The language cookie, which every page reads its language from. */
+    const languageCookie = { name: 'adiutor.locale', value: locale, url: E2E_BASE_URL };
+
+    PUBLIC_PATHS.forEach((path) => {
+      test(`${path} signed out`, async ({ context, page }) => {
+        await context.addCookies([languageCookie]);
+        await page.goto(path);
+        await expect(page.locator('html')).toHaveAttribute('lang', locale);
+        await expectNoSidewaysScroll(page);
+        await expectAccessible(page);
+      });
+    });
+
+    APP_PATHS.forEach((path) => {
+      test(path, async ({ browser }) => {
+        const context = await browser.newContext({
+          storageState: adminState,
+          viewport: { width: 320, height: 640 },
+          reducedMotion: 'reduce',
+        });
+        // Over the cookie the Admin's sign-in set, which says English.
+        await context.addCookies([languageCookie]);
+        const page = await context.newPage();
+        await page.goto(resolvePath(path));
+        await expect(page.locator('html')).toHaveAttribute('lang', locale);
+        await expectNoSidewaysScroll(page);
+        await expectAccessible(page);
+        await context.close();
+      });
+    });
+
+    test('the theme and language menu, signed out', async ({ context, page }) => {
+      await context.addCookies([languageCookie]);
+      await page.goto('/auth');
+      await page.getByRole('button', { name: /^(Thema en taal|Tema e idioma):/ }).click();
+      await expect(page.getByRole('menu')).toBeVisible();
+      await expectAccessible(page, '[role="menu"]');
     });
   });
 });

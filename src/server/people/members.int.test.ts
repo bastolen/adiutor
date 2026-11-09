@@ -25,10 +25,13 @@ import {
   createSession,
   createStaffSettings,
   createUser,
+  emailLanguage,
   fillRateLimitBucket,
+  inLanguage,
   inSequence,
   memberActor,
   rateLimitHits,
+  setUserLocale,
   setupTestContext,
   staffActor,
   tokenFrom,
@@ -461,6 +464,23 @@ describe('adding existing users', () => {
     await expect(
       addMember(ctx, manager, { companyId: testCompany.id, userId: jane, role: 'client' }),
     ).rejects.toMatchObject({ code: 'conflict' });
+  });
+
+  it('tells someone added in the language they saved, not the adder’s', async () => {
+    const manager = await staffActor(db, 'manager');
+    const jane = await createUser(db, 'jane@adiutor.test');
+    await setUserLocale(db, jane, 'es-ES');
+
+    await addMember(inLanguage(ctx, 'nl-NL'), manager, {
+      companyId: testCompany.id,
+      userId: jane,
+      role: 'client',
+    });
+
+    const added = defined(sent.at(-1), 'the email to Jane');
+    expect(emailLanguage(added)).toBe('es-ES');
+    expect(added.subject).toBe(`Te han añadido a ${testCompany.name} en Adiutor`);
+    expect(added.text).toContain('como Cliente.');
   });
 
   it('lets staff Admins and Managers add themselves, like anyone else', async () => {

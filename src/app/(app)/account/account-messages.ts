@@ -26,6 +26,9 @@ export interface AccountMessage {
 /** The anchor of the Profile page's Email card, where verifying the address starts and ends. */
 export const EMAIL_SECTION = 'email';
 
+/** The anchor of the Profile page's Language card, where the page reloads after a change. */
+export const LANGUAGE_SECTION = 'language';
+
 /**
  * Where the email verification link comes back to: the Email card on the
  * Profile page, saying it worked (Better Auth adds `error=<code>` before the
@@ -41,6 +44,8 @@ export interface AccountParams {
   connected?: string | string[];
   /** Better Auth's error code when verifying or connecting failed. */
   error?: string | string[];
+  /** Set by us after saving the language (`saved`), once the page reloaded in it. */
+  language?: string | string[];
 }
 
 /** Messages per Better Auth error code. */

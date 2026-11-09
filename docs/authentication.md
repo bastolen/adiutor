@@ -187,8 +187,10 @@ refused (`TWO_FACTOR_ALREADY_OFF`), since it would only replace the session.
 
 ## Signing out
 
-Signing out removes every cookie the browser sends, except the "Last used" sign-in method
-(`cookiesToClearAtSignOut` in `src/lib/sign-in/auth-cookies.ts`, applied by `afterAuthRequest`): the
+Signing out removes every cookie the browser sends, except the "Last used" sign-in method and the
+language (`cookiesToClearAtSignOut` in `src/lib/sign-in/auth-cookies.ts`, applied by
+`afterAuthRequest`; neither says who signed in, and the sign-in page stays in the browser's
+language, see [Languages](i18n.md#how-the-language-is-chosen)): the
 session, "Trust this device" and anything naming someone (such as the provider-linked notice),
 so the next person on that browser starts clean. The browser's trusted device is forgotten too
 (`forgetSignedOutBrowserTrust`), so a copy of its cookie no longer skips the code step. Signing a
@@ -231,8 +233,9 @@ Account pages, two tabs:
 
 ### Profile (`/account`)
 
-Change your name, and verify your email with a link sent by email
-(registered accounts start unverified). A summary shows whether your sign-in is
+Change your name and your language (saved with the account, so emails reach you in it and every
+browser you sign in on shows it; see [Languages](i18n.md#how-the-language-is-chosen)), and verify
+your email with a link sent by email (registered accounts start unverified). A summary shows whether your sign-in is
 protected, and **Recent activity** lists the last 20 things that happened to your account
 (sign-ins and failed attempts, sign-in method and security changes, memberships and role
 changes, saying who made changes for you), with when, and the device and IP address of your

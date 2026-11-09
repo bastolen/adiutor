@@ -2,6 +2,7 @@
  * @file Tests for the first-run setup form.
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { defined } from '@/lib/defined';
@@ -41,10 +42,27 @@ describe('SetupForm', () => {
       Object.fromEntries(defined(setupAction.mock.calls[0], 'the first call')[1] as FormData),
     ).toEqual({
       staffName: 'Adiutor Tests',
+      defaultLocale: 'en-US',
       name: 'Setup Admin',
       email: 'setup@adiutor.test',
       password: 'setup-password-1',
     });
+  });
+
+  it("asks for Adiutor's default language, the page's to begin with", async () => {
+    const user = userEvent.setup();
+    setupAction.mockResolvedValue({ ok: true });
+    render(<SetupForm />);
+
+    const select = screen.getByRole('combobox', { name: 'Default language' });
+    expect(select).toHaveTextContent('English (US)');
+    await user.click(select);
+    await user.click(screen.getByRole('option', { name: 'Nederlands' }));
+    submitForm();
+
+    await waitFor(() => expect(setupAction).toHaveBeenCalledTimes(1));
+    const formData = defined(setupAction.mock.calls[0], 'the first call')[1] as FormData;
+    expect(formData.get('defaultLocale')).toBe('nl-NL');
   });
 
   it('shows why setup failed', async () => {

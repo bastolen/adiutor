@@ -9,6 +9,14 @@
  */
 
 /**
+ * Checks the translation catalogues once, without the staged paths: the
+ * check reads every catalogue and all of `src` (docs/i18n.md).
+ *
+ * @returns {string} The command.
+ */
+const checkMessages = () => 'pnpm lint:messages';
+
+/**
  * Commands to run per file type. Each receives the staged file paths.
  *
  * @type {import('lint-staged').Configuration}
@@ -21,7 +29,11 @@ const config = {
   '*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}': [
     'eslint --fix --max-warnings=0 --no-warn-ignored',
     'vitest related --run --passWithNoTests --project unit',
+    // Code can stop using a message, or start using one that doesn't exist.
+    checkMessages,
   ],
+  /** The translation catalogues: every language complete and matching English (docs/i18n.md). */
+  'src/messages/**/*.json': checkMessages,
   /** Stylelint fixes and formats (Prettier runs inside it), then fails on errors it can't fix. */
   '*.{css,scss}': 'stylelint --fix --allow-empty-input --max-warnings=0',
   /** Everything else Prettier understands: JSON, Markdown, YAML and so on. */

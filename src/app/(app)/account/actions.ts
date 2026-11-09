@@ -1,24 +1,53 @@
 /**
- * @file Server actions for the Profile page of the account (name and email
- * verification). They go through Better Auth, so its rules apply. The
- * Security page's actions are in `./security/actions.ts`.
+ * @file Server actions for the Profile page of the account (name, language
+ * and email verification). They go through Better Auth, so its rules apply.
+ * The Security page's actions are in `./security/actions.ts`.
  */
 'use server';
 
 import { isAPIError } from 'better-auth/api';
 import { refresh } from 'next/cache';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 
 import type { ActionResult } from '@/lib/action-result';
 import { auth } from '@/lib/auth';
 import field from '@/lib/form-data';
+import localeCookieOptions from '@/lib/i18n/locale-cookie';
+import { LOCALE_COOKIE } from '@/lib/i18n/locales';
+import { withSection } from '@/lib/redirect';
 import { nameSchema } from '@/lib/validation';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
 import { getActor } from '@/server/authz';
+import setOwnLocale from '@/server/people/own-locale';
 import { assertRateLimit, RATE_LIMITS } from '@/server/rate-limit';
 
-import { VERIFIED_RETURN_PATH } from './account-messages';
+import { LANGUAGE_SECTION, VERIFIED_RETURN_PATH } from './account-messages';
+
+/** Where the page reloads after the language changed, to say so in it (`?language=saved`). */
+const LANGUAGE_SAVED_PATH = withSection('/account?language=saved', LANGUAGE_SECTION);
+
+/**
+ * Saves the signed-in user's language with their account, so emails reach
+ * them in it, and in this browser's language cookie. The form then reloads
+ * the page (the path it gets back), so every part of it, and every page kept
+ * alive, shows the new language at once; the page says it's saved.
+ *
+ * @param _previous - The previous result (unused).
+ * @param formData - Field `locale`.
+ * @returns Where to reload to, or why it failed.
+ */
+export async function saveLanguageAction(
+  _previous: ActionResult<string> | null,
+  formData: FormData,
+): Promise<ActionResult<string>> {
+  return runAction(async () => {
+    const actor = await getActor({ allowMissingMfa: true });
+    const locale = await setOwnLocale(appContext, actor, field(formData, 'locale'));
+    (await cookies()).set(LOCALE_COOKIE, locale, localeCookieOptions());
+    return { ok: true, data: LANGUAGE_SAVED_PATH };
+  });
+}
 
 /**
  * Changes the signed-in user's display name.

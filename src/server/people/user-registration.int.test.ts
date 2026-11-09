@@ -12,6 +12,8 @@ import { hashVerificationIdentifier } from '@/lib/sign-in/tokens';
 import {
   createStaffSettings,
   createUser,
+  emailLanguage,
+  inLanguage,
   setupTestContext,
   staffActor,
 } from '../../../tests/integration/helpers';
@@ -75,6 +77,36 @@ describe('registerUser', () => {
       .from(auditEvent)
       .where(eq(auditEvent.action, 'account_created'));
     expect(entry).toMatchObject({ actorUserId: manager.id, targetUserId: result.userId });
+  });
+
+  it('saves the language chosen for the new user, and welcomes them in it', async () => {
+    const { userId } = await registerUser(inLanguage(ctx, 'en-US'), manager, 'nl@adiutor.test', {
+      locale: 'nl-NL',
+    });
+
+    const created = firstRow(
+      await db.select({ locale: user.locale }).from(user).where(eq(user.id, userId)),
+      'the new user',
+    );
+    expect(created.locale).toBe('nl-NL');
+    const welcome = defined(sent[0], 'the welcome email');
+    expect(emailLanguage(welcome)).toBe('nl-NL');
+    expect(welcome.subject).toBe('Je Adiutor-account staat klaar');
+  });
+
+  it('without a chosen language, saves none and welcomes them in the request’s', async () => {
+    const { userId } = await registerUser(inLanguage(ctx, 'es-ES'), manager, 'es@adiutor.test');
+    await registerUser(ctx, manager, 'en@adiutor.test');
+
+    const created = firstRow(
+      await db.select({ locale: user.locale }).from(user).where(eq(user.id, userId)),
+      'the new user',
+    );
+    expect(created.locale).toBeNull();
+    expect(sent.map((email) => [email.to, emailLanguage(email)])).toEqual([
+      ['es@adiutor.test', 'es-ES'],
+      ['en@adiutor.test', 'en-US'],
+    ]);
   });
 
   it('reports an existing account without changing anything', async () => {

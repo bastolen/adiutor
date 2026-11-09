@@ -19,7 +19,7 @@ import EmailLinkStep from './email-link-step';
  * kept out of search engines, and its address (with the link's token) isn't
  * sent along to other pages.
  */
-export const metadata: Metadata = { ...secretLinkMetadata, title: 'Continue signing in · Adiutor' };
+export const metadata: Metadata = { ...secretLinkMetadata, title: 'Continue signing in' };
 
 /**
  * The email-link page. It reads the link from the URL, so it renders at

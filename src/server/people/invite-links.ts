@@ -54,6 +54,7 @@ import {
   assertRateLimit,
   RATE_LIMITS,
 } from '../rate-limit';
+import recipientLocale from '../recipient-locale';
 import getStaffName from './staff-name';
 
 /** A link's state. */
@@ -391,6 +392,8 @@ export async function claimInviteLink(
 ): Promise<{ status: 'sent' | 'invalid' }> {
   const email = emailSchema.parse(rawEmail);
   const request = ctx.requestInfo ? await ctx.requestInfo() : null;
+  // The confirmation is in the language of whoever opened the link, and so is the invitation.
+  const locale = await recipientLocale(ctx);
   await assertRateLimit(
     ctx,
     `invite-link-claim:ip:${request?.ip ?? 'unknown'}`,
@@ -434,6 +437,7 @@ export async function claimInviteLink(
       invitedBy: used.createdBy,
       fromLink: true,
       baseUrl: ctx.baseUrl,
+      locale,
     });
     // `null` when it created no invitation: the link is used up, pointing at nothing.
     await tx

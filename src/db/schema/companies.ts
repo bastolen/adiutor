@@ -13,6 +13,7 @@ import { check, index, pgEnum, pgTable, text, uniqueIndex, uuid } from 'drizzle-
 import { user } from './auth';
 import { createdAt, id, timestampTz } from './columns';
 import { COMPANY_ROLES, PLATFORM_ROLES, ROLE_IDS } from '../../lib/authz/roles';
+import { DEFAULT_LOCALE, LOCALES } from '../../lib/i18n/locales';
 
 /** Roles in a company; see `src/lib/authz/roles.ts`. */
 export const companyRole = pgEnum('company_role', COMPANY_ROLES);
@@ -82,6 +83,11 @@ export const invitation = pgTable(
     revokedAt: timestampTz('revoked_at'),
     /** When the "expires soon" reminder was sent, so it's sent only once. */
     reminderSentAt: timestampTz('reminder_sent_at'),
+    /**
+     * The language the invitation, its resends and its reminder are written
+     * in (an invitee who has an account gets their own language instead).
+     */
+    locale: text('locale', { enum: LOCALES }).notNull().default(DEFAULT_LOCALE),
     createdAt: createdAt(),
   },
   (table) => [

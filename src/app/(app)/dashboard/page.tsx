@@ -24,7 +24,7 @@ import StaffShortcuts from './staff-shortcuts';
  * Page metadata.
  */
 export const metadata: Metadata = {
-  title: 'Dashboard · Adiutor',
+  title: 'Dashboard',
 };
 
 /**

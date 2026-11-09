@@ -4,6 +4,7 @@
  * sortable and paginated. Managing needs `members:manage`.
  */
 import { Users } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
@@ -71,7 +72,11 @@ async function Members({
     listPendingInvitations(appContext, actor, company.id, invitationsRequested),
     listInviteLinks(appContext, actor, company.id, linksRequested),
   ]);
-  const url = createPageUrl(`/companies/${company.slug}/members`);
+  const url = createPageUrl(
+    `/companies/${company.slug}/members`,
+    {},
+    await getTranslations('tables'),
+  );
   const table = url.table(MEMBERS_TABLE, { ...membersRequested, page: members.page });
   const invitationsTable = url.table(INVITATIONS_TABLE, {
     ...invitationsRequested,

@@ -4,6 +4,7 @@
  */
 import { Building2, ChevronRight, Plus } from 'lucide-react';
 import Link from 'next/link';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import Avatar from '@/components/ui/avatar';
@@ -33,7 +34,7 @@ import { listCompanies } from '@/server/people/companies';
  * the 404 page's title for everyone else, who get the 404 page.
  */
 export const generateMetadata = globalPermissionMetadata('company:view', {
-  title: 'Companies · Adiutor',
+  title: 'Companies',
 });
 
 /**
@@ -45,12 +46,17 @@ export const generateMetadata = globalPermissionMetadata('company:view', {
  * @returns The page content.
  */
 async function CompanyList({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const locale = await getLocale();
   const actor = await requireGlobalPermission('company:view');
   const params = await searchParams;
   const search = searchParam(params.q)?.trim() ?? '';
   const requested = parseTableState(COMPANIES_TABLE, params);
   const companies = await listCompanies(appContext, actor, { search, ...requested });
-  const table = createPageUrl('/admin/companies', { q: search }).table(COMPANIES_TABLE, {
+  const table = createPageUrl(
+    '/admin/companies',
+    { q: search },
+    await getTranslations('tables'),
+  ).table(COMPANIES_TABLE, {
     ...requested,
     page: companies.page,
   });
@@ -143,7 +149,7 @@ async function CompanyList({ searchParams }: { searchParams: Promise<SearchParam
                         </span>
                         {/* Below tablet width, when it was added goes here. */}
                         <span className="text-xs text-muted-foreground md:hidden">
-                          Added {formatDate(company.createdAt)}
+                          Added {formatDate(company.createdAt, locale)}
                         </span>
                       </div>
                     </div>
@@ -156,7 +162,7 @@ async function CompanyList({ searchParams }: { searchParams: Promise<SearchParam
                     )}
                   </Td>
                   <Td className="hidden text-muted-foreground md:table-cell">
-                    {formatDate(company.createdAt)}
+                    {formatDate(company.createdAt, locale)}
                   </Td>
                   <Td className="w-10 text-right">
                     <ChevronRight

@@ -11,6 +11,7 @@ import {
   LinkFallback,
 } from '@/components/email/email-text';
 import type { Email } from '@/lib/email';
+import translator from '@/lib/i18n/translator';
 
 import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
 import renderEmail from './render';
@@ -39,6 +40,7 @@ export interface AccountCreatedEmailProps extends EmailBaseProps {
  * @param props.staffName - The staff's name shown to users.
  * @param props.url - Link to choose a password.
  * @param props.validDays - Days the link stays valid.
+ * @param props.locale - The recipient's language.
  * @param props.logoSrc - Logo URL override.
  * @returns The email.
  */
@@ -48,26 +50,24 @@ export default function AccountCreatedEmail({
   staffName,
   url,
   validDays,
+  locale,
   logoSrc = undefined,
 }: AccountCreatedEmailProps) {
+  const t = translator(locale, 'emails.accountCreated');
+  const values = { creator: creatorName, staff: staffName };
   return (
     <EmailLayout
-      preview="Your Adiutor account is ready"
+      preview={t('preview')}
       appUrl={appUrl}
+      locale={locale}
       logoSrc={logoSrc}
-      reason={`You're receiving this because ${creatorName} of ${staffName} created an Adiutor account for this email address. If you weren't expecting it, you can ignore this email.`}
+      reason={t('reason', values)}
     >
-      <EmailHeading>Your Adiutor account is ready</EmailHeading>
-      <EmailParagraph>
-        {creatorName} of {staffName} created an Adiutor account for you. Choose a password to sign
-        in.
-      </EmailParagraph>
-      <EmailButton href={url}>Choose your password</EmailButton>
-      <EmailNote>
-        The link works once and expires in {validDays} days. You can also sign in with a link sent
-        to this address at {appUrl}/auth.
-      </EmailNote>
-      <LinkFallback url={url} />
+      <EmailHeading>{t('heading')}</EmailHeading>
+      <EmailParagraph>{t('body', values)}</EmailParagraph>
+      <EmailButton href={url}>{t('button')}</EmailButton>
+      <EmailNote>{t('note', { days: validDays, signInUrl: `${appUrl}/auth` })}</EmailNote>
+      <LinkFallback url={url} locale={locale} />
     </EmailLayout>
   );
 }
@@ -89,5 +89,9 @@ AccountCreatedEmail.PreviewProps = {
  * @returns The email, ready to send.
  */
 export function accountCreatedEmail(to: string, props: AccountCreatedEmailProps): Promise<Email> {
-  return renderEmail(to, 'Your Adiutor account is ready', <AccountCreatedEmail {...props} />);
+  return renderEmail(
+    to,
+    translator(props.locale, 'emails.accountCreated')('subject'),
+    <AccountCreatedEmail {...props} />,
+  );
 }

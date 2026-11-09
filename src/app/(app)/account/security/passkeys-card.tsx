@@ -5,6 +5,7 @@
 
 import { KeyRound, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useLocale } from 'next-intl';
 import { type FormEvent, useId, useRef, useState } from 'react';
 
 import { useRecentConfirmation } from '@/components/auth/recent-confirmation';
@@ -134,6 +135,7 @@ function NameDialog({
  * @returns The card.
  */
 export default function PasskeysCard({ passkeys, removeLastBlockedReason }: PasskeysCardProps) {
+  const locale = useLocale();
   const router = useRouter();
   const { askToConfirm, askToConfirmOnRefusal } = useRecentConfirmation(SECTION);
   const [adding, setAdding] = useTransientState(false);
@@ -260,7 +262,7 @@ export default function PasskeysCard({ passkeys, removeLastBlockedReason }: Pass
               }
             >
               {passkey.backedUp ? 'Synced across your devices' : 'On this device only'}
-              {passkey.createdAt && ` · Added ${formatDate(passkey.createdAt)}`}
+              {passkey.createdAt && ` · Added ${formatDate(passkey.createdAt, locale)}`}
             </IconRow>
           ))}
         </ul>

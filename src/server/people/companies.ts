@@ -6,6 +6,7 @@ import { and, eq, ilike, or, sql } from 'drizzle-orm';
 import { company, membership } from '@/db/schema';
 import { COMPANY_ADMIN_ROLE } from '@/lib/authz/roles';
 import { firstRow } from '@/lib/defined';
+import type { Locale } from '@/lib/i18n/locales';
 import type { InviteStatus } from '@/lib/invite-status';
 import { type Paged, resolveTableState, type TableState } from '@/lib/tables/table-state';
 import { COMPANIES_TABLE, type CompanySort } from '@/lib/tables/tables';
@@ -94,6 +95,8 @@ export async function listCompanies(
  * @param input.name - Company name.
  * @param input.slug - URL name; must be unique.
  * @param input.adminEmail - Email address of the company's first admin.
+ * @param input.locale - The language of their invitation; by default the request's, else English
+ *   (US). An Admin who has an account with a saved language gets that instead.
  * @returns The new company's ID and URL name, and the invitation status.
  * @throws {ServiceError} `forbidden` without `company:create` (also when it's gone by the time the
  *   change is made), `rate_limited` when the actor has sent too many invitations
@@ -102,7 +105,7 @@ export async function listCompanies(
 export async function registerCompany(
   ctx: ServiceContext,
   actor: Actor,
-  input: { name: string; slug: string; adminEmail: string },
+  input: { name: string; slug: string; adminEmail: string; locale?: Locale },
 ): Promise<{ companyId: string; slug: string; inviteStatus: InviteStatus }> {
   assertPermission(getGlobalPermissions(actor), 'company:create');
   const name = companyNameSchema.parse(input.name);
@@ -135,6 +138,7 @@ export async function registerCompany(
         target: { companyId: inserted.id, name: inserted.name },
         email: adminEmail,
         role: COMPANY_ADMIN_ROLE,
+        locale: input.locale,
       });
       return { created: inserted, invitation: invited };
     });

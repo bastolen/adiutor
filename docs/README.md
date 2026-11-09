@@ -30,6 +30,8 @@ detail, one topic each.
 - [Email](email.md): the templates, previewing them, Mailpit, and how emails leave the app.
 - [Design, accessibility and dark mode](design.md): the component library, tables, colours,
   keyboard support, dark mode and the brand assets.
+- [Languages](i18n.md): English (US), Dutch and Spanish, how the language is chosen, the
+  translation catalogues, writing messages, formatting, the checks and adding a language.
 
 ## Running it
 

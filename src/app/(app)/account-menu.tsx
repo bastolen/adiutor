@@ -4,7 +4,7 @@
  */
 'use client';
 
-import { ChevronsUpDown, LogOut, SunMoon, UserRound } from 'lucide-react';
+import { ChevronsUpDown, LogOut, Palette, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -107,7 +107,7 @@ export default function AccountMenu({ name, email }: AccountMenuProps) {
         <MenuSeparator />
         <MenuRadioRow
           label="Theme"
-          icon={SunMoon}
+          icon={Palette}
           value={preference}
           onValueChange={(value) => {
             if (isThemePreference(value)) {

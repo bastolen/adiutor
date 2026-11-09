@@ -3,20 +3,28 @@
  */
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
+import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 
+import IntlClientProvider from '@/lib/i18n/intl-client-provider';
+import { pickMessages } from '@/lib/i18n/messages';
 import { NONCE_HEADER } from '@/lib/request/csp';
 import { themeScript } from '@/lib/theme';
 
 import './globals.css';
 
 /**
- * Default page metadata. Pages can override these values.
+ * Default page metadata, in the request's language. Pages set their own
+ * title, which the template ends with the product name ("Users · Adiutor").
+ *
+ * @returns The metadata.
  */
-export const metadata: Metadata = {
-  title: 'Adiutor',
-  description:
-    'Get help without chasing emails. Report a problem or ask for something new, follow its progress, and approve the work, all in one place.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('common');
+  return {
+    title: { template: t('documentTitle', { page: '%s' }), default: 'Adiutor' },
+    description: t('app.description'),
+  };
+}
 
 /**
  * The layout reads the request's CSP nonce (see `src/lib/request/csp.ts`), so every
@@ -31,6 +39,10 @@ export const instant = false;
  * styles. The theme choice is in the layouts below: the floating button in
  * the public layout, the account menu in the app.
  *
+ * `<html lang>` is the request's language (docs/i18n.md), and the shared
+ * `common` messages reach every client component through the provider;
+ * pages pass their own namespaces with `ClientMessages`.
+ *
  * The inline theme script sets `data-theme` on `<html>` before the page
  * paints, so `suppressHydrationWarning` tells React that this attribute is
  * expected to differ from the server-rendered HTML. It carries the request's
@@ -41,14 +53,22 @@ export const instant = false;
  * @returns The document shell.
  */
 export default async function RootLayout({ children }: LayoutProps<'/'>) {
-  const nonce = (await headers()).get(NONCE_HEADER) ?? undefined;
+  const [nonce, locale, messages] = await Promise.all([
+    headers().then((list) => list.get(NONCE_HEADER) ?? undefined),
+    getLocale(),
+    getMessages(),
+  ]);
   return (
-    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html lang={locale} data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         {/* eslint-disable-next-line react/no-danger -- Static script from our own code; it must run before the first paint. */}
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="bg-background text-foreground antialiased">{children}</body>
+      <body className="bg-background text-foreground antialiased">
+        <IntlClientProvider locale={locale} messages={pickMessages(messages, ['common'])}>
+          {children}
+        </IntlClientProvider>
+      </body>
     </html>
   );
 }

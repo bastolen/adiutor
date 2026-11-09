@@ -1,0 +1,11 @@
+{
+  "account": {
+    "profile": {
+      "languageTitle": "Language",
+      "languageDescription": "Adiutor and the emails it sends you use this language.",
+      "languageLabel": "Language",
+      "saveLanguage": "Save language",
+      "languageSaved": "Language saved."
+    }
+  }
+}

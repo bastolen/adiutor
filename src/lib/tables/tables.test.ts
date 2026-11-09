@@ -82,7 +82,7 @@ describe('table definitions', () => {
       expect(parseTableState(table, {})).toEqual({ sort, dir, page: 1, size: 25 });
     });
 
-    it('names its sorts so they can appear in a URL, with labels and both directions', () => {
+    it('names its sorts so they can appear in a URL, with message keys for both directions', () => {
       Object.entries(table.sorts).forEach(([key, definition]) => {
         expect(key).toMatch(/^[a-z]+(-[a-z]+)*$/);
         expect(definition.label).not.toBe('');
@@ -109,14 +109,14 @@ describe('table definitions', () => {
     const byDate: TableDefinition[] = [INVITATIONS_TABLE, INVITE_LINKS_TABLE, DEVICES_TABLE];
     byName.forEach((table) => {
       expect(parseTableState(table, {})).toMatchObject({ sort: 'name', dir: 'asc' });
-      expect(defined(table.sorts.name, 'the name sort').directions.asc).toBe('A to Z');
+      expect(defined(table.sorts.name, 'the name sort').directions.asc).toBe('aToZ');
     });
     byDate.forEach((table) => {
       const { sort, dir } = parseTableState(table, {});
       expect(dir).toBe('desc');
       const definition = defined(table.sorts[sort], 'the default sort');
-      expect(definition.directions.desc).toBe('newest first');
-      expect(definition.directions.asc).toBe('oldest first');
+      expect(definition.directions.desc).toBe('newestFirst');
+      expect(definition.directions.asc).toBe('oldestFirst');
     });
   });
 
@@ -124,34 +124,34 @@ describe('table definitions', () => {
     [USERS_TABLE, STAFF_TABLE, MEMBERS_TABLE].forEach((table) => {
       expect(table.prefix).toBe('');
       expect(Object.keys(table.sorts)).toEqual(['name', 'email', 'last-active', 'joined']);
-      expect(table.sorts.name).toMatchObject({ label: 'Name', first: 'asc' });
-      expect(table.sorts.email).toMatchObject({ label: 'Email', first: 'asc' });
+      expect(table.sorts.name).toMatchObject({ label: 'name', first: 'asc' });
+      expect(table.sorts.email).toMatchObject({ label: 'email', first: 'asc' });
       expect(table.sorts['last-active']).toEqual({
-        label: 'Last active',
+        label: 'lastActive',
         first: 'desc',
-        directions: { desc: 'most recent first', asc: 'least recent first' },
+        directions: { desc: 'mostRecentFirst', asc: 'leastRecentFirst' },
       });
-      expect(table.sorts.joined).toMatchObject({ label: 'Joined', first: 'desc' });
+      expect(table.sorts.joined).toMatchObject({ label: 'joined', first: 'desc' });
     });
   });
 
   it('lists companies by their name or when they were added or joined', () => {
     expect(Object.keys(COMPANIES_TABLE.sorts)).toEqual(['name', 'added']);
-    expect(COMPANIES_TABLE.sorts.name.label).toBe('Company');
-    expect(COMPANIES_TABLE.sorts.added).toMatchObject({ label: 'Added', first: 'desc' });
+    expect(COMPANIES_TABLE.sorts.name.label).toBe('company');
+    expect(COMPANIES_TABLE.sorts.added).toMatchObject({ label: 'added', first: 'desc' });
     expect(Object.keys(USER_COMPANIES_TABLE.sorts)).toEqual(['name', 'joined']);
-    expect(USER_COMPANIES_TABLE.sorts.name.label).toBe('Company');
-    expect(USER_COMPANIES_TABLE.sorts.joined).toMatchObject({ label: 'Joined', first: 'desc' });
+    expect(USER_COMPANIES_TABLE.sorts.name.label).toBe('company');
+    expect(USER_COMPANIES_TABLE.sorts.joined).toMatchObject({ label: 'joined', first: 'desc' });
   });
 
   it('lists invitations by email or when they were sent, and links and devices by date', () => {
     expect(Object.keys(INVITATIONS_TABLE.sorts)).toEqual(['email', 'sent']);
-    expect(INVITATIONS_TABLE.sorts.email).toMatchObject({ label: 'Email', first: 'asc' });
-    expect(INVITATIONS_TABLE.sorts.sent).toMatchObject({ label: 'Sent', first: 'desc' });
+    expect(INVITATIONS_TABLE.sorts.email).toMatchObject({ label: 'email', first: 'asc' });
+    expect(INVITATIONS_TABLE.sorts.sent).toMatchObject({ label: 'sent', first: 'desc' });
     expect(Object.keys(INVITE_LINKS_TABLE.sorts)).toEqual(['created']);
-    expect(INVITE_LINKS_TABLE.sorts.created).toMatchObject({ label: 'Created', first: 'desc' });
+    expect(INVITE_LINKS_TABLE.sorts.created).toMatchObject({ label: 'created', first: 'desc' });
     expect(Object.keys(DEVICES_TABLE.sorts)).toEqual(['signed-in']);
-    expect(DEVICES_TABLE.sorts['signed-in']).toMatchObject({ label: 'Signed in', first: 'desc' });
+    expect(DEVICES_TABLE.sorts['signed-in']).toMatchObject({ label: 'signedIn', first: 'desc' });
   });
 
   it('gives the main table of a page no prefix and every other table its own', () => {

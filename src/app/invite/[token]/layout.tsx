@@ -10,7 +10,7 @@ import secretLinkMetadata from '@/lib/secret-link-metadata';
  * Metadata: the URL contains a secret token, so it's never sent as a referrer
  * and the page isn't indexed.
  */
-export const metadata: Metadata = { ...secretLinkMetadata, title: 'Invitation · Adiutor' };
+export const metadata: Metadata = { ...secretLinkMetadata, title: 'Invitation' };
 
 /**
  * Shows the page in the public layout (form column and brand panel).

@@ -33,6 +33,8 @@ import { EMAIL_CODE_MINUTES, TWO_FACTOR_LOCK_ATTEMPTS, TWO_FACTOR_LOCK_MINUTES }
 import { PLATFORM_ROLES } from './authz/roles';
 import { sendEmail } from './email';
 import { appUrl, env } from './env';
+import { localeFromHeaders } from './i18n/default-locale';
+import { isLocale, type Locale, LOCALES } from './i18n/locales';
 import { MIN_PASSWORD_LENGTH } from './input-rules';
 import ipAddressOptions from './request/ip-address-options';
 import { LAST_USED_LOGIN_METHOD_COOKIE } from './sign-in/auth-cookies';
@@ -85,6 +87,43 @@ function runInBackground(task: Promise<unknown>): void {
     after(logged);
   } catch {
     // Not in a request: the promise runs on its own.
+  }
+}
+
+/**
+ * The language of an email to a Better Auth user: the one they saved
+ * (`user.locale`), else the request's (`localeFromHeaders`: the language
+ * cookie, else Adiutor's default language). See "Which language" in
+ * docs/email.md.
+ *
+ * @param user - The user, with the app's additional fields.
+ * @param headers - The request's headers, if known.
+ * @returns The locale.
+ */
+async function emailLocale(user: object, headers: Headers | null | undefined): Promise<Locale> {
+  const saved = (user as { locale?: unknown }).locale;
+  return isLocale(saved) ? saved : localeFromHeaders(headers, db);
+}
+
+/**
+ * The headers of the request an email callback runs in: the one Better Auth
+ * passes, else the current Next.js request's (a server action calling
+ * `auth.api`, which passes none), else none (scripts, tests).
+ *
+ * @param request - The request Better Auth passed, if any.
+ * @returns The headers, or `null` outside a request.
+ */
+async function callbackHeaders(request: Request | undefined): Promise<Headers | null> {
+  if (request) {
+    return request.headers;
+  }
+  try {
+    // Loaded here: the Better Auth CLI loads this config outside Next.js.
+    const { headers } = await import('next/headers');
+    return await headers();
+  } catch {
+    // Not in a Next.js request.
+    return null;
   }
 }
 
@@ -397,6 +436,12 @@ export const auth = betterAuth({
        * setup, staff invitations and the staff page; never by the user.
        */
       platformRole: { type: [...PLATFORM_ROLES], required: false, input: false },
+      /**
+       * The language the user chose, for the emails they get (and, once
+       * saved, the app's language at sign-in). Empty until they choose one;
+       * never set through Better Auth's endpoints.
+       */
+      locale: { type: [...LOCALES], required: false, input: false },
     },
   },
 
@@ -472,14 +517,21 @@ export const auth = betterAuth({
      * @param data - The user and the reset link.
      * @param data.user - The user who asked for the reset.
      * @param data.url - The reset link.
+     * @param request - The request, for the language of a user who saved none.
      */
-    sendResetPassword: async ({ user, url }) => {
+    sendResetPassword: async ({ user, url }, request) => {
       if (isDeactivated(user)) {
         return;
       }
       // Loaded here, not at the top: loading this config (e.g. for `pnpm auth:schema`) shouldn't load React templates.
       const { resetPasswordEmail } = await import('../emails/reset-password');
-      await sendEmail(await resetPasswordEmail(user.email, { appUrl, url }));
+      await sendEmail(
+        await resetPasswordEmail(user.email, {
+          appUrl,
+          url,
+          locale: await emailLocale(user, await callbackHeaders(request)),
+        }),
+      );
     },
   },
 
@@ -559,10 +611,17 @@ export const auth = betterAuth({
      * @param data - The user and the verification link.
      * @param data.user - The user to verify.
      * @param data.url - The verification link.
+     * @param request - The request, for the language of a user who saved none.
      */
-    sendVerificationEmail: async ({ user, url }) => {
+    sendVerificationEmail: async ({ user, url }, request) => {
       const { verifyEmailEmail } = await import('../emails/verify-email');
-      await sendEmail(await verifyEmailEmail(user.email, { appUrl, url }));
+      await sendEmail(
+        await verifyEmailEmail(user.email, {
+          appUrl,
+          url,
+          locale: await emailLocale(user, await callbackHeaders(request)),
+        }),
+      );
     },
     /**
      * Records a verified email address in the audit log.
@@ -626,18 +685,26 @@ export const auth = betterAuth({
        * @param data - The address as typed and the sign-in link.
        * @param data.email - The address the link was asked for, as typed.
        * @param data.url - The sign-in link.
-       * @param context - The request context, used to look up the user.
+       * @param context - The request context, used to look up the user and for the language
+       *   of a user who saved none.
        */
       sendMagicLink: async ({ email, url }, context) => {
+        // Worked out now, during the request: the background work may run after it.
+        const requestLocale = await localeFromHeaders(context?.headers, db);
         /** Looks the user up and sends the link to their stored address. */
         const send = async () => {
           const found = await context?.context.internalAdapter.findUserByEmail(email);
           if (!found || isDeactivated(found.user)) {
             return;
           }
+          const saved = (found.user as { locale?: unknown }).locale;
           const { magicLinkEmail } = await import('../emails/magic-link');
           await sendEmail(
-            await magicLinkEmail(found.user.email, { appUrl, url: emailLinkUrl(url, appUrl) }),
+            await magicLinkEmail(found.user.email, {
+              appUrl,
+              url: emailLinkUrl(url, appUrl),
+              locale: isLocale(saved) ? saved : requestLocale,
+            }),
           );
         };
         runInBackground(send());
@@ -677,10 +744,17 @@ export const auth = betterAuth({
          * @param data - The user and the code.
          * @param data.user - Who gets the code.
          * @param data.otp - The code.
+         * @param context - The request context, for the language of a user who saved none.
          */
-        sendOTP: async ({ user, otp }) => {
+        sendOTP: async ({ user, otp }, context) => {
           const { twoFactorCodeEmail } = await import('../emails/two-factor-code');
-          await sendEmail(await twoFactorCodeEmail(user.email, { appUrl, code: otp }));
+          await sendEmail(
+            await twoFactorCodeEmail(user.email, {
+              appUrl,
+              code: otp,
+              locale: await emailLocale(user, context?.headers),
+            }),
+          );
         },
       },
     }),

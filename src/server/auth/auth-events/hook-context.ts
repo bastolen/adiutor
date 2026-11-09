@@ -8,6 +8,7 @@ import type { SecurityNoticeKind } from '@/emails/security-notice';
 import type { AuditAction } from '@/lib/audit-actions';
 import { sendEmail } from '@/lib/email';
 import { appUrl } from '@/lib/env';
+import { localeFromHeaders } from '@/lib/i18n/default-locale';
 import ipAddressOptions from '@/lib/request/ip-address-options';
 import { type RequestInfo, requestInfoFromHeaders } from '@/lib/request/request-info';
 import { providerLabel } from '@/lib/sign-in/oauth-providers';
@@ -190,6 +191,12 @@ export async function notify(
       sendEmail,
       baseUrl: appUrl,
       requestInfo: auditContext(headers).requestInfo,
+      /**
+       * The language of the request that made the change, for a user who saved none.
+       *
+       * @returns The locale.
+       */
+      requestLocale: () => localeFromHeaders(headers, db),
     },
     { userId },
     kind,

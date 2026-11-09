@@ -16,6 +16,7 @@
  * `src/lib/auth.ts`; its icon in `src/components/brand/provider-icons.tsx`;
  * and, for an MFA provider, its check in `src/server/auth/provider-mfa.ts`.
  */
+import type { Locale } from '@/lib/i18n/locales';
 
 /** OAuth providers a user can connect. */
 export const OAUTH_PROVIDERS = ['github', 'google'] as const;
@@ -61,6 +62,21 @@ export function providerNames(providers: readonly OAuthProvider[]): string {
   return labels.length > 1
     ? `${labels.slice(0, -1).join(', ')} or ${labels[labels.length - 1]}`
     : (labels[0] ?? '');
+}
+
+/**
+ * Joins provider names for a sentence in the reader's language: "GitHub",
+ * "GitHub or Google" ("GitHub of Google", "GitHub o Google"). Pass the result
+ * as a named argument of a whole-sentence message.
+ *
+ * @param providers - The providers.
+ * @param locale - The reader's language.
+ * @returns Their labels, joined with the language's "or".
+ */
+export function providerList(providers: readonly OAuthProvider[], locale: Locale): string {
+  return new Intl.ListFormat(locale, { type: 'disjunction' }).format(
+    providers.map((provider) => PROVIDER_LABELS[provider]),
+  );
 }
 
 /**

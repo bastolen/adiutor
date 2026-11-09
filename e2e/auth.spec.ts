@@ -120,7 +120,7 @@ test('the code step starts over after signing out, with "Trust this device" unti
 /** The cookie Better Auth sets with a passkey challenge (the sign-in page asks for one on load). */
 const PASSKEY_CHALLENGE_COOKIE = 'better-auth.better-auth-passkey';
 
-test('signing out leaves only the "Last used" sign-in method in the browser', async ({
+test('signing out leaves only the "Last used" sign-in method and the language in the browser', async ({
   page,
   context,
 }) => {
@@ -134,9 +134,9 @@ test('signing out leaves only the "Last used" sign-in method in the browser', as
   // The sign-in page it lands on asks for a passkey challenge right away (for passkey autofill),
   // which sets a new short-lived cookie of its own; everything from before is gone.
   const names = (await context.cookies()).map((cookie) => cookie.name);
-  expect(names.filter((name) => name !== PASSKEY_CHALLENGE_COOKIE)).toEqual([
-    LAST_USED_LOGIN_METHOD_COOKIE,
-  ]);
+  expect(names.filter((name) => name !== PASSKEY_CHALLENGE_COOKIE).sort()).toEqual(
+    [LAST_USED_LOGIN_METHOD_COOKIE, 'adiutor.locale'].sort(),
+  );
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toContainText(
     'Last used',
   );

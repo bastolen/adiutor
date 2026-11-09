@@ -1,0 +1,32 @@
+{
+  "roles": {
+    "platform_admin": {
+      "label": "Administrador",
+      "description": "Gestiona el personal, las empresas y la configuración."
+    },
+    "manager": {
+      "label": "Gestor",
+      "description": "Gestiona las empresas y a su gente."
+    },
+    "finance": {
+      "label": "Finanzas",
+      "description": "Ve todas las empresas."
+    },
+    "support": {
+      "label": "Soporte",
+      "description": "Trabaja en las solicitudes."
+    },
+    "admin": {
+      "label": "Administrador",
+      "description": "Crea solicitudes y gestiona quién tiene acceso en la empresa."
+    },
+    "client": {
+      "label": "Cliente",
+      "description": "Crea solicitudes, las comenta y aprueba el trabajo."
+    },
+    "watcher": {
+      "label": "Observador",
+      "description": "Sigue las solicitudes sin participar."
+    }
+  }
+}

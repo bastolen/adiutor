@@ -5,6 +5,7 @@
  */
 import { SearchX } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 import Button from '@/components/ui/button';
 import Card from '@/components/ui/card';
@@ -16,16 +17,17 @@ import EmptyState from '@/components/ui/empty-state';
  * @returns The 404 content.
  */
 export default function AppNotFound() {
+  const t = useTranslations('common');
   return (
     <Card flush>
       <EmptyState
         icon={SearchX}
-        title="Page not found"
+        title={t('notFound.heading')}
         titleAs="h1"
-        description="This page doesn't exist, or you don't have access to it."
+        description={t('notFound.description')}
         action={
           <Button asChild>
-            <Link href="/dashboard">Go to your dashboard</Link>
+            <Link href="/dashboard">{t('actions.goToDashboard')}</Link>
           </Button>
         }
       />

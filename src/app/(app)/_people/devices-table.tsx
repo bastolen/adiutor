@@ -5,6 +5,7 @@
  * was MFA verified. The card around it (title, sort menu, pagination and the
  * sign-out buttons) is the page's.
  */
+import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
 import Badge from '@/components/ui/badge';
@@ -63,6 +64,7 @@ export default function DevicesTable({
   currentSessionId = null,
   renderAction = undefined,
 }: DevicesTableProps) {
+  const tCommon = useTranslations('common');
   return (
     <Table caption={table.caption(caption, devices)}>
       <thead>
@@ -82,7 +84,7 @@ export default function DevicesTable({
       <tbody>
         {devices.items.map((device) => {
           const current = device.id === currentSessionId;
-          const { label } = describeUserAgent(device.userAgent);
+          const label = tCommon('device', describeUserAgent(device.userAgent));
           return (
             <Tr key={device.id}>
               <Td>

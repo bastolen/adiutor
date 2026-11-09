@@ -21,7 +21,9 @@
  * - a wrong code at the code step (which has no session yet) is recorded
  *   without an actor (`pendingCodeSignInOf`, `reactToRefusedSignInCode`),
  *   and the owner is told once when wrong codes pause signing in with a
- *   code (Better Auth's account lockout), without the device that typed them.
+ *   code (Better Auth's account lockout), without the device that typed them;
+ * - an emailed code is in the account's language, else the browser's, and so
+ *   is a verification link (English (US) outside a request).
  */
 import { createHmac } from 'node:crypto';
 
@@ -33,13 +35,15 @@ import { account, auditEvent, session, twoFactor, user } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { TWO_FACTOR_LOCK_ATTEMPTS } from '@/lib/authz/mfa';
 import { defined, firstRow } from '@/lib/defined';
-import { sendEmail } from '@/lib/email';
+import { type Email, sendEmail } from '@/lib/email';
 import { env } from '@/lib/env';
 
 import {
   createUser,
+  emailLanguage,
   enableTwoFactor,
   lastActiveAt,
+  setUserLocale,
   setupTestContext,
 } from '../../../tests/integration/helpers';
 import { getOptionalActor } from '../authz';
@@ -238,6 +242,26 @@ async function signInWithPassword(
 }
 
 /**
+ * Waits for the code email to an address, which is sent after the response,
+ * in whatever language.
+ *
+ * @param to - The address.
+ * @returns The email.
+ */
+async function codeEmailTo(to: string): Promise<Email> {
+  return vi.waitFor(() => {
+    const found = vi
+      .mocked(sendEmail)
+      .mock.calls.map(([sent]) => sent)
+      .find((sent) => sent.to === to && /\b\d{6}\b/.test(sent.text));
+    if (!found) {
+      throw new Error('The code email has not been sent yet');
+    }
+    return found;
+  }, 10_000);
+}
+
+/**
  * Asks for an email code and reads it from the email, which is sent after
  * the response.
  *
@@ -416,6 +440,55 @@ describe('signing in with a password', () => {
     ]);
     expect(await sessionsOf(jane)).toHaveLength(1);
     expect(await lastActiveAt(db, jane)).not.toBeNull();
+  });
+
+  it('emails the code in the language the account saved, else the browser’s', async () => {
+    const jane = await createUserWithPassword('jane@adiutor.test');
+    const sam = await createUserWithPassword('sam@adiutor.test');
+    await enableTwoFactor(db, jane, 'email');
+    await enableTwoFactor(db, sam, 'email');
+    await setUserLocale(db, jane, 'nl-NL');
+
+    /**
+     * Signs in on a Spanish browser and asks for a code.
+     *
+     * @param email - The address.
+     * @returns The language of the code email.
+     */
+    const codeLanguage = async (email: string) => {
+      const browser = newBrowser();
+      browser.restore([['adiutor.locale', 'es-ES']]);
+      await signInWithPassword(browser, email);
+      expect((await browser.post('two-factor/send-otp')).status).toBe(200);
+      return emailLanguage(await codeEmailTo(email));
+    };
+
+    expect(await codeLanguage('jane@adiutor.test')).toBe('nl-NL');
+    expect(await codeLanguage('sam@adiutor.test')).toBe('es-ES');
+  });
+
+  it('emails a verification link in the language the account saved, else English (US) outside a request', async () => {
+    const jane = await createUser(db, 'jane@adiutor.test');
+    await createUser(db, 'sam@adiutor.test');
+    await db.update(user).set({ emailVerified: false });
+    await setUserLocale(db, jane, 'nl-NL');
+
+    // As the account page's action asks for it (`auth.api`, which passes Better Auth no request).
+    await Promise.all(
+      ['jane@adiutor.test', 'sam@adiutor.test'].map((email) =>
+        auth.api.sendVerificationEmail({ body: { email, callbackURL: '/account' } }),
+      ),
+    );
+
+    const sent = vi.mocked(sendEmail).mock.calls.map(([call]) => call);
+    expect(
+      sent
+        .map((email) => [email.to, emailLanguage(email)])
+        .sort(([a], [b]) => (a ?? '').localeCompare(b ?? '')),
+    ).toEqual([
+      ['jane@adiutor.test', 'nl-NL'],
+      ['sam@adiutor.test', 'en-US'],
+    ]);
   });
 
   it("ends the browser's session when its password is typed again and the code step starts", async () => {

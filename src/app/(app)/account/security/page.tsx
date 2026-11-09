@@ -12,6 +12,7 @@
  * it went).
  */
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
@@ -48,7 +49,7 @@ import TwoFactorCard from './two-factor-card';
  * Page metadata.
  */
 export const metadata: Metadata = {
-  title: 'Security · Adiutor',
+  title: 'Security',
 };
 
 /** Shown where removing the last passkey would break a role's MFA requirement. */
@@ -98,7 +99,7 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
     soleAdminOf(appContext.db, actor.id, { lock: false }),
   ]);
   // Built from the table's own state only, so a sort doesn't bring back `?connected=…`.
-  const url = createPageUrl('/account/security');
+  const url = createPageUrl('/account/security', {}, await getTranslations('tables'));
   const devicesTable = url.table(DEVICES_TABLE, {
     ...devicesRequested,
     page: sessions.page,

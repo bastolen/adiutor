@@ -42,7 +42,7 @@ import StepUpForm from './step-up-form';
  * Page metadata.
  */
 export const metadata: Metadata = {
-  title: 'Confirm it’s you · Adiutor',
+  title: 'Confirm it’s you',
 };
 
 /**

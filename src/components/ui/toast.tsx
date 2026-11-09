@@ -10,6 +10,7 @@
 'use client';
 
 import { CircleAlert, CircleCheck, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Toast } from 'radix-ui';
 import { useEffect, useSyncExternalStore } from 'react';
 
@@ -135,6 +136,7 @@ export function useToast(): ShowToast | null {
  * @returns The toasts.
  */
 export function Toaster() {
+  const t = useTranslations('common.actions');
   const toasts = useSyncExternalStore(
     subscribe,
     () => shownToasts,
@@ -184,7 +186,7 @@ export function Toaster() {
               <Button
                 variant="ghost"
                 size="sm"
-                aria-label="Dismiss notification"
+                aria-label={t('dismissNotification')}
                 className="-my-1.5 -mr-1.5 text-muted-foreground hover:text-foreground"
               >
                 <X aria-hidden="true" />

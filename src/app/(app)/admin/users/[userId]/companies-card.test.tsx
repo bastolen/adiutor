@@ -8,6 +8,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import translator from '@/lib/i18n/translator';
 import { createPageUrl, parseTableState } from '@/lib/tables/table-state';
 import { USER_COMPANIES_TABLE } from '@/lib/tables/tables';
 import type { UserCompany } from '@/server/people/user-admin';
@@ -48,7 +49,7 @@ const MEMBERSHIP: UserCompany = {
 };
 
 /** The table's links in its default state. */
-const TABLE = createPageUrl('/admin/users/user-1').table(
+const TABLE = createPageUrl('/admin/users/user-1', {}, translator('en-US', 'tables')).table(
   USER_COMPANIES_TABLE,
   parseTableState(USER_COMPANIES_TABLE, {}),
 );

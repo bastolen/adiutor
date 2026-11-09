@@ -38,13 +38,10 @@ export type ErrorSort = 'time';
  * creation.
  */
 const PEOPLE_SORTS: TableDefinition<PeopleSort>['sorts'] = {
-  name: textSort('Name'),
-  email: textSort('Email'),
-  'last-active': dateSort('Last active', {
-    desc: 'most recent first',
-    asc: 'least recent first',
-  }),
-  joined: dateSort('Joined'),
+  name: textSort('name'),
+  email: textSort('email'),
+  'last-active': dateSort('lastActive', { desc: 'mostRecentFirst', asc: 'leastRecentFirst' }),
+  joined: dateSort('joined'),
 };
 
 /** The users list (`/admin/users`); Joined is when the account was created. */
@@ -72,7 +69,7 @@ export const MEMBERS_TABLE: TableDefinition<PeopleSort> = {
 export const COMPANIES_TABLE: TableDefinition<CompanySort> = {
   prefix: '',
   defaultSort: 'name',
-  sorts: { name: textSort('Company'), added: dateSort('Added') },
+  sorts: { name: textSort('company'), added: dateSort('added') },
 };
 
 /** The companies of one user, on their page (`/admin/users/[userId]`). */
@@ -80,7 +77,7 @@ export const USER_COMPANIES_TABLE: TableDefinition<UserCompanySort> = {
   prefix: 'companies-',
   section: 'companies',
   defaultSort: 'name',
-  sorts: { name: textSort('Company'), joined: dateSort('Joined') },
+  sorts: { name: textSort('company'), joined: dateSort('joined') },
 };
 
 /** Open invitations, on the members and staff pages. */
@@ -88,7 +85,7 @@ export const INVITATIONS_TABLE: TableDefinition<InvitationSort> = {
   prefix: 'inv-',
   section: 'invitations',
   defaultSort: 'sent',
-  sorts: { email: textSort('Email'), sent: dateSort('Sent') },
+  sorts: { email: textSort('email'), sent: dateSort('sent') },
 };
 
 /** Invite links, on the members and staff pages. */
@@ -96,7 +93,7 @@ export const INVITE_LINKS_TABLE: TableDefinition<InviteLinkSort> = {
   prefix: 'links-',
   section: 'invite-links',
   defaultSort: 'created',
-  sorts: { created: dateSort('Created') },
+  sorts: { created: dateSort('created') },
 };
 
 /** Signed-in devices, on a user's page and the Security page. */
@@ -104,19 +101,19 @@ export const DEVICES_TABLE: TableDefinition<DeviceSort> = {
   prefix: 'devices-',
   section: 'devices',
   defaultSort: 'signed-in',
-  sorts: { 'signed-in': dateSort('Signed in') },
+  sorts: { 'signed-in': dateSort('signedIn') },
 };
 
 /** The audit log (`/admin/logs`): every recorded event, newest first. */
 export const AUDIT_LOG_TABLE: TableDefinition<AuditLogSort> = {
   prefix: '',
   defaultSort: 'time',
-  sorts: { time: dateSort('Time') },
+  sorts: { time: dateSort('time') },
 };
 
 /** The errors recorded in the last 7 days (`/admin/logs/errors`), newest first. */
 export const ERRORS_TABLE: TableDefinition<ErrorSort> = {
   prefix: '',
   defaultSort: 'time',
-  sorts: { time: dateSort('Time') },
+  sorts: { time: dateSort('time') },
 };

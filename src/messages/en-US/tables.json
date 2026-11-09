@@ -1,0 +1,27 @@
+{
+  "tables": {
+    "sorts": {
+      "name": "Name",
+      "email": "Email",
+      "lastActive": "Last active",
+      "joined": "Joined",
+      "company": "Company",
+      "added": "Added",
+      "sent": "Sent",
+      "created": "Created",
+      "signedIn": "Signed in",
+      "time": "Time"
+    },
+    "directions": {
+      "aToZ": "A to Z",
+      "zToA": "Z to A",
+      "newestFirst": "newest first",
+      "oldestFirst": "oldest first",
+      "mostRecentFirst": "most recent first",
+      "leastRecentFirst": "least recent first"
+    },
+    "option": "{sort}, {direction}",
+    "caption": "{table}, sorted by {sort}, {direction}",
+    "captionPaged": "{table}, sorted by {sort}, {direction}, page {page, number} of {pages, number}"
+  }
+}

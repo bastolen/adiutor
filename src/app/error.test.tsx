@@ -27,6 +27,9 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('./report-error-action', () => ({ default: vi.fn(async () => null) }));
 
+// The language button's action reads the server's configuration; nothing here changes the language.
+vi.mock('./language-action', () => ({ default: vi.fn(async () => true) }));
+
 beforeEach(() => {
   // The layout's theme button follows the system setting.
   vi.stubGlobal(
@@ -89,7 +92,7 @@ describe('RootError', () => {
     render(<RootError error={new RangeError('Invalid time value')} retry={vi.fn()} />);
 
     expect(await screen.findByText('7KQ2-M9XD')).toBeInTheDocument();
-    expect(screen.getByText('28 Oct 2026, 18:40 UTC')).toBeInTheDocument();
+    expect(screen.getByText('Oct 28, 2026, 6:40 PM UTC')).toBeInTheDocument();
     expect(reportErrorAction).toHaveBeenCalledWith({
       name: 'RangeError',
       message: 'Invalid time value',

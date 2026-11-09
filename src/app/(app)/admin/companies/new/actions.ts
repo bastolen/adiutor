@@ -4,7 +4,7 @@
 'use server';
 
 import type { ActionResult } from '@/lib/action-result';
-import field from '@/lib/form-data';
+import field, { localeField } from '@/lib/form-data';
 import inviteStatusMessage from '@/lib/invite-status';
 import { emailSchema } from '@/lib/validation';
 import runAction from '@/server/action-result';
@@ -18,7 +18,7 @@ import confirmFirstIfNeeded from '../../../_people/confirm-grant';
  * Adds a company and invites its first admin.
  *
  * @param _previous - The previous result (unused).
- * @param formData - Fields `name`, `slug` and `adminEmail`.
+ * @param formData - Fields `name`, `slug`, `adminEmail` and `locale` (the invitation's language).
  * @returns A confirmation with the new company's ID and URL name, or why it failed.
  */
 export default async function registerCompanyAction(
@@ -37,6 +37,7 @@ export default async function registerCompanyAction(
           name: field(formData, 'name'),
           slug: field(formData, 'slug'),
           adminEmail,
+          locale: localeField(formData),
         }),
     );
     return {

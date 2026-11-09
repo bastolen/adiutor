@@ -22,7 +22,7 @@ import {
 } from '@/db/schema';
 import { invitationReminderEmail } from '@/emails/invitation-reminder';
 import displayName from '@/lib/display-name';
-import { formatDateTime } from '@/lib/format';
+import { isLocale } from '@/lib/i18n/locales';
 import { generateToken, hashToken } from '@/lib/sign-in/tokens';
 
 import { APP_ERROR_RETENTION_DAYS } from './app-errors';
@@ -166,6 +166,9 @@ export interface ReminderResults {
  * pending list until they expire, and removing the person revokes them
  * (`revokeInvitationsTo`).
  *
+ * Each reminder is in the invitation's language (`invitation.locale`), or in
+ * the invitee's own when they have an account with a saved language.
+ *
  * @param ctx - Service context.
  * @returns How many reminders were sent, and how many failed.
  */
@@ -173,6 +176,8 @@ export async function sendInvitationReminders(ctx: ServiceContext): Promise<Remi
   const staffName = await getStaffName(ctx.db);
   // The account the invitation is addressed to, if any (`user` is joined as the inviter).
   const invitee = alias(user, 'invitee');
+  // The same account, joined for its language (`invitee` is the subquery's).
+  const recipient = alias(user, 'recipient');
   // Staff invitations have no company, so the deactivation check passes for them.
   const due = await ctx.db
     .select({
@@ -185,10 +190,14 @@ export async function sendInvitationReminders(ctx: ServiceContext): Promise<Remi
       companyName: company.name,
       inviterName: user.name,
       inviterEmail: user.email,
+      // The invitee's own language when they have an account and saved one, else the invitation's.
+      recipientLocale: recipient.locale,
+      locale: invitation.locale,
     })
     .from(invitation)
     .leftJoin(company, eq(company.id, invitation.companyId))
     .leftJoin(user, eq(user.id, invitation.invitedBy))
+    .leftJoin(recipient, eq(recipient.email, invitation.email))
     .where(
       and(
         isNull(invitation.acceptedAt),
@@ -245,6 +254,7 @@ export async function sendInvitationReminders(ctx: ServiceContext): Promise<Remi
         await ctx.sendEmail(
           await invitationReminderEmail(found.email, {
             appUrl: ctx.baseUrl,
+            locale: isLocale(found.recipientLocale) ? found.recipientLocale : found.locale,
             // The inviter's account may be gone since; the target's name stands in then.
             inviterName: found.inviterEmail
               ? displayName({ name: found.inviterName, email: found.inviterEmail })
@@ -252,7 +262,7 @@ export async function sendInvitationReminders(ctx: ServiceContext): Promise<Remi
             companyName: targetName,
             role: found.role,
             url: `${ctx.baseUrl}/invite/${token}`,
-            expires: formatDateTime(found.expiresAt),
+            expiresAt: found.expiresAt,
           }),
         );
         return 'sent';

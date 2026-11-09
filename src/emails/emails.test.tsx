@@ -1,6 +1,6 @@
 /**
- * @file Tests for the email templates: subjects, links, logo, escaping and
- * the plain-text versions.
+ * @file Tests for the email templates: subjects, links, logo, escaping, the
+ * plain-text versions, and every template in every language.
  * @vitest-environment node
  */
 import { readdir, readFile } from 'node:fs/promises';
@@ -10,6 +10,8 @@ import { render } from 'react-email';
 import { describe, expect, it } from 'vitest';
 
 import type { Email } from '@/lib/email';
+import { formatDateTime } from '@/lib/format';
+import { LOCALES, type Locale } from '@/lib/i18n/locales';
 
 import { accountCreatedEmail } from './account-created';
 import { addedToCompanyEmail } from './added-to-company';
@@ -27,6 +29,9 @@ import { verifyEmailEmail } from './verify-email';
 
 /** The app URL used in every test email. */
 const appUrl = 'https://adiutor.test';
+
+/** What every English (US) test email shares: the app URL and the language. */
+const english = { appUrl, locale: 'en-US' } as const;
 
 /** A template component with the example data the template preview renders it with. */
 type PreviewableTemplate = ((props: Record<string, unknown>) => ReactElement) & {
@@ -61,7 +66,7 @@ function expectBasics(email: Email, url: string) {
 describe('account emails', () => {
   it('magic link', async () => {
     const url = `${appUrl}/auth/email-link?token=abc`;
-    const email = await magicLinkEmail('jane@adiutor.test', { appUrl, url });
+    const email = await magicLinkEmail('jane@adiutor.test', { ...english, url });
 
     expect(email).toMatchObject({ to: 'jane@adiutor.test', subject: 'Your Adiutor sign-in link' });
     expect(email.text).toContain('expires in 5 minutes');
@@ -70,7 +75,7 @@ describe('account emails', () => {
 
   it('password reset', async () => {
     const url = `${appUrl}/auth/reset-password?token=abc`;
-    const email = await resetPasswordEmail('jane@adiutor.test', { appUrl, url });
+    const email = await resetPasswordEmail('jane@adiutor.test', { ...english, url });
 
     expect(email.subject).toBe('Reset your Adiutor password');
     expect(email.text).toContain('Choose a new password');
@@ -79,7 +84,7 @@ describe('account emails', () => {
 
   it('email verification', async () => {
     const url = `${appUrl}/api/auth/verify-email?token=abc`;
-    const email = await verifyEmailEmail('jane@adiutor.test', { appUrl, url });
+    const email = await verifyEmailEmail('jane@adiutor.test', { ...english, url });
 
     expect(email.subject).toBe('Verify your Adiutor email address');
     expect(email.text).toContain('Verify email address');
@@ -89,7 +94,7 @@ describe('account emails', () => {
 
 describe('two-step verification email', () => {
   it('shows the code first and says it expires', async () => {
-    const email = await twoFactorCodeEmail('jane@adiutor.test', { appUrl, code: '482915' });
+    const email = await twoFactorCodeEmail('jane@adiutor.test', { ...english, code: '482915' });
 
     expect(email.subject).toBe('Your Adiutor sign-in code');
     expect(email.html).toContain('482915');
@@ -105,7 +110,7 @@ describe('company emails', () => {
   it('invitation names the inviter, the company and the role with what it can do', async () => {
     const url = `${appUrl}/invite/abc`;
     const email = await invitationEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       inviterName: 'Sam Doe',
       companyName: 'Adiutor Tests',
       role: 'client',
@@ -124,7 +129,7 @@ describe('company emails', () => {
 
   it('escapes names, so they cannot add HTML', async () => {
     const email = await invitationEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       inviterName: '<b>Sam</b>',
       companyName: 'Adiutor <script>Tests</script>',
       role: 'watcher',
@@ -139,14 +144,15 @@ describe('company emails', () => {
 
   it('invitation reminder says the invitation is still open until it expires', async () => {
     const url = `${appUrl}/invite/abc`;
-    const expires = '25 Oct 2026, 14:05 UTC';
+    const expiresAt = new Date('2026-10-25T14:05:00Z');
+    const expires = formatDateTime(expiresAt, 'en-US');
     const email = await invitationReminderEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       inviterName: 'Sam Doe',
       companyName: 'Adiutor Tests',
       role: 'client',
       url,
-      expires,
+      expiresAt,
     });
 
     expect(email.subject).toBe('Reminder: join Adiutor Tests on Adiutor');
@@ -161,7 +167,7 @@ describe('company emails', () => {
   it('invite-link confirmation asks to confirm the address, without an inviter', async () => {
     const url = `${appUrl}/invite/abc`;
     const email = await inviteLinkConfirmationEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       companyName: 'Adiutor Tests',
       role: 'client',
       url,
@@ -176,7 +182,7 @@ describe('company emails', () => {
   it('already a member', async () => {
     const url = `${appUrl}/companies/abc`;
     const email = await alreadyMemberEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       companyName: 'Adiutor Tests',
       url,
     });
@@ -188,7 +194,7 @@ describe('company emails', () => {
 
   it('already invited points to the earlier invitation and links to the sign-in page', async () => {
     const email = await alreadyInvitedEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       companyName: 'Adiutor Tests',
     });
 
@@ -207,7 +213,7 @@ describe('company emails', () => {
 
   it('already invited escapes the name, so it cannot add HTML', async () => {
     const email = await alreadyInvitedEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       companyName: 'Adiutor <script>Tests</script>',
     });
 
@@ -220,7 +226,7 @@ describe('staff-made changes', () => {
   it('welcome email for a registered account', async () => {
     const url = `${appUrl}/auth/reset-password?token=abc&welcome=1`;
     const email = await accountCreatedEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       creatorName: 'Alex Admin',
       staffName: 'Adiutor Tests',
       url,
@@ -238,7 +244,7 @@ describe('staff-made changes', () => {
   it('added to a company', async () => {
     const url = `${appUrl}/companies/abc`;
     const email = await addedToCompanyEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       adderName: 'Alex Admin',
       companyName: 'Adiutor Tests',
       role: 'client',
@@ -253,7 +259,7 @@ describe('staff-made changes', () => {
   it('tells the staff Admins about a new staff Admin, and how they became one', async () => {
     const url = `${appUrl}/admin/staff`;
     const made = await staffAdminAddedEmail('alex@adiutor.test', {
-      appUrl,
+      ...english,
       newAdminName: 'Sam Tester',
       newAdminEmail: 'sam@adiutor.test',
       how: 'role',
@@ -267,7 +273,7 @@ describe('staff-made changes', () => {
     expectBasics(made, url);
 
     const invited = await staffAdminAddedEmail('alex@adiutor.test', {
-      appUrl,
+      ...english,
       newAdminName: 'sam@adiutor.test',
       newAdminEmail: 'sam@adiutor.test',
       how: 'invitation',
@@ -282,11 +288,11 @@ describe('staff-made changes', () => {
 });
 
 describe('security notices', () => {
-  const when = '23 Oct 2026, 14:05 UTC';
+  const when = new Date('2026-10-23T14:05:00Z');
 
   it('says what changed, when and from where, with a link to the Security page', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       kind: 'two_factor_disabled',
       when,
       device: 'Firefox on Windows',
@@ -294,7 +300,7 @@ describe('security notices', () => {
     });
 
     expect(email.subject).toBe('Two-step verification was turned off on your Adiutor account');
-    expect(email.text).toContain(`When: ${when}`);
+    expect(email.text).toContain(`When: ${formatDateTime(when, 'en-US')}`);
     expect(email.text).toContain('From: Firefox on Windows, 203.0.113.7');
     expect(email.text).toContain("If this wasn't you, reset your password");
     expectBasics(email, `${appUrl}/account/security`);
@@ -302,7 +308,7 @@ describe('security notices', () => {
 
   it('names the provider', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       kind: 'provider_connected',
       when,
       provider: 'GitHub',
@@ -314,7 +320,7 @@ describe('security notices', () => {
 
   it('has no Security page link for a deactivated account', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       kind: 'account_deactivated',
       when,
     });
@@ -325,7 +331,7 @@ describe('security notices', () => {
 
   it('tells the owner that wrong passwords paused password sign-in, and what still works', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       kind: 'password_sign_in_paused',
       when,
     });
@@ -343,7 +349,7 @@ describe('security notices', () => {
 
   it('has no Security page link for a deleted account', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       kind: 'account_deleted',
       when,
     });
@@ -358,7 +364,7 @@ describe('security notices', () => {
 
   it('tells the owner that wrong codes paused signing in with a code, and to change the password', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       kind: 'two_factor_locked',
       when,
     });
@@ -376,7 +382,7 @@ describe('security notices', () => {
 
   it('says that a reset of two-step verification also disconnected GitHub and Google', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       kind: 'mfa_reset',
       when,
     });
@@ -389,7 +395,7 @@ describe('security notices', () => {
   });
 
   it.each(SECURITY_NOTICE_KINDS)('renders %s', async (kind) => {
-    const email = await securityNoticeEmail('jane@adiutor.test', { appUrl, kind, when });
+    const email = await securityNoticeEmail('jane@adiutor.test', { ...english, kind, when });
     expect(email.subject).toMatch(/Adiutor/);
     expect(email.subject).not.toMatch(/\{(provider|role|company)\}/);
     expect(email.html).not.toMatch(/\{(provider|role|company)\}/);
@@ -398,11 +404,11 @@ describe('security notices', () => {
 
   it('names the company and the role in a changed company role', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       kind: 'company_role_changed',
       when,
       company: 'Adiutor Tests',
-      role: 'Admin',
+      role: 'admin',
     });
 
     expect(email.subject).toBe('Your role in Adiutor Tests on Adiutor changed');
@@ -414,7 +420,7 @@ describe('security notices', () => {
 
   it('names the company in a removal from a company', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       kind: 'removed_from_company',
       when,
       company: 'Adiutor Tests',
@@ -428,7 +434,7 @@ describe('security notices', () => {
 
   it('falls back to "your company" when the notice is built without a company name', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       kind: 'removed_from_company',
       when,
     });
@@ -438,7 +444,7 @@ describe('security notices', () => {
 
   it('escapes the company name, so it cannot add HTML', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       kind: 'removed_from_company',
       when,
       company: 'Adiutor <script>Tests</script>',
@@ -450,12 +456,302 @@ describe('security notices', () => {
 
   it('names the staff role', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
-      appUrl,
+      ...english,
       kind: 'staff_role_changed',
       when,
-      role: 'Manager',
+      role: 'manager',
     });
     expect(email.text).toContain('changed your staff role on Adiutor to Manager.');
+  });
+});
+
+/** A built email of one template in a language, and its main link. */
+interface BuiltEmail {
+  /** The email. */
+  email: Email;
+  /** Its main link, the first in the plain text. */
+  url: string;
+}
+
+/** Builds one email of every template (security notices apart) in a language. */
+const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = {
+  /**
+   * The sign-in link email.
+   *
+   * @param locale - The language.
+   * @returns The email and its main link.
+   */
+  'magic link': async (locale) => {
+    const url = `${appUrl}/auth/email-link?token=abc`;
+    return { email: await magicLinkEmail('jane@adiutor.test', { appUrl, locale, url }), url };
+  },
+  /**
+   * The password reset email.
+   *
+   * @param locale - The language.
+   * @returns The email and its main link.
+   */
+  'password reset': async (locale) => {
+    const url = `${appUrl}/auth/reset-password?token=abc`;
+    return { email: await resetPasswordEmail('jane@adiutor.test', { appUrl, locale, url }), url };
+  },
+  /**
+   * The email verification email.
+   *
+   * @param locale - The language.
+   * @returns The email and its main link.
+   */
+  'email verification': async (locale) => {
+    const url = `${appUrl}/api/auth/verify-email?token=abc`;
+    return { email: await verifyEmailEmail('jane@adiutor.test', { appUrl, locale, url }), url };
+  },
+  /**
+   * The invitation.
+   *
+   * @param locale - The language.
+   * @returns The email and its main link.
+   */
+  invitation: async (locale) => {
+    const url = `${appUrl}/invite/abc`;
+    const email = await invitationEmail('jane@adiutor.test', {
+      appUrl,
+      locale,
+      inviterName: 'Sam Doe',
+      companyName: 'Adiutor Tests',
+      role: 'client',
+      url,
+      validDays: 7,
+    });
+    return { email, url };
+  },
+  /**
+   * The invitation reminder.
+   *
+   * @param locale - The language.
+   * @returns The email and its main link.
+   */
+  'invitation reminder': async (locale) => {
+    const url = `${appUrl}/invite/abc`;
+    const email = await invitationReminderEmail('jane@adiutor.test', {
+      appUrl,
+      locale,
+      inviterName: 'Sam Doe',
+      companyName: 'Adiutor Tests',
+      role: 'watcher',
+      url,
+      expiresAt: new Date('2026-10-25T14:05:00Z'),
+    });
+    return { email, url };
+  },
+  /**
+   * The invite-link confirmation.
+   *
+   * @param locale - The language.
+   * @returns The email and its main link.
+   */
+  'invite-link confirmation': async (locale) => {
+    const url = `${appUrl}/invite/abc`;
+    const email = await inviteLinkConfirmationEmail('jane@adiutor.test', {
+      appUrl,
+      locale,
+      companyName: 'Adiutor Tests',
+      role: 'admin',
+      url,
+      validDays: 1,
+    });
+    return { email, url };
+  },
+  /**
+   * The "already a member" email.
+   *
+   * @param locale - The language.
+   * @returns The email and its main link.
+   */
+  'already a member': async (locale) => {
+    const url = `${appUrl}/companies/abc`;
+    const email = await alreadyMemberEmail('jane@adiutor.test', {
+      appUrl,
+      locale,
+      companyName: 'Adiutor Tests',
+      url,
+    });
+    return { email, url };
+  },
+  /**
+   * The "already invited" email.
+   *
+   * @param locale - The language.
+   * @returns The email and its main link.
+   */
+  'already invited': async (locale) => ({
+    email: await alreadyInvitedEmail('jane@adiutor.test', {
+      appUrl,
+      locale,
+      companyName: 'Adiutor Tests',
+    }),
+    url: `${appUrl}/auth`,
+  }),
+  /**
+   * The welcome email.
+   *
+   * @param locale - The language.
+   * @returns The email and its main link.
+   */
+  'account created': async (locale) => {
+    const url = `${appUrl}/auth/reset-password?token=abc`;
+    const email = await accountCreatedEmail('jane@adiutor.test', {
+      appUrl,
+      locale,
+      creatorName: 'Alex Admin',
+      staffName: 'Adiutor Tests',
+      url,
+      validDays: 7,
+    });
+    return { email, url };
+  },
+  /**
+   * The "added to a company" email.
+   *
+   * @param locale - The language.
+   * @returns The email and its main link.
+   */
+  'added to a company': async (locale) => {
+    const url = `${appUrl}/companies/abc`;
+    const email = await addedToCompanyEmail('jane@adiutor.test', {
+      appUrl,
+      locale,
+      adderName: 'Alex Admin',
+      companyName: 'Adiutor Tests',
+      role: 'client',
+      url,
+    });
+    return { email, url };
+  },
+  /**
+   * The "new staff Admin" email.
+   *
+   * @param locale - The language.
+   * @returns The email and its main link.
+   */
+  'new staff Admin': async (locale) => {
+    const url = `${appUrl}/admin/staff`;
+    const email = await staffAdminAddedEmail('alex@adiutor.test', {
+      appUrl,
+      locale,
+      newAdminName: 'Sam Tester',
+      newAdminEmail: 'sam@adiutor.test',
+      how: 'invitation',
+      byName: 'Jane Admin',
+      url,
+    });
+    return { email, url };
+  },
+};
+
+describe('every template in every language', () => {
+  /** Every template in every language, as `[locale, template]`. */
+  const cases = LOCALES.flatMap((locale) =>
+    Object.keys(EVERY_TEMPLATE).map((name) => [locale, name] as const),
+  );
+
+  it.each(cases)('%s: %s', async (locale, name) => {
+    const build = EVERY_TEMPLATE[name];
+    if (!build) {
+      throw new Error(`No example for ${name}`);
+    }
+    // A missing message throws outside production, so building it at all says none is missing.
+    const [{ email, url }, { email: inEnglish }] = await Promise.all([
+      build(locale),
+      build('en-US'),
+    ]);
+
+    expect(email.html).toContain(`lang="${locale}"`);
+    expect(email.subject).not.toMatch(/[{}]/);
+    expect(email.text).not.toMatch(/[{}]/);
+    expect(email.text.match(/https?:\/\/\S+/)?.[0]).toBe(url);
+    if (locale !== 'en-US') {
+      expect(email.subject).not.toBe(inEnglish.subject);
+      expect(email.text).not.toBe(inEnglish.text);
+    }
+  });
+
+  it.each(
+    LOCALES.flatMap((locale) => SECURITY_NOTICE_KINDS.map((kind) => [locale, kind] as const)),
+  )('%s: the %s security notice', async (locale, kind) => {
+    const props = { appUrl, kind, when: new Date('2026-10-23T14:05:00Z') };
+    const [email, inEnglish] = await Promise.all([
+      securityNoticeEmail('jane@adiutor.test', { ...props, locale }),
+      securityNoticeEmail('jane@adiutor.test', { ...props, locale: 'en-US' }),
+    ]);
+
+    expect(email.html).toContain(`lang="${locale}"`);
+    expect(email.subject).not.toMatch(/[{}]/);
+    expect(email.text).toContain(formatDateTime(props.when, locale));
+    if (locale !== 'en-US') {
+      expect(email.subject).not.toBe(inEnglish.subject);
+    }
+  });
+
+  it('lets a language put the company before the inviter in the subject', async () => {
+    const props = {
+      appUrl,
+      inviterName: 'Sam Doe',
+      companyName: 'Adiutor Tests',
+      role: 'client',
+      url: `${appUrl}/invite/abc`,
+      validDays: 7,
+    } as const;
+    expect(
+      (await invitationEmail('jane@adiutor.test', { ...props, locale: 'en-US' })).subject,
+    ).toBe('Sam Doe invited you to join Adiutor Tests on Adiutor');
+    expect(
+      (await invitationEmail('jane@adiutor.test', { ...props, locale: 'es-ES' })).subject,
+    ).toBe('Invitación a Adiutor Tests en Adiutor de parte de Sam Doe');
+    expect(
+      (await invitationEmail('jane@adiutor.test', { ...props, locale: 'nl-NL' })).subject,
+    ).toBe('Sam Doe nodigt je uit voor Adiutor Tests op Adiutor');
+  });
+
+  it('names roles, dates and the device in the recipient’s language', async () => {
+    const reminder = await invitationReminderEmail('jane@adiutor.test', {
+      appUrl,
+      locale: 'nl-NL',
+      inviterName: 'Sam Doe',
+      companyName: 'Adiutor Tests',
+      role: 'watcher',
+      url: `${appUrl}/invite/abc`,
+      expiresAt: new Date('2026-10-25T14:05:00Z'),
+    });
+    expect(reminder.text).toContain(
+      'Sam Doe nodigt je uit om lid te worden van Adiutor Tests op Adiutor als Meekijker. De uitnodiging staat nog open tot 25 okt 2026, 14:05 UTC.',
+    );
+    const invited = await invitationEmail('jane@adiutor.test', {
+      appUrl,
+      locale: 'nl-NL',
+      inviterName: 'Sam Doe',
+      companyName: 'Adiutor Tests',
+      role: 'watcher',
+      url: `${appUrl}/invite/abc`,
+      validDays: 1,
+    });
+    expect(invited.text).toContain('Volgt verzoeken zonder mee te doen.');
+    expect(invited.text).toContain('De link werkt één keer en verloopt over 1 dag.');
+
+    const notice = await securityNoticeEmail('jane@adiutor.test', {
+      appUrl,
+      locale: 'es-ES',
+      kind: 'company_role_changed',
+      when: new Date('2026-10-23T14:05:00Z'),
+      device: 'Firefox en Windows',
+      ip: '203.0.113.7',
+      company: 'Adiutor Tests',
+      role: 'client',
+    });
+    expect(notice.subject).toBe('Ha cambiado tu rol en Adiutor Tests en Adiutor');
+    expect(notice.text).toContain('Tu rol en Adiutor Tests en Adiutor ha cambiado a Cliente.');
+    expect(notice.text).toContain('Cuándo: 23 oct 2026, 14:05 UTC');
+    expect(notice.text).toContain('Desde: Firefox en Windows, 203.0.113.7');
+    expect(notice.text).toContain('Enviado por Adiutor');
   });
 });
 
@@ -472,6 +768,7 @@ describe('template preview', () => {
 
     expect(Template.PreviewProps).toMatchObject({
       appUrl: 'https://adiutor.dev',
+      locale: 'en-US',
       logoSrc: '/static/logo.png',
     });
     const [html, text] = await Promise.all([

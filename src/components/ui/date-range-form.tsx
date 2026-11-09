@@ -7,6 +7,7 @@
 
 import Form from 'next/form';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useId } from 'react';
 import { useFormStatus } from 'react-dom';
 
@@ -38,11 +39,12 @@ interface DateRangeFormProps {
  * @returns The button.
  */
 function ApplyButton() {
+  const t = useTranslations('common');
   const { pending } = useFormStatus();
   return (
     <Button type="submit" variant="secondary" aria-busy={pending || undefined}>
       {pending && <Spinner />}
-      Apply
+      {t('actions.apply')}
     </Button>
   );
 }
@@ -67,6 +69,7 @@ export default function DateRangeForm({
   hiddenFields = {},
   clearHref,
 }: DateRangeFormProps) {
+  const t = useTranslations('common');
   const id = useId();
   return (
     <Form action="" scroll={false} aria-label={label} className="flex flex-wrap items-end gap-2">
@@ -75,7 +78,7 @@ export default function DateRangeForm({
       ))}
       <TextField
         id={`${id}-from`}
-        label="From"
+        label={t('dateRange.from')}
         name="from"
         type="date"
         defaultValue={from}
@@ -83,7 +86,7 @@ export default function DateRangeForm({
       />
       <TextField
         id={`${id}-to`}
-        label="To"
+        label={t('dateRange.to')}
         name="to"
         type="date"
         defaultValue={to}
@@ -93,7 +96,7 @@ export default function DateRangeForm({
       {(from || to) && (
         <Button asChild variant="ghost">
           <Link href={clearHref} scroll={false}>
-            Clear
+            {t('actions.clear')}
           </Link>
         </Button>
       )}

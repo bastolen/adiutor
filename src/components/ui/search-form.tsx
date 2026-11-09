@@ -6,6 +6,7 @@
 
 import { Search } from 'lucide-react';
 import Form from 'next/form';
+import { useTranslations } from 'next-intl';
 import { useFormStatus } from 'react-dom';
 
 import cn from '@/lib/cn';
@@ -38,11 +39,12 @@ interface SearchFormProps {
  * @returns The button.
  */
 function SearchButton() {
+  const t = useTranslations('common.actions');
   const { pending } = useFormStatus();
   return (
     <Button type="submit" variant="secondary" aria-busy={pending || undefined}>
       {pending && <Spinner />}
-      Search
+      {t('search')}
     </Button>
   );
 }

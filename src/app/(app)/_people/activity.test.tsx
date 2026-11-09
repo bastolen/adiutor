@@ -16,7 +16,7 @@ describe('ActivityColumn', () => {
 
     expect(screen.getByText('Last active:')).toHaveClass('sr-only');
     expect(container).toHaveTextContent('Last active: Never');
-    expect(screen.getByText('Joined 28 Oct 2026')).toHaveClass('block', 'text-xs');
+    expect(screen.getByText('Joined Oct 28, 2026')).toHaveClass('block', 'text-xs');
   });
 
   it('gives the moment they were last active as a time', () => {
@@ -32,7 +32,7 @@ describe('ActivityLine', () => {
     const { container } = render(<ActivityLine lastActiveAt={null} joinedAt={JOINED} />);
 
     expect(screen.getByText(/^Last active/)).toHaveTextContent('Last active never');
-    expect(screen.getByText('Joined 28 Oct 2026')).toBeInTheDocument();
+    expect(screen.getByText('Joined Oct 28, 2026')).toBeInTheDocument();
     expect(container.firstElementChild).toHaveClass('contents');
   });
 

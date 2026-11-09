@@ -6,6 +6,8 @@
  * emails, company names), a group of event types and a range of days.
  */
 import { ScrollText } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import Alert from '@/components/ui/alert';
@@ -45,7 +47,7 @@ import { globalPermissionMetadata } from '@/server/page-metadata';
  * the 404 page's title for everyone else, who get the 404 page.
  */
 export const generateMetadata = globalPermissionMetadata('audit:view', {
-  title: 'Audit log · Adiutor',
+  title: 'Audit log',
 });
 
 /** The group filter's choices: everything, then each group. */
@@ -109,12 +111,13 @@ function Involved({ event }: { event: AuditEntry }) {
  * @returns The text, or a dash when neither is known.
  */
 function Origin({ event }: { event: AuditEntry }) {
+  const tCommon = useTranslations('common');
   if (!event.userAgent && !event.ip) {
     return <span aria-label="Not recorded">–</span>;
   }
   return (
     <span className="flex flex-wrap gap-x-1.5">
-      {event.userAgent && <span>{describeUserAgent(event.userAgent).label}</span>}
+      {event.userAgent && <span>{tCommon('device', describeUserAgent(event.userAgent))}</span>}
       {event.ip && <span className="font-mono">{formatIpAddress(event.ip)}</span>}
     </span>
   );
@@ -128,6 +131,7 @@ function Origin({ event }: { event: AuditEntry }) {
  * @returns The page content.
  */
 async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const locale = await getLocale();
   const actor = await requireGlobalPermission('audit:view');
   const params = await searchParams;
   const search = searchParam(params.q)?.trim() ?? '';
@@ -147,10 +151,13 @@ async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> 
 
   // The page's own parameters, in the order they appear in links.
   const pageParams = { group, q: search, from, to };
-  const table = createPageUrl('/admin/logs', pageParams).table(AUDIT_LOG_TABLE, {
-    ...requested,
-    page: events.page,
-  });
+  const table = createPageUrl('/admin/logs', pageParams, await getTranslations('tables')).table(
+    AUDIT_LOG_TABLE,
+    {
+      ...requested,
+      page: events.page,
+    },
+  );
   /**
    * The page's own parameters to keep in a form, leaving out the ones it sets itself.
    *
@@ -260,7 +267,7 @@ async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> 
                   </Td>
                   <Td className="hidden whitespace-nowrap text-muted-foreground sm:table-cell">
                     <RelativeTime date={event.at} />
-                    <span className="sr-only">, {formatDateTime(event.at)}</span>
+                    <span className="sr-only">, {formatDateTime(event.at, locale)}</span>
                   </Td>
                   <Td className="hidden text-sm text-muted-foreground lg:table-cell">
                     <Origin event={event} />

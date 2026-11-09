@@ -3,6 +3,7 @@
  * staff page.
  */
 import { Link2 } from 'lucide-react';
+import { useLocale } from 'next-intl';
 
 import Badge, { type BadgeTone } from '@/components/ui/badge';
 import Card from '@/components/ui/card';
@@ -14,6 +15,7 @@ import SortMenu from '@/components/ui/sort-menu';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
 import { ROLE_LABELS } from '@/lib/authz/roles';
 import formatDate from '@/lib/format';
+import { type Locale } from '@/lib/i18n/locales';
 import { type Paged, showsPagination, type TableLinks } from '@/lib/tables/table-state';
 import type { InviteLinkSort } from '@/lib/tables/tables';
 import type { InviteLinkStatus, InviteLinkSummary } from '@/server/people/invite-links';
@@ -58,17 +60,18 @@ interface InviteLinksCardProps {
  * it or when it expired.
  *
  * @param link - The link.
+ * @param locale - The reader's language, for the date.
  * @returns The details, or `null` for a revoked link (its status says it all).
  */
-function linkDetails(link: InviteLinkSummary): string | null {
+function linkDetails(link: InviteLinkSummary, locale: Locale): string | null {
   if (link.status === 'active') {
-    return `Expires ${formatDate(link.expiresAt)}`;
+    return `Expires ${formatDate(link.expiresAt, locale)}`;
   }
   if (link.usedByEmail) {
     return `Used by ${link.usedByEmail}`;
   }
   if (link.status === 'expired') {
-    return `Expired ${formatDate(link.expiresAt)}`;
+    return `Expired ${formatDate(link.expiresAt, locale)}`;
   }
   return null;
 }
@@ -93,6 +96,7 @@ export default function InviteLinksCard({
   companyId,
   roles,
 }: InviteLinksCardProps) {
+  const locale = useLocale();
   return (
     <Card
       id={table.section}
@@ -140,11 +144,11 @@ export default function InviteLinksCard({
                     <Badge>{ROLE_LABELS[link.role]}</Badge>
                     {/* When it was created goes here on phones, its details below tablet width. */}
                     <span className="text-xs whitespace-nowrap text-muted-foreground sm:hidden">
-                      Created {formatDate(link.createdAt)}
+                      Created {formatDate(link.createdAt, locale)}
                     </span>
-                    {linkDetails(link) && (
+                    {linkDetails(link, locale) && (
                       <span className="text-xs wrap-anywhere text-muted-foreground md:hidden">
-                        {linkDetails(link)}
+                        {linkDetails(link, locale)}
                       </span>
                     )}
                   </div>
@@ -155,11 +159,11 @@ export default function InviteLinksCard({
                   </Badge>
                 </Td>
                 <Td className="hidden whitespace-nowrap text-muted-foreground sm:table-cell">
-                  {formatDate(link.createdAt)}
+                  {formatDate(link.createdAt, locale)}
                 </Td>
                 {/* "Used by" names an address, which may have to wrap. */}
                 <Td className="hidden wrap-anywhere text-muted-foreground md:table-cell">
-                  {linkDetails(link) ?? (
+                  {linkDetails(link, locale) ?? (
                     <>
                       <span aria-hidden="true">—</span>
                       <span className="sr-only">No details</span>
@@ -173,7 +177,7 @@ export default function InviteLinksCard({
                         action={revokeInviteLinkAction}
                         fields={{ companyId: companyId ?? '', linkId: link.id }}
                         label="Revoke"
-                        ariaLabel={`Revoke ${ROLE_LABELS[link.role]} link created ${formatDate(link.createdAt)}`}
+                        ariaLabel={`Revoke ${ROLE_LABELS[link.role]} link created ${formatDate(link.createdAt, locale)}`}
                         variant="danger-subtle"
                         confirm={{
                           title: 'Revoke this invite link?',

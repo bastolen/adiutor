@@ -8,11 +8,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Permission } from '@/lib/authz/permissions';
 import type { PlatformRole } from '@/lib/authz/roles';
-import { NOT_FOUND_METADATA } from '@/lib/not-found-metadata';
 
 import type { Actor } from './actor';
 import { findCompanyAccess, getActor } from './authz';
 import { companyPermissionMetadata, globalPermissionMetadata } from './page-metadata';
+
+/** The 404 page's metadata, in English (US) as unit tests render. */
+const NOT_FOUND_METADATA = {
+  title: { absolute: 'Not found · Adiutor', template: 'Not found · Adiutor' },
+};
 
 vi.mock('server-only', () => ({}));
 vi.mock('./authz', async () => {

@@ -1,17 +1,18 @@
 /**
  * @file Tests for which cookies a sign-out removes: all the browser sent,
- * except the "Last used" sign-in method.
+ * except the "Last used" sign-in method and the language.
  */
 import { describe, expect, it } from 'vitest';
 
 import { cookiesToClearAtSignOut, LAST_USED_LOGIN_METHOD_COOKIE } from './auth-cookies';
 
 describe('cookiesToClearAtSignOut', () => {
-  it('lists every cookie but the last sign-in method, each once', () => {
+  it('lists every cookie but the last sign-in method and the language, each once', () => {
     const header = [
       'better-auth.session_token=abc.def',
       '__Secure-better-auth.trust_device=xyz',
       `${LAST_USED_LOGIN_METHOD_COOKIE}=github`,
+      'adiutor.locale=nl-NL',
       'adiutor-provider-linked=github%3Aadiutor-tests',
       'better-auth.session_token=again',
       'empty=',

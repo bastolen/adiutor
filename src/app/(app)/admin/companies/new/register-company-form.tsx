@@ -7,6 +7,7 @@ import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 import { ConfirmFirstNote } from '@/components/auth/recent-confirmation';
+import EmailLanguageField from '@/components/language/email-language-field';
 import Alert from '@/components/ui/alert';
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
@@ -97,6 +98,7 @@ export default function RegisterCompanyForm() {
         description="They'll get an invitation to join as the company's Admin."
         required
       />
+      <EmailLanguageField purpose="invitation" />
       {!confirmFirst && (
         <div>
           <Button type="submit" loading={pending}>

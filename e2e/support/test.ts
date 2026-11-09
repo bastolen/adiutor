@@ -2,7 +2,10 @@
  * @file The Playwright `test` and `expect` every spec uses: Playwright's own,
  * plus a check that fails a test when one of its pages reports a Content
  * Security Policy violation (e.g. a script without the request's nonce, see
- * `src/lib/request/csp.ts`), since a blocked script often breaks a page silently.
+ * `src/lib/request/csp.ts`), since a blocked script often breaks a page
+ * silently, or a message it couldn't show (the `[i18n]` line of
+ * `src/lib/i18n/message-errors.ts`, e.g. a client component whose namespace
+ * no provider passes).
  *
  * It watches every page open during the test: those of the test's own
  * context, of contexts made earlier (e.g. in `beforeAll`) and of contexts the
@@ -30,8 +33,11 @@ import { randomClientIp } from './helpers';
 
 export { expect };
 
-/** What a CSP violation looks like in a console message or an uncaught error. */
-const VIOLATION = /Content Security Policy|Content-Security-Policy|EvalError/i;
+/**
+ * What a CSP violation looks like in a console message or an uncaught error,
+ * and the prefix of a message that couldn't be shown.
+ */
+const VIOLATION = /Content Security Policy|Content-Security-Policy|EvalError|\[i18n\]/i;
 
 /**
  * Playwright's `test`, failing on CSP violations in any page open during the
@@ -133,7 +139,7 @@ export const test = base.extend<{ cspViolations: string[] }>({
         Object.assign(browser, { newContext, newPage });
         cleanups.forEach((cleanup) => cleanup());
       }
-      expect(violations, 'Content Security Policy violations').toEqual([]);
+      expect(violations, 'Content Security Policy violations and missing messages').toEqual([]);
     },
     { auto: true },
   ],

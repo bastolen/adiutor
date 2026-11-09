@@ -7,6 +7,7 @@ import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
+import EmailLanguageField from '@/components/language/email-language-field';
 import Alert from '@/components/ui/alert';
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
@@ -74,6 +75,7 @@ export default function RegisterUserForm() {
         description="They'll get an email with a link to choose a password. They aren't added to any company or given staff access."
         required
       />
+      <EmailLanguageField purpose="account" />
       <div>
         <Button type="submit" loading={pending}>
           Add user

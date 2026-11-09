@@ -9,7 +9,7 @@ import AuthLayout from '@/components/layout/auth-layout';
  * Metadata: a one-time page, kept out of search engines.
  */
 export const metadata: Metadata = {
-  title: 'Set up Adiutor',
+  title: { absolute: 'Set up Adiutor' },
   robots: { index: false, follow: false },
 };
 

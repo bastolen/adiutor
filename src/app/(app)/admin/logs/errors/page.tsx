@@ -7,6 +7,8 @@
  * reference" in docs/deploying.md).
  */
 import { SearchX, ShieldCheck } from 'lucide-react';
+import { useLocale } from 'next-intl';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { Fragment, type ReactNode, Suspense } from 'react';
 
 import Badge from '@/components/ui/badge';
@@ -34,7 +36,7 @@ import { findErrorReference, listRecentErrors, type RecordedError } from '@/serv
  * the 404 page's title for everyone else, who get the 404 page.
  */
 export const generateMetadata = globalPermissionMetadata('errors:view', {
-  title: 'Errors · Adiutor',
+  title: 'Errors',
 });
 
 /**
@@ -89,9 +91,10 @@ function Detail({ term, children }: { term: string; children: ReactNode }) {
  * @returns Its details.
  */
 function ErrorDetails({ error }: { error: RecordedError }) {
+  const locale = useLocale();
   return (
     <dl className="divide-y divide-border">
-      <Detail term="When">{formatDateTime(error.at)}</Detail>
+      <Detail term="When">{formatDateTime(error.at, locale)}</Detail>
       <Detail term="Kind">
         <Badge>{kindLabel(error)}</Badge>
       </Detail>
@@ -205,6 +208,7 @@ function LookupResult({
  * @returns The page content.
  */
 async function Errors({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const locale = await getLocale();
   const actor = await requireGlobalPermission('errors:view');
   const params = await searchParams;
   const input = searchParam(params.q)?.trim() ?? '';
@@ -213,7 +217,11 @@ async function Errors({ searchParams }: { searchParams: Promise<SearchParams> })
     input ? findErrorReference(appContext, actor, input) : null,
     listRecentErrors(appContext, actor, requested),
   ]);
-  const table = createPageUrl('/admin/logs/errors', { q: input }).table(ERRORS_TABLE, {
+  const table = createPageUrl(
+    '/admin/logs/errors',
+    { q: input },
+    await getTranslations('tables'),
+  ).table(ERRORS_TABLE, {
     ...requested,
     page: recent.page,
   });
@@ -284,7 +292,7 @@ async function Errors({ searchParams }: { searchParams: Promise<SearchParams> })
                   </Td>
                   <Td className="hidden whitespace-nowrap text-muted-foreground sm:table-cell">
                     <RelativeTime date={error.at} />
-                    <span className="sr-only">, {formatDateTime(error.at)}</span>
+                    <span className="sr-only">, {formatDateTime(error.at, locale)}</span>
                   </Td>
                 </Tr>
               ))}

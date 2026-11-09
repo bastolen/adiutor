@@ -22,7 +22,7 @@ import SignInForm from './sign-in-form';
  * Page metadata.
  */
 export const metadata: Metadata = {
-  title: 'Sign in · Adiutor',
+  title: 'Sign in',
 };
 
 /**

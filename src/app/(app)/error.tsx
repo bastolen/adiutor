@@ -10,6 +10,7 @@
 
 import { TriangleAlert } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useTransition } from 'react';
 
 import Button from '@/components/ui/button';
@@ -31,6 +32,7 @@ import useErrorReference from '../use-error-reference';
  * @returns The error content.
  */
 export default function AppError({ error, retry }: ErrorPageProps) {
+  const t = useTranslations('common');
   const reference = useErrorReference(error);
   const [retrying, startRetry] = useTransition();
   const heading = useRef<HTMLElement>(null);
@@ -43,17 +45,17 @@ export default function AppError({ error, retry }: ErrorPageProps) {
     <Card flush>
       <EmptyState
         icon={TriangleAlert}
-        title="Something went wrong"
+        title={t('error.title')}
         titleAs="h1"
         titleRef={heading}
-        description="This page couldn't load. Try again, or go to your dashboard."
+        description={t('error.description')}
         action={
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button loading={retrying} onClick={() => startRetry(retry)}>
-              Try again
+              {t('actions.tryAgain')}
             </Button>
             <Button asChild variant="secondary">
-              <Link href="/dashboard">Go to your dashboard</Link>
+              <Link href="/dashboard">{t('actions.goToDashboard')}</Link>
             </Button>
           </div>
         }

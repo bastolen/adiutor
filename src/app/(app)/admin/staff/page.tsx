@@ -1,8 +1,9 @@
 /**
- * @file The staff page, served at `/admin/staff`: the staff name and its
- * people (staff), with invitations and invite links to join it, each
+ * @file The staff page, served at `/admin/staff`: the staff name, Adiutor's
+ * default language and its people (staff), with invitations and invite links to join it, each
  * sortable and paginated. Platform Admins only (`staff:manage`).
  */
+import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
@@ -30,6 +31,7 @@ import { listPendingInvitations } from '@/server/people/invitations';
 import { listInviteLinks } from '@/server/people/invite-links';
 import { getStaffSettings, listStaff } from '@/server/people/staff';
 
+import DefaultLanguageForm from './default-language-form';
 import StaffNameForm from './staff-name-form';
 import { ActivityColumn, ActivityLine } from '../../_people/activity';
 import InvitationsCard from '../../_people/invitations-card';
@@ -43,7 +45,7 @@ import { changeStaffRoleAction, removeFromStaffAction } from '../../_people/staf
  * the 404 page's title for everyone else, who get the 404 page.
  */
 export const generateMetadata = globalPermissionMetadata('staff:manage', {
-  title: 'Staff · Adiutor',
+  title: 'Staff',
 });
 
 /** The staff roles as select options, with what each one does. */
@@ -69,7 +71,8 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
     listPendingInvitations(appContext, actor, null, invitationsRequested),
     listInviteLinks(appContext, actor, null, linksRequested),
   ]);
-  const url = createPageUrl('/admin/staff');
+  const url = createPageUrl('/admin/staff', {}, await getTranslations('tables'));
+  const language = await getTranslations('common.language');
   const table = url.table(STAFF_TABLE, { ...staffRequested, page: members.page });
   const invitationsTable = url.table(INVITATIONS_TABLE, {
     ...invitationsRequested,
@@ -94,6 +97,10 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
         description="Used in invitations and wherever users see who's helping them."
       >
         <StaffNameForm name={settings.name} />
+      </Card>
+
+      <Card title={language('defaultLabel')} description={language('defaultDescription')}>
+        <DefaultLanguageForm defaultLocale={settings.defaultLocale} />
       </Card>
 
       <Card

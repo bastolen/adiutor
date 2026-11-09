@@ -40,6 +40,32 @@ describe('SelectField', () => {
     expect(screen.getByRole('option', { name: 'Watcher' })).toBeInTheDocument();
   });
 
+  it("shows an option's icon in the list and when chosen, keeping the label as its name", async () => {
+    const user = userEvent.setup();
+    render(
+      <SelectField
+        label="Language"
+        options={[
+          {
+            value: 'nl-NL',
+            label: 'Nederlands',
+            icon: <svg aria-hidden="true" data-testid="nl" />,
+          },
+          { value: 'es-ES', label: 'Español', icon: <svg aria-hidden="true" data-testid="es" /> },
+        ]}
+        defaultValue="nl-NL"
+      />,
+    );
+
+    const select = screen.getByRole('combobox', { name: 'Language' });
+    expect(select).toHaveTextContent('Nederlands');
+    expect(select.querySelector('[data-testid="nl"]')).not.toBeNull();
+
+    await user.click(select);
+    const option = screen.getByRole('option', { name: 'Español' });
+    expect(option.querySelector('[data-testid="es"]')).not.toBeNull();
+  });
+
   it('reports the chosen value', async () => {
     const user = userEvent.setup();
     const onValueChange = vi.fn();
@@ -78,5 +104,22 @@ describe('SelectField', () => {
     expect(select).not.toHaveAttribute('aria-busy');
     await user.click(select);
     expect(await screen.findByRole('listbox')).toBeInTheDocument();
+  });
+});
+
+describe('SelectField with a description', () => {
+  it('links its help text to the field', () => {
+    render(
+      <SelectField
+        label="Email language"
+        options={[{ value: 'en-US', label: 'English (US)' }]}
+        defaultValue="en-US"
+        description="The invitation and its reminder are sent in this language."
+      />,
+    );
+
+    expect(screen.getByRole('combobox', { name: 'Email language' })).toHaveAccessibleDescription(
+      'The invitation and its reminder are sent in this language.',
+    );
   });
 });

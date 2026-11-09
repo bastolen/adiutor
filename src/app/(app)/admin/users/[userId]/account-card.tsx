@@ -3,6 +3,8 @@
  * and whether it's verified, whether the account is active, when they were
  * last active and when the account was created.
  */
+import { useLocale } from 'next-intl';
+
 import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
 import RelativeTime from '@/components/ui/relative-time';
@@ -37,6 +39,7 @@ export default function AccountCard({
   lastActiveAt,
   createdAt,
 }: AccountCardProps) {
+  const locale = useLocale();
   return (
     <Card title="Account">
       <dl className="divide-y divide-border">
@@ -54,7 +57,7 @@ export default function AccountCard({
         <DetailRow term="Last active">
           <RelativeTime date={lastActiveAt} />
         </DetailRow>
-        <DetailRow term="Account created">{formatDate(createdAt)}</DetailRow>
+        <DetailRow term="Account created">{formatDate(createdAt, locale)}</DetailRow>
       </dl>
     </Card>
   );

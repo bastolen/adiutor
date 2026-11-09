@@ -9,7 +9,7 @@
 import { refresh } from 'next/cache';
 
 import type { ActionResult } from '@/lib/action-result';
-import field from '@/lib/form-data';
+import field, { localeField } from '@/lib/form-data';
 import inviteStatusMessage from '@/lib/invite-status';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
@@ -55,7 +55,7 @@ interface InviteResultLine {
  * Invites one or more people by email (up to 20), all with the same role.
  *
  * @param _previous - The previous result (unused).
- * @param formData - Fields `companyId`, `emails` and `role`.
+ * @param formData - Fields `companyId`, `emails`, `role` and `locale` (the emails' language).
  * @returns A summary with a line per address, or why it failed.
  */
 export async function inviteAction(
@@ -71,6 +71,7 @@ export async function inviteAction(
         companyId,
         emails: field(formData, 'emails'),
         role: field(formData, 'role'),
+        locale: localeField(formData),
       }),
     );
     refresh();

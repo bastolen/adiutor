@@ -16,7 +16,14 @@ import type { Database, DatabaseOrTransaction } from '@/db';
 import { staffSettings, user } from '@/db/schema';
 import { PLATFORM_ADMIN_ROLE } from '@/lib/authz/roles';
 import { firstRow } from '@/lib/defined';
-import { emailSchema, nameSchema, passwordSchema, staffNameSchema } from '@/lib/validation';
+import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/locales';
+import {
+  emailSchema,
+  localeSchema,
+  nameSchema,
+  passwordSchema,
+  staffNameSchema,
+} from '@/lib/validation';
 
 import { recordEvent } from './audit';
 import { withMfaPromotion } from './auth/mfa-promotion';
@@ -68,6 +75,17 @@ export interface SetupInput {
   email: string;
   /** Their password; leave out to create an account that signs in by email link. */
   password?: string;
+  /**
+   * Adiutor's default language, for everyone who hasn't chosen one, as the
+   * form sent it; English (US) when left out.
+   */
+  defaultLocale?: string;
+  /**
+   * A new Admin's own language: the one they set up in, so choosing another
+   * default doesn't switch their screens. Left out, their first sign-in saves
+   * one. An existing account (the command line) keeps its own.
+   */
+  adminLocale?: Locale;
 }
 
 /** Options for {@link setUpPlatform}. */
@@ -93,7 +111,8 @@ export interface SetupResult {
 }
 
 /**
- * Names the staff and makes the given person its Admin, in one transaction. A
+ * Names the staff, sets Adiutor's default language and makes the given person
+ * its Admin, in one transaction. A
  * new Admin's email address counts as verified: whoever runs setup owns the
  * installation, and Better Auth would otherwise delete the password at their
  * first email-link sign-in (it removes sign-in methods of unverified accounts
@@ -109,7 +128,7 @@ export interface SetupResult {
  * settings row, and the losing request gets the same "already set up" error.
  *
  * @param db - Database client.
- * @param input - The name shown to users and the Admin's details.
+ * @param input - The name shown to users, Adiutor's default language and the Admin's details.
  * @param options - Whether it may use an existing account.
  * @returns What was created.
  * @throws {ServiceError} `conflict` if setup is already done or, without
@@ -125,6 +144,8 @@ export async function setUpPlatform(
   const staffName = staffNameSchema.parse(input.staffName);
   const name = nameSchema.parse(input.name);
   const email = emailSchema.parse(input.email);
+  const defaultLocale =
+    input.defaultLocale === undefined ? DEFAULT_LOCALE : localeSchema.parse(input.defaultLocale);
   /**
    * Checks whether setup may run now.
    *
@@ -145,7 +166,7 @@ export async function setUpPlatform(
       if (!(await isOpen(tx))) {
         throw alreadySetUpError();
       }
-      await tx.insert(staffSettings).values({ name: staffName });
+      await tx.insert(staffSettings).values({ name: staffName, defaultLocale });
 
       const [existing] = allowExisting
         ? await tx
@@ -192,7 +213,13 @@ export async function setUpPlatform(
       const { id: userId } = firstRow(
         await tx
           .insert(user)
-          .values({ name, email, emailVerified: true, platformRole: PLATFORM_ADMIN_ROLE })
+          .values({
+            name,
+            email,
+            emailVerified: true,
+            platformRole: PLATFORM_ADMIN_ROLE,
+            locale: input.adminLocale ?? null,
+          })
           .returning({ id: user.id }),
         'the first staff Admin',
       );

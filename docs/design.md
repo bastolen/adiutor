@@ -212,14 +212,22 @@ cursors using only the keyboard.
 The site supports light and dark mode. Visitors choose **System** (the default, following their
 device), **Light** or **Dark**:
 
-- **Signed out** (`AuthLayout`, and `CenteredLayout` for the 404, sign-in error and error pages): a
-  floating button in the bottom-right corner (`ThemeSwitcher`), on every page without the account
-  menu.
+- **Signed out** (`AuthLayout`, and `CenteredLayout` for the 404, sign-in error and error pages): one
+  floating button in the bottom-right corner for the theme and the language (`PreferencesMenu` in
+  `src/components/layout/preferences-menu.tsx`), on every page without the account menu. It shows
+  two icons split by a thin line, the current theme's and the language's flag, and is named in
+  full for screen readers ("Theme and language: System, English (US)"). Its Radix menu has the
+  theme as the same row of three icons as the account menu, then the languages, each with its
+  flag, named in itself and marked with its `lang` (see
+  [Languages](i18n.md#how-the-language-is-chosen)).
 - **Signed in:** a row of three icons in the account menu (`src/app/(app)/account-menu.tsx`).
-  Choosing one keeps the menu open so the result shows at once.
+
+Choosing a theme keeps the menu open, so the result shows at once.
 
 Both use the same hook (`useThemePreference`) and the same labels and icons
-(`src/components/theme/theme-options.ts`), so a choice made before signing in carries over.
+(`src/components/theme/theme-options.ts`: half sun, half moon for **System**, so it reads as a
+theme; a sun; a moon), so a choice made before signing in carries over. The row's "Theme" label
+has a palette icon, apart from the options.
 
 - **Stored choice:** saved in `localStorage` (`adiutor-theme`) and kept in sync across tabs. With
   System, the page follows device changes live.

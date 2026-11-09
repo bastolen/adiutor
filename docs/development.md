@@ -12,6 +12,8 @@ Mailpit at <http://localhost:8025> (see [Email](email.md)).
 
 For scripted deployments, `pnpm setup:platform --staff-name "Adiutor" --email you@adiutor.dev --name
 "Your Name"` does the same from the command line (the account then signs in with an email link).
+Add `--default-language nl-NL` (or `es-ES`) to choose Adiutor's default language; it's English (US)
+otherwise.
 
 ## Migrations
 

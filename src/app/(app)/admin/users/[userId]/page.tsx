@@ -16,6 +16,7 @@
  * its own component next to it (`*-card.tsx`), taking only what it shows.
  */
 import { notFound } from 'next/navigation';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
@@ -61,7 +62,7 @@ import StaffAccessCard from './staff-access-card';
  */
 export const generateMetadata = globalPermissionMetadata(
   'users:view',
-  { title: 'User · Adiutor' },
+  { title: 'User' },
   async (actor, { params }: PageProps<'/admin/users/[userId]'>) =>
     userExists(appContext, actor, (await params).userId),
 );
@@ -84,6 +85,7 @@ async function UserDetailContent({
   params: Promise<{ userId: string }>;
   searchParams: Promise<SearchParams>;
 }) {
+  const locale = await getLocale();
   const actor = await requireGlobalPermission('users:view');
   const [{ userId }, query] = await Promise.all([params, searchParams]);
   const companiesRequested = parseTableState(USER_COMPANIES_TABLE, query);
@@ -108,7 +110,7 @@ async function UserDetailContent({
     }
     throw error;
   }
-  const url = createPageUrl(`/admin/users/${detail.id}`);
+  const url = createPageUrl(`/admin/users/${detail.id}`, {}, await getTranslations('tables'));
 
   const permissions = getGlobalPermissions(actor);
   const isSelf = detail.id === actor.id;
@@ -152,8 +154,8 @@ async function UserDetailContent({
 
       {detail.deactivatedAt && (
         <Alert tone="error">
-          This account was deactivated on {formatDateTime(detail.deactivatedAt)}. It can&apos;t sign
-          in until an Admin reactivates it.
+          This account was deactivated on {formatDateTime(detail.deactivatedAt, locale)}. It
+          can&apos;t sign in until an Admin reactivates it.
         </Alert>
       )}
       {isSelf && (

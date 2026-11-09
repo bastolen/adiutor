@@ -6,6 +6,7 @@ import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph } from '@/components/email/email-text';
 import type { Email } from '@/lib/email';
+import translator from '@/lib/i18n/translator';
 
 import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
 import renderEmail from './render';
@@ -41,6 +42,7 @@ export interface StaffAdminAddedEmailProps extends EmailBaseProps {
  * @param props.how - How they became one.
  * @param props.byName - Who gave the role or sent the invitation, if known.
  * @param props.url - Link to the staff page.
+ * @param props.locale - The recipient's language.
  * @param props.logoSrc - Logo URL override.
  * @returns The email.
  */
@@ -51,32 +53,33 @@ export default function StaffAdminAddedEmail({
   how,
   byName,
   url,
+  locale,
   logoSrc = undefined,
 }: StaffAdminAddedEmailProps) {
+  const t = translator(locale, 'emails.staffAdminAdded');
   // Their address once, also when it's all there is to name them by.
-  const who = newAdminName === newAdminEmail ? newAdminEmail : `${newAdminName} (${newAdminEmail})`;
-  let what = `${who} accepted an invitation to the staff and is now a staff Admin on Adiutor.`;
+  const who =
+    newAdminName === newAdminEmail
+      ? newAdminEmail
+      : t('nameWithEmail', { name: newAdminName, email: newAdminEmail });
+  let what = t('accepted', { who });
   if (how === 'role') {
-    what = byName
-      ? `${byName} made ${who} a staff Admin on Adiutor.`
-      : `${who} was made a staff Admin on Adiutor.`;
+    what = byName ? t('madeBy', { by: byName, who }) : t('made', { who });
   } else if (byName) {
-    what = `${who} accepted ${byName}’s invitation and is now a staff Admin on Adiutor.`;
+    what = t('acceptedFrom', { by: byName, who });
   }
   return (
     <EmailLayout
-      preview={`${newAdminName} is now a staff Admin on Adiutor`}
+      preview={t('preview', { name: newAdminName })}
       appUrl={appUrl}
+      locale={locale}
       logoSrc={logoSrc}
-      reason="You're receiving this because you're a staff Admin on Adiutor: staff Admins are told whenever someone becomes one."
+      reason={t('reason')}
     >
-      <EmailHeading>{newAdminName} is now a staff Admin</EmailHeading>
+      <EmailHeading>{t('heading', { name: newAdminName })}</EmailHeading>
       <EmailParagraph>{what}</EmailParagraph>
-      <EmailParagraph>
-        Staff Admins can manage everything on Adiutor, the staff included. If you don&apos;t
-        recognise this, remove their staff access on the staff page and check the audit log.
-      </EmailParagraph>
-      <EmailButton href={url}>Open the staff page</EmailButton>
+      <EmailParagraph>{t('advice')}</EmailParagraph>
+      <EmailButton href={url}>{t('button')}</EmailButton>
     </EmailLayout>
   );
 }
@@ -101,7 +104,7 @@ StaffAdminAddedEmail.PreviewProps = {
 export function staffAdminAddedEmail(to: string, props: StaffAdminAddedEmailProps): Promise<Email> {
   return renderEmail(
     to,
-    `${props.newAdminName} is now a staff Admin on Adiutor`,
+    translator(props.locale, 'emails.staffAdminAdded')('subject', { name: props.newAdminName }),
     <StaffAdminAddedEmail {...props} />,
   );
 }

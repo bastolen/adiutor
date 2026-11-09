@@ -1,0 +1,11 @@
+{
+  "account": {
+    "profile": {
+      "languageTitle": "Taal",
+      "languageDescription": "Adiutor en de e-mails die je ontvangt gebruiken deze taal.",
+      "languageLabel": "Taal",
+      "saveLanguage": "Taal opslaan",
+      "languageSaved": "Taal opgeslagen."
+    }
+  }
+}

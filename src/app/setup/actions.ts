@@ -9,18 +9,20 @@ import { redirect } from 'next/navigation';
 import type { ActionResult } from '@/lib/action-result';
 import { auth } from '@/lib/auth';
 import field from '@/lib/form-data';
+import requestLocale from '@/lib/i18n/request-locale';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
 import { setUpPlatform } from '@/server/setup';
 
 /**
- * Names the staff and creates its first Admin, signs them in and opens the
- * dashboard. Only on a fresh install: refused once setup is done or any
+ * Names the staff, sets Adiutor's default language and creates its first
+ * Admin, in the language the setup page was shown in (their browser's, as
+ * nothing is set up yet), then signs them in and opens the dashboard. Only on a fresh install: refused once setup is done or any
  * account exists, even if the form is posted directly, so it never promotes
  * an existing account.
  *
  * @param _previous - The previous result (unused).
- * @param formData - Fields `staffName`, `name`, `email` and `password`.
+ * @param formData - Fields `staffName`, `defaultLocale`, `name`, `email` and `password`.
  * @returns Why it failed; on success, redirects instead.
  */
 export default async function setupAction(
@@ -31,6 +33,8 @@ export default async function setupAction(
     const password = field(formData, 'password');
     const result = await setUpPlatform(appContext.db, {
       staffName: field(formData, 'staffName'),
+      defaultLocale: field(formData, 'defaultLocale'),
+      adminLocale: await requestLocale(),
       name: field(formData, 'name'),
       email: field(formData, 'email'),
       password,

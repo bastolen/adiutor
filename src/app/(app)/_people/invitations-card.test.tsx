@@ -6,6 +6,7 @@ import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { defined } from '@/lib/defined';
+import translator from '@/lib/i18n/translator';
 import { createPageUrl } from '@/lib/tables/table-state';
 import { INVITATIONS_TABLE } from '@/lib/tables/tables';
 import type { PendingInvitation } from '@/server/people/invitations';
@@ -49,7 +50,11 @@ function pending(overrides: Partial<PendingInvitation>): PendingInvitation {
 }
 
 /** The table's links in its default state. */
-const TABLE = createPageUrl('/companies/company-1/members').table(INVITATIONS_TABLE, {
+const TABLE = createPageUrl(
+  '/companies/company-1/members',
+  {},
+  translator('en-US', 'tables'),
+).table(INVITATIONS_TABLE, {
   sort: 'sent',
   dir: 'desc',
   page: 1,

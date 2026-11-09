@@ -4,6 +4,7 @@
  * @see https://nextjs.org/docs/app/api-reference/config/next-config-js
  */
 import type { NextConfig } from 'next';
+import createNextIntlPlugin from 'next-intl/plugin';
 
 /**
  * The Content Security Policy for the static files the proxy skips (logos and
@@ -108,4 +109,10 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+/**
+ * Adds next-intl: points it at the per-request configuration (the
+ * request's language and messages, see docs/i18n.md).
+ */
+const withNextIntl = createNextIntlPlugin('./src/lib/i18n/request.ts');
+
+export default withNextIntl(nextConfig);

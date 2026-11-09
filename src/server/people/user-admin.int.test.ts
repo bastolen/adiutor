@@ -41,8 +41,11 @@ import {
   createSession,
   createStaffSettings,
   createUser,
+  emailLanguage,
   enableTwoFactor,
+  inLanguage,
   inSequence,
+  setUserLocale,
   setupTestContext,
   staffActor,
   tokenFrom,
@@ -575,6 +578,17 @@ describe('admin actions', () => {
       actorUserId: admin.id,
       details: { email: 'jane@adiutor.test' },
     });
+  });
+
+  it('tells a deleted user in the language they saved, read before the account went', async () => {
+    await setUserLocale(db, jane, 'nl-NL');
+
+    // The Admin's own language doesn't count: Jane saved hers.
+    await deleteUser(inLanguage(ctx, 'es-ES'), admin, jane, 'jane@adiutor.test');
+
+    expect(sent.map((email) => [email.to, emailLanguage(email), email.subject])).toEqual([
+      ['jane@adiutor.test', 'nl-NL', 'Je Adiutor-account is verwijderd'],
+    ]);
   });
 
   it('refuses to remove the last Admin of a company who can sign in', async () => {

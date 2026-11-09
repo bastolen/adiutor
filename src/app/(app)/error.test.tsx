@@ -76,7 +76,7 @@ describe('AppError', () => {
     expect(await screen.findByText('7KQ2-M9XD')).toBeInTheDocument();
     rerender(<AppError error={error} retry={vi.fn()} />);
 
-    expect(screen.getByText('28 Oct 2026, 18:40 UTC')).toBeInTheDocument();
+    expect(screen.getByText('Oct 28, 2026, 6:40 PM UTC')).toBeInTheDocument();
     expect(reportErrorAction).toHaveBeenCalledOnce();
     expect(reportErrorAction).toHaveBeenCalledWith({
       name: 'TypeError',

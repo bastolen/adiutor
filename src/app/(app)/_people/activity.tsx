@@ -3,6 +3,8 @@
  * when they were last active and when they joined. Shown in one "Activity"
  * column, and under their name where that column is hidden.
  */
+import { useLocale } from 'next-intl';
+
 import RelativeTime from '@/components/ui/relative-time';
 import cn from '@/lib/cn';
 import formatDate from '@/lib/format';
@@ -26,11 +28,12 @@ interface ActivityProps {
  * @returns The cell's content.
  */
 export function ActivityColumn({ lastActiveAt, joinedAt }: ActivityProps) {
+  const locale = useLocale();
   return (
     <>
       <span className="sr-only">Last active: </span>
       <RelativeTime date={lastActiveAt} />
-      <span className="block text-xs">Joined {formatDate(joinedAt)}</span>
+      <span className="block text-xs">Joined {formatDate(joinedAt, locale)}</span>
     </>
   );
 }
@@ -51,12 +54,13 @@ export function ActivityLine({
   joinedAt,
   className = '',
 }: ActivityProps & { className?: string }) {
+  const locale = useLocale();
   return (
     <span className={cn('contents', className)}>
       <span>
         Last active <RelativeTime date={lastActiveAt} never="never" />
       </span>
-      <span>Joined {formatDate(joinedAt)}</span>
+      <span>Joined {formatDate(joinedAt, locale)}</span>
     </span>
   );
 }

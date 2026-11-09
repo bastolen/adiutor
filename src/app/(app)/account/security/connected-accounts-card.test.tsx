@@ -124,7 +124,7 @@ describe('ConnectedAccountsCard', () => {
     render(<ConnectedAccountsCard providers={['github', 'google']} connected={[github]} />);
 
     const githubRow = within(row('GitHub'));
-    expect(githubRow.getByText('Connected 23 Oct 2026')).toBeInTheDocument();
+    expect(githubRow.getByText('Connected Oct 23, 2026')).toBeInTheDocument();
     expect(githubRow.getByRole('button', { name: 'Disconnect GitHub' })).toBeInTheDocument();
     expect(githubRow.queryByRole('button', { name: 'Confirm GitHub' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Confirm/ })).not.toBeInTheDocument();
@@ -145,7 +145,7 @@ describe('ConnectedAccountsCard', () => {
     const githubRow = within(row('GitHub'));
     expect(
       githubRow.getByText(
-        "Connected 23 Oct 2026 when you signed in with it. Confirm it to use it as your second step, or disconnect it if it isn't yours.",
+        "Connected Oct 23, 2026 when you signed in with it. Confirm it to use it as your second step, or disconnect it if it isn't yours.",
       ),
     ).toBeInTheDocument();
     expect(githubRow.getByRole('button', { name: 'Confirm GitHub' })).toBeInTheDocument();
@@ -164,7 +164,7 @@ describe('ConnectedAccountsCard', () => {
 
     expect(
       within(row('GitHub')).getByText(
-        "Connected 23 Oct 2026 when you signed in with it. Confirm it if it's yours, or disconnect it if it isn't yours.",
+        "Connected Oct 23, 2026 when you signed in with it. Confirm it if it's yours, or disconnect it if it isn't yours.",
       ),
     ).toBeInTheDocument();
   });
@@ -179,7 +179,7 @@ describe('ConnectedAccountsCard', () => {
 
     expect(
       within(row('Google')).getByText(
-        "Connected 24 Oct 2026 when you signed in with it. Confirm it if it's yours, or disconnect it if it isn't yours.",
+        "Connected Oct 24, 2026 when you signed in with it. Confirm it if it's yours, or disconnect it if it isn't yours.",
       ),
     ).toBeInTheDocument();
   });
@@ -499,13 +499,13 @@ describe('ConnectedAccountsCard', () => {
       );
 
       expect(
-        screen.getByRole('button', { name: 'Disconnect GitHub (connected 23 Oct 2026)' }),
+        screen.getByRole('button', { name: 'Disconnect GitHub (connected Oct 23, 2026)' }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole('button', { name: 'Disconnect GitHub (connected 25 Oct 2026)' }),
+        screen.getByRole('button', { name: 'Disconnect GitHub (connected Oct 25, 2026)' }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole('button', { name: 'Confirm GitHub (connected 25 Oct 2026)' }),
+        screen.getByRole('button', { name: 'Confirm GitHub (connected Oct 25, 2026)' }),
       ).toBeInTheDocument();
       expect(screen.getAllByRole('button', { name: /^Confirm/ })).toHaveLength(1);
       expect(screen.getByRole('button', { name: 'Connect Google' })).toBeInTheDocument();
@@ -544,12 +544,12 @@ describe('ConnectedAccountsCard', () => {
 
       expect(
         screen.getByRole('button', {
-          name: 'Disconnect GitHub (adiutor-tests, connected 23 Oct 2026)',
+          name: 'Disconnect GitHub (adiutor-tests, connected Oct 23, 2026)',
         }),
       ).toBeInTheDocument();
       expect(
         screen.getByRole('button', {
-          name: 'Confirm GitHub (adiutor-tests, connected 25 Oct 2026)',
+          name: 'Confirm GitHub (adiutor-tests, connected Oct 25, 2026)',
         }),
       ).toBeInTheDocument();
     });
@@ -566,7 +566,7 @@ describe('ConnectedAccountsCard', () => {
         screen.getByRole('button', { name: 'Disconnect GitHub (adiutor-tests)' }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole('button', { name: 'Disconnect GitHub (connected 25 Oct 2026)' }),
+        screen.getByRole('button', { name: 'Disconnect GitHub (connected Oct 25, 2026)' }),
       ).toBeInTheDocument();
     });
 
@@ -584,7 +584,7 @@ describe('ConnectedAccountsCard', () => {
       );
 
       const confirm = screen.getByRole('button', {
-        name: 'Confirm GitHub (connected 25 Oct 2026)',
+        name: 'Confirm GitHub (connected Oct 25, 2026)',
       });
       expect(confirm).toBeEnabled();
       expect(confirm).not.toHaveAttribute('aria-describedby');
@@ -611,10 +611,10 @@ describe('ConnectedAccountsCard', () => {
       );
 
       const allowed = screen.getByRole('button', {
-        name: 'Confirm GitHub (connected 25 Oct 2026)',
+        name: 'Confirm GitHub (connected Oct 25, 2026)',
       });
       const blocked = screen.getByRole('button', {
-        name: 'Confirm GitHub (connected 26 Oct 2026)',
+        name: 'Confirm GitHub (connected Oct 26, 2026)',
       });
       expect(allowed).toBeEnabled();
       expect(allowed).not.toHaveAttribute('aria-describedby');
@@ -637,17 +637,17 @@ describe('ConnectedAccountsCard', () => {
       );
 
       const confirm = screen.getByRole('button', {
-        name: 'Confirm GitHub (connected 25 Oct 2026)',
+        name: 'Confirm GitHub (connected Oct 25, 2026)',
       });
       expect(confirm).toBeDisabled();
       expectDescribedBy(confirm, CONNECT_REASON);
       const disconnect = screen.getByRole('button', {
-        name: 'Disconnect GitHub (connected 23 Oct 2026)',
+        name: 'Disconnect GitHub (connected Oct 23, 2026)',
       });
       expect(disconnect).toBeDisabled();
       expectDescribedBy(disconnect, DISCONNECT_REASON);
       expect(
-        screen.getByRole('button', { name: 'Disconnect GitHub (connected 25 Oct 2026)' }),
+        screen.getByRole('button', { name: 'Disconnect GitHub (connected Oct 25, 2026)' }),
       ).toBeEnabled();
     });
   });

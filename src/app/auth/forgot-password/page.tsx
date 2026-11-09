@@ -10,7 +10,7 @@ import ForgotPasswordForm from './forgot-password-form';
  * Page metadata.
  */
 export const metadata: Metadata = {
-  title: 'Forgot password · Adiutor',
+  title: 'Forgot password',
 };
 
 /**

@@ -23,6 +23,9 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('./report-error-action', () => ({ default: vi.fn(async () => null) }));
 
+// The language button's action reads the server's configuration; nothing here changes the language.
+vi.mock('./language-action', () => ({ default: vi.fn(async () => true) }));
+
 afterEach(() => {
   localStorage.clear();
   delete document.documentElement.dataset.theme;
@@ -54,7 +57,7 @@ describe('GlobalError', () => {
   it('renders a whole document with its title and the error page', () => {
     const html = renderToStaticMarkup(<GlobalError error={error} retry={vi.fn()} />);
 
-    expect(html).toMatch(/^<html lang="en">/);
+    expect(html).toMatch(/^<html lang="en-US">/);
     expect(html).toMatch(/<head>.*<title>Something went wrong · Adiutor<\/title>.*<\/head>/);
     expect(html).toContain('<body class="bg-background text-foreground antialiased">');
     expect(html).toContain('Something went wrong</h1>');
@@ -77,5 +80,21 @@ describe('GlobalError', () => {
     render(<GlobalError error={error} retry={vi.fn()} />);
 
     expect(document.documentElement.dataset.theme).toBe('dark');
+  });
+});
+
+describe('GlobalError in another language', () => {
+  afterEach(() => {
+    document.cookie = 'adiutor.locale=; max-age=0';
+  });
+
+  it("switches to the language cookie's language once it's in the browser", async () => {
+    mockSystemDark(false);
+    document.cookie = 'adiutor.locale=nl-NL';
+
+    render(<GlobalError error={error} retry={vi.fn()} />);
+
+    expect(await screen.findByRole('heading', { name: 'Er ging iets mis' })).toBeVisible();
+    expect(document.documentElement).toHaveAttribute('lang', 'nl-NL');
   });
 });

@@ -5,6 +5,8 @@
  * role in one and remove them from one, on their own page too (worded for
  * themselves).
  */
+import { useLocale } from 'next-intl';
+
 import ActionDialog from '@/components/ui/action-dialog';
 import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
@@ -70,6 +72,7 @@ export default function CompaniesCard({
   canManageMembers,
   addable,
 }: CompaniesCardProps) {
+  const locale = useLocale();
   const companyRoleOptions = roleOptions(COMPANY_ROLES);
   return (
     <Card
@@ -169,14 +172,14 @@ export default function CompaniesCard({
                       </span>
                       {/* Below tablet width, when they joined goes here. */}
                       <span className="text-xs text-muted-foreground md:hidden">
-                        Joined {formatDate(membership.joinedAt)}
+                        Joined {formatDate(membership.joinedAt, locale)}
                       </span>
                       <div className="sm:hidden">{role}</div>
                     </div>
                   </Td>
                   <Td className="hidden sm:table-cell">{role}</Td>
                   <Td className="hidden text-muted-foreground md:table-cell">
-                    {formatDate(membership.joinedAt)}
+                    {formatDate(membership.joinedAt, locale)}
                   </Td>
                   {canManageMembers && (
                     <Td className="text-right">

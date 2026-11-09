@@ -3,6 +3,7 @@
  * company users whether or not the address has an account.
  */
 import { parseEmailList } from '@/lib/email-list';
+import type { Locale } from '@/lib/i18n/locales';
 import { MAX_BULK_INVITES } from '@/lib/input-rules';
 import type { InviteStatus } from '@/lib/invite-status';
 import { emailSchema, roleSchema } from '@/lib/validation';
@@ -34,12 +35,14 @@ import { concurrentChangeError, isDeadlock, ServiceError } from '../../errors';
  * @param input.companyId - The company, or `null` for staff.
  * @param input.email - The email address to invite.
  * @param input.role - The role to give.
+ * @param input.locale - The invitation's language; by default the request's, else English (US).
+ *   An invitee who has an account with a saved language gets that instead.
  * @returns The status the actor may see (see {@link visibleStatus}).
  */
 export async function inviteByEmail(
   ctx: ServiceContext,
   actor: Actor,
-  input: { companyId: string | null; email: string; role: string },
+  input: { companyId: string | null; email: string; role: string; locale?: Locale },
 ): Promise<{ status: InviteStatus }> {
   const email = emailSchema.parse(input.email);
   const role = roleSchema.parse(input.role);
@@ -58,6 +61,7 @@ export async function inviteByEmail(
       target: { companyId, name: access.name },
       email,
       role,
+      locale: input.locale,
     });
   });
   // Rendered only now, once the transaction has committed and released its locks.
@@ -90,6 +94,7 @@ export type BulkInviteResult =
  * @param input.companyId - The company, or `null` for staff.
  * @param input.emails - The addresses, one per line or separated by commas.
  * @param input.role - The role for all of them.
+ * @param input.locale - The invitations' language (see {@link inviteByEmail}).
  * @returns One result per address, in the order typed.
  * @throws {ServiceError} `invalid` when an entry isn't an email address, or
  *   there are none or more than {@link MAX_BULK_INVITES}; `not_found` for a
@@ -99,7 +104,7 @@ export type BulkInviteResult =
 export async function inviteManyByEmail(
   ctx: ServiceContext,
   actor: Actor,
-  input: { companyId: string | null; emails: string; role: string },
+  input: { companyId: string | null; emails: string; role: string; locale?: Locale },
 ): Promise<BulkInviteResult[]> {
   const { emails, invalid } = parseEmailList(input.emails);
   if (invalid.length > 0) {

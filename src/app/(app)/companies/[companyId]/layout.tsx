@@ -10,7 +10,7 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 
 import { PageHeaderSkeleton } from '@/components/ui/skeleton';
-import { NOT_FOUND_METADATA } from '@/lib/not-found-metadata';
+import notFoundMetadata from '@/lib/not-found-metadata';
 import { findCompanyAccess, requireCompanyAccess } from '@/server/authz';
 
 import CompanyHeader from './company-header';
@@ -38,11 +38,11 @@ export async function generateMetadata({
   const { companyId } = await params;
   const access = await findCompanyAccess(companyId);
   if (!access) {
-    return NOT_FOUND_METADATA;
+    return notFoundMetadata();
   }
   const { company } = access;
   return {
-    title: { template: `%s · ${company.name} · Adiutor`, default: `${company.name} · Adiutor` },
+    title: { template: `%s · ${company.name} · Adiutor`, default: company.name },
   };
 }
 

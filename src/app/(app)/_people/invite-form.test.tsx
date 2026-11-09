@@ -42,7 +42,7 @@ describe('InviteForm', () => {
     expect(screen.getByRole('combobox', { name: 'Role' })).toHaveTextContent('Watcher');
   });
 
-  it('submits the company, email and role and shows the confirmation', async () => {
+  it('submits the company, emails, role and email language and shows the confirmation', async () => {
     const user = userEvent.setup();
     inviteAction.mockResolvedValue({ ok: true, message: 'Invitation sent to jane@adiutor.test.' });
     render(<InviteForm companyId="company-1" roles={roles} />);
@@ -56,11 +56,32 @@ describe('InviteForm', () => {
       'Invitation sent to jane@adiutor.test.',
     );
     const formData = defined(inviteAction.mock.calls[0], 'the first call')[1] as FormData;
+    // The email language defaults to the sender's own (English here).
     expect(Object.fromEntries(formData)).toEqual({
       companyId: 'company-1',
       emails: 'jane@adiutor.test',
       role: 'client',
+      locale: 'en-US',
     });
+  });
+
+  it('lets the sender pick another language for the email', async () => {
+    const user = userEvent.setup();
+    inviteAction.mockResolvedValue({ ok: true, message: 'Invitation sent to jane@adiutor.test.' });
+    render(<InviteForm companyId="company-1" roles={roles} />);
+
+    const language = screen.getByRole('combobox', { name: 'Email language' });
+    expect(language).toHaveAccessibleDescription(
+      'The invitation and its reminder are sent in this language.',
+    );
+    await user.type(screen.getByLabelText('Email addresses'), 'jane@adiutor.test');
+    await user.click(language);
+    await user.click(screen.getByRole('option', { name: 'Nederlands' }));
+    await user.click(screen.getByRole('button', { name: 'Send invitations' }));
+
+    await screen.findByRole('status');
+    const formData = defined(inviteAction.mock.calls[0], 'the first call')[1] as FormData;
+    expect(formData.get('locale')).toBe('nl-NL');
   });
 
   it('shows why sending failed and moves focus to it', async () => {

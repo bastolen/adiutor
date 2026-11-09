@@ -6,6 +6,7 @@
  */
 'use client';
 
+import { useLocale } from 'next-intl';
 import { type MouseEvent, useId } from 'react';
 
 import { useRecentConfirmation } from '@/components/auth/recent-confirmation';
@@ -15,6 +16,7 @@ import Card from '@/components/ui/card';
 import IconRow from '@/components/ui/icon-row';
 import RowAction from '@/components/ui/row-action';
 import formatDate from '@/lib/format';
+import { type Locale } from '@/lib/i18n/locales';
 import {
   type OAuthProvider,
   providerAccountLabel,
@@ -36,10 +38,11 @@ const SECTION = 'connected-accounts';
  * it gives MFA: see `ConnectedProvider.givesMfa`).
  *
  * @param link - The connected account.
+ * @param locale - The reader's language, for the date.
  * @returns The description.
  */
-function describeLink(link: ConnectedProvider): string {
-  const connected = `Connected ${formatDate(link.connectedAt)}`;
+function describeLink(link: ConnectedProvider, locale: Locale): string {
+  const connected = `Connected ${formatDate(link.connectedAt, locale)}`;
   if (link.confirmed) {
     return connected;
   }
@@ -70,13 +73,14 @@ interface AccountRow {
  *
  * @param link - The connected account.
  * @param dated - Whether to say when it was connected.
- * @returns E.g. "GitHub (octocat)", "GitHub (connected 23 Oct 2026)", or "GitHub".
+ * @param locale - The reader's language, for the date.
+ * @returns E.g. "GitHub (octocat)", "GitHub (connected Oct 23, 2026)", or "GitHub".
  */
-function accountLabel(link: ConnectedProvider, dated: boolean): string {
+function accountLabel(link: ConnectedProvider, dated: boolean, locale: Locale): string {
   if (!dated) {
     return providerAccountLabel(link.provider, link.accountName);
   }
-  const connected = `connected ${formatDate(link.connectedAt)}`;
+  const connected = `connected ${formatDate(link.connectedAt, locale)}`;
   return providerAccountLabel(
     link.provider,
     link.accountName ? `${link.accountName}, ${connected}` : connected,
@@ -153,6 +157,7 @@ export default function ConnectedAccountsCard({
   confirmBlocked = [],
   connectBlockedReason = '',
 }: ConnectedAccountsCardProps) {
+  const locale = useLocale();
   const { askToConfirm } = useRecentConfirmation(SECTION);
 
   /**
@@ -224,7 +229,7 @@ export default function ConnectedAccountsCard({
           const label = PROVIDER_LABELS[provider];
           const Icon = PROVIDER_ICONS[provider];
           // Accounts are told apart by their name at the provider, and when needed by date.
-          const name = link ? accountLabel(link, dated) : label;
+          const name = link ? accountLabel(link, dated, locale) : label;
           // The row's Connect or Confirm button, when it has one.
           const addBlocked = connectOrConfirmBlocked(link);
           const addDescribedBy = connectNote && addBlocked ? connectNoteId : undefined;
@@ -278,7 +283,7 @@ export default function ConnectedAccountsCard({
                 )
               }
             >
-              {link ? describeLink(link) : 'Not connected'}
+              {link ? describeLink(link, locale) : 'Not connected'}
             </IconRow>
           );
         })}

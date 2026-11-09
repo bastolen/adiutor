@@ -1,0 +1,58 @@
+{
+  "audit": {
+    "actions": {
+      "sign_in": "Ingelogd",
+      "sign_in_failed": "Mislukte inlogpoging",
+      "sign_in_code_pending": "Wachtwoord geaccepteerd, codestap gestart",
+      "mfa_verified": "Inloggen bevestigd met MFA",
+      "mfa_failed": "Mislukte MFA-bevestiging",
+      "two_factor_enabled": "Verificatie in twee stappen aangezet",
+      "two_factor_disabled": "Verificatie in twee stappen uitgezet",
+      "backup_codes_regenerated": "Nieuwe back-upcodes gemaakt",
+      "passkey_added": "Passkey toegevoegd",
+      "passkey_removed": "Passkey verwijderd",
+      "password_changed": "Wachtwoord gewijzigd",
+      "password_reset": "Wachtwoord opnieuw ingesteld",
+      "password_check_failed": "Verkeerd huidig wachtwoord ingevoerd",
+      "provider_connected": "Inlogprovider gekoppeld",
+      "provider_confirmed": "Inlogprovider bevestigd",
+      "provider_disconnected": "Inlogprovider ontkoppeld",
+      "email_verified": "E-mailadres bevestigd",
+      "session_revoked": "Apparaat uitgelogd",
+      "sessions_revoked": "Overal uitgelogd",
+      "account_deactivated": "Account gedeactiveerd",
+      "account_reactivated": "Account opnieuw geactiveerd",
+      "account_deleted": "Account verwijderd",
+      "account_created": "Account aangemaakt",
+      "mfa_reset": "Verificatie in twee stappen gereset",
+      "member_joined": "Lid geworden van een bedrijf",
+      "member_added": "Lid toegevoegd",
+      "member_removed": "Lid verwijderd",
+      "role_changed": "Rol gewijzigd",
+      "invitation_sent": "Uitnodiging verstuurd",
+      "invitation_revoked": "Uitnodiging ingetrokken",
+      "invite_link_created": "Uitnodigingslink gemaakt",
+      "invite_link_claimed": "Uitnodigingslink gebruikt",
+      "invite_link_revoked": "Uitnodigingslink ingetrokken",
+      "company_created": "Bedrijf toegevoegd",
+      "company_updated": "Bedrijfsgegevens gewijzigd",
+      "company_deactivated": "Bedrijf gedeactiveerd",
+      "company_reactivated": "Bedrijf opnieuw geactiveerd",
+      "staff_renamed": "Naam voor gebruikers gewijzigd"
+    },
+    "events": {
+      "sessionsRevokedMfaRequired": "Uitgelogd uit sessies zonder MFA, die de rol nu vereist",
+      "sessionsRevokedOthers": "Uitgelogd op andere apparaten",
+      "mfaFailedAtSignIn": "Verkeerde code voor verificatie in twee stappen ingevoerd bij het inloggen",
+      "passwordCheckFailedChangePassword": "Verkeerd huidig wachtwoord ingevoerd bij het wijzigen van het wachtwoord",
+      "passwordCheckFailedDeactivate": "Verkeerd huidig wachtwoord ingevoerd bij het deactiveren van het account"
+    },
+    "groups": {
+      "sign-ins": "Inloggen",
+      "sign-in-methods": "Inlogmethoden",
+      "accounts": "Accounts",
+      "people": "Mensen",
+      "companies": "Bedrijven en medewerkers"
+    }
+  }
+}

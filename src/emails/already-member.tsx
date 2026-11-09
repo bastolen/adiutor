@@ -6,6 +6,7 @@ import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph } from '@/components/email/email-text';
 import type { Email } from '@/lib/email';
+import translator from '@/lib/i18n/translator';
 
 import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
 import renderEmail from './render';
@@ -27,6 +28,7 @@ export interface AlreadyMemberEmailProps extends EmailBaseProps {
  * @param props.appUrl - Public app URL.
  * @param props.companyName - The company.
  * @param props.url - Link to the company.
+ * @param props.locale - The recipient's language.
  * @param props.logoSrc - Logo URL override.
  * @returns The email.
  */
@@ -34,21 +36,22 @@ export default function AlreadyMemberEmail({
   appUrl,
   companyName,
   url,
+  locale,
   logoSrc = undefined,
 }: AlreadyMemberEmailProps) {
+  const t = translator(locale, 'emails.alreadyMember');
+  const values = { company: companyName };
   return (
     <EmailLayout
-      preview="No action needed"
+      preview={t('preview')}
       appUrl={appUrl}
+      locale={locale}
       logoSrc={logoSrc}
-      reason={`You're receiving this because someone tried to invite this email address to ${companyName}.`}
+      reason={t('reason', values)}
     >
-      <EmailHeading>You&apos;re already a member</EmailHeading>
-      <EmailParagraph>
-        Someone tried to invite you to {companyName} on Adiutor, but you&apos;re already a member.
-        No action is needed.
-      </EmailParagraph>
-      <EmailButton href={url}>Open {companyName}</EmailButton>
+      <EmailHeading>{t('heading')}</EmailHeading>
+      <EmailParagraph>{t('body', values)}</EmailParagraph>
+      <EmailButton href={url}>{t('button', values)}</EmailButton>
     </EmailLayout>
   );
 }
@@ -70,7 +73,7 @@ AlreadyMemberEmail.PreviewProps = {
 export function alreadyMemberEmail(to: string, props: AlreadyMemberEmailProps): Promise<Email> {
   return renderEmail(
     to,
-    `You're already a member of ${props.companyName} on Adiutor`,
+    translator(props.locale, 'emails.alreadyMember')('subject', { company: props.companyName }),
     <AlreadyMemberEmail {...props} />,
   );
 }

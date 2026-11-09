@@ -13,7 +13,8 @@
  *   first password;
  * - a link that isn't valid gets Better Auth's own answer, as before;
  * - a reset takes the user's sign-in change lock, like the other sign-in
- *   changes, and gives it back afterwards.
+ *   changes, and gives it back afterwards;
+ * - the reset email is in the account's language, else the browser's.
  */
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -33,6 +34,8 @@ import {
   createCompany,
   createStaffSettings,
   createUser,
+  emailLanguage,
+  setUserLocale,
   setupTestContext,
   staffActor,
 } from '../../../tests/integration/helpers';
@@ -83,13 +86,18 @@ async function storeResetLink(
  *
  * @param path - The endpoint, e.g. `reset-password`.
  * @param body - The JSON body.
+ * @param headers - More request headers, e.g. the language cookie.
  * @returns The response.
  */
-function post(path: string, body: Record<string, unknown>): Promise<Response> {
+function post(
+  path: string,
+  body: Record<string, unknown>,
+  headers: Record<string, string> = {},
+): Promise<Response> {
   return auth.handler(
     new Request(`${env.BETTER_AUTH_URL}/api/auth/${path}`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', origin: env.BETTER_AUTH_URL },
+      headers: { 'content-type': 'application/json', origin: env.BETTER_AUTH_URL, ...headers },
       body: JSON.stringify(body),
     }),
   );
@@ -262,6 +270,38 @@ describe('a reset link on an account whose only MFA is GitHub', () => {
     expect(response.status).toBe(200);
     expect(await credentialCount(support.id)).toBe(1);
     expect(await signInWithNewPassword(support.email)).toBe(200);
+  });
+});
+
+describe('the reset email', () => {
+  it('is in the language the account saved, else the browser’s', async () => {
+    await setUserLocale(db, await createUser(db, 'jane@adiutor.test'), 'nl-NL');
+    await createUser(db, 'sam@adiutor.test');
+    const spanishBrowser = { cookie: 'adiutor.locale=es-ES' };
+
+    await Promise.all(
+      ['jane@adiutor.test', 'sam@adiutor.test'].map(async (email) => {
+        const body = { email, redirectTo: '/auth/reset-password' };
+        expect((await post('request-password-reset', body, spanishBrowser)).status).toBe(200);
+      }),
+    );
+
+    // Sent after the responses.
+    const emails = await vi.waitFor(() => {
+      const found = vi.mocked(sendEmail).mock.calls.map(([call]) => call);
+      if (found.length < 2) {
+        throw new Error('The reset emails have not been sent yet');
+      }
+      return found;
+    }, 10_000);
+    expect(
+      emails
+        .map((email) => [email.to, emailLanguage(email), email.subject])
+        .sort(([a], [b]) => (a ?? '').localeCompare(b ?? '')),
+    ).toEqual([
+      ['jane@adiutor.test', 'nl-NL', 'Stel je Adiutor-wachtwoord opnieuw in'],
+      ['sam@adiutor.test', 'es-ES', 'Restablece tu contraseña de Adiutor'],
+    ]);
   });
 });
 

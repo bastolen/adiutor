@@ -4,7 +4,7 @@
 'use server';
 
 import type { ActionResult } from '@/lib/action-result';
-import field from '@/lib/form-data';
+import field, { localeField } from '@/lib/form-data';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
 import { getActor } from '@/server/authz';
@@ -16,7 +16,7 @@ import { registerUser } from '@/server/people/user-registration';
  * may see this).
  *
  * @param _previous - The previous result (unused).
- * @param formData - Field `email`.
+ * @param formData - Fields `email` and `locale` (the account's and the welcome email's language).
  * @returns The user and whether they were created, or why it failed.
  */
 export default async function registerUserAction(
@@ -26,7 +26,9 @@ export default async function registerUserAction(
   return runAction<{ userId: string; created: boolean }>(async () => {
     const actor = await getActor();
     const email = field(formData, 'email').trim();
-    const result = await registerUser(appContext, actor, email);
+    const result = await registerUser(appContext, actor, email, {
+      locale: localeField(formData),
+    });
     return result.status === 'created'
       ? {
           ok: true,

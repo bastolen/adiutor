@@ -22,6 +22,7 @@ import {
   providerAccountLabel,
   providerLabel,
   providerLinkedCookieValue,
+  providerList,
   providerNames,
   providerStepUpCookieValue,
   providerStepUpMessage,
@@ -34,6 +35,17 @@ describe('MFA_PROVIDERS', () => {
     expect(isMfaProvider('google')).toBe(false);
     expect(isMfaProvider('unknown')).toBe(false);
     expect(isMfaProvider(undefined)).toBe(false);
+  });
+});
+
+describe('providerList', () => {
+  it.each([
+    ['en-US', 'GitHub or Google'],
+    ['nl-NL', 'GitHub of Google'],
+    ['es-ES', 'GitHub o Google'],
+  ] as const)('joins names with the "or" of %s', (locale, expected) => {
+    expect(providerList(['github', 'google'], locale)).toBe(expected);
+    expect(providerList(['github'], locale)).toBe('GitHub');
   });
 });
 

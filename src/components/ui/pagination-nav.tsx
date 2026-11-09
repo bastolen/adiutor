@@ -6,6 +6,7 @@
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useEffect, useRef } from 'react';
 
 import cn from '@/lib/cn';
@@ -61,6 +62,7 @@ export default function PaginationNav({
   nextHref,
   pages,
 }: PaginationNavProps) {
+  const t = useTranslations('common.pagination');
   const navRef = useRef<HTMLElement>(null);
   /** The page a link here was followed to, until that page is shown. */
   const target = useRef<number | null>(null);
@@ -98,15 +100,19 @@ export default function PaginationNav({
                 <LinkPendingIndicator>
                   <ChevronLeft aria-hidden="true" />
                 </LinkPendingIndicator>
-                <span className="max-sm:sr-only">Previous</span>
-                <span className="sr-only"> page</span>
+                <span aria-hidden="true" className="max-sm:sr-only">
+                  {t('previous')}
+                </span>
+                <span className="sr-only">{t('previousPage')}</span>
               </Link>
             </Button>
           ) : (
             <Button variant="ghost" size="sm" disabled className="max-sm:px-2">
               <ChevronLeft aria-hidden="true" />
-              <span className="max-sm:sr-only">Previous</span>
-              <span className="sr-only"> page</span>
+              <span aria-hidden="true" className="max-sm:sr-only">
+                {t('previous')}
+              </span>
+              <span className="sr-only">{t('previousPage')}</span>
             </Button>
           )}
         </li>
@@ -136,14 +142,16 @@ export default function PaginationNav({
                     : 'text-foreground hover:bg-muted',
                 )}
               >
-                <span className="sr-only">Page </span>
-                <LinkPendingIndicator>{item.page}</LinkPendingIndicator>
+                <span className="sr-only">{t('page', { page: item.page })}</span>
+                <LinkPendingIndicator>
+                  <span aria-hidden="true">{item.page}</span>
+                </LinkPendingIndicator>
               </Link>
             </li>
           ),
         )}
         <li className="min-w-0 px-1 text-sm text-muted-foreground sm:hidden">
-          Page {page} of {pageCount}
+          {t('pageOf', { page, pages: pageCount })}
         </li>
         <li>
           {nextHref ? (
@@ -155,8 +163,10 @@ export default function PaginationNav({
                   target.current = page + 1;
                 }}
               >
-                <span className="max-sm:sr-only">Next</span>
-                <span className="sr-only"> page</span>
+                <span aria-hidden="true" className="max-sm:sr-only">
+                  {t('next')}
+                </span>
+                <span className="sr-only">{t('nextPage')}</span>
                 <LinkPendingIndicator>
                   <ChevronRight aria-hidden="true" />
                 </LinkPendingIndicator>
@@ -164,8 +174,10 @@ export default function PaginationNav({
             </Button>
           ) : (
             <Button variant="ghost" size="sm" disabled className="max-sm:px-2">
-              <span className="max-sm:sr-only">Next</span>
-              <span className="sr-only"> page</span>
+              <span aria-hidden="true" className="max-sm:sr-only">
+                {t('next')}
+              </span>
+              <span className="sr-only">{t('nextPage')}</span>
               <ChevronRight aria-hidden="true" />
             </Button>
           )}

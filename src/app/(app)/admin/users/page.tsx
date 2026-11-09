@@ -6,6 +6,7 @@
  */
 import { Plus, Users } from 'lucide-react';
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import { Fragment, Suspense } from 'react';
 
 import Avatar from '@/components/ui/avatar';
@@ -40,7 +41,7 @@ import { ActivityColumn, ActivityLine } from '../../_people/activity';
  * the 404 page's title for everyone else, who get the 404 page.
  */
 export const generateMetadata = globalPermissionMetadata('users:view', {
-  title: 'Users · Adiutor',
+  title: 'Users',
 });
 
 /** The filter choices, in order. */
@@ -105,10 +106,14 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
   const requested = parseTableState(USERS_TABLE, params);
   const users = await listUsers(appContext, actor, { search, filter, ...requested });
   // Filter before search in links, the order the search form submits them in.
-  const table = createPageUrl('/admin/users', {
-    filter: filter === 'all' ? undefined : filter,
-    q: search,
-  }).table(USERS_TABLE, { ...requested, page: users.page });
+  const table = createPageUrl(
+    '/admin/users',
+    {
+      filter: filter === 'all' ? undefined : filter,
+      q: search,
+    },
+    await getTranslations('tables'),
+  ).table(USERS_TABLE, { ...requested, page: users.page });
   const filterLabel = FILTERS.find(({ value }) => value === filter)?.label ?? 'All';
 
   let empty = {

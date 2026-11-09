@@ -1,0 +1,87 @@
+{
+  "common": {
+    "app": {
+      "description": "Get help without chasing emails. Report a problem or ask for something new, follow its progress, and approve the work, all in one place."
+    },
+    "documentTitle": "{page} · Adiutor",
+    "loading": "Loading…",
+    "skipToContent": "Skip to main content",
+    "homeLink": "Adiutor home",
+    "actions": {
+      "cancel": "Cancel",
+      "close": "Close",
+      "dismiss": "Dismiss",
+      "dismissNotification": "Dismiss notification",
+      "goBack": "Go back",
+      "search": "Search",
+      "apply": "Apply",
+      "clear": "Clear",
+      "copy": "Copy",
+      "copied": "Copied",
+      "tryAgain": "Try again",
+      "goToDashboard": "Go to your dashboard"
+    },
+    "relativeTime": {
+      "justNow": "just now",
+      "never": "Never"
+    },
+    "pagination": {
+      "showing": "Showing {first, number}–{last, number} of {total, number}",
+      "pages": "Pages of {rows}",
+      "perPageGroup": "Per page, {rows}",
+      "perPage": "Per page",
+      "perPageOption": "{size, number} per page",
+      "previous": "Previous",
+      "previousPage": "Previous page",
+      "next": "Next",
+      "nextPage": "Next page",
+      "page": "Page {page, number}",
+      "pageOf": "Page {page, number} of {pages, number}"
+    },
+    "sort": {
+      "button": "Sort",
+      "trigger": "Sort {rows}",
+      "triggerSorted": "Sort {rows}: {sort}",
+      "sortBy": "Sort by"
+    },
+    "dateRange": {
+      "from": "From",
+      "to": "To"
+    },
+    "errorReference": {
+      "intro": "If it keeps happening, send this reference to an administrator:",
+      "copyText": "Reference {reference} ({when})",
+      "copy": "Copy reference"
+    },
+    "theme": {
+      "label": "Theme",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "notFound": {
+      "title": "Not found",
+      "heading": "Page not found",
+      "description": "This page doesn't exist, or you don't have access to it."
+    },
+    "error": {
+      "title": "Something went wrong",
+      "description": "This page couldn't load. Try again, or go to your dashboard."
+    },
+    "device": "{browser, select, unknown {Unknown browser} other {{browser}}} on {os, select, unknown {unknown system} other {{os}}}",
+    "language": {
+      "label": "Language",
+      "emailField": "Email language",
+      "emailHintInvitation": "The invitation and its reminder are sent in this language.",
+      "emailHintAccount": "The welcome email and the account use this language until they choose their own.",
+      "defaultLabel": "Default language",
+      "defaultHint": "For everyone who hasn't chosen a language. You can change it later.",
+      "defaultDescription": "Adiutor uses this language for everyone who hasn't chosen their own, and in the emails it sends them.",
+      "saveDefault": "Save default language",
+      "defaultSaved": "Default language saved."
+    },
+    "preferences": {
+      "button": "Theme and language: {theme, select, light {Light} dark {Dark} other {System}}, {language}"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 /**
  * @file Integration tests for inviting people by email: privacy, many addresses
- * at once, and who may invite.
+ * at once, the invitation's language, and who may invite.
  */
 import { eq, sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -15,8 +15,11 @@ import {
   createCompany,
   createStaffSettings,
   createUser,
+  emailLanguage,
+  inLanguage,
   inSequence,
   memberActor,
+  setUserLocale,
   staffActor,
 } from '../../../../tests/integration/helpers';
 import type { Actor } from '../../actor';
@@ -229,6 +232,68 @@ describe('inviteManyByEmail', () => {
       'A bulk invitation hit a database deadlock; that address was reported as a conflict.',
     );
     warn.mockRestore();
+  });
+});
+
+describe('the invitation’s language', () => {
+  it('is the one chosen, else the request’s, else English (US), and is stored with it', async () => {
+    const input = { companyId: testCompany.id, role: 'client' };
+    await inviteByEmail(ctx, companyAdmin, { ...input, email: 'nl@adiutor.test', locale: 'nl-NL' });
+    await inviteByEmail(inLanguage(ctx, 'es-ES'), companyAdmin, {
+      ...input,
+      email: 'es@adiutor.test',
+    });
+    await inviteByEmail(ctx, companyAdmin, { ...input, email: 'en@adiutor.test' });
+
+    expect(sent.map((email) => [email.to, emailLanguage(email)])).toEqual([
+      ['nl@adiutor.test', 'nl-NL'],
+      ['es@adiutor.test', 'es-ES'],
+      ['en@adiutor.test', 'en-US'],
+    ]);
+    expect(defined(sent[0], 'the Dutch invitation').subject).toMatch(
+      / nodigt je uit voor Adiutor Tests op Adiutor$/,
+    );
+    const stored = await db
+      .select({ email: invitation.email, locale: invitation.locale })
+      .from(invitation)
+      .orderBy(invitation.email);
+    expect(stored).toEqual([
+      { email: 'en@adiutor.test', locale: 'en-US' },
+      { email: 'es@adiutor.test', locale: 'es-ES' },
+      { email: 'nl@adiutor.test', locale: 'nl-NL' },
+    ]);
+  });
+
+  it('gives someone with an account their own language, a member’s “already a member” too', async () => {
+    const [existing, member] = await Promise.all(
+      ['existing@adiutor.test', 'member@adiutor.test'].map(async (address) =>
+        defined(
+          (await db.select({ id: user.id }).from(user).where(eq(user.email, address)))[0],
+          address,
+        ),
+      ),
+    );
+    await setUserLocale(db, defined(existing, 'existing').id, 'nl-NL');
+    await setUserLocale(db, defined(member, 'member').id, 'es-ES');
+
+    await inviteManyByEmail(ctx, companyAdmin, {
+      companyId: testCompany.id,
+      emails: 'existing@adiutor.test, member@adiutor.test, new@adiutor.test',
+      role: 'client',
+      locale: 'en-US',
+    });
+
+    expect(sent.map((email) => [email.to, emailLanguage(email)])).toEqual([
+      ['existing@adiutor.test', 'nl-NL'],
+      ['member@adiutor.test', 'es-ES'],
+      ['new@adiutor.test', 'en-US'],
+    ]);
+    // The invitation keeps the language it was sent with.
+    const [stored] = await db
+      .select({ locale: invitation.locale })
+      .from(invitation)
+      .where(eq(invitation.email, 'existing@adiutor.test'));
+    expect(stored?.locale).toBe('en-US');
   });
 });
 

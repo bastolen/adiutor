@@ -1,10 +1,31 @@
 /**
- * @file The shared frame of every email: logo, white card and footer.
+ * @file The shared frame of every email: logo, white card and footer, in the
+ * recipient's language.
  */
 import type { ReactNode } from 'react';
 import { Body, Container, Head, Html, Img, Link, Preview, Section, Text } from 'react-email';
 
+import type { Locale } from '@/lib/i18n/locales';
+import translator from '@/lib/i18n/translator';
+
 import { colors, fontFamily, small } from './theme';
+
+/**
+ * The footer's link to the app, for the `<link>` tag of
+ * `emails.layout.sentBy` ("Sent by <link>Adiutor</link>").
+ *
+ * @param href - The app's URL.
+ * @returns The tag's renderer.
+ */
+function appLinkTag(href: string) {
+  return function linkTag(chunks: ReactNode) {
+    return (
+      <Link href={href} style={{ color: colors.muted, textDecoration: 'underline' }}>
+        {chunks}
+      </Link>
+    );
+  };
+}
 
 /**
  * Props for {@link EmailLayout}.
@@ -14,6 +35,8 @@ interface EmailLayoutProps {
   preview: string;
   /** Public base URL of the app (no trailing slash), for the logo and the footer link. */
   appUrl: string;
+  /** The recipient's language: the document's `lang` and the footer's text. */
+  locale: Locale;
   /** Why the recipient gets this email, shown in the footer. */
   reason: ReactNode;
   /** Logo image URL. Defaults to `{appUrl}/brand/logo.png`; the template preview overrides it. */
@@ -34,6 +57,7 @@ interface EmailLayoutProps {
  * @param props - Layout props.
  * @param props.preview - Inbox preview text.
  * @param props.appUrl - Public app URL.
+ * @param props.locale - The recipient's language.
  * @param props.reason - Footer explanation.
  * @param props.logoSrc - Logo URL override.
  * @param props.children - The content.
@@ -42,12 +66,14 @@ interface EmailLayoutProps {
 export default function EmailLayout({
   preview,
   appUrl,
+  locale,
   reason,
   logoSrc = undefined,
   children,
 }: EmailLayoutProps) {
+  const t = translator(locale, 'emails.layout');
   return (
-    <Html lang="en" dir="ltr">
+    <Html lang={locale} dir="ltr">
       <Head />
       <Preview>{preview}</Preview>
       <Body style={{ margin: 0, backgroundColor: colors.background, fontFamily }}>
@@ -57,7 +83,7 @@ export default function EmailLayout({
               src={logoSrc ?? `${appUrl}/brand/logo.png`}
               width="140"
               height="32"
-              alt="Adiutor"
+              alt={t('logoAlt')}
               style={{
                 color: colors.primary,
                 fontSize: '22px',
@@ -78,12 +104,7 @@ export default function EmailLayout({
           </Section>
           <Section style={{ padding: '24px 8px 0' }}>
             <Text style={{ ...small, marginBottom: '8px' }}>{reason}</Text>
-            <Text style={small}>
-              Sent by{' '}
-              <Link href={appUrl} style={{ color: colors.muted, textDecoration: 'underline' }}>
-                Adiutor
-              </Link>
-            </Text>
+            <Text style={small}>{t.rich('sentBy', { link: appLinkTag(appUrl) })}</Text>
           </Section>
         </Container>
       </Body>

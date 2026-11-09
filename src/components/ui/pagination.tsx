@@ -4,6 +4,7 @@
  * `src/lib/tables/table-state.ts`, which builds the links).
  */
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 import cn from '@/lib/cn';
 import type { PaginationLinks } from '@/lib/tables/table-state';
@@ -11,9 +12,6 @@ import type { PaginationLinks } from '@/lib/tables/table-state';
 import LinkPendingIndicator from './link-pending';
 import PaginationNav from './pagination-nav';
 import { focusRing } from './styles';
-
-/** Formats row counts, e.g. 1,250. */
-const countFormat = new Intl.NumberFormat('en');
 
 /**
  * "Showing 26–50 of 132", the page links (with more than one page) and the
@@ -47,16 +45,16 @@ export default function Pagination({
   pages,
   sizes,
 }: PaginationLinks) {
+  const t = useTranslations('common.pagination');
   return (
     <div className="flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-3">
       <p role="status" className="text-sm text-muted-foreground tabular-nums">
-        Showing {countFormat.format(first)}–{countFormat.format(last)} of{' '}
-        {countFormat.format(total)}
+        {t('showing', { first, last, total })}
       </p>
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
         {pageCount > 1 && (
           <PaginationNav
-            label={`Pages of ${label}`}
+            label={t('pages', { rows: label })}
             page={page}
             pageCount={pageCount}
             previousHref={previousHref}
@@ -64,9 +62,13 @@ export default function Pagination({
             pages={pages}
           />
         )}
-        <div role="group" aria-label={`Per page, ${label}`} className="flex items-center gap-2">
+        <div
+          role="group"
+          aria-label={t('perPageGroup', { rows: label })}
+          className="flex items-center gap-2"
+        >
           <span aria-hidden="true" className="text-sm text-muted-foreground">
-            Per page
+            {t('perPage')}
           </span>
           <ul className="inline-flex gap-0.5 rounded-lg border border-border bg-muted p-0.5">
             {sizes.map((option) => (
@@ -84,8 +86,10 @@ export default function Pagination({
                       : 'text-muted-foreground hover:bg-surface hover:text-foreground',
                   )}
                 >
-                  <LinkPendingIndicator>{option.size}</LinkPendingIndicator>
-                  <span className="sr-only"> per page</span>
+                  <LinkPendingIndicator>
+                    <span aria-hidden="true">{option.size}</span>
+                  </LinkPendingIndicator>
+                  <span className="sr-only">{t('perPageOption', { size: option.size })}</span>
                 </Link>
               </li>
             ))}

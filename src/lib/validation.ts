@@ -8,6 +8,7 @@
 import { z } from 'zod';
 
 import { COMPANY_ROLES, isRole, PLATFORM_ROLES } from './authz/roles';
+import { LOCALES } from './i18n/locales';
 import {
   MIN_PASSWORD_LENGTH,
   NAME_MAX_LENGTH,
@@ -33,6 +34,11 @@ export const CHOOSE_COMPANY_ROLE_MESSAGE = 'Choose a role that fits this company
 
 /** Why a role that isn't a staff role is refused where a staff role is needed. */
 export const CHOOSE_STAFF_ROLE_MESSAGE = 'Choose a staff role.';
+
+/** A language (one of `LOCALES`), e.g. from the account's language select or an invite form. */
+export const localeSchema = z.enum(LOCALES, {
+  error: 'Choose one of the languages.',
+});
 
 /** A company role (Admin, Client or Watcher), e.g. from a member's role select. */
 export const companyRoleSchema = z.enum(COMPANY_ROLES, { error: CHOOSE_COMPANY_ROLE_MESSAGE });

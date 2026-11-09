@@ -4,6 +4,7 @@
  */
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { AlertDialog } from 'radix-ui';
 import type { ReactNode } from 'react';
 
@@ -74,6 +75,7 @@ export default function ConfirmDialog({
   onConfirm,
   tone = 'danger',
 }: ConfirmDialogProps) {
+  const t = useTranslations('common.actions');
   // Closed again when the user leaves the page (e.g. with the Back button).
   const [ownOpen, setOwnOpen] = useTransientState(false);
   const controlled = open !== undefined;
@@ -100,7 +102,7 @@ export default function ConfirmDialog({
           </div>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <AlertDialog.Cancel asChild>
-              <Button variant="secondary">Cancel</Button>
+              <Button variant="secondary">{t('cancel')}</Button>
             </AlertDialog.Cancel>
             <AlertDialog.Action asChild>
               <Button variant={tone} onClick={onConfirm}>

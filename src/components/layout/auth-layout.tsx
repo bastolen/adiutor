@@ -7,9 +7,9 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 import Logo from '@/components/brand/logo';
-import ThemeSwitcher from '@/components/theme/theme-switcher';
 import { focusRing } from '@/components/ui/styles';
 
+import PreferencesMenu from './preferences-menu';
 import RequestPreview from './request-preview';
 import SkipLink from './skip-link';
 
@@ -25,8 +25,8 @@ interface AuthLayoutProps {
  * Two columns on large screens: the content in a narrow, centred column, and
  * a decorative brand panel with an example request and the product pitch,
  * written for company users. On small screens, only the content column.
- * These pages have no account menu, so the floating theme button is here,
- * last in tab order.
+ * These pages have no account menu, so the floating theme and language
+ * button is here, last in tab order.
  *
  * @param props - Layout props.
  * @param props.children - The page content.
@@ -85,7 +85,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
           </p>
         </div>
       </div>
-      <ThemeSwitcher />
+      <PreferencesMenu />
     </div>
   );
 }

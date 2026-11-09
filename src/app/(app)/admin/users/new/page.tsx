@@ -18,7 +18,7 @@ import RegisterUserForm from './register-user-form';
  * the 404 page's title for everyone else, who get the 404 page.
  */
 export const generateMetadata = globalPermissionMetadata('users:create', {
-  title: 'Add user · Adiutor',
+  title: 'Add user',
 });
 
 /**

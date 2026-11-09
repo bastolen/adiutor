@@ -7,6 +7,7 @@ import { CircleAlert, CircleCheck } from 'lucide-react';
 import { useLayoutEffect, useRef } from 'react';
 
 import { ConfirmFirstNote, ReturnToField } from '@/components/auth/recent-confirmation';
+import EmailLanguageField from '@/components/language/email-language-field';
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
 import SelectField, { type SelectOption } from '@/components/ui/select-field';
@@ -99,13 +100,16 @@ export default function InviteForm({ companyId, roles }: InviteFormProps) {
           description={`One per line or separated by commas, up to ${MAX_BULK_INVITES}.`}
           required
         />
-        <SelectField
-          label="Role"
-          name="role"
-          options={roles}
-          value={role}
-          onValueChange={setRole}
-        />
+        <div className="flex flex-col gap-4">
+          <SelectField
+            label="Role"
+            name="role"
+            options={roles}
+            value={role}
+            onValueChange={setRole}
+          />
+          <EmailLanguageField purpose="invitation" />
+        </div>
       </div>
       {confirmFirst ? (
         <ConfirmFirstNote>{CONFIRM_BEFORE_GRANT_NOTE}</ConfirmFirstNote>

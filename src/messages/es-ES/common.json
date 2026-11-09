@@ -1,0 +1,87 @@
+{
+  "common": {
+    "app": {
+      "description": "Consigue ayuda sin perseguir correos. Informa de un problema o pide algo nuevo, sigue su progreso y aprueba el trabajo, todo en un mismo lugar."
+    },
+    "documentTitle": "{page} · Adiutor",
+    "loading": "Cargando…",
+    "skipToContent": "Saltar al contenido principal",
+    "homeLink": "Inicio de Adiutor",
+    "actions": {
+      "cancel": "Cancelar",
+      "close": "Cerrar",
+      "dismiss": "Descartar",
+      "dismissNotification": "Descartar notificación",
+      "goBack": "Volver",
+      "search": "Buscar",
+      "apply": "Aplicar",
+      "clear": "Borrar",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "tryAgain": "Volver a intentarlo",
+      "goToDashboard": "Ir a tu panel"
+    },
+    "relativeTime": {
+      "justNow": "hace un momento",
+      "never": "Nunca"
+    },
+    "pagination": {
+      "showing": "{first, number}–{last, number} de {total, number}",
+      "pages": "Páginas de {rows}",
+      "perPageGroup": "Por página, {rows}",
+      "perPage": "Por página",
+      "perPageOption": "{size, number} por página",
+      "previous": "Anterior",
+      "previousPage": "Página anterior",
+      "next": "Siguiente",
+      "nextPage": "Página siguiente",
+      "page": "Página {page, number}",
+      "pageOf": "Página {page, number} de {pages, number}"
+    },
+    "sort": {
+      "button": "Ordenar",
+      "trigger": "Ordenar {rows}",
+      "triggerSorted": "Ordenar {rows}: {sort}",
+      "sortBy": "Ordenar por"
+    },
+    "dateRange": {
+      "from": "Desde",
+      "to": "Hasta"
+    },
+    "errorReference": {
+      "intro": "Si sigue ocurriendo, envía esta referencia a un administrador:",
+      "copyText": "Referencia {reference} ({when})",
+      "copy": "Copiar referencia"
+    },
+    "theme": {
+      "label": "Tema",
+      "system": "Sistema",
+      "light": "Claro",
+      "dark": "Oscuro"
+    },
+    "notFound": {
+      "title": "No encontrada",
+      "heading": "Página no encontrada",
+      "description": "Esta página no existe o no tienes acceso a ella."
+    },
+    "error": {
+      "title": "Algo ha ido mal",
+      "description": "Esta página no se ha podido cargar. Vuelve a intentarlo o ve a tu panel."
+    },
+    "device": "{browser, select, unknown {Navegador desconocido} other {{browser}}} en {os, select, unknown {sistema desconocido} other {{os}}}",
+    "language": {
+      "label": "Idioma",
+      "emailField": "Idioma del correo",
+      "emailHintInvitation": "La invitación y su recordatorio se envían en este idioma.",
+      "emailHintAccount": "El correo de bienvenida y la cuenta usan este idioma hasta que elija el suyo.",
+      "defaultLabel": "Idioma predeterminado",
+      "defaultHint": "Para quien aún no haya elegido un idioma. Puedes cambiarlo más adelante.",
+      "defaultDescription": "Adiutor usa este idioma para quien aún no haya elegido el suyo, también en los correos que le envía.",
+      "saveDefault": "Guardar idioma predeterminado",
+      "defaultSaved": "Idioma predeterminado guardado."
+    },
+    "preferences": {
+      "button": "Tema e idioma: {theme, select, light {Claro} dark {Oscuro} other {Sistema}}, {language}"
+    }
+  }
+}

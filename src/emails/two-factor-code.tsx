@@ -7,6 +7,7 @@ import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailNote, EmailParagraph } from '@/components/email/email-text';
 import { EMAIL_CODE_MINUTES } from '@/lib/authz/mfa';
 import type { Email } from '@/lib/email';
+import translator from '@/lib/i18n/translator';
 
 import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
 import renderEmail from './render';
@@ -26,27 +27,29 @@ export interface TwoFactorCodeEmailProps extends EmailBaseProps {
  * @param props - Template props.
  * @param props.appUrl - Public app URL.
  * @param props.code - The code.
+ * @param props.locale - The recipient's language.
  * @param props.logoSrc - Logo URL override.
  * @returns The email.
  */
 export default function TwoFactorCodeEmail({
   appUrl,
   code,
+  locale,
   logoSrc = undefined,
 }: TwoFactorCodeEmailProps) {
+  const t = translator(locale, 'emails.twoFactorCode');
   return (
     <EmailLayout
-      preview={`Your Adiutor code is ${code}`}
+      preview={t('preview', { code })}
       appUrl={appUrl}
+      locale={locale}
       logoSrc={logoSrc}
-      reason="You're receiving this because someone signed in to Adiutor with your password, or turned on email codes for your account. If that wasn't you, change your password right away."
+      reason={t('reason')}
     >
-      <EmailHeading>Your sign-in code</EmailHeading>
-      <EmailParagraph>Enter this code in Adiutor to continue:</EmailParagraph>
+      <EmailHeading>{t('heading')}</EmailHeading>
+      <EmailParagraph>{t('intro')}</EmailParagraph>
       <EmailCode code={code} />
-      <EmailNote>
-        The code expires in {EMAIL_CODE_MINUTES} minutes. Never share it with anyone.
-      </EmailNote>
+      <EmailNote>{t('note', { minutes: EMAIL_CODE_MINUTES })}</EmailNote>
     </EmailLayout>
   );
 }
@@ -65,5 +68,9 @@ TwoFactorCodeEmail.PreviewProps = {
  * @returns The email, ready to send.
  */
 export function twoFactorCodeEmail(to: string, props: TwoFactorCodeEmailProps): Promise<Email> {
-  return renderEmail(to, 'Your Adiutor sign-in code', <TwoFactorCodeEmail {...props} />);
+  return renderEmail(
+    to,
+    translator(props.locale, 'emails.twoFactorCode')('subject'),
+    <TwoFactorCodeEmail {...props} />,
+  );
 }

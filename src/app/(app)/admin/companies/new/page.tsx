@@ -19,7 +19,7 @@ import RegisterCompanyForm from './register-company-form';
  * the 404 page's title for everyone else, who get the 404 page.
  */
 export const generateMetadata = globalPermissionMetadata('company:create', {
-  title: 'Add company · Adiutor',
+  title: 'Add company',
 });
 
 /**
