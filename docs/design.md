@@ -88,6 +88,10 @@ keyboard support.
   back/forward cache (`pageshow`).
 - **Illustrations** (like the example request on the sign-in pages) are `inert`, and use
   `<Button decorative>` for buttons that only look like buttons: no hover, focus or press effects.
+- **Button labels** stay on one line, except on full-width buttons (`fullWidth`, like the sign-in
+  page's), whose label wraps and makes the button taller when it doesn't fit. Longer languages,
+  wider fonts (Linux browsers use DejaVu Sans for the system font) and a "Last used" badge then
+  never make a narrow screen scroll sideways.
 - **Colours:** semantic tokens in `src/styles/theme.css`, each checked for contrast (at least 4.5:1
   for text, 3:1 for input borders) in both modes:
 
@@ -208,7 +212,8 @@ keyboard support.
 Two end-to-end specs keep this true: `e2e/a11y.spec.ts` scans every page (and open menus, selects,
 dialogs and the mobile menu) with [axe](https://github.com/dequelabs/axe-core) against the WCAG 2.2
 A and AA rules in light and dark mode and checks that no page scrolls sideways on a 320px-wide
-screen, and `e2e/keyboard.spec.ts` checks the skip link, menus, selects, dialogs, the mobile menu and
+screen, in every language (with the sign-in page's widest buttons, "Last used" badge included), and
+`e2e/keyboard.spec.ts` checks the skip link, menus, selects, dialogs, the mobile menu and
 cursors using only the keyboard.
 
 ## Dark mode

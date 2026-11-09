@@ -49,6 +49,17 @@ const sizeClasses = {
 } as const;
 
 /**
+ * Classes per size for a full-width button. Its label may wrap onto a second
+ * line, growing the button from its usual height, so a long label (another
+ * language, a wider font, a "Last used" badge) never makes a narrow screen
+ * scroll sideways (WCAG 1.4.10 Reflow).
+ */
+const fullWidthClasses = {
+  sm: 'h-auto min-h-8 w-full py-1.5 text-center whitespace-normal',
+  md: 'h-auto min-h-10 w-full py-2 text-center whitespace-normal',
+} as const;
+
+/**
  * Props for {@link Button}.
  */
 export type ButtonProps = ComponentProps<'button'> & {
@@ -56,7 +67,7 @@ export type ButtonProps = ComponentProps<'button'> & {
   variant?: keyof typeof variantClasses;
   /** Size. Defaults to `md`. */
   size?: keyof typeof sizeClasses;
-  /** Stretch to the container's width. */
+  /** Stretch to the container's width; the label then wraps when it doesn't fit. */
   fullWidth?: boolean;
   /** Show a spinner and block clicks while an action runs. */
   loading?: boolean;
@@ -111,7 +122,7 @@ export default function Button({
           'pointer-events-none cursor-default',
           variantClasses[variant].look,
           sizeClasses[size],
-          fullWidth && 'w-full',
+          fullWidth && fullWidthClasses[size],
           className,
         )}
       >
@@ -127,7 +138,7 @@ export default function Button({
     variantClasses[variant].look,
     variantClasses[variant].hover,
     sizeClasses[size],
-    fullWidth && 'w-full',
+    fullWidth && fullWidthClasses[size],
     className,
   );
 

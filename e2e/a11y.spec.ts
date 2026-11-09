@@ -7,7 +7,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { type Page } from '@playwright/test';
+import { type BrowserContext, type Page } from '@playwright/test';
 
 import expectAccessible from './support/axe';
 import { findCompanyId, storeInvitation, storeInviteLink, storeSignInLink } from './support/db';
@@ -27,6 +27,7 @@ import {
 } from './support/helpers';
 import { expect, test } from './support/test';
 import { defined } from '../src/lib/defined';
+import { LAST_USED_LOGIN_METHOD_COOKIE } from '../src/lib/sign-in/auth-cookies';
 import {
   PROVIDER_LINKED_COOKIE,
   PROVIDER_STEP_UP_COOKIE,
@@ -159,8 +160,49 @@ async function expectNoSidewaysScroll(page: Page): Promise<void> {
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 }
 
+/**
+ * The sign-in page's button for the other way in, per language: the longest
+ * label on the page, which gets the "Last used" badge after a sign-in by link.
+ */
+const USE_LINK_BUTTON = {
+  'en-US': 'Sign in with an email link instead',
+  'nl-NL': 'Liever inloggen met een e-maillink',
+  'es-ES': 'Usar un enlace por correo',
+} as const;
+
+/**
+ * Checks the sign-in page fits with its widest buttons: the email link button
+ * with the "Last used" badge, then the link form's send button with it. Their
+ * labels wrap rather than make the page scroll sideways.
+ *
+ * @param context - The browser context, which gets the "Last used" cookie.
+ * @param page - The browser page.
+ * @param locale - The page's language.
+ */
+async function expectSignInFitsWithLastUsed(
+  context: BrowserContext,
+  page: Page,
+  locale: keyof typeof USE_LINK_BUTTON,
+): Promise<void> {
+  await context.addCookies([
+    { name: LAST_USED_LOGIN_METHOD_COOKIE, value: 'magic-link', url: E2E_BASE_URL },
+  ]);
+  await page.goto('/auth');
+  await expectNoSidewaysScroll(page);
+  await page.getByRole('button', { name: USE_LINK_BUTTON[locale] }).click();
+  await expect(page.getByRole('button', { name: USE_LINK_BUTTON[locale] })).toHaveCount(0);
+  await expectNoSidewaysScroll(page);
+}
+
 test.describe('on a 320px wide screen', () => {
   test.use({ viewport: { width: 320, height: 640 } });
+
+  test('the sign-in page fits with "Last used" on its longest buttons', async ({
+    context,
+    page,
+  }) => {
+    await expectSignInFitsWithLastUsed(context, page, 'en-US');
+  });
 
   PUBLIC_PATHS.forEach((path) => {
     test(`${path} fits without sideways scrolling`, async ({ page }) => {
@@ -463,6 +505,14 @@ test.describe('on a 320px wide screen', () => {
         await expectAccessible(page);
         await context.close();
       });
+    });
+
+    test('the sign-in page fits with "Last used" on its longest buttons', async ({
+      context,
+      page,
+    }) => {
+      await context.addCookies([languageCookie]);
+      await expectSignInFitsWithLastUsed(context, page, locale);
     });
 
     test('the theme and language menu, signed out', async ({ context, page }) => {

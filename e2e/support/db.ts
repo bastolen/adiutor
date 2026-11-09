@@ -9,7 +9,7 @@
  * Each opens its own short connection to the test database. Resetting and
  * seeding the database is `seed.ts`.
  */
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Client } from 'pg';
 
@@ -214,7 +214,9 @@ export async function storeSignInLink(databaseUrl: string, email: string): Promi
 /**
  * Stores an open invitation to a company the way the app does (only the
  * token's hash), without sending an email, for tests that open the
- * invitation page. Opening it doesn't use it up.
+ * invitation page. Opening it doesn't use it up. Like inviting an address
+ * again in the app, it replaces that address's open invitation, so a test
+ * that runs again (a retry) still gets one.
  *
  * @param databaseUrl - Connection string of the test database.
  * @param invitation - The invitation.
@@ -235,15 +237,25 @@ export async function storeInvitation(
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();
   try {
-    await drizzle(client, { schema })
-      .insert(schema.invitation)
-      .values({
-        companyId,
-        email,
-        role,
-        tokenHash: hashToken(token),
-        expiresAt: new Date(Date.now() + STORED_LINK_LIFETIME_MS),
-      });
+    const database = drizzle(client, { schema });
+    await database
+      .update(schema.invitation)
+      .set({ revokedAt: new Date() })
+      .where(
+        and(
+          eq(schema.invitation.companyId, companyId),
+          eq(schema.invitation.email, email),
+          isNull(schema.invitation.acceptedAt),
+          isNull(schema.invitation.revokedAt),
+        ),
+      );
+    await database.insert(schema.invitation).values({
+      companyId,
+      email,
+      role,
+      tokenHash: hashToken(token),
+      expiresAt: new Date(Date.now() + STORED_LINK_LIFETIME_MS),
+    });
   } finally {
     await client.end();
   }
