@@ -14,6 +14,7 @@ import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
 import TextField from '@/components/ui/text-field';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
+import type { Locale } from '@/lib/i18n/locales';
 
 import registerUserAction from './actions';
 
@@ -21,11 +22,14 @@ import registerUserAction from './actions';
  * An email field with a submit button. Afterwards it says what happened, with
  * a link to the user (new or existing) and a way to add another. Its text
  * comes from the `admin.addUser` messages: the page passes them with
- * `ClientMessages` (namespace `admin`).
+ * `ClientMessages` (namespace `admin`). The Email language field starts on
+ * Default, so the new account follows Adiutor's default language.
  *
+ * @param props - Component props.
+ * @param props.defaultLocale - Adiutor's default language, named in the Default option.
  * @returns The form.
  */
-export default function RegisterUserForm() {
+export default function RegisterUserForm({ defaultLocale }: { defaultLocale: Locale }) {
   const t = useTranslations('admin.addUser.form');
   const [result, formAction, pending, onSubmit] = useTransientActionState(registerUserAction, null);
   // A new form after "Add another", so the old result doesn't show again.
@@ -79,7 +83,7 @@ export default function RegisterUserForm() {
         description={t('description')}
         required
       />
-      <EmailLanguageField purpose="account" />
+      <EmailLanguageField purpose="account" defaultLocale={defaultLocale} />
       <div>
         <Button type="submit" loading={pending}>
           {t('submit')}

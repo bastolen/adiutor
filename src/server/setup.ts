@@ -82,8 +82,9 @@ export interface SetupInput {
   defaultLocale?: string;
   /**
    * A new Admin's own language: the one they set up in, so choosing another
-   * default doesn't switch their screens. Left out, their first sign-in saves
-   * one. An existing account (the command line) keeps its own.
+   * default doesn't switch their screens. When it's the default they chose,
+   * or left out, they start on Default (no saved language) and follow it. An
+   * existing account (the command line) keeps its own.
    */
   adminLocale?: Locale;
 }
@@ -215,7 +216,9 @@ export async function setUpPlatform(
             email,
             emailVerified: true,
             platformRole: PLATFORM_ADMIN_ROLE,
-            locale: input.adminLocale ?? null,
+            // Default when they set up in the default language; otherwise they keep theirs.
+            locale:
+              input.adminLocale && input.adminLocale !== defaultLocale ? input.adminLocale : null,
           })
           .returning({ id: user.id }),
         'the first staff Admin',

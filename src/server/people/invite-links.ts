@@ -60,7 +60,7 @@ import {
   assertRateLimit,
   RATE_LIMITS,
 } from '../rate-limit';
-import recipientLocale from '../recipient-locale';
+import { requesterLocale } from '../recipient-locale';
 import getStaffName from './staff-name';
 
 /** A link's state. */
@@ -399,7 +399,7 @@ export async function claimInviteLink(
   const email = emailSchema.parse(rawEmail);
   const request = ctx.requestInfo ? await ctx.requestInfo() : null;
   // The confirmation is in the language of whoever opened the link, and so is the invitation.
-  const locale = await recipientLocale(ctx);
+  const locale = await requesterLocale(ctx);
   await assertRateLimit(
     ctx,
     `invite-link-claim:ip:${request?.ip ?? 'unknown'}`,

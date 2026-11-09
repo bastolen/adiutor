@@ -221,8 +221,9 @@ device), **Light** or **Dark**:
   `src/components/layout/preferences-menu.tsx`), on every page without the account menu. It shows
   two icons split by a thin line, the current theme's and the language's flag, and is named in
   full for screen readers ("Theme and language: System, English (US)"). Its Radix menu has the
-  theme as the same row of three icons as the account menu, then the languages, each with its
-  flag, named in itself and marked with its `lang` (see
+  theme as the same row of three icons as the account menu, then the language: Default first (a
+  globe where the flags go; it follows Adiutor's default language), then the languages, each with
+  its flag, named in itself and marked with its `lang` (see
   [Languages](i18n.md#how-the-language-is-chosen)).
 - **Signed in:** a row of three icons in the account menu (`src/app/(app)/account-menu.tsx`).
 

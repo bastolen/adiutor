@@ -68,9 +68,9 @@ test("an Admin changes Adiutor's default language, which visitors without a choi
     await select.click();
     await page.getByRole('option', { name: 'Español' }).click();
     await page.getByRole('button', { name: 'Save default language' }).click();
-    // The Admin's own language comes first, so the page stays in English.
-    await expect(toasts(page)).toContainText('Default language saved.');
-    await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
+    // The Admin hasn't chosen a language of their own (they're on Default), so they follow it too.
+    await expect(toasts(page)).toContainText('Idioma predeterminado guardado.');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'es-ES');
 
     // Someone without a choice gets Spanish, whatever their browser asks for.
     const visitor = await browser.newContext({ locale: 'nl-NL' });

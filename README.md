@@ -39,9 +39,10 @@ built; requests, the tickets themselves, come next.
   [Security measures](docs/security-measures.md).
 - **Accessible, in light and dark mode.** Built to meet WCAG 2.2 AA, with full keyboard support.
   See [Design, accessibility and dark mode](docs/design.md).
-- **English, Dutch and Spanish.** The staff choose Adiutor's default language, and each person can
-  choose their own on the sign-in page or their account, without the address changing; emails reach
-  them in it. Invitations go out in the language the sender picks. See [Languages](docs/i18n.md).
+- **English, Dutch and Spanish.** The staff choose Adiutor's default language, which everyone
+  follows until they choose their own on the sign-in page or their account, without the address
+  changing; emails reach them in it. Invitations go out in the language the sender picks. See
+  [Languages](docs/i18n.md).
 
 **Coming next: requests.** Companies will raise requests, comment on them and approve them, and
 follow them through with the staff. The company roles are already set up for it.

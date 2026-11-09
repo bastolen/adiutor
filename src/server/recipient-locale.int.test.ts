@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import recipientLocale from './recipient-locale';
+import recipientLocale, { defaultLanguage, requesterLocale } from './recipient-locale';
 import { createStaffSettings, setupTestContext } from '../../tests/integration/helpers';
 
 const { db } = setupTestContext();
@@ -15,43 +15,52 @@ const { db } = setupTestContext();
  */
 const spanishRequest = async () => 'es-ES' as const;
 
+/**
+ * Fails, as reading cookies outside a request does.
+ *
+ * @returns Never.
+ */
+const noRequest = async (): Promise<never> => {
+  throw new Error('Not in a request');
+};
+
 describe('recipientLocale', () => {
   it('prefers the language the recipient saved', async () => {
-    expect(await recipientLocale({ db, requestLocale: spanishRequest }, 'nl-NL')).toBe('nl-NL');
+    await createStaffSettings(db, 'Adiutor Tests', 'es-ES');
+    expect(await recipientLocale({ db }, 'nl-NL')).toBe('nl-NL');
   });
 
-  it('falls back on the request’s language for someone who saved none, or something unknown', async () => {
+  it('uses Adiutor’s default language for someone on Default, or something unknown', async () => {
     await createStaffSettings(db, 'Adiutor Tests', 'nl-NL');
-    const ctx = { db, requestLocale: spanishRequest };
 
-    expect(await recipientLocale(ctx, null)).toBe('es-ES');
-    expect(await recipientLocale(ctx)).toBe('es-ES');
-    expect(await recipientLocale(ctx, 'fr-FR')).toBe('es-ES');
+    expect(await recipientLocale({ db }, null)).toBe('nl-NL');
+    expect(await recipientLocale({ db })).toBe('nl-NL');
+    expect(await recipientLocale({ db }, 'fr-FR')).toBe('nl-NL');
+  });
+
+  it('ignores the language of whoever caused the email', async () => {
+    await createStaffSettings(db, 'Adiutor Tests', 'nl-NL');
+    const fromSpanishBrowser = { db, requestLocale: spanishRequest };
+
+    expect(await recipientLocale(fromSpanishBrowser, null)).toBe('nl-NL');
+  });
+
+  it('falls back on English (US) before setup', async () => {
+    expect(await recipientLocale({ db }, null)).toBe('en-US');
+    expect(await defaultLanguage({ db })).toBe('en-US');
+  });
+});
+
+describe('requesterLocale', () => {
+  it('uses the language the requester’s browser shows', async () => {
+    await createStaffSettings(db, 'Adiutor Tests', 'nl-NL');
+    expect(await requesterLocale({ db, requestLocale: spanishRequest })).toBe('es-ES');
   });
 
   it('falls back on Adiutor’s default language outside a request, or when the request can’t say', async () => {
     await createStaffSettings(db, 'Adiutor Tests', 'nl-NL');
 
-    expect(await recipientLocale({ db }, null)).toBe('nl-NL');
-    expect(
-      await recipientLocale(
-        {
-          db,
-          /**
-           * Fails, as reading cookies outside a request does.
-           *
-           * @returns Never.
-           */
-          requestLocale: async () => {
-            throw new Error('Not in a request');
-          },
-        },
-        null,
-      ),
-    ).toBe('nl-NL');
-  });
-
-  it('falls back on English (US) before setup', async () => {
-    expect(await recipientLocale({ db }, null)).toBe('en-US');
+    expect(await requesterLocale({ db })).toBe('nl-NL');
+    expect(await requesterLocale({ db, requestLocale: noRequest })).toBe('nl-NL');
   });
 });

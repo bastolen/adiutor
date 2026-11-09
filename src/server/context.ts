@@ -24,9 +24,10 @@ export interface ServiceContext {
   /** Reads where the current request came from; absent outside requests (tests, scripts). */
   requestInfo?: () => Promise<RequestInfo>;
   /**
-   * Reads the current request's language, for emails to someone without a
-   * saved language (`recipientLocale`); absent outside requests (tests,
-   * scripts, the hourly job), where English (US) stands in.
+   * Reads the current request's language, for an email to the person making
+   * the request (`requesterLocale`, e.g. an invite link's confirmation);
+   * absent outside requests (tests, scripts, the hourly job), where Adiutor's
+   * default language stands in.
    */
   requestLocale?: () => Promise<Locale>;
 }

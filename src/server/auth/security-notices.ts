@@ -42,7 +42,7 @@ export interface SecurityNoticeOptions {
 
 /**
  * Emails a user that a security setting changed, in their language: the one
- * they saved, else the request's (`ctx.requestLocale`), else English (US)
+ * they saved, else Adiutor's default language, else English (US)
  * (`recipientLocale`).
  *
  * @param ctx - Service context (database, email, app URL, request).
@@ -59,7 +59,7 @@ export interface SecurityNoticeOptions {
  * @returns Whether it was sent (never throws: a failure is logged).
  */
 export async function sendSecurityNotice(
-  ctx: Pick<ServiceContext, 'db' | 'sendEmail' | 'baseUrl' | 'requestInfo' | 'requestLocale'>,
+  ctx: Pick<ServiceContext, 'db' | 'sendEmail' | 'baseUrl' | 'requestInfo'>,
   recipient: { userId: string } | { email: string },
   kind: SecurityNoticeKind,
   { provider, role, company, locale = null, showDevice = false }: SecurityNoticeOptions = {},

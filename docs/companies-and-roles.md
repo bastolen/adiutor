@@ -186,7 +186,7 @@ email address; a first password chosen that way sends no security email.
 On a fresh install (no `staff_settings` row and no accounts), `/auth` redirects to
 `/setup`. There, the first person chooses the name users see and Adiutor's default language (the
 setup page's own to begin with) and becomes the first staff Admin, keeping the language they set up
-in for themselves (or use `pnpm setup:platform`, with `--default-language`); a new account's email
+in for themselves, or starting on Default when it's the default they chose (or use `pnpm setup:platform`, with `--default-language`); a new account's email
 address counts as verified. Until then `/setup` is
 open to anyone who can reach the site, so complete it right after deploying. Once set up, or once
 any account exists, `/setup` shows the not-found page, so it can never promote an existing account.
@@ -213,9 +213,11 @@ staff page also recreates the row. A fresh setup itself isn't recorded in the au
 - **By email:** company admins (and staff Admins and Managers) invite people from a company's
   Members page, and Admins invite staff from the staff page. Staff add a company
   (`/admin/companies/new`) by naming it and inviting its first Admin. The invitation, its resend and
-  its reminder go out in the form's **Email language**, which starts as the sender's language (an
-  invitee who already has an account gets their own); Add user's welcome email does the same, and
-  the new account keeps that language until its user chooses one. The link works once and
+  its reminder go out in the form's **Email language** (an invitee who already has an account gets
+  their own). On the Members and staff pages it starts as the sender's language; Add company
+  starts on Default, Adiutor's default language. Add user's welcome email works the same way,
+  starting on Default too: a new account on Default keeps following Adiutor's default language
+  until its user chooses one, and one given a language keeps that. The link works once and
   expires in 7 days. Inviting an address again, or resending, replaces its open invitation, so
   only the newest link works; two requests at the same moment take turns, and the newest wins.
 - **By invite link:** a single-use link for a role, valid for 1, 7 or 30 days. Whoever opens it

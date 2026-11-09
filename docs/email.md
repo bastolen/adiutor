@@ -57,12 +57,15 @@ can't use it.
 
 ## Which language
 
-An email is written in its recipient's language: the one they saved (`user.locale`); without an
-account, or with none saved, the language of the request that caused it (`ServiceContext.requestLocale`
-in services, the request's headers in Better Auth's callbacks: the language cookie, else Adiutor's
-default language); outside a request (the hourly job, scripts), Adiutor's default language
-(`staff_settings.default_locale`); failing that, English (US). `recipientLocale`
-(`src/server/recipient-locale.ts`) is that rule.
+An email is written in its recipient's language: the one they saved (`user.locale`); for someone
+on Default (none saved) or without an account, Adiutor's default language
+(`staff_settings.default_locale`); failing that (before setup), English (US). `recipientLocale`
+(`src/server/recipient-locale.ts`) is that rule. The language of whoever caused the email doesn't
+count: a staff Admin browsing in Dutch doesn't send a user on Default a Dutch notice. Only emails
+someone asks for themselves follow the language their browser shows: an invite link's confirmation
+(`requesterLocale`, which reads `ServiceContext.requestLocale`), and, for an account on Default,
+the sign-in link, password reset and verification (`emailLocale` in `src/lib/auth.ts`: the language
+cookie, else Adiutor's default).
 
 | Email                                               | Language                                                                                                                                          |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -71,13 +74,14 @@ default language); outside a request (the hourly job, scripts), Adiutor's defaul
 | Invitation, its resends and its reminder            | The invitation's (`invitation.locale`), or the invitee's own when they have an account with a saved language                                      |
 | Invite-link confirmation, "already invited"         | The language of whoever opened the link, which the invitation it turns into keeps                                                                 |
 | "Already a member", added to a company, staff Admin | Each recipient's own                                                                                                                              |
-| Welcome (Add user)                                  | The language given for the new user, which is saved as theirs; else the request's                                                                 |
+| Welcome (Add user)                                  | The language given for the new user, which is saved as theirs; for Default, Adiutor's default language                                            |
 
 `invitation.locale` (NOT NULL, `en-US` by default) is chosen when the invitation is sent: the
 invitation services (`inviteByEmail`, `inviteManyByEmail`, `registerCompany`, `createSentInvitation`)
-take an optional `locale`, by default the request's, and a resend keeps the invitation's unless it's
-given another. `registerUser` takes an optional `locale` too. The forms ask for it (**Email
-language** on the invite form, Add company and Add user), starting with the sender's language.
+take an optional `locale`, by default Adiutor's default language, and a resend keeps the
+invitation's unless it's given another. `registerUser` takes an optional `locale` too; without one
+the new account is on Default. The forms ask for it (**Email language**): Add user and Add company
+start on Default (no `locale`), the invite form on the sender's language.
 Scripts and the hourly job have no request: their emails use the recipient's or the invitation's
 language, else Adiutor's default language (`pnpm db:seed` sends its invitations in English (US)).
 

@@ -34,22 +34,46 @@ afterEach(() => {
 });
 
 describe('LanguageForm', () => {
-  it('shows the current language, each named in itself', async () => {
+  it('shows the saved language, Default first and each language named in itself', async () => {
     const user = userEvent.setup();
-    renderInLocale('nl-NL', <LanguageForm />);
+    renderInLocale('nl-NL', <LanguageForm choice="nl-NL" defaultLocale="en-US" />);
 
     const select = screen.getByRole('combobox', { name: 'Taal' });
     expect(select).toHaveTextContent('Nederlands');
     await user.click(select);
+    const options = screen.getAllByRole('option');
+    expect(options[0]).toHaveAccessibleName(
+      'Standaard Volgt de standaardtaal van Adiutor, nu English (US).',
+    );
     expect(screen.getByRole('option', { name: 'English (US)' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Español' })).toBeInTheDocument();
+  });
+
+  it('starts on Default for an account that follows Adiutor’s default language', () => {
+    renderInLocale('en-US', <LanguageForm choice="default" defaultLocale="es-ES" />);
+
+    expect(screen.getByRole('combobox', { name: 'Language' })).toHaveTextContent('Default');
+  });
+
+  it('sends Default as the choice when it is picked', async () => {
+    vi.mocked(saveLanguageAction).mockResolvedValue({ ok: true, data: SAVED_PATH });
+    const user = userEvent.setup();
+    renderInLocale('en-US', <LanguageForm choice="nl-NL" defaultLocale="en-US" />);
+
+    await user.click(screen.getByRole('combobox', { name: 'Language' }));
+    await user.click(screen.getByRole('option', { name: /^Default/ }));
+    await user.click(screen.getByRole('button', { name: 'Save language' }));
+
+    await waitFor(() => expect(saveLanguageAction).toHaveBeenCalledOnce());
+    const formData = vi.mocked(saveLanguageAction).mock.calls[0]?.[1];
+    expect(formData?.get('locale')).toBe('default');
   });
 
   it('reloads the page where the action says once the language is saved', async () => {
     vi.mocked(saveLanguageAction).mockResolvedValue({ ok: true, data: SAVED_PATH });
     const replaceState = vi.spyOn(window.history, 'replaceState');
     const user = userEvent.setup();
-    renderInLocale('en-US', <LanguageForm />);
+    renderInLocale('en-US', <LanguageForm choice="en-US" defaultLocale="en-US" />);
 
     await user.click(screen.getByRole('button', { name: 'Save language' }));
 
@@ -62,7 +86,7 @@ describe('LanguageForm', () => {
     window.history.replaceState(null, '', SAVED_PATH);
     vi.mocked(saveLanguageAction).mockResolvedValue({ ok: true, data: SAVED_PATH });
     const user = userEvent.setup();
-    renderInLocale('es-ES', <LanguageForm />);
+    renderInLocale('es-ES', <LanguageForm choice="es-ES" defaultLocale="en-US" />);
 
     await user.click(screen.getByRole('button', { name: 'Guardar idioma' }));
 
@@ -76,7 +100,7 @@ describe('LanguageForm', () => {
       message: 'Choose one of the languages.',
     });
     const user = userEvent.setup();
-    renderInLocale('en-US', <LanguageForm />);
+    renderInLocale('en-US', <LanguageForm choice="default" defaultLocale="en-US" />);
 
     await user.click(screen.getByRole('button', { name: 'Save language' }));
 

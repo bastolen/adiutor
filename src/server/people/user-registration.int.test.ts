@@ -5,7 +5,7 @@
 import { eq, like } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { auditEvent, membership, user, verification } from '@/db/schema';
+import { auditEvent, membership, staffSettings, user, verification } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 import { hashVerificationIdentifier } from '@/lib/sign-in/tokens';
 
@@ -94,9 +94,9 @@ describe('registerUser', () => {
     expect(welcome.subject).toBe('Je Adiutor-account staat klaar');
   });
 
-  it('without a chosen language, saves none and welcomes them in the request’s', async () => {
-    const { userId } = await registerUser(inLanguage(ctx, 'es-ES'), manager, 'es@adiutor.test');
-    await registerUser(ctx, manager, 'en@adiutor.test');
+  it('on Default, saves no language and welcomes them in Adiutor’s default, not the sender’s', async () => {
+    await db.update(staffSettings).set({ defaultLocale: 'nl-NL' });
+    const { userId } = await registerUser(inLanguage(ctx, 'es-ES'), manager, 'nl@adiutor.test');
 
     const created = firstRow(
       await db.select({ locale: user.locale }).from(user).where(eq(user.id, userId)),
@@ -104,8 +104,7 @@ describe('registerUser', () => {
     );
     expect(created.locale).toBeNull();
     expect(sent.map((email) => [email.to, emailLanguage(email)])).toEqual([
-      ['es@adiutor.test', 'es-ES'],
-      ['en@adiutor.test', 'en-US'],
+      ['nl@adiutor.test', 'nl-NL'],
     ]);
   });
 

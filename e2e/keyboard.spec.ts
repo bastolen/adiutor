@@ -525,8 +525,8 @@ test.describe('signed out', () => {
     await expect(page.getByRole('menuitemradio', { name: 'Light' })).toBeFocused();
     await page.keyboard.press('ArrowLeft');
     await expect(page.getByRole('menuitemradio', { name: 'System' })).toBeFocused();
-    // Down goes through the row, then on to the languages.
-    for (const name of ['Light', 'Dark', 'English (US)']) {
+    // Down goes through the row, then on to the languages, Default first.
+    for (const name of ['Light', 'Dark', 'Default', 'English (US)']) {
       // eslint-disable-next-line no-await-in-loop -- Each key moves on from where the last one went.
       await page.keyboard.press('ArrowDown');
       // eslint-disable-next-line no-await-in-loop -- Checked before the next key is pressed.
@@ -539,7 +539,7 @@ test.describe('signed out', () => {
     // Enter on another language reloads the page in it.
     await page.keyboard.press('Enter');
     await expect(page.getByRole('menuitemradio', { name: 'System' })).toBeFocused();
-    for (const name of ['Light', 'Dark', 'English (US)', 'Nederlands']) {
+    for (const name of ['Light', 'Dark', 'Default', 'English (US)', 'Nederlands']) {
       // eslint-disable-next-line no-await-in-loop -- Each key moves on from where the last one went.
       await page.keyboard.press('ArrowDown');
       // eslint-disable-next-line no-await-in-loop -- Checked before the next key is pressed.

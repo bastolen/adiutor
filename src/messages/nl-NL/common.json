@@ -127,7 +127,9 @@
       "defaultHint": "Voor iedereen die nog geen taal heeft gekozen. Je kunt dit later wijzigen.",
       "defaultDescription": "Adiutor gebruikt deze taal voor iedereen die nog geen eigen taal heeft gekozen, ook in de e-mails die ze ontvangen.",
       "saveDefault": "Standaardtaal opslaan",
-      "defaultSaved": "Standaardtaal opgeslagen."
+      "defaultSaved": "Standaardtaal opgeslagen.",
+      "followDefault": "Standaard",
+      "followDefaultDescription": "Volgt de standaardtaal van Adiutor, nu {language}."
     },
     "preferences": {
       "button": "Thema en taal: {theme, select, light {Licht} dark {Donker} other {Systeem}}, {language}"

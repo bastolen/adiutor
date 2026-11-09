@@ -9,7 +9,7 @@
 import { match } from '@formatjs/intl-localematcher';
 import Negotiator from 'negotiator';
 
-import { DEFAULT_LOCALE, isLocale, LOCALE_COOKIE, LOCALES, type Locale } from './locales';
+import { DEFAULT_LOCALE, isLocale, languageCookieValue, LOCALES, type Locale } from './locales';
 
 /**
  * Reads the language cookie's value.
@@ -77,24 +77,6 @@ export function resolveLocale(request: {
 }
 
 /**
- * Reads one cookie from a `Cookie` header.
- *
- * @param cookieHeader - The header, if any.
- * @param name - The cookie's name.
- * @returns Its value, or `null` when it isn't there.
- */
-function cookieFromHeader(cookieHeader: string | null, name: string): string | null {
-  if (!cookieHeader) {
-    return null;
-  }
-  const pair = cookieHeader
-    .split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${name}=`));
-  return pair ? decodeURIComponent(pair.slice(name.length + 1)) : null;
-}
-
-/**
  * The language cookie's value in a request's headers, e.g. in Better Auth's
  * hooks (`ctx.headers`), where `next/headers` isn't available.
  *
@@ -102,5 +84,5 @@ function cookieFromHeader(cookieHeader: string | null, name: string): string | n
  * @returns The cookie's value, or `null` when it isn't there.
  */
 export function localeCookieFromHeaders(headers: Headers | null | undefined): string | null {
-  return cookieFromHeader(headers?.get('cookie') ?? null, LOCALE_COOKIE);
+  return languageCookieValue(headers?.get('cookie'));
 }

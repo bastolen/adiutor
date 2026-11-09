@@ -123,6 +123,17 @@ describe('setUpPlatform', () => {
     expect(admin.locale).toBe('es-ES');
   });
 
+  it('starts the Admin on Default when they set up in the default language they chose', async () => {
+    const { userId } = await setUpPlatform(db, {
+      ...input,
+      defaultLocale: 'nl-NL',
+      adminLocale: 'nl-NL',
+    });
+
+    const admin = firstRow(await db.select().from(user).where(eq(user.id, userId)), 'the Admin');
+    expect(admin.locale).toBeNull();
+  });
+
   it('refuses a default language it doesn’t know, and sets nothing up', async () => {
     await expect(setUpPlatform(db, { ...input, defaultLocale: 'fr-FR' })).rejects.toThrow(
       'validation.locale',

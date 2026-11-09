@@ -1,7 +1,8 @@
 /**
  * @file Integration tests for the language at sign-in: the browser gets the
- * account's language, an account without one saves the language it signed
- * in with, and a password whose code step is still to come changes nothing.
+ * account's language, an account on Default saves only a language picked in
+ * the browser (never a guessed one), and a password whose code step is still
+ * to come changes nothing.
  */
 import { getOAuthState } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
@@ -99,7 +100,8 @@ const languageCookies = (setCookie: ReturnType<typeof passwordSignIn>['setCookie
   setCookie.mock.calls.filter(([name]) => name === 'adiutor.locale').map(([, value]) => value);
 
 describe('the language at sign-in', () => {
-  it("saves the language an account without one signed in with (before setup, the browser's), and gives the browser it", async () => {
+  it("keeps an account on Default without a language picked in the browser: neither the browser's nor Adiutor's default is saved", async () => {
+    await createStaffSettings(db, 'Adiutor Tests', 'es-ES');
     const jane = await createUser(db, 'jane@adiutor.test');
     const sessionId = await createSession(db, jane);
     const { ctx, setCookie } = passwordSignIn(
@@ -109,31 +111,11 @@ describe('the language at sign-in', () => {
 
     await afterPasswordSignIn(ctx);
 
-    expect(await savedLocale(jane)).toBe('nl-NL');
-    expect(languageCookies(setCookie)).toEqual(['nl-NL']);
-    expect(setCookie).toHaveBeenCalledWith(
-      'adiutor.locale',
-      'nl-NL',
-      expect.objectContaining({ path: '/', httpOnly: false, sameSite: 'lax' }),
-    );
+    expect(await savedLocale(jane)).toBeNull();
+    expect(languageCookies(setCookie)).toEqual([]);
   });
 
-  it("saves Adiutor's default language once set up, whatever the browser asks for", async () => {
-    await createStaffSettings(db, 'Adiutor Tests', 'es-ES');
-    const jane = await createUser(db, 'jane@adiutor.test');
-    const sessionId = await createSession(db, jane);
-    const { ctx, setCookie } = passwordSignIn(
-      { 'accept-language': 'nl-NL' },
-      { sessionId, userId: jane },
-    );
-
-    await afterPasswordSignIn(ctx);
-
-    expect(await savedLocale(jane)).toBe('es-ES');
-    expect(languageCookies(setCookie)).toEqual(['es-ES']);
-  });
-
-  it("saves the language the browser chose over Adiutor's default", async () => {
+  it('saves the language picked in the browser for an account on Default', async () => {
     await createStaffSettings(db, 'Adiutor Tests', 'es-ES');
     const jane = await createUser(db, 'jane@adiutor.test');
     const sessionId = await createSession(db, jane);
@@ -145,7 +127,18 @@ describe('the language at sign-in', () => {
     await afterPasswordSignIn(ctx);
 
     expect(await savedLocale(jane)).toBe('nl-NL');
-    expect(languageCookies(setCookie)).toEqual(['nl-NL']);
+    // The browser already has it.
+    expect(languageCookies(setCookie)).toEqual([]);
+  });
+
+  it('ignores a language cookie that is not one of the languages', async () => {
+    const jane = await createUser(db, 'jane@adiutor.test');
+    const sessionId = await createSession(db, jane);
+    const { ctx } = passwordSignIn({ cookie: 'adiutor.locale=fr-FR' }, { sessionId, userId: jane });
+
+    await afterPasswordSignIn(ctx);
+
+    expect(await savedLocale(jane)).toBeNull();
   });
 
   it("gives the browser the account's language over the one it was using", async () => {
@@ -161,6 +154,11 @@ describe('the language at sign-in', () => {
 
     expect(await savedLocale(jane)).toBe('es-ES');
     expect(languageCookies(setCookie)).toEqual(['es-ES']);
+    expect(setCookie).toHaveBeenCalledWith(
+      'adiutor.locale',
+      'es-ES',
+      expect.objectContaining({ path: '/', httpOnly: false, sameSite: 'lax' }),
+    );
   });
 
   it('changes nothing for a password whose code step is still to come', async () => {
@@ -168,9 +166,9 @@ describe('the language at sign-in', () => {
     const sessionId = await createSession(db, jane);
     // The app's reactions see the session before the two-step plugin deletes it; the plugin
     // listed after it sees none.
-    const before = passwordSignIn({ 'accept-language': 'es-ES' }, { sessionId, userId: jane });
+    const before = passwordSignIn({ cookie: 'adiutor.locale=es-ES' }, { sessionId, userId: jane });
     await afterAuthRequest(before.ctx);
-    const after = passwordSignIn({ 'accept-language': 'es-ES' }, null);
+    const after = passwordSignIn({ cookie: 'adiutor.locale=es-ES' }, null);
     await afterPasswordSignIn(after.ctx);
 
     expect(await savedLocale(jane)).toBeNull();

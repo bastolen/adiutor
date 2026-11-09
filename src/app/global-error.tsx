@@ -19,8 +19,8 @@ import { useEffect, useSyncExternalStore } from 'react';
 import {
   DEFAULT_LOCALE,
   isLocale,
+  languageCookieValue,
   type Locale,
-  LOCALE_COOKIE,
   localeForLanguages,
 } from '@/lib/i18n/locales';
 import { onMessageError } from '@/lib/i18n/message-errors';
@@ -66,11 +66,7 @@ function applySavedTheme() {
  * @returns The locale, or the default when neither gives one.
  */
 function savedLocale(): Locale {
-  const cookie = document.cookie
-    .split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${LOCALE_COOKIE}=`));
-  const value = cookie?.slice(LOCALE_COOKIE.length + 1);
+  const value = languageCookieValue(document.cookie);
   if (isLocale(value)) {
     return value;
   }

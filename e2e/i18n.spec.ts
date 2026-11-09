@@ -7,7 +7,7 @@
  */
 import { type Page } from '@playwright/test';
 
-import { findCompanyId, storeInvitation } from './support/db';
+import { findCompanyId, setDefaultLocale, storeInvitation } from './support/db';
 import { COMPANY_NAME, COMPANY_SLUG } from './support/fixtures';
 import {
   adminStorageState,
@@ -50,10 +50,16 @@ async function chooseLanguage(page: Page, current: string, language: string, lan
  *
  * @param page - The browser page, on the account page.
  * @param label - The select's label, in the page's language now.
- * @param language - The language to choose, named in itself.
+ * @param language - The language to choose, named in itself (or Default, by a pattern, as its
+ *   name includes its description).
  * @param save - The save button's name, in the page's language now.
  */
-async function saveAccountLanguage(page: Page, label: string, language: string, save: string) {
+async function saveAccountLanguage(
+  page: Page,
+  label: string,
+  language: string | RegExp,
+  save: string,
+) {
   await page.getByRole('combobox', { name: label, exact: true }).click();
   await page.getByRole('option', { name: language }).click();
   await page.getByRole('button', { name: save }).click();
@@ -83,6 +89,12 @@ test('the theme and language menu on the sign-in page remembers the choice', asy
   await expect(page.getByRole('heading', { name: 'Inicia sesión en Adiutor' })).toBeVisible();
   const cookies = await page.context().cookies();
   expect(cookies.find(({ name }) => name === 'adiutor.locale')?.value).toBe('es-ES');
+
+  // Default forgets the choice: the page follows Adiutor's default language again.
+  await chooseLanguage(page, 'Tema e idioma: Sistema, Español', 'Predeterminado', 'en-US');
+  await expect(page.getByRole('heading', { name: 'Sign in to Adiutor' })).toBeVisible();
+  const after = await page.context().cookies();
+  expect(after.find(({ name }) => name === 'adiutor.locale')).toBeUndefined();
 });
 
 test("an account's language: saved on the account page, kept at sign-out, winning at sign-in", async ({
@@ -100,6 +112,8 @@ test("an account's language: saved on the account page, kept at sign-out, winnin
 
   await page.goto('/account');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
+  // A new account follows Adiutor's default language until it chooses one.
+  await expect(page.getByRole('combobox', { name: 'Language', exact: true })).toHaveText('Default');
   await saveAccountLanguage(page, 'Language', 'Nederlands', 'Save language');
 
   // The page reloads in Dutch, on the Language card, and says it's saved.
@@ -135,6 +149,44 @@ test("an account's language: saved on the account page, kept at sign-out, winnin
     await expect(other.locator('html')).toHaveAttribute('lang', 'es-ES');
   } finally {
     await english.close();
+  }
+});
+
+test("an account on Default follows Adiutor's default language, also after it changes", async ({
+  page,
+}) => {
+  await useOwnClientIp(page);
+  const email = freshAddress('default-language');
+  const companyId = await findCompanyId(getTestDatabaseUrl(), COMPANY_SLUG);
+  await page.goto(
+    await storeInvitation(getTestDatabaseUrl(), { companyId, email, role: 'client' }),
+  );
+  await createAccountFromInvitation(page, 'Default Tester', 'default-language-password');
+
+  try {
+    await page.goto('/account');
+    await saveAccountLanguage(page, 'Language', 'Nederlands', 'Save language');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'nl-NL');
+
+    // Back to Default: the page reloads in Adiutor's default language, without a cookie of its own.
+    await saveAccountLanguage(page, 'Taal', /^Standaard/, 'Taal opslaan');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
+    await expect(toasts(page)).toContainText('Language saved.');
+    await expect(page.getByRole('combobox', { name: 'Language', exact: true })).toHaveText(
+      'Default',
+    );
+    const cookies = await page.context().cookies();
+    expect(cookies.find(({ name }) => name === 'adiutor.locale')).toBeUndefined();
+
+    // A staff Admin changes the default language on the staff page: the account follows.
+    await setDefaultLocale(getTestDatabaseUrl(), 'es-ES');
+    await page.goto('/account');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'es-ES');
+    await expect(page.getByRole('combobox', { name: 'Idioma', exact: true })).toHaveText(
+      'Predeterminado',
+    );
+  } finally {
+    await setDefaultLocale(getTestDatabaseUrl(), 'en-US');
   }
 });
 

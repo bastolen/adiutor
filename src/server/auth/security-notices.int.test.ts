@@ -12,6 +12,7 @@ import { defined } from '@/lib/defined';
 
 import { sendSecurityNotice } from './security-notices';
 import {
+  createStaffSettings,
   createUser,
   emailLanguage,
   inLanguage,
@@ -84,21 +85,29 @@ describe('sendSecurityNotice', () => {
     );
   });
 
-  it('falls back to the request’s language, then English (US), and names the device in it', async () => {
+  it('uses Adiutor’s default language for someone on Default, not the request’s, and names the device in it', async () => {
+    await createStaffSettings(db, 'Adiutor Tests', 'es-ES');
     await createUser(db, 'jane@adiutor.test');
 
     await sendSecurityNotice(
-      inLanguage(fromBrowser, 'es-ES'),
+      inLanguage(fromBrowser, 'nl-NL'),
       { email: 'jane@adiutor.test' },
       'password_changed',
       { showDevice: true },
     );
-    await sendSecurityNotice(ctx, { email: 'jane@adiutor.test' }, 'password_changed');
 
-    expect(sent.map(emailLanguage)).toEqual(['es-ES', 'en-US']);
+    expect(sent.map(emailLanguage)).toEqual(['es-ES']);
     expect(defined(sent[0], 'the Spanish notice').text).toContain(
       'Desde: Firefox en Windows, 203.0.113.9',
     );
+  });
+
+  it('falls back to English (US) before setup', async () => {
+    await createUser(db, 'jane@adiutor.test');
+
+    await sendSecurityNotice(ctx, { email: 'jane@adiutor.test' }, 'password_changed');
+
+    expect(sent.map(emailLanguage)).toEqual(['en-US']);
   });
 
   it('takes the language of a deleted account from the caller', async () => {

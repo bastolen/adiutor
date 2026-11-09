@@ -30,13 +30,15 @@ import { LANGUAGE_SECTION, VERIFIED_RETURN_PATH } from './account-messages';
 const LANGUAGE_SAVED_PATH = withSection('/account?language=saved', LANGUAGE_SECTION);
 
 /**
- * Saves the signed-in user's language with their account, so emails reach
- * them in it, and in this browser's language cookie. The form then reloads
- * the page (the path it gets back), so every part of it, and every page kept
- * alive, shows the new language at once; the page says it's saved.
+ * Saves the signed-in user's language choice with their account, so emails
+ * reach them in it, and in this browser's language cookie. Default saves no
+ * language and deletes the cookie, so both follow Adiutor's default language.
+ * The form then reloads the page (the path it gets back), so every part of
+ * it, and every page kept alive, shows the new language at once; the page
+ * says it's saved.
  *
  * @param _previous - The previous result (unused).
- * @param formData - Field `locale`.
+ * @param formData - Field `locale`: a language, or `FOLLOW_DEFAULT`.
  * @returns Where to reload to, or why it failed.
  */
 export async function saveLanguageAction(
@@ -46,7 +48,12 @@ export async function saveLanguageAction(
   return runAction(async () => {
     const actor = await getActor({ allowMissingMfa: true });
     const locale = await setOwnLocale(appContext, actor, field(formData, 'locale'));
-    (await cookies()).set(LOCALE_COOKIE, locale, localeCookieOptions());
+    const cookieStore = await cookies();
+    if (locale) {
+      cookieStore.set(LOCALE_COOKIE, locale, localeCookieOptions());
+    } else {
+      cookieStore.delete(LOCALE_COOKIE);
+    }
     return { ok: true, data: LANGUAGE_SAVED_PATH };
   });
 }

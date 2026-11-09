@@ -40,6 +40,42 @@ export const LOCALE_NAMES: Record<Locale, string> = {
 export const LOCALE_COOKIE = 'adiutor.locale';
 
 /**
+ * The language choice "Default": follow Adiutor's default language (chosen on
+ * the staff page, `staff_settings.default_locale`), now and after it changes.
+ * An account on Default has no saved language (`user.locale` is `null`), and a
+ * browser on Default has no {@link LOCALE_COOKIE}. Form fields and the
+ * language menu send it as their value.
+ */
+export const FOLLOW_DEFAULT = 'default';
+
+/** A language choice: one of the {@link LOCALES}, or {@link FOLLOW_DEFAULT}. */
+export type LanguageChoice = Locale | typeof FOLLOW_DEFAULT;
+
+/**
+ * Reads the language cookie's value from a list of cookies: a request's
+ * `Cookie` header, or `document.cookie` in the browser.
+ *
+ * @param cookies - The cookies, as `name=value` pairs split by `;`.
+ * @returns The cookie's value (not yet checked with {@link isLocale}), or
+ * `null` when it isn't there or can't be read.
+ */
+export function languageCookieValue(cookies: string | null | undefined): string | null {
+  const pair = cookies
+    ?.split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${LOCALE_COOKIE}=`));
+  if (!pair) {
+    return null;
+  }
+  try {
+    return decodeURIComponent(pair.slice(LOCALE_COOKIE.length + 1));
+  } catch {
+    // A malformed escape: treated like a missing cookie.
+    return null;
+  }
+}
+
+/**
  * Picks the first language we speak among a browser's languages, by the
  * language alone (`nl-BE` gets Dutch, `en-GB` English (US)). A light match
  * for the browser, where the full `Accept-Language` matching of
@@ -68,4 +104,15 @@ export function localeForLanguages(languages: readonly string[]): Locale | null 
  */
 export function isLocale(value: unknown): value is Locale {
   return LOCALES.includes(value as Locale);
+}
+
+/**
+ * Checks whether a value is a {@link LanguageChoice}: a language, or
+ * {@link FOLLOW_DEFAULT}.
+ *
+ * @param value - The value to check, e.g. a form field.
+ * @returns Whether it is a {@link LanguageChoice}.
+ */
+export function isLanguageChoice(value: unknown): value is LanguageChoice {
+  return value === FOLLOW_DEFAULT || isLocale(value);
 }

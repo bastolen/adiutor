@@ -5,7 +5,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { company, invitation, user } from '@/db/schema';
+import { company, invitation, staffSettings, user } from '@/db/schema';
 import { defined } from '@/lib/defined';
 
 import { listPendingInvitations } from './manage';
@@ -242,19 +242,18 @@ describe('inviteManyByEmail', () => {
 });
 
 describe('the invitation’s language', () => {
-  it('is the one chosen, else the request’s, else English (US), and is stored with it', async () => {
+  it('is the one chosen, else Adiutor’s default (never the sender’s), and is stored with it', async () => {
+    await db.update(staffSettings).set({ defaultLocale: 'es-ES' });
     const input = { companyId: testCompany.id, role: 'client' };
     await inviteByEmail(ctx, companyAdmin, { ...input, email: 'nl@adiutor.test', locale: 'nl-NL' });
-    await inviteByEmail(inLanguage(ctx, 'es-ES'), companyAdmin, {
+    await inviteByEmail(inLanguage(ctx, 'en-US'), companyAdmin, {
       ...input,
       email: 'es@adiutor.test',
     });
-    await inviteByEmail(ctx, companyAdmin, { ...input, email: 'en@adiutor.test' });
 
     expect(sent.map((email) => [email.to, emailLanguage(email)])).toEqual([
       ['nl@adiutor.test', 'nl-NL'],
       ['es@adiutor.test', 'es-ES'],
-      ['en@adiutor.test', 'en-US'],
     ]);
     expect(defined(sent[0], 'the Dutch invitation').subject).toMatch(
       / nodigt je uit voor Adiutor Tests op Adiutor$/,
@@ -264,7 +263,6 @@ describe('the invitation’s language', () => {
       .from(invitation)
       .orderBy(invitation.email);
     expect(stored).toEqual([
-      { email: 'en@adiutor.test', locale: 'en-US' },
       { email: 'es@adiutor.test', locale: 'es-ES' },
       { email: 'nl@adiutor.test', locale: 'nl-NL' },
     ]);

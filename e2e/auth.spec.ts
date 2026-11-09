@@ -126,8 +126,12 @@ test('signing out leaves only the "Last used" sign-in method and the language in
 }) => {
   await useOwnClientIp(page);
   await signIn(page, CLIENT_WATCHER);
-  // A cookie of the app's own, as the provider-linked notice sets one.
-  await context.addCookies([{ name: PROVIDER_LINKED_COOKIE, value: 'github', url: page.url() }]);
+  // A cookie of the app's own, as the provider-linked notice sets one, and a language of the
+  // browser's own, as choosing one sets (the seeded account is on Default, so sign-in sets none).
+  await context.addCookies([
+    { name: PROVIDER_LINKED_COOKIE, value: 'github', url: page.url() },
+    { name: 'adiutor.locale', value: 'en-US', url: page.url() },
+  ]);
 
   await signOut(page);
 

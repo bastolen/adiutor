@@ -1,6 +1,7 @@
 /**
  * @file The Profile page of the account, served at `/account`: name, email
- * (with verification), a summary of sign-in security and recent activity on
+ * (with verification), language (one of the languages, or Default), a
+ * summary of sign-in security and recent activity on
  * the account (sign-ins and changes, from the audit log). Password, passkeys,
  * two-step verification and connected accounts are on the Security page. The
  * verification link comes back to the Email card (`#email`), which says
@@ -23,6 +24,7 @@ import ClientMessages from '@/lib/i18n/client-messages';
 import appContext from '@/server/app-context';
 import { listOwnActivity } from '@/server/audit';
 import { getActor } from '@/server/authz';
+import { ownLanguage } from '@/server/people/own-locale';
 
 import accountMessage, {
   type AccountParams,
@@ -53,9 +55,10 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 async function AccountSettings({ searchParams }: { searchParams: Promise<AccountParams> }) {
   const actor = await getActor({ allowMissingMfa: true });
-  const [params, activity, t, tAudit, tRoles] = await Promise.all([
+  const [params, activity, language, t, tAudit, tRoles] = await Promise.all([
     searchParams,
     listOwnActivity(appContext, actor),
+    ownLanguage(appContext, actor),
     getTranslations('account'),
     getTranslations('audit'),
     getTranslations('roles'),
@@ -127,7 +130,7 @@ async function AccountSettings({ searchParams }: { searchParams: Promise<Account
       >
         {params.language === 'saved' && <ToastOnArrival message={t('profile.languageSaved')} />}
         <ClientMessages namespaces={['account']}>
-          <LanguageForm />
+          <LanguageForm choice={language.choice} defaultLocale={language.defaultLocale} />
         </ClientMessages>
       </Card>
       <Card

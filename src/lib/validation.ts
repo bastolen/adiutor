@@ -14,7 +14,7 @@ import type { MessageKeys, NestedKeyOf } from 'use-intl/core';
 import { z } from 'zod';
 
 import { COMPANY_ROLES, isRole, PLATFORM_ROLES } from './authz/roles';
-import { LOCALES } from './i18n/locales';
+import { FOLLOW_DEFAULT, LOCALES } from './i18n/locales';
 import type { Messages } from './i18n/messages';
 import {
   MIN_PASSWORD_LENGTH,
@@ -60,8 +60,16 @@ export const CHOOSE_COMPANY_ROLE_MESSAGE = 'validation.companyRole' satisfies Va
  */
 export const CHOOSE_STAFF_ROLE_MESSAGE = 'validation.staffRole' satisfies ValidationMessageKey;
 
-/** A language (one of `LOCALES`), e.g. from the account's language select or an invite form. */
+/** A language (one of `LOCALES`), e.g. from an invite form or the staff page's default language. */
 export const localeSchema = z.enum(LOCALES, {
+  error: 'validation.locale' satisfies ValidationMessageKey,
+});
+
+/**
+ * A language choice: a language, or `FOLLOW_DEFAULT` to follow Adiutor's
+ * default language, e.g. from the account's Language card.
+ */
+export const languageChoiceSchema = z.enum([FOLLOW_DEFAULT, ...LOCALES], {
   error: 'validation.locale' satisfies ValidationMessageKey,
 });
 

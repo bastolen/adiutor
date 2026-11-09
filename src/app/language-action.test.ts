@@ -6,8 +6,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import setLanguageAction from './language-action';
 
-/** Stands in for the response's cookie store. */
+/** Stands in for the response's cookie store: setting a cookie. */
 const set = vi.fn();
+
+/** Stands in for the response's cookie store: deleting a cookie. */
+const remove = vi.fn();
 
 vi.mock('@/lib/env', () => ({ appUrl: 'https://adiutor.dev' }));
 
@@ -15,9 +18,9 @@ vi.mock('next/headers', () => ({
   /**
    * The response's cookies.
    *
-   * @returns A store that records what's set.
+   * @returns A store that records what's set and deleted.
    */
-  cookies: vi.fn(async () => ({ set })),
+  cookies: vi.fn(async () => ({ set, delete: remove })),
 }));
 
 describe('setLanguageAction', () => {
@@ -34,9 +37,19 @@ describe('setLanguageAction', () => {
     });
   });
 
+  it('deletes the language cookie for Default, so the browser follows Adiutor’s default', async () => {
+    set.mockClear();
+    await expect(setLanguageAction('default')).resolves.toBe(true);
+
+    expect(remove).toHaveBeenCalledWith('adiutor.locale');
+    expect(set).not.toHaveBeenCalled();
+  });
+
   it.each(['fr-FR', '', null, { locale: 'nl-NL' }])('refuses %j', async (value) => {
     set.mockClear();
+    remove.mockClear();
     await expect(setLanguageAction(value)).resolves.toBe(false);
     expect(set).not.toHaveBeenCalled();
+    expect(remove).not.toHaveBeenCalled();
   });
 });

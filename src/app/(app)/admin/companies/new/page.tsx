@@ -11,8 +11,10 @@ import PageHeader from '@/components/ui/page-header';
 import { FormSkeleton, PageHeaderSkeleton } from '@/components/ui/skeleton';
 import ClientMessages from '@/lib/i18n/client-messages';
 import { confirmationWindow } from '@/lib/sign-in/confirm-url';
+import appContext from '@/server/app-context';
 import { requireGlobalPermission } from '@/server/authz';
 import { globalPermissionMetadata } from '@/server/page-metadata';
+import { defaultLanguage } from '@/server/recipient-locale';
 
 import RegisterCompanyForm from './register-company-form';
 
@@ -36,6 +38,7 @@ export const generateMetadata = globalPermissionMetadata(
 async function Register() {
   const t = await getTranslations('admin');
   const actor = await requireGlobalPermission('company:create');
+  const defaultLocale = await defaultLanguage(appContext);
   return (
     <>
       <PageHeader
@@ -51,7 +54,7 @@ async function Register() {
       >
         <ClientMessages namespaces={['admin.addCompany.form', 'people']}>
           <Card>
-            <RegisterCompanyForm />
+            <RegisterCompanyForm defaultLocale={defaultLocale} />
           </Card>
         </ClientMessages>
       </RecentConfirmationProvider>

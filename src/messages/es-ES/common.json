@@ -127,7 +127,9 @@
       "defaultHint": "Para quien aún no haya elegido un idioma. Puedes cambiarlo más adelante.",
       "defaultDescription": "Adiutor usa este idioma para quien aún no haya elegido el suyo, también en los correos que le envía.",
       "saveDefault": "Guardar idioma predeterminado",
-      "defaultSaved": "Idioma predeterminado guardado."
+      "defaultSaved": "Idioma predeterminado guardado.",
+      "followDefault": "Predeterminado",
+      "followDefaultDescription": "Sigue el idioma predeterminado de Adiutor, ahora {language}."
     },
     "preferences": {
       "button": "Tema e idioma: {theme, select, light {Claro} dark {Oscuro} other {Sistema}}, {language}"

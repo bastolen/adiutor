@@ -23,8 +23,8 @@ export default function field(formData: FormData, name: string): string {
  *
  * @param formData - The submitted form.
  * @param name - The field name; `locale` by default.
- * @returns The language, or `undefined` when the field is missing or isn't one of
- * the languages (the service then uses the request's).
+ * @returns The language, or `undefined` for Default (`FOLLOW_DEFAULT`), a missing field or
+ * anything that isn't one of the languages: the service then uses Adiutor's default language.
  */
 export function localeField(formData: FormData, name = 'locale'): Locale | undefined {
   const value = field(formData, name);

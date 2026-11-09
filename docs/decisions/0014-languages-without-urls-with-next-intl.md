@@ -24,6 +24,11 @@ the Content Security Policy's nonce ([0006](0006-nonce-based-content-security-po
   staff Admin chooses at setup and on the staff page. It comes before the browser's language
   because the staff choose the language their users work in; anyone can pick another in the menu.
   Reading the cookie costs nothing extra, since every page already renders per request.
+- **Default is a choice of its own, and where everyone starts.** An account on Default saves no
+  language and has no cookie, so it follows the default language, also after a staff Admin changes
+  it; its emails use the default too, never the language of whoever caused them. Only a language
+  someone picks is saved (on the account page, or in the signed-out menu before signing in); a
+  guessed one never is.
 - **Messages are ICU, one whole sentence each,** in one JSON catalogue per area and language, so
   translators choose the word order.
 
@@ -40,8 +45,8 @@ Details: [Languages](../i18n.md).
   less, and hard-coded or glued-together text.
 - A cached function (`'use cache'`) can't read the request's language: it must take the locale as
   an argument.
-- A first visit (no cookie) waits for one small query for the default language before rendering.
-  The browser's language only counts before setup.
+- A request without a cookie (a first visit, or anyone on Default) waits for one small query for
+  the default language before rendering. The browser's language only counts before setup.
 
 ## Alternatives considered
 

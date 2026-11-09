@@ -314,8 +314,8 @@ export async function createInvitationRecord(
  * @param input.email - Normalized email address.
  * @param input.role - Role to give; must fit the company.
  * @param input.resent - Whether it replaces an earlier invitation.
- * @param input.locale - The invitation's language; by default the request's
- *   (`ctx.requestLocale`), else English (US).
+ * @param input.locale - The invitation's language; by default Adiutor's default
+ *   language, else English (US).
  * @returns What happened and the email to send.
  */
 export async function createSentInvitation(

@@ -31,7 +31,7 @@ export interface StaffAdminAdded {
  * Each in their own language (`recipientLocale`). Never throws: a failure is
  * logged (without addresses).
  *
- * @param ctx - Service context (database, email, app URL, the request's language).
+ * @param ctx - Service context (database, email, app URL).
  * @param added - Who became a staff Admin, and how.
  * @param added.newAdminId - The new staff Admin.
  * @param added.how - Given the role, or joined from an invitation or link.
@@ -39,7 +39,7 @@ export interface StaffAdminAdded {
  * @returns How many Admins were emailed.
  */
 export default async function notifyStaffAdminAdded(
-  ctx: Pick<ServiceContext, 'db' | 'sendEmail' | 'baseUrl' | 'requestLocale'>,
+  ctx: Pick<ServiceContext, 'db' | 'sendEmail' | 'baseUrl'>,
   { newAdminId, how, byUserId }: StaffAdminAdded,
 ): Promise<number> {
   try {

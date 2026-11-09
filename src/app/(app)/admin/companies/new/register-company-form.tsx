@@ -16,6 +16,7 @@ import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
 import TextField from '@/components/ui/text-field';
 import { useTransientState, useTransientActionState } from '@/components/ui/use-transient-state';
+import type { Locale } from '@/lib/i18n/locales';
 import { NAME_MAX_LENGTH, SLUG_MAX_LENGTH, slugify } from '@/lib/input-rules';
 
 import registerCompanyAction from './actions';
@@ -26,11 +27,14 @@ import useConfirmBeforeGrant from '../../../_people/use-confirm-before-grant';
  * After registering, links to the new company. Its first Admin gets the
  * company's Admin role, which needs a recent confirmation: without one, a
  * note with a link to confirm shows at the top, before anything is typed,
- * and there's no submit button.
+ * and there's no submit button. The Email language field starts on Default:
+ * the invitation goes out in Adiutor's default language.
  *
+ * @param props - Component props.
+ * @param props.defaultLocale - Adiutor's default language, named in the Default option.
  * @returns The form.
  */
-export default function RegisterCompanyForm() {
+export default function RegisterCompanyForm({ defaultLocale }: { defaultLocale: Locale }) {
   const t = useTranslations('admin.addCompany.form');
   const tPeople = useTranslations('people');
   const [result, formAction, pending, onSubmit] = useTransientActionState(
@@ -101,7 +105,7 @@ export default function RegisterCompanyForm() {
         description={t('emailDescription')}
         required
       />
-      <EmailLanguageField purpose="invitation" />
+      <EmailLanguageField purpose="invitation" defaultLocale={defaultLocale} />
       {!confirmFirst && (
         <div>
           <Button type="submit" loading={pending}>

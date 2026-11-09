@@ -10,8 +10,10 @@ import Card from '@/components/ui/card';
 import PageHeader from '@/components/ui/page-header';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import ClientMessages from '@/lib/i18n/client-messages';
+import appContext from '@/server/app-context';
 import { requireGlobalPermission } from '@/server/authz';
 import { globalPermissionMetadata } from '@/server/page-metadata';
+import { defaultLanguage } from '@/server/recipient-locale';
 
 import RegisterUserForm from './register-user-form';
 
@@ -30,7 +32,10 @@ export const generateMetadata = globalPermissionMetadata('users:create', 'admin.
  */
 async function Register() {
   await requireGlobalPermission('users:create');
-  const t = await getTranslations('admin.addUser');
+  const [t, defaultLocale] = await Promise.all([
+    getTranslations('admin.addUser'),
+    defaultLanguage(appContext),
+  ]);
   return (
     <>
       <PageHeader
@@ -41,7 +46,7 @@ async function Register() {
       <Card>
         {/* The form's own text is in the `admin` namespace. */}
         <ClientMessages namespaces={['admin.addUser.form']}>
-          <RegisterUserForm />
+          <RegisterUserForm defaultLocale={defaultLocale} />
         </ClientMessages>
       </Card>
     </>

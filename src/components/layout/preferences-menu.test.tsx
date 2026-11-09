@@ -23,6 +23,15 @@ const FLAG = 'svg[viewBox="0 0 30 20"]';
 /** The button's name on a fresh page: the system theme, in English (US). */
 const FRESH_NAME = 'Theme and language: System, English (US)';
 
+/**
+ * Gives the browser a language of its own, as choosing one in the menu does.
+ *
+ * @param locale - The language.
+ */
+function chooseInBrowser(locale: string) {
+  document.cookie = `adiutor.locale=${locale}; path=/`;
+}
+
 beforeEach(() => {
   // The system setting is dark.
   vi.stubGlobal(
@@ -38,6 +47,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  document.cookie = 'adiutor.locale=; max-age=0; path=/';
   localStorage.clear();
   delete document.documentElement.dataset.theme;
   vi.unstubAllGlobals();
@@ -152,7 +162,8 @@ describe('PreferencesMenu', () => {
   });
 
   describe('the language', () => {
-    it('lists each language in itself, the current one checked', async () => {
+    it('lists each language in itself, the browser’s choice checked', async () => {
+      chooseInBrowser('nl-NL');
       const user = userEvent.setup();
       renderInLocale('nl-NL', <PreferencesMenu />);
 
@@ -164,6 +175,35 @@ describe('PreferencesMenu', () => {
       ).not.toBeNull();
       expect(screen.getByText('English (US)')).toHaveAttribute('lang', 'en-US');
       expect(screen.getByText('Español')).toHaveAttribute('lang', 'es-ES');
+    });
+
+    it('ticks Default, first, while the browser has no language of its own', async () => {
+      const user = userEvent.setup();
+      render(<PreferencesMenu />);
+
+      await user.click(screen.getByRole('button', { name: FRESH_NAME }));
+
+      const languages = screen.getAllByRole('menuitemradio').slice(3);
+      expect(languages.map((item) => item.textContent)).toEqual([
+        'Default',
+        'English (US)',
+        'Nederlands',
+        'Español',
+      ]);
+      expect(screen.getByRole('menuitemradio', { name: 'Default' })).toBeChecked();
+      expect(screen.getByRole('menuitemradio', { name: 'English (US)' })).not.toBeChecked();
+    });
+
+    it('goes back to Adiutor’s default language and reloads the page in it', async () => {
+      chooseInBrowser('es-ES');
+      const user = userEvent.setup();
+      renderInLocale('es-ES', <PreferencesMenu />);
+
+      await user.click(screen.getByRole('button', { name: 'Tema e idioma: Sistema, Español' }));
+      await user.click(screen.getByRole('menuitemradio', { name: 'Predeterminado' }));
+
+      await waitFor(() => expect(reload).toHaveBeenCalled());
+      expect(setLanguageAction).toHaveBeenCalledWith('default');
     });
 
     it('remembers another language and reloads the page in it', async () => {
@@ -198,7 +238,8 @@ describe('PreferencesMenu', () => {
       expect(button.querySelector(FLAG)).toBeNull();
     });
 
-    it('does nothing when the current language is chosen again', async () => {
+    it('does nothing when the browser’s choice is chosen again', async () => {
+      chooseInBrowser('en-US');
       const user = userEvent.setup();
       render(<PreferencesMenu />);
 
@@ -207,6 +248,28 @@ describe('PreferencesMenu', () => {
 
       expect(setLanguageAction).not.toHaveBeenCalled();
       expect(reload).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when Default is chosen again', async () => {
+      const user = userEvent.setup();
+      render(<PreferencesMenu />);
+
+      await user.click(screen.getByRole('button', { name: FRESH_NAME }));
+      await user.click(screen.getByRole('menuitemradio', { name: 'Default' }));
+
+      expect(setLanguageAction).not.toHaveBeenCalled();
+      expect(reload).not.toHaveBeenCalled();
+    });
+
+    it('on Default, keeps the language it shows as the browser’s own when it is chosen', async () => {
+      const user = userEvent.setup();
+      render(<PreferencesMenu />);
+
+      await user.click(screen.getByRole('button', { name: FRESH_NAME }));
+      await user.click(screen.getByRole('menuitemradio', { name: 'English (US)' }));
+
+      await waitFor(() => expect(reload).toHaveBeenCalled());
+      expect(setLanguageAction).toHaveBeenCalledWith('en-US');
     });
   });
 });
