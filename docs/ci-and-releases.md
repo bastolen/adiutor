@@ -131,8 +131,8 @@ the tests](#skipping-the-tests)). To release, mark it ready for review (`gh pr r
 CI then runs every test on it, whatever passed before, and again on each update while it stays
 ready. A release pull request is one the release app opened, from a branch in this repository whose
 name starts with `release-please--`. Merge it once **CI passed** is green; that publishes a GitHub
-release, and Vercel deploys the release commit (see [Vercel](deploying.md#vercel)), which is the
-only commit it builds. It works as a small GitHub App instead of the workflow's own token
+release, and `.github/workflows/production-branch.yml` moves the `production` branch to it, which
+Vercel deploys as production (see [Vercel](deploying.md#vercel)). It works as a small GitHub App instead of the workflow's own token
 (which gets no access at all), so the repository doesn't have to let GitHub Actions create and
 approve pull requests, and CI runs on the release pull request. To set it up once:
 
