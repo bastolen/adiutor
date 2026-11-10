@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/bastolen/adiutor/compare/v0.1.0...v0.2.0) (2026-11-10)
+
+
+### Features
+
+* add language support with Dutch and Spanish next to English ([#21](https://github.com/bastolen/adiutor/issues/21)) ([b4e5159](https://github.com/bastolen/adiutor/commit/b4e51598692c39722630a53b44943be0c72e24a2))
+
+
+### Bug Fixes
+
+* **deps:** update all non-major dependencies ([#19](https://github.com/bastolen/adiutor/issues/19)) ([118ea19](https://github.com/bastolen/adiutor/commit/118ea198ab423e7cc7c7ddf5d6c4072e2cb645ea))
+* **deps:** update all non-major dependencies ([#3](https://github.com/bastolen/adiutor/issues/3)) ([fa2dd63](https://github.com/bastolen/adiutor/commit/fa2dd631c2d5ad5a47fb46a32a71eaaa36439d00))
+
 ## 0.1.0 (2026-11-07)
 
 
