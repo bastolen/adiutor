@@ -41,7 +41,7 @@ hasn't passed them yet, and **CI passed** counts the skipped jobs as passed.
   (`git ls-tree -r HEAD`; on a pull request, GitHub's merge commit with `main`, so the code as it
   would land). It leaves out the files no test reads: `docs/`, every Markdown file, `LICENSE`,
   `.github/ISSUE_TEMPLATE/`, `.github/CODEOWNERS`, `.github/dependabot.yml`, `.github/rulesets/`,
-  `renovate.json5`, `commitlint.config.mjs`, `.vscode/`, `.claude/`,
+  `renovate.json5`, `commitlint.config.mjs`, `.vscode/`, `.claude/`, `vercel.json`,
   `.release-please-manifest.json` and `release-please-config.json`. `package.json` counts without
   its `version`, which nothing in the app or its tests reads. Workflows and the local actions count,
   so a change to CI always runs the tests.
@@ -131,7 +131,8 @@ the tests](#skipping-the-tests)). To release, mark it ready for review (`gh pr r
 CI then runs every test on it, whatever passed before, and again on each update while it stays
 ready. A release pull request is one the release app opened, from a branch in this repository whose
 name starts with `release-please--`. Merge it once **CI passed** is green; that publishes a GitHub
-release. It works as a small GitHub App instead of the workflow's own token
+release, and Vercel deploys the release commit (see [Vercel](deploying.md#vercel)), which is the
+only commit it builds. It works as a small GitHub App instead of the workflow's own token
 (which gets no access at all), so the repository doesn't have to let GitHub Actions create and
 approve pull requests, and CI runs on the release pull request. To set it up once:
 

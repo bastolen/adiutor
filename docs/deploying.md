@@ -1,7 +1,7 @@
 # Deploying and running Adiutor
 
-What to set up on a server, and how to run and look after it: installing and upgrading, the Docker
-image and health check, the client IP address, background jobs, logs, looking up the reference of
+What to set up on a server, and how to run and look after it: installing and upgrading, deploying
+on Vercel, the Docker image and health check, the client IP address, background jobs, logs, looking up the reference of
 an error, rotating the auth secret, and what to do after a suspected leak. Back to the
 [documentation](README.md).
 
@@ -33,6 +33,24 @@ Commands you run on the server need them: `pnpm db:migrate` runs drizzle-kit, an
 `pnpm setup:platform`, `pnpm jobs:run` and `pnpm sessions:revoke-all` run through tsx. Without
 them, migrations, the hourly jobs, the first-run setup and signing everyone out after a leak all
 fail, possibly in the middle of an incident.
+
+## Vercel
+
+`vercel.json` sets how Vercel builds Adiutor. It's strict JSON, so it can't carry comments; this
+section explains it instead. Both of its settings take precedence over the same fields in the
+project's dashboard.
+
+- **Only releases are built** (`ignoreCommand`). Vercel builds a commit when the command exits with 1:
+  only a commit on `main` whose first line starts with `chore(main): release `, which is what
+  merging Release Please's pull request lands (see [Releases](ci-and-releases.md#releases)). Every
+  other push to `main`, and every other branch, is skipped, so there are no preview deployments
+  and the live deployment is always the latest release.
+- **Each release migrates first** (`buildCommand`). A production build runs `pnpm db:migrate`
+  before `pnpm build`, through `DATABASE_URL_UNPOOLED` (Neon's direct connection, which its Vercel
+  integration sets) or else `DATABASE_URL`. Migrations should use a direct connection, not a
+  pooled one. When migrating fails, the build fails and the previous deployment stays live, so new
+  code never runs against the old schema. Set `DATABASE_URL` (the pooled connection the app uses)
+  and, for migrations, `DATABASE_URL_UNPOOLED` in the project's environment variables.
 
 ## Docker
 
