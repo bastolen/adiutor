@@ -49,8 +49,10 @@ Every other branch is skipped, so pull requests get no preview deployments.
 section explains it instead. Both of its settings take precedence over the same fields in the
 project's dashboard.
 
-- **What's built** (`ignoreCommand`): Vercel builds a commit when the command exits with 1, which
-  it does only for `main` and `production`.
+- **What's built** (`ignoreCommand`): Vercel builds a commit when the command exits with 1. It does
+  for every commit on `main`, and for `production` only when the branch points at a release commit
+  (one whose first line starts with `chore(main): release `), so a stray push to `production` never
+  reaches production. Every other branch is skipped.
 - **Each build migrates first** (`buildCommand`): for `main` and `production`, `pnpm db:migrate`
   runs before `pnpm build`, through the environment's `DATABASE_URL_UNPOOLED` (Neon's direct
   connection) or else its `DATABASE_URL`. Migrations should use a direct connection, not a pooled
@@ -59,7 +61,8 @@ project's dashboard.
 
 **Moving production** (`.github/workflows/production-branch.yml`): when Release Please publishes a
 release, this workflow moves `production` to the release's commit, creating the branch the first
-time. It only moves forward (a fast-forward), so an older release can't replace a newer one; to roll
+time. It does so as Release Please's app, the one account besides repository admins that
+[Protecting production](ci-and-releases.md#protecting-production) allows. It only moves forward (a fast-forward), so an older release can't replace a newer one; to roll
 back, use Vercel's Instant Rollback. Run it by hand (Actions → Production branch → Run workflow, with
 a tag such as `v0.2.0`) to move production to an existing release.
 

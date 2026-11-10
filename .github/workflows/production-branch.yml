@@ -8,10 +8,16 @@
 # first time or after a failed run.
 #
 # The branch only moves forward (a fast-forward): an older release can't replace a newer one here.
-# To roll back, use Vercel's Instant Rollback. The move is made with the built-in token, which
-# starts no other workflows, but GitHub still tells its apps about the push, so Vercel builds it.
+# To roll back, use Vercel's Instant Rollback.
 #
-# It runs `gh` and `jq`, which GitHub's runners include, so there's no action to pin.
+# The move is made as Release Please's app (adiutor-releases), with a token from the same app
+# release-please.yml uses (the variable RELEASE_APP_CLIENT_ID and the secret
+# RELEASE_APP_PRIVATE_KEY). Besides repository admins, it's the only account the production ruleset
+# (.github/rulesets/production.json, "Protecting production" in docs/ci-and-releases.md) lets
+# update the branch. A push made with an app's token can start workflows, but none runs on pushes
+# to `production`; Vercel builds it. The job doesn't use the built-in token at all.
+#
+# Actions are pinned to exact commits (version in a comment); Dependabot keeps them up to date.
 name: Production branch
 
 on:
@@ -39,15 +45,22 @@ jobs:
     if: ${{ github.repository == 'bastolen/adiutor' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    permissions:
-      # Creates or moves the production branch.
-      contents: write
+    # The built-in token isn't used: the release app's token moves the branch.
+    permissions: {}
     steps:
+      # Only contents: write, which creating or moving a branch needs.
+      - name: Get a token for the release app
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
       # The tag comes in as an environment variable, never pasted into the script, and must look
       # like a release tag before it's used.
       - name: Move the production branch to the release
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           REPOSITORY: ${{ github.repository }}
           TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: |

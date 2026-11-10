@@ -1,5 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "ignoreCommand": "case \"$VERCEL_GIT_COMMIT_REF\" in main|production) exit 1;; esac",
+  "ignoreCommand": "case \"$VERCEL_GIT_COMMIT_REF\" in main) exit 1;; production) printf '%s\\n' \"$VERCEL_GIT_COMMIT_MESSAGE\" | head -n 1 | grep -q '^chore(main): release ' && exit 1;; esac; exit 0",
   "buildCommand": "case \"$VERCEL_GIT_COMMIT_REF\" in main|production) DATABASE_URL=\"${DATABASE_URL_UNPOOLED:-$DATABASE_URL}\" pnpm db:migrate || exit 1;; esac; pnpm build"
 }

@@ -107,6 +107,33 @@ If the import doesn't recognise the bypass entry, add **Repository admin** to th
 the form before creating it. When a job in CI is renamed, the rules don't change; only renaming
 **CI passed** or the PR title check means updating the file and the ruleset on GitHub.
 
+## Protecting production
+
+`.github/rulesets/production.json` holds the rules for the `production` branch, which Vercel
+deploys as production (see [Vercel](deploying.md#vercel)). Like `main.json`, it waits until GitHub
+can enforce rulesets here, and it's strict JSON in the same format, so this section explains it:
+
+- Nobody can create, update, delete or force-push `production` (`creation`, `update`, `deletion`
+  and `non_fast_forward`), except the two accounts allowed through:
+  - repository admins (`actor_id` 5, as in `main.json`): you, for emergencies;
+  - Release Please's app, `adiutor-releases` (`Integration` 5542327, the app's ID), which
+    `.github/workflows/production-branch.yml` uses to move `production` to each published release.
+- So only a release, or you, can change what production serves. Pull requests, Renovate,
+  Dependabot and the built-in token of any workflow can't.
+
+To switch it on, import the file as above, or run:
+
+```bash
+gh api --method POST repos/bastolen/adiutor/rulesets --input .github/rulesets/production.json
+```
+
+If the import doesn't recognise the bypass entries, add **Repository admin** and the
+**adiutor-releases** app to the bypass list in the form before creating it.
+
+Until then, `vercel.json` guards production on Vercel's side: it builds `production` only when the
+branch points at a release commit (one whose first line starts with `chore(main): release `), so a
+stray push to `production` never reaches production.
+
 ## Security advisories
 
 `pnpm audit --prod` in CI fails the build on a new advisory in a
