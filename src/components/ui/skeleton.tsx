@@ -1,6 +1,7 @@
 /**
  * @file Loading placeholders that match the size of the content they stand
- * in for, so nothing jumps when it arrives.
+ * in for, so nothing jumps when it arrives. Fixed widths always come with
+ * `max-w-full`, so a placeholder never makes a narrow screen scroll sideways.
  */
 import cn from '@/lib/cn';
 
@@ -37,7 +38,7 @@ export function PageSkeleton({ header = true }: { header?: boolean } = {}) {
       <LoadingStatus />
       {header && (
         <div className="flex flex-col gap-2">
-          <Skeleton className="h-8 w-56" />
+          <Skeleton className="h-8 w-56 max-w-full" />
           <Skeleton className="h-4 w-80 max-w-full" />
         </div>
       )}
@@ -51,14 +52,19 @@ export function PageSkeleton({ header = true }: { header?: boolean } = {}) {
  * apart from the page: an avatar, a heading, a description and a row of tabs.
  * It doesn't announce anything: the page's own skeleton says "Loading…".
  *
+ * The text column needs `min-w-0`, like the real `PageHeader`'s: a flex item
+ * can't get narrower than its content, and `max-w-full` on the placeholders
+ * doesn't count toward that minimum, so without it the column stays 320px
+ * wide and the page scrolls sideways on a narrow screen while it loads.
+ *
  * @returns The loading header.
  */
 export function PageHeaderSkeleton() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
-        <Skeleton className="size-12 rounded-full" />
-        <div className="flex flex-1 flex-col gap-2">
+        <Skeleton className="size-12 shrink-0 rounded-full" />
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
           <Skeleton className="h-8 w-56 max-w-full" />
           <Skeleton className="h-4 w-80 max-w-full" />
         </div>
@@ -79,7 +85,7 @@ export function FormSkeleton() {
     <div aria-busy="true" className="flex flex-col gap-6">
       <LoadingStatus />
       <div className="flex flex-col gap-2">
-        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-8 w-48 max-w-full" />
         <Skeleton className="h-4 w-64 max-w-full" />
       </div>
       <Skeleton className="h-10 w-full" />

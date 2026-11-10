@@ -1,6 +1,7 @@
 /**
  * @file Accessibility scans of every page, in light and dark mode, against
- * the WCAG 2.2 A and AA rules, plus a reflow check on a narrow screen. The
+ * the WCAG 2.2 A and AA rules, plus a reflow check on a narrow screen (for
+ * signed-in pages also while they still show their loading placeholders). The
  * invitation and invite-link pages are scanned with real tokens (stored in
  * `beforeAll`), signed out and signed in. `/setup` is scanned in
  * `setup.spec.ts`, the only place the database is empty.
@@ -146,18 +147,29 @@ test.beforeAll(async ({ browser }) => {
 });
 
 /**
- * Checks that the page doesn't scroll sideways (WCAG 1.4.10 Reflow). Wide
- * tables may scroll inside their own container; the page itself must not.
+ * Checks that the page as it is now doesn't scroll sideways (WCAG 1.4.10
+ * Reflow). Wide tables may scroll inside their own container; the page itself
+ * must not.
  *
  * @param page - The browser page.
  */
-async function expectNoSidewaysScroll(page: Page): Promise<void> {
-  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+async function expectFitsNow(page: Page): Promise<void> {
   const { scrollWidth, clientWidth } = await page.evaluate(() => ({
     scrollWidth: document.documentElement.scrollWidth,
     clientWidth: document.documentElement.clientWidth,
   }));
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+}
+
+/**
+ * Checks that the page doesn't scroll sideways once it has loaded (see
+ * {@link expectFitsNow}).
+ *
+ * @param page - The browser page.
+ */
+async function expectNoSidewaysScroll(page: Page): Promise<void> {
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+  await expectFitsNow(page);
 }
 
 /**
@@ -227,6 +239,20 @@ test.describe('on a 320px wide screen', () => {
       const page = await context.newPage();
       await page.goto(resolvePath(path));
       await expectNoSidewaysScroll(page);
+      await context.close();
+    });
+
+    test(`${path} fits without sideways scrolling while it loads`, async ({ browser }) => {
+      // Without JavaScript the streamed content never replaces the Suspense placeholders, so the
+      // page stays as it looks while it loads.
+      const context = await browser.newContext({
+        storageState: adminState,
+        viewport: { width: 320, height: 640 },
+        javaScriptEnabled: false,
+      });
+      const page = await context.newPage();
+      await page.goto(resolvePath(path));
+      await expectFitsNow(page);
       await context.close();
     });
   });

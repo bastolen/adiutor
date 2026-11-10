@@ -214,7 +214,8 @@ keyboard support.
 Two end-to-end specs keep this true: `e2e/a11y.spec.ts` scans every page (and open menus, selects,
 dialogs and the mobile menu) with [axe](https://github.com/dequelabs/axe-core) against the WCAG 2.2
 A and AA rules in light and dark mode and checks that no page scrolls sideways on a 320px-wide
-screen, in every language (with the sign-in page's widest buttons, "Last used" badge included), and
+screen, in every language (with the sign-in page's widest buttons, "Last used" badge included) and
+while signed-in pages still show their loading placeholders, and
 `e2e/keyboard.spec.ts` checks the skip link, menus, selects, dialogs, the mobile menu and
 cursors using only the keyboard.
 
