@@ -1,7 +1,7 @@
 # Deploying and running Adiutor
 
-What to set up on a server, and how to run and look after it: installing and upgrading, the Docker
-image and health check, the client IP address, background jobs, logs, looking up the reference of
+What to set up on a server, and how to run and look after it: installing and upgrading, deploying
+on Vercel, the Docker image and health check, the client IP address, background jobs, logs, looking up the reference of
 an error, rotating the auth secret, and what to do after a suspected leak. Back to the
 [documentation](README.md).
 
@@ -33,6 +33,57 @@ Commands you run on the server need them: `pnpm db:migrate` runs drizzle-kit, an
 `pnpm setup:platform`, `pnpm jobs:run` and `pnpm sessions:revoke-all` run through tsx. Without
 them, migrations, the hourly jobs, the first-run setup and signing everyone out after a leak all
 fail, possibly in the middle of an incident.
+
+## Vercel
+
+Vercel runs two environments from two branches:
+
+- **Production** follows releases: its branch is `production`, which only moves when a release is
+  published.
+- **Preview** follows `main`: every commit on `main` is a preview deployment, at an address of its
+  own.
+
+Every other branch is skipped, so pull requests get no preview deployments.
+
+`vercel.json` sets how Vercel builds Adiutor. It's strict JSON, so it can't carry comments; this
+section explains it instead. Both of its settings take precedence over the same fields in the
+project's dashboard.
+
+- **What's built** (`ignoreCommand`): Vercel builds a commit when the command exits with 1, which
+  it does only for `main` and `production`.
+- **Each build migrates first** (`buildCommand`): for `main` and `production`, `pnpm db:migrate`
+  runs before `pnpm build`, through the environment's `DATABASE_URL_UNPOOLED` (Neon's direct
+  connection) or else its `DATABASE_URL`. Migrations should use a direct connection, not a pooled
+  one. When migrating fails, the build fails and the previous deployment stays live, so new code
+  never runs against the old schema.
+
+**Moving production** (`.github/workflows/production-branch.yml`): when Release Please publishes a
+release, this workflow moves `production` to the release's commit, creating the branch the first
+time. It only moves forward (a fast-forward), so an older release can't replace a newer one; to roll
+back, use Vercel's Instant Rollback. Run it by hand (Actions → Production branch → Run workflow, with
+a tag such as `v0.2.0`) to move production to an existing release.
+
+**Each environment needs its own settings** (Settings → Environment Variables):
+
+- **A separate database for Preview.** Preview migrates on every commit to `main`. If it shared
+  production's database, each migration would reach production before its release, and the live
+  release would run against a schema it doesn't know. Either turn on the Neon integration's branch
+  for preview deployments, or connect the integration to Production only, create a `preview` branch
+  in Neon and set `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` for Preview yourself. Check
+  that Preview's database host differs from Production's.
+- **`BETTER_AUTH_URL`:** each environment's own address, or sign-in links and redirects point at the
+  other one. GitHub and Google sign-in need Preview's address as a callback URL too; otherwise leave
+  their settings unset in Preview.
+
+**One-time setup, in this order:**
+
+1. Give Preview its own database and settings, as above.
+2. In Settings → Environments → Production, set the branch to `production`. Until it exists,
+   production keeps its current deployment.
+3. In Settings → Domains, give `main` a fixed address: a domain with **Git Branch** set to `main`
+   always shows the latest commit.
+4. Publish a release (see [Releases](ci-and-releases.md#releases)): the workflow creates
+   `production` at it, and Vercel deploys it as production.
 
 ## Docker
 

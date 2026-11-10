@@ -102,22 +102,22 @@ The integration and end-to-end tests need `pnpm services:up` running. See [Testi
 
 The [docs](docs/README.md) go into detail, one topic each:
 
-| Page                                                      | What it covers                                                           |
-| --------------------------------------------------------- | ------------------------------------------------------------------------ |
-| [Local development](docs/development.md)                  | First run, test accounts, starting over, every script                    |
-| [Where the code lives](docs/project-structure.md)         | The folders of the repository                                            |
-| [Testing](docs/testing.md)                                | Unit, integration and end-to-end tests                                   |
-| [Code style and tooling](docs/code-style.md)              | Linters, formatting, JSDoc, editor setup, Git hooks                      |
-| [CI, releases and dependencies](docs/ci-and-releases.md)  | CI, protecting `main`, security advisories, releases, dependency updates |
-| [Companies, users and roles](docs/companies-and-roles.md) | Roles and permissions, staff screens, invitations                        |
-| [Sign-in and accounts](docs/authentication.md)            | Sign-in methods, sessions, account pages, security emails                |
-| [Multi-factor authentication](docs/mfa.md)                | Second steps, who needs them, confirming sessions                        |
-| [Security measures](docs/security-measures.md)            | Audit log, rate limits, tokens, names, lock order, headers, CSP          |
-| [Email](docs/email.md)                                    | Templates, previews, Mailpit, how emails are sent                        |
-| [Design, accessibility and dark mode](docs/design.md)     | Components, tables, colours, keyboard support, dark mode, brand          |
-| [Languages](docs/i18n.md)                                 | Choosing a language, translation catalogues, formatting, checks          |
-| [Deploying and running](docs/deploying.md)                | Install and upgrade, Docker, server setup, client IP, jobs, logs, leaks  |
-| [Decision records](docs/decisions/README.md)              | Why Adiutor works the way it does, one decision per page                 |
+| Page                                                      | What it covers                                                                  |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| [Local development](docs/development.md)                  | First run, test accounts, starting over, every script                           |
+| [Where the code lives](docs/project-structure.md)         | The folders of the repository                                                   |
+| [Testing](docs/testing.md)                                | Unit, integration and end-to-end tests                                          |
+| [Code style and tooling](docs/code-style.md)              | Linters, formatting, JSDoc, editor setup, Git hooks                             |
+| [CI, releases and dependencies](docs/ci-and-releases.md)  | CI, protecting `main`, security advisories, releases, dependency updates        |
+| [Companies, users and roles](docs/companies-and-roles.md) | Roles and permissions, staff screens, invitations                               |
+| [Sign-in and accounts](docs/authentication.md)            | Sign-in methods, sessions, account pages, security emails                       |
+| [Multi-factor authentication](docs/mfa.md)                | Second steps, who needs them, confirming sessions                               |
+| [Security measures](docs/security-measures.md)            | Audit log, rate limits, tokens, names, lock order, headers, CSP                 |
+| [Email](docs/email.md)                                    | Templates, previews, Mailpit, how emails are sent                               |
+| [Design, accessibility and dark mode](docs/design.md)     | Components, tables, colours, keyboard support, dark mode, brand                 |
+| [Languages](docs/i18n.md)                                 | Choosing a language, translation catalogues, formatting, checks                 |
+| [Deploying and running](docs/deploying.md)                | Install and upgrade, Vercel, Docker, server setup, client IP, jobs, logs, leaks |
+| [Decision records](docs/decisions/README.md)              | Why Adiutor works the way it does, one decision per page                        |
 
 ## Contributing
 

@@ -1,0 +1,68 @@
+# Production branch: moves the `production` branch to every published release, so Vercel deploys
+# the release as production (vercel.json and "Vercel" in docs/deploying.md). `main` is Vercel's
+# preview branch; only releases reach `production`.
+#
+# Release Please publishes releases with its app's token, and only events made with the built-in
+# GITHUB_TOKEN can't start other workflows, so its releases start this one. Running it by hand
+# (Actions → Production branch → Run workflow) moves `production` to an existing release, e.g. the
+# first time or after a failed run.
+#
+# The branch only moves forward (a fast-forward): an older release can't replace a newer one here.
+# To roll back, use Vercel's Instant Rollback. The move is made with the built-in token, which
+# starts no other workflows, but GitHub still tells its apps about the push, so Vercel builds it.
+#
+# It runs `gh` and `jq`, which GitHub's runners include, so there's no action to pin.
+name: Production branch
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The release tag to move production to, such as v0.2.0
+        required: true
+        type: string
+
+# Nothing by default; the job asks for what it needs.
+permissions: {}
+
+# One move at a time, in the order they started.
+concurrency:
+  group: production-branch
+  cancel-in-progress: false
+
+jobs:
+  move:
+    name: Move production to the release
+    # Only this repository deploys from its production branch.
+    if: ${{ github.repository == 'bastolen/adiutor' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # Creates or moves the production branch.
+      contents: write
+    steps:
+      # The tag comes in as an environment variable, never pasted into the script, and must look
+      # like a release tag before it's used.
+      - name: Move the production branch to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Not a release tag: $TAG"
+            exit 1
+          fi
+          commit=$(gh api "repos/$REPOSITORY/commits/$TAG" --jq .sha)
+          if gh api "repos/$REPOSITORY/git/ref/heads/production" > /dev/null 2>&1; then
+            # force=false: GitHub refuses anything but a fast-forward.
+            gh api --method PATCH "repos/$REPOSITORY/git/refs/heads/production" \
+              -f sha="$commit" -F force=false > /dev/null
+            echo "Moved production to $TAG ($commit)."
+          else
+            gh api --method POST "repos/$REPOSITORY/git/refs" \
+              -f ref=refs/heads/production -f sha="$commit" > /dev/null
+            echo "Created production at $TAG ($commit)."
+          fi

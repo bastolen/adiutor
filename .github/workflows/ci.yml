@@ -66,7 +66,7 @@ jobs:
         name: Fingerprint the code the tests depend on
         run: |
           {
-            echo 'scheme 1'
+            echo 'scheme 2'
             git ls-tree -r -z HEAD | while IFS= read -r -d '' entry; do
               path="${entry#*$'\t'}"
               case "$path" in
@@ -75,8 +75,8 @@ jobs:
                 # Repository settings for GitHub and the bots, which no test reads.
                 .github/ISSUE_TEMPLATE/* | .github/CODEOWNERS | .github/dependabot.yml) continue ;;
                 .github/rulesets/* | renovate.json5 | commitlint.config.mjs) continue ;;
-                # Editor and agent settings.
-                .vscode/* | .claude/*) continue ;;
+                # Editor and agent settings, and Vercel's deployment settings.
+                .vscode/* | .claude/* | vercel.json) continue ;;
                 # Release Please's version record and settings.
                 .release-please-manifest.json | release-please-config.json) continue ;;
                 # Counted without its version, which nothing in the app or its tests reads.
