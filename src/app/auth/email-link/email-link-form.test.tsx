@@ -9,8 +9,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { defined } from '@/lib/defined';
 
-import EmailLinkForm, { type SignedInAccount } from './email-link-form';
 import renderInLocale from '../../../../tests/i18n/render';
+import EmailLinkForm, { type SignedInAccount } from './email-link-form';
 
 /** The account the test link signs in to. */
 const JANE = { name: 'Jane Tester', email: 'jane@adiutor.test' };

@@ -10,8 +10,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { PageLinkItem, PaginationLinks } from '@/lib/tables/table-state';
 
-import Pagination from './pagination';
 import renderInLocale from '../../../tests/i18n/render';
+import Pagination from './pagination';
 
 // Next's Link only calls `onNavigate` once the app router is mounted, which it isn't in these
 // tests: this stand-in calls it for every plain click, as a client navigation would.

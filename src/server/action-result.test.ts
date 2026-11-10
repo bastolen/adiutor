@@ -7,9 +7,9 @@ import { z } from 'zod';
 
 import { companyNameSchema } from '@/lib/validation';
 
+import { testLocale } from '../../tests/i18n/next-intl-mocks';
 import runAction from './action-result';
 import { ServiceError } from './errors';
-import { testLocale } from '../../tests/i18n/next-intl-mocks';
 
 /**
  * Builds the error Drizzle throws when Postgres breaks a deadlock: its own

@@ -21,12 +21,12 @@ import { INVITATION_VALID_DAYS } from '@/lib/invitation-lifetimes';
 import type { InviteStatus } from '@/lib/invite-status';
 import { generateToken, hashToken } from '@/lib/sign-in/tokens';
 
-import { lockInvitationsOf } from './locks';
-import { type InviteDestination, joinedPath, sameTarget, auditTarget } from './rules';
 import type { Actor } from '../../actor';
 import { recordEvent } from '../../audit';
 import type { ServiceContext } from '../../context';
 import recipientLocale from '../../recipient-locale';
+import { lockInvitationsOf } from './locks';
+import { type InviteDestination, joinedPath, sameTarget, auditTarget } from './rules';
 
 /**
  * What claiming an invite link can come to: an {@link InviteStatus}, or

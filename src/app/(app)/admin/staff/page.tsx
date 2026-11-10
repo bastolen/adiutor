@@ -32,14 +32,14 @@ import { listPendingInvitations } from '@/server/people/invitations';
 import { listInviteLinks } from '@/server/people/invite-links';
 import { getStaffSettings, listStaff } from '@/server/people/staff';
 
-import DefaultLanguageForm from './default-language-form';
-import StaffNameForm from './staff-name-form';
 import { ActivityColumn, ActivityLine } from '../../_people/activity';
 import InvitationsCard from '../../_people/invitations-card';
 import InviteForm from '../../_people/invite-form';
 import InviteLinksCard from '../../_people/invite-links-card';
 import RoleSelect from '../../_people/role-select';
 import { changeStaffRoleAction, removeFromStaffAction } from '../../_people/staff-actions';
+import DefaultLanguageForm from './default-language-form';
+import StaffNameForm from './staff-name-form';
 
 /**
  * Page metadata: "Staff · Adiutor" for those who may see the page (`staff:manage`), and

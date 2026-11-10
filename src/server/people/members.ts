@@ -26,6 +26,9 @@ import {
 } from '../access';
 import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
+import { withMfaPromotion } from '../auth/mfa-promotion';
+import { sendSecurityNotice } from '../auth/security-notices';
+import type { ServiceContext } from '../context';
 import {
   companyDeactivatedError,
   forbiddenError,
@@ -33,13 +36,10 @@ import {
   ServiceError,
   parseId,
 } from '../errors';
-import { revokeInvitationsTo, revokeInvitesWithoutManager } from './invitations';
-import { withMfaPromotion } from '../auth/mfa-promotion';
-import { sendSecurityNotice } from '../auth/security-notices';
-import type { ServiceContext } from '../context';
 import { paginate, peopleOrder } from '../pagination';
 import { assertInviteSenderLimit, assertRoleChangeLimit } from '../rate-limit';
 import recipientLocale from '../recipient-locale';
+import { revokeInvitationsTo, revokeInvitesWithoutManager } from './invitations';
 
 /** A member as shown on the members page. */
 export interface Member {

@@ -2,10 +2,10 @@
  * @file Whether a session counts as having had a second factor, and the
  * 15-minute window after a second step in which sign-in methods may change.
  */
+import { isMfaProvider, MFA_PROVIDERS, type MfaProvider } from '../../sign-in/oauth-providers';
 import { type MfaRole, requiresMfa } from './requirement';
 import type { MfaState } from './state';
 import { hasStrongerStepThanProvider } from './step-up';
-import { isMfaProvider, MFA_PROVIDERS, type MfaProvider } from '../../sign-in/oauth-providers';
 
 /**
  * How a session's second factor was proven:

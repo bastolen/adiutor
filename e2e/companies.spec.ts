@@ -9,6 +9,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
+import getTestDatabaseUrl from '../tests/database/database-url';
 import { addMembership, createCompany, findCompanyId } from './support/db';
 import {
   CLIENT_WATCHER,
@@ -27,7 +28,6 @@ import {
 } from './support/helpers';
 import { countEmails, linkIn, waitForEmail, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
-import getTestDatabaseUrl from '../tests/database/database-url';
 
 test('register a company, accept the invitation and join through a link', async ({
   page,

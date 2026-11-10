@@ -4,10 +4,10 @@
  */
 import { rm } from 'node:fs/promises';
 
-import { OUTBOX_DIR } from './fixtures';
-import seedTestDatabase from './seed';
 import getTestDatabaseUrl from '../../tests/database/database-url';
 import prepareTestDatabase from '../../tests/database/prepare-database';
+import { OUTBOX_DIR } from './fixtures';
+import seedTestDatabase from './seed';
 
 /**
  * Migrates and seeds the test database, and clears old emails.

@@ -11,6 +11,7 @@ import { firstRow } from '@/lib/defined';
 import { sendEmail } from '@/lib/email';
 import { PROVIDER_STEP_UP_COOKIE } from '@/lib/sign-in/oauth-providers';
 
+import { createSession, createUser, inSequence } from '../../../../tests/integration/helpers';
 import { afterAuthRequest } from './after-request';
 import { checkIncomingUser, checkReverify, type IncomingUserInfo } from './reverify';
 import { beforeSessionCreate } from './session-hooks';
@@ -25,7 +26,6 @@ import {
   minutesAgo,
   storeSessionMfa,
 } from './test-helpers';
-import { createSession, createUser, inSequence } from '../../../../tests/integration/helpers';
 
 vi.mock('@/db', async (importOriginal) =>
   (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),

@@ -11,16 +11,16 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 
-import { afterAuthRequest } from './after-request';
-import type { AuthHookContext } from './hook-context';
-import { afterPasswordSignIn } from './password-sign-in';
-import { db, githubCallback } from './test-helpers';
 import {
   createSession,
   createStaffSettings,
   createUser,
   setUserLocale,
 } from '../../../../tests/integration/helpers';
+import { afterAuthRequest } from './after-request';
+import type { AuthHookContext } from './hook-context';
+import { afterPasswordSignIn } from './password-sign-in';
+import { db, githubCallback } from './test-helpers';
 
 vi.mock('@/db', async (importOriginal) =>
   (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),

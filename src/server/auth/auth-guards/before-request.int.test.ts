@@ -10,10 +10,10 @@ import { session } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { REVERIFY_HINT } from '@/lib/sign-in/oauth-providers';
 
+import { createSession, createUser, inSequence } from '../../../../tests/integration/helpers';
 import { beforeAuthRequest } from './before-request';
 import type { AuthGuardContext } from './paths';
 import { db, refusedWith } from './test-helpers';
-import { createSession, createUser, inSequence } from '../../../../tests/integration/helpers';
 
 vi.mock('@/db', async (importOriginal) =>
   (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),

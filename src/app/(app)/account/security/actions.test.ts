@@ -18,8 +18,8 @@ import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
 import { deactivateOwnAccount } from '@/server/people/user-admin';
 
-import { deactivateAccountAction, passwordAction, revokeOtherSessionsAction } from './actions';
 import { testLocale } from '../../../../../tests/i18n/next-intl-mocks';
+import { deactivateAccountAction, passwordAction, revokeOtherSessionsAction } from './actions';
 
 vi.mock('next/headers', () => ({ headers: vi.fn(async () => new Headers()) }));
 vi.mock('next/cache', () => ({ refresh: vi.fn() }));

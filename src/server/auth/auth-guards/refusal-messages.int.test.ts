@@ -4,8 +4,8 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { noteRefusalLocale, refusalBody } from './refusal-messages';
 import { createStaffSettings, setupTestContext } from '../../../../tests/integration/helpers';
+import { noteRefusalLocale, refusalBody } from './refusal-messages';
 
 const { db } = setupTestContext();
 

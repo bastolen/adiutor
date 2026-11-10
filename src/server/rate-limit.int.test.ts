@@ -8,13 +8,13 @@ import { describe, expect, it } from 'vitest';
 
 import { rateLimitBucket } from '@/db/schema';
 
+import { setupTestContext } from '../../tests/integration/helpers';
 import {
   assertRateLimit,
   clearFailedSignIns,
   hitRateLimit,
   releaseRateLimitHit,
 } from './rate-limit';
-import { setupTestContext } from '../../tests/integration/helpers';
 
 const { ctx, db } = setupTestContext();
 

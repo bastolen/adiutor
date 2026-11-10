@@ -10,6 +10,8 @@ import { sendEmail } from '@/lib/email';
 import { LAST_USED_LOGIN_METHOD_COOKIE } from '@/lib/sign-in/auth-cookies';
 import { PROVIDER_LINKED_COOKIE } from '@/lib/sign-in/oauth-providers';
 
+import { createSession, createUser } from '../../../../tests/integration/helpers';
+import { releaseSignInChangeLockOf } from '../auth-guards';
 import { afterAuthRequest } from './after-request';
 import type { AuthHookContext } from './hook-context';
 import {
@@ -26,8 +28,6 @@ import {
   events,
   subjects,
 } from './test-helpers';
-import { createSession, createUser } from '../../../../tests/integration/helpers';
-import { releaseSignInChangeLockOf } from '../auth-guards';
 
 vi.mock('@/db', async (importOriginal) =>
   (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),

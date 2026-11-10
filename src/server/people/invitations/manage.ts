@@ -11,15 +11,6 @@ import type { Locale } from '@/lib/i18n/locales';
 import { type Paged, resolveTableState, type TableState } from '@/lib/tables/table-state';
 import { INVITATIONS_TABLE, type InvitationSort } from '@/lib/tables/tables';
 
-import { lockInvitationsOf } from './locks';
-import { createSentInvitation } from './record';
-import {
-  sameTarget,
-  assertCanManage,
-  assertInviteRateLimits,
-  assertInvitable,
-  auditTarget,
-} from './rules';
 import {
   assertConfirmedForGrant,
   assertStillManages,
@@ -31,6 +22,15 @@ import { recordEvent } from '../../audit';
 import type { ServiceContext } from '../../context';
 import { forbiddenError, notFoundError, parseId } from '../../errors';
 import { orderTerms, paginate } from '../../pagination';
+import { lockInvitationsOf } from './locks';
+import { createSentInvitation } from './record';
+import {
+  sameTarget,
+  assertCanManage,
+  assertInviteRateLimits,
+  assertInvitable,
+  auditTarget,
+} from './rules';
 
 /** An open invitation as shown on the members page. */
 export interface PendingInvitation {

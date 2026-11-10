@@ -6,6 +6,7 @@ import { afterEach, beforeEach, afterAll, describe, expect, it, vi } from 'vites
 
 import { sendEmail } from '@/lib/email';
 
+import { createSession, createUser } from '../../../../tests/integration/helpers';
 import { afterAuthRequest } from './after-request';
 import {
   db,
@@ -19,7 +20,6 @@ import {
   events,
   subjects,
 } from './test-helpers';
-import { createSession, createUser } from '../../../../tests/integration/helpers';
 
 vi.mock('@/db', async (importOriginal) =>
   (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),

@@ -8,14 +8,14 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { auditEvent, user } from '@/db/schema';
 
-import type { Actor } from './actor';
-import { listAuditEvents, listAuditLog, listOwnActivity, recordEvent } from './audit';
 import {
   createCompany,
   createStaffSettings,
   setupTestContext,
   staffActor,
 } from '../../tests/integration/helpers';
+import type { Actor } from './actor';
+import { listAuditEvents, listAuditLog, listOwnActivity, recordEvent } from './audit';
 
 const { ctx, db } = setupTestContext();
 

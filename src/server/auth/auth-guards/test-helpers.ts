@@ -10,10 +10,10 @@ import { rateLimitBucket, user } from '@/db/schema';
 import type { MfaMethod } from '@/lib/authz/mfa';
 import { firstRow } from '@/lib/defined';
 
+import { inSequence, setupTestContext } from '../../../../tests/integration/helpers';
 import { beforeAuthRequest } from './before-request';
 import { releaseSignInChangeLockOf } from './change-lock';
 import type { AuthGuardContext } from './paths';
-import { inSequence, setupTestContext } from '../../../../tests/integration/helpers';
 
 /**
  * The test database context these tests share. Each test file imports this

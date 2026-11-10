@@ -2,6 +2,7 @@
  * @file The ways a user can confirm their session with a second step (step-up),
  * and which of them open the window for changing sign-in methods.
  */
+import { type MfaProvider } from '../../sign-in/oauth-providers';
 import { allowsEmailCodes } from './email-codes';
 import type { MfaRole } from './requirement';
 import {
@@ -10,7 +11,6 @@ import {
   ALL_MFA_PROVIDERS,
   mfaGivingProviders,
 } from './state';
-import { type MfaProvider } from '../../sign-in/oauth-providers';
 
 /** The ways a user can confirm a session that didn't have a second step. */
 export interface StepUpMethods {

@@ -10,9 +10,6 @@ import { auditEvent, rateLimitBucket, twoFactor, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 import { sendEmail } from '@/lib/email';
 
-import { afterAuthRequest } from './after-request';
-import type { AuthHookContext } from './hook-context';
-import { db, subjects, events, services } from './test-helpers';
 import {
   addPassword,
   createSession,
@@ -23,6 +20,9 @@ import {
 } from '../../../../tests/integration/helpers';
 import { listOwnActivity } from '../../audit';
 import { type AuthGuardContext, beforeAuthRequest } from '../auth-guards';
+import { afterAuthRequest } from './after-request';
+import type { AuthHookContext } from './hook-context';
+import { db, subjects, events, services } from './test-helpers';
 
 vi.mock('@/db', async (importOriginal) =>
   (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),

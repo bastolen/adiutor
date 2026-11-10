@@ -7,6 +7,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { rateLimitBucket } from '@/db/schema';
 
+import { enableTwoFactor, inSequence, staffActor } from '../../../../tests/integration/helpers';
 import { beforeAuthRequest } from './before-request';
 import { pendingCodeSignInOf } from './code-step';
 import {
@@ -19,7 +20,6 @@ import {
   signedIn,
   repeat,
 } from './test-helpers';
-import { enableTwoFactor, inSequence, staffActor } from '../../../../tests/integration/helpers';
 
 vi.mock('@/db', async (importOriginal) =>
   (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),

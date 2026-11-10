@@ -7,8 +7,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { company, membership, passkey, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
-import { loadActor, touchLastActive } from './actor';
-import { loadMfaStates } from './auth/mfa-state';
 import {
   actorFor,
   addMember,
@@ -23,6 +21,8 @@ import {
   staffActor,
   turnOffGitHubSignIn,
 } from '../../tests/integration/helpers';
+import { loadActor, touchLastActive } from './actor';
+import { loadMfaStates } from './auth/mfa-state';
 
 const { db } = setupTestContext();
 

@@ -26,7 +26,6 @@ import { sendEmail } from '@/lib/email';
 import { env } from '@/lib/env';
 import { generateToken, hashVerificationIdentifier } from '@/lib/sign-in/tokens';
 
-import { releaseSignInChangeLock, takeSignInChangeLock } from './sign-in-change-lock';
 import {
   addMember,
   addPasskey,
@@ -40,6 +39,7 @@ import {
   staffActor,
 } from '../../../tests/integration/helpers';
 import { registerUser } from '../people/user-registration';
+import { releaseSignInChangeLock, takeSignInChangeLock } from './sign-in-change-lock';
 
 vi.mock('@/db', async (importOriginal) =>
   (await import('../../../tests/integration/app-modules')).default(await importOriginal()),

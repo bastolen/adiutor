@@ -4,8 +4,8 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { loadDefaultLocale, localeFromHeaders } from './default-locale';
 import { createStaffSettings, setupTestContext } from '../../../tests/integration/helpers';
+import { loadDefaultLocale, localeFromHeaders } from './default-locale';
 
 const { db } = setupTestContext();
 

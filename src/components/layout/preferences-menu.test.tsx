@@ -9,8 +9,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import setLanguageAction from '@/app/language-action';
 import { THEME_STORAGE_KEY } from '@/lib/theme';
 
-import PreferencesMenu from './preferences-menu';
 import renderInLocale from '../../../tests/i18n/render';
+import PreferencesMenu from './preferences-menu';
 
 vi.mock('@/app/language-action', () => ({ default: vi.fn(async () => true) }));
 

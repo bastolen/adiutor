@@ -19,9 +19,6 @@ import { defined, firstRow } from '@/lib/defined';
 import type { Email } from '@/lib/email';
 import { hashToken } from '@/lib/sign-in/tokens';
 
-import type { Actor } from './actor';
-import { cleanUp, sendInvitationReminders } from './jobs';
-import { inviteByEmail } from './people/invitations';
 import {
   addMember,
   createCompany,
@@ -34,6 +31,9 @@ import {
   staffActor,
   tokenFrom,
 } from '../../tests/integration/helpers';
+import type { Actor } from './actor';
+import { cleanUp, sendInvitationReminders } from './jobs';
+import { inviteByEmail } from './people/invitations';
 
 const { ctx, db, sent } = setupTestContext();
 

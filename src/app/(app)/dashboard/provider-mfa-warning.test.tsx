@@ -5,8 +5,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import ProviderMfaWarning from './provider-mfa-warning';
 import renderInLocale from '../../../../tests/i18n/render';
+import ProviderMfaWarning from './provider-mfa-warning';
 
 describe('ProviderMfaWarning', () => {
   it('names the provider, how many users, and links to them', () => {

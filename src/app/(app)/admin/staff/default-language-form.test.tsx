@@ -9,9 +9,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defined } from '@/lib/defined';
 import { isLocale, type Locale } from '@/lib/i18n/locales';
 
+import renderInLocale from '../../../../../tests/i18n/render';
 import { saveDefaultLanguageAction } from './actions';
 import DefaultLanguageForm from './default-language-form';
-import renderInLocale from '../../../../../tests/i18n/render';
 
 vi.mock('./actions', () => ({ saveDefaultLanguageAction: vi.fn() }));
 

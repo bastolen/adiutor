@@ -8,11 +8,6 @@ import { invitation } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 import { hashToken } from '@/lib/sign-in/tokens';
 
-import { getInvitationPreview } from './accept';
-import { revokeInvitation } from './manage';
-import { createSentInvitation } from './record';
-import { inviteByEmail } from './send';
-import { db, ctx, sent } from './test-helpers';
 import {
   atTheSameMoment,
   createCompany,
@@ -23,6 +18,11 @@ import {
   tokenFrom,
 } from '../../../../tests/integration/helpers';
 import type { Actor } from '../../actor';
+import { getInvitationPreview } from './accept';
+import { revokeInvitation } from './manage';
+import { createSentInvitation } from './record';
+import { inviteByEmail } from './send';
+import { db, ctx, sent } from './test-helpers';
 
 /** Shared fixtures, recreated before each test. */
 let testCompany: Awaited<ReturnType<typeof createCompany>>;

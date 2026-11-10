@@ -21,9 +21,9 @@ import {
 } from '../../../tests/integration/helpers';
 import { getCompanyAccess } from '../access';
 import type { Actor } from '../actor';
+import { RATE_LIMITS } from '../rate-limit';
 import { listCompanies, registerCompany, setCompanyActive, updateCompany } from './companies';
 import { listPendingInvitations } from './invitations';
-import { RATE_LIMITS } from '../rate-limit';
 
 const { ctx, db, sent } = setupTestContext();
 

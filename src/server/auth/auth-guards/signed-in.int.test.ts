@@ -10,16 +10,6 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { account } from '@/db/schema';
 
-import { beforeAuthRequest } from './before-request';
-import {
-  outcomeOf,
-  db,
-  signedIn,
-  request,
-  refusedWith,
-  hits,
-  sendCodesOverTime,
-} from './test-helpers';
 import {
   addPasskey,
   addPassword,
@@ -34,6 +24,16 @@ import {
   startAuthenticatorSetup,
   turnOffGitHubSignIn,
 } from '../../../../tests/integration/helpers';
+import { beforeAuthRequest } from './before-request';
+import {
+  outcomeOf,
+  db,
+  signedIn,
+  request,
+  refusedWith,
+  hits,
+  sendCodesOverTime,
+} from './test-helpers';
 
 vi.mock('@/db', async (importOriginal) =>
   (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),

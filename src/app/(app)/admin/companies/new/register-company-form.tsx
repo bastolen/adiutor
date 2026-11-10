@@ -19,8 +19,8 @@ import { useTransientState, useTransientActionState } from '@/components/ui/use-
 import type { Locale } from '@/lib/i18n/locales';
 import { NAME_MAX_LENGTH, SLUG_MAX_LENGTH, slugify } from '@/lib/input-rules';
 
-import registerCompanyAction from './actions';
 import useConfirmBeforeGrant from '../../../_people/use-confirm-before-grant';
+import registerCompanyAction from './actions';
 
 /**
  * Name, URL name (suggested from the name until edited) and admin email.

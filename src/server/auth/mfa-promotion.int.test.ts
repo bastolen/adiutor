@@ -23,13 +23,13 @@ import {
   tokenFrom,
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
-import { withMfaPromotion } from './mfa-promotion';
 import { setCompanyActive } from '../people/companies';
 import { acceptInvitation, inviteByEmail } from '../people/invitations';
 import { createInviteLink, joinWithInviteLink } from '../people/invite-links';
 import { addMember, changeMemberRole } from '../people/members';
 import { changeStaffRole } from '../people/staff';
 import { setUpPlatform } from '../setup';
+import { withMfaPromotion } from './mfa-promotion';
 
 const { ctx, db, sent } = setupTestContext();
 

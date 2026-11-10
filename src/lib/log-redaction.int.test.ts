@@ -9,8 +9,8 @@ import { describe, expect, it } from 'vitest';
 
 import { account, user } from '@/db/schema';
 
-import { REDACTED, redactLogValue } from './log-redaction';
 import { createUser, setupTestContext } from '../../tests/integration/helpers';
+import { REDACTED, redactLogValue } from './log-redaction';
 
 const { db } = setupTestContext();
 

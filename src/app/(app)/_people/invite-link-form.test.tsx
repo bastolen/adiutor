@@ -5,8 +5,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import InviteLinkForm from './invite-link-form';
 import renderInLocale from '../../../../tests/i18n/render';
+import InviteLinkForm from './invite-link-form';
 
 vi.mock('next/navigation', () => ({
   /**

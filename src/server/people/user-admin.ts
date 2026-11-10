@@ -45,7 +45,6 @@ import { idSchema } from '@/lib/validation';
 import { assertPermission, getGlobalPermissions } from '../access';
 import type { Actor } from '../actor';
 import { type AuditEntry, listAuditEvents, recordEvent } from '../audit';
-import { hasOtherActiveAdmin } from './staff';
 import { listConnectedProviders } from '../auth/accounts';
 import { checkCurrentPassword } from '../auth/current-password';
 import { loadMfaContext } from '../auth/mfa-state';
@@ -54,8 +53,9 @@ import { endSessionsOf } from '../auth/sessions';
 import { withSignInChangeLock } from '../auth/sign-in-change-lock';
 import type { ServiceContext } from '../context';
 import { concurrentChangeError, notFoundError, ServiceError, parseId } from '../errors';
-import { revokeInvitationsTo, revokeInvitesWithoutManager } from './invitations';
 import { orderTerms, paginate, textOrder } from '../pagination';
+import { revokeInvitationsTo, revokeInvitesWithoutManager } from './invitations';
+import { hasOtherActiveAdmin } from './staff';
 
 /** A company the user belongs to, on the detail page. */
 export interface UserCompany {

@@ -14,8 +14,8 @@ import { type Paged, showsPagination, type TableLinks } from '@/lib/tables/table
 import type { DeviceSort } from '@/lib/tables/tables';
 import type { UserSession } from '@/server/people/user-admin';
 
-import { signOutEverywhereAction } from './actions';
 import DevicesTable from '../../../_people/devices-table';
+import { signOutEverywhereAction } from './actions';
 
 /**
  * Props for {@link DevicesCard}.

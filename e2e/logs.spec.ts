@@ -6,10 +6,10 @@
  */
 import { type Page } from '@playwright/test';
 
+import { defined } from '../src/lib/defined';
 import { PLATFORM_ADMIN, STEP_UP_MANAGER, SUPPORT_STAFF } from './support/fixtures';
 import { adminStorageState, signIn, type StorageState } from './support/helpers';
 import { expect, test } from './support/test';
-import { defined } from '../src/lib/defined';
 
 /** Sign-in cookies of the staff Admin. */
 let adminState: StorageState;

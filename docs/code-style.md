@@ -11,8 +11,8 @@ The linters and formatters, the JSDoc rule, the editor setup and the Git hooks. 
   `eslint-config-airbnb` does not support ESLint 9. Every `if`, `else` and loop body has braces,
   even a single statement (`curly: 'all'`, turned back on after Prettier's config, which turns it
   off; `pnpm lint:fix` adds them). Imports come in fixed groups (Node built-ins, packages, `@/…`,
-  relative), with a blank line between groups and A to Z within each (`import-x/order`; side-effect
-  imports like `import 'server-only'` stay put). Every `eslint-disable` comment gives its reason
+  relative), with a blank line between groups and A to Z by path within each, so `../` imports come
+  before `./` ones (`import-x/order`; side-effect imports like `import 'server-only'` stay put). Every `eslint-disable` comment gives its reason
   (`-- why`), none disables everything, and one that no longer disables anything is an error
   (`@eslint-community/eslint-plugin-eslint-comments`); `pnpm lint:fix` removes those. `pnpm lint`
   fails on warnings as well as errors (`--max-warnings=0`, also in the pre-commit hook). In `e2e/`

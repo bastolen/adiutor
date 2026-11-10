@@ -18,15 +18,15 @@ import { localeSchema, staffNameSchema, staffRoleSchema } from '@/lib/validation
 
 import { assertConfirmedForGrant, assertPermission, getGlobalPermissions } from '../access';
 import type { Actor } from '../actor';
-import notifyStaffAdminAdded from './staff-admin-notice';
 import { recordEvent } from '../audit';
+import { withMfaPromotion } from '../auth/mfa-promotion';
 import { sendSecurityNotice } from '../auth/security-notices';
 import type { ServiceContext } from '../context';
 import { forbiddenError, notFoundError, ServiceError, parseId } from '../errors';
-import { revokeInvitationsTo, revokeInvitesWithoutManager } from './invitations';
-import { withMfaPromotion } from '../auth/mfa-promotion';
 import { paginate, peopleOrder } from '../pagination';
 import { assertRoleChangeLimit } from '../rate-limit';
+import { revokeInvitationsTo, revokeInvitesWithoutManager } from './invitations';
+import notifyStaffAdminAdded from './staff-admin-notice';
 import getStaffName from './staff-name';
 
 /** A staff member, as shown on the staff page. */

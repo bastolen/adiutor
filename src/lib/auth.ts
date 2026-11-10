@@ -29,6 +29,7 @@ import { after } from 'next/server';
 
 import { db } from '../db';
 import * as schema from '../db/schema';
+import type { AuthHookContext } from '../server/auth/auth-events';
 import { EMAIL_CODE_MINUTES, TWO_FACTOR_LOCK_ATTEMPTS, TWO_FACTOR_LOCK_MINUTES } from './authz/mfa';
 import { PLATFORM_ROLES } from './authz/roles';
 import { sendEmail } from './email';
@@ -43,7 +44,6 @@ import { parseAuthSecrets } from './sign-in/auth-secrets';
 import { EMAIL_LINK_MINUTES, emailLinkUrl } from './sign-in/email-link';
 import { providerCredentials } from './sign-in/providers';
 import { hashEmailLinkToken } from './sign-in/tokens';
-import type { AuthHookContext } from '../server/auth/auth-events';
 
 /**
  * How long a session lasts, in seconds: a fixed 7 days (see `session` in

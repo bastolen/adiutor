@@ -15,8 +15,8 @@ import { type Paged, showsPagination, type TableLinks } from '@/lib/tables/table
 import type { DeviceSort } from '@/lib/tables/tables';
 import type { UserSession } from '@/server/people/user-admin';
 
-import { revokeOtherSessionsAction, revokeSessionAction } from './actions';
 import DevicesTable from '../../_people/devices-table';
+import { revokeOtherSessionsAction, revokeSessionAction } from './actions';
 
 /**
  * Props for {@link SessionsCard}.

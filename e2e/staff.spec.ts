@@ -7,6 +7,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
+import getTestDatabaseUrl from '../tests/database/database-url';
 import { backdateMfaConfirmation, setDefaultLocale } from './support/db';
 import { COMPANY_SLUG, PLATFORM_ADMIN, STAFF_NAME } from './support/fixtures';
 import {
@@ -20,7 +21,6 @@ import {
 import { linkIn, waitForEmail } from './support/outbox';
 import { expect, test } from './support/test';
 import { codeForSecret } from './support/totp';
-import getTestDatabaseUrl from '../tests/database/database-url';
 
 test('an Admin changes the name shown to users', async ({ page }) => {
   await signIn(page, PLATFORM_ADMIN);

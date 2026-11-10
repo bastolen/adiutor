@@ -48,6 +48,7 @@ import {
 } from '../../../tests/integration/helpers';
 import { type Actor, loadActor } from '../actor';
 import { listOwnActivity, recordEvent } from '../audit';
+import { releaseSignInChangeLock, takeSignInChangeLock } from '../auth/sign-in-change-lock';
 import { acceptInvitationWithNewAccount, inviteByEmail } from './invitations';
 import { createInviteLink } from './invite-links';
 import {
@@ -64,7 +65,6 @@ import {
   userExists,
   type UserSession,
 } from './user-admin';
-import { releaseSignInChangeLock, takeSignInChangeLock } from '../auth/sign-in-change-lock';
 
 const { ctx, db, sent } = setupTestContext();
 

@@ -9,8 +9,8 @@ import { getActor } from '@/server/authz';
 import { concurrentChangeError, ServiceError } from '@/server/errors';
 import { type BulkInviteResult, inviteManyByEmail } from '@/server/people/invitations';
 
-import { inviteAction } from './invitation-actions';
 import { testLocale } from '../../../../tests/i18n/next-intl-mocks';
+import { inviteAction } from './invitation-actions';
 
 vi.mock('next/cache', () => ({ refresh: vi.fn() }));
 vi.mock('@/server/app-context', () => ({ default: { name: 'app context' } }));

@@ -17,8 +17,8 @@ import {
   REVERIFY_HINT,
 } from '@/lib/sign-in/oauth-providers';
 
-import StepUpForm, { type StepUpFormProps } from './step-up-form';
 import renderInLocale from '../../../../tests/i18n/render';
+import StepUpForm, { type StepUpFormProps } from './step-up-form';
 
 /** Mocked Better Auth client methods and router. */
 const { verifyTotp, verifyOtp, verifyBackupCode, sendOtp, passkey, social, replace } = vi.hoisted(

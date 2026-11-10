@@ -11,10 +11,6 @@ import type { DatabaseTransaction } from '@/db';
 import { invitation, membership, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
-import { getInvitationPreview } from './accept';
-import { listPendingInvitations, resendInvitation, revokeInvitation } from './manage';
-import { inviteByEmail } from './send';
-import { db, ctx, sent } from './test-helpers';
 import {
   atTheSameMoment,
   createCompany,
@@ -28,6 +24,10 @@ import {
   tokenFrom,
 } from '../../../../tests/integration/helpers';
 import type { Actor } from '../../actor';
+import { getInvitationPreview } from './accept';
+import { listPendingInvitations, resendInvitation, revokeInvitation } from './manage';
+import { inviteByEmail } from './send';
+import { db, ctx, sent } from './test-helpers';
 
 /** Shared fixtures, recreated before each test. */
 let testCompany: Awaited<ReturnType<typeof createCompany>>;

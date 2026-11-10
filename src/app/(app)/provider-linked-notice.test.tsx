@@ -9,8 +9,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { PROVIDER_LINKED_COOKIE } from '@/lib/sign-in/oauth-providers';
 
-import ProviderLinkedNotice from './provider-linked-notice';
 import renderInLocale from '../../../tests/i18n/render';
+import ProviderLinkedNotice from './provider-linked-notice';
 
 /**
  * Sets the cookie that `afterAccountCreate` leaves after connecting a

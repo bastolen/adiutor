@@ -14,6 +14,8 @@ import { randomInt } from 'node:crypto';
 
 import { type Locator, type Page } from '@playwright/test';
 
+import { defined } from '../src/lib/defined';
+import getTestDatabaseUrl from '../tests/database/database-url';
 import {
   backdateMfaConfirmation,
   sessionOfCookieExists,
@@ -39,8 +41,6 @@ import {
 import { countEmails, linkIn, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
 import { codeForSecret } from './support/totp';
-import { defined } from '../src/lib/defined';
-import getTestDatabaseUrl from '../tests/database/database-url';
 
 // The tests use up state (step-up attempts, a password, a lockout), so a retry of the file could
 // only fail at an earlier test: no retries, and a trace of the first failure instead.

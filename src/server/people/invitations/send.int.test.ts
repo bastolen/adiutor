@@ -8,9 +8,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { company, invitation, staffSettings, user } from '@/db/schema';
 import { defined } from '@/lib/defined';
 
-import { listPendingInvitations } from './manage';
-import { type BulkInviteResult, inviteByEmail, inviteManyByEmail } from './send';
-import { db, ctx, sent } from './test-helpers';
 import {
   createCompany,
   createStaffSettings,
@@ -23,6 +20,9 @@ import {
   staffActor,
 } from '../../../../tests/integration/helpers';
 import type { Actor } from '../../actor';
+import { listPendingInvitations } from './manage';
+import { type BulkInviteResult, inviteByEmail, inviteManyByEmail } from './send';
+import { db, ctx, sent } from './test-helpers';
 
 /** Shared fixtures, recreated before each test. */
 let testCompany: Awaited<ReturnType<typeof createCompany>>;

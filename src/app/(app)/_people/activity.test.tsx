@@ -5,8 +5,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { ActivityColumn, ActivityLine } from './activity';
 import renderInLocale from '../../../../tests/i18n/render';
+import { ActivityColumn, ActivityLine } from './activity';
 
 /** When the test person joined. */
 const JOINED = new Date('2026-10-28T09:00:00Z');

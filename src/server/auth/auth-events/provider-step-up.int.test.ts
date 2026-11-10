@@ -10,6 +10,12 @@ import { auditEvent, session } from '@/db/schema';
 import { sendEmail } from '@/lib/email';
 import { PROVIDER_STEP_UP_COOKIE } from '@/lib/sign-in/oauth-providers';
 
+import {
+  createSession,
+  createUser,
+  inSequence,
+  lastActiveAt,
+} from '../../../../tests/integration/helpers';
 import { afterAuthRequest } from './after-request';
 import type { AuthHookContext } from './hook-context';
 import { afterAccountCreate } from './provider-accounts';
@@ -30,12 +36,6 @@ import {
   sessionVerifiedAt,
   cookiesBesidesLanguage,
 } from './test-helpers';
-import {
-  createSession,
-  createUser,
-  inSequence,
-  lastActiveAt,
-} from '../../../../tests/integration/helpers';
 
 vi.mock('@/db', async (importOriginal) =>
   (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),

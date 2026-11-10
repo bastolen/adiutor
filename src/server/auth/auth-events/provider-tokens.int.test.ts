@@ -10,6 +10,7 @@ import { account } from '@/db/schema';
 import { sendEmail } from '@/lib/email';
 import { PROVIDER_STEP_UP_COOKIE } from '@/lib/sign-in/oauth-providers';
 
+import { createSession, createUser } from '../../../../tests/integration/helpers';
 import { afterAuthRequest } from './after-request';
 import { afterAccountCreate, beforeAccountCreate, beforeAccountUpdate } from './provider-accounts';
 import { afterSessionCreate } from './session-hooks';
@@ -25,7 +26,6 @@ import {
   events,
   cookiesBesidesLanguage,
 } from './test-helpers';
-import { createSession, createUser } from '../../../../tests/integration/helpers';
 
 vi.mock('@/db', async (importOriginal) =>
   (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),

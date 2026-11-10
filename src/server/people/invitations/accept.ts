@@ -24,7 +24,6 @@ import {
   passwordSchema,
 } from '@/lib/validation';
 
-import { auditTarget } from './rules';
 import { recordEvent } from '../../audit';
 import { withMfaPromotion } from '../../auth/mfa-promotion';
 import addPasswordCredential from '../../auth/password-credential';
@@ -32,6 +31,7 @@ import type { ServiceContext } from '../../context';
 import { ServiceError } from '../../errors';
 import notifyStaffAdminAdded, { type StaffAdminAdded } from '../staff-admin-notice';
 import getStaffName from '../staff-name';
+import { auditTarget } from './rules';
 
 /**
  * Finds a usable invitation by the token in its link: not accepted, revoked

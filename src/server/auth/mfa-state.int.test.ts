@@ -11,8 +11,8 @@ import { account } from '@/db/schema';
 import { canConfirmSessions, hasMfa } from '@/lib/authz/mfa';
 import { firstRow } from '@/lib/defined';
 
-import { loadMfaContext, loadMfaStates } from './mfa-state';
 import { createUser, setupTestContext, staffActor } from '../../../tests/integration/helpers';
+import { loadMfaContext, loadMfaStates } from './mfa-state';
 
 const { db } = setupTestContext();
 

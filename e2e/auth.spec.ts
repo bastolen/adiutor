@@ -6,12 +6,12 @@
  * must start over), and the sign-in page shows its "Last used" hint.
  */
 
+import { LAST_USED_LOGIN_METHOD_COOKIE } from '../src/lib/sign-in/auth-cookies';
+import { PROVIDER_LINKED_COOKIE } from '../src/lib/sign-in/oauth-providers';
 import { CLIENT_WATCHER, SESSIONS_CLIENT } from './support/fixtures';
 import { signIn, signOut, submitPassword, useOwnClientIp } from './support/helpers';
 import { expect, test } from './support/test';
 import { codeForSecret } from './support/totp';
-import { LAST_USED_LOGIN_METHOD_COOKIE } from '../src/lib/sign-in/auth-cookies';
-import { PROVIDER_LINKED_COOKIE } from '../src/lib/sign-in/oauth-providers';
 
 test('a signed-out visitor of the dashboard is sent to sign in', async ({ page }) => {
   await page.goto('/dashboard');
