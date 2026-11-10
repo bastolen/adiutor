@@ -45,23 +45,36 @@ hasn't passed them yet, and **CI passed** counts the skipped jobs as passed.
   `.release-please-manifest.json` and `release-please-config.json`. `package.json` counts without
   its `version`, which nothing in the app or its tests reads. Workflows and the local actions count,
   so a change to CI always runs the tests.
-- **The record:** after a run where every test job ran and passed, **CI passed** saves
-  `tests-passed-<fingerprint>` in the Actions cache. A failed, cancelled or skipped run saves
-  nothing. The first job looks the fingerprint up (`lookup-only`) and skips the tests when it's
-  there.
-- **What that skips:** a change to docs or repository settings, once `main`'s code passed; a re-run
-  of code that passed; the draft release pull request and the release commit merging it puts on
-  `main`. When `main`'s last run failed or was cancelled, nothing was recorded, so the next run of
-  that code (a docs change, the release pull request) runs the tests.
-- **Who can use a record:** a pull request only reads records saved on `main` or on that pull
-  request, so a fork can't skip the tests for anyone else. Records nobody uses for 7 days expire,
-  and the tests then run again. The fingerprint starts with a scheme number, which changes when
-  the list of files left out does.
+- **The record:** after a run where every test job ran and passed, **CI passed** uploads a small
+  artifact named `tests-passed-<fingerprint>`. A failed, cancelled or skipped run uploads nothing.
+  The first job looks the name up through GitHub's Artifacts API and skips the tests when a record
+  counts (below). If the API can't answer, the tests run.
+- **What that skips:**
+  - `main`'s run after merging a pull request whose last run was against the current `main`: the
+    squash merge lands exactly the code that pull request tested. A merge of a pull request that
+    fell behind `main` runs the tests on `main`.
+  - a change to docs or repository settings, once `main`'s code passed;
+  - a re-run of code that passed;
+  - the release commit that merging the release pull request puts on `main`.
+    When nothing recorded a pass of `main`'s code (its last run failed or was cancelled), the next
+    run of that code runs the tests.
+- **The draft release pull request** never runs the tests. Its code is `main`'s, plus the
+  changelog and version the fingerprint leaves out, and a draft can't be merged. Marked ready for
+  review, it runs every test.
+- **Who can use a record:** only records made by runs of this repository's own branches: `main`
+  and pull requests from branches here. A fork's pull request runs its own copy of the workflow and
+  could upload anything, so its records are ignored. It can still skip the tests when its code
+  matches a record made here. (Records used to live in the Actions cache, which never lets `main`
+  read what a pull request saved, so `main` re-ran every merged pull request.) Records expire after
+  7 days, and the tests then run again. The fingerprint starts with a scheme number, which changes
+  when the list of files left out does.
 
 **PR titles** (`.github/workflows/pr-title.yml`): a squash merge lands on `main` with the pull
 request's title, and Release Please reads it, but the commit-msg hook never sees it. So every pull
 request's title is checked with the same commitlint rules (`commitlint.config.mjs`) when it's
-opened or edited and on every new commit. Renovate's and Release Please's titles
+opened, when its title is edited and on every new commit. An edit that leaves the title alone (a
+new description, which Renovate writes on every update) skips the check: the job doesn't start a
+runner, and GitHub counts a skipped job as passed. Renovate's and Release Please's titles
 (`chore(deps): …`, `fix(deps): …`, `chore(main): release …`) already pass. Dependabot's
 (`ci(deps): bump …`) are skipped: Dependabot doesn't let us choose them, its group wording ("… in the
 github-actions group across 1 directory") can run past the 100-character limit, and their `ci` type
@@ -79,10 +92,10 @@ generate such a migration locally.
 
 ## Protecting main
 
-`.github/rulesets/main.json` holds the rules for `main`, ready to switch on. GitHub only enforces
-rulesets on private repositories with GitHub Pro (or Team), so they wait until the repository is
-public or upgraded. The file is strict JSON (no comments) in the format GitHub's ruleset import and
-API take, so this section explains it:
+`.github/rulesets/main.json` holds the rules for `main`, and the ruleset on GitHub is made from it.
+GitHub enforces rulesets on a private repository only with GitHub Pro (or Team), which this
+account has. The file is strict JSON (no comments) in the format GitHub's ruleset import and API
+take, so this section explains it:
 
 - `main` (the default branch, `~DEFAULT_BRANCH`) can't be deleted or force-pushed, and its history
   stays linear.
@@ -96,22 +109,26 @@ API take, so this section explains it:
 - Repository admins can bypass the rules (`actor_id` 5 is the admin role). That's for emergencies,
   and for the empty `Release-As` commit in [Versions](#versions), which goes straight to `main`.
 
-To switch it on, either import the file in the repository's Settings → Rules → Rulesets → New
-ruleset → Import a ruleset, check it and click Create, or run:
+To create the ruleset (once, or again in a new repository), either import the file in the
+repository's Settings → Rules → Rulesets → New ruleset → Import a ruleset, check it and click
+Create, or run:
 
 ```bash
 gh api --method POST repos/bastolen/adiutor/rulesets --input .github/rulesets/main.json
 ```
 
 If the import doesn't recognise the bypass entry, add **Repository admin** to the bypass list in
-the form before creating it. When a job in CI is renamed, the rules don't change; only renaming
-**CI passed** or the PR title check means updating the file and the ruleset on GitHub.
+the form before creating it. After changing the file, update the ruleset on GitHub to match: find
+its ID with `gh api repos/bastolen/adiutor/rulesets`, then run
+`gh api --method PUT repos/bastolen/adiutor/rulesets/<id> --input .github/rulesets/main.json`.
+When a job in CI is renamed, the rules don't change; only renaming **CI passed** or the PR title
+check means updating the file and the ruleset.
 
 ## Protecting production
 
 `.github/rulesets/production.json` holds the rules for the `production` branch, which Vercel
-deploys as production (see [Vercel](deploying.md#vercel)). Like `main.json`, it waits until GitHub
-can enforce rulesets here, and it's strict JSON in the same format, so this section explains it:
+deploys as production (see [Vercel](deploying.md#vercel)), and the ruleset on GitHub is made from
+it. It's strict JSON in the same format as `main.json`, so this section explains it:
 
 - Nobody can create, update, delete or force-push `production` (`creation`, `update`, `deletion`
   and `non_fast_forward`), except the two accounts allowed through:
@@ -121,16 +138,17 @@ can enforce rulesets here, and it's strict JSON in the same format, so this sect
 - So only a release, or you, can change what production serves. Pull requests, Renovate,
   Dependabot and the built-in token of any workflow can't.
 
-To switch it on, import the file as above, or run:
+To create the ruleset, import the file as above, or run:
 
 ```bash
 gh api --method POST repos/bastolen/adiutor/rulesets --input .github/rulesets/production.json
 ```
 
 If the import doesn't recognise the bypass entries, add **Repository admin** and the
-**adiutor-releases** app to the bypass list in the form before creating it.
+**adiutor-releases** app to the bypass list in the form before creating it. After changing the
+file, update the ruleset with `PUT`, as for `main`.
 
-Until then, `vercel.json` guards production on Vercel's side: it builds `production` only when the
+Besides the ruleset, `vercel.json` guards production on Vercel's side: it builds `production` only when the
 branch points at a release commit (one whose first line starts with `chore(main): release `), so a
 stray push to `production` never reaches production.
 
@@ -210,9 +228,9 @@ Every release also publishes the Docker image (`.github/workflows/docker.yml`, b
 container registry as `ghcr.io/bastolen/adiutor`. Release Please publishes releases with its app's
 token, so they start this workflow (events made with the built-in token don't start workflows).
 
-- **Platforms:** `linux/amd64` and `linux/arm64`. GitHub's free runners for private repositories
-  are amd64, so the arm64 half is built under emulation and a release build takes a while (up to
-  about 25 minutes).
+- **Platforms:** `linux/amd64` and `linux/arm64`. The workflow builds both on one amd64 runner, so
+  the arm64 half is built under emulation and a release build takes a while (about 25 minutes).
+  GitHub also has arm64 runners for private repositories, should that ever need to be faster.
 - **Tags:** the version (`0.1.0`), its minor line (`0.1`, which moves to `0.1.1` when that's out)
   and `latest`. There's no `0` tag while Adiutor is below 1.0.0, since a new minor can break things.
 - **What's attached:** build provenance and an SBOM (the list of what's in the image), and the
@@ -254,6 +272,14 @@ Weekly on Monday morning, a few days after a release at the earliest:
   forever. Digest pull requests still wait: Renovate opens or updates them only 3 days after Docker
   Hub pushed the image. If the check stays pending on another kind of update, Renovate's job log
   (developer.mend.io) says why.
+- Renovate's pull requests come in groups: all minor and patch updates together (Next.js and React
+  included), and the major updates of Next.js, React and their types together.
+- Major updates wait for approval: Renovate lists them under "Pending Approval" in the Dependency
+  Dashboard issue and opens the pull request once you tick its box. A major often waits on the
+  tools around it (typescript-eslint for TypeScript, plugins for ESLint), and an open pull request
+  that can't pass yet runs CI again every time a merge changes the lockfile. Security fixes don't
+  wait. Closing a pull request makes Renovate skip that version; the dashboard lists it with a box
+  to open it again.
 - Dependabot (`.github/dependabot.yml`, built into GitHub) updates the GitHub Actions, SHA and
   version comment together, in one pull request. Leave the repository's "Dependabot security
   updates" off, or it opens npm pull requests next to Renovate's.

@@ -28,6 +28,14 @@
   minimumReleaseAge: '3 days',
   /** Refresh the lockfile weekly, picking up updates to indirect dependencies. */
   lockFileMaintenance: { enabled: true },
+  /**
+   * Major updates wait for approval: Renovate lists them under "Pending Approval" in the
+   * Dependency Dashboard issue and opens the PR once its box is ticked. A major often waits on
+   * the tools around it (typescript-eslint for TypeScript, plugins for ESLint), and an open PR
+   * that can't pass yet reruns CI every time a merge changes the lockfile. Security fixes don't
+   * wait.
+   */
+  major: { dependencyDashboardApproval: true },
   /** Conventional Commit messages, matching commitlint. */
   semanticCommits: 'enabled',
   packageRules: [
@@ -68,8 +76,12 @@
       groupSlug: 'all-minor-patch',
     },
     {
-      /** Next.js, React and their type packages move together. */
+      /**
+       * Major updates of Next.js, React and their type packages move together. Their minor and
+       * patch updates join the non-major group above, so most weeks bring one PR fewer.
+       */
       matchPackageNames: ['next', 'react', 'react-dom', '@types/react', '@types/react-dom'],
+      matchUpdateTypes: ['major'],
       groupName: 'Next.js and React',
     },
   ],
