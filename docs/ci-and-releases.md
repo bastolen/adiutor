@@ -17,7 +17,7 @@ pnpm, Node from `.nvmrc` with pnpm's store cached, and `pnpm install --frozen-lo
 | Unit tests                    | `pnpm test`                                                                                         | none       |
 | Integration tests             | `pnpm test:integration`, then the migrations applied to a fresh database                            | PostgreSQL |
 | End-to-end tests (1/2), (2/2) | a production build, then half the specs each (`pnpm test:e2e --shard=1/2`), with a report per shard | PostgreSQL |
-| CI passed                     | fails when any other job failed or was cancelled                                                    | none       |
+| CI passed                     | fails when any other job failed or was cancelled, and records a run where every test passed         | none       |
 
 **CI passed** is the one check protecting `main` requires (see [Protecting main](#protecting-main)),
 so jobs and shards can change without touching the rules. Each job has its own time limit (15 to 30
@@ -32,12 +32,31 @@ the app's own files (`src/`, `public/`, `next.config.ts`, `tsconfig.json`). Both
 and the first saves a new entry when the source changed. Pull requests start from `main`'s cache and
 only write their own.
 
-Release Please's pull requests, and the release commits that merging them puts on `main`, only
-change `CHANGELOG.md`, `.release-please-manifest.json` and the version in `package.json`. For those,
-the first job (Decide what runs) skips the unit, integration and end-to-end tests, and **CI passed**
-counts a skipped job as passed. A pull request only counts as a release pull request when the
-release app opened it, from a branch in this repository whose name starts with `release-please--`:
-a fork can copy the branch name, but not the author.
+### Skipping the tests
+
+The static checks always run. The unit, integration and end-to-end tests only run for code that
+hasn't passed them yet, and **CI passed** counts the skipped jobs as passed.
+
+- **The fingerprint:** the first job (Decide what runs) hashes every tracked file and its content
+  (`git ls-tree -r HEAD`; on a pull request, GitHub's merge commit with `main`, so the code as it
+  would land). It leaves out the files no test reads: `docs/`, every Markdown file, `LICENSE`,
+  `.github/ISSUE_TEMPLATE/`, `.github/CODEOWNERS`, `.github/dependabot.yml`, `.github/rulesets/`,
+  `renovate.json5`, `commitlint.config.mjs`, `.vscode/`, `.claude/`,
+  `.release-please-manifest.json` and `release-please-config.json`. `package.json` counts without
+  its `version`, which nothing in the app or its tests reads. Workflows and the local actions count,
+  so a change to CI always runs the tests.
+- **The record:** after a run where every test job ran and passed, **CI passed** saves
+  `tests-passed-<fingerprint>` in the Actions cache. A failed, cancelled or skipped run saves
+  nothing. The first job looks the fingerprint up (`lookup-only`) and skips the tests when it's
+  there.
+- **What that skips:** a change to docs or repository settings, once `main`'s code passed; a re-run
+  of code that passed; the draft release pull request and the release commit merging it puts on
+  `main`. When `main`'s last run failed or was cancelled, nothing was recorded, so the next run of
+  that code (a docs change, the release pull request) runs the tests.
+- **Who can use a record:** a pull request only reads records saved on `main` or on that pull
+  request, so a fork can't skip the tests for anyone else. Records nobody uses for 7 days expire,
+  and the tests then run again. The fingerprint starts with a scheme number, which changes when
+  the list of files left out does.
 
 **PR titles** (`.github/workflows/pr-title.yml`): a squash merge lands on `main` with the pull
 request's title, and Release Please reads it, but the commit-msg hook never sees it. So every pull
@@ -105,8 +124,14 @@ in `.github/actions/`, which Dependabot updates along with the workflows.
 ## Releases
 
 Releases (`.github/workflows/release-please.yml`): Release Please keeps a release pull request
-open that bumps the version and updates `CHANGELOG.md` from the commit messages. Merging it
-publishes a GitHub release. It works as a small GitHub App instead of the workflow's own token
+open that bumps the version and updates `CHANGELOG.md` from the commit messages. It opens it as a
+draft (`draft-pull-request` in `release-please-config.json`), which GitHub won't merge, so its
+updates after every merge to `main` skip the tests when `main`'s code passed them (see [Skipping
+the tests](#skipping-the-tests)). To release, mark it ready for review (`gh pr ready <number>`):
+CI then runs every test on it, whatever passed before, and again on each update while it stays
+ready. A release pull request is one the release app opened, from a branch in this repository whose
+name starts with `release-please--`. Merge it once **CI passed** is green; that publishes a GitHub
+release. It works as a small GitHub App instead of the workflow's own token
 (which gets no access at all), so the repository doesn't have to let GitHub Actions create and
 approve pull requests, and CI runs on the release pull request. To set it up once:
 

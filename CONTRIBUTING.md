@@ -101,7 +101,8 @@ titles follow the same format, since a squash merge lands with the title; CI che
 
 ## Releases
 
-Releases are automated by Release Please: it keeps a release pull request open that bumps the
-version and updates `CHANGELOG.md`. Merging it publishes the release. It runs as a small GitHub
+Releases are automated by Release Please: it keeps a draft release pull request open that bumps
+the version and updates `CHANGELOG.md`. To release, mark it ready for review: CI then runs every
+test on it. Merging it once CI is green publishes the release. It runs as a small GitHub
 App; see [Releases](docs/ci-and-releases.md#releases) for the one-time setup. Versions stay
 below 1.0.0 until Adiutor is ready for real use (see [Versions](docs/ci-and-releases.md#versions)).
