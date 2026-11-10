@@ -247,6 +247,13 @@ Weekly on Monday morning, a few days after a release at the earliest:
   the npm packages, the container images (in the workflows and `compose.yaml`), `.nvmrc` and the
   pnpm version in `packageManager`. It uses pnpm like local development: the lockfile, that pnpm
   version and the settings in `pnpm-workspace.yaml`.
+- Renovate waits 3 days after a release before proposing it (`minimumReleaseAge`), in case the
+  release is pulled or compromised, and shows the wait on each pull request as the
+  `renovate/stability-days` check. Image digest updates and lockfile refreshes carry no release
+  date that check can read, so `renovate.json5` lets it pass for them instead of leaving it pending
+  forever. Digest pull requests still wait: Renovate opens or updates them only 3 days after Docker
+  Hub pushed the image. If the check stays pending on another kind of update, Renovate's job log
+  (developer.mend.io) says why.
 - Dependabot (`.github/dependabot.yml`, built into GitHub) updates the GitHub Actions, SHA and
   version comment together, in one pull request. Leave the repository's "Dependabot security
   updates" off, or it opens npm pull requests next to Renovate's.

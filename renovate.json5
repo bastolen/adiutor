@@ -20,7 +20,11 @@
   /** Open update PRs once a week, so they arrive in batches. */
   schedule: ['before 6am on monday'],
   timezone: 'Europe/Amsterdam',
-  /** Wait 3 days after a release before updating, in case it is pulled or compromised. */
+  /**
+   * Wait 3 days after a release before updating, in case it is pulled or
+   * compromised. Shown on each PR as the `renovate/stability-days` check;
+   * image digests and lockfile refreshes have their own rule below.
+   */
   minimumReleaseAge: '3 days',
   /** Refresh the lockfile weekly, picking up updates to indirect dependencies. */
   lockFileMaintenance: { enabled: true },
@@ -43,6 +47,19 @@
       /** The Dockerfile's base image (Node.js) stays pinned to a digest, its version in the tag. */
       matchManagers: ['dockerfile'],
       pinDigests: true,
+    },
+    {
+      /**
+       * Image digest updates and lockfile refreshes carry no release date that
+       * the `renovate/stability-days` check can read, and without one the
+       * default (`timestamp-required`) keeps the check pending forever. Here a
+       * missing date passes instead. Digest PRs still wait: Renovate only opens
+       * or updates them 3 days after Docker Hub pushed the tag. Lockfile
+       * refreshes get no wait from Renovate; pnpm's built-in default still
+       * skips versions younger than a day when it resolves them.
+       */
+      matchUpdateTypes: ['digest', 'pinDigest', 'lockFileMaintenance'],
+      minimumReleaseAgeBehaviour: 'timestamp-optional',
     },
     {
       /** Group all minor and patch updates into one PR. */
