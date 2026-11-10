@@ -10,11 +10,11 @@ import { invitation, inviteLink, membership, user } from '@/db/schema';
 import { getPermissions } from '@/lib/authz/permissions';
 import { type CompanyRole } from '@/lib/authz/roles';
 
-import { invitationLockKey, takeInvitationLock } from './locks';
-import { sameTarget, auditTarget } from './rules';
 import { managePermission } from '../../access';
 import { recordEvent } from '../../audit';
 import type { ServiceContext } from '../../context';
+import { invitationLockKey, takeInvitationLock } from './locks';
+import { sameTarget, auditTarget } from './rules';
 
 /**
  * Revokes the open invitations and unused invite links someone created for

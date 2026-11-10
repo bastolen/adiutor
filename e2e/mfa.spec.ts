@@ -7,6 +7,7 @@
  * the recommendation for everyone else.
  */
 
+import getTestDatabaseUrl from '../tests/database/database-url';
 import { storeSignInLink } from './support/db';
 import {
   CLIENT_WATCHER,
@@ -30,7 +31,6 @@ import {
 import { codeIn, countEmails, linkIn, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
 import { codeForSecret } from './support/totp';
-import getTestDatabaseUrl from '../tests/database/database-url';
 
 test('a Manager must set up MFA first, then signs in with an authenticator or a backup code', async ({
   page,

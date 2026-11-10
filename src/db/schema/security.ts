@@ -4,10 +4,10 @@
  */
 import { index, integer, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
+import type { AuditAction } from '../../lib/audit-actions';
 import { user } from './auth';
 import { createdAt, id, timestampTz } from './columns';
 import { company } from './companies';
-import type { AuditAction } from '../../lib/audit-actions';
 
 /**
  * The audit log: who did what, when and from where. References are cleared

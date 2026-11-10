@@ -8,9 +8,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { DatabaseOrTransaction } from '@/db';
 
+import { setupTestContext } from '../../tests/integration/helpers';
 import { isHealthy } from './health';
 import { JOURNAL_ENTRIES } from './migration-check';
-import { setupTestContext } from '../../tests/integration/helpers';
 
 const { db } = setupTestContext();
 

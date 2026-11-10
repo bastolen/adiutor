@@ -3,11 +3,11 @@
  * see, and what staff see on a company's overview.
  */
 
+import getTestDatabaseUrl from '../tests/database/database-url';
 import { findCompanyId } from './support/db';
 import { CLIENT_WATCHER, COMPANY_NAME, COMPANY_SLUG, PLATFORM_ADMIN } from './support/fixtures';
 import { signIn } from './support/helpers';
 import { expect, test } from './support/test';
-import getTestDatabaseUrl from '../tests/database/database-url';
 
 ['/', '/companies/x', '/admin/companies', '/account'].forEach((path) => {
   test(`signed out, ${path} redirects to sign in`, async ({ page }) => {

@@ -4,10 +4,10 @@
  */
 import { type Page } from '@playwright/test';
 
+import { THEME_STORAGE_KEY } from '../src/lib/theme';
 import { PLATFORM_ADMIN } from './support/fixtures';
 import { signIn, useOwnClientIp } from './support/helpers';
 import { expect, test } from './support/test';
-import { THEME_STORAGE_KEY } from '../src/lib/theme';
 
 /** The semantic colour tokens of `src/styles/theme.css`. */
 const TOKENS = [

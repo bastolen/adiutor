@@ -5,8 +5,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { Activity, type ReactNode, useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import SignInForm from './sign-in-form';
 import renderInLocale from '../../../tests/i18n/render';
+import SignInForm from './sign-in-form';
 
 /** Mocked Better Auth client methods. */
 const {

@@ -8,7 +8,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { membership, user } from '@/db/schema';
 
-import { currentPermissionsOf, getCompanyAccess } from './access';
 import {
   createCompany,
   createUser,
@@ -16,6 +15,7 @@ import {
   setupTestContext,
   staffActor,
 } from '../../tests/integration/helpers';
+import { currentPermissionsOf, getCompanyAccess } from './access';
 
 const { db } = setupTestContext();
 

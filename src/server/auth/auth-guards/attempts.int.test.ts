@@ -6,6 +6,15 @@ import { addOAuthServerContext, getSessionFromCtx } from 'better-auth/api';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  createCompany,
+  createUser,
+  enableTwoFactor,
+  inSequence,
+  memberActor,
+  staffActor,
+} from '../../../../tests/integration/helpers';
+import { clearFailedSignIns } from '../../rate-limit';
+import {
   countFailedSignIn,
   endEmailCodeCooldown,
   settlePasswordAttempt,
@@ -22,15 +31,6 @@ import {
   sendCodesOverTime,
   waitForNextCode,
 } from './test-helpers';
-import {
-  createCompany,
-  createUser,
-  enableTwoFactor,
-  inSequence,
-  memberActor,
-  staffActor,
-} from '../../../../tests/integration/helpers';
-import { clearFailedSignIns } from '../../rate-limit';
 
 vi.mock('@/db', async (importOriginal) =>
   (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),

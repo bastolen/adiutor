@@ -10,7 +10,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { defined } from '@/lib/defined';
 
-import { sendSecurityNotice } from './security-notices';
 import {
   createStaffSettings,
   createUser,
@@ -19,6 +18,7 @@ import {
   setUserLocale,
   setupTestContext,
 } from '../../../tests/integration/helpers';
+import { sendSecurityNotice } from './security-notices';
 
 const { ctx, db, sent } = setupTestContext();
 

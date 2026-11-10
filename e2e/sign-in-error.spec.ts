@@ -4,10 +4,10 @@
  * leads an admin to the stored error.
  */
 
-import { findSignInError } from './support/db';
-import { expect, test } from './support/test';
 import { defined } from '../src/lib/defined';
 import getTestDatabaseUrl from '../tests/database/database-url';
+import { findSignInError } from './support/db';
+import { expect, test } from './support/test';
 
 test('a failed sign-in ends on the error page, with a reference an admin can look up', async ({
   page,

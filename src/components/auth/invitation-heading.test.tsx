@@ -5,8 +5,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import InvitationHeading from './invitation-heading';
 import renderInLocale from '../../../tests/i18n/render';
+import InvitationHeading from './invitation-heading';
 
 describe('InvitationHeading', () => {
   it('names the company and the role offered', () => {

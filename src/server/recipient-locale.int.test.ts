@@ -3,8 +3,8 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import recipientLocale, { defaultLanguage, requesterLocale } from './recipient-locale';
 import { createStaffSettings, setupTestContext } from '../../tests/integration/helpers';
+import recipientLocale, { defaultLanguage, requesterLocale } from './recipient-locale';
 
 const { db } = setupTestContext();
 

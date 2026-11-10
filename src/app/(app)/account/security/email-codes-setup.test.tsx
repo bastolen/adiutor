@@ -9,8 +9,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 
-import EmailCodesSetup from './email-codes-setup';
 import renderInLocale from '../../../../../tests/i18n/render';
+import EmailCodesSetup from './email-codes-setup';
 
 /** The mocked auth client and router. */
 const { sendOtp, verifyOtp, push, refresh } = vi.hoisted(() => ({

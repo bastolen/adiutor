@@ -10,6 +10,7 @@ import { randomUUID } from 'node:crypto';
 
 import { type Page } from '@playwright/test';
 
+import getTestDatabaseUrl from '../tests/database/database-url';
 import expectAccessible from './support/axe';
 import { findCompanyId } from './support/db';
 import {
@@ -29,7 +30,6 @@ import {
 } from './support/helpers';
 import { countEmails, linkIn, waitForEmail, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
-import getTestDatabaseUrl from '../tests/database/database-url';
 
 /**
  * Opens the Members page of a seeded company.

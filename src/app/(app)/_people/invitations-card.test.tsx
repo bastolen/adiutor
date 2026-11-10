@@ -11,8 +11,8 @@ import { createPageUrl, type Paged } from '@/lib/tables/table-state';
 import { INVITATIONS_TABLE } from '@/lib/tables/tables';
 import type { PendingInvitation } from '@/server/people/invitations';
 
-import InvitationsCard from './invitations-card';
 import renderInLocale from '../../../../tests/i18n/render';
+import InvitationsCard from './invitations-card';
 
 /** Mocked server actions. */
 const { resendInvitationAction, revokeInvitationAction } = vi.hoisted(() => ({

@@ -8,8 +8,6 @@ import { MAX_BULK_INVITES } from '@/lib/input-rules';
 import type { InviteStatus } from '@/lib/invite-status';
 import { emailSchema, roleSchema } from '@/lib/validation';
 
-import { createSentInvitation } from './record';
-import { assertCanManage, assertInvitable, assertInviteRateLimits, visibleStatus } from './rules';
 import {
   assertConfirmedForGrant,
   assertStillManages,
@@ -19,6 +17,8 @@ import {
 import type { Actor } from '../../actor';
 import type { ServiceContext } from '../../context';
 import { concurrentChangeError, isDeadlock, ServiceError } from '../../errors';
+import { createSentInvitation } from './record';
+import { assertCanManage, assertInvitable, assertInviteRateLimits, visibleStatus } from './rules';
 
 /**
  * Invites someone to a company, or to the staff, by email: the

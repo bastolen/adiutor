@@ -11,6 +11,18 @@ import type { MfaMethod } from '@/lib/authz/mfa';
 import { defined } from '@/lib/defined';
 import { sendEmail } from '@/lib/email';
 
+import {
+  addMember,
+  connectGitHub,
+  createCompany,
+  createSession,
+  createUser,
+  enableTwoFactor,
+  inSequence,
+  lastActiveAt,
+  memberActor,
+  turnOffGitHubSignIn,
+} from '../../../../tests/integration/helpers';
 import type { AuthHookContext } from './hook-context';
 import { afterSessionCreate, beforeSessionCreate } from './session-hooks';
 import {
@@ -24,18 +36,6 @@ import {
   addPasskey,
   minutesAgo,
 } from './test-helpers';
-import {
-  addMember,
-  connectGitHub,
-  createCompany,
-  createSession,
-  createUser,
-  enableTwoFactor,
-  inSequence,
-  lastActiveAt,
-  memberActor,
-  turnOffGitHubSignIn,
-} from '../../../../tests/integration/helpers';
 
 vi.mock('@/db', async (importOriginal) =>
   (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),

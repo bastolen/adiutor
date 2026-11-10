@@ -11,10 +11,10 @@ import { appError } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { referenceFromDigest } from '@/lib/error-reference';
 
+import { createUser, inSequence, setupTestContext } from '../../tests/integration/helpers';
 import { recordAppError, recordedPath } from './app-errors';
 import type { ServiceContext } from './context';
 import { RATE_LIMITS } from './rate-limit';
-import { createUser, inSequence, setupTestContext } from '../../tests/integration/helpers';
 
 const { db, ctx } = setupTestContext();
 

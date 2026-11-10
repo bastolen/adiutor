@@ -33,7 +33,6 @@ import {
   managePermission,
 } from '../access';
 import type { Actor } from '../actor';
-import notifyStaffAdminAdded from './staff-admin-notice';
 import { recordEvent } from '../audit';
 import type { ServiceContext } from '../context';
 import {
@@ -43,6 +42,14 @@ import {
   ServiceError,
   parseId,
 } from '../errors';
+import { orderTerms, paginate } from '../pagination';
+import {
+  assertInviteCompanyLimit,
+  assertInviteSenderLimit,
+  assertRateLimit,
+  RATE_LIMITS,
+} from '../rate-limit';
+import { requesterLocale } from '../recipient-locale';
 import {
   assertCanManage,
   assertInvitable,
@@ -53,14 +60,7 @@ import {
   joinTarget,
   sameTarget,
 } from './invitations';
-import { orderTerms, paginate } from '../pagination';
-import {
-  assertInviteCompanyLimit,
-  assertInviteSenderLimit,
-  assertRateLimit,
-  RATE_LIMITS,
-} from '../rate-limit';
-import { requesterLocale } from '../recipient-locale';
+import notifyStaffAdminAdded from './staff-admin-notice';
 import getStaffName from './staff-name';
 
 /** A link's state. */

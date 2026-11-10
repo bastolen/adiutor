@@ -9,10 +9,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Permission } from '@/lib/authz/permissions';
 import type { PlatformRole } from '@/lib/authz/roles';
 
+import { testLocale } from '../../tests/i18n/next-intl-mocks';
 import type { Actor } from './actor';
 import { findCompanyAccess, getActor } from './authz';
 import { companyPermissionMetadata, globalPermissionMetadata } from './page-metadata';
-import { testLocale } from '../../tests/i18n/next-intl-mocks';
 
 /** The 404 page's metadata, in English (US) as unit tests render. */
 const NOT_FOUND_METADATA = {

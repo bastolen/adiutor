@@ -4,6 +4,13 @@
  */
 import { type Locator, type Page } from '@playwright/test';
 
+import {
+  PROVIDER_LINKED_COOKIE,
+  PROVIDER_STEP_UP_COOKIE,
+  providerLinkedCookieValue,
+  providerStepUpCookieValue,
+} from '../src/lib/sign-in/oauth-providers';
+import getTestDatabaseUrl from '../tests/database/database-url';
 import { findCompanyId } from './support/db';
 import {
   CLIENT_WATCHER,
@@ -13,13 +20,6 @@ import {
 } from './support/fixtures';
 import { adminStorageState, openUser, type StorageState, toasts } from './support/helpers';
 import { expect, test } from './support/test';
-import {
-  PROVIDER_LINKED_COOKIE,
-  PROVIDER_STEP_UP_COOKIE,
-  providerLinkedCookieValue,
-  providerStepUpCookieValue,
-} from '../src/lib/sign-in/oauth-providers';
-import getTestDatabaseUrl from '../tests/database/database-url';
 
 /** Sign-in cookies of the staff Admin. */
 let adminState: StorageState;

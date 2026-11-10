@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
+import { MFA_PROVIDERS } from '../../sign-in/oauth-providers';
 import {
   isMfaConfirmedRecently,
   isSessionMfaVerified,
@@ -19,7 +20,6 @@ import {
   REQUIRED_ROLES,
   OPTIONAL_ROLES,
 } from './test-helpers';
-import { MFA_PROVIDERS } from '../../sign-in/oauth-providers';
 
 describe('isSessionMfaVerified', () => {
   it('needs a second factor', () => {

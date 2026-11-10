@@ -11,8 +11,8 @@ import Card from '@/components/ui/card';
 import { Toaster } from '@/components/ui/toast';
 import { defined } from '@/lib/defined';
 
-import RoleSelect from './role-select';
 import renderInLocale from '../../../../tests/i18n/render';
+import RoleSelect from './role-select';
 
 /** Mocked router. */
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));

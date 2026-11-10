@@ -135,9 +135,10 @@ const projectRulesConfig = [
     rules: {
       /**
        * Imports in fixed groups (Node built-ins, packages, `@/…`, relative),
-       * a blank line between groups and A to Z within each, so two people
-       * adding imports don't reorder each other's. Side-effect imports such
-       * as `import 'server-only'` stay where they are.
+       * a blank line between groups and A to Z by path within each (so `../`
+       * imports come before `./` ones), so two people adding imports don't
+       * reorder each other's. Side-effect imports such as
+       * `import 'server-only'` stay where they are.
        */
       'import-x/order': [
         'error',

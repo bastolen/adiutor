@@ -32,8 +32,8 @@ import { getGlobalPermissions, requireGlobalPermission } from '@/server/authz';
 import { globalPermissionMetadata } from '@/server/page-metadata';
 import { isUserFilter, listUsers, type UserFilter, type UserListItem } from '@/server/people/users';
 
-import { AccountStateBadges, MfaBadge, StaffBadge } from './user-badges';
 import { ActivityColumn, ActivityLine } from '../../_people/activity';
+import { AccountStateBadges, MfaBadge, StaffBadge } from './user-badges';
 
 /**
  * Page metadata: "Users · Adiutor" for those who may see the page (`users:view`), and

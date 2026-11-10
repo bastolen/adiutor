@@ -10,6 +10,17 @@ import { auditEvent, session } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { sendEmail } from '@/lib/email';
 
+import {
+  createCompany,
+  createSession,
+  createUser,
+  enableTwoFactor,
+  lastActiveAt,
+  memberActor,
+  staffActor,
+} from '../../../../tests/integration/helpers';
+import { loadActor } from '../../actor';
+import { listOwnActivity } from '../../audit';
 import { afterAuthRequest } from './after-request';
 import type { AuthHookContext } from './hook-context';
 import { afterPasswordSignIn } from './password-sign-in';
@@ -32,17 +43,6 @@ import {
   devicesLeft,
   TRUST_DEVICE_COOKIE,
 } from './test-helpers';
-import {
-  createCompany,
-  createSession,
-  createUser,
-  enableTwoFactor,
-  lastActiveAt,
-  memberActor,
-  staffActor,
-} from '../../../../tests/integration/helpers';
-import { loadActor } from '../../actor';
-import { listOwnActivity } from '../../audit';
 
 vi.mock('@/db', async (importOriginal) =>
   (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),

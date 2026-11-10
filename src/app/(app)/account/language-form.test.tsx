@@ -5,9 +5,9 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import renderInLocale from '../../../../tests/i18n/render';
 import { saveLanguageAction } from './actions';
 import LanguageForm from './language-form';
-import renderInLocale from '../../../../tests/i18n/render';
 
 vi.mock('./actions', () => ({ saveLanguageAction: vi.fn() }));
 

@@ -9,8 +9,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EMAIL_CODE_RESEND_SECONDS } from '@/lib/authz/mfa';
 import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 
-import TwoFactorForm from './two-factor-form';
 import renderInLocale from '../../../../tests/i18n/render';
+import TwoFactorForm from './two-factor-form';
 
 /** Mocked Better Auth client methods and router. */
 const { verifyTotp, verifyOtp, verifyBackupCode, sendOtp, replace } = vi.hoisted(() => ({

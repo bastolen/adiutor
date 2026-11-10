@@ -10,10 +10,10 @@
 import { sql } from 'drizzle-orm';
 import { check, index, pgEnum, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
-import { user } from './auth';
-import { createdAt, id, timestampTz } from './columns';
 import { COMPANY_ROLES, PLATFORM_ROLES, ROLE_IDS } from '../../lib/authz/roles';
 import { DEFAULT_LOCALE, LOCALES } from '../../lib/i18n/locales';
+import { user } from './auth';
+import { createdAt, id, timestampTz } from './columns';
 
 /** Roles in a company; see `src/lib/authz/roles.ts`. */
 export const companyRole = pgEnum('company_role', COMPANY_ROLES);

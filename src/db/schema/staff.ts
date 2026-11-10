@@ -7,8 +7,8 @@
 import { sql } from 'drizzle-orm';
 import { boolean, check, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
 
-import { createdAt, id, timestampTz } from './columns';
 import { DEFAULT_LOCALE, LOCALES } from '../../lib/i18n/locales';
+import { createdAt, id, timestampTz } from './columns';
 
 /** Settings for the staff (the people who handle requests from companies). Always a single row. */
 export const staffSettings = pgTable(

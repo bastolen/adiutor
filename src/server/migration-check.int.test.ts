@@ -5,8 +5,8 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { JOURNAL_ENTRIES, migrationStatus, readAppliedMigrations } from './migration-check';
 import { setupTestContext } from '../../tests/integration/helpers';
+import { JOURNAL_ENTRIES, migrationStatus, readAppliedMigrations } from './migration-check';
 
 const { db } = setupTestContext();
 

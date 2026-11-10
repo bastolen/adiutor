@@ -7,13 +7,13 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { invitationEmail } from '@/emails/invitation';
 
-import { createSentInvitation } from './invitations';
 import {
   createCompany,
   createStaffSettings,
   memberActor,
   setupTestContext,
 } from '../../../tests/integration/helpers';
+import { createSentInvitation } from './invitations';
 
 vi.mock('@/emails/invitation', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/emails/invitation')>();

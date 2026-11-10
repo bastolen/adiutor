@@ -4,12 +4,12 @@
  * the other specs keep their data.
  */
 
+import getTestDatabaseUrl from '../tests/database/database-url';
 import expectAccessible from './support/axe';
 import { removeStaffSettings } from './support/db';
 import { STAFF_NAME } from './support/fixtures';
 import seedTestDatabase, { emptyTestDatabase } from './support/seed';
 import { expect, test } from './support/test';
-import getTestDatabaseUrl from '../tests/database/database-url';
 
 test.describe('first run', () => {
   test.afterAll(async () => {

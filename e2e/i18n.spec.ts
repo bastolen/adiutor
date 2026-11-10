@@ -7,6 +7,7 @@
  */
 import { type Page } from '@playwright/test';
 
+import getTestDatabaseUrl from '../tests/database/database-url';
 import { findCompanyId, setDefaultLocale, storeInvitation } from './support/db';
 import { COMPANY_NAME, COMPANY_SLUG } from './support/fixtures';
 import {
@@ -18,7 +19,6 @@ import {
 } from './support/helpers';
 import { waitForEmail } from './support/outbox';
 import { expect, test } from './support/test';
-import getTestDatabaseUrl from '../tests/database/database-url';
 
 /**
  * A fresh address for a test's own account or invitation.

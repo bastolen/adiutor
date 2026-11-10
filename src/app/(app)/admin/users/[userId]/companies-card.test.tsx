@@ -14,8 +14,8 @@ import { createPageUrl, parseTableState } from '@/lib/tables/table-state';
 import { USER_COMPANIES_TABLE } from '@/lib/tables/tables';
 import type { UserCompany } from '@/server/people/user-admin';
 
-import CompaniesCard from './companies-card';
 import renderInLocale from '../../../../../../tests/i18n/render';
+import CompaniesCard from './companies-card';
 
 /** Mocked server actions. */
 const { addMemberAction, changeRoleAction, removeMemberAction } = vi.hoisted(() => ({

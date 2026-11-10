@@ -6,8 +6,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import RequestPreview from './request-preview';
 import renderInLocale from '../../../tests/i18n/render';
+import RequestPreview from './request-preview';
 
 describe('RequestPreview', () => {
   it('shows a company user asking and the staff answering, in English (US)', () => {

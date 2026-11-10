@@ -11,8 +11,8 @@ import { emailLinkVerificationIdentifier } from '@/lib/sign-in/tokens';
 
 import { createUser, setupTestContext } from '../../../tests/integration/helpers';
 import type { ServiceContext } from '../context';
-import { getEmailLinkPreview } from './email-links';
 import { RATE_LIMITS } from '../rate-limit';
+import { getEmailLinkPreview } from './email-links';
 
 const { db, ctx } = setupTestContext();
 

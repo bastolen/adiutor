@@ -8,9 +8,9 @@ import { describe, expect, it } from 'vitest';
 import { account, auditEvent, rateLimitBucket, staffSettings, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
+import { createUser, setupTestContext } from '../../tests/integration/helpers';
 import { hitRateLimit } from './rate-limit';
 import { isSetUp, isWebSetupOpen, setUpPlatform } from './setup';
-import { createUser, setupTestContext } from '../../tests/integration/helpers';
 
 const { db } = setupTestContext();
 

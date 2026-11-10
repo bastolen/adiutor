@@ -7,10 +7,6 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { env } from '@/lib/env';
 
-import { beforeAuthRequest } from './before-request';
-import { releaseSignInChangeLockOf } from './change-lock';
-import type { AuthGuardContext } from './paths';
-import { request, refusedWith, hits, db, signedIn, outcomeOf } from './test-helpers';
 import {
   createUser,
   enableTwoFactor,
@@ -18,6 +14,10 @@ import {
   staffActor,
 } from '../../../../tests/integration/helpers';
 import { loadMfaContext } from '../mfa-state';
+import { beforeAuthRequest } from './before-request';
+import { releaseSignInChangeLockOf } from './change-lock';
+import type { AuthGuardContext } from './paths';
+import { request, refusedWith, hits, db, signedIn, outcomeOf } from './test-helpers';
 
 vi.mock('@/db', async (importOriginal) =>
   (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),

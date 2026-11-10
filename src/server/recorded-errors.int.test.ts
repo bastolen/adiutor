@@ -9,9 +9,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { appError, signInError } from '@/db/schema';
 import { REFERENCE_ALPHABET } from '@/lib/error-reference';
 
+import { createStaffSettings, setupTestContext, staffActor } from '../../tests/integration/helpers';
 import type { Actor } from './actor';
 import { findErrorReference, listRecentErrors } from './recorded-errors';
-import { createStaffSettings, setupTestContext, staffActor } from '../../tests/integration/helpers';
 
 const { ctx, db } = setupTestContext();
 

@@ -8,6 +8,11 @@ import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Client } from 'pg';
 
+import * as schema from '../../src/db/schema';
+import type { CompanyRole, PlatformRole } from '../../src/lib/authz/roles';
+import { firstRow } from '../../src/lib/defined';
+import { generateToken, hashToken } from '../../src/lib/sign-in/tokens';
+import emptyDatabase from '../../tests/database/empty-database';
 import {
   CLIENT_WATCHER,
   CLOSED_COMPANY_ADMIN,
@@ -44,11 +49,6 @@ import {
   SESSIONS_CLIENT,
   UNVERIFIED_USER,
 } from './fixtures';
-import * as schema from '../../src/db/schema';
-import type { CompanyRole, PlatformRole } from '../../src/lib/authz/roles';
-import { firstRow } from '../../src/lib/defined';
-import { generateToken, hashToken } from '../../src/lib/sign-in/tokens';
-import emptyDatabase from '../../tests/database/empty-database';
 
 /**
  * Empties the test database, as on a fresh install: every user, company, the

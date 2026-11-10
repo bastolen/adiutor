@@ -9,9 +9,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { account, company, invitation, membership, rateLimitBucket, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
-import { acceptInvitation, acceptInvitationWithNewAccount, getInvitationPreview } from './accept';
-import { inviteByEmail } from './send';
-import { db, ctx, sent } from './test-helpers';
 import {
   actorFor,
   createCompany,
@@ -25,6 +22,9 @@ import {
 import type { Actor } from '../../actor';
 import { hitRateLimit } from '../../rate-limit';
 import { claimInviteLink, createInviteLink } from '../invite-links';
+import { acceptInvitation, acceptInvitationWithNewAccount, getInvitationPreview } from './accept';
+import { inviteByEmail } from './send';
+import { db, ctx, sent } from './test-helpers';
 
 /** Shared fixtures, recreated before each test. */
 let testCompany: Awaited<ReturnType<typeof createCompany>>;

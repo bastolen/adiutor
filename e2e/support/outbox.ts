@@ -6,8 +6,8 @@ import { join } from 'node:path';
 
 import { expect } from '@playwright/test';
 
-import { OUTBOX_DIR } from './fixtures';
 import { defined } from '../../src/lib/defined';
+import { OUTBOX_DIR } from './fixtures';
 
 /** An email as written to the outbox. */
 export interface OutboxEmail {

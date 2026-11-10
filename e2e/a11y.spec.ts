@@ -9,6 +9,19 @@ import { randomUUID } from 'node:crypto';
 
 import { type BrowserContext, type Page } from '@playwright/test';
 
+import { defined } from '../src/lib/defined';
+import { LAST_USED_LOGIN_METHOD_COOKIE } from '../src/lib/sign-in/auth-cookies';
+import {
+  PROVIDER_LINKED_COOKIE,
+  PROVIDER_STEP_UP_COOKIE,
+  providerLinkedCookieValue,
+  providerStepUpCookieValue,
+} from '../src/lib/sign-in/oauth-providers';
+import {
+  REVERIFY_WRONG_ACCOUNT,
+  reverifyWrongAccountMessage,
+} from '../src/lib/sign-in/sign-in-refusals';
+import getTestDatabaseUrl from '../tests/database/database-url';
 import expectAccessible from './support/axe';
 import { findCompanyId, storeInvitation, storeInviteLink, storeSignInLink } from './support/db';
 import {
@@ -26,19 +39,6 @@ import {
   useOwnClientIp,
 } from './support/helpers';
 import { expect, test } from './support/test';
-import { defined } from '../src/lib/defined';
-import { LAST_USED_LOGIN_METHOD_COOKIE } from '../src/lib/sign-in/auth-cookies';
-import {
-  PROVIDER_LINKED_COOKIE,
-  PROVIDER_STEP_UP_COOKIE,
-  providerLinkedCookieValue,
-  providerStepUpCookieValue,
-} from '../src/lib/sign-in/oauth-providers';
-import {
-  REVERIFY_WRONG_ACCOUNT,
-  reverifyWrongAccountMessage,
-} from '../src/lib/sign-in/sign-in-refusals';
-import getTestDatabaseUrl from '../tests/database/database-url';
 
 /** Pages that work signed out. */
 const PUBLIC_PATHS = [

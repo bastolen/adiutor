@@ -2,8 +2,8 @@
  * @file An account's sign-in setup and whether it counts as protected by MFA,
  * including provider MFA from the providers configured here.
  */
-import { type MfaRole, requiresMfa } from './requirement';
 import { MFA_PROVIDERS, type MfaProvider } from '../../sign-in/oauth-providers';
+import { type MfaRole, requiresMfa } from './requirement';
 
 /** An account's sign-in setup, as far as MFA is concerned. */
 export interface MfaState {

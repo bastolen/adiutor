@@ -5,8 +5,8 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
-import EmailLanguageField from './email-language-field';
 import renderInLocale from '../../../tests/i18n/render';
+import EmailLanguageField from './email-language-field';
 
 describe('EmailLanguageField', () => {
   it('starts on Default when the form offers it, naming the language it stands for', async () => {

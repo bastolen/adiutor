@@ -8,6 +8,7 @@
  */
 import { type Page } from '@playwright/test';
 
+import { defined } from '../src/lib/defined';
 import {
   CLIENT_WATCHER,
   NAMELESS_SUPPORT,
@@ -20,7 +21,6 @@ import {
 } from './support/fixtures';
 import { adminStorageState, type StorageState } from './support/helpers';
 import { expect, test } from './support/test';
-import { defined } from '../src/lib/defined';
 
 /** Sign-in cookies of the staff Admin. */
 let adminState: StorageState;

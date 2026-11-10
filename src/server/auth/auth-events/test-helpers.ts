@@ -14,8 +14,8 @@ import { firstRow } from '@/lib/defined';
 import { sendEmail } from '@/lib/email';
 import { LOCALE_COOKIE } from '@/lib/i18n/locales';
 
-import type { AuthHookContext } from './hook-context';
 import { setupTestContext } from '../../../../tests/integration/helpers';
+import type { AuthHookContext } from './hook-context';
 
 /**
  * The test database context these tests share. Each test file imports this

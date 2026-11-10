@@ -23,6 +23,17 @@ import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { defined, firstRow } from '@/lib/defined';
 import { hashToken } from '@/lib/sign-in/tokens';
 
+import {
+  addMember as addMembership,
+  createCompany,
+  createStaffSettings,
+  createUser,
+  inSequence,
+  memberActor,
+  setupTestContext,
+  staffActor,
+  tokenFrom,
+} from '../../tests/integration/helpers';
 import type { Actor } from './actor';
 import { listAuditEvents, listAuditLog } from './audit';
 import { ServiceError } from './errors';
@@ -75,17 +86,6 @@ import {
 import { registerUser } from './people/user-registration';
 import { listUsers } from './people/users';
 import { findErrorReference, listRecentErrors } from './recorded-errors';
-import {
-  addMember as addMembership,
-  createCompany,
-  createStaffSettings,
-  createUser,
-  inSequence,
-  memberActor,
-  setupTestContext,
-  staffActor,
-  tokenFrom,
-} from '../../tests/integration/helpers';
 
 const { ctx, db, sent } = setupTestContext();
 

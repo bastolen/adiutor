@@ -56,7 +56,6 @@ import { parseArgs } from 'node:util';
 import { hashPassword, symmetricEncrypt } from 'better-auth/crypto';
 import { eq } from 'drizzle-orm';
 
-import { sampleErrors } from './sample-errors';
 import { db } from '../src/db';
 import * as schema from '../src/db/schema';
 import { type InvitationEmailProps, invitationEmail } from '../src/emails/invitation';
@@ -72,6 +71,7 @@ import { encryptionKey, parseAuthSecrets } from '../src/lib/sign-in/auth-secrets
 import { generateToken, hashToken } from '../src/lib/sign-in/tokens';
 import { emailSchema } from '../src/lib/validation';
 import emptyDatabase from '../tests/database/empty-database';
+import { sampleErrors } from './sample-errors';
 
 /** Password of every seeded account that has one (local test value). */
 const PASSWORD = 'adiutor-test-password';

@@ -8,13 +8,13 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { auditEvent, session, verification } from '@/db/schema';
 
-import { revokeAllSessions, revokeOtherOwnSessions, revokeOwnSession } from './sessions';
 import {
   actorFor,
   createSession,
   createUser,
   setupTestContext,
 } from '../../../tests/integration/helpers';
+import { revokeAllSessions, revokeOtherOwnSessions, revokeOwnSession } from './sessions';
 
 const { ctx, db, sent } = setupTestContext();
 
