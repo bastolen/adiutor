@@ -15,7 +15,7 @@ import Pagination from '@/components/ui/pagination';
 import RowAction from '@/components/ui/row-action';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import SortMenu from '@/components/ui/sort-menu';
-import { Table, Td, Th, Tr } from '@/components/ui/table';
+import { ownRowCell, Table, Td, Th, Tr } from '@/components/ui/table';
 import TextLink from '@/components/ui/text-link';
 import { PLATFORM_ROLES, roleOptions } from '@/lib/authz/roles';
 import displayName from '@/lib/display-name';
@@ -38,6 +38,7 @@ import InviteForm from '../../_people/invite-form';
 import InviteLinksCard from '../../_people/invite-links-card';
 import RoleSelect from '../../_people/role-select';
 import { changeStaffRoleAction, removeFromStaffAction } from '../../_people/staff-actions';
+import YouBadge from '../../_people/you-badge';
 import DefaultLanguageForm from './default-language-form';
 import StaffNameForm from './staff-name-form';
 
@@ -161,7 +162,7 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
                 );
                 return (
                   <Tr key={member.userId}>
-                    <Td>
+                    <Td className={isSelf ? ownRowCell : undefined}>
                       <div className="flex items-center gap-3">
                         <Avatar name={shownName} size="sm" brand />
                         <div className="flex min-w-0 flex-col">
@@ -172,11 +173,7 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
                             >
                               {shownName}
                             </TextLink>
-                            {isSelf && (
-                              <span className="text-sm text-muted-foreground">
-                                {t('people.you')}
-                              </span>
-                            )}
+                            {isSelf && <YouBadge />}
                             {member.deactivatedAt && (
                               <Badge tone="danger">{t('people.deactivated')}</Badge>
                             )}

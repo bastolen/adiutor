@@ -170,6 +170,14 @@ test('an Admin leaves the company from their own row, and lands on the dashboard
   await addMembership(getTestDatabaseUrl(), companyId, PLATFORM_MANAGER.email, 'admin');
 
   await page.goto(`/companies/${companyId}/members`);
+  // Their own row says so; the other Admin's doesn't.
+  const you = page.getByText('You', { exact: true });
+  await expect(
+    page.getByRole('row').filter({ hasText: 'Leaver' }).filter({ has: you }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('row').filter({ hasText: PLATFORM_MANAGER.email }).filter({ has: you }),
+  ).toHaveCount(0);
   await page.getByRole('button', { name: `Leave ${companyName}` }).click();
   const dialog = page.getByRole('alertdialog', { name: `Leave ${companyName}?` });
   await expect(dialog).toContainText(`You'll no longer be a member of ${companyName}.`);

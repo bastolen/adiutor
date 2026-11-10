@@ -71,6 +71,13 @@ export function Td({ className = '', ...props }: ComponentProps<'td'>) {
 }
 
 /**
+ * Classes for the first cell of the viewer's own row in a table of people: a
+ * 3px bar in the accent colour on its left edge, so they can spot themselves
+ * while scrolling. Decorative: the row also says it in words (`YouBadge`).
+ */
+export const ownRowCell = 'shadow-[inset_3px_0_0_0_var(--color-highlight)]';
+
+/**
  * A body row with a divider below it and a subtle hover.
  *
  * @param props - Row props.

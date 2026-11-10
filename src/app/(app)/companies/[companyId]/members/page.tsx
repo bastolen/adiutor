@@ -16,7 +16,7 @@ import Pagination from '@/components/ui/pagination';
 import RowAction from '@/components/ui/row-action';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import SortMenu from '@/components/ui/sort-menu';
-import { Table, Td, Th, Tr } from '@/components/ui/table';
+import { ownRowCell, Table, Td, Th, Tr } from '@/components/ui/table';
 import { COMPANY_ROLES, roleOptions } from '@/lib/authz/roles';
 import displayName from '@/lib/display-name';
 import ClientMessages from '@/lib/i18n/client-messages';
@@ -38,6 +38,7 @@ import InviteForm from '../../../_people/invite-form';
 import InviteLinksCard from '../../../_people/invite-links-card';
 import { changeRoleAction, removeMemberAction } from '../../../_people/member-actions';
 import RoleSelect from '../../../_people/role-select';
+import YouBadge from '../../../_people/you-badge';
 
 /**
  * Page metadata: "Members · <company> · Adiutor" (the company layout adds the
@@ -181,18 +182,13 @@ async function Members({
                   );
                   return (
                     <Tr key={member.id}>
-                      <Td>
+                      <Td className={isSelf ? ownRowCell : undefined}>
                         <div className="flex items-center gap-3">
                           <Avatar name={shownName} size="sm" />
                           <div className="flex min-w-0 flex-col">
-                            <span className="font-medium wrap-anywhere">
-                              {shownName}
-                              {isSelf && (
-                                <span className="font-normal text-muted-foreground">
-                                  {' '}
-                                  {t('you')}
-                                </span>
-                              )}
+                            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <span className="font-medium wrap-anywhere">{shownName}</span>
+                              {isSelf && <YouBadge />}
                             </span>
                             {/* The address, at every width, unless it is the name. */}
                             {shownName !== member.email && (

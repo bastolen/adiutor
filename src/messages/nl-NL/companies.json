@@ -16,7 +16,6 @@
         "activity": "Activiteit",
         "actions": "Acties"
       },
-      "you": "(jij)",
       "changeOwnRole": {
         "title": "Je eigen rol wijzigen naar {role}?",
         "description": "Alleen beheerders beheren de leden van {company}. Een andere beheerder kan je weer beheerder maken.",

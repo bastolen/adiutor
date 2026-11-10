@@ -175,7 +175,7 @@ test.describe('signed in', () => {
     await page.goto('/admin/staff');
     const role = page
       .getByRole('row')
-      .filter({ hasText: '(you)' })
+      .filter({ has: page.getByText('You', { exact: true }) })
       .getByRole('combobox', { name: /^Role of / });
 
     await openWithEnter(role);

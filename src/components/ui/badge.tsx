@@ -19,6 +19,11 @@ const toneClasses = {
   danger: 'border-transparent bg-danger-soft text-danger',
   /** Brand emphasis, e.g. the staff. */
   brand: 'border-transparent bg-primary text-primary-foreground',
+  /**
+   * Outlined in the accent colour links use, for what's about the viewer,
+   * e.g. "You" on their own row in a table of people.
+   */
+  accent: 'border-highlight bg-transparent text-highlight',
 } as const;
 
 /** A badge tone. */

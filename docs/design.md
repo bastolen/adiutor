@@ -21,7 +21,8 @@ keyboard support.
   menu); ArrowLeft and ArrowRight also move within it. `MenuRadioLinkItem` is a radio item that is
   a link (the sorts in `SortMenu`). A `Badge`'s tone says what kind of status it is: `success` for
   active or verified, `warning` for something that needs attention (expired, not verified),
-  `danger` for deactivated or revoked. A status keeps one tone on every screen, which
+  `danger` for deactivated or revoked, and `accent` (outlined in the link colour) for what's about
+  the viewer, like "You" on their own row. A status keeps one tone on every screen, which
   `src/components/ui/badge-tones.test.ts` checks (it reads a badge whose label is one message,
   `{t('deactivated')}`, as its English text). Icons come from
   [Lucide](https://lucide.dev) and are hidden from screen readers; icon-only buttons have an
@@ -36,6 +37,10 @@ keyboard support.
     companies are sorted by name until another order is chosen; invitations, invite links and
     devices newest first. People tables (users, staff, members) sort by name, email, last
     active and joined.
+  - **Your own row:** in people tables your row has a "You" badge after your name (`YouBadge` in
+    `src/app/(app)/_people/you-badge.tsx`, in the `accent` tone) and a bar in the accent colour
+    on its left edge (`ownRowCell` in `src/components/ui/table.tsx`), so you can spot yourself
+    while scrolling. The bar is decorative: the badge says it in words.
   - **Pages:** 25, 50 or 100 rows per page, chosen in the table's footer (`Pagination`: "Showing
     26–50 of 132", Previous, the page numbers and Next). The footer only shows with more than 10
     rows.

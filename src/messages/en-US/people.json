@@ -23,6 +23,7 @@
       "signedIn": "Signed in",
       "actions": "Actions"
     },
+    "you": "You",
     "activity": {
       "lastActive": "<hidden>Last active: </hidden><time></time>",
       "lastActiveShort": "Last active <time></time>",

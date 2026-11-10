@@ -16,7 +16,6 @@
         "activity": "Activity",
         "actions": "Actions"
       },
-      "you": "(you)",
       "changeOwnRole": {
         "title": "Change your own role to {role}?",
         "description": "Only Admins manage {company}'s members. Another Admin can make you one again.",
