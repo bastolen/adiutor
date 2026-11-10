@@ -3,9 +3,12 @@
 # (.github/rulesets/main.json, "Protecting main" in docs/ci-and-releases.md), so jobs and shards
 # can change without touching the rules.
 #
-# Release Please's own pull requests, and the release commits merging them puts on main, only
-# change CHANGELOG.md, .release-please-manifest.json and the version in package.json. For those,
-# only the static checks run; the test jobs are skipped, which "CI passed" counts as passed.
+# The static checks always run. The test jobs only run for code that hasn't passed them yet: the
+# first job works out a fingerprint of everything the tests can depend on and skips them when a
+# passing run recorded that fingerprint ("Skipping the tests" in docs/ci-and-releases.md). So a
+# change to docs or repository settings, and Release Please's draft pull request, skip them when
+# main's code passed; a release pull request marked ready for review always runs every test.
+# Skipped jobs count as passed in "CI passed".
 #
 # Actions and images are pinned to exact commits and digests (with the
 # version in a comment), so a moved tag can't change what runs; Dependabot
@@ -16,6 +19,9 @@ on:
   push:
     branches: [main]
   pull_request:
+    # The default types, plus ready_for_review: marking the release pull request ready starts the
+    # full test run a release needs.
+    types: [opened, synchronize, reopened, ready_for_review]
 
 # Cancel an older run when new commits are pushed to the same branch or PR.
 concurrency:
@@ -35,40 +41,89 @@ env:
   BETTER_AUTH_URL: http://localhost:3000
 
 jobs:
-  # Whether the test jobs run: not for a release pull request (opened by the release app, from a
-  # branch in this repository) or the release commit it puts on main. Both conditions are needed
-  # for pull requests: a fork could name its branch `release-please--…`, but not its author.
-  # Only the maintainer merges into main, so a release commit's title can't be borrowed.
+  # Whether the test jobs run. They're skipped when this exact code already passed them: the
+  # fingerprint below covers every tracked file the tests can depend on, and "CI passed" records it
+  # in the Actions cache after a run where every test job passed. A release pull request that's
+  # ready for review (not a draft) always runs them: that's the run a release needs.
   scope:
     name: Decide what runs
     runs-on: ubuntu-latest
     timeout-minutes: 2
     outputs:
       tests: ${{ steps.decide.outputs.tests }}
+      fingerprint: ${{ steps.fingerprint.outputs.value }}
     steps:
+      # The code as it would land: on a pull request, GitHub's merge commit with main.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # A SHA-256 of every tracked file and its content, leaving out the files no test reads (docs,
+      # Markdown, the bots' and editors' settings, Release Please's files) and package.json's
+      # version, the only other thing a release changes. Workflows and local actions count, so a
+      # change to CI always runs the tests. "scheme" changes when this list does, so a record made
+      # under the old list can't skip a run.
+      - id: fingerprint
+        name: Fingerprint the code the tests depend on
+        run: |
+          {
+            echo 'scheme 1'
+            git ls-tree -r -z HEAD | while IFS= read -r -d '' entry; do
+              path="${entry#*$'\t'}"
+              case "$path" in
+                # Docs and every Markdown file (README, CHANGELOG, CLAUDE.md, the PR template, ...).
+                docs/* | *.md | LICENSE) continue ;;
+                # Repository settings for GitHub and the bots, which no test reads.
+                .github/ISSUE_TEMPLATE/* | .github/CODEOWNERS | .github/dependabot.yml) continue ;;
+                .github/rulesets/* | renovate.json5 | commitlint.config.mjs) continue ;;
+                # Editor and agent settings.
+                .vscode/* | .claude/*) continue ;;
+                # Release Please's version record and settings.
+                .release-please-manifest.json | release-please-config.json) continue ;;
+                # Counted without its version, which nothing in the app or its tests reads.
+                package.json)
+                  echo "package.json $(jq -S 'del(.version)' package.json | sha256sum | cut -d ' ' -f 1)"
+                  continue
+                  ;;
+              esac
+              echo "$entry"
+            done
+          } | sha256sum | cut -d ' ' -f 1 > fingerprint.txt
+          echo "value=$(cat fingerprint.txt)" >> "$GITHUB_OUTPUT"
+          echo "Fingerprint: $(cat fingerprint.txt)"
+      # Only looks: "CI passed" saves the record. A pull request can only read records saved on
+      # main or on that pull request, so nobody can skip the tests for others.
+      - id: passed
+        name: Look for a passing run of this code
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: tests-passed.txt
+          key: tests-passed-${{ steps.fingerprint.outputs.value }}
+          lookup-only: true
       # The event's values come in as environment variables, never pasted into the script, so a
-      # branch name or commit message can't run as code.
+      # branch name can't run as code. A release pull request is one the release app opened from a
+      # branch in this repository named release-please--...; this only ever adds tests, so a
+      # look-alike can't skip anything with it.
       - id: decide
+        name: Decide whether the tests run
         env:
           EVENT: ${{ github.event_name }}
           REPOSITORY: ${{ github.repository }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
           PR_BRANCH: ${{ github.head_ref }}
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
+          ALREADY_PASSED: ${{ steps.passed.outputs.cache-hit }}
         run: |
-          release=false
           if [[ "$EVENT" == pull_request && "$PR_AUTHOR" == 'adiutor-releases[bot]' \
-            && "$PR_REPOSITORY" == "$REPOSITORY" && "$PR_BRANCH" == release-please--* ]]; then
-            release=true
-          fi
-          if [[ "$EVENT" == push && "$COMMIT_MESSAGE" == 'chore(main): release '* ]]; then
-            release=true
-          fi
-          echo "Release pull request or commit: $release"
-          if [[ "$release" == true ]]; then
+            && "$PR_REPOSITORY" == "$REPOSITORY" && "$PR_BRANCH" == release-please--* \
+            && "$PR_DRAFT" == false ]]; then
+            echo "A release pull request ready for review: every test runs."
+            echo "tests=true" >> "$GITHUB_OUTPUT"
+          elif [[ "$ALREADY_PASSED" == true ]]; then
+            echo "This code already passed every test: the test jobs are skipped."
             echo "tests=false" >> "$GITHUB_OUTPUT"
           else
+            echo "No passing run of this code yet: every test runs."
             echo "tests=true" >> "$GITHUB_OUTPUT"
           fi
 
@@ -244,7 +299,9 @@ jobs:
           retention-days: 14
 
   # The one result protecting main requires: fails when any job failed or was cancelled, passes
-  # when each passed or was skipped (the test jobs for release pull requests and commits).
+  # when each passed or was skipped (the test jobs, for code that already passed them). When the
+  # test jobs ran and all passed, it records the code's fingerprint, so later runs of the same
+  # code (a docs change, the draft release pull request) can skip them.
   passed:
     name: CI passed
     if: ${{ always() }}
@@ -263,3 +320,16 @@ jobs:
               *) echo "A job ended as: $result"; exit 1 ;;
             esac
           done
+      # Only after a run where the tests ran: the previous step already failed if any job didn't
+      # pass, so here they all did.
+      - name: Note that this code passed every test
+        if: ${{ needs.scope.outputs.tests == 'true' }}
+        env:
+          FINGERPRINT: ${{ needs.scope.outputs.fingerprint }}
+        run: echo "$FINGERPRINT" > tests-passed.txt
+      - name: Record the passing run
+        if: ${{ needs.scope.outputs.tests == 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: tests-passed.txt
+          key: tests-passed-${{ needs.scope.outputs.fingerprint }}
