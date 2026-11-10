@@ -7,6 +7,9 @@
 # Runs on `pull_request` (a fork's PR gets a read-only token and no secrets),
 # again when the title is edited, and on every new commit, so it can be a
 # required check. It's its own workflow, so editing a title doesn't re-run CI.
+# An edit that leaves the title alone (Renovate rewrites its descriptions on
+# every update) skips the job: it starts no runner, and a skipped job counts
+# as passed for a required check.
 #
 # Actions are pinned to exact commits (version in a comment); Dependabot keeps
 # them up to date.
@@ -16,9 +19,11 @@ on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
 
-# Cancel an older check of the same pull request.
+# Cancel an older check of the same pull request. Edits that leave the title alone get a group of
+# their own: they skip the job, so they must never cancel a check that's still running (say, the
+# one for a pull request that was just opened).
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}${{ github.event.action == 'edited' && !github.event.changes.title && '-other-edit' || '' }}
   cancel-in-progress: true
 
 permissions:
@@ -27,6 +32,8 @@ permissions:
 jobs:
   title:
     name: Conventional Commits title
+    # Not for an edit of only the description or base branch: the title is the one already checked.
+    if: ${{ github.event.action != 'edited' || github.event.changes.title }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
