@@ -1,7 +1,8 @@
 /**
  * @file Accessibility scans of every page, in light and dark mode, against
  * the WCAG 2.2 A and AA rules, plus a reflow check on a narrow screen (for
- * signed-in pages also while they still show their loading placeholders). The
+ * signed-in pages also while they still show their loading placeholders) and
+ * a check that no field is small enough for phones to zoom in on. The
  * invitation and invite-link pages are scanned with real tokens (stored in
  * `beforeAll`), signed out and signed in. `/setup` is scanned in
  * `setup.spec.ts`, the only place the database is empty.
@@ -173,6 +174,33 @@ async function expectNoSidewaysScroll(page: Page): Promise<void> {
 }
 
 /**
+ * Checks that every field people type in has text of at least 16px: iOS
+ * Safari zooms the page in when a field with smaller text gets focus. Hidden
+ * fields and those kept from assistive technology (like the native select
+ * behind a Radix select) can't get focus, so they don't count.
+ *
+ * @param page - The browser page, loaded.
+ */
+async function expectFieldsDontZoom(page: Page): Promise<void> {
+  const smallFields = await page.evaluate(() => {
+    const notTyped = ['hidden', 'checkbox', 'radio', 'submit', 'button', 'reset', 'file', 'range'];
+    return [...document.querySelectorAll('input, textarea, select')]
+      .filter(
+        (field) =>
+          !notTyped.includes(field.getAttribute('type') ?? '') &&
+          field.getClientRects().length > 0 &&
+          field.closest('[aria-hidden="true"]') === null,
+      )
+      .map((field) => ({
+        field: field.getAttribute('name') ?? field.getAttribute('aria-label') ?? field.id,
+        fontSize: getComputedStyle(field).fontSize,
+      }))
+      .filter(({ fontSize }) => Number.parseFloat(fontSize) < 16);
+  });
+  expect(smallFields).toEqual([]);
+}
+
+/**
  * The sign-in page's button for the other way in, per language: the longest
  * label on the page, which gets the "Last used" badge after a sign-in by link.
  */
@@ -217,9 +245,10 @@ test.describe('on a 320px wide screen', () => {
   });
 
   PUBLIC_PATHS.forEach((path) => {
-    test(`${path} fits without sideways scrolling`, async ({ page }) => {
+    test(`${path} fits without sideways scrolling or zooming into its fields`, async ({ page }) => {
       await page.goto(path);
       await expectNoSidewaysScroll(page);
+      await expectFieldsDontZoom(page);
     });
   });
 
@@ -231,7 +260,9 @@ test.describe('on a 320px wide screen', () => {
   });
 
   APP_PATHS.forEach((path) => {
-    test(`${path} fits without sideways scrolling`, async ({ browser }) => {
+    test(`${path} fits without sideways scrolling or zooming into its fields`, async ({
+      browser,
+    }) => {
       const context = await browser.newContext({
         storageState: adminState,
         viewport: { width: 320, height: 640 },
@@ -239,6 +270,7 @@ test.describe('on a 320px wide screen', () => {
       const page = await context.newPage();
       await page.goto(resolvePath(path));
       await expectNoSidewaysScroll(page);
+      await expectFieldsDontZoom(page);
       await context.close();
     });
 

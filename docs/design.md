@@ -193,7 +193,9 @@ keyboard support.
   don't show errors themselves: a failed submit shows an `Alert` (`ResultAlert`) and moves focus
   to it, and in the signed-in app a toast too.
   Inline confirmations use `role="status"` and errors `role="alert"`, so screen readers announce
-  them.
+  them. Field text is 16px on every device (`fieldControl` in `src/components/ui/styles.ts`),
+  never smaller, because iOS Safari zooms the page in when a field with smaller text gets focus.
+  Don't work around that with `maximum-scale` in the viewport: it also blocks pinch-zoom.
 - **Page titles:** "Page · Adiutor", most specific part first. Next's route announcer reads the
   title after each client-side navigation (only when it changed), so pages that differ get
   different titles: a company's pages add the company ("Members · Adiutor Tests · Adiutor", the
@@ -215,7 +217,8 @@ Two end-to-end specs keep this true: `e2e/a11y.spec.ts` scans every page (and op
 dialogs and the mobile menu) with [axe](https://github.com/dequelabs/axe-core) against the WCAG 2.2
 A and AA rules in light and dark mode and checks that no page scrolls sideways on a 320px-wide
 screen, in every language (with the sign-in page's widest buttons, "Last used" badge included) and
-while signed-in pages still show their loading placeholders, and
+while signed-in pages still show their loading placeholders, and that no field's text is under 16px,
+and
 `e2e/keyboard.spec.ts` checks the skip link, menus, selects, dialogs, the mobile menu and
 cursors using only the keyboard.
 
