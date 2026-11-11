@@ -135,11 +135,12 @@ async function CompanyList({ searchParams }: { searchParams: Promise<SearchParam
                       <div className="flex items-center gap-3">
                         <Avatar name={company.name} size="sm" />
                         <div className="flex min-w-0 flex-col">
-                          {/* The link covers the whole row, so the row is one click target. */}
+                          {/* The link covers the whole row, so the row is one click target; on its own it's
+                            2px taller above and below too, like every text link (at least 24px). */}
                           <Link
                             href={`/companies/${company.slug}`}
                             className={cn(
-                              'rounded-sm font-medium wrap-anywhere text-foreground group-hover:underline group-hover:underline-offset-4 after:absolute after:inset-0',
+                              '-my-0.5 rounded-sm py-0.5 font-medium wrap-anywhere text-foreground group-hover:underline group-hover:underline-offset-4 after:absolute after:inset-0',
                               focusRing,
                             )}
                           >

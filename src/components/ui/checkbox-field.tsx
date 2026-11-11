@@ -19,7 +19,10 @@ type CheckboxFieldProps = Omit<ComponentProps<'input'>, 'type'> & {
 
 /**
  * A native checkbox with its label to the right. The whole label is
- * clickable, and the description is linked with `aria-describedby`.
+ * clickable, and the description is linked with `aria-describedby`. The box
+ * is 20px, level with the label's first line, and the label reaches 2px above
+ * and below its text, so box and label together are at least 24px to tap
+ * (WCAG 2.5.8) without moving anything.
  *
  * @param props - Checkbox props.
  * @param props.label - Label text.
@@ -46,14 +49,14 @@ export default function CheckboxField({
         type="checkbox"
         aria-describedby={description ? descriptionId : undefined}
         className={cn(
-          'mt-0.5 size-4 shrink-0 cursor-pointer rounded-sm border-border-strong accent-primary disabled:cursor-not-allowed',
+          'mt-px size-5 shrink-0 cursor-pointer rounded-sm border-border-strong accent-primary disabled:cursor-not-allowed',
           focusRing,
           className,
         )}
         {...props}
       />
       <div className="flex flex-col gap-0.5">
-        <label htmlFor={inputId} className="text-sm font-medium text-foreground">
+        <label htmlFor={inputId} className="-my-0.5 py-0.5 text-sm font-medium text-foreground">
           {label}
         </label>
         {description && (
