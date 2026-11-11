@@ -39,7 +39,6 @@ export default function AppLayout({ children }: LayoutProps<'/'>) {
       </Suspense>
       <main
         id="main"
-        tabIndex={-1}
         className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 outline-none sm:px-6 lg:px-10 lg:py-10"
       >
         {/* First in the content, so it's what the skip link and a screen reader reach first. */}

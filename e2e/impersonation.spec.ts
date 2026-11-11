@@ -70,6 +70,10 @@ test('a staff Admin signs in as a Manager, changes nothing, and goes back', asyn
   await expect(page.getByRole('button', { name: 'Save name' })).toBeDisabled();
   await expect(page.getByRole('textbox', { name: 'Name', exact: true })).toBeDisabled();
   await expect(page.getByRole('combobox', { name: 'Language' })).toBeDisabled();
+  // A click on the disabled field leaves focus where it was: if it went to the main content,
+  // Chrome would draw a text cursor in the field.
+  await page.getByRole('textbox', { name: 'Name', exact: true }).click({ force: true });
+  await expect(page.locator('main#main')).not.toBeFocused();
 
   // Back to the Admin's own account, on the card they started from.
   await banner.getByRole('button', { name: 'Back to my account' }).click();

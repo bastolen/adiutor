@@ -140,6 +140,11 @@ keyboard support.
   centered, with "Go to your dashboard" ("Go to sign in" for someone who isn't signed in) and a
   "Go back" button (`BackButton`, shown only when the tab has a previous page).
   Every page has a "Skip to main content" link, one `h1` and `header`/`nav`/`main` landmarks.
+  The skip link moves focus to `<main id="main">` from script (`focusMainContent` in
+  `src/components/ui/focus-fallback.ts`). The main content is focusable only then, until focus
+  leaves it: with a lasting `tabIndex={-1}`, a click in the content on something that can't take
+  focus, like a disabled field, would hand focus to it, and Chrome then draws a blinking text
+  cursor in the field.
 - **Errors:** when a page or server action fails unexpectedly, an error page takes the page's
   place, built like the 404 pages: "Something went wrong", "This page couldn't load. Try again, or
   go to your dashboard.", **Try again** (busy while the page loads again), **Go to your dashboard**
@@ -168,7 +173,8 @@ keyboard support.
   control that had focus (a removed row, "Make staff" becoming "Remove staff access", turning
   two-step verification off, a dismissed notice), focus moves to the heading of its card (card
   headings take focus from script, `tabIndex={-1}`) or, outside a card, to the main content
-  (`restoreFocusIfLost` in `src/components/ui/focus-fallback.ts`), never to `<body>`.
+  (`restoreFocusIfLost` in `src/components/ui/focus-fallback.ts`, which focuses it with
+  `focusMainContent`), never to `<body>`.
   - **Signed in as someone.** While a staff member is signed in as a user, the controls that change
     something render disabled, and the banner says changes are turned off (see
     [Signing in as a user](authentication.md#signing-in-as-a-user)). The banner mounts
