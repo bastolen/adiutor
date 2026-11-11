@@ -10,7 +10,7 @@ import RowAction from '@/components/ui/row-action';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import ToastOnArrival from '@/components/ui/toast-on-arrival';
 import ClientMessages from '@/lib/i18n/client-messages';
-import { type SearchParams, searchParam } from '@/lib/tables/search-params';
+import { type SearchParams, searchParam } from '@/lib/search-params';
 import { requireCompanyAccess } from '@/server/authz';
 import { companyPermissionMetadata } from '@/server/page-metadata';
 

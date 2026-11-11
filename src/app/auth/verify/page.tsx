@@ -32,8 +32,8 @@ import { FormSkeleton } from '@/components/ui/skeleton';
 import { needsRecentConfirmation } from '@/lib/authz/mfa';
 import ClientMessages from '@/lib/i18n/client-messages';
 import { getSafeRedirectPath } from '@/lib/redirect';
+import { type SearchParams, searchParam } from '@/lib/search-params';
 import { reverifyErrorText } from '@/lib/sign-in/auth-error-messages';
-import { type SearchParams, searchParam } from '@/lib/tables/search-params';
 import appContext from '@/server/app-context';
 import { getStepUpMethods } from '@/server/auth/security';
 import { getOptionalActor } from '@/server/authz';
@@ -76,7 +76,7 @@ async function StepUp({ searchParams }: { searchParams: Promise<SearchParams> })
   const forChange = searchParam(params.for) === 'change' || actor.sessionMfaVerified;
   // Only the providers configured here (`availableProviders`) are offered, and for a change only
   // the methods that open its window.
-  const methods = await getStepUpMethods(appContext.db, actor.id, actor.mfaRole, { forChange });
+  const methods = await getStepUpMethods(appContext, actor.id, actor.mfaRole, { forChange });
   // A different account than the user's own confirmed one names the provider, and never says
   // whether an address has an account (`reverifyErrorText`).
   const initialError = reverifyErrorText(

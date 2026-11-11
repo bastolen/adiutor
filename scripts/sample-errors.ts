@@ -9,7 +9,7 @@
  */
 import type * as schema from '../src/db/schema';
 import { referenceFromDigest } from '../src/lib/error-reference';
-import { createReference } from '../src/server/auth/sign-in-errors';
+import { createReference } from '../src/server/error-reference';
 
 /** An hour in milliseconds. */
 const HOUR = 60 * 60 * 1000;

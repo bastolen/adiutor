@@ -22,8 +22,8 @@ import {
 } from '@/lib/input-rules';
 import { redactLogValue } from '@/lib/log-redaction';
 
-import { createReference } from './auth/sign-in-errors';
 import type { ServiceContext } from './context';
+import { createReference } from './error-reference';
 import { hitRateLimit, RATE_LIMITS } from './rate-limit';
 
 /** How many days stored errors are kept (`cleanUp` in `jobs.ts` deletes older ones). */

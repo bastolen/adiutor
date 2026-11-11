@@ -1,27 +1,10 @@
 /**
- * @file Tests for the references and error codes of sign-in errors (storing
+ * @file Tests for the error codes of sign-in errors (storing
  * them is covered by the integration tests).
  */
 import { describe, expect, it } from 'vitest';
 
-import { cleanErrorCode, createReference, REFERENCE_ALPHABET } from './sign-in-errors';
-
-describe('createReference', () => {
-  it('makes two groups of four characters that are easy to read out', () => {
-    const references = Array.from({ length: 200 }, () => createReference());
-
-    references.forEach((reference) => {
-      expect(reference).toMatch(/^[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$/);
-    });
-    expect(new Set(references).size).toBeGreaterThan(195);
-  });
-
-  it('leaves out characters that look alike', () => {
-    ['0', 'O', '1', 'I', 'L'].forEach((character) => {
-      expect(REFERENCE_ALPHABET).not.toContain(character);
-    });
-  });
-});
+import { cleanErrorCode } from './sign-in-errors';
 
 describe('cleanErrorCode', () => {
   it("keeps Better Auth's codes", () => {

@@ -5,7 +5,6 @@
  */
 import { asc, eq } from 'drizzle-orm';
 
-import type { Database } from '@/db';
 import { passkey } from '@/db/schema';
 import {
   type MfaRole,
@@ -18,6 +17,7 @@ import {
 import { availableProviders } from '@/lib/sign-in/providers';
 
 import type { Actor } from '../actor';
+import type { ServiceContext } from '../context';
 import { loadMfaStates } from './mfa-state';
 
 /** A passkey as shown on the Security page. */
@@ -49,17 +49,17 @@ export interface SecurityOverview {
  * from the actor, which loaded it in this request (`loadActor`), so only
  * their passkeys are queried here.
  *
- * @param db - Database client.
+ * @param ctx - Service context.
  * @param actor - The signed-in user.
  * @param actor.id - Their ID.
  * @param actor.mfaState - Their sign-in setup, as loaded with them.
  * @returns Their passkeys and sign-in setup.
  */
 export async function getSecurityOverview(
-  db: Database,
+  ctx: Pick<ServiceContext, 'db'>,
   actor: Pick<Actor, 'id' | 'mfaState'>,
 ): Promise<SecurityOverview> {
-  const passkeys = await db
+  const passkeys = await ctx.db
     .select({
       id: passkey.id,
       name: passkey.name,
@@ -86,7 +86,7 @@ export async function getSecurityOverview(
  * are offered (`windowOpeningMethods`): not GitHub next to a passkey or an
  * authenticator app, where it would confirm the session but allow no change.
  *
- * @param db - Database client.
+ * @param ctx - Service context.
  * @param userId - The signed-in user's ID.
  * @param mfaRole - Which MFA rules apply to them (see `mfaRoleOf`), or `null`.
  * @param options - Options.
@@ -94,12 +94,12 @@ export async function getSecurityOverview(
  * @returns The available methods.
  */
 export async function getStepUpMethods(
-  db: Database,
+  ctx: Pick<ServiceContext, 'db'>,
   userId: string,
   mfaRole: MfaRole | null,
   { forChange = false }: { forChange?: boolean } = {},
 ): Promise<StepUpMethods> {
-  const state = (await loadMfaStates(db, [userId])).get(userId);
+  const state = (await loadMfaStates(ctx.db, [userId])).get(userId);
   if (!state) {
     return NO_STEP_UP_METHODS;
   }

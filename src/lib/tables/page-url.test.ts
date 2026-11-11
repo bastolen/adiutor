@@ -8,9 +8,9 @@ import { describe, expect, it } from 'vitest';
 
 import { defined } from '@/lib/defined';
 import translator from '@/lib/i18n/translator';
+import type { SearchParams } from '@/lib/search-params';
 
 import { createPageUrl, type TableLinks } from './page-url';
-import type { SearchParams } from './search-params';
 import {
   DEFAULT_PAGE_SIZE,
   type PageSize,

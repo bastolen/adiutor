@@ -5,7 +5,9 @@ The folders of the repository and what belongs in each. Back to the [documentati
 - `src/components/ui/`: the component library (see
   [Design and accessibility](design.md#design-and-accessibility)); `src/components/layout/` has the app and
   auth layouts, and `src/components/auth/` the pieces the sign-in and account screens share (the code
-  field `CodeField`, the recent-confirmation provider, notices).
+  field `CodeField`, the recent-confirmation provider, notices). A server action only a shared
+  component uses sits next to it (`src/components/layout/language-action.ts` for the language menu),
+  not in `src/app/`.
 - `src/app/`: the routes. Components only one route uses sit next to its page (e.g. the user detail
   page's `*-card.tsx`); what several signed-in pages share is in `src/app/(app)/_people/`. A
   company's pages and the account pages have a `layout.tsx` with their header and tabs (see
@@ -32,15 +34,15 @@ The folders of the repository and what belongs in each. Back to the [documentati
     `invitations/` has one file per flow: the shared rules, the lock, creating the record, sending,
     managing, accepting, and revoking when someone loses access.
 - `src/lib/`: code shared by the server and the browser. General helpers (`env`, `format`,
-  `validation`, ...) and `auth.ts` sit at its root; the rest is grouped by topic. `validation.ts`
+  `search-params`, `validation`, ...) and `auth.ts` sit at its root; the rest is grouped by topic. `validation.ts`
   (zod schemas) is for the server; the limits client components need (`MIN_PASSWORD_LENGTH`,
   `PASSKEY_NAME_MAX_LENGTH`, `MAX_BULK_INVITES`, `slugify`) are in the zod-free `input-rules.ts`
   (see "Browser bundle" in [Code style](code-style.md)).
-  - `src/lib/sign-in/`: the auth client (`load-auth-client.ts` loads it when first needed, outside
+  - `src/lib/sign-in/`: the auth client, the URLs of the code and step-up pages (`load-auth-client.ts` loads it when first needed, outside
     the sign-in pages), the code check (`verify-code.ts`), cookies, endpoints,
     secrets, OAuth providers, sign-in refusals, tokens and email links. It isn't called `auth/` because `src/lib/auth.ts` is the
     Better Auth configuration.
-  - `src/lib/tables/`: table state, the table definitions and search parameters.
+  - `src/lib/tables/`: table state, the table definitions and the page links built from them.
   - `src/lib/i18n/`: the languages and the request's language, the catalogue loader, next-intl's
     request configuration, the translator for code outside React, and the providers that pass
     messages to client components (see [Languages](i18n.md)).

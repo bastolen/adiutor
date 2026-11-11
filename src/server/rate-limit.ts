@@ -7,7 +7,6 @@ import { and, eq, gt, sql } from 'drizzle-orm';
 import type { DatabaseOrTransaction } from '@/db';
 import { rateLimitBucket } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
-import { normalizeEmail } from '@/lib/email-address';
 
 import type { ServiceContext } from './context';
 import { ServiceError } from './errors';
@@ -162,33 +161,6 @@ export async function releaseRateLimitHit(
  */
 export async function resetRateLimit(conn: DatabaseOrTransaction, key: string): Promise<void> {
   await conn.delete(rateLimitBucket).where(eq(rateLimitBucket.key, key));
-}
-
-/**
- * The key counting wrong passwords typed for an address (the per-address
- * limit in `src/server/auth/auth-guards/`). Stored: changing it resets live
- * counts.
- *
- * @param email - The address, as typed.
- * @returns The key, for the trimmed, lower-cased address.
- */
-export function failedSignInsKey(email: string): string {
-  return `sign-in-failed:email:${normalizeEmail(email) ?? ''}`;
-}
-
-/**
- * Lifts the pause on password sign-in after wrong passwords for an address,
- * once someone proved they control its inbox (a completed password reset, an
- * accepted invitation) or on first-run setup, which just chose its password.
- *
- * @param conn - Database client or transaction.
- * @param email - The address.
- */
-export async function clearFailedSignIns(
-  conn: DatabaseOrTransaction,
-  email: string,
-): Promise<void> {
-  await resetRateLimit(conn, failedSignInsKey(email));
 }
 
 /**

@@ -13,7 +13,7 @@ import {
   memberActor,
   staffActor,
 } from '../../../../tests/integration/helpers';
-import { clearFailedSignIns } from '../../rate-limit';
+import { clearFailedSignIns } from '../failed-sign-ins';
 import {
   countFailedSignIn,
   endEmailCodeCooldown,

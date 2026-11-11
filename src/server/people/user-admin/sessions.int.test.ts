@@ -45,11 +45,11 @@ describe('which sessions count as MFA verified', () => {
 
   it('decides it with the MFA role listUserSessions is given', async () => {
     // An email code doesn't count for the Admin of an active company, but does without a role.
-    expect(byBrowser(await listUserSessions(db, anna, 'company_admin'))).toEqual({
+    expect(byBrowser(await listUserSessions({ db }, anna, 'company_admin'))).toEqual({
       Firefox: false,
       Safari: true,
     });
-    expect(byBrowser(await listUserSessions(db, anna, null))).toEqual({
+    expect(byBrowser(await listUserSessions({ db }, anna, null))).toEqual({
       Firefox: true,
       Safari: true,
     });
@@ -89,7 +89,7 @@ describe('listUserSessions sorting and paging', () => {
       userAgent: 'Browser other',
     });
 
-    const listed = await listUserSessions(db, jane, null);
+    const listed = await listUserSessions({ db }, jane, null);
 
     expect(listed).toMatchObject({ total: 3, page: 1, size: 25 });
     expect(listed.items.map((found) => found.userAgent)).toEqual([
@@ -108,7 +108,7 @@ describe('listUserSessions sorting and paging', () => {
      * @returns The browsers, in order.
      */
     const agents = async (options?: Parameters<typeof listUserSessions>[3]) =>
-      (await listUserSessions(db, jane, null, options)).items.map((found) => found.userAgent);
+      (await listUserSessions({ db }, jane, null, options)).items.map((found) => found.userAgent);
 
     const newestFirst = ['Browser 04', 'Browser 03', 'Browser 02', 'Browser 01'];
     expect(await agents()).toEqual(newestFirst);
@@ -124,13 +124,13 @@ describe('listUserSessions sorting and paging', () => {
       expiresAt: new Date(Date.now() - 1000),
     });
 
-    const first = await listUserSessions(db, jane, null);
+    const first = await listUserSessions({ db }, jane, null);
     expect(first).toMatchObject({ total: 30, page: 1, size: 25 });
     expect(first.items.map((found) => found.userAgent)).toEqual(
       Array.from({ length: 25 }, (_, index) => `Browser ${String(30 - index).padStart(2, '0')}`),
     );
 
-    const second = await listUserSessions(db, jane, null, { page: 2 });
+    const second = await listUserSessions({ db }, jane, null, { page: 2 });
     expect(second).toMatchObject({ total: 30, page: 2 });
     expect(second.items.map((found) => found.userAgent)).toEqual([
       'Browser 05',
@@ -140,11 +140,11 @@ describe('listUserSessions sorting and paging', () => {
       'Browser 01',
     ]);
 
-    const past = await listUserSessions(db, jane, null, { page: 99 });
+    const past = await listUserSessions({ db }, jane, null, { page: 99 });
     expect(past.page).toBe(2);
     expect(past.items.map((found) => found.id)).toEqual(second.items.map((found) => found.id));
 
-    const fifty = await listUserSessions(db, jane, null, { size: 50 });
+    const fifty = await listUserSessions({ db }, jane, null, { size: 50 });
     expect(fifty).toMatchObject({ total: 30, page: 1, size: 50 });
     expect(fifty.items).toHaveLength(30);
   });

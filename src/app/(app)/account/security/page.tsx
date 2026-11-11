@@ -26,11 +26,11 @@ import {
   mustSetUpMfa,
 } from '@/lib/authz/mfa';
 import ClientMessages from '@/lib/i18n/client-messages';
+import type { SearchParams } from '@/lib/search-params';
 import { confirmationWindow } from '@/lib/sign-in/confirm-url';
 import { providerList } from '@/lib/sign-in/oauth-providers';
 import { availableProviders, signInProviders } from '@/lib/sign-in/providers';
 import { createPageUrl } from '@/lib/tables/page-url';
-import type { SearchParams } from '@/lib/tables/search-params';
 import { parseTableState } from '@/lib/tables/table-state';
 import { DEVICES_TABLE } from '@/lib/tables/tables';
 import appContext from '@/server/app-context';
@@ -76,9 +76,9 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
   ]);
   const devicesRequested = parseTableState(DEVICES_TABLE, params);
   const [overview, connected, sessions, lastAdminOf] = await Promise.all([
-    getSecurityOverview(appContext.db, actor),
-    listConnectedProviders(appContext.db, actor.id),
-    listUserSessions(appContext.db, actor.id, actor.mfaRole, devicesRequested),
+    getSecurityOverview(appContext, actor),
+    listConnectedProviders(appContext, actor.id),
+    listUserSessions(appContext, actor.id, actor.mfaRole, devicesRequested),
     // Only shown: deactivating checks again, with locks, in its own transaction.
     soleAdminOf(appContext.db, actor.id, { lock: false }),
   ]);

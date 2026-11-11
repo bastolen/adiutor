@@ -7,6 +7,7 @@
 import type { useTranslations } from 'next-intl';
 
 import { withSection } from '@/lib/redirect';
+import { searchParam } from '@/lib/search-params';
 import { type AuthTranslator, signInErrorText } from '@/lib/sign-in/auth-error-messages';
 import { isOAuthProvider, PROVIDER_LABELS } from '@/lib/sign-in/oauth-providers';
 import {
@@ -14,7 +15,6 @@ import {
   SESSION_NOT_FRESH,
   SIGN_IN_CHANGE_IN_PROGRESS,
 } from '@/lib/sign-in/sign-in-refusals';
-import { searchParam } from '@/lib/tables/search-params';
 
 import { providerErrorMessage } from '../../sign-in-error/messages';
 

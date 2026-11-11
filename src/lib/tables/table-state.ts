@@ -17,8 +17,7 @@
  * its translator to `createPageUrl`.
  */
 import type { Messages } from '@/lib/i18n/messages';
-
-import { type SearchParams, searchParam } from './search-params';
+import { type SearchParams, searchParam } from '@/lib/search-params';
 
 /** The page sizes a viewer can choose from. */
 export const PAGE_SIZES = [25, 50, 100] as const;

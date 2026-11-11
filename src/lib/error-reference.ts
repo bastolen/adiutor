@@ -2,7 +2,7 @@
  * @file The short references error pages show, such as `7KQ2-M9XD`, for
  * users to send to an administrator, who finds the error under it in the
  * server log or the database. Sign-in errors draw a random one
- * (`createReference` in `src/server/auth/sign-in-errors.ts`); errors in the
+ * (`createReference` in `src/server/error-reference.ts`); errors in the
  * app take theirs from Next's `digest` ({@link referenceFromDigest}), so the
  * error page and the server arrive at the same reference on their own.
  *

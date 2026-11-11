@@ -115,6 +115,10 @@ In `src/lib/email.ts`, in order:
   never end up in logs
 - `EMAIL_OUTBOX_DIR` is refused in production unless `E2E_TESTS=1` (the end-to-end tests)
 
+A failed send is logged with `sendFailureOf` (also in `src/lib/email.ts`): only nodemailer's error code
+and the SMTP reply code, never the error itself, because a mail server's refusal can quote the
+address.
+
 Services render and send an email only once their transaction has committed, never while it holds
 its locks: a refused or rolled-back change sends nothing, and nothing waits on those locks while
 React renders. Invitations return a `renderEmail` function for that (`createInvitationRecord` in

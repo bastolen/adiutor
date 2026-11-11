@@ -32,7 +32,7 @@ export default async function setupAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const password = field(formData, 'password');
-    const result = await setUpPlatform(appContext.db, {
+    const result = await setUpPlatform(appContext, {
       staffName: field(formData, 'staffName'),
       defaultLocale: field(formData, 'defaultLocale'),
       adminLocale: await requestLocale(),

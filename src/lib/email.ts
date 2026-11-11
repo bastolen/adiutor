@@ -83,3 +83,16 @@ export async function sendEmail({ to, subject, text, html }: Email): Promise<voi
   // eslint-disable-next-line no-console -- Development fallback: print the email so its link can be opened.
   console.info(`\n📧 Email to ${to}\nSubject: ${subject}\n\n${text}\n`);
 }
+
+/**
+ * Picks nodemailer's error code and the SMTP reply code from a failed send,
+ * for log lines that must not hold personal data (a mail server's refusal can
+ * quote the address).
+ *
+ * @param error - What the send threw.
+ * @returns The codes, where there are any.
+ */
+export function sendFailureOf(error: unknown): { code: unknown; responseCode: unknown } {
+  const { code, responseCode } = (error ?? {}) as { code?: unknown; responseCode?: unknown };
+  return { code: code ?? null, responseCode: responseCode ?? null };
+}

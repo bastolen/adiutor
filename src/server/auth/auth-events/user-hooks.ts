@@ -7,7 +7,7 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { account, user } from '@/db/schema';
 
-import { clearFailedSignIns } from '../../rate-limit';
+import { clearFailedSignIns } from '../failed-sign-ins';
 import { databaseHookState } from '../request-state';
 import { forgetTrustedDevices } from '../trusted-devices';
 import { safely, audit, notify, type AuthHookContext } from './hook-context';

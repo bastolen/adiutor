@@ -2,12 +2,19 @@
  * @file End-to-end tests for registering users and managing them from the
  * user detail page: their company memberships, staff access, two-step
  * verification (reset) and account (delete), and what an Admin's own page
- * offers (their companies, but no staff access or account actions).
+ * offers (their companies, but no staff access or account actions), and who
+ * sees which provider account a user has.
  */
 import { type Page } from '@playwright/test';
 
-import { DELETE_CLIENT, PLATFORM_ADMIN, RESET_CLIENT } from './support/fixtures';
-import { freshAddress, openUser, signIn, signOut, toasts } from './support/helpers';
+import {
+  DELETE_CLIENT,
+  GITHUB_ONLY_MANAGER,
+  PLATFORM_ADMIN,
+  RESET_CLIENT,
+  SUPPORT_STAFF,
+} from './support/fixtures';
+import { freshAddress, openUser, signIn, signOut, toasts, useOwnClientIp } from './support/helpers';
 import { countEmails, linkIn, waitForEmail, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
 
@@ -162,4 +169,35 @@ test('an Admin resets two-step verification, deletes a user, and on their own pa
   // The reset user signs in with just their password now.
   await signOut(page);
   await signIn(page, RESET_CLIENT);
+});
+
+test('only staff Admins see which GitHub account a user signs in with', async ({
+  page,
+  browser,
+}) => {
+  await signIn(page, PLATFORM_ADMIN);
+  await page.goto(`/admin/users?q=${encodeURIComponent(GITHUB_ONLY_MANAGER.email)}`);
+  await page.getByRole('main').getByRole('link', { name: GITHUB_ONLY_MANAGER.name }).click();
+  await expect(page.getByRole('heading', { name: GITHUB_ONLY_MANAGER.name })).toBeVisible();
+  await expect(
+    page.getByRole('main').getByText(GITHUB_ONLY_MANAGER.githubLogin, { exact: true }),
+  ).toBeVisible();
+  const userPage = page.url();
+
+  // Support may view users, but not which account they have at a provider.
+  const context = await browser.newContext();
+  const support = await context.newPage();
+  await useOwnClientIp(support);
+  await signIn(support, SUPPORT_STAFF);
+  await support.goto(userPage);
+  await expect(support.getByRole('heading', { name: GITHUB_ONLY_MANAGER.name })).toBeVisible();
+  // The GitHub row says only "Connected" (next to its 2FA badge).
+  await expect(
+    support
+      .getByRole('main')
+      .getByRole('definition')
+      .filter({ hasText: /^Connected/ }),
+  ).toBeVisible();
+  await expect(support.getByText(GITHUB_ONLY_MANAGER.githubLogin)).toHaveCount(0);
+  await context.close();
 });

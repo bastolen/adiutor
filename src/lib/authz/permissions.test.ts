@@ -4,7 +4,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  getGlobalPermissions,
   getPermissions,
+  getStaffPermissionsInCompanies,
+  managePermission,
   mayRevealAccountExistence,
   mayUseInviteLinks,
   type Permission,
@@ -129,5 +132,36 @@ describe('mayUseInviteLinks', () => {
     expect(mayUseInviteLinks('manager')).toBe(true);
     expect(mayUseInviteLinks('finance')).toBe(false);
     expect(mayUseInviteLinks('support')).toBe(false);
+  });
+});
+
+describe('getGlobalPermissions', () => {
+  it.each(PLATFORM_ROLES)('gives %s what getPermissions gives outside any company', (role) => {
+    expect(sorted(getGlobalPermissions({ platformRole: role }))).toEqual(
+      sorted(getPermissions({ platformRole: role, companyRole: null, company: null })),
+    );
+  });
+
+  it('gives nothing without a staff role', () => {
+    expect(getGlobalPermissions({ platformRole: null }).size).toBe(0);
+  });
+});
+
+describe('getStaffPermissionsInCompanies', () => {
+  it.each(PLATFORM_ROLES)('gives %s what getPermissions gives in an active company', (role) => {
+    expect(sorted(getStaffPermissionsInCompanies({ platformRole: role }))).toEqual(
+      sorted(getPermissions({ platformRole: role, companyRole: null, company: activeClient })),
+    );
+  });
+
+  it('gives nothing without a staff role', () => {
+    expect(getStaffPermissionsInCompanies({ platformRole: null }).size).toBe(0);
+  });
+});
+
+describe('managePermission', () => {
+  it('is staff:manage for the staff and members:manage for a company', () => {
+    expect(managePermission(null)).toBe('staff:manage');
+    expect(managePermission('0190c3a8-0000-7000-8000-000000000001')).toBe('members:manage');
   });
 });

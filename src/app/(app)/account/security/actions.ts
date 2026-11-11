@@ -157,7 +157,7 @@ export async function disconnectAction(
     const actor = await getActor({ allowMissingMfa: true });
     const accountId = field(formData, 'accountId');
     const [connected, t, tAuth] = await Promise.all([
-      listConnectedProviders(appContext.db, actor.id),
+      listConnectedProviders(appContext, actor.id),
       getTranslations('account'),
       getTranslations('auth'),
     ]);

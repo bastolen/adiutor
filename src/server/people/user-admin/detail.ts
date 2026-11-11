@@ -102,7 +102,7 @@ async function loadAccountNames(
   db: Database,
   userId: string,
 ): Promise<Record<string, string | null>> {
-  const accounts = await listConnectedProviders(db, userId);
+  const accounts = await listConnectedProviders({ db }, userId);
   return Object.fromEntries(accounts.map(({ id, accountName }) => [id, accountName]));
 }
 

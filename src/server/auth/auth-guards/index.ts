@@ -70,7 +70,7 @@
  *   get around by changing its IP address). Since anyone can pause an
  *   address's password sign-in this way, the refusal points to the other ways
  *   in, the same for every address, and proving control of the inbox lifts
- *   it (`clearFailedSignIns` in `rate-limit.ts`): a completed password reset
+ *   it (`clearFailedSignIns` in `failed-sign-ins.ts`): a completed password reset
  *   or an accepted invitation.
  *
  * Wrong passwords and wrong step-up codes are counted before the check, and

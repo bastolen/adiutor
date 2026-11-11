@@ -26,7 +26,7 @@ describe('setUpPlatform', () => {
   it('names the staff and makes the first Admin', async () => {
     expect(await isSetUp(db)).toBe(false);
 
-    const result = await setUpPlatform(db, input);
+    const result = await setUpPlatform({ db }, input);
     expect(result).toMatchObject({ email: 'setup@adiutor.test', createdUser: true });
     expect(await isSetUp(db)).toBe(true);
     expect(await db.select({ name: staffSettings.name }).from(staffSettings)).toEqual([
@@ -59,22 +59,22 @@ describe('setUpPlatform', () => {
     const failed = { limit: 10, windowSeconds: 15 * 60 };
     await hitRateLimit({ db }, 'sign-in-failed:email:setup@adiutor.test', failed);
 
-    await setUpPlatform(db, input);
+    await setUpPlatform({ db }, input);
 
     expect(await db.select().from(rateLimitBucket)).toEqual([]);
   });
 
   it('is refused once set up', async () => {
-    await setUpPlatform(db, input);
+    await setUpPlatform({ db }, input);
     await expect(
-      setUpPlatform(db, { ...input, email: 'other@adiutor.test' }),
+      setUpPlatform({ db }, { ...input, email: 'other@adiutor.test' }),
     ).rejects.toMatchObject({ code: 'conflict' });
   });
 
   it('lets only one of two simultaneous setups succeed', async () => {
     const results = await Promise.allSettled([
-      setUpPlatform(db, input),
-      setUpPlatform(db, { ...input, email: 'other@adiutor.test' }),
+      setUpPlatform({ db }, input),
+      setUpPlatform({ db }, { ...input, email: 'other@adiutor.test' }),
     ]);
     expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
     const rejected = results.find((result) => result.status === 'rejected');
@@ -89,7 +89,7 @@ describe('setUpPlatform', () => {
 
   it('uses an existing account without changing its password, making it an Admin', async () => {
     const userId = await createUser(db, 'setup@adiutor.test');
-    const result = await setUpPlatform(db, input, { allowExistingAccount: true });
+    const result = await setUpPlatform({ db }, input, { allowExistingAccount: true });
     expect(result).toMatchObject({ userId, createdUser: false });
     expect(await db.select().from(account).where(eq(account.userId, userId))).toHaveLength(0);
     const found = firstRow(await db.select().from(user).where(eq(user.id, userId)), 'the user');
@@ -97,12 +97,12 @@ describe('setUpPlatform', () => {
   });
 
   it('creates an email-link account when no password is given', async () => {
-    const { userId } = await setUpPlatform(db, { ...input, password: undefined });
+    const { userId } = await setUpPlatform({ db }, { ...input, password: undefined });
     expect(await db.select().from(account).where(eq(account.userId, userId))).toHaveLength(0);
   });
 
   it("sets Adiutor's default language, English (US) unless chosen", async () => {
-    await setUpPlatform(db, input);
+    await setUpPlatform({ db }, input);
 
     expect(
       await db.select({ defaultLocale: staffSettings.defaultLocale }).from(staffSettings),
@@ -110,11 +110,14 @@ describe('setUpPlatform', () => {
   });
 
   it("keeps the Admin in the language they set up in, whatever Adiutor's default", async () => {
-    const { userId } = await setUpPlatform(db, {
-      ...input,
-      defaultLocale: 'nl-NL',
-      adminLocale: 'es-ES',
-    });
+    const { userId } = await setUpPlatform(
+      { db },
+      {
+        ...input,
+        defaultLocale: 'nl-NL',
+        adminLocale: 'es-ES',
+      },
+    );
 
     expect(
       await db.select({ defaultLocale: staffSettings.defaultLocale }).from(staffSettings),
@@ -124,18 +127,21 @@ describe('setUpPlatform', () => {
   });
 
   it('starts the Admin on Default when they set up in the default language they chose', async () => {
-    const { userId } = await setUpPlatform(db, {
-      ...input,
-      defaultLocale: 'nl-NL',
-      adminLocale: 'nl-NL',
-    });
+    const { userId } = await setUpPlatform(
+      { db },
+      {
+        ...input,
+        defaultLocale: 'nl-NL',
+        adminLocale: 'nl-NL',
+      },
+    );
 
     const admin = firstRow(await db.select().from(user).where(eq(user.id, userId)), 'the Admin');
     expect(admin.locale).toBeNull();
   });
 
   it('refuses a default language it doesn’t know, and sets nothing up', async () => {
-    await expect(setUpPlatform(db, { ...input, defaultLocale: 'fr-FR' })).rejects.toThrow(
+    await expect(setUpPlatform({ db }, { ...input, defaultLocale: 'fr-FR' })).rejects.toThrow(
       'validation.locale',
     );
     expect(await isSetUp(db)).toBe(false);
@@ -159,7 +165,7 @@ describe('the web setup form', () => {
   it('never makes an existing account the Admin, and changes nothing', async () => {
     const userId = await createUser(db, 'setup@adiutor.test');
 
-    await expect(setUpPlatform(db, input)).rejects.toMatchObject({
+    await expect(setUpPlatform({ db }, input)).rejects.toMatchObject({
       code: 'conflict',
       key: 'errors.setup.alreadySetUp',
     });
@@ -171,14 +177,14 @@ describe('the web setup form', () => {
 
   it('is refused once any account exists, even for a new address', async () => {
     await createUser(db, 'watcher@adiutor.test');
-    await expect(setUpPlatform(db, input)).rejects.toMatchObject({
+    await expect(setUpPlatform({ db }, input)).rejects.toMatchObject({
       code: 'conflict',
     });
     expect(await db.select().from(user).where(eq(user.email, 'setup@adiutor.test'))).toEqual([]);
   });
 
   it('sets up a fresh install', async () => {
-    const result = await setUpPlatform(db, input);
+    const result = await setUpPlatform({ db }, input);
     expect(result).toMatchObject({ email: 'setup@adiutor.test', createdUser: true });
     expect(await isWebSetupOpen(db)).toBe(false);
   });
@@ -187,7 +193,7 @@ describe('the web setup form', () => {
 describe('the command line', () => {
   it('records making an existing account the Admin, with no acting user', async () => {
     const userId = await createUser(db, 'setup@adiutor.test');
-    await setUpPlatform(db, input, { allowExistingAccount: true });
+    await setUpPlatform({ db }, input, { allowExistingAccount: true });
 
     expect(
       await db
@@ -217,7 +223,7 @@ describe('the command line', () => {
   it('recovers a lost settings row while accounts exist', async () => {
     await createUser(db, 'watcher@adiutor.test');
     const result = await setUpPlatform(
-      db,
+      { db },
       { ...input, email: 'owner@adiutor.test' },
       { allowExistingAccount: true },
     );
@@ -229,7 +235,9 @@ describe('the command line', () => {
     const userId = await createUser(db, 'setup@adiutor.test');
     await db.update(user).set({ deactivatedAt: new Date() }).where(eq(user.id, userId));
 
-    await expect(setUpPlatform(db, input, { allowExistingAccount: true })).rejects.toMatchObject({
+    await expect(
+      setUpPlatform({ db }, input, { allowExistingAccount: true }),
+    ).rejects.toMatchObject({
       code: 'conflict',
       key: 'errors.setup.accountDeactivated',
     });

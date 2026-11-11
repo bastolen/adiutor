@@ -59,7 +59,10 @@ Admins and Managers who aren't members can still add themselves with any role, a
   [The last Admin, at the same moment](#staff-screens)).
 - **Authorization matrix:** `src/server/authorization-matrix.int.test.ts` checks every role against
   every service behind a server action, and the page loaders that check roles, on their own
-  company, another company, the staff and another user, down to the kind of refusal.
+  company, another company, the staff and another user, down to the kind of refusal. The own-account
+  services that take an ID (`revokeOwnSession`, `confirmConnectedProvider`) are tried with another
+  user's ID; password changes, which need a second step, are covered in
+  `src/server/auth/accounts.int.test.ts`.
 - **Protected by default:** `src/proxy.ts` sends signed-out visitors of every page to `/auth`, except
   the public `/auth`, `/invite`, `/join`, `/setup` and `/api/auth` paths and the health check (`/api/health`). Pages and server actions still check
   the session and permissions on the server through `src/server/authz.ts`. Someone without the
@@ -162,7 +165,7 @@ Admins and Managers who aren't members can still add themselves with any role, a
   revoking invite links, adding members and registering companies (`assertStillManages` in
   `src/server/access.ts`), and changing staff or company roles and removing people (`setStaffRole`
   and `changeMembership` work the rights out from the rows they lock, with the same permission rules
-  as when the request started, `getGlobalPermissions` and `getPermissions`, never by comparing
+  as when the request started, `getGlobalPermissions` and `getPermissions` (both in `src/lib/authz/permissions.ts`), never by comparing
   roles). So someone demoted, removed or
   deactivated while their request was under way is refused (a demoted company Admin's queued "make
   me Admin" included), and whatever they created just before is revoked with the rest (see

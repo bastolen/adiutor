@@ -12,6 +12,7 @@ import { isSessionMfaVerified, type MfaRole } from '@/lib/authz/mfa';
 import { type Paged, resolveTableState, type TableState } from '@/lib/tables/table-state';
 import { DEVICES_TABLE, type DeviceSort } from '@/lib/tables/tables';
 
+import type { ServiceContext } from '../../context';
 import { orderTerms, paginate } from '../../pagination';
 
 /** A signed-in device, on the detail page and the Security page. */
@@ -113,17 +114,17 @@ export function asSeenWith(
  * MFA role, which decides which sessions count as MFA verified: read in the
  * same request (e.g. `actor.mfaRole` for the signed-in user).
  *
- * @param db - Database client.
+ * @param ctx - Service context.
  * @param userId - The user.
  * @param mfaRole - The user's MFA role now (see `mfaRoleOf`).
  * @param options - Sort and page (by default most recently signed in first, the first page).
  * @returns The page of sessions.
  */
 export async function listUserSessions(
-  db: Database,
+  ctx: Pick<ServiceContext, 'db'>,
   userId: string,
   mfaRole: MfaRole | null,
   options: Partial<TableState<DeviceSort>> = {},
 ): Promise<Paged<UserSession>> {
-  return asSeenWith(await loadSessionRows(db, userId, options), mfaRole);
+  return asSeenWith(await loadSessionRows(ctx.db, userId, options), mfaRole);
 }

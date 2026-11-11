@@ -22,6 +22,7 @@ import {
 } from '@/db/schema';
 import { invitationReminderEmail } from '@/emails/invitation-reminder';
 import displayName from '@/lib/display-name';
+import { sendFailureOf } from '@/lib/email';
 import { isLocale } from '@/lib/i18n/locales';
 import { generateToken, hashToken } from '@/lib/sign-in/tokens';
 
@@ -29,7 +30,6 @@ import { APP_ERROR_RETENTION_DAYS } from './app-errors';
 import { SIGN_IN_ERROR_RETENTION_DAYS } from './auth/sign-in-errors';
 import type { ServiceContext } from './context';
 import getStaffName from './people/staff-name';
-import sendFailureOf from './send-failure';
 
 /** How long audit events are kept. */
 const AUDIT_RETENTION_DAYS = 365;

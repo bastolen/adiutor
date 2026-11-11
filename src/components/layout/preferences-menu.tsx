@@ -11,7 +11,6 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { useState, useTransition } from 'react';
 
-import setLanguageAction from '@/app/language-action';
 import LanguageFlag from '@/components/language/language-flag';
 import { FollowDefaultIcon } from '@/components/language/language-options';
 import ThemeMenuRow from '@/components/theme/theme-menu-row';
@@ -38,6 +37,8 @@ import {
   LOCALE_NAMES,
   LOCALES,
 } from '@/lib/i18n/locales';
+
+import setLanguageAction from './language-action';
 
 /**
  * A pill with two icons split by a thin line: the current theme's (half sun,

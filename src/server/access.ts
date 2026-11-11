@@ -9,13 +9,25 @@ import type { Database, DatabaseTransaction } from '@/db';
 import { company, membership, user } from '@/db/schema';
 import { grantNeedsConfirmation, type RoleGrant } from '@/lib/authz/guards';
 import { needsRecentConfirmation } from '@/lib/authz/mfa';
-import { getPermissions, type Permission } from '@/lib/authz/permissions';
+import {
+  getGlobalPermissions,
+  getPermissions,
+  getStaffPermissionsInCompanies,
+  managePermission,
+  type Permission,
+} from '@/lib/authz/permissions';
 import type { PlatformRole } from '@/lib/authz/roles';
 import { idSchema } from '@/lib/validation';
 
 import { type Actor, loadActor } from './actor';
 import { forbiddenError, notFoundError, ServiceError } from './errors';
 import getStaffName from './people/staff-name';
+
+/**
+ * The pure permission rules live in `src/lib/authz/permissions.ts`; they're
+ * re-exported so services and pages keep importing them from here.
+ */
+export { getGlobalPermissions, getStaffPermissionsInCompanies, managePermission };
 
 /** A company row. */
 export type Company = typeof company.$inferSelect;
@@ -71,20 +83,6 @@ export async function getCompanyAccess(
 }
 
 /**
- * A user's permissions that aren't about one company (e.g. registering
- * companies), from their staff role: the acting user as the request loaded
- * them, or their row as a transaction locked it (to check their rights
- * again with the same rules, e.g. in `setStaffRole`).
- *
- * @param subject - The acting user, or anything with their staff role.
- * @param subject.platformRole - Their staff role, or `null` for none.
- * @returns The permissions.
- */
-export function getGlobalPermissions(subject: Pick<Actor, 'platformRole'>): Set<Permission> {
-  return getPermissions({ platformRole: subject.platformRole, companyRole: null, company: null });
-}
-
-/**
  * A user's permissions as they are in the database now: globally, or in one
  * company. For a change to the user's own roles, whose actor (loaded at the
  * start of the request) still has the rights from before it, e.g. to tell
@@ -116,21 +114,6 @@ export async function currentPermissionsOf(
     }
     throw error;
   }
-}
-
-/**
- * What staff may do in any active company (without being a member),
- * e.g. to decide whether to show membership controls on the user detail page.
- *
- * @param actor - The acting user.
- * @returns The permissions; empty for non-staff.
- */
-export function getStaffPermissionsInCompanies(actor: Actor): Set<Permission> {
-  return getPermissions({
-    platformRole: actor.platformRole,
-    companyRole: null,
-    company: { deactivated: false },
-  });
 }
 
 /** Staff or a company, as the target of invitations and invite links. */
@@ -223,17 +206,6 @@ export function assertPermission(permissions: Set<Permission>, permission: Permi
   if (!permissions.has(permission)) {
     throw forbiddenError();
   }
-}
-
-/**
- * The permission that manages a target's people: `staff:manage` for the staff,
- * `members:manage` in a company (what `TargetAccess.canManage` stands for).
- *
- * @param companyId - The company, or `null` for staff.
- * @returns The permission.
- */
-export function managePermission(companyId: string | null): Permission {
-  return companyId === null ? 'staff:manage' : 'members:manage';
 }
 
 /** A user row as {@link assertStillManages} locked it. */

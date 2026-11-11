@@ -28,7 +28,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('./report-error-action', () => ({ default: vi.fn(async () => null) }));
 
 // The language button's action reads the server's configuration; nothing here changes the language.
-vi.mock('./language-action', () => ({ default: vi.fn(async () => true) }));
+vi.mock('@/components/layout/language-action', () => ({ default: vi.fn(async () => true) }));
 
 beforeEach(() => {
   // The layout's theme button follows the system setting.

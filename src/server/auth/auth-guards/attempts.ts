@@ -10,12 +10,12 @@ import { EMAIL_CODE_RESEND_SECONDS } from '@/lib/authz/mfa';
 import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 
 import {
-  failedSignInsKey,
   hitRateLimit,
   type RateLimitRule,
   releaseRateLimitHit,
   resetRateLimit,
 } from '../../rate-limit';
+import { failedSignInsKey } from '../failed-sign-ins';
 import { requestState, takeRequestState } from '../request-state';
 import type { AuthGuardContext } from './paths';
 import { passwordSignInPausedBody, refusalBody, tooManyAttemptsBody } from './refusal-messages';

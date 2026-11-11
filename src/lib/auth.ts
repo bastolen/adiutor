@@ -32,7 +32,7 @@ import * as schema from '../db/schema';
 import type { AuthHookContext } from '../server/auth/auth-events';
 import { EMAIL_CODE_MINUTES, TWO_FACTOR_LOCK_ATTEMPTS, TWO_FACTOR_LOCK_MINUTES } from './authz/mfa';
 import { PLATFORM_ROLES } from './authz/roles';
-import { sendEmail } from './email';
+import { sendEmail, sendFailureOf } from './email';
 import { appUrl, env } from './env';
 import { localeFromHeaders } from './i18n/default-locale';
 import { isLocale, type Locale, LOCALES } from './i18n/locales';
@@ -80,8 +80,12 @@ function loadAuthGuards() {
  */
 function runInBackground(task: Promise<unknown>): void {
   const logged = task.catch((error: unknown) => {
-    // eslint-disable-next-line no-console -- Background work has no caller to report to.
-    console.error('Background auth task failed', error);
+    // eslint-disable-next-line no-console -- Background work has no caller to report to; only the failure's kind is logged, as a mail server's refusal can quote the address.
+    console.error(
+      'Background auth task failed',
+      error instanceof Error ? error.name : null,
+      sendFailureOf(error),
+    );
   });
   try {
     after(logged);
