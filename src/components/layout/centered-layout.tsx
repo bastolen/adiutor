@@ -22,8 +22,9 @@ interface CenteredLayoutProps {
 
 /**
  * The logo in the top-left corner (linking home), where the app's sidebar
- * shows it, and the content centered on the page. These pages have no account menu, so the floating theme
- * and language button is here, last in tab order.
+ * shows it, and the content centered on the page. These pages have no account
+ * menu, so the theme and language button is here, last in tab order: floating
+ * in the corner from tablet width, and at the end of the page below that.
  *
  * @param props - Layout props.
  * @param props.children - The page content.
@@ -42,11 +43,13 @@ export default function CenteredLayout({ children }: CenteredLayoutProps) {
       <main
         id="main"
         tabIndex={-1}
-        className="flex flex-1 items-center justify-center px-6 pt-8 pb-24 outline-none"
+        // From tablet width the space below keeps the content clear of the floating button.
+        className="flex flex-1 items-center justify-center px-6 pt-8 pb-8 outline-none md:pb-24"
       >
         <div className="w-full max-w-md">{children}</div>
       </main>
-      <PreferencesMenu />
+      {/* Below tablet width at the end of the page; from there, in the corner. */}
+      <PreferencesMenu className="mr-4 mb-4 self-end" />
     </div>
   );
 }

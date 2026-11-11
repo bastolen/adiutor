@@ -163,14 +163,56 @@ async function expectFitsNow(page: Page): Promise<void> {
 }
 
 /**
- * Checks that the page doesn't scroll sideways once it has loaded (see
- * {@link expectFitsNow}).
+ * Checks that no box cuts off content wider than itself, as a card does with a
+ * button that runs past its edge: the page doesn't scroll, so
+ * {@link expectFitsNow} can't see it. Deliberate truncation (`…`), visually
+ * hidden text and areas that scroll on purpose don't count.
+ *
+ * @param page - The browser page.
+ */
+async function expectNothingClipped(page: Page): Promise<void> {
+  const clipped = await page.evaluate(() =>
+    [...document.querySelectorAll('body *')]
+      .filter((element) => {
+        const style = getComputedStyle(element);
+        const clips = [style.overflowX, style.overflow].some((value) =>
+          ['hidden', 'clip'].includes(value),
+        );
+        // A field's own text scrolls inside it, so fields don't count.
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName)) {
+          return false;
+        }
+        // Visually hidden until focused or read out, like the skip link (`sr-only`).
+        const visuallyHidden =
+          element.classList.contains('sr-only') ||
+          style.clip === 'rect(0px, 0px, 0px, 0px)' ||
+          style.clipPath === 'inset(50%)';
+        return (
+          clips &&
+          !visuallyHidden &&
+          style.textOverflow !== 'ellipsis' &&
+          element.getBoundingClientRect().width > 1 &&
+          element.scrollWidth > element.clientWidth + 1
+        );
+      })
+      .map((element) => {
+        const name = (element.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 60);
+        return `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''} "${name}": ${element.scrollWidth}px of content in ${element.clientWidth}px`;
+      }),
+  );
+  expect(clipped).toEqual([]);
+}
+
+/**
+ * Checks that the page doesn't scroll sideways or cut anything off once it
+ * has loaded (see {@link expectFitsNow} and {@link expectNothingClipped}).
  *
  * @param page - The browser page.
  */
 async function expectNoSidewaysScroll(page: Page): Promise<void> {
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
   await expectFitsNow(page);
+  await expectNothingClipped(page);
 }
 
 /**
@@ -257,6 +299,49 @@ test.describe('on a 320px wide screen', () => {
   }) => {
     await page.goto(await storeSignInLink(getTestDatabaseUrl(), CLIENT_WATCHER.email));
     await expectNoSidewaysScroll(page);
+  });
+
+  ['/auth', '/sign-in-error?error=state_mismatch'].forEach((path) => {
+    test(`${path}: the theme and language button covers no other control`, async ({ page }) => {
+      await page.goto(path);
+      const covered = await page.evaluate(() => {
+        const button = [...document.querySelectorAll('button')].find((element) =>
+          element.getAttribute('aria-label')?.startsWith('Theme and language'),
+        );
+        if (!button) {
+          return ['no theme and language button'];
+        }
+        const box = button.getBoundingClientRect();
+        return [...document.querySelectorAll('a[href], button, input, select, textarea')]
+          .filter((element) => element !== button)
+          .filter((element) => {
+            const other = element.getBoundingClientRect();
+            return (
+              other.width > 0 &&
+              other.left < box.right &&
+              other.right > box.left &&
+              other.top < box.bottom &&
+              other.bottom > box.top
+            );
+          })
+          .map((element) => (element.textContent ?? '').trim() || element.tagName);
+      });
+      expect(covered).toEqual([]);
+    });
+  });
+
+  test('the Sort menu keeps clear of the screen edges', async ({ browser }) => {
+    const context = await browser.newContext({
+      storageState: adminState,
+      viewport: { width: 320, height: 640 },
+    });
+    const page = await context.newPage();
+    await page.goto('/admin/users');
+    await page.getByRole('button', { name: /^Sort users/ }).click();
+    const box = defined(await page.getByRole('menu').boundingBox(), 'the menu');
+    expect(box.x).toBeGreaterThanOrEqual(16);
+    expect(box.x + box.width).toBeLessThanOrEqual(320 - 16);
+    await context.close();
   });
 
   APP_PATHS.forEach((path) => {

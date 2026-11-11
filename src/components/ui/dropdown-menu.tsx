@@ -12,7 +12,7 @@ import { type ComponentProps, type KeyboardEvent, type ReactNode, useId } from '
 
 import cn from '@/lib/cn';
 
-import { focusRing } from './styles';
+import { focusRing, SCREEN_GUTTER } from './styles';
 
 /** The menu root; controls open state. */
 export const MenuRoot = DropdownMenu.Root;
@@ -33,17 +33,21 @@ const itemClasses =
  * @param props - Content props.
  * @param props.className - Extra classes.
  * @param props.sideOffset - Distance from the trigger.
+ * @param props.collisionPadding - The least distance from the screen's edges when the panel would
+ *   otherwise run off it; the page's side gutter by default.
  * @returns The panel.
  */
 export function MenuContent({
   className = '',
   sideOffset = 6,
+  collisionPadding = SCREEN_GUTTER,
   ...props
 }: ComponentProps<typeof DropdownMenu.Content>) {
   return (
     <DropdownMenu.Portal>
       <DropdownMenu.Content
         sideOffset={sideOffset}
+        collisionPadding={collisionPadding}
         className={cn(
           'z-50 min-w-48 rounded-lg border border-border bg-raised p-1 shadow-lg',
           className,

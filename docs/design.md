@@ -95,10 +95,14 @@ keyboard support.
   back/forward cache (`pageshow`).
 - **Illustrations** (like the example request on the sign-in pages) are `inert`, and use
   `<Button decorative>` for buttons that only look like buttons: no hover, focus or press effects.
-- **Button labels** stay on one line, except on full-width buttons (`fullWidth`, like the sign-in
-  page's), whose label wraps and makes the button taller when it doesn't fit. Longer languages,
-  wider fonts (Linux browsers use DejaVu Sans for the system font) and a "Last used" badge then
-  never make a narrow screen scroll sideways.
+- **Button labels** stay on one line when they fit. A button is never wider than its container
+  (`max-w-full`): a longer label wraps onto a second line and makes the button taller (it has a
+  minimum height, not a fixed one), and a card's actions wrap onto more lines too. Longer
+  languages, wider fonts (Linux browsers use DejaVu Sans for the system font) and a "Last used"
+  badge then never run out of a card or make a narrow screen scroll sideways.
+- **Menus and select lists** keep at least the page's 16px side gutter from the screen's edges
+  when they would otherwise run off it (`SCREEN_GUTTER` in `src/components/ui/styles.ts`, Radix's
+  `collisionPadding`).
 - **Colours:** semantic tokens in `src/styles/theme.css`, each checked for contrast (at least 4.5:1
   for text, 3:1 for input borders) in both modes:
 
@@ -233,8 +237,10 @@ The site supports light and dark mode. Visitors choose **System** (the default, 
 device), **Light** or **Dark**:
 
 - **Signed out** (`AuthLayout`, and `CenteredLayout` for the 404, sign-in error and error pages): one
-  floating button in the bottom-right corner for the theme and the language (`PreferencesMenu` in
-  `src/components/layout/preferences-menu.tsx`), on every page without the account menu. It shows
+  button for the theme and the language (`PreferencesMenu` in
+  `src/components/layout/preferences-menu.tsx`), on every page without the account menu: floating
+  in the bottom-right corner from tablet width, and at the end of the page below that, where a
+  fixed button would cover the page's last links on a small phone. It shows
   two icons split by a thin line, the current theme's and the language's flag, and is named in
   full for screen readers ("Theme and language: System, English (US)"). Its Radix menu has the
   theme as the same row of three icons as the account menu, then the language: Default first (a

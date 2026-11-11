@@ -38,26 +38,29 @@ const variantClasses = {
   },
 } as const;
 
-/** Classes every button shares, interactive or not. */
+/**
+ * Classes every button shares, interactive or not. A button is never wider
+ * than its container (`max-w-full`): a label that fits stays on one line, and
+ * a longer one (another language, a wider font, a "Last used" badge) wraps
+ * onto a second line, growing the button from its usual height, instead of
+ * running out of its card or making a narrow screen scroll sideways
+ * (WCAG 1.4.10 Reflow).
+ */
 const baseClasses =
-  'inline-flex shrink-0 items-center justify-center rounded-lg font-medium whitespace-nowrap select-none [&_svg]:size-4';
-
-/** Classes per button size. Small buttons still meet the 24px target size. */
-const sizeClasses = {
-  sm: 'h-8 gap-1.5 px-3 text-sm',
-  md: 'h-10 gap-2 px-4 text-sm',
-} as const;
+  'inline-flex max-w-full shrink-0 items-center justify-center rounded-lg text-center font-medium text-balance select-none [&_svg]:size-4 [&_svg]:shrink-0';
 
 /**
- * Classes per size for a full-width button. Its label may wrap onto a second
- * line, growing the button from its usual height, so a long label (another
- * language, a wider font, a "Last used" badge) never makes a narrow screen
- * scroll sideways (WCAG 1.4.10 Reflow).
+ * Classes per button size: a minimum height rather than a fixed one, so a
+ * wrapped label grows the button. Small buttons still meet the 24px target
+ * size.
  */
-const fullWidthClasses = {
-  sm: 'h-auto min-h-8 w-full py-1.5 text-center whitespace-normal',
-  md: 'h-auto min-h-10 w-full py-2 text-center whitespace-normal',
+const sizeClasses = {
+  sm: 'min-h-8 gap-1.5 px-3 py-1 text-sm',
+  md: 'min-h-10 gap-2 px-4 py-1.5 text-sm',
 } as const;
+
+/** Classes for a full-width button: it stretches to its container. */
+const fullWidthClasses = 'w-full';
 
 /**
  * Props for {@link Button}.
@@ -67,7 +70,7 @@ export type ButtonProps = ComponentProps<'button'> & {
   variant?: keyof typeof variantClasses;
   /** Size. Defaults to `md`. */
   size?: keyof typeof sizeClasses;
-  /** Stretch to the container's width; the label then wraps when it doesn't fit. */
+  /** Stretch to the container's width. */
   fullWidth?: boolean;
   /** Show a spinner and block clicks while an action runs. */
   loading?: boolean;
@@ -122,7 +125,7 @@ export default function Button({
           'pointer-events-none cursor-default',
           variantClasses[variant].look,
           sizeClasses[size],
-          fullWidth && fullWidthClasses[size],
+          fullWidth && fullWidthClasses,
           className,
         )}
       >
@@ -138,7 +141,7 @@ export default function Button({
     variantClasses[variant].look,
     variantClasses[variant].hover,
     sizeClasses[size],
-    fullWidth && fullWidthClasses[size],
+    fullWidth && fullWidthClasses,
     className,
   );
 

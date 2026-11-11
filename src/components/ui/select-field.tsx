@@ -9,7 +9,7 @@ import { type ReactNode, useId, useState } from 'react';
 
 import cn from '@/lib/cn';
 
-import { fieldControl } from './styles';
+import { fieldControl, SCREEN_GUTTER } from './styles';
 
 /** One option in a {@link SelectField}. */
 export interface SelectOption {
@@ -137,6 +137,7 @@ export default function SelectField({
           <Select.Content
             position="popper"
             sideOffset={4}
+            collisionPadding={SCREEN_GUTTER}
             className="z-50 max-h-(--radix-select-content-available-height) max-w-80 min-w-(--radix-select-trigger-width) overflow-hidden rounded-lg border border-border bg-raised p-1 text-foreground shadow-lg"
           >
             <Select.Viewport>
