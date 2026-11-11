@@ -7,7 +7,8 @@
       "label": "Accountbeveiliging",
       "title": "Beveilig je account",
       "description": "Voeg een passkey of verificatie in twee stappen toe, zodat een gestolen wachtwoord niet genoeg is om binnen te komen.",
-      "setUp": "Instellen"
+      "setUp": "Instellen",
+      "dismissFailed": "Het advies kon niet worden verborgen. Probeer het zo opnieuw."
     },
     "providerMfaWarning": {
       "label": "Gebruikers zonder MFA",

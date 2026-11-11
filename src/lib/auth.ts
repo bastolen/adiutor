@@ -442,6 +442,13 @@ export const auth = betterAuth({
        * never set through Better Auth's endpoints.
        */
       locale: { type: [...LOCALES], required: false, input: false },
+      /**
+       * When the user dismissed the dashboard's recommendation to add a
+       * passkey or two-step verification, so it stays hidden on every device.
+       * Empty until then; never set through Better Auth's endpoints
+       * (`dismissMfaRecommendation`).
+       */
+      mfaRecommendationDismissedAt: { type: 'date', required: false, input: false },
     },
   },
 

@@ -7,7 +7,8 @@
       "label": "Seguridad de la cuenta",
       "title": "Protege tu cuenta",
       "description": "Añade una llave de acceso o la verificación en dos pasos, para que una contraseña robada no baste para entrar.",
-      "setUp": "Configurar"
+      "setUp": "Configurar",
+      "dismissFailed": "No se ha podido ocultar la recomendación. Vuelve a intentarlo en un momento."
     },
     "providerMfaWarning": {
       "label": "Usuarios sin MFA",

@@ -185,6 +185,29 @@ export async function setDefaultLocale(databaseUrl: string, locale: Locale): Pro
 }
 
 /**
+ * Brings back the dashboard's MFA recommendation for a user, as if they had
+ * never dismissed it, so a test that dismisses it can run again.
+ *
+ * @param databaseUrl - Connection string of the test database.
+ * @param email - The user's address.
+ */
+export async function clearMfaRecommendationDismissal(
+  databaseUrl: string,
+  email: string,
+): Promise<void> {
+  const client = new Client({ connectionString: databaseUrl });
+  await client.connect();
+  try {
+    await drizzle(client, { schema })
+      .update(schema.user)
+      .set({ mfaRecommendationDismissedAt: null })
+      .where(eq(schema.user.email, email));
+  } finally {
+    await client.end();
+  }
+}
+
+/**
  * Stores a sign-in link for a user the way Better Auth's magic-link plugin
  * does, as if they had asked for one, without sending an email (so tests
  * don't run into the limit on emails per address).

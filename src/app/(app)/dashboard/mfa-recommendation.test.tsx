@@ -1,22 +1,38 @@
 /**
  * @file Tests for the dashboard's MFA recommendation: it links to the Security
- * page, and a dismissal is remembered per user, so someone else signing in on
- * the browser still sees it.
+ * page, Dismiss hides it at once and saves that with the account, and a
+ * dismissal that can't be saved brings it back with the reason.
  */
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import MfaRecommendation, { mfaRecommendationKey } from './mfa-recommendation';
+import { Toaster } from '@/components/ui/toast';
+
+import dismissMfaRecommendationAction from './actions';
+import MfaRecommendation from './mfa-recommendation';
+
+vi.mock('./actions', () => ({ default: vi.fn() }));
 
 afterEach(() => {
-  window.localStorage.clear();
-  vi.restoreAllMocks();
+  vi.mocked(dismissMfaRecommendationAction).mockReset();
 });
+
+/**
+ * Renders the banner with the toasts it may raise.
+ */
+function renderBanner() {
+  render(
+    <>
+      <MfaRecommendation />
+      <Toaster />
+    </>,
+  );
+}
 
 describe('MfaRecommendation', () => {
   it('recommends MFA with a link to the Security page', () => {
-    render(<MfaRecommendation userId="jane-id" />);
+    renderBanner();
 
     expect(screen.getByRole('region', { name: 'Account security' })).toHaveTextContent(
       'Protect your account',
@@ -27,34 +43,45 @@ describe('MfaRecommendation', () => {
     );
   });
 
-  it('stays dismissed for the user who dismissed it, and only for them', async () => {
+  it('hides at once on Dismiss and saves the dismissal with the account', async () => {
+    vi.mocked(dismissMfaRecommendationAction).mockResolvedValue({ ok: true });
     const user = userEvent.setup();
-    const { unmount } = render(<MfaRecommendation userId="jane-id" />);
+    renderBanner();
 
     await user.click(screen.getByRole('button', { name: 'Dismiss' }));
-    expect(screen.queryByRole('region', { name: 'Account security' })).not.toBeInTheDocument();
-    expect(window.localStorage.getItem(mfaRecommendationKey('jane-id'))).toBe('1');
-    unmount();
 
-    render(<MfaRecommendation userId="jane-id" />);
     expect(screen.queryByRole('region', { name: 'Account security' })).not.toBeInTheDocument();
+    expect(dismissMfaRecommendationAction).toHaveBeenCalledOnce();
   });
 
-  it('still shows for someone else signing in on the browser', () => {
-    window.localStorage.setItem(mfaRecommendationKey('jane-id'), '1');
-
-    render(<MfaRecommendation userId="john-id" />);
-
-    expect(screen.getByRole('region', { name: 'Account security' })).toBeInTheDocument();
-  });
-
-  it('shows when storage is blocked', () => {
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-      throw new Error('blocked');
+  it('comes back with the reason when the dismissal is refused', async () => {
+    vi.mocked(dismissMfaRecommendationAction).mockResolvedValue({
+      ok: false,
+      message: 'Too many attempts.',
     });
+    const user = userEvent.setup();
+    renderBanner();
 
-    render(<MfaRecommendation userId="jane-id" />);
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }));
 
-    expect(screen.getByRole('region', { name: 'Account security' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Account security' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getAllByText('Too many attempts.').length).toBeGreaterThan(0);
+    });
+  });
+
+  it('comes back with a message when the dismissal can’t be saved at all', async () => {
+    vi.mocked(dismissMfaRecommendationAction).mockRejectedValue(new Error('offline'));
+    const user = userEvent.setup();
+    renderBanner();
+
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }));
+
+    expect(await screen.findByRole('region', { name: 'Account security' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getAllByText("The recommendation couldn't be hidden. Try again in a moment.").length,
+      ).toBeGreaterThan(0);
+    });
   });
 });
