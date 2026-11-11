@@ -23,14 +23,7 @@
  */
 export { requiresMfa, mfaRoleOf } from './requirement';
 export type { MfaRole } from './requirement';
-export {
-  ALL_MFA_PROVIDERS,
-  givesMfa,
-  hasMfa,
-  mfaGivingProviders,
-  unavailableProviderMfa,
-  mfaStatus,
-} from './state';
+export { givesMfa, hasMfa, mfaGivingProviders, unavailableProviderMfa, mfaStatus } from './state';
 export type { MfaState, ProviderAvailability, MfaStatus } from './state';
 export {
   EMAIL_CODE_MINUTES,
@@ -55,7 +48,6 @@ export {
   NO_STEP_UP_METHODS,
   stepUpMethods,
   canConfirmSessions,
-  hasStrongerStepThanProvider,
   windowOpeningMethods,
   mayReverifyWith,
 } from './step-up';
@@ -63,18 +55,11 @@ export type { StepUpMethods, ReverifyFacts } from './step-up';
 export {
   mfaMethodFromPath,
   isSessionMfaVerified,
-  RECENT_MFA_MS,
   mfaConfirmedUntil,
   isMfaConfirmedRecently,
 } from './session';
 export type { MfaMethod } from './session';
-export {
-  mustSetUpMfa,
-  mustStepUp,
-  needsRecentConfirmation,
-  FRESH_SIGN_IN_MS,
-  needsFreshSignIn,
-} from './actor-gates';
+export { mustSetUpMfa, mustStepUp, needsRecentConfirmation, needsFreshSignIn } from './actor-gates';
 export type { ActorMfa } from './actor-gates';
 export { signInMethodFromPath } from './sign-in-method';
 export type { SignInMethod } from './sign-in-method';

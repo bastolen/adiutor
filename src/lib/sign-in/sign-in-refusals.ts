@@ -160,24 +160,6 @@ export const SESSION_NOT_FRESH = {
 } as const satisfies SignInRefusal;
 
 /**
- * Says in English (US) that a provider couldn't confirm the session on the
- * step-up page, because the user signed in there with another account than
- * their own confirmed one ({@link REVERIFY_WRONG_ACCOUNT}). The step-up page
- * says it in the reader's language (`reverifyErrorText`); the end-to-end
- * tests compare with this.
- *
- * @param provider - The provider's display name (`PROVIDER_LABELS`), or
- *   `null` when it isn't known: the wording then doesn't name one.
- * @returns The message, e.g. "GitHub couldn't confirm it's you: …".
- */
-export function reverifyWrongAccountMessage(provider: string | null): string {
-  if (!provider) {
-    return "The sign-in provider couldn't confirm it's you: you signed in with a different account than the one you set up as a second step. Nothing was changed. Sign in with that account and try again, or use another second step.";
-  }
-  return `${provider} couldn't confirm it's you: you signed in with a different ${provider} account than the one you set up as a second step. Nothing was changed. Sign in to ${provider} with that account and try again, or use another second step.`;
-}
-
-/**
  * "Confirm with GitHub" on the step-up page (a re-verify) signed in with
  * another provider account than the user's own confirmed one: a new account
  * with their email address, another user's account, or one of their own
@@ -188,7 +170,8 @@ export function reverifyWrongAccountMessage(provider: string | null): string {
  */
 export const REVERIFY_WRONG_ACCOUNT = {
   code: 'REVERIFY_WRONG_ACCOUNT',
-  message: reverifyWrongAccountMessage(null),
+  message:
+    "The sign-in provider couldn't confirm it's you: you signed in with a different account than the one you set up as a second step. Nothing was changed. Sign in with that account and try again, or use another second step.",
 } as const satisfies SignInRefusal;
 
 /**

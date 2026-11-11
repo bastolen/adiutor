@@ -147,14 +147,12 @@ async function queryAuditEntries(
 }
 
 /**
- * Lists the newest audit events about a user (as actor or target) or a
- * company. Staff with `audit:view` only.
+ * Lists the newest audit events about a user (as actor or target). Staff with
+ * `audit:view` only.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `audit:view`.
- * @param filter - Whose events to list.
- * @param filter.userId - Events by or about this user.
- * @param filter.companyId - Events about this company.
+ * @param userId - Events by or about this user.
  * @param limit - How many to return. Defaults to 50.
  * @returns The events, newest first.
  * @throws {ServiceError} `forbidden` without `audit:view`.
@@ -162,40 +160,30 @@ async function queryAuditEntries(
 export async function listAuditEvents(
   ctx: ServiceContext,
   actor: Actor,
-  filter: { userId?: string; companyId?: string },
+  userId: string,
   limit = 50,
 ): Promise<AuditEntry[]> {
   assertPermission(getGlobalPermissions(actor), 'audit:view');
-  const conditions: SQL[] = [];
-  const { userId } = filter;
-  if (userId) {
-    /**
-     * The newest events whose `column` is the user: a range of its index
-     * (`audit_event_actor_idx` / `audit_event_target_idx`), read backwards
-     * without sorting.
-     *
-     * @param column - The actor or the target.
-     * @returns The query for their IDs.
-     */
-    const newest = (column: PgColumn) =>
-      ctx.db
-        .select({ id: auditEvent.id })
-        .from(auditEvent)
-        .where(eq(column, userId))
-        .orderBy(...orderTerms('desc', auditEvent.at, auditEvent.id))
-        .limit(limit);
-    // The newest by them and the newest about them, each bounded, instead of sorting everything an
-    // `actor OR target` filter matches; `union` drops an event that's both.
-    conditions.push(
-      inArray(
-        auditEvent.id,
-        union(newest(auditEvent.actorUserId), newest(auditEvent.targetUserId)),
-      ),
-    );
-  }
-  if (filter.companyId) {
-    conditions.push(eq(auditEvent.companyId, filter.companyId));
-  }
+  /**
+   * The newest events whose `column` is the user: a range of its index
+   * (`audit_event_actor_idx` / `audit_event_target_idx`), read backwards
+   * without sorting.
+   *
+   * @param column - The actor or the target.
+   * @returns The query for their IDs.
+   */
+  const newest = (column: PgColumn) =>
+    ctx.db
+      .select({ id: auditEvent.id })
+      .from(auditEvent)
+      .where(eq(column, userId))
+      .orderBy(...orderTerms('desc', auditEvent.at, auditEvent.id))
+      .limit(limit);
+  // The newest by them and the newest about them, each bounded, instead of sorting everything an
+  // `actor OR target` filter matches; `union` drops an event that's both.
+  const conditions: SQL[] = [
+    inArray(auditEvent.id, union(newest(auditEvent.actorUserId), newest(auditEvent.targetUserId))),
+  ];
   return queryAuditEntries(ctx.db, conditions, { limit });
 }
 

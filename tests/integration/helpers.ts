@@ -25,7 +25,7 @@ import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { defined, firstRow } from '@/lib/defined';
 import type { Email } from '@/lib/email';
 import type { Locale } from '@/lib/i18n/locales';
-import { MFA_PROVIDERS, type MfaProvider } from '@/lib/sign-in/oauth-providers';
+import { MFA_PROVIDERS } from '@/lib/sign-in/oauth-providers';
 import { availableProviders, configuredProviders } from '@/lib/sign-in/providers';
 import { type Actor, loadActor } from '@/server/actor';
 import type { ServiceContext } from '@/server/context';
@@ -68,7 +68,7 @@ export function setupTestContext(): TestContext {
 
   beforeEach(async () => {
     sent.length = 0;
-    // Every provider that can prove MFA counts as configured again (see `turnOffProviderSignIn`).
+    // Every provider that can prove MFA counts as configured again (see `turnOffGitHubSignIn`).
     availableProviders.splice(
       0,
       availableProviders.length,
@@ -85,25 +85,18 @@ export function setupTestContext(): TestContext {
 }
 
 /**
- * Makes the rest of the current test run as if a provider's sign-in weren't
+ * Makes the rest of the current test run as if GitHub sign-in weren't
  * configured on this server (the integration tests configure every provider
  * that can prove MFA), so the MFA rules don't count its accounts' two-factor
  * authentication anywhere: as MFA, as a second step or as something to keep.
  * It changes `availableProviders`, which every service passes to the rules;
  * {@link setupTestContext} turns it back on before the next test.
- *
- * @param provider - The provider; GitHub by default.
  */
-export function turnOffProviderSignIn(provider: MfaProvider = 'github'): void {
-  const index = availableProviders.indexOf(provider);
+export function turnOffGitHubSignIn(): void {
+  const index = availableProviders.indexOf('github');
   if (index >= 0) {
     availableProviders.splice(index, 1);
   }
-}
-
-/** Turns GitHub sign-in off for the rest of the test (see {@link turnOffProviderSignIn}). */
-export function turnOffGitHubSignIn(): void {
-  turnOffProviderSignIn('github');
 }
 
 /**

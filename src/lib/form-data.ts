@@ -22,11 +22,10 @@ export default function field(formData: FormData, name: string): string {
  * Reads a language field (`EmailLanguageField`) from a form.
  *
  * @param formData - The submitted form.
- * @param name - The field name; `locale` by default.
  * @returns The language, or `undefined` for Default (`FOLLOW_DEFAULT`), a missing field or
  * anything that isn't one of the languages: the service then uses Adiutor's default language.
  */
-export function localeField(formData: FormData, name = 'locale'): Locale | undefined {
-  const value = field(formData, name);
+export function localeField(formData: FormData): Locale | undefined {
+  const value = field(formData, 'locale');
   return isLocale(value) ? value : undefined;
 }

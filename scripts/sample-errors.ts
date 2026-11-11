@@ -37,7 +37,7 @@ export interface SampleErrors {
 }
 
 /** The digest of the server error that happened three times. */
-export const REPEATED_DIGEST = '2828711936';
+const REPEATED_DIGEST = '2828711936';
 
 /**
  * Builds the sample errors, all from the last 6 days, so they show in
@@ -46,10 +46,10 @@ export const REPEATED_DIGEST = '2828711936';
  * come from their digest, so adding them again stores the same errors again.
  *
  * @param users - IDs of the seeded users to name as signed in (`null` when missing).
- * @param now - The time to count back from.
  * @returns The rows.
  */
-export function sampleErrors(users: SampleErrorUsers, now: Date): SampleErrors {
+export function sampleErrors(users: SampleErrorUsers): SampleErrors {
+  const now = new Date();
   /**
    * A time some hours before `now`.
    *

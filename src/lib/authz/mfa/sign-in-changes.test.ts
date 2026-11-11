@@ -53,16 +53,16 @@ describe('wouldRemoveRequiredMfa and mfaDowngradeBlocks', () => {
     it.each(SETUPS.map((setup) => ({ ...setup, refusing: setup.refused.join(', ') || 'nothing' })))(
       'with $name, refuses $refusing',
       ({ state, refused }) => {
-        expect(refusedChanges(state, role)).toEqual(refused);
-        expect(mfaDowngradeBlocks(state, role)).toEqual(expectedBlocks(refused));
+        expect(refusedChanges(state, role, WITH_GITHUB)).toEqual(refused);
+        expect(mfaDowngradeBlocks(state, role, WITH_GITHUB)).toEqual(expectedBlocks(refused));
       },
     );
   });
 
   describe.each(OPTIONAL_ROLES)('for %s, whose role doesn’t require MFA', (role) => {
     it.each(SETUPS)('with $name, refuses nothing', ({ state }) => {
-      expect(refusedChanges(state, role)).toEqual([]);
-      expect(mfaDowngradeBlocks(state, role)).toEqual(expectedBlocks([]));
+      expect(refusedChanges(state, role, WITH_GITHUB)).toEqual([]);
+      expect(mfaDowngradeBlocks(state, role, WITH_GITHUB)).toEqual(expectedBlocks([]));
     });
   });
 
@@ -78,18 +78,23 @@ describe('wouldRemoveRequiredMfa and mfaDowngradeBlocks', () => {
       providerId: 'github',
       mfaVerified,
     });
-    expect(wouldRemoveRequiredMfa(githubOnly, 'manager', connect(true))).toBe(false);
-    expect(wouldRemoveRequiredMfa(githubOnly, 'manager', connect(false))).toBe(true);
+    expect(wouldRemoveRequiredMfa(githubOnly, 'manager', connect(true), WITH_GITHUB)).toBe(false);
+    expect(wouldRemoveRequiredMfa(githubOnly, 'manager', connect(false), WITH_GITHUB)).toBe(true);
     // Until its MFA is known, a new account counts as without.
-    expect(wouldRemoveRequiredMfa(githubOnly, 'manager', connect())).toBe(true);
+    expect(wouldRemoveRequiredMfa(githubOnly, 'manager', connect(), WITH_GITHUB)).toBe(true);
   });
 
   it('changes nothing when disconnecting an account that isn’t there', () => {
     expect(
-      wouldRemoveRequiredMfa(githubOnly, 'platform_admin', {
-        kind: 'disconnect_provider',
-        accountId: '01970000-0000-7000-8000-0000000000ff',
-      }),
+      wouldRemoveRequiredMfa(
+        githubOnly,
+        'platform_admin',
+        {
+          kind: 'disconnect_provider',
+          accountId: '01970000-0000-7000-8000-0000000000ff',
+        },
+        WITH_GITHUB,
+      ),
     ).toBe(false);
   });
 
@@ -100,12 +105,17 @@ describe('wouldRemoveRequiredMfa and mfaDowngradeBlocks', () => {
       providerAccounts: [githubLinked, { ...githubLinked, id: secondId }],
     };
     expect(
-      wouldRemoveRequiredMfa(twoGitHub, 'company_admin', {
-        kind: 'disconnect_provider',
-        accountId: secondId,
-      }),
+      wouldRemoveRequiredMfa(
+        twoGitHub,
+        'company_admin',
+        {
+          kind: 'disconnect_provider',
+          accountId: secondId,
+        },
+        WITH_GITHUB,
+      ),
     ).toBe(false);
-    expect(mfaDowngradeBlocks(twoGitHub, 'company_admin').disconnect).toEqual([]);
+    expect(mfaDowngradeBlocks(twoGitHub, 'company_admin', WITH_GITHUB).disconnect).toEqual([]);
   });
 
   it('only lists provider accounts with an ID as blocked from disconnecting', () => {
@@ -113,7 +123,7 @@ describe('wouldRemoveRequiredMfa and mfaDowngradeBlocks', () => {
       ...githubOnly,
       providerAccounts: [{ providerId: 'github', mfaVerified: true }],
     };
-    expect(mfaDowngradeBlocks(withoutId, 'manager')).toEqual({
+    expect(mfaDowngradeBlocks(withoutId, 'manager', WITH_GITHUB)).toEqual({
       ...expectedBlocks(['set_password', 'connect_provider']),
       disconnect: [],
     });
@@ -126,10 +136,10 @@ describe('wouldEndMfa', () => {
    *
    * @param state - The account's setup.
    * @param role - The user's MFA role.
-   * @param available - Which providers can be used; the rules' default when left out.
+   * @param available - Which providers can be used.
    * @returns The kinds of those changes, in the order of {@link CHANGES}.
    */
-  const endingChanges = (state: MfaState, role: MfaRole | null, available?: ProviderAvailability) =>
+  const endingChanges = (state: MfaState, role: MfaRole | null, available: ProviderAvailability) =>
     CHANGES.filter((change) => wouldEndMfa(state, role, change, available)).map(
       (change) => change.kind,
     );
@@ -138,7 +148,7 @@ describe('wouldEndMfa', () => {
     it.each(SETUPS.map((setup) => ({ ...setup, ending: setup.refused.join(', ') || 'nothing' })))(
       'with $name, is ended by $ending: the changes refused for the role',
       ({ state, refused }) => {
-        expect(endingChanges(state, role)).toEqual(refused);
+        expect(endingChanges(state, role, WITH_GITHUB)).toEqual(refused);
       },
     );
   });
@@ -150,17 +160,22 @@ describe('wouldEndMfa', () => {
         return { ...setup, ended, ending: ended.join(', ') || 'nothing' };
       }),
     )('with $name, is ended by $ending', ({ state, ended }) => {
-      expect(endingChanges(state, role)).toEqual(ended);
+      expect(endingChanges(state, role, WITH_GITHUB)).toEqual(ended);
     });
   });
 
   it('is ended by a first password next to GitHub with 2FA alone, for any role', () => {
     [...REQUIRED_ROLES, ...OPTIONAL_ROLES].forEach((role) => {
-      expect(wouldEndMfa(githubOnly, role, { kind: 'set_password' })).toBe(true);
+      expect(wouldEndMfa(githubOnly, role, { kind: 'set_password' }, WITH_GITHUB)).toBe(true);
       // Not with a passkey, which keeps counting.
-      expect(wouldEndMfa({ ...githubOnly, passkeyCount: 1 }, role, { kind: 'set_password' })).toBe(
-        false,
-      );
+      expect(
+        wouldEndMfa(
+          { ...githubOnly, passkeyCount: 1 },
+          role,
+          { kind: 'set_password' },
+          WITH_GITHUB,
+        ),
+      ).toBe(false);
       // Nor while GitHub sign-in is off: GitHub isn't MFA here then.
       expect(wouldEndMfa(githubOnly, role, { kind: 'set_password' }, WITHOUT_GITHUB)).toBe(false);
     });

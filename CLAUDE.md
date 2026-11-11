@@ -49,7 +49,7 @@
 - The language is the person's own (the `adiutor.locale` cookie, mirroring their account), else Adiutor's default (`staff_settings.default_locale`), else, before setup only, the browser's `Accept-Language`: use `requestLocale()` or `localeFromHeaders()`, never your own parsing. Language choices name each language in itself with its flag (`LANGUAGE_OPTIONS`, `LanguageFlag`).
 - Server Components, actions and metadata translate with `useTranslations` / `getTranslations`. Client components get messages from the root provider (`common`) or `ClientMessages` (the page's own namespaces, inside its `<Suspense>`). Code outside React or a Next.js request (emails, services, jobs, scripts) uses `translator(locale, namespace)` with the locale it's given; keep `next-intl/server` out of `src/server/`.
 - Text in a route's static shell (outside its `<Suspense>`) comes from a client component that reads the root provider, so Partial Prefetching can prefetch the shell.
-- Format dates and numbers with `src/lib/format.ts` and the reader's locale (times are UTC). A cached function never reads the request's language: pass the locale in.
+- Format dates with `src/lib/format.ts` and the reader's locale (times are UTC); numbers are ICU `{n, number}` arguments in the message. A cached function never reads the request's language: pass the locale in.
 
 ## Email
 

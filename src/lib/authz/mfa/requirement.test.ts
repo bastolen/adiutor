@@ -7,7 +7,7 @@ import { allowsEmailCodes } from './email-codes';
 import { mfaRoleOf, requiresMfa } from './requirement';
 import { isSessionMfaVerified } from './session';
 import { hasMfa } from './state';
-import { emailCodes } from './test-helpers';
+import { emailCodes, WITH_GITHUB } from './test-helpers';
 
 describe('requiresMfa', () => {
   it('applies to staff Admins and Managers, and company Admins', () => {
@@ -33,7 +33,7 @@ describe('mfaRoleOf', () => {
   });
 
   it('applies the strict rules to company Admins', () => {
-    expect(hasMfa(emailCodes, 'company_admin')).toBe(false);
+    expect(hasMfa(emailCodes, 'company_admin', WITH_GITHUB)).toBe(false);
     expect(allowsEmailCodes(emailCodes, 'company_admin')).toBe(false);
     expect(
       isSessionMfaVerified({ mfaVerified: true, mfaMethod: 'email_code' }, 'company_admin'),

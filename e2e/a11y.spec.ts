@@ -19,10 +19,7 @@ import {
   providerLinkedCookieValue,
   providerStepUpCookieValue,
 } from '../src/lib/sign-in/oauth-providers';
-import {
-  REVERIFY_WRONG_ACCOUNT,
-  reverifyWrongAccountMessage,
-} from '../src/lib/sign-in/sign-in-refusals';
+import { REVERIFY_WRONG_ACCOUNT } from '../src/lib/sign-in/sign-in-refusals';
 import getTestDatabaseUrl from '../tests/database/database-url';
 import expectAccessible from './support/axe';
 import { findCompanyId, storeInvitation, storeInviteLink, storeSignInLink } from './support/db';
@@ -542,8 +539,9 @@ test.describe('on a 320px wide screen', () => {
           error: REVERIFY_WRONG_ACCOUNT.code,
         })}`,
       );
-      const message = reverifyWrongAccountMessage('GitHub');
-      await expect(page.getByRole('alert').filter({ hasText: message })).toBeVisible();
+      await expect(
+        page.getByRole('alert').filter({ hasText: "GitHub couldn't confirm it's you" }),
+      ).toBeVisible();
       await expectAccessible(page);
     });
 

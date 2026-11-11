@@ -4,7 +4,7 @@
  * the guards refuse).
  */
 import { type MfaRole, requiresMfa } from './requirement';
-import { type MfaState, type ProviderAvailability, ALL_MFA_PROVIDERS, hasMfa } from './state';
+import { type MfaState, type ProviderAvailability, hasMfa } from './state';
 
 /**
  * A change to how the user signs in that could leave them without MFA:
@@ -70,14 +70,14 @@ function afterChange(state: MfaState, change: SignInChange): MfaState {
  * @param state - The account's setup now.
  * @param mfaRole - Which MFA rules apply to the user (see {@link mfaRoleOf}), or `null`.
  * @param change - The change.
- * @param available - The configured providers that can prove MFA (all of them by default).
+ * @param available - The configured providers that can prove MFA.
  * @returns Whether the account has MFA now and wouldn't afterwards.
  */
 export function wouldEndMfa(
   state: MfaState,
   mfaRole: MfaRole | null,
   change: SignInChange,
-  available: ProviderAvailability = ALL_MFA_PROVIDERS,
+  available: ProviderAvailability,
 ): boolean {
   return (
     hasMfa(state, mfaRole, available) && !hasMfa(afterChange(state, change), mfaRole, available)
@@ -95,14 +95,14 @@ export function wouldEndMfa(
  * @param state - The account's setup now.
  * @param mfaRole - Which MFA rules apply to the user (see {@link mfaRoleOf}), or `null`.
  * @param change - The change.
- * @param available - The configured providers that can prove MFA (all of them by default).
+ * @param available - The configured providers that can prove MFA.
  * @returns Whether it would take away the MFA their role requires.
  */
 export function wouldRemoveRequiredMfa(
   state: MfaState,
   mfaRole: MfaRole | null,
   change: SignInChange,
-  available: ProviderAvailability = ALL_MFA_PROVIDERS,
+  available: ProviderAvailability,
 ): boolean {
   return requiresMfa(mfaRole) && wouldEndMfa(state, mfaRole, change, available);
 }
@@ -178,14 +178,14 @@ export interface MfaDowngradeBlocks {
  *
  * @param state - The account's setup.
  * @param mfaRole - Which MFA rules apply to the user (see {@link mfaRoleOf}), or `null`.
- * @param available - The configured providers that can prove MFA (all of them by default).
+ * @param available - The configured providers that can prove MFA.
  * @param unconfirmed - The user's provider accounts waiting for confirmation (none by default).
  * @returns The refused changes.
  */
 export function mfaDowngradeBlocks(
   state: MfaState,
   mfaRole: MfaRole | null,
-  available: ProviderAvailability = ALL_MFA_PROVIDERS,
+  available: ProviderAvailability,
   unconfirmed: readonly UnconfirmedProviderAccount[] = [],
 ): MfaDowngradeBlocks {
   /**

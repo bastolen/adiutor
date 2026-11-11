@@ -5,12 +5,7 @@
 import { type MfaProvider } from '../../sign-in/oauth-providers';
 import { allowsEmailCodes } from './email-codes';
 import type { MfaRole } from './requirement';
-import {
-  type MfaState,
-  type ProviderAvailability,
-  ALL_MFA_PROVIDERS,
-  mfaGivingProviders,
-} from './state';
+import { type MfaState, type ProviderAvailability, mfaGivingProviders } from './state';
 
 /** The ways a user can confirm a session that didn't have a second step. */
 export interface StepUpMethods {
@@ -50,14 +45,14 @@ export const NO_STEP_UP_METHODS: StepUpMethods = {
  *
  * @param state - The account's setup.
  * @param mfaRole - Which MFA rules apply to the user (see {@link mfaRoleOf}), or `null`.
- * @param available - The configured providers that can prove MFA (all of them
- *   by default); a provider only counts while it's configured.
+ * @param available - The configured providers that can prove MFA; a provider
+ *   only counts while it's configured.
  * @returns The available methods.
  */
 export function stepUpMethods(
   state: MfaState,
   mfaRole: MfaRole | null,
-  available: ProviderAvailability = ALL_MFA_PROVIDERS,
+  available: ProviderAvailability,
 ): StepUpMethods {
   return {
     authenticator: state.twoFactorEnabled && state.authenticator,
@@ -77,13 +72,13 @@ export function stepUpMethods(
  *
  * @param state - The account's setup.
  * @param mfaRole - Which MFA rules apply to the user (see {@link mfaRoleOf}), or `null`.
- * @param available - The configured providers that can prove MFA (all of them by default).
+ * @param available - The configured providers that can prove MFA.
  * @returns Whether a session can be confirmed with a second step.
  */
 export function canConfirmSessions(
   state: MfaState,
   mfaRole: MfaRole | null,
-  available: ProviderAvailability = ALL_MFA_PROVIDERS,
+  available: ProviderAvailability,
 ): boolean {
   const methods = stepUpMethods(state, mfaRole, available);
   return methods.authenticator || methods.email || methods.passkey || methods.providers.length > 0;

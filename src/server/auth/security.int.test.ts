@@ -138,7 +138,6 @@ describe('getSecurityOverview', () => {
     expect(passkeys[0]).toEqual({
       id: expect.any(String),
       name: 'Laptop',
-      deviceType: 'singleDevice',
       backedUp: false,
       createdAt: new Date('2026-01-01T10:00:00Z'),
     });

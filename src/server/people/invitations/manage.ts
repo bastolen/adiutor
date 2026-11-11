@@ -7,7 +7,6 @@ import { and, eq, exists, inArray, isNull, sql } from 'drizzle-orm';
 import type { DatabaseOrTransaction } from '@/db';
 import { invitation, inviteLink } from '@/db/schema';
 import { type Role } from '@/lib/authz/roles';
-import type { Locale } from '@/lib/i18n/locales';
 import { type Paged, resolveTableState, type TableState } from '@/lib/tables/table-state';
 import { INVITATIONS_TABLE, type InvitationSort } from '@/lib/tables/tables';
 
@@ -163,14 +162,13 @@ async function findTargetInvitation(
  * @param input - Which invitation.
  * @param input.companyId - The company, or `null` for staff.
  * @param input.invitationId - The invitation.
- * @param input.locale - The new invitation's language; by default the one the invitation was
- *   sent in (`invitation.locale`). An invitee who has an account with a saved language gets that
- *   instead.
+ * The new invitation keeps the language the invitation was sent in (`invitation.locale`); an
+ * invitee who has an account with a saved language gets that instead.
  */
 export async function resendInvitation(
   ctx: ServiceContext,
   actor: Actor,
-  input: { companyId: string | null; invitationId: string; locale?: Locale },
+  input: { companyId: string | null; invitationId: string },
 ): Promise<void> {
   const access = await getTargetAccess(ctx.db, actor, input.companyId);
   assertCanManage(access);
@@ -202,7 +200,7 @@ export async function resendInvitation(
       email: existing.email,
       role: existing.role,
       resent: true,
-      locale: input.locale ?? existing.locale,
+      locale: existing.locale,
     });
     // Still from the link: Finance and Support mustn't be able to accept it now.
     if (links.length > 0 && resent.invitationId) {

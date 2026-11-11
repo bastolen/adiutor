@@ -41,7 +41,7 @@ const config = {
   /** Stylesheet that loads Tailwind and the theme, so custom classes sort too. */
   tailwindStylesheet: './src/app/globals.css',
   /** Also sort classes passed to these class-name helpers. */
-  tailwindFunctions: ['clsx', 'cn', 'cva', 'tv', 'twMerge', 'twJoin'],
+  tailwindFunctions: ['clsx', 'cn'],
 };
 
 export default config;

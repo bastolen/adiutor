@@ -1,5 +1,5 @@
 /**
- * @file Formatting for dates and numbers shown in the UI and in emails, in
+ * @file Formatting for dates and times shown in the UI and in emails, in
  * the reader's language. Times are in UTC and say so (`TIME_ZONE`), so
  * server and browser render the same text. Server Components pass the
  * request's locale (`getLocale()` or `useLocale()`), emails the recipient's.
@@ -56,9 +56,6 @@ const relativeFormat = perLocale(
   (locale) => new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }),
 );
 
-/** Number formatters, e.g. "12,345" or "12.345". */
-const numberFormat = perLocale((locale) => new Intl.NumberFormat(locale));
-
 /**
  * Formats a date for display.
  *
@@ -79,17 +76,6 @@ export default function formatDate(date: Date, locale: Locale): string {
  */
 export function formatDateTime(date: Date, locale: Locale): string {
   return dateTimeFormat(locale).format(date);
-}
-
-/**
- * Formats a number for display, with the language's digit grouping.
- *
- * @param value - The number.
- * @param locale - The reader's language.
- * @returns The formatted number, e.g. "12,345".
- */
-export function formatNumber(value: number, locale: Locale): string {
-  return numberFormat(locale).format(value);
 }
 
 /** Units for {@link formatRelative}, each with its length in seconds and how long it's used. */

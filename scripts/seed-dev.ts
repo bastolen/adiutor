@@ -465,7 +465,7 @@ async function main(): Promise<number> {
       ]);
 
       // Sample errors, so Logs → Errors has references to look up.
-      const errors = sampleErrors({ admin, manager, support, alphaAdmin, multi }, new Date());
+      const errors = sampleErrors({ admin, manager, support, alphaAdmin, multi });
       await tx.insert(schema.appError).values(errors.appErrors);
       await tx.insert(schema.signInError).values(errors.signInErrors);
 

@@ -1,7 +1,7 @@
 /**
  * @file The "Default language" select: Adiutor's own language for everyone
  * who hasn't chosen one (`staff_settings.default_locale`), on the setup form
- * and the staff page. Read it with `localeField(formData, 'defaultLocale')`.
+ * and the staff page. Read it with `field(formData, 'defaultLocale')`.
  */
 'use client';
 

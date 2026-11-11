@@ -9,21 +9,16 @@
 
 import { useRecentConfirmation } from '@/components/auth/recent-confirmation';
 import { grantNeedsConfirmation } from '@/lib/authz/guards';
-import { isRole, type Role } from '@/lib/authz/roles';
+import { isRole } from '@/lib/authz/roles';
 
 /**
  * Checks whether a role grant must be confirmed before it's sent.
  *
  * @param companyId - The company, or `null` for the staff.
  * @param role - The chosen role (as the form has it).
- * @param from - The role the person has there now, if any; left out for invitations.
  * @returns Whether to show `ConfirmFirstNote` instead of sending.
  */
-export default function useConfirmBeforeGrant(
-  companyId: string | null,
-  role: string,
-  from?: Role | null,
-): boolean {
+export default function useConfirmBeforeGrant(companyId: string | null, role: string): boolean {
   const { mustConfirm } = useRecentConfirmation();
   return (
     mustConfirm &&
@@ -31,7 +26,6 @@ export default function useConfirmBeforeGrant(
     grantNeedsConfirmation({
       target: companyId === null ? { type: 'staff' } : { type: 'company' },
       role,
-      from,
     })
   );
 }

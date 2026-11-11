@@ -46,8 +46,6 @@ interface BannerProps {
    * dismissal where it should).
    */
   onDismiss?: () => void;
-  /** The dismiss button's name for screen readers. Defaults to "Dismiss" in the reader's language. */
-  dismissLabel?: string;
 }
 
 /**
@@ -68,7 +66,6 @@ interface BannerProps {
  * @param props.actions - Buttons or links on the right.
  * @param props.onDismiss - Called when dismissed; adds the dismiss button. Focus then moves to
  *   the card's heading or the main content (`restoreFocusIfLost`), not to `<body>`.
- * @param props.dismissLabel - The dismiss button's name.
  * @returns The banner.
  */
 export default function Banner({
@@ -79,7 +76,6 @@ export default function Banner({
   description,
   actions = null,
   onDismiss = undefined,
-  dismissLabel = undefined,
 }: BannerProps) {
   const t = useTranslations('common.actions');
   return (
@@ -107,7 +103,7 @@ export default function Banner({
             <Button
               variant="ghost"
               size="sm"
-              aria-label={dismissLabel ?? t('dismiss')}
+              aria-label={t('dismiss')}
               onClick={(event) => {
                 // The banner (and this button) goes away: focus moves on instead of to <body>.
                 restoreFocusIfLost(event.currentTarget);

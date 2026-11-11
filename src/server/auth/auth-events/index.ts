@@ -38,7 +38,7 @@ export {
   afterAccountCreate,
   afterAccountDelete,
 } from './provider-accounts';
-export { checkReverify, checkIncomingUser } from './reverify';
+export { checkIncomingUser } from './reverify';
 export type { IncomingUserInfo } from './reverify';
 export { beforeSessionCreate, afterSessionCreate } from './session-hooks';
 export { afterPasswordSignIn } from './password-sign-in';

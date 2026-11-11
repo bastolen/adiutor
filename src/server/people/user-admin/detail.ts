@@ -188,7 +188,7 @@ export async function getUserDetail(
     ),
     // Judged once the MFA role above is in (`asSeenWith`), so both load in this one batch.
     permissions.has('users:manage') ? loadSessionRows(ctx.db, id, options.sessions ?? {}) : null,
-    permissions.has('audit:view') ? listAuditEvents(ctx, actor, { userId: id }, 25) : null,
+    permissions.has('audit:view') ? listAuditEvents(ctx, actor, id, 25) : null,
     permissions.has('users:manage') ? loadAccountNames(ctx.db, id) : null,
   ]);
   if (!mfa) {

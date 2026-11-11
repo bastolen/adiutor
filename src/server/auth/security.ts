@@ -26,8 +26,6 @@ export interface PasskeySummary {
   id: string;
   /** The name the user gave it. */
   name: string | null;
-  /** `singleDevice` (e.g. a security key) or `multiDevice` (synced, e.g. iCloud Keychain). */
-  deviceType: string;
   /** Whether it's backed up or synced by the provider. */
   backedUp: boolean;
   /** When it was added. */
@@ -67,7 +65,6 @@ export async function getSecurityOverview(
     .select({
       id: passkey.id,
       name: passkey.name,
-      deviceType: passkey.deviceType,
       backedUp: passkey.backedUp,
       createdAt: passkey.createdAt,
     })

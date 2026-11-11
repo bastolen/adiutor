@@ -322,25 +322,3 @@ export function parseProviderStepUpCookie(
   }
   return { provider, outcome };
 }
-
-/**
- * Says why a provider didn't confirm the session, and what the user can do.
- * Worded to fit wherever they land. The session keeps any earlier
- * confirmation it had (Better Auth replaces the session, which keeps it:
- * `beforeSessionCreate`), so it never says one ended.
- *
- * @param provider - The provider the user confirmed with.
- * @param outcome - Why it didn't confirm the session.
- * @returns The message, e.g. "GitHub couldn't confirm it's you: …".
- */
-export function providerStepUpMessage(
-  provider: MfaProvider,
-  outcome: ProviderStepUpOutcome,
-): string {
-  const label = PROVIDER_LABELS[provider];
-  const reasons: Record<ProviderStepUpOutcome, string> = {
-    'mfa-off': `two-factor authentication is off for your ${label} account. Turn it on at ${label}, or use another second step.`,
-    unchecked: `we couldn't check your ${label} account's two-factor authentication just now. Try again in a moment.`,
-  };
-  return `${label} couldn't confirm it's you: ${reasons[outcome]}`;
-}

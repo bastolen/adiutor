@@ -365,7 +365,7 @@ function listOperations(): Operation[] {
     ['deactivate user', (w) => deactivateUser(ctx, w.actor, w.outsider)],
     ['reactivate user', (w) => reactivateUser(ctx, w.actor, w.deactivated)],
     ['delete user', (w) => deleteUser(ctx, w.actor, w.deletable, 'deletable@adiutor.test')],
-    ['view audit log', (w) => listAuditEvents(ctx, w.actor, {})],
+    ['view audit log', (w) => listAuditEvents(ctx, w.actor, w.outsider)],
     ['list the audit log', (w) => listAuditLog(ctx, w.actor)],
     ['look up an error reference', (w) => findErrorReference(ctx, w.actor, '7KQ2-M9XD')],
     ['list recent errors', (w) => listRecentErrors(ctx, w.actor)],

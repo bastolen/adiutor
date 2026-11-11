@@ -10,7 +10,7 @@ import { existsSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 /** What `next build` reads, from the repository root. */
-export const BUILD_INPUTS = [
+const BUILD_INPUTS = [
   'src',
   'public',
   'next.config.ts',
@@ -46,10 +46,10 @@ function lastChange(target: string): number {
  * Whether the last production build is still current: it exists and none of
  * {@link BUILD_INPUTS} changed after it. Inputs that don't exist are ignored.
  *
- * @param root - The repository root.
  * @returns Whether it can be started without building again.
  */
-export function buildIsCurrent(root = process.cwd()): boolean {
+export function buildIsCurrent(): boolean {
+  const root = process.cwd();
   const buildId = path.join(root, '.next', 'BUILD_ID');
   if (!existsSync(buildId)) {
     return false;

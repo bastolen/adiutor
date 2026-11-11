@@ -50,7 +50,7 @@ describe('audit log', () => {
     });
     await recordEvent(ctx, { action: 'sign_in', actorUserId: jane.id, targetUserId: jane.id });
 
-    const events = await listAuditEvents(ctx, admin, { userId: jane.id });
+    const events = await listAuditEvents(ctx, admin, jane.id);
 
     expect(events.map(({ action }) => action)).toEqual(['sign_in', 'role_changed']);
     expect(events[1]).toMatchObject({
@@ -95,7 +95,7 @@ describe('audit log by user', () => {
      * @returns Their actions and days, newest first.
      */
     const janes = async (limit: number) =>
-      (await listAuditEvents(ctx, admin, { userId: jane.id }, limit)).map(
+      (await listAuditEvents(ctx, admin, jane.id, limit)).map(
         ({ action, at }) => `${action} ${at.getUTCDate()}`,
       );
 
@@ -189,7 +189,7 @@ describe('own activity', () => {
       { action: 'sign_in', ip: '203.0.113.7', userAgent: 'Firefox' },
     ]);
     // Staff with access to the audit log still see where the wrong password came from.
-    const logged = await listAuditEvents(ctx, admin, { userId: jane.id });
+    const logged = await listAuditEvents(ctx, admin, jane.id);
     expect(logged.find(({ action }) => action === 'sign_in_failed')).toMatchObject({
       ip: '203.0.113.7',
       userAgent: 'Firefox',

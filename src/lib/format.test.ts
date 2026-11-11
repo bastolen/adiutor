@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import formatDate, { formatDateTime, formatNumber, formatRelative } from './format';
+import formatDate, { formatDateTime, formatRelative } from './format';
 
 const NOW = new Date('2026-10-23T12:00:00Z');
 
@@ -32,16 +32,6 @@ describe('formatDateTime', () => {
     ['es-ES', '23 oct 2026, 14:05 UTC'],
   ] as const)('includes the time and zone in %s', (locale, expected) => {
     expect(formatDateTime(new Date('2026-10-23T14:05:00Z'), locale)).toBe(expected);
-  });
-});
-
-describe('formatNumber', () => {
-  it.each([
-    ['en-US', '12,345'],
-    ['nl-NL', '12.345'],
-    ['es-ES', '12.345'],
-  ] as const)('groups digits in %s', (locale, expected) => {
-    expect(formatNumber(12345, locale)).toBe(expected);
   });
 });
 
