@@ -51,7 +51,7 @@ follow them through with the staff. The company roles are already set up for it.
 
 - **App:** [Next.js](https://nextjs.org) 16 (App Router, Cache Components), React 19 and
   TypeScript, with [next-intl](https://next-intl.dev) for languages
-- **Interface:** Tailwind CSS 4 and SCSS, [Radix UI](https://www.radix-ui.com) and
+- **Interface:** Tailwind CSS 4, [Radix UI](https://www.radix-ui.com) and
   [Lucide](https://lucide.dev) icons
 - **Sign-in:** [Better Auth](https://www.better-auth.com), with passkeys, two-factor
   authentication, email links and GitHub and Google sign-in

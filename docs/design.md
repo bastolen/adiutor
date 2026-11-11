@@ -276,8 +276,7 @@ carries over. The row's "Theme" label has a palette icon, apart from the options
   `light-dark(<light>, <dark>)`, so both values sit side by side when you check contrast.
 - **Styling:** use the semantic colours (see [Design and accessibility](#design-and-accessibility))
   such as `bg-surface text-foreground` instead of fixed colours like `bg-white` or `text-ink`; they
-  switch with the mode. For anything else, use the `dark:` variant (e.g. `dark:hidden`). In SCSS,
-  use the matching Sass variables, e.g. `brand.$surface` and `brand.$foreground`.
+  switch with the mode. For anything else, use the `dark:` variant (e.g. `dark:hidden`).
 - **Logo:** use the `Logo` component (`src/components/brand/logo.tsx`), which shows `logo.svg` in
   light mode and `logo-on-dark.svg` in dark mode.
 
@@ -292,13 +291,9 @@ Logos and icons live in `public/brand/`, cropped to their content with no backgr
 | `logo-white.svg`, `icon-white.svg` | The brand gradient or accent colour |
 
 `src/styles/theme.css` is the Tailwind theme: the brand colours (`brand-teal`, `brand-green`,
-`brand-orange`, `ink`), the `bg-brand-gradient` utility, the fonts (Inter and JetBrains Mono, then
-the system fonts as fallbacks), text sizes with
-line height = font size + 8px, short entrance animations, and the semantic colours described under
-[Design and accessibility](#design-and-accessibility). Use the brand colours for brand moments
-only; UI uses the semantic colours.
-
-In SCSS, `@use "brand";` (from `src/styles/_brand.scss`) gives the same values as Sass variables,
-e.g. `brand.$primary` or `brand.$brand-gradient`.
+`brand-orange`, `ink`), the fonts (Inter and JetBrains Mono, then the system fonts as fallbacks),
+text sizes with line height = font size + 8px, short entrance animations, and the semantic colours
+described under [Design and accessibility](#design-and-accessibility). Use the brand colours for
+brand moments only; UI uses the semantic colours.
 
 The brand assets aren't covered by the code's MIT License; see [License](../README.md#license).

@@ -41,17 +41,17 @@ The linters and formatters, the JSDoc rule, the editor setup and the Git hooks. 
 - **JSDoc** is required: every file starts with a `/** @file ... */` block, and every function,
   component, class and exported value has a `/** */` comment, which says something: an empty block
   (as `lint:fix` inserts) fails until it's written (`jsdoc/require-description`).
-  `eslint-plugin-jsdoc` enforces this for JS/TS. In CSS and SCSS, Stylelint rejects any comment that is not `/** */` (including `//`),
-  but cannot check that a file header or a comment exists. The translation catalogues
+  `eslint-plugin-jsdoc` enforces this for JS/TS. In CSS, Stylelint rejects any comment that is not
+  `/** */`, but cannot check that a file header or a comment exists. The translation catalogues
   (`src/messages/**/*.json`) are the one exception: JSON can't hold comments, so
   [Languages](i18n.md) and the loader's JSDoc (`src/lib/i18n/messages.ts`) give their context.
 - **Prettier** (`prettier.config.mjs`) handles formatting with settings that match Airbnb (single
   quotes, semicolons, trailing commas, 100-character lines). It runs inside ESLint and Stylelint,
   and sorts Tailwind classes.
-- **Stylelint** (`stylelint.config.mjs`) checks CSS and SCSS with the standard SCSS rules, allows
+- **Stylelint** (`stylelint.config.mjs`) checks CSS with the standard rules, allows
   Tailwind's at-rules (`@theme`, `@utility`, `@apply`, ...) and enforces JSDoc-style comments.
 - **Tailwind classes** are sorted by Prettier's Tailwind plugin, in `className` and in helpers like
-  `clsx()` and `cn()`, and in `@apply` in CSS/SCSS. Because Prettier runs inside ESLint and
+  `clsx()` and `cn()`, and in `@apply` in CSS. Because Prettier runs inside ESLint and
   Stylelint, `pnpm lint` reports classes in the wrong order and `pnpm lint:fix` sorts them.
   `eslint-plugin-better-tailwindcss` also reports unknown, duplicate, conflicting and deprecated
   classes, using the brand theme so classes like `bg-primary` count as valid.
@@ -109,7 +109,7 @@ being committed:
   then the Vitest tests related to the changed files, then `pnpm lint:messages` (code can stop
   using a message, or use one that doesn't exist)
 - The translation catalogues (`src/messages/`): `pnpm lint:messages`
-- CSS/SCSS: `stylelint --fix` (same, for styles)
+- CSS: `stylelint --fix` (same, for styles)
 - JSON, Markdown and YAML: `prettier --write`
 
 Only staged changes are touched: unstaged edits in the same file are set aside while the hook runs.

@@ -8,7 +8,7 @@
     "dbaeumer.vscode-eslint",
     /** Prettier: formats files on save with prettier.config.mjs. */
     "esbenp.prettier-vscode",
-    /** Stylelint: shows CSS and SCSS lint errors while you type. */
+    /** Stylelint: shows CSS lint errors while you type. */
     "stylelint.vscode-stylelint",
     /** Tailwind CSS IntelliSense: class autocomplete, hover previews and theme colours. */
     "bradlc.vscode-tailwindcss",

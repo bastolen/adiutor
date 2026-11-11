@@ -47,8 +47,8 @@ prompted. [Local development](docs/development.md#scripts) lists every script, a
 - ESLint (Airbnb rules), Stylelint and Prettier enforce the style. The pre-commit hook fixes what it
   can; run `pnpm lint:fix` and `pnpm format` to do the same manually.
 - **Document all code with JSDoc comments** (`/** ... */`): every file starts with a `@file` block,
-  and every function, component, type and exported value has a comment. This applies to CSS and
-  SCSS too. Update comments, the README and the [docs](docs/README.md) when you change behaviour.
+  and every function, component, type and exported value has a comment. This applies to CSS too.
+  Update comments, the README and the [docs](docs/README.md) when you change behaviour.
 - **Build UI from `src/components/ui/`** and keep it accessible (WCAG 2.2 AA, full keyboard
   support, both colour modes). See [Design and accessibility](docs/design.md#design-and-accessibility).
 - **Check where code lives** now and then: in Claude Code, `/placement-check`

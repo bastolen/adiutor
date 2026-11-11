@@ -35,7 +35,7 @@ const config = {
   /** The translation catalogues: every language complete and matching English (docs/i18n.md). */
   'src/messages/**/*.json': checkMessages,
   /** Stylelint fixes and formats (Prettier runs inside it), then fails on errors it can't fix. */
-  '*.{css,scss}': 'stylelint --fix --allow-empty-input --max-warnings=0',
+  '*.css': 'stylelint --fix --allow-empty-input --max-warnings=0',
   /** Everything else Prettier understands: JSON, Markdown, YAML and so on. */
   '*.{json,jsonc,json5,md,yml,yaml}': 'prettier --write --ignore-unknown',
 };

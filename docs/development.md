@@ -114,9 +114,9 @@ Things that can look like a problem but aren't:
 | `pnpm dev`                 | Start the dev server                                                                                        |
 | `pnpm build`               | Build for production                                                                                        |
 | `pnpm start`               | Serve the production build                                                                                  |
-| `pnpm lint`                | Check JS/TS with ESLint and CSS/SCSS with Stylelint                                                         |
-| `pnpm lint:fix`            | Fix and format JS/TS, CSS and SCSS where possible                                                           |
-| `pnpm format`              | Format every file type with Prettier (CSS, SCSS, JSON, Markdown)                                            |
+| `pnpm lint`                | Check JS/TS with ESLint and CSS with Stylelint                                                              |
+| `pnpm lint:fix`            | Fix and format JS/TS and CSS where possible                                                                 |
+| `pnpm format`              | Format every file type with Prettier (CSS, JSON, Markdown)                                                  |
 | `pnpm format:check`        | Check formatting without changing files                                                                     |
 | `pnpm typecheck`           | Generate Next.js route types, then type-check with TypeScript                                               |
 | `pnpm test`                | Run the unit and component tests (Vitest)                                                                   |

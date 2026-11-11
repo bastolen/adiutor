@@ -13,8 +13,8 @@
 
 ## Documentation
 
-- Document all code with JSDoc-style `/** ... */` comments. This includes TypeScript, config files, CSS and SCSS.
-- Every file starts with a `/** @file ... */` block saying what it is for. Every export, component, function, config option, theme token group and Sass variable gets its own `/** */` comment.
+- Document all code with JSDoc-style `/** ... */` comments. This includes TypeScript, config files and CSS.
+- Every file starts with a `/** @file ... */` block saying what it is for. Every export, component, function, config option and theme token group gets its own `/** */` comment.
 - When you change code, update its comments, the README and the matching page in `docs/` in the same change, so documentation never drifts from the code.
 - `README.md` is about the product and the project (what Adiutor is, its features, the tech stack, the quick start, contributing, security reporting, the license). Developer detail lives in `docs/`, one page per topic, each listed in `docs/README.md` and the README's Documentation table; add new pages to both.
 - A significant decision (architecture, the security model, process) gets a record in `docs/decisions/` (template and index in its `README.md`). Read the record before changing such a decision; a change gets a new record that supersedes the old one.

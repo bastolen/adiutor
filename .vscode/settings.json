@@ -19,9 +19,8 @@
   },
 
   /** Stylelint checks styles; VS Code's built-in CSS checks don't know Tailwind and are turned off. */
-  "stylelint.validate": ["css", "scss", "tailwindcss"],
+  "stylelint.validate": ["css", "tailwindcss"],
   "css.validate": false,
-  "scss.validate": false,
 
   /** Tailwind IntelliSense: read the theme and suggest classes inside class-name helpers. */
   "tailwindCSS.experimental.configFile": "src/app/globals.css",

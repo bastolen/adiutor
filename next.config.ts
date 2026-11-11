@@ -89,27 +89,17 @@ const nextConfig: NextConfig = {
     },
   },
 
-  /** Options passed to the Sass compiler for `.scss` files. */
-  sassOptions: {
-    /**
-     * Folders Sass searches for `@use` imports, so any `.scss` file can write
-     * `@use "brand"` instead of a relative path to `src/styles/_brand.scss`.
-     */
-    loadPaths: ['src/styles'],
-  },
-
   /** Turbopack settings for the dev server and build. */
   turbopack: {
     rules: {
       /**
        * Runs Tailwind CSS on stylesheets.
        *
-       * Limited to plain global CSS: re-typing CSS Modules or compiled Sass
-       * output as `*.css` strips their scoped class names, so `.module.*`,
-       * `.scss` and `.sass` files are skipped.
+       * Limited to plain global CSS: re-typing CSS Modules as `*.css` strips
+       * their scoped class names, so `.module.*` files are skipped.
        */
       '*.css': {
-        condition: { not: { path: /\.module\.|\.s[ac]ss/ } },
+        condition: { not: { path: /\.module\./ } },
         loaders: ['@tailwindcss/turbopack'],
         as: '*.css',
       },
