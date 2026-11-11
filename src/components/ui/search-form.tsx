@@ -34,7 +34,8 @@ interface SearchFormProps {
 /**
  * The Search button. While the results load it shows a spinner and is busy
  * (`aria-busy`, with the wait cursor), but stays enabled, so keyboard focus
- * stays on it; pressing it again just searches again.
+ * stays on it; pressing it again just searches again. On phones it has a
+ * little less padding, so the field keeps room for its placeholder.
  *
  * @returns The button.
  */
@@ -42,7 +43,12 @@ function SearchButton() {
   const t = useTranslations('common.actions');
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant="secondary" aria-busy={pending || undefined}>
+    <Button
+      type="submit"
+      variant="secondary"
+      aria-busy={pending || undefined}
+      className="px-3 sm:px-4"
+    >
       {pending && <Spinner />}
       {t('search')}
     </Button>

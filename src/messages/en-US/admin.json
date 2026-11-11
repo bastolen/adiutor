@@ -319,7 +319,7 @@
         "errorsTab": "Errors"
       },
       "searchLabel": "Search people or companies",
-      "searchPlaceholder": "Person or company",
+      "searchPlaceholder": "Name or company",
       "dateLabel": "Filter by date",
       "filterLabel": "Filter events",
       "all": "All",

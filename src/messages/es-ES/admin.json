@@ -276,7 +276,7 @@
       "description": "Todas las empresas a las que ayudas. Abre una para gestionar a su gente y su configuración.",
       "add": "Añadir empresa",
       "searchLabel": "Buscar empresas",
-      "searchPlaceholder": "Buscar por nombre",
+      "searchPlaceholder": "Busca por nombre",
       "rows": "empresas",
       "noMatchTitle": "No hay empresas que coincidan",
       "noMatchDescription": "Nada coincide con \"{search}\". Prueba con otro nombre.",
@@ -319,7 +319,7 @@
         "errorsTab": "Errores"
       },
       "searchLabel": "Buscar personas o empresas",
-      "searchPlaceholder": "Persona o empresa",
+      "searchPlaceholder": "Nombre o empresa",
       "dateLabel": "Filtrar por fecha",
       "filterLabel": "Filtrar eventos",
       "all": "Todos",
