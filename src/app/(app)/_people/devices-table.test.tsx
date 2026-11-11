@@ -6,7 +6,7 @@ import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import translator from '@/lib/i18n/translator';
-import { createPageUrl } from '@/lib/tables/table-state';
+import { createPageUrl } from '@/lib/tables/page-url';
 import { DEVICES_TABLE } from '@/lib/tables/tables';
 import type { UserSession } from '@/server/people/user-admin';
 

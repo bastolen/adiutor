@@ -184,7 +184,7 @@ link), the reset goes ahead.
 ## Locked out
 
 An Admin resets two-step verification on the user's detail page (`resetUserMfa` in
-`src/server/people/user-admin.ts`). The reset turns off two-step verification (the authenticator
+`src/server/people/user-admin/`). The reset turns off two-step verification (the authenticator
 app, its backup codes and email codes), removes the user's passkeys if the Admin ticks that, and
 disconnects every GitHub and Google account connected to theirs, confirmed or not. Someone who
 once verified the user's address at GitHub or Google can connect their own account by signing in

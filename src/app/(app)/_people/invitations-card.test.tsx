@@ -7,7 +7,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { defined } from '@/lib/defined';
 import translator from '@/lib/i18n/translator';
-import { createPageUrl, type Paged } from '@/lib/tables/table-state';
+import { createPageUrl } from '@/lib/tables/page-url';
+import { type Paged } from '@/lib/tables/table-state';
 import { INVITATIONS_TABLE } from '@/lib/tables/tables';
 import type { PendingInvitation } from '@/server/people/invitations';
 

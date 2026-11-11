@@ -13,7 +13,8 @@ import RowAction from '@/components/ui/row-action';
 import SortMenu from '@/components/ui/sort-menu';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
 import formatDate from '@/lib/format';
-import { type Paged, showsPagination, type TableLinks } from '@/lib/tables/table-state';
+import { type TableLinks } from '@/lib/tables/page-url';
+import { type Paged, showsPagination } from '@/lib/tables/table-state';
 import type { InvitationSort } from '@/lib/tables/tables';
 import type { PendingInvitation } from '@/server/people/invitations';
 

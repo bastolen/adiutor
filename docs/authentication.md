@@ -334,7 +334,7 @@ whole sentence per event, with who made the change, if not you, where each langu
   has a second step (starting it without one sends you to the step-up page first). It also needs
   your password, if you have one (wrong ones are recorded and limited, as for changing it), and
   without a password or a second step a sign-in from the last hour (`deactivateOwnAccount` in
-  `src/server/people/user-admin.ts`). It's blocked while you're the only Admin of the staff or a
+  `src/server/people/user-admin/`). It's blocked while you're the only Admin of the staff or a
   company, and the card says so with the service's own refusal ("You are the only staff Admin.
   Make someone else an Admin first.", `soleAdminError`); that's checked before the password, so
   the refusal is the same with a right or a wrong one. Only Admins delete accounts.

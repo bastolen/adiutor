@@ -149,7 +149,7 @@ Admins and Managers who aren't members can still add themselves with any role, a
   too (two Admins deactivated or deleted together, one deactivated while the other is demoted or
   removed, two staff Admins demoting each other). Everything that can take away a company's last
   active Admin locks that company's row first (`changeMembership` in
-  `src/server/people/members.ts`, `soleAdminOf` in `src/server/people/user-admin.ts`), and the
+  `src/server/people/members.ts`, `soleAdminOf` in `src/server/people/user-admin/sole-admin.ts`), and the
   staff equivalents lock the staff Admins' rows (`setStaffRole` in `src/server/people/staff.ts`),
   so they take turns and count the Admins again once they hold the lock: the second one sees the
   first and is refused with the usual last-Admin message. In the rare case where two changes still

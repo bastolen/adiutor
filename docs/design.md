@@ -27,8 +27,8 @@ keyboard support.
   `{t('deactivated')}`, as its English text). Icons come from
   [Lucide](https://lucide.dev) and are hidden from screen readers; icon-only buttons have an
   `aria-label`. Join classes with `cn()` (`src/lib/cn.ts`).
-- **Tables** of records sort and paginate (`src/lib/tables/table-state.ts`, with each table defined in
-  `src/lib/tables/tables.ts`):
+- **Tables** of records sort and paginate (`src/lib/tables/table-state.ts`, with their links built
+  in `src/lib/tables/page-url.ts` and each table defined in `src/lib/tables/tables.ts`):
   - **Sorting:** every table sorts from its Sort menu (`SortMenu`) in the card header or next to
     the filters, at every width. The button says how the table is sorted ("Name, A to Z"; just
     "Sort" on phones) and lists each sort both ways, A to Z or newest first at the top.

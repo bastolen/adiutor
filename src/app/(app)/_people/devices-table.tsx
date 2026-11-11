@@ -14,7 +14,8 @@ import RelativeTime from '@/components/ui/relative-time';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
 import formatIpAddress from '@/lib/request/ip-address';
 import { describeUserAgent } from '@/lib/request/user-agent';
-import type { Paged, TableLinks } from '@/lib/tables/table-state';
+import type { TableLinks } from '@/lib/tables/page-url';
+import type { Paged } from '@/lib/tables/table-state';
 import type { DeviceSort } from '@/lib/tables/tables';
 import type { UserSession } from '@/server/people/user-admin';
 
