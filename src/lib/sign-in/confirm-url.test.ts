@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_SIGNED_IN_PATH } from '@/lib/redirect';
 
-import confirmChangeUrl, { confirmChangeUrlFor } from './confirm-url';
+import confirmChangeUrl, { confirmChangeUrlFor, confirmStrongUrlFor } from './confirm-url';
 
 /**
  * Builds a submitted form.
@@ -62,4 +62,21 @@ describe('confirmChangeUrlFor', () => {
       );
     },
   );
+});
+
+describe('confirmStrongUrlFor', () => {
+  it("opens the step-up page in strong mode, returning to the form's page and card", () => {
+    expect(
+      confirmStrongUrlFor(form({ returnTo: '/admin/users/u1?d-page=2#sign-in-as' }), '/x'),
+    ).toBe('/auth/verify?callbackURL=%2Fadmin%2Fusers%2Fu1%3Fd-page%3D2%23sign-in-as&for=strong');
+  });
+
+  it('returns to the fallback without a returnTo, and never off the site', () => {
+    expect(confirmStrongUrlFor(form({}), '/admin/users/u1')).toBe(
+      '/auth/verify?callbackURL=%2Fadmin%2Fusers%2Fu1&for=strong',
+    );
+    expect(confirmStrongUrlFor(form({ returnTo: '//evil.adiutor.test' }), '/x')).toBe(
+      `/auth/verify?callbackURL=${encodeURIComponent(DEFAULT_SIGNED_IN_PATH)}&for=strong`,
+    );
+  });
 });

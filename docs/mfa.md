@@ -188,6 +188,25 @@ passkey or an authenticator app there first, since a password next to provider M
 refused for them. With a passkey or an authenticator app, or without MFA (a new account's welcome
 link), the reset goes ahead.
 
+## Signing in as someone needs strong MFA
+
+Signing in as a user (see [Signing in as a user](authentication.md#signing-in-as-a-user)) asks the
+staff member for the rules of the roles that require MFA, whatever their own role, so Support too:
+
+- **Strong MFA on their account** (`hasStrongMfa`, the Actor's `strongMfa`): an authenticator app,
+  a passkey, or no password with every connected provider account having MFA. Email codes don't
+  count.
+- **A confirmation with it from the last 15 minutes** (`strongMfaConfirmedUntil`, the Actor's
+  `strongMfaConfirmedUntil`): an email code or a trusted device never opens this window, and GitHub
+  doesn't on an account with a passkey or an authenticator app.
+
+Starting without one sends them to the step-up page in its strong mode (`for=strong`, from
+`confirmStrongUrlFor` in `src/lib/sign-in/confirm-url.ts`). That mode offers only the methods that
+open the window (`strongStepUpMethods`): never email codes, and GitHub only as the account's only
+strong step. So Support with email codes next to a passkey confirms with the passkey rather than
+being sent back and forth. A session confirmed strongly already goes straight back. So does an
+account without strong MFA, since the page that sent them explains what's missing.
+
 ## Locked out
 
 An Admin resets two-step verification on the user's detail page (`resetUserMfa` in

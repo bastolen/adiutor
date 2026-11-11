@@ -19,6 +19,13 @@
  * account whose only strong step is GitHub still gets GitHub, which opens the
  * window there.
  *
+ * Before signing in as someone, staff come in strong mode (`for=strong`, see
+ * `confirmStrongUrlFor`): only strong methods that open that window whatever
+ * their role are offered (`strongStepUpMethods`), never email codes, so
+ * Support with email codes next to a passkey confirms with the passkey. A
+ * session confirmed strongly already, or an account without strong MFA, goes
+ * straight back (the page that sent them explains what's missing).
+ *
  * Once confirmed, they go back to `callbackURL`: the page, its tables' sort
  * and page, and the anchor of the card where they clicked (`getSafeRedirectPath`
  * keeps an anchor only when it names a section).
@@ -29,7 +36,7 @@ import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import { FormSkeleton } from '@/components/ui/skeleton';
-import { needsRecentConfirmation } from '@/lib/authz/mfa';
+import { isMfaConfirmedRecently, needsRecentConfirmation } from '@/lib/authz/mfa';
 import ClientMessages from '@/lib/i18n/client-messages';
 import { DEFAULT_SIGNED_IN_PATH, getSafeRedirectPath } from '@/lib/redirect';
 import { type SearchParams, searchParam } from '@/lib/search-params';
@@ -56,8 +63,9 @@ export async function generateMetadata(): Promise<Metadata> {
  *
  * @param props - Component props.
  * @param props.searchParams - Query parameters (`callbackURL`, `for=change`
- *   from the Security page, and after "Confirm with GitHub" didn't sign in:
- *   `error` and the `provider` it named).
+ *   from the Security page or `for=strong` before signing in as someone, and
+ *   after "Confirm with GitHub" didn't sign in: `error` and the `provider` it
+ *   named).
  * @returns The form.
  */
 async function StepUp({ searchParams }: { searchParams: Promise<SearchParams> }) {
@@ -71,16 +79,25 @@ async function StepUp({ searchParams }: { searchParams: Promise<SearchParams> })
   if (actor.signedInAs) {
     redirect(DEFAULT_SIGNED_IN_PATH);
   }
-  // Confirmed recently enough for anything, or no second step that can be used here.
-  if (!needsRecentConfirmation(actor)) {
+  // Before signing in as someone: a strong second step, whatever the role (`strongStepUpMethods`).
+  const strong = searchParam(params.for) === 'strong';
+  // Confirmed recently enough for anything, or no second step that can be used here. In strong
+  // mode: confirmed strongly already, or no strong step at all (the page that sent them says so).
+  const nothingToConfirm = strong
+    ? !actor.strongMfa || isMfaConfirmedRecently(actor.strongMfaConfirmedUntil)
+    : !needsRecentConfirmation(actor);
+  if (nothingToConfirm) {
     redirect(callbackURL);
   }
 
   // A confirmed session is only here for a change to how the user signs in.
-  const forChange = searchParam(params.for) === 'change' || actor.sessionMfaVerified;
+  const forChange = strong || searchParam(params.for) === 'change' || actor.sessionMfaVerified;
   // Only the providers configured here (`availableProviders`) are offered, and for a change only
   // the methods that open its window.
-  const methods = await getStepUpMethods(appContext, actor.id, actor.mfaRole, { forChange });
+  const methods = await getStepUpMethods(appContext, actor.id, actor.mfaRole, {
+    forChange,
+    strong,
+  });
   // A different account than the user's own confirmed one names the provider, and never says
   // whether an address has an account (`reverifyErrorText`).
   const initialError = reverifyErrorText(

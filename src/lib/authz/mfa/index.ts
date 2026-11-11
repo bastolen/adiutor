@@ -64,7 +64,7 @@ export {
   sessionMfaOf,
 } from './session';
 export type { MfaMethod, SessionMfa, SessionMfaInput } from './session';
-export { hasStrongMfa, strongMfaConfirmedUntil } from './strong';
+export { hasStrongMfa, strongMfaConfirmedUntil, strongStepUpMethods } from './strong';
 export { mustSetUpMfa, mustStepUp, needsRecentConfirmation, needsFreshSignIn } from './actor-gates';
 export type { ActorMfa } from './actor-gates';
 export { signInMethodFromPath } from './sign-in-method';

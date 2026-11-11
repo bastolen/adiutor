@@ -3,11 +3,13 @@
  * someone else asks of the staff member who starts it. They need MFA that
  * counts for the roles that require it (not email codes), and a confirmation
  * with it from the last 15 minutes, also when their own role (Support)
- * doesn't require MFA. See docs/decisions/0017-staff-sign-in-as-users.md.
+ * doesn't require MFA, which the step-up page's strong mode offers. See
+ * docs/decisions/0017-staff-sign-in-as-users.md.
  */
 import type { MfaRole } from './requirement';
 import { mfaConfirmedUntil, type SessionMfa } from './session';
 import { hasMfa, type MfaState, type ProviderAvailability } from './state';
+import { type StepUpMethods, stepUpMethods, windowOpeningMethods } from './step-up';
 
 /**
  * The MFA role whose rules the strong checks apply. Every role that requires
@@ -43,4 +45,23 @@ export function hasStrongMfa(state: MfaState, available: ProviderAvailability): 
  */
 export function strongMfaConfirmedUntil(session: SessionMfa, state: MfaState): Date | null {
   return mfaConfirmedUntil(session, STRONG_MFA_ROLE, state);
+}
+
+/**
+ * Lists the ways the step-up page offers to confirm with a strong second
+ * step, for its strong mode (`for=strong`, before signing in as someone):
+ * the methods that open {@link strongMfaConfirmedUntil}'s window. Email codes
+ * never do, whatever the role, and GitHub only on an account without a
+ * passkey or an authenticator app (`windowOpeningMethods`, which lists it in
+ * `providersHeldBack` otherwise).
+ *
+ * @param state - The account's setup.
+ * @param available - The configured providers that can prove MFA.
+ * @returns The methods, empty without strong MFA.
+ */
+export function strongStepUpMethods(
+  state: MfaState,
+  available: ProviderAvailability,
+): StepUpMethods {
+  return windowOpeningMethods(stepUpMethods(state, STRONG_MFA_ROLE, available));
 }

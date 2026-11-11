@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { SessionMfa } from './session';
-import { hasStrongMfa, strongMfaConfirmedUntil } from './strong';
+import { hasStrongMfa, strongMfaConfirmedUntil, strongStepUpMethods } from './strong';
 import {
   authenticatorApp,
   bare,
@@ -79,5 +79,31 @@ describe('strongMfaConfirmedUntil', () => {
         authenticatorApp,
       ),
     ).toBeNull();
+  });
+});
+
+describe('strongStepUpMethods', () => {
+  it('offers the strong methods only, never email codes', () => {
+    expect(strongStepUpMethods({ ...emailCodes, passkeyCount: 1 }, WITH_GITHUB)).toEqual({
+      authenticator: false,
+      email: false,
+      passkey: true,
+      providers: [],
+    });
+    expect(strongStepUpMethods(emailCodes, WITH_GITHUB)).toEqual({
+      authenticator: false,
+      email: false,
+      passkey: false,
+      providers: [],
+    });
+  });
+
+  it('holds GitHub back next to a passkey or an authenticator app, where it opens nothing', () => {
+    expect(strongStepUpMethods(githubOnly, WITH_GITHUB).providers).toEqual(['github']);
+    expect(strongStepUpMethods({ ...githubOnly, passkeyCount: 1 }, WITH_GITHUB)).toMatchObject({
+      passkey: true,
+      providers: [],
+      providersHeldBack: ['github'],
+    });
   });
 });
