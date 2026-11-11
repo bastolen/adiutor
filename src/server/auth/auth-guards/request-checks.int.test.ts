@@ -19,10 +19,6 @@ import { releaseSignInChangeLockOf } from './change-lock';
 import type { AuthGuardContext } from './paths';
 import { request, refusedWith, hits, db, signedIn, outcomeOf } from './test-helpers';
 
-vi.mock('@/db', async (importOriginal) =>
-  (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),
-);
-
 vi.mock('better-auth/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('better-auth/api')>()),
   getSessionFromCtx: vi.fn(),

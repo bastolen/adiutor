@@ -5,14 +5,12 @@
  * it's you before giving a staff role or a company's Admin role, coming back
  * to the card where you clicked.
  */
-import { randomUUID } from 'node:crypto';
-
-import getTestDatabaseUrl from '../tests/database/database-url';
 import { backdateMfaConfirmation, setDefaultLocale } from './support/db';
 import { COMPANY_SLUG, PLATFORM_ADMIN, STAFF_NAME } from './support/fixtures';
 import {
   createAccountFromInvitation,
   createInviteLink,
+  freshAddress,
   setUpAuthenticator,
   signIn,
   toasts,
@@ -90,7 +88,7 @@ test("an Admin changes Adiutor's default language, which visitors without a choi
     }
   } finally {
     // Put it back for the other tests, even if a step failed.
-    await setDefaultLocale(getTestDatabaseUrl(), 'en-US');
+    await setDefaultLocale('en-US');
   }
 });
 
@@ -98,7 +96,7 @@ test('an Admin invites a Manager by email, changes their role, and keeps an Admi
   page,
   browser,
 }) => {
-  const email = `new.manager-${randomUUID().slice(0, 8)}@adiutor.test`;
+  const email = freshAddress('new.manager');
   await signIn(page, PLATFORM_ADMIN);
   await page.goto('/admin/staff');
 
@@ -147,7 +145,7 @@ test('a second staff Admin steps down after a confirmation, and lands on the das
   page,
   browser,
 }) => {
-  const email = `second.admin-${randomUUID().slice(0, 8)}@adiutor.test`;
+  const email = freshAddress('second.admin');
   await signIn(page, PLATFORM_ADMIN);
   await page.goto('/admin/staff');
   const inviteForm = page
@@ -199,7 +197,7 @@ test('an Admin creates a staff invite link that someone uses', async ({ page, br
   const inviteLink = await createInviteLink(page, 'Support');
   expect(inviteLink).toMatch(/\/join\/[A-Za-z0-9_-]{43}$/);
 
-  const email = `linked.staff-${randomUUID().slice(0, 8)}@adiutor.test`;
+  const email = freshAddress('linked.staff');
   const visitor = await (await browser.newContext()).newPage();
   await visitor.goto(inviteLink);
   await expect(visitor.getByRole('heading', { name: `Join ${STAFF_NAME}` })).toBeVisible();
@@ -221,7 +219,7 @@ test('an Admin who confirmed long ago confirms it’s them before giving staff o
   const confirm = /^Confirm it.s you$/;
 
   // Confirmed just now: invite someone to the staff, to resend once the confirmation is old.
-  const email = `resend.support-${randomUUID().slice(0, 8)}@adiutor.test`;
+  const email = freshAddress('resend.support');
   await page.goto('/admin/staff');
   const staffInvite = page.locator('form').filter({ has: page.getByLabel('Email addresses') });
   await staffInvite.getByLabel('Email addresses').fill(email);
@@ -231,7 +229,7 @@ test('an Admin who confirmed long ago confirms it’s them before giving staff o
   await expect(toasts(page)).toContainText(`Invitation sent to ${email}.`);
 
   // Signed in 20 minutes ago, as far as the confirmation window goes.
-  await backdateMfaConfirmation(getTestDatabaseUrl(), PLATFORM_ADMIN.email, 20);
+  await backdateMfaConfirmation(PLATFORM_ADMIN.email, 20);
 
   // Every staff role needs it: the invite form asks before anything is typed, and the step-up
   // page comes back to the form's card.

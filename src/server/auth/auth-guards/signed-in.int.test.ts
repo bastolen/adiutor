@@ -23,6 +23,7 @@ import {
   staffActor,
   startAuthenticatorSetup,
   turnOffGitHubSignIn,
+  minutesAgo,
 } from '../../../../tests/integration/helpers';
 import { beforeAuthRequest } from './before-request';
 import {
@@ -34,10 +35,6 @@ import {
   hits,
   sendCodesOverTime,
 } from './test-helpers';
-
-vi.mock('@/db', async (importOriginal) =>
-  (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),
-);
 
 vi.mock('better-auth/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('better-auth/api')>()),
@@ -61,14 +58,6 @@ beforeEach(() => {
   vi.mocked(getSessionFromCtx).mockReset().mockResolvedValue(null);
   vi.mocked(addOAuthServerContext).mockReset();
 });
-
-/**
- * The time a number of minutes ago.
- *
- * @param minutes - How many minutes.
- * @returns That time.
- */
-const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000);
 
 /**
  * Sends several requests with the current session, one after another.

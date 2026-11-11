@@ -10,7 +10,6 @@ import {
   providerLinkedCookieValue,
   providerStepUpCookieValue,
 } from '../src/lib/sign-in/oauth-providers';
-import getTestDatabaseUrl from '../tests/database/database-url';
 import { findCompanyId } from './support/db';
 import {
   CLIENT_WATCHER,
@@ -31,7 +30,7 @@ let companyId: string;
 let pagingMembersPath: string;
 
 test.beforeAll(async ({ browser }) => {
-  companyId = await findCompanyId(getTestDatabaseUrl(), COMPANY_SLUG);
+  companyId = await findCompanyId(COMPANY_SLUG);
   // At the address the app links to (its URL name).
   pagingMembersPath = `/companies/${PAGING_COMPANY_SLUG}/members`;
   adminState = await adminStorageState(browser);

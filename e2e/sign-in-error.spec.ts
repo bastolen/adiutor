@@ -5,7 +5,6 @@
  */
 
 import { defined } from '../src/lib/defined';
-import getTestDatabaseUrl from '../tests/database/database-url';
 import { findSignInError } from './support/db';
 import { expect, test } from './support/test';
 
@@ -24,7 +23,7 @@ test('a failed sign-in ends on the error page, with a reference an admin can loo
   await expect(page.getByRole('button', { name: 'Copy reference' })).toBeVisible();
 
   const shown = defined(await reference.textContent(), 'the reference');
-  expect(await findSignInError(getTestDatabaseUrl(), shown)).toEqual({
+  expect(await findSignInError(shown)).toEqual({
     code: 'state_mismatch',
     description: 'State mismatch',
   });

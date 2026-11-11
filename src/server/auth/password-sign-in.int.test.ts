@@ -25,19 +25,21 @@
  * - an emailed code is in the account's language, else the browser's, and so
  *   is a verification link (English (US) outside a request).
  */
-import { createHmac } from 'node:crypto';
-
-import { hashPassword, symmetricEncrypt } from 'better-auth/crypto';
+import { hashPassword } from 'better-auth/crypto';
 import { asc, desc, eq } from 'drizzle-orm';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { account, auditEvent, session, twoFactor, user } from '@/db/schema';
+import { account, auditEvent, session, user } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { TWO_FACTOR_LOCK_ATTEMPTS } from '@/lib/authz/mfa';
 import { defined, firstRow } from '@/lib/defined';
 import { type Email, sendEmail } from '@/lib/email';
 import { env } from '@/lib/env';
 
+import {
+  authenticatorCode as codeFromSecret,
+  storeAuthenticator,
+} from '../../../tests/auth/authenticator';
 import {
   createUser,
   emailLanguage,
@@ -57,9 +59,6 @@ const pageRequest = vi.hoisted(() => ({ headers: new Headers() }));
  */
 const backgroundTasks = vi.hoisted((): unknown[] => []);
 
-vi.mock('@/db', async (importOriginal) =>
-  (await import('../../../tests/integration/app-modules')).default(await importOriginal()),
-);
 vi.mock('@/lib/email', () => ({ sendEmail: vi.fn() }));
 // What pages read the signed-in user with (`src/server/authz.ts`), outside Next.
 vi.mock('server-only', () => ({}));
@@ -342,36 +341,23 @@ const LOCKED_SUBJECT = 'Signing in to your Adiutor account with a code is paused
 
 /**
  * Sets up an authenticator app for a user, as Better Auth stores it once its
- * first code was right: the secret, and no backup codes left, encrypted with
- * the auth secret.
+ * first code was right.
  *
  * @param userId - The user.
  */
 async function setUpAuthenticator(userId: string): Promise<void> {
   const { secretConfig } = await auth.$context;
-  await db.update(user).set({ twoFactorEnabled: true }).where(eq(user.id, userId));
-  await db.insert(twoFactor).values({
-    userId,
-    secret: await symmetricEncrypt({ key: secretConfig, data: AUTHENTICATOR_SECRET }),
-    backupCodes: await symmetricEncrypt({ key: secretConfig, data: JSON.stringify([]) }),
-    verified: true,
-  });
+  await storeAuthenticator(db, userId, AUTHENTICATOR_SECRET, secretConfig);
 }
 
 /**
- * The code the authenticator app shows (RFC 6238: HMAC-SHA1, 6 digits,
- * 30 seconds, as Better Auth checks it and `e2e/support/totp.ts` computes it).
+ * The code the authenticator app shows for the test users' secret.
  *
  * @param stepOffset - Which 30 seconds, from now; the current ones by default.
  * @returns The code.
  */
 function authenticatorCode(stepOffset = 0): string {
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30_000) + stepOffset));
-  const hmac = createHmac('sha1', AUTHENTICATOR_SECRET).update(counter).digest();
-  // Dynamic truncation: the low 4 bits pick an offset, the top bit of the 31-bit value is dropped.
-  const offset = defined(hmac[hmac.length - 1], 'the last byte of the HMAC') % 16;
-  return ((hmac.readUInt32BE(offset) % 2 ** 31) % 1_000_000).toString().padStart(6, '0');
+  return codeFromSecret(AUTHENTICATOR_SECRET, stepOffset);
 }
 
 /**

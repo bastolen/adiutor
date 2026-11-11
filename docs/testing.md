@@ -24,7 +24,9 @@ configurations in VS Code, which turn the time limit off (see
   [Code style](code-style.md)) has a test file next to each of its files, and the helpers they
   share in the folder's `test-helpers.ts`. When the tests share a database test context, that file
   calls `setupTestContext()` once; every test file still declares its own `vi.mock` calls and hooks,
-  since Vitest hoists those per file.
+  since Vitest hoists those per file. The one mock every integration file needs, `@/db` pointing
+  at the test database, is declared once in `tests/integration/setup.ts` (a `setupFiles` entry of
+  the integration project), so no file copies it.
 - **Integration tests** (`*.int.test.ts` next to the code they test, mostly in `src/server/`) run
   the services against a real PostgreSQL test database, `adiutor_test`. It's created and migrated
   automatically and emptied before each test. Because the tests empty it, its name must end in
@@ -51,7 +53,8 @@ configurations in VS Code, which turn the time limit off (see
   include the accessibility and keyboard checks described under
   [Design and accessibility](design.md#design-and-accessibility); the invitation and invite-link
   pages are scanned with real tokens stored straight in the database (`storeInvitation`,
-  `storeInviteLink` in `e2e/support/db.ts`), signed out and signed in. In CI a failed test is
+  `storeInviteLink` in `e2e/support/db.ts`), signed out and signed in. Those helpers, like the others in that file, open their own connection to the test
+  database (`withTestDatabase`), so specs pass no URL. In CI a failed test is
   retried twice and traced on its first retry, except in `e2e/security.spec.ts`: its tests use up
   state in order, so it doesn't retry and keeps a trace of its first failure instead (traces are in
   the `playwright-report` artifact). A test that uses up state (locks, deletes or changes an

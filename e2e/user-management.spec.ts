@@ -4,12 +4,10 @@
  * verification (reset) and account (delete), and what an Admin's own page
  * offers (their companies, but no staff access or account actions).
  */
-import { randomUUID } from 'node:crypto';
-
 import { type Page } from '@playwright/test';
 
 import { DELETE_CLIENT, PLATFORM_ADMIN, RESET_CLIENT } from './support/fixtures';
-import { openUser, signIn, signOut, toasts } from './support/helpers';
+import { freshAddress, openUser, signIn, signOut, toasts } from './support/helpers';
 import { countEmails, linkIn, waitForEmail, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
 
@@ -31,7 +29,7 @@ async function registerUser(page: Page, email: string): Promise<void> {
 test('an Admin registers a user, who chooses a password from the welcome email', async ({
   page,
 }) => {
-  const email = `registered-${randomUUID().slice(0, 8)}@adiutor.test`;
+  const email = freshAddress('registered');
   await signIn(page, PLATFORM_ADMIN);
   await registerUser(page, email);
 
@@ -58,7 +56,7 @@ test('an Admin registers a user, who chooses a password from the welcome email',
 test('an Admin adds a user to a company and gives them staff access from their page', async ({
   page,
 }) => {
-  const email = `managed-${randomUUID().slice(0, 8)}@adiutor.test`;
+  const email = freshAddress('managed');
   await signIn(page, PLATFORM_ADMIN);
   await registerUser(page, email);
   await page.getByRole('link', { name: 'Open user' }).click();

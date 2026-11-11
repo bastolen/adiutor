@@ -80,7 +80,7 @@ test.describe('first run', () => {
   test("isn't offered once accounts exist, even if nothing is set up", async ({ page }) => {
     // E.g. the staff settings row was lost: accounts exist, but there's no settings row.
     await seedTestDatabase(getTestDatabaseUrl());
-    await removeStaffSettings(getTestDatabaseUrl());
+    await removeStaffSettings();
 
     await page.goto('/auth');
     await expect(page).toHaveURL(/\/auth/);

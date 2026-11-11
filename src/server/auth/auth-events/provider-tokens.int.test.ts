@@ -27,10 +27,6 @@ import {
   cookiesBesidesLanguage,
 } from './test-helpers';
 
-vi.mock('@/db', async (importOriginal) =>
-  (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),
-);
-
 vi.mock('@/lib/email', () => ({ sendEmail: vi.fn() }));
 
 // The checks before a request read its session from Better Auth, and the reactions read the OAuth

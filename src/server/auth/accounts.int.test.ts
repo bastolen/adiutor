@@ -25,6 +25,7 @@ import {
   setupTestContext,
   staffActor,
   turnOffGitHubSignIn,
+  minutesAgo,
 } from '../../../tests/integration/helpers';
 import { loadActor } from '../actor';
 import { ServiceError } from '../errors';
@@ -130,16 +131,6 @@ async function signedIn(
     throw new Error(`No user ${userId}`);
   }
   return actor;
-}
-
-/**
- * A time a number of minutes ago.
- *
- * @param minutes - How long ago.
- * @returns The time.
- */
-function minutesAgo(minutes: number): Date {
-  return new Date(Date.now() - minutes * 60_000);
 }
 
 /**

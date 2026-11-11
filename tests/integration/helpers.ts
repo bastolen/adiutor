@@ -25,7 +25,7 @@ import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { defined, firstRow } from '@/lib/defined';
 import type { Email } from '@/lib/email';
 import type { Locale } from '@/lib/i18n/locales';
-import { MFA_PROVIDERS } from '@/lib/sign-in/oauth-providers';
+import { MFA_PROVIDERS, type OAuthProvider } from '@/lib/sign-in/oauth-providers';
 import { availableProviders, configuredProviders } from '@/lib/sign-in/providers';
 import { type Actor, loadActor } from '@/server/actor';
 import type { ServiceContext } from '@/server/context';
@@ -170,16 +170,22 @@ export async function startAuthenticatorSetup(db: Database, userId: string): Pro
  *   defaults to `true`.
  * @param options.confirmed - Whether it counts yet (see `beforeAccountCreate`); defaults to `true`.
  * @param options.accountName - Its name at the provider (`accountName`); none by default.
+ * @param options.accessToken - Its access token; none by default.
+ * @param options.updatedAt - When it was last used to sign in; defaults to now.
+ * @param options.accountId - The provider's ID for the account; random by default.
  * @returns The account row's ID (what Better Auth's unlink takes).
  */
 export async function connectProvider(
   db: Database,
   userId: string,
   options: {
-    providerId?: 'github' | 'google';
+    providerId?: OAuthProvider;
     mfaVerified?: boolean;
     confirmed?: boolean;
     accountName?: string;
+    accessToken?: string;
+    updatedAt?: Date;
+    accountId?: string;
   } = {},
 ): Promise<string> {
   const providerId = options.providerId ?? 'github';
@@ -188,17 +194,27 @@ export async function connectProvider(
       .insert(account)
       .values({
         userId,
-        accountId: `${providerId}-${randomUUID()}`,
+        accountId: options.accountId ?? `${providerId}-${randomUUID()}`,
         providerId,
         mfaVerified: options.mfaVerified ?? true,
         confirmed: options.confirmed ?? true,
         accountName: options.accountName,
+        accessToken: options.accessToken,
+        updatedAt: options.updatedAt,
       })
       .returning({ id: account.id }),
     'the new account',
   );
   return created.id;
 }
+
+/**
+ * The time a number of minutes ago.
+ *
+ * @param minutes - How many minutes.
+ * @returns That time.
+ */
+export const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000);
 
 /**
  * Connects a GitHub account to a user, as Better Auth stores it.

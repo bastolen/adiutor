@@ -59,7 +59,7 @@ The folders of the repository and what belongs in each. Back to the [documentati
   (see [Languages](i18n.md)).
 - `e2e/support/`: what the Playwright specs in `e2e/` share (fixtures, database, seed, outbox, axe,
   TOTP and global setup).
-- `tests/`: helpers the test runners share: `database/` (which
-  database the tests use, and preparing it), `integration/` (the integration tests' setup and
-  helpers), `i18n/` (next-intl's stand-ins for unit tests, and rendering in another language) and
+- `tests/`: helpers the test runners share: `auth/` (authenticator-app codes and storing an
+  authenticator), `database/` (which database the tests use, and preparing it), `integration/` (the
+  integration tests' setup, which points `@/db` at the test database, and helpers), `i18n/` (next-intl's stand-ins for unit tests, and rendering in another language) and
   `build/` (whether a local e2e run can reuse the last build).

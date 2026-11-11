@@ -9,7 +9,6 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import getTestDatabaseUrl from '../tests/database/database-url';
 import { addMembership, createCompany, findCompanyId } from './support/db';
 import {
   CLIENT_WATCHER,
@@ -68,7 +67,7 @@ test('register a company, accept the invitation and join through a link', async 
   // Company Admins must set up MFA before they continue.
   await expect(page.getByText(/^Your role requires MFA\./)).toBeVisible();
   await setUpAuthenticator(page, 'owner-password-1');
-  const companyId = await findCompanyId(getTestDatabaseUrl(), `adiutor-tests-${suffix}`);
+  const companyId = await findCompanyId(`adiutor-tests-${suffix}`);
   await page.goto(`/companies/${companyId}`);
   await expect(page.getByRole('heading', { name: COMPANY_NAME })).toBeVisible();
 
@@ -165,9 +164,9 @@ test('an Admin leaves the company from their own row, and lands on the dashboard
     '/account/security?setup=required',
   );
   await setUpAuthenticator(page, 'leaver-password-1');
-  const companyId = await findCompanyId(getTestDatabaseUrl(), `adiutor-tests-leaving-${suffix}`);
+  const companyId = await findCompanyId(`adiutor-tests-leaving-${suffix}`);
   // A second Admin, so the first one may leave.
-  await addMembership(getTestDatabaseUrl(), companyId, PLATFORM_MANAGER.email, 'admin');
+  await addMembership(companyId, PLATFORM_MANAGER.email, 'admin');
 
   await page.goto(`/companies/${companyId}/members`);
   // Their own row says so; the other Admin's doesn't.
@@ -194,7 +193,7 @@ test('a company opens by its URL name or its ID, and moves with a new URL name',
   const suffix = randomUUID().slice(0, 8);
   const name = `Adiutor Tests Address ${suffix}`;
   const slug = `adiutor-tests-address-${suffix}`;
-  const companyId = await createCompany(getTestDatabaseUrl(), { name, slug });
+  const companyId = await createCompany({ name, slug });
   await signIn(page, PLATFORM_ADMIN);
 
   // The companies list links with the URL name.
@@ -243,8 +242,8 @@ test("staff deactivate a company from its settings, which cuts its people off un
   const suffix = randomUUID().slice(0, 8);
   const name = `Adiutor Tests Paused ${suffix}`;
   const slug = `adiutor-tests-paused-${suffix}`;
-  const companyId = await createCompany(getTestDatabaseUrl(), { name, slug });
-  await addMembership(getTestDatabaseUrl(), companyId, CLIENT_WATCHER.email, 'client');
+  const companyId = await createCompany({ name, slug });
+  await addMembership(companyId, CLIENT_WATCHER.email, 'client');
 
   // One of its people, on a browser of their own.
   const member = await (await browser.newContext()).newPage();

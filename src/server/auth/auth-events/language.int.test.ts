@@ -22,10 +22,6 @@ import type { AuthHookContext } from './hook-context';
 import { afterPasswordSignIn } from './password-sign-in';
 import { db, githubCallback } from './test-helpers';
 
-vi.mock('@/db', async (importOriginal) =>
-  (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),
-);
-
 vi.mock('@/lib/email', () => ({ sendEmail: vi.fn() }));
 
 vi.mock('better-auth/api', async (importOriginal) => ({

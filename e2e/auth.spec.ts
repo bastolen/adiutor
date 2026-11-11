@@ -6,6 +6,7 @@
  * must start over), and the sign-in page shows its "Last used" hint.
  */
 
+import { LOCALE_COOKIE } from '../src/lib/i18n/locales';
 import { LAST_USED_LOGIN_METHOD_COOKIE } from '../src/lib/sign-in/auth-cookies';
 import { PROVIDER_LINKED_COOKIE } from '../src/lib/sign-in/oauth-providers';
 import { CLIENT_WATCHER, SESSIONS_CLIENT } from './support/fixtures';
@@ -130,7 +131,7 @@ test('signing out leaves only the "Last used" sign-in method and the language in
   // browser's own, as choosing one sets (the seeded account is on Default, so sign-in sets none).
   await context.addCookies([
     { name: PROVIDER_LINKED_COOKIE, value: 'github', url: page.url() },
-    { name: 'adiutor.locale', value: 'en-US', url: page.url() },
+    { name: LOCALE_COOKIE, value: 'en-US', url: page.url() },
   ]);
 
   await signOut(page);
@@ -139,7 +140,7 @@ test('signing out leaves only the "Last used" sign-in method and the language in
   // which sets a new short-lived cookie of its own; everything from before is gone.
   const names = (await context.cookies()).map((cookie) => cookie.name);
   expect(names.filter((name) => name !== PASSKEY_CHALLENGE_COOKIE).sort()).toEqual(
-    [LAST_USED_LOGIN_METHOD_COOKIE, 'adiutor.locale'].sort(),
+    [LAST_USED_LOGIN_METHOD_COOKIE, LOCALE_COOKIE].sort(),
   );
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toContainText(
     'Last used',

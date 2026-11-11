@@ -29,6 +29,7 @@ import {
   test as base,
 } from '@playwright/test';
 
+import { MESSAGE_ERROR_PREFIX } from '../../src/lib/i18n/message-errors';
 import { randomClientIp } from './helpers';
 
 export { expect };
@@ -37,7 +38,15 @@ export { expect };
  * What a CSP violation looks like in a console message or an uncaught error,
  * and the prefix of a message that couldn't be shown.
  */
-const VIOLATION = /Content Security Policy|Content-Security-Policy|EvalError|\[i18n\]/i;
+const VIOLATION = new RegExp(
+  [
+    'Content Security Policy',
+    'Content-Security-Policy',
+    'EvalError',
+    MESSAGE_ERROR_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+  ].join('|'),
+  'i',
+);
 
 /**
  * Playwright's `test`, failing on CSP violations in any page open during the
