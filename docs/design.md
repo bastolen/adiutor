@@ -128,7 +128,8 @@ keyboard support.
 
 - **Font:** the device's own sans-serif font (`system-ui`), with line height = font size + 8px.
 - **Layout:** signed-in pages have a sidebar that becomes a menu button and slide-over panel
-  (`Sheet`) on small screens; signed-out pages use `AuthLayout`, with a decorative brand panel on wide screens.
+  (`Sheet`) on small screens, which opens with focus on the link to the current page; signed-out
+  pages use `AuthLayout`, with a decorative brand panel on wide screens.
   The 404 page uses `CenteredLayout`: the logo top left (where the sidebar has it) and the message
   centered, with "Go to your dashboard" and a "Go back" button (`BackButton`, shown only when the
   tab has a previous page).
