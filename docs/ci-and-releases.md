@@ -31,7 +31,9 @@ warm from Next's build cache (`.next/cache`), following
 [Next's CI guide](https://nextjs.org/docs/app/guides/ci-build-caching): keyed on the lockfile and
 the app's own files (`src/`, `public/`, `next.config.ts`, `tsconfig.json`). Both shards restore it,
 and the first saves a new entry when the source changed. Pull requests start from `main`'s cache and
-only write their own.
+only write their own. Each shard then downloads only Playwright's Chromium, without `--with-deps`:
+the runner image ships Google Chrome, so the libraries Chromium needs are already installed, and
+installing them again with `apt-get` would fail whenever Ubuntu's package servers can't be reached.
 
 ### Skipping the tests
 
