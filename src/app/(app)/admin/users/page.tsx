@@ -31,7 +31,13 @@ import { USERS_TABLE } from '@/lib/tables/tables';
 import appContext from '@/server/app-context';
 import { getGlobalPermissions, requireGlobalPermission } from '@/server/authz';
 import { globalPermissionMetadata } from '@/server/page-metadata';
-import { isUserFilter, listUsers, type UserFilter, type UserListItem } from '@/server/people/users';
+import {
+  isUserFilter,
+  listUsers,
+  USER_FILTERS,
+  type UserFilter,
+  type UserListItem,
+} from '@/server/people/users';
 
 import { ActivityColumn, ActivityLine } from '../../_people/activity';
 import YouBadge from '../../_people/you-badge';
@@ -43,9 +49,6 @@ import { AccountStateBadges, MfaBadge, StaffBadge } from './user-badges';
  */
 // i18n-check t('admin.users.title')
 export const generateMetadata = globalPermissionMetadata('users:view', 'admin.users.title');
-
-/** The filter choices, in order; their names are `admin.users.filters.option`. */
-const FILTERS: readonly UserFilter[] = ['all', 'staff', 'not_staff', 'without_mfa', 'deactivated'];
 
 /**
  * A user's companies as comma-separated links, or a dash when there are
@@ -167,7 +170,7 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SegmentedNav
             label={t('filters.label')}
-            items={FILTERS.map((value) => ({
+            items={USER_FILTERS.map((value) => ({
               href: table.withParams({ filter: value === 'all' ? undefined : value }),
               label: t('filters.option', { filter: value }),
               current: value === filter,

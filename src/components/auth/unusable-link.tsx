@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 
 import AuthHeading from '@/components/ui/auth-heading';
 import Button from '@/components/ui/button';
+import IconTile from '@/components/ui/icon-tile';
 
 /**
  * Explains that the link doesn't work, without saying why (expired, used,
@@ -30,9 +31,7 @@ export default function UnusableLink({
   const t = useTranslations('auth');
   return (
     <div className="flex flex-col gap-6">
-      <span className="flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-        <LinkIcon aria-hidden="true" className="size-5" />
-      </span>
+      <IconTile icon={LinkIcon} size="lg" />
       <AuthHeading
         title={t('unusableLink.heading')}
         description={description ?? t('unusableLink.invitation')}

@@ -1,7 +1,7 @@
 /**
- * @file Dashboard, served at `/dashboard`. Staff get tiles for the users
- * and companies lists (and Admins one for the staff, and a warning when
- * users lost their provider MFA); company users only see a welcome until
+ * @file Dashboard, served at `/dashboard`. Staff get a tile for each staff
+ * section they may see (and Admins a warning when users lost their provider
+ * MFA); company users only see a welcome until
  * their features exist. A note says what happened when users were sent here
  * after leaving the staff or a company, or stepping down (`AccessNotice`).
  */
@@ -19,6 +19,7 @@ import { isMfaRecommendationDismissed } from '@/server/people/mfa-recommendation
 import { getProviderMfaWarning } from '@/server/people/users';
 
 import AccessNotice from '../access-notice';
+import { staffSectionKeys } from '../staff-sections';
 import MfaRecommendation from './mfa-recommendation';
 import ProviderMfaWarning from './provider-mfa-warning';
 import StaffShortcuts from './staff-shortcuts';
@@ -74,10 +75,7 @@ async function Dashboard() {
       <AccessNotice />
       {recommendation}
       {providerMfaWarning && <ProviderMfaWarning warning={providerMfaWarning} />}
-      <StaffShortcuts
-        canManageStaff={permissions.has('staff:manage')}
-        canViewLogs={permissions.has('audit:view')}
-      />
+      <StaffShortcuts sections={staffSectionKeys(permissions)} />
     </>
   );
 }

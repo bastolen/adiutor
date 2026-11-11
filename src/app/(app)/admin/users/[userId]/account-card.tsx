@@ -7,11 +7,10 @@ import { useLocale, useTranslations } from 'next-intl';
 
 import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
+import { DescriptionList, DescriptionRow } from '@/components/ui/description-list';
 import RelativeTime from '@/components/ui/relative-time';
 import formatDate from '@/lib/format';
 import type { UserDetail } from '@/server/people/user-admin';
-
-import DetailRow from './detail-row';
 
 /**
  * Props for {@link AccountCard}: the parts of the user it shows.
@@ -43,23 +42,23 @@ export default function AccountCard({
   const t = useTranslations('admin.user.account');
   return (
     <Card title={t('title')}>
-      <dl className="divide-y divide-border">
-        <DetailRow term={t('email')}>
+      <DescriptionList>
+        <DescriptionRow term={t('email')}>
           {email}
           {emailVerified ? (
             <Badge tone="success">{t('verified')}</Badge>
           ) : (
             <Badge tone="warning">{t('notVerified')}</Badge>
           )}
-        </DetailRow>
-        <DetailRow term={t('status')}>
+        </DescriptionRow>
+        <DescriptionRow term={t('status')}>
           {deactivatedAt ? <Badge tone="danger">{t('deactivated')}</Badge> : t('active')}
-        </DetailRow>
-        <DetailRow term={t('lastActive')}>
+        </DescriptionRow>
+        <DescriptionRow term={t('lastActive')}>
           <RelativeTime date={lastActiveAt} />
-        </DetailRow>
-        <DetailRow term={t('created')}>{formatDate(createdAt, locale)}</DetailRow>
-      </dl>
+        </DescriptionRow>
+        <DescriptionRow term={t('created')}>{formatDate(createdAt, locale)}</DescriptionRow>
+      </DescriptionList>
     </Card>
   );
 }

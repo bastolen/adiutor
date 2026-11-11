@@ -8,22 +8,20 @@
  */
 'use client';
 
-import { Palette } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useState, useTransition } from 'react';
 
 import setLanguageAction from '@/app/language-action';
 import LanguageFlag from '@/components/language/language-flag';
 import { FollowDefaultIcon } from '@/components/language/language-options';
+import ThemeMenuRow from '@/components/theme/theme-menu-row';
 import { THEME_ICONS } from '@/components/theme/theme-options';
 import useThemePreference from '@/components/theme/use-theme-preference';
 import {
   MenuContent,
-  MenuIconRadioItem,
   MenuLabel,
   MenuRadioGroup,
   MenuRadioItem,
-  MenuRadioRow,
   MenuRoot,
   MenuSeparator,
   MenuTrigger,
@@ -40,7 +38,6 @@ import {
   LOCALE_NAMES,
   LOCALES,
 } from '@/lib/i18n/locales';
-import { isThemePreference, THEME_PREFERENCES } from '@/lib/theme';
 
 /**
  * A pill with two icons split by a thin line: the current theme's (half sun,
@@ -66,7 +63,6 @@ import { isThemePreference, THEME_PREFERENCES } from '@/lib/theme';
  */
 export default function PreferencesMenu({ className = '' }: { className?: string }) {
   const t = useTranslations('common');
-  const themeText = useTranslations('common.theme');
   const locale = useLocale();
   const { preference, setPreference } = useThemePreference();
   const [pending, startTransition] = useTransition();
@@ -98,25 +94,7 @@ export default function PreferencesMenu({ className = '' }: { className?: string
         {pending ? <Spinner /> : <LanguageFlag locale={locale} />}
       </MenuTrigger>
       <MenuContent side="top" align="end" className="min-w-56">
-        <MenuRadioRow
-          label={themeText('label')}
-          icon={Palette}
-          value={preference}
-          onValueChange={(value) => {
-            if (isThemePreference(value)) {
-              setPreference(value);
-            }
-          }}
-        >
-          {THEME_PREFERENCES.map((option) => (
-            <MenuIconRadioItem
-              key={option}
-              value={option}
-              label={themeText(option)}
-              icon={THEME_ICONS[option]}
-            />
-          ))}
-        </MenuRadioRow>
+        <ThemeMenuRow preference={preference} onChange={setPreference} />
         <MenuSeparator />
         <MenuLabel>{t('language.label')}</MenuLabel>
         <MenuRadioGroup

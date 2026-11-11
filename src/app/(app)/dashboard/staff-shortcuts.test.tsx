@@ -1,7 +1,8 @@
 /**
- * @file Tests for the staff shortcuts on the dashboard: every staff member
- * gets the Users and Companies tiles, only those who may manage the staff
- * get the Staff tile, and only those who may see the audit log the Logs tile.
+ * @file Tests for the staff shortcuts on the dashboard: a tile for each of
+ * the user's staff sections, named by its title and followed by its
+ * description (which sections each role gets is tested in
+ * `staff-sections.test.ts`).
  */
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
@@ -9,8 +10,8 @@ import { describe, expect, it } from 'vitest';
 import StaffShortcuts from './staff-shortcuts';
 
 describe('StaffShortcuts', () => {
-  it('shows Users, Companies, Staff and Logs to Admins', () => {
-    render(<StaffShortcuts canManageStaff canViewLogs />);
+  it('shows a tile for each section', () => {
+    render(<StaffShortcuts sections={['users', 'companies', 'staff', 'logs']} />);
 
     const links = screen.getAllByRole('link');
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
@@ -34,8 +35,8 @@ describe('StaffShortcuts', () => {
     );
   });
 
-  it('shows Logs, not Staff, to Managers', () => {
-    render(<StaffShortcuts canManageStaff={false} canViewLogs />);
+  it('leaves out the sections the user may not see', () => {
+    render(<StaffShortcuts sections={['users', 'companies', 'logs']} />);
 
     expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
       '/admin/users',
@@ -47,22 +48,17 @@ describe('StaffShortcuts', () => {
   it.each([
     ['four tiles', true],
     ['three tiles', false],
-  ])('never uses more than two columns, with %s', (_tiles, canManageStaff) => {
-    render(<StaffShortcuts canManageStaff={canManageStaff} canViewLogs />);
+  ])('never uses more than two columns, with %s', (_tiles, withStaff) => {
+    render(
+      <StaffShortcuts
+        sections={
+          withStaff ? ['users', 'companies', 'staff', 'logs'] : ['users', 'companies', 'logs']
+        }
+      />,
+    );
 
     const list = screen.getByRole('list');
     expect(list).toHaveClass('sm:grid-cols-2');
     expect(list.className).not.toMatch(/grid-cols-([3-9]|\d{2})/);
-  });
-
-  it('leaves out Staff and Logs for everyone else', () => {
-    render(<StaffShortcuts canManageStaff={false} canViewLogs={false} />);
-
-    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
-      '/admin/users',
-      '/admin/companies',
-    ]);
-    expect(screen.queryByRole('link', { name: /^Staff/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /^Logs/ })).not.toBeInTheDocument();
   });
 });

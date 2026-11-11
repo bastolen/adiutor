@@ -1,8 +1,7 @@
 /**
- * @file Tests for the staff navigation links: every staff member gets
- * Dashboard, Users and Companies; Admins also Staff; those who may see the
- * audit log (Admins and Managers) also Logs, which stays current on its
- * Errors tab.
+ * @file Tests for the staff navigation links: Dashboard, then the user's
+ * staff sections (which sections each role gets is tested in
+ * `staff-sections.test.ts`); Logs stays current on its Errors tab.
  */
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -19,8 +18,8 @@ describe('NavLinks', () => {
     usePathname.mockReturnValue('/dashboard');
   });
 
-  it('shows Staff and Logs to Admins', () => {
-    render(<NavLinks canManageStaff canViewLogs />);
+  it('links to the dashboard, then each section', () => {
+    render(<NavLinks sections={['users', 'companies', 'staff', 'logs']} />);
 
     expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
       '/dashboard',
@@ -31,22 +30,16 @@ describe('NavLinks', () => {
     ]);
   });
 
-  it('shows Logs, not Staff, to Managers', () => {
-    render(<NavLinks canManageStaff={false} canViewLogs />);
+  it('leaves out the sections the user may not see', () => {
+    render(<NavLinks sections={['users', 'companies', 'logs']} />);
 
     expect(screen.getByRole('link', { name: 'Logs' })).toHaveAttribute('href', '/admin/logs');
     expect(screen.queryByRole('link', { name: 'Staff' })).not.toBeInTheDocument();
   });
 
-  it('leaves Logs out for staff who may not see the audit log', () => {
-    render(<NavLinks canManageStaff={false} canViewLogs={false} />);
-
-    expect(screen.queryByRole('link', { name: 'Logs' })).not.toBeInTheDocument();
-  });
-
   it('marks Logs as current on its Errors tab too', () => {
     usePathname.mockReturnValue('/admin/logs/errors');
-    render(<NavLinks canManageStaff canViewLogs />);
+    render(<NavLinks sections={['users', 'companies', 'staff', 'logs']} />);
 
     expect(screen.getByRole('link', { name: 'Logs' })).toHaveAttribute('aria-current', 'page');
   });

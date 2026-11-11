@@ -23,10 +23,11 @@ import { paginate, peopleOrder, slicePage } from '../pagination';
 import containsPattern from '../search';
 
 /**
- * Ways to narrow the users list: everyone, only the staff, only people who
- * aren't on it, accounts without MFA, or deactivated accounts.
+ * Ways to narrow the users list, in the order the page offers them:
+ * everyone, only the staff, only people who aren't on it, accounts without
+ * MFA, or deactivated accounts.
  */
-const USER_FILTERS = ['all', 'staff', 'not_staff', 'without_mfa', 'deactivated'] as const;
+export const USER_FILTERS = ['all', 'staff', 'not_staff', 'without_mfa', 'deactivated'] as const;
 
 /** One of {@link USER_FILTERS}. */
 export type UserFilter = (typeof USER_FILTERS)[number];

@@ -13,7 +13,8 @@ keyboard support.
   `Card`, `PageHeader`, `AuthHeading`, `AuthDivider`, `Table`, `Badge`, `Alert` (optionally
   dismissible), `Banner` (a notice with an icon, title and actions, e.g. on the dashboard),
   `ResultAlert`, `ConfirmDialog`, `DropdownMenu`, `Sheet` (a slide-over panel), `EmptyState`,
-  `IconRow`, `Skeleton`, `Pagination`, `SortMenu`, ...). Menus, selects, dialogs and sheets are
+  `IconRow`, `IconTile` (a decorative icon on a tinted square), `DescriptionList` (labels and
+  values), `Skeleton`, `Pagination`, `SortMenu`, ...). Menus, selects, dialogs and sheets are
   built on [Radix UI](https://www.radix-ui.com), and only `src/components/ui/` imports it. Radix
   follows the WAI-ARIA patterns: arrow keys, typeahead, Escape to close, focus kept inside
   dialogs and returned to the button that opened them. In a menu, `MenuRadioRow` with
@@ -40,7 +41,8 @@ keyboard support.
   - **Your own row:** in people tables your row has a "You" badge after your name (`YouBadge` in
     `src/app/(app)/_people/you-badge.tsx`, in the `accent` tone) and a bar in the accent colour
     on its left edge (`ownRowCell` in `src/components/ui/table.tsx`), so you can spot yourself
-    while scrolling. The bar is decorative: the badge says it in words.
+    while scrolling. The bar is decorative: the badge says it in words. The staff and members
+    tables build their first cell with `PersonCell` (`src/app/(app)/_people/person-cell.tsx`).
   - **Pages:** 25, 50 or 100 rows per page, chosen in the table's footer (`Pagination`: "Showing
     26–50 of 132", Previous, the page numbers and Next). The footer only shows with more than 10
     rows.
@@ -262,10 +264,11 @@ device), **Light** or **Dark**:
 
 Choosing a theme keeps the menu open, so the result shows at once.
 
-Both use the same hook (`useThemePreference`) and the same labels and icons
-(`common.theme` in the catalogues, icons in `src/components/theme/theme-options.ts`: half sun, half
-moon for **System**, so it reads as a theme; a sun; a moon), so a choice made before signing in
-carries over. The row's "Theme" label has a palette icon, apart from the options.
+Both use the same hook (`useThemePreference`) and the same row (`ThemeMenuRow` in
+`src/components/theme/theme-menu-row.tsx`, with its labels in `common.theme` and its icons in
+`src/components/theme/theme-options.ts`: half sun, half moon for **System**, so it reads as a
+theme; a sun; a moon), so a choice made before signing in carries over. The row's "Theme" label
+has a palette icon, apart from the options.
 
 - **Stored choice:** saved in `localStorage` (`adiutor-theme`) and kept in sync across tabs. With
   System, the page follows device changes live.

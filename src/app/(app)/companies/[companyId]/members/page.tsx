@@ -8,7 +8,6 @@ import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
-import Avatar from '@/components/ui/avatar';
 import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
 import EmptyState from '@/components/ui/empty-state';
@@ -16,7 +15,7 @@ import Pagination from '@/components/ui/pagination';
 import RowAction from '@/components/ui/row-action';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import SortMenu from '@/components/ui/sort-menu';
-import { ownRowCell, Table, Td, Th, Tr } from '@/components/ui/table';
+import { Table, Td, Th, Tr } from '@/components/ui/table';
 import { COMPANY_ROLES, roleOptions } from '@/lib/authz/roles';
 import displayName from '@/lib/display-name';
 import ClientMessages from '@/lib/i18n/client-messages';
@@ -33,13 +32,13 @@ import { listPendingInvitations } from '@/server/people/invitations';
 import { listInviteLinks } from '@/server/people/invite-links';
 import { listMembers } from '@/server/people/members';
 
-import { ActivityColumn, ActivityLine } from '../../../_people/activity';
+import { ActivityColumn } from '../../../_people/activity';
 import InvitationsCard from '../../../_people/invitations-card';
 import InviteForm from '../../../_people/invite-form';
 import InviteLinksCard from '../../../_people/invite-links-card';
 import { changeRoleAction, removeMemberAction } from '../../../_people/member-actions';
+import PersonCell from '../../../_people/person-cell';
 import RoleSelect from '../../../_people/role-select';
-import YouBadge from '../../../_people/you-badge';
 
 /**
  * Page metadata: "Members · <company> · Adiutor" (the company layout adds the
@@ -183,31 +182,14 @@ async function Members({
                   );
                   return (
                     <Tr key={member.id}>
-                      <Td className={isSelf ? ownRowCell : undefined}>
-                        <div className="flex items-center gap-3">
-                          <Avatar name={shownName} size="sm" />
-                          <div className="flex min-w-0 flex-col">
-                            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                              <span className="font-medium wrap-anywhere">{shownName}</span>
-                              {isSelf && <YouBadge />}
-                            </span>
-                            {/* The address, at every width, unless it is the name. */}
-                            {shownName !== member.email && (
-                              <span className="text-xs wrap-anywhere text-muted-foreground">
-                                {member.email}
-                              </span>
-                            )}
-                            <div className="mt-2 md:hidden">{role}</div>
-                            {/* Below the width where it gets its column, the activity goes here. */}
-                            <span className="mt-1 flex flex-wrap gap-x-2 text-xs text-muted-foreground xl:hidden">
-                              <ActivityLine
-                                lastActiveAt={member.lastActiveAt}
-                                joinedAt={member.createdAt}
-                              />
-                            </span>
-                          </div>
-                        </div>
-                      </Td>
+                      <PersonCell
+                        name={shownName}
+                        email={member.email}
+                        isSelf={isSelf}
+                        role={role}
+                        lastActiveAt={member.lastActiveAt}
+                        joinedAt={member.createdAt}
+                      />
                       <Td className="hidden md:table-cell">{role}</Td>
                       <Td className="hidden whitespace-nowrap text-muted-foreground xl:table-cell">
                         <ActivityColumn

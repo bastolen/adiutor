@@ -6,6 +6,8 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode, Ref } from 'react';
 
+import IconTile from './icon-tile';
+
 /**
  * Props for {@link EmptyState}.
  */
@@ -44,7 +46,7 @@ interface EmptyStateProps {
  * @returns The empty state.
  */
 export default function EmptyState({
-  icon: Icon,
+  icon,
   title,
   description = '',
   action = null,
@@ -54,9 +56,7 @@ export default function EmptyState({
 }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
-      <span className="flex size-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-        <Icon aria-hidden="true" className="size-5" />
-      </span>
+      <IconTile icon={icon} />
       <div className="flex flex-col gap-1">
         <Title
           // Every element `titleAs` allows is an `HTMLElement`; TypeScript can't tell for the union.
