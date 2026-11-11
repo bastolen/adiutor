@@ -44,7 +44,6 @@
     "messages": {
       "verificationExpired": "This verification link has expired. Send a new one.",
       "verificationInvalid": "This verification link is invalid. Send a new one.",
-      "linkedToOther": "That account is already connected to another Adiutor account.",
       "emailNotVerified": "The provider hasn't verified that account's email address.",
       "failed": "That didn’t work. Please try again.",
       "verified": "Your email address is verified.",

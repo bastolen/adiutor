@@ -21,37 +21,46 @@ describe('VERIFIED_RETURN_PATH', () => {
 
 describe('accountMessage', () => {
   it('confirms verification and connections', () => {
-    expect(accountMessage(t, { verified: '1' })).toEqual({
+    expect(accountMessage(t, tAuth, { verified: '1' })).toEqual({
       tone: 'success',
       text: 'Your email address is verified.',
     });
-    expect(accountMessage(t, { connected: 'github' })?.text).toBe('GitHub is now connected.');
-    expect(accountMessage(t, { connected: 'google' })?.text).toBe('Google is now connected.');
+    expect(accountMessage(t, tAuth, { connected: 'github' })?.text).toBe(
+      'GitHub is now connected.',
+    );
+    expect(accountMessage(t, tAuth, { connected: 'google' })?.text).toBe(
+      'Google is now connected.',
+    );
   });
 
   it('explains verification and connection errors', () => {
-    expect(accountMessage(t, { error: 'TOKEN_EXPIRED' })?.text).toContain('expired');
-    expect(accountMessage(t, { error: 'INVALID_TOKEN' })?.text).toContain('invalid');
+    expect(accountMessage(t, tAuth, { error: 'TOKEN_EXPIRED' })?.text).toContain('expired');
+    expect(accountMessage(t, tAuth, { error: 'INVALID_TOKEN' })?.text).toContain('invalid');
     expect(
-      accountMessage(t, { error: 'account_already_linked_to_different_user' })?.text,
+      accountMessage(t, tAuth, { error: 'account_already_linked_to_different_user' })?.text,
     ).toContain('another Adiutor account');
-    expect(accountMessage(t, { error: 'email_not_verified' })?.text).toContain("hasn't verified");
-    expect(accountMessage(t, { error: 'something_else' })?.text).toBe(
+    expect(accountMessage(t, tAuth, { error: 'unable_to_link_account' })?.text).toContain(
+      "couldn't be connected",
+    );
+    expect(accountMessage(t, tAuth, { error: 'email_not_verified' })?.text).toContain(
+      "hasn't verified",
+    );
+    expect(accountMessage(t, tAuth, { error: 'something_else' })?.text).toBe(
       'That didn’t work. Please try again.',
     );
-    expect(accountMessage(t, { error: 'toString' })?.tone).toBe('error');
+    expect(accountMessage(t, tAuth, { error: 'toString' })?.tone).toBe('error');
   });
 
   it('shows the error when Better Auth appends one to a success URL', () => {
-    expect(accountMessage(t, { verified: '1', error: 'TOKEN_EXPIRED' })?.tone).toBe('error');
-    expect(accountMessage(t, { connected: 'github', error: 'unable_to_link_account' })?.tone).toBe(
-      'error',
-    );
+    expect(accountMessage(t, tAuth, { verified: '1', error: 'TOKEN_EXPIRED' })?.tone).toBe('error');
+    expect(
+      accountMessage(t, tAuth, { connected: 'github', error: 'unable_to_link_account' })?.tone,
+    ).toBe('error');
   });
 
   it('ignores unknown providers and empty parameters', () => {
-    expect(accountMessage(t, { connected: 'myspace' })).toBeNull();
-    expect(accountMessage(t, {})).toBeNull();
+    expect(accountMessage(t, tAuth, { connected: 'myspace' })).toBeNull();
+    expect(accountMessage(t, tAuth, {})).toBeNull();
   });
 });
 
@@ -74,11 +83,15 @@ describe('disconnectFailureMessage', () => {
 
 describe('in Dutch and Spanish', () => {
   it('names the connected provider where the language puts it', () => {
-    expect(accountMessage(translator('nl-NL', 'account'), { connected: 'github' })?.text).toBe(
-      'GitHub is nu gekoppeld.',
-    );
-    expect(accountMessage(translator('es-ES', 'account'), { connected: 'google' })?.text).toBe(
-      'Google ya está conectado.',
-    );
+    expect(
+      accountMessage(translator('nl-NL', 'account'), translator('nl-NL', 'auth'), {
+        connected: 'github',
+      })?.text,
+    ).toBe('GitHub is nu gekoppeld.');
+    expect(
+      accountMessage(translator('es-ES', 'account'), translator('es-ES', 'auth'), {
+        connected: 'google',
+      })?.text,
+    ).toBe('Google ya está conectado.');
   });
 });

@@ -94,7 +94,6 @@ export { CODE_PATHS } from './paths';
 export type { AuthGuardContext } from './paths';
 export {
   endEmailCodeCooldown,
-  normalizeEmail,
   countFailedSignIn,
   settlePasswordAttempt,
   settleStepUpAttempt,

@@ -5,9 +5,10 @@
 import { APIError, getSessionFromCtx } from 'better-auth/api';
 
 import { db } from '@/db';
+import { normalizeEmail } from '@/lib/email-address';
 
 import { markReverify } from '../reverify-marker';
-import { normalizeEmail, reservePasswordAttempt, limit, AUTH_GUARD_LIMITS } from './attempts';
+import { reservePasswordAttempt, limit, AUTH_GUARD_LIMITS } from './attempts';
 import { checkCodeStep } from './code-step';
 import { checkPasswordReset } from './password-reset';
 import { type AuthGuardContext, CREDENTIAL_PATHS, STEP_PATHS } from './paths';

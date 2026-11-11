@@ -55,15 +55,16 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 async function AccountSettings({ searchParams }: { searchParams: Promise<AccountParams> }) {
   const actor = await getActor({ allowMissingMfa: true });
-  const [params, activity, language, t, tAudit, tRoles] = await Promise.all([
+  const [params, activity, language, t, tAuth, tAudit, tRoles] = await Promise.all([
     searchParams,
     listOwnActivity(appContext, actor),
     ownLanguage(appContext, actor),
     getTranslations('account'),
+    getTranslations('auth'),
     getTranslations('audit'),
     getTranslations('roles'),
   ]);
-  const message = accountMessage(t, params);
+  const message = accountMessage(t, tAuth, params);
 
   return (
     <>

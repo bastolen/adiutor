@@ -14,6 +14,8 @@ import {
   mfaRoleOf,
   type MfaState,
   requiresMfa,
+  type SessionMfaInput,
+  sessionMfaOf,
 } from '@/lib/authz/mfa';
 import { COMPANY_ADMIN_ROLE, type CompanyRole, type PlatformRole } from '@/lib/authz/roles';
 import { availableProviders } from '@/lib/sign-in/providers';
@@ -107,11 +109,8 @@ export interface Actor {
 export async function loadActor(
   db: Database,
   userId: string,
-  session: {
+  session: SessionMfaInput & {
     id?: string;
-    mfaVerified?: boolean | null;
-    mfaMethod?: string | null;
-    mfaVerifiedAt?: Date | string | null;
     createdAt?: Date | string | null;
   } = {},
 ): Promise<Actor | null> {
@@ -148,11 +147,7 @@ export async function loadActor(
     (row) => row.role === COMPANY_ADMIN_ROLE && row.deactivatedAt === null,
   );
   const mfaRole = mfaRoleOf(platformRole, adminOfActiveCompany);
-  const sessionMfa = {
-    mfaVerified: session.mfaVerified ?? false,
-    mfaMethod: session.mfaMethod ?? null,
-    mfaVerifiedAt: session.mfaVerifiedAt ?? null,
-  };
+  const sessionMfa = sessionMfaOf(session);
   return {
     ...found,
     platformRole,

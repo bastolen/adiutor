@@ -148,16 +148,6 @@ export async function endEmailCodeCooldown(userId: string): Promise<void> {
 }
 
 /**
- * An email address as the limits key it: trimmed and lower-cased.
- *
- * @param value - The address as sent, if any.
- * @returns The address, or `null` without one.
- */
-export function normalizeEmail(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null;
-}
-
-/**
  * Counts a wrong password for an address, for a failed sign-in that took no
  * attempt beforehand (and for tests).
  *

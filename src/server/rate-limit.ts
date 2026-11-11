@@ -7,6 +7,7 @@ import { and, eq, gt, sql } from 'drizzle-orm';
 import type { DatabaseOrTransaction } from '@/db';
 import { rateLimitBucket } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
+import { normalizeEmail } from '@/lib/email-address';
 
 import type { ServiceContext } from './context';
 import { ServiceError } from './errors';
@@ -172,7 +173,7 @@ export async function resetRateLimit(conn: DatabaseOrTransaction, key: string): 
  * @returns The key, for the trimmed, lower-cased address.
  */
 export function failedSignInsKey(email: string): string {
-  return `sign-in-failed:email:${email.trim().toLowerCase()}`;
+  return `sign-in-failed:email:${normalizeEmail(email) ?? ''}`;
 }
 
 /**

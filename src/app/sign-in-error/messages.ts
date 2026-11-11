@@ -31,6 +31,20 @@ const PROVIDER_ERRORS: Readonly<Record<string, ProviderErrorKey>> = {
 };
 
 /**
+ * The message for an error of signing in or connecting an account through a
+ * provider. Shared by the error page and the account pages (where connecting
+ * a provider can fail).
+ *
+ * @param t - Translates the `auth` namespace.
+ * @param code - Better Auth's error code.
+ * @returns The message, or `null` for a code that isn't a provider error.
+ */
+export function providerErrorMessage(t: AuthTranslator, code: string): string | null {
+  const providerError = ownValue(PROVIDER_ERRORS, code);
+  return providerError ? t(`codes.providers.${providerError}`) : null;
+}
+
+/**
  * Says what went wrong, for the error page.
  *
  * @param t - Translates the `auth` namespace.
@@ -39,9 +53,7 @@ const PROVIDER_ERRORS: Readonly<Record<string, ProviderErrorKey>> = {
  *   knows, or a general one ("Something went wrong while signing you in. …").
  */
 export default function signInErrorMessage(t: AuthTranslator, code: string): string {
-  const providerError = ownValue(PROVIDER_ERRORS, code);
-  if (providerError) {
-    return t(`codes.providers.${providerError}`);
-  }
-  return knownAuthErrorText(t, code) ?? t('codes.errorPageFallback');
+  return (
+    providerErrorMessage(t, code) ?? knownAuthErrorText(t, code) ?? t('codes.errorPageFallback')
+  );
 }

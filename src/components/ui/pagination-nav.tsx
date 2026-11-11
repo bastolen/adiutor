@@ -13,6 +13,7 @@ import cn from '@/lib/cn';
 import type { PaginationLinks } from '@/lib/tables/table-state';
 
 import Button from './button';
+import { isShown } from './focus-fallback';
 import LinkPendingIndicator from './link-pending';
 import { focusRing } from './styles';
 
@@ -26,16 +27,6 @@ type PaginationNavProps = Pick<
   /** The landmark's name, unique on the page, e.g. "Pages of members". */
   label: string;
 };
-
-/**
- * Checks whether an element is shown (not hidden at this screen size).
- *
- * @param element - The element.
- * @returns Whether it takes up space on the page.
- */
-function isShown(element: HTMLElement): boolean {
-  return element.getClientRects().length > 0;
-}
 
 /**
  * Previous and Next (a disabled button on the first or last page), with the

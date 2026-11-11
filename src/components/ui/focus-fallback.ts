@@ -10,6 +10,29 @@
 const WATCH_FRAMES = 120;
 
 /**
+ * Checks whether an element takes up space on the page: not hidden, and not
+ * on a page React's `<Activity>` keeps in the background.
+ *
+ * @param element - The element.
+ * @returns Whether it's shown.
+ */
+export function isShown(element: Element): boolean {
+  return element.getClientRects().length > 0;
+}
+
+/**
+ * Checks whether keyboard focus is nowhere in particular: on `<body>`, or on
+ * an element that's gone or no longer shown (e.g. the button on the page the
+ * user just left, which `<Activity>` keeps hidden).
+ *
+ * @returns Whether it is.
+ */
+export function focusIsLost(): boolean {
+  const active = document.activeElement;
+  return !active || active === document.body || !active.isConnected || !isShown(active);
+}
+
+/**
  * Where focus should go when a control inside `from` disappears: the heading
  * of the card it's in (`data-card-heading`, focusable with `tabIndex={-1}`),
  * or the page's main content (`<main id="main">`) outside a card.
@@ -42,7 +65,7 @@ export default function restoreFocusIfLost(from: Element | null): void {
   /** Checks where focus is, once per frame. */
   const check = () => {
     const active = document.activeElement;
-    if (!active || active === document.body || !active.isConnected) {
+    if (!active || focusIsLost()) {
       // The card itself may be gone too: the main content is always there.
       (target?.isConnected ? target : document.getElementById('main'))?.focus();
       return;

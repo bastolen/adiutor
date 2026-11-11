@@ -12,6 +12,8 @@ import {
   hasMfa,
   mfaMethodFromPath,
   isSessionMfaVerified,
+  type SessionMfaInput,
+  sessionMfaOf,
   type SignInMethod,
   signInMethodFromPath,
 } from '@/lib/authz/mfa';
@@ -61,16 +63,6 @@ const AGE_KEEPING_PATHS = new Set([
   '/two-factor/enable',
 ]);
 
-/** A session's second step, as stored or as Better Auth passes it to hooks. */
-interface SessionConfirmation {
-  /** Whether it had a second step. */
-  mfaVerified?: boolean | null;
-  /** Which one. */
-  mfaMethod?: string | null;
-  /** When (Better Auth may pass it as a string). */
-  mfaVerifiedAt?: Date | string | null;
-}
-
 /**
  * Copies a session's second step, as it was, to the session that takes its
  * place: the same confirmation, which opens no new window for changing
@@ -79,12 +71,9 @@ interface SessionConfirmation {
  * @param previous - The session being replaced.
  * @returns The new session's MFA facts.
  */
-function keptConfirmation(previous: SessionConfirmation) {
-  return {
-    mfaVerified: previous.mfaVerified ?? false,
-    mfaMethod: previous.mfaMethod ?? null,
-    mfaVerifiedAt: previous.mfaVerifiedAt ? new Date(previous.mfaVerifiedAt) : null,
-  };
+function keptConfirmation(previous: SessionMfaInput) {
+  const kept = sessionMfaOf(previous);
+  return { ...kept, mfaVerifiedAt: kept.mfaVerifiedAt ? new Date(kept.mfaVerifiedAt) : null };
 }
 
 /** A session's age, as stored or as Better Auth passes it to hooks. */

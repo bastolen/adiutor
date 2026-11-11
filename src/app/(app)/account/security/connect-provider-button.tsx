@@ -9,12 +9,10 @@ import { useTranslations } from 'next-intl';
 import { useRecentConfirmation } from '@/components/auth/recent-confirmation';
 import Button from '@/components/ui/button';
 import { useTransientState } from '@/components/ui/use-transient-state';
+import { SECURITY_PAGE } from '@/lib/redirect';
 import { signInChangeRefusalText } from '@/lib/sign-in/auth-error-messages';
 import loadAuthClient from '@/lib/sign-in/load-auth-client';
 import type { OAuthProvider } from '@/lib/sign-in/oauth-providers';
-
-/** Where the provider sends the user back to outside a page with a return address (only in tests). */
-const SECURITY_PAGE = '/account/security';
 
 /**
  * Props for {@link ConnectProviderButton}.

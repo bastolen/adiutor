@@ -10,8 +10,7 @@ import type { DatabaseOrTransaction } from '@/db';
 import { staffSettings, user } from '@/db/schema';
 import { isStaffRoleRaise, wouldLeaveNoAdmin } from '@/lib/authz/guards';
 import { PLATFORM_ADMIN_ROLE, type PlatformRole } from '@/lib/authz/roles';
-import { loadDefaultLocale } from '@/lib/i18n/default-locale';
-import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/locales';
+import type { Locale } from '@/lib/i18n/locales';
 import { type Paged, resolveTableState, type TableState } from '@/lib/tables/table-state';
 import { type PeopleSort, STAFF_TABLE } from '@/lib/tables/tables';
 import { localeSchema, staffNameSchema, staffRoleSchema } from '@/lib/validation';
@@ -25,6 +24,7 @@ import type { ServiceContext } from '../context';
 import { forbiddenError, notFoundError, ServiceError, parseId } from '../errors';
 import { paginate, peopleOrder } from '../pagination';
 import { assertRoleChangeLimit } from '../rate-limit';
+import { defaultLanguage } from '../recipient-locale';
 import { revokeInvitationsTo, revokeInvitesWithoutManager } from './invitations';
 import notifyStaffAdminAdded from './staff-admin-notice';
 import getStaffName from './staff-name';
@@ -59,11 +59,8 @@ export async function getStaffSettings(
   actor: Actor,
 ): Promise<{ name: string; defaultLocale: Locale }> {
   assertPermission(getGlobalPermissions(actor), 'staff:manage');
-  const [name, defaultLocale] = await Promise.all([
-    getStaffName(ctx.db),
-    loadDefaultLocale(ctx.db),
-  ]);
-  return { name, defaultLocale: defaultLocale ?? DEFAULT_LOCALE };
+  const [name, defaultLocale] = await Promise.all([getStaffName(ctx.db), defaultLanguage(ctx)]);
+  return { name, defaultLocale };
 }
 
 /**

@@ -2,10 +2,11 @@
  * @file The languages Adiutor speaks, and the cookie that remembers a
  * browser's choice.
  *
- * Imports nothing on purpose: `src/lib/auth.ts` reads {@link LOCALES} for
+ * Imports only the pure `cookie-value.ts` on purpose: `src/lib/auth.ts` reads {@link LOCALES} for
  * the user's saved language, and the Better Auth CLI (`pnpm auth:schema`)
  * loads that file without React or Next.js. See docs/i18n.md.
  */
+import { cookieValue } from '../request/cookie-value';
 
 /**
  * Every language, as a BCP 47 tag with its region, in the order the language
@@ -60,19 +61,7 @@ export type LanguageChoice = Locale | typeof FOLLOW_DEFAULT;
  * `null` when it isn't there or can't be read.
  */
 export function languageCookieValue(cookies: string | null | undefined): string | null {
-  const pair = cookies
-    ?.split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${LOCALE_COOKIE}=`));
-  if (!pair) {
-    return null;
-  }
-  try {
-    return decodeURIComponent(pair.slice(LOCALE_COOKIE.length + 1));
-  } catch {
-    // A malformed escape: treated like a missing cookie.
-    return null;
-  }
+  return cookieValue(cookies, LOCALE_COOKIE);
 }
 
 /**

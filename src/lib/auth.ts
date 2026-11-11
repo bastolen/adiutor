@@ -36,7 +36,7 @@ import { sendEmail } from './email';
 import { appUrl, env } from './env';
 import { localeFromHeaders } from './i18n/default-locale';
 import { isLocale, type Locale, LOCALES } from './i18n/locales';
-import { MIN_PASSWORD_LENGTH } from './input-rules';
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from './input-rules';
 import ipAddressOptions from './request/ip-address-options';
 import { LAST_USED_LOGIN_METHOD_COOKIE } from './sign-in/auth-cookies';
 import { DISABLED_AUTH_PATHS } from './sign-in/auth-endpoints';
@@ -505,6 +505,7 @@ export const auth = betterAuth({
     disableSignUp: true,
     /** New passwords need at least 12 characters (see `passwordSchema`). */
     minPasswordLength: MIN_PASSWORD_LENGTH,
+    maxPasswordLength: MAX_PASSWORD_LENGTH,
     /** Sign the user out everywhere after a password reset. */
     revokeSessionsOnPasswordReset: true,
     /**

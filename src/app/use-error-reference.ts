@@ -8,6 +8,11 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { errorDigest, referenceFromDigest } from '@/lib/error-reference';
+import {
+  ERROR_MESSAGE_MAX_LENGTH,
+  ERROR_NAME_MAX_LENGTH,
+  ERROR_PATH_MAX_LENGTH,
+} from '@/lib/input-rules';
 
 import reportErrorAction, { type BrowserErrorReport } from './report-error-action';
 
@@ -35,9 +40,9 @@ function browserReport(error: unknown): BrowserErrorReport {
     // A value that can't be turned into text: the report still says where it happened.
   }
   return {
-    name: error instanceof Error ? error.name.slice(0, 100) : null,
-    message: message.slice(0, 500),
-    path: window.location.pathname.slice(0, 300),
+    name: error instanceof Error ? error.name.slice(0, ERROR_NAME_MAX_LENGTH) : null,
+    message: message.slice(0, ERROR_MESSAGE_MAX_LENGTH),
+    path: window.location.pathname.slice(0, ERROR_PATH_MAX_LENGTH),
   };
 }
 

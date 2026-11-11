@@ -9,6 +9,8 @@
 
 import { useSyncExternalStore } from 'react';
 
+import { cookieValue } from '@/lib/request/cookie-value';
+
 /** Event fired in this tab when one of these cookies is removed. */
 const CHANGE_EVENT = 'adiutor-next-page-cookie-change';
 
@@ -19,20 +21,7 @@ const CHANGE_EVENT = 'adiutor-next-page-cookie-change';
  * @returns The decoded value, or `null` without a usable cookie.
  */
 function readCookie(name: string): string | null {
-  const prefix = `${name}=`;
-  const found = document.cookie
-    .split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(prefix));
-  if (!found) {
-    return null;
-  }
-  try {
-    return decodeURIComponent(found.slice(prefix.length));
-  } catch {
-    // Changed in the browser into something that isn't URL-encoded: nothing to say.
-    return null;
-  }
+  return cookieValue(document.cookie, name);
 }
 
 /**

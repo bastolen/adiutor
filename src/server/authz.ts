@@ -14,7 +14,7 @@ import { after } from 'next/server';
 import { cache } from 'react';
 
 import { auth } from '@/lib/auth';
-import { mustSetUpMfa, mustStepUp } from '@/lib/authz/mfa';
+import { mustSetUpMfa, mustStepUp, sessionMfaOf } from '@/lib/authz/mfa';
 import type { Permission } from '@/lib/authz/permissions';
 import { getSafeRedirectPath } from '@/lib/redirect';
 import PATHNAME_HEADER from '@/lib/request/pathname-header';
@@ -48,16 +48,10 @@ export const getOptionalActor = cache(async (): Promise<Actor | null> => {
   if (!session) {
     return null;
   }
-  const { mfaVerified, mfaMethod, mfaVerifiedAt } = session.session as {
-    mfaVerified?: boolean | null;
-    mfaMethod?: string | null;
-    mfaVerifiedAt?: Date | string | null;
-  };
+  const sessionMfa = sessionMfaOf(session.session);
   const actor = await loadActor(appContext.db, session.user.id, {
     id: session.session.id,
-    mfaVerified,
-    mfaMethod,
-    mfaVerifiedAt,
+    ...sessionMfa,
     // When it signed in, for the one-hour rule (`needsFreshSignIn`).
     createdAt: session.session.createdAt,
   });

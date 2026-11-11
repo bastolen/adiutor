@@ -57,8 +57,9 @@ export {
   isSessionMfaVerified,
   mfaConfirmedUntil,
   isMfaConfirmedRecently,
+  sessionMfaOf,
 } from './session';
-export type { MfaMethod } from './session';
+export type { MfaMethod, SessionMfa, SessionMfaInput } from './session';
 export { mustSetUpMfa, mustStepUp, needsRecentConfirmation, needsFreshSignIn } from './actor-gates';
 export type { ActorMfa } from './actor-gates';
 export { signInMethodFromPath } from './sign-in-method';

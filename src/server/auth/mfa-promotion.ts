@@ -13,7 +13,7 @@ import { inArray } from 'drizzle-orm';
 
 import type { DatabaseOrTransaction } from '@/db';
 import { session } from '@/db/schema';
-import { isSessionMfaVerified, requiresMfa } from '@/lib/authz/mfa';
+import { isSessionMfaVerified, requiresMfa, sessionMfaOf } from '@/lib/authz/mfa';
 
 import { recordEvent } from '../audit';
 import type { ServiceContext } from '../context';
@@ -74,10 +74,7 @@ export async function withMfaPromotion<T>(
   const weaker = sessions.filter(
     (found) =>
       found.id !== options.keepSessionId &&
-      !isSessionMfaVerified(
-        { mfaVerified: found.mfaVerified ?? false, mfaMethod: found.mfaMethod },
-        roles.get(found.userId) ?? null,
-      ),
+      !isSessionMfaVerified(sessionMfaOf(found), roles.get(found.userId) ?? null),
   );
   if (weaker.length === 0) {
     return result;

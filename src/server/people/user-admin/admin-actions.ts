@@ -12,6 +12,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import type { DatabaseOrTransaction } from '@/db';
 import { account, passkey, twoFactor, user } from '@/db/schema';
 import { needsRecentConfirmation } from '@/lib/authz/mfa';
+import { normalizeEmail } from '@/lib/email-address';
 import { OAUTH_PROVIDERS } from '@/lib/sign-in/oauth-providers';
 
 import { assertPermission, getGlobalPermissions } from '../../access';
@@ -293,7 +294,7 @@ export async function deleteUser(
   assertPermission(getGlobalPermissions(actor), 'users:delete');
   const { email, locale } = await ctx.db.transaction(async (tx) => {
     const target = await loadTarget(tx, actor, userId);
-    if (confirmEmail.trim().toLowerCase() !== target.email.toLowerCase()) {
+    if (normalizeEmail(confirmEmail) !== target.email.toLowerCase()) {
       throw new ServiceError('invalid', 'errors.users.confirmEmail');
     }
     // Locks their row first, so nothing they create meanwhile escapes the revoke below.

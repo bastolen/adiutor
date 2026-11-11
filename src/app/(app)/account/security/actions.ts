@@ -19,6 +19,7 @@ import type { ActionResult } from '@/lib/action-result';
 import { auth } from '@/lib/auth';
 import { needsRecentConfirmation } from '@/lib/authz/mfa';
 import field from '@/lib/form-data';
+import { SECURITY_PAGE } from '@/lib/redirect';
 import { signInChangeRefusalText } from '@/lib/sign-in/auth-error-messages';
 import { confirmChangeUrlFor } from '@/lib/sign-in/confirm-url';
 import { MFA_VERIFICATION_REQUIRED } from '@/lib/sign-in/sign-in-refusals';
@@ -37,9 +38,6 @@ import { getActor } from '@/server/authz';
 import { deactivateOwnAccount } from '@/server/people/user-admin';
 
 import { disconnectFailureMessage } from '../account-messages';
-
-/** Where the step-up page comes back to when a form doesn't say (its `returnTo` field). */
-const SECURITY_PAGE = '/account/security';
 
 /**
  * Sets a first password, or changes the existing one (which needs the

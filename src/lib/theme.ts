@@ -50,11 +50,13 @@ export function resolveTheme(
 
 /**
  * Sets the theme before the first paint. Turned into an inline script with
- * `toString()`, so it must not use anything from outside its own body.
+ * `toString()`, so it must not use anything from outside its own body. Also
+ * called by the last-resort error page (`global-error.tsx`), which has no
+ * inline script.
  *
  * @param storageKey - The `localStorage` key holding the preference.
  */
-function applyStoredTheme(storageKey: string) {
+export function applyStoredTheme(storageKey: string) {
   try {
     const stored = window.localStorage.getItem(storageKey);
     const dark =

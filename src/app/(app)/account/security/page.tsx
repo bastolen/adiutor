@@ -68,9 +68,10 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 async function Security({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const actor = await getActor({ allowMissingMfa: true });
-  const [params, t, locale] = await Promise.all([
+  const [params, t, tAuth, locale] = await Promise.all([
     searchParams,
     getTranslations('account'),
+    getTranslations('auth'),
     getLocale(),
   ]);
   const devicesRequested = parseTableState(DEVICES_TABLE, params);
@@ -87,7 +88,7 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
     ...devicesRequested,
     page: sessions.page,
   });
-  const message = accountMessage(t, params);
+  const message = accountMessage(t, tAuth, params);
   // The same check that sent them here (`getActor`).
   const mustSetUp = mustSetUpMfa(actor);
   const setup = {

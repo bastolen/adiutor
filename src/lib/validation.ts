@@ -17,6 +17,7 @@ import { COMPANY_ROLES, isRole, PLATFORM_ROLES } from './authz/roles';
 import { FOLLOW_DEFAULT, LOCALES } from './i18n/locales';
 import type { Messages } from './i18n/messages';
 import {
+  MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
   NAME_MAX_LENGTH,
   PASSKEY_NAME_MAX_LENGTH,
@@ -33,7 +34,10 @@ export type ValidationMessageKey = `validation.${MessageKeys<
   NestedKeyOf<Messages['validation']>
 >}`;
 
-/** An email address, trimmed and lower-cased so it matches stored addresses. */
+/**
+ * An email address, trimmed and lower-cased so it matches stored addresses
+ * (the same normalization as `normalizeEmail` in `email-address.ts`).
+ */
 export const emailSchema = z
   .string()
   .trim()
@@ -252,13 +256,15 @@ export const nameSchema = withNameSafety(
   'name',
 );
 
-/** A new password: at least `MIN_PASSWORD_LENGTH` characters, at most Better Auth's 128. */
+/** A new password: at least `MIN_PASSWORD_LENGTH` characters, at most `MAX_PASSWORD_LENGTH` (Better Auth's own limit). */
 export const passwordSchema = z
   .string()
   .min(MIN_PASSWORD_LENGTH, {
     error: 'validation.password.tooShort' satisfies ValidationMessageKey,
   })
-  .max(128, { error: 'validation.password.tooLong' satisfies ValidationMessageKey });
+  .max(MAX_PASSWORD_LENGTH, {
+    error: 'validation.password.tooLong' satisfies ValidationMessageKey,
+  });
 
 /** A company name. */
 export const companyNameSchema = withNameSafety(

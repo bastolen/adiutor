@@ -13,7 +13,7 @@ import AuthHeading from '@/components/ui/auth-heading';
 import Button from '@/components/ui/button';
 import TextField from '@/components/ui/text-field';
 import { useTransientState } from '@/components/ui/use-transient-state';
-import { MIN_PASSWORD_LENGTH } from '@/lib/input-rules';
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '@/lib/input-rules';
 import authClient from '@/lib/sign-in/auth-client';
 import { authErrorText, signInErrorText } from '@/lib/sign-in/auth-error-messages';
 
@@ -115,6 +115,7 @@ export default function ResetPasswordForm() {
           name="password"
           autoComplete="new-password"
           minLength={MIN_PASSWORD_LENGTH}
+          maxLength={MAX_PASSWORD_LENGTH}
           required
           value={password}
           onChange={(event) => setPassword(event.target.value)}
@@ -125,6 +126,7 @@ export default function ResetPasswordForm() {
           name="confirmation"
           autoComplete="new-password"
           minLength={MIN_PASSWORD_LENGTH}
+          maxLength={MAX_PASSWORD_LENGTH}
           required
           value={confirmation}
           onChange={(event) => setConfirmation(event.target.value)}
