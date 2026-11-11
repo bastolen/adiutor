@@ -8,8 +8,9 @@ releases are published and how dependencies are kept up to date. Back to the
 
 CI (`.github/workflows/ci.yml`) runs on every pull request and push to `main`, as jobs that run at
 the same time, with test-only auth settings. Its token is read-only, and checkout doesn't keep it in
-`.git`. Each job starts with the same setup, a local action (`.github/actions/setup/action.yml`):
-pnpm, Node from `.nvmrc` with pnpm's store cached, and `pnpm install --frozen-lockfile`.
+`.git`. Each job starts with the same setup, a local action (`.github/actions/setup/action.yml`,
+which the PR title check uses too): pnpm, Node from `.nvmrc` with pnpm's store cached, and
+`pnpm install --frozen-lockfile`.
 
 | Job                           | What it runs                                                                                        | Database   |
 | ----------------------------- | --------------------------------------------------------------------------------------------------- | ---------- |
