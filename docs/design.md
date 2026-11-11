@@ -205,6 +205,10 @@ keyboard support.
   stay inline: a new company's "Open the company", a new invite link to copy. The signed-out
   pages (sign in, the code step, password reset, invitations, `/setup`) show their results inline
   only.
+- **Tap targets:** every control is at least 24×24px (WCAG 2.5.8) without leaning on the rule's
+  spacing exception, so each is easy to tap on a phone. Text links on their own line reach 2px above
+  and below the text (`TextLink`, cancelled by a negative margin, so nothing moves), and a checkbox
+  counts with its label (`CheckboxField`). Links inside a sentence are exempt, as in WCAG.
 - **Forms:** labels are always visible and help text is linked with `aria-describedby`. Fields
   don't show errors themselves: a failed submit shows an `Alert` (`ResultAlert`) and moves focus
   to it, and in the signed-in app a toast too.
@@ -231,7 +235,7 @@ keyboard support.
 
 Two end-to-end specs keep this true: `e2e/a11y.spec.ts` scans every page (and open menus, selects,
 dialogs and the mobile menu) with [axe](https://github.com/dequelabs/axe-core) against the WCAG 2.2
-A and AA rules in light and dark mode and checks that no page scrolls sideways on a 320px-wide
+A and AA rules in light and dark mode, and that every control is at least 24×24px, and checks that no page scrolls sideways on a 320px-wide
 screen, in every language (with the sign-in page's widest buttons, "Last used" badge included) and
 while signed-in pages still show their loading placeholders, and that no field's text is under 16px,
 and

@@ -51,7 +51,8 @@ export default function PageHeader({
       {back && (
         <Link
           href={back.href}
-          className={`inline-flex w-fit items-center gap-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground ${focusRing}`}
+          // 2px above and below the text, cancelled by the margin: at least 24px to tap, nothing moves.
+          className={`-my-0.5 inline-flex w-fit items-center gap-1.5 rounded-md py-0.5 text-sm text-muted-foreground hover:text-foreground ${focusRing}`}
         >
           <ArrowLeft aria-hidden="true" className="size-4" />
           {back.label}
