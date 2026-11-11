@@ -12,7 +12,7 @@ import EmailLanguageField from '@/components/language/email-language-field';
 import Alert from '@/components/ui/alert';
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
-import { useSignedInAs } from '@/components/ui/signed-in-as';
+import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
 import TextField from '@/components/ui/text-field';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import type { Locale } from '@/lib/i18n/locales';
@@ -76,22 +76,25 @@ export default function RegisterUserForm({ defaultLocale }: { defaultLocale: Loc
       }}
       className="flex flex-col gap-4"
     >
-      {showResult && <ResultAlert result={result} errorsOnly />}
-      <TextField
-        label={t('email')}
-        type="email"
-        name="email"
-        autoComplete="off"
-        placeholder={t('placeholder')}
-        description={t('description')}
-        required
-      />
-      <EmailLanguageField purpose="account" defaultLocale={defaultLocale} />
-      <div>
-        <Button type="submit" loading={pending} disabled={changesOff}>
-          {t('submit')}
-        </Button>
-      </div>
+      <ChangesFieldset>
+        {showResult && <ResultAlert result={result} errorsOnly />}
+        <TextField
+          label={t('email')}
+          type="email"
+          name="email"
+          autoComplete="off"
+          placeholder={t('placeholder')}
+          description={t('description')}
+          required
+          disabled={changesOff}
+        />
+        <EmailLanguageField purpose="account" defaultLocale={defaultLocale} disabled={changesOff} />
+        <div>
+          <Button type="submit" loading={pending} disabled={changesOff}>
+            {t('submit')}
+          </Button>
+        </div>
+      </ChangesFieldset>
     </form>
   );
 }

@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
-import { useSignedInAs } from '@/components/ui/signed-in-as';
+import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
 import TextField from '@/components/ui/text-field';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import { NAME_MAX_LENGTH, SLUG_MAX_LENGTH } from '@/lib/input-rules';
@@ -47,33 +47,37 @@ export default function CompanyForm({ companyId, name, slug }: CompanyFormProps)
 
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-4">
-      <input type="hidden" name="companyId" value={companyId} />
-      <ResultAlert result={result} />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <TextField
-          label={t('name')}
-          name="name"
-          maxLength={NAME_MAX_LENGTH}
-          defaultValue={name}
-          autoComplete="organization"
-          required
-        />
-        <TextField
-          label={t('slug')}
-          name="slug"
-          maxLength={SLUG_MAX_LENGTH}
-          defaultValue={slug}
-          description={t('slugDescription', { slug })}
-          autoComplete="off"
-          spellCheck={false}
-          required
-        />
-      </div>
-      <div>
-        <Button type="submit" loading={pending} disabled={changesOff}>
-          {t('save')}
-        </Button>
-      </div>
+      <ChangesFieldset>
+        <input type="hidden" name="companyId" value={companyId} />
+        <ResultAlert result={result} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <TextField
+            label={t('name')}
+            name="name"
+            maxLength={NAME_MAX_LENGTH}
+            defaultValue={name}
+            autoComplete="organization"
+            required
+            disabled={changesOff}
+          />
+          <TextField
+            label={t('slug')}
+            name="slug"
+            maxLength={SLUG_MAX_LENGTH}
+            defaultValue={slug}
+            description={t('slugDescription', { slug })}
+            autoComplete="off"
+            spellCheck={false}
+            required
+            disabled={changesOff}
+          />
+        </div>
+        <div>
+          <Button type="submit" loading={pending} disabled={changesOff}>
+            {t('save')}
+          </Button>
+        </div>
+      </ChangesFieldset>
     </form>
   );
 }

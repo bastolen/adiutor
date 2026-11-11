@@ -2,14 +2,16 @@
  * @file Tests for turning off changes on screen while a staff member is
  * signed in as the user: the hook follows the banner's marker, and the
  * shared controls (`RowAction`, `ActionDialog`) render disabled meanwhile,
- * except the user's own work.
+ * except the user's own work, and so does everything in a form's
+ * `ChangesFieldset`, its fields included.
  */
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import ActionDialog from './action-dialog';
 import RowAction from './row-action';
-import { SignedInAsMarker, useSignedInAs } from './signed-in-as';
+import { ChangesFieldset, SignedInAsMarker, useSignedInAs } from './signed-in-as';
+import TextField from './text-field';
 
 vi.mock('next/navigation', () => ({
   /**
@@ -88,5 +90,43 @@ describe('the shared controls while signed in as someone', () => {
 
     expect(screen.getByRole('button', { name: 'Remove' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Rename' })).toBeEnabled();
+  });
+});
+
+describe('ChangesFieldset', () => {
+  /**
+   * A form with a field and its submit button, in the fieldset.
+   *
+   * @returns The form.
+   */
+  function NameForm() {
+    return (
+      <form>
+        <ChangesFieldset>
+          <TextField name="name" label="Name" defaultValue="Jane Doe" />
+          <button type="submit">Save name</button>
+        </ChangesFieldset>
+      </form>
+    );
+  }
+
+  it('turns off the field and the button while signed in as someone', () => {
+    render(
+      <>
+        <NameForm />
+        <SignedInAsMarker />
+      </>,
+    );
+
+    expect(screen.getByRole('textbox', { name: 'Name' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save name' })).toBeDisabled();
+  });
+
+  it('leaves the form as it is otherwise, and adds no group', () => {
+    render(<NameForm />);
+
+    expect(screen.getByRole('textbox', { name: 'Name' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Save name' })).toBeEnabled();
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
   });
 });

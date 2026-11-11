@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl';
 import DefaultLanguageField from '@/components/language/default-language-field';
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
-import { useSignedInAs } from '@/components/ui/signed-in-as';
+import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import type { Locale } from '@/lib/i18n/locales';
 
@@ -39,13 +39,15 @@ export default function DefaultLanguageForm({ defaultLocale }: { defaultLocale: 
 
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-4">
-      <ResultAlert result={result} />
-      <DefaultLanguageField defaultValue={defaultLocale} />
-      <div>
-        <Button type="submit" loading={pending} disabled={changesOff}>
-          {t('saveDefault')}
-        </Button>
-      </div>
+      <ChangesFieldset>
+        <ResultAlert result={result} />
+        <DefaultLanguageField defaultValue={defaultLocale} disabled={changesOff} />
+        <div>
+          <Button type="submit" loading={pending} disabled={changesOff}>
+            {t('saveDefault')}
+          </Button>
+        </div>
+      </ChangesFieldset>
     </form>
   );
 }

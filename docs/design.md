@@ -174,8 +174,11 @@ keyboard support.
     [Signing in as a user](authentication.md#signing-in-as-a-user)). The banner mounts
     `SignedInAsMarker`, and controls read `useSignedInAs` (`src/components/ui/signed-in-as.tsx`).
     `RowAction`, `ActionDialog` and `RoleSelect` do it themselves; pass `allowedWhileSignedInAs`
-    for the user's own work. Forms that change something disable their submit button with the
-    hook. Reads (search, filters, sorting, paging) stay as they are. The server refuses changes
+    for the user's own work. Forms that change something pass the hook's value as `disabled` to
+    each field, select and submit button, so the attribute is on the control itself (Radix selects
+    read their own `disabled`). They also wrap their contents in `ChangesFieldset`, a disabled
+    fieldset then, which turns off anything a form missed, without a box or a group of its own.
+    Reads (search, filters, sorting, paging) stay as they are. The server refuses changes
     either way, so a control that misses this still changes nothing.
   - **Card anchors.** A `Card` whose controls can send the user away and back (a confirmation, a
     provider, an emailed link) gets an `id`, a section ID like `invitations` (see

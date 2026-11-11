@@ -10,7 +10,7 @@ import { useLanguageChoiceOptions } from '@/components/language/language-options
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
 import SelectField from '@/components/ui/select-field';
-import { useSignedInAs } from '@/components/ui/signed-in-as';
+import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import type { LanguageChoice, Locale } from '@/lib/i18n/locales';
 
@@ -58,20 +58,23 @@ export default function LanguageForm({ choice, defaultLocale }: LanguageFormProp
 
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-4">
-      {result && !result.ok && <ResultAlert result={result} />}
-      <SelectField
-        label={t('profile.languageLabel')}
-        name="locale"
-        options={options}
-        defaultValue={choice}
-        className="sm:max-w-xs"
-      />
-      <div>
-        {/* Busy until the page has reloaded, so nobody presses it twice. */}
-        <Button type="submit" loading={pending || Boolean(result?.ok)} disabled={changesOff}>
-          {t('profile.saveLanguage')}
-        </Button>
-      </div>
+      <ChangesFieldset>
+        {result && !result.ok && <ResultAlert result={result} />}
+        <SelectField
+          label={t('profile.languageLabel')}
+          name="locale"
+          options={options}
+          defaultValue={choice}
+          className="sm:max-w-xs"
+          disabled={changesOff}
+        />
+        <div>
+          {/* Busy until the page has reloaded, so nobody presses it twice. */}
+          <Button type="submit" loading={pending || Boolean(result?.ok)} disabled={changesOff}>
+            {t('profile.saveLanguage')}
+          </Button>
+        </div>
+      </ChangesFieldset>
     </form>
   );
 }

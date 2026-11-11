@@ -263,7 +263,9 @@ does, to check what isn't working for them. The reasons are in
     off, and when it ends, with **Back to my account** (`SignedInAsBanner` in the app's layout). It
     stays in view while the page scrolls, and it's the first thing in the content for the skip link
     and screen readers.
-  - The controls that change something render disabled meanwhile (`useSignedInAs`, see
+  - The controls that change something render disabled meanwhile, and so do the fields and
+    dropdowns of forms that change something (`useSignedInAs`, with `ChangesFieldset` as a safety
+    net, see
     [Design](design.md#design-and-accessibility)).
   - The account menu shows the user, labelled "Signed in as". **Back to my account** takes Sign
     out's place there, since signing out would end the staff member's own session.

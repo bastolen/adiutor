@@ -45,6 +45,9 @@ test('a staff Admin signs in as a Manager, changes nothing, and goes back', asyn
   // the controls are off (and the server refuses them anyway, see the authorization matrix).
   await page.goto(`/companies/${COMPANY_SLUG}/settings`);
   await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+  // The fields too, not only the button that would save them.
+  await expect(page.getByRole('textbox', { name: 'Name', exact: true })).toBeDisabled();
+  await expect(page.getByRole('textbox', { name: 'URL name' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Deactivate company' })).toBeDisabled();
   await page.goto(`/companies/${COMPANY_SLUG}/members`);
   await expect(
@@ -65,6 +68,8 @@ test('a staff Admin signs in as a Manager, changes nothing, and goes back', asyn
   await expect(page.getByRole('heading', { name: 'Signed-in devices' })).toBeVisible();
   await page.goto('/account');
   await expect(page.getByRole('button', { name: 'Save name' })).toBeDisabled();
+  await expect(page.getByRole('textbox', { name: 'Name', exact: true })).toBeDisabled();
+  await expect(page.getByRole('combobox', { name: 'Language' })).toBeDisabled();
 
   // Back to the Admin's own account, on the card they started from.
   await banner.getByRole('button', { name: 'Back to my account' }).click();
