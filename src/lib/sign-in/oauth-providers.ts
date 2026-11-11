@@ -15,6 +15,10 @@
  * and `src/lib/sign-in/providers.ts`; its `socialProviders` entry in
  * `src/lib/auth.ts`; its icon in `src/components/brand/provider-icons.tsx`;
  * and, for an MFA provider, its check in `src/server/auth/provider-mfa.ts`.
+ * Three config files list providers by hand too: `playwright.config.ts`
+ * (the `webServer` env blanks its credentials), `vitest.config.mts` (the
+ * integration env, for an MFA provider) and `eslint.config.mjs`
+ * (`providerIdSyntax`).
  */
 import type { Locale } from '@/lib/i18n/locales';
 

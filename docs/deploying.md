@@ -297,8 +297,8 @@ what happened:
 
 - **In the app**, as a staff Admin, open **Logs → Errors** (`/admin/logs/errors`) and look the
   reference up (case and the dash don't matter). It shows everything stored under it, and the
-  page lists the errors of the last 7 days. After 7 days, or for errors over the limit below,
-  use the server log.
+  page lists the errors of the last 7 days. After 7 days, or for errors over the limit, use the
+  server log.
 - **In the server log**, search for the reference. Each error logs one line with the reference
   and where it happened, e.g.
   `App error TXCY-X79D: server render /(app)/companies/page (digest 2828711936)`; search for the
@@ -314,12 +314,8 @@ what happened:
   A reference of a server error comes from Next's digest, so the same error happening again
   is stored again under the same reference, and the query can return several rows.
 
-Rows hold where the error happened (`server` or `browser`, the route and the page's path without
-its query string, with the token of an invitation, invite link or password reset link replaced by
-`[token]`), the error's class name and message (database values taken out, at most 500
-characters) and who was signed in. Errors are stored from `onRequestError` in
-`src/instrumentation.ts` for the server, and reported by the error page for errors in the browser
-(`src/server/app-errors.ts`); at most 20 per IP address per hour are stored, the rest only logged.
+What is stored, and the limits and retention, are under
+[Recorded errors](security-measures.md#recorded-errors).
 
 ## Rotating the auth secret
 

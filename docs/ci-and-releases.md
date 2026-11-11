@@ -65,10 +65,8 @@ hasn't passed them yet, and **CI passed** counts the skipped jobs as passed.
 - **Who can use a record:** only records made by runs of this repository's own branches: `main`
   and pull requests from branches here. A fork's pull request runs its own copy of the workflow and
   could upload anything, so its records are ignored. It can still skip the tests when its code
-  matches a record made here. (Records used to live in the Actions cache, which never lets `main`
-  read what a pull request saved, so `main` re-ran every merged pull request.) Records expire after
-  7 days, and the tests then run again. The fingerprint starts with a scheme number, which changes
-  when the list of files left out does.
+  matches a record made here. Records expire after 7 days, and the tests then run again. The
+  fingerprint starts with a scheme number, which changes when the list of files left out does.
 
 **PR titles** (`.github/workflows/pr-title.yml`): a squash merge lands on `main` with the pull
 request's title, and Release Please reads it, but the commit-msg hook never sees it. So every pull
@@ -149,9 +147,8 @@ If the import doesn't recognise the bypass entries, add **Repository admin** and
 **adiutor-releases** app to the bypass list in the form before creating it. After changing the
 file, update the ruleset with `PUT`, as for `main`.
 
-Besides the ruleset, `vercel.json` guards production on Vercel's side: it builds `production` only when the
-branch points at a release commit (one whose first line starts with `chore(main): release `), so a
-stray push to `production` never reaches production.
+`vercel.json` also refuses to build `production` unless it points at a release commit (see
+[Vercel](deploying.md#vercel)).
 
 ## Security advisories
 

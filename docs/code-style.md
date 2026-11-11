@@ -55,13 +55,9 @@ The linters and formatters, the JSDoc rule, the editor setup and the Git hooks. 
   Stylelint, `pnpm lint` reports classes in the wrong order and `pnpm lint:fix` sorts them.
   `eslint-plugin-better-tailwindcss` also reports unknown, duplicate, conflicting and deprecated
   classes, using the brand theme so classes like `bg-primary` count as valid.
-- **Text** comes from the translation catalogues, in every language (see [Languages](i18n.md)).
-  ESLint refuses text written straight into JSX (`react/jsx-no-literals`) or into a text prop
-  (`aria-label`, `title`, `label`, `placeholder`, ...) in `src/app`, `src/components` and
-  `src/emails`, and a translation call inside a template literal or a `+` anywhere in `src/`: a message is one
-  whole sentence with named arguments. `pnpm lint:messages` (part of `pnpm lint`) checks the
-  catalogues themselves: every language complete, the same arguments as English, no unused or
-  undefined keys.
+- **Text** comes from the translation catalogues, in every language. ESLint refuses hard-coded and
+  glued-together text, and `pnpm lint:messages` checks the catalogues (see
+  [Checks](i18n.md#checks) in Languages).
 - **Browser bundle:** client components ship only what the page needs when it loads. zod and the
   schemas in `src/lib/validation.ts` stay on the server (the limits forms need are in
   `src/lib/input-rules.ts`); pages outside the sign-in pages load the Better Auth client with

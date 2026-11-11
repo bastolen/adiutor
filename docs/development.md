@@ -6,10 +6,6 @@ migrations, test data, starting over, debugging, and every script. Back to the
 
 ## First run
 
-Open <http://localhost:3000>. On the first run it goes to `/setup`, where you choose the name
-users see and create your Admin account. After that, sign in at `/auth`. Every email the app sends shows up in
-Mailpit at <http://localhost:8025> (see [Email](email.md)).
-
 Next.js's development indicator (the round "N") is turned off in `next.config.ts`
 (`devIndicators: false`), because in every corner it covers one of the app's controls. Compile and
 runtime errors still show in its overlay.

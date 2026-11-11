@@ -225,7 +225,7 @@ keyboard support.
   same access check as the pages. Titles never name a person (a user's page is "User · Adiutor"):
   they end up in the browser history, which holds no personal data. Someone who may not see a page
   (a missing permission, a company they're not in, a user that doesn't exist) gets the 404 page,
-  and its title too: "Not found · Adiutor" (`NOT_FOUND_TITLE` in `src/lib/not-found-metadata.ts`).
+  and its title too: "Not found · Adiutor" (`notFoundMetadata` in `src/lib/not-found-metadata.ts`).
   Pages and layouts that require a permission therefore export their `generateMetadata` from
   `src/server/page-metadata.ts`, with the same check as the page: `globalPermissionMetadata`
   (with `requireGlobalPermission`, plus an `exists` check for a page about one record, like a

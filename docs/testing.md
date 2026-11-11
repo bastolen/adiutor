@@ -39,33 +39,38 @@ configurations in VS Code, which turn the time limit off (see
   foreign keys). Run them with `pnpm test:integration`.
 - **End-to-end tests** use [Playwright](https://playwright.dev), in `e2e/` (`playwright.config.ts`).
   They build and start their own server on port 3100 against the seeded test database, and read
-  emails from `e2e/.outbox`; your dev server and database aren't touched. Locally they reuse the
-  last build when nothing it reads (`src/` apart from unit tests, `public/`, `next.config.ts`,
-  `tsconfig.json`, `package.json`, the lockfile) changed since (`tests/build/build-state.ts`), so
-  rerunning a spec after editing only specs starts at once; `E2E_REBUILD=1 pnpm test:e2e` builds
-  anyway (e.g. after an edit saved while a build was running). Every test gets its own
-  client address (`X-Forwarded-For`, set in `e2e/support/test.ts`), so Better Auth's per-IP limits
-  (3 sign-ins per 10 seconds, sign-in links, codes) don't carry over between tests; a test that
-  signs in more often than that gives a page another address with `useOwnClientIp`. The seed includes a
-  company, "Adiutor Tests Paging", with more members and invite links than fit on a page, used
-  by the pagination tests (`e2e/tables.spec.ts`) and the accessibility and keyboard checks of
-  paginated tables (`e2e/a11y.spec.ts`, `e2e/keyboard.spec.ts`); no test changes its data. They
-  include the accessibility and keyboard checks described under
-  [Design and accessibility](design.md#design-and-accessibility); the invitation and invite-link
-  pages are scanned with real tokens stored straight in the database (`storeInvitation`,
-  `storeInviteLink` in `e2e/support/db.ts`), signed out and signed in. Those helpers, like the others in that file, open their own connection to the test
-  database (`withTestDatabase`), so specs pass no URL. In CI a failed test is
-  retried twice and traced on its first retry, except in `e2e/security.spec.ts`: its tests use up
-  state in order, so it doesn't retry and keeps a trace of its first failure instead (traces are in
-  the `playwright-report` artifact). A test that uses up state (locks, deletes or changes an
-  account) has its own seeded account or a fresh address. Emails to a seeded or reused address are
-  counted with `countEmails` before the action and awaited with `waitForNewEmail` after it:
-  `waitForEmail` returns an email that's already there, so it's only for a fresh address's first
-  email. Tests wait for what they need (`expect.poll`, `waitForNewEmail`, a locator), never a
-  fixed time: ESLint refuses `waitForTimeout` in `e2e/`, except where a helper waits out Better
-  Auth's rate-limit window. A check that something doesn't happen (a second email) belongs in the
-  integration tests, which can wait for the work done after a response. Install the browser once
-  with
-  `pnpm exec playwright install chromium`, then run them with `pnpm test:e2e`.
+  emails from `e2e/.outbox`; your dev server and database aren't touched. They include the
+  accessibility and keyboard checks described under
+  [Design and accessibility](design.md#design-and-accessibility).
+  - **Running and build reuse:** install the browser once with
+    `pnpm exec playwright install chromium`, then run them with `pnpm test:e2e`. Locally they reuse
+    the last build when nothing it reads (`src/` apart from unit tests, `public/`,
+    `next.config.ts`, `tsconfig.json`, `package.json`, the lockfile) changed since
+    (`tests/build/build-state.ts`), so rerunning a spec after editing only specs starts at once;
+    `E2E_REBUILD=1 pnpm test:e2e` builds anyway (e.g. after an edit saved while a build was
+    running).
+  - **Isolation:** every test gets its own client address (`X-Forwarded-For`, set in
+    `e2e/support/test.ts`), so Better Auth's per-IP limits (3 sign-ins per 10 seconds, sign-in
+    links, codes) don't carry over between tests; a test that signs in more often than that gives
+    a page another address with `useOwnClientIp`. A test that uses up state (locks, deletes or
+    changes an account) has its own seeded account or a fresh address. The seed includes a
+    company, "Adiutor Tests Paging", with more members and invite links than fit on a page, used
+    by the pagination tests (`e2e/tables.spec.ts`) and the accessibility and keyboard checks of
+    paginated tables (`e2e/a11y.spec.ts`, `e2e/keyboard.spec.ts`); no test changes its data.
+  - **Tokens:** the invitation and invite-link pages are scanned with real tokens stored straight
+    in the database (`storeInvitation`, `storeInviteLink` in `e2e/support/db.ts`), signed out and
+    signed in. Those helpers, like the others in that file, open their own connection to the test
+    database (`withTestDatabase`), so specs pass no URL.
+  - **Emails:** emails to a seeded or reused address are counted with `countEmails` before the
+    action and awaited with `waitForNewEmail` after it. `waitForEmail` returns an email that's
+    already there, so it's only for a fresh address's first email.
+  - **Waiting and negative checks:** tests wait for what they need (`expect.poll`,
+    `waitForNewEmail`, a locator), never a fixed time: ESLint refuses `waitForTimeout` in `e2e/`,
+    except where a helper waits out Better Auth's rate-limit window. A check that something
+    doesn't happen (a second email) belongs in the integration tests, which can wait for the work
+    done after a response.
+  - **CI retries and traces:** in CI a failed test is retried twice and traced on its first retry,
+    except in `e2e/security.spec.ts`: its tests use up state in order, so it doesn't retry and
+    keeps a trace of its first failure instead (traces are in the `playwright-report` artifact).
 
 `pnpm services:up` must be running for integration and end-to-end tests.

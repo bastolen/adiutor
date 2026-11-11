@@ -22,17 +22,24 @@ untracked, so reviewers use the filesystem rather than `git diff`.
 
 1. `src/app`: the routes (`auth`, `invite`, `join`, `setup`, `sign-in-error`, `api`), the
    `(app)` route group with its private `_people` folder, and server actions.
-2. `src/components`: `ui`, `auth`, `brand`, `email`, `layout`, `theme`.
-3. `src/lib`: its topic folders `authz/`, `sign-in/`, `tables/` and `request/`, and the shared
-   files at its root.
-4. `src/server`: its topic folders `auth/` and `people/`, and the shared files at its root.
-5. `src/db`, `drizzle/`, `src/emails`, `src/styles`, `src/proxy.ts`, `src/instrumentation.ts`,
-   `scripts/`, `tests/` (`integration/` for Vitest, `database/` shared with Playwright), `public/`.
-6. `e2e/` (the specs, and `e2e/support/` for shared helpers) and the root config:
-   `package.json`, `pnpm-workspace.yaml`, the Playwright, Vitest, ESLint, Prettier, Stylelint,
-   lint-staged, commitlint, Drizzle and Next configs, `tsconfig.json`, `compose.yaml`,
-   `docker/`, `.github/`, `.vscode/`, `.husky/`, `.claude/` (settings and skills),
-   `renovate.json5`, `.env.example`, the root Markdown files (`README.md`, `CONTRIBUTING.md`,
+2. `src/components`: every folder under it (`ui`, `auth`, `brand`, `email`, `language`, `layout`,
+   `theme`, and any added later).
+3. `src/lib`: every topic folder under it (`authz/`, `i18n/`, `request/`, `sign-in/`, `tables/`,
+   and any added later), and the shared files at its root.
+4. `src/server`: every topic folder under it (`auth/`, `people/`, and any added later), and the
+   shared files at its root.
+5. `src/db`, `drizzle/`, `src/emails`, `src/messages`, `src/styles`, the root files of `src/`
+   (`proxy.ts`, `instrumentation.ts` and their tests, `client-imports.test.ts`), `scripts/`,
+   `tests/` (every folder under it: `integration/`, `database/`, `auth/`, `i18n/`, `build/`) and
+   `public/`.
+6. `e2e/` (the specs, and `e2e/support/` for shared helpers) and everything at the repository
+   root: `package.json`, `pnpm-workspace.yaml`, the lockfile, the Playwright, Vitest (and
+   `vitest.setup.ts`), ESLint, Prettier, Stylelint, lint-staged, commitlint, Drizzle and Next
+   configs, `tsconfig.json`, `compose.yaml`, `Dockerfile`, `.dockerignore`, `docker/`,
+   `vercel.json`, `release-please-config.json`, `.release-please-manifest.json`, `CHANGELOG.md`,
+   `.github/`, `.vscode/`, `.husky/`, `.claude/` (settings, `launch.json` and skills),
+   `renovate.json5`, `.env.example`, `.nvmrc`, `.editorconfig`, `.gitattributes`,
+   `.prettierignore`, `LICENSES/`, the root Markdown files (`README.md`, `CONTRIBUTING.md`,
    `SECURITY.md`, `CODE_OF_CONDUCT.md`, `CLAUDE.md`, `AGENTS.md`), `LICENSE`, and `docs/` with
    its index `docs/README.md`.
 7. A repository-wide sweep for unused exports, files and props: a read-only script lists
@@ -44,6 +51,11 @@ test output. `git ls-files --cached --others --exclude-standard` lists the files
 scope, untracked ones included. Ignored files are only read as references where this skill says
 so (the docs and sources in `node_modules`), never checked or reported on.
 
+**Every path has an area.** Before the reviewers start, the orchestrator assigns every path from
+`git ls-files --cached --others --exclude-standard` to exactly one of areas 1 to 6, and reports
+any path left over (a new folder or root file no area names) in the final report, with the area
+it was given. Area 7 is a sweep across the others and takes no paths of its own.
+
 ## What to judge against
 
 - **The rules in CLAUDE.md**, especially:
@@ -53,7 +65,7 @@ so (the docs and sources in `node_modules`), never checked or reported on.
   - services taking a `ServiceContext`;
   - **topic folders:** new server and lib files go in the folder of their topic
     (`src/server/auth/`, `src/server/people/`, `src/lib/sign-in/`, `src/lib/tables/`,
-    `src/lib/request/`), with their tests next to them; code shared by every topic stays at the
+    `src/lib/request/`, `src/lib/i18n/`, `src/lib/authz/`), with their tests next to them; code shared by every topic stays at the
     root of `src/server` or `src/lib`, and shared e2e helpers go in `e2e/support/`;
   - **declared once:**
     - OAuth providers in `src/lib/sign-in/oauth-providers.ts`, with their credentials in
