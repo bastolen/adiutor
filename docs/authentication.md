@@ -231,6 +231,10 @@ does, to check what isn't working for them. The reasons are in
 - nobody: themselves, or a deactivated account.
 
 - **Starting** (`startImpersonation` in `src/server/auth/impersonation.ts`):
+  - It starts from the **Sign in as user** card on the user's page (see
+    [Staff screens](companies-and-roles.md#staff-screens)). Its dialog asks for an optional reason,
+    then opens the dashboard as the user (`signInAsAction`, which refreshes the layout too). The
+    card says why when it isn't possible.
   - It needs strong MFA on the staff member's own account: an authenticator app, a passkey or
     provider MFA, never email codes (`hasStrongMfa`). It also needs a confirmation with it from the
     last 15 minutes, whatever their role (`strongMfaConfirmedUntil`).
@@ -253,6 +257,15 @@ does, to check what isn't working for them. The reasons are in
     `signedInAt`) are empty, so `getActor()` never sends the staff member to the step-up page, and
     the step-up page sends them to the dashboard. It still sends them to the Security page when the
     user must set up MFA, as it would the user.
+- **On screen:**
+  - A banner at the top of every page says whom they're signed in as and when it ends, with
+    **Back to my account** (`SignedInAsBanner` in the app's layout). It stays in view while the
+    page scrolls, and it's the first thing in the content for the skip link and screen readers.
+  - The account menu shows the user, labelled "Signed in as". **Back to my account** takes Sign
+    out's place there, since signing out would end the staff member's own session.
+  - Back to my account (`backToOwnAccountAction`, `stopSigningInAs`) records `impersonation_ended`
+    with `stopped`. It returns to where the staff member started (the user's page, at the card),
+    with a toast.
 - **Nothing changes in the user's name.**
   - Every service that changes something calls `assertNotSignedInAs` first (code `signed_in_as`:
     "This can't be changed while you're signed in as someone else."). The server actions that call

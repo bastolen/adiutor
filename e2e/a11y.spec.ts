@@ -39,6 +39,8 @@ import {
   adminStorageState,
   freshAddress,
   openSignInLink,
+  signIn,
+  signInAsUser,
   type StorageState,
   toasts,
 } from './support/helpers';
@@ -524,6 +526,16 @@ test.describe('on a 320px wide screen', () => {
       await expect(
         page.getByRole('alert').filter({ hasText: "GitHub couldn't confirm it's you" }),
       ).toBeVisible();
+      await expectAccessible(page);
+    });
+
+    // A session of its own: signing in as someone changes what the shared Admin session shows.
+    test('while signed in as a user: the banner, and their account pages', async ({ page }) => {
+      await signIn(page, PLATFORM_ADMIN);
+      await signInAsUser(page, CLIENT_WATCHER.name);
+      await expectAccessible(page);
+      await page.goto('/account/security');
+      await expect(page.getByRole('main')).toContainText('their own account pages');
       await expectAccessible(page);
     });
 

@@ -22,7 +22,12 @@ import PATHNAME_HEADER from '@/lib/request/pathname-header';
 import { type CompanyAccess, getCompanyAccess, getGlobalPermissions } from './access';
 import { type Actor, loadActor, touchLastActive } from './actor';
 import appContext from './app-context';
-import { actorSignedInAs, endImpersonation, findSessionImpersonation } from './auth/impersonation';
+import {
+  actorSignedInAs,
+  type EndedImpersonation,
+  endImpersonation,
+  findSessionImpersonation,
+} from './auth/impersonation';
 import { ServiceError } from './errors';
 
 /**
@@ -87,6 +92,19 @@ export const getOptionalActor = cache(async (): Promise<Actor | null> => {
   }
   return outcome.actor;
 });
+
+/**
+ * Ends the current session's sign-in as someone ("Back to my account"), and
+ * records it with the request's details. It reads the session itself: while
+ * it lasts, the actor is the user, not the staff member whose session it is.
+ *
+ * @returns Where to go back to and whom it was, or `null` when the session
+ *   wasn't signed in as anyone (any more) or there's no session.
+ */
+export async function stopSigningInAs(): Promise<EndedImpersonation | null> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  return session ? endImpersonation(appContext, session.session.id, 'stopped') : null;
+}
 
 /** Where users whose role requires MFA are sent until they've set it up. */
 const MFA_SETUP_PATH = '/account/security?setup=required';

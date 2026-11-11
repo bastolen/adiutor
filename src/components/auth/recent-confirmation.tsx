@@ -35,7 +35,7 @@ import Alert from '@/components/ui/alert';
 import { useSectionId } from '@/components/ui/anchored-section';
 import Button from '@/components/ui/button';
 import { withSection } from '@/lib/redirect';
-import confirmChangeUrl from '@/lib/sign-in/confirm-url';
+import confirmChangeUrl, { confirmStrongUrl } from '@/lib/sign-in/confirm-url';
 import { MFA_VERIFICATION_REQUIRED } from '@/lib/sign-in/sign-in-refusals';
 
 /**
@@ -57,6 +57,15 @@ interface RecentConfirmationProps {
    * (`PageUrl.current()`) but no anchor: each control adds its card's.
    */
   returnTo: string;
+  /**
+   * Which step-up page to send them to: `change` (the default) for changes
+   * to sign-in methods and grants (`confirmChangeUrl`), or `strong` for a
+   * strong second step whatever the role, before signing in as someone
+   * (`confirmStrongUrl`; `required` and the window are then the Actor's
+   * `strongMfa` and `strongMfaConfirmedUntil`). A provider for one card can
+   * sit inside the page's own.
+   */
+  mode?: 'change' | 'strong';
 }
 
 /** What the forms and cards use. */
@@ -69,6 +78,8 @@ interface RecentConfirmationValue {
   mustConfirm: boolean;
   /** The page to come back to, without an anchor; `null` outside a provider. */
   returnTo: string | null;
+  /** See {@link RecentConfirmationProps.mode}. */
+  mode: 'change' | 'strong';
 }
 
 /**
@@ -88,6 +99,7 @@ const RecentConfirmationContext = createContext<RecentConfirmationValue>({
   isOpen: () => true,
   mustConfirm: false,
   returnTo: null,
+  mode: 'change',
 });
 
 /**
@@ -98,6 +110,7 @@ const RecentConfirmationContext = createContext<RecentConfirmationValue>({
  * @param props.confirmedUntil - The end of the window, on the server's clock.
  * @param props.serverTime - The server's time at render.
  * @param props.returnTo - The page to come back to after confirming.
+ * @param props.mode - Which step-up page to send them to; `change` by default.
  * @param props.children - The forms and cards.
  * @returns The provider.
  */
@@ -106,6 +119,7 @@ export function RecentConfirmationProvider({
   confirmedUntil,
   serverTime,
   returnTo,
+  mode = 'change',
   children,
 }: RecentConfirmationProps & { children: ReactNode }) {
   // When this render reached the browser, by its own clock. Kept per server render, so showing the
@@ -147,8 +161,9 @@ export function RecentConfirmationProvider({
       },
       mustConfirm: required && !openNow,
       returnTo,
+      mode,
     }),
-    [required, confirmedUntil, serverTime, openNow, returnTo],
+    [required, confirmedUntil, serverTime, openNow, returnTo, mode],
   );
   return <RecentConfirmationContext value={value}>{children}</RecentConfirmationContext>;
 }
@@ -166,11 +181,17 @@ function useReturnAddress(ownSection?: string): {
   returnTo: string | null;
   confirmUrl: string | null;
 } {
-  const { returnTo } = useContext(RecentConfirmationContext);
+  const { returnTo, mode } = useContext(RecentConfirmationContext);
   const cardSection = useSectionId();
   const section = ownSection ?? cardSection;
   const here = returnTo === null ? null : withSection(returnTo, section);
-  return { returnTo: here, confirmUrl: here === null ? null : confirmChangeUrl(here) };
+  if (here === null) {
+    return { returnTo: null, confirmUrl: null };
+  }
+  return {
+    returnTo: here,
+    confirmUrl: mode === 'strong' ? confirmStrongUrl(here) : confirmChangeUrl(here),
+  };
 }
 
 /**

@@ -15,6 +15,13 @@
     "closeMenu": "Close menu",
     "accountMenu": "Account menu:",
     "accountSettings": "Account settings",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "signedInAs": {
+      "label": "Signed in as someone else",
+      "text": "You're signed in as {name} ({email}). It ends at {time}.",
+      "back": "Back to my account",
+      "backDone": "You're back in your own account.",
+      "menuLabel": "Signed in as"
+    }
   }
 }

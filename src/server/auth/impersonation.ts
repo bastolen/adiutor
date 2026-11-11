@@ -23,7 +23,7 @@ import displayName from '@/lib/display-name';
 import { getSafeRedirectPath, isSafeAppRedirect } from '@/lib/redirect';
 import { impersonationReasonSchema } from '@/lib/validation';
 
-import { assertNotSignedInAs } from '../access';
+import { assertNotSignedInAs, assertPermission, getGlobalPermissions } from '../access';
 import { type Actor, loadActor } from '../actor';
 import { recordEvent } from '../audit';
 import type { ServiceContext } from '../context';
@@ -204,6 +204,46 @@ export async function startImpersonation(
     staffName: await getStaffName(ctx.db),
   });
   return { expiresAt: started.expiresAt };
+}
+
+/**
+ * Says whether the staff member may sign in as a user, and if not why, for
+ * the "Sign in as user" card on the user's page: the rules' answer
+ * (`mayImpersonate`) with the user as they are now. Starting decides again
+ * with the rows locked ({@link startImpersonation}).
+ *
+ * @param ctx - Service context (only the database is used).
+ * @param actor - The staff member; needs `users:view`.
+ * @param userId - The user.
+ * @returns `allowed`, or the reason it isn't.
+ * @throws {ServiceError} `forbidden` without `users:view`; `not_found` for an unknown user.
+ */
+export async function impersonationVerdictFor(
+  ctx: Pick<ServiceContext, 'db'>,
+  actor: Actor,
+  userId: string,
+): Promise<ImpersonationVerdict> {
+  assertPermission(getGlobalPermissions(actor), 'users:view');
+  const id = parseId(userId);
+  const [[target], companyRoles] = await Promise.all([
+    ctx.db
+      .select({ platformRole: user.platformRole, deactivatedAt: user.deactivatedAt })
+      .from(user)
+      .where(eq(user.id, id)),
+    ctx.db.select({ role: membership.role }).from(membership).where(eq(membership.userId, id)),
+  ]);
+  if (!target) {
+    throw notFoundError();
+  }
+  return mayImpersonate(
+    { id: actor.id, platformRole: actor.platformRole, strongMfa: actor.strongMfa },
+    {
+      id,
+      platformRole: target.platformRole ?? null,
+      companyRoles: companyRoles.map((row) => row.role),
+      deactivated: target.deactivatedAt !== null,
+    },
+  );
 }
 
 /** A sign-in as someone that ended, as {@link endImpersonation} returns it. */

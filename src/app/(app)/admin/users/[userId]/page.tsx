@@ -6,7 +6,8 @@
  * staff access, reset two-step verification (which also disconnects their
  * GitHub and Google accounts, and needs the Admin's recent confirmation: the
  * action sends them to the step-up page first), sign them out everywhere,
- * deactivate, reactivate and delete the account.
+ * deactivate, reactivate and delete the account. Staff Admins, Managers and
+ * Support can sign in as the user, when the rules allow it for this user.
  *
  * On your own page, your companies are managed like anyone's, but the staff
  * access and account controls aren't shown: your sign-in methods are on your
@@ -25,6 +26,7 @@ import Avatar from '@/components/ui/avatar';
 import PageHeader from '@/components/ui/page-header';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import TextLink from '@/components/ui/text-link';
+import type { ImpersonationVerdict } from '@/lib/authz/impersonation';
 import displayName from '@/lib/display-name';
 import { formatDateTime } from '@/lib/format';
 import ClientMessages from '@/lib/i18n/client-messages';
@@ -34,6 +36,7 @@ import { createPageUrl } from '@/lib/tables/page-url';
 import { parseTableState } from '@/lib/tables/table-state';
 import { DEVICES_TABLE, USER_COMPANIES_TABLE } from '@/lib/tables/tables';
 import appContext from '@/server/app-context';
+import { impersonationVerdictFor } from '@/server/auth/impersonation';
 import {
   getGlobalPermissions,
   getStaffPermissionsInCompanies,
@@ -52,6 +55,7 @@ import CompaniesCard from './companies-card';
 import DeleteAccountCard from './delete-account-card';
 import DevicesCard from './devices-card';
 import SecurityCard from './security-card';
+import SignInAsCard from './sign-in-as-card';
 import StaffAccessCard from './staff-access-card';
 
 /**
@@ -117,14 +121,16 @@ async function UserDetailContent({
   const canManageMembers = getStaffPermissionsInCompanies(actor).has('members:manage');
   let detail: UserDetail;
   let addable: AddableCompany[];
+  let signInAs: ImpersonationVerdict;
   try {
     // Independent reads, so they run together; an unknown user ends on the 404 page either way.
-    [detail, addable] = await Promise.all([
+    [detail, addable, signInAs] = await Promise.all([
       getUserDetail(appContext, actor, userId, {
         companies: companiesRequested,
         sessions: devicesRequested,
       }),
       canManageMembers ? listAddableCompanies(appContext, actor, userId) : [],
+      impersonationVerdictFor(appContext, actor, userId),
     ]);
   } catch (error) {
     if (error instanceof ServiceError) {
@@ -229,6 +235,18 @@ async function UserDetailContent({
 
       {detail.activity && (
         <ActivityCard userId={detail.id} userName={userName} activity={detail.activity} />
+      )}
+
+      {/* Not for roles that can't sign in as anyone, nor on your own page. */}
+      {signInAs !== 'role' && signInAs !== 'self' && (
+        <SignInAsCard
+          userId={detail.id}
+          userName={userName}
+          verdict={signInAs}
+          strongMfa={actor.strongMfa}
+          strongMfaConfirmedUntil={actor.strongMfaConfirmedUntil}
+          returnTo={url.current()}
+        />
       )}
 
       {canManage && (

@@ -55,7 +55,7 @@ import {
 import type { Actor } from './actor';
 import { listAuditEvents, listAuditLog } from './audit';
 import { confirmConnectedProvider } from './auth/accounts';
-import { startImpersonation } from './auth/impersonation';
+import { impersonationVerdictFor, startImpersonation } from './auth/impersonation';
 import { revokeOwnSession } from './auth/sessions';
 import { ServiceError } from './errors';
 import {
@@ -407,6 +407,7 @@ function listOperations(): Operation[] {
     ['list users', (w) => listUsers(ctx, w.actor)],
     ['view user', (w) => getUserDetail(ctx, w.actor, w.outsider)],
     ['check a user exists', (w) => userExists(ctx, w.actor, w.outsider)],
+    ['check signing in as a user', (w) => impersonationVerdictFor(ctx, w.actor, w.outsider)],
     ['list addable companies', (w) => listAddableCompanies(ctx, w.actor, w.outsider)],
     [
       'sign in as a user',
@@ -467,6 +468,7 @@ const READS: ReadonlySet<string> = new Set([
   'list users',
   'view user',
   'check a user exists',
+  'check signing in as a user',
   'list addable companies',
   'view audit log',
   'list the audit log',
@@ -554,6 +556,7 @@ const EXPECTED: Record<string, string> = {
   'view user': 'FFFAAAA',
   // The user page's title: whether the user in its URL exists, for the staff who may see users.
   'check a user exists': 'FFFAAAA',
+  'check signing in as a user': 'FFFAAAA',
   // The user page's "Add to company" list: staff who see companies.
   'list addable companies': 'FFFAAAA',
   'register user': 'FFFFFAA',

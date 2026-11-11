@@ -1,7 +1,8 @@
 /**
  * @file Shared steps for the end-to-end tests: signing in and out, the
  * authenticator and sign-in link steps, a signed-in Admin's cookies for specs
- * that only read, and steps on the staff screens that more than one spec uses.
+ * that only read, signing in as a user, and steps on the staff screens that
+ * more than one spec uses.
  */
 import { randomInt, randomUUID } from 'node:crypto';
 
@@ -276,6 +277,33 @@ export async function openUser(page: Page, name: string): Promise<void> {
   await page.goto(`/admin/users?q=${encodeURIComponent(name)}`);
   await page.getByRole('main').getByRole('link', { name, exact: true }).click();
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
+}
+
+/**
+ * Signs in as a user from their detail page's "Sign in as user" card, with a
+ * reason, and waits for the banner where the user lands. The staff member
+ * must have confirmed with a strong second step lately (a sign-in with an
+ * authenticator code counts).
+ *
+ * @param page - The browser page, signed in as staff who may sign in as the user.
+ * @param name - The user's display name.
+ * @param options - Options.
+ * @param options.reason - Why, as typed into the dialog; none by default.
+ * @param options.landsOn - Where the user lands: the dashboard, or the Security page for a role
+ *   that must set up MFA first.
+ */
+export async function signInAsUser(
+  page: Page,
+  name: string,
+  { reason = '', landsOn = '/dashboard' }: { reason?: string; landsOn?: string } = {},
+): Promise<void> {
+  await openUser(page, name);
+  await page.getByRole('button', { name: 'Sign in as user' }).click();
+  const dialog = page.getByRole('dialog', { name: `Sign in as ${name}?` });
+  await dialog.getByLabel('Reason (optional)').fill(reason);
+  await dialog.getByRole('button', { name: `Sign in as ${name}` }).click();
+  await expect(page).toHaveURL(landsOn);
+  await expect(page.getByRole('region', { name: 'Signed in as someone else' })).toBeVisible();
 }
 
 /**

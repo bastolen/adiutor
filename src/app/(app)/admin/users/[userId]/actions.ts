@@ -1,6 +1,7 @@
 /**
  * @file Server actions for the user detail page's account actions
- * (two-step verification, sign-out, deactivating and deleting); memberships
+ * (two-step verification, sign-out, deactivating and deleting) and for
+ * signing in as the user; memberships
  * use `src/app/(app)/_people/member-actions.ts` and the staff role
  * `src/app/(app)/_people/staff-actions.ts`. Each one checks the session and
  * lets the service check permissions, then refreshes the page. Success
@@ -13,11 +14,13 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 
 import type { ActionResult } from '@/lib/action-result';
-import { needsRecentConfirmation } from '@/lib/authz/mfa';
+import { isMfaConfirmedRecently, needsRecentConfirmation } from '@/lib/authz/mfa';
 import field from '@/lib/form-data';
-import { confirmChangeUrlFor } from '@/lib/sign-in/confirm-url';
+import { DEFAULT_SIGNED_IN_PATH } from '@/lib/redirect';
+import { confirmChangeUrlFor, confirmStrongUrlFor } from '@/lib/sign-in/confirm-url';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
+import { startImpersonation } from '@/server/auth/impersonation';
 import { assertNotSignedInAs, getActor } from '@/server/authz';
 import { parseId } from '@/server/errors';
 import {
@@ -139,6 +142,46 @@ export async function deleteUserAction(
   });
   if (result.ok) {
     redirect('/admin/users?deleted=1');
+  }
+  return result;
+}
+
+/**
+ * Signs in as a user (`startImpersonation`), then opens the dashboard as
+ * them. It needs a confirmation with the staff member's strong second step
+ * from the last 15 minutes, whatever their role; without one, they're sent
+ * to the step-up page in its strong mode first and come back to the card
+ * (its `returnTo` field), which is also where "Back to my account" returns.
+ *
+ * @param _previous - The previous result (unused).
+ * @param formData - Fields `userId`, `reason` (optional) and `returnTo`.
+ * @returns Why it failed (on success it redirects).
+ */
+export async function signInAsAction(
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const result = await runAction(async () => {
+    const actor = await getActor();
+    // Before the confirmation, which would otherwise send a staff member signed in as someone to it.
+    assertNotSignedInAs(actor);
+    const userId = field(formData, 'userId');
+    // Only an account with strong MFA can confirm; without it, the service says what's missing.
+    if (actor.strongMfa && !isMfaConfirmedRecently(actor.strongMfaConfirmedUntil)) {
+      redirect(confirmStrongUrlFor(formData, `/admin/users/${parseId(userId)}`));
+    }
+    await startImpersonation(appContext, actor, {
+      userId,
+      reason: field(formData, 'reason'),
+      returnTo: field(formData, 'returnTo'),
+    });
+    return { ok: true };
+  });
+  if (result.ok) {
+    // The whole app now shows the user, the layout too (the banner, the account menu), which a
+    // redirect alone keeps as it was.
+    refresh();
+    redirect(DEFAULT_SIGNED_IN_PATH);
   }
   return result;
 }

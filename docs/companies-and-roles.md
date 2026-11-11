@@ -29,11 +29,22 @@ and screens for company users talk about their company by name and about **reque
 | See recorded errors (`errors:view`) |   ✓   |    –    |    –    |    –    |
 | Billing (reserved for later)        |   ✓   |    –    |    ✓    |    –    |
 | Join a company with an invite link  |   ✓   |    ✓    |    –    |    –    |
+| Sign in as a user (see below)       |   ✓   |    ✓    |    –    |    ✓    |
 
 Nobody can give themselves a higher staff role: Admins can step down, never back up. Finance and
 Support can't join with an invite link, or accept the invitation a link sends them, so a shared link
 isn't a way into a company for them; an email invitation someone sends them still works, and staff
 Admins and Managers can add them (or themselves) to any company directly.
+
+Signing in as a user lets staff see Adiutor as that user does, to check what isn't working for them.
+Each role can sign in as different users:
+
+- staff Admins: anyone but staff Admins;
+- Managers: company users;
+- Support: company users who aren't an Admin in any company.
+
+Nobody can sign in as themselves, and nothing can be changed while signed in as someone. See
+[Signing in as a user](authentication.md#signing-in-as-a-user).
 
 | Company                                          | Admin | Client | Watcher |
 | ------------------------------------------------ | :---: | :----: | :-----: |
@@ -135,6 +146,11 @@ Admins and Managers who aren't members can still add themselves with any role, a
     it, with the last-staff-Admin rule; the user gets a security email. Removing it also revokes the
     open staff invitations addressed to them. Admins and Managers must set up a second sign-in step
     at their next sign-in.
+  - **Sign in as user** (staff Admins, Managers and Support, not on your own page): see Adiutor as
+    the user does for up to 30 minutes, with an optional reason (`SignInAsCard`). The card says why
+    when the rules don't allow it for this user (`impersonationVerdictFor`). Without a recent
+    strong confirmation, the button goes to the step-up page in its strong mode first, and comes
+    back to the card. See [Signing in as a user](authentication.md#signing-in-as-a-user).
 
   Admins can also (each confirmed in a dialog, logged and emailed to the user):
   - **reset two-step verification** for a lost phone (optionally removing passkeys too), which

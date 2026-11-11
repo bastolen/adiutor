@@ -74,9 +74,22 @@ export function confirmChangeUrlFor(formData: FormData, fallback: string): strin
 }
 
 /**
- * The step-up page in its strong mode (`for=strong`), for a server action that
- * needs a confirmation with a strong second step whatever the role (signing in
- * as someone), returning to the page the form was on (its `returnTo` field, or
+ * The step-up page in its strong mode (`for=strong`), which only offers the
+ * strong methods that open the window whatever the role
+ * (`strongStepUpMethods`), returning to a page of the app once confirmed.
+ *
+ * @param returnTo - The page to come back to, already a safe app path, e.g.
+ *   `/admin/users/<id>#sign-in-as`.
+ * @returns The step-up page's address.
+ */
+export function confirmStrongUrl(returnTo: string): string {
+  return confirmUrl(returnTo, 'strong');
+}
+
+/**
+ * The step-up page in its strong mode, for a server action that needs a
+ * confirmation with a strong second step whatever the role (signing in as
+ * someone), returning to the page the form was on (its `returnTo` field, or
  * `fallback`).
  *
  * @param formData - The submitted form, with an optional `returnTo` path.
@@ -84,7 +97,7 @@ export function confirmChangeUrlFor(formData: FormData, fallback: string): strin
  * @returns The step-up page's address.
  */
 export function confirmStrongUrlFor(formData: FormData, fallback: string): string {
-  return confirmUrl(returnToOf(formData, fallback), 'strong');
+  return confirmStrongUrl(returnToOf(formData, fallback));
 }
 
 /**

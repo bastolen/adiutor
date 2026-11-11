@@ -1,7 +1,8 @@
 /**
  * @file Layout of the signed-in app: skip link, navigation (sidebar or mobile
- * menu), the notices after a provider sign-in, the page content, and the
- * toasts that report what the user's actions did.
+ * menu), the banner while a staff member is signed in as a user, the notices
+ * after a provider sign-in, the page content, and the toasts that report what
+ * the user's actions did.
  */
 import { Suspense } from 'react';
 
@@ -11,6 +12,7 @@ import { Toaster } from '@/components/ui/toast';
 
 import Navigation from './navigation';
 import ProviderLinkedNotice from './provider-linked-notice';
+import SignedInAsBanner from './signed-in-as-banner';
 
 /**
  * Renders the navigation and the page. The navigation reads the session, so
@@ -40,6 +42,10 @@ export default function AppLayout({ children }: LayoutProps<'/'>) {
         tabIndex={-1}
         className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 outline-none sm:px-6 lg:px-10 lg:py-10"
       >
+        {/* First in the content, so it's what the skip link and a screen reader reach first. */}
+        <Suspense fallback={null}>
+          <SignedInAsBanner />
+        </Suspense>
         {/* After "Confirm with GitHub" didn't count, also on the Security page's MFA setup. */}
         <ProviderStepUpNotice />
         <ProviderLinkedNotice />
