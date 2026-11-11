@@ -246,7 +246,8 @@
       }
     },
     "signedInAs": {
-      "note": "Je bent ingelogd als {name}, dus hun eigen accountpagina's worden hier niet getoond. Hun account en inlogbeveiliging vind je op <link>hun gebruikerspagina</link>.",
+      "note": "Je bekijkt de accountpagina's van {name} zoals die persoon ze ziet. Je kunt hier niets wijzigen terwijl je als die persoon bent ingelogd.",
+      "leftOut": "Sommige persoonlijke gegevens zijn weggelaten, zoals op <link>hun gebruikerspagina</link>.",
       "mustSetUpMfa": "{name} moet eerst MFA instellen om Adiutor te kunnen gebruiken, dus deze pagina Beveiliging is wat die persoon nu ziet."
     }
   }

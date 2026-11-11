@@ -10,7 +10,9 @@ import {
   type ImpersonationVerdict,
   mayImpersonate,
   mayImpersonateAnyone,
+  personalDataShown,
 } from './impersonation';
+import { getGlobalPermissions } from './permissions';
 import { PLATFORM_ROLES, type PlatformRole } from './roles';
 
 /** The staff member's user ID. */
@@ -153,5 +155,32 @@ describe('mayImpersonateAnyone', () => {
     expect(mayImpersonateAnyone('support')).toBe(true);
     expect(mayImpersonateAnyone('finance')).toBe(false);
     expect(mayImpersonateAnyone(null)).toBe(false);
+  });
+});
+
+describe('personalDataShown', () => {
+  /**
+   * What the account pages show to a staff role signed in as the user.
+   *
+   * @param role - The staff role.
+   * @returns What shows.
+   */
+  const shownTo = (role: PlatformRole) =>
+    personalDataShown({
+      signedInAs: { staffPermissions: [...getGlobalPermissions({ platformRole: role })] },
+    });
+
+  it('shows everything to the user themselves', () => {
+    expect(personalDataShown({ signedInAs: null })).toEqual({
+      devices: true,
+      accountNames: true,
+      origins: true,
+    });
+  });
+
+  it('shows staff only what they see on the user page', () => {
+    expect(shownTo('platform_admin')).toEqual({ devices: true, accountNames: true, origins: true });
+    expect(shownTo('manager')).toEqual({ devices: false, accountNames: false, origins: true });
+    expect(shownTo('support')).toEqual({ devices: false, accountNames: false, origins: false });
   });
 });

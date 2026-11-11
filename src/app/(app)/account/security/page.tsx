@@ -9,7 +9,9 @@
  * them to the step-up page first (`RecentConfirmationProvider`), which comes
  * back to the card they started in (its anchor, e.g. `#passkeys`), as does
  * connecting GitHub or Google (`#connected-accounts`, where the card says how
- * it went).
+ * it went). A staff member signed in as the user sees it read-only, with a
+ * note, and the devices and the passkeys' and provider accounts' names only
+ * when they're a staff Admin (`personalDataShown`).
  */
 import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -19,6 +21,7 @@ import { RecentConfirmationProvider } from '@/components/auth/recent-confirmatio
 import Alert from '@/components/ui/alert';
 import Card from '@/components/ui/card';
 import { PageSkeleton } from '@/components/ui/skeleton';
+import { personalDataShown } from '@/lib/authz/impersonation';
 import {
   emailCodeStatus,
   mfaDowngradeBlocks,
@@ -69,10 +72,9 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 async function Security({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const actor = await getActor({ allowMissingMfa: true });
-  // Nothing of the user's sign-in setup is loaded while a staff member is signed in as them.
-  if (actor.signedInAs) {
-    return <SignedInAsNote actor={actor} onSecurityPage />;
-  }
+  // A staff member signed in as the user sees the page read-only, with only the personal details
+  // they see on the user's page.
+  const shown = personalDataShown(actor);
   const [params, t, tAuth, locale] = await Promise.all([
     searchParams,
     getTranslations('account'),
@@ -105,7 +107,12 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
   const unconfirmed = connected
     .filter((link) => !link.confirmed)
     .map(({ id, provider, mfaVerified }) => ({ id, providerId: provider, mfaVerified }));
-  const links = connected.map(({ mfaVerified, ...link }) => link);
+  const links = connected.map(({ mfaVerified, ...link }) =>
+    shown.accountNames ? link : { ...link, accountName: null },
+  );
+  const passkeys = shown.devices
+    ? overview.passkeys
+    : overview.passkeys.map((passkey) => ({ ...passkey, name: null }));
   // Changes that would take away the MFA the user's role requires (the guards and services refuse
   // them too).
   const blocked = mfaDowngradeBlocks(
@@ -126,6 +133,7 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
 
   return (
     <>
+      {actor.signedInAs && <SignedInAsNote actor={actor} shown={shown} onSecurityPage />}
       {message && !showsConnectedAccounts && (
         <Alert tone={message.tone} focusOnShow>
           {message.text}
@@ -148,7 +156,7 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
         {...confirmationWindow(actor.mfaConfirmedUntil)}
       >
         <PasskeysCard
-          passkeys={overview.passkeys}
+          passkeys={passkeys}
           removeLastBlockedReason={blocked.lastPasskey ? t('security.keepLastPasskey') : null}
         />
         <TwoFactorCard
@@ -185,7 +193,13 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
             blockedReason={blocked.setPassword ? providerMfaOnly : null}
           />
         </Card>
-        <SessionsCard sessions={sessions} table={devicesTable} currentSessionId={actor.sessionId} />
+        {shown.devices && (
+          <SessionsCard
+            sessions={sessions}
+            table={devicesTable}
+            currentSessionId={actor.sessionId}
+          />
+        )}
         <DeactivateCard
           hasPassword={overview.mfaState.hasPassword}
           blockedReason={soleAdmin ? serviceErrorMessage(soleAdmin, locale) : null}

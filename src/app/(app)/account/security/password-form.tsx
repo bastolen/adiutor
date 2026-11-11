@@ -11,6 +11,7 @@ import { useTranslations } from 'next-intl';
 import { ReturnToField, useRecentConfirmation } from '@/components/auth/recent-confirmation';
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
+import { useSignedInAs } from '@/components/ui/signed-in-as';
 import TextField from '@/components/ui/text-field';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '@/lib/input-rules';
@@ -37,6 +38,8 @@ export default function PasswordForm({
   blockedReason: string | null;
 }) {
   const t = useTranslations('account');
+  // Changes are turned off while a staff member is signed in as the user.
+  const changesOff = useSignedInAs();
   const [result, formAction, pending, onSubmit] = useTransientActionState(passwordAction, null);
   const { askToConfirm } = useRecentConfirmation();
 
@@ -90,7 +93,7 @@ export default function PasswordForm({
         required
       />
       <div>
-        <Button type="submit" loading={pending}>
+        <Button type="submit" loading={pending} disabled={changesOff}>
           {hasPassword ? t('security.password.change') : t('security.password.set')}
         </Button>
       </div>

@@ -281,8 +281,18 @@ does, to check what isn't working for them. The reasons are in
     request features. Those record the staff member, which only staff with `audit:view` and the
     user see.
   - The authorization matrix tries every change with a staff member signed in as the acting user.
-- **The user's account pages** (Profile and Security) show a note instead of the user's settings,
-  with a link to the user's page.
+- **The user's account pages** (Profile and Security) show as the user sees them, read-only, with a
+  note at the top. Their controls are off, like everywhere else. They show only the personal details
+  the staff member sees on the user's page (`personalDataShown` in
+  `src/lib/authz/impersonation.ts`, from `signedInAs.staffPermissions`):
+  - the signed-in devices and the passkeys' names: staff Admins only (`users:manage`);
+  - the provider accounts' names: staff Admins only (`users:manage`);
+  - the IP address and browser in the recent activity: staff who see the audit log
+    (`audit:view`).
+
+  The note says when something is left out, with a link to the user's page. On the Security page,
+  it also says when the user must set up MFA first.
+
 - **Ending:**
   - It ends after its 30 minutes, when the staff member's session ends (signing out included), or
     when either person's rights change.

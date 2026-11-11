@@ -16,6 +16,7 @@ import ConfirmDialog from '@/components/ui/confirm-dialog';
 import restoreFocusIfLost from '@/components/ui/focus-fallback';
 import IconRow from '@/components/ui/icon-row';
 import Modal from '@/components/ui/modal';
+import { useSignedInAs } from '@/components/ui/signed-in-as';
 import TextField from '@/components/ui/text-field';
 import { useToast } from '@/components/ui/toast';
 import { useTransientState } from '@/components/ui/use-transient-state';
@@ -144,6 +145,8 @@ export default function PasskeysCard({ passkeys, removeLastBlockedReason }: Pass
   const defaultName = t('security.passkeys.defaultName');
   const router = useRouter();
   const { askToConfirm, askToConfirmOnRefusal } = useRecentConfirmation(SECTION);
+  // Nothing changes while a staff member is signed in as the user.
+  const changesOff = useSignedInAs();
   const [adding, setAdding] = useTransientState(false);
   const [renaming, setRenaming] = useTransientState<PasskeySummary | null>(null);
   const [status, setStatus] = useTransientState<string | null>(null);
@@ -200,6 +203,7 @@ export default function PasskeysCard({ passkeys, removeLastBlockedReason }: Pass
       actions={
         <Button
           size="sm"
+          disabled={changesOff}
           onClick={() => {
             if (!askToConfirm()) {
               setAdding(true);
@@ -239,6 +243,7 @@ export default function PasskeysCard({ passkeys, removeLastBlockedReason }: Pass
                     aria-label={t('security.passkeys.renameNamed', {
                       name: passkeyName(passkey, defaultName),
                     })}
+                    disabled={changesOff}
                     onClick={() => setRenaming(passkey)}
                   >
                     {t('security.passkeys.rename')}
@@ -251,7 +256,7 @@ export default function PasskeysCard({ passkeys, removeLastBlockedReason }: Pass
                         aria-label={t('security.passkeys.removeNamed', {
                           name: passkeyName(passkey, defaultName),
                         })}
-                        disabled={removeBlocked !== null}
+                        disabled={removeBlocked !== null || changesOff}
                         loading={removing === passkey.id}
                         aria-describedby={removeBlocked ? removeBlockedId : undefined}
                         onClick={(event) => {

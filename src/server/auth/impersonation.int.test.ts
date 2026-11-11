@@ -332,6 +332,8 @@ describe('actorSignedInAs', () => {
           staffName: 'Sam Lee',
           endsAt: found.expiresAt,
           returnTo: `/admin/users/${userId}`,
+          // The staff Admin's own, which decide what the user's account pages show.
+          staffPermissions: expect.arrayContaining(['users:manage', 'audit:view']),
         },
       },
     });

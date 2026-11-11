@@ -434,6 +434,7 @@ export async function actorSignedInAs(
         staffName: displayName(staff),
         endsAt: found.expiresAt,
         returnTo: found.returnTo,
+        staffPermissions: [...getGlobalPermissions(staff)],
       },
     },
   };

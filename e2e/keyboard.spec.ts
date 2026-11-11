@@ -518,6 +518,9 @@ test.describe('signed in as a user', () => {
   }) => {
     await signIn(page, PLATFORM_ADMIN);
     await signInAsUser(page, CLIENT_WATCHER.name);
+    // A fresh page, so the first Tab starts from the top (not from where the dialog left focus).
+    await page.goto('/dashboard');
+    await expect(page.getByRole('region', { name: 'Signed in as someone else' })).toBeVisible();
 
     await page.keyboard.press('Tab');
     await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused();

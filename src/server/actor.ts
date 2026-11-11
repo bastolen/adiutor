@@ -19,6 +19,7 @@ import {
   sessionMfaOf,
   strongMfaConfirmedUntil,
 } from '@/lib/authz/mfa';
+import type { Permission } from '@/lib/authz/permissions';
 import { COMPANY_ADMIN_ROLE, type CompanyRole, type PlatformRole } from '@/lib/authz/roles';
 import { availableProviders } from '@/lib/sign-in/providers';
 
@@ -39,6 +40,12 @@ export interface SignedInAs {
   endsAt: Date;
   /** The page of the app the staff member goes back to afterwards. */
   returnTo: string;
+  /**
+   * The staff member's own global permissions, so the user's account pages
+   * show only what the staff member sees on the user's page
+   * (`personalDataShown`).
+   */
+  staffPermissions: Permission[];
 }
 
 /**

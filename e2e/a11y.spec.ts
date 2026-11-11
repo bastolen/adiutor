@@ -535,7 +535,7 @@ test.describe('on a 320px wide screen', () => {
       await signInAsUser(page, CLIENT_WATCHER.name);
       await expectAccessible(page);
       await page.goto('/account/security');
-      await expect(page.getByRole('main')).toContainText('their own account pages');
+      await expect(page.getByRole('main')).toContainText('account pages as they see them');
       await expectAccessible(page);
     });
 

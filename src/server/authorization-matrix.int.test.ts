@@ -803,6 +803,7 @@ describe('authorization matrix', () => {
             staffName: 'Sam Lee',
             endsAt: new Date(Date.now() + 30 * 60_000),
             returnTo: '/dashboard',
+            staffPermissions: ['users:view', 'users:manage', 'audit:view'],
           },
         },
       };

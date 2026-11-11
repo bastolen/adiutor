@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 
 import { useRecentConfirmation } from '@/components/auth/recent-confirmation';
 import Button from '@/components/ui/button';
+import { useSignedInAs } from '@/components/ui/signed-in-as';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import { SECURITY_PAGE } from '@/lib/redirect';
 import { signInChangeRefusalText } from '@/lib/sign-in/auth-error-messages';
@@ -65,6 +66,8 @@ export default function ConnectProviderButton({
   describedBy = undefined,
 }: ConnectProviderButtonProps) {
   const t = useTranslations('account');
+  // Nothing changes while a staff member is signed in as the user.
+  const changesOff = useSignedInAs();
   const tAuth = useTranslations('auth');
   const { askToConfirm, askToConfirmOnRefusal, returnTo } = useRecentConfirmation();
   // Gone when the user leaves the page and comes back, like every status message.
@@ -106,7 +109,7 @@ export default function ConnectProviderButton({
       <Button
         variant="secondary"
         loading={pending}
-        disabled={disabled}
+        disabled={disabled || changesOff}
         aria-describedby={describedBy}
         onClick={connect}
         aria-label={t('security.connected.connectNamed', { provider: label })}

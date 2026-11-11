@@ -246,7 +246,8 @@
       }
     },
     "signedInAs": {
-      "note": "Has iniciado sesión como {name}, así que sus páginas de cuenta no se muestran aquí. Su cuenta y la seguridad de su inicio de sesión están en <link>su página de usuario</link>.",
+      "note": "Estás viendo las páginas de cuenta de {name} tal como las ve. No se puede cambiar nada aquí mientras has iniciado sesión como esa persona.",
+      "leftOut": "Algunos de sus datos personales se omiten, como en <link>su página de usuario</link>.",
       "mustSetUpMfa": "{name} tiene que configurar MFA antes de poder usar Adiutor, así que esta página Seguridad es la que ve ahora."
     }
   }

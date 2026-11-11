@@ -15,6 +15,7 @@ import Card from '@/components/ui/card';
 import restoreFocusIfLost from '@/components/ui/focus-fallback';
 import IconRow from '@/components/ui/icon-row';
 import Modal from '@/components/ui/modal';
+import { useSignedInAs } from '@/components/ui/signed-in-as';
 import { useToast } from '@/components/ui/toast';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import type { EmailCodeStatus } from '@/lib/authz/mfa';
@@ -78,6 +79,8 @@ export default function TwoFactorCard({
   turnOffBlockedReason,
 }: TwoFactorCardProps) {
   const t = useTranslations('account');
+  // Nothing changes while a staff member is signed in as the user.
+  const changesOff = useSignedInAs();
   const router = useRouter();
   const showToast = useToast();
   // Around "Turn off", which turning it off removes: focus then moves to the card's heading.
@@ -135,7 +138,7 @@ export default function TwoFactorCard({
             <Button
               variant="danger-subtle"
               size="sm"
-              disabled={turnOffBlockedReason !== null}
+              disabled={turnOffBlockedReason !== null || changesOff}
               aria-describedby={turnOffNoteId}
               onClick={() => start('turn-off')}
             >
@@ -173,11 +176,21 @@ export default function TwoFactorCard({
             title={t('security.twoFactor.authenticator')}
             control={
               authenticatorSetUp ? (
-                <Button variant="secondary" size="sm" onClick={() => start('backup')}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={changesOff}
+                  onClick={() => start('backup')}
+                >
                   {t('security.twoFactor.newBackupCodes')}
                 </Button>
               ) : (
-                <Button variant="secondary" size="sm" onClick={() => start('authenticator')}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={changesOff}
+                  onClick={() => start('authenticator')}
+                >
                   {t('security.twoFactor.setUp')}
                 </Button>
               )
@@ -190,12 +203,12 @@ export default function TwoFactorCard({
         </ul>
       ) : (
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => start('authenticator')}>
+          <Button disabled={changesOff} onClick={() => start('authenticator')}>
             <Smartphone aria-hidden="true" />
             {t('security.twoFactor.useAuthenticator')}
           </Button>
           {emailCodes === 'available' && (
-            <Button variant="secondary" onClick={() => start('email')}>
+            <Button variant="secondary" disabled={changesOff} onClick={() => start('email')}>
               <Mail aria-hidden="true" />
               {t('security.twoFactor.useEmailCodes')}
             </Button>

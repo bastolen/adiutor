@@ -11,9 +11,12 @@
  * - Finance, and anyone who isn't staff, may not.
  * - Nobody signs in as themselves or as a deactivated account, and the staff
  *   member needs strong MFA on their own account (`hasStrongMfa`).
+ * - The user's account pages then show only the personal details the staff
+ *   member sees on the user's page ({@link personalDataShown}).
  *
  * See docs/decisions/0017-staff-sign-in-as-users.md.
  */
+import type { Permission } from './permissions';
 import {
   COMPANY_ADMIN_ROLE,
   type CompanyRole,
@@ -156,4 +159,47 @@ export function mayImpersonate(
     return 'deactivated';
   }
   return staff.strongMfa ? 'allowed' : 'needs_mfa';
+}
+
+/**
+ * Which of the user's personal sign-in details their own account pages show:
+ * all of them to the user, and to a staff member signed in as them only what
+ * that staff member sees on the user's page (see `getUserDetail`):
+ * - `devices`: the signed-in devices and the passkeys' names, for staff
+ *   Admins (`users:manage`);
+ * - `accountNames`: the provider accounts' names (a GitHub username, a Google
+ *   address), for staff Admins (`users:manage`);
+ * - `origins`: the IP address and browser in their recent activity, for
+ *   staff who see the audit log (`audit:view`).
+ */
+export interface PersonalDataShown {
+  /** Whether the signed-in devices and the passkeys' names show. */
+  devices: boolean;
+  /** Whether the provider accounts' names show. */
+  accountNames: boolean;
+  /** Whether the IP address and browser of the recent activity show. */
+  origins: boolean;
+}
+
+/**
+ * Works out which personal sign-in details the account pages show (see
+ * {@link PersonalDataShown}).
+ *
+ * @param viewer - The actor, as far as signing in as them goes.
+ * @param viewer.signedInAs - The staff member signed in as the user, with their global
+ *   permissions, or `null` when it's the user themselves.
+ * @returns What shows.
+ */
+export function personalDataShown(viewer: {
+  signedInAs: { staffPermissions: readonly Permission[] } | null;
+}): PersonalDataShown {
+  if (!viewer.signedInAs) {
+    return { devices: true, accountNames: true, origins: true };
+  }
+  const permissions = new Set(viewer.signedInAs.staffPermissions);
+  return {
+    devices: permissions.has('users:manage'),
+    accountNames: permissions.has('users:manage'),
+    origins: permissions.has('audit:view'),
+  };
 }

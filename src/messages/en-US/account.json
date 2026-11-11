@@ -246,7 +246,8 @@
       }
     },
     "signedInAs": {
-      "note": "You're signed in as {name}, so their own account pages aren't shown here. Their account and sign-in security are on <link>their user page</link>.",
+      "note": "You're viewing {name}'s account pages as they see them. Nothing can be changed here while you're signed in as them.",
+      "leftOut": "Some of their personal details are left out, as on <link>their user page</link>.",
       "mustSetUpMfa": "{name} has to set up MFA before they can use Adiutor, so this Security page is what they see now."
     }
   }

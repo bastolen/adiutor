@@ -10,6 +10,7 @@ import { useLanguageChoiceOptions } from '@/components/language/language-options
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
 import SelectField from '@/components/ui/select-field';
+import { useSignedInAs } from '@/components/ui/signed-in-as';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import type { LanguageChoice, Locale } from '@/lib/i18n/locales';
 
@@ -42,6 +43,8 @@ interface LanguageFormProps {
  */
 export default function LanguageForm({ choice, defaultLocale }: LanguageFormProps) {
   const t = useTranslations('account');
+  // Changes are turned off while a staff member is signed in as the user.
+  const changesOff = useSignedInAs();
   const options = useLanguageChoiceOptions(defaultLocale);
   const [result, formAction, pending, onSubmit] = useTransientActionState(saveLanguageAction, null);
 
@@ -65,7 +68,7 @@ export default function LanguageForm({ choice, defaultLocale }: LanguageFormProp
       />
       <div>
         {/* Busy until the page has reloaded, so nobody presses it twice. */}
-        <Button type="submit" loading={pending || Boolean(result?.ok)}>
+        <Button type="submit" loading={pending || Boolean(result?.ok)} disabled={changesOff}>
           {t('profile.saveLanguage')}
         </Button>
       </div>

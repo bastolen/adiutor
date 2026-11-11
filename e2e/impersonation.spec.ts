@@ -1,11 +1,12 @@
 /**
  * @file End-to-end tests for signing in as a user: a staff Admin signs in as a
  * Manager from their page, sees Adiutor as them with the banner, can't change
- * anything, is told so on the user's account pages, and goes back to the
- * card; the user is emailed and the audit log has the reason. Signed in as a
- * company Admin who must set up MFA, the Admin sees the Security page that
- * user would see. Support is told why they can't sign in as a company Admin,
- * or without strong MFA.
+ * anything (the controls are off, the user's account pages read-only), and
+ * goes back to the card; the user is emailed and the audit log has the
+ * reason. A Manager signed in as a Watcher doesn't see the Watcher's devices.
+ * Signed in as a company Admin who must set up MFA, the Admin sees the
+ * Security page that user would see. Support is told why they can't sign in
+ * as a company Admin, or without strong MFA.
  */
 import { findUserId } from './support/db';
 import {
@@ -50,12 +51,19 @@ test('a staff Admin signs in as a Manager, changes nothing, and goes back', asyn
   ).toBeDisabled();
   await expect(page.getByRole('button', { name: `Remove ${CLIENT_WATCHER.name}` })).toBeDisabled();
 
-  // The Manager's own account pages show a note instead of their settings.
+  // The Manager's own account pages show as the Manager sees them, read-only. A staff Admin sees
+  // everything there, devices included, as on the Manager's user page.
   await page.goto('/account/security');
   await expect(page.getByRole('main')).toContainText(
-    `You're signed in as ${STEP_UP_MANAGER.name}, so their own account pages aren't shown here.`,
+    `You're viewing ${STEP_UP_MANAGER.name}'s account pages as they see them.`,
   );
-  await expect(page.getByRole('heading', { name: 'Passkeys' })).toHaveCount(0);
+  await expect(page.getByRole('main')).not.toContainText('Some of their personal details');
+  await expect(page.getByRole('heading', { name: 'Passkeys' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Add passkey' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'New backup codes' })).toBeDisabled();
+  await expect(page.getByRole('heading', { name: 'Signed-in devices' })).toBeVisible();
+  await page.goto('/account');
+  await expect(page.getByRole('button', { name: 'Save name' })).toBeDisabled();
 
   // Back to the Admin's own account, on the card they started from.
   await banner.getByRole('button', { name: 'Back to my account' }).click();
@@ -72,6 +80,25 @@ test('a staff Admin signs in as a Manager, changes nothing, and goes back', asyn
   await expect(page.getByRole('main')).toContainText('Signed in as a user');
   await expect(page.getByRole('main')).toContainText('Reason: Checking the company settings');
   await expect(page.getByRole('main')).toContainText('Went back from signing in as a user');
+});
+
+test('a Manager signed in as a Watcher sees their account pages without devices', async ({
+  page,
+}) => {
+  // The Manager's sign-in code is a strong confirmation too.
+  await signIn(page, STEP_UP_MANAGER);
+  await signInAsUser(page, CLIENT_WATCHER.name);
+
+  await page.goto('/account/security');
+  await expect(page.getByRole('main')).toContainText(
+    'Some of their personal details are left out, as on their user page.',
+  );
+  // Only staff Admins see a user's devices; Managers see the rest, read-only.
+  await expect(page.getByRole('heading', { name: 'Passkeys' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Signed-in devices' })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Back to my account' }).click();
+  await expect(page.getByRole('region', { name: 'Signed in as someone else' })).toHaveCount(0);
 });
 
 test('signed in as a company Admin who must set up MFA, the Admin sees what they would', async ({
