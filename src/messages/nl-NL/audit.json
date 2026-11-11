@@ -18,6 +18,8 @@
       "provider_confirmed": "Inlogprovider bevestigd",
       "provider_disconnected": "Inlogprovider ontkoppeld",
       "email_verified": "E-mailadres bevestigd",
+      "staff_sign_in_turned_off": "Inloggen door medewerkers uitgezet",
+      "staff_sign_in_turned_on": "Inloggen door medewerkers aangezet",
       "session_revoked": "Apparaat uitgelogd",
       "sessions_revoked": "Overal uitgelogd",
       "impersonation_started": "Ingelogd als een gebruiker",

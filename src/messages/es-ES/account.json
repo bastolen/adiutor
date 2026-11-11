@@ -243,6 +243,16 @@
         "dialogTitle": "¿Desactivar tu cuenta?",
         "dialogDescription": "Se cerrará tu sesión en todos los dispositivos de inmediato. Para volver a usar Adiutor, pide a un Administrador que reactive tu cuenta.",
         "confirm": "Desactivar mi cuenta"
+      },
+      "staffSignIn": {
+        "title": "Inicio de sesión del personal",
+        "description": "{minutes, plural, one {El personal de Adiutor puede iniciar sesión como tú durante # minuto como máximo, para ver lo que ves y comprobar qué no te funciona. No puede cambiar nada mientras lo hace, y recibes un correo cada vez.} other {El personal de Adiutor puede iniciar sesión como tú durante # minutos como máximo, para ver lo que ves y comprobar qué no te funciona. No puede cambiar nada mientras lo hace, y recibes un correo cada vez.}}",
+        "on": "Activado",
+        "off": "Desactivado",
+        "turnOff": "Desactivar",
+        "turnOn": "Activar",
+        "turnedOff": "Inicio de sesión del personal desactivado.",
+        "turnedOn": "Inicio de sesión del personal activado."
       }
     },
     "signedInAs": {

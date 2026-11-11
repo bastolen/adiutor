@@ -16,7 +16,8 @@ password and provider changes, wrong current passwords typed in a signed-in sess
 MFA resets, role changes, removed members, invitations and invite links, company changes, and staff
 signing in as a user (`impersonation_started`, with the optional reason the staff member gave, and
 `impersonation_ended`, with why it ended: going back, its time being up, no longer being allowed, or
-the staff member's session ending; see `src/server/auth/impersonation.ts` and
+the staff member's session ending; and users turning sign-ins by staff off or on,
+`staff_sign_in_turned_off` and `staff_sign_in_turned_on`; see `src/server/auth/impersonation.ts` and
 [decision 0017](decisions/0017-staff-sign-in-as-users.md)), each
 with who, whom, which company, IP address and browser. It's kept for a year. The reasons for
 signing in as a user show only under **Logs**; the user sees both events in their own activity,

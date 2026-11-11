@@ -79,6 +79,7 @@ describe('SignInAsCard', () => {
     ['staff', 'Only staff Admins can sign in as staff.'],
     ['staff_admin', 'Nobody can sign in as a staff Admin.'],
     ['deactivated', 'This account is deactivated, so nobody can sign in as this user.'],
+    ['opted_out', 'This user has turned off sign-ins by staff.'],
   ] as const)('says why it is refused for %s, with the button disabled', (verdict, reason) => {
     renderCard({ verdict });
 

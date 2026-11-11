@@ -18,6 +18,8 @@
       "provider_confirmed": "Proveedor de inicio de sesión confirmado",
       "provider_disconnected": "Proveedor de inicio de sesión desconectado",
       "email_verified": "Dirección de correo verificada",
+      "staff_sign_in_turned_off": "Desactivó el inicio de sesión del personal",
+      "staff_sign_in_turned_on": "Activó el inicio de sesión del personal",
       "session_revoked": "Sesión cerrada en un dispositivo",
       "sessions_revoked": "Sesión cerrada en todas partes",
       "impersonation_started": "Inició sesión como un usuario",

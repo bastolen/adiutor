@@ -33,6 +33,7 @@ import {
   listConnectedProviders,
   setFirstPassword,
 } from '@/server/auth/accounts';
+import { setStaffSignInAllowed } from '@/server/auth/impersonation';
 import { revokeOtherOwnSessions, revokeOwnSession } from '@/server/auth/sessions';
 import { assertNotSignedInAs, getActor } from '@/server/authz';
 import { deactivateOwnAccount } from '@/server/people/user-admin';
@@ -250,5 +251,31 @@ export async function revokeOtherSessionsAction(): Promise<ActionResult> {
     refresh();
     const t = await getTranslations('account');
     return { ok: true, message: t('security.sessions.signedOutOthers', { count }) };
+  });
+}
+
+/**
+ * Turns sign-ins by staff on or off for the user's own account
+ * (`setStaffSignInAllowed`). Turning it off ends a sign-in as them that's
+ * under way.
+ *
+ * @param _previous - The previous result (unused).
+ * @param formData - Field `allowed`: `true` to turn it on, `false` to turn it off.
+ * @returns A confirmation.
+ */
+export async function staffSignInAction(
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const actor = await getActor({ allowMissingMfa: true });
+    const allowed = field(formData, 'allowed') === 'true';
+    await setStaffSignInAllowed(appContext, actor, allowed);
+    refresh();
+    const t = await getTranslations('account');
+    return {
+      ok: true,
+      message: allowed ? t('security.staffSignIn.turnedOn') : t('security.staffSignIn.turnedOff'),
+    };
   });
 }

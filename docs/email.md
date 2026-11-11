@@ -58,7 +58,8 @@ member, and the name the staff are shown with to users) come from `staffMember` 
 and IP address only when the caller passes `showDevice: true`, which it does only for changes the
 recipient made themselves (see [Security emails](authentication.md#security-emails)). Every kind
 links to the Security page except `account_deactivated` and `account_deleted`, whose recipients
-can't use it.
+can't use it. `impersonation_started` links to its "Sign-ins by staff" card (`#staff-sign-in`,
+`NOTICE_SECTIONS`), where the user can turn it off, as the email says.
 
 ## Which language
 

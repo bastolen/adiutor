@@ -8,7 +8,7 @@
  * lasts, services refuse changes (`assertNotSignedInAs`) and the auth guards
  * refuse Better Auth's endpoints (`refuseWhileSignedInAs` in `auth-guards/`).
  */
-import { asc, eq, inArray, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 
 import type { Database } from '@/db';
 import { auditEvent, impersonation, membership, user } from '@/db/schema';
@@ -59,6 +59,7 @@ const REFUSAL_MESSAGES: Record<
   staff: 'errors.impersonation.staff',
   company_admin: 'errors.impersonation.companyAdmin',
   deactivated: 'errors.impersonation.deactivated',
+  opted_out: 'errors.impersonation.optedOut',
   needs_mfa: 'errors.impersonation.needsMfa',
 };
 
@@ -141,7 +142,12 @@ export async function startImpersonation(
   const started = await ctx.db.transaction(async (tx) => {
     // One statement, in ID order: the staff member and the user.
     const rows = await tx
-      .select({ id: user.id, platformRole: user.platformRole, deactivatedAt: user.deactivatedAt })
+      .select({
+        id: user.id,
+        platformRole: user.platformRole,
+        deactivatedAt: user.deactivatedAt,
+        allowStaffSignIn: user.allowStaffSignIn,
+      })
       .from(user)
       .where(inArray(user.id, [...new Set([actor.id, userId])]))
       .orderBy(asc(user.id))
@@ -166,6 +172,7 @@ export async function startImpersonation(
         platformRole: target.platformRole ?? null,
         companyRoles: companyRoles.map((row) => row.role),
         deactivated: target.deactivatedAt !== null,
+        allowsStaffSignIn: target.allowStaffSignIn !== false,
       },
     );
     if (verdict !== 'allowed') {
@@ -227,7 +234,11 @@ export async function impersonationVerdictFor(
   const id = parseId(userId);
   const [[target], companyRoles] = await Promise.all([
     ctx.db
-      .select({ platformRole: user.platformRole, deactivatedAt: user.deactivatedAt })
+      .select({
+        platformRole: user.platformRole,
+        deactivatedAt: user.deactivatedAt,
+        allowStaffSignIn: user.allowStaffSignIn,
+      })
       .from(user)
       .where(eq(user.id, id)),
     ctx.db.select({ role: membership.role }).from(membership).where(eq(membership.userId, id)),
@@ -242,6 +253,7 @@ export async function impersonationVerdictFor(
       platformRole: target.platformRole ?? null,
       companyRoles: companyRoles.map((row) => row.role),
       deactivated: target.deactivatedAt !== null,
+      allowsStaffSignIn: target.allowStaffSignIn !== false,
     },
   );
 }
@@ -420,6 +432,7 @@ export async function actorSignedInAs(
           platformRole: target.platformRole,
           companyRoles: Object.values(target.memberships),
           deactivated: target.deactivatedAt !== null,
+          allowsStaffSignIn: target.allowStaffSignIn,
         },
       )
     : 'deactivated';
@@ -438,4 +451,55 @@ export async function actorSignedInAs(
       },
     },
   };
+}
+
+/**
+ * Turns sign-ins by staff on or off for the user's own account, from their
+ * Security page, and records it (`staff_sign_in_turned_off` or
+ * `staff_sign_in_turned_on`). Turning it off ends a sign-in as them that's
+ * under way at the staff member's next request (`actorSignedInAs`), and
+ * starting one waits for this change or sees it (both lock the user's row).
+ * Choosing what's already set changes and records nothing.
+ *
+ * @param ctx - Service context.
+ * @param actor - The user.
+ * @param allowed - Whether staff may sign in as them.
+ * @returns Whether anything changed.
+ * @throws {ServiceError} `signed_in_as` while a staff member is signed in as them.
+ */
+export async function setStaffSignInAllowed(
+  ctx: ServiceContext,
+  actor: Actor,
+  allowed: boolean,
+): Promise<boolean> {
+  assertNotSignedInAs(actor);
+  return ctx.db.transaction(async (tx) => {
+    const [changed] = await tx
+      .update(user)
+      .set({ allowStaffSignIn: allowed })
+      .where(
+        and(
+          eq(user.id, actor.id),
+          // Only when it changes, so choosing the same again records nothing. A row from before the
+          // setting existed (`null`) counts as on.
+          allowed
+            ? eq(user.allowStaffSignIn, false)
+            : or(isNull(user.allowStaffSignIn), eq(user.allowStaffSignIn, true)),
+        ),
+      )
+      .returning({ id: user.id });
+    if (!changed) {
+      return false;
+    }
+    await recordEvent(
+      ctx,
+      {
+        action: allowed ? 'staff_sign_in_turned_on' : 'staff_sign_in_turned_off',
+        actorUserId: actor.id,
+        targetUserId: actor.id,
+      },
+      tx,
+    );
+    return true;
+  });
 }

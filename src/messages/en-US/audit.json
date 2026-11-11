@@ -18,6 +18,8 @@
       "provider_confirmed": "Confirmed a sign-in provider",
       "provider_disconnected": "Disconnected a sign-in provider",
       "email_verified": "Verified the email address",
+      "staff_sign_in_turned_off": "Turned off sign-ins by staff",
+      "staff_sign_in_turned_on": "Turned on sign-ins by staff",
       "session_revoked": "Signed out a device",
       "sessions_revoked": "Signed out everywhere",
       "impersonation_started": "Signed in as a user",

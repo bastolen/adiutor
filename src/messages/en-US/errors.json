@@ -12,6 +12,7 @@
       "staff": "Only staff Admins can sign in as staff.",
       "companyAdmin": "Support can't sign in as a company Admin.",
       "deactivated": "This account is deactivated, so nobody can sign in as this user.",
+      "optedOut": "This user has turned off sign-ins by staff.",
       "needsMfa": "To sign in as someone, first add a passkey or set up an authenticator app on your Security page.",
       "confirmationRequired": "Confirm it’s you with your second step before signing in as someone.",
       "alreadyStarted": "You're already signed in as someone. Go back to your own account first.",

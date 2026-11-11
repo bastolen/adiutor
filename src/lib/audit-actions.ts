@@ -21,6 +21,8 @@ export const AUDIT_ACTIONS = [
   'provider_confirmed',
   'provider_disconnected',
   'email_verified',
+  'staff_sign_in_turned_off',
+  'staff_sign_in_turned_on',
   'session_revoked',
   'sessions_revoked',
   'impersonation_started',
@@ -94,6 +96,8 @@ export const AUDIT_GROUPS: Record<AuditGroup, { actions: readonly AuditAction[] 
       'provider_disconnected',
       'email_verified',
       'mfa_reset',
+      'staff_sign_in_turned_off',
+      'staff_sign_in_turned_on',
     ],
   },
   accounts: {

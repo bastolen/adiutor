@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD COLUMN "allow_staff_sign_in" boolean DEFAULT true;

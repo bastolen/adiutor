@@ -243,6 +243,16 @@
         "dialogTitle": "Deactivate your account?",
         "dialogDescription": "You're signed out on every device right away. To use Adiutor again, ask an Admin to reactivate your account.",
         "confirm": "Deactivate my account"
+      },
+      "staffSignIn": {
+        "title": "Sign-ins by staff",
+        "description": "{minutes, plural, one {Adiutor staff can sign in as you for up to # minute, to see what you see and check what isn't working for you. They can't change anything while they do, and you get an email each time.} other {Adiutor staff can sign in as you for up to # minutes, to see what you see and check what isn't working for you. They can't change anything while they do, and you get an email each time.}}",
+        "on": "On",
+        "off": "Off",
+        "turnOff": "Turn off",
+        "turnOn": "Turn on",
+        "turnedOff": "Sign-ins by staff turned off.",
+        "turnedOn": "Sign-ins by staff turned on."
       }
     },
     "signedInAs": {

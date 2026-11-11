@@ -6,7 +6,8 @@
  * reason. A Manager signed in as a Watcher doesn't see the Watcher's devices.
  * Signed in as a company Admin who must set up MFA, the Admin sees the
  * Security page that user would see. Support is told why they can't sign in
- * as a company Admin, or without strong MFA.
+ * as a company Admin, or without strong MFA. A user who turns sign-ins by
+ * staff off keeps staff out until they turn it back on.
  */
 import { findUserId } from './support/db';
 import {
@@ -128,4 +129,34 @@ test('Support is told why they can’t sign in as someone', async ({ page }) => 
     '/account/security#passkeys',
   );
   await expect(page.getByRole('button', { name: 'Sign in as user' })).toBeDisabled();
+});
+
+// Last in this file: it turns the Watcher's setting off for a moment, and back on.
+test('a user turns sign-ins by staff off, which keeps staff out, and back on', async ({
+  page,
+  browser,
+}) => {
+  await signIn(page, CLIENT_WATCHER);
+  await page.goto('/account/security');
+  const card = page.locator('#staff-sign-in');
+  await expect(card.getByRole('heading', { name: 'Sign-ins by staff' })).toBeVisible();
+  await card.getByRole('button', { name: 'Turn off' }).click();
+  await expect(toasts(page)).toContainText('Sign-ins by staff turned off.');
+  await expect(card).toContainText('Off');
+
+  const adminContext = await browser.newContext();
+  try {
+    const admin = await adminContext.newPage();
+    await useOwnClientIp(admin);
+    await signIn(admin, PLATFORM_ADMIN);
+    await openUser(admin, CLIENT_WATCHER.name);
+    await expect(admin.getByText('This user has turned off sign-ins by staff.')).toBeVisible();
+    await expect(admin.getByRole('button', { name: 'Sign in as user' })).toBeDisabled();
+  } finally {
+    await adminContext.close();
+  }
+
+  await card.getByRole('button', { name: 'Turn on' }).click();
+  await expect(toasts(page)).toContainText('Sign-ins by staff turned on.');
+  await expect(card).toContainText('On');
 });

@@ -9,8 +9,9 @@
  * - Support may sign in as company users who aren't an Admin in any company,
  *   so it gives them no rights to manage members they don't have already.
  * - Finance, and anyone who isn't staff, may not.
- * - Nobody signs in as themselves or as a deactivated account, and the staff
- *   member needs strong MFA on their own account (`hasStrongMfa`).
+ * - Nobody signs in as themselves, as a deactivated account, or as a user who
+ *   turned sign-ins by staff off, and the staff member needs strong MFA on
+ *   their own account (`hasStrongMfa`).
  * - The user's account pages then show only the personal details the staff
  *   member sees on the user's page ({@link personalDataShown}).
  *
@@ -68,6 +69,8 @@ export interface ImpersonationTarget {
   companyRoles: readonly CompanyRole[];
   /** Whether their account is deactivated. */
   deactivated: boolean;
+  /** Whether they let staff sign in as them (`user.allowStaffSignIn`, on unless they turned it off). */
+  allowsStaffSignIn: boolean;
 }
 
 /**
@@ -80,6 +83,7 @@ export interface ImpersonationTarget {
  * - `company_admin`: the user is an Admin in a company, as whom Support
  *   doesn't sign in;
  * - `deactivated`: the user's account is deactivated;
+ * - `opted_out`: the user turned sign-ins by staff off;
  * - `needs_mfa`: everything else allows it, but the staff member has no
  *   strong MFA on their own account.
  */
@@ -91,6 +95,7 @@ export type ImpersonationVerdict =
   | 'staff'
   | 'company_admin'
   | 'deactivated'
+  | 'opted_out'
   | 'needs_mfa';
 
 /**
@@ -157,6 +162,9 @@ export function mayImpersonate(
   }
   if (target.deactivated) {
     return 'deactivated';
+  }
+  if (!target.allowsStaffSignIn) {
+    return 'opted_out';
   }
   return staff.strongMfa ? 'allowed' : 'needs_mfa';
 }

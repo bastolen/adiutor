@@ -55,7 +55,11 @@ import {
 import type { Actor } from './actor';
 import { listAuditEvents, listAuditLog } from './audit';
 import { confirmConnectedProvider } from './auth/accounts';
-import { impersonationVerdictFor, startImpersonation } from './auth/impersonation';
+import {
+  impersonationVerdictFor,
+  setStaffSignInAllowed,
+  startImpersonation,
+} from './auth/impersonation';
 import { revokeOwnSession } from './auth/sessions';
 import { ServiceError } from './errors';
 import {
@@ -391,6 +395,7 @@ function listOperations(): Operation[] {
     ['view staff settings', (w) => getStaffSettings(ctx, w.actor)],
     ['choose own language', (w) => setOwnLocale(ctx, w.actor, 'nl-NL')],
     ['dismiss own MFA recommendation', (w) => dismissMfaRecommendation(ctx, w.actor)],
+    ['turn off sign-ins by staff', (w) => setStaffSignInAllowed(ctx, w.actor, false)],
     ["sign out another user's device", (w) => revokeOwnSession(ctx, w.actor, w.othersSession)],
     [
       "confirm another user's provider account",
@@ -545,6 +550,8 @@ const EXPECTED: Record<string, string> = {
   'choose own language': 'AAAAAAA',
   // Everyone dismisses their own MFA recommendation, and nobody else's.
   'dismiss own MFA recommendation': 'AAAAAAA',
+  // Everyone's own account, whatever their role.
+  'turn off sign-ins by staff': 'AAAAAAA',
   // Sessions and provider accounts are looked up among the user's own: someone else's don't exist.
   "sign out another user's device": 'NNNNNNN',
   "confirm another user's provider account": 'NNNNNNN',

@@ -1,7 +1,8 @@
 /**
  * @file The Security page of the account, served at `/account/security`:
  * passkeys, two-step verification, connected provider accounts,
- * password, signed-in devices and deactivating the account. Users whose role
+ * password, signed-in devices, whether staff may sign in as the user, and
+ * deactivating the account. Users whose role
  * requires MFA are sent here until they've set it up (a passkey or an
  * authenticator app; email codes don't count for them). Changing how they
  * sign in, and deactivating the account, needs a confirmation with their
@@ -50,6 +51,7 @@ import DeactivateCard from './deactivate-card';
 import PasskeysCard from './passkeys-card';
 import PasswordForm from './password-form';
 import SessionsCard from './sessions-card';
+import StaffSignInCard from './staff-sign-in-card';
 import TwoFactorCard from './two-factor-card';
 
 /**
@@ -200,6 +202,7 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
             currentSessionId={actor.sessionId}
           />
         )}
+        <StaffSignInCard allowed={actor.allowStaffSignIn} />
         <DeactivateCard
           hasPassword={overview.mfaState.hasPassword}
           blockedReason={soleAdmin ? serviceErrorMessage(soleAdmin, locale) : null}

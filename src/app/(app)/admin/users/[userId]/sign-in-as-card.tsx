@@ -80,6 +80,7 @@ export default function SignInAsCard({
     staff: t('refused.staff'),
     company_admin: t('refused.companyAdmin'),
     deactivated: t('refused.deactivated'),
+    opted_out: t('refused.optedOut'),
     needs_mfa: t.rich('refused.needsMfa', { link: securityLink }),
   };
   return (

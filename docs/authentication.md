@@ -228,7 +228,8 @@ does, to check what isn't working for them. The reasons are in
 - staff Admins: anyone but staff Admins;
 - Managers: company users;
 - Support: company users who aren't an Admin in any company;
-- nobody: themselves, or a deactivated account.
+- nobody: themselves, a deactivated account, or a user who turned sign-ins by staff off (see
+  [Security](#security-accountsecurity)).
 
 - **Starting** (`startImpersonation` in `src/server/auth/impersonation.ts`):
   - It starts from the **Sign in as user** card on the user's page (see
@@ -368,6 +369,11 @@ whole sentence per event, with who made the change, if not you, where each langu
   when, and an "MFA Verified" badge when that sign-in had MFA), with "Sign out" per device and "Sign out other
   devices". Both also forget every browser you trusted at the code step, this one included (see
   [Signing out](#signing-out)).
+- **Sign-ins by staff:** whether staff may sign in as you (see
+  [Signing in as a user](#signing-in-as-a-user)): on by default, with **Turn off** and **Turn on**
+  (`setStaffSignInAllowed`, recorded as `staff_sign_in_turned_off` or `staff_sign_in_turned_on`).
+  Turning it off ends a sign-in as you that's under way. The email you get when someone signs in as
+  you links here (`#staff-sign-in`).
 - **Deactivate account:** signs you out everywhere and blocks sign-in until an Admin reactivates
   it; nothing is deleted. Like the changes above, it needs a recent confirmation once the account
   has a second step (starting it without one sends you to the step-up page first). It also needs

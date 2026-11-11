@@ -61,6 +61,7 @@ type TargetKind = keyof typeof TARGETS;
 const target = (kind: TargetKind): ImpersonationTarget => ({
   id: TARGET_ID,
   deactivated: false,
+  allowsStaffSignIn: true,
   ...TARGETS[kind],
 });
 
@@ -136,6 +137,15 @@ describe('mayImpersonate', () => {
     expect(mayImpersonate(staffWith('manager'), { ...target('a Client'), deactivated: true })).toBe(
       'deactivated',
     );
+  });
+
+  it('refuses a user who turned sign-ins by staff off', () => {
+    expect(
+      mayImpersonate(staffWith('platform_admin'), {
+        ...target('a Client'),
+        allowsStaffSignIn: false,
+      }),
+    ).toBe('opted_out');
   });
 
   it('asks for strong MFA only once everything else allows it', () => {

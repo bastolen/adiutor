@@ -40,6 +40,7 @@ import {
   endFinishedImpersonations,
   endImpersonation,
   findSessionImpersonation,
+  setStaffSignInAllowed,
   startImpersonation,
 } from './impersonation';
 import { revokeOtherOwnSessions } from './sessions';
@@ -385,6 +386,48 @@ describe('actorSignedInAs', () => {
   });
 });
 
+describe('setStaffSignInAllowed', () => {
+  it('turns sign-ins by staff off and on, recording each change once', async () => {
+    const userId = await companyUser();
+    const jane = await loadActor(db, userId);
+    if (!jane) {
+      throw new Error('No user');
+    }
+
+    await expect(setStaffSignInAllowed(ctx, jane, false)).resolves.toBe(true);
+    await expect(setStaffSignInAllowed(ctx, jane, false)).resolves.toBe(false);
+    expect((await loadActor(db, userId))?.allowStaffSignIn).toBe(false);
+    await expect(setStaffSignInAllowed(ctx, jane, true)).resolves.toBe(true);
+    expect((await loadActor(db, userId))?.allowStaffSignIn).toBe(true);
+
+    const events = await db
+      .select({ action: auditEvent.action, actorUserId: auditEvent.actorUserId })
+      .from(auditEvent)
+      .orderBy(auditEvent.at);
+    expect(events).toEqual([
+      { action: 'staff_sign_in_turned_off', actorUserId: userId },
+      { action: 'staff_sign_in_turned_on', actorUserId: userId },
+    ]);
+  });
+
+  it('keeps staff out: no start, and one under way ends', async () => {
+    const staff = await confirmedStaff('platform_admin');
+    const userId = await companyUser();
+    await startImpersonation(ctx, staff, { userId });
+    const found = await findSessionImpersonation(db, staff.sessionId ?? '');
+    const jane = await loadActor(db, userId);
+    if (!found || !jane) {
+      throw new Error('Not signed in as the user');
+    }
+
+    await setStaffSignInAllowed(ctx, jane, false);
+
+    await expect(actorSignedInAs(db, staff, found)).resolves.toEqual({ end: 'no_longer_allowed' });
+    await endImpersonation(ctx, staff.sessionId ?? '', 'no_longer_allowed');
+    expect((await refusal(staff, userId)).key).toBe('errors.impersonation.optedOut');
+  });
+});
+
 describe('while signed in as someone', () => {
   it('refuses the user’s own account changes, before anything is checked or changed', async () => {
     const staff = await confirmedStaff('platform_admin');
@@ -406,6 +449,8 @@ describe('while signed in as someone', () => {
       setFirstPassword(ctx, asUser, neverCalled),
       revokeOtherOwnSessions(ctx, asUser),
       deactivateOwnAccount(ctx, asUser, ''),
+      // Nor turn sign-ins by staff off (or on) for them.
+      setStaffSignInAllowed(ctx, asUser, false),
       // Nor a sign-in as someone else from the user's view.
       startImpersonation(ctx, asUser, { userId: staff.id }),
     ];

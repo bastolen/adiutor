@@ -243,6 +243,16 @@
         "dialogTitle": "Je account deactiveren?",
         "dialogDescription": "Je wordt meteen op elk apparaat uitgelogd. Wil je Adiutor weer gebruiken? Vraag een Beheerder om je account opnieuw te activeren.",
         "confirm": "Mijn account deactiveren"
+      },
+      "staffSignIn": {
+        "title": "Inloggen door medewerkers",
+        "description": "{minutes, plural, one {Medewerkers van Adiutor kunnen hooguit # minuut als jou inloggen, om te zien wat jij ziet en te controleren wat er voor jou niet werkt. Ze kunnen dan niets wijzigen, en je krijgt elke keer een e-mail.} other {Medewerkers van Adiutor kunnen hooguit # minuten als jou inloggen, om te zien wat jij ziet en te controleren wat er voor jou niet werkt. Ze kunnen dan niets wijzigen, en je krijgt elke keer een e-mail.}}",
+        "on": "Aan",
+        "off": "Uit",
+        "turnOff": "Uitzetten",
+        "turnOn": "Aanzetten",
+        "turnedOff": "Inloggen door medewerkers staat uit.",
+        "turnedOn": "Inloggen door medewerkers staat aan."
       }
     },
     "signedInAs": {

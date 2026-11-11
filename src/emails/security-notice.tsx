@@ -91,6 +91,26 @@ interface NoticeNames {
   staffName?: string;
 }
 
+/**
+ * The card of the Security page a notice's button goes to, by kind: the
+ * switch for sign-ins by staff, after a staff member signed in as the user.
+ * Other kinds go to the top of the page.
+ */
+const NOTICE_SECTIONS: Partial<Record<SecurityNoticeKind, string>> = {
+  impersonation_started: 'staff-sign-in',
+};
+
+/**
+ * The anchor a notice's button adds to the Security page's address.
+ *
+ * @param kind - What changed.
+ * @returns `#<card>`, or nothing for the top of the page.
+ */
+function sectionOf(kind: SecurityNoticeKind): string {
+  const section = NOTICE_SECTIONS[kind];
+  return section ? `#${section}` : '';
+}
+
 /** The staff's name when none is given: the product's, as before first-run setup. */
 const FALLBACK_STAFF_NAME = 'Adiutor';
 
@@ -207,7 +227,9 @@ export default function SecurityNoticeEmail({
         )}
       </EmailNote>
       {!withoutAccount && (
-        <EmailButton href={`${appUrl}/account/security`}>{t('button')}</EmailButton>
+        <EmailButton href={`${appUrl}/account/security${sectionOf(kind)}`}>
+          {t('button')}
+        </EmailButton>
       )}
       <EmailParagraph>{t('ifNotYou', { kind })}</EmailParagraph>
     </EmailLayout>

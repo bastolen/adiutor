@@ -236,7 +236,7 @@
       "impersonation_started": {
         "subject": "{name} from {staff} signed in to Adiutor as you",
         "heading": "{name} signed in as you",
-        "body": "{minutes, plural, one {{name} from {staff} signed in to Adiutor as you, to see what you see and check what isn't working. It ends after at most # minute. Meanwhile, nobody can change your sign-in methods, your account or anyone's access.} other {{name} from {staff} signed in to Adiutor as you, to see what you see and check what isn't working. It ends after at most # minutes. Meanwhile, nobody can change your sign-in methods, your account or anyone's access.}}"
+        "body": "{minutes, plural, one {{name} from {staff} signed in to Adiutor as you, to see what you see and check what isn't working. It ends after at most # minute. Meanwhile, nobody can change your sign-in methods, your account or anyone's access. If you'd rather staff didn't sign in as you, you can turn it off on your Security page.} other {{name} from {staff} signed in to Adiutor as you, to see what you see and check what isn't working. It ends after at most # minutes. Meanwhile, nobody can change your sign-in methods, your account or anyone's access. If you'd rather staff didn't sign in as you, you can turn it off on your Security page.}}"
       }
     }
   }

@@ -130,6 +130,11 @@ export interface Actor {
   /** When the account was deactivated, or `null` while it's active. */
   deactivatedAt: Date | null;
   /**
+   * Whether staff may sign in as the user (`user.allow_staff_sign_in`): on
+   * unless they turned it off on their Security page.
+   */
+  allowStaffSignIn: boolean;
+  /**
    * The staff member signed in as this user in the current session, or
    * `null` when the user signed in themselves. While it's set, every change
    * is refused (`assertNotSignedInAs`), and the session facts above
@@ -172,6 +177,7 @@ export async function loadActor(
         emailVerified: user.emailVerified,
         deactivatedAt: user.deactivatedAt,
         platformRole: user.platformRole,
+        allowStaffSignIn: user.allowStaffSignIn,
       })
       .from(user)
       .where(eq(user.id, userId)),
@@ -199,6 +205,8 @@ export async function loadActor(
   const sessionMfa = sessionMfaOf(session);
   return {
     ...found,
+    // On unless turned off (a row from before the setting existed counts as on).
+    allowStaffSignIn: found.allowStaffSignIn !== false,
     platformRole,
     memberships: Object.fromEntries(rows.map((row) => [row.companyId, row.role])),
     mfaRole,

@@ -454,9 +454,11 @@ describe('security notices', () => {
       "Sam Lee from Adiutor Tests signed in to Adiutor as you, to see what you see and check what isn't working.",
     );
     expect(email.text).toContain('It ends after at most 30 minutes.');
+    expect(email.text).toContain('you can turn it off on your Security page.');
     expect(email.text).toContain("If you didn't expect this, contact your administrator.");
     expect(email.text).not.toContain('From:');
-    expectBasics(email, `${appUrl}/account/security`);
+    // Straight to the switch for sign-ins by staff.
+    expectBasics(email, `${appUrl}/account/security#staff-sign-in`);
   });
 
   it('says "a staff member" when the notice is built without a name', async () => {

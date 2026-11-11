@@ -236,7 +236,7 @@
       "impersonation_started": {
         "subject": "{name}, de {staff}, ha iniciado sesión como tú en Adiutor",
         "heading": "{name} ha iniciado sesión como tú",
-        "body": "{minutes, plural, one {{name}, de {staff}, ha iniciado sesión como tú en Adiutor para ver lo que ves y comprobar qué no funciona. Termina como mucho en # minuto. Mientras tanto, nadie puede cambiar tus métodos de inicio de sesión, tu cuenta ni el acceso de nadie.} other {{name}, de {staff}, ha iniciado sesión como tú en Adiutor para ver lo que ves y comprobar qué no funciona. Termina como mucho en # minutos. Mientras tanto, nadie puede cambiar tus métodos de inicio de sesión, tu cuenta ni el acceso de nadie.}}"
+        "body": "{minutes, plural, one {{name}, de {staff}, ha iniciado sesión como tú en Adiutor para ver lo que ves y comprobar qué no funciona. Termina como mucho en # minuto. Mientras tanto, nadie puede cambiar tus métodos de inicio de sesión, tu cuenta ni el acceso de nadie. Si prefieres que el personal no inicie sesión como tú, puedes desactivarlo en tu página Seguridad.} other {{name}, de {staff}, ha iniciado sesión como tú en Adiutor para ver lo que ves y comprobar qué no funciona. Termina como mucho en # minutos. Mientras tanto, nadie puede cambiar tus métodos de inicio de sesión, tu cuenta ni el acceso de nadie. Si prefieres que el personal no inicie sesión como tú, puedes desactivarlo en tu página Seguridad.}}"
       }
     }
   }

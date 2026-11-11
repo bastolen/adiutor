@@ -13,13 +13,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { auth } from '@/lib/auth';
 import confirmChangeUrl from '@/lib/sign-in/confirm-url';
 import { changeOwnPassword, hasPassword, setFirstPassword } from '@/server/auth/accounts';
+import { setStaffSignInAllowed } from '@/server/auth/impersonation';
 import { revokeOtherOwnSessions } from '@/server/auth/sessions';
 import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
 import { deactivateOwnAccount } from '@/server/people/user-admin';
 
 import { testLocale } from '../../../../../tests/i18n/next-intl-mocks';
-import { deactivateAccountAction, passwordAction, revokeOtherSessionsAction } from './actions';
+import {
+  deactivateAccountAction,
+  passwordAction,
+  revokeOtherSessionsAction,
+  staffSignInAction,
+} from './actions';
 
 vi.mock('next/headers', () => ({ headers: vi.fn(async () => new Headers()) }));
 vi.mock('next/cache', () => ({ refresh: vi.fn() }));
@@ -52,6 +58,7 @@ vi.mock('@/server/auth/accounts', () => ({
   setFirstPassword: vi.fn(),
 }));
 vi.mock('@/server/auth/sessions', () => ({ revokeOtherOwnSessions: vi.fn() }));
+vi.mock('@/server/auth/impersonation', () => ({ setStaffSignInAllowed: vi.fn() }));
 vi.mock('@/server/people/user-admin', () => ({ deactivateOwnAccount: vi.fn() }));
 
 /** The signed-in user, without a second step. */
@@ -343,5 +350,22 @@ describe('while a staff member is signed in as the user', () => {
     expect(deactivateOwnAccount).not.toHaveBeenCalled();
     expect(auth.api.setPassword).not.toHaveBeenCalled();
     expect(auth.api.changePassword).not.toHaveBeenCalled();
+  });
+});
+
+describe('staffSignInAction', () => {
+  it('turns sign-ins by staff off and on through the service, saying which', async () => {
+    testLocale.current = 'en-US';
+
+    expect(await staffSignInAction(null, form({ allowed: 'false' }))).toEqual({
+      ok: true,
+      message: 'Sign-ins by staff turned off.',
+    });
+    expect(setStaffSignInAllowed).toHaveBeenLastCalledWith({ name: 'app context' }, actor, false);
+    expect(await staffSignInAction(null, form({ allowed: 'true' }))).toEqual({
+      ok: true,
+      message: 'Sign-ins by staff turned on.',
+    });
+    expect(setStaffSignInAllowed).toHaveBeenLastCalledWith({ name: 'app context' }, actor, true);
   });
 });
