@@ -17,6 +17,7 @@ import { COMPANY_ROLES, isRole, PLATFORM_ROLES } from './authz/roles';
 import { FOLLOW_DEFAULT, LOCALES } from './i18n/locales';
 import type { Messages } from './i18n/messages';
 import {
+  IMPERSONATION_REASON_MAX_LENGTH,
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
   NAME_MAX_LENGTH,
@@ -177,11 +178,12 @@ function containsWebAddress(value: string): boolean {
 }
 
 /**
- * The names people choose, each with its own messages in the `validation`
- * catalogue (`validation.<field>.controlCharacters`, ...), since forms show
- * one message above all their fields, so it must say which one it's about.
+ * The names and short texts people choose, each with its own messages in the
+ * `validation` catalogue (`validation.<field>.controlCharacters`, ...), since
+ * forms show one message above all their fields, so it must say which one
+ * it's about.
  */
-type NameField = 'name' | 'companyName' | 'staffName' | 'passkeyName';
+type NameField = 'name' | 'companyName' | 'staffName' | 'passkeyName' | 'impersonationReason';
 
 /**
  * Adds the shared character rules to a string schema: no control characters
@@ -213,7 +215,7 @@ function withCharacterSafety<T extends z.ZodType<string>>(schema: T, field: Name
  */
 function withNameSafety<T extends z.ZodType<string>>(
   schema: T,
-  field: Exclude<NameField, 'passkeyName'>,
+  field: Exclude<NameField, 'passkeyName' | 'impersonationReason'>,
 ) {
   return withCharacterSafety(schema, field).refine((value) => !containsWebAddress(value), {
     error: `validation.${field}.webAddress` satisfies ValidationMessageKey,
@@ -307,6 +309,24 @@ export const passkeyNameSchema = withCharacterSafety(
   }),
   'passkeyName',
 );
+
+/**
+ * Why a staff member signs in as a user, if they say: trimmed, at most
+ * `IMPERSONATION_REASON_MAX_LENGTH` characters, with the character rules of
+ * names (no line breaks or control characters, nothing that hides or
+ * reorders text). Only staff see it, in the audit log, and it's never quoted
+ * in emails, so web addresses (a link to a ticket) are fine. Empty means no
+ * reason (`null`).
+ */
+export const impersonationReasonSchema = withCharacterSafety(
+  z
+    .string()
+    .trim()
+    .max(IMPERSONATION_REASON_MAX_LENGTH, {
+      error: 'validation.impersonationReason.tooLong' satisfies ValidationMessageKey,
+    }),
+  'impersonationReason',
+).transform((value) => value || null);
 
 /**
  * A company's URL name, the part of its address after `/companies/`:

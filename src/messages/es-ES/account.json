@@ -82,6 +82,8 @@
       "accountReactivated": "{by, select, self {Cuenta reactivada} admin {Un administrador reactivó tu cuenta} other {{name} reactivó tu cuenta}}",
       "mfaReset": "{by, select, self {Verificación en dos pasos restablecida} admin {Un administrador restableció tu verificación en dos pasos} other {{name} restableció tu verificación en dos pasos}}",
       "accountCreated": "{by, select, self {Cuenta creada} admin {Un administrador creó tu cuenta} other {{name} creó tu cuenta}}",
+      "impersonationStarted": "{by, select, self {Alguien del personal inició sesión como tú} admin {Alguien del personal inició sesión como tú} other {{name}, del personal, inició sesión como tú}}",
+      "impersonationEnded": "{by, select, self {Alguien del personal ya no tiene la sesión iniciada como tú} admin {Alguien del personal ya no tiene la sesión iniciada como tú} other {{name} ya no tiene la sesión iniciada como tú}}",
       "addedToStaff": "{by, select, self {Se te añadió al personal como {role}} admin {Un administrador te añadió al personal como {role}} other {{name} te añadió al personal como {role}}}",
       "addedToCompany": "{by, select, self {Se te añadió a {company} como {role}} admin {Un administrador te añadió a {company} como {role}} other {{name} te añadió a {company} como {role}}}",
       "joinedStaff": "Se te añadió al personal",

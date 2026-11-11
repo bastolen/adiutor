@@ -111,6 +111,25 @@ function Involved({ event }: { event: AuditEntry }) {
 }
 
 /**
+ * The reason a staff member gave for signing in as a user, under that
+ * event's description. Only staff who see the log see it.
+ *
+ * @param props - Component props.
+ * @param props.event - The event.
+ * @returns The reason, or nothing when the event has none.
+ */
+function Reason({ event }: { event: AuditEntry }) {
+  const t = useTranslations('admin.logs');
+  const { reason } = event.details;
+  if (event.action !== 'impersonation_started' || typeof reason !== 'string' || !reason) {
+    return null;
+  }
+  return (
+    <span className="text-sm wrap-anywhere text-muted-foreground">{t('reason', { reason })}</span>
+  );
+}
+
+/**
  * The browser and IP address an event came from.
  *
  * @param props - Component props.
@@ -284,6 +303,7 @@ async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> 
                         {tAudit(describeAuditEvent(event.action, event.details))}
                       </span>
                       <Involved event={event} />
+                      <Reason event={event} />
                       {/* Below the wider widths, when and where it came from go here. */}
                       <span className="text-xs text-muted-foreground sm:hidden">
                         <RelativeTime date={event.at} />

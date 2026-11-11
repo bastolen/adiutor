@@ -82,6 +82,8 @@
       "accountReactivated": "{by, select, self {Account opnieuw geactiveerd} admin {Een beheerder heeft je account opnieuw geactiveerd} other {{name} heeft je account opnieuw geactiveerd}}",
       "mfaReset": "{by, select, self {Verificatie in twee stappen gereset} admin {Een beheerder heeft je verificatie in twee stappen gereset} other {{name} heeft je verificatie in twee stappen gereset}}",
       "accountCreated": "{by, select, self {Account aangemaakt} admin {Een beheerder heeft je account aangemaakt} other {{name} heeft je account aangemaakt}}",
+      "impersonationStarted": "{by, select, self {Een medewerker heeft als jou ingelogd} admin {Een medewerker heeft als jou ingelogd} other {{name}, een medewerker, heeft als jou ingelogd}}",
+      "impersonationEnded": "{by, select, self {Een medewerker is niet langer als jou ingelogd} admin {Een medewerker is niet langer als jou ingelogd} other {{name} is niet langer als jou ingelogd}}",
       "addedToStaff": "{by, select, self {Als {role} toegevoegd aan de medewerkers} admin {Een beheerder heeft je als {role} toegevoegd aan de medewerkers} other {{name} heeft je als {role} toegevoegd aan de medewerkers}}",
       "addedToCompany": "{by, select, self {Als {role} toegevoegd aan {company}} admin {Een beheerder heeft je als {role} toegevoegd aan {company}} other {{name} heeft je als {role} toegevoegd aan {company}}}",
       "joinedStaff": "Toegevoegd aan de medewerkers",

@@ -14,6 +14,12 @@ export const MAX_PASSWORD_LENGTH = 128;
 /** The longest passkey name (`passkeyNameSchema`, and the name field on the Security page). */
 export const PASSKEY_NAME_MAX_LENGTH = 64;
 
+/**
+ * The longest reason a staff member may give for signing in as a user
+ * (`impersonationReasonSchema`, and the reason field's `maxLength`).
+ */
+export const IMPERSONATION_REASON_MAX_LENGTH = 200;
+
 /** The most addresses one bulk invitation may contain (`inviteManyByEmail` and the invite form). */
 export const MAX_BULK_INVITES = 20;
 

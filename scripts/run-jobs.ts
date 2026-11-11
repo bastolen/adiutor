@@ -28,7 +28,8 @@ async function main(): Promise<number> {
       `${removed.auditEvents} old audit events, ${removed.signInErrors} old sign-in errors ` +
       `and ${removed.appErrors} other old errors, ` +
       `and cleared OAuth tokens left on ` +
-      `${removed.providerTokens} accounts. Sent ${reminders.sent} invitation reminders${
+      `${removed.providerTokens} accounts. Ended ${removed.impersonations} staff sign-ins as a ` +
+      `user. Sent ${reminders.sent} invitation reminders${
         reminders.failed
           ? `; ${reminders.failed} couldn't be sent and will be tried again next run.`
           : '.'

@@ -23,6 +23,8 @@ export const AUDIT_ACTIONS = [
   'email_verified',
   'session_revoked',
   'sessions_revoked',
+  'impersonation_started',
+  'impersonation_ended',
   'account_deactivated',
   'account_reactivated',
   'account_deleted',
@@ -74,6 +76,8 @@ export const AUDIT_GROUPS: Record<AuditGroup, { actions: readonly AuditAction[] 
       'password_check_failed',
       'session_revoked',
       'sessions_revoked',
+      'impersonation_started',
+      'impersonation_ended',
     ],
   },
   'sign-in-methods': {
@@ -138,7 +142,21 @@ type AuditEventDescription =
   | 'sessionsRevokedOthers'
   | 'mfaFailedAtSignIn'
   | 'passwordCheckFailedChangePassword'
-  | 'passwordCheckFailedDeactivate';
+  | 'passwordCheckFailedDeactivate'
+  | 'impersonationExpired'
+  | 'impersonationNoLongerAllowed'
+  | 'impersonationSessionEnded';
+
+/**
+ * The more precise descriptions of `impersonation_ended`, by why it ended
+ * (`ImpersonationEndReason` in `src/server/auth/impersonation.ts`); going
+ * back to your own account (`stopped`) keeps the label.
+ */
+const IMPERSONATION_END_DESCRIPTIONS = new Map<unknown, AuditEventDescription>([
+  ['expired', 'impersonationExpired'],
+  ['no_longer_allowed', 'impersonationNoLongerAllowed'],
+  ['session_ended', 'impersonationSessionEnded'],
+]);
 
 /**
  * How an event is described: a key in the `audit` namespace, its label
@@ -150,7 +168,8 @@ export type AuditEventMessageKey = `actions.${AuditAction}` | `events.${AuditEve
  * Describes an event for the staff audit log: its label, or a more precise
  * one where the details change what happened (a sign-out that ended only
  * some sessions, a wrong code at sign-in rather than on the step-up page,
- * what a wrong current password was typed for). The caller translates the
+ * what a wrong current password was typed for, why a sign-in as a user
+ * ended). The caller translates the
  * key in the reader's language, `getTranslations('audit')`.
  *
  * @param action - What happened.
@@ -177,6 +196,12 @@ export function describeAuditEvent(
   }
   if (action === 'password_check_failed' && details.purpose === 'deactivate') {
     return 'events.passwordCheckFailedDeactivate';
+  }
+  // Recorded with why it ended, unless the staff member went back to their own account.
+  const endDescription =
+    action === 'impersonation_ended' ? IMPERSONATION_END_DESCRIPTIONS.get(details.reason) : null;
+  if (endDescription) {
+    return `events.${endDescription}`;
   }
   return `actions.${action}`;
 }

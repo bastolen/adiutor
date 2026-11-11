@@ -4,7 +4,12 @@
 import { describe, expect, it } from 'vitest';
 import type { z } from 'zod';
 
-import { NAME_MAX_LENGTH, PASSKEY_NAME_MAX_LENGTH, SLUG_MAX_LENGTH } from './input-rules';
+import {
+  IMPERSONATION_REASON_MAX_LENGTH,
+  NAME_MAX_LENGTH,
+  PASSKEY_NAME_MAX_LENGTH,
+  SLUG_MAX_LENGTH,
+} from './input-rules';
 import {
   CHOOSE_COMPANY_ROLE_MESSAGE,
   CHOOSE_STAFF_ROLE_MESSAGE,
@@ -12,6 +17,7 @@ import {
   companyRoleSchema,
   emailSchema,
   idSchema,
+  impersonationReasonSchema,
   nameSchema,
   passkeyNameSchema,
   passwordSchema,
@@ -228,6 +234,27 @@ describe('passkeyNameSchema', () => {
 
   it('allows the joiners real names need', () => {
     expect(passkeyNameSchema.safeParse('\u{915}\u{94D}\u{200D}\u{937} laptop').success).toBe(true);
+  });
+});
+
+describe('impersonationReasonSchema', () => {
+  it('keeps a trimmed reason, web addresses included, and makes an empty one null', () => {
+    expect(impersonationReasonSchema.parse('  Ticket at https://adiutor.dev/t/12 ')).toBe(
+      'Ticket at https://adiutor.dev/t/12',
+    );
+    expect(impersonationReasonSchema.parse('')).toBeNull();
+    expect(impersonationReasonSchema.parse('   ')).toBeNull();
+    expect(
+      impersonationReasonSchema.safeParse('a'.repeat(IMPERSONATION_REASON_MAX_LENGTH)).success,
+    ).toBe(true);
+  });
+
+  it('refuses reasons that are too long, or hide or break text', () => {
+    ['a'.repeat(IMPERSONATION_REASON_MAX_LENGTH + 1), 'Line\nbreak', 'Hidden \u{202E}txet'].forEach(
+      (reason) => {
+        expect(impersonationReasonSchema.safeParse(reason).success, reason).toBe(false);
+      },
+    );
   });
 });
 

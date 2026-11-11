@@ -29,6 +29,13 @@
       "when": 1794386991623,
       "tag": "0003_mfa_recommendation_dismissal",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794408789422,
+      "tag": "0004_impersonation",
+      "breakpoints": true
     }
   ]
 }

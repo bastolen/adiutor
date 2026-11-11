@@ -25,6 +25,10 @@ export interface SecurityNoticeOptions {
   role?: Role;
   /** The company's name, for company role changes and removals, e.g. "Adiutor". */
   company?: string;
+  /** The staff member's name, for a sign-in as the recipient, e.g. "Sam Lee". */
+  staffMember?: string;
+  /** The name the staff are shown with to users (`getStaffName`), e.g. "Adiutor". */
+  staffName?: string;
   /**
    * The recipient's saved language when it can't be looked up any more: a
    * deleted account's, read before the deletion. An account that still
@@ -54,6 +58,8 @@ export interface SecurityNoticeOptions {
  * @param options.provider - Provider name, e.g. "GitHub".
  * @param options.role - The role, e.g. `manager`.
  * @param options.company - Company name, e.g. "Adiutor".
+ * @param options.staffMember - The staff member who signed in as the recipient, e.g. "Sam Lee".
+ * @param options.staffName - The name the staff are shown with to users, e.g. "Adiutor".
  * @param options.locale - A deleted account's saved language, read before the deletion.
  * @param options.showDevice - Whether to name the device and IP address, only for the
  *   recipient's own changes. Defaults to `false`.
@@ -63,7 +69,15 @@ export async function sendSecurityNotice(
   ctx: Pick<ServiceContext, 'db' | 'sendEmail' | 'baseUrl' | 'requestInfo'>,
   recipient: { userId: string } | { email: string },
   kind: SecurityNoticeKind,
-  { provider, role, company, locale = null, showDevice = false }: SecurityNoticeOptions = {},
+  {
+    provider,
+    role,
+    company,
+    staffMember,
+    staffName,
+    locale = null,
+    showDevice = false,
+  }: SecurityNoticeOptions = {},
 ): Promise<boolean> {
   try {
     const [found] = await ctx.db
@@ -92,6 +106,8 @@ export async function sendSecurityNotice(
       provider,
       role,
       company,
+      staffMember,
+      staffName,
     });
     try {
       await ctx.sendEmail(message);

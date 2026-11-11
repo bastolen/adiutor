@@ -82,6 +82,8 @@
       "accountReactivated": "{by, select, self {Account reactivated} admin {Account reactivated by an administrator} other {Account reactivated by {name}}}",
       "mfaReset": "{by, select, self {Two-step verification reset} admin {Two-step verification reset by an administrator} other {Two-step verification reset by {name}}}",
       "accountCreated": "{by, select, self {Account created} admin {Account created by an administrator} other {Account created by {name}}}",
+      "impersonationStarted": "{by, select, self {A staff member signed in as you} admin {A staff member signed in as you} other {{name}, a staff member, signed in as you}}",
+      "impersonationEnded": "{by, select, self {A staff member is no longer signed in as you} admin {A staff member is no longer signed in as you} other {{name} is no longer signed in as you}}",
       "addedToStaff": "{by, select, self {Added to staff as {role}} admin {Added to staff as {role} by an administrator} other {Added to staff as {role} by {name}}}",
       "addedToCompany": "{by, select, self {Added to {company} as {role}} admin {Added to {company} as {role} by an administrator} other {Added to {company} as {role} by {name}}}",
       "joinedStaff": "Added to staff",

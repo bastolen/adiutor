@@ -20,6 +20,8 @@
       "email_verified": "Verified the email address",
       "session_revoked": "Signed out a device",
       "sessions_revoked": "Signed out everywhere",
+      "impersonation_started": "Signed in as a user",
+      "impersonation_ended": "Went back from signing in as a user",
       "account_deactivated": "Deactivated the account",
       "account_reactivated": "Reactivated the account",
       "account_deleted": "Deleted the account",
@@ -45,7 +47,10 @@
       "sessionsRevokedOthers": "Signed out of other devices",
       "mfaFailedAtSignIn": "Wrong two-step verification code entered at sign-in",
       "passwordCheckFailedChangePassword": "Wrong current password entered when changing the password",
-      "passwordCheckFailedDeactivate": "Wrong current password entered when deactivating the account"
+      "passwordCheckFailedDeactivate": "Wrong current password entered when deactivating the account",
+      "impersonationExpired": "Sign-in as a user ended when its time was up",
+      "impersonationNoLongerAllowed": "Sign-in as a user ended because it was no longer allowed",
+      "impersonationSessionEnded": "Sign-in as a user ended with the staff member’s own session"
     },
     "groups": {
       "sign-ins": "Sign-ins",

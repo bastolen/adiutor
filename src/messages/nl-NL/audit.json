@@ -20,6 +20,8 @@
       "email_verified": "E-mailadres bevestigd",
       "session_revoked": "Apparaat uitgelogd",
       "sessions_revoked": "Overal uitgelogd",
+      "impersonation_started": "Ingelogd als een gebruiker",
+      "impersonation_ended": "Teruggegaan na inloggen als een gebruiker",
       "account_deactivated": "Account gedeactiveerd",
       "account_reactivated": "Account opnieuw geactiveerd",
       "account_deleted": "Account verwijderd",
@@ -45,7 +47,10 @@
       "sessionsRevokedOthers": "Uitgelogd op andere apparaten",
       "mfaFailedAtSignIn": "Verkeerde code voor verificatie in twee stappen ingevoerd bij het inloggen",
       "passwordCheckFailedChangePassword": "Verkeerd huidig wachtwoord ingevoerd bij het wijzigen van het wachtwoord",
-      "passwordCheckFailedDeactivate": "Verkeerd huidig wachtwoord ingevoerd bij het deactiveren van het account"
+      "passwordCheckFailedDeactivate": "Verkeerd huidig wachtwoord ingevoerd bij het deactiveren van het account",
+      "impersonationExpired": "Inloggen als een gebruiker is gestopt toen de tijd om was",
+      "impersonationNoLongerAllowed": "Inloggen als een gebruiker is gestopt omdat het niet meer was toegestaan",
+      "impersonationSessionEnded": "Inloggen als een gebruiker is gestopt met de eigen sessie van de medewerker"
     },
     "groups": {
       "sign-ins": "Inloggen",

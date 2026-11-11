@@ -44,13 +44,17 @@ see [Emails](i18n.md#emails). Templates share the frame and building blocks in
 `security-notice.tsx` is one template with a wording per kind (`SECURITY_NOTICE_KINDS`): a changed or
 added password, two-step verification, backup codes, passkeys and connected GitHub or Google accounts,
 an MFA reset, signing out everywhere, deactivating, reactivating and deleting an account, staff role
-changes, a changed company role and a removal from a company, and the pauses after too many wrong
-passwords (`password_sign_in_paused`) or codes (`two_factor_locked`). Each kind's subject, heading
+changes, a changed company role and a removal from a company, the pauses after too many wrong
+passwords (`password_sign_in_paused`) or codes (`two_factor_locked`), and a staff member signing in
+as the recipient (`impersonation_started`). Each kind's subject, heading
 and text are ICU messages in `emails.securityNotice.<kind>`, and the footer and the advice for when
 it wasn't them are `select`s on the kind (`reason`, `ifNotYou`). The messages' `{provider}`, `{role}`
 and `{company}` come from the `provider`, `role` (a role ID, named in the recipient's language) and
 `company` options of `sendSecurityNotice` (`src/server/auth/security-notices.ts`), with a stand-in
-("A provider", "a new role", "your company") when one is missing. The email names the device
+("A provider", "a new role", "your company") when one is missing; `{name}` and `{staff}` (the staff
+member, and the name the staff are shown with to users) come from `staffMember` and `staffName`
+("A staff member", "Adiutor"), and `{minutes}` is how long signing in as someone lasts
+(`IMPERSONATION_MINUTES`). The email names the device
 and IP address only when the caller passes `showDevice: true`, which it does only for changes the
 recipient made themselves (see [Security emails](authentication.md#security-emails)). Every kind
 links to the Security page except `account_deactivated` and `account_deleted`, whose recipients

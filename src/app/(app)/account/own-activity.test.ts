@@ -282,6 +282,29 @@ describe('describeOwnActivity', () => {
     ).toBe('Added to staff as Manager by Alex Admin');
   });
 
+  it('names the staff member who signed in as the user', () => {
+    const staff = { id: 'staff-1', name: 'Sam Lee' };
+    expect(describeInEnglish(event({ action: 'impersonation_started', actor: staff }), ME)).toBe(
+      'Sam Lee, a staff member, signed in as you',
+    );
+    expect(
+      describeInEnglish(
+        event({ action: 'impersonation_ended', actor: staff, details: { reason: 'expired' } }),
+        ME,
+      ),
+    ).toBe('Sam Lee is no longer signed in as you');
+    // A staff member whose account is gone, or has no name.
+    expect(describeInEnglish(event({ action: 'impersonation_started', actor: null }), ME)).toBe(
+      'A staff member signed in as you',
+    );
+    expect(
+      describeInEnglish(
+        event({ action: 'impersonation_started', actor: { id: 'staff-1', name: ' ' } }),
+        ME,
+      ),
+    ).toBe('A staff member signed in as you');
+  });
+
   it('falls back to the general label', () => {
     expect(describeInEnglish(event({ action: 'company_updated' }), ME)).toBe(
       'Changed company details',

@@ -37,6 +37,11 @@
       "controlCharacters": "Quita los saltos de línea y los caracteres de control del nombre de la llave de acceso.",
       "hiddenCharacters": "Quita los caracteres invisibles y las marcas de dirección del texto del nombre de la llave de acceso."
     },
+    "impersonationReason": {
+      "tooLong": "El motivo puede tener como máximo {maximum, number} caracteres.",
+      "controlCharacters": "Quita los saltos de línea y los caracteres de control del motivo.",
+      "hiddenCharacters": "Quita los caracteres invisibles y las marcas de dirección del texto del motivo."
+    },
     "slug": {
       "format": "Usa letras minúsculas, números y guiones en el nombre de URL, por ejemplo adiutor.",
       "looksLikeId": "Elige un nombre de URL que no parezca un ID.",

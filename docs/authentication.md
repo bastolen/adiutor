@@ -229,7 +229,8 @@ browser you sign in on shows it; see [Languages](i18n.md#how-the-language-is-cho
 your email with a link sent by email (registered accounts start unverified). A summary shows whether your sign-in is
 protected, and **Recent activity** lists the last 20 things that happened to your account
 (sign-ins and failed attempts, sign-in method and security changes, memberships and role
-changes, saying who made changes for you), with when, and the device and IP address of your
+changes, saying who made changes for you, and staff signing in as you and ending it, naming
+them), with when, and the device and IP address of your
 own actions only: not of an admin's changes, nor of passwords typed for your address (wrong
 ones, or right ones whose sign-in then asked for the code) and wrong codes typed at that code step
 ("Wrong two-step verification code entered at sign-in", see

@@ -11,7 +11,10 @@
  * needs actors with a second step, and these have none. The same goes for
  * changing or first setting a password (`changeOwnPassword`,
  * `setFirstPassword`), which need a second step or a fresh sign-in and are
- * covered in `auth/accounts.int.test.ts`. The own-account services that take
+ * covered in `auth/accounts.int.test.ts`. Signing in as a user needs strong
+ * MFA and a recent confirmation with it, so the matrix gives the actor those
+ * and a session, leaving only the role to decide; the rest of its rules are
+ * in `auth/impersonation.int.test.ts`. The own-account services that take
  * an ID (`revokeOwnSession`, `confirmConnectedProvider`) are tried with
  * another user's ID, and `deactivateOwnAccount` with a password; its refusal
  * of the last Admin is the last test below (a conflict, which the matrix
@@ -47,6 +50,7 @@ import {
 import type { Actor } from './actor';
 import { listAuditEvents, listAuditLog } from './audit';
 import { confirmConnectedProvider } from './auth/accounts';
+import { startImpersonation } from './auth/impersonation';
 import { revokeOwnSession } from './auth/sessions';
 import { ServiceError } from './errors';
 import {
@@ -399,6 +403,22 @@ function listOperations(): Operation[] {
     ['view user', (w) => getUserDetail(ctx, w.actor, w.outsider)],
     ['check a user exists', (w) => userExists(ctx, w.actor, w.outsider)],
     ['list addable companies', (w) => listAddableCompanies(ctx, w.actor, w.outsider)],
+    [
+      'sign in as a user',
+      // Before `deactivate user` deactivates the outsider. In a session of their own, with the
+      // strong MFA it needs, which the actors here lack, so only the role decides.
+      async (w) =>
+        startImpersonation(
+          ctx,
+          {
+            ...w.actor,
+            sessionId: await createSession(db, w.actor.id),
+            strongMfa: true,
+            strongMfaConfirmedUntil: new Date(Date.now() + 60_000),
+          },
+          { userId: w.outsider },
+        ),
+    ],
     ['register user', (w) => registerUser(ctx, w.actor, 'registered@adiutor.test')],
     ['reset MFA', (w) => resetUserMfa(ctx, w.actor, w.outsider)],
     ['sign out everywhere', (w) => signOutUserEverywhere(ctx, w.actor, w.outsider)],
@@ -512,6 +532,8 @@ const EXPECTED: Record<string, string> = {
   'list the audit log': 'FFFFFAA',
   'look up an error reference': 'FFFFFFA',
   'list recent errors': 'FFFFFFA',
+  // A user in no company, so Support may too (never a company Admin, see `mayImpersonate`).
+  'sign in as a user': 'FFFAFAA',
   // Everyone may deactivate their own account (each world has other Admins).
   'deactivate own account': 'AAAAAAA',
 };

@@ -120,8 +120,9 @@
       "someProvider": "A provider",
       "newRole": "a new role",
       "yourCompany": "your company",
-      "reason": "{kind, select, password_sign_in_paused {You're receiving this because of failed sign-in attempts on your Adiutor account. We send it at most once a day.} account_deleted {You're receiving this because your Adiutor account was deleted. We send it once, to the address the account had.} two_factor_locked {You're receiving this because of failed sign-in attempts on your Adiutor account. We send it once each time signing in with a code is paused.} other {You're receiving this because a security setting changed on your Adiutor account. We always send these, so you know about every change.}}",
-      "ifNotYou": "{kind, select, account_deactivated {If you didn't expect this, contact your administrator.} company_role_changed {If you didn't expect this, contact your administrator.} removed_from_company {If you didn't expect this, contact your administrator.} account_deleted {If you didn't expect this, contact your administrator.} password_sign_in_paused {If this wasn't you, someone may be guessing your password. Make sure it's one you don't use anywhere else, or add a passkey.} two_factor_locked {If this wasn't you, someone may know your password. Change it right away, and make sure it's one you don't use anywhere else.} other {If this wasn't you, reset your password right away and contact your administrator.}}",
+      "someStaffMember": "A staff member",
+      "reason": "{kind, select, password_sign_in_paused {You're receiving this because of failed sign-in attempts on your Adiutor account. We send it at most once a day.} account_deleted {You're receiving this because your Adiutor account was deleted. We send it once, to the address the account had.} two_factor_locked {You're receiving this because of failed sign-in attempts on your Adiutor account. We send it once each time signing in with a code is paused.} impersonation_started {You're receiving this because a staff member signed in to Adiutor as you. We send it every time, so you always know.} other {You're receiving this because a security setting changed on your Adiutor account. We always send these, so you know about every change.}}",
+      "ifNotYou": "{kind, select, account_deactivated {If you didn't expect this, contact your administrator.} company_role_changed {If you didn't expect this, contact your administrator.} removed_from_company {If you didn't expect this, contact your administrator.} account_deleted {If you didn't expect this, contact your administrator.} password_sign_in_paused {If this wasn't you, someone may be guessing your password. Make sure it's one you don't use anywhere else, or add a passkey.} two_factor_locked {If this wasn't you, someone may know your password. Change it right away, and make sure it's one you don't use anywhere else.} impersonation_started {If you didn't expect this, contact your administrator.} other {If this wasn't you, reset your password right away and contact your administrator.}}",
       "password_changed": {
         "subject": "Your Adiutor password was changed",
         "heading": "Your password was changed",
@@ -231,6 +232,11 @@
         "subject": "Signing in to your Adiutor account with a code is paused",
         "heading": "Signing in with a code is paused",
         "body": "A wrong code was entered for your Adiutor account's two-step verification too many times, so signing in with a code is paused for 15 minutes. No one signed in: the codes weren't accepted."
+      },
+      "impersonation_started": {
+        "subject": "{name} from {staff} signed in to Adiutor as you",
+        "heading": "{name} signed in as you",
+        "body": "{minutes, plural, one {{name} from {staff} signed in to Adiutor as you, to see what you see and check what isn't working. It ends after at most # minute. Meanwhile, nobody can change your sign-in methods, your account or anyone's access.} other {{name} from {staff} signed in to Adiutor as you, to see what you see and check what isn't working. It ends after at most # minutes. Meanwhile, nobody can change your sign-in methods, your account or anyone's access.}}"
       }
     }
   }

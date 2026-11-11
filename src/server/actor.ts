@@ -8,6 +8,7 @@ import { company, membership, user } from '@/db/schema';
 import {
   canConfirmSessions,
   hasMfa,
+  hasStrongMfa,
   isSessionMfaVerified,
   mfaConfirmedUntil,
   type MfaRole,
@@ -16,6 +17,7 @@ import {
   requiresMfa,
   type SessionMfaInput,
   sessionMfaOf,
+  strongMfaConfirmedUntil,
 } from '@/lib/authz/mfa';
 import { COMPANY_ADMIN_ROLE, type CompanyRole, type PlatformRole } from '@/lib/authz/roles';
 import { availableProviders } from '@/lib/sign-in/providers';
@@ -79,6 +81,18 @@ export interface Actor {
    * authenticator app), or `null` (see `mfaConfirmedUntil`).
    */
   mfaConfirmedUntil: Date | null;
+  /**
+   * Whether their account has strong MFA whatever their role (an
+   * authenticator app, a passkey or provider MFA, never email codes; see
+   * `hasStrongMfa`), which signing in as someone else needs.
+   */
+  strongMfa: boolean;
+  /**
+   * Until when the current session counts as recently confirmed with a strong
+   * second step whatever their role (see `strongMfaConfirmedUntil`), or
+   * `null`: signing in as someone else needs it.
+   */
+  strongMfaConfirmedUntil: Date | null;
   /**
    * When the current session signed in (`session.createdAt`), or `null`
    * outside a request (see `needsFreshSignIn`).
@@ -163,6 +177,8 @@ export async function loadActor(
     // A provider's confirmation is judged by the setup (`hasStrongerStepThanProvider`); without one
     // there's no second step to have confirmed with.
     mfaConfirmedUntil: mfaState ? mfaConfirmedUntil(sessionMfa, mfaRole, mfaState) : null,
+    strongMfa: mfaState ? hasStrongMfa(mfaState, availableProviders) : false,
+    strongMfaConfirmedUntil: mfaState ? strongMfaConfirmedUntil(sessionMfa, mfaState) : null,
     signedInAt: session.createdAt ? new Date(session.createdAt) : null,
     sessionId: session.id ?? null,
   };

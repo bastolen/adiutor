@@ -120,8 +120,9 @@
       "someProvider": "Een provider",
       "newRole": "een nieuwe rol",
       "yourCompany": "je bedrijf",
-      "reason": "{kind, select, password_sign_in_paused {Je ontvangt dit vanwege mislukte inlogpogingen op je Adiutor-account. We sturen dit hooguit één keer per dag.} account_deleted {Je ontvangt dit omdat je Adiutor-account is verwijderd. We sturen dit één keer, naar het adres dat het account had.} two_factor_locked {Je ontvangt dit vanwege mislukte inlogpogingen op je Adiutor-account. We sturen dit één keer telkens als inloggen met een code wordt gepauzeerd.} other {Je ontvangt dit omdat er een beveiligingsinstelling van je Adiutor-account is gewijzigd. We sturen dit altijd, zodat je van elke wijziging weet.}}",
-      "ifNotYou": "{kind, select, account_deactivated {Had je dit niet verwacht, neem dan contact op met je beheerder.} company_role_changed {Had je dit niet verwacht, neem dan contact op met je beheerder.} removed_from_company {Had je dit niet verwacht, neem dan contact op met je beheerder.} account_deleted {Had je dit niet verwacht, neem dan contact op met je beheerder.} password_sign_in_paused {Was jij dit niet, dan probeert iemand misschien je wachtwoord te raden. Zorg dat je het nergens anders gebruikt, of voeg een passkey toe.} two_factor_locked {Was jij dit niet, dan kent iemand misschien je wachtwoord. Wijzig het meteen en zorg dat je het nergens anders gebruikt.} other {Was jij dit niet, stel dan meteen je wachtwoord opnieuw in en neem contact op met je beheerder.}}",
+      "someStaffMember": "Een medewerker",
+      "reason": "{kind, select, password_sign_in_paused {Je ontvangt dit vanwege mislukte inlogpogingen op je Adiutor-account. We sturen dit hooguit één keer per dag.} account_deleted {Je ontvangt dit omdat je Adiutor-account is verwijderd. We sturen dit één keer, naar het adres dat het account had.} two_factor_locked {Je ontvangt dit vanwege mislukte inlogpogingen op je Adiutor-account. We sturen dit één keer telkens als inloggen met een code wordt gepauzeerd.} impersonation_started {Je ontvangt dit omdat een medewerker als jou heeft ingelogd op Adiutor. We sturen dit elke keer, zodat je het altijd weet.} other {Je ontvangt dit omdat er een beveiligingsinstelling van je Adiutor-account is gewijzigd. We sturen dit altijd, zodat je van elke wijziging weet.}}",
+      "ifNotYou": "{kind, select, account_deactivated {Had je dit niet verwacht, neem dan contact op met je beheerder.} company_role_changed {Had je dit niet verwacht, neem dan contact op met je beheerder.} removed_from_company {Had je dit niet verwacht, neem dan contact op met je beheerder.} account_deleted {Had je dit niet verwacht, neem dan contact op met je beheerder.} password_sign_in_paused {Was jij dit niet, dan probeert iemand misschien je wachtwoord te raden. Zorg dat je het nergens anders gebruikt, of voeg een passkey toe.} two_factor_locked {Was jij dit niet, dan kent iemand misschien je wachtwoord. Wijzig het meteen en zorg dat je het nergens anders gebruikt.} impersonation_started {Had je dit niet verwacht, neem dan contact op met je beheerder.} other {Was jij dit niet, stel dan meteen je wachtwoord opnieuw in en neem contact op met je beheerder.}}",
       "password_changed": {
         "subject": "Je Adiutor-wachtwoord is gewijzigd",
         "heading": "Je wachtwoord is gewijzigd",
@@ -231,6 +232,11 @@
         "subject": "Inloggen met een code op je Adiutor-account is gepauzeerd",
         "heading": "Inloggen met een code is gepauzeerd",
         "body": "Er is te vaak een verkeerde code ingevoerd voor de verificatie in twee stappen van je Adiutor-account, dus inloggen met een code is 15 minuten gepauzeerd. Niemand is ingelogd: de codes zijn niet geaccepteerd."
+      },
+      "impersonation_started": {
+        "subject": "{name} van {staff} heeft als jou ingelogd op Adiutor",
+        "heading": "{name} heeft als jou ingelogd",
+        "body": "{minutes, plural, one {{name} van {staff} heeft als jou ingelogd op Adiutor, om te zien wat jij ziet en te controleren wat er niet werkt. Het stopt na hooguit # minuut. Ondertussen kan niemand je inlogmethoden, je account of iemands toegang wijzigen.} other {{name} van {staff} heeft als jou ingelogd op Adiutor, om te zien wat jij ziet en te controleren wat er niet werkt. Het stopt na hooguit # minuten. Ondertussen kan niemand je inlogmethoden, je account of iemands toegang wijzigen.}}"
       }
     }
   }

@@ -37,6 +37,11 @@
       "controlCharacters": "Remove line breaks and control characters from the passkey name.",
       "hiddenCharacters": "Remove invisible characters and text direction marks from the passkey name."
     },
+    "impersonationReason": {
+      "tooLong": "Use at most {maximum, number} characters for the reason.",
+      "controlCharacters": "Remove line breaks and control characters from the reason.",
+      "hiddenCharacters": "Remove invisible characters and text direction marks from the reason."
+    },
     "slug": {
       "format": "Use lower-case letters, numbers and dashes in the URL name, e.g. adiutor.",
       "looksLikeId": "Choose a URL name that doesn’t look like an ID.",

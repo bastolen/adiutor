@@ -341,7 +341,8 @@
       "by": "por <link>{name}</link>",
       "about": "sobre <link>{name}</link>",
       "staff": "Personal",
-      "notRecorded": "Sin registrar"
+      "notRecorded": "Sin registrar",
+      "reason": "Motivo: {reason}"
     },
     "errors": {
       "title": "Errores",

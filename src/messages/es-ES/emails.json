@@ -120,8 +120,9 @@
       "someProvider": "Un proveedor",
       "newRole": "un rol nuevo",
       "yourCompany": "tu empresa",
-      "reason": "{kind, select, password_sign_in_paused {Recibes esto por intentos fallidos de inicio de sesión en tu cuenta de Adiutor. Lo enviamos como mucho una vez al día.} account_deleted {Recibes esto porque se ha eliminado tu cuenta de Adiutor. Lo enviamos una sola vez, a la dirección que tenía la cuenta.} two_factor_locked {Recibes esto por intentos fallidos de inicio de sesión en tu cuenta de Adiutor. Lo enviamos una vez cada vez que se pausa el inicio de sesión con código.} other {Recibes esto porque ha cambiado una configuración de seguridad de tu cuenta de Adiutor. Siempre los enviamos, para que estés al tanto de cada cambio.}}",
-      "ifNotYou": "{kind, select, account_deactivated {Si no lo esperabas, ponte en contacto con tu administrador.} company_role_changed {Si no lo esperabas, ponte en contacto con tu administrador.} removed_from_company {Si no lo esperabas, ponte en contacto con tu administrador.} account_deleted {Si no lo esperabas, ponte en contacto con tu administrador.} password_sign_in_paused {Si no has sido tú, puede que alguien esté intentando adivinar tu contraseña. Asegúrate de que no la usas en ningún otro sitio, o añade una llave de acceso.} two_factor_locked {Si no has sido tú, puede que alguien conozca tu contraseña. Cámbiala enseguida y asegúrate de que no la usas en ningún otro sitio.} other {Si no has sido tú, restablece tu contraseña enseguida y ponte en contacto con tu administrador.}}",
+      "someStaffMember": "Alguien del personal",
+      "reason": "{kind, select, password_sign_in_paused {Recibes esto por intentos fallidos de inicio de sesión en tu cuenta de Adiutor. Lo enviamos como mucho una vez al día.} account_deleted {Recibes esto porque se ha eliminado tu cuenta de Adiutor. Lo enviamos una sola vez, a la dirección que tenía la cuenta.} two_factor_locked {Recibes esto por intentos fallidos de inicio de sesión en tu cuenta de Adiutor. Lo enviamos una vez cada vez que se pausa el inicio de sesión con código.} impersonation_started {Recibes esto porque alguien del personal ha iniciado sesión como tú en Adiutor. Lo enviamos cada vez, para que siempre lo sepas.} other {Recibes esto porque ha cambiado una configuración de seguridad de tu cuenta de Adiutor. Siempre los enviamos, para que estés al tanto de cada cambio.}}",
+      "ifNotYou": "{kind, select, account_deactivated {Si no lo esperabas, ponte en contacto con tu administrador.} company_role_changed {Si no lo esperabas, ponte en contacto con tu administrador.} removed_from_company {Si no lo esperabas, ponte en contacto con tu administrador.} account_deleted {Si no lo esperabas, ponte en contacto con tu administrador.} password_sign_in_paused {Si no has sido tú, puede que alguien esté intentando adivinar tu contraseña. Asegúrate de que no la usas en ningún otro sitio, o añade una llave de acceso.} two_factor_locked {Si no has sido tú, puede que alguien conozca tu contraseña. Cámbiala enseguida y asegúrate de que no la usas en ningún otro sitio.} impersonation_started {Si no lo esperabas, ponte en contacto con tu administrador.} other {Si no has sido tú, restablece tu contraseña enseguida y ponte en contacto con tu administrador.}}",
       "password_changed": {
         "subject": "Se ha cambiado tu contraseña de Adiutor",
         "heading": "Se ha cambiado tu contraseña",
@@ -231,6 +232,11 @@
         "subject": "El inicio de sesión con código en tu cuenta de Adiutor está en pausa",
         "heading": "El inicio de sesión con código está en pausa",
         "body": "Se ha introducido un código incorrecto demasiadas veces en la verificación en dos pasos de tu cuenta de Adiutor, así que el inicio de sesión con código está en pausa durante 15 minutos. Nadie ha iniciado sesión: los códigos no se han aceptado."
+      },
+      "impersonation_started": {
+        "subject": "{name}, de {staff}, ha iniciado sesión como tú en Adiutor",
+        "heading": "{name} ha iniciado sesión como tú",
+        "body": "{minutes, plural, one {{name}, de {staff}, ha iniciado sesión como tú en Adiutor para ver lo que ves y comprobar qué no funciona. Termina como mucho en # minuto. Mientras tanto, nadie puede cambiar tus métodos de inicio de sesión, tu cuenta ni el acceso de nadie.} other {{name}, de {staff}, ha iniciado sesión como tú en Adiutor para ver lo que ves y comprobar qué no funciona. Termina como mucho en # minutos. Mientras tanto, nadie puede cambiar tus métodos de inicio de sesión, tu cuenta ni el acceso de nadie.}}"
       }
     }
   }

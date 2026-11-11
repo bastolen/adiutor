@@ -211,6 +211,27 @@ describe('loadActor confirmation window', () => {
     );
   });
 
+  it('judges strong MFA as for a role that requires it, whatever the role (for signing in as)', async () => {
+    const support = await staffActor(db, 'support');
+    await enableTwoFactor(db, support.id, 'email');
+    const viaEmail = { mfaVerified: true, mfaMethod: 'email_code', mfaVerifiedAt: new Date() };
+
+    const withEmailCodes = await loadActor(db, support.id, viaEmail);
+    expect(withEmailCodes).toMatchObject({ strongMfa: false, strongMfaConfirmedUntil: null });
+
+    await addPasskey(db, support.id);
+    const viaPasskey = { mfaVerified: true, mfaMethod: 'passkey', mfaVerifiedAt: new Date() };
+    expect(await loadActor(db, support.id, viaPasskey)).toMatchObject({
+      strongMfa: true,
+      strongMfaConfirmedUntil: new Date(viaPasskey.mfaVerifiedAt.getTime() + WINDOW_MS),
+    });
+    // An email code still confirms Support's own changes, but not signing in as someone.
+    expect(await loadActor(db, support.id, viaEmail)).toMatchObject({
+      strongMfa: true,
+      strongMfaConfirmedUntil: null,
+    });
+  });
+
   describe('of a session confirmed with GitHub', () => {
     /**
      * A session that just signed in with GitHub, whose account has 2FA.

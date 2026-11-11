@@ -1,11 +1,11 @@
 /**
  * @file Drizzle schema for the audit log, sign-in errors, other errors in
- * the app and the app's own rate limits.
+ * the app, the app's own rate limits and staff signed in as users.
  */
 import { index, integer, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import type { AuditAction } from '../../lib/audit-actions';
-import { user } from './auth';
+import { session, user } from './auth';
 import { createdAt, id, timestampTz } from './columns';
 import { company } from './companies';
 
@@ -138,5 +138,46 @@ export const rateLimitBucket = pgTable(
   (table) => [
     uniqueIndex('rate_limit_bucket_key_idx').on(table.key),
     index('rate_limit_bucket_reset_idx').on(table.resetAt),
+  ],
+);
+
+/**
+ * A staff member signed in as a user ("Sign in as", see
+ * docs/decisions/0017-staff-sign-in-as-users.md): their own session, marked
+ * as acting as that user until `expires_at`. A row lives only while it lasts;
+ * the audit log keeps the history (`impersonation_started` and
+ * `impersonation_ended`). When the staff member's session goes (signing out,
+ * being signed out, its end), `session_id` is cleared rather than the row
+ * deleted, so the hourly job still records how it ended
+ * (`endFinishedImpersonations` in `src/server/auth/impersonation.ts`).
+ */
+export const impersonation = pgTable(
+  'impersonation',
+  {
+    id: id(),
+    /** The staff member's session that acts as the user, or `null` once that session is gone. */
+    sessionId: uuid('session_id').references(() => session.id, { onDelete: 'set null' }),
+    /** The staff member who signed in as the user. */
+    staffUserId: uuid('staff_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    /** The user they signed in as. */
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    /** Why, if the staff member said (at most `IMPERSONATION_REASON_MAX_LENGTH` characters). */
+    reason: text('reason'),
+    /** The page of the app to go back to afterwards, e.g. the user's page. */
+    returnTo: text('return_to').notNull(),
+    startedAt: timestampTz('started_at').defaultNow().notNull(),
+    /** When it ends by itself, `IMPERSONATION_MINUTES` after it started. */
+    expiresAt: timestampTz('expires_at').notNull(),
+  },
+  (table) => [
+    // One at a time per session; a cleared session (`null`) doesn't count.
+    uniqueIndex('impersonation_session_idx').on(table.sessionId),
+    index('impersonation_staff_user_idx').on(table.staffUserId),
+    index('impersonation_user_idx').on(table.userId),
+    index('impersonation_expires_at_idx').on(table.expiresAt),
   ],
 );

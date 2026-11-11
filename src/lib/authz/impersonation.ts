@@ -22,6 +22,13 @@ import {
 } from './roles';
 
 /**
+ * How long signing in as someone lasts, in minutes: a fixed time from the
+ * start, never extended. It ends earlier when the staff member goes back to
+ * their own account or may no longer do it.
+ */
+export const IMPERSONATION_MINUTES = 30;
+
+/**
  * Whom a staff role may sign in as:
  * - `all_but_staff_admins`: every user except staff Admins;
  * - `company_users`: users who aren't staff;

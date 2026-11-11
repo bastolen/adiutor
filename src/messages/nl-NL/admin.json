@@ -341,7 +341,8 @@
       "by": "door <link>{name}</link>",
       "about": "over <link>{name}</link>",
       "staff": "Medewerkers",
-      "notRecorded": "Niet vastgelegd"
+      "notRecorded": "Niet vastgelegd",
+      "reason": "Reden: {reason}"
     },
     "errors": {
       "title": "Fouten",

@@ -341,7 +341,8 @@
       "by": "by <link>{name}</link>",
       "about": "about <link>{name}</link>",
       "staff": "Staff",
-      "notRecorded": "Not recorded"
+      "notRecorded": "Not recorded",
+      "reason": "Reason: {reason}"
     },
     "errors": {
       "title": "Errors",

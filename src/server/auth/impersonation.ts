@@ -1,0 +1,290 @@
+/**
+ * @file Signing in as a user ("Sign in as"): starting it, ending it, and
+ * ending those whose time is up or whose session is gone. A staff member
+ * keeps their own session, which an `impersonation` row marks as acting as
+ * the user until it ends (see
+ * docs/decisions/0017-staff-sign-in-as-users.md). Who may sign in as whom is
+ * decided by `mayImpersonate` (`src/lib/authz/impersonation.ts`).
+ */
+import { asc, eq, inArray, isNull, lte, or, sql } from 'drizzle-orm';
+
+import { auditEvent, impersonation, membership, user } from '@/db/schema';
+import {
+  IMPERSONATION_MINUTES,
+  type ImpersonationVerdict,
+  mayImpersonate,
+  mayImpersonateAnyone,
+} from '@/lib/authz/impersonation';
+import { isMfaConfirmedRecently } from '@/lib/authz/mfa';
+import displayName from '@/lib/display-name';
+import { getSafeRedirectPath, isSafeAppRedirect } from '@/lib/redirect';
+import { impersonationReasonSchema } from '@/lib/validation';
+
+import type { Actor } from '../actor';
+import { recordEvent } from '../audit';
+import type { ServiceContext } from '../context';
+import {
+  type ErrorMessageKey,
+  forbiddenError,
+  notFoundError,
+  parseId,
+  ServiceError,
+} from '../errors';
+import getStaffName from '../people/staff-name';
+import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
+import { sendSecurityNotice } from './security-notices';
+
+/**
+ * Why signing in as someone ended, as `impersonation_ended` records it:
+ * - `stopped`: the staff member went back to their own account;
+ * - `expired`: its {@link IMPERSONATION_MINUTES} were up;
+ * - `no_longer_allowed`: the rules no longer allow it (a role changed, an
+ *   account was deactivated, the staff member's MFA no longer counts);
+ * - `session_ended`: the staff member's own session ended (signed out, or
+ *   signed out by someone else).
+ */
+export type ImpersonationEndReason = 'stopped' | 'expired' | 'no_longer_allowed' | 'session_ended';
+
+/** The message of each refusal by the rules ({@link ImpersonationVerdict}). */
+const REFUSAL_MESSAGES: Record<
+  Exclude<ImpersonationVerdict, 'allowed' | 'role'>,
+  ErrorMessageKey
+> = {
+  self: 'errors.impersonation.self',
+  staff_admin: 'errors.impersonation.staffAdmin',
+  staff: 'errors.impersonation.staff',
+  company_admin: 'errors.impersonation.companyAdmin',
+  deactivated: 'errors.impersonation.deactivated',
+  needs_mfa: 'errors.impersonation.needsMfa',
+};
+
+/**
+ * Turns a refusal by the rules into the error the staff member sees.
+ *
+ * @param verdict - The rules' answer, not `allowed`.
+ * @returns The error (`forbidden`).
+ */
+function refusalError(verdict: Exclude<ImpersonationVerdict, 'allowed'>): ServiceError {
+  return verdict === 'role'
+    ? forbiddenError()
+    : new ServiceError('forbidden', REFUSAL_MESSAGES[verdict]);
+}
+
+/** What {@link startImpersonation} takes. */
+export interface StartImpersonationInput {
+  /** The user to sign in as. */
+  userId: string;
+  /** Why, if the staff member said; empty for none. */
+  reason?: string | null;
+  /**
+   * The page of the app to go back to afterwards (e.g. the user's page with
+   * the card's anchor); anything else goes back to the user's page.
+   */
+  returnTo?: string | null;
+}
+
+/**
+ * Starts signing in as a user, in the staff member's current session, for
+ * {@link IMPERSONATION_MINUTES} minutes.
+ *
+ * 1. The staff member's role must be one that may sign in as someone, their
+ *    account must have strong MFA, and their session must have confirmed
+ *    with it in the last 15 minutes (`strongMfaConfirmedUntil`), whatever
+ *    their role; then the start counts against their limit
+ *    (`RATE_LIMITS.impersonationsPerUser`), since each one emails the user.
+ * 2. In one transaction, it locks both users' rows `FOR SHARE` in ID order
+ *    (see "Lock order" in docs/security-measures.md), so a role change or
+ *    deactivation of either waits or is seen, decides again with those rows
+ *    (`mayImpersonate`), marks the session and records
+ *    `impersonation_started` with the reason.
+ * 3. Once that has committed, the user gets a security email naming the
+ *    staff member, without their device or IP address.
+ *
+ * @param ctx - Service context.
+ * @param actor - The staff member, signed in with a session.
+ * @param input - The user, the reason and where to go back to afterwards.
+ * @returns When it ends by itself.
+ * @throws {ServiceError} `forbidden` when the rules refuse it (with the reason) or there's no
+ *   session; `confirmation_required` without a recent strong confirmation; `rate_limited`;
+ *   `not_found` when the user doesn't exist; `conflict` when the session already signed in as
+ *   someone; `invalid` for a reason that's too long or has control characters.
+ */
+export async function startImpersonation(
+  ctx: ServiceContext,
+  actor: Actor,
+  input: StartImpersonationInput,
+): Promise<{ expiresAt: Date }> {
+  const userId = parseId(input.userId);
+  const reason = impersonationReasonSchema.parse(input.reason ?? '');
+  const { sessionId } = actor;
+  if (!mayImpersonateAnyone(actor.platformRole) || sessionId === null) {
+    throw forbiddenError();
+  }
+  if (!actor.strongMfa) {
+    throw refusalError('needs_mfa');
+  }
+  if (!isMfaConfirmedRecently(actor.strongMfaConfirmedUntil)) {
+    throw new ServiceError('confirmation_required', 'errors.impersonation.confirmationRequired');
+  }
+  await assertRateLimit(ctx, `impersonation:user:${actor.id}`, RATE_LIMITS.impersonationsPerUser);
+  const returnTo = isSafeAppRedirect(input.returnTo)
+    ? getSafeRedirectPath(input.returnTo)
+    : `/admin/users/${userId}`;
+
+  const started = await ctx.db.transaction(async (tx) => {
+    // One statement, in ID order: the staff member and the user.
+    const rows = await tx
+      .select({ id: user.id, platformRole: user.platformRole, deactivatedAt: user.deactivatedAt })
+      .from(user)
+      .where(inArray(user.id, [...new Set([actor.id, userId])]))
+      .orderBy(asc(user.id))
+      .for('share');
+    const staff = rows.find((row) => row.id === actor.id);
+    const target = rows.find((row) => row.id === userId);
+    if (!staff || staff.deactivatedAt !== null) {
+      throw forbiddenError();
+    }
+    if (!target) {
+      throw notFoundError();
+    }
+    // Every company they're in, active or not: a company Admin is out of Support's reach either way.
+    const companyRoles = await tx
+      .select({ role: membership.role })
+      .from(membership)
+      .where(eq(membership.userId, userId));
+    const verdict = mayImpersonate(
+      { id: actor.id, platformRole: staff.platformRole ?? null, strongMfa: actor.strongMfa },
+      {
+        id: userId,
+        platformRole: target.platformRole ?? null,
+        companyRoles: companyRoles.map((row) => row.role),
+        deactivated: target.deactivatedAt !== null,
+      },
+    );
+    if (verdict !== 'allowed') {
+      throw refusalError(verdict);
+    }
+    const [row] = await tx
+      .insert(impersonation)
+      .values({
+        sessionId,
+        staffUserId: actor.id,
+        userId,
+        reason,
+        returnTo,
+        expiresAt: sql`now() + make_interval(mins => ${IMPERSONATION_MINUTES})`,
+      })
+      .onConflictDoNothing({ target: impersonation.sessionId })
+      .returning({ expiresAt: impersonation.expiresAt });
+    if (!row) {
+      throw new ServiceError('conflict', 'errors.impersonation.alreadyStarted');
+    }
+    await recordEvent(
+      ctx,
+      {
+        action: 'impersonation_started',
+        actorUserId: actor.id,
+        targetUserId: userId,
+        details: { expiresAt: row.expiresAt.toISOString(), ...(reason ? { reason } : {}) },
+      },
+      tx,
+    );
+    return row;
+  });
+
+  await sendSecurityNotice(ctx, { userId }, 'impersonation_started', {
+    staffMember: displayName(actor),
+    staffName: await getStaffName(ctx.db),
+  });
+  return { expiresAt: started.expiresAt };
+}
+
+/** A sign-in as someone that ended, as {@link endImpersonation} returns it. */
+export interface EndedImpersonation {
+  /** The user the staff member was signed in as. */
+  userId: string;
+  /** The page of the app to go back to. */
+  returnTo: string;
+}
+
+/**
+ * Ends the sign-in as someone of a session, and records `impersonation_ended`
+ * with why, by the staff member, in one transaction. Ending one that has
+ * ended already (two tabs at once, or the hourly job first) changes and
+ * records nothing.
+ *
+ * @param ctx - Service context (database and request info).
+ * @param sessionId - The staff member's session.
+ * @param reason - Why it ends.
+ * @returns What ended, or `null` when the session wasn't signed in as anyone.
+ */
+export async function endImpersonation(
+  ctx: Pick<ServiceContext, 'db' | 'requestInfo'>,
+  sessionId: string,
+  reason: Exclude<ImpersonationEndReason, 'session_ended'>,
+): Promise<EndedImpersonation | null> {
+  return ctx.db.transaction(async (tx) => {
+    const [ended] = await tx
+      .delete(impersonation)
+      .where(eq(impersonation.sessionId, sessionId))
+      .returning({
+        staffUserId: impersonation.staffUserId,
+        userId: impersonation.userId,
+        returnTo: impersonation.returnTo,
+      });
+    if (!ended) {
+      return null;
+    }
+    await recordEvent(
+      ctx,
+      {
+        action: 'impersonation_ended',
+        actorUserId: ended.staffUserId,
+        targetUserId: ended.userId,
+        details: { reason },
+      },
+      tx,
+    );
+    return { userId: ended.userId, returnTo: ended.returnTo };
+  });
+}
+
+/**
+ * Ends every sign-in as someone whose time is up or whose session is gone,
+ * for the hourly job (`cleanUp`), recording `impersonation_ended` for each:
+ * `expired` at the moment it expired, or `session_ended` now, since when the
+ * session went isn't known. Requests end their own as soon as they see it
+ * (see `getOptionalActor`); this catches those nobody came back to.
+ *
+ * @param ctx - Service context (only the database is used).
+ * @returns How many ended.
+ */
+export async function endFinishedImpersonations(ctx: Pick<ServiceContext, 'db'>): Promise<number> {
+  return ctx.db.transaction(async (tx) => {
+    const ended = await tx
+      .delete(impersonation)
+      .where(or(lte(impersonation.expiresAt, sql`now()`), isNull(impersonation.sessionId)))
+      .returning({
+        staffUserId: impersonation.staffUserId,
+        userId: impersonation.userId,
+        expiresAt: impersonation.expiresAt,
+        sessionId: impersonation.sessionId,
+      });
+    if (ended.length > 0) {
+      const now = new Date();
+      await tx.insert(auditEvent).values(
+        ended.map((row) => {
+          const expired = row.expiresAt.getTime() <= now.getTime();
+          return {
+            action: 'impersonation_ended' as const,
+            at: expired ? row.expiresAt : now,
+            actorUserId: row.staffUserId,
+            targetUserId: row.userId,
+            details: { reason: expired ? 'expired' : 'session_ended' },
+          };
+        }),
+      );
+    }
+    return ended.length;
+  });
+}
