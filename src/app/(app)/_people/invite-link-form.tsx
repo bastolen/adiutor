@@ -11,6 +11,7 @@ import Button from '@/components/ui/button';
 import CopyButton from '@/components/ui/copy-button';
 import ResultAlert from '@/components/ui/result-alert';
 import SelectField, { type SelectOption } from '@/components/ui/select-field';
+import { useSignedInAs } from '@/components/ui/signed-in-as';
 import { fieldControl } from '@/components/ui/styles';
 import { useTransientActionState, useTransientState } from '@/components/ui/use-transient-state';
 import cn from '@/lib/cn';
@@ -43,6 +44,8 @@ interface InviteLinkFormProps {
  */
 export default function InviteLinkForm({ companyId, roles }: InviteLinkFormProps) {
   const t = useTranslations('people');
+  // Changes are turned off while a staff member is signed in as the user.
+  const changesOff = useSignedInAs();
   // How long a link can stay valid, from the lifetimes the server accepts.
   const validityOptions: readonly SelectOption[] = INVITE_LINK_VALIDITY_DAYS.map((days) => ({
     value: String(days),
@@ -99,7 +102,7 @@ export default function InviteLinkForm({ companyId, roles }: InviteLinkFormProps
         <ConfirmFirstNote>{t('confirmBeforeGrant')}</ConfirmFirstNote>
       ) : (
         <div>
-          <Button type="submit" variant="secondary" loading={pending}>
+          <Button type="submit" variant="secondary" loading={pending} disabled={changesOff}>
             {t('inviteLinkForm.submit')}
           </Button>
         </div>

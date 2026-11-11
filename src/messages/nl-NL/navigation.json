@@ -18,7 +18,7 @@
     "signOut": "Uitloggen",
     "signedInAs": {
       "label": "Ingelogd als iemand anders",
-      "text": "Je bent ingelogd als {name} ({email}). Dit stopt om {time}.",
+      "text": "Je bent ingelogd als {name} ({email}) en kunt niets wijzigen. Dit stopt om {time}.",
       "back": "Terug naar mijn account",
       "backDone": "Je bent terug in je eigen account.",
       "menuLabel": "Ingelogd als"

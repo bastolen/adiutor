@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
+import { useSignedInAs } from '@/components/ui/signed-in-as';
 import TextField from '@/components/ui/text-field';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import { NAME_MAX_LENGTH } from '@/lib/input-rules';
@@ -23,6 +24,8 @@ import renameStaffAction from './actions';
  */
 export default function StaffNameForm({ name }: { name: string }) {
   const t = useTranslations('admin.staff.name');
+  // Changes are turned off while a staff member is signed in as the user.
+  const changesOff = useSignedInAs();
   const [result, formAction, pending, onSubmit] = useTransientActionState(renameStaffAction, null);
 
   return (
@@ -38,7 +41,7 @@ export default function StaffNameForm({ name }: { name: string }) {
         required
       />
       <div>
-        <Button type="submit" loading={pending}>
+        <Button type="submit" loading={pending} disabled={changesOff}>
           {t('save')}
         </Button>
       </div>

@@ -2,13 +2,16 @@
  * @file The banner on every page of the signed-in app while a staff member is
  * signed in as a user ("Sign in as", see
  * docs/decisions/0017-staff-sign-in-as-users.md): whom they're signed in as,
- * when it ends, and "Back to my account". It stays at the top of the content
- * while the page scrolls (below the small screens' top bar). Text from
- * `navigation.signedInAs`.
+ * that changes are turned off, when it ends, and "Back to my account". It
+ * stays at the top of the content while the page scrolls (below the small
+ * screens' top bar), and marks the tab as signed in as someone
+ * (`SignedInAsMarker`), so controls that change something render disabled.
+ * Text from `navigation.signedInAs`.
  */
 import { Eye } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
 
+import { SignedInAsMarker } from '@/components/ui/signed-in-as';
 import displayName from '@/lib/display-name';
 import { formatTime } from '@/lib/format';
 import { getOptionalActor } from '@/server/authz';
@@ -45,6 +48,7 @@ export default async function SignedInAsBanner() {
       <div className="shrink-0 self-start sm:self-auto">
         <BackToOwnAccountButton label={t('back')} />
       </div>
+      <SignedInAsMarker />
     </section>
   );
 }

@@ -11,6 +11,7 @@ import { startTransition, useCallback, useRef } from 'react';
 import { ReturnToField, useRecentConfirmation } from '@/components/auth/recent-confirmation';
 import ConfirmDialog from '@/components/ui/confirm-dialog';
 import SelectField, { type SelectOption } from '@/components/ui/select-field';
+import { useSignedInAs } from '@/components/ui/signed-in-as';
 import Spinner from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toast';
 import { useTransientActionState, useTransientState } from '@/components/ui/use-transient-state';
@@ -104,6 +105,8 @@ export default function RoleSelect({
   target = undefined,
 }: RoleSelectProps) {
   const t = useTranslations('people.roleSelect');
+  // Roles don't change while a staff member is signed in as the user.
+  const changesOff = useSignedInAs();
   const { askToConfirm } = useRecentConfirmation();
   const showToast = useToast();
   // Toasts as soon as the action returns, like `RowAction`.
@@ -185,6 +188,7 @@ export default function RoleSelect({
             options={roles}
             value={shownRole}
             busy={pending}
+            disabled={changesOff}
             onValueChange={(role) => {
               // A raise that needs a recent confirmation: confirm first, save nothing.
               if (

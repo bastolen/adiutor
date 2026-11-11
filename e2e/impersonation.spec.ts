@@ -21,10 +21,6 @@ import { openUser, signIn, signInAsUser, toasts, useOwnClientIp } from './suppor
 import { countEmails, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
 
-/** What every change says while signed in as someone. */
-const CHANGES_OFF =
-  "This can't be changed while you're signed in as someone else. Go back to your own account first.";
-
 test.beforeEach(async ({ page }) => {
   await useOwnClientIp(page);
 });
@@ -39,15 +35,20 @@ test('a staff Admin signs in as a Manager, changes nothing, and goes back', asyn
   // The banner and the account menu say whom the Admin is signed in as.
   const banner = page.getByRole('region', { name: 'Signed in as someone else' });
   await expect(banner).toContainText(
-    `You're signed in as ${STEP_UP_MANAGER.name} (${STEP_UP_MANAGER.email}).`,
+    `You're signed in as ${STEP_UP_MANAGER.name} (${STEP_UP_MANAGER.email}), with changes turned off.`,
   );
   await expect(page.getByRole('button', { name: /^Account menu/ })).toContainText('Signed in as');
 
-  // A Manager may change a company's details, but nothing changes from their view.
+  // A Manager may change a company's details and its members, but nothing changes from their view:
+  // the controls are off (and the server refuses them anyway, see the authorization matrix).
   await page.goto(`/companies/${COMPANY_SLUG}/settings`);
-  await page.getByRole('button', { name: 'Save changes' }).click();
-  await expect(page.getByRole('alert').filter({ hasText: CHANGES_OFF })).toBeVisible();
-  await expect(toasts(page)).toContainText(CHANGES_OFF);
+  await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Deactivate company' })).toBeDisabled();
+  await page.goto(`/companies/${COMPANY_SLUG}/members`);
+  await expect(
+    page.getByRole('combobox', { name: `Role of ${CLIENT_WATCHER.name}` }),
+  ).toBeDisabled();
+  await expect(page.getByRole('button', { name: `Remove ${CLIENT_WATCHER.name}` })).toBeDisabled();
 
   // The Manager's own account pages show a note instead of their settings.
   await page.goto('/account/security');

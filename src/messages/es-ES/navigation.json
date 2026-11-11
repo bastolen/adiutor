@@ -18,7 +18,7 @@
     "signOut": "Cerrar sesión",
     "signedInAs": {
       "label": "Sesión iniciada como otra persona",
-      "text": "Has iniciado sesión como {name} ({email}). Termina a las {time}.",
+      "text": "Has iniciado sesión como {name} ({email}) y los cambios están desactivados. Termina a las {time}.",
       "back": "Volver a mi cuenta",
       "backDone": "Has vuelto a tu propia cuenta.",
       "menuLabel": "Sesión iniciada como"

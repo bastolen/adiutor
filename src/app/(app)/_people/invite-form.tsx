@@ -14,6 +14,7 @@ import EmailLanguageField from '@/components/language/email-language-field';
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
 import SelectField, { type SelectOption } from '@/components/ui/select-field';
+import { useSignedInAs } from '@/components/ui/signed-in-as';
 import TextAreaField from '@/components/ui/textarea-field';
 import { useTransientActionState, useTransientState } from '@/components/ui/use-transient-state';
 import { MAX_BULK_INVITES } from '@/lib/input-rules';
@@ -53,6 +54,8 @@ interface InviteFormProps {
  */
 export default function InviteForm({ companyId, roles }: InviteFormProps) {
   const t = useTranslations('people');
+  // Changes are turned off while a staff member is signed in as the user.
+  const changesOff = useSignedInAs();
   const [result, formAction, pending, onSubmit] = useTransientActionState(inviteAction, null);
   const lines = result?.ok ? (result.data?.lines ?? []) : [];
   const emailsRef = useRef<HTMLTextAreaElement>(null);
@@ -125,7 +128,7 @@ export default function InviteForm({ companyId, roles }: InviteFormProps) {
         <ConfirmFirstNote>{t('confirmBeforeGrant')}</ConfirmFirstNote>
       ) : (
         <div>
-          <Button type="submit" loading={pending}>
+          <Button type="submit" loading={pending} disabled={changesOff}>
             {t('inviteForm.submit')}
           </Button>
         </div>

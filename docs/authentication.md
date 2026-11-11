@@ -258,9 +258,12 @@ does, to check what isn't working for them. The reasons are in
     the step-up page sends them to the dashboard. It still sends them to the Security page when the
     user must set up MFA, as it would the user.
 - **On screen:**
-  - A banner at the top of every page says whom they're signed in as and when it ends, with
-    **Back to my account** (`SignedInAsBanner` in the app's layout). It stays in view while the
-    page scrolls, and it's the first thing in the content for the skip link and screen readers.
+  - A banner at the top of every page says whom they're signed in as, that changes are turned
+    off, and when it ends, with **Back to my account** (`SignedInAsBanner` in the app's layout). It
+    stays in view while the page scrolls, and it's the first thing in the content for the skip link
+    and screen readers.
+  - The controls that change something render disabled meanwhile (`useSignedInAs`, see
+    [Design](design.md#design-and-accessibility)).
   - The account menu shows the user, labelled "Signed in as". **Back to my account** takes Sign
     out's place there, since signing out would end the staff member's own session.
   - Back to my account (`backToOwnAccountAction`, `stopSigningInAs`) records `impersonation_ended`

@@ -14,6 +14,7 @@ import EmailLanguageField from '@/components/language/email-language-field';
 import Alert from '@/components/ui/alert';
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
+import { useSignedInAs } from '@/components/ui/signed-in-as';
 import TextField from '@/components/ui/text-field';
 import { useTransientState, useTransientActionState } from '@/components/ui/use-transient-state';
 import type { Locale } from '@/lib/i18n/locales';
@@ -36,6 +37,8 @@ import registerCompanyAction from './actions';
  */
 export default function RegisterCompanyForm({ defaultLocale }: { defaultLocale: Locale }) {
   const t = useTranslations('admin.addCompany.form');
+  // Changes are turned off while a staff member is signed in as the user.
+  const changesOff = useSignedInAs();
   const tPeople = useTranslations('people');
   const [result, formAction, pending, onSubmit] = useTransientActionState(
     registerCompanyAction,
@@ -108,7 +111,7 @@ export default function RegisterCompanyForm({ defaultLocale }: { defaultLocale: 
       <EmailLanguageField purpose="invitation" defaultLocale={defaultLocale} />
       {!confirmFirst && (
         <div>
-          <Button type="submit" loading={pending}>
+          <Button type="submit" loading={pending} disabled={changesOff}>
             {t('submit')}
           </Button>
         </div>

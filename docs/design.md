@@ -169,6 +169,14 @@ keyboard support.
   two-step verification off, a dismissed notice), focus moves to the heading of its card (card
   headings take focus from script, `tabIndex={-1}`) or, outside a card, to the main content
   (`restoreFocusIfLost` in `src/components/ui/focus-fallback.ts`), never to `<body>`.
+  - **Signed in as someone.** While a staff member is signed in as a user, the controls that change
+    something render disabled, and the banner says changes are turned off (see
+    [Signing in as a user](authentication.md#signing-in-as-a-user)). The banner mounts
+    `SignedInAsMarker`, and controls read `useSignedInAs` (`src/components/ui/signed-in-as.tsx`).
+    `RowAction`, `ActionDialog` and `RoleSelect` do it themselves; pass `allowedWhileSignedInAs`
+    for the user's own work. Forms that change something disable their submit button with the
+    hook. Reads (search, filters, sorting, paging) stay as they are. The server refuses changes
+    either way, so a control that misses this still changes nothing.
   - **Card anchors.** A `Card` whose controls can send the user away and back (a confirmation, a
     provider, an emailed link) gets an `id`, a section ID like `invitations` (see
     [Coming back to where you were](authentication.md#coming-back-to-where-you-were)). The

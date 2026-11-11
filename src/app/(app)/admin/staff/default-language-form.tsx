@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import DefaultLanguageField from '@/components/language/default-language-field';
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
+import { useSignedInAs } from '@/components/ui/signed-in-as';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import type { Locale } from '@/lib/i18n/locales';
 
@@ -28,6 +29,8 @@ import { saveDefaultLanguageAction } from './actions';
  */
 export default function DefaultLanguageForm({ defaultLocale }: { defaultLocale: Locale }) {
   const t = useTranslations('common.language');
+  // Changes are turned off while a staff member is signed in as the user.
+  const changesOff = useSignedInAs();
   const [result, formAction, pending, onSubmit] = useTransientActionState(
     saveDefaultLanguageAction,
     null,
@@ -39,7 +42,7 @@ export default function DefaultLanguageForm({ defaultLocale }: { defaultLocale: 
       <ResultAlert result={result} />
       <DefaultLanguageField defaultValue={defaultLocale} />
       <div>
-        <Button type="submit" loading={pending}>
+        <Button type="submit" loading={pending} disabled={changesOff}>
           {t('saveDefault')}
         </Button>
       </div>
