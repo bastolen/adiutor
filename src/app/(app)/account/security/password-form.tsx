@@ -27,14 +27,14 @@ import { passwordAction } from './actions';
  */
 export default function PasswordForm({
   hasPassword,
-  blockedReason = null,
+  blockedReason,
 }: {
   hasPassword: boolean;
   /**
    * Why a first password can't be set (it would take away the MFA the user's
    * role requires, see `mfaDowngradeBlocks`), or `null` when it can.
    */
-  blockedReason?: string | null;
+  blockedReason: string | null;
 }) {
   const t = useTranslations('account');
   const [result, formAction, pending, onSubmit] = useTransientActionState(passwordAction, null);

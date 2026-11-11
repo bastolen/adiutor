@@ -33,6 +33,9 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push }),
 }));
 
+/** The props that disable nothing, spread into each render so it states only what differs. */
+const NOTHING_BLOCKED = { disabled: false };
+
 /** The server's time when the Security page rendered. */
 const SERVER_TIME = new Date('2026-10-26T12:00:00Z').getTime();
 
@@ -84,7 +87,7 @@ describe('ConnectProviderButton', () => {
 
   it('starts connecting with the return URLs', async () => {
     linkSocial.mockResolvedValue({ error: null });
-    render(<ConnectProviderButton provider="github" label="GitHub" />);
+    render(<ConnectProviderButton {...NOTHING_BLOCKED} provider="github" label="GitHub" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Connect GitHub' }));
 
@@ -108,7 +111,7 @@ describe('ConnectProviderButton', () => {
         returnTo="/account/security?devices-page=2"
       >
         <Card id="connected-accounts" title="Connected accounts">
-          <ConnectProviderButton provider="github" label="GitHub" />
+          <ConnectProviderButton {...NOTHING_BLOCKED} provider="github" label="GitHub" />
         </Card>
       </RecentConfirmationProvider>,
     );
@@ -127,7 +130,7 @@ describe('ConnectProviderButton', () => {
 
   it('shows a message when connecting can’t start', async () => {
     linkSocial.mockResolvedValue({ error: { message: 'Provider not found' } });
-    render(<ConnectProviderButton provider="google" label="Google" />);
+    render(<ConnectProviderButton {...NOTHING_BLOCKED} provider="google" label="Google" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Connect Google' }));
 
@@ -140,7 +143,7 @@ describe('ConnectProviderButton', () => {
     linkSocial.mockResolvedValue({ error: { message: 'Provider not found' } });
     render(
       <Page>
-        <ConnectProviderButton provider="google" label="Google" />
+        <ConnectProviderButton {...NOTHING_BLOCKED} provider="google" label="Google" />
       </Page>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Connect Google' }));
@@ -154,7 +157,7 @@ describe('ConnectProviderButton', () => {
   });
 
   it('sends the user to confirm first without a recent confirmation', () => {
-    render(<ConnectProviderButton provider="github" label="GitHub" />, {
+    render(<ConnectProviderButton {...NOTHING_BLOCKED} provider="github" label="GitHub" />, {
       wrapper: NotConfirmedRecently,
     });
 
@@ -175,7 +178,7 @@ describe('ConnectProviderButton', () => {
         serverTime={SERVER_TIME}
         returnTo="/account/security"
       >
-        <ConnectProviderButton provider="github" label="GitHub" />
+        <ConnectProviderButton {...NOTHING_BLOCKED} provider="github" label="GitHub" />
       </RecentConfirmationProvider>,
     );
 
@@ -187,7 +190,9 @@ describe('ConnectProviderButton', () => {
   });
 
   it('can be disabled, and then doesn’t start connecting', () => {
-    render(<ConnectProviderButton provider="google" label="Google" disabled />);
+    render(
+      <ConnectProviderButton {...NOTHING_BLOCKED} provider="google" label="Google" disabled />,
+    );
 
     const button = screen.getByRole('button', { name: 'Connect Google' });
     expect(button).toBeDisabled();
@@ -197,18 +202,13 @@ describe('ConnectProviderButton', () => {
     expect(push).not.toHaveBeenCalled();
   });
 
-  it('is enabled by default', () => {
-    render(<ConnectProviderButton provider="google" label="Google" />);
-
-    expect(screen.getByRole('button', { name: 'Connect Google' })).toBeEnabled();
-  });
-
   it('links the button to the text that explains it', () => {
     const reason = 'Your role requires MFA. Add a passkey or an authenticator app first.';
     render(
       <>
         <p id="connect-note">{reason}</p>
         <ConnectProviderButton
+          {...NOTHING_BLOCKED}
           provider="google"
           label="Google"
           disabled
@@ -223,7 +223,7 @@ describe('ConnectProviderButton', () => {
   });
 
   it('adds no description by default', () => {
-    render(<ConnectProviderButton provider="google" label="Google" />);
+    render(<ConnectProviderButton {...NOTHING_BLOCKED} provider="google" label="Google" />);
 
     expect(screen.getByRole('button', { name: 'Connect Google' })).not.toHaveAttribute(
       'aria-describedby',
@@ -234,7 +234,7 @@ describe('ConnectProviderButton', () => {
     linkSocial.mockResolvedValue({
       error: { code: 'SIGN_IN_CHANGE_IN_PROGRESS', message: 'Conflict' },
     });
-    render(<ConnectProviderButton provider="google" label="Google" />);
+    render(<ConnectProviderButton {...NOTHING_BLOCKED} provider="google" label="Google" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Connect Google' }));
 
@@ -247,7 +247,7 @@ describe('ConnectProviderButton', () => {
     linkSocial.mockResolvedValue({
       error: { code: 'MFA_REQUIRED_FOR_ROLE', message: 'Forbidden' },
     });
-    render(<ConnectProviderButton provider="google" label="Google" />);
+    render(<ConnectProviderButton {...NOTHING_BLOCKED} provider="google" label="Google" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Connect Google' }));
 
@@ -264,7 +264,7 @@ describe('ConnectProviderButton', () => {
     linkSocial.mockResolvedValue({
       error: { code: 'SESSION_NOT_FRESH', message: 'Session is not fresh' },
     });
-    render(<ConnectProviderButton provider="github" label="GitHub" />);
+    render(<ConnectProviderButton {...NOTHING_BLOCKED} provider="github" label="GitHub" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Connect GitHub' }));
 

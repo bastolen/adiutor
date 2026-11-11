@@ -62,6 +62,16 @@ const google: ConnectedProvider = {
   accountName: null,
 };
 
+/** The props that block nothing, spread into each render so it states only what differs. */
+const NOTHING_BLOCKED = {
+  message: null,
+  disconnectBlocked: [],
+  disconnectBlockedReason: null,
+  connectBlocked: false,
+  confirmBlocked: [],
+  connectBlockedReason: null,
+};
+
 /** Why an account that gives the user their required MFA can't be disconnected. */
 const DISCONNECT_REASON = 'Your role requires MFA, and GitHub gives you it.';
 
@@ -83,7 +93,11 @@ function renderOnSecurityPage(connected: ConnectedProvider[], windowOpen: boolea
       serverTime={serverTime}
       returnTo="/account/security"
     >
-      <ConnectedAccountsCard providers={['github', 'google']} connected={connected} />
+      <ConnectedAccountsCard
+        {...NOTHING_BLOCKED}
+        providers={['github', 'google']}
+        connected={connected}
+      />
     </RecentConfirmationProvider>,
   );
 }
@@ -121,7 +135,13 @@ describe('ConnectedAccountsCard', () => {
   });
 
   it('shows Disconnect without Confirm for a confirmed account, and Connect for the others', () => {
-    render(<ConnectedAccountsCard providers={['github', 'google']} connected={[github]} />);
+    render(
+      <ConnectedAccountsCard
+        {...NOTHING_BLOCKED}
+        providers={['github', 'google']}
+        connected={[github]}
+      />,
+    );
 
     const githubRow = within(row('GitHub'));
     expect(githubRow.getByText('Connected Oct 23, 2026')).toBeInTheDocument();
@@ -137,6 +157,7 @@ describe('ConnectedAccountsCard', () => {
   it('offers Confirm next to Disconnect for an account connected at sign-in', () => {
     render(
       <ConnectedAccountsCard
+        {...NOTHING_BLOCKED}
         providers={['github', 'google']}
         connected={[{ ...github, confirmed: false }]}
       />,
@@ -157,6 +178,7 @@ describe('ConnectedAccountsCard', () => {
   it("doesn't call a GitHub account without two-factor authentication a second step", () => {
     render(
       <ConnectedAccountsCard
+        {...NOTHING_BLOCKED}
         providers={['github', 'google']}
         connected={[{ ...github, confirmed: false, givesMfa: false }]}
       />,
@@ -172,6 +194,7 @@ describe('ConnectedAccountsCard', () => {
   it("doesn't call an account of a provider that can't prove MFA a second step", () => {
     render(
       <ConnectedAccountsCard
+        {...NOTHING_BLOCKED}
         providers={['github', 'google']}
         connected={[{ ...google, confirmed: false }]}
       />,
@@ -185,11 +208,19 @@ describe('ConnectedAccountsCard', () => {
   });
 
   it('names the configured providers in its description', () => {
-    const { unmount } = render(<ConnectedAccountsCard providers={['github']} connected={[]} />);
+    const { unmount } = render(
+      <ConnectedAccountsCard {...NOTHING_BLOCKED} providers={['github']} connected={[]} />,
+    );
     expect(screen.getByText(/^Connect GitHub to sign in with it\./)).toBeInTheDocument();
     unmount();
 
-    render(<ConnectedAccountsCard providers={['github', 'google']} connected={[]} />);
+    render(
+      <ConnectedAccountsCard
+        {...NOTHING_BLOCKED}
+        providers={['github', 'google']}
+        connected={[]}
+      />,
+    );
     expect(
       screen.getByText(/^Connect GitHub or Google to sign in with them\./),
     ).toBeInTheDocument();
@@ -199,6 +230,7 @@ describe('ConnectedAccountsCard', () => {
     const user = userEvent.setup();
     render(
       <ConnectedAccountsCard
+        {...NOTHING_BLOCKED}
         providers={['github']}
         connected={[{ ...github, confirmed: false }]}
       />,
@@ -269,6 +301,7 @@ describe('ConnectedAccountsCard', () => {
     it('disables Disconnect for the blocked accounts only, with the reason below', () => {
       render(
         <ConnectedAccountsCard
+          {...NOTHING_BLOCKED}
           providers={['github', 'google']}
           connected={[github, google]}
           disconnectBlocked={[github.id]}
@@ -293,6 +326,7 @@ describe('ConnectedAccountsCard', () => {
     it('leaves out the disconnect reason when no blocked account is connected', () => {
       render(
         <ConnectedAccountsCard
+          {...NOTHING_BLOCKED}
           providers={['github', 'google']}
           connected={[google]}
           disconnectBlocked={[github.id]}
@@ -307,6 +341,7 @@ describe('ConnectedAccountsCard', () => {
     it('disables Confirm and Connect, but not Disconnect, with the reason below', () => {
       render(
         <ConnectedAccountsCard
+          {...NOTHING_BLOCKED}
           providers={['github', 'google']}
           connected={[{ ...github, confirmed: false }]}
           connectBlocked
@@ -331,6 +366,7 @@ describe('ConnectedAccountsCard', () => {
     it('shows both reasons when both apply', () => {
       render(
         <ConnectedAccountsCard
+          {...NOTHING_BLOCKED}
           providers={['github', 'google']}
           connected={[github]}
           disconnectBlocked={[github.id]}
@@ -354,6 +390,7 @@ describe('ConnectedAccountsCard', () => {
     it('leaves out the connect reason when there’s nothing to connect or confirm', () => {
       render(
         <ConnectedAccountsCard
+          {...NOTHING_BLOCKED}
           providers={['github']}
           connected={[github]}
           disconnectBlocked={[github.id]}
@@ -374,6 +411,7 @@ describe('ConnectedAccountsCard', () => {
     it('shows no reason at all when the only provider is connected and can be disconnected', () => {
       render(
         <ConnectedAccountsCard
+          {...NOTHING_BLOCKED}
           providers={['github']}
           connected={[github]}
           disconnectBlocked={[]}
@@ -393,6 +431,7 @@ describe('ConnectedAccountsCard', () => {
     it('shows the connect reason for a blocked Confirm when every provider is connected', () => {
       render(
         <ConnectedAccountsCard
+          {...NOTHING_BLOCKED}
           providers={['github']}
           connected={[{ ...github, confirmed: false, givesMfa: false }]}
           connectBlocked
@@ -409,6 +448,7 @@ describe('ConnectedAccountsCard', () => {
     it('disables nothing and shows no reason when nothing is blocked', () => {
       render(
         <ConnectedAccountsCard
+          {...NOTHING_BLOCKED}
           providers={['github', 'google']}
           connected={[{ ...github, confirmed: false }]}
           disconnectBlocked={[]}
@@ -432,6 +472,7 @@ describe('ConnectedAccountsCard', () => {
       // E.g. a GitHub account with 2FA, connected at sign-in by someone whose only MFA is GitHub.
       render(
         <ConnectedAccountsCard
+          {...NOTHING_BLOCKED}
           providers={['github', 'google']}
           connected={[{ ...github, confirmed: false }]}
           connectBlocked
@@ -451,6 +492,7 @@ describe('ConnectedAccountsCard', () => {
     it('shows no connect reason when only Confirm buttons are shown and none is blocked', () => {
       render(
         <ConnectedAccountsCard
+          {...NOTHING_BLOCKED}
           providers={['github']}
           connected={[{ ...github, confirmed: false }]}
           connectBlocked
@@ -463,19 +505,6 @@ describe('ConnectedAccountsCard', () => {
       expect(confirm).toBeEnabled();
       expect(confirm).not.toHaveAttribute('aria-describedby');
       expect(screen.queryByText(CONNECT_REASON)).not.toBeInTheDocument();
-    });
-
-    it('disables nothing without the props', () => {
-      render(
-        <ConnectedAccountsCard
-          providers={['github', 'google']}
-          connected={[{ ...github, confirmed: false }]}
-        />,
-      );
-
-      expect(screen.getByRole('button', { name: 'Confirm GitHub' })).toBeEnabled();
-      expect(screen.getByRole('button', { name: 'Disconnect GitHub' })).toBeEnabled();
-      expect(screen.getByRole('button', { name: 'Connect Google' })).toBeEnabled();
     });
   });
 
@@ -493,6 +522,7 @@ describe('ConnectedAccountsCard', () => {
     it('shows each one, so the one connected at sign-in can be confirmed or disconnected', () => {
       render(
         <ConnectedAccountsCard
+          {...NOTHING_BLOCKED}
           providers={['github', 'google']}
           connected={[github, secondGitHub]}
         />,
@@ -514,6 +544,7 @@ describe('ConnectedAccountsCard', () => {
     it('tells them apart by their names at the provider', () => {
       render(
         <ConnectedAccountsCard
+          {...NOTHING_BLOCKED}
           providers={['github']}
           connected={[
             { ...github, accountName: 'adiutor-tests' },
@@ -534,6 +565,7 @@ describe('ConnectedAccountsCard', () => {
     it('adds when they were connected when the names are the same', () => {
       render(
         <ConnectedAccountsCard
+          {...NOTHING_BLOCKED}
           providers={['github']}
           connected={[
             { ...github, accountName: 'adiutor-tests' },
@@ -557,6 +589,7 @@ describe('ConnectedAccountsCard', () => {
     it('dates the one without a name next to one with a name', () => {
       render(
         <ConnectedAccountsCard
+          {...NOTHING_BLOCKED}
           providers={['github']}
           connected={[{ ...github, accountName: 'adiutor-tests' }, secondGitHub]}
         />,
@@ -573,6 +606,7 @@ describe('ConnectedAccountsCard', () => {
     it('lets the user confirm a second account with 2FA when their only MFA is GitHub', () => {
       render(
         <ConnectedAccountsCard
+          {...NOTHING_BLOCKED}
           providers={['github', 'google']}
           connected={[github, secondGitHub]}
           disconnectBlocked={[github.id]}
@@ -603,6 +637,7 @@ describe('ConnectedAccountsCard', () => {
       };
       render(
         <ConnectedAccountsCard
+          {...NOTHING_BLOCKED}
           providers={['github']}
           connected={[github, secondGitHub, thirdGitHub]}
           confirmBlocked={[thirdGitHub.id]}
@@ -626,6 +661,7 @@ describe('ConnectedAccountsCard', () => {
       const without2fa = { ...secondGitHub, givesMfa: false };
       render(
         <ConnectedAccountsCard
+          {...NOTHING_BLOCKED}
           providers={['github']}
           connected={[github, without2fa]}
           disconnectBlocked={[github.id]}
@@ -655,6 +691,7 @@ describe('ConnectedAccountsCard', () => {
   it('ignores accounts of providers that are no longer configured for its notes', () => {
     render(
       <ConnectedAccountsCard
+        {...NOTHING_BLOCKED}
         providers={['github']}
         connected={[github, { ...google, confirmed: false }]}
         disconnectBlocked={[google.id]}
@@ -674,6 +711,7 @@ describe('ConnectedAccountsCard', () => {
     const unconfirmedGoogle = { ...google, confirmed: false };
     render(
       <ConnectedAccountsCard
+        {...NOTHING_BLOCKED}
         providers={['github', 'google']}
         connected={[github, unconfirmedGoogle]}
         disconnectBlocked={[github.id]}

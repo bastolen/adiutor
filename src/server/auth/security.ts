@@ -32,17 +32,15 @@ export interface PasskeySummary {
   createdAt: Date | null;
 }
 
-/** Everything the Security page shows. */
+/** The sign-in security the Security page shows. */
 export interface SecurityOverview {
-  /** Whether two-step verification is on (with email codes, or an authenticator app). */
-  twoFactorEnabled: boolean;
-  /** Whether an authenticator app is set up (and so backup codes exist). */
-  authenticatorSetUp: boolean;
-  /** Whether the user has a password (needed to confirm some changes). */
-  hasPassword: boolean;
   /** Their passkeys, oldest first. */
   passkeys: PasskeySummary[];
-  /** Their setup as the MFA rules see it (e.g. for `mfaDowngradeBlocks`). */
+  /**
+   * Their setup as the MFA rules see it: whether two-step verification is on
+   * (`twoFactorEnabled`), an authenticator app is set up (`authenticator`, and
+   * so backup codes exist), they have a password (`hasPassword`), and more.
+   */
   mfaState: MfaState;
 }
 
@@ -55,7 +53,7 @@ export interface SecurityOverview {
  * @param actor - The signed-in user.
  * @param actor.id - Their ID.
  * @param actor.mfaState - Their sign-in setup, as loaded with them.
- * @returns Their two-step verification and passkey settings.
+ * @returns Their passkeys and sign-in setup.
  */
 export async function getSecurityOverview(
   db: Database,
@@ -71,20 +69,14 @@ export async function getSecurityOverview(
     .from(passkey)
     .where(eq(passkey.userId, actor.id))
     .orderBy(asc(passkey.createdAt));
-  const state = actor.mfaState ?? {
+  const mfaState = actor.mfaState ?? {
     twoFactorEnabled: false,
     authenticator: false,
     passkeyCount: 0,
     hasPassword: false,
     providerAccounts: [],
   };
-  return {
-    twoFactorEnabled: state.twoFactorEnabled,
-    authenticatorSetUp: state.authenticator,
-    hasPassword: state.hasPassword,
-    passkeys,
-    mfaState: state,
-  };
+  return { passkeys, mfaState };
 }
 
 /**

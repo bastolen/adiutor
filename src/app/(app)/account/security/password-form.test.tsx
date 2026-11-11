@@ -51,7 +51,7 @@ function renderWithoutConfirmation(hasPassword: boolean) {
       serverTime={Date.now()}
       returnTo="/account/security"
     >
-      <PasswordForm hasPassword={hasPassword} />
+      <PasswordForm hasPassword={hasPassword} blockedReason={null} />
     </RecentConfirmationProvider>,
   );
 }

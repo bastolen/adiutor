@@ -23,7 +23,7 @@ interface ConnectProviderButtonProps {
   /** Its display name. */
   label: string;
   /** Disables the button, e.g. when connecting would take away the MFA the user's role requires. */
-  disabled?: boolean;
+  disabled: boolean;
   /** ID of the text that explains the button, e.g. why it's disabled. */
   describedBy?: string;
 }
@@ -61,7 +61,7 @@ function connectedUrl(returnTo: string, provider: OAuthProvider): string {
 export default function ConnectProviderButton({
   provider,
   label,
-  disabled = false,
+  disabled,
   describedBy = undefined,
 }: ConnectProviderButtonProps) {
   const t = useTranslations('account');

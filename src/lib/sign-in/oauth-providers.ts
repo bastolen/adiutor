@@ -88,15 +88,15 @@ export function providerLabel(providerId: string): string {
 }
 
 /**
- * The claims of a provider's profile that name the account the way its owner
- * knows it, tried in order: GitHub's username, Google's email address. Shown
+ * The claim of a provider's profile that names the account the way its owner
+ * knows it: GitHub's username, Google's email address. Shown
  * next to a connected account so the user can tell which one it is
  * (`src/server/auth/auth-events/` stores it when they sign in or connect with
  * it). Only for display: accounts are always matched by their ID.
  */
-export const PROVIDER_ACCOUNT_NAME_CLAIMS: Record<OAuthProvider, readonly string[]> = {
-  github: ['login'],
-  google: ['email'],
+export const PROVIDER_ACCOUNT_NAME_CLAIMS: Record<OAuthProvider, string> = {
+  github: 'login',
+  google: 'email',
 };
 
 /** The longest account name kept: the longest an email address can be. */
@@ -126,26 +126,19 @@ export function cleanAccountName(value: unknown): string | null {
 }
 
 /**
- * Reads the account name from a provider's profile, from the claims in
+ * Reads the account name from a provider's profile, from its claim in
  * {@link PROVIDER_ACCOUNT_NAME_CLAIMS} (the profile's own keys only).
  *
  * @param provider - The provider.
  * @param profile - The provider's profile (user info or ID token claims), unchecked.
- * @returns The first usable name, or `null`.
+ * @returns The name, cleaned (`cleanAccountName`), or `null` when there's no usable one.
  */
 export function accountNameFromProfile(provider: OAuthProvider, profile: unknown): string | null {
-  if (!profile || typeof profile !== 'object') {
+  const claim = PROVIDER_ACCOUNT_NAME_CLAIMS[provider];
+  if (!profile || typeof profile !== 'object' || !Object.hasOwn(profile, claim)) {
     return null;
   }
-  const claims = PROVIDER_ACCOUNT_NAME_CLAIMS[provider];
-  return claims.reduce<string | null>(
-    (found, claim) =>
-      found ??
-      (Object.hasOwn(profile, claim)
-        ? cleanAccountName((profile as Record<string, unknown>)[claim])
-        : null),
-    null,
-  );
+  return cleanAccountName((profile as Record<string, unknown>)[claim]);
 }
 
 /**

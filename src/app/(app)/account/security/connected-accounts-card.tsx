@@ -101,7 +101,7 @@ interface ConnectedAccountsCardProps {
    * How connecting an account went, after coming back from the provider
    * (`accountMessage`: `?connected=…` or Better Auth's `?error=…`), or `null`.
    */
-  message?: AccountMessage | null;
+  message: AccountMessage | null;
   /** The providers configured on the server, in order. */
   providers: readonly OAuthProvider[];
   /** The user's connected provider accounts. */
@@ -110,23 +110,23 @@ interface ConnectedAccountsCardProps {
    * Connected accounts (by ID) that can't be disconnected, because they give
    * the user the MFA their role requires (`mfaDowngradeBlocks`).
    */
-  disconnectBlocked?: readonly string[];
+  disconnectBlocked: readonly string[];
   /** Why those can't be disconnected. */
-  disconnectBlockedReason?: string;
+  disconnectBlockedReason: string | null;
   /**
    * Whether connecting another account is refused, because its MFA isn't
    * known until it's connected and it could take away the MFA the user's
    * role requires (`MfaDowngradeBlocks.connectProvider`).
    */
-  connectBlocked?: boolean;
+  connectBlocked: boolean;
   /**
    * Accounts connected at sign-in (by ID) that can't be confirmed, because
    * counting them would take away the MFA the user's role requires
    * (`MfaDowngradeBlocks.confirm`, judged with each account's own MFA).
    */
-  confirmBlocked?: readonly string[];
+  confirmBlocked: readonly string[];
   /** Why those Connect and Confirm buttons are disabled. */
-  connectBlockedReason?: string;
+  connectBlockedReason: string | null;
 }
 
 /**
@@ -154,14 +154,14 @@ interface ConnectedAccountsCardProps {
  * @returns The card.
  */
 export default function ConnectedAccountsCard({
-  message = null,
+  message,
   providers,
   connected,
-  disconnectBlocked = [],
-  disconnectBlockedReason = '',
-  connectBlocked = false,
-  confirmBlocked = [],
-  connectBlockedReason = '',
+  disconnectBlocked,
+  disconnectBlockedReason,
+  connectBlocked,
+  confirmBlocked,
+  connectBlockedReason,
 }: ConnectedAccountsCardProps) {
   const t = useTranslations('account');
   const locale = useLocale();

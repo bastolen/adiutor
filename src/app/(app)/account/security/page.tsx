@@ -92,7 +92,7 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
   // The same check that sent them here (`getActor`).
   const mustSetUp = mustSetUpMfa(actor);
   const setup = {
-    authenticator: overview.authenticatorSetUp,
+    authenticator: overview.mfaState.authenticator,
     passkeyCount: overview.passkeys.length,
   };
   // Accounts connected at sign-in are judged with the MFA their provider gave (stored at that
@@ -128,7 +128,9 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
       )}
       {mustSetUp && (
         <Alert tone="info" focusOnShow>
-          {t('security.mustSetUp', { emailCodes: overview.twoFactorEnabled ? 'true' : 'false' })}
+          {t('security.mustSetUp', {
+            emailCodes: overview.mfaState.twoFactorEnabled ? 'true' : 'false',
+          })}
         </Alert>
       )}
       {!actor.mfaEnabled && !actor.mfaRequired && (
@@ -146,10 +148,10 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
         />
         <TwoFactorCard
           email={actor.email}
-          enabled={overview.twoFactorEnabled}
-          authenticatorSetUp={overview.authenticatorSetUp}
+          enabled={overview.mfaState.twoFactorEnabled}
+          authenticatorSetUp={overview.mfaState.authenticator}
           emailCodes={emailCodeStatus(setup, actor.mfaRole)}
-          hasPassword={overview.hasPassword}
+          hasPassword={overview.mfaState.hasPassword}
           turnOffBlockedReason={blocked.turnOffTwoFactor ? t('security.keepAuthenticator') : null}
         />
         {showsConnectedAccounts && (
@@ -168,19 +170,19 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
           id="password"
           title={t('security.password.title')}
           description={
-            overview.hasPassword
+            overview.mfaState.hasPassword
               ? t('security.password.descriptionChange')
               : t('security.password.descriptionSet')
           }
         >
           <PasswordForm
-            hasPassword={overview.hasPassword}
+            hasPassword={overview.mfaState.hasPassword}
             blockedReason={blocked.setPassword ? providerMfaOnly : null}
           />
         </Card>
         <SessionsCard sessions={sessions} table={devicesTable} currentSessionId={actor.sessionId} />
         <DeactivateCard
-          hasPassword={overview.hasPassword}
+          hasPassword={overview.mfaState.hasPassword}
           blockedReason={soleAdmin ? serviceErrorMessage(soleAdmin, locale) : null}
         />
       </RecentConfirmationProvider>
