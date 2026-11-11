@@ -10,6 +10,10 @@ Open <http://localhost:3000>. On the first run it goes to `/setup`, where you ch
 users see and create your Admin account. After that, sign in at `/auth`. Every email the app sends shows up in
 Mailpit at <http://localhost:8025> (see [Email](email.md)).
 
+Next.js's development indicator (the round "N") is turned off in `next.config.ts`
+(`devIndicators: false`), because in every corner it covers one of the app's controls. Compile and
+runtime errors still show in its overlay.
+
 For scripted deployments, `pnpm setup:platform --staff-name "Adiutor" --email you@adiutor.dev --name
 "Your Name"` does the same from the command line (the account then signs in with an email link).
 Add `--default-language nl-NL` (or `es-ES`) to choose Adiutor's default language; it's English (US)
