@@ -244,6 +244,10 @@
         "dialogDescription": "You're signed out on every device right away. To use Adiutor again, ask an Admin to reactivate your account.",
         "confirm": "Deactivate my account"
       }
+    },
+    "signedInAs": {
+      "note": "You're signed in as {name}, so their own account pages aren't shown here. Their account and sign-in security are on <link>their user page</link>.",
+      "mustSetUpMfa": "{name} has to set up MFA before they can use Adiutor, so this Security page is what they see now."
     }
   }
 }

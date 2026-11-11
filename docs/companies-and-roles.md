@@ -62,7 +62,11 @@ Admins and Managers who aren't members can still add themselves with any role, a
   company, another company, the staff and another user, down to the kind of refusal. The own-account
   services that take an ID (`revokeOwnSession`, `confirmConnectedProvider`) are tried with another
   user's ID; password changes, which need a second step, are covered in
-  `src/server/auth/accounts.int.test.ts`.
+  `src/server/auth/accounts.int.test.ts`. It also tries every operation with a staff member signed
+  in as the acting user: every change is refused (`signed_in_as`) except the user's own work
+  (`OWN_WORK`), and the reads (`READS`) give what they give the user. A new operation counts as a
+  change unless it's listed there (see
+  [Signing in as a user](authentication.md#signing-in-as-a-user)).
 - **Protected by default:** `src/proxy.ts` sends signed-out visitors of every page to `/auth`, except
   the public `/auth`, `/invite`, `/join`, `/setup` and `/api/auth` paths and the health check (`/api/health`). Pages and server actions still check
   the session and permissions on the server through `src/server/authz.ts`. Someone without the

@@ -39,7 +39,11 @@ vi.mock('@/lib/auth', () => ({
   },
 }));
 vi.mock('@/server/app-context', () => ({ default: { name: 'app context' } }));
-vi.mock('@/server/authz', () => ({ getActor: vi.fn() }));
+// The real refusal while signed in as someone, so the actions are tried with it.
+vi.mock('@/server/authz', async () => ({
+  getActor: vi.fn(),
+  assertNotSignedInAs: (await import('@/server/signed-in-as')).default,
+}));
 vi.mock('@/server/auth/accounts', () => ({
   changeOwnPassword: vi.fn(),
   confirmConnectedProvider: vi.fn(),
@@ -301,5 +305,43 @@ describe('revokeOtherSessionsAction', () => {
     vi.mocked(revokeOtherOwnSessions).mockResolvedValue(count);
 
     expect(await revokeOtherSessionsAction()).toEqual({ ok: true, message });
+  });
+});
+
+describe('while a staff member is signed in as the user', () => {
+  /** The user, with a second step, as a staff member is signed in as them. */
+  const signedInAs = {
+    ...actor,
+    canConfirmSessions: true,
+    mfaConfirmedUntil: null,
+    signedInAs: {
+      staffId: 'staff-1',
+      staffName: 'Sam Lee',
+      endsAt: new Date('2026-11-11T12:30:00Z'),
+      returnTo: '/admin/users/user-1',
+    },
+  } as unknown as Awaited<ReturnType<typeof getActor>>;
+
+  /** What every refused change says. */
+  const refused = {
+    ok: false,
+    message:
+      "This can't be changed while you're signed in as someone else. Go back to your own account first.",
+  };
+
+  it('changes nothing, and sends nobody to confirm first', async () => {
+    testLocale.current = 'en-US';
+    vi.mocked(getActor).mockResolvedValue(signedInAs);
+
+    expect(await passwordAction(null, firstPassword)).toEqual(refused);
+    expect(await passwordAction(null, changedPassword)).toEqual(refused);
+    expect(await deactivateAccountAction(null, form({ password: '' }))).toEqual(refused);
+
+    expect(redirect).not.toHaveBeenCalled();
+    expect(setFirstPassword).not.toHaveBeenCalled();
+    expect(changeOwnPassword).not.toHaveBeenCalled();
+    expect(deactivateOwnAccount).not.toHaveBeenCalled();
+    expect(auth.api.setPassword).not.toHaveBeenCalled();
+    expect(auth.api.changePassword).not.toHaveBeenCalled();
   });
 });

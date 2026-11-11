@@ -35,6 +35,7 @@ import { sendVerificationAction } from './actions';
 import LanguageForm from './language-form';
 import NameForm from './name-form';
 import describeOwnActivity from './own-activity';
+import SignedInAsNote from './signed-in-as-note';
 
 /**
  * Page metadata: "Account", in the request's language.
@@ -55,6 +56,10 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 async function AccountSettings({ searchParams }: { searchParams: Promise<AccountParams> }) {
   const actor = await getActor({ allowMissingMfa: true });
+  // Nothing of the user's own settings is loaded while a staff member is signed in as them.
+  if (actor.signedInAs) {
+    return <SignedInAsNote actor={actor} />;
+  }
   const [params, activity, language, t, tAuth, tAudit, tRoles] = await Promise.all([
     searchParams,
     listOwnActivity(appContext, actor),

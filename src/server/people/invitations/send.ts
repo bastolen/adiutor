@@ -13,6 +13,7 @@ import {
   assertStillManages,
   getTargetAccess,
   managePermission,
+  assertNotSignedInAs,
 } from '../../access';
 import type { Actor } from '../../actor';
 import type { ServiceContext } from '../../context';
@@ -44,6 +45,7 @@ export async function inviteByEmail(
   actor: Actor,
   input: { companyId: string | null; email: string; role: string; locale?: Locale },
 ): Promise<{ status: InviteStatus }> {
+  assertNotSignedInAs(actor);
   const email = emailSchema.parse(input.email);
   const role = roleSchema.parse(input.role);
   const access = await getTargetAccess(ctx.db, actor, input.companyId);
@@ -111,6 +113,7 @@ export async function inviteManyByEmail(
   actor: Actor,
   input: { companyId: string | null; emails: string; role: string; locale?: Locale },
 ): Promise<BulkInviteResult[]> {
+  assertNotSignedInAs(actor);
   const { emails, invalid } = parseEmailList(input.emails);
   if (invalid.length > 0) {
     throw new ServiceError('invalid', 'validation.emailList.invalid', {

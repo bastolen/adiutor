@@ -34,7 +34,7 @@ import {
   setFirstPassword,
 } from '@/server/auth/accounts';
 import { revokeOtherOwnSessions, revokeOwnSession } from '@/server/auth/sessions';
-import { getActor } from '@/server/authz';
+import { assertNotSignedInAs, getActor } from '@/server/authz';
 import { deactivateOwnAccount } from '@/server/people/user-admin';
 
 import { disconnectFailureMessage } from '../account-messages';
@@ -65,6 +65,8 @@ export async function passwordAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor({ allowMissingMfa: true });
+    // Before the confirmation below, which would otherwise send a staff member signed in as the user to it.
+    assertNotSignedInAs(actor);
     const newPassword = passwordSchema.parse(field(formData, 'newPassword'));
     const t = await getTranslations('account');
     if (newPassword !== field(formData, 'confirmation')) {
@@ -129,6 +131,7 @@ export async function confirmProviderAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor({ allowMissingMfa: true });
+    assertNotSignedInAs(actor);
     if (needsRecentConfirmation(actor)) {
       redirect(confirmChangeUrlFor(formData, SECURITY_PAGE));
     }
@@ -155,6 +158,8 @@ export async function disconnectAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor({ allowMissingMfa: true });
+    // Better Auth would act on the session's own user: a staff member signed in as someone.
+    assertNotSignedInAs(actor);
     const accountId = field(formData, 'accountId');
     const [connected, t, tAuth] = await Promise.all([
       listConnectedProviders(appContext, actor.id),
@@ -198,6 +203,7 @@ export async function deactivateAccountAction(
 ): Promise<ActionResult> {
   const result = await runAction(async () => {
     const actor = await getActor({ allowMissingMfa: true });
+    assertNotSignedInAs(actor);
     if (needsRecentConfirmation(actor)) {
       redirect(confirmChangeUrlFor(formData, SECURITY_PAGE));
     }

@@ -218,6 +218,62 @@ it. They get no sign-in or reset emails. The invitations and invite links they s
 for anyone who loses the right to manage (see
 [Rights checked when the change is made](companies-and-roles.md#staff-screens)).
 
+## Signing in as a user
+
+Staff Admins, Managers and Support can sign in as a user. They then see Adiutor the way that user
+does, to check what isn't working for them. The reasons are in
+[decision 0017](decisions/0017-staff-sign-in-as-users.md). Who may sign in as whom is decided by
+`mayImpersonate` in `src/lib/authz/impersonation.ts`:
+
+- staff Admins: anyone but staff Admins;
+- Managers: company users;
+- Support: company users who aren't an Admin in any company;
+- nobody: themselves, or a deactivated account.
+
+- **Starting** (`startImpersonation` in `src/server/auth/impersonation.ts`):
+  - It needs strong MFA on the staff member's own account: an authenticator app, a passkey or
+    provider MFA, never email codes (`hasStrongMfa`). It also needs a confirmation with it from the
+    last 15 minutes, whatever their role (`strongMfaConfirmedUntil`).
+  - It's limited to 10 an hour per staff member.
+  - It decides again with both users' rows locked.
+  - It records `impersonation_started` with the optional reason, which has at most 200 characters
+    and is shown only to staff.
+  - It emails the user the `impersonation_started` security notice, which names the staff member
+    but not their device.
+- **The session stays the staff member's.**
+  - An `impersonation` row marks it for 30 minutes (`IMPERSONATION_MINUTES`). Better Auth never
+    gets a session for the user.
+  - On every request, `getOptionalActor` reads that row alongside the staff member, checks again
+    (the time, the rules, and that the staff member's session still counts as MFA), and returns
+    the user with `signedInAs` set (`actorSignedInAs`).
+  - One that's over ends after the response (`impersonation_ended` with `expired` or
+    `no_longer_allowed`), and the request goes on as the staff member.
+  - Only the staff member is recorded as active.
+  - The user's session facts (`sessionId`, `sessionMfaVerified`, `mfaConfirmedUntil`,
+    `signedInAt`) are empty, so `getActor()` never sends the staff member to the step-up page, and
+    the step-up page sends them to the dashboard. It still sends them to the Security page when the
+    user must set up MFA, as it would the user.
+- **Nothing changes in the user's name.**
+  - Every service that changes something calls `assertNotSignedInAs` first (code `signed_in_as`:
+    "This can't be changed while you're signed in as someone else."). The server actions that call
+    Better Auth themselves, or send the user to confirm before a service would refuse, call it
+    before that.
+  - The auth guards refuse every Better Auth endpoint for such a session except reading the
+    session and signing out (`refuseWhileSignedInAs`, code `SIGNED_IN_AS_SOMEONE`). Those
+    endpoints would act on the staff member's own account.
+  - Only the user's own work stays allowed: today, hiding the dashboard's MFA tip; later, the
+    request features. Those record the staff member, which only staff with `audit:view` and the
+    user see.
+  - The authorization matrix tries every change with a staff member signed in as the acting user.
+- **The user's account pages** (Profile and Security) show a note instead of the user's settings,
+  with a link to the user's page.
+- **Ending:**
+  - It ends after its 30 minutes, when the staff member's session ends (signing out included), or
+    when either person's rights change.
+  - The hourly job ends and records those nobody came back to (see
+    [Background jobs](deploying.md#background-jobs)).
+  - Errors reported while signed in as someone are recorded for the staff member.
+
 ## Account pages
 
 Account pages, two tabs:

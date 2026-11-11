@@ -41,6 +41,7 @@ import { serviceErrorMessage } from '@/server/errors';
 import { listUserSessions, soleAdminError, soleAdminOf } from '@/server/people/user-admin';
 
 import accountMessage from '../account-messages';
+import SignedInAsNote from '../signed-in-as-note';
 import ConnectedAccountsCard from './connected-accounts-card';
 import DeactivateCard from './deactivate-card';
 import PasskeysCard from './passkeys-card';
@@ -68,6 +69,10 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 async function Security({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const actor = await getActor({ allowMissingMfa: true });
+  // Nothing of the user's sign-in setup is loaded while a staff member is signed in as them.
+  if (actor.signedInAs) {
+    return <SignedInAsNote actor={actor} onSecurityPage />;
+  }
   const [params, t, tAuth, locale] = await Promise.all([
     searchParams,
     getTranslations('account'),

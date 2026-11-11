@@ -244,6 +244,10 @@
         "dialogDescription": "Je wordt meteen op elk apparaat uitgelogd. Wil je Adiutor weer gebruiken? Vraag een Beheerder om je account opnieuw te activeren.",
         "confirm": "Mijn account deactiveren"
       }
+    },
+    "signedInAs": {
+      "note": "Je bent ingelogd als {name}, dus hun eigen accountpagina's worden hier niet getoond. Hun account en inlogbeveiliging vind je op <link>hun gebruikerspagina</link>.",
+      "mustSetUpMfa": "{name} moet eerst MFA instellen om Adiutor te kunnen gebruiken, dus deze pagina Beveiliging is wat die persoon nu ziet."
     }
   }
 }

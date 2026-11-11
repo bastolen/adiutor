@@ -7,6 +7,7 @@ import { and, eq, isNotNull } from 'drizzle-orm';
 import { account } from '@/db/schema';
 import { needsFreshSignIn, needsRecentConfirmation } from '@/lib/authz/mfa';
 
+import { assertNotSignedInAs } from '../../access';
 import type { Actor } from '../../actor';
 import { recordEvent } from '../../audit';
 import { checkCurrentPassword } from '../../auth/current-password';
@@ -45,6 +46,7 @@ export async function deactivateOwnAccount(
   actor: Actor,
   password: string,
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   if (needsRecentConfirmation(actor)) {
     throw new ServiceError('forbidden', 'errors.signIn.mfaVerificationRequired');
   }

@@ -1,13 +1,16 @@
 /**
- * @file Signing in as a user ("Sign in as"): starting it, ending it, and
- * ending those whose time is up or whose session is gone. A staff member
- * keeps their own session, which an `impersonation` row marks as acting as
- * the user until it ends (see
+ * @file Signing in as a user ("Sign in as"): starting it, working out whom a
+ * request acts as while it lasts, ending it, and ending those whose time is
+ * up or whose session is gone. A staff member keeps their own session, which
+ * an `impersonation` row marks as acting as the user until it ends (see
  * docs/decisions/0017-staff-sign-in-as-users.md). Who may sign in as whom is
- * decided by `mayImpersonate` (`src/lib/authz/impersonation.ts`).
+ * decided by `mayImpersonate` (`src/lib/authz/impersonation.ts`); while it
+ * lasts, services refuse changes (`assertNotSignedInAs`) and the auth guards
+ * refuse Better Auth's endpoints (`refuseWhileSignedInAs` in `auth-guards/`).
  */
 import { asc, eq, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 
+import type { Database } from '@/db';
 import { auditEvent, impersonation, membership, user } from '@/db/schema';
 import {
   IMPERSONATION_MINUTES,
@@ -15,12 +18,13 @@ import {
   mayImpersonate,
   mayImpersonateAnyone,
 } from '@/lib/authz/impersonation';
-import { isMfaConfirmedRecently } from '@/lib/authz/mfa';
+import { isMfaConfirmedRecently, mustSetUpMfa, mustStepUp } from '@/lib/authz/mfa';
 import displayName from '@/lib/display-name';
 import { getSafeRedirectPath, isSafeAppRedirect } from '@/lib/redirect';
 import { impersonationReasonSchema } from '@/lib/validation';
 
-import type { Actor } from '../actor';
+import { assertNotSignedInAs } from '../access';
+import { type Actor, loadActor } from '../actor';
 import { recordEvent } from '../audit';
 import type { ServiceContext } from '../context';
 import {
@@ -107,13 +111,16 @@ export interface StartImpersonationInput {
  * @throws {ServiceError} `forbidden` when the rules refuse it (with the reason) or there's no
  *   session; `confirmation_required` without a recent strong confirmation; `rate_limited`;
  *   `not_found` when the user doesn't exist; `conflict` when the session already signed in as
- *   someone; `invalid` for a reason that's too long or has control characters.
+ *   someone (`signed_in_as` when the request acts as that user); ZodError for a reason that's too
+ *   long or has control characters.
  */
 export async function startImpersonation(
   ctx: ServiceContext,
   actor: Actor,
   input: StartImpersonationInput,
 ): Promise<{ expiresAt: Date }> {
+  // Not while signed in as someone already: one at a time, and never from the user's view.
+  assertNotSignedInAs(actor);
   const userId = parseId(input.userId);
   const reason = impersonationReasonSchema.parse(input.reason ?? '');
   const { sessionId } = actor;
@@ -287,4 +294,107 @@ export async function endFinishedImpersonations(ctx: Pick<ServiceContext, 'db'>)
     }
     return ended.length;
   });
+}
+
+/** A session's sign-in as someone, as {@link findSessionImpersonation} reads it. */
+export interface SessionImpersonation {
+  /** The user the staff member signed in as. */
+  userId: string;
+  /** When it ends by itself (it may have passed already). */
+  expiresAt: Date;
+  /** The page of the app to go back to. */
+  returnTo: string;
+}
+
+/**
+ * Reads whether a session is signed in as someone, whether or not its time
+ * is up (so the request that finds it over can end it). Every request reads
+ * it alongside the signed-in user (`getOptionalActor`), with the pool, so it
+ * adds no wait.
+ *
+ * @param db - Database client (the pool).
+ * @param sessionId - The session.
+ * @returns The sign-in as someone, or `null` for an ordinary session.
+ */
+export async function findSessionImpersonation(
+  db: Database,
+  sessionId: string,
+): Promise<SessionImpersonation | null> {
+  const [found] = await db
+    .select({
+      userId: impersonation.userId,
+      expiresAt: impersonation.expiresAt,
+      returnTo: impersonation.returnTo,
+    })
+    .from(impersonation)
+    .where(eq(impersonation.sessionId, sessionId));
+  return found ?? null;
+}
+
+/**
+ * What a request signed in as someone acts as ({@link actorSignedInAs}): the
+ * user, or an end because it's over.
+ */
+export type SignedInAsOutcome =
+  { actor: Actor } | { end: Extract<ImpersonationEndReason, 'expired' | 'no_longer_allowed'> };
+
+/**
+ * Works out whom a request signed in as someone acts as, checking again
+ * with what the request just loaded (both people's roles, their accounts,
+ * the staff member's MFA), so a demotion, a deactivation or a lost second
+ * step ends it at once:
+ *
+ * - its time is up: it ends (`expired`);
+ * - `mayImpersonate` no longer allows it, or the staff member's session no
+ *   longer counts as MFA (`mustStepUp`, `mustSetUpMfa`): it ends
+ *   (`no_longer_allowed`);
+ * - otherwise: the user, loaded without a session (the session is the staff
+ *   member's), with `signedInAs` set.
+ *
+ * The caller ends it after the response and goes on as the staff member.
+ *
+ * @param db - Database client (the pool).
+ * @param staff - The staff member, as their request loaded them.
+ * @param found - The session's sign-in as someone.
+ * @param now - The current time.
+ * @returns The user as the actor, or why it ends.
+ */
+export async function actorSignedInAs(
+  db: Database,
+  staff: Actor,
+  found: SessionImpersonation,
+  now: Date = new Date(),
+): Promise<SignedInAsOutcome> {
+  if (found.expiresAt.getTime() <= now.getTime()) {
+    return { end: 'expired' };
+  }
+  if (mustStepUp(staff) || mustSetUpMfa(staff)) {
+    return { end: 'no_longer_allowed' };
+  }
+  const target = await loadActor(db, found.userId);
+  const verdict = target
+    ? mayImpersonate(
+        { id: staff.id, platformRole: staff.platformRole, strongMfa: staff.strongMfa },
+        {
+          id: target.id,
+          platformRole: target.platformRole,
+          companyRoles: Object.values(target.memberships),
+          deactivated: target.deactivatedAt !== null,
+        },
+      )
+    : 'deactivated';
+  if (!target || verdict !== 'allowed') {
+    return { end: 'no_longer_allowed' };
+  }
+  return {
+    actor: {
+      ...target,
+      signedInAs: {
+        staffId: staff.id,
+        staffName: displayName(staff),
+        endsAt: found.expiresAt,
+        returnTo: found.returnTo,
+      },
+    },
+  };
 }

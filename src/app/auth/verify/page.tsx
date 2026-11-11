@@ -31,7 +31,7 @@ import { Suspense } from 'react';
 import { FormSkeleton } from '@/components/ui/skeleton';
 import { needsRecentConfirmation } from '@/lib/authz/mfa';
 import ClientMessages from '@/lib/i18n/client-messages';
-import { getSafeRedirectPath } from '@/lib/redirect';
+import { DEFAULT_SIGNED_IN_PATH, getSafeRedirectPath } from '@/lib/redirect';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import { reverifyErrorText } from '@/lib/sign-in/auth-error-messages';
 import appContext from '@/server/app-context';
@@ -66,6 +66,10 @@ async function StepUp({ searchParams }: { searchParams: Promise<SearchParams> })
   const actor = await getOptionalActor();
   if (!actor) {
     redirect(`/auth?callbackURL=${encodeURIComponent(callbackURL)}`);
+  }
+  // Signed in as someone: there's nothing to confirm, and nothing changes from their view.
+  if (actor.signedInAs) {
+    redirect(DEFAULT_SIGNED_IN_PATH);
   }
   // Confirmed recently enough for anything, or no second step that can be used here.
   if (!needsRecentConfirmation(actor)) {

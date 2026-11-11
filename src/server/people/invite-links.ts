@@ -31,6 +31,7 @@ import {
   assertStillManages,
   getTargetAccess,
   managePermission,
+  assertNotSignedInAs,
 } from '../access';
 import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
@@ -103,6 +104,7 @@ export async function createInviteLink(
   actor: Actor,
   input: { companyId: string | null; role: string; validDays: number },
 ): Promise<{ url: string; expiresAt: Date }> {
+  assertNotSignedInAs(actor);
   const role = roleSchema.parse(input.role);
   if (!isInviteLinkValidity(input.validDays)) {
     throw new ServiceError('invalid', 'errors.inviteLinks.validity');
@@ -227,6 +229,7 @@ export async function revokeInviteLink(
   actor: Actor,
   input: { companyId: string | null; linkId: string },
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   const access = await getTargetAccess(ctx.db, actor, input.companyId);
   assertCanManage(access);
   const companyId = access.company?.id ?? null;
@@ -483,9 +486,11 @@ export async function claimInviteLink(
  * @param signedIn.sessionId - The session they join with. Unlike an emailed invitation, a link
  *   proves no inbox, so when the new role requires MFA this session ends too unless it was
  *   confirmed with a strong factor (`withMfaPromotion`).
+ * @param signedIn.signedInAs - The staff member signed in as them, if any: they join nothing.
  * @returns What was joined (and whether that ended the session it was joined with), or
  *   `invalid` if the link wasn't usable.
- * @throws {ServiceError} `forbidden` for Finance and Support (see `mayUseInviteLinks`).
+ * @throws {ServiceError} `forbidden` for Finance and Support (see `mayUseInviteLinks`);
+ *   `signed_in_as` while a staff member is signed in as them, before the link is used up.
  */
 export async function joinWithInviteLink(
   ctx: ServiceContext,
@@ -495,10 +500,12 @@ export async function joinWithInviteLink(
     email: string;
     platformRole: PlatformRole | null;
     sessionId?: string | null;
+    signedInAs?: Actor['signedInAs'];
   },
 ): Promise<
   { status: 'joined'; companyId: string | null; signedOut: boolean } | { status: 'invalid' }
 > {
+  assertNotSignedInAs(signedIn);
   // Checked before the link is used up, so it still works for whoever it was meant for.
   if (!mayUseInviteLinks(signedIn.platformRole)) {
     throw inviteLinksNotAllowedError();

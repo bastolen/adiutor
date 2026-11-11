@@ -14,7 +14,8 @@
       "deactivated": "Esta cuenta está desactivada, así que nadie puede iniciar sesión como este usuario.",
       "needsMfa": "Para iniciar sesión como otra persona, primero añade una llave de acceso o configura una app de autenticación en la página Seguridad.",
       "confirmationRequired": "Confirma que eres tú con tu segundo paso antes de iniciar sesión como otra persona.",
-      "alreadyStarted": "Ya has iniciado sesión como otra persona. Vuelve primero a tu propia cuenta."
+      "alreadyStarted": "Ya has iniciado sesión como otra persona. Vuelve primero a tu propia cuenta.",
+      "changesOff": "Esto no se puede cambiar mientras has iniciado sesión como otra persona. Vuelve primero a tu propia cuenta."
     },
     "setup": {
       "alreadySetUp": "Adiutor ya está configurado. Inicia sesión.",

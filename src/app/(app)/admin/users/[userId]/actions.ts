@@ -18,7 +18,7 @@ import field from '@/lib/form-data';
 import { confirmChangeUrlFor } from '@/lib/sign-in/confirm-url';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
-import { getActor } from '@/server/authz';
+import { assertNotSignedInAs, getActor } from '@/server/authz';
 import { parseId } from '@/server/errors';
 import {
   deactivateUser,
@@ -45,6 +45,8 @@ export async function resetMfaAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor();
+    // Before the confirmation, which would otherwise send a staff member signed in as someone to it.
+    assertNotSignedInAs(actor);
     const userId = field(formData, 'userId');
     if (needsRecentConfirmation(actor)) {
       // Back to the form's page and card; without one, to the user's page (only an ID goes in).

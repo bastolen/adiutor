@@ -44,6 +44,8 @@ short, visible and recorded, and it must not leave a way into the account behind
   user turning it off ends it straight away.
 - New request features decide whether they're the user's work, and if so record who acted.
 
+Details: [Signing in as a user](../authentication.md#signing-in-as-a-user).
+
 ## Alternatives considered
 
 - **Better Auth's admin plugin.** It adds roles, ban fields and endpoints of its own (against

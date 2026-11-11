@@ -244,6 +244,10 @@
         "dialogDescription": "Se cerrará tu sesión en todos los dispositivos de inmediato. Para volver a usar Adiutor, pide a un Administrador que reactive tu cuenta.",
         "confirm": "Desactivar mi cuenta"
       }
+    },
+    "signedInAs": {
+      "note": "Has iniciado sesión como {name}, así que sus páginas de cuenta no se muestran aquí. Su cuenta y la seguridad de su inicio de sesión están en <link>su página de usuario</link>.",
+      "mustSetUpMfa": "{name} tiene que configurar MFA antes de poder usar Adiutor, así que esta página Seguridad es la que ve ahora."
     }
   }
 }

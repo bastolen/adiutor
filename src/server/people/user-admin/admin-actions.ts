@@ -15,7 +15,7 @@ import { needsRecentConfirmation } from '@/lib/authz/mfa';
 import { normalizeEmail } from '@/lib/email-address';
 import { OAUTH_PROVIDERS } from '@/lib/sign-in/oauth-providers';
 
-import { assertPermission, getGlobalPermissions } from '../../access';
+import { assertNotSignedInAs, assertPermission, getGlobalPermissions } from '../../access';
 import type { Actor } from '../../actor';
 import { recordEvent } from '../../audit';
 import { sendSecurityNotice } from '../../auth/security-notices';
@@ -104,6 +104,7 @@ export async function resetUserMfa(
   userId: string,
   { removePasskeys = false }: { removePasskeys?: boolean } = {},
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'users:manage');
   if (needsRecentConfirmation(actor)) {
     throw new ServiceError('forbidden', 'errors.signIn.mfaVerificationRequired');
@@ -156,6 +157,7 @@ export async function signOutUserEverywhere(
   actor: Actor,
   userId: string,
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'users:manage');
   const { email } = await ctx.db.transaction(async (tx) => {
     const target = await loadTarget(tx, actor, userId);
@@ -211,6 +213,7 @@ export async function deactivateUser(
   actor: Actor,
   userId: string,
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'users:manage');
   const { email } = await ctx.db.transaction(async (tx) => {
     const target = await loadTarget(tx, actor, userId);
@@ -242,6 +245,7 @@ export async function reactivateUser(
   actor: Actor,
   userId: string,
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'users:manage');
   const { email } = await ctx.db.transaction(async (tx) => {
     const target = await loadTarget(tx, actor, userId);
@@ -291,6 +295,7 @@ export async function deleteUser(
   userId: string,
   confirmEmail: string,
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'users:delete');
   const { email, locale } = await ctx.db.transaction(async (tx) => {
     const target = await loadTarget(tx, actor, userId);

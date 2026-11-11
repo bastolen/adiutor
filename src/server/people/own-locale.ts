@@ -11,6 +11,7 @@ import { user } from '@/db/schema';
 import { FOLLOW_DEFAULT, isLocale, type LanguageChoice, type Locale } from '@/lib/i18n/locales';
 import { languageChoiceSchema } from '@/lib/validation';
 
+import { assertNotSignedInAs } from '../access';
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { defaultLanguage } from '../recipient-locale';
@@ -30,6 +31,7 @@ export default async function setOwnLocale(
   actor: Actor,
   choice: unknown,
 ): Promise<Locale | null> {
+  assertNotSignedInAs(actor);
   const chosen = languageChoiceSchema.parse(choice);
   const locale = chosen === FOLLOW_DEFAULT ? null : chosen;
   await ctx.db.update(user).set({ locale }).where(eq(user.id, actor.id));

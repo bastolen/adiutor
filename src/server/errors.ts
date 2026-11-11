@@ -19,9 +19,17 @@ import { idSchema, type ValidationMessageKey } from '@/lib/validation';
  * Kinds of expected problems. `confirmation_required` is a change that needs
  * the actor's second step from the last 15 minutes first (e.g. giving a staff
  * role, see `assertConfirmedForGrant`); actions send the actor to confirm.
+ * `signed_in_as` is a change refused because a staff member is signed in as
+ * the actor (`assertNotSignedInAs`), whatever the actor's own rights.
  */
 export type ServiceErrorCode =
-  'not_found' | 'forbidden' | 'invalid' | 'conflict' | 'rate_limited' | 'confirmation_required';
+  | 'not_found'
+  | 'forbidden'
+  | 'invalid'
+  | 'conflict'
+  | 'rate_limited'
+  | 'confirmation_required'
+  | 'signed_in_as';
 
 /** A message of the `errors` catalogue, by its key within the namespace. */
 type ErrorsKey = MessageKeys<Messages['errors'], NestedKeyOf<Messages['errors']>>;

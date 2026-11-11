@@ -1,14 +1,16 @@
 /**
  * @file Integration tests for signing in as a user: starting it (the rules,
  * the strong MFA and confirmation it needs, the limit, the record and the
- * email), ending it, and the hourly job ending those that are over. Which
- * staff roles may start it at all is in the authorization matrix.
+ * email), whom a request acts as while it lasts, the own-account changes it
+ * refuses, ending it, and the hourly job ending those that are over. Which
+ * staff roles may start it at all, and the refusal of every change in the
+ * matrix, are in the authorization matrix.
  */
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
 
-import { auditEvent, impersonation, session, user } from '@/db/schema';
+import { auditEvent, impersonation, membership, session, user } from '@/db/schema';
 import type { MfaMethod } from '@/lib/authz/mfa';
 import type { PlatformRole } from '@/lib/authz/roles';
 import { IMPERSONATION_REASON_MAX_LENGTH } from '@/lib/input-rules';
@@ -30,8 +32,17 @@ import {
 import { type Actor, loadActor } from '../actor';
 import { ServiceError } from '../errors';
 import { cleanUp } from '../jobs';
+import { deactivateOwnAccount } from '../people/user-admin';
 import { RATE_LIMITS } from '../rate-limit';
-import { endFinishedImpersonations, endImpersonation, startImpersonation } from './impersonation';
+import { changeOwnPassword, setFirstPassword } from './accounts';
+import {
+  actorSignedInAs,
+  endFinishedImpersonations,
+  endImpersonation,
+  findSessionImpersonation,
+  startImpersonation,
+} from './impersonation';
+import { revokeOtherOwnSessions } from './sessions';
 
 const { ctx, db, sent } = setupTestContext();
 
@@ -278,6 +289,131 @@ describe('startImpersonation', () => {
       }),
     ).rejects.toBeInstanceOf(ZodError);
     expect((await refusal(staff, '01970000-0000-7000-8000-00000000dead')).code).toBe('not_found');
+  });
+});
+
+describe('actorSignedInAs', () => {
+  /**
+   * A staff member signed in as a company user, as the request finds it.
+   *
+   * @param role - The staff member's role.
+   * @param target - The user's company role.
+   * @returns The staff member, the user and the session's sign-in as them.
+   */
+  async function signedIn(
+    role: PlatformRole = 'platform_admin',
+    target: 'admin' | 'client' = 'client',
+  ) {
+    const staff = await confirmedStaff(role);
+    const userId = await companyUser(target);
+    await startImpersonation(ctx, staff, { userId, returnTo: `/admin/users/${userId}` });
+    const found = await findSessionImpersonation(db, staff.sessionId ?? '');
+    if (!found) {
+      throw new Error('Not signed in as the user');
+    }
+    return { staff, userId, found };
+  }
+
+  it('acts as the user, without the staff member’s session', async () => {
+    const { staff, userId, found } = await signedIn();
+
+    const outcome = await actorSignedInAs(db, staff, found);
+
+    expect(outcome).toMatchObject({
+      actor: {
+        id: userId,
+        email: 'client@adiutor.test',
+        sessionId: null,
+        sessionMfaVerified: false,
+        mfaConfirmedUntil: null,
+        signedInAt: null,
+        signedInAs: {
+          staffId: staff.id,
+          staffName: 'Sam Lee',
+          endsAt: found.expiresAt,
+          returnTo: `/admin/users/${userId}`,
+        },
+      },
+    });
+  });
+
+  it('ends once its time is up, which reading it still finds', async () => {
+    const { staff, found } = await signedIn();
+    await db.update(impersonation).set({ expiresAt: minutesAgo(1) });
+
+    const expired = await findSessionImpersonation(db, staff.sessionId ?? '');
+    expect(expired).not.toBeNull();
+    await expect(actorSignedInAs(db, staff, expired ?? found)).resolves.toEqual({
+      end: 'expired',
+    });
+  });
+
+  it('ends when the staff member may no longer do it', async () => {
+    const { staff, found } = await signedIn('manager');
+    // Demoted to Finance, as the next request loads them.
+    await db.update(user).set({ platformRole: 'finance' }).where(eq(user.id, staff.id));
+    const demoted = await loadActor(db, staff.id, {
+      id: staff.sessionId ?? undefined,
+      mfaVerified: true,
+      mfaMethod: 'passkey',
+      mfaVerifiedAt: new Date(),
+    });
+
+    await expect(actorSignedInAs(db, demoted as Actor, found)).resolves.toEqual({
+      end: 'no_longer_allowed',
+    });
+    // Or without strong MFA on their account any more.
+    await expect(actorSignedInAs(db, { ...staff, strongMfa: false }, found)).resolves.toEqual({
+      end: 'no_longer_allowed',
+    });
+  });
+
+  it('ends when the user is deactivated, or out of the staff member’s reach', async () => {
+    const support = await signedIn('support');
+    // Made Admin of their company: Support doesn't sign in as company Admins.
+    await db.update(membership).set({ role: 'admin' }).where(eq(membership.userId, support.userId));
+    await expect(actorSignedInAs(db, support.staff, support.found)).resolves.toEqual({
+      end: 'no_longer_allowed',
+    });
+
+    await db.update(user).set({ deactivatedAt: new Date() }).where(eq(user.id, support.userId));
+    await expect(actorSignedInAs(db, support.staff, support.found)).resolves.toEqual({
+      end: 'no_longer_allowed',
+    });
+  });
+});
+
+describe('while signed in as someone', () => {
+  it('refuses the user’s own account changes, before anything is checked or changed', async () => {
+    const staff = await confirmedStaff('platform_admin');
+    const userId = await companyUser();
+    await startImpersonation(ctx, staff, { userId });
+    const found = await findSessionImpersonation(db, staff.sessionId ?? '');
+    const outcome = found ? await actorSignedInAs(db, staff, found) : null;
+    if (!outcome || !('actor' in outcome)) {
+      throw new Error('Not signed in as the user');
+    }
+    const asUser = outcome.actor;
+    /** A change that must not happen. */
+    const neverCalled = async () => {
+      throw new Error('Changed while signed in as someone');
+    };
+
+    const changes = [
+      changeOwnPassword(ctx, asUser, neverCalled),
+      setFirstPassword(ctx, asUser, neverCalled),
+      revokeOtherOwnSessions(ctx, asUser),
+      deactivateOwnAccount(ctx, asUser, ''),
+      // Nor a sign-in as someone else from the user's view.
+      startImpersonation(ctx, asUser, { userId: staff.id }),
+    ];
+    const errors = await Promise.all(changes.map((change) => change.catch((error) => error)));
+
+    errors.forEach((error) => {
+      expect(error).toBeInstanceOf(ServiceError);
+      expect(error).toMatchObject({ code: 'signed_in_as', key: 'errors.impersonation.changesOff' });
+    });
+    expect((await db.select().from(user).where(eq(user.id, userId)))[0]?.deactivatedAt).toBeNull();
   });
 });
 

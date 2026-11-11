@@ -15,6 +15,7 @@ import {
   assertStillManages,
   getTargetAccess,
   managePermission,
+  assertNotSignedInAs,
 } from '../../access';
 import type { Actor } from '../../actor';
 import { recordEvent } from '../../audit';
@@ -170,6 +171,7 @@ export async function resendInvitation(
   actor: Actor,
   input: { companyId: string | null; invitationId: string },
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   const access = await getTargetAccess(ctx.db, actor, input.companyId);
   assertCanManage(access);
   const companyId = access.company?.id ?? null;
@@ -236,6 +238,7 @@ export async function revokeInvitation(
   actor: Actor,
   input: { companyId: string | null; invitationId: string },
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   const access = await getTargetAccess(ctx.db, actor, input.companyId);
   assertCanManage(access);
   const companyId = access.company?.id ?? null;

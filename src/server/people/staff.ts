@@ -15,7 +15,12 @@ import { type Paged, resolveTableState, type TableState } from '@/lib/tables/tab
 import { type PeopleSort, STAFF_TABLE } from '@/lib/tables/tables';
 import { localeSchema, staffNameSchema, staffRoleSchema } from '@/lib/validation';
 
-import { assertConfirmedForGrant, assertPermission, getGlobalPermissions } from '../access';
+import {
+  assertNotSignedInAs,
+  assertConfirmedForGrant,
+  assertPermission,
+  getGlobalPermissions,
+} from '../access';
 import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
 import { withMfaPromotion } from '../auth/mfa-promotion';
@@ -81,6 +86,7 @@ export async function setDefaultLocale(
   actor: Actor,
   locale: unknown,
 ): Promise<Locale> {
+  assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'staff:manage');
   const defaultLocale = localeSchema.parse(locale);
   await ctx.db.transaction(async (tx) => {
@@ -108,6 +114,7 @@ export async function renameStaff(
   actor: Actor,
   rawName: string,
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'staff:manage');
   const name = staffNameSchema.parse(rawName);
   await ctx.db.transaction(async (tx) => {
@@ -361,6 +368,7 @@ export async function changeStaffRole(
   actor: Actor,
   input: { userId: string; role: string },
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   const role = staffRoleSchema.parse(input.role);
   await setStaffRole(ctx, actor, input.userId, role);
 }
@@ -379,6 +387,7 @@ export async function removeFromStaff(
   actor: Actor,
   userId: string,
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   await setStaffRole(ctx, actor, userId, null);
 }
 

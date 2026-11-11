@@ -23,6 +23,7 @@ import {
   getCompanyAccess,
   getGlobalPermissions,
   getStaffPermissionsInCompanies,
+  assertNotSignedInAs,
 } from '../access';
 import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
@@ -348,6 +349,7 @@ export async function changeMemberRole(
   actor: Actor,
   input: { companyId: string; membershipId: string; role: string },
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   const role = companyRoleSchema.parse(input.role);
   const access = await getCompanyAccess(ctx.db, actor, input.companyId);
   await changeMembership(ctx, actor, access, input.membershipId, role);
@@ -367,6 +369,7 @@ export async function removeMember(
   actor: Actor,
   input: { companyId: string; membershipId: string },
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   const access = await getCompanyAccess(ctx.db, actor, input.companyId);
   await changeMembership(ctx, actor, access, input.membershipId, null);
 }
@@ -399,6 +402,7 @@ export async function addMember(
   actor: Actor,
   input: { companyId: string; userId: string; role: string },
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   assertPermission(getStaffPermissionsInCompanies(actor), 'members:manage');
   const role = companyRoleSchema.parse(input.role);
   const access = await getCompanyAccess(ctx.db, actor, input.companyId);

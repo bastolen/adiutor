@@ -25,6 +25,23 @@ import { availableProviders } from '@/lib/sign-in/providers';
 import { loadMfaStates } from './auth/mfa-state';
 
 /**
+ * A staff member signed in as the user ("Sign in as", see
+ * docs/decisions/0017-staff-sign-in-as-users.md): the session is the staff
+ * member's, and the app acts as the user while it lasts, refusing changes
+ * (`assertNotSignedInAs`).
+ */
+export interface SignedInAs {
+  /** The staff member's user ID. */
+  staffId: string;
+  /** The staff member's name (or email address, without one). */
+  staffName: string;
+  /** When it ends by itself. */
+  endsAt: Date;
+  /** The page of the app the staff member goes back to afterwards. */
+  returnTo: string;
+}
+
+/**
  * A signed-in user with their roles. Plain data, so it can be passed to
  * Client Components.
  */
@@ -98,10 +115,21 @@ export interface Actor {
    * outside a request (see `needsFreshSignIn`).
    */
   signedInAt: Date | null;
-  /** The current session's ID, or `null` outside a request. */
+  /**
+   * The current session's ID, or `null` outside a request and while a staff
+   * member is signed in as the user (the session is theirs, not the user's).
+   */
   sessionId: string | null;
   /** When the account was deactivated, or `null` while it's active. */
   deactivatedAt: Date | null;
+  /**
+   * The staff member signed in as this user in the current session, or
+   * `null` when the user signed in themselves. While it's set, every change
+   * is refused (`assertNotSignedInAs`), and the session facts above
+   * (`sessionMfaVerified`, `mfaConfirmedUntil`, `signedInAt`, `sessionId`)
+   * are empty: the session isn't the user's.
+   */
+  signedInAs: SignedInAs | null;
 }
 
 /**
@@ -181,6 +209,8 @@ export async function loadActor(
     strongMfaConfirmedUntil: mfaState ? strongMfaConfirmedUntil(sessionMfa, mfaState) : null,
     signedInAt: session.createdAt ? new Date(session.createdAt) : null,
     sessionId: session.id ?? null,
+    // Set by `getOptionalActor` when the session belongs to a staff member signed in as the user.
+    signedInAs: null,
   };
 }
 

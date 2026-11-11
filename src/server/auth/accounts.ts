@@ -24,6 +24,7 @@ import {
 } from '@/lib/sign-in/oauth-providers';
 import { availableProviders } from '@/lib/sign-in/providers';
 
+import { assertNotSignedInAs } from '../access';
 import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
 import type { ServiceContext } from '../context';
@@ -179,6 +180,7 @@ export async function confirmConnectedProvider(
   actor: Actor,
   accountId: string,
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   // Without a second step there's nothing to confirm with, as for adding a first one: a recent
   // sign-in instead.
   assertMayChangeSignIn(actor);
@@ -250,6 +252,7 @@ export async function setFirstPassword(
   actor: Actor,
   setPassword: () => Promise<unknown>,
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   // Without a second step there's nothing to confirm with, as for adding a first one: a recent
   // sign-in instead.
   assertMayChangeSignIn(actor);
@@ -290,6 +293,7 @@ export async function changeOwnPassword(
   actor: Actor,
   change: () => Promise<unknown>,
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   await checkCurrentPassword(ctx, actor, 'change_password', async () => {
     try {
       await change();

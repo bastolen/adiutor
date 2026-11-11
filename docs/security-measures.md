@@ -101,7 +101,11 @@ Only the endpoints the browser uses under `/api/auth` are open; the rest answer 
 server code can still call them (`disabledPaths`, listed in `src/lib/sign-in/auth-endpoints.ts`, with a
 test that fails when Better Auth adds one that's in neither list). The only other API route open
 signed out is the health check (`/api/health`, see [Docker](deploying.md#docker)), which answers
-only whether the app is up.
+only whether the app is up. While a staff member is signed in as a user, the guards refuse every
+endpoint, from the browser or from server code, except reading the session and signing out
+(`refuseWhileSignedInAs` in `src/server/auth/auth-guards/`). The session is the staff member's, so
+an endpoint would act on their own account (see
+[Signing in as a user](authentication.md#signing-in-as-a-user)).
 
 Return addresses must be pages of the app (`isSafeAppRedirect` in `src/lib/redirect.ts`): a path
 that starts with a single `/`, has no control characters, spaces or backslashes, stays on the site

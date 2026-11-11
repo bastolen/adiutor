@@ -22,13 +22,18 @@ import PATHNAME_HEADER from '@/lib/request/pathname-header';
 import { type CompanyAccess, getCompanyAccess, getGlobalPermissions } from './access';
 import { type Actor, loadActor, touchLastActive } from './actor';
 import appContext from './app-context';
+import { actorSignedInAs, endImpersonation, findSessionImpersonation } from './auth/impersonation';
 import { ServiceError } from './errors';
 
 /**
  * The permission helpers pages use to decide what to show, so pages check
- * permissions only through this module (`./access` is for services).
+ * permissions only through this module (`./access` is for services), and the
+ * refusal of changes while signed in as someone, for the server actions that
+ * call Better Auth themselves or send the user to confirm before a service
+ * would refuse.
  */
 export {
+  assertNotSignedInAs,
   type Company,
   currentPermissionsOf,
   getGlobalPermissions,
@@ -41,6 +46,12 @@ export {
  * `after`), so the page doesn't wait for that write or a lock on their row;
  * Next logs it if it fails.
  *
+ * When a staff member's session is signed in as a user ("Sign in as"), it
+ * returns that user with `signedInAs` set (`actorSignedInAs`), checked again
+ * with this request's rows. One that's over (its time is up, or it's no
+ * longer allowed) is ended after the response, and the request goes on as
+ * the staff member. Only the staff member is recorded as active.
+ *
  * @returns The actor, or `null`.
  */
 export const getOptionalActor = cache(async (): Promise<Actor | null> => {
@@ -48,19 +59,33 @@ export const getOptionalActor = cache(async (): Promise<Actor | null> => {
   if (!session) {
     return null;
   }
+  const sessionId = session.session.id;
   const sessionMfa = sessionMfaOf(session.session);
-  const actor = await loadActor(appContext.db, session.user.id, {
-    id: session.session.id,
-    ...sessionMfa,
-    // When it signed in, for the one-hour rule (`needsFreshSignIn`).
-    createdAt: session.session.createdAt,
-  });
+  // Independent reads, so they run together.
+  const [actor, signedInAs] = await Promise.all([
+    loadActor(appContext.db, session.user.id, {
+      id: sessionId,
+      ...sessionMfa,
+      // When it signed in, for the one-hour rule (`needsFreshSignIn`).
+      createdAt: session.session.createdAt,
+    }),
+    findSessionImpersonation(appContext.db, sessionId),
+  ]);
   // A deactivated account counts as signed out (its sessions are revoked as well).
   if (!actor || actor.deactivatedAt) {
     return null;
   }
   after(() => touchLastActive(appContext.db, actor.id));
-  return actor;
+  if (!signedInAs) {
+    return actor;
+  }
+  const outcome = await actorSignedInAs(appContext.db, actor, signedInAs);
+  if ('end' in outcome) {
+    // Without the request's details: rendering can't read them after the response.
+    after(() => endImpersonation({ db: appContext.db }, sessionId, outcome.end));
+    return actor;
+  }
+  return outcome.actor;
 });
 
 /** Where users whose role requires MFA are sent until they've set it up. */
@@ -80,6 +105,10 @@ const MFA_SETUP_PATH = '/account/security?setup=required';
  *   navigation around them) pass `allowMissingMfa`, so that's the one place
  *   they can still go.
  *
+ * A staff member signed in as a user is never sent to confirm: the session is
+ * theirs, and `getOptionalActor` checked it already. They are sent to the
+ * Security page like the user would be, since that's what the user sees.
+ *
  * @param options - Options.
  * @param options.allowMissingMfa - Let users without required MFA set up through (account pages only).
  * @returns The actor.
@@ -91,7 +120,7 @@ export async function getActor({
   if (!actor) {
     redirect('/auth');
   }
-  if (mustStepUp(actor)) {
+  if (actor.signedInAs === null && mustStepUp(actor)) {
     const current = (await headers()).get(PATHNAME_HEADER);
     redirect(`/auth/verify?callbackURL=${encodeURIComponent(getSafeRedirectPath(current))}`);
   }

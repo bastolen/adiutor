@@ -18,7 +18,11 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 vi.mock('@/server/app-context', () => ({ default: { name: 'app context' } }));
-vi.mock('@/server/authz', () => ({ getActor: vi.fn() }));
+// The real refusal while signed in as someone, so the actions are tried with it.
+vi.mock('@/server/authz', async () => ({
+  getActor: vi.fn(),
+  assertNotSignedInAs: (await import('@/server/signed-in-as')).default,
+}));
 vi.mock('@/server/people/user-admin', () => ({
   deactivateUser: vi.fn(),
   deleteUser: vi.fn(),
@@ -65,6 +69,22 @@ beforeEach(() => {
 });
 
 describe('resetMfaAction', () => {
+  it('refuses while a staff member is signed in as the Admin, without sending them to confirm', async () => {
+    signedInAs({
+      ...confirmedAdmin,
+      mfaConfirmedUntil: null,
+      signedInAs: { staffId: 'staff-1', staffName: 'Sam Lee', endsAt: new Date(), returnTo: '/' },
+    });
+
+    expect(await resetMfaAction(null, form({ userId: USER_ID }))).toEqual({
+      ok: false,
+      message:
+        "This can't be changed while you're signed in as someone else. Go back to your own account first.",
+    });
+    expect(redirect).not.toHaveBeenCalled();
+    expect(resetUserMfa).not.toHaveBeenCalled();
+  });
+
   it("sends the Admin to confirm it's them first, coming back to the user's page", async () => {
     signedInAs({ ...confirmedAdmin, mfaConfirmedUntil: null });
 

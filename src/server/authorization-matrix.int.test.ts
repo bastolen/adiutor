@@ -20,6 +20,11 @@
  * of the last Admin is the last test below (a conflict, which the matrix
  * counts as allowed).
  *
+ * While a staff member is signed in as the acting user, every operation that
+ * changes something is refused (`signed_in_as`, see `assertNotSignedInAs`),
+ * except the user's own work (`OWN_WORK`), and the reads (`READS`) give what
+ * they give the user; a new operation counts as a change unless it's listed.
+ *
  * Each role's operations run one after another on one world, so every
  * operation that uses up or removes its target (resending, revoking,
  * removing, reactivating, accepting) gets a target of its own in
@@ -443,6 +448,35 @@ function listOperations(): Operation[] {
 /** The operations by name. */
 const OPERATIONS = new Map(listOperations());
 
+/**
+ * The operations that only read: while a staff member is signed in as the
+ * acting user, they still work, with the user's own rights. Every other
+ * operation changes something and is refused then (`signed_in_as`), except
+ * the user's own work ({@link OWN_WORK}), so a new operation that changes
+ * something is refused unless it's listed here.
+ */
+const READS: ReadonlySet<string> = new Set([
+  'list members (own)',
+  'list members (other)',
+  'list invitations (own)',
+  'list invite links (other)',
+  'list companies',
+  'list staff invitations',
+  'list staff',
+  'view staff settings',
+  'list users',
+  'view user',
+  'check a user exists',
+  'list addable companies',
+  'view audit log',
+  'list the audit log',
+  'look up an error reference',
+  'list recent errors',
+]);
+
+/** What a user may still change while a staff member is signed in as them: their own work. */
+const OWN_WORK: ReadonlySet<string> = new Set(['dismiss own MFA recommendation']);
+
 /** What happens when a role tries an operation. */
 type Outcome = 'allowed' | 'forbidden' | 'not_found';
 
@@ -730,6 +764,9 @@ async function outcomeCode(run: () => Promise<unknown>): Promise<string> {
 describe('authorization matrix', () => {
   it('expects an outcome of every operation for every role', () => {
     expect(Object.keys(EXPECTED).sort()).toEqual([...OPERATIONS.keys()].sort());
+    [...READS, ...OWN_WORK].forEach((name) => {
+      expect(OPERATIONS.has(name), name).toBe(true);
+    });
     Object.entries(EXPECTED).forEach(([operation, letters]) => {
       expect(letters, operation).toHaveLength(ROLES.length);
       expect(
@@ -749,6 +786,42 @@ describe('authorization matrix', () => {
     const expected = names.map((name) => [name, expectedOutcome(name, role)]);
     expect(Object.fromEntries(results)).toEqual(Object.fromEntries(expected));
   });
+
+  it.each(['client', 'company admin', 'platform admin'] as const)(
+    'refuses every change while a staff member is signed in as a %s, and still reads as them',
+    async (role) => {
+      const world = await createWorld(role);
+      const signedInAs: World = {
+        ...world,
+        actor: {
+          ...world.actor,
+          signedInAs: {
+            staffId: world.outsider,
+            staffName: 'Sam Lee',
+            endsAt: new Date(Date.now() + 30 * 60_000),
+            returnTo: '/dashboard',
+          },
+        },
+      };
+      const names = [...OPERATIONS.keys()];
+      const results = await inSequence(names, async (name) => {
+        /**
+         * Runs the operation with the staff member signed in as the acting user.
+         *
+         * @returns What the operation returns.
+         */
+        const run = () => defined(OPERATIONS.get(name), `the ${name} operation`)(signedInAs);
+        return [name, READS.has(name) ? await outcome(run) : await outcomeCode(run)];
+      });
+      const expected = names.map((name) => {
+        if (READS.has(name)) {
+          return [name, expectedOutcome(name, role)];
+        }
+        return [name, OWN_WORK.has(name) ? 'done' : 'signed_in_as'];
+      });
+      expect(Object.fromEntries(results)).toEqual(Object.fromEntries(expected));
+    },
+  );
 
   it('refuses deactivating your own account to the last Admin of the staff or a company', async () => {
     await createStaffSettings(db);
