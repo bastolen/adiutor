@@ -8,7 +8,7 @@
       "rows": "users",
       "search": {
         "label": "Search users",
-        "placeholder": "Search by name or email"
+        "placeholder": "Name or email"
       },
       "filters": {
         "label": "Filter users",
@@ -244,7 +244,6 @@
         "role": "Role",
         "activity": "Activity",
         "actions": "Actions",
-        "you": "(you)",
         "deactivated": "Deactivated"
       },
       "stepDown": {
@@ -320,7 +319,7 @@
         "errorsTab": "Errors"
       },
       "searchLabel": "Search people or companies",
-      "searchPlaceholder": "Search by name, email or company",
+      "searchPlaceholder": "Name or company",
       "dateLabel": "Filter by date",
       "filterLabel": "Filter events",
       "all": "All",

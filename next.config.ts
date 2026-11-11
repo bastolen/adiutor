@@ -44,6 +44,14 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
 
   /**
+   * Hides Next.js's development indicator (the round "N"): in every corner it
+   * covers one of the app's controls (the menu button on phones, the
+   * sidebar's account button, the theme and language button). Compile and
+   * runtime errors still show. Development only.
+   */
+  devIndicators: false,
+
+  /**
    * Adds the security headers to every response, and a fixed Content
    * Security Policy to the static files the proxy skips.
    *

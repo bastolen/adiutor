@@ -23,6 +23,7 @@
       "signedIn": "Inicio de sesión",
       "actions": "Acciones"
     },
+    "you": "Tú",
     "activity": {
       "lastActive": "<hidden>Última actividad: </hidden><time></time>",
       "lastActiveShort": "Última actividad <time></time>",

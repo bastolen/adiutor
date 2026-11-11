@@ -20,7 +20,7 @@ import SearchForm from '@/components/ui/search-form';
 import SegmentedNav from '@/components/ui/segmented-nav';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import SortMenu from '@/components/ui/sort-menu';
-import { Table, Td, Th, Tr } from '@/components/ui/table';
+import { ownRowCell, Table, Td, Th, Tr } from '@/components/ui/table';
 import TextLink from '@/components/ui/text-link';
 import ToastOnArrival from '@/components/ui/toast-on-arrival';
 import displayName from '@/lib/display-name';
@@ -33,6 +33,7 @@ import { globalPermissionMetadata } from '@/server/page-metadata';
 import { isUserFilter, listUsers, type UserFilter, type UserListItem } from '@/server/people/users';
 
 import { ActivityColumn, ActivityLine } from '../../_people/activity';
+import YouBadge from '../../_people/you-badge';
 import { AccountStateBadges, MfaBadge, StaffBadge } from './user-badges';
 
 /**
@@ -207,9 +208,10 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
             <tbody>
               {users.items.map((listed) => {
                 const shownName = displayName(listed);
+                const isSelf = listed.id === actor.id;
                 return (
                   <Tr key={listed.id}>
-                    <Td>
+                    <Td className={isSelf ? ownRowCell : undefined}>
                       <div className="flex items-center gap-3">
                         <Avatar name={shownName} size="sm" brand={listed.staffRole !== null} />
                         <div className="flex min-w-0 flex-col">
@@ -220,6 +222,7 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
                             >
                               {shownName}
                             </TextLink>
+                            {isSelf && <YouBadge />}
                             {listed.staffRole && <StaffBadge role={listed.staffRole} />}
                             <AccountStateBadges
                               deactivated={listed.deactivatedAt !== null}

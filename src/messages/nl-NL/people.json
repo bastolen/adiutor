@@ -23,6 +23,7 @@
       "signedIn": "Ingelogd",
       "actions": "Acties"
     },
+    "you": "Jij",
     "activity": {
       "lastActive": "<hidden>Laatst actief: </hidden><time></time>",
       "lastActiveShort": "Laatst actief <time></time>",

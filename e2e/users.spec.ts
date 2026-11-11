@@ -46,6 +46,9 @@ test('an Admin finds users, recognises the staff and filters and searches the li
   await expect(rows.nth(1)).toContainText(PLATFORM_ADMIN.email);
   const watcherRow = rows.filter({ hasText: CLIENT_WATCHER.email });
   await expect(watcherRow.getByRole('link', { name: COMPANY_NAME })).toBeVisible();
+  // The Admin's own row says so; nobody else's does.
+  await expect(adminRow.getByText('You', { exact: true })).toBeVisible();
+  await expect(watcherRow.getByText('You', { exact: true })).toHaveCount(0);
 
   const filters = page.getByRole('navigation', { name: 'Filter users' });
   await filters.getByRole('link', { name: 'Not staff' }).click();
@@ -74,6 +77,11 @@ test('an Admin finds users, recognises the staff and filters and searches the li
   await page.evaluate(() => {
     (window as unknown as { searchedInPage: boolean }).searchedInPage = true;
   });
+  // Short enough to fit the field on a small phone; its label says what it searches.
+  await expect(page.getByRole('searchbox', { name: 'Search users' })).toHaveAttribute(
+    'placeholder',
+    'Name or email',
+  );
   await page.getByRole('searchbox', { name: 'Search users' }).fill('UNVERIFIED');
   const search = page.getByRole('button', { name: 'Search' });
   await search.click();

@@ -5,6 +5,7 @@ import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 
+import fontVariables from '@/lib/fonts';
 import IntlClientProvider from '@/lib/i18n/intl-client-provider';
 import { pickMessages } from '@/lib/i18n/messages';
 import { NONCE_HEADER } from '@/lib/request/csp';
@@ -36,7 +37,7 @@ export const instant = false;
 
 /**
  * Wraps every page in the `<html>` and `<body>` elements and loads the global
- * styles. The theme choice is in the layouts below: the floating button in
+ * styles and the fonts Adiutor ships (`src/lib/fonts.ts`). The theme choice is in the layouts below: the floating button in
  * the public layout, the account menu in the app.
  *
  * `<html lang>` is the request's language (docs/i18n.md), and the shared
@@ -59,7 +60,12 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
     getMessages(),
   ]);
   return (
-    <html lang={locale} data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html
+      lang={locale}
+      className={fontVariables}
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+    >
       <head>
         {/* eslint-disable-next-line react/no-danger -- Static script from our own code; it must run before the first paint. */}
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeScript }} />

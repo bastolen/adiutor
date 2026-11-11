@@ -37,6 +37,9 @@ export const user = pgTable('user', {
     enum: ['platform_admin', 'manager', 'finance', 'support'],
   }),
   locale: text('locale', { enum: ['en-US', 'nl-NL', 'es-ES'] }),
+  mfaRecommendationDismissedAt: timestamp('mfa_recommendation_dismissed_at', {
+    withTimezone: true,
+  }),
 });
 
 /** Better Auth's `session` table. */

@@ -8,7 +8,7 @@
  */
 
 import getTestDatabaseUrl from '../tests/database/database-url';
-import { storeSignInLink } from './support/db';
+import { clearMfaRecommendationDismissal, storeSignInLink } from './support/db';
 import {
   CLIENT_WATCHER,
   CLOSED_COMPANY_ADMIN,
@@ -185,8 +185,10 @@ test('a company user adds a passkey and is offered it when signing in', async ({
 });
 
 test('everyone else is recommended MFA, and can dismiss the recommendation for themselves', async ({
+  browser,
   page,
 }) => {
+  await clearMfaRecommendationDismissal(getTestDatabaseUrl(), CLIENT_WATCHER.email);
   await useOwnClientIp(page);
   await signIn(page, CLIENT_WATCHER);
   const banner = page.getByRole('region', { name: 'Account security' });
@@ -194,15 +196,26 @@ test('everyone else is recommended MFA, and can dismiss the recommendation for t
 
   await banner.getByRole('button', { name: 'Dismiss' }).click();
   await expect(banner).toHaveCount(0);
-  await page.reload();
-  // The banner reads the dismissal in the browser: wait until the page has hydrated (the account
-  // menu opens) before checking it stays hidden.
-  await page.getByRole('button', { name: /^Account menu/ }).click();
-  await expect(page.getByRole('menu')).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(banner).toHaveCount(0);
+  // Saved with the account: once the save is done, a reload no longer has it, straight from the
+  // server.
+  await expect
+    .poll(async () => {
+      await page.reload();
+      await page.getByRole('heading', { level: 1 }).waitFor();
+      return banner.count();
+    })
+    .toBe(0);
 
-  // Someone else signing in on this browser still sees it.
+  // And on another device.
+  const otherDevice = await browser.newContext();
+  const otherPage = await otherDevice.newPage();
+  await useOwnClientIp(otherPage);
+  await signIn(otherPage, CLIENT_WATCHER);
+  await expect(otherPage.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(otherPage.getByRole('region', { name: 'Account security' })).toHaveCount(0);
+  await otherDevice.close();
+
+  // Someone else signing in on this browser still sees theirs.
   await signOut(page);
   await signIn(page, SUPPORT_STAFF);
   await expect(banner).toContainText('Protect your account');

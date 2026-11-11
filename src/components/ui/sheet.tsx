@@ -41,8 +41,10 @@ interface SheetProps {
 }
 
 /**
- * A sheet following the WAI-ARIA dialog pattern: focus moves into it and
- * stays there, Escape, the close button or clicking outside closes it, and
+ * A sheet following the WAI-ARIA dialog pattern: focus moves into it, to the
+ * link for the current page (`aria-current="page"`) when it has one and else
+ * to its first link or button (Radix on its own skips links, which put focus
+ * on the account menu at the bottom of the navigation), and stays there, Escape, the close button or clicking outside closes it, and
  * focus returns to the trigger. The close button sits in the top right
  * corner, after the content in the tab order. Close it from the content too
  * where that's expected, e.g. after following a link.
@@ -71,7 +73,22 @@ export default function Sheet({
       <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-overlay data-[state=open]:animate-fade-in" />
-        <Dialog.Content className="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] border-r border-border bg-raised shadow-xl data-[state=open]:animate-slide-in">
+        <Dialog.Content
+          className="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] border-r border-border bg-raised shadow-xl data-[state=open]:animate-slide-in"
+          onOpenAutoFocus={(event) => {
+            const sheet = event.currentTarget;
+            if (!(sheet instanceof HTMLElement)) {
+              return;
+            }
+            const start =
+              sheet.querySelector<HTMLElement>('[aria-current="page"]') ??
+              sheet.querySelector<HTMLElement>('a[href], button:not([disabled])');
+            if (start) {
+              event.preventDefault();
+              start.focus();
+            }
+          }}
+        >
           <Dialog.Title className="sr-only">{title}</Dialog.Title>
           <Dialog.Description className="sr-only">{description}</Dialog.Description>
           {children}

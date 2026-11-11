@@ -1,7 +1,9 @@
 /**
- * @file Floating button in the bottom-right corner for choosing the theme and
- * the language, on the pages without the account menu (`AuthLayout` and
- * `CenteredLayout`). Signed in, the theme is a row in the account menu and
+ * @file Button for choosing the theme and the language, on the pages without
+ * the account menu (`AuthLayout` and `CenteredLayout`): floating in the
+ * bottom-right corner from tablet width, and at the end of the page below
+ * that, where a fixed button would cover the page's last links on a small
+ * phone. Signed in, the theme is a row in the account menu and
  * the language is chosen on the account page, saved with the account.
  */
 'use client';
@@ -57,9 +59,12 @@ import { isThemePreference, THEME_PREFERENCES } from '@/lib/theme';
  * it) and reloads the page in it, so every part of the page (and pages kept
  * alive) changes at once; the button is busy until then.
  *
+ * @param props - Component props.
+ * @param props.className - Where it sits below tablet width, in the page's flow (from tablet
+ *   width it's fixed in the bottom-right corner).
  * @returns The theme and language button.
  */
-export default function PreferencesMenu() {
+export default function PreferencesMenu({ className = '' }: { className?: string }) {
   const t = useTranslations('common');
   const themeText = useTranslations('common.theme');
   const locale = useLocale();
@@ -82,8 +87,9 @@ export default function PreferencesMenu() {
         aria-label={t('preferences.button', { theme: preference, language: LOCALE_NAMES[locale] })}
         aria-busy={pending || undefined}
         className={cn(
-          'fixed right-4 bottom-4 z-40 flex h-11 items-center gap-3 rounded-full border border-border bg-surface px-3.5 text-foreground shadow-lg transition-colors hover:bg-muted aria-busy:cursor-wait data-[state=open]:bg-muted',
+          'flex h-11 w-fit items-center gap-3 rounded-full border border-border bg-surface px-3.5 text-foreground shadow-lg transition-colors hover:bg-muted aria-busy:cursor-wait data-[state=open]:bg-muted md:fixed md:right-4 md:bottom-4 md:z-40 md:m-0',
           focusRing,
+          className,
         )}
       >
         <ThemeIcon aria-hidden="true" className="size-5" />

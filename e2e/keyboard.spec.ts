@@ -175,7 +175,7 @@ test.describe('signed in', () => {
     await page.goto('/admin/staff');
     const role = page
       .getByRole('row')
-      .filter({ hasText: '(you)' })
+      .filter({ has: page.getByText('You', { exact: true }) })
       .getByRole('combobox', { name: /^Role of / });
 
     await openWithEnter(role);
@@ -332,6 +332,8 @@ test.describe('signed in', () => {
     await page.keyboard.press('Enter');
     const menu = page.getByRole('dialog', { name: 'Menu' });
     await expect(menu).toBeVisible();
+    // It starts on the current page's link, at the top, not on the account menu at the bottom.
+    await expect(menu.getByRole('link', { name: 'Dashboard', exact: true })).toBeFocused();
     // Focus stays in the panel however far you tab.
     for (let step = 0; step < 8; step += 1) {
       // eslint-disable-next-line no-await-in-loop -- Key presses must happen in order.

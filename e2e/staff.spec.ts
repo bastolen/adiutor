@@ -174,7 +174,7 @@ test('a second staff Admin steps down after a confirmation, and lands on the das
 
   // On their own row, the select asks first, in their own words.
   await admin.goto('/admin/staff');
-  const ownRow = admin.getByRole('row').filter({ hasText: '(you)' });
+  const ownRow = admin.getByRole('row').filter({ has: admin.getByText('You', { exact: true }) });
   await expect(ownRow.getByRole('button', { name: 'Leave the staff' })).toBeVisible();
   await ownRow.getByRole('combobox', { name: 'Role of Second Admin' }).click();
   await admin.getByRole('option', { name: 'Manager' }).click();

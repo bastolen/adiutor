@@ -31,13 +31,19 @@
   --color-gradient-start: #015555;
   --color-gradient-end: #05de85;
 
-  /** The device's own sans-serif font. */
+  /**
+   * Inter, which Adiutor ships (`src/lib/fonts.ts`), so text looks and
+   * measures the same on every device; the device's own font only until it
+   * loads.
+   */
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial',
-    sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+    var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', 'Roboto',
+    'Helvetica Neue', 'Arial', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
 
-  /** Monospaced font, for links and codes. */
-  --font-mono: ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', 'Liberation Mono', monospace;
+  /** JetBrains Mono, also shipped, for links and codes. */
+  --font-mono:
+    var(--font-jetbrains-mono), ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas',
+    'Liberation Mono', monospace;
 
   /**
    * Font sizes. Per the brand guidelines, each line height is the font size

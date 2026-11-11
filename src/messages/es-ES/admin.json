@@ -8,7 +8,7 @@
       "rows": "usuarios",
       "search": {
         "label": "Buscar usuarios",
-        "placeholder": "Buscar por nombre o correo"
+        "placeholder": "Nombre o correo"
       },
       "filters": {
         "label": "Filtrar usuarios",
@@ -244,7 +244,6 @@
         "role": "Rol",
         "activity": "Actividad",
         "actions": "Acciones",
-        "you": "(tú)",
         "deactivated": "Desactivado"
       },
       "stepDown": {
@@ -277,7 +276,7 @@
       "description": "Todas las empresas a las que ayudas. Abre una para gestionar a su gente y su configuración.",
       "add": "Añadir empresa",
       "searchLabel": "Buscar empresas",
-      "searchPlaceholder": "Buscar por nombre",
+      "searchPlaceholder": "Busca por nombre",
       "rows": "empresas",
       "noMatchTitle": "No hay empresas que coincidan",
       "noMatchDescription": "Nada coincide con \"{search}\". Prueba con otro nombre.",
@@ -320,7 +319,7 @@
         "errorsTab": "Errores"
       },
       "searchLabel": "Buscar personas o empresas",
-      "searchPlaceholder": "Buscar por nombre, correo o empresa",
+      "searchPlaceholder": "Nombre o empresa",
       "dateLabel": "Filtrar por fecha",
       "filterLabel": "Filtrar eventos",
       "all": "Todos",

@@ -8,7 +8,7 @@
       "rows": "gebruikers",
       "search": {
         "label": "Gebruikers zoeken",
-        "placeholder": "Zoek op naam of e-mailadres"
+        "placeholder": "Naam of e-mail"
       },
       "filters": {
         "label": "Gebruikers filteren",
@@ -244,7 +244,6 @@
         "role": "Rol",
         "activity": "Activiteit",
         "actions": "Acties",
-        "you": "(jij)",
         "deactivated": "Gedeactiveerd"
       },
       "stepDown": {
@@ -320,7 +319,7 @@
         "errorsTab": "Fouten"
       },
       "searchLabel": "Mensen of bedrijven zoeken",
-      "searchPlaceholder": "Zoeken op naam, e-mailadres of bedrijf",
+      "searchPlaceholder": "Naam of bedrijf",
       "dateLabel": "Filteren op datum",
       "filterLabel": "Gebeurtenissen filteren",
       "all": "Alles",

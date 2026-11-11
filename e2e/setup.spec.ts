@@ -87,5 +87,6 @@ test.describe('first run', () => {
     await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
     await page.goto('/setup');
     await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+    await expect(page).toHaveTitle('Not found · Adiutor');
   });
 });

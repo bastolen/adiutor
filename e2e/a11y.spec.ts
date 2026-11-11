@@ -1,6 +1,8 @@
 /**
  * @file Accessibility scans of every page, in light and dark mode, against
- * the WCAG 2.2 A and AA rules, plus a reflow check on a narrow screen. The
+ * the WCAG 2.2 A and AA rules, plus a reflow check on a narrow screen (for
+ * signed-in pages also while they still show their loading placeholders) and
+ * a check that no field is small enough for phones to zoom in on. The
  * invitation and invite-link pages are scanned with real tokens (stored in
  * `beforeAll`), signed out and signed in. `/setup` is scanned in
  * `setup.spec.ts`, the only place the database is empty.
@@ -26,6 +28,7 @@ import expectAccessible from './support/axe';
 import { findCompanyId, storeInvitation, storeInviteLink, storeSignInLink } from './support/db';
 import {
   CLIENT_WATCHER,
+  COMPANY_NAME,
   COMPANY_SLUG,
   E2E_BASE_URL,
   PAGING_COMPANY_SLUG,
@@ -146,18 +149,162 @@ test.beforeAll(async ({ browser }) => {
 });
 
 /**
- * Checks that the page doesn't scroll sideways (WCAG 1.4.10 Reflow). Wide
- * tables may scroll inside their own container; the page itself must not.
+ * Checks that the page as it is now doesn't scroll sideways (WCAG 1.4.10
+ * Reflow). Wide tables may scroll inside their own container; the page itself
+ * must not.
  *
  * @param page - The browser page.
  */
-async function expectNoSidewaysScroll(page: Page): Promise<void> {
-  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+async function expectFitsNow(page: Page): Promise<void> {
   const { scrollWidth, clientWidth } = await page.evaluate(() => ({
     scrollWidth: document.documentElement.scrollWidth,
     clientWidth: document.documentElement.clientWidth,
   }));
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+}
+
+/**
+ * Checks that no box cuts off content wider than itself, as a card does with a
+ * button that runs past its edge: the page doesn't scroll, so
+ * {@link expectFitsNow} can't see it. Deliberate truncation (`…`), visually
+ * hidden text and areas that scroll on purpose don't count.
+ *
+ * @param page - The browser page.
+ */
+async function expectNothingClipped(page: Page): Promise<void> {
+  const clipped = await page.evaluate(() =>
+    [...document.querySelectorAll('body *')]
+      .filter((element) => {
+        const style = getComputedStyle(element);
+        const clips = [style.overflowX, style.overflow].some((value) =>
+          ['hidden', 'clip'].includes(value),
+        );
+        // A field's own text scrolls inside it, so fields don't count.
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName)) {
+          return false;
+        }
+        // Visually hidden until focused or read out, like the skip link (`sr-only`).
+        const visuallyHidden =
+          element.classList.contains('sr-only') ||
+          style.clip === 'rect(0px, 0px, 0px, 0px)' ||
+          style.clipPath === 'inset(50%)';
+        return (
+          clips &&
+          !visuallyHidden &&
+          style.textOverflow !== 'ellipsis' &&
+          element.getBoundingClientRect().width > 1 &&
+          element.scrollWidth > element.clientWidth + 1
+        );
+      })
+      .map((element) => {
+        const name = (element.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 60);
+        return `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''} "${name}": ${element.scrollWidth}px of content in ${element.clientWidth}px`;
+      }),
+  );
+  expect(clipped).toEqual([]);
+}
+
+/**
+ * Checks that every field's placeholder fits inside the field, measured in the
+ * field's own font: a longer one is cut off mid-word ("Zoek op naam of e").
+ *
+ * @param page - The browser page.
+ */
+async function expectPlaceholdersFit(page: Page): Promise<void> {
+  const cutOff = await page.evaluate(() => {
+    const canvas = document.createElement('canvas').getContext('2d');
+    if (!canvas) {
+      return ['no canvas to measure with'];
+    }
+    return [...document.querySelectorAll('input[placeholder], textarea[placeholder]')]
+      .filter((field) => field.getClientRects().length > 0)
+      .filter((field) => {
+        const style = getComputedStyle(field);
+        canvas.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+        // From the outer width: browsers differ in whether a field's clientWidth counts padding.
+        const room =
+          field.getBoundingClientRect().width -
+          ['paddingLeft', 'paddingRight', 'borderLeftWidth', 'borderRightWidth']
+            .map((side) =>
+              Number.parseFloat(
+                style.getPropertyValue(
+                  side.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`),
+                ),
+              ),
+            )
+            .reduce((sum, width) => sum + width, 0);
+        return canvas.measureText(field.getAttribute('placeholder') ?? '').width > room + 1;
+      })
+      .map((field) => field.getAttribute('placeholder'));
+  });
+  expect(cutOff).toEqual([]);
+}
+
+/**
+ * Checks that the buttons in table rows keep their label on one line: a table
+ * gives a column only the width its content needs at least, so a button that
+ * may wrap gets squeezed onto two lines ("Sign / out") in a row with room.
+ *
+ * @param page - The browser page.
+ */
+async function expectTableButtonsOnOneLine(page: Page): Promise<void> {
+  const wrapped = await page.evaluate(() =>
+    [...document.querySelectorAll('td [data-button]')]
+      .filter((button) => button.getClientRects().length > 0)
+      .filter((button) => {
+        const style = getComputedStyle(button);
+        const frame = ['padding-top', 'padding-bottom', 'border-top-width', 'border-bottom-width']
+          .map((side) => Number.parseFloat(style.getPropertyValue(side)))
+          .reduce((sum, size) => sum + size, 0);
+        const lines =
+          (button.getBoundingClientRect().height - frame) / Number.parseFloat(style.lineHeight);
+        return Math.round(lines) > 1;
+      })
+      .map((button) => (button.textContent ?? '').trim()),
+  );
+  expect(wrapped).toEqual([]);
+}
+
+/**
+ * Checks that the page doesn't scroll sideways or cut anything off once it
+ * has loaded (see {@link expectFitsNow}, {@link expectNothingClipped},
+ * {@link expectPlaceholdersFit} and {@link expectTableButtonsOnOneLine}).
+ *
+ * @param page - The browser page.
+ */
+async function expectNoSidewaysScroll(page: Page): Promise<void> {
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+  await expectFitsNow(page);
+  await expectNothingClipped(page);
+  await expectPlaceholdersFit(page);
+  await expectTableButtonsOnOneLine(page);
+}
+
+/**
+ * Checks that every field people type in has text of at least 16px: iOS
+ * Safari zooms the page in when a field with smaller text gets focus. Hidden
+ * fields and those kept from assistive technology (like the native select
+ * behind a Radix select) can't get focus, so they don't count.
+ *
+ * @param page - The browser page, loaded.
+ */
+async function expectFieldsDontZoom(page: Page): Promise<void> {
+  const smallFields = await page.evaluate(() => {
+    const notTyped = ['hidden', 'checkbox', 'radio', 'submit', 'button', 'reset', 'file', 'range'];
+    return [...document.querySelectorAll('input, textarea, select')]
+      .filter(
+        (field) =>
+          !notTyped.includes(field.getAttribute('type') ?? '') &&
+          field.getClientRects().length > 0 &&
+          field.closest('[aria-hidden="true"]') === null,
+      )
+      .map((field) => ({
+        field: field.getAttribute('name') ?? field.getAttribute('aria-label') ?? field.id,
+        fontSize: getComputedStyle(field).fontSize,
+      }))
+      .filter(({ fontSize }) => Number.parseFloat(fontSize) < 16);
+  });
+  expect(smallFields).toEqual([]);
 }
 
 /**
@@ -205,9 +352,10 @@ test.describe('on a 320px wide screen', () => {
   });
 
   PUBLIC_PATHS.forEach((path) => {
-    test(`${path} fits without sideways scrolling`, async ({ page }) => {
+    test(`${path} fits without sideways scrolling or zooming into its fields`, async ({ page }) => {
       await page.goto(path);
       await expectNoSidewaysScroll(page);
+      await expectFieldsDontZoom(page);
     });
   });
 
@@ -218,8 +366,74 @@ test.describe('on a 320px wide screen', () => {
     await expectNoSidewaysScroll(page);
   });
 
+  ['/auth', '/sign-in-error?error=state_mismatch'].forEach((path) => {
+    test(`${path}: the theme and language button covers no other control`, async ({ page }) => {
+      await page.goto(path);
+      const covered = await page.evaluate(() => {
+        const button = [...document.querySelectorAll('button')].find((element) =>
+          element.getAttribute('aria-label')?.startsWith('Theme and language'),
+        );
+        if (!button) {
+          return ['no theme and language button'];
+        }
+        const box = button.getBoundingClientRect();
+        return [...document.querySelectorAll('a[href], button, input, select, textarea')]
+          .filter((element) => element !== button)
+          .filter((element) => {
+            const other = element.getBoundingClientRect();
+            return (
+              other.width > 0 &&
+              other.left < box.right &&
+              other.right > box.left &&
+              other.top < box.bottom &&
+              other.bottom > box.top
+            );
+          })
+          .map((element) => (element.textContent ?? '').trim() || element.tagName);
+      });
+      expect(covered).toEqual([]);
+    });
+  });
+
+  test('the companies list shows each status under the name', async ({ browser }) => {
+    const context = await browser.newContext({
+      storageState: adminState,
+      viewport: { width: 320, height: 640 },
+    });
+    const page = await context.newPage();
+    await page.goto('/admin/companies');
+    // Once the list is there: no Status column squeezing the names, the badge sits under the name.
+    await expect(page.getByRole('columnheader', { name: 'Company' })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Status' })).toBeHidden();
+    const nameCell = page
+      .getByRole('row')
+      .filter({ hasText: COMPANY_NAME })
+      .getByRole('cell')
+      .first();
+    await expect(
+      nameCell.getByText('Active', { exact: true }).filter({ visible: true }),
+    ).toHaveCount(1);
+    await context.close();
+  });
+
+  test('the Sort menu keeps clear of the screen edges', async ({ browser }) => {
+    const context = await browser.newContext({
+      storageState: adminState,
+      viewport: { width: 320, height: 640 },
+    });
+    const page = await context.newPage();
+    await page.goto('/admin/users');
+    await page.getByRole('button', { name: /^Sort users/ }).click();
+    const box = defined(await page.getByRole('menu').boundingBox(), 'the menu');
+    expect(box.x).toBeGreaterThanOrEqual(16);
+    expect(box.x + box.width).toBeLessThanOrEqual(320 - 16);
+    await context.close();
+  });
+
   APP_PATHS.forEach((path) => {
-    test(`${path} fits without sideways scrolling`, async ({ browser }) => {
+    test(`${path} fits without sideways scrolling or zooming into its fields`, async ({
+      browser,
+    }) => {
       const context = await browser.newContext({
         storageState: adminState,
         viewport: { width: 320, height: 640 },
@@ -227,6 +441,21 @@ test.describe('on a 320px wide screen', () => {
       const page = await context.newPage();
       await page.goto(resolvePath(path));
       await expectNoSidewaysScroll(page);
+      await expectFieldsDontZoom(page);
+      await context.close();
+    });
+
+    test(`${path} fits without sideways scrolling while it loads`, async ({ browser }) => {
+      // Without JavaScript the streamed content never replaces the Suspense placeholders, so the
+      // page stays as it looks while it loads.
+      const context = await browser.newContext({
+        storageState: adminState,
+        viewport: { width: 320, height: 640 },
+        javaScriptEnabled: false,
+      });
+      const page = await context.newPage();
+      await page.goto(resolvePath(path));
+      await expectFitsNow(page);
       await context.close();
     });
   });

@@ -137,3 +137,7 @@ The code is released under the [MIT License](LICENSE).
 The MIT License covers the source code only. The Adiutor name, logo and other brand assets (including
 the files in `public/brand/`) are not covered by it and may not be used to represent other projects
 or products without permission.
+
+The fonts Adiutor ships, [Inter](https://github.com/rsms/inter) and
+[JetBrains Mono](https://github.com/JetBrains/JetBrainsMono), are under the SIL Open Font License
+1.1 (see `LICENSES/`).

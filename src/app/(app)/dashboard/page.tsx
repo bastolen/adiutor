@@ -15,6 +15,7 @@ import displayName from '@/lib/display-name';
 import ClientMessages from '@/lib/i18n/client-messages';
 import appContext from '@/server/app-context';
 import { getActor, getGlobalPermissions } from '@/server/authz';
+import { isMfaRecommendationDismissed } from '@/server/people/mfa-recommendation';
 import { getProviderMfaWarning } from '@/server/people/users';
 
 import AccessNotice from '../access-notice';
@@ -46,12 +47,14 @@ async function Dashboard() {
   const isStaff = permissions.has('users:view');
   const firstName = displayName(actor).split(' ')[0] ?? '';
 
-  // Recommended for everyone who isn't required to have MFA (those can't get here without it).
-  const recommendation = !actor.mfaEnabled && (
-    <ClientMessages namespaces={['dashboard.mfaRecommendation']}>
-      <MfaRecommendation userId={actor.id} />
-    </ClientMessages>
-  );
+  // Recommended for everyone who isn't required to have MFA (those can't get here without it),
+  // until they dismiss it: saved with the account, so it's known here and never pops in late.
+  const recommendation = !actor.mfaEnabled &&
+    !(await isMfaRecommendationDismissed(appContext, actor)) && (
+      <ClientMessages namespaces={['dashboard.mfaRecommendation']}>
+        <MfaRecommendation />
+      </ClientMessages>
+    );
   // For staff Admins: users who lost their MFA because a provider isn't configured here.
   const providerMfaWarning = isStaff ? await getProviderMfaWarning(appContext, actor) : null;
 

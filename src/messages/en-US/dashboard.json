@@ -7,7 +7,8 @@
       "label": "Account security",
       "title": "Protect your account",
       "description": "Add a passkey or two-step verification, so a stolen password isn't enough to get in.",
-      "setUp": "Set up"
+      "setUp": "Set up",
+      "dismissFailed": "The recommendation couldn't be hidden. Try again in a moment."
     },
     "providerMfaWarning": {
       "label": "Users without MFA",

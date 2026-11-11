@@ -38,7 +38,8 @@ see [Emails](i18n.md#emails). Templates share the frame and building blocks in
   a monospace box) and `LinkFallback`
 - `RoleSummary`, which names the role and what it can do from the `roles` catalogue
 - the colours and fonts in `theme.ts` (`fontFamily`, `monoFontFamily`), which match the app's
-  light theme as inline styles
+  light theme as inline styles; the fonts are the device's own, not the Inter and JetBrains Mono the
+  app ships, because many email clients block or strip web fonts
 
 `security-notice.tsx` is one template with a wording per kind (`SECURITY_NOTICE_KINDS`): a changed or
 added password, two-step verification, backup codes, passkeys and connected GitHub or Google accounts,

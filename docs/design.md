@@ -21,7 +21,8 @@ keyboard support.
   menu); ArrowLeft and ArrowRight also move within it. `MenuRadioLinkItem` is a radio item that is
   a link (the sorts in `SortMenu`). A `Badge`'s tone says what kind of status it is: `success` for
   active or verified, `warning` for something that needs attention (expired, not verified),
-  `danger` for deactivated or revoked. A status keeps one tone on every screen, which
+  `danger` for deactivated or revoked, and `accent` (outlined in the link colour) for what's about
+  the viewer, like "You" on their own row. A status keeps one tone on every screen, which
   `src/components/ui/badge-tones.test.ts` checks (it reads a badge whose label is one message,
   `{t('deactivated')}`, as its English text). Icons come from
   [Lucide](https://lucide.dev) and are hidden from screen readers; icon-only buttons have an
@@ -36,6 +37,10 @@ keyboard support.
     companies are sorted by name until another order is chosen; invitations, invite links and
     devices newest first. People tables (users, staff, members) sort by name, email, last
     active and joined.
+  - **Your own row:** in people tables your row has a "You" badge after your name (`YouBadge` in
+    `src/app/(app)/_people/you-badge.tsx`, in the `accent` tone) and a bar in the accent colour
+    on its left edge (`ownRowCell` in `src/components/ui/table.tsx`), so you can spot yourself
+    while scrolling. The bar is decorative: the badge says it in words.
   - **Pages:** 25, 50 or 100 rows per page, chosen in the table's footer (`Pagination`: "Showing
     26–50 of 132", Previous, the page numbers and Next). The footer only shows with more than 10
     rows.
@@ -61,6 +66,8 @@ keyboard support.
       768px in its own column.
     - **Staff and members:** the address always shows under the name (unless it is the name),
       and the role from 768px in its own column.
+    - **Companies:** the URL name always shows under the name, and the status and when it was
+      added from 768px in their own columns, so on a phone the name keeps the room.
     - **Long values:** names, addresses and company names wrap (`wrap-anywhere`) rather than
       widening the table.
     - **Check:** `e2e/tables.spec.ts` checks every table at 640, 768, 1024, 1280, 1536 and
@@ -90,10 +97,15 @@ keyboard support.
   back/forward cache (`pageshow`).
 - **Illustrations** (like the example request on the sign-in pages) are `inert`, and use
   `<Button decorative>` for buttons that only look like buttons: no hover, focus or press effects.
-- **Button labels** stay on one line, except on full-width buttons (`fullWidth`, like the sign-in
-  page's), whose label wraps and makes the button taller when it doesn't fit. Longer languages,
-  wider fonts (Linux browsers use DejaVu Sans for the system font) and a "Last used" badge then
-  never make a narrow screen scroll sideways.
+- **Button labels** stay on one line when they fit. A button is never wider than its container
+  (`max-w-full`): a longer label wraps onto a second line and makes the button taller (it has a
+  minimum height, not a fixed one), and a card's actions wrap onto more lines too. Buttons in table
+  cells stay on one line (`Td`), since a table would squeeze a button that may wrap. Longer
+  languages and a "Last used" badge then never run out of a card or make a narrow screen scroll
+  sideways.
+- **Menus and select lists** keep at least the page's 16px side gutter from the screen's edges
+  when they would otherwise run off it (`SCREEN_GUTTER` in `src/components/ui/styles.ts`, Radix's
+  `collisionPadding`).
 - **Colours:** semantic tokens in `src/styles/theme.css`, each checked for contrast (at least 4.5:1
   for text, 3:1 for input borders) in both modes:
 
@@ -115,12 +127,16 @@ keyboard support.
   Never make text lighter with opacity (`text-foreground/60`): contrast can't be guaranteed that
   way. Brand orange is too light for small text on white, so errors use the darker `danger`.
 
-- **Font:** the device's own sans-serif font (`system-ui`), with line height = font size + 8px.
+- **Font:** Inter for text and JetBrains Mono for codes, URL names and references, which Adiutor
+  ships (`src/lib/fonts.ts`, served from its own domain), so text looks and measures the same on
+  every device and in CI; line height = font size + 8px. Emails use the device's own font, since
+  email clients often block web fonts. See [decision 0016](decisions/0016-ship-inter-and-jetbrains-mono.md).
 - **Layout:** signed-in pages have a sidebar that becomes a menu button and slide-over panel
-  (`Sheet`) on small screens; signed-out pages use `AuthLayout`, with a decorative brand panel on wide screens.
+  (`Sheet`) on small screens, which opens with focus on the link to the current page; signed-out
+  pages use `AuthLayout`, with a decorative brand panel on wide screens.
   The 404 page uses `CenteredLayout`: the logo top left (where the sidebar has it) and the message
-  centered, with "Go to your dashboard" and a "Go back" button (`BackButton`, shown only when the
-  tab has a previous page).
+  centered, with "Go to your dashboard" ("Go to sign in" for someone who isn't signed in) and a
+  "Go back" button (`BackButton`, shown only when the tab has a previous page).
   Every page has a "Skip to main content" link, one `h1` and `header`/`nav`/`main` landmarks.
 - **Errors:** when a page or server action fails unexpectedly, an error page takes the page's
   place, built like the 404 pages: "Something went wrong", "This page couldn't load. Try again, or
@@ -193,7 +209,9 @@ keyboard support.
   don't show errors themselves: a failed submit shows an `Alert` (`ResultAlert`) and moves focus
   to it, and in the signed-in app a toast too.
   Inline confirmations use `role="status"` and errors `role="alert"`, so screen readers announce
-  them.
+  them. Field text is 16px on every device (`fieldControl` in `src/components/ui/styles.ts`),
+  never smaller, because iOS Safari zooms the page in when a field with smaller text gets focus.
+  Don't work around that with `maximum-scale` in the viewport: it also blocks pinch-zoom.
 - **Page titles:** "Page · Adiutor", most specific part first. Next's route announcer reads the
   title after each client-side navigation (only when it changed), so pages that differ get
   different titles: a company's pages add the company ("Members · Adiutor Tests · Adiutor", the
@@ -214,7 +232,9 @@ keyboard support.
 Two end-to-end specs keep this true: `e2e/a11y.spec.ts` scans every page (and open menus, selects,
 dialogs and the mobile menu) with [axe](https://github.com/dequelabs/axe-core) against the WCAG 2.2
 A and AA rules in light and dark mode and checks that no page scrolls sideways on a 320px-wide
-screen, in every language (with the sign-in page's widest buttons, "Last used" badge included), and
+screen, in every language (with the sign-in page's widest buttons, "Last used" badge included) and
+while signed-in pages still show their loading placeholders, and that no field's text is under 16px,
+and
 `e2e/keyboard.spec.ts` checks the skip link, menus, selects, dialogs, the mobile menu and
 cursors using only the keyboard.
 
@@ -224,8 +244,10 @@ The site supports light and dark mode. Visitors choose **System** (the default, 
 device), **Light** or **Dark**:
 
 - **Signed out** (`AuthLayout`, and `CenteredLayout` for the 404, sign-in error and error pages): one
-  floating button in the bottom-right corner for the theme and the language (`PreferencesMenu` in
-  `src/components/layout/preferences-menu.tsx`), on every page without the account menu. It shows
+  button for the theme and the language (`PreferencesMenu` in
+  `src/components/layout/preferences-menu.tsx`), on every page without the account menu: floating
+  in the bottom-right corner from tablet width, and at the end of the page below that, where a
+  fixed button would cover the page's last links on a small phone. It shows
   two icons split by a thin line, the current theme's and the language's flag, and is named in
   full for screen readers ("Theme and language: System, English (US)"). Its Radix menu has the
   theme as the same row of three icons as the account menu, then the language: Default first (a
@@ -266,7 +288,8 @@ Logos and icons live in `public/brand/`, cropped to their content with no backgr
 | `logo-white.svg`, `icon-white.svg` | The brand gradient or accent colour |
 
 `src/styles/theme.css` is the Tailwind theme: the brand colours (`brand-teal`, `brand-green`,
-`brand-orange`, `ink`), the `bg-brand-gradient` utility, the system font stack, text sizes with
+`brand-orange`, `ink`), the `bg-brand-gradient` utility, the fonts (Inter and JetBrains Mono, then
+the system fonts as fallbacks), text sizes with
 line height = font size + 8px, short entrance animations, and the semantic colours described under
 [Design and accessibility](#design-and-accessibility). Use the brand colours for brand moments
 only; UI uses the semantic colours.

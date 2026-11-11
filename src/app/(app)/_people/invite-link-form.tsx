@@ -74,7 +74,7 @@ export default function InviteLinkForm({ companyId, roles }: InviteLinkFormProps
               readOnly
               value={url}
               onFocus={(event) => event.currentTarget.select()}
-              className={cn(fieldControl, 'h-10 min-w-0 flex-1 font-mono text-xs')}
+              className={cn(fieldControl, 'h-10 min-w-0 flex-1 font-mono')}
             />
             <CopyButton value={url} label={t('inviteLinkForm.copy')} />
           </div>

@@ -64,8 +64,9 @@ page (`getActor()` in `src/server/authz.ts`). When it stops meeting it (2FA turn
 provider, a password added), the requirement applies again, and while
 a provider account with 2FA is still connected they first confirm with it on the step-up page,
 so whoever set the password can't set up MFA instead. Everyone else gets a
-dismissible recommendation on the dashboard (dismissed per user in that browser, so someone
-else signing in there still sees it), and email codes count for them.
+dismissible recommendation on the dashboard (dismissed per user and saved with the account,
+`user.mfa_recommendation_dismissed_at`, so the dashboard knows on the server and shows it from the
+first paint, and it stays dismissed on every device), and email codes count for them.
 
 ## Every session counts
 

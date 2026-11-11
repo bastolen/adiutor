@@ -58,7 +58,10 @@ export function Th({ className = '', ...props }: ComponentProps<'th'>) {
 }
 
 /**
- * A data cell.
+ * A data cell. Buttons in it keep their label on one line: a table gives a
+ * column only the width its content needs at least, so a button that may
+ * wrap (as buttons do elsewhere when they run out of room) would be squeezed
+ * onto two lines in a row that has room for one.
  *
  * @param props - Cell props.
  * @param props.className - Extra classes.
@@ -66,9 +69,22 @@ export function Th({ className = '', ...props }: ComponentProps<'th'>) {
  */
 export function Td({ className = '', ...props }: ComponentProps<'td'>) {
   return (
-    <td className={cn('px-4 py-3 align-middle text-foreground sm:px-6', className)} {...props} />
+    <td
+      className={cn(
+        'px-4 py-3 align-middle text-foreground sm:px-6 [&_[data-button]]:whitespace-nowrap',
+        className,
+      )}
+      {...props}
+    />
   );
 }
+
+/**
+ * Classes for the first cell of the viewer's own row in a table of people: a
+ * 3px bar in the accent colour on its left edge, so they can spot themselves
+ * while scrolling. Decorative: the row also says it in words (`YouBadge`).
+ */
+export const ownRowCell = 'shadow-[inset_3px_0_0_0_var(--color-highlight)]';
 
 /**
  * A body row with a divider below it and a subtle hover.

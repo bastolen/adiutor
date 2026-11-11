@@ -65,6 +65,7 @@ import {
   listMembers,
   removeMember,
 } from './people/members';
+import { dismissMfaRecommendation } from './people/mfa-recommendation';
 import setOwnLocale from './people/own-locale';
 import {
   changeStaffRole,
@@ -346,6 +347,7 @@ function listOperations(): Operation[] {
     ['list staff', (w) => listStaff(ctx, w.actor)],
     ['view staff settings', (w) => getStaffSettings(ctx, w.actor)],
     ['choose own language', (w) => setOwnLocale(ctx, w.actor, 'nl-NL')],
+    ['dismiss own MFA recommendation', (w) => dismissMfaRecommendation(ctx, w.actor)],
     ['rename staff', (w) => renameStaff(ctx, w.actor, 'Adiutor Tests')],
     ['set default language', (w) => setDefaultLocale(ctx, w.actor, 'nl-NL')],
     [
@@ -437,6 +439,8 @@ const EXPECTED: Record<string, string> = {
   'view staff settings': 'FFFFFFA',
   // Everyone chooses their own language, and nobody else's.
   'choose own language': 'AAAAAAA',
+  // Everyone dismisses their own MFA recommendation, and nobody else's.
+  'dismiss own MFA recommendation': 'AAAAAAA',
   'rename staff': 'FFFFFFA',
   'set default language': 'FFFFFFA',
   'change staff role': 'FFFFFFA',

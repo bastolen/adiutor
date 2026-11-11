@@ -25,8 +25,9 @@ interface AuthLayoutProps {
  * Two columns on large screens: the content in a narrow, centred column, and
  * a decorative brand panel with an example request and the product pitch,
  * written for companies (`BrandPanel`). On small screens, only the content
- * column. These pages have no account menu, so the floating theme and language
- * button is here, last in tab order.
+ * column. These pages have no account menu, so the theme and language button
+ * is here, last in tab order: floating in the corner from tablet width, and at
+ * the end of the content column below that.
  *
  * The layout is in each page's static shell, so its text comes from client
  * components that read the root provider (`HomeLink`, `BrandPanel`), never
@@ -53,10 +54,11 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         >
           <div className="w-full max-w-sm">{children}</div>
         </main>
+        {/* Below tablet width at the end of the form column; from there, in the corner. */}
+        <PreferencesMenu className="self-end" />
       </div>
 
       <BrandPanel />
-      <PreferencesMenu />
     </div>
   );
 }

@@ -16,7 +16,6 @@
         "activity": "Actividad",
         "actions": "Acciones"
       },
-      "you": "(tú)",
       "changeOwnRole": {
         "title": "¿Cambiar tu propio rol a {role}?",
         "description": "Solo los administradores gestionan los miembros de {company}. Otro administrador puede volver a hacerte administrador.",
