@@ -25,7 +25,10 @@ export const colors = {
   primaryForeground: '#ffffff',
 } as const;
 
-/** The device's own sans-serif font, as in the app. */
+/**
+ * The device's own sans-serif font. The app ships Inter, but many email
+ * clients block or strip web fonts, so emails don't rely on it.
+ */
 export const fontFamily =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 

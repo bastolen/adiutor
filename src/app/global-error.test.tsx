@@ -54,10 +54,11 @@ function mockSystemDark(dark: boolean) {
 const error = Object.assign(new Error('Server Components render'), { digest: '2828711936' });
 
 describe('GlobalError', () => {
-  it('renders a whole document with its title and the error page', () => {
+  it('renders a whole document with its title, the shipped fonts and the error page', () => {
     const html = renderToStaticMarkup(<GlobalError error={error} retry={vi.fn()} />);
 
-    expect(html).toMatch(/^<html lang="en-US">/);
+    // The fonts' variables (Inter and JetBrains Mono, `src/lib/fonts.ts`), as the root layout has.
+    expect(html).toMatch(/^<html lang="en-US" class="font-inter font-jetbrains-mono">/);
     expect(html).toMatch(/<head>.*<title>Something went wrong · Adiutor<\/title>.*<\/head>/);
     expect(html).toContain('<body class="bg-background text-foreground antialiased">');
     expect(html).toContain('Something went wrong</h1>');

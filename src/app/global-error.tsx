@@ -16,6 +16,7 @@
 import { NextIntlClientProvider, useTranslations } from 'next-intl';
 import { useEffect, useSyncExternalStore } from 'react';
 
+import fontVariables from '@/lib/fonts';
 import {
   DEFAULT_LOCALE,
   isLocale,
@@ -119,7 +120,7 @@ export default function GlobalError({ error, retry }: ErrorPageProps) {
   }, []);
 
   return (
-    <html lang={locale}>
+    <html lang={locale} className={fontVariables}>
       <body className="bg-background text-foreground antialiased">
         <NextIntlClientProvider
           locale={locale}

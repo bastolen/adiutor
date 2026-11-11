@@ -101,8 +101,8 @@ keyboard support.
   (`max-w-full`): a longer label wraps onto a second line and makes the button taller (it has a
   minimum height, not a fixed one), and a card's actions wrap onto more lines too. Buttons in table
   cells stay on one line (`Td`), since a table would squeeze a button that may wrap. Longer
-  languages, wider fonts (Linux browsers use DejaVu Sans for the system font) and a "Last used"
-  badge then never run out of a card or make a narrow screen scroll sideways.
+  languages and a "Last used" badge then never run out of a card or make a narrow screen scroll
+  sideways.
 - **Menus and select lists** keep at least the page's 16px side gutter from the screen's edges
   when they would otherwise run off it (`SCREEN_GUTTER` in `src/components/ui/styles.ts`, Radix's
   `collisionPadding`).
@@ -127,7 +127,10 @@ keyboard support.
   Never make text lighter with opacity (`text-foreground/60`): contrast can't be guaranteed that
   way. Brand orange is too light for small text on white, so errors use the darker `danger`.
 
-- **Font:** the device's own sans-serif font (`system-ui`), with line height = font size + 8px.
+- **Font:** Inter for text and JetBrains Mono for codes, URL names and references, which Adiutor
+  ships (`src/lib/fonts.ts`, served from its own domain), so text looks and measures the same on
+  every device and in CI; line height = font size + 8px. Emails use the device's own font, since
+  email clients often block web fonts. See [decision 0016](decisions/0016-ship-inter-and-jetbrains-mono.md).
 - **Layout:** signed-in pages have a sidebar that becomes a menu button and slide-over panel
   (`Sheet`) on small screens, which opens with focus on the link to the current page; signed-out
   pages use `AuthLayout`, with a decorative brand panel on wide screens.
@@ -285,7 +288,8 @@ Logos and icons live in `public/brand/`, cropped to their content with no backgr
 | `logo-white.svg`, `icon-white.svg` | The brand gradient or accent colour |
 
 `src/styles/theme.css` is the Tailwind theme: the brand colours (`brand-teal`, `brand-green`,
-`brand-orange`, `ink`), the `bg-brand-gradient` utility, the system font stack, text sizes with
+`brand-orange`, `ink`), the `bg-brand-gradient` utility, the fonts (Inter and JetBrains Mono, then
+the system fonts as fallbacks), text sizes with
 line height = font size + 8px, short entrance animations, and the semantic colours described under
 [Design and accessibility](#design-and-accessibility). Use the brand colours for brand moments
 only; UI uses the semantic colours.
