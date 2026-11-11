@@ -99,7 +99,8 @@ keyboard support.
   `<Button decorative>` for buttons that only look like buttons: no hover, focus or press effects.
 - **Button labels** stay on one line when they fit. A button is never wider than its container
   (`max-w-full`): a longer label wraps onto a second line and makes the button taller (it has a
-  minimum height, not a fixed one), and a card's actions wrap onto more lines too. Longer
+  minimum height, not a fixed one), and a card's actions wrap onto more lines too. Buttons in table
+  cells stay on one line (`Td`), since a table would squeeze a button that may wrap. Longer
   languages, wider fonts (Linux browsers use DejaVu Sans for the system font) and a "Last used"
   badge then never run out of a card or make a narrow screen scroll sideways.
 - **Menus and select lists** keep at least the page's 16px side gutter from the screen's edges

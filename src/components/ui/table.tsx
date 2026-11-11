@@ -58,7 +58,10 @@ export function Th({ className = '', ...props }: ComponentProps<'th'>) {
 }
 
 /**
- * A data cell.
+ * A data cell. Buttons in it keep their label on one line: a table gives a
+ * column only the width its content needs at least, so a button that may
+ * wrap (as buttons do elsewhere when they run out of room) would be squeezed
+ * onto two lines in a row that has room for one.
  *
  * @param props - Cell props.
  * @param props.className - Extra classes.
@@ -66,7 +69,13 @@ export function Th({ className = '', ...props }: ComponentProps<'th'>) {
  */
 export function Td({ className = '', ...props }: ComponentProps<'td'>) {
   return (
-    <td className={cn('px-4 py-3 align-middle text-foreground sm:px-6', className)} {...props} />
+    <td
+      className={cn(
+        'px-4 py-3 align-middle text-foreground sm:px-6 [&_[data-button]]:whitespace-nowrap',
+        className,
+      )}
+      {...props}
+    />
   );
 }
 

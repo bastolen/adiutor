@@ -44,7 +44,8 @@ const variantClasses = {
  * a longer one (another language, a wider font, a "Last used" badge) wraps
  * onto a second line, growing the button from its usual height, instead of
  * running out of its card or making a narrow screen scroll sideways
- * (WCAG 1.4.10 Reflow).
+ * (WCAG 1.4.10 Reflow). Every button carries `data-button`, which table cells
+ * use to keep theirs on one line (see `Td`).
  */
 const baseClasses =
   'inline-flex max-w-full shrink-0 items-center justify-center rounded-lg text-center font-medium text-balance select-none [&_svg]:size-4 [&_svg]:shrink-0';
@@ -120,6 +121,7 @@ export default function Button({
     return (
       <span
         aria-hidden="true"
+        data-button=""
         className={cn(
           baseClasses,
           'pointer-events-none cursor-default',
@@ -147,7 +149,7 @@ export default function Button({
 
   if (asChild) {
     return (
-      <Slot.Root className={classes} {...props}>
+      <Slot.Root data-button="" className={classes} {...props}>
         {children}
       </Slot.Root>
     );
@@ -157,6 +159,7 @@ export default function Button({
     <button
       // eslint-disable-next-line react/button-has-type -- `type` defaults to "button" above.
       type={type}
+      data-button=""
       className={classes}
       disabled={disabled || loading}
       aria-busy={loading || undefined}

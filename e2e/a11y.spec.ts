@@ -241,9 +241,34 @@ async function expectPlaceholdersFit(page: Page): Promise<void> {
 }
 
 /**
+ * Checks that the buttons in table rows keep their label on one line: a table
+ * gives a column only the width its content needs at least, so a button that
+ * may wrap gets squeezed onto two lines ("Sign / out") in a row with room.
+ *
+ * @param page - The browser page.
+ */
+async function expectTableButtonsOnOneLine(page: Page): Promise<void> {
+  const wrapped = await page.evaluate(() =>
+    [...document.querySelectorAll('td [data-button]')]
+      .filter((button) => button.getClientRects().length > 0)
+      .filter((button) => {
+        const style = getComputedStyle(button);
+        const frame = ['padding-top', 'padding-bottom', 'border-top-width', 'border-bottom-width']
+          .map((side) => Number.parseFloat(style.getPropertyValue(side)))
+          .reduce((sum, size) => sum + size, 0);
+        const lines =
+          (button.getBoundingClientRect().height - frame) / Number.parseFloat(style.lineHeight);
+        return Math.round(lines) > 1;
+      })
+      .map((button) => (button.textContent ?? '').trim()),
+  );
+  expect(wrapped).toEqual([]);
+}
+
+/**
  * Checks that the page doesn't scroll sideways or cut anything off once it
- * has loaded (see {@link expectFitsNow}, {@link expectNothingClipped} and
- * {@link expectPlaceholdersFit}).
+ * has loaded (see {@link expectFitsNow}, {@link expectNothingClipped},
+ * {@link expectPlaceholdersFit} and {@link expectTableButtonsOnOneLine}).
  *
  * @param page - The browser page.
  */
@@ -252,6 +277,7 @@ async function expectNoSidewaysScroll(page: Page): Promise<void> {
   await expectFitsNow(page);
   await expectNothingClipped(page);
   await expectPlaceholdersFit(page);
+  await expectTableButtonsOnOneLine(page);
 }
 
 /**
