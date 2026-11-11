@@ -8,7 +8,7 @@
       "rows": "usuarios",
       "search": {
         "label": "Buscar usuarios",
-        "placeholder": "Buscar por nombre o correo"
+        "placeholder": "Nombre o correo"
       },
       "filters": {
         "label": "Filtrar usuarios",
@@ -319,7 +319,7 @@
         "errorsTab": "Errores"
       },
       "searchLabel": "Buscar personas o empresas",
-      "searchPlaceholder": "Buscar por nombre, correo o empresa",
+      "searchPlaceholder": "Persona o empresa",
       "dateLabel": "Filtrar por fecha",
       "filterLabel": "Filtrar eventos",
       "all": "Todos",

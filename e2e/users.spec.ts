@@ -77,6 +77,11 @@ test('an Admin finds users, recognises the staff and filters and searches the li
   await page.evaluate(() => {
     (window as unknown as { searchedInPage: boolean }).searchedInPage = true;
   });
+  // Short enough to fit the field on a small phone; its label says what it searches.
+  await expect(page.getByRole('searchbox', { name: 'Search users' })).toHaveAttribute(
+    'placeholder',
+    'Name or email',
+  );
   await page.getByRole('searchbox', { name: 'Search users' }).fill('UNVERIFIED');
   const search = page.getByRole('button', { name: 'Search' });
   await search.click();

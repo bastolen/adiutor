@@ -111,7 +111,8 @@ async function CompanyList({ searchParams }: { searchParams: Promise<SearchParam
             <thead>
               <tr>
                 <Th aria-sort={table.ariaSort('name')}>{t('company')}</Th>
-                <Th>{t('status')}</Th>
+                {/* Below tablet width the status goes under the name, so the name keeps the room. */}
+                <Th className="hidden md:table-cell">{t('status')}</Th>
                 <Th aria-sort={table.ariaSort('added')} className="hidden md:table-cell">
                   {t('added')}
                 </Th>
@@ -121,50 +122,53 @@ async function CompanyList({ searchParams }: { searchParams: Promise<SearchParam
               </tr>
             </thead>
             <tbody>
-              {companies.items.map((company) => (
-                <Tr key={company.id} className="group relative">
-                  <Td>
-                    <div className="flex items-center gap-3">
-                      <Avatar name={company.name} size="sm" />
-                      <div className="flex min-w-0 flex-col">
-                        {/* The link covers the whole row, so the row is one click target. */}
-                        <Link
-                          href={`/companies/${company.slug}`}
-                          className={cn(
-                            'rounded-sm font-medium wrap-anywhere text-foreground group-hover:underline group-hover:underline-offset-4 after:absolute after:inset-0',
-                            focusRing,
-                          )}
-                        >
-                          {company.name}
-                        </Link>
-                        <span className="font-mono text-xs wrap-anywhere text-muted-foreground">
-                          {company.slug}
-                        </span>
-                        {/* Below tablet width, when it was added goes here. */}
-                        <span className="text-xs text-muted-foreground md:hidden">
-                          {t('addedOn', { date: formatDate(company.createdAt, locale) })}
-                        </span>
+              {companies.items.map((company) => {
+                // Shown in its own column from tablet width, and under the name before that.
+                const status = company.deactivatedAt ? (
+                  <Badge tone="danger">{t('deactivated')}</Badge>
+                ) : (
+                  <Badge tone="success">{t('active')}</Badge>
+                );
+                return (
+                  <Tr key={company.id} className="group relative">
+                    <Td>
+                      <div className="flex items-center gap-3">
+                        <Avatar name={company.name} size="sm" />
+                        <div className="flex min-w-0 flex-col">
+                          {/* The link covers the whole row, so the row is one click target. */}
+                          <Link
+                            href={`/companies/${company.slug}`}
+                            className={cn(
+                              'rounded-sm font-medium wrap-anywhere text-foreground group-hover:underline group-hover:underline-offset-4 after:absolute after:inset-0',
+                              focusRing,
+                            )}
+                          >
+                            {company.name}
+                          </Link>
+                          <span className="font-mono text-xs wrap-anywhere text-muted-foreground">
+                            {company.slug}
+                          </span>
+                          {/* Below tablet width, when it was added and the status go here. */}
+                          <span className="text-xs text-muted-foreground md:hidden">
+                            {t('addedOn', { date: formatDate(company.createdAt, locale) })}
+                          </span>
+                          <span className="mt-1 md:hidden">{status}</span>
+                        </div>
                       </div>
-                    </div>
-                  </Td>
-                  <Td>
-                    {company.deactivatedAt ? (
-                      <Badge tone="danger">{t('deactivated')}</Badge>
-                    ) : (
-                      <Badge tone="success">{t('active')}</Badge>
-                    )}
-                  </Td>
-                  <Td className="hidden text-muted-foreground md:table-cell">
-                    {formatDate(company.createdAt, locale)}
-                  </Td>
-                  <Td className="w-10 text-right">
-                    <ChevronRight
-                      aria-hidden
-                      className="ml-auto size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5"
-                    />
-                  </Td>
-                </Tr>
-              ))}
+                    </Td>
+                    <Td className="hidden md:table-cell">{status}</Td>
+                    <Td className="hidden text-muted-foreground md:table-cell">
+                      {formatDate(company.createdAt, locale)}
+                    </Td>
+                    <Td className="w-10 text-right">
+                      <ChevronRight
+                        aria-hidden
+                        className="ml-auto size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+                      />
+                    </Td>
+                  </Tr>
+                );
+              })}
             </tbody>
           </Table>
         )}

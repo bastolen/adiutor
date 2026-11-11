@@ -8,7 +8,7 @@
       "rows": "gebruikers",
       "search": {
         "label": "Gebruikers zoeken",
-        "placeholder": "Zoek op naam of e-mailadres"
+        "placeholder": "Naam of e-mail"
       },
       "filters": {
         "label": "Gebruikers filteren",
@@ -319,7 +319,7 @@
         "errorsTab": "Fouten"
       },
       "searchLabel": "Mensen of bedrijven zoeken",
-      "searchPlaceholder": "Zoeken op naam, e-mailadres of bedrijf",
+      "searchPlaceholder": "Persoon of bedrijf",
       "dateLabel": "Filteren op datum",
       "filterLabel": "Gebeurtenissen filteren",
       "all": "Alles",

@@ -66,6 +66,8 @@ keyboard support.
       768px in its own column.
     - **Staff and members:** the address always shows under the name (unless it is the name),
       and the role from 768px in its own column.
+    - **Companies:** the URL name always shows under the name, and the status and when it was
+      added from 768px in their own columns, so on a phone the name keeps the room.
     - **Long values:** names, addresses and company names wrap (`wrap-anywhere`) rather than
       widening the table.
     - **Check:** `e2e/tables.spec.ts` checks every table at 640, 768, 1024, 1280, 1536 and

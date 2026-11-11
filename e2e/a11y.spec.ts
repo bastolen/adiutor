@@ -28,6 +28,7 @@ import expectAccessible from './support/axe';
 import { findCompanyId, storeInvitation, storeInviteLink, storeSignInLink } from './support/db';
 import {
   CLIENT_WATCHER,
+  COMPANY_NAME,
   COMPANY_SLUG,
   E2E_BASE_URL,
   PAGING_COMPANY_SLUG,
@@ -204,8 +205,45 @@ async function expectNothingClipped(page: Page): Promise<void> {
 }
 
 /**
+ * Checks that every field's placeholder fits inside the field, measured in the
+ * field's own font: a longer one is cut off mid-word ("Zoek op naam of e").
+ *
+ * @param page - The browser page.
+ */
+async function expectPlaceholdersFit(page: Page): Promise<void> {
+  const cutOff = await page.evaluate(() => {
+    const canvas = document.createElement('canvas').getContext('2d');
+    if (!canvas) {
+      return ['no canvas to measure with'];
+    }
+    return [...document.querySelectorAll('input[placeholder], textarea[placeholder]')]
+      .filter((field) => field.getClientRects().length > 0)
+      .filter((field) => {
+        const style = getComputedStyle(field);
+        canvas.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+        // From the outer width: browsers differ in whether a field's clientWidth counts padding.
+        const room =
+          field.getBoundingClientRect().width -
+          ['paddingLeft', 'paddingRight', 'borderLeftWidth', 'borderRightWidth']
+            .map((side) =>
+              Number.parseFloat(
+                style.getPropertyValue(
+                  side.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`),
+                ),
+              ),
+            )
+            .reduce((sum, width) => sum + width, 0);
+        return canvas.measureText(field.getAttribute('placeholder') ?? '').width > room + 1;
+      })
+      .map((field) => field.getAttribute('placeholder'));
+  });
+  expect(cutOff).toEqual([]);
+}
+
+/**
  * Checks that the page doesn't scroll sideways or cut anything off once it
- * has loaded (see {@link expectFitsNow} and {@link expectNothingClipped}).
+ * has loaded (see {@link expectFitsNow}, {@link expectNothingClipped} and
+ * {@link expectPlaceholdersFit}).
  *
  * @param page - The browser page.
  */
@@ -213,6 +251,7 @@ async function expectNoSidewaysScroll(page: Page): Promise<void> {
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
   await expectFitsNow(page);
   await expectNothingClipped(page);
+  await expectPlaceholdersFit(page);
 }
 
 /**
@@ -328,6 +367,27 @@ test.describe('on a 320px wide screen', () => {
       });
       expect(covered).toEqual([]);
     });
+  });
+
+  test('the companies list shows each status under the name', async ({ browser }) => {
+    const context = await browser.newContext({
+      storageState: adminState,
+      viewport: { width: 320, height: 640 },
+    });
+    const page = await context.newPage();
+    await page.goto('/admin/companies');
+    // Once the list is there: no Status column squeezing the names, the badge sits under the name.
+    await expect(page.getByRole('columnheader', { name: 'Company' })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Status' })).toBeHidden();
+    const nameCell = page
+      .getByRole('row')
+      .filter({ hasText: COMPANY_NAME })
+      .getByRole('cell')
+      .first();
+    await expect(
+      nameCell.getByText('Active', { exact: true }).filter({ visible: true }),
+    ).toHaveCount(1);
+    await context.close();
   });
 
   test('the Sort menu keeps clear of the screen edges', async ({ browser }) => {
