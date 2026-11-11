@@ -5,11 +5,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
+import { Suspense } from 'react';
 
 import CenteredLayout from '@/components/layout/centered-layout';
 import BackButton from '@/components/ui/back-button';
 import Button from '@/components/ui/button';
 import notFoundMetadata from '@/lib/not-found-metadata';
+import { getOptionalActor } from '@/server/authz';
 
 /**
  * Page metadata: the title pages the user may not see give them too.
@@ -24,8 +27,41 @@ export function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * A large, quiet "404", what happened, and the way out: the dashboard (which
- * sends signed-out visitors to sign in) and, when there's a previous page in
+ * The link to the dashboard, also shown while {@link MainAction} reads who
+ * is signed in (the dashboard sends signed-out visitors to sign in anyway).
+ *
+ * @returns The link, as the page's main button.
+ */
+function DashboardLink() {
+  const t = useTranslations('common');
+  return (
+    <Button asChild className="w-full sm:w-auto">
+      <Link href="/dashboard">{t('actions.goToDashboard')}</Link>
+    </Button>
+  );
+}
+
+/**
+ * The way out: the dashboard when someone is signed in, and signing in when
+ * nobody is.
+ *
+ * @returns The page's main button.
+ */
+async function MainAction() {
+  if (await getOptionalActor()) {
+    return <DashboardLink />;
+  }
+  const t = await getTranslations('auth');
+  return (
+    <Button asChild className="w-full sm:w-auto">
+      <Link href="/auth">{t('actions.goToSignIn')}</Link>
+    </Button>
+  );
+}
+
+/**
+ * A large, quiet "404", what happened, and the way out: the dashboard, or
+ * signing in for someone who isn't, and, when there's a previous page in
  * this tab, back to it.
  *
  * @returns The 404 page.
@@ -47,9 +83,10 @@ export default function NotFound() {
           </p>
         </div>
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-          <Button asChild className="w-full sm:w-auto">
-            <Link href="/dashboard">{t('actions.goToDashboard')}</Link>
-          </Button>
+          {/* Who is signed in comes from the request, inside its own boundary. */}
+          <Suspense fallback={<DashboardLink />}>
+            <MainAction />
+          </Suspense>
           <BackButton className="w-full sm:w-auto" />
         </div>
       </div>

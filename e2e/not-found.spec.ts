@@ -109,15 +109,16 @@ test('signed in, an unknown page offers the dashboard and going back', async ({
   await expect(page).toHaveURL('/dashboard');
 });
 
-test('opened in a new tab, there is nothing to go back to', async ({ page }) => {
+test('opened in a new tab while signed out, it offers signing in and nothing to go back to', async ({
+  page,
+}) => {
   await page.goto('/auth/does-not-exist');
   await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Go to your dashboard' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Go to your dashboard' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Go back' })).toHaveCount(0);
 
-  // Signed out, the dashboard sends visitors to sign in.
-  await page.getByRole('link', { name: 'Go to your dashboard' }).click();
-  await expect(page).toHaveURL(/\/auth\?callbackURL=%2Fdashboard$/);
+  await page.getByRole('link', { name: 'Go to sign in' }).click();
+  await expect(page).toHaveURL('/auth');
 });
 
 test.describe('pages someone may not see are titled like the 404 page', () => {

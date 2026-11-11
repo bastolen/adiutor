@@ -131,8 +131,8 @@ keyboard support.
   (`Sheet`) on small screens, which opens with focus on the link to the current page; signed-out
   pages use `AuthLayout`, with a decorative brand panel on wide screens.
   The 404 page uses `CenteredLayout`: the logo top left (where the sidebar has it) and the message
-  centered, with "Go to your dashboard" and a "Go back" button (`BackButton`, shown only when the
-  tab has a previous page).
+  centered, with "Go to your dashboard" ("Go to sign in" for someone who isn't signed in) and a
+  "Go back" button (`BackButton`, shown only when the tab has a previous page).
   Every page has a "Skip to main content" link, one `h1` and `header`/`nav`/`main` landmarks.
 - **Errors:** when a page or server action fails unexpectedly, an error page takes the page's
   place, built like the 404 pages: "Something went wrong", "This page couldn't load. Try again, or
