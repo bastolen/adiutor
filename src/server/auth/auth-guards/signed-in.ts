@@ -13,6 +13,8 @@ import {
   isSessionMfaVerified,
   mfaConfirmedUntil,
   needsFreshSignIn,
+  type SessionMfaInput,
+  sessionMfaOf,
   type SignInChange,
   wouldRemoveRequiredMfa,
 } from '@/lib/authz/mfa';
@@ -77,13 +79,7 @@ function refuseTwoFactorAlreadyOff(ctx: AuthGuardContext): never {
 /** A session as the checks for a signed-in request see it. */
 interface SignedInSession {
   /** The session's MFA facts. */
-  session: {
-    /** Whether it had a second factor. */
-    mfaVerified?: boolean | null;
-    /** Which one. */
-    mfaMethod?: string | null;
-    /** When. */
-    mfaVerifiedAt?: Date | string | null;
+  session: SessionMfaInput & {
     /** When it signed in. */
     createdAt?: Date | string | null;
   };
@@ -111,11 +107,7 @@ async function checkSignedInRequest(
     return;
   }
   const { mfaRole, state } = mfa;
-  const sessionMfa = {
-    mfaVerified: session.session.mfaVerified ?? false,
-    mfaMethod: session.session.mfaMethod ?? null,
-    mfaVerifiedAt: session.session.mfaVerifiedAt ?? null,
-  };
+  const sessionMfa = sessionMfaOf(session.session);
   const confirmed = RENAME_PATHS.has(path)
     ? isSessionMfaVerified(sessionMfa, mfaRole)
     : isMfaConfirmedRecently(mfaConfirmedUntil(sessionMfa, mfaRole, state));

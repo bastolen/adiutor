@@ -37,8 +37,7 @@ account. What limits it:
 This depends on [0001](0001-invitation-only-sign-up.md): without public sign-up, nobody else can
 have set up the account in advance.
 
-Details: [Automatic linking](../authentication.md#automatic-linking) and
-[Trusted provider addresses](../security-measures.md#trusted-provider-addresses).
+Details: [Automatic linking](../authentication.md#automatic-linking).
 
 ## Alternatives considered
 

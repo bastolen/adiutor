@@ -44,7 +44,6 @@
     "messages": {
       "verificationExpired": "Deze bevestigingslink is verlopen. Stuur een nieuwe.",
       "verificationInvalid": "Deze bevestigingslink is ongeldig. Stuur een nieuwe.",
-      "linkedToOther": "Dat account is al gekoppeld aan een ander Adiutor-account.",
       "emailNotVerified": "De provider heeft het e-mailadres van dat account niet geverifieerd.",
       "failed": "Dat is niet gelukt. Probeer het opnieuw.",
       "verified": "Je e-mailadres is bevestigd.",

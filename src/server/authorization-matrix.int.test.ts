@@ -8,24 +8,34 @@
  * change to the rules shows up here as a deliberate edit. Role refusals are
  * checked here, not in the service tests. The refusal of role grants without
  * a recent confirmation is in `people/grant-confirmation.int.test.ts`: it
- * needs actors with a second step, and these have none.
+ * needs actors with a second step, and these have none. The same goes for
+ * changing or first setting a password (`changeOwnPassword`,
+ * `setFirstPassword`), which need a second step or a fresh sign-in and are
+ * covered in `auth/accounts.int.test.ts`. The own-account services that take
+ * an ID (`revokeOwnSession`, `confirmConnectedProvider`) are tried with
+ * another user's ID, and `deactivateOwnAccount` with a password; its refusal
+ * of the last Admin is the last test below (a conflict, which the matrix
+ * counts as allowed).
  *
  * Each role's operations run one after another on one world, so every
  * operation that uses up or removes its target (resending, revoking,
  * removing, reactivating, accepting) gets a target of its own in
  * `createWorld`.
  */
+import { hashPassword } from 'better-auth/crypto';
 import { and, eq, isNull } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { invitation, inviteLink, membership, user } from '@/db/schema';
+import { account, invitation, inviteLink, membership, user } from '@/db/schema';
 import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { defined, firstRow } from '@/lib/defined';
 import { hashToken } from '@/lib/sign-in/tokens';
 
 import {
   addMember as addMembership,
+  connectProvider,
   createCompany,
+  createSession,
   createStaffSettings,
   createUser,
   inSequence,
@@ -36,6 +46,8 @@ import {
 } from '../../tests/integration/helpers';
 import type { Actor } from './actor';
 import { listAuditEvents, listAuditLog } from './audit';
+import { confirmConnectedProvider } from './auth/accounts';
+import { revokeOwnSession } from './auth/sessions';
 import { ServiceError } from './errors';
 import {
   listCompanies,
@@ -76,6 +88,7 @@ import {
   setDefaultLocale,
 } from './people/staff';
 import {
+  deactivateOwnAccount,
   deactivateUser,
   deleteUser,
   getUserDetail,
@@ -116,6 +129,10 @@ interface World {
   memberships: { own: string; other: string };
   /** A user outside every company. */
   outsider: string;
+  /** A session of that user, which isn't the acting user's. */
+  othersSession: string;
+  /** An unconfirmed provider account of that user, which isn't the acting user's. */
+  othersAccount: string;
   /** A user to delete. */
   deletable: string;
   /** A staff member to change. */
@@ -139,6 +156,23 @@ interface World {
    * user, that an invite link sent (claimed with their address).
    */
   invitationFromLink: string;
+}
+
+/** The password the acting user is given in `deactivate own account`. */
+const OWN_PASSWORD = 'correct horse battery';
+
+/**
+ * Gives a user a password, as Better Auth stores it.
+ *
+ * @param userId - The user.
+ */
+async function givePassword(userId: string): Promise<void> {
+  await db.insert(account).values({
+    userId,
+    accountId: userId,
+    providerId: 'credential',
+    password: await hashPassword(OWN_PASSWORD),
+  });
 }
 
 /** One operation: what it does, on which target, and how to run it in a world. */
@@ -348,6 +382,12 @@ function listOperations(): Operation[] {
     ['view staff settings', (w) => getStaffSettings(ctx, w.actor)],
     ['choose own language', (w) => setOwnLocale(ctx, w.actor, 'nl-NL')],
     ['dismiss own MFA recommendation', (w) => dismissMfaRecommendation(ctx, w.actor)],
+    ["sign out another user's device", (w) => revokeOwnSession(ctx, w.actor, w.othersSession)],
+    [
+      "confirm another user's provider account",
+      // With a fresh sign-in, which the actors here lack, so only the account's owner decides.
+      (w) => confirmConnectedProvider(ctx, { ...w.actor, signedInAt: new Date() }, w.othersAccount),
+    ],
     ['rename staff', (w) => renameStaff(ctx, w.actor, 'Adiutor Tests')],
     ['set default language', (w) => setDefaultLocale(ctx, w.actor, 'nl-NL')],
     [
@@ -365,10 +405,18 @@ function listOperations(): Operation[] {
     ['deactivate user', (w) => deactivateUser(ctx, w.actor, w.outsider)],
     ['reactivate user', (w) => reactivateUser(ctx, w.actor, w.deactivated)],
     ['delete user', (w) => deleteUser(ctx, w.actor, w.deletable, 'deletable@adiutor.test')],
-    ['view audit log', (w) => listAuditEvents(ctx, w.actor, {})],
+    ['view audit log', (w) => listAuditEvents(ctx, w.actor, w.outsider)],
     ['list the audit log', (w) => listAuditLog(ctx, w.actor)],
     ['look up an error reference', (w) => findErrorReference(ctx, w.actor, '7KQ2-M9XD')],
     ['list recent errors', (w) => listRecentErrors(ctx, w.actor)],
+    // Last: it deactivates the acting user.
+    [
+      'deactivate own account',
+      async (w) => {
+        await givePassword(w.actor.id);
+        await deactivateOwnAccount(ctx, w.actor, OWN_PASSWORD);
+      },
+    ],
   ];
 }
 
@@ -441,6 +489,9 @@ const EXPECTED: Record<string, string> = {
   'choose own language': 'AAAAAAA',
   // Everyone dismisses their own MFA recommendation, and nobody else's.
   'dismiss own MFA recommendation': 'AAAAAAA',
+  // Sessions and provider accounts are looked up among the user's own: someone else's don't exist.
+  "sign out another user's device": 'NNNNNNN',
+  "confirm another user's provider account": 'NNNNNNN',
   'rename staff': 'FFFFFFA',
   'set default language': 'FFFFFFA',
   'change staff role': 'FFFFFFA',
@@ -461,6 +512,8 @@ const EXPECTED: Record<string, string> = {
   'list the audit log': 'FFFFFAA',
   'look up an error reference': 'FFFFFFA',
   'list recent errors': 'FFFFFFA',
+  // Everyone may deactivate their own account (each world has other Admins).
+  'deactivate own account': 'AAAAAAA',
 };
 
 /**
@@ -570,12 +623,15 @@ async function createWorld(role: MatrixRole): Promise<World> {
   // Claiming a link with the actor's address turns it into an invitation to them that a link sent.
   await claimInviteLink(ctx, (await createLink(otherAdmin, other.id)).token, actor.email);
   const invitationFromLink = tokenFrom(defined(sent.at(-1), 'the invitation email'));
+  const outsider = await createUser(db, 'outsider@adiutor.test');
   return {
     actor,
     own,
     other,
     memberships,
-    outsider: await createUser(db, 'outsider@adiutor.test'),
+    outsider,
+    othersSession: await createSession(db, outsider),
+    othersAccount: await connectProvider(db, outsider, { confirmed: false }),
     deletable: await createUser(db, 'deletable@adiutor.test'),
     staffMember,
     linkToOther: (await createLink(otherAdmin, other.id)).token,
@@ -631,6 +687,24 @@ async function outcome(run: () => Promise<unknown>): Promise<Outcome> {
   }
 }
 
+/**
+ * Runs an operation and reports how it ended.
+ *
+ * @param run - The operation.
+ * @returns `done`, or the code of the service error it threw.
+ */
+async function outcomeCode(run: () => Promise<unknown>): Promise<string> {
+  try {
+    await run();
+    return 'done';
+  } catch (error) {
+    if (!(error instanceof ServiceError)) {
+      throw error;
+    }
+    return error.code;
+  }
+}
+
 describe('authorization matrix', () => {
   it('expects an outcome of every operation for every role', () => {
     expect(Object.keys(EXPECTED).sort()).toEqual([...OPERATIONS.keys()].sort());
@@ -652,5 +726,20 @@ describe('authorization matrix', () => {
     ]);
     const expected = names.map((name) => [name, expectedOutcome(name, role)]);
     expect(Object.fromEntries(results)).toEqual(Object.fromEntries(expected));
+  });
+
+  it('refuses deactivating your own account to the last Admin of the staff or a company', async () => {
+    await createStaffSettings(db);
+    const company = await createCompany(db, { name: 'Adiutor Tests A' });
+    const [soleStaffAdmin, soleCompanyAdmin, client] = [
+      await staffActor(db, 'platform_admin'),
+      await memberActor(db, company.id, 'admin'),
+      await memberActor(db, company.id, 'client'),
+    ];
+    const results = await inSequence([soleStaffAdmin, soleCompanyAdmin, client], async (actor) => {
+      await givePassword(actor.id);
+      return outcomeCode(() => deactivateOwnAccount(ctx, actor, OWN_PASSWORD));
+    });
+    expect(results).toEqual(['conflict', 'conflict', 'done']);
   });
 });

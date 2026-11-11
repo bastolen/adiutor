@@ -2,7 +2,7 @@
  * @file Reading, setting and expiring the cookies the reactions use to tell the
  * next page something.
  */
-import { appUrl } from '@/lib/env';
+import { secureCookies } from '@/lib/env';
 
 import type { AuthHookContext } from './hook-context';
 
@@ -34,7 +34,7 @@ export function setNextPageCookie(ctx: AuthHookContext, name: string, value: str
     path: '/',
     httpOnly: false,
     sameSite: 'lax',
-    secure: appUrl.startsWith('https://'),
+    secure: secureCookies,
   });
 }
 
@@ -50,6 +50,6 @@ export function expireCookie(ctx: AuthHookContext, name: string): void {
     path: '/',
     sameSite: 'lax',
     // Cookies named `__Secure-` or `__Host-` can only be changed by a secure response.
-    secure: appUrl.startsWith('https://') || /^__(Secure|Host)-/.test(name),
+    secure: secureCookies || /^__(Secure|Host)-/.test(name),
   });
 }

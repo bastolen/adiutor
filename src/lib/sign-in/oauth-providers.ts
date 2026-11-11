@@ -15,6 +15,10 @@
  * and `src/lib/sign-in/providers.ts`; its `socialProviders` entry in
  * `src/lib/auth.ts`; its icon in `src/components/brand/provider-icons.tsx`;
  * and, for an MFA provider, its check in `src/server/auth/provider-mfa.ts`.
+ * Three config files list providers by hand too: `playwright.config.ts`
+ * (the `webServer` env blanks its credentials), `vitest.config.mts` (the
+ * integration env, for an MFA provider) and `eslint.config.mjs`
+ * (`providerIdSyntax`).
  */
 import type { Locale } from '@/lib/i18n/locales';
 
@@ -88,15 +92,15 @@ export function providerLabel(providerId: string): string {
 }
 
 /**
- * The claims of a provider's profile that name the account the way its owner
- * knows it, tried in order: GitHub's username, Google's email address. Shown
+ * The claim of a provider's profile that names the account the way its owner
+ * knows it: GitHub's username, Google's email address. Shown
  * next to a connected account so the user can tell which one it is
  * (`src/server/auth/auth-events/` stores it when they sign in or connect with
  * it). Only for display: accounts are always matched by their ID.
  */
-export const PROVIDER_ACCOUNT_NAME_CLAIMS: Record<OAuthProvider, readonly string[]> = {
-  github: ['login'],
-  google: ['email'],
+export const PROVIDER_ACCOUNT_NAME_CLAIMS: Record<OAuthProvider, string> = {
+  github: 'login',
+  google: 'email',
 };
 
 /** The longest account name kept: the longest an email address can be. */
@@ -126,26 +130,19 @@ export function cleanAccountName(value: unknown): string | null {
 }
 
 /**
- * Reads the account name from a provider's profile, from the claims in
+ * Reads the account name from a provider's profile, from its claim in
  * {@link PROVIDER_ACCOUNT_NAME_CLAIMS} (the profile's own keys only).
  *
  * @param provider - The provider.
  * @param profile - The provider's profile (user info or ID token claims), unchecked.
- * @returns The first usable name, or `null`.
+ * @returns The name, cleaned (`cleanAccountName`), or `null` when there's no usable one.
  */
 export function accountNameFromProfile(provider: OAuthProvider, profile: unknown): string | null {
-  if (!profile || typeof profile !== 'object') {
+  const claim = PROVIDER_ACCOUNT_NAME_CLAIMS[provider];
+  if (!profile || typeof profile !== 'object' || !Object.hasOwn(profile, claim)) {
     return null;
   }
-  const claims = PROVIDER_ACCOUNT_NAME_CLAIMS[provider];
-  return claims.reduce<string | null>(
-    (found, claim) =>
-      found ??
-      (Object.hasOwn(profile, claim)
-        ? cleanAccountName((profile as Record<string, unknown>)[claim])
-        : null),
-    null,
-  );
+  return cleanAccountName((profile as Record<string, unknown>)[claim]);
 }
 
 /**
@@ -321,26 +318,4 @@ export function parseProviderStepUpCookie(
     return null;
   }
   return { provider, outcome };
-}
-
-/**
- * Says why a provider didn't confirm the session, and what the user can do.
- * Worded to fit wherever they land. The session keeps any earlier
- * confirmation it had (Better Auth replaces the session, which keeps it:
- * `beforeSessionCreate`), so it never says one ended.
- *
- * @param provider - The provider the user confirmed with.
- * @param outcome - Why it didn't confirm the session.
- * @returns The message, e.g. "GitHub couldn't confirm it's you: …".
- */
-export function providerStepUpMessage(
-  provider: MfaProvider,
-  outcome: ProviderStepUpOutcome,
-): string {
-  const label = PROVIDER_LABELS[provider];
-  const reasons: Record<ProviderStepUpOutcome, string> = {
-    'mfa-off': `two-factor authentication is off for your ${label} account. Turn it on at ${label}, or use another second step.`,
-    unchecked: `we couldn't check your ${label} account's two-factor authentication just now. Try again in a moment.`,
-  };
-  return `${label} couldn't confirm it's you: ${reasons[outcome]}`;
 }

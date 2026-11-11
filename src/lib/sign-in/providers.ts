@@ -57,7 +57,7 @@ export const signInProviders: readonly OAuthProvider[] = OAUTH_PROVIDERS.filter(
 /**
  * The providers that can prove MFA and are configured here, for the MFA rules
  * in `src/lib/authz/mfa/`: provider MFA only counts for these. (A list the
- * integration tests change, to turn a provider off; see `turnOffProviderSignIn`.)
+ * integration tests change, to turn a provider off; see `turnOffGitHubSignIn`.)
  */
 export const availableProviders: ProviderAvailability & MfaProvider[] = MFA_PROVIDERS.filter(
   (provider) => configuredProviders[provider],

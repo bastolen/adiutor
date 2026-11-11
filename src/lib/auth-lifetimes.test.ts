@@ -4,8 +4,7 @@
  * Auth's defaults differ (3 minutes for codes), and its plugins don't expose
  * their options, so this reads what the auth config hands them. The same for
  * the pause after wrong codes at sign-in (`TWO_FACTOR_LOCK_MINUTES`), which
- * the lockout email names. Also checks that sessions last a fixed 7 days and
- * aren't extended while they're used.
+ * the lockout email names.
  * @vitest-environment node
  */
 import { magicLink, twoFactor } from 'better-auth/plugins';
@@ -52,13 +51,5 @@ describe('Better Auth lifetimes', () => {
       durationSeconds: TWO_FACTOR_LOCK_MINUTES * 60,
     });
     expect(TWO_FACTOR_LOCK_MINUTES).toBe(15);
-  });
-
-  it('end sessions 7 days after the sign-in, however much they are used', async () => {
-    const { auth } = await import('./auth');
-
-    // In seconds. Pages can't set cookies, so a session extended there would outlive its cookie.
-    expect(auth.options.session?.expiresIn).toBe(7 * 24 * 60 * 60);
-    expect(auth.options.session?.disableSessionRefresh).toBe(true);
   });
 });

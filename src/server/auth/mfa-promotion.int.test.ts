@@ -274,7 +274,7 @@ describe('changes that make a role require MFA', () => {
     const kinds = await sessionsOfEachKind(jane);
 
     await setUpPlatform(
-      db,
+      { db },
       { staffName: 'Adiutor Tests', name: 'Jane', email: 'jane@adiutor.test' },
       { allowExistingAccount: true },
     );

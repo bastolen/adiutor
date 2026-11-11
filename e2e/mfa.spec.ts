@@ -7,7 +7,6 @@
  * the recommendation for everyone else.
  */
 
-import getTestDatabaseUrl from '../tests/database/database-url';
 import { clearMfaRecommendationDismissal, storeSignInLink } from './support/db';
 import {
   CLIENT_WATCHER,
@@ -169,7 +168,7 @@ test('a company user adds a passkey and is offered it when signing in', async ({
   // Signed in without a second step (an email link), confirming with the passkey on the step-up
   // page confirms that session: Recent activity shows it as such, not as another sign-in.
   await context.clearCookies();
-  await openSignInLink(page, await storeSignInLink(getTestDatabaseUrl(), PASSKEY_CLIENT.email));
+  await openSignInLink(page, await storeSignInLink(PASSKEY_CLIENT.email));
   await expect(page).toHaveURL(/\/auth\/verify/);
   await page.getByRole('button', { name: 'Confirm with a passkey' }).click();
   await expect(page).toHaveURL('/dashboard');
@@ -188,8 +187,7 @@ test('everyone else is recommended MFA, and can dismiss the recommendation for t
   browser,
   page,
 }) => {
-  await clearMfaRecommendationDismissal(getTestDatabaseUrl(), CLIENT_WATCHER.email);
-  await useOwnClientIp(page);
+  await clearMfaRecommendationDismissal(CLIENT_WATCHER.email);
   await signIn(page, CLIENT_WATCHER);
   const banner = page.getByRole('region', { name: 'Account security' });
   await expect(banner).toContainText('Protect your account');

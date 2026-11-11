@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { account } from '@/db/schema';
 import { canConfirmSessions, hasMfa } from '@/lib/authz/mfa';
 import { firstRow } from '@/lib/defined';
+import { availableProviders } from '@/lib/sign-in/providers';
 
 import { createUser, setupTestContext, staffActor } from '../../../tests/integration/helpers';
 import { loadMfaContext, loadMfaStates } from './mfa-state';
@@ -54,8 +55,8 @@ async function mfaOf(userId: string) {
   }
   return {
     providerAccounts: mfa.state.providerAccounts,
-    hasMfa: hasMfa(mfa.state, mfa.mfaRole),
-    canConfirmSessions: canConfirmSessions(mfa.state, mfa.mfaRole),
+    hasMfa: hasMfa(mfa.state, mfa.mfaRole, availableProviders),
+    canConfirmSessions: canConfirmSessions(mfa.state, mfa.mfaRole, availableProviders),
   };
 }
 

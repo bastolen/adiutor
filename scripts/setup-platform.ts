@@ -52,7 +52,7 @@ async function main(): Promise<number> {
 
   try {
     const result = await setUpPlatform(
-      db,
+      { db },
       { staffName: values['staff-name'], email: values.email, name: values.name, defaultLocale },
       // Unlike the web form, may make an existing account the Admin (to recover).
       { allowExistingAccount: true },

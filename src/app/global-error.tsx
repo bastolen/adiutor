@@ -26,7 +26,7 @@ import {
 } from '@/lib/i18n/locales';
 import { onMessageError } from '@/lib/i18n/message-errors';
 import { TIME_ZONE } from '@/lib/i18n/time-zone';
-import { DARK_MEDIA_QUERY, isThemePreference, resolveTheme, THEME_STORAGE_KEY } from '@/lib/theme';
+import { applyStoredTheme, THEME_STORAGE_KEY } from '@/lib/theme';
 import enUsCommon from '@/messages/en-US/common.json';
 import esEsCommon from '@/messages/es-ES/common.json';
 import nlNlCommon from '@/messages/nl-NL/common.json';
@@ -44,21 +44,6 @@ const COMMON_MESSAGES: Record<Locale, typeof enUsCommon> = {
   'nl-NL': nlNlCommon,
   'es-ES': esEsCommon,
 };
-
-/**
- * Shows the saved theme, as the root layout's inline script would have.
- */
-function applySavedTheme() {
-  try {
-    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-    document.documentElement.dataset.theme = resolveTheme(
-      isThemePreference(stored) ? stored : 'system',
-      window.matchMedia(DARK_MEDIA_QUERY).matches,
-    );
-  } catch {
-    // Storage can be blocked (e.g. some private modes); the CSS then follows the system.
-  }
-}
 
 /**
  * The browser's language: its choice in the language cookie, else the first
@@ -116,7 +101,7 @@ export default function GlobalError({ error, retry }: ErrorPageProps) {
   const locale = useSyncExternalStore(subscribeToNothing, savedLocale, serverLocale);
 
   useEffect(() => {
-    applySavedTheme();
+    applyStoredTheme(THEME_STORAGE_KEY);
   }, []);
 
   return (

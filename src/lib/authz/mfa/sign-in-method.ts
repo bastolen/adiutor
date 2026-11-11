@@ -3,6 +3,7 @@
  * that created the session.
  */
 import { isMfaProvider, isOAuthProvider, type OAuthProvider } from '../../sign-in/oauth-providers';
+import { mfaMethodFromPath } from './session';
 
 /** How someone signed in, for the audit log. */
 export type SignInMethod =
@@ -16,24 +17,8 @@ export type SignInMethod =
   | 'other';
 
 /**
- * Endpoints that prove a second step ({@link MFA_METHOD_PATHS}): without a
- * session they sign someone in (a password sign-in's code step, or a
- * passkey); with one they turn two-step verification on or confirm the
- * session on the step-up page, which aren't sign-ins. (Better Auth doesn't
- * read the session on the passkey endpoint, so for it the caller tells from
- * the request's signed session cookie.) A provider callback proves one too,
- * but only once its provider confirmed it ({@link provesSecondStep}).
- */
-const SECOND_STEP_PATHS = new Set([
-  '/two-factor/verify-totp',
-  '/two-factor/verify-otp',
-  '/two-factor/verify-backup-code',
-  '/passkey/verify-authentication',
-]);
-
-/**
  * Checks whether an endpoint proved a second step: one of the
- * {@link SECOND_STEP_PATHS}, or the callback of a provider that can prove
+ * endpoints that prove one ({@link mfaMethodFromPath}), or the callback of a provider that can prove
  * MFA (`MFA_PROVIDERS`) when that provider confirmed the session with the
  * account's two-factor authentication. Other providers (Google) never do.
  *
@@ -47,7 +32,7 @@ function provesSecondStep(
   providerId: string | undefined,
   providerMfa: boolean,
 ): boolean {
-  if (SECOND_STEP_PATHS.has(path)) {
+  if (mfaMethodFromPath(path) !== null) {
     return true;
   }
   return providerMfa && path.startsWith('/callback/') && isMfaProvider(providerId);

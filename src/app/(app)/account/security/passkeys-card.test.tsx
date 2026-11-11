@@ -47,7 +47,6 @@ vi.mock('next/navigation', () => ({
 const laptop: PasskeySummary = {
   id: '01970000-0000-7000-8000-000000000011',
   name: 'Work laptop',
-  deviceType: 'multiDevice',
   backedUp: true,
   createdAt: new Date('2026-10-20T09:00:00Z'),
 };

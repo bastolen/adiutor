@@ -41,27 +41,23 @@ The linters and formatters, the JSDoc rule, the editor setup and the Git hooks. 
 - **JSDoc** is required: every file starts with a `/** @file ... */` block, and every function,
   component, class and exported value has a `/** */` comment, which says something: an empty block
   (as `lint:fix` inserts) fails until it's written (`jsdoc/require-description`).
-  `eslint-plugin-jsdoc` enforces this for JS/TS. In CSS and SCSS, Stylelint rejects any comment that is not `/** */` (including `//`),
-  but cannot check that a file header or a comment exists. The translation catalogues
+  `eslint-plugin-jsdoc` enforces this for JS/TS. In CSS, Stylelint rejects any comment that is not
+  `/** */`, but cannot check that a file header or a comment exists. The translation catalogues
   (`src/messages/**/*.json`) are the one exception: JSON can't hold comments, so
   [Languages](i18n.md) and the loader's JSDoc (`src/lib/i18n/messages.ts`) give their context.
 - **Prettier** (`prettier.config.mjs`) handles formatting with settings that match Airbnb (single
   quotes, semicolons, trailing commas, 100-character lines). It runs inside ESLint and Stylelint,
   and sorts Tailwind classes.
-- **Stylelint** (`stylelint.config.mjs`) checks CSS and SCSS with the standard SCSS rules, allows
+- **Stylelint** (`stylelint.config.mjs`) checks CSS with the standard rules, allows
   Tailwind's at-rules (`@theme`, `@utility`, `@apply`, ...) and enforces JSDoc-style comments.
 - **Tailwind classes** are sorted by Prettier's Tailwind plugin, in `className` and in helpers like
-  `clsx()` and `cn()`, and in `@apply` in CSS/SCSS. Because Prettier runs inside ESLint and
+  `clsx()` and `cn()`, and in `@apply` in CSS. Because Prettier runs inside ESLint and
   Stylelint, `pnpm lint` reports classes in the wrong order and `pnpm lint:fix` sorts them.
   `eslint-plugin-better-tailwindcss` also reports unknown, duplicate, conflicting and deprecated
   classes, using the brand theme so classes like `bg-primary` count as valid.
-- **Text** comes from the translation catalogues, in every language (see [Languages](i18n.md)).
-  ESLint refuses text written straight into JSX (`react/jsx-no-literals`) or into a text prop
-  (`aria-label`, `title`, `label`, `placeholder`, ...) in `src/app`, `src/components` and
-  `src/emails`, and a translation call inside a template literal or a `+` anywhere in `src/`: a message is one
-  whole sentence with named arguments. `pnpm lint:messages` (part of `pnpm lint`) checks the
-  catalogues themselves: every language complete, the same arguments as English, no unused or
-  undefined keys.
+- **Text** comes from the translation catalogues, in every language. ESLint refuses hard-coded and
+  glued-together text, and `pnpm lint:messages` checks the catalogues (see
+  [Checks](i18n.md#checks) in Languages).
 - **Browser bundle:** client components ship only what the page needs when it loads. zod and the
   schemas in `src/lib/validation.ts` stay on the server (the limits forms need are in
   `src/lib/input-rules.ts`); pages outside the sign-in pages load the Better Auth client with
@@ -74,8 +70,8 @@ The linters and formatters, the JSDoc rule, the editor setup and the Git hooks. 
   fails, naming the chain, when one reaches a module on its list; add new heavy libraries there.
 - **Modules that outgrow one file** (around 500 lines, or several jobs in one file) become a folder
   with an `index.ts` as the module's public API, like `src/lib/authz/mfa/`,
-  `src/server/auth/auth-events/`, `src/server/auth/auth-guards/` and
-  `src/server/people/invitations/`. Each file inside holds one part of the module; files import
+  `src/server/auth/auth-events/`, `src/server/auth/auth-guards/`, `src/server/people/invitations/`
+  and `src/server/people/user-admin/`. Each file inside holds one part of the module; files import
   each other directly (never `./index`), and code outside imports only the folder itself, so
   existing imports keep working and the internals can change freely. ESLint enforces that boundary
   for the folders listed in `FOLDER_MODULES` (`eslint.config.mjs`), and `import-x/no-cycle` keeps
@@ -109,7 +105,7 @@ being committed:
   then the Vitest tests related to the changed files, then `pnpm lint:messages` (code can stop
   using a message, or use one that doesn't exist)
 - The translation catalogues (`src/messages/`): `pnpm lint:messages`
-- CSS/SCSS: `stylelint --fix` (same, for styles)
+- CSS: `stylelint --fix` (same, for styles)
 - JSON, Markdown and YAML: `prettier --write`
 
 Only staged changes are touched: unstaged edits in the same file are set aside while the hook runs.

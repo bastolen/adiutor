@@ -3,7 +3,7 @@
  * sign-in (docs/i18n.md, "How the language is chosen"). Server only: it reads
  * the app's address.
  */
-import { appUrl } from '@/lib/env';
+import { secureCookies } from '@/lib/env';
 
 /** A year, in seconds: the language is a lasting preference of the browser. */
 const ONE_YEAR = 365 * 24 * 60 * 60;
@@ -22,6 +22,6 @@ export default function localeCookieOptions() {
     path: '/',
     httpOnly: false,
     sameSite: 'lax',
-    secure: appUrl.startsWith('https://'),
+    secure: secureCookies,
   } as const;
 }

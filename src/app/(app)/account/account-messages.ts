@@ -7,6 +7,7 @@
 import type { useTranslations } from 'next-intl';
 
 import { withSection } from '@/lib/redirect';
+import { searchParam } from '@/lib/search-params';
 import { type AuthTranslator, signInErrorText } from '@/lib/sign-in/auth-error-messages';
 import { isOAuthProvider, PROVIDER_LABELS } from '@/lib/sign-in/oauth-providers';
 import {
@@ -14,7 +15,8 @@ import {
   SESSION_NOT_FRESH,
   SIGN_IN_CHANGE_IN_PROGRESS,
 } from '@/lib/sign-in/sign-in-refusals';
-import { searchParam } from '@/lib/tables/search-params';
+
+import { providerErrorMessage } from '../../sign-in-error/messages';
 
 /** A message for the form message component. */
 export interface AccountMessage {
@@ -54,21 +56,24 @@ export interface AccountParams {
  * an account failed.
  *
  * @param t - Translates the `account` namespace (`useTranslations` or `getTranslations`).
+ * @param tAuth - Translates the `auth` namespace, for the provider errors.
  * @param code - The code.
  * @returns The message; a general one for codes without their own.
  */
-function errorText(t: ReturnType<typeof useTranslations<'account'>>, code: string): string {
+function errorText(
+  t: ReturnType<typeof useTranslations<'account'>>,
+  tAuth: AuthTranslator,
+  code: string,
+): string {
   switch (code) {
     case 'TOKEN_EXPIRED':
       return t('messages.verificationExpired');
     case 'INVALID_TOKEN':
       return t('messages.verificationInvalid');
-    case 'account_already_linked_to_different_user':
-      return t('messages.linkedToOther');
     case 'email_not_verified':
       return t('messages.emailNotVerified');
     default:
-      return t('messages.failed');
+      return providerErrorMessage(tAuth, code) ?? t('messages.failed');
   }
 }
 
@@ -78,16 +83,18 @@ function errorText(t: ReturnType<typeof useTranslations<'account'>>, code: strin
  * over our success parameters.
  *
  * @param t - Translates the `account` namespace (`useTranslations` or `getTranslations`).
+ * @param tAuth - Translates the `auth` namespace, for Better Auth's provider errors.
  * @param params - The page's query parameters.
  * @returns The message, or `null` when there's nothing to say.
  */
 export default function accountMessage(
   t: ReturnType<typeof useTranslations<'account'>>,
+  tAuth: AuthTranslator,
   params: AccountParams,
 ): AccountMessage | null {
   const error = searchParam(params.error);
   if (error) {
-    return { tone: 'error', text: errorText(t, error) };
+    return { tone: 'error', text: errorText(t, tAuth, error) };
   }
   if (params.verified) {
     return { tone: 'success', text: t('messages.verified') };

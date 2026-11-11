@@ -324,6 +324,7 @@ const FOLDER_MODULES = [
   'server/auth/auth-events',
   'server/auth/auth-guards',
   'server/people/invitations',
+  'server/people/user-admin',
 ];
 
 /**

@@ -5,7 +5,7 @@
  * them (their staff role, or Admin of an active company), in a fixed number of
  * queries for any number of users.
  */
-import { and, count, eq, inArray, isNull } from 'drizzle-orm';
+import { and, count, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import type { Database, DatabaseOrTransaction } from '@/db';
 import { account, company, membership, passkey, twoFactor, user } from '@/db/schema';
@@ -107,6 +107,38 @@ export async function loadMfaStates(
     return new Map();
   }
   return (await loadSetup(db, userIds)).states;
+}
+
+/**
+ * Finds the active (not deactivated) users with a counting, MFA-verified
+ * account at one of these providers. A provider account counts unless it was
+ * connected at sign-in and isn't confirmed yet (`confirmed IS DISTINCT FROM
+ * false`, the rule {@link loadMfaStates} applies).
+ *
+ * @param db - Database client.
+ * @param providers - The providers' IDs, e.g. `['github']`.
+ * @returns The users' IDs.
+ */
+export async function loadUsersWithProviderMfa(
+  db: Database,
+  providers: readonly string[],
+): Promise<string[]> {
+  if (providers.length === 0) {
+    return [];
+  }
+  const rows = await db
+    .selectDistinct({ userId: account.userId })
+    .from(account)
+    .innerJoin(user, eq(user.id, account.userId))
+    .where(
+      and(
+        inArray(account.providerId, [...providers]),
+        eq(account.mfaVerified, true),
+        sql`${account.confirmed} is distinct from false`,
+        isNull(user.deactivatedAt),
+      ),
+    );
+  return rows.map((row) => row.userId);
 }
 
 /**

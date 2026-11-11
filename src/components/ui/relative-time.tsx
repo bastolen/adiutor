@@ -12,8 +12,6 @@ import { formatDateTime, formatRelative } from '@/lib/format';
 interface RelativeTimeProps {
   /** When it happened, or `null` if it never did. */
   date: Date | null;
-  /** Text when `date` is `null`. Defaults to "Never" in the reader's language. */
-  never?: string;
 }
 
 /**
@@ -22,14 +20,13 @@ interface RelativeTimeProps {
  *
  * @param props - Component props.
  * @param props.date - The moment.
- * @param props.never - Text without a moment.
  * @returns The time.
  */
-export default function RelativeTime({ date, never = undefined }: RelativeTimeProps) {
+export default function RelativeTime({ date }: RelativeTimeProps) {
   const t = useTranslations('common.relativeTime');
   const locale = useLocale();
   if (!date) {
-    return <span>{never ?? t('never')}</span>;
+    return <span>{t('never')}</span>;
   }
   const exact = formatDateTime(date, locale);
   return (

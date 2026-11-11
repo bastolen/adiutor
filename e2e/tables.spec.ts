@@ -8,7 +8,7 @@
  */
 import { type Page } from '@playwright/test';
 
-import { defined } from '../src/lib/defined';
+import { findUserId } from './support/db';
 import {
   CLIENT_WATCHER,
   NAMELESS_SUPPORT,
@@ -213,11 +213,7 @@ test.describe('on a phone', () => {
 test('no table scrolls sideways from tablet to desktop widths', async ({ page }) => {
   // Seven pages at six widths, one after another.
   test.setTimeout(120_000);
-  await page.goto(`/admin/users?q=${encodeURIComponent(CLIENT_WATCHER.name)}`);
-  const userHref = await page
-    .getByRole('main')
-    .getByRole('link', { name: CLIENT_WATCHER.name, exact: true })
-    .getAttribute('href');
+  const userId = await findUserId(CLIENT_WATCHER.email);
   // The staff member with no name and a long address is the widest row.
   const paths = [
     '/admin/users',
@@ -225,7 +221,7 @@ test('no table scrolls sideways from tablet to desktop widths', async ({ page })
     '/admin/staff',
     '/admin/companies',
     membersPath,
-    defined(userHref, "the user's link"),
+    `/admin/users/${userId}`,
     '/account/security',
   ];
 

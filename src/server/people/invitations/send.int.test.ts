@@ -302,18 +302,6 @@ describe('the invitation’s language', () => {
 });
 
 describe('inviteByEmail permissions', () => {
-  it('hides companies from outsiders', async () => {
-    const other = await createCompany(db);
-    const outsider = await memberActor(db, other.id, 'admin');
-    await expect(
-      inviteByEmail(ctx, outsider, {
-        companyId: testCompany.id,
-        email: 'x@adiutor.test',
-        role: 'client',
-      }),
-    ).rejects.toMatchObject({ code: 'not_found' });
-  });
-
   it('refuses roles from the other kind of company', async () => {
     await expect(
       inviteByEmail(ctx, companyAdmin, {

@@ -26,11 +26,12 @@ import {
   mustSetUpMfa,
 } from '@/lib/authz/mfa';
 import ClientMessages from '@/lib/i18n/client-messages';
+import type { SearchParams } from '@/lib/search-params';
 import { confirmationWindow } from '@/lib/sign-in/confirm-url';
 import { providerList } from '@/lib/sign-in/oauth-providers';
 import { availableProviders, signInProviders } from '@/lib/sign-in/providers';
-import type { SearchParams } from '@/lib/tables/search-params';
-import { createPageUrl, parseTableState } from '@/lib/tables/table-state';
+import { createPageUrl } from '@/lib/tables/page-url';
+import { parseTableState } from '@/lib/tables/table-state';
 import { DEVICES_TABLE } from '@/lib/tables/tables';
 import appContext from '@/server/app-context';
 import { listConnectedProviders } from '@/server/auth/accounts';
@@ -67,16 +68,17 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 async function Security({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const actor = await getActor({ allowMissingMfa: true });
-  const [params, t, locale] = await Promise.all([
+  const [params, t, tAuth, locale] = await Promise.all([
     searchParams,
     getTranslations('account'),
+    getTranslations('auth'),
     getLocale(),
   ]);
   const devicesRequested = parseTableState(DEVICES_TABLE, params);
   const [overview, connected, sessions, lastAdminOf] = await Promise.all([
-    getSecurityOverview(appContext.db, actor),
-    listConnectedProviders(appContext.db, actor.id),
-    listUserSessions(appContext.db, actor.id, actor.mfaRole, devicesRequested),
+    getSecurityOverview(appContext, actor),
+    listConnectedProviders(appContext, actor.id),
+    listUserSessions(appContext, actor.id, actor.mfaRole, devicesRequested),
     // Only shown: deactivating checks again, with locks, in its own transaction.
     soleAdminOf(appContext.db, actor.id, { lock: false }),
   ]);
@@ -86,11 +88,11 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
     ...devicesRequested,
     page: sessions.page,
   });
-  const message = accountMessage(t, params);
+  const message = accountMessage(t, tAuth, params);
   // The same check that sent them here (`getActor`).
   const mustSetUp = mustSetUpMfa(actor);
   const setup = {
-    authenticator: overview.authenticatorSetUp,
+    authenticator: overview.mfaState.authenticator,
     passkeyCount: overview.passkeys.length,
   };
   // Accounts connected at sign-in are judged with the MFA their provider gave (stored at that
@@ -126,7 +128,9 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
       )}
       {mustSetUp && (
         <Alert tone="info" focusOnShow>
-          {t('security.mustSetUp', { emailCodes: overview.twoFactorEnabled ? 'true' : 'false' })}
+          {t('security.mustSetUp', {
+            emailCodes: overview.mfaState.twoFactorEnabled ? 'true' : 'false',
+          })}
         </Alert>
       )}
       {!actor.mfaEnabled && !actor.mfaRequired && (
@@ -144,10 +148,10 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
         />
         <TwoFactorCard
           email={actor.email}
-          enabled={overview.twoFactorEnabled}
-          authenticatorSetUp={overview.authenticatorSetUp}
+          enabled={overview.mfaState.twoFactorEnabled}
+          authenticatorSetUp={overview.mfaState.authenticator}
           emailCodes={emailCodeStatus(setup, actor.mfaRole)}
-          hasPassword={overview.hasPassword}
+          hasPassword={overview.mfaState.hasPassword}
           turnOffBlockedReason={blocked.turnOffTwoFactor ? t('security.keepAuthenticator') : null}
         />
         {showsConnectedAccounts && (
@@ -166,19 +170,19 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
           id="password"
           title={t('security.password.title')}
           description={
-            overview.hasPassword
+            overview.mfaState.hasPassword
               ? t('security.password.descriptionChange')
               : t('security.password.descriptionSet')
           }
         >
           <PasswordForm
-            hasPassword={overview.hasPassword}
+            hasPassword={overview.mfaState.hasPassword}
             blockedReason={blocked.setPassword ? providerMfaOnly : null}
           />
         </Card>
         <SessionsCard sessions={sessions} table={devicesTable} currentSessionId={actor.sessionId} />
         <DeactivateCard
-          hasPassword={overview.hasPassword}
+          hasPassword={overview.mfaState.hasPassword}
           blockedReason={soleAdmin ? serviceErrorMessage(soleAdmin, locale) : null}
         />
       </RecentConfirmationProvider>

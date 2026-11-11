@@ -10,6 +10,7 @@ import type { ReactNode } from 'react';
 
 import Alert from '@/components/ui/alert';
 import Button from '@/components/ui/button';
+import IconTile from '@/components/ui/icon-tile';
 import ResultAlert from '@/components/ui/result-alert';
 import TextField from '@/components/ui/text-field';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
@@ -56,9 +57,7 @@ export default function JoinForm({ token, signedInEmail }: JoinFormProps) {
   if (result?.ok) {
     return (
       <div className="flex flex-col items-start gap-4">
-        <span className="flex size-11 items-center justify-center rounded-xl bg-success-soft text-success">
-          <MailCheck aria-hidden="true" className="size-5" />
-        </span>
+        <IconTile icon={MailCheck} tone="success" size="lg" />
         <Alert tone="success">{result.message ?? null}</Alert>
       </div>
     );

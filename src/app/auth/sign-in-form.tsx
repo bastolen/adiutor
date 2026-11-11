@@ -28,8 +28,7 @@ import {
   signInNoticeText,
 } from '@/lib/sign-in/auth-error-messages';
 import { type OAuthProvider, PROVIDER_LABELS } from '@/lib/sign-in/oauth-providers';
-
-import { twoFactorPath } from './two-factor/two-factor-path';
+import { twoFactorPath } from '@/lib/sign-in/two-factor-path';
 
 /**
  * Props for {@link SignInForm}.

@@ -80,8 +80,8 @@ cookie, else Adiutor's default).
 `invitation.locale` (NOT NULL, `en-US` by default) is chosen when the invitation is sent: the
 invitation services (`inviteByEmail`, `inviteManyByEmail`, `registerCompany`, `createSentInvitation`)
 take an optional `locale`, by default Adiutor's default language, and a resend keeps the
-invitation's unless it's given another. `registerUser` takes an optional `locale` too; without one
-the new account is on Default. The forms ask for it (**Email language**): Add user and Add company
+invitation's language. `registerUser` takes an optional `locale` too; without one the new account
+is on Default. The forms ask for it (**Email language**): Add user and Add company
 start on Default (no `locale`), the invite form on the sender's language.
 Scripts and the hourly job have no request: their emails use the recipient's or the invitation's
 language, else Adiutor's default language (`pnpm db:seed` sends its invitations in English (US)).
@@ -114,6 +114,10 @@ In `src/lib/email.ts`, in order:
 - neither, anywhere else (production, or a script without `NODE_ENV`): sending fails, so links
   never end up in logs
 - `EMAIL_OUTBOX_DIR` is refused in production unless `E2E_TESTS=1` (the end-to-end tests)
+
+A failed send is logged with `sendFailureOf` (also in `src/lib/email.ts`): only nodemailer's error code
+and the SMTP reply code, never the error itself, because a mail server's refusal can quote the
+address.
 
 Services render and send an email only once their transaction has committed, never while it holds
 its locks: a refused or rolled-back change sends nothing, and nothing waits on those locks while

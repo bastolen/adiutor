@@ -34,8 +34,7 @@ says the account has two-factor authentication, not that this sign-in used it.
 - Stepping down, removing someone, and the Client and Watcher roles need nothing.
 - Every new staff Admin is emailed to the other staff Admins, so an unexpected one gets noticed.
 
-Details: [Lasting ways in](../security-measures.md#lasting-ways-in),
-[Changing sign-in methods needs a recent confirmation](../mfa.md#changing-sign-in-methods-needs-a-recent-confirmation)
+Details: [Changing sign-in methods needs a recent confirmation](../mfa.md#changing-sign-in-methods-needs-a-recent-confirmation)
 and [Invitations](../companies-and-roles.md#invitations).
 
 ## Alternatives considered

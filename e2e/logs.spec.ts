@@ -2,12 +2,12 @@
  * @file End-to-end tests for the Logs pages: staff Admins find events in the
  * audit log by search, group and days, and look up the reference an error
  * page showed (however it's typed); Managers see the audit log but not the
- * errors; Support staff see neither.
+ * errors (Support staff's missing Logs is checked in `not-found.spec.ts`).
  */
 import { type Page } from '@playwright/test';
 
 import { defined } from '../src/lib/defined';
-import { PLATFORM_ADMIN, STEP_UP_MANAGER, SUPPORT_STAFF } from './support/fixtures';
+import { PLATFORM_ADMIN, STEP_UP_MANAGER } from './support/fixtures';
 import { adminStorageState, signIn, type StorageState } from './support/helpers';
 import { expect, test } from './support/test';
 
@@ -141,14 +141,5 @@ test('a Manager sees the audit log, without tabs, and not the errors', async ({ 
   await expect(auditTable(page)).toBeVisible();
 
   await page.goto('/admin/logs/errors');
-  await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
-});
-
-test('Support staff have no Logs', async ({ page }) => {
-  await signIn(page, SUPPORT_STAFF);
-  await page.goto('/dashboard');
-  await expect(page.getByRole('link', { name: 'Logs', exact: true })).toHaveCount(0);
-
-  await page.goto('/admin/logs');
   await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
 });

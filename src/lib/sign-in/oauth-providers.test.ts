@@ -23,7 +23,6 @@ import {
   providerLinkedCookieValue,
   providerList,
   providerStepUpCookieValue,
-  providerStepUpMessage,
 } from './oauth-providers';
 
 describe('MFA_PROVIDERS', () => {
@@ -162,7 +161,6 @@ describe('the provider step-up cookie', () => {
       expect(value).toBe(`github:${outcome}`);
       expect(parseProviderStepUpCookie(value)).toEqual({ provider: 'github', outcome });
     });
-    expect(PROVIDER_STEP_UP_OUTCOMES).toEqual(['mfa-off', 'unchecked']);
   });
 
   it('is only read for a provider that can prove MFA and a known outcome, since the browser can change it', () => {
@@ -178,14 +176,5 @@ describe('the provider step-up cookie', () => {
     expect(parseProviderStepUpCookie('')).toBeNull();
     expect(parseProviderStepUpCookie(null)).toBeNull();
     expect(parseProviderStepUpCookie(undefined)).toBeNull();
-  });
-
-  it('explains each outcome with the provider’s name', () => {
-    expect(providerStepUpMessage('github', 'mfa-off')).toBe(
-      "GitHub couldn't confirm it's you: two-factor authentication is off for your GitHub account. Turn it on at GitHub, or use another second step.",
-    );
-    expect(providerStepUpMessage('github', 'unchecked')).toBe(
-      "GitHub couldn't confirm it's you: we couldn't check your GitHub account's two-factor authentication just now. Try again in a moment.",
-    );
   });
 });

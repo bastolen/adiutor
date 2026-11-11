@@ -10,8 +10,6 @@ import {
   providerLinkedCookieValue,
   providerStepUpCookieValue,
 } from '../src/lib/sign-in/oauth-providers';
-import getTestDatabaseUrl from '../tests/database/database-url';
-import { findCompanyId } from './support/db';
 import {
   CLIENT_WATCHER,
   COMPANY_NAME,
@@ -24,14 +22,10 @@ import { expect, test } from './support/test';
 /** Sign-in cookies of the staff Admin. */
 let adminState: StorageState;
 
-/** ID of the seeded company. */
-let companyId: string;
-
 /** The members page of the seeded company with more members than fit on a page. */
 let pagingMembersPath: string;
 
 test.beforeAll(async ({ browser }) => {
-  companyId = await findCompanyId(getTestDatabaseUrl(), COMPANY_SLUG);
   // At the address the app links to (its URL name).
   pagingMembersPath = `/companies/${PAGING_COMPANY_SLUG}/members`;
   adminState = await adminStorageState(browser);
@@ -134,7 +128,7 @@ test.describe('signed in', () => {
   });
 
   test('a role is only saved when picked with Enter, not while browsing', async ({ page }) => {
-    await page.goto(`/companies/${companyId}/members`);
+    await page.goto(`/companies/${COMPANY_SLUG}/members`);
     const role = page.getByRole('combobox', { name: `Role of ${CLIENT_WATCHER.name}` });
 
     // Browse the roles and close: nothing changes.
@@ -196,7 +190,7 @@ test.describe('signed in', () => {
   });
 
   test('the confirm dialog traps focus, cancels with Escape and confirms', async ({ page }) => {
-    await page.goto(`/companies/${companyId}/members`);
+    await page.goto(`/companies/${COMPANY_SLUG}/members`);
 
     // Make a link to revoke, so the test changes nothing else.
     await page.getByRole('button', { name: 'Create invite link' }).click();
@@ -233,7 +227,7 @@ test.describe('signed in', () => {
   });
 
   test('toasts are reached with F8 and dismissed with the keyboard', async ({ page }) => {
-    await page.goto(`/companies/${companyId}/members`);
+    await page.goto(`/companies/${COMPANY_SLUG}/members`);
     await page.getByRole('button', { name: 'Create invite link' }).click();
     await expect(page.getByRole('textbox', { name: 'Invite link' })).toBeVisible();
     const revoke = page.getByRole('button', { name: /^Revoke .* link created/ }).first();
@@ -383,7 +377,7 @@ test.describe('signed in', () => {
   });
 
   test('clickable things show a pointer, disabled ones a not-allowed cursor', async ({ page }) => {
-    await page.goto(`/companies/${companyId}/members`);
+    await page.goto(`/companies/${COMPANY_SLUG}/members`);
 
     expect(await cursorOf(page.getByRole('button', { name: 'Send invitations' }))).toBe('pointer');
     expect(await cursorOf(page.getByRole('link', { name: 'Members' }))).toBe('pointer');
@@ -574,6 +568,12 @@ test.describe('tables', () => {
       await trigger.press('Enter');
       await expect(page.getByRole('menu')).toBeVisible({ timeout: 1000 });
     }).toPass();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('menu')).toBeHidden();
+    await expect(trigger).toBeFocused();
+
+    await trigger.press('Enter');
+    await expect(page.getByRole('menu')).toBeVisible();
     const zToA = page.getByRole('menuitemradio', { name: 'Name, Z to A' });
     await expect(async () => {
       await page.keyboard.press('ArrowDown');
@@ -598,37 +598,5 @@ test.describe('tables', () => {
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(`${pagingMembersPath}?page=2`);
     await expect(pages.getByRole('link', { name: 'Page 2' })).toBeFocused();
-  });
-
-  test.describe('on a phone', () => {
-    test.use({ viewport: { width: 375, height: 812 } });
-
-    test('the sort menu opens with Enter, moves with the arrows and closes with Escape', async ({
-      page,
-    }) => {
-      await page.goto(pagingMembersPath);
-      const trigger = page.getByRole('button', { name: 'Sort members' });
-
-      await trigger.focus();
-      await expect(async () => {
-        await trigger.press('Enter');
-        await expect(page.getByRole('menu')).toBeVisible({ timeout: 1000 });
-      }).toPass();
-      await page.keyboard.press('Escape');
-      await expect(page.getByRole('menu')).toBeHidden();
-      await expect(trigger).toBeFocused();
-
-      await trigger.press('Enter');
-      await expect(page.getByRole('menu')).toBeVisible();
-      // Opening with the keyboard puts focus on a choice; the arrows move it down the list.
-      await expect(page.locator('[role="menuitemradio"]:focus')).toHaveCount(1);
-      const joined = page.getByRole('menuitemradio', { name: 'Joined, newest first' });
-      await expect(async () => {
-        await page.keyboard.press('ArrowDown');
-        await expect(joined).toBeFocused({ timeout: 250 });
-      }).toPass();
-      await page.keyboard.press('Enter');
-      await expect(page).toHaveURL(`${pagingMembersPath}?sort=joined`);
-    });
   });
 });

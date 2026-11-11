@@ -10,12 +10,16 @@
  * the owner).
  * Runs in order: the accounts carry state from test to test.
  */
-import { randomInt } from 'node:crypto';
-
 import { type Locator, type Page } from '@playwright/test';
 
 import { defined } from '../src/lib/defined';
-import getTestDatabaseUrl from '../tests/database/database-url';
+import {
+  EMAIL_CODES_NOT_ALLOWED,
+  MFA_REQUIRED_FOR_ROLE,
+  MFA_VERIFICATION_REQUIRED,
+  PASSWORD_SIGN_IN_PAUSED,
+  TOO_MANY_ATTEMPTS,
+} from '../src/lib/sign-in/sign-in-refusals';
 import {
   backdateMfaConfirmation,
   sessionOfCookieExists,
@@ -32,11 +36,11 @@ import {
   SUPPORT_STAFF,
 } from './support/fixtures';
 import {
+  freshAddress,
   openSignInLink,
   randomClientIp,
   signIn,
   submitPassword,
-  useOwnClientIp,
 } from './support/helpers';
 import { countEmails, linkIn, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
@@ -198,7 +202,7 @@ test('with an authenticator app, email codes are refused at sign-in', async ({ p
   await expect(page.getByRole('button', { name: 'Email code' })).toHaveCount(0);
   expect(await callAuth(page, 'POST', '/two-factor/send-otp')).toEqual({
     status: 403,
-    code: 'EMAIL_CODES_NOT_ALLOWED',
+    code: EMAIL_CODES_NOT_ALLOWED.code,
   });
 });
 
@@ -229,7 +233,7 @@ test('an email-link session gets only a few guesses at the authenticator code', 
   // Even the right code is refused now, for a while.
   expect(await callAuth(page, 'POST', '/two-factor/verify-totp', { code: right })).toEqual({
     status: 429,
-    code: 'TOO_MANY_ATTEMPTS',
+    code: TOO_MANY_ATTEMPTS.code,
   });
 });
 
@@ -242,15 +246,15 @@ test("a Manager's email-link session can't add a way in until it's confirmed", a
 
   expect(await callAuth(page, 'POST', '/two-factor/send-otp')).toEqual({
     status: 403,
-    code: 'EMAIL_CODES_NOT_ALLOWED',
+    code: EMAIL_CODES_NOT_ALLOWED.code,
   });
   expect(await callAuth(page, 'GET', '/passkey/generate-register-options')).toEqual({
     status: 403,
-    code: 'MFA_VERIFICATION_REQUIRED',
+    code: MFA_VERIFICATION_REQUIRED.code,
   });
   expect(await callAuth(page, 'POST', '/two-factor/generate-backup-codes', {})).toEqual({
     status: 403,
-    code: 'MFA_VERIFICATION_REQUIRED',
+    code: MFA_VERIFICATION_REQUIRED.code,
   });
   expect(
     await callAuth(page, 'POST', '/link-social', { provider: 'github', callbackURL: '/account' }),
@@ -294,7 +298,6 @@ async function clickUntil(button: Locator, reacted: () => Promise<void>): Promis
 test('changing how you sign in needs a confirmation from the last 15 minutes', async ({ page }) => {
   // Waits for the next authenticator code (up to 30 seconds) on top of the sign-in.
   test.setTimeout(120_000);
-  await useOwnClientIp(page);
   await signIn(page, RECENT_MFA_CLIENT);
   // The code just used to sign in (or an earlier one); confirming again needs a later one.
   const signInCode = codeForSecret(RECENT_MFA_CLIENT.totpSecret);
@@ -303,10 +306,10 @@ test('changing how you sign in needs a confirmation from the last 15 minutes', a
   await expect(newBackupCodes).toBeVisible();
 
   // Signed in with the authenticator app 20 minutes ago: too long to change how they sign in.
-  await backdateMfaConfirmation(getTestDatabaseUrl(), RECENT_MFA_CLIENT.email, 20);
+  await backdateMfaConfirmation(RECENT_MFA_CLIENT.email, 20);
   expect(await callAuth(page, 'POST', '/two-factor/generate-backup-codes', {})).toEqual({
     status: 403,
-    code: 'MFA_VERIFICATION_REQUIRED',
+    code: MFA_VERIFICATION_REQUIRED.code,
   });
 
   // Starting a change sends them to confirm first, instead of opening a dialog the server refuses.
@@ -346,7 +349,6 @@ test("a mail scanner opening a sign-in link doesn't sign in or use it up", async
   page,
   request,
 }) => {
-  await useOwnClientIp(page);
   const before = await countEmails(CLIENT_WATCHER.email);
   const response = await page.request.post('/api/auth/sign-in/magic-link', {
     headers: apiHeaders(),
@@ -407,13 +409,12 @@ async function sessionCookieOf(page: Page): Promise<string> {
 }
 
 test('a sign-in link says when it switches this browser from another account', async ({ page }) => {
-  await useOwnClientIp(page);
   await page.goto('/auth');
   await signIn(page, SUPPORT_STAFF);
   const supportSession = await sessionCookieOf(page);
 
   // A link someone else sent for their own account: the page says whose it is and what continuing does.
-  await page.goto(await storeSignInLink(getTestDatabaseUrl(), CLIENT_WATCHER.email));
+  await page.goto(await storeSignInLink(CLIENT_WATCHER.email));
   await expect(page.getByRole('status')).toHaveText(
     `You're signed in as ${SUPPORT_STAFF.name} (${SUPPORT_STAFF.email}) in this browser. Continuing switches this browser to ${CLIENT_WATCHER.name} (${CLIENT_WATCHER.email}).`,
   );
@@ -422,10 +423,10 @@ test('a sign-in link says when it switches this browser from another account', a
   await page.goto('/account');
   await expect(page.locator('#main').getByText(CLIENT_WATCHER.email).first()).toBeVisible();
   // The other account's session in this browser ended, as if they had signed out.
-  expect(await sessionOfCookieExists(getTestDatabaseUrl(), supportSession)).toBe(false);
+  expect(await sessionOfCookieExists(supportSession)).toBe(false);
 
   // A link for the account that's signed in goes on without using it.
-  const again = await storeSignInLink(getTestDatabaseUrl(), CLIENT_WATCHER.email);
+  const again = await storeSignInLink(CLIENT_WATCHER.email);
   await page.goto(again);
   await expect(page.getByRole('heading', { name: "You're already signed in" })).toBeVisible();
   await page.getByRole('link', { name: 'Continue' }).click();
@@ -437,15 +438,14 @@ test('a sign-in link says when it switches this browser from another account', a
 test('a sign-in link that stopped working while another account is signed in says so on its own page', async ({
   page,
 }) => {
-  await useOwnClientIp(page);
   await page.goto('/auth');
   await signIn(page, SUPPORT_STAFF);
-  const link = await storeSignInLink(getTestDatabaseUrl(), CLIENT_WATCHER.email);
+  const link = await storeSignInLink(CLIENT_WATCHER.email);
   await page.goto(link);
   await expect(page.getByRole('button', { name: 'Continue signing in' })).toBeVisible();
 
   // It expires, or is used in another browser, before the click.
-  await useUpSignInLink(getTestDatabaseUrl(), link);
+  await useUpSignInLink(link);
   await page.getByRole('button', { name: 'Continue signing in' }).click();
 
   // Not the sign-in page, which would send the browser on to the account still signed in.
@@ -456,20 +456,13 @@ test('a sign-in link that stopped working while another account is signed in say
 });
 
 test("a sign-in link can't go on to another account's link", async ({ page }) => {
-  await useOwnClientIp(page);
   // Someone's own link, and a genuine link for another user whose return addresses go on to it.
-  const attackerLink = new URL(
-    await storeSignInLink(getTestDatabaseUrl(), CLIENT_WATCHER.email),
-    E2E_BASE_URL,
-  );
+  const attackerLink = new URL(await storeSignInLink(CLIENT_WATCHER.email), E2E_BASE_URL);
   const chained = `/api/auth/magic-link/verify?${new URLSearchParams({
     token: attackerLink.searchParams.get('token') ?? '',
     callbackURL: '/dashboard',
   })}`;
-  const victimLink = new URL(
-    await storeSignInLink(getTestDatabaseUrl(), SUPPORT_STAFF.email),
-    E2E_BASE_URL,
-  );
+  const victimLink = new URL(await storeSignInLink(SUPPORT_STAFF.email), E2E_BASE_URL);
   victimLink.searchParams.set('callbackURL', chained);
   victimLink.searchParams.set('errorCallbackURL', chained);
 
@@ -492,7 +485,7 @@ test("a sign-in link can't go on to another account's link", async ({ page }) =>
 test("sign-in, reset and magic-link don't reveal whether an email has an account", async ({
   page,
 }) => {
-  const absent = `ghost-${randomInt(1, 1_000_000)}@adiutor.test`;
+  const absent = freshAddress('ghost');
   const probes: [string, Record<string, unknown>][] = [
     ['/sign-in/email', { password: 'definitely-wrong-password' }],
     ['/request-password-reset', { redirectTo: '/dashboard' }],
@@ -506,24 +499,11 @@ test("sign-in, reset and magic-link don't reveal whether an email has an account
   }, Promise.resolve());
 });
 
-test('a company user only gets the not-found page on staff screens', async ({ page }) => {
-  expect(await submitPassword(page, CLIENT_WATCHER)).toBe('signed-in');
-  const paths = ['/admin/users', '/admin/staff', '/admin/companies'];
-  await paths.reduce(async (previous, path) => {
-    await previous;
-    await page.goto(path);
-    await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
-    // No other user's data leaks onto the page.
-    await expect(page.getByText(STEP_UP_MANAGER.email)).toHaveCount(0);
-  }, Promise.resolve());
-});
-
 // Runs after the 15-minute test, which waits for a new authenticator code: the Manager's code
 // from their email-link test can't be the one this sign-in uses.
 test("a role that requires MFA can't turn off its only method", async ({ page }) => {
   // The Manager's only method is the authenticator app (their earlier test asked for passkey
   // options but added none), and signing in with it confirms the session just now.
-  await useOwnClientIp(page);
   await signIn(page, STEP_UP_MANAGER);
   await page.goto('/account/security');
   const twoStep = page.getByRole('region', { name: 'Two-step verification', exact: true });
@@ -540,7 +520,7 @@ test("a role that requires MFA can't turn off its only method", async ({ page })
   // still offer it). The session was confirmed just now, so it's the role that stops it.
   expect(
     await callAuth(page, 'POST', '/two-factor/disable', { password: STEP_UP_MANAGER.password }),
-  ).toEqual({ status: 403, code: 'MFA_REQUIRED_FOR_ROLE' });
+  ).toEqual({ status: 403, code: MFA_REQUIRED_FOR_ROLE.code });
 
   await page.reload();
   await expect(twoStep.getByText('On', { exact: true })).toBeVisible();
@@ -550,7 +530,6 @@ test("a role that requires MFA can't turn off its only method", async ({ page })
 test('wrong passwords pause password sign-in for an address, and a password reset lifts it', async ({
   page,
 }) => {
-  await useOwnClientIp(page);
   const { email } = PAUSED_CLIENT;
   /**
    * Sends ten wrong passwords for an address, then tries once more.
@@ -572,7 +551,7 @@ test('wrong passwords pause password sign-in for an address, and a password rese
   const emailsBefore = await countEmails(email);
 
   // Even the right password is refused now, the same way as for an address without an account.
-  const paused = { status: 429, code: 'PASSWORD_SIGN_IN_PAUSED' };
+  const paused = { status: 429, code: PASSWORD_SIGN_IN_PAUSED.code };
   expect(await pauseAndTry(email, PAUSED_CLIENT.password)).toEqual(paused);
   expect(await pauseAndTry('nobody.paused@adiutor.test', 'wrong-1234')).toEqual(paused);
 

@@ -112,6 +112,16 @@ confirm such changes (`hasStrongerStepThanProvider` and `mfaConfirmedUntil` in
 `src/lib/authz/mfa/session.ts`), so whoever has a browser signed in to the user's GitHub can't add a way
 in of their own. The step-up page then doesn't offer GitHub for a change (see below).
 
+When a sign-in with your own GitHub account didn't confirm the session, the page the user lands
+on (back on the step-up page, the Security page to set up MFA, or the page they came for) says
+why: two-factor authentication is off for that GitHub account, or GitHub couldn't be checked just
+now (`ProviderStepUpNotice`, from a short-lived cookie set by `recordProviderSession` that names
+the provider and the reason, never the account; removed once the session is confirmed, when
+someone signs out, or when another sign-in starts on that browser). Such an attempt takes nothing
+away: the new session Better Auth creates for it keeps the confirmation the browser's session
+had, as it was, so it opens no new 15 minutes for changing sign-in methods either
+(`beforeSessionCreate`).
+
 ## A promotion ends weaker sessions
 
 When someone's role starts requiring MFA (made a company
@@ -149,11 +159,8 @@ passkey, connecting or disconnecting a provider account, turning two-step verifi
 and backup codes (the guards, for Better Auth's endpoints), and setting a first password and confirming a
 provider account connected at sign-in (`setFirstPassword` and `confirmConnectedProvider` in
 `src/server/auth/accounts.ts`, which apply both rules themselves: Better Auth's `setPassword` is
-server-only and never reaches the guards). Deactivating your own account
-(`deactivateOwnAccount`) needs the same recent confirmation once the account has a second step;
-with a password it also needs the password (wrong ones are limited per user and recorded, see
-[Rate limits](security-measures.md#rate-limits)), and without a password or a second step a
-sign-in from the last hour. Two-step
+server-only and never reaches the guards). Deactivating your own account needs the same recent
+confirmation (see [Security](authentication.md#security-accountsecurity)). Two-step
 verification is only turned on by proving a code (an authenticator app, or email codes through
 their code step), and setting up an authenticator app next to email codes is recorded and
 emailed as a new method. On
@@ -184,7 +191,7 @@ link), the reset goes ahead.
 ## Locked out
 
 An Admin resets two-step verification on the user's detail page (`resetUserMfa` in
-`src/server/people/user-admin.ts`). The reset turns off two-step verification (the authenticator
+`src/server/people/user-admin/`). The reset turns off two-step verification (the authenticator
 app, its backup codes and email codes), removes the user's passkeys if the Admin ticks that, and
 disconnects every GitHub and Google account connected to theirs, confirmed or not. Someone who
 once verified the user's address at GitHub or Google can connect their own account by signing in

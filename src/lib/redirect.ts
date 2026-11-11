@@ -16,6 +16,9 @@
 /** Where users go after signing in when no other page was requested. */
 export const DEFAULT_SIGNED_IN_PATH = '/dashboard';
 
+/** The Security page, where the step-up page and the provider connections come back to when nothing else is asked. */
+export const SECURITY_PAGE = '/account/security';
+
 /** A stand-in origin to resolve paths against; never shown or requested. */
 const BASE = 'https://adiutor.invalid';
 

@@ -5,10 +5,27 @@
  */
 import { act, render, screen } from '@testing-library/react';
 import { useState } from 'react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Card from './card';
 import restoreFocusIfLost from './focus-fallback';
+
+/** Elements jsdom should treat as hidden, e.g. a page `<Activity>` keeps in the background. */
+const hidden = new Set<Element>();
+
+beforeEach(() => {
+  // jsdom has no layout: give every element a box, except the ones a test hides.
+  vi.spyOn(Element.prototype, 'getClientRects').mockImplementation(function getClientRects(
+    this: Element,
+  ) {
+    return (hidden.has(this) ? [] : [{}]) as unknown as DOMRectList;
+  });
+});
+
+afterEach(() => {
+  hidden.clear();
+  vi.restoreAllMocks();
+});
 
 /**
  * Runs the frames `restoreFocusIfLost` waits for.
@@ -113,5 +130,21 @@ describe('restoreFocusIfLost', () => {
     screen.getByRole('button', { name: 'Revoke' }).focus();
     await nextFrames();
     expect(screen.getByRole('button', { name: 'Revoke' })).toHaveFocus();
+  });
+
+  it('counts focus on an element that is no longer shown as lost', async () => {
+    render(
+      <main id="main" tabIndex={-1}>
+        <Card title="Invitations">
+          <button type="button">Resend</button>
+        </Card>
+      </main>,
+    );
+    const resend = screen.getByRole('button', { name: 'Resend' });
+    resend.focus();
+    hidden.add(resend);
+    restoreFocusIfLost(resend);
+    await nextFrames();
+    expect(screen.getByRole('heading', { name: 'Invitations' })).toHaveFocus();
   });
 });

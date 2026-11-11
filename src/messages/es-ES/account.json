@@ -44,7 +44,6 @@
     "messages": {
       "verificationExpired": "Este enlace de verificación ha caducado. Envía uno nuevo.",
       "verificationInvalid": "Este enlace de verificación no es válido. Envía uno nuevo.",
-      "linkedToOther": "Esa cuenta ya está conectada a otra cuenta de Adiutor.",
       "emailNotVerified": "El proveedor no ha verificado la dirección de correo de esa cuenta.",
       "failed": "No ha funcionado. Vuelve a intentarlo.",
       "verified": "Tu dirección de correo está verificada.",

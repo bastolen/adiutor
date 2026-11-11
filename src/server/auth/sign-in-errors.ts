@@ -7,21 +7,16 @@
  * {@link SIGN_IN_ERROR_RETENTION_DAYS} days, in the `sign_in_error` table
  * (with Better Auth's description too).
  */
-import { randomInt } from 'node:crypto';
-
 import { signInError } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
-import { formatReference, REFERENCE_ALPHABET, REFERENCE_LENGTH } from '@/lib/error-reference';
 
 import type { ServiceContext } from '../context';
+import { createReference } from '../error-reference';
 import { isUniqueViolation } from '../errors';
 import { hitRateLimit, RATE_LIMITS } from '../rate-limit';
 
 /** How many days stored sign-in errors are kept (`cleanUp` in `jobs.ts` deletes older ones). */
 export const SIGN_IN_ERROR_RETENTION_DAYS = 7;
-
-/** The characters references are made of, shared with the app's other error references. */
-export { REFERENCE_ALPHABET };
 
 /** Better Auth's error codes: letters, digits, `_`, `-` and `'` (e.g. `email_doesn't_match`). */
 const CODE_PATTERN = /^[A-Za-z0-9_'-]{1,100}$/;
@@ -31,22 +26,6 @@ const MAX_DESCRIPTION_LENGTH = 500;
 
 /** How often a reference is drawn again when it's taken already (practically never). */
 const REFERENCE_ATTEMPTS = 3;
-
-/**
- * Draws a new random reference: eight characters from `REFERENCE_ALPHABET`
- * in two groups, e.g. `7KQ2-M9XD` (`src/lib/error-reference.ts`, so it
- * looks like the references of other errors). Also used for errors in the
- * app that have no digest to take one from (`recordAppError`).
- *
- * @returns The reference.
- */
-export function createReference(): string {
-  return formatReference(
-    Array.from({ length: REFERENCE_LENGTH }, () =>
-      REFERENCE_ALPHABET.charAt(randomInt(REFERENCE_ALPHABET.length)),
-    ),
-  );
-}
 
 /**
  * Checks a code from the URL again (Better Auth sanitizes it, but the page

@@ -13,6 +13,8 @@ import { createContext, type ReactNode, useContext, useEffect, useRef } from 're
 
 import { sectionFromHash } from '@/lib/redirect';
 
+import { focusIsLost, isShown } from './focus-fallback';
+
 /** The anchor of the card a control is in, or `null` outside one. */
 const SectionContext = createContext<string | null>(null);
 
@@ -23,29 +25,6 @@ const SectionContext = createContext<string | null>(null);
  */
 export function useSectionId(): string | null {
   return useContext(SectionContext);
-}
-
-/**
- * Checks whether an element takes up space on the page: not hidden, and not
- * on a page React's `<Activity>` keeps in the background.
- *
- * @param element - The element.
- * @returns Whether it's shown.
- */
-function isShown(element: Element): boolean {
-  return element.getClientRects().length > 0;
-}
-
-/**
- * Checks whether keyboard focus is nowhere in particular: on `<body>`, or on
- * an element that's gone or no longer shown (e.g. the button on the page the
- * user just left, which `<Activity>` keeps hidden).
- *
- * @returns Whether it is.
- */
-function focusIsLost(): boolean {
-  const active = document.activeElement;
-  return !active || active === document.body || !active.isConnected || !isShown(active);
 }
 
 /**

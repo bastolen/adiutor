@@ -4,9 +4,11 @@
  */
 import { redirect } from 'next/navigation';
 
+import { DEFAULT_SIGNED_IN_PATH } from '@/lib/redirect';
+
 /**
  * Redirects to the dashboard.
  */
 export default function Home() {
-  redirect('/dashboard');
+  redirect(DEFAULT_SIGNED_IN_PATH);
 }

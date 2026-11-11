@@ -12,7 +12,11 @@ credentials are set in `.env`. Saved passkeys are also offered in the browser's
 suggestions for the email field. The method used last in that browser is marked "Last used" (Better
 Auth's `lastLoginMethod` plugin, a cookie only). OAuth callback URLs are
 `<BETTER_AUTH_URL>/api/auth/callback/<provider ID>`, e.g. `.../callback/github`. Adding a provider
-is listed in the file comment of `src/lib/sign-in/oauth-providers.ts`.
+is listed in the file comment of `src/lib/sign-in/oauth-providers.ts`. Besides the code it names,
+three config files list providers by hand: `playwright.config.ts` (the `webServer` env blanks
+their credentials, so a developer's `.env` doesn't change the end-to-end runs), `vitest.config.mts`
+(the integration env, for a provider that can prove MFA) and `eslint.config.mjs`
+(`providerIdSyntax`, which flags provider IDs compared inline).
 
 Someone who opens `/auth` while signed in goes on to the page asked for (`callbackURL`, when it's
 a page of the app: on the site and not under `/api`) or the dashboard (`signedInPath` in
@@ -109,13 +113,11 @@ people to `/sign-in-error` (`onAPIError.errorURL` in `src/lib/auth.ts`, public i
 `src/proxy.ts`). Built like the 404 page, it explains what happened in plain words, in the reader's
 language (`src/app/sign-in-error/messages.ts`, never the error code itself), offers "Sign in again" and
 "Go back", and shows a reference such as `7KQ2-M9XD` with the time, which users can copy and
-send to an administrator (`ErrorReference`, the box the app's other error pages show too; see
-[Looking up an error reference](deploying.md#looking-up-an-error-reference)). `recordSignInError` (`src/server/auth/sign-in-errors.ts`) logs one line,
-`Sign-in error 7KQ2-M9XD: state_mismatch`, and stores the reference with Better Auth's code
-and description and the signed-in user, if any, in the `sign_in_error` table for 7 days
-(`SIGN_IN_ERROR_RETENTION_DAYS`), at most 20 per IP address per hour. To look a reference up,
-search the server log for it, or query `sign_in_error` by `reference`; there's no screen for it
-yet.
+send to an administrator (`ErrorReference`, the box the app's other error pages show too).
+`recordSignInError` (`src/server/auth/sign-in-errors.ts`) records the reference. Staff Admins look
+it up under Logs → Errors (see
+[Looking up an error reference](deploying.md#looking-up-an-error-reference)); what is stored, and
+for how long, is under [Recorded errors](security-measures.md#recorded-errors).
 
 ## How refusals reach the user
 
@@ -161,41 +163,13 @@ sees the name), and a security
 email is sent. If the account already had a second step that can confirm sessions, the new
 connection signs in like an email link but doesn't count as MFA, or on the step-up page, until
 the user confirms it on the Security page within 15 minutes of confirming with that step
-(`account.confirmed`, set by
-`beforeAccountCreate` in `src/server/auth/auth-events/provider-accounts.ts`). So whoever controls the inbox can't get
-past the existing second step this way. "Confirm with GitHub" on the step-up page never links
-an account: it only takes your own confirmed GitHub account, and refuses any other before
-anything is connected (see ["Confirm with GitHub" only takes your own GitHub account](mfa.md#confirm-with-github)). When it
-signed in with your own account but didn't confirm the session, the page the user lands on
-(back on the step-up page, the Security page to set up MFA, or the page they came for) says
-why: two-factor authentication is off for that GitHub account, or GitHub couldn't be checked
-just now (`ProviderStepUpNotice`, from a short-lived cookie set by `recordProviderSession` that
-names the provider and the reason, never the account; removed once the session is confirmed,
-when someone signs out, or when another sign-in starts on that browser). Such an attempt takes
-nothing away: the new session Better Auth creates for it keeps the confirmation the browser's
-session had, as it was, so it opens no new 15 minutes for changing sign-in methods either
-(`beforeSessionCreate`). Only GitHub's 2FA confirms it afresh, and even that opens a new 15
-minutes only on an account without a passkey or an authenticator app (see
+(`account.confirmed`, set by `beforeAccountCreate` in
+`src/server/auth/auth-events/provider-accounts.ts`). So whoever controls the inbox can't get past
+the existing second step this way. Confirming a session with GitHub never links an account (see
 [Confirm with GitHub](mfa.md#confirm-with-github)).
 
-Trusting the provider's verified address is a deliberate choice: people registered by staff or
-invited can sign in with GitHub or Google without setting anything up first. The provider's
-address is trusted for exactly that, finding the Adiutor account with the same address and
-marking it verified, never for anything about a connected account. The remaining risk: "verified"
-only means that someone verified the address at GitHub or Google once, and neither checks it
-again. Someone who once verified the address there but no longer has the inbox (a former employee
-with their work address on a personal GitHub account, a shared address such as
-`support@adiutor.dev` that changed hands) can sign in to the Adiutor account that has it, which
-for an account without a second step is the whole account. What limits it:
-
-- The owner is told: the next page names the connected account with a link to disconnect it, and
-  a security email goes to the address (`provider_connected`).
-- On an account with a second step that can confirm sessions, the new connection stays
-  unconfirmed until the owner confirms it (see above): it can't get past that step.
-- An Admin's MFA reset on the user's detail page disconnects all their GitHub and Google
-  accounts, confirmed or not, for when one that isn't theirs became their only second step (see
-  [Locked out](mfa.md#locked-out)).
-- A deactivated account gets nothing connected (see [Deactivated accounts](#deactivated-accounts)).
+Trusting the provider's verified address is deliberate: the risk and what limits it are in
+[decision 0002](decisions/0002-trusted-provider-email-addresses.md).
 
 ## Sessions
 
@@ -240,21 +214,9 @@ Auth connects a new provider account, marks the address verified or stores a tok
 (`checkIncomingUser` in `src/server/auth/auth-events/reverify.ts`, from `user.validateUserInfo`, after the
 re-verify check so a refused "Confirm with GitHub" says nothing about another user): a provider
 account can't be planted while the account is deactivated, to sign in once an Admin reactivates
-it. They get no sign-in or reset emails, and the invitations and invite links they sent are revoked. So are those
-of anyone who loses the right to manage a company or the staff (a role change, removal or
-deletion), so a former Admin keeps no way back in. Removing someone from a company or the staff,
-or deleting their account, also revokes the open invitations addressed to them there (everywhere,
-for a deletion; `revokeInvitationsTo`), so they can't come back through one; a deactivated account
-needs nothing more, since it can't accept an invitation. Requests of theirs already under way don't get
-around this: sending, resending and revoking invitations, creating and revoking invite links,
-adding members and registering companies check their rights again, locked, as the first step of
-the transaction (`assertStillManages` in `src/server/access.ts`), and role changes take them from
-the rows they lock. So each request comes either before the change, and what it created is revoked
-with the rest, or after it, and is refused; a demoted company Admin's queued "make me Admin" too
-(nobody raises their own role). A link of theirs claimed at that very moment leaves no open invitation
-either: the claim locks the link's creator before the link, so it takes turns with the change (links
-are revoked first, then the invitations are read again; see
-[Lock order](security-measures.md#lock-order)).
+it. They get no sign-in or reset emails. The invitations and invite links they sent are revoked, as
+for anyone who loses the right to manage (see
+[Rights checked when the change is made](companies-and-roles.md#staff-screens)).
 
 ## Account pages
 
@@ -290,19 +252,13 @@ whole sentence per event, with who made the change, if not you, where each langu
   password or connecting another account next to it, or confirming one without two-factor
   authentication (provider MFA only counts while there's no password and every connected account
   has it; each account to confirm is judged on its own); the reasons name the provider. They add a passkey first (to move
-  an authenticator app to a new phone too). For every role, a password reset or welcome link
-  can't give an account its first password when that would end its MFA (`wouldEndMfa`: provider
-  MFA only counts without a password). Otherwise whoever reads the inbox would get past the
-  provider's second step with a password of their own. The guards refuse it with
-  `RESET_ENDS_PROVIDER_MFA` before Better Auth sets anything, and the reset page names the
-  provider and says to sign in with it and set a password here instead (roles that require MFA
-  add a passkey or an authenticator app first). Accounts that keep their MFA (a passkey next to
-  GitHub) and new accounts without one reset as usual. One such change is made at a time per user
+  an authenticator app to a new phone too). A reset or welcome link that would end an account's MFA
+  is refused for every role (see
+  [Changing sign-in methods](mfa.md#changing-sign-in-methods-needs-a-recent-confirmation)). One
+  such change is made at a time per user
   (`src/server/auth/sign-in-change-lock.ts`, also taken by a reset): two sent at the same moment (removing both passkeys
   from two tabs) can't both pass the check; the second is told to try again in a moment, and
-  a provider connected meanwhile waits for confirmation. A first password goes through
-  `setFirstPassword` (`src/server/auth/accounts.ts`), since Better Auth's `setPassword` is
-  server-only and never reaches the guards.
+  a provider connected meanwhile waits for confirmation.
 - **Connected accounts:** connect or disconnect GitHub and Google while signed in; the provider
   account's email may differ from yours. Each account shows its name at the provider (the
   GitHub username, the Google email address: `PROVIDER_ACCOUNT_NAME_CLAIMS` in
@@ -334,29 +290,25 @@ whole sentence per event, with who made the change, if not you, where each langu
   has a second step (starting it without one sends you to the step-up page first). It also needs
   your password, if you have one (wrong ones are recorded and limited, as for changing it), and
   without a password or a second step a sign-in from the last hour (`deactivateOwnAccount` in
-  `src/server/people/user-admin.ts`). It's blocked while you're the only Admin of the staff or a
+  `src/server/people/user-admin/`). It's blocked while you're the only Admin of the staff or a
   company, and the card says so with the service's own refusal ("You are the only staff Admin.
   Make someone else an Admin first.", `soleAdminError`); that's checked before the password, so
   the refusal is the same with a right or a wrong one. Only Admins delete accounts.
 
 ## Security emails
 
-Security emails (`src/emails/security-notice.tsx`): users get an email when their password is
-changed, added or reset, two-step verification is turned on or off, backup codes are renewed, a
-passkey or GitHub/Google is added or removed, or they deactivate their own account. It says what
-changed, when and from which device. Only these, the user's own changes, name the device and IP
-address: `sendSecurityNotice` (`src/server/auth/security-notices.ts`) leaves them out unless it's
-given `showDevice: true`, so a new email can't show someone else's by mistake. Changes someone
-else makes to their access are emailed too, sent once the change has committed and without the
-device or IP address, which would be that person's: an Admin resetting their MFA, signing them
-out (or the command line doing so), deactivating or reactivating them; a staff role given, changed
-or taken away; a changed company role (`company_role_changed`, naming the company and the new role) and a removal
-from a company (`removed_from_company`), except when they made that change themselves (see
-[Changing roles and removing people](companies-and-roles.md#changing-roles-and-removing-people));
-and the deletion of their account (`account_deleted`, sent to the address the account had). They're also
-told when wrong passwords pause their password sign-in (see [Rate limits](security-measures.md#rate-limits)), at most once a day (a
-notice that couldn't be sent is tried again at the next pause) and without the device or IP
-address, which may be someone else's. Likewise when wrong codes at sign-in pause signing in with a
-code (`two_factor_locked`, see [Two-step verification](mfa.md#two-step-verification)): once per
+Security emails (`src/emails/security-notice.tsx`) tell users when something about their access
+changes; the kinds, and what they say, are listed in [Email](email.md#templates). Only a
+user's own changes name the device and IP address: `sendSecurityNotice`
+(`src/server/auth/security-notices.ts`) leaves them out unless it's given `showDevice: true`, so a
+new email can't show someone else's by mistake. Changes someone else makes to their access are
+emailed too, sent once the change has committed and without the device or IP address, which
+would be that person's. A company role change or a removal is not emailed to the person who made
+it themselves (see
+[Changing roles and removing people](companies-and-roles.md#changing-roles-and-removing-people)).
+Users are also told when wrong passwords pause their password sign-in (see
+[Rate limits](security-measures.md#rate-limits)), at most once a day (a notice that couldn't be
+sent is tried again at the next pause). Likewise when wrong codes at sign-in pause signing in with
+a code (`two_factor_locked`, see [Two-step verification](mfa.md#two-step-verification)): once per
 15-minute pause (a notice that couldn't be sent is tried again at the next refusal while it
-lasts), also without the device or IP address.
+lasts). Neither names the device or IP address, which may be someone else's.

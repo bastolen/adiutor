@@ -2,36 +2,29 @@
  * @file End-to-end tests for light and dark mode: the floating theme button
  * on the public pages and the theme row in the account menu.
  */
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { type Page } from '@playwright/test';
 
 import { THEME_STORAGE_KEY } from '../src/lib/theme';
 import { PLATFORM_ADMIN } from './support/fixtures';
-import { signIn, useOwnClientIp } from './support/helpers';
+import { signIn } from './support/helpers';
 import { expect, test } from './support/test';
 
-/** The semantic colour tokens of `src/styles/theme.css`. */
-const TOKENS = [
-  'background',
-  'surface',
-  'muted',
-  'border',
-  'border-strong',
-  'foreground',
-  'muted-foreground',
-  'primary',
-  'primary-hover',
-  'primary-foreground',
-  'highlight',
-  'ring',
-  'danger',
-  'danger-hover',
-  'danger-foreground',
-  'danger-soft',
-  'success',
-  'success-soft',
-  'warning',
-  'warning-soft',
-];
+/**
+ * The semantic colour tokens of `src/styles/theme.css`: every `--name`
+ * declared as `light-dark(` in its first `:root` block, so a new token joins
+ * the light/dark check without being listed here.
+ */
+const TOKENS = (() => {
+  const css = readFileSync(join(__dirname, '../src/styles/theme.css'), 'utf8');
+  const start = css.indexOf(':root {');
+  const block = css.slice(start, css.indexOf('\n}', start));
+  return [...block.matchAll(/^\s*--([\w-]+):\s*light-dark\(/gm)].flatMap(([, name]) =>
+    name ? [name] : [],
+  );
+})();
 
 /**
  * Reads the colour each semantic token resolves to, with a theme set on
@@ -105,6 +98,7 @@ test('a chosen theme wins over the system setting, which applies without one', a
   await page.emulateMedia({ colorScheme: 'light' });
   const dark = await tokenColours(page, 'dark');
 
+  expect(TOKENS.length, 'the tokens read from theme.css').toBeGreaterThan(0);
   expect(light.colorScheme).toBe('light');
   expect(dark.colorScheme).toBe('dark');
   TOKENS.forEach((token) => expect(dark.colours[token], token).not.toBe(light.colours[token]));
@@ -119,7 +113,6 @@ test('a chosen theme wins over the system setting, which applies without one', a
 test('signed in, the theme is chosen in the account menu, sharing the choice with sign-in', async ({
   page,
 }) => {
-  await useOwnClientIp(page);
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/auth');
   await page.getByRole('button', { name: 'Theme and language: System, English (US)' }).click();

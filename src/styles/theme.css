@@ -3,8 +3,7 @@
  * colours, type scale and motion.
  *
  * Each `--color-*`, `--font-*` and `--text-*` variable becomes Tailwind
- * classes such as `bg-surface`, `text-muted-foreground` and `text-2xl`. SCSS
- * can use the same values through `_brand.scss`.
+ * classes such as `bg-surface`, `text-muted-foreground` and `text-2xl`.
  *
  * UI uses the semantic colours (`background`, `surface`, `foreground`,
  * `primary`, `danger`, ...), which switch between light and dark mode and all
@@ -18,7 +17,7 @@
  * Fixed tokens.
  *
  * `static` makes Tailwind output every variable even when no Tailwind class
- * uses it, so SCSS can always read them.
+ * uses it, so the brand variables are always available (e.g. to `:root`).
  */
 @theme static {
   /** Brand colours from the brand guidelines. Use the semantic colours for UI. */
@@ -26,10 +25,6 @@
   --color-brand-green: #25dc89;
   --color-brand-orange: #f13800;
   --color-ink: #0e0e2d;
-
-  /** Gradient stops used in the logo and brand backgrounds. */
-  --color-gradient-start: #015555;
-  --color-gradient-end: #05de85;
 
   /**
    * Inter, which Adiutor ships (`src/lib/fonts.ts`), so text looks and
@@ -104,18 +99,6 @@
       translate: -100% 0;
     }
   }
-}
-
-/**
- * `bg-brand-gradient`: the brand gradient, dark teal to green from left to
- * right.
- */
-@utility bg-brand-gradient {
-  background-image: linear-gradient(
-    to right,
-    var(--color-gradient-start),
-    var(--color-gradient-end)
-  );
 }
 
 /**

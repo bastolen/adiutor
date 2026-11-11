@@ -12,7 +12,7 @@
 import { hashPassword } from 'better-auth/crypto';
 import { eq } from 'drizzle-orm';
 
-import type { Database, DatabaseOrTransaction } from '@/db';
+import type { DatabaseOrTransaction } from '@/db';
 import { staffSettings, user } from '@/db/schema';
 import { PLATFORM_ADMIN_ROLE } from '@/lib/authz/roles';
 import { firstRow } from '@/lib/defined';
@@ -28,6 +28,7 @@ import {
 import { recordEvent } from './audit';
 import { withMfaPromotion } from './auth/mfa-promotion';
 import addPasswordCredential from './auth/password-credential';
+import type { ServiceContext } from './context';
 import { isUniqueViolation, ServiceError } from './errors';
 
 /**
@@ -128,7 +129,7 @@ export interface SetupResult {
  * Two simultaneous setups can't both succeed: the database allows only one
  * settings row, and the losing request gets the same "already set up" error.
  *
- * @param db - Database client.
+ * @param ctx - Service context.
  * @param input - The name shown to users, Adiutor's default language and the Admin's details.
  * @param options - Whether it may use an existing account.
  * @returns What was created.
@@ -137,7 +138,7 @@ export interface SetupResult {
  *   web form doesn't say more); `conflict` for a deactivated account.
  */
 export async function setUpPlatform(
-  db: Database,
+  ctx: Pick<ServiceContext, 'db'>,
   input: SetupInput,
   options: SetupOptions = {},
 ): Promise<SetupResult> {
@@ -156,14 +157,14 @@ export async function setUpPlatform(
   const isOpen = async (conn: DatabaseOrTransaction) =>
     allowExisting ? !(await isSetUp(conn)) : isWebSetupOpen(conn);
   // Refuse before the (deliberately slow) password hash; checked again in the transaction.
-  if (!(await isOpen(db))) {
+  if (!(await isOpen(ctx.db))) {
     throw alreadySetUpError();
   }
   const passwordHash =
     input.password === undefined ? null : await hashPassword(passwordSchema.parse(input.password));
 
   try {
-    return await db.transaction(async (tx) => {
+    return await ctx.db.transaction(async (tx) => {
       if (!(await isOpen(tx))) {
         throw alreadySetUpError();
       }
@@ -184,13 +185,13 @@ export async function setUpPlatform(
           throw new ServiceError('conflict', 'errors.setup.accountDeactivated');
         }
         // Their sessions without MFA that counts for an Admin end (`withMfaPromotion`).
-        await withMfaPromotion({ db }, tx, [existing.id], async () => {
+        await withMfaPromotion(ctx, tx, [existing.id], async () => {
           await tx
             .update(user)
             .set({ platformRole: PLATFORM_ADMIN_ROLE })
             .where(eq(user.id, existing.id));
           await recordEvent(
-            { db },
+            ctx,
             {
               action: existing.platformRole ? 'role_changed' : 'member_added',
               targetUserId: existing.id,

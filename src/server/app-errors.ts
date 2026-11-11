@@ -15,23 +15,19 @@
 import { type AppErrorRouteType, type AppErrorSource, appError } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { referenceFromDigest } from '@/lib/error-reference';
+import {
+  ERROR_MESSAGE_MAX_LENGTH,
+  ERROR_NAME_MAX_LENGTH,
+  ERROR_PATH_MAX_LENGTH,
+} from '@/lib/input-rules';
 import { redactLogValue } from '@/lib/log-redaction';
 
-import { createReference } from './auth/sign-in-errors';
 import type { ServiceContext } from './context';
+import { createReference } from './error-reference';
 import { hitRateLimit, RATE_LIMITS } from './rate-limit';
 
 /** How many days stored errors are kept (`cleanUp` in `jobs.ts` deletes older ones). */
 export const APP_ERROR_RETENTION_DAYS = 7;
-
-/** The longest error message that is stored. */
-const MAX_MESSAGE_LENGTH = 500;
-
-/** The longest error class name, digest and route path that are stored. */
-const MAX_NAME_LENGTH = 100;
-
-/** The longest page path that is stored. */
-const MAX_PATH_LENGTH = 300;
 
 /**
  * Paths whose next segment is a secret token: invitations, invite links and
@@ -92,7 +88,7 @@ export function recordedPath(path: string | null | undefined): string | null {
   const cleaned = prefix
     ? `${withoutQuery.slice(0, prefix.length)}[token]${withoutQuery.slice(prefix.length).replace(/^[^/]*/, '')}`
     : withoutQuery;
-  return shorten(cleaned, MAX_PATH_LENGTH);
+  return shorten(cleaned, ERROR_PATH_MAX_LENGTH);
 }
 
 /**
@@ -136,9 +132,9 @@ export async function recordAppError(
   ctx: Pick<ServiceContext, 'db' | 'requestInfo'>,
   report: AppErrorReport,
 ): Promise<RecordedAppError & { stored: boolean }> {
-  const digest = shorten(report.digest, MAX_NAME_LENGTH);
+  const digest = shorten(report.digest, ERROR_NAME_MAX_LENGTH);
   const reference = digest ? referenceFromDigest(digest) : createReference();
-  const routePath = shorten(report.routePath, MAX_NAME_LENGTH);
+  const routePath = shorten(report.routePath, ERROR_NAME_MAX_LENGTH);
   const path = recordedPath(report.path);
 
   const where = [report.source, report.routeType, routePath ?? path].filter(Boolean).join(' ');
@@ -166,8 +162,8 @@ export async function recordAppError(
         routeType: report.routeType ?? null,
         routePath,
         path,
-        name: shorten(name, MAX_NAME_LENGTH),
-        message: shorten(message, MAX_MESSAGE_LENGTH),
+        name: shorten(name, ERROR_NAME_MAX_LENGTH),
+        message: shorten(message, ERROR_MESSAGE_MAX_LENGTH),
         userId: report.userId ?? null,
       })
       .returning({ at: appError.createdAt }),

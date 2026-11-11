@@ -16,6 +16,7 @@ import { useTransientState } from '@/components/ui/use-transient-state';
 
 import AccountMenu from './account-menu';
 import NavLinks from './nav-links';
+import type { StaffSectionKey } from './staff-sections';
 
 /**
  * Props for {@link AppNavigation}.
@@ -25,12 +26,11 @@ interface AppNavigationProps {
   name: string;
   /** Their email address. */
   email: string;
-  /** Whether they're staff; everyone else gets no navigation links yet. */
-  isStaff: boolean;
-  /** Whether they may manage the staff (Admins), which adds "Staff". */
-  canManageStaff: boolean;
-  /** Whether they may see the audit log (Admins and Managers), which adds "Logs". */
-  canViewLogs: boolean;
+  /**
+   * The staff sections they may see (`staffSectionKeys`). Company users have
+   * none, and get no navigation links yet.
+   */
+  sections: StaffSectionKey[];
 }
 
 /**
@@ -40,18 +40,14 @@ interface AppNavigationProps {
  * @param props - Panel props.
  * @param props.name - The user's name.
  * @param props.email - Their email address.
- * @param props.isStaff - Show staff links.
- * @param props.canManageStaff - Show the "Staff" link.
- * @param props.canViewLogs - Show the "Logs" link.
+ * @param props.sections - The staff sections to link to.
  * @param props.onNavigate - Called after navigating.
  * @returns The panel content.
  */
 function NavigationPanel({
   name,
   email,
-  isStaff,
-  canManageStaff,
-  canViewLogs,
+  sections,
   onNavigate = undefined,
 }: AppNavigationProps & { onNavigate?: () => void }) {
   const t = useTranslations('navigation');
@@ -65,13 +61,9 @@ function NavigationPanel({
       >
         <Logo height={26} />
       </Link>
-      {isStaff ? (
+      {sections.length > 0 ? (
         <nav aria-label={t('main')} className="flex-1">
-          <NavLinks
-            canManageStaff={canManageStaff}
-            canViewLogs={canViewLogs}
-            onNavigate={onNavigate}
-          />
+          <NavLinks sections={sections} onNavigate={onNavigate} />
         </nav>
       ) : (
         // No links yet for company users; an empty landmark would only be noise for screen readers.
@@ -91,31 +83,17 @@ function NavigationPanel({
  * @param props - Navigation props.
  * @param props.name - The user's name.
  * @param props.email - Their email address.
- * @param props.isStaff - Show staff links.
- * @param props.canManageStaff - Show the "Staff" link.
- * @param props.canViewLogs - Show the "Logs" link.
+ * @param props.sections - The staff sections to link to.
  * @returns The navigation.
  */
-export default function AppNavigation({
-  name,
-  email,
-  isStaff,
-  canManageStaff,
-  canViewLogs,
-}: AppNavigationProps) {
+export default function AppNavigation({ name, email, sections }: AppNavigationProps) {
   const t = useTranslations('navigation');
   const [open, setOpen] = useTransientState(false);
 
   return (
     <>
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-border bg-surface lg:block">
-        <NavigationPanel
-          name={name}
-          email={email}
-          isStaff={isStaff}
-          canManageStaff={canManageStaff}
-          canViewLogs={canViewLogs}
-        />
+        <NavigationPanel name={name} email={email} sections={sections} />
       </aside>
 
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-surface/90 px-4 backdrop-blur-sm lg:hidden">
@@ -141,9 +119,7 @@ export default function AppNavigation({
           <NavigationPanel
             name={name}
             email={email}
-            isStaff={isStaff}
-            canManageStaff={canManageStaff}
-            canViewLogs={canViewLogs}
+            sections={sections}
             onNavigate={() => setOpen(false)}
           />
         </Sheet>

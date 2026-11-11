@@ -124,13 +124,13 @@ export const SETUPS: readonly {
  *
  * @param state - The account's setup.
  * @param role - The user's MFA role.
- * @param available - Which providers can be used; the rules' default when left out.
+ * @param available - Which providers can be used.
  * @returns The kinds of the refused changes, in the order of {@link CHANGES}.
  */
 export function refusedChanges(
   state: MfaState,
   role: MfaRole | null,
-  available?: ProviderAvailability,
+  available: ProviderAvailability,
 ): ChangeKind[] {
   return CHANGES.filter((change) => wouldRemoveRequiredMfa(state, role, change, available)).map(
     (change) => change.kind,

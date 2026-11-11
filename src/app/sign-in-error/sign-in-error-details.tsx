@@ -7,7 +7,7 @@
 import { getTranslations } from 'next-intl/server';
 
 import ErrorReference from '@/components/ui/error-reference';
-import { type SearchParams, searchParam } from '@/lib/tables/search-params';
+import { type SearchParams, searchParam } from '@/lib/search-params';
 import appContext from '@/server/app-context';
 import { cleanErrorCode, recordSignInError } from '@/server/auth/sign-in-errors';
 import { getOptionalActor } from '@/server/authz';

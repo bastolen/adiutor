@@ -26,6 +26,9 @@ application code. The three tests above were removed on 2026-11-07, when this wa
 - A change that only touches config, CI or tooling is documented, not tested.
 - Code outside the application is still linted and type-checked, and the test runs, scripts and CI
   that use it exercise it.
+- One deliberate exception: the dev seed's safety guard (`src/lib/dev-seed-guard.ts`, with its test)
+  stays in `src/lib` and keeps its test. It refuses to wipe a database that isn't local, so it
+  prevents data loss.
 
 Details: [Testing](../testing.md) and the "Code style" rules in `CLAUDE.md`.
 

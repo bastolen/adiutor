@@ -1,6 +1,6 @@
-# Shared setup for CI's jobs (.github/workflows/ci.yml): pnpm (its version from "packageManager"
-# in package.json), Node (from .nvmrc, with pnpm's store cached) and the dependencies, exactly as
-# the lockfile has them. A job checks out the repository before using it, since the action lives
+# Shared setup for CI's jobs (.github/workflows/ci.yml) and the PR title check
+# (.github/workflows/pr-title.yml): pnpm (its version from "packageManager" in package.json), Node
+# (from .nvmrc, with pnpm's store cached) and the dependencies, exactly as the lockfile has them. A job checks out the repository before using it, since the action lives
 # there.
 #
 # Actions are pinned to exact commits (version in a comment); Dependabot keeps them up to date

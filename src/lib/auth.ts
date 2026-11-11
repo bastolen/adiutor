@@ -32,11 +32,11 @@ import * as schema from '../db/schema';
 import type { AuthHookContext } from '../server/auth/auth-events';
 import { EMAIL_CODE_MINUTES, TWO_FACTOR_LOCK_ATTEMPTS, TWO_FACTOR_LOCK_MINUTES } from './authz/mfa';
 import { PLATFORM_ROLES } from './authz/roles';
-import { sendEmail } from './email';
+import { sendEmail, sendFailureOf } from './email';
 import { appUrl, env } from './env';
 import { localeFromHeaders } from './i18n/default-locale';
 import { isLocale, type Locale, LOCALES } from './i18n/locales';
-import { MIN_PASSWORD_LENGTH } from './input-rules';
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from './input-rules';
 import ipAddressOptions from './request/ip-address-options';
 import { LAST_USED_LOGIN_METHOD_COOKIE } from './sign-in/auth-cookies';
 import { DISABLED_AUTH_PATHS } from './sign-in/auth-endpoints';
@@ -80,8 +80,12 @@ function loadAuthGuards() {
  */
 function runInBackground(task: Promise<unknown>): void {
   const logged = task.catch((error: unknown) => {
-    // eslint-disable-next-line no-console -- Background work has no caller to report to.
-    console.error('Background auth task failed', error);
+    // eslint-disable-next-line no-console -- Background work has no caller to report to; only the failure's kind is logged, as a mail server's refusal can quote the address.
+    console.error(
+      'Background auth task failed',
+      error instanceof Error ? error.name : null,
+      sendFailureOf(error),
+    );
   });
   try {
     after(logged);
@@ -505,6 +509,7 @@ export const auth = betterAuth({
     disableSignUp: true,
     /** New passwords need at least 12 characters (see `passwordSchema`). */
     minPasswordLength: MIN_PASSWORD_LENGTH,
+    maxPasswordLength: MAX_PASSWORD_LENGTH,
     /** Sign the user out everywhere after a password reset. */
     revokeSessionsOnPasswordReset: true,
     /**

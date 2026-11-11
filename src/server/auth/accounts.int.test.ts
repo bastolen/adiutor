@@ -25,6 +25,7 @@ import {
   setupTestContext,
   staffActor,
   turnOffGitHubSignIn,
+  minutesAgo,
 } from '../../../tests/integration/helpers';
 import { loadActor } from '../actor';
 import { ServiceError } from '../errors';
@@ -133,16 +134,6 @@ async function signedIn(
 }
 
 /**
- * A time a number of minutes ago.
- *
- * @param minutes - How long ago.
- * @returns The time.
- */
-function minutesAgo(minutes: number): Date {
-  return new Date(Date.now() - minutes * 60_000);
-}
-
-/**
  * Lists the audit log's actions and details.
  *
  * @returns The events, in no particular order.
@@ -168,11 +159,11 @@ describe('sign-in methods', () => {
       { userId: otherId, accountId: 'gh-2', providerId: 'github' },
     ]);
 
-    const connected = await listConnectedProviders(db, userId);
+    const connected = await listConnectedProviders({ db }, userId);
     expect(connected.map((item) => item.provider).sort()).toEqual(['github', 'google']);
     expect(await hasPassword(db, userId)).toBe(true);
     expect(await hasPassword(db, otherId)).toBe(false);
-    expect(await listConnectedProviders(db, otherId)).toHaveLength(1);
+    expect(await listConnectedProviders({ db }, otherId)).toHaveLength(1);
   });
 
   it('tells which connected accounts wait for confirmation', async () => {
@@ -180,7 +171,7 @@ describe('sign-in methods', () => {
     const github = await connect(userId, 'github', false);
     const google = await connect(userId, 'google');
 
-    const connected = await listConnectedProviders(db, userId);
+    const connected = await listConnectedProviders({ db }, userId);
 
     expect(connected.map(({ id, confirmed }) => ({ id, confirmed }))).toEqual(
       expect.arrayContaining([
@@ -199,7 +190,10 @@ describe('sign-in methods', () => {
     const odd = await connectProvider(db, userId, { accountName: 'adiutor\u202E-tests' });
 
     const names = Object.fromEntries(
-      (await listConnectedProviders(db, userId)).map(({ id, accountName }) => [id, accountName]),
+      (await listConnectedProviders({ db }, userId)).map(({ id, accountName }) => [
+        id,
+        accountName,
+      ]),
     );
 
     expect(names).toEqual({ [github]: 'adiutor-tests', [google]: null, [odd]: 'adiutor-tests' });
@@ -217,7 +211,7 @@ describe('sign-in methods', () => {
      * @returns Each account's ID, `givesMfa` and stored `mfaVerified`.
      */
     const listed = async () =>
-      (await listConnectedProviders(db, userId)).map(({ id, givesMfa, mfaVerified }) => ({
+      (await listConnectedProviders({ db }, userId)).map(({ id, givesMfa, mfaVerified }) => ({
         id,
         givesMfa,
         mfaVerified,

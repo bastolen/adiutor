@@ -82,19 +82,4 @@ describe('Banner', () => {
     await user.click(dismiss);
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
-
-  it('names the dismiss button as asked', () => {
-    render(
-      <Banner
-        label="Account security"
-        icon={ShieldCheck}
-        title="Title"
-        description="Description"
-        onDismiss={vi.fn()}
-        dismissLabel="Dismiss the security tip"
-      />,
-    );
-
-    expect(screen.getByRole('button', { name: 'Dismiss the security tip' })).toBeInTheDocument();
-  });
 });

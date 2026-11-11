@@ -4,7 +4,8 @@
  */
 import { isAPIError } from 'better-auth/api';
 
-import { normalizeEmail } from '../auth-guards';
+import { normalizeEmail } from '@/lib/email-address';
+
 import type { AuthHookContext } from './hook-context';
 
 /** The facts about a finished Better Auth request that the phases of {@link afterAuthRequest} share. */

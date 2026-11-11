@@ -1,6 +1,8 @@
 /**
- * @file Tests for the account menu: the theme row (stored and applied like
- * the floating theme button) and signing out.
+ * @file Tests for the account menu: it shows the stored theme in its theme
+ * row and keeps following the system while closed (choosing a theme is
+ * tested with the theme and language button, which uses the same row), and
+ * it signs out.
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -77,27 +79,6 @@ describe('AccountMenu', () => {
     expect(screen.getByRole('menuitemradio', { name: 'Light' })).toBeChecked();
     expect(screen.getByRole('menuitemradio', { name: 'System' })).not.toBeChecked();
     expect(screen.getByRole('menuitemradio', { name: 'Dark' })).not.toBeChecked();
-  });
-
-  it('stores and applies a chosen theme, keeping the menu open', async () => {
-    const user = await openMenu();
-
-    await user.click(screen.getByRole('menuitemradio', { name: 'Light' }));
-
-    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('light');
-    expect(document.documentElement.dataset.theme).toBe('light');
-    expect(screen.getByRole('menuitemradio', { name: 'Light' })).toBeChecked();
-    expect(screen.getByRole('menu')).toBeInTheDocument();
-  });
-
-  it('goes back to following the system', async () => {
-    localStorage.setItem(THEME_STORAGE_KEY, 'light');
-    const user = await openMenu();
-
-    await user.click(screen.getByRole('menuitemradio', { name: 'System' }));
-
-    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
-    expect(document.documentElement.dataset.theme).toBe('dark');
   });
 
   it('follows the system while the menu is closed', () => {

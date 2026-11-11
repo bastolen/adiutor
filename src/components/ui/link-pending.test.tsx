@@ -17,15 +17,13 @@ vi.mock('next/link', async (importOriginal) => ({
 /**
  * Renders the indicator inside a link, like the pagination does.
  *
- * @param props - Test props.
- * @param props.className - Extra classes for the indicator.
  * @returns The link.
  */
-function IndicatorLink({ className = '' }: { className?: string }) {
+function IndicatorLink() {
   return (
     <Link href="/members?page=2">
       Next
-      <LinkPendingIndicator className={className}>
+      <LinkPendingIndicator>
         <svg data-testid="icon" aria-hidden="true" />
       </LinkPendingIndicator>
     </Link>
@@ -103,12 +101,5 @@ describe('LinkPendingIndicator', () => {
 
       expect(screen.getByRole('link', { name: 'Next' })).toBeInTheDocument();
     });
-  });
-
-  it('adds extra classes to its wrapper', () => {
-    render(<IndicatorLink className="ml-2" />);
-
-    const wrapper = screen.getByTestId('icon').parentElement?.parentElement;
-    expect(wrapper).toHaveClass('ml-2', 'relative', 'inline-flex');
   });
 });

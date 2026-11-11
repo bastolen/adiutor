@@ -13,7 +13,7 @@ import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
 import TextField from '@/components/ui/text-field';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
-import { MIN_PASSWORD_LENGTH, NAME_MAX_LENGTH } from '@/lib/input-rules';
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, NAME_MAX_LENGTH } from '@/lib/input-rules';
 
 import { acceptAction, createAccountAction } from './actions';
 
@@ -97,6 +97,7 @@ function SignInOrCreateAccount({ token }: { token: string }) {
           name="password"
           autoComplete="new-password"
           minLength={MIN_PASSWORD_LENGTH}
+          maxLength={MAX_PASSWORD_LENGTH}
           description={t('fields.passwordHint', { min: MIN_PASSWORD_LENGTH })}
           required
         />

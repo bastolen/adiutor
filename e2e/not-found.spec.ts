@@ -12,6 +12,7 @@ import {
   COMPANY_NAME,
   COMPANY_SLUG,
   PLATFORM_ADMIN,
+  STEP_UP_MANAGER,
   SUPPORT_STAFF,
 } from './support/fixtures';
 import { adminStorageState, openUser, signIn, type StorageState } from './support/helpers';
@@ -133,7 +134,11 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
         companyPage('members'),
         companyPage('settings'),
       ],
-      (path) => expectNotFound(page, path),
+      async (path) => {
+        await expectNotFound(page, path);
+        // No other user's data leaks onto the page.
+        await expect(page.getByText(STEP_UP_MANAGER.email)).toHaveCount(0);
+      },
     );
   });
 

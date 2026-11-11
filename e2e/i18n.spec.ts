@@ -7,28 +7,18 @@
  */
 import { type Page } from '@playwright/test';
 
-import getTestDatabaseUrl from '../tests/database/database-url';
+import { LOCALE_COOKIE } from '../src/lib/i18n/locales';
 import { findCompanyId, setDefaultLocale, storeInvitation } from './support/db';
-import { COMPANY_NAME, COMPANY_SLUG } from './support/fixtures';
+import { COMPANY_NAME, COMPANY_SLUG, PLATFORM_ADMIN } from './support/fixtures';
 import {
-  adminStorageState,
   createAccountFromInvitation,
+  freshAddress,
   signIn,
   toasts,
   useOwnClientIp,
 } from './support/helpers';
 import { waitForEmail } from './support/outbox';
 import { expect, test } from './support/test';
-
-/**
- * A fresh address for a test's own account or invitation.
- *
- * @param name - What the address is for.
- * @returns The address.
- */
-function freshAddress(name: string): string {
-  return `${name}-${Date.now()}-${Math.round(Math.random() * 1e6)}@adiutor.test`;
-}
 
 /**
  * Chooses a language in the floating language menu of a signed-out page and
@@ -88,26 +78,23 @@ test('the theme and language menu on the sign-in page remembers the choice', asy
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Inicia sesión en Adiutor' })).toBeVisible();
   const cookies = await page.context().cookies();
-  expect(cookies.find(({ name }) => name === 'adiutor.locale')?.value).toBe('es-ES');
+  expect(cookies.find(({ name }) => name === LOCALE_COOKIE)?.value).toBe('es-ES');
 
   // Default forgets the choice: the page follows Adiutor's default language again.
   await chooseLanguage(page, 'Tema e idioma: Sistema, Español', 'Predeterminado', 'en-US');
   await expect(page.getByRole('heading', { name: 'Sign in to Adiutor' })).toBeVisible();
   const after = await page.context().cookies();
-  expect(after.find(({ name }) => name === 'adiutor.locale')).toBeUndefined();
+  expect(after.find(({ name }) => name === LOCALE_COOKIE)).toBeUndefined();
 });
 
 test("an account's language: saved on the account page, kept at sign-out, winning at sign-in", async ({
   browser,
   page,
 }) => {
-  await useOwnClientIp(page);
   const email = freshAddress('language');
   const password = 'language-test-password';
-  const companyId = await findCompanyId(getTestDatabaseUrl(), COMPANY_SLUG);
-  await page.goto(
-    await storeInvitation(getTestDatabaseUrl(), { companyId, email, role: 'client' }),
-  );
+  const companyId = await findCompanyId(COMPANY_SLUG);
+  await page.goto(await storeInvitation({ companyId, email, role: 'client' }));
   await createAccountFromInvitation(page, 'Language Tester', password);
 
   await page.goto('/account');
@@ -155,12 +142,9 @@ test("an account's language: saved on the account page, kept at sign-out, winnin
 test("an account on Default follows Adiutor's default language, also after it changes", async ({
   page,
 }) => {
-  await useOwnClientIp(page);
   const email = freshAddress('default-language');
-  const companyId = await findCompanyId(getTestDatabaseUrl(), COMPANY_SLUG);
-  await page.goto(
-    await storeInvitation(getTestDatabaseUrl(), { companyId, email, role: 'client' }),
-  );
+  const companyId = await findCompanyId(COMPANY_SLUG);
+  await page.goto(await storeInvitation({ companyId, email, role: 'client' }));
   await createAccountFromInvitation(page, 'Default Tester', 'default-language-password');
 
   try {
@@ -176,41 +160,35 @@ test("an account on Default follows Adiutor's default language, also after it ch
       'Default',
     );
     const cookies = await page.context().cookies();
-    expect(cookies.find(({ name }) => name === 'adiutor.locale')).toBeUndefined();
+    expect(cookies.find(({ name }) => name === LOCALE_COOKIE)).toBeUndefined();
 
     // A staff Admin changes the default language on the staff page: the account follows.
-    await setDefaultLocale(getTestDatabaseUrl(), 'es-ES');
+    await setDefaultLocale('es-ES');
     await page.goto('/account');
     await expect(page.locator('html')).toHaveAttribute('lang', 'es-ES');
     await expect(page.getByRole('combobox', { name: 'Idioma', exact: true })).toHaveText(
       'Predeterminado',
     );
   } finally {
-    await setDefaultLocale(getTestDatabaseUrl(), 'en-US');
+    await setDefaultLocale('en-US');
   }
 });
 
-test('an invitation sent in Dutch arrives in Dutch', async ({ browser }) => {
-  const adminState = await adminStorageState(browser);
-  const context = await browser.newContext({ storageState: adminState });
-  try {
-    const page = await context.newPage();
-    const email = freshAddress('dutch-invitation');
-    await page.goto(`/companies/${COMPANY_SLUG}/members`);
-    // The invite link form next to it has a role select of its own.
-    const inviteForm = page.locator('form').filter({ has: page.getByLabel('Email addresses') });
-    await inviteForm.getByLabel('Email addresses').fill(email);
-    await inviteForm.getByRole('combobox', { name: 'Role', exact: true }).click();
-    await page.getByRole('option', { name: /^Client/ }).click();
-    await inviteForm.getByRole('combobox', { name: 'Email language' }).click();
-    await page.getByRole('option', { name: 'Nederlands' }).click();
-    await inviteForm.getByRole('button', { name: 'Send invitations' }).click();
-    await expect(toasts(page)).toContainText(`Invitation sent to ${email}.`);
+test('an invitation sent in Dutch arrives in Dutch', async ({ page }) => {
+  await signIn(page, PLATFORM_ADMIN);
+  const email = freshAddress('dutch-invitation');
+  await page.goto(`/companies/${COMPANY_SLUG}/members`);
+  // The invite link form next to it has a role select of its own.
+  const inviteForm = page.locator('form').filter({ has: page.getByLabel('Email addresses') });
+  await inviteForm.getByLabel('Email addresses').fill(email);
+  await inviteForm.getByRole('combobox', { name: 'Role', exact: true }).click();
+  await page.getByRole('option', { name: /^Client/ }).click();
+  await inviteForm.getByRole('combobox', { name: 'Email language' }).click();
+  await page.getByRole('option', { name: 'Nederlands' }).click();
+  await inviteForm.getByRole('button', { name: 'Send invitations' }).click();
+  await expect(toasts(page)).toContainText(`Invitation sent to ${email}.`);
 
-    const sent = await waitForEmail(email);
-    expect(sent.subject).toMatch(new RegExp(`nodigt je uit voor ${COMPANY_NAME} op Adiutor$`));
-    expect(sent.html).toContain('lang="nl-NL"');
-  } finally {
-    await context.close();
-  }
+  const sent = await waitForEmail(email);
+  expect(sent.subject).toMatch(new RegExp(`nodigt je uit voor ${COMPANY_NAME} op Adiutor$`));
+  expect(sent.html).toContain('lang="nl-NL"');
 });

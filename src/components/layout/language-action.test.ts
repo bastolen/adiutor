@@ -12,7 +12,7 @@ const set = vi.fn();
 /** Stands in for the response's cookie store: deleting a cookie. */
 const remove = vi.fn();
 
-vi.mock('@/lib/env', () => ({ appUrl: 'https://adiutor.dev' }));
+vi.mock('@/lib/env', () => ({ appUrl: 'https://adiutor.dev', secureCookies: true }));
 
 vi.mock('next/headers', () => ({
   /**

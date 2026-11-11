@@ -1,7 +1,6 @@
 /**
  * @file Integration tests for the app's rate limiter (`rate-limit.ts`):
- * counting hits in a window, giving one back, lifting a sign-in pause for one
- * address and starting a new window, against the test database.
+ * counting hits in a window, giving one back and starting a new window, against the test database.
  */
 import { eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
@@ -9,12 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { rateLimitBucket } from '@/db/schema';
 
 import { setupTestContext } from '../../tests/integration/helpers';
-import {
-  assertRateLimit,
-  clearFailedSignIns,
-  hitRateLimit,
-  releaseRateLimitHit,
-} from './rate-limit';
+import { assertRateLimit, hitRateLimit, releaseRateLimitHit } from './rate-limit';
 
 const { ctx, db } = setupTestContext();
 
@@ -43,17 +37,6 @@ describe('rate limits', () => {
     await Promise.all([1, 2, 3].map(() => releaseRateLimitHit(ctx, 'test:key')));
     await expect(hitRateLimit(ctx, 'test:key', rule)).resolves.toMatchObject({ hits: 1 });
     await expect(hitRateLimit(ctx, 'test:other', rule)).resolves.toMatchObject({ hits: 2 });
-  });
-
-  it('lifts a pause on password sign-in for one address only', async () => {
-    const failed = { limit: 10, windowSeconds: 15 * 60 };
-    await hitRateLimit(ctx, 'sign-in-failed:email:jane@adiutor.test', failed);
-    await hitRateLimit(ctx, 'sign-in-failed:email:john@adiutor.test', failed);
-
-    await clearFailedSignIns(db, ' Jane@Adiutor.test');
-
-    const left = await db.select({ key: rateLimitBucket.key }).from(rateLimitBucket);
-    expect(left.map(({ key }) => key)).toEqual(['sign-in-failed:email:john@adiutor.test']);
   });
 
   it('starts a new window once the old one has passed', async () => {

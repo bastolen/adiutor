@@ -19,10 +19,6 @@ import { db, signedIn, request, outcomeOf, hits } from './test-helpers';
 const { loadMfaContext: realLoadMfaContext } =
   await vi.importActual<typeof import('../mfa-state')>('../mfa-state');
 
-vi.mock('@/db', async (importOriginal) =>
-  (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),
-);
-
 vi.mock('better-auth/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('better-auth/api')>()),
   getSessionFromCtx: vi.fn(),

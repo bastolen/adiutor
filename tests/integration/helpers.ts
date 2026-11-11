@@ -25,7 +25,7 @@ import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { defined, firstRow } from '@/lib/defined';
 import type { Email } from '@/lib/email';
 import type { Locale } from '@/lib/i18n/locales';
-import { MFA_PROVIDERS, type MfaProvider } from '@/lib/sign-in/oauth-providers';
+import { MFA_PROVIDERS, type OAuthProvider } from '@/lib/sign-in/oauth-providers';
 import { availableProviders, configuredProviders } from '@/lib/sign-in/providers';
 import { type Actor, loadActor } from '@/server/actor';
 import type { ServiceContext } from '@/server/context';
@@ -68,7 +68,7 @@ export function setupTestContext(): TestContext {
 
   beforeEach(async () => {
     sent.length = 0;
-    // Every provider that can prove MFA counts as configured again (see `turnOffProviderSignIn`).
+    // Every provider that can prove MFA counts as configured again (see `turnOffGitHubSignIn`).
     availableProviders.splice(
       0,
       availableProviders.length,
@@ -85,25 +85,18 @@ export function setupTestContext(): TestContext {
 }
 
 /**
- * Makes the rest of the current test run as if a provider's sign-in weren't
+ * Makes the rest of the current test run as if GitHub sign-in weren't
  * configured on this server (the integration tests configure every provider
  * that can prove MFA), so the MFA rules don't count its accounts' two-factor
  * authentication anywhere: as MFA, as a second step or as something to keep.
  * It changes `availableProviders`, which every service passes to the rules;
  * {@link setupTestContext} turns it back on before the next test.
- *
- * @param provider - The provider; GitHub by default.
  */
-export function turnOffProviderSignIn(provider: MfaProvider = 'github'): void {
-  const index = availableProviders.indexOf(provider);
+export function turnOffGitHubSignIn(): void {
+  const index = availableProviders.indexOf('github');
   if (index >= 0) {
     availableProviders.splice(index, 1);
   }
-}
-
-/** Turns GitHub sign-in off for the rest of the test (see {@link turnOffProviderSignIn}). */
-export function turnOffGitHubSignIn(): void {
-  turnOffProviderSignIn('github');
 }
 
 /**
@@ -177,16 +170,22 @@ export async function startAuthenticatorSetup(db: Database, userId: string): Pro
  *   defaults to `true`.
  * @param options.confirmed - Whether it counts yet (see `beforeAccountCreate`); defaults to `true`.
  * @param options.accountName - Its name at the provider (`accountName`); none by default.
+ * @param options.accessToken - Its access token; none by default.
+ * @param options.updatedAt - When it was last used to sign in; defaults to now.
+ * @param options.accountId - The provider's ID for the account; random by default.
  * @returns The account row's ID (what Better Auth's unlink takes).
  */
 export async function connectProvider(
   db: Database,
   userId: string,
   options: {
-    providerId?: 'github' | 'google';
+    providerId?: OAuthProvider;
     mfaVerified?: boolean;
     confirmed?: boolean;
     accountName?: string;
+    accessToken?: string;
+    updatedAt?: Date;
+    accountId?: string;
   } = {},
 ): Promise<string> {
   const providerId = options.providerId ?? 'github';
@@ -195,17 +194,27 @@ export async function connectProvider(
       .insert(account)
       .values({
         userId,
-        accountId: `${providerId}-${randomUUID()}`,
+        accountId: options.accountId ?? `${providerId}-${randomUUID()}`,
         providerId,
         mfaVerified: options.mfaVerified ?? true,
         confirmed: options.confirmed ?? true,
         accountName: options.accountName,
+        accessToken: options.accessToken,
+        updatedAt: options.updatedAt,
       })
       .returning({ id: account.id }),
     'the new account',
   );
   return created.id;
 }
+
+/**
+ * The time a number of minutes ago.
+ *
+ * @param minutes - How many minutes.
+ * @returns That time.
+ */
+export const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000);
 
 /**
  * Connects a GitHub account to a user, as Better Auth stores it.

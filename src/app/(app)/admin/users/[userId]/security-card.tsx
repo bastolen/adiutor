@@ -8,11 +8,11 @@ import { useTranslations } from 'next-intl';
 
 import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
+import { DescriptionList, DescriptionRow } from '@/components/ui/description-list';
 import { isMfaProvider, providerLabel } from '@/lib/sign-in/oauth-providers';
 import type { UserDetail } from '@/server/people/user-admin';
 
 import { MfaBadge } from '../user-badges';
-import DetailRow from './detail-row';
 
 /**
  * The account's sign-in security.
@@ -40,17 +40,21 @@ export default function SecurityCard({
       title={t('title')}
       description={mfa.required ? t('descriptionRequired') : t('descriptionRecommended')}
     >
-      <dl className="divide-y divide-border">
-        <DetailRow term={t('status')}>
+      <DescriptionList>
+        <DescriptionRow term={t('status')}>
           <MfaBadge status={mfa.status} />
-        </DetailRow>
-        <DetailRow term={t('twoFactor')}>{t('twoFactorValue', { state: twoFactor })}</DetailRow>
-        <DetailRow term={t('passkeys')}>{t('passkeyCount', { count: mfa.passkeyCount })}</DetailRow>
-        <DetailRow term={t('password')}>
+        </DescriptionRow>
+        <DescriptionRow term={t('twoFactor')}>
+          {t('twoFactorValue', { state: twoFactor })}
+        </DescriptionRow>
+        <DescriptionRow term={t('passkeys')}>
+          {t('passkeyCount', { count: mfa.passkeyCount })}
+        </DescriptionRow>
+        <DescriptionRow term={t('password')}>
           {t('passwordState', { set: mfa.hasPassword ? 'yes' : 'no' })}
-        </DetailRow>
+        </DescriptionRow>
         {mfa.providerAccounts.map((provider) => (
-          <DetailRow
+          <DescriptionRow
             key={provider.id ?? provider.providerId}
             term={providerLabel(provider.providerId)}
           >
@@ -68,9 +72,9 @@ export default function SecurityCard({
                   : t('twoFactorOff', { provider: providerLabel(provider.providerId) })}
               </Badge>
             )}
-          </DetailRow>
+          </DescriptionRow>
         ))}
-      </dl>
+      </DescriptionList>
     </Card>
   );
 }

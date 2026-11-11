@@ -135,22 +135,24 @@ describe('sendSecurityNotice', () => {
     );
   });
 
-  it('never throws: a failed send is logged and returns false', async () => {
+  it('never throws: a failed send is logged by its codes only and returns false', async () => {
     const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
     const failing = {
       ...ctx,
       /** Fails like an unreachable mail server. */
       sendEmail: async () => {
-        throw new Error('SMTP down');
+        throw Object.assign(new Error('SMTP down for jane@adiutor.test'), {
+          code: 'ECONNECTION',
+        });
       },
     };
 
     expect(await sendSecurityNotice(failing, { email: 'jane@adiutor.test' }, 'mfa_reset')).toBe(
       false,
     );
-    expect(logged).toHaveBeenCalledWith(
-      'Sending the "mfa_reset" security notice failed',
-      expect.any(Error),
-    );
+    expect(logged).toHaveBeenCalledWith('Sending the "mfa_reset" security notice failed', {
+      code: 'ECONNECTION',
+      responseCode: null,
+    });
   });
 });

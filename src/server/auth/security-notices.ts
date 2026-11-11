@@ -8,6 +8,7 @@ import { eq } from 'drizzle-orm';
 import { user } from '@/db/schema';
 import { type SecurityNoticeKind, securityNoticeEmail } from '@/emails/security-notice';
 import type { Role } from '@/lib/authz/roles';
+import { sendFailureOf } from '@/lib/email';
 import type { Locale } from '@/lib/i18n/locales';
 import translator from '@/lib/i18n/translator';
 import formatIpAddress from '@/lib/request/ip-address';
@@ -79,25 +80,30 @@ export async function sendSecurityNotice(
     const language = await recipientLocale(ctx, found?.locale ?? locale);
     const request =
       showDevice && ctx.requestInfo ? await ctx.requestInfo().catch(() => null) : null;
-    await ctx.sendEmail(
-      await securityNoticeEmail(email, {
-        appUrl: ctx.baseUrl,
-        locale: language,
-        kind,
-        when: new Date(),
-        device: request?.userAgent
-          ? translator(language, 'common')('device', describeUserAgent(request.userAgent))
-          : null,
-        ip: request?.ip ? formatIpAddress(request.ip) : null,
-        provider,
-        role,
-        company,
-      }),
-    );
+    const message = await securityNoticeEmail(email, {
+      appUrl: ctx.baseUrl,
+      locale: language,
+      kind,
+      when: new Date(),
+      device: request?.userAgent
+        ? translator(language, 'common')('device', describeUserAgent(request.userAgent))
+        : null,
+      ip: request?.ip ? formatIpAddress(request.ip) : null,
+      provider,
+      role,
+      company,
+    });
+    try {
+      await ctx.sendEmail(message);
+    } catch (error) {
+      // eslint-disable-next-line no-console -- A failed notice must not undo the change, but should show up in the logs; a mail server's refusal can quote the address, so only its codes are logged.
+      console.error(`Sending the "${kind}" security notice failed`, sendFailureOf(error));
+      return false;
+    }
     return true;
   } catch (error) {
-    // eslint-disable-next-line no-console -- A failed notice must not undo the change, but should show up in the logs.
-    console.error(`Sending the "${kind}" security notice failed`, error);
+    // eslint-disable-next-line no-console -- A failed notice must not undo the change, but should show up in the logs; database values are left out by the log redaction.
+    console.error(`Preparing the "${kind}" security notice failed`, error);
     return false;
   }
 }

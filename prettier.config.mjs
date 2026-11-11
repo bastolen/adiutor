@@ -3,7 +3,7 @@
  *
  * Settings match the Airbnb style guide, so Prettier and the Airbnb ESLint
  * rules agree. ESLint runs Prettier on JavaScript and TypeScript; run
- * `pnpm format` to format every other file type (CSS, SCSS, JSON, Markdown).
+ * `pnpm format` to format every other file type (CSS, JSON, Markdown).
  * @see https://prettier.io/docs/options
  */
 
@@ -41,7 +41,7 @@ const config = {
   /** Stylesheet that loads Tailwind and the theme, so custom classes sort too. */
   tailwindStylesheet: './src/app/globals.css',
   /** Also sort classes passed to these class-name helpers. */
-  tailwindFunctions: ['clsx', 'cn', 'cva', 'tv', 'twMerge', 'twJoin'],
+  tailwindFunctions: ['clsx', 'cn'],
 };
 
 export default config;

@@ -22,9 +22,10 @@ Playwright or `pnpm install`/`dlx` while reviewing. Reading files, grep and one-
 scripts are fine. Most files may be untracked, so reviewers use the filesystem rather than
 `git diff`.
 
-What's reviewed is the same as for `/placement-check`: `src/` (`app`, `components`, `lib`,
-`server`, `db`, `emails`, `styles`), `drizzle/`, `scripts/`, `tests/`, `e2e/`, `public/`, the
-root config, `.github/`, the root Markdown files and `docs/`. Not part of the review: anything
+What's reviewed is the same as for `/placement-check`: every path in the repository, so
+everything under `src/` (including `messages/` and the root files), `drizzle/`, `scripts/`,
+`tests/`, `e2e/`, `public/`, `LICENSES/`, `docker/`, the root config and dotfiles, `.github/`,
+`.claude/`, the root Markdown files and `docs/`. Not part of the review: anything
 Git ignores (`.gitignore`), such as `node_modules`, `.next` and test output.
 `git ls-files --cached --others --exclude-standard` lists the files that are in scope, untracked
 ones included. Ignored files are only read as references where this skill says so (the docs and

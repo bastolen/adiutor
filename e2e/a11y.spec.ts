@@ -7,11 +7,10 @@
  * `beforeAll`), signed out and signed in. `/setup` is scanned in
  * `setup.spec.ts`, the only place the database is empty.
  */
-import { randomUUID } from 'node:crypto';
-
 import { type BrowserContext, type Page } from '@playwright/test';
 
 import { defined } from '../src/lib/defined';
+import { LOCALE_COOKIE } from '../src/lib/i18n/locales';
 import { LAST_USED_LOGIN_METHOD_COOKIE } from '../src/lib/sign-in/auth-cookies';
 import {
   PROVIDER_LINKED_COOKIE,
@@ -19,13 +18,15 @@ import {
   providerLinkedCookieValue,
   providerStepUpCookieValue,
 } from '../src/lib/sign-in/oauth-providers';
-import {
-  REVERIFY_WRONG_ACCOUNT,
-  reverifyWrongAccountMessage,
-} from '../src/lib/sign-in/sign-in-refusals';
-import getTestDatabaseUrl from '../tests/database/database-url';
+import { REVERIFY_WRONG_ACCOUNT } from '../src/lib/sign-in/sign-in-refusals';
 import expectAccessible from './support/axe';
-import { findCompanyId, storeInvitation, storeInviteLink, storeSignInLink } from './support/db';
+import {
+  findCompanyId,
+  findUserId,
+  storeInvitation,
+  storeInviteLink,
+  storeSignInLink,
+} from './support/db';
 import {
   CLIENT_WATCHER,
   COMPANY_NAME,
@@ -36,10 +37,10 @@ import {
 } from './support/fixtures';
 import {
   adminStorageState,
+  freshAddress,
   openSignInLink,
   type StorageState,
   toasts,
-  useOwnClientIp,
 } from './support/helpers';
 import { expect, test } from './support/test';
 
@@ -124,28 +125,22 @@ const resolvePath = (path: string) =>
     .replace('{user}', userId);
 
 test.beforeAll(async ({ browser }) => {
-  companyId = await findCompanyId(getTestDatabaseUrl(), COMPANY_SLUG);
-  pagingCompanyId = await findCompanyId(getTestDatabaseUrl(), PAGING_COMPANY_SLUG);
+  companyId = await findCompanyId(COMPANY_SLUG);
+  pagingCompanyId = await findCompanyId(PAGING_COMPANY_SLUG);
   // Unique per run: an address may have only one open invitation per company.
-  newAddressInvitationPath = await storeInvitation(getTestDatabaseUrl(), {
+  newAddressInvitationPath = await storeInvitation({
     companyId,
-    email: `a11y-${randomUUID().slice(0, 8)}@adiutor.test`,
+    email: freshAddress('a11y'),
     role: 'client',
   });
-  adminInvitationPath = await storeInvitation(getTestDatabaseUrl(), {
+  adminInvitationPath = await storeInvitation({
     companyId,
     email: PLATFORM_ADMIN.email,
     role: 'client',
   });
-  inviteLinkPath = await storeInviteLink(getTestDatabaseUrl(), { companyId, role: 'client' });
-  adminState = await adminStorageState(browser, async (page) => {
-    await page.goto(`/admin/users?q=${encodeURIComponent(CLIENT_WATCHER.name)}`);
-    const userHref = await page
-      .getByRole('main')
-      .getByRole('link', { name: CLIENT_WATCHER.name, exact: true })
-      .getAttribute('href');
-    userId = defined(defined(userHref, "the user's link").split('/').at(-1), "the user's ID");
-  });
+  inviteLinkPath = await storeInviteLink({ companyId, role: 'client' });
+  userId = await findUserId(CLIENT_WATCHER.email);
+  adminState = await adminStorageState(browser);
 });
 
 /**
@@ -362,7 +357,7 @@ test.describe('on a 320px wide screen', () => {
   test('a sign-in link page that names the account fits without sideways scrolling', async ({
     page,
   }) => {
-    await page.goto(await storeSignInLink(getTestDatabaseUrl(), CLIENT_WATCHER.email));
+    await page.goto(await storeSignInLink(CLIENT_WATCHER.email));
     await expectNoSidewaysScroll(page);
   });
 
@@ -395,68 +390,55 @@ test.describe('on a 320px wide screen', () => {
     });
   });
 
-  test('the companies list shows each status under the name', async ({ browser }) => {
-    const context = await browser.newContext({
-      storageState: adminState,
-      viewport: { width: 320, height: 640 },
+  test.describe('signed in', () => {
+    test.beforeEach(async ({ context }) => {
+      await context.addCookies(adminState.cookies);
     });
-    const page = await context.newPage();
-    await page.goto('/admin/companies');
-    // Once the list is there: no Status column squeezing the names, the badge sits under the name.
-    await expect(page.getByRole('columnheader', { name: 'Company' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Status' })).toBeHidden();
-    const nameCell = page
-      .getByRole('row')
-      .filter({ hasText: COMPANY_NAME })
-      .getByRole('cell')
-      .first();
-    await expect(
-      nameCell.getByText('Active', { exact: true }).filter({ visible: true }),
-    ).toHaveCount(1);
-    await context.close();
-  });
 
-  test('the Sort menu keeps clear of the screen edges', async ({ browser }) => {
-    const context = await browser.newContext({
-      storageState: adminState,
-      viewport: { width: 320, height: 640 },
+    test('the companies list shows each status under the name', async ({ page }) => {
+      await page.goto('/admin/companies');
+      // Once the list is there: no Status column squeezing the names, the badge sits under the name.
+      await expect(page.getByRole('columnheader', { name: 'Company' })).toBeVisible();
+      await expect(page.getByRole('columnheader', { name: 'Status' })).toBeHidden();
+      const nameCell = page
+        .getByRole('row')
+        .filter({ hasText: COMPANY_NAME })
+        .getByRole('cell')
+        .first();
+      await expect(
+        nameCell.getByText('Active', { exact: true }).filter({ visible: true }),
+      ).toHaveCount(1);
     });
-    const page = await context.newPage();
-    await page.goto('/admin/users');
-    await page.getByRole('button', { name: /^Sort users/ }).click();
-    const box = defined(await page.getByRole('menu').boundingBox(), 'the menu');
-    expect(box.x).toBeGreaterThanOrEqual(16);
-    expect(box.x + box.width).toBeLessThanOrEqual(320 - 16);
-    await context.close();
-  });
 
-  APP_PATHS.forEach((path) => {
-    test(`${path} fits without sideways scrolling or zooming into its fields`, async ({
-      browser,
-    }) => {
-      const context = await browser.newContext({
-        storageState: adminState,
-        viewport: { width: 320, height: 640 },
+    test('the Sort menu keeps clear of the screen edges', async ({ page }) => {
+      await page.goto('/admin/users');
+      await page.getByRole('button', { name: /^Sort users/ }).click();
+      const box = defined(await page.getByRole('menu').boundingBox(), 'the menu');
+      expect(box.x).toBeGreaterThanOrEqual(16);
+      expect(box.x + box.width).toBeLessThanOrEqual(320 - 16);
+    });
+
+    APP_PATHS.forEach((path) => {
+      test(`${path} fits without sideways scrolling or zooming into its fields`, async ({
+        page,
+      }) => {
+        await page.goto(resolvePath(path));
+        await expectNoSidewaysScroll(page);
+        await expectFieldsDontZoom(page);
       });
-      const page = await context.newPage();
-      await page.goto(resolvePath(path));
-      await expectNoSidewaysScroll(page);
-      await expectFieldsDontZoom(page);
-      await context.close();
     });
 
-    test(`${path} fits without sideways scrolling while it loads`, async ({ browser }) => {
+    test.describe('while it loads', () => {
       // Without JavaScript the streamed content never replaces the Suspense placeholders, so the
       // page stays as it looks while it loads.
-      const context = await browser.newContext({
-        storageState: adminState,
-        viewport: { width: 320, height: 640 },
-        javaScriptEnabled: false,
+      test.use({ javaScriptEnabled: false });
+
+      APP_PATHS.forEach((path) => {
+        test(`${path} fits without sideways scrolling while it loads`, async ({ page }) => {
+          await page.goto(resolvePath(path));
+          await expectFitsNow(page);
+        });
       });
-      const page = await context.newPage();
-      await page.goto(resolvePath(path));
-      await expectFitsNow(page);
-      await context.close();
     });
   });
 });
@@ -493,7 +475,7 @@ test.describe('on a 320px wide screen', () => {
     });
 
     test('a sign-in link page that names the account, signed out', async ({ page }) => {
-      await page.goto(await storeSignInLink(getTestDatabaseUrl(), CLIENT_WATCHER.email));
+      await page.goto(await storeSignInLink(CLIENT_WATCHER.email));
       await expect(page.getByText(CLIENT_WATCHER.name, { exact: true })).toBeVisible();
       await expectAccessible(page);
     });
@@ -501,8 +483,7 @@ test.describe('on a 320px wide screen', () => {
     // Only reachable signed in without a recent second step, so it can't be in APP_PATHS: the
     // Admin signs in with an email link, which doesn't count as one.
     test('the step-up page, after signing in with an email link', async ({ page }) => {
-      await useOwnClientIp(page);
-      await openSignInLink(page, await storeSignInLink(getTestDatabaseUrl(), PLATFORM_ADMIN.email));
+      await openSignInLink(page, await storeSignInLink(PLATFORM_ADMIN.email));
       await expect(page).toHaveURL(/\/auth\/verify\?callbackURL=%2Fdashboard/);
       await expect(page.getByRole('heading', { name: /^Confirm it.s you$/ })).toBeVisible();
       await expectAccessible(page);
@@ -512,8 +493,7 @@ test.describe('on a 320px wide screen', () => {
       context,
       page,
     }) => {
-      await useOwnClientIp(page);
-      await openSignInLink(page, await storeSignInLink(getTestDatabaseUrl(), PLATFORM_ADMIN.email));
+      await openSignInLink(page, await storeSignInLink(PLATFORM_ADMIN.email));
       await expect(page).toHaveURL(/\/auth\/verify\?callbackURL=%2Fdashboard/);
       // GitHub isn't configured in these tests: the browser gets the cookie its callback leaves.
       await context.addCookies([
@@ -531,8 +511,7 @@ test.describe('on a 320px wide screen', () => {
     test('the step-up page, after "Confirm with GitHub" signed in with a different GitHub account', async ({
       page,
     }) => {
-      await useOwnClientIp(page);
-      await openSignInLink(page, await storeSignInLink(getTestDatabaseUrl(), PLATFORM_ADMIN.email));
+      await openSignInLink(page, await storeSignInLink(PLATFORM_ADMIN.email));
       await expect(page).toHaveURL(/\/auth\/verify\?callbackURL=%2Fdashboard/);
       // GitHub isn't configured in these tests: the browser comes back as the refusal sends it.
       await page.goto(
@@ -542,79 +521,50 @@ test.describe('on a 320px wide screen', () => {
           error: REVERIFY_WRONG_ACCOUNT.code,
         })}`,
       );
-      const message = reverifyWrongAccountMessage('GitHub');
-      await expect(page.getByRole('alert').filter({ hasText: message })).toBeVisible();
+      await expect(
+        page.getByRole('alert').filter({ hasText: "GitHub couldn't confirm it's you" }),
+      ).toBeVisible();
       await expectAccessible(page);
     });
 
     test.describe('signed in', () => {
+      test.beforeEach(async ({ context }) => {
+        await context.addCookies(adminState.cookies);
+      });
+
       APP_PATHS.forEach((path) => {
-        test(path, async ({ browser }) => {
-          const context = await browser.newContext({
-            storageState: adminState,
-            colorScheme,
-            reducedMotion: 'reduce',
-          });
-          const page = await context.newPage();
+        test(path, async ({ page }) => {
           await page.goto(resolvePath(path));
           await expectAccessible(page);
-          await context.close();
         });
       });
 
       test('an invitation addressed to the signed-in user, and an invite link', async ({
-        browser,
+        page,
       }) => {
-        const context = await browser.newContext({
-          storageState: adminState,
-          colorScheme,
-          reducedMotion: 'reduce',
-        });
-        const page = await context.newPage();
         await page.goto(adminInvitationPath);
         await expect(page.getByRole('button', { name: 'Accept invitation' })).toBeVisible();
         await expectAccessible(page);
         await page.goto(inviteLinkPath);
         await expect(page.getByRole('button', { name: 'Join', exact: true })).toBeVisible();
         await expectAccessible(page);
-        await context.close();
       });
 
-      test('a toast', async ({ browser }) => {
-        const context = await browser.newContext({
-          storageState: adminState,
-          colorScheme,
-          reducedMotion: 'reduce',
-        });
-        const page = await context.newPage();
+      test('a toast', async ({ page }) => {
         // Saving the staff name unchanged changes nothing, but shows its toast.
         await page.goto('/admin/staff');
         await page.getByRole('button', { name: 'Save name' }).click();
         await expect(toasts(page)).toContainText('Name saved.');
         await expectAccessible(page);
-        await context.close();
       });
 
-      test('a sign-in link page for another account', async ({ browser }) => {
-        const context = await browser.newContext({
-          storageState: adminState,
-          colorScheme,
-          reducedMotion: 'reduce',
-        });
-        const page = await context.newPage();
-        await page.goto(await storeSignInLink(getTestDatabaseUrl(), CLIENT_WATCHER.email));
+      test('a sign-in link page for another account', async ({ page }) => {
+        await page.goto(await storeSignInLink(CLIENT_WATCHER.email));
         await expect(page.getByRole('status')).toBeVisible();
         await expectAccessible(page);
-        await context.close();
       });
 
-      test('the notice after a provider was connected at sign-in', async ({ browser }) => {
-        const context = await browser.newContext({
-          storageState: adminState,
-          colorScheme,
-          reducedMotion: 'reduce',
-        });
-        const page = await context.newPage();
+      test('the notice after a provider was connected at sign-in', async ({ context, page }) => {
         await page.goto('/dashboard');
         await context.addCookies([
           {
@@ -626,16 +576,9 @@ test.describe('on a 320px wide screen', () => {
         await page.reload();
         await expect(page.getByRole('region', { name: 'GitHub connected' })).toBeVisible();
         await expectAccessible(page);
-        await context.close();
       });
 
-      test('open menus, selects and dialogs', async ({ browser }) => {
-        const context = await browser.newContext({
-          storageState: adminState,
-          colorScheme,
-          reducedMotion: 'reduce',
-        });
-        const page = await context.newPage();
+      test('open menus, selects and dialogs', async ({ page }) => {
         await page.goto(`/companies/${companyId}/members`);
 
         await page.getByRole('button', { name: /^Account menu/ }).click();
@@ -652,45 +595,32 @@ test.describe('on a 320px wide screen', () => {
         await expect(page.getByRole('alertdialog')).toBeVisible();
         await expectAccessible(page, '[role="alertdialog"]');
         await page.getByRole('button', { name: 'Cancel' }).click();
-        await context.close();
       });
 
-      test('the sort menu on a phone', async ({ browser }) => {
-        const context = await browser.newContext({
-          storageState: adminState,
-          colorScheme,
-          reducedMotion: 'reduce',
-          viewport: { width: 375, height: 812 },
+      test.describe('on a phone', () => {
+        test.use({ viewport: { width: 375, height: 812 } });
+
+        test('the sort menu', async ({ page }) => {
+          await page.goto(resolvePath('/companies/{paging}/members'));
+
+          await page.getByRole('button', { name: 'Sort members' }).click();
+          await expect(page.getByRole('menu')).toBeVisible();
+          await expectAccessible(page, '[role="menu"]');
         });
-        const page = await context.newPage();
-        await page.goto(resolvePath('/companies/{paging}/members'));
 
-        await page.getByRole('button', { name: 'Sort members' }).click();
-        await expect(page.getByRole('menu')).toBeVisible();
-        await expectAccessible(page, '[role="menu"]');
-        await context.close();
-      });
+        test('the mobile menu', async ({ page }) => {
+          await page.goto('/dashboard');
+          await expectAccessible(page);
 
-      test('the mobile menu', async ({ browser }) => {
-        const context = await browser.newContext({
-          storageState: adminState,
-          colorScheme,
-          reducedMotion: 'reduce',
-          viewport: { width: 375, height: 812 },
+          await page.getByRole('button', { name: 'Open menu' }).click();
+          const menu = page.getByRole('dialog', { name: 'Menu' });
+          await expect(menu).toBeVisible();
+          await expectAccessible(page, '[role="dialog"]');
+
+          await menu.getByRole('button', { name: /^Account menu/ }).click();
+          await expect(page.getByRole('menu')).toBeVisible();
+          await expectAccessible(page, '[role="menu"]');
         });
-        const page = await context.newPage();
-        await page.goto('/dashboard');
-        await expectAccessible(page);
-
-        await page.getByRole('button', { name: 'Open menu' }).click();
-        const menu = page.getByRole('dialog', { name: 'Menu' });
-        await expect(menu).toBeVisible();
-        await expectAccessible(page, '[role="dialog"]');
-
-        await menu.getByRole('button', { name: /^Account menu/ }).click();
-        await expect(page.getByRole('menu')).toBeVisible();
-        await expectAccessible(page, '[role="menu"]');
-        await context.close();
       });
     });
   });
@@ -706,7 +636,7 @@ test.describe('on a 320px wide screen', () => {
     test.use({ viewport: { width: 320, height: 640 }, reducedMotion: 'reduce' });
 
     /** The language cookie, which every page reads its language from. */
-    const languageCookie = { name: 'adiutor.locale', value: locale, url: E2E_BASE_URL };
+    const languageCookie = { name: LOCALE_COOKIE, value: locale, url: E2E_BASE_URL };
 
     PUBLIC_PATHS.forEach((path) => {
       test(`${path} signed out`, async ({ context, page }) => {
@@ -718,21 +648,20 @@ test.describe('on a 320px wide screen', () => {
       });
     });
 
-    APP_PATHS.forEach((path) => {
-      test(path, async ({ browser }) => {
-        const context = await browser.newContext({
-          storageState: adminState,
-          viewport: { width: 320, height: 640 },
-          reducedMotion: 'reduce',
-        });
+    test.describe('signed in', () => {
+      test.beforeEach(async ({ context }) => {
+        await context.addCookies(adminState.cookies);
         // Over the cookie the Admin's sign-in set, which says English.
         await context.addCookies([languageCookie]);
-        const page = await context.newPage();
-        await page.goto(resolvePath(path));
-        await expect(page.locator('html')).toHaveAttribute('lang', locale);
-        await expectNoSidewaysScroll(page);
-        await expectAccessible(page);
-        await context.close();
+      });
+
+      APP_PATHS.forEach((path) => {
+        test(path, async ({ page }) => {
+          await page.goto(resolvePath(path));
+          await expect(page.locator('html')).toHaveAttribute('lang', locale);
+          await expectNoSidewaysScroll(page);
+          await expectAccessible(page);
+        });
       });
     });
 

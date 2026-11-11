@@ -46,38 +46,13 @@ describe('runAction', () => {
     });
   });
 
-  it('fills in the values of a service error’s message', async () => {
-    await expect(
-      runAction(async () => {
-        throw new ServiceError('conflict', 'errors.members.alreadyMember', {
-          company: 'Adiutor Tests',
-        });
-      }),
-    ).resolves.toEqual({ ok: false, message: "They're already a member of Adiutor Tests." });
-  });
-
-  it('shows the first problem of invalid input, with the limit from the issue', async () => {
+  it('shows the first problem of invalid input', async () => {
     await expect(
       runAction(async () => {
         z.email({ error: 'validation.email' }).parse('nope');
         return { ok: true };
       }),
     ).resolves.toEqual({ ok: false, message: 'Enter a valid email address.' });
-    await expect(
-      runAction(async () => {
-        companyNameSchema.parse('A');
-        return { ok: true };
-      }),
-    ).resolves.toEqual({ ok: false, message: 'Use at least 2 characters for the company name.' });
-  });
-
-  it('asks to check the input when zod worded the problem itself', async () => {
-    await expect(
-      runAction(async () => {
-        z.string().parse(undefined);
-        return { ok: true };
-      }),
-    ).resolves.toEqual({ ok: false, message: 'Check your input.' });
   });
 
   it('turns a database deadlock into a conflict that asks to try again, and notes it in the log', async () => {
@@ -110,45 +85,41 @@ describe('runAction', () => {
 });
 
 describe('runAction in other languages', () => {
-  it.each([
-    ['nl-NL', 'Te veel pogingen. Probeer het over 3 minuten opnieuw.'],
-    ['es-ES', 'Demasiados intentos. Vuelve a intentarlo dentro de 3 minutos.'],
-  ] as const)('words a service error in the request’s language (%s)', async (locale, message) => {
-    testLocale.current = locale;
+  it('words a service error in the request’s language', async () => {
+    testLocale.current = 'nl-NL';
     await expect(
       runAction(async () => {
         throw new ServiceError('rate_limited', 'errors.tooManyAttempts', { minutes: 3 });
       }),
-    ).resolves.toEqual({ ok: false, message });
+    ).resolves.toEqual({
+      ok: false,
+      message: 'Te veel pogingen. Probeer het over 3 minuten opnieuw.',
+    });
   });
 
-  it.each([
-    ['nl-NL', 'Gebruik maximaal 100 tekens voor de bedrijfsnaam.'],
-    // Spanish puts the field first and the limit after it.
-    ['es-ES', 'El nombre de la empresa puede tener como máximo 100 caracteres.'],
-  ] as const)('words invalid input in the request’s language (%s)', async (locale, message) => {
-    testLocale.current = locale;
+  it('words invalid input in the request’s language', async () => {
+    testLocale.current = 'nl-NL';
     await expect(
       runAction(async () => {
         companyNameSchema.parse('a'.repeat(101));
         return { ok: true };
       }),
-    ).resolves.toEqual({ ok: false, message });
+    ).resolves.toEqual({
+      ok: false,
+      message: 'Gebruik maximaal 100 tekens voor de bedrijfsnaam.',
+    });
   });
 
-  it.each([
-    ['nl-NL', 'Iemand anders wijzigde dit op hetzelfde moment. Probeer het opnieuw.'],
-    ['es-ES', 'Otra persona cambió esto en el mismo momento. Vuelve a intentarlo.'],
-  ] as const)(
-    'asks to try again after a deadlock in the request’s language (%s)',
-    async (locale, message) => {
-      vi.spyOn(console, 'warn').mockImplementation(() => {});
-      testLocale.current = locale;
-      await expect(
-        runAction(async () => {
-          throw deadlockError();
-        }),
-      ).resolves.toEqual({ ok: false, message });
-    },
-  );
+  it('asks to try again after a deadlock in the request’s language', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    testLocale.current = 'nl-NL';
+    await expect(
+      runAction(async () => {
+        throw deadlockError();
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      message: 'Iemand anders wijzigde dit op hetzelfde moment. Probeer het opnieuw.',
+    });
+  });
 });

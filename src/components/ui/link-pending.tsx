@@ -20,21 +20,14 @@ import Spinner from './spinner';
  *
  * @param props - Component props.
  * @param props.children - The icon or label shown when nothing is loading.
- * @param props.className - Extra classes.
  * @returns The indicator.
  */
-export default function LinkPendingIndicator({
-  children,
-  className = '',
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+export default function LinkPendingIndicator({ children }: { children: ReactNode }) {
   const { pending } = useLinkStatus();
   return (
     <span
       aria-busy={pending || undefined}
-      className={cn('relative inline-flex items-center justify-center', className)}
+      className="relative inline-flex items-center justify-center"
     >
       <span className={cn('inline-flex', pending && 'invisible')}>{children}</span>
       {pending && <Spinner className="absolute size-3.5" />}

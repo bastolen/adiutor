@@ -8,7 +8,7 @@
 import type { DatabaseTransaction } from '@/db';
 import { account } from '@/db/schema';
 
-import { clearFailedSignIns } from '../rate-limit';
+import { clearFailedSignIns } from './failed-sign-ins';
 
 /**
  * Adds a password to a just-created account, in its transaction: the

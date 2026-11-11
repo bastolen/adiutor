@@ -10,10 +10,10 @@ import { user } from '@/db/schema';
 import { staffAdminAddedEmail } from '@/emails/staff-admin-added';
 import { PLATFORM_ADMIN_ROLE } from '@/lib/authz/roles';
 import displayName from '@/lib/display-name';
+import { sendFailureOf } from '@/lib/email';
 
 import type { ServiceContext } from '../context';
 import recipientLocale from '../recipient-locale';
-import sendFailureOf from '../send-failure';
 
 /** Who became a staff Admin, and how. */
 export interface StaffAdminAdded {

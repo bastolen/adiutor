@@ -9,6 +9,11 @@
 
 import { z } from 'zod';
 
+import {
+  ERROR_MESSAGE_MAX_LENGTH,
+  ERROR_NAME_MAX_LENGTH,
+  ERROR_PATH_MAX_LENGTH,
+} from '@/lib/input-rules';
 import appContext from '@/server/app-context';
 import { type RecordedAppError, recordAppError } from '@/server/app-errors';
 import { getOptionalActor } from '@/server/authz';
@@ -19,13 +24,13 @@ import { getOptionalActor } from '@/server/authz';
  * dropped (they can hold search terms and tokens).
  */
 const reportSchema = z.object({
-  name: z.string().max(100).nullable(),
-  message: z.string().max(500),
+  name: z.string().max(ERROR_NAME_MAX_LENGTH).nullable(),
+  message: z.string().max(ERROR_MESSAGE_MAX_LENGTH),
   path: z
     .string()
     .max(2048)
     .transform((path) => path.split(/[?#]/, 1)[0] ?? '')
-    .pipe(z.string().max(300)),
+    .pipe(z.string().max(ERROR_PATH_MAX_LENGTH)),
 });
 
 /** An error the browser reports, as the error page sends it. */

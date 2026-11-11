@@ -5,7 +5,6 @@
  */
 import { asc, eq } from 'drizzle-orm';
 
-import type { Database } from '@/db';
 import { passkey } from '@/db/schema';
 import {
   type MfaRole,
@@ -18,6 +17,7 @@ import {
 import { availableProviders } from '@/lib/sign-in/providers';
 
 import type { Actor } from '../actor';
+import type { ServiceContext } from '../context';
 import { loadMfaStates } from './mfa-state';
 
 /** A passkey as shown on the Security page. */
@@ -26,25 +26,21 @@ export interface PasskeySummary {
   id: string;
   /** The name the user gave it. */
   name: string | null;
-  /** `singleDevice` (e.g. a security key) or `multiDevice` (synced, e.g. iCloud Keychain). */
-  deviceType: string;
   /** Whether it's backed up or synced by the provider. */
   backedUp: boolean;
   /** When it was added. */
   createdAt: Date | null;
 }
 
-/** Everything the Security page shows. */
+/** The sign-in security the Security page shows. */
 export interface SecurityOverview {
-  /** Whether two-step verification is on (with email codes, or an authenticator app). */
-  twoFactorEnabled: boolean;
-  /** Whether an authenticator app is set up (and so backup codes exist). */
-  authenticatorSetUp: boolean;
-  /** Whether the user has a password (needed to confirm some changes). */
-  hasPassword: boolean;
   /** Their passkeys, oldest first. */
   passkeys: PasskeySummary[];
-  /** Their setup as the MFA rules see it (e.g. for `mfaDowngradeBlocks`). */
+  /**
+   * Their setup as the MFA rules see it: whether two-step verification is on
+   * (`twoFactorEnabled`), an authenticator app is set up (`authenticator`, and
+   * so backup codes exist), they have a password (`hasPassword`), and more.
+   */
   mfaState: MfaState;
 }
 
@@ -53,41 +49,34 @@ export interface SecurityOverview {
  * from the actor, which loaded it in this request (`loadActor`), so only
  * their passkeys are queried here.
  *
- * @param db - Database client.
+ * @param ctx - Service context.
  * @param actor - The signed-in user.
  * @param actor.id - Their ID.
  * @param actor.mfaState - Their sign-in setup, as loaded with them.
- * @returns Their two-step verification and passkey settings.
+ * @returns Their passkeys and sign-in setup.
  */
 export async function getSecurityOverview(
-  db: Database,
+  ctx: Pick<ServiceContext, 'db'>,
   actor: Pick<Actor, 'id' | 'mfaState'>,
 ): Promise<SecurityOverview> {
-  const passkeys = await db
+  const passkeys = await ctx.db
     .select({
       id: passkey.id,
       name: passkey.name,
-      deviceType: passkey.deviceType,
       backedUp: passkey.backedUp,
       createdAt: passkey.createdAt,
     })
     .from(passkey)
     .where(eq(passkey.userId, actor.id))
     .orderBy(asc(passkey.createdAt));
-  const state = actor.mfaState ?? {
+  const mfaState = actor.mfaState ?? {
     twoFactorEnabled: false,
     authenticator: false,
     passkeyCount: 0,
     hasPassword: false,
     providerAccounts: [],
   };
-  return {
-    twoFactorEnabled: state.twoFactorEnabled,
-    authenticatorSetUp: state.authenticator,
-    hasPassword: state.hasPassword,
-    passkeys,
-    mfaState: state,
-  };
+  return { passkeys, mfaState };
 }
 
 /**
@@ -97,7 +86,7 @@ export async function getSecurityOverview(
  * are offered (`windowOpeningMethods`): not GitHub next to a passkey or an
  * authenticator app, where it would confirm the session but allow no change.
  *
- * @param db - Database client.
+ * @param ctx - Service context.
  * @param userId - The signed-in user's ID.
  * @param mfaRole - Which MFA rules apply to them (see `mfaRoleOf`), or `null`.
  * @param options - Options.
@@ -105,12 +94,12 @@ export async function getSecurityOverview(
  * @returns The available methods.
  */
 export async function getStepUpMethods(
-  db: Database,
+  ctx: Pick<ServiceContext, 'db'>,
   userId: string,
   mfaRole: MfaRole | null,
   { forChange = false }: { forChange?: boolean } = {},
 ): Promise<StepUpMethods> {
-  const state = (await loadMfaStates(db, [userId])).get(userId);
+  const state = (await loadMfaStates(ctx.db, [userId])).get(userId);
   if (!state) {
     return NO_STEP_UP_METHODS;
   }

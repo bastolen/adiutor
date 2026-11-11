@@ -41,7 +41,7 @@ function databaseIdentity(url: URL): string {
  * @returns The PostgreSQL connection string for tests.
  * @throws {Error} If neither is set, or the result may not be a test database.
  */
-export function resolveTestDatabaseUrl({ explicit, base }: TestDatabaseSettings): string {
+function resolveTestDatabaseUrl({ explicit, base }: TestDatabaseSettings): string {
   const connection = explicit || base;
   if (!connection) {
     throw new Error('Set DATABASE_URL_TEST (or DATABASE_URL) to run database tests.');

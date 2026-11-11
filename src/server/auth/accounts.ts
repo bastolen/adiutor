@@ -123,15 +123,15 @@ export interface ConnectedProviderDetails extends ConnectedProvider {
 /**
  * Lists a user's connected provider accounts (not their password).
  *
- * @param db - Database client.
+ * @param ctx - Service context.
  * @param userId - The user.
  * @returns The connected accounts, oldest first.
  */
 export async function listConnectedProviders(
-  db: Database,
+  ctx: Pick<ServiceContext, 'db'>,
   userId: string,
 ): Promise<ConnectedProviderDetails[]> {
-  const rows = await db
+  const rows = await ctx.db
     .select({
       id: account.id,
       provider: account.providerId,

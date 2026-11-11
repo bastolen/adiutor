@@ -30,24 +30,28 @@ import {
 
 describe('stepUpMethods', () => {
   it('offers only the methods that count', () => {
-    expect(stepUpMethods(authenticatorApp, null)).toEqual({
+    expect(stepUpMethods(authenticatorApp, null, WITH_GITHUB)).toEqual({
       authenticator: true,
       email: false,
       passkey: false,
       providers: [],
     });
-    expect(stepUpMethods(emailCodes, null).email).toBe(true);
-    expect(stepUpMethods(emailCodes, 'manager').email).toBe(false);
-    expect(stepUpMethods({ ...bare, passkeyCount: 2 }, 'manager').passkey).toBe(true);
+    expect(stepUpMethods(emailCodes, null, WITH_GITHUB).email).toBe(true);
+    expect(stepUpMethods(emailCodes, 'manager', WITH_GITHUB).email).toBe(false);
+    expect(stepUpMethods({ ...bare, passkeyCount: 2 }, 'manager', WITH_GITHUB).passkey).toBe(true);
     // Each provider once, however many of its accounts have 2FA.
     expect(
-      stepUpMethods({ ...bare, providerAccounts: [githubWith2fa, { ...githubWith2fa }] }, null)
-        .providers,
+      stepUpMethods(
+        { ...bare, providerAccounts: [githubWith2fa, { ...githubWith2fa }] },
+        null,
+        WITH_GITHUB,
+      ).providers,
     ).toEqual(['github']);
     expect(
       stepUpMethods(
         { ...bare, providerAccounts: [{ providerId: 'github', mfaVerified: false }] },
         null,
+        WITH_GITHUB,
       ).providers,
     ).toEqual([]);
   });
@@ -86,21 +90,22 @@ describe('mayReverifyWith', () => {
 describe('canConfirmSessions', () => {
   it('counts every second step the step-up page offers, also GitHub next to a password', () => {
     const githubAndPassword: MfaState = { ...bare, providerAccounts: [githubWith2fa] };
-    expect(hasMfa(githubAndPassword, 'platform_admin')).toBe(false);
-    expect(canConfirmSessions(githubAndPassword, 'platform_admin')).toBe(true);
-    expect(canConfirmSessions(githubAndPassword, null)).toBe(true);
-    expect(canConfirmSessions(authenticatorApp, null)).toBe(true);
-    expect(canConfirmSessions({ ...bare, passkeyCount: 1 }, 'manager')).toBe(true);
-    expect(canConfirmSessions(emailCodes, 'support')).toBe(true);
+    expect(hasMfa(githubAndPassword, 'platform_admin', WITH_GITHUB)).toBe(false);
+    expect(canConfirmSessions(githubAndPassword, 'platform_admin', WITH_GITHUB)).toBe(true);
+    expect(canConfirmSessions(githubAndPassword, null, WITH_GITHUB)).toBe(true);
+    expect(canConfirmSessions(authenticatorApp, null, WITH_GITHUB)).toBe(true);
+    expect(canConfirmSessions({ ...bare, passkeyCount: 1 }, 'manager', WITH_GITHUB)).toBe(true);
+    expect(canConfirmSessions(emailCodes, 'support', WITH_GITHUB)).toBe(true);
     // Email codes don't count for Managers, and GitHub without 2FA isn't a second step.
-    expect(canConfirmSessions(emailCodes, 'manager')).toBe(false);
+    expect(canConfirmSessions(emailCodes, 'manager', WITH_GITHUB)).toBe(false);
     expect(
       canConfirmSessions(
         { ...bare, providerAccounts: [{ ...githubWith2fa, mfaVerified: false }] },
         null,
+        WITH_GITHUB,
       ),
     ).toBe(false);
-    expect(canConfirmSessions(bare, null)).toBe(false);
+    expect(canConfirmSessions(bare, null, WITH_GITHUB)).toBe(false);
   });
 });
 

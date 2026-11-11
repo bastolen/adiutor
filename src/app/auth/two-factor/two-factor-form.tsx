@@ -21,9 +21,8 @@ import { getSafeRedirectPath } from '@/lib/redirect';
 import authClient from '@/lib/sign-in/auth-client';
 import { authCodeText, authErrorText } from '@/lib/sign-in/auth-error-messages';
 import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
+import { parseTwoFactorMethod } from '@/lib/sign-in/two-factor-path';
 import verifyCode, { type CodeKind } from '@/lib/sign-in/verify-code';
-
-import { parseTwoFactorMethod } from './two-factor-path';
 
 /**
  * Asks for the second step: a code from the authenticator app (or a backup

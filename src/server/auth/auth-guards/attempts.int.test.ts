@@ -13,7 +13,7 @@ import {
   memberActor,
   staffActor,
 } from '../../../../tests/integration/helpers';
-import { clearFailedSignIns } from '../../rate-limit';
+import { clearFailedSignIns } from '../failed-sign-ins';
 import {
   countFailedSignIn,
   endEmailCodeCooldown,
@@ -31,10 +31,6 @@ import {
   sendCodesOverTime,
   waitForNextCode,
 } from './test-helpers';
-
-vi.mock('@/db', async (importOriginal) =>
-  (await import('../../../../tests/integration/app-modules')).default(await importOriginal()),
-);
 
 vi.mock('better-auth/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('better-auth/api')>()),

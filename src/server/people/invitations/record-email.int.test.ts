@@ -12,8 +12,8 @@ import {
   createStaffSettings,
   memberActor,
   setupTestContext,
-} from '../../../tests/integration/helpers';
-import { createSentInvitation } from './invitations';
+} from '../../../../tests/integration/helpers';
+import { createSentInvitation } from './record';
 
 vi.mock('@/emails/invitation', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/emails/invitation')>();

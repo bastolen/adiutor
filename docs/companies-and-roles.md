@@ -59,7 +59,10 @@ Admins and Managers who aren't members can still add themselves with any role, a
   [The last Admin, at the same moment](#staff-screens)).
 - **Authorization matrix:** `src/server/authorization-matrix.int.test.ts` checks every role against
   every service behind a server action, and the page loaders that check roles, on their own
-  company, another company, the staff and another user, down to the kind of refusal.
+  company, another company, the staff and another user, down to the kind of refusal. The own-account
+  services that take an ID (`revokeOwnSession`, `confirmConnectedProvider`) are tried with another
+  user's ID; password changes, which need a second step, are covered in
+  `src/server/auth/accounts.int.test.ts`.
 - **Protected by default:** `src/proxy.ts` sends signed-out visitors of every page to `/auth`, except
   the public `/auth`, `/invite`, `/join`, `/setup` and `/api/auth` paths and the health check (`/api/health`). Pages and server actions still check
   the session and permissions on the server through `src/server/authz.ts`. Someone without the
@@ -149,7 +152,7 @@ Admins and Managers who aren't members can still add themselves with any role, a
   too (two Admins deactivated or deleted together, one deactivated while the other is demoted or
   removed, two staff Admins demoting each other). Everything that can take away a company's last
   active Admin locks that company's row first (`changeMembership` in
-  `src/server/people/members.ts`, `soleAdminOf` in `src/server/people/user-admin.ts`), and the
+  `src/server/people/members.ts`, `soleAdminOf` in `src/server/people/user-admin/sole-admin.ts`), and the
   staff equivalents lock the staff Admins' rows (`setStaffRole` in `src/server/people/staff.ts`),
   so they take turns and count the Admins again once they hold the lock: the second one sees the
   first and is refused with the usual last-Admin message. In the rare case where two changes still
@@ -162,11 +165,16 @@ Admins and Managers who aren't members can still add themselves with any role, a
   revoking invite links, adding members and registering companies (`assertStillManages` in
   `src/server/access.ts`), and changing staff or company roles and removing people (`setStaffRole`
   and `changeMembership` work the rights out from the rows they lock, with the same permission rules
-  as when the request started, `getGlobalPermissions` and `getPermissions`, never by comparing
+  as when the request started, `getGlobalPermissions` and `getPermissions` (both in `src/lib/authz/permissions.ts`), never by comparing
   roles). So someone demoted, removed or
   deactivated while their request was under way is refused (a demoted company Admin's queued "make
-  me Admin" included), and whatever they created just before is revoked with the rest (see
-  [Deactivated accounts](authentication.md#deactivated-accounts)).
+  me Admin" included), and whatever they created just before is revoked with the rest. The
+  invitations and invite links someone sent are revoked whenever they or anyone else take away
+  their right to manage a company or the staff: a role change, a removal, a deactivation or a
+  deletion (`revokeInvitesWithoutManager`), so a former Admin keeps no way back in. A link of
+  theirs claimed at that very moment leaves no open invitation either: the claim locks the link's
+  creator before the link, so it takes turns with the change (see
+  [Lock order](security-measures.md#lock-order)).
 
 - **Last active:** `getOptionalActor()` records when each user last did something, at most once a
   minute (`touchLastActive` in `src/server/actor.ts`), and signing in sets it too. It's written after
@@ -213,11 +221,8 @@ staff page also recreates the row. A fresh setup itself isn't recorded in the au
 - **By email:** company admins (and staff Admins and Managers) invite people from a company's
   Members page, and Admins invite staff from the staff page. Staff add a company
   (`/admin/companies/new`) by naming it and inviting its first Admin. The invitation, its resend and
-  its reminder go out in the form's **Email language** (an invitee who already has an account gets
-  their own). On the Members and staff pages it starts as the sender's language; Add company
-  starts on Default, Adiutor's default language. Add user's welcome email works the same way,
-  starting on Default too: a new account on Default keeps following Adiutor's default language
-  until its user chooses one, and one given a language keeps that. The link works once and
+  its reminder go out in the form's Email language (see [Which language](email.md#which-language)).
+  The link works once and
   expires in 7 days. Inviting an address again, or resending, replaces its open invitation, so
   only the newest link works; two requests at the same moment take turns, and the newest wins.
 - **By invite link:** a single-use link for a role, valid for 1, 7 or 30 days. Whoever opens it
@@ -247,10 +252,6 @@ staff page also recreates the row. A fresh setup itself isn't recorded in the au
   `pnpm jobs:run`. Addresses that are already members of the company (or, for staff invitations,
   on the staff) get none: they joined some other way meanwhile. A reminder that can't be sent keeps
   the old link working, and the next run tries again.
-- **Language:** an invitation remembers the language it was sent in (`invitation.locale`, the
-  form's Email language), and its resends and reminder use it, unless the address has an account
-  with a saved language (`user.locale`), which wins. An invite link's invitation takes the language of
-  whoever opened the link. See [Which language](email.md#which-language).
 - **Accepting** (`/invite/…`): signed in with the invited address, you join directly. Signed out,
   you can sign in or create an account (name and password). Joining as staff sets the platform role
   (someone who's already staff keeps theirs) and opens the dashboard.
@@ -304,6 +305,3 @@ Whether an email address already has an account is only ever shown to staff
 (`mayRevealAccountExistence`). Company admins always see the same
 "Invitation sent" message, whatever the address; someone who's already a member gets an "already a
 member" email instead.
-
-Deactivated accounts and what happens to the invitations someone sent when they lose their role
-are described under [Deactivated accounts](authentication.md#deactivated-accounts).

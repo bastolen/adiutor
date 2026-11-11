@@ -7,9 +7,9 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { user } from '@/db/schema';
 import { signInMethodFromPath } from '@/lib/authz/mfa';
+import { normalizeEmail } from '@/lib/email-address';
 
 import { recordEvent } from '../../audit';
-import { normalizeEmail } from '../auth-guards';
 import { type AuthHookContext, safely, auditContext } from './hook-context';
 import rememberLanguage from './language';
 import { recordSignIn } from './session-hooks';

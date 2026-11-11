@@ -3,7 +3,7 @@
  * companies from `fixtures.ts`. Looking at or changing the database during a
  * test is `db.ts`.
  */
-import { hashPassword, symmetricEncrypt } from 'better-auth/crypto';
+import { hashPassword } from 'better-auth/crypto';
 import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Client } from 'pg';
@@ -12,6 +12,7 @@ import * as schema from '../../src/db/schema';
 import type { CompanyRole, PlatformRole } from '../../src/lib/authz/roles';
 import { firstRow } from '../../src/lib/defined';
 import { generateToken, hashToken } from '../../src/lib/sign-in/tokens';
+import { storeAuthenticator } from '../../tests/auth/authenticator';
 import emptyDatabase from '../../tests/database/empty-database';
 import {
   CLIENT_WATCHER,
@@ -130,18 +131,12 @@ export default async function seedTestDatabase(databaseUrl: string): Promise<voi
     const addAuthenticator = async (person: { email: string; totpSecret: string }) => {
       const found = firstRow(
         await db
-          .update(schema.user)
-          .set({ twoFactorEnabled: true })
-          .where(eq(schema.user.email, person.email))
-          .returning({ id: schema.user.id }),
+          .select({ id: schema.user.id })
+          .from(schema.user)
+          .where(eq(schema.user.email, person.email)),
         'the user',
       );
-      await db.insert(schema.twoFactor).values({
-        userId: found.id,
-        secret: await symmetricEncrypt({ key: E2E_AUTH_SECRET, data: person.totpSecret }),
-        backupCodes: await symmetricEncrypt({ key: E2E_AUTH_SECRET, data: JSON.stringify([]) }),
-        verified: true,
-      });
+      await storeAuthenticator(db, found.id, person.totpSecret, E2E_AUTH_SECRET);
     };
 
     await db.insert(schema.staffSettings).values({ name: STAFF_NAME });

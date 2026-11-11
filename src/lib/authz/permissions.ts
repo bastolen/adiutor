@@ -191,3 +191,48 @@ const VIEW_ONLY_STAFF_ROLES: readonly PlatformRole[] = ['finance', 'support'];
 export function mayUseInviteLinks(platformRole: PlatformRole | null): boolean {
   return platformRole === null || !VIEW_ONLY_STAFF_ROLES.includes(platformRole);
 }
+
+/**
+ * A user's permissions that aren't about one company (e.g. registering
+ * companies), from their staff role: the acting user as the request loaded
+ * them, or their row as a transaction locked it (to check their rights
+ * again with the same rules, e.g. in `setStaffRole`).
+ *
+ * @param subject - The acting user, or anything with their staff role.
+ * @param subject.platformRole - Their staff role, or `null` for none.
+ * @returns The permissions.
+ */
+export function getGlobalPermissions(subject: {
+  platformRole: PlatformRole | null;
+}): Set<Permission> {
+  return getPermissions({ platformRole: subject.platformRole, companyRole: null, company: null });
+}
+
+/**
+ * What staff may do in any active company (without being a member),
+ * e.g. to decide whether to show membership controls on the user detail page.
+ *
+ * @param subject - The acting user, or anything with their staff role.
+ * @param subject.platformRole - Their staff role, or `null` for none.
+ * @returns The permissions; empty for non-staff.
+ */
+export function getStaffPermissionsInCompanies(subject: {
+  platformRole: PlatformRole | null;
+}): Set<Permission> {
+  return getPermissions({
+    platformRole: subject.platformRole,
+    companyRole: null,
+    company: { deactivated: false },
+  });
+}
+
+/**
+ * The permission that manages a target's people: `staff:manage` for the staff,
+ * `members:manage` in a company (what `TargetAccess.canManage` stands for).
+ *
+ * @param companyId - The company, or `null` for staff.
+ * @returns The permission.
+ */
+export function managePermission(companyId: string | null): Permission {
+  return companyId === null ? 'staff:manage' : 'members:manage';
+}

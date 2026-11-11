@@ -6,13 +6,9 @@
  * working.
  */
 
-import { randomUUID } from 'node:crypto';
-
 import { type Page } from '@playwright/test';
 
-import getTestDatabaseUrl from '../tests/database/database-url';
 import expectAccessible from './support/axe';
-import { findCompanyId } from './support/db';
 import {
   COMPANY_NAME,
   COMPANY_SLUG,
@@ -24,6 +20,7 @@ import {
 import {
   createAccountFromInvitation,
   createInviteLink,
+  freshAddress,
   signIn,
   toasts,
   useOwnClientIp,
@@ -38,8 +35,7 @@ import { expect, test } from './support/test';
  * @param slug - The company's URL name.
  */
 async function openMembers(page: Page, slug: string): Promise<void> {
-  const companyId = await findCompanyId(getTestDatabaseUrl(), slug);
-  await page.goto(`/companies/${companyId}/members`);
+  await page.goto(`/companies/${slug}/members`);
 }
 
 test("a Support staff member sees why they can't use an invite link", async ({ page, browser }) => {
@@ -91,7 +87,7 @@ test("claiming a link with an address an Admin invited keeps the Admin's invitat
   page,
   browser,
 }) => {
-  const email = `invited-${randomUUID().slice(0, 8)}@adiutor.test`;
+  const email = freshAddress('invited');
 
   // A staff Admin invites the address as Client.
   await signIn(page, PLATFORM_ADMIN);

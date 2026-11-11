@@ -13,7 +13,7 @@ import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
 import TextField from '@/components/ui/text-field';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
-import { MIN_PASSWORD_LENGTH } from '@/lib/input-rules';
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '@/lib/input-rules';
 
 import { passwordAction } from './actions';
 
@@ -27,14 +27,14 @@ import { passwordAction } from './actions';
  */
 export default function PasswordForm({
   hasPassword,
-  blockedReason = null,
+  blockedReason,
 }: {
   hasPassword: boolean;
   /**
    * Why a first password can't be set (it would take away the MFA the user's
    * role requires, see `mfaDowngradeBlocks`), or `null` when it can.
    */
-  blockedReason?: string | null;
+  blockedReason: string | null;
 }) {
   const t = useTranslations('account');
   const [result, formAction, pending, onSubmit] = useTransientActionState(passwordAction, null);
@@ -76,6 +76,7 @@ export default function PasswordForm({
         name="newPassword"
         autoComplete="new-password"
         minLength={MIN_PASSWORD_LENGTH}
+        maxLength={MAX_PASSWORD_LENGTH}
         description={t('security.password.hint', { min: MIN_PASSWORD_LENGTH })}
         required
       />
@@ -85,6 +86,7 @@ export default function PasswordForm({
         name="confirmation"
         autoComplete="new-password"
         minLength={MIN_PASSWORD_LENGTH}
+        maxLength={MAX_PASSWORD_LENGTH}
         required
       />
       <div>

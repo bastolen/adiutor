@@ -3,7 +3,7 @@
  * authenticator and sign-in link steps, a signed-in Admin's cookies for specs
  * that only read, and steps on the staff screens that more than one spec uses.
  */
-import { randomInt } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
 
 import {
   type Browser,
@@ -18,6 +18,17 @@ import { codeForSecret, codeForSetupKey } from './totp';
 
 /** How long Better Auth's sign-in rate limit window lasts (3 attempts per 10 seconds). */
 const RATE_LIMIT_WINDOW_MS = 10_000;
+
+/**
+ * A fresh address for a test's own account or invitation, unique per call
+ * (an address may have only one open invitation per company).
+ *
+ * @param prefix - What the address is for.
+ * @returns The address, on the test domain.
+ */
+export function freshAddress(prefix: string): string {
+  return `${prefix}-${randomUUID().slice(0, 8)}@adiutor.test`;
+}
 
 /**
  * A random client IP address (from the documentation range 198.51.100.0/24),

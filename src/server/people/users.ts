@@ -6,7 +6,7 @@
 import { and, asc, eq, ilike, inArray, isNotNull, isNull, or } from 'drizzle-orm';
 
 import type { Database } from '@/db';
-import { account, company, membership, user } from '@/db/schema';
+import { company, membership, user } from '@/db/schema';
 import { mfaRoleOf, mfaStatus, type MfaStatus, unavailableProviderMfa } from '@/lib/authz/mfa';
 import type { PlatformRole } from '@/lib/authz/roles';
 import { defined } from '@/lib/defined';
@@ -17,16 +17,22 @@ import { type PeopleSort, USERS_TABLE } from '@/lib/tables/tables';
 
 import { assertPermission, getGlobalPermissions } from '../access';
 import type { Actor } from '../actor';
-import { loadActiveCompanyAdminIds, loadMfaRoles, loadMfaStates } from '../auth/mfa-state';
+import {
+  loadActiveCompanyAdminIds,
+  loadMfaRoles,
+  loadMfaStates,
+  loadUsersWithProviderMfa,
+} from '../auth/mfa-state';
 import type { ServiceContext } from '../context';
 import { paginate, peopleOrder, slicePage } from '../pagination';
 import containsPattern from '../search';
 
 /**
- * Ways to narrow the users list: everyone, only the staff, only people who
- * aren't on it, accounts without MFA, or deactivated accounts.
+ * Ways to narrow the users list, in the order the page offers them:
+ * everyone, only the staff, only people who aren't on it, accounts without
+ * MFA, or deactivated accounts.
  */
-const USER_FILTERS = ['all', 'staff', 'not_staff', 'without_mfa', 'deactivated'] as const;
+export const USER_FILTERS = ['all', 'staff', 'not_staff', 'without_mfa', 'deactivated'] as const;
 
 /** One of {@link USER_FILTERS}. */
 export type UserFilter = (typeof USER_FILTERS)[number];
@@ -283,19 +289,7 @@ export async function getProviderMfaWarning(
   if (missing.length === 0) {
     return null;
   }
-  const rows = await ctx.db
-    .selectDistinct({ userId: account.userId })
-    .from(account)
-    .innerJoin(user, eq(user.id, account.userId))
-    .where(
-      and(
-        inArray(account.providerId, missing),
-        eq(account.mfaVerified, true),
-        eq(account.confirmed, true),
-        isNull(user.deactivatedAt),
-      ),
-    );
-  const userIds = rows.map((row) => row.userId);
+  const userIds = await loadUsersWithProviderMfa(ctx.db, missing);
   if (userIds.length === 0) {
     return null;
   }

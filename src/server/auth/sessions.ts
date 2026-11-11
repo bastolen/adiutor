@@ -11,6 +11,7 @@ import { and, eq, ne } from 'drizzle-orm';
 
 import type { DatabaseOrTransaction } from '@/db';
 import { session, user } from '@/db/schema';
+import { normalizeEmail } from '@/lib/email-address';
 
 import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
@@ -140,7 +141,7 @@ export async function revokeAllSessions(
   ctx: Pick<ServiceContext, 'db' | 'sendEmail' | 'baseUrl'>,
   options: { email?: string } = {},
 ): Promise<RevokeAllResult> {
-  const email = options.email?.trim().toLowerCase();
+  const email = normalizeEmail(options.email);
   if (options.email !== undefined && !email) {
     throw new ServiceError('invalid', 'errors.sessions.emailRequired');
   }

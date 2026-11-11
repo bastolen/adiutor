@@ -10,7 +10,6 @@ import {
   formatReference,
   parseErrorReference,
   REFERENCE_ALPHABET,
-  REFERENCE_LENGTH,
   referenceFromDigest,
 } from './error-reference';
 
@@ -20,7 +19,6 @@ const REFERENCE_PATTERN = /^[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$/;
 describe('formatReference', () => {
   it('writes eight characters in two groups of four', () => {
     expect(formatReference([...'7KQ2M9XD'])).toBe('7KQ2-M9XD');
-    expect(REFERENCE_LENGTH).toBe(8);
   });
 
   it('uses an alphabet without characters that look alike', () => {

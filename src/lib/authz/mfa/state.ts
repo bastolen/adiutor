@@ -30,9 +30,6 @@ export interface MfaState {
  */
 export type ProviderAvailability = readonly MfaProvider[];
 
-/** Every provider that can prove MFA, as if all were configured: the rules' default. */
-export const ALL_MFA_PROVIDERS: ProviderAvailability = MFA_PROVIDERS;
-
 /**
  * Checks whether a provider account can give MFA here: its provider can
  * prove MFA, is configured, and said the account has it.
@@ -40,12 +37,12 @@ export const ALL_MFA_PROVIDERS: ProviderAvailability = MFA_PROVIDERS;
  * @param account - The provider account.
  * @param account.providerId - Its provider.
  * @param account.mfaVerified - Whether its provider said it has MFA.
- * @param available - The configured providers that can prove MFA (all of them by default).
+ * @param available - The configured providers that can prove MFA.
  * @returns Whether it counts.
  */
 export function givesMfa(
   account: { providerId: string; mfaVerified: boolean },
-  available: ProviderAvailability = ALL_MFA_PROVIDERS,
+  available: ProviderAvailability,
 ): boolean {
   return account.mfaVerified && available.includes(account.providerId as MfaProvider);
 }
@@ -63,13 +60,13 @@ export function givesMfa(
  *
  * @param state - The account's setup.
  * @param mfaRole - Which MFA rules apply to the user (see {@link mfaRoleOf}), or `null`.
- * @param available - The configured providers that can prove MFA (all of them by default).
+ * @param available - The configured providers that can prove MFA.
  * @returns Whether it counts as protected.
  */
 export function hasMfa(
   state: MfaState,
-  mfaRole: MfaRole | null = null,
-  available: ProviderAvailability = ALL_MFA_PROVIDERS,
+  mfaRole: MfaRole | null,
+  available: ProviderAvailability,
 ): boolean {
   const { twoFactorEnabled, authenticator, passkeyCount, hasPassword, providerAccounts } = state;
   if (passkeyCount > 0) {
@@ -125,7 +122,7 @@ export function unavailableProviderMfa(
   if (!requiresMfa(mfaRole) || hasMfa(state, mfaRole, available)) {
     return [];
   }
-  if (!hasMfa(state, mfaRole, ALL_MFA_PROVIDERS)) {
+  if (!hasMfa(state, mfaRole, MFA_PROVIDERS)) {
     return [];
   }
   return MFA_PROVIDERS.filter(
@@ -149,13 +146,13 @@ export type MfaStatus = 'protected' | 'optional' | 'required';
  *
  * @param state - The account's setup.
  * @param mfaRole - Which MFA rules apply to the user (see {@link mfaRoleOf}), or `null`.
- * @param available - The configured providers that can prove MFA (all of them by default).
+ * @param available - The configured providers that can prove MFA.
  * @returns The status.
  */
 export function mfaStatus(
   state: MfaState,
   mfaRole: MfaRole | null,
-  available: ProviderAvailability = ALL_MFA_PROVIDERS,
+  available: ProviderAvailability,
 ): MfaStatus {
   if (hasMfa(state, mfaRole, available)) {
     return 'protected';

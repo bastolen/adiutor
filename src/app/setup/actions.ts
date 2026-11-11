@@ -10,6 +10,7 @@ import type { ActionResult } from '@/lib/action-result';
 import { auth } from '@/lib/auth';
 import field from '@/lib/form-data';
 import requestLocale from '@/lib/i18n/request-locale';
+import { DEFAULT_SIGNED_IN_PATH } from '@/lib/redirect';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
 import { setUpPlatform } from '@/server/setup';
@@ -31,7 +32,7 @@ export default async function setupAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const password = field(formData, 'password');
-    const result = await setUpPlatform(appContext.db, {
+    const result = await setUpPlatform(appContext, {
       staffName: field(formData, 'staffName'),
       defaultLocale: field(formData, 'defaultLocale'),
       adminLocale: await requestLocale(),
@@ -43,6 +44,6 @@ export default async function setupAction(
       body: { email: result.email, password },
       headers: await headers(),
     });
-    redirect('/dashboard');
+    redirect(DEFAULT_SIGNED_IN_PATH);
   });
 }

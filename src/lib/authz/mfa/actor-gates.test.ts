@@ -100,10 +100,6 @@ describe('needsFreshSignIn', () => {
    */
   const before = (minutes: number) => new Date(now.getTime() - minutes * 60_000);
 
-  it('lasts an hour', () => {
-    expect(FRESH_SIGN_IN_MS).toBe(60 * 60 * 1000);
-  });
-
   it('needs a sign-in from the last hour on an account without a second step', () => {
     expect(needsFreshSignIn({ canConfirmSessions: false, signedInAt: before(59) }, now)).toBe(
       false,

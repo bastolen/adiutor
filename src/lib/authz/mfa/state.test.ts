@@ -4,9 +4,8 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { mfaDowngradeBlocks, wouldRemoveRequiredMfa } from './sign-in-changes';
+import { mfaDowngradeBlocks } from './sign-in-changes';
 import {
-  ALL_MFA_PROVIDERS,
   givesMfa,
   hasMfa,
   mfaGivingProviders,
@@ -32,34 +31,44 @@ import {
 
 describe('hasMfa', () => {
   it('counts an authenticator app, any passkey, or email codes', () => {
-    expect(hasMfa(authenticatorApp)).toBe(true);
-    expect(hasMfa({ ...bare, passkeyCount: 1 })).toBe(true);
-    expect(hasMfa(emailCodes)).toBe(true);
-    expect(hasMfa(bare)).toBe(false);
+    expect(hasMfa(authenticatorApp, null, WITH_GITHUB)).toBe(true);
+    expect(hasMfa({ ...bare, passkeyCount: 1 }, null, WITH_GITHUB)).toBe(true);
+    expect(hasMfa(emailCodes, null, WITH_GITHUB)).toBe(true);
+    expect(hasMfa(bare, null, WITH_GITHUB)).toBe(false);
   });
 
   it("doesn't count email codes for roles that require MFA", () => {
-    expect(hasMfa(emailCodes, 'manager')).toBe(false);
-    expect(hasMfa(emailCodes, 'platform_admin')).toBe(false);
-    expect(hasMfa(emailCodes, 'support')).toBe(true);
-    expect(hasMfa(authenticatorApp, 'manager')).toBe(true);
-    expect(hasMfa({ ...emailCodes, passkeyCount: 1 }, 'manager')).toBe(true);
+    expect(hasMfa(emailCodes, 'manager', WITH_GITHUB)).toBe(false);
+    expect(hasMfa(emailCodes, 'platform_admin', WITH_GITHUB)).toBe(false);
+    expect(hasMfa(emailCodes, 'support', WITH_GITHUB)).toBe(true);
+    expect(hasMfa(authenticatorApp, 'manager', WITH_GITHUB)).toBe(true);
+    expect(hasMfa({ ...emailCodes, passkeyCount: 1 }, 'manager', WITH_GITHUB)).toBe(true);
   });
 
   it('counts provider MFA only without a password and when every provider account has it', () => {
     const googleWithout = { providerId: 'google', mfaVerified: false };
-    expect(hasMfa({ ...bare, hasPassword: false, providerAccounts: [githubWith2fa] })).toBe(true);
-    expect(hasMfa({ ...bare, hasPassword: true, providerAccounts: [githubWith2fa] })).toBe(false);
     expect(
-      hasMfa({ ...bare, hasPassword: false, providerAccounts: [githubWith2fa, googleWithout] }),
+      hasMfa({ ...bare, hasPassword: false, providerAccounts: [githubWith2fa] }, null, WITH_GITHUB),
+    ).toBe(true);
+    expect(
+      hasMfa({ ...bare, hasPassword: true, providerAccounts: [githubWith2fa] }, null, WITH_GITHUB),
     ).toBe(false);
-    expect(hasMfa({ ...bare, hasPassword: false, providerAccounts: [] })).toBe(false);
+    expect(
+      hasMfa(
+        { ...bare, hasPassword: false, providerAccounts: [githubWith2fa, googleWithout] },
+        null,
+        WITH_GITHUB,
+      ),
+    ).toBe(false);
+    expect(hasMfa({ ...bare, hasPassword: false, providerAccounts: [] }, null, WITH_GITHUB)).toBe(
+      false,
+    );
   });
 
   it('gives the matching status', () => {
-    expect(mfaStatus(emailCodes, 'manager')).toBe('required');
-    expect(mfaStatus(emailCodes, null)).toBe('protected');
-    expect(mfaStatus(bare, null)).toBe('optional');
+    expect(mfaStatus(emailCodes, 'manager', WITH_GITHUB)).toBe('required');
+    expect(mfaStatus(emailCodes, null, WITH_GITHUB)).toBe('protected');
+    expect(mfaStatus(bare, null, WITH_GITHUB)).toBe('optional');
   });
 });
 
@@ -96,7 +105,7 @@ describe('without GitHub sign-in configured', () => {
     [...REQUIRED_ROLES, ...OPTIONAL_ROLES].forEach((role) => {
       setups.forEach((state) => {
         expect(hasMfa(state, role, WITHOUT_GITHUB)).toBe(hasMfa(state, role, WITH_GITHUB));
-        expect(mfaStatus(state, role, WITHOUT_GITHUB)).toBe(mfaStatus(state, role));
+        expect(mfaStatus(state, role, WITHOUT_GITHUB)).toBe(mfaStatus(state, role, WITH_GITHUB));
       });
     });
     expect(hasMfa({ ...githubOnly, passkeyCount: 1 }, 'manager', WITHOUT_GITHUB)).toBe(true);
@@ -121,19 +130,6 @@ describe('without GitHub sign-in configured', () => {
       expect(refusedChanges(state, role, WITHOUT_GITHUB)).toEqual([]);
       expect(mfaDowngradeBlocks(state, role, WITHOUT_GITHUB)).toEqual(expectedBlocks([]));
     });
-  });
-
-  it('treats every provider that can prove MFA as configured when not told', () => {
-    expect(ALL_MFA_PROVIDERS).toEqual(['github']);
-    expect(hasMfa(githubOnly, 'manager')).toBe(true);
-    expect(mfaStatus(githubOnly, 'manager')).toBe('protected');
-    expect(wouldRemoveRequiredMfa(githubOnly, 'manager', { kind: 'set_password' })).toBe(true);
-    expect(mfaDowngradeBlocks(githubOnly, 'manager')).toEqual(
-      mfaDowngradeBlocks(githubOnly, 'manager', WITH_GITHUB),
-    );
-    expect(mfaDowngradeBlocks(githubOnly, 'manager')).toEqual(
-      expectedBlocks(['disconnect_provider', 'set_password', 'connect_provider']),
-    );
   });
 });
 
@@ -199,7 +195,6 @@ describe('ProviderAvailability', () => {
 describe('givesMfa', () => {
   it('needs a configured provider that can prove MFA and said the account has it', () => {
     expect(givesMfa(githubWith2fa, WITH_GITHUB)).toBe(true);
-    expect(givesMfa(githubWith2fa)).toBe(true);
     expect(givesMfa(githubWith2fa, WITHOUT_GITHUB)).toBe(false);
     expect(givesMfa({ ...githubWith2fa, mfaVerified: false }, WITH_GITHUB)).toBe(false);
     expect(givesMfa({ providerId: 'google', mfaVerified: true }, WITH_GITHUB)).toBe(false);

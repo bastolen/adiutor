@@ -36,9 +36,8 @@ import {
   REVERIFY_HINT,
 } from '@/lib/sign-in/oauth-providers';
 import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
+import type { TwoFactorMethod } from '@/lib/sign-in/two-factor-path';
 import verifyCode, { type CodeKind } from '@/lib/sign-in/verify-code';
-
-import type { TwoFactorMethod } from '../two-factor/two-factor-path';
 
 /**
  * Why the session needs confirming, as the `reason` of `auth.stepUp.reason`.

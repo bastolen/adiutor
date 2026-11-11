@@ -39,6 +39,8 @@ export default defineConfig({
           include: ['src/**/*.int.test.ts'],
           /** Creates and migrates the test database once per run. */
           globalSetup: ['./tests/integration/global-setup.ts'],
+          /** Points the app's `@/db` module at the test database in every file. */
+          setupFiles: ['./tests/integration/setup.ts'],
           /** Tests share one database, so files run one at a time. */
           fileParallelism: false,
           testTimeout: 15_000,

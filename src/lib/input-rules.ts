@@ -8,6 +8,9 @@
 /** The minimum length of a new password (`passwordSchema`, and Better Auth's `minPasswordLength`). */
 export const MIN_PASSWORD_LENGTH = 12;
 
+/** The maximum length of a new password (`passwordSchema`, Better Auth's `maxPasswordLength` and the password fields' `maxLength`). */
+export const MAX_PASSWORD_LENGTH = 128;
+
 /** The longest passkey name (`passkeyNameSchema`, and the name field on the Security page). */
 export const PASSKEY_NAME_MAX_LENGTH = 64;
 
@@ -22,6 +25,15 @@ export const NAME_MAX_LENGTH = 100;
 
 /** The longest URL name (`slugSchema`, `slugify`, and the URL name field's `maxLength`). */
 export const SLUG_MAX_LENGTH = 60;
+
+/** The longest error class name that is reported or stored (also the digest and route path of an error). */
+export const ERROR_NAME_MAX_LENGTH = 100;
+
+/** The longest error message that is reported or stored (`reportErrorAction` and `recordAppError`). */
+export const ERROR_MESSAGE_MAX_LENGTH = 500;
+
+/** The longest page path that is reported or stored (`reportErrorAction` and `recordAppError`). */
+export const ERROR_PATH_MAX_LENGTH = 300;
 
 /**
  * Turns a company name into a slug suggestion, e.g. "Adiutor B.V." → "adiutor-b-v".

@@ -20,6 +20,34 @@ import { hasStrongerStepThanProvider } from './step-up';
 export type MfaMethod =
   'authenticator' | 'email_code' | 'backup_code' | 'passkey' | 'trusted_device' | MfaProvider;
 
+/** A session's MFA facts, as the rules read them. */
+export interface SessionMfa {
+  /** Whether its sign-in, or a later step-up, had a second factor. */
+  mfaVerified: boolean;
+  /** Which second factor, if known. */
+  mfaMethod: string | null;
+  /** When it was proven, if known (Better Auth may pass a string). */
+  mfaVerifiedAt: Date | string | null;
+}
+
+/** A session's MFA facts as a reader gets them: any may be missing or `null`. */
+export type SessionMfaInput = { [Key in keyof SessionMfa]?: SessionMfa[Key] | null };
+
+/**
+ * Normalizes a session's MFA facts as a reader gets them (from Better Auth,
+ * a hook or a query), where any may be missing, into what the rules take.
+ *
+ * @param raw - The session, or just its MFA fields.
+ * @returns The facts, with a missing `mfaVerified` as `false` and missing others as `null`.
+ */
+export function sessionMfaOf(raw: SessionMfaInput): SessionMfa {
+  return {
+    mfaVerified: raw.mfaVerified ?? false,
+    mfaMethod: raw.mfaMethod ?? null,
+    mfaVerifiedAt: raw.mfaVerifiedAt ?? null,
+  };
+}
+
 /** The second-factor method of each Better Auth endpoint that proves one. */
 const MFA_METHOD_PATHS: Record<string, MfaMethod> = {
   '/two-factor/verify-totp': 'authenticator',
@@ -64,7 +92,7 @@ const STRONG_METHODS: readonly MfaMethod[] = [
  * @returns Whether it counts as verified.
  */
 export function isSessionMfaVerified(
-  session: { mfaVerified: boolean; mfaMethod: string | null },
+  session: Pick<SessionMfa, 'mfaVerified' | 'mfaMethod'>,
   mfaRole: MfaRole | null,
 ): boolean {
   if (!session.mfaVerified) {
@@ -104,7 +132,7 @@ export const RECENT_MFA_MS = 15 * 60 * 1000;
  * @returns The end of that window, or `null` when the session has no confirmation.
  */
 export function mfaConfirmedUntil(
-  session: { mfaVerified: boolean; mfaMethod: string | null; mfaVerifiedAt: Date | string | null },
+  session: SessionMfa,
   mfaRole: MfaRole | null,
   state: MfaState,
 ): Date | null {

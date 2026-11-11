@@ -31,9 +31,6 @@ import { ACCOUNT_DEACTIVATED } from '@/lib/sign-in/sign-in-refusals';
 
 import { createUser, setupTestContext } from '../../../tests/integration/helpers';
 
-vi.mock('@/db', async (importOriginal) =>
-  (await import('../../../tests/integration/app-modules')).default(await importOriginal()),
-);
 vi.mock('@/lib/email', () => ({ sendEmail: vi.fn() }));
 
 const { db } = setupTestContext();

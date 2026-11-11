@@ -9,7 +9,8 @@ import { describe, expect, it } from 'vitest';
 import { account, rateLimitBucket } from '@/db/schema';
 
 import { createUser, setupTestContext } from '../../../tests/integration/helpers';
-import { failedSignInsKey, hitRateLimit } from '../rate-limit';
+import { hitRateLimit } from '../rate-limit';
+import { failedSignInsKey } from './failed-sign-ins';
 import addPasswordCredential from './password-credential';
 
 const { db } = setupTestContext();

@@ -4,20 +4,18 @@
  */
 'use client';
 
-import { ChevronsUpDown, LogOut, Palette, UserRound } from 'lucide-react';
+import { ChevronsUpDown, LogOut, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
-import { THEME_ICONS } from '@/components/theme/theme-options';
+import ThemeMenuRow from '@/components/theme/theme-menu-row';
 import useThemePreference from '@/components/theme/use-theme-preference';
 import Avatar from '@/components/ui/avatar';
 import {
   MenuContent,
-  MenuIconRadioItem,
   MenuItem,
   MenuLabel,
-  MenuRadioRow,
   MenuRoot,
   MenuSeparator,
   MenuTrigger,
@@ -26,7 +24,6 @@ import { focusRing } from '@/components/ui/styles';
 import cn from '@/lib/cn';
 import displayName from '@/lib/display-name';
 import loadAuthClient from '@/lib/sign-in/load-auth-client';
-import { isThemePreference, THEME_PREFERENCES, type ThemePreference } from '@/lib/theme';
 
 /**
  * Props for {@link AccountMenu}.
@@ -61,15 +58,9 @@ interface AccountMenuProps {
  */
 export default function AccountMenu({ name, email }: AccountMenuProps) {
   const t = useTranslations('navigation');
-  const tCommon = useTranslations('common');
   const router = useRouter();
   const { preference, setPreference } = useThemePreference();
   const shownName = displayName({ name, email });
-  const themeLabels: Record<ThemePreference, string> = {
-    system: tCommon('theme.system'),
-    light: tCommon('theme.light'),
-    dark: tCommon('theme.dark'),
-  };
 
   /** Ends the session, then loads the sign-in page with a fresh cache. */
   const signOut = async () => {
@@ -113,25 +104,7 @@ export default function AccountMenu({ name, email }: AccountMenuProps) {
           </Link>
         </MenuItem>
         <MenuSeparator />
-        <MenuRadioRow
-          label={tCommon('theme.label')}
-          icon={Palette}
-          value={preference}
-          onValueChange={(value) => {
-            if (isThemePreference(value)) {
-              setPreference(value);
-            }
-          }}
-        >
-          {THEME_PREFERENCES.map((option) => (
-            <MenuIconRadioItem
-              key={option}
-              value={option}
-              label={themeLabels[option]}
-              icon={THEME_ICONS[option]}
-            />
-          ))}
-        </MenuRadioRow>
+        <ThemeMenuRow preference={preference} onChange={setPreference} />
         <MenuSeparator />
         <MenuItem onSelect={signOut}>
           <LogOut aria-hidden="true" />

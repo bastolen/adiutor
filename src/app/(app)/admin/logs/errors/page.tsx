@@ -9,10 +9,11 @@
 import { SearchX, ShieldCheck } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { Fragment, type ReactNode, Suspense } from 'react';
+import { Fragment, Suspense } from 'react';
 
 import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
+import { DescriptionList, DescriptionRow } from '@/components/ui/description-list';
 import EmptyState from '@/components/ui/empty-state';
 import Pagination from '@/components/ui/pagination';
 import RelativeTime from '@/components/ui/relative-time';
@@ -23,8 +24,9 @@ import { Table, Td, Th, Tr } from '@/components/ui/table';
 import TextLink from '@/components/ui/text-link';
 import displayName from '@/lib/display-name';
 import { formatDateTime } from '@/lib/format';
-import { type SearchParams, searchParam } from '@/lib/tables/search-params';
-import { createPageUrl, parseTableState, showsPagination } from '@/lib/tables/table-state';
+import { type SearchParams, searchParam } from '@/lib/search-params';
+import { createPageUrl } from '@/lib/tables/page-url';
+import { parseTableState, showsPagination } from '@/lib/tables/table-state';
 import { ERRORS_TABLE } from '@/lib/tables/tables';
 import appContext from '@/server/app-context';
 import { requireGlobalPermission } from '@/server/authz';
@@ -70,23 +72,6 @@ function summary(error: RecordedError, noMessage: string): string {
 }
 
 /**
- * A label and value in an error's details.
- *
- * @param props - Component props.
- * @param props.term - The label.
- * @param props.children - The value.
- * @returns The row.
- */
-function Detail({ term, children }: { term: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1 py-2 sm:flex-row sm:gap-4">
-      <dt className="text-sm text-muted-foreground sm:w-40 sm:shrink-0">{term}</dt>
-      <dd className="text-sm wrap-anywhere text-foreground">{children}</dd>
-    </div>
-  );
-}
-
-/**
  * Everything recorded about one occurrence of an error (text from
  * `admin.errors`).
  *
@@ -98,52 +83,54 @@ function ErrorDetails({ error }: { error: RecordedError }) {
   const locale = useLocale();
   const t = useTranslations('admin.errors');
   return (
-    <dl className="divide-y divide-border">
-      <Detail term={t('details.when')}>{formatDateTime(error.at, locale)}</Detail>
-      <Detail term={t('details.kind')}>
+    <DescriptionList>
+      <DescriptionRow term={t('details.when')}>{formatDateTime(error.at, locale)}</DescriptionRow>
+      <DescriptionRow term={t('details.kind')}>
         <KindBadge error={error} />
-      </Detail>
+      </DescriptionRow>
       {error.kind === 'app' && (
         <>
           {error.routePath && (
-            <Detail term={t('details.where')}>
+            <DescriptionRow term={t('details.where')}>
               <span className="font-mono">
                 {error.routeType ? `${error.routeType} ` : ''}
                 {error.routePath}
               </span>
-            </Detail>
+            </DescriptionRow>
           )}
           {error.path && (
-            <Detail term={t('details.page')}>
+            <DescriptionRow term={t('details.page')}>
               <span className="font-mono">{error.path}</span>
-            </Detail>
+            </DescriptionRow>
           )}
-          <Detail term={t('details.error')}>{summary(error, t('noMessage'))}</Detail>
+          <DescriptionRow term={t('details.error')}>
+            {summary(error, t('noMessage'))}
+          </DescriptionRow>
           {error.digest && (
-            <Detail term={t('details.digest')}>
+            <DescriptionRow term={t('details.digest')}>
               <span className="font-mono">{error.digest}</span>
-            </Detail>
+            </DescriptionRow>
           )}
         </>
       )}
       {error.kind === 'sign-in' && (
         <>
-          <Detail term={t('details.code')}>
+          <DescriptionRow term={t('details.code')}>
             <span className="font-mono">{error.code}</span>
-          </Detail>
+          </DescriptionRow>
           {error.description && (
-            <Detail term={t('details.description')}>{error.description}</Detail>
+            <DescriptionRow term={t('details.description')}>{error.description}</DescriptionRow>
           )}
         </>
       )}
-      <Detail term={t('details.signedIn')}>
+      <DescriptionRow term={t('details.signedIn')}>
         {error.user ? (
           <TextLink href={`/admin/users/${error.user.id}`}>{displayName(error.user)}</TextLink>
         ) : (
           t('details.noOne')
         )}
-      </Detail>
-    </dl>
+      </DescriptionRow>
+    </DescriptionList>
   );
 }
 

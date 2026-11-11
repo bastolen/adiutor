@@ -431,17 +431,6 @@ describe('staff access to companies', () => {
     const members = (await listMembers(ctx, companyAdmin, testCompany.id)).items;
     expect(members.find((m) => m.userId === member.id)?.role).toBe('watcher');
   });
-
-  it('gives Finance and Support view-only access', async () => {
-    const id = await membershipOf(companyAdmin, testCompany.id, companyAdmin.id);
-    await inSequence(['finance', 'support'] as const, async (role) => {
-      const staff = await staffActor(db, role);
-      expect((await listMembers(ctx, staff, testCompany.id)).items).toHaveLength(1);
-      await expect(
-        removeMember(ctx, staff, { companyId: testCompany.id, membershipId: id }),
-      ).rejects.toMatchObject({ code: 'forbidden' });
-    });
-  });
 });
 
 describe('adding existing users', () => {

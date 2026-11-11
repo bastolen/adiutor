@@ -6,10 +6,6 @@ migrations, test data, starting over, debugging, and every script. Back to the
 
 ## First run
 
-Open <http://localhost:3000>. On the first run it goes to `/setup`, where you choose the name
-users see and create your Admin account. After that, sign in at `/auth`. Every email the app sends shows up in
-Mailpit at <http://localhost:8025> (see [Email](email.md)).
-
 Next.js's development indicator (the round "N") is turned off in `next.config.ts`
 (`devIndicators: false`), because in every corner it covers one of the app's controls. Compile and
 runtime errors still show in its overlay.
@@ -114,9 +110,9 @@ Things that can look like a problem but aren't:
 | `pnpm dev`                 | Start the dev server                                                                                        |
 | `pnpm build`               | Build for production                                                                                        |
 | `pnpm start`               | Serve the production build                                                                                  |
-| `pnpm lint`                | Check JS/TS with ESLint and CSS/SCSS with Stylelint                                                         |
-| `pnpm lint:fix`            | Fix and format JS/TS, CSS and SCSS where possible                                                           |
-| `pnpm format`              | Format every file type with Prettier (CSS, SCSS, JSON, Markdown)                                            |
+| `pnpm lint`                | Check JS/TS with ESLint and CSS with Stylelint                                                              |
+| `pnpm lint:fix`            | Fix and format JS/TS and CSS where possible                                                                 |
+| `pnpm format`              | Format every file type with Prettier (CSS, JSON, Markdown)                                                  |
 | `pnpm format:check`        | Check formatting without changing files                                                                     |
 | `pnpm typecheck`           | Generate Next.js route types, then type-check with TypeScript                                               |
 | `pnpm test`                | Run the unit and component tests (Vitest)                                                                   |

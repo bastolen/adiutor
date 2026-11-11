@@ -6,13 +6,13 @@ import userEvent from '@testing-library/user-event';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import setLanguageAction from '@/app/language-action';
 import { THEME_STORAGE_KEY } from '@/lib/theme';
 
 import renderInLocale from '../../../tests/i18n/render';
+import setLanguageAction from './language-action';
 import PreferencesMenu from './preferences-menu';
 
-vi.mock('@/app/language-action', () => ({ default: vi.fn(async () => true) }));
+vi.mock('./language-action', () => ({ default: vi.fn(async () => true) }));
 
 /** Stands in for `window.location.reload`, which jsdom can't do. */
 const reload = vi.fn();

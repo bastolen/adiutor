@@ -1,8 +1,8 @@
 /**
  * @file Tests for the error page outside the signed-in app: what it says,
- * the ways out (with "Go back"), focus on the heading, and the reference:
- * worked out from the digest for errors from the server, reported for
- * errors in the browser, and left out when that report fails.
+ * the ways out (with "Go back"), focus on the heading, and that it shows the
+ * reference worked out from the digest of an error from the server (the
+ * reference's other cases are tested with the signed-in app's error page).
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -28,7 +28,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('./report-error-action', () => ({ default: vi.fn(async () => null) }));
 
 // The language button's action reads the server's configuration; nothing here changes the language.
-vi.mock('./language-action', () => ({ default: vi.fn(async () => true) }));
+vi.mock('@/components/layout/language-action', () => ({ default: vi.fn(async () => true) }));
 
 beforeEach(() => {
   // The layout's theme button follows the system setting.
@@ -82,30 +82,5 @@ describe('RootError', () => {
 
     expect(await screen.findByText(referenceFromDigest('3496291841'))).toBeInTheDocument();
     expect(reportErrorAction).not.toHaveBeenCalled();
-  });
-
-  it('reports an error from the browser and shows the reference it gets back', async () => {
-    vi.mocked(reportErrorAction).mockResolvedValue({
-      reference: '7KQ2-M9XD',
-      at: new Date('2026-10-28T18:40:00Z'),
-    });
-    render(<RootError error={new RangeError('Invalid time value')} retry={vi.fn()} />);
-
-    expect(await screen.findByText('7KQ2-M9XD')).toBeInTheDocument();
-    expect(screen.getByText('Oct 28, 2026, 6:40 PM UTC')).toBeInTheDocument();
-    expect(reportErrorAction).toHaveBeenCalledWith({
-      name: 'RangeError',
-      message: 'Invalid time value',
-      path: '/',
-    });
-  });
-
-  it('shows no reference when the report fails', async () => {
-    vi.mocked(reportErrorAction).mockRejectedValue(new Error('offline'));
-    render(<RootError error={new Error('x')} retry={vi.fn()} />);
-
-    await vi.waitFor(() => expect(reportErrorAction).toHaveBeenCalledOnce());
-
-    expect(screen.queryByText(/send this reference/)).not.toBeInTheDocument();
   });
 });

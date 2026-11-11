@@ -10,12 +10,12 @@ import { EMAIL_CODE_RESEND_SECONDS } from '@/lib/authz/mfa';
 import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 
 import {
-  failedSignInsKey,
   hitRateLimit,
   type RateLimitRule,
   releaseRateLimitHit,
   resetRateLimit,
 } from '../../rate-limit';
+import { failedSignInsKey } from '../failed-sign-ins';
 import { requestState, takeRequestState } from '../request-state';
 import type { AuthGuardContext } from './paths';
 import { passwordSignInPausedBody, refusalBody, tooManyAttemptsBody } from './refusal-messages';
@@ -145,16 +145,6 @@ export async function limitEmailCode(
  */
 export async function endEmailCodeCooldown(userId: string): Promise<void> {
   await resetRateLimit(db, KEYS.emailCodeCooldown(userId));
-}
-
-/**
- * An email address as the limits key it: trimmed and lower-cased.
- *
- * @param value - The address as sent, if any.
- * @returns The address, or `null` without one.
- */
-export function normalizeEmail(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null;
 }
 
 /**

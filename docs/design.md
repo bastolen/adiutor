@@ -13,7 +13,8 @@ keyboard support.
   `Card`, `PageHeader`, `AuthHeading`, `AuthDivider`, `Table`, `Badge`, `Alert` (optionally
   dismissible), `Banner` (a notice with an icon, title and actions, e.g. on the dashboard),
   `ResultAlert`, `ConfirmDialog`, `DropdownMenu`, `Sheet` (a slide-over panel), `EmptyState`,
-  `IconRow`, `Skeleton`, `Pagination`, `SortMenu`, ...). Menus, selects, dialogs and sheets are
+  `IconRow`, `IconTile` (a decorative icon on a tinted square), `DescriptionList` (labels and
+  values), `Skeleton`, `Pagination`, `SortMenu`, ...). Menus, selects, dialogs and sheets are
   built on [Radix UI](https://www.radix-ui.com), and only `src/components/ui/` imports it. Radix
   follows the WAI-ARIA patterns: arrow keys, typeahead, Escape to close, focus kept inside
   dialogs and returned to the button that opened them. In a menu, `MenuRadioRow` with
@@ -27,8 +28,8 @@ keyboard support.
   `{t('deactivated')}`, as its English text). Icons come from
   [Lucide](https://lucide.dev) and are hidden from screen readers; icon-only buttons have an
   `aria-label`. Join classes with `cn()` (`src/lib/cn.ts`).
-- **Tables** of records sort and paginate (`src/lib/tables/table-state.ts`, with each table defined in
-  `src/lib/tables/tables.ts`):
+- **Tables** of records sort and paginate (`src/lib/tables/table-state.ts`, with their links built
+  in `src/lib/tables/page-url.ts` and each table defined in `src/lib/tables/tables.ts`):
   - **Sorting:** every table sorts from its Sort menu (`SortMenu`) in the card header or next to
     the filters, at every width. The button says how the table is sorted ("Name, A to Z"; just
     "Sort" on phones) and lists each sort both ways, A to Z or newest first at the top.
@@ -40,7 +41,8 @@ keyboard support.
   - **Your own row:** in people tables your row has a "You" badge after your name (`YouBadge` in
     `src/app/(app)/_people/you-badge.tsx`, in the `accent` tone) and a bar in the accent colour
     on its left edge (`ownRowCell` in `src/components/ui/table.tsx`), so you can spot yourself
-    while scrolling. The bar is decorative: the badge says it in words.
+    while scrolling. The bar is decorative: the badge says it in words. The staff and members
+    tables build their first cell with `PersonCell` (`src/app/(app)/_people/person-cell.tsx`).
   - **Pages:** 25, 50 or 100 rows per page, chosen in the table's footer (`Pagination`: "Showing
     26–50 of 132", Previous, the page numbers and Next). The footer only shows with more than 10
     rows.
@@ -223,7 +225,7 @@ keyboard support.
   same access check as the pages. Titles never name a person (a user's page is "User · Adiutor"):
   they end up in the browser history, which holds no personal data. Someone who may not see a page
   (a missing permission, a company they're not in, a user that doesn't exist) gets the 404 page,
-  and its title too: "Not found · Adiutor" (`NOT_FOUND_TITLE` in `src/lib/not-found-metadata.ts`).
+  and its title too: "Not found · Adiutor" (`notFoundMetadata` in `src/lib/not-found-metadata.ts`).
   Pages and layouts that require a permission therefore export their `generateMetadata` from
   `src/server/page-metadata.ts`, with the same check as the page: `globalPermissionMetadata`
   (with `requireGlobalPermission`, plus an `exists` check for a page about one record, like a
@@ -262,10 +264,11 @@ device), **Light** or **Dark**:
 
 Choosing a theme keeps the menu open, so the result shows at once.
 
-Both use the same hook (`useThemePreference`) and the same labels and icons
-(`common.theme` in the catalogues, icons in `src/components/theme/theme-options.ts`: half sun, half
-moon for **System**, so it reads as a theme; a sun; a moon), so a choice made before signing in
-carries over. The row's "Theme" label has a palette icon, apart from the options.
+Both use the same hook (`useThemePreference`) and the same row (`ThemeMenuRow` in
+`src/components/theme/theme-menu-row.tsx`, with its labels in `common.theme` and its icons in
+`src/components/theme/theme-options.ts`: half sun, half moon for **System**, so it reads as a
+theme; a sun; a moon), so a choice made before signing in carries over. The row's "Theme" label
+has a palette icon, apart from the options.
 
 - **Stored choice:** saved in `localStorage` (`adiutor-theme`) and kept in sync across tabs. With
   System, the page follows device changes live.
@@ -276,8 +279,7 @@ carries over. The row's "Theme" label has a palette icon, apart from the options
   `light-dark(<light>, <dark>)`, so both values sit side by side when you check contrast.
 - **Styling:** use the semantic colours (see [Design and accessibility](#design-and-accessibility))
   such as `bg-surface text-foreground` instead of fixed colours like `bg-white` or `text-ink`; they
-  switch with the mode. For anything else, use the `dark:` variant (e.g. `dark:hidden`). In SCSS,
-  use the matching Sass variables, e.g. `brand.$surface` and `brand.$foreground`.
+  switch with the mode. For anything else, use the `dark:` variant (e.g. `dark:hidden`).
 - **Logo:** use the `Logo` component (`src/components/brand/logo.tsx`), which shows `logo.svg` in
   light mode and `logo-on-dark.svg` in dark mode.
 
@@ -292,13 +294,9 @@ Logos and icons live in `public/brand/`, cropped to their content with no backgr
 | `logo-white.svg`, `icon-white.svg` | The brand gradient or accent colour |
 
 `src/styles/theme.css` is the Tailwind theme: the brand colours (`brand-teal`, `brand-green`,
-`brand-orange`, `ink`), the `bg-brand-gradient` utility, the fonts (Inter and JetBrains Mono, then
-the system fonts as fallbacks), text sizes with
-line height = font size + 8px, short entrance animations, and the semantic colours described under
-[Design and accessibility](#design-and-accessibility). Use the brand colours for brand moments
-only; UI uses the semantic colours.
-
-In SCSS, `@use "brand";` (from `src/styles/_brand.scss`) gives the same values as Sass variables,
-e.g. `brand.$primary` or `brand.$brand-gradient`.
+`brand-orange`, `ink`), the fonts (Inter and JetBrains Mono, then the system fonts as fallbacks),
+text sizes with line height = font size + 8px, short entrance animations, and the semantic colours
+described under [Design and accessibility](#design-and-accessibility). Use the brand colours for
+brand moments only; UI uses the semantic colours.
 
 The brand assets aren't covered by the code's MIT License; see [License](../README.md#license).

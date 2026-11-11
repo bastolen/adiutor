@@ -14,6 +14,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import Alert from '@/components/ui/alert';
 import AuthHeading from '@/components/ui/auth-heading';
 import Button from '@/components/ui/button';
+import IconTile from '@/components/ui/icon-tile';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import { getSafeRedirectPath } from '@/lib/redirect';
 import { MAGIC_LINK_VERIFY_PATH } from '@/lib/sign-in/email-link';
@@ -125,11 +126,7 @@ export default function EmailLinkForm({ account, signedIn }: EmailLinkFormProps)
     return () => window.removeEventListener('pageshow', reset);
   }, [setPending]);
 
-  const icon = (
-    <span className="flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-      <MailCheck aria-hidden="true" className="size-5" />
-    </span>
-  );
+  const icon = <IconTile icon={MailCheck} size="lg" />;
 
   if (signedIn?.same) {
     return (

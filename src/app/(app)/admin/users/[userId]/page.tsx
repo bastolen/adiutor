@@ -28,9 +28,10 @@ import TextLink from '@/components/ui/text-link';
 import displayName from '@/lib/display-name';
 import { formatDateTime } from '@/lib/format';
 import ClientMessages from '@/lib/i18n/client-messages';
+import type { SearchParams } from '@/lib/search-params';
 import { confirmationWindow } from '@/lib/sign-in/confirm-url';
-import type { SearchParams } from '@/lib/tables/search-params';
-import { createPageUrl, parseTableState } from '@/lib/tables/table-state';
+import { createPageUrl } from '@/lib/tables/page-url';
+import { parseTableState } from '@/lib/tables/table-state';
 import { DEVICES_TABLE, USER_COMPANIES_TABLE } from '@/lib/tables/tables';
 import appContext from '@/server/app-context';
 import {

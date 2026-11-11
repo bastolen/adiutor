@@ -2,6 +2,9 @@
 
 How the app records security events, limits abuse and protects tokens and pages. To report a
 vulnerability, see the [security policy](../SECURITY.md). Back to the [documentation](README.md).
+The reasons behind the trust and confirmation rules are in the decision records
+[0002](decisions/0002-trusted-provider-email-addresses.md) and
+[0004](decisions/0004-recent-confirmation-for-sign-in-changes-and-lasting-access.md).
 
 ## Audit log
 
@@ -18,17 +21,6 @@ Staff Admins and Managers (`audit:view`) see all of it under **Logs** (`/admin/l
 addresses and browsers of other people. Users see their own recent activity on the Security page.
 Errors recorded for the references error pages show (`app_error`, `sign_in_error`, kept 7 days)
 are only for staff Admins (`errors:view`), under **Logs → Errors** (`src/server/recorded-errors.ts`).
-
-## Lasting ways in
-
-A session lasts up to 7 days after its sign-in, so a stolen one must not be able to leave a way in
-that outlasts it. Adding a way in to your own account (passkeys, provider accounts, two-step
-verification, a first password) and giving someone else one (any staff role or a higher one, and a
-company's Admin role) need a confirmation with your second step from the last 15 minutes (see
-[MFA](mfa.md#changing-sign-in-methods-needs-a-recent-confirmation) and
-[Invitations](companies-and-roles.md#invitations)): a new account would otherwise survive signing
-the victim out, changing their password and resetting their MFA. Every new staff Admin is also
-emailed to the other staff Admins.
 
 ## Rate limits
 
@@ -82,11 +74,11 @@ Errors are recorded for admins, who look them up by the reference the error page
 Each keeps the signed-in user, if any, and is limited to 20 rows per IP address per hour
 (`RATE_LIMITS.signInErrorsPerIp` and `RATE_LIMITS.appErrorsPerIp`), so opening an error page over
 and over can't fill the table; past the limit an error is only logged. Rows are deleted after 7
-days (`cleanUp` in `src/server/jobs.ts`). `app_error` stores no database values (the message goes
-through `redactLogValue`, `src/lib/log-redaction.ts`), no query strings (they can hold search terms
-and sign-in tokens) and no secret tokens from paths (`/invite/…`, `/join/…` and Better Auth's
-`/api/auth/reset-password/…` are stored with `[token]`). The log line of each error holds only its
-reference, where it happened and the digest.
+days (`cleanUp` in `src/server/jobs.ts`). `app_error` stores no database values (the message, cut
+to 500 characters, goes through `redactLogValue`, `src/lib/log-redaction.ts`), no query strings
+(they can hold search terms and sign-in tokens) and no secret tokens from paths (`/invite/…`,
+`/join/…` and Better Auth's `/api/auth/reset-password/…` are stored with `[token]`). The log line
+of each error holds only its reference, where it happened and the digest.
 
 ## Client IP
 
@@ -155,17 +147,6 @@ user comes from the signed session cookie; the hourly job clears any a refused s
 The app never calls their APIs later, so a leaked database holds no tokens for users' provider
 accounts.
 
-## Trusted provider addresses
-
-Signing in with a GitHub or Google account that isn't connected yet connects it to the Adiutor
-account with the same address, when the provider says it verified that address. This is a
-deliberate choice: the provider's word is trusted, even though it only means the address was
-verified there once. So whoever once verified a user's address at GitHub or Google can sign in as
-that user. The mitigations: the owner is told on the next page and by email, an account with a
-second step keeps the new connection unconfirmed until the owner confirms it, an Admin's MFA reset
-disconnects every GitHub and Google account of the user, and nothing is connected to a
-deactivated account. See [Automatic linking](authentication.md#automatic-linking).
-
 ## Lock order
 
 Changes to people and their rights run in transactions at Postgres's default READ COMMITTED, which
@@ -176,7 +157,7 @@ deadlocking:
 
 1. `company` rows, `FOR NO KEY UPDATE`, in ID order: the companies whose last active Admin the
    change could take away (`changeMembership` in `src/server/people/members.ts`, and `soleAdminOf`
-   in `src/server/people/user-admin.ts` when deactivating or deleting an account). Deactivating or
+   in `src/server/people/user-admin/` when deactivating or deleting an account). Deactivating or
    reactivating a company updates its row, so it takes turns with them too; inserts that only
    point at the company (memberships, invitations, audit events) don't wait.
 2. `user` rows, in ID order, in one statement: the staff, the target and the actor `FOR UPDATE`

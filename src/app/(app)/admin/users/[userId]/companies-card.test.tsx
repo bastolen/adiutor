@@ -10,7 +10,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { Locale } from '@/lib/i18n/locales';
 import translator from '@/lib/i18n/translator';
-import { createPageUrl, parseTableState } from '@/lib/tables/table-state';
+import { createPageUrl } from '@/lib/tables/page-url';
+import { parseTableState } from '@/lib/tables/table-state';
 import { USER_COMPANIES_TABLE } from '@/lib/tables/tables';
 import type { UserCompany } from '@/server/people/user-admin';
 

@@ -8,13 +8,18 @@ import { getOAuthState } from 'better-auth/api';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { expect, vi } from 'vitest';
 
-import { account, auditEvent, passkey, session, user, verification } from '@/db/schema';
+import { account, auditEvent, session, user, verification } from '@/db/schema';
 import type { MfaMethod } from '@/lib/authz/mfa';
 import { firstRow } from '@/lib/defined';
 import { sendEmail } from '@/lib/email';
 import { LOCALE_COOKIE } from '@/lib/i18n/locales';
 
-import { setupTestContext } from '../../../../tests/integration/helpers';
+import {
+  addPasskey as addStoredPasskey,
+  connectProvider,
+  minutesAgo,
+  setupTestContext,
+} from '../../../../tests/integration/helpers';
 import type { AuthHookContext } from './hook-context';
 
 /**
@@ -185,13 +190,8 @@ export async function storeSessionMfa(
     .where(eq(session.id, sessionId));
 }
 
-/**
- * The time a number of minutes ago.
- *
- * @param minutes - How many minutes.
- * @returns That time.
- */
-export const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000);
+/** The time a number of minutes ago (shared with the other integration tests). */
+export { minutesAgo };
 
 /** The secret the test requests' cookies are signed with. */
 export const COOKIE_SECRET = 'adiutor-tests-cookie-secret';
@@ -320,22 +320,13 @@ export async function connectGitHubWithToken(
   accessToken: string,
   options: { confirmed?: boolean; updatedAt?: Date; mfaVerified?: boolean } = {},
 ): Promise<string> {
-  const created = firstRow(
-    await db
-      .insert(account)
-      .values({
-        userId,
-        accountId: `github-${accessToken}`,
-        providerId: 'github',
-        accessToken,
-        mfaVerified: options.mfaVerified ?? false,
-        confirmed: options.confirmed ?? true,
-        updatedAt: options.updatedAt,
-      })
-      .returning({ id: account.id }),
-    'the new account',
-  );
-  return created.id;
+  return connectProvider(db, userId, {
+    accountId: `github-${accessToken}`,
+    accessToken,
+    mfaVerified: options.mfaVerified ?? false,
+    confirmed: options.confirmed,
+    updatedAt: options.updatedAt,
+  });
 }
 
 /**
@@ -377,15 +368,7 @@ export async function storedGitHubMfa(accountId: string): Promise<boolean | null
  * @param userId - The user.
  */
 export async function addPasskey(userId: string): Promise<void> {
-  await db.insert(passkey).values({
-    userId,
-    name: 'Adiutor Tests laptop',
-    publicKey: 'adiutor-tests-public-key',
-    credentialID: `adiutor-tests-credential-${userId}`,
-    counter: 0,
-    deviceType: 'multiDevice',
-    backedUp: true,
-  });
+  await addStoredPasskey(db, userId);
 }
 
 /**

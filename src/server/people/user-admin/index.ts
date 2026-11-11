@@ -1,0 +1,30 @@
+/**
+ * @file User administration: the user detail page (and whether its user
+ * exists, for its title), the signed-in devices of a user, the last-Admin
+ * rule, what Admins can do to an account (reset two-step verification, which
+ * also disconnects GitHub and Google accounts, sign out everywhere,
+ * deactivate, reactivate, delete), and deactivating your own account.
+ *
+ * Every change is recorded in the audit log, emails the user, and refuses
+ * anything that would leave a company or the staff without an Admin who can
+ * sign in, also when two such changes come at the same moment
+ * (`soleAdminOf` locks before it counts).
+ *
+ * This is the module's public API: the code lives in the files next to it
+ * (`detail`, `sessions`, `sole-admin`, `admin-actions`, `own-account`), and
+ * nothing outside this folder imports them directly.
+ */
+export { getUserDetail, userExists } from './detail';
+export type { UserCompany, UserDetail, UserDetailOptions } from './detail';
+export { listUserSessions } from './sessions';
+export type { UserSession } from './sessions';
+export { soleAdminError, soleAdminOf } from './sole-admin';
+export type { SoleAdminOf, SoleAdminSubject } from './sole-admin';
+export {
+  deactivateUser,
+  deleteUser,
+  reactivateUser,
+  resetUserMfa,
+  signOutUserEverywhere,
+} from './admin-actions';
+export { deactivateOwnAccount } from './own-account';

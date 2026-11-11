@@ -13,8 +13,8 @@
 
 ## Documentation
 
-- Document all code with JSDoc-style `/** ... */` comments. This includes TypeScript, config files, CSS and SCSS.
-- Every file starts with a `/** @file ... */` block saying what it is for. Every export, component, function, config option, theme token group and Sass variable gets its own `/** */` comment.
+- Document all code with JSDoc-style `/** ... */` comments. This includes TypeScript, config files and CSS.
+- Every file starts with a `/** @file ... */` block saying what it is for. Every export, component, function, config option and theme token group gets its own `/** */` comment.
 - When you change code, update its comments, the README and the matching page in `docs/` in the same change, so documentation never drifts from the code.
 - `README.md` is about the product and the project (what Adiutor is, its features, the tech stack, the quick start, contributing, security reporting, the license). Developer detail lives in `docs/`, one page per topic, each listed in `docs/README.md` and the README's Documentation table; add new pages to both.
 - A significant decision (architecture, the security model, process) gets a record in `docs/decisions/` (template and index in its `README.md`). Read the record before changing such a decision; a change gets a new record that supersedes the old one.
@@ -49,7 +49,7 @@
 - The language is the person's own (the `adiutor.locale` cookie, mirroring their account), else Adiutor's default (`staff_settings.default_locale`), else, before setup only, the browser's `Accept-Language`: use `requestLocale()` or `localeFromHeaders()`, never your own parsing. Language choices name each language in itself with its flag (`LANGUAGE_OPTIONS`, `LanguageFlag`).
 - Server Components, actions and metadata translate with `useTranslations` / `getTranslations`. Client components get messages from the root provider (`common`) or `ClientMessages` (the page's own namespaces, inside its `<Suspense>`). Code outside React or a Next.js request (emails, services, jobs, scripts) uses `translator(locale, namespace)` with the locale it's given; keep `next-intl/server` out of `src/server/`.
 - Text in a route's static shell (outside its `<Suspense>`) comes from a client component that reads the root provider, so Partial Prefetching can prefetch the shell.
-- Format dates and numbers with `src/lib/format.ts` and the reader's locale (times are UTC). A cached function never reads the request's language: pass the locale in.
+- Format dates with `src/lib/format.ts` and the reader's locale (times are UTC); numbers are ICU `{n, number}` arguments in the message. A cached function never reads the request's language: pass the locale in.
 
 ## Email
 
@@ -98,7 +98,7 @@
 - Schema changes: edit `src/db/schema/`, run `pnpm db:generate`, commit the migration in `drizzle/`. After changing Better Auth's config, run `pnpm auth:schema` first. Don't hand-edit `src/db/schema/auth.ts`.
 - Services take a `ServiceContext` and are covered by `*.int.test.ts` integration tests against the test database.
 - A module that outgrows one file (around 500 lines, or several jobs) becomes a folder whose `index.ts` is its public API: files inside import each other directly, code outside imports only the folder (add it to `FOLDER_MODULES` in `eslint.config.mjs`, which enforces this), and its tests sit next to its files with shared helpers in the folder's `test-helpers.ts`.
-- New server and lib files go in the topic folder they belong to (`src/server/auth/`, `src/server/people/`, `src/lib/sign-in/`, `src/lib/tables/`, `src/lib/request/`), with their tests next to them; code shared by every topic stays at the root of `src/server` or `src/lib`. Shared e2e helpers go in `e2e/support/`.
+- New server and lib files go in the topic folder they belong to (`src/server/auth/`, `src/server/people/`, `src/lib/sign-in/`, `src/lib/tables/`, `src/lib/request/`, `src/lib/i18n/`, `src/lib/authz/`), with their tests next to them; code shared by every topic stays at the root of `src/server` or `src/lib`. Shared e2e helpers go in `e2e/support/`.
 
 ## Example and test data
 

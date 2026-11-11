@@ -3,8 +3,6 @@
  * see, and what staff see on a company's overview.
  */
 
-import getTestDatabaseUrl from '../tests/database/database-url';
-import { findCompanyId } from './support/db';
 import { CLIENT_WATCHER, COMPANY_NAME, COMPANY_SLUG, PLATFORM_ADMIN } from './support/fixtures';
 import { signIn } from './support/helpers';
 import { expect, test } from './support/test';
@@ -26,7 +24,7 @@ import { expect, test } from './support/test';
 test('a Watcher can view the company but not manage its members', async ({ page }) => {
   await signIn(page, CLIENT_WATCHER);
   // Company users have no links yet, so open the company directly.
-  const companyUrl = `/companies/${await findCompanyId(getTestDatabaseUrl(), COMPANY_SLUG)}`;
+  const companyUrl = `/companies/${COMPANY_SLUG}`;
   await page.goto(companyUrl);
   await expect(page.getByRole('heading', { name: COMPANY_NAME })).toBeVisible();
   // In the page content: right after loading, React's streamed copy may still be in the document.

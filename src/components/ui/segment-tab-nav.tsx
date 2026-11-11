@@ -1,13 +1,16 @@
 'use client';
 
 /**
- * @file Section tabs for a layout: a {@link TabNav} whose current tab is the
+ * @file Section tabs for a layout: underlined links whose current tab is the
  * route segment below the layout, read in the browser, so the tabs stay
  * mounted (and the chosen tab keeps focus) while the pages under them change.
  */
+import Link from 'next/link';
 import { useSelectedLayoutSegment } from 'next/navigation';
 
-import TabNav from './tab-nav';
+import cn from '@/lib/cn';
+
+import { focusRing } from './styles';
 
 /** One tab in a {@link SegmentTabNav}. */
 interface SegmentTab {
@@ -30,8 +33,10 @@ interface SegmentTabNavProps {
 }
 
 /**
- * Section tabs that mark the open section with `aria-current="page"`. Render
- * it from the layout of the sections, not from their pages.
+ * A row of section links with an underline under the open section's, marked
+ * with `aria-current="page"`. Each section is its own page, so these are
+ * links, not ARIA tabs. Render it from the layout of the sections, not from
+ * their pages.
  *
  * @param props - Navigation props.
  * @param props.label - Landmark name.
@@ -41,9 +46,29 @@ interface SegmentTabNavProps {
 export default function SegmentTabNav({ label, items }: SegmentTabNavProps) {
   const current = useSelectedLayoutSegment();
   return (
-    <TabNav
-      label={label}
-      items={items.map(({ segment, ...item }) => ({ ...item, current: segment === current }))}
-    />
+    <nav aria-label={label} className="-mb-px border-b border-border">
+      <ul className="flex gap-1">
+        {items.map((item) => {
+          const isCurrent = item.segment === current;
+          return (
+            <li key={item.href}>
+              <Link
+                href={item.href}
+                aria-current={isCurrent ? 'page' : undefined}
+                className={cn(
+                  'inline-flex h-10 items-center border-b-2 px-3 text-sm font-medium transition-colors',
+                  focusRing,
+                  isCurrent
+                    ? 'border-highlight text-foreground'
+                    : 'border-transparent text-muted-foreground hover:border-border-strong hover:text-foreground',
+                )}
+              >
+                {item.label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
 }
