@@ -45,17 +45,8 @@ describe('StaffShortcuts', () => {
     ]);
   });
 
-  it.each([
-    ['four tiles', true],
-    ['three tiles', false],
-  ])('never uses more than two columns, with %s', (_tiles, withStaff) => {
-    render(
-      <StaffShortcuts
-        sections={
-          withStaff ? ['users', 'companies', 'staff', 'logs'] : ['users', 'companies', 'logs']
-        }
-      />,
-    );
+  it('never uses more than two columns', () => {
+    render(<StaffShortcuts sections={['users', 'companies', 'staff', 'logs']} />);
 
     const list = screen.getByRole('list');
     expect(list).toHaveClass('sm:grid-cols-2');

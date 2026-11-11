@@ -188,7 +188,6 @@ test('everyone else is recommended MFA, and can dismiss the recommendation for t
   page,
 }) => {
   await clearMfaRecommendationDismissal(CLIENT_WATCHER.email);
-  await useOwnClientIp(page);
   await signIn(page, CLIENT_WATCHER);
   const banner = page.getByRole('region', { name: 'Account security' });
   await expect(banner).toContainText('Protect your account');

@@ -10,7 +10,7 @@ import { LOCALE_COOKIE } from '../src/lib/i18n/locales';
 import { LAST_USED_LOGIN_METHOD_COOKIE } from '../src/lib/sign-in/auth-cookies';
 import { PROVIDER_LINKED_COOKIE } from '../src/lib/sign-in/oauth-providers';
 import { CLIENT_WATCHER, SESSIONS_CLIENT } from './support/fixtures';
-import { signIn, signOut, submitPassword, useOwnClientIp } from './support/helpers';
+import { signIn, signOut, submitPassword } from './support/helpers';
 import { expect, test } from './support/test';
 import { codeForSecret } from './support/totp';
 
@@ -22,7 +22,6 @@ test('a signed-out visitor of the dashboard is sent to sign in', async ({ page }
 });
 
 test('signing in goes on to the card the address named', async ({ page }) => {
-  await useOwnClientIp(page);
   // The proxy can't see the anchor, but the browser keeps it on the sign-in page's address.
   expect(await submitPassword(page, CLIENT_WATCHER, '/account/security#password')).toBe(
     'signed-in',
@@ -53,7 +52,6 @@ test('a reset link without a token explains what to do', async ({ page }) => {
 test('the sign-in page sends someone signed in already on to the page they asked for', async ({
   page,
 }) => {
-  await useOwnClientIp(page);
   await signIn(page, CLIENT_WATCHER);
 
   await page.goto('/auth?callbackURL=%2Faccount');
@@ -70,7 +68,6 @@ test('the sign-in page sends someone signed in already on to the page they asked
 test('the sign-in form starts over after signing out, without reloading the page', async ({
   page,
 }) => {
-  await useOwnClientIp(page);
   await signIn(page, CLIENT_WATCHER);
 
   // Signing out goes back to the sign-in page Next kept alive since signing in.
@@ -89,7 +86,6 @@ test('the sign-in form starts over after signing out, without reloading the page
 test('the code step starts over after signing out, with "Trust this device" unticked', async ({
   page,
 }) => {
-  await useOwnClientIp(page);
   /**
    * Signs in with the password, up to the code step.
    */
@@ -125,7 +121,6 @@ test('signing out leaves only the "Last used" sign-in method and the language in
   page,
   context,
 }) => {
-  await useOwnClientIp(page);
   await signIn(page, CLIENT_WATCHER);
   // A cookie of the app's own, as the provider-linked notice sets one, and a language of the
   // browser's own, as choosing one sets (the seeded account is on Default, so sign-in sets none).

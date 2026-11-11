@@ -41,7 +41,6 @@ import {
   openSignInLink,
   type StorageState,
   toasts,
-  useOwnClientIp,
 } from './support/helpers';
 import { expect, test } from './support/test';
 
@@ -484,7 +483,6 @@ test.describe('on a 320px wide screen', () => {
     // Only reachable signed in without a recent second step, so it can't be in APP_PATHS: the
     // Admin signs in with an email link, which doesn't count as one.
     test('the step-up page, after signing in with an email link', async ({ page }) => {
-      await useOwnClientIp(page);
       await openSignInLink(page, await storeSignInLink(PLATFORM_ADMIN.email));
       await expect(page).toHaveURL(/\/auth\/verify\?callbackURL=%2Fdashboard/);
       await expect(page.getByRole('heading', { name: /^Confirm it.s you$/ })).toBeVisible();
@@ -495,7 +493,6 @@ test.describe('on a 320px wide screen', () => {
       context,
       page,
     }) => {
-      await useOwnClientIp(page);
       await openSignInLink(page, await storeSignInLink(PLATFORM_ADMIN.email));
       await expect(page).toHaveURL(/\/auth\/verify\?callbackURL=%2Fdashboard/);
       // GitHub isn't configured in these tests: the browser gets the cookie its callback leaves.
@@ -514,7 +511,6 @@ test.describe('on a 320px wide screen', () => {
     test('the step-up page, after "Confirm with GitHub" signed in with a different GitHub account', async ({
       page,
     }) => {
-      await useOwnClientIp(page);
       await openSignInLink(page, await storeSignInLink(PLATFORM_ADMIN.email));
       await expect(page).toHaveURL(/\/auth\/verify\?callbackURL=%2Fdashboard/);
       // GitHub isn't configured in these tests: the browser comes back as the refusal sends it.

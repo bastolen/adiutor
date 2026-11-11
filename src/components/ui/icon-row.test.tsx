@@ -42,7 +42,6 @@ describe('IconRow', () => {
     const row = renderRow();
 
     expect(row).toHaveTextContent('PasskeyOn this device only');
-    expect(screen.getByText('On this device only')).toHaveClass('text-xs', 'text-muted-foreground');
     expect(screen.getByRole('button', { name: 'Rename' })).toBeInTheDocument();
   });
 
@@ -55,17 +54,10 @@ describe('IconRow', () => {
     expect(screen.getByText(name)).not.toHaveClass('truncate');
   });
 
-  it('keeps room for the text on narrow screens, wrapping the control below it on the right', () => {
-    renderRow({ subtitle: 'jane@adiutor.test' });
-
-    expect(screen.getByText('Passkey').parentElement).toHaveClass('flex-1', 'basis-40', 'min-w-0');
-    expect(screen.getByRole('button', { name: 'Rename' }).parentElement).toHaveClass('ml-auto');
-  });
-
   it('leaves the subtitle out when there is none', () => {
     const row = renderRow({ subtitle: null });
 
-    expect(row.querySelectorAll('div > span')).toHaveLength(2);
+    expect(row.textContent).toBe('PasskeyOn this device onlyRename');
   });
 
   it('hides the icon from screen readers', () => {

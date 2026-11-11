@@ -91,7 +91,6 @@ test("an account's language: saved on the account page, kept at sign-out, winnin
   browser,
   page,
 }) => {
-  await useOwnClientIp(page);
   const email = freshAddress('language');
   const password = 'language-test-password';
   const companyId = await findCompanyId(COMPANY_SLUG);
@@ -143,7 +142,6 @@ test("an account's language: saved on the account page, kept at sign-out, winnin
 test("an account on Default follows Adiutor's default language, also after it changes", async ({
   page,
 }) => {
-  await useOwnClientIp(page);
   const email = freshAddress('default-language');
   const companyId = await findCompanyId(COMPANY_SLUG);
   await page.goto(await storeInvitation({ companyId, email, role: 'client' }));

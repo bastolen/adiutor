@@ -9,7 +9,6 @@
 import { type Page } from '@playwright/test';
 
 import expectAccessible from './support/axe';
-import { findCompanyId } from './support/db';
 import {
   COMPANY_NAME,
   COMPANY_SLUG,
@@ -36,8 +35,7 @@ import { expect, test } from './support/test';
  * @param slug - The company's URL name.
  */
 async function openMembers(page: Page, slug: string): Promise<void> {
-  const companyId = await findCompanyId(slug);
-  await page.goto(`/companies/${companyId}/members`);
+  await page.goto(`/companies/${slug}/members`);
 }
 
 test("a Support staff member sees why they can't use an invite link", async ({ page, browser }) => {

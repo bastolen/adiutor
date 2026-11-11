@@ -38,7 +38,7 @@ export interface Email {
 }
 
 /** How many SMTP connections are kept open and reused at most, unless `SMTP_URL` says otherwise. */
-export const SMTP_MAX_CONNECTIONS = 3;
+const SMTP_MAX_CONNECTIONS = 3;
 
 /**
  * SMTP transport, pooled, or `null` when SMTP isn't configured. The pool

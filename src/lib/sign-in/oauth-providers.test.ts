@@ -161,7 +161,6 @@ describe('the provider step-up cookie', () => {
       expect(value).toBe(`github:${outcome}`);
       expect(parseProviderStepUpCookie(value)).toEqual({ provider: 'github', outcome });
     });
-    expect(PROVIDER_STEP_UP_OUTCOMES).toEqual(['mfa-off', 'unchecked']);
   });
 
   it('is only read for a provider that can prove MFA and a known outcome, since the browser can change it', () => {

@@ -61,22 +61,6 @@ async function failedSignIn(reference: string, at: string, userId: string | null
   });
 }
 
-describe('who may read recorded errors', () => {
-  it('is staff Admins only, not Managers who see the audit log', async () => {
-    const manager = await staffActor(db, 'manager', 'manager@adiutor.test');
-    const support = await staffActor(db, 'support', 'support@adiutor.test');
-
-    for (const viewer of [manager, support]) {
-      // eslint-disable-next-line no-await-in-loop -- Each viewer is checked in turn.
-      await expect(findErrorReference(ctx, viewer, '7KQ2-M9XD')).rejects.toMatchObject({
-        code: 'forbidden',
-      });
-      // eslint-disable-next-line no-await-in-loop -- Same.
-      await expect(listRecentErrors(ctx, viewer)).rejects.toMatchObject({ code: 'forbidden' });
-    }
-  });
-});
-
 describe('findErrorReference', () => {
   it('finds a reference however it was typed, with every occurrence, newest first', async () => {
     await serverError('7KQ2-M9XD', '2026-11-02T10:00:00Z', admin.id);

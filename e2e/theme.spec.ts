@@ -9,7 +9,7 @@ import { type Page } from '@playwright/test';
 
 import { THEME_STORAGE_KEY } from '../src/lib/theme';
 import { PLATFORM_ADMIN } from './support/fixtures';
-import { signIn, useOwnClientIp } from './support/helpers';
+import { signIn } from './support/helpers';
 import { expect, test } from './support/test';
 
 /**
@@ -113,7 +113,6 @@ test('a chosen theme wins over the system setting, which applies without one', a
 test('signed in, the theme is chosen in the account menu, sharing the choice with sign-in', async ({
   page,
 }) => {
-  await useOwnClientIp(page);
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/auth');
   await page.getByRole('button', { name: 'Theme and language: System, English (US)' }).click();

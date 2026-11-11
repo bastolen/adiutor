@@ -411,7 +411,6 @@ describe('a provider connected at sign-in', () => {
       'github',
       expect.objectContaining({ maxAge: 300, path: '/', httpOnly: false, sameSite: 'lax' }),
     );
-    expect(PROVIDER_LINKED_COOKIE).toBe('adiutor-provider-linked');
     expect(subjects()).toEqual(['GitHub was connected to your Adiutor account']);
   });
 

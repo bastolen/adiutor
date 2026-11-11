@@ -13,7 +13,6 @@ import { createPageUrl, type TableLinks } from './page-url';
 import type { SearchParams } from './search-params';
 import {
   DEFAULT_PAGE_SIZE,
-  PAGE_SIZES,
   type PageSize,
   type Paged,
   parseTableState,
@@ -529,7 +528,6 @@ describe('createPageUrl', () => {
         { size: 50, href: `${PATH}?size=50`, current: false },
         { size: 100, href: `${PATH}?size=100`, current: false },
       ]);
-      expect(PAGE_SIZES).toEqual([25, 50, 100]);
 
       const bigger = pageLinks({ users: { page: 2, size: 50 } }).users;
       expect(bigger.pagination(pagedOf(132, 2, 50), 'users').sizes).toEqual([

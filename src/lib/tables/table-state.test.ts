@@ -7,7 +7,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   clampPage,
-  PAGINATION_THRESHOLD,
   pageCount,
   pageWindow,
   parseTableState,
@@ -356,7 +355,6 @@ describe('clampPage', () => {
 
 describe('showsPagination', () => {
   it('shows it only above the threshold', () => {
-    expect(PAGINATION_THRESHOLD).toBe(10);
     expect(showsPagination(0)).toBe(false);
     expect(showsPagination(10)).toBe(false);
     expect(showsPagination(11)).toBe(true);

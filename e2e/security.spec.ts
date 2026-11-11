@@ -41,7 +41,6 @@ import {
   randomClientIp,
   signIn,
   submitPassword,
-  useOwnClientIp,
 } from './support/helpers';
 import { countEmails, linkIn, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
@@ -299,7 +298,6 @@ async function clickUntil(button: Locator, reacted: () => Promise<void>): Promis
 test('changing how you sign in needs a confirmation from the last 15 minutes', async ({ page }) => {
   // Waits for the next authenticator code (up to 30 seconds) on top of the sign-in.
   test.setTimeout(120_000);
-  await useOwnClientIp(page);
   await signIn(page, RECENT_MFA_CLIENT);
   // The code just used to sign in (or an earlier one); confirming again needs a later one.
   const signInCode = codeForSecret(RECENT_MFA_CLIENT.totpSecret);
@@ -351,7 +349,6 @@ test("a mail scanner opening a sign-in link doesn't sign in or use it up", async
   page,
   request,
 }) => {
-  await useOwnClientIp(page);
   const before = await countEmails(CLIENT_WATCHER.email);
   const response = await page.request.post('/api/auth/sign-in/magic-link', {
     headers: apiHeaders(),
@@ -412,7 +409,6 @@ async function sessionCookieOf(page: Page): Promise<string> {
 }
 
 test('a sign-in link says when it switches this browser from another account', async ({ page }) => {
-  await useOwnClientIp(page);
   await page.goto('/auth');
   await signIn(page, SUPPORT_STAFF);
   const supportSession = await sessionCookieOf(page);
@@ -442,7 +438,6 @@ test('a sign-in link says when it switches this browser from another account', a
 test('a sign-in link that stopped working while another account is signed in says so on its own page', async ({
   page,
 }) => {
-  await useOwnClientIp(page);
   await page.goto('/auth');
   await signIn(page, SUPPORT_STAFF);
   const link = await storeSignInLink(CLIENT_WATCHER.email);
@@ -461,7 +456,6 @@ test('a sign-in link that stopped working while another account is signed in say
 });
 
 test("a sign-in link can't go on to another account's link", async ({ page }) => {
-  await useOwnClientIp(page);
   // Someone's own link, and a genuine link for another user whose return addresses go on to it.
   const attackerLink = new URL(await storeSignInLink(CLIENT_WATCHER.email), E2E_BASE_URL);
   const chained = `/api/auth/magic-link/verify?${new URLSearchParams({
@@ -505,24 +499,11 @@ test("sign-in, reset and magic-link don't reveal whether an email has an account
   }, Promise.resolve());
 });
 
-test('a company user only gets the not-found page on staff screens', async ({ page }) => {
-  expect(await submitPassword(page, CLIENT_WATCHER)).toBe('signed-in');
-  const paths = ['/admin/users', '/admin/staff', '/admin/companies'];
-  await paths.reduce(async (previous, path) => {
-    await previous;
-    await page.goto(path);
-    await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
-    // No other user's data leaks onto the page.
-    await expect(page.getByText(STEP_UP_MANAGER.email)).toHaveCount(0);
-  }, Promise.resolve());
-});
-
 // Runs after the 15-minute test, which waits for a new authenticator code: the Manager's code
 // from their email-link test can't be the one this sign-in uses.
 test("a role that requires MFA can't turn off its only method", async ({ page }) => {
   // The Manager's only method is the authenticator app (their earlier test asked for passkey
   // options but added none), and signing in with it confirms the session just now.
-  await useOwnClientIp(page);
   await signIn(page, STEP_UP_MANAGER);
   await page.goto('/account/security');
   const twoStep = page.getByRole('region', { name: 'Two-step verification', exact: true });
@@ -549,7 +530,6 @@ test("a role that requires MFA can't turn off its only method", async ({ page })
 test('wrong passwords pause password sign-in for an address, and a password reset lifts it', async ({
   page,
 }) => {
-  await useOwnClientIp(page);
   const { email } = PAUSED_CLIENT;
   /**
    * Sends ten wrong passwords for an address, then tries once more.

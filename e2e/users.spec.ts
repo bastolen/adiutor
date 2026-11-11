@@ -38,12 +38,18 @@ test('an Admin finds users, recognises the staff and filters and searches the li
   const rows = page.getByRole('row');
   const adminRow = rows.filter({ hasText: PLATFORM_ADMIN.email });
   await expect(adminRow.getByText('Staff · Admin')).toBeVisible();
-  // Sorted by name, A to Z, until another order is chosen: E2E Admin comes first.
+  // Sorted by name, A to Z, until another order is chosen: E2E Admin before E2E Support. Other
+  // specs add users, so the Admin needn't be the first row.
   await expect(page.getByRole('columnheader', { name: 'Name' })).toHaveAttribute(
     'aria-sort',
     'ascending',
   );
-  await expect(rows.nth(1)).toContainText(PLATFORM_ADMIN.email);
+  const rowTexts = await rows.allInnerTexts();
+  const adminRowIndex = rowTexts.findIndex((text) => text.includes(PLATFORM_ADMIN.email));
+  expect(adminRowIndex).toBeGreaterThan(0);
+  expect(adminRowIndex).toBeLessThan(
+    rowTexts.findIndex((text) => text.includes(SUPPORT_STAFF.email)),
+  );
   const watcherRow = rows.filter({ hasText: CLIENT_WATCHER.email });
   await expect(watcherRow.getByRole('link', { name: COMPANY_NAME })).toBeVisible();
   // The Admin's own row says so; nobody else's does.
@@ -121,7 +127,6 @@ test('an Admin opens the staff page from the dashboard and the menu', async ({ p
 });
 
 test("staff who can't manage the staff get no Staff tile or menu item", async ({ page }) => {
-  await useOwnClientIp(page);
   await signIn(page, SUPPORT_STAFF);
   await page.goto('/dashboard');
 
@@ -172,7 +177,6 @@ test('only staff Admins see which GitHub account a user signs in with', async ({
   page,
   browser,
 }) => {
-  await useOwnClientIp(page);
   await signIn(page, PLATFORM_ADMIN);
   await page.goto(`/admin/users?q=${encodeURIComponent(GITHUB_ONLY_MANAGER.email)}`);
   await page.getByRole('main').getByRole('link', { name: GITHUB_ONLY_MANAGER.name }).click();

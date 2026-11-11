@@ -32,9 +32,6 @@ test('register a company, accept the invitation and join through a link', async 
   page,
   context,
 }) => {
-  // Its own client IP, so Better Auth's per-IP limits on sign-ins and codes don't carry over from
-  // the tests before it.
-  await useOwnClientIp(page);
   // Unique per attempt, so retries don't collide with earlier data.
   const suffix = randomUUID().slice(0, 8);
   const ownerEmail = `owner-${suffix}@adiutor.test`;
@@ -140,7 +137,6 @@ test('an Admin leaves the company from their own row, and lands on the dashboard
   page,
   context,
 }) => {
-  await useOwnClientIp(page);
   const suffix = randomUUID().slice(0, 8);
   const ownerEmail = `leaver-${suffix}@adiutor.test`;
   const companyName = 'Adiutor Tests Leaving';

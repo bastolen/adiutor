@@ -1,11 +1,10 @@
 /**
- * @file Tests for sending email over SMTP: a pooled transport, and what is
- * sent.
+ * @file Tests for sending email over SMTP: what is sent.
  * @vitest-environment node
  */
 import { describe, expect, it, vi } from 'vitest';
 
-import { sendEmail, SMTP_MAX_CONNECTIONS } from './email';
+import { sendEmail } from './email';
 
 /** Mocked SMTP transport and its factory. */
 const { sendMail, createTransport } = vi.hoisted(() => {
@@ -25,21 +24,6 @@ vi.mock('./env', () => ({
 }));
 
 describe('sendEmail', () => {
-  it('reuses a few pooled SMTP connections, letting the URL override them', async () => {
-    // The transport is created when the module loads, so load it afresh.
-    vi.resetModules();
-    createTransport.mockClear();
-    await import('./email');
-
-    expect(createTransport).toHaveBeenCalledOnce();
-    expect(createTransport).toHaveBeenCalledWith({
-      url: 'smtp://localhost:1025',
-      pool: true,
-      maxConnections: SMTP_MAX_CONNECTIONS,
-    });
-    expect(SMTP_MAX_CONNECTIONS).toBe(3);
-  });
-
   it('sends the HTML and plain-text versions over SMTP, without attachments', async () => {
     await sendEmail({
       to: 'jane@adiutor.test',

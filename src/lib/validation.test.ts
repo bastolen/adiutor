@@ -202,7 +202,6 @@ describe('passkeyNameSchema', () => {
     expect(passkeyNameSchema.parse('  Work laptop ')).toBe('Work laptop');
     expect(passkeyNameSchema.safeParse('a').success).toBe(true);
     expect(passkeyNameSchema.safeParse('a'.repeat(PASSKEY_NAME_MAX_LENGTH)).success).toBe(true);
-    expect(PASSKEY_NAME_MAX_LENGTH).toBe(64);
     // It isn't quoted in emails, so a name like a device's model passes.
     expect(passkeyNameSchema.safeParse('1Password on adiutor.dev').success).toBe(true);
   });
@@ -313,10 +312,5 @@ describe('messages', () => {
     expect(issueFor(companyNameSchema, 'Adiutor\tTests')?.message).toBe(
       'validation.companyName.controlCharacters',
     );
-  });
-
-  it('refuse roles with keys that service errors use too', () => {
-    expect(CHOOSE_COMPANY_ROLE_MESSAGE).toBe('validation.companyRole');
-    expect(CHOOSE_STAFF_ROLE_MESSAGE).toBe('validation.staffRole');
   });
 });

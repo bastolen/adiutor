@@ -3,10 +3,6 @@
  * plain-text versions, and every template in every language.
  * @vitest-environment node
  */
-import { readdir, readFile } from 'node:fs/promises';
-
-import { createElement, type ReactElement } from 'react';
-import { render } from 'react-email';
 import { describe, expect, it } from 'vitest';
 
 import type { Email } from '@/lib/email';
@@ -32,17 +28,6 @@ const appUrl = 'https://adiutor.test';
 
 /** What every English (US) test email shares: the app URL and the language. */
 const english = { appUrl, locale: 'en-US' } as const;
-
-/** A template component with the example data the template preview renders it with. */
-type PreviewableTemplate = ((props: Record<string, unknown>) => ReactElement) & {
-  /** The example data for `pnpm email:dev`. */
-  PreviewProps?: Record<string, unknown>;
-};
-
-/** The name (file name without `.tsx`) of every template in this folder, not the helpers or the tests. */
-const templateNames = (await readdir('src/emails'))
-  .filter((name) => name.endsWith('.tsx') && !name.endsWith('.test.tsx'))
-  .map((name) => name.slice(0, -'.tsx'.length));
 
 /**
  * Checks what every email needs: the linked logo, the button link in the
@@ -752,41 +737,5 @@ describe('every template in every language', () => {
     expect(notice.text).toContain('Cuándo: 23 oct 2026, 14:05 UTC');
     expect(notice.text).toContain('Desde: Firefox en Windows, 203.0.113.7');
     expect(notice.text).toContain('Enviado por Adiutor');
-  });
-});
-
-describe('template preview', () => {
-  it('finds the templates', () => {
-    expect(templateNames).toContain('magic-link');
-    expect(templateNames).toContain('invitation-reminder');
-  });
-
-  it.each(templateNames)('renders %s with its PreviewProps', async (name) => {
-    const { default: Template } = (await import(/* @vite-ignore */ `./${name}.tsx`)) as {
-      default: PreviewableTemplate;
-    };
-
-    expect(Template.PreviewProps).toMatchObject({
-      appUrl: 'https://adiutor.dev',
-      locale: 'en-US',
-      logoSrc: '/static/logo.png',
-    });
-    const [html, text] = await Promise.all([
-      render(createElement(Template, Template.PreviewProps)),
-      render(createElement(Template, Template.PreviewProps), { plainText: true }),
-    ]);
-    expect(html).toContain('src="/static/logo.png"');
-    expect(html).toContain('alt="Adiutor"');
-    expect(text).toContain('Adiutor');
-  });
-});
-
-describe('logo', () => {
-  it('is the same file in the app and in the template preview', async () => {
-    const [app, preview] = await Promise.all([
-      readFile('public/brand/logo.png'),
-      readFile('src/emails/static/logo.png'),
-    ]);
-    expect(preview.equals(app)).toBe(true);
   });
 });

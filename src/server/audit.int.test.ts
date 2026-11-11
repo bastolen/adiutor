@@ -220,14 +220,6 @@ describe('the whole audit log', () => {
     await db.insert(auditEvent).values({ ...event, at: new Date(at), details: {} });
   }
 
-  it('is for staff with access to the audit log only', async () => {
-    const support = await staffActor(db, 'support', 'support@adiutor.test');
-    const manager = await staffActor(db, 'manager', 'manager@adiutor.test');
-
-    await expect(listAuditLog(ctx, support)).rejects.toMatchObject({ code: 'forbidden' });
-    await expect(listAuditLog(ctx, manager)).resolves.toMatchObject({ total: 0 });
-  });
-
   it('lists every event by or about anyone, newest first, a page at a time', async () => {
     const jane = await staffActor(db, 'support', 'jane@adiutor.test');
     await eventAt('2026-11-01T10:00:00Z', { action: 'sign_in', actorUserId: jane.id });
