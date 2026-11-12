@@ -21,7 +21,7 @@ switches to that version by itself.
    checklist below says what each setting needs on a server.
 3. `pnpm build`, with those settings in place (CI builds the same way).
 4. `pnpm db:migrate` creates the tables (drizzle-kit applies the migrations in `drizzle/`).
-5. `pnpm start`, then the first-run step and the hourly jobs from the checklist below.
+5. `pnpm start`, then the first-run step and the background jobs from the checklist below.
 
 **Every new release:** get the new code, then `pnpm install --frozen-lockfile`, `pnpm build` and
 `pnpm db:migrate`, and only then restart the app. Migrations bring the database to what the new
@@ -31,7 +31,7 @@ than this, its release notes (the changelog Release Please writes) say so.
 **Don't prune the dev dependencies** (no `pnpm prune --prod`, and no slim image without them).
 Commands you run on the server need them: `pnpm db:migrate` runs drizzle-kit, and
 `pnpm setup:platform`, `pnpm jobs:run` and `pnpm sessions:revoke-all` run through tsx. Without
-them, migrations, the hourly jobs, the first-run setup and signing everyone out after a leak all
+them, migrations, the background jobs, the first-run setup and signing everyone out after a leak all
 fail, possibly in the middle of an incident.
 
 ## Vercel
@@ -124,7 +124,7 @@ docker run --rm --env-file .env adiutor pnpm jobs:run
 docker run --rm --env-file .env adiutor pnpm sessions:revoke-all
 ```
 
-Run `pnpm jobs:run` from cron every hour, as in [Background jobs](#background-jobs).
+Run `pnpm jobs:run` from cron every 5 minutes, as in [Background jobs](#background-jobs).
 
 **Health check:** `GET /api/health` answers `200 {"status":"ok"}` when the database answers and has
 every migration in `drizzle/` applied, and `503 {"status":"unavailable"}` otherwise, so a load
@@ -182,7 +182,7 @@ What to set up on a server before sharing its address:
   `BETTER_AUTH_URL` isn't on this computer (see [Test accounts](development.md#test-accounts)).
 - **Secrets:** a random `BETTER_AUTH_SECRET` of at least 32 characters; rotate it as described in
   [Rotating the auth secret](#rotating-the-auth-secret).
-- **Jobs:** run `pnpm jobs:run` hourly with `NODE_ENV=production` (see
+- **Jobs:** run `pnpm jobs:run` every 5 minutes with `NODE_ENV=production` (see
   [Background jobs](#background-jobs)).
 - **Logs:** successful requests log nothing that identifies anyone, but errors can: an email
   address an email failed for, a user's name, and so on (database values are left out, see
@@ -264,18 +264,18 @@ traffic from Cloudflare's addresses.
 
 ## Background jobs
 
-`pnpm jobs:run` (`scripts/run-jobs.ts`) runs the jobs once: it deletes expired sign-in links, codes
-and sessions, finished rate-limit windows, sign-in errors and other recorded errors older than 7
-days and audit events older than a year, clears provider
-tokens a failed sign-in left behind, ends (and records) staff sign-ins as a user whose time is up or
-whose staff session is gone, and sends invitation reminders. It's safe to run again at any time. A reminder
-that can't be sent is undone (the invitation keeps its old link, which still works) and tried again
-on the next run; the run still finishes the other jobs and reminders, then exits with 1, so cron's
-mail or your monitoring tells you the mail setup is broken. In production, run it hourly from cron:
+Adiutor's background work runs as jobs, started by a **tick** every 5 minutes; each job has its own
+schedule in code, and the tick runs whichever are due (see [Background jobs](jobs.md) for the jobs
+and how they work). On a server, run the tick from cron with `pnpm jobs:run`:
 
 ```cron
-0 * * * * cd /srv/adiutor && pnpm jobs:run >> /var/log/adiutor-jobs.log 2>&1
+*/5 * * * * cd /srv/adiutor && pnpm jobs:run >> /var/log/adiutor-jobs.log 2>&1
 ```
+
+It's safe to run at any time and never runs a job twice at once, so a tick that overlaps the next
+one does no harm. It exits with 1 when a job failed (after the others ran), so cron's mail or your
+monitoring notices, for example when the mail setup is broken and reminders can't be sent; the next
+run tries again.
 
 ## Logs
 

@@ -1,11 +1,22 @@
 /**
  * @file Every background job Adiutor has. A new job gets a file of its own
- * and a line here.
+ * (in `recurring/`) and a line here; see docs/jobs.md.
  */
 import type { RecurringJob } from './define';
+import expiredSignInData from './recurring/expired-sign-in-data';
+import finishedSignInsAsUsers from './recurring/finished-sign-ins-as-users';
+import invitationReminders from './recurring/invitation-reminders';
+import leftoverProviderTokens from './recurring/leftover-provider-tokens';
+import retention from './recurring/retention';
 
 /** The recurring jobs, in the order the tick runs them when several are due. */
-export const RECURRING_JOBS: readonly RecurringJob[] = [];
+export const RECURRING_JOBS: readonly RecurringJob[] = [
+  leftoverProviderTokens,
+  finishedSignInsAsUsers,
+  expiredSignInData,
+  invitationReminders,
+  retention,
+];
 
 /**
  * Finds a recurring job by name.

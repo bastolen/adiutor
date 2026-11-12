@@ -45,8 +45,8 @@ export const auditEvent = pgTable(
 /**
  * Sign-in errors that ended on the error page (`/sign-in-error`), for
  * admins: the page shows the reference, which they look up here or in the
- * server log. Rows are deleted after 7 days (`cleanUp` in
- * `src/server/jobs.ts`).
+ * server log. Rows are deleted after 7 days (the `retention` job in
+ * `src/server/jobs`).
  */
 export const signInError = pgTable(
   'sign_in_error',
@@ -84,7 +84,7 @@ export type AppErrorRouteType = 'render' | 'action' | 'route' | 'proxy';
  * pages that failed in the browser), for admins: the error page shows the
  * reference, which they look up here or in the server log. Recorded by
  * `recordAppError` (`src/server/app-errors.ts`); rows are deleted after 7
- * days (`cleanUp` in `src/server/jobs.ts`).
+ * days (the `retention` job in `src/server/jobs`).
  */
 export const appError = pgTable(
   'app_error',

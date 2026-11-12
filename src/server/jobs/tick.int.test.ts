@@ -272,6 +272,12 @@ describe('running a job now', () => {
     ).resolves.toBeNull();
   });
 
+  it('runs a registered job by name', async () => {
+    await expect(
+      runJobNow(ctx, 'expired-sign-in-data', { trigger: 'cli', deadline: later }),
+    ).resolves.toMatchObject({ job: 'expired-sign-in-data', status: 'succeeded' });
+  });
+
   it('refuses a job that does not exist', async () => {
     await expect(
       runJobNow(ctx, 'adiutor-tests-missing', { trigger: 'cli', deadline: later }),

@@ -1,156 +1,25 @@
 /**
- * @file Background jobs, run hourly by `pnpm jobs:run` (see
- * `scripts/run-jobs.ts`): cleaning up expired data and reminding people of
- * invitations that expire soon. Every job is safe to run again.
+ * @file The hourly job that reminds people of invitations that expire soon.
  */
 import { and, eq, exists, gt, isNotNull, isNull, lt, notExists, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
-import {
-  account,
-  appError,
-  auditEvent,
-  company,
-  invitation,
-  membership,
-  rateLimit,
-  rateLimitBucket,
-  session,
-  signInError,
-  user,
-  verification,
-} from '@/db/schema';
+import { company, invitation, membership, user } from '@/db/schema';
 import { invitationReminderEmail } from '@/emails/invitation-reminder';
 import displayName from '@/lib/display-name';
 import { sendFailureOf } from '@/lib/email';
 import { isLocale } from '@/lib/i18n/locales';
 import { generateToken, hashToken } from '@/lib/sign-in/tokens';
 
-import { APP_ERROR_RETENTION_DAYS } from './app-errors';
-import { endFinishedImpersonations } from './auth/impersonation';
-import { SIGN_IN_ERROR_RETENTION_DAYS } from './auth/sign-in-errors';
-import type { ServiceContext } from './context';
-import getStaffName from './people/staff-name';
+import type { ServiceContext } from '../../context';
+import getStaffName from '../../people/staff-name';
+import { defineRecurringJob } from '../define';
 
-/** How long audit events are kept. */
-const AUDIT_RETENTION_DAYS = 365;
-
-/** How long before an invitation expires its reminder is sent. */
+/** How long before an invitation expires its reminder is sent, in hours. */
 const REMINDER_BEFORE_HOURS = 48;
 
-/** What {@link cleanUp} removed. */
-export interface CleanUpResult {
-  /** Expired verification values (sign-in links, codes, reset tokens). */
-  verifications: number;
-  /** Expired sessions. */
-  sessions: number;
-  /** Finished rate-limit windows (the app's and Better Auth's). */
-  rateLimits: number;
-  /** Audit events older than {@link AUDIT_RETENTION_DAYS} days. */
-  auditEvents: number;
-  /** Sign-in errors older than `SIGN_IN_ERROR_RETENTION_DAYS` days. */
-  signInErrors: number;
-  /** Other errors in the app older than `APP_ERROR_RETENTION_DAYS` days. */
-  appErrors: number;
-  /** GitHub or Google accounts whose OAuth tokens a failed request left behind. */
-  providerTokens: number;
-  /**
-   * Sign-ins as a user whose time was up or whose staff session was gone,
-   * each recorded as ended (`endFinishedImpersonations`).
-   */
-  impersonations: number;
-}
-
-/**
- * Deletes data nobody can use any more. Invitations and invite links are
- * kept as history; their tokens are stored hashed and stop working when they
- * expire. OAuth tokens are only needed during the request that stored them
- * (see `withoutKeptTokens` in `auth-events/provider-accounts.ts`); any still there after ten
- * minutes are cleared. Sign-ins as a user that are over are ended and recorded
- * (`endFinishedImpersonations`).
- *
- * @param ctx - Service context (only the database is used).
- * @returns How many rows were removed per kind.
- */
-export async function cleanUp(ctx: Pick<ServiceContext, 'db'>): Promise<CleanUpResult> {
-  const { db } = ctx;
-  const [
-    verifications,
-    sessions,
-    buckets,
-    betterAuthLimits,
-    auditEvents,
-    signInErrors,
-    appErrors,
-    providerTokens,
-    impersonations,
-  ] = await Promise.all([
-    db
-      .delete(verification)
-      .where(lt(verification.expiresAt, sql`now()`))
-      .returning({ id: verification.id }),
-    db
-      .delete(session)
-      .where(lt(session.expiresAt, sql`now()`))
-      .returning({ id: session.id }),
-    db
-      .delete(rateLimitBucket)
-      .where(lt(rateLimitBucket.resetAt, sql`now()`))
-      .returning({ id: rateLimitBucket.id }),
-    // Better Auth's windows are at most minutes long; a day without requests means it's done.
-    db
-      .delete(rateLimit)
-      .where(lt(rateLimit.lastRequest, Date.now() - 24 * 60 * 60 * 1000))
-      .returning({ id: rateLimit.id }),
-    db
-      .delete(auditEvent)
-      .where(lt(auditEvent.at, sql`now() - make_interval(days => ${AUDIT_RETENTION_DAYS})`))
-      .returning({ id: auditEvent.id }),
-    db
-      .delete(signInError)
-      .where(
-        lt(
-          signInError.createdAt,
-          sql`now() - make_interval(days => ${SIGN_IN_ERROR_RETENTION_DAYS})`,
-        ),
-      )
-      .returning({ id: signInError.id }),
-    db
-      .delete(appError)
-      .where(
-        lt(appError.createdAt, sql`now() - make_interval(days => ${APP_ERROR_RETENTION_DAYS})`),
-      )
-      .returning({ id: appError.id }),
-    db
-      .update(account)
-      .set({ accessToken: null, refreshToken: null, idToken: null })
-      .where(
-        and(
-          or(
-            isNotNull(account.accessToken),
-            isNotNull(account.refreshToken),
-            isNotNull(account.idToken),
-          ),
-          lt(account.updatedAt, sql`now() - interval '10 minutes'`),
-        ),
-      )
-      .returning({ id: account.id }),
-    endFinishedImpersonations(ctx),
-  ]);
-  return {
-    verifications: verifications.length,
-    sessions: sessions.length,
-    rateLimits: buckets.length + betterAuthLimits.length,
-    auditEvents: auditEvents.length,
-    signInErrors: signInErrors.length,
-    appErrors: appErrors.length,
-    providerTokens: providerTokens.length,
-    impersonations,
-  };
-}
-
 /** What {@link sendInvitationReminders} did. */
-export interface ReminderResults {
+interface ReminderResults {
   /** Reminders sent. */
   sent: number;
   /** Reminders that couldn't be sent: the next run tries them again. */
@@ -182,7 +51,7 @@ export interface ReminderResults {
  * @param ctx - Service context.
  * @returns How many reminders were sent, and how many failed.
  */
-export async function sendInvitationReminders(ctx: ServiceContext): Promise<ReminderResults> {
+async function sendInvitationReminders(ctx: ServiceContext): Promise<ReminderResults> {
   const staffName = await getStaffName(ctx.db);
   // The account the invitation is addressed to, if any (`user` is joined as the inviter).
   const invitee = alias(user, 'invitee');
@@ -297,3 +166,24 @@ export async function sendInvitationReminders(ctx: ServiceContext): Promise<Remi
     failed: results.filter((result) => result === 'failed').length,
   };
 }
+
+export default defineRecurringJob({
+  name: 'invitation-reminders',
+  schedule: '10 * * * *',
+  /**
+   * Sends the reminders that are due. When some couldn't be sent, the run
+   * counts as failed, so the failure shows (and the next run tries again).
+   *
+   * @param ctx - Service context.
+   * @returns How many were sent and how many failed.
+   */
+  run: async (ctx) => {
+    const { sent, failed } = await sendInvitationReminders(ctx);
+    return {
+      summary: { sent, failed },
+      ...(failed > 0
+        ? { failure: `Reminders that couldn't be sent: ${failed}; the next run tries them again` }
+        : {}),
+    };
+  },
+});

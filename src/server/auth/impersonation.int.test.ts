@@ -31,7 +31,7 @@ import {
 } from '../../../tests/integration/helpers';
 import { type Actor, loadActor } from '../actor';
 import { ServiceError } from '../errors';
-import { cleanUp } from '../jobs';
+import { runJobNow } from '../jobs';
 import { deactivateOwnAccount } from '../people/user-admin';
 import { RATE_LIMITS } from '../rate-limit';
 import { changeOwnPassword, setFirstPassword } from './accounts';
@@ -518,7 +518,12 @@ describe('endFinishedImpersonations', () => {
       { sessionId: null },
     ]);
 
-    await expect(cleanUp(ctx)).resolves.toMatchObject({ impersonations: 1 });
+    await expect(
+      runJobNow(ctx, 'finished-sign-ins-as-users', {
+        trigger: 'cli',
+        deadline: new Date(Date.now() + 60_000),
+      }),
+    ).resolves.toMatchObject({ summary: { ended: 1 } });
 
     expect(await db.select().from(impersonation)).toHaveLength(0);
     expect((await endEvents())[0]).toMatchObject({

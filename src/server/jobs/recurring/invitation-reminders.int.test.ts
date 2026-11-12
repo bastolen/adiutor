@@ -1,20 +1,11 @@
 /**
- * @file Integration tests for the background jobs, against the test
- * database.
+ * @file Integration tests for the job that reminds people of invitations
+ * that expire soon, against the test database.
  */
 import { eq, isNull, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  account,
-  appError,
-  auditEvent,
-  company,
-  invitation,
-  rateLimitBucket,
-  session,
-  verification,
-} from '@/db/schema';
+import { company, invitation } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 import type { Email } from '@/lib/email';
 import { hashToken } from '@/lib/sign-in/tokens';
@@ -22,7 +13,6 @@ import { hashToken } from '@/lib/sign-in/tokens';
 import {
   addMember,
   createCompany,
-  createSession,
   createUser,
   emailLanguage,
   memberActor,
@@ -30,10 +20,11 @@ import {
   setupTestContext,
   staffActor,
   tokenFrom,
-} from '../../tests/integration/helpers';
-import type { Actor } from './actor';
-import { cleanUp, sendInvitationReminders } from './jobs';
-import { inviteByEmail } from './people/invitations';
+} from '../../../../tests/integration/helpers';
+import type { Actor } from '../../actor';
+import type { ServiceContext } from '../../context';
+import { inviteByEmail } from '../../people/invitations';
+import invitationReminders from './invitation-reminders';
 
 const { ctx, db, sent } = setupTestContext();
 
@@ -46,99 +37,20 @@ beforeEach(async () => {
   companyAdmin = await memberActor(db, testCompany.id, 'admin', 'boss@adiutor.test');
 });
 
-describe('cleanUp', () => {
-  it('removes expired values, sessions, rate-limit windows and old audit events only', async () => {
-    const jane = await createUser(db, 'jane@adiutor.test');
-    const past = new Date(Date.now() - 60_000);
-    const future = new Date(Date.now() + 60_000);
-    await db.insert(verification).values([
-      { identifier: 'old', value: 'x', expiresAt: past },
-      { identifier: 'new', value: 'x', expiresAt: future },
-    ]);
-    await createSession(db, jane, { expiresAt: past });
-    const kept = await createSession(db, jane);
-    await db.insert(rateLimitBucket).values([
-      { key: 'old', count: 1, resetAt: past },
-      { key: 'new', count: 1, resetAt: future },
-    ]);
-    await db
-      .insert(auditEvent)
-      .values([{ action: 'sign_in', at: sql`now() - interval '400 days'` }, { action: 'sign_in' }]);
+/** Far enough away that no test reaches it. */
+const deadline = new Date(Date.now() + 60 * 60_000);
 
-    await expect(cleanUp(ctx)).resolves.toEqual({
-      verifications: 1,
-      sessions: 1,
-      rateLimits: 1,
-      auditEvents: 1,
-      signInErrors: 0,
-      appErrors: 0,
-      providerTokens: 0,
-      impersonations: 0,
-    });
-    expect((await db.select().from(session)).map(({ id }) => id)).toEqual([kept]);
-    expect(await db.select().from(verification)).toHaveLength(1);
-    expect(await db.select().from(auditEvent)).toHaveLength(1);
-  });
+/**
+ * Runs the job once.
+ *
+ * @param context - The service context to run it with.
+ * @returns How many reminders were sent and how many failed.
+ */
+async function remind(context: ServiceContext) {
+  return (await invitationReminders.run(context, { deadline })).summary;
+}
 
-  it('removes errors in the app after 7 days', async () => {
-    await db.insert(appError).values([
-      {
-        reference: 'OLD2-OLD2',
-        source: 'server',
-        createdAt: sql`now() - interval '8 days'`,
-      },
-      { reference: 'NEW2-NEW2', source: 'browser', createdAt: sql`now() - interval '6 days'` },
-    ]);
-
-    await expect(cleanUp(ctx)).resolves.toMatchObject({ appErrors: 1 });
-
-    expect(
-      (await db.select({ reference: appError.reference }).from(appError)).map(
-        ({ reference }) => reference,
-      ),
-    ).toEqual(['NEW2-NEW2']);
-  });
-
-  it('clears OAuth tokens a request left behind, but not those of a request still running', async () => {
-    const jane = await createUser(db, 'jane@adiutor.test');
-    const john = await createUser(db, 'john@adiutor.test');
-    const tokens = { accessToken: 'gho_adiutor-tests', idToken: 'id', refreshToken: 'refresh' };
-    const inserted = await db
-      .insert(account)
-      .values([
-        {
-          userId: jane,
-          accountId: 'jane-github',
-          providerId: 'github',
-          ...tokens,
-          updatedAt: new Date(Date.now() - 11 * 60_000),
-        },
-        { userId: john, accountId: 'john-github', providerId: 'github', ...tokens },
-      ])
-      .returning({ id: account.id });
-    const left = defined(inserted[0], 'the account of the request left behind');
-    const running = defined(inserted[1], 'the account of the request still running');
-
-    await expect(cleanUp(ctx)).resolves.toMatchObject({ providerTokens: 1 });
-
-    const stored = await db
-      .select({
-        id: account.id,
-        accessToken: account.accessToken,
-        refreshToken: account.refreshToken,
-        idToken: account.idToken,
-      })
-      .from(account);
-    expect(stored).toEqual(
-      expect.arrayContaining([
-        { id: left.id, accessToken: null, refreshToken: null, idToken: null },
-        { id: running.id, ...tokens },
-      ]),
-    );
-  });
-});
-
-describe('sendInvitationReminders', () => {
+describe('invitation-reminders', () => {
   /**
    * Moves an invitation's dates, as if it were sent earlier.
    *
@@ -170,8 +82,8 @@ describe('sendInvitationReminders', () => {
     await age('later@adiutor.test', '4 days');
     sent.length = 0;
 
-    await expect(sendInvitationReminders(ctx)).resolves.toEqual({ sent: 1, failed: 0 });
-    await expect(sendInvitationReminders(ctx)).resolves.toEqual({ sent: 0, failed: 0 });
+    await expect(remind(ctx)).resolves.toEqual({ sent: 1, failed: 0 });
+    await expect(remind(ctx)).resolves.toEqual({ sent: 0, failed: 0 });
 
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({
@@ -196,7 +108,7 @@ describe('sendInvitationReminders', () => {
     await age('known@adiutor.test', '1 day');
     sent.length = 0;
 
-    await expect(sendInvitationReminders(ctx)).resolves.toEqual({ sent: 2, failed: 0 });
+    await expect(remind(ctx)).resolves.toEqual({ sent: 2, failed: 0 });
 
     const byAddress = Object.fromEntries(sent.map((email) => [email.to, email]));
     expect(emailLanguage(defined(byAddress['new@adiutor.test'], 'the Dutch reminder'))).toBe(
@@ -252,7 +164,7 @@ describe('sendInvitationReminders', () => {
     sent.length = 0;
 
     // Only the due invitation of the active company: each other one has a single reason to skip.
-    await expect(sendInvitationReminders(ctx)).resolves.toEqual({ sent: 1, failed: 0 });
+    await expect(remind(ctx)).resolves.toEqual({ sent: 1, failed: 0 });
     expect(sent.map(({ to }) => to)).toEqual(['due@adiutor.test']);
   });
 
@@ -266,7 +178,7 @@ describe('sendInvitationReminders', () => {
     await age('new.staff@adiutor.test', '1 day');
     sent.length = 0;
 
-    await expect(sendInvitationReminders(ctx)).resolves.toEqual({ sent: 1, failed: 0 });
+    await expect(remind(ctx)).resolves.toEqual({ sent: 1, failed: 0 });
     expect(sent).toHaveLength(1);
     // Without staff settings, the staff go by the fallback name.
     expect(sent[0]).toMatchObject({
@@ -301,7 +213,7 @@ describe('sendInvitationReminders', () => {
     await staffActor(db, 'support', 'staffer@adiutor.test');
     sent.length = 0;
 
-    await expect(sendInvitationReminders(ctx)).resolves.toEqual({ sent: 2, failed: 0 });
+    await expect(remind(ctx)).resolves.toEqual({ sent: 2, failed: 0 });
     expect(sent.map(({ to }) => to).sort()).toEqual([
       'elsewhere@adiutor.test',
       'support@adiutor.test',
@@ -370,7 +282,11 @@ describe('sendInvitationReminders', () => {
         },
       };
 
-      await expect(sendInvitationReminders(bouncing)).resolves.toEqual({ sent: 1, failed: 1 });
+      // The run counts as failed, so the failure shows; it says how many, not who.
+      await expect(invitationReminders.run(bouncing, { deadline })).resolves.toEqual({
+        summary: { sent: 1, failed: 1 },
+        failure: "Reminders that couldn't be sent: 1; the next run tries them again",
+      });
 
       expect(sent.map(({ to }) => to)).toEqual(['arrives@adiutor.test']);
       const after = await invitationTo('bounces@adiutor.test');
@@ -385,7 +301,7 @@ describe('sendInvitationReminders', () => {
 
       // Once mail works again, the next run sends it.
       sent.length = 0;
-      await expect(sendInvitationReminders(ctx)).resolves.toEqual({ sent: 1, failed: 0 });
+      await expect(remind(ctx)).resolves.toEqual({ sent: 1, failed: 0 });
       expect(sent.map(({ to }) => to)).toEqual(['bounces@adiutor.test']);
     });
 
@@ -410,7 +326,7 @@ describe('sendInvitationReminders', () => {
         },
       };
 
-      await expect(sendInvitationReminders(timingOut)).resolves.toEqual({ sent: 0, failed: 1 });
+      await expect(remind(timingOut)).resolves.toEqual({ sent: 0, failed: 1 });
 
       expect((await invitationTo('resent@adiutor.test')).tokenHash).toBe(resentHash);
     });

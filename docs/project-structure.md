@@ -24,7 +24,7 @@ The folders of the repository and what belongs in each. Back to the [documentati
 - `src/server/`: services. Each takes an explicit context and checks permissions itself, so it can
   be tested against a real database. The services every topic shares (access and permission checks,
   actor and context, the metadata of pages someone may not see, audit log, recorded errors, rate
-  limits, pagination, search, jobs, setup, the language an email goes out in) sit at its root;
+  limits, pagination, search, setup, the language an email goes out in) sit at its root;
   the rest are grouped by topic, and each file's tests sit next to it. A module that outgrew one
   file is a folder whose `index.ts` is its public API (see "Modules that outgrow one file" in
   [Code style](code-style.md)):
@@ -38,8 +38,8 @@ The folders of the repository and what belongs in each. Back to the [documentati
     `invitations/` has one file per flow (the shared rules, the lock, creating the record, sending,
     managing, accepting, and revoking when someone loses access) and `user-admin/` the staff
     actions on a user (detail, sessions, own account, the sole Admin rule).
-  - `src/server/jobs/`: background jobs ([decision 0018](decisions/0018-background-jobs-in-postgres-with-one-tick.md)):
-    the tick, the leases and the history of runs, with every job listed in `registry.ts`.
+  - `src/server/jobs/`: background jobs (see [Background jobs](jobs.md)): the tick, leases and
+    history, with each recurring job in `recurring/` and every job listed in `registry.ts`.
 - `src/lib/`: code shared by the server and the browser, with a few server-only exceptions below.
   General helpers (`env`, `format`, `search-params`, `validation`, ...) sit at its root; the rest
   is grouped by topic. `validation.ts` (zod schemas) is for the server; the limits client

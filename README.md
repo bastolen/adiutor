@@ -118,6 +118,7 @@ The [docs](docs/README.md) go into detail, one topic each:
 | [Multi-factor authentication](docs/mfa.md)                | Second steps, who needs them, confirming sessions                               |
 | [Security measures](docs/security-measures.md)            | Audit log, rate limits, tokens, names, lock order, headers, CSP                 |
 | [Email](docs/email.md)                                    | Templates, previews, Mailpit, how emails are sent                               |
+| [Background jobs](docs/jobs.md)                           | The tick, recurring jobs, history, commands, adding a job                       |
 | [Design, accessibility and dark mode](docs/design.md)     | Components, tables, colours, keyboard support, dark mode, brand                 |
 | [Languages](docs/i18n.md)                                 | Choosing a language, translation catalogues, formatting, checks                 |
 | [Deploying and running](docs/deploying.md)                | Install and upgrade, Vercel, Docker, server setup, client IP, jobs, logs, leaks |

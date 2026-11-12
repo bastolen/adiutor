@@ -9,7 +9,7 @@ import { signInError } from '@/db/schema';
 
 import { createUser, inSequence, setupTestContext } from '../../../tests/integration/helpers';
 import type { ServiceContext } from '../context';
-import { cleanUp } from '../jobs';
+import { runJobNow } from '../jobs';
 import { RATE_LIMITS } from '../rate-limit';
 import { recordSignInError } from './sign-in-errors';
 
@@ -124,14 +124,16 @@ describe('recordSignInError', () => {
   });
 });
 
-describe('cleanUp of sign-in errors', () => {
+describe('the retention job, for sign-in errors', () => {
   it('removes them after 7 days', async () => {
     await db.insert(signInError).values([
       { reference: 'OLD2-OLD2', code: 'state_mismatch', createdAt: sql`now() - interval '8 days'` },
       { reference: 'NEW2-NEW2', code: 'state_mismatch', createdAt: sql`now() - interval '6 days'` },
     ]);
 
-    await expect(cleanUp(ctx)).resolves.toMatchObject({ signInErrors: 1 });
+    await expect(
+      runJobNow(ctx, 'retention', { trigger: 'cli', deadline: new Date(Date.now() + 60_000) }),
+    ).resolves.toMatchObject({ summary: { signInErrors: 1 } });
 
     expect((await stored()).map(({ reference }) => reference)).toEqual(['NEW2-NEW2']);
   });

@@ -83,7 +83,7 @@ Errors are recorded for admins, who look them up by the reference the error page
 Each keeps the signed-in user, if any, and is limited to 20 rows per IP address per hour
 (`RATE_LIMITS.signInErrorsPerIp` and `RATE_LIMITS.appErrorsPerIp`), so opening an error page over
 and over can't fill the table; past the limit an error is only logged. Rows are deleted after 7
-days (`cleanUp` in `src/server/jobs.ts`). `app_error` stores no database values (the message, cut
+days (the `retention` job, see [Background jobs](jobs.md)). `app_error` stores no database values (the message, cut
 to 500 characters, goes through `redactLogValue`, `src/lib/log-redaction.ts`), no query strings
 (they can hold search terms and sign-in tokens) and no secret tokens from paths (`/invite/…`,
 `/join/…` and Better Auth's `/api/auth/reset-password/…` are stored with `[token]`). The log line

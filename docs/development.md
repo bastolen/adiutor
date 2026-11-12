@@ -45,7 +45,7 @@ deactivated account, authenticator and email-code MFA (and a
 Manager with email codes only, which don't count for Managers), plus
 invitations and invite links in every state (one due for its expiry reminder), varied "last active"
 times, some audit log entries and sample errors from the last few days to look up under Logs →
-Errors (`scripts/sample-errors.ts`; `pnpm jobs:run` removes them once they're 7 days old).
+Errors (`scripts/sample-errors.ts`; the `retention` job removes them once they're 7 days old).
 `scripts/seed-dev.ts` lists the accounts and their password. The open invitations are emailed to
 Mailpit, and the script prints the authenticator setup key, backup codes and the links that still
 work. It reads the same validated `.env` as the app (so `BETTER_AUTH_URL` must be set), and refuses
@@ -127,5 +127,5 @@ Things that can look like a problem but aren't:
 | `pnpm auth:schema`         | Regenerate Better Auth's tables after changing its config                                                   |
 | `pnpm setup:platform`      | First-run setup from the command line (can also recover; see [First run](companies-and-roles.md#first-run)) |
 | `pnpm db:seed --yes`       | Replace all local data with test accounts and companies (`--admin-mail` adds your own staff Admin)          |
-| `pnpm jobs:run`            | Run the background jobs once (see [Background jobs](deploying.md#background-jobs))                          |
+| `pnpm jobs:run`            | One tick of the background jobs (see [Background jobs](jobs.md))                                            |
 | `pnpm sessions:revoke-all` | End sessions after a leak (see [After a suspected leak](deploying.md#after-a-suspected-leak))               |

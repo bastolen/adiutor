@@ -1,0 +1,66 @@
+# Background jobs
+
+Back to the [documentation](README.md).
+
+Adiutor does some of its work in the background: cleaning up data nobody can use any more, keeping
+data only as long as it may, and reminding people of invitations. That work runs as **jobs**, in
+`src/server/jobs` ([decision 0018](decisions/0018-background-jobs-in-postgres-with-one-tick.md)).
+
+## The tick
+
+Every 5 minutes something starts a **tick**: `pnpm jobs:run` from system cron or the Docker image.
+A tick runs every recurring job that's due, one after another (`runTick` in
+`src/server/jobs/tick.ts`). It stops starting new runs at its deadline (4 minutes from the command
+line), and what's left waits for the next tick.
+
+- **Due** means the job never ran, or its schedule named a moment since its last run started. After
+  a long silence (say, the server was down) a job runs once, not once per missed moment
+  (`isDue` in `schedule.ts`).
+- **One run at a time:** a run takes its job under a lease (`claimJob` in `state.ts`): a row in
+  `job_state` with `locked_until` 15 minutes ahead. A second tick leaves the job to that run, and
+  can't run it again for the same moment once it's done. A run that dies frees the job when the
+  lease runs out. A lease row is used because PostgreSQL's session locks don't survive a pooled
+  connection, such as Neon's.
+- **Failures** don't stop the other jobs. A job fails when it throws, or when it finishes but
+  reports a `failure` (say, some reminders couldn't be sent). The run is recorded as failed, the
+  error goes to the server log, and `job_state.consecutive_failures` counts failed runs in a row.
+- **Paused** jobs (`job_state.paused_at`) are skipped by the tick.
+
+## The jobs
+
+| Job                          | Schedule (UTC)  | What it does                                                                                                         |
+| ---------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `leftover-provider-tokens`   | every 5 minutes | Clears OAuth tokens a failed GitHub or Google sign-in left behind, after 10 minutes                                  |
+| `finished-sign-ins-as-users` | every 5 minutes | Ends and records staff sign-ins as a user whose time is up or whose staff session is gone                            |
+| `expired-sign-in-data`       | hourly          | Deletes expired sign-in links, codes and sessions, and finished rate-limit windows                                   |
+| `invitation-reminders`       | hourly, at :10  | Emails a reminder 48 hours before an invitation expires; one that can't be sent is tried again next run              |
+| `retention`                  | daily, at 03:15 | Deletes audit events after a year, sign-in errors and other recorded errors after 7 days, and job runs after 30 days |
+
+## History
+
+Every finished run is a row in `job_run`: the job, what started it (`tick`, `cli` or `page`), when it
+started and finished, how it ended, and what it did as counts, e.g. `{ "sessions": 12 }`. The
+summary never holds personal data. The `retention` job deletes runs after 30 days
+(`JOB_HISTORY_RETENTION_DAYS`).
+
+## Running it
+
+`pnpm jobs:run` runs one tick and exits with 1 when a run failed, after the other jobs ran. In
+production, run it every 5 minutes; see [Background jobs](deploying.md#background-jobs) in the
+deployment docs.
+
+## Adding a recurring job
+
+1. Add a file to `src/server/jobs/recurring/` that exports a job made with `defineRecurringJob`:
+   - `name`: stable, in kebab-case. It's stored with the job's state and history, so don't rename
+     it.
+   - `schedule`: a cron expression in UTC with five fields, e.g. `0 6 1 * *` for 06:00 on the 1st.
+   - `run(ctx, { deadline })`: does the work and returns `{ summary }` with counts, plus `failure`
+     when it finished but something went wrong.
+2. Add it to `RECURRING_JOBS` in `src/server/jobs/registry.ts`. The tick runs due jobs in that
+   order.
+3. Write its integration test next to it (`*.int.test.ts`), calling its `run` directly.
+
+A job must be safe to run again at any time: a tick can stop between two jobs, and a run by hand can
+follow a scheduled one. Work that can take longer than a tick should stop starting new pieces at
+`deadline` and leave the rest for the next run.

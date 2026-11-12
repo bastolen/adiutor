@@ -138,9 +138,9 @@ export function beforeAccountUpdate<T extends object>(
  * Clears the OAuth tokens a request stored for a user, once it's done with
  * them (the provider's MFA check), after every provider callback whose user is
  * known: from the session it created, or the signed session cookie when
- * connecting from the Security page. The hourly clean-up (`cleanUp` in
- * `jobs.ts`) clears any left by a callback without one (e.g. a refused
- * sign-in).
+ * connecting from the Security page. The `leftover-provider-tokens` job
+ * (`src/server/jobs`) clears any left by a callback without one (e.g. a
+ * refused sign-in).
  *
  * @param userId - The user.
  */
