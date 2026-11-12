@@ -36,6 +36,8 @@
     "db:seed": "node --env-file-if-exists=.env --import tsx scripts/seed-dev.ts",
     "jobs:run": "node --env-file-if-exists=.env --import tsx scripts/jobs.ts run",
     "jobs:list": "node --env-file-if-exists=.env --import tsx scripts/jobs.ts list",
+    "jobs:retry": "node --env-file-if-exists=.env --import tsx scripts/jobs.ts retry",
+    "jobs:discard": "node --env-file-if-exists=.env --import tsx scripts/jobs.ts discard",
     "sessions:revoke-all": "node --env-file-if-exists=.env --import tsx scripts/revoke-sessions.ts",
     "prepare": "husky"
   },

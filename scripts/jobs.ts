@@ -5,19 +5,32 @@
  *   (and the Docker image) runs it every 5 minutes, e.g.
  *   `*\/5 * * * * cd /srv/adiutor && pnpm jobs:run >> /var/log/adiutor-jobs.log 2>&1`.
  * - `pnpm jobs:run <name>`: runs one job now, whether it's due or not.
- * - `pnpm jobs:list`: every job with its schedule, state, last and next run.
+ * - `pnpm jobs:list`: every job with its schedule, state, last and next run,
+ *   each kind of queued job with how many wait and failed, and the failed
+ *   jobs' IDs.
+ * - `pnpm jobs:retry <id>` or `pnpm jobs:retry --kind <name>`: puts failed
+ *   queued jobs back in the queue, with a fresh count of attempts.
+ * - `pnpm jobs:discard <id>` or `pnpm jobs:discard --kind <name>`: discards
+ *   failed queued jobs.
  *
  * It exits with 1 when a run failed (after the other jobs ran), so cron's
  * mail or the monitoring notices; 2 for a mistake in the command.
  */
+import { z } from 'zod';
+
 import { db } from '../src/db';
 import { sendEmail } from '../src/lib/email';
 import { appUrl } from '../src/lib/env';
 import { installLogRedaction } from '../src/lib/log-redaction';
 import {
+  discardFailedQueuedJobs,
+  type FailedJobsSelection,
   type JobRunResult,
+  listFailedQueuedJobs,
   listJobs,
+  listQueuedKinds,
   RECURRING_JOBS,
+  retryFailedQueuedJobs,
   runJobNow,
   runTick,
 } from '../src/server/jobs';
@@ -140,6 +153,62 @@ async function list(): Promise<number> {
       ].join('\n'),
     );
   });
+  const [kinds, failed] = await Promise.all([listQueuedKinds(db), listFailedQueuedJobs(db)]);
+  kinds.forEach((kind) => {
+    const notes = [kind.paused ? 'paused' : null, kind.known ? null : 'not registered, never runs']
+      .filter(Boolean)
+      .join(', ');
+    console.info(
+      `${kind.name} (queued)${notes ? `, ${notes}` : ''}\n  waiting: ${kind.waiting}, failed: ${kind.failed}`,
+    );
+  });
+  if (failed.length > 0) {
+    console.info('Failed queued jobs (retry or discard them by ID):');
+    failed.forEach((job) =>
+      console.info(
+        `  ${job.id}  ${job.kind}, ${job.attempts} attempts, given up ${moment(job.failedAt)}`,
+      ),
+    );
+  }
+  return 0;
+}
+
+/**
+ * Reads which failed jobs a command names: an ID, or `--kind <name>`.
+ *
+ * @param args - The command's arguments after its name.
+ * @returns The selection, or `null` when the arguments don't name one.
+ */
+function selectionFrom(args: readonly string[]): FailedJobsSelection | null {
+  const [first, second] = args;
+  if (first === '--kind') {
+    return second ? { kind: second } : null;
+  }
+  return first && z.uuid().safeParse(first).success ? { id: first } : null;
+}
+
+/**
+ * Retries or discards failed queued jobs and says how many.
+ *
+ * @param action - What to do.
+ * @param args - The command's arguments after its name.
+ * @returns The exit code: 2 when the arguments name no jobs.
+ */
+async function manage(action: 'retry' | 'discard', args: readonly string[]): Promise<number> {
+  const selection = selectionFrom(args);
+  if (!selection) {
+    console.error(`Usage: pnpm jobs:${action} <id> | pnpm jobs:${action} --kind <name>`);
+    return 2;
+  }
+  const changed =
+    action === 'retry'
+      ? await retryFailedQueuedJobs(db, selection)
+      : await discardFailedQueuedJobs(db, selection);
+  print(
+    `${action === 'retry' ? 'Put back in the queue' : 'Discarded'}: ${changed} failed queued job${
+      changed === 1 ? '' : 's'
+    }.`,
+  );
   return 0;
 }
 
@@ -149,14 +218,19 @@ async function list(): Promise<number> {
  * @returns The exit code.
  */
 async function main(): Promise<number> {
-  const [command, name] = process.argv.slice(2);
+  const [command, ...args] = process.argv.slice(2);
   if (command === 'run') {
-    return name ? runOne(name) : tick();
+    return args[0] ? runOne(args[0]) : tick();
   }
   if (command === 'list') {
     return list();
   }
-  console.error('Usage: pnpm jobs:run [job] | pnpm jobs:list');
+  if (command === 'retry' || command === 'discard') {
+    return manage(command, args);
+  }
+  console.error(
+    'Usage: pnpm jobs:run [job] | pnpm jobs:list | pnpm jobs:retry <id> | pnpm jobs:discard <id>',
+  );
   return 2;
 }
 

@@ -23,9 +23,16 @@ export type {
 export { answerTickRequest } from './endpoint';
 export type { TickResponse } from './endpoint';
 export { listJobs } from './list';
+export type { JobListing } from './list';
+export {
+  discardFailedQueuedJobs,
+  listFailedQueuedJobs,
+  listQueuedKinds,
+  retryFailedQueuedJobs,
+} from './manage-queue';
+export type { FailedJobsSelection, FailedQueuedJob, QueuedKindListing } from './manage-queue';
 export { queueJob } from './queue';
 export type { QueueOptions } from './queue';
-export type { JobListing } from './list';
 export { RECURRING_JOBS } from './registry';
 export type { JobRunResult } from './run';
 export { runJobNow, runTick } from './tick';

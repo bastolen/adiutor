@@ -113,11 +113,13 @@ summary never holds personal data. The `retention` job deletes runs after 30 day
 
 ## From the command line
 
-| Command                | What it does                                                                        |
-| ---------------------- | ----------------------------------------------------------------------------------- |
-| `pnpm jobs:run`        | One tick. Exits with 1 when a run failed, after the other jobs ran.                 |
-| `pnpm jobs:run <name>` | Runs one job now, whether it's due or paused (unless another run holds it).         |
-| `pnpm jobs:list`       | Every job with its schedule, whether it's paused or running, its last and next run. |
+| Command                  | What it does                                                                                                                                                         |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm jobs:run`          | One tick. Exits with 1 when a run failed, after the other jobs ran.                                                                                                  |
+| `pnpm jobs:run <name>`   | Runs one job now, whether it's due or paused (unless another run holds it).                                                                                          |
+| `pnpm jobs:list`         | Every job with its schedule, whether it's paused or running, its last and next run; each kind of queued job with how many wait and failed; and the failed jobs' IDs. |
+| `pnpm jobs:retry <id>`   | Puts a failed queued job back in the queue with a fresh count of attempts; `--kind <name>` for every failed job of a kind.                                           |
+| `pnpm jobs:discard <id>` | Discards a failed queued job; `--kind <name>` for every failed job of a kind.                                                                                        |
 
 In production, run the tick every 5 minutes; see [Background jobs](deploying.md#background-jobs) in
 the deployment docs. The command is thin (`scripts/jobs.ts`); the logic lives in the module and its
