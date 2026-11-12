@@ -86,9 +86,9 @@ export async function afterUserUpdate(
     return;
   }
   delete state.verifyingEmailAtProviderSignIn;
-  await safely('record email verification', () =>
-    audit(ctx, 'email_verified', updated.id, { providerId: ctx.params?.id ?? null }),
-  );
+  await safely('record email verification', async () => {
+    await audit(ctx, 'email_verified', updated.id, { providerId: ctx.params?.id ?? null });
+  });
 }
 
 /**
@@ -98,5 +98,7 @@ export async function afterUserUpdate(
  * @param headers - Request headers, for IP and browser.
  */
 export async function onEmailVerified(userId: string, headers?: Headers): Promise<void> {
-  await safely('record email verification', () => audit({ headers }, 'email_verified', userId));
+  await safely('record email verification', async () => {
+    await audit({ headers }, 'email_verified', userId);
+  });
 }

@@ -154,14 +154,15 @@ export function auditContext(headers: Headers | undefined) {
  * @param action - What happened.
  * @param userId - Who did it (and whose account it was about).
  * @param details - Extra facts.
+ * @returns The event's ID.
  */
 export async function audit(
   ctx: Pick<AuthHookContext, 'headers'> | null,
   action: AuditAction,
   userId: string | null,
   details: Record<string, unknown> = {},
-): Promise<void> {
-  await recordEvent(auditContext(ctx?.headers), {
+): Promise<string> {
+  return recordEvent(auditContext(ctx?.headers), {
     action,
     actorUserId: userId,
     targetUserId: userId,
