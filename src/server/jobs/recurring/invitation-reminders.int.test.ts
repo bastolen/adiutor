@@ -24,7 +24,7 @@ import {
 import type { Actor } from '../../actor';
 import type { ServiceContext } from '../../context';
 import { inviteByEmail } from '../../people/invitations';
-import invitationReminders from './invitation-reminders';
+import invitationReminders, { REMINDER_GROUP_SIZE } from './invitation-reminders';
 
 const { ctx, db, sent } = setupTestContext();
 
@@ -96,6 +96,51 @@ describe('invitation-reminders', () => {
     );
     expect(reminded.tokenHash).toBe(hashToken(tokenFrom(defined(sent[0], 'the reminder email'))));
     expect(reminded.reminderSentAt).toBeInstanceOf(Date);
+  });
+
+  it('reminds the soonest-expiring first, a group at a time, leaving the rest at its deadline', async () => {
+    // One more than a group, expiring an hour apart, the first soonest.
+    await db.insert(invitation).values(
+      Array.from({ length: REMINDER_GROUP_SIZE + 1 }, (_, index) => ({
+        companyId: testCompany.id,
+        email: `due${index}@adiutor.test`,
+        role: 'client' as const,
+        tokenHash: hashToken(`adiutor-tests-due-${index}`),
+        invitedBy: companyAdmin.id,
+        createdAt: sql`now() - interval '5 days'`,
+        expiresAt: sql`now() + make_interval(hours => ${index + 1})`,
+      })),
+    );
+    const groupEnd = new Date(Date.now() + 60_000);
+    // The first group takes until past the deadline.
+    const slowMail: ServiceContext = {
+      ...ctx,
+      /**
+       * Sends like the test context, then moves the clock past the deadline.
+       *
+       * @param email - The email.
+       */
+      sendEmail: async (email) => {
+        await ctx.sendEmail(email);
+        vi.setSystemTime(new Date(groupEnd.getTime() + 1));
+      },
+    };
+    vi.useFakeTimers({ toFake: ['Date'] });
+
+    try {
+      const { summary } = await invitationReminders.run(slowMail, { deadline: groupEnd });
+
+      expect(summary).toEqual({ sent: REMINDER_GROUP_SIZE, failed: 0 });
+    } finally {
+      vi.useRealTimers();
+    }
+    // The one that expires last waits for the next run.
+    expect(
+      await db
+        .select({ email: invitation.email })
+        .from(invitation)
+        .where(isNull(invitation.reminderSentAt)),
+    ).toEqual([{ email: `due${REMINDER_GROUP_SIZE}@adiutor.test` }]);
   });
 
   it('reminds in the invitation’s language, or the invitee’s own when they saved one', async () => {

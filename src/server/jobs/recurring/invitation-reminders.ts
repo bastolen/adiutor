@@ -1,7 +1,8 @@
 /**
- * @file The hourly job that reminds people of invitations that expire soon.
+ * @file The hourly job that reminds people of invitations that expire soon,
+ * soonest first, a group at a time until its deadline.
  */
-import { and, eq, exists, gt, isNotNull, isNull, lt, notExists, or, sql } from 'drizzle-orm';
+import { and, asc, eq, exists, gt, isNotNull, isNull, lt, notExists, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
 import { company, invitation, membership, user } from '@/db/schema';
@@ -18,6 +19,13 @@ import { defineRecurringJob } from '../define';
 /** How long before an invitation expires its reminder is sent, in hours. */
 const REMINDER_BEFORE_HOURS = 48;
 
+/**
+ * How many reminders go out at once. The run checks its deadline before each
+ * group, so a long list never keeps it past the request; the rest wait for
+ * the next run, which is in time: they're due 48 hours before expiry.
+ */
+export const REMINDER_GROUP_SIZE = 20;
+
 /** What {@link sendInvitationReminders} did. */
 interface ReminderResults {
   /** Reminders sent. */
@@ -27,38 +35,19 @@ interface ReminderResults {
 }
 
 /**
- * Emails a reminder for each open invitation that expires within
- * {@link REMINDER_BEFORE_HOURS} hours, once per invitation, for staff and
- * active companies. Each reminder has a new link (the old one stops working),
- * because only a hash of the link's token is stored.
- *
- * A reminder that can't be sent is undone: the invitation gets its old link
- * back and stays due, so the link the invitee has keeps working and the next
- * run tries again. One failure doesn't stop the others. With SMTP, the pooled
- * transport (`src/lib/email.ts`) caps how many go out at once.
- *
- * Invitations whose address already belongs to a member of the company (or,
- * for the staff, to someone on the staff) are skipped: they joined some other
- * way meanwhile (added directly, or with an invite link while signed in), and
- * a fresh link would only keep a way back in alive. They aren't revoked here,
- * which would need the per-address lock and an audit event: they stay in the
- * pending list until they expire, and removing the person revokes them
- * (`revokeInvitationsTo`).
- *
- * Each reminder is in the invitation's language (`invitation.locale`), or in
- * the invitee's own when they have an account with a saved language.
+ * Loads the open invitations whose reminder is due (see
+ * {@link sendInvitationReminders}), soonest-expiring first.
  *
  * @param ctx - Service context.
- * @returns How many reminders were sent, and how many failed.
+ * @returns The invitations, with what their reminders need.
  */
-async function sendInvitationReminders(ctx: ServiceContext): Promise<ReminderResults> {
-  const staffName = await getStaffName(ctx.db);
+async function loadDueInvitations(ctx: ServiceContext) {
   // The account the invitation is addressed to, if any (`user` is joined as the inviter).
   const invitee = alias(user, 'invitee');
   // The same account, joined for its language (`invitee` is the subquery's).
   const recipient = alias(user, 'recipient');
   // Staff invitations have no company, so the deactivation check passes for them.
-  const due = await ctx.db
+  return ctx.db
     .select({
       id: invitation.id,
       email: invitation.email,
@@ -113,54 +102,122 @@ async function sendInvitationReminders(ctx: ServiceContext): Promise<ReminderRes
             ),
         ),
       ),
-    );
+    )
+    .orderBy(asc(invitation.expiresAt), asc(invitation.id));
+}
 
-  const results = await Promise.all(
-    due.map(async (found) => {
-      const targetName = found.companyName ?? staffName;
-      const token = generateToken();
-      const tokenHash = hashToken(token);
-      // Claim the reminder first, so two runs at once don't both send it.
-      const [claimed] = await ctx.db
-        .update(invitation)
-        .set({ tokenHash, reminderSentAt: sql`now()` })
-        .where(and(eq(invitation.id, found.id), isNull(invitation.reminderSentAt)))
-        .returning({ id: invitation.id });
-      if (!claimed) {
-        return 'skipped';
-      }
-      try {
-        await ctx.sendEmail(
-          await invitationReminderEmail(found.email, {
-            appUrl: ctx.baseUrl,
-            locale: isLocale(found.recipientLocale) ? found.recipientLocale : found.locale,
-            // The inviter's account may be gone since; the target's name stands in then.
-            inviterName: found.inviterEmail
-              ? displayName({ name: found.inviterName, email: found.inviterEmail })
-              : targetName,
-            companyName: targetName,
-            role: found.role,
-            url: `${ctx.baseUrl}/invite/${token}`,
-            expiresAt: found.expiresAt,
-          }),
-        );
-        return 'sent';
-      } catch (error) {
-        // Undo the claim, so the link they have works again and the next run retries. Only while
-        // the link is still the reminder's: a resend meanwhile has sent them a newer one.
-        await ctx.db
-          .update(invitation)
-          .set({ tokenHash: found.tokenHash, reminderSentAt: null })
-          .where(and(eq(invitation.id, found.id), eq(invitation.tokenHash, tokenHash)));
-        // eslint-disable-next-line no-console -- The job has no caller to report one failure to.
-        console.error(
-          `Sending the reminder for invitation ${found.id} failed; the next run tries again`,
-          sendFailureOf(error),
-        );
-        return 'failed';
-      }
-    }),
-  );
+/** An invitation whose reminder is due. */
+type DueInvitation = Awaited<ReturnType<typeof loadDueInvitations>>[number];
+
+/** How one reminder went: sent, couldn't be sent, or another run took it first. */
+type ReminderResult = 'sent' | 'failed' | 'skipped';
+
+/**
+ * Sends one reminder with a new link, after claiming it, and undoes the
+ * claim when it can't be sent.
+ *
+ * @param ctx - Service context.
+ * @param found - The invitation.
+ * @param staffName - The name the staff are shown with, for staff invitations.
+ * @returns How it went.
+ */
+async function remind(
+  ctx: ServiceContext,
+  found: DueInvitation,
+  staffName: string,
+): Promise<ReminderResult> {
+  const targetName = found.companyName ?? staffName;
+  const token = generateToken();
+  const tokenHash = hashToken(token);
+  // Claim the reminder first, so two runs at once don't both send it.
+  const [claimed] = await ctx.db
+    .update(invitation)
+    .set({ tokenHash, reminderSentAt: sql`now()` })
+    .where(and(eq(invitation.id, found.id), isNull(invitation.reminderSentAt)))
+    .returning({ id: invitation.id });
+  if (!claimed) {
+    return 'skipped';
+  }
+  try {
+    await ctx.sendEmail(
+      await invitationReminderEmail(found.email, {
+        appUrl: ctx.baseUrl,
+        locale: isLocale(found.recipientLocale) ? found.recipientLocale : found.locale,
+        // The inviter's account may be gone since; the target's name stands in then.
+        inviterName: found.inviterEmail
+          ? displayName({ name: found.inviterName, email: found.inviterEmail })
+          : targetName,
+        companyName: targetName,
+        role: found.role,
+        url: `${ctx.baseUrl}/invite/${token}`,
+        expiresAt: found.expiresAt,
+      }),
+    );
+    return 'sent';
+  } catch (error) {
+    // Undo the claim, so the link they have works again and the next run retries. Only while
+    // the link is still the reminder's: a resend meanwhile has sent them a newer one.
+    await ctx.db
+      .update(invitation)
+      .set({ tokenHash: found.tokenHash, reminderSentAt: null })
+      .where(and(eq(invitation.id, found.id), eq(invitation.tokenHash, tokenHash)));
+    // eslint-disable-next-line no-console -- The job has no caller to report one failure to.
+    console.error(
+      `Sending the reminder for invitation ${found.id} failed; the next run tries again`,
+      sendFailureOf(error),
+    );
+    return 'failed';
+  }
+}
+
+/**
+ * Emails a reminder for each open invitation that expires within
+ * {@link REMINDER_BEFORE_HOURS} hours, once per invitation, for staff and
+ * active companies. Each reminder has a new link (the old one stops working),
+ * because only a hash of the link's token is stored.
+ *
+ * A reminder that can't be sent is undone: the invitation gets its old link
+ * back and stays due, so the link the invitee has keeps working and the next
+ * run tries again. One failure doesn't stop the others. With SMTP, the pooled
+ * transport (`src/lib/email.ts`) caps how many go out at once.
+ *
+ * Invitations whose address already belongs to a member of the company (or,
+ * for the staff, to someone on the staff) are skipped: they joined some other
+ * way meanwhile (added directly, or with an invite link while signed in), and
+ * a fresh link would only keep a way back in alive. They aren't revoked here,
+ * which would need the per-address lock and an audit event: they stay in the
+ * pending list until they expire, and removing the person revokes them
+ * (`revokeInvitationsTo`).
+ *
+ * Each reminder is in the invitation's language (`invitation.locale`), or in
+ * the invitee's own when they have an account with a saved language.
+ *
+ * The soonest-expiring go first, {@link REMINDER_GROUP_SIZE} at a time, and
+ * no new group starts after the deadline: those left stay due for the next
+ * run.
+ *
+ * @param ctx - Service context.
+ * @param deadline - When to stop starting new groups.
+ * @returns How many reminders were sent, and how many failed.
+ */
+async function sendInvitationReminders(
+  ctx: ServiceContext,
+  deadline: Date,
+): Promise<ReminderResults> {
+  const [staffName, due] = await Promise.all([getStaffName(ctx.db), loadDueInvitations(ctx)]);
+  const results: ReminderResult[] = [];
+  for (
+    let start = 0;
+    start < due.length && Date.now() < deadline.getTime();
+    start += REMINDER_GROUP_SIZE
+  ) {
+    // One group at a time on purpose, so the deadline is checked between them.
+    // eslint-disable-next-line no-await-in-loop -- See above.
+    const group = await Promise.all(
+      due.slice(start, start + REMINDER_GROUP_SIZE).map((found) => remind(ctx, found, staffName)),
+    );
+    results.push(...group);
+  }
   return {
     sent: results.filter((result) => result === 'sent').length,
     failed: results.filter((result) => result === 'failed').length,
@@ -171,14 +228,17 @@ export default defineRecurringJob({
   name: 'invitation-reminders',
   schedule: '10 * * * *',
   /**
-   * Sends the reminders that are due. When some couldn't be sent, the run
-   * counts as failed, so the failure shows (and the next run tries again).
+   * Sends the reminders that are due, until the deadline. When some couldn't
+   * be sent, the run counts as failed, so the failure shows (and the next run
+   * tries again).
    *
    * @param ctx - Service context.
+   * @param options - The run's options.
+   * @param options.deadline - When to stop starting new groups of reminders.
    * @returns How many were sent and how many failed.
    */
-  run: async (ctx) => {
-    const { sent, failed } = await sendInvitationReminders(ctx);
+  run: async (ctx, { deadline }) => {
+    const { sent, failed } = await sendInvitationReminders(ctx, deadline);
     return {
       summary: { sent, failed },
       ...(failed > 0
