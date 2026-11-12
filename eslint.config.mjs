@@ -326,6 +326,7 @@ const FOLDER_MODULES = [
   'server/jobs',
   'server/people/invitations',
   'server/people/user-admin',
+  'server/queue',
 ];
 
 /**

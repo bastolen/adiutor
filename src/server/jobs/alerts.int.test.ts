@@ -15,8 +15,8 @@ import { jobState, user } from '@/db/schema';
 
 import { setUserLocale, setupTestContext, staffActor } from '../../../tests/integration/helpers';
 import type { ServiceContext } from '../context';
-import { defineQueuedJob, defineRecurringJob } from './define';
-import { queueJob } from './queue';
+import { defineQueuedKind, queueJob } from '../queue';
+import { defineRecurringJob, handleQueuedJob } from './define';
 import { runQueue } from './run-queue';
 import { runTick } from './tick';
 
@@ -148,19 +148,21 @@ describe('alerts about a recurring job', () => {
 
 describe('alerts about queued jobs', () => {
   it('tell the staff Admins when queued jobs are given up', async () => {
-    const hopeless = defineQueuedJob({
-      name: 'adiutor-tests-hopeless',
-      payload: z.object({ userId: z.uuid() }),
-      maxAttempts: 1,
+    const hopeless = handleQueuedJob(
+      defineQueuedKind({
+        name: 'adiutor-tests-hopeless',
+        payload: z.object({ userId: z.uuid() }),
+        maxAttempts: 1,
+      }),
       /**
        * Fails.
        *
        * @returns Never.
        */
-      run: async () => {
+      async () => {
         throw new Error('Adiutor Tests: the job broke');
       },
-    });
+    );
     await queueJob(db, hopeless, { userId: randomUUID() });
     await queueJob(db, hopeless, { userId: randomUUID() });
 

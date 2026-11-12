@@ -1,6 +1,6 @@
 /**
- * @file Integration tests for the queue, against the test database: queuing
- * a job with a checked payload, running due jobs at the tick (oldest first,
+ * @file Integration tests for running the queue, against the test database:
+ * due jobs at the tick (oldest first,
  * once each, even with two ticks at once), skipped jobs, failed jobs tried
  * again after growing waits and then given up, runs that died, paused
  * kinds, each kind's cap per tick, the deadline, and coupled jobs that run
@@ -10,19 +10,21 @@ import { randomUUID } from 'node:crypto';
 
 import { asc, eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { z, ZodError } from 'zod';
+import { z } from 'zod';
 
 import { appError, jobRun, jobState, queuedJob } from '@/db/schema';
 
 import { setupTestContext } from '../../../tests/integration/helpers';
+import { defineQueuedKind, type QueuedJobKind, queueJob } from '../queue';
 import {
   type BatchedQueuedJob,
+  batchedJobRunner,
   defineJobBatch,
-  defineQueuedJob,
+  handleQueuedJob,
   type JobBatch,
-  type QueuedJobKind,
+  type QueuedJobRunner,
 } from './define';
-import { queueJob, retryWaitMinutes } from './queue';
+import { retryWaitMinutes } from './queue';
 import { runQueue } from './run-queue';
 import { runTick } from './tick';
 
@@ -63,11 +65,9 @@ function noteKind(
     perTick?: number;
     result?: (note: string) => Promise<'done' | 'skipped'>;
   } = {},
-): QueuedJobKind<z.infer<typeof payload>> {
-  return defineQueuedJob({
-    name,
-    payload,
-    ...(perTick ? { perTick } : {}),
+): QueuedJobKind<z.infer<typeof payload>> & QueuedJobRunner {
+  return handleQueuedJob(
+    defineQueuedKind({ name, payload, ...(perTick ? { perTick } : {}) }),
     /**
      * Notes the job, then ends as the test asks.
      *
@@ -75,11 +75,11 @@ function noteKind(
      * @param job - The job.
      * @returns How it ended.
      */
-    run: async (_ctx, job) => {
+    async (_ctx, job) => {
       ran.push(job.payload.note);
       return result(job.payload.note);
     },
-  });
+  );
 }
 
 /**
@@ -110,34 +110,6 @@ async function stored() {
     attempts: row.attempts,
   }));
 }
-
-describe('queueJob', () => {
-  it('stores a job with its kind and checked payload', async () => {
-    const kind = noteKind('adiutor-tests-note');
-    const userId = randomUUID();
-
-    const id = await queueJob(db, kind, { userId, note: 'hello' });
-
-    expect(await db.select().from(queuedJob).where(eq(queuedJob.id, id))).toEqual([
-      expect.objectContaining({
-        kind: 'adiutor-tests-note',
-        payload: { userId, note: 'hello' },
-        status: 'queued',
-        attempts: 0,
-        batchKey: null,
-      }),
-    ]);
-  });
-
-  it('refuses a payload that does not fit, and stores nothing', async () => {
-    const kind = noteKind('adiutor-tests-note');
-
-    await expect(queueJob(db, kind, { userId: 'not-an-id', note: 'hello' })).rejects.toThrow(
-      ZodError,
-    );
-    expect(await db.select().from(queuedJob)).toEqual([]);
-  });
-});
 
 describe('running the queue', () => {
   it('runs due jobs at the tick, oldest first, and records one run for the kind', async () => {
@@ -291,9 +263,8 @@ describe('running the queue', () => {
   });
 
   it('runs each job once when two ticks run the queue at the same time', async () => {
-    const slow = defineQueuedJob({
-      name: 'adiutor-tests-slow',
-      payload,
+    const slow = handleQueuedJob(
+      defineQueuedKind({ name: 'adiutor-tests-slow', payload }),
       /**
        * Notes the job and takes a moment, so two ticks overlap.
        *
@@ -301,14 +272,14 @@ describe('running the queue', () => {
        * @param job - The job.
        * @returns Done.
        */
-      run: async (_ctx, job) => {
+      async (_ctx, job) => {
         ran.push(job.payload.note);
         await new Promise((resolve) => {
           setTimeout(resolve, 20);
         });
         return 'done';
       },
-    });
+    );
     await Promise.all(
       ['a', 'b', 'c', 'd', 'e', 'f'].map(async (note) =>
         queueJob(db, slow, { userId: randomUUID(), note }),
@@ -327,19 +298,17 @@ describe('running the queue', () => {
 
   it('waits longer after each failed attempt, and gives up after the last', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    const broken = defineQueuedJob({
-      name: 'adiutor-tests-broken',
-      payload,
-      maxAttempts: 3,
+    const broken = handleQueuedJob(
+      defineQueuedKind({ name: 'adiutor-tests-broken', payload, maxAttempts: 3 }),
       /**
        * Always fails.
        *
        * @returns Never.
        */
-      run: async () => {
+      async () => {
         throw new Error('Adiutor Tests: the job broke');
       },
-    });
+    );
     const id = await queueJob(db, broken, { userId: randomUUID(), note: 'broken' });
     /**
      * Runs the queue as if the job's wait were over.
@@ -419,18 +388,22 @@ describe('batches', () => {
   };
 
   /** A status update, coupled with comments. */
-  const statusChanged = defineQueuedJob({
-    name: 'adiutor-tests-status-changed',
-    payload: ticketPayload,
-    batch: batching,
-  });
+  const statusChanged = batchedJobRunner(
+    defineQueuedKind({
+      name: 'adiutor-tests-status-changed',
+      payload: ticketPayload,
+      batch: batching,
+    }),
+  );
 
   /** A comment, coupled with status updates. */
-  const commented = defineQueuedJob({
-    name: 'adiutor-tests-commented',
-    payload: ticketPayload,
-    batch: batching,
-  });
+  const commented = batchedJobRunner(
+    defineQueuedKind({
+      name: 'adiutor-tests-commented',
+      payload: ticketPayload,
+      batch: batching,
+    }),
+  );
 
   /** The jobs of each call of the batch, as `<kind>:<ticket>:<person>`. */
   let calls: string[][] = [];
@@ -520,14 +493,6 @@ describe('batches', () => {
     await queueJob(db, commented, { ticketId: ticket1, userId: jane });
     await run();
     expect(calls).toEqual([[`${commented.name}:${ticket1}:${jane}`]]);
-  });
-
-  it('stores the key with each job', async () => {
-    const id = await queueJob(db, commented, { ticketId: ticket1, userId: jane });
-
-    expect(
-      await db.select({ batchKey: queuedJob.batchKey }).from(queuedJob).where(eq(queuedJob.id, id)),
-    ).toEqual([{ batchKey: `${batching.group}:${ticket1}:${jane}` }]);
   });
 
   it('tries a failed batch again together with the jobs of its key queued since', async () => {

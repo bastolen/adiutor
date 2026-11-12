@@ -40,6 +40,8 @@ The folders of the repository and what belongs in each. Back to the [documentati
     actions on a user (detail, sessions, own account, the sole Admin rule).
   - `src/server/jobs/`: background jobs (see [Background jobs](jobs.md)): the tick, leases and
     history, with each recurring job in `recurring/` and every job listed in `registry.ts`.
+  - `src/server/queue/`: declaring kinds of queued job and adding jobs to the queue (`queueJob`),
+    apart from `src/server/jobs`, which imports the code it runs: so code anywhere can queue a job.
 - `src/lib/`: code shared by the server and the browser, with a few server-only exceptions below.
   General helpers (`env`, `format`, `search-params`, `validation`, ...) sit at its root; the rest
   is grouped by topic. `validation.ts` (zod schemas) is for the server; the limits client

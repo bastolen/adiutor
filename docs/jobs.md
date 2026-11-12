@@ -61,7 +61,8 @@ prefetcher can't start a tick, because it needs the secret:
 
 ## Queued jobs
 
-The app adds a job to the queue (`queued_job`) with `queueJob(db, kind, payload)`, inside the
+The app adds a job to the queue (`queued_job`) with `queueJob(db, kind, payload)` from
+`src/server/queue`, inside the
 transaction of the change it belongs to, so the job only exists if the change was saved. The next
 tick runs it; with `runAt`, not before that moment.
 
@@ -162,19 +163,26 @@ follow a scheduled one. Work that can take longer than a tick should stop starti
 
 ## Adding a queued job
 
-1. Add a file to `src/server/jobs/queued/` that exports a kind made with `defineQueuedJob`:
+A queued job comes in two parts, in two modules, so code that queues jobs never imports the code
+that runs them (the runner imports the code it runs, and that code queues jobs):
+
+1. **Declare the kind** in `src/server/queue/` with `defineQueuedKind`, and export it from that
+   module's `index.ts`:
    - `name`: stable, in kebab-case. It's stored with each job, so don't rename it while jobs of it
      may be waiting.
    - `payload`: a zod schema of IDs, enums, numbers and booleans (see [Queued jobs](#queued-jobs)).
-   - `run(ctx, job)`: reads what it needs with the IDs in `job.payload`, does the work and returns
-     `'done'`, or `'skipped'` when what it was about is gone. It throws when it can't do its work,
-     and must be safe to run again: an attempt can fail halfway and be retried.
    - `perTick` (optional): how many of its jobs one tick runs at most.
    - `maxAttempts` (optional): how many times a job is tried before it's given up.
-   - Or, for jobs that run together, `batch: { group, key }` instead of `run`, and a batch for the
-     group made with `defineJobBatch` (see [Batches](#batches-coupled-jobs)), added to `JOB_BATCHES`
-     in the registry.
-2. Add it to `QUEUED_JOBS` in `src/server/jobs/registry.ts`, and export it from the module's
-   `index.ts` for the code that queues it.
-3. Queue it with `queueJob(tx, kind, payload)` in the transaction of the change, and test it next
-   to its file (`*.int.test.ts`), calling its `handle` or running the queue.
+   - `batch` (optional): `{ group, key }`, for jobs that run together (see
+     [Batches](#batches-coupled-jobs)).
+2. **Give it a handler** in `src/server/jobs/queued/`, and add it to `QUEUED_JOBS` in
+   `src/server/jobs/registry.ts`:
+   - `handleQueuedJob(kind, run)`, where `run(ctx, job)` reads what it needs with the IDs in
+     `job.payload`, does the work and returns `'done'`, or `'skipped'` when what it was about is
+     gone. It throws when it can't do its work, and must be safe to run again: an attempt can fail
+     halfway and be retried.
+   - Or, for a batched kind, `batchedJobRunner(kind)`, plus a batch for its group made with
+     `defineJobBatch`, added to `JOB_BATCHES`.
+3. **Queue it** with `queueJob(tx, kind, payload)` from `src/server/queue`, in the transaction of
+   the change where there is one, and test the handler next to its file (`*.int.test.ts`), calling
+   its `handle` or running the queue.

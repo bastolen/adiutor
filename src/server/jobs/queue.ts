@@ -1,15 +1,14 @@
 /**
- * @file The queue (`queued_job`): adding a job for the next tick or later,
- * taking the next due job under a lease, noting how it ended, and trying a
- * failed one again after a growing wait.
+ * @file The runner's side of the queue (`queued_job`): taking the next due
+ * job under a lease, noting how it ended, and trying a failed one again after
+ * a growing wait. Jobs are added with `queueJob` (`src/server/queue`).
  */
 import { and, asc, eq, inArray, lt, lte, ne, or, sql } from 'drizzle-orm';
 
 import type { DatabaseOrTransaction } from '@/db';
 import { type QueuedJobStatus, queuedJob } from '@/db/schema';
-import { firstRow } from '@/lib/defined';
 
-import type { JobPayload, QueuedJobKind, StoredQueuedJob } from './define';
+import type { StoredQueuedJob } from './define';
 import { JOB_LEASE_MINUTES } from './state';
 
 /**
@@ -26,45 +25,6 @@ export const RETRY_MINUTES = [5, 15, 60, 360] as const;
  */
 export function retryWaitMinutes(attempts: number): number {
   return RETRY_MINUTES[Math.min(Math.max(attempts, 1), RETRY_MINUTES.length) - 1] ?? 5;
-}
-
-/** When a queued job may run. */
-export interface QueueOptions {
-  /** Not before this moment; the next tick by default. */
-  runAt?: Date;
-}
-
-/**
- * Adds a job to the queue. Call it inside the transaction of the change it
- * belongs to, so the job only exists if the change was saved. A job of a
- * kind with `batch` gets its batch key, so it runs with the others of that
- * key.
- *
- * @param db - Database client or the change's transaction.
- * @param kind - The kind of job.
- * @param payload - Its IDs and small settings, checked against the kind's schema.
- * @param options - When it may run.
- * @param options.runAt - Not before this moment.
- * @returns The queued job's ID.
- * @throws {ZodError} When the payload doesn't fit the kind's schema.
- */
-export async function queueJob<P extends JobPayload>(
-  db: DatabaseOrTransaction,
-  kind: QueuedJobKind<P>,
-  payload: P,
-  { runAt }: QueueOptions = {},
-): Promise<string> {
-  const checked = kind.payload.parse(payload);
-  const queued = await db
-    .insert(queuedJob)
-    .values({
-      kind: kind.name,
-      payload: { ...checked },
-      batchKey: kind.batchKey(checked),
-      runAt: runAt ?? sql`now()`,
-    })
-    .returning({ id: queuedJob.id });
-  return firstRow(queued, 'the queued job').id;
 }
 
 /**
