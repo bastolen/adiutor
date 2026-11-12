@@ -12,7 +12,13 @@
  */
 import { defineConfig, devices } from '@playwright/test';
 
-import { E2E_AUTH_SECRET, E2E_BASE_URL, E2E_PORT, OUTBOX_DIR } from './e2e/support/fixtures';
+import {
+  E2E_AUTH_SECRET,
+  E2E_BASE_URL,
+  E2E_CRON_SECRET,
+  E2E_PORT,
+  OUTBOX_DIR,
+} from './e2e/support/fixtures';
 import { buildIsCurrent } from './tests/build/build-state';
 import getTestDatabaseUrl from './tests/database/database-url';
 
@@ -67,6 +73,8 @@ export default defineConfig({
       DATABASE_URL: getTestDatabaseUrl(),
       BETTER_AUTH_URL: E2E_BASE_URL,
       BETTER_AUTH_SECRET: E2E_AUTH_SECRET,
+      // The email helpers start the jobs' tick with it, so queued emails go out.
+      CRON_SECRET: E2E_CRON_SECRET,
       EMAIL_OUTBOX_DIR: OUTBOX_DIR,
       // Allows the email outbox in this production build.
       E2E_TESTS: '1',

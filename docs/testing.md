@@ -39,7 +39,9 @@ configurations in VS Code, which turn the time limit off (see
   foreign keys). Run them with `pnpm test:integration`.
 - **End-to-end tests** use [Playwright](https://playwright.dev), in `e2e/` (`playwright.config.ts`).
   They build and start their own server on port 3100 against the seeded test database, and read
-  emails from `e2e/.outbox`; your dev server and database aren't touched. They include the
+  emails from `e2e/.outbox`; your dev server and database aren't touched. Before reading, the email
+  helpers (`e2e/support/outbox.ts`) start the [background jobs](jobs.md)' tick on that server
+  (`/api/jobs`, with the test `CRON_SECRET`), so emails waiting in the queue go out first. They include the
   accessibility and keyboard checks described under
   [Design and accessibility](design.md#design-and-accessibility).
   - **Running and build reuse:** install the browser once with

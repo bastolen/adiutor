@@ -22,6 +22,12 @@ export const OUTBOX_DIR = resolve('e2e/.outbox');
 export const E2E_AUTH_SECRET = 'e2e-only-secret-not-used-anywhere-else-0123456789';
 
 /**
+ * The test server's `CRON_SECRET`, with which the email helpers start the
+ * background jobs' tick (`/api/jobs`), so queued emails go out.
+ */
+export const E2E_CRON_SECRET = 'e2e-only-cron-secret-not-used-anywhere-else-0123';
+
+/**
  * An Admin on the staff, created by the global setup. Admins must have MFA,
  * so they have an authenticator app set up with this (raw) secret; the
  * `signIn` helper computes the codes.

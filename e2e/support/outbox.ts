@@ -1,5 +1,7 @@
 /**
- * @file Reads emails the test server wrote to the outbox folder.
+ * @file Reads emails the test server wrote to the outbox folder. Before it
+ * reads, it starts the background jobs' tick on the test server, so emails
+ * that wait in the queue (security notices and the like) are sent first.
  */
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -7,7 +9,7 @@ import { join } from 'node:path';
 import { expect } from '@playwright/test';
 
 import { defined } from '../../src/lib/defined';
-import { OUTBOX_DIR } from './fixtures';
+import { E2E_BASE_URL, E2E_CRON_SECRET, OUTBOX_DIR } from './fixtures';
 
 /** An email as written to the outbox. */
 export interface OutboxEmail {
@@ -19,6 +21,17 @@ export interface OutboxEmail {
   text: string;
   /** HTML body. */
   html: string;
+}
+
+/**
+ * Starts one tick of the background jobs on the test server, as a cron
+ * service would, so queued emails are sent.
+ */
+async function runJobs(): Promise<void> {
+  const response = await fetch(`${E2E_BASE_URL}/api/jobs`, {
+    headers: { authorization: `Bearer ${E2E_CRON_SECRET}` },
+  });
+  expect(response.status, 'the jobs’ tick on the test server').toBe(200);
 }
 
 /**
@@ -54,6 +67,7 @@ export async function waitForEmail(to: string): Promise<OutboxEmail> {
   let found: OutboxEmail | undefined;
   await expect
     .poll(async () => {
+      await runJobs();
       found = (await readOutbox()).filter((email) => email.to === to).at(-1);
       return found;
     })
@@ -62,12 +76,14 @@ export async function waitForEmail(to: string): Promise<OutboxEmail> {
 }
 
 /**
- * Counts the emails sent to an address so far.
+ * Counts the emails sent to an address so far, after sending what waits in
+ * the queue: an email an earlier step queued can't then pass for a new one.
  *
  * @param to - The recipient address.
  * @returns How many there are.
  */
 export async function countEmails(to: string): Promise<number> {
+  await runJobs();
   return (await readOutbox()).filter((email) => email.to === to).length;
 }
 
