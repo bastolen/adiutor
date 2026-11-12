@@ -9,7 +9,9 @@ data only as long as it may, and reminding people of invitations. That work runs
 ## The tick
 
 Every 5 minutes something starts a **tick**: Vercel Cron or an external cron service calling the
-[endpoint](#the-endpoint), or `pnpm jobs:run` from system cron or the Docker image.
+[endpoint](#the-endpoint), or `pnpm jobs:run` from system cron or the Docker image (see
+[Background jobs](deploying.md#background-jobs) and [Vercel](deploying.md#vercel) in the
+deployment docs).
 A tick runs every recurring job that's due, one after another (`runTick` in
 `src/server/jobs/tick.ts`). It stops starting new runs at its deadline (4 minutes from the command
 line), and what's left waits for the next tick.

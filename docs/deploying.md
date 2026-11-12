@@ -45,9 +45,9 @@ Vercel runs two environments from two branches:
 
 Every other branch is skipped, so pull requests get no preview deployments.
 
-`vercel.json` sets how Vercel builds Adiutor. It's strict JSON, so it can't carry comments; this
-section explains it instead. Both of its settings take precedence over the same fields in the
-project's dashboard.
+`vercel.json` sets how Vercel builds and runs Adiutor. It's strict JSON, so it can't carry
+comments; this section explains it instead. Its build settings take precedence over the same
+fields in the project's dashboard.
 
 - **What's built** (`ignoreCommand`): Vercel builds a commit when the command exits with 1. It does
   for every commit on `main`, and for `production` only when the branch points at a release commit
@@ -58,6 +58,12 @@ project's dashboard.
   connection) or else its `DATABASE_URL`. Migrations should use a direct connection, not a pooled
   one. When migrating fails, the build fails and the previous deployment stays live, so new code
   never runs against the old schema.
+- **A daily tick** (`crons`): Vercel Cron calls `/api/jobs` once a day at 04:00 UTC (on the Hobby
+  plan, somewhere within that hour), with `Authorization: Bearer <CRON_SECRET>` when the
+  environment has `CRON_SECRET`. It's the fallback for the external cron service below, so the
+  jobs still run if that service stops. Vercel runs crons for Production only. On the Pro plan,
+  change its schedule to `*/5 * * * *` and drop the external service: Hobby refuses to deploy a
+  cron that runs more than once a day.
 
 **Moving production** (`.github/workflows/production-branch.yml`): when Release Please publishes a
 release, this workflow moves `production` to the release's commit, creating the branch the first
@@ -77,6 +83,8 @@ a tag such as `v0.2.0`) to move production to an existing release.
 - **`BETTER_AUTH_URL`:** each environment's own address, or sign-in links and redirects point at the
   other one. GitHub and Google sign-in need Preview's address as a callback URL too; otherwise leave
   their settings unset in Preview.
+- **`CRON_SECRET`:** a different random secret per environment (at least 32 characters, e.g.
+  `openssl rand -base64 32`), for the background jobs' endpoint.
 
 **One-time setup, in this order:**
 
@@ -87,6 +95,15 @@ a tag such as `v0.2.0`) to move production to an existing release.
    always shows the latest commit.
 4. Publish a release (see [Releases](ci-and-releases.md#releases)): the workflow creates
    `production` at it, and Vercel deploys it as production.
+5. Start the background jobs every 5 minutes with an external cron service (such as
+   [cron-job.org](https://cron-job.org)), one entry per environment:
+   - `GET https://<the environment's address>/api/jobs`, every 5 minutes;
+   - the header `Authorization: Bearer <that environment's CRON_SECRET>`;
+   - for Preview, if Deployment Protection is on, also the header
+     `x-vercel-protection-bypass` with the project's secret from Settings → Deployment Protection →
+     Protection Bypass for Automation;
+   - have the service warn you when the answer isn't 200: a 500 means a job failed (see
+     [Background jobs](jobs.md)).
 
 ## Docker
 
