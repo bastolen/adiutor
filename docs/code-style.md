@@ -70,8 +70,8 @@ The linters and formatters, the JSDoc rule, the editor setup and the Git hooks. 
   fails, naming the chain, when one reaches a module on its list; add new heavy libraries there.
 - **Modules that outgrow one file** (around 500 lines, or several jobs in one file) become a folder
   with an `index.ts` as the module's public API, like `src/lib/authz/mfa/`,
-  `src/server/auth/auth-events/`, `src/server/auth/auth-guards/`, `src/server/people/invitations/`
-  and `src/server/people/user-admin/`. Each file inside holds one part of the module; files import
+  `src/server/auth/auth-events/`, `src/server/auth/auth-guards/`, `src/server/jobs/`,
+  `src/server/people/invitations/` and `src/server/people/user-admin/`. Each file inside holds one part of the module; files import
   each other directly (never `./index`), and code outside imports only the folder itself, so
   existing imports keep working and the internals can change freely. ESLint enforces that boundary
   for the folders listed in `FOLDER_MODULES` (`eslint.config.mjs`), and `import-x/no-cycle` keeps

@@ -323,6 +323,7 @@ const FOLDER_MODULES = [
   'lib/authz/mfa',
   'server/auth/auth-events',
   'server/auth/auth-guards',
+  'server/jobs',
   'server/people/invitations',
   'server/people/user-admin',
 ];

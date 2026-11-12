@@ -38,6 +38,8 @@ The folders of the repository and what belongs in each. Back to the [documentati
     `invitations/` has one file per flow (the shared rules, the lock, creating the record, sending,
     managing, accepting, and revoking when someone loses access) and `user-admin/` the staff
     actions on a user (detail, sessions, own account, the sole Admin rule).
+  - `src/server/jobs/`: background jobs ([decision 0018](decisions/0018-background-jobs-in-postgres-with-one-tick.md)):
+    the tick, the leases and the history of runs, with every job listed in `registry.ts`.
 - `src/lib/`: code shared by the server and the browser, with a few server-only exceptions below.
   General helpers (`env`, `format`, `search-params`, `validation`, ...) sit at its root; the rest
   is grouped by topic. `validation.ts` (zod schemas) is for the server; the limits client

@@ -43,6 +43,7 @@
     "@formatjs/intl-localematcher": "^0.10.1",
     "better-auth": "^1.7.12",
     "clsx": "^2.1.1",
+    "cron-parser": "5.10.4",
     "drizzle-orm": "^0.45.4",
     "lucide-react": "^1.61.0",
     "negotiator": "^1.1.0",
