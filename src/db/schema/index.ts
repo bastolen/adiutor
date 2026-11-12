@@ -3,5 +3,6 @@
  */
 export * from './auth';
 export * from './companies';
+export * from './jobs';
 export * from './security';
 export * from './staff';

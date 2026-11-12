@@ -34,6 +34,6 @@ export interface SqlExecutor {
  */
 export default async function emptyDatabase(executor: SqlExecutor): Promise<void> {
   await executor.execute(
-    sql`truncate table "user", company, staff_settings, verification, rate_limit_bucket, rate_limit cascade`,
+    sql`truncate table "user", company, staff_settings, verification, rate_limit_bucket, rate_limit, job_state, job_run cascade`,
   );
 }
