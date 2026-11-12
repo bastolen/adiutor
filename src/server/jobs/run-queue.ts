@@ -4,8 +4,9 @@
  * nothing is due. A job with a batch key
  * runs with the rest of its batch, in one call of its group's batch. A job
  * that fails is tried again later, up to its kind's `maxAttempts`, and each
- * failure is recorded as an error with a reference; when jobs are given up,
- * the staff Admins are told. Every kind that ran jobs gets one run in the
+ * failure is recorded as an error with a reference. A run that dies (its
+ * lease runs out) counts as an attempt too, and a job whose last attempt died
+ * is given up. When jobs are given up, the staff Admins are told. Every kind that ran jobs gets one run in the
  * history, with how many were done, skipped, retried and failed.
  */
 import type { JobTrigger } from '@/db/schema';
@@ -111,6 +112,40 @@ async function fail(
       }
       await retryQueuedJobLater(ctx.db, job.id, job.attempts, errorReference);
       return { ended: 'retried', errorReference };
+    }),
+  );
+}
+
+/**
+ * Gives up jobs whose last attempt never finished: a run that dies (say, the
+ * platform stopped the tick at its time limit) never throws, so without this
+ * such a job would be taken again every time its lease runs out, forever. A
+ * job claimed with more attempts than its kind allows used them all, the last
+ * one dying. The error is recorded once, with the jobs' IDs and attempts;
+ * each job keeps its reference and stays `failed`.
+ *
+ * @param ctx - Service context.
+ * @param jobs - The jobs, each with its kind.
+ * @returns How each ended: failed.
+ */
+async function giveUp(
+  ctx: ServiceContext,
+  jobs: readonly { job: StoredQueuedJob; kind: QueuedJobRunner }[],
+): Promise<Ending[]> {
+  const ids = jobs.map(({ job }) => `${job.id} (${job.kind})`).join(', ');
+  const errorReference = await recordJobError(
+    ctx,
+    [...new Set(jobs.map(({ job }) => job.kind))].join(', '),
+    new Error(
+      `Queued jobs given up because their runs never finished (each was stopped before it was done, e.g. by the platform's time limit): ${ids}`,
+    ),
+  );
+  // eslint-disable-next-line no-console -- A job has no caller to report to but the log.
+  console.error(`Queued jobs given up, their runs never finished: ${ids}`);
+  return Promise.all(
+    jobs.map(async ({ job }) => {
+      await finishQueuedJob(ctx.db, job.id, 'failed', errorReference);
+      return { ended: 'failed', errorReference };
     }),
   );
 }
@@ -228,9 +263,16 @@ export async function runQueue(
         job,
         kind: defined(kindsByName.get(job.kind), `the kind of queued job ${job.id}`),
       }));
-      // eslint-disable-next-line no-await-in-loop -- See above.
-      const endings = await runClaimed(ctx, claimed, batchesByGroup);
-      claimed.forEach(({ kind }, index) => {
+      // Taken once more than its kind allows: every attempt was used, and the last one died.
+      const spent = claimed.filter(({ job, kind }) => job.attempts > kind.maxAttempts);
+      const toRun = claimed.filter(({ job, kind }) => job.attempts <= kind.maxAttempts);
+      const endings = [
+        // eslint-disable-next-line no-await-in-loop -- See above.
+        ...(spent.length > 0 ? await giveUp(ctx, spent) : []),
+        // eslint-disable-next-line no-await-in-loop -- See above.
+        ...(toRun.length > 0 ? await runClaimed(ctx, toRun, batchesByGroup) : []),
+      ];
+      [...spent, ...toRun].forEach(({ kind }, index) => {
         const { ended, errorReference } = defined(endings[index], 'how the job ended');
         const kindCounts = counts.get(kind.name) ?? { done: 0, skipped: 0, retried: 0, failed: 0 };
         kindCounts[ended] += 1;

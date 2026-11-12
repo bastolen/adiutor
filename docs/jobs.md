@@ -108,7 +108,9 @@ tick runs it; with `runAt`, not before that moment.
   (`RETRY_MINUTES` in `queue.ts`). After its kind's last attempt (`maxAttempts`, 5 by default: about
   7½ hours) it stays `failed`. Each failed attempt is recorded with a reference (see
   [Failures](#failures)), and the log names the jobs' IDs and attempts, never their payloads. A job
-  whose run died (its lease ran out) is taken again, as another attempt.
+  whose run died (its lease ran out, say because the platform stopped the tick at its time limit) is
+  taken again, as another attempt. When that was its last attempt, it's given up as `failed`, with a
+  recorded error and the alert, so a job that always runs out of time can't be taken forever.
 - **Turns, no cap:** the kinds take turns, one claim each, so one kind with many waiting jobs can't
   keep the others waiting, and a kind on its own gets the whole tick. A kind with nothing due sits
   out the rest of the tick. A paused kind's jobs wait, and jobs of a kind the registry doesn't list

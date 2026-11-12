@@ -14,7 +14,7 @@ import { z } from 'zod';
 
 import { appError, jobRun, jobState, queuedJob } from '@/db/schema';
 
-import { setupTestContext } from '../../../tests/integration/helpers';
+import { setupTestContext, staffActor } from '../../../tests/integration/helpers';
 import { defineQueuedKind, type QueuedJobKind, queueJob } from '../queue';
 import {
   type BatchedQueuedJob,
@@ -28,7 +28,7 @@ import { retryWaitMinutes } from './queue';
 import { runQueue } from './run-queue';
 import { runTick } from './tick';
 
-const { ctx, db } = setupTestContext();
+const { ctx, db, sent } = setupTestContext();
 
 /** Far enough away that no test reaches it. */
 const later = new Date(Date.now() + 60 * 60_000);
@@ -407,6 +407,48 @@ describe('running the queue', () => {
     await runQueue(ctx, { trigger: 'tick', deadline: later, startedAt: new Date(), kinds: [kind] });
 
     expect(await stored()).toEqual([{ note: 'orphaned', status: 'succeeded', attempts: 2 }]);
+  });
+
+  it('gives up a job whose last attempt never finished, and tells the staff Admins', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await staffActor(db, 'platform_admin', 'alex@adiutor.test');
+    const kind = noteKind('adiutor-tests-note');
+    const id = await add(kind, 'hung');
+    // Its last attempt was taken, and its run died before it finished.
+    await db
+      .update(queuedJob)
+      .set({
+        status: 'running',
+        attempts: kind.maxAttempts,
+        lockedUntil: sql`now() - interval '1 minute'`,
+      })
+      .where(eq(queuedJob.id, id));
+
+    const runs = await runQueue(ctx, {
+      trigger: 'tick',
+      deadline: later,
+      startedAt: new Date(),
+      kinds: [kind],
+    });
+
+    // Not run again: given up, with what went wrong recorded.
+    expect(ran).toEqual([]);
+    const [job] = await db
+      .select({ status: queuedJob.status, reference: queuedJob.lastErrorReference })
+      .from(queuedJob);
+    expect(job).toEqual({ status: 'failed', reference: expect.any(String) });
+    expect(await db.select({ reference: appError.reference }).from(appError)).toEqual([
+      { reference: job?.reference },
+    ]);
+    expect(runs).toEqual([
+      expect.objectContaining({ summary: { done: 0, skipped: 0, retried: 0, failed: 1 } }),
+    ]);
+    expect(sent.map(({ to, subject }) => ({ to, subject }))).toEqual([
+      {
+        to: 'alex@adiutor.test',
+        subject: 'Background job adiutor-tests-note keeps failing on Adiutor',
+      },
+    ]);
   });
 
   it('waits 5 minutes, 15, an hour, then 6 hours each time', () => {
