@@ -203,10 +203,14 @@ event.
      it.
    - `schedule`: a cron expression in UTC with five fields, e.g. `0 6 1 * *` for 06:00 on the 1st.
    - `run(ctx, { deadline })`: does the work and returns `{ summary }` with counts, plus `failure`
-     when it finished but something went wrong.
+     when it finished but something went wrong. Each count is one of `JOB_SUMMARY_KEYS` in
+     `src/lib/job-names.ts`; a new one goes there, with its words in `jobs.summary.<count>`.
 2. Add it to `RECURRING_JOBS` in `src/server/jobs/registry.ts`. The tick runs due jobs in that
    order.
-3. Write its integration test next to it (`*.int.test.ts`), calling its `run` directly.
+3. Add its name to `RECURRING_JOB_NAMES` in `src/lib/job-names.ts`, in the same place, and what it
+   does to `jobs.descriptions.<name>` in every language, for the Jobs page (`registry.int.test.ts`
+   checks the two lists match).
+4. Write its integration test next to it (`*.int.test.ts`), calling its `run` directly.
 
 A job must be safe to run again at any time: a tick can stop between two jobs, and a run by hand can
 follow a scheduled one. Work that can take longer than a tick should stop starting new pieces at
@@ -234,6 +238,8 @@ that runs them (the runner imports the code it runs, and that code queues jobs):
      halfway and be retried.
    - Or, for a batched kind, `batchedJobRunner(kind)`, plus a batch for its group made with
      `defineJobBatch`, added to `JOB_BATCHES`.
+   - Add its name to `QUEUED_JOB_NAMES` in `src/lib/job-names.ts`, in the same place, and what it
+     does to `jobs.descriptions.<name>` in every language, for the Jobs page.
 3. **Queue it** with `queueJob(tx, kind, payload)` from `src/server/queue`, in the transaction of
    the change where there is one, and test the handler next to its file (`*.int.test.ts`), calling
    its `handle` or running the queue.
