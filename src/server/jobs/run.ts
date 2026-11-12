@@ -11,7 +11,7 @@ import type { ServiceContext } from '../context';
 import { ALERT_AFTER_FAILED_RUNS, alertStaffAdmins } from './alerts';
 import type { JobOutcome, JobSummary, RecurringJob } from './define';
 import recordJobError from './record-error';
-import { claimJob, finishJobRun } from './state';
+import { addToHistory, claimJob, closeUnfinishedRuns, finishJobRun } from './state';
 
 /** How a run went. */
 export interface JobRunResult {
@@ -70,6 +70,71 @@ async function attempt(
 }
 
 /**
+ * Tells the staff Admins about a job once it has failed several runs in a
+ * row ({@link ALERT_AFTER_FAILED_RUNS}).
+ *
+ * @param ctx - Service context.
+ * @param job - The job's name.
+ * @param consecutiveFailures - How many runs in a row have failed.
+ * @param reference - The last error's reference, if it could be recorded.
+ */
+async function alertWhenFailingRepeatedly(
+  ctx: ServiceContext,
+  job: string,
+  consecutiveFailures: number,
+  reference: string | null,
+): Promise<void> {
+  if (consecutiveFailures >= ALERT_AFTER_FAILED_RUNS) {
+    await alertStaffAdmins(ctx, {
+      job,
+      failure: 'recurring',
+      count: consecutiveFailures,
+      reference,
+    });
+  }
+}
+
+/**
+ * Records the runs that never finished (see `closeUnfinishedRuns`): each as a
+ * failed run in the history, recorded as the tick's, with an error saying it
+ * never finished, counted with the failures in a row, so a job that always
+ * runs out of time is reported like any failing job. Its lease is freed, so
+ * it runs again at its next scheduled moment.
+ *
+ * @param ctx - Service context.
+ * @param names - The recurring jobs to look at.
+ * @returns The runs it recorded.
+ */
+export async function recordUnfinishedRuns(
+  ctx: ServiceContext,
+  names: readonly string[],
+): Promise<JobRunResult[]> {
+  const unfinished = await closeUnfinishedRuns(ctx.db, names);
+  return Promise.all(
+    unfinished.map(async ({ job, startedAt, consecutiveFailures }) => {
+      const errorReference = await recordJobError(
+        ctx,
+        job,
+        new Error(
+          `The run that started at ${startedAt.toISOString()} never finished: it was stopped before it was done, e.g. by the platform's time limit`,
+        ),
+      );
+      const runId = await addToHistory(ctx.db, {
+        job,
+        trigger: 'tick',
+        startedBy: null,
+        startedAt,
+        status: 'failed',
+        summary: {},
+        errorReference,
+      });
+      await alertWhenFailingRepeatedly(ctx, job, consecutiveFailures, errorReference);
+      return { job, status: 'failed' as const, summary: {}, runId, errorReference };
+    }),
+  );
+}
+
+/**
  * Runs a recurring job under its lease and adds the run to its history.
  *
  * @param ctx - Service context.
@@ -101,13 +166,8 @@ export async function runRecurringJob(
     summary: outcome.summary,
     errorReference,
   });
-  if (status === 'failed' && consecutiveFailures >= ALERT_AFTER_FAILED_RUNS) {
-    await alertStaffAdmins(ctx, {
-      job: job.name,
-      failure: 'recurring',
-      count: consecutiveFailures,
-      reference: errorReference,
-    });
+  if (status === 'failed') {
+    await alertWhenFailingRepeatedly(ctx, job.name, consecutiveFailures, errorReference);
   }
   return { job: job.name, status, summary: outcome.summary, runId, errorReference };
 }

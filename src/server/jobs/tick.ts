@@ -11,7 +11,7 @@ import { notFoundError } from '../errors';
 import type { QueuedJobRunner, RecurringJob } from './define';
 import { hasDueQueuedJobs } from './queue';
 import { findRecurringJob, JOB_BATCHES, QUEUED_JOBS, RECURRING_JOBS } from './registry';
-import { type JobRunResult, runRecurringJob } from './run';
+import { type JobRunResult, recordUnfinishedRuns, runRecurringJob } from './run';
 import { runnableKinds, runQueue } from './run-queue';
 import { isDue, lastScheduledAt } from './schedule';
 import { loadJobStates } from './state';
@@ -73,7 +73,8 @@ async function queueLeftAtDeadline(
 
 /**
  * Runs every recurring job that's due and not paused, then the queued jobs
- * that are due. The recurring jobs get at most the first half of the tick
+ * that are due. First it records the runs that never finished since the last
+ * tick (`recordUnfinishedRuns`). The recurring jobs get at most the first half of the tick
  * (they normally take milliseconds), so a slow one never leaves the queue
  * without time; the queue runs until the deadline. A job another run holds
  * is left alone (that run does it); a job that fails doesn't stop the
@@ -92,12 +93,16 @@ export async function runTick(
   ctx: ServiceContext,
   { trigger, deadline, now = new Date(), jobs = RECURRING_JOBS, queuedJobs }: TickOptions,
 ): Promise<TickResult> {
+  // Runs that died since the last tick (their lease ran out) are failures to report first.
+  const runs: JobRunResult[] = await recordUnfinishedRuns(
+    ctx,
+    jobs.map((job) => job.name),
+  );
   const states = await loadJobStates(ctx.db);
   const due = jobs.filter((job) => {
     const state = states.get(job.name);
     return !state?.pausedAt && isDue(job.schedule, state?.lastStartedAt ?? null, now);
   });
-  const runs: JobRunResult[] = [];
   const leftForNextTick: string[] = [];
   // The recurring jobs' share: the first half of what's left of the tick.
   const recurringDeadline = new Date(Date.now() + Math.max(0, deadline.getTime() - Date.now()) / 2);

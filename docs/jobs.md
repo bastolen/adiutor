@@ -25,8 +25,8 @@ reminders working up to their deadline) can never leave the queue without time.
 - **One run at a time:** a run takes its job under a lease (`claimJob` in `state.ts`): a row in
   `job_state` with `locked_until` 15 minutes ahead. A second tick leaves the job to that run, and
   can't run it again for the same moment once it's done. A run that dies frees the job when the
-  lease runs out. A lease row is used because PostgreSQL's session locks don't survive a pooled
-  connection, such as Neon's.
+  lease runs out, and the next tick records it as failed (see [Failures](#failures)). A lease row is
+  used because PostgreSQL's session locks don't survive a pooled connection, such as Neon's.
 - **Failures** don't stop the other jobs. A job fails when it throws, or when it finishes but
   reports a `failure` (say, some reminders couldn't be sent). The run is recorded as failed, the
   error is recorded with a reference (see [Failures](#failures)), and
@@ -156,6 +156,17 @@ under **Logs → Errors**, where it shows as a job error. The run in the history
 The server log gets one line with the job and the reference, never the error's message: it can
 quote personal data, such as the address a mail server refused. Job errors are never rate-limited,
 since no visitor can cause them, and they're deleted after 7 days like other recorded errors.
+
+**Runs that never finish** fail too. On Vercel, the platform stops the endpoint's function after 60
+seconds, so a job that runs past it dies before its run is recorded:
+
+- A recurring run always frees its lease when it ends, so a lease that ran out means its run died.
+  The next tick closes it first (`recordUnfinishedRuns` in `run.ts`, `closeUnfinishedRuns` in
+  `state.ts`, in one statement so two ticks never close it twice): a failed run in the history,
+  recorded as the tick's, with an error saying it never finished. It counts with the failures in a
+  row, and the job runs again at its next scheduled moment.
+- A queued job whose run died is taken again as another attempt, and given up after its last one
+  (see [Queued jobs](#queued-jobs)).
 
 **The staff Admins are told** when a job keeps failing (`alertStaffAdmins` in `alerts.ts`): after a
 recurring job's third failed run in a row, or when queued jobs are given up. Every active staff

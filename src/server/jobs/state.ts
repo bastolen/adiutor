@@ -1,11 +1,11 @@
 /**
  * @file Each job's state in the database (`job_state`): taking a job for a
- * run under a lease, so two runs never do the same job at once, and
- * recording how the run went (`job_run`).
+ * run under a lease, so two runs never do the same job at once, recording
+ * how the run went (`job_run`), and closing runs that never finished.
  */
-import { and, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
 
-import type { Database } from '@/db';
+import type { Database, DatabaseOrTransaction } from '@/db';
 import { type JobRunStatus, type JobTrigger, jobRun, jobState } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 
@@ -119,6 +119,29 @@ export interface FinishedRun {
 }
 
 /**
+ * Adds a finished run to the history (`job_run`).
+ *
+ * @param db - Database client or transaction.
+ * @param run - The run.
+ * @returns Its row's ID.
+ */
+export async function addToHistory(db: DatabaseOrTransaction, run: FinishedRun): Promise<string> {
+  const recorded = await db
+    .insert(jobRun)
+    .values({
+      job: run.job,
+      trigger: run.trigger,
+      startedBy: run.startedBy,
+      startedAt: run.startedAt,
+      status: run.status,
+      summary: { ...run.summary },
+      errorReference: run.errorReference ?? null,
+    })
+    .returning({ id: jobRun.id });
+  return firstRow(recorded, 'the recorded run').id;
+}
+
+/**
  * Frees the job, notes how its run went and adds the run to the history. A
  * kind of queued job gets its state row the first time it runs.
  *
@@ -152,21 +175,63 @@ export async function finishJobRun(
         },
       })
       .returning({ consecutiveFailures: jobState.consecutiveFailures });
-    const recorded = await tx
-      .insert(jobRun)
-      .values({
-        job: run.job,
-        trigger: run.trigger,
-        startedBy: run.startedBy,
-        startedAt: run.startedAt,
-        status: run.status,
-        summary: { ...run.summary },
-        errorReference: run.errorReference ?? null,
-      })
-      .returning({ id: jobRun.id });
     return {
-      runId: firstRow(recorded, 'the recorded run').id,
+      runId: await addToHistory(tx, run),
       consecutiveFailures: firstRow(state, 'the job state').consecutiveFailures,
     };
   });
+}
+
+/** A run that started but never finished, now closed as failed. */
+export interface UnfinishedRun {
+  /** The job's name. */
+  job: string;
+  /** When the run started. */
+  startedAt: Date;
+  /** How many runs in a row have failed now, this one included. */
+  consecutiveFailures: number;
+}
+
+/**
+ * Closes the runs that never finished: a run that ends always frees its
+ * job's lease ({@link finishJobRun}), so a lease that ran out means the run
+ * died (say, the platform stopped the tick at its time limit). Each is noted
+ * as failed and counted with the failures in a row, in one statement, so two
+ * ticks at once never close the same run twice.
+ *
+ * @param db - Database client.
+ * @param names - The recurring jobs to look at.
+ * @returns The runs it closed.
+ */
+export async function closeUnfinishedRuns(
+  db: Database,
+  names: readonly string[],
+): Promise<UnfinishedRun[]> {
+  if (names.length === 0) {
+    return [];
+  }
+  const closed = await db
+    .update(jobState)
+    .set({
+      lockedUntil: null,
+      lastFinishedAt: sql`now()`,
+      lastStatus: 'failed',
+      consecutiveFailures: sql`${jobState.consecutiveFailures} + 1`,
+    })
+    .where(
+      and(
+        inArray(jobState.name, [...names]),
+        isNotNull(jobState.lockedUntil),
+        lt(jobState.lockedUntil, sql`now()`),
+        isNotNull(jobState.lastStartedAt),
+      ),
+    )
+    .returning({
+      job: jobState.name,
+      startedAt: jobState.lastStartedAt,
+      consecutiveFailures: jobState.consecutiveFailures,
+    });
+  return closed.flatMap(({ job, startedAt, consecutiveFailures }) =>
+    startedAt ? [{ job, startedAt, consecutiveFailures }] : [],
+  );
 }
