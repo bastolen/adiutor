@@ -365,13 +365,13 @@ export async function afterAccountCreate(
 ): Promise<void> {
   await safely('record account', async () => {
     if (created.providerId === 'credential') {
-      await audit(ctx, 'password_changed', created.userId, { first: true });
+      const eventId = await audit(ctx, 'password_changed', created.userId, { first: true });
       // The welcome link of a registered account (a reset link on an account with no other way
       // in) needs no email: they just did this from their inbox. Any other first password does,
       // e.g. through a reset on an account that also signs in with a passkey or GitHub. (A reset
       // that would end provider MFA is refused before: `RESET_ENDS_PROVIDER_MFA` in the guards.)
       if (ctx?.path !== '/reset-password' || (await hasOtherSignInMethod(created.userId))) {
-        await notify(ctx?.headers, created.userId, 'password_added');
+        await notify(eventId, created.userId, 'password_added');
       }
       return;
     }
@@ -380,11 +380,11 @@ export async function afterAccountCreate(
     const atSignIn =
       ctx?.path?.startsWith('/callback/') === true &&
       (await ownSession(ctx, created.userId)) === null;
-    await audit(ctx, 'provider_connected', created.userId, {
+    const eventId = await audit(ctx, 'provider_connected', created.userId, {
       providerId: created.providerId,
       ...(atSignIn && { atSignIn: true, confirmed: created.confirmed !== false }),
     });
-    await notify(ctx?.headers, created.userId, 'provider_connected', created.providerId);
+    await notify(eventId, created.userId, 'provider_connected', created.providerId);
     if (isMfaProvider(created.providerId)) {
       await refreshProviderMfa(created.providerId, created.userId, created.id);
     }
@@ -418,7 +418,9 @@ export async function afterAccountDelete(
     return;
   }
   await safely('record disconnected provider', async () => {
-    await audit(ctx, 'provider_disconnected', deleted.userId, { providerId: deleted.providerId });
-    await notify(ctx.headers, deleted.userId, 'provider_disconnected', deleted.providerId);
+    const eventId = await audit(ctx, 'provider_disconnected', deleted.userId, {
+      providerId: deleted.providerId,
+    });
+    await notify(eventId, deleted.userId, 'provider_disconnected', deleted.providerId);
   });
 }

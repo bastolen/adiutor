@@ -6,7 +6,7 @@ import { APIError, getOAuthState, getSessionFromCtx } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
 
-import { auditEvent, rateLimitBucket, twoFactor, user } from '@/db/schema';
+import { auditEvent, queuedJob, rateLimitBucket, twoFactor, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 import { sendEmail } from '@/lib/email';
 
@@ -118,10 +118,10 @@ describe('wrong passwords', () => {
     const jane = await createUserWithPassword('jane@adiutor.test');
 
     await failSignIns(9, 'Jane@adiutor.test');
-    expect(subjects()).toEqual([]);
+    expect(await subjects()).toEqual([]);
     await failSignIns(1, 'jane@adiutor.test');
 
-    expect(subjects()).toEqual(['Password sign-in to your Adiutor account is paused']);
+    expect(await subjects()).toEqual(['Password sign-in to your Adiutor account is paused']);
     const [notice] = defined(vi.mocked(sendEmail).mock.calls[0], 'the sent email');
     expect(notice.to).toBe('jane@adiutor.test');
     // Whoever typed them may be someone else: their browser and IP address aren't shared.
@@ -146,10 +146,10 @@ describe('wrong passwords', () => {
       signInWithPassword(' jane@adiutor.test ', { returned: malformed }),
     );
     await failSignIns(9, 'jane@adiutor.test');
-    expect(subjects()).toEqual([]);
+    expect(await subjects()).toEqual([]);
     await failSignIns(1, ' jane@adiutor.test');
 
-    expect(subjects()).toEqual(['Password sign-in to your Adiutor account is paused']);
+    expect(await subjects()).toEqual(['Password sign-in to your Adiutor account is paused']);
     expect((await events()).every(({ targetUserId }) => targetUserId === jane)).toBe(true);
   });
 
@@ -163,23 +163,24 @@ describe('wrong passwords', () => {
       .where(eq(rateLimitBucket.key, 'sign-in-failed:email:jane@adiutor.test'));
     await failSignIns(10, 'jane@adiutor.test');
 
-    expect(subjects()).toHaveLength(1);
+    expect(await subjects()).toHaveLength(1);
   });
 
-  it('tries again at the next pause when the notice could not be sent', async () => {
+  it('leaves a notice the mail server refused to the queue, which tries it again', async () => {
     await createUserWithPassword('jane@adiutor.test');
     vi.mocked(sendEmail).mockRejectedValueOnce(new Error('SMTP is down'));
     vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
     await failSignIns(10, 'jane@adiutor.test');
-    expect(subjects()).toHaveLength(1);
-    await db
-      .update(rateLimitBucket)
-      .set({ resetAt: new Date(Date.now() - 1000) })
-      .where(eq(rateLimitBucket.key, 'sign-in-failed:email:jane@adiutor.test'));
+    // The first try is refused; the notice waits in the queue.
+    expect(await subjects()).toHaveLength(1);
 
-    await failSignIns(10, 'jane@adiutor.test');
-
-    expect(subjects()).toHaveLength(2);
+    // Its wait is over, and the mail server is back.
+    await db.update(queuedJob).set({ runAt: new Date() });
+    expect(await subjects()).toEqual([
+      'Password sign-in to your Adiutor account is paused',
+      'Password sign-in to your Adiutor account is paused',
+    ]);
   });
 
   it('tells no one without a password: no account, a deactivated one, or one without a password', async () => {
@@ -191,7 +192,7 @@ describe('wrong passwords', () => {
     await failSignIns(10, 'john@adiutor.test');
     await failSignIns(10, 'linkonly@adiutor.test');
 
-    expect(subjects()).toEqual([]);
+    expect(await subjects()).toEqual([]);
     const counted = await db
       .select({ key: rateLimitBucket.key, count: rateLimitBucket.count })
       .from(rateLimitBucket)
@@ -208,9 +209,9 @@ describe('wrong passwords', () => {
     await signInWithPassword('jane@adiutor.test', { runInBackground });
 
     expect(runInBackground).toHaveBeenCalledTimes(1);
-    expect(subjects()).toEqual([]);
+    expect(await subjects()).toEqual([]);
     await defined(runInBackground.mock.calls[0], 'the background task')[0];
-    expect(subjects()).toEqual(['Password sign-in to your Adiutor account is paused']);
+    expect(await subjects()).toEqual(['Password sign-in to your Adiutor account is paused']);
   });
 });
 
@@ -358,7 +359,7 @@ describe('a code at the code step of a password sign-in', () => {
     ]);
     // Nothing counts towards the step-up limit, and the account isn't paused, so no email.
     expect(await db.select().from(rateLimitBucket)).toEqual([]);
-    expect(subjects()).toEqual([]);
+    expect(await subjects()).toEqual([]);
   });
 
   it('records a wrong code on the step-up page once, with the user as its actor, even with a pending sign-in', async () => {
@@ -393,7 +394,7 @@ describe('a code at the code step of a password sign-in', () => {
         .select({ key: rateLimitBucket.key, count: rateLimitBucket.count })
         .from(rateLimitBucket),
     ).toEqual([{ key: `step-up-failed:user:${support.id}`, count: 1 }]);
-    expect(subjects()).toEqual([]);
+    expect(await subjects()).toEqual([]);
   });
 
   it('tells the owner once while wrong codes pause signing in with a code, without the browser', async () => {
@@ -411,7 +412,7 @@ describe('a code at the code step of a password sign-in', () => {
       refusal('TOO_MANY_REQUESTS', 'ACCOUNT_TEMPORARILY_LOCKED'),
     );
 
-    expect(subjects()).toEqual([LOCKED_SUBJECT]);
+    expect(await subjects()).toEqual([LOCKED_SUBJECT]);
     const [notice] = defined(vi.mocked(sendEmail).mock.calls[0], 'the sent email');
     expect(notice.to).toBe(support.email);
     // Whoever typed the codes may be someone else.
@@ -420,21 +421,25 @@ describe('a code at the code step of a password sign-in', () => {
     expect((await events()).map(({ action }) => action)).toEqual(['mfa_failed']);
   });
 
-  it('tries again at the next refusal when the notice could not be sent', async () => {
+  it('queues one notice per pause, which the queue tries again when the mail server refused it', async () => {
     const support = await staffActor(db, 'support');
     await enableTwoFactor(db, support.id);
     await lockTwoFactor(support.id, new Date(Date.now() + 15 * 60_000));
     vi.mocked(sendEmail).mockRejectedValueOnce(new Error('SMTP unavailable'));
     const locked = refusal('TOO_MANY_REQUESTS', 'ACCOUNT_TEMPORARILY_LOCKED');
-    // The failed send is logged.
+    // The refused try is logged.
     vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     await handle(codeStep('/two-factor/verify-totp', support.id), locked);
     await handle(codeStep('/two-factor/verify-totp', support.id), locked);
     await handle(codeStep('/two-factor/verify-totp', support.id), locked);
+    expect(await subjects()).toEqual([LOCKED_SUBJECT]);
 
-    expect(subjects()).toEqual([LOCKED_SUBJECT, LOCKED_SUBJECT]);
-    expect(vi.mocked(sendEmail)).toHaveBeenCalledTimes(2);
+    // Its wait is over, and the mail server is back.
+    await db.update(queuedJob).set({ runAt: new Date() });
+    expect(await subjects()).toEqual([LOCKED_SUBJECT, LOCKED_SUBJECT]);
+    expect(await db.select().from(queuedJob)).toHaveLength(1);
   });
 
   it('tells nobody without a pause, or when the account is deactivated', async () => {
@@ -464,7 +469,7 @@ describe('a code at the code step of a password sign-in', () => {
       refusal('TOO_MANY_REQUESTS', 'ACCOUNT_TEMPORARILY_LOCKED'),
     );
 
-    expect(subjects()).toEqual([]);
+    expect(await subjects()).toEqual([]);
     expect((await events()).map(({ targetUserId, details }) => [targetUserId, details])).toEqual([
       [ended.id, { method: 'authenticator', atSignIn: true }],
       [emailOnly.id, { method: 'email_code', atSignIn: true }],

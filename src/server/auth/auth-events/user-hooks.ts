@@ -46,8 +46,8 @@ export async function onPasswordReset(userId: string, headers?: Headers): Promis
     if (credential && Date.now() - credential.createdAt.getTime() < JUST_CREATED_MS) {
       return;
     }
-    await audit({ headers }, 'password_reset', userId);
-    await notify(headers, userId, 'password_reset');
+    const eventId = await audit({ headers }, 'password_reset', userId);
+    await notify(eventId, userId, 'password_reset');
   });
 }
 

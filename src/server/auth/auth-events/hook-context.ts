@@ -5,15 +5,12 @@
  */
 import { db } from '@/db';
 import type { AuditAction } from '@/lib/audit-actions';
-import { sendEmail } from '@/lib/email';
-import { appUrl } from '@/lib/env';
 import ipAddressOptions from '@/lib/request/ip-address-options';
 import { type RequestInfo, requestInfoFromHeaders } from '@/lib/request/request-info';
 import type { SecurityNoticeKind } from '@/lib/security-notice-kinds';
-import { providerLabel } from '@/lib/sign-in/oauth-providers';
 
 import { recordEvent } from '../../audit';
-import { sendSecurityNotice } from '../security-notices';
+import { queueSecurityNotice } from '../security-notices';
 
 /** The parts of a Better Auth endpoint context the reactions use. */
 export interface AuthHookContext {
@@ -171,30 +168,20 @@ export async function audit(
 }
 
 /**
- * Emails the user about a security change made in this request.
+ * Queues the security email about a change the user made in this request.
+ * It's their own change, so the email names its device and IP address, read
+ * from the change's audit event.
  *
- * @param headers - Request headers, for the device and IP address.
+ * @param auditEventId - The change's audit event (`audit` returns it).
  * @param userId - The user.
  * @param kind - What changed.
  * @param providerId - The provider, for connected/disconnected.
  */
 export async function notify(
-  headers: Headers | undefined,
+  auditEventId: string,
   userId: string,
   kind: SecurityNoticeKind,
   providerId?: string,
 ): Promise<void> {
-  const provider = providerId ? providerLabel(providerId) : undefined;
-  await sendSecurityNotice(
-    {
-      db,
-      sendEmail,
-      baseUrl: appUrl,
-      requestInfo: auditContext(headers).requestInfo,
-    },
-    { userId },
-    kind,
-    // The user's own change, made in this request, so the email may say from which device.
-    { provider, showDevice: true },
-  );
+  await queueSecurityNotice(db, userId, kind, { auditEventId, providerId: providerId ?? null });
 }

@@ -195,7 +195,7 @@ describe('naming a provider account', () => {
     expect((await events()).map((event) => event.details)).toEqual([
       { providerId: 'github', atSignIn: true, confirmed: true },
     ]);
-    expect(subjects()).toEqual(['GitHub was connected to your Adiutor account']);
+    expect(await subjects()).toEqual(['GitHub was connected to your Adiutor account']);
   });
 
   describe('the next-page notice naming the account', () => {

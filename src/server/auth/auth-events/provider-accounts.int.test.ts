@@ -85,7 +85,7 @@ describe('disconnecting a provider', () => {
         details: { providerId: 'github' },
       },
     ]);
-    expect(subjects()).toEqual(['GitHub was disconnected from your Adiutor account']);
+    expect(await subjects()).toEqual(['GitHub was disconnected from your Adiutor account']);
   });
 
   it('ignores accounts removed in other ways', async () => {
@@ -98,7 +98,7 @@ describe('disconnecting a provider', () => {
     await afterAccountDelete({ userId: jane, providerId: 'github' }, null);
 
     expect(await events()).toEqual([]);
-    expect(subjects()).toEqual([]);
+    expect(await subjects()).toEqual([]);
   });
 });
 
@@ -411,7 +411,7 @@ describe('a provider connected at sign-in', () => {
       'github',
       expect.objectContaining({ maxAge: 300, path: '/', httpOnly: false, sameSite: 'lax' }),
     );
-    expect(subjects()).toEqual(['GitHub was connected to your Adiutor account']);
+    expect(await subjects()).toEqual(['GitHub was connected to your Adiutor account']);
   });
 
   it('is recorded as confirmed when it counted right away', async () => {
@@ -445,7 +445,7 @@ describe('a provider connected at sign-in', () => {
 
     expect((await events()).map((event) => event.details)).toEqual([{ providerId: 'github' }]);
     expect(setCookie).not.toHaveBeenCalled();
-    expect(subjects()).toEqual(['GitHub was connected to your Adiutor account']);
+    expect(await subjects()).toEqual(['GitHub was connected to your Adiutor account']);
   });
 
   it('records that it verified an email address that was not verified yet', async () => {
