@@ -41,8 +41,8 @@ import { findErrorReference, listRecentErrors, type RecordedError } from '@/serv
 export const generateMetadata = globalPermissionMetadata('errors:view', 'admin.errors.title');
 
 /**
- * What kind of error it was, as a badge ("Server error", "Browser error" or
- * "Sign-in error"; text from `admin.errors.kinds`).
+ * What kind of error it was, as a badge ("Server error", "Browser error",
+ * "Job error" or "Sign-in error"; text from `admin.errors.kinds`).
  *
  * @param props - Component props.
  * @param props.error - The error.
@@ -53,7 +53,8 @@ function KindBadge({ error }: { error: RecordedError }) {
   if (error.kind === 'sign-in') {
     return <Badge>{t('signIn')}</Badge>;
   }
-  return <Badge>{error.source === 'browser' ? t('browser') : t('server')}</Badge>;
+  const labels = { browser: t('browser'), job: t('job'), server: t('server') };
+  return <Badge>{labels[error.source ?? 'server']}</Badge>;
 }
 
 /**

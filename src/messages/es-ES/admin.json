@@ -370,6 +370,7 @@
       "kinds": {
         "signIn": "Error de inicio de sesión",
         "browser": "Error del navegador",
+        "job": "Error de tarea",
         "server": "Error del servidor"
       },
       "noMessage": "Sin mensaje registrado",

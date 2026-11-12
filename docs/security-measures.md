@@ -79,12 +79,15 @@ Errors are recorded for admins, who look them up by the reference the error page
 - **`sign_in_error`** (`src/server/auth/sign-in-errors.ts`): sign-in errors that end on the
   sign-in error page, with Better Auth's code and description.
 - **`app_error`** (`src/server/app-errors.ts`): other unexpected errors, from the server
-  (`onRequestError` in `src/instrumentation.ts`) and from the browser (reported by the error page
-  through `src/app/report-error-action.ts`, whose input is checked and cut to size).
+  (`onRequestError` in `src/instrumentation.ts`), from the browser (reported by the error page
+  through `src/app/report-error-action.ts`, whose input is checked and cut to size), and from
+  background jobs (source `job`, with the job's name as `route_path`; see
+  [Background jobs](jobs.md#failures)).
 
 Each keeps the signed-in user, if any, and is limited to 20 rows per IP address per hour
 (`RATE_LIMITS.signInErrorsPerIp` and `RATE_LIMITS.appErrorsPerIp`), so opening an error page over
-and over can't fill the table; past the limit an error is only logged. Rows are deleted after 7
+and over can't fill the table; past the limit an error is only logged. Job errors have no IP
+address and no visitor behind them, so they're never limited. Rows are deleted after 7
 days (the `retention` job, see [Background jobs](jobs.md)). `app_error` stores no database values (the message, cut
 to 500 characters, goes through `redactLogValue`, `src/lib/log-redaction.ts`), no query strings
 (they can hold search terms and sign-in tokens) and no secret tokens from paths (`/invite/…`,

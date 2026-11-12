@@ -69,8 +69,11 @@ export const signInError = pgTable(
   ],
 );
 
-/** Where an error in the app happened: on the server, or in the browser. */
-export type AppErrorSource = 'server' | 'browser';
+/**
+ * Where an error in the app happened: on the server, in the browser, or in a
+ * background job (its name is the error's `route_path`).
+ */
+export type AppErrorSource = 'server' | 'browser' | 'job';
 
 /**
  * What the server was doing when an error happened, as Next.js reports it to
@@ -102,7 +105,10 @@ export const appError = pgTable(
     source: text('source').$type<AppErrorSource>().notNull(),
     /** What the server was doing (server errors only). */
     routeType: text('route_type').$type<AppErrorRouteType>(),
-    /** The route's file path, e.g. `/(app)/companies/[companyId]/page` (server errors only). */
+    /**
+     * The route's file path, e.g. `/(app)/companies/[companyId]/page` (server
+     * errors), or the job's name, e.g. `retention` (job errors).
+     */
     routePath: text('route_path'),
     /** The page's path, without its query string and with secret tokens taken out. */
     path: text('path'),

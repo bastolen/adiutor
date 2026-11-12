@@ -370,6 +370,7 @@
       "kinds": {
         "signIn": "Sign-in error",
         "browser": "Browser error",
+        "job": "Job error",
         "server": "Server error"
       },
       "noMessage": "No message recorded",

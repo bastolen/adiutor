@@ -45,7 +45,7 @@ export interface AppErrorReport {
   digest?: string | null;
   /** What the server was doing (server errors only). */
   routeType?: AppErrorRouteType | null;
-  /** The route's file path (server errors only). */
+  /** The route's file path (server errors), or the job's name (job errors). */
   routePath?: string | null;
   /** The page's path; its query string and secret tokens are taken out. */
   path?: string | null;
@@ -120,7 +120,9 @@ function describeError(error: unknown): { name: string | null; message: string |
  * error's name and message (database values taken out, shortened) and who
  * was signed in. The rows are limited per IP address
  * (`RATE_LIMITS.appErrorsPerIp`), so errors can't be used to fill the table;
- * past the limit the error is only logged.
+ * past the limit the error is only logged. Errors of background jobs have no
+ * IP address and no visitor who could cause them, so they're never limited:
+ * there are only so many jobs per tick.
  *
  * @param ctx - Service context: the database, and `requestInfo` for the IP
  *   address the limit counts.
@@ -142,11 +144,15 @@ export async function recordAppError(
   console.warn(`App error ${reference}: ${where}${digest ? ` (digest ${digest})` : ''}`);
 
   const request = ctx.requestInfo ? await ctx.requestInfo() : null;
-  const { allowed } = await hitRateLimit(
-    ctx,
-    `app-error:ip:${request?.ip ?? 'unknown'}`,
-    RATE_LIMITS.appErrorsPerIp,
-  );
+  const allowed =
+    report.source === 'job' ||
+    (
+      await hitRateLimit(
+        ctx,
+        `app-error:ip:${request?.ip ?? 'unknown'}`,
+        RATE_LIMITS.appErrorsPerIp,
+      )
+    ).allowed;
   if (!allowed) {
     return { reference, at: new Date(), stored: false };
   }

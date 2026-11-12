@@ -151,15 +151,22 @@ export async function claimNextQueuedJobs(
  * @param db - Database client.
  * @param id - The job.
  * @param status - How it ended.
+ * @param errorReference - The reference of the error its last attempt recorded, when it failed.
  */
 export async function finishQueuedJob(
   db: DatabaseOrTransaction,
   id: string,
   status: Extract<QueuedJobStatus, 'succeeded' | 'skipped' | 'failed'>,
+  errorReference?: string | null,
 ): Promise<void> {
   await db
     .update(queuedJob)
-    .set({ status, lockedUntil: null, finishedAt: sql`now()` })
+    .set({
+      status,
+      lockedUntil: null,
+      finishedAt: sql`now()`,
+      ...(errorReference ? { lastErrorReference: errorReference } : {}),
+    })
     .where(eq(queuedJob.id, id));
 }
 
@@ -170,11 +177,13 @@ export async function finishQueuedJob(
  * @param db - Database client.
  * @param id - The job.
  * @param attempts - How many times it was tried so far.
+ * @param errorReference - The reference of the error this attempt recorded, if any.
  */
 export async function retryQueuedJobLater(
   db: DatabaseOrTransaction,
   id: string,
   attempts: number,
+  errorReference: string | null,
 ): Promise<void> {
   await db
     .update(queuedJob)
@@ -182,6 +191,7 @@ export async function retryQueuedJobLater(
       status: 'queued',
       lockedUntil: null,
       runAt: sql`now() + make_interval(mins => ${retryWaitMinutes(attempts)})`,
+      ...(errorReference ? { lastErrorReference: errorReference } : {}),
     })
     .where(eq(queuedJob.id, id));
 }

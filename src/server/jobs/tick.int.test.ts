@@ -6,9 +6,9 @@
  * Also the registry and the job list.
  */
 import { eq, sql } from 'drizzle-orm';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { jobRun, jobState } from '@/db/schema';
+import { appError, jobRun, jobState } from '@/db/schema';
 
 import { setupTestContext } from '../../../tests/integration/helpers';
 import { ServiceError } from '../errors';
@@ -20,6 +20,10 @@ import { isValidSchedule } from './schedule';
 import { runJobNow, runTick } from './tick';
 
 const { ctx, db } = setupTestContext();
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 /** Far enough away that no test reaches it. */
 const later = new Date(Date.now() + 60 * 60_000);
@@ -213,6 +217,66 @@ describe('runTick', () => {
       summary: { sent: 1, failed: 1 },
     });
     expect(await state(fine.name)).toMatchObject({ consecutiveFailures: 0 });
+  });
+
+  it('records each failure as a job error, whose reference the run keeps and the log names', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const broken = hourlyJob('adiutor-tests-broken', async () => {
+      throw new Error('Adiutor Tests: refused for jane@adiutor.test');
+    });
+    const partly = hourlyJob('adiutor-tests-partly', async () => ({
+      summary: { sent: 1, failed: 1 },
+      failure: 'Some emails could not be sent',
+    }));
+
+    const result = await runTick(ctx, {
+      trigger: 'tick',
+      deadline: later,
+      now: at('10:30'),
+      jobs: [broken, partly],
+    });
+
+    const errors = await db
+      .select({
+        reference: appError.reference,
+        source: appError.source,
+        routePath: appError.routePath,
+        message: appError.message,
+      })
+      .from(appError);
+    expect(errors).toEqual(
+      expect.arrayContaining([
+        {
+          reference: expect.any(String),
+          source: 'job',
+          routePath: broken.name,
+          message: 'Adiutor Tests: refused for jane@adiutor.test',
+        },
+        {
+          reference: expect.any(String),
+          source: 'job',
+          routePath: partly.name,
+          message: 'Some emails could not be sent',
+        },
+      ]),
+    );
+    const byJob = new Map(errors.map((error) => [error.routePath, error.reference]));
+    expect(result.runs.map((run) => [run.job, run.errorReference])).toEqual([
+      [broken.name, byJob.get(broken.name)],
+      [partly.name, byJob.get(partly.name)],
+    ]);
+    expect(
+      await db
+        .select({ errorReference: jobRun.errorReference })
+        .from(jobRun)
+        .where(eq(jobRun.job, broken.name)),
+    ).toEqual([{ errorReference: byJob.get(broken.name) }]);
+    // The log names the job and the reference; the message (which can quote an address) stays out.
+    expect(logged).toHaveBeenCalledWith(
+      `Job ${broken.name} failed; see error ${byJob.get(broken.name)}`,
+    );
+    expect(JSON.stringify(logged.mock.calls)).not.toContain('jane@adiutor.test');
   });
 
   it('starts the count again after a run that succeeds', async () => {

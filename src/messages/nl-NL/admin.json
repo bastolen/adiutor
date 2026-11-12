@@ -370,6 +370,7 @@
       "kinds": {
         "signIn": "Inlogfout",
         "browser": "Browserfout",
+        "job": "Taakfout",
         "server": "Serverfout"
       },
       "noMessage": "Geen melding vastgelegd",

@@ -114,6 +114,8 @@ export interface FinishedRun {
   status: JobRunStatus;
   /** What it did. */
   summary: JobSummary;
+  /** The reference of the error a failed run recorded, if any. */
+  errorReference?: string | null;
 }
 
 /**
@@ -155,6 +157,7 @@ export async function finishJobRun(db: Database, run: FinishedRun): Promise<stri
         startedAt: run.startedAt,
         status: run.status,
         summary: { ...run.summary },
+        errorReference: run.errorReference ?? null,
       })
       .returning({ id: jobRun.id });
     return firstRow(recorded, 'the recorded run').id;

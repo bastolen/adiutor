@@ -2,9 +2,10 @@
  * @file Running the queue at a tick: due jobs one at a time, oldest first,
  * until the deadline, each kind up to its `perTick`. A job with a batch key
  * runs with the rest of its batch, in one call of its group's batch. A job
- * that fails is tried again later, up to its kind's `maxAttempts`. Every
- * kind that ran jobs gets one run in the history, with how many were done,
- * skipped, retried and failed.
+ * that fails is tried again later, up to its kind's `maxAttempts`, and each
+ * failure is recorded as an error with a reference. Every kind that ran jobs
+ * gets one run in the history, with how many were done, skipped, retried and
+ * failed.
  */
 import type { JobTrigger } from '@/db/schema';
 import { defined } from '@/lib/defined';
@@ -12,6 +13,7 @@ import { defined } from '@/lib/defined';
 import type { ServiceContext } from '../context';
 import type { JobBatch, QueuedJobResult, QueuedJobRunner, StoredQueuedJob } from './define';
 import { claimNextQueuedJobs, finishQueuedJob, retryQueuedJobLater } from './queue';
+import recordJobError from './record-error';
 import { JOB_BATCHES, QUEUED_JOBS } from './registry';
 import type { JobRunResult } from './run';
 import { finishJobRun, loadJobStates } from './state';
@@ -28,8 +30,13 @@ interface KindCounts {
   failed: number;
 }
 
-/** How one job ended during a tick. */
-type Ending = keyof KindCounts;
+/** How one job ended during a tick, with the reference of the error a failure recorded. */
+interface Ending {
+  /** How it ended. */
+  ended: keyof KindCounts;
+  /** The error's reference, when it failed and the error could be recorded. */
+  errorReference: string | null;
+}
 
 /** How the queue runs. */
 export interface QueueRunOptions {
@@ -59,14 +66,16 @@ async function finish(
   return Promise.all(
     jobs.map(async ({ job, result }) => {
       await finishQueuedJob(ctx.db, job.id, result === 'done' ? 'succeeded' : 'skipped');
-      return result;
+      return { ended: result, errorReference: null };
     }),
   );
 }
 
 /**
- * Notes that jobs failed: each is tried again later, or given up after its
- * kind's last attempt. The error goes to the log, without the payloads.
+ * Notes that jobs failed: the error is recorded once (with a reference each
+ * job keeps), and each job is tried again later, or given up after its
+ * kind's last attempt. The log gets the jobs' IDs and attempts, never their
+ * payloads.
  *
  * @param ctx - Service context.
  * @param jobs - The jobs, each with its kind.
@@ -78,6 +87,11 @@ async function fail(
   jobs: readonly { job: StoredQueuedJob; kind: QueuedJobRunner }[],
   error: unknown,
 ): Promise<Ending[]> {
+  const errorReference = await recordJobError(
+    ctx,
+    [...new Set(jobs.map(({ job }) => job.kind))].join(', '),
+    error,
+  );
   // eslint-disable-next-line no-console -- A job has no caller to report to but the log.
   console.error(
     `Queued jobs failed: ${jobs
@@ -86,16 +100,15 @@ async function fail(
           `${job.id} (${job.kind}, attempt ${job.attempts} of ${kind.maxAttempts})`,
       )
       .join(', ')}; given up after the last attempt, else tried again later`,
-    error,
   );
   return Promise.all(
     jobs.map(async ({ job, kind }) => {
       if (job.attempts >= kind.maxAttempts) {
-        await finishQueuedJob(ctx.db, job.id, 'failed');
-        return 'failed';
+        await finishQueuedJob(ctx.db, job.id, 'failed', errorReference);
+        return { ended: 'failed', errorReference };
       }
-      await retryQueuedJobLater(ctx.db, job.id, job.attempts);
-      return 'retried';
+      await retryQueuedJobLater(ctx.db, job.id, job.attempts, errorReference);
+      return { ended: 'retried', errorReference };
     }),
   );
 }
@@ -169,6 +182,8 @@ export async function runQueue(
       (kind.handle !== null || (kind.batchGroup !== null && batchesByGroup.has(kind.batchGroup))),
   );
   const counts = new Map<string, KindCounts>();
+  // The last error each kind recorded this tick, for its run in the history.
+  const lastErrors = new Map<string, string>();
   while (open.length > 0 && Date.now() < deadline.getTime()) {
     // One claim at a time on purpose: jobs are taken only when they're about to run.
     // eslint-disable-next-line no-await-in-loop -- See above.
@@ -187,9 +202,13 @@ export async function runQueue(
     // eslint-disable-next-line no-await-in-loop -- See above.
     const endings = await runClaimed(ctx, claimed, batchesByGroup);
     claimed.forEach(({ kind }, index) => {
+      const { ended, errorReference } = defined(endings[index], 'how the job ended');
       const kindCounts = counts.get(kind.name) ?? { done: 0, skipped: 0, retried: 0, failed: 0 };
-      kindCounts[defined(endings[index], 'how the job ended')] += 1;
+      kindCounts[ended] += 1;
       counts.set(kind.name, kindCounts);
+      if (errorReference) {
+        lastErrors.set(kind.name, errorReference);
+      }
     });
     open = open.filter((kind) => {
       const kindCounts = counts.get(kind.name);
@@ -202,6 +221,7 @@ export async function runQueue(
   return Promise.all(
     [...counts].map(async ([name, summary]) => {
       const status = summary.retried + summary.failed > 0 ? 'failed' : 'succeeded';
+      const errorReference = lastErrors.get(name) ?? null;
       const runId = await finishJobRun(ctx.db, {
         job: name,
         trigger,
@@ -209,8 +229,9 @@ export async function runQueue(
         startedAt,
         status,
         summary: { ...summary },
+        errorReference,
       });
-      return { job: name, status, summary: { ...summary }, runId };
+      return { job: name, status, summary: { ...summary }, runId, errorReference };
     }),
   );
 }

@@ -28,7 +28,8 @@ tick.
   connection, such as Neon's.
 - **Failures** don't stop the other jobs. A job fails when it throws, or when it finishes but
   reports a `failure` (say, some reminders couldn't be sent). The run is recorded as failed, the
-  error goes to the server log, and `job_state.consecutive_failures` counts failed runs in a row.
+  error is recorded with a reference (see [Failures](#failures)), and
+  `job_state.consecutive_failures` counts failed runs in a row.
 - **Paused** jobs (`job_state.paused_at`) are skipped by the tick. Running a job by hand still works.
 
 ## The jobs
@@ -75,8 +76,9 @@ tick runs it; with `runAt`, not before that moment.
   user was deleted meanwhile).
 - **Retries:** a job that throws is tried again after 5 minutes, then 15, an hour and 6 hours
   (`RETRY_MINUTES` in `queue.ts`). After its kind's last attempt (`maxAttempts`, 5 by default: about
-  7½ hours) it stays `failed`. Each failed attempt goes to the server log with the job's ID, never
-  its payload. A job whose run died (its lease ran out) is taken again, as another attempt.
+  7½ hours) it stays `failed`. Each failed attempt is recorded with a reference (see
+  [Failures](#failures)), and the log names the jobs' IDs and attempts, never their payloads. A job
+  whose run died (its lease ran out) is taken again, as another attempt.
 - **Limits:** each kind runs at most its `perTick` jobs per tick (50 by default), so one large batch
   can't push the others out; the rest wait for the next tick. A paused kind's jobs wait too, and
   jobs of a kind the registry doesn't list are never taken.
@@ -103,6 +105,16 @@ run its jobs on its own:
 
 Each kind that ran jobs during a tick gets one run in the history, with how many were done,
 skipped, retried and failed (given up); the run counts as failed when any job failed.
+
+## Failures
+
+Every failure is recorded as an error in the app (`recordJobError` in `record-error.ts`, which calls
+`recordAppError` with source `job` and the job's name), so staff Admins look it up by its reference
+under **Logs → Errors**, where it shows as a job error. The run in the history keeps the reference
+(`job_run.error_reference`), and so does a failed queued job (`queued_job.last_error_reference`).
+The server log gets one line with the job and the reference, never the error's message: it can
+quote personal data, such as the address a mail server refused. Job errors are never rate-limited,
+since no visitor can cause them, and they're deleted after 7 days like other recorded errors.
 
 ## History
 

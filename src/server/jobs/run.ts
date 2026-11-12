@@ -1,11 +1,13 @@
 /**
  * @file Running one recurring job: taking it under its lease, doing the
  * work, and recording how it went, so a failing job never stops the others.
+ * A failure is recorded as an error with a reference (`recordJobError`).
  */
 import type { JobRunStatus, JobTrigger } from '@/db/schema';
 
 import type { ServiceContext } from '../context';
 import type { JobOutcome, JobSummary, RecurringJob } from './define';
+import recordJobError from './record-error';
 import { claimJob, finishJobRun } from './state';
 
 /** How a run went. */
@@ -18,6 +20,8 @@ export interface JobRunResult {
   summary: JobSummary;
   /** The run's row in the history. */
   runId: string;
+  /** The reference of the error a failed run recorded, if it could. */
+  errorReference: string | null;
 }
 
 /** How a recurring job is run. */
@@ -36,30 +40,29 @@ export interface RunOptions {
 
 /**
  * Does the job's work and turns what happens into an outcome: a job that
- * throws failed, with nothing to count.
+ * throws failed, with nothing to count. Either way a failure is recorded as
+ * an error, with the job's own words when it finished but reported one.
  *
  * @param ctx - Service context.
  * @param job - The job.
  * @param deadline - When it should stop starting new work.
- * @returns How it went.
+ * @returns How it went, and the reference of the error a failure recorded.
  */
 async function attempt(
   ctx: ServiceContext,
   job: RecurringJob,
   deadline: Date,
-): Promise<{ status: JobRunStatus; outcome: JobOutcome }> {
+): Promise<{ status: JobRunStatus; outcome: JobOutcome; errorReference: string | null }> {
   try {
     const outcome = await job.run(ctx, { deadline });
     if (outcome.failure) {
-      // eslint-disable-next-line no-console -- A job has no caller to report to but the log.
-      console.error(`Job ${job.name} failed: ${outcome.failure}`);
-      return { status: 'failed', outcome };
+      const errorReference = await recordJobError(ctx, job.name, new Error(outcome.failure));
+      return { status: 'failed', outcome, errorReference };
     }
-    return { status: 'succeeded', outcome };
+    return { status: 'succeeded', outcome, errorReference: null };
   } catch (error) {
-    // eslint-disable-next-line no-console -- A job has no caller to report to but the log.
-    console.error(`Job ${job.name} failed`, error);
-    return { status: 'failed', outcome: { summary: {} } };
+    const errorReference = await recordJobError(ctx, job.name, error);
+    return { status: 'failed', outcome: { summary: {} }, errorReference };
   }
 }
 
@@ -85,7 +88,7 @@ export async function runRecurringJob(
   if (!(await claimJob(ctx.db, job.name, { startedAt, slot }))) {
     return null;
   }
-  const { status, outcome } = await attempt(ctx, job, deadline);
+  const { status, outcome, errorReference } = await attempt(ctx, job, deadline);
   const runId = await finishJobRun(ctx.db, {
     job: job.name,
     trigger,
@@ -93,6 +96,7 @@ export async function runRecurringJob(
     startedAt,
     status,
     summary: outcome.summary,
+    errorReference,
   });
-  return { job: job.name, status, summary: outcome.summary, runId };
+  return { job: job.name, status, summary: outcome.summary, runId, errorReference };
 }

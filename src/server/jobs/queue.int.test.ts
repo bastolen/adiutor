@@ -12,7 +12,7 @@ import { asc, eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z, ZodError } from 'zod';
 
-import { jobRun, jobState, queuedJob } from '@/db/schema';
+import { appError, jobRun, jobState, queuedJob } from '@/db/schema';
 
 import { setupTestContext } from '../../../tests/integration/helpers';
 import {
@@ -369,6 +369,17 @@ describe('running the queue', () => {
     }
 
     await expect(attempt()).resolves.toEqual({ status: 'queued', wait: 5, finished: false });
+    // The attempt recorded a job error, whose reference the job keeps.
+    const [recorded] = await db
+      .select({ reference: appError.reference, routePath: appError.routePath })
+      .from(appError);
+    expect(recorded).toEqual({ reference: expect.any(String), routePath: broken.name });
+    expect(
+      await db
+        .select({ lastErrorReference: queuedJob.lastErrorReference })
+        .from(queuedJob)
+        .where(eq(queuedJob.id, id)),
+    ).toEqual([{ lastErrorReference: recorded?.reference }]);
     await expect(attempt()).resolves.toEqual({ status: 'queued', wait: 15, finished: false });
     await expect(attempt()).resolves.toMatchObject({ status: 'failed', finished: true });
   });

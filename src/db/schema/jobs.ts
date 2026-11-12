@@ -78,6 +78,11 @@ export const jobRun = pgTable(
     status: text('status').$type<JobRunStatus>().notNull(),
     /** What it did, as counts, e.g. `{ "sessions": 12 }`. */
     summary: jsonb('summary').$type<Record<string, number>>().notNull().default({}),
+    /**
+     * The reference of the error a failed run recorded (Logs → Errors, kept
+     * 7 days), or of the last one when several of a kind's queued jobs failed.
+     */
+    errorReference: text('error_reference'),
   },
   (table) => [
     index('job_run_job_started_at_idx').on(table.job, table.startedAt),
@@ -129,6 +134,8 @@ export const queuedJob = pgTable(
     createdAt: createdAt(),
     /** When it was done, given up or discarded. */
     finishedAt: timestampTz('finished_at'),
+    /** The reference of the error its last failed attempt recorded (Logs → Errors, kept 7 days). */
+    lastErrorReference: text('last_error_reference'),
   },
   (table) => [
     // What the tick looks for: waiting jobs, oldest due first.
