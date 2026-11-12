@@ -39,6 +39,8 @@ describe('staff permissions outside any company', () => {
         'company:create',
         'company:view',
         'errors:view',
+        'jobs:manage',
+        'jobs:view',
         'staff:manage',
         'users:create',
         'users:delete',
@@ -46,7 +48,10 @@ describe('staff permissions outside any company', () => {
         'users:view',
       ],
     ],
-    ['manager', ['audit:view', 'company:create', 'company:view', 'users:create', 'users:view']],
+    [
+      'manager',
+      ['audit:view', 'company:create', 'company:view', 'jobs:view', 'users:create', 'users:view'],
+    ],
     ['finance', ['billing:manage', 'billing:view', 'company:view', 'users:view']],
     ['support', ['company:view', 'users:view']],
   ])('%s', (role, expected) => {

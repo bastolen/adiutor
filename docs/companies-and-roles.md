@@ -16,20 +16,22 @@ and screens for company users talk about their company by name and about **reque
 
 ## Roles and permissions
 
-| Staff (platform role)               | Admin | Manager | Finance | Support |
-| ----------------------------------- | :---: | :-----: | :-----: | :-----: |
-| Manage staff (`staff:manage`)       |   ✓   |    –    |    –    |    –    |
-| Add / edit / (de)activate companies |   ✓   |    ✓    |    –    |    –    |
-| Manage any company's users          |   ✓   |    ✓    |    –    |    –    |
-| View all companies and their users  |   ✓   |    ✓    |    ✓    |    ✓    |
-| View all users (`/admin/users`)     |   ✓   |    ✓    |    ✓    |    ✓    |
-| Reset MFA, sign out, (de)activate   |   ✓   |    –    |    –    |    –    |
-| Delete user accounts                |   ✓   |    –    |    –    |    –    |
-| View the audit log (`audit:view`)   |   ✓   |    ✓    |    –    |    –    |
-| See recorded errors (`errors:view`) |   ✓   |    –    |    –    |    –    |
-| Billing (reserved for later)        |   ✓   |    –    |    ✓    |    –    |
-| Join a company with an invite link  |   ✓   |    ✓    |    –    |    –    |
-| Sign in as a user (see below)       |   ✓   |    ✓    |    –    |    ✓    |
+| Staff (platform role)                     | Admin | Manager | Finance | Support |
+| ----------------------------------------- | :---: | :-----: | :-----: | :-----: |
+| Manage staff (`staff:manage`)             |   ✓   |    –    |    –    |    –    |
+| Add / edit / (de)activate companies       |   ✓   |    ✓    |    –    |    –    |
+| Manage any company's users                |   ✓   |    ✓    |    –    |    –    |
+| View all companies and their users        |   ✓   |    ✓    |    ✓    |    ✓    |
+| View all users (`/admin/users`)           |   ✓   |    ✓    |    ✓    |    ✓    |
+| Reset MFA, sign out, (de)activate         |   ✓   |    –    |    –    |    –    |
+| Delete user accounts                      |   ✓   |    –    |    –    |    –    |
+| View the audit log (`audit:view`)         |   ✓   |    ✓    |    –    |    –    |
+| See recorded errors (`errors:view`)       |   ✓   |    –    |    –    |    –    |
+| See background jobs (`jobs:view`)         |   ✓   |    ✓    |    –    |    –    |
+| Run, pause and retry jobs (`jobs:manage`) |   ✓   |    –    |    –    |    –    |
+| Billing (reserved for later)              |   ✓   |    –    |    ✓    |    –    |
+| Join a company with an invite link        |   ✓   |    ✓    |    –    |    –    |
+| Sign in as a user (see below)             |   ✓   |    ✓    |    –    |    ✓    |
 
 Nobody can give themselves a higher staff role: Admins can step down, never back up. Finance and
 Support can't join with an invite link, or accept the invitation a link sends them, so a shared link

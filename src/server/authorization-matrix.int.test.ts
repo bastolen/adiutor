@@ -62,6 +62,7 @@ import {
 } from './auth/impersonation';
 import { revokeOwnSession } from './auth/sessions';
 import { ServiceError } from './errors';
+import { listFailedJobs, listJobRuns, loadJobsOverview } from './jobs';
 import {
   listCompanies,
   registerCompany,
@@ -440,6 +441,9 @@ function listOperations(): Operation[] {
     ['list the audit log', (w) => listAuditLog(ctx, w.actor)],
     ['look up an error reference', (w) => findErrorReference(ctx, w.actor, '7KQ2-M9XD')],
     ['list recent errors', (w) => listRecentErrors(ctx, w.actor)],
+    ['view jobs', (w) => loadJobsOverview(ctx, w.actor)],
+    ['list job runs', (w) => listJobRuns(ctx, w.actor)],
+    ['list failed queued jobs', (w) => listFailedJobs(ctx, w.actor)],
     // Last: it deactivates the acting user.
     [
       'deactivate own account',
@@ -479,6 +483,9 @@ const READS: ReadonlySet<string> = new Set([
   'list the audit log',
   'look up an error reference',
   'list recent errors',
+  'view jobs',
+  'list job runs',
+  'list failed queued jobs',
 ]);
 
 /** What a user may still change while a staff member is signed in as them: their own work. */
@@ -576,6 +583,9 @@ const EXPECTED: Record<string, string> = {
   'list the audit log': 'FFFFFAA',
   'look up an error reference': 'FFFFFFA',
   'list recent errors': 'FFFFFFA',
+  'view jobs': 'FFFFFAA',
+  'list job runs': 'FFFFFAA',
+  'list failed queued jobs': 'FFFFFAA',
   // A user in no company, so Support may too (never a company Admin, see `mayImpersonate`).
   'sign in as a user': 'FFFAFAA',
   // Everyone may deactivate their own account (each world has other Admins).

@@ -34,6 +34,10 @@ export const PERMISSIONS = [
   'audit:view',
   /** See recorded errors and look up their references (Logs → Errors). */
   'errors:view',
+  /** See the background jobs, their runs and the queued jobs that failed (Logs → Jobs). */
+  'jobs:view',
+  /** Run, pause and resume background jobs, and retry or discard failed queued jobs. */
+  'jobs:manage',
   /** See a company's members, invitations and invite links. */
   'members:view',
   /** Invite, change roles of and remove a company's members. */
@@ -80,10 +84,19 @@ const STAFF_GLOBAL: Record<PlatformRole, Permission[]> = {
     'users:delete',
     'audit:view',
     'errors:view',
+    'jobs:view',
+    'jobs:manage',
     'billing:view',
     'billing:manage',
   ],
-  manager: ['company:create', 'company:view', 'users:view', 'users:create', 'audit:view'],
+  manager: [
+    'company:create',
+    'company:view',
+    'users:view',
+    'users:create',
+    'audit:view',
+    'jobs:view',
+  ],
   finance: ['company:view', 'users:view', 'billing:view', 'billing:manage'],
   support: ['company:view', 'users:view'],
 };
