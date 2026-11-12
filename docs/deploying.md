@@ -275,7 +275,8 @@ and how they work). On a server, run the tick from cron with `pnpm jobs:run`:
 It's safe to run at any time and never runs a job twice at once, so a tick that overlaps the next
 one does no harm. It exits with 1 when a job failed (after the others ran), so cron's mail or your
 monitoring notices, for example when the mail setup is broken and reminders can't be sent; the next
-run tries again.
+run tries again. `pnpm jobs:list` shows every job with its last and next run, and
+`pnpm jobs:run <name>` runs one job now.
 
 ## Logs
 

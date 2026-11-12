@@ -9,6 +9,8 @@
  * outside this folder imports them directly.
  */
 export type { JobOutcome, JobSummary, RecurringJob } from './define';
+export { listJobs } from './list';
+export type { JobListing } from './list';
 export { RECURRING_JOBS } from './registry';
 export type { JobRunResult } from './run';
 export { runJobNow, runTick } from './tick';

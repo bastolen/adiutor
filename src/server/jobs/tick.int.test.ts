@@ -3,7 +3,7 @@
  * test database: due jobs run once per scheduled moment, paused ones don't,
  * a lease keeps two runs of a job apart, failures are counted without
  * stopping the others, and the deadline leaves the rest for the next tick.
- * Also the registry.
+ * Also the registry and the job list.
  */
 import { eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
@@ -13,6 +13,7 @@ import { jobRun, jobState } from '@/db/schema';
 import { setupTestContext } from '../../../tests/integration/helpers';
 import { ServiceError } from '../errors';
 import { defineRecurringJob, type JobOutcome, type RecurringJob } from './define';
+import { listJobs } from './list';
 import { RECURRING_JOBS } from './registry';
 import { runRecurringJob } from './run';
 import { isValidSchedule } from './schedule';
@@ -282,5 +283,31 @@ describe('running a job now', () => {
     await expect(
       runJobNow(ctx, 'adiutor-tests-missing', { trigger: 'cli', deadline: later }),
     ).rejects.toThrow(ServiceError);
+  });
+});
+
+describe('listJobs', () => {
+  it('lists every job with its state and next run', async () => {
+    const now = new Date();
+    await runJobNow(ctx, 'retention', { trigger: 'cli', deadline: later });
+    await db.insert(jobState).values({ name: 'expired-sign-in-data', pausedAt: sql`now()` });
+
+    const jobs = await listJobs(ctx, now);
+
+    expect(jobs.map((job) => job.name)).toEqual(RECURRING_JOBS.map((job) => job.name));
+    const byName = new Map(jobs.map((job) => [job.name, job]));
+    // It ran just now, so its next run is its next scheduled moment.
+    expect(byName.get('retention')).toMatchObject({
+      paused: false,
+      running: false,
+      lastStatus: 'succeeded',
+    });
+    expect(byName.get('retention')?.nextRunAt?.getTime()).toBeGreaterThan(now.getTime());
+    expect(byName.get('expired-sign-in-data')).toMatchObject({ paused: true, nextRunAt: null });
+    // Never ran: due at the next tick.
+    expect(byName.get('invitation-reminders')).toMatchObject({
+      lastStatus: null,
+      nextRunAt: now,
+    });
   });
 });

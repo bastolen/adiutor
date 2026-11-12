@@ -24,7 +24,7 @@ line), and what's left waits for the next tick.
 - **Failures** don't stop the other jobs. A job fails when it throws, or when it finishes but
   reports a `failure` (say, some reminders couldn't be sent). The run is recorded as failed, the
   error goes to the server log, and `job_state.consecutive_failures` counts failed runs in a row.
-- **Paused** jobs (`job_state.paused_at`) are skipped by the tick.
+- **Paused** jobs (`job_state.paused_at`) are skipped by the tick. Running a job by hand still works.
 
 ## The jobs
 
@@ -43,11 +43,17 @@ started and finished, how it ended, and what it did as counts, e.g. `{ "sessions
 summary never holds personal data. The `retention` job deletes runs after 30 days
 (`JOB_HISTORY_RETENTION_DAYS`).
 
-## Running it
+## From the command line
 
-`pnpm jobs:run` runs one tick and exits with 1 when a run failed, after the other jobs ran. In
-production, run it every 5 minutes; see [Background jobs](deploying.md#background-jobs) in the
-deployment docs.
+| Command                | What it does                                                                        |
+| ---------------------- | ----------------------------------------------------------------------------------- |
+| `pnpm jobs:run`        | One tick. Exits with 1 when a run failed, after the other jobs ran.                 |
+| `pnpm jobs:run <name>` | Runs one job now, whether it's due or paused (unless another run holds it).         |
+| `pnpm jobs:list`       | Every job with its schedule, whether it's paused or running, its last and next run. |
+
+In production, run the tick every 5 minutes; see [Background jobs](deploying.md#background-jobs) in
+the deployment docs. The command is thin (`scripts/jobs.ts`); the logic lives in the module and its
+tests.
 
 ## Adding a recurring job
 

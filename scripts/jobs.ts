@@ -1,0 +1,174 @@
+/**
+ * @file The background jobs from the command line (see docs/jobs.md).
+ *
+ * - `pnpm jobs:run`: one tick, running every job that's due. System cron
+ *   (and the Docker image) runs it every 5 minutes, e.g.
+ *   `*\/5 * * * * cd /srv/adiutor && pnpm jobs:run >> /var/log/adiutor-jobs.log 2>&1`.
+ * - `pnpm jobs:run <name>`: runs one job now, whether it's due or not.
+ * - `pnpm jobs:list`: every job with its schedule, state, last and next run.
+ *
+ * It exits with 1 when a run failed (after the other jobs ran), so cron's
+ * mail or the monitoring notices; 2 for a mistake in the command.
+ */
+import { db } from '../src/db';
+import { sendEmail } from '../src/lib/email';
+import { appUrl } from '../src/lib/env';
+import { installLogRedaction } from '../src/lib/log-redaction';
+import {
+  type JobRunResult,
+  listJobs,
+  RECURRING_JOBS,
+  runJobNow,
+  runTick,
+} from '../src/server/jobs';
+
+/** How long one tick from the command line may keep starting runs: less than cron's 5 minutes. */
+const TICK_MINUTES = 4;
+
+/** How long one job run by hand may take. */
+const RUN_NOW_MINUTES = 10;
+
+/** The service context for the jobs: the database, email and the app's address. */
+const ctx = { db, sendEmail, baseUrl: appUrl };
+
+/**
+ * The moment some minutes from now.
+ *
+ * @param minutes - How many minutes.
+ * @returns That moment.
+ */
+function minutesFromNow(minutes: number): Date {
+  return new Date(Date.now() + minutes * 60_000);
+}
+
+/**
+ * Describes a run on one line, e.g. `retention: succeeded (auditEvents 0, jobRuns 12)`.
+ *
+ * @param run - The run.
+ * @returns The line.
+ */
+function describeRun(run: JobRunResult): string {
+  const counts = Object.entries(run.summary)
+    .map(([what, count]) => `${what} ${count}`)
+    .join(', ');
+  return `${run.job}: ${run.status}${counts ? ` (${counts})` : ''}`;
+}
+
+/**
+ * Prints a line with the time in front.
+ *
+ * @param line - The line.
+ */
+function print(line: string): void {
+  console.info(`[${new Date().toISOString()}] ${line}`);
+}
+
+/**
+ * Runs one tick and prints what it did.
+ *
+ * @returns The exit code: 1 when a run failed.
+ */
+async function tick(): Promise<number> {
+  const result = await runTick(ctx, { trigger: 'cli', deadline: minutesFromNow(TICK_MINUTES) });
+  if (result.runs.length === 0) {
+    print('Nothing was due.');
+  }
+  result.runs.forEach((run) => print(describeRun(run)));
+  if (result.leftForNextTick.length > 0) {
+    print(`Left for the next tick: ${result.leftForNextTick.join(', ')}.`);
+  }
+  return result.failed ? 1 : 0;
+}
+
+/**
+ * Runs one job now and prints how it went.
+ *
+ * @param name - The job's name.
+ * @returns The exit code: 1 when it failed, 2 for an unknown job.
+ */
+async function runOne(name: string): Promise<number> {
+  if (!RECURRING_JOBS.some((job) => job.name === name)) {
+    console.error(
+      `There's no job called "${name}". The jobs: ${RECURRING_JOBS.map((job) => job.name).join(', ')}.`,
+    );
+    return 2;
+  }
+  const run = await runJobNow(ctx, name, {
+    trigger: 'cli',
+    deadline: minutesFromNow(RUN_NOW_MINUTES),
+  });
+  if (!run) {
+    print(`${name} is running already; try again when it's done.`);
+    return 1;
+  }
+  print(describeRun(run));
+  return run.status === 'failed' ? 1 : 0;
+}
+
+/**
+ * Formats a moment for the job list, or a dash for none.
+ *
+ * @param at - The moment.
+ * @returns The text.
+ */
+function moment(at: Date | null): string {
+  return at ? at.toISOString() : '-';
+}
+
+/**
+ * Prints every job with its state.
+ *
+ * @returns The exit code: 0.
+ */
+async function list(): Promise<number> {
+  const jobs = await listJobs(ctx);
+  jobs.forEach((job) => {
+    let state = 'waiting';
+    if (job.paused) {
+      state = 'paused';
+    } else if (job.running) {
+      state = 'running';
+    }
+    console.info(
+      [
+        job.name,
+        `  schedule: ${job.schedule} (UTC), ${state}`,
+        `  last run: ${moment(job.lastStartedAt)}, ${job.lastStatus ?? 'never ran'}${
+          job.consecutiveFailures > 1 ? ` (${job.consecutiveFailures} failures in a row)` : ''
+        }`,
+        `  next run: ${moment(job.nextRunAt)}`,
+      ].join('\n'),
+    );
+  });
+  return 0;
+}
+
+/**
+ * Reads the command and does it.
+ *
+ * @returns The exit code.
+ */
+async function main(): Promise<number> {
+  const [command, name] = process.argv.slice(2);
+  if (command === 'run') {
+    return name ? runOne(name) : tick();
+  }
+  if (command === 'list') {
+    return list();
+  }
+  console.error('Usage: pnpm jobs:run [job] | pnpm jobs:list');
+  return 2;
+}
+
+// Database errors are logged without the values they were sent.
+installLogRedaction();
+
+main()
+  .then(async (code) => {
+    await db.$client.end();
+    process.exit(code);
+  })
+  .catch((error: unknown) => {
+    console.error(error);
+    process.exit(1);
+  });

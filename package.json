@@ -34,7 +34,8 @@
     "auth:schema": "node --env-file-if-exists=.env --import tsx scripts/generate-auth-schema.ts",
     "setup:platform": "node --env-file-if-exists=.env --import tsx scripts/setup-platform.ts",
     "db:seed": "node --env-file-if-exists=.env --import tsx scripts/seed-dev.ts",
-    "jobs:run": "node --env-file-if-exists=.env --import tsx scripts/run-jobs.ts",
+    "jobs:run": "node --env-file-if-exists=.env --import tsx scripts/jobs.ts run",
+    "jobs:list": "node --env-file-if-exists=.env --import tsx scripts/jobs.ts list",
     "sessions:revoke-all": "node --env-file-if-exists=.env --import tsx scripts/revoke-sessions.ts",
     "prepare": "husky"
   },

@@ -127,5 +127,6 @@ Things that can look like a problem but aren't:
 | `pnpm auth:schema`         | Regenerate Better Auth's tables after changing its config                                                   |
 | `pnpm setup:platform`      | First-run setup from the command line (can also recover; see [First run](companies-and-roles.md#first-run)) |
 | `pnpm db:seed --yes`       | Replace all local data with test accounts and companies (`--admin-mail` adds your own staff Admin)          |
-| `pnpm jobs:run`            | One tick of the background jobs (see [Background jobs](jobs.md))                                            |
+| `pnpm jobs:run [job]`      | One tick of the background jobs, or one job now (see [Background jobs](jobs.md))                            |
+| `pnpm jobs:list`           | Every background job with its schedule, last and next run                                                   |
 | `pnpm sessions:revoke-all` | End sessions after a leak (see [After a suspected leak](deploying.md#after-a-suspected-leak))               |
