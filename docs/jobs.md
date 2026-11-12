@@ -10,14 +10,14 @@ data only as long as it may, and reminding people of invitations. That work runs
 ## The tick
 
 Every 5 minutes something starts a **tick**: an external cron service (with a Vercel schedule every
-15 minutes as the fallback) calling the
-[endpoint](#the-endpoint), or `pnpm jobs:run` from system cron or the Docker image (see
-[Background jobs](deploying.md#background-jobs) and [Vercel](deploying.md#vercel) in the
-deployment docs).
-A tick runs every recurring job that's due, one after another, then the
-[queued jobs](#queued-jobs) that are due (`runTick` in `src/server/jobs/tick.ts`). It stops starting
-new runs at its deadline (4 minutes from the command line), and what's left waits for the next
-tick.
+15 minutes as the fallback) calling the [endpoint](#the-endpoint), or `pnpm jobs:run` from system
+cron or the Docker image (see [Background jobs](deploying.md#background-jobs) and
+[Vercel](deploying.md#vercel) in the deployment docs). A tick runs every recurring job that's due,
+one after another, then the [queued jobs](#queued-jobs) that are due (`runTick` in
+`src/server/jobs/tick.ts`). It stops starting new runs at its deadline (45 seconds from the
+endpoint, 4 minutes from the command line), and what's left waits for the next tick. The recurring
+jobs get at most the first half of that time: they normally take milliseconds, but a slow one (say,
+reminders working up to their deadline) can never leave the queue without time.
 
 - **Due** means the job never ran, or its schedule named a moment since its last run started. After
   a long silence (say, the server was down) a job runs once, not once per missed moment

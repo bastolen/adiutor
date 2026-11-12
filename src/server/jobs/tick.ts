@@ -41,9 +41,11 @@ export interface TickOptions {
 
 /**
  * Runs every recurring job that's due and not paused, then the queued jobs
- * that are due. A job another run holds is left alone (that run does it); a
- * job that fails doesn't stop the others. Once the deadline has passed, the
- * rest waits for the next tick.
+ * that are due. The recurring jobs get at most the first half of the tick
+ * (they normally take milliseconds), so a slow one never leaves the queue
+ * without time; the queue runs until the deadline. A job another run holds
+ * is left alone (that run does it); a job that fails doesn't stop the
+ * others. Work left at either deadline waits for the next tick.
  *
  * @param ctx - Service context.
  * @param options - How to run.
@@ -65,15 +67,17 @@ export async function runTick(
   });
   const runs: JobRunResult[] = [];
   const leftForNextTick: string[] = [];
+  // The recurring jobs' share: the first half of what's left of the tick.
+  const recurringDeadline = new Date(Date.now() + Math.max(0, deadline.getTime() - Date.now()) / 2);
   for (const job of due) {
-    if (Date.now() >= deadline.getTime()) {
+    if (Date.now() >= recurringDeadline.getTime()) {
       leftForNextTick.push(job.name);
     } else {
       // Sequential on purpose: one job at a time keeps the deadline and the database's load in hand.
       // eslint-disable-next-line no-await-in-loop -- See above.
       const result = await runRecurringJob(ctx, job, {
         trigger,
-        deadline,
+        deadline: recurringDeadline,
         startedAt: now,
         slot: lastScheduledAt(job.schedule, now),
       });

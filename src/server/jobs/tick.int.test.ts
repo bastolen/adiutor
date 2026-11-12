@@ -2,17 +2,23 @@
  * @file Integration tests for the tick and running a job now, against the
  * test database: due jobs run once per scheduled moment, paused ones don't,
  * a lease keeps two runs of a job apart, failures are counted without
- * stopping the others, and the deadline leaves the rest for the next tick.
+ * stopping the others, the recurring jobs get at most half of the tick so
+ * the queue always has time, and the deadline leaves the rest for the next
+ * tick.
  * Also the registry and the job list.
  */
+import { randomUUID } from 'node:crypto';
+
 import { eq, sql } from 'drizzle-orm';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 
 import { appError, jobRun, jobState } from '@/db/schema';
 
 import { setupTestContext } from '../../../tests/integration/helpers';
 import { ServiceError } from '../errors';
-import { defineRecurringJob, type JobOutcome, type RecurringJob } from './define';
+import { defineQueuedKind, queueJob } from '../queue';
+import { defineRecurringJob, handleQueuedJob, type JobOutcome, type RecurringJob } from './define';
 import { listJobs } from './list';
 import { RECURRING_JOBS } from './registry';
 import { runRecurringJob } from './run';
@@ -310,6 +316,63 @@ describe('runTick', () => {
 
     expect(result).toEqual({ runs: [], leftForNextTick: [job.name], failed: false });
     expect(await history(job.name)).toEqual([]);
+  });
+
+  it('gives the recurring jobs the first half of the tick, and the queue the rest', async () => {
+    const tickMs = 600;
+    const deadline = new Date(Date.now() + tickMs);
+    const deadlines: Date[] = [];
+    // A slow job that works until its own deadline, as invitation reminders can.
+    const slow = defineRecurringJob({
+      name: 'adiutor-tests-slow',
+      schedule: '0 * * * *',
+      /**
+       * Notes the deadline it got, then works until it.
+       *
+       * @param _ctx - Service context (not used).
+       * @param options - The run's options.
+       * @param options.deadline - When to stop.
+       * @returns One done.
+       */
+      run: async (_ctx, { deadline: own }) => {
+        deadlines.push(own);
+        await new Promise((resolve) => {
+          setTimeout(resolve, Math.max(0, own.getTime() - Date.now()));
+        });
+        return { summary: { done: 1 } };
+      },
+    });
+    const ran: string[] = [];
+    const note = handleQueuedJob(
+      defineQueuedKind({ name: 'adiutor-tests-note', payload: z.object({ userId: z.uuid() }) }),
+      /**
+       * Notes that it ran.
+       *
+       * @returns Done.
+       */
+      async () => {
+        ran.push('note');
+        return 'done';
+      },
+    );
+    await queueJob(db, note, { userId: randomUUID() });
+
+    const result = await runTick(ctx, {
+      trigger: 'tick',
+      deadline,
+      now: at('10:30'),
+      jobs: [slow],
+      queuedJobs: [note],
+    });
+
+    // Halfway through what was left when the tick began its work, a moment after the test started.
+    const half = deadline.getTime() - tickMs / 2;
+    expect(deadlines).toHaveLength(1);
+    expect(deadlines[0]?.getTime()).toBeGreaterThanOrEqual(half);
+    expect(deadlines[0]?.getTime()).toBeLessThan(half + 100);
+    // The queue still ran after the slow job used all its time.
+    expect(ran).toEqual(['note']);
+    expect(result.runs.map((run) => run.job)).toEqual(['adiutor-tests-slow', 'adiutor-tests-note']);
   });
 });
 
