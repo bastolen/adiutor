@@ -1,12 +1,13 @@
 /**
  * @file Background jobs (decision 0018): the state of each job (paused or
- * not, who holds it, how its last run went) and the history of its runs,
- * kept for 30 days.
+ * not, who holds it, how its last run went), the history of its runs, kept
+ * for 30 days, and the queue of jobs the app adds to run once.
  */
+import { sql } from 'drizzle-orm';
 import { index, integer, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { user } from './auth';
-import { id, timestampTz } from './columns';
+import { createdAt, id, timestampTz } from './columns';
 
 /** How a run of a job ended. */
 export const JOB_RUN_STATUSES = ['succeeded', 'failed'] as const;
@@ -82,5 +83,62 @@ export const jobRun = pgTable(
     index('job_run_job_started_at_idx').on(table.job, table.startedAt),
     index('job_run_started_at_idx').on(table.startedAt),
     index('job_run_started_by_idx').on(table.startedBy),
+  ],
+);
+
+/** Where a queued job is. */
+export const QUEUED_JOB_STATUSES = [
+  'queued',
+  'running',
+  'succeeded',
+  'skipped',
+  'failed',
+  'discarded',
+] as const;
+
+/**
+ * Where a queued job is: waiting (`queued`, also between attempts), being
+ * run, done (`succeeded`, or `skipped` when what it was about is gone), given
+ * up after its last attempt (`failed`) or `discarded` by a staff Admin.
+ */
+export type QueuedJobStatus = (typeof QUEUED_JOB_STATUSES)[number];
+
+/**
+ * Jobs the app adds to run once, at the next tick or later: the queue. Each
+ * holds IDs and small settings only (its `payload`), never personal data; the
+ * job reads what it needs when it runs. Finished jobs are kept for 30 days.
+ */
+export const queuedJob = pgTable(
+  'queued_job',
+  {
+    id: id(),
+    /** What kind of job it is, by the kind's name (e.g. `security-notice`). */
+    kind: text('kind').notNull(),
+    /** Its IDs and small settings, checked against the kind's schema when it's queued. */
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull().default({}),
+    /** Jobs with the same key run together, in one call of their batch's handler; `null` runs alone. */
+    batchKey: text('batch_key'),
+    /** Where it is. */
+    status: text('status').$type<QueuedJobStatus>().notNull().default('queued'),
+    /** When it may run: when it was queued, a later moment, or after a failed attempt. */
+    runAt: timestampTz('run_at').defaultNow().notNull(),
+    /** How many times a run took it. */
+    attempts: integer('attempts').notNull().default(0),
+    /** Until when the run that took it holds it; `null` while no run does. */
+    lockedUntil: timestampTz('locked_until'),
+    createdAt: createdAt(),
+    /** When it was done, given up or discarded. */
+    finishedAt: timestampTz('finished_at'),
+  },
+  (table) => [
+    // What the tick looks for: waiting jobs, oldest due first.
+    index('queued_job_due_idx')
+      .on(table.runAt, table.id)
+      .where(sql`${table.status} = 'queued'`),
+    index('queued_job_batch_key_idx')
+      .on(table.batchKey)
+      .where(sql`${table.status} = 'queued'`),
+    index('queued_job_kind_status_idx').on(table.kind, table.status),
+    index('queued_job_finished_at_idx').on(table.finishedAt),
   ],
 );

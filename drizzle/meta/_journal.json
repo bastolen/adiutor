@@ -50,6 +50,13 @@
       "when": 1794475525666,
       "tag": "0006_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794477803110,
+      "tag": "0007_queued_jobs",
+      "breakpoints": true
     }
   ]
 }

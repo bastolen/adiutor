@@ -5,7 +5,7 @@
 import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { appError, auditEvent, jobRun } from '@/db/schema';
+import { appError, auditEvent, jobRun, queuedJob } from '@/db/schema';
 
 import { setupTestContext } from '../../../../tests/integration/helpers';
 import retention from './retention';
@@ -62,5 +62,23 @@ describe('retention', () => {
       summary: { jobRuns: 1 },
     });
     expect(await db.select().from(jobRun)).toHaveLength(1);
+  });
+
+  it('removes queued jobs 30 days after they were done, but never waiting ones', async () => {
+    const longAgo = sql`now() - interval '31 days'`;
+    await db.insert(queuedJob).values([
+      { kind: 'adiutor-tests', status: 'succeeded', finishedAt: longAgo },
+      { kind: 'adiutor-tests', status: 'failed', finishedAt: longAgo },
+      { kind: 'adiutor-tests', status: 'succeeded', finishedAt: sql`now()` },
+      { kind: 'adiutor-tests', status: 'queued', runAt: longAgo },
+    ]);
+
+    await expect(retention.run(ctx, { deadline })).resolves.toMatchObject({
+      summary: { queuedJobs: 2 },
+    });
+    expect(
+      (await db.select({ status: queuedJob.status }).from(queuedJob)).map(({ status }) => status),
+    ).toEqual(expect.arrayContaining(['succeeded', 'queued']));
+    expect(await db.select().from(queuedJob)).toHaveLength(2);
   });
 });

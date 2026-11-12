@@ -1,11 +1,12 @@
 /**
  * @file The daily job that deletes what Adiutor keeps only for a while:
  * audit events after a year, sign-in errors and other recorded errors after
- * 7 days, and the history of job runs after 30 days.
+ * 7 days, and the history of job runs and the queued jobs that are done
+ * (or given up, or discarded) after 30 days.
  */
-import { lt, sql } from 'drizzle-orm';
+import { and, lt, ne, sql } from 'drizzle-orm';
 
-import { appError, auditEvent, jobRun, signInError } from '@/db/schema';
+import { appError, auditEvent, jobRun, queuedJob, signInError } from '@/db/schema';
 
 import { APP_ERROR_RETENTION_DAYS } from '../../app-errors';
 import { SIGN_IN_ERROR_RETENTION_DAYS } from '../../auth/sign-in-errors';
@@ -14,7 +15,7 @@ import { defineRecurringJob } from '../define';
 /** How long audit events are kept, in days. */
 export const AUDIT_RETENTION_DAYS = 365;
 
-/** How long the history of job runs is kept, in days. */
+/** How long the history of job runs, and queued jobs that are done, are kept, in days. */
 export const JOB_HISTORY_RETENTION_DAYS = 30;
 
 /**
@@ -37,7 +38,7 @@ export default defineRecurringJob({
    * @returns How many rows were deleted per kind.
    */
   run: async (ctx) => {
-    const [auditEvents, signInErrors, appErrors, jobRuns] = await Promise.all([
+    const [auditEvents, signInErrors, appErrors, jobRuns, queuedJobs] = await Promise.all([
       ctx.db
         .delete(auditEvent)
         .where(lt(auditEvent.at, daysAgo(AUDIT_RETENTION_DAYS)))
@@ -54,6 +55,17 @@ export default defineRecurringJob({
         .delete(jobRun)
         .where(lt(jobRun.startedAt, daysAgo(JOB_HISTORY_RETENTION_DAYS)))
         .returning({ id: jobRun.id }),
+      // Waiting and running jobs have no `finished_at`; only what's over goes.
+      ctx.db
+        .delete(queuedJob)
+        .where(
+          and(
+            ne(queuedJob.status, 'queued'),
+            ne(queuedJob.status, 'running'),
+            lt(queuedJob.finishedAt, daysAgo(JOB_HISTORY_RETENTION_DAYS)),
+          ),
+        )
+        .returning({ id: queuedJob.id }),
     ]);
     return {
       summary: {
@@ -61,6 +73,7 @@ export default defineRecurringJob({
         signInErrors: signInErrors.length,
         appErrors: appErrors.length,
         jobRuns: jobRuns.length,
+        queuedJobs: queuedJobs.length,
       },
     };
   },
