@@ -1,8 +1,9 @@
 /**
  * @file The queue (`queued_job`): adding a job for the next tick or later,
- * taking the next due job under a lease, and noting how it ended.
+ * taking the next due job under a lease, noting how it ended, and trying a
+ * failed one again after a growing wait.
  */
-import { and, asc, eq, inArray, lte, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, lt, lte, or, sql } from 'drizzle-orm';
 
 import type { DatabaseOrTransaction } from '@/db';
 import { type QueuedJobStatus, queuedJob } from '@/db/schema';
@@ -10,6 +11,22 @@ import { firstRow } from '@/lib/defined';
 
 import type { JobPayload, QueuedJobKind, StoredQueuedJob } from './define';
 import { JOB_LEASE_MINUTES } from './state';
+
+/**
+ * How long a failed job waits before it's tried again, in minutes: after the
+ * first failed attempt, the second, and so on; the last wait repeats.
+ */
+export const RETRY_MINUTES = [5, 15, 60, 360] as const;
+
+/**
+ * How long a job waits after a failed attempt.
+ *
+ * @param attempts - How many times it was tried so far.
+ * @returns The wait, in minutes.
+ */
+export function retryWaitMinutes(attempts: number): number {
+  return RETRY_MINUTES[Math.min(Math.max(attempts, 1), RETRY_MINUTES.length) - 1] ?? 5;
+}
 
 /** When a queued job may run. */
 export interface QueueOptions {
@@ -44,9 +61,10 @@ export async function queueJob<P extends JobPayload>(
 }
 
 /**
- * Takes the oldest due job of one of the given kinds, under a lease. Jobs
- * another run is taking at the same moment are skipped (`SKIP LOCKED`), so
- * two ticks never take the same job.
+ * Takes the oldest due job of one of the given kinds, under a lease: a
+ * waiting job whose time has come, or one whose run died (its lease ran
+ * out). Jobs another run is taking at the same moment are skipped
+ * (`SKIP LOCKED`), so two ticks never take the same job.
  *
  * @param db - Database client.
  * @param kinds - The names of the kinds that may run now.
@@ -64,9 +82,11 @@ export async function claimNextQueuedJob(
     .from(queuedJob)
     .where(
       and(
-        eq(queuedJob.status, 'queued'),
-        lte(queuedJob.runAt, sql`now()`),
         inArray(queuedJob.kind, [...kinds]),
+        or(
+          and(eq(queuedJob.status, 'queued'), lte(queuedJob.runAt, sql`now()`)),
+          and(eq(queuedJob.status, 'running'), lt(queuedJob.lockedUntil, sql`now()`)),
+        ),
       ),
     )
     .orderBy(asc(queuedJob.runAt), asc(queuedJob.id))
@@ -104,5 +124,28 @@ export async function finishQueuedJob(
   await db
     .update(queuedJob)
     .set({ status, lockedUntil: null, finishedAt: sql`now()` })
+    .where(eq(queuedJob.id, id));
+}
+
+/**
+ * Puts a job that failed back in the queue, to be tried again after a wait
+ * that grows with each attempt (`RETRY_MINUTES`).
+ *
+ * @param db - Database client.
+ * @param id - The job.
+ * @param attempts - How many times it was tried so far.
+ */
+export async function retryQueuedJobLater(
+  db: DatabaseOrTransaction,
+  id: string,
+  attempts: number,
+): Promise<void> {
+  await db
+    .update(queuedJob)
+    .set({
+      status: 'queued',
+      lockedUntil: null,
+      runAt: sql`now() + make_interval(mins => ${retryWaitMinutes(attempts)})`,
+    })
     .where(eq(queuedJob.id, id));
 }

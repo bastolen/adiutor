@@ -102,6 +102,8 @@ export interface QueuedJobDefinition<P extends JobPayload> {
   payload: z.ZodType<P>;
   /** How many of its jobs one tick runs at most, so a large batch can't push the others out. */
   perTick?: number;
+  /** How many times a job is tried before it's given up as failed. */
+  maxAttempts?: number;
   /** Does one job's work; throws when it can't. */
   run: (ctx: ServiceContext, job: QueuedJob<P>) => Promise<QueuedJobResult>;
 }
@@ -112,6 +114,8 @@ export interface QueuedJobRunner {
   name: string;
   /** How many of its jobs one tick runs at most. */
   perTick: number;
+  /** How many times a job is tried before it's given up as failed. */
+  maxAttempts: number;
   /** Runs a job from the queue, checking its payload first. */
   handle: (ctx: ServiceContext, job: StoredQueuedJob) => Promise<QueuedJobResult>;
 }
@@ -126,6 +130,12 @@ export interface QueuedJobKind<P extends JobPayload> extends QueuedJobRunner {
 export const DEFAULT_PER_TICK = 50;
 
 /**
+ * How many times a job is tried before it's given up, unless its kind says
+ * otherwise: with the waits in `RETRY_MINUTES`, about 7½ hours in all.
+ */
+export const DEFAULT_MAX_ATTEMPTS = 5;
+
+/**
  * Describes a kind of queued job; add it to `QUEUED_JOBS` in `registry.ts`,
  * and queue jobs of it with `queueJob`.
  *
@@ -133,6 +143,7 @@ export const DEFAULT_PER_TICK = 50;
  * @param definition.name - Its name.
  * @param definition.payload - The payload's schema.
  * @param definition.perTick - How many of its jobs one tick runs at most.
+ * @param definition.maxAttempts - How many times a job is tried.
  * @param definition.run - What one job does.
  * @returns The kind.
  */
@@ -140,12 +151,14 @@ export function defineQueuedJob<P extends JobPayload>({
   name,
   payload,
   perTick = DEFAULT_PER_TICK,
+  maxAttempts = DEFAULT_MAX_ATTEMPTS,
   run,
 }: QueuedJobDefinition<P>): QueuedJobKind<P> {
   return {
     name,
     payload,
     perTick,
+    maxAttempts,
     /**
      * Checks the stored payload against the schema, then runs the job.
      *

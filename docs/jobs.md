@@ -71,14 +71,18 @@ tick runs it; with `runAt`, not before that moment.
 - **Running:** due jobs run one at a time, oldest first (`runQueue` in `run-queue.ts`). A run takes
   the next job under a lease, skipping jobs another run is taking (`FOR UPDATE SKIP LOCKED`), so two
   ticks at once never run the same job.
-- **How it ends:** `done`, `skipped` when what it was about is gone (the job checks: say, the user
-  was deleted meanwhile), or failed when it throws, with the error in the server log.
+- **How it ends:** `done`, or `skipped` when what it was about is gone (the job checks: say, the
+  user was deleted meanwhile).
+- **Retries:** a job that throws is tried again after 5 minutes, then 15, an hour and 6 hours
+  (`RETRY_MINUTES` in `queue.ts`). After its kind's last attempt (`maxAttempts`, 5 by default: about
+  7½ hours) it stays `failed`. Each failed attempt goes to the server log with the job's ID, never
+  its payload. A job whose run died (its lease ran out) is taken again, as another attempt.
 - **Limits:** each kind runs at most its `perTick` jobs per tick (50 by default), so one large batch
   can't push the others out; the rest wait for the next tick. A paused kind's jobs wait too, and
   jobs of a kind the registry doesn't list are never taken.
 
-Each kind that ran jobs during a tick gets one run in the history, with how many were done, skipped
-and failed.
+Each kind that ran jobs during a tick gets one run in the history, with how many were done,
+skipped, retried and failed (given up); the run counts as failed when any job failed.
 
 ## History
 
@@ -122,8 +126,10 @@ follow a scheduled one. Work that can take longer than a tick should stop starti
      may be waiting.
    - `payload`: a zod schema of IDs, enums, numbers and booleans (see [Queued jobs](#queued-jobs)).
    - `run(ctx, job)`: reads what it needs with the IDs in `job.payload`, does the work and returns
-     `'done'`, or `'skipped'` when what it was about is gone. It throws when it can't do its work.
+     `'done'`, or `'skipped'` when what it was about is gone. It throws when it can't do its work,
+     and must be safe to run again: an attempt can fail halfway and be retried.
    - `perTick` (optional): how many of its jobs one tick runs at most.
+   - `maxAttempts` (optional): how many times a job is tried before it's given up.
 2. Add it to `QUEUED_JOBS` in `src/server/jobs/registry.ts`, and export it from the module's
    `index.ts` for the code that queues it.
 3. Queue it with `queueJob(tx, kind, payload)` in the transaction of the change, and test it next

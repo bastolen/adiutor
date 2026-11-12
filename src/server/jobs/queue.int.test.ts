@@ -1,7 +1,8 @@
 /**
  * @file Integration tests for the queue, against the test database: queuing
  * a job with a checked payload, running due jobs at the tick (oldest first,
- * once each, even with two ticks at once), skipped and failed jobs, paused
+ * once each, even with two ticks at once), skipped jobs, failed jobs tried
+ * again after growing waits and then given up, runs that died, paused
  * kinds, each kind's cap per tick, and the deadline.
  */
 import { randomUUID } from 'node:crypto';
@@ -14,7 +15,7 @@ import { jobRun, jobState, queuedJob } from '@/db/schema';
 
 import { setupTestContext } from '../../../tests/integration/helpers';
 import { defineQueuedJob, type QueuedJobKind } from './define';
-import { queueJob } from './queue';
+import { queueJob, retryWaitMinutes } from './queue';
 import { runQueue } from './run-queue';
 import { runTick } from './tick';
 
@@ -150,7 +151,7 @@ describe('running the queue', () => {
       expect.objectContaining({
         job: kind.name,
         status: 'succeeded',
-        summary: { done: 2, skipped: 0, failed: 0 },
+        summary: { done: 2, skipped: 0, retried: 0, failed: 0 },
       }),
     ]);
     expect(await stored()).toEqual([
@@ -186,12 +187,15 @@ describe('running the queue', () => {
     });
 
     expect(runs).toEqual([
-      expect.objectContaining({ status: 'succeeded', summary: { done: 0, skipped: 1, failed: 0 } }),
+      expect.objectContaining({
+        status: 'succeeded',
+        summary: { done: 0, skipped: 1, retried: 0, failed: 0 },
+      }),
     ]);
     expect(await stored()).toEqual([{ note: 'gone', status: 'skipped', attempts: 1 }]);
   });
 
-  it('notes a failed job without stopping the others, and counts the failed run', async () => {
+  it('tries a failed job again later without stopping the others, and counts the failed run', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const kind = noteKind('adiutor-tests-note', {
       /**
@@ -218,11 +222,15 @@ describe('running the queue', () => {
     });
 
     expect(runs).toEqual([
-      expect.objectContaining({ status: 'failed', summary: { done: 1, skipped: 0, failed: 1 } }),
+      expect.objectContaining({
+        status: 'failed',
+        summary: { done: 1, skipped: 0, retried: 1, failed: 0 },
+      }),
     ]);
     expect(await stored()).toEqual([
-      { note: 'broken', status: 'failed', attempts: 1 },
       { note: 'fine', status: 'succeeded', attempts: 1 },
+      // Back in the queue, 5 minutes from now: after the job that's done.
+      { note: 'broken', status: 'queued', attempts: 1 },
     ]);
     expect(
       await db
@@ -308,5 +316,70 @@ describe('running the queue', () => {
 
     expect([...ran].sort()).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
     expect((await stored()).every(({ attempts }) => attempts === 1)).toBe(true);
+  });
+
+  it('waits longer after each failed attempt, and gives up after the last', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const broken = defineQueuedJob({
+      name: 'adiutor-tests-broken',
+      payload,
+      maxAttempts: 3,
+      /**
+       * Always fails.
+       *
+       * @returns Never.
+       */
+      run: async () => {
+        throw new Error('Adiutor Tests: the job broke');
+      },
+    });
+    const id = await queueJob(db, broken, { userId: randomUUID(), note: 'broken' });
+    /**
+     * Runs the queue as if the job's wait were over.
+     *
+     * @returns When the job may run next, in minutes from now (rounded), and its status.
+     */
+    async function attempt() {
+      await db
+        .update(queuedJob)
+        .set({ runAt: sql`now()` })
+        .where(eq(queuedJob.id, id));
+      await runQueue(ctx, {
+        trigger: 'tick',
+        deadline: later,
+        startedAt: new Date(),
+        kinds: [broken],
+      });
+      const [job] = await db
+        .select({
+          status: queuedJob.status,
+          wait: sql<number>`round(extract(epoch from ${queuedJob.runAt} - now()) / 60)::int`,
+          finished: sql<boolean>`${queuedJob.finishedAt} is not null`,
+        })
+        .from(queuedJob)
+        .where(eq(queuedJob.id, id));
+      return job;
+    }
+
+    await expect(attempt()).resolves.toEqual({ status: 'queued', wait: 5, finished: false });
+    await expect(attempt()).resolves.toEqual({ status: 'queued', wait: 15, finished: false });
+    await expect(attempt()).resolves.toMatchObject({ status: 'failed', finished: true });
+  });
+
+  it('takes a job again once the lease of the run that died runs out', async () => {
+    const kind = noteKind('adiutor-tests-note');
+    const id = await add(kind, 'orphaned');
+    await db
+      .update(queuedJob)
+      .set({ status: 'running', attempts: 1, lockedUntil: sql`now() - interval '1 minute'` })
+      .where(eq(queuedJob.id, id));
+
+    await runQueue(ctx, { trigger: 'tick', deadline: later, startedAt: new Date(), kinds: [kind] });
+
+    expect(await stored()).toEqual([{ note: 'orphaned', status: 'succeeded', attempts: 2 }]);
+  });
+
+  it('waits 5 minutes, 15, an hour, then 6 hours each time', () => {
+    expect([1, 2, 3, 4, 5, 9].map(retryWaitMinutes)).toEqual([5, 15, 60, 360, 360, 360]);
   });
 });

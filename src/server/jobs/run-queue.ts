@@ -1,15 +1,16 @@
 /**
  * @file Running the queue at a tick: due jobs one at a time, oldest first,
- * until the deadline, each kind up to its `perTick`. Every kind that ran
- * jobs gets one run in the history, with how many were done, skipped and
- * failed.
+ * until the deadline, each kind up to its `perTick`. A job that fails is
+ * tried again later, up to its kind's `maxAttempts`. Every kind that ran
+ * jobs gets one run in the history, with how many were done, skipped,
+ * retried and failed.
  */
 import type { JobTrigger } from '@/db/schema';
 import { defined } from '@/lib/defined';
 
 import type { ServiceContext } from '../context';
 import type { QueuedJobRunner, StoredQueuedJob } from './define';
-import { claimNextQueuedJob, finishQueuedJob } from './queue';
+import { claimNextQueuedJob, finishQueuedJob, retryQueuedJobLater } from './queue';
 import { QUEUED_JOBS } from './registry';
 import type { JobRunResult } from './run';
 import { finishJobRun, loadJobStates } from './state';
@@ -20,7 +21,9 @@ interface KindCounts {
   done: number;
   /** Jobs skipped, because what they were about is gone. */
   skipped: number;
-  /** Jobs that failed. */
+  /** Jobs that failed and will be tried again. */
+  retried: number;
+  /** Jobs that failed their last attempt and were given up. */
   failed: number;
 }
 
@@ -37,8 +40,9 @@ export interface QueueRunOptions {
 }
 
 /**
- * Runs one job and notes how it ended. A job that throws failed; its error
- * goes to the log, without its payload.
+ * Runs one job and notes how it ended. A job that throws is tried again
+ * later, or given up after its kind's last attempt; its error goes to the
+ * log, without its payload.
  *
  * @param ctx - Service context.
  * @param kind - The job's kind.
@@ -55,10 +59,20 @@ async function runOne(
     await finishQueuedJob(ctx.db, job.id, result === 'done' ? 'succeeded' : 'skipped');
     return result === 'done' ? 'done' : 'skipped';
   } catch (error) {
+    const givenUp = job.attempts >= kind.maxAttempts;
     // eslint-disable-next-line no-console -- A job has no caller to report to but the log.
-    console.error(`Queued job ${job.id} (${job.kind}) failed`, error);
-    await finishQueuedJob(ctx.db, job.id, 'failed');
-    return 'failed';
+    console.error(
+      `Queued job ${job.id} (${job.kind}) failed attempt ${job.attempts} of ${kind.maxAttempts}${
+        givenUp ? '; given up' : '; it will be tried again'
+      }`,
+      error,
+    );
+    if (givenUp) {
+      await finishQueuedJob(ctx.db, job.id, 'failed');
+      return 'failed';
+    }
+    await retryQueuedJobLater(ctx.db, job.id, job.attempts);
+    return 'retried';
   }
 }
 
@@ -97,16 +111,17 @@ export async function runQueue(
     );
     // eslint-disable-next-line no-await-in-loop -- See above.
     const ended = await runOne(ctx, kind, job);
-    const kindCounts = counts.get(kind.name) ?? { done: 0, skipped: 0, failed: 0 };
+    const kindCounts = counts.get(kind.name) ?? { done: 0, skipped: 0, retried: 0, failed: 0 };
     kindCounts[ended] += 1;
     counts.set(kind.name, kindCounts);
-    if (kindCounts.done + kindCounts.skipped + kindCounts.failed >= kind.perTick) {
+    const handled = kindCounts.done + kindCounts.skipped + kindCounts.retried + kindCounts.failed;
+    if (handled >= kind.perTick) {
       open = open.filter((candidate) => candidate !== kind);
     }
   }
   return Promise.all(
     [...counts].map(async ([name, summary]) => {
-      const status = summary.failed > 0 ? 'failed' : 'succeeded';
+      const status = summary.retried + summary.failed > 0 ? 'failed' : 'succeeded';
       const runId = await finishJobRun(ctx.db, {
         job: name,
         trigger,
