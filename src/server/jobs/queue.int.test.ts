@@ -3,7 +3,8 @@
  * a job with a checked payload, running due jobs at the tick (oldest first,
  * once each, even with two ticks at once), skipped jobs, failed jobs tried
  * again after growing waits and then given up, runs that died, paused
- * kinds, each kind's cap per tick, and the deadline.
+ * kinds, each kind's cap per tick, the deadline, and coupled jobs that run
+ * together in batches.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -14,7 +15,13 @@ import { z, ZodError } from 'zod';
 import { jobRun, jobState, queuedJob } from '@/db/schema';
 
 import { setupTestContext } from '../../../tests/integration/helpers';
-import { defineQueuedJob, type QueuedJobKind } from './define';
+import {
+  type BatchedQueuedJob,
+  defineJobBatch,
+  defineQueuedJob,
+  type JobBatch,
+  type QueuedJobKind,
+} from './define';
 import { queueJob, retryWaitMinutes } from './queue';
 import { runQueue } from './run-queue';
 import { runTick } from './tick';
@@ -381,5 +388,196 @@ describe('running the queue', () => {
 
   it('waits 5 minutes, 15, an hour, then 6 hours each time', () => {
     expect([1, 2, 3, 4, 5, 9].map(retryWaitMinutes)).toEqual([5, 15, 60, 360, 360, 360]);
+  });
+});
+
+describe('batches', () => {
+  /** The payload of the coupled test kinds: a ticket and the person to tell. */
+  const ticketPayload = z.object({ ticketId: z.uuid(), userId: z.uuid() });
+
+  /** Jobs about the same ticket for the same person go together. */
+  const batching = {
+    group: 'adiutor-tests-ticket-email',
+    /**
+     * The key: the ticket and the person.
+     *
+     * @param about - The job's payload.
+     * @returns The key.
+     */
+    key: (about: z.infer<typeof ticketPayload>) => `${about.ticketId}:${about.userId}`,
+  };
+
+  /** A status update, coupled with comments. */
+  const statusChanged = defineQueuedJob({
+    name: 'adiutor-tests-status-changed',
+    payload: ticketPayload,
+    batch: batching,
+  });
+
+  /** A comment, coupled with status updates. */
+  const commented = defineQueuedJob({
+    name: 'adiutor-tests-commented',
+    payload: ticketPayload,
+    batch: batching,
+  });
+
+  /** The jobs of each call of the batch, as `<kind>:<ticket>:<person>`. */
+  let calls: string[][] = [];
+
+  beforeEach(() => {
+    calls = [];
+  });
+
+  /**
+   * The batch: notes the jobs of each call.
+   *
+   * @param outcome - What it does after noting them: nothing by default.
+   * @returns The batch.
+   */
+  function emailBatch(
+    outcome: (
+      jobs: readonly BatchedQueuedJob[],
+    ) => Promise<{ skipped?: string[] }> = async () => ({}),
+  ): JobBatch {
+    return defineJobBatch({
+      group: batching.group,
+      /**
+       * Notes the jobs, reading each payload with its own kind.
+       *
+       * @param _ctx - Service context (not used).
+       * @param jobs - The jobs of one key.
+       * @returns What the test asks.
+       */
+      run: async (_ctx, jobs) => {
+        calls.push(
+          jobs.map((job) => {
+            const about = statusChanged.read(job) ?? commented.read(job);
+            return `${job.kind}:${about?.ticketId}:${about?.userId}`;
+          }),
+        );
+        return outcome(jobs);
+      },
+    });
+  }
+
+  /** Two tickets and two people. */
+  const [ticket1, ticket2, jane, john] = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+
+  /**
+   * Runs the queue with the coupled kinds.
+   *
+   * @param batch - The batch.
+   * @returns The runs.
+   */
+  async function run(batch: JobBatch = emailBatch()) {
+    return runQueue(ctx, {
+      trigger: 'tick',
+      deadline: later,
+      startedAt: new Date(),
+      kinds: [statusChanged, commented],
+      batches: [batch],
+    });
+  }
+
+  it('runs the jobs of one key together, whatever their kind, and each job once', async () => {
+    await queueJob(db, statusChanged, { ticketId: ticket1, userId: jane });
+    await queueJob(db, commented, { ticketId: ticket1, userId: jane });
+    await queueJob(db, commented, { ticketId: ticket1, userId: john });
+    await queueJob(db, commented, { ticketId: ticket2, userId: jane });
+
+    const runs = await run();
+
+    expect(calls).toEqual([
+      [`${statusChanged.name}:${ticket1}:${jane}`, `${commented.name}:${ticket1}:${jane}`],
+      [`${commented.name}:${ticket1}:${john}`],
+      [`${commented.name}:${ticket2}:${jane}`],
+    ]);
+    expect(runs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          job: commented.name,
+          summary: { done: 3, skipped: 0, retried: 0, failed: 0 },
+        }),
+        expect.objectContaining({
+          job: statusChanged.name,
+          summary: { done: 1, skipped: 0, retried: 0, failed: 0 },
+        }),
+      ]),
+    );
+    // A job that was in one batch never comes back in the next.
+    calls = [];
+    await queueJob(db, commented, { ticketId: ticket1, userId: jane });
+    await run();
+    expect(calls).toEqual([[`${commented.name}:${ticket1}:${jane}`]]);
+  });
+
+  it('stores the key with each job', async () => {
+    const id = await queueJob(db, commented, { ticketId: ticket1, userId: jane });
+
+    expect(
+      await db.select({ batchKey: queuedJob.batchKey }).from(queuedJob).where(eq(queuedJob.id, id)),
+    ).toEqual([{ batchKey: `${batching.group}:${ticket1}:${jane}` }]);
+  });
+
+  it('tries a failed batch again together with the jobs of its key queued since', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await queueJob(db, statusChanged, { ticketId: ticket1, userId: jane });
+    await queueJob(db, commented, { ticketId: ticket1, userId: jane });
+
+    const failed = await run(
+      emailBatch(async () => {
+        throw new Error('Adiutor Tests: the mail server is down');
+      }),
+    );
+    expect(failed).toEqual(
+      expect.arrayContaining([expect.objectContaining({ job: commented.name, status: 'failed' })]),
+    );
+    expect((await stored()).map(({ status }) => status)).toEqual(['queued', 'queued']);
+
+    // Another comment arrives, and the wait is over.
+    await queueJob(db, commented, { ticketId: ticket1, userId: jane });
+    await db.update(queuedJob).set({ runAt: sql`now() - interval '1 second'` });
+    calls = [];
+    await run();
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toHaveLength(3);
+    expect((await stored()).map(({ status }) => status)).toEqual([
+      'succeeded',
+      'succeeded',
+      'succeeded',
+    ]);
+  });
+
+  it('marks the jobs the batch skipped, and the rest done', async () => {
+    const gone = await queueJob(db, statusChanged, { ticketId: ticket1, userId: jane });
+    await queueJob(db, commented, { ticketId: ticket1, userId: jane });
+
+    await run(emailBatch(async () => ({ skipped: [gone] })));
+
+    expect(
+      await db
+        .select({ kind: queuedJob.kind, status: queuedJob.status })
+        .from(queuedJob)
+        .orderBy(queuedJob.kind),
+    ).toEqual([
+      { kind: commented.name, status: 'succeeded' },
+      { kind: statusChanged.name, status: 'skipped' },
+    ]);
+  });
+
+  it('leaves batched jobs waiting while their group has no batch', async () => {
+    await queueJob(db, commented, { ticketId: ticket1, userId: jane });
+
+    const runs = await runQueue(ctx, {
+      trigger: 'tick',
+      deadline: later,
+      startedAt: new Date(),
+      kinds: [statusChanged, commented],
+      batches: [],
+    });
+
+    expect(runs).toEqual([]);
+    expect((await stored()).map(({ status }) => status)).toEqual(['queued']);
   });
 });

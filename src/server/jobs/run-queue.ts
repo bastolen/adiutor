@@ -1,17 +1,18 @@
 /**
  * @file Running the queue at a tick: due jobs one at a time, oldest first,
- * until the deadline, each kind up to its `perTick`. A job that fails is
- * tried again later, up to its kind's `maxAttempts`. Every kind that ran
- * jobs gets one run in the history, with how many were done, skipped,
- * retried and failed.
+ * until the deadline, each kind up to its `perTick`. A job with a batch key
+ * runs with the rest of its batch, in one call of its group's batch. A job
+ * that fails is tried again later, up to its kind's `maxAttempts`. Every
+ * kind that ran jobs gets one run in the history, with how many were done,
+ * skipped, retried and failed.
  */
 import type { JobTrigger } from '@/db/schema';
 import { defined } from '@/lib/defined';
 
 import type { ServiceContext } from '../context';
-import type { QueuedJobRunner, StoredQueuedJob } from './define';
-import { claimNextQueuedJob, finishQueuedJob, retryQueuedJobLater } from './queue';
-import { QUEUED_JOBS } from './registry';
+import type { JobBatch, QueuedJobResult, QueuedJobRunner, StoredQueuedJob } from './define';
+import { claimNextQueuedJobs, finishQueuedJob, retryQueuedJobLater } from './queue';
+import { JOB_BATCHES, QUEUED_JOBS } from './registry';
 import type { JobRunResult } from './run';
 import { finishJobRun, loadJobStates } from './state';
 
@@ -27,6 +28,9 @@ interface KindCounts {
   failed: number;
 }
 
+/** How one job ended during a tick. */
+type Ending = keyof KindCounts;
+
 /** How the queue runs. */
 export interface QueueRunOptions {
   /** What starts it. */
@@ -37,48 +41,112 @@ export interface QueueRunOptions {
   startedAt: Date;
   /** The kinds that may run; all of them by default (tests pass their own). */
   kinds?: readonly QueuedJobRunner[];
+  /** The batches of the batch groups; all of them by default (tests pass their own). */
+  batches?: readonly JobBatch[];
 }
 
 /**
- * Runs one job and notes how it ended. A job that throws is tried again
- * later, or given up after its kind's last attempt; its error goes to the
- * log, without its payload.
+ * Notes that jobs were done or skipped.
  *
  * @param ctx - Service context.
- * @param kind - The job's kind.
- * @param job - The job.
- * @returns How it ended.
+ * @param jobs - The jobs, each with how its run ended.
+ * @returns How each ended.
  */
-async function runOne(
+async function finish(
   ctx: ServiceContext,
-  kind: QueuedJobRunner,
-  job: StoredQueuedJob,
-): Promise<keyof KindCounts> {
+  jobs: readonly { job: StoredQueuedJob; result: QueuedJobResult }[],
+): Promise<Ending[]> {
+  return Promise.all(
+    jobs.map(async ({ job, result }) => {
+      await finishQueuedJob(ctx.db, job.id, result === 'done' ? 'succeeded' : 'skipped');
+      return result;
+    }),
+  );
+}
+
+/**
+ * Notes that jobs failed: each is tried again later, or given up after its
+ * kind's last attempt. The error goes to the log, without the payloads.
+ *
+ * @param ctx - Service context.
+ * @param jobs - The jobs, each with its kind.
+ * @param error - What went wrong.
+ * @returns How each ended.
+ */
+async function fail(
+  ctx: ServiceContext,
+  jobs: readonly { job: StoredQueuedJob; kind: QueuedJobRunner }[],
+  error: unknown,
+): Promise<Ending[]> {
+  // eslint-disable-next-line no-console -- A job has no caller to report to but the log.
+  console.error(
+    `Queued jobs failed: ${jobs
+      .map(
+        ({ job, kind }) =>
+          `${job.id} (${job.kind}, attempt ${job.attempts} of ${kind.maxAttempts})`,
+      )
+      .join(', ')}; given up after the last attempt, else tried again later`,
+    error,
+  );
+  return Promise.all(
+    jobs.map(async ({ job, kind }) => {
+      if (job.attempts >= kind.maxAttempts) {
+        await finishQueuedJob(ctx.db, job.id, 'failed');
+        return 'failed';
+      }
+      await retryQueuedJobLater(ctx.db, job.id, job.attempts);
+      return 'retried';
+    }),
+  );
+}
+
+/**
+ * Runs what one claim took: a job on its own, or a batch through its group's
+ * batch, with each job's payload checked by its own kind.
+ *
+ * @param ctx - Service context.
+ * @param claimed - The jobs, each with its kind.
+ * @param batches - The batches by group.
+ * @returns How each job ended, in the same order.
+ */
+async function runClaimed(
+  ctx: ServiceContext,
+  claimed: readonly { job: StoredQueuedJob; kind: QueuedJobRunner }[],
+  batches: ReadonlyMap<string, JobBatch>,
+): Promise<Ending[]> {
   try {
-    const result = await kind.handle(ctx, job);
-    await finishQueuedJob(ctx.db, job.id, result === 'done' ? 'succeeded' : 'skipped');
-    return result === 'done' ? 'done' : 'skipped';
-  } catch (error) {
-    const givenUp = job.attempts >= kind.maxAttempts;
-    // eslint-disable-next-line no-console -- A job has no caller to report to but the log.
-    console.error(
-      `Queued job ${job.id} (${job.kind}) failed attempt ${job.attempts} of ${kind.maxAttempts}${
-        givenUp ? '; given up' : '; it will be tried again'
-      }`,
-      error,
-    );
-    if (givenUp) {
-      await finishQueuedJob(ctx.db, job.id, 'failed');
-      return 'failed';
+    const [first] = claimed;
+    const solo = claimed.length === 1 && first?.kind.handle ? first : null;
+    if (solo?.kind.handle) {
+      const result = await solo.kind.handle(ctx, solo.job);
+      return await finish(ctx, [{ job: solo.job, result }]);
     }
-    await retryQueuedJobLater(ctx.db, job.id, job.attempts);
-    return 'retried';
+    const group = defined(first?.kind.batchGroup, 'the batch group of the claimed jobs');
+    const batch = defined(batches.get(group), `the batch of group ${group}`);
+    const outcome = await batch.run(
+      ctx,
+      claimed.map(({ job, kind }) => ({
+        id: job.id,
+        kind: job.kind,
+        attempts: job.attempts,
+        payload: kind.check(job.payload),
+      })),
+    );
+    const skipped = new Set(outcome.skipped ?? []);
+    return await finish(
+      ctx,
+      claimed.map(({ job }) => ({ job, result: skipped.has(job.id) ? 'skipped' : 'done' })),
+    );
+  } catch (error) {
+    return fail(ctx, claimed, error);
   }
 }
 
 /**
  * Runs the due queued jobs of every kind that isn't paused, oldest first,
- * until the deadline or until each kind reached its `perTick`.
+ * until the deadline or until each kind reached its `perTick`. Only kinds
+ * that can run are taken: those that run on their own, and batched kinds
+ * whose group has a batch.
  *
  * @param ctx - Service context.
  * @param options - How to run.
@@ -86,38 +154,50 @@ async function runOne(
  * @param options.deadline - When it should stop taking new jobs.
  * @param options.startedAt - When the tick started.
  * @param options.kinds - The kinds that may run.
+ * @param options.batches - The batches of the batch groups.
  * @returns One run per kind that ran jobs, in the order they first ran.
  */
 export async function runQueue(
   ctx: ServiceContext,
-  { trigger, deadline, startedAt, kinds = QUEUED_JOBS }: QueueRunOptions,
+  { trigger, deadline, startedAt, kinds = QUEUED_JOBS, batches = JOB_BATCHES }: QueueRunOptions,
 ): Promise<JobRunResult[]> {
   const states = await loadJobStates(ctx.db);
-  let open = kinds.filter((kind) => !states.get(kind.name)?.pausedAt);
+  const batchesByGroup = new Map(batches.map((batch) => [batch.group, batch]));
+  let open = kinds.filter(
+    (kind) =>
+      !states.get(kind.name)?.pausedAt &&
+      (kind.handle !== null || (kind.batchGroup !== null && batchesByGroup.has(kind.batchGroup))),
+  );
   const counts = new Map<string, KindCounts>();
   while (open.length > 0 && Date.now() < deadline.getTime()) {
-    // One at a time on purpose: each job is taken only when it's about to run.
+    // One claim at a time on purpose: jobs are taken only when they're about to run.
     // eslint-disable-next-line no-await-in-loop -- See above.
-    const job = await claimNextQueuedJob(
+    const jobs = await claimNextQueuedJobs(
       ctx.db,
       open.map((kind) => kind.name),
     );
-    if (!job) {
+    if (jobs.length === 0) {
       break;
     }
-    const kind = defined(
-      open.find((candidate) => candidate.name === job.kind),
-      `the kind of queued job ${job.id}`,
-    );
+    const kindsByName = new Map(open.map((kind) => [kind.name, kind]));
+    const claimed = jobs.map((job) => ({
+      job,
+      kind: defined(kindsByName.get(job.kind), `the kind of queued job ${job.id}`),
+    }));
     // eslint-disable-next-line no-await-in-loop -- See above.
-    const ended = await runOne(ctx, kind, job);
-    const kindCounts = counts.get(kind.name) ?? { done: 0, skipped: 0, retried: 0, failed: 0 };
-    kindCounts[ended] += 1;
-    counts.set(kind.name, kindCounts);
-    const handled = kindCounts.done + kindCounts.skipped + kindCounts.retried + kindCounts.failed;
-    if (handled >= kind.perTick) {
-      open = open.filter((candidate) => candidate !== kind);
-    }
+    const endings = await runClaimed(ctx, claimed, batchesByGroup);
+    claimed.forEach(({ kind }, index) => {
+      const kindCounts = counts.get(kind.name) ?? { done: 0, skipped: 0, retried: 0, failed: 0 };
+      kindCounts[defined(endings[index], 'how the job ended')] += 1;
+      counts.set(kind.name, kindCounts);
+    });
+    open = open.filter((kind) => {
+      const kindCounts = counts.get(kind.name);
+      const handled = kindCounts
+        ? kindCounts.done + kindCounts.skipped + kindCounts.retried + kindCounts.failed
+        : 0;
+      return handled < kind.perTick;
+    });
   }
   return Promise.all(
     [...counts].map(async ([name, summary]) => {

@@ -94,8 +94,21 @@ export interface QueuedJob<P extends JobPayload> {
  */
 export type QueuedJobResult = 'done' | 'skipped';
 
-/** How a kind of queued job is described. */
-export interface QueuedJobDefinition<P extends JobPayload> {
+/**
+ * How a kind's jobs are coupled: kinds with the same `group` run together,
+ * through that group's batch (`defineJobBatch`), and jobs with the same key
+ * go into one call of it; say, a status update and a comment for the same
+ * person on the same ticket, so they get one email.
+ */
+export interface JobBatching<P extends JobPayload> {
+  /** The batch group. */
+  group: string;
+  /** Which jobs go together, from a job's payload; e.g. the ticket's and the person's IDs. */
+  key: (payload: P) => string;
+}
+
+/** What every kind of queued job describes. */
+interface QueuedJobDefinitionBase<P extends JobPayload> {
   /** Stable name in kebab-case, stored with each job, e.g. `security-notice`. */
   name: string;
   /** The payload's schema: IDs, enums, numbers and booleans (see {@link JobPayloadValue}). */
@@ -104,8 +117,37 @@ export interface QueuedJobDefinition<P extends JobPayload> {
   perTick?: number;
   /** How many times a job is tried before it's given up as failed. */
   maxAttempts?: number;
-  /** Does one job's work; throws when it can't. */
-  run: (ctx: ServiceContext, job: QueuedJob<P>) => Promise<QueuedJobResult>;
+}
+
+/**
+ * How a kind of queued job is described: one whose jobs each run on their
+ * own (`run`), or one whose jobs run in batches with those of the other kinds
+ * of their group (`batch`).
+ */
+export type QueuedJobDefinition<P extends JobPayload> = QueuedJobDefinitionBase<P> &
+  (
+    | {
+        /** Does one job's work; throws when it can't. */
+        run: (ctx: ServiceContext, job: QueuedJob<P>) => Promise<QueuedJobResult>;
+        batch?: undefined;
+      }
+    | {
+        /** How its jobs are coupled with others. */
+        batch: JobBatching<P>;
+        run?: undefined;
+      }
+  );
+
+/** A queued job as a batch gets it: with its kind, and its payload checked by that kind. */
+export interface BatchedQueuedJob {
+  /** The job's ID. */
+  id: string;
+  /** Its kind's name. */
+  kind: string;
+  /** Its payload; read it typed with the kind's `read`. */
+  payload: JobPayload;
+  /** How many times a run took it, this one included. */
+  attempts: number;
 }
 
 /** What the runner needs of any kind of queued job, whatever its payload. */
@@ -116,14 +158,22 @@ export interface QueuedJobRunner {
   perTick: number;
   /** How many times a job is tried before it's given up as failed. */
   maxAttempts: number;
-  /** Runs a job from the queue, checking its payload first. */
-  handle: (ctx: ServiceContext, job: StoredQueuedJob) => Promise<QueuedJobResult>;
+  /** The batch group its jobs run in, or `null` when each runs on its own. */
+  batchGroup: string | null;
+  /** Checks a stored payload against the kind's schema. */
+  check: (payload: unknown) => JobPayload;
+  /** Runs one of its jobs, checking the payload first; `null` when its jobs run in batches. */
+  handle: ((ctx: ServiceContext, job: StoredQueuedJob) => Promise<QueuedJobResult>) | null;
 }
 
-/** A kind of queued job: what the runner needs, and the schema `queueJob` checks payloads with. */
+/** A kind of queued job: what the runner needs, and what `queueJob` and batches use. */
 export interface QueuedJobKind<P extends JobPayload> extends QueuedJobRunner {
   /** The payload's schema. */
   payload: z.ZodType<P>;
+  /** The batch key a job with this payload is queued with, or `null` when it runs on its own. */
+  batchKey: (payload: P) => string | null;
+  /** A batched job's payload, typed, when the job is of this kind; `null` otherwise. */
+  read: (job: BatchedQueuedJob) => P | null;
 }
 
 /** How many jobs of one kind a tick runs at most, unless the kind says otherwise. */
@@ -140,33 +190,85 @@ export const DEFAULT_MAX_ATTEMPTS = 5;
  * and queue jobs of it with `queueJob`.
  *
  * @param definition - The kind.
- * @param definition.name - Its name.
- * @param definition.payload - The payload's schema.
- * @param definition.perTick - How many of its jobs one tick runs at most.
- * @param definition.maxAttempts - How many times a job is tried.
- * @param definition.run - What one job does.
  * @returns The kind.
  */
-export function defineQueuedJob<P extends JobPayload>({
-  name,
-  payload,
-  perTick = DEFAULT_PER_TICK,
-  maxAttempts = DEFAULT_MAX_ATTEMPTS,
-  run,
-}: QueuedJobDefinition<P>): QueuedJobKind<P> {
+export function defineQueuedJob<P extends JobPayload>(
+  definition: QueuedJobDefinition<P>,
+): QueuedJobKind<P> {
+  const {
+    name,
+    payload,
+    perTick = DEFAULT_PER_TICK,
+    maxAttempts = DEFAULT_MAX_ATTEMPTS,
+    batch,
+    run,
+  } = definition;
   return {
     name,
     payload,
     perTick,
     maxAttempts,
+    batchGroup: batch?.group ?? null,
     /**
-     * Checks the stored payload against the schema, then runs the job.
+     * Checks a stored payload.
      *
-     * @param ctx - Service context.
-     * @param job - The job, as stored.
-     * @returns How it ended.
+     * @param stored - The payload, as stored.
+     * @returns It, checked.
      */
-    handle: async (ctx, job) =>
-      run(ctx, { id: job.id, attempts: job.attempts, payload: payload.parse(job.payload) }),
+    check: (stored) => payload.parse(stored),
+    /**
+     * The batch key for a payload.
+     *
+     * @param value - The payload.
+     * @returns `<group>:<key>`, or `null` when the kind's jobs run on their own.
+     */
+    batchKey: (value) => (batch ? `${batch.group}:${batch.key(value)}` : null),
+    /**
+     * Reads a batched job's payload when it's of this kind.
+     *
+     * @param job - The job.
+     * @returns The payload, typed, or `null`.
+     */
+    read: (job) => (job.kind === name ? payload.parse(job.payload) : null),
+    handle: run
+      ? /**
+         * Checks the stored payload against the schema, then runs the job.
+         *
+         * @param ctx - Service context.
+         * @param job - The job, as stored.
+         * @returns How it ended.
+         */
+        async (ctx, job) =>
+          run(ctx, { id: job.id, attempts: job.attempts, payload: payload.parse(job.payload) })
+      : null,
   };
+}
+
+/** What a batch says about its jobs: those it skipped, because what they were about is gone. The rest are done. */
+export interface BatchOutcome {
+  /** The IDs of the jobs it skipped. */
+  skipped?: readonly string[];
+}
+
+/** The handler of a batch group: it gets the jobs of one batch key at once. */
+export interface JobBatch {
+  /** The group, as its kinds name it in `batch.group`. */
+  group: string;
+  /**
+   * Does the work for the batch's jobs, e.g. one email for all of them. When
+   * it throws, every job in the batch is tried again later (with anything
+   * queued for the key meanwhile), so it must be safe to run again.
+   */
+  run: (ctx: ServiceContext, jobs: readonly BatchedQueuedJob[]) => Promise<BatchOutcome>;
+}
+
+/**
+ * Describes the handler of a batch group; add it to `JOB_BATCHES` in
+ * `registry.ts`.
+ *
+ * @param batch - The handler.
+ * @returns The same handler, typed.
+ */
+export function defineJobBatch(batch: JobBatch): JobBatch {
+  return batch;
 }

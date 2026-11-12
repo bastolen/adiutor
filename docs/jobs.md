@@ -81,6 +81,26 @@ tick runs it; with `runAt`, not before that moment.
   can't push the others out; the rest wait for the next tick. A paused kind's jobs wait too, and
   jobs of a kind the registry doesn't list are never taken.
 
+### Batches: coupled jobs
+
+Some jobs belong together: a status update and a comment on the same ticket for the same person
+should make one email, not two. A kind made with `batch: { group, key }` instead of `run` doesn't
+run its jobs on its own:
+
+- Each job is queued with a **batch key**, `<group>:<key>`, where `key` comes from its payload (say,
+  the ticket's and the person's IDs).
+- When the tick takes a job with a batch key, it takes every other waiting, due job with the same
+  key too, of any kind in the group, and hands them all to the group's batch
+  (`defineJobBatch({ group, run })`) in one call. The batch reads each job's payload typed with its
+  kind's `read`, and returns the IDs of jobs it skipped; the rest are done.
+- **Each job is in exactly one batch.** Once taken, a job is no longer waiting, so a job queued
+  after a batch ran goes in the next one: an email never repeats what an earlier one said.
+- When the batch throws, all its jobs are tried again later, and the next try includes whatever was
+  queued for the key meanwhile.
+- Jobs are gathered until the next tick: whatever arrived since is sent together, which turns a
+  burst of comments into one email. In the rare case that two ticks run at the same moment, they can
+  split one key's jobs between them (two emails), but never run a job twice.
+
 Each kind that ran jobs during a tick gets one run in the history, with how many were done,
 skipped, retried and failed (given up); the run counts as failed when any job failed.
 
@@ -130,6 +150,9 @@ follow a scheduled one. Work that can take longer than a tick should stop starti
      and must be safe to run again: an attempt can fail halfway and be retried.
    - `perTick` (optional): how many of its jobs one tick runs at most.
    - `maxAttempts` (optional): how many times a job is tried before it's given up.
+   - Or, for jobs that run together, `batch: { group, key }` instead of `run`, and a batch for the
+     group made with `defineJobBatch` (see [Batches](#batches-coupled-jobs)), added to `JOB_BATCHES`
+     in the registry.
 2. Add it to `QUEUED_JOBS` in `src/server/jobs/registry.ts`, and export it from the module's
    `index.ts` for the code that queues it.
 3. Queue it with `queueJob(tx, kind, payload)` in the transaction of the change, and test it next

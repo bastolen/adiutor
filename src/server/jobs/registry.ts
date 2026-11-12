@@ -2,7 +2,7 @@
  * @file Every background job Adiutor has. A new job gets a file of its own
  * (in `recurring/` or `queued/`) and a line here; see docs/jobs.md.
  */
-import type { QueuedJobRunner, RecurringJob } from './define';
+import type { JobBatch, QueuedJobRunner, RecurringJob } from './define';
 import expiredSignInData from './recurring/expired-sign-in-data';
 import finishedSignInsAsUsers from './recurring/finished-sign-ins-as-users';
 import invitationReminders from './recurring/invitation-reminders';
@@ -30,3 +30,6 @@ export function findRecurringJob(name: string): RecurringJob | undefined {
 
 /** The kinds of queued job; the tick only runs jobs of kinds listed here. */
 export const QUEUED_JOBS: readonly QueuedJobRunner[] = [];
+
+/** The batches of the batch groups that kinds of queued job name in `batch.group`. */
+export const JOB_BATCHES: readonly JobBatch[] = [];

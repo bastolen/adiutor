@@ -3,7 +3,7 @@
  * taking the next due job under a lease, noting how it ended, and trying a
  * failed one again after a growing wait.
  */
-import { and, asc, eq, inArray, lt, lte, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, lt, lte, ne, or, sql } from 'drizzle-orm';
 
 import type { DatabaseOrTransaction } from '@/db';
 import { type QueuedJobStatus, queuedJob } from '@/db/schema';
@@ -36,7 +36,9 @@ export interface QueueOptions {
 
 /**
  * Adds a job to the queue. Call it inside the transaction of the change it
- * belongs to, so the job only exists if the change was saved.
+ * belongs to, so the job only exists if the change was saved. A job of a
+ * kind with `batch` gets its batch key, so it runs with the others of that
+ * key.
  *
  * @param db - Database client or the change's transaction.
  * @param kind - The kind of job.
@@ -55,7 +57,12 @@ export async function queueJob<P extends JobPayload>(
   const checked = kind.payload.parse(payload);
   const queued = await db
     .insert(queuedJob)
-    .values({ kind: kind.name, payload: { ...checked }, runAt: runAt ?? sql`now()` })
+    .values({
+      kind: kind.name,
+      payload: { ...checked },
+      batchKey: kind.batchKey(checked),
+      runAt: runAt ?? sql`now()`,
+    })
     .returning({ id: queuedJob.id });
   return firstRow(queued, 'the queued job').id;
 }
@@ -63,50 +70,79 @@ export async function queueJob<P extends JobPayload>(
 /**
  * Takes the oldest due job of one of the given kinds, under a lease: a
  * waiting job whose time has come, or one whose run died (its lease ran
- * out). Jobs another run is taking at the same moment are skipped
- * (`SKIP LOCKED`), so two ticks never take the same job.
+ * out). A job with a batch key comes with every other waiting, due job of
+ * that key, so they run together. Jobs another run is taking at the same
+ * moment are skipped (`SKIP LOCKED`), so two ticks never take the same job;
+ * at worst, two ticks split one key's jobs between them.
  *
  * @param db - Database client.
  * @param kinds - The names of the kinds that may run now.
- * @returns The job, or `null` when none is due.
+ * @returns The job and the rest of its batch, oldest first; empty when none is due.
  */
-export async function claimNextQueuedJob(
+export async function claimNextQueuedJobs(
   db: DatabaseOrTransaction,
   kinds: readonly string[],
-): Promise<StoredQueuedJob | null> {
+): Promise<StoredQueuedJob[]> {
   if (kinds.length === 0) {
-    return null;
+    return [];
   }
-  const next = db
-    .select({ id: queuedJob.id })
-    .from(queuedJob)
-    .where(
-      and(
-        inArray(queuedJob.kind, [...kinds]),
-        or(
-          and(eq(queuedJob.status, 'queued'), lte(queuedJob.runAt, sql`now()`)),
-          and(eq(queuedJob.status, 'running'), lt(queuedJob.lockedUntil, sql`now()`)),
+  const ofKinds = inArray(queuedJob.kind, [...kinds]);
+  const next = db.$with('next').as(
+    db
+      .select({ id: queuedJob.id, batchKey: queuedJob.batchKey })
+      .from(queuedJob)
+      .where(
+        and(
+          ofKinds,
+          or(
+            and(eq(queuedJob.status, 'queued'), lte(queuedJob.runAt, sql`now()`)),
+            and(eq(queuedJob.status, 'running'), lt(queuedJob.lockedUntil, sql`now()`)),
+          ),
         ),
-      ),
-    )
-    .orderBy(asc(queuedJob.runAt), asc(queuedJob.id))
-    .limit(1)
-    .for('update', { skipLocked: true });
-  const [claimed] = await db
+      )
+      .orderBy(asc(queuedJob.runAt), asc(queuedJob.id))
+      .limit(1)
+      .for('update', { skipLocked: true }),
+  );
+  const members = db.$with('members').as(
+    db
+      .select({ id: queuedJob.id })
+      .from(queuedJob)
+      .innerJoin(next, eq(queuedJob.batchKey, next.batchKey))
+      .where(
+        and(
+          ofKinds,
+          ne(queuedJob.id, next.id),
+          eq(queuedJob.status, 'queued'),
+          lte(queuedJob.runAt, sql`now()`),
+        ),
+      )
+      .for('update', { of: queuedJob, skipLocked: true }),
+  );
+  const claimed = await db
+    .with(next, members)
     .update(queuedJob)
     .set({
       status: 'running',
       attempts: sql`${queuedJob.attempts} + 1`,
       lockedUntil: sql`now() + make_interval(mins => ${JOB_LEASE_MINUTES})`,
     })
-    .where(inArray(queuedJob.id, next))
+    .where(
+      or(
+        inArray(queuedJob.id, db.select({ id: next.id }).from(next)),
+        inArray(queuedJob.id, db.select({ id: members.id }).from(members)),
+      ),
+    )
     .returning({
       id: queuedJob.id,
       kind: queuedJob.kind,
       payload: queuedJob.payload,
       attempts: queuedJob.attempts,
+      runAt: queuedJob.runAt,
     });
-  return claimed ?? null;
+  return claimed
+    .sort((a, b) => a.runAt.getTime() - b.runAt.getTime() || a.id.localeCompare(b.id))
+    .map(({ id, kind, payload, attempts }) => ({ id, kind, payload, attempts }));
 }
 
 /**
