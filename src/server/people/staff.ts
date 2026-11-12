@@ -24,7 +24,7 @@ import {
 import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
 import { withMfaPromotion } from '../auth/mfa-promotion';
-import { sendSecurityNotice } from '../auth/security-notices';
+import { queueSecurityNotice } from '../auth/security-notices';
 import type { ServiceContext } from '../context';
 import { forbiddenError, notFoundError, ServiceError, parseId } from '../errors';
 import { paginate, peopleOrder } from '../pagination';
@@ -341,9 +341,7 @@ async function setStaffRole(
   });
 
   if (change) {
-    await sendSecurityNotice(ctx, { email: change.email }, STAFF_NOTICES[change.kind], {
-      role: newRole ?? undefined,
-    });
+    await queueSecurityNotice(ctx.db, id, STAFF_NOTICES[change.kind], { role: newRole });
     // The other staff Admins hear about a new one (not the actor, who made the change).
     if (change.becameAdmin) {
       await notifyStaffAdminAdded(ctx, { newAdminId: id, how: 'role', byUserId: actor.id });

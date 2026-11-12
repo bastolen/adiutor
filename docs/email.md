@@ -51,15 +51,17 @@ changes, a changed company role and a removal from a company, the pauses after t
 passwords (`password_sign_in_paused`) or codes (`two_factor_locked`), and a staff member signing in
 as the recipient (`impersonation_started`). Each kind's subject, heading
 and text are ICU messages in `emails.securityNotice.<kind>`, and the footer and the advice for when
-it wasn't them are `select`s on the kind (`reason`, `ifNotYou`). The messages' `{provider}`, `{role}`
-and `{company}` come from the `provider`, `role` (a role ID, named in the recipient's language) and
-`company` options of `sendSecurityNotice` (`src/server/auth/security-notices.ts`), with a stand-in
-("A provider", "a new role", "your company") when one is missing; `{name}` and `{staff}` (the staff
-member, and the name the staff are shown with to users) come from `staffMember` and `staffName`
-("A staff member", "Adiutor"), and `{minutes}` is how long signing in as someone lasts
-(`IMPERSONATION_MINUTES`). The email names the device
-and IP address only when the caller passes `showDevice: true`, which it does only for changes the
-recipient made themselves (see [Security emails](authentication.md#security-emails)). Every kind
+it wasn't them are `select`s on the kind (`reason`, `ifNotYou`). Most are queued (the
+`security-notice` job, see [Security emails](authentication.md#security-emails)), and the job reads
+the names when it sends them, from the IDs it was queued with: `{provider}` from the provider ID,
+`{role}` (named in the recipient's language), `{company}` from the company, `{name}` from the staff
+member and `{staff}` (the name the staff are shown with to users). A notice sent straight away
+(`sendSecurityNotice`) is given them as options. Each has a stand-in ("A provider", "a new role",
+"your company", "A staff member", "Adiutor") when it's missing, and `{minutes}` is how long signing
+in as someone lasts (`IMPERSONATION_MINUTES`). Both build the email the same way
+(`buildSecurityNotice` in `src/server/auth/security-notice-email.ts`). The email names the device
+and IP address only for changes the recipient made themselves (see
+[Security emails](authentication.md#security-emails)). Every kind
 links to the Security page except `account_deactivated` and `account_deleted`, whose recipients
 can't use it. `impersonation_started` links to its "Sign-ins by staff" card (`#staff-sign-in`,
 `NOTICE_SECTIONS`), where the user can turn it off, as the email says.

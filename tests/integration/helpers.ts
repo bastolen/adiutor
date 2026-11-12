@@ -29,6 +29,7 @@ import { MFA_PROVIDERS, type OAuthProvider } from '@/lib/sign-in/oauth-providers
 import { availableProviders, configuredProviders } from '@/lib/sign-in/providers';
 import { type Actor, loadActor } from '@/server/actor';
 import type { ServiceContext } from '@/server/context';
+import { runQueue } from '@/server/jobs';
 
 import emptyDatabase from '../database/empty-database';
 
@@ -623,4 +624,19 @@ export async function lastActiveAt(db: Database, userId: string): Promise<Date |
     'the user',
   );
   return found.lastActiveAt;
+}
+
+/**
+ * Sends what waits in the queue, as the next tick would: security notices
+ * and the other queued emails. Call it before checking for an email a
+ * service queues.
+ *
+ * @param ctx - The service context, whose `sendEmail` gets the emails.
+ */
+export async function sendQueuedEmails(ctx: ServiceContext): Promise<void> {
+  await runQueue(ctx, {
+    trigger: 'tick',
+    deadline: new Date(Date.now() + 60_000),
+    startedAt: new Date(),
+  });
 }

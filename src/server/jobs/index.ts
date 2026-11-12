@@ -25,6 +25,7 @@ export {
 } from './manage-queue';
 export type { FailedJobsSelection, FailedQueuedJob, QueuedKindListing } from './manage-queue';
 export { RECURRING_JOBS } from './registry';
+export { runQueue } from './run-queue';
 export type { JobRunResult } from './run';
 export { runJobNow, runTick } from './tick';
 export type { TickResult } from './tick';

@@ -19,6 +19,7 @@ import {
   inSequence,
   memberActor,
   rateLimitHits,
+  sendQueuedEmails,
   setupTestContext,
   staffActor,
   tokenFrom,
@@ -246,6 +247,7 @@ describe('granting staff access', () => {
     await removeFromStaff(ctx, admin, userId);
     expect(await platformRoleOf(userId)).toBeNull();
 
+    await sendQueuedEmails(ctx);
     expect(sent.map((email) => email.subject)).toEqual([
       'You now have staff access to Adiutor',
       'Your Adiutor staff role changed',
@@ -297,10 +299,12 @@ describe('the limit on staff role changes', () => {
     ).rejects.toMatchObject({ code: 'rate_limited' });
     expect(await platformRoleOf(userId)).toBeNull();
     expect(await platformRoleOf(manager.id)).toBe('manager');
+    await sendQueuedEmails(ctx);
     expect(sent).toEqual([]);
 
     await removeFromStaff(ctx, admin, manager.id);
     expect(await platformRoleOf(manager.id)).toBeNull();
+    await sendQueuedEmails(ctx);
     expect(sent.map((email) => email.subject)).toEqual(['Your Adiutor staff access was removed']);
   });
 });
@@ -386,6 +390,7 @@ describe('joining the staff by invite link', () => {
     });
 
     expect(await claimInviteLink(ctx, token, 'linked@adiutor.test')).toEqual({ status: 'sent' });
+    await sendQueuedEmails(ctx);
     expect(sent.at(-1)?.to).toBe('linked@adiutor.test');
 
     const second = await createInviteLink(ctx, admin, {

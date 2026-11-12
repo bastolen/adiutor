@@ -3,16 +3,17 @@
  * forgets the devices you trusted at the code step, and is recorded), and
  * everyone or one user from the command line, against the test database.
  */
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 
-import { auditEvent, session, verification } from '@/db/schema';
+import { auditEvent, queuedJob, session, verification } from '@/db/schema';
 
 import {
   actorFor,
   createSession,
   createUser,
   setupTestContext,
+  sendQueuedEmails,
 } from '../../../tests/integration/helpers';
 import { revokeAllSessions, revokeOtherOwnSessions, revokeOwnSession } from './sessions';
 
@@ -157,7 +158,7 @@ describe('signing out from the command line', () => {
     await expect(revokeAllSessions(ctx)).resolves.toEqual({
       count: 3,
       email: null,
-      emailed: false,
+      noticeQueued: false,
     });
 
     expect(await db.select().from(session)).toEqual([]);
@@ -192,8 +193,9 @@ describe('signing out from the command line', () => {
     await expect(revokeAllSessions(ctx, { email: ' Jane@Adiutor.test ' })).resolves.toEqual({
       count: 2,
       email: 'jane@adiutor.test',
-      emailed: true,
+      noticeQueued: true,
     });
+    await sendQueuedEmails(ctx);
 
     expect(await sessionIds(jane)).toEqual([]);
     expect(await sessionIds(sam)).toEqual([samSession]);
@@ -224,10 +226,11 @@ describe('signing out from the command line', () => {
     expect(await db.select().from(auditEvent)).toEqual([]);
   });
 
-  it('says when emailing the user failed', async () => {
+  it('tells the user at a later tick when the mail server was down at first', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
     await createSession(db, jane);
     vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
     /**
      * Fails like an SMTP server that's down.
      *
@@ -235,9 +238,19 @@ describe('signing out from the command line', () => {
      */
     const failingSendEmail = () => Promise.reject(new Error('SMTP is down'));
 
-    await expect(
-      revokeAllSessions({ ...ctx, sendEmail: failingSendEmail }, { email: 'jane@adiutor.test' }),
-    ).resolves.toEqual({ count: 1, email: 'jane@adiutor.test', emailed: false });
-    expect(await sessionIds(jane)).toEqual([]);
+    await expect(revokeAllSessions(ctx, { email: 'jane@adiutor.test' })).resolves.toEqual({
+      count: 1,
+      email: 'jane@adiutor.test',
+      noticeQueued: true,
+    });
+    await sendQueuedEmails({ ...ctx, sendEmail: failingSendEmail });
+    expect(sent).toEqual([]);
+
+    // The mail server is back once the wait is over.
+    await db.update(queuedJob).set({ runAt: sql`now()` });
+    await sendQueuedEmails(ctx);
+    expect(sent.map(({ to, subject }) => ({ to, subject }))).toEqual([
+      { to: 'jane@adiutor.test', subject: 'You were signed out of Adiutor' },
+    ]);
   });
 });

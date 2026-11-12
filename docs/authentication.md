@@ -389,12 +389,18 @@ whole sentence per event, with who made the change, if not you, where each langu
 ## Security emails
 
 Security emails (`src/emails/security-notice.tsx`) tell users when something about their access
-changes; the kinds, and what they say, are listed in [Email](email.md#templates). Only a
-user's own changes name the device and IP address: `sendSecurityNotice`
-(`src/server/auth/security-notices.ts`) leaves them out unless it's given `showDevice: true`, so a
-new email can't show someone else's by mistake. Changes someone else makes to their access are
-emailed too, sent once the change has committed and without the device or IP address, which
-would be that person's. A company role change or a removal is not emailed to the person who made
+changes; the kinds, and what they say, are listed in [Email](email.md#templates). The ones about
+changes to accounts, roles, sessions and signing in as a user are queued for the next tick of the
+[background jobs](jobs.md#queued-jobs) once the change has committed (`queueSecurityNotice` in
+`src/server/auth/security-notices.ts`, the `security-notice` job), so a mail outage retries them
+instead of losing them; they arrive up to 5 minutes later. The rest are still sent straight away
+(`sendSecurityNotice`): the notice to a deleted account's address, which can't wait because the
+account is gone by then, and for now the notices about sign-in methods. Only a user's own changes
+name the device and IP address: a queued notice names them only when it's given the change's audit
+event (`auditEventId`, whose device, IP address and time it reads), and `sendSecurityNotice` only
+with `showDevice: true`, so a new email can't show someone else's by mistake. Changes someone else
+makes to their access are emailed too, without the device or IP address, which would be that
+person's. A company role change or a removal is not emailed to the person who made
 it themselves (see
 [Changing roles and removing people](companies-and-roles.md#changing-roles-and-removing-people)).
 Users are also told when wrong passwords pause their password sign-in (see

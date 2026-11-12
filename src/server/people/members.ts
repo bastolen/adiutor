@@ -28,7 +28,7 @@ import {
 import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
 import { withMfaPromotion } from '../auth/mfa-promotion';
-import { sendSecurityNotice } from '../auth/security-notices';
+import { queueSecurityNotice } from '../auth/security-notices';
 import type { ServiceContext } from '../context';
 import {
   companyDeactivatedError,
@@ -315,19 +315,16 @@ async function changeMembership(
       return null;
     }
     return newRole
-      ? {
-          email: targetUser.email,
-          kind: 'company_role_changed' as const,
-          company: locked.name,
-          role: newRole,
-        }
-      : { email: targetUser.email, kind: 'removed_from_company' as const, company: locked.name };
+      ? { userId: target.userId, kind: 'company_role_changed' as const, role: newRole }
+      : { userId: target.userId, kind: 'removed_from_company' as const, role: null };
   });
 
   // Only once the change has committed: a refused or rolled-back change sends nothing.
   if (notice) {
-    const { email, kind, ...names } = notice;
-    await sendSecurityNotice(ctx, { email }, kind, names);
+    await queueSecurityNotice(ctx.db, notice.userId, notice.kind, {
+      role: notice.role,
+      companyId: access.company.id,
+    });
   }
 }
 

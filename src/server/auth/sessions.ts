@@ -18,7 +18,7 @@ import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
 import type { ServiceContext } from '../context';
 import { notFoundError, ServiceError, parseId } from '../errors';
-import { sendSecurityNotice } from './security-notices';
+import { queueSecurityNotice } from './security-notices';
 import { forgetAllTrustedDevices, forgetTrustedDevices } from './trusted-devices';
 
 /**
@@ -121,8 +121,11 @@ export interface RevokeAllResult {
   count: number;
   /** The user signed out, or `null` when it was everyone. */
   email: string | null;
-  /** Whether that user was emailed (sending can fail; it's logged). */
-  emailed: boolean;
+  /**
+   * Whether that user's security email was queued; the next tick of the
+   * background jobs sends it (queuing can fail; it's logged).
+   */
+  noticeQueued: boolean;
 }
 
 /**
@@ -130,8 +133,8 @@ export interface RevokeAllResult {
  * after a suspected leak of the database or a session (`pnpm
  * sessions:revoke-all`), so no stolen session keeps working. Trusted devices
  * are forgotten too, so a stolen one can't skip the code step at its next
- * sign-in. Records it in the audit log; one user is also emailed (everyone
- * isn't: tell them yourself if needed).
+ * sign-in. Records it in the audit log; one user also gets a security email,
+ * queued for the next tick (everyone doesn't: tell them yourself if needed).
  *
  * @param ctx - Service context (database and email; there's no request).
  * @param options - Options.
@@ -173,10 +176,11 @@ export async function revokeAllSessions(
       },
       tx,
     );
-    return { count, email: target?.email ?? null };
+    return { count, email: target?.email ?? null, userId: target?.id ?? null };
   });
-  const emailed = result.email
-    ? await sendSecurityNotice(ctx, { email: result.email }, 'signed_out_everywhere')
+  const { userId, ...signedOut } = result;
+  const noticeQueued = userId
+    ? await queueSecurityNotice(ctx.db, userId, 'signed_out_everywhere')
     : false;
-  return { ...result, emailed };
+  return { ...signedOut, noticeQueued };
 }

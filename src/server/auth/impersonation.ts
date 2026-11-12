@@ -34,9 +34,8 @@ import {
   parseId,
   ServiceError,
 } from '../errors';
-import getStaffName from '../people/staff-name';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
-import { sendSecurityNotice } from './security-notices';
+import { queueSecurityNotice } from './security-notices';
 
 /**
  * Why signing in as someone ended, as `impersonation_ended` records it:
@@ -206,10 +205,7 @@ export async function startImpersonation(
     return row;
   });
 
-  await sendSecurityNotice(ctx, { userId }, 'impersonation_started', {
-    staffMember: displayName(actor),
-    staffName: await getStaffName(ctx.db),
-  });
+  await queueSecurityNotice(ctx.db, userId, 'impersonation_started', { staffUserId: actor.id });
   return { expiresAt: started.expiresAt };
 }
 

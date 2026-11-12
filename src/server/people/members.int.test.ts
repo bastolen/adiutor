@@ -31,8 +31,9 @@ import {
   inSequence,
   memberActor,
   rateLimitHits,
-  setUserLocale,
+  sendQueuedEmails,
   setupTestContext,
+  setUserLocale,
   staffActor,
   tokenFrom,
 } from '../../../tests/integration/helpers';
@@ -253,6 +254,7 @@ describe('your own role', () => {
     );
     expect(own.role).toBe('watcher');
     // They made the change themselves, so nobody is emailed about it.
+    await sendQueuedEmails(ctx);
     expect(sent).toEqual([]);
   });
 
@@ -515,6 +517,7 @@ describe('adding existing users', () => {
         await db.select({ id: session.id }).from(session).where(eq(session.userId, staff.id)),
       ).toEqual([{ id: device }]);
       // The email still goes to their own address, so it doubles as a notice.
+      await sendQueuedEmails(ctx);
       expect(sent.filter((email) => email.to === staff.email)).toEqual([
         expect.objectContaining({
           subject: `You were added to ${testCompany.name} on Adiutor`,
@@ -733,6 +736,7 @@ describe('security emails to members', () => {
     });
     await removeMember(fromBrowser, companyAdmin, { companyId: testCompany.id, membershipId: id });
 
+    await sendQueuedEmails(ctx);
     expect(sent.map(({ to, subject }) => ({ to, subject }))).toEqual([
       { to: 'erin@adiutor.test', subject: 'Your role in Adiutor Tests on Adiutor changed' },
       { to: 'erin@adiutor.test', subject: 'You were removed from Adiutor Tests on Adiutor' },
@@ -762,6 +766,7 @@ describe('security emails to members', () => {
       membershipId: await membershipOf(companyAdmin, testCompany.id, companyAdmin.id),
     });
 
+    await sendQueuedEmails(ctx);
     expect(sent).toEqual([]);
   });
 
@@ -808,6 +813,7 @@ describe('security emails to members', () => {
     expect(await db.select().from(auditEvent).where(eq(auditEvent.action, 'role_changed'))).toEqual(
       [],
     );
+    await sendQueuedEmails(ctx);
     expect(sent).toEqual([]);
   });
 
@@ -836,6 +842,7 @@ describe('security emails to members', () => {
       }),
     ).rejects.toMatchObject({ code: 'forbidden' });
 
+    await sendQueuedEmails(ctx);
     expect(sent).toEqual([]);
   });
 });
@@ -878,10 +885,12 @@ describe('the limit on role changes', () => {
       'the membership',
     );
     expect(row.role).toBe('client');
+    await sendQueuedEmails(ctx);
     expect(sent).toEqual([]);
 
     // A removal can't be repeated without a new invitation, so it isn't limited.
     await removeMember(ctx, companyAdmin, { companyId: testCompany.id, membershipId: id });
+    await sendQueuedEmails(ctx);
     expect(sent.map(({ to, subject }) => ({ to, subject }))).toEqual([
       { to: 'erin@adiutor.test', subject: 'You were removed from Adiutor Tests on Adiutor' },
     ]);

@@ -25,6 +25,7 @@ import {
   enableTwoFactor,
   fillRateLimitBucket,
   minutesAgo,
+  sendQueuedEmails,
   setupTestContext,
   setUserLocale,
   staffActor,
@@ -162,6 +163,7 @@ describe('startImpersonation', () => {
       details: { reason: 'Ticket 12: the Members page is empty' },
     });
     // In the user's language, naming the staff member and the staff, without a device.
+    await sendQueuedEmails(ctx);
     expect(sent).toHaveLength(1);
     expect(sent[0]?.to).toBe('client@adiutor.test');
     expect(sent[0]?.subject).toBe('Sam Lee van Adiutor Tests heeft als jou ingelogd op Adiutor');
@@ -207,6 +209,7 @@ describe('startImpersonation', () => {
     expect((await refusal(staff, staff.id)).key).toBe('errors.impersonation.self');
     expect((await refusal(staff, deactivated)).key).toBe('errors.impersonation.deactivated');
     expect(await db.select().from(impersonation)).toHaveLength(0);
+    await sendQueuedEmails(ctx);
     expect(sent).toHaveLength(0);
   });
 

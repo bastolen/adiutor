@@ -11,7 +11,7 @@ import { assertNotSignedInAs } from '../../access';
 import type { Actor } from '../../actor';
 import { recordEvent } from '../../audit';
 import { checkCurrentPassword } from '../../auth/current-password';
-import { sendSecurityNotice } from '../../auth/security-notices';
+import { queueSecurityNotice } from '../../auth/security-notices';
 import type { ServiceContext } from '../../context';
 import { ServiceError } from '../../errors';
 import { deactivate } from './admin-actions';
@@ -70,10 +70,10 @@ export async function deactivateOwnAccount(
     // No password and no second step (with one, the confirmation above was needed).
     throw new ServiceError('forbidden', 'errors.signIn.sessionNotFresh');
   }
-  await ctx.db.transaction(async (tx) => {
+  const auditEventId = await ctx.db.transaction(async (tx) => {
     await assertNotSoleAdmin(tx, actor.id, 'self');
     await deactivate(ctx, tx, actor.id);
-    await recordEvent(
+    return recordEvent(
       ctx,
       {
         action: 'account_deactivated',
@@ -84,8 +84,6 @@ export async function deactivateOwnAccount(
       tx,
     );
   });
-  // Their own change, so the email may say from which device.
-  await sendSecurityNotice(ctx, { email: actor.email }, 'account_deactivated', {
-    showDevice: true,
-  });
+  // Their own change, so the email may say from which device (its audit event's).
+  await queueSecurityNotice(ctx.db, actor.id, 'account_deactivated', { auditEventId });
 }
