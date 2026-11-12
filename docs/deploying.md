@@ -181,7 +181,8 @@ What to set up on a server before sharing its address:
   whose password and authenticator secret are in the repository. It refuses to run when
   `BETTER_AUTH_URL` isn't on this computer (see [Test accounts](development.md#test-accounts)).
 - **Secrets:** a random `BETTER_AUTH_SECRET` of at least 32 characters; rotate it as described in
-  [Rotating the auth secret](#rotating-the-auth-secret).
+  [Rotating the auth secret](#rotating-the-auth-secret). If a cron service calls the jobs' endpoint,
+  a random `CRON_SECRET` of at least 32 characters too.
 - **Jobs:** run `pnpm jobs:run` every 5 minutes with `NODE_ENV=production` (see
   [Background jobs](#background-jobs)).
 - **Logs:** successful requests log nothing that identifies anyone, but errors can: an email
@@ -271,6 +272,10 @@ and how they work). On a server, run the tick from cron with `pnpm jobs:run`:
 ```cron
 */5 * * * * cd /srv/adiutor && pnpm jobs:run >> /var/log/adiutor-jobs.log 2>&1
 ```
+
+Or have a cron service call the endpoint every 5 minutes instead: set `CRON_SECRET` (at least 32
+characters, e.g. `openssl rand -base64 32`) and send `GET /api/jobs` with
+`Authorization: Bearer <CRON_SECRET>` (see [The endpoint](jobs.md#the-endpoint)).
 
 It's safe to run at any time and never runs a job twice at once, so a tick that overlaps the next
 one does no harm. It exits with 1 when a job failed (after the others ran), so cron's mail or your

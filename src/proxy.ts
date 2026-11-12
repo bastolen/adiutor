@@ -23,7 +23,9 @@ import PATHNAME_HEADER from '@/lib/request/pathname-header';
 
 /**
  * Path prefixes reachable without signing in. `/api/health` is for load
- * balancers and monitors, and says only whether the app is up.
+ * balancers and monitors, and says only whether the app is up. `/api/jobs`
+ * is the background jobs' tick, for a cron service: it checks its own secret
+ * (`answerTickRequest`), since the proxy is never the security check.
  */
 export const PUBLIC_PATHS = [
   '/auth',
@@ -33,6 +35,7 @@ export const PUBLIC_PATHS = [
   '/sign-in-error',
   '/api/auth',
   '/api/health',
+  '/api/jobs',
 ] as const;
 
 /**

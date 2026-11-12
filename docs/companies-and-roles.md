@@ -80,7 +80,7 @@ Admins and Managers who aren't members can still add themselves with any role, a
   change unless it's listed there (see
   [Signing in as a user](authentication.md#signing-in-as-a-user)).
 - **Protected by default:** `src/proxy.ts` sends signed-out visitors of every page to `/auth`, except
-  the public `/auth`, `/invite`, `/join`, `/setup` and `/api/auth` paths and the health check (`/api/health`). Pages and server actions still check
+  the public `/auth`, `/invite`, `/join`, `/setup` and `/api/auth` paths, the health check (`/api/health`) and the background jobs' tick (`/api/jobs`, which checks its own secret). Pages and server actions still check
   the session and permissions on the server through `src/server/authz.ts`. Someone without the
   permission gets the 404 page, titled "Not found · Adiutor" like it, so the browser tab doesn't
   name the page they may not see (see "Page titles" in [Design](design.md)).

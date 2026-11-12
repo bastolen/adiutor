@@ -98,6 +98,12 @@ const envSchema = z
      */
     BETTER_AUTH_URL: z.url(),
     /**
+     * The secret the tick's endpoint (`/api/jobs`) asks for, as
+     * `Authorization: Bearer <secret>`; at least 32 characters. Unset, the
+     * endpoint is off (see "Background jobs" in `docs/deploying.md`).
+     */
+    CRON_SECRET: z.preprocess(emptyToUndefined, z.string().min(32).optional()),
+    /**
      * GitHub OAuth app credentials. GitHub sign-in is enabled when both are
      * set, and only then does GitHub's 2FA count as MFA (see `src/lib/sign-in/providers.ts`).
      */

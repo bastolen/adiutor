@@ -8,7 +8,8 @@ data only as long as it may, and reminding people of invitations. That work runs
 
 ## The tick
 
-Every 5 minutes something starts a **tick**: `pnpm jobs:run` from system cron or the Docker image.
+Every 5 minutes something starts a **tick**: Vercel Cron or an external cron service calling the
+[endpoint](#the-endpoint), or `pnpm jobs:run` from system cron or the Docker image.
 A tick runs every recurring job that's due, one after another (`runTick` in
 `src/server/jobs/tick.ts`). It stops starting new runs at its deadline (4 minutes from the command
 line), and what's left waits for the next tick.
@@ -35,6 +36,22 @@ line), and what's left waits for the next tick.
 | `expired-sign-in-data`       | hourly          | Deletes expired sign-in links, codes and sessions, and finished rate-limit windows                                   |
 | `invitation-reminders`       | hourly, at :10  | Emails a reminder 48 hours before an invitation expires; one that can't be sent is tried again next run              |
 | `retention`                  | daily, at 03:15 | Deletes audit events after a year, sign-in errors and other recorded errors after 7 days, and job runs after 30 days |
+
+## The endpoint
+
+`GET` or `POST /api/jobs` runs one tick (`answerTickRequest` in `src/server/jobs/endpoint.ts`,
+the route in `src/app/api/jobs/route.ts`):
+
+- It asks for `Authorization: Bearer <CRON_SECRET>`, compared in constant time. Vercel Cron sends
+  that header by itself; an external cron service sends it as a request header. Without
+  `CRON_SECRET` the endpoint is off and answers 503.
+- A wrong or missing secret answers 401 and counts against the sender's IP address. Past 20 in 15
+  minutes it answers 429, but the right secret still runs the tick, so someone sharing the cron
+  service's address can't lock it out.
+- With the right secret it runs one tick, stopping new runs after 45 seconds (the route's
+  `maxDuration` is 60), and answers 200, or 500 when a run failed, with each run's job, status and
+  counts. It's public in the proxy (`PUBLIC_PATHS`), since it checks its own secret, and never
+  cached.
 
 ## History
 

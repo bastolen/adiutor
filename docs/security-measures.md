@@ -59,8 +59,10 @@ invite-link claims (per IP address), verification emails (per user), starting to
 (10 an hour per staff member, `RATE_LIMITS.impersonationsPerUser`, since each start emails the
 user), sign-in link pages
 opened with a link that can't be used (20 per 15 minutes per IP address, so links can't be
-guessed by looking them up; past it, the page offers no way to continue), and the errors stored
-for admins (see [Recorded errors](#recorded-errors)). All are kept in
+guessed by looking them up; past it, the page offers no way to continue), wrong secrets sent to
+the background jobs' endpoint (20 per 15 minutes per IP address, `RATE_LIMITS.jobTickMissesPerIp`;
+past it the endpoint answers 429, while the right secret still works), and the errors stored for
+admins (see [Recorded errors](#recorded-errors)). All are kept in
 `rate_limit_bucket` (`src/server/rate-limit.ts`), with a clear "Try again in N minutes" message.
 A claimed invite link also counts as an invitation its creator sends, against their limit and
 the company's (or the staff's), in the claim's transaction once the link is used up
@@ -100,9 +102,11 @@ forwarded chain from the right past `TRUSTED_PROXIES`. Configure both for your h
 
 Only the endpoints the browser uses under `/api/auth` are open; the rest answer 404, while
 server code can still call them (`disabledPaths`, listed in `src/lib/sign-in/auth-endpoints.ts`, with a
-test that fails when Better Auth adds one that's in neither list). The only other API route open
-signed out is the health check (`/api/health`, see [Docker](deploying.md#docker)), which answers
-only whether the app is up. While a staff member is signed in as a user, the guards refuse every
+test that fails when Better Auth adds one that's in neither list). The other API routes open
+signed out are the health check (`/api/health`, see [Docker](deploying.md#docker)), which answers
+only whether the app is up, and the background jobs' tick (`/api/jobs`, see
+[Background jobs](jobs.md#the-endpoint)), which runs only with `Authorization: Bearer <CRON_SECRET>`
+(compared in constant time) and answers with counts only; without `CRON_SECRET` it's off. While a staff member is signed in as a user, the guards refuse every
 endpoint, from the browser or from server code, except reading the session and signing out
 (`refuseWhileSignedInAs` in `src/server/auth/auth-guards/`). The session is the staff member's, so
 an endpoint would act on their own account (see
