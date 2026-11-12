@@ -28,8 +28,8 @@ detail, one topic each.
   the name checks, the lock order of concurrent changes, security headers and the Content Security
   Policy.
 - [Email](email.md): the templates, previewing them, Mailpit, and how emails leave the app.
-- [Background jobs](jobs.md): the tick, the recurring jobs, their history, the commands and adding
-  a job.
+- [Background jobs](jobs.md): the tick, the recurring and queued jobs, their history, the Jobs page,
+  the commands and adding a job.
 - [Design, accessibility and dark mode](design.md): the component library, tables, colours,
   keyboard support, dark mode and the brand assets.
 - [Languages](i18n.md): English (US), Dutch and Spanish, how the language is chosen, the

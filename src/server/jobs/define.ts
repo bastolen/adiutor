@@ -4,11 +4,17 @@
  * `defineQueuedKind` in `src/server/queue`) does with its jobs. Each lives
  * in a file of its own and is listed in `registry.ts` (see docs/jobs.md).
  */
+import type { JobSummaryKey } from '@/lib/job-names';
+
 import type { ServiceContext } from '../context';
 import type { JobPayload, QueuedJobKind } from '../queue';
 
-/** What a run did, as counts, e.g. `{ sessions: 12 }`: numbers only, never personal data. */
-export type JobSummary = Readonly<Record<string, number>>;
+/**
+ * What a run did, as counts, e.g. `{ sessions: 12 }`: numbers only, never
+ * personal data. Each count is one of `JOB_SUMMARY_KEYS`
+ * (`src/lib/job-names.ts`), which the Jobs page words.
+ */
+export type JobSummary = Readonly<Partial<Record<JobSummaryKey, number>>>;
 
 /** What a run of a job returns. */
 export interface JobOutcome {

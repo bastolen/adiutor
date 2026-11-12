@@ -331,11 +331,11 @@
       "title": "Auditlog",
       "header": {
         "title": "Logs",
-        "descriptionWithErrors": "Beveiligingsgebeurtenissen van en over iedereen, en de fouten waar mensen tegenaan liepen.",
-        "description": "Beveiligingsgebeurtenissen van en over iedereen.",
+        "description": "{sections, select, errorsAndJobs {Beveiligingsgebeurtenissen van en over iedereen, de fouten waar mensen tegenaan liepen en de achtergrondtaken.} errors {Beveiligingsgebeurtenissen van en over iedereen, en de fouten waar mensen tegenaan liepen.} jobs {Beveiligingsgebeurtenissen van en over iedereen, en de achtergrondtaken.} other {Beveiligingsgebeurtenissen van en over iedereen.}}",
         "tabsLabel": "Onderdelen van de logs",
         "auditTab": "Auditlog",
-        "errorsTab": "Fouten"
+        "errorsTab": "Fouten",
+        "jobsTab": "Taken"
       },
       "searchLabel": "Mensen of bedrijven zoeken",
       "searchPlaceholder": "Naam of bedrijf",
@@ -409,6 +409,67 @@
         "reference": "Referentie",
         "whatHappened": "Wat er gebeurde",
         "when": "Wanneer"
+      }
+    },
+    "jobs": {
+      "title": "Taken",
+      "schedule": "{kind, select, minutes {{minutes, plural, one {Elke minuut} other {Elke # minuten}}} hourly {{minute, plural, =0 {Elk heel uur} one {Elk uur, # minuut over} other {Elk uur, # minuten over}}} daily {Elke dag om {time}} other {Volgens het schema {expression} (UTC)}}",
+      "status": {
+        "succeeded": "Gelukt",
+        "failed": "Mislukt",
+        "paused": "Gepauzeerd",
+        "running": "Bezig",
+        "noLongerUsed": "Niet meer in gebruik"
+      },
+      "errorReference": "Fout {reference}",
+      "errorReferenceLink": "Fout {reference} opzoeken",
+      "nothingDone": "Niets te doen",
+      "recurring": {
+        "title": "Geplande taken",
+        "description": "Elke taak draait volgens zijn schema, bij de tik die om de paar minuten komt. Tijden zijn in UTC.",
+        "caption": "Geplande taken",
+        "job": "Taak",
+        "lastRun": "Laatst uitgevoerd",
+        "nextRun": "Volgende keer",
+        "neverRun": "Nog niet uitgevoerd",
+        "atNextTick": "Bij de volgende tik",
+        "whilePaused": "Niet zolang hij gepauzeerd is",
+        "failuresInARow": "{count, plural, one {De laatste uitvoering is mislukt} other {De laatste # uitvoeringen zijn mislukt}}"
+      },
+      "queued": {
+        "title": "Taken in de wachtrij",
+        "description": "Werk dat Adiutor uitbesteedt, zoals e-mails die een paar minuten kunnen wachten. Elke taak draait bij de volgende tik en wordt opnieuw geprobeerd als hij mislukt.",
+        "caption": "Soorten taken in de wachtrij",
+        "kind": "Soort",
+        "waiting": "Wachtend",
+        "failed": "Mislukt",
+        "count": "{count, number}",
+        "counts": "{waiting, number} wachtend, {failed, number} mislukt"
+      },
+      "failed": {
+        "title": "Mislukte taken in de wachtrij",
+        "description": "Taken die na hun laatste poging zijn opgegeven, nieuwste eerst. Ze draaien niet meer, tenzij ze opnieuw worden geprobeerd.",
+        "caption": "Mislukte taken in de wachtrij",
+        "rows": "mislukte taken",
+        "emptyTitle": "Geen mislukte taken",
+        "emptyDescription": "Elke taak in de wachtrij is uitgevoerd of wacht op zijn beurt.",
+        "job": "Taak",
+        "givenUp": "Opgegeven",
+        "error": "Fout",
+        "attempts": "{count, plural, one {Eén keer geprobeerd} other {# keer geprobeerd}}"
+      },
+      "runs": {
+        "title": "Recente uitvoeringen",
+        "description": "Elke uitvoering van de laatste 30 dagen, nieuwste eerst.",
+        "caption": "Uitvoeringen van achtergrondtaken",
+        "rows": "uitvoeringen",
+        "emptyTitle": "Nog geen uitvoeringen",
+        "emptyDescription": "Uitvoeringen verschijnen hier na de eerste tik.",
+        "job": "Taak",
+        "started": "Gestart",
+        "outcome": "Resultaat",
+        "trigger": "{trigger, select, tick {Door de tik} cli {Vanaf de opdrachtregel} other {Vanaf de pagina Taken}}",
+        "startedBy": "Vanaf de pagina Taken, door <link>{name}</link>"
       }
     },
     "dateRange": {

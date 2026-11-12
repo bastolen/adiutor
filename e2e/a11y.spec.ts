@@ -81,6 +81,7 @@ const APP_PATHS = [
   '/admin/logs/errors',
   '/admin/logs/errors?q=ZZZZ-ZZZZ',
   '/admin/logs/errors?q=not-a-reference',
+  '/admin/logs/jobs',
   '/account',
   '/account/security',
   '/companies/{company}',

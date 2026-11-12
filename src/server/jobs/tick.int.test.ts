@@ -365,12 +365,18 @@ describe('listJobs', () => {
       paused: false,
       running: false,
       lastStatus: 'succeeded',
+      due: false,
     });
     expect(byName.get('retention')?.nextRunAt?.getTime()).toBeGreaterThan(now.getTime());
-    expect(byName.get('expired-sign-in-data')).toMatchObject({ paused: true, nextRunAt: null });
+    expect(byName.get('expired-sign-in-data')).toMatchObject({
+      paused: true,
+      due: false,
+      nextRunAt: null,
+    });
     // Never ran: due at the next tick.
     expect(byName.get('invitation-reminders')).toMatchObject({
       lastStatus: null,
+      due: true,
       nextRunAt: now,
     });
   });

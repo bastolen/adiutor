@@ -1,0 +1,31 @@
+{
+  "jobs": {
+    "descriptions": {
+      "leftover-provider-tokens": "Borra los tokens que un proveedor de inicio de sesión dio a Adiutor cuando un inicio de sesión con él no terminó.",
+      "finished-sign-ins-as-users": "Termina los inicios de sesión como usuario cuyo tiempo se ha acabado, y lo registra en el registro de auditoría.",
+      "expired-sign-in-data": "Elimina los enlaces, códigos y sesiones de inicio de sesión caducados, y los límites que ya han pasado.",
+      "invitation-reminders": "Recuerda una vez a las personas las invitaciones que aún no han aceptado, unos días antes de que caduquen.",
+      "retention": "Elimina los eventos de auditoría al cabo de un año, los errores a los 7 días y el historial de tareas a los 30 días.",
+      "security-notice": "Avisa a las personas de los cambios en la seguridad de su cuenta.",
+      "added-to-company": "Avisa a las personas de que el personal las ha añadido a una empresa.",
+      "staff-admin-added": "Avisa a los administradores del personal de que alguien se ha convertido en administrador del personal."
+    },
+    "summary": {
+      "done": "{count, plural, one {# hecha} other {# hechas}}",
+      "skipped": "{count, plural, one {# omitida} other {# omitidas}}",
+      "retried": "{count, plural, one {# por reintentar} other {# por reintentar}}",
+      "failed": "{count, plural, one {# fallida} other {# fallidas}}",
+      "sent": "{count, plural, one {# enviado} other {# enviados}}",
+      "accounts": "{count, plural, one {Tokens de # cuenta borrados} other {Tokens de # cuentas borrados}}",
+      "ended": "{count, plural, one {# inicio de sesión como usuario terminado} other {# inicios de sesión como usuario terminados}}",
+      "verifications": "{count, plural, one {# enlace o código eliminado} other {# enlaces y códigos eliminados}}",
+      "sessions": "{count, plural, one {# sesión eliminada} other {# sesiones eliminadas}}",
+      "rateLimits": "{count, plural, one {# límite eliminado} other {# límites eliminados}}",
+      "auditEvents": "{count, plural, one {# evento de auditoría eliminado} other {# eventos de auditoría eliminados}}",
+      "appErrors": "{count, plural, one {# error eliminado} other {# errores eliminados}}",
+      "signInErrors": "{count, plural, one {# error de inicio de sesión eliminado} other {# errores de inicio de sesión eliminados}}",
+      "jobRuns": "{count, plural, one {# ejecución eliminada} other {# ejecuciones eliminadas}}",
+      "queuedJobs": "{count, plural, one {# tarea en cola eliminada} other {# tareas en cola eliminadas}}"
+    }
+  }
+}

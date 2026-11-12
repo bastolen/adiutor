@@ -331,11 +331,11 @@
       "title": "Audit log",
       "header": {
         "title": "Logs",
-        "descriptionWithErrors": "Security events by and about everyone, and the errors people ran into.",
-        "description": "Security events by and about everyone.",
+        "description": "{sections, select, errorsAndJobs {Security events by and about everyone, the errors people ran into and the background jobs.} errors {Security events by and about everyone, and the errors people ran into.} jobs {Security events by and about everyone, and the background jobs.} other {Security events by and about everyone.}}",
         "tabsLabel": "Log sections",
         "auditTab": "Audit log",
-        "errorsTab": "Errors"
+        "errorsTab": "Errors",
+        "jobsTab": "Jobs"
       },
       "searchLabel": "Search people or companies",
       "searchPlaceholder": "Name or company",
@@ -409,6 +409,67 @@
         "reference": "Reference",
         "whatHappened": "What happened",
         "when": "When"
+      }
+    },
+    "jobs": {
+      "title": "Jobs",
+      "schedule": "{kind, select, minutes {{minutes, plural, one {Every minute} other {Every # minutes}}} hourly {{minute, plural, =0 {Every hour, on the hour} one {Every hour, # minute past} other {Every hour, # minutes past}}} daily {Every day at {time}} other {On the schedule {expression} (UTC)}}",
+      "status": {
+        "succeeded": "Succeeded",
+        "failed": "Failed",
+        "paused": "Paused",
+        "running": "Running",
+        "noLongerUsed": "No longer used"
+      },
+      "errorReference": "Error {reference}",
+      "errorReferenceLink": "Look up error {reference}",
+      "nothingDone": "Nothing to do",
+      "recurring": {
+        "title": "Scheduled jobs",
+        "description": "Each runs on its schedule, at the tick every few minutes. Times are in UTC.",
+        "caption": "Scheduled jobs",
+        "job": "Job",
+        "lastRun": "Last run",
+        "nextRun": "Next run",
+        "neverRun": "Not run yet",
+        "atNextTick": "At the next tick",
+        "whilePaused": "Not while paused",
+        "failuresInARow": "{count, plural, one {Its last run failed} other {Its last # runs failed}}"
+      },
+      "queued": {
+        "title": "Queued jobs",
+        "description": "Work Adiutor hands off, such as emails that can wait a few minutes. Each job runs at the next tick and is tried again when it fails.",
+        "caption": "Kinds of queued job",
+        "kind": "Kind",
+        "waiting": "Waiting",
+        "failed": "Failed",
+        "count": "{count, number}",
+        "counts": "{waiting, number} waiting, {failed, number} failed"
+      },
+      "failed": {
+        "title": "Failed queued jobs",
+        "description": "Jobs given up after their last attempt, latest first. They don’t run again unless they’re retried.",
+        "caption": "Failed queued jobs",
+        "rows": "failed jobs",
+        "emptyTitle": "No failed jobs",
+        "emptyDescription": "Every queued job ran, or is waiting for its turn.",
+        "job": "Job",
+        "givenUp": "Given up",
+        "error": "Error",
+        "attempts": "{count, plural, one {Tried once} other {Tried # times}}"
+      },
+      "runs": {
+        "title": "Recent runs",
+        "description": "Every run of the last 30 days, newest first.",
+        "caption": "Runs of background jobs",
+        "rows": "runs",
+        "emptyTitle": "No runs yet",
+        "emptyDescription": "Runs show up here after the first tick.",
+        "job": "Job",
+        "started": "Started",
+        "outcome": "Outcome",
+        "trigger": "{trigger, select, tick {By the tick} cli {From the command line} other {From the Jobs page}}",
+        "startedBy": "From the Jobs page, by <link>{name}</link>"
       }
     },
     "dateRange": {

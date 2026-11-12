@@ -41,6 +41,48 @@ describe('loadJobsOverview', () => {
       { name: 'staff-admin-added', known: true, paused: false, waiting: 0, failed: 0 },
     ]);
   });
+
+  it('gives a job whose last run failed that run’s error reference', async () => {
+    const manager = await staffActor(db, 'manager', 'sam@adiutor.test');
+    await db.insert(jobState).values([
+      { name: 'invitation-reminders', lastStatus: 'failed', lastStartedAt: sql`now()` },
+      { name: 'retention', lastStatus: 'succeeded', lastStartedAt: sql`now()` },
+    ]);
+    await db.insert(jobRun).values([
+      {
+        job: 'invitation-reminders',
+        trigger: 'tick',
+        startedAt: new Date('2026-11-10T09:10:00Z'),
+        status: 'failed',
+        errorReference: 'AAAA-BBBB',
+      },
+      {
+        job: 'invitation-reminders',
+        trigger: 'tick',
+        startedAt: new Date('2026-11-11T09:10:00Z'),
+        status: 'failed',
+        errorReference: 'CCCC-DDDD',
+      },
+      // An earlier failure of a job whose last run went well.
+      {
+        job: 'retention',
+        trigger: 'tick',
+        startedAt: new Date('2026-11-10T03:15:00Z'),
+        status: 'failed',
+        errorReference: 'EEEE-FFFF',
+      },
+    ]);
+
+    const { recurring } = await loadJobsOverview(ctx, manager);
+
+    expect(Object.fromEntries(recurring.map((job) => [job.name, job.lastErrorReference]))).toEqual({
+      'leftover-provider-tokens': null,
+      'finished-sign-ins-as-users': null,
+      'expired-sign-in-data': null,
+      'invitation-reminders': 'CCCC-DDDD',
+      retention: null,
+    });
+  });
 });
 
 describe('listJobRuns', () => {

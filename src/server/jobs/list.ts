@@ -28,6 +28,8 @@ export interface JobListing {
   lastStatus: JobRunStatus | null;
   /** How many runs in a row failed. */
   consecutiveFailures: number;
+  /** Whether the next tick runs it: it isn't paused and a scheduled moment passed since its last start. */
+  due: boolean;
   /** When the tick runs it next: the next tick when it's due, else its next scheduled moment; `null` while paused. */
   nextRunAt: Date | null;
 }
@@ -48,11 +50,10 @@ export async function listJobs(
     const state = states.get(job.name);
     const lastStartedAt = state?.lastStartedAt ?? null;
     const paused = Boolean(state?.pausedAt);
+    const due = !paused && isDue(job.schedule, lastStartedAt, now);
     let nextRunAt: Date | null = null;
     if (!paused) {
-      nextRunAt = isDue(job.schedule, lastStartedAt, now)
-        ? now
-        : nextScheduledAt(job.schedule, now);
+      nextRunAt = due ? now : nextScheduledAt(job.schedule, now);
     }
     return {
       name: job.name,
@@ -63,6 +64,7 @@ export async function listJobs(
       lastFinishedAt: state?.lastFinishedAt ?? null,
       lastStatus: state?.lastStatus ?? null,
       consecutiveFailures: state?.consecutiveFailures ?? 0,
+      due,
       nextRunAt,
     };
   });

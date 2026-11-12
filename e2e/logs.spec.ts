@@ -1,8 +1,9 @@
 /**
  * @file End-to-end tests for the Logs pages: staff Admins find events in the
  * audit log by search, group and days, and look up the reference an error
- * page showed (however it's typed); Managers see the audit log but not the
- * errors (Support staff's missing Logs is checked in `not-found.spec.ts`).
+ * page showed (however it's typed); Managers see the audit log and the jobs
+ * but not the errors (Support staff's missing Logs is checked in
+ * `not-found.spec.ts`, the Jobs page in `jobs.spec.ts`).
  */
 import { type Page } from '@playwright/test';
 
@@ -133,11 +134,12 @@ test.describe('as a staff Admin', () => {
   });
 });
 
-test('a Manager sees the audit log, without tabs, and not the errors', async ({ page }) => {
+test('a Manager sees the audit log and the jobs, and not the errors', async ({ page }) => {
   await signIn(page, STEP_UP_MANAGER);
   await page.goto('/admin/logs');
   await expect(page.getByRole('heading', { level: 1, name: 'Logs' })).toBeVisible();
-  await expect(page.getByRole('navigation', { name: 'Log sections' })).toHaveCount(0);
+  const tabs = page.getByRole('navigation', { name: 'Log sections' });
+  await expect(tabs.getByRole('link')).toHaveText(['Audit log', 'Jobs']);
   await expect(auditTable(page)).toBeVisible();
 
   await page.goto('/admin/logs/errors');

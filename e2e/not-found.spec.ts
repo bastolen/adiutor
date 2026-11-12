@@ -30,6 +30,7 @@ const STAFF_PAGES = [
   { path: '/admin/staff', title: 'Staff · Adiutor' },
   { path: '/admin/logs', title: 'Audit log · Adiutor' },
   { path: '/admin/logs/errors', title: 'Errors · Adiutor' },
+  { path: '/admin/logs/jobs', title: 'Jobs · Adiutor' },
 ] as const;
 
 /** An ID no user has. */
@@ -153,6 +154,7 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
         '/admin/staff',
         '/admin/logs',
         '/admin/logs/errors',
+        '/admin/logs/jobs',
         companyPage('settings'),
       ],
       (path) => expectNotFound(page, path),

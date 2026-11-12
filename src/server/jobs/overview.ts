@@ -4,7 +4,7 @@
  * of the last 30 days and the queued jobs that were given up. Staff Admins
  * and Managers (`jobs:view`).
  */
-import { count, eq } from 'drizzle-orm';
+import { count, desc, eq, inArray } from 'drizzle-orm';
 
 import { jobRun, type JobRunStatus, type JobTrigger, queuedJob, user } from '@/db/schema';
 import { type Paged, resolveTableState, type TableState } from '@/lib/tables/table-state';
@@ -23,16 +23,23 @@ import type { JobSummary } from './define';
 import { type JobListing, listJobs } from './list';
 import { listQueuedKinds, type QueuedKindListing } from './manage-queue';
 
+/** A recurring job on the Jobs page. */
+export interface RecurringJobOverview extends JobListing {
+  /** The reference of the error its last finished run recorded, when that run failed. */
+  lastErrorReference: string | null;
+}
+
 /** The jobs at a glance: every recurring job and every kind of queued job. */
 export interface JobsOverview {
   /** The recurring jobs, in the order the tick runs them. */
-  recurring: JobListing[];
+  recurring: RecurringJobOverview[];
   /** The kinds of queued job, with how many of their jobs wait and failed. */
   queued: QueuedKindListing[];
 }
 
 /**
- * Loads every recurring job and every kind of queued job with its state.
+ * Loads every recurring job and every kind of queued job with its state,
+ * and for a recurring job whose last run failed, that run's error reference.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `jobs:view`.
@@ -41,8 +48,26 @@ export interface JobsOverview {
  */
 export async function loadJobsOverview(ctx: ServiceContext, actor: Actor): Promise<JobsOverview> {
   assertPermission(getGlobalPermissions(actor), 'jobs:view');
-  const [recurring, queued] = await Promise.all([listJobs(ctx), listQueuedKinds(ctx.db)]);
-  return { recurring, queued };
+  const [jobs, queued] = await Promise.all([listJobs(ctx), listQueuedKinds(ctx.db)]);
+  // Each job's last finished run, for the error it recorded.
+  const lastRuns = await ctx.db
+    .selectDistinctOn([jobRun.job], { job: jobRun.job, errorReference: jobRun.errorReference })
+    .from(jobRun)
+    .where(
+      inArray(
+        jobRun.job,
+        jobs.map((job) => job.name),
+      ),
+    )
+    .orderBy(jobRun.job, desc(jobRun.startedAt), desc(jobRun.id));
+  const lastErrors = new Map(lastRuns.map((run) => [run.job, run.errorReference]));
+  return {
+    recurring: jobs.map((job) => ({
+      ...job,
+      lastErrorReference: job.lastStatus === 'failed' ? (lastErrors.get(job.name) ?? null) : null,
+    })),
+    queued,
+  };
 }
 
 /** One run in the history. */

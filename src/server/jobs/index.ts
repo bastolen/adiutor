@@ -38,7 +38,7 @@ export type {
   QueuedKindListing,
 } from './manage-queue';
 export { listFailedJobs, listJobRuns, loadJobsOverview } from './overview';
-export type { FailedJobEntry, JobRunEntry, JobsOverview } from './overview';
+export type { FailedJobEntry, JobRunEntry, JobsOverview, RecurringJobOverview } from './overview';
 export { RECURRING_JOBS } from './registry';
 export { runQueue } from './run-queue';
 export type { JobRunResult } from './run';

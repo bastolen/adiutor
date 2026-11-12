@@ -331,11 +331,11 @@
       "title": "Registro de auditoría",
       "header": {
         "title": "Registros",
-        "descriptionWithErrors": "Eventos de seguridad de todos y sobre todos, y los errores con los que se ha encontrado la gente.",
-        "description": "Eventos de seguridad de todos y sobre todos.",
+        "description": "{sections, select, errorsAndJobs {Eventos de seguridad de todos y sobre todos, los errores con los que se ha encontrado la gente y las tareas en segundo plano.} errors {Eventos de seguridad de todos y sobre todos, y los errores con los que se ha encontrado la gente.} jobs {Eventos de seguridad de todos y sobre todos, y las tareas en segundo plano.} other {Eventos de seguridad de todos y sobre todos.}}",
         "tabsLabel": "Secciones de los registros",
         "auditTab": "Registro de auditoría",
-        "errorsTab": "Errores"
+        "errorsTab": "Errores",
+        "jobsTab": "Tareas"
       },
       "searchLabel": "Buscar personas o empresas",
       "searchPlaceholder": "Nombre o empresa",
@@ -409,6 +409,67 @@
         "reference": "Referencia",
         "whatHappened": "Qué ocurrió",
         "when": "Cuándo"
+      }
+    },
+    "jobs": {
+      "title": "Tareas",
+      "schedule": "{kind, select, minutes {{minutes, plural, one {Cada minuto} other {Cada # minutos}}} hourly {{minute, plural, =0 {Cada hora en punto} one {Cada hora, al minuto #} other {Cada hora, al minuto #}}} daily {Cada día a las {time}} other {Según el horario {expression} (UTC)}}",
+      "status": {
+        "succeeded": "Completada",
+        "failed": "Fallida",
+        "paused": "Pausada",
+        "running": "En curso",
+        "noLongerUsed": "Ya no se usa"
+      },
+      "errorReference": "Error {reference}",
+      "errorReferenceLink": "Buscar el error {reference}",
+      "nothingDone": "Nada que hacer",
+      "recurring": {
+        "title": "Tareas programadas",
+        "description": "Cada una se ejecuta según su horario, en el tic que llega cada pocos minutos. Las horas están en UTC.",
+        "caption": "Tareas programadas",
+        "job": "Tarea",
+        "lastRun": "Última ejecución",
+        "nextRun": "Próxima ejecución",
+        "neverRun": "Aún no se ha ejecutado",
+        "atNextTick": "En el próximo tic",
+        "whilePaused": "No mientras esté pausada",
+        "failuresInARow": "{count, plural, one {Su última ejecución falló} other {Sus últimas # ejecuciones fallaron}}"
+      },
+      "queued": {
+        "title": "Tareas en cola",
+        "description": "Trabajo que Adiutor deja para después, como correos que pueden esperar unos minutos. Cada tarea se ejecuta en el próximo tic y se reintenta si falla.",
+        "caption": "Tipos de tarea en cola",
+        "kind": "Tipo",
+        "waiting": "En espera",
+        "failed": "Fallidas",
+        "count": "{count, number}",
+        "counts": "{waiting, number} en espera, {failed, number} fallidas"
+      },
+      "failed": {
+        "title": "Tareas en cola fallidas",
+        "description": "Tareas abandonadas tras su último intento, la más reciente primero. No vuelven a ejecutarse a menos que se reintenten.",
+        "caption": "Tareas en cola fallidas",
+        "rows": "tareas fallidas",
+        "emptyTitle": "No hay tareas fallidas",
+        "emptyDescription": "Todas las tareas en cola se han ejecutado o esperan su turno.",
+        "job": "Tarea",
+        "givenUp": "Abandonada",
+        "error": "Error",
+        "attempts": "{count, plural, one {Intentada una vez} other {Intentada # veces}}"
+      },
+      "runs": {
+        "title": "Ejecuciones recientes",
+        "description": "Todas las ejecuciones de los últimos 30 días, la más reciente primero.",
+        "caption": "Ejecuciones de tareas en segundo plano",
+        "rows": "ejecuciones",
+        "emptyTitle": "Aún no hay ejecuciones",
+        "emptyDescription": "Las ejecuciones aparecen aquí después del primer tic.",
+        "job": "Tarea",
+        "started": "Inicio",
+        "outcome": "Resultado",
+        "trigger": "{trigger, select, tick {Por el tic} cli {Desde la línea de comandos} other {Desde la página Tareas}}",
+        "startedBy": "Desde la página Tareas, por <link>{name}</link>"
       }
     },
     "dateRange": {

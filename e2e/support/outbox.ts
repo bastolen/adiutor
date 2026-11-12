@@ -25,9 +25,9 @@ export interface OutboxEmail {
 
 /**
  * Starts one tick of the background jobs on the test server, as a cron
- * service would, so queued emails are sent.
+ * service would, so queued emails are sent and due jobs run.
  */
-async function runJobs(): Promise<void> {
+export async function runJobs(): Promise<void> {
   const response = await fetch(`${E2E_BASE_URL}/api/jobs`, {
     headers: { authorization: `Bearer ${E2E_CRON_SECRET}` },
   });

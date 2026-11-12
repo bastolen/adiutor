@@ -155,9 +155,27 @@ tests.
 
 ## For staff
 
-Staff Admins and Managers (`jobs:view`) see the jobs, their runs and the failed queued jobs
-(`loadJobsOverview`, `listJobRuns` and `listFailedJobs` in `overview.ts`). Staff Admins
-(`jobs:manage`) also act on them (`controls.ts`), never while signed in as someone:
+Staff Admins and Managers (`jobs:view`) see the jobs under **Logs → Jobs** (`/admin/logs/jobs`), from
+`loadJobsOverview`, `listJobRuns` and `listFailedJobs` in `overview.ts`:
+
+- **Scheduled jobs:** each recurring job by its name, with what it does in the reader's language
+  (`jobs.descriptions.<name>`), its schedule in words (`describeSchedule` in
+  `src/lib/job-schedule.ts`: every few minutes, hourly at a minute, daily at a time; any other
+  expression as written), how its last run went (with how many runs in a row failed and the error's
+  reference) and when it runs next.
+- **Queued jobs:** each kind with how many of its jobs wait and failed, including kinds the registry
+  no longer lists while their jobs are still there.
+- **Failed queued jobs:** the jobs given up after their last attempt, latest first, with how often
+  each was tried and its last error's reference.
+- **Recent runs:** every run of the last 30 days, newest first, with what started it (the tick, the
+  command line, or a staff Admin on this page), how it ended and what it did in words
+  (`jobs.summary.<count>`).
+
+Error references link to Logs → Errors for staff Admins (`errors:view`); Managers see them as text.
+The names of the jobs and their counts are listed once in `src/lib/job-names.ts`, which the
+registry must match (`registry.int.test.ts`), so each has its words in every language.
+
+Staff Admins (`jobs:manage`) also act on the jobs (`controls.ts`), never while signed in as someone:
 
 - **Pause and resume** a recurring job or a kind of queued job (`pauseJob`, `resumeJob`), which
   notes who paused it (`job_state.paused_by`). Pausing what's already paused, or resuming what isn't,
