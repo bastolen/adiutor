@@ -3,14 +3,15 @@
  * until the deadline, each kind up to its `perTick`. A job with a batch key
  * runs with the rest of its batch, in one call of its group's batch. A job
  * that fails is tried again later, up to its kind's `maxAttempts`, and each
- * failure is recorded as an error with a reference. Every kind that ran jobs
- * gets one run in the history, with how many were done, skipped, retried and
- * failed.
+ * failure is recorded as an error with a reference; when jobs are given up,
+ * the staff Admins are told. Every kind that ran jobs gets one run in the
+ * history, with how many were done, skipped, retried and failed.
  */
 import type { JobTrigger } from '@/db/schema';
 import { defined } from '@/lib/defined';
 
 import type { ServiceContext } from '../context';
+import { alertStaffAdmins } from './alerts';
 import type { JobBatch, QueuedJobResult, QueuedJobRunner, StoredQueuedJob } from './define';
 import { claimNextQueuedJobs, finishQueuedJob, retryQueuedJobLater } from './queue';
 import recordJobError from './record-error';
@@ -222,7 +223,7 @@ export async function runQueue(
     [...counts].map(async ([name, summary]) => {
       const status = summary.retried + summary.failed > 0 ? 'failed' : 'succeeded';
       const errorReference = lastErrors.get(name) ?? null;
-      const runId = await finishJobRun(ctx.db, {
+      const { runId } = await finishJobRun(ctx.db, {
         job: name,
         trigger,
         startedBy: null,
@@ -231,6 +232,14 @@ export async function runQueue(
         summary: { ...summary },
         errorReference,
       });
+      if (summary.failed > 0) {
+        await alertStaffAdmins(ctx, {
+          job: name,
+          failure: 'queued',
+          count: summary.failed,
+          reference: errorReference,
+        });
+      }
       return { job: name, status, summary: { ...summary }, runId, errorReference };
     }),
   );

@@ -1,0 +1,1 @@
+ALTER TABLE "job_state" ADD COLUMN "last_alert_at" timestamp with time zone;

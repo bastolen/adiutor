@@ -124,12 +124,15 @@ export interface FinishedRun {
  *
  * @param db - Database client.
  * @param run - The finished run.
- * @returns The history row's ID.
+ * @returns The history row's ID, and how many runs in a row have failed now.
  */
-export async function finishJobRun(db: Database, run: FinishedRun): Promise<string> {
+export async function finishJobRun(
+  db: Database,
+  run: FinishedRun,
+): Promise<{ runId: string; consecutiveFailures: number }> {
   const failed = run.status === 'failed';
   return db.transaction(async (tx) => {
-    await tx
+    const state = await tx
       .insert(jobState)
       .values({
         name: run.job,
@@ -147,7 +150,8 @@ export async function finishJobRun(db: Database, run: FinishedRun): Promise<stri
           lastStatus: run.status,
           consecutiveFailures: failed ? sql`${jobState.consecutiveFailures} + 1` : 0,
         },
-      });
+      })
+      .returning({ consecutiveFailures: jobState.consecutiveFailures });
     const recorded = await tx
       .insert(jobRun)
       .values({
@@ -160,6 +164,9 @@ export async function finishJobRun(db: Database, run: FinishedRun): Promise<stri
         errorReference: run.errorReference ?? null,
       })
       .returning({ id: jobRun.id });
-    return firstRow(recorded, 'the recorded run').id;
+    return {
+      runId: firstRow(recorded, 'the recorded run').id,
+      consecutiveFailures: firstRow(state, 'the job state').consecutiveFailures,
+    };
   });
 }

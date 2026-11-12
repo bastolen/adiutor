@@ -116,6 +116,13 @@ The server log gets one line with the job and the reference, never the error's m
 quote personal data, such as the address a mail server refused. Job errors are never rate-limited,
 since no visitor can cause them, and they're deleted after 7 days like other recorded errors.
 
+**The staff Admins are told** when a job keeps failing (`alertStaffAdmins` in `alerts.ts`): after a
+recurring job's third failed run in a row, or when queued jobs are given up. Every active staff
+Admin gets an email in their own language, with the last error's reference and a link to it under
+Logs → Errors. At most one email a day goes out per job (`job_state.last_alert_at`), and it's sent
+straight away, not through the queue, which may be what's broken. A mail problem is logged and never
+stops the tick.
+
 ## History
 
 Every finished run is a row in `job_run`: the job, what started it (`tick`, `cli` or `page`), when it

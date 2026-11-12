@@ -1,11 +1,14 @@
 /**
  * @file Running one recurring job: taking it under its lease, doing the
  * work, and recording how it went, so a failing job never stops the others.
- * A failure is recorded as an error with a reference (`recordJobError`).
+ * A failure is recorded as an error with a reference (`recordJobError`),
+ * and after several runs in a row the staff Admins are told
+ * (`alertStaffAdmins`).
  */
 import type { JobRunStatus, JobTrigger } from '@/db/schema';
 
 import type { ServiceContext } from '../context';
+import { ALERT_AFTER_FAILED_RUNS, alertStaffAdmins } from './alerts';
 import type { JobOutcome, JobSummary, RecurringJob } from './define';
 import recordJobError from './record-error';
 import { claimJob, finishJobRun } from './state';
@@ -89,7 +92,7 @@ export async function runRecurringJob(
     return null;
   }
   const { status, outcome, errorReference } = await attempt(ctx, job, deadline);
-  const runId = await finishJobRun(ctx.db, {
+  const { runId, consecutiveFailures } = await finishJobRun(ctx.db, {
     job: job.name,
     trigger,
     startedBy,
@@ -98,5 +101,13 @@ export async function runRecurringJob(
     summary: outcome.summary,
     errorReference,
   });
+  if (status === 'failed' && consecutiveFailures >= ALERT_AFTER_FAILED_RUNS) {
+    await alertStaffAdmins(ctx, {
+      job: job.name,
+      failure: 'recurring',
+      count: consecutiveFailures,
+      reference: errorReference,
+    });
+  }
   return { job: job.name, status, summary: outcome.summary, runId, errorReference };
 }

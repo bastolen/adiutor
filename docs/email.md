@@ -14,6 +14,9 @@ One file per email in `src/emails/`:
 - `staff-admin-added.tsx` for the staff Admins when someone else becomes one (given the role, or
   by an invitation or invite link), naming the new Admin and who made it happen, without a device
   or IP address (`notifyStaffAdminAdded` in `src/server/people/staff-admin-notice.ts`)
+- `job-failing.tsx` for the staff Admins when a background job keeps failing, with the error's
+  reference and a link to it under Logs → Errors, at most once a day per job (`alertStaffAdmins` in
+  `src/server/jobs/alerts.ts`, see [Background jobs](jobs.md#failures))
 - `invitation.tsx`, `invitation-reminder.tsx`, `invite-link-confirmation.tsx`,
   `added-to-company.tsx`, `already-member.tsx` and `already-invited.tsx` for companies
   (`already-invited.tsx` goes to someone who claimed an invite link while their address already has
@@ -73,14 +76,14 @@ someone asks for themselves follow the language their browser shows: an invite l
 the sign-in link, password reset and verification (`emailLocale` in `src/lib/auth.ts`: the language
 cookie, else Adiutor's default).
 
-| Email                                               | Language                                                                                                                                          |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sign-in link, password reset, verification, code    | The user's, else the request's (`emailLocale` in `src/lib/auth.ts`; the sign-in link works it out before the lookup that runs after the response) |
-| Security notices                                    | The recipient's, looked up by ID or address; a deleted account's is read before the deletion and passed in (`locale`)                             |
-| Invitation, its resends and its reminder            | The invitation's (`invitation.locale`), or the invitee's own when they have an account with a saved language                                      |
-| Invite-link confirmation, "already invited"         | The language of whoever opened the link, which the invitation it turns into keeps                                                                 |
-| "Already a member", added to a company, staff Admin | Each recipient's own                                                                                                                              |
-| Welcome (Add user)                                  | The language given for the new user, which is saved as theirs; for Default, Adiutor's default language                                            |
+| Email                                                                  | Language                                                                                                                                          |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sign-in link, password reset, verification, code                       | The user's, else the request's (`emailLocale` in `src/lib/auth.ts`; the sign-in link works it out before the lookup that runs after the response) |
+| Security notices                                                       | The recipient's, looked up by ID or address; a deleted account's is read before the deletion and passed in (`locale`)                             |
+| Invitation, its resends and its reminder                               | The invitation's (`invitation.locale`), or the invitee's own when they have an account with a saved language                                      |
+| Invite-link confirmation, "already invited"                            | The language of whoever opened the link, which the invitation it turns into keeps                                                                 |
+| "Already a member", added to a company, staff Admin, job keeps failing | Each recipient's own                                                                                                                              |
+| Welcome (Add user)                                                     | The language given for the new user, which is saved as theirs; for Default, Adiutor's default language                                            |
 
 `invitation.locale` (NOT NULL, `en-US` by default) is chosen when the invitation is sent: the
 invitation services (`inviteByEmail`, `inviteManyByEmail`, `registerCompany`, `createSentInvitation`)

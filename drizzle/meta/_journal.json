@@ -64,6 +64,13 @@
       "when": 1794479680552,
       "tag": "0008_job_error_references",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794480590282,
+      "tag": "0009_job_alerts",
+      "breakpoints": true
     }
   ]
 }

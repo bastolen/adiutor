@@ -16,6 +16,7 @@ import { alreadyMemberEmail } from './already-member';
 import { invitationEmail } from './invitation';
 import { invitationReminderEmail } from './invitation-reminder';
 import { inviteLinkConfirmationEmail } from './invite-link-confirmation';
+import { jobFailingEmail } from './job-failing';
 import { magicLinkEmail } from './magic-link';
 import { resetPasswordEmail } from './reset-password';
 import { SECURITY_NOTICE_KINDS, securityNoticeEmail } from './security-notice';
@@ -269,6 +270,52 @@ describe('staff-made changes', () => {
       'sam@adiutor.test accepted an invitation to the staff and is now a staff Admin',
     );
     expect(invited.text).not.toContain('(sam@adiutor.test)');
+  });
+});
+
+describe('background jobs', () => {
+  it('tells the staff Admins that a recurring job keeps failing, with the error to look up', async () => {
+    const url = `${appUrl}/admin/logs/errors?q=7KQ2-M9XD`;
+    const email = await jobFailingEmail('alex@adiutor.test', {
+      ...english,
+      job: 'invitation-reminders',
+      failure: 'recurring',
+      count: 3,
+      reference: '7KQ2-M9XD',
+      url,
+    });
+
+    expect(email.subject).toBe('Background job invitation-reminders keeps failing on Adiutor');
+    expect(email.text).toContain(
+      'The background job invitation-reminders failed its last 3 runs in a row.',
+    );
+    expect(email.text).toContain('Error reference: 7KQ2-M9XD');
+    expectBasics(email, url);
+  });
+
+  it('tells them that queued jobs were given up, also without a reference', async () => {
+    const url = `${appUrl}/admin/logs/errors`;
+    const one = await jobFailingEmail('alex@adiutor.test', {
+      ...english,
+      job: 'security-notice',
+      failure: 'queued',
+      count: 1,
+      reference: null,
+      url,
+    });
+    expect(one.text).toContain('A security-notice job was given up after its last attempt');
+    expect(one.text).not.toContain('Error reference');
+    expectBasics(one, url);
+
+    const several = await jobFailingEmail('alex@adiutor.test', {
+      ...english,
+      job: 'security-notice',
+      failure: 'queued',
+      count: 4,
+      reference: null,
+      url,
+    });
+    expect(several.text).toContain('4 security-notice jobs were given up after their last attempt');
   });
 });
 
@@ -640,6 +687,25 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = 
       adderName: 'Alex Admin',
       companyName: 'Adiutor Tests',
       role: 'client',
+      url,
+    });
+    return { email, url };
+  },
+  /**
+   * The "job keeps failing" email.
+   *
+   * @param locale - The language.
+   * @returns The email and its main link.
+   */
+  'job keeps failing': async (locale) => {
+    const url = `${appUrl}/admin/logs/errors?q=7KQ2-M9XD`;
+    const email = await jobFailingEmail('alex@adiutor.test', {
+      appUrl,
+      locale,
+      job: 'invitation-reminders',
+      failure: 'recurring',
+      count: 3,
+      reference: '7KQ2-M9XD',
       url,
     });
     return { email, url };

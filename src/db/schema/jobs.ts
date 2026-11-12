@@ -51,6 +51,8 @@ export const jobState = pgTable(
     lastStatus: text('last_status').$type<JobRunStatus>(),
     /** How many runs in a row failed; back to 0 after a run that succeeds. */
     consecutiveFailures: integer('consecutive_failures').notNull().default(0),
+    /** When the staff Admins were last emailed that it keeps failing: at most once a day. */
+    lastAlertAt: timestampTz('last_alert_at'),
   },
   (table) => [
     uniqueIndex('job_state_name_idx').on(table.name),
