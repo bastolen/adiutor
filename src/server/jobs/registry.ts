@@ -3,7 +3,9 @@
  * (in `recurring/` or `queued/`) and a line here; see docs/jobs.md.
  */
 import type { JobBatch, QueuedJobRunner, RecurringJob } from './define';
+import addedToCompanyJob from './queued/added-to-company';
 import securityNoticeJob from './queued/security-notice';
+import staffAdminAddedJob from './queued/staff-admin-added';
 import expiredSignInData from './recurring/expired-sign-in-data';
 import finishedSignInsAsUsers from './recurring/finished-sign-ins-as-users';
 import invitationReminders from './recurring/invitation-reminders';
@@ -30,7 +32,11 @@ export function findRecurringJob(name: string): RecurringJob | undefined {
 }
 
 /** The kinds of queued job; the tick only runs jobs of kinds listed here. */
-export const QUEUED_JOBS: readonly QueuedJobRunner[] = [securityNoticeJob];
+export const QUEUED_JOBS: readonly QueuedJobRunner[] = [
+  securityNoticeJob,
+  addedToCompanyJob,
+  staffAdminAddedJob,
+];
 
 /** The batches of the batch groups that kinds of queued job name in `batch.group`. */
 export const JOB_BATCHES: readonly JobBatch[] = [];

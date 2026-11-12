@@ -1,19 +1,17 @@
 /**
  * @file Tells the other staff Admins when someone becomes a staff Admin
  * (given the role, or by accepting an invitation or using an invite link),
- * so an account a stolen session leaves behind gets noticed. Sent once the
- * change has committed; a failure is logged and never undoes it.
+ * so an account a stolen session leaves behind gets noticed. Queued once the
+ * change has committed (sent at the next tick); a failure is logged and
+ * never undoes it.
  */
-import { and, eq, inArray, isNull, or } from 'drizzle-orm';
+import { and, eq, isNull, ne } from 'drizzle-orm';
 
 import { user } from '@/db/schema';
-import { staffAdminAddedEmail } from '@/emails/staff-admin-added';
 import { PLATFORM_ADMIN_ROLE } from '@/lib/authz/roles';
-import displayName from '@/lib/display-name';
-import { sendFailureOf } from '@/lib/email';
 
 import type { ServiceContext } from '../context';
-import recipientLocale from '../recipient-locale';
+import { queueJob, staffAdminAddedJob } from '../queue';
 
 /** Who became a staff Admin, and how. */
 export interface StaffAdminAdded {
@@ -26,77 +24,48 @@ export interface StaffAdminAdded {
 }
 
 /**
- * Emails every other active staff Admin that someone became a staff Admin:
- * not the new Admin, and not whoever gave the role or sent the invitation.
- * Each in their own language (`recipientLocale`). Never throws: a failure is
- * logged (without addresses).
+ * Queues an email to every other active staff Admin that someone became a
+ * staff Admin: not the new Admin, and not whoever gave the role or sent the
+ * invitation. One job each (`staffAdminAddedJob`), so a refusal for one
+ * Admin never sends the others theirs twice; each is written in that Admin's
+ * language when it's sent. Never throws: a failure is logged.
  *
- * @param ctx - Service context (database, email, app URL).
+ * @param ctx - Service context (only the database is used).
  * @param added - Who became a staff Admin, and how.
  * @param added.newAdminId - The new staff Admin.
  * @param added.how - Given the role, or joined from an invitation or link.
  * @param added.byUserId - Who made it happen, if known.
- * @returns How many Admins were emailed.
+ * @returns How many emails were queued.
  */
 export default async function notifyStaffAdminAdded(
-  ctx: Pick<ServiceContext, 'db' | 'sendEmail' | 'baseUrl'>,
+  ctx: Pick<ServiceContext, 'db'>,
   { newAdminId, how, byUserId }: StaffAdminAdded,
 ): Promise<number> {
   try {
-    const named = byUserId ? [newAdminId, byUserId] : [newAdminId];
-    const people = await ctx.db
-      .select({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.platformRole,
-        locale: user.locale,
-      })
+    const recipients = await ctx.db
+      .select({ id: user.id })
       .from(user)
       .where(
-        or(
-          inArray(user.id, named),
-          and(eq(user.platformRole, PLATFORM_ADMIN_ROLE), isNull(user.deactivatedAt)),
+        and(
+          eq(user.platformRole, PLATFORM_ADMIN_ROLE),
+          isNull(user.deactivatedAt),
+          ne(user.id, newAdminId),
+          ...(byUserId ? [ne(user.id, byUserId)] : []),
         ),
       );
-    const newAdmin = people.find((person) => person.id === newAdminId);
-    if (!newAdmin) {
-      return 0;
-    }
-    const by = byUserId ? people.find((person) => person.id === byUserId) : undefined;
-    const recipients = people.filter(
-      (person) =>
-        person.role === PLATFORM_ADMIN_ROLE && person.id !== newAdminId && person.id !== byUserId,
+    await Promise.all(
+      recipients.map(async (recipient) =>
+        queueJob(ctx.db, staffAdminAddedJob, {
+          recipientId: recipient.id,
+          newAdminId,
+          how,
+          byUserId,
+        }),
+      ),
     );
-
-    const sent = await Promise.all(
-      recipients.map(async (recipient) => {
-        try {
-          await ctx.sendEmail(
-            await staffAdminAddedEmail(recipient.email, {
-              appUrl: ctx.baseUrl,
-              locale: await recipientLocale(ctx, recipient.locale),
-              newAdminName: displayName(newAdmin),
-              newAdminEmail: newAdmin.email,
-              how,
-              byName: by ? displayName(by) : null,
-              url: `${ctx.baseUrl}/admin/staff`,
-            }),
-          );
-          return true;
-        } catch (error) {
-          // eslint-disable-next-line no-console -- A failed email must not undo the change, but should show up in the logs.
-          console.error(
-            `Telling staff Admin ${recipient.id} about new staff Admin ${newAdminId} failed`,
-            sendFailureOf(error),
-          );
-          return false;
-        }
-      }),
-    );
-    return sent.filter(Boolean).length;
+    return recipients.length;
   } catch (error) {
-    // eslint-disable-next-line no-console -- As above; database values are left out by the log redaction.
+    // eslint-disable-next-line no-console -- The change has committed; a lost notice should show up in the logs (database values are left out by the log redaction).
     console.error(`Telling the staff Admins about new staff Admin ${newAdminId} failed`, error);
     return 0;
   }

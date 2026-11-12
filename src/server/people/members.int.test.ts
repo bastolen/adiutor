@@ -448,6 +448,7 @@ describe('adding existing users', () => {
     expect(
       (await listMembers(ctx, manager, testCompany.id)).items.find((m) => m.userId === jane)?.role,
     ).toBe('watcher');
+    await sendQueuedEmails(ctx);
     expect(sent.at(-1)).toMatchObject({
       to: 'jane@adiutor.test',
       subject: expect.stringContaining('You were added to'),
@@ -469,6 +470,7 @@ describe('adding existing users', () => {
       role: 'client',
     });
 
+    await sendQueuedEmails(ctx);
     const added = defined(sent.at(-1), 'the email to Jane');
     expect(emailLanguage(added)).toBe('es-ES');
     expect(added.subject).toBe(`Te han añadido a ${testCompany.name} en Adiutor`);

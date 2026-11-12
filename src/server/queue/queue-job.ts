@@ -32,7 +32,8 @@ export interface QueueOptions {
 export async function queueJob<P extends JobPayload>(
   db: DatabaseOrTransaction,
   kind: QueuedJobKind<P>,
-  payload: P,
+  // Typed by the kind alone, so `role: 'client'` stays the role it is.
+  payload: NoInfer<P>,
   { runAt }: QueueOptions = {},
 ): Promise<string> {
   const checked = kind.check(payload);

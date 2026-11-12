@@ -14,14 +14,15 @@ import { defined, firstRow } from '@/lib/defined';
 
 import {
   addMember as addMemberRow,
-  inSequence,
   createCompany,
   createStaffSettings,
   createUser,
   emailLanguage,
   enableTwoFactor,
-  setUserLocale,
+  inSequence,
+  sendQueuedEmails,
   setupTestContext,
+  setUserLocale,
   tokenFrom,
 } from '../../../tests/integration/helpers';
 import { type Actor, loadActor } from '../actor';
@@ -276,15 +277,17 @@ describe('company Admin grants', () => {
 
 describe('a new staff Admin', () => {
   /**
-   * The addresses that got the "new staff Admin" email.
+   * The addresses that got the "new staff Admin" email, once the queued ones are sent.
    *
    * @returns The recipients, sorted.
    */
-  const toldAdmins = () =>
-    sent
+  const toldAdmins = async () => {
+    await sendQueuedEmails(ctx);
+    return sent
       .filter((email) => email.subject.endsWith('is now a staff Admin on Adiutor'))
       .map((email) => email.to)
       .sort();
+  };
 
   it('is emailed to the other active staff Admins when given the role', async () => {
     const actor = await freshAdmin();
@@ -296,7 +299,7 @@ describe('a new staff Admin', () => {
     await changeStaffRole(ctx, actor, { userId: manager, role: 'platform_admin' });
 
     // Not the actor, who made the change, the new Admin, or a deactivated Admin.
-    expect(toldAdmins()).toEqual(['other.admin@adiutor.test']);
+    expect(await toldAdmins()).toEqual(['other.admin@adiutor.test']);
     const told = defined(
       sent.find((email) => email.to === 'other.admin@adiutor.test'),
       'the email to the other Admin',
@@ -317,6 +320,7 @@ describe('a new staff Admin', () => {
 
     await changeStaffRole(ctx, actor, { userId: manager, role: 'platform_admin' });
 
+    await sendQueuedEmails(ctx);
     const told = sent
       .filter((email) => email.to.endsWith('.admin@adiutor.test'))
       .map((email) => [email.to, emailLanguage(email)])
@@ -342,7 +346,7 @@ describe('a new staff Admin', () => {
       name: 'Invited Admin',
       password: 'invited-admin-password',
     });
-    expect(toldAdmins()).toEqual(['other.admin@adiutor.test']);
+    expect(await toldAdmins()).toEqual(['other.admin@adiutor.test']);
     expect(sent.find((email) => email.to === 'other.admin@adiutor.test')?.text).toContain(
       'accepted fresh.admin’s invitation',
     );
@@ -359,7 +363,7 @@ describe('a new staff Admin', () => {
       email: 'joiner@adiutor.test',
       platformRole: null,
     });
-    expect(toldAdmins()).toEqual(['invited@adiutor.test', 'other.admin@adiutor.test']);
+    expect(await toldAdmins()).toEqual(['invited@adiutor.test', 'other.admin@adiutor.test']);
   });
 
   it('isn’t emailed for other staff roles', async () => {
@@ -369,6 +373,6 @@ describe('a new staff Admin', () => {
 
     await changeStaffRole(ctx, actor, { userId: outsider, role: 'manager' });
 
-    expect(toldAdmins()).toEqual([]);
+    expect(await toldAdmins()).toEqual([]);
   });
 });

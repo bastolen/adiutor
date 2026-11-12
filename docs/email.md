@@ -13,15 +13,19 @@ One file per email in `src/emails/`:
   `account-created.tsx` and `security-notice.tsx` for accounts
 - `staff-admin-added.tsx` for the staff Admins when someone else becomes one (given the role, or
   by an invitation or invite link), naming the new Admin and who made it happen, without a device
-  or IP address (`notifyStaffAdminAdded` in `src/server/people/staff-admin-notice.ts`)
+  or IP address (`notifyStaffAdminAdded` in `src/server/people/staff-admin-notice.ts` queues one
+  `staff-admin-added` job per Admin; see [Background jobs](jobs.md#queued-jobs))
 - `job-failing.tsx` for the staff Admins when a background job keeps failing, with the error's
   reference and a link to it under Logs → Errors, at most once a day per job (`alertStaffAdmins` in
   `src/server/jobs/alerts.ts`, see [Background jobs](jobs.md#failures))
 - `invitation.tsx`, `invitation-reminder.tsx`, `invite-link-confirmation.tsx`,
-  `added-to-company.tsx`, `already-member.tsx` and `already-invited.tsx` for companies
-  (`already-invited.tsx` goes to someone who claimed an invite link while their address already has
-  an open invitation there that someone sent, which the claim keeps: it points to the earlier
-  invitation email and links to the sign-in page)
+  `already-member.tsx` and `already-invited.tsx` for companies (`already-invited.tsx` goes to
+  someone who claimed an invite link while their address already has an open invitation there that
+  someone sent, which the claim keeps: it points to the earlier invitation email and links to the
+  sign-in page)
+- `added-to-company.tsx` for someone staff added to a company with a role (`addMember` queues an
+  `added-to-company` job, so it goes out at the next tick; see
+  [Background jobs](jobs.md#queued-jobs))
 
 Each exports the template, example `PreviewProps` and a builder that returns the email to send.
 
