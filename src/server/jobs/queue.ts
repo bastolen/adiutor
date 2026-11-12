@@ -28,20 +28,23 @@ export function retryWaitMinutes(attempts: number): number {
 }
 
 /**
- * Takes the oldest due job of one of the given kinds, under a lease: a
- * waiting job whose time has come, or one whose run died (its lease ran
- * out). A job with a batch key comes with every other waiting, due job of
- * that key, so they run together. Jobs another run is taking at the same
+ * Takes the oldest due job of one kind (or, without one, of any of the given
+ * kinds), under a lease: a waiting job whose time has come, or one whose run
+ * died (its lease ran out). A job with a batch key comes with every other
+ * waiting, due job of that key among the given kinds, so they run together,
+ * whatever their kind. Jobs another run is taking at the same
  * moment are skipped (`SKIP LOCKED`), so two ticks never take the same job;
  * at worst, two ticks split one key's jobs between them.
  *
  * @param db - Database client.
  * @param kinds - The names of the kinds that may run now.
+ * @param first - The kind to take the job from, whose turn it is; any of `kinds` when `null`.
  * @returns The job and the rest of its batch, oldest first; empty when none is due.
  */
 export async function claimNextQueuedJobs(
   db: DatabaseOrTransaction,
   kinds: readonly string[],
+  first: string | null = null,
 ): Promise<StoredQueuedJob[]> {
   if (kinds.length === 0) {
     return [];
@@ -53,7 +56,7 @@ export async function claimNextQueuedJobs(
       .from(queuedJob)
       .where(
         and(
-          ofKinds,
+          first === null ? ofKinds : eq(queuedJob.kind, first),
           or(
             and(eq(queuedJob.status, 'queued'), lte(queuedJob.runAt, sql`now()`)),
             and(eq(queuedJob.status, 'running'), lt(queuedJob.lockedUntil, sql`now()`)),

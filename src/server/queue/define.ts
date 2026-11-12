@@ -36,8 +36,6 @@ export interface QueuedKindDefinition<P extends JobPayload> {
   name: string;
   /** The payload's schema: IDs, enums, numbers and booleans (see {@link JobPayloadValue}). */
   payload: z.ZodType<P>;
-  /** How many of its jobs one tick runs at most, so a large batch can't push the others out. */
-  perTick?: number;
   /** How many times a job is tried before it's given up as failed. */
   maxAttempts?: number;
   /** How its jobs are coupled with others, if they are. */
@@ -50,8 +48,6 @@ export interface QueuedJobKind<P extends JobPayload> {
   name: string;
   /** The payload's schema. */
   payload: z.ZodType<P>;
-  /** How many of its jobs one tick runs at most. */
-  perTick: number;
   /** How many times a job is tried before it's given up as failed. */
   maxAttempts: number;
   /** The batch group its jobs run in, or `null` when each runs on its own. */
@@ -63,9 +59,6 @@ export interface QueuedJobKind<P extends JobPayload> {
   /** A job's payload, typed, when the job is of this kind; `null` otherwise. */
   read: (job: { kind: string; payload: unknown }) => P | null;
 }
-
-/** How many jobs of one kind a tick runs at most, unless the kind says otherwise. */
-export const DEFAULT_PER_TICK = 50;
 
 /**
  * How many times a job is tried before it's given up, unless its kind says
@@ -80,7 +73,6 @@ export const DEFAULT_MAX_ATTEMPTS = 5;
  * @param definition - The kind.
  * @param definition.name - Its name.
  * @param definition.payload - The payload's schema.
- * @param definition.perTick - How many of its jobs one tick runs at most.
  * @param definition.maxAttempts - How many times a job is tried.
  * @param definition.batch - How its jobs are coupled with others.
  * @returns The kind.
@@ -88,14 +80,12 @@ export const DEFAULT_MAX_ATTEMPTS = 5;
 export function defineQueuedKind<P extends JobPayload>({
   name,
   payload,
-  perTick = DEFAULT_PER_TICK,
   maxAttempts = DEFAULT_MAX_ATTEMPTS,
   batch,
 }: QueuedKindDefinition<P>): QueuedJobKind<P> {
   return {
     name,
     payload,
-    perTick,
     maxAttempts,
     batchGroup: batch?.group ?? null,
     /**

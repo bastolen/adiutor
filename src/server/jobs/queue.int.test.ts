@@ -52,22 +52,19 @@ const payload = z.object({ userId: z.uuid(), note: z.string() });
  *
  * @param name - Its name.
  * @param options - How it behaves.
- * @param options.perTick - How many of its jobs one tick runs at most.
  * @param options.result - What each run returns: done by default.
  * @returns The kind.
  */
 function noteKind(
   name: string,
   {
-    perTick,
     result = async () => 'done',
   }: {
-    perTick?: number;
     result?: (note: string) => Promise<'done' | 'skipped'>;
   } = {},
 ): QueuedJobKind<z.infer<typeof payload>> & QueuedJobRunner {
   return handleQueuedJob(
-    defineQueuedKind({ name, payload, ...(perTick ? { perTick } : {}) }),
+    defineQueuedKind({ name, payload }),
     /**
      * Notes the job, then ends as the test asks.
      *
@@ -264,14 +261,33 @@ describe('running the queue', () => {
     expect((await stored()).map(({ status }) => status)).toEqual(['queued', 'queued']);
   });
 
-  it('runs at most its cap of one kind per tick, and the rest at the next', async () => {
-    const kind = noteKind('adiutor-tests-note', { perTick: 2 });
-    await Promise.all(['a', 'b', 'c'].map(async (note) => add(kind, note)));
+  it('lets the kinds take turns, so many older jobs of one kind keep no other waiting', async () => {
+    const busy = noteKind('adiutor-tests-busy');
+    const quiet = noteKind('adiutor-tests-quiet');
+    // One after another, so they're queued in this order.
+    await add(busy, 'busy 1');
+    await add(busy, 'busy 2');
+    await add(busy, 'busy 3');
+    await add(quiet, 'quiet 1');
+
+    await runQueue(ctx, {
+      trigger: 'tick',
+      deadline: later,
+      startedAt: new Date(),
+      kinds: [busy, quiet],
+    });
+
+    // Oldest first would have kept the quiet kind's job waiting until the busy kind's were done.
+    expect(ran).toEqual(['busy 1', 'quiet 1', 'busy 2', 'busy 3']);
+  });
+
+  it('runs every due job of a kind on its own in one tick, with no cap', async () => {
+    const kind = noteKind('adiutor-tests-note');
+    await Promise.all(Array.from({ length: 60 }, async (_, index) => add(kind, `note ${index}`)));
 
     await runQueue(ctx, { trigger: 'tick', deadline: later, startedAt: new Date(), kinds: [kind] });
-    expect(ran).toHaveLength(2);
-    await runQueue(ctx, { trigger: 'tick', deadline: later, startedAt: new Date(), kinds: [kind] });
-    expect(ran).toHaveLength(3);
+
+    expect(ran).toHaveLength(60);
   });
 
   it('takes no new jobs once the deadline has passed', async () => {

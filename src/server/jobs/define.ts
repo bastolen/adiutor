@@ -111,8 +111,6 @@ export interface BatchedQueuedJob {
 export interface QueuedJobRunner {
   /** The kind's name. */
   name: string;
-  /** How many of its jobs one tick runs at most. */
-  perTick: number;
   /** How many times a job is tried before it's given up as failed. */
   maxAttempts: number;
   /** The batch group its jobs run in, or `null` when each runs on its own. */

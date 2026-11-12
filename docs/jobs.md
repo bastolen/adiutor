@@ -71,9 +71,9 @@ tick runs it; with `runAt`, not before that moment.
   lists of IDs for references to several things (`JobPayload`). Never personal data like names or
   addresses: the job reads what it needs when it runs, so nothing sensitive or out of date sits in
   the queue. Each kind checks its payload with a zod schema, when it's queued and when it runs.
-- **Running:** due jobs run one at a time, oldest first (`runQueue` in `run-queue.ts`). A run takes
-  the next job under a lease, skipping jobs another run is taking (`FOR UPDATE SKIP LOCKED`), so two
-  ticks at once never run the same job.
+- **Running:** due jobs run one at a time, the kinds taking turns, each kind's oldest first
+  (`runQueue` in `run-queue.ts`). A run takes the next job under a lease, skipping jobs another run
+  is taking (`FOR UPDATE SKIP LOCKED`), so two ticks at once never run the same job.
 - **How it ends:** `done`, or `skipped` when what it was about is gone (the job checks: say, the
   user was deleted meanwhile).
 - **Retries:** a job that throws is tried again after 5 minutes, then 15, an hour and 6 hours
@@ -81,9 +81,10 @@ tick runs it; with `runAt`, not before that moment.
   7½ hours) it stays `failed`. Each failed attempt is recorded with a reference (see
   [Failures](#failures)), and the log names the jobs' IDs and attempts, never their payloads. A job
   whose run died (its lease ran out) is taken again, as another attempt.
-- **Limits:** each kind runs at most its `perTick` jobs per tick (50 by default), so one large batch
-  can't push the others out; the rest wait for the next tick. A paused kind's jobs wait too, and
-  jobs of a kind the registry doesn't list are never taken.
+- **Turns, no cap:** the kinds take turns, one claim each, so one kind with many waiting jobs can't
+  keep the others waiting, and a kind on its own gets the whole tick. A kind with nothing due sits
+  out the rest of the tick. A paused kind's jobs wait, and jobs of a kind the registry doesn't list
+  are never taken.
 
 The kinds of queued job (declared in `src/server/queue`, handled in `src/server/jobs/queued`):
 
@@ -227,7 +228,6 @@ that runs them (the runner imports the code it runs, and that code queues jobs):
    - `name`: stable, in kebab-case. It's stored with each job, so don't rename it while jobs of it
      may be waiting.
    - `payload`: a zod schema of IDs, enums, numbers and booleans (see [Queued jobs](#queued-jobs)).
-   - `perTick` (optional): how many of its jobs one tick runs at most.
    - `maxAttempts` (optional): how many times a job is tried before it's given up.
    - `batch` (optional): `{ group, key }`, for jobs that run together (see
      [Batches](#batches-coupled-jobs)).

@@ -10,7 +10,7 @@
  * This is the module's public API: nothing outside this folder imports its
  * files directly.
  */
-export { DEFAULT_MAX_ATTEMPTS, DEFAULT_PER_TICK, defineQueuedKind } from './define';
+export { DEFAULT_MAX_ATTEMPTS, defineQueuedKind } from './define';
 export type {
   JobBatching,
   JobPayload,

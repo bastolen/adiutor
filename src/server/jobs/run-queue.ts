@@ -1,6 +1,7 @@
 /**
- * @file Running the queue at a tick: due jobs one at a time, oldest first,
- * until the deadline, each kind up to its `perTick`. A job with a batch key
+ * @file Running the queue at a tick: due jobs one at a time, with the kinds
+ * taking turns (each kind's oldest first), until the deadline or until
+ * nothing is due. A job with a batch key
  * runs with the rest of its batch, in one call of its group's batch. A job
  * that fails is tried again later, up to its kind's `maxAttempts`, and each
  * failure is recorded as an error with a reference; when jobs are given up,
@@ -158,10 +159,13 @@ async function runClaimed(
 }
 
 /**
- * Runs the due queued jobs of every kind that isn't paused, oldest first,
- * until the deadline or until each kind reached its `perTick`. Only kinds
- * that can run are taken: those that run on their own, and batched kinds
- * whose group has a batch.
+ * Runs the due queued jobs of every kind that isn't paused, until the
+ * deadline or until nothing is due. The kinds take turns, one claim each
+ * (each kind's oldest job first), so a kind with many jobs can't keep the
+ * others waiting, and a kind on its own gets the whole tick; a kind with
+ * nothing due sits out the rest of the tick. Only kinds that can run are
+ * taken: those that run on their own, and batched kinds whose group has a
+ * batch.
  *
  * @param ctx - Service context.
  * @param options - How to run.
@@ -178,47 +182,47 @@ export async function runQueue(
 ): Promise<JobRunResult[]> {
   const states = await loadJobStates(ctx.db);
   const batchesByGroup = new Map(batches.map((batch) => [batch.group, batch]));
-  let open = kinds.filter(
+  const runnable = kinds.filter(
     (kind) =>
       !states.get(kind.name)?.pausedAt &&
       (kind.handle !== null || (kind.batchGroup !== null && batchesByGroup.has(kind.batchGroup))),
   );
+  // Every kind that can run, for the rest of a batch, whichever kind's turn took its first job.
+  const runnableNames = runnable.map((kind) => kind.name);
+  const kindsByName = new Map(runnable.map((kind) => [kind.name, kind]));
+  // The kinds that still take turns, and whose turn it is.
+  let turns = [...runnable];
+  let turn = 0;
   const counts = new Map<string, KindCounts>();
   // The last error each kind recorded this tick, for its run in the history.
   const lastErrors = new Map<string, string>();
-  while (open.length > 0 && Date.now() < deadline.getTime()) {
+  while (turns.length > 0 && Date.now() < deadline.getTime()) {
+    const current = defined(turns[turn], 'the kind whose turn it is');
     // One claim at a time on purpose: jobs are taken only when they're about to run.
     // eslint-disable-next-line no-await-in-loop -- See above.
-    const jobs = await claimNextQueuedJobs(
-      ctx.db,
-      open.map((kind) => kind.name),
-    );
+    const jobs = await claimNextQueuedJobs(ctx.db, runnableNames, current.name);
     if (jobs.length === 0) {
-      break;
+      // Nothing of this kind is due: it sits out the rest of the tick, and the next kind moves up.
+      turns = turns.filter((kind) => kind !== current);
+      turn = turn < turns.length ? turn : 0;
+    } else {
+      turn = (turn + 1) % turns.length;
+      const claimed = jobs.map((job) => ({
+        job,
+        kind: defined(kindsByName.get(job.kind), `the kind of queued job ${job.id}`),
+      }));
+      // eslint-disable-next-line no-await-in-loop -- See above.
+      const endings = await runClaimed(ctx, claimed, batchesByGroup);
+      claimed.forEach(({ kind }, index) => {
+        const { ended, errorReference } = defined(endings[index], 'how the job ended');
+        const kindCounts = counts.get(kind.name) ?? { done: 0, skipped: 0, retried: 0, failed: 0 };
+        kindCounts[ended] += 1;
+        counts.set(kind.name, kindCounts);
+        if (errorReference) {
+          lastErrors.set(kind.name, errorReference);
+        }
+      });
     }
-    const kindsByName = new Map(open.map((kind) => [kind.name, kind]));
-    const claimed = jobs.map((job) => ({
-      job,
-      kind: defined(kindsByName.get(job.kind), `the kind of queued job ${job.id}`),
-    }));
-    // eslint-disable-next-line no-await-in-loop -- See above.
-    const endings = await runClaimed(ctx, claimed, batchesByGroup);
-    claimed.forEach(({ kind }, index) => {
-      const { ended, errorReference } = defined(endings[index], 'how the job ended');
-      const kindCounts = counts.get(kind.name) ?? { done: 0, skipped: 0, retried: 0, failed: 0 };
-      kindCounts[ended] += 1;
-      counts.set(kind.name, kindCounts);
-      if (errorReference) {
-        lastErrors.set(kind.name, errorReference);
-      }
-    });
-    open = open.filter((kind) => {
-      const kindCounts = counts.get(kind.name);
-      const handled = kindCounts
-        ? kindCounts.done + kindCounts.skipped + kindCounts.retried + kindCounts.failed
-        : 0;
-      return handled < kind.perTick;
-    });
   }
   return Promise.all(
     [...counts].map(async ([name, summary]) => {
