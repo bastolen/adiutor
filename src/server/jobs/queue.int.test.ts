@@ -147,6 +147,33 @@ describe('running the queue', () => {
     expect(ran).toEqual([]);
   });
 
+  it('tells a job when it was queued', async () => {
+    let queuedAt: Date | null = null;
+    const kind = handleQueuedJob(
+      defineQueuedKind({ name: 'adiutor-tests-when', payload }),
+      /**
+       * Notes when the job was queued.
+       *
+       * @param _ctx - Service context (not used).
+       * @param job - The job.
+       * @returns Done.
+       */
+      async (_ctx, job) => {
+        queuedAt = job.queuedAt;
+        return 'done';
+      },
+    );
+    const id = await queueJob(db, kind, { userId: randomUUID(), note: 'when' });
+
+    await runQueue(ctx, { trigger: 'tick', deadline: later, startedAt: new Date(), kinds: [kind] });
+
+    const [row] = await db
+      .select({ createdAt: queuedJob.createdAt })
+      .from(queuedJob)
+      .where(eq(queuedJob.id, id));
+    expect(queuedAt).toEqual(row?.createdAt);
+  });
+
   it('marks a job skipped when what it was about is gone', async () => {
     const kind = noteKind('adiutor-tests-note', {
       /**

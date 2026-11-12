@@ -99,10 +99,17 @@ export async function claimNextQueuedJobs(
       payload: queuedJob.payload,
       attempts: queuedJob.attempts,
       runAt: queuedJob.runAt,
+      queuedAt: queuedJob.createdAt,
     });
   return claimed
     .sort((a, b) => a.runAt.getTime() - b.runAt.getTime() || a.id.localeCompare(b.id))
-    .map(({ id, kind, payload, attempts }) => ({ id, kind, payload, attempts }));
+    .map(({ id, kind, payload, attempts, queuedAt }) => ({
+      id,
+      kind,
+      payload,
+      attempts,
+      queuedAt,
+    }));
 }
 
 /**

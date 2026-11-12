@@ -143,6 +143,7 @@ async function runClaimed(
         id: job.id,
         kind: job.kind,
         attempts: job.attempts,
+        queuedAt: job.queuedAt,
         payload: kind.check(job.payload),
       })),
     );

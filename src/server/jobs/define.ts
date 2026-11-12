@@ -64,6 +64,8 @@ export interface StoredQueuedJob {
   payload: unknown;
   /** How many times a run took it, this one included. */
   attempts: number;
+  /** When it was queued: what happened most likely happened then. */
+  queuedAt: Date;
 }
 
 /** A queued job as its kind's handler gets it: with its payload checked. */
@@ -74,6 +76,8 @@ export interface QueuedJob<P extends JobPayload> {
   payload: P;
   /** How many times a run took it, this one included. */
   attempts: number;
+  /** When it was queued: what happened most likely happened then. */
+  queuedAt: Date;
 }
 
 /**
@@ -93,6 +97,8 @@ export interface BatchedQueuedJob {
   payload: JobPayload;
   /** How many times a run took it, this one included. */
   attempts: number;
+  /** When it was queued: what happened most likely happened then. */
+  queuedAt: Date;
 }
 
 /** What the runner needs of any kind of queued job, whatever its payload. */
@@ -141,7 +147,12 @@ export function handleQueuedJob<P extends JobPayload>(
      * @returns How it ended.
      */
     handle: async (ctx, job) =>
-      run(ctx, { id: job.id, attempts: job.attempts, payload: kind.check(job.payload) }),
+      run(ctx, {
+        id: job.id,
+        attempts: job.attempts,
+        queuedAt: job.queuedAt,
+        payload: kind.check(job.payload),
+      }),
   };
 }
 
