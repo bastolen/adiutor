@@ -3,7 +3,7 @@
  * run under a lease, so two runs never do the same job at once, and
  * recording how the run went (`job_run`).
  */
-import { and, eq, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, isNull, lt, or, sql } from 'drizzle-orm';
 
 import type { Database } from '@/db';
 import { type JobRunStatus, type JobTrigger, jobRun, jobState } from '@/db/schema';
@@ -117,23 +117,35 @@ export interface FinishedRun {
 }
 
 /**
- * Frees the job, notes how its run went and adds the run to the history.
+ * Frees the job, notes how its run went and adds the run to the history. A
+ * kind of queued job gets its state row the first time it runs.
  *
  * @param db - Database client.
  * @param run - The finished run.
  * @returns The history row's ID.
  */
 export async function finishJobRun(db: Database, run: FinishedRun): Promise<string> {
+  const failed = run.status === 'failed';
   return db.transaction(async (tx) => {
     await tx
-      .update(jobState)
-      .set({
-        lockedUntil: null,
+      .insert(jobState)
+      .values({
+        name: run.job,
+        lastStartedAt: run.startedAt,
         lastFinishedAt: sql`now()`,
         lastStatus: run.status,
-        consecutiveFailures: run.status === 'failed' ? sql`${jobState.consecutiveFailures} + 1` : 0,
+        consecutiveFailures: failed ? 1 : 0,
       })
-      .where(eq(jobState.name, run.job));
+      .onConflictDoUpdate({
+        target: jobState.name,
+        set: {
+          lockedUntil: null,
+          lastStartedAt: run.startedAt,
+          lastFinishedAt: sql`now()`,
+          lastStatus: run.status,
+          consecutiveFailures: failed ? sql`${jobState.consecutiveFailures} + 1` : 0,
+        },
+      });
     const recorded = await tx
       .insert(jobRun)
       .values({

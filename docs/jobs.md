@@ -4,7 +4,8 @@ Back to the [documentation](README.md).
 
 Adiutor does some of its work in the background: cleaning up data nobody can use any more, keeping
 data only as long as it may, and reminding people of invitations. That work runs as **jobs**, in
-`src/server/jobs` ([decision 0018](decisions/0018-background-jobs-in-postgres-with-one-tick.md)).
+`src/server/jobs` ([decision 0018](decisions/0018-background-jobs-in-postgres-with-one-tick.md)):
+**recurring** jobs run on a schedule, and **queued** jobs are added by the app to run once.
 
 ## The tick
 
@@ -12,9 +13,10 @@ Every 5 minutes something starts a **tick**: Vercel Cron or an external cron ser
 [endpoint](#the-endpoint), or `pnpm jobs:run` from system cron or the Docker image (see
 [Background jobs](deploying.md#background-jobs) and [Vercel](deploying.md#vercel) in the
 deployment docs).
-A tick runs every recurring job that's due, one after another (`runTick` in
-`src/server/jobs/tick.ts`). It stops starting new runs at its deadline (4 minutes from the command
-line), and what's left waits for the next tick.
+A tick runs every recurring job that's due, one after another, then the
+[queued jobs](#queued-jobs) that are due (`runTick` in `src/server/jobs/tick.ts`). It stops starting
+new runs at its deadline (4 minutes from the command line), and what's left waits for the next
+tick.
 
 - **Due** means the job never ran, or its schedule named a moment since its last run started. After
   a long silence (say, the server was down) a job runs once, not once per missed moment
@@ -56,6 +58,28 @@ prefetcher can't start a tick, because it needs the secret:
   counts. It's public in the proxy (`PUBLIC_PATHS`), since it checks its own secret, and never
   cached.
 
+## Queued jobs
+
+The app adds a job to the queue (`queued_job`) with `queueJob(db, kind, payload)`, inside the
+transaction of the change it belongs to, so the job only exists if the change was saved. The next
+tick runs it; with `runAt`, not before that moment.
+
+- **Payload:** IDs and small settings only, such as `{ userId, kind: 'password_changed' }`, and
+  lists of IDs for references to several things (`JobPayload`). Never personal data like names or
+  addresses: the job reads what it needs when it runs, so nothing sensitive or out of date sits in
+  the queue. Each kind checks its payload with a zod schema, when it's queued and when it runs.
+- **Running:** due jobs run one at a time, oldest first (`runQueue` in `run-queue.ts`). A run takes
+  the next job under a lease, skipping jobs another run is taking (`FOR UPDATE SKIP LOCKED`), so two
+  ticks at once never run the same job.
+- **How it ends:** `done`, `skipped` when what it was about is gone (the job checks: say, the user
+  was deleted meanwhile), or failed when it throws, with the error in the server log.
+- **Limits:** each kind runs at most its `perTick` jobs per tick (50 by default), so one large batch
+  can't push the others out; the rest wait for the next tick. A paused kind's jobs wait too, and
+  jobs of a kind the registry doesn't list are never taken.
+
+Each kind that ran jobs during a tick gets one run in the history, with how many were done, skipped
+and failed.
+
 ## History
 
 Every finished run is a row in `job_run`: the job, what started it (`tick`, `cli` or `page`), when it
@@ -90,3 +114,17 @@ tests.
 A job must be safe to run again at any time: a tick can stop between two jobs, and a run by hand can
 follow a scheduled one. Work that can take longer than a tick should stop starting new pieces at
 `deadline` and leave the rest for the next run.
+
+## Adding a queued job
+
+1. Add a file to `src/server/jobs/queued/` that exports a kind made with `defineQueuedJob`:
+   - `name`: stable, in kebab-case. It's stored with each job, so don't rename it while jobs of it
+     may be waiting.
+   - `payload`: a zod schema of IDs, enums, numbers and booleans (see [Queued jobs](#queued-jobs)).
+   - `run(ctx, job)`: reads what it needs with the IDs in `job.payload`, does the work and returns
+     `'done'`, or `'skipped'` when what it was about is gone. It throws when it can't do its work.
+   - `perTick` (optional): how many of its jobs one tick runs at most.
+2. Add it to `QUEUED_JOBS` in `src/server/jobs/registry.ts`, and export it from the module's
+   `index.ts` for the code that queues it.
+3. Queue it with `queueJob(tx, kind, payload)` in the transaction of the change, and test it next
+   to its file (`*.int.test.ts`), calling its `handle` or running the queue.

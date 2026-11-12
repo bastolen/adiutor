@@ -1,21 +1,23 @@
 /**
  * @file The tick: what the endpoint and `pnpm jobs:run` start every few
- * minutes. It runs every recurring job that's due, one after another, until
- * its deadline; and running one job now, whether it's due or not.
+ * minutes. It runs every recurring job that's due, one after another, then
+ * the queued jobs that are due, until its deadline; and running one job now,
+ * whether it's due or not.
  */
 import type { JobTrigger } from '@/db/schema';
 
 import type { ServiceContext } from '../context';
 import { notFoundError } from '../errors';
-import type { RecurringJob } from './define';
+import type { QueuedJobRunner, RecurringJob } from './define';
 import { findRecurringJob, RECURRING_JOBS } from './registry';
 import { type JobRunResult, runRecurringJob } from './run';
+import { runQueue } from './run-queue';
 import { isDue, lastScheduledAt } from './schedule';
 import { loadJobStates } from './state';
 
 /** What a tick did. */
 export interface TickResult {
-  /** The runs it started, in order. */
+  /** The runs it started, in order: recurring jobs, then one per kind of queued job that ran. */
   runs: JobRunResult[];
   /** Jobs that were due but left for the next tick, because the deadline came first. */
   leftForNextTick: string[];
@@ -31,26 +33,30 @@ export interface TickOptions {
   deadline: Date;
   /** The current moment; now by default (tests pass their own). */
   now?: Date;
-  /** The jobs to consider; all of them by default (tests pass their own). */
+  /** The recurring jobs to consider; all of them by default (tests pass their own). */
   jobs?: readonly RecurringJob[];
+  /** The kinds of queued job that may run; all of them by default (tests pass their own). */
+  queuedJobs?: readonly QueuedJobRunner[];
 }
 
 /**
- * Runs every recurring job that's due and not paused. A job another run
- * holds is left alone (that run does it); a job that fails doesn't stop the
- * others. Once the deadline has passed, the rest waits for the next tick.
+ * Runs every recurring job that's due and not paused, then the queued jobs
+ * that are due. A job another run holds is left alone (that run does it); a
+ * job that fails doesn't stop the others. Once the deadline has passed, the
+ * rest waits for the next tick.
  *
  * @param ctx - Service context.
  * @param options - How to run.
  * @param options.trigger - What starts it.
  * @param options.deadline - When it should stop starting new runs.
  * @param options.now - The current moment.
- * @param options.jobs - The jobs to consider.
+ * @param options.jobs - The recurring jobs to consider.
+ * @param options.queuedJobs - The kinds of queued job that may run.
  * @returns What it did.
  */
 export async function runTick(
   ctx: ServiceContext,
-  { trigger, deadline, now = new Date(), jobs = RECURRING_JOBS }: TickOptions,
+  { trigger, deadline, now = new Date(), jobs = RECURRING_JOBS, queuedJobs }: TickOptions,
 ): Promise<TickResult> {
   const states = await loadJobStates(ctx.db);
   const due = jobs.filter((job) => {
@@ -76,6 +82,14 @@ export async function runTick(
       }
     }
   }
+  runs.push(
+    ...(await runQueue(ctx, {
+      trigger,
+      deadline,
+      startedAt: now,
+      ...(queuedJobs ? { kinds: queuedJobs } : {}),
+    })),
+  );
   return { runs, leftForNextTick, failed: runs.some((run) => run.status === 'failed') };
 }
 
