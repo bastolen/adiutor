@@ -42,7 +42,8 @@ built; requests, the tickets themselves, come next.
   and changes nothing in the user's name. The user gets an email, and every start is in the audit
   log. See [Signing in as a user](docs/authentication.md#signing-in-as-a-user).
 - **Background jobs.** Reminders, clean-ups and emails that can wait a few minutes run from a tick
-  every 5 minutes (Vercel Cron, a cron service or `pnpm jobs:run`), and are tried again when they
+  every 5 minutes (a cron service or `pnpm jobs:run`, with a Vercel schedule as the fallback), and
+  are tried again when they
   fail. Staff Admins and Managers see them under Logs → Jobs, where staff Admins also run, pause and
   retry them. See [Background jobs](docs/jobs.md).
 - **Accessible, in light and dark mode.** Built to meet WCAG 2.2 AA, with full keyboard support.

@@ -13,8 +13,8 @@ a plain server) must keep working too.
 
 ## Decision
 
-- **One tick:** something calls Adiutor every 5 minutes: the endpoint for Vercel Cron or an external
-  cron service, or `pnpm jobs:run` for system cron. Adiutor decides what's due. Schedules are cron
+- **One tick:** something calls Adiutor every 5 minutes: the endpoint for an external cron service
+  or a Vercel schedule, or `pnpm jobs:run` for system cron. Adiutor decides what's due. Schedules are cron
   expressions in UTC, in code, so a new job never changes the hosting setup.
 - **Two kinds of job** (`src/server/jobs`, see [Background jobs](../jobs.md)):
   - **recurring** jobs run on their schedule;
@@ -33,8 +33,8 @@ a plain server) must keep working too.
   deadline (or in parts over several ticks), with counts but no personal data in its summary.
 - A queued job runs at the next tick, so it can be up to 5 minutes late. Emails needed to sign in
   are never queued.
-- On Vercel's Hobby plan, Vercel Cron runs at most once a day; the 5-minute tick needs an external
-  cron service, or the Pro plan.
+- On Vercel's Hobby plan, a Vercel schedule runs at most every 15 minutes (Schedules, in beta); the
+  5-minute tick needs an external cron service, or the Pro plan.
 
 ## Alternatives considered
 

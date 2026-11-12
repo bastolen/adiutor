@@ -1,8 +1,8 @@
 /**
  * @file Answering the tick's endpoint (`GET /api/jobs`): with
  * the right secret it runs one tick and reports what it did, as counts.
- * Vercel Cron sends the secret by itself; an external cron service sends it
- * as `Authorization: Bearer <secret>`.
+ * A Vercel schedule sends the secret by itself; an external cron service
+ * sends it as `Authorization: Bearer <secret>`.
  */
 import { createHash, timingSafeEqual } from 'node:crypto';
 

@@ -9,7 +9,8 @@ data only as long as it may, and reminding people of invitations. That work runs
 
 ## The tick
 
-Every 5 minutes something starts a **tick**: Vercel Cron or an external cron service calling the
+Every 5 minutes something starts a **tick**: an external cron service (with a Vercel schedule every
+15 minutes as the fallback) calling the
 [endpoint](#the-endpoint), or `pnpm jobs:run` from system cron or the Docker image (see
 [Background jobs](deploying.md#background-jobs) and [Vercel](deploying.md#vercel) in the
 deployment docs).
@@ -45,11 +46,11 @@ tick.
 ## The endpoint
 
 `GET /api/jobs` runs one tick (`answerTickRequest` in `src/server/jobs/endpoint.ts`, the route in
-`src/app/api/jobs/route.ts`). Only `GET`, since that's all Vercel Cron sends; a link checker or
-prefetcher can't start a tick, because it needs the secret:
+`src/app/api/jobs/route.ts`). Only `GET`: the Vercel schedule is set to send it (`requestMethod`),
+as cron services do; a link checker or prefetcher can't start a tick, because it needs the secret:
 
-- It asks for `Authorization: Bearer <CRON_SECRET>`, compared in constant time. Vercel Cron sends
-  that header by itself; an external cron service sends it as a request header. Without
+- It asks for `Authorization: Bearer <CRON_SECRET>`, compared in constant time. A Vercel schedule
+  sends that header by itself; an external cron service sends it as a request header. Without
   `CRON_SECRET` the endpoint is off and answers 503.
 - A wrong or missing secret answers 401 and counts against the sender's IP address. Past 20 in 15
   minutes it answers 429, but the right secret still runs the tick, so someone sharing the cron

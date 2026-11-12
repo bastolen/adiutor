@@ -58,12 +58,16 @@ fields in the project's dashboard.
   connection) or else its `DATABASE_URL`. Migrations should use a direct connection, not a pooled
   one. When migrating fails, the build fails and the previous deployment stays live, so new code
   never runs against the old schema.
-- **A daily tick** (`crons`): Vercel Cron calls `/api/jobs` once a day at 04:00 UTC (on the Hobby
-  plan, somewhere within that hour), with `Authorization: Bearer <CRON_SECRET>` when the
-  environment has `CRON_SECRET`. It's the fallback for the external cron service below, so the
-  jobs still run if that service stops. Vercel runs crons for Production only. On the Pro plan,
-  change its schedule to `*/5 * * * *` and drop the external service: Hobby refuses to deploy a
-  cron that runs more than once a day.
+- **A tick every 15 minutes** (`schedules`): a Vercel schedule (`jobs-tick`, Vercel Schedules, in
+  beta) calls `GET /api/jobs` every 15 minutes (on the Hobby plan, somewhere within each 15
+  minutes), with `Authorization: Bearer <CRON_SECRET>` when the environment has `CRON_SECRET`.
+  `requestMethod` makes it a `GET`, since Schedules send `POST` by default. It's the fallback for the
+  external cron service below, so the jobs still run if that service stops. Hobby allows 5,000 runs
+  a month, and this one uses about 3,000. Preview's copy of the schedule starts inactive: leave it
+  so, as the external service ticks Preview and a second active schedule would go over that budget.
+  On the Pro plan, change it to `*/5 * * * *` and the external service becomes optional. Vercel's
+  older cron jobs (`crons`) can run only once a day on Hobby, and keeping both for the same path runs
+  it twice.
 
 **Moving production** (`.github/workflows/production-branch.yml`): when Release Please publishes a
 release, this workflow moves `production` to the release's commit, creating the branch the first

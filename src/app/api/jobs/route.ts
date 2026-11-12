@@ -1,8 +1,9 @@
 /**
- * @file The background jobs' tick at `GET /api/jobs`, for Vercel Cron or an
- * external cron service every 5 minutes. Only `GET`, since that's all Vercel
- * Cron sends; a link checker or prefetcher can't start it, because it asks
- * for `Authorization: Bearer <CRON_SECRET>`. It runs every job that's due
+ * @file The background jobs' tick at `GET /api/jobs`, for an external cron
+ * service every 5 minutes and a Vercel schedule every 15 (`vercel.json`).
+ * Only `GET`: the Vercel schedule is set to send it (`requestMethod`), as
+ * cron services do; a link checker or prefetcher can't start it, because it
+ * asks for `Authorization: Bearer <CRON_SECRET>`. It runs every job that's due
  * (`answerTickRequest`, see docs/jobs.md). Public in the proxy
  * (`PUBLIC_PATHS` in `src/proxy.ts`), since it checks its own secret. The
  * answer holds counts only, and is never cached.
