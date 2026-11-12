@@ -1,5 +1,5 @@
 /**
- * @file Answering the tick's endpoint (`GET` or `POST /api/jobs`): with
+ * @file Answering the tick's endpoint (`GET /api/jobs`): with
  * the right secret it runs one tick and reports what it did, as counts.
  * Vercel Cron sends the secret by itself; an external cron service sends it
  * as `Authorization: Bearer <secret>`.

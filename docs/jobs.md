@@ -41,8 +41,9 @@ line), and what's left waits for the next tick.
 
 ## The endpoint
 
-`GET` or `POST /api/jobs` runs one tick (`answerTickRequest` in `src/server/jobs/endpoint.ts`,
-the route in `src/app/api/jobs/route.ts`):
+`GET /api/jobs` runs one tick (`answerTickRequest` in `src/server/jobs/endpoint.ts`, the route in
+`src/app/api/jobs/route.ts`). Only `GET`, since that's all Vercel Cron sends; a link checker or
+prefetcher can't start a tick, because it needs the secret:
 
 - It asks for `Authorization: Bearer <CRON_SECRET>`, compared in constant time. Vercel Cron sends
   that header by itself; an external cron service sends it as a request header. Without

@@ -1,7 +1,8 @@
 /**
- * @file The background jobs' tick at `/api/jobs`, for Vercel Cron (`GET`) or
- * an external cron service (`GET` or `POST`) every 5 minutes. It asks for
- * `Authorization: Bearer <CRON_SECRET>` and runs every job that's due
+ * @file The background jobs' tick at `GET /api/jobs`, for Vercel Cron or an
+ * external cron service every 5 minutes. Only `GET`, since that's all Vercel
+ * Cron sends; a link checker or prefetcher can't start it, because it asks
+ * for `Authorization: Bearer <CRON_SECRET>`. It runs every job that's due
  * (`answerTickRequest`, see docs/jobs.md). Public in the proxy
  * (`PUBLIC_PATHS` in `src/proxy.ts`), since it checks its own secret. The
  * answer holds counts only, and is never cached.
@@ -31,4 +32,4 @@ async function tick(request: Request): Promise<Response> {
   return Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 
-export { tick as GET, tick as POST };
+export { tick as GET };
