@@ -4,12 +4,12 @@
  * an audit event or sending a security notice.
  */
 import { db } from '@/db';
-import type { SecurityNoticeKind } from '@/emails/security-notice';
 import type { AuditAction } from '@/lib/audit-actions';
 import { sendEmail } from '@/lib/email';
 import { appUrl } from '@/lib/env';
 import ipAddressOptions from '@/lib/request/ip-address-options';
 import { type RequestInfo, requestInfoFromHeaders } from '@/lib/request/request-info';
+import type { SecurityNoticeKind } from '@/lib/security-notice-kinds';
 import { providerLabel } from '@/lib/sign-in/oauth-providers';
 
 import { recordEvent } from '../../audit';

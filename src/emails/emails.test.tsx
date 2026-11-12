@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import type { Email } from '@/lib/email';
 import { formatDateTime } from '@/lib/format';
 import { LOCALES, type Locale } from '@/lib/i18n/locales';
+import { SECURITY_NOTICE_KINDS } from '@/lib/security-notice-kinds';
 
 import { accountCreatedEmail } from './account-created';
 import { addedToCompanyEmail } from './added-to-company';
@@ -19,7 +20,7 @@ import { inviteLinkConfirmationEmail } from './invite-link-confirmation';
 import { jobFailingEmail } from './job-failing';
 import { magicLinkEmail } from './magic-link';
 import { resetPasswordEmail } from './reset-password';
-import { SECURITY_NOTICE_KINDS, securityNoticeEmail } from './security-notice';
+import { securityNoticeEmail } from './security-notice';
 import { staffAdminAddedEmail } from './staff-admin-added';
 import { twoFactorCodeEmail } from './two-factor-code';
 import { verifyEmailEmail } from './verify-email';

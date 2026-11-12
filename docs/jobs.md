@@ -84,6 +84,12 @@ tick runs it; with `runAt`, not before that moment.
   can't push the others out; the rest wait for the next tick. A paused kind's jobs wait too, and
   jobs of a kind the registry doesn't list are never taken.
 
+The kinds of queued job (declared in `src/server/queue`, handled in `src/server/jobs/queued`):
+
+| Kind              | What it does                                                                                                                                                                                                                                                                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `security-notice` | Emails a user about a security change on their account, queued with `queueSecurityNotice`. Its payload names the user, the change and the IDs the email names (provider, role, company, staff member); for the user's own change, also the change's audit event, whose device, IP address and time the email shows. A user who's gone is skipped. |
+
 ### Batches: coupled jobs
 
 Some jobs belong together: a status update and a comment on the same ticket for the same person
