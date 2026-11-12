@@ -3,7 +3,8 @@
  * Managers (`jobs:view`): the scheduled jobs with how their last run went
  * and when they run next, the kinds of queued job with how many wait and
  * failed, the queued jobs that were given up, and every run of the last 30
- * days (see docs/jobs.md).
+ * days (see docs/jobs.md). Staff Admins (`jobs:manage`) also run, pause and
+ * resume jobs and retry or discard failed queued jobs (`actions.ts`).
  */
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
@@ -31,6 +32,12 @@ import RecurringJobsCard from './recurring-jobs-card';
 export const generateMetadata = globalPermissionMetadata('jobs:view', 'admin.jobs.title');
 
 /**
+ * How long the page's server actions may take, in seconds: running a job now
+ * starts new work for at most 45 of them (`PAGE_RUN_SECONDS`).
+ */
+export const maxDuration = 60;
+
+/**
  * Loads the jobs, the failed queued jobs and the runs, and shows them.
  *
  * @param props - Component props.
@@ -39,7 +46,9 @@ export const generateMetadata = globalPermissionMetadata('jobs:view', 'admin.job
  */
 async function Jobs({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const actor = await requireGlobalPermission('jobs:view');
-  const canLookUp = getGlobalPermissions(actor).has('errors:view');
+  const permissions = getGlobalPermissions(actor);
+  const canLookUp = permissions.has('errors:view');
+  const canManage = permissions.has('jobs:manage');
   const params = await searchParams;
   const runsState = parseTableState(JOB_RUNS_TABLE, params);
   const failedState = parseTableState(FAILED_JOBS_TABLE, params);
@@ -55,9 +64,14 @@ async function Jobs({ searchParams }: { searchParams: Promise<SearchParams> }) {
 
   return (
     <>
-      <RecurringJobsCard jobs={overview.recurring} canLookUp={canLookUp} />
-      <QueuedJobsCard kinds={overview.queued} />
-      <FailedJobsCard jobs={failed} table={failedTable} canLookUp={canLookUp} />
+      <RecurringJobsCard jobs={overview.recurring} canLookUp={canLookUp} canManage={canManage} />
+      <QueuedJobsCard kinds={overview.queued} canManage={canManage} />
+      <FailedJobsCard
+        jobs={failed}
+        table={failedTable}
+        canLookUp={canLookUp}
+        canManage={canManage}
+      />
       <JobRunsCard runs={runs} table={runsTable} canLookUp={canLookUp} />
     </>
   );

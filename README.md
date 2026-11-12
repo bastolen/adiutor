@@ -43,7 +43,8 @@ built; requests, the tickets themselves, come next.
   log. See [Signing in as a user](docs/authentication.md#signing-in-as-a-user).
 - **Background jobs.** Reminders, clean-ups and emails that can wait a few minutes run from a tick
   every 5 minutes (Vercel Cron, a cron service or `pnpm jobs:run`), and are tried again when they
-  fail. Staff Admins and Managers see them under Logs → Jobs. See [Background jobs](docs/jobs.md).
+  fail. Staff Admins and Managers see them under Logs → Jobs, where staff Admins also run, pause and
+  retry them. See [Background jobs](docs/jobs.md).
 - **Accessible, in light and dark mode.** Built to meet WCAG 2.2 AA, with full keyboard support.
   See [Design, accessibility and dark mode](docs/design.md).
 - **English, Dutch and Spanish.** The staff choose Adiutor's default language, which everyone

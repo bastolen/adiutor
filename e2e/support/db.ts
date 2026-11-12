@@ -110,6 +110,32 @@ export async function findUserId(email: string): Promise<string> {
 }
 
 /**
+ * Stores a `staff-admin-added` queued job that was given up after its last
+ * attempt, for the Jobs page's Retry and Discard. It tells a Manager about a
+ * new staff Admin, so when it's retried the job is skipped (the recipient
+ * isn't a staff Admin) and never fails a later tick or sends an email.
+ *
+ * @param managerEmail - A Manager's email address.
+ * @returns The job's ID.
+ */
+export async function storeFailedQueuedJob(managerEmail: string): Promise<string> {
+  const managerId = await findUserId(managerEmail);
+  return withTestDatabase(async (db) => {
+    const stored = await db
+      .insert(schema.queuedJob)
+      .values({
+        kind: 'staff-admin-added',
+        payload: { recipientId: managerId, newAdminId: managerId, how: 'role', byUserId: null },
+        status: 'failed',
+        attempts: 5,
+        finishedAt: new Date(),
+      })
+      .returning({ id: schema.queuedJob.id });
+    return firstRow(stored, 'the failed queued job').id;
+  });
+}
+
+/**
  * Adds an existing user to a company with a role, straight in the database,
  * for a test that needs another member (e.g. a second Admin, so the first one
  * may leave) without inviting them.

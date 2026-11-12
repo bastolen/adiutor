@@ -175,7 +175,11 @@ Error references link to Logs → Errors for staff Admins (`errors:view`); Manag
 The names of the jobs and their counts are listed once in `src/lib/job-names.ts`, which the
 registry must match (`registry.int.test.ts`), so each has its words in every language.
 
-Staff Admins (`jobs:manage`) also act on the jobs (`controls.ts`), never while signed in as someone:
+Staff Admins (`jobs:manage`) also act on the jobs, from the same page (`actions.ts` next to it, with
+`maxDuration = 60` for running a job) or `controls.ts` directly, never while signed in as someone. On
+the page: **Run now**, **Pause** and **Resume** per scheduled job; **Pause**, **Resume**, **Retry
+failed** and **Discard failed** per kind of queued job; **Retry** and **Discard** per failed job.
+Discarding asks first (`ConfirmDialog`), and a run that fails says so with its error's reference.
 
 - **Pause and resume** a recurring job or a kind of queued job (`pauseJob`, `resumeJob`), which
   notes who paused it (`job_state.paused_by`). Pausing what's already paused, or resuming what isn't,

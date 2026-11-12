@@ -470,6 +470,40 @@
         "outcome": "Outcome",
         "trigger": "{trigger, select, tick {By the tick} cli {From the command line} other {From the Jobs page}}",
         "startedBy": "From the Jobs page, by <link>{name}</link>"
+      },
+      "actions": {
+        "column": "Actions",
+        "runNow": "Run now",
+        "runNowLabel": "Run now: {job}",
+        "ran": "{job} ran.",
+        "ranFailed": "{job} ran, but failed.",
+        "ranFailedWithReference": "{job} ran, but failed. Error reference: {reference}.",
+        "pause": "Pause",
+        "pauseLabel": "Pause {job}",
+        "paused": "{job} is paused until it’s resumed.",
+        "resume": "Resume",
+        "resumeLabel": "Resume {job}",
+        "resumed": "{job} is resumed.",
+        "retry": "Retry",
+        "retryLabel": "Retry the {job} job given up {time}",
+        "retried": "{count, plural, one {# job is back in the queue for the next tick.} other {# jobs are back in the queue for the next tick.}}",
+        "discard": "Discard",
+        "discardLabel": "Discard the {job} job given up {time}",
+        "discardConfirm": {
+          "title": "Discard this job?",
+          "description": "This {job} job won’t run again. It stays in the history as discarded for 30 days.",
+          "confirm": "Discard job"
+        },
+        "discarded": "{count, plural, one {# job discarded.} other {# jobs discarded.}}",
+        "retryAll": "Retry failed",
+        "retryAllLabel": "Retry failed {job} jobs",
+        "discardAll": "Discard failed",
+        "discardAllLabel": "Discard failed {job} jobs",
+        "discardAllConfirm": {
+          "title": "Discard every failed {job} job?",
+          "description": "{count, plural, one {# job won’t run again.} other {# jobs won’t run again.}} They stay in the history as discarded for 30 days.",
+          "confirm": "Discard jobs"
+        }
       }
     },
     "dateRange": {

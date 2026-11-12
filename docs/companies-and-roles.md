@@ -123,8 +123,9 @@ Admins and Managers who aren't members can still add themselves with any role, a
   errors of the last 7 days, newest first (see [Looking up an error
   reference](deploying.md#looking-up-an-error-reference)). Admins and Managers (`jobs:view`) also get
   a **Jobs** tab (`/admin/logs/jobs`): the scheduled jobs, the kinds of queued job, the failed queued
-  jobs and the runs of the last 30 days (see [Background jobs](jobs.md#for-staff)). The errors page
-  is "not found" for Managers.
+  jobs and the runs of the last 30 days (see [Background jobs](jobs.md#for-staff)); Admins
+  (`jobs:manage`) also run, pause and resume jobs and retry or discard failed ones there. The errors
+  page is "not found" for Managers.
 - **Users page** (`/admin/users`, `users:view`): every account in a table, sorted by name
   until another order is chosen from the Sort menu (email, last active or joined), with staff marked with a
   brand-coloured avatar and a "Staff · role" badge. Under each name it lists the user's

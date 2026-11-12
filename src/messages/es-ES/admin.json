@@ -470,6 +470,40 @@
         "outcome": "Resultado",
         "trigger": "{trigger, select, tick {Por el tic} cli {Desde la línea de comandos} other {Desde la página Tareas}}",
         "startedBy": "Desde la página Tareas, por <link>{name}</link>"
+      },
+      "actions": {
+        "column": "Acciones",
+        "runNow": "Ejecutar ahora",
+        "runNowLabel": "Ejecutar ahora la tarea {job}",
+        "ran": "{job} se ha ejecutado.",
+        "ranFailed": "{job} se ha ejecutado, pero ha fallado.",
+        "ranFailedWithReference": "{job} se ha ejecutado, pero ha fallado. Referencia del error: {reference}.",
+        "pause": "Pausar",
+        "pauseLabel": "Pausar {job}",
+        "paused": "{job} está pausada hasta que se reanude.",
+        "resume": "Reanudar",
+        "resumeLabel": "Reanudar {job}",
+        "resumed": "{job} se ha reanudado.",
+        "retry": "Reintentar",
+        "retryLabel": "Reintentar la tarea de {job} abandonada {time}",
+        "retried": "{count, plural, one {# tarea vuelve a estar en la cola para el próximo tic.} other {# tareas vuelven a estar en la cola para el próximo tic.}}",
+        "discard": "Descartar",
+        "discardLabel": "Descartar la tarea de {job} abandonada {time}",
+        "discardConfirm": {
+          "title": "¿Descartar esta tarea?",
+          "description": "Esta tarea de {job} no volverá a ejecutarse. Se queda en el historial como descartada durante 30 días.",
+          "confirm": "Descartar tarea"
+        },
+        "discarded": "{count, plural, one {# tarea descartada.} other {# tareas descartadas.}}",
+        "retryAll": "Reintentar fallidas",
+        "retryAllLabel": "Reintentar fallidas de {job}",
+        "discardAll": "Descartar fallidas",
+        "discardAllLabel": "Descartar fallidas de {job}",
+        "discardAllConfirm": {
+          "title": "¿Descartar todas las tareas fallidas de {job}?",
+          "description": "{count, plural, one {# tarea no volverá a ejecutarse.} other {# tareas no volverán a ejecutarse.}} Se quedan en el historial como descartadas durante 30 días.",
+          "confirm": "Descartar tareas"
+        }
       }
     },
     "dateRange": {

@@ -148,12 +148,12 @@ export function ErrorReference({
   const t = useTranslations('admin.jobs');
   const text = t('errorReference', { reference });
   if (!canLookUp) {
-    return <span className="font-mono">{text}</span>;
+    return <span className="font-mono whitespace-nowrap">{text}</span>;
   }
   return (
     <TextLink
       href={`/admin/logs/errors?${new URLSearchParams({ q: reference }).toString()}`}
-      className="font-mono"
+      className="font-mono whitespace-nowrap"
       aria-label={t('errorReferenceLink', { reference })}
     >
       {text}

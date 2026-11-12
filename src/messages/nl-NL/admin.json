@@ -470,6 +470,40 @@
         "outcome": "Resultaat",
         "trigger": "{trigger, select, tick {Door de tik} cli {Vanaf de opdrachtregel} other {Vanaf de pagina Taken}}",
         "startedBy": "Vanaf de pagina Taken, door <link>{name}</link>"
+      },
+      "actions": {
+        "column": "Acties",
+        "runNow": "Nu uitvoeren",
+        "runNowLabel": "{job} nu uitvoeren",
+        "ran": "{job} is uitgevoerd.",
+        "ranFailed": "{job} is uitgevoerd, maar mislukt.",
+        "ranFailedWithReference": "{job} is uitgevoerd, maar mislukt. Foutreferentie: {reference}.",
+        "pause": "Pauzeren",
+        "pauseLabel": "{job} pauzeren",
+        "paused": "{job} is gepauzeerd tot hij wordt hervat.",
+        "resume": "Hervatten",
+        "resumeLabel": "{job} hervatten",
+        "resumed": "{job} is hervat.",
+        "retry": "Opnieuw proberen",
+        "retryLabel": "De taak van {job} die {time} is opgegeven opnieuw proberen",
+        "retried": "{count, plural, one {# taak staat weer in de wachtrij voor de volgende tik.} other {# taken staan weer in de wachtrij voor de volgende tik.}}",
+        "discard": "Verwijderen",
+        "discardLabel": "De taak van {job} die {time} is opgegeven verwijderen",
+        "discardConfirm": {
+          "title": "Deze taak verwijderen?",
+          "description": "Deze taak van {job} wordt niet meer uitgevoerd. Hij blijft 30 dagen als verwijderd in de geschiedenis staan.",
+          "confirm": "Taak verwijderen"
+        },
+        "discarded": "{count, plural, one {# taak verwijderd.} other {# taken verwijderd.}}",
+        "retryAll": "Mislukte opnieuw proberen",
+        "retryAllLabel": "Mislukte opnieuw proberen voor {job}",
+        "discardAll": "Mislukte verwijderen",
+        "discardAllLabel": "Mislukte verwijderen voor {job}",
+        "discardAllConfirm": {
+          "title": "Elke mislukte taak van {job} verwijderen?",
+          "description": "{count, plural, one {# taak wordt niet meer uitgevoerd.} other {# taken worden niet meer uitgevoerd.}} Ze blijven 30 dagen als verwijderd in de geschiedenis staan.",
+          "confirm": "Taken verwijderen"
+        }
       }
     },
     "dateRange": {
