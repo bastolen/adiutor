@@ -13,7 +13,7 @@ import { eq, sql } from 'drizzle-orm';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
-import { appError, jobRun, jobState } from '@/db/schema';
+import { appError, jobRun, jobState, queuedJob } from '@/db/schema';
 
 import { setupTestContext } from '../../../tests/integration/helpers';
 import { ServiceError } from '../errors';
@@ -102,7 +102,7 @@ describe('runTick', () => {
       now: at('10:30'),
       jobs: [job],
     });
-    expect(first).toMatchObject({ failed: false, leftForNextTick: [] });
+    expect(first).toMatchObject({ failed: false, leftForNextTick: [], moreDue: false });
     expect(first.runs).toEqual([
       expect.objectContaining({ job: job.name, status: 'succeeded', summary: { done: 1 } }),
     ]);
@@ -314,7 +314,12 @@ describe('runTick', () => {
       jobs: [job],
     });
 
-    expect(result).toEqual({ runs: [], leftForNextTick: [job.name], failed: false });
+    expect(result).toEqual({
+      runs: [],
+      leftForNextTick: [job.name],
+      moreDue: true,
+      failed: false,
+    });
     expect(await history(job.name)).toEqual([]);
   });
 
@@ -373,6 +378,49 @@ describe('runTick', () => {
     // The queue still ran after the slow job used all its time.
     expect(ran).toEqual(['note']);
     expect(result.runs.map((run) => run.job)).toEqual(['adiutor-tests-slow', 'adiutor-tests-note']);
+  });
+
+  it('says work is left when the deadline came with queued jobs due, and not for retries', async () => {
+    const slowNote = handleQueuedJob(
+      defineQueuedKind({
+        name: 'adiutor-tests-slow-note',
+        payload: z.object({ userId: z.uuid() }),
+      }),
+      /**
+       * Takes a moment, so the deadline comes first.
+       *
+       * @returns Done.
+       */
+      async () => {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 30);
+        });
+        return 'done';
+      },
+    );
+    await Promise.all(
+      Array.from({ length: 5 }, async () => queueJob(db, slowNote, { userId: randomUUID() })),
+    );
+
+    const busy = await runTick(ctx, {
+      trigger: 'tick',
+      deadline: new Date(Date.now() + 50),
+      now: at('10:30'),
+      jobs: [],
+      queuedJobs: [slowNote],
+    });
+    expect(busy).toMatchObject({ leftForNextTick: [], moreDue: true });
+
+    // What's left only waits for a later attempt: nothing is due now.
+    await db.update(queuedJob).set({ runAt: sql`now() + interval '5 minutes'` });
+    const waiting = await runTick(ctx, {
+      trigger: 'tick',
+      deadline: new Date(Date.now() - 1),
+      now: at('10:30'),
+      jobs: [],
+      queuedJobs: [slowNote],
+    });
+    expect(waiting).toMatchObject({ runs: [], moreDue: false });
   });
 });
 

@@ -28,6 +28,42 @@ export function retryWaitMinutes(attempts: number): number {
 }
 
 /**
+ * The condition for jobs a run may take now: waiting ones whose time has
+ * come, and ones whose run died (their lease ran out).
+ *
+ * @returns The SQL condition.
+ */
+function takeable() {
+  return or(
+    and(eq(queuedJob.status, 'queued'), lte(queuedJob.runAt, sql`now()`)),
+    and(eq(queuedJob.status, 'running'), lt(queuedJob.lockedUntil, sql`now()`)),
+  );
+}
+
+/**
+ * Whether any job of the given kinds could run now. Jobs waiting for a later
+ * attempt don't count, so a failing job never makes it look like work is left.
+ *
+ * @param db - Database client.
+ * @param kinds - The names of the kinds that may run.
+ * @returns Whether one is due.
+ */
+export async function hasDueQueuedJobs(
+  db: DatabaseOrTransaction,
+  kinds: readonly string[],
+): Promise<boolean> {
+  if (kinds.length === 0) {
+    return false;
+  }
+  const [due] = await db
+    .select({ id: queuedJob.id })
+    .from(queuedJob)
+    .where(and(inArray(queuedJob.kind, [...kinds]), takeable()))
+    .limit(1);
+  return due !== undefined;
+}
+
+/**
  * Takes the oldest due job of one kind (or, without one, of any of the given
  * kinds), under a lease: a waiting job whose time has come, or one whose run
  * died (its lease ran out). A job with a batch key comes with every other
@@ -54,15 +90,7 @@ export async function claimNextQueuedJobs(
     db
       .select({ id: queuedJob.id, batchKey: queuedJob.batchKey })
       .from(queuedJob)
-      .where(
-        and(
-          first === null ? ofKinds : eq(queuedJob.kind, first),
-          or(
-            and(eq(queuedJob.status, 'queued'), lte(queuedJob.runAt, sql`now()`)),
-            and(eq(queuedJob.status, 'running'), lt(queuedJob.lockedUntil, sql`now()`)),
-          ),
-        ),
-      )
+      .where(and(first === null ? ofKinds : eq(queuedJob.kind, first), takeable()))
       .orderBy(asc(queuedJob.runAt), asc(queuedJob.id))
       .limit(1)
       .for('update', { skipLocked: true }),

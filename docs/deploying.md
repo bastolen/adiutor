@@ -105,7 +105,10 @@ a tag such as `v0.2.0`) to move production to an existing release.
    - the header `Authorization: Bearer <that environment's CRON_SECRET>`;
    - for Preview, if Deployment Protection is on, also the header
      `x-vercel-protection-bypass` with the project's secret from Settings → Deployment Protection →
-     Protection Bypass for Automation;
+     Protection Bypass for Automation. Generating that secret also gives deployments
+     `VERCEL_AUTOMATION_BYPASS_SECRET`, which the endpoint sends when it continues a tick on itself
+     (see [Continuing a tick](jobs.md#continuing-a-tick)), so a backlog on Preview doesn't wait for
+     the next tick;
    - have the service warn you when the answer isn't 200: a 500 means a job failed (see
      [Background jobs](jobs.md)).
 

@@ -9,9 +9,10 @@ import type { JobTrigger } from '@/db/schema';
 import type { ServiceContext } from '../context';
 import { notFoundError } from '../errors';
 import type { QueuedJobRunner, RecurringJob } from './define';
-import { findRecurringJob, RECURRING_JOBS } from './registry';
+import { hasDueQueuedJobs } from './queue';
+import { findRecurringJob, JOB_BATCHES, QUEUED_JOBS, RECURRING_JOBS } from './registry';
 import { type JobRunResult, runRecurringJob } from './run';
-import { runQueue } from './run-queue';
+import { runnableKinds, runQueue } from './run-queue';
 import { isDue, lastScheduledAt } from './schedule';
 import { loadJobStates } from './state';
 
@@ -21,6 +22,12 @@ export interface TickResult {
   runs: JobRunResult[];
   /** Jobs that were due but left for the next tick, because the deadline came first. */
   leftForNextTick: string[];
+  /**
+   * Whether work is still due: recurring jobs were left for the next tick, or
+   * the deadline came while queued jobs could still run. Jobs waiting for a
+   * later attempt don't count.
+   */
+  moreDue: boolean;
   /** Whether any run failed. */
   failed: boolean;
 }
@@ -37,6 +44,31 @@ export interface TickOptions {
   jobs?: readonly RecurringJob[];
   /** The kinds of queued job that may run; all of them by default (tests pass their own). */
   queuedJobs?: readonly QueuedJobRunner[];
+}
+
+/**
+ * Whether the queue stopped at the deadline with jobs it could still run.
+ * Before the deadline, the queue only stops once nothing is due.
+ *
+ * @param ctx - Service context.
+ * @param deadline - The tick's deadline.
+ * @param queuedJobs - The kinds that may run; all of them by default.
+ * @returns Whether queued jobs are left.
+ */
+async function queueLeftAtDeadline(
+  ctx: ServiceContext,
+  deadline: Date,
+  queuedJobs: readonly QueuedJobRunner[] = QUEUED_JOBS,
+): Promise<boolean> {
+  if (Date.now() < deadline.getTime()) {
+    return false;
+  }
+  const states = await loadJobStates(ctx.db);
+  const batchesByGroup = new Map(JOB_BATCHES.map((batch) => [batch.group, batch]));
+  return hasDueQueuedJobs(
+    ctx.db,
+    runnableKinds(states, queuedJobs, batchesByGroup).map((kind) => kind.name),
+  );
 }
 
 /**
@@ -94,7 +126,12 @@ export async function runTick(
       ...(queuedJobs ? { kinds: queuedJobs } : {}),
     })),
   );
-  return { runs, leftForNextTick, failed: runs.some((run) => run.status === 'failed') };
+  return {
+    runs,
+    leftForNextTick,
+    moreDue: leftForNextTick.length > 0 || (await queueLeftAtDeadline(ctx, deadline, queuedJobs)),
+    failed: runs.some((run) => run.status === 'failed'),
+  };
 }
 
 /** How {@link runJobNow} runs a job. */

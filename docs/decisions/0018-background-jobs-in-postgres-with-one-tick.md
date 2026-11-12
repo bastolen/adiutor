@@ -32,7 +32,9 @@ a plain server) must keep working too.
 - Every background task is a job in `src/server/jobs`: safe to run again, done within the tick's
   deadline (or in parts over several ticks), with counts but no personal data in its summary.
 - A queued job runs at the next tick, so it can be up to 5 minutes late. Emails needed to sign in
-  are never queued.
+  are never queued. A backlog doesn't wait for more ticks: the kinds take turns without a cap, the
+  queue gets at least half of each tick, and a tick that stops at its deadline with work left
+  continues straight away, calling the endpoint again.
 - On Vercel's Hobby plan, a Vercel schedule runs at most every 15 minutes (Schedules, in beta); the
   5-minute tick needs an external cron service, or the Pro plan.
 

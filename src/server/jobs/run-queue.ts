@@ -159,6 +159,27 @@ async function runClaimed(
 }
 
 /**
+ * The kinds whose jobs a tick may take: those that aren't paused and can run,
+ * on their own (with a handler) or through their group's batch.
+ *
+ * @param states - The jobs' states, for which kinds are paused.
+ * @param kinds - The kinds.
+ * @param batchesByGroup - The batches by group.
+ * @returns The kinds that can run.
+ */
+export function runnableKinds(
+  states: Awaited<ReturnType<typeof loadJobStates>>,
+  kinds: readonly QueuedJobRunner[],
+  batchesByGroup: ReadonlyMap<string, JobBatch>,
+): QueuedJobRunner[] {
+  return kinds.filter(
+    (kind) =>
+      !states.get(kind.name)?.pausedAt &&
+      (kind.handle !== null || (kind.batchGroup !== null && batchesByGroup.has(kind.batchGroup))),
+  );
+}
+
+/**
  * Runs the due queued jobs of every kind that isn't paused, until the
  * deadline or until nothing is due. The kinds take turns, one claim each
  * (each kind's oldest job first), so a kind with many jobs can't keep the
@@ -182,11 +203,7 @@ export async function runQueue(
 ): Promise<JobRunResult[]> {
   const states = await loadJobStates(ctx.db);
   const batchesByGroup = new Map(batches.map((batch) => [batch.group, batch]));
-  const runnable = kinds.filter(
-    (kind) =>
-      !states.get(kind.name)?.pausedAt &&
-      (kind.handle !== null || (kind.batchGroup !== null && batchesByGroup.has(kind.batchGroup))),
-  );
+  const runnable = runnableKinds(states, kinds, batchesByGroup);
   // Every kind that can run, for the rest of a batch, whichever kind's turn took its first job.
   const runnableNames = runnable.map((kind) => kind.name);
   const kindsByName = new Map(runnable.map((kind) => [kind.name, kind]));

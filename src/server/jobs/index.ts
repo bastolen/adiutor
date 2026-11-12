@@ -21,8 +21,13 @@ export {
   retryFailedJobs,
   runJobFromPage,
 } from './controls';
-export { answerTickRequest } from './endpoint';
-export type { TickResponse } from './endpoint';
+export {
+  answerTickRequest,
+  continueAfterAnswer,
+  MAX_TICK_CONTINUATIONS,
+  TICK_CONTINUATION_HEADER,
+} from './endpoint';
+export type { TickAnswer, TickResponse } from './endpoint';
 export { listJobs } from './list';
 export type { JobListing } from './list';
 export {

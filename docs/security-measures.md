@@ -109,7 +109,9 @@ test that fails when Better Auth adds one that's in neither list). The other API
 signed out are the health check (`/api/health`, see [Docker](deploying.md#docker)), which answers
 only whether the app is up, and the background jobs' tick (`/api/jobs`, see
 [Background jobs](jobs.md#the-endpoint)), which runs only with `Authorization: Bearer <CRON_SECRET>`
-(compared in constant time) and answers with counts only; without `CRON_SECRET` it's off. While a staff member is signed in as a user, the guards refuse every
+(compared in constant time) and answers with counts only; without `CRON_SECRET` it's off. When it
+continues a tick on itself, it sends the secret only to the app's configured address
+(`BETTER_AUTH_URL`), never to a host taken from the request. While a staff member is signed in as a user, the guards refuse every
 endpoint, from the browser or from server code, except reading the session and signing out
 (`refuseWhileSignedInAs` in `src/server/auth/auth-guards/`). The session is the staff member's, so
 an endpoint would act on their own account (see

@@ -57,8 +57,36 @@ as cron services do; a link checker or prefetcher can't start a tick, because it
   service's address can't lock it out.
 - With the right secret it runs one tick, stopping new runs after 45 seconds (the route's
   `maxDuration` is 60), and answers 200, or 500 when a run failed, with each run's job, status and
-  counts. It's public in the proxy (`PUBLIC_PATHS`), since it checks its own secret, and never
-  cached.
+  counts, and whether it `continues`. It's public in the proxy (`PUBLIC_PATHS`), since it checks its
+  own secret, and never cached.
+
+### Continuing a tick
+
+When a tick stops at its deadline with work still due, a backlog doesn't wait 5 or 15 minutes for the
+next tick: the endpoint continues it straight away.
+
+1. The tick says whether work is left (`moreDue`): recurring jobs it had to leave, or queued jobs
+   that could still run when the deadline came (`hasDueQueuedJobs`). Jobs waiting for a later
+   attempt don't count, so a failing job can't keep it going.
+2. When work is left and the tick ran something, the endpoint answers as usual and then, after the
+   answer (`after()` in the route, `continueAfterAnswer`), calls itself again
+   (`requestTickContinuation`). The call goes to the app's configured address (`BETTER_AUTH_URL`,
+   never a host from the request, since it carries the secret) with the secret, the header
+   `x-adiutor-tick-continuation` with the continuation's number, and Vercel's
+   `x-vercel-protection-bypass` when `VERCEL_AUTOMATION_BYPASS_SECRET` is set.
+3. A continued call answers 202 at once and runs its tick after answering. So the call before it only
+   waits milliseconds for that answer, never another 45 seconds, and each function stays within its
+   60 seconds.
+4. It repeats while work is left, at most 10 times in a row (`MAX_TICK_CONTINUATIONS`, about 7½
+   minutes of extra work); then the next tick takes over. A malformed number answers 400, and the
+   number counts only with the right secret.
+
+Continued ticks overlap safely with each other and with the cron service's ticks, for the same
+reasons as any two ticks: leases and `SKIP LOCKED`. Their runs are recorded like any other ("By the
+tick"), and a failure reaches Logs → Errors and the staff Admins' email, although the cron service
+only sees the first tick's answer. A continuation that can't be made (say, the address isn't
+reachable from the server) is logged, and the next tick takes over. `pnpm jobs:run` doesn't
+continue: its queue already runs until it's empty or its 4 minutes are up.
 
 ## Queued jobs
 
