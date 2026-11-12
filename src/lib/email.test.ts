@@ -1,15 +1,27 @@
 /**
- * @file Tests for sending email over SMTP: what is sent.
+ * @file Tests for sending email over SMTP: what is sent, and that a mail
+ * server that hangs can't hold a request or a job for long.
  * @vitest-environment node
  */
 import { describe, expect, it, vi } from 'vitest';
 
-import { sendEmail, sendFailureOf } from './email';
+import { sendEmail, sendFailureOf, SMTP_TIMEOUTS } from './email';
 
-/** Mocked SMTP transport and its factory. */
-const { sendMail, createTransport } = vi.hoisted(() => {
+/**
+ * Mocked SMTP transport and its factory, which keeps the options it was
+ * created with (when the module loads, before the mocks' calls are cleared).
+ */
+const { sendMail, createTransport, transportOptions } = vi.hoisted(() => {
   const send = vi.fn();
-  return { sendMail: send, createTransport: vi.fn((_options: unknown) => ({ sendMail: send })) };
+  const options: unknown[] = [];
+  return {
+    sendMail: send,
+    transportOptions: options,
+    createTransport: vi.fn((created: unknown) => {
+      options.push(created);
+      return { sendMail: send };
+    }),
+  };
 });
 
 vi.mock('nodemailer', () => ({ createTransport }));
@@ -39,6 +51,20 @@ describe('sendEmail', () => {
       text: 'Sign in https://adiutor.test/x',
       html: '<p>Sign in</p>',
     });
+  });
+});
+
+describe('the SMTP transport', () => {
+  it('waits for the mail server well within the jobs’ tick, not nodemailer’s minutes', () => {
+    expect(transportOptions).toEqual([
+      expect.objectContaining({
+        url: 'smtp://localhost:1025',
+        connectionTimeout: 10_000,
+        greetingTimeout: 10_000,
+        socketTimeout: 20_000,
+      }),
+    ]);
+    expect(Math.max(...Object.values(SMTP_TIMEOUTS))).toBeLessThan(45_000);
   });
 });
 

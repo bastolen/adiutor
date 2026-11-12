@@ -259,6 +259,12 @@ A job must be safe to run again at any time: a tick can stop between two jobs, a
 follow a scheduled one. Work that can take longer than a tick should stop starting new pieces at
 `deadline` and leave the rest for the next run.
 
+Keep each piece of work to seconds. On Vercel the endpoint's function is stopped after 60 seconds,
+and a run that's stopped is recorded as failed (see [Failures](#failures)). Give every network call
+a time limit well under that (email already has one: `SMTP_TIMEOUTS` in `src/lib/email.ts`). Split
+long work: stop at `deadline` and go on at the next run, or queue one job per item. A run must also
+end within its 15-minute lease, or another tick could take the job while it's still running.
+
 ## Adding a queued job
 
 A queued job comes in two parts, in two modules, so code that queues jobs never imports the code
@@ -277,7 +283,8 @@ that runs them (the runner imports the code it runs, and that code queues jobs):
    - `handleQueuedJob(kind, run)`, where `run(ctx, job)` reads what it needs with the IDs in
      `job.payload`, does the work and returns `'done'`, or `'skipped'` when what it was about is
      gone. It throws when it can't do its work, and must be safe to run again: an attempt can fail
-     halfway and be retried.
+     halfway and be retried. One job takes seconds, with a time limit on every network call, as
+     for recurring jobs above; a job that's stopped uses up an attempt.
    - Or, for a batched kind, `batchedJobRunner(kind)`, plus a batch for its group made with
      `defineJobBatch`, added to `JOB_BATCHES`.
    - Add its name to `QUEUED_JOB_NAMES` in `src/lib/job-names.ts`, in the same place, and what it

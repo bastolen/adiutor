@@ -93,7 +93,7 @@ async function queueSkippedNotices(count: number): Promise<void> {
  * @returns The fake, and the requests it got.
  */
 function fakeFetch(status = 202) {
-  const requests: { url: string; headers: Record<string, string> }[] = [];
+  const requests: { url: string; headers: Record<string, string>; signal: unknown }[] = [];
   /**
    * Notes the request and answers.
    *
@@ -102,7 +102,11 @@ function fakeFetch(status = 202) {
    * @returns The answer.
    */
   const send = async (url: string | URL | Request, init?: RequestInit) => {
-    requests.push({ url: String(url), headers: { ...(init?.headers as Record<string, string>) } });
+    requests.push({
+      url: String(url),
+      headers: { ...(init?.headers as Record<string, string>) },
+      signal: init?.signal,
+    });
     return new Response(null, { status });
   };
   return { send, requests };
@@ -275,6 +279,8 @@ describe('continuing the tick', () => {
       {
         url: `${ctx.baseUrl}/api/jobs`,
         headers: { authorization: `Bearer ${SECRET}`, [TICK_CONTINUATION_HEADER]: '2' },
+        // A call that hangs is given up, so it never holds the function that asked.
+        signal: expect.any(AbortSignal),
       },
     ]);
     expect(bypassed.requests[0]?.headers).toMatchObject({

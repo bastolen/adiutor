@@ -34,6 +34,13 @@ export const TICK_CONTINUATION_HEADER = 'x-adiutor-tick-continuation';
  */
 export const MAX_TICK_CONTINUATIONS = 10;
 
+/**
+ * How long a continuation waits for the continued call's 202, in
+ * milliseconds: it answers at once, so anything longer means it hangs, and
+ * waiting would only hold the function that asked.
+ */
+const CONTINUATION_TIMEOUT_MS = 10_000;
+
 /** What the endpoint answers: the status code and a body with counts only. */
 export interface TickResponse {
   /**
@@ -225,8 +232,9 @@ export interface ContinuationOptions {
  * Calls the endpoint again as a continuation, on the app's own configured
  * address (`ctx.baseUrl`, never a host from the request: the call carries the
  * secret). It only waits for the 202, as the continued call runs its tick
- * after answering. A problem is logged (the status or error, and the step)
- * and never thrown: the next tick takes over.
+ * after answering, and at most {@link CONTINUATION_TIMEOUT_MS}. A problem is
+ * logged (the status or error, and the step) and never thrown: the next tick
+ * takes over.
  *
  * @param ctx - Service context, for the app's address.
  * @param step - The continuation's step.
@@ -247,7 +255,11 @@ export async function requestTickContinuation(
     ...(bypassSecret ? { 'x-vercel-protection-bypass': bypassSecret } : {}),
   };
   try {
-    const response = await send(`${ctx.baseUrl}${TICK_PATH}`, { headers, cache: 'no-store' });
+    const response = await send(`${ctx.baseUrl}${TICK_PATH}`, {
+      headers,
+      cache: 'no-store',
+      signal: AbortSignal.timeout(CONTINUATION_TIMEOUT_MS),
+    });
     await response.body?.cancel();
     if (response.status === 202) {
       return true;
