@@ -272,4 +272,45 @@ describe('getStepUpMethods', () => {
       });
     });
   });
+
+  describe('for a strong second step (before signing in as someone)', () => {
+    it('never offers email codes, whatever the role', async () => {
+      const support = await createUser(db, 'support@adiutor.test');
+      await enableTwoFactor(db, support, 'email');
+      await addPasskey(support, 'Laptop', new Date('2026-01-01T10:00:00Z'));
+
+      expect(await getStepUpMethods({ db }, support, 'support', { forChange: true })).toEqual({
+        authenticator: false,
+        email: true,
+        passkey: true,
+        providers: [],
+      });
+      expect(await getStepUpMethods({ db }, support, 'support', { strong: true })).toEqual({
+        authenticator: false,
+        email: false,
+        passkey: true,
+        providers: [],
+      });
+    });
+
+    it('offers GitHub only as the only strong step, and nothing without one', async () => {
+      const githubOnly = await createUser(db, 'jane@adiutor.test');
+      await connectGitHub(db, githubOnly);
+      const emailCodesOnly = await createUser(db, 'john@adiutor.test');
+      await enableTwoFactor(db, emailCodesOnly, 'email');
+
+      expect(await getStepUpMethods({ db }, githubOnly, 'support', { strong: true })).toEqual({
+        authenticator: false,
+        email: false,
+        passkey: false,
+        providers: ['github'],
+      });
+      expect(await getStepUpMethods({ db }, emailCodesOnly, 'support', { strong: true })).toEqual({
+        authenticator: false,
+        email: false,
+        passkey: false,
+        providers: [],
+      });
+    });
+  });
 });

@@ -27,6 +27,7 @@ import { isLocale } from '@/lib/i18n/locales';
 import { generateToken, hashToken } from '@/lib/sign-in/tokens';
 
 import { APP_ERROR_RETENTION_DAYS } from './app-errors';
+import { endFinishedImpersonations } from './auth/impersonation';
 import { SIGN_IN_ERROR_RETENTION_DAYS } from './auth/sign-in-errors';
 import type { ServiceContext } from './context';
 import getStaffName from './people/staff-name';
@@ -53,6 +54,11 @@ export interface CleanUpResult {
   appErrors: number;
   /** GitHub or Google accounts whose OAuth tokens a failed request left behind. */
   providerTokens: number;
+  /**
+   * Sign-ins as a user whose time was up or whose staff session was gone,
+   * each recorded as ended (`endFinishedImpersonations`).
+   */
+  impersonations: number;
 }
 
 /**
@@ -60,7 +66,8 @@ export interface CleanUpResult {
  * kept as history; their tokens are stored hashed and stop working when they
  * expire. OAuth tokens are only needed during the request that stored them
  * (see `withoutKeptTokens` in `auth-events/provider-accounts.ts`); any still there after ten
- * minutes are cleared.
+ * minutes are cleared. Sign-ins as a user that are over are ended and recorded
+ * (`endFinishedImpersonations`).
  *
  * @param ctx - Service context (only the database is used).
  * @returns How many rows were removed per kind.
@@ -76,6 +83,7 @@ export async function cleanUp(ctx: Pick<ServiceContext, 'db'>): Promise<CleanUpR
     signInErrors,
     appErrors,
     providerTokens,
+    impersonations,
   ] = await Promise.all([
     db
       .delete(verification)
@@ -127,6 +135,7 @@ export async function cleanUp(ctx: Pick<ServiceContext, 'db'>): Promise<CleanUpR
         ),
       )
       .returning({ id: account.id }),
+    endFinishedImpersonations(ctx),
   ]);
   return {
     verifications: verifications.length,
@@ -136,6 +145,7 @@ export async function cleanUp(ctx: Pick<ServiceContext, 'db'>): Promise<CleanUpR
     signInErrors: signInErrors.length,
     appErrors: appErrors.length,
     providerTokens: providerTokens.length,
+    impersonations,
   };
 }
 

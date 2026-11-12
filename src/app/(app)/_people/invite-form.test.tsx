@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
+import { SignedInAsMarker } from '@/components/ui/signed-in-as';
 import { defined } from '@/lib/defined';
 
 import InviteForm from './invite-form';
@@ -35,6 +36,21 @@ const roles = [
 describe('InviteForm', () => {
   beforeEach(() => {
     inviteAction.mockReset();
+  });
+
+  it('turns every field and the button off while a staff member is signed in as the user', () => {
+    render(
+      <>
+        <InviteForm companyId="company-1" roles={roles} />
+        <SignedInAsMarker />
+      </>,
+    );
+
+    // The attribute on each control itself, not only the fieldset's.
+    expect(screen.getByRole('textbox', { name: 'Email addresses' })).toHaveAttribute('disabled');
+    expect(screen.getByRole('combobox', { name: 'Role' })).toHaveAttribute('disabled');
+    expect(screen.getByRole('combobox', { name: 'Email language' })).toHaveAttribute('disabled');
+    expect(screen.getByRole('button', { name: 'Send invitations' })).toHaveAttribute('disabled');
   });
 
   it('defaults to the least powerful role', () => {

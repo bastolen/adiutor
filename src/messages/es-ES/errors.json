@@ -6,6 +6,18 @@
     "companyDeactivated": "Esta empresa está desactivada. Reactívala primero.",
     "tooManyAttempts": "{minutes, plural, one {Demasiados intentos. Vuelve a intentarlo dentro de # minuto.} other {Demasiados intentos. Vuelve a intentarlo dentro de # minutos.}}",
     "grantConfirmationRequired": "Confirma que eres tú con tu segundo paso antes de dar este rol a alguien.",
+    "impersonation": {
+      "self": "No puedes iniciar sesión como tú mismo.",
+      "staffAdmin": "Nadie puede iniciar sesión como un administrador del personal.",
+      "staff": "Solo los administradores del personal pueden iniciar sesión como alguien del personal.",
+      "companyAdmin": "Soporte no puede iniciar sesión como un administrador de una empresa.",
+      "deactivated": "Esta cuenta está desactivada, así que nadie puede iniciar sesión como este usuario.",
+      "optedOut": "Este usuario ha desactivado el inicio de sesión del personal.",
+      "needsMfa": "Para iniciar sesión como otra persona, primero añade una llave de acceso o configura una app de autenticación en la página Seguridad.",
+      "confirmationRequired": "Confirma que eres tú con tu segundo paso antes de iniciar sesión como otra persona.",
+      "alreadyStarted": "Ya has iniciado sesión como otra persona. Vuelve primero a tu propia cuenta.",
+      "changesOff": "Esto no se puede cambiar mientras has iniciado sesión como otra persona. Vuelve primero a tu propia cuenta."
+    },
     "setup": {
       "alreadySetUp": "Adiutor ya está configurado. Inicia sesión.",
       "accountDeactivated": "Esa cuenta está desactivada, así que no ha podido iniciar sesión. Usa otra dirección."

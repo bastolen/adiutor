@@ -6,6 +6,18 @@
     "companyDeactivated": "Dit bedrijf is gedeactiveerd. Activeer het eerst opnieuw.",
     "tooManyAttempts": "{minutes, plural, one {Te veel pogingen. Probeer het over # minuut opnieuw.} other {Te veel pogingen. Probeer het over # minuten opnieuw.}}",
     "grantConfirmationRequired": "Bevestig met je tweede stap dat jij het bent, voordat je iemand deze rol geeft.",
+    "impersonation": {
+      "self": "Je kunt niet als jezelf inloggen.",
+      "staffAdmin": "Niemand kan inloggen als een beheerder van de medewerkers.",
+      "staff": "Alleen beheerders van de medewerkers kunnen inloggen als een medewerker.",
+      "companyAdmin": "Support kan niet inloggen als een beheerder van een bedrijf.",
+      "deactivated": "Dit account is gedeactiveerd, dus niemand kan als deze gebruiker inloggen.",
+      "optedOut": "Deze gebruiker heeft inloggen door medewerkers uitgezet.",
+      "needsMfa": "Voeg eerst een passkey of een authenticator-app toe op de pagina Beveiliging om als iemand anders in te loggen.",
+      "confirmationRequired": "Bevestig met je tweede stap dat jij het bent, voordat je als iemand anders inlogt.",
+      "alreadyStarted": "Je bent al ingelogd als iemand anders. Ga eerst terug naar je eigen account.",
+      "changesOff": "Dit kan niet worden gewijzigd terwijl je als iemand anders bent ingelogd. Ga eerst terug naar je eigen account."
+    },
     "setup": {
       "alreadySetUp": "Adiutor is al ingesteld. Log gewoon in.",
       "accountDeactivated": "Dat account is gedeactiveerd, dus het kon niet inloggen. Gebruik een ander adres."

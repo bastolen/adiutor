@@ -33,8 +33,9 @@ import {
   listConnectedProviders,
   setFirstPassword,
 } from '@/server/auth/accounts';
+import { setStaffSignInAllowed } from '@/server/auth/impersonation';
 import { revokeOtherOwnSessions, revokeOwnSession } from '@/server/auth/sessions';
-import { getActor } from '@/server/authz';
+import { assertNotSignedInAs, getActor } from '@/server/authz';
 import { deactivateOwnAccount } from '@/server/people/user-admin';
 
 import { disconnectFailureMessage } from '../account-messages';
@@ -65,6 +66,8 @@ export async function passwordAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor({ allowMissingMfa: true });
+    // Before the confirmation below, which would otherwise send a staff member signed in as the user to it.
+    assertNotSignedInAs(actor);
     const newPassword = passwordSchema.parse(field(formData, 'newPassword'));
     const t = await getTranslations('account');
     if (newPassword !== field(formData, 'confirmation')) {
@@ -129,6 +132,7 @@ export async function confirmProviderAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor({ allowMissingMfa: true });
+    assertNotSignedInAs(actor);
     if (needsRecentConfirmation(actor)) {
       redirect(confirmChangeUrlFor(formData, SECURITY_PAGE));
     }
@@ -155,6 +159,8 @@ export async function disconnectAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor({ allowMissingMfa: true });
+    // Better Auth would act on the session's own user: a staff member signed in as someone.
+    assertNotSignedInAs(actor);
     const accountId = field(formData, 'accountId');
     const [connected, t, tAuth] = await Promise.all([
       listConnectedProviders(appContext, actor.id),
@@ -198,6 +204,7 @@ export async function deactivateAccountAction(
 ): Promise<ActionResult> {
   const result = await runAction(async () => {
     const actor = await getActor({ allowMissingMfa: true });
+    assertNotSignedInAs(actor);
     if (needsRecentConfirmation(actor)) {
       redirect(confirmChangeUrlFor(formData, SECURITY_PAGE));
     }
@@ -244,5 +251,31 @@ export async function revokeOtherSessionsAction(): Promise<ActionResult> {
     refresh();
     const t = await getTranslations('account');
     return { ok: true, message: t('security.sessions.signedOutOthers', { count }) };
+  });
+}
+
+/**
+ * Turns sign-ins by staff on or off for the user's own account
+ * (`setStaffSignInAllowed`). Turning it off ends a sign-in as them that's
+ * under way.
+ *
+ * @param _previous - The previous result (unused).
+ * @param formData - Field `allowed`: `true` to turn it on, `false` to turn it off.
+ * @returns A confirmation.
+ */
+export async function staffSignInAction(
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const actor = await getActor({ allowMissingMfa: true });
+    const allowed = field(formData, 'allowed') === 'true';
+    await setStaffSignInAllowed(appContext, actor, allowed);
+    refresh();
+    const t = await getTranslations('account');
+    return {
+      ok: true,
+      message: allowed ? t('security.staffSignIn.turnedOn') : t('security.staffSignIn.turnedOff'),
+    };
   });
 }

@@ -15,8 +15,16 @@ import {
   COMPANY_NAME,
   COMPANY_SLUG,
   PAGING_COMPANY_SLUG,
+  PLATFORM_ADMIN,
 } from './support/fixtures';
-import { adminStorageState, openUser, type StorageState, toasts } from './support/helpers';
+import {
+  adminStorageState,
+  openUser,
+  signIn,
+  signInAsUser,
+  type StorageState,
+  toasts,
+} from './support/helpers';
 import { expect, test } from './support/test';
 
 /** Sign-in cookies of the staff Admin. */
@@ -498,6 +506,34 @@ test.describe('signed in', () => {
     await expect(page).toHaveURL(/[?&]to=2026-01-31/);
     // The other filters stay.
     await expect(page).toHaveURL(/[?&]group=people/);
+  });
+});
+
+test.describe('signed in as a user', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  // A session of its own: signing in as someone changes what the shared Admin session shows.
+  test('the banner comes first in the content, and going back lands on the card', async ({
+    page,
+  }) => {
+    await signIn(page, PLATFORM_ADMIN);
+    await signInAsUser(page, CLIENT_WATCHER.name);
+    // A fresh page, so the first Tab starts from the top (not from where the dialog left focus).
+    await page.goto('/dashboard');
+    await expect(page.getByRole('region', { name: 'Signed in as someone else' })).toBeVisible();
+
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    const back = page
+      .getByRole('region', { name: 'Signed in as someone else' })
+      .getByRole('button', { name: 'Back to my account' });
+    await expect(back).toBeFocused();
+
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/#sign-in-as$/);
+    await expect(page.getByRole('heading', { name: 'Sign in as user' })).toBeFocused();
   });
 });
 

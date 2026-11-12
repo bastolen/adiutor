@@ -53,7 +53,8 @@ The folders of the repository and what belongs in each. Back to the [documentati
     the sign-in pages), the URLs of the code and step-up pages, the code check (`verify-code.ts`),
     cookies, endpoints, secrets, OAuth providers, sign-in refusals, tokens and email links. It
     isn't called `auth/` because `src/lib/auth.ts` is the Better Auth configuration.
-  - `src/lib/authz/`: roles, permissions and guards (pure functions). `mfa/` holds the MFA rules,
+  - `src/lib/authz/`: roles, permissions, guards and who may sign in as whom (`impersonation.ts`),
+    all pure functions. `mfa/` holds the MFA rules,
     one file per topic (see [MFA](mfa.md)).
   - `src/lib/tables/`: table state, the table definitions and `page-url.ts`, which builds the page
     links from them.

@@ -5,6 +5,8 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { SignedInAsMarker } from '@/components/ui/signed-in-as';
+
 import renderInLocale from '../../../../tests/i18n/render';
 import { saveLanguageAction } from './actions';
 import LanguageForm from './language-form';
@@ -34,6 +36,20 @@ afterEach(() => {
 });
 
 describe('LanguageForm', () => {
+  it('turns the select and the button off while a staff member is signed in as the user', () => {
+    renderInLocale(
+      'en-US',
+      <>
+        <LanguageForm choice="en-US" defaultLocale="en-US" />
+        <SignedInAsMarker />
+      </>,
+    );
+
+    // The attribute itself, not only the fieldset's, so the select's menu stays shut too.
+    expect(screen.getByRole('combobox', { name: 'Language' })).toHaveAttribute('disabled');
+    expect(screen.getByRole('button', { name: 'Save language' })).toHaveAttribute('disabled');
+  });
+
   it('shows the saved language, Default first and each language named in itself', async () => {
     const user = userEvent.setup();
     renderInLocale('nl-NL', <LanguageForm choice="nl-NL" defaultLocale="en-US" />);

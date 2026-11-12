@@ -1,10 +1,11 @@
 /**
  * @file The account menu at the bottom of the sidebar: who's signed in,
- * account settings, the theme and sign-out.
+ * account settings, the theme and sign-out (or, while a staff member is
+ * signed in as a user, "Back to my account").
  */
 'use client';
 
-import { ChevronsUpDown, LogOut, UserRound } from 'lucide-react';
+import { ChevronsUpDown, LogOut, Undo2, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -25,6 +26,8 @@ import cn from '@/lib/cn';
 import displayName from '@/lib/display-name';
 import loadAuthClient from '@/lib/sign-in/load-auth-client';
 
+import useBackToOwnAccount from './use-back-to-own-account';
+
 /**
  * Props for {@link AccountMenu}.
  */
@@ -33,6 +36,12 @@ interface AccountMenuProps {
   name: string;
   /** Their email address. */
   email: string;
+  /**
+   * Whether a staff member is signed in as this user: the menu then says so,
+   * and "Back to my account" takes Sign out's place (signing out would end
+   * the staff member's own session).
+   */
+  signedInAs?: boolean;
 }
 
 /**
@@ -54,10 +63,12 @@ interface AccountMenuProps {
  * @param props - Menu props.
  * @param props.name - The user's name.
  * @param props.email - Their email address.
+ * @param props.signedInAs - Whether a staff member is signed in as the user.
  * @returns The account menu.
  */
-export default function AccountMenu({ name, email }: AccountMenuProps) {
+export default function AccountMenu({ name, email, signedInAs = false }: AccountMenuProps) {
   const t = useTranslations('navigation');
+  const { goBack } = useBackToOwnAccount();
   const router = useRouter();
   const { preference, setPreference } = useThemePreference();
   const shownName = displayName({ name, email });
@@ -90,6 +101,11 @@ export default function AccountMenu({ name, email }: AccountMenuProps) {
         <span className="flex min-w-0 flex-1 flex-col">
           {/* Part of the button's name, which then contains its visible text (WCAG 2.5.3). */}
           <span className="sr-only">{t('accountMenu')}</span>
+          {signedInAs && (
+            <span className="truncate text-xs font-medium text-warning">
+              {t('signedInAs.menuLabel')}
+            </span>
+          )}
           <span className="truncate text-sm font-medium text-foreground">{shownName}</span>
           <span className="truncate text-xs text-muted-foreground">{email}</span>
         </span>
@@ -106,10 +122,17 @@ export default function AccountMenu({ name, email }: AccountMenuProps) {
         <MenuSeparator />
         <ThemeMenuRow preference={preference} onChange={setPreference} />
         <MenuSeparator />
-        <MenuItem onSelect={signOut}>
-          <LogOut aria-hidden="true" />
-          {t('signOut')}
-        </MenuItem>
+        {signedInAs ? (
+          <MenuItem onSelect={goBack}>
+            <Undo2 aria-hidden="true" />
+            {t('signedInAs.back')}
+          </MenuItem>
+        ) : (
+          <MenuItem onSelect={signOut}>
+            <LogOut aria-hidden="true" />
+            {t('signOut')}
+          </MenuItem>
+        )}
       </MenuContent>
     </MenuRoot>
   );

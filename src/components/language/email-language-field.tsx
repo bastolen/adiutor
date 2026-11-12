@@ -25,6 +25,8 @@ interface EmailLanguageFieldProps {
    * language) and is chosen; otherwise the sender's own language is.
    */
   defaultLocale?: Locale | null;
+  /** Turn the field off, e.g. while changes are turned off. */
+  disabled?: boolean;
 }
 
 /**
@@ -34,11 +36,13 @@ interface EmailLanguageFieldProps {
  * @param props - Field props.
  * @param props.purpose - What the language is for, which the hint says.
  * @param props.defaultLocale - Adiutor's default language, to offer Default.
+ * @param props.disabled - Turn the field off.
  * @returns The field.
  */
 export default function EmailLanguageField({
   purpose,
   defaultLocale = null,
+  disabled = false,
 }: EmailLanguageFieldProps) {
   const t = useTranslations('common.language');
   const locale = useLocale();
@@ -50,6 +54,7 @@ export default function EmailLanguageField({
       options={defaultLocale ? choices : LANGUAGE_OPTIONS}
       defaultValue={defaultLocale ? FOLLOW_DEFAULT : locale}
       description={purpose === 'invitation' ? t('emailHintInvitation') : t('emailHintAccount')}
+      disabled={disabled}
     />
   );
 }

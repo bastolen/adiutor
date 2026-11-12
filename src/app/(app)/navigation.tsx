@@ -22,6 +22,7 @@ export default async function Navigation() {
         name={actor.name}
         email={actor.email}
         sections={staffSectionKeys(getGlobalPermissions(actor))}
+        signedInAs={actor.signedInAs !== null}
       />
     </ClientMessages>
   );

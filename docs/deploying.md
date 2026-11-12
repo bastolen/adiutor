@@ -267,7 +267,8 @@ traffic from Cloudflare's addresses.
 `pnpm jobs:run` (`scripts/run-jobs.ts`) runs the jobs once: it deletes expired sign-in links, codes
 and sessions, finished rate-limit windows, sign-in errors and other recorded errors older than 7
 days and audit events older than a year, clears provider
-tokens a failed sign-in left behind, and sends invitation reminders. It's safe to run again at any time. A reminder
+tokens a failed sign-in left behind, ends (and records) staff sign-ins as a user whose time is up or
+whose staff session is gone, and sends invitation reminders. It's safe to run again at any time. A reminder
 that can't be sent is undone (the invitation keeps its old link, which still works) and tried again
 on the next run; the run still finishes the other jobs and reminders, then exits with 1, so cron's
 mail or your monitoring tells you the mail setup is broken. In production, run it hourly from cron:

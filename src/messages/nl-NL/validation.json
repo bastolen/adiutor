@@ -37,6 +37,11 @@
       "controlCharacters": "Haal regeleinden en besturingstekens uit de naam van de passkey.",
       "hiddenCharacters": "Haal onzichtbare tekens en tekens voor de tekstrichting uit de naam van de passkey."
     },
+    "impersonationReason": {
+      "tooLong": "Gebruik maximaal {maximum, number} tekens voor de reden.",
+      "controlCharacters": "Haal regeleinden en besturingstekens uit de reden.",
+      "hiddenCharacters": "Haal onzichtbare tekens en tekens voor de tekstrichting uit de reden."
+    },
     "slug": {
       "format": "Gebruik kleine letters, cijfers en streepjes in de URL-naam, bijvoorbeeld adiutor.",
       "looksLikeId": "Kies een URL-naam die niet op een ID lijkt.",

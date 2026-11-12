@@ -140,6 +140,11 @@ keyboard support.
   centered, with "Go to your dashboard" ("Go to sign in" for someone who isn't signed in) and a
   "Go back" button (`BackButton`, shown only when the tab has a previous page).
   Every page has a "Skip to main content" link, one `h1` and `header`/`nav`/`main` landmarks.
+  The skip link moves focus to `<main id="main">` from script (`focusMainContent` in
+  `src/components/ui/focus-fallback.ts`). The main content is focusable only then, until focus
+  leaves it: with a lasting `tabIndex={-1}`, a click in the content on something that can't take
+  focus, like a disabled field, would hand focus to it, and Chrome then draws a blinking text
+  cursor in the field.
 - **Errors:** when a page or server action fails unexpectedly, an error page takes the page's
   place, built like the 404 pages: "Something went wrong", "This page couldn't load. Try again, or
   go to your dashboard.", **Try again** (busy while the page loads again), **Go to your dashboard**
@@ -168,7 +173,19 @@ keyboard support.
   control that had focus (a removed row, "Make staff" becoming "Remove staff access", turning
   two-step verification off, a dismissed notice), focus moves to the heading of its card (card
   headings take focus from script, `tabIndex={-1}`) or, outside a card, to the main content
-  (`restoreFocusIfLost` in `src/components/ui/focus-fallback.ts`), never to `<body>`.
+  (`restoreFocusIfLost` in `src/components/ui/focus-fallback.ts`, which focuses it with
+  `focusMainContent`), never to `<body>`.
+  - **Signed in as someone.** While a staff member is signed in as a user, the controls that change
+    something render disabled, and the banner says changes are turned off (see
+    [Signing in as a user](authentication.md#signing-in-as-a-user)). The banner mounts
+    `SignedInAsMarker`, and controls read `useSignedInAs` (`src/components/ui/signed-in-as.tsx`).
+    `RowAction`, `ActionDialog` and `RoleSelect` do it themselves; pass `allowedWhileSignedInAs`
+    for the user's own work. Forms that change something pass the hook's value as `disabled` to
+    each field, select and submit button, so the attribute is on the control itself (Radix selects
+    read their own `disabled`). They also wrap their contents in `ChangesFieldset`, a disabled
+    fieldset then, which turns off anything a form missed, without a box or a group of its own.
+    Reads (search, filters, sorting, paging) stay as they are. The server refuses changes
+    either way, so a control that misses this still changes nothing.
   - **Card anchors.** A `Card` whose controls can send the user away and back (a confirmation, a
     provider, an emailed link) gets an `id`, a section ID like `invitations` (see
     [Coming back to where you were](authentication.md#coming-back-to-where-you-were)). The

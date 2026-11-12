@@ -218,6 +218,91 @@ it. They get no sign-in or reset emails. The invitations and invite links they s
 for anyone who loses the right to manage (see
 [Rights checked when the change is made](companies-and-roles.md#staff-screens)).
 
+## Signing in as a user
+
+Staff Admins, Managers and Support can sign in as a user. They then see Adiutor the way that user
+does, to check what isn't working for them. The reasons are in
+[decision 0017](decisions/0017-staff-sign-in-as-users.md). Who may sign in as whom is decided by
+`mayImpersonate` in `src/lib/authz/impersonation.ts`:
+
+- staff Admins: anyone but staff Admins;
+- Managers: company users;
+- Support: company users who aren't an Admin in any company;
+- nobody: themselves, a deactivated account, or a user who turned sign-ins by staff off (see
+  [Security](#security-accountsecurity)).
+
+- **Starting** (`startImpersonation` in `src/server/auth/impersonation.ts`):
+  - It starts from the **Sign in as user** card on the user's page (see
+    [Staff screens](companies-and-roles.md#staff-screens)). Its dialog asks for an optional reason,
+    then opens the dashboard as the user (`signInAsAction`, which refreshes the layout too). The
+    card says why when it isn't possible.
+  - It needs strong MFA on the staff member's own account: an authenticator app, a passkey or
+    provider MFA, never email codes (`hasStrongMfa`). It also needs a confirmation with it from the
+    last 15 minutes, whatever their role (`strongMfaConfirmedUntil`).
+  - It's limited to 10 an hour per staff member.
+  - It decides again with both users' rows locked.
+  - It records `impersonation_started` with the optional reason, which has at most 200 characters
+    and is shown only to staff.
+  - It emails the user the `impersonation_started` security notice, which names the staff member
+    but not their device.
+- **The session stays the staff member's.**
+  - An `impersonation` row marks it for 30 minutes (`IMPERSONATION_MINUTES`). Better Auth never
+    gets a session for the user.
+  - On every request, `getOptionalActor` reads that row alongside the staff member, checks again
+    (the time, the rules, and that the staff member's session still counts as MFA), and returns
+    the user with `signedInAs` set (`actorSignedInAs`).
+  - One that's over ends after the response (`impersonation_ended` with `expired` or
+    `no_longer_allowed`), and the request goes on as the staff member.
+  - Only the staff member is recorded as active.
+  - The user's session facts (`sessionId`, `sessionMfaVerified`, `mfaConfirmedUntil`,
+    `signedInAt`) are empty, so `getActor()` never sends the staff member to the step-up page, and
+    the step-up page sends them to the dashboard. It still sends them to the Security page when the
+    user must set up MFA, as it would the user.
+- **On screen:**
+  - A banner at the top of every page says whom they're signed in as, that changes are turned
+    off, and when it ends, with **Back to my account** (`SignedInAsBanner` in the app's layout). It
+    stays in view while the page scrolls, and it's the first thing in the content for the skip link
+    and screen readers.
+  - The controls that change something render disabled meanwhile, and so do the fields and
+    dropdowns of forms that change something (`useSignedInAs`, with `ChangesFieldset` as a safety
+    net, see
+    [Design](design.md#design-and-accessibility)).
+  - The account menu shows the user, labelled "Signed in as". **Back to my account** takes Sign
+    out's place there, since signing out would end the staff member's own session.
+  - Back to my account (`backToOwnAccountAction`, `stopSigningInAs`) records `impersonation_ended`
+    with `stopped`. It returns to where the staff member started (the user's page, at the card),
+    with a toast.
+- **Nothing changes in the user's name.**
+  - Every service that changes something calls `assertNotSignedInAs` first (code `signed_in_as`:
+    "This can't be changed while you're signed in as someone else."). The server actions that call
+    Better Auth themselves, or send the user to confirm before a service would refuse, call it
+    before that.
+  - The auth guards refuse every Better Auth endpoint for such a session except reading the
+    session and signing out (`refuseWhileSignedInAs`, code `SIGNED_IN_AS_SOMEONE`). Those
+    endpoints would act on the staff member's own account.
+  - Only the user's own work stays allowed: today, hiding the dashboard's MFA tip; later, the
+    request features. Those record the staff member, which only staff with `audit:view` and the
+    user see.
+  - The authorization matrix tries every change with a staff member signed in as the acting user.
+- **The user's account pages** (Profile and Security) show as the user sees them, read-only, with a
+  note at the top. Their controls are off, like everywhere else. They show only the personal details
+  the staff member sees on the user's page (`personalDataShown` in
+  `src/lib/authz/impersonation.ts`, from `signedInAs.staffPermissions`):
+  - the signed-in devices and the passkeys' names: staff Admins only (`users:manage`);
+  - the provider accounts' names: staff Admins only (`users:manage`);
+  - the IP address and browser in the recent activity: staff who see the audit log
+    (`audit:view`).
+
+  The note says when something is left out, with a link to the user's page. On the Security page,
+  it also says when the user must set up MFA first.
+
+- **Ending:**
+  - It ends after its 30 minutes, when the staff member's session ends (signing out included), or
+    when either person's rights change.
+  - The hourly job ends and records those nobody came back to (see
+    [Background jobs](deploying.md#background-jobs)).
+  - Errors reported while signed in as someone are recorded for the staff member.
+
 ## Account pages
 
 Account pages, two tabs:
@@ -229,7 +314,8 @@ browser you sign in on shows it; see [Languages](i18n.md#how-the-language-is-cho
 your email with a link sent by email (registered accounts start unverified). A summary shows whether your sign-in is
 protected, and **Recent activity** lists the last 20 things that happened to your account
 (sign-ins and failed attempts, sign-in method and security changes, memberships and role
-changes, saying who made changes for you), with when, and the device and IP address of your
+changes, saying who made changes for you, and staff signing in as you and ending it, naming
+them), with when, and the device and IP address of your
 own actions only: not of an admin's changes, nor of passwords typed for your address (wrong
 ones, or right ones whose sign-in then asked for the code) and wrong codes typed at that code step
 ("Wrong two-step verification code entered at sign-in", see
@@ -285,6 +371,11 @@ whole sentence per event, with who made the change, if not you, where each langu
   when, and an "MFA Verified" badge when that sign-in had MFA), with "Sign out" per device and "Sign out other
   devices". Both also forget every browser you trusted at the code step, this one included (see
   [Signing out](#signing-out)).
+- **Sign-ins by staff:** whether staff may sign in as you (see
+  [Signing in as a user](#signing-in-as-a-user)): on by default, with **Turn off** and **Turn on**
+  (`setStaffSignInAllowed`, recorded as `staff_sign_in_turned_off` or `staff_sign_in_turned_on`).
+  Turning it off ends a sign-in as you that's under way. The email you get when someone signs in as
+  you links here (`#staff-sign-in`).
 - **Deactivate account:** signs you out everywhere and blocks sign-in until an Admin reactivates
   it; nothing is deleted. Like the changes above, it needs a recent confirmation once the account
   has a second step (starting it without one sends you to the step-up page first). It also needs

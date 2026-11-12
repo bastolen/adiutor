@@ -12,6 +12,7 @@ import {
   NO_STEP_UP_METHODS,
   type StepUpMethods,
   stepUpMethods,
+  strongStepUpMethods,
   windowOpeningMethods,
 } from '@/lib/authz/mfa';
 import { availableProviders } from '@/lib/sign-in/providers';
@@ -85,23 +86,30 @@ export async function getSecurityOverview(
  * change to how they sign in, only the methods that open the window for it
  * are offered (`windowOpeningMethods`): not GitHub next to a passkey or an
  * authenticator app, where it would confirm the session but allow no change.
+ * To confirm with a strong second step whatever the role (before signing in
+ * as someone), only those that open that window are (`strongStepUpMethods`):
+ * never email codes.
  *
  * @param ctx - Service context.
  * @param userId - The signed-in user's ID.
  * @param mfaRole - Which MFA rules apply to them (see `mfaRoleOf`), or `null`.
  * @param options - Options.
  * @param options.forChange - Whether the confirmation is for a change to how they sign in.
+ * @param options.strong - Whether it must be a strong second step whatever the role.
  * @returns The available methods.
  */
 export async function getStepUpMethods(
   ctx: Pick<ServiceContext, 'db'>,
   userId: string,
   mfaRole: MfaRole | null,
-  { forChange = false }: { forChange?: boolean } = {},
+  { forChange = false, strong = false }: { forChange?: boolean; strong?: boolean } = {},
 ): Promise<StepUpMethods> {
   const state = (await loadMfaStates(ctx.db, [userId])).get(userId);
   if (!state) {
     return NO_STEP_UP_METHODS;
+  }
+  if (strong) {
+    return strongStepUpMethods(state, availableProviders);
   }
   const methods = stepUpMethods(state, mfaRole, availableProviders);
   return forChange ? windowOpeningMethods(methods) : methods;

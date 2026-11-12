@@ -13,6 +13,7 @@ import type { DatabaseOrTransaction } from '@/db';
 import { session, user } from '@/db/schema';
 import { normalizeEmail } from '@/lib/email-address';
 
+import { assertNotSignedInAs } from '../access';
 import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
 import type { ServiceContext } from '../context';
@@ -65,6 +66,7 @@ export async function revokeOwnSession(
   actor: Actor,
   sessionId: string,
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   const id = parseId(sessionId);
   if (id === actor.sessionId) {
     throw new ServiceError('invalid', 'errors.sessions.currentDevice');
@@ -96,6 +98,7 @@ export async function revokeOwnSession(
  * @returns How many devices were signed out.
  */
 export async function revokeOtherOwnSessions(ctx: ServiceContext, actor: Actor): Promise<number> {
+  assertNotSignedInAs(actor);
   return ctx.db.transaction(async (tx) => {
     const count = await endSessionsOf(tx, actor.id, { except: actor.sessionId });
     await recordEvent(

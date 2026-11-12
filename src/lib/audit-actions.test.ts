@@ -66,8 +66,28 @@ describe('describeAuditEvent', () => {
     );
   });
 
+  it('says why a sign-in as a user ended, unless the staff member went back', () => {
+    expect(t(describeAuditEvent('impersonation_ended', { reason: 'expired' }))).toBe(
+      'Sign-in as a user ended when its time was up',
+    );
+    expect(t(describeAuditEvent('impersonation_ended', { reason: 'no_longer_allowed' }))).toBe(
+      'Sign-in as a user ended because it was no longer allowed',
+    );
+    expect(t(describeAuditEvent('impersonation_ended', { reason: 'session_ended' }))).toBe(
+      'Sign-in as a user ended with the staff member’s own session',
+    );
+    expect(t(describeAuditEvent('impersonation_ended', { reason: 'stopped' }))).toBe(
+      'Went back from signing in as a user',
+    );
+    // A detail that only looks like a reason (an object's own property names) is just the label.
+    expect(t(describeAuditEvent('impersonation_ended', { reason: 'constructor' }))).toBe(
+      'Went back from signing in as a user',
+    );
+  });
+
   it('uses the label for everything else', () => {
     expect(t(describeAuditEvent('role_changed', { mfaRequired: true }))).toBe('Changed a role');
+    expect(t(describeAuditEvent('sign_in', { reason: 'expired' }))).toBe('Signed in');
   });
 });
 

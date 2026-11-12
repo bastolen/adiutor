@@ -42,7 +42,6 @@ export default function CenteredLayout({ children }: CenteredLayoutProps) {
       </header>
       <main
         id="main"
-        tabIndex={-1}
         // From tablet width the space below keeps the content clear of the floating button.
         className="flex flex-1 items-center justify-center px-6 pt-8 pb-8 outline-none md:pb-24"
       >

@@ -82,6 +82,8 @@
       "accountReactivated": "{by, select, self {Cuenta reactivada} admin {Un administrador reactivó tu cuenta} other {{name} reactivó tu cuenta}}",
       "mfaReset": "{by, select, self {Verificación en dos pasos restablecida} admin {Un administrador restableció tu verificación en dos pasos} other {{name} restableció tu verificación en dos pasos}}",
       "accountCreated": "{by, select, self {Cuenta creada} admin {Un administrador creó tu cuenta} other {{name} creó tu cuenta}}",
+      "impersonationStarted": "{by, select, self {Alguien del personal inició sesión como tú} admin {Alguien del personal inició sesión como tú} other {{name}, del personal, inició sesión como tú}}",
+      "impersonationEnded": "{by, select, self {Alguien del personal ya no tiene la sesión iniciada como tú} admin {Alguien del personal ya no tiene la sesión iniciada como tú} other {{name} ya no tiene la sesión iniciada como tú}}",
       "addedToStaff": "{by, select, self {Se te añadió al personal como {role}} admin {Un administrador te añadió al personal como {role}} other {{name} te añadió al personal como {role}}}",
       "addedToCompany": "{by, select, self {Se te añadió a {company} como {role}} admin {Un administrador te añadió a {company} como {role}} other {{name} te añadió a {company} como {role}}}",
       "joinedStaff": "Se te añadió al personal",
@@ -241,7 +243,22 @@
         "dialogTitle": "¿Desactivar tu cuenta?",
         "dialogDescription": "Se cerrará tu sesión en todos los dispositivos de inmediato. Para volver a usar Adiutor, pide a un Administrador que reactive tu cuenta.",
         "confirm": "Desactivar mi cuenta"
+      },
+      "staffSignIn": {
+        "title": "Inicio de sesión del personal",
+        "description": "{minutes, plural, one {El personal de Adiutor puede iniciar sesión como tú durante # minuto como máximo, para ver lo que ves y comprobar qué no te funciona. No puede cambiar nada mientras lo hace, y recibes un correo cada vez.} other {El personal de Adiutor puede iniciar sesión como tú durante # minutos como máximo, para ver lo que ves y comprobar qué no te funciona. No puede cambiar nada mientras lo hace, y recibes un correo cada vez.}}",
+        "on": "Activado",
+        "off": "Desactivado",
+        "turnOff": "Desactivar",
+        "turnOn": "Activar",
+        "turnedOff": "Inicio de sesión del personal desactivado.",
+        "turnedOn": "Inicio de sesión del personal activado."
       }
+    },
+    "signedInAs": {
+      "note": "Estás viendo las páginas de cuenta de {name} tal como las ve. No se puede cambiar nada aquí mientras has iniciado sesión como esa persona.",
+      "leftOut": "Algunos de sus datos personales se omiten, como en <link>su página de usuario</link>.",
+      "mustSetUpMfa": "{name} tiene que configurar MFA antes de poder usar Adiutor, así que esta página Seguridad es la que ve ahora."
     }
   }
 }

@@ -24,6 +24,8 @@ import {
   passwordSchema,
 } from '@/lib/validation';
 
+import { assertNotSignedInAs } from '../../access';
+import { type Actor } from '../../actor';
 import { recordEvent } from '../../audit';
 import { withMfaPromotion } from '../../auth/mfa-promotion';
 import addPasswordCredential from '../../auth/password-credential';
@@ -262,8 +264,10 @@ export type AcceptResult =
  *   that came from an invite link.
  * @param signedIn.sessionId - The session they accept it with, which stays when the new role
  *   requires MFA (see `joinTarget`).
+ * @param signedIn.signedInAs - The staff member signed in as them, if any: they accept nothing.
  * @returns What happened.
- * @throws {ServiceError} `forbidden` for Finance and Support with an invitation from a link.
+ * @throws {ServiceError} `forbidden` for Finance and Support with an invitation from a link;
+ *   `signed_in_as` while a staff member is signed in as them.
  */
 export async function acceptInvitation(
   ctx: ServiceContext,
@@ -273,8 +277,10 @@ export async function acceptInvitation(
     email: string;
     platformRole: PlatformRole | null;
     sessionId?: string | null;
+    signedInAs?: Actor['signedInAs'];
   },
 ): Promise<AcceptResult> {
+  assertNotSignedInAs(signedIn);
   const { result, newStaffAdmin } = await ctx.db.transaction(
     async (tx): Promise<{ result: AcceptResult; newStaffAdmin: StaffAdminAdded | null }> => {
       const found = await findUsableInvitation(tx, token, true);

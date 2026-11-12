@@ -8,6 +8,7 @@ import { company, membership, user } from '@/db/schema';
 import {
   canConfirmSessions,
   hasMfa,
+  hasStrongMfa,
   isSessionMfaVerified,
   mfaConfirmedUntil,
   type MfaRole,
@@ -16,11 +17,36 @@ import {
   requiresMfa,
   type SessionMfaInput,
   sessionMfaOf,
+  strongMfaConfirmedUntil,
 } from '@/lib/authz/mfa';
+import type { Permission } from '@/lib/authz/permissions';
 import { COMPANY_ADMIN_ROLE, type CompanyRole, type PlatformRole } from '@/lib/authz/roles';
 import { availableProviders } from '@/lib/sign-in/providers';
 
 import { loadMfaStates } from './auth/mfa-state';
+
+/**
+ * A staff member signed in as the user ("Sign in as", see
+ * docs/decisions/0017-staff-sign-in-as-users.md): the session is the staff
+ * member's, and the app acts as the user while it lasts, refusing changes
+ * (`assertNotSignedInAs`).
+ */
+export interface SignedInAs {
+  /** The staff member's user ID. */
+  staffId: string;
+  /** The staff member's name (or email address, without one). */
+  staffName: string;
+  /** When it ends by itself. */
+  endsAt: Date;
+  /** The page of the app the staff member goes back to afterwards. */
+  returnTo: string;
+  /**
+   * The staff member's own global permissions, so the user's account pages
+   * show only what the staff member sees on the user's page
+   * (`personalDataShown`).
+   */
+  staffPermissions: Permission[];
+}
 
 /**
  * A signed-in user with their roles. Plain data, so it can be passed to
@@ -80,14 +106,42 @@ export interface Actor {
    */
   mfaConfirmedUntil: Date | null;
   /**
+   * Whether their account has strong MFA whatever their role (an
+   * authenticator app, a passkey or provider MFA, never email codes; see
+   * `hasStrongMfa`), which signing in as someone else needs.
+   */
+  strongMfa: boolean;
+  /**
+   * Until when the current session counts as recently confirmed with a strong
+   * second step whatever their role (see `strongMfaConfirmedUntil`), or
+   * `null`: signing in as someone else needs it.
+   */
+  strongMfaConfirmedUntil: Date | null;
+  /**
    * When the current session signed in (`session.createdAt`), or `null`
    * outside a request (see `needsFreshSignIn`).
    */
   signedInAt: Date | null;
-  /** The current session's ID, or `null` outside a request. */
+  /**
+   * The current session's ID, or `null` outside a request and while a staff
+   * member is signed in as the user (the session is theirs, not the user's).
+   */
   sessionId: string | null;
   /** When the account was deactivated, or `null` while it's active. */
   deactivatedAt: Date | null;
+  /**
+   * Whether staff may sign in as the user (`user.allow_staff_sign_in`): on
+   * unless they turned it off on their Security page.
+   */
+  allowStaffSignIn: boolean;
+  /**
+   * The staff member signed in as this user in the current session, or
+   * `null` when the user signed in themselves. While it's set, every change
+   * is refused (`assertNotSignedInAs`), and the session facts above
+   * (`sessionMfaVerified`, `mfaConfirmedUntil`, `signedInAt`, `sessionId`)
+   * are empty: the session isn't the user's.
+   */
+  signedInAs: SignedInAs | null;
 }
 
 /**
@@ -123,6 +177,7 @@ export async function loadActor(
         emailVerified: user.emailVerified,
         deactivatedAt: user.deactivatedAt,
         platformRole: user.platformRole,
+        allowStaffSignIn: user.allowStaffSignIn,
       })
       .from(user)
       .where(eq(user.id, userId)),
@@ -150,6 +205,8 @@ export async function loadActor(
   const sessionMfa = sessionMfaOf(session);
   return {
     ...found,
+    // On unless turned off (a row from before the setting existed counts as on).
+    allowStaffSignIn: found.allowStaffSignIn !== false,
     platformRole,
     memberships: Object.fromEntries(rows.map((row) => [row.companyId, row.role])),
     mfaRole,
@@ -163,8 +220,12 @@ export async function loadActor(
     // A provider's confirmation is judged by the setup (`hasStrongerStepThanProvider`); without one
     // there's no second step to have confirmed with.
     mfaConfirmedUntil: mfaState ? mfaConfirmedUntil(sessionMfa, mfaRole, mfaState) : null,
+    strongMfa: mfaState ? hasStrongMfa(mfaState, availableProviders) : false,
+    strongMfaConfirmedUntil: mfaState ? strongMfaConfirmedUntil(sessionMfa, mfaState) : null,
     signedInAt: session.createdAt ? new Date(session.createdAt) : null,
     sessionId: session.id ?? null,
+    // Set by `getOptionalActor` when the session belongs to a staff member signed in as the user.
+    signedInAs: null,
   };
 }
 

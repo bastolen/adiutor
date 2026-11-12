@@ -18,6 +18,8 @@ interface DefaultLanguageFieldProps {
   defaultValue: Locale;
   /** Help text under the field, if any. */
   description?: string;
+  /** Turn the field off, e.g. while changes are turned off. */
+  disabled?: boolean;
 }
 
 /**
@@ -27,11 +29,13 @@ interface DefaultLanguageFieldProps {
  * @param props - Field props.
  * @param props.defaultValue - The language chosen to begin with.
  * @param props.description - Help text under the field.
+ * @param props.disabled - Turn the field off.
  * @returns The field.
  */
 export default function DefaultLanguageField({
   defaultValue,
   description = undefined,
+  disabled = false,
 }: DefaultLanguageFieldProps) {
   const t = useTranslations('common.language');
   return (
@@ -41,6 +45,7 @@ export default function DefaultLanguageField({
       options={LANGUAGE_OPTIONS}
       defaultValue={defaultValue}
       description={description}
+      disabled={disabled}
       className="sm:max-w-xs"
     />
   );

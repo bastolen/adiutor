@@ -16,6 +16,7 @@ import type { ActionResult } from '@/lib/action-result';
 import Button, { type ButtonProps } from './button';
 import ConfirmDialog from './confirm-dialog';
 import restoreFocusIfLost from './focus-fallback';
+import { useSignedInAs } from './signed-in-as';
 import { useToast } from './toast';
 import { useTransientActionState } from './use-transient-state';
 
@@ -53,6 +54,12 @@ interface RowActionProps {
    * jane@adiutor.test revoked."). Defaults to the action's message.
    */
   doneMessage?: string;
+  /**
+   * Whether the action is the user's own work, which stays allowed while a
+   * staff member is signed in as them (see `useSignedInAs`). Every other
+   * action renders disabled then, as the server refuses it.
+   */
+  allowedWhileSignedInAs?: boolean;
 }
 
 /**
@@ -75,6 +82,7 @@ interface RowActionProps {
  * @param props.onClick - Runs on click, before the action starts.
  * @param props.describedBy - ID of the text that explains the button.
  * @param props.doneMessage - The toast after it worked; defaults to the action's message.
+ * @param props.allowedWhileSignedInAs - Keep it enabled while signed in as the user (their own work).
  * @returns The form.
  */
 export default function RowAction({
@@ -88,8 +96,10 @@ export default function RowAction({
   onClick = undefined,
   describedBy = undefined,
   doneMessage = undefined,
+  allowedWhileSignedInAs = false,
 }: RowActionProps) {
   const showToast = useToast();
+  const changesOff = useSignedInAs() && !allowedWhileSignedInAs;
   // Set once the action worked, so the row going away afterwards can move focus.
   const succeeded = useRef(false);
 
@@ -128,7 +138,7 @@ export default function RowAction({
       variant={variant}
       size="sm"
       loading={pending}
-      disabled={disabled}
+      disabled={disabled || changesOff}
       aria-label={ariaLabel}
       aria-describedby={describedBy}
       onClick={onClick}

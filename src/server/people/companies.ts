@@ -19,6 +19,7 @@ import {
   type Company,
   getCompanyAccess,
   getGlobalPermissions,
+  assertNotSignedInAs,
 } from '../access';
 import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
@@ -107,6 +108,7 @@ export async function registerCompany(
   actor: Actor,
   input: { name: string; slug: string; adminEmail: string; locale?: Locale },
 ): Promise<{ companyId: string; slug: string; inviteStatus: InviteStatus }> {
+  assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'company:create');
   const name = companyNameSchema.parse(input.name);
   const slug = slugSchema.parse(input.slug);
@@ -174,6 +176,7 @@ export async function updateCompany(
   actor: Actor,
   input: { companyId: string; name: string; slug: string },
 ): Promise<{ slug: string; slugChanged: boolean }> {
+  assertNotSignedInAs(actor);
   const access = await getCompanyAccess(ctx.db, actor, input.companyId);
   assertPermission(access.permissions, 'company:update');
   const name = companyNameSchema.parse(input.name);
@@ -222,6 +225,7 @@ export async function setCompanyActive(
   actor: Actor,
   input: { companyId: string; active: boolean },
 ): Promise<void> {
+  assertNotSignedInAs(actor);
   const access = await getCompanyAccess(ctx.db, actor, input.companyId);
   assertPermission(access.permissions, 'company:deactivate');
   await ctx.db.transaction(async (tx) => {

@@ -14,6 +14,7 @@ import EmailLanguageField from '@/components/language/email-language-field';
 import Alert from '@/components/ui/alert';
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
+import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
 import TextField from '@/components/ui/text-field';
 import { useTransientState, useTransientActionState } from '@/components/ui/use-transient-state';
 import type { Locale } from '@/lib/i18n/locales';
@@ -36,6 +37,8 @@ import registerCompanyAction from './actions';
  */
 export default function RegisterCompanyForm({ defaultLocale }: { defaultLocale: Locale }) {
   const t = useTranslations('admin.addCompany.form');
+  // Changes are turned off while a staff member is signed in as the user.
+  const changesOff = useSignedInAs();
   const tPeople = useTranslations('people');
   const [result, formAction, pending, onSubmit] = useTransientActionState(
     registerCompanyAction,
@@ -65,54 +68,63 @@ export default function RegisterCompanyForm({ defaultLocale }: { defaultLocale: 
 
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-4">
-      {confirmFirst && <ConfirmFirstNote>{tPeople('confirmBeforeGrant')}</ConfirmFirstNote>}
-      <ResultAlert result={result} errorsOnly />
-      <TextField
-        label={t('nameLabel')}
-        name="name"
-        maxLength={NAME_MAX_LENGTH}
-        required
-        autoComplete="off"
-        placeholder={t('namePlaceholder')}
-        value={name}
-        onChange={(event) => {
-          setName(event.target.value);
-          if (!slugEdited) {
-            setSlug(slugify(event.target.value));
-          }
-        }}
-      />
-      <TextField
-        label={t('slugLabel')}
-        name="slug"
-        maxLength={SLUG_MAX_LENGTH}
-        required
-        autoComplete="off"
-        spellCheck={false}
-        description={t('slugDescription', { slug: slug || 'adiutor' })}
-        value={slug}
-        onChange={(event) => {
-          setSlug(event.target.value);
-          setSlugEdited(true);
-        }}
-      />
-      <TextField
-        label={t('emailLabel')}
-        type="email"
-        name="adminEmail"
-        autoComplete="off"
-        placeholder={t('emailPlaceholder')}
-        description={t('emailDescription')}
-        required
-      />
-      <EmailLanguageField purpose="invitation" defaultLocale={defaultLocale} />
-      {!confirmFirst && (
-        <div>
-          <Button type="submit" loading={pending}>
-            {t('submit')}
-          </Button>
-        </div>
-      )}
+      <ChangesFieldset>
+        {confirmFirst && <ConfirmFirstNote>{tPeople('confirmBeforeGrant')}</ConfirmFirstNote>}
+        <ResultAlert result={result} errorsOnly />
+        <TextField
+          label={t('nameLabel')}
+          name="name"
+          maxLength={NAME_MAX_LENGTH}
+          required
+          autoComplete="off"
+          placeholder={t('namePlaceholder')}
+          value={name}
+          onChange={(event) => {
+            setName(event.target.value);
+            if (!slugEdited) {
+              setSlug(slugify(event.target.value));
+            }
+          }}
+          disabled={changesOff}
+        />
+        <TextField
+          label={t('slugLabel')}
+          name="slug"
+          maxLength={SLUG_MAX_LENGTH}
+          required
+          autoComplete="off"
+          spellCheck={false}
+          description={t('slugDescription', { slug: slug || 'adiutor' })}
+          value={slug}
+          onChange={(event) => {
+            setSlug(event.target.value);
+            setSlugEdited(true);
+          }}
+          disabled={changesOff}
+        />
+        <TextField
+          label={t('emailLabel')}
+          type="email"
+          name="adminEmail"
+          autoComplete="off"
+          placeholder={t('emailPlaceholder')}
+          description={t('emailDescription')}
+          required
+          disabled={changesOff}
+        />
+        <EmailLanguageField
+          purpose="invitation"
+          defaultLocale={defaultLocale}
+          disabled={changesOff}
+        />
+        {!confirmFirst && (
+          <div>
+            <Button type="submit" loading={pending} disabled={changesOff}>
+              {t('submit')}
+            </Button>
+          </div>
+        )}
+      </ChangesFieldset>
     </form>
   );
 }

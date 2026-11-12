@@ -2,7 +2,8 @@
  * @file Tests for the account menu: it shows the stored theme in its theme
  * row and keeps following the system while closed (choosing a theme is
  * tested with the theme and language button, which uses the same row), and
- * it signs out.
+ * it signs out, or, while a staff member is signed in as the user, goes back
+ * to their own account instead.
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -12,11 +13,16 @@ import { THEME_STORAGE_KEY } from '@/lib/theme';
 
 import AccountMenu from './account-menu';
 
-/** Mocked router and sign-out. */
-const { replace, refresh, signOut } = vi.hoisted(() => ({
+/** Mocked router, sign-out and going back from signing in as someone. */
+const { replace, refresh, signOut, backToOwnAccount } = vi.hoisted(() => ({
   replace: vi.fn(),
   refresh: vi.fn(),
   signOut: vi.fn(async () => ({})),
+  backToOwnAccount: vi.fn(async () => ({
+    ok: true as const,
+    message: "You're back in your own account.",
+    data: { returnTo: '/admin/users/u1#sign-in-as' },
+  })),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -29,6 +35,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/lib/sign-in/auth-client', () => ({ default: { signOut } }));
+vi.mock('./impersonation-actions', () => ({ default: backToOwnAccount }));
 
 /**
  * Renders the menu for the test user and opens it.
@@ -97,6 +104,24 @@ describe('AccountMenu', () => {
 
     expect(signOut).toHaveBeenCalled();
     expect(replace).toHaveBeenCalledWith('/auth');
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it("goes back to the staff member's own account instead, while signed in as the user", async () => {
+    const user = userEvent.setup();
+    render(<AccountMenu name="Ada Tester" email="ada@adiutor.test" signedInAs />);
+    const button = screen.getByRole('button', { name: /^Account menu/ });
+    expect(button).toHaveTextContent('Signed in as');
+    await user.click(button);
+
+    expect(screen.queryByRole('menuitem', { name: 'Sign out' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('menuitem', { name: 'Back to my account' }));
+
+    await vi.waitFor(() => {
+      expect(replace).toHaveBeenCalledWith('/admin/users/u1#sign-in-as');
+    });
+    expect(backToOwnAccount).toHaveBeenCalled();
+    expect(signOut).not.toHaveBeenCalled();
     expect(refresh).toHaveBeenCalled();
   });
 });

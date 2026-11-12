@@ -40,6 +40,7 @@ export const user = pgTable('user', {
   mfaRecommendationDismissedAt: timestamp('mfa_recommendation_dismissed_at', {
     withTimezone: true,
   }),
+  allowStaffSignIn: boolean('allow_staff_sign_in').default(true),
 });
 
 /** Better Auth's `session` table. */

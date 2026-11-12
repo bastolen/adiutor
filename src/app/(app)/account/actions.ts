@@ -20,7 +20,7 @@ import { withSection } from '@/lib/redirect';
 import { nameSchema } from '@/lib/validation';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
-import { getActor } from '@/server/authz';
+import { assertNotSignedInAs, getActor } from '@/server/authz';
 import setOwnLocale from '@/server/people/own-locale';
 import { assertRateLimit, RATE_LIMITS } from '@/server/rate-limit';
 
@@ -70,7 +70,8 @@ export async function updateNameAction(
   formData: FormData,
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await getActor({ allowMissingMfa: true });
+    // Better Auth would rename the session's own user: a staff member signed in as someone.
+    assertNotSignedInAs(await getActor({ allowMissingMfa: true }));
     const name = nameSchema.parse(field(formData, 'name'));
     await auth.api.updateUser({ body: { name }, headers: await headers() });
     refresh();
@@ -89,6 +90,7 @@ export async function updateNameAction(
 export async function sendVerificationAction(): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor({ allowMissingMfa: true });
+    assertNotSignedInAs(actor);
     const t = await getTranslations('account');
     if (actor.emailVerified) {
       return { ok: true, message: t('profile.alreadyVerified') };

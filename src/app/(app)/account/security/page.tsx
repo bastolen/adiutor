@@ -1,7 +1,8 @@
 /**
  * @file The Security page of the account, served at `/account/security`:
  * passkeys, two-step verification, connected provider accounts,
- * password, signed-in devices and deactivating the account. Users whose role
+ * password, signed-in devices, whether staff may sign in as the user, and
+ * deactivating the account. Users whose role
  * requires MFA are sent here until they've set it up (a passkey or an
  * authenticator app; email codes don't count for them). Changing how they
  * sign in, and deactivating the account, needs a confirmation with their
@@ -9,7 +10,9 @@
  * them to the step-up page first (`RecentConfirmationProvider`), which comes
  * back to the card they started in (its anchor, e.g. `#passkeys`), as does
  * connecting GitHub or Google (`#connected-accounts`, where the card says how
- * it went).
+ * it went). A staff member signed in as the user sees it read-only, with a
+ * note, and the devices and the passkeys' and provider accounts' names only
+ * when they're a staff Admin (`personalDataShown`).
  */
 import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -19,6 +22,7 @@ import { RecentConfirmationProvider } from '@/components/auth/recent-confirmatio
 import Alert from '@/components/ui/alert';
 import Card from '@/components/ui/card';
 import { PageSkeleton } from '@/components/ui/skeleton';
+import { personalDataShown } from '@/lib/authz/impersonation';
 import {
   emailCodeStatus,
   mfaDowngradeBlocks,
@@ -41,11 +45,13 @@ import { serviceErrorMessage } from '@/server/errors';
 import { listUserSessions, soleAdminError, soleAdminOf } from '@/server/people/user-admin';
 
 import accountMessage from '../account-messages';
+import SignedInAsNote from '../signed-in-as-note';
 import ConnectedAccountsCard from './connected-accounts-card';
 import DeactivateCard from './deactivate-card';
 import PasskeysCard from './passkeys-card';
 import PasswordForm from './password-form';
 import SessionsCard from './sessions-card';
+import StaffSignInCard from './staff-sign-in-card';
 import TwoFactorCard from './two-factor-card';
 
 /**
@@ -68,6 +74,9 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 async function Security({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const actor = await getActor({ allowMissingMfa: true });
+  // A staff member signed in as the user sees the page read-only, with only the personal details
+  // they see on the user's page.
+  const shown = personalDataShown(actor);
   const [params, t, tAuth, locale] = await Promise.all([
     searchParams,
     getTranslations('account'),
@@ -100,7 +109,12 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
   const unconfirmed = connected
     .filter((link) => !link.confirmed)
     .map(({ id, provider, mfaVerified }) => ({ id, providerId: provider, mfaVerified }));
-  const links = connected.map(({ mfaVerified, ...link }) => link);
+  const links = connected.map(({ mfaVerified, ...link }) =>
+    shown.accountNames ? link : { ...link, accountName: null },
+  );
+  const passkeys = shown.devices
+    ? overview.passkeys
+    : overview.passkeys.map((passkey) => ({ ...passkey, name: null }));
   // Changes that would take away the MFA the user's role requires (the guards and services refuse
   // them too).
   const blocked = mfaDowngradeBlocks(
@@ -121,6 +135,7 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
 
   return (
     <>
+      {actor.signedInAs && <SignedInAsNote actor={actor} shown={shown} onSecurityPage />}
       {message && !showsConnectedAccounts && (
         <Alert tone={message.tone} focusOnShow>
           {message.text}
@@ -143,7 +158,7 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
         {...confirmationWindow(actor.mfaConfirmedUntil)}
       >
         <PasskeysCard
-          passkeys={overview.passkeys}
+          passkeys={passkeys}
           removeLastBlockedReason={blocked.lastPasskey ? t('security.keepLastPasskey') : null}
         />
         <TwoFactorCard
@@ -180,7 +195,14 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
             blockedReason={blocked.setPassword ? providerMfaOnly : null}
           />
         </Card>
-        <SessionsCard sessions={sessions} table={devicesTable} currentSessionId={actor.sessionId} />
+        {shown.devices && (
+          <SessionsCard
+            sessions={sessions}
+            table={devicesTable}
+            currentSessionId={actor.sessionId}
+          />
+        )}
+        <StaffSignInCard allowed={actor.allowStaffSignIn} />
         <DeactivateCard
           hasPassword={overview.mfaState.hasPassword}
           blockedReason={soleAdmin ? serviceErrorMessage(soleAdmin, locale) : null}

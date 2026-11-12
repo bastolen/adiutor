@@ -19,6 +19,7 @@ import {
   refuseInvalidPasskeyName,
 } from './request-checks';
 import { checkSignedIn } from './signed-in';
+import refuseWhileSignedInAs from './signed-in-as';
 
 /**
  * Reads the email address a request is about, lower-cased.
@@ -44,6 +45,8 @@ export async function beforeAuthRequest(ctx: AuthGuardContext): Promise<void> {
   // Any refusal below is worded in the request's language, with Adiutor's default for a
   // browser that chose none.
   await noteRefusalLocale(ctx, db);
+  // A staff member signed in as a user changes nothing through Better Auth, whatever the endpoint.
+  await refuseWhileSignedInAs(ctx, path);
 
   if (path === '/magic-link/verify') {
     // The confirmation page first: it passes only safe return addresses on.

@@ -5,7 +5,9 @@
  * the account (sign-ins and changes, from the audit log). Password, passkeys,
  * two-step verification and connected accounts are on the Security page. The
  * verification link comes back to the Email card (`#email`), which says
- * whether it worked.
+ * whether it worked. A staff member signed in as the user sees it read-only,
+ * with a note, and the activity's IP addresses and browsers only when they see
+ * the audit log (`personalDataShown`).
  */
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -20,6 +22,7 @@ import Card from '@/components/ui/card';
 import RowAction from '@/components/ui/row-action';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import ToastOnArrival from '@/components/ui/toast-on-arrival';
+import { personalDataShown } from '@/lib/authz/impersonation';
 import ClientMessages from '@/lib/i18n/client-messages';
 import appContext from '@/server/app-context';
 import { listOwnActivity } from '@/server/audit';
@@ -35,6 +38,7 @@ import { sendVerificationAction } from './actions';
 import LanguageForm from './language-form';
 import NameForm from './name-form';
 import describeOwnActivity from './own-activity';
+import SignedInAsNote from './signed-in-as-note';
 
 /**
  * Page metadata: "Account", in the request's language.
@@ -55,7 +59,10 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 async function AccountSettings({ searchParams }: { searchParams: Promise<AccountParams> }) {
   const actor = await getActor({ allowMissingMfa: true });
-  const [params, activity, language, t, tAuth, tAudit, tRoles] = await Promise.all([
+  // A staff member signed in as the user sees the page read-only, with only the personal details
+  // they see on the user's page.
+  const shown = personalDataShown(actor);
+  const [params, ownActivity, language, t, tAuth, tAudit, tRoles] = await Promise.all([
     searchParams,
     listOwnActivity(appContext, actor),
     ownLanguage(appContext, actor),
@@ -65,9 +72,13 @@ async function AccountSettings({ searchParams }: { searchParams: Promise<Account
     getTranslations('roles'),
   ]);
   const message = accountMessage(t, tAuth, params);
+  const activity = shown.origins
+    ? ownActivity
+    : ownActivity.map((event) => ({ ...event, ip: null, userAgent: null }));
 
   return (
     <>
+      {actor.signedInAs && <SignedInAsNote actor={actor} shown={shown} />}
       <Card
         title={t('profile.securityTitle')}
         description={

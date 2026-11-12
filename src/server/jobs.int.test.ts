@@ -73,6 +73,7 @@ describe('cleanUp', () => {
       signInErrors: 0,
       appErrors: 0,
       providerTokens: 0,
+      impersonations: 0,
     });
     expect((await db.select().from(session)).map(({ id }) => id)).toEqual([kept]);
     expect(await db.select().from(verification)).toHaveLength(1);

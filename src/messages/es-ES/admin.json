@@ -206,6 +206,25 @@
         "signedOut": "Sesión cerrada en todas partes.",
         "deactivated": "Cuenta desactivada.",
         "reactivated": "Cuenta reactivada."
+      },
+      "signInAs": {
+        "title": "Iniciar sesión como usuario",
+        "description": "{minutes, plural, one {Ve Adiutor como lo ve {name} durante # minuto como máximo, para comprobar qué no le funciona.} other {Ve Adiutor como lo ve {name} durante # minutos como máximo, para comprobar qué no le funciona.}}",
+        "allowed": "Los cambios están desactivados mientras has iniciado sesión como {name}, y recibirá un correo indicando que lo hiciste.",
+        "label": "Iniciar sesión como usuario",
+        "dialogTitle": "¿Iniciar sesión como {name}?",
+        "dialogDescription": "{minutes, plural, one {Verás Adiutor como lo ve {name} durante # minuto como máximo y después volverás a tu propia cuenta. No puedes cambiar nada mientras has iniciado sesión como esa persona, y recibirá un correo con tu nombre.} other {Verás Adiutor como lo ve {name} durante # minutos como máximo y después volverás a tu propia cuenta. No puedes cambiar nada mientras has iniciado sesión como esa persona, y recibirá un correo con tu nombre.}}",
+        "confirmLabel": "Iniciar sesión como {name}",
+        "reasonLabel": "Motivo (opcional)",
+        "reasonHint": "Por ejemplo, la solicitud que estás revisando. Solo el personal que ve el registro de auditoría puede leerlo.",
+        "refused": {
+          "staffAdmin": "Nadie puede iniciar sesión como un administrador del personal.",
+          "staff": "Solo los administradores del personal pueden iniciar sesión como alguien del personal.",
+          "companyAdmin": "Soporte no puede iniciar sesión como un administrador de una empresa.",
+          "deactivated": "Esta cuenta está desactivada, así que nadie puede iniciar sesión como este usuario.",
+          "optedOut": "Este usuario ha desactivado el inicio de sesión del personal.",
+          "needsMfa": "Para iniciar sesión como otra persona, primero añade una llave de acceso o configura una app de autenticación en tu <link>página Seguridad</link>."
+        }
       }
     },
     "addUser": {
@@ -341,7 +360,8 @@
       "by": "por <link>{name}</link>",
       "about": "sobre <link>{name}</link>",
       "staff": "Personal",
-      "notRecorded": "Sin registrar"
+      "notRecorded": "Sin registrar",
+      "reason": "Motivo: {reason}"
     },
     "errors": {
       "title": "Errores",

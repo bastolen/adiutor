@@ -175,6 +175,18 @@ export const REVERIFY_WRONG_ACCOUNT = {
 } as const satisfies SignInRefusal;
 
 /**
+ * The session is a staff member's, signed in as a user ("Sign in as"): Better
+ * Auth's endpoints would act on the staff member's own account, so every one
+ * but reading the session and signing out is refused (`refuseWhileSignedInAs`
+ * in `src/server/auth/auth-guards/`).
+ */
+export const SIGNED_IN_AS_SOMEONE = {
+  code: 'SIGNED_IN_AS_SOMEONE',
+  message:
+    "This can't be changed while you're signed in as someone else. Go back to your own account first.",
+} as const satisfies SignInRefusal;
+
+/**
  * Refusals whose message has details only the server knows: how long to wait
  * ({@link TOO_MANY_ATTEMPTS}, {@link PASSWORD_SIGN_IN_PAUSED}) and which
  * providers to sign in with ({@link RESET_ENDS_PROVIDER_MFA}). The guards

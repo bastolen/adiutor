@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import formatDate, { formatDateTime, formatRelative } from './format';
+import formatDate, { formatDateTime, formatRelative, formatTime } from './format';
 
 const NOW = new Date('2026-10-23T12:00:00Z');
 
@@ -32,6 +32,16 @@ describe('formatDateTime', () => {
     ['es-ES', '23 oct 2026, 14:05 UTC'],
   ] as const)('includes the time and zone in %s', (locale, expected) => {
     expect(formatDateTime(new Date('2026-10-23T14:05:00Z'), locale)).toBe(expected);
+  });
+});
+
+describe('formatTime', () => {
+  it.each([
+    ['en-US', '2:05 PM UTC'],
+    ['nl-NL', '14:05 UTC'],
+    ['es-ES', '14:05 UTC'],
+  ] as const)('gives the time and zone without the date in %s', (locale, expected) => {
+    expect(formatTime(new Date('2026-10-23T14:05:00Z'), locale)).toBe(expected);
   });
 });
 

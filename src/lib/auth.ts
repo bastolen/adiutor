@@ -453,6 +453,12 @@ export const auth = betterAuth({
        * (`dismissMfaRecommendation`).
        */
       mfaRecommendationDismissedAt: { type: 'date', required: false, input: false },
+      /**
+       * Whether staff may sign in as the user ("Sign in as"); on unless the
+       * user turned it off on their Security page. Never set through Better
+       * Auth's endpoints (`setStaffSignInAllowed`).
+       */
+      allowStaffSignIn: { type: 'boolean', required: false, defaultValue: true, input: false },
     },
   },
 

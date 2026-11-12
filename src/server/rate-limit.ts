@@ -61,6 +61,11 @@ export const RATE_LIMITS = {
    * password sign-in.
    */
   wrongCurrentPasswordsPerUser: { limit: 5, windowSeconds: 15 * 60 },
+  /**
+   * Times one staff member starts signing in as someone
+   * (`startImpersonation`): each one emails the user.
+   */
+  impersonationsPerUser: { limit: 10, windowSeconds: 60 * 60 },
 } as const satisfies Record<string, RateLimitRule>;
 
 /**

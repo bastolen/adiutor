@@ -196,6 +196,12 @@ export function assertConfirmedForGrant(actor: Actor, grant: RoleGrant): void {
 }
 
 /**
+ * Refuses a change while a staff member is signed in as the actor; every
+ * service that changes something calls it first (see `./signed-in-as`).
+ */
+export { default as assertNotSignedInAs } from './signed-in-as';
+
+/**
  * Stops unless a permission is present.
  *
  * @param permissions - The actor's permissions.

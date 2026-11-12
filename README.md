@@ -37,6 +37,10 @@ built; requests, the tickets themselves, come next.
   deactivate accounts. A searchable audit log, rate limits and a strict Content Security Policy
   guard the rest, and staff Admins can look up the error references people send them. See
   [Security measures](docs/security-measures.md).
+- **Sign in as a user.** Staff Admins, Managers and Support can see Adiutor the way a user does, to
+  check what isn't working for them. It lasts 30 minutes at most, needs strong MFA, shows a banner
+  and changes nothing in the user's name. The user gets an email, and every start is in the audit
+  log. See [Signing in as a user](docs/authentication.md#signing-in-as-a-user).
 - **Accessible, in light and dark mode.** Built to meet WCAG 2.2 AA, with full keyboard support.
   See [Design, accessibility and dark mode](docs/design.md).
 - **English, Dutch and Spanish.** The staff choose Adiutor's default language, which everyone

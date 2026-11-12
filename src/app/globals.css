@@ -28,7 +28,8 @@
   button:disabled,
   [aria-disabled='true'],
   select:disabled,
-  input:disabled {
+  input:disabled,
+  textarea:disabled {
     cursor: not-allowed;
   }
 

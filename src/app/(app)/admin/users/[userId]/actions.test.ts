@@ -1,15 +1,18 @@
 /**
- * @file Tests for the user detail page's MFA reset action: without the
+ * @file Tests for the user detail page's MFA reset action (without the
  * Admin's recent confirmation it sends them to the step-up page, which
- * returns to the user's page, and otherwise it resets through the service.
+ * returns to the user's page, and otherwise it resets through the service)
+ * and its sign-in as the user (the same, with a strong second step).
  */
 import { redirect } from 'next/navigation';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { startImpersonation } from '@/server/auth/impersonation';
 import { getActor } from '@/server/authz';
+import { ServiceError } from '@/server/errors';
 import { resetUserMfa } from '@/server/people/user-admin';
 
-import { resetMfaAction } from './actions';
+import { resetMfaAction, signInAsAction } from './actions';
 
 vi.mock('next/cache', () => ({ refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({
@@ -18,7 +21,12 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 vi.mock('@/server/app-context', () => ({ default: { name: 'app context' } }));
-vi.mock('@/server/authz', () => ({ getActor: vi.fn() }));
+// The real refusal while signed in as someone, so the actions are tried with it.
+vi.mock('@/server/authz', async () => ({
+  getActor: vi.fn(),
+  assertNotSignedInAs: (await import('@/server/signed-in-as')).default,
+}));
+vi.mock('@/server/auth/impersonation', () => ({ startImpersonation: vi.fn() }));
 vi.mock('@/server/people/user-admin', () => ({
   deactivateUser: vi.fn(),
   deleteUser: vi.fn(),
@@ -65,6 +73,22 @@ beforeEach(() => {
 });
 
 describe('resetMfaAction', () => {
+  it('refuses while a staff member is signed in as the Admin, without sending them to confirm', async () => {
+    signedInAs({
+      ...confirmedAdmin,
+      mfaConfirmedUntil: null,
+      signedInAs: { staffId: 'staff-1', staffName: 'Sam Lee', endsAt: new Date(), returnTo: '/' },
+    });
+
+    expect(await resetMfaAction(null, form({ userId: USER_ID }))).toEqual({
+      ok: false,
+      message:
+        "This can't be changed while you're signed in as someone else. Go back to your own account first.",
+    });
+    expect(redirect).not.toHaveBeenCalled();
+    expect(resetUserMfa).not.toHaveBeenCalled();
+  });
+
   it("sends the Admin to confirm it's them first, coming back to the user's page", async () => {
     signedInAs({ ...confirmedAdmin, mfaConfirmedUntil: null });
 
@@ -113,6 +137,70 @@ describe('resetMfaAction', () => {
     });
     expect(resetUserMfa).toHaveBeenNthCalledWith(2, appContext, confirmedAdmin, USER_ID, {
       removePasskeys: false,
+    });
+    expect(redirect).not.toHaveBeenCalled();
+  });
+});
+
+describe('signInAsAction', () => {
+  /** A Support member with a passkey, confirmed with it a minute ago. */
+  const confirmedSupport = {
+    id: 'support-1',
+    strongMfa: true,
+    strongMfaConfirmedUntil: new Date(Date.now() + 14 * 60_000),
+    signedInAs: null,
+  };
+
+  /**
+   * Builds the card's form: the user, a reason and the card to come back to.
+   *
+   * @returns The form data.
+   */
+  const signInForm = () =>
+    form({
+      userId: USER_ID,
+      reason: 'Ticket 12',
+      returnTo: `/admin/users/${USER_ID}#sign-in-as`,
+    });
+
+  beforeEach(() => {
+    vi.mocked(startImpersonation).mockReset();
+  });
+
+  it('starts it with the reason and the card to come back to, then opens the dashboard', async () => {
+    signedInAs(confirmedSupport);
+
+    await expect(signInAsAction(null, signInForm())).rejects.toThrow('NEXT_REDIRECT');
+
+    expect(startImpersonation).toHaveBeenCalledWith({ name: 'app context' }, confirmedSupport, {
+      userId: USER_ID,
+      reason: 'Ticket 12',
+      returnTo: `/admin/users/${USER_ID}#sign-in-as`,
+    });
+    expect(redirect).toHaveBeenCalledWith('/dashboard');
+  });
+
+  it('sends the staff member to confirm with a strong second step first, back to the card', async () => {
+    signedInAs({ ...confirmedSupport, strongMfaConfirmedUntil: null });
+
+    await expect(signInAsAction(null, signInForm())).rejects.toThrow('NEXT_REDIRECT');
+
+    expect(redirect).toHaveBeenCalledWith(
+      `/auth/verify?callbackURL=${encodeURIComponent(`/admin/users/${USER_ID}#sign-in-as`)}&for=strong`,
+    );
+    expect(startImpersonation).not.toHaveBeenCalled();
+  });
+
+  it("shows the service's refusal, e.g. without strong MFA, where there's nothing to confirm with", async () => {
+    signedInAs({ ...confirmedSupport, strongMfa: false, strongMfaConfirmedUntil: null });
+    vi.mocked(startImpersonation).mockRejectedValue(
+      new ServiceError('forbidden', 'errors.impersonation.needsMfa'),
+    );
+
+    expect(await signInAsAction(null, signInForm())).toEqual({
+      ok: false,
+      message:
+        'To sign in as someone, first add a passkey or set up an authenticator app on your Security page.',
     });
     expect(redirect).not.toHaveBeenCalled();
   });

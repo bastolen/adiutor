@@ -60,7 +60,9 @@ export default async function reportErrorAction(
       source: 'browser',
       error: { name, message },
       path,
-      userId: actor?.id ?? null,
+      // The person at the browser: a staff member signed in as someone is recorded as themselves,
+      // like errors on the server (`recordRequestError`).
+      userId: actor?.signedInAs?.staffId ?? actor?.id ?? null,
     });
     return recorded.stored ? { reference: recorded.reference, at: recorded.at } : null;
   } catch {

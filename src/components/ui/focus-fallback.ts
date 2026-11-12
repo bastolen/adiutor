@@ -3,7 +3,8 @@
  * goes away: after a row action removes its row, a button swaps for another,
  * two-step verification is turned off, or a notice is dismissed. Without
  * this, focus falls to `<body>` and keyboard users start again at the top of
- * the page.
+ * the page. Also moves focus to the main content for the skip link
+ * ({@link focusMainContent}).
  */
 
 /** How many frames to keep watching (about two seconds), e.g. while a dialog closes. */
@@ -33,16 +34,35 @@ export function focusIsLost(): boolean {
 }
 
 /**
- * Where focus should go when a control inside `from` disappears: the heading
- * of the card it's in (`data-card-heading`, focusable with `tabIndex={-1}`),
- * or the page's main content (`<main id="main">`) outside a card.
+ * Moves focus to the page's main content (`<main id="main">`), e.g. from the
+ * skip link. The main content isn't focusable on its own: with a lasting
+ * `tabIndex={-1}`, a click on something that can't take focus, like a
+ * disabled field, would hand focus to it, and Chrome then draws a blinking
+ * text cursor in that field. So it's made focusable just for this, until
+ * focus leaves it again. A `tabindex` it already has stays.
+ */
+export function focusMainContent(): void {
+  const main = document.getElementById('main');
+  if (!main) {
+    return;
+  }
+  if (!main.hasAttribute('tabindex')) {
+    main.setAttribute('tabindex', '-1');
+    main.addEventListener('blur', () => main.removeAttribute('tabindex'), { once: true });
+  }
+  main.focus();
+}
+
+/**
+ * The card heading focus should go to when a control inside `from`
+ * disappears (`data-card-heading`, focusable with `tabIndex={-1}`); outside a
+ * card there's none, and the main content takes focus instead.
  *
  * @param from - The control, or what contains it.
- * @returns The element to focus, if any.
+ * @returns The heading, if the control is in a card.
  */
-function fallbackFor(from: Element | null): HTMLElement | null {
-  const heading = from?.closest('[data-card]')?.querySelector<HTMLElement>('[data-card-heading]');
-  return heading ?? document.getElementById('main');
+function cardHeadingFor(from: Element | null): HTMLElement | null {
+  return from?.closest('[data-card]')?.querySelector<HTMLElement>('[data-card-heading]') ?? null;
 }
 
 /**
@@ -59,7 +79,7 @@ export default function restoreFocusIfLost(from: Element | null): void {
   if (typeof window === 'undefined') {
     return;
   }
-  const target = fallbackFor(from);
+  const heading = cardHeadingFor(from);
   let framesLeft = WATCH_FRAMES;
 
   /** Checks where focus is, once per frame. */
@@ -67,7 +87,11 @@ export default function restoreFocusIfLost(from: Element | null): void {
     const active = document.activeElement;
     if (!active || focusIsLost()) {
       // The card itself may be gone too: the main content is always there.
-      (target?.isConnected ? target : document.getElementById('main'))?.focus();
+      if (heading?.isConnected) {
+        heading.focus();
+      } else {
+        focusMainContent();
+      }
       return;
     }
     const stillWaiting =

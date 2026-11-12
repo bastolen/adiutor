@@ -82,6 +82,8 @@
       "accountReactivated": "{by, select, self {Account reactivated} admin {Account reactivated by an administrator} other {Account reactivated by {name}}}",
       "mfaReset": "{by, select, self {Two-step verification reset} admin {Two-step verification reset by an administrator} other {Two-step verification reset by {name}}}",
       "accountCreated": "{by, select, self {Account created} admin {Account created by an administrator} other {Account created by {name}}}",
+      "impersonationStarted": "{by, select, self {A staff member signed in as you} admin {A staff member signed in as you} other {{name}, a staff member, signed in as you}}",
+      "impersonationEnded": "{by, select, self {A staff member is no longer signed in as you} admin {A staff member is no longer signed in as you} other {{name} is no longer signed in as you}}",
       "addedToStaff": "{by, select, self {Added to staff as {role}} admin {Added to staff as {role} by an administrator} other {Added to staff as {role} by {name}}}",
       "addedToCompany": "{by, select, self {Added to {company} as {role}} admin {Added to {company} as {role} by an administrator} other {Added to {company} as {role} by {name}}}",
       "joinedStaff": "Added to staff",
@@ -241,7 +243,22 @@
         "dialogTitle": "Deactivate your account?",
         "dialogDescription": "You're signed out on every device right away. To use Adiutor again, ask an Admin to reactivate your account.",
         "confirm": "Deactivate my account"
+      },
+      "staffSignIn": {
+        "title": "Sign-ins by staff",
+        "description": "{minutes, plural, one {Adiutor staff can sign in as you for up to # minute, to see what you see and check what isn't working for you. They can't change anything while they do, and you get an email each time.} other {Adiutor staff can sign in as you for up to # minutes, to see what you see and check what isn't working for you. They can't change anything while they do, and you get an email each time.}}",
+        "on": "On",
+        "off": "Off",
+        "turnOff": "Turn off",
+        "turnOn": "Turn on",
+        "turnedOff": "Sign-ins by staff turned off.",
+        "turnedOn": "Sign-ins by staff turned on."
       }
+    },
+    "signedInAs": {
+      "note": "You're viewing {name}'s account pages as they see them. Nothing can be changed here while you're signed in as them.",
+      "leftOut": "Some of their personal details are left out, as on <link>their user page</link>.",
+      "mustSetUpMfa": "{name} has to set up MFA before they can use Adiutor, so this Security page is what they see now."
     }
   }
 }

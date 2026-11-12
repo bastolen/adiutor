@@ -251,6 +251,11 @@ function describeAction(
       return t('ownActivity.mfaReset', { ...by });
     case 'account_created':
       return t('ownActivity.accountCreated', { ...by });
+    // Recorded by the staff member, so `by` names them (or says "a staff member" once they're gone).
+    case 'impersonation_started':
+      return t('ownActivity.impersonationStarted', { ...by });
+    case 'impersonation_ended':
+      return t('ownActivity.impersonationEnded', { ...by });
     default:
       return describeMembership({ action, details, company }, by, t, others);
   }

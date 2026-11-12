@@ -439,6 +439,38 @@ describe('security notices', () => {
     expect(email.html).toContain('&lt;script&gt;');
   });
 
+  it('names the staff member who signed in as the user, and how long it lasts', async () => {
+    const email = await securityNoticeEmail('jane@adiutor.test', {
+      ...english,
+      kind: 'impersonation_started',
+      when,
+      staffMember: 'Sam Lee',
+      staffName: 'Adiutor Tests',
+    });
+
+    expect(email.subject).toBe('Sam Lee from Adiutor Tests signed in to Adiutor as you');
+    expect(email.html).toContain('Sam Lee signed in as you');
+    expect(email.text).toContain(
+      "Sam Lee from Adiutor Tests signed in to Adiutor as you, to see what you see and check what isn't working.",
+    );
+    expect(email.text).toContain('It ends after at most 30 minutes.');
+    expect(email.text).toContain('you can turn it off on your Security page.');
+    expect(email.text).toContain("If you didn't expect this, contact your administrator.");
+    expect(email.text).not.toContain('From:');
+    // Straight to the switch for sign-ins by staff.
+    expectBasics(email, `${appUrl}/account/security#staff-sign-in`);
+  });
+
+  it('says "a staff member" when the notice is built without a name', async () => {
+    const email = await securityNoticeEmail('jane@adiutor.test', {
+      ...english,
+      kind: 'impersonation_started',
+      when,
+    });
+
+    expect(email.subject).toBe('A staff member from Adiutor signed in to Adiutor as you');
+  });
+
   it('names the staff role', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
       ...english,

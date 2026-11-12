@@ -13,8 +13,15 @@ right passwords whose sign-in then asked for the code, recorded without an actor
 codes (on the step-up page, and at the code step of a sign-in without an actor), MFA changes,
 password and provider changes, wrong current passwords typed in a signed-in session
 (`password_check_failed`), revoked sessions, account deactivation, reactivation and deletion,
-MFA resets, role changes, removed members, invitations and invite links, and company changes, each
-with who, whom, which company, IP address and browser. It's kept for a year.
+MFA resets, role changes, removed members, invitations and invite links, company changes, and staff
+signing in as a user (`impersonation_started`, with the optional reason the staff member gave, and
+`impersonation_ended`, with why it ended: going back, its time being up, no longer being allowed, or
+the staff member's session ending; and users turning sign-ins by staff off or on,
+`staff_sign_in_turned_off` and `staff_sign_in_turned_on`; see `src/server/auth/impersonation.ts` and
+[decision 0017](decisions/0017-staff-sign-in-as-users.md)), each
+with who, whom, which company, IP address and browser. It's kept for a year. The reasons for
+signing in as a user show only under **Logs**; the user sees both events in their own activity,
+naming the staff member.
 
 Staff Admins and Managers (`audit:view`) see all of it under **Logs** (`/admin/logs`,
 `listAuditLog`), and a user's recent activity on their page; they're the only ones who see the IP
@@ -48,7 +55,9 @@ gives it back unless the password was wrong, and each wrong one is recorded. The
 role changes (30 an hour per user, company and staff roles together; each one emails the member,
 and removals aren't counted, see
 [Changing roles](companies-and-roles.md#changing-roles-and-removing-people)),
-invite-link claims (per IP address), verification emails (per user), sign-in link pages
+invite-link claims (per IP address), verification emails (per user), starting to sign in as a user
+(10 an hour per staff member, `RATE_LIMITS.impersonationsPerUser`, since each start emails the
+user), sign-in link pages
 opened with a link that can't be used (20 per 15 minutes per IP address, so links can't be
 guessed by looking them up; past it, the page offers no way to continue), and the errors stored
 for admins (see [Recorded errors](#recorded-errors)). All are kept in
@@ -93,7 +102,11 @@ Only the endpoints the browser uses under `/api/auth` are open; the rest answer 
 server code can still call them (`disabledPaths`, listed in `src/lib/sign-in/auth-endpoints.ts`, with a
 test that fails when Better Auth adds one that's in neither list). The only other API route open
 signed out is the health check (`/api/health`, see [Docker](deploying.md#docker)), which answers
-only whether the app is up.
+only whether the app is up. While a staff member is signed in as a user, the guards refuse every
+endpoint, from the browser or from server code, except reading the session and signing out
+(`refuseWhileSignedInAs` in `src/server/auth/auth-guards/`). The session is the staff member's, so
+an endpoint would act on their own account (see
+[Signing in as a user](authentication.md#signing-in-as-a-user)).
 
 Return addresses must be pages of the app (`isSafeAppRedirect` in `src/lib/redirect.ts`): a path
 that starts with a single `/`, has no control characters, spaces or backslashes, stays on the site
@@ -166,7 +179,10 @@ deadlocking:
    (`changeMembership`); the actor `FOR SHARE`, plus the user being added for `addMember`
    (`assertStillManages` in `src/server/access.ts`: creating, resending and revoking invitations
    and invite links, `addMember` and `registerCompany`); the link's creator `FOR KEY SHARE`
-   (`claimInviteLink` in `src/server/people/invite-links.ts`, before it uses the link up).
+   (`claimInviteLink` in `src/server/people/invite-links.ts`, before it uses the link up); the staff
+   member and the user `FOR SHARE` (`startImpersonation` in `src/server/auth/impersonation.ts`, so
+   a role change or deactivation of either takes turns with signing in as the user, which then
+   decides again with the locked rows).
 3. `membership` rows: the actor's own in the company `FOR SHARE` (`assertStillManages`), the
    company's `FOR UPDATE` (`changeMembership`).
 4. `invite_link` rows: the link a claim uses, the links whose creator loses their rights

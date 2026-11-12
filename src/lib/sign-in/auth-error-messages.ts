@@ -113,6 +113,7 @@ const ERROR_CODE_VALUES: Readonly<Record<AuthErrorCode, Readonly<Record<string, 
     ERROR_CEREMONY_ABORTED: null,
     ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED: null,
     INVALID_PASSKEY_NAME: { max: PASSKEY_NAME_MAX_LENGTH },
+    SIGNED_IN_AS_SOMEONE: null,
   };
 
 /** The notice codes of `?notice=<code>` ({@link signInNoticeText}), by message key. */

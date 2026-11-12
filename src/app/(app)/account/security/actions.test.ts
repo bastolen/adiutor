@@ -13,13 +13,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { auth } from '@/lib/auth';
 import confirmChangeUrl from '@/lib/sign-in/confirm-url';
 import { changeOwnPassword, hasPassword, setFirstPassword } from '@/server/auth/accounts';
+import { setStaffSignInAllowed } from '@/server/auth/impersonation';
 import { revokeOtherOwnSessions } from '@/server/auth/sessions';
 import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
 import { deactivateOwnAccount } from '@/server/people/user-admin';
 
 import { testLocale } from '../../../../../tests/i18n/next-intl-mocks';
-import { deactivateAccountAction, passwordAction, revokeOtherSessionsAction } from './actions';
+import {
+  deactivateAccountAction,
+  passwordAction,
+  revokeOtherSessionsAction,
+  staffSignInAction,
+} from './actions';
 
 vi.mock('next/headers', () => ({ headers: vi.fn(async () => new Headers()) }));
 vi.mock('next/cache', () => ({ refresh: vi.fn() }));
@@ -39,7 +45,11 @@ vi.mock('@/lib/auth', () => ({
   },
 }));
 vi.mock('@/server/app-context', () => ({ default: { name: 'app context' } }));
-vi.mock('@/server/authz', () => ({ getActor: vi.fn() }));
+// The real refusal while signed in as someone, so the actions are tried with it.
+vi.mock('@/server/authz', async () => ({
+  getActor: vi.fn(),
+  assertNotSignedInAs: (await import('@/server/signed-in-as')).default,
+}));
 vi.mock('@/server/auth/accounts', () => ({
   changeOwnPassword: vi.fn(),
   confirmConnectedProvider: vi.fn(),
@@ -48,6 +58,7 @@ vi.mock('@/server/auth/accounts', () => ({
   setFirstPassword: vi.fn(),
 }));
 vi.mock('@/server/auth/sessions', () => ({ revokeOtherOwnSessions: vi.fn() }));
+vi.mock('@/server/auth/impersonation', () => ({ setStaffSignInAllowed: vi.fn() }));
 vi.mock('@/server/people/user-admin', () => ({ deactivateOwnAccount: vi.fn() }));
 
 /** The signed-in user, without a second step. */
@@ -301,5 +312,60 @@ describe('revokeOtherSessionsAction', () => {
     vi.mocked(revokeOtherOwnSessions).mockResolvedValue(count);
 
     expect(await revokeOtherSessionsAction()).toEqual({ ok: true, message });
+  });
+});
+
+describe('while a staff member is signed in as the user', () => {
+  /** The user, with a second step, as a staff member is signed in as them. */
+  const signedInAs = {
+    ...actor,
+    canConfirmSessions: true,
+    mfaConfirmedUntil: null,
+    signedInAs: {
+      staffId: 'staff-1',
+      staffName: 'Sam Lee',
+      endsAt: new Date('2026-11-11T12:30:00Z'),
+      returnTo: '/admin/users/user-1',
+    },
+  } as unknown as Awaited<ReturnType<typeof getActor>>;
+
+  /** What every refused change says. */
+  const refused = {
+    ok: false,
+    message:
+      "This can't be changed while you're signed in as someone else. Go back to your own account first.",
+  };
+
+  it('changes nothing, and sends nobody to confirm first', async () => {
+    testLocale.current = 'en-US';
+    vi.mocked(getActor).mockResolvedValue(signedInAs);
+
+    expect(await passwordAction(null, firstPassword)).toEqual(refused);
+    expect(await passwordAction(null, changedPassword)).toEqual(refused);
+    expect(await deactivateAccountAction(null, form({ password: '' }))).toEqual(refused);
+
+    expect(redirect).not.toHaveBeenCalled();
+    expect(setFirstPassword).not.toHaveBeenCalled();
+    expect(changeOwnPassword).not.toHaveBeenCalled();
+    expect(deactivateOwnAccount).not.toHaveBeenCalled();
+    expect(auth.api.setPassword).not.toHaveBeenCalled();
+    expect(auth.api.changePassword).not.toHaveBeenCalled();
+  });
+});
+
+describe('staffSignInAction', () => {
+  it('turns sign-ins by staff off and on through the service, saying which', async () => {
+    testLocale.current = 'en-US';
+
+    expect(await staffSignInAction(null, form({ allowed: 'false' }))).toEqual({
+      ok: true,
+      message: 'Sign-ins by staff turned off.',
+    });
+    expect(setStaffSignInAllowed).toHaveBeenLastCalledWith({ name: 'app context' }, actor, false);
+    expect(await staffSignInAction(null, form({ allowed: 'true' }))).toEqual({
+      ok: true,
+      message: 'Sign-ins by staff turned on.',
+    });
+    expect(setStaffSignInAllowed).toHaveBeenLastCalledWith({ name: 'app context' }, actor, true);
   });
 });

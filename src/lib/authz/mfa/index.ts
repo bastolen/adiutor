@@ -20,6 +20,10 @@
  * sign-in used it, so it confirms sessions but opens the window for changing
  * sign-in methods only on accounts without a passkey or authenticator app
  * (`mfaConfirmedUntil`).
+ *
+ * Starting to sign in as someone else asks for strong MFA whatever the staff
+ * member's own role (`hasStrongMfa`, `strongMfaConfirmedUntil`): the rules of
+ * the roles that require MFA, also for Support.
  */
 export { requiresMfa, mfaRoleOf } from './requirement';
 export type { MfaRole } from './requirement';
@@ -60,6 +64,7 @@ export {
   sessionMfaOf,
 } from './session';
 export type { MfaMethod, SessionMfa, SessionMfaInput } from './session';
+export { hasStrongMfa, strongMfaConfirmedUntil, strongStepUpMethods } from './strong';
 export { mustSetUpMfa, mustStepUp, needsRecentConfirmation, needsFreshSignIn } from './actor-gates';
 export type { ActorMfa } from './actor-gates';
 export { signInMethodFromPath } from './sign-in-method';

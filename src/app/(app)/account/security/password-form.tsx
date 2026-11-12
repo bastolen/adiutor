@@ -11,6 +11,7 @@ import { useTranslations } from 'next-intl';
 import { ReturnToField, useRecentConfirmation } from '@/components/auth/recent-confirmation';
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
+import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
 import TextField from '@/components/ui/text-field';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '@/lib/input-rules';
@@ -37,6 +38,8 @@ export default function PasswordForm({
   blockedReason: string | null;
 }) {
   const t = useTranslations('account');
+  // Changes are turned off while a staff member is signed in as the user.
+  const changesOff = useSignedInAs();
   const [result, formAction, pending, onSubmit] = useTransientActionState(passwordAction, null);
   const { askToConfirm } = useRecentConfirmation();
 
@@ -58,42 +61,47 @@ export default function PasswordForm({
       className="flex flex-col gap-4"
       key={result?.ok ? 'saved' : 'form'}
     >
-      {/* The page and card to come back to, if the action sends the user to confirm first. */}
-      <ReturnToField />
-      <ResultAlert result={result} />
-      {hasPassword && (
+      <ChangesFieldset>
+        {/* The page and card to come back to, if the action sends the user to confirm first. */}
+        <ReturnToField />
+        <ResultAlert result={result} />
+        {hasPassword && (
+          <TextField
+            label={t('security.currentPassword')}
+            type="password"
+            name="currentPassword"
+            autoComplete="current-password"
+            required
+            disabled={changesOff}
+          />
+        )}
         <TextField
-          label={t('security.currentPassword')}
+          label={t('security.password.newPassword')}
           type="password"
-          name="currentPassword"
-          autoComplete="current-password"
+          name="newPassword"
+          autoComplete="new-password"
+          minLength={MIN_PASSWORD_LENGTH}
+          maxLength={MAX_PASSWORD_LENGTH}
+          description={t('security.password.hint', { min: MIN_PASSWORD_LENGTH })}
           required
+          disabled={changesOff}
         />
-      )}
-      <TextField
-        label={t('security.password.newPassword')}
-        type="password"
-        name="newPassword"
-        autoComplete="new-password"
-        minLength={MIN_PASSWORD_LENGTH}
-        maxLength={MAX_PASSWORD_LENGTH}
-        description={t('security.password.hint', { min: MIN_PASSWORD_LENGTH })}
-        required
-      />
-      <TextField
-        label={t('security.password.confirmNew')}
-        type="password"
-        name="confirmation"
-        autoComplete="new-password"
-        minLength={MIN_PASSWORD_LENGTH}
-        maxLength={MAX_PASSWORD_LENGTH}
-        required
-      />
-      <div>
-        <Button type="submit" loading={pending}>
-          {hasPassword ? t('security.password.change') : t('security.password.set')}
-        </Button>
-      </div>
+        <TextField
+          label={t('security.password.confirmNew')}
+          type="password"
+          name="confirmation"
+          autoComplete="new-password"
+          minLength={MIN_PASSWORD_LENGTH}
+          maxLength={MAX_PASSWORD_LENGTH}
+          required
+          disabled={changesOff}
+        />
+        <div>
+          <Button type="submit" loading={pending} disabled={changesOff}>
+            {hasPassword ? t('security.password.change') : t('security.password.set')}
+          </Button>
+        </div>
+      </ChangesFieldset>
     </form>
   );
 }

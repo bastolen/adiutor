@@ -206,6 +206,25 @@
         "signedOut": "Signed out everywhere.",
         "deactivated": "Account deactivated.",
         "reactivated": "Account reactivated."
+      },
+      "signInAs": {
+        "title": "Sign in as user",
+        "description": "{minutes, plural, one {See Adiutor the way {name} does for up to # minute, to check what isn't working for them.} other {See Adiutor the way {name} does for up to # minutes, to check what isn't working for them.}}",
+        "allowed": "Changes are turned off while you're signed in as {name}, and they get an email saying you did.",
+        "label": "Sign in as user",
+        "dialogTitle": "Sign in as {name}?",
+        "dialogDescription": "{minutes, plural, one {You'll see Adiutor as {name} does for up to # minute, then you're back in your own account. You can't change anything while you're signed in as them, and they get an email naming you.} other {You'll see Adiutor as {name} does for up to # minutes, then you're back in your own account. You can't change anything while you're signed in as them, and they get an email naming you.}}",
+        "confirmLabel": "Sign in as {name}",
+        "reasonLabel": "Reason (optional)",
+        "reasonHint": "For example, the request you're looking into. Only staff who see the audit log can read it.",
+        "refused": {
+          "staffAdmin": "Nobody can sign in as a staff Admin.",
+          "staff": "Only staff Admins can sign in as staff.",
+          "companyAdmin": "Support can't sign in as a company Admin.",
+          "deactivated": "This account is deactivated, so nobody can sign in as this user.",
+          "optedOut": "This user has turned off sign-ins by staff.",
+          "needsMfa": "To sign in as someone, first add a passkey or set up an authenticator app on your <link>Security page</link>."
+        }
       }
     },
     "addUser": {
@@ -341,7 +360,8 @@
       "by": "by <link>{name}</link>",
       "about": "about <link>{name}</link>",
       "staff": "Staff",
-      "notRecorded": "Not recorded"
+      "notRecorded": "Not recorded",
+      "reason": "Reason: {reason}"
     },
     "errors": {
       "title": "Errors",

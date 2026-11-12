@@ -24,6 +24,7 @@ import Button, { type ButtonProps } from './button';
 import restoreFocusIfLost from './focus-fallback';
 import Modal from './modal';
 import ResultAlert from './result-alert';
+import { useSignedInAs } from './signed-in-as';
 import { useToast } from './toast';
 import { useTransientActionState, useTransientState } from './use-transient-state';
 
@@ -64,6 +65,12 @@ interface ActionDialogProps {
    * unlike `onTriggerClick`.
    */
   confirmFirst?: boolean;
+  /**
+   * Whether the action is the user's own work, which stays allowed while a
+   * staff member is signed in as them (see `useSignedInAs`). Every other
+   * action's button renders disabled then, as the server refuses it.
+   */
+  allowedWhileSignedInAs?: boolean;
 }
 
 /**
@@ -146,6 +153,7 @@ function ActionDialogForm({
  * @param props.disabled - Disable the opening button.
  * @param props.onTriggerClick - Runs before the dialog opens; can keep it closed.
  * @param props.confirmFirst - Send the user to confirm it's them first when needed.
+ * @param props.allowedWhileSignedInAs - Keep it enabled while signed in as the user (their own work).
  * @returns The button and dialog.
  */
 export default function ActionDialog({
@@ -161,8 +169,10 @@ export default function ActionDialog({
   disabled = false,
   onTriggerClick = undefined,
   confirmFirst = false,
+  allowedWhileSignedInAs = false,
 }: ActionDialogProps) {
   const { askToConfirm } = useRecentConfirmation();
+  const changesOff = useSignedInAs() && !allowedWhileSignedInAs;
   const [open, setOpen] = useTransientState(false);
   const [message, setMessage] = useTransientState<string | null>(null);
   // A fresh form state per opening, so an old error doesn't show again.
@@ -208,7 +218,7 @@ export default function ActionDialog({
       <Button
         variant={triggerVariant}
         size="sm"
-        disabled={disabled}
+        disabled={disabled || changesOff}
         onClick={(event) => {
           onTriggerClick?.(event);
           if (event.defaultPrevented) {

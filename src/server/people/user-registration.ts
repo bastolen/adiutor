@@ -14,7 +14,7 @@ import type { Locale } from '@/lib/i18n/locales';
 import { generateToken, hashVerificationIdentifier } from '@/lib/sign-in/tokens';
 import { emailSchema } from '@/lib/validation';
 
-import { assertPermission, getGlobalPermissions } from '../access';
+import { assertNotSignedInAs, assertPermission, getGlobalPermissions } from '../access';
 import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
 import type { ServiceContext } from '../context';
@@ -65,6 +65,7 @@ export async function registerUser(
   rawEmail: string,
   options: { locale?: Locale } = {},
 ): Promise<RegisterResult> {
+  assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'users:create');
   const email = emailSchema.parse(rawEmail);
 

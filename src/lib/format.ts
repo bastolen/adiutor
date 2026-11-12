@@ -27,6 +27,14 @@ const DATE_TIME_OPTIONS: Intl.DateTimeFormatOptions = {
   timeZoneName: 'short',
 };
 
+/** Time format with the zone, for a moment later today (e.g. "2:05 PM UTC" or "14:05 UTC"). */
+const TIME_OPTIONS: Intl.DateTimeFormatOptions = {
+  hour: 'numeric',
+  minute: '2-digit',
+  timeZoneName: 'short',
+  timeZone: TIME_ZONE,
+};
+
 /**
  * Keeps one formatter per language and kind, since creating one is slow.
  *
@@ -50,6 +58,9 @@ const dateFormat = perLocale((locale) => new Intl.DateTimeFormat(locale, DATE_OP
 
 /** Date and time formatters. */
 const dateTimeFormat = perLocale((locale) => new Intl.DateTimeFormat(locale, DATE_TIME_OPTIONS));
+
+/** Time formatters. */
+const timeFormat = perLocale((locale) => new Intl.DateTimeFormat(locale, TIME_OPTIONS));
 
 /** Relative time formatters, e.g. "5 minutes ago" or "yesterday". */
 const relativeFormat = perLocale(
@@ -76,6 +87,18 @@ export default function formatDate(date: Date, locale: Locale): string {
  */
 export function formatDateTime(date: Date, locale: Locale): string {
   return dateTimeFormat(locale).format(date);
+}
+
+/**
+ * Formats the time of a moment later today, in UTC, e.g. when signing in as
+ * someone ends (within the hour, so the date would only add noise).
+ *
+ * @param date - The moment.
+ * @param locale - The reader's language.
+ * @returns The formatted time, e.g. "2:05 PM UTC".
+ */
+export function formatTime(date: Date, locale: Locale): string {
+  return timeFormat(locale).format(date);
 }
 
 /** Units for {@link formatRelative}, each with its length in seconds and how long it's used. */

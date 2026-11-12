@@ -11,11 +11,19 @@
  * needs actors with a second step, and these have none. The same goes for
  * changing or first setting a password (`changeOwnPassword`,
  * `setFirstPassword`), which need a second step or a fresh sign-in and are
- * covered in `auth/accounts.int.test.ts`. The own-account services that take
+ * covered in `auth/accounts.int.test.ts`. Signing in as a user needs strong
+ * MFA and a recent confirmation with it, so the matrix gives the actor those
+ * and a session, leaving only the role to decide; the rest of its rules are
+ * in `auth/impersonation.int.test.ts`. The own-account services that take
  * an ID (`revokeOwnSession`, `confirmConnectedProvider`) are tried with
  * another user's ID, and `deactivateOwnAccount` with a password; its refusal
  * of the last Admin is the last test below (a conflict, which the matrix
  * counts as allowed).
+ *
+ * While a staff member is signed in as the acting user, every operation that
+ * changes something is refused (`signed_in_as`, see `assertNotSignedInAs`),
+ * except the user's own work (`OWN_WORK`), and the reads (`READS`) give what
+ * they give the user; a new operation counts as a change unless it's listed.
  *
  * Each role's operations run one after another on one world, so every
  * operation that uses up or removes its target (resending, revoking,
@@ -47,6 +55,11 @@ import {
 import type { Actor } from './actor';
 import { listAuditEvents, listAuditLog } from './audit';
 import { confirmConnectedProvider } from './auth/accounts';
+import {
+  impersonationVerdictFor,
+  setStaffSignInAllowed,
+  startImpersonation,
+} from './auth/impersonation';
 import { revokeOwnSession } from './auth/sessions';
 import { ServiceError } from './errors';
 import {
@@ -382,6 +395,7 @@ function listOperations(): Operation[] {
     ['view staff settings', (w) => getStaffSettings(ctx, w.actor)],
     ['choose own language', (w) => setOwnLocale(ctx, w.actor, 'nl-NL')],
     ['dismiss own MFA recommendation', (w) => dismissMfaRecommendation(ctx, w.actor)],
+    ['turn off sign-ins by staff', (w) => setStaffSignInAllowed(ctx, w.actor, false)],
     ["sign out another user's device", (w) => revokeOwnSession(ctx, w.actor, w.othersSession)],
     [
       "confirm another user's provider account",
@@ -398,7 +412,24 @@ function listOperations(): Operation[] {
     ['list users', (w) => listUsers(ctx, w.actor)],
     ['view user', (w) => getUserDetail(ctx, w.actor, w.outsider)],
     ['check a user exists', (w) => userExists(ctx, w.actor, w.outsider)],
+    ['check signing in as a user', (w) => impersonationVerdictFor(ctx, w.actor, w.outsider)],
     ['list addable companies', (w) => listAddableCompanies(ctx, w.actor, w.outsider)],
+    [
+      'sign in as a user',
+      // Before `deactivate user` deactivates the outsider. In a session of their own, with the
+      // strong MFA it needs, which the actors here lack, so only the role decides.
+      async (w) =>
+        startImpersonation(
+          ctx,
+          {
+            ...w.actor,
+            sessionId: await createSession(db, w.actor.id),
+            strongMfa: true,
+            strongMfaConfirmedUntil: new Date(Date.now() + 60_000),
+          },
+          { userId: w.outsider },
+        ),
+    ],
     ['register user', (w) => registerUser(ctx, w.actor, 'registered@adiutor.test')],
     ['reset MFA', (w) => resetUserMfa(ctx, w.actor, w.outsider)],
     ['sign out everywhere', (w) => signOutUserEverywhere(ctx, w.actor, w.outsider)],
@@ -422,6 +453,36 @@ function listOperations(): Operation[] {
 
 /** The operations by name. */
 const OPERATIONS = new Map(listOperations());
+
+/**
+ * The operations that only read: while a staff member is signed in as the
+ * acting user, they still work, with the user's own rights. Every other
+ * operation changes something and is refused then (`signed_in_as`), except
+ * the user's own work ({@link OWN_WORK}), so a new operation that changes
+ * something is refused unless it's listed here.
+ */
+const READS: ReadonlySet<string> = new Set([
+  'list members (own)',
+  'list members (other)',
+  'list invitations (own)',
+  'list invite links (other)',
+  'list companies',
+  'list staff invitations',
+  'list staff',
+  'view staff settings',
+  'list users',
+  'view user',
+  'check a user exists',
+  'check signing in as a user',
+  'list addable companies',
+  'view audit log',
+  'list the audit log',
+  'look up an error reference',
+  'list recent errors',
+]);
+
+/** What a user may still change while a staff member is signed in as them: their own work. */
+const OWN_WORK: ReadonlySet<string> = new Set(['dismiss own MFA recommendation']);
 
 /** What happens when a role tries an operation. */
 type Outcome = 'allowed' | 'forbidden' | 'not_found';
@@ -489,6 +550,8 @@ const EXPECTED: Record<string, string> = {
   'choose own language': 'AAAAAAA',
   // Everyone dismisses their own MFA recommendation, and nobody else's.
   'dismiss own MFA recommendation': 'AAAAAAA',
+  // Everyone's own account, whatever their role.
+  'turn off sign-ins by staff': 'AAAAAAA',
   // Sessions and provider accounts are looked up among the user's own: someone else's don't exist.
   "sign out another user's device": 'NNNNNNN',
   "confirm another user's provider account": 'NNNNNNN',
@@ -500,6 +563,7 @@ const EXPECTED: Record<string, string> = {
   'view user': 'FFFAAAA',
   // The user page's title: whether the user in its URL exists, for the staff who may see users.
   'check a user exists': 'FFFAAAA',
+  'check signing in as a user': 'FFFAAAA',
   // The user page's "Add to company" list: staff who see companies.
   'list addable companies': 'FFFAAAA',
   'register user': 'FFFFFAA',
@@ -512,6 +576,8 @@ const EXPECTED: Record<string, string> = {
   'list the audit log': 'FFFFFAA',
   'look up an error reference': 'FFFFFFA',
   'list recent errors': 'FFFFFFA',
+  // A user in no company, so Support may too (never a company Admin, see `mayImpersonate`).
+  'sign in as a user': 'FFFAFAA',
   // Everyone may deactivate their own account (each world has other Admins).
   'deactivate own account': 'AAAAAAA',
 };
@@ -708,6 +774,9 @@ async function outcomeCode(run: () => Promise<unknown>): Promise<string> {
 describe('authorization matrix', () => {
   it('expects an outcome of every operation for every role', () => {
     expect(Object.keys(EXPECTED).sort()).toEqual([...OPERATIONS.keys()].sort());
+    [...READS, ...OWN_WORK].forEach((name) => {
+      expect(OPERATIONS.has(name), name).toBe(true);
+    });
     Object.entries(EXPECTED).forEach(([operation, letters]) => {
       expect(letters, operation).toHaveLength(ROLES.length);
       expect(
@@ -727,6 +796,43 @@ describe('authorization matrix', () => {
     const expected = names.map((name) => [name, expectedOutcome(name, role)]);
     expect(Object.fromEntries(results)).toEqual(Object.fromEntries(expected));
   });
+
+  it.each(['client', 'company admin', 'platform admin'] as const)(
+    'refuses every change while a staff member is signed in as a %s, and still reads as them',
+    async (role) => {
+      const world = await createWorld(role);
+      const signedInAs: World = {
+        ...world,
+        actor: {
+          ...world.actor,
+          signedInAs: {
+            staffId: world.outsider,
+            staffName: 'Sam Lee',
+            endsAt: new Date(Date.now() + 30 * 60_000),
+            returnTo: '/dashboard',
+            staffPermissions: ['users:view', 'users:manage', 'audit:view'],
+          },
+        },
+      };
+      const names = [...OPERATIONS.keys()];
+      const results = await inSequence(names, async (name) => {
+        /**
+         * Runs the operation with the staff member signed in as the acting user.
+         *
+         * @returns What the operation returns.
+         */
+        const run = () => defined(OPERATIONS.get(name), `the ${name} operation`)(signedInAs);
+        return [name, READS.has(name) ? await outcome(run) : await outcomeCode(run)];
+      });
+      const expected = names.map((name) => {
+        if (READS.has(name)) {
+          return [name, expectedOutcome(name, role)];
+        }
+        return [name, OWN_WORK.has(name) ? 'done' : 'signed_in_as'];
+      });
+      expect(Object.fromEntries(results)).toEqual(Object.fromEntries(expected));
+    },
+  );
 
   it('refuses deactivating your own account to the last Admin of the staff or a company', async () => {
     await createStaffSettings(db);

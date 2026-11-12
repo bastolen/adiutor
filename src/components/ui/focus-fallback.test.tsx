@@ -1,14 +1,15 @@
 /**
  * @file Tests for keeping focus when a control goes away: it moves to the
  * card's heading, or to the main content outside a card, and only when focus
- * fell to `<body>`.
+ * fell to `<body>`. The main content is focusable only while it has focus
+ * from script (`focusMainContent`).
  */
 import { act, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Card from './card';
-import restoreFocusIfLost from './focus-fallback';
+import restoreFocusIfLost, { focusMainContent } from './focus-fallback';
 
 /** Elements jsdom should treat as hidden, e.g. a page `<Activity>` keeps in the background. */
 const hidden = new Set<Element>();
@@ -46,7 +47,7 @@ async function nextFrames() {
 function RemovingRow() {
   const [shown, setShown] = useState(true);
   return (
-    <main id="main" tabIndex={-1}>
+    <main id="main">
       <Card title="Invite links">
         {shown && (
           <button
@@ -86,7 +87,7 @@ describe('restoreFocusIfLost', () => {
     function Notice() {
       const [shown, setShown] = useState(true);
       return (
-        <main id="main" tabIndex={-1}>
+        <main id="main">
           {shown && (
             <button
               type="button"
@@ -108,12 +109,16 @@ describe('restoreFocusIfLost', () => {
     act(() => dismiss.click());
     await nextFrames();
 
-    expect(screen.getByRole('main')).toHaveFocus();
+    const main = screen.getByRole('main');
+    expect(main).toHaveFocus();
+    // Focusable only while it has focus, so a click in the content doesn't hand it focus later.
+    act(() => main.blur());
+    expect(main).not.toHaveAttribute('tabindex');
   });
 
   it('leaves focus alone when the control stays, or focus went elsewhere', async () => {
     render(
-      <main id="main" tabIndex={-1}>
+      <main id="main">
         <Card title="Invitations">
           <button type="button">Resend</button>
           <button type="button">Revoke</button>
@@ -134,7 +139,7 @@ describe('restoreFocusIfLost', () => {
 
   it('counts focus on an element that is no longer shown as lost', async () => {
     render(
-      <main id="main" tabIndex={-1}>
+      <main id="main">
         <Card title="Invitations">
           <button type="button">Resend</button>
         </Card>
@@ -146,5 +151,46 @@ describe('restoreFocusIfLost', () => {
     restoreFocusIfLost(resend);
     await nextFrames();
     expect(screen.getByRole('heading', { name: 'Invitations' })).toHaveFocus();
+  });
+});
+
+describe('focusMainContent', () => {
+  it('focuses the main content, focusable only until focus leaves it', () => {
+    render(
+      <main id="main">
+        <p>Content</p>
+        <button type="button">Next</button>
+      </main>,
+    );
+    const main = screen.getByRole('main');
+    expect(main).not.toHaveAttribute('tabindex');
+
+    focusMainContent();
+    expect(main).toHaveFocus();
+    expect(main).toHaveAttribute('tabindex', '-1');
+
+    screen.getByRole('button', { name: 'Next' }).focus();
+    expect(main).not.toHaveAttribute('tabindex');
+  });
+
+  it('keeps a tabindex the main content already has', () => {
+    render(
+      <main id="main" tabIndex={-1}>
+        <button type="button">Next</button>
+      </main>,
+    );
+    const main = screen.getByRole('main');
+
+    focusMainContent();
+    expect(main).toHaveFocus();
+    screen.getByRole('button', { name: 'Next' }).focus();
+    expect(main).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('does nothing on a page without main content', () => {
+    render(<button type="button">Next</button>);
+
+    expect(() => focusMainContent()).not.toThrow();
+    expect(document.body).toHaveFocus();
   });
 });
