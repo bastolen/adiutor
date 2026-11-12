@@ -360,6 +360,8 @@
       "by": "por <link>{name}</link>",
       "about": "sobre <link>{name}</link>",
       "staff": "Personal",
+      "job": "Tarea <code>{name}</code>",
+      "jobs": "{count, plural, one {# tarea de <code>{name}</code>} other {# tareas de <code>{name}</code>}}",
       "notRecorded": "Sin registrar",
       "reason": "Motivo: {reason}"
     },

@@ -75,6 +75,12 @@
       "validity": "Kies hoe lang de link geldig blijft.",
       "claimLimited": "Deze uitnodigingslink kan nu niet worden gebruikt. Probeer het later opnieuw.",
       "notAllowed": "Financiën en Support kunnen geen uitnodigingslinks gebruiken. Vraag degene die de link stuurde om je per e-mail uit te nodigen."
+    },
+    "jobs": {
+      "alreadyPaused": "Deze taak is al gepauzeerd.",
+      "notPaused": "Deze taak is niet gepauzeerd.",
+      "running": "Deze taak wordt nu uitgevoerd. Probeer het opnieuw als hij klaar is.",
+      "noFailedJobs": "Hier valt niets meer opnieuw te proberen of te verwijderen: misschien heeft iemand het al gedaan."
     }
   }
 }

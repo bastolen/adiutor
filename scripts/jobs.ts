@@ -200,7 +200,7 @@ async function manage(action: 'retry' | 'discard', args: readonly string[]): Pro
     console.error(`Usage: pnpm jobs:${action} <id> | pnpm jobs:${action} --kind <name>`);
     return 2;
   }
-  const changed =
+  const { length: changed } =
     action === 'retry'
       ? await retryFailedQueuedJobs(db, selection)
       : await discardFailedQueuedJobs(db, selection);

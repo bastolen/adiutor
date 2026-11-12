@@ -153,6 +153,27 @@ In production, run the tick every 5 minutes; see [Background jobs](deploying.md#
 the deployment docs. The command is thin (`scripts/jobs.ts`); the logic lives in the module and its
 tests.
 
+## For staff
+
+Staff Admins and Managers (`jobs:view`) see the jobs, their runs and the failed queued jobs
+(`loadJobsOverview`, `listJobRuns` and `listFailedJobs` in `overview.ts`). Staff Admins
+(`jobs:manage`) also act on them (`controls.ts`), never while signed in as someone:
+
+- **Pause and resume** a recurring job or a kind of queued job (`pauseJob`, `resumeJob`), which
+  notes who paused it (`job_state.paused_by`). Pausing what's already paused, or resuming what isn't,
+  is a `conflict`.
+- **Run a recurring job now** (`runJobFromPage`), whether it's due or paused, for at most 45 seconds
+  of new work (`PAGE_RUN_SECONDS`), so it ends within the request. Its run is kept with who started
+  it (`trigger: 'page'`, `started_by`); while another run holds the job, it's a `conflict`.
+- **Retry or discard** failed queued jobs, one by ID or every one of a kind (`retryFailedJobs`,
+  `discardFailedJobs`). Discarding also takes a kind the registry no longer lists, to clear its
+  leftover jobs. When none of them is still failed (someone did it first), it's a `conflict`.
+
+Each is recorded in the audit log (`job_started`, `job_paused`, `job_resumed`,
+`queued_jobs_retried`, `queued_jobs_discarded`, in the Background jobs group), with the job's name
+and, for queued jobs, how many (`details.job`, `details.count`), which the audit log shows under the
+event.
+
 ## Adding a recurring job
 
 1. Add a file to `src/server/jobs/recurring/` that exports a job made with `defineRecurringJob`:

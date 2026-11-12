@@ -13,6 +13,14 @@
  * folder imports them directly.
  */
 export type { JobOutcome, JobSummary, QueuedJob, QueuedJobResult, RecurringJob } from './define';
+export {
+  discardFailedJobs,
+  PAGE_RUN_SECONDS,
+  pauseJob,
+  resumeJob,
+  retryFailedJobs,
+  runJobFromPage,
+} from './controls';
 export { answerTickRequest } from './endpoint';
 export type { TickResponse } from './endpoint';
 export { listJobs } from './list';
@@ -23,7 +31,12 @@ export {
   listQueuedKinds,
   retryFailedQueuedJobs,
 } from './manage-queue';
-export type { FailedJobsSelection, FailedQueuedJob, QueuedKindListing } from './manage-queue';
+export type {
+  ChangedQueuedJob,
+  FailedJobsSelection,
+  FailedQueuedJob,
+  QueuedKindListing,
+} from './manage-queue';
 export { listFailedJobs, listJobRuns, loadJobsOverview } from './overview';
 export type { FailedJobEntry, JobRunEntry, JobsOverview } from './overview';
 export { RECURRING_JOBS } from './registry';

@@ -360,6 +360,8 @@
       "by": "by <link>{name}</link>",
       "about": "about <link>{name}</link>",
       "staff": "Staff",
+      "job": "Job <code>{name}</code>",
+      "jobs": "{count, plural, one {# <code>{name}</code> job} other {# <code>{name}</code> jobs}}",
       "notRecorded": "Not recorded",
       "reason": "Reason: {reason}"
     },

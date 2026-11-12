@@ -57,8 +57,19 @@ function userLink(userId: string) {
 }
 
 /**
- * Who acted, whom it was about and which company, as a line of links under
- * an event's description. Its text comes from `admin.logs`.
+ * Shows the `<code>` tag of a rich message as a job's name, as the command
+ * line and the Jobs page write it.
+ *
+ * @param chunks - The name.
+ * @returns The name in a monospace font.
+ */
+function jobName(chunks: ReactNode) {
+  return <span className="font-mono">{chunks}</span>;
+}
+
+/**
+ * Who acted, whom it was about, which company and which background job, as
+ * a line under an event's description. Its text comes from `admin.logs`.
  *
  * @param props - Component props.
  * @param props.event - The event.
@@ -96,6 +107,17 @@ function Involved({ event }: { event: AuditEntry }) {
     );
   } else if (event.details.staff === true) {
     parts.push(<span key="staff">{t('staff')}</span>);
+  }
+  // A background job a staff Admin acted on, with how many of its queued jobs when there were several.
+  const { job, count } = event.details;
+  if (typeof job === 'string') {
+    parts.push(
+      <span key="job">
+        {typeof count === 'number'
+          ? t.rich('jobs', { name: job, count, code: jobName })
+          : t.rich('job', { name: job, code: jobName })}
+      </span>,
+    );
   }
   if (parts.length === 0) {
     return null;

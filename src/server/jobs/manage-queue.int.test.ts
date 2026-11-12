@@ -89,7 +89,7 @@ describe('retryFailedQueuedJobs', () => {
     const failed = await job('adiutor-tests-a', 'failed');
     const other = await job('adiutor-tests-a', 'failed');
 
-    await expect(retryFailedQueuedJobs(db, { id: failed })).resolves.toBe(1);
+    await expect(retryFailedQueuedJobs(db, { id: failed })).resolves.toHaveLength(1);
 
     expect(await stored()).toEqual([
       { id: failed, kind: 'adiutor-tests-a', status: 'queued', attempts: 0 },
@@ -108,7 +108,7 @@ describe('retryFailedQueuedJobs', () => {
     await job('adiutor-tests-a', 'succeeded');
     await job('adiutor-tests-b', 'failed');
 
-    await expect(retryFailedQueuedJobs(db, { kind: 'adiutor-tests-a' })).resolves.toBe(2);
+    await expect(retryFailedQueuedJobs(db, { kind: 'adiutor-tests-a' })).resolves.toHaveLength(2);
 
     expect((await stored()).map(({ kind, status }) => `${kind}:${status}`)).toEqual([
       'adiutor-tests-a:queued',
@@ -124,8 +124,8 @@ describe('discardFailedQueuedJobs', () => {
     const failed = await job('adiutor-tests-a', 'failed');
     const waiting = await job('adiutor-tests-a', 'queued');
 
-    await expect(discardFailedQueuedJobs(db, { kind: 'adiutor-tests-a' })).resolves.toBe(1);
-    await expect(discardFailedQueuedJobs(db, { id: waiting })).resolves.toBe(0);
+    await expect(discardFailedQueuedJobs(db, { kind: 'adiutor-tests-a' })).resolves.toHaveLength(1);
+    await expect(discardFailedQueuedJobs(db, { id: waiting })).resolves.toEqual([]);
 
     expect(await stored()).toEqual([
       { id: failed, kind: 'adiutor-tests-a', status: 'discarded', attempts: 5 },

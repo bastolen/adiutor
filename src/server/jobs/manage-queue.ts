@@ -5,7 +5,7 @@
  */
 import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
 
-import type { Database } from '@/db';
+import type { Database, DatabaseOrTransaction } from '@/db';
 import { queuedJob } from '@/db/schema';
 
 import { QUEUED_JOBS } from './registry';
@@ -103,6 +103,14 @@ export async function listFailedQueuedJobs(db: Database, limit = 50): Promise<Fa
 /** Which failed jobs: one by ID, or every one of a kind. */
 export type FailedJobsSelection = { id: string } | { kind: string };
 
+/** A failed job that was put back or discarded. */
+export interface ChangedQueuedJob {
+  /** The job's ID. */
+  id: string;
+  /** Its kind's name. */
+  kind: string;
+}
+
 /**
  * The condition for the failed jobs a selection names.
  *
@@ -120,38 +128,36 @@ function failedJobs(selection: FailedJobsSelection) {
  * Puts failed jobs back in the queue for the next tick, with a fresh count
  * of attempts.
  *
- * @param db - Database client.
+ * @param db - Database client or transaction.
  * @param selection - Which failed jobs.
- * @returns How many were put back.
+ * @returns The jobs that were put back.
  */
 export async function retryFailedQueuedJobs(
-  db: Database,
+  db: DatabaseOrTransaction,
   selection: FailedJobsSelection,
-): Promise<number> {
-  const retried = await db
+): Promise<ChangedQueuedJob[]> {
+  return db
     .update(queuedJob)
     .set({ status: 'queued', attempts: 0, runAt: sql`now()`, finishedAt: null })
     .where(failedJobs(selection))
-    .returning({ id: queuedJob.id });
-  return retried.length;
+    .returning({ id: queuedJob.id, kind: queuedJob.kind });
 }
 
 /**
  * Discards failed jobs: they stay in the history as discarded and are
  * deleted with the other finished jobs after 30 days.
  *
- * @param db - Database client.
+ * @param db - Database client or transaction.
  * @param selection - Which failed jobs.
- * @returns How many were discarded.
+ * @returns The jobs that were discarded.
  */
 export async function discardFailedQueuedJobs(
-  db: Database,
+  db: DatabaseOrTransaction,
   selection: FailedJobsSelection,
-): Promise<number> {
-  const discarded = await db
+): Promise<ChangedQueuedJob[]> {
+  return db
     .update(queuedJob)
     .set({ status: 'discarded', finishedAt: sql`now()` })
     .where(failedJobs(selection))
-    .returning({ id: queuedJob.id });
-  return discarded.length;
+    .returning({ id: queuedJob.id, kind: queuedJob.kind });
 }

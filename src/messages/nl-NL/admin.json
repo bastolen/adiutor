@@ -360,6 +360,8 @@
       "by": "door <link>{name}</link>",
       "about": "over <link>{name}</link>",
       "staff": "Medewerkers",
+      "job": "Taak <code>{name}</code>",
+      "jobs": "{count, plural, one {# taak van <code>{name}</code>} other {# taken van <code>{name}</code>}}",
       "notRecorded": "Niet vastgelegd",
       "reason": "Reden: {reason}"
     },

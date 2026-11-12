@@ -34,7 +34,7 @@ import { hashPassword } from 'better-auth/crypto';
 import { and, eq, isNull } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { account, invitation, inviteLink, membership, user } from '@/db/schema';
+import { account, invitation, inviteLink, membership, queuedJob, user } from '@/db/schema';
 import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { defined, firstRow } from '@/lib/defined';
 import { hashToken } from '@/lib/sign-in/tokens';
@@ -62,7 +62,16 @@ import {
 } from './auth/impersonation';
 import { revokeOwnSession } from './auth/sessions';
 import { ServiceError } from './errors';
-import { listFailedJobs, listJobRuns, loadJobsOverview } from './jobs';
+import {
+  discardFailedJobs,
+  listFailedJobs,
+  listJobRuns,
+  loadJobsOverview,
+  pauseJob,
+  resumeJob,
+  retryFailedJobs,
+  runJobFromPage,
+} from './jobs';
 import {
   listCompanies,
   registerCompany,
@@ -170,6 +179,8 @@ interface World {
    * user, that an invite link sent (claimed with their address).
    */
   invitationFromLink: string;
+  /** A queued job that was given up, to retry, and another to discard. */
+  failedJobs: { retry: string; discard: string };
 }
 
 /** The password the acting user is given in `deactivate own account`. */
@@ -444,6 +455,15 @@ function listOperations(): Operation[] {
     ['view jobs', (w) => loadJobsOverview(ctx, w.actor)],
     ['list job runs', (w) => listJobRuns(ctx, w.actor)],
     ['list failed queued jobs', (w) => listFailedJobs(ctx, w.actor)],
+    // Pausing first, so resuming finds it paused when it's allowed.
+    ['pause a job', (w) => pauseJob(ctx, w.actor, 'retention')],
+    ['resume a job', (w) => resumeJob(ctx, w.actor, 'retention')],
+    ['run a job now', (w) => runJobFromPage(ctx, w.actor, 'retention')],
+    ['retry a failed queued job', (w) => retryFailedJobs(ctx, w.actor, { id: w.failedJobs.retry })],
+    [
+      'discard a failed queued job',
+      (w) => discardFailedJobs(ctx, w.actor, { id: w.failedJobs.discard }),
+    ],
     // Last: it deactivates the acting user.
     [
       'deactivate own account',
@@ -586,6 +606,11 @@ const EXPECTED: Record<string, string> = {
   'view jobs': 'FFFFFAA',
   'list job runs': 'FFFFFAA',
   'list failed queued jobs': 'FFFFFAA',
+  'pause a job': 'FFFFFFA',
+  'resume a job': 'FFFFFFA',
+  'run a job now': 'FFFFFFA',
+  'retry a failed queued job': 'FFFFFFA',
+  'discard a failed queued job': 'FFFFFFA',
   // A user in no company, so Support may too (never a company Admin, see `mayImpersonate`).
   'sign in as a user': 'FFFAFAA',
   // Everyone may deactivate their own account (each world has other Admins).
@@ -652,6 +677,19 @@ async function openInvitation(admin: Actor, companyId: string, email: string): P
     'the invitation',
   );
   return found.id;
+}
+
+/**
+ * Adds a queued job that was given up after its last attempt.
+ *
+ * @returns Its ID.
+ */
+async function failedJob(): Promise<string> {
+  const [row] = await db
+    .insert(queuedJob)
+    .values({ kind: 'security-notice', status: 'failed', attempts: 5, finishedAt: new Date() })
+    .returning({ id: queuedJob.id });
+  return defined(row, 'the failed job').id;
 }
 
 /**
@@ -740,6 +778,7 @@ async function createWorld(role: MatrixRole): Promise<World> {
     deactivated,
     staffToRemove,
     invitationFromLink,
+    failedJobs: { retry: await failedJob(), discard: await failedJob() },
   };
 }
 

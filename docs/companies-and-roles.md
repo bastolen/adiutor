@@ -116,7 +116,7 @@ Admins and Managers who aren't members can still add themselves with any role, a
   until the Sort menu says otherwise, in pages. Each event says what happened, who did it, whom it
   was about and which company (each a link), when, and the browser and IP address it came from. It
   can be searched by a person's name or email or a company's name, filtered to a group of events
-  (Sign-ins, Sign-in methods, Accounts, People, Companies and staff; `AUDIT_GROUPS` in
+  (Sign-ins, Sign-in methods, Accounts, People, Companies and staff, Background jobs; `AUDIT_GROUPS` in
   `src/lib/audit-actions.ts`, named by `audit.groups.*`) and limited to a range of days (UTC, both
   days included). Admins (`errors:view`) also get an **Errors** tab (`/admin/logs/errors`): look up
   the reference an error page showed, typed in any case, with or without the dash, and see the

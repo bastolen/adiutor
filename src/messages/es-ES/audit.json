@@ -42,7 +42,12 @@
       "company_updated": "Datos de la empresa cambiados",
       "company_deactivated": "Empresa desactivada",
       "company_reactivated": "Empresa reactivada",
-      "staff_renamed": "Nombre visible para los usuarios cambiado"
+      "staff_renamed": "Nombre visible para los usuarios cambiado",
+      "job_started": "Tarea en segundo plano ejecutada ahora",
+      "job_paused": "Tarea en segundo plano pausada",
+      "job_resumed": "Tarea en segundo plano reanudada",
+      "queued_jobs_retried": "Tareas fallidas en cola reintentadas",
+      "queued_jobs_discarded": "Tareas fallidas en cola descartadas"
     },
     "events": {
       "sessionsRevokedMfaRequired": "Sesiones sin MFA cerradas, porque el rol ahora lo exige",
@@ -59,7 +64,8 @@
       "sign-in-methods": "Métodos de inicio de sesión",
       "accounts": "Cuentas",
       "people": "Personas",
-      "companies": "Empresas y personal"
+      "companies": "Empresas y personal",
+      "jobs": "Tareas en segundo plano"
     }
   }
 }
