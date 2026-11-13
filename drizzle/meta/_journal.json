@@ -47,36 +47,8 @@
     {
       "idx": 6,
       "version": "7",
-      "when": 1794475525666,
+      "when": 1794570706241,
       "tag": "0006_jobs",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1794477803110,
-      "tag": "0007_queued_jobs",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1794479680552,
-      "tag": "0008_job_error_references",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1794480590282,
-      "tag": "0009_job_alerts",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1794564662615,
-      "tag": "0010_queue_indexes",
       "breakpoints": true
     }
   ]
