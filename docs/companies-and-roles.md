@@ -201,9 +201,10 @@ Admins and Managers who aren't members can still add themselves with any role, a
   [Lock order](security-measures.md#lock-order)).
 
 - **Last active:** `getOptionalActor()` records when each user last did something, at most once a
-  minute (`touchLastActive` in `src/server/actor.ts`), and signing in sets it too. It's written after
-  the response (Next's `after`), so pages never wait for it. It's shown in the
-  Activity column of the Users, Staff and Members tables, and on the user detail page.
+  minute (`touchLastActive` in `src/server/actor.ts`), and signing in sets it too. It's written in
+  the background (`startInBackground` in `src/server/background.ts`, which says why not with Next's
+  `after`), so pages never wait for it. It's shown in the Activity column of the Users, Staff and
+  Members tables, and on the user detail page.
 
 ## Accounts and invitations
 

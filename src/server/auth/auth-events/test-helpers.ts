@@ -13,6 +13,7 @@ import type { MfaMethod } from '@/lib/authz/mfa';
 import { firstRow } from '@/lib/defined';
 import { sendEmail } from '@/lib/email';
 import { LOCALE_COOKIE } from '@/lib/i18n/locales';
+import { ACTING_AS_CHANGED_COOKIE } from '@/lib/sign-in/auth-cookies';
 
 import {
   addPasskey as addStoredPasskey,
@@ -301,15 +302,19 @@ export function githubCallback(
 }
 
 /**
- * The cookies a request set besides the language cookie, which every sign-in
- * sets from the account's language (`rememberLanguage`); for tests about the
- * other cookies.
+ * The cookies a request set to tell the next page something of its own: all
+ * but the language cookie, which every sign-in sets from the account's
+ * language (`rememberLanguage`), and the one that tells the other tabs, which
+ * every provider sign-in sets when the browser acts as someone else now
+ * (`ACTING_AS_CHANGED_COOKIE`). For tests about the other cookies.
  *
  * @param setCookie - The request's `setCookie` mock.
  * @returns The other `setCookie` calls, in order.
  */
-export function cookiesBesidesLanguage(setCookie: ReturnType<typeof githubCallback>['setCookie']) {
-  return setCookie.mock.calls.filter(([name]) => name !== LOCALE_COOKIE);
+export function noticeCookies(setCookie: ReturnType<typeof githubCallback>['setCookie']) {
+  return setCookie.mock.calls.filter(
+    ([name]) => name !== LOCALE_COOKIE && name !== ACTING_AS_CHANGED_COOKIE,
+  );
 }
 
 /**

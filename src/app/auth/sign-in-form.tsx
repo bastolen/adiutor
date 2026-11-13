@@ -17,6 +17,7 @@ import AuthDivider from '@/components/ui/auth-divider';
 import AuthHeading from '@/components/ui/auth-heading';
 import Badge from '@/components/ui/badge';
 import Button from '@/components/ui/button';
+import loadFresh from '@/components/ui/load-fresh';
 import TextField from '@/components/ui/text-field';
 import TextLink from '@/components/ui/text-link';
 import { useTransientState } from '@/components/ui/use-transient-state';
@@ -163,10 +164,16 @@ export default function SignInForm({ providers }: SignInFormProps) {
    */
   const describedBy = (option: string) => (lastUsed === option ? lastUsedId : undefined);
 
-  /** Goes to the page the user came for. */
+  /**
+   * Loads the page the user came for afresh (`loadFresh`), busy until it
+   * goes: a navigation within the app would bring back pages Next kept alive
+   * for whoever was signed in on this browser before. The browser's other
+   * tabs load their own page afresh too (`everyTab`): a sign-in page open
+   * there goes on, signed in.
+   */
   const finish = () => {
-    router.replace(destination());
-    router.refresh();
+    setPending(true);
+    loadFresh(destination(), { everyTab: true });
   };
 
   useEffect(() => {

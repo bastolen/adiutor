@@ -232,7 +232,7 @@ export async function loadActor(
 /**
  * Records that a user was active now, at most once a minute: the update only
  * matches when the last recorded activity is older, so busy users don't cause
- * a write per request. Pages run it after the response (`getOptionalActor`),
+ * a write per request. Pages start it in the background (`getOptionalActor`),
  * so they never wait on it or on a lock on the user's row.
  *
  * @param db - Database client.

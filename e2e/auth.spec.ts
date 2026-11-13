@@ -2,15 +2,24 @@
  * @file End-to-end tests for signed-out behaviour of the auth pages: signing
  * in goes on to the card a signed-out visitor's address named, the sign-in
  * page sends someone who is signed in already on, signing out leaves nothing
- * behind in the browser (including the sign-in pages Next keeps alive, which
- * must start over), and the sign-in page shows its "Last used" hint.
+ * behind in the browser (signing out and in load the next page afresh, so no
+ * page Next keeps alive is left for the next person, also in the browser's
+ * other tabs, after an email link too), and the sign-in page shows its
+ * "Last used" hint.
  */
 
 import { LOCALE_COOKIE } from '../src/lib/i18n/locales';
 import { LAST_USED_LOGIN_METHOD_COOKIE } from '../src/lib/sign-in/auth-cookies';
 import { PROVIDER_LINKED_COOKIE } from '../src/lib/sign-in/oauth-providers';
-import { CLIENT_WATCHER, SESSIONS_CLIENT } from './support/fixtures';
-import { signIn, signOut, submitPassword } from './support/helpers';
+import { storeSignInLink } from './support/db';
+import { CLIENT_WATCHER, SESSIONS_CLIENT, SUPPORT_STAFF } from './support/fixtures';
+import {
+  openAccountSettings,
+  openSignInLink,
+  signIn,
+  signOut,
+  submitPassword,
+} from './support/helpers';
 import { expect, test } from './support/test';
 import { codeForSecret } from './support/totp';
 
@@ -65,12 +74,11 @@ test('the sign-in page sends someone signed in already on to the page they asked
   await expect(page).toHaveURL('/dashboard');
 });
 
-test('the sign-in form starts over after signing out, without reloading the page', async ({
+test('the sign-in form is empty after signing out, for the next person to sign in', async ({
   page,
 }) => {
   await signIn(page, CLIENT_WATCHER);
 
-  // Signing out goes back to the sign-in page Next kept alive since signing in.
   await signOut(page);
   await expect(page.getByLabel('Email')).toHaveValue('');
   await expect(page.getByLabel('Password')).toHaveValue('');
@@ -81,6 +89,63 @@ test('the sign-in form starts over after signing out, without reloading the page
   await page.getByLabel('Password').fill(CLIENT_WATCHER.password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page).toHaveURL(/\/(dashboard|companies\/)/);
+});
+
+test('the next person to sign in on this browser sees their own account, not the last one’s', async ({
+  page,
+}) => {
+  const name = page.getByRole('textbox', { name: 'Name', exact: true });
+  await signIn(page, CLIENT_WATCHER);
+  // Opened with a click, so Next would keep it alive with the Watcher's name in its field.
+  await openAccountSettings(page);
+  await expect(name).toHaveValue(CLIENT_WATCHER.name);
+  await signOut(page);
+
+  // Someone else signs in on the same page, without loading it again.
+  await page.getByRole('textbox', { name: 'Email' }).fill(SUPPORT_STAFF.email);
+  await page.getByLabel('Password', { exact: true }).fill(SUPPORT_STAFF.password);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page).toHaveURL('/dashboard');
+  await openAccountSettings(page);
+  await expect(name).toHaveValue(SUPPORT_STAFF.name);
+});
+
+test("signing in or out in one tab loads the browser's other tabs afresh", async ({
+  page,
+  context,
+}) => {
+  // A second tab of the same browser is on the sign-in page too.
+  const other = await context.newPage();
+  await other.goto('/auth');
+  await expect(other.getByRole('heading', { name: 'Sign in to Adiutor' })).toBeVisible();
+
+  // Signing in in the first tab takes the other one on without a click, signed in.
+  await signIn(page, CLIENT_WATCHER);
+  await expect(other).toHaveURL(/\/(dashboard|companies\/)/);
+
+  // The other tab's Profile page, opened with a click, so Next would keep it alive with the name.
+  const otherName = other.getByRole('textbox', { name: 'Name', exact: true });
+  await openAccountSettings(other);
+  await expect(otherName).toHaveValue(CLIENT_WATCHER.name);
+
+  // Signing out in the first tab sends the other one to the sign-in page, which comes back there.
+  await signOut(page);
+  await expect(other).toHaveURL('/auth?callbackURL=%2Faccount');
+  await expect(other.getByRole('heading', { name: 'Sign in to Adiutor' })).toBeVisible();
+  await expect(otherName).toHaveCount(0);
+});
+
+test("an email-link sign-in loads the browser's other tabs afresh", async ({ page, context }) => {
+  // A second tab of the same browser is on the sign-in page.
+  const other = await context.newPage();
+  await other.goto('/auth');
+  await expect(other.getByRole('heading', { name: 'Sign in to Adiutor' })).toBeVisible();
+
+  // The link comes back through a redirect, so the page it lands on tells the other tab, which goes
+  // on without a click, signed in.
+  await openSignInLink(page, await storeSignInLink(CLIENT_WATCHER.email));
+  await expect(page).toHaveURL(/\/(dashboard|companies\/)/);
+  await expect(other).toHaveURL(/\/(dashboard|companies\/)/);
 });
 
 test('the code step starts over after signing out, with "Trust this device" unticked', async ({

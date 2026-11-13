@@ -23,6 +23,26 @@ a page of the app: on the site and not under `/api`) or the dashboard (`signedIn
 `src/lib/redirect.ts`): switching accounts means signing out first. A deactivated account counts
 as signed out and gets the form.
 
+Signing in with a password, a passkey or the code step loads that page afresh (`loadFresh` in
+`src/components/ui/load-fresh.ts`), never as a navigation within the app: Next keeps the last few
+pages alive with what's in their fields, so a session that ended without signing out (it expired,
+or was signed out elsewhere) would otherwise leave the previous person's pages for the next one.
+Email links and providers come back with a full load anyway. The browser's other tabs load their
+own page afresh too (`loadFresh` with `everyTab`, see
+[Signing in as a user](#signing-in-as-a-user) for how), so a sign-in page open in another tab goes
+on, signed in. Email links and providers come back through a redirect, after which no code of the
+page that started them runs, so the server leaves the next page a cookie instead
+(`ACTING_AS_CHANGED_COOKIE` in `src/lib/sign-in/auth-cookies.ts`, set by `afterAuthRequest`): only
+`1`, for 5 minutes, readable in the browser. The page that loads with it removes it and tells the
+other tabs (`ReloadWhenActingAsChanges`). It's set only when the browser acts as someone else now
+(it had no session, or someone else's: `replacePreviousSession`), not when the same user confirms
+again, e.g. with GitHub on the step-up page. Server actions that sign someone in or out and then
+redirect (setup, creating an account from an invitation, and joining with an invite link when that
+ends the session) leave the same cookie (`markActingAsChanged` in
+`src/server/auth/acting-as-changed.ts`): their redirect is a navigation within the app, so when it
+reaches a page with the cookie, that tab loads afresh too, and so do the others. Their forms keep
+working before JavaScript has loaded.
+
 ## Email links
 
 A magic link email opens a confirmation page (`/auth/email-link`, `src/lib/sign-in/email-link.ts`); only
@@ -39,7 +59,9 @@ does, since whoever has it can sign in with it. When someone else is signed in i
 it says that continuing switches to the link's account (and points out when both have the same
 name), which ends the other account's session there as signing out would. If the link stops
 working before the click, Better Auth comes back to this page with the reason, not to the
-sign-in page, which would send the browser on to the account still signed in. When it's that
+sign-in page, which would send the browser on to the account still signed in. After a switch, the
+browser's other tabs load their page afresh as the link's account (see
+[Sign-in methods](#sign-in-methods)). When it's that
 account already, Continue goes on without using the link. A link that
 expired or was used says so straight away, and its "Go to sign in" keeps where the link would
 have gone. The form only gets the link's token in the browser,
@@ -195,7 +217,16 @@ language (`cookiesToClearAtSignOut` in `src/lib/sign-in/auth-cookies.ts`, applie
 `afterAuthRequest`; neither says who signed in, and the sign-in page stays in the browser's
 language, see [Languages](i18n.md#how-the-language-is-chosen)): the
 session, "Trust this device" and anything naming someone (such as the provider-linked notice),
-so the next person on that browser starts clean. The browser's trusted device is forgotten too
+so the next person on that browser starts clean. The sign-in page it goes to loads afresh
+(`loadFresh`), so none of the pages Next kept alive, with their fields, is left for them either; the
+same goes for every other change of who the browser acts as: signing in (see
+[Sign-in methods](#sign-in-methods)) and starting or ending a sign-in as a user (see
+[Signing in as a user](#signing-in-as-a-user)). Signing out from the account menu or the step-up
+page also makes the browser's other tabs load their page afresh (`everyTab`), which sends them to
+the sign-in page, so no tab keeps showing the pages of whoever signed out. So does deactivating
+your own account (the dialog's `loadOnSuccess`, to `/auth?error=ACCOUNT_DEACTIVATED`), and joining
+with an invite link when the new role ends the session (see
+[Sign-in methods](#sign-in-methods)). The browser's trusted device is forgotten too
 (`forgetSignedOutBrowserTrust`), so a copy of its cookie no longer skips the code step. Signing a
 device out on the Security page ("Sign out" per device, "Sign out other devices") and changing
 the password forget every device the user trusted, this browser's included (a session doesn't
@@ -234,8 +265,8 @@ does, to check what isn't working for them. The reasons are in
 - **Starting** (`startImpersonation` in `src/server/auth/impersonation.ts`):
   - It starts from the **Sign in as user** card on the user's page (see
     [Staff screens](companies-and-roles.md#staff-screens)). Its dialog asks for an optional reason,
-    then opens the dashboard as the user (`signInAsAction`, which refreshes the layout too). The
-    card says why when it isn't possible.
+    then loads the dashboard afresh as the user (`signInAsAction`, then the dialog's
+    `loadOnSuccess`). The card says why when it isn't possible.
   - It needs strong MFA on the staff member's own account: an authenticator app, a passkey or
     provider MFA, never email codes (`hasStrongMfa`). It also needs a confirmation with it from the
     last 15 minutes, whatever their role (`strongMfaConfirmedUntil`).
@@ -251,7 +282,7 @@ does, to check what isn't working for them. The reasons are in
   - On every request, `getOptionalActor` reads that row alongside the staff member, checks again
     (the time, the rules, and that the staff member's session still counts as MFA), and returns
     the user with `signedInAs` set (`actorSignedInAs`).
-  - One that's over ends after the response (`impersonation_ended` with `expired` or
+  - One that's over ends in the background (`impersonation_ended` with `expired` or
     `no_longer_allowed`), and the request goes on as the staff member.
   - Only the staff member is recorded as active.
   - The user's session facts (`sessionId`, `sessionMfaVerified`, `mfaConfirmedUntil`,
@@ -271,7 +302,20 @@ does, to check what isn't working for them. The reasons are in
     out's place there, since signing out would end the staff member's own session.
   - Back to my account (`backToOwnAccountAction`, `stopSigningInAs`) records `impersonation_ended`
     with `stopped`. It returns to where the staff member started (the user's page, at the card),
-    with a toast.
+    with a toast (`showToastAfterLoad`).
+  - Starting and going back both end with a full page load (`loadFresh`), never a navigation
+    within the app: Next keeps the last few pages alive with what's in their fields, so a Profile
+    page from before would still show the other person's name. So does an end by itself (see
+    **Ending** below), and signing in and out (see [Signing out](#signing-out)).
+  - The browser's other tabs load their own page afresh too, at once, also when they're hidden
+    (`loadFresh` with `everyTab`). The session is the browser's cookie, so their next navigation
+    would render for the new person, but without the banner (and so with changes on) and with the
+    pages Next kept alive from before. The tab that starts or goes back tells the others over a
+    `BroadcastChannel` (`src/components/ui/acting-as-channel.ts`) once the server has made the
+    change, and `ReloadWhenActingAsChanges` in the root layout loads the page each one is on. The
+    message only says that something changed: no name, ID or address, and it isn't logged. A page
+    the new person can't open says so as it would for anyone (a staff page is not found for a
+    company user).
 - **Nothing changes in the user's name.**
   - Every service that changes something calls `assertNotSignedInAs` first (code `signed_in_as`:
     "This can't be changed while you're signed in as someone else."). The server actions that call
@@ -301,6 +345,21 @@ does, to check what isn't working for them. The reasons are in
     when either person's rights change.
   - The hourly job ends and records those nobody came back to (see
     [Background jobs](deploying.md#background-jobs)).
+  - Once its 30 minutes are up, the tab loads the page it's on afresh, as the staff member, with a
+    toast (`ReloadWhenSignedInAsEnds`, mounted by the banner). Without that, the banner and the
+    pages Next kept alive would still show the user, since a navigation within the app doesn't
+    fetch the layout again. The banner hands it the time left as the server measured it, so the
+    browser's clock doesn't matter. It waits 2 more seconds, so the server finds it over, and only
+    while the tab is visible: a hidden tab loads as it comes back into view.
+  - When the rules end it (`no_longer_allowed`), the tab finds out at its next navigation within
+    the app, or as it comes back into view. The banner then asks the server when the sign-in ends
+    (`signedInAsEndsAtAction`), and loads the page afresh the same way when there's none any more,
+    or another one took its place (a change in another tab whose message didn't arrive; usually
+    the message reloads it at once). That's one small request per navigation, only while signed
+    in as someone, and never on a timer. A tab nobody touches keeps showing what it already showed
+    until then.
+  - An end by itself doesn't tell the other tabs: each has its own timer and check, and loads with
+    the toast that says why.
   - Errors reported while signed in as someone are recorded for the staff member.
 
 ## Account pages

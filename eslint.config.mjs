@@ -365,6 +365,21 @@ const useActionStatePath = {
 };
 
 /**
+ * Work the response doesn't wait for goes through `startInBackground`
+ * (`src/server/background.ts`), not Next's `after()`: called while a page
+ * renders, `after()` makes every later `cookies()` or `headers()` read in that
+ * render fail once the response closes, and renders can outlive their
+ * response. Route handlers may use it: Better Auth's endpoints
+ * (`src/lib/auth.ts`) and the jobs' tick (`src/app/api/jobs/route.ts`).
+ */
+const nextAfterPath = {
+  name: 'next/server',
+  importNames: ['after'],
+  message:
+    'Use `startInBackground` (src/server/background.ts): `after()` called while rendering makes later cookie and header reads in that render fail once the response closes.',
+};
+
+/**
  * Specs import `test` and `expect` from `e2e/support/test.ts` (CLAUDE.md, "UI
  * and accessibility"), which fails a test on the CSP violations its pages
  * report. Types still come from `@playwright/test`.
@@ -388,7 +403,7 @@ const restrictedImportsConfig = [
     rules: {
       'no-restricted-imports': [
         'error',
-        { patterns: folderModulePatterns, paths: [useActionStatePath] },
+        { patterns: folderModulePatterns, paths: [useActionStatePath, nextAfterPath] },
       ],
     },
   },
@@ -397,7 +412,25 @@ const restrictedImportsConfig = [
     files: ['src/components/ui/use-transient-state.ts'],
     rules: {
       /** The wrapper itself is built on `useActionState`. */
-      'no-restricted-imports': ['error', { patterns: folderModulePatterns }],
+      'no-restricted-imports': [
+        'error',
+        { patterns: folderModulePatterns, paths: [nextAfterPath] },
+      ],
+    },
+  },
+  {
+    name: 'adiutor/restricted-imports/auth',
+    files: ['src/lib/auth.ts', 'src/app/api/jobs/route.ts'],
+    rules: {
+      /**
+       * Route handlers, where `after()` may read the request: Better Auth's
+       * endpoints, and the jobs' tick, whose continuation needs `after()` so
+       * Vercel keeps the function running until it's done.
+       */
+      'no-restricted-imports': [
+        'error',
+        { patterns: folderModulePatterns, paths: [useActionStatePath] },
+      ],
     },
   },
   {
@@ -406,7 +439,10 @@ const restrictedImportsConfig = [
     rules: {
       'no-restricted-imports': [
         'error',
-        { patterns: folderModulePatterns, paths: [useActionStatePath, playwrightTestPath] },
+        {
+          patterns: folderModulePatterns,
+          paths: [useActionStatePath, nextAfterPath, playwrightTestPath],
+        },
       ],
     },
   },

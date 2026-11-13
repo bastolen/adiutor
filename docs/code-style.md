@@ -22,6 +22,10 @@ The linters and formatters, the JSDoc rule, the editor setup and the Git hooks. 
   - fixed colours (`bg-white`, `text-ink`, ...) and text lightened with opacity (`text-foreground/70`)
     in `src/app` and `src/components`; a font size with a line height (`text-sm/6`) is fine;
   - `useActionState`, outside `useTransientActionState` (`src/components/ui/use-transient-state.ts`);
+  - Next's `after()`, outside the route handlers that need it (Better Auth's endpoints in
+    `src/lib/auth.ts`, the jobs' tick in `src/app/api/jobs/route.ts`): called while a page renders,
+    it makes later `cookies()` and `headers()` reads in that render fail once the response closes, so
+    background work uses `startInBackground` (`src/server/background.ts`);
   - `test` and `expect` imported from `@playwright/test` in a spec, instead of `e2e/support/test.ts`;
   - a provider ID (`'github'`, `'google'`) outside the files that declare the providers;
   - a role compared with a string (`role === 'admin'`) in a page or component;

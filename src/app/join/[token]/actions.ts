@@ -12,6 +12,7 @@ import field from '@/lib/form-data';
 import { emailSchema } from '@/lib/validation';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
+import markActingAsChanged from '@/server/auth/acting-as-changed';
 import { getActor } from '@/server/authz';
 import { joinedPath } from '@/server/people/invitations';
 import { claimInviteLink, joinWithInviteLink } from '@/server/people/invite-links';
@@ -42,7 +43,8 @@ export async function claimAction(
  * Uses the link to join as the signed-in user, then opens the company (or the
  * dashboard after joining the staff). When the new role requires MFA and
  * this session wasn't confirmed with it, joining ended the session, so the
- * user goes to sign in again with a note.
+ * user goes to sign in again with a note, and every tab of the browser loads
+ * afresh, signed out (`markActingAsChanged`).
  *
  * @param _previous - The previous result (unused).
  * @param formData - Field `token`.
@@ -57,6 +59,7 @@ export async function joinAction(
     const result = await joinWithInviteLink(appContext, field(formData, 'token'), actor);
     if (result.status === 'joined' && result.signedOut) {
       // The new role requires MFA, and a link proves no inbox: this session ended.
+      await markActingAsChanged();
       const next = encodeURIComponent(joinedPath(result.companyId));
       redirect(`/auth?notice=joined-mfa-required&callbackURL=${next}`);
     }

@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import renderInLocale from '../../../tests/i18n/render';
 import SignInForm from './sign-in-form';
 
-/** Mocked Better Auth client methods. */
+/** Mocked Better Auth client methods, router and full page load. */
 const {
   signInEmail,
   signInMagicLink,
@@ -16,7 +16,7 @@ const {
   signInPasskey,
   getLastUsedLoginMethod,
   push,
-  replace,
+  loadFresh,
 } = vi.hoisted(() => ({
   signInEmail: vi.fn(),
   signInMagicLink: vi.fn(),
@@ -24,7 +24,7 @@ const {
   signInPasskey: vi.fn(),
   getLastUsedLoginMethod: vi.fn(),
   push: vi.fn(),
-  replace: vi.fn(),
+  loadFresh: vi.fn(),
 }));
 
 /** Query string the mocked `useSearchParams` returns. */
@@ -32,11 +32,11 @@ let searchParams = new URLSearchParams();
 
 vi.mock('next/navigation', () => ({
   /**
-   * Mocked router; `push` and `replace` are recorded.
+   * Mocked router; `push` is recorded (the code step comes before the session).
    *
    * @returns The router.
    */
-  useRouter: () => ({ push, replace, refresh: vi.fn() }),
+  useRouter: () => ({ push, replace: vi.fn(), refresh: vi.fn() }),
   /**
    * Mocked query string.
    *
@@ -56,6 +56,8 @@ vi.mock('@/lib/sign-in/auth-client', () => ({
     getLastUsedLoginMethod,
   },
 }));
+
+vi.mock('@/components/ui/load-fresh', () => ({ default: loadFresh }));
 
 /**
  * Wraps content in an `<Activity>` that a "Leave" / "Return" button hides and
@@ -235,7 +237,9 @@ describe('SignInForm', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }));
 
-      await vi.waitFor(() => expect(replace).toHaveBeenCalledWith('/admin/staff#invitations'));
+      await vi.waitFor(() =>
+        expect(loadFresh).toHaveBeenCalledWith('/admin/staff#invitations', { everyTab: true }),
+      );
     });
 
     it('keeps it through the code step, an email link and a provider', async () => {
@@ -291,7 +295,9 @@ describe('SignInForm', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }));
 
-      await vi.waitFor(() => expect(replace).toHaveBeenCalledWith('/admin/staff#invite'));
+      await vi.waitFor(() =>
+        expect(loadFresh).toHaveBeenCalledWith('/admin/staff#invite', { everyTab: true }),
+      );
     });
 
     it.each(['#:~:text=secret', '#100%', '#top'])(
@@ -304,7 +310,9 @@ describe('SignInForm', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }));
 
-        await vi.waitFor(() => expect(replace).toHaveBeenCalledWith('/admin/staff'));
+        await vi.waitFor(() =>
+          expect(loadFresh).toHaveBeenCalledWith('/admin/staff', { everyTab: true }),
+        );
       },
     );
   });
@@ -325,7 +333,7 @@ describe('SignInForm', () => {
         '/auth/two-factor?callbackURL=%2Fdashboard&methods=totp%2Cotp',
       ),
     );
-    expect(replace).not.toHaveBeenCalled();
+    expect(loadFresh).not.toHaveBeenCalled();
   });
 
   it('signs in with a passkey', async () => {
@@ -334,7 +342,10 @@ describe('SignInForm', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }));
 
-    await vi.waitFor(() => expect(replace).toHaveBeenCalledWith('/dashboard'));
+    // The browser's other tabs load their page afresh too, signed in.
+    await vi.waitFor(() =>
+      expect(loadFresh).toHaveBeenCalledWith('/dashboard', { everyTab: true }),
+    );
   });
 
   it('explains a cancelled passkey prompt', async () => {
@@ -359,7 +370,9 @@ describe('SignInForm', () => {
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'jane@adiutor.test' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret-password' } });
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
-    await vi.waitFor(() => expect(replace).toHaveBeenCalledWith('/dashboard'));
+    await vi.waitFor(() =>
+      expect(loadFresh).toHaveBeenCalledWith('/dashboard', { everyTab: true }),
+    );
 
     // Signed in, the page is left; signing out shows it again.
     fireEvent.click(screen.getByRole('button', { name: 'Leave' }));

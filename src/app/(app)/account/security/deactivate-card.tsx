@@ -2,7 +2,9 @@
  * @file The "Deactivate account" card at the bottom of the Security page.
  * Like changing how the user signs in, deactivating needs a confirmation
  * with the second step from the last 15 minutes, so starting it without one
- * sends the user to confirm first (see `useRecentConfirmation`).
+ * sends the user to confirm first (see `useRecentConfirmation`). Once it's
+ * done, the sign-in page loads afresh in every tab of the browser
+ * (`loadOnSuccess`), saying the account is deactivated.
  */
 'use client';
 
@@ -17,6 +19,9 @@ import { deactivateAccountAction } from './actions';
 
 /** The card's anchor, which the step-up page comes back to (it renders the card itself). */
 const SECTION = 'deactivate';
+
+/** The sign-in page, saying the account is deactivated, which loads once it's done. */
+export const DEACTIVATED_PATH = '/auth?error=ACCOUNT_DEACTIVATED';
 
 /**
  * Props for {@link DeactivateCard}.
@@ -57,6 +62,7 @@ export default function DeactivateCard({ hasPassword, blockedReason }: Deactivat
         blocked ? undefined : (
           <ActionDialog
             action={deactivateAccountAction}
+            loadOnSuccess={DEACTIVATED_PATH}
             triggerLabel={t('security.deactivate.trigger')}
             triggerVariant="danger-subtle"
             title={t('security.deactivate.dialogTitle')}

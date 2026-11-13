@@ -399,7 +399,7 @@ export type SignedInAsOutcome =
  * - otherwise: the user, loaded without a session (the session is the staff
  *   member's), with `signedInAs` set.
  *
- * The caller ends it after the response and goes on as the staff member.
+ * The caller ends it in the background and goes on as the staff member.
  *
  * @param db - Database client (the pool).
  * @param staff - The staff member, as their request loaded them.

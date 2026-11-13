@@ -10,6 +10,7 @@ import { db } from '@/db';
 import { passkey } from '@/db/schema';
 import { allowsEmailCodes, hasMfa, mfaMethodFromPath } from '@/lib/authz/mfa';
 import { firstRow } from '@/lib/defined';
+import { ACTING_AS_CHANGED_COOKIE } from '@/lib/sign-in/auth-cookies';
 import { isMfaProvider } from '@/lib/sign-in/oauth-providers';
 import { availableProviders } from '@/lib/sign-in/providers';
 
@@ -31,6 +32,7 @@ import {
   forgetSignedOutBrowserTrust,
   replacePreviousSession,
 } from './browser-cleanup';
+import { setNextPageCookie } from './cookies';
 import { type FinishedRequest, finishedRequest } from './finished-request';
 import { type AuthHookContext, safely, audit, auditAndNotify } from './hook-context';
 import rememberLanguage from './language';
@@ -200,10 +202,26 @@ async function reactToSignInChange(
 }
 
 /**
+ * Whether a sign-in through this endpoint comes back to the app with a
+ * redirect: a provider's callback, or an email link. No code of the page
+ * that started it runs afterwards, so it can't tell the browser's other tabs
+ * itself, as a password, passkey or code sign-in does (`loadFresh` with
+ * `everyTab`).
+ *
+ * @param path - The endpoint's path.
+ * @returns Whether it's `/callback/…` or `/magic-link/verify`.
+ */
+function signsInByRedirect(path: string): boolean {
+  return path.startsWith('/callback/') || path === '/magic-link/verify';
+}
+
+/**
  * Reacts to a request that went through: ends the browser's previous session
- * when a new one started, checks a provider callback's MFA (for
- * `recordProviderSession`), and otherwise reacts to the change to how the
- * user signs in ({@link reactToSignInChange}).
+ * when a new one started, and when that sign-in came back with a redirect and
+ * the browser acts as someone else now, leaves the next page a cookie that
+ * tells the other tabs to load afresh (`ACTING_AS_CHANGED_COOKIE`). It checks
+ * a provider callback's MFA (for `recordProviderSession`), and otherwise
+ * reacts to the change to how the user signs in ({@link reactToSignInChange}).
  *
  * @param ctx - The endpoint context, with its response.
  * @param request - The facts about the request.
@@ -221,14 +239,21 @@ async function reactToSuccess(
 
   const { newSession } = ctx.context;
   if (newSession) {
+    // Unless it says otherwise: telling the other tabs once too often only loads them again.
+    let actsAsSomeoneElse = true;
     // Also for a password sign-in that goes on to the code step, and whoever's the old session
     // was: see `replacePreviousSession`. On its own, so a failure doesn't skip what follows.
-    await safely("end the browser's previous session", () =>
-      replacePreviousSession(ctx, {
+    await safely("end the browser's previous session", async () => {
+      actsAsSomeoneElse = await replacePreviousSession(ctx, {
         id: newSession.session.id,
         userId: newSession.user.id,
-      }),
-    );
+      });
+    });
+    if (actsAsSomeoneElse && signsInByRedirect(path)) {
+      await safely('tell the next page the browser acts as someone else', async () => {
+        setNextPageCookie(ctx, ACTING_AS_CHANGED_COOKIE, '1');
+      });
+    }
     // The browser gets the account's language. A password sign-in's session may still be deleted
     // for the code step, so `afterPasswordSignIn` does it once the session stays.
     if (path !== '/sign-in/email') {

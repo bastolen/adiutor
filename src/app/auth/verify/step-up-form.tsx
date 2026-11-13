@@ -24,6 +24,7 @@ import Alert from '@/components/ui/alert';
 import AuthDivider from '@/components/ui/auth-divider';
 import AuthHeading from '@/components/ui/auth-heading';
 import Button from '@/components/ui/button';
+import loadFresh from '@/components/ui/load-fresh';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import type { StepUpMethods } from '@/lib/authz/mfa';
 import { EMAIL_CODE_MINUTES } from '@/lib/authz/mfa';
@@ -299,11 +300,15 @@ export default function StepUpForm({
     }
   };
 
-  /** Ends the session and goes back to the sign-in page. */
+  /**
+   * Ends the session and loads the sign-in page afresh (`loadFresh`), so no
+   * page Next kept alive is left for the next person on this browser, in
+   * this tab or the browser's others (`everyTab`), which go to the sign-in
+   * page too.
+   */
   const signOut = async () => {
     await authClient.signOut();
-    router.replace('/auth');
-    router.refresh();
+    loadFresh('/auth', { everyTab: true });
   };
 
   const showCodeForm = mode === 'totp' || mode === 'backup' || (mode === 'otp' && codeSent);

@@ -3,6 +3,9 @@
  * action that needs extra input, e.g. typing an email address to confirm a
  * deletion or a password to deactivate an account. In the signed-in app its
  * success is a toast, so it's seen even when the action removes the button.
+ * An action after which every page must start over (starting a sign-in as a
+ * user) loads a page afresh instead, and the browser's other tabs load
+ * theirs (`loadOnSuccess`).
  */
 'use client';
 
@@ -22,10 +25,11 @@ import type { ActionResult } from '@/lib/action-result';
 
 import Button, { type ButtonProps } from './button';
 import restoreFocusIfLost from './focus-fallback';
+import loadFresh from './load-fresh';
 import Modal from './modal';
 import ResultAlert from './result-alert';
 import { useSignedInAs } from './signed-in-as';
-import { useToast } from './toast';
+import { showToastAfterLoad, useToast } from './toast';
 import { useTransientActionState, useTransientState } from './use-transient-state';
 
 /**
@@ -71,6 +75,17 @@ interface ActionDialogProps {
    * action's button renders disabled then, as the server refuses it.
    */
   allowedWhileSignedInAs?: boolean;
+  /**
+   * A page of the app to load afresh after a successful result
+   * (`loadFresh`), for an action after which every page must start over,
+   * such as starting a sign-in as a user: a navigation within the app would
+   * keep the pages Next keeps alive, with the values from before. The
+   * browser's other tabs load their own page afresh too (`everyTab`), since
+   * the browser acts as someone else in them as well. The dialog stays open,
+   * its button busy, until the page goes; the result's message is a toast on
+   * the next page.
+   */
+  loadOnSuccess?: string;
 }
 
 /**
@@ -83,6 +98,7 @@ interface ActionDialogProps {
  * @param props.tone - Submit button style.
  * @param props.onDone - Called with the message after a successful result.
  * @param props.onCancel - Called when Cancel is pressed.
+ * @param props.leaving - Whether a page is loading afresh after the action, which keeps it busy.
  * @param props.children - Form fields.
  * @returns The form.
  */
@@ -93,16 +109,19 @@ function ActionDialogForm({
   tone,
   onDone,
   onCancel,
+  leaving,
   children,
 }: Pick<ActionDialogProps, 'action' | 'confirmLabel' | 'children'> & {
   fields: Record<string, string>;
   tone: 'danger' | 'primary';
   onDone: (message?: string) => void;
   onCancel: () => void;
+  leaving: boolean;
 }) {
   // Through the shared hook's `onSubmit`, so a refused submit (a wrong password) keeps the input.
   const t = useTranslations('common.actions');
-  const [result, formAction, pending, onSubmit] = useTransientActionState(action, null);
+  const [result, formAction, running, onSubmit] = useTransientActionState(action, null);
+  const pending = running || leaving;
 
   useEffect(() => {
     if (result?.ok) {
@@ -138,7 +157,8 @@ function ActionDialogForm({
  * the signed-in app (shown as soon as the action returns) or else shown next
  * to the button. Escape or Cancel closes it without submitting, and focus
  * returns to the button; if the action removed the button (e.g. "Make staff"
- * becoming "Remove staff access"), focus moves to its card's heading.
+ * becoming "Remove staff access"), focus moves to its card's heading. With
+ * `loadOnSuccess`, a successful result loads that page afresh instead.
  *
  * @param props - Dialog props.
  * @param props.action - The server action.
@@ -154,6 +174,7 @@ function ActionDialogForm({
  * @param props.onTriggerClick - Runs before the dialog opens; can keep it closed.
  * @param props.confirmFirst - Send the user to confirm it's them first when needed.
  * @param props.allowedWhileSignedInAs - Keep it enabled while signed in as the user (their own work).
+ * @param props.loadOnSuccess - A page to load afresh after a successful result.
  * @returns The button and dialog.
  */
 export default function ActionDialog({
@@ -170,6 +191,7 @@ export default function ActionDialog({
   onTriggerClick = undefined,
   confirmFirst = false,
   allowedWhileSignedInAs = false,
+  loadOnSuccess = undefined,
 }: ActionDialogProps) {
   const { askToConfirm } = useRecentConfirmation();
   const changesOff = useSignedInAs() && !allowedWhileSignedInAs;
@@ -181,12 +203,22 @@ export default function ActionDialog({
   const containerRef = useRef<HTMLDivElement>(null);
   // Set once the action worked, so this button going away afterwards can move focus.
   const succeeded = useRef(false);
+  // Set once the action worked with `loadOnSuccess`, so the dialog stays busy until the page goes.
+  const [leaving, setLeaving] = useTransientState(false);
 
   // Toasts a success as soon as the action returns: the refresh may remove this button.
   // Errors toast where they're shown, in the dialog's `ResultAlert`.
   const run = useCallback(
     async (previous: ActionResult | null, formData: FormData) => {
       const next = await action(previous, formData);
+      if (next.ok && loadOnSuccess) {
+        if (next.message) {
+          showToastAfterLoad(next.message);
+        }
+        setLeaving(true);
+        loadFresh(loadOnSuccess, { everyTab: true });
+        return next;
+      }
       if (showToast && next.ok) {
         if (next.message) {
           showToast(next.message);
@@ -195,7 +227,7 @@ export default function ActionDialog({
       }
       return next;
     },
-    [action, showToast],
+    [action, showToast, loadOnSuccess, setLeaving],
   );
 
   useLayoutEffect(() => {
@@ -251,11 +283,16 @@ export default function ActionDialog({
           confirmLabel={confirmLabel}
           tone={tone}
           onDone={(done) => {
+            if (loadOnSuccess) {
+              // Stays open and busy until the page goes; the next page has the toast.
+              return;
+            }
             // With toasts, the toast already said it.
             setMessage(showToast ? null : (done ?? null));
             setOpen(false);
           }}
           onCancel={() => setOpen(false)}
+          leaving={leaving}
         >
           {children}
         </ActionDialogForm>

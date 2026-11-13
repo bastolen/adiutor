@@ -85,6 +85,16 @@ keyboard support.
   you come back. Forms use `useTransientActionState` instead of `useActionState`, and status
   messages and dialog open state use `useTransientState` instead of `useState`
   (`src/components/ui/use-transient-state.ts`); both reset when the page is hidden.
+- **A new person means a new page load:** what's kept alive belongs to whoever was signed in, and
+  React keeps a field's value even when a page comes back for someone else. So every change of who
+  the browser acts as (signing in or out, starting or ending a sign-in as a user, also when it ends
+  by itself) ends with a full page load (`loadFresh` in `src/components/ui/load-fresh.ts`), never `router.push` or
+  `router.replace`, as does a change of language. The browser's other tabs load their page afresh
+  too (`everyTab`, heard by `ReloadWhenActingAsChanges` in the root layout), except after an end
+  by itself, which each tab finds on its own. A change that ends in a redirect (a provider or an
+  email link, or a server action that redirects) leaves the next page a cookie instead
+  (`ACTING_AS_CHANGED_COOKIE`, `markActingAsChanged`), which does the same. See
+  [Signing out](authentication.md#signing-out).
 - **A refused submit keeps the input:** React 19 resets a `<form action>` after every submit,
   whatever the result. Forms pass both the action and the hook's `onSubmit`
   (`<form action={formAction} onSubmit={onSubmit}>`), which runs the action itself and clears the
@@ -94,8 +104,8 @@ keyboard support.
   Select restores that on a form reset), not the one just saved. A bulk invite that sent some
   invitations keeps just the addresses that weren't sent. The sign-in pages are the exception to keeping typed input: the sign-in form and the code step keep their
   fields, busy state and "Trust this device" in `useTransientState` too, because they come back
-  after signing out, and the next person on the browser mustn't find the last user's details or a
-  button still busy. They also reset a busy button when the browser restores them from its
+  when someone goes back to them (from the code step to the sign-in page, say), and whoever does
+  mustn't find the last user's details or a button still busy. They also reset a busy button when the browser restores them from its
   back/forward cache (`pageshow`).
 - **Illustrations** (like the example request on the sign-in pages) are `inert`, and use
   `<Button decorative>` for buttons that only look like buttons: no hover, focus or press effects.
@@ -220,7 +230,10 @@ keyboard support.
   as soon as their action returns, so the toast outlasts a row the refresh removes (`RowAction`'s
   `doneMessage` names the row, e.g. "Invitation to jane@adiutor.dev revoked."); `ResultAlert`
   toasts a form's result, `Alert`'s `alsoToast` an error a component shows itself, and
-  `ToastOnArrival` a confirmation that comes with a redirect ("User deleted."). Results to act on
+  `ToastOnArrival` a confirmation that comes with a redirect ("User deleted."). An action that
+  ends with a full page load (`loadFresh`) leaves its toast for the next page with
+  `showToastAfterLoad`, which the `Toaster` there shows once ("You're back in your own account.");
+  it's kept in the tab's `sessionStorage` and counts for 30 seconds. Results to act on
   stay inline: a new company's "Open the company", a new invite link to copy. The signed-out
   pages (sign in, the code step, password reset, invitations, `/setup`) show their results inline
   only.
