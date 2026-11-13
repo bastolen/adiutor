@@ -10,7 +10,10 @@
       "sent": "Verstuurd",
       "created": "Aangemaakt",
       "signedIn": "Ingelogd",
-      "time": "Tijd"
+      "time": "Tijd",
+      "activity": "Laatste activiteit",
+      "raised": "Ingediend",
+      "priority": "Prioriteit"
     },
     "directions": {
       "aToZ": "A tot Z",
@@ -18,7 +21,9 @@
       "newestFirst": "nieuwste eerst",
       "oldestFirst": "oudste eerst",
       "mostRecentFirst": "meest recent eerst",
-      "leastRecentFirst": "minst recent eerst"
+      "leastRecentFirst": "minst recent eerst",
+      "highestFirst": "hoogste eerst",
+      "lowestFirst": "laagste eerst"
     },
     "option": "{sort}, {direction}",
     "caption": "{table}, gesorteerd op {sort}, {direction}",

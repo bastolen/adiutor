@@ -10,7 +10,10 @@
       "sent": "Fecha de envío",
       "created": "Fecha de creación",
       "signedIn": "Inicio de sesión",
-      "time": "Hora"
+      "time": "Hora",
+      "activity": "Última actividad",
+      "raised": "Fecha de creación",
+      "priority": "Prioridad"
     },
     "directions": {
       "aToZ": "de la A a la Z",
@@ -18,7 +21,9 @@
       "newestFirst": "más recientes primero",
       "oldestFirst": "más antiguos primero",
       "mostRecentFirst": "más recientes primero",
-      "leastRecentFirst": "menos recientes primero"
+      "leastRecentFirst": "menos recientes primero",
+      "highestFirst": "más altas primero",
+      "lowestFirst": "más bajas primero"
     },
     "option": "{sort}, {direction}",
     "caption": "{table} (orden: {sort}, {direction})",

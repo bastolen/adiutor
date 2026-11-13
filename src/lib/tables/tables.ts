@@ -6,7 +6,7 @@
  * their card (`section`). People and companies are sorted by name A to Z until the viewer
  * picks another order; invitations, invite links and devices newest first.
  */
-import { dateSort, type TableDefinition, textSort } from './table-state';
+import { dateSort, type SortDefinition, type TableDefinition, textSort } from './table-state';
 
 /** How a list of people (users, staff, members) can be sorted. */
 export type PeopleSort = 'name' | 'email' | 'last-active' | 'joined';
@@ -37,6 +37,12 @@ export type JobRunSort = 'time';
 
 /** How the failed queued jobs can be sorted: by when they were given up. */
 export type FailedJobSort = 'time';
+
+/** How a list of requests can be sorted by everyone who sees it. */
+export type RequestSort = 'activity' | 'raised';
+
+/** How the staff can sort a list of requests: also by priority, which only they see. */
+export type StaffRequestSort = RequestSort | 'priority';
 
 /**
  * The sorts of a list of people, the same wherever people are listed. What
@@ -137,4 +143,34 @@ export const FAILED_JOBS_TABLE: TableDefinition<FailedJobSort> = {
   section: 'failed-jobs',
   defaultSort: 'time',
   sorts: { time: dateSort('time') },
+};
+
+/** The sorts of a list of requests: by their last activity, or by when they were raised. */
+const REQUEST_SORTS: TableDefinition<RequestSort>['sorts'] = {
+  activity: dateSort('activity', { desc: 'mostRecentFirst', asc: 'leastRecentFirst' }),
+  raised: dateSort('raised'),
+};
+
+/** Sorting by priority, the highest first unless the viewer picks the other way. */
+const PRIORITY_SORT: SortDefinition = {
+  label: 'priority',
+  first: 'desc',
+  directions: { desc: 'highestFirst', asc: 'lowestFirst' },
+};
+
+/**
+ * A list of requests (`/requests`, and a company's page), as company users
+ * see it: by default the request with the latest activity first.
+ */
+export const REQUESTS_TABLE: TableDefinition<RequestSort> = {
+  prefix: '',
+  defaultSort: 'activity',
+  sorts: REQUEST_SORTS,
+};
+
+/** The same list as the staff see it, who can also sort it by priority. */
+export const STAFF_REQUESTS_TABLE: TableDefinition<StaffRequestSort> = {
+  prefix: '',
+  defaultSort: 'activity',
+  sorts: { ...REQUEST_SORTS, priority: PRIORITY_SORT },
 };

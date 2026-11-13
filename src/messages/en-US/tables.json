@@ -10,7 +10,10 @@
       "sent": "Sent",
       "created": "Created",
       "signedIn": "Signed in",
-      "time": "Time"
+      "time": "Time",
+      "activity": "Last activity",
+      "raised": "Raised",
+      "priority": "Priority"
     },
     "directions": {
       "aToZ": "A to Z",
@@ -18,7 +21,9 @@
       "newestFirst": "newest first",
       "oldestFirst": "oldest first",
       "mostRecentFirst": "most recent first",
-      "leastRecentFirst": "least recent first"
+      "leastRecentFirst": "least recent first",
+      "highestFirst": "highest first",
+      "lowestFirst": "lowest first"
     },
     "option": "{sort}, {direction}",
     "caption": "{table}, sorted by {sort}, {direction}",

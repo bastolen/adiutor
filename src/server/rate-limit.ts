@@ -68,6 +68,8 @@ export const RATE_LIMITS = {
    * (`startImpersonation`): each one emails the user.
    */
   impersonationsPerUser: { limit: 10, windowSeconds: 60 * 60 },
+  /** Requests one user raises: far more than anyone raises by hand, few enough to stop a flood. */
+  requestsPerUser: { limit: 60, windowSeconds: 60 * 60 },
 } as const satisfies Record<string, RateLimitRule>;
 
 /**

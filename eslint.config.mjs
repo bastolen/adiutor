@@ -336,6 +336,7 @@ const FOLDER_MODULES = [
   'server/people/invitations',
   'server/people/user-admin',
   'server/queue',
+  'server/requests',
 ];
 
 /**
