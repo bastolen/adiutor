@@ -352,8 +352,9 @@ describe('runTick', () => {
   });
 
   it('gives the recurring jobs the first half of the tick, and the queue the rest', async () => {
-    const tickMs = 600;
-    const deadline = new Date(Date.now() + tickMs);
+    // A faked clock that only the slow job moves, so no real time window can flake.
+    const start = new Date('2030-01-15T10:30:00Z');
+    const deadline = new Date(start.getTime() + 600);
     const deadlines: Date[] = [];
     // A slow job that works until its own deadline, as invitation reminders can.
     const slow = defineRecurringJob({
@@ -369,9 +370,7 @@ describe('runTick', () => {
        */
       run: async (_ctx, { deadline: own }) => {
         deadlines.push(own);
-        await new Promise((resolve) => {
-          setTimeout(resolve, Math.max(0, own.getTime() - Date.now()));
-        });
+        vi.setSystemTime(own);
         return { summary: { done: 1 } };
       },
     });
@@ -389,6 +388,8 @@ describe('runTick', () => {
       },
     );
     await queueJob(db, note, { userId: randomUUID() });
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(start);
 
     const result = await runTick(ctx, {
       trigger: 'tick',
@@ -396,13 +397,10 @@ describe('runTick', () => {
       now: at('10:30'),
       jobs: [slow],
       queuedJobs: [note],
-    });
+    }).finally(() => vi.useRealTimers());
 
-    // Halfway through what was left when the tick began its work, a moment after the test started.
-    const half = deadline.getTime() - tickMs / 2;
-    expect(deadlines).toHaveLength(1);
-    expect(deadlines[0]?.getTime()).toBeGreaterThanOrEqual(half);
-    expect(deadlines[0]?.getTime()).toBeLessThan(half + 100);
+    // Exactly halfway, as the clock stood still until the slow job moved it to its deadline.
+    expect(deadlines).toEqual([new Date(start.getTime() + 300)]);
     // The queue still ran after the slow job used all its time.
     expect(ran).toEqual(['note']);
     expect(result.runs.map((run) => run.job)).toEqual(['adiutor-tests-slow', 'adiutor-tests-note']);

@@ -5,7 +5,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { eq, sql } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 import { afterAll, beforeEach, expect, inject, vi } from 'vitest';
 
 import { createDatabase, type Database, type DatabaseTransaction } from '@/db';
@@ -14,6 +14,7 @@ import {
   company,
   membership,
   passkey,
+  queuedJob,
   rateLimitBucket,
   session,
   staffSettings,
@@ -639,4 +640,21 @@ export async function sendQueuedEmails(ctx: ServiceContext): Promise<void> {
     deadline: new Date(Date.now() + 60_000),
     startedAt: new Date(),
   });
+}
+
+/**
+ * The kinds of the jobs waiting in the queue, oldest first. Services queue
+ * most emails instead of sending them, so a check that nothing was sent also
+ * checks this, or it would pass whatever the service queued.
+ *
+ * @param db - The test database.
+ * @returns The kinds, e.g. `['security-notice']`; empty when nothing waits.
+ */
+export async function queuedJobKinds(db: Database): Promise<string[]> {
+  const rows = await db
+    .select({ kind: queuedJob.kind })
+    .from(queuedJob)
+    .where(eq(queuedJob.status, 'queued'))
+    .orderBy(asc(queuedJob.runAt), asc(queuedJob.id));
+  return rows.map(({ kind }) => kind);
 }

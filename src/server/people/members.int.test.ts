@@ -20,6 +20,7 @@ import {
 import { defined, firstRow } from '@/lib/defined';
 
 import {
+  queuedJobKinds,
   atTheSameMoment,
   createCompany,
   createSession,
@@ -390,6 +391,7 @@ describe('rights taken away while the request is under way', () => {
       ),
     ).toBe(0);
     expect(sent).toEqual([]);
+    expect(await queuedJobKinds(db)).toEqual([]);
   });
 
   it('refuses adding an account deactivated at that moment', async () => {

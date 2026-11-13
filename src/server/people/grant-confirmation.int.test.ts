@@ -13,6 +13,7 @@ import { invitation, inviteLink, membership, rateLimitBucket, user } from '@/db/
 import { defined, firstRow } from '@/lib/defined';
 
 import {
+  queuedJobKinds,
   addMember as addMemberRow,
   createCompany,
   createStaffSettings,
@@ -247,6 +248,7 @@ describe('company Admin grants', () => {
     );
     expect(row.role).toBe('admin');
     expect(sent).toEqual([]);
+    expect(await queuedJobKinds(db)).toEqual([]);
   });
 
   it('refuse adding someone as Admin, and a company with its first Admin, without one', async () => {

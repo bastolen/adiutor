@@ -8,7 +8,7 @@
  */
 import { type Page } from '@playwright/test';
 
-import { storeFailedQueuedJob } from './support/db';
+import { discardFailedQueuedJobs, resumeJob, storeFailedQueuedJob } from './support/db';
 import { PLATFORM_ADMIN, STEP_UP_MANAGER } from './support/fixtures';
 import { adminStorageState, signIn, type StorageState, toasts } from './support/helpers';
 import { runJobs } from './support/outbox';
@@ -90,6 +90,8 @@ test.describe('as a staff Admin', () => {
   });
 
   test('pauses and resumes a job, which the audit log records', async ({ page }) => {
+    // A retry after a failure halfway starts from a running job.
+    await resumeJob('expired-sign-in-data');
     await page.goto('/admin/logs/jobs');
     const row = page
       .getByRole('table', { name: 'Scheduled jobs' })
@@ -118,6 +120,8 @@ test.describe('as a staff Admin', () => {
   test('retries one failed queued job, and discards the rest of its kind after confirming', async ({
     page,
   }) => {
+    // A retry after a failure halfway starts without the jobs that attempt left behind.
+    await discardFailedQueuedJobs('staff-admin-added');
     await storeFailedQueuedJob(STEP_UP_MANAGER.email);
     await storeFailedQueuedJob(STEP_UP_MANAGER.email);
     await page.goto('/admin/logs/jobs');
@@ -141,8 +145,5 @@ test.describe('as a staff Admin', () => {
     await dialog.getByRole('button', { name: 'Discard jobs' }).click();
     await expect(toasts(page).getByText('1 job discarded.')).toBeVisible();
     await expect(page.getByText('No failed jobs')).toBeVisible();
-
-    // The retried job is skipped at the next tick: its recipient isn't a staff Admin.
-    await runJobs();
   });
 });

@@ -110,6 +110,36 @@ export async function findUserId(email: string): Promise<string> {
 }
 
 /**
+ * Resumes a background job if a test left it paused, so a retried test starts
+ * from a running job.
+ *
+ * @param name - The job's name.
+ */
+export async function resumeJob(name: string): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db
+      .update(schema.jobState)
+      .set({ pausedAt: null, pausedBy: null })
+      .where(eq(schema.jobState.name, name));
+  });
+}
+
+/**
+ * Discards the failed queued jobs of a kind that an earlier attempt of a test
+ * left behind, so a retried test starts without them.
+ *
+ * @param kind - The kind's name.
+ */
+export async function discardFailedQueuedJobs(kind: string): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db
+      .update(schema.queuedJob)
+      .set({ status: 'discarded', finishedAt: new Date() })
+      .where(and(eq(schema.queuedJob.kind, kind), eq(schema.queuedJob.status, 'failed')));
+  });
+}
+
+/**
  * Stores a `staff-admin-added` queued job that was given up after its last
  * attempt, for the Jobs page's Retry and Discard. It tells a Manager about a
  * new staff Admin, so when it's retried the job is skipped (the recipient
