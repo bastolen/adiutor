@@ -3,7 +3,7 @@
  */
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useRef } from 'react';
 
@@ -14,6 +14,7 @@ import Alert from '@/components/ui/alert';
 import AuthHeading from '@/components/ui/auth-heading';
 import Button from '@/components/ui/button';
 import CheckboxField from '@/components/ui/checkbox-field';
+import loadFresh from '@/components/ui/load-fresh';
 import TextLink from '@/components/ui/text-link';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import { EMAIL_CODE_MINUTES } from '@/lib/authz/mfa';
@@ -31,18 +32,18 @@ import verifyCode, { type CodeKind } from '@/lib/sign-in/verify-code';
  * days, until the user signs out there (sign-out clears it, see
  * `cookiesToClearAtSignOut`).
  *
- * The form starts over whenever the page is hidden, and after a code is
- * accepted: Next keeps the page alive (React's `<Activity>`) and shows it
- * again at the next sign-in, and the next person mustn't find the last code,
- * a busy button, or "Trust this device" still ticked, which would trust the
- * browser for someone else. The first emailed code is sent again then. A page
- * the browser restores from its back/forward cache is made usable again too.
+ * The form starts over whenever the page is hidden: Next keeps the page alive
+ * (React's `<Activity>`), e.g. after going back to the sign-in page, and
+ * whoever comes back to it mustn't find the last code, a busy button, or
+ * "Trust this device" still ticked, which would trust the browser for someone
+ * else. Once a code is accepted, the page the user came for loads afresh
+ * (`loadFresh`), which keeps no page alive. A page the browser restores from
+ * its back/forward cache is made usable again too.
  *
  * @returns The form.
  */
 export default function TwoFactorForm() {
   const t = useTranslations('auth');
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackURL = getSafeRedirectPath(searchParams.get('callbackURL'));
   const method = parseTwoFactorMethod(searchParams.get('methods'));
@@ -128,21 +129,13 @@ export default function TwoFactorForm() {
   }, [setPending]);
 
   /**
-   * Continues to the page the user came for. The form starts over, since the
-   * page stays alive and comes back at the next sign-in on this browser,
-   * which then sends its first emailed code again.
+   * Loads the page the user came for afresh (`loadFresh`), the button busy
+   * until it goes. A full load leaves no page alive, this one included, for
+   * the next person to sign in on this browser. The browser's other tabs
+   * load their own page afresh too (`everyTab`), signed in.
    */
   const finish = () => {
-    setPending(false);
-    setCode('');
-    setTrustDevice(false);
-    setMode(method);
-    setExpired(false);
-    // The code was used, which ends the guards' wait for a new one too.
-    cooldown.reset();
-    sentInitialCode.current = false;
-    router.replace(callbackURL);
-    router.refresh();
+    loadFresh(callbackURL, { everyTab: true });
   };
 
   /**

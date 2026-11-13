@@ -4,6 +4,7 @@
  */
 import { secureCookies } from '@/lib/env';
 
+import nextPageCookieOptions from '../next-page-cookie';
 import type { AuthHookContext } from './hook-context';
 
 /**
@@ -18,24 +19,20 @@ export function sentCookie(ctx: AuthHookContext, name: string): boolean {
 }
 
 /**
- * Sets a cookie that tells the next page something, which shows it and
- * removes it in the browser (`ProviderLinkedNotice`, `ProviderStepUpNotice`,
- * through `useNextPageCookie` in `src/components/auth/use-next-page-cookie.ts`):
- * for 5 minutes, readable in the browser (not `httpOnly`), and on every path,
- * so signing out removes it.
+ * Sets a cookie that tells the next page something, which shows it or acts
+ * on it and removes it in the browser (`ProviderLinkedNotice`,
+ * `ProviderStepUpNotice`, through `useNextPageCookie` in
+ * `src/components/auth/use-next-page-cookie.ts`, and
+ * `ReloadWhenActingAsChanges`), with {@link nextPageCookieOptions}: for 5
+ * minutes, readable in the browser (not `httpOnly`), and on every path, so
+ * signing out removes it.
  *
  * @param ctx - The endpoint context.
  * @param name - The cookie's name.
  * @param value - Its value.
  */
 export function setNextPageCookie(ctx: AuthHookContext, name: string, value: string): void {
-  ctx.setCookie?.(name, value, {
-    maxAge: 300,
-    path: '/',
-    httpOnly: false,
-    sameSite: 'lax',
-    secure: secureCookies,
-  });
+  ctx.setCookie?.(name, value, nextPageCookieOptions());
 }
 
 /**

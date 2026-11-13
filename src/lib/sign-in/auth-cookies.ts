@@ -20,6 +20,17 @@ import { LOCALE_COOKIE } from '@/lib/i18n/locales';
  */
 export const LAST_USED_LOGIN_METHOD_COOKIE = 'adiutor.last_used_login_method';
 
+/**
+ * The cookie that tells the next page the browser acts as someone else now,
+ * after a sign-in that came back through a redirect (a provider, an email
+ * link), where no code of the page that started it runs afterwards. The
+ * server sets it (`setNextPageCookie`); the page that loads next removes it
+ * and tells the browser's other tabs (`ReloadWhenActingAsChanges`), which
+ * load their page afresh. Its value is only `1`: never who, nor any ID. A
+ * sign-out removes it like any other.
+ */
+export const ACTING_AS_CHANGED_COOKIE = 'adiutor.acting-as-changed';
+
 /** Cookies a sign-out keeps: the "Last used" method and the language. */
 const KEPT_AT_SIGN_OUT: ReadonlySet<string> = new Set([
   LAST_USED_LOGIN_METHOD_COOKIE,

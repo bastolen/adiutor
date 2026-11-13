@@ -192,31 +192,30 @@ export async function disconnectAction(
  * Admin can reactivate it. Like changing how they sign in, it needs a recent
  * confirmation with the second step, if the account has one (otherwise the
  * user is sent to confirm first), and without a password or a second step a
- * sign-in from the last hour (`deactivateOwnAccount`).
+ * sign-in from the last hour (`deactivateOwnAccount`). On success the card's
+ * dialog loads the sign-in page afresh, in this tab and the browser's others
+ * (`loadOnSuccess`): a redirect from here would be a navigation within the
+ * app, keeping this person's pages alive and the other tabs unaware.
  *
  * @param _previous - The previous result (unused).
  * @param formData - Field `password` (when the user has one).
- * @returns Why it failed (on success it goes to the sign-in page).
+ * @returns Whether it worked, and if not why.
  */
 export async function deactivateAccountAction(
   _previous: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  const result = await runAction(async () => {
+  return runAction(async () => {
     const actor = await getActor({ allowMissingMfa: true });
     assertNotSignedInAs(actor);
     if (needsRecentConfirmation(actor)) {
       redirect(confirmChangeUrlFor(formData, SECURITY_PAGE));
     }
     await deactivateOwnAccount(appContext, actor, field(formData, 'password'));
-    return { ok: true };
-  });
-  if (result.ok) {
     // The sessions are gone already; this clears the cookies in the browser too.
     await auth.api.signOut({ headers: await headers() }).catch(() => undefined);
-    redirect('/auth?error=ACCOUNT_DEACTIVATED');
-  }
-  return result;
+    return { ok: true };
+  });
 }
 
 /**

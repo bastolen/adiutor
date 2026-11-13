@@ -3,10 +3,11 @@
  * deactivating needs a recent confirmation with the second step, so without
  * one the button sends the user to the step-up page instead of opening the
  * dialog; with one (or without a second step) the dialog opens, asking for
- * the password when the user has one. While they're the last Admin of
- * something, it only says why.
+ * the password when the user has one. Once it's done, the sign-in page
+ * loads afresh in every tab. While they're the last Admin of something, it
+ * only says why.
  */
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -18,13 +19,16 @@ import DeactivateCard from './deactivate-card';
 /** The step-up page, coming back to this card on the Security page. */
 const CONFIRM_SIGN_IN_CHANGE_URL = confirmChangeUrl('/account/security#deactivate');
 
-/** The mocked server action and router. */
-const { deactivateAccountAction, push } = vi.hoisted(() => ({
+/** The mocked server action, router and full page load. */
+const { deactivateAccountAction, push, loadFresh } = vi.hoisted(() => ({
   deactivateAccountAction: vi.fn(),
   push: vi.fn(),
+  loadFresh: vi.fn(),
 }));
 
 vi.mock('./actions', () => ({ deactivateAccountAction }));
+
+vi.mock('@/components/ui/load-fresh', () => ({ default: loadFresh }));
 
 vi.mock('next/navigation', () => ({
   /**
@@ -63,6 +67,7 @@ function renderCard(
 beforeEach(() => {
   push.mockReset();
   deactivateAccountAction.mockReset();
+  loadFresh.mockReset();
 });
 
 describe('DeactivateCard', () => {
@@ -93,6 +98,21 @@ describe('DeactivateCard', () => {
     expect(screen.getByRole('dialog', { name: 'Deactivate your account?' })).toBeInTheDocument();
     expect(screen.queryByLabelText('Current password')).not.toBeInTheDocument();
     expect(push).not.toHaveBeenCalled();
+  });
+
+  it('loads the sign-in page afresh in every tab once it is done', async () => {
+    deactivateAccountAction.mockResolvedValue({ ok: true });
+    render(<DeactivateCard hasPassword={false} blockedReason={null} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Deactivate' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Deactivate my account' }));
+
+    // A full page load, also in the browser's other tabs, so none keeps this person's pages.
+    await waitFor(() =>
+      expect(loadFresh).toHaveBeenCalledWith('/auth?error=ACCOUNT_DEACTIVATED', {
+        everyTab: true,
+      }),
+    );
   });
 
   it('only says why while the user is the last Admin of something', () => {

@@ -99,26 +99,36 @@ export async function forgetSignedOutBrowserTrust(ctx: AuthHookContext): Promise
  * session is unusable anyway, and this is the last moment it can be found.
  * Later, it would stay listed as a signed-in device until it expired.
  *
+ * It also says whether the browser acts as someone else now: it had no
+ * session that counts (no validly signed cookie, or one whose session is
+ * gone), or someone else's. The same user again (a step-up) isn't.
+ *
  * @param ctx - The endpoint context.
  * @param created - The new session.
  * @param created.id - Its ID.
  * @param created.userId - Its user.
+ * @returns Whether the browser acts as someone else now.
  */
 export async function replacePreviousSession(
   ctx: AuthHookContext,
   created: { id: string; userId: string },
-): Promise<void> {
+): Promise<boolean> {
   const token = await signedSessionToken(ctx);
   if (!token) {
-    return;
+    return true;
   }
   const [ended] = await db
     .delete(sessionTable)
     .where(and(eq(sessionTable.token, token), ne(sessionTable.id, created.id)))
     .returning({ userId: sessionTable.userId });
-  if (ended && ended.userId !== created.userId) {
-    await forgetOthersBrowserTrust(ctx, created.userId);
+  if (!ended) {
+    return true;
   }
+  if (ended.userId !== created.userId) {
+    await forgetOthersBrowserTrust(ctx, created.userId);
+    return true;
+  }
+  return false;
 }
 
 /**

@@ -1,8 +1,9 @@
 /**
- * @file The server action that ends signing in as a user: "Back to my
- * account", in the banner and in the account menu (where it takes Sign out's
+ * @file The server actions while signed in as a user. "Back to my account"
+ * ends it, in the banner and in the account menu (where it takes Sign out's
  * place while signed in as someone). It's the one change that works from the
- * user's view, since it changes nothing of theirs.
+ * user's view, since it changes nothing of theirs. The banner also asks after
+ * each navigation within the app whether it still lasts.
  */
 'use server';
 
@@ -10,7 +11,7 @@ import { getTranslations } from 'next-intl/server';
 
 import type { ActionResult } from '@/lib/action-result';
 import { getSafeRedirectPath } from '@/lib/redirect';
-import { stopSigningInAs } from '@/server/authz';
+import { getOptionalActor, stopSigningInAs } from '@/server/authz';
 
 /**
  * Ends signing in as a user (`stopSigningInAs`, recorded as
@@ -30,4 +31,19 @@ export default async function backToOwnAccountAction(): Promise<
     message: t('backDone'),
     data: { returnTo: getSafeRedirectPath(ended?.returnTo) },
   };
+}
+
+/**
+ * Says when the session's sign-in as someone ends, for the banner's check
+ * after a navigation within the app (`ReloadWhenSignedInAsEnds`). A
+ * different answer than the banner's, or none, means it's over (the rules no
+ * longer allow it, or its time is up) or another tab started a new one, and
+ * the tab loads afresh. It changes nothing itself: `getOptionalActor` ends
+ * one that's over, as on every request.
+ *
+ * @returns When it ends (ISO), or `null` when the session isn't signed in as anyone.
+ */
+export async function signedInAsEndsAtAction(): Promise<string | null> {
+  const actor = await getOptionalActor();
+  return actor?.signedInAs?.endsAt.toISOString() ?? null;
 }

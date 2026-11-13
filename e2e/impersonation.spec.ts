@@ -3,13 +3,19 @@
  * Manager from their page, sees Adiutor as them with the banner, can't change
  * anything (the controls are off, the user's account pages read-only), and
  * goes back to the card; the user is emailed and the audit log has the
- * reason. A Manager signed in as a Watcher doesn't see the Watcher's devices.
- * Signed in as a company Admin who must set up MFA, the Admin sees the
- * Security page that user would see. Support is told why they can't sign in
- * as a company Admin, or without strong MFA. A user who turns sign-ins by
- * staff off keeps staff out until they turn it back on.
+ * reason. The account pages show whoever the Admin is signed in as, also
+ * when Next kept them alive from before. The Admin's other tabs load afresh
+ * as the user when it starts, and as the Admin when they go back, without a
+ * click. Once its time is up, the tab loads afresh as the Admin, without a
+ * click. A Manager signed in as a Watcher
+ * doesn't see the Watcher's devices. Signed in as a company Admin who must
+ * set up MFA, the Admin sees the Security page that user would see. Support
+ * is told why they can't sign in as a company Admin, or without strong MFA.
+ * A user who turns sign-ins by staff off ends one under way (the Admin's tab
+ * loads afresh at their next page) and keeps staff out until they turn it
+ * back on.
  */
-import { findUserId } from './support/db';
+import { endSignInAsSoon, findUserId } from './support/db';
 import {
   CLIENT_WATCHER,
   COMPANY_OWNER,
@@ -19,7 +25,14 @@ import {
   STEP_UP_MANAGER,
   SUPPORT_STAFF,
 } from './support/fixtures';
-import { openUser, signIn, signInAsUser, toasts, useOwnClientIp } from './support/helpers';
+import {
+  openAccountSettings,
+  openUser,
+  signIn,
+  signInAsUser,
+  toasts,
+  useOwnClientIp,
+} from './support/helpers';
 import { countEmails, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
 
@@ -92,6 +105,97 @@ test('a staff Admin signs in as a Manager, changes nothing, and goes back', asyn
   await expect(page.getByRole('main')).toContainText('Went back from signing in as a user');
 });
 
+test('the account pages show whoever the Admin is signed in as, also when Next kept them', async ({
+  page,
+}) => {
+  const managerId = await findUserId(STEP_UP_MANAGER.email);
+  const banner = page.getByRole('region', { name: 'Signed in as someone else' });
+  const name = page.getByRole('textbox', { name: 'Name', exact: true });
+  await signIn(page, PLATFORM_ADMIN);
+  await openUser(page, STEP_UP_MANAGER.name);
+  // The Admin's own Profile page, opened with a click, so Next keeps it alive with its fields.
+  await openAccountSettings(page);
+  await expect(name).toHaveValue(PLATFORM_ADMIN.name);
+  await page.goBack();
+
+  await page.getByRole('button', { name: 'Sign in as user' }).click();
+  const dialog = page.getByRole('dialog', { name: `Sign in as ${STEP_UP_MANAGER.name}?` });
+  await dialog.getByRole('button', { name: `Sign in as ${STEP_UP_MANAGER.name}` }).click();
+  await expect(page).toHaveURL('/dashboard');
+  await expect(banner).toBeVisible();
+
+  // Signed in as the Manager, the Profile page shows the Manager, not what the Admin's held.
+  await openAccountSettings(page);
+  await expect(name).toHaveValue(STEP_UP_MANAGER.name);
+
+  // Back in their own account, the Admin's Profile page shows the Admin again, not the Manager.
+  await banner.getByRole('button', { name: 'Back to my account' }).click();
+  await expect(page).toHaveURL(`/admin/users/${managerId}#sign-in-as`);
+  await expect(toasts(page)).toContainText("You're back in your own account.");
+  await openAccountSettings(page);
+  await expect(name).toHaveValue(PLATFORM_ADMIN.name);
+});
+
+test("the Admin's other tabs load afresh as the user, and back, without a click", async ({
+  page,
+  context,
+}) => {
+  await signIn(page, PLATFORM_ADMIN);
+  // Another tab of the same browser has the Admin's own Profile page, opened with a click, so Next
+  // keeps it alive with their name.
+  const other = await context.newPage();
+  await useOwnClientIp(other);
+  await other.goto('/dashboard');
+  await openAccountSettings(other);
+  const otherName = other.getByRole('textbox', { name: 'Name', exact: true });
+  const otherBanner = other.getByRole('region', { name: 'Signed in as someone else' });
+  await expect(otherName).toHaveValue(PLATFORM_ADMIN.name);
+
+  await signInAsUser(page, STEP_UP_MANAGER.name);
+
+  // Without a click, the other tab loads its page afresh as the Manager: the banner, their name,
+  // and changes turned off.
+  await expect(otherBanner).toBeVisible();
+  await expect(other).toHaveURL('/account');
+  await expect(otherName).toHaveValue(STEP_UP_MANAGER.name);
+  await expect(otherName).toBeDisabled();
+
+  // Back to the Admin's own account in the first tab: the other tab loads afresh as the Admin.
+  await page
+    .getByRole('region', { name: 'Signed in as someone else' })
+    .getByRole('button', { name: 'Back to my account' })
+    .click();
+  await expect(otherBanner).toHaveCount(0);
+  await expect(other).toHaveURL('/account');
+  await expect(otherName).toHaveValue(PLATFORM_ADMIN.name);
+  await expect(otherName).toBeEnabled();
+});
+
+test('the tab loads afresh as the Admin once the sign-in as a user has ended by itself', async ({
+  page,
+}) => {
+  const banner = page.getByRole('region', { name: 'Signed in as someone else' });
+  const name = page.getByRole('textbox', { name: 'Name', exact: true });
+  await signIn(page, PLATFORM_ADMIN);
+  await signInAsUser(page, STEP_UP_MANAGER.name);
+  // It ends in a few seconds instead of 30 minutes; the page counts down from when it loads.
+  await endSignInAsSoon(PLATFORM_ADMIN.email, 6);
+  await page.reload();
+  await expect(banner).toBeVisible();
+
+  // The Manager's Profile page, opened with a click, so Next keeps it alive with their name.
+  await openAccountSettings(page);
+  await expect(name).toHaveValue(STEP_UP_MANAGER.name);
+
+  // Without a click, the same page loads afresh as the Admin once it has ended.
+  await expect(banner).toHaveCount(0, { timeout: 15_000 });
+  await expect(toasts(page)).toContainText(
+    "Signing in as the user has ended. You're back in your own account.",
+  );
+  await expect(page).toHaveURL('/account');
+  await expect(name).toHaveValue(PLATFORM_ADMIN.name);
+});
+
 test('a Manager signed in as a Watcher sees their account pages without devices', async ({
   page,
 }) => {
@@ -141,23 +245,36 @@ test('Support is told why they can’t sign in as someone', async ({ page }) => 
 });
 
 // Last in this file: it turns the Watcher's setting off for a moment, and back on.
-test('a user turns sign-ins by staff off, which keeps staff out, and back on', async ({
+test('a user turns sign-ins by staff off, which ends one under way and keeps staff out, and back on', async ({
   page,
   browser,
 }) => {
-  await signIn(page, CLIENT_WATCHER);
-  await page.goto('/account/security');
   const card = page.locator('#staff-sign-in');
-  await expect(card.getByRole('heading', { name: 'Sign-ins by staff' })).toBeVisible();
-  await card.getByRole('button', { name: 'Turn off' }).click();
-  await expect(toasts(page)).toContainText('Sign-ins by staff turned off.');
-  await expect(card).toContainText('Off');
-
   const adminContext = await browser.newContext();
   try {
+    // A staff Admin is signed in as the Watcher when the Watcher turns it off.
     const admin = await adminContext.newPage();
     await useOwnClientIp(admin);
     await signIn(admin, PLATFORM_ADMIN);
+    await signInAsUser(admin, CLIENT_WATCHER.name);
+
+    await signIn(page, CLIENT_WATCHER);
+    await page.goto('/account/security');
+    await expect(card.getByRole('heading', { name: 'Sign-ins by staff' })).toBeVisible();
+    await card.getByRole('button', { name: 'Turn off' }).click();
+    await expect(toasts(page)).toContainText('Sign-ins by staff turned off.');
+    await expect(card).toContainText('Off');
+
+    // The Admin's next page within the app ends it, and the tab loads afresh as the Admin.
+    await openAccountSettings(admin);
+    await expect(admin.getByRole('region', { name: 'Signed in as someone else' })).toHaveCount(0);
+    await expect(toasts(admin)).toContainText(
+      "Signing in as the user has ended. You're back in your own account.",
+    );
+    await expect(admin.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue(
+      PLATFORM_ADMIN.name,
+    );
+
     await openUser(admin, CLIENT_WATCHER.name);
     await expect(admin.getByText('This user has turned off sign-ins by staff.')).toBeVisible();
     await expect(admin.getByRole('button', { name: 'Sign in as user' })).toBeDisabled();

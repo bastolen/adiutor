@@ -274,9 +274,9 @@ describe('deactivateAccountAction', () => {
   });
 
   it('deactivates through the service with the typed password, then signs out', async () => {
-    await expect(
-      deactivateAccountAction(null, form({ password: 'adiutor-tests-password' })),
-    ).rejects.toThrow('NEXT_REDIRECT');
+    expect(
+      await deactivateAccountAction(null, form({ password: 'adiutor-tests-password' })),
+    ).toEqual({ ok: true });
 
     expect(deactivateOwnAccount).toHaveBeenCalledWith(
       { name: 'app context' },
@@ -284,7 +284,8 @@ describe('deactivateAccountAction', () => {
       'adiutor-tests-password',
     );
     expect(auth.api.signOut).toHaveBeenCalled();
-    expect(redirect).toHaveBeenCalledWith('/auth?error=ACCOUNT_DEACTIVATED');
+    // The card's dialog loads the sign-in page afresh in every tab, not a redirect from here.
+    expect(redirect).not.toHaveBeenCalled();
   });
 
   it("shows the service's refusal, e.g. a sign-in that's too old", async () => {

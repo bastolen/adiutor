@@ -224,6 +224,19 @@ export async function signOut(page: Page): Promise<void> {
 }
 
 /**
+ * Opens the Profile page of the account through the account menu, as the
+ * user would: a click on a link, without loading the page, so a page Next
+ * kept alive from earlier comes back.
+ *
+ * @param page - The browser page, on an app page.
+ */
+export async function openAccountSettings(page: Page): Promise<void> {
+  await page.getByRole('button', { name: /^Account menu/ }).click();
+  await page.getByRole('menuitem', { name: 'Account settings' }).click();
+  await expect(page).toHaveURL('/account');
+}
+
+/**
  * Opens a sign-in link from an email and continues on its confirmation page,
  * as the user would (the link itself only shows that page, see
  * `src/lib/sign-in/email-link.ts`).

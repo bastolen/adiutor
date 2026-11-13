@@ -7,7 +7,6 @@
 
 import { ChevronsUpDown, LogOut, Undo2, UserRound } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
 import ThemeMenuRow from '@/components/theme/theme-menu-row';
@@ -21,6 +20,7 @@ import {
   MenuSeparator,
   MenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import loadFresh from '@/components/ui/load-fresh';
 import { focusRing } from '@/components/ui/styles';
 import cn from '@/lib/cn';
 import displayName from '@/lib/display-name';
@@ -69,16 +69,20 @@ interface AccountMenuProps {
 export default function AccountMenu({ name, email, signedInAs = false }: AccountMenuProps) {
   const t = useTranslations('navigation');
   const { goBack } = useBackToOwnAccount();
-  const router = useRouter();
   const { preference, setPreference } = useThemePreference();
   const shownName = displayName({ name, email });
 
-  /** Ends the session, then loads the sign-in page with a fresh cache. */
+  /**
+   * Ends the session, then loads the sign-in page afresh (`loadFresh`): a
+   * navigation within the app would keep this person's pages alive for the
+   * next one to sign in on this browser. The browser's other tabs load
+   * their own page afresh too (`everyTab`), which takes them to the sign-in
+   * page, so none of them keeps showing this person's pages.
+   */
   const signOut = async () => {
     const authClient = await loadAuthClient();
     await authClient.signOut();
-    router.replace('/auth');
-    router.refresh();
+    loadFresh('/auth', { everyTab: true });
   };
 
   return (

@@ -6,8 +6,11 @@
  * says why and the button stays disabled. Starting needs a recent
  * confirmation with a strong second step, so the card sits in a confirmation
  * provider of its own in strong mode, which sends the staff member to the
- * step-up page first and back to this card. Text from `admin.user.signInAs`.
- * See docs/decisions/0017-staff-sign-in-as-users.md.
+ * step-up page first and back to this card. Once it has started, the
+ * dashboard loads afresh as the user (`loadOnSuccess`), and so does the page
+ * in each of the browser's other tabs, so no page Next kept alive still
+ * shows the staff member's own values. Text from
+ * `admin.user.signInAs`. See docs/decisions/0017-staff-sign-in-as-users.md.
  */
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
@@ -19,6 +22,7 @@ import TextField from '@/components/ui/text-field';
 import TextLink from '@/components/ui/text-link';
 import { IMPERSONATION_MINUTES, type ImpersonationVerdict } from '@/lib/authz/impersonation';
 import { IMPERSONATION_REASON_MAX_LENGTH } from '@/lib/input-rules';
+import { DEFAULT_SIGNED_IN_PATH } from '@/lib/redirect';
 import { confirmationWindow } from '@/lib/sign-in/confirm-url';
 
 import { signInAsAction } from './actions';
@@ -100,6 +104,7 @@ export default function SignInAsCard({
               disabled={verdict !== 'allowed'}
               confirmFirst
               action={signInAsAction}
+              loadOnSuccess={DEFAULT_SIGNED_IN_PATH}
               fields={{ userId }}
               triggerLabel={t('label')}
               triggerVariant="primary"

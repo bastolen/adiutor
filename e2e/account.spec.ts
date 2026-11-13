@@ -1,7 +1,8 @@
 /**
  * @file End-to-end tests for a user's own account: verifying your email on
  * the account page and the account's recent activity, deactivating your
- * account (which an Admin can reactivate), and signing out your other
+ * account (which an Admin can reactivate, and which sends the browser's
+ * other tabs to the sign-in page too), and signing out your other
  * devices (which also forgets the browsers you trusted at the code step).
  */
 import { type Browser, type Page } from '@playwright/test';
@@ -76,10 +77,17 @@ test('a user deactivates their account and an Admin reactivates it', async ({ pa
   await dialog.getByLabel('Current password').fill('wrong password');
   await dialog.getByRole('button', { name: 'Deactivate my account' }).click();
   await expect(dialog.getByRole('alert')).toHaveText('That password is incorrect.');
+  // Another tab of the same browser has the dashboard open.
+  const other = await page.context().newPage();
+  await other.goto('/dashboard');
+  await expect(other).toHaveURL(/\/(dashboard|companies\/)/);
   await dialog.getByLabel('Current password').fill(DEACTIVATE_CLIENT.password);
   await dialog.getByRole('button', { name: 'Deactivate my account' }).click();
 
   await expect(page).toHaveURL(/\/auth\?error=ACCOUNT_DEACTIVATED/);
+  // Without a click, the other tab loads afresh too, signed out.
+  await expect(other).toHaveURL(/\/auth\?callbackURL=/);
+  await other.close();
   expect((await waitForNewEmail(DEACTIVATE_CLIENT.email, before)).subject).toBe(
     'Your Adiutor account was deactivated',
   );

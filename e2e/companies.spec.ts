@@ -5,11 +5,12 @@
  * invite link), inviting several people at once, an Admin leaving the
  * company themselves, a company's address (its URL name or its ID) and its
  * settings: renaming it (a taken URL name is refused) and deactivating it,
- * which cuts its people off until it's reactivated.
+ * which cuts its people off until it's reactivated. Creating an account from
+ * an invitation loads the browser's other tabs afresh, signed in.
  */
 import { randomUUID } from 'node:crypto';
 
-import { addMembership, createCompany, findCompanyId } from './support/db';
+import { addMembership, createCompany, findCompanyId, storeInvitation } from './support/db';
 import {
   CLIENT_WATCHER,
   COMPANY_NAME,
@@ -20,6 +21,7 @@ import {
 import {
   createAccountFromInvitation,
   createInviteLink,
+  freshAddress,
   setUpAuthenticator,
   signIn,
   toasts,
@@ -92,6 +94,26 @@ test('register a company, accept the invitation and join through a link', async 
   await expect(page.getByText('Client', { exact: true })).toBeVisible();
   await expect(page.getByText('Requests are on their way')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Members' })).toHaveCount(0);
+});
+
+test("creating an account from an invitation loads the browser's other tabs afresh", async ({
+  page,
+  context,
+}) => {
+  // A second tab of the same browser is on the sign-in page.
+  const other = await context.newPage();
+  await other.goto('/auth');
+  await expect(other.getByRole('heading', { name: 'Sign in to Adiutor' })).toBeVisible();
+
+  // The new account is signed in by a server action that redirects, which tells the other tab.
+  const companyId = await findCompanyId(COMPANY_SLUG);
+  await page.goto(
+    await storeInvitation({ companyId, email: freshAddress('other-tabs'), role: 'client' }),
+  );
+  await createAccountFromInvitation(page, 'Other Tabs Tester', 'other-tabs-password');
+
+  // Without a click, the other tab goes on, signed in as the new account.
+  await expect(other).toHaveURL(/\/(dashboard|companies\/)/);
 });
 
 test('an Admin invites several people at once', async ({ page }) => {
