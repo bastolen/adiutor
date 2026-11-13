@@ -39,6 +39,7 @@ export type {
 export {
   isReopening,
   mayChangeStatus,
+  maySetStatus,
   requestAudience,
   requestSide,
   statusAfterReply,

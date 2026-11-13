@@ -61,7 +61,10 @@ user), sign-in link pages
 opened with a link that can't be used (20 per 15 minutes per IP address, so links can't be
 guessed by looking them up; past it, the page offers no way to continue), wrong secrets sent to
 the background jobs' endpoint (20 per 15 minutes per IP address, `RATE_LIMITS.jobTickMissesPerIp`;
-past it the endpoint answers 429, while the right secret still works), and the errors stored for
+past it the endpoint answers 429, while the right secret still works), work on requests (per
+user and hour: 60 requests raised, 200 replies and 300 changes of a status or of details;
+`RATE_LIMITS.requestsPerUser`, `requestRepliesPerUser` and `requestChangesPerUser`, far more than
+anyone does by hand and few enough to stop a flood), and the errors stored for
 admins (see [Recorded errors](#recorded-errors)). All are kept in
 `rate_limit_bucket` (`src/server/rate-limit.ts`), with a clear "Try again in N minutes" message.
 A claimed invite link also counts as an invitation its creator sends, against their limit and
@@ -210,7 +213,13 @@ deadlocking:
    `revokeInvitesWithoutManager`). The invitations the person sent were revoked just before,
    without these locks; they could only cross an invitation to the same address if the person had
    invited their own address, which the deadlock backstop below covers.
-7. Sessions and audit events, last.
+7. The `request_counter` row (`raiseRequest` in `src/server/requests/`, right before it stores the
+   request, so nothing waits for a number longer than the insert takes), then `request` rows,
+   `FOR NO KEY UPDATE`: the request a reply or a change is about (`changeRequest`). Every change
+   to a request starts with `assertStillManages`, so it has its `user` and `membership` locks
+   (steps 2 and 3) before the request's: deleting an account locks the user first and then
+   clears them from the requests and entries they wrote, in the same order.
+8. Sessions and audit events, last.
 
 What a change decides on (how many Admins are left, the acting user's own rights) is read in a new
 statement once the locks are held, so it sees whatever the transaction before it committed. The

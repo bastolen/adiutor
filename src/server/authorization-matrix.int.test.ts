@@ -125,11 +125,14 @@ import { registerUser } from './people/user-registration';
 import { listUsers } from './people/users';
 import { findErrorReference, listRecentErrors } from './recorded-errors';
 import {
+  changeRequestStatus,
   findRequest,
   getRequest,
   listRequestCompanies,
   listRequests,
   raiseRequest,
+  replyToRequest,
+  updateRequestDetails,
 } from './requests';
 
 const { ctx, db, sent } = setupTestContext();
@@ -192,6 +195,9 @@ interface World {
   /** The number of a request in each company, raised by its Admin. */
   requests: { own: string; other: string };
 }
+
+/** A request's details as the staff's form sends them, with a new title. */
+const NEW_DETAILS = { title: 'The printer on floor 2 is broken', type: 'hotfix', priority: 'high' };
 
 /** A request as its form sends it, without its company. */
 const NEW_REQUEST = {
@@ -499,6 +505,53 @@ function listOperations(): Operation[] {
       (w) => raiseRequest(ctx, w.actor, { ...NEW_REQUEST, companyId: w.other.id }),
     ],
     [
+      'reply to request (own)',
+      (w) => replyToRequest(ctx, w.actor, { request: w.requests.own, body: 'Any news?' }),
+    ],
+    [
+      'reply to request (other)',
+      (w) => replyToRequest(ctx, w.actor, { request: w.requests.other, body: 'Any news?' }),
+    ],
+    [
+      'reply and wait for the company (own)',
+      (w) =>
+        replyToRequest(ctx, w.actor, {
+          request: w.requests.own,
+          body: 'Which printer is it?',
+          status: 'waiting',
+        }),
+    ],
+    // In this order, each on the request as the one before left it: done, then cancelled or
+    // (for the company, which can't cancel a done request) still done, then open again.
+    [
+      'mark request done (own)',
+      (w) => changeRequestStatus(ctx, w.actor, { request: w.requests.own, status: 'done' }),
+    ],
+    [
+      'cancel request (own)',
+      (w) => changeRequestStatus(ctx, w.actor, { request: w.requests.own, status: 'cancelled' }),
+    ],
+    [
+      'reopen request (own)',
+      (w) => changeRequestStatus(ctx, w.actor, { request: w.requests.own, status: 'open' }),
+    ],
+    [
+      'set request status (own)',
+      (w) => changeRequestStatus(ctx, w.actor, { request: w.requests.own, status: 'todo' }),
+    ],
+    [
+      'set request status (other)',
+      (w) => changeRequestStatus(ctx, w.actor, { request: w.requests.other, status: 'todo' }),
+    ],
+    [
+      'edit request details (own)',
+      (w) => updateRequestDetails(ctx, w.actor, { ...NEW_DETAILS, request: w.requests.own }),
+    ],
+    [
+      'edit request details (other)',
+      (w) => updateRequestDetails(ctx, w.actor, { ...NEW_DETAILS, request: w.requests.other }),
+    ],
+    [
       'deactivate own account',
       async (w) => {
         await givePassword(w.actor.id);
@@ -666,6 +719,19 @@ const EXPECTED: Record<string, string> = {
   // Watchers follow requests and Finance reads them: neither raises one.
   'raise request (own)': 'FAAAFAA',
   'raise request (other)': 'NNNAFAA',
+  'reply to request (own)': 'FAAAFAA',
+  'reply to request (other)': 'NNNAFAA',
+  // Only the staff who work on requests set a request to waiting.
+  'reply and wait for the company (own)': 'FFFAFAA',
+  // Either side closes a request and reopens it.
+  'mark request done (own)': 'FAAAFAA',
+  'cancel request (own)': 'FAAAFAA',
+  'reopen request (own)': 'FAAAFAA',
+  // Every other status, and a request's details, are the staff's.
+  'set request status (own)': 'FFFAFAA',
+  'set request status (other)': 'NNNAFAA',
+  'edit request details (own)': 'FFFAFAA',
+  'edit request details (other)': 'NNNAFAA',
   // Everyone may deactivate their own account (each world has other Admins).
   'deactivate own account': 'AAAAAAA',
 };

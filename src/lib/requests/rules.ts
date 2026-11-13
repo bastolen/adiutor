@@ -64,6 +64,29 @@ export function isReopening(from: RequestStatus, to: RequestStatus): boolean {
 }
 
 /**
+ * The statuses someone who takes part from the company can ever set: the
+ * ones that close a request, and `open`, which a reopened request gets.
+ */
+const CONTRIBUTOR_STATUSES: readonly RequestStatus[] = ['open', 'done', 'cancelled'];
+
+/**
+ * Whether someone may ever give a request a status, whatever status it has
+ * now. Asking for a status this refuses is asking for something they may
+ * not do; a status it allows can still be the wrong move for the request as
+ * it is by then ({@link mayChangeStatus}).
+ *
+ * @param permissions - Their permissions in the request's company.
+ * @param to - The status they want.
+ * @returns Whether they may ever set it.
+ */
+export function maySetStatus(permissions: ReadonlySet<Permission>, to: RequestStatus): boolean {
+  if (permissions.has('requests:manage')) {
+    return true;
+  }
+  return permissions.has('requests:contribute') && CONTRIBUTOR_STATUSES.includes(to);
+}
+
+/**
  * Whether someone may change a request's status. A change to the status it
  * already has is never allowed: there's nothing to change.
  *
@@ -77,20 +100,14 @@ export function mayChangeStatus(
   from: RequestStatus,
   to: RequestStatus,
 ): boolean {
-  if (from === to) {
+  if (from === to || !maySetStatus(permissions, to)) {
     return false;
   }
   if (permissions.has('requests:manage')) {
     return true;
   }
-  if (!permissions.has('requests:contribute')) {
-    return false;
-  }
   // The company closes a request that's still worked on, and reopens a closed one.
-  if (to === 'done' || to === 'cancelled') {
-    return !isClosedStatus(from);
-  }
-  return to === 'open' && isClosedStatus(from);
+  return to === 'open' ? isClosedStatus(from) : !isClosedStatus(from);
 }
 
 /**

@@ -8,6 +8,7 @@ import type { CompanyRole, PlatformRole } from '../authz/roles';
 import {
   isReopening,
   mayChangeStatus,
+  maySetStatus,
   requestAudience,
   requestSide,
   statusAfterReply,
@@ -114,6 +115,27 @@ describe('mayChangeStatus', () => {
     REQUEST_STATUSES.forEach((from) => {
       expect(statusChoices(watcher, from)).toEqual([]);
       expect(statusChoices(finance, from)).toEqual([]);
+    });
+  });
+});
+
+describe('maySetStatus', () => {
+  it('lets the staff who work on requests set every status', () => {
+    REQUEST_STATUSES.forEach((to) => expect(maySetStatus(support, to)).toBe(true));
+  });
+
+  it('lets the company close and reopen only, whatever the request’s status', () => {
+    expect(REQUEST_STATUSES.filter((to) => maySetStatus(client, to))).toEqual([
+      'open',
+      'done',
+      'cancelled',
+    ]);
+  });
+
+  it('lets those who only read set nothing', () => {
+    REQUEST_STATUSES.forEach((to) => {
+      expect(maySetStatus(watcher, to)).toBe(false);
+      expect(maySetStatus(finance, to)).toBe(false);
     });
   });
 });
