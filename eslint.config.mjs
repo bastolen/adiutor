@@ -17,9 +17,17 @@ import jsdoc from 'eslint-plugin-jsdoc';
 import prettierPlugin from 'eslint-plugin-prettier';
 
 /**
- * Generated files and dependencies that should never be linted.
+ * Generated files, and other checkouts of the repository that Claude Code
+ * keeps in `.claude/worktrees/` (each with its own files and dependencies),
+ * which should never be linted from here.
  */
-const ignoreConfig = globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts']);
+const ignoreConfig = globalIgnores([
+  '.next/**',
+  'out/**',
+  'build/**',
+  'next-env.d.ts',
+  '.claude/worktrees/**',
+]);
 
 /**
  * ESLint's recommended rules plus Airbnb's base JavaScript rules.
@@ -323,8 +331,10 @@ const FOLDER_MODULES = [
   'lib/authz/mfa',
   'server/auth/auth-events',
   'server/auth/auth-guards',
+  'server/jobs',
   'server/people/invitations',
   'server/people/user-admin',
+  'server/queue',
 ];
 
 /**
@@ -359,8 +369,8 @@ const useActionStatePath = {
  * (`src/server/background.ts`), not Next's `after()`: called while a page
  * renders, `after()` makes every later `cookies()` or `headers()` read in that
  * render fail once the response closes, and renders can outlive their
- * response. Better Auth's endpoints (`src/lib/auth.ts`) may use it: they're
- * route handlers.
+ * response. Route handlers may use it: Better Auth's endpoints
+ * (`src/lib/auth.ts`) and the jobs' tick (`src/app/api/jobs/route.ts`).
  */
 const nextAfterPath = {
   name: 'next/server',
@@ -410,9 +420,13 @@ const restrictedImportsConfig = [
   },
   {
     name: 'adiutor/restricted-imports/auth',
-    files: ['src/lib/auth.ts'],
+    files: ['src/lib/auth.ts', 'src/app/api/jobs/route.ts'],
     rules: {
-      /** Better Auth's endpoints are route handlers, where `after()` may read the request. */
+      /**
+       * Route handlers, where `after()` may read the request: Better Auth's
+       * endpoints, and the jobs' tick, whose continuation needs `after()` so
+       * Vercel keeps the function running until it's done.
+       */
       'no-restricted-imports': [
         'error',
         { patterns: folderModulePatterns, paths: [useActionStatePath] },

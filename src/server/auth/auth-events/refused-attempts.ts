@@ -8,14 +8,12 @@ import { and, eq, gt, isNull } from 'drizzle-orm';
 import { db } from '@/db';
 import { twoFactor, user } from '@/db/schema';
 import { mfaMethodFromPath, TWO_FACTOR_LOCK_MINUTES } from '@/lib/authz/mfa';
-import { sendEmail } from '@/lib/email';
-import { appUrl } from '@/lib/env';
 
 import { recordEvent } from '../../audit';
 import { hitRateLimit, peekRateLimit, releaseRateLimitHit } from '../../rate-limit';
 import { hasPassword } from '../accounts';
 import { CODE_PATHS, pendingCodeSignInOf } from '../auth-guards';
-import { sendSecurityNotice } from '../security-notices';
+import { queueSecurityNotice } from '../security-notices';
 import type { FinishedRequest } from './finished-request';
 import { type AuthHookContext, auditContext, runAfterResponse, audit } from './hook-context';
 
@@ -24,7 +22,8 @@ const PAUSED_NOTICE_LIMIT = { limit: 1, windowSeconds: 24 * 60 * 60 };
 
 /**
  * Tells a user that wrong passwords paused their password sign-in, at most
- * once a day (a notice that couldn't be sent doesn't count), and only if
+ * once a day (a notice that couldn't be queued doesn't count; one the mail
+ * server refuses is retried by the queue), and only if
  * they have a password: for anyone else nothing was paused. Without the
  * device and IP address: they may be someone else's (staff see them in the
  * audit log).
@@ -39,12 +38,8 @@ async function notifyPasswordSignInPaused(userId: string): Promise<void> {
   if ((await peekRateLimit({ db }, key, PAUSED_NOTICE_LIMIT)).limited) {
     return;
   }
-  const sent = await sendSecurityNotice(
-    { db, sendEmail, baseUrl: appUrl },
-    { userId },
-    'password_sign_in_paused',
-  );
-  if (sent) {
+  const queued = await queueSecurityNotice(db, userId, 'password_sign_in_paused');
+  if (queued) {
     await hitRateLimit({ db }, key, PAUSED_NOTICE_LIMIT);
   }
 }
@@ -67,7 +62,7 @@ const LOCKED_NOTICE_LIMIT = { limit: 1, windowSeconds: TWO_FACTOR_LOCK_MINUTES *
  * refusal because of a pause, it only sends while the account is paused, and
  * only the first time in the window: counted before it's sent (one atomic
  * statement), so codes refused at the same moment send one notice, and one
- * that couldn't be sent gives its count back, so a later refusal can try
+ * that couldn't be queued gives its count back, so a later refusal can try
  * again. Without the device and IP address: they're whoever typed the codes,
  * who may be someone else (staff see them in the audit log). Deactivated
  * accounts get none, like the other sign-in emails.
@@ -95,12 +90,8 @@ async function notifyTwoFactorLocked(userId: string): Promise<void> {
   if (!allowed) {
     return;
   }
-  const sent = await sendSecurityNotice(
-    { db, sendEmail, baseUrl: appUrl },
-    { userId },
-    'two_factor_locked',
-  );
-  if (!sent) {
+  const queued = await queueSecurityNotice(db, userId, 'two_factor_locked');
+  if (!queued) {
     await releaseRateLimitHit({ db }, key);
   }
 }

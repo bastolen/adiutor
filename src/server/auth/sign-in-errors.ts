@@ -15,7 +15,7 @@ import { createReference } from '../error-reference';
 import { isUniqueViolation } from '../errors';
 import { hitRateLimit, RATE_LIMITS } from '../rate-limit';
 
-/** How many days stored sign-in errors are kept (`cleanUp` in `jobs.ts` deletes older ones). */
+/** How many days stored sign-in errors are kept (the `retention` job deletes older ones). */
 export const SIGN_IN_ERROR_RETENTION_DAYS = 7;
 
 /** Better Auth's error codes: letters, digits, `_`, `-` and `'` (e.g. `email_doesn't_match`). */

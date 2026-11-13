@@ -1,19 +1,16 @@
 /**
  * @file What the reactions to Better Auth activity share: the endpoint context
  * they read, running a reaction without failing the request, and recording
- * an audit event or sending a security notice.
+ * an audit event and queuing a security notice.
  */
 import { db } from '@/db';
-import type { SecurityNoticeKind } from '@/emails/security-notice';
 import type { AuditAction } from '@/lib/audit-actions';
-import { sendEmail } from '@/lib/email';
-import { appUrl } from '@/lib/env';
 import ipAddressOptions from '@/lib/request/ip-address-options';
 import { type RequestInfo, requestInfoFromHeaders } from '@/lib/request/request-info';
-import { providerLabel } from '@/lib/sign-in/oauth-providers';
+import type { SecurityNoticeKind } from '@/lib/security-notice-kinds';
 
 import { recordEvent } from '../../audit';
-import { sendSecurityNotice } from '../security-notices';
+import { queueSecurityNotice } from '../security-notices';
 
 /** The parts of a Better Auth endpoint context the reactions use. */
 export interface AuthHookContext {
@@ -154,14 +151,15 @@ export function auditContext(headers: Headers | undefined) {
  * @param action - What happened.
  * @param userId - Who did it (and whose account it was about).
  * @param details - Extra facts.
+ * @returns The event's ID.
  */
 export async function audit(
   ctx: Pick<AuthHookContext, 'headers'> | null,
   action: AuditAction,
   userId: string | null,
   details: Record<string, unknown> = {},
-): Promise<void> {
-  await recordEvent(auditContext(ctx?.headers), {
+): Promise<string> {
+  return recordEvent(auditContext(ctx?.headers), {
     action,
     actorUserId: userId,
     targetUserId: userId,
@@ -170,30 +168,41 @@ export async function audit(
 }
 
 /**
- * Emails the user about a security change made in this request.
+ * Queues the security email about a change the user made in this request.
+ * It's their own change, so the email names its device and IP address, read
+ * from the change's audit event.
  *
- * @param headers - Request headers, for the device and IP address.
+ * @param auditEventId - The change's audit event (`audit` returns it).
  * @param userId - The user.
  * @param kind - What changed.
  * @param providerId - The provider, for connected/disconnected.
  */
 export async function notify(
-  headers: Headers | undefined,
+  auditEventId: string,
   userId: string,
   kind: SecurityNoticeKind,
   providerId?: string,
 ): Promise<void> {
-  const provider = providerId ? providerLabel(providerId) : undefined;
-  await sendSecurityNotice(
-    {
-      db,
-      sendEmail,
-      baseUrl: appUrl,
-      requestInfo: auditContext(headers).requestInfo,
-    },
-    { userId },
-    kind,
-    // The user's own change, made in this request, so the email may say from which device.
-    { provider, showDevice: true },
-  );
+  await queueSecurityNotice(db, userId, kind, { auditEventId, providerId: providerId ?? null });
+}
+
+/**
+ * Records a change the user made in this request and queues its security
+ * email, which names the change's device and IP address (read from the
+ * audit event). For changes whose audit action and notice share a name.
+ *
+ * @param ctx - The request's headers (for IP and browser), e.g. the endpoint context.
+ * @param change - What changed, both the audit action and the notice.
+ * @param userId - The user.
+ * @param extra - The audit event's details, and the provider for connected/disconnected.
+ * @param extra.details - Extra facts for the audit event.
+ * @param extra.providerId - The provider, for connected/disconnected.
+ */
+export async function auditAndNotify(
+  ctx: Pick<AuthHookContext, 'headers'> | null,
+  change: AuditAction & SecurityNoticeKind,
+  userId: string,
+  { details = {}, providerId }: { details?: Record<string, unknown>; providerId?: string } = {},
+): Promise<void> {
+  await notify(await audit(ctx, change, userId, details), userId, change, providerId);
 }

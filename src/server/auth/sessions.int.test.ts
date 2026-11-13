@@ -4,7 +4,7 @@
  * everyone or one user from the command line, against the test database.
  */
 import { eq } from 'drizzle-orm';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { auditEvent, session, verification } from '@/db/schema';
 
@@ -13,6 +13,7 @@ import {
   createSession,
   createUser,
   setupTestContext,
+  sendQueuedEmails,
 } from '../../../tests/integration/helpers';
 import { revokeAllSessions, revokeOtherOwnSessions, revokeOwnSession } from './sessions';
 
@@ -157,7 +158,7 @@ describe('signing out from the command line', () => {
     await expect(revokeAllSessions(ctx)).resolves.toEqual({
       count: 3,
       email: null,
-      emailed: false,
+      noticeQueued: false,
     });
 
     expect(await db.select().from(session)).toEqual([]);
@@ -192,8 +193,9 @@ describe('signing out from the command line', () => {
     await expect(revokeAllSessions(ctx, { email: ' Jane@Adiutor.test ' })).resolves.toEqual({
       count: 2,
       email: 'jane@adiutor.test',
-      emailed: true,
+      noticeQueued: true,
     });
+    await sendQueuedEmails(ctx);
 
     expect(await sessionIds(jane)).toEqual([]);
     expect(await sessionIds(sam)).toEqual([samSession]);
@@ -222,22 +224,5 @@ describe('signing out from the command line', () => {
 
     expect(await sessionIds(jane)).toEqual([janeSession]);
     expect(await db.select().from(auditEvent)).toEqual([]);
-  });
-
-  it('says when emailing the user failed', async () => {
-    const jane = await createUser(db, 'jane@adiutor.test');
-    await createSession(db, jane);
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    /**
-     * Fails like an SMTP server that's down.
-     *
-     * @returns Never; it rejects.
-     */
-    const failingSendEmail = () => Promise.reject(new Error('SMTP is down'));
-
-    await expect(
-      revokeAllSessions({ ...ctx, sendEmail: failingSendEmail }, { email: 'jane@adiutor.test' }),
-    ).resolves.toEqual({ count: 1, email: 'jane@adiutor.test', emailed: false });
-    expect(await sessionIds(jane)).toEqual([]);
   });
 });

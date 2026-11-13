@@ -6,11 +6,9 @@
 import { and, asc, eq, inArray, isNull, notExists, sql } from 'drizzle-orm';
 
 import { company, membership, user } from '@/db/schema';
-import { addedToCompanyEmail } from '@/emails/added-to-company';
 import { isCompanyRoleRaise, wouldLeaveNoAdmin } from '@/lib/authz/guards';
 import { getPermissions } from '@/lib/authz/permissions';
 import { COMPANY_ADMIN_ROLE, type CompanyRole } from '@/lib/authz/roles';
-import displayName from '@/lib/display-name';
 import { type Paged, resolveTableState, type TableState } from '@/lib/tables/table-state';
 import { MEMBERS_TABLE, type PeopleSort } from '@/lib/tables/tables';
 import { companyRoleSchema } from '@/lib/validation';
@@ -28,7 +26,7 @@ import {
 import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
 import { withMfaPromotion } from '../auth/mfa-promotion';
-import { sendSecurityNotice } from '../auth/security-notices';
+import { queueSecurityNotice } from '../auth/security-notices';
 import type { ServiceContext } from '../context';
 import {
   companyDeactivatedError,
@@ -38,8 +36,8 @@ import {
   parseId,
 } from '../errors';
 import { paginate, peopleOrder } from '../pagination';
+import { addedToCompanyJob, queueJob } from '../queue';
 import { assertInviteSenderLimit, assertRoleChangeLimit } from '../rate-limit';
-import recipientLocale from '../recipient-locale';
 import { revokeInvitationsTo, revokeInvitesWithoutManager } from './invitations';
 
 /** A member as shown on the members page. */
@@ -315,19 +313,16 @@ async function changeMembership(
       return null;
     }
     return newRole
-      ? {
-          email: targetUser.email,
-          kind: 'company_role_changed' as const,
-          company: locked.name,
-          role: newRole,
-        }
-      : { email: targetUser.email, kind: 'removed_from_company' as const, company: locked.name };
+      ? { userId: target.userId, kind: 'company_role_changed' as const, role: newRole }
+      : { userId: target.userId, kind: 'removed_from_company' as const, role: null };
   });
 
   // Only once the change has committed: a refused or rolled-back change sends nothing.
   if (notice) {
-    const { email, kind, ...names } = notice;
-    await sendSecurityNotice(ctx, { email }, kind, names);
+    await queueSecurityNotice(ctx.db, notice.userId, notice.kind, {
+      role: notice.role,
+      companyId: access.company.id,
+    });
   }
 }
 
@@ -475,16 +470,13 @@ export async function addMember(
     );
   });
 
-  await ctx.sendEmail(
-    await addedToCompanyEmail(target.email, {
-      appUrl: ctx.baseUrl,
-      locale: await recipientLocale(ctx, target.locale),
-      adderName: displayName(actor),
-      companyName: access.company.name,
-      role,
-      url: `${ctx.baseUrl}/companies/${access.company.id}`,
-    }),
-  );
+  // Queued once the member is added: a mail outage retries it, and never fails the change.
+  await queueJob(ctx.db, addedToCompanyJob, {
+    userId: target.id,
+    companyId: access.company.id,
+    role,
+    addedBy: actor.id,
+  });
 }
 
 /** A company a user can still be added to, for the user detail page. */

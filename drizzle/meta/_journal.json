@@ -43,6 +43,13 @@
       "when": 1794424931293,
       "tag": "0005_allow_staff_sign_in",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794572720470,
+      "tag": "0006_jobs",
+      "breakpoints": true
     }
   ]
 }

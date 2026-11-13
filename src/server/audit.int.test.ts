@@ -30,6 +30,14 @@ beforeEach(async () => {
 });
 
 describe('audit log', () => {
+  it('returns the recorded event’s ID', async () => {
+    const id = await recordEvent(ctx, { action: 'sign_in', actorUserId: admin.id });
+
+    expect(
+      await db.select({ action: auditEvent.action }).from(auditEvent).where(eq(auditEvent.id, id)),
+    ).toEqual([{ action: 'sign_in' }]);
+  });
+
   it('records events with the request origin and lists them newest first', async () => {
     const jane = await staffActor(db, 'support', 'jane@adiutor.test');
     const withRequest = {

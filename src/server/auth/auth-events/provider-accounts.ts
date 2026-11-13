@@ -31,7 +31,7 @@ import { loadMfaContext } from '../mfa-state';
 import { PROVIDER_MFA_CHECKS } from '../provider-mfa';
 import { requestState, takeRequestState } from '../request-state';
 import { setNextPageCookie } from './cookies';
-import { type AuthHookContext, safely, audit, notify } from './hook-context';
+import { type AuthHookContext, safely, audit, auditAndNotify, notify } from './hook-context';
 import { ownSession } from './session-records';
 
 /**
@@ -138,9 +138,9 @@ export function beforeAccountUpdate<T extends object>(
  * Clears the OAuth tokens a request stored for a user, once it's done with
  * them (the provider's MFA check), after every provider callback whose user is
  * known: from the session it created, or the signed session cookie when
- * connecting from the Security page. The hourly clean-up (`cleanUp` in
- * `jobs.ts`) clears any left by a callback without one (e.g. a refused
- * sign-in).
+ * connecting from the Security page. The `leftover-provider-tokens` job
+ * (`src/server/jobs`) clears any left by a callback without one (e.g. a
+ * refused sign-in).
  *
  * @param userId - The user.
  */
@@ -365,13 +365,13 @@ export async function afterAccountCreate(
 ): Promise<void> {
   await safely('record account', async () => {
     if (created.providerId === 'credential') {
-      await audit(ctx, 'password_changed', created.userId, { first: true });
+      const eventId = await audit(ctx, 'password_changed', created.userId, { first: true });
       // The welcome link of a registered account (a reset link on an account with no other way
       // in) needs no email: they just did this from their inbox. Any other first password does,
       // e.g. through a reset on an account that also signs in with a passkey or GitHub. (A reset
       // that would end provider MFA is refused before: `RESET_ENDS_PROVIDER_MFA` in the guards.)
       if (ctx?.path !== '/reset-password' || (await hasOtherSignInMethod(created.userId))) {
-        await notify(ctx?.headers, created.userId, 'password_added');
+        await notify(eventId, created.userId, 'password_added');
       }
       return;
     }
@@ -380,11 +380,13 @@ export async function afterAccountCreate(
     const atSignIn =
       ctx?.path?.startsWith('/callback/') === true &&
       (await ownSession(ctx, created.userId)) === null;
-    await audit(ctx, 'provider_connected', created.userId, {
+    await auditAndNotify(ctx, 'provider_connected', created.userId, {
+      details: {
+        providerId: created.providerId,
+        ...(atSignIn && { atSignIn: true, confirmed: created.confirmed !== false }),
+      },
       providerId: created.providerId,
-      ...(atSignIn && { atSignIn: true, confirmed: created.confirmed !== false }),
     });
-    await notify(ctx?.headers, created.userId, 'provider_connected', created.providerId);
     if (isMfaProvider(created.providerId)) {
       await refreshProviderMfa(created.providerId, created.userId, created.id);
     }
@@ -418,7 +420,9 @@ export async function afterAccountDelete(
     return;
   }
   await safely('record disconnected provider', async () => {
-    await audit(ctx, 'provider_disconnected', deleted.userId, { providerId: deleted.providerId });
-    await notify(ctx.headers, deleted.userId, 'provider_disconnected', deleted.providerId);
+    await auditAndNotify(ctx, 'provider_disconnected', deleted.userId, {
+      details: { providerId: deleted.providerId },
+      providerId: deleted.providerId,
+    });
   });
 }

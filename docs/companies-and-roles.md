@@ -16,20 +16,22 @@ and screens for company users talk about their company by name and about **reque
 
 ## Roles and permissions
 
-| Staff (platform role)               | Admin | Manager | Finance | Support |
-| ----------------------------------- | :---: | :-----: | :-----: | :-----: |
-| Manage staff (`staff:manage`)       |   ✓   |    –    |    –    |    –    |
-| Add / edit / (de)activate companies |   ✓   |    ✓    |    –    |    –    |
-| Manage any company's users          |   ✓   |    ✓    |    –    |    –    |
-| View all companies and their users  |   ✓   |    ✓    |    ✓    |    ✓    |
-| View all users (`/admin/users`)     |   ✓   |    ✓    |    ✓    |    ✓    |
-| Reset MFA, sign out, (de)activate   |   ✓   |    –    |    –    |    –    |
-| Delete user accounts                |   ✓   |    –    |    –    |    –    |
-| View the audit log (`audit:view`)   |   ✓   |    ✓    |    –    |    –    |
-| See recorded errors (`errors:view`) |   ✓   |    –    |    –    |    –    |
-| Billing (reserved for later)        |   ✓   |    –    |    ✓    |    –    |
-| Join a company with an invite link  |   ✓   |    ✓    |    –    |    –    |
-| Sign in as a user (see below)       |   ✓   |    ✓    |    –    |    ✓    |
+| Staff (platform role)                     | Admin | Manager | Finance | Support |
+| ----------------------------------------- | :---: | :-----: | :-----: | :-----: |
+| Manage staff (`staff:manage`)             |   ✓   |    –    |    –    |    –    |
+| Add / edit / (de)activate companies       |   ✓   |    ✓    |    –    |    –    |
+| Manage any company's users                |   ✓   |    ✓    |    –    |    –    |
+| View all companies and their users        |   ✓   |    ✓    |    ✓    |    ✓    |
+| View all users (`/admin/users`)           |   ✓   |    ✓    |    ✓    |    ✓    |
+| Reset MFA, sign out, (de)activate         |   ✓   |    –    |    –    |    –    |
+| Delete user accounts                      |   ✓   |    –    |    –    |    –    |
+| View the audit log (`audit:view`)         |   ✓   |    ✓    |    –    |    –    |
+| See recorded errors (`errors:view`)       |   ✓   |    –    |    –    |    –    |
+| See background jobs (`jobs:view`)         |   ✓   |    ✓    |    –    |    –    |
+| Run, pause and retry jobs (`jobs:manage`) |   ✓   |    –    |    –    |    –    |
+| Billing (reserved for later)              |   ✓   |    –    |    ✓    |    –    |
+| Join a company with an invite link        |   ✓   |    ✓    |    –    |    –    |
+| Sign in as a user (see below)             |   ✓   |    ✓    |    –    |    ✓    |
 
 Nobody can give themselves a higher staff role: Admins can step down, never back up. Finance and
 Support can't join with an invite link, or accept the invitation a link sends them, so a shared link
@@ -80,7 +82,7 @@ Admins and Managers who aren't members can still add themselves with any role, a
   change unless it's listed there (see
   [Signing in as a user](authentication.md#signing-in-as-a-user)).
 - **Protected by default:** `src/proxy.ts` sends signed-out visitors of every page to `/auth`, except
-  the public `/auth`, `/invite`, `/join`, `/setup` and `/api/auth` paths and the health check (`/api/health`). Pages and server actions still check
+  the public `/auth`, `/invite`, `/join`, `/setup` and `/api/auth` paths, the health check (`/api/health`) and the background jobs' tick (`/api/jobs`, which checks its own secret). Pages and server actions still check
   the session and permissions on the server through `src/server/authz.ts`. Someone without the
   permission gets the 404 page, titled "Not found · Adiutor" like it, so the browser tab doesn't
   name the page they may not see (see "Page titles" in [Design](design.md)).
@@ -90,7 +92,8 @@ Admins and Managers who aren't members can still add themselves with any role, a
 - **Staff:** the menu has Dashboard, Users and Companies, and the dashboard has a tile for each of
   Users and Companies. Admins (`staff:manage`) also get **Staff** in the menu and as a tile on
   the dashboard, which opens the staff page. Admins and Managers (`audit:view`) also get **Logs**,
-  last in the menu and as a tile on the dashboard.
+  last in the menu and as a tile on the dashboard, and a warning there when background jobs aren't
+  running (see [When the ticks stop](jobs.md#failures)).
 - **Company users:** the menu and dashboard stay empty until their features exist. Company pages still
   work by URL, for example right after accepting an invitation.
 - **Company addresses:** a company's pages are at `/companies/<URL name>` (its `slug`, e.g.
@@ -114,13 +117,14 @@ Admins and Managers who aren't members can still add themselves with any role, a
   until the Sort menu says otherwise, in pages. Each event says what happened, who did it, whom it
   was about and which company (each a link), when, and the browser and IP address it came from. It
   can be searched by a person's name or email or a company's name, filtered to a group of events
-  (Sign-ins, Sign-in methods, Accounts, People, Companies and staff; `AUDIT_GROUPS` in
+  (Sign-ins, Sign-in methods, Accounts, People, Companies and staff, Background jobs; `AUDIT_GROUPS` in
   `src/lib/audit-actions.ts`, named by `audit.groups.*`) and limited to a range of days (UTC, both
   days included). Admins (`errors:view`) also get an **Errors** tab (`/admin/logs/errors`): look up
   the reference an error page showed, typed in any case, with or without the dash, and see the
   errors of the last 7 days, newest first (see [Looking up an error
-  reference](deploying.md#looking-up-an-error-reference)). Managers see the audit log without tabs;
-  the errors page is "not found" for them.
+  reference](deploying.md#looking-up-an-error-reference)). Admins and Managers (`jobs:view`) also get
+  a **Jobs** tab (`/admin/logs/jobs`), where Admins (`jobs:manage`) also run, pause and retry jobs
+  (see [Background jobs](jobs.md#for-staff)). The errors page is "not found" for Managers.
 - **Users page** (`/admin/users`, `users:view`): every account in a table, sorted by name
   until another order is chosen from the Sort menu (email, last active or joined), with staff marked with a
   brand-coloured avatar and a "Staff · role" badge. Under each name it lists the user's

@@ -59,8 +59,10 @@ invite-link claims (per IP address), verification emails (per user), starting to
 (10 an hour per staff member, `RATE_LIMITS.impersonationsPerUser`, since each start emails the
 user), sign-in link pages
 opened with a link that can't be used (20 per 15 minutes per IP address, so links can't be
-guessed by looking them up; past it, the page offers no way to continue), and the errors stored
-for admins (see [Recorded errors](#recorded-errors)). All are kept in
+guessed by looking them up; past it, the page offers no way to continue), wrong secrets sent to
+the background jobs' endpoint (20 per 15 minutes per IP address, `RATE_LIMITS.jobTickMissesPerIp`;
+past it the endpoint answers 429, while the right secret still works), and the errors stored for
+admins (see [Recorded errors](#recorded-errors)). All are kept in
 `rate_limit_bucket` (`src/server/rate-limit.ts`), with a clear "Try again in N minutes" message.
 A claimed invite link also counts as an invitation its creator sends, against their limit and
 the company's (or the staff's), in the claim's transaction once the link is used up
@@ -77,13 +79,16 @@ Errors are recorded for admins, who look them up by the reference the error page
 - **`sign_in_error`** (`src/server/auth/sign-in-errors.ts`): sign-in errors that end on the
   sign-in error page, with Better Auth's code and description.
 - **`app_error`** (`src/server/app-errors.ts`): other unexpected errors, from the server
-  (`onRequestError` in `src/instrumentation.ts`) and from the browser (reported by the error page
-  through `src/app/report-error-action.ts`, whose input is checked and cut to size).
+  (`onRequestError` in `src/instrumentation.ts`), from the browser (reported by the error page
+  through `src/app/report-error-action.ts`, whose input is checked and cut to size), and from
+  background jobs (source `job`, with the job's name as `route_path`; see
+  [Background jobs](jobs.md#failures)).
 
 Each keeps the signed-in user, if any, and is limited to 20 rows per IP address per hour
 (`RATE_LIMITS.signInErrorsPerIp` and `RATE_LIMITS.appErrorsPerIp`), so opening an error page over
-and over can't fill the table; past the limit an error is only logged. Rows are deleted after 7
-days (`cleanUp` in `src/server/jobs.ts`). `app_error` stores no database values (the message, cut
+and over can't fill the table; past the limit an error is only logged. Job errors have no IP
+address and no visitor behind them, so they're never limited. Rows are deleted after 7
+days (the `retention` job, see [Background jobs](jobs.md)). `app_error` stores no database values (the message, cut
 to 500 characters, goes through `redactLogValue`, `src/lib/log-redaction.ts`), no query strings
 (they can hold search terms and sign-in tokens) and no secret tokens from paths (`/invite/…`,
 `/join/…` and Better Auth's `/api/auth/reset-password/…` are stored with `[token]`). The log line
@@ -100,9 +105,16 @@ forwarded chain from the right past `TRUSTED_PROXIES`. Configure both for your h
 
 Only the endpoints the browser uses under `/api/auth` are open; the rest answer 404, while
 server code can still call them (`disabledPaths`, listed in `src/lib/sign-in/auth-endpoints.ts`, with a
-test that fails when Better Auth adds one that's in neither list). The only other API route open
-signed out is the health check (`/api/health`, see [Docker](deploying.md#docker)), which answers
-only whether the app is up. While a staff member is signed in as a user, the guards refuse every
+test that fails when Better Auth adds one that's in neither list). The other API routes open
+signed out are the health check (`/api/health`, see [Docker](deploying.md#docker)), which answers
+only whether the app is up, and the background jobs' tick (`/api/jobs`, see
+[Background jobs](jobs.md#the-endpoint)), which runs only with `Authorization: Bearer <CRON_SECRET>`
+(compared in constant time) and answers with counts only; without `CRON_SECRET` it's off. When it
+continues a tick on itself, it sends the secret only to the app's configured address
+(`BETTER_AUTH_URL`), never to a host taken from the request. Staff Admins can pause background jobs,
+but not the ones that keep people informed or clean up sign-in data (security notices, new staff
+Admins, leftover provider tokens, finished sign-ins as a user), so a stolen staff Admin session can't
+silence the emails that would give it away. While a staff member is signed in as a user, the guards refuse every
 endpoint, from the browser or from server code, except reading the session and signing out
 (`refuseWhileSignedInAs` in `src/server/auth/auth-guards/`). The session is the staff member's, so
 an endpoint would act on their own account (see

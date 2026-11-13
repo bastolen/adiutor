@@ -31,7 +31,7 @@
       },
       "logs": {
         "title": "Logs",
-        "description": "Het auditlog en de fouten waar mensen tegenaan liepen."
+        "description": "Het auditlog, de fouten waar mensen tegenaan liepen en de achtergrondtaken."
       }
     }
   }

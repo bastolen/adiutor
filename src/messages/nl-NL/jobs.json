@@ -1,0 +1,31 @@
+{
+  "jobs": {
+    "descriptions": {
+      "leftover-provider-tokens": "Wist de tokens die een inlogprovider aan Adiutor gaf als inloggen ermee niet is afgerond.",
+      "finished-sign-ins-as-users": "Beëindigt inloggen als gebruiker wanneer de tijd om is, en legt dat vast in het auditlog.",
+      "expired-sign-in-data": "Verwijdert verlopen inloglinks, codes en sessies, en verlopen limieten op pogingen.",
+      "invitation-reminders": "Herinnert mensen eenmalig aan uitnodigingen die ze nog niet hebben geaccepteerd, twee dagen voordat ze verlopen.",
+      "retention": "Verwijdert auditgebeurtenissen na een jaar, fouten na 7 dagen en de geschiedenis van taken na 30 dagen.",
+      "security-notice": "Laat mensen weten wanneer er iets aan de beveiliging van hun account verandert.",
+      "added-to-company": "Laat mensen weten dat medewerkers ze aan een bedrijf hebben toegevoegd.",
+      "staff-admin-added": "Laat de beheerders van de medewerkers weten dat iemand beheerder is geworden."
+    },
+    "summary": {
+      "done": "{count, number} klaar",
+      "skipped": "{count, number} overgeslagen",
+      "retried": "{count, number} opnieuw te proberen",
+      "failed": "{count, number} mislukt",
+      "sent": "{count, number} verstuurd",
+      "accounts": "{count, plural, one {Tokens van # account gewist} other {Tokens van # accounts gewist}}",
+      "ended": "{count, plural, one {# keer inloggen als gebruiker beëindigd} other {# keer inloggen als gebruiker beëindigd}}",
+      "verifications": "{count, plural, one {# link of code verwijderd} other {# links en codes verwijderd}}",
+      "sessions": "{count, plural, one {# sessie verwijderd} other {# sessies verwijderd}}",
+      "rateLimits": "{count, plural, one {# limiet verwijderd} other {# limieten verwijderd}}",
+      "auditEvents": "{count, plural, one {# auditgebeurtenis verwijderd} other {# auditgebeurtenissen verwijderd}}",
+      "appErrors": "{count, plural, one {# fout verwijderd} other {# fouten verwijderd}}",
+      "signInErrors": "{count, plural, one {# inlogfout verwijderd} other {# inlogfouten verwijderd}}",
+      "jobRuns": "{count, plural, one {# uitvoering verwijderd} other {# uitvoeringen verwijderd}}",
+      "queuedJobs": "{count, plural, one {# taak uit de wachtrij verwijderd} other {# taken uit de wachtrij verwijderd}}"
+    }
+  }
+}

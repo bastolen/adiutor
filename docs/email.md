@@ -13,12 +13,19 @@ One file per email in `src/emails/`:
   `account-created.tsx` and `security-notice.tsx` for accounts
 - `staff-admin-added.tsx` for the staff Admins when someone else becomes one (given the role, or
   by an invitation or invite link), naming the new Admin and who made it happen, without a device
-  or IP address (`notifyStaffAdminAdded` in `src/server/people/staff-admin-notice.ts`)
+  or IP address (`notifyStaffAdminAdded` in `src/server/people/staff-admin-notice.ts` queues one
+  `staff-admin-added` job per Admin; see [Background jobs](jobs.md#queued-jobs))
+- `job-failing.tsx` for the staff Admins when a background job keeps failing, with the error's
+  reference and a link to it under Logs → Errors, at most once a day per job (`alertStaffAdmins` in
+  `src/server/jobs/alerts.ts`, see [Background jobs](jobs.md#failures))
 - `invitation.tsx`, `invitation-reminder.tsx`, `invite-link-confirmation.tsx`,
-  `added-to-company.tsx`, `already-member.tsx` and `already-invited.tsx` for companies
-  (`already-invited.tsx` goes to someone who claimed an invite link while their address already has
-  an open invitation there that someone sent, which the claim keeps: it points to the earlier
-  invitation email and links to the sign-in page)
+  `already-member.tsx` and `already-invited.tsx` for companies (`already-invited.tsx` goes to
+  someone who claimed an invite link while their address already has an open invitation there that
+  someone sent, which the claim keeps: it points to the earlier invitation email and links to the
+  sign-in page)
+- `added-to-company.tsx` for someone staff added to a company with a role (`addMember` queues an
+  `added-to-company` job, so it goes out at the next tick; see
+  [Background jobs](jobs.md#queued-jobs))
 
 Each exports the template, example `PreviewProps` and a builder that returns the email to send.
 
@@ -48,15 +55,17 @@ changes, a changed company role and a removal from a company, the pauses after t
 passwords (`password_sign_in_paused`) or codes (`two_factor_locked`), and a staff member signing in
 as the recipient (`impersonation_started`). Each kind's subject, heading
 and text are ICU messages in `emails.securityNotice.<kind>`, and the footer and the advice for when
-it wasn't them are `select`s on the kind (`reason`, `ifNotYou`). The messages' `{provider}`, `{role}`
-and `{company}` come from the `provider`, `role` (a role ID, named in the recipient's language) and
-`company` options of `sendSecurityNotice` (`src/server/auth/security-notices.ts`), with a stand-in
-("A provider", "a new role", "your company") when one is missing; `{name}` and `{staff}` (the staff
-member, and the name the staff are shown with to users) come from `staffMember` and `staffName`
-("A staff member", "Adiutor"), and `{minutes}` is how long signing in as someone lasts
-(`IMPERSONATION_MINUTES`). The email names the device
-and IP address only when the caller passes `showDevice: true`, which it does only for changes the
-recipient made themselves (see [Security emails](authentication.md#security-emails)). Every kind
+it wasn't them are `select`s on the kind (`reason`, `ifNotYou`). Most are queued (the
+`security-notice` job, see [Security emails](authentication.md#security-emails)), and the job reads
+the names when it sends them, from the IDs it was queued with: `{provider}` from the provider ID,
+`{role}` (named in the recipient's language), `{company}` from the company, `{name}` from the staff
+member and `{staff}` (the name the staff are shown with to users). The notice to a deleted account,
+sent straight away (`sendAccountDeletedNotice`), names none of them. Each has a stand-in ("A provider", "a new role",
+"your company", "A staff member", "Adiutor") when it's missing, and `{minutes}` is how long signing
+in as someone lasts (`IMPERSONATION_MINUTES`). Both build the email the same way
+(`buildSecurityNotice` in `src/server/auth/security-notice-email.ts`). The email names the device
+and IP address only for changes the recipient made themselves (see
+[Security emails](authentication.md#security-emails)). Every kind
 links to the Security page except `account_deactivated` and `account_deleted`, whose recipients
 can't use it. `impersonation_started` links to its "Sign-ins by staff" card (`#staff-sign-in`,
 `NOTICE_SECTIONS`), where the user can turn it off, as the email says.
@@ -73,14 +82,14 @@ someone asks for themselves follow the language their browser shows: an invite l
 the sign-in link, password reset and verification (`emailLocale` in `src/lib/auth.ts`: the language
 cookie, else Adiutor's default).
 
-| Email                                               | Language                                                                                                                                          |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sign-in link, password reset, verification, code    | The user's, else the request's (`emailLocale` in `src/lib/auth.ts`; the sign-in link works it out before the lookup that runs after the response) |
-| Security notices                                    | The recipient's, looked up by ID or address; a deleted account's is read before the deletion and passed in (`locale`)                             |
-| Invitation, its resends and its reminder            | The invitation's (`invitation.locale`), or the invitee's own when they have an account with a saved language                                      |
-| Invite-link confirmation, "already invited"         | The language of whoever opened the link, which the invitation it turns into keeps                                                                 |
-| "Already a member", added to a company, staff Admin | Each recipient's own                                                                                                                              |
-| Welcome (Add user)                                  | The language given for the new user, which is saved as theirs; for Default, Adiutor's default language                                            |
+| Email                                                                  | Language                                                                                                                                          |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sign-in link, password reset, verification, code                       | The user's, else the request's (`emailLocale` in `src/lib/auth.ts`; the sign-in link works it out before the lookup that runs after the response) |
+| Security notices                                                       | The recipient's, looked up by ID or address; a deleted account's is read before the deletion and passed in (`locale`)                             |
+| Invitation, its resends and its reminder                               | The invitation's (`invitation.locale`), or the invitee's own when they have an account with a saved language                                      |
+| Invite-link confirmation, "already invited"                            | The language of whoever opened the link, which the invitation it turns into keeps                                                                 |
+| "Already a member", added to a company, staff Admin, job keeps failing | Each recipient's own                                                                                                                              |
+| Welcome (Add user)                                                     | The language given for the new user, which is saved as theirs; for Default, Adiutor's default language                                            |
 
 `invitation.locale` (NOT NULL, `en-US` by default) is chosen when the invitation is sent: the
 invitation services (`inviteByEmail`, `inviteManyByEmail`, `registerCompany`, `createSentInvitation`)
@@ -113,7 +122,10 @@ In `src/lib/email.ts`, in order:
 
 - `EMAIL_OUTBOX_DIR` set: written there as JSON (the end-to-end tests read them)
 - `SMTP_URL` set: sent over SMTP (Mailpit in development, your provider in production, with
-  `EMAIL_FROM` as the sender)
+  `EMAIL_FROM` as the sender), with time limits (`SMTP_TIMEOUTS`: 10 seconds to connect, 10 for the
+  greeting, 20 of silence) instead of nodemailer's minutes, so a mail server that hangs fails one
+  email (which a queued job tries again) instead of holding a request or the background jobs' tick
+  until the platform stops it; settings in `SMTP_URL` still win
 - neither, with `NODE_ENV` set to `development` or `test`: the plain text is printed to the
   server console
 - neither, anywhere else (production, or a script without `NODE_ENV`): sending fails, so links

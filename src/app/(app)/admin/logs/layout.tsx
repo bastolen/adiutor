@@ -1,8 +1,9 @@
 /**
- * @file Layout of the Logs pages (the audit log, and the errors): the
- * heading and tabs, then the page. Only staff who may see the audit log
- * (Admins and Managers) get here; the errors page also checks its own,
- * stricter permission (staff Admins).
+ * @file Layout of the Logs pages (the audit log, the errors and the
+ * background jobs): the heading and tabs, then the page. Only staff who may
+ * see the audit log (Admins and Managers) get here; the errors and jobs
+ * pages also check their own permission (`errors:view` for staff Admins,
+ * `jobs:view` for staff Admins and Managers).
  */
 import { Suspense } from 'react';
 
@@ -21,13 +22,19 @@ export const generateMetadata = globalPermissionMetadata('audit:view');
 
 /**
  * Checks the viewer may see the logs (the 404 page otherwise) and shows the
- * header, with tabs when they may also see the errors.
+ * header, with tabs for the other sections they may see.
  *
  * @returns The header.
  */
 async function LogsHeaderLoader() {
   const actor = await requireGlobalPermission('audit:view');
-  return <LogsHeader canViewErrors={getGlobalPermissions(actor).has('errors:view')} />;
+  const permissions = getGlobalPermissions(actor);
+  return (
+    <LogsHeader
+      canViewErrors={permissions.has('errors:view')}
+      canViewJobs={permissions.has('jobs:view')}
+    />
+  );
 }
 
 /**

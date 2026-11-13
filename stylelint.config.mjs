@@ -31,8 +31,8 @@ const tailwindAtRules = [
  */
 const config = {
   extends: ['stylelint-config-standard', 'stylelint-prettier/recommended'],
-  /** Generated output and dependencies that should never be linted. */
-  ignoreFiles: ['.next/**', 'out/**', 'build/**', 'node_modules/**'],
+  /** Generated output, dependencies and Claude Code's worktrees (other checkouts): never linted. */
+  ignoreFiles: ['.next/**', 'out/**', 'build/**', 'node_modules/**', '.claude/worktrees/**'],
   rules: {
     /** Allow Tailwind's at-rules. */
     'at-rule-no-unknown': [true, { ignoreAtRules: tailwindAtRules }],

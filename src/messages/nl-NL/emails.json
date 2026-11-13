@@ -111,6 +111,17 @@
       "advice": "Beheerders van de medewerkers kunnen alles beheren op Adiutor, ook de medewerkers. Herken je dit niet, haal dan hun toegang als medewerker weg op de medewerkerspagina en bekijk het auditlog.",
       "button": "Medewerkerspagina openen"
     },
+    "jobFailing": {
+      "subject": "Achtergrondtaak {job} blijft mislukken op Adiutor",
+      "preview": "Achtergrondtaak {job} blijft mislukken op Adiutor",
+      "reason": "Je ontvangt dit omdat je beheerder van de medewerkers bent op Adiutor: beheerders horen het wanneer een achtergrondtaak blijft mislukken, hooguit één keer per dag per taak.",
+      "heading": "{job} blijft mislukken",
+      "recurring": "{count, plural, one {De achtergrondtaak {job} is de laatste keer mislukt.} other {De achtergrondtaak {job} is de laatste # keer achter elkaar mislukt.}} De andere taken lopen door, maar deze doet zijn werk pas weer als het probleem is opgelost.",
+      "queued": "{count, plural, one {Een taak van {job} is na de laatste poging opgegeven en wordt niet meer vanzelf uitgevoerd.} other {# taken van {job} zijn na de laatste poging opgegeven en worden niet meer vanzelf uitgevoerd.}}",
+      "reference": "Foutreferentie: {reference}",
+      "advice": "Zoek de fout op onder Logs → Fouten om te zien wat er misging.",
+      "button": "Fout openen"
+    },
     "securityNotice": {
       "when": "Wanneer: {when}",
       "fromDeviceAndIp": "Vanaf: {device}, {ip}",

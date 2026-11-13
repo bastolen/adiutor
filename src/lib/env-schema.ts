@@ -98,6 +98,20 @@ const envSchema = z
      */
     BETTER_AUTH_URL: z.url(),
     /**
+     * The secret the tick's endpoint (`/api/jobs`) asks for, as
+     * `Authorization: Bearer <secret>`; at least 32 characters. Unset, the
+     * endpoint is off (see "Background jobs" in `docs/deploying.md`).
+     */
+    CRON_SECRET: z.preprocess(emptyToUndefined, z.string().min(32).optional()),
+    /**
+     * Vercel's Protection Bypass for Automation secret, which Vercel sets by
+     * itself once it's generated (Settings → Deployment Protection). The
+     * tick's endpoint sends it when it continues itself
+     * (`x-vercel-protection-bypass`), so the call reaches a protected Preview
+     * deployment. Unset elsewhere.
+     */
+    VERCEL_AUTOMATION_BYPASS_SECRET: optionalString,
+    /**
      * GitHub OAuth app credentials. GitHub sign-in is enabled when both are
      * set, and only then does GitHub's 2FA count as MFA (see `src/lib/sign-in/providers.ts`).
      */

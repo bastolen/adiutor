@@ -18,6 +18,7 @@ import {
   createUser,
   enableTwoFactor,
   inSequence,
+  sendQueuedEmails,
 } from '../../../../tests/integration/helpers';
 import type { Actor } from '../../actor';
 import {
@@ -108,6 +109,7 @@ describe('deactivateOwnAccount', () => {
     expect((await db.select().from(verification)).map((row) => row.identifier)).toEqual([
       'trust-device-someone-else',
     ]);
+    await sendQueuedEmails(ctx);
     expect(sent.map((email) => email.subject)).toEqual(['Your Adiutor account was deactivated']);
     expect(await actionsAbout(jane)).toEqual(['password_check_failed', 'account_deactivated']);
     const [wrong] = await db
@@ -121,6 +123,7 @@ describe('deactivateOwnAccount', () => {
     await givePassword(jane);
     await deactivateOwnAccount(fromKnownDevice, await signedIn(jane), PASSWORD);
 
+    await sendQueuedEmails(ctx);
     expect(sent).toHaveLength(1);
     const notice = defined(sent[0], 'the notice email');
     expect(notice.text).toContain('Firefox on Windows');

@@ -32,6 +32,12 @@ export type AuditLogSort = 'time';
 /** How the recent errors can be sorted. */
 export type ErrorSort = 'time';
 
+/** How the runs of background jobs can be sorted: by when they started. */
+export type JobRunSort = 'time';
+
+/** How the failed queued jobs can be sorted: by when they were given up. */
+export type FailedJobSort = 'time';
+
 /**
  * The sorts of a list of people, the same wherever people are listed. What
  * "Joined" sorts by is up to each list: the account's or the membership's
@@ -114,6 +120,21 @@ export const AUDIT_LOG_TABLE: TableDefinition<AuditLogSort> = {
 /** The errors recorded in the last 7 days (`/admin/logs/errors`), newest first. */
 export const ERRORS_TABLE: TableDefinition<ErrorSort> = {
   prefix: '',
+  defaultSort: 'time',
+  sorts: { time: dateSort('time') },
+};
+
+/** The runs of background jobs in the last 30 days (`/admin/logs/jobs`), newest first. */
+export const JOB_RUNS_TABLE: TableDefinition<JobRunSort> = {
+  prefix: '',
+  defaultSort: 'time',
+  sorts: { time: dateSort('time') },
+};
+
+/** The queued jobs that were given up, on the Jobs page, latest first. */
+export const FAILED_JOBS_TABLE: TableDefinition<FailedJobSort> = {
+  prefix: 'failed-',
+  section: 'failed-jobs',
   defaultSort: 'time',
   sorts: { time: dateSort('time') },
 };

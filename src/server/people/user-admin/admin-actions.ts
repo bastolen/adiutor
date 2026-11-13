@@ -18,7 +18,7 @@ import { OAUTH_PROVIDERS } from '@/lib/sign-in/oauth-providers';
 import { assertNotSignedInAs, assertPermission, getGlobalPermissions } from '../../access';
 import type { Actor } from '../../actor';
 import { recordEvent } from '../../audit';
-import { sendSecurityNotice } from '../../auth/security-notices';
+import { queueSecurityNotice, sendAccountDeletedNotice } from '../../auth/security-notices';
 import { endSessionsOf } from '../../auth/sessions';
 import { withSignInChangeLock } from '../../auth/sign-in-change-lock';
 import type { ServiceContext } from '../../context';
@@ -110,7 +110,7 @@ export async function resetUserMfa(
     throw new ServiceError('forbidden', 'errors.signIn.mfaVerificationRequired');
   }
   const targetId = targetIdOf(actor, userId);
-  const { email } = await withSignInChangeLock(ctx, targetId, () =>
+  await withSignInChangeLock(ctx, targetId, () =>
     ctx.db.transaction(async (tx) => {
       const target = await loadTarget(tx, actor, targetId);
       await tx.update(user).set({ twoFactorEnabled: false }).where(eq(user.id, target.id));
@@ -139,10 +139,9 @@ export async function resetUserMfa(
         },
         tx,
       );
-      return { email: target.email };
     }),
   );
-  await sendSecurityNotice(ctx, { email }, 'mfa_reset');
+  await queueSecurityNotice(ctx.db, targetId, 'mfa_reset');
 }
 
 /**
@@ -159,7 +158,7 @@ export async function signOutUserEverywhere(
 ): Promise<void> {
   assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'users:manage');
-  const { email } = await ctx.db.transaction(async (tx) => {
+  const { targetId } = await ctx.db.transaction(async (tx) => {
     const target = await loadTarget(tx, actor, userId);
     // Trusted devices too: a stolen device that was trusted mustn't skip the code step at its next
     // sign-in.
@@ -174,9 +173,9 @@ export async function signOutUserEverywhere(
       },
       tx,
     );
-    return { email: target.email };
+    return { targetId: target.id };
   });
-  await sendSecurityNotice(ctx, { email }, 'signed_out_everywhere');
+  await queueSecurityNotice(ctx.db, targetId, 'signed_out_everywhere');
 }
 
 /**
@@ -215,7 +214,7 @@ export async function deactivateUser(
 ): Promise<void> {
   assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'users:manage');
-  const { email } = await ctx.db.transaction(async (tx) => {
+  const { targetId } = await ctx.db.transaction(async (tx) => {
     const target = await loadTarget(tx, actor, userId);
     if (target.deactivatedAt) {
       throw new ServiceError('conflict', 'errors.users.alreadyDeactivated');
@@ -227,9 +226,9 @@ export async function deactivateUser(
       { action: 'account_deactivated', actorUserId: actor.id, targetUserId: target.id },
       tx,
     );
-    return { email: target.email };
+    return { targetId: target.id };
   });
-  await sendSecurityNotice(ctx, { email }, 'account_deactivated');
+  await queueSecurityNotice(ctx.db, targetId, 'account_deactivated');
 }
 
 /**
@@ -247,7 +246,7 @@ export async function reactivateUser(
 ): Promise<void> {
   assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'users:manage');
-  const { email } = await ctx.db.transaction(async (tx) => {
+  const { targetId } = await ctx.db.transaction(async (tx) => {
     const target = await loadTarget(tx, actor, userId);
     if (!target.deactivatedAt) {
       throw new ServiceError('conflict', 'errors.users.alreadyActive');
@@ -258,9 +257,9 @@ export async function reactivateUser(
       { action: 'account_reactivated', actorUserId: actor.id, targetUserId: target.id },
       tx,
     );
-    return { email: target.email };
+    return { targetId: target.id };
   });
-  await sendSecurityNotice(ctx, { email }, 'account_reactivated');
+  await queueSecurityNotice(ctx.db, targetId, 'account_reactivated');
 }
 
 /**
@@ -332,5 +331,5 @@ export async function deleteUser(
   });
   // Only once the deletion has committed: a refused one sends nothing. The account is gone, so its
   // language comes along.
-  await sendSecurityNotice(ctx, { email }, 'account_deleted', { locale });
+  await sendAccountDeletedNotice(ctx, email, locale);
 }

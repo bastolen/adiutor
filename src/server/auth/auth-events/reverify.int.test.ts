@@ -11,7 +11,12 @@ import { firstRow } from '@/lib/defined';
 import { sendEmail } from '@/lib/email';
 import { PROVIDER_STEP_UP_COOKIE } from '@/lib/sign-in/oauth-providers';
 
-import { createSession, createUser, inSequence } from '../../../../tests/integration/helpers';
+import {
+  createSession,
+  createUser,
+  inSequence,
+  queuedJobKinds,
+} from '../../../../tests/integration/helpers';
 import { afterAuthRequest } from './after-request';
 import { checkIncomingUser, checkReverify, type IncomingUserInfo } from './reverify';
 import { beforeSessionCreate } from './session-hooks';
@@ -195,6 +200,7 @@ describe('refusing a re-verify with another account', () => {
     ).toEqual(refused);
     expect(await events()).toEqual([failedConfirmation(jane)]);
     expect(sendEmail).not.toHaveBeenCalled();
+    expect(await queuedJobKinds(db)).toEqual([]);
   });
 
   it('refuses her own confirmed account once the browser no longer has the session it confirms', async () => {

@@ -21,7 +21,7 @@ switches to that version by itself.
    checklist below says what each setting needs on a server.
 3. `pnpm build`, with those settings in place (CI builds the same way).
 4. `pnpm db:migrate` creates the tables (drizzle-kit applies the migrations in `drizzle/`).
-5. `pnpm start`, then the first-run step and the hourly jobs from the checklist below.
+5. `pnpm start`, then the first-run step and the background jobs from the checklist below.
 
 **Every new release:** get the new code, then `pnpm install --frozen-lockfile`, `pnpm build` and
 `pnpm db:migrate`, and only then restart the app. Migrations bring the database to what the new
@@ -31,7 +31,7 @@ than this, its release notes (the changelog Release Please writes) say so.
 **Don't prune the dev dependencies** (no `pnpm prune --prod`, and no slim image without them).
 Commands you run on the server need them: `pnpm db:migrate` runs drizzle-kit, and
 `pnpm setup:platform`, `pnpm jobs:run` and `pnpm sessions:revoke-all` run through tsx. Without
-them, migrations, the hourly jobs, the first-run setup and signing everyone out after a leak all
+them, migrations, the background jobs, the first-run setup and signing everyone out after a leak all
 fail, possibly in the middle of an incident.
 
 ## Vercel
@@ -45,9 +45,9 @@ Vercel runs two environments from two branches:
 
 Every other branch is skipped, so pull requests get no preview deployments.
 
-`vercel.json` sets how Vercel builds Adiutor. It's strict JSON, so it can't carry comments; this
-section explains it instead. Both of its settings take precedence over the same fields in the
-project's dashboard.
+`vercel.json` sets how Vercel builds and runs Adiutor. It's strict JSON, so it can't carry
+comments; this section explains it instead. Its build settings take precedence over the same
+fields in the project's dashboard.
 
 - **What's built** (`ignoreCommand`): Vercel builds a commit when the command exits with 1. It does
   for every commit on `main`, and for `production` only when the branch points at a release commit
@@ -58,6 +58,14 @@ project's dashboard.
   connection) or else its `DATABASE_URL`. Migrations should use a direct connection, not a pooled
   one. When migrating fails, the build fails and the previous deployment stays live, so new code
   never runs against the old schema.
+- **A tick every 15 minutes** (`schedules`): a Vercel schedule (`jobs-tick`, Vercel Schedules, in
+  beta) calls `GET /api/jobs` every 15 minutes (on the Hobby plan, somewhere within each 15
+  minutes), with `Authorization: Bearer <CRON_SECRET>` when the environment has `CRON_SECRET`.
+  `requestMethod` makes it a `GET`, since Schedules send `POST` by default. It's the fallback for the
+  external cron service below, so the jobs still run if that service stops. Preview's copy of the
+  schedule starts inactive: leave it so, as the external service ticks Preview. On the Pro plan,
+  change it to `*/5 * * * *` and the external service becomes optional. Don't also add Vercel's
+  older cron jobs (`crons`) for the same path, or the tick runs twice.
 
 **Moving production** (`.github/workflows/production-branch.yml`): when Release Please publishes a
 release, this workflow moves `production` to the release's commit, creating the branch the first
@@ -77,6 +85,8 @@ a tag such as `v0.2.0`) to move production to an existing release.
 - **`BETTER_AUTH_URL`:** each environment's own address, or sign-in links and redirects point at the
   other one. GitHub and Google sign-in need Preview's address as a callback URL too; otherwise leave
   their settings unset in Preview.
+- **`CRON_SECRET`:** a different random secret per environment (at least 32 characters, e.g.
+  `openssl rand -base64 32`), for the background jobs' endpoint.
 
 **One-time setup, in this order:**
 
@@ -87,6 +97,21 @@ a tag such as `v0.2.0`) to move production to an existing release.
    always shows the latest commit.
 4. Publish a release (see [Releases](ci-and-releases.md#releases)): the workflow creates
    `production` at it, and Vercel deploys it as production.
+5. Start the background jobs every 5 minutes with an external cron service (such as
+   [cron-job.org](https://cron-job.org)), one entry per environment:
+   - `GET https://<the environment's address>/api/jobs`, every 5 minutes;
+   - the header `Authorization: Bearer <that environment's CRON_SECRET>`;
+   - for Preview, if Deployment Protection is on, also the header
+     `x-vercel-protection-bypass` with the project's secret from Settings → Deployment Protection →
+     Protection Bypass for Automation. Generating that secret also gives deployments
+     `VERCEL_AUTOMATION_BYPASS_SECRET`, which the endpoint sends when it continues a tick on itself
+     (see [The endpoint](jobs.md#the-endpoint)), so a backlog on Preview doesn't wait for the next
+     tick;
+   - have the service warn you when the answer isn't 200: a 500 means a job failed (see
+     [Background jobs](jobs.md)).
+
+   Logs → Jobs then shows a recent tick. When none has run for 45 minutes, the dashboard and the
+   Jobs page warn staff Admins and Managers that background jobs aren't running.
 
 ## Docker
 
@@ -124,7 +149,7 @@ docker run --rm --env-file .env adiutor pnpm jobs:run
 docker run --rm --env-file .env adiutor pnpm sessions:revoke-all
 ```
 
-Run `pnpm jobs:run` from cron every hour, as in [Background jobs](#background-jobs).
+Run `pnpm jobs:run` from cron every 5 minutes, as in [Background jobs](#background-jobs).
 
 **Health check:** `GET /api/health` answers `200 {"status":"ok"}` when the database answers and has
 every migration in `drizzle/` applied, and `503 {"status":"unavailable"}` otherwise, so a load
@@ -181,8 +206,9 @@ What to set up on a server before sharing its address:
   whose password and authenticator secret are in the repository. It refuses to run when
   `BETTER_AUTH_URL` isn't on this computer (see [Test accounts](development.md#test-accounts)).
 - **Secrets:** a random `BETTER_AUTH_SECRET` of at least 32 characters; rotate it as described in
-  [Rotating the auth secret](#rotating-the-auth-secret).
-- **Jobs:** run `pnpm jobs:run` hourly with `NODE_ENV=production` (see
+  [Rotating the auth secret](#rotating-the-auth-secret). If a cron service calls the jobs' endpoint,
+  a random `CRON_SECRET` of at least 32 characters too.
+- **Jobs:** run `pnpm jobs:run` every 5 minutes with `NODE_ENV=production` (see
   [Background jobs](#background-jobs)).
 - **Logs:** successful requests log nothing that identifies anyone, but errors can: an email
   address an email failed for, a user's name, and so on (database values are left out, see
@@ -264,18 +290,23 @@ traffic from Cloudflare's addresses.
 
 ## Background jobs
 
-`pnpm jobs:run` (`scripts/run-jobs.ts`) runs the jobs once: it deletes expired sign-in links, codes
-and sessions, finished rate-limit windows, sign-in errors and other recorded errors older than 7
-days and audit events older than a year, clears provider
-tokens a failed sign-in left behind, ends (and records) staff sign-ins as a user whose time is up or
-whose staff session is gone, and sends invitation reminders. It's safe to run again at any time. A reminder
-that can't be sent is undone (the invitation keeps its old link, which still works) and tried again
-on the next run; the run still finishes the other jobs and reminders, then exits with 1, so cron's
-mail or your monitoring tells you the mail setup is broken. In production, run it hourly from cron:
+Adiutor's background work runs as jobs, started by a **tick** every 5 minutes; each job has its own
+schedule in code, and the tick runs whichever are due (see [Background jobs](jobs.md) for the jobs
+and how they work). On a server, run the tick from cron with `pnpm jobs:run`:
 
 ```cron
-0 * * * * cd /srv/adiutor && pnpm jobs:run >> /var/log/adiutor-jobs.log 2>&1
+*/5 * * * * cd /srv/adiutor && pnpm jobs:run >> /var/log/adiutor-jobs.log 2>&1
 ```
+
+Or have a cron service call the endpoint every 5 minutes instead: set `CRON_SECRET` (at least 32
+characters, e.g. `openssl rand -base64 32`) and send `GET /api/jobs` with
+`Authorization: Bearer <CRON_SECRET>` (see [The endpoint](jobs.md#the-endpoint)).
+
+It's safe to run at any time and never runs a job twice at once, so a tick that overlaps the next
+one does no harm. It exits with 1 when a job failed (after the others ran), so cron's mail or your
+monitoring notices, for example when the mail setup is broken and reminders can't be sent; the next
+run tries again. `pnpm jobs:list` shows every job with its last and next run, and
+`pnpm jobs:run <name>` runs one job now.
 
 ## Logs
 

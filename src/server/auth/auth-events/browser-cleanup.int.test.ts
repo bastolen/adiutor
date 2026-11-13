@@ -149,7 +149,7 @@ describe('forgetting trusted devices', () => {
       expect(await events()).toEqual([
         { action, actorUserId: jane, targetUserId: jane, details: {} },
       ]);
-      expect(subjects()).toEqual([subject]);
+      expect(await subjects()).toEqual([subject]);
     });
 
     it('does nothing when the request was refused', async () => {
@@ -167,7 +167,7 @@ describe('forgetting trusted devices', () => {
 
       expect(await devicesLeft([device])).toEqual([device]);
       expect(await events()).toEqual([]);
-      expect(subjects()).toEqual([]);
+      expect(await subjects()).toEqual([]);
     });
   });
 });

@@ -331,11 +331,12 @@
       "title": "Auditlog",
       "header": {
         "title": "Logs",
-        "descriptionWithErrors": "Beveiligingsgebeurtenissen van en over iedereen, en de fouten waar mensen tegenaan liepen.",
-        "description": "Beveiligingsgebeurtenissen van en over iedereen.",
+        "descriptionWithErrors": "Beveiligingsgebeurtenissen van en over iedereen, de fouten waar mensen tegenaan liepen en de achtergrondtaken.",
+        "description": "Beveiligingsgebeurtenissen van en over iedereen, en de achtergrondtaken.",
         "tabsLabel": "Onderdelen van de logs",
         "auditTab": "Auditlog",
-        "errorsTab": "Fouten"
+        "errorsTab": "Fouten",
+        "jobsTab": "Taken"
       },
       "searchLabel": "Mensen of bedrijven zoeken",
       "searchPlaceholder": "Naam of bedrijf",
@@ -360,6 +361,8 @@
       "by": "door <link>{name}</link>",
       "about": "over <link>{name}</link>",
       "staff": "Medewerkers",
+      "job": "Taak <code>{name}</code>",
+      "jobs": "{count, plural, one {# taak van <code>{name}</code>} other {# taken van <code>{name}</code>}}",
       "notRecorded": "Niet vastgelegd",
       "reason": "Reden: {reason}"
     },
@@ -370,6 +373,7 @@
       "kinds": {
         "signIn": "Inlogfout",
         "browser": "Browserfout",
+        "job": "Taakfout",
         "server": "Serverfout"
       },
       "noMessage": "Geen melding vastgelegd",
@@ -406,6 +410,109 @@
         "reference": "Referentie",
         "whatHappened": "Wat er gebeurde",
         "when": "Wanneer"
+      }
+    },
+    "jobs": {
+      "title": "Taken",
+      "schedule": "{kind, select, minutes {{minutes, plural, one {Elke minuut} other {Elke # minuten}}} hourly {{minute, plural, =0 {Elk heel uur} one {Elk uur, # minuut over} other {Elk uur, # minuten over}}} daily {Elke dag om {time}} other {Volgens het schema {expression} (UTC)}}",
+      "status": {
+        "succeeded": "Gelukt",
+        "failed": "Mislukt",
+        "paused": "Gepauzeerd",
+        "running": "Bezig",
+        "noLongerUsed": "Niet meer in gebruik"
+      },
+      "errorReference": "Fout {reference}",
+      "errorReferenceLink": "Fout {reference} opzoeken",
+      "nothingDone": "Niets te doen",
+      "tickWarning": {
+        "label": "Achtergrondtaken",
+        "title": "Achtergrondtaken draaien niet",
+        "late": "De laatste tik begon {time}, dus herinneringen, beveiligingsmails en opruimtaken wachten. Controleer de cronservice die elke 5 minuten /api/jobs aanroept, of de cron op de server die pnpm jobs:run uitvoert.",
+        "never": "Er is nog geen tik geweest, dus ook nog geen achtergrondtaak. Stel een cronservice in die elke 5 minuten /api/jobs aanroept, of voer pnpm jobs:run uit vanuit de cron op de server.",
+        "action": "Taken openen"
+      },
+      "recurring": {
+        "title": "Geplande taken",
+        "description": "Elke taak draait volgens zijn schema, bij de tik die om de paar minuten komt. Tijden zijn in UTC.",
+        "caption": "Geplande taken",
+        "job": "Taak",
+        "lastRun": "Laatst uitgevoerd",
+        "nextRun": "Volgende uitvoering",
+        "neverRun": "Nog niet uitgevoerd",
+        "atNextTick": "Bij de volgende tik",
+        "whilePaused": "Niet terwijl de taak gepauzeerd is",
+        "failuresInARow": "{count, plural, one {De laatste uitvoering is mislukt} other {De laatste # uitvoeringen zijn mislukt}}",
+        "lastTick": "Laatste tik <when>{time}</when>",
+        "noTick": "Nog geen tik"
+      },
+      "queued": {
+        "title": "Taken in de wachtrij",
+        "description": "Werk dat Adiutor voor later klaarzet, zoals e-mails die een paar minuten kunnen wachten. Elke taak draait bij de volgende tik en wordt opnieuw geprobeerd als hij mislukt.",
+        "caption": "Soorten taken in de wachtrij",
+        "kind": "Soort",
+        "waiting": "Wachtend",
+        "failed": "Mislukt",
+        "count": "{count, number}",
+        "counts": "{waiting, number} wachtend, {failed, number} mislukt"
+      },
+      "failed": {
+        "title": "Mislukte taken in de wachtrij",
+        "description": "Taken die na hun laatste poging zijn opgegeven, nieuwste eerst. Ze draaien niet meer, tenzij ze opnieuw worden geprobeerd.",
+        "caption": "Mislukte taken in de wachtrij",
+        "rows": "mislukte taken",
+        "emptyTitle": "Geen mislukte taken",
+        "emptyDescription": "Elke taak in de wachtrij is uitgevoerd of wacht op zijn beurt.",
+        "job": "Taak",
+        "givenUp": "Opgegeven",
+        "error": "Fout",
+        "attempts": "{count, plural, one {Eén keer geprobeerd} other {# keer geprobeerd}}"
+      },
+      "runs": {
+        "title": "Recente uitvoeringen",
+        "description": "De uitvoeringen van de laatste 30 dagen die iets deden, mislukten of met de hand zijn gestart, nieuwste eerst.",
+        "caption": "Uitvoeringen van achtergrondtaken",
+        "rows": "uitvoeringen",
+        "emptyTitle": "Nog geen uitvoeringen",
+        "emptyDescription": "Uitvoeringen verschijnen hier zodra een taak iets doet, mislukt of met de hand wordt uitgevoerd.",
+        "job": "Taak",
+        "started": "Gestart",
+        "outcome": "Resultaat",
+        "trigger": "{trigger, select, tick {Door de tik} cli {Vanaf de opdrachtregel} other {Vanaf de pagina Taken}}",
+        "startedBy": "Vanaf de pagina Taken, door <link>{name}</link>"
+      },
+      "actions": {
+        "runNow": "Nu uitvoeren",
+        "runNowLabel": "{job} nu uitvoeren",
+        "ran": "{job} is uitgevoerd.",
+        "ranFailed": "{job} is uitgevoerd, maar mislukt.",
+        "ranFailedWithReference": "{job} is uitgevoerd, maar mislukt. Foutreferentie: {reference}.",
+        "pause": "Pauzeren",
+        "pauseLabel": "{job} pauzeren",
+        "paused": "{job} is gepauzeerd tot hij wordt hervat.",
+        "resume": "Hervatten",
+        "resumeLabel": "{job} hervatten",
+        "resumed": "{job} is hervat.",
+        "retry": "Opnieuw proberen",
+        "retryLabel": "De taak van {job} die {time} is opgegeven opnieuw proberen",
+        "retried": "{count, plural, one {# taak staat weer in de wachtrij voor de volgende tik.} other {# taken staan weer in de wachtrij voor de volgende tik.}}",
+        "discard": "Weggooien",
+        "discardLabel": "De taak van {job} die {time} is opgegeven weggooien",
+        "discardConfirm": {
+          "title": "Deze taak weggooien?",
+          "description": "Deze taak van {job} wordt niet meer uitgevoerd. Hij blijft 30 dagen als weggegooid in de geschiedenis staan.",
+          "confirm": "Taak weggooien"
+        },
+        "discarded": "{count, plural, one {# taak weggegooid.} other {# taken weggegooid.}}",
+        "retryAll": "Alles opnieuw proberen",
+        "retryAllLabel": "Alles opnieuw proberen: mislukte taken van {job}",
+        "discardAll": "Alles weggooien",
+        "discardAllLabel": "Alles weggooien: mislukte taken van {job}",
+        "discardAllConfirm": {
+          "title": "Elke mislukte taak van {job} weggooien?",
+          "description": "{count, plural, one {# taak wordt niet meer uitgevoerd.} other {# taken worden niet meer uitgevoerd.}} Ze blijven 30 dagen als weggegooid in de geschiedenis staan.",
+          "confirm": "Taken weggooien"
+        }
       }
     },
     "dateRange": {

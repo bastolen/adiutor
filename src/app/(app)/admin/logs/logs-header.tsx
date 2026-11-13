@@ -11,35 +11,38 @@ import SegmentTabNav from '@/components/ui/segment-tab-nav';
  * Props for {@link LogsHeader}.
  */
 interface LogsHeaderProps {
-  /** Whether the viewer may see recorded errors (staff Admins), which adds the tabs. */
+  /** Whether the viewer may see recorded errors (staff Admins), which adds their tab. */
   canViewErrors: boolean;
+  /** Whether the viewer may see the background jobs (staff Admins and Managers), which adds their tab. */
+  canViewJobs: boolean;
 }
 
 /**
- * The "Logs" heading, with tabs for the audit log and the errors when the
- * viewer may see both (staff Admins); Managers only get the audit log, so no
- * tabs. Its text comes from `admin.logs.header`.
+ * The "Logs" heading, with a tab for the audit log and one for each other
+ * section the viewer may see: the errors (staff Admins) and the background
+ * jobs (staff Admins and Managers, so everyone who sees the logs). Its text
+ * comes from `admin.logs.header`.
  *
  * @param props - Header props.
  * @param props.canViewErrors - Whether the viewer may see recorded errors.
+ * @param props.canViewJobs - Whether the viewer may see the background jobs.
  * @returns The header.
  */
-export default function LogsHeader({ canViewErrors }: LogsHeaderProps) {
+export default function LogsHeader({ canViewErrors, canViewJobs }: LogsHeaderProps) {
   const t = useTranslations('admin.logs.header');
+  const items = [
+    { href: '/admin/logs', label: t('auditTab'), segment: null },
+    ...(canViewErrors
+      ? [{ href: '/admin/logs/errors', label: t('errorsTab'), segment: 'errors' }]
+      : []),
+    ...(canViewJobs ? [{ href: '/admin/logs/jobs', label: t('jobsTab'), segment: 'jobs' }] : []),
+  ];
   return (
     <PageHeader
       title={t('title')}
       description={canViewErrors ? t('descriptionWithErrors') : t('description')}
     >
-      {canViewErrors && (
-        <SegmentTabNav
-          label={t('tabsLabel')}
-          items={[
-            { href: '/admin/logs', label: t('auditTab'), segment: null },
-            { href: '/admin/logs/errors', label: t('errorsTab'), segment: 'errors' },
-          ]}
-        />
-      )}
+      <SegmentTabNav label={t('tabsLabel')} items={items} />
     </PageHeader>
   );
 }

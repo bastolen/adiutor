@@ -26,6 +26,7 @@ describe('isPublicPath', () => {
       '/setup',
       '/api/auth/sign-in/email',
       '/api/health',
+      '/api/jobs',
     ].forEach((path) => expect(isPublicPath(path), path).toBe(true));
   });
 
@@ -40,6 +41,7 @@ describe('isPublicPath', () => {
       '/setups',
       '/api/other',
       '/api/healthy',
+      '/api/jobsite',
     ].forEach((path) => expect(isPublicPath(path), path).toBe(false));
   });
 });

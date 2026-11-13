@@ -2,7 +2,8 @@
  * @file Signs everyone out, or one user, on every device, and forgets their
  * trusted devices: for after a suspected leak of the database, the auth
  * secret or a session (see "After a suspected leak" in `docs/deploying.md`).
- * Recorded in the audit log; one user is also emailed.
+ * Recorded in the audit log; one user also gets a security email, sent by
+ * the next tick of the background jobs.
  *
  * Usage: `pnpm sessions:revoke-all --yes` (everyone) or
  * `pnpm sessions:revoke-all --user user@adiutor.dev` (one user).
@@ -46,9 +47,9 @@ async function main(): Promise<number> {
     } else {
       console.info(`Signed ${result.email} out: ended ${result.count} sessions.`);
       console.info(
-        result.emailed
-          ? 'They were emailed.'
-          : 'Emailing them failed (see the error above); tell them yourself.',
+        result.noticeQueued
+          ? 'Their security email goes out with the next tick of the background jobs.'
+          : 'Queuing their security email failed (see the error above); tell them yourself.',
       );
     }
     return 0;

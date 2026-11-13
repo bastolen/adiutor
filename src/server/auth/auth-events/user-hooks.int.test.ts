@@ -54,7 +54,7 @@ describe('a first password', () => {
       { path: '/reset-password', headers: new Headers(), context: {} },
     );
 
-    expect(subjects()).toEqual(['A password was added to your Adiutor account']);
+    expect(await subjects()).toEqual(['A password was added to your Adiutor account']);
   });
 
   it("isn't emailed for the welcome link of a registered account", async () => {
@@ -65,7 +65,7 @@ describe('a first password', () => {
       { path: '/reset-password', headers: new Headers(), context: {} },
     );
 
-    expect(subjects()).toEqual([]);
+    expect(await subjects()).toEqual([]);
   });
 });
 
@@ -96,7 +96,7 @@ describe('emailed links', () => {
     expect(await events()).toEqual([
       { action: 'password_reset', actorUserId: jane, targetUserId: jane, details: {} },
     ]);
-    expect(subjects()).toHaveLength(1);
+    expect(await subjects()).toHaveLength(1);
     const found = firstRow(
       await db.select({ emailVerified: user.emailVerified }).from(user).where(eq(user.id, jane)),
       'the user',

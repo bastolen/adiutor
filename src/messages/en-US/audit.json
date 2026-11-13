@@ -42,7 +42,12 @@
       "company_updated": "Changed company details",
       "company_deactivated": "Deactivated a company",
       "company_reactivated": "Reactivated a company",
-      "staff_renamed": "Changed the name shown to users"
+      "staff_renamed": "Changed the name shown to users",
+      "job_started": "Ran a background job now",
+      "job_paused": "Paused a background job",
+      "job_resumed": "Resumed a background job",
+      "queued_jobs_retried": "Retried failed queued jobs",
+      "queued_jobs_discarded": "Discarded failed queued jobs"
     },
     "events": {
       "sessionsRevokedMfaRequired": "Signed out of sessions without MFA, which the role now requires",
@@ -59,7 +64,8 @@
       "sign-in-methods": "Sign-in methods",
       "accounts": "Accounts",
       "people": "People",
-      "companies": "Companies and staff"
+      "companies": "Companies and staff",
+      "jobs": "Background jobs"
     }
   }
 }

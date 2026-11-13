@@ -35,6 +35,7 @@ import {
   enableTwoFactor,
   inLanguage,
   inSequence,
+  sendQueuedEmails,
   setUserLocale,
   staffActor,
   tokenFrom,
@@ -92,6 +93,7 @@ describe('admin actions', () => {
       'trust-device-someone-else',
     ]);
     expect(await actionsAbout(jane)).toEqual(['mfa_reset']);
+    await sendQueuedEmails(ctx);
     expect(sent.map((email) => email.subject)).toEqual([
       'Your Adiutor two-step verification was reset',
     ]);
@@ -135,6 +137,7 @@ describe('admin actions', () => {
       actorUserId: admin.id,
       details: { removePasskeys: false, disconnectedProviders: ['github', 'google'] },
     });
+    await sendQueuedEmails(ctx);
     expect(sent.map((email) => email.subject)).toEqual([
       'Your Adiutor two-step verification was reset',
     ]);
@@ -180,6 +183,7 @@ describe('admin actions', () => {
     expect(await providersOf(jane)).toEqual(['github']);
     expect(await db.select().from(session).where(eq(session.userId, jane))).toHaveLength(1);
     expect(await actionsAbout(jane)).toEqual([]);
+    await sendQueuedEmails(ctx);
     expect(sent).toEqual([]);
 
     // Confirmed 14 minutes ago, it goes ahead.
@@ -267,6 +271,7 @@ describe('admin actions', () => {
     );
     expect(reactivated.deactivatedAt).toBeNull();
     expect(await actionsAbout(jane)).toEqual(['account_deactivated', 'account_reactivated']);
+    await sendQueuedEmails(ctx);
     expect(sent.map((email) => email.subject)).toEqual([
       'Your Adiutor account was deactivated',
       'Your Adiutor account was reactivated',
@@ -278,6 +283,8 @@ describe('admin actions', () => {
     await signOutUserEverywhere(fromKnownDevice, admin, jane);
     await deactivateUser(fromKnownDevice, admin, jane);
     await reactivateUser(fromKnownDevice, admin, jane);
+    // Sent before the deletion: a queued notice to an account that's gone is skipped.
+    await sendQueuedEmails(ctx);
     await deleteUser(fromKnownDevice, admin, jane, 'jane@adiutor.test');
 
     expect(sent).toHaveLength(5);
@@ -316,6 +323,7 @@ describe('admin actions', () => {
     // The Admin's own language doesn't count: Jane saved hers.
     await deleteUser(inLanguage(ctx, 'es-ES'), admin, jane, 'jane@adiutor.test');
 
+    await sendQueuedEmails(ctx);
     expect(sent.map((email) => [email.to, emailLanguage(email), email.subject])).toEqual([
       ['jane@adiutor.test', 'nl-NL', 'Je Adiutor-account is verwijderd'],
     ]);
@@ -423,6 +431,7 @@ describe('invitations of people who lose access', () => {
       },
     });
     // The address the account had is told, without the Admin's device or IP address.
+    await sendQueuedEmails(ctx);
     expect(sent).toEqual([
       expect.objectContaining({
         to: 'jane@adiutor.test',

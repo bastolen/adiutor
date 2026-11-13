@@ -19,6 +19,7 @@ import {
   addPasskey as addStoredPasskey,
   connectProvider,
   minutesAgo,
+  sendQueuedEmails,
   setupTestContext,
 } from '../../../../tests/integration/helpers';
 import type { AuthHookContext } from './hook-context';
@@ -82,11 +83,20 @@ export async function sessionExists(sessionId: string): Promise<boolean> {
 }
 
 /**
- * The subjects of the security emails sent.
+ * Sends the security emails that wait in the queue (as the next tick would),
+ * through the mocked `sendEmail` the hooks would use.
+ */
+export async function sendQueuedNotices(): Promise<void> {
+  await sendQueuedEmails({ ...services, sendEmail });
+}
+
+/**
+ * The subjects of the security emails sent, once the queued ones are sent.
  *
  * @returns The subjects, in order.
  */
-export function subjects(): string[] {
+export async function subjects(): Promise<string[]> {
+  await sendQueuedNotices();
   return vi.mocked(sendEmail).mock.calls.map(([email]) => email.subject);
 }
 

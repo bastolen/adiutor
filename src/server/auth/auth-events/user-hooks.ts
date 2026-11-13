@@ -10,7 +10,7 @@ import { account, user } from '@/db/schema';
 import { clearFailedSignIns } from '../failed-sign-ins';
 import { databaseHookState } from '../request-state';
 import { forgetTrustedDevices } from '../trusted-devices';
-import { safely, audit, notify, type AuthHookContext } from './hook-context';
+import { safely, audit, auditAndNotify, type AuthHookContext } from './hook-context';
 
 /** How recent a password sign-in must be to count as just created by the reset. */
 const JUST_CREATED_MS = 60_000;
@@ -46,8 +46,7 @@ export async function onPasswordReset(userId: string, headers?: Headers): Promis
     if (credential && Date.now() - credential.createdAt.getTime() < JUST_CREATED_MS) {
       return;
     }
-    await audit({ headers }, 'password_reset', userId);
-    await notify(headers, userId, 'password_reset');
+    await auditAndNotify({ headers }, 'password_reset', userId);
   });
 }
 
@@ -86,9 +85,9 @@ export async function afterUserUpdate(
     return;
   }
   delete state.verifyingEmailAtProviderSignIn;
-  await safely('record email verification', () =>
-    audit(ctx, 'email_verified', updated.id, { providerId: ctx.params?.id ?? null }),
-  );
+  await safely('record email verification', async () => {
+    await audit(ctx, 'email_verified', updated.id, { providerId: ctx.params?.id ?? null });
+  });
 }
 
 /**
@@ -98,5 +97,7 @@ export async function afterUserUpdate(
  * @param headers - Request headers, for IP and browser.
  */
 export async function onEmailVerified(userId: string, headers?: Headers): Promise<void> {
-  await safely('record email verification', () => audit({ headers }, 'email_verified', userId));
+  await safely('record email verification', async () => {
+    await audit({ headers }, 'email_verified', userId);
+  });
 }

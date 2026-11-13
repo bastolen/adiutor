@@ -46,6 +46,11 @@ export const AUDIT_ACTIONS = [
   'company_deactivated',
   'company_reactivated',
   'staff_renamed',
+  'job_started',
+  'job_paused',
+  'job_resumed',
+  'queued_jobs_retried',
+  'queued_jobs_discarded',
 ] as const;
 
 /** One audit event type. */
@@ -58,6 +63,7 @@ export const AUDIT_GROUP_KEYS = [
   'accounts',
   'people',
   'companies',
+  'jobs',
 ] as const;
 
 /** A group of audit event types (see {@link AUDIT_GROUPS}). */
@@ -123,6 +129,15 @@ export const AUDIT_GROUPS: Record<AuditGroup, { actions: readonly AuditAction[] 
       'company_deactivated',
       'company_reactivated',
       'staff_renamed',
+    ],
+  },
+  jobs: {
+    actions: [
+      'job_started',
+      'job_paused',
+      'job_resumed',
+      'queued_jobs_retried',
+      'queued_jobs_discarded',
     ],
   },
 };

@@ -36,10 +36,15 @@ configurations in VS Code, which turn the time limit off (see
   moment (`atTheSameMoment` in `tests/integration/helpers.ts`), whole sign-in flows through Better
   Auth (`src/server/auth/password-sign-in.int.test.ts`, and email links in
   `src/server/auth/email-link-chain.int.test.ts`) and the database rules (UUIDv7 IDs, indexed
-  foreign keys). Run them with `pnpm test:integration`.
+  foreign keys). Run them with `pnpm test:integration`. For the [background jobs](jobs.md),
+  `tests/integration/helpers.ts` also runs the queue as the next tick would (`sendQueuedEmails`),
+  stores a queued job directly (`storeQueuedJob`), gives a context whose mail server is down
+  (`mailDown`) and a deadline no test reaches (`later`): use them rather than a copy.
 - **End-to-end tests** use [Playwright](https://playwright.dev), in `e2e/` (`playwright.config.ts`).
   They build and start their own server on port 3100 against the seeded test database, and read
-  emails from `e2e/.outbox`; your dev server and database aren't touched. They include the
+  emails from `e2e/.outbox`; your dev server and database aren't touched. Before reading, the email
+  helpers (`e2e/support/outbox.ts`) start the [background jobs](jobs.md)' tick on that server
+  (`/api/jobs`, with the test `CRON_SECRET`), so emails waiting in the queue go out first. They include the
   accessibility and keyboard checks described under
   [Design and accessibility](design.md#design-and-accessibility).
   - **Running and build reuse:** install the browser once with

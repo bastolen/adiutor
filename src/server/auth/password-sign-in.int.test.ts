@@ -45,6 +45,7 @@ import {
   emailLanguage,
   enableTwoFactor,
   lastActiveAt,
+  sendQueuedEmails,
   setUserLocale,
   setupTestContext,
 } from '../../../tests/integration/helpers';
@@ -90,7 +91,7 @@ vi.mock('../background', () => ({
   },
 }));
 
-const { db } = setupTestContext();
+const { ctx, db } = setupTestContext();
 
 afterAll(async () => {
   const app = await import('@/db');
@@ -391,7 +392,9 @@ function wrongAuthenticatorCode(): string {
  *
  * @returns Each one's recipient and plain text.
  */
-function lockoutEmails() {
+async function lockoutEmails() {
+  // Notices are queued: send them first, through the mocked `sendEmail`.
+  await sendQueuedEmails({ ...ctx, sendEmail });
   return vi
     .mocked(sendEmail)
     .mock.calls.map(([sent]) => sent)
@@ -677,7 +680,7 @@ describe('wrong codes at the code step', () => {
       ['mfa_failed', null, jane, { method: 'backup_code', atSignIn: true }],
     ]);
     await backgroundWork();
-    expect(lockoutEmails()).toEqual([]);
+    expect(await lockoutEmails()).toEqual([]);
   });
 
   it('records a wrong email code too', async () => {
@@ -712,7 +715,7 @@ describe('wrong codes at the code step', () => {
       ['sign_in', jane, jane, { method: 'password_and_authenticator' }],
     ]);
     await backgroundWork();
-    expect(lockoutEmails()).toEqual([]);
+    expect(await lockoutEmails()).toEqual([]);
   });
 
   it('tells the owner once when wrong codes pause signing in with a code, not again while paused', async () => {
@@ -746,7 +749,7 @@ describe('wrong codes at the code step', () => {
     expect(answers).toEqual(
       Array.from({ length: TWO_FACTOR_LOCK_ATTEMPTS }, () => [401, 'INVALID_CODE']),
     );
-    const sent = lockoutEmails();
+    const sent = await lockoutEmails();
     expect(sent).toHaveLength(1);
     const notice = defined(sent[0], 'the lockout email');
     expect(notice.to).toBe('jane@adiutor.test');
@@ -761,7 +764,7 @@ describe('wrong codes at the code step', () => {
     expect(right.status).toBe(429);
     await backgroundWork();
 
-    expect(lockoutEmails()).toHaveLength(1);
+    expect(await lockoutEmails()).toHaveLength(1);
     // Only the codes Better Auth compared are recorded as wrong.
     const wrongCodes = (await events()).filter(([action]) => action === 'mfa_failed');
     expect(wrongCodes).toHaveLength(TWO_FACTOR_LOCK_ATTEMPTS);

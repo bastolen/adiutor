@@ -50,6 +50,7 @@ import {
   memberActor,
   setupTestContext,
   staffActor,
+  storeQueuedJob,
   tokenFrom,
 } from '../../tests/integration/helpers';
 import type { Actor } from './actor';
@@ -62,6 +63,16 @@ import {
 } from './auth/impersonation';
 import { revokeOwnSession } from './auth/sessions';
 import { ServiceError } from './errors';
+import {
+  discardFailedJobs,
+  listFailedJobs,
+  listJobRuns,
+  loadJobsOverview,
+  pauseJob,
+  resumeJob,
+  retryFailedJobs,
+  runJobFromPage,
+} from './jobs';
 import {
   listCompanies,
   registerCompany,
@@ -169,6 +180,8 @@ interface World {
    * user, that an invite link sent (claimed with their address).
    */
   invitationFromLink: string;
+  /** A queued job that was given up, to retry, and another to discard. */
+  failedJobs: { retry: string; discard: string };
 }
 
 /** The password the acting user is given in `deactivate own account`. */
@@ -440,6 +453,18 @@ function listOperations(): Operation[] {
     ['list the audit log', (w) => listAuditLog(ctx, w.actor)],
     ['look up an error reference', (w) => findErrorReference(ctx, w.actor, '7KQ2-M9XD')],
     ['list recent errors', (w) => listRecentErrors(ctx, w.actor)],
+    ['view jobs', (w) => loadJobsOverview(ctx, w.actor)],
+    ['list job runs', (w) => listJobRuns(ctx, w.actor)],
+    ['list failed queued jobs', (w) => listFailedJobs(ctx, w.actor)],
+    // Pausing first, so resuming finds it paused when it's allowed.
+    ['pause a job', (w) => pauseJob(ctx, w.actor, 'retention')],
+    ['resume a job', (w) => resumeJob(ctx, w.actor, 'retention')],
+    ['run a job now', (w) => runJobFromPage(ctx, w.actor, 'retention')],
+    ['retry a failed queued job', (w) => retryFailedJobs(ctx, w.actor, { id: w.failedJobs.retry })],
+    [
+      'discard a failed queued job',
+      (w) => discardFailedJobs(ctx, w.actor, { id: w.failedJobs.discard }),
+    ],
     // Last: it deactivates the acting user.
     [
       'deactivate own account',
@@ -479,6 +504,9 @@ const READS: ReadonlySet<string> = new Set([
   'list the audit log',
   'look up an error reference',
   'list recent errors',
+  'view jobs',
+  'list job runs',
+  'list failed queued jobs',
 ]);
 
 /** What a user may still change while a staff member is signed in as them: their own work. */
@@ -576,6 +604,14 @@ const EXPECTED: Record<string, string> = {
   'list the audit log': 'FFFFFAA',
   'look up an error reference': 'FFFFFFA',
   'list recent errors': 'FFFFFFA',
+  'view jobs': 'FFFFFAA',
+  'list job runs': 'FFFFFAA',
+  'list failed queued jobs': 'FFFFFAA',
+  'pause a job': 'FFFFFFA',
+  'resume a job': 'FFFFFFA',
+  'run a job now': 'FFFFFFA',
+  'retry a failed queued job': 'FFFFFFA',
+  'discard a failed queued job': 'FFFFFFA',
   // A user in no company, so Support may too (never a company Admin, see `mayImpersonate`).
   'sign in as a user': 'FFFAFAA',
   // Everyone may deactivate their own account (each world has other Admins).
@@ -730,6 +766,10 @@ async function createWorld(role: MatrixRole): Promise<World> {
     deactivated,
     staffToRemove,
     invitationFromLink,
+    failedJobs: {
+      retry: await storeQueuedJob(db, 'security-notice'),
+      discard: await storeQueuedJob(db, 'security-notice'),
+    },
   };
 }
 

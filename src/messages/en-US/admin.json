@@ -331,11 +331,12 @@
       "title": "Audit log",
       "header": {
         "title": "Logs",
-        "descriptionWithErrors": "Security events by and about everyone, and the errors people ran into.",
-        "description": "Security events by and about everyone.",
+        "descriptionWithErrors": "Security events by and about everyone, the errors people ran into and the background jobs.",
+        "description": "Security events by and about everyone, and the background jobs.",
         "tabsLabel": "Log sections",
         "auditTab": "Audit log",
-        "errorsTab": "Errors"
+        "errorsTab": "Errors",
+        "jobsTab": "Jobs"
       },
       "searchLabel": "Search people or companies",
       "searchPlaceholder": "Name or company",
@@ -360,6 +361,8 @@
       "by": "by <link>{name}</link>",
       "about": "about <link>{name}</link>",
       "staff": "Staff",
+      "job": "Job <code>{name}</code>",
+      "jobs": "{count, plural, one {# <code>{name}</code> job} other {# <code>{name}</code> jobs}}",
       "notRecorded": "Not recorded",
       "reason": "Reason: {reason}"
     },
@@ -370,6 +373,7 @@
       "kinds": {
         "signIn": "Sign-in error",
         "browser": "Browser error",
+        "job": "Job error",
         "server": "Server error"
       },
       "noMessage": "No message recorded",
@@ -406,6 +410,109 @@
         "reference": "Reference",
         "whatHappened": "What happened",
         "when": "When"
+      }
+    },
+    "jobs": {
+      "title": "Jobs",
+      "schedule": "{kind, select, minutes {{minutes, plural, one {Every minute} other {Every # minutes}}} hourly {{minute, plural, =0 {Every hour, on the hour} one {Every hour, # minute past} other {Every hour, # minutes past}}} daily {Every day at {time}} other {On the schedule {expression} (UTC)}}",
+      "status": {
+        "succeeded": "Succeeded",
+        "failed": "Failed",
+        "paused": "Paused",
+        "running": "Running",
+        "noLongerUsed": "No longer used"
+      },
+      "errorReference": "Error {reference}",
+      "errorReferenceLink": "Look up error {reference}",
+      "nothingDone": "Nothing to do",
+      "tickWarning": {
+        "label": "Background jobs",
+        "title": "Background jobs aren't running",
+        "late": "The last tick started {time}, so reminders, security emails and clean-ups are waiting. Check the cron service that calls /api/jobs every 5 minutes, or the server's cron that runs pnpm jobs:run.",
+        "never": "No tick has run yet, so no background job has run either. Set up a cron service that calls /api/jobs every 5 minutes, or run pnpm jobs:run from the server's cron.",
+        "action": "Open Jobs"
+      },
+      "recurring": {
+        "title": "Scheduled jobs",
+        "description": "Each runs on its schedule, at the tick every few minutes. Times are in UTC.",
+        "caption": "Scheduled jobs",
+        "job": "Job",
+        "lastRun": "Last run",
+        "nextRun": "Next run",
+        "neverRun": "Not run yet",
+        "atNextTick": "At the next tick",
+        "whilePaused": "Not while paused",
+        "failuresInARow": "{count, plural, one {Its last run failed} other {Its last # runs failed}}",
+        "lastTick": "Last tick <when>{time}</when>",
+        "noTick": "No tick yet"
+      },
+      "queued": {
+        "title": "Queued jobs",
+        "description": "Work Adiutor hands off, such as emails that can wait a few minutes. Each job runs at the next tick and is tried again when it fails.",
+        "caption": "Kinds of queued job",
+        "kind": "Kind",
+        "waiting": "Waiting",
+        "failed": "Failed",
+        "count": "{count, number}",
+        "counts": "{waiting, number} waiting, {failed, number} failed"
+      },
+      "failed": {
+        "title": "Failed queued jobs",
+        "description": "Jobs given up after their last attempt, latest first. They don’t run again unless they’re retried.",
+        "caption": "Failed queued jobs",
+        "rows": "failed jobs",
+        "emptyTitle": "No failed jobs",
+        "emptyDescription": "Every queued job ran, or is waiting for its turn.",
+        "job": "Job",
+        "givenUp": "Given up",
+        "error": "Error",
+        "attempts": "{count, plural, one {Tried once} other {Tried # times}}"
+      },
+      "runs": {
+        "title": "Recent runs",
+        "description": "The runs of the last 30 days that did something, failed or were started by hand, newest first.",
+        "caption": "Runs of background jobs",
+        "rows": "runs",
+        "emptyTitle": "No runs yet",
+        "emptyDescription": "Runs show up here once a job does something, fails or is run by hand.",
+        "job": "Job",
+        "started": "Started",
+        "outcome": "Outcome",
+        "trigger": "{trigger, select, tick {By the tick} cli {From the command line} other {From the Jobs page}}",
+        "startedBy": "From the Jobs page, by <link>{name}</link>"
+      },
+      "actions": {
+        "runNow": "Run now",
+        "runNowLabel": "Run now: {job}",
+        "ran": "{job} ran.",
+        "ranFailed": "{job} ran, but failed.",
+        "ranFailedWithReference": "{job} ran, but failed. Error reference: {reference}.",
+        "pause": "Pause",
+        "pauseLabel": "Pause {job}",
+        "paused": "{job} is paused until it’s resumed.",
+        "resume": "Resume",
+        "resumeLabel": "Resume {job}",
+        "resumed": "{job} is resumed.",
+        "retry": "Retry",
+        "retryLabel": "Retry the {job} job given up {time}",
+        "retried": "{count, plural, one {# job is back in the queue for the next tick.} other {# jobs are back in the queue for the next tick.}}",
+        "discard": "Discard",
+        "discardLabel": "Discard the {job} job given up {time}",
+        "discardConfirm": {
+          "title": "Discard this job?",
+          "description": "This {job} job won’t run again. It stays in the history as discarded for 30 days.",
+          "confirm": "Discard job"
+        },
+        "discarded": "{count, plural, one {# job discarded.} other {# jobs discarded.}}",
+        "retryAll": "Retry failed",
+        "retryAllLabel": "Retry failed {job} jobs",
+        "discardAll": "Discard failed",
+        "discardAllLabel": "Discard failed {job} jobs",
+        "discardAllConfirm": {
+          "title": "Discard every failed {job} job?",
+          "description": "{count, plural, one {# job won’t run again.} other {# jobs won’t run again.}} They stay in the history as discarded for 30 days.",
+          "confirm": "Discard jobs"
+        }
       }
     },
     "dateRange": {

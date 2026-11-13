@@ -5,8 +5,9 @@
  * sign-in link without sending an email (and using one up), checking whether
  * a browser's session still exists, reading a stored sign-in error, adding
  * someone to a company directly, storing an invitation or an invite link
- * without sending anything, and making a staff member's sign-in as a user end
- * in a few seconds.
+ * without sending anything, making a staff member's sign-in as a user end in a
+ * few seconds, and the background jobs' state (resuming a job, discarding or
+ * storing failed queued jobs, making the last tick late).
  * Each opens its own short connection to the test database (`withTestDatabase`).
  * Resetting and seeding the database is `seed.ts`.
  */
@@ -107,6 +108,79 @@ export async function findUserId(email: string): Promise<string> {
       throw new Error(`No user ${email}`);
     }
     return found.id;
+  });
+}
+
+/**
+ * Resumes a background job if a test left it paused, so a retried test starts
+ * from a running job.
+ *
+ * @param name - The job's name.
+ */
+export async function resumeJob(name: string): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db
+      .update(schema.jobState)
+      .set({ pausedAt: null, pausedBy: null })
+      .where(eq(schema.jobState.name, name));
+  });
+}
+
+/**
+ * Makes the last tick look two hours old, so the Jobs page and the dashboard
+ * warn that background jobs aren't running, until the next tick.
+ */
+export async function makeTickLate(): Promise<void> {
+  await withTestDatabase(async (db) => {
+    const twoHoursAgo = sql`now() - interval '2 hours'`;
+    await db
+      .insert(schema.jobTick)
+      .values({ lastStartedAt: twoHoursAgo })
+      .onConflictDoUpdate({
+        target: schema.jobTick.singleton,
+        set: { lastStartedAt: twoHoursAgo },
+      });
+  });
+}
+
+/**
+ * Discards the failed queued jobs of a kind that an earlier attempt of a test
+ * left behind, so a retried test starts without them.
+ *
+ * @param kind - The kind's name.
+ */
+export async function discardFailedQueuedJobs(kind: string): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db
+      .update(schema.queuedJob)
+      .set({ status: 'discarded', finishedAt: new Date() })
+      .where(and(eq(schema.queuedJob.kind, kind), eq(schema.queuedJob.status, 'failed')));
+  });
+}
+
+/**
+ * Stores a `staff-admin-added` queued job that was given up after its last
+ * attempt, for the Jobs page's Retry and Discard. It tells a Manager about a
+ * new staff Admin, so when it's retried the job is skipped (the recipient
+ * isn't a staff Admin) and never fails a later tick or sends an email.
+ *
+ * @param managerEmail - A Manager's email address.
+ * @returns The job's ID.
+ */
+export async function storeFailedQueuedJob(managerEmail: string): Promise<string> {
+  const managerId = await findUserId(managerEmail);
+  return withTestDatabase(async (db) => {
+    const stored = await db
+      .insert(schema.queuedJob)
+      .values({
+        kind: 'staff-admin-added',
+        payload: { recipientId: managerId, newAdminId: managerId, how: 'role', byUserId: null },
+        status: 'failed',
+        attempts: 5,
+        finishedAt: new Date(),
+      })
+      .returning({ id: schema.queuedJob.id });
+    return firstRow(stored, 'the failed queued job').id;
   });
 }
 

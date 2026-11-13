@@ -29,7 +29,7 @@ import { env } from '@/lib/env';
 import { REVERIFY_HINT } from '@/lib/sign-in/oauth-providers';
 import { ACCOUNT_DEACTIVATED } from '@/lib/sign-in/sign-in-refusals';
 
-import { createUser, setupTestContext } from '../../../tests/integration/helpers';
+import { createUser, queuedJobKinds, setupTestContext } from '../../../tests/integration/helpers';
 
 vi.mock('@/lib/email', () => ({ sendEmail: vi.fn() }));
 
@@ -262,6 +262,7 @@ describe('signing in with GitHub to a deactivated account', () => {
     expect(await db.select().from(sessionTable)).toEqual([]);
     expect(await db.select({ action: auditEvent.action }).from(auditEvent)).toEqual([]);
     expect(sendEmail).not.toHaveBeenCalled();
+    expect(await queuedJobKinds(db)).toEqual([]);
   });
 
   it('refuses the GitHub account she connected before, without storing its token', async () => {
@@ -479,6 +480,7 @@ describe('"Confirm with GitHub" with another GitHub account than her own confirm
 
       expect(await stored()).toEqual(before);
       expect(sendEmail).not.toHaveBeenCalled();
+      expect(await queuedJobKinds(db)).toEqual([]);
       expect(await recordedSinceSignIn()).toEqual([
         {
           action: 'mfa_failed',
@@ -505,6 +507,7 @@ describe('"Confirm with GitHub" with another GitHub account than her own confirm
 
     expect(await stored()).toEqual(before);
     expect(sendEmail).not.toHaveBeenCalled();
+    expect(await queuedJobKinds(db)).toEqual([]);
     expect(await recordedSinceSignIn()).toEqual([
       {
         action: 'mfa_failed',
@@ -524,6 +527,7 @@ describe('"Confirm with GitHub" with another GitHub account than her own confirm
 
     expect(await stored()).toEqual(before);
     expect(sendEmail).not.toHaveBeenCalled();
+    expect(await queuedJobKinds(db)).toEqual([]);
   });
 
   describe('without the hint (a plain sign-in with GitHub), as before', () => {

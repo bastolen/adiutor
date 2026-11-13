@@ -31,7 +31,7 @@ describe('StaffShortcuts', () => {
       'Invite staff and manage their roles.',
     );
     expect(screen.getByRole('link', { name: /^Logs/ })).toHaveTextContent(
-      'The audit log, and the errors people ran into.',
+      'The audit log, the errors people ran into and the background jobs.',
     );
   });
 

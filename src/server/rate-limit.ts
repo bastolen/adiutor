@@ -53,6 +53,8 @@ export const RATE_LIMITS = {
    * More are only logged.
    */
   appErrorsPerIp: { limit: 20, windowSeconds: 60 * 60 },
+  /** Wrong secrets sent to the jobs' endpoint from one IP address; past it, the endpoint answers 429. */
+  jobTickMissesPerIp: { limit: 20, windowSeconds: 15 * 60 },
   /**
    * Wrong current passwords typed by one signed-in user, when changing the
    * password or deactivating the account (`checkCurrentPassword`): a session

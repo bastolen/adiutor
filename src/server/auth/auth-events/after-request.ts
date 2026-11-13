@@ -34,7 +34,7 @@ import {
 } from './browser-cleanup';
 import { setNextPageCookie } from './cookies';
 import { type FinishedRequest, finishedRequest } from './finished-request';
-import { type AuthHookContext, safely, audit, notify } from './hook-context';
+import { type AuthHookContext, safely, audit, auditAndNotify } from './hook-context';
 import rememberLanguage from './language';
 import { refreshProviderMfa, stepUpOutcomeOf, forgetProviderTokens } from './provider-accounts';
 import { reactToFailure } from './refused-attempts';
@@ -140,8 +140,9 @@ async function reactToSignInChange(
         // count, so neither does a browser trusted after one: every trusted device is forgotten.
         await forgetTrustedDevices(db, userId);
         await markSessionVerified(ctx.context.session.session.id, 'authenticator');
-        await audit(ctx, 'two_factor_enabled', userId, { method: mfaMethodFromPath(path) });
-        await notify(ctx.headers, userId, 'two_factor_enabled');
+        await auditAndNotify(ctx, 'two_factor_enabled', userId, {
+          details: { method: mfaMethodFromPath(path) },
+        });
       } else if (sessionUser.twoFactorEnabled) {
         // Signed in already: the step-up page confirmed this session with a code. Email codes
         // only count where the rules allow them (the guard refuses them elsewhere anyway).
@@ -155,23 +156,21 @@ async function reactToSignInChange(
       } else {
         // Signed in without it yet: this turned two-step verification on (and Better Auth
         // replaced the session; `beforeSessionCreate` decided whether the new one counts).
-        await audit(ctx, 'two_factor_enabled', userId, { method: mfaMethodFromPath(path) });
-        await notify(ctx.headers, userId, 'two_factor_enabled');
+        await auditAndNotify(ctx, 'two_factor_enabled', userId, {
+          details: { method: mfaMethodFromPath(path) },
+        });
       }
       break;
     }
     case '/two-factor/disable':
       await forgetTrustedDevices(db, userId);
-      await audit(ctx, 'two_factor_disabled', userId);
-      await notify(ctx.headers, userId, 'two_factor_disabled');
+      await auditAndNotify(ctx, 'two_factor_disabled', userId);
       break;
     case '/two-factor/generate-backup-codes':
-      await audit(ctx, 'backup_codes_regenerated', userId);
-      await notify(ctx.headers, userId, 'backup_codes_regenerated');
+      await auditAndNotify(ctx, 'backup_codes_regenerated', userId);
       break;
     case '/passkey/verify-registration': {
-      await audit(ctx, 'passkey_added', userId);
-      await notify(ctx.headers, userId, 'passkey_added');
+      await auditAndNotify(ctx, 'passkey_added', userId);
       // A first passkey on an account without other MFA that counts (for its role now) counts
       // for the current session too: there was nothing to protect before. (Accounts with a second
       // step need a confirmed session to add one at all; see `auth-guards/`.)
@@ -188,15 +187,13 @@ async function reactToSignInChange(
       break;
     }
     case '/passkey/delete-passkey':
-      await audit(ctx, 'passkey_removed', userId);
-      await notify(ctx.headers, userId, 'passkey_removed');
+      await auditAndNotify(ctx, 'passkey_removed', userId);
       break;
     case '/change-password':
       // A new password starts afresh, as a reset does: no earlier "Trust this device" skips the
       // code step with it (a synced password manager would hand it to a stolen browser).
       await forgetTrustedDevices(db, userId);
-      await audit(ctx, 'password_changed', userId);
-      await notify(ctx.headers, userId, 'password_changed');
+      await auditAndNotify(ctx, 'password_changed', userId);
       break;
     // Session revocation is audited where it happens (`sessions.ts`); Better Auth's own
     // `/revoke-*` endpoints are disabled (`DISABLED_AUTH_PATHS`).

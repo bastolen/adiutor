@@ -182,4 +182,14 @@ describe('recordAppError', () => {
     expect(await stored()).toHaveLength(limit + 1);
     expect((await stored()).map(({ reference }) => reference)).not.toContain(over.reference);
   });
+
+  it('stores every error of a background job, which has no IP address to limit', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { limit } = RATE_LIMITS.appErrorsPerIp;
+    const report = { source: 'job' as const, error: new Error('x'), routePath: 'retention' };
+
+    await inSequence(Array.from({ length: limit + 2 }), () => recordAppError({ db }, report));
+
+    expect(await stored()).toHaveLength(limit + 2);
+  });
 });

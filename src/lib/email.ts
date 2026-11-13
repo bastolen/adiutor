@@ -8,8 +8,10 @@
  *   automated tests).
  * - `SMTP_URL` set: emails are sent over SMTP, reusing up to
  *   {@link SMTP_MAX_CONNECTIONS} open connections (nodemailer's pool), so a
- *   bulk invitation doesn't connect and sign in once per email. Settings in
- *   the URL win (e.g. `?maxConnections=1`, or `?pool=false`).
+ *   bulk invitation doesn't connect and sign in once per email, with time
+ *   limits ({@link SMTP_TIMEOUTS}) so a mail server that hangs fails the
+ *   email instead of holding a request or a job. Settings in the URL win
+ *   (e.g. `?maxConnections=1`, or `?pool=false`).
  * - Otherwise, only when `NODE_ENV` is explicitly `development` or `test`:
  *   emails are printed to the server console, so links can be opened from
  *   there. Anywhere else (production, or a script run without `NODE_ENV`)
@@ -41,13 +43,34 @@ export interface Email {
 const SMTP_MAX_CONNECTIONS = 3;
 
 /**
+ * How long to wait for the mail server, in milliseconds, instead of
+ * nodemailer's 2 minutes, 30 seconds and 10 minutes: well within a request,
+ * and within the background jobs' tick (45 seconds), so a server that hangs
+ * fails one email (which a queued job then tries again) instead of holding
+ * the request or the tick until the platform stops it.
+ */
+export const SMTP_TIMEOUTS = {
+  /** To connect. */
+  connectionTimeout: 10_000,
+  /** For the server's greeting once connected. */
+  greetingTimeout: 10_000,
+  /** Of silence while sending. */
+  socketTimeout: 20_000,
+} as const;
+
+/**
  * SMTP transport, pooled, or `null` when SMTP isn't configured. The pool
  * queues emails beyond its connections, which also caps how many go out at
  * once. Scripts end with `process.exit`, so an open connection never keeps
  * them running.
  */
 const transport = env.SMTP_URL
-  ? createTransport({ url: env.SMTP_URL, pool: true, maxConnections: SMTP_MAX_CONNECTIONS })
+  ? createTransport({
+      url: env.SMTP_URL,
+      pool: true,
+      maxConnections: SMTP_MAX_CONNECTIONS,
+      ...SMTP_TIMEOUTS,
+    })
   : null;
 
 /**

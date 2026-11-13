@@ -9,6 +9,7 @@ import { alias, type PgColumn, union } from 'drizzle-orm/pg-core';
 import type { DatabaseOrTransaction } from '@/db';
 import { auditEvent, company, user } from '@/db/schema';
 import { type AuditAction, type AuditGroup, AUDIT_GROUPS } from '@/lib/audit-actions';
+import { firstRow } from '@/lib/defined';
 import {
   type Paged,
   resolveTableState,
@@ -45,22 +46,27 @@ export interface AuditEventInput {
  * @param ctx - Service context (for the request info).
  * @param event - What happened.
  * @param db - Database or transaction to write with. Defaults to `ctx.db`.
+ * @returns The event's ID, e.g. for a security notice that names its device.
  */
 export async function recordEvent(
   ctx: Pick<ServiceContext, 'db' | 'requestInfo'>,
   event: AuditEventInput,
   db: DatabaseOrTransaction = ctx.db,
-): Promise<void> {
+): Promise<string> {
   const request = ctx.requestInfo ? await ctx.requestInfo().catch(() => null) : null;
-  await db.insert(auditEvent).values({
-    action: event.action,
-    actorUserId: event.actorUserId ?? null,
-    targetUserId: event.targetUserId ?? null,
-    companyId: event.companyId ?? null,
-    ip: request?.ip ?? null,
-    userAgent: request?.userAgent ?? null,
-    details: event.details ?? {},
-  });
+  const recorded = await db
+    .insert(auditEvent)
+    .values({
+      action: event.action,
+      actorUserId: event.actorUserId ?? null,
+      targetUserId: event.targetUserId ?? null,
+      companyId: event.companyId ?? null,
+      ip: request?.ip ?? null,
+      userAgent: request?.userAgent ?? null,
+      details: event.details ?? {},
+    })
+    .returning({ id: auditEvent.id });
+  return firstRow(recorded, 'the recorded event').id;
 }
 
 /** An event in the activity timeline. */
