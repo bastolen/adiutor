@@ -1,9 +1,9 @@
 /**
  * @file End-to-end tests for the 404 page: its centered layout, the theme
  * button, and the ways out (the dashboard, and back when there's a previous
- * page). Pages someone may not see (a missing permission, an unknown user)
- * show it with its title, "Not found · Adiutor", while those who may see
- * them get the page's own title.
+ * page). Pages someone may not see (a missing permission, an unknown user,
+ * another company's request) show it with its title, "Not found · Adiutor",
+ * while those who may see them get the page's own title.
  */
 import { type Page } from '@playwright/test';
 
@@ -11,7 +11,9 @@ import {
   CLIENT_WATCHER,
   COMPANY_NAME,
   COMPANY_SLUG,
+  FIRST_PAGED_REQUEST_NUMBER,
   PLATFORM_ADMIN,
+  SEEDED_REQUESTS,
   STEP_UP_MANAGER,
   SUPPORT_STAFF,
 } from './support/fixtures';
@@ -139,6 +141,38 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
         await expectNotFound(page, path);
         // No other user's data leaks onto the page.
         await expect(page.getByText(STEP_UP_MANAGER.email)).toHaveCount(0);
+      },
+    );
+  });
+
+  test('a company user gets it on another company’s request, and on a request that doesn’t exist', async ({
+    page,
+  }) => {
+    await signIn(page, CLIENT_WATCHER);
+    // Their own company's request is named by its number, never by its title.
+    await expectTitle(
+      page,
+      `/requests/${SEEDED_REQUESTS.waiting.number}`,
+      'Request AD-1 · Adiutor',
+    );
+    await expect(
+      page.getByRole('heading', { level: 1, name: SEEDED_REQUESTS.waiting.title }),
+    ).toBeVisible();
+
+    await eachInTurn(
+      [
+        // The paging company's, the deactivated company's, and numbers no request has.
+        `/requests/${FIRST_PAGED_REQUEST_NUMBER}`,
+        `/requests/${SEEDED_REQUESTS.closedCompany.number}`,
+        '/requests/999999',
+        '/requests/0',
+        '/requests/AD-1',
+      ],
+      async (path) => {
+        await expectNotFound(page, path);
+        // Nothing of the request shows on the way.
+        await expect(page.getByText('Paged request')).toHaveCount(0);
+        await expect(page.getByText(SEEDED_REQUESTS.closedCompany.title)).toHaveCount(0);
       },
     );
   });

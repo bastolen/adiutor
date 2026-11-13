@@ -1,0 +1,202 @@
+/**
+ * @file A request's conversation: what was asked, then every reply and every
+ * change of its status, title, type or priority, oldest first. Each entry
+ * names who wrote or changed it and when. Its text comes from the `requests`
+ * namespace.
+ */
+import { CircleDot, Flag, type LucideIcon, Pencil, Tag } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
+
+import RelativeTime from '@/components/ui/relative-time';
+import {
+  isReopening,
+  isRequestPriority,
+  isRequestStatus,
+  isRequestType,
+  type RequestAudience,
+} from '@/lib/requests';
+import type { RequestDetail, RequestEntryView, RequestPerson } from '@/server/requests';
+
+import PersonLine, { PersonAvatar, type SideNames } from '../../_requests/request-person';
+import RequestText from '../../_requests/request-text';
+import ShowEarlierLink from './show-earlier-link';
+
+/** The icon of each kind of change. */
+const CHANGE_ICONS: Record<Exclude<RequestEntryView['kind'], 'comment'>, LucideIcon> = {
+  status: CircleDot,
+  title: Pencil,
+  type: Tag,
+  priority: Flag,
+};
+
+/**
+ * One entry of the conversation: something in front (an avatar, or an
+ * icon), who it's by and when, and what they wrote or changed below.
+ *
+ * @param props - Component props.
+ * @param props.leading - What stands in front: the person's avatar, or a change's icon.
+ * @param props.person - Who wrote or changed it.
+ * @param props.names - The names of the two sides.
+ * @param props.at - When.
+ * @param props.children - What they wrote or changed.
+ * @returns The list item.
+ */
+function Entry({
+  leading,
+  person,
+  names,
+  at,
+  children,
+}: {
+  leading: ReactNode;
+  person: RequestPerson;
+  names: SideNames;
+  at: Date;
+  children: ReactNode;
+}) {
+  return (
+    <li className="flex gap-3">
+      {leading}
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <PersonLine person={person} names={names}>
+          <span className="text-muted-foreground">
+            <RelativeTime date={at} />
+          </span>
+        </PersonLine>
+        {children}
+      </div>
+    </li>
+  );
+}
+
+/**
+ * What a change did, as a sentence without its subject (the entry's first
+ * line names who made it): "Changed the status from Open to In progress."
+ * Closing and reopening a request have sentences of their own. A value this
+ * version doesn't know is shown as it was stored.
+ *
+ * @param props - Component props.
+ * @param props.entry - The change.
+ * @param props.audience - Who reads it, for the wording of a status.
+ * @returns The sentence.
+ */
+function ChangeText({ entry, audience }: { entry: RequestEntryView; audience: RequestAudience }) {
+  const t = useTranslations('requests');
+  const from = entry.from ?? '';
+  const to = entry.to ?? '';
+  /**
+   * A status as the reader knows it.
+   *
+   * @param status - The stored status.
+   * @returns Its label.
+   */
+  const statusLabel = (status: string) =>
+    isRequestStatus(status) ? t('status', { status, audience }) : status;
+
+  switch (entry.kind) {
+    case 'status': {
+      let change = 'moved';
+      if (isRequestStatus(from) && isRequestStatus(to) && isReopening(from, to)) {
+        change = 'reopened';
+      } else if (to === 'done' || to === 'cancelled') {
+        change = to;
+      }
+      return t('entry.status', { change, from: statusLabel(from), to: statusLabel(to) });
+    }
+    case 'type':
+      return t('entry.type', {
+        from: isRequestType(from) ? t('type', { type: from }) : from,
+        to: isRequestType(to) ? t('type', { type: to }) : to,
+      });
+    case 'priority':
+      return t('entry.priority', {
+        from: isRequestPriority(from) ? t('priority', { priority: from }) : from,
+        to: isRequestPriority(to) ? t('priority', { priority: to }) : to,
+      });
+    default:
+      return t('entry.title', { from, to });
+  }
+}
+
+/**
+ * The conversation of a request. What was asked comes first, by whoever
+ * raised it; when the request has more entries than are loaded, a link to
+ * show earlier ones follows, and then the entries, oldest first.
+ *
+ * @param props - Component props.
+ * @param props.detail - The request, as its reader gets it.
+ * @param props.earlierHref - The page with earlier entries, or `null` when all are shown.
+ * @returns The list of entries.
+ */
+export default function Thread({
+  detail,
+  earlierHref,
+}: {
+  detail: RequestDetail;
+  earlierHref: string | null;
+}) {
+  const t = useTranslations('requests.detail');
+  const names: SideNames = { company: detail.company.name, staff: detail.staffName };
+
+  return (
+    <ol className="flex flex-col gap-5">
+      <Entry
+        leading={<PersonAvatar person={detail.raisedBy} names={names} />}
+        person={detail.raisedBy}
+        names={names}
+        at={detail.createdAt}
+      >
+        <RequestText
+          text={detail.description}
+          className="rounded-lg bg-muted px-3 py-2 text-sm text-foreground"
+        />
+      </Entry>
+      {earlierHref && (
+        <li>
+          <ShowEarlierLink href={earlierHref}>
+            {t('showEarlier', { count: detail.earlierEntries })}
+          </ShowEarlierLink>
+        </li>
+      )}
+      {detail.entries.map((entry) => {
+        if (entry.kind === 'comment') {
+          return (
+            <Entry
+              key={entry.id}
+              leading={<PersonAvatar person={entry.author} names={names} />}
+              person={entry.author}
+              names={names}
+              at={entry.createdAt}
+            >
+              {entry.body && (
+                <RequestText
+                  text={entry.body}
+                  className="rounded-lg bg-muted px-3 py-2 text-sm text-foreground"
+                />
+              )}
+            </Entry>
+          );
+        }
+        const Icon = CHANGE_ICONS[entry.kind];
+        return (
+          <Entry
+            key={entry.id}
+            leading={
+              <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground">
+                <Icon aria-hidden="true" className="size-4" />
+              </span>
+            }
+            person={entry.author}
+            names={names}
+            at={entry.createdAt}
+          >
+            <p className="text-sm wrap-anywhere text-muted-foreground">
+              <ChangeText entry={entry} audience={detail.audience} />
+            </p>
+          </Entry>
+        );
+      })}
+    </ol>
+  );
+}

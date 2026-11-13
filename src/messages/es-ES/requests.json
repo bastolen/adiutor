@@ -1,0 +1,24 @@
+{
+  "requests": {
+    "detail": {
+      "title": "Solicitud {reference}",
+      "deactivated": "Esta empresa está desactivada, así que sus solicitudes solo se pueden leer.",
+      "conversation": "Conversación",
+      "showEarlier": "Mostrar actividad anterior ({count, number} más)"
+    },
+    "status": "{status, select, open {Abierta} todo {Por hacer} in_progress {En curso} waiting {{audience, select, contributor {A la espera de tu respuesta} follower {A la espera de tu empresa} other {A la espera de la empresa}}} done {Resuelta} cancelled {Cancelada} other {Desconocido}}",
+    "reopened": "Reabierta",
+    "type": "{type, select, hotfix {Corrección urgente} bug {Error} support {Soporte} new_feature {Nueva función} other {Desconocido}}",
+    "priority": "{priority, select, low {Baja} normal {Normal} high {Alta} other {Desconocida}}",
+    "priorityBadge": "{priority, select, low {Prioridad baja} normal {Prioridad normal} high {Prioridad alta} other {Prioridad desconocida}}",
+    "entry": {
+      "status": "{change, select, reopened {Solicitud reabierta.} done {Solicitud marcada como resuelta.} cancelled {Solicitud cancelada.} other {Estado cambiado de {from} a {to}.}}",
+      "title": "Título cambiado de «{from}» a «{to}».",
+      "type": "Tipo cambiado de {from} a {to}.",
+      "priority": "Prioridad cambiada de {from} a {to}."
+    },
+    "text": {
+      "newTab": "(se abre en una pestaña nueva)"
+    }
+  }
+}

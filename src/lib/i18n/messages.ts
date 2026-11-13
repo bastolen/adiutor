@@ -27,6 +27,7 @@ import enUsErrors from '@/messages/en-US/errors.json';
 import enUsJobs from '@/messages/en-US/jobs.json';
 import enUsNavigation from '@/messages/en-US/navigation.json';
 import enUsPeople from '@/messages/en-US/people.json';
+import enUsRequests from '@/messages/en-US/requests.json';
 import enUsRoles from '@/messages/en-US/roles.json';
 import enUsTables from '@/messages/en-US/tables.json';
 import enUsValidation from '@/messages/en-US/validation.json';
@@ -42,6 +43,7 @@ import esEsErrors from '@/messages/es-ES/errors.json';
 import esEsJobs from '@/messages/es-ES/jobs.json';
 import esEsNavigation from '@/messages/es-ES/navigation.json';
 import esEsPeople from '@/messages/es-ES/people.json';
+import esEsRequests from '@/messages/es-ES/requests.json';
 import esEsRoles from '@/messages/es-ES/roles.json';
 import esEsTables from '@/messages/es-ES/tables.json';
 import esEsValidation from '@/messages/es-ES/validation.json';
@@ -57,6 +59,7 @@ import nlNlErrors from '@/messages/nl-NL/errors.json';
 import nlNlJobs from '@/messages/nl-NL/jobs.json';
 import nlNlNavigation from '@/messages/nl-NL/navigation.json';
 import nlNlPeople from '@/messages/nl-NL/people.json';
+import nlNlRequests from '@/messages/nl-NL/requests.json';
 import nlNlRoles from '@/messages/nl-NL/roles.json';
 import nlNlTables from '@/messages/nl-NL/tables.json';
 import nlNlValidation from '@/messages/nl-NL/validation.json';
@@ -77,6 +80,7 @@ const EN_US = {
   ...enUsJobs,
   ...enUsNavigation,
   ...enUsPeople,
+  ...enUsRequests,
   ...enUsRoles,
   ...enUsTables,
   ...enUsValidation,
@@ -106,6 +110,7 @@ const TRANSLATIONS: Record<Locale, MessageTree> = {
     ...nlNlJobs,
     ...nlNlNavigation,
     ...nlNlPeople,
+    ...nlNlRequests,
     ...nlNlRoles,
     ...nlNlTables,
     ...nlNlValidation,
@@ -123,6 +128,7 @@ const TRANSLATIONS: Record<Locale, MessageTree> = {
     ...esEsJobs,
     ...esEsNavigation,
     ...esEsPeople,
+    ...esEsRequests,
     ...esEsRoles,
     ...esEsTables,
     ...esEsValidation,

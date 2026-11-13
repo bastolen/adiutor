@@ -90,6 +90,8 @@ const APP_PATHS = [
   '/companies/{paging}/members',
   '/companies/{paging}/members?page=2&sort=joined',
   '/companies/{company}/settings',
+  // A request with a conversation: replies from both sides, a link, and changes.
+  '/requests/1',
   '/companies/does-not-exist',
   '/does-not-exist',
 ];

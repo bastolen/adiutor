@@ -1,0 +1,24 @@
+{
+  "requests": {
+    "detail": {
+      "title": "Verzoek {reference}",
+      "deactivated": "Dit bedrijf is gedeactiveerd, dus de verzoeken kunnen alleen worden gelezen.",
+      "conversation": "Gesprek",
+      "showEarlier": "Eerdere activiteit tonen (nog {count, number})"
+    },
+    "status": "{status, select, open {Open} todo {Te doen} in_progress {In behandeling} waiting {{audience, select, contributor {Wacht op jouw reactie} follower {Wacht op je bedrijf} other {Wacht op het bedrijf}}} done {Afgerond} cancelled {Geannuleerd} other {Onbekend}}",
+    "reopened": "Heropend",
+    "type": "{type, select, hotfix {Hotfix} bug {Bug} support {Support} new_feature {Nieuwe functie} other {Onbekend}}",
+    "priority": "{priority, select, low {Laag} normal {Normaal} high {Hoog} other {Onbekend}}",
+    "priorityBadge": "{priority, select, low {Lage prioriteit} normal {Normale prioriteit} high {Hoge prioriteit} other {Onbekende prioriteit}}",
+    "entry": {
+      "status": "{change, select, reopened {Verzoek heropend.} done {Verzoek als afgerond gemarkeerd.} cancelled {Verzoek geannuleerd.} other {Status gewijzigd van {from} naar {to}.}}",
+      "title": "Titel gewijzigd van “{from}” naar “{to}”.",
+      "type": "Type gewijzigd van {from} naar {to}.",
+      "priority": "Prioriteit gewijzigd van {from} naar {to}."
+    },
+    "text": {
+      "newTab": "(opent in een nieuw tabblad)"
+    }
+  }
+}
