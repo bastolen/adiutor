@@ -72,7 +72,7 @@ export interface QueuedJobKind<P extends JobPayload> {
  * How many times a job is tried before it's given up, unless its kind says
  * otherwise: with the runner's waits between attempts, about 7½ hours in all.
  */
-export const DEFAULT_MAX_ATTEMPTS = 5;
+const DEFAULT_MAX_ATTEMPTS = 5;
 
 /**
  * Declares a kind of queued job. Queue jobs of it with `queueJob`, and give

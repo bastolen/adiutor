@@ -19,7 +19,7 @@ import recipientLocale from '../recipient-locale';
 export const ALERT_AFTER_FAILED_RUNS = 3;
 
 /** How long after an alert about a job the next one may go out, in hours. */
-export const ALERT_EVERY_HOURS = 24;
+const ALERT_EVERY_HOURS = 24;
 
 /** A job that keeps failing. */
 export interface FailingJob {

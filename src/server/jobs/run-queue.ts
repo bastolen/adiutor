@@ -35,11 +35,17 @@ interface KindCounts {
 
 /** How one job ended during a tick, with the reference of the error a failure recorded. */
 interface Ending {
+  /** Its kind's name. */
+  kind: string;
   /** How it ended. */
   ended: keyof KindCounts;
   /** The error's reference, when it failed and the error could be recorded. */
   errorReference: string | null;
 }
+
+/** What's recorded for a job whose runs never finished, once it's given up. */
+const NEVER_FINISHED =
+  "Its runs never finished: each was stopped before it was done, e.g. by the platform's time limit";
 
 /** How the queue runs. */
 export interface QueueRunOptions {
@@ -69,7 +75,7 @@ async function finish(
   return Promise.all(
     jobs.map(async ({ job, result }) => {
       await finishQueuedJob(ctx.db, job.id, result === 'done' ? 'succeeded' : 'skipped');
-      return { ended: result, errorReference: null };
+      return { kind: job.kind, ended: result, errorReference: null };
     }),
   );
 }
@@ -108,44 +114,10 @@ async function fail(
     jobs.map(async ({ job, kind }) => {
       if (job.attempts >= kind.maxAttempts) {
         await finishQueuedJob(ctx.db, job.id, 'failed', errorReference);
-        return { ended: 'failed', errorReference };
+        return { kind: job.kind, ended: 'failed', errorReference };
       }
       await retryQueuedJobLater(ctx.db, job.id, job.attempts, errorReference);
-      return { ended: 'retried', errorReference };
-    }),
-  );
-}
-
-/**
- * Gives up jobs whose last attempt never finished: a run that dies (say, the
- * platform stopped the tick at its time limit) never throws, so without this
- * such a job would be taken again every time its lease runs out, forever. A
- * job claimed with more attempts than its kind allows used them all, the last
- * one dying. The error is recorded once, with the jobs' IDs and attempts;
- * each job keeps its reference and stays `failed`.
- *
- * @param ctx - Service context.
- * @param jobs - The jobs, each with its kind.
- * @returns How each ended: failed.
- */
-async function giveUp(
-  ctx: ServiceContext,
-  jobs: readonly { job: StoredQueuedJob; kind: QueuedJobRunner }[],
-): Promise<Ending[]> {
-  const ids = jobs.map(({ job }) => `${job.id} (${job.kind})`).join(', ');
-  const errorReference = await recordJobError(
-    ctx,
-    [...new Set(jobs.map(({ job }) => job.kind))].join(', '),
-    new Error(
-      `Queued jobs given up because their runs never finished (each was stopped before it was done, e.g. by the platform's time limit): ${ids}`,
-    ),
-  );
-  // eslint-disable-next-line no-console -- A job has no caller to report to but the log.
-  console.error(`Queued jobs given up, their runs never finished: ${ids}`);
-  return Promise.all(
-    jobs.map(async ({ job }) => {
-      await finishQueuedJob(ctx.db, job.id, 'failed', errorReference);
-      return { ended: 'failed', errorReference };
+      return { kind: job.kind, ended: 'retried', errorReference };
     }),
   );
 }
@@ -264,22 +236,22 @@ export async function runQueue(
         job,
         kind: defined(kindsByName.get(job.kind), `the kind of queued job ${job.id}`),
       }));
-      // Taken once more than its kind allows: every attempt was used, and the last one died.
+      // Taken once more than its kind allows: every attempt was used, and the last one died
+      // (a run that's stopped never throws). It fails for good, rather than being taken forever.
       const spent = claimed.filter(({ job, kind }) => job.attempts > kind.maxAttempts);
       const toRun = claimed.filter(({ job, kind }) => job.attempts <= kind.maxAttempts);
       const endings = [
         // eslint-disable-next-line no-await-in-loop -- See above.
-        ...(spent.length > 0 ? await giveUp(ctx, spent) : []),
+        ...(spent.length > 0 ? await fail(ctx, spent, new Error(NEVER_FINISHED)) : []),
         // eslint-disable-next-line no-await-in-loop -- See above.
         ...(toRun.length > 0 ? await runClaimed(ctx, toRun, batchesByGroup) : []),
       ];
-      [...spent, ...toRun].forEach(({ kind }, index) => {
-        const { ended, errorReference } = defined(endings[index], 'how the job ended');
-        const kindCounts = counts.get(kind.name) ?? { done: 0, skipped: 0, retried: 0, failed: 0 };
+      endings.forEach(({ kind, ended, errorReference }) => {
+        const kindCounts = counts.get(kind) ?? { done: 0, skipped: 0, retried: 0, failed: 0 };
         kindCounts[ended] += 1;
-        counts.set(kind.name, kindCounts);
+        counts.set(kind, kindCounts);
         if (errorReference) {
-          lastErrors.set(kind.name, errorReference);
+          lastErrors.set(kind, errorReference);
         }
       });
     }

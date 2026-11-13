@@ -335,7 +335,6 @@ async function setStaffRole(
     });
     return {
       kind,
-      email: target.email,
       becameAdmin: newRole === PLATFORM_ADMIN_ROLE && target.role !== PLATFORM_ADMIN_ROLE,
     };
   });

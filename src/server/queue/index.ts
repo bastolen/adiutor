@@ -8,16 +8,9 @@
  * This is the module's public API: nothing outside this folder imports its
  * files directly.
  */
-export { DEFAULT_MAX_ATTEMPTS, defineQueuedKind } from './define';
-export type {
-  JobBatching,
-  JobPayload,
-  JobPayloadValue,
-  QueuedJobKind,
-  QueuedKindDefinition,
-} from './define';
+export { defineQueuedKind } from './define';
+export type { JobPayload, QueuedJobKind } from './define';
 export { queueJob } from './queue-job';
-export type { QueueOptions } from './queue-job';
 export { addedToCompanyJob, staffAdminAddedJob } from './people-emails';
 export { securityNoticeJob } from './security-notice';
 export type { SecurityNoticePayload } from './security-notice';

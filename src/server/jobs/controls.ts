@@ -20,7 +20,7 @@ import {
   type FailedJobsSelection,
   retryFailedQueuedJobs,
 } from './manage-queue';
-import { findRecurringJob, QUEUED_JOBS } from './registry';
+import { findQueuedKind, findRecurringJob } from './registry';
 import type { JobRunResult } from './run';
 import { runJobNow } from './tick';
 
@@ -28,7 +28,7 @@ import { runJobNow } from './tick';
  * How long a run started from the Jobs page may keep starting new work, so it
  * ends within the request's 60 seconds; what's left waits for the next tick.
  */
-export const PAGE_RUN_SECONDS = 45;
+const PAGE_RUN_SECONDS = 45;
 
 /**
  * Checks the actor may act on the jobs: a staff Admin, as themself.
@@ -50,7 +50,7 @@ function assertMayManageJobs(actor: Actor): void {
  * @throws {ServiceError} `not_found` for any other name.
  */
 function isPausableJob(name: string): boolean {
-  const job = findRecurringJob(name) ?? QUEUED_JOBS.find((kind) => kind.name === name);
+  const job = findRecurringJob(name) ?? findQueuedKind(name);
   if (!job) {
     throw notFoundError();
   }
@@ -158,9 +158,7 @@ export async function runJobFromPage(
   name: string,
 ): Promise<JobRunResult> {
   assertMayManageJobs(actor);
-  if (!findRecurringJob(name)) {
-    throw notFoundError();
-  }
+  // `runJobNow` refuses a name that isn't a recurring job (`not_found`).
   const result = await runJobNow(ctx, name, {
     trigger: 'page',
     deadline: new Date(Date.now() + PAGE_RUN_SECONDS * 1000),
@@ -196,7 +194,7 @@ function parseSelection(selection: FailedJobsSelection, retry: boolean): FailedJ
     return { id: parseId(selection.id) };
   }
   const { kind } = selection;
-  const registered = QUEUED_JOBS.some((queued) => queued.name === kind);
+  const registered = findQueuedKind(kind) !== undefined;
   if ((retry && !registered) || !kind || kind.length > MAX_KIND_LENGTH) {
     throw notFoundError();
   }

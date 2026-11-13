@@ -20,10 +20,10 @@ import { runTick, type TickResult } from './tick';
  * How long one tick from the endpoint may keep starting runs, in seconds:
  * well within the route's `maxDuration` of 60, so it answers in time.
  */
-export const ENDPOINT_TICK_SECONDS = 45;
+const ENDPOINT_TICK_SECONDS = 45;
 
 /** The endpoint's path, which a continuation calls on the app's own address. */
-export const TICK_PATH = '/api/jobs';
+const TICK_PATH = '/api/jobs';
 
 /** The header a continued call carries: how many continuations came before it, plus one. */
 export const TICK_CONTINUATION_HEADER = 'x-adiutor-tick-continuation';
@@ -219,7 +219,7 @@ export async function answerTickRequest(
 }
 
 /** How a continuation is requested. */
-export interface ContinuationOptions {
+interface ContinuationOptions {
   /** The endpoint's secret (`CRON_SECRET`). */
   secret: string;
   /** Vercel's protection bypass secret (`VERCEL_AUTOMATION_BYPASS_SECRET`), for protected Preview deployments. */

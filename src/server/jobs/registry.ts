@@ -38,5 +38,15 @@ export const QUEUED_JOBS: readonly QueuedJobRunner[] = [
   staffAdminAddedJob,
 ];
 
+/**
+ * Finds a kind of queued job by name.
+ *
+ * @param name - The kind's name.
+ * @returns The kind, or `undefined` when the registry lists none by that name.
+ */
+export function findQueuedKind(name: string): QueuedJobRunner | undefined {
+  return QUEUED_JOBS.find((kind) => kind.name === name);
+}
+
 /** The batches of the batch groups that kinds of queued job name in `batch.group`. */
 export const JOB_BATCHES: readonly JobBatch[] = [];

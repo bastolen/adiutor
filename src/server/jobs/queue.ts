@@ -15,7 +15,7 @@ import { JOB_LEASE_MINUTES } from './state';
  * How long a failed job waits before it's tried again, in minutes: after the
  * first failed attempt, the second, and so on; the last wait repeats.
  */
-export const RETRY_MINUTES = [5, 15, 60, 360] as const;
+const RETRY_MINUTES = [5, 15, 60, 360] as const;
 
 /**
  * How long a job waits after a failed attempt.
