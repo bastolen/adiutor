@@ -6,6 +6,7 @@
  * stays at the top of the content while the page scrolls (below the small
  * screens' top bar), and marks the tab as signed in as someone
  * (`SignedInAsMarker`), so controls that change something render disabled.
+ * Once it ends by itself, the tab loads afresh (`ReloadWhenSignedInAsEnds`).
  * Text from `navigation.signedInAs`.
  */
 import { Eye } from 'lucide-react';
@@ -17,6 +18,7 @@ import { formatTime } from '@/lib/format';
 import { getOptionalActor } from '@/server/authz';
 
 import BackToOwnAccountButton from './back-to-own-account-button';
+import ReloadWhenSignedInAsEnds from './reload-when-signed-in-as-ends';
 
 /**
  * Shows the banner while the session is signed in as someone, and nothing
@@ -29,6 +31,10 @@ export default async function SignedInAsBanner() {
   if (!actor?.signedInAs) {
     return null;
   }
+  // Measured by the server's clock, so the browser's doesn't matter. After the request's data, so
+  // it's request-time work, which Cache Components allows.
+  // eslint-disable-next-line react-hooks/purity -- a server component renders once per request: this is how long is left at that moment
+  const endsInMs = actor.signedInAs.endsAt.getTime() - Date.now();
   const [t, locale] = await Promise.all([getTranslations('navigation.signedInAs'), getLocale()]);
   return (
     <section
@@ -49,6 +55,7 @@ export default async function SignedInAsBanner() {
         <BackToOwnAccountButton label={t('back')} />
       </div>
       <SignedInAsMarker />
+      <ReloadWhenSignedInAsEnds endsInMs={endsInMs} endedMessage={t('ended')} />
     </section>
   );
 }

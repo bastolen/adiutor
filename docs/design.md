@@ -87,8 +87,8 @@ keyboard support.
   (`src/components/ui/use-transient-state.ts`); both reset when the page is hidden.
 - **A new person means a new page load:** what's kept alive belongs to whoever was signed in, and
   React keeps a field's value even when a page comes back for someone else. So every change of who
-  the browser acts as (signing in or out, starting or ending a sign-in as a user) ends with a full
-  page load (`loadFresh` in `src/components/ui/load-fresh.ts`), never `router.push` or
+  the browser acts as (signing in or out, starting or ending a sign-in as a user, also when it ends
+  by itself) ends with a full page load (`loadFresh` in `src/components/ui/load-fresh.ts`), never `router.push` or
   `router.replace`, as does a change of language. See
   [Signing out](authentication.md#signing-out).
 - **A refused submit keeps the input:** React 19 resets a `<form action>` after every submit,

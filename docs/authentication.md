@@ -284,8 +284,8 @@ does, to check what isn't working for them. The reasons are in
     with a toast (`showToastAfterLoad`).
   - Starting and going back both end with a full page load (`loadFresh`), never a navigation
     within the app: Next keeps the last few pages alive with what's in their fields, so a Profile
-    page from before would still show the other person's name. Signing in and out do the same (see
-    [Signing out](#signing-out)).
+    page from before would still show the other person's name. So does an end by itself (see
+    **Ending** below), and signing in and out (see [Signing out](#signing-out)).
 - **Nothing changes in the user's name.**
   - Every service that changes something calls `assertNotSignedInAs` first (code `signed_in_as`:
     "This can't be changed while you're signed in as someone else."). The server actions that call
@@ -315,6 +315,12 @@ does, to check what isn't working for them. The reasons are in
     when either person's rights change.
   - The hourly job ends and records those nobody came back to (see
     [Background jobs](deploying.md#background-jobs)).
+  - Once its 30 minutes are up, the tab loads the page it's on afresh, as the staff member, with a
+    toast (`ReloadWhenSignedInAsEnds`, mounted by the banner). Without that, the banner and the
+    pages Next kept alive would still show the user, since a navigation within the app doesn't
+    fetch the layout again. The banner hands it the time left as the server measured it, so the
+    browser's clock doesn't matter. It waits 2 more seconds, so the server finds it over, and only
+    while the tab is visible: a hidden tab loads as it comes back into view.
   - Errors reported while signed in as someone are recorded for the staff member.
 
 ## Account pages

@@ -4,13 +4,14 @@
  * anything (the controls are off, the user's account pages read-only), and
  * goes back to the card; the user is emailed and the audit log has the
  * reason. The account pages show whoever the Admin is signed in as, also
- * when Next kept them alive from before. A Manager signed in as a Watcher doesn't see the Watcher's devices.
+ * when Next kept them alive from before. Once it ends by itself, the tab loads
+ * afresh as the Admin, without a click. A Manager signed in as a Watcher doesn't see the Watcher's devices.
  * Signed in as a company Admin who must set up MFA, the Admin sees the
  * Security page that user would see. Support is told why they can't sign in
  * as a company Admin, or without strong MFA. A user who turns sign-ins by
  * staff off keeps staff out until they turn it back on.
  */
-import { findUserId } from './support/db';
+import { endSignInAsSoon, findUserId } from './support/db';
 import {
   CLIENT_WATCHER,
   COMPANY_OWNER,
@@ -128,6 +129,31 @@ test('the account pages show whoever the Admin is signed in as, also when Next k
   await expect(page).toHaveURL(`/admin/users/${managerId}#sign-in-as`);
   await expect(toasts(page)).toContainText("You're back in your own account.");
   await openAccountSettings(page);
+  await expect(name).toHaveValue(PLATFORM_ADMIN.name);
+});
+
+test('the tab loads afresh as the Admin once the sign-in as a user has ended by itself', async ({
+  page,
+}) => {
+  const banner = page.getByRole('region', { name: 'Signed in as someone else' });
+  const name = page.getByRole('textbox', { name: 'Name', exact: true });
+  await signIn(page, PLATFORM_ADMIN);
+  await signInAsUser(page, STEP_UP_MANAGER.name);
+  // It ends in a few seconds instead of 30 minutes; the page counts down from when it loads.
+  await endSignInAsSoon(PLATFORM_ADMIN.email, 6);
+  await page.reload();
+  await expect(banner).toBeVisible();
+
+  // The Manager's Profile page, opened with a click, so Next keeps it alive with their name.
+  await openAccountSettings(page);
+  await expect(name).toHaveValue(STEP_UP_MANAGER.name);
+
+  // Without a click, the same page loads afresh as the Admin once it has ended.
+  await expect(banner).toHaveCount(0, { timeout: 15_000 });
+  await expect(toasts(page)).toContainText(
+    "Signing in as the user has ended. You're back in your own account.",
+  );
+  await expect(page).toHaveURL('/account');
   await expect(name).toHaveValue(PLATFORM_ADMIN.name);
 });
 

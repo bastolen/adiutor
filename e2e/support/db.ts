@@ -4,12 +4,13 @@
  * a session's MFA confirmation, deleting the staff settings, storing a
  * sign-in link without sending an email (and using one up), checking whether
  * a browser's session still exists, reading a stored sign-in error, adding
- * someone to a company directly, and storing an invitation or an invite link
- * without sending anything.
+ * someone to a company directly, storing an invitation or an invite link
+ * without sending anything, and making a staff member's sign-in as a user end
+ * in a few seconds.
  * Each opens its own short connection to the test database (`withTestDatabase`).
  * Resetting and seeding the database is `seed.ts`.
  */
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Client } from 'pg';
 
@@ -153,6 +154,37 @@ export async function backdateMfaConfirmation(email: string, minutes: number): P
       .returning({ id: schema.session.id });
     if (updated.length === 0) {
       throw new Error(`${email} has no sessions to backdate.`);
+    }
+  });
+}
+
+/**
+ * Makes a staff member's sign-in as a user end in a few seconds
+ * (`impersonation.expires_at`), instead of after `IMPERSONATION_MINUTES`, so
+ * a test can see it end by itself. Pages rendered before still count down
+ * from the old end: load the page again.
+ *
+ * @param staffEmail - The staff member's email address.
+ * @param seconds - In how many seconds it should end.
+ * @throws {Error} When the staff member isn't signed in as anyone, so the test would check nothing.
+ */
+export async function endSignInAsSoon(staffEmail: string, seconds: number): Promise<void> {
+  await withTestDatabase(async (db) => {
+    const updated = await db
+      .update(schema.impersonation)
+      .set({ expiresAt: sql`now() + make_interval(secs => ${seconds})` })
+      .where(
+        inArray(
+          schema.impersonation.staffUserId,
+          db
+            .select({ id: schema.user.id })
+            .from(schema.user)
+            .where(eq(schema.user.email, staffEmail)),
+        ),
+      )
+      .returning({ id: schema.impersonation.id });
+    if (updated.length === 0) {
+      throw new Error(`${staffEmail} isn't signed in as anyone.`);
     }
   });
 }
