@@ -15,9 +15,10 @@ import {
   createCompany,
   createUser,
   emailLanguage,
+  later,
   memberActor,
-  setUserLocale,
   setupTestContext,
+  setUserLocale,
   staffActor,
   tokenFrom,
 } from '../../../../tests/integration/helpers';
@@ -37,9 +38,6 @@ beforeEach(async () => {
   companyAdmin = await memberActor(db, testCompany.id, 'admin', 'boss@adiutor.test');
 });
 
-/** Far enough away that no test reaches it. */
-const deadline = new Date(Date.now() + 60 * 60_000);
-
 /**
  * Runs the job once.
  *
@@ -47,7 +45,7 @@ const deadline = new Date(Date.now() + 60 * 60_000);
  * @returns How many reminders were sent and how many failed.
  */
 async function remind(context: ServiceContext) {
-  return (await invitationReminders.run(context, { deadline })).summary;
+  return (await invitationReminders.run(context, { deadline: later })).summary;
 }
 
 describe('invitation-reminders', () => {
@@ -328,7 +326,7 @@ describe('invitation-reminders', () => {
       };
 
       // The run counts as failed, so the failure shows; it says how many, not who.
-      await expect(invitationReminders.run(bouncing, { deadline })).resolves.toEqual({
+      await expect(invitationReminders.run(bouncing, { deadline: later })).resolves.toEqual({
         summary: { sent: 1, failed: 1 },
         failure: "Reminders that couldn't be sent: 1; the next run tries them again",
       });

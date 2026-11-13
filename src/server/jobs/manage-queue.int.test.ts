@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import { jobState, queuedJob } from '@/db/schema';
 
-import { setupTestContext } from '../../../tests/integration/helpers';
+import { setupTestContext, storeQueuedJob } from '../../../tests/integration/helpers';
 import {
   discardFailedQueuedJobs,
   listFailedQueuedJobs,
@@ -17,26 +17,6 @@ import {
 } from './manage-queue';
 
 const { db } = setupTestContext();
-
-/**
- * Adds a stored job directly.
- *
- * @param kind - Its kind's name.
- * @param status - Where it is.
- * @returns Its ID.
- */
-async function job(kind: string, status: 'queued' | 'running' | 'failed' | 'succeeded') {
-  const [row] = await db
-    .insert(queuedJob)
-    .values({
-      kind,
-      status,
-      attempts: status === 'queued' ? 0 : 5,
-      finishedAt: status === 'failed' || status === 'succeeded' ? sql`now()` : null,
-    })
-    .returning({ id: queuedJob.id });
-  return row?.id ?? '';
-}
 
 /**
  * The stored jobs.
@@ -57,10 +37,10 @@ async function stored() {
 
 describe('listQueuedKinds', () => {
   it('counts waiting and failed jobs per kind, including kinds no longer registered', async () => {
-    await job('adiutor-tests-gone', 'queued');
-    await job('adiutor-tests-gone', 'running');
-    await job('adiutor-tests-gone', 'failed');
-    await job('adiutor-tests-gone', 'succeeded');
+    await storeQueuedJob(db, 'adiutor-tests-gone', 'queued');
+    await storeQueuedJob(db, 'adiutor-tests-gone', 'running');
+    await storeQueuedJob(db, 'adiutor-tests-gone', 'failed');
+    await storeQueuedJob(db, 'adiutor-tests-gone', 'succeeded');
     await db.insert(jobState).values({ name: 'adiutor-tests-gone', pausedAt: sql`now()` });
 
     // A kind the registry no longer lists can't be paused, so a pause left behind doesn't count.
@@ -77,8 +57,8 @@ describe('listQueuedKinds', () => {
 
 describe('listFailedQueuedJobs', () => {
   it('lists only the jobs that were given up', async () => {
-    const failed = await job('adiutor-tests-a', 'failed');
-    await job('adiutor-tests-a', 'queued');
+    const failed = await storeQueuedJob(db, 'adiutor-tests-a', 'failed');
+    await storeQueuedJob(db, 'adiutor-tests-a', 'queued');
 
     expect(await listFailedQueuedJobs(db)).toEqual([
       expect.objectContaining({ id: failed, kind: 'adiutor-tests-a', known: false, attempts: 5 }),
@@ -88,8 +68,8 @@ describe('listFailedQueuedJobs', () => {
 
 describe('retryFailedQueuedJobs', () => {
   it('puts a failed job back in the queue, with a fresh count of attempts', async () => {
-    const failed = await job('adiutor-tests-a', 'failed');
-    const other = await job('adiutor-tests-a', 'failed');
+    const failed = await storeQueuedJob(db, 'adiutor-tests-a', 'failed');
+    const other = await storeQueuedJob(db, 'adiutor-tests-a', 'failed');
 
     await expect(retryFailedQueuedJobs(db, { id: failed })).resolves.toHaveLength(1);
 
@@ -105,10 +85,10 @@ describe('retryFailedQueuedJobs', () => {
   });
 
   it('puts back every failed job of a kind, and leaves the others alone', async () => {
-    await job('adiutor-tests-a', 'failed');
-    await job('adiutor-tests-a', 'failed');
-    await job('adiutor-tests-a', 'succeeded');
-    await job('adiutor-tests-b', 'failed');
+    await storeQueuedJob(db, 'adiutor-tests-a', 'failed');
+    await storeQueuedJob(db, 'adiutor-tests-a', 'failed');
+    await storeQueuedJob(db, 'adiutor-tests-a', 'succeeded');
+    await storeQueuedJob(db, 'adiutor-tests-b', 'failed');
 
     await expect(retryFailedQueuedJobs(db, { kind: 'adiutor-tests-a' })).resolves.toHaveLength(2);
 
@@ -123,8 +103,8 @@ describe('retryFailedQueuedJobs', () => {
 
 describe('discardFailedQueuedJobs', () => {
   it('discards failed jobs only', async () => {
-    const failed = await job('adiutor-tests-a', 'failed');
-    const waiting = await job('adiutor-tests-a', 'queued');
+    const failed = await storeQueuedJob(db, 'adiutor-tests-a', 'failed');
+    const waiting = await storeQueuedJob(db, 'adiutor-tests-a', 'queued');
 
     await expect(discardFailedQueuedJobs(db, { kind: 'adiutor-tests-a' })).resolves.toHaveLength(1);
     await expect(discardFailedQueuedJobs(db, { id: waiting })).resolves.toEqual([]);

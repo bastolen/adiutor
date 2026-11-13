@@ -13,7 +13,7 @@ import { z } from 'zod';
 
 import { appError, jobRun, jobState, queuedJob } from '@/db/schema';
 
-import { setupTestContext, staffActor } from '../../../tests/integration/helpers';
+import { later, setupTestContext, staffActor } from '../../../tests/integration/helpers';
 import { defineQueuedKind, type JobPayload, type QueuedJobKind, queueJob } from '../queue';
 import {
   type QueuedJob,
@@ -28,9 +28,6 @@ import { runQueue } from './run-queue';
 import { runTick } from './tick';
 
 const { ctx, db, sent } = setupTestContext();
-
-/** Far enough away that no test reaches it. */
-const later = new Date(Date.now() + 60 * 60_000);
 
 /** The notes of the jobs the test kinds ran, in order. */
 let ran: string[] = [];

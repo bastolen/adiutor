@@ -24,6 +24,7 @@ import {
   createUser,
   enableTwoFactor,
   fillRateLimitBucket,
+  later,
   minutesAgo,
   sendQueuedEmails,
   setupTestContext,
@@ -524,7 +525,7 @@ describe('endFinishedImpersonations', () => {
     await expect(
       runJobNow(ctx, 'finished-sign-ins-as-users', {
         trigger: 'cli',
-        deadline: new Date(Date.now() + 60_000),
+        deadline: later,
       }),
     ).resolves.toMatchObject({ summary: { ended: 1 } });
 

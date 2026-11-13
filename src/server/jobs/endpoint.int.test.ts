@@ -13,7 +13,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { invitation, jobRun, jobState, queuedJob } from '@/db/schema';
 
-import { createCompany, memberActor, setupTestContext } from '../../../tests/integration/helpers';
+import {
+  createCompany,
+  mailDown,
+  memberActor,
+  setupTestContext,
+} from '../../../tests/integration/helpers';
 import type { ServiceContext } from '../context';
 import { inviteByEmail } from '../people/invitations';
 import { RATE_LIMITS } from '../rate-limit';
@@ -187,15 +192,7 @@ describe('answerTickRequest', () => {
       .update(invitation)
       .set({ createdAt: sql`now() - interval '5 days'`, expiresAt: sql`now() + interval '1 day'` })
       .where(eq(invitation.email, 'soon@adiutor.test'));
-    const mailDown: ServiceContext = {
-      ...fromAddress,
-      /** The mail server is down. */
-      sendEmail: async () => {
-        throw new Error('Adiutor Tests: the mail server is down');
-      },
-    };
-
-    const { response } = await ask(`Bearer ${SECRET}`, mailDown);
+    const { response } = await ask(`Bearer ${SECRET}`, mailDown(fromAddress));
 
     expect(response).toMatchObject({ status: 500, body: { status: 'failed' } });
     expect('runs' in response.body && response.body.runs).toContainEqual({

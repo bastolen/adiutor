@@ -7,7 +7,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { signInError } from '@/db/schema';
 
-import { createUser, inSequence, setupTestContext } from '../../../tests/integration/helpers';
+import {
+  createUser,
+  inSequence,
+  later,
+  setupTestContext,
+} from '../../../tests/integration/helpers';
 import type { ServiceContext } from '../context';
 import { runJobNow } from '../jobs';
 import { RATE_LIMITS } from '../rate-limit';
@@ -132,7 +137,7 @@ describe('the retention job, for sign-in errors', () => {
     ]);
 
     await expect(
-      runJobNow(ctx, 'retention', { trigger: 'cli', deadline: new Date(Date.now() + 60_000) }),
+      runJobNow(ctx, 'retention', { trigger: 'cli', deadline: later }),
     ).resolves.toMatchObject({ summary: { signInErrors: 1 } });
 
     expect((await stored()).map(({ reference }) => reference)).toEqual(['NEW2-NEW2']);

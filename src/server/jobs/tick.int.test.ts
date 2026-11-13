@@ -15,7 +15,7 @@ import { z } from 'zod';
 
 import { appError, jobRun, jobState, queuedJob } from '@/db/schema';
 
-import { setupTestContext, staffActor } from '../../../tests/integration/helpers';
+import { later, setupTestContext, staffActor } from '../../../tests/integration/helpers';
 import { ServiceError } from '../errors';
 import { defineQueuedKind, queueJob } from '../queue';
 import { defineRecurringJob, handleQueuedJob, type JobOutcome, type RecurringJob } from './define';
@@ -30,9 +30,6 @@ const { ctx, db, sent } = setupTestContext();
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-/** Far enough away that no test reaches it. */
-const later = new Date(Date.now() + 60 * 60_000);
 
 /**
  * A moment on a day far from today, in UTC, for the tick's clock.

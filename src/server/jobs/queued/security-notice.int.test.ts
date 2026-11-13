@@ -13,40 +13,22 @@ import { company, queuedJob } from '@/db/schema';
 import {
   createCompany,
   createUser,
-  setUserLocale,
+  mailDown,
+  sendQueuedEmails,
   setupTestContext,
+  setUserLocale,
   staffActor,
 } from '../../../../tests/integration/helpers';
 import { recordEvent } from '../../audit';
 import { queueSecurityNotice } from '../../auth/security-notices';
 import type { ServiceContext } from '../../context';
-import { runQueue } from '../run-queue';
 import securityNoticeJob from './security-notice';
 
 const { ctx, db, sent } = setupTestContext();
 
-/** Far enough away that no test reaches it. */
-const later = new Date(Date.now() + 60 * 60_000);
-
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-/**
- * Runs the queue with the security notice only.
- *
- * @param context - The service context; the test one by default.
- * @returns The runs.
- */
-async function sendQueued(context: ServiceContext = ctx) {
-  const { runs } = await runQueue(context, {
-    trigger: 'tick',
-    deadline: later,
-    startedAt: new Date(),
-    kinds: [securityNoticeJob],
-  });
-  return runs;
-}
 
 describe('queueSecurityNotice', () => {
   it('queues the notice with IDs and small settings only', async () => {
@@ -99,7 +81,7 @@ describe('the security-notice job', () => {
     });
     await queueSecurityNotice(db, jane, 'password_changed', { auditEventId });
 
-    await sendQueued();
+    await sendQueuedEmails(ctx, [securityNoticeJob]);
 
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({
@@ -133,7 +115,7 @@ describe('the security-notice job', () => {
     });
     await queueSecurityNotice(db, jane, 'mfa_reset', { auditEventId });
 
-    await sendQueued();
+    await sendQueuedEmails(ctx, [securityNoticeJob]);
 
     expect(sent).toHaveLength(1);
     expect(sent[0]?.text).not.toContain('203.0.113.9');
@@ -151,7 +133,7 @@ describe('the security-notice job', () => {
       .set({ name: 'Adiutor Tests Renamed' })
       .where(eq(company.id, companyId));
 
-    await sendQueued();
+    await sendQueuedEmails(ctx, [securityNoticeJob]);
 
     expect(sent[0]?.subject).toBe('Je rol bij Adiutor Tests Renamed op Adiutor is gewijzigd');
     expect(sent[0]?.text).not.toContain('Vanaf:');
@@ -162,7 +144,7 @@ describe('the security-notice job', () => {
     const sam = await staffActor(db, 'platform_admin', 'sam@adiutor.test');
     await queueSecurityNotice(db, jane, 'impersonation_started', { staffUserId: sam.id });
 
-    await sendQueued();
+    await sendQueuedEmails(ctx, [securityNoticeJob]);
 
     expect(sent[0]?.subject).toContain('sam');
   });
@@ -171,7 +153,7 @@ describe('the security-notice job', () => {
     const jane = await createUser(db, 'jane@adiutor.test');
     await queueSecurityNotice(db, jane, 'provider_connected', { providerId: 'github' });
 
-    await sendQueued();
+    await sendQueuedEmails(ctx, [securityNoticeJob]);
 
     expect(sent[0]?.subject).toBe('GitHub was connected to your Adiutor account');
   });
@@ -181,7 +163,7 @@ describe('the security-notice job', () => {
     await queueSecurityNotice(db, jane, 'mfa_reset');
     await db.execute(sql`delete from "user" where id = ${jane}`);
 
-    const runs = await sendQueued();
+    const runs = await sendQueuedEmails(ctx, [securityNoticeJob]);
 
     expect(sent).toEqual([]);
     expect(runs).toEqual([
@@ -194,15 +176,7 @@ describe('the security-notice job', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     const jane = await createUser(db, 'jane@adiutor.test');
     await queueSecurityNotice(db, jane, 'mfa_reset');
-    const mailDown: ServiceContext = {
-      ...ctx,
-      /** The mail server is down. */
-      sendEmail: async () => {
-        throw new Error('Adiutor Tests: the mail server is down');
-      },
-    };
-
-    await sendQueued(mailDown);
+    await sendQueuedEmails(mailDown(ctx), [securityNoticeJob]);
 
     expect(
       await db.select({ status: queuedJob.status, attempts: queuedJob.attempts }).from(queuedJob),

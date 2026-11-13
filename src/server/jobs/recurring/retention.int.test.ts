@@ -7,13 +7,10 @@ import { describe, expect, it } from 'vitest';
 
 import { appError, auditEvent, jobRun, queuedJob } from '@/db/schema';
 
-import { setupTestContext } from '../../../../tests/integration/helpers';
+import { later, setupTestContext } from '../../../../tests/integration/helpers';
 import retention from './retention';
 
 const { ctx, db } = setupTestContext();
-
-/** Far enough away that no test reaches it. */
-const deadline = new Date(Date.now() + 60 * 60_000);
 
 describe('retention', () => {
   it('removes audit events after a year', async () => {
@@ -21,7 +18,7 @@ describe('retention', () => {
       .insert(auditEvent)
       .values([{ action: 'sign_in', at: sql`now() - interval '400 days'` }, { action: 'sign_in' }]);
 
-    await expect(retention.run(ctx, { deadline })).resolves.toMatchObject({
+    await expect(retention.run(ctx, { deadline: later })).resolves.toMatchObject({
       summary: { auditEvents: 1 },
     });
     expect(await db.select().from(auditEvent)).toHaveLength(1);
@@ -37,7 +34,7 @@ describe('retention', () => {
       { reference: 'NEW2-NEW2', source: 'browser', createdAt: sql`now() - interval '6 days'` },
     ]);
 
-    await expect(retention.run(ctx, { deadline })).resolves.toMatchObject({
+    await expect(retention.run(ctx, { deadline: later })).resolves.toMatchObject({
       summary: { appErrors: 1 },
     });
     expect(
@@ -58,7 +55,7 @@ describe('retention', () => {
       { job: 'retention', trigger: 'tick', startedAt: sql`now()`, status: 'succeeded' },
     ]);
 
-    await expect(retention.run(ctx, { deadline })).resolves.toMatchObject({
+    await expect(retention.run(ctx, { deadline: later })).resolves.toMatchObject({
       summary: { jobRuns: 1 },
     });
     expect(await db.select().from(jobRun)).toHaveLength(1);
@@ -73,7 +70,7 @@ describe('retention', () => {
       { kind: 'adiutor-tests', status: 'queued', runAt: longAgo },
     ]);
 
-    await expect(retention.run(ctx, { deadline })).resolves.toMatchObject({
+    await expect(retention.run(ctx, { deadline: later })).resolves.toMatchObject({
       summary: { queuedJobs: 2 },
     });
     expect(

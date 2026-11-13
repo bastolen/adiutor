@@ -6,13 +6,15 @@ import { describe, expect, it } from 'vitest';
 
 import { rateLimitBucket, session, verification } from '@/db/schema';
 
-import { createSession, createUser, setupTestContext } from '../../../../tests/integration/helpers';
+import {
+  createSession,
+  createUser,
+  later,
+  setupTestContext,
+} from '../../../../tests/integration/helpers';
 import expiredSignInData from './expired-sign-in-data';
 
 const { ctx, db } = setupTestContext();
-
-/** Far enough away that no test reaches it. */
-const deadline = new Date(Date.now() + 60 * 60_000);
 
 describe('expired-sign-in-data', () => {
   it('removes expired values, sessions and rate-limit windows only', async () => {
@@ -30,7 +32,7 @@ describe('expired-sign-in-data', () => {
       { key: 'new', count: 1, resetAt: future },
     ]);
 
-    await expect(expiredSignInData.run(ctx, { deadline })).resolves.toEqual({
+    await expect(expiredSignInData.run(ctx, { deadline: later })).resolves.toEqual({
       summary: { verifications: 1, sessions: 1, rateLimits: 1 },
     });
     expect((await db.select().from(session)).map(({ id }) => id)).toEqual([kept]);

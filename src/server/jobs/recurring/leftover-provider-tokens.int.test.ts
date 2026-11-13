@@ -7,13 +7,10 @@ import { describe, expect, it } from 'vitest';
 import { account } from '@/db/schema';
 import { defined } from '@/lib/defined';
 
-import { createUser, setupTestContext } from '../../../../tests/integration/helpers';
+import { createUser, later, setupTestContext } from '../../../../tests/integration/helpers';
 import leftoverProviderTokens from './leftover-provider-tokens';
 
 const { ctx, db } = setupTestContext();
-
-/** Far enough away that no test reaches it. */
-const deadline = new Date(Date.now() + 60 * 60_000);
 
 describe('leftover-provider-tokens', () => {
   it('clears OAuth tokens a request left behind, but not those of a request still running', async () => {
@@ -36,7 +33,7 @@ describe('leftover-provider-tokens', () => {
     const left = defined(inserted[0], 'the account of the request left behind');
     const running = defined(inserted[1], 'the account of the request still running');
 
-    await expect(leftoverProviderTokens.run(ctx, { deadline })).resolves.toEqual({
+    await expect(leftoverProviderTokens.run(ctx, { deadline: later })).resolves.toEqual({
       summary: { accounts: 1 },
     });
 

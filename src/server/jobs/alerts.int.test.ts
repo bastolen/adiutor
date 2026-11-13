@@ -13,7 +13,13 @@ import { z } from 'zod';
 
 import { jobState, user } from '@/db/schema';
 
-import { setUserLocale, setupTestContext, staffActor } from '../../../tests/integration/helpers';
+import {
+  later,
+  mailDown,
+  setupTestContext,
+  setUserLocale,
+  staffActor,
+} from '../../../tests/integration/helpers';
 import type { ServiceContext } from '../context';
 import { defineQueuedKind, queueJob } from '../queue';
 import { defineRecurringJob, handleQueuedJob } from './define';
@@ -21,9 +27,6 @@ import { runQueue } from './run-queue';
 import { runTick } from './tick';
 
 const { ctx, db, sent } = setupTestContext();
-
-/** Far enough away that no test reaches it. */
-const later = new Date(Date.now() + 60 * 60_000);
 
 /** A recurring job that always fails. */
 const broken = defineRecurringJob({
@@ -132,17 +135,9 @@ describe('alerts about a recurring job', () => {
   });
 
   it('never stop the tick when the mail server is down', async () => {
-    const mailDown: ServiceContext = {
-      ...ctx,
-      /** The mail server refuses everything. */
-      sendEmail: async () => {
-        throw new Error('Adiutor Tests: the mail server is down');
-      },
-    };
-
-    await tickAt(10, mailDown);
-    await tickAt(11, mailDown);
-    await expect(tickAt(12, mailDown)).resolves.toBeUndefined();
+    await tickAt(10, mailDown(ctx));
+    await tickAt(11, mailDown(ctx));
+    await expect(tickAt(12, mailDown(ctx))).resolves.toBeUndefined();
   });
 });
 

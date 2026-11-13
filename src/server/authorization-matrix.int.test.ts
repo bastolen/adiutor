@@ -34,7 +34,7 @@ import { hashPassword } from 'better-auth/crypto';
 import { and, eq, isNull } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { account, invitation, inviteLink, membership, queuedJob, user } from '@/db/schema';
+import { account, invitation, inviteLink, membership, user } from '@/db/schema';
 import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { defined, firstRow } from '@/lib/defined';
 import { hashToken } from '@/lib/sign-in/tokens';
@@ -50,6 +50,7 @@ import {
   memberActor,
   setupTestContext,
   staffActor,
+  storeQueuedJob,
   tokenFrom,
 } from '../../tests/integration/helpers';
 import type { Actor } from './actor';
@@ -680,19 +681,6 @@ async function openInvitation(admin: Actor, companyId: string, email: string): P
 }
 
 /**
- * Adds a queued job that was given up after its last attempt.
- *
- * @returns Its ID.
- */
-async function failedJob(): Promise<string> {
-  const [row] = await db
-    .insert(queuedJob)
-    .values({ kind: 'security-notice', status: 'failed', attempts: 5, finishedAt: new Date() })
-    .returning({ id: queuedJob.id });
-  return defined(row, 'the failed job').id;
-}
-
-/**
  * Creates the world for one role.
  *
  * @param role - The role to act as.
@@ -778,7 +766,10 @@ async function createWorld(role: MatrixRole): Promise<World> {
     deactivated,
     staffToRemove,
     invitationFromLink,
-    failedJobs: { retry: await failedJob(), discard: await failedJob() },
+    failedJobs: {
+      retry: await storeQueuedJob(db, 'security-notice'),
+      discard: await storeQueuedJob(db, 'security-notice'),
+    },
   };
 }
 

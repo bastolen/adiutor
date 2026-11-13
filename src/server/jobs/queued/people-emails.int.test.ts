@@ -14,31 +14,16 @@ import {
   addMember,
   createCompany,
   createUser,
+  sendQueuedEmails,
   setupTestContext,
   staffActor,
 } from '../../../../tests/integration/helpers';
 import notifyStaffAdminAdded from '../../people/staff-admin-notice';
 import { queueJob } from '../../queue';
-import { runQueue } from '../run-queue';
 import addedToCompanyJob from './added-to-company';
 import staffAdminAddedJob from './staff-admin-added';
 
 const { ctx, db, sent } = setupTestContext();
-
-/**
- * Runs the queue with the two kinds.
- *
- * @returns The runs.
- */
-async function sendQueued() {
-  const { runs } = await runQueue(ctx, {
-    trigger: 'tick',
-    deadline: new Date(Date.now() + 60_000),
-    startedAt: new Date(),
-    kinds: [addedToCompanyJob, staffAdminAddedJob],
-  });
-  return runs;
-}
 
 describe('the added-to-company job', () => {
   it('is skipped when the member was removed before it went out', async () => {
@@ -56,7 +41,7 @@ describe('the added-to-company job', () => {
       .delete(membership)
       .where(and(eq(membership.userId, jane), eq(membership.companyId, companyId)));
 
-    const runs = await sendQueued();
+    const runs = await sendQueuedEmails(ctx, [addedToCompanyJob, staffAdminAddedJob]);
 
     expect(sent).toEqual([]);
     expect(runs).toEqual([
@@ -77,7 +62,7 @@ describe('the added-to-company job', () => {
     });
     await db.execute(sql`delete from "user" where id = ${sam.id}`);
 
-    await sendQueued();
+    await sendQueuedEmails(ctx, [addedToCompanyJob, staffAdminAddedJob]);
 
     expect(sent).toHaveLength(1);
     expect(sent[0]?.to).toBe('jane@adiutor.test');
@@ -98,7 +83,7 @@ describe('the staff-admin-added job', () => {
     expect(await db.select().from(queuedJob)).toHaveLength(2);
     await db.update(user).set({ platformRole: 'manager' }).where(eq(user.id, blake.id));
 
-    await sendQueued();
+    await sendQueuedEmails(ctx, [addedToCompanyJob, staffAdminAddedJob]);
 
     expect(sent.map((email) => email.to)).toEqual(['casey@adiutor.test']);
   });

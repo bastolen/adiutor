@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 import { auditEvent, jobRun, jobState, queuedJob } from '@/db/schema';
 
-import { setupTestContext, staffActor } from '../../../tests/integration/helpers';
+import { setupTestContext, staffActor, storeQueuedJob } from '../../../tests/integration/helpers';
 import {
   discardFailedJobs,
   pauseJob,
@@ -36,20 +36,6 @@ async function events() {
     })
     .from(auditEvent)
     .orderBy(asc(auditEvent.at), asc(auditEvent.id));
-}
-
-/**
- * Adds a queued job that was given up after its last attempt.
- *
- * @param kind - Its kind's name.
- * @returns Its ID.
- */
-async function failedJob(kind = 'security-notice'): Promise<string> {
-  const [row] = await db
-    .insert(queuedJob)
-    .values({ kind, status: 'failed', attempts: 5, finishedAt: sql`now()` })
-    .returning({ id: queuedJob.id });
-  return row?.id ?? '';
 }
 
 describe('pauseJob and resumeJob', () => {
@@ -169,7 +155,7 @@ describe('runJobFromPage', () => {
 describe('retryFailedJobs and discardFailedJobs', () => {
   it('puts one failed job back, recording its kind, and only once', async () => {
     const admin = await staffActor(db, 'platform_admin', 'alex@adiutor.test');
-    const job = await failedJob();
+    const job = await storeQueuedJob(db, 'security-notice');
 
     await expect(retryFailedJobs(ctx, admin, { id: job })).resolves.toBe(1);
     await expect(retryFailedJobs(ctx, admin, { id: job })).rejects.toMatchObject({
@@ -191,9 +177,9 @@ describe('retryFailedJobs and discardFailedJobs', () => {
 
   it('discards every failed job of a kind, even one the registry no longer lists', async () => {
     const admin = await staffActor(db, 'platform_admin', 'alex@adiutor.test');
-    await failedJob('adiutor-tests-gone');
-    await failedJob('adiutor-tests-gone');
-    await failedJob();
+    await storeQueuedJob(db, 'adiutor-tests-gone');
+    await storeQueuedJob(db, 'adiutor-tests-gone');
+    await storeQueuedJob(db, 'security-notice');
 
     // No tick runs a kind the registry doesn't list, so its jobs can't be retried.
     await expect(retryFailedJobs(ctx, admin, { kind: 'adiutor-tests-gone' })).rejects.toMatchObject(

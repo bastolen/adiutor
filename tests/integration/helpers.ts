@@ -15,6 +15,7 @@ import {
   membership,
   passkey,
   queuedJob,
+  type QueuedJobStatus,
   rateLimitBucket,
   session,
   staffSettings,
@@ -30,7 +31,7 @@ import { MFA_PROVIDERS, type OAuthProvider } from '@/lib/sign-in/oauth-providers
 import { availableProviders, configuredProviders } from '@/lib/sign-in/providers';
 import { type Actor, loadActor } from '@/server/actor';
 import type { ServiceContext } from '@/server/context';
-import { runQueue } from '@/server/jobs';
+import { type JobRunResult, runQueue } from '@/server/jobs';
 
 import emptyDatabase from '../database/empty-database';
 
@@ -628,18 +629,76 @@ export async function lastActiveAt(db: Database, userId: string): Promise<Date |
 }
 
 /**
+ * A deadline far enough away that no test reaches it, for runs that may take
+ * all the time they need.
+ */
+export const later = new Date(Date.now() + 60 * 60_000);
+
+/**
  * Sends what waits in the queue, as the next tick would: security notices
  * and the other queued emails. Call it before checking for an email a
  * service queues.
  *
  * @param ctx - The service context, whose `sendEmail` gets the emails.
+ * @param kinds - The kinds to run; every registered kind by default.
+ * @returns The runs, one per kind that ran jobs.
  */
-export async function sendQueuedEmails(ctx: ServiceContext): Promise<void> {
-  await runQueue(ctx, {
+export async function sendQueuedEmails(
+  ctx: ServiceContext,
+  kinds?: Parameters<typeof runQueue>[1]['kinds'],
+): Promise<JobRunResult[]> {
+  const { runs } = await runQueue(ctx, {
     trigger: 'tick',
-    deadline: new Date(Date.now() + 60_000),
+    deadline: later,
     startedAt: new Date(),
+    ...(kinds ? { kinds } : {}),
   });
+  return runs;
+}
+
+/**
+ * The context with its mail server down: every email it sends fails.
+ *
+ * @param ctx - The service context.
+ * @returns The same context, refusing every email.
+ */
+export function mailDown(ctx: ServiceContext): ServiceContext {
+  return {
+    ...ctx,
+    /** Refuses the email, as a mail server that's down would. */
+    sendEmail: async () => {
+      throw new Error('Adiutor Tests: the mail server is down');
+    },
+  };
+}
+
+/**
+ * Stores a queued job directly: waiting (never tried), or tried five times
+ * and, when failed or succeeded, finished now.
+ *
+ * @param db - The test database.
+ * @param kind - Its kind's name.
+ * @param status - Where it is; given up after its last attempt by default.
+ * @returns Its ID.
+ */
+export async function storeQueuedJob(
+  db: Database,
+  kind: string,
+  status: QueuedJobStatus = 'failed',
+): Promise<string> {
+  const stored = firstRow(
+    await db
+      .insert(queuedJob)
+      .values({
+        kind,
+        status,
+        attempts: status === 'queued' ? 0 : 5,
+        finishedAt: status === 'failed' || status === 'succeeded' ? sql`now()` : null,
+      })
+      .returning({ id: queuedJob.id }),
+    'the queued job',
+  );
+  return stored.id;
 }
 
 /**
