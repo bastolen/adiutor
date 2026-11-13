@@ -258,6 +258,8 @@ export async function requestTickContinuation(
     const response = await send(`${ctx.baseUrl}${TICK_PATH}`, {
       headers,
       cache: 'no-store',
+      // A redirect would take the bypass secret elsewhere; a wrong address should fail loudly.
+      redirect: 'error',
       signal: AbortSignal.timeout(CONTINUATION_TIMEOUT_MS),
     });
     await response.body?.cancel();

@@ -5,7 +5,7 @@
  * it in the user's language. A user who's gone by then is skipped; a mail
  * problem throws, so the job is tried again later.
  */
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { auditEvent, company, user } from '@/db/schema';
 import displayName from '@/lib/display-name';
@@ -39,7 +39,14 @@ export default handleQueuedJob(
         ? ctx.db
             .select({ at: auditEvent.at, ip: auditEvent.ip, userAgent: auditEvent.userAgent })
             .from(auditEvent)
-            .where(eq(auditEvent.id, auditEventId))
+            // Only the recipient's own change: nobody else's device or IP address ever shows.
+            .where(
+              and(
+                eq(auditEvent.id, auditEventId),
+                eq(auditEvent.actorUserId, userId),
+                eq(auditEvent.targetUserId, userId),
+              ),
+            )
         : [],
       companyId
         ? ctx.db.select({ name: company.name }).from(company).where(eq(company.id, companyId))

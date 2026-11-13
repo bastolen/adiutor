@@ -108,6 +108,37 @@ describe('the security-notice job', () => {
     expect(sent[0]?.text).toContain('Firefox on Windows, 203.0.113.7');
   });
 
+  it('never names the device of an event that isn’t the recipient’s own', async () => {
+    const jane = await createUser(db, 'jane@adiutor.test');
+    const sam = await staffActor(db, 'platform_admin', 'sam@adiutor.test');
+    const fromFirefox: ServiceContext = {
+      ...ctx,
+      /**
+       * Pretends the request came from Firefox on Windows at a known IP address.
+       *
+       * @returns The request's origin.
+       */
+      requestInfo: async () => ({
+        ip: '203.0.113.9',
+        userAgent:
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0',
+      }),
+    };
+    // A staff member's change to Jane's account, queued by mistake with its event.
+    const auditEventId = await recordEvent(fromFirefox, {
+      action: 'mfa_reset',
+      actorUserId: sam.id,
+      targetUserId: jane,
+    });
+    await queueSecurityNotice(db, jane, 'mfa_reset', { auditEventId });
+
+    await sendQueued();
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.text).not.toContain('203.0.113.9');
+    expect(sent[0]?.text).not.toContain('Firefox');
+  });
+
   it('names no device for someone else’s change, and reads names when it sends', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
     await setUserLocale(db, jane, 'nl-NL');

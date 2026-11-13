@@ -93,7 +93,12 @@ async function queueSkippedNotices(count: number): Promise<void> {
  * @returns The fake, and the requests it got.
  */
 function fakeFetch(status = 202) {
-  const requests: { url: string; headers: Record<string, string>; signal: unknown }[] = [];
+  const requests: {
+    url: string;
+    headers: Record<string, string>;
+    redirect: unknown;
+    signal: unknown;
+  }[] = [];
   /**
    * Notes the request and answers.
    *
@@ -105,6 +110,7 @@ function fakeFetch(status = 202) {
     requests.push({
       url: String(url),
       headers: { ...(init?.headers as Record<string, string>) },
+      redirect: init?.redirect,
       signal: init?.signal,
     });
     return new Response(null, { status });
@@ -279,6 +285,8 @@ describe('continuing the tick', () => {
       {
         url: `${ctx.baseUrl}/api/jobs`,
         headers: { authorization: `Bearer ${SECRET}`, [TICK_CONTINUATION_HEADER]: '2' },
+        // A redirect could take the bypass secret elsewhere.
+        redirect: 'error',
         // A call that hangs is given up, so it never holds the function that asked.
         signal: expect.any(AbortSignal),
       },
