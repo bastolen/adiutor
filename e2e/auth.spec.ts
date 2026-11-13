@@ -3,8 +3,8 @@
  * in goes on to the card a signed-out visitor's address named, the sign-in
  * page sends someone who is signed in already on, signing out leaves nothing
  * behind in the browser (signing out and in load the next page afresh, so no
- * page Next keeps alive is left for the next person), and the sign-in page
- * shows its "Last used" hint.
+ * page Next keeps alive is left for the next person, also in the browser's
+ * other tabs), and the sign-in page shows its "Last used" hint.
  */
 
 import { LOCALE_COOKIE } from '../src/lib/i18n/locales';
@@ -100,6 +100,31 @@ test('the next person to sign in on this browser sees their own account, not the
   await expect(page).toHaveURL('/dashboard');
   await openAccountSettings(page);
   await expect(name).toHaveValue(SUPPORT_STAFF.name);
+});
+
+test("signing in or out in one tab loads the browser's other tabs afresh", async ({
+  page,
+  context,
+}) => {
+  // A second tab of the same browser is on the sign-in page too.
+  const other = await context.newPage();
+  await other.goto('/auth');
+  await expect(other.getByRole('heading', { name: 'Sign in to Adiutor' })).toBeVisible();
+
+  // Signing in in the first tab takes the other one on without a click, signed in.
+  await signIn(page, CLIENT_WATCHER);
+  await expect(other).toHaveURL(/\/(dashboard|companies\/)/);
+
+  // The other tab's Profile page, opened with a click, so Next would keep it alive with the name.
+  const otherName = other.getByRole('textbox', { name: 'Name', exact: true });
+  await openAccountSettings(other);
+  await expect(otherName).toHaveValue(CLIENT_WATCHER.name);
+
+  // Signing out in the first tab sends the other one to the sign-in page, which comes back there.
+  await signOut(page);
+  await expect(other).toHaveURL('/auth?callbackURL=%2Faccount');
+  await expect(other.getByRole('heading', { name: 'Sign in to Adiutor' })).toBeVisible();
+  await expect(otherName).toHaveCount(0);
 });
 
 test('the code step starts over after signing out, with "Trust this device" unticked', async ({

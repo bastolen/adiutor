@@ -145,7 +145,7 @@ describe('StepUpForm', () => {
     await user.click(screen.getByRole('button', { name: 'Sign out' }));
 
     expect(signOut).toHaveBeenCalled();
-    await waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/auth'));
+    await waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/auth', { everyTab: true }));
     expect(replace).not.toHaveBeenCalled();
   });
 

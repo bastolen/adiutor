@@ -76,7 +76,7 @@ describe('TwoFactorForm', () => {
     await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
 
     expect(verifyTotp).toHaveBeenCalledWith({ code: '123456', trustDevice: true });
-    await waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/companies/x'));
+    await waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/companies/x', { everyTab: true }));
     expect(sendOtp).not.toHaveBeenCalled();
   });
 
@@ -231,7 +231,7 @@ describe('TwoFactorForm', () => {
     await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
 
     // A full load keeps no page alive for the next person to sign in on this browser.
-    await waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/companies/x'));
+    await waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/companies/x', { everyTab: true }));
     expect(screen.getByRole('button', { name: 'Verify and sign in' })).toHaveAttribute(
       'aria-busy',
       'true',

@@ -237,7 +237,9 @@ describe('SignInForm', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }));
 
-      await vi.waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/admin/staff#invitations'));
+      await vi.waitFor(() =>
+        expect(loadFresh).toHaveBeenCalledWith('/admin/staff#invitations', { everyTab: true }),
+      );
     });
 
     it('keeps it through the code step, an email link and a provider', async () => {
@@ -293,7 +295,9 @@ describe('SignInForm', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }));
 
-      await vi.waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/admin/staff#invite'));
+      await vi.waitFor(() =>
+        expect(loadFresh).toHaveBeenCalledWith('/admin/staff#invite', { everyTab: true }),
+      );
     });
 
     it.each(['#:~:text=secret', '#100%', '#top'])(
@@ -306,7 +310,9 @@ describe('SignInForm', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }));
 
-        await vi.waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/admin/staff'));
+        await vi.waitFor(() =>
+          expect(loadFresh).toHaveBeenCalledWith('/admin/staff', { everyTab: true }),
+        );
       },
     );
   });
@@ -336,7 +342,10 @@ describe('SignInForm', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }));
 
-    await vi.waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/dashboard'));
+    // The browser's other tabs load their page afresh too, signed in.
+    await vi.waitFor(() =>
+      expect(loadFresh).toHaveBeenCalledWith('/dashboard', { everyTab: true }),
+    );
   });
 
   it('explains a cancelled passkey prompt', async () => {
@@ -361,7 +370,9 @@ describe('SignInForm', () => {
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'jane@adiutor.test' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret-password' } });
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
-    await vi.waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/dashboard'));
+    await vi.waitFor(() =>
+      expect(loadFresh).toHaveBeenCalledWith('/dashboard', { everyTab: true }),
+    );
 
     // Signed in, the page is left; signing out shows it again.
     fireEvent.click(screen.getByRole('button', { name: 'Leave' }));

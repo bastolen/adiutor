@@ -167,11 +167,13 @@ export default function SignInForm({ providers }: SignInFormProps) {
   /**
    * Loads the page the user came for afresh (`loadFresh`), busy until it
    * goes: a navigation within the app would bring back pages Next kept alive
-   * for whoever was signed in on this browser before.
+   * for whoever was signed in on this browser before. The browser's other
+   * tabs load their own page afresh too (`everyTab`): a sign-in page open
+   * there goes on, signed in.
    */
   const finish = () => {
     setPending(true);
-    loadFresh(destination());
+    loadFresh(destination(), { everyTab: true });
   };
 
   useEffect(() => {

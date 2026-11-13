@@ -302,11 +302,13 @@ export default function StepUpForm({
 
   /**
    * Ends the session and loads the sign-in page afresh (`loadFresh`), so no
-   * page Next kept alive is left for the next person on this browser.
+   * page Next kept alive is left for the next person on this browser, in
+   * this tab or the browser's others (`everyTab`), which go to the sign-in
+   * page too.
    */
   const signOut = async () => {
     await authClient.signOut();
-    loadFresh('/auth');
+    loadFresh('/auth', { everyTab: true });
   };
 
   const showCodeForm = mode === 'totp' || mode === 'backup' || (mode === 'otp' && codeSent);

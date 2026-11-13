@@ -89,7 +89,9 @@ keyboard support.
   React keeps a field's value even when a page comes back for someone else. So every change of who
   the browser acts as (signing in or out, starting or ending a sign-in as a user, also when it ends
   by itself) ends with a full page load (`loadFresh` in `src/components/ui/load-fresh.ts`), never `router.push` or
-  `router.replace`, as does a change of language. See
+  `router.replace`, as does a change of language. The browser's other tabs load their page afresh
+  too (`everyTab`, heard by `ReloadWhenActingAsChanges` in the root layout), except after an end
+  by itself, which each tab finds on its own. See
   [Signing out](authentication.md#signing-out).
 - **A refused submit keeps the input:** React 19 resets a `<form action>` after every submit,
   whatever the result. Forms pass both the action and the hook's `onSubmit`

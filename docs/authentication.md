@@ -27,7 +27,11 @@ Signing in with a password, a passkey or the code step loads that page afresh (`
 `src/components/ui/load-fresh.ts`), never as a navigation within the app: Next keeps the last few
 pages alive with what's in their fields, so a session that ended without signing out (it expired,
 or was signed out elsewhere) would otherwise leave the previous person's pages for the next one.
-Email links and providers come back with a full load anyway.
+Email links and providers come back with a full load anyway. The browser's other tabs load their
+own page afresh too (`loadFresh` with `everyTab`, see
+[Signing in as a user](#signing-in-as-a-user) for how), so a sign-in page open in another tab goes
+on, signed in. Sign-ins that come back through a redirect (email links, providers, creating an
+account from an invitation or invite link, setup) don't tell the other tabs yet.
 
 ## Email links
 
@@ -205,7 +209,10 @@ so the next person on that browser starts clean. The sign-in page it goes to loa
 (`loadFresh`), so none of the pages Next kept alive, with their fields, is left for them either; the
 same goes for every other change of who the browser acts as: signing in (see
 [Sign-in methods](#sign-in-methods)) and starting or ending a sign-in as a user (see
-[Signing in as a user](#signing-in-as-a-user)). The browser's trusted device is forgotten too
+[Signing in as a user](#signing-in-as-a-user)). Signing out from the account menu or the step-up
+page also makes the browser's other tabs load their page afresh (`everyTab`), which sends them to
+the sign-in page, so no tab keeps showing the pages of whoever signed out. Deactivating your own
+account signs out with a server redirect and doesn't tell the other tabs yet. The browser's trusted device is forgotten too
 (`forgetSignedOutBrowserTrust`), so a copy of its cookie no longer skips the code step. Signing a
 device out on the Security page ("Sign out" per device, "Sign out other devices") and changing
 the password forget every device the user trusted, this browser's included (a session doesn't

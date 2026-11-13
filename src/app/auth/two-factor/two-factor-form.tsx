@@ -131,10 +131,11 @@ export default function TwoFactorForm() {
   /**
    * Loads the page the user came for afresh (`loadFresh`), the button busy
    * until it goes. A full load leaves no page alive, this one included, for
-   * the next person to sign in on this browser.
+   * the next person to sign in on this browser. The browser's other tabs
+   * load their own page afresh too (`everyTab`), signed in.
    */
   const finish = () => {
-    loadFresh(callbackURL);
+    loadFresh(callbackURL, { everyTab: true });
   };
 
   /**

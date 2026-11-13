@@ -99,8 +99,9 @@ describe('AccountMenu', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Sign out' }));
 
     expect(signOut).toHaveBeenCalled();
-    // A full page load, so the next person on this browser finds none of these pages kept alive.
-    await vi.waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/auth'));
+    // A full page load, so the next person on this browser finds none of these pages kept alive,
+    // in this tab or the others, which go to the sign-in page too.
+    await vi.waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/auth', { everyTab: true }));
   });
 
   it("goes back to the staff member's own account instead, while signed in as the user", async () => {

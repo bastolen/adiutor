@@ -75,12 +75,14 @@ export default function AccountMenu({ name, email, signedInAs = false }: Account
   /**
    * Ends the session, then loads the sign-in page afresh (`loadFresh`): a
    * navigation within the app would keep this person's pages alive for the
-   * next one to sign in on this browser.
+   * next one to sign in on this browser. The browser's other tabs load
+   * their own page afresh too (`everyTab`), which takes them to the sign-in
+   * page, so none of them keeps showing this person's pages.
    */
   const signOut = async () => {
     const authClient = await loadAuthClient();
     await authClient.signOut();
-    loadFresh('/auth');
+    loadFresh('/auth', { everyTab: true });
   };
 
   return (
