@@ -49,17 +49,19 @@ export interface JobsOverview {
 export async function loadJobsOverview(ctx: ServiceContext, actor: Actor): Promise<JobsOverview> {
   assertPermission(getGlobalPermissions(actor), 'jobs:view');
   const [jobs, queued] = await Promise.all([listJobs(ctx), listQueuedKinds(ctx.db)]);
-  // Each job's last finished run, for the error it recorded.
-  const lastRuns = await ctx.db
-    .selectDistinctOn([jobRun.job], { job: jobRun.job, errorReference: jobRun.errorReference })
-    .from(jobRun)
-    .where(
-      inArray(
-        jobRun.job,
-        jobs.map((job) => job.name),
-      ),
-    )
-    .orderBy(jobRun.job, desc(jobRun.startedAt), desc(jobRun.id));
+  // The last run's error, only for jobs whose last run failed (usually none, so no query at all).
+  const failing = jobs.filter((job) => job.lastStatus === 'failed').map((job) => job.name);
+  const lastRuns =
+    failing.length === 0
+      ? []
+      : await ctx.db
+          .selectDistinctOn([jobRun.job], {
+            job: jobRun.job,
+            errorReference: jobRun.errorReference,
+          })
+          .from(jobRun)
+          .where(inArray(jobRun.job, failing))
+          .orderBy(jobRun.job, desc(jobRun.startedAt), desc(jobRun.id));
   const lastErrors = new Map(lastRuns.map((run) => [run.job, run.errorReference]));
   return {
     recurring: jobs.map((job) => ({

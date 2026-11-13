@@ -71,6 +71,13 @@
       "when": 1794480590282,
       "tag": "0009_job_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794564662615,
+      "tag": "0010_queue_indexes",
+      "breakpoints": true
     }
   ]
 }

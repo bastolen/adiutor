@@ -140,14 +140,15 @@ export const queuedJob = pgTable(
     lastErrorReference: text('last_error_reference'),
   },
   (table) => [
-    // What the tick looks for: waiting jobs, oldest due first.
+    // What the tick looks for: a kind's waiting jobs, oldest due first (the kinds take turns).
     index('queued_job_due_idx')
-      .on(table.runAt, table.id)
+      .on(table.kind, table.runAt, table.id)
       .where(sql`${table.status} = 'queued'`),
     index('queued_job_batch_key_idx')
       .on(table.batchKey)
       .where(sql`${table.status} = 'queued'`),
-    index('queued_job_kind_status_idx').on(table.kind, table.status),
+    // Counts and lists by status (the Jobs page, failed jobs, runs that died), then kind.
+    index('queued_job_status_kind_idx').on(table.status, table.kind),
     index('queued_job_finished_at_idx').on(table.finishedAt),
   ],
 );

@@ -3,7 +3,7 @@
  * job under a lease, noting how it ended, and trying a failed one again after
  * a growing wait. Jobs are added with `queueJob` (`src/server/queue`).
  */
-import { and, asc, eq, inArray, lt, lte, ne, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, lt, lte, ne, sql } from 'drizzle-orm';
 
 import type { DatabaseOrTransaction } from '@/db';
 import { type QueuedJobStatus, queuedJob } from '@/db/schema';
@@ -28,21 +28,28 @@ export function retryWaitMinutes(attempts: number): number {
 }
 
 /**
- * The condition for jobs a run may take now: waiting ones whose time has
- * come, and ones whose run died (their lease ran out).
+ * The condition for waiting jobs whose time has come.
  *
  * @returns The SQL condition.
  */
-function takeable() {
-  return or(
-    and(eq(queuedJob.status, 'queued'), lte(queuedJob.runAt, sql`now()`)),
-    and(eq(queuedJob.status, 'running'), lt(queuedJob.lockedUntil, sql`now()`)),
-  );
+function waiting() {
+  return and(eq(queuedJob.status, 'queued'), lte(queuedJob.runAt, sql`now()`));
+}
+
+/**
+ * The condition for jobs whose run died: still `running`, but their lease ran out.
+ *
+ * @returns The SQL condition.
+ */
+function died() {
+  return and(eq(queuedJob.status, 'running'), lt(queuedJob.lockedUntil, sql`now()`));
 }
 
 /**
  * Whether any job of the given kinds could run now. Jobs waiting for a later
  * attempt don't count, so a failing job never makes it look like work is left.
+ * Each check is a lookup in an index (`queued_job_due_idx`,
+ * `queued_job_status_kind_idx`).
  *
  * @param db - Database client.
  * @param kinds - The names of the kinds that may run.
@@ -55,42 +62,38 @@ export async function hasDueQueuedJobs(
   if (kinds.length === 0) {
     return false;
   }
-  const [due] = await db
-    .select({ id: queuedJob.id })
-    .from(queuedJob)
-    .where(and(inArray(queuedJob.kind, [...kinds]), takeable()))
-    .limit(1);
-  return due !== undefined;
+  const ofKinds = inArray(queuedJob.kind, [...kinds]);
+  const found = await Promise.all(
+    [waiting(), died()].map(async (condition) =>
+      db.select({ id: queuedJob.id }).from(queuedJob).where(and(ofKinds, condition)).limit(1),
+    ),
+  );
+  return found.some((rows) => rows.length > 0);
 }
 
 /**
- * Takes the oldest due job of one kind (or, without one, of any of the given
- * kinds), under a lease: a waiting job whose time has come, or one whose run
- * died (its lease ran out). A job with a batch key comes with every other
- * waiting, due job of that key among the given kinds, so they run together,
- * whatever their kind. Jobs another run is taking at the same
- * moment are skipped (`SKIP LOCKED`), so two ticks never take the same job;
- * at worst, two ticks split one key's jobs between them.
+ * Takes the oldest job of one kind that meets a condition, under a lease,
+ * with every other waiting, due job of its batch key among the given kinds.
+ * The jobs are updated by their IDs in one list (`UNION ALL`), so the update
+ * finds them by primary key instead of reading the whole table.
  *
  * @param db - Database client.
- * @param kinds - The names of the kinds that may run now.
- * @param first - The kind to take the job from, whose turn it is; any of `kinds` when `null`.
- * @returns The job and the rest of its batch, oldest first; empty when none is due.
+ * @param kinds - The names of the kinds that may run now, for the rest of a batch.
+ * @param first - The kind to take the job from.
+ * @param condition - Which of its jobs: waiting ones, or ones whose run died.
+ * @returns The jobs taken, as the update returned them.
  */
-export async function claimNextQueuedJobs(
+async function claimWhere(
   db: DatabaseOrTransaction,
   kinds: readonly string[],
-  first: string | null = null,
-): Promise<StoredQueuedJob[]> {
-  if (kinds.length === 0) {
-    return [];
-  }
-  const ofKinds = inArray(queuedJob.kind, [...kinds]);
+  first: string,
+  condition: ReturnType<typeof waiting>,
+) {
   const next = db.$with('next').as(
     db
       .select({ id: queuedJob.id, batchKey: queuedJob.batchKey })
       .from(queuedJob)
-      .where(and(first === null ? ofKinds : eq(queuedJob.kind, first), takeable()))
+      .where(and(eq(queuedJob.kind, first), condition))
       .orderBy(asc(queuedJob.runAt), asc(queuedJob.id))
       .limit(1)
       .for('update', { skipLocked: true }),
@@ -100,17 +103,10 @@ export async function claimNextQueuedJobs(
       .select({ id: queuedJob.id })
       .from(queuedJob)
       .innerJoin(next, eq(queuedJob.batchKey, next.batchKey))
-      .where(
-        and(
-          ofKinds,
-          ne(queuedJob.id, next.id),
-          eq(queuedJob.status, 'queued'),
-          lte(queuedJob.runAt, sql`now()`),
-        ),
-      )
+      .where(and(inArray(queuedJob.kind, [...kinds]), ne(queuedJob.id, next.id), waiting()))
       .for('update', { of: queuedJob, skipLocked: true }),
   );
-  const claimed = await db
+  return db
     .with(next, members)
     .update(queuedJob)
     .set({
@@ -119,9 +115,12 @@ export async function claimNextQueuedJobs(
       lockedUntil: sql`now() + make_interval(mins => ${JOB_LEASE_MINUTES})`,
     })
     .where(
-      or(
-        inArray(queuedJob.id, db.select({ id: next.id }).from(next)),
-        inArray(queuedJob.id, db.select({ id: members.id }).from(members)),
+      inArray(
+        queuedJob.id,
+        db
+          .select({ id: next.id })
+          .from(next)
+          .unionAll(db.select({ id: members.id }).from(members)),
       ),
     )
     .returning({
@@ -132,6 +131,29 @@ export async function claimNextQueuedJobs(
       runAt: queuedJob.runAt,
       queuedAt: queuedJob.createdAt,
     });
+}
+
+/**
+ * Takes the oldest due job of one kind, under a lease: a waiting job whose
+ * time has come (served by `queued_job_due_idx`), or, when none waits, one
+ * whose run died (its lease ran out). A job with a batch key comes with every
+ * other waiting, due job of that key among the given kinds, so they run
+ * together, whatever their kind. Jobs another run is taking at the same
+ * moment are skipped (`SKIP LOCKED`), so two ticks never take the same job;
+ * at worst, two ticks split one key's jobs between them.
+ *
+ * @param db - Database client.
+ * @param kinds - The names of the kinds that may run now.
+ * @param first - The kind to take the job from, whose turn it is.
+ * @returns The job and the rest of its batch, oldest first; empty when none is due.
+ */
+export async function claimNextQueuedJobs(
+  db: DatabaseOrTransaction,
+  kinds: readonly string[],
+  first: string,
+): Promise<StoredQueuedJob[]> {
+  const taken = await claimWhere(db, kinds, first, waiting());
+  const claimed = taken.length > 0 ? taken : await claimWhere(db, kinds, first, died());
   return claimed
     .sort((a, b) => a.runAt.getTime() - b.runAt.getTime() || a.id.localeCompare(b.id))
     .map(({ id, kind, payload, attempts, queuedAt }) => ({
