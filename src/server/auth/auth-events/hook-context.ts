@@ -1,7 +1,7 @@
 /**
  * @file What the reactions to Better Auth activity share: the endpoint context
  * they read, running a reaction without failing the request, and recording
- * an audit event or sending a security notice.
+ * an audit event or queuing a security notice.
  */
 import { db } from '@/db';
 import type { AuditAction } from '@/lib/audit-actions';

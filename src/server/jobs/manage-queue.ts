@@ -1,7 +1,7 @@
 /**
  * @file Looking after the queue: how many jobs of each kind wait or failed,
  * which ones failed, and trying failed jobs again or discarding them. For
- * `pnpm jobs:list`, `jobs:retry` and `jobs:discard`.
+ * `pnpm jobs:list`, `jobs:retry` and `jobs:discard`, and the Jobs page.
  */
 import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
 

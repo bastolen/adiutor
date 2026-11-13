@@ -1,10 +1,9 @@
 /**
  * @file Integration tests for running the queue, against the test database:
- * due jobs at the tick (oldest first,
+ * due jobs at the tick (the kinds taking turns, each kind's oldest first,
  * once each, even with two ticks at once), skipped jobs, failed jobs tried
  * again after growing waits and then given up, runs that died, paused
- * kinds, each kind's cap per tick, the deadline, and coupled jobs that run
- * together in batches.
+ * kinds, the deadline, and coupled jobs that run together in batches.
  */
 import { randomUUID } from 'node:crypto';
 

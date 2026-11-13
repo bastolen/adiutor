@@ -4,7 +4,7 @@
       "leftover-provider-tokens": "Clears the tokens a sign-in provider gave Adiutor when a sign-in with it didn’t finish.",
       "finished-sign-ins-as-users": "Ends the sign-ins as a user whose time is up, and records it in the audit log.",
       "expired-sign-in-data": "Deletes expired sign-in links, codes and sessions, and rate limits that are over.",
-      "invitation-reminders": "Reminds people of invitations they haven’t accepted, once, a few days before they expire.",
+      "invitation-reminders": "Reminds people of invitations they haven’t accepted, once, two days before they expire.",
       "retention": "Deletes audit events after a year, errors after 7 days, and the history of jobs after 30 days.",
       "security-notice": "Tells people about changes to the security of their account.",
       "added-to-company": "Tells people that staff added them to a company.",

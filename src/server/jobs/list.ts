@@ -1,7 +1,7 @@
 /**
  * @file The overview of every recurring job: its schedule, whether it's
  * paused or running, how its last run went and when it runs next. For
- * `pnpm jobs:list`.
+ * `pnpm jobs:list` and the Jobs page.
  */
 import type { JobRunStatus } from '@/db/schema';
 

@@ -3,8 +3,8 @@
     "descriptions": {
       "leftover-provider-tokens": "Wist de tokens die een inlogprovider aan Adiutor gaf als inloggen ermee niet is afgerond.",
       "finished-sign-ins-as-users": "Beëindigt inloggen als gebruiker wanneer de tijd om is, en legt dat vast in het auditlog.",
-      "expired-sign-in-data": "Verwijdert verlopen inloglinks, codes en sessies, en limieten die voorbij zijn.",
-      "invitation-reminders": "Herinnert mensen eenmalig aan uitnodigingen die ze nog niet hebben geaccepteerd, een paar dagen voordat ze verlopen.",
+      "expired-sign-in-data": "Verwijdert verlopen inloglinks, codes en sessies, en verlopen limieten op pogingen.",
+      "invitation-reminders": "Herinnert mensen eenmalig aan uitnodigingen die ze nog niet hebben geaccepteerd, twee dagen voordat ze verlopen.",
       "retention": "Verwijdert auditgebeurtenissen na een jaar, fouten na 7 dagen en de geschiedenis van taken na 30 dagen.",
       "security-notice": "Laat mensen weten wanneer er iets aan de beveiliging van hun account verandert.",
       "added-to-company": "Laat mensen weten dat medewerkers ze aan een bedrijf hebben toegevoegd.",

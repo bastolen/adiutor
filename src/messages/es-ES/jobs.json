@@ -3,8 +3,8 @@
     "descriptions": {
       "leftover-provider-tokens": "Borra los tokens que un proveedor de inicio de sesión dio a Adiutor cuando un inicio de sesión con él no terminó.",
       "finished-sign-ins-as-users": "Termina los inicios de sesión como usuario cuyo tiempo se ha acabado, y lo registra en el registro de auditoría.",
-      "expired-sign-in-data": "Elimina los enlaces, códigos y sesiones de inicio de sesión caducados, y los límites que ya han pasado.",
-      "invitation-reminders": "Recuerda una vez a las personas las invitaciones que aún no han aceptado, unos días antes de que caduquen.",
+      "expired-sign-in-data": "Elimina los enlaces, códigos y sesiones de inicio de sesión caducados, y los límites de intentos vencidos.",
+      "invitation-reminders": "Recuerda una vez a las personas las invitaciones que aún no han aceptado, dos días antes de que caduquen.",
       "retention": "Elimina los eventos de auditoría al cabo de un año, los errores a los 7 días y el historial de tareas a los 30 días.",
       "security-notice": "Avisa a las personas de los cambios en la seguridad de su cuenta.",
       "added-to-company": "Avisa a las personas de que el personal las ha añadido a una empresa.",

@@ -480,7 +480,7 @@
         "ranFailedWithReference": "{job} se ha ejecutado, pero ha fallado. Referencia del error: {reference}.",
         "pause": "Pausar",
         "pauseLabel": "Pausar {job}",
-        "paused": "{job} está pausada hasta que se reanude.",
+        "paused": "{job} está en pausa hasta que se reanude.",
         "resume": "Reanudar",
         "resumeLabel": "Reanudar {job}",
         "resumed": "{job} se ha reanudado.",

@@ -47,7 +47,7 @@
       "job_paused": "Achtergrondtaak gepauzeerd",
       "job_resumed": "Achtergrondtaak hervat",
       "queued_jobs_retried": "Mislukte taken in de wachtrij opnieuw geprobeerd",
-      "queued_jobs_discarded": "Mislukte taken uit de wachtrij verwijderd"
+      "queued_jobs_discarded": "Mislukte taken uit de wachtrij weggegooid"
     },
     "events": {
       "sessionsRevokedMfaRequired": "Uitgelogd uit sessies zonder MFA, die de rol nu vereist",

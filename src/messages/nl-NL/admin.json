@@ -430,15 +430,15 @@
         "caption": "Geplande taken",
         "job": "Taak",
         "lastRun": "Laatst uitgevoerd",
-        "nextRun": "Volgende keer",
+        "nextRun": "Volgende uitvoering",
         "neverRun": "Nog niet uitgevoerd",
         "atNextTick": "Bij de volgende tik",
-        "whilePaused": "Niet zolang hij gepauzeerd is",
+        "whilePaused": "Niet terwijl de taak gepauzeerd is",
         "failuresInARow": "{count, plural, one {De laatste uitvoering is mislukt} other {De laatste # uitvoeringen zijn mislukt}}"
       },
       "queued": {
         "title": "Taken in de wachtrij",
-        "description": "Werk dat Adiutor uitbesteedt, zoals e-mails die een paar minuten kunnen wachten. Elke taak draait bij de volgende tik en wordt opnieuw geprobeerd als hij mislukt.",
+        "description": "Werk dat Adiutor voor later klaarzet, zoals e-mails die een paar minuten kunnen wachten. Elke taak draait bij de volgende tik en wordt opnieuw geprobeerd als hij mislukt.",
         "caption": "Soorten taken in de wachtrij",
         "kind": "Soort",
         "waiting": "Wachtend",
@@ -487,22 +487,22 @@
         "retry": "Opnieuw proberen",
         "retryLabel": "De taak van {job} die {time} is opgegeven opnieuw proberen",
         "retried": "{count, plural, one {# taak staat weer in de wachtrij voor de volgende tik.} other {# taken staan weer in de wachtrij voor de volgende tik.}}",
-        "discard": "Verwijderen",
-        "discardLabel": "De taak van {job} die {time} is opgegeven verwijderen",
+        "discard": "Weggooien",
+        "discardLabel": "De taak van {job} die {time} is opgegeven weggooien",
         "discardConfirm": {
-          "title": "Deze taak verwijderen?",
-          "description": "Deze taak van {job} wordt niet meer uitgevoerd. Hij blijft 30 dagen als verwijderd in de geschiedenis staan.",
-          "confirm": "Taak verwijderen"
+          "title": "Deze taak weggooien?",
+          "description": "Deze taak van {job} wordt niet meer uitgevoerd. Hij blijft 30 dagen als weggegooid in de geschiedenis staan.",
+          "confirm": "Taak weggooien"
         },
-        "discarded": "{count, plural, one {# taak verwijderd.} other {# taken verwijderd.}}",
-        "retryAll": "Mislukte opnieuw proberen",
-        "retryAllLabel": "Mislukte opnieuw proberen voor {job}",
-        "discardAll": "Mislukte verwijderen",
-        "discardAllLabel": "Mislukte verwijderen voor {job}",
+        "discarded": "{count, plural, one {# taak weggegooid.} other {# taken weggegooid.}}",
+        "retryAll": "Alles opnieuw proberen",
+        "retryAllLabel": "Alles opnieuw proberen: mislukte taken van {job}",
+        "discardAll": "Alles weggooien",
+        "discardAllLabel": "Alles weggooien: mislukte taken van {job}",
         "discardAllConfirm": {
-          "title": "Elke mislukte taak van {job} verwijderen?",
-          "description": "{count, plural, one {# taak wordt niet meer uitgevoerd.} other {# taken worden niet meer uitgevoerd.}} Ze blijven 30 dagen als verwijderd in de geschiedenis staan.",
-          "confirm": "Taken verwijderen"
+          "title": "Elke mislukte taak van {job} weggooien?",
+          "description": "{count, plural, one {# taak wordt niet meer uitgevoerd.} other {# taken worden niet meer uitgevoerd.}} Ze blijven 30 dagen als weggegooid in de geschiedenis staan.",
+          "confirm": "Taken weggooien"
         }
       }
     },
