@@ -4,7 +4,20 @@
       "title": "Request {reference}",
       "deactivated": "This company is deactivated, so its requests can only be read.",
       "conversation": "Conversation",
-      "showEarlier": "Show earlier activity ({count, number} more)"
+      "showEarlier": "Show earlier activity ({count, number} more)",
+      "description": "Description",
+      "details": "Details",
+      "noReplies": "No replies yet.",
+      "status": "Status",
+      "type": "Type",
+      "priority": "Priority",
+      "company": "Company",
+      "raisedBy": "Raised by",
+      "raised": "Raised",
+      "firstResponse": "First response",
+      "firstResponseAfter": "{duration} after it was raised",
+      "noResponse": "Not yet",
+      "lastActivity": "Last activity"
     },
     "status": "{status, select, open {Open} todo {To do} in_progress {In progress} waiting {{audience, select, contributor {Waiting for your reply} follower {Waiting for your company} other {Waiting for the company}}} done {Done} cancelled {Cancelled} other {Unknown}}",
     "reopened": "Reopened",
@@ -19,6 +32,34 @@
     },
     "text": {
       "newTab": "(opens in a new tab)"
+    },
+    "reply": {
+      "label": "Your reply",
+      "send": "Send reply",
+      "sendAndWait": "Send and wait for the company",
+      "sent": "Reply sent."
+    },
+    "controls": {
+      "status": "Status",
+      "saving": "Saving…",
+      "markDone": "Mark as done",
+      "cancel": "Cancel request",
+      "cancelTitle": "Cancel this request?",
+      "cancelDescription": "Cancel it when it’s no longer needed. It can be reopened later.",
+      "keep": "Keep request",
+      "reopen": "Reopen",
+      "editDetails": "Edit details",
+      "editTitle": "Edit this request’s details",
+      "editDescription": "Each change shows in the request’s history. The company doesn’t see the priority.",
+      "titleLabel": "Title",
+      "typeLabel": "Type",
+      "priorityLabel": "Priority",
+      "priorityHint": "A new type sets its own priority until you choose one.",
+      "saveDetails": "Save details"
+    },
+    "saved": {
+      "status": "{change, select, reopened {Request reopened.} done {Request marked as done.} cancelled {Request cancelled.} other {Status saved.}}",
+      "details": "{changed, plural, =0 {Nothing changed.} other {Details saved.}}"
     }
   }
 }

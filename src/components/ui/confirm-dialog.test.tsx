@@ -2,7 +2,7 @@
  * @file Tests for the confirmation dialog, opened from its trigger or by the
  * caller.
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -73,6 +73,32 @@ describe('ConfirmDialog', () => {
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('names its closing button differently when "Cancel" would say nothing', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn();
+    render(
+      <ConfirmDialog
+        trigger={<Button>Cancel request</Button>}
+        title="Cancel this request?"
+        description="It can be reopened later."
+        confirmLabel="Cancel request"
+        cancelLabel="Keep request"
+        onConfirm={onConfirm}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Cancel request' }));
+    const dialog = screen.getByRole('alertdialog');
+    const keep = within(dialog).getByRole('button', { name: 'Keep request' });
+    // Still the safe choice, where focus starts.
+    expect(keep).toHaveFocus();
+    expect(within(dialog).queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+
+    await user.click(keep);
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(onConfirm).not.toHaveBeenCalled();
   });
 
   describe('opened by the caller, without a trigger', () => {

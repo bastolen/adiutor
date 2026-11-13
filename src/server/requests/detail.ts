@@ -2,7 +2,7 @@
  * @file One request as its readers see it: its details, the company it's in,
  * what the reader may do with it, and its conversation.
  */
-import { and, count, desc, eq, ne } from 'drizzle-orm';
+import { and, count, desc, eq, min, ne } from 'drizzle-orm';
 
 import { requestEntry, user } from '@/db/schema';
 import type { Permission } from '@/lib/authz/permissions';
@@ -79,6 +79,10 @@ export interface RequestDetail {
   raisedBy: RequestPerson;
   /** When it was raised. */
   createdAt: Date;
+  /** When the staff first replied to it, or `null` while they haven't. */
+  firstResponseAt: Date | null;
+  /** When it was raised, replied to or changed last (a change of priority doesn't count). */
+  lastActivityAt: Date;
   /** Its company. A deactivated company's requests can only be read. */
   company: { id: string; name: string; slug: string; deactivated: boolean };
   /** What the reader may do in that company. */
@@ -145,7 +149,7 @@ export async function getRequest(
     internal ? undefined : ne(requestEntry.kind, 'priority'),
   );
 
-  const [raisedBy, staffName, prefix, total, latest] = await Promise.all([
+  const [raisedBy, staffName, prefix, firstResponse, total, latest] = await Promise.all([
     found.createdBy
       ? ctx.db
           .select({ id: user.id, name: user.name })
@@ -154,6 +158,16 @@ export async function getRequest(
       : [],
     getStaffName(ctx.db),
     getRequestPrefix(ctx.db),
+    ctx.db
+      .select({ at: min(requestEntry.createdAt) })
+      .from(requestEntry)
+      .where(
+        and(
+          eq(requestEntry.requestId, found.id),
+          eq(requestEntry.kind, 'comment'),
+          eq(requestEntry.authorSide, 'staff'),
+        ),
+      ),
     ctx.db.select({ total: count() }).from(requestEntry).where(shown),
     ctx.db
       .select({
@@ -191,6 +205,8 @@ export async function getRequest(
     priority: internal ? found.priority : null,
     raisedBy: requestPerson(raisedBy[0] ?? { id: null, name: null }, found.createdBySide, actor),
     createdAt: found.createdAt,
+    firstResponseAt: firstResponse[0]?.at ?? null,
+    lastActivityAt: found.lastActivityAt,
     company: {
       id: company.id,
       name: company.name,

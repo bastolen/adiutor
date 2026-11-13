@@ -72,15 +72,28 @@ export function TypeBadge({ type }: { type: RequestType }) {
 }
 
 /**
- * A request's priority, which only the staff see.
+ * A request's priority, which only the staff see. On its own it says what it
+ * is ("High priority"); next to a label that says so already, `short` leaves
+ * that out ("High").
  *
  * @param props - Component props.
  * @param props.priority - The priority.
+ * @param props.short - Leave "priority" out of the label.
  * @returns The badge.
  */
-export function PriorityBadge({ priority }: { priority: RequestPriority }) {
+export function PriorityBadge({
+  priority,
+  short = false,
+}: {
+  priority: RequestPriority;
+  short?: boolean;
+}) {
   const t = useTranslations('requests');
-  return <Badge tone={PRIORITY_TONES[priority]}>{t('priorityBadge', { priority })}</Badge>;
+  return (
+    <Badge tone={PRIORITY_TONES[priority]}>
+      {short ? t('priority', { priority }) : t('priorityBadge', { priority })}
+    </Badge>
+  );
 }
 
 /**

@@ -63,10 +63,10 @@ describe('changeRequestStatus: the staff', () => {
     );
 
     expect(results).toEqual([
-      { changed: true, status: 'todo' },
-      { changed: true, status: 'in_progress' },
-      { changed: true, status: 'waiting' },
-      { changed: true, status: 'done' },
+      { changed: true, reopened: false, status: 'todo' },
+      { changed: true, reopened: false, status: 'in_progress' },
+      { changed: true, reopened: false, status: 'waiting' },
+      { changed: true, reopened: false, status: 'done' },
     ]);
     expect(await changes(raised.id)).toEqual([
       ['status', 'open', 'todo', 'staff'],
@@ -99,7 +99,9 @@ describe('changeRequestStatus: the staff', () => {
     const support = await staffActor(db, 'support');
     const raised = await storeRequest(company.id, { status: 'done' });
 
-    await changeRequestStatus(ctx, support, { request: raised.id, status: 'in_progress' });
+    expect(
+      await changeRequestStatus(ctx, support, { request: raised.id, status: 'in_progress' }),
+    ).toEqual({ changed: true, reopened: true, status: 'in_progress' });
     const reopened = await stored(raised.id);
     expect(reopened?.reopenedAt?.getTime()).toBeGreaterThan(minutesAgo(1).getTime());
 
@@ -134,7 +136,7 @@ describe('changeRequestStatus: the company', () => {
 
     const result = await changeRequestStatus(ctx, client, { request: raised.id, status: to });
 
-    expect(result).toEqual({ changed: true, status: to });
+    expect(result).toEqual({ changed: true, reopened: false, status: to });
     expect(await changes(raised.id)).toEqual([['status', from, to, 'company']]);
   });
 
@@ -147,7 +149,7 @@ describe('changeRequestStatus: the company', () => {
 
       const result = await changeRequestStatus(ctx, admin, { request: raised.id, status: 'open' });
 
-      expect(result).toEqual({ changed: true, status: 'open' });
+      expect(result).toEqual({ changed: true, reopened: true, status: 'open' });
       expect(await changes(raised.id)).toEqual([['status', from, 'open', 'company']]);
       const after = await stored(raised.id);
       expect(after?.status).toBe('open');
@@ -195,11 +197,13 @@ describe('changeRequestStatus: refusals and no-ops', () => {
     // Both sides mark it done after it already was: neither is refused.
     expect(await changeRequestStatus(ctx, client, { request: raised.id, status: 'done' })).toEqual({
       changed: false,
+      reopened: false,
       status: 'done',
     });
     expect(await changeRequestStatus(ctx, support, { request: raised.id, status: 'done' })).toEqual(
       {
         changed: false,
+        reopened: false,
         status: 'done',
       },
     );

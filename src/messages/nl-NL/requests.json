@@ -4,7 +4,20 @@
       "title": "Verzoek {reference}",
       "deactivated": "Dit bedrijf is gedeactiveerd, dus de verzoeken kunnen alleen worden gelezen.",
       "conversation": "Gesprek",
-      "showEarlier": "Eerdere activiteit tonen (nog {count, number})"
+      "showEarlier": "Eerdere activiteit tonen (nog {count, number})",
+      "description": "Beschrijving",
+      "details": "Gegevens",
+      "noReplies": "Nog geen reacties.",
+      "status": "Status",
+      "type": "Type",
+      "priority": "Prioriteit",
+      "company": "Bedrijf",
+      "raisedBy": "Ingediend door",
+      "raised": "Ingediend",
+      "firstResponse": "Eerste reactie",
+      "firstResponseAfter": "{duration} na het indienen",
+      "noResponse": "Nog niet",
+      "lastActivity": "Laatste activiteit"
     },
     "status": "{status, select, open {Open} todo {Te doen} in_progress {In behandeling} waiting {{audience, select, contributor {Wacht op jouw reactie} follower {Wacht op je bedrijf} other {Wacht op het bedrijf}}} done {Afgerond} cancelled {Geannuleerd} other {Onbekend}}",
     "reopened": "Heropend",
@@ -19,6 +32,34 @@
     },
     "text": {
       "newTab": "(opent in een nieuw tabblad)"
+    },
+    "reply": {
+      "label": "Je reactie",
+      "send": "Reactie versturen",
+      "sendAndWait": "Versturen en op het bedrijf wachten",
+      "sent": "Reactie verstuurd."
+    },
+    "controls": {
+      "status": "Status",
+      "saving": "Opslaan…",
+      "markDone": "Markeren als afgerond",
+      "cancel": "Verzoek annuleren",
+      "cancelTitle": "Dit verzoek annuleren?",
+      "cancelDescription": "Annuleer het als het niet meer nodig is. Het kan later worden heropend.",
+      "keep": "Verzoek behouden",
+      "reopen": "Heropenen",
+      "editDetails": "Gegevens bewerken",
+      "editTitle": "De gegevens van dit verzoek bewerken",
+      "editDescription": "Elke wijziging staat in de geschiedenis van het verzoek. Het bedrijf ziet de prioriteit niet.",
+      "titleLabel": "Titel",
+      "typeLabel": "Type",
+      "priorityLabel": "Prioriteit",
+      "priorityHint": "Een nieuw type bepaalt zelf de prioriteit totdat je er een kiest.",
+      "saveDetails": "Gegevens opslaan"
+    },
+    "saved": {
+      "status": "{change, select, reopened {Verzoek heropend.} done {Verzoek gemarkeerd als afgerond.} cancelled {Verzoek geannuleerd.} other {Status opgeslagen.}}",
+      "details": "{changed, plural, =0 {Er is niets gewijzigd.} other {Gegevens opgeslagen.}}"
     }
   }
 }

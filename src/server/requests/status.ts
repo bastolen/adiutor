@@ -5,7 +5,13 @@
 import { eq } from 'drizzle-orm';
 
 import { request, requestEntry } from '@/db/schema';
-import { maySetStatus, mayChangeStatus, requestSide, type RequestStatus } from '@/lib/requests';
+import {
+  isReopening,
+  mayChangeStatus,
+  maySetStatus,
+  requestSide,
+  type RequestStatus,
+} from '@/lib/requests';
 import { requestStatusSchema } from '@/lib/validation';
 
 import type { Actor } from '../actor';
@@ -29,7 +35,7 @@ import { changeRequest, requestToChange, statusChange, workingPermission } from 
  * @param input - Form input.
  * @param input.request - The request's number or ID.
  * @param input.status - The new status (`REQUEST_STATUSES`).
- * @returns Whether anything changed, and the request's status.
+ * @returns Whether anything changed, whether that reopened the request, and its status.
  * @throws {ServiceError} `signed_in_as` while a staff member is signed in as the actor,
  *   `not_found` when the actor may not see the request, `forbidden` without
  *   `requests:contribute` or when the status isn't theirs to set, `invalid` when the company is
@@ -42,7 +48,7 @@ export default async function changeRequestStatus(
   ctx: ServiceContext,
   actor: Actor,
   input: { request: string; status: string },
-): Promise<{ changed: boolean; status: RequestStatus }> {
+): Promise<{ changed: boolean; reopened: boolean; status: RequestStatus }> {
   const access = await requestToChange(ctx, actor, input.request, 'requests:contribute');
   const { permissions } = access;
   const status = requestStatusSchema.parse(input.status);
@@ -53,7 +59,7 @@ export default async function changeRequestStatus(
 
   return changeRequest(ctx, actor, access, workingPermission(permissions), async (tx, locked) => {
     if (locked.status === status) {
-      return { changed: false, status };
+      return { changed: false, reopened: false, status };
     }
     if (!mayChangeStatus(permissions, locked.status, status)) {
       throw new ServiceError('conflict', 'errors.requests.statusChanged');
@@ -70,6 +76,6 @@ export default async function changeRequestStatus(
       .update(request)
       .set(statusChange(locked.status, status))
       .where(eq(request.id, locked.id));
-    return { changed: true, status };
+    return { changed: true, reopened: isReopening(locked.status, status), status };
   });
 }

@@ -54,6 +54,8 @@ function detailOf(detail: Partial<RequestDetail> = {}): RequestDetail {
     priority: null,
     raisedBy: CASEY,
     createdAt: new Date('2026-11-10T09:00:00Z'),
+    firstResponseAt: null,
+    lastActivityAt: new Date('2026-11-10T09:00:00Z'),
     company: {
       id: 'company',
       name: 'Adiutor Tests Alpha',
@@ -80,14 +82,13 @@ const entryTexts = () =>
     .map((item) => item.textContent);
 
 describe('Thread', () => {
-  it('starts with what was asked, by whoever raised it', () => {
+  it('says so when nobody has replied yet', () => {
     render(<Thread detail={detailOf()} earlierHref={null} />);
 
-    const [first] = within(screen.getByRole('list')).getAllByRole('listitem');
-    expect(first).toHaveTextContent('Casey Client');
-    expect(first).toHaveTextContent('You');
-    expect(first).toHaveTextContent('Our opening hours change next month.');
-    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.getByText('No replies yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+    // What was asked is the page's Description, not part of the conversation.
+    expect(screen.queryByText('Our opening hours change next month.')).not.toBeInTheDocument();
   });
 
   it('shows the replies in order, each with who wrote it', () => {
@@ -104,13 +105,15 @@ describe('Thread', () => {
     );
 
     const items = within(screen.getByRole('list')).getAllByRole('listitem');
-    expect(items).toHaveLength(3);
-    expect(items[1]).toHaveTextContent('Sam Support');
+    expect(items).toHaveLength(2);
+    expect(items[0]).toHaveTextContent('Sam Support');
     // The staff carry the name users know them by.
-    expect(items[1]).toHaveTextContent('Adiutor Tests');
-    expect(items[1]).toHaveTextContent('Which days change?');
-    expect(items[2]).toHaveTextContent('Casey Client');
-    expect(items[2]).toHaveTextContent('Monday to Friday.');
+    expect(items[0]).toHaveTextContent('Adiutor Tests');
+    expect(items[0]).toHaveTextContent('Which days change?');
+    expect(items[1]).toHaveTextContent('Casey Client');
+    expect(items[1]).toHaveTextContent('You');
+    expect(items[1]).toHaveTextContent('Monday to Friday.');
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 
   it.each<[string, Partial<RequestEntryView>, string]>([
@@ -155,7 +158,7 @@ describe('Thread', () => {
   ])('says what %s did, after who did it', (_what, change, sentence) => {
     render(<Thread detail={detailOf({ entries: [entryOf('1', change)] })} earlierHref={null} />);
 
-    const [, changed] = within(screen.getByRole('list')).getAllByRole('listitem');
+    const [changed] = within(screen.getByRole('list')).getAllByRole('listitem');
     expect(changed).toHaveTextContent('Sam Support');
     expect(changed).toHaveTextContent(sentence);
   });
@@ -164,9 +167,12 @@ describe('Thread', () => {
     render(
       <Thread
         detail={detailOf({
-          raisedBy: { name: null, side: 'company', isViewer: false },
           entries: [
             entryOf('1', {
+              author: { name: null, side: 'company', isViewer: false },
+              body: { text: 'Any news?', format: 'plain' },
+            }),
+            entryOf('2', {
               author: { name: null, side: 'staff', isViewer: false },
               body: { text: 'On it.', format: 'plain' },
             }),
@@ -178,9 +184,10 @@ describe('Thread', () => {
 
     expect(entryTexts()[0]).toContain('Adiutor Tests Alpha');
     expect(entryTexts()[1]).toContain('Adiutor Tests');
+    expect(entryTexts()[1]).not.toContain('Adiutor Tests Alpha');
   });
 
-  it('offers the earlier entries after what was asked, when there are more', () => {
+  it('offers the earlier entries first, when there are more', () => {
     render(
       <Thread
         detail={detailOf({
@@ -192,11 +199,12 @@ describe('Thread', () => {
     );
 
     const items = within(screen.getByRole('list')).getAllByRole('listitem');
-    expect(items).toHaveLength(3);
-    const link = within(items[1] as HTMLElement).getByRole('link', {
+    expect(items).toHaveLength(2);
+    const link = within(items[0] as HTMLElement).getByRole('link', {
       name: 'Show earlier activity (55 more)',
     });
     expect(link).toHaveAttribute('href', '/requests/142?earlier=1');
+    expect(items[1]).toHaveTextContent('Reply 56');
   });
 
   it.each([

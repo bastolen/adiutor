@@ -34,8 +34,12 @@ interface RowActionProps {
   ariaLabel?: string;
   /** Button style. Defaults to `secondary`. */
   variant?: ButtonProps['variant'];
-  /** Ask for confirmation first: the dialog's question and explanation. */
-  confirm?: { title: string; description: string; confirmLabel?: string };
+  /**
+   * Ask for confirmation first: the dialog's question and explanation, and
+   * optionally its buttons' texts (the confirming one defaults to the label,
+   * the other to "Cancel").
+   */
+  confirm?: { title: string; description: string; confirmLabel?: string; cancelLabel?: string };
   /**
    * Disables the button, e.g. when there's nothing left to act on. The form
    * stays, so the last result's message stays visible.
@@ -174,6 +178,7 @@ export default function RowAction({
           title={confirm.title}
           description={confirm.description}
           confirmLabel={confirm.confirmLabel ?? label}
+          cancelLabel={confirm.cancelLabel}
           tone={variant === 'danger' || variant === 'danger-subtle' ? 'danger' : 'primary'}
           onConfirm={() => formRef.current?.requestSubmit()}
         />

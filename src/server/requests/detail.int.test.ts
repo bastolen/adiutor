@@ -14,6 +14,7 @@ import {
   createStaffSettings,
   inSequence,
   memberActor,
+  minutesAgo,
   staffActor,
 } from '../../../tests/integration/helpers';
 import { findRequest, getRequest, THREAD_CHUNK } from './detail';
@@ -260,6 +261,43 @@ describe('getRequest: the conversation', () => {
     expect(await shown(-3)).toEqual(['Reply 56', 'Reply 105', THREAD_CHUNK, 55]);
     expect(await shown(Number.NaN)).toEqual(['Reply 56', 'Reply 105', THREAD_CHUNK, 55]);
     expect(await shown(1.5)).toEqual(['Reply 56', 'Reply 105', THREAD_CHUNK, 55]);
+  });
+});
+
+describe('getRequest: when things happened', () => {
+  it('says when the staff first replied, and when the request last had activity', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client');
+    const [raisedAt, firstAt, laterAt] = [minutesAgo(600), minutesAgo(480), minutesAgo(60)];
+    const stored = await storeRequest(company.id, { createdAt: raisedAt, lastActivityAt: laterAt });
+    // A reply from the company and a change by the staff are no response from the staff.
+    await storeEntry(stored.id, { body: 'Any news?', createdAt: minutesAgo(540) });
+    await storeEntry(stored.id, {
+      kind: 'status',
+      authorSide: 'staff',
+      fromValue: 'open',
+      toValue: 'todo',
+      createdAt: minutesAgo(500),
+    });
+    await storeEntry(stored.id, { authorSide: 'staff', body: 'On it.', createdAt: firstAt });
+    await storeEntry(stored.id, { authorSide: 'staff', body: 'Fixed.', createdAt: laterAt });
+
+    const detail = await getRequest(ctx, client, '1');
+
+    expect(detail.createdAt).toEqual(raisedAt);
+    expect(detail.firstResponseAt).toEqual(firstAt);
+    expect(detail.lastActivityAt).toEqual(laterAt);
+  });
+
+  it('has no first response while the staff have not replied', async () => {
+    const company = await createCompany(db);
+    const stored = await storeRequest(company.id);
+    await storeEntry(stored.id, { body: 'Any news?' });
+
+    const detail = await getRequest(ctx, await staffActor(db, 'support'), '1');
+
+    expect(detail.firstResponseAt).toBeNull();
+    expect(detail.lastActivityAt).toEqual(stored.lastActivityAt);
   });
 });
 

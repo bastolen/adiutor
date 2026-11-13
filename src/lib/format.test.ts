@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import formatDate, { formatDateTime, formatRelative, formatTime } from './format';
+import formatDate, { formatDateTime, formatDuration, formatRelative, formatTime } from './format';
 
 const NOW = new Date('2026-10-23T12:00:00Z');
 
@@ -67,5 +67,33 @@ describe('formatRelative', () => {
 
   it('treats future times as now', () => {
     expect(formatRelative(ago(-30), 'en-US', { justNow: 'just now', now: NOW })).toBe('just now');
+  });
+});
+
+describe('formatDuration', () => {
+  /** A minute in milliseconds. */
+  const MINUTE = 60_000;
+
+  it.each([
+    [0, '1 minute'],
+    [20_000, '1 minute'],
+    [45 * MINUTE, '45 minutes'],
+    [59 * MINUTE, '59 minutes'],
+    [60 * MINUTE, '1 hour'],
+    [150 * MINUTE, '3 hours'],
+    [47 * 60 * MINUTE, '47 hours'],
+    [48 * 60 * MINUTE, '2 days'],
+    [10 * 24 * 60 * MINUTE, '10 days'],
+  ])('says %i milliseconds as %s', (milliseconds, expected) => {
+    expect(formatDuration(milliseconds, 'en-US')).toBe(expected);
+  });
+
+  it.each([
+    ['nl-NL', '45 minuten', '2 uur', '3 dagen'],
+    ['es-ES', '45 minutos', '2 horas', '3 días'],
+  ] as const)('speaks %s', (locale, minutes, hours, days) => {
+    expect(formatDuration(45 * MINUTE, locale)).toBe(minutes);
+    expect(formatDuration(120 * MINUTE, locale)).toBe(hours);
+    expect(formatDuration(3 * 24 * 60 * MINUTE, locale)).toBe(days);
   });
 });

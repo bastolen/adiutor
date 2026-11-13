@@ -6,8 +6,9 @@
  * a browser's session still exists, reading a stored sign-in error, adding
  * someone to a company directly, storing an invitation or an invite link
  * without sending anything, making a staff member's sign-in as a user end in a
- * few seconds, and the background jobs' state (resuming a job, discarding or
- * storing failed queued jobs, making the last tick late).
+ * few seconds, the background jobs' state (resuming a job, discarding or
+ * storing failed queued jobs, making the last tick late), and storing a
+ * request for a test to change.
  * Each opens its own short connection to the test database (`withTestDatabase`).
  * Resetting and seeding the database is `seed.ts`.
  */
@@ -20,6 +21,7 @@ import type { CompanyRole } from '../../src/lib/authz/roles';
 import { firstRow } from '../../src/lib/defined';
 import type { Locale } from '../../src/lib/i18n/locales';
 import { INVITATION_VALID_DAYS } from '../../src/lib/invitation-lifetimes';
+import type { RequestPriority, RequestStatus, RequestType } from '../../src/lib/requests';
 import { EMAIL_LINK_MINUTES, EMAIL_LINK_PATH } from '../../src/lib/sign-in/email-link';
 import {
   emailLinkVerificationIdentifier,
@@ -27,6 +29,7 @@ import {
   hashToken,
 } from '../../src/lib/sign-in/tokens';
 import getTestDatabaseUrl from '../../tests/database/database-url';
+import storeRequests from '../../tests/database/store-requests';
 
 /** How long the invite links stored here stay valid (any of the lifetimes a link can have). */
 const INVITE_LINK_LIFETIME_MS = 7 * 24 * 60 * 60_000;
@@ -445,5 +448,75 @@ export async function findSignInError(
       .from(schema.signInError)
       .where(eq(schema.signInError.reference, reference));
     return found ?? null;
+  });
+}
+
+/**
+ * Stores a request raised by someone at a company, without going through the
+ * app: a request of the test's own, since no test changes the seeded ones.
+ * It gets the next number, so requests raised afterwards continue from it.
+ *
+ * @param request - The request.
+ * @param request.companySlug - The URL name of the company it's in.
+ * @param request.raisedBy - The email address of the member who raised it.
+ * @param request.title - Its title.
+ * @param request.description - What's asked; a short text when left out.
+ * @param request.type - Its type; a bug when left out.
+ * @param request.priority - Its priority; normal when left out.
+ * @param request.status - Its status; open when left out.
+ * @returns The request's number.
+ */
+export async function storeRequest({
+  companySlug,
+  raisedBy,
+  title,
+  description = 'A request stored for a test.',
+  type = 'bug',
+  priority = 'normal',
+  status = 'open',
+}: {
+  companySlug: string;
+  raisedBy: string;
+  title: string;
+  description?: string;
+  type?: RequestType;
+  priority?: RequestPriority;
+  status?: RequestStatus;
+}): Promise<number> {
+  return withTestDatabase(async (db) => {
+    const company = firstRow(
+      await db
+        .select({ id: schema.company.id })
+        .from(schema.company)
+        .where(eq(schema.company.slug, companySlug)),
+      'the company',
+    );
+    const author = firstRow(
+      await db
+        .select({ id: schema.user.id })
+        .from(schema.user)
+        .where(eq(schema.user.email, raisedBy)),
+      'the member who raised it',
+    );
+    const [counter] = await db
+      .select({ last: schema.requestCounter.lastNumber })
+      .from(schema.requestCounter);
+    const numbers = await storeRequests(
+      db,
+      [
+        {
+          companyId: company.id,
+          title,
+          description,
+          type,
+          priority,
+          status,
+          raisedBy: { id: author.id, side: 'company' },
+          at: new Date(),
+        },
+      ],
+      (counter?.last ?? 0) + 1,
+    );
+    return firstRow(numbers, 'the new request number');
   });
 }

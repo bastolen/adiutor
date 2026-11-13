@@ -39,6 +39,12 @@ interface ConfirmDialogProps {
   description: string;
   /** Text of the confirming button, e.g. "Remove". */
   confirmLabel: string;
+  /**
+   * Text of the button that closes the dialog without confirming. "Cancel"
+   * unless the question is itself about cancelling something, where "Cancel"
+   * next to "Cancel request" would say nothing ("Keep request").
+   */
+  cancelLabel?: string;
   /** Called when the user confirms. */
   onConfirm: () => void;
   /** `danger` styles the confirm button as destructive. Defaults to `danger`. */
@@ -47,7 +53,7 @@ interface ConfirmDialogProps {
 
 /**
  * A modal dialog that asks for confirmation. Following the WAI-ARIA alert
- * dialog pattern: focus moves into it (to "Cancel", the safe choice), stays
+ * dialog pattern: focus moves into it (to "Cancel", the safe choice, or `cancelLabel`), stays
  * inside while it's open, Escape cancels, and focus returns to the trigger
  * when it closes. Without a trigger, the caller controls it with `open` and
  * `onOpenChange`, and returns focus itself (`onCloseAutoFocus`).
@@ -60,6 +66,7 @@ interface ConfirmDialogProps {
  * @param props.title - The question.
  * @param props.description - What will happen.
  * @param props.confirmLabel - Confirm button text.
+ * @param props.cancelLabel - Text of the button that closes it without confirming.
  * @param props.onConfirm - Called on confirm.
  * @param props.tone - Confirm button style.
  * @returns The dialog with its trigger.
@@ -72,6 +79,7 @@ export default function ConfirmDialog({
   title,
   description,
   confirmLabel,
+  cancelLabel = undefined,
   onConfirm,
   tone = 'danger',
 }: ConfirmDialogProps) {
@@ -102,7 +110,7 @@ export default function ConfirmDialog({
           </div>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <AlertDialog.Cancel asChild>
-              <Button variant="secondary">{t('cancel')}</Button>
+              <Button variant="secondary">{cancelLabel ?? t('cancel')}</Button>
             </AlertDialog.Cancel>
             <AlertDialog.Action asChild>
               <Button variant={tone} onClick={onConfirm}>

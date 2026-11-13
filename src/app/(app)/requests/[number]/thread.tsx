@@ -1,8 +1,8 @@
 /**
- * @file A request's conversation: what was asked, then every reply and every
- * change of its status, title, type or priority, oldest first. Each entry
- * names who wrote or changed it and when. Its text comes from the `requests`
- * namespace.
+ * @file A request's conversation: every reply and every change of its
+ * status, title, type or priority, oldest first. Each entry names who wrote
+ * or changed it and when. What was asked is the page's Description, above
+ * it. Its text comes from the `requests` namespace.
  */
 import { CircleDot, Flag, type LucideIcon, Pencil, Tag } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -120,14 +120,14 @@ function ChangeText({ entry, audience }: { entry: RequestEntryView; audience: Re
 }
 
 /**
- * The conversation of a request. What was asked comes first, by whoever
- * raised it; when the request has more entries than are loaded, a link to
- * show earlier ones follows, and then the entries, oldest first.
+ * The conversation of a request: its entries, oldest first. When the request
+ * has more entries than are loaded, a link to show earlier ones comes first.
+ * Without any entry yet, it says so.
  *
  * @param props - Component props.
  * @param props.detail - The request, as its reader gets it.
  * @param props.earlierHref - The page with earlier entries, or `null` when all are shown.
- * @returns The list of entries.
+ * @returns The list of entries, or a line saying there are none.
  */
 export default function Thread({
   detail,
@@ -139,19 +139,12 @@ export default function Thread({
   const t = useTranslations('requests.detail');
   const names: SideNames = { company: detail.company.name, staff: detail.staffName };
 
+  if (detail.entries.length === 0) {
+    return <p className="text-sm text-muted-foreground">{t('noReplies')}</p>;
+  }
+
   return (
     <ol className="flex flex-col gap-5">
-      <Entry
-        leading={<PersonAvatar person={detail.raisedBy} names={names} />}
-        person={detail.raisedBy}
-        names={names}
-        at={detail.createdAt}
-      >
-        <RequestText
-          text={detail.description}
-          className="rounded-lg bg-muted px-3 py-2 text-sm text-foreground"
-        />
-      </Entry>
       {earlierHref && (
         <li>
           <ShowEarlierLink href={earlierHref}>

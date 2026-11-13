@@ -4,7 +4,20 @@
       "title": "Solicitud {reference}",
       "deactivated": "Esta empresa está desactivada, así que sus solicitudes solo se pueden leer.",
       "conversation": "Conversación",
-      "showEarlier": "Mostrar actividad anterior ({count, number} más)"
+      "showEarlier": "Mostrar actividad anterior ({count, number} más)",
+      "description": "Descripción",
+      "details": "Datos",
+      "noReplies": "Aún no hay respuestas.",
+      "status": "Estado",
+      "type": "Tipo",
+      "priority": "Prioridad",
+      "company": "Empresa",
+      "raisedBy": "Creada por",
+      "raised": "Fecha de creación",
+      "firstResponse": "Primera respuesta",
+      "firstResponseAfter": "{duration} después de crearla",
+      "noResponse": "Aún no",
+      "lastActivity": "Última actividad"
     },
     "status": "{status, select, open {Abierta} todo {Por hacer} in_progress {En curso} waiting {{audience, select, contributor {A la espera de tu respuesta} follower {A la espera de tu empresa} other {A la espera de la empresa}}} done {Resuelta} cancelled {Cancelada} other {Desconocido}}",
     "reopened": "Reabierta",
@@ -19,6 +32,34 @@
     },
     "text": {
       "newTab": "(se abre en una pestaña nueva)"
+    },
+    "reply": {
+      "label": "Tu respuesta",
+      "send": "Enviar respuesta",
+      "sendAndWait": "Enviar y esperar a la empresa",
+      "sent": "Respuesta enviada."
+    },
+    "controls": {
+      "status": "Estado",
+      "saving": "Guardando…",
+      "markDone": "Marcar como resuelta",
+      "cancel": "Cancelar solicitud",
+      "cancelTitle": "¿Cancelar esta solicitud?",
+      "cancelDescription": "Cancélala cuando ya no haga falta. Se puede reabrir más adelante.",
+      "keep": "Mantener solicitud",
+      "reopen": "Reabrir",
+      "editDetails": "Editar datos",
+      "editTitle": "Editar los datos de esta solicitud",
+      "editDescription": "Cada cambio aparece en el historial de la solicitud. La empresa no ve la prioridad.",
+      "titleLabel": "Título",
+      "typeLabel": "Tipo",
+      "priorityLabel": "Prioridad",
+      "priorityHint": "Un tipo nuevo fija su propia prioridad hasta que elijas una.",
+      "saveDetails": "Guardar datos"
+    },
+    "saved": {
+      "status": "{change, select, reopened {Solicitud reabierta.} done {Solicitud marcada como resuelta.} cancelled {Solicitud cancelada.} other {Estado guardado.}}",
+      "details": "{changed, plural, =0 {No ha cambiado nada.} other {Datos guardados.}}"
     }
   }
 }
