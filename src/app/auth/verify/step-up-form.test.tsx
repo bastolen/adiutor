@@ -20,18 +20,28 @@ import {
 import renderInLocale from '../../../../tests/i18n/render';
 import StepUpForm, { type StepUpFormProps } from './step-up-form';
 
-/** Mocked Better Auth client methods and router. */
-const { verifyTotp, verifyOtp, verifyBackupCode, sendOtp, passkey, social, replace } = vi.hoisted(
-  () => ({
-    verifyTotp: vi.fn(),
-    verifyOtp: vi.fn(),
-    verifyBackupCode: vi.fn(),
-    sendOtp: vi.fn(),
-    passkey: vi.fn(),
-    social: vi.fn(),
-    replace: vi.fn(),
-  }),
-);
+/** Mocked Better Auth client methods, router and full page load. */
+const {
+  verifyTotp,
+  verifyOtp,
+  verifyBackupCode,
+  sendOtp,
+  passkey,
+  social,
+  signOut,
+  replace,
+  loadFresh,
+} = vi.hoisted(() => ({
+  signOut: vi.fn(async () => ({})),
+  loadFresh: vi.fn(),
+  verifyTotp: vi.fn(),
+  verifyOtp: vi.fn(),
+  verifyBackupCode: vi.fn(),
+  sendOtp: vi.fn(),
+  passkey: vi.fn(),
+  social: vi.fn(),
+  replace: vi.fn(),
+}));
 
 vi.mock('next/navigation', () => ({
   /**
@@ -46,9 +56,11 @@ vi.mock('@/lib/sign-in/auth-client', () => ({
   default: {
     twoFactor: { verifyTotp, verifyOtp, verifyBackupCode, sendOtp },
     signIn: { passkey, social },
-    signOut: vi.fn(),
+    signOut,
   },
 }));
+
+vi.mock('@/components/ui/load-fresh', () => ({ default: loadFresh }));
 
 // A second provider that can prove MFA, for tests only (GitHub is the only real one so far).
 vi.mock('@/lib/sign-in/oauth-providers', async (importOriginal) => {
@@ -124,6 +136,17 @@ describe('StepUpForm', () => {
     [verifyTotp, verifyOtp, verifyBackupCode].forEach((verify) =>
       verify.mockResolvedValue({ data: {}, error: null }),
     );
+  });
+
+  it('signs out and loads the sign-in page afresh, leaving no page alive for the next person', async () => {
+    const user = userEvent.setup();
+    render(<StepUpForm methods={{ ...none, authenticator: true }} callbackURL="/account" />);
+
+    await user.click(screen.getByRole('button', { name: 'Sign out' }));
+
+    expect(signOut).toHaveBeenCalled();
+    await waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/auth'));
+    expect(replace).not.toHaveBeenCalled();
   });
 
   it('checks an authenticator code, then continues', async () => {

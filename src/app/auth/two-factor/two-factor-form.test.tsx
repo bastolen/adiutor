@@ -12,25 +12,19 @@ import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 import renderInLocale from '../../../../tests/i18n/render';
 import TwoFactorForm from './two-factor-form';
 
-/** Mocked Better Auth client methods and router. */
-const { verifyTotp, verifyOtp, verifyBackupCode, sendOtp, replace } = vi.hoisted(() => ({
+/** Mocked Better Auth client methods and full page load. */
+const { verifyTotp, verifyOtp, verifyBackupCode, sendOtp, loadFresh } = vi.hoisted(() => ({
   verifyTotp: vi.fn(),
   verifyOtp: vi.fn(),
   verifyBackupCode: vi.fn(),
   sendOtp: vi.fn(),
-  replace: vi.fn(),
+  loadFresh: vi.fn(),
 }));
 
 /** Query string the mocked `useSearchParams` returns. */
 let searchParams = new URLSearchParams();
 
 vi.mock('next/navigation', () => ({
-  /**
-   * Mocked router; `replace` is recorded.
-   *
-   * @returns The router.
-   */
-  useRouter: () => ({ replace, refresh: vi.fn() }),
   /**
    * Mocked query string.
    *
@@ -42,6 +36,8 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/lib/sign-in/auth-client', () => ({
   default: { twoFactor: { verifyTotp, verifyOtp, verifyBackupCode, sendOtp } },
 }));
+
+vi.mock('@/components/ui/load-fresh', () => ({ default: loadFresh }));
 
 /**
  * Wraps content in an `<Activity>` that a "Leave" / "Return" button hides and
@@ -80,7 +76,7 @@ describe('TwoFactorForm', () => {
     await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
 
     expect(verifyTotp).toHaveBeenCalledWith({ code: '123456', trustDevice: true });
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/companies/x'));
+    await waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/companies/x'));
     expect(sendOtp).not.toHaveBeenCalled();
   });
 
@@ -204,7 +200,7 @@ describe('TwoFactorForm', () => {
     await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent("That code isn't right");
-    expect(replace).not.toHaveBeenCalled();
+    expect(loadFresh).not.toHaveBeenCalled();
   });
 
   it('offers to start again when the pending sign-in expired', async () => {
@@ -224,30 +220,22 @@ describe('TwoFactorForm', () => {
       '/auth?callbackURL=%2Fcompanies%2Fx',
     );
   });
-  it('starts over once a code is accepted, and sends the first emailed code again next time', async () => {
+  it('loads the page asked for afresh once a code is accepted, busy until it goes', async () => {
     const user = userEvent.setup();
     searchParams = new URLSearchParams({ callbackURL: '/companies/x', methods: 'otp' });
     verifyOtp.mockResolvedValue({ data: {}, error: null });
-    render(
-      <Page>
-        <TwoFactorForm />
-      </Page>,
-    );
+    render(<TwoFactorForm />);
     await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(1));
 
     await user.type(screen.getByLabelText('Code'), '123456');
-    await user.click(screen.getByLabelText('Trust this device for 30 days'));
     await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/companies/x'));
 
-    // The page comes back at the next sign-in on this browser.
-    await user.click(screen.getByRole('button', { name: 'Leave' }));
-    await user.click(screen.getByRole('button', { name: 'Return' }));
-
-    expect(screen.getByLabelText('Code')).toHaveValue('');
-    expect(screen.getByLabelText('Trust this device for 30 days')).not.toBeChecked();
-    expect(screen.getByRole('button', { name: 'Verify and sign in' })).toBeEnabled();
-    await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(2));
+    // A full load keeps no page alive for the next person to sign in on this browser.
+    await waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/companies/x'));
+    expect(screen.getByRole('button', { name: 'Verify and sign in' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
   });
 
   it('starts over when the page is hidden before a code is accepted', async () => {

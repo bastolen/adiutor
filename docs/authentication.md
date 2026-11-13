@@ -23,6 +23,12 @@ a page of the app: on the site and not under `/api`) or the dashboard (`signedIn
 `src/lib/redirect.ts`): switching accounts means signing out first. A deactivated account counts
 as signed out and gets the form.
 
+Signing in with a password, a passkey or the code step loads that page afresh (`loadFresh` in
+`src/components/ui/load-fresh.ts`), never as a navigation within the app: Next keeps the last few
+pages alive with what's in their fields, so a session that ended without signing out (it expired,
+or was signed out elsewhere) would otherwise leave the previous person's pages for the next one.
+Email links and providers come back with a full load anyway.
+
 ## Email links
 
 A magic link email opens a confirmation page (`/auth/email-link`, `src/lib/sign-in/email-link.ts`); only
@@ -195,7 +201,11 @@ language (`cookiesToClearAtSignOut` in `src/lib/sign-in/auth-cookies.ts`, applie
 `afterAuthRequest`; neither says who signed in, and the sign-in page stays in the browser's
 language, see [Languages](i18n.md#how-the-language-is-chosen)): the
 session, "Trust this device" and anything naming someone (such as the provider-linked notice),
-so the next person on that browser starts clean. The browser's trusted device is forgotten too
+so the next person on that browser starts clean. The sign-in page it goes to loads afresh
+(`loadFresh`), so none of the pages Next kept alive, with their fields, is left for them either; the
+same goes for every other change of who the browser acts as: signing in (see
+[Sign-in methods](#sign-in-methods)) and starting or ending a sign-in as a user (see
+[Signing in as a user](#signing-in-as-a-user)). The browser's trusted device is forgotten too
 (`forgetSignedOutBrowserTrust`), so a copy of its cookie no longer skips the code step. Signing a
 device out on the Security page ("Sign out" per device, "Sign out other devices") and changing
 the password forget every device the user trusted, this browser's included (a session doesn't
@@ -274,7 +284,8 @@ does, to check what isn't working for them. The reasons are in
     with a toast (`showToastAfterLoad`).
   - Starting and going back both end with a full page load (`loadFresh`), never a navigation
     within the app: Next keeps the last few pages alive with what's in their fields, so a Profile
-    page from before would still show the other person's name.
+    page from before would still show the other person's name. Signing in and out do the same (see
+    [Signing out](#signing-out)).
 - **Nothing changes in the user's name.**
   - Every service that changes something calls `assertNotSignedInAs` first (code `signed_in_as`:
     "This can't be changed while you're signed in as someone else."). The server actions that call

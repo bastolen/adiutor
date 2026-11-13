@@ -13,29 +13,16 @@ import { THEME_STORAGE_KEY } from '@/lib/theme';
 
 import AccountMenu from './account-menu';
 
-/** Mocked router, sign-out, going back from signing in as someone, and the full page load. */
-const { replace, refresh, signOut, backToOwnAccount, loadFresh, showToastAfterLoad } = vi.hoisted(
-  () => ({
-    replace: vi.fn(),
-    refresh: vi.fn(),
-    loadFresh: vi.fn(),
-    showToastAfterLoad: vi.fn(),
-    signOut: vi.fn(async () => ({})),
-    backToOwnAccount: vi.fn(async () => ({
-      ok: true as const,
-      message: "You're back in your own account.",
-      data: { returnTo: '/admin/users/u1#sign-in-as' },
-    })),
-  }),
-);
-
-vi.mock('next/navigation', () => ({
-  /**
-   * Mocked router.
-   *
-   * @returns A router whose `replace` and `refresh` are recorded.
-   */
-  useRouter: () => ({ replace, refresh }),
+/** Mocked sign-out, going back from signing in as someone, and the full page load. */
+const { signOut, backToOwnAccount, loadFresh, showToastAfterLoad } = vi.hoisted(() => ({
+  loadFresh: vi.fn(),
+  showToastAfterLoad: vi.fn(),
+  signOut: vi.fn(async () => ({})),
+  backToOwnAccount: vi.fn(async () => ({
+    ok: true as const,
+    message: "You're back in your own account.",
+    data: { returnTo: '/admin/users/u1#sign-in-as' },
+  })),
 }));
 
 vi.mock('@/lib/sign-in/auth-client', () => ({ default: { signOut } }));
@@ -106,14 +93,14 @@ describe('AccountMenu', () => {
     expect(document.documentElement.dataset.theme).toBe('dark');
   });
 
-  it('signs out and goes to the sign-in page', async () => {
+  it('signs out and loads the sign-in page afresh', async () => {
     const user = await openMenu();
 
     await user.click(screen.getByRole('menuitem', { name: 'Sign out' }));
 
     expect(signOut).toHaveBeenCalled();
-    expect(replace).toHaveBeenCalledWith('/auth');
-    expect(refresh).toHaveBeenCalled();
+    // A full page load, so the next person on this browser finds none of these pages kept alive.
+    await vi.waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/auth'));
   });
 
   it("goes back to the staff member's own account instead, while signed in as the user", async () => {
@@ -133,6 +120,5 @@ describe('AccountMenu', () => {
     expect(showToastAfterLoad).toHaveBeenCalledWith("You're back in your own account.");
     expect(backToOwnAccount).toHaveBeenCalled();
     expect(signOut).not.toHaveBeenCalled();
-    expect(replace).not.toHaveBeenCalled();
   });
 });
