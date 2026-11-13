@@ -91,7 +91,9 @@ keyboard support.
   by itself) ends with a full page load (`loadFresh` in `src/components/ui/load-fresh.ts`), never `router.push` or
   `router.replace`, as does a change of language. The browser's other tabs load their page afresh
   too (`everyTab`, heard by `ReloadWhenActingAsChanges` in the root layout), except after an end
-  by itself, which each tab finds on its own. See
+  by itself, which each tab finds on its own. A change that ends in a redirect (a provider or an
+  email link, or a server action that redirects) leaves the next page a cookie instead
+  (`ACTING_AS_CHANGED_COOKIE`, `markActingAsChanged`), which does the same. See
   [Signing out](authentication.md#signing-out).
 - **A refused submit keeps the input:** React 19 resets a `<form action>` after every submit,
   whatever the result. Forms pass both the action and the hook's `onSubmit`

@@ -13,6 +13,7 @@ import { auth } from '@/lib/auth';
 import field from '@/lib/form-data';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
+import markActingAsChanged from '@/server/auth/acting-as-changed';
 import { getActor } from '@/server/authz';
 import {
   acceptInvitation,
@@ -48,7 +49,8 @@ export async function acceptAction(
 
 /**
  * Creates an account for the invited address, signs in and opens the company
- * (or the dashboard after joining the staff).
+ * (or the dashboard after joining the staff), which loads afresh in every tab
+ * of the browser (`markActingAsChanged`).
  *
  * @param _previous - The previous result (unused).
  * @param formData - Fields `token`, `name` and `password`.
@@ -69,6 +71,7 @@ export async function createAccountAction(
         body: { email: result.email, password },
         headers: await headers(),
       });
+      await markActingAsChanged();
       redirect(joinedPath(result.companyId));
     }
     const t = await getTranslations('auth');

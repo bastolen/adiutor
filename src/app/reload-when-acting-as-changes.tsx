@@ -9,16 +9,21 @@
  * turns changes off) and the pages Next kept alive would still show the
  * previous one.
  *
- * A sign-in that came back through a redirect (a provider, an email link)
- * can't tell the other tabs from the page that started it, so the server
- * leaves the next page a cookie instead (`ACTING_AS_CHANGED_COOKIE`): the
- * page that loads with it removes it and tells them.
+ * A change that ends in a redirect can't tell the other tabs from the page
+ * that made it, so the server leaves the next page a cookie instead
+ * (`ACTING_AS_CHANGED_COOKIE`): after a sign-in that came back through a
+ * redirect (a provider, an email link), and from a server action that signs
+ * someone in or out and redirects (`markActingAsChanged`). The page that
+ * loads with it, or that a navigation within the app reaches with it,
+ * removes it and tells them; after such a navigation, this tab loads afresh
+ * too.
  *
  * Mounted in the root layout, so every page listens, the sign-in pages
  * included.
  */
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 
 import { clearNextPageCookie } from '@/components/auth/use-next-page-cookie';
@@ -37,19 +42,34 @@ import { ACTING_AS_CHANGED_COOKIE } from '@/lib/sign-in/auth-cookies';
  * says so as it would for anyone. It never tells the other tabs in turn.
  *
  * When the page loads with {@link ACTING_AS_CHANGED_COOKIE}, it removes the
- * cookie and tells the other tabs: this page is a full load already.
+ * cookie and tells the other tabs: this page is a full load already. When a
+ * navigation within the app (a server action's redirect) reaches a page with
+ * it, it removes it and loads that page afresh in this tab and the others
+ * (`loadFresh` with `everyTab`), so no page Next kept alive from before stays
+ * in this tab either.
  *
  * @returns Nothing visible.
  */
 export default function ReloadWhenActingAsChanges() {
+  const pathname = usePathname();
   const loading = useRef(false);
+  // Whether the page this tab loaded with is still the one shown, before any navigation.
+  const firstPage = useRef(true);
 
   useEffect(() => {
-    if (cookieValue(document.cookie, ACTING_AS_CHANGED_COOKIE) !== null) {
-      clearNextPageCookie(ACTING_AS_CHANGED_COOKIE);
-      tellOtherTabs();
+    const loadedWithIt = firstPage.current;
+    firstPage.current = false;
+    if (loading.current || cookieValue(document.cookie, ACTING_AS_CHANGED_COOKIE) === null) {
+      return;
     }
-  }, []);
+    clearNextPageCookie(ACTING_AS_CHANGED_COOKIE);
+    if (loadedWithIt) {
+      tellOtherTabs();
+      return;
+    }
+    loading.current = true;
+    loadFresh(currentPage(), { everyTab: true });
+  }, [pathname]);
 
   useEffect(
     () =>

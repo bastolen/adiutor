@@ -4,6 +4,7 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { getLocale, getMessages, getTranslations } from 'next-intl/server';
+import { Suspense } from 'react';
 
 import fontVariables from '@/lib/fonts';
 import IntlClientProvider from '@/lib/i18n/intl-client-provider';
@@ -52,7 +53,10 @@ export const instant = false;
  * nonce, or the Content Security Policy would block it.
  *
  * Every page loads afresh when another tab of this browser signs in or out,
- * or starts or ends a sign-in as a user (`ReloadWhenActingAsChanges`).
+ * or starts or ends a sign-in as a user (`ReloadWhenActingAsChanges`). It
+ * reads the path, which isn't known while Next prerenders a route with
+ * dynamic parameters, so it waits behind its own `<Suspense>` (rendering
+ * nothing meanwhile).
  *
  * @param props - Layout props from Next.js.
  * @param props.children - The page or nested layout to render.
@@ -79,7 +83,9 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
         <IntlClientProvider locale={locale} messages={pickMessages(messages, ['common'])}>
           {children}
         </IntlClientProvider>
-        <ReloadWhenActingAsChanges />
+        <Suspense fallback={null}>
+          <ReloadWhenActingAsChanges />
+        </Suspense>
       </body>
     </html>
   );

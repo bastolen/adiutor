@@ -36,8 +36,12 @@ page that started them runs, so the server leaves the next page a cookie instead
 `1`, for 5 minutes, readable in the browser. The page that loads with it removes it and tells the
 other tabs (`ReloadWhenActingAsChanges`). It's set only when the browser acts as someone else now
 (it had no session, or someone else's: `replacePreviousSession`), not when the same user confirms
-again, e.g. with GitHub on the step-up page. Creating an account from an invitation or invite
-link, and setup, don't tell the other tabs yet.
+again, e.g. with GitHub on the step-up page. Server actions that sign someone in or out and then
+redirect (setup, creating an account from an invitation, and joining with an invite link when that
+ends the session) leave the same cookie (`markActingAsChanged` in
+`src/server/auth/acting-as-changed.ts`): their redirect is a navigation within the app, so when it
+reaches a page with the cookie, that tab loads afresh too, and so do the others. Their forms keep
+working before JavaScript has loaded.
 
 ## Email links
 
@@ -219,8 +223,10 @@ same goes for every other change of who the browser acts as: signing in (see
 [Sign-in methods](#sign-in-methods)) and starting or ending a sign-in as a user (see
 [Signing in as a user](#signing-in-as-a-user)). Signing out from the account menu or the step-up
 page also makes the browser's other tabs load their page afresh (`everyTab`), which sends them to
-the sign-in page, so no tab keeps showing the pages of whoever signed out. Deactivating your own
-account signs out with a server redirect and doesn't tell the other tabs yet. The browser's trusted device is forgotten too
+the sign-in page, so no tab keeps showing the pages of whoever signed out. So does deactivating
+your own account (the dialog's `loadOnSuccess`, to `/auth?error=ACCOUNT_DEACTIVATED`), and joining
+with an invite link when the new role ends the session (see
+[Sign-in methods](#sign-in-methods)). The browser's trusted device is forgotten too
 (`forgetSignedOutBrowserTrust`), so a copy of its cookie no longer skips the code step. Signing a
 device out on the Security page ("Sign out" per device, "Sign out other devices") and changing
 the password forget every device the user trusted, this browser's included (a session doesn't
