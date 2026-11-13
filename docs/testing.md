@@ -59,9 +59,12 @@ configurations in VS Code, which turn the time limit off (see
     links, codes) don't carry over between tests; a test that signs in more often than that gives
     a page another address with `useOwnClientIp`. A test that uses up state (locks, deletes or
     changes an account) has its own seeded account or a fresh address. The seed includes a
-    company, "Adiutor Tests Paging", with more members and invite links than fit on a page, used
-    by the pagination tests (`e2e/tables.spec.ts`) and the accessibility and keyboard checks of
-    paginated tables (`e2e/a11y.spec.ts`, `e2e/keyboard.spec.ts`); no test changes its data.
+    company, "Adiutor Tests Paging", with more members, invite links and requests than fit on a
+    page, used by the pagination tests (`e2e/tables.spec.ts`) and the accessibility and keyboard
+    checks of paginated tables (`e2e/a11y.spec.ts`, `e2e/keyboard.spec.ts`); no test changes its
+    data. The same goes for the five seeded requests the pages are read with (`SEEDED_REQUESTS`
+    in `e2e/support/fixtures.ts`): a test that changes a request raises its own. Both seeds store
+    their requests with `tests/database/store-requests.ts`.
   - **Tokens:** the invitation and invite-link pages are scanned with real tokens stored straight
     in the database (`storeInvitation`, `storeInviteLink` in `e2e/support/db.ts`), signed out and
     signed in. Those helpers, like the others in that file, open their own connection to the test

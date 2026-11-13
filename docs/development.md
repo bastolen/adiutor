@@ -52,8 +52,10 @@ accounts, a GitHub-only Admin (whose GitHub MFA only counts while GitHub sign-in
 deactivated account, authenticator and email-code MFA (and a
 Manager with email codes only, which don't count for Managers), plus
 invitations and invite links in every state (one due for its expiry reminder), varied "last active"
-times, some audit log entries and sample errors from the last few days to look up under Logs →
-Errors (`scripts/sample-errors.ts`; the `retention` job removes them once they're 7 days old).
+times, some audit log entries, sample errors from the last few days to look up under Logs →
+Errors (`scripts/sample-errors.ts`; the `retention` job removes them once they're 7 days old) and
+sample requests in every status, with replies and changes from both sides
+(`scripts/sample-requests.ts`).
 `scripts/seed-dev.ts` lists the accounts and their password. The open invitations are emailed to
 Mailpit, and the script prints the authenticator setup key, backup codes and the links that still
 work. It reads the same validated `.env` as the app (so `BETTER_AUTH_URL` must be set), and refuses

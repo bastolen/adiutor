@@ -46,11 +46,21 @@ export const PLATFORM_MANAGER = {
   password: 'e2e-manager-password',
 } as const;
 
-/** A Support member of the staff: can look at companies but can't use invite links. */
+/**
+ * A Support member of the staff: can look at companies but can't use invite
+ * links, and works on every company's requests.
+ */
 export const SUPPORT_STAFF = {
   name: 'E2E Support',
   email: 'support@adiutor.test',
   password: 'e2e-support-password',
+} as const;
+
+/** A Finance member of the staff: reads every company's requests, and changes none. */
+export const FINANCE_STAFF = {
+  name: 'E2E Finance',
+  email: 'finance@adiutor.test',
+  password: 'e2e-finance-password',
 } as const;
 
 /**
@@ -236,10 +246,10 @@ export const CLOSED_COMPANY_NAME = 'Adiutor Tests Closed';
 export const CLOSED_COMPANY_SLUG = 'adiutor-tests-closed';
 
 /**
- * A company with more members and invite links than fit on a page, for the
- * pagination tests (`e2e/tables.spec.ts`) and the accessibility and keyboard
- * checks of paginated tables (`a11y.spec.ts`, `keyboard.spec.ts`); no test
- * changes its data.
+ * A company with more members, invite links and requests than fit on a page,
+ * for the pagination tests (`e2e/tables.spec.ts`) and the accessibility and
+ * keyboard checks of paginated tables (`a11y.spec.ts`, `keyboard.spec.ts`);
+ * no test changes its data.
  */
 export const PAGING_COMPANY_NAME = 'Adiutor Tests Paging';
 
@@ -272,4 +282,54 @@ export function pagedMemberName(number: number): string {
  */
 export function pagedMemberEmail(number: number): string {
   return `paged.${String(number).padStart(2, '0')}@adiutor.test`;
+}
+
+/**
+ * A Client of the test company ({@link COMPANY_NAME}) for the request tests:
+ * they raise requests, reply to them, close and reopen them. An account of
+ * their own, so the tests that change the other Clients don't touch it.
+ */
+export const REQUESTS_CLIENT = {
+  name: 'E2E Requests Client',
+  email: 'requests.client@adiutor.test',
+  password: 'e2e-requests-client-password',
+} as const;
+
+/**
+ * The seeded requests, by what they're for. No test changes them: a test
+ * that changes a request raises its own. The first four are the test
+ * company's ({@link COMPANY_NAME}).
+ */
+export const SEEDED_REQUESTS = {
+  /**
+   * Waiting for the company's reply, with a conversation: a reply from each
+   * side, status changes and a change of priority (which only staff see).
+   * Raised by {@link REQUESTS_CLIENT}; the staff's part is {@link SUPPORT_STAFF}'s.
+   */
+  waiting: { number: 1, title: 'Update the opening hours on the website' },
+  /** Open, without replies. */
+  open: { number: 2, title: 'The printer on floor 2 prints blank pages' },
+  /** Done; raised by the staff for the company. */
+  done: { number: 3, title: 'A new colleague needs access' },
+  /** In progress after it was reopened. */
+  reopened: { number: 4, title: 'Invoices show the wrong address' },
+  /** In the deactivated company ({@link CLOSED_COMPANY_NAME}): the staff can read it, nobody can change it. */
+  closedCompany: { number: 5, title: 'Renew the SSL certificate' },
+} as const;
+
+/** How many requests the paging company has: more than one page of 25, all open. */
+export const PAGED_REQUEST_COUNT = 30;
+
+/** The number of the paging company's first request; the others follow it. */
+export const FIRST_PAGED_REQUEST_NUMBER = Object.keys(SEEDED_REQUESTS).length + 1;
+
+/**
+ * The title of a request of the paging company (they were raised in this
+ * order, a minute apart).
+ *
+ * @param number - Which request, from 1.
+ * @returns E.g. "Paged request 07".
+ */
+export function pagedRequestTitle(number: number): string {
+  return `Paged request ${String(number).padStart(2, '0')}`;
 }

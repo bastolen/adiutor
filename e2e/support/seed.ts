@@ -14,6 +14,7 @@ import { firstRow } from '../../src/lib/defined';
 import { generateToken, hashToken } from '../../src/lib/sign-in/tokens';
 import { storeAuthenticator } from '../../tests/auth/authenticator';
 import emptyDatabase from '../../tests/database/empty-database';
+import storeRequests from '../../tests/database/store-requests';
 import {
   CLIENT_WATCHER,
   CLOSED_COMPANY_ADMIN,
@@ -26,6 +27,7 @@ import {
   DEACTIVATE_CLIENT,
   DELETE_CLIENT,
   E2E_AUTH_SECRET,
+  FINANCE_STAFF,
   GITHUB_ONLY_MANAGER,
   MFA_CLIENT,
   NAMELESS_SUPPORT,
@@ -33,8 +35,10 @@ import {
   OWNED_COMPANY_SLUG,
   PAGED_LINK_COUNT,
   PAGED_MEMBER_COUNT,
+  PAGED_REQUEST_COUNT,
   pagedMemberEmail,
   pagedMemberName,
+  pagedRequestTitle,
   PAGING_COMPANY_NAME,
   PAGING_COMPANY_SLUG,
   PASSKEY_CLIENT,
@@ -43,7 +47,9 @@ import {
   LINK_JOINER,
   PAUSED_CLIENT,
   RECENT_MFA_CLIENT,
+  REQUESTS_CLIENT,
   RESET_CLIENT,
+  SEEDED_REQUESTS,
   STEP_UP_MANAGER,
   STEP_UP_CLIENT,
   SUPPORT_STAFF,
@@ -90,6 +96,7 @@ export default async function seedTestDatabase(databaseUrl: string): Promise<voi
      * @param person.password - Password.
      * @param where - A platform role for staff, or a company and a company role.
      * @param emailVerified - Whether their email counts as verified.
+     * @returns The user's ID.
      */
     const addPerson = async (
       person: { name: string; email: string; password: string },
@@ -119,6 +126,7 @@ export default async function seedTestDatabase(databaseUrl: string): Promise<voi
           .insert(schema.membership)
           .values({ companyId: where.companyId, userId: created.id, role: where.role });
       }
+      return created.id;
     };
 
     /**
@@ -144,7 +152,8 @@ export default async function seedTestDatabase(databaseUrl: string): Promise<voi
     await db.insert(schema.jobTick).values({ lastStartedAt: new Date() });
     await addPerson(PLATFORM_ADMIN, { platformRole: 'platform_admin' });
     await addPerson(PLATFORM_MANAGER, { platformRole: 'manager' });
-    await addPerson(SUPPORT_STAFF, { platformRole: 'support' });
+    const support = await addPerson(SUPPORT_STAFF, { platformRole: 'support' });
+    await addPerson(FINANCE_STAFF, { platformRole: 'finance' });
     await addPerson(NAMELESS_SUPPORT, { platformRole: 'support' });
 
     // The Admin has an authenticator app set up, as their role requires MFA.
@@ -171,6 +180,10 @@ export default async function seedTestDatabase(databaseUrl: string): Promise<voi
     await addPerson(RECENT_MFA_CLIENT, { companyId: clientCompany.id, role: 'client' });
     await addPerson(PAUSED_CLIENT, { companyId: clientCompany.id, role: 'client' });
     await addPerson(LINK_JOINER, { companyId: clientCompany.id, role: 'client' });
+    const requestsClient = await addPerson(REQUESTS_CLIENT, {
+      companyId: clientCompany.id,
+      role: 'client',
+    });
 
     // Signs in only with GitHub (2FA on, no password), which doesn't count while GitHub is off.
     const githubManager = firstRow(
@@ -222,7 +235,10 @@ export default async function seedTestDatabase(databaseUrl: string): Promise<voi
         .returning({ id: schema.company.id }),
       'the closed company',
     );
-    await addPerson(CLOSED_COMPANY_ADMIN, { companyId: closedCompany.id, role: 'admin' });
+    const closedCompanyAdmin = await addPerson(CLOSED_COMPANY_ADMIN, {
+      companyId: closedCompany.id,
+      role: 'admin',
+    });
 
     // A company with more members than fit on a page, and more invite links than the 10 a table
     // shows without pagination, for the pagination tests only. The members never sign in, so
@@ -262,6 +278,106 @@ export default async function seedTestDatabase(databaseUrl: string): Promise<voi
         createdAt: new Date(joinedFrom + index * 60_000),
       })),
     );
+
+    // Requests no test changes (see `SEEDED_REQUESTS`): four in the test company, one in the
+    // deactivated company, and more than a page of them in the paging company, raised a minute
+    // apart by its first member.
+    const HOUR = 60 * 60_000;
+    /**
+     * A time before now.
+     *
+     * @param hours - How many hours before.
+     * @returns The time.
+     */
+    const hoursAgo = (hours: number) => new Date(Date.now() - hours * HOUR);
+    const byClient = { id: requestsClient, side: 'company' } as const;
+    const byStaff = { id: support, side: 'staff' } as const;
+    const firstPagedMember = firstRow(pagedMembers, 'the first paged member');
+    await storeRequests(db, [
+      {
+        companyId: clientCompany.id,
+        title: SEEDED_REQUESTS.waiting.title,
+        description: 'Our opening hours change next month. Can you update them on the website?',
+        type: 'support',
+        priority: 'high',
+        status: 'waiting',
+        raisedBy: byClient,
+        at: hoursAgo(72),
+        entries: [
+          { by: byClient, at: hoursAgo(70), reply: 'It’s for the summer schedule, from 1 July.' },
+          { by: byStaff, at: hoursAgo(48), change: 'status', from: 'open', to: 'in_progress' },
+          { by: byStaff, at: hoursAgo(47), change: 'priority', from: 'normal', to: 'high' },
+          {
+            by: byStaff,
+            at: hoursAgo(2),
+            reply: 'Done on the test site: https://adiutor.test/preview\nWhich days change?',
+          },
+          { by: byStaff, at: hoursAgo(2), change: 'status', from: 'in_progress', to: 'waiting' },
+        ],
+      },
+      {
+        companyId: clientCompany.id,
+        title: SEEDED_REQUESTS.open.title,
+        description: 'It started after the last toner change.\nThe one on floor 1 works.',
+        type: 'bug',
+        priority: 'normal',
+        raisedBy: byClient,
+        at: hoursAgo(5),
+      },
+      {
+        companyId: clientCompany.id,
+        title: SEEDED_REQUESTS.done.title,
+        description: 'Raised after a phone call: Robin starts on Monday.',
+        type: 'support',
+        priority: 'normal',
+        status: 'done',
+        raisedBy: byStaff,
+        at: hoursAgo(240),
+        entries: [
+          { by: byStaff, at: hoursAgo(230), reply: 'Robin has access now.' },
+          { by: byStaff, at: hoursAgo(230), change: 'status', from: 'open', to: 'done' },
+        ],
+      },
+      {
+        companyId: clientCompany.id,
+        title: SEEDED_REQUESTS.reopened.title,
+        description: 'Invoices still show our old address.',
+        type: 'hotfix',
+        priority: 'high',
+        status: 'in_progress',
+        reopened: true,
+        raisedBy: byClient,
+        at: hoursAgo(200),
+        entries: [
+          { by: byStaff, at: hoursAgo(190), change: 'status', from: 'open', to: 'done' },
+          { by: byClient, at: hoursAgo(30), reply: 'The email still has the old address.' },
+          { by: byClient, at: hoursAgo(30), change: 'status', from: 'done', to: 'open' },
+          { by: byStaff, at: hoursAgo(24), change: 'status', from: 'open', to: 'in_progress' },
+        ],
+      },
+      {
+        companyId: closedCompany.id,
+        title: SEEDED_REQUESTS.closedCompany.title,
+        description: 'The certificate of our shop expires at the end of the month.',
+        type: 'support',
+        priority: 'normal',
+        status: 'in_progress',
+        raisedBy: { id: closedCompanyAdmin, side: 'company' },
+        at: hoursAgo(400),
+        entries: [
+          { by: byStaff, at: hoursAgo(390), change: 'status', from: 'open', to: 'in_progress' },
+        ],
+      },
+      ...Array.from({ length: PAGED_REQUEST_COUNT }, (_, index) => ({
+        companyId: pagingCompany.id,
+        title: pagedRequestTitle(index + 1),
+        description: 'One of the requests that fill more than a page.',
+        type: 'bug' as const,
+        priority: 'normal' as const,
+        raisedBy: { id: firstPagedMember.id, side: 'company' as const },
+        at: new Date(joinedFrom + index * 60_000),
+      })),
+    ]);
   } finally {
     await client.end();
   }
