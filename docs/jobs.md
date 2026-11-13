@@ -43,6 +43,9 @@ A tick runs every recurring job that's due, one after another, then the queued j
 | `invitation-reminders`       | hourly, at :10  | Emails a reminder 48 hours before an invitation expires, soonest first, until its deadline; the rest go next run                              |
 | `retention`                  | daily, at 03:15 | Deletes audit events after a year, sign-in errors and other recorded errors after 7 days, and job runs and finished queued jobs after 30 days |
 
+`retention` deletes 10,000 rows at a time until its deadline, so a large backlog is cleared over a
+few runs without holding the database for long.
+
 | Kind of queued job  | What it does                                                                                                                                                       |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `security-notice`   | Emails a user about a security change on their account (see [Security emails](authentication.md#security-emails))                                                  |
