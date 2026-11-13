@@ -10,7 +10,7 @@ import { queuedJob } from '@/db/schema';
 import type { SortDirection } from '@/lib/tables/table-state';
 
 import { orderTerms } from '../pagination';
-import { QUEUED_JOBS } from './registry';
+import { findQueuedKind, QUEUED_JOBS } from './registry';
 import { loadJobStates } from './state';
 
 /** One kind of queued job in the overview. */
@@ -79,6 +79,8 @@ export interface FailedQueuedJob {
   id: string;
   /** Its kind's name. */
   kind: string;
+  /** Whether the registry still lists its kind; only then can it be retried, as no tick runs the others. */
+  known: boolean;
   /** How many times it was tried. */
   attempts: number;
   /** When it was queued. */
@@ -105,7 +107,7 @@ export async function readFailedQueuedJobs(
   db: Database,
   { limit, offset = 0, dir = 'desc' }: { limit: number; offset?: number; dir?: SortDirection },
 ): Promise<FailedQueuedJob[]> {
-  return db
+  const rows = await db
     .select({
       id: queuedJob.id,
       kind: queuedJob.kind,
@@ -119,6 +121,7 @@ export async function readFailedQueuedJobs(
     .orderBy(...orderTerms(dir, queuedJob.finishedAt, queuedJob.id))
     .limit(limit)
     .offset(offset);
+  return rows.map((row) => ({ ...row, known: findQueuedKind(row.kind) !== undefined }));
 }
 
 /**

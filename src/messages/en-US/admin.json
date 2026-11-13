@@ -331,7 +331,8 @@
       "title": "Audit log",
       "header": {
         "title": "Logs",
-        "description": "{sections, select, errorsAndJobs {Security events by and about everyone, the errors people ran into and the background jobs.} errors {Security events by and about everyone, and the errors people ran into.} jobs {Security events by and about everyone, and the background jobs.} other {Security events by and about everyone.}}",
+        "descriptionWithErrors": "Security events by and about everyone, the errors people ran into and the background jobs.",
+        "description": "Security events by and about everyone, and the background jobs.",
         "tabsLabel": "Log sections",
         "auditTab": "Audit log",
         "errorsTab": "Errors",
@@ -472,7 +473,6 @@
         "startedBy": "From the Jobs page, by <link>{name}</link>"
       },
       "actions": {
-        "column": "Actions",
         "runNow": "Run now",
         "runNowLabel": "Run now: {job}",
         "ran": "{job} ran.",

@@ -331,7 +331,8 @@
       "title": "Auditlog",
       "header": {
         "title": "Logs",
-        "description": "{sections, select, errorsAndJobs {Beveiligingsgebeurtenissen van en over iedereen, de fouten waar mensen tegenaan liepen en de achtergrondtaken.} errors {Beveiligingsgebeurtenissen van en over iedereen, en de fouten waar mensen tegenaan liepen.} jobs {Beveiligingsgebeurtenissen van en over iedereen, en de achtergrondtaken.} other {Beveiligingsgebeurtenissen van en over iedereen.}}",
+        "descriptionWithErrors": "Beveiligingsgebeurtenissen van en over iedereen, de fouten waar mensen tegenaan liepen en de achtergrondtaken.",
+        "description": "Beveiligingsgebeurtenissen van en over iedereen, en de achtergrondtaken.",
         "tabsLabel": "Onderdelen van de logs",
         "auditTab": "Auditlog",
         "errorsTab": "Fouten",
@@ -472,7 +473,6 @@
         "startedBy": "Vanaf de pagina Taken, door <link>{name}</link>"
       },
       "actions": {
-        "column": "Acties",
         "runNow": "Nu uitvoeren",
         "runNowLabel": "{job} nu uitvoeren",
         "ran": "{job} is uitgevoerd.",

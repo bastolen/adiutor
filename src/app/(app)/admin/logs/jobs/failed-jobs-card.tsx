@@ -16,7 +16,6 @@ import RowAction from '@/components/ui/row-action';
 import SortMenu from '@/components/ui/sort-menu';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
 import { formatDateTime, formatRelative } from '@/lib/format';
-import { isQueuedJobName } from '@/lib/job-names';
 import type { TableLinks } from '@/lib/tables/page-url';
 import { type Paged, showsPagination } from '@/lib/tables/table-state';
 import type { FailedJobSort } from '@/lib/tables/tables';
@@ -45,7 +44,7 @@ function Controls({ job }: { job: FailedJobEntry }) {
   };
   return (
     <>
-      {isQueuedJobName(job.kind) && (
+      {job.known && (
         <RowAction
           action={retryFailedJobsAction}
           fields={{ id: job.id }}
@@ -95,7 +94,6 @@ interface FailedJobsCardProps {
  */
 export default function FailedJobsCard({ jobs, table, canLookUp, canManage }: FailedJobsCardProps) {
   const t = useTranslations('admin.jobs.failed');
-  const tActions = useTranslations('admin.jobs.actions');
   const locale = useLocale();
   return (
     <Card
@@ -121,11 +119,6 @@ export default function FailedJobsCard({ jobs, table, canLookUp, canManage }: Fa
                 {t('givenUp')}
               </Th>
               <Th className="hidden md:table-cell">{t('error')}</Th>
-              {canManage && (
-                <Th className="hidden text-right sm:table-cell">
-                  <span className="sr-only">{tActions('column')}</span>
-                </Th>
-              )}
             </tr>
           </thead>
           <tbody>
@@ -146,9 +139,8 @@ export default function FailedJobsCard({ jobs, table, canLookUp, canManage }: Fa
                         <RelativeTime date={job.failedAt} />
                       </span>
                       {error && <span className="text-sm md:hidden">{error}</span>}
-                      {/* On narrow screens, the controls go under the job too. */}
                       {canManage && (
-                        <div className="flex flex-wrap gap-2 pt-1 sm:hidden">
+                        <div className="flex flex-wrap gap-2 pt-1">
                           <Controls job={job} />
                         </div>
                       )}
@@ -161,13 +153,6 @@ export default function FailedJobsCard({ jobs, table, canLookUp, canManage }: Fa
                     )}
                   </Td>
                   <Td className="hidden text-sm md:table-cell">{error}</Td>
-                  {canManage && (
-                    <Td className="hidden sm:table-cell">
-                      <div className="flex flex-col items-end gap-2 lg:flex-row lg:justify-end">
-                        <Controls job={job} />
-                      </div>
-                    </Td>
-                  )}
                 </Tr>
               );
             })}

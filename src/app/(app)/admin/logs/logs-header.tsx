@@ -18,27 +18,10 @@ interface LogsHeaderProps {
 }
 
 /**
- * Which sections the header's description names (`admin.logs.header.description`).
- *
- * @param canViewErrors - Whether the viewer may see recorded errors.
- * @param canViewJobs - Whether the viewer may see the background jobs.
- * @returns The description's `sections` choice.
- */
-function sectionsOf(canViewErrors: boolean, canViewJobs: boolean): string {
-  if (canViewErrors && canViewJobs) {
-    return 'errorsAndJobs';
-  }
-  if (canViewErrors) {
-    return 'errors';
-  }
-  return canViewJobs ? 'jobs' : 'audit';
-}
-
-/**
  * The "Logs" heading, with a tab for the audit log and one for each other
  * section the viewer may see: the errors (staff Admins) and the background
- * jobs (staff Admins and Managers). With only the audit log, there are no
- * tabs. Its text comes from `admin.logs.header`.
+ * jobs (staff Admins and Managers, so everyone who sees the logs). Its text
+ * comes from `admin.logs.header`.
  *
  * @param props - Header props.
  * @param props.canViewErrors - Whether the viewer may see recorded errors.
@@ -57,9 +40,9 @@ export default function LogsHeader({ canViewErrors, canViewJobs }: LogsHeaderPro
   return (
     <PageHeader
       title={t('title')}
-      description={t('description', { sections: sectionsOf(canViewErrors, canViewJobs) })}
+      description={canViewErrors ? t('descriptionWithErrors') : t('description')}
     >
-      {items.length > 1 && <SegmentTabNav label={t('tabsLabel')} items={items} />}
+      <SegmentTabNav label={t('tabsLabel')} items={items} />
     </PageHeader>
   );
 }

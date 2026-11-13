@@ -81,7 +81,7 @@ describe('listFailedQueuedJobs', () => {
     await job('adiutor-tests-a', 'queued');
 
     expect(await listFailedQueuedJobs(db)).toEqual([
-      expect.objectContaining({ id: failed, kind: 'adiutor-tests-a', attempts: 5 }),
+      expect.objectContaining({ id: failed, kind: 'adiutor-tests-a', known: false, attempts: 5 }),
     ]);
   });
 });

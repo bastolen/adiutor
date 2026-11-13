@@ -15,8 +15,15 @@ import { Table, Td, Th, Tr } from '@/components/ui/table';
 import { formatDateTime, formatTime } from '@/lib/format';
 import type { RecurringJobOverview } from '@/server/jobs';
 
-import { pauseJobAction, resumeJobAction, runJobAction } from './actions';
-import { ErrorReference, JobName, PausedBadge, RunStatusBadge, ScheduleText } from './job-parts';
+import { runJobAction } from './actions';
+import {
+  ErrorReference,
+  JobName,
+  PausedBadge,
+  PauseToggle,
+  RunStatusBadge,
+  ScheduleText,
+} from './job-parts';
 
 /**
  * When a job runs next: at the next tick, at its next scheduled moment (only
@@ -88,32 +95,16 @@ function LastRun({ job, canLookUp }: { job: RecurringJobOverview; canLookUp: boo
  */
 function Controls({ job }: { job: RecurringJobOverview }) {
   const t = useTranslations('admin.jobs.actions');
-  const fields = { job: job.name };
   return (
     <>
       <RowAction
         action={runJobAction}
-        fields={fields}
+        fields={{ job: job.name }}
         label={t('runNow')}
         ariaLabel={t('runNowLabel', { job: job.name })}
         disabled={job.running}
       />
-      {job.pausable &&
-        (job.paused ? (
-          <RowAction
-            action={resumeJobAction}
-            fields={fields}
-            label={t('resume')}
-            ariaLabel={t('resumeLabel', { job: job.name })}
-          />
-        ) : (
-          <RowAction
-            action={pauseJobAction}
-            fields={fields}
-            label={t('pause')}
-            ariaLabel={t('pauseLabel', { job: job.name })}
-          />
-        ))}
+      <PauseToggle job={job} />
     </>
   );
 }
@@ -142,7 +133,6 @@ interface RecurringJobsCardProps {
 export default function RecurringJobsCard({ jobs, canLookUp, canManage }: RecurringJobsCardProps) {
   const t = useTranslations('admin.jobs.recurring');
   const tStatus = useTranslations('admin.jobs.status');
-  const tActions = useTranslations('admin.jobs.actions');
   return (
     <Card id="scheduled-jobs" title={t('title')} description={t('description')} flush>
       <Table caption={t('caption')}>
@@ -151,11 +141,6 @@ export default function RecurringJobsCard({ jobs, canLookUp, canManage }: Recurr
             <Th>{t('job')}</Th>
             <Th className="hidden md:table-cell">{t('lastRun')}</Th>
             <Th className="hidden sm:table-cell">{t('nextRun')}</Th>
-            {canManage && (
-              <Th className="hidden text-right sm:table-cell">
-                <span className="sr-only">{tActions('column')}</span>
-              </Th>
-            )}
           </tr>
         </thead>
         <tbody>
@@ -182,9 +167,8 @@ export default function RecurringJobsCard({ jobs, canLookUp, canManage }: Recurr
                     <span className="text-sm text-muted-foreground sm:hidden">
                       <NextRun job={job} />
                     </span>
-                    {/* On narrow screens, the controls go under the job too. */}
                     {canManage && (
-                      <div className="flex flex-wrap gap-2 pt-1 sm:hidden">
+                      <div className="flex flex-wrap gap-2 pt-1">
                         <Controls job={job} />
                       </div>
                     )}
@@ -194,13 +178,6 @@ export default function RecurringJobsCard({ jobs, canLookUp, canManage }: Recurr
                 <Td className="hidden text-sm text-muted-foreground sm:table-cell">
                   <NextRun job={job} />
                 </Td>
-                {canManage && (
-                  <Td className="hidden sm:table-cell">
-                    <div className="flex flex-col items-end gap-2 lg:flex-row lg:justify-end">
-                      <Controls job={job} />
-                    </div>
-                  </Td>
-                )}
               </Tr>
             );
           })}

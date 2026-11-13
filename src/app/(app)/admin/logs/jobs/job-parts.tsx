@@ -1,18 +1,21 @@
 /**
  * @file The pieces the Jobs page's cards share: a job's name and what it
- * does, its status as a badge, its schedule in words, a run's counts and an
- * error's reference. Text from `admin.jobs`, and from `jobs` for what each
- * job does and counts.
+ * does, its status as a badge, its schedule in words, a run's counts, an
+ * error's reference and the Pause or Resume button. Text from `admin.jobs`,
+ * and from `jobs` for what each job does and counts.
  */
 import { useLocale, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
 import Badge, { type BadgeTone } from '@/components/ui/badge';
+import RowAction from '@/components/ui/row-action';
 import TextLink from '@/components/ui/text-link';
 import type { JobRunStatus } from '@/db/schema';
 import { formatTime } from '@/lib/format';
 import { isJobName, isJobSummaryKey } from '@/lib/job-names';
 import describeSchedule from '@/lib/job-schedule';
+
+import { pauseJobAction, resumeJobAction } from './actions';
 
 /**
  * A job's name as the command line, the docs and the emails write it, in a
@@ -23,9 +26,18 @@ import describeSchedule from '@/lib/job-schedule';
  * @param props - Component props.
  * @param props.name - The recurring job or kind of queued job.
  * @param props.badges - Badges to show next to the name, e.g. "Paused".
+ * @param props.describe - Whether to say what it does; the history leaves it out, as it repeats on every run.
  * @returns The name and description.
  */
-export function JobName({ name, badges = null }: { name: string; badges?: ReactNode }) {
+export function JobName({
+  name,
+  badges = null,
+  describe = true,
+}: {
+  name: string;
+  badges?: ReactNode;
+  describe?: boolean;
+}) {
   const t = useTranslations('jobs');
   return (
     <span className="flex flex-col items-start gap-1">
@@ -33,7 +45,7 @@ export function JobName({ name, badges = null }: { name: string; badges?: ReactN
         <span className="font-mono font-medium wrap-anywhere text-foreground">{name}</span>
         {badges}
       </span>
-      {isJobName(name) && (
+      {describe && isJobName(name) && (
         <span className="text-sm text-muted-foreground">{t(`descriptions.${name}`)}</span>
       )}
     </span>
@@ -70,6 +82,43 @@ export function RunStatusBadge({ status }: { status: JobRunStatus }) {
 export function PausedBadge() {
   const t = useTranslations('admin.jobs.status');
   return <Badge tone="warning">{t('paused')}</Badge>;
+}
+
+/**
+ * A staff Admin's Pause or Resume button for a recurring job or kind of
+ * queued job; nothing for one that keeps Adiutor secure (`pausable`).
+ *
+ * @param props - Component props.
+ * @param props.job - The job.
+ * @param props.job.name - Its name.
+ * @param props.job.pausable - Whether it can be paused.
+ * @param props.job.paused - Whether it is.
+ * @returns The button, or nothing.
+ */
+export function PauseToggle({
+  job,
+}: {
+  job: { name: string; pausable: boolean; paused: boolean };
+}) {
+  const t = useTranslations('admin.jobs.actions');
+  if (!job.pausable) {
+    return null;
+  }
+  return job.paused ? (
+    <RowAction
+      action={resumeJobAction}
+      fields={{ job: job.name }}
+      label={t('resume')}
+      ariaLabel={t('resumeLabel', { job: job.name })}
+    />
+  ) : (
+    <RowAction
+      action={pauseJobAction}
+      fields={{ job: job.name }}
+      label={t('pause')}
+      ariaLabel={t('pauseLabel', { job: job.name })}
+    />
+  );
 }
 
 /**

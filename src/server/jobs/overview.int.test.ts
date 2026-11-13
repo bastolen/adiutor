@@ -178,6 +178,7 @@ describe('listFailedJobs', () => {
       {
         id: expect.any(String),
         kind: 'added-to-company',
+        known: true,
         attempts: 5,
         queuedAt: expect.any(Date),
         failedAt: new Date('2026-11-11T10:00:00Z'),

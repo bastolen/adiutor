@@ -22,7 +22,7 @@ import { type Paged, showsPagination } from '@/lib/tables/table-state';
 import type { JobRunSort } from '@/lib/tables/tables';
 import type { JobRunEntry } from '@/server/jobs';
 
-import { ErrorReference, RunStatusBadge, RunSummary } from './job-parts';
+import { ErrorReference, JobName, RunStatusBadge, RunSummary } from './job-parts';
 
 /**
  * Makes the `<link>` tag of a rich message a link to a user's page.
@@ -117,9 +117,7 @@ export default function JobRunsCard({ runs, table, canLookUp }: JobRunsCardProps
                 <Tr key={run.id}>
                   <Td>
                     <div className="flex flex-col items-start gap-1.5">
-                      <span className="font-mono font-medium wrap-anywhere text-foreground">
-                        {run.job}
-                      </span>
+                      <JobName name={run.job} describe={false} />
                       <span className="text-sm text-muted-foreground">
                         <Trigger run={run} />
                       </span>

@@ -331,7 +331,8 @@
       "title": "Registro de auditoría",
       "header": {
         "title": "Registros",
-        "description": "{sections, select, errorsAndJobs {Eventos de seguridad de todos y sobre todos, los errores con los que se ha encontrado la gente y las tareas en segundo plano.} errors {Eventos de seguridad de todos y sobre todos, y los errores con los que se ha encontrado la gente.} jobs {Eventos de seguridad de todos y sobre todos, y las tareas en segundo plano.} other {Eventos de seguridad de todos y sobre todos.}}",
+        "descriptionWithErrors": "Eventos de seguridad de todos y sobre todos, los errores con los que se ha encontrado la gente y las tareas en segundo plano.",
+        "description": "Eventos de seguridad de todos y sobre todos, y las tareas en segundo plano.",
         "tabsLabel": "Secciones de los registros",
         "auditTab": "Registro de auditoría",
         "errorsTab": "Errores",
@@ -472,7 +473,6 @@
         "startedBy": "Desde la página Tareas, por <link>{name}</link>"
       },
       "actions": {
-        "column": "Acciones",
         "runNow": "Ejecutar ahora",
         "runNowLabel": "Ejecutar ahora la tarea {job}",
         "ran": "{job} se ha ejecutado.",

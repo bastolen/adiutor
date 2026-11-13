@@ -12,21 +12,17 @@ import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
 import RowAction from '@/components/ui/row-action';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
+import cn from '@/lib/cn';
 import type { QueuedKindListing } from '@/server/jobs';
 
-import {
-  discardFailedJobsAction,
-  pauseJobAction,
-  resumeJobAction,
-  retryFailedJobsAction,
-} from './actions';
-import { JobName, PausedBadge } from './job-parts';
+import { discardFailedJobsAction, retryFailedJobsAction } from './actions';
+import { JobName, PausedBadge, PauseToggle } from './job-parts';
 
 /**
  * A staff Admin's controls for a kind: pause or resume it (only a kind
- * Adiutor still has, and not one that keeps people informed about their
- * security), and with failed jobs, retry them all (the same) or
- * discard them all after a confirmation.
+ * Adiutor still has, and not one that keeps Adiutor secure), and with failed
+ * jobs, retry them all (again only a kind Adiutor still has) or discard them
+ * all after a confirmation.
  *
  * @param props - Component props.
  * @param props.kind - The kind.
@@ -37,22 +33,7 @@ function Controls({ kind }: { kind: QueuedKindListing }) {
   const job = kind.name;
   return (
     <>
-      {kind.pausable &&
-        (kind.paused ? (
-          <RowAction
-            action={resumeJobAction}
-            fields={{ job }}
-            label={t('resume')}
-            ariaLabel={t('resumeLabel', { job })}
-          />
-        ) : (
-          <RowAction
-            action={pauseJobAction}
-            fields={{ job }}
-            label={t('pause')}
-            ariaLabel={t('pauseLabel', { job })}
-          />
-        ))}
+      <PauseToggle job={kind} />
       {kind.failed > 0 && kind.known && (
         <RowAction
           action={retryFailedJobsAction}
@@ -100,7 +81,6 @@ interface QueuedJobsCardProps {
 export default function QueuedJobsCard({ kinds, canManage }: QueuedJobsCardProps) {
   const t = useTranslations('admin.jobs.queued');
   const tStatus = useTranslations('admin.jobs.status');
-  const tActions = useTranslations('admin.jobs.actions');
   return (
     <Card id="queued-jobs" title={t('title')} description={t('description')} flush>
       <Table caption={t('caption')}>
@@ -109,11 +89,6 @@ export default function QueuedJobsCard({ kinds, canManage }: QueuedJobsCardProps
             <Th>{t('kind')}</Th>
             <Th className="hidden text-right sm:table-cell">{t('waiting')}</Th>
             <Th className="hidden text-right sm:table-cell">{t('failed')}</Th>
-            {canManage && (
-              <Th className="hidden text-right sm:table-cell">
-                <span className="sr-only">{tActions('column')}</span>
-              </Th>
-            )}
           </tr>
         </thead>
         <tbody>
@@ -134,9 +109,9 @@ export default function QueuedJobsCard({ kinds, canManage }: QueuedJobsCardProps
                   <span className="text-sm text-muted-foreground sm:hidden">
                     {t('counts', { waiting: kind.waiting, failed: kind.failed })}
                   </span>
-                  {/* On narrow screens, the controls go under the kind too. */}
                   {canManage && (
-                    <div className="flex flex-wrap gap-2 pt-1 empty:hidden sm:hidden">
+                    // Hidden when the kind has nothing to do, so it adds no gap.
+                    <div className="flex flex-wrap gap-2 pt-1 empty:hidden">
                       <Controls kind={kind} />
                     </div>
                   )}
@@ -146,21 +121,13 @@ export default function QueuedJobsCard({ kinds, canManage }: QueuedJobsCardProps
                 {t('count', { count: kind.waiting })}
               </Td>
               <Td
-                className={
-                  kind.failed > 0
-                    ? 'hidden text-right font-medium whitespace-nowrap text-danger tabular-nums sm:table-cell'
-                    : 'hidden text-right whitespace-nowrap text-muted-foreground tabular-nums sm:table-cell'
-                }
+                className={cn(
+                  'hidden text-right whitespace-nowrap tabular-nums sm:table-cell',
+                  kind.failed > 0 ? 'font-medium text-danger' : 'text-muted-foreground',
+                )}
               >
                 {t('count', { count: kind.failed })}
               </Td>
-              {canManage && (
-                <Td className="hidden sm:table-cell">
-                  <div className="flex flex-col items-end gap-2 lg:flex-row lg:justify-end">
-                    <Controls kind={kind} />
-                  </div>
-                </Td>
-              )}
             </Tr>
           ))}
         </tbody>
