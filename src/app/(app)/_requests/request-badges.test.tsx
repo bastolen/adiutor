@@ -9,7 +9,7 @@ import translator from '@/lib/i18n/translator';
 import { REQUEST_PRIORITIES, REQUEST_STATUSES, REQUEST_TYPES } from '@/lib/requests';
 
 import renderInLocale from '../../../../tests/i18n/render';
-import RequestBadges, { StatusBadge } from './request-badges';
+import { PriorityBadge, ReopenedBadge, StatusBadge, TypeBadge } from './request-badges';
 
 describe('StatusBadge', () => {
   it.each([
@@ -33,46 +33,44 @@ describe('StatusBadge', () => {
   });
 });
 
-describe('RequestBadges', () => {
-  it('shows the status, that it was reopened, the type and the priority', () => {
-    render(<RequestBadges status="open" reopened type="hotfix" priority="high" audience="staff" />);
-
-    expect(screen.getByText('Open')).toBeInTheDocument();
-    expect(screen.getByText('Reopened')).toBeInTheDocument();
-    expect(screen.getByText('Hotfix')).toBeInTheDocument();
-    expect(screen.getByText('High priority')).toBeInTheDocument();
-  });
-
-  it('shows no priority to readers who get none, and no "Reopened" unless it was', () => {
+describe('ReopenedBadge, TypeBadge and PriorityBadge', () => {
+  it('say that a request was reopened, and what type it is', () => {
     render(
-      <RequestBadges
-        status="in_progress"
-        reopened={false}
-        type="new_feature"
-        priority={null}
-        audience="contributor"
-      />,
+      <>
+        <ReopenedBadge />
+        <TypeBadge type="new_feature" />
+      </>,
     );
 
-    expect(screen.getByText('In progress')).toBeInTheDocument();
+    expect(screen.getByText('Reopened')).toBeInTheDocument();
     expect(screen.getByText('New feature')).toBeInTheDocument();
-    expect(screen.queryByText('Reopened')).not.toBeInTheDocument();
-    expect(screen.queryByText(/priority/i)).not.toBeInTheDocument();
+  });
+
+  it('names the priority on its own, and leaves "priority" out next to a label that says it', () => {
+    render(
+      <>
+        <PriorityBadge priority="high" />
+        <PriorityBadge priority="low" short />
+      </>,
+    );
+
+    expect(screen.getByText('High priority')).toBeInTheDocument();
+    expect(screen.getByText('Low')).toBeInTheDocument();
   });
 
   it.each([
-    ['nl-NL', ['Wacht op jouw reactie', 'Heropend', 'Support', 'Lage prioriteit']],
-    ['es-ES', ['A la espera de tu respuesta', 'Reabierta', 'Soporte', 'Prioridad baja']],
-  ] as const)('speaks %s', (locale, labels) => {
+    ['nl-NL', ['Wacht op jouw reactie', 'Heropend', 'Support', 'Lage prioriteit', 'Hoog']],
+    ['es-ES', ['A la espera de tu respuesta', 'Reabierta', 'Soporte', 'Prioridad baja', 'Alta']],
+  ] as const)('speak %s', (locale, labels) => {
     renderInLocale(
       locale,
-      <RequestBadges
-        status="waiting"
-        reopened
-        type="support"
-        priority="low"
-        audience="contributor"
-      />,
+      <>
+        <StatusBadge status="waiting" audience="contributor" />
+        <ReopenedBadge />
+        <TypeBadge type="support" />
+        <PriorityBadge priority="low" />
+        <PriorityBadge priority="high" short />
+      </>,
     );
 
     labels.forEach((label) => expect(screen.getByText(label)).toBeInTheDocument());

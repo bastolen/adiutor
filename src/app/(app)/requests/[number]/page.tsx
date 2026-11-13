@@ -23,6 +23,7 @@ import RelativeTime from '@/components/ui/relative-time';
 import RowAction from '@/components/ui/row-action';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import TextLink from '@/components/ui/text-link';
+import ToastOnArrival from '@/components/ui/toast-on-arrival';
 import ClientMessages from '@/lib/i18n/client-messages';
 import {
   formatRequestNumber,
@@ -131,13 +132,19 @@ async function RequestContent({
             <TextLink href={`/companies/${detail.company.slug}`}>{detail.company.name}</TextLink>
           </span>
         }
+        back={{ href: '/requests', label: t('back') }}
       />
+
+      {/* Set by the redirect after the request was raised; not part of any link on this page. */}
+      {searchParam(query.raised) === '1' && <ToastOnArrival message={t('justRaised')} />}
 
       {detail.company.deactivated && <Alert tone="info">{t('deactivated')}</Alert>}
 
       {/* On a wide screen the details stand next to the description and the conversation; on a
           narrower one they come between the two, in the order they're read. */}
-      <div className="flex flex-col gap-6 xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start">
+      {/* The first row is as tall as the description; what the details need beyond it goes to
+          the second, so no gap opens between the description and the conversation. */}
+      <div className="flex flex-col gap-6 xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:grid-rows-[auto_1fr] xl:items-start">
         <div className="xl:col-start-1 xl:row-start-1">
           <Card title={t('description')}>
             {/* Who asked and when, then what they asked, across the card's full width. */}

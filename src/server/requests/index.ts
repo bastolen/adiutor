@@ -14,7 +14,7 @@
  * rules of requests are in `src/lib/requests`.
  */
 export type { RequestPerson } from './access';
-export { listRequestCompanies, listRequests } from './list';
+export { getRequestSettings, listRequestCompanies, listRequests } from './list';
 export type { ListRequestsOptions, RequestCompany, RequestListItem } from './list';
 export { findRequest, getRequest, MAX_EARLIER_CHUNKS, THREAD_CHUNK } from './detail';
 export type { RequestDetail, RequestEntryView, RequestText } from './detail';

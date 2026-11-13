@@ -90,6 +90,11 @@ const APP_PATHS = [
   '/companies/{paging}/members',
   '/companies/{paging}/members?page=2&sort=joined',
   '/companies/{company}/settings',
+  '/requests',
+  '/requests?status=all&q=no-such-request',
+  // More requests than fit on a page: pagination, another sort, the last page.
+  '/requests?company=adiutor-tests-paging&sort=raised&page=2',
+  '/requests/new',
   // A request with a conversation: replies from both sides, a link, and changes.
   '/requests/1',
   '/companies/does-not-exist',

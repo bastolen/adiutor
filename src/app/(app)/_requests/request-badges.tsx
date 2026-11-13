@@ -95,38 +95,3 @@ export function PriorityBadge({
     </Badge>
   );
 }
-
-/**
- * The labels of one request, in a row that wraps: its status, "Reopened"
- * when it was, its type, and its priority for readers who get one.
- *
- * @param props - Component props.
- * @param props.status - The status.
- * @param props.reopened - Whether it was closed before and is worked on again.
- * @param props.type - The type.
- * @param props.priority - The priority, or `null` for readers who don't see priorities.
- * @param props.audience - Who reads it.
- * @returns The row of badges.
- */
-export default function RequestBadges({
-  status,
-  reopened,
-  type,
-  priority,
-  audience,
-}: {
-  status: RequestStatus;
-  reopened: boolean;
-  type: RequestType;
-  priority: RequestPriority | null;
-  audience: RequestAudience;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <StatusBadge status={status} audience={audience} />
-      {reopened && <ReopenedBadge />}
-      <TypeBadge type={type} />
-      {priority && <PriorityBadge priority={priority} />}
-    </div>
-  );
-}

@@ -1,5 +1,7 @@
 /**
- * @file End-to-end tests for a request's page: its description, details and
+ * @file End-to-end tests for requests: the list with its filters, search,
+ * sorting and pages, raising a request (someone at a company, and the staff
+ * for a company), and a request's page: its description, details and
  * conversation, the staff and a company working a request through (status,
  * replies, done, reopened, cancelled), the staff editing its details, and
  * who only reads: Watchers, Finance, everyone for a
@@ -16,6 +18,11 @@ import {
   COMPANY_NAME,
   COMPANY_SLUG,
   FINANCE_STAFF,
+  FIRST_PAGED_REQUEST_NUMBER,
+  PAGED_REQUEST_COUNT,
+  pagedRequestTitle,
+  PAGING_COMPANY_NAME,
+  PAGING_COMPANY_SLUG,
   PLATFORM_ADMIN,
   REQUESTS_CLIENT,
   SEEDED_REQUESTS,
@@ -69,6 +76,227 @@ async function expectReadOnly(page: Page) {
     }),
   ).toHaveCount(0);
 }
+
+/**
+ * The rows of the request list on the page.
+ *
+ * @param page - The browser page.
+ * @returns The table's body rows.
+ */
+const requestRows = (page: Page) => main(page).getByRole('table').locator('tbody tr');
+
+test('the staff find every company’s requests, and narrow them down', async ({ page }) => {
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto('/requests');
+  await expect(page).toHaveTitle('Requests · Adiutor');
+  await expect(page.getByRole('heading', { level: 1, name: 'Requests' })).toBeVisible();
+
+  // What still needs something, the latest activity on top; nothing closed.
+  const table = main(page).getByRole('table');
+  await expect(table).toHaveAccessibleName(
+    /^Active requests, sorted by Last activity, most recent first, page 1 of 2$/,
+  );
+  // The staff see each request's priority.
+  await expect(table.getByRole('columnheader', { name: 'Priority' })).toBeVisible();
+  await expect(main(page).getByText(SEEDED_REQUESTS.done.title)).toHaveCount(0);
+
+  // The ones that wait for the company, each with its number and company.
+  const filters = page.getByRole('navigation', { name: 'Filter requests by status' });
+  await filters.getByRole('link', { name: 'Waiting' }).click();
+  await expect(page).toHaveURL('/requests?status=waiting');
+  const waiting = requestRows(page).filter({ hasText: SEEDED_REQUESTS.waiting.title });
+  await expect(waiting).toContainText('AD-1');
+  await expect(waiting).toContainText(COMPANY_NAME);
+  await expect(waiting).toContainText('Waiting for the company');
+  await filters.getByRole('link', { name: 'Active' }).click();
+  await expect(page).toHaveURL('/requests');
+
+  // A deactivated company's requests can't be worked on, so they aren't among the active ones.
+  await page.getByRole('searchbox', { name: 'Search requests' }).fill('SSL');
+  await page.getByRole('button', { name: 'Search' }).click();
+  await expect(main(page).getByText('No matching requests')).toBeVisible();
+
+  // Every status: the closed company's request and the done one are there.
+  await filters.getByRole('link', { name: 'All', exact: true }).click();
+  await expect(page).toHaveURL('/requests?status=all&q=SSL');
+  await expect(requestRows(page)).toHaveCount(1);
+  await expect(requestRows(page).first()).toContainText(SEEDED_REQUESTS.closedCompany.title);
+
+  // By number, with any prefix or none.
+  await page.getByRole('searchbox', { name: 'Search requests' }).fill('ad-3');
+  await page.getByRole('button', { name: 'Search' }).click();
+  await expect(requestRows(page)).toHaveCount(1);
+  await expect(requestRows(page).first()).toContainText(SEEDED_REQUESTS.done.title);
+  await expect(requestRows(page).first()).toContainText('Done');
+
+  // Waiting, closed, and the menus next to Sort.
+  await page.goto('/requests');
+  await filters.getByRole('link', { name: 'Closed' }).click();
+  await expect(page).toHaveURL('/requests?status=closed');
+  await expect(requestRows(page)).toHaveCount(1);
+  await expect(requestRows(page).first()).toContainText(SEEDED_REQUESTS.done.title);
+
+  await page.goto('/requests');
+  await page.getByRole('button', { name: 'Type', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: 'Hotfix' }).click();
+  await expect(page).toHaveURL('/requests?type=hotfix');
+  await expect(page.getByRole('button', { name: 'Type: Hotfix' })).toBeFocused();
+  await expect(requestRows(page).filter({ hasText: SEEDED_REQUESTS.reopened.title })).toHaveCount(
+    1,
+  );
+  await expect(requestRows(page).filter({ hasText: SEEDED_REQUESTS.reopened.title })).toContainText(
+    'Reopened',
+  );
+  await expect(main(page).getByText(SEEDED_REQUESTS.open.title)).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Priority', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: 'Low' }).click();
+  await expect(page).toHaveURL('/requests?type=hotfix&priority=low');
+  await expect(main(page).getByText('No matching requests')).toBeVisible();
+
+  // One company's requests, more than fit on a page, raised first to last.
+  await page.goto('/requests');
+  await page.getByRole('button', { name: 'Company', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: PAGING_COMPANY_NAME }).click();
+  await expect(page).toHaveURL(`/requests?company=${PAGING_COMPANY_SLUG}`);
+  await expect(main(page).getByText(`Showing 1–25 of ${PAGED_REQUEST_COUNT}`)).toBeVisible();
+  await page.getByRole('button', { name: /^Sort\s*requests/ }).click();
+  await page.getByRole('menuitemradio', { name: 'Raised, oldest first' }).click();
+  await expect(page).toHaveURL(`/requests?company=${PAGING_COMPANY_SLUG}&sort=raised&dir=asc`);
+  await expect(requestRows(page).first()).toContainText(pagedRequestTitle(1));
+  await expect(requestRows(page).first()).toContainText(`AD-${FIRST_PAGED_REQUEST_NUMBER}`);
+  await main(page).getByRole('link', { name: 'Next page' }).click();
+  await expect(requestRows(page)).toHaveCount(PAGED_REQUEST_COUNT - 25);
+  await expect(requestRows(page).last()).toContainText(pagedRequestTitle(PAGED_REQUEST_COUNT));
+
+  // A row is one link to its request.
+  await requestRows(page).last().getByRole('link').click();
+  await expect(page).toHaveURL(`/requests/${FIRST_PAGED_REQUEST_NUMBER + PAGED_REQUEST_COUNT - 1}`);
+  await page.getByRole('link', { name: 'Requests', exact: true }).click();
+  await expect(page).toHaveURL('/requests');
+});
+
+test('someone at a company sees its requests only, without priorities', async ({ page }) => {
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto('/requests?status=all');
+
+  await expect(requestRows(page).filter({ hasText: SEEDED_REQUESTS.waiting.title })).toContainText(
+    'Waiting for your reply',
+  );
+  await expect(main(page).getByText(SEEDED_REQUESTS.done.title)).toBeVisible();
+  // Nothing of other companies, and no way to ask for it.
+  await expect(main(page).getByText('Paged request')).toHaveCount(0);
+  await expect(main(page).getByText(SEEDED_REQUESTS.closedCompany.title)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Company', exact: true })).toHaveCount(0);
+  await page.goto(`/requests?status=all&company=${PAGING_COMPANY_SLUG}`);
+  await expect(main(page).getByText('Paged request')).toHaveCount(0);
+  await expect(main(page).getByText(SEEDED_REQUESTS.waiting.title)).toBeVisible();
+
+  // No priority: no column, no filter, no sort, and asking for one changes nothing.
+  await expect(main(page).getByText(/priority/i)).toHaveCount(0);
+  await page.getByRole('button', { name: /^Sort\s*requests/ }).click();
+  await expect(page.getByRole('menuitemradio', { name: /Priority/ })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await page.goto('/requests?status=all&priority=low&sort=priority');
+  await expect(main(page).getByText(SEEDED_REQUESTS.waiting.title)).toBeVisible();
+  await expect(main(page).getByRole('table')).toHaveAccessibleName(
+    /^All requests, sorted by Last activity, most recent first$/,
+  );
+});
+
+test('someone at a company raises a request, which the staff then find', async ({ page }) => {
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto('/requests');
+  await main(page).getByRole('link', { name: 'New request' }).click();
+  await expect(page).toHaveURL('/requests/new');
+  await expect(page).toHaveTitle('New request · Adiutor');
+  // One company, so nothing to choose; and no priority to set.
+  await expect(page.getByRole('combobox', { name: 'Company' })).toHaveCount(0);
+  await expect(page.getByRole('combobox', { name: 'Priority' })).toHaveCount(0);
+
+  // Without a type it's refused, and what was typed stays.
+  await page.getByRole('textbox', { name: 'Title' }).fill('The coffee machine app is offline');
+  await page
+    .getByRole('textbox', { name: 'Description' })
+    .fill('It says “no connection”.\nSee https://adiutor.test/coffee for the manual.');
+  await page.getByRole('button', { name: 'Raise request' }).click();
+  await expect(main(page).getByRole('alert')).toContainText('Choose what kind of request this is.');
+  await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue(
+    'The coffee machine app is offline',
+  );
+
+  await page.getByRole('combobox', { name: 'Type' }).click();
+  await page.getByRole('option', { name: /^Bug/ }).click();
+  await page.getByRole('button', { name: 'Raise request' }).click();
+
+  // It opens on its own page, which says so once.
+  await expect(page).toHaveURL(/\/requests\/\d+\?raised=1$/);
+  await expect(toasts(page)).toContainText('Request raised.');
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'The coffee machine app is offline' }),
+  ).toBeVisible();
+  const description = page.getByRole('region', { name: 'Description' });
+  await expect(description).toContainText('It says “no connection”.');
+  await expect(description.getByRole('link', { name: /adiutor\.test\/coffee/ })).toBeVisible();
+  await expect(detail(page, 'Status')).toHaveText('Open');
+  await expect(detail(page, 'Type')).toHaveText('Bug');
+  await expect(detail(page, 'Raised by')).toContainText('You');
+  const number = new URL(page.url()).pathname.split('/').pop();
+  await signOut(page);
+
+  // The staff find it at the top of the list, with the priority its type gave it.
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto('/requests');
+  await expect(requestRows(page).first()).toContainText('The coffee machine app is offline');
+  await expect(requestRows(page).first()).toContainText(`AD-${number}`);
+  await requestRows(page).first().getByRole('link').click();
+  await expect(detail(page, 'Priority')).toHaveText('Normal');
+  await expect(detail(page, 'Raised by')).toContainText(REQUESTS_CLIENT.name);
+});
+
+test('the staff raise a request for a company and choose its priority', async ({ page }) => {
+  await signIn(page, SUPPORT_STAFF);
+  // From a company's own list the company is chosen already.
+  await page.goto(`/requests/new?company=${COMPANY_SLUG}`);
+  await expect(page.getByRole('combobox', { name: 'Company' })).toHaveText(COMPANY_NAME);
+  // A deactivated company's requests can only be read, so it isn't offered.
+  await page.getByRole('combobox', { name: 'Company' }).click();
+  await expect(page.getByRole('option', { name: CLOSED_COMPANY_NAME })).toHaveCount(0);
+  await page.getByRole('option', { name: COMPANY_NAME }).click();
+
+  await page.getByRole('textbox', { name: 'Title' }).fill('Add a colleague to the mailing list');
+  await page.getByRole('combobox', { name: 'Type' }).click();
+  await page.getByRole('option', { name: /^New feature/ }).click();
+  await page.getByRole('textbox', { name: 'Description' }).fill('Asked by phone.');
+  await expect(page.getByRole('combobox', { name: 'Priority' })).toHaveText('Set by the type');
+  await page.getByRole('combobox', { name: 'Priority' }).click();
+  await page.getByRole('option', { name: 'High' }).click();
+  await page.getByRole('button', { name: 'Raise request' }).click();
+
+  await expect(page).toHaveURL(/\/requests\/\d+\?raised=1$/);
+  await expect(detail(page, 'Priority')).toHaveText('High');
+  await expect(detail(page, 'Company')).toHaveText(COMPANY_NAME);
+  // Raised by the staff, so there's no first response to wait for.
+  await expect(detail(page, 'Raised by')).toContainText(STAFF_NAME);
+  await expect(page.getByRole('region', { name: 'Details' })).not.toContainText('First response');
+});
+
+test('nobody raises a request who may not: a Watcher and Finance get no form', async ({ page }) => {
+  await signIn(page, CLIENT_WATCHER);
+  await page.goto('/requests');
+  await expect(main(page).getByText(SEEDED_REQUESTS.waiting.title)).toBeVisible();
+  await expect(main(page).getByRole('link', { name: 'New request' })).toHaveCount(0);
+  await page.goto('/requests/new');
+  await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
+  await expect(page).toHaveTitle('Not found · Adiutor');
+  await signOut(page);
+
+  await signIn(page, FINANCE_STAFF);
+  await page.goto('/requests');
+  await expect(main(page).getByRole('link', { name: 'New request' })).toHaveCount(0);
+  await page.goto('/requests/new');
+  await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
+});
 
 test('the staff and a company work a request through, and close and reopen it', async ({
   page,

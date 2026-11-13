@@ -28,6 +28,8 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { notFoundError } from '../errors';
 import { orderTerms, paginate, textOrder } from '../pagination';
+import getRequestPrefix from '../people/request-prefix';
+import getStaffName from '../people/staff-name';
 import containsPattern from '../search';
 import { type RequestPerson, requestPerson, requestScope, visibleRequests } from './access';
 
@@ -275,4 +277,19 @@ export async function listRequests(
       raisedBy: requestPerson(author ?? { id: null, name: null }, createdBySide, actor),
     })),
   };
+}
+
+/**
+ * Loads what every request page shows that the staff chose: the prefix of
+ * request numbers and the name the staff are shown with. Nothing here is
+ * about one request or one person.
+ *
+ * @param ctx - Service context.
+ * @returns The prefix, e.g. "AD", and the staff's name, e.g. "Adiutor".
+ */
+export async function getRequestSettings(
+  ctx: Pick<ServiceContext, 'db'>,
+): Promise<{ prefix: string; staffName: string }> {
+  const [prefix, staffName] = await Promise.all([getRequestPrefix(ctx.db), getStaffName(ctx.db)]);
+  return { prefix, staffName };
 }

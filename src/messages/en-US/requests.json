@@ -1,5 +1,56 @@
 {
   "requests": {
+    "list": {
+      "title": "Requests",
+      "description": "{audience, select, staff {Every company’s requests, with what still needs something first.} other {What your company asked {staff}, and how far along each request is.}}",
+      "new": "New request",
+      "rows": "requests",
+      "searchLabel": "Search requests",
+      "searchPlaceholder": "Title or number",
+      "statusLabel": "Filter requests by status",
+      "statusOption": "{status, select, active {Active} waiting {Waiting} closed {Closed} other {All}}",
+      "companyFilter": "Company",
+      "companyMenu": "Filter by company",
+      "allCompanies": "All",
+      "typeFilter": "Type",
+      "typeMenu": "Filter by type",
+      "allTypes": "All",
+      "priorityFilter": "Priority",
+      "priorityMenu": "Filter by priority",
+      "allPriorities": "All",
+      "caption": "{status, select, active {{matching, select, yes {Active requests matching “{search}”} other {Active requests}}} waiting {{matching, select, yes {Requests that wait for the company matching “{search}”} other {Requests that wait for the company}}} closed {{matching, select, yes {Closed requests matching “{search}”} other {Closed requests}}} other {{matching, select, yes {All requests matching “{search}”} other {All requests}}}}",
+      "columns": {
+        "request": "Request",
+        "status": "Status",
+        "priority": "Priority",
+        "activity": "Last activity",
+        "open": "Open"
+      },
+      "empty": {
+        "activeTitle": "No active requests",
+        "activeDescription": "{canRaise, select, yes {Raise a request and it shows up here until it’s done.} other {Requests that still need something show up here.}}",
+        "noMatchTitle": "No matching requests",
+        "noMatchDescription": "Nothing matches your search or filters."
+      }
+    },
+    "new": {
+      "title": "New request",
+      "description": "{audience, select, staff {Raise a request for a company, for example after a phone call.} other {Tell {staff} what you need. They’ll reply on the request’s page.}}",
+      "back": "Requests",
+      "company": "Company",
+      "companyPlaceholder": "Choose a company",
+      "titleLabel": "Title",
+      "titleHint": "One line that says what it’s about.",
+      "typeLabel": "Type",
+      "typePlaceholder": "Choose a type",
+      "descriptionLabel": "Description",
+      "descriptionHint": "What do you need, and what have you tried? Add web addresses if they help.",
+      "priorityLabel": "Priority",
+      "priorityFromType": "Set by the type",
+      "priorityHint": "Only staff see the priority.",
+      "submit": "Raise request",
+      "cancel": "Cancel"
+    },
     "detail": {
       "title": "Request {reference}",
       "deactivated": "This company is deactivated, so its requests can only be read.",
@@ -17,11 +68,14 @@
       "firstResponse": "First response",
       "firstResponseAfter": "{duration} after it was raised",
       "noResponse": "Not yet",
-      "lastActivity": "Last activity"
+      "lastActivity": "Last activity",
+      "back": "Requests",
+      "justRaised": "Request raised."
     },
     "status": "{status, select, open {Open} todo {To do} in_progress {In progress} waiting {{audience, select, contributor {Waiting for your reply} follower {Waiting for your company} other {Waiting for the company}}} done {Done} cancelled {Cancelled} other {Unknown}}",
     "reopened": "Reopened",
     "type": "{type, select, hotfix {Hotfix} bug {Bug} support {Support} new_feature {New feature} other {Unknown}}",
+    "typeDescription": "{type, select, hotfix {Something is broken and needs fixing right away.} bug {Something doesn’t work as it should.} support {A question, or help with something.} new_feature {Something new, or a change to how things work.} other {Another kind of request.}}",
     "priority": "{priority, select, low {Low} normal {Normal} high {High} other {Unknown}}",
     "priorityBadge": "{priority, select, low {Low priority} normal {Normal priority} high {High priority} other {Unknown priority}}",
     "entry": {
