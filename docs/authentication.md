@@ -251,7 +251,7 @@ does, to check what isn't working for them. The reasons are in
   - On every request, `getOptionalActor` reads that row alongside the staff member, checks again
     (the time, the rules, and that the staff member's session still counts as MFA), and returns
     the user with `signedInAs` set (`actorSignedInAs`).
-  - One that's over ends after the response (`impersonation_ended` with `expired` or
+  - One that's over ends in the background (`impersonation_ended` with `expired` or
     `no_longer_allowed`), and the request goes on as the staff member.
   - Only the staff member is recorded as active.
   - The user's session facts (`sessionId`, `sessionMfaVerified`, `mfaConfirmedUntil`,

@@ -16,8 +16,8 @@
  *   (`getOptionalActor`, while a Server Component renders) doesn't extend it,
  *   since a page can't extend its cookie, and neither does turning two-step
  *   verification on or off, which replaces it (`beforeSessionCreate`), and
- *   when the user was last active is written only after the page (Next's
- *   `after`), so the page never waits for it;
+ *   when the user was last active is written in the background
+ *   (`startInBackground`), so the page never waits for it;
  * - a wrong code at the code step (which has no session yet) is recorded
  *   without an actor (`pendingCodeSignInOf`, `reactToRefusedSignInCode`),
  *   and the owner is told once when wrong codes pause signing in with a
@@ -54,8 +54,10 @@ import { getOptionalActor } from '../authz';
 const pageRequest = vi.hoisted(() => ({ headers: new Headers() }));
 
 /**
- * Work Better Auth runs after its responses (`runInBackground` in
- * `src/lib/auth.ts`, through Next's `after`), such as emails, to wait for.
+ * Work that runs in the background, to wait for: Better Auth's, run after its
+ * responses (`runInBackground` in `src/lib/auth.ts`, through Next's `after`),
+ * such as emails, and the app's own (`startInBackground` in
+ * `src/server/background.ts`), such as recording last activity.
  */
 const backgroundTasks = vi.hoisted((): unknown[] => []);
 
@@ -68,12 +70,22 @@ vi.mock('next/navigation', () => ({ notFound: vi.fn(), redirect: vi.fn() }));
 vi.mock('next/server', async (importOriginal) => ({
   ...(await importOriginal<typeof import('next/server')>()),
   /**
-   * Keeps work to run after the response: a promise already started (Better
-   * Auth's), or a function that runs only once `backgroundWork` is awaited.
+   * Keeps Better Auth's work, a promise already started, to wait for.
    *
    * @param task - The work.
    */
   after: (task: unknown) => {
+    backgroundTasks.push(task);
+  },
+}));
+vi.mock('../background', () => ({
+  /**
+   * Keeps the app's work, to run only once `backgroundWork` is awaited.
+   *
+   * @param description - What the work does (unused here).
+   * @param task - The work.
+   */
+  default: (description: string, task: () => Promise<unknown>) => {
     backgroundTasks.push(task);
   },
 }));
@@ -86,9 +98,8 @@ afterAll(async () => {
 });
 
 /**
- * Waits for the work run after the responses so far: Better Auth's, already
- * started, and the app's own (functions such as recording last activity),
- * which run now.
+ * Waits for the background work so far: Better Auth's, already started, and
+ * the app's own (functions such as recording last activity), which run now.
  */
 async function backgroundWork(): Promise<void> {
   await Promise.all(
@@ -796,7 +807,7 @@ describe('a session', () => {
     expect(after.expiresAt.getTime()).toBe(expiresAt.getTime());
   });
 
-  it('records last activity after the page, so the page never waits for it', async () => {
+  it('records last activity in the background, so the page never waits for it', async () => {
     const jane = await createUserWithPassword('jane@adiutor.test');
     const browser = newBrowser();
     await signInWithPassword(browser, 'jane@adiutor.test');
