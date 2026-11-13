@@ -7,6 +7,12 @@
  * (`JobSummary` in `src/server/jobs/define.ts`).
  */
 
+/**
+ * How a job's name looks: kebab-case, as the command line, the docs and the
+ * emails write it. `defineRecurringJob` and `defineQueuedKind` refuse others.
+ */
+export const JOB_NAME_PATTERN = /^[a-z]+(-[a-z]+)*$/;
+
 /** The recurring jobs, in the order the tick runs them. */
 export const RECURRING_JOB_NAMES = [
   'leftover-provider-tokens',

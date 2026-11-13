@@ -5,7 +5,7 @@
 import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { appError, auditEvent, jobRun, queuedJob } from '@/db/schema';
+import { appError, auditEvent, jobRun, queuedJob, signInError } from '@/db/schema';
 
 import { later, setupTestContext } from '../../../../tests/integration/helpers';
 import retention from './retention';
@@ -39,6 +39,22 @@ describe('retention', () => {
     });
     expect(
       (await db.select({ reference: appError.reference }).from(appError)).map(
+        ({ reference }) => reference,
+      ),
+    ).toEqual(['NEW2-NEW2']);
+  });
+
+  it('removes sign-in errors after 7 days', async () => {
+    await db.insert(signInError).values([
+      { reference: 'OLD2-OLD2', code: 'state_mismatch', createdAt: sql`now() - interval '8 days'` },
+      { reference: 'NEW2-NEW2', code: 'state_mismatch', createdAt: sql`now() - interval '6 days'` },
+    ]);
+
+    await expect(retention.run(ctx, { deadline: later })).resolves.toMatchObject({
+      summary: { signInErrors: 1 },
+    });
+    expect(
+      (await db.select({ reference: signInError.reference }).from(signInError)).map(
         ({ reference }) => reference,
       ),
     ).toEqual(['NEW2-NEW2']);

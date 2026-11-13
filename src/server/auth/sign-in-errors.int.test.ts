@@ -1,20 +1,15 @@
 /**
  * @file Integration tests for recording sign-in errors: what is stored, the
- * unique references, the limit per IP address and the 7-day cleanup.
+ * unique references and the limit per IP address. The 7-day cleanup is the
+ * retention job's (`retention.int.test.ts`).
  */
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { signInError } from '@/db/schema';
 
-import {
-  createUser,
-  inSequence,
-  later,
-  setupTestContext,
-} from '../../../tests/integration/helpers';
+import { createUser, inSequence, setupTestContext } from '../../../tests/integration/helpers';
 import type { ServiceContext } from '../context';
-import { runJobNow } from '../jobs';
 import { RATE_LIMITS } from '../rate-limit';
 import { recordSignInError } from './sign-in-errors';
 
@@ -126,20 +121,5 @@ describe('recordSignInError', () => {
     ).toEqual([]);
     // The limit's IP address got its limit's worth; another one isn't affected.
     expect(await stored()).toHaveLength(limit + 1);
-  });
-});
-
-describe('the retention job, for sign-in errors', () => {
-  it('removes them after 7 days', async () => {
-    await db.insert(signInError).values([
-      { reference: 'OLD2-OLD2', code: 'state_mismatch', createdAt: sql`now() - interval '8 days'` },
-      { reference: 'NEW2-NEW2', code: 'state_mismatch', createdAt: sql`now() - interval '6 days'` },
-    ]);
-
-    await expect(
-      runJobNow(ctx, 'retention', { trigger: 'cli', deadline: later }),
-    ).resolves.toMatchObject({ summary: { signInErrors: 1 } });
-
-    expect((await stored()).map(({ reference }) => reference)).toEqual(['NEW2-NEW2']);
   });
 });

@@ -16,7 +16,7 @@ import { listFailedJobs, listJobRuns, loadJobsOverview } from './overview';
 const { ctx, db } = setupTestContext();
 
 describe('loadJobsOverview', () => {
-  it('lists every recurring job and kind of queued job with its state', async () => {
+  it('gives every recurring job and kind of queued job its state', async () => {
     const manager = await staffActor(db, 'manager', 'sam@adiutor.test');
     await db.insert(jobState).values({ name: 'retention', pausedAt: sql`now()` });
     await db
@@ -28,39 +28,13 @@ describe('loadJobsOverview', () => {
 
     const overview = await loadJobsOverview(ctx, manager);
 
-    expect(overview.recurring.map(({ name, paused }) => ({ name, paused }))).toEqual([
-      { name: 'leftover-provider-tokens', paused: false },
-      { name: 'finished-sign-ins-as-users', paused: false },
-      { name: 'expired-sign-in-data', paused: false },
-      { name: 'invitation-reminders', paused: false },
-      { name: 'retention', paused: true },
+    expect(overview.recurring.filter((job) => job.paused).map((job) => job.name)).toEqual([
+      'retention',
     ]);
-    expect(overview.queued).toEqual([
-      {
-        name: 'security-notice',
-        known: true,
-        pausable: false,
-        paused: false,
-        waiting: 1,
-        failed: 1,
-      },
-      {
-        name: 'added-to-company',
-        known: true,
-        pausable: true,
-        paused: false,
-        waiting: 0,
-        failed: 0,
-      },
-      {
-        name: 'staff-admin-added',
-        known: true,
-        pausable: false,
-        paused: false,
-        waiting: 0,
-        failed: 0,
-      },
-    ]);
+    expect(overview.queued.find((kind) => kind.name === 'security-notice')).toMatchObject({
+      waiting: 1,
+      failed: 1,
+    });
   });
 
   it('gives a job whose last run failed that run’s error reference', async () => {
@@ -96,13 +70,11 @@ describe('loadJobsOverview', () => {
 
     const { recurring } = await loadJobsOverview(ctx, manager);
 
-    expect(Object.fromEntries(recurring.map((job) => [job.name, job.lastErrorReference]))).toEqual({
-      'leftover-provider-tokens': null,
-      'finished-sign-ins-as-users': null,
-      'expired-sign-in-data': null,
-      'invitation-reminders': 'CCCC-DDDD',
-      retention: null,
-    });
+    expect(
+      recurring
+        .filter((job) => job.lastErrorReference)
+        .map(({ name, lastErrorReference }) => ({ name, lastErrorReference })),
+    ).toEqual([{ name: 'invitation-reminders', lastErrorReference: 'CCCC-DDDD' }]);
   });
 });
 

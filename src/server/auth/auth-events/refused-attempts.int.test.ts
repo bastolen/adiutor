@@ -166,23 +166,6 @@ describe('wrong passwords', () => {
     expect(await subjects()).toHaveLength(1);
   });
 
-  it('leaves a notice the mail server refused to the queue, which tries it again', async () => {
-    await createUserWithPassword('jane@adiutor.test');
-    vi.mocked(sendEmail).mockRejectedValueOnce(new Error('SMTP is down'));
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-    await failSignIns(10, 'jane@adiutor.test');
-    // The first try is refused; the notice waits in the queue.
-    expect(await subjects()).toHaveLength(1);
-
-    // Its wait is over, and the mail server is back.
-    await db.update(queuedJob).set({ runAt: new Date() });
-    expect(await subjects()).toEqual([
-      'Password sign-in to your Adiutor account is paused',
-      'Password sign-in to your Adiutor account is paused',
-    ]);
-  });
-
   it('tells no one without a password: no account, a deactivated one, or one without a password', async () => {
     const john = await createUserWithPassword('john@adiutor.test');
     await db.update(user).set({ deactivatedAt: new Date() }).where(eq(user.id, john));
@@ -421,25 +404,18 @@ describe('a code at the code step of a password sign-in', () => {
     expect((await events()).map(({ action }) => action)).toEqual(['mfa_failed']);
   });
 
-  it('queues one notice per pause, which the queue tries again when the mail server refused it', async () => {
+  it('queues one notice per pause, however many refusals it brings', async () => {
     const support = await staffActor(db, 'support');
     await enableTwoFactor(db, support.id);
     await lockTwoFactor(support.id, new Date(Date.now() + 15 * 60_000));
-    vi.mocked(sendEmail).mockRejectedValueOnce(new Error('SMTP unavailable'));
     const locked = refusal('TOO_MANY_REQUESTS', 'ACCOUNT_TEMPORARILY_LOCKED');
-    // The refused try is logged.
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     await handle(codeStep('/two-factor/verify-totp', support.id), locked);
     await handle(codeStep('/two-factor/verify-totp', support.id), locked);
     await handle(codeStep('/two-factor/verify-totp', support.id), locked);
-    expect(await subjects()).toEqual([LOCKED_SUBJECT]);
 
-    // Its wait is over, and the mail server is back.
-    await db.update(queuedJob).set({ runAt: new Date() });
-    expect(await subjects()).toEqual([LOCKED_SUBJECT, LOCKED_SUBJECT]);
     expect(await db.select().from(queuedJob)).toHaveLength(1);
+    expect(await subjects()).toEqual([LOCKED_SUBJECT]);
   });
 
   it('tells nobody without a pause, or when the account is deactivated', async () => {

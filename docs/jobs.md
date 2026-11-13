@@ -247,6 +247,7 @@ event.
    - `name`: stable, in kebab-case. It's stored with the job's state and history, so don't rename
      it.
    - `schedule`: a cron expression in UTC with five fields, e.g. `0 6 1 * *` for 06:00 on the 1st.
+     A name that isn't kebab-case or a schedule that can't be read stops the app from loading.
    - `run(ctx, { deadline })`: does the work and returns `{ summary }` with counts, plus `failure`
      when it finished but something went wrong. Each count is one of `JOB_SUMMARY_KEYS` in
      `src/lib/job-names.ts`; a new one goes there, with its words in `jobs.summary.<count>`.
@@ -274,8 +275,8 @@ that runs them (the runner imports the code it runs, and that code queues jobs):
 
 1. **Declare the kind** in `src/server/queue/` with `defineQueuedKind`, and export it from that
    module's `index.ts`:
-   - `name`: stable, in kebab-case. It's stored with each job, so don't rename it while jobs of it
-     may be waiting.
+   - `name`: stable, in kebab-case (anything else stops the app from loading). It's stored with
+     each job, so don't rename it while jobs of it may be waiting.
    - `payload`: a zod schema of IDs, enums, numbers and booleans (see [Queued jobs](#queued-jobs)).
    - `maxAttempts` (optional): how many times a job is tried before it's given up.
    - `batch` (optional): `{ group, key }`, for jobs that run together (see

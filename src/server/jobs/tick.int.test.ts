@@ -1,11 +1,9 @@
 /**
- * @file Integration tests for the tick and running a job now, against the
- * test database: due jobs run once per scheduled moment, paused ones don't,
+ * @file Integration tests for the tick, against the test database: due jobs run once per scheduled moment, paused ones don't,
  * a lease keeps two runs of a job apart, failures are counted without
  * stopping the others, the recurring jobs get at most half of the tick so
- * the queue always has time, and the deadline leaves the rest for the next
- * tick.
- * Also the registry and the job list.
+ * the queue always has time, the deadline leaves the rest for the next
+ * tick, and a run whose lease ran out is recorded as failed, once.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -15,17 +13,13 @@ import { z } from 'zod';
 
 import { appError, jobRun, jobState, queuedJob } from '@/db/schema';
 
-import { later, setupTestContext, staffActor } from '../../../tests/integration/helpers';
-import { ServiceError } from '../errors';
+import { later, setupTestContext } from '../../../tests/integration/helpers';
 import { defineQueuedKind, queueJob } from '../queue';
-import { defineRecurringJob, handleQueuedJob, type JobOutcome, type RecurringJob } from './define';
-import { listJobs } from './list';
-import { RECURRING_JOBS } from './registry';
-import { runRecurringJob } from './run';
-import { isValidSchedule } from './schedule';
-import { runJobNow, runTick } from './tick';
+import { defineRecurringJob, handleQueuedJob } from './define';
+import { history, hourlyJob } from './test-helpers';
+import { runTick } from './tick';
 
-const { ctx, db, sent } = setupTestContext();
+const { ctx, db } = setupTestContext();
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -42,34 +36,6 @@ function at(time: string): Date {
 }
 
 /**
- * An hourly test job that counts its runs.
- *
- * @param name - Its name.
- * @param run - What it does; it counts one run by default.
- * @returns The job.
- */
-function hourlyJob(
-  name: string,
-  run: () => Promise<JobOutcome> = async () => ({ summary: { done: 1 } }),
-): RecurringJob {
-  return defineRecurringJob({ name, schedule: '0 * * * *', run });
-}
-
-/**
- * The stored history of a job.
- *
- * @param name - The job's name.
- * @returns Its runs, oldest first.
- */
-async function history(name: string) {
-  return db
-    .select({ status: jobRun.status, trigger: jobRun.trigger, summary: jobRun.summary })
-    .from(jobRun)
-    .where(eq(jobRun.job, name))
-    .orderBy(jobRun.startedAt, jobRun.id);
-}
-
-/**
  * The stored state of a job.
  *
  * @param name - The job's name.
@@ -79,15 +45,6 @@ async function state(name: string) {
   const [found] = await db.select().from(jobState).where(eq(jobState.name, name));
   return found;
 }
-
-describe('the registry', () => {
-  it('has unique names in kebab-case and valid schedules', () => {
-    const names = RECURRING_JOBS.map((job) => job.name);
-    expect(new Set(names).size).toBe(names.length);
-    names.forEach((name) => expect(name).toMatch(/^[a-z]+(-[a-z]+)*$/));
-    RECURRING_JOBS.forEach((job) => expect(isValidSchedule(job.schedule)).toBe(true));
-  });
-});
 
 describe('runTick', () => {
   it('runs a due job once per scheduled moment, and records each run', async () => {
@@ -108,7 +65,7 @@ describe('runTick', () => {
     // The next hour: due again.
     await runTick(ctx, { trigger: 'cli', deadline: later, now: at('11:05'), jobs: [job] });
 
-    expect(await history(job.name)).toEqual([
+    expect(await history(db, job.name)).toEqual([
       { status: 'succeeded', trigger: 'tick', summary: { done: 1 } },
       { status: 'succeeded', trigger: 'cli', summary: { done: 1 } },
     ]);
@@ -132,7 +89,7 @@ describe('runTick', () => {
     });
 
     expect(result.runs).toEqual([]);
-    expect(await history(job.name)).toEqual([]);
+    expect(await history(db, job.name)).toEqual([]);
   });
 
   it('runs a job that can’t be paused, whatever pause is left in the database', async () => {
@@ -188,29 +145,7 @@ describe('runTick', () => {
 
     expect(second.runs).toEqual([]);
     expect((await first).runs).toHaveLength(1);
-    expect(await history(job.name)).toHaveLength(1);
-  });
-
-  it('takes over a job whose run died, once its lease ran out, recording the died run', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    const job = hourlyJob('adiutor-tests-orphaned');
-    await db.insert(jobState).values({
-      name: job.name,
-      lockedUntil: sql`now() - interval '1 minute'`,
-      lastStartedAt: at('09:00'),
-    });
-
-    const result = await runTick(ctx, {
-      trigger: 'tick',
-      deadline: later,
-      now: at('10:30'),
-      jobs: [job],
-    });
-
-    expect(result.runs.map((run) => [run.job, run.status])).toEqual([
-      [job.name, 'failed'],
-      [job.name, 'succeeded'],
-    ]);
+    expect(await history(db, job.name)).toHaveLength(1);
   });
 
   it('counts failures in a row without stopping the other jobs', async () => {
@@ -233,7 +168,7 @@ describe('runTick', () => {
       [partly.name, 'failed'],
       [fine.name, 'succeeded'],
     ]);
-    expect(await history(broken.name)).toEqual([
+    expect(await history(db, broken.name)).toEqual([
       { status: 'failed', trigger: 'tick', summary: {} },
       { status: 'failed', trigger: 'tick', summary: {} },
     ]);
@@ -242,7 +177,7 @@ describe('runTick', () => {
       lastStatus: 'failed',
     });
     expect(await state(partly.name)).toMatchObject({ consecutiveFailures: 2 });
-    expect(await history(partly.name)).toContainEqual({
+    expect(await history(db, partly.name)).toContainEqual({
       status: 'failed',
       trigger: 'tick',
       summary: { sent: 1, failed: 1 },
@@ -345,7 +280,7 @@ describe('runTick', () => {
       moreDue: true,
       failed: false,
     });
-    expect(await history(job.name)).toEqual([]);
+    expect(await history(db, job.name)).toEqual([]);
   });
 
   it('gives the recurring jobs the first half of the tick, and the queue the rest', async () => {
@@ -448,28 +383,17 @@ describe('runTick', () => {
 });
 
 describe('runs that never finished', () => {
-  /**
-   * Stores a run that started at 10:20 on the tick's day and died: its lease
-   * ran out a minute ago, and it never finished.
-   *
-   * @param name - The job's name.
-   * @param consecutiveFailures - How many runs in a row had failed before it.
-   */
-  async function diedAt1020(name: string, consecutiveFailures = 0) {
-    await db.insert(jobState).values({
-      name,
-      lastStartedAt: at('10:20'),
-      lockedUntil: sql`now() - interval '1 minute'`,
-      consecutiveFailures,
-    });
-  }
-
-  it('records a run whose lease ran out as failed, once, even with two ticks at once', async () => {
+  it('records a run whose lease ran out as failed, once, and takes the job over, even with two ticks at once', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const job = hourlyJob('adiutor-tests-died');
-    await diedAt1020(job.name);
+    // Its 9:00 run died: the lease ran out a minute ago, and it never finished.
+    await db.insert(jobState).values({
+      name: job.name,
+      lastStartedAt: at('09:00'),
+      lockedUntil: sql`now() - interval '1 minute'`,
+    });
 
-    // At 10:30 it isn't due again (it last started at 10:20, after 10:00).
+    // At 10:30 it's due again.
     const results = await Promise.all(
       [1, 2].map(async () =>
         runTick(ctx, { trigger: 'tick', deadline: later, now: at('10:30'), jobs: [job] }),
@@ -483,20 +407,24 @@ describe('runs that never finished', () => {
         reference: jobRun.errorReference,
       })
       .from(jobRun)
-      .where(eq(jobRun.job, job.name));
+      .where(eq(jobRun.job, job.name))
+      .orderBy(jobRun.startedAt);
     expect(recorded).toEqual([
-      { status: 'failed', startedAt: at('10:20'), reference: expect.any(String) },
+      { status: 'failed', startedAt: at('09:00'), reference: expect.any(String) },
+      { status: 'succeeded', startedAt: at('10:30'), reference: null },
     ]);
     expect(await db.select({ reference: appError.reference }).from(appError)).toEqual([
       { reference: recorded[0]?.reference },
     ]);
-    // One of the two ticks reported it, as a failure.
-    expect(results.map((result) => result.failed).sort()).toEqual([false, true]);
-    // Its lease is free again, for its next scheduled moment.
+    // Between them, the two ticks reported each run once.
+    expect(results.flatMap((result) => result.runs.map((run) => run.status)).sort()).toEqual([
+      'failed',
+      'succeeded',
+    ]);
     expect(await state(job.name)).toMatchObject({
       lockedUntil: null,
-      lastStatus: 'failed',
-      consecutiveFailures: 1,
+      lastStatus: 'succeeded',
+      consecutiveFailures: 0,
     });
   });
 
@@ -516,91 +444,6 @@ describe('runs that never finished', () => {
     });
 
     expect(result.runs).toEqual([]);
-    expect(await history(job.name)).toEqual([]);
-  });
-
-  it('tells the staff Admins once it is the third failure in a row', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    await staffActor(db, 'platform_admin', 'alex@adiutor.test');
-    const job = hourlyJob('adiutor-tests-hangs');
-    await diedAt1020(job.name, 2);
-
-    await runTick(ctx, { trigger: 'tick', deadline: later, now: at('10:30'), jobs: [job] });
-
-    expect(sent.map(({ to, subject }) => ({ to, subject }))).toEqual([
-      {
-        to: 'alex@adiutor.test',
-        subject: 'Background job adiutor-tests-hangs keeps failing on Adiutor',
-      },
-    ]);
-  });
-});
-
-describe('running a job now', () => {
-  it('runs a job whether it is due or paused', async () => {
-    const job = hourlyJob('adiutor-tests-now');
-    await db
-      .insert(jobState)
-      .values({ name: job.name, pausedAt: sql`now()`, lastStartedAt: sql`now()` });
-
-    const run = await runRecurringJob(ctx, job, { trigger: 'cli', deadline: later });
-
-    expect(run).toMatchObject({ job: job.name, status: 'succeeded', summary: { done: 1 } });
-    expect(await history(job.name)).toHaveLength(1);
-  });
-
-  it('leaves a job another run holds alone', async () => {
-    const job = hourlyJob('adiutor-tests-held');
-    await db
-      .insert(jobState)
-      .values({ name: job.name, lockedUntil: sql`now() + interval '5 minutes'` });
-
-    await expect(
-      runRecurringJob(ctx, job, { trigger: 'cli', deadline: later }),
-    ).resolves.toBeNull();
-  });
-
-  it('runs a registered job by name', async () => {
-    await expect(
-      runJobNow(ctx, 'expired-sign-in-data', { trigger: 'cli', deadline: later }),
-    ).resolves.toMatchObject({ job: 'expired-sign-in-data', status: 'succeeded' });
-  });
-
-  it('refuses a job that does not exist', async () => {
-    await expect(
-      runJobNow(ctx, 'adiutor-tests-missing', { trigger: 'cli', deadline: later }),
-    ).rejects.toThrow(ServiceError);
-  });
-});
-
-describe('listJobs', () => {
-  it('lists every job with its state and next run', async () => {
-    const now = new Date();
-    await runJobNow(ctx, 'retention', { trigger: 'cli', deadline: later });
-    await db.insert(jobState).values({ name: 'expired-sign-in-data', pausedAt: sql`now()` });
-
-    const jobs = await listJobs(ctx, now);
-
-    expect(jobs.map((job) => job.name)).toEqual(RECURRING_JOBS.map((job) => job.name));
-    const byName = new Map(jobs.map((job) => [job.name, job]));
-    // It ran just now, so its next run is its next scheduled moment.
-    expect(byName.get('retention')).toMatchObject({
-      paused: false,
-      running: false,
-      lastStatus: 'succeeded',
-      due: false,
-    });
-    expect(byName.get('retention')?.nextRunAt?.getTime()).toBeGreaterThan(now.getTime());
-    expect(byName.get('expired-sign-in-data')).toMatchObject({
-      paused: true,
-      due: false,
-      nextRunAt: null,
-    });
-    // Never ran: due at the next tick.
-    expect(byName.get('invitation-reminders')).toMatchObject({
-      lastStatus: null,
-      due: true,
-      nextRunAt: now,
-    });
+    expect(await history(db, job.name)).toEqual([]);
   });
 });

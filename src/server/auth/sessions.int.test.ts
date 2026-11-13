@@ -3,10 +3,10 @@
  * forgets the devices you trusted at the code step, and is recorded), and
  * everyone or one user from the command line, against the test database.
  */
-import { eq, sql } from 'drizzle-orm';
-import { describe, expect, it, vi } from 'vitest';
+import { eq } from 'drizzle-orm';
+import { describe, expect, it } from 'vitest';
 
-import { auditEvent, queuedJob, session, verification } from '@/db/schema';
+import { auditEvent, session, verification } from '@/db/schema';
 
 import {
   actorFor,
@@ -224,33 +224,5 @@ describe('signing out from the command line', () => {
 
     expect(await sessionIds(jane)).toEqual([janeSession]);
     expect(await db.select().from(auditEvent)).toEqual([]);
-  });
-
-  it('tells the user at a later tick when the mail server was down at first', async () => {
-    const jane = await createUser(db, 'jane@adiutor.test');
-    await createSession(db, jane);
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-    /**
-     * Fails like an SMTP server that's down.
-     *
-     * @returns Never; it rejects.
-     */
-    const failingSendEmail = () => Promise.reject(new Error('SMTP is down'));
-
-    await expect(revokeAllSessions(ctx, { email: 'jane@adiutor.test' })).resolves.toEqual({
-      count: 1,
-      email: 'jane@adiutor.test',
-      noticeQueued: true,
-    });
-    await sendQueuedEmails({ ...ctx, sendEmail: failingSendEmail });
-    expect(sent).toEqual([]);
-
-    // The mail server is back once the wait is over.
-    await db.update(queuedJob).set({ runAt: sql`now()` });
-    await sendQueuedEmails(ctx);
-    expect(sent.map(({ to, subject }) => ({ to, subject }))).toEqual([
-      { to: 'jane@adiutor.test', subject: 'You were signed out of Adiutor' },
-    ]);
   });
 });

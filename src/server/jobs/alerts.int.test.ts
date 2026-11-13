@@ -1,7 +1,7 @@
 /**
  * @file Integration tests for telling the staff Admins that a job keeps
- * failing, against the test database: after three failed runs in a row, or
- * when queued jobs are given up; only active staff Admins, in their own
+ * failing, against the test database: after three failed runs in a row
+ * (a run that never finished counts), or when queued jobs are given up; only active staff Admins, in their own
  * language; at most once a day per job; and a mail problem never stops the
  * tick.
  */
@@ -132,6 +132,21 @@ describe('alerts about a recurring job', () => {
     expect(sent.find((email) => email.to === 'alex@adiutor.test')?.subject).toBe(
       'Achtergrondtaak adiutor-tests-broken blijft mislukken op Adiutor',
     );
+  });
+
+  it('count a run that never finished as a failure', async () => {
+    // Two failed runs in a row, then a run at 10:20 that died: its lease ran out a minute ago.
+    await db.insert(jobState).values({
+      name: broken.name,
+      lastStartedAt: new Date('2030-01-15T10:20:00Z'),
+      lockedUntil: sql`now() - interval '1 minute'`,
+      consecutiveFailures: 2,
+    });
+
+    // At 10:30 it isn't due again, but the run that died is recorded: the third failure.
+    await tickAt(10);
+
+    expect(alerted()).toEqual(['alex@adiutor.test', 'blake@adiutor.test']);
   });
 
   it('never stop the tick when the mail server is down', async () => {

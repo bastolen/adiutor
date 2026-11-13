@@ -3,13 +3,14 @@
  * page, against the test database: pausing and resuming (each once),
  * running a recurring job now (kept in the history with who started it, and
  * refused while another run holds it), and retrying or discarding failed
- * queued jobs; each recorded in the audit log with the job's name. Who may
- * do them is in the authorization matrix.
+ * queued jobs; each recorded in the audit log with the job's name. Which
+ * rows retrying and discarding change is in `manage-queue.int.test.ts`, who
+ * may do them in the authorization matrix.
  */
 import { asc, eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { auditEvent, jobRun, jobState, queuedJob } from '@/db/schema';
+import { auditEvent, jobRun, jobState } from '@/db/schema';
 
 import { setupTestContext, staffActor, storeQueuedJob } from '../../../tests/integration/helpers';
 import {
@@ -163,9 +164,6 @@ describe('retryFailedJobs and discardFailedJobs', () => {
       key: 'errors.jobs.noFailedJobs',
     });
 
-    expect(
-      await db.select({ status: queuedJob.status, attempts: queuedJob.attempts }).from(queuedJob),
-    ).toEqual([{ status: 'queued', attempts: 0 }]);
     expect(await events()).toEqual([
       {
         action: 'queued_jobs_retried',
@@ -187,16 +185,6 @@ describe('retryFailedJobs and discardFailedJobs', () => {
     );
     await expect(discardFailedJobs(ctx, admin, { kind: 'adiutor-tests-gone' })).resolves.toBe(2);
 
-    expect(
-      await db
-        .select({ kind: queuedJob.kind, status: queuedJob.status })
-        .from(queuedJob)
-        .orderBy(asc(queuedJob.id)),
-    ).toEqual([
-      { kind: 'adiutor-tests-gone', status: 'discarded' },
-      { kind: 'adiutor-tests-gone', status: 'discarded' },
-      { kind: 'security-notice', status: 'failed' },
-    ]);
     expect(await events()).toEqual([
       {
         action: 'queued_jobs_discarded',

@@ -57,12 +57,7 @@ describe('sendEmail', () => {
 describe('the SMTP transport', () => {
   it('waits for the mail server well within the jobs’ tick, not nodemailer’s minutes', () => {
     expect(transportOptions).toEqual([
-      expect.objectContaining({
-        url: 'smtp://localhost:1025',
-        connectionTimeout: 10_000,
-        greetingTimeout: 10_000,
-        socketTimeout: 20_000,
-      }),
+      expect.objectContaining({ url: 'smtp://localhost:1025', ...SMTP_TIMEOUTS }),
     ]);
     expect(Math.max(...Object.values(SMTP_TIMEOUTS))).toBeLessThan(45_000);
   });

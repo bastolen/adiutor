@@ -4,10 +4,11 @@
  * `defineQueuedKind` in `src/server/queue`) does with its jobs. Each lives
  * in a file of its own and is listed in `registry.ts` (see docs/jobs.md).
  */
-import type { JobSummaryKey } from '@/lib/job-names';
+import { JOB_NAME_PATTERN, type JobSummaryKey } from '@/lib/job-names';
 
 import type { ServiceContext } from '../context';
 import type { JobPayload, QueuedJobKind } from '../queue';
+import { isValidSchedule } from './schedule';
 
 /**
  * What a run did, as counts, e.g. `{ sessions: 12 }`: numbers only, never
@@ -61,8 +62,14 @@ export interface RecurringJob {
  *
  * @param job - The job.
  * @returns The same job, typed.
+ * @throws {Error} When its name isn't kebab-case or its schedule can't be read, so a mistake stops the app from loading.
  */
 export function defineRecurringJob(job: RecurringJob): RecurringJob {
+  if (!JOB_NAME_PATTERN.test(job.name) || !isValidSchedule(job.schedule)) {
+    throw new Error(
+      `The recurring job "${job.name}" needs a kebab-case name and a valid schedule (${job.schedule})`,
+    );
+  }
   return job;
 }
 

@@ -7,6 +7,8 @@
  */
 import type { z } from 'zod';
 
+import { JOB_NAME_PATTERN } from '@/lib/job-names';
+
 /**
  * One value in a queued job's payload: an ID, a small setting, or a list of
  * IDs. Never personal data such as names or addresses: the job reads those
@@ -85,6 +87,7 @@ const DEFAULT_MAX_ATTEMPTS = 5;
  * @param definition.pausable - Whether staff Admins may pause it.
  * @param definition.batch - How its jobs are coupled with others.
  * @returns The kind.
+ * @throws {Error} When its name isn't kebab-case, so a mistake stops the app from loading.
  */
 export function defineQueuedKind<P extends JobPayload>({
   name,
@@ -93,6 +96,9 @@ export function defineQueuedKind<P extends JobPayload>({
   pausable = true,
   batch,
 }: QueuedKindDefinition<P>): QueuedJobKind<P> {
+  if (!JOB_NAME_PATTERN.test(name)) {
+    throw new Error(`The kind of queued job "${name}" needs a kebab-case name`);
+  }
   return {
     name,
     payload,
