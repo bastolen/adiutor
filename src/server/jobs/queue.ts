@@ -8,7 +8,7 @@ import { and, asc, eq, inArray, lt, lte, ne, sql } from 'drizzle-orm';
 import type { DatabaseOrTransaction } from '@/db';
 import { type QueuedJobStatus, queuedJob } from '@/db/schema';
 
-import type { StoredQueuedJob } from './define';
+import type { QueuedJob } from './define';
 import { JOB_LEASE_MINUTES } from './state';
 
 /**
@@ -151,7 +151,7 @@ export async function claimNextQueuedJobs(
   db: DatabaseOrTransaction,
   kinds: readonly string[],
   first: string,
-): Promise<StoredQueuedJob[]> {
+): Promise<QueuedJob[]> {
   const taken = await claimWhere(db, kinds, first, waiting());
   const claimed = taken.length > 0 ? taken : await claimWhere(db, kinds, first, died());
   return claimed

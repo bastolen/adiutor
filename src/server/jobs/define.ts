@@ -66,24 +66,17 @@ export function defineRecurringJob(job: RecurringJob): RecurringJob {
   return job;
 }
 
-/** A queued job as the runner reads it from the queue, before its payload is checked. */
-export interface StoredQueuedJob {
+/**
+ * A queued job: as the runner reads it from the queue (`payload: unknown`,
+ * before its kind checks it), as its kind's handler gets it (`QueuedJob<P>`,
+ * checked), or as a batch gets it (`QueuedJob<JobPayload>`: read each one
+ * typed with its kind's `read`).
+ */
+export interface QueuedJob<P = unknown> {
   /** The job's ID. */
   id: string;
   /** Its kind's name. */
   kind: string;
-  /** Its payload, as stored. */
-  payload: unknown;
-  /** How many times a run took it, this one included. */
-  attempts: number;
-  /** When it was queued: what happened most likely happened then. */
-  queuedAt: Date;
-}
-
-/** A queued job as its kind's handler gets it: with its payload checked. */
-export interface QueuedJob<P extends JobPayload> {
-  /** The job's ID. */
-  id: string;
   /** Its payload. */
   payload: P;
   /** How many times a run took it, this one included. */
@@ -99,35 +92,14 @@ export interface QueuedJob<P extends JobPayload> {
  */
 export type QueuedJobResult = 'done' | 'skipped';
 
-/** A queued job as a batch gets it: with its kind, and its payload checked by that kind. */
-export interface BatchedQueuedJob {
-  /** The job's ID. */
-  id: string;
-  /** Its kind's name. */
-  kind: string;
-  /** Its payload; read it typed with the kind's `read`. */
-  payload: JobPayload;
-  /** How many times a run took it, this one included. */
-  attempts: number;
-  /** When it was queued: what happened most likely happened then. */
-  queuedAt: Date;
-}
-
 /** What the runner needs of any kind of queued job, whatever its payload. */
-export interface QueuedJobRunner {
-  /** The kind's name. */
-  name: string;
-  /** Whether staff Admins may pause it (see `defineQueuedKind`). */
-  pausable: boolean;
-  /** How many times a job is tried before it's given up as failed. */
-  maxAttempts: number;
-  /** The batch group its jobs run in, or `null` when each runs on its own. */
-  batchGroup: string | null;
-  /** Checks a stored payload against the kind's schema. */
-  check: (payload: unknown) => JobPayload;
+export type QueuedJobRunner = Pick<
+  QueuedJobKind<JobPayload>,
+  'name' | 'pausable' | 'maxAttempts' | 'batchGroup' | 'check'
+> & {
   /** Runs one of its jobs, checking the payload first; `null` when its jobs run in batches. */
-  handle: ((ctx: ServiceContext, job: StoredQueuedJob) => Promise<QueuedJobResult>) | null;
-}
+  handle: ((ctx: ServiceContext, job: QueuedJob) => Promise<QueuedJobResult>) | null;
+};
 
 /**
  * Gives a kind of queued job whose jobs run on their own its handler, for
@@ -158,13 +130,7 @@ export function handleQueuedJob<P extends JobPayload>(
      * @param job - The job, as stored.
      * @returns How it ended.
      */
-    handle: async (ctx, job) =>
-      run(ctx, {
-        id: job.id,
-        attempts: job.attempts,
-        queuedAt: job.queuedAt,
-        payload: kind.check(job.payload),
-      }),
+    handle: async (ctx, job) => run(ctx, { ...job, payload: kind.check(job.payload) }),
   };
 }
 
@@ -200,7 +166,7 @@ export interface JobBatch {
    * it throws, every job in the batch is tried again later (with anything
    * queued for the key meanwhile), so it must be safe to run again.
    */
-  run: (ctx: ServiceContext, jobs: readonly BatchedQueuedJob[]) => Promise<BatchOutcome>;
+  run: (ctx: ServiceContext, jobs: readonly QueuedJob<JobPayload>[]) => Promise<BatchOutcome>;
 }
 
 /**

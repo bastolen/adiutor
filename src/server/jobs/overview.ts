@@ -21,7 +21,12 @@ import type { ServiceContext } from '../context';
 import { orderTerms, paginate } from '../pagination';
 import type { JobSummary } from './define';
 import { type JobListing, listJobs } from './list';
-import { listQueuedKinds, type QueuedKindListing } from './manage-queue';
+import {
+  type FailedQueuedJob,
+  listQueuedKinds,
+  type QueuedKindListing,
+  readFailedQueuedJobs,
+} from './manage-queue';
 
 /** A recurring job on the Jobs page. */
 export interface RecurringJobOverview extends JobListing {
@@ -146,20 +151,7 @@ export async function listJobRuns(
 }
 
 /** A queued job that was given up, as the Jobs page lists it. */
-export interface FailedJobEntry {
-  /** The job's ID. */
-  id: string;
-  /** Its kind's name. */
-  kind: string;
-  /** How many times it was tried. */
-  attempts: number;
-  /** When it was queued. */
-  queuedAt: Date;
-  /** When it was given up. */
-  failedAt: Date | null;
-  /** The reference of the error its last attempt recorded. */
-  errorReference: string | null;
-}
+export type FailedJobEntry = FailedQueuedJob;
 
 /**
  * Lists the queued jobs that were given up after their last attempt, a page
@@ -185,20 +177,6 @@ export async function listFailedJobs(
     state,
     async () =>
       (await ctx.db.select({ total: count() }).from(queuedJob).where(failed))[0]?.total ?? 0,
-    (limit, offset) =>
-      ctx.db
-        .select({
-          id: queuedJob.id,
-          kind: queuedJob.kind,
-          attempts: queuedJob.attempts,
-          queuedAt: queuedJob.createdAt,
-          failedAt: queuedJob.finishedAt,
-          errorReference: queuedJob.lastErrorReference,
-        })
-        .from(queuedJob)
-        .where(failed)
-        .orderBy(...orderTerms(state.dir, queuedJob.finishedAt, queuedJob.id))
-        .limit(limit)
-        .offset(offset),
+    (limit, offset) => readFailedQueuedJobs(ctx.db, { limit, offset, dir: state.dir }),
   );
 }

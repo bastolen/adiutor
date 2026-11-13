@@ -14,9 +14,9 @@ import { z } from 'zod';
 import { appError, jobRun, jobState, queuedJob } from '@/db/schema';
 
 import { setupTestContext, staffActor } from '../../../tests/integration/helpers';
-import { defineQueuedKind, type QueuedJobKind, queueJob } from '../queue';
+import { defineQueuedKind, type JobPayload, type QueuedJobKind, queueJob } from '../queue';
 import {
-  type BatchedQueuedJob,
+  type QueuedJob,
   batchedJobRunner,
   defineJobBatch,
   handleQueuedJob,
@@ -532,7 +532,7 @@ describe('batches', () => {
    */
   function emailBatch(
     outcome: (
-      jobs: readonly BatchedQueuedJob[],
+      jobs: readonly QueuedJob<JobPayload>[],
     ) => Promise<{ skipped?: string[] }> = async () => ({}),
   ): JobBatch {
     return defineJobBatch({

@@ -14,7 +14,7 @@ import { defined } from '@/lib/defined';
 
 import type { ServiceContext } from '../context';
 import { alertStaffAdmins } from './alerts';
-import type { JobBatch, QueuedJobResult, QueuedJobRunner, StoredQueuedJob } from './define';
+import type { JobBatch, QueuedJobResult, QueuedJobRunner, QueuedJob } from './define';
 import {
   claimNextQueuedJobs,
   finishQueuedJob,
@@ -75,7 +75,7 @@ export interface QueueRunOptions {
  */
 async function finish(
   ctx: ServiceContext,
-  jobs: readonly { job: StoredQueuedJob; result: QueuedJobResult }[],
+  jobs: readonly { job: QueuedJob; result: QueuedJobResult }[],
 ): Promise<Ending[]> {
   return Promise.all(
     jobs.map(async ({ job, result }) => {
@@ -98,7 +98,7 @@ async function finish(
  */
 async function fail(
   ctx: ServiceContext,
-  jobs: readonly { job: StoredQueuedJob; kind: QueuedJobRunner }[],
+  jobs: readonly { job: QueuedJob; kind: QueuedJobRunner }[],
   error: unknown,
 ): Promise<Ending[]> {
   const errorReference = await recordJobError(
@@ -138,7 +138,7 @@ async function fail(
  */
 async function runClaimed(
   ctx: ServiceContext,
-  claimed: readonly { job: StoredQueuedJob; kind: QueuedJobRunner }[],
+  claimed: readonly { job: QueuedJob; kind: QueuedJobRunner }[],
   batches: ReadonlyMap<string, JobBatch>,
 ): Promise<Ending[]> {
   try {

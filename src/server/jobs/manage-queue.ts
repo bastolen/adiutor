@@ -3,11 +3,13 @@
  * which ones failed, and trying failed jobs again or discarding them. For
  * `pnpm jobs:list`, `jobs:retry` and `jobs:discard`, and the Jobs page.
  */
-import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, count, eq, inArray, sql } from 'drizzle-orm';
 
 import type { Database, DatabaseOrTransaction } from '@/db';
 import { queuedJob } from '@/db/schema';
+import type { SortDirection } from '@/lib/tables/table-state';
 
+import { orderTerms } from '../pagination';
 import { QUEUED_JOBS } from './registry';
 import { loadJobStates } from './state';
 
@@ -79,8 +81,44 @@ export interface FailedQueuedJob {
   kind: string;
   /** How many times it was tried. */
   attempts: number;
+  /** When it was queued. */
+  queuedAt: Date;
   /** When it was given up. */
   failedAt: Date | null;
+  /** The reference of the error its last attempt recorded. */
+  errorReference: string | null;
+}
+
+/**
+ * Reads queued jobs that were given up, by when they were given up, without
+ * their payloads (only IDs, which tell nobody anything; the error reference
+ * says what went wrong). For the command line and the Jobs page.
+ *
+ * @param db - Database client.
+ * @param page - Which jobs.
+ * @param page.limit - How many at most.
+ * @param page.offset - How many to skip.
+ * @param page.dir - Latest first (`desc`) or oldest first.
+ * @returns The jobs.
+ */
+export async function readFailedQueuedJobs(
+  db: Database,
+  { limit, offset = 0, dir = 'desc' }: { limit: number; offset?: number; dir?: SortDirection },
+): Promise<FailedQueuedJob[]> {
+  return db
+    .select({
+      id: queuedJob.id,
+      kind: queuedJob.kind,
+      attempts: queuedJob.attempts,
+      queuedAt: queuedJob.createdAt,
+      failedAt: queuedJob.finishedAt,
+      errorReference: queuedJob.lastErrorReference,
+    })
+    .from(queuedJob)
+    .where(eq(queuedJob.status, 'failed'))
+    .orderBy(...orderTerms(dir, queuedJob.finishedAt, queuedJob.id))
+    .limit(limit)
+    .offset(offset);
 }
 
 /**
@@ -91,17 +129,7 @@ export interface FailedQueuedJob {
  * @returns The jobs.
  */
 export async function listFailedQueuedJobs(db: Database, limit = 50): Promise<FailedQueuedJob[]> {
-  return db
-    .select({
-      id: queuedJob.id,
-      kind: queuedJob.kind,
-      attempts: queuedJob.attempts,
-      failedAt: queuedJob.finishedAt,
-    })
-    .from(queuedJob)
-    .where(eq(queuedJob.status, 'failed'))
-    .orderBy(desc(queuedJob.finishedAt), desc(queuedJob.id))
-    .limit(limit);
+  return readFailedQueuedJobs(db, { limit });
 }
 
 /** Which failed jobs: one by ID, or every one of a kind. */
