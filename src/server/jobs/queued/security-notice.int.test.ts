@@ -39,12 +39,13 @@ afterEach(() => {
  * @returns The runs.
  */
 async function sendQueued(context: ServiceContext = ctx) {
-  return runQueue(context, {
+  const { runs } = await runQueue(context, {
     trigger: 'tick',
     deadline: later,
     startedAt: new Date(),
     kinds: [securityNoticeJob],
   });
+  return runs;
 }
 
 describe('queueSecurityNotice', () => {

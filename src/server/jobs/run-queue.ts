@@ -15,7 +15,12 @@ import { defined } from '@/lib/defined';
 import type { ServiceContext } from '../context';
 import { alertStaffAdmins } from './alerts';
 import type { JobBatch, QueuedJobResult, QueuedJobRunner, StoredQueuedJob } from './define';
-import { claimNextQueuedJobs, finishQueuedJob, retryQueuedJobLater } from './queue';
+import {
+  claimNextQueuedJobs,
+  finishQueuedJob,
+  hasDueQueuedJobs,
+  retryQueuedJobLater,
+} from './queue';
 import recordJobError from './record-error';
 import { JOB_BATCHES, QUEUED_JOBS } from './registry';
 import type { JobRunResult } from './run';
@@ -165,6 +170,17 @@ async function runClaimed(
   }
 }
 
+/** What a run of the queue did. */
+export interface QueueRun {
+  /** One run per kind that ran jobs, in the order they first ran. */
+  runs: JobRunResult[];
+  /**
+   * Whether jobs it could run are still due: it stopped at the deadline with
+   * some left. Jobs waiting for a later attempt don't count.
+   */
+  moreDue: boolean;
+}
+
 /**
  * The kinds whose jobs a tick may take: those that aren't paused (a pause
  * only counts for a kind that can be paused) and can run, on their own (with
@@ -175,7 +191,7 @@ async function runClaimed(
  * @param batchesByGroup - The batches by group.
  * @returns The kinds that can run.
  */
-export function runnableKinds(
+function runnableKinds(
   states: Awaited<ReturnType<typeof loadJobStates>>,
   kinds: readonly QueuedJobRunner[],
   batchesByGroup: ReadonlyMap<string, JobBatch>,
@@ -203,12 +219,12 @@ export function runnableKinds(
  * @param options.startedAt - When the tick started.
  * @param options.kinds - The kinds that may run.
  * @param options.batches - The batches of the batch groups.
- * @returns One run per kind that ran jobs, in the order they first ran.
+ * @returns The runs, one per kind that ran jobs, and whether jobs are still due.
  */
 export async function runQueue(
   ctx: ServiceContext,
   { trigger, deadline, startedAt, kinds = QUEUED_JOBS, batches = JOB_BATCHES }: QueueRunOptions,
-): Promise<JobRunResult[]> {
+): Promise<QueueRun> {
   const states = await loadJobStates(ctx.db);
   const batchesByGroup = new Map(batches.map((batch) => [batch.group, batch]));
   const runnable = runnableKinds(states, kinds, batchesByGroup);
@@ -256,7 +272,9 @@ export async function runQueue(
       });
     }
   }
-  return Promise.all(
+  // Kinds still taking turns at the deadline may have jobs left; one lookup tells.
+  const moreDue = turns.length > 0 && (await hasDueQueuedJobs(ctx.db, runnableNames));
+  const runs: JobRunResult[] = await Promise.all(
     [...counts].map(async ([name, summary]) => {
       const status = summary.retried + summary.failed > 0 ? 'failed' : 'succeeded';
       const errorReference = lastErrors.get(name) ?? null;
@@ -280,4 +298,5 @@ export async function runQueue(
       return { job: name, status, summary: { ...summary }, runId, errorReference };
     }),
   );
+  return { runs, moreDue };
 }

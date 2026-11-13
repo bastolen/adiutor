@@ -65,17 +65,17 @@ export interface TickResponse {
     | { status: 'invalid' | 'unauthorized' | 'too_many_requests' | 'disabled' };
 }
 
-/**
- * The endpoint's answer, and what's left to do once it's sent: running a
- * continued call's tick and saying whether to continue again. It gives the
- * next continuation's step, or `null` to stop. (Not called `then`: an object
- * with a `then` would pass for a promise when awaited.)
- */
+/** The endpoint's answer, and what's left to do once it's sent. */
 export interface TickAnswer {
   /** What to answer. */
   response: TickResponse;
-  /** The work for after the answer, if any (`after()` in the route). */
-  afterAnswer: (() => Promise<number | null>) | null;
+  /**
+   * The work for after the answer (the route runs it with `after()`), if any:
+   * a continued call's tick, then the next continuation while work is still
+   * due. It logs its own problems and never throws. (Not called `then`: an
+   * object with a `then` would pass for a promise when awaited.)
+   */
+  afterAnswer: (() => Promise<void>) | null;
 }
 
 /**
@@ -127,95 +127,6 @@ function continuationStep(header: string | null): number | null {
   }
   const step = /^\d{1,2}$/.test(header) ? Number(header) : 0;
   return step >= 1 && step <= MAX_TICK_CONTINUATIONS ? step : null;
-}
-
-/**
- * Answers a request to the tick's endpoint. Without a secret configured the
- * endpoint is off. A wrong or missing secret counts against the sender's IP
- * address, and past the limit the answer becomes 429; the right secret always
- * runs the tick, so someone sharing the cron service's address can't lock it
- * out.
- *
- * A call from a cron service runs the tick and answers with what it did,
- * saying whether it continues. A continued call (with
- * {@link TICK_CONTINUATION_HEADER}) answers 202 at once and runs its tick in
- * `afterAnswer`, so the call before it only waits for that answer.
- *
- * @param ctx - Service context, with the request's IP address.
- * @param request - What the request brought.
- * @param request.authorization - Its `Authorization` header, if any.
- * @param request.continuation - Its {@link TICK_CONTINUATION_HEADER}, if any.
- * @param request.secret - The configured secret (`CRON_SECRET`), if any.
- * @param request.tickSeconds - How long the tick may start runs; {@link ENDPOINT_TICK_SECONDS} by default.
- * @returns The answer, and what to do after it.
- */
-export async function answerTickRequest(
-  ctx: ServiceContext,
-  {
-    authorization,
-    continuation = null,
-    secret,
-    tickSeconds = ENDPOINT_TICK_SECONDS,
-  }: {
-    authorization: string | null;
-    continuation?: string | null;
-    secret: string | undefined;
-    tickSeconds?: number;
-  },
-): Promise<TickAnswer> {
-  if (!secret) {
-    return { response: { status: 503, body: { status: 'disabled' } }, afterAnswer: null };
-  }
-  if (!isAuthorized(authorization, secret)) {
-    const request = ctx.requestInfo ? await ctx.requestInfo() : null;
-    const { allowed } = await hitRateLimit(
-      ctx,
-      `job-tick-miss:ip:${request?.ip ?? 'unknown'}`,
-      RATE_LIMITS.jobTickMissesPerIp,
-    );
-    return {
-      response: allowed
-        ? { status: 401, body: { status: 'unauthorized' } }
-        : { status: 429, body: { status: 'too_many_requests' } },
-      afterAnswer: null,
-    };
-  }
-  const step = continuationStep(continuation);
-  if (step === null) {
-    return { response: { status: 400, body: { status: 'invalid' } }, afterAnswer: null };
-  }
-  /**
-   * Runs one tick.
-   *
-   * @returns What it did.
-   */
-  const tick = () =>
-    runTick(ctx, { trigger: 'tick', deadline: new Date(Date.now() + tickSeconds * 1000) });
-  if (step > 0) {
-    return {
-      response: { status: 202, body: { status: 'continuing', step } },
-      /**
-       * Runs the continued call's tick after the answer.
-       *
-       * @returns The next continuation's step, or `null` to stop.
-       */
-      afterAnswer: async () => nextContinuation(await tick(), step),
-    };
-  }
-  const result = await tick();
-  const next = nextContinuation(result, 0);
-  return {
-    response: {
-      status: result.failed ? 500 : 200,
-      body: {
-        status: result.failed ? 'failed' : 'ok',
-        runs: result.runs.map(({ job, status, summary }) => ({ job, status, summary })),
-        leftForNextTick: result.leftForNextTick,
-        continues: next !== null,
-      },
-    },
-    afterAnswer: next === null ? null : async () => next,
-  };
 }
 
 /** How a continuation is requested. */
@@ -281,30 +192,113 @@ export async function requestTickContinuation(
 }
 
 /**
- * Does what's left after the endpoint answered (the route runs it with
- * `after()`): a continued call's tick, then the next continuation when work
- * is still due. An unexpected error (say, the database is unreachable) is
- * logged, never thrown.
+ * Answers a request to the tick's endpoint. Without a secret configured the
+ * endpoint is off. A wrong or missing secret counts against the sender's IP
+ * address, and past the limit the answer becomes 429; the right secret always
+ * runs the tick, so someone sharing the cron service's address can't lock it
+ * out.
  *
- * @param ctx - Service context.
- * @param afterAnswer - The work from the answer.
- * @param options - How to request the next continuation.
+ * A call from a cron service runs the tick and answers with what it did,
+ * saying whether it continues. A continued call (with
+ * {@link TICK_CONTINUATION_HEADER}) answers 202 at once and runs its tick in
+ * `afterAnswer`, so the call before it only waits for that answer.
+ *
+ * @param ctx - Service context, with the request's IP address.
+ * @param request - What the request brought.
+ * @param request.authorization - Its `Authorization` header, if any.
+ * @param request.continuation - Its {@link TICK_CONTINUATION_HEADER}, if any.
+ * @param request.secret - The configured secret (`CRON_SECRET`), if any.
+ * @param request.bypassSecret - Vercel's protection bypass secret (`VERCEL_AUTOMATION_BYPASS_SECRET`), for continuations on protected Preview deployments.
+ * @param request.tickSeconds - How long the tick may start runs; {@link ENDPOINT_TICK_SECONDS} by default.
+ * @param request.fetch - How a continuation is sent; the global `fetch` by default (tests pass their own).
+ * @returns The answer, and what to do after it.
  */
-export async function continueAfterAnswer(
-  ctx: Pick<ServiceContext, 'baseUrl'>,
-  afterAnswer: () => Promise<number | null>,
-  options: ContinuationOptions,
-): Promise<void> {
-  try {
-    const next = await afterAnswer();
-    if (next !== null) {
-      await requestTickContinuation(ctx, next, options);
-    }
-  } catch (error) {
-    // eslint-disable-next-line no-console -- Runs after the answer: only the log can tell.
-    console.error(
-      "The jobs' tick failed after answering; the next tick takes over",
-      error instanceof Error ? error.name : 'unknown error',
-    );
+export async function answerTickRequest(
+  ctx: ServiceContext,
+  {
+    authorization,
+    continuation = null,
+    secret,
+    bypassSecret,
+    tickSeconds = ENDPOINT_TICK_SECONDS,
+    fetch: send = fetch,
+  }: {
+    authorization: string | null;
+    continuation?: string | null;
+    secret: string | undefined;
+    bypassSecret?: string | undefined;
+    tickSeconds?: number;
+    fetch?: typeof fetch;
+  },
+): Promise<TickAnswer> {
+  if (!secret) {
+    return { response: { status: 503, body: { status: 'disabled' } }, afterAnswer: null };
   }
+  if (!isAuthorized(authorization, secret)) {
+    const request = ctx.requestInfo ? await ctx.requestInfo() : null;
+    const { allowed } = await hitRateLimit(
+      ctx,
+      `job-tick-miss:ip:${request?.ip ?? 'unknown'}`,
+      RATE_LIMITS.jobTickMissesPerIp,
+    );
+    return {
+      response: allowed
+        ? { status: 401, body: { status: 'unauthorized' } }
+        : { status: 429, body: { status: 'too_many_requests' } },
+      afterAnswer: null,
+    };
+  }
+  const step = continuationStep(continuation);
+  if (step === null) {
+    return { response: { status: 400, body: { status: 'invalid' } }, afterAnswer: null };
+  }
+  /**
+   * Runs one tick.
+   *
+   * @returns What it did.
+   */
+  const tick = () =>
+    runTick(ctx, { trigger: 'tick', deadline: new Date(Date.now() + tickSeconds * 1000) });
+  /**
+   * Does what's left after the answer: finds the next continuation's step and
+   * asks for it, logging an unexpected error (say, the database is
+   * unreachable) instead of throwing.
+   *
+   * @param nextStep - Finds the step, or `null` to stop.
+   * @returns The work.
+   */
+  const afterwards = (nextStep: () => Promise<number | null>) => async () => {
+    try {
+      const next = await nextStep();
+      if (next !== null) {
+        await requestTickContinuation(ctx, next, { secret, bypassSecret, fetch: send });
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console -- Runs after the answer: only the log can tell.
+      console.error(
+        "The jobs' tick failed after answering; the next tick takes over",
+        error instanceof Error ? error.name : 'unknown error',
+      );
+    }
+  };
+  if (step > 0) {
+    return {
+      response: { status: 202, body: { status: 'continuing', step } },
+      afterAnswer: afterwards(async () => nextContinuation(await tick(), step)),
+    };
+  }
+  const result = await tick();
+  const next = nextContinuation(result, 0);
+  return {
+    response: {
+      status: result.failed ? 500 : 200,
+      body: {
+        status: result.failed ? 'failed' : 'ok',
+        runs: result.runs.map(({ job, status, summary }) => ({ job, status, summary })),
+        leftForNextTick: result.leftForNextTick,
+        continues: next !== null,
+      },
+    },
+    afterAnswer: next === null ? null : afterwards(async () => next),
+  };
 }

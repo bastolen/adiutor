@@ -31,12 +31,13 @@ const { ctx, db, sent } = setupTestContext();
  * @returns The runs.
  */
 async function sendQueued() {
-  return runQueue(ctx, {
+  const { runs } = await runQueue(ctx, {
     trigger: 'tick',
     deadline: new Date(Date.now() + 60_000),
     startedAt: new Date(),
     kinds: [addedToCompanyJob, staffAdminAddedJob],
   });
+  return runs;
 }
 
 describe('the added-to-company job', () => {

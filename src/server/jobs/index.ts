@@ -20,7 +20,7 @@ export {
   retryFailedJobs,
   runJobFromPage,
 } from './controls';
-export { answerTickRequest, continueAfterAnswer, TICK_CONTINUATION_HEADER } from './endpoint';
+export { answerTickRequest, TICK_CONTINUATION_HEADER } from './endpoint';
 export { listJobs } from './list';
 export {
   discardFailedQueuedJobs,

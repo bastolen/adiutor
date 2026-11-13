@@ -19,7 +19,6 @@ import { inviteByEmail } from '../people/invitations';
 import { RATE_LIMITS } from '../rate-limit';
 import {
   answerTickRequest,
-  continueAfterAnswer,
   MAX_TICK_CONTINUATIONS,
   nextContinuation,
   requestTickContinuation,
@@ -230,14 +229,26 @@ describe('continuing the tick', () => {
       lockedUntil: sql`now() - interval '1 minute'`,
     });
 
+    const continued = fakeFetch();
+
     const { response, afterAnswer } = await answerTickRequest(fromAddress, {
       authorization: `Bearer ${SECRET}`,
       secret: SECRET,
+      bypassSecret: 'adiutor-tests-bypass',
       tickSeconds: 0,
+      fetch: continued.send,
     });
+    await afterAnswer?.();
 
     expect(response).toMatchObject({ body: { continues: true } });
-    await expect(afterAnswer?.()).resolves.toBe(1);
+    // After the answer, it asks for the first continuation, with the bypass for protected Previews.
+    expect(continued.requests.map(({ headers }) => headers)).toEqual([
+      {
+        authorization: `Bearer ${SECRET}`,
+        [TICK_CONTINUATION_HEADER]: '1',
+        'x-vercel-protection-bypass': 'adiutor-tests-bypass',
+      },
+    ]);
   });
 
   it('stops a tick that got nothing done, however much is due', async () => {
@@ -254,14 +265,21 @@ describe('continuing the tick', () => {
   });
 
   it('answers a continued call at once, and runs its tick after answering', async () => {
-    const { response, afterAnswer } = await ask(`Bearer ${SECRET}`, fromAddress, '3');
+    const continued = fakeFetch();
+    const { response, afterAnswer } = await answerTickRequest(fromAddress, {
+      authorization: `Bearer ${SECRET}`,
+      secret: SECRET,
+      continuation: '3',
+      fetch: continued.send,
+    });
 
     expect(response).toEqual({ status: 202, body: { status: 'continuing', step: 3 } });
     // Nothing ran before the answer.
     expect(await db.select().from(jobRun)).toEqual([]);
-    // Nothing is left once it ran, so it doesn't continue again.
-    await expect(afterAnswer?.()).resolves.toBeNull();
+    await afterAnswer?.();
     expect(await db.select().from(jobRun)).not.toEqual([]);
+    // Nothing is left once it ran, so it doesn't continue again.
+    expect(continued.requests).toEqual([]);
   });
 
   it('continues only while work is due, the tick did something and the limit allows', () => {
@@ -324,28 +342,27 @@ describe('continuing the tick', () => {
     expect(JSON.stringify(logged.mock.calls)).not.toContain(SECRET);
   });
 
-  it('after answering, asks for the next continuation only when there is one', async () => {
+  it('never throws after answering, even when the continuation can’t be sent', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    const once = fakeFetch();
-    const never = fakeFetch();
-    const broken = fakeFetch();
+    await db.insert(jobState).values({
+      name: 'retention',
+      lastStartedAt: sql`now() - interval '20 minutes'`,
+      lockedUntil: sql`now() - interval '1 minute'`,
+    });
+    /**
+     * Fails like an unreachable address.
+     *
+     * @returns Never; it rejects.
+     */
+    const unreachable = (() => Promise.reject(new TypeError('fetch failed'))) as typeof fetch;
 
-    await continueAfterAnswer(ctx, async () => 5, { secret: SECRET, fetch: once.send });
-    await continueAfterAnswer(ctx, async () => null, { secret: SECRET, fetch: never.send });
-    await expect(
-      continueAfterAnswer(
-        ctx,
-        async () => {
-          throw new Error('Adiutor Tests: the database is unreachable');
-        },
-        { secret: SECRET, fetch: broken.send },
-      ),
-    ).resolves.toBeUndefined();
+    const { afterAnswer } = await answerTickRequest(fromAddress, {
+      authorization: `Bearer ${SECRET}`,
+      secret: SECRET,
+      tickSeconds: 0,
+      fetch: unreachable,
+    });
 
-    expect(once.requests.map((request) => request.headers[TICK_CONTINUATION_HEADER])).toEqual([
-      '5',
-    ]);
-    expect(never.requests).toEqual([]);
-    expect(broken.requests).toEqual([]);
+    await expect(afterAnswer?.()).resolves.toBeUndefined();
   });
 });

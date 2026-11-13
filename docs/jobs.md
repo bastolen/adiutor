@@ -69,7 +69,7 @@ next tick: the endpoint continues it straight away.
    that could still run when the deadline came (`hasDueQueuedJobs`). Jobs waiting for a later
    attempt don't count, so a failing job can't keep it going.
 2. When work is left and the tick ran something, the endpoint answers as usual and then, after the
-   answer (`after()` in the route, `continueAfterAnswer`), calls itself again
+   answer (`afterAnswer`, which the route runs with `after()`), calls itself again
    (`requestTickContinuation`). The call goes to the app's configured address (`BETTER_AUTH_URL`,
    never a host from the request, since it carries the secret) with the secret, the header
    `x-adiutor-tick-continuation` with the continuation's number, and Vercel's

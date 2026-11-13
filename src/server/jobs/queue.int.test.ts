@@ -181,7 +181,7 @@ describe('running the queue', () => {
     });
     await add(kind, 'gone');
 
-    const runs = await runQueue(ctx, {
+    const { runs } = await runQueue(ctx, {
       trigger: 'tick',
       deadline: later,
       startedAt: new Date(),
@@ -216,7 +216,7 @@ describe('running the queue', () => {
     await add(kind, 'broken', new Date(Date.now() - 60_000));
     await add(kind, 'fine');
 
-    const runs = await runQueue(ctx, {
+    const { runs } = await runQueue(ctx, {
       trigger: 'tick',
       deadline: later,
       startedAt: new Date(),
@@ -249,7 +249,7 @@ describe('running the queue', () => {
     await add(paused, 'paused');
     await add(unknown, 'unknown');
 
-    const runs = await runQueue(ctx, {
+    const { runs } = await runQueue(ctx, {
       trigger: 'tick',
       deadline: later,
       startedAt: new Date(),
@@ -321,7 +321,7 @@ describe('running the queue', () => {
     const kind = noteKind('adiutor-tests-note');
     await add(kind, 'late');
 
-    const runs = await runQueue(ctx, {
+    const { runs } = await runQueue(ctx, {
       trigger: 'tick',
       deadline: new Date(Date.now() - 1),
       startedAt: new Date(),
@@ -451,7 +451,7 @@ describe('running the queue', () => {
       })
       .where(eq(queuedJob.id, id));
 
-    const runs = await runQueue(ctx, {
+    const { runs } = await runQueue(ctx, {
       trigger: 'tick',
       deadline: later,
       startedAt: new Date(),
@@ -566,13 +566,14 @@ describe('batches', () => {
    * @returns The runs.
    */
   async function run(batch: JobBatch = emailBatch()) {
-    return runQueue(ctx, {
+    const { runs } = await runQueue(ctx, {
       trigger: 'tick',
       deadline: later,
       startedAt: new Date(),
       kinds: [statusChanged, commented],
       batches: [batch],
     });
+    return runs;
   }
 
   it('runs the jobs of one key together, whatever their kind, and each job once', async () => {
@@ -657,7 +658,7 @@ describe('batches', () => {
   it('leaves batched jobs waiting while their group has no batch', async () => {
     await queueJob(db, commented, { ticketId: ticket1, userId: jane });
 
-    const runs = await runQueue(ctx, {
+    const { runs } = await runQueue(ctx, {
       trigger: 'tick',
       deadline: later,
       startedAt: new Date(),
