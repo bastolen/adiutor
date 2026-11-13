@@ -18,7 +18,7 @@ import { OAUTH_PROVIDERS } from '@/lib/sign-in/oauth-providers';
 import { assertNotSignedInAs, assertPermission, getGlobalPermissions } from '../../access';
 import type { Actor } from '../../actor';
 import { recordEvent } from '../../audit';
-import { queueSecurityNotice, sendSecurityNotice } from '../../auth/security-notices';
+import { queueSecurityNotice, sendAccountDeletedNotice } from '../../auth/security-notices';
 import { endSessionsOf } from '../../auth/sessions';
 import { withSignInChangeLock } from '../../auth/sign-in-change-lock';
 import type { ServiceContext } from '../../context';
@@ -331,5 +331,5 @@ export async function deleteUser(
   });
   // Only once the deletion has committed: a refused one sends nothing. The account is gone, so its
   // language comes along.
-  await sendSecurityNotice(ctx, { email }, 'account_deleted', { locale });
+  await sendAccountDeletedNotice(ctx, email, locale);
 }

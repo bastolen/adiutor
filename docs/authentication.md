@@ -393,13 +393,14 @@ changes; the kinds, and what they say, are listed in [Email](email.md#templates)
 for the next tick of the [background jobs](jobs.md#queued-jobs) once the change has committed
 (`queueSecurityNotice` in `src/server/auth/security-notices.ts`, the `security-notice` job), so a
 mail outage retries them instead of losing them; they arrive up to 5 minutes later. Only the notice
-to a deleted account's address is sent straight away (`sendSecurityNotice`): it can't wait, because
-the account is gone by then. Changes made through Better Auth's endpoints (passwords, two-step
-verification, passkeys, linked accounts) queue theirs from its hooks (`notify` in
-`src/server/auth/auth-events/hook-context.ts`), right after recording the audit event. Only a user's own changes
-name the device and IP address: a queued notice names them only when it's given the change's audit
-event (`auditEventId`, whose device, IP address and time it reads), and `sendSecurityNotice` only
-with `showDevice: true`, so a new email can't show someone else's by mistake. Changes someone else
+to a deleted account's address is sent straight away (`sendAccountDeletedNotice`): it can't wait,
+because the account is gone by then, and it never names a device. Changes made through Better
+Auth's endpoints (passwords, two-step verification, passkeys, linked accounts) queue theirs from its
+hooks (`auditAndNotify` in `src/server/auth/auth-events/hook-context.ts`), with the audit event.
+Only a user's own changes name the device and IP address: a queued notice names them only when it's
+given the change's audit event (`auditEventId`, whose device, IP address and time it reads), and
+only when the user is both that event's actor and its target, so an email can't show someone
+else's by mistake. Changes someone else
 makes to their access are emailed too, without the device or IP address, which would be that
 person's. A company role change or a removal is not emailed to the person who made
 it themselves (see

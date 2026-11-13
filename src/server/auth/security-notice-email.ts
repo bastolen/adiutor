@@ -1,7 +1,7 @@
 /**
  * @file Building a security notice for a recipient (`src/emails/security-notice.tsx`),
  * in their language, with the device and IP address of the change when it
- * was their own. Shared by the notice sent straight away (`sendSecurityNotice`)
+ * was their own. Shared by the notice sent straight away (`sendAccountDeletedNotice`)
  * and the queued one (the `security-notice` job).
  */
 import { securityNoticeEmail } from '@/emails/security-notice';

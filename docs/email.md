@@ -59,8 +59,8 @@ it wasn't them are `select`s on the kind (`reason`, `ifNotYou`). Most are queued
 `security-notice` job, see [Security emails](authentication.md#security-emails)), and the job reads
 the names when it sends them, from the IDs it was queued with: `{provider}` from the provider ID,
 `{role}` (named in the recipient's language), `{company}` from the company, `{name}` from the staff
-member and `{staff}` (the name the staff are shown with to users). A notice sent straight away
-(`sendSecurityNotice`) is given them as options. Each has a stand-in ("A provider", "a new role",
+member and `{staff}` (the name the staff are shown with to users). The notice to a deleted account,
+sent straight away (`sendAccountDeletedNotice`), names none of them. Each has a stand-in ("A provider", "a new role",
 "your company", "A staff member", "Adiutor") when it's missing, and `{minutes}` is how long signing
 in as someone lasts (`IMPERSONATION_MINUTES`). Both build the email the same way
 (`buildSecurityNotice` in `src/server/auth/security-notice-email.ts`). The email names the device

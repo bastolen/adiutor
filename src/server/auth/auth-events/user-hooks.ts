@@ -10,7 +10,7 @@ import { account, user } from '@/db/schema';
 import { clearFailedSignIns } from '../failed-sign-ins';
 import { databaseHookState } from '../request-state';
 import { forgetTrustedDevices } from '../trusted-devices';
-import { safely, audit, notify, type AuthHookContext } from './hook-context';
+import { safely, audit, auditAndNotify, type AuthHookContext } from './hook-context';
 
 /** How recent a password sign-in must be to count as just created by the reset. */
 const JUST_CREATED_MS = 60_000;
@@ -46,8 +46,7 @@ export async function onPasswordReset(userId: string, headers?: Headers): Promis
     if (credential && Date.now() - credential.createdAt.getTime() < JUST_CREATED_MS) {
       return;
     }
-    const eventId = await audit({ headers }, 'password_reset', userId);
-    await notify(eventId, userId, 'password_reset');
+    await auditAndNotify({ headers }, 'password_reset', userId);
   });
 }
 

@@ -31,7 +31,7 @@ import { loadMfaContext } from '../mfa-state';
 import { PROVIDER_MFA_CHECKS } from '../provider-mfa';
 import { requestState, takeRequestState } from '../request-state';
 import { setNextPageCookie } from './cookies';
-import { type AuthHookContext, safely, audit, notify } from './hook-context';
+import { type AuthHookContext, safely, audit, auditAndNotify, notify } from './hook-context';
 import { ownSession } from './session-records';
 
 /**
@@ -380,11 +380,13 @@ export async function afterAccountCreate(
     const atSignIn =
       ctx?.path?.startsWith('/callback/') === true &&
       (await ownSession(ctx, created.userId)) === null;
-    const eventId = await audit(ctx, 'provider_connected', created.userId, {
+    await auditAndNotify(ctx, 'provider_connected', created.userId, {
+      details: {
+        providerId: created.providerId,
+        ...(atSignIn && { atSignIn: true, confirmed: created.confirmed !== false }),
+      },
       providerId: created.providerId,
-      ...(atSignIn && { atSignIn: true, confirmed: created.confirmed !== false }),
     });
-    await notify(eventId, created.userId, 'provider_connected', created.providerId);
     if (isMfaProvider(created.providerId)) {
       await refreshProviderMfa(created.providerId, created.userId, created.id);
     }
@@ -418,9 +420,9 @@ export async function afterAccountDelete(
     return;
   }
   await safely('record disconnected provider', async () => {
-    const eventId = await audit(ctx, 'provider_disconnected', deleted.userId, {
+    await auditAndNotify(ctx, 'provider_disconnected', deleted.userId, {
+      details: { providerId: deleted.providerId },
       providerId: deleted.providerId,
     });
-    await notify(eventId, deleted.userId, 'provider_disconnected', deleted.providerId);
   });
 }

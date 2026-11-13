@@ -1,7 +1,7 @@
 /**
  * @file What the reactions to Better Auth activity share: the endpoint context
  * they read, running a reaction without failing the request, and recording
- * an audit event or queuing a security notice.
+ * an audit event and queuing a security notice.
  */
 import { db } from '@/db';
 import type { AuditAction } from '@/lib/audit-actions';
@@ -184,4 +184,25 @@ export async function notify(
   providerId?: string,
 ): Promise<void> {
   await queueSecurityNotice(db, userId, kind, { auditEventId, providerId: providerId ?? null });
+}
+
+/**
+ * Records a change the user made in this request and queues its security
+ * email, which names the change's device and IP address (read from the
+ * audit event). For changes whose audit action and notice share a name.
+ *
+ * @param ctx - The request's headers (for IP and browser), e.g. the endpoint context.
+ * @param change - What changed, both the audit action and the notice.
+ * @param userId - The user.
+ * @param extra - The audit event's details, and the provider for connected/disconnected.
+ * @param extra.details - Extra facts for the audit event.
+ * @param extra.providerId - The provider, for connected/disconnected.
+ */
+export async function auditAndNotify(
+  ctx: Pick<AuthHookContext, 'headers'> | null,
+  change: AuditAction & SecurityNoticeKind,
+  userId: string,
+  { details = {}, providerId }: { details?: Record<string, unknown>; providerId?: string } = {},
+): Promise<void> {
+  await notify(await audit(ctx, change, userId, details), userId, change, providerId);
 }
