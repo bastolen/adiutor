@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 
 import { useLanguageChoiceOptions } from '@/components/language/language-options';
 import Button from '@/components/ui/button';
+import loadFresh from '@/components/ui/load-fresh';
 import ResultAlert from '@/components/ui/result-alert';
 import SelectField from '@/components/ui/select-field';
 import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
@@ -32,9 +33,9 @@ interface LanguageFormProps {
  * alive in the old one), at the address the action gives, where the page says
  * it's saved. Errors stay in the form, as alert and toast.
  *
- * The reload sets that address and reloads, rather than `location.assign`:
- * after one change the page is already at it, and going to the same address
- * with a `#section` only scrolls, which would leave the button busy.
+ * The reload is `loadFresh`, which also works when the page is already at
+ * that address after an earlier change (going to the same address with a
+ * `#section` would only scroll, and leave the button busy).
  *
  * @param props - Component props.
  * @param props.choice - The saved choice.
@@ -50,9 +51,7 @@ export default function LanguageForm({ choice, defaultLocale }: LanguageFormProp
 
   useEffect(() => {
     if (result?.ok && result.data) {
-      // Keeps the router's history state; only the address changes before the reload.
-      window.history.replaceState(window.history.state, '', result.data);
-      window.location.reload();
+      loadFresh(result.data);
     }
   }, [result]);
 
