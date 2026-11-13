@@ -1,20 +1,25 @@
 /**
- * @file Tests for loading the page afresh when another tab says the browser
- * acts as someone else now: nothing happens until then, then the current
+ * @file Tests for keeping the tabs in step with whoever the browser acts as.
+ * When another tab says so: nothing happens until then, then the current
  * page loads afresh once, without telling the other tabs in turn, and
- * nothing happens once it's gone.
+ * nothing happens once it's gone. When the page loads with the cookie a
+ * redirect sign-in leaves: it's removed and the other tabs are told, without
+ * loading this page again.
  */
 import { render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ACTING_AS_CHANGED_COOKIE } from '@/lib/sign-in/auth-cookies';
+
 import ReloadWhenActingAsChanges from './reload-when-acting-as-changes';
 
-/** Mocked full page load, the channel's listener and its unsubscribe. */
+/** Mocked full page load, and the channel: its listener, unsubscribe and message to the others. */
 const { loadFresh, channel } = vi.hoisted(() => ({
   loadFresh: vi.fn(),
   channel: {
     listener: undefined as (() => void) | undefined,
     unsubscribe: vi.fn(),
+    tellOtherTabs: vi.fn(),
   },
 }));
 
@@ -34,6 +39,7 @@ vi.mock('@/components/ui/acting-as-channel', () => ({
     channel.listener = listener;
     return channel.unsubscribe;
   },
+  tellOtherTabs: channel.tellOtherTabs,
 }));
 
 /** The page the tab is on. */
@@ -51,7 +57,9 @@ beforeEach(() => {
 afterEach(() => {
   loadFresh.mockClear();
   channel.unsubscribe.mockClear();
+  channel.tellOtherTabs.mockClear();
   channel.listener = undefined;
+  document.cookie = `${ACTING_AS_CHANGED_COOKIE}=; Max-Age=0; path=/`;
   window.history.replaceState(null, '', '/');
 });
 
@@ -61,6 +69,7 @@ describe('ReloadWhenActingAsChanges', () => {
 
     expect(channel.listener).toBeDefined();
     expect(loadFresh).not.toHaveBeenCalled();
+    expect(channel.tellOtherTabs).not.toHaveBeenCalled();
   });
 
   it('loads the current page afresh, without telling the other tabs in turn', () => {
@@ -87,5 +96,16 @@ describe('ReloadWhenActingAsChanges', () => {
     unmount();
 
     expect(channel.unsubscribe).toHaveBeenCalledOnce();
+  });
+
+  it('tells the other tabs when the page loads after a sign-in that came back by redirect', () => {
+    document.cookie = `${ACTING_AS_CHANGED_COOKIE}=1; path=/`;
+
+    render(<ReloadWhenActingAsChanges />);
+
+    expect(channel.tellOtherTabs).toHaveBeenCalledOnce();
+    // The cookie is used up, and this page, a full load already, isn't loaded again.
+    expect(document.cookie).not.toContain(ACTING_AS_CHANGED_COOKIE);
+    expect(loadFresh).not.toHaveBeenCalled();
   });
 });

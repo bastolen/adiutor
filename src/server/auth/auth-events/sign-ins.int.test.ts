@@ -9,6 +9,7 @@ import { afterEach, beforeEach, afterAll, describe, expect, it, vi } from 'vites
 import { auditEvent, session } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { sendEmail } from '@/lib/email';
+import { ACTING_AS_CHANGED_COOKIE } from '@/lib/sign-in/auth-cookies';
 
 import {
   createCompany,
@@ -305,6 +306,75 @@ describe('signing in with GitHub', () => {
       .from(session)
       .where(inArray(session.id, [previous, kept]));
     expect(left).toEqual([{ id: kept }]);
+  });
+
+  describe('telling the browser’s other tabs', () => {
+    /** The cookie that tells the next page to have the other tabs load afresh. */
+    const marker = [
+      ACTING_AS_CHANGED_COOKIE,
+      '1',
+      expect.objectContaining({ maxAge: 300, path: '/', httpOnly: false }),
+    ];
+
+    it('leaves the next page the cookie on a browser that was signed out, or someone else’s', async () => {
+      mockGitHubApi({ 'john-token': true });
+      const jane = await createUser(db, 'jane@adiutor.test');
+      const john = await createUser(db, 'john@adiutor.test');
+      await connectGitHubWithToken(john, 'john-token');
+
+      const signedOut = githubCallback(new Headers(), {
+        sessionId: await createSession(db, john),
+        userId: john,
+      });
+      await afterAuthRequest(signedOut.ctx);
+      const janes = githubCallback(await signedInHeaders(await createSession(db, jane)), {
+        sessionId: await createSession(db, john),
+        userId: john,
+      });
+      await afterAuthRequest(janes.ctx);
+
+      expect(signedOut.setCookie).toHaveBeenCalledWith(...marker);
+      expect(janes.setCookie).toHaveBeenCalledWith(...marker);
+    });
+
+    it('leaves none when the same user signs in again', async () => {
+      mockGitHubApi({ 'john-token': true });
+      const john = await createUser(db, 'john@adiutor.test');
+      await connectGitHubWithToken(john, 'john-token');
+
+      const { ctx, setCookie } = githubCallback(
+        await signedInHeaders(await createSession(db, john)),
+        { sessionId: await createSession(db, john), userId: john },
+      );
+      await afterAuthRequest(ctx);
+
+      expect(setCookie).not.toHaveBeenCalledWith(ACTING_AS_CHANGED_COOKIE, '1', expect.anything());
+    });
+
+    it('leaves one after an email link, but none after a passkey, whose page tells the tabs itself', async () => {
+      const john = await createUser(db, 'john@adiutor.test');
+      /**
+       * A sign-in on a signed-out browser through another endpoint.
+       *
+       * @param path - The endpoint.
+       * @returns Its `setCookie` mock, after the reactions.
+       */
+      const signInThrough = async (path: string) => {
+        const { ctx, setCookie } = githubCallback(new Headers(), {
+          sessionId: await createSession(db, john),
+          userId: john,
+        });
+        await afterAuthRequest({ ...ctx, path, params: {} });
+        return setCookie;
+      };
+
+      expect(await signInThrough('/magic-link/verify')).toHaveBeenCalledWith(...marker);
+      expect(await signInThrough('/passkey/verify-authentication')).not.toHaveBeenCalledWith(
+        ACTING_AS_CHANGED_COOKIE,
+        '1',
+        expect.anything(),
+      );
+    });
   });
 
   describe("when someone else signs in on a browser that wasn't signed out", () => {

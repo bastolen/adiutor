@@ -30,8 +30,14 @@ or was signed out elsewhere) would otherwise leave the previous person's pages f
 Email links and providers come back with a full load anyway. The browser's other tabs load their
 own page afresh too (`loadFresh` with `everyTab`, see
 [Signing in as a user](#signing-in-as-a-user) for how), so a sign-in page open in another tab goes
-on, signed in. Sign-ins that come back through a redirect (email links, providers, creating an
-account from an invitation or invite link, setup) don't tell the other tabs yet.
+on, signed in. Email links and providers come back through a redirect, after which no code of the
+page that started them runs, so the server leaves the next page a cookie instead
+(`ACTING_AS_CHANGED_COOKIE` in `src/lib/sign-in/auth-cookies.ts`, set by `afterAuthRequest`): only
+`1`, for 5 minutes, readable in the browser. The page that loads with it removes it and tells the
+other tabs (`ReloadWhenActingAsChanges`). It's set only when the browser acts as someone else now
+(it had no session, or someone else's: `replacePreviousSession`), not when the same user confirms
+again, e.g. with GitHub on the step-up page. Creating an account from an invitation or invite
+link, and setup, don't tell the other tabs yet.
 
 ## Email links
 
@@ -49,7 +55,9 @@ does, since whoever has it can sign in with it. When someone else is signed in i
 it says that continuing switches to the link's account (and points out when both have the same
 name), which ends the other account's session there as signing out would. If the link stops
 working before the click, Better Auth comes back to this page with the reason, not to the
-sign-in page, which would send the browser on to the account still signed in. When it's that
+sign-in page, which would send the browser on to the account still signed in. After a switch, the
+browser's other tabs load their page afresh as the link's account (see
+[Sign-in methods](#sign-in-methods)). When it's that
 account already, Continue goes on without using the link. A link that
 expired or was used says so straight away, and its "Go to sign in" keeps where the link would
 have gone. The form only gets the link's token in the browser,

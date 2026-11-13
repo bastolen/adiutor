@@ -4,14 +4,22 @@
  * page sends someone who is signed in already on, signing out leaves nothing
  * behind in the browser (signing out and in load the next page afresh, so no
  * page Next keeps alive is left for the next person, also in the browser's
- * other tabs), and the sign-in page shows its "Last used" hint.
+ * other tabs, after an email link too), and the sign-in page shows its
+ * "Last used" hint.
  */
 
 import { LOCALE_COOKIE } from '../src/lib/i18n/locales';
 import { LAST_USED_LOGIN_METHOD_COOKIE } from '../src/lib/sign-in/auth-cookies';
 import { PROVIDER_LINKED_COOKIE } from '../src/lib/sign-in/oauth-providers';
+import { storeSignInLink } from './support/db';
 import { CLIENT_WATCHER, SESSIONS_CLIENT, SUPPORT_STAFF } from './support/fixtures';
-import { openAccountSettings, signIn, signOut, submitPassword } from './support/helpers';
+import {
+  openAccountSettings,
+  openSignInLink,
+  signIn,
+  signOut,
+  submitPassword,
+} from './support/helpers';
 import { expect, test } from './support/test';
 import { codeForSecret } from './support/totp';
 
@@ -125,6 +133,19 @@ test("signing in or out in one tab loads the browser's other tabs afresh", async
   await expect(other).toHaveURL('/auth?callbackURL=%2Faccount');
   await expect(other.getByRole('heading', { name: 'Sign in to Adiutor' })).toBeVisible();
   await expect(otherName).toHaveCount(0);
+});
+
+test("an email-link sign-in loads the browser's other tabs afresh", async ({ page, context }) => {
+  // A second tab of the same browser is on the sign-in page.
+  const other = await context.newPage();
+  await other.goto('/auth');
+  await expect(other.getByRole('heading', { name: 'Sign in to Adiutor' })).toBeVisible();
+
+  // The link comes back through a redirect, so the page it lands on tells the other tab, which goes
+  // on without a click, signed in.
+  await openSignInLink(page, await storeSignInLink(CLIENT_WATCHER.email));
+  await expect(page).toHaveURL(/\/(dashboard|companies\/)/);
+  await expect(other).toHaveURL(/\/(dashboard|companies\/)/);
 });
 
 test('the code step starts over after signing out, with "Trust this device" unticked', async ({
