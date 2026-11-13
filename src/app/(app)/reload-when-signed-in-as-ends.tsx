@@ -8,14 +8,18 @@
  * and the pages Next kept alive would still show the user: a full page load
  * (`loadFresh`) shows the staff member everywhere, with a toast that says
  * why (`showToastAfterLoad`). Mounted by the banner (`SignedInAsBanner`), so
- * only while signed in as someone.
+ * only while signed in as someone. An end by itself reaches every tab on its
+ * own (each has its timer and its check), so it doesn't tell the other tabs;
+ * a change made in another tab (Back to my account, a new sign-in as
+ * someone) reaches this one at once (`ReloadWhenActingAsChanges`), and the
+ * check is its safety net.
  */
 'use client';
 
 import { usePathname } from 'next/navigation';
 import { useEffect, useEffectEvent, useRef } from 'react';
 
-import loadFresh from '@/components/ui/load-fresh';
+import loadFresh, { currentPage } from '@/components/ui/load-fresh';
 import { showToastAfterLoad } from '@/components/ui/toast';
 
 import { signedInAsEndsAtAction } from './impersonation-actions';
@@ -41,23 +45,14 @@ export interface ReloadWhenSignedInAsEndsProps {
 }
 
 /**
- * The address of the current page, with its search and section.
- *
- * @returns E.g. `/companies/adiutor/members?page=2#members`.
- */
-function currentPage(): string {
-  const { pathname, search, hash } = window.location;
-  return `${pathname}${search}${hash}`;
-}
-
-/**
  * Loads the current page afresh, once, when the sign-in as a user has ended:
  *
  * - its time is up (plus {@link END_MARGIN_MS}), only while the tab is
  *   visible: a hidden tab loads as it comes back into view, which also
  *   catches a timer the browser held up meanwhile;
- * - the server says it's over or another one took its place
- *   (`signedInAsEndsAtAction`), asked after each navigation within the app
+ * - the server says it's over, or that another one took its place when the
+ *   other tab's message didn't arrive (`signedInAsEndsAtAction`), asked
+ *   after each navigation within the app
  *   (which the server rendered for whoever it acts as) and when the tab
  *   comes back into view before the time is up. One question at a time,
  *   never on a timer; one that fails changes nothing.

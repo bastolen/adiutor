@@ -18,7 +18,8 @@ import backToOwnAccountAction from './impersonation-actions';
  * from afresh (`loadFresh`), where a toast confirms it
  * (`showToastAfterLoad`). A navigation within the app would keep the pages
  * Next kept alive while signed in as the user, with the user's values in
- * their fields.
+ * their fields. The browser's other tabs load their own page afresh too
+ * (`everyTab`), as the staff member.
  *
  * @returns `goBack` to start it, and `pending` while it runs and until the page goes.
  */
@@ -35,7 +36,9 @@ export default function useBackToOwnAccount(): { goBack: () => void; pending: bo
         showToastAfterLoad(result.message);
       }
       setLeaving(true);
-      loadFresh((result.ok && result.data?.returnTo) || DEFAULT_SIGNED_IN_PATH);
+      loadFresh((result.ok && result.data?.returnTo) || DEFAULT_SIGNED_IN_PATH, {
+        everyTab: true,
+      });
     });
   };
 

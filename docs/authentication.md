@@ -286,6 +286,15 @@ does, to check what isn't working for them. The reasons are in
     within the app: Next keeps the last few pages alive with what's in their fields, so a Profile
     page from before would still show the other person's name. So does an end by itself (see
     **Ending** below), and signing in and out (see [Signing out](#signing-out)).
+  - The browser's other tabs load their own page afresh too, at once, also when they're hidden
+    (`loadFresh` with `everyTab`). The session is the browser's cookie, so their next navigation
+    would render for the new person, but without the banner (and so with changes on) and with the
+    pages Next kept alive from before. The tab that starts or goes back tells the others over a
+    `BroadcastChannel` (`src/components/ui/acting-as-channel.ts`) once the server has made the
+    change, and `ReloadWhenActingAsChanges` in the root layout loads the page each one is on. The
+    message only says that something changed: no name, ID or address, and it isn't logged. A page
+    the new person can't open says so as it would for anyone (a staff page is not found for a
+    company user).
 - **Nothing changes in the user's name.**
   - Every service that changes something calls `assertNotSignedInAs` first (code `signed_in_as`:
     "This can't be changed while you're signed in as someone else."). The server actions that call
@@ -324,9 +333,12 @@ does, to check what isn't working for them. The reasons are in
   - When the rules end it (`no_longer_allowed`), the tab finds out at its next navigation within
     the app, or as it comes back into view. The banner then asks the server when the sign-in ends
     (`signedInAsEndsAtAction`), and loads the page afresh the same way when there's none any more,
-    or another one took its place (started from another tab). That's one small request per
-    navigation, only while signed in as someone, and never on a timer. A tab nobody touches keeps
-    showing what it already showed until then.
+    or another one took its place (a change in another tab whose message didn't arrive; usually
+    the message reloads it at once). That's one small request per navigation, only while signed
+    in as someone, and never on a timer. A tab nobody touches keeps showing what it already showed
+    until then.
+  - An end by itself doesn't tell the other tabs: each has its own timer and check, and loads with
+    the toast that says why.
   - Errors reported while signed in as someone are recorded for the staff member.
 
 ## Account pages

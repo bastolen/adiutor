@@ -22,7 +22,10 @@ const { loadFresh, showToastAfterLoad, signedInAsEndsAtAction, navigation } = vi
   navigation: { pathname: '/' },
 }));
 
-vi.mock('@/components/ui/load-fresh', () => ({ default: loadFresh }));
+vi.mock('@/components/ui/load-fresh', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/components/ui/load-fresh')>()),
+  default: loadFresh,
+}));
 
 vi.mock('@/components/ui/toast', () => ({ showToastAfterLoad }));
 

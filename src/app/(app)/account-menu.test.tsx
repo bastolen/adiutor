@@ -114,8 +114,9 @@ describe('AccountMenu', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Back to my account' }));
 
     // A full page load, so no page Next kept alive still shows the user, with the toast after it.
+    // The browser's other tabs load their own page afresh too, as the staff member.
     await vi.waitFor(() => {
-      expect(loadFresh).toHaveBeenCalledWith('/admin/users/u1#sign-in-as');
+      expect(loadFresh).toHaveBeenCalledWith('/admin/users/u1#sign-in-as', { everyTab: true });
     });
     expect(showToastAfterLoad).toHaveBeenCalledWith("You're back in your own account.");
     expect(backToOwnAccount).toHaveBeenCalled();

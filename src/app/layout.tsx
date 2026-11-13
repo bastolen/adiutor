@@ -11,6 +11,8 @@ import { pickMessages } from '@/lib/i18n/messages';
 import { NONCE_HEADER } from '@/lib/request/csp';
 import { themeScript } from '@/lib/theme';
 
+import ReloadWhenActingAsChanges from './reload-when-acting-as-changes';
+
 import './globals.css';
 
 /**
@@ -49,6 +51,9 @@ export const instant = false;
  * expected to differ from the server-rendered HTML. It carries the request's
  * nonce, or the Content Security Policy would block it.
  *
+ * Every page loads afresh when another tab of this browser signs in or out,
+ * or starts or ends a sign-in as a user (`ReloadWhenActingAsChanges`).
+ *
  * @param props - Layout props from Next.js.
  * @param props.children - The page or nested layout to render.
  * @returns The document shell.
@@ -74,6 +79,7 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
         <IntlClientProvider locale={locale} messages={pickMessages(messages, ['common'])}>
           {children}
         </IntlClientProvider>
+        <ReloadWhenActingAsChanges />
       </body>
     </html>
   );

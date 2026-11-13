@@ -4,7 +4,8 @@
  * deletion or a password to deactivate an account. In the signed-in app its
  * success is a toast, so it's seen even when the action removes the button.
  * An action after which every page must start over (starting a sign-in as a
- * user) loads a page afresh instead (`loadOnSuccess`).
+ * user) loads a page afresh instead, and the browser's other tabs load
+ * theirs (`loadOnSuccess`).
  */
 'use client';
 
@@ -78,9 +79,11 @@ interface ActionDialogProps {
    * A page of the app to load afresh after a successful result
    * (`loadFresh`), for an action after which every page must start over,
    * such as starting a sign-in as a user: a navigation within the app would
-   * keep the pages Next keeps alive, with the values from before. The dialog
-   * stays open, its button busy, until the page goes; the result's message
-   * is a toast on the next page.
+   * keep the pages Next keeps alive, with the values from before. The
+   * browser's other tabs load their own page afresh too (`everyTab`), since
+   * the browser acts as someone else in them as well. The dialog stays open,
+   * its button busy, until the page goes; the result's message is a toast on
+   * the next page.
    */
   loadOnSuccess?: string;
 }
@@ -213,7 +216,7 @@ export default function ActionDialog({
           showToastAfterLoad(next.message);
         }
         setLeaving(true);
-        loadFresh(loadOnSuccess);
+        loadFresh(loadOnSuccess, { everyTab: true });
         return next;
       }
       if (showToast && next.ok) {

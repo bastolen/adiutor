@@ -82,7 +82,7 @@ describe('SignInAsCard', () => {
     expect(screen.getByRole('button', { name: 'Sign in as Jane Doe' })).toBeEnabled();
   });
 
-  it('loads the dashboard afresh once it has started, staying busy until it goes', async () => {
+  it('loads the dashboard afresh, in every tab, once it has started, staying busy until it goes', async () => {
     signInAsAction.mockResolvedValue({ ok: true });
     const user = userEvent.setup();
     renderCard();
@@ -90,7 +90,8 @@ describe('SignInAsCard', () => {
     await user.click(screen.getByRole('button', { name: 'Sign in as user' }));
     await user.click(screen.getByRole('button', { name: 'Sign in as Jane Doe' }));
 
-    await waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/dashboard'));
+    // The browser's other tabs load their own page afresh too, as the user.
+    await waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/dashboard', { everyTab: true }));
     expect(screen.getByRole('dialog', { name: 'Sign in as Jane Doe?' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign in as Jane Doe' })).toHaveAttribute(
       'aria-busy',
