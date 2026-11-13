@@ -31,7 +31,7 @@
       },
       "logs": {
         "title": "Logs",
-        "description": "The audit log, and the errors people ran into."
+        "description": "The audit log, the errors people ran into and the background jobs."
       }
     }
   }

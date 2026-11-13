@@ -31,7 +31,7 @@
       },
       "logs": {
         "title": "Registros",
-        "description": "El registro de auditoría y los errores que encontró la gente."
+        "description": "El registro de auditoría, los errores que encontró la gente y las tareas en segundo plano."
       }
     }
   }
