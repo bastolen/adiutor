@@ -23,8 +23,8 @@ export interface SqlExecutor {
 
 /**
  * Empties the database as on a fresh install: every user, company, the staff
- * settings, verification tokens and rate limits, and (through `cascade`)
- * everything that belongs to them.
+ * settings, verification tokens, rate limits, jobs and the request counter,
+ * and (through `cascade`) everything that belongs to them.
  *
  * A new table that `cascade` from `user` or `company` doesn't reach (one with
  * no foreign key to either) must be added to the statement here, or the tests
@@ -34,6 +34,6 @@ export interface SqlExecutor {
  */
 export default async function emptyDatabase(executor: SqlExecutor): Promise<void> {
   await executor.execute(
-    sql`truncate table "user", company, staff_settings, verification, rate_limit_bucket, rate_limit, job_state, job_run, job_tick, queued_job cascade`,
+    sql`truncate table "user", company, staff_settings, verification, rate_limit_bucket, rate_limit, job_state, job_run, job_tick, queued_job, request_counter cascade`,
   );
 }
