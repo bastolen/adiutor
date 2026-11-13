@@ -389,25 +389,24 @@ whole sentence per event, with who made the change, if not you, where each langu
 ## Security emails
 
 Security emails (`src/emails/security-notice.tsx`) tell users when something about their access
-changes; the kinds, and what they say, are listed in [Email](email.md#templates). They're queued
-for the next tick of the [background jobs](jobs.md#queued-jobs) once the change has committed
-(`queueSecurityNotice` in `src/server/auth/security-notices.ts`, the `security-notice` job), so a
-mail outage retries them instead of losing them; they arrive up to 5 minutes later. Only the notice
-to a deleted account's address is sent straight away (`sendAccountDeletedNotice`): it can't wait,
-because the account is gone by then, and it never names a device. Changes made through Better
-Auth's endpoints (passwords, two-step verification, passkeys, linked accounts) queue theirs from its
-hooks (`auditAndNotify` in `src/server/auth/auth-events/hook-context.ts`), with the audit event.
-Only a user's own changes name the device and IP address: a queued notice names them only when it's
-given the change's audit event (`auditEventId`, whose device, IP address and time it reads), and
-only when the user is both that event's actor and its target, so an email can't show someone
-else's by mistake. Changes someone else
-makes to their access are emailed too, without the device or IP address, which would be that
-person's. A company role change or a removal is not emailed to the person who made
-it themselves (see
-[Changing roles and removing people](companies-and-roles.md#changing-roles-and-removing-people)).
-Users are also told when wrong passwords pause their password sign-in (see
-[Rate limits](security-measures.md#rate-limits)), at most once a day. Likewise when wrong codes at
-sign-in pause signing in with a code (`two_factor_locked`, see
-[Two-step verification](mfa.md#two-step-verification)): once per 15-minute pause. A notice that
-can't be queued doesn't count, so the next pause or refusal tries again; one the mail server refuses
-is retried by the queue. Neither names the device or IP address, which may be someone else's.
+changes; the kinds, and what they say, are listed in [Email](email.md#templates).
+
+- **Queued:** they go out at the next tick of the [background jobs](jobs.md#queued-jobs), up to 5
+  minutes later, so a mail outage delays them instead of losing them. Services queue them once the
+  change has committed (`queueSecurityNotice` in `src/server/auth/security-notices.ts`); changes
+  through Better Auth's endpoints (passwords, two-step verification, passkeys, linked accounts) are
+  queued from its hooks with their audit event (`auditAndNotify` in
+  `src/server/auth/auth-events/hook-context.ts`).
+- **Straight away:** only the notice to a deleted account's address (`sendAccountDeletedNotice`),
+  which can't wait because the account is gone by then. It never names a device.
+- **Device and IP address:** only for a user's own changes. A notice names them only when it's given
+  the change's audit event (`auditEventId`) and the user is both that event's actor and its target,
+  so an email can't show someone else's. Changes someone else makes are emailed without them.
+- **Not emailed:** a company role change or a removal, to the person who made it themselves (see
+  [Changing roles and removing people](companies-and-roles.md#changing-roles-and-removing-people)).
+- **Paused sign-ins:** users are told when wrong passwords pause their password sign-in (see
+  [Rate limits](security-measures.md#rate-limits)), at most once a day, and when wrong codes at
+  sign-in pause signing in with a code (`two_factor_locked`, see
+  [Two-step verification](mfa.md#two-step-verification)), once per 15-minute pause. Neither names
+  the device or IP address, which may be someone else's. A notice that can't be queued doesn't
+  count, so the next pause or refusal tries again.

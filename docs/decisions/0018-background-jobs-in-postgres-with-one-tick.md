@@ -1,4 +1,4 @@
-# 0018. Background jobs in PostgreSQL, started by one tick
+# 0018. Recurring and queued jobs in PostgreSQL, started by one tick
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
@@ -18,8 +18,8 @@ a plain server) must keep working too.
   expressions in UTC, in code, so a new job never changes the hosting setup.
 - **Two kinds of job** (`src/server/jobs`, see [Background jobs](../jobs.md)):
   - **recurring** jobs run on their schedule;
-  - **queued** jobs are added by the app with IDs and small settings, run at the next tick, retry
-    with growing waits and then stay failed. Jobs that share a batch key run together in one
+  - **queued** jobs are added by the app with IDs and small settings, run at the next tick, are
+    attempted again with growing waits and are then given up. Jobs that share a batch key run together in one
     handler, so ten comments make one email.
 - **State in PostgreSQL:** each job's state, the history of runs (30 days) and the queue live in
   the database Adiutor already has. A lease row keeps two runs of a job apart, because session

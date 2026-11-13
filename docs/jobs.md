@@ -3,295 +3,177 @@
 Back to the [documentation](README.md).
 
 Adiutor does some of its work in the background: cleaning up data nobody can use any more, keeping
-data only as long as it may, and reminding people of invitations. That work runs as **jobs**, in
-`src/server/jobs` ([decision 0018](decisions/0018-background-jobs-in-postgres-with-one-tick.md)):
-**recurring** jobs run on a schedule, and **queued** jobs are added by the app to run once.
+data only as long as it may, reminding people of invitations and sending emails that can wait a few
+minutes. That work runs as jobs, in `src/server/jobs`
+([decision 0018](decisions/0018-background-jobs-in-postgres-with-one-tick.md)). How to start them on
+each kind of hosting is in [Background jobs](deploying.md#background-jobs) in the deployment docs.
+
+## Words
+
+- **Tick:** one pass over the jobs, started every 5 minutes. It runs the recurring jobs that are
+  due, then the queued jobs that are due.
+- **Recurring job:** runs on its own schedule ("scheduled" on the Jobs page).
+- **Queued job:** work the app hands off to run once, at the next tick. Its **kind** says what it
+  does, such as `security-notice`.
+- **Run:** one recurring job's turn in a tick, or one kind's queued jobs in a tick. Every run is kept
+  in the history.
+- **Attempt:** one try at a queued job. A failed attempt is attempted again later, until the job is
+  **given up** (`failed` in the database). Staff can **retry** a job that was given up.
 
 ## The tick
 
-Every 5 minutes something starts a **tick**: an external cron service (with a Vercel schedule every
-15 minutes as the fallback) calling the [endpoint](#the-endpoint), or `pnpm jobs:run` from system
-cron or the Docker image (see [Background jobs](deploying.md#background-jobs) and
-[Vercel](deploying.md#vercel) in the deployment docs). A tick runs every recurring job that's due,
-one after another, then the [queued jobs](#queued-jobs) that are due (`runTick` in
-`src/server/jobs/tick.ts`). It stops starting new runs at its deadline (45 seconds from the
-endpoint, 4 minutes from the command line), and what's left waits for the next tick. The recurring
-jobs get at most the first half of that time: they normally take milliseconds, but a slow one (say,
-reminders working up to their deadline) can never leave the queue without time.
+A tick runs every recurring job that's due, one after another, then the queued jobs that are due
+(`runTick` in `tick.ts`), until its deadline; what's left waits for the next tick.
 
 - **Due** means the job never ran, or its schedule named a moment since its last run started. After
-  a long silence (say, the server was down) a job runs once, not once per missed moment
-  (`isDue` in `schedule.ts`).
-- **One run at a time:** a run takes its job under a lease (`claimJob` in `state.ts`): a row in
-  `job_state` with `locked_until` 15 minutes ahead. A second tick leaves the job to that run, and
-  can't run it again for the same moment once it's done. A run that dies frees the job when the
-  lease runs out, and the next tick records it as failed (see [Failures](#failures)). A lease row is
-  used because PostgreSQL's session locks don't survive a pooled connection, such as Neon's.
-- **Failures** don't stop the other jobs. A job fails when it throws, or when it finishes but
-  reports a `failure` (say, some reminders couldn't be sent). The run is recorded as failed, the
-  error is recorded with a reference (see [Failures](#failures)), and
-  `job_state.consecutive_failures` counts failed runs in a row.
-- **Paused** jobs (`job_state.paused_at`) are skipped by the tick. Running a job by hand still works.
+  a long silence a job runs once, not once per missed moment (`isDue` in `schedule.ts`).
+- **One run at a time:** a run holds its job under a lease (`job_state.locked_until`), so a second
+  tick leaves the job alone. A lease row is used because PostgreSQL's session locks don't survive a
+  pooled connection, such as Neon's.
+- **Paused** jobs are skipped by the tick (`job_state.paused_at`). Running one by hand still works.
+- **Failures** don't stop the other jobs (see [Failures](#failures)).
 
 ## The jobs
 
-| Job                          | Schedule (UTC)  | What it does                                                                                                                                               |
-| ---------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `leftover-provider-tokens`   | every 5 minutes | Clears OAuth tokens a failed GitHub or Google sign-in left behind, after 10 minutes                                                                        |
-| `finished-sign-ins-as-users` | every 5 minutes | Ends and records staff sign-ins as a user whose time is up or whose staff session is gone                                                                  |
-| `expired-sign-in-data`       | hourly          | Deletes expired sign-in links, codes and sessions, and finished rate-limit windows                                                                         |
-| `invitation-reminders`       | hourly, at :10  | Emails a reminder 48 hours before an invitation expires, soonest first, 20 at a time until its deadline; the rest, and any that can't be sent, go next run |
-| `retention`                  | daily, at 03:15 | Deletes audit events after a year, sign-in errors and other recorded errors after 7 days, and job runs and finished queued jobs after 30 days              |
+| Job                          | Schedule (UTC)  | What it does                                                                                                                                  |
+| ---------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `leftover-provider-tokens`   | every 5 minutes | Clears OAuth tokens a failed GitHub or Google sign-in left behind, after 10 minutes                                                           |
+| `finished-sign-ins-as-users` | every 5 minutes | Ends and records staff sign-ins as a user whose time is up or whose staff session is gone                                                     |
+| `expired-sign-in-data`       | hourly          | Deletes expired sign-in links, codes and sessions, and finished rate-limit windows                                                            |
+| `invitation-reminders`       | hourly, at :10  | Emails a reminder 48 hours before an invitation expires, soonest first, until its deadline; the rest go next run                              |
+| `retention`                  | daily, at 03:15 | Deletes audit events after a year, sign-in errors and other recorded errors after 7 days, and job runs and finished queued jobs after 30 days |
+
+| Kind of queued job  | What it does                                                                                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `security-notice`   | Emails a user about a security change on their account (see [Security emails](authentication.md#security-emails))                                                  |
+| `added-to-company`  | Emails a user that staff added them to a company; skipped when the membership is gone by then                                                                      |
+| `staff-admin-added` | Emails one staff Admin that someone became a staff Admin (one job per Admin, so a refusal for one never resends the others); skipped for an Admin who stepped down |
 
 ## The endpoint
 
-`GET /api/jobs` runs one tick (`answerTickRequest` in `src/server/jobs/endpoint.ts`, the route in
-`src/app/api/jobs/route.ts`). Only `GET`: the Vercel schedule is set to send it (`requestMethod`),
-as cron services do; a link checker or prefetcher can't start a tick, because it needs the secret:
+`GET /api/jobs` runs one tick (`answerTickRequest` in `endpoint.ts`). It asks for
+`Authorization: Bearer <CRON_SECRET>`, compared in constant time, and is off (503) without
+`CRON_SECRET`. A wrong secret answers 401 and counts against the sender's IP address, 429 past 20 in
+15 minutes, but the right secret always runs the tick. It answers 200, or 500 when a run failed,
+with each run's counts and whether the tick `continues`. It's public in the proxy, since it checks
+its own secret, and never cached.
 
-- It asks for `Authorization: Bearer <CRON_SECRET>`, compared in constant time. A Vercel schedule
-  sends that header by itself; an external cron service sends it as a request header. Without
-  `CRON_SECRET` the endpoint is off and answers 503.
-- A wrong or missing secret answers 401 and counts against the sender's IP address. Past 20 in 15
-  minutes it answers 429, but the right secret still runs the tick, so someone sharing the cron
-  service's address can't lock it out.
-- With the right secret it runs one tick, stopping new runs after 45 seconds (the route's
-  `maxDuration` is 60), and answers 200, or 500 when a run failed, with each run's job, status and
-  counts, and whether it `continues`. It's public in the proxy (`PUBLIC_PATHS`), since it checks its
-  own secret, and never cached.
-
-### Continuing a tick
-
-When a tick stops at its deadline with work still due, a backlog doesn't wait 5 or 15 minutes for the
-next tick: the endpoint continues it straight away.
-
-1. The tick says whether work is left (`moreDue`): recurring jobs it had to leave, or queued jobs
-   that could still run when the deadline came (`hasDueQueuedJobs`). Jobs waiting for a later
-   attempt don't count, so a failing job can't keep it going.
-2. When work is left and the tick ran something, the endpoint answers as usual and then, after the
-   answer (`afterAnswer`, which the route runs with `after()`), calls itself again
-   (`requestTickContinuation`). The call goes to the app's configured address (`BETTER_AUTH_URL`,
-   never a host from the request, since it carries the secret) with the secret, the header
-   `x-adiutor-tick-continuation` with the continuation's number, and Vercel's
-   `x-vercel-protection-bypass` when `VERCEL_AUTOMATION_BYPASS_SECRET` is set.
-3. A continued call answers 202 at once and runs its tick after answering. So the call before it only
-   waits milliseconds for that answer, never another 45 seconds, and each function stays within its
-   60 seconds.
-4. It repeats while work is left, at most 10 times in a row (`MAX_TICK_CONTINUATIONS`, about 7½
-   minutes of extra work); then the next tick takes over. A malformed number answers 400, and the
-   number counts only with the right secret.
-
-Continued ticks overlap safely with each other and with the cron service's ticks, for the same
-reasons as any two ticks: leases and `SKIP LOCKED`. Their runs are recorded like any other ("By the
-tick"), and a failure reaches Logs → Errors and the staff Admins' email, although the cron service
-only sees the first tick's answer. A continuation that can't be made (say, the address isn't
-reachable from the server) is logged, and the next tick takes over. `pnpm jobs:run` doesn't
-continue: its queue already runs until it's empty or its 4 minutes are up.
+**Continuing a tick:** when a tick stops at its deadline with work still due and it ran something,
+the endpoint calls itself again after answering (`afterAnswer`, run with `after()`), so a backlog
+doesn't wait for the next tick. The call goes to the app's own address (`BETTER_AUTH_URL`, never a
+host from the request) with the secret, the step in `x-adiutor-tick-continuation` and, on a
+protected Preview, `x-vercel-protection-bypass`. A continued call answers 202 at once and runs its
+tick afterwards, so no function waits on another. It stops after 10 steps in a row
+(`MAX_TICK_CONTINUATIONS`), or when only jobs waiting for a later attempt are left. A continuation
+that fails is logged, and the next tick takes over. `pnpm jobs:run` doesn't continue: it runs until
+the queue is empty or its time is up.
 
 ## Queued jobs
 
-The app adds a job to the queue (`queued_job`) with `queueJob(db, kind, payload)` from
-`src/server/queue`, inside the
-transaction of the change it belongs to, so the job only exists if the change was saved. The next
-tick runs it; with `runAt`, not before that moment.
+The app queues a job with `queueJob(tx, kind, payload)` from `src/server/queue`, inside the
+transaction of the change it belongs to, so the job only exists if the change was saved.
 
-- **Payload:** IDs and small settings only, such as `{ userId, kind: 'password_changed' }`, and
-  lists of IDs for references to several things (`JobPayload`). Never personal data like names or
-  addresses: the job reads what it needs when it runs, so nothing sensitive or out of date sits in
-  the queue. Each kind checks its payload with a zod schema, when it's queued and when it runs.
-- **Running:** due jobs run one at a time, the kinds taking turns, each kind's oldest first
-  (`runQueue` in `run-queue.ts`). A run takes the next job under a lease, skipping jobs another run
-  is taking (`FOR UPDATE SKIP LOCKED`), so two ticks at once never run the same job.
-- **How it ends:** `done`, or `skipped` when what it was about is gone (the job checks: say, the
-  user was deleted meanwhile).
-- **Retries:** a job that throws is tried again after 5 minutes, then 15, an hour and 6 hours
-  (`RETRY_MINUTES` in `queue.ts`). After its kind's last attempt (`maxAttempts`, 5 by default: about
-  7½ hours) it stays `failed`. Each failed attempt is recorded with a reference (see
-  [Failures](#failures)), and the log names the jobs' IDs and attempts, never their payloads. A job
-  whose run died (its lease ran out, say because the platform stopped the tick at its time limit) is
-  taken again, as another attempt. When that was its last attempt, it's given up as `failed`, with a
-  recorded error and the alert, so a job that always runs out of time can't be taken forever.
-- **Turns, no cap:** the kinds take turns, one claim each, so one kind with many waiting jobs can't
-  keep the others waiting, and a kind on its own gets the whole tick. A kind with nothing due sits
-  out the rest of the tick. A paused kind's jobs wait, and jobs of a kind the registry doesn't list
-  are never taken.
+- **Payload:** IDs and small settings only, such as `{ userId, kind: 'password_changed' }`. Never
+  names, addresses or other personal data: the job reads what it needs when it runs. Each kind checks
+  its payload with a zod schema when it's queued and when it runs.
+- **Running:** the kinds take turns, one job each, oldest first (`runQueue` in `run-queue.ts`), so a
+  kind with many jobs can't keep the others waiting. Jobs are taken with `FOR UPDATE SKIP LOCKED`,
+  so two ticks never run the same job.
+- **How it ends:** `done`, or `skipped` when what it was about is gone (say, the user was deleted).
+- **Attempts:** a job that throws is attempted again after 5 minutes, then 15, an hour and 6 hours.
+  After its kind's last attempt (`maxAttempts`, 5 by default) it's given up. A job whose attempt
+  died (see [Failures](#failures)) is taken again, as its next attempt.
 
-The kinds of queued job (declared in `src/server/queue`, handled in `src/server/jobs/queued`):
-
-| Kind                | What it does                                                                                                                                                                                                                                                                                                                                      |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `security-notice`   | Emails a user about a security change on their account, queued with `queueSecurityNotice`. Its payload names the user, the change and the IDs the email names (provider, role, company, staff member); for the user's own change, also the change's audit event, whose device, IP address and time the email shows. A user who's gone is skipped. |
-| `added-to-company`  | Emails a user that staff added them to a company, queued by `addMember`. Skipped when the membership is gone by then; the staff's name stands in when the adder's account is.                                                                                                                                                                     |
-| `staff-admin-added` | Emails one staff Admin that someone became a staff Admin, queued by `notifyStaffAdminAdded` (one job per Admin, so a refusal for one never resends the others). Skipped for an Admin who stepped down meanwhile.                                                                                                                                  |
-
-### Batches: coupled jobs
-
-Some jobs belong together: a status update and a comment on the same ticket for the same person
-should make one email, not two. A kind made with `batch: { group, key }` instead of `run` doesn't
-run its jobs on its own:
-
-- Each job is queued with a **batch key**, `<group>:<key>`, where `key` comes from its payload (say,
-  the ticket's and the person's IDs).
-- When the tick takes a job with a batch key, it takes every other waiting, due job with the same
-  key too, of any kind in the group, and hands them all to the group's batch
-  (`defineJobBatch({ group, run })`) in one call. The batch reads each job's payload typed with its
-  kind's `read`, and returns the IDs of jobs it skipped; the rest are done.
-- **Each job is in exactly one batch.** Once taken, a job is no longer waiting, so a job queued
-  after a batch ran goes in the next one: an email never repeats what an earlier one said.
-- When the batch throws, all its jobs are tried again later, and the next try includes whatever was
-  queued for the key meanwhile.
-- Jobs are gathered until the next tick: whatever arrived since is sent together, which turns a
-  burst of comments into one email. In the rare case that two ticks run at the same moment, they can
-  split one key's jobs between them (two emails), but never run a job twice.
-
-Each kind that ran jobs during a tick gets one run in the history, with how many were done,
-skipped, retried and failed (given up); the run counts as failed when any job failed.
+**Batches:** some jobs belong together, such as a status update and a comment on the same ticket
+for the same person, which should make one email. A kind declared with `batch: { group, key }` is
+queued with a batch key; when the tick takes one of its jobs, it takes every waiting job with the
+same key too, of any kind in the group, and hands them to the group's batch in one call (its
+kinds are handled with `batchedJobRunner`, and the batch, made with `defineJobBatch`, goes in
+`JOB_BATCHES`). Each job is in exactly one batch, so an email never repeats an earlier one, and a batch
+that throws is attempted again with whatever was queued for its key meanwhile.
 
 ## Failures
 
-Every failure is recorded as an error in the app (`recordJobError` in `record-error.ts`, which calls
-`recordAppError` with source `job` and the job's name), so staff Admins look it up by its reference
-under **Logs → Errors**, where it shows as a job error. The run in the history keeps the reference
-(`job_run.error_reference`), and so does a failed queued job (`queued_job.last_error_reference`).
-The server log gets one line with the job and the reference, never the error's message: it can
-quote personal data, such as the address a mail server refused. Job errors are never rate-limited,
-since no visitor can cause them, and they're deleted after 7 days like other recorded errors.
+A failure is recorded as an error in the app (`recordJobError`), so staff Admins look it up by its
+reference under **Logs → Errors**. The run in the history keeps the reference, and so does a queued
+job that failed. The server log gets the job and the reference, never the error's message, which can
+quote personal data.
 
-**Runs that never finish** fail too. On Vercel, the platform stops the endpoint's function after 60
-seconds, so a job that runs past it dies before its run is recorded:
+**The limits:** a tick starts new runs for 45 seconds from the endpoint and 4 minutes from the
+command line, and the recurring jobs get at most the first half of that, so the queue always has
+time. On Vercel the platform stops the endpoint's function after 60 seconds. A lease lasts 15
+minutes.
 
-- A recurring run always frees its lease when it ends, so a lease that ran out means its run died.
-  The next tick closes it first (`recordUnfinishedRuns` in `run.ts`, `closeUnfinishedRuns` in
-  `state.ts`, in one statement so two ticks never close it twice): a failed run in the history,
-  recorded as the tick's, with an error saying it never finished. It counts with the failures in a
-  row, and the job runs again at its next scheduled moment.
-- A queued job whose run died is taken again as another attempt, and given up after its last one
-  (see [Queued jobs](#queued-jobs)).
+**A run that never finishes** (say, the platform stopped it at 60 seconds) fails too. A recurring
+run always frees its lease when it ends, so a lease that ran out means its run died: the next tick
+records it as a failed run (`recordUnfinishedRuns` in `run.ts`), once, and the job runs again at its
+next scheduled moment. A queued job whose attempt died uses up that attempt.
 
-**The staff Admins are told** when a job keeps failing (`alertStaffAdmins` in `alerts.ts`): after a
-recurring job's third failed run in a row, or when queued jobs are given up. Every active staff
-Admin gets an email in their own language, with the last error's reference and a link to it under
-Logs → Errors. At most one email a day goes out per job (`job_state.last_alert_at`), and it's sent
-straight away, not through the queue, which may be what's broken. A mail problem is logged and never
-stops the tick.
+**The staff Admins are told** when a job keeps failing (`alerts.ts`): after a recurring job's third
+failed run in a row, or when queued jobs are given up. Each active staff Admin gets an email in their
+own language with the error's reference, at most once a day per job, sent straight away rather than
+through the queue.
 
 ## History
 
-Every finished run is a row in `job_run`: the job, what started it (`tick`, `cli` or `page`), when it
-started and finished, how it ended, and what it did as counts, e.g. `{ "sessions": 12 }`. The
-summary never holds personal data. The `retention` job deletes runs after 30 days
-(`JOB_HISTORY_RETENTION_DAYS`).
+Every run is a row in `job_run`: the job, what started it (`tick`, `cli` or `page`), when, how it
+ended and what it did as counts, e.g. `{ "sessions": 12 }`, never personal data. The `retention` job
+deletes runs after 30 days.
 
 ## From the command line
 
-| Command                  | What it does                                                                                                                                                         |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm jobs:run`          | One tick. Exits with 1 when a run failed, after the other jobs ran.                                                                                                  |
-| `pnpm jobs:run <name>`   | Runs one job now, whether it's due or paused (unless another run holds it).                                                                                          |
-| `pnpm jobs:list`         | Every job with its schedule, whether it's paused or running, its last and next run; each kind of queued job with how many wait and failed; and the failed jobs' IDs. |
-| `pnpm jobs:retry <id>`   | Puts a failed queued job back in the queue with a fresh count of attempts; `--kind <name>` for every failed job of a kind.                                           |
-| `pnpm jobs:discard <id>` | Discards a failed queued job; `--kind <name>` for every failed job of a kind.                                                                                        |
-
-In production, run the tick every 5 minutes; see [Background jobs](deploying.md#background-jobs) in
-the deployment docs. The command is thin (`scripts/jobs.ts`); the logic lives in the module and its
-tests.
+| Command                  | What it does                                                                                                   |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `pnpm jobs:run`          | One tick. Exits with 1 when a run failed, after the other jobs ran.                                            |
+| `pnpm jobs:run <name>`   | Runs one recurring job now, whether it's due or paused (unless another run holds it).                          |
+| `pnpm jobs:list`         | Every job with its state, last and next run; each kind of queued job with how many wait and failed; failed IDs |
+| `pnpm jobs:retry <id>`   | Retries a failed queued job, with a fresh count of attempts; `--kind <name>` for every failed job of a kind    |
+| `pnpm jobs:discard <id>` | Discards a failed queued job; `--kind <name>` for every failed job of a kind                                   |
 
 ## For staff
 
-Staff Admins and Managers (`jobs:view`) see the jobs under **Logs → Jobs** (`/admin/logs/jobs`), from
-`loadJobsOverview`, `listJobRuns` and `listFailedJobs` in `overview.ts`:
+Staff Admins and Managers (`jobs:view`) see the jobs under **Logs → Jobs** (`/admin/logs/jobs`): the
+scheduled jobs with what each does, its schedule in words, its last and next run; the kinds of queued
+job with how many wait and failed; the failed queued jobs; and the runs of the last 30 days. Error
+references link to Logs → Errors for those who may see it (`errors:view`).
 
-- **Scheduled jobs:** each recurring job by its name, with what it does in the reader's language
-  (`jobs.descriptions.<name>`), its schedule in words (`describeSchedule` in
-  `src/lib/job-schedule.ts`: every few minutes, hourly at a minute, daily at a time; any other
-  expression as written), how its last run went (with how many runs in a row failed and the error's
-  reference) and when it runs next.
-- **Queued jobs:** each kind with how many of its jobs wait and failed, including kinds the registry
-  no longer lists while their jobs are still there.
-- **Failed queued jobs:** the jobs given up after their last attempt, latest first, with how often
-  each was tried and its last error's reference.
-- **Recent runs:** every run of the last 30 days, newest first, with what started it (the tick, the
-  command line, or a staff Admin on this page), how it ended and what it did in words
-  (`jobs.summary.<count>`).
-
-Error references link to Logs → Errors for staff Admins (`errors:view`); Managers see them as text.
-The names of the jobs and their counts are listed once in `src/lib/job-names.ts`, which the
-registry must match (`registry.int.test.ts`), so each has its words in every language.
-
-Staff Admins (`jobs:manage`) also act on the jobs, from the same page (`actions.ts` next to it, with
-`maxDuration = 60` for running a job) or `controls.ts` directly, never while signed in as someone. On
-the page: **Run now**, **Pause** and **Resume** per scheduled job; **Pause**, **Resume**, **Retry
-failed** and **Discard failed** per kind of queued job; **Retry** and **Discard** per failed job.
-Discarding asks first (`ConfirmDialog`), and a run that fails says so with its error's reference.
-
-- **Pause and resume** a recurring job or a kind of queued job (`pauseJob`, `resumeJob`), which
-  notes who paused it (`job_state.paused_by`). Pausing what's already paused, or resuming what isn't,
-  is a `conflict`. Jobs that keep Adiutor secure can't be paused (`pausable: false`: security
-  notices, new staff Admins, leftover provider tokens, finished sign-ins as a user), and they run even
-  with a pause left in the database.
-- **Run a recurring job now** (`runJobFromPage`), whether it's due or paused, for at most 45 seconds
-  of new work (`PAGE_RUN_SECONDS`), so it ends within the request. Its run is kept with who started
-  it (`trigger: 'page'`, `started_by`); while another run holds the job, it's a `conflict`.
-- **Retry or discard** failed queued jobs, one by ID or every one of a kind (`retryFailedJobs`,
-  `discardFailedJobs`). Discarding also takes a kind the registry no longer lists, to clear its
-  leftover jobs. When none of them is still failed (someone did it first), it's a `conflict`.
-
-Each is recorded in the audit log (`job_started`, `job_paused`, `job_resumed`,
-`queued_jobs_retried`, `queued_jobs_discarded`, in the Background jobs group), with the job's name
-and, for queued jobs, how many (`details.job`, `details.count`), which the audit log shows under the
-event.
+Staff Admins (`jobs:manage`) also run a recurring job now (for at most 45 seconds of new work; the
+page's `maxDuration` is 60), pause and resume jobs, and retry or discard failed queued jobs, one or
+all of a kind (`controls.ts`). Each is recorded in the audit log, never allowed while signed in as
+someone, and discarding asks first. Jobs that keep Adiutor secure can't be paused (`pausable:
+false`: security notices, new staff Admins, leftover provider tokens and finished sign-ins as a
+user), and run even with a pause left in the database.
 
 ## Adding a recurring job
 
 1. Add a file to `src/server/jobs/recurring/` that exports a job made with `defineRecurringJob`:
-   - `name`: stable, in kebab-case. It's stored with the job's state and history, so don't rename
-     it.
-   - `schedule`: a cron expression in UTC with five fields, e.g. `0 6 1 * *` for 06:00 on the 1st.
-     A name that isn't kebab-case or a schedule that can't be read stops the app from loading.
+   - `name`: stable, in kebab-case, since it's stored with the job's state and history;
+   - `schedule`: a cron expression in UTC with five fields, e.g. `0 6 1 * *` for 06:00 on the 1st
+     (a name or schedule that's wrong stops the app from loading);
    - `run(ctx, { deadline })`: does the work and returns `{ summary }` with counts, plus `failure`
      when it finished but something went wrong. Each count is one of `JOB_SUMMARY_KEYS` in
-     `src/lib/job-names.ts`; a new one goes there, with its words in `jobs.summary.<count>`.
-2. Add it to `RECURRING_JOBS` in `src/server/jobs/registry.ts`. The tick runs due jobs in that
-   order.
-3. Add its name to `RECURRING_JOB_NAMES` in `src/lib/job-names.ts`, in the same place, and what it
-   does to `jobs.descriptions.<name>` in every language, for the Jobs page (`registry.int.test.ts`
-   checks the two lists match).
-4. Write its integration test next to it (`*.int.test.ts`), calling its `run` directly.
+     `src/lib/job-names.ts`, with its words in `jobs.summary.<count>`.
+2. Add it to `RECURRING_JOBS` in `registry.ts` (the tick runs them in that order), and its name to
+   `RECURRING_JOB_NAMES` in `src/lib/job-names.ts` in the same place, with what it does in
+   `jobs.descriptions.<name>` in every language.
+3. Test it next to its file (`*.int.test.ts`), calling its `run`.
 
-A job must be safe to run again at any time: a tick can stop between two jobs, and a run by hand can
-follow a scheduled one. Work that can take longer than a tick should stop starting new pieces at
-`deadline` and leave the rest for the next run.
-
-Keep each piece of work to seconds. On Vercel the endpoint's function is stopped after 60 seconds,
-and a run that's stopped is recorded as failed (see [Failures](#failures)). Give every network call
-a time limit well under that (email already has one: `SMTP_TIMEOUTS` in `src/lib/email.ts`). Split
-long work: stop at `deadline` and go on at the next run, or queue one job per item. A run must also
-end within its 15-minute lease, or another tick could take the job while it's still running.
+A job must be safe to run again at any time. Keep each piece of work to seconds, with a time limit
+on every network call (email has one: `SMTP_TIMEOUTS`), and stop starting new pieces at `deadline`,
+leaving the rest for the next run (see [the limits](#failures)).
 
 ## Adding a queued job
 
 A queued job comes in two parts, in two modules, so code that queues jobs never imports the code
-that runs them (the runner imports the code it runs, and that code queues jobs):
+that runs them:
 
 1. **Declare the kind** in `src/server/queue/` with `defineQueuedKind`, and export it from that
-   module's `index.ts`:
-   - `name`: stable, in kebab-case (anything else stops the app from loading). It's stored with
-     each job, so don't rename it while jobs of it may be waiting.
-   - `payload`: a zod schema of IDs, enums, numbers and booleans (see [Queued jobs](#queued-jobs)).
-   - `maxAttempts` (optional): how many times a job is tried before it's given up.
-   - `batch` (optional): `{ group, key }`, for jobs that run together (see
-     [Batches](#batches-coupled-jobs)).
-2. **Give it a handler** in `src/server/jobs/queued/`, and add it to `QUEUED_JOBS` in
-   `src/server/jobs/registry.ts`:
-   - `handleQueuedJob(kind, run)`, where `run(ctx, job)` reads what it needs with the IDs in
-     `job.payload`, does the work and returns `'done'`, or `'skipped'` when what it was about is
-     gone. It throws when it can't do its work, and must be safe to run again: an attempt can fail
-     halfway and be retried. One job takes seconds, with a time limit on every network call, as
-     for recurring jobs above; a job that's stopped uses up an attempt.
-   - Or, for a batched kind, `batchedJobRunner(kind)`, plus a batch for its group made with
-     `defineJobBatch`, added to `JOB_BATCHES`.
-   - Add its name to `QUEUED_JOB_NAMES` in `src/lib/job-names.ts`, in the same place, and what it
-     does to `jobs.descriptions.<name>` in every language, for the Jobs page.
-3. **Queue it** with `queueJob(tx, kind, payload)` from `src/server/queue`, in the transaction of
-   the change where there is one, and test the handler next to its file (`*.int.test.ts`), calling
-   its `handle` or running the queue.
+   module's `index.ts`: its `name` (stable, in kebab-case), its `payload` schema, and optionally
+   `maxAttempts`, `pausable: false` (for jobs that keep Adiutor secure) and `batch`.
+2. **Handle it** in `src/server/jobs/queued/` with `handleQueuedJob(kind, run)`, and add it to
+   `QUEUED_JOBS` in `registry.ts` and its name to `QUEUED_JOB_NAMES` in `src/lib/job-names.ts`, with
+   what it does in `jobs.descriptions.<name>`. `run(ctx, job)` reads what it needs with the IDs in
+   `job.payload` and returns `'done'`, or `'skipped'` when what it was about is gone. It throws when
+   it can't do its work, and must be safe to run again, taking seconds like a recurring job.
+3. **Queue it** with `queueJob(tx, kind, payload)` in the change's transaction, and test the handler
+   next to its file.

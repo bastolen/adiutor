@@ -127,8 +127,5 @@ Things that can look like a problem but aren't:
 | `pnpm auth:schema`         | Regenerate Better Auth's tables after changing its config                                                   |
 | `pnpm setup:platform`      | First-run setup from the command line (can also recover; see [First run](companies-and-roles.md#first-run)) |
 | `pnpm db:seed --yes`       | Replace all local data with test accounts and companies (`--admin-mail` adds your own staff Admin)          |
-| `pnpm jobs:run [job]`      | One tick of the background jobs, or one job now (see [Background jobs](jobs.md))                            |
-| `pnpm jobs:list`           | Every background job with its schedule, last and next run, and the queue's waiting and failed jobs          |
-| `pnpm jobs:retry <id>`     | Put a failed queued job back in the queue (`--kind <name>` for all of a kind)                               |
-| `pnpm jobs:discard <id>`   | Discard a failed queued job (`--kind <name>` for all of a kind)                                             |
+| `pnpm jobs:run [job]`      | One tick, or one job now; more `jobs:` commands in [Background jobs](jobs.md#from-the-command-line)         |
 | `pnpm sessions:revoke-all` | End sessions after a leak (see [After a suspected leak](deploying.md#after-a-suspected-leak))               |

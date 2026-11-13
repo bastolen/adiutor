@@ -62,12 +62,10 @@ fields in the project's dashboard.
   beta) calls `GET /api/jobs` every 15 minutes (on the Hobby plan, somewhere within each 15
   minutes), with `Authorization: Bearer <CRON_SECRET>` when the environment has `CRON_SECRET`.
   `requestMethod` makes it a `GET`, since Schedules send `POST` by default. It's the fallback for the
-  external cron service below, so the jobs still run if that service stops. Hobby allows 5,000 runs
-  a month, and this one uses about 3,000. Preview's copy of the schedule starts inactive: leave it
-  so, as the external service ticks Preview and a second active schedule would go over that budget.
-  On the Pro plan, change it to `*/5 * * * *` and the external service becomes optional. Vercel's
-  older cron jobs (`crons`) can run only once a day on Hobby, and keeping both for the same path runs
-  it twice.
+  external cron service below, so the jobs still run if that service stops. Preview's copy of the
+  schedule starts inactive: leave it so, as the external service ticks Preview. On the Pro plan,
+  change it to `*/5 * * * *` and the external service becomes optional. Don't also add Vercel's
+  older cron jobs (`crons`) for the same path, or the tick runs twice.
 
 **Moving production** (`.github/workflows/production-branch.yml`): when Release Please publishes a
 release, this workflow moves `production` to the release's commit, creating the branch the first
@@ -107,8 +105,8 @@ a tag such as `v0.2.0`) to move production to an existing release.
      `x-vercel-protection-bypass` with the project's secret from Settings → Deployment Protection →
      Protection Bypass for Automation. Generating that secret also gives deployments
      `VERCEL_AUTOMATION_BYPASS_SECRET`, which the endpoint sends when it continues a tick on itself
-     (see [Continuing a tick](jobs.md#continuing-a-tick)), so a backlog on Preview doesn't wait for
-     the next tick;
+     (see [The endpoint](jobs.md#the-endpoint)), so a backlog on Preview doesn't wait for the next
+     tick;
    - have the service warn you when the answer isn't 200: a 500 means a job failed (see
      [Background jobs](jobs.md)).
 
