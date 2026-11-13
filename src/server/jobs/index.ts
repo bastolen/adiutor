@@ -20,6 +20,7 @@ export {
   retryFailedJobs,
   runJobFromPage,
 } from './controls';
+export { startDevTick } from './dev-tick';
 export { answerTickRequest, TICK_CONTINUATION_HEADER } from './endpoint';
 export { listJobs } from './list';
 export {

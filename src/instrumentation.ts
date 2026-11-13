@@ -4,7 +4,8 @@
  * line drop database values (`src/lib/log-redaction.ts`), including Next's
  * own logging of errors that pages, route handlers and server actions
  * throw, and in development it warns when the database is missing
- * migrations from `drizzle/` (`src/server/migration-check.ts`);
+ * migrations from `drizzle/` (`src/server/migration-check.ts`) and runs the
+ * background jobs' tick every minute (`startDevTick`);
  * `onRequestError` records each of those errors in `app_error`
  * (`src/server/request-errors.ts`), under the reference the error page shows.
  */
@@ -13,9 +14,10 @@ import type { Instrumentation } from 'next';
 /**
  * Sets up the server process before it handles requests: makes its logs
  * drop database values and, in development, starts checking the database
- * for pending migrations. That check isn't awaited, since Next waits for
- * `register` before serving requests and a slow or unreachable database
- * must not hold that up; it logs what it finds and never fails startup.
+ * for pending migrations and ticking the background jobs. Neither is
+ * awaited, since Next waits for `register` before serving requests and a
+ * slow or unreachable database must not hold that up; each logs what it
+ * finds and never fails startup.
  *
  * @returns Nothing, once it's set up.
  */
@@ -31,6 +33,12 @@ export async function register(): Promise<void> {
         .then(({ checkMigrations }) => checkMigrations())
         .catch(() => {
           // checkMigrations reports its own failures; nothing here may affect startup.
+        });
+      // Nothing calls the jobs' endpoint locally: the dev server ticks itself, every minute.
+      void import('./server/jobs')
+        .then(({ startDevTick }) => startDevTick())
+        .catch(() => {
+          // startDevTick logs a failed tick itself; nothing here may affect startup.
         });
     }
   }

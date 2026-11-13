@@ -27,6 +27,14 @@ were regenerated), `pnpm db:migrate` can't fix it; the warning says so, and the 
 the database can't be reached it only notes that it couldn't check. Production servers don't run
 it: [deploying](deploying.md#installing-and-upgrading) migrates before every restart.
 
+## Background jobs
+
+`pnpm dev` runs the [background jobs](jobs.md)' tick itself, right away and then every minute
+(`startDevTick` in `src/server/jobs/dev-tick.ts`, started from `src/instrumentation.ts`), so emails
+the app queues, such as security notices, reach Mailpit within a minute. `pnpm jobs:run` runs a tick
+at once, and `pnpm jobs:run <job>` one job. Production servers never tick themselves: see
+[Background jobs](deploying.md#background-jobs) in the deployment docs.
+
 ## Starting over
 
 The database files live in `docker/database/` (git-ignored). To start over with an empty database

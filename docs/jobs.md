@@ -10,8 +10,9 @@ each kind of hosting is in [Background jobs](deploying.md#background-jobs) in th
 
 ## Words
 
-- **Tick:** one pass over the jobs, started every 5 minutes. It runs the recurring jobs that are
-  due, then the queued jobs that are due.
+- **Tick:** one pass over the jobs, started every 5 minutes (every minute by `pnpm dev`, see
+  [Development](development.md#background-jobs)). It runs the recurring jobs that are due, then the
+  queued jobs that are due.
 - **Recurring job:** runs on its own schedule ("scheduled" on the Jobs page).
 - **Queued job:** work the app hands off to run once, at the next tick. Its **kind** says what it
   does, such as `security-notice`.
