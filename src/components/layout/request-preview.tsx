@@ -11,9 +11,14 @@ import { useLocale, useTranslations } from 'next-intl';
 import Avatar from '@/components/ui/avatar';
 import Badge from '@/components/ui/badge';
 import Button from '@/components/ui/button';
+import { DEFAULT_REQUEST_PREFIX, formatRequestNumber } from '@/lib/requests';
 
-/** The example request's reference: an identifier, the same in every language. */
-const REFERENCE = 'REQ-142';
+/**
+ * The example request's number, the same in every language, with the prefix
+ * numbers have until the staff choose their own. The panel is part of the
+ * pages' static shell, so it doesn't read the staff's setting.
+ */
+const REFERENCE = formatRequestNumber(DEFAULT_REQUEST_PREFIX, 142);
 
 /**
  * The days the example messages were sent on: a Monday and the Tuesday

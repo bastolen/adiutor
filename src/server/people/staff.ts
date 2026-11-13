@@ -1,5 +1,5 @@
 /**
- * @file Staff: its name and its people (users with a platform role).
+ * @file Staff: its name and other settings, and its people (users with a platform role).
  * Invitations and invite links for staff are in `invitations/` and
  * `invite-links.ts` (with no company). Managing the staff needs
  * `staff:manage` (platform Admins).
@@ -13,7 +13,12 @@ import { PLATFORM_ADMIN_ROLE, type PlatformRole } from '@/lib/authz/roles';
 import type { Locale } from '@/lib/i18n/locales';
 import { type Paged, resolveTableState, type TableState } from '@/lib/tables/table-state';
 import { type PeopleSort, STAFF_TABLE } from '@/lib/tables/tables';
-import { localeSchema, staffNameSchema, staffRoleSchema } from '@/lib/validation';
+import {
+  localeSchema,
+  requestPrefixSchema,
+  staffNameSchema,
+  staffRoleSchema,
+} from '@/lib/validation';
 
 import {
   assertNotSignedInAs,
@@ -31,6 +36,7 @@ import { paginate, peopleOrder } from '../pagination';
 import { assertRoleChangeLimit } from '../rate-limit';
 import { defaultLanguage } from '../recipient-locale';
 import { revokeInvitationsTo, revokeInvitesWithoutManager } from './invitations';
+import getRequestPrefix from './request-prefix';
 import notifyStaffAdminAdded from './staff-admin-notice';
 import getStaffName from './staff-name';
 
@@ -53,19 +59,57 @@ export interface StaffMember {
 }
 
 /**
- * Loads the staff name for the staff page.
+ * Loads the staff's settings for the staff page.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `staff:manage`.
- * @returns The name, and Adiutor's default language (English (US) if the settings row is missing).
+ * @returns The name, Adiutor's default language (English (US) if the settings row is missing)
+ *   and the prefix request numbers are shown with ("AD" if it's missing).
  */
 export async function getStaffSettings(
   ctx: ServiceContext,
   actor: Actor,
-): Promise<{ name: string; defaultLocale: Locale }> {
+): Promise<{ name: string; defaultLocale: Locale; requestPrefix: string }> {
   assertPermission(getGlobalPermissions(actor), 'staff:manage');
-  const [name, defaultLocale] = await Promise.all([getStaffName(ctx.db), defaultLanguage(ctx)]);
-  return { name, defaultLocale };
+  const [name, defaultLocale, requestPrefix] = await Promise.all([
+    getStaffName(ctx.db),
+    defaultLanguage(ctx),
+    getRequestPrefix(ctx.db),
+  ]);
+  return { name, defaultLocale, requestPrefix };
+}
+
+/**
+ * Sets the prefix request numbers are shown with ("AD" in "AD-142"). Only
+ * how numbers look changes: a request keeps its number and its address, and
+ * a number written with the earlier prefix still finds it. If the settings
+ * row is missing (it was lost), this creates it again, with the name users
+ * then see ("Adiutor"). Not a security change, so no audit event, like the
+ * default language.
+ *
+ * @param ctx - Service context.
+ * @param actor - The acting user; needs `staff:manage`.
+ * @param prefix - The prefix, as the form sent it.
+ * @returns The saved prefix, in capitals.
+ * @throws {ZodError} When it isn't one to five letters or digits starting with a letter.
+ */
+export async function setRequestPrefix(
+  ctx: ServiceContext,
+  actor: Actor,
+  prefix: unknown,
+): Promise<string> {
+  assertNotSignedInAs(actor);
+  assertPermission(getGlobalPermissions(actor), 'staff:manage');
+  const requestPrefix = requestPrefixSchema.parse(prefix);
+  await ctx.db.transaction(async (tx) => {
+    const [found] = await tx.select({ id: staffSettings.id }).from(staffSettings).for('update');
+    if (found) {
+      await tx.update(staffSettings).set({ requestPrefix });
+    } else {
+      await tx.insert(staffSettings).values({ name: await getStaffName(tx), requestPrefix });
+    }
+  });
+  return requestPrefix;
 }
 
 /**

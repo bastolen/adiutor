@@ -110,6 +110,7 @@ import {
   removeFromStaff,
   renameStaff,
   setDefaultLocale,
+  setRequestPrefix,
 } from './people/staff';
 import {
   deactivateOwnAccount,
@@ -439,6 +440,7 @@ function listOperations(): Operation[] {
     ],
     ['rename staff', (w) => renameStaff(ctx, w.actor, 'Adiutor Tests')],
     ['set default language', (w) => setDefaultLocale(ctx, w.actor, 'nl-NL')],
+    ['set request prefix', (w) => setRequestPrefix(ctx, w.actor, 'HELP')],
     [
       'change staff role',
       (w) => changeStaffRole(ctx, w.actor, { userId: w.staffMember, role: 'finance' }),
@@ -678,6 +680,7 @@ const EXPECTED: Record<string, string> = {
   "confirm another user's provider account": 'NNNNNNN',
   'rename staff': 'FFFFFFA',
   'set default language': 'FFFFFFA',
+  'set request prefix': 'FFFFFFA',
   'change staff role': 'FFFFFFA',
   'remove from staff': 'FFFFFFA',
   'list users': 'FFFAAAA',

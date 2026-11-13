@@ -254,6 +254,14 @@
         "save": "Guardar nombre",
         "saved": "Nombre guardado."
       },
+      "requestNumbers": {
+        "title": "Números de solicitud",
+        "description": "Cada solicitud tiene un número que la gente puede citar. Se muestra tras el prefijo que elijas.",
+        "label": "Prefijo",
+        "example": "Las solicitudes se muestran como {example}.",
+        "save": "Guardar prefijo",
+        "saved": "Prefijo guardado."
+      },
       "people": {
         "title": "Personas",
         "description": "{count, plural, one {# persona tiene} other {# personas tienen}} acceso como personal.",

@@ -1,7 +1,8 @@
 /**
- * @file Server actions for the staff page: changing the name shown to users
- * and Adiutor's default language. Staff roles use `src/app/(app)/_people/staff-actions.ts`, and invitations
- * and invite links `src/app/(app)/_people/invitation-actions.ts`.
+ * @file Server actions for the staff page: changing the name shown to users,
+ * Adiutor's default language and the prefix of request numbers. Staff roles
+ * use `src/app/(app)/_people/staff-actions.ts`, and invitations and invite
+ * links `src/app/(app)/_people/invitation-actions.ts`.
  */
 'use server';
 
@@ -13,7 +14,7 @@ import field from '@/lib/form-data';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
 import { getActor } from '@/server/authz';
-import { renameStaff, setDefaultLocale } from '@/server/people/staff';
+import { renameStaff, setDefaultLocale, setRequestPrefix } from '@/server/people/staff';
 
 /**
  * Renames the staff.
@@ -53,5 +54,25 @@ export async function saveDefaultLanguageAction(
     refresh();
     const t = await getTranslations('common.language');
     return { ok: true, message: t('defaultSaved') };
+  });
+}
+
+/**
+ * Sets the prefix request numbers are shown with.
+ *
+ * @param _previous - The previous result (unused).
+ * @param formData - Field `prefix`.
+ * @returns A confirmation, or why it failed.
+ */
+export async function saveRequestPrefixAction(
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const actor = await getActor();
+    await setRequestPrefix(appContext, actor, field(formData, 'prefix'));
+    refresh();
+    const t = await getTranslations('admin.staff.requestNumbers');
+    return { ok: true, message: t('saved') };
   });
 }

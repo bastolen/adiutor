@@ -1,7 +1,7 @@
 /**
  * @file The staff page, served at `/admin/staff`: the staff name, Adiutor's
- * default language and its people (staff), with invitations and invite links to join it, each
- * sortable and paginated. Platform Admins only (`staff:manage`).
+ * default language, the prefix of request numbers and its people (staff), with invitations and
+ * invite links to join it, each sortable and paginated. Platform Admins only (`staff:manage`).
  */
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
@@ -39,6 +39,7 @@ import PersonCell from '../../_people/person-cell';
 import RoleSelect from '../../_people/role-select';
 import { changeStaffRoleAction, removeFromStaffAction } from '../../_people/staff-actions';
 import DefaultLanguageForm from './default-language-form';
+import RequestPrefixForm from './request-prefix-form';
 import StaffNameForm from './staff-name-form';
 
 /**
@@ -50,7 +51,7 @@ export const generateMetadata = globalPermissionMetadata('staff:manage', 'admin.
 
 /**
  * Loads and shows the staff. Its text comes from `admin.staff`; the client
- * components below (`StaffNameForm`, `InviteForm`, `InviteLinksCard`'s form
+ * components below (`StaffNameForm`, `RequestPrefixForm`, `InviteForm`, `InviteLinksCard`'s form
  * and `RoleSelect`) get `admin` and `people` through `ClientMessages`.
  *
  * @param props - Component props.
@@ -83,7 +84,7 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
   const linksTable = url.table(INVITE_LINKS_TABLE, { ...linksRequested, page: links.page });
 
   return (
-    <ClientMessages namespaces={['admin.staff.name', 'people']}>
+    <ClientMessages namespaces={['admin.staff.name', 'admin.staff.requestNumbers', 'people']}>
       <RecentConfirmationProvider
         required={actor.canConfirmSessions}
         // The page with its tables; each control adds its card's anchor.
@@ -98,6 +99,10 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
 
         <Card title={language('defaultLabel')} description={language('defaultDescription')}>
           <DefaultLanguageForm defaultLocale={settings.defaultLocale} />
+        </Card>
+
+        <Card title={t('requestNumbers.title')} description={t('requestNumbers.description')}>
+          <RequestPrefixForm prefix={settings.requestPrefix} />
         </Card>
 
         <Card
