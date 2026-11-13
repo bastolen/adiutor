@@ -52,6 +52,24 @@
       "empty": "Introduce al menos una dirección de correo.",
       "tooMany": "Puedes invitar como máximo a {max, number} personas a la vez. Divide la lista y vuelve a intentarlo."
     },
+    "requestTitle": {
+      "empty": "Introduce un título para la solicitud.",
+      "tooLong": "El título puede tener como máximo {maximum, number} caracteres.",
+      "controlCharacters": "Quita los saltos de línea y los caracteres de control del título.",
+      "hiddenCharacters": "Quita los caracteres invisibles y las marcas de dirección del texto del título."
+    },
+    "requestDescription": {
+      "empty": "Describe lo que necesitas.",
+      "tooLong": "La descripción puede tener como máximo {maximum, number} caracteres."
+    },
+    "requestReply": {
+      "empty": "Escribe primero tu respuesta.",
+      "tooLong": "Tu respuesta puede tener como máximo {maximum, number} caracteres."
+    },
+    "requestType": "Elige qué tipo de solicitud es.",
+    "requestPriority": "Elige una prioridad.",
+    "requestStatus": "Elige un estado.",
+    "requestPrefix": "Usa de una a cinco letras o cifras para el prefijo, empezando por una letra, por ejemplo AD.",
     "locale": "Elige uno de los idiomas."
   }
 }

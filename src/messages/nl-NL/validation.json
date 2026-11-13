@@ -52,6 +52,24 @@
       "empty": "Vul minstens één e-mailadres in.",
       "tooMany": "Je kunt maximaal {max, number} mensen tegelijk uitnodigen. Splits de lijst en probeer het opnieuw."
     },
+    "requestTitle": {
+      "empty": "Vul een titel in voor het verzoek.",
+      "tooLong": "Gebruik maximaal {maximum, number} tekens voor de titel.",
+      "controlCharacters": "Haal regeleinden en besturingstekens uit de titel.",
+      "hiddenCharacters": "Haal onzichtbare tekens en tekens voor de tekstrichting uit de titel."
+    },
+    "requestDescription": {
+      "empty": "Beschrijf wat je nodig hebt.",
+      "tooLong": "Gebruik maximaal {maximum, number} tekens voor de beschrijving."
+    },
+    "requestReply": {
+      "empty": "Schrijf eerst je reactie.",
+      "tooLong": "Gebruik maximaal {maximum, number} tekens voor je reactie."
+    },
+    "requestType": "Kies wat voor verzoek dit is.",
+    "requestPriority": "Kies een prioriteit.",
+    "requestStatus": "Kies een status.",
+    "requestPrefix": "Gebruik één tot vijf letters of cijfers voor het voorvoegsel, beginnend met een letter, bijvoorbeeld AD.",
     "locale": "Kies een van de talen."
   }
 }

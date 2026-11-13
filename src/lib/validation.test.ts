@@ -8,6 +8,9 @@ import {
   IMPERSONATION_REASON_MAX_LENGTH,
   NAME_MAX_LENGTH,
   PASSKEY_NAME_MAX_LENGTH,
+  REQUEST_PREFIX_MAX_LENGTH,
+  REQUEST_TEXT_MAX_LENGTH,
+  REQUEST_TITLE_MAX_LENGTH,
   SLUG_MAX_LENGTH,
 } from './input-rules';
 import {
@@ -21,6 +24,13 @@ import {
   nameSchema,
   passkeyNameSchema,
   passwordSchema,
+  requestDescriptionSchema,
+  requestPrefixSchema,
+  requestPrioritySchema,
+  requestReplySchema,
+  requestStatusSchema,
+  requestTitleSchema,
+  requestTypeSchema,
   roleSchema,
   slugSchema,
   staffNameSchema,
@@ -258,6 +268,80 @@ describe('impersonationReasonSchema', () => {
   });
 });
 
+describe('requestTitleSchema', () => {
+  it('keeps a trimmed title, web addresses included', () => {
+    expect(requestTitleSchema.parse('  portal.adiutor.dev is down ')).toBe(
+      'portal.adiutor.dev is down',
+    );
+    expect(requestTitleSchema.safeParse('a'.repeat(REQUEST_TITLE_MAX_LENGTH)).success).toBe(true);
+  });
+
+  it('refuses titles that are empty, too long, of several lines, or that hide text', () => {
+    [
+      '',
+      '   ',
+      'a'.repeat(REQUEST_TITLE_MAX_LENGTH + 1),
+      'Two\nlines',
+      'Hidden \u{202E}txet',
+    ].forEach((title) => {
+      expect(requestTitleSchema.safeParse(title).success, title).toBe(false);
+    });
+  });
+});
+
+describe('requestDescriptionSchema and requestReplySchema', () => {
+  it('keep the lines of a text and clean it instead of refusing it', () => {
+    expect(
+      requestDescriptionSchema.parse('  Steps:\r\n1. Open the page\u200b\r\n2. Wait\u0000 '),
+    ).toBe('Steps:\n1. Open the page\n2. Wait');
+    expect(requestReplySchema.parse('See https://adiutor.dev/docs\n\nThanks!')).toBe(
+      'See https://adiutor.dev/docs\n\nThanks!',
+    );
+  });
+
+  it('count the length of what is saved, not of what the form sent', () => {
+    // A form sends a line break as two characters; saved, it is one.
+    const lines = `${'a'.repeat(REQUEST_TEXT_MAX_LENGTH - 2)}\r\nb`;
+    expect(lines.length).toBe(REQUEST_TEXT_MAX_LENGTH + 1);
+    expect(requestDescriptionSchema.parse(lines)).toHaveLength(REQUEST_TEXT_MAX_LENGTH);
+    expect(requestReplySchema.safeParse('a'.repeat(REQUEST_TEXT_MAX_LENGTH + 1)).success).toBe(
+      false,
+    );
+  });
+
+  it('refuse a text with nothing to read in it', () => {
+    ['', '  \r\n ', '\u200b\u0000'].forEach((text) => {
+      expect(requestDescriptionSchema.safeParse(text).success, text).toBe(false);
+      expect(requestReplySchema.safeParse(text).success, text).toBe(false);
+    });
+  });
+});
+
+describe('request types, priorities and statuses', () => {
+  it('accept their own values only', () => {
+    expect(requestTypeSchema.parse('new_feature')).toBe('new_feature');
+    expect(requestTypeSchema.safeParse('question').success).toBe(false);
+    expect(requestPrioritySchema.parse('high')).toBe('high');
+    expect(requestPrioritySchema.safeParse('urgent').success).toBe(false);
+    expect(requestStatusSchema.parse('in_progress').toString()).toBe('in_progress');
+    expect(requestStatusSchema.safeParse('closed').success).toBe(false);
+  });
+});
+
+describe('requestPrefixSchema', () => {
+  it('saves the prefix in capitals', () => {
+    expect(requestPrefixSchema.parse(' ad ')).toBe('AD');
+    expect(requestPrefixSchema.parse('help1')).toBe('HELP1');
+    expect(requestPrefixSchema.parse('a'.repeat(REQUEST_PREFIX_MAX_LENGTH))).toBe('AAAAA');
+  });
+
+  it('refuses anything that is not one to five letters or digits starting with a letter', () => {
+    ['', '1AD', 'A-D', 'A D', 'a'.repeat(REQUEST_PREFIX_MAX_LENGTH + 1), 'ÄD'].forEach((prefix) => {
+      expect(requestPrefixSchema.safeParse(prefix).success, prefix).toBe(false);
+    });
+  });
+});
+
 describe('slugs', () => {
   it('validates slugs', () => {
     expect(slugSchema.safeParse('adiutor-tests').success).toBe(true);
@@ -317,6 +401,32 @@ describe('messages', () => {
     expect(issueFor(passkeyNameSchema, 'Work\nlaptop')?.message).toBe(
       'validation.passkeyName.controlCharacters',
     );
+    expect(issueFor(requestTitleSchema, ' ')?.message).toBe('validation.requestTitle.empty');
+    expect(issueFor(requestTitleSchema, 'a'.repeat(REQUEST_TITLE_MAX_LENGTH + 1))).toMatchObject({
+      message: 'validation.requestTitle.tooLong',
+      maximum: REQUEST_TITLE_MAX_LENGTH,
+    });
+    expect(issueFor(requestTitleSchema, 'Two\nlines')?.message).toBe(
+      'validation.requestTitle.controlCharacters',
+    );
+    expect(issueFor(requestDescriptionSchema, ' ')?.message).toBe(
+      'validation.requestDescription.empty',
+    );
+    expect(
+      issueFor(requestDescriptionSchema, 'a'.repeat(REQUEST_TEXT_MAX_LENGTH + 1)),
+    ).toMatchObject({
+      message: 'validation.requestDescription.tooLong',
+      maximum: REQUEST_TEXT_MAX_LENGTH,
+    });
+    expect(issueFor(requestReplySchema, ' ')?.message).toBe('validation.requestReply.empty');
+    expect(issueFor(requestReplySchema, 'a'.repeat(REQUEST_TEXT_MAX_LENGTH + 1))).toMatchObject({
+      message: 'validation.requestReply.tooLong',
+      maximum: REQUEST_TEXT_MAX_LENGTH,
+    });
+    expect(issueFor(requestTypeSchema, 'question')?.message).toBe('validation.requestType');
+    expect(issueFor(requestPrioritySchema, 'urgent')?.message).toBe('validation.requestPriority');
+    expect(issueFor(requestStatusSchema, 'closed')?.message).toBe('validation.requestStatus');
+    expect(issueFor(requestPrefixSchema, 'a-d')?.message).toBe('validation.requestPrefix');
     expect(issueFor(emailSchema, 'nope')?.message).toBe('validation.email');
     expect(issueFor(idSchema, 'nope')?.message).toBe('validation.id');
     expect(issueFor(roleSchema, 'owner')?.message).toBe('validation.role');
