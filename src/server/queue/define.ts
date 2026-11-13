@@ -38,6 +38,12 @@ export interface QueuedKindDefinition<P extends JobPayload> {
   payload: z.ZodType<P>;
   /** How many times a job is tried before it's given up as failed. */
   maxAttempts?: number;
+  /**
+   * Whether staff Admins may pause it; `false` for kinds that keep people
+   * informed about their security (security notices, new staff Admins), so
+   * nobody can silence them. Pausable by default.
+   */
+  pausable?: boolean;
   /** How its jobs are coupled with others, if they are. */
   batch?: JobBatching<P>;
 }
@@ -50,6 +56,8 @@ export interface QueuedJobKind<P extends JobPayload> {
   payload: z.ZodType<P>;
   /** How many times a job is tried before it's given up as failed. */
   maxAttempts: number;
+  /** Whether staff Admins may pause it. */
+  pausable: boolean;
   /** The batch group its jobs run in, or `null` when each runs on its own. */
   batchGroup: string | null;
   /** Checks a payload, as stored or as given, against the schema. */
@@ -74,6 +82,7 @@ export const DEFAULT_MAX_ATTEMPTS = 5;
  * @param definition.name - Its name.
  * @param definition.payload - The payload's schema.
  * @param definition.maxAttempts - How many times a job is tried.
+ * @param definition.pausable - Whether staff Admins may pause it.
  * @param definition.batch - How its jobs are coupled with others.
  * @returns The kind.
  */
@@ -81,12 +90,14 @@ export function defineQueuedKind<P extends JobPayload>({
   name,
   payload,
   maxAttempts = DEFAULT_MAX_ATTEMPTS,
+  pausable = true,
   batch,
 }: QueuedKindDefinition<P>): QueuedJobKind<P> {
   return {
     name,
     payload,
     maxAttempts,
+    pausable,
     batchGroup: batch?.group ?? null,
     /**
      * Checks a payload.

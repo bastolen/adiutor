@@ -79,6 +79,7 @@
     "jobs": {
       "alreadyPaused": "This job is already paused.",
       "notPaused": "This job isn't paused.",
+      "notPausable": "This job keeps Adiutor secure, so it can't be paused.",
       "running": "This job is running right now. Try again once it has finished.",
       "noFailedJobs": "There's nothing left to retry or discard here: someone may have done it already."
     }

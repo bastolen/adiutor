@@ -101,7 +101,9 @@ export async function runTick(
   const states = await loadJobStates(ctx.db);
   const due = jobs.filter((job) => {
     const state = states.get(job.name);
-    return !state?.pausedAt && isDue(job.schedule, state?.lastStartedAt ?? null, now);
+    // A pause only counts for a job that can be paused.
+    const paused = Boolean(state?.pausedAt) && job.pausable !== false;
+    return !paused && isDue(job.schedule, state?.lastStartedAt ?? null, now);
   });
   const leftForNextTick: string[] = [];
   // The recurring jobs' share: the first half of what's left of the tick.

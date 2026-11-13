@@ -88,13 +88,39 @@ describe('pauseJob and resumeJob', () => {
   it('pauses a kind of queued job, and knows no other names', async () => {
     const admin = await staffActor(db, 'platform_admin', 'alex@adiutor.test');
 
-    await pauseJob(ctx, admin, 'security-notice');
+    await pauseJob(ctx, admin, 'added-to-company');
     await expect(pauseJob(ctx, admin, 'adiutor-tests-unknown')).rejects.toMatchObject({
       code: 'not_found',
     });
 
     expect(await db.select({ name: jobState.name }).from(jobState)).toEqual([
-      { name: 'security-notice' },
+      { name: 'added-to-company' },
+    ]);
+  });
+
+  it('refuses to pause the jobs that keep Adiutor secure, but clears a pause left behind', async () => {
+    const admin = await staffActor(db, 'platform_admin', 'alex@adiutor.test');
+
+    await Promise.all(
+      [
+        'security-notice',
+        'staff-admin-added',
+        'leftover-provider-tokens',
+        'finished-sign-ins-as-users',
+      ].map(async (name) => {
+        await expect(pauseJob(ctx, admin, name)).rejects.toMatchObject({
+          code: 'invalid',
+          key: 'errors.jobs.notPausable',
+        });
+      }),
+    );
+    expect(await events()).toEqual([]);
+
+    // Paused before it became unpausable: resuming still clears it.
+    await db.insert(jobState).values({ name: 'security-notice', pausedAt: sql`now()` });
+    await resumeJob(ctx, admin, 'security-notice');
+    expect(await db.select({ pausedAt: jobState.pausedAt }).from(jobState)).toEqual([
+      { pausedAt: null },
     ]);
   });
 });

@@ -10,6 +10,8 @@ import { defineRecurringJob } from '../define';
 export default defineRecurringJob({
   name: 'finished-sign-ins-as-users',
   schedule: '*/5 * * * *',
+  // A sign-in as a user must end when its time is up.
+  pausable: false,
   /**
    * Ends them.
    *

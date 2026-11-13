@@ -80,7 +80,7 @@ function LastRun({ job, canLookUp }: { job: RecurringJobOverview; canLookUp: boo
 
 /**
  * A staff Admin's controls for a job: run it now (also while it's paused),
- * and pause or resume it.
+ * and pause or resume it, unless it keeps Adiutor secure (`pausable`).
  *
  * @param props - Component props.
  * @param props.job - The job.
@@ -98,21 +98,22 @@ function Controls({ job }: { job: RecurringJobOverview }) {
         ariaLabel={t('runNowLabel', { job: job.name })}
         disabled={job.running}
       />
-      {job.paused ? (
-        <RowAction
-          action={resumeJobAction}
-          fields={fields}
-          label={t('resume')}
-          ariaLabel={t('resumeLabel', { job: job.name })}
-        />
-      ) : (
-        <RowAction
-          action={pauseJobAction}
-          fields={fields}
-          label={t('pause')}
-          ariaLabel={t('pauseLabel', { job: job.name })}
-        />
-      )}
+      {job.pausable &&
+        (job.paused ? (
+          <RowAction
+            action={resumeJobAction}
+            fields={fields}
+            label={t('resume')}
+            ariaLabel={t('resumeLabel', { job: job.name })}
+          />
+        ) : (
+          <RowAction
+            action={pauseJobAction}
+            fields={fields}
+            label={t('pause')}
+            ariaLabel={t('pauseLabel', { job: job.name })}
+          />
+        ))}
     </>
   );
 }

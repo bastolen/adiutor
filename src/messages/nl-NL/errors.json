@@ -79,6 +79,7 @@
     "jobs": {
       "alreadyPaused": "Deze taak is al gepauzeerd.",
       "notPaused": "Deze taak is niet gepauzeerd.",
+      "notPausable": "Deze taak houdt Adiutor veilig en kan daarom niet worden gepauzeerd.",
       "running": "Deze taak wordt nu uitgevoerd. Probeer het opnieuw als hij klaar is.",
       "noFailedJobs": "Hier valt niets meer opnieuw te proberen of te verwijderen: misschien heeft iemand het al gedaan."
     }

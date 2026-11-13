@@ -17,7 +17,9 @@ export interface QueuedKindListing {
   name: string;
   /** Whether the registry lists it; jobs of a kind it doesn't list are never run. */
   known: boolean;
-  /** Whether it's paused. */
+  /** Whether staff Admins may pause it: a kind the registry lists, unless it says otherwise. */
+  pausable: boolean;
+  /** Whether it's paused (only a kind that can be paused ever is). */
   paused: boolean;
   /** Jobs waiting or running. */
   waiting: number;
@@ -43,6 +45,7 @@ export async function listQueuedKinds(db: Database): Promise<QueuedKindListing[]
     loadJobStates(db),
   ]);
   const registered = QUEUED_JOBS.map((kind) => kind.name);
+  const pausable = new Set(QUEUED_JOBS.filter((kind) => kind.pausable).map((kind) => kind.name));
   const others = [...new Set(rows.map((row) => row.kind))]
     .filter((name) => !registered.includes(name))
     .sort();
@@ -60,7 +63,8 @@ export async function listQueuedKinds(db: Database): Promise<QueuedKindListing[]
     return {
       name,
       known: registered.includes(name),
-      paused: Boolean(states.get(name)?.pausedAt),
+      pausable: pausable.has(name),
+      paused: pausable.has(name) && Boolean(states.get(name)?.pausedAt),
       waiting: of(['queued', 'running']),
       failed: of(['failed']),
     };

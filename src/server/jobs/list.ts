@@ -16,7 +16,9 @@ export interface JobListing {
   name: string;
   /** Its schedule, a cron expression in UTC. */
   schedule: string;
-  /** Whether it's paused. */
+  /** Whether staff Admins may pause it. */
+  pausable: boolean;
+  /** Whether it's paused (only a job that can be paused ever is). */
   paused: boolean;
   /** Whether a run holds it right now. */
   running: boolean;
@@ -49,7 +51,8 @@ export async function listJobs(
   return RECURRING_JOBS.map((job) => {
     const state = states.get(job.name);
     const lastStartedAt = state?.lastStartedAt ?? null;
-    const paused = Boolean(state?.pausedAt);
+    const pausable = job.pausable !== false;
+    const paused = pausable && Boolean(state?.pausedAt);
     const due = !paused && isDue(job.schedule, lastStartedAt, now);
     let nextRunAt: Date | null = null;
     if (!paused) {
@@ -58,6 +61,7 @@ export async function listJobs(
     return {
       name: job.name,
       schedule: job.schedule,
+      pausable,
       paused,
       running: Boolean(state?.lockedUntil && state.lockedUntil > now),
       lastStartedAt,

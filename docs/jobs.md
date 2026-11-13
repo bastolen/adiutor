@@ -226,7 +226,9 @@ Discarding asks first (`ConfirmDialog`), and a run that fails says so with its e
 
 - **Pause and resume** a recurring job or a kind of queued job (`pauseJob`, `resumeJob`), which
   notes who paused it (`job_state.paused_by`). Pausing what's already paused, or resuming what isn't,
-  is a `conflict`.
+  is a `conflict`. Jobs that keep Adiutor secure can't be paused (`pausable: false`: security
+  notices, new staff Admins, leftover provider tokens, finished sign-ins as a user), and they run even
+  with a pause left in the database.
 - **Run a recurring job now** (`runJobFromPage`), whether it's due or paused, for at most 45 seconds
   of new work (`PAGE_RUN_SECONDS`), so it ends within the request. Its run is kept with who started
   it (`trigger: 'page'`, `started_by`); while another run holds the job, it's a `conflict`.

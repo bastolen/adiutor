@@ -14,6 +14,8 @@ import { defineRecurringJob } from '../define';
 export default defineRecurringJob({
   name: 'leftover-provider-tokens',
   schedule: '*/5 * * * *',
+  // OAuth tokens must never be kept longer than the sign-in needs them.
+  pausable: false,
   /**
    * Clears the tokens.
    *

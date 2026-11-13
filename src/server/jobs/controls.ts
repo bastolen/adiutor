@@ -42,15 +42,19 @@ function assertMayManageJobs(actor: Actor): void {
 }
 
 /**
- * Checks a name is a recurring job or a kind of queued job the registry lists.
+ * Says whether staff Admins may pause a recurring job or a kind of queued job
+ * the registry lists.
  *
  * @param name - The name.
+ * @returns Whether it can be paused.
  * @throws {ServiceError} `not_found` for any other name.
  */
-function assertKnownJob(name: string): void {
-  if (!findRecurringJob(name) && !QUEUED_JOBS.some((kind) => kind.name === name)) {
+function isPausableJob(name: string): boolean {
+  const job = findRecurringJob(name) ?? QUEUED_JOBS.find((kind) => kind.name === name);
+  if (!job) {
     throw notFoundError();
   }
+  return job.pausable !== false;
 }
 
 /**
@@ -70,7 +74,10 @@ async function setJobPaused(
   paused: boolean,
 ): Promise<void> {
   assertMayManageJobs(actor);
-  assertKnownJob(name);
+  // Resuming always works, so a pause from before a job became unpausable can be cleared.
+  if (!isPausableJob(name) && paused) {
+    throw new ServiceError('invalid', 'errors.jobs.notPausable');
+  }
   await ctx.db.transaction(async (tx) => {
     const changed = paused
       ? await tx
@@ -107,12 +114,14 @@ async function setJobPaused(
 
 /**
  * Pauses a recurring job or a kind of queued job until a staff Admin resumes
- * it. Running a recurring job now still works while it's paused.
+ * it. Running a recurring job now still works while it's paused. Jobs that
+ * keep Adiutor secure can't be paused (`pausable: false`), so nobody, not
+ * even a stolen staff Admin session, can silence security notices.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `jobs:manage`.
  * @param name - The recurring job or kind of queued job.
- * @throws {ServiceError} `not_found` for an unknown name, `conflict` when it's already paused.
+ * @throws {ServiceError} `not_found` for an unknown name, `invalid` for one that can't be paused, `conflict` when it's already paused.
  */
 export async function pauseJob(ctx: ServiceContext, actor: Actor, name: string): Promise<void> {
   await setJobPaused(ctx, actor, name, true);

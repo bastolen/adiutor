@@ -36,9 +36,30 @@ describe('loadJobsOverview', () => {
       { name: 'retention', paused: true },
     ]);
     expect(overview.queued).toEqual([
-      { name: 'security-notice', known: true, paused: false, waiting: 1, failed: 1 },
-      { name: 'added-to-company', known: true, paused: false, waiting: 0, failed: 0 },
-      { name: 'staff-admin-added', known: true, paused: false, waiting: 0, failed: 0 },
+      {
+        name: 'security-notice',
+        known: true,
+        pausable: false,
+        paused: false,
+        waiting: 1,
+        failed: 1,
+      },
+      {
+        name: 'added-to-company',
+        known: true,
+        pausable: true,
+        paused: false,
+        waiting: 0,
+        failed: 0,
+      },
+      {
+        name: 'staff-admin-added',
+        known: true,
+        pausable: false,
+        paused: false,
+        waiting: 0,
+        failed: 0,
+      },
     ]);
   });
 

@@ -138,6 +138,30 @@ describe('runTick', () => {
     expect(await history(job.name)).toEqual([]);
   });
 
+  it('runs a job that can’t be paused, whatever pause is left in the database', async () => {
+    const job = defineRecurringJob({
+      name: 'adiutor-tests-vital',
+      schedule: '0 * * * *',
+      pausable: false,
+      /**
+       * Counts one run.
+       *
+       * @returns One done.
+       */
+      run: async () => ({ summary: { done: 1 } }),
+    });
+    await db.insert(jobState).values({ name: job.name, pausedAt: sql`now()` });
+
+    const result = await runTick(ctx, {
+      trigger: 'tick',
+      deadline: later,
+      now: at('10:30'),
+      jobs: [job],
+    });
+
+    expect(result.runs.map((run) => [run.job, run.status])).toEqual([[job.name, 'succeeded']]);
+  });
+
   it('never runs a job twice at once: a second tick leaves it to the run that holds it', async () => {
     /** Lets the slow job finish; set once its run has started. */
     let finish: () => void = () => {};

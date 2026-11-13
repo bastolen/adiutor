@@ -63,10 +63,12 @@ describe('listQueuedKinds', () => {
     await job('adiutor-tests-gone', 'succeeded');
     await db.insert(jobState).values({ name: 'adiutor-tests-gone', pausedAt: sql`now()` });
 
+    // A kind the registry no longer lists can't be paused, so a pause left behind doesn't count.
     expect(await listQueuedKinds(db)).toContainEqual({
       name: 'adiutor-tests-gone',
       known: false,
-      paused: true,
+      pausable: false,
+      paused: false,
       waiting: 2,
       failed: 1,
     });

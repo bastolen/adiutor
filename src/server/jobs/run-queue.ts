@@ -194,8 +194,9 @@ async function runClaimed(
 }
 
 /**
- * The kinds whose jobs a tick may take: those that aren't paused and can run,
- * on their own (with a handler) or through their group's batch.
+ * The kinds whose jobs a tick may take: those that aren't paused (a pause
+ * only counts for a kind that can be paused) and can run, on their own (with
+ * a handler) or through their group's batch.
  *
  * @param states - The jobs' states, for which kinds are paused.
  * @param kinds - The kinds.
@@ -209,7 +210,7 @@ export function runnableKinds(
 ): QueuedJobRunner[] {
   return kinds.filter(
     (kind) =>
-      !states.get(kind.name)?.pausedAt &&
+      (!states.get(kind.name)?.pausedAt || !kind.pausable) &&
       (kind.handle !== null || (kind.batchGroup !== null && batchesByGroup.has(kind.batchGroup))),
   );
 }

@@ -20,6 +20,8 @@ const PROVIDER_ID_MAX_LENGTH = 64;
 /** The queued security notice: what it carries, checked when it's queued and when it's sent. */
 export const securityNoticeJob = defineQueuedKind({
   name: 'security-notice',
+  // Nobody may silence these, not even a staff Admin (or a stolen session of one).
+  pausable: false,
   payload: z.object({
     /** The user to tell. */
     userId: z.uuid(),

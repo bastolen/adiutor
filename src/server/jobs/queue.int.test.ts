@@ -261,6 +261,34 @@ describe('running the queue', () => {
     expect((await stored()).map(({ status }) => status)).toEqual(['queued', 'queued']);
   });
 
+  it('runs a kind that can’t be paused, whatever pause is left in the database', async () => {
+    const vital = handleQueuedJob(
+      defineQueuedKind({ name: 'adiutor-tests-vital', payload, pausable: false }),
+      /**
+       * Notes the job.
+       *
+       * @param _ctx - Service context (not used).
+       * @param job - The job.
+       * @returns Done.
+       */
+      async (_ctx, job) => {
+        ran.push(job.payload.note);
+        return 'done';
+      },
+    );
+    await db.insert(jobState).values({ name: vital.name, pausedAt: sql`now()` });
+    await add(vital, 'vital');
+
+    await runQueue(ctx, {
+      trigger: 'tick',
+      deadline: later,
+      startedAt: new Date(),
+      kinds: [vital],
+    });
+
+    expect(ran).toEqual(['vital']);
+  });
+
   it('lets the kinds take turns, so many older jobs of one kind keep no other waiting', async () => {
     const busy = noteKind('adiutor-tests-busy');
     const quiet = noteKind('adiutor-tests-quiet');

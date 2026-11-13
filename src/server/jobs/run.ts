@@ -153,7 +153,7 @@ export async function runRecurringJob(
   job: RecurringJob,
   { trigger, deadline, startedAt = new Date(), startedBy = null, slot = null }: RunOptions,
 ): Promise<JobRunResult | null> {
-  if (!(await claimJob(ctx.db, job.name, { startedAt, slot }))) {
+  if (!(await claimJob(ctx.db, job.name, { startedAt, slot, pausable: job.pausable !== false }))) {
     return null;
   }
   const { status, outcome, errorReference } = await attempt(ctx, job, deadline);

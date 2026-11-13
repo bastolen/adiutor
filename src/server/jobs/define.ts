@@ -44,6 +44,12 @@ export interface RecurringJob {
   /** When it runs: a cron expression in UTC, e.g. `0 * * * *` for every hour. */
   schedule: string;
   /**
+   * Whether staff Admins may pause it; `false` for jobs that keep Adiutor
+   * secure (clearing leftover tokens, ending sign-ins as a user), which run
+   * even with a pause left in the database. Pausable by default.
+   */
+  pausable?: boolean;
+  /**
    * Does the work. It must be safe to run again at any time, and it throws
    * when it can't do its work at all.
    */
@@ -111,6 +117,8 @@ export interface BatchedQueuedJob {
 export interface QueuedJobRunner {
   /** The kind's name. */
   name: string;
+  /** Whether staff Admins may pause it (see `defineQueuedKind`). */
+  pausable: boolean;
   /** How many times a job is tried before it's given up as failed. */
   maxAttempts: number;
   /** The batch group its jobs run in, or `null` when each runs on its own. */

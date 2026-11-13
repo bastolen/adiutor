@@ -79,6 +79,7 @@
     "jobs": {
       "alreadyPaused": "Esta tarea ya está pausada.",
       "notPaused": "Esta tarea no está pausada.",
+      "notPausable": "Esta tarea mantiene Adiutor seguro, así que no se puede pausar.",
       "running": "Esta tarea se está ejecutando ahora mismo. Vuelve a intentarlo cuando termine.",
       "noFailedJobs": "Aquí ya no queda nada que reintentar ni descartar: puede que alguien ya lo haya hecho."
     }

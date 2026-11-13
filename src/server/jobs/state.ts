@@ -58,21 +58,22 @@ export async function loadJobStates(db: Database): Promise<Map<string, JobState>
 
 /**
  * Takes a job for a run, unless another run holds it. With `slot` (the
- * tick), only while it isn't paused and hasn't started since that scheduled
- * moment: two ticks at once can't both run it for the same moment, even one
- * after the other.
+ * tick), only while it isn't paused (when it can be) and hasn't started since
+ * that scheduled moment: two ticks at once can't both run it for the same
+ * moment, even one after the other.
  *
  * @param db - Database client.
  * @param name - The job's name.
  * @param claim - The claim.
  * @param claim.startedAt - When the run starts, stored as the job's last start.
  * @param claim.slot - The scheduled moment the tick runs it for, or `null` to run it now regardless.
+ * @param claim.pausable - Whether a pause stops the tick's claim; `false` for jobs that can't be paused.
  * @returns Whether the run may go ahead.
  */
 export async function claimJob(
   db: Database,
   name: string,
-  { startedAt, slot }: { startedAt: Date; slot: Date | null },
+  { startedAt, slot, pausable = true }: { startedAt: Date; slot: Date | null; pausable?: boolean },
 ): Promise<boolean> {
   const free = or(isNull(jobState.lockedUntil), lt(jobState.lockedUntil, sql`now()`));
   const claimed = await db
@@ -91,7 +92,7 @@ export async function claimJob(
       setWhere: slot
         ? and(
             free,
-            isNull(jobState.pausedAt),
+            pausable ? isNull(jobState.pausedAt) : undefined,
             or(isNull(jobState.lastStartedAt), lt(jobState.lastStartedAt, slot)),
           )
         : free,

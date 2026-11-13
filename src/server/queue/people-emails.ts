@@ -29,6 +29,8 @@ export const addedToCompanyJob = defineQueuedKind({
 /** The "someone became a staff Admin" email to one staff Admin. */
 export const staffAdminAddedJob = defineQueuedKind({
   name: 'staff-admin-added',
+  // Tells the other staff Admins about a new one, so nobody may silence it.
+  pausable: false,
   payload: z.object({
     /** The staff Admin to tell. */
     recipientId: z.uuid(),

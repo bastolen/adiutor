@@ -24,7 +24,8 @@ import { JobName, PausedBadge } from './job-parts';
 
 /**
  * A staff Admin's controls for a kind: pause or resume it (only a kind
- * Adiutor still has), and with failed jobs, retry them all (the same) or
+ * Adiutor still has, and not one that keeps people informed about their
+ * security), and with failed jobs, retry them all (the same) or
  * discard them all after a confirmation.
  *
  * @param props - Component props.
@@ -36,7 +37,7 @@ function Controls({ kind }: { kind: QueuedKindListing }) {
   const job = kind.name;
   return (
     <>
-      {kind.known &&
+      {kind.pausable &&
         (kind.paused ? (
           <RowAction
             action={resumeJobAction}
