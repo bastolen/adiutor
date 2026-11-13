@@ -127,8 +127,10 @@ the Jobs page and the dashboard of staff who see the jobs warn that background j
 ## History
 
 Every run is a row in `job_run`: the job, what started it (`tick`, `cli` or `page`), when, how it
-ended and what it did as counts, e.g. `{ "sessions": 12 }`, never personal data. The `retention` job
-deletes runs after 30 days.
+ended and what it did as counts, e.g. `{ "sessions": 12 }`, never personal data. A tick's run for a
+scheduled moment that succeeded without doing anything isn't kept, or the every-5-minutes jobs would
+bury the rest; its job's state still says when it last ran. Runs started by hand are always kept. The
+`retention` job deletes runs after 30 days.
 
 ## From the command line
 
@@ -144,9 +146,9 @@ deletes runs after 30 days.
 
 Staff Admins and Managers (`jobs:view`) see the jobs under **Logs → Jobs** (`/admin/logs/jobs`): when
 the last tick started; the scheduled jobs with what each does, its schedule in words, its last and
-next run; the kinds of queued
-job with how many wait and failed; the failed queued jobs; and the runs of the last 30 days. Error
-references link to Logs → Errors for those who may see it (`errors:view`).
+next run; the kinds of queued job with how many wait and failed; the failed queued jobs; and the
+runs of the last 30 days that did something, failed or were started by hand. Error references link
+to Logs → Errors for those who may see it (`errors:view`).
 
 Staff Admins (`jobs:manage`) also run a recurring job now (for at most 45 seconds of new work; the
 page's `maxDuration` is 60), pause and resume jobs, and retry or discard failed queued jobs, one or

@@ -470,11 +470,11 @@
       },
       "runs": {
         "title": "Recente uitvoeringen",
-        "description": "Elke uitvoering van de laatste 30 dagen, nieuwste eerst.",
+        "description": "De uitvoeringen van de laatste 30 dagen die iets deden, mislukten of met de hand zijn gestart, nieuwste eerst.",
         "caption": "Uitvoeringen van achtergrondtaken",
         "rows": "uitvoeringen",
         "emptyTitle": "Nog geen uitvoeringen",
-        "emptyDescription": "Uitvoeringen verschijnen hier na de eerste tik.",
+        "emptyDescription": "Uitvoeringen verschijnen hier zodra een taak iets doet, mislukt of met de hand wordt uitgevoerd.",
         "job": "Taak",
         "started": "Gestart",
         "outcome": "Resultaat",

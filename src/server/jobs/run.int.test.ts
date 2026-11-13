@@ -1,8 +1,8 @@
 /**
  * @file Integration tests for running a recurring job now (from the command
  * line or the Jobs page), against the test database: it runs whether it's
- * due or paused, leaves a job another run holds alone, and refuses a name
- * the registry doesn't list.
+ * due or paused, is always kept in the history, leaves a job another run
+ * holds alone, and refuses a name the registry doesn't list.
  */
 import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
@@ -28,6 +28,17 @@ describe('running a job now', () => {
 
     expect(run).toMatchObject({ job: job.name, status: 'succeeded', summary: { done: 1 } });
     expect(await history(db, job.name)).toHaveLength(1);
+  });
+
+  it('keeps a run started by hand in the history, even when it did nothing', async () => {
+    const job = hourlyJob('adiutor-tests-idle', async () => ({ summary: {} }));
+
+    const run = await runRecurringJob(ctx, job, { trigger: 'page', deadline: later });
+
+    expect(run?.runId).toEqual(expect.any(String));
+    expect(await history(db, job.name)).toEqual([
+      { status: 'succeeded', trigger: 'page', summary: {} },
+    ]);
   });
 
   it('leaves a job another run holds alone', async () => {

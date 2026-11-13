@@ -470,11 +470,11 @@
       },
       "runs": {
         "title": "Ejecuciones recientes",
-        "description": "Todas las ejecuciones de los últimos 30 días, la más reciente primero.",
+        "description": "Las ejecuciones de los últimos 30 días que hicieron algo, fallaron o se iniciaron a mano, la más reciente primero.",
         "caption": "Ejecuciones de tareas en segundo plano",
         "rows": "ejecuciones",
         "emptyTitle": "Aún no hay ejecuciones",
-        "emptyDescription": "Las ejecuciones aparecen aquí después del primer tic.",
+        "emptyDescription": "Las ejecuciones aparecen aquí en cuanto una tarea hace algo, falla o se ejecuta a mano.",
         "job": "Tarea",
         "started": "Inicio",
         "outcome": "Resultado",

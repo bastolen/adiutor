@@ -21,8 +21,8 @@ export interface JobRunResult {
   status: JobRunStatus;
   /** What it did. */
   summary: JobSummary;
-  /** The run's row in the history. */
-  runId: string;
+  /** The run's row in the history, or `null` for a tick's run that did nothing, which isn't kept. */
+  runId: string | null;
   /** The reference of the error a failed run recorded, if it could. */
   errorReference: string | null;
 }
@@ -135,7 +135,9 @@ export async function recordUnfinishedRuns(
 }
 
 /**
- * Runs a recurring job under its lease and adds the run to its history.
+ * Runs a recurring job under its lease and adds the run to its history,
+ * unless the tick ran it for a scheduled moment and it succeeded without
+ * doing anything.
  *
  * @param ctx - Service context.
  * @param job - The job.
@@ -157,15 +159,22 @@ export async function runRecurringJob(
     return null;
   }
   const { status, outcome, errorReference } = await attempt(ctx, job, deadline);
-  const { runId, consecutiveFailures } = await finishJobRun(ctx.db, {
-    job: job.name,
-    trigger,
-    startedBy,
-    startedAt,
-    status,
-    summary: outcome.summary,
-    errorReference,
-  });
+  // A tick's run for a scheduled moment that did nothing would only bury the others in the history;
+  // the job's state still says it ran. Runs started by hand are always kept.
+  const didNothing = Object.values(outcome.summary).every((count) => !count);
+  const { runId, consecutiveFailures } = await finishJobRun(
+    ctx.db,
+    {
+      job: job.name,
+      trigger,
+      startedBy,
+      startedAt,
+      status,
+      summary: outcome.summary,
+      errorReference,
+    },
+    { keepInHistory: !(slot !== null && status === 'succeeded' && didNothing) },
+  );
   if (status === 'failed') {
     await alertWhenFailingRepeatedly(ctx, job.name, consecutiveFailures, errorReference);
   }

@@ -3,7 +3,8 @@
  * a lease keeps two runs of a job apart, failures are counted without
  * stopping the others, the recurring jobs get at most half of the tick so
  * the queue always has time, the deadline leaves the rest for the next
- * tick, and a run whose lease ran out is recorded as failed, once.
+ * tick, a run that did nothing stays out of the history, and a run whose
+ * lease ran out is recorded as failed, once.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -74,6 +75,29 @@ describe('runTick', () => {
       lastStatus: 'succeeded',
       lockedUntil: null,
       consecutiveFailures: 0,
+    });
+  });
+
+  it('leaves out of the history a run that did nothing, but notes in the state that it ran', async () => {
+    const idle = hourlyJob('adiutor-tests-idle', async () => ({ summary: { done: 0 } }));
+    const busy = hourlyJob('adiutor-tests-busy');
+
+    const result = await runTick(ctx, {
+      trigger: 'tick',
+      deadline: later,
+      now: at('10:30'),
+      jobs: [idle, busy],
+    });
+
+    expect(result.runs.map((run) => [run.job, run.runId === null])).toEqual([
+      [idle.name, true],
+      [busy.name, false],
+    ]);
+    expect(await history(db, idle.name)).toEqual([]);
+    expect(await history(db, busy.name)).toHaveLength(1);
+    expect(await state(idle.name)).toMatchObject({
+      lastStartedAt: at('10:30'),
+      lastStatus: 'succeeded',
     });
   });
 

@@ -470,11 +470,11 @@
       },
       "runs": {
         "title": "Recent runs",
-        "description": "Every run of the last 30 days, newest first.",
+        "description": "The runs of the last 30 days that did something, failed or were started by hand, newest first.",
         "caption": "Runs of background jobs",
         "rows": "runs",
         "emptyTitle": "No runs yet",
-        "emptyDescription": "Runs show up here after the first tick.",
+        "emptyDescription": "Runs show up here once a job does something, fails or is run by hand.",
         "job": "Job",
         "started": "Started",
         "outcome": "Outcome",

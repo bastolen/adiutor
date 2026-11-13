@@ -143,17 +143,21 @@ export async function addToHistory(db: DatabaseOrTransaction, run: FinishedRun):
 }
 
 /**
- * Frees the job, notes how its run went and adds the run to the history. A
- * kind of queued job gets its state row the first time it runs.
+ * Frees the job, notes how its run went and, unless told not to, adds the
+ * run to the history. A kind of queued job gets its state row the first time
+ * it runs.
  *
  * @param db - Database client.
  * @param run - The finished run.
- * @returns The history row's ID, and how many runs in a row have failed now.
+ * @param options - How to record it.
+ * @param options.keepInHistory - Whether to add it to the history; a tick's run that did nothing isn't.
+ * @returns The history row's ID (`null` when it wasn't kept), and how many runs in a row have failed now.
  */
 export async function finishJobRun(
   db: Database,
   run: FinishedRun,
-): Promise<{ runId: string; consecutiveFailures: number }> {
+  { keepInHistory = true }: { keepInHistory?: boolean } = {},
+): Promise<{ runId: string | null; consecutiveFailures: number }> {
   const failed = run.status === 'failed';
   return db.transaction(async (tx) => {
     const state = await tx
@@ -177,7 +181,7 @@ export async function finishJobRun(
       })
       .returning({ consecutiveFailures: jobState.consecutiveFailures });
     return {
-      runId: await addToHistory(tx, run),
+      runId: keepInHistory ? await addToHistory(tx, run) : null,
       consecutiveFailures: firstRow(state, 'the job state').consecutiveFailures,
     };
   });

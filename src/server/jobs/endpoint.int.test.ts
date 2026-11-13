@@ -11,7 +11,7 @@ import { randomUUID } from 'node:crypto';
 import { eq, sql } from 'drizzle-orm';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { invitation, jobRun, jobState, queuedJob } from '@/db/schema';
+import { invitation, jobState, jobTick, queuedJob } from '@/db/schema';
 
 import {
   createCompany,
@@ -130,7 +130,8 @@ describe('answerTickRequest', () => {
       response: { status: 503, body: { status: 'disabled' } },
       afterAnswer: null,
     });
-    expect(await db.select().from(jobRun)).toEqual([]);
+    // No tick started.
+    expect(await db.select().from(jobTick)).toEqual([]);
   });
 
   it('refuses a missing or wrong secret, without running anything', async () => {
@@ -146,7 +147,8 @@ describe('answerTickRequest', () => {
       afterAnswer: null,
     });
 
-    expect(await db.select().from(jobRun)).toEqual([]);
+    // No tick started.
+    expect(await db.select().from(jobTick)).toEqual([]);
   });
 
   it('answers 429 after too many wrong secrets, while the right one still runs the tick', async () => {
@@ -173,9 +175,13 @@ describe('answerTickRequest', () => {
       status: 'succeeded',
       summary: { verifications: 0, sessions: 0, rateLimits: 0 },
     });
+    // It did nothing, so the history leaves it out; its state says it ran.
     expect(
-      await db.select({ trigger: jobRun.trigger }).from(jobRun).where(eq(jobRun.job, 'retention')),
-    ).toEqual([{ trigger: 'tick' }]);
+      await db
+        .select({ lastStatus: jobState.lastStatus })
+        .from(jobState)
+        .where(eq(jobState.name, 'retention')),
+    ).toEqual([{ lastStatus: 'succeeded' }]);
   });
 
   it('answers 500 when a run failed', async () => {
@@ -213,7 +219,8 @@ describe('continuing the tick', () => {
         });
       }),
     );
-    expect(await db.select().from(jobRun)).toEqual([]);
+    // No tick started.
+    expect(await db.select().from(jobTick)).toEqual([]);
   });
 
   it('continues a tick that stopped at its deadline with work left', async () => {
@@ -271,10 +278,10 @@ describe('continuing the tick', () => {
     });
 
     expect(response).toEqual({ status: 202, body: { status: 'continuing', step: 3 } });
-    // Nothing ran before the answer.
-    expect(await db.select().from(jobRun)).toEqual([]);
+    // No tick started before the answer.
+    expect(await db.select().from(jobTick)).toEqual([]);
     await afterAnswer?.();
-    expect(await db.select().from(jobRun)).not.toEqual([]);
+    expect(await db.select().from(jobTick)).toHaveLength(1);
     // Nothing is left once it ran, so it doesn't continue again.
     expect(continued.requests).toEqual([]);
   });
