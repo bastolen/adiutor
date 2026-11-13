@@ -107,7 +107,7 @@ export default function JobRunsCard({ runs, table, canLookUp }: JobRunsCardProps
               const outcome = (
                 <span className="flex flex-col items-start gap-1">
                   <RunStatusBadge status={run.status} />
-                  <RunSummary summary={run.summary} />
+                  <RunSummary summary={run.summary} status={run.status} />
                   {run.errorReference && (
                     <ErrorReference reference={run.errorReference} canLookUp={canLookUp} />
                   )}

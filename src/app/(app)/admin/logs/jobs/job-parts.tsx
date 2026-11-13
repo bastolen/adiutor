@@ -150,13 +150,22 @@ export function ScheduleText({ schedule }: { schedule: string }) {
 
 /**
  * What a run did, in words: each count it reports that isn't zero ("3 sent ·
- * 1 failed"), or "Nothing to do". Counts Adiutor no longer has are left out.
+ * 1 failed"), or "Nothing to do" for a run that succeeded. A failed run
+ * without counts says nothing here: its error says what happened. Counts
+ * Adiutor no longer has are left out.
  *
  * @param props - Component props.
  * @param props.summary - The run's counts.
- * @returns The summary.
+ * @param props.status - How the run ended.
+ * @returns The summary, or nothing.
  */
-export function RunSummary({ summary }: { summary: Readonly<Record<string, number | undefined>> }) {
+export function RunSummary({
+  summary,
+  status,
+}: {
+  summary: Readonly<Record<string, number | undefined>>;
+  status: JobRunStatus;
+}) {
   const t = useTranslations('jobs');
   const tJobs = useTranslations('admin.jobs');
   const parts = Object.entries(summary).flatMap(([key, count]) =>
@@ -165,7 +174,7 @@ export function RunSummary({ summary }: { summary: Readonly<Record<string, numbe
       : [],
   );
   if (parts.length === 0) {
-    return <span>{tJobs('nothingDone')}</span>;
+    return status === 'succeeded' ? <span>{tJobs('nothingDone')}</span> : null;
   }
   return (
     <span className="flex flex-wrap gap-x-1.5">
