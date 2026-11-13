@@ -1,8 +1,9 @@
 /**
  * @file What staff see of the background jobs on the Jobs page (Logs → Jobs):
- * the recurring jobs and the kinds of queued job with their state, the runs
- * of the last 30 days and the queued jobs that were given up. Staff Admins
- * and Managers (`jobs:view`).
+ * the recurring jobs and the kinds of queued job with their state, when the
+ * last tick started, the runs of the last 30 days and the queued jobs that
+ * were given up; and the warning on the dashboard when the ticks stopped.
+ * Staff Admins and Managers (`jobs:view`).
  */
 import { count, desc, eq, inArray } from 'drizzle-orm';
 
@@ -27,6 +28,7 @@ import {
   type QueuedKindListing,
   readFailedQueuedJobs,
 } from './manage-queue';
+import { isTickLate, readLastTick } from './tick-record';
 
 /** A recurring job on the Jobs page. */
 export interface RecurringJobOverview extends JobListing {
@@ -34,17 +36,22 @@ export interface RecurringJobOverview extends JobListing {
   lastErrorReference: string | null;
 }
 
-/** The jobs at a glance: every recurring job and every kind of queued job. */
+/** The jobs at a glance: every recurring job and every kind of queued job, and the ticks. */
 export interface JobsOverview {
   /** The recurring jobs, in the order the tick runs them. */
   recurring: RecurringJobOverview[];
   /** The kinds of queued job, with how many of their jobs wait and failed. */
   queued: QueuedKindListing[];
+  /** When the last tick started, or `null` when none ran yet. */
+  lastTickAt: Date | null;
+  /** Whether the ticks look stopped (`isTickLate`), so no job runs. */
+  tickLate: boolean;
 }
 
 /**
  * Loads every recurring job and every kind of queued job with its state,
- * and for a recurring job whose last run failed, that run's error reference.
+ * for a recurring job whose last run failed, that run's error reference, and
+ * when the last tick started.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `jobs:view`.
@@ -53,7 +60,11 @@ export interface JobsOverview {
  */
 export async function loadJobsOverview(ctx: ServiceContext, actor: Actor): Promise<JobsOverview> {
   assertPermission(getGlobalPermissions(actor), 'jobs:view');
-  const [jobs, queued] = await Promise.all([listJobs(ctx), listQueuedKinds(ctx.db)]);
+  const [jobs, queued, lastTickAt] = await Promise.all([
+    listJobs(ctx),
+    listQueuedKinds(ctx.db),
+    readLastTick(ctx.db),
+  ]);
   // The last run's error, only for jobs whose last run failed (usually none, so no query at all).
   const failing = jobs.filter((job) => job.lastStatus === 'failed').map((job) => job.name);
   const lastRuns =
@@ -74,7 +85,34 @@ export async function loadJobsOverview(ctx: ServiceContext, actor: Actor): Promi
       lastErrorReference: job.lastStatus === 'failed' ? (lastErrors.get(job.name) ?? null) : null,
     })),
     queued,
+    lastTickAt,
+    tickLate: isTickLate(lastTickAt),
   };
+}
+
+/** Why the dashboard warns that background jobs aren't running. */
+export interface TickWarning {
+  /** When the last tick started, or `null` when none ran yet. */
+  lastTickAt: Date | null;
+}
+
+/**
+ * Whether to warn on the dashboard that background jobs aren't running: for
+ * staff who see the jobs (`jobs:view`), when the ticks look stopped.
+ *
+ * @param ctx - Service context.
+ * @param actor - The acting user.
+ * @returns The warning, or `null` when the ticks are on time or the actor doesn't see the jobs.
+ */
+export async function getTickWarning(
+  ctx: ServiceContext,
+  actor: Actor,
+): Promise<TickWarning | null> {
+  if (!getGlobalPermissions(actor).has('jobs:view')) {
+    return null;
+  }
+  const lastTickAt = await readLastTick(ctx.db);
+  return isTickLate(lastTickAt) ? { lastTickAt } : null;
 }
 
 /** One run in the history. */

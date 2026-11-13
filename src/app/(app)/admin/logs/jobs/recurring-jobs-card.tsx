@@ -1,18 +1,21 @@
 /**
  * @file The "Scheduled jobs" card on the Jobs page: every recurring job with
- * what it does, its schedule, how its last run went and when it runs next;
+ * what it does, its schedule, how its last run went and when it runs next,
+ * and when the last tick started;
  * staff Admins also run it now, pause it and resume it. The registry decides
  * the jobs and their order, so the table neither sorts nor pages. Text from
  * `admin.jobs.recurring` and `admin.jobs.actions`.
  */
 import { useLocale, useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
 
 import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
 import RelativeTime from '@/components/ui/relative-time';
 import RowAction from '@/components/ui/row-action';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
-import { formatDateTime, formatTime } from '@/lib/format';
+import { formatDateTime, formatRelative, formatTime } from '@/lib/format';
+import type { Locale } from '@/lib/i18n/locales';
 import type { RecurringJobOverview } from '@/server/jobs';
 
 import { runJobAction } from './actions';
@@ -52,6 +55,48 @@ function NextRun({ job }: { job: RecurringJobOverview }) {
     >
       {today ? formatTime(job.nextRunAt, locale) : formatDateTime(job.nextRunAt, locale)}
     </time>
+  );
+}
+
+/**
+ * Makes the `<when>` tag of a rich message a `<time>` for a moment, with the
+ * exact date and time as its tooltip.
+ *
+ * @param at - The moment.
+ * @param locale - The reader's language.
+ * @returns The renderer `t.rich` takes for the tag.
+ */
+function timeTag(at: Date, locale: Locale) {
+  return function TimeTag(chunks: ReactNode) {
+    return (
+      <time dateTime={at.toISOString()} title={formatDateTime(at, locale)}>
+        {chunks}
+      </time>
+    );
+  };
+}
+
+/**
+ * When the last tick started ("Last tick 2 minutes ago"), or that none did.
+ *
+ * @param props - Component props.
+ * @param props.at - When the last tick started, if one did.
+ * @returns The wording.
+ */
+function LastTick({ at }: { at: Date | null }) {
+  const t = useTranslations('admin.jobs.recurring');
+  const tTime = useTranslations('common.relativeTime');
+  const locale = useLocale();
+  if (!at) {
+    return <span className="text-sm text-muted-foreground">{t('noTick')}</span>;
+  }
+  return (
+    <span className="text-sm whitespace-nowrap text-muted-foreground">
+      {t.rich('lastTick', {
+        time: formatRelative(at, locale, { justNow: tTime('justNow') }),
+        when: timeTag(at, locale),
+      })}
+    </span>
   );
 }
 
@@ -115,6 +160,8 @@ function Controls({ job }: { job: RecurringJobOverview }) {
 interface RecurringJobsCardProps {
   /** The recurring jobs, in the order the tick runs them. */
   jobs: RecurringJobOverview[];
+  /** When the last tick started, or `null` when none ran yet. */
+  lastTickAt: Date | null;
   /** Whether the viewer may look up errors (`errors:view`). */
   canLookUp: boolean;
   /** Whether the viewer may run, pause and resume jobs (`jobs:manage`). */
@@ -126,15 +173,27 @@ interface RecurringJobsCardProps {
  *
  * @param props - Component props.
  * @param props.jobs - The recurring jobs.
+ * @param props.lastTickAt - When the last tick started, if one did.
  * @param props.canLookUp - Whether the viewer may look up errors.
  * @param props.canManage - Whether the viewer may run, pause and resume jobs.
  * @returns The card.
  */
-export default function RecurringJobsCard({ jobs, canLookUp, canManage }: RecurringJobsCardProps) {
+export default function RecurringJobsCard({
+  jobs,
+  lastTickAt,
+  canLookUp,
+  canManage,
+}: RecurringJobsCardProps) {
   const t = useTranslations('admin.jobs.recurring');
   const tStatus = useTranslations('admin.jobs.status');
   return (
-    <Card id="scheduled-jobs" title={t('title')} description={t('description')} flush>
+    <Card
+      id="scheduled-jobs"
+      title={t('title')}
+      description={t('description')}
+      actions={<LastTick at={lastTickAt} />}
+      flush
+    >
       <Table caption={t('caption')}>
         <thead>
           <tr>

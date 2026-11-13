@@ -23,6 +23,13 @@ CREATE TABLE "job_state" (
 	"last_alert_at" timestamp with time zone
 );
 --> statement-breakpoint
+CREATE TABLE "job_tick" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"singleton" boolean DEFAULT true NOT NULL,
+	"last_started_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "job_tick_singleton_true" CHECK ("job_tick"."singleton")
+);
+--> statement-breakpoint
 CREATE TABLE "queued_job" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"kind" text NOT NULL,
@@ -44,6 +51,7 @@ CREATE INDEX "job_run_started_at_idx" ON "job_run" USING btree ("started_at");--
 CREATE INDEX "job_run_started_by_idx" ON "job_run" USING btree ("started_by");--> statement-breakpoint
 CREATE UNIQUE INDEX "job_state_name_idx" ON "job_state" USING btree ("name");--> statement-breakpoint
 CREATE INDEX "job_state_paused_by_idx" ON "job_state" USING btree ("paused_by");--> statement-breakpoint
+CREATE UNIQUE INDEX "job_tick_singleton_idx" ON "job_tick" USING btree ("singleton");--> statement-breakpoint
 CREATE INDEX "queued_job_due_idx" ON "queued_job" USING btree ("kind","run_at","id") WHERE "queued_job"."status" = 'queued';--> statement-breakpoint
 CREATE INDEX "queued_job_batch_key_idx" ON "queued_job" USING btree ("batch_key") WHERE "queued_job"."status" = 'queued';--> statement-breakpoint
 CREATE INDEX "queued_job_status_kind_idx" ON "queued_job" USING btree ("status","kind");--> statement-breakpoint

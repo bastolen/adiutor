@@ -117,6 +117,12 @@ failed run in a row, or when queued jobs are given up. Each active staff Admin g
 own language with the error's reference, at most once a day per job, sent straight away rather than
 through the queue.
 
+**When the ticks stop**, no job runs and none can tell anyone. So every tick notes when it started
+(`job_tick`, `recordTick` in `tick-record.ts`), and when none started in the last 45 minutes
+(`TICK_LATE_MINUTES`; Vercel's 15-minute schedule can fire up to 30 minutes apart), or none ever did,
+the Jobs page and the dashboard of staff who see the jobs warn that background jobs aren't running
+(`getTickWarning`).
+
 ## History
 
 Every run is a row in `job_run`: the job, what started it (`tick`, `cli` or `page`), when, how it
@@ -135,8 +141,9 @@ deletes runs after 30 days.
 
 ## For staff
 
-Staff Admins and Managers (`jobs:view`) see the jobs under **Logs → Jobs** (`/admin/logs/jobs`): the
-scheduled jobs with what each does, its schedule in words, its last and next run; the kinds of queued
+Staff Admins and Managers (`jobs:view`) see the jobs under **Logs → Jobs** (`/admin/logs/jobs`): when
+the last tick started; the scheduled jobs with what each does, its schedule in words, its last and
+next run; the kinds of queued
 job with how many wait and failed; the failed queued jobs; and the runs of the last 30 days. Error
 references link to Logs → Errors for those who may see it (`errors:view`).
 

@@ -1,17 +1,19 @@
 /**
  * @file Integration tests for what the Jobs page shows, against the test
  * database: every recurring job and kind of queued job with its state, the
- * runs newest first with the staff Admin who started one, and only the
- * queued jobs that were given up. Who may see them is in the authorization
- * matrix.
+ * runs newest first with the staff Admin who started one, only the queued
+ * jobs that were given up, and when the ticks look stopped (on the Jobs page
+ * and, for staff who see the jobs, the dashboard). Who may see them is in
+ * the authorization matrix.
  */
 import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { jobRun, jobState, queuedJob } from '@/db/schema';
+import { jobRun, jobState, jobTick, queuedJob } from '@/db/schema';
 
 import { setupTestContext, staffActor } from '../../../tests/integration/helpers';
-import { listFailedJobs, listJobRuns, loadJobsOverview } from './overview';
+import { getTickWarning, listFailedJobs, listJobRuns, loadJobsOverview } from './overview';
+import { recordTick } from './tick-record';
 
 const { ctx, db } = setupTestContext();
 
@@ -75,6 +77,38 @@ describe('loadJobsOverview', () => {
         .filter((job) => job.lastErrorReference)
         .map(({ name, lastErrorReference }) => ({ name, lastErrorReference })),
     ).toEqual([{ name: 'invitation-reminders', lastErrorReference: 'CCCC-DDDD' }]);
+  });
+});
+
+describe('the ticks', () => {
+  it('give the overview when the last tick started, and whether that is late', async () => {
+    const manager = await staffActor(db, 'manager', 'sam@adiutor.test');
+    expect(await loadJobsOverview(ctx, manager)).toMatchObject({
+      lastTickAt: null,
+      tickLate: true,
+    });
+
+    await recordTick(db);
+
+    expect(await loadJobsOverview(ctx, manager)).toMatchObject({
+      lastTickAt: expect.any(Date),
+      tickLate: false,
+    });
+  });
+
+  it('warn on the dashboard only while late, and only staff who see the jobs', async () => {
+    const admin = await staffActor(db, 'platform_admin', 'alex@adiutor.test');
+    const support = await staffActor(db, 'support', 'pat@adiutor.test');
+
+    // No tick ever ran.
+    await expect(getTickWarning(ctx, admin)).resolves.toEqual({ lastTickAt: null });
+    await expect(getTickWarning(ctx, support)).resolves.toBeNull();
+
+    await recordTick(db);
+    await expect(getTickWarning(ctx, admin)).resolves.toBeNull();
+
+    await db.update(jobTick).set({ lastStartedAt: sql`now() - interval '2 hours'` });
+    await expect(getTickWarning(ctx, admin)).resolves.toEqual({ lastTickAt: expect.any(Date) });
   });
 });
 

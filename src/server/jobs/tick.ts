@@ -1,8 +1,8 @@
 /**
  * @file The tick: what the endpoint and `pnpm jobs:run` start every few
- * minutes. It runs every recurring job that's due, one after another, then
- * the queued jobs that are due, until its deadline; and running one job now,
- * whether it's due or not.
+ * minutes. It notes that it started (`recordTick`), runs every recurring job
+ * that's due, one after another, then the queued jobs that are due, until
+ * its deadline; and running one job now, whether it's due or not.
  */
 import type { JobTrigger } from '@/db/schema';
 
@@ -14,6 +14,7 @@ import { type JobRunResult, recordUnfinishedRuns, runRecurringJob } from './run'
 import { runQueue } from './run-queue';
 import { isDue, lastScheduledAt } from './schedule';
 import { loadJobStates } from './state';
+import { recordTick } from './tick-record';
 
 /** What a tick did. */
 export interface TickResult {
@@ -67,6 +68,8 @@ export async function runTick(
   ctx: ServiceContext,
   { trigger, deadline, now = new Date(), jobs = RECURRING_JOBS, queuedJobs }: TickOptions,
 ): Promise<TickResult> {
+  // First, so the Jobs page and the dashboard know the ticks are coming, whatever this one does.
+  await recordTick(ctx.db);
   // Runs that died since the last tick (their lease ran out) are failures to report first.
   const runs: JobRunResult[] = await recordUnfinishedRuns(
     ctx,

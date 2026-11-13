@@ -110,6 +110,9 @@ a tag such as `v0.2.0`) to move production to an existing release.
    - have the service warn you when the answer isn't 200: a 500 means a job failed (see
      [Background jobs](jobs.md)).
 
+   Logs → Jobs then shows a recent tick. When none has run for 45 minutes, the dashboard and the
+   Jobs page warn staff Admins and Managers that background jobs aren't running.
+
 ## Docker
 
 The `Dockerfile` builds one image with the whole application: the built app, its source, scripts

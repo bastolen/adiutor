@@ -92,7 +92,8 @@ Admins and Managers who aren't members can still add themselves with any role, a
 - **Staff:** the menu has Dashboard, Users and Companies, and the dashboard has a tile for each of
   Users and Companies. Admins (`staff:manage`) also get **Staff** in the menu and as a tile on
   the dashboard, which opens the staff page. Admins and Managers (`audit:view`) also get **Logs**,
-  last in the menu and as a tile on the dashboard.
+  last in the menu and as a tile on the dashboard, and a warning there when background jobs aren't
+  running (see [When the ticks stop](jobs.md#failures)).
 - **Company users:** the menu and dashboard stay empty until their features exist. Company pages still
   work by URL, for example right after accepting an invitation.
 - **Company addresses:** a company's pages are at `/companies/<URL name>` (its `slug`, e.g.

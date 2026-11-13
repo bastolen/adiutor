@@ -1,10 +1,21 @@
 /**
  * @file Background jobs (decision 0018): the state of each job (paused or
  * not, who holds it, how its last run went), the history of its runs, kept
- * for 30 days, and the queue of jobs the app adds to run once.
+ * for 30 days, the queue of jobs the app adds to run once, and when the last
+ * tick started.
  */
 import { sql } from 'drizzle-orm';
-import { index, integer, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  check,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 import { user } from './auth';
 import { createdAt, id, timestampTz } from './columns';
@@ -57,6 +68,25 @@ export const jobState = pgTable(
   (table) => [
     uniqueIndex('job_state_name_idx').on(table.name),
     index('job_state_paused_by_idx').on(table.pausedBy),
+  ],
+);
+
+/**
+ * When the last tick started, in one row, so staff are warned when the
+ * ticks stop (the Jobs page and the dashboard): no job can tell anyone then.
+ */
+export const jobTick = pgTable(
+  'job_tick',
+  {
+    id: id(),
+    /** Always `true`; with the unique index and check below, it allows only one row. */
+    singleton: boolean('singleton').default(true).notNull(),
+    /** When the last tick started, from any source: the endpoint, `pnpm jobs:run` or the dev server. */
+    lastStartedAt: timestampTz('last_started_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('job_tick_singleton_idx').on(table.singleton),
+    check('job_tick_singleton_true', sql`${table.singleton}`),
   ],
 );
 

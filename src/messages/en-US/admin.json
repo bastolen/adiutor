@@ -425,6 +425,13 @@
       "errorReference": "Error {reference}",
       "errorReferenceLink": "Look up error {reference}",
       "nothingDone": "Nothing to do",
+      "tickWarning": {
+        "label": "Background jobs",
+        "title": "Background jobs aren't running",
+        "late": "The last tick started {time}, so reminders, security emails and clean-ups are waiting. Check the cron service that calls /api/jobs every 5 minutes, or the server's cron that runs pnpm jobs:run.",
+        "never": "No tick has run yet, so no background job has run either. Set up a cron service that calls /api/jobs every 5 minutes, or run pnpm jobs:run from the server's cron.",
+        "action": "Open Jobs"
+      },
       "recurring": {
         "title": "Scheduled jobs",
         "description": "Each runs on its schedule, at the tick every few minutes. Times are in UTC.",
@@ -435,7 +442,9 @@
         "neverRun": "Not run yet",
         "atNextTick": "At the next tick",
         "whilePaused": "Not while paused",
-        "failuresInARow": "{count, plural, one {Its last run failed} other {Its last # runs failed}}"
+        "failuresInARow": "{count, plural, one {Its last run failed} other {Its last # runs failed}}",
+        "lastTick": "Last tick <when>{time}</when>",
+        "noTick": "No tick yet"
       },
       "queued": {
         "title": "Queued jobs",

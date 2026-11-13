@@ -140,6 +140,8 @@ export default async function seedTestDatabase(databaseUrl: string): Promise<voi
     };
 
     await db.insert(schema.staffSettings).values({ name: STAFF_NAME });
+    // A tick just ran, so pages don't warn that background jobs aren't running.
+    await db.insert(schema.jobTick).values({ lastStartedAt: new Date() });
     await addPerson(PLATFORM_ADMIN, { platformRole: 'platform_admin' });
     await addPerson(PLATFORM_MANAGER, { platformRole: 'manager' });
     await addPerson(SUPPORT_STAFF, { platformRole: 'support' });

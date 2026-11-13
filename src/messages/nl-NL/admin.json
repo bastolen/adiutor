@@ -425,6 +425,13 @@
       "errorReference": "Fout {reference}",
       "errorReferenceLink": "Fout {reference} opzoeken",
       "nothingDone": "Niets te doen",
+      "tickWarning": {
+        "label": "Achtergrondtaken",
+        "title": "Achtergrondtaken draaien niet",
+        "late": "De laatste tik begon {time}, dus herinneringen, beveiligingsmails en opruimtaken wachten. Controleer de cronservice die elke 5 minuten /api/jobs aanroept, of de cron op de server die pnpm jobs:run uitvoert.",
+        "never": "Er is nog geen tik geweest, dus ook nog geen achtergrondtaak. Stel een cronservice in die elke 5 minuten /api/jobs aanroept, of voer pnpm jobs:run uit vanuit de cron op de server.",
+        "action": "Taken openen"
+      },
       "recurring": {
         "title": "Geplande taken",
         "description": "Elke taak draait volgens zijn schema, bij de tik die om de paar minuten komt. Tijden zijn in UTC.",
@@ -435,7 +442,9 @@
         "neverRun": "Nog niet uitgevoerd",
         "atNextTick": "Bij de volgende tik",
         "whilePaused": "Niet terwijl de taak gepauzeerd is",
-        "failuresInARow": "{count, plural, one {De laatste uitvoering is mislukt} other {De laatste # uitvoeringen zijn mislukt}}"
+        "failuresInARow": "{count, plural, one {De laatste uitvoering is mislukt} other {De laatste # uitvoeringen zijn mislukt}}",
+        "lastTick": "Laatste tik <when>{time}</when>",
+        "noTick": "Nog geen tik"
       },
       "queued": {
         "title": "Taken in de wachtrij",

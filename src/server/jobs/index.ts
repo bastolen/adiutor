@@ -29,8 +29,8 @@ export {
   retryFailedQueuedJobs,
 } from './manage-queue';
 export type { FailedJobsSelection, QueuedKindListing } from './manage-queue';
-export { listFailedJobs, listJobRuns, loadJobsOverview } from './overview';
-export type { FailedJobEntry, JobRunEntry, RecurringJobOverview } from './overview';
+export { getTickWarning, listFailedJobs, listJobRuns, loadJobsOverview } from './overview';
+export type { FailedJobEntry, JobRunEntry, RecurringJobOverview, TickWarning } from './overview';
 export { RECURRING_JOBS } from './registry';
 export { runQueue } from './run-queue';
 export type { JobRunResult } from './run';

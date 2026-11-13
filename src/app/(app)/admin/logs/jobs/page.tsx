@@ -1,7 +1,8 @@
 /**
  * @file The Jobs page, served at `/admin/logs/jobs`, for staff Admins and
- * Managers (`jobs:view`): the scheduled jobs with how their last run went
- * and when they run next, the kinds of queued job with how many wait and
+ * Managers (`jobs:view`): a warning when the ticks look stopped, the
+ * scheduled jobs with how their last run went and when they run next, when
+ * the last tick started, the kinds of queued job with how many wait and
  * failed, the queued jobs that were given up, and every run of the last 30
  * days (see docs/jobs.md). Staff Admins (`jobs:manage`) also run, pause and
  * resume jobs and retry or discard failed queued jobs (`actions.ts`).
@@ -19,6 +20,7 @@ import { getGlobalPermissions, requireGlobalPermission } from '@/server/authz';
 import { listFailedJobs, listJobRuns, loadJobsOverview } from '@/server/jobs';
 import { globalPermissionMetadata } from '@/server/page-metadata';
 
+import TickWarning from '../../../_jobs/tick-warning';
 import FailedJobsCard from './failed-jobs-card';
 import JobRunsCard from './job-runs-card';
 import QueuedJobsCard from './queued-jobs-card';
@@ -64,7 +66,13 @@ async function Jobs({ searchParams }: { searchParams: Promise<SearchParams> }) {
 
   return (
     <>
-      <RecurringJobsCard jobs={overview.recurring} canLookUp={canLookUp} canManage={canManage} />
+      {overview.tickLate && <TickWarning lastTickAt={overview.lastTickAt} />}
+      <RecurringJobsCard
+        jobs={overview.recurring}
+        lastTickAt={overview.lastTickAt}
+        canLookUp={canLookUp}
+        canManage={canManage}
+      />
       <QueuedJobsCard kinds={overview.queued} canManage={canManage} />
       <FailedJobsCard
         jobs={failed}

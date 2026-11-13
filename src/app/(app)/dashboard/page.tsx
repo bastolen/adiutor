@@ -1,7 +1,8 @@
 /**
  * @file Dashboard, served at `/dashboard`. Staff get a tile for each staff
  * section they may see (and Admins a warning when users lost their provider
- * MFA); company users only see a welcome until
+ * MFA; Admins and Managers one when background jobs aren't running); company
+ * users only see a welcome until
  * their features exist. A note says what happened when users were sent here
  * after leaving the staff or a company, or stepping down (`AccessNotice`).
  */
@@ -15,9 +16,11 @@ import displayName from '@/lib/display-name';
 import ClientMessages from '@/lib/i18n/client-messages';
 import appContext from '@/server/app-context';
 import { getActor, getGlobalPermissions } from '@/server/authz';
+import { getTickWarning } from '@/server/jobs';
 import { isMfaRecommendationDismissed } from '@/server/people/mfa-recommendation';
 import { getProviderMfaWarning } from '@/server/people/users';
 
+import TickWarning from '../_jobs/tick-warning';
 import AccessNotice from '../access-notice';
 import { staffSectionKeys } from '../staff-sections';
 import MfaRecommendation from './mfa-recommendation';
@@ -58,6 +61,8 @@ async function Dashboard() {
     );
   // For staff Admins: users who lost their MFA because a provider isn't configured here.
   const providerMfaWarning = isStaff ? await getProviderMfaWarning(appContext, actor) : null;
+  // For staff who see the jobs: no job runs while the ticks are stopped, and none can say so.
+  const tickWarning = isStaff ? await getTickWarning(appContext, actor) : null;
 
   if (!isStaff) {
     return (
@@ -75,6 +80,7 @@ async function Dashboard() {
       <AccessNotice />
       {recommendation}
       {providerMfaWarning && <ProviderMfaWarning warning={providerMfaWarning} />}
+      {tickWarning && <TickWarning lastTickAt={tickWarning.lastTickAt} linkToJobs />}
       <StaffShortcuts sections={staffSectionKeys(permissions)} />
     </>
   );

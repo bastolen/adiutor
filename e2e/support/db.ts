@@ -5,8 +5,9 @@
  * sign-in link without sending an email (and using one up), checking whether
  * a browser's session still exists, reading a stored sign-in error, adding
  * someone to a company directly, storing an invitation or an invite link
- * without sending anything, and making a staff member's sign-in as a user end
- * in a few seconds.
+ * without sending anything, making a staff member's sign-in as a user end in a
+ * few seconds, and the background jobs' state (resuming a job, discarding or
+ * storing failed queued jobs, making the last tick late).
  * Each opens its own short connection to the test database (`withTestDatabase`).
  * Resetting and seeding the database is `seed.ts`.
  */
@@ -122,6 +123,23 @@ export async function resumeJob(name: string): Promise<void> {
       .update(schema.jobState)
       .set({ pausedAt: null, pausedBy: null })
       .where(eq(schema.jobState.name, name));
+  });
+}
+
+/**
+ * Makes the last tick look two hours old, so the Jobs page and the dashboard
+ * warn that background jobs aren't running, until the next tick.
+ */
+export async function makeTickLate(): Promise<void> {
+  await withTestDatabase(async (db) => {
+    const twoHoursAgo = sql`now() - interval '2 hours'`;
+    await db
+      .insert(schema.jobTick)
+      .values({ lastStartedAt: twoHoursAgo })
+      .onConflictDoUpdate({
+        target: schema.jobTick.singleton,
+        set: { lastStartedAt: twoHoursAgo },
+      });
   });
 }
 

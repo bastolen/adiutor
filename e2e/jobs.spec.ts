@@ -3,12 +3,18 @@
  * Managers see the scheduled jobs with their schedule in words, the kinds of
  * queued job and the runs a tick made; staff Admins also run a job now,
  * pause and resume it (in the audit log), and retry or discard failed queued
- * jobs, which Managers can't. Support staff get the 404 page
- * (`not-found.spec.ts`).
+ * jobs, which Managers can't. When the ticks stop, the dashboard and the Jobs
+ * page warn. Support staff get the 404 page (`not-found.spec.ts`).
  */
 import { type Page } from '@playwright/test';
 
-import { discardFailedQueuedJobs, resumeJob, storeFailedQueuedJob } from './support/db';
+import expectAccessible from './support/axe';
+import {
+  discardFailedQueuedJobs,
+  makeTickLate,
+  resumeJob,
+  storeFailedQueuedJob,
+} from './support/db';
 import { PLATFORM_ADMIN, STEP_UP_MANAGER } from './support/fixtures';
 import { adminStorageState, signIn, type StorageState, toasts } from './support/helpers';
 import { runJobs } from './support/outbox';
@@ -146,4 +152,40 @@ test.describe('as a staff Admin', () => {
     await expect(toasts(page).getByText('1 job discarded.')).toBeVisible();
     await expect(page.getByText('No failed jobs')).toBeVisible();
   });
+});
+
+test('staff are warned on the dashboard and the Jobs page when the ticks stop', async ({
+  context,
+  page,
+}) => {
+  await context.addCookies(adminState.cookies);
+  const warning = page.getByRole('region', { name: 'Background jobs' });
+
+  // Other tests tick all the time, which ends the warning: make the tick late again until it shows.
+  await expect(async () => {
+    await makeTickLate();
+    await page.goto('/dashboard');
+    await expect(warning.getByText("Background jobs aren't running")).toBeVisible({
+      timeout: 2000,
+    });
+    await expect(warning).toContainText(/The last tick started 2 hours ago/);
+    await expectAccessible(page);
+
+    await warning.getByRole('link', { name: 'Open Jobs' }).click();
+    await expect(page).toHaveURL('/admin/logs/jobs');
+    await expect(warning).toBeVisible({ timeout: 2000 });
+    await expectAccessible(page);
+
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.reload();
+    await expect(warning).toBeVisible({ timeout: 2000 });
+    await expectAccessible(page);
+    await page.emulateMedia({ colorScheme: 'light' });
+  }).toPass({ timeout: 60_000 });
+
+  // The next tick ends it.
+  await runJobs();
+  await page.goto('/admin/logs/jobs');
+  await expect(page.getByText(/^Last tick (just now|\d+ seconds? ago)$/)).toBeVisible();
+  await expect(warning).toHaveCount(0);
 });
