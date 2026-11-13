@@ -10,7 +10,6 @@
 import 'server-only';
 import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
-import { after } from 'next/server';
 import { cache } from 'react';
 
 import { auth } from '@/lib/auth';
@@ -28,6 +27,7 @@ import {
   endImpersonation,
   findSessionImpersonation,
 } from './auth/impersonation';
+import startInBackground from './background';
 import { ServiceError } from './errors';
 
 /**
@@ -47,15 +47,15 @@ export {
 
 /**
  * Returns the signed-in user with their roles, or `null` when signed out.
- * When they were last active is recorded after the response (Next's
- * `after`), so the page doesn't wait for that write or a lock on their row;
- * Next logs it if it fails.
+ * When they were last active is recorded in the background
+ * (`startInBackground`, which says why not with Next's `after`), so the page
+ * doesn't wait for that write or a lock on their row; a failure is logged.
  *
  * When a staff member's session is signed in as a user ("Sign in as"), it
  * returns that user with `signedInAs` set (`actorSignedInAs`), checked again
  * with this request's rows. One that's over (its time is up, or it's no
- * longer allowed) is ended after the response, and the request goes on as
- * the staff member. Only the staff member is recorded as active.
+ * longer allowed) is ended in the background, and the request goes on as the
+ * staff member. Only the staff member is recorded as active.
  *
  * @returns The actor, or `null`.
  */
@@ -80,14 +80,18 @@ export const getOptionalActor = cache(async (): Promise<Actor | null> => {
   if (!actor || actor.deactivatedAt) {
     return null;
   }
-  after(() => touchLastActive(appContext.db, actor.id));
+  startInBackground('Recording when the user was last active', () =>
+    touchLastActive(appContext.db, actor.id),
+  );
   if (!signedInAs) {
     return actor;
   }
   const outcome = await actorSignedInAs(appContext.db, actor, signedInAs);
   if ('end' in outcome) {
-    // Without the request's details: rendering can't read them after the response.
-    after(() => endImpersonation({ db: appContext.db }, sessionId, outcome.end));
+    // Without the request's details: the work can outlive the response, when they can't be read.
+    startInBackground('Ending a sign-in as someone that is over', () =>
+      endImpersonation({ db: appContext.db }, sessionId, outcome.end),
+    );
     return actor;
   }
   return outcome.actor;
