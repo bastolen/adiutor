@@ -321,6 +321,12 @@ does, to check what isn't working for them. The reasons are in
     fetch the layout again. The banner hands it the time left as the server measured it, so the
     browser's clock doesn't matter. It waits 2 more seconds, so the server finds it over, and only
     while the tab is visible: a hidden tab loads as it comes back into view.
+  - When the rules end it (`no_longer_allowed`), the tab finds out at its next navigation within
+    the app, or as it comes back into view. The banner then asks the server when the sign-in ends
+    (`signedInAsEndsAtAction`), and loads the page afresh the same way when there's none any more,
+    or another one took its place (started from another tab). That's one small request per
+    navigation, only while signed in as someone, and never on a timer. A tab nobody touches keeps
+    showing what it already showed until then.
   - Errors reported while signed in as someone are recorded for the staff member.
 
 ## Account pages

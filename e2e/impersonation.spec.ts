@@ -4,12 +4,14 @@
  * anything (the controls are off, the user's account pages read-only), and
  * goes back to the card; the user is emailed and the audit log has the
  * reason. The account pages show whoever the Admin is signed in as, also
- * when Next kept them alive from before. Once it ends by itself, the tab loads
- * afresh as the Admin, without a click. A Manager signed in as a Watcher doesn't see the Watcher's devices.
- * Signed in as a company Admin who must set up MFA, the Admin sees the
- * Security page that user would see. Support is told why they can't sign in
- * as a company Admin, or without strong MFA. A user who turns sign-ins by
- * staff off keeps staff out until they turn it back on.
+ * when Next kept them alive from before. Once its time is up, the tab loads
+ * afresh as the Admin, without a click. A Manager signed in as a Watcher
+ * doesn't see the Watcher's devices. Signed in as a company Admin who must
+ * set up MFA, the Admin sees the Security page that user would see. Support
+ * is told why they can't sign in as a company Admin, or without strong MFA.
+ * A user who turns sign-ins by staff off ends one under way (the Admin's tab
+ * loads afresh at their next page) and keeps staff out until they turn it
+ * back on.
  */
 import { endSignInAsSoon, findUserId } from './support/db';
 import {
@@ -206,23 +208,36 @@ test('Support is told why they can’t sign in as someone', async ({ page }) => 
 });
 
 // Last in this file: it turns the Watcher's setting off for a moment, and back on.
-test('a user turns sign-ins by staff off, which keeps staff out, and back on', async ({
+test('a user turns sign-ins by staff off, which ends one under way and keeps staff out, and back on', async ({
   page,
   browser,
 }) => {
-  await signIn(page, CLIENT_WATCHER);
-  await page.goto('/account/security');
   const card = page.locator('#staff-sign-in');
-  await expect(card.getByRole('heading', { name: 'Sign-ins by staff' })).toBeVisible();
-  await card.getByRole('button', { name: 'Turn off' }).click();
-  await expect(toasts(page)).toContainText('Sign-ins by staff turned off.');
-  await expect(card).toContainText('Off');
-
   const adminContext = await browser.newContext();
   try {
+    // A staff Admin is signed in as the Watcher when the Watcher turns it off.
     const admin = await adminContext.newPage();
     await useOwnClientIp(admin);
     await signIn(admin, PLATFORM_ADMIN);
+    await signInAsUser(admin, CLIENT_WATCHER.name);
+
+    await signIn(page, CLIENT_WATCHER);
+    await page.goto('/account/security');
+    await expect(card.getByRole('heading', { name: 'Sign-ins by staff' })).toBeVisible();
+    await card.getByRole('button', { name: 'Turn off' }).click();
+    await expect(toasts(page)).toContainText('Sign-ins by staff turned off.');
+    await expect(card).toContainText('Off');
+
+    // The Admin's next page within the app ends it, and the tab loads afresh as the Admin.
+    await openAccountSettings(admin);
+    await expect(admin.getByRole('region', { name: 'Signed in as someone else' })).toHaveCount(0);
+    await expect(toasts(admin)).toContainText(
+      "Signing in as the user has ended. You're back in your own account.",
+    );
+    await expect(admin.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue(
+      PLATFORM_ADMIN.name,
+    );
+
     await openUser(admin, CLIENT_WATCHER.name);
     await expect(admin.getByText('This user has turned off sign-ins by staff.')).toBeVisible();
     await expect(admin.getByRole('button', { name: 'Sign in as user' })).toBeDisabled();

@@ -6,7 +6,8 @@
  * stays at the top of the content while the page scrolls (below the small
  * screens' top bar), and marks the tab as signed in as someone
  * (`SignedInAsMarker`), so controls that change something render disabled.
- * Once it ends by itself, the tab loads afresh (`ReloadWhenSignedInAsEnds`).
+ * Once it ends by itself (its time, or the rules), the tab loads afresh
+ * (`ReloadWhenSignedInAsEnds`).
  * Text from `navigation.signedInAs`.
  */
 import { Eye } from 'lucide-react';
@@ -55,7 +56,11 @@ export default async function SignedInAsBanner() {
         <BackToOwnAccountButton label={t('back')} />
       </div>
       <SignedInAsMarker />
-      <ReloadWhenSignedInAsEnds endsInMs={endsInMs} endedMessage={t('ended')} />
+      <ReloadWhenSignedInAsEnds
+        endsAt={actor.signedInAs.endsAt.toISOString()}
+        endsInMs={endsInMs}
+        endedMessage={t('ended')}
+      />
     </section>
   );
 }
