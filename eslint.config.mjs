@@ -17,9 +17,17 @@ import jsdoc from 'eslint-plugin-jsdoc';
 import prettierPlugin from 'eslint-plugin-prettier';
 
 /**
- * Generated files and dependencies that should never be linted.
+ * Generated files, and other checkouts of the repository that Claude Code
+ * keeps in `.claude/worktrees/` (each with its own files and dependencies),
+ * which should never be linted from here.
  */
-const ignoreConfig = globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts']);
+const ignoreConfig = globalIgnores([
+  '.next/**',
+  'out/**',
+  'build/**',
+  'next-env.d.ts',
+  '.claude/worktrees/**',
+]);
 
 /**
  * ESLint's recommended rules plus Airbnb's base JavaScript rules.
