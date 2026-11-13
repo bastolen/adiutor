@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.0](https://github.com/bastolen/adiutor/compare/v0.2.0...v0.3.0) (2026-11-13)
+
+
+### Features
+
+* add background jobs that run on Vercel, with a Jobs page ([#42](https://github.com/bastolen/adiutor/issues/42)) ([d0b7258](https://github.com/bastolen/adiutor/commit/d0b7258f5d4982514871dae711f4bc81e4b5e4b8))
+* let staff sign in as a user to see Adiutor as they do ([#39](https://github.com/bastolen/adiutor/issues/39)) ([18f1bac](https://github.com/bastolen/adiutor/commit/18f1bac3c8b17753d1921f3fafee269b2ec5d622))
+
+
+### Bug Fixes
+
+* **deps:** update all non-major dependencies ([#27](https://github.com/bastolen/adiutor/issues/27)) ([df1cf4f](https://github.com/bastolen/adiutor/commit/df1cf4fc7d8888938e15b503918cf0723f4cf167))
+* **deps:** update next.js and react ([#28](https://github.com/bastolen/adiutor/issues/28)) ([b9d6164](https://github.com/bastolen/adiutor/commit/b9d616421d2725ae858b9ce4d51e615b129d8275))
+* give every control a tap target of at least 24px ([#37](https://github.com/bastolen/adiutor/issues/37)) ([eda2b4d](https://github.com/bastolen/adiutor/commit/eda2b4da2fe3a461a6ff6bc6ae6f73ee637a548e))
+* load every page and tab afresh when the browser acts as someone else ([#41](https://github.com/bastolen/adiutor/issues/41)) ([9a172b3](https://github.com/bastolen/adiutor/commit/9a172b377c763134aa297185b2e1bafe9b7299d2))
+* small fixes and improvements ([#36](https://github.com/bastolen/adiutor/issues/36)) ([a3878ae](https://github.com/bastolen/adiutor/commit/a3878ae52b944841b629a00b3288e82dc1a16415))
+* stop render errors when a page is left before it finishes loading ([#40](https://github.com/bastolen/adiutor/issues/40)) ([0235885](https://github.com/bastolen/adiutor/commit/0235885652d94a699fd43073acc3cfb1be28f5f0))
+
 ## [0.2.0](https://github.com/bastolen/adiutor/compare/v0.1.0...v0.2.0) (2026-11-10)
 
 
