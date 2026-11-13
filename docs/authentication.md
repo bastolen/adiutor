@@ -234,8 +234,8 @@ does, to check what isn't working for them. The reasons are in
 - **Starting** (`startImpersonation` in `src/server/auth/impersonation.ts`):
   - It starts from the **Sign in as user** card on the user's page (see
     [Staff screens](companies-and-roles.md#staff-screens)). Its dialog asks for an optional reason,
-    then opens the dashboard as the user (`signInAsAction`, which refreshes the layout too). The
-    card says why when it isn't possible.
+    then loads the dashboard afresh as the user (`signInAsAction`, then the dialog's
+    `loadOnSuccess`). The card says why when it isn't possible.
   - It needs strong MFA on the staff member's own account: an authenticator app, a passkey or
     provider MFA, never email codes (`hasStrongMfa`). It also needs a confirmation with it from the
     last 15 minutes, whatever their role (`strongMfaConfirmedUntil`).
@@ -271,7 +271,10 @@ does, to check what isn't working for them. The reasons are in
     out's place there, since signing out would end the staff member's own session.
   - Back to my account (`backToOwnAccountAction`, `stopSigningInAs`) records `impersonation_ended`
     with `stopped`. It returns to where the staff member started (the user's page, at the card),
-    with a toast.
+    with a toast (`showToastAfterLoad`).
+  - Starting and going back both end with a full page load (`loadFresh`), never a navigation
+    within the app: Next keeps the last few pages alive with what's in their fields, so a Profile
+    page from before would still show the other person's name.
 - **Nothing changes in the user's name.**
   - Every service that changes something calls `assertNotSignedInAs` first (code `signed_in_as`:
     "This can't be changed while you're signed in as someone else."). The server actions that call

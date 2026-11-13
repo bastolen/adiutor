@@ -13,17 +13,21 @@ import { THEME_STORAGE_KEY } from '@/lib/theme';
 
 import AccountMenu from './account-menu';
 
-/** Mocked router, sign-out and going back from signing in as someone. */
-const { replace, refresh, signOut, backToOwnAccount } = vi.hoisted(() => ({
-  replace: vi.fn(),
-  refresh: vi.fn(),
-  signOut: vi.fn(async () => ({})),
-  backToOwnAccount: vi.fn(async () => ({
-    ok: true as const,
-    message: "You're back in your own account.",
-    data: { returnTo: '/admin/users/u1#sign-in-as' },
-  })),
-}));
+/** Mocked router, sign-out, going back from signing in as someone, and the full page load. */
+const { replace, refresh, signOut, backToOwnAccount, loadFresh, showToastAfterLoad } = vi.hoisted(
+  () => ({
+    replace: vi.fn(),
+    refresh: vi.fn(),
+    loadFresh: vi.fn(),
+    showToastAfterLoad: vi.fn(),
+    signOut: vi.fn(async () => ({})),
+    backToOwnAccount: vi.fn(async () => ({
+      ok: true as const,
+      message: "You're back in your own account.",
+      data: { returnTo: '/admin/users/u1#sign-in-as' },
+    })),
+  }),
+);
 
 vi.mock('next/navigation', () => ({
   /**
@@ -36,6 +40,11 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/lib/sign-in/auth-client', () => ({ default: { signOut } }));
 vi.mock('./impersonation-actions', () => ({ default: backToOwnAccount }));
+vi.mock('@/components/ui/load-fresh', () => ({ default: loadFresh }));
+vi.mock('@/components/ui/toast', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/components/ui/toast')>()),
+  showToastAfterLoad,
+}));
 
 /**
  * Renders the menu for the test user and opens it.
@@ -117,11 +126,13 @@ describe('AccountMenu', () => {
     expect(screen.queryByRole('menuitem', { name: 'Sign out' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('menuitem', { name: 'Back to my account' }));
 
+    // A full page load, so no page Next kept alive still shows the user, with the toast after it.
     await vi.waitFor(() => {
-      expect(replace).toHaveBeenCalledWith('/admin/users/u1#sign-in-as');
+      expect(loadFresh).toHaveBeenCalledWith('/admin/users/u1#sign-in-as');
     });
+    expect(showToastAfterLoad).toHaveBeenCalledWith("You're back in your own account.");
     expect(backToOwnAccount).toHaveBeenCalled();
     expect(signOut).not.toHaveBeenCalled();
-    expect(refresh).toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
   });
 });

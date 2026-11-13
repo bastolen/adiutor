@@ -167,17 +167,18 @@ describe('signInAsAction', () => {
     vi.mocked(startImpersonation).mockReset();
   });
 
-  it('starts it with the reason and the card to come back to, then opens the dashboard', async () => {
+  it('starts it with the reason and the card to come back to, leaving the page load to the card', async () => {
     signedInAs(confirmedSupport);
 
-    await expect(signInAsAction(null, signInForm())).rejects.toThrow('NEXT_REDIRECT');
+    expect(await signInAsAction(null, signInForm())).toEqual({ ok: true });
 
     expect(startImpersonation).toHaveBeenCalledWith({ name: 'app context' }, confirmedSupport, {
       userId: USER_ID,
       reason: 'Ticket 12',
       returnTo: `/admin/users/${USER_ID}#sign-in-as`,
     });
-    expect(redirect).toHaveBeenCalledWith('/dashboard');
+    // A redirect would be a navigation within the app, which keeps the pages Next kept alive.
+    expect(redirect).not.toHaveBeenCalled();
   });
 
   it('sends the staff member to confirm with a strong second step first, back to the card', async () => {

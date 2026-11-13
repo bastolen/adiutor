@@ -220,7 +220,10 @@ keyboard support.
   as soon as their action returns, so the toast outlasts a row the refresh removes (`RowAction`'s
   `doneMessage` names the row, e.g. "Invitation to jane@adiutor.dev revoked."); `ResultAlert`
   toasts a form's result, `Alert`'s `alsoToast` an error a component shows itself, and
-  `ToastOnArrival` a confirmation that comes with a redirect ("User deleted."). Results to act on
+  `ToastOnArrival` a confirmation that comes with a redirect ("User deleted."). An action that
+  ends with a full page load (`loadFresh`) leaves its toast for the next page with
+  `showToastAfterLoad`, which the `Toaster` there shows once ("You're back in your own account.");
+  it's kept in the tab's `sessionStorage` and counts for 30 seconds. Results to act on
   stay inline: a new company's "Open the company", a new invite link to copy. The signed-out
   pages (sign in, the code step, password reset, invitations, `/setup`) show their results inline
   only.

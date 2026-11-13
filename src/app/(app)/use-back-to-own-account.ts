@@ -4,37 +4,40 @@
  */
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
 
-import { useToast } from '@/components/ui/toast';
+import loadFresh from '@/components/ui/load-fresh';
+import { showToastAfterLoad } from '@/components/ui/toast';
+import { useTransientState } from '@/components/ui/use-transient-state';
 import { DEFAULT_SIGNED_IN_PATH } from '@/lib/redirect';
 
 import backToOwnAccountAction from './impersonation-actions';
 
 /**
- * Ends signing in as a user, then opens the page the staff member started
- * from and confirms it with a toast. The toast survives the navigation: the
- * signed-in app's `Toaster` is in the layout, which stays.
+ * Ends signing in as a user, then loads the page the staff member started
+ * from afresh (`loadFresh`), where a toast confirms it
+ * (`showToastAfterLoad`). A navigation within the app would keep the pages
+ * Next kept alive while signed in as the user, with the user's values in
+ * their fields.
  *
- * @returns `goBack` to start it, and `pending` while it runs.
+ * @returns `goBack` to start it, and `pending` while it runs and until the page goes.
  */
 export default function useBackToOwnAccount(): { goBack: () => void; pending: boolean } {
-  const router = useRouter();
-  const showToast = useToast();
-  const [pending, startTransition] = useTransition();
+  const [running, startTransition] = useTransition();
+  // Set once it has ended, so the button stays busy until the page goes.
+  const [leaving, setLeaving] = useTransientState(false);
 
   /** Ends it, then goes back. */
   const goBack = () => {
     startTransition(async () => {
       const result = await backToOwnAccountAction();
       if (result.ok && result.message) {
-        showToast?.(result.message);
+        showToastAfterLoad(result.message);
       }
-      router.replace((result.ok && result.data?.returnTo) || DEFAULT_SIGNED_IN_PATH);
-      router.refresh();
+      setLeaving(true);
+      loadFresh((result.ok && result.data?.returnTo) || DEFAULT_SIGNED_IN_PATH);
     });
   };
 
-  return { goBack, pending };
+  return { goBack, pending: running || leaving };
 }

@@ -3,7 +3,8 @@
  * Manager from their page, sees Adiutor as them with the banner, can't change
  * anything (the controls are off, the user's account pages read-only), and
  * goes back to the card; the user is emailed and the audit log has the
- * reason. A Manager signed in as a Watcher doesn't see the Watcher's devices.
+ * reason. The account pages show whoever the Admin is signed in as, also
+ * when Next kept them alive from before. A Manager signed in as a Watcher doesn't see the Watcher's devices.
  * Signed in as a company Admin who must set up MFA, the Admin sees the
  * Security page that user would see. Support is told why they can't sign in
  * as a company Admin, or without strong MFA. A user who turns sign-ins by
@@ -19,7 +20,14 @@ import {
   STEP_UP_MANAGER,
   SUPPORT_STAFF,
 } from './support/fixtures';
-import { openUser, signIn, signInAsUser, toasts, useOwnClientIp } from './support/helpers';
+import {
+  openAccountSettings,
+  openUser,
+  signIn,
+  signInAsUser,
+  toasts,
+  useOwnClientIp,
+} from './support/helpers';
 import { countEmails, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
 
@@ -90,6 +98,37 @@ test('a staff Admin signs in as a Manager, changes nothing, and goes back', asyn
   await expect(page.getByRole('main')).toContainText('Signed in as a user');
   await expect(page.getByRole('main')).toContainText('Reason: Checking the company settings');
   await expect(page.getByRole('main')).toContainText('Went back from signing in as a user');
+});
+
+test('the account pages show whoever the Admin is signed in as, also when Next kept them', async ({
+  page,
+}) => {
+  const managerId = await findUserId(STEP_UP_MANAGER.email);
+  const banner = page.getByRole('region', { name: 'Signed in as someone else' });
+  const name = page.getByRole('textbox', { name: 'Name', exact: true });
+  await signIn(page, PLATFORM_ADMIN);
+  await openUser(page, STEP_UP_MANAGER.name);
+  // The Admin's own Profile page, opened with a click, so Next keeps it alive with its fields.
+  await openAccountSettings(page);
+  await expect(name).toHaveValue(PLATFORM_ADMIN.name);
+  await page.goBack();
+
+  await page.getByRole('button', { name: 'Sign in as user' }).click();
+  const dialog = page.getByRole('dialog', { name: `Sign in as ${STEP_UP_MANAGER.name}?` });
+  await dialog.getByRole('button', { name: `Sign in as ${STEP_UP_MANAGER.name}` }).click();
+  await expect(page).toHaveURL('/dashboard');
+  await expect(banner).toBeVisible();
+
+  // Signed in as the Manager, the Profile page shows the Manager, not what the Admin's held.
+  await openAccountSettings(page);
+  await expect(name).toHaveValue(STEP_UP_MANAGER.name);
+
+  // Back in their own account, the Admin's Profile page shows the Admin again, not the Manager.
+  await banner.getByRole('button', { name: 'Back to my account' }).click();
+  await expect(page).toHaveURL(`/admin/users/${managerId}#sign-in-as`);
+  await expect(toasts(page)).toContainText("You're back in your own account.");
+  await openAccountSettings(page);
+  await expect(name).toHaveValue(PLATFORM_ADMIN.name);
 });
 
 test('a Manager signed in as a Watcher sees their account pages without devices', async ({

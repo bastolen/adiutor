@@ -5,7 +5,9 @@
  * too. The toasts live in one store for the page and are shown by the
  * {@link Toaster} in the layout, beside the content rather than around it
  * (so the layout stays a server component), and they outlast the row, dialog
- * or page that caused them.
+ * or page that caused them. An action that ends with a full page load
+ * (`loadFresh`) leaves its toast for the next page with
+ * {@link showToastAfterLoad}.
  */
 'use client';
 
@@ -97,6 +99,65 @@ const showToast: ShowToast = (message, { tone = 'success' } = {}) => {
   notify();
 };
 
+/** Where {@link showToastAfterLoad} leaves a toast for the next page, in the tab's `sessionStorage`. */
+const AFTER_LOAD_KEY = 'adiutor.toast-after-load';
+
+/**
+ * How long a toast left for the next page counts, in milliseconds: long
+ * enough for the page to load, short enough that a later page (or the next
+ * person on the browser, should the next page not show it) never does.
+ */
+const AFTER_LOAD_MAX_AGE = 30_000;
+
+/**
+ * Leaves a success toast for the next page this tab loads, for an action
+ * that ends with a full page load (`loadFresh`), which takes the toasts on
+ * screen with it: e.g. "You're back in your own account." The next
+ * {@link Toaster} shows it once, if it arrives within 30 seconds. It's kept
+ * in the tab's `sessionStorage`; without storage (blocked site data), the
+ * page loads without it.
+ *
+ * @param message - What happened.
+ */
+export function showToastAfterLoad(message: string): void {
+  try {
+    window.sessionStorage.setItem(AFTER_LOAD_KEY, JSON.stringify({ message, at: Date.now() }));
+  } catch {
+    // Without storage, there's just no toast after the load.
+  }
+}
+
+/**
+ * Takes the toast left for this page by {@link showToastAfterLoad}, removing
+ * it, if it's recent enough.
+ *
+ * @returns Its message, or `null` without a recent one.
+ */
+function takeToastAfterLoad(): string | null {
+  try {
+    const saved = window.sessionStorage.getItem(AFTER_LOAD_KEY);
+    if (saved === null) {
+      return null;
+    }
+    window.sessionStorage.removeItem(AFTER_LOAD_KEY);
+    const left: unknown = JSON.parse(saved);
+    if (
+      typeof left !== 'object' ||
+      left === null ||
+      !('message' in left) ||
+      !('at' in left) ||
+      typeof left.message !== 'string' ||
+      typeof left.at !== 'number'
+    ) {
+      return null;
+    }
+    const age = Date.now() - left.at;
+    return age >= 0 && age <= AFTER_LOAD_MAX_AGE ? left.message : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Removes a toast once it closes (timed out, dismissed or swiped away).
  *
@@ -131,7 +192,8 @@ export function useToast(): ShowToast | null {
  * the inline error next to the field or button already is, or takes focus.
  * Each toast has a dismiss button and can be swiped away. Put one in a
  * layout, next to its content; toasts are offered while it's mounted, and
- * cleared when the last one goes.
+ * cleared when the last one goes. Once mounted, it shows the toast an action
+ * left for this page ({@link showToastAfterLoad}).
  *
  * @returns The toasts.
  */
@@ -146,7 +208,15 @@ export function Toaster() {
   useEffect(() => {
     mountedToasters += 1;
     notify();
+    // A moment later, so a mount that's undone at once (React's Strict Mode) doesn't use it up.
+    const afterLoad = window.setTimeout(() => {
+      const left = takeToastAfterLoad();
+      if (left !== null) {
+        showToast(left);
+      }
+    }, 0);
     return () => {
+      window.clearTimeout(afterLoad);
       mountedToasters -= 1;
       if (mountedToasters === 0) {
         shownToasts = [];
