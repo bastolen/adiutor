@@ -39,7 +39,7 @@ async function Overview({ params }: { params: Promise<{ companyId: string }> }) 
   };
   if (!role) {
     empty = { ...empty, description: t('staffDescription', { company: company.name }) };
-  } else if (!permissions.has('app:use')) {
+  } else if (!permissions.has('requests:contribute')) {
     empty = {
       icon: Eye,
       title: t('viewOnlyTitle'),

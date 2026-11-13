@@ -46,8 +46,14 @@ export const PERMISSIONS = [
   'billing:view',
   /** Manage billing (reserved for later). */
   'billing:manage',
-  /** Use the app's features in a company. */
-  'app:use',
+  /** See a company's requests and their conversations. */
+  'requests:view',
+  /** Raise requests in a company, comment on them, mark them done, cancel and reopen them. */
+  'requests:contribute',
+  /** Work on a company's requests as staff: set any status, change their details and priority. */
+  'requests:manage',
+  /** See what only staff see on a request: its priority. */
+  'requests:view-internal',
 ] as const;
 
 /** One permission. */
@@ -101,6 +107,18 @@ const STAFF_GLOBAL: Record<PlatformRole, Permission[]> = {
   support: ['company:view', 'users:view'],
 };
 
+/**
+ * What the staff who work on requests may do with every company's requests:
+ * raise them for a company, take part, set any status, change their details
+ * and see their priority.
+ */
+const STAFF_REQUEST_WORK: Permission[] = [
+  'requests:view',
+  'requests:contribute',
+  'requests:manage',
+  'requests:view-internal',
+];
+
 /** What staff may do in any company, member or not. */
 const STAFF_IN_COMPANY: Record<PlatformRole, Permission[]> = {
   platform_admin: [
@@ -109,6 +127,7 @@ const STAFF_IN_COMPANY: Record<PlatformRole, Permission[]> = {
     'company:deactivate',
     'members:view',
     'members:manage',
+    ...STAFF_REQUEST_WORK,
   ],
   manager: [
     'company:view',
@@ -116,16 +135,19 @@ const STAFF_IN_COMPANY: Record<PlatformRole, Permission[]> = {
     'company:deactivate',
     'members:view',
     'members:manage',
+    ...STAFF_REQUEST_WORK,
   ],
-  finance: ['company:view', 'members:view'],
-  support: ['company:view', 'members:view'],
+  // Finance reads requests, with what staff see on them, but doesn't work on them.
+  finance: ['company:view', 'members:view', 'requests:view', 'requests:view-internal'],
+  support: ['company:view', 'members:view', ...STAFF_REQUEST_WORK],
 };
 
 /** What members of a company may do in it while it's active. */
 const COMPANY_MEMBER: Record<CompanyRole, Permission[]> = {
-  admin: ['company:view', 'members:view', 'members:manage', 'app:use'],
-  client: ['company:view', 'app:use'],
-  watcher: ['company:view'],
+  admin: ['company:view', 'members:view', 'members:manage', 'requests:view', 'requests:contribute'],
+  client: ['company:view', 'requests:view', 'requests:contribute'],
+  // A Watcher follows the company's requests without taking part.
+  watcher: ['company:view', 'requests:view'],
 };
 
 /**
