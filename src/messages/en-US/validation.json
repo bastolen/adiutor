@@ -52,6 +52,24 @@
       "empty": "Enter at least one email address.",
       "tooMany": "You can invite up to {max, number} people at once. Split the list and try again."
     },
+    "requestTitle": {
+      "empty": "Enter a title for the request.",
+      "tooLong": "Use at most {maximum, number} characters for the title.",
+      "controlCharacters": "Remove line breaks and control characters from the title.",
+      "hiddenCharacters": "Remove invisible characters and text direction marks from the title."
+    },
+    "requestDescription": {
+      "empty": "Describe what you need.",
+      "tooLong": "Use at most {maximum, number} characters for the description."
+    },
+    "requestReply": {
+      "empty": "Write your reply first.",
+      "tooLong": "Use at most {maximum, number} characters for your reply."
+    },
+    "requestType": "Choose what kind of request this is.",
+    "requestPriority": "Choose a priority.",
+    "requestStatus": "Choose a status.",
+    "requestPrefix": "Use one to five letters or digits for the prefix, starting with a letter, e.g. AD.",
     "locale": "Choose one of the languages."
   }
 }

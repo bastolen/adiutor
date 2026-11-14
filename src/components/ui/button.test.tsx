@@ -3,6 +3,7 @@
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { FormEvent } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { defined } from '@/lib/defined';
@@ -15,20 +16,69 @@ describe('Button', () => {
     expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('type', 'button');
   });
 
-  it('is busy and disabled while loading', async () => {
+  it('is busy while loading without giving up focus: it ignores presses instead of being disabled', async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();
-    render(
+    const { rerender } = render(<Button onClick={onClick}>Save</Button>);
+    const button = screen.getByRole('button', { name: 'Save' });
+    button.focus();
+
+    rerender(
       <Button loading onClick={onClick}>
         Save
       </Button>,
     );
-
-    const button = screen.getByRole('button', { name: 'Save' });
-    expect(button).toBeDisabled();
+    // A disabled button loses focus the moment it's disabled, and doesn't get it back.
+    expect(button).toBeEnabled();
+    expect(button).toHaveFocus();
     expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(button).toHaveAttribute('aria-disabled', 'true');
     await user.click(button);
+    await user.keyboard('{Enter}');
+    await user.keyboard(' ');
     expect(onClick).not.toHaveBeenCalled();
+
+    rerender(<Button onClick={onClick}>Save</Button>);
+    expect(button).toHaveFocus();
+    expect(button).not.toHaveAttribute('aria-disabled');
+    await user.keyboard('{Enter}');
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not submit its form again while loading, from the button or from Enter in a field', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn((event: FormEvent) => event.preventDefault());
+    const { rerender } = render(
+      <form onSubmit={onSubmit}>
+        <input aria-label="Name" />
+        <Button type="submit" loading>
+          Save
+        </Button>
+      </form>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Adiutor Tests{Enter}');
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    rerender(
+      <form onSubmit={onSubmit}>
+        <input aria-label="Name" />
+        <Button type="submit">Save</Button>
+      </form>,
+    );
+    await user.type(screen.getByRole('textbox', { name: 'Name' }), '{Enter}');
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it('is disabled when asked to be, which a busy state does not change', () => {
+    render(
+      <Button disabled loading>
+        Save
+      </Button>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
   });
 
   it('is not marked busy when idle', () => {

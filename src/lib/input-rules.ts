@@ -29,6 +29,21 @@ export const MAX_BULK_INVITES = 20;
  */
 export const NAME_MAX_LENGTH = 100;
 
+/** The longest title of a request (`requestTitleSchema`, and the title fields' `maxLength`). */
+export const REQUEST_TITLE_MAX_LENGTH = 150;
+
+/**
+ * The longest description of a request and the longest reply to one
+ * (`requestDescriptionSchema`, `requestReplySchema`, and those fields' `maxLength`).
+ */
+export const REQUEST_TEXT_MAX_LENGTH = 10_000;
+
+/**
+ * The longest prefix request numbers are shown with, "AD" in "AD-142"
+ * (`requestPrefixSchema`, and the prefix field's `maxLength`).
+ */
+export const REQUEST_PREFIX_MAX_LENGTH = 5;
+
 /** The longest URL name (`slugSchema`, `slugify`, and the URL name field's `maxLength`). */
 export const SLUG_MAX_LENGTH = 60;
 

@@ -43,6 +43,9 @@
       "triggerSorted": "Sort {rows}: {sort}",
       "sortBy": "Sort by"
     },
+    "filter": {
+      "chosen": "{filter}: {choice}"
+    },
     "dateRange": {
       "from": "From",
       "to": "To"

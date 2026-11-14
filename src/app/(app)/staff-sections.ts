@@ -1,8 +1,9 @@
 /**
  * @file The staff sections of the app (Users, Companies, Staff and Logs),
  * declared once for the sidebar (`NavLinks`) and the dashboard's tiles
- * (`StaffShortcuts`), with the permission each needs. A new section goes
+ * (`Shortcuts`), with the permission each needs. A new section goes
  * here, and gets its text in `navigation.items` and `dashboard.shortcuts`.
+ * Requests, which everyone gets, is in `requests-section.ts`.
  */
 import { Building2, type LucideIcon, ScrollText, UserCog, Users } from 'lucide-react';
 

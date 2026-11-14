@@ -11,9 +11,10 @@ import { ServiceError } from './errors';
  * Refuses a change while a staff member is signed in as the actor: they see
  * what the user sees, but change nothing in the user's name. Every service
  * that changes something calls it first, before any other check, so the
- * refusal is the same whatever the user's rights; the only changes allowed
- * are the user's own work (`dismissMfaRecommendation`, and the request
- * features once they're built, which then record the staff member).
+ * refusal is the same whatever the user's rights; the only change allowed
+ * is the user's own work (`dismissMfaRecommendation`). Every change to a
+ * request is refused too, until working on requests as the user is designed,
+ * which then records the staff member.
  *
  * @param actor - The acting user (or the signed-in user an invitation is accepted for).
  * @param actor.signedInAs - The staff member signed in as them, if any.

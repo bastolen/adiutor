@@ -75,18 +75,15 @@
     },
     "titleTemplate": "%s · {company} · Adiutor",
     "header": {
-      "overview": "Overview",
+      "requests": "Requests",
+      "newRequest": "New request",
       "staffAccess": "Staff access",
       "deactivated": "Deactivated",
       "sections": "Company sections"
     },
-    "overview": {
-      "title": "Requests are on their way",
-      "description": "Soon you'll raise requests here, follow their progress and approve the work.",
-      "staffDescription": "Requests from {company} will appear here.",
-      "viewOnlyTitle": "View-only access",
-      "viewOnlyDescription": "You have view-only access to this company. You'll be able to follow requests here.",
-      "deactivated": "This company is deactivated. Its people can't use Adiutor until it's reactivated."
+    "requests": {
+      "title": "Requests · {company}",
+      "deactivated": "This company is deactivated. Its people can't use Adiutor until it's reactivated, and its requests can only be read."
     }
   }
 }

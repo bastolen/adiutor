@@ -324,9 +324,9 @@ does, to check what isn't working for them. The reasons are in
   - The auth guards refuse every Better Auth endpoint for such a session except reading the
     session and signing out (`refuseWhileSignedInAs`, code `SIGNED_IN_AS_SOMEONE`). Those
     endpoints would act on the staff member's own account.
-  - Only the user's own work stays allowed: today, hiding the dashboard's MFA tip; later, the
-    request features. Those record the staff member, which only staff with `audit:view` and the
-    user see.
+  - Only the user's own work stays allowed: today, hiding the dashboard's MFA tip. Requests can
+    be read but not changed ([Requests](requests.md)); working on them as the user is for a later
+    change, which then records the staff member, for staff with `audit:view` and the user to see.
   - The authorization matrix tries every change with a staff member signed in as the acting user.
 - **The user's account pages** (Profile and Security) show as the user sees them, read-only, with a
   note at the top. Their controls are off, like everywhere else. They show only the personal details

@@ -14,13 +14,14 @@ keyboard support.
   dismissible), `Banner` (a notice with an icon, title and actions, e.g. on the dashboard),
   `ResultAlert`, `ConfirmDialog`, `DropdownMenu`, `Sheet` (a slide-over panel), `EmptyState`,
   `IconRow`, `IconTile` (a decorative icon on a tinted square), `DescriptionList` (labels and
-  values), `Skeleton`, `Pagination`, `SortMenu`, ...). Menus, selects, dialogs and sheets are
+  values), `Skeleton`, `Pagination`, `SortMenu`, `FilterMenu`, ...). Menus, selects, dialogs and
+  sheets are
   built on [Radix UI](https://www.radix-ui.com), and only `src/components/ui/` imports it. Radix
   follows the WAI-ARIA patterns: arrow keys, typeahead, Escape to close, focus kept inside
   dialogs and returned to the button that opened them. In a menu, `MenuRadioRow` with
   `MenuIconRadioItem`s shows a choice as a segmented row of icons (like the theme in the account
   menu); ArrowLeft and ArrowRight also move within it. `MenuRadioLinkItem` is a radio item that is
-  a link (the sorts in `SortMenu`). A `Badge`'s tone says what kind of status it is: `success` for
+  a link (the sorts in `SortMenu`, the choices in `FilterMenu`). A `Badge`'s tone says what kind of status it is: `success` for
   active or verified, `warning` for something that needs attention (expired, not verified),
   `danger` for deactivated or revoked, and `accent` (outlined in the link colour) for what's about
   the viewer, like "You" on their own row. A status keeps one tone on every screen, which
@@ -57,7 +58,11 @@ keyboard support.
     Search (`SearchForm`, on `next/form`) and filter links (`SegmentedNav`) work the same way:
     they load the list within the app without scrolling, keep focus and the pages kept alive, and
     show a busy state (a spinner in the Search button, or in the followed filter link) until the
-    list arrives; without JavaScript, search is a plain GET.
+    list arrives; without JavaScript, search is a plain GET. A list with more to filter by than
+    fits in a row of links has a `FilterMenu` per filter next to its Sort menu (the company, type
+    and priority of requests): a button that names the filter and, once one is chosen, the choice
+    ("Type: Bug"), with the choices as links in a menu, "All" first. It keeps focus like the Sort
+    menu does. It needs JavaScript, unlike the search and the status links.
   - **Widths:** no table scrolls sideways. The content area stops growing at 1280px (`xl`,
     `max-w-5xl` in the app layout), so a table gets no more columns past that. Columns that don't
     fit move under the name instead:
@@ -170,9 +175,12 @@ keyboard support.
   page simply shows no reference.
 - **Interaction:** every control has hover, pressed, focus-visible (a 2px ring), disabled and busy
   states. Clickable things show a pointer cursor, disabled ones a not-allowed cursor and busy ones
-  a wait cursor (base rules in `src/app/globals.css`). Buttons disable and show a spinner while
-  their action runs, so nothing is submitted twice. Destructive actions ask for confirmation in a
-  `ConfirmDialog`. A role select only saves when an option is picked (Enter or click), never while
+  a wait cursor (base rules in `src/app/globals.css`). While its action runs a button is busy
+  (`Button`'s `loading`: a spinner, `aria-busy`, `aria-disabled` and the wait cursor) and ignores
+  presses, so nothing is submitted twice. It's busy rather than disabled, because a disabled
+  button loses keyboard focus the moment the action starts and doesn't get it back, which would
+  leave keyboard users at the top of the page after every form they send. Destructive actions ask
+  for confirmation in a `ConfirmDialog`. A role select only saves when an option is picked (Enter or click), never while
   arrowing through the list; on the user's own row it asks first (`confirmChange`, with the
   question for each role worded by the page, e.g. "Step down to Manager?"), and cancelling puts it
   back and returns focus to it. While it saves it's busy (`SelectField`'s `busy`:
@@ -214,7 +222,7 @@ keyboard support.
   - **Sticky header.** Cards scroll to 5rem from the top below `lg`, clear of the sticky header,
     and 2.5rem from `lg` up (`scroll-mt-20 lg:scroll-mt-10`).
 
-  Pages with section tabs (a company's Overview, Members and Settings; the account's Profile and
+  Pages with section tabs (a company's Requests, Members and Settings; the account's Profile and
   Security) get their header and tabs from a layout (`companies/[companyId]/layout.tsx`,
   `account/layout.tsx`), which stays mounted while the page under it changes: the tab you chose
   keeps focus and the header doesn't reload. `SegmentTabNav` marks the current tab from the URL
@@ -250,10 +258,13 @@ keyboard support.
   Don't work around that with `maximum-scale` in the viewport: it also blocks pinch-zoom.
 - **Page titles:** "Page · Adiutor", most specific part first. Next's route announcer reads the
   title after each client-side navigation (only when it changed), so pages that differ get
-  different titles: a company's pages add the company ("Members · Adiutor Tests · Adiutor", the
-  overview just "Adiutor Tests · Adiutor"), from the company layout's `generateMetadata`, after the
-  same access check as the pages. Titles never name a person (a user's page is "User · Adiutor"):
-  they end up in the browser history, which holds no personal data. Someone who may not see a page
+  different titles: a company's pages add the company ("Members · Adiutor Tests · Adiutor"), from
+  the company layout's `generateMetadata`, after the same access check as the pages. Next doesn't
+  apply a layout's title template to the page in the layout's own route segment, so the company's
+  first page names the company itself ("Requests · Adiutor Tests · Adiutor",
+  `companyPermissionMetadata`). Titles never name a person or carry what someone wrote (a user's
+  page is "User · Adiutor", a request's "Request AD-142 · Adiutor"): they end up in the browser
+  history, which holds no personal data. Someone who may not see a page
   (a missing permission, a company they're not in, a user that doesn't exist) gets the 404 page,
   and its title too: "Not found · Adiutor" (`notFoundMetadata` in `src/lib/not-found-metadata.ts`).
   Pages and layouts that require a permission therefore export their `generateMetadata` from
@@ -262,17 +273,23 @@ keyboard support.
   user's) or `companyPermissionMetadata` (with `requireCompanyAccess` and a permission). Both take
   the title as a message key (`'admin.users.title'`), translated in the request's language; the
   company layout's template ("%s · {company} · Adiutor") is the message `companies.titleTemplate`.
+  A page that decides with a check of its own (a request's, which everyone who may see the request
+  may open) uses `checkedPageMetadata` with that check.
   `src/app/permission-titles.test.ts` fails when one of them has a static title instead.
+- **Page headers:** `PageHeader` keeps its actions to the right of the title while the title has
+  room to read (10rem), and moves them below it on narrower screens, rather than squeezing the
+  title into a column.
 - **Motion:** short transitions only, and none at all when the device asks for reduced motion.
 
 Two end-to-end specs keep this true: `e2e/a11y.spec.ts` scans every page (and open menus, selects,
 dialogs and the mobile menu) with [axe](https://github.com/dequelabs/axe-core) against the WCAG 2.2
 A and AA rules in light and dark mode, and that every control is at least 24×24px, and checks that no page scrolls sideways on a 320px-wide
 screen, in every language (with the sign-in page's widest buttons, "Last used" badge included) and
-while signed-in pages still show their loading placeholders, and that no field's text is under 16px,
-and
-`e2e/keyboard.spec.ts` checks the skip link, menus, selects, dialogs, the mobile menu and
-cursors using only the keyboard.
+while signed-in pages still show their loading placeholders, and that no field's text is under 16px.
+The pages are scanned as the staff Admin, and the ones that look different to someone at a company
+(the dashboard, the requests) also as a Client and as a Watcher.
+`e2e/keyboard.spec.ts` checks the skip link, menus, selects, dialogs, the mobile menu, the request
+controls and cursors using only the keyboard, and that a button keeps focus while its form saves.
 
 ## Dark mode
 

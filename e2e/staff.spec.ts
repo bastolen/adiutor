@@ -1,6 +1,6 @@
 /**
- * @file End-to-end tests for the staff page: renaming the staff, inviting
- * staff by email and by invite link, changing staff roles with the
+ * @file End-to-end tests for the staff page: renaming the staff, choosing the
+ * prefix of request numbers, inviting staff by email and by invite link, changing staff roles with the
  * last-Admin guard, a staff Admin stepping down themselves, and confirming
  * it's you before giving a staff role or a company's Admin role, coming back
  * to the card where you clicked.
@@ -52,6 +52,38 @@ test('an Admin changes the name shown to users', async ({ page }) => {
   await page.goForward();
   await expect(page.getByRole('heading', { level: 1, name: 'Staff' })).toBeVisible();
   await expect(page.getByRole('main').getByText('Name saved.')).toHaveCount(0);
+});
+
+test('an Admin chooses the prefix request numbers are shown with', async ({ page }) => {
+  await signIn(page, PLATFORM_ADMIN);
+  await page.goto('/admin/staff');
+
+  const prefix = page.getByRole('textbox', { name: 'Prefix' });
+  await expect(prefix).toHaveValue('AD');
+  await expect(prefix).toHaveAccessibleDescription('Requests are shown as AD-142.');
+
+  // Anything but letters and digits is refused, and what was typed stays.
+  await prefix.fill('a-d');
+  await page.getByRole('button', { name: 'Save prefix' }).click();
+  await expect(page.getByRole('main').getByRole('alert')).toContainText(
+    'Use one to five letters or digits for the prefix',
+  );
+  await expect(prefix).toHaveValue('a-d');
+
+  // Typed in lower case, saved in capitals.
+  await prefix.fill('help');
+  await page.getByRole('button', { name: 'Save prefix' }).click();
+  await expect(toasts(page)).toContainText('Prefix saved.');
+  await expect(prefix).toHaveValue('HELP');
+  await expect(prefix).toHaveAccessibleDescription('Requests are shown as HELP-142.');
+  await page.reload();
+  await expect(prefix).toHaveValue('HELP');
+
+  // Put it back for the other tests.
+  await prefix.fill('AD');
+  await page.getByRole('button', { name: 'Save prefix' }).click();
+  await expect(toasts(page)).toContainText('Prefix saved.');
+  await expect(prefix).toHaveValue('AD');
 });
 
 test("an Admin changes Adiutor's default language, which visitors without a choice get", async ({

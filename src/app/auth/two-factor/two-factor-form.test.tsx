@@ -263,11 +263,13 @@ describe('TwoFactorForm', () => {
 
     await user.type(screen.getByLabelText('Code'), '123456');
     await user.click(verify);
-    expect(verify).toBeDisabled();
+    expect(verify).toHaveAttribute('aria-busy', 'true');
+    expect(verify).toHaveAttribute('aria-disabled', 'true');
     act(() => {
       window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
     });
 
-    expect(verify).toBeEnabled();
+    expect(verify).not.toHaveAttribute('aria-busy');
+    expect(verify).not.toHaveAttribute('aria-disabled');
   });
 });

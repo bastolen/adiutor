@@ -4,6 +4,7 @@
     "main": "Principal",
     "items": {
       "dashboard": "Panel",
+      "requests": "Solicitudes",
       "users": "Usuarios",
       "companies": "Empresas",
       "staff": "Personal",

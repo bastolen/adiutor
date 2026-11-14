@@ -2,7 +2,8 @@
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome, {name}",
-    "staffDescription": "Open a company, or see everyone who uses Adiutor.",
+    "staffDescription": "Work on requests, open a company, or see everyone who uses Adiutor.",
+    "companyDescription": "{canRaise, select, yes {Raise a request, or see how the open ones are coming along.} other {See how the open requests are coming along.}}",
     "mfaRecommendation": {
       "label": "Account security",
       "title": "Protect your account",
@@ -17,6 +18,10 @@
       "action": "See users without MFA"
     },
     "shortcuts": {
+      "requests": {
+        "title": "Requests",
+        "description": "What was asked, and where it stands."
+      },
       "users": {
         "title": "Users",
         "description": "Staff and the people of each company."
@@ -33,6 +38,10 @@
         "title": "Logs",
         "description": "The audit log, the errors people ran into and the background jobs."
       }
+    },
+    "yourCompanies": {
+      "title": "{count, plural, one {Your company} other {Your companies}}",
+      "description": "{count, plural, one {Open it to see its requests.} other {Open one to see its requests.}}"
     }
   }
 }

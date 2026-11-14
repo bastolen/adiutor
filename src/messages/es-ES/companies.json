@@ -75,18 +75,15 @@
     },
     "titleTemplate": "%s · {company} · Adiutor",
     "header": {
-      "overview": "Resumen",
+      "requests": "Solicitudes",
+      "newRequest": "Nueva solicitud",
       "staffAccess": "Acceso como personal",
       "deactivated": "Desactivada",
       "sections": "Secciones de la empresa"
     },
-    "overview": {
-      "title": "Las solicitudes están en camino",
-      "description": "Pronto podrás crear solicitudes aquí, seguir su progreso y aprobar el trabajo.",
-      "staffDescription": "Las solicitudes de {company} aparecerán aquí.",
-      "viewOnlyTitle": "Acceso de solo lectura",
-      "viewOnlyDescription": "Tienes acceso de solo lectura a esta empresa. Podrás seguir las solicitudes aquí.",
-      "deactivated": "Esta empresa está desactivada. Su gente no puede usar Adiutor hasta que se reactive."
+    "requests": {
+      "title": "Solicitudes · {company}",
+      "deactivated": "Esta empresa está desactivada. Su gente no puede usar Adiutor hasta que se reactive, y sus solicitudes solo se pueden leer."
     }
   }
 }

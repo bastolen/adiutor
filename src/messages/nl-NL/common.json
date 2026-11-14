@@ -43,6 +43,9 @@
       "triggerSorted": "Sorteer {rows}: {sort}",
       "sortBy": "Sorteren op"
     },
+    "filter": {
+      "chosen": "{filter}: {choice}"
+    },
     "dateRange": {
       "from": "Van",
       "to": "Tot en met"

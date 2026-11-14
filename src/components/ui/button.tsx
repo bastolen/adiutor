@@ -2,7 +2,7 @@
  * @file Button in the brand style, with variants, sizes and a busy state.
  */
 import { Slot } from 'radix-ui';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, MouseEvent } from 'react';
 
 import cn from '@/lib/cn';
 
@@ -73,7 +73,10 @@ export type ButtonProps = ComponentProps<'button'> & {
   size?: keyof typeof sizeClasses;
   /** Stretch to the container's width. */
   fullWidth?: boolean;
-  /** Show a spinner and block clicks while an action runs. */
+  /**
+   * Show a spinner and ignore presses while an action runs. The button is
+   * busy, not disabled, so it keeps keyboard focus (see {@link Button}).
+   */
   loading?: boolean;
   /** Render the child element (e.g. a link) with the button's styles instead of a `<button>`. */
   asChild?: boolean;
@@ -86,10 +89,26 @@ export type ButtonProps = ComponentProps<'button'> & {
 };
 
 /**
+ * Ignores a press on a busy button: nothing is called, and a submit button
+ * doesn't submit its form again (also not when Enter in one of the form's
+ * fields presses it). Radix triggers skip their own handler for a prevented
+ * press too.
+ *
+ * @param event - The click, also the one a key press or a form makes.
+ */
+function ignorePress(event: MouseEvent<HTMLButtonElement>): void {
+  event.preventDefault();
+}
+
+/**
  * A button. Defaults to `type="button"` so it never submits a form by
  * accident; pass `type="submit"` for form buttons. While `loading`, it's
- * disabled and marked `aria-busy`, which prevents double submissions. With
- * `decorative`, it's only a picture of a button (see the prop).
+ * busy rather than disabled: marked `aria-busy` and `aria-disabled`, with a
+ * spinner and the wait cursor, and it ignores presses, which prevents double
+ * submissions. A disabled button would lose keyboard focus the moment the
+ * action starts, and not get it back, leaving keyboard users at the top of
+ * the page after every form they send. With `decorative`, it's only a
+ * picture of a button (see the prop).
  *
  * @param props - Button props.
  * @param props.variant - Visual style.
@@ -101,6 +120,7 @@ export type ButtonProps = ComponentProps<'button'> & {
  * @param props.className - Extra classes.
  * @param props.type - Button type.
  * @param props.disabled - Disabled state.
+ * @param props.onClick - Called when it's pressed, unless it's busy.
  * @param props.children - Content.
  * @returns The button.
  */
@@ -114,6 +134,7 @@ export default function Button({
   className = '',
   type = 'button',
   disabled = false,
+  onClick = undefined,
   children = null,
   ...props
 }: ButtonProps) {
@@ -138,7 +159,8 @@ export default function Button({
 
   const classes = cn(
     baseClasses,
-    'transition-[background-color,border-color,color,box-shadow,transform] active:scale-[0.98] disabled:opacity-55 disabled:active:scale-100',
+    // A busy button (`aria-disabled`) looks like a disabled one.
+    'transition-[background-color,border-color,color,box-shadow,transform] active:scale-[0.98] disabled:opacity-55 disabled:active:scale-100 aria-disabled:opacity-55 aria-disabled:active:scale-100',
     focusRing,
     variantClasses[variant].look,
     variantClasses[variant].hover,
@@ -149,7 +171,7 @@ export default function Button({
 
   if (asChild) {
     return (
-      <Slot.Root data-button="" className={classes} {...props}>
+      <Slot.Root data-button="" className={classes} onClick={onClick} {...props}>
         {children}
       </Slot.Root>
     );
@@ -161,9 +183,11 @@ export default function Button({
       type={type}
       data-button=""
       className={classes}
-      disabled={disabled || loading}
+      disabled={disabled}
       aria-busy={loading || undefined}
+      aria-disabled={loading || undefined}
       {...props}
+      onClick={loading ? ignorePress : onClick}
     >
       {loading && <Spinner />}
       {children}

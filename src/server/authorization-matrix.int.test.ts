@@ -110,6 +110,7 @@ import {
   removeFromStaff,
   renameStaff,
   setDefaultLocale,
+  setRequestPrefix,
 } from './people/staff';
 import {
   deactivateOwnAccount,
@@ -124,6 +125,16 @@ import {
 import { registerUser } from './people/user-registration';
 import { listUsers } from './people/users';
 import { findErrorReference, listRecentErrors } from './recorded-errors';
+import {
+  changeRequestStatus,
+  findRequest,
+  getRequest,
+  listRequestCompanies,
+  listRequests,
+  raiseRequest,
+  replyToRequest,
+  updateRequestDetails,
+} from './requests';
 
 const { ctx, db, sent } = setupTestContext();
 
@@ -182,7 +193,19 @@ interface World {
   invitationFromLink: string;
   /** A queued job that was given up, to retry, and another to discard. */
   failedJobs: { retry: string; discard: string };
+  /** The number of a request in each company, raised by its Admin. */
+  requests: { own: string; other: string };
 }
+
+/** A request's details as the staff's form sends them, with a new title. */
+const NEW_DETAILS = { title: 'The printer on floor 2 is broken', type: 'hotfix', priority: 'high' };
+
+/** A request as its form sends it, without its company. */
+const NEW_REQUEST = {
+  title: 'The printer is broken',
+  description: 'It prints blank pages.',
+  type: 'bug',
+} as const;
 
 /** The password the acting user is given in `deactivate own account`. */
 const OWN_PASSWORD = 'correct horse battery';
@@ -417,6 +440,7 @@ function listOperations(): Operation[] {
     ],
     ['rename staff', (w) => renameStaff(ctx, w.actor, 'Adiutor Tests')],
     ['set default language', (w) => setDefaultLocale(ctx, w.actor, 'nl-NL')],
+    ['set request prefix', (w) => setRequestPrefix(ctx, w.actor, 'HELP')],
     [
       'change staff role',
       (w) => changeStaffRole(ctx, w.actor, { userId: w.staffMember, role: 'finance' }),
@@ -466,6 +490,69 @@ function listOperations(): Operation[] {
       (w) => discardFailedJobs(ctx, w.actor, { id: w.failedJobs.discard }),
     ],
     // Last: it deactivates the acting user.
+    ['list requests', (w) => listRequests(ctx, w.actor)],
+    ['list requests (own)', (w) => listRequests(ctx, w.actor, { company: w.own.id })],
+    ['list requests (other)', (w) => listRequests(ctx, w.actor, { company: w.other.id })],
+    ['list companies to raise a request for', (w) => listRequestCompanies(ctx, w.actor)],
+    ['look up a request (own)', (w) => findRequest(ctx, w.actor, w.requests.own)],
+    ['look up a request (other)', (w) => findRequest(ctx, w.actor, w.requests.other)],
+    ['view request (own)', (w) => getRequest(ctx, w.actor, w.requests.own)],
+    ['view request (other)', (w) => getRequest(ctx, w.actor, w.requests.other)],
+    [
+      'raise request (own)',
+      (w) => raiseRequest(ctx, w.actor, { ...NEW_REQUEST, companyId: w.own.id }),
+    ],
+    [
+      'raise request (other)',
+      (w) => raiseRequest(ctx, w.actor, { ...NEW_REQUEST, companyId: w.other.id }),
+    ],
+    [
+      'reply to request (own)',
+      (w) => replyToRequest(ctx, w.actor, { request: w.requests.own, body: 'Any news?' }),
+    ],
+    [
+      'reply to request (other)',
+      (w) => replyToRequest(ctx, w.actor, { request: w.requests.other, body: 'Any news?' }),
+    ],
+    [
+      'reply and wait for the company (own)',
+      (w) =>
+        replyToRequest(ctx, w.actor, {
+          request: w.requests.own,
+          body: 'Which printer is it?',
+          status: 'waiting',
+        }),
+    ],
+    // In this order, each on the request as the one before left it: done, then cancelled or
+    // (for the company, which can't cancel a done request) still done, then open again.
+    [
+      'mark request done (own)',
+      (w) => changeRequestStatus(ctx, w.actor, { request: w.requests.own, status: 'done' }),
+    ],
+    [
+      'cancel request (own)',
+      (w) => changeRequestStatus(ctx, w.actor, { request: w.requests.own, status: 'cancelled' }),
+    ],
+    [
+      'reopen request (own)',
+      (w) => changeRequestStatus(ctx, w.actor, { request: w.requests.own, status: 'open' }),
+    ],
+    [
+      'set request status (own)',
+      (w) => changeRequestStatus(ctx, w.actor, { request: w.requests.own, status: 'todo' }),
+    ],
+    [
+      'set request status (other)',
+      (w) => changeRequestStatus(ctx, w.actor, { request: w.requests.other, status: 'todo' }),
+    ],
+    [
+      'edit request details (own)',
+      (w) => updateRequestDetails(ctx, w.actor, { ...NEW_DETAILS, request: w.requests.own }),
+    ],
+    [
+      'edit request details (other)',
+      (w) => updateRequestDetails(ctx, w.actor, { ...NEW_DETAILS, request: w.requests.other }),
+    ],
     [
       'deactivate own account',
       async (w) => {
@@ -507,6 +594,14 @@ const READS: ReadonlySet<string> = new Set([
   'view jobs',
   'list job runs',
   'list failed queued jobs',
+  'list requests',
+  'list requests (own)',
+  'list requests (other)',
+  'list companies to raise a request for',
+  'look up a request (own)',
+  'look up a request (other)',
+  'view request (own)',
+  'view request (other)',
 ]);
 
 /** What a user may still change while a staff member is signed in as them: their own work. */
@@ -585,6 +680,7 @@ const EXPECTED: Record<string, string> = {
   "confirm another user's provider account": 'NNNNNNN',
   'rename staff': 'FFFFFFA',
   'set default language': 'FFFFFFA',
+  'set request prefix': 'FFFFFFA',
   'change staff role': 'FFFFFFA',
   'remove from staff': 'FFFFFFA',
   'list users': 'FFFAAAA',
@@ -614,6 +710,31 @@ const EXPECTED: Record<string, string> = {
   'discard a failed queued job': 'FFFFFFA',
   // A user in no company, so Support may too (never a company Admin, see `mayImpersonate`).
   'sign in as a user': 'FFFAFAA',
+  // Everyone lists the requests they may see: their companies', or every company's for the staff.
+  'list requests': 'AAAAAAA',
+  'list requests (own)': 'AAAAAAA',
+  'list requests (other)': 'NNNAAAA',
+  'list companies to raise a request for': 'AAAAAAA',
+  'look up a request (own)': 'AAAAAAA',
+  'look up a request (other)': 'NNNAAAA',
+  'view request (own)': 'AAAAAAA',
+  'view request (other)': 'NNNAAAA',
+  // Watchers follow requests and Finance reads them: neither raises one.
+  'raise request (own)': 'FAAAFAA',
+  'raise request (other)': 'NNNAFAA',
+  'reply to request (own)': 'FAAAFAA',
+  'reply to request (other)': 'NNNAFAA',
+  // Only the staff who work on requests set a request to waiting.
+  'reply and wait for the company (own)': 'FFFAFAA',
+  // Either side closes a request and reopens it.
+  'mark request done (own)': 'FAAAFAA',
+  'cancel request (own)': 'FAAAFAA',
+  'reopen request (own)': 'FAAAFAA',
+  // Every other status, and a request's details, are the staff's.
+  'set request status (own)': 'FFFAFAA',
+  'set request status (other)': 'NNNAFAA',
+  'edit request details (own)': 'FFFAFAA',
+  'edit request details (other)': 'NNNAFAA',
   // Everyone may deactivate their own account (each world has other Admins).
   'deactivate own account': 'AAAAAAA',
 };
@@ -769,6 +890,14 @@ async function createWorld(role: MatrixRole): Promise<World> {
     failedJobs: {
       retry: await storeQueuedJob(db, 'security-notice'),
       discard: await storeQueuedJob(db, 'security-notice'),
+    },
+    requests: {
+      own: String(
+        (await raiseRequest(ctx, ownAdmin, { ...NEW_REQUEST, companyId: own.id })).number,
+      ),
+      other: String(
+        (await raiseRequest(ctx, otherAdmin, { ...NEW_REQUEST, companyId: other.id })).number,
+      ),
     },
   };
 }

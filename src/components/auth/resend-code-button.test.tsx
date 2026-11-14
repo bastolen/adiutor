@@ -72,6 +72,8 @@ describe('ResendCodeButton', () => {
     render(<Harness sending />);
     const button = screen.getByRole('button', { name: /Send a new code/ });
     expect(button).toHaveAttribute('aria-busy', 'true');
-    expect(button).toBeDisabled();
+    // Busy rather than disabled, so it keeps keyboard focus while the code is sent.
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    expect(button).toBeEnabled();
   });
 });

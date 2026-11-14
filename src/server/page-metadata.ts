@@ -14,7 +14,8 @@
  * Every page or layout that calls `requireGlobalPermission` or
  * `requireCompanyAccess` with a permission exports its `generateMetadata`
  * from here, with the same permission (`src/app/permission-titles.test.ts`
- * checks it). Titles are message keys, translated in the request's language
+ * checks it). A page that decides with a check of its own (a request's)
+ * uses `checkedPageMetadata` with that check. Titles are message keys, translated in the request's language
  * with `translator` (`next-intl/server` stays out of `src/server/`).
  */
 import 'server-only';
@@ -37,20 +38,27 @@ import { findCompanyAccess, getActor, getGlobalPermissions } from './authz';
  */
 export type PageTitleKey = MessageKeys<Messages, NestedKeyOf<Messages>>;
 
+/** The values of a title's ICU arguments, e.g. `{ reference: 'AD-142' }`. */
+export type PageTitleValues = Record<string, string | number>;
+
 /**
  * A page's metadata with its title in the request's language.
  *
  * @param title - The title's message key, or nothing for a layout (its pages keep their own).
+ * @param values - The values of the title's arguments, if it has any.
  * @returns The metadata.
  */
-async function titledMetadata(title: PageTitleKey | undefined): Promise<Metadata> {
+async function titledMetadata(
+  title: PageTitleKey | undefined,
+  values?: PageTitleValues,
+): Promise<Metadata> {
   if (!title) {
     return {};
   }
   const cut = title.lastIndexOf('.');
   // The namespace is everything before the last dot; the key type above already checked the path.
   const t = translator(await requestLocale(), title.slice(0, cut) as Namespace);
-  return { title: t(title.slice(cut + 1) as never) };
+  return { title: t(title.slice(cut + 1) as never, values as never) };
 }
 
 /**
@@ -99,6 +107,12 @@ export function globalPermissionMetadata<Props = unknown>(
  * on Members). For everyone else, the page's title (e.g. "Members") still
  * gets the company's name from the layout's template.
  *
+ * The company's first page is the exception: Next doesn't apply a layout's
+ * title template to the page in the layout's own route segment, so that
+ * page's title names the company itself. Every title here is given the
+ * company's name as its `{company}` argument for it
+ * (`companies.requests.title`, "Requests · {company}").
+ *
  * @param permission - The permission the page requires.
  * @param title - The page's title for those who may see it, as a message
  *   key, e.g. `companies.members.title`.
@@ -111,6 +125,39 @@ export function companyPermissionMetadata(
   return async ({ params }) => {
     const { companyId } = await params;
     const access = await findCompanyAccess(companyId);
-    return access?.permissions.has(permission) ? titledMetadata(title) : notFoundMetadata();
+    if (!access?.permissions.has(permission)) {
+      return notFoundMetadata();
+    }
+    return titledMetadata(title, { company: access.company.name });
+  };
+}
+
+/**
+ * Metadata for a page whose access isn't one permission: a request's page,
+ * which everyone who may see the request may open. The page's own check
+ * decides, and gives what the title names:
+ *
+ * ```ts
+ * export const generateMetadata = checkedPageMetadata('requests.detail.title', async (actor, props) =>
+ *   // The values of the title's arguments, or `null` for the 404 page's title.
+ * );
+ * ```
+ *
+ * The check must be the one the page makes, so the title and the page agree.
+ * Titles end up in the browser's history: give them a number or a name of
+ * something, never a person's name or what someone wrote.
+ *
+ * @param title - The page's title for those who may see it, as a message key.
+ * @param check - Whether the actor may see the page: the values of the title's arguments (`{}`
+ *   when it has none), or `null` when they may not.
+ * @returns The `generateMetadata` function.
+ */
+export function checkedPageMetadata<Props = unknown>(
+  title: PageTitleKey,
+  check: (actor: Actor, props: Props) => Promise<PageTitleValues | null>,
+): (props: Props) => Promise<Metadata> {
+  return async (props) => {
+    const values = await check(await getActor(), props);
+    return values ? titledMetadata(title, values) : notFoundMetadata();
   };
 }

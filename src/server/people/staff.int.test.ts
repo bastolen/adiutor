@@ -46,6 +46,7 @@ import {
   removeFromStaff,
   renameStaff,
   setDefaultLocale,
+  setRequestPrefix,
 } from './staff';
 
 const { ctx, db, sent } = setupTestContext();
@@ -80,6 +81,7 @@ describe('staff settings and people', () => {
     expect(await getStaffSettings(ctx, admin)).toEqual({
       name: 'Adiutor Support',
       defaultLocale: 'en-US',
+      requestPrefix: 'AD',
     });
     const entry = firstRow(
       await db.select().from(auditEvent).where(eq(auditEvent.action, 'staff_renamed')),
@@ -94,6 +96,7 @@ describe('staff settings and people', () => {
     expect(await getStaffSettings(ctx, admin)).toEqual({
       name: 'Adiutor Support',
       defaultLocale: 'en-US',
+      requestPrefix: 'AD',
     });
     const entry = firstRow(
       await db.select().from(auditEvent).where(eq(auditEvent.action, 'staff_renamed')),
@@ -108,6 +111,7 @@ describe('staff settings and people', () => {
     expect(await getStaffSettings(ctx, admin)).toEqual({
       name: 'Adiutor Tests',
       defaultLocale: 'nl-NL',
+      requestPrefix: 'AD',
     });
     await expect(setDefaultLocale(ctx, admin, 'fr-FR')).rejects.toThrow('validation.locale');
     expect((await getStaffSettings(ctx, admin)).defaultLocale).toBe('nl-NL');
@@ -118,7 +122,42 @@ describe('staff settings and people', () => {
 
     await setDefaultLocale(ctx, admin, 'es-ES');
 
-    expect(await getStaffSettings(ctx, admin)).toEqual({ name: 'Adiutor', defaultLocale: 'es-ES' });
+    expect(await getStaffSettings(ctx, admin)).toEqual({
+      name: 'Adiutor',
+      defaultLocale: 'es-ES',
+      requestPrefix: 'AD',
+    });
+  });
+
+  it('sets the prefix of request numbers, in capitals, keeping the name and the language', async () => {
+    await setDefaultLocale(ctx, admin, 'nl-NL');
+
+    await expect(setRequestPrefix(ctx, admin, ' help ')).resolves.toBe('HELP');
+
+    expect(await getStaffSettings(ctx, admin)).toEqual({
+      name: 'Adiutor Tests',
+      defaultLocale: 'nl-NL',
+      requestPrefix: 'HELP',
+    });
+    // Not a security change: nothing in the audit log.
+    expect(await db.select().from(auditEvent)).toEqual([]);
+  });
+
+  it.each(['', '1AD', 'A-D', 'TOOLONG', 'ÄD'])('refuses %j as a prefix', async (prefix) => {
+    await expect(setRequestPrefix(ctx, admin, prefix)).rejects.toThrow('validation.requestPrefix');
+    expect((await getStaffSettings(ctx, admin)).requestPrefix).toBe('AD');
+  });
+
+  it('creates the settings again with the prefix when they were lost', async () => {
+    await db.delete(staffSettings);
+
+    await setRequestPrefix(ctx, admin, 'REQ');
+
+    expect(await getStaffSettings(ctx, admin)).toEqual({
+      name: 'Adiutor',
+      defaultLocale: 'en-US',
+      requestPrefix: 'REQ',
+    });
   });
 
   it('lists the staff by name, with their role', async () => {

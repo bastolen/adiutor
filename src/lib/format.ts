@@ -136,3 +136,40 @@ export function formatRelative(
   const [name, length] = unit;
   return relativeFormat(locale).format(-Math.floor(seconds / length), name);
 }
+
+/** A minute, an hour and a day in milliseconds. */
+const MINUTE = 60_000;
+
+/** The units a duration is said in, with how many minutes each one is. */
+const DURATION_UNITS = { minute: 1, hour: 60, day: 24 * 60 } as const;
+
+/** A duration's unit. */
+type DurationUnit = keyof typeof DURATION_UNITS;
+
+/** Formatters of a number of minutes, hours or days ("2 hours"), per language and unit. */
+const durationFormats = new Map<string, Intl.NumberFormat>();
+
+/**
+ * Formats how long something took, in whole minutes, hours or days: minutes
+ * up to an hour, hours up to two days, days after that. Never less than a
+ * minute.
+ *
+ * @param milliseconds - How long it took.
+ * @param locale - The reader's language.
+ * @returns E.g. "45 minutes", "2 hours", "3 days".
+ */
+export function formatDuration(milliseconds: number, locale: Locale): string {
+  const minutes = Math.max(1, Math.round(milliseconds / MINUTE));
+  let unit: DurationUnit = 'day';
+  if (minutes < DURATION_UNITS.hour) {
+    unit = 'minute';
+  } else if (minutes < 2 * DURATION_UNITS.day) {
+    unit = 'hour';
+  }
+  const key = `${locale}:${unit}`;
+  const format =
+    durationFormats.get(key) ??
+    new Intl.NumberFormat(locale, { style: 'unit', unit, unitDisplay: 'long' });
+  durationFormats.set(key, format);
+  return format.format(Math.round(minutes / DURATION_UNITS[unit]));
+}

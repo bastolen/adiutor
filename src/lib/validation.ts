@@ -14,6 +14,7 @@ import type { MessageKeys, NestedKeyOf } from 'use-intl/core';
 import { z } from 'zod';
 
 import { COMPANY_ROLES, isRole, PLATFORM_ROLES } from './authz/roles';
+import { hasControlCharacter, hasHiddenCharacter } from './character-rules';
 import { FOLLOW_DEFAULT, LOCALES } from './i18n/locales';
 import type { Messages } from './i18n/messages';
 import {
@@ -22,8 +23,17 @@ import {
   MIN_PASSWORD_LENGTH,
   NAME_MAX_LENGTH,
   PASSKEY_NAME_MAX_LENGTH,
+  REQUEST_TEXT_MAX_LENGTH,
+  REQUEST_TITLE_MAX_LENGTH,
   SLUG_MAX_LENGTH,
 } from './input-rules';
+import {
+  cleanMultilineText,
+  REQUEST_PREFIX_PATTERN,
+  REQUEST_PRIORITIES,
+  REQUEST_STATUSES,
+  REQUEST_TYPES,
+} from './requests';
 
 /**
  * A message of the `validation` catalogue, by its full key (e.g.
@@ -84,47 +94,6 @@ export const companyRoleSchema = z.enum(COMPANY_ROLES, { error: CHOOSE_COMPANY_R
 /** A staff role, e.g. from the staff page's role select. */
 export const staffRoleSchema = z.enum(PLATFORM_ROLES, { error: CHOOSE_STAFF_ROLE_MESSAGE });
 
-/**
- * Whether a string contains a control character (C0 or C1, e.g. a line break
- * or tab) that never belongs in a display name. A character check avoids a
- * control-character regex literal.
- *
- * @param value - The string to check.
- * @returns Whether any character is a control character.
- */
-function hasControlCharacter(value: string): boolean {
-  for (let i = 0; i < value.length; i += 1) {
-    const code = value.charCodeAt(i);
-    if (code <= 0x1f || (code >= 0x7f && code <= 0x9f)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/**
- * Characters that hide or reorder text without being seen: the text direction
- * controls (U+061C, U+200E, U+200F, U+202A–U+202E, U+2066–U+2069), invisible
- * characters (U+200B, U+2060–U+2064, U+FEFF) and the line and paragraph
- * separators (U+2028, U+2029). With them, a name can reorder the text around
- * it in an email or look like another name. The zero-width non-joiner and
- * joiner (U+200C, U+200D) are allowed: Persian, Arabic and Indic names, and
- * emoji sequences, need them.
- */
-const HIDDEN_CHARACTER =
-  /[\u{061C}\u{200B}\u{200E}\u{200F}\u{2028}-\u{202E}\u{2060}-\u{2064}\u{2066}-\u{2069}\u{FEFF}]/u;
-
-/**
- * Whether a string contains a character that hides or reorders text
- * ({@link HIDDEN_CHARACTER}).
- *
- * @param value - The string to check.
- * @returns Whether it contains one.
- */
-function hasHiddenCharacter(value: string): boolean {
-  return HIDDEN_CHARACTER.test(value);
-}
-
 /** Every format character (`\p{Cf}`), removed from the copy the web-address check reads. */
 const FORMAT_CHARACTERS = /\p{Cf}/gu;
 
@@ -183,7 +152,8 @@ function containsWebAddress(value: string): boolean {
  * forms show one message above all their fields, so it must say which one
  * it's about.
  */
-type NameField = 'name' | 'companyName' | 'staffName' | 'passkeyName' | 'impersonationReason';
+type NameField =
+  'name' | 'companyName' | 'staffName' | 'passkeyName' | 'impersonationReason' | 'requestTitle';
 
 /**
  * Adds the shared character rules to a string schema: no control characters
@@ -215,7 +185,7 @@ function withCharacterSafety<T extends z.ZodType<string>>(schema: T, field: Name
  */
 function withNameSafety<T extends z.ZodType<string>>(
   schema: T,
-  field: Exclude<NameField, 'passkeyName' | 'impersonationReason'>,
+  field: Exclude<NameField, 'passkeyName' | 'impersonationReason' | 'requestTitle'>,
 ) {
   return withCharacterSafety(schema, field).refine((value) => !containsWebAddress(value), {
     error: `validation.${field}.webAddress` satisfies ValidationMessageKey,
@@ -345,3 +315,82 @@ export const slugSchema = z
     error: 'validation.slug.looksLikeId' satisfies ValidationMessageKey,
   })
   .max(SLUG_MAX_LENGTH, { error: 'validation.slug.tooLong' satisfies ValidationMessageKey });
+
+/**
+ * A request's title: one line, trimmed, 1 to `REQUEST_TITLE_MAX_LENGTH`
+ * characters, with the character rules of names (no line breaks or control
+ * characters, nothing that hides or reorders text). Web addresses are fine
+ * ("portal.adiutor.dev is down" is an ordinary title); a title is never shown
+ * as a link.
+ */
+export const requestTitleSchema = withCharacterSafety(
+  lengthLimited({
+    min: 1,
+    max: REQUEST_TITLE_MAX_LENGTH,
+    tooShort: 'validation.requestTitle.empty',
+    tooLong: 'validation.requestTitle.tooLong',
+  }),
+  'requestTitle',
+);
+
+/**
+ * A text of several lines, cleaned before its length is checked
+ * (`cleanMultilineText`: line endings as a form sends them become line
+ * breaks, and characters nobody can see are dropped rather than refused), so
+ * what's stored is what's counted.
+ *
+ * @param messages - The messages that name the field.
+ * @param messages.empty - The message when nothing is left to save.
+ * @param messages.tooLong - The message when it's longer than `REQUEST_TEXT_MAX_LENGTH`.
+ * @returns The schema.
+ */
+function multilineText(messages: { empty: ValidationMessageKey; tooLong: ValidationMessageKey }) {
+  return z
+    .string()
+    .transform(cleanMultilineText)
+    .pipe(
+      z
+        .string()
+        .min(1, { error: messages.empty })
+        .max(REQUEST_TEXT_MAX_LENGTH, { error: messages.tooLong }),
+    );
+}
+
+/** A request's description: plain text of several lines, at most `REQUEST_TEXT_MAX_LENGTH` characters. */
+export const requestDescriptionSchema = multilineText({
+  empty: 'validation.requestDescription.empty',
+  tooLong: 'validation.requestDescription.tooLong',
+});
+
+/** A reply to a request: plain text of several lines, at most `REQUEST_TEXT_MAX_LENGTH` characters. */
+export const requestReplySchema = multilineText({
+  empty: 'validation.requestReply.empty',
+  tooLong: 'validation.requestReply.tooLong',
+});
+
+/** A request's type, e.g. from the form that raises one. */
+export const requestTypeSchema = z.enum(REQUEST_TYPES, {
+  error: 'validation.requestType' satisfies ValidationMessageKey,
+});
+
+/** A request's priority, which only staff choose. */
+export const requestPrioritySchema = z.enum(REQUEST_PRIORITIES, {
+  error: 'validation.requestPriority' satisfies ValidationMessageKey,
+});
+
+/** A request's status, e.g. from the status select on its page. */
+export const requestStatusSchema = z.enum(REQUEST_STATUSES, {
+  error: 'validation.requestStatus' satisfies ValidationMessageKey,
+});
+
+/**
+ * The prefix request numbers are shown with ("AD" in "AD-142"): one to five
+ * letters or digits starting with a letter, saved in capitals.
+ */
+export const requestPrefixSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(REQUEST_PREFIX_PATTERN, {
+    error: 'validation.requestPrefix' satisfies ValidationMessageKey,
+  });

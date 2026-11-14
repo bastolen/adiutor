@@ -82,6 +82,9 @@
       "notPausable": "Esta tarea mantiene Adiutor seguro, así que no se puede pausar.",
       "running": "Esta tarea se está ejecutando ahora mismo. Vuelve a intentarlo cuando termine.",
       "noFailedJobs": "Aquí ya no queda nada que reintentar ni descartar: puede que alguien ya lo haya hecho."
+    },
+    "requests": {
+      "statusChanged": "El estado de esta solicitud ha cambiado entretanto. Compruébalo y vuelve a intentarlo."
     }
   }
 }

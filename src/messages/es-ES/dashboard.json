@@ -2,7 +2,8 @@
   "dashboard": {
     "title": "Panel",
     "welcome": "Te damos la bienvenida, {name}",
-    "staffDescription": "Abre una empresa o consulta a todas las personas que usan Adiutor.",
+    "staffDescription": "Trabaja en las solicitudes, abre una empresa o consulta a todas las personas que usan Adiutor.",
+    "companyDescription": "{canRaise, select, yes {Crea una solicitud o consulta cómo van las que están abiertas.} other {Consulta cómo van las solicitudes abiertas.}}",
     "mfaRecommendation": {
       "label": "Seguridad de la cuenta",
       "title": "Protege tu cuenta",
@@ -17,6 +18,10 @@
       "action": "Ver usuarios sin MFA"
     },
     "shortcuts": {
+      "requests": {
+        "title": "Solicitudes",
+        "description": "Lo que se ha pedido y en qué punto está."
+      },
       "users": {
         "title": "Usuarios",
         "description": "El personal y las personas de cada empresa."
@@ -33,6 +38,10 @@
         "title": "Registros",
         "description": "El registro de auditoría, los errores que encontró la gente y las tareas en segundo plano."
       }
+    },
+    "yourCompanies": {
+      "title": "{count, plural, one {Tu empresa} other {Tus empresas}}",
+      "description": "{count, plural, one {Ábrela para ver sus solicitudes.} other {Abre una para ver sus solicitudes.}}"
     }
   }
 }

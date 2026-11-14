@@ -11,9 +11,11 @@
 @layer base {
   /**
    * Tailwind resets buttons to the default arrow cursor; every clickable
-   * control shows a pointer, disabled ones a "not allowed" cursor.
+   * control shows a pointer, disabled ones a "not allowed" cursor. A busy
+   * button isn't `:disabled` (it keeps keyboard focus) but `aria-disabled`,
+   * so it's left out here and gets the wait cursor below.
    */
-  button:not(:disabled),
+  button:not(:disabled, [aria-disabled='true']),
   [role='button']:not([aria-disabled='true']),
   [role='menuitem'],
   [role='menuitemradio'],
@@ -33,7 +35,10 @@
     cursor: not-allowed;
   }
 
-  /** A button whose action is running. */
+  /**
+   * A button or select whose action is running. After the rule above, which
+   * it also matches (`aria-disabled`), so this one wins.
+   */
   [aria-busy='true'] {
     cursor: wait;
   }

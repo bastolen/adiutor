@@ -50,6 +50,8 @@
  * that can still be used are printed at the end. Users have varied "last
  * active" times, the audit log has some sample events, and Logs → Errors
  * has sample errors from the last few days (`scripts/sample-errors.ts`).
+ * Alpha, Beta and Gamma have sample requests in every status, with replies
+ * and changes from both sides (`scripts/sample-requests.ts`).
  */
 import { parseArgs } from 'node:util';
 
@@ -71,7 +73,9 @@ import { encryptionKey, parseAuthSecrets } from '../src/lib/sign-in/auth-secrets
 import { generateToken, hashToken } from '../src/lib/sign-in/tokens';
 import { emailSchema } from '../src/lib/validation';
 import emptyDatabase from '../tests/database/empty-database';
+import storeRequests from '../tests/database/store-requests';
 import { sampleErrors } from './sample-errors';
+import sampleRequests from './sample-requests';
 
 /** Password of every seeded account that has one (local test value). */
 const PASSWORD = 'adiutor-test-password';
@@ -386,11 +390,10 @@ async function main(): Promise<number> {
         verified: true,
       });
       await addMember(alpha, alphaAdmin, 'admin');
-      await addMember(
-        alpha,
-        await addUser('alpha.client@adiutor.test', 'Casey Client', { twoFactor: true }),
-        'client',
-      );
+      const alphaClient = await addUser('alpha.client@adiutor.test', 'Casey Client', {
+        twoFactor: true,
+      });
+      await addMember(alpha, alphaClient, 'client');
       await addMember(
         alpha,
         await addUser('alpha.watcher@adiutor.test', 'Wren Watcher'),
@@ -414,7 +417,8 @@ async function main(): Promise<number> {
       await addMember(beta, multi, 'admin');
 
       // Gamma: deactivated, so its members can't open it (staff still can).
-      await addMember(gamma, await addUser('gamma.admin@adiutor.test', 'Gale Gamma'), 'admin');
+      const gammaAdmin = await addUser('gamma.admin@adiutor.test', 'Gale Gamma');
+      await addMember(gamma, gammaAdmin, 'admin');
       await addMember(gamma, await addUser('gamma.client@adiutor.test', 'Gus Gamma'), 'client');
 
       // Someone without a company (e.g. removed from one).
@@ -468,6 +472,22 @@ async function main(): Promise<number> {
       const errors = sampleErrors({ admin, manager, support, alphaAdmin, multi });
       await tx.insert(schema.appError).values(errors.appErrors);
       await tx.insert(schema.signInError).values(errors.signInErrors);
+
+      // Sample requests, so the request pages have every status, type and kind of history.
+      await storeRequests(
+        tx,
+        sampleRequests({
+          alpha,
+          beta,
+          gamma,
+          alphaAdmin,
+          alphaClient,
+          multi,
+          gammaAdmin,
+          support,
+          manager,
+        }),
+      );
 
       /**
        * Creates an invitation and returns its accept link. Open ones are

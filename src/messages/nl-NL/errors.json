@@ -82,6 +82,9 @@
       "notPausable": "Deze taak houdt Adiutor veilig en kan daarom niet worden gepauzeerd.",
       "running": "Deze taak wordt nu uitgevoerd. Probeer het opnieuw als hij klaar is.",
       "noFailedJobs": "Hier valt niets meer opnieuw te proberen of weg te gooien: misschien heeft iemand het al gedaan."
+    },
+    "requests": {
+      "statusChanged": "De status van dit verzoek is intussen gewijzigd. Bekijk het en probeer het opnieuw."
     }
   }
 }

@@ -8,8 +8,8 @@ customers, who raise requests). Staff have a **platform role** on their account 
 and the name users see and Adiutor's default language live in the single-row `staff_settings` table
 (`src/db/schema/staff.ts`).
 **Users** can belong to several companies, with one company role (Admin, Client or Watcher) in
-each. Staff can also be members of companies. The request (ticket) features aren't built yet; the roles below are
-ready for them.
+each. Staff can also be members of companies. What each role may do with requests is in
+[Requests](requests.md).
 
 In the interface, staff screens say **users**, **companies** and **staff** (the `Staff` badge),
 and screens for company users talk about their company by name and about **requests**.
@@ -23,6 +23,8 @@ and screens for company users talk about their company by name and about **reque
 | Manage any company's users                |   ✓   |    ✓    |    –    |    –    |
 | View all companies and their users        |   ✓   |    ✓    |    ✓    |    ✓    |
 | View all users (`/admin/users`)           |   ✓   |    ✓    |    ✓    |    ✓    |
+| Work on every company's requests          |   ✓   |    ✓    |    –    |    ✓    |
+| Read every company's requests             |   ✓   |    ✓    |    ✓    |    ✓    |
 | Reset MFA, sign out, (de)activate         |   ✓   |    –    |    –    |    –    |
 | Delete user accounts                      |   ✓   |    –    |    –    |    –    |
 | View the audit log (`audit:view`)         |   ✓   |    ✓    |    –    |    –    |
@@ -49,11 +51,11 @@ Nobody can sign in as themselves or as a user who turned it off on their Securit
 can be changed while signed in as someone. See
 [Signing in as a user](authentication.md#signing-in-as-a-user).
 
-| Company                                          | Admin | Client | Watcher |
-| ------------------------------------------------ | :---: | :----: | :-----: |
-| Invite and manage users                          |   ✓   |   –    |    –    |
-| Raise, comment on and approve requests (planned) |   ✓   |   ✓    |    –    |
-| View and follow requests                         |   ✓   |   ✓    |    ✓    |
+| Company                                      | Admin | Client | Watcher |
+| -------------------------------------------- | :---: | :----: | :-----: |
+| Invite and manage users                      |   ✓   |   –    |    –    |
+| Raise requests, reply, close and reopen them |   ✓   |   ✓    |    –    |
+| View and follow the company's requests       |   ✓   |   ✓    |    ✓    |
 
 Nobody can give themselves a higher company role either (`isCompanyRoleRaise` in
 `src/lib/authz/guards.ts`): an Admin can step down to Client or Watcher while another Admin remains,
@@ -89,13 +91,18 @@ Admins and Managers who aren't members can still add themselves with any role, a
 
 ## Navigation and dashboard
 
-- **Staff:** the menu has Dashboard, Users and Companies, and the dashboard has a tile for each of
-  Users and Companies. Admins (`staff:manage`) also get **Staff** in the menu and as a tile on
-  the dashboard, which opens the staff page. Admins and Managers (`audit:view`) also get **Logs**,
-  last in the menu and as a tile on the dashboard, and a warning there when background jobs aren't
-  running (see [When the ticks stop](jobs.md#failures)).
-- **Company users:** the menu and dashboard stay empty until their features exist. Company pages still
-  work by URL, for example right after accepting an invitation.
+- **Everyone:** the menu has Dashboard and **Requests** (`/requests`: every request the user may
+  see), and the dashboard has a Requests tile. Requests is declared once for both
+  (`src/app/(app)/requests-section.ts`), like the staff sections (`staff-sections.ts`).
+- **Staff:** the menu also has Users and Companies, and the dashboard a tile for each. Admins
+  (`staff:manage`) also get **Staff** in the menu and as a tile on the dashboard, which opens the
+  staff page. Admins and Managers (`audit:view`) also get **Logs**, last in the menu and as a tile
+  on the dashboard, and a warning there when background jobs aren't running (see
+  [When the ticks stop](jobs.md#failures)).
+- **Company users:** the dashboard also has a **Your companies** card ("Your company" for one):
+  each active company they're in, with their role, linking to the company's page. The menu lists
+  no companies, so the card is their way to a company and from one company to another. Someone
+  who is in no company gets no card.
 - **Company addresses:** a company's pages are at `/companies/<URL name>` (its `slug`, e.g.
   `/companies/adiutor/members`), and its ID works there too (`getCompanyAccess` takes either; a
   company the user can't see is "not found" either way). The app's links use the URL name; emails

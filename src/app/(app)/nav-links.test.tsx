@@ -1,7 +1,8 @@
 /**
- * @file Tests for the staff navigation links: Dashboard, then the user's
- * staff sections (which sections each role gets is tested in
- * `staff-sections.test.ts`); Logs stays current on its Errors tab.
+ * @file Tests for the navigation links: Dashboard and Requests for everyone,
+ * then the user's staff sections (which sections each role gets is tested in
+ * `staff-sections.test.ts`); Requests stays current on a request's page, and
+ * Logs on its Errors tab.
  */
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -18,11 +19,12 @@ describe('NavLinks', () => {
     usePathname.mockReturnValue('/dashboard');
   });
 
-  it('links to the dashboard, then each section', () => {
+  it('links to the dashboard and the requests, then each section', () => {
     render(<NavLinks sections={['users', 'companies', 'staff', 'logs']} />);
 
     expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
       '/dashboard',
+      '/requests',
       '/admin/users',
       '/admin/companies',
       '/admin/staff',
@@ -35,6 +37,26 @@ describe('NavLinks', () => {
 
     expect(screen.getByRole('link', { name: 'Logs' })).toHaveAttribute('href', '/admin/logs');
     expect(screen.queryByRole('link', { name: 'Staff' })).not.toBeInTheDocument();
+  });
+
+  it('gives company users, who have no staff sections, the dashboard and the requests', () => {
+    render(<NavLinks sections={[]} />);
+
+    expect(screen.getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'Dashboard',
+      'Requests',
+    ]);
+  });
+
+  it('marks Requests as current on a request and on the form for a new one', () => {
+    usePathname.mockReturnValue('/requests/142');
+    const { rerender } = render(<NavLinks sections={[]} />);
+    expect(screen.getByRole('link', { name: 'Requests' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Dashboard' })).not.toHaveAttribute('aria-current');
+
+    usePathname.mockReturnValue('/requests/new');
+    rerender(<NavLinks sections={[]} />);
+    expect(screen.getByRole('link', { name: 'Requests' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('marks Logs as current on its Errors tab too', () => {

@@ -166,7 +166,10 @@ export async function signIn(
 }
 
 /**
- * Creates an account from an open invitation page.
+ * Creates an account from an open invitation page, and waits until the page
+ * it lands on has loaded afresh: the browser acts as someone new, so that
+ * page loads a second time (`ReloadWhenActingAsChanges`), which would
+ * interrupt a navigation the test starts in between.
  *
  * @param page - The browser page, on `/invite/…`.
  * @param name - The new account's name.
@@ -182,8 +185,11 @@ export async function createAccountFromInvitation(
 ) {
   await page.getByLabel('Your name').fill(name);
   await page.getByLabel('Password', { exact: true }).fill(password);
+  // The action's redirect is a navigation within the app; the fresh load after it is the full one.
+  const loadedAfresh = page.waitForEvent('load');
   await page.getByRole('button', { name: 'Create account and join' }).click();
   await expect(page).toHaveURL(landsOn);
+  await loadedAfresh;
 }
 
 /**
@@ -253,18 +259,20 @@ export async function openSignInLink(page: Page, url: string): Promise<void> {
 export type StorageState = Awaited<ReturnType<BrowserContext['storageState']>>;
 
 /**
- * Signs the staff Admin in once, for specs that only read as the Admin
- * (scans, keyboard checks, tables): they open each test's context with the
- * returned state instead of signing in again, which the sign-in rate limits
- * would slow down.
+ * Signs an account in once, for specs that only read as it (scans, keyboard
+ * checks, tables): they open each test's context with the returned state
+ * instead of signing in again, which the sign-in rate limits would slow
+ * down.
  *
  * @param browser - The browser.
+ * @param account - The account to sign in as.
  * @param whileSignedIn - Optional steps to run on the signed-in page first, e.g. looking up an
- *   ID in the Admin's screens.
- * @returns The Admin's sign-in cookies.
+ *   ID in the account's screens.
+ * @returns The account's sign-in cookies.
  */
-export async function adminStorageState(
+export async function storageStateFor(
   browser: Browser,
+  account: Parameters<typeof signIn>[1],
   whileSignedIn?: (page: Page) => Promise<void>,
 ): Promise<StorageState> {
   const context = await browser.newContext();
@@ -272,12 +280,28 @@ export async function adminStorageState(
     const page = await context.newPage();
     // As `useOwnClientIp` does, inlined because its name makes the hooks lint rule object here.
     await page.setExtraHTTPHeaders({ 'X-Forwarded-For': randomClientIp() });
-    await signIn(page, PLATFORM_ADMIN);
+    await signIn(page, account);
     await whileSignedIn?.(page);
     return await context.storageState();
   } finally {
     await context.close();
   }
+}
+
+/**
+ * Signs the staff Admin in once ({@link storageStateFor}), for specs that
+ * only read as the Admin.
+ *
+ * @param browser - The browser.
+ * @param whileSignedIn - Optional steps to run on the signed-in page first, e.g. looking up an
+ *   ID in the Admin's screens.
+ * @returns The Admin's sign-in cookies.
+ */
+export function adminStorageState(
+  browser: Browser,
+  whileSignedIn?: (page: Page) => Promise<void>,
+): Promise<StorageState> {
+  return storageStateFor(browser, PLATFORM_ADMIN, whileSignedIn);
 }
 
 /**

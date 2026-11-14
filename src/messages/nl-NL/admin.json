@@ -254,6 +254,14 @@
         "save": "Naam opslaan",
         "saved": "Naam opgeslagen."
       },
+      "requestNumbers": {
+        "title": "Verzoeknummers",
+        "description": "Elk verzoek heeft een nummer waarnaar mensen kunnen verwijzen. Het staat achter een voorvoegsel dat jij kiest.",
+        "label": "Voorvoegsel",
+        "example": "Verzoeken worden getoond als {example}.",
+        "save": "Voorvoegsel opslaan",
+        "saved": "Voorvoegsel opgeslagen."
+      },
       "people": {
         "title": "Mensen",
         "description": "{count, plural, one {# persoon heeft} other {# mensen hebben}} toegang als medewerker.",

@@ -254,6 +254,14 @@
         "save": "Save name",
         "saved": "Name saved."
       },
+      "requestNumbers": {
+        "title": "Request numbers",
+        "description": "Every request has a number people can quote. It’s shown after a prefix you choose.",
+        "label": "Prefix",
+        "example": "Requests are shown as {example}.",
+        "save": "Save prefix",
+        "saved": "Prefix saved."
+      },
       "people": {
         "title": "People",
         "description": "{count, plural, one {# person has} other {# people have}} staff access.",

@@ -12,7 +12,11 @@ import type { PlatformRole } from '@/lib/authz/roles';
 import { testLocale } from '../../tests/i18n/next-intl-mocks';
 import type { Actor } from './actor';
 import { findCompanyAccess, getActor } from './authz';
-import { companyPermissionMetadata, globalPermissionMetadata } from './page-metadata';
+import {
+  checkedPageMetadata,
+  companyPermissionMetadata,
+  globalPermissionMetadata,
+} from './page-metadata';
 
 /** The 404 page's metadata, in English (US) as unit tests render. */
 const NOT_FOUND_METADATA = {
@@ -58,6 +62,7 @@ function signInAs(platformRole: PlatformRole | null): Actor {
  */
 function companyAccessWith(permissions: Permission[]) {
   vi.mocked(findCompanyAccess).mockResolvedValue({
+    company: { name: 'Adiutor Tests' },
     permissions: new Set(permissions),
   } as Awaited<ReturnType<typeof findCompanyAccess>>);
 }
@@ -128,6 +133,13 @@ describe('companyPermissionMetadata', () => {
     expect(findCompanyAccess).toHaveBeenCalledWith('adiutor-tests');
   });
 
+  it("names the company in a title that asks for it: the company's first page", async () => {
+    companyAccessWith(['company:view', 'requests:view']);
+    await expect(
+      companyPermissionMetadata('requests:view', 'companies.requests.title')(props),
+    ).resolves.toEqual({ title: 'Requests · Adiutor Tests' });
+  });
+
   it("is the 404 page's for those who see the company without the permission", async () => {
     companyAccessWith(['company:view']);
     await expect(
@@ -140,5 +152,35 @@ describe('companyPermissionMetadata', () => {
     await expect(
       companyPermissionMetadata('company:update', 'companies.settings.title')(props),
     ).resolves.toEqual(NOT_FOUND_METADATA);
+  });
+});
+
+describe('checkedPageMetadata', () => {
+  it("is the page's title, with what the check says it names, for those the check lets in", async () => {
+    const actor = signInAs(null);
+    const check = vi.fn().mockResolvedValue({ reference: 'AD-142' });
+    const generateMetadata = checkedPageMetadata('requests.detail.title', check);
+
+    await expect(generateMetadata({ params: 'the props' })).resolves.toEqual({
+      title: 'Request AD-142',
+    });
+    expect(check).toHaveBeenCalledWith(actor, { params: 'the props' });
+  });
+
+  it('is the 404 page’s title for those the check refuses', async () => {
+    signInAs('platform_admin');
+    const generateMetadata = checkedPageMetadata('requests.detail.title', async () => null);
+
+    await expect(generateMetadata({})).resolves.toEqual(NOT_FOUND_METADATA);
+  });
+
+  it('is in the request’s language', async () => {
+    signInAs(null);
+    testLocale.current = 'nl-NL';
+    const generateMetadata = checkedPageMetadata('requests.detail.title', async () => ({
+      reference: 'AD-142',
+    }));
+
+    await expect(generateMetadata({})).resolves.toEqual({ title: 'Verzoek AD-142' });
   });
 });

@@ -211,7 +211,7 @@ test.describe('on a phone', () => {
 });
 
 test('no table scrolls sideways from tablet to desktop widths', async ({ page }) => {
-  // Seven pages at six widths, one after another.
+  // Nine pages at six widths, one after another.
   test.setTimeout(120_000);
   const userId = await findUserId(CLIENT_WATCHER.email);
   // The staff member with no name and a long address is the widest row.
@@ -223,6 +223,10 @@ test('no table scrolls sideways from tablet to desktop widths', async ({ page })
     membersPath,
     `/admin/users/${userId}`,
     '/account/security',
+    // Every request, with the staff's Priority column and the longest status.
+    '/requests?status=all',
+    // A company's own requests, under its header and tabs.
+    `/companies/${PAGING_COMPANY_SLUG}`,
   ];
 
   // From 1280px the content stops getting wider, so wider screens must fit the same columns.

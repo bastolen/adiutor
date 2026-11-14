@@ -16,6 +16,8 @@ import {
   INVITATIONS_TABLE,
   INVITE_LINKS_TABLE,
   MEMBERS_TABLE,
+  REQUESTS_TABLE,
+  STAFF_REQUESTS_TABLE,
   STAFF_TABLE,
   USER_COMPANIES_TABLE,
   USERS_TABLE,
@@ -33,6 +35,8 @@ const TABLES: { name: string; table: TableDefinition }[] = [
   { name: 'DEVICES_TABLE', table: DEVICES_TABLE },
   { name: 'AUDIT_LOG_TABLE', table: AUDIT_LOG_TABLE },
   { name: 'ERRORS_TABLE', table: ERRORS_TABLE },
+  { name: 'REQUESTS_TABLE', table: REQUESTS_TABLE },
+  { name: 'STAFF_REQUESTS_TABLE', table: STAFF_REQUESTS_TABLE },
 ];
 
 /** The query parameters every table has, after its prefix. */
@@ -40,9 +44,10 @@ const TABLE_PARAMS = ['sort', 'dir', 'page', 'size'];
 
 /**
  * The parameters pages use for themselves (search, filters, the audit log's
- * group and dates), which no table may take.
+ * group and dates, a request list's status, company, type and priority),
+ * which no table may take.
  */
-const PAGE_PARAMS = ['q', 'filter', 'group', 'from', 'to'];
+const PAGE_PARAMS = ['q', 'filter', 'group', 'from', 'to', 'status', 'company', 'type', 'priority'];
 
 /**
  * Lists the query parameters of tables, with their prefixes.

@@ -8,6 +8,7 @@ import { sql } from 'drizzle-orm';
 import { boolean, check, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
 
 import { DEFAULT_LOCALE, LOCALES } from '../../lib/i18n/locales';
+import { DEFAULT_REQUEST_PREFIX } from '../../lib/requests';
 import { createdAt, id, timestampTz } from './columns';
 
 /** Settings for the staff (the people who handle requests from companies). Always a single row. */
@@ -22,6 +23,12 @@ export const staffSettings = pgTable(
      * cookie): chosen at setup, changeable on the staff page. See docs/i18n.md.
      */
     defaultLocale: text('default_locale', { enum: LOCALES }).notNull().default(DEFAULT_LOCALE),
+    /**
+     * What request numbers are shown with ("AD" in "AD-142"), changeable on
+     * the staff page. Only for display: a request's number and address don't
+     * change with it.
+     */
+    requestPrefix: text('request_prefix').notNull().default(DEFAULT_REQUEST_PREFIX),
     /** Always `true`; with the unique index and check below, it allows only one row. */
     singleton: boolean('singleton').default(true).notNull(),
     createdAt: createdAt(),

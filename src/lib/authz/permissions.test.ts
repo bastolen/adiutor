@@ -20,6 +20,14 @@ const activeClient = { deactivated: false } as const;
 /** A deactivated company. */
 const deactivatedClient = { deactivated: true } as const;
 
+/** What the staff who work on requests may do with them, sorted. */
+const REQUEST_WORK: Permission[] = [
+  'requests:contribute',
+  'requests:manage',
+  'requests:view',
+  'requests:view-internal',
+];
+
 /**
  * Lists permissions as a sorted array, for readable comparisons.
  *
@@ -71,14 +79,29 @@ describe('staff in companies they are not members of', () => {
   it.each<[PlatformRole, Permission[]]>([
     [
       'platform_admin',
-      ['company:deactivate', 'company:update', 'company:view', 'members:manage', 'members:view'],
+      [
+        'company:deactivate',
+        'company:update',
+        'company:view',
+        'members:manage',
+        'members:view',
+        ...REQUEST_WORK,
+      ],
     ],
     [
       'manager',
-      ['company:deactivate', 'company:update', 'company:view', 'members:manage', 'members:view'],
+      [
+        'company:deactivate',
+        'company:update',
+        'company:view',
+        'members:manage',
+        'members:view',
+        ...REQUEST_WORK,
+      ],
     ],
-    ['finance', ['company:view', 'members:view']],
-    ['support', ['company:view', 'members:view']],
+    // Finance reads requests, with what only staff see, but can't take part.
+    ['finance', ['company:view', 'members:view', 'requests:view', 'requests:view-internal']],
+    ['support', ['company:view', 'members:view', ...REQUEST_WORK]],
   ])('%s', (role, expected) => {
     const input = { platformRole: role, companyRole: null };
     expect(sorted(getPermissions({ ...input, company: activeClient }))).toEqual(expected);
@@ -89,9 +112,13 @@ describe('staff in companies they are not members of', () => {
 
 describe('members of a company', () => {
   it.each<[CompanyRole, Permission[]]>([
-    ['admin', ['app:use', 'company:view', 'members:manage', 'members:view']],
-    ['client', ['app:use', 'company:view']],
-    ['watcher', ['company:view']],
+    [
+      'admin',
+      ['company:view', 'members:manage', 'members:view', 'requests:contribute', 'requests:view'],
+    ],
+    ['client', ['company:view', 'requests:contribute', 'requests:view']],
+    // A Watcher follows requests without taking part, and nobody in a company sees the priority.
+    ['watcher', ['company:view', 'requests:view']],
   ])('%s', (role, expected) => {
     expect(
       sorted(getPermissions({ platformRole: null, companyRole: role, company: activeClient })),
@@ -114,12 +141,19 @@ describe('members of a company', () => {
   });
 
   it('combine with staff permissions', () => {
+    // Finance only reads requests; being a Client of this company lets them take part in it.
     const permissions = getPermissions({
-      platformRole: 'support',
+      platformRole: 'finance',
       companyRole: 'client',
       company: activeClient,
     });
-    expect(sorted(permissions)).toEqual(['app:use', 'company:view', 'members:view']);
+    expect(sorted(permissions)).toEqual([
+      'company:view',
+      'members:view',
+      'requests:contribute',
+      'requests:view',
+      'requests:view-internal',
+    ]);
   });
 });
 

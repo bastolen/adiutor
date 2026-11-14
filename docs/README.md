@@ -20,6 +20,8 @@ detail, one topic each.
 
 - [Companies, users and roles](companies-and-roles.md): roles and permissions, the staff screens,
   accounts and invitations.
+- [Requests](requests.md): what a request is, its statuses, types and priorities, numbers and
+  their prefix, text, who may do what, and the pages.
 - [Sign-in and accounts](authentication.md): sign-in methods, email links, sessions, deactivated
   accounts, the account pages and security emails.
 - [Multi-factor authentication](mfa.md): second steps, who must have them, and when a session

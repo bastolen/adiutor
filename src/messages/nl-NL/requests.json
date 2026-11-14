@@ -1,0 +1,119 @@
+{
+  "requests": {
+    "list": {
+      "title": "Verzoeken",
+      "description": "{audience, select, staff {De verzoeken van alle bedrijven, met voorop wat nog iets nodig heeft.} other {Wat je bedrijf aan {staff} heeft gevraagd, en hoe ver elk verzoek is.}}",
+      "new": "Nieuw verzoek",
+      "rows": "verzoeken",
+      "searchLabel": "Verzoeken zoeken",
+      "searchPlaceholder": "Titel of nummer",
+      "statusLabel": "Verzoeken filteren op status",
+      "statusOption": "{status, select, active {Actief} waiting {Wachtend} closed {Gesloten} other {Alle}}",
+      "companyFilter": "Bedrijf",
+      "companyMenu": "Filteren op bedrijf",
+      "allCompanies": "Alle",
+      "typeFilter": "Type",
+      "typeMenu": "Filteren op type",
+      "allTypes": "Alle",
+      "priorityFilter": "Prioriteit",
+      "priorityMenu": "Filteren op prioriteit",
+      "allPriorities": "Alle",
+      "caption": "{status, select, active {{matching, select, yes {Actieve verzoeken die overeenkomen met “{search}”} other {Actieve verzoeken}}} waiting {{matching, select, yes {Verzoeken die op het bedrijf wachten die overeenkomen met “{search}”} other {Verzoeken die op het bedrijf wachten}}} closed {{matching, select, yes {Gesloten verzoeken die overeenkomen met “{search}”} other {Gesloten verzoeken}}} other {{matching, select, yes {Alle verzoeken die overeenkomen met “{search}”} other {Alle verzoeken}}}}",
+      "columns": {
+        "request": "Verzoek",
+        "status": "Status",
+        "priority": "Prioriteit",
+        "activity": "Laatste activiteit",
+        "open": "Openen"
+      },
+      "empty": {
+        "activeTitle": "Geen actieve verzoeken",
+        "activeDescription": "{canRaise, select, yes {Dien een verzoek in en het staat hier totdat het is afgerond.} other {Verzoeken die nog iets nodig hebben, staan hier.}}",
+        "noMatchTitle": "Geen verzoeken gevonden",
+        "noMatchDescription": "Niets komt overeen met je zoekopdracht of filters."
+      }
+    },
+    "new": {
+      "title": "Nieuw verzoek",
+      "description": "{audience, select, staff {Dien een verzoek in voor een bedrijf, bijvoorbeeld na een telefoongesprek.} other {Vertel {staff} wat je nodig hebt. Ze reageren op de pagina van het verzoek.}}",
+      "back": "Verzoeken",
+      "company": "Bedrijf",
+      "companyPlaceholder": "Kies een bedrijf",
+      "titleLabel": "Titel",
+      "titleHint": "Eén regel die zegt waar het over gaat.",
+      "typeLabel": "Type",
+      "typePlaceholder": "Kies een type",
+      "descriptionLabel": "Beschrijving",
+      "descriptionHint": "Wat heb je nodig, en wat heb je al geprobeerd? Voeg webadressen toe als die helpen.",
+      "priorityLabel": "Prioriteit",
+      "priorityFromType": "Bepaald door het type",
+      "priorityHint": "Alleen medewerkers zien de prioriteit.",
+      "submit": "Verzoek indienen",
+      "cancel": "Annuleren"
+    },
+    "detail": {
+      "title": "Verzoek {reference}",
+      "deactivated": "Dit bedrijf is gedeactiveerd, dus de verzoeken kunnen alleen worden gelezen.",
+      "conversation": "Gesprek",
+      "showEarlier": "Eerdere activiteit tonen (nog {count, number})",
+      "description": "Beschrijving",
+      "details": "Gegevens",
+      "noReplies": "Nog geen reacties.",
+      "status": "Status",
+      "type": "Type",
+      "priority": "Prioriteit",
+      "company": "Bedrijf",
+      "raisedBy": "Ingediend door",
+      "raised": "Ingediend",
+      "firstResponse": "Eerste reactie",
+      "firstResponseAfter": "{duration} na het indienen",
+      "noResponse": "Nog niet",
+      "lastActivity": "Laatste activiteit",
+      "back": "Verzoeken",
+      "justRaised": "Verzoek ingediend."
+    },
+    "status": "{status, select, open {Open} todo {Te doen} in_progress {In behandeling} waiting {{audience, select, contributor {Wacht op jouw reactie} follower {Wacht op je bedrijf} other {Wacht op het bedrijf}}} done {Afgerond} cancelled {Geannuleerd} other {Onbekend}}",
+    "reopened": "Heropend",
+    "type": "{type, select, hotfix {Hotfix} bug {Bug} support {Support} new_feature {Nieuwe functie} other {Onbekend}}",
+    "typeDescription": "{type, select, hotfix {Er is iets kapot dat meteen moet worden opgelost.} bug {Iets werkt niet zoals het hoort.} support {Een vraag, of hulp bij iets.} new_feature {Iets nieuws, of een wijziging in hoe iets werkt.} other {Een ander soort verzoek.}}",
+    "priority": "{priority, select, low {Laag} normal {Normaal} high {Hoog} other {Onbekend}}",
+    "priorityBadge": "{priority, select, low {Lage prioriteit} normal {Normale prioriteit} high {Hoge prioriteit} other {Onbekende prioriteit}}",
+    "entry": {
+      "status": "{change, select, reopened {Verzoek heropend.} done {Verzoek als afgerond gemarkeerd.} cancelled {Verzoek geannuleerd.} other {Status gewijzigd van {from} naar {to}.}}",
+      "title": "Titel gewijzigd van “{from}” naar “{to}”.",
+      "type": "Type gewijzigd van {from} naar {to}.",
+      "priority": "Prioriteit gewijzigd van {from} naar {to}."
+    },
+    "text": {
+      "newTab": "(opent in een nieuw tabblad)"
+    },
+    "reply": {
+      "label": "Je reactie",
+      "send": "Reactie versturen",
+      "sendAndWait": "Versturen en op het bedrijf wachten",
+      "sent": "Reactie verstuurd."
+    },
+    "controls": {
+      "status": "Status",
+      "saving": "Opslaan…",
+      "markDone": "Markeren als afgerond",
+      "cancel": "Verzoek annuleren",
+      "cancelTitle": "Dit verzoek annuleren?",
+      "cancelDescription": "Annuleer het als het niet meer nodig is. Het kan later worden heropend.",
+      "keep": "Verzoek behouden",
+      "reopen": "Heropenen",
+      "editDetails": "Gegevens bewerken",
+      "editTitle": "De gegevens van dit verzoek bewerken",
+      "editDescription": "Elke wijziging staat in de geschiedenis van het verzoek. Het bedrijf ziet de prioriteit niet.",
+      "titleLabel": "Titel",
+      "typeLabel": "Type",
+      "priorityLabel": "Prioriteit",
+      "priorityHint": "Een nieuw type bepaalt zelf de prioriteit totdat je er een kiest.",
+      "saveDetails": "Gegevens opslaan"
+    },
+    "saved": {
+      "status": "{change, select, reopened {Verzoek heropend.} done {Verzoek gemarkeerd als afgerond.} cancelled {Verzoek geannuleerd.} other {Status opgeslagen.}}",
+      "details": "{changed, plural, =0 {Er is niets gewijzigd.} other {Gegevens opgeslagen.}}"
+    }
+  }
+}
