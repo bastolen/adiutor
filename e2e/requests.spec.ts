@@ -11,7 +11,7 @@
  */
 import type { Page } from '@playwright/test';
 
-import { storeRequest } from './support/db';
+import { findCompanyId, storeInvitation, storeRequest } from './support/db';
 import {
   CLIENT_WATCHER,
   CLOSED_COMPANY_NAME,
@@ -29,7 +29,14 @@ import {
   STAFF_NAME,
   SUPPORT_STAFF,
 } from './support/fixtures';
-import { signIn, signInAsUser, signOut, toasts } from './support/helpers';
+import {
+  createAccountFromInvitation,
+  freshAddress,
+  signIn,
+  signInAsUser,
+  signOut,
+  toasts,
+} from './support/helpers';
 import { expect, test } from './support/test';
 
 /**
@@ -262,7 +269,10 @@ test('the staff raise a request for a company and choose its priority', async ({
   // A deactivated company's requests can only be read, so it isn't offered.
   await page.getByRole('combobox', { name: 'Company' }).click();
   await expect(page.getByRole('option', { name: CLOSED_COMPANY_NAME })).toHaveCount(0);
-  await page.getByRole('option', { name: COMPANY_NAME }).click();
+  // The chosen company stays chosen. Its name isn't picked from the list: other specs add
+  // companies with the same name.
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('combobox', { name: 'Company' })).toHaveText(COMPANY_NAME);
 
   await page.getByRole('textbox', { name: 'Title' }).fill('Add a colleague to the mailing list');
   await page.getByRole('combobox', { name: 'Type' }).click();
@@ -282,7 +292,16 @@ test('the staff raise a request for a company and choose its priority', async ({
 });
 
 test('nobody raises a request who may not: a Watcher and Finance get no form', async ({ page }) => {
-  await signIn(page, CLIENT_WATCHER);
+  // A Watcher of this test's own, who is in no other company: other specs make the seeded
+  // Watcher a Client elsewhere, where they may raise requests.
+  await page.goto(
+    await storeInvitation({
+      companyId: await findCompanyId(COMPANY_SLUG),
+      email: freshAddress('requests-watcher'),
+      role: 'watcher',
+    }),
+  );
+  await createAccountFromInvitation(page, 'Reads Only Tester', 'reads-only-tester-password');
   await page.goto('/requests');
   await expect(main(page).getByText(SEEDED_REQUESTS.waiting.title)).toBeVisible();
   await expect(main(page).getByRole('link', { name: 'New request' })).toHaveCount(0);
