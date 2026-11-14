@@ -3,7 +3,8 @@
  * sorting and pages, raising a request (someone at a company, and the staff
  * for a company), and a request's page: its description, details and
  * conversation, the staff and a company working a request through (status,
- * replies, done, reopened, cancelled), the staff editing its details, and
+ * replies, done, reopened, cancelled), the staff editing its details, the
+ * prefix numbers are shown with, and
  * who only reads: Watchers, Finance, everyone for a
  * deactivated company's request, and a staff member signed in as a user.
  * Each test that changes a request stores its own (`storeRequest`); the
@@ -11,7 +12,7 @@
  */
 import type { Page } from '@playwright/test';
 
-import { findCompanyId, storeInvitation, storeRequest } from './support/db';
+import { findCompanyId, setRequestPrefix, storeInvitation, storeRequest } from './support/db';
 import {
   CLIENT_WATCHER,
   CLOSED_COMPANY_NAME,
@@ -140,8 +141,9 @@ test('the staff find every company’s requests, and narrow them down', async ({
   await page.goto('/requests');
   await filters.getByRole('link', { name: 'Closed' }).click();
   await expect(page).toHaveURL('/requests?status=closed');
-  await expect(requestRows(page)).toHaveCount(1);
-  await expect(requestRows(page).first()).toContainText(SEEDED_REQUESTS.done.title);
+  // Other specs close requests of their own, so only the seeded ones are looked for.
+  await expect(requestRows(page).filter({ hasText: SEEDED_REQUESTS.done.title })).toHaveCount(1);
+  await expect(main(page).getByText(SEEDED_REQUESTS.open.title)).toHaveCount(0);
 
   await page.goto('/requests');
   await page.getByRole('button', { name: 'Type', exact: true }).click();
@@ -185,6 +187,49 @@ test('the staff find every company’s requests, and narrow them down', async ({
   ).toHaveAttribute('aria-current', 'page');
   await main(page).getByRole('link', { name: 'Requests', exact: true }).click();
   await expect(page).toHaveURL('/requests');
+});
+
+test('a changed prefix shows on every number, and the old one still finds a request', async ({
+  page,
+}) => {
+  await signIn(page, SUPPORT_STAFF);
+  // Changed straight in the database (the staff page's field is tested in `staff.spec.ts`), and
+  // put back whatever happens: every other test reads "AD".
+  await setRequestPrefix('HELP');
+  try {
+    await page.goto('/requests?status=waiting');
+    const waiting = requestRows(page).filter({ hasText: SEEDED_REQUESTS.waiting.title });
+    await expect(waiting).toContainText(`HELP-${SEEDED_REQUESTS.waiting.number}`);
+    await expect(main(page).getByText(/\bAD-\d/)).toHaveCount(0);
+
+    // Numbers people noted before the change still find their request.
+    await page
+      .getByRole('searchbox', { name: 'Search requests' })
+      .fill(`AD-${SEEDED_REQUESTS.waiting.number}`);
+    await page.getByRole('button', { name: 'Search' }).click();
+    await expect(requestRows(page)).toHaveCount(1);
+    await expect(requestRows(page).first()).toContainText(SEEDED_REQUESTS.waiting.title);
+
+    // The request's address has no prefix, so it stays; its page and title show the new one.
+    await requestRows(page).first().getByRole('link').click();
+    await expect(page).toHaveURL(`/requests/${SEEDED_REQUESTS.waiting.number}`);
+    await expect(page).toHaveTitle(`Request HELP-${SEEDED_REQUESTS.waiting.number} · Adiutor`);
+    // Only the page shown counts: Next keeps the list alive, hidden, with the number in its row.
+    await expect(
+      main(page)
+        .getByText(`HELP-${SEEDED_REQUESTS.waiting.number}`, { exact: true })
+        .filter({ visible: true }),
+    ).toHaveCount(1);
+    await expect(
+      main(page)
+        .getByText(/\bAD-\d/)
+        .filter({ visible: true }),
+    ).toHaveCount(0);
+  } finally {
+    await setRequestPrefix('AD');
+  }
+  await page.reload();
+  await expect(page).toHaveTitle(`Request AD-${SEEDED_REQUESTS.waiting.number} · Adiutor`);
 });
 
 test('someone at a company sees its requests only, without priorities', async ({ page }) => {

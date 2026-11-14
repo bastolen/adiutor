@@ -289,6 +289,19 @@ export async function setDefaultLocale(locale: Locale): Promise<void> {
 }
 
 /**
+ * Sets the prefix request numbers are shown with directly, for tests about
+ * the numbers (the staff page's own field is tested in `staff.spec.ts`), and
+ * to put it back afterwards.
+ *
+ * @param prefix - The prefix, e.g. "AD".
+ */
+export async function setRequestPrefix(prefix: string): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.update(schema.staffSettings).set({ requestPrefix: prefix });
+  });
+}
+
+/**
  * Brings back the dashboard's MFA recommendation for a user, as if they had
  * never dismissed it, so a test that dismisses it can run again.
  *

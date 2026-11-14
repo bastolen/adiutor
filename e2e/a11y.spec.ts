@@ -3,9 +3,12 @@
  * the WCAG 2.2 A and AA rules, plus a reflow check on a narrow screen (for
  * signed-in pages also while they still show their loading placeholders) and
  * a check that no field is small enough for phones to zoom in on. The
- * invitation and invite-link pages are scanned with real tokens (stored in
- * `beforeAll`), signed out and signed in. `/setup` is scanned in
- * `setup.spec.ts`, the only place the database is empty.
+ * signed-in pages are scanned as the staff Admin; the pages that look
+ * different to someone at a company (the dashboard, the requests) also as a
+ * Client and as a Watcher. The invitation and invite-link pages are scanned
+ * with real tokens (stored in `beforeAll`), signed out and signed in.
+ * `/setup` is scanned in `setup.spec.ts`, the only place the database is
+ * empty.
  */
 import { type BrowserContext, type Page } from '@playwright/test';
 
@@ -34,6 +37,8 @@ import {
   E2E_BASE_URL,
   PAGING_COMPANY_SLUG,
   PLATFORM_ADMIN,
+  REQUESTS_CLIENT,
+  SEEDED_REQUESTS,
 } from './support/fixtures';
 import {
   adminStorageState,
@@ -42,6 +47,7 @@ import {
   signIn,
   signInAsUser,
   type StorageState,
+  storageStateFor,
   toasts,
 } from './support/helpers';
 import { expect, test } from './support/test';
@@ -104,8 +110,31 @@ const APP_PATHS = [
   '/does-not-exist',
 ];
 
+/**
+ * Pages that look different to someone at a company than to the staff,
+ * scanned as a Client: the dashboard with their companies, the requests
+ * without priorities, the form for a new one without a priority, a request
+ * with the company's own controls, and their company's page.
+ */
+const CLIENT_PATHS = [
+  '/dashboard',
+  '/requests',
+  '/requests/new',
+  '/requests/1',
+  '/companies/{company}',
+];
+
+/** Pages scanned as a Watcher, who only reads: no form, no controls. */
+const WATCHER_PATHS = ['/dashboard', '/requests/1'];
+
 /** Sign-in cookies of the staff Admin, shared by the signed-in scans. */
 let adminState: StorageState;
+
+/** Sign-in cookies of a Client of the seeded company, for the scans as someone at a company. */
+let clientState: StorageState;
+
+/** Sign-in cookies of the seeded Watcher, for the scans as someone who only reads. */
+let watcherState: StorageState;
 
 /** ID of the seeded company. */
 let companyId: string;
@@ -154,6 +183,8 @@ test.beforeAll(async ({ browser }) => {
   inviteLinkPath = await storeInviteLink({ companyId, role: 'client' });
   userId = await findUserId(CLIENT_WATCHER.email);
   adminState = await adminStorageState(browser);
+  clientState = await storageStateFor(browser, REQUESTS_CLIENT);
+  watcherState = await storageStateFor(browser, CLIENT_WATCHER);
 });
 
 /**
@@ -454,6 +485,20 @@ test.describe('on a 320px wide screen', () => {
       });
     });
   });
+
+  test.describe('signed in as someone at a company', () => {
+    CLIENT_PATHS.forEach((path) => {
+      test(`${path} fits without sideways scrolling or zooming into its fields, as a Client`, async ({
+        context,
+        page,
+      }) => {
+        await context.addCookies(clientState.cookies);
+        await page.goto(resolvePath(path));
+        await expectNoSidewaysScroll(page);
+        await expectFieldsDontZoom(page);
+      });
+    });
+  });
 });
 
 (['light', 'dark'] as const).forEach((colorScheme) => {
@@ -573,6 +618,25 @@ test.describe('on a 320px wide screen', () => {
         await expectAccessible(page);
       });
 
+      test('a request’s open filter menu, status select and edit dialog', async ({ page }) => {
+        await page.goto('/requests');
+        await page.getByRole('button', { name: 'Type', exact: true }).click();
+        await expect(page.getByRole('menu')).toBeVisible();
+        await expectAccessible(page, '[role="menu"]');
+        await page.keyboard.press('Escape');
+
+        // The seeded request, which nothing here changes: the menus are only opened.
+        await page.goto('/requests/1');
+        await page.getByRole('combobox', { name: 'Status' }).click();
+        await expect(page.getByRole('listbox')).toBeVisible();
+        await expectAccessible(page, '[role="listbox"]');
+        await page.keyboard.press('Escape');
+
+        await page.getByRole('button', { name: 'Edit details' }).click();
+        await expect(page.getByRole('dialog')).toBeVisible();
+        await expectAccessible(page, '[role="dialog"]');
+      });
+
       test('a toast', async ({ page }) => {
         // Saving the staff name unchanged changes nothing, but shows its toast.
         await page.goto('/admin/staff');
@@ -644,6 +708,36 @@ test.describe('on a 320px wide screen', () => {
           await expect(page.getByRole('menu')).toBeVisible();
           await expectAccessible(page, '[role="menu"]');
         });
+      });
+    });
+
+    test.describe('signed in as someone at a company', () => {
+      CLIENT_PATHS.forEach((path) => {
+        test(`${path} as a Client`, async ({ context, page }) => {
+          await context.addCookies(clientState.cookies);
+          await page.goto(resolvePath(path));
+          await expectAccessible(page);
+        });
+      });
+
+      WATCHER_PATHS.forEach((path) => {
+        test(`${path} as a Watcher`, async ({ context, page }) => {
+          await context.addCookies(watcherState.cookies);
+          await page.goto(resolvePath(path));
+          await expectAccessible(page);
+        });
+      });
+
+      test('the dialog that asks before a request is cancelled', async ({ context, page }) => {
+        await context.addCookies(clientState.cookies);
+        // The seeded open request, which stays as it is: the dialog is closed with "Keep request".
+        await page.goto(`/requests/${SEEDED_REQUESTS.open.number}`);
+        await page.getByRole('button', { name: 'Cancel request' }).click();
+        const dialog = page.getByRole('alertdialog', { name: 'Cancel this request?' });
+        await expect(dialog).toBeVisible();
+        await expectAccessible(page, '[role="alertdialog"]');
+        await dialog.getByRole('button', { name: 'Keep request' }).click();
+        await expect(dialog).toHaveCount(0);
       });
     });
   });

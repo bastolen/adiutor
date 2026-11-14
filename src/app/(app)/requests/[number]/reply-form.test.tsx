@@ -1,10 +1,11 @@
 /**
  * @file Tests for the form that replies to a request.
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import Card from '@/components/ui/card';
 import { defined } from '@/lib/defined';
 import { REQUEST_TEXT_MAX_LENGTH } from '@/lib/input-rules';
 
@@ -25,6 +26,18 @@ afterEach(() => {
  */
 const sent = () =>
   Object.fromEntries(defined(vi.mocked(replyAction).mock.calls.at(-1), 'the last call')[1]);
+
+/**
+ * Waits two frames, as long as the form watches where focus went.
+ *
+ * @returns When they've passed.
+ */
+const nextFrames = () =>
+  act(async () => {
+    await new Promise((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(resolve));
+    });
+  });
 
 describe('ReplyForm', () => {
   it('sends the reply for its request, and is empty again once it is sent', async () => {
@@ -71,6 +84,37 @@ describe('ReplyForm', () => {
 
     await waitFor(() => expect(replyAction).toHaveBeenCalledTimes(1));
     expect(sent()).toEqual({ request: '142', body: 'On it.' });
+  });
+
+  it('moves focus to the conversation’s heading when the second button goes while it has focus', async () => {
+    const { rerender } = render(
+      <Card title="Conversation">
+        <ReplyForm request={142} canWait />
+      </Card>,
+    );
+    screen.getByRole('button', { name: 'Send and wait for the company' }).focus();
+
+    // The request waits now, as after the reply it sent.
+    rerender(
+      <Card title="Conversation">
+        <ReplyForm request={142} canWait={false} />
+      </Card>,
+    );
+    await nextFrames();
+
+    expect(screen.queryByRole('button', { name: 'Send and wait for the company' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Conversation' })).toHaveFocus();
+  });
+
+  it('takes no focus when it appears without the second button', async () => {
+    render(
+      <Card title="Conversation">
+        <ReplyForm request={142} canWait={false} />
+      </Card>,
+    );
+    await nextFrames();
+
+    expect(document.body).toHaveFocus();
   });
 
   it('shows why a reply was refused, and keeps what was typed', async () => {

@@ -10,12 +10,14 @@ import {
   providerLinkedCookieValue,
   providerStepUpCookieValue,
 } from '../src/lib/sign-in/oauth-providers';
+import { storeRequest } from './support/db';
 import {
   CLIENT_WATCHER,
   COMPANY_NAME,
   COMPANY_SLUG,
   PAGING_COMPANY_SLUG,
   PLATFORM_ADMIN,
+  REQUESTS_CLIENT,
 } from './support/fixtures';
 import {
   adminStorageState,
@@ -23,12 +25,16 @@ import {
   signIn,
   signInAsUser,
   type StorageState,
+  storageStateFor,
   toasts,
 } from './support/helpers';
 import { expect, test } from './support/test';
 
 /** Sign-in cookies of the staff Admin. */
 let adminState: StorageState;
+
+/** Sign-in cookies of a Client of the seeded company, for the company's side of a request. */
+let clientState: StorageState;
 
 /** The members page of the seeded company with more members than fit on a page. */
 let pagingMembersPath: string;
@@ -37,7 +43,24 @@ test.beforeAll(async ({ browser }) => {
   // At the address the app links to (its URL name).
   pagingMembersPath = `/companies/${PAGING_COMPANY_SLUG}/members`;
   adminState = await adminStorageState(browser);
+  clientState = await storageStateFor(browser, REQUESTS_CLIENT);
 });
+
+/**
+ * Stores a request of the test's own in the seeded company, raised by its
+ * Client.
+ *
+ * @param title - The request's title.
+ * @returns The path of the request's page.
+ */
+async function storeOwnRequest(title: string): Promise<string> {
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title,
+  });
+  return `/requests/${number}`;
+}
 
 /**
  * Opens a select with Enter and waits until an option has focus, so the
@@ -647,5 +670,147 @@ test.describe('tables', () => {
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(`${pagingMembersPath}?page=2`);
     await expect(pages.getByRole('link', { name: 'Page 2' })).toBeFocused();
+  });
+});
+
+test.describe('requests', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test.describe('as the staff', () => {
+    test.beforeEach(async ({ context }) => {
+      await context.addCookies(adminState.cookies);
+    });
+
+    test('a filter menu filters with the keyboard and keeps focus on its button', async ({
+      page,
+    }) => {
+      await page.goto('/requests');
+      const trigger = page.getByRole('button', { name: 'Type', exact: true });
+      expect(await cursorOf(trigger)).toBe('pointer');
+
+      // Escape closes it and changes nothing.
+      await trigger.focus();
+      await expect(async () => {
+        await trigger.press('Enter');
+        await expect(page.getByRole('menu')).toBeVisible({ timeout: 1000 });
+      }).toPass();
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('menu')).toBeHidden();
+      await expect(trigger).toBeFocused();
+      await expect(page).toHaveURL('/requests');
+
+      // The arrow keys move through the choices, and Enter picks one.
+      await trigger.press('Enter');
+      await expect(page.getByRole('menu')).toBeVisible();
+      const hotfix = page.getByRole('menuitemradio', { name: 'Hotfix' });
+      await expect(async () => {
+        await page.keyboard.press('ArrowDown');
+        await expect(hotfix).toBeFocused({ timeout: 250 });
+      }).toPass();
+      await page.keyboard.press('Enter');
+      await expect(page).toHaveURL('/requests?type=hotfix');
+      // The button now says what's chosen, and still has focus.
+      await expect(page.getByRole('button', { name: 'Type: Hotfix' })).toBeFocused();
+    });
+
+    test('a status is only saved when picked with Enter, not while browsing', async ({ page }) => {
+      await page.goto(await storeOwnRequest('A status picked with the keyboard'));
+      const status = page.getByRole('combobox', { name: 'Status' });
+      await expect(status).toHaveText('Open');
+
+      // Browse the statuses and close: nothing changes.
+      await openWithEnter(status);
+      await expect(page.getByRole('option', { name: 'Open' })).toBeFocused();
+      await page.keyboard.press('ArrowDown');
+      await expect(page.getByRole('option', { name: 'To do' })).toBeFocused();
+      await page.keyboard.press('Escape');
+      await expect(status).toBeFocused();
+      await page.reload();
+      await expect(status).toHaveText('Open');
+
+      // Pick To do with Enter: saved, and focus stays on the select.
+      await openWithEnter(status);
+      await page.keyboard.press('ArrowDown');
+      await expect(page.getByRole('option', { name: 'To do' })).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(toasts(page)).toContainText('Status saved.');
+      await expect(status).toBeFocused();
+      await page.reload();
+      await expect(status).toHaveText('To do');
+    });
+
+    test('a reply is sent with the keyboard, and focus is never lost', async ({ page }) => {
+      await page.goto(await storeOwnRequest('A reply sent with the keyboard'));
+      const reply = page.getByRole('textbox', { name: 'Your reply' });
+      const send = page.getByRole('button', { name: 'Send reply' });
+      const sendAndWait = page.getByRole('button', { name: 'Send and wait for the company' });
+
+      // The field, then its buttons. Sending keeps focus on the button, which stays.
+      await reply.focus();
+      await page.keyboard.type('We are looking into it.');
+      await page.keyboard.press('Tab');
+      await expect(send).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(toasts(page)).toContainText('Reply sent.');
+      await expect(reply).toHaveValue('');
+      await expect(send).toBeFocused();
+
+      // "Send and wait for the company" goes once the request waits: focus moves to the
+      // conversation's heading, not to nowhere.
+      await reply.focus();
+      await page.keyboard.type('Which printer is it?');
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Tab');
+      await expect(sendAndWait).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(toasts(page)).toContainText('Reply sent.');
+      await expect(sendAndWait).toHaveCount(0);
+      await expect(page.getByRole('heading', { level: 2, name: 'Conversation' })).toBeFocused();
+    });
+  });
+
+  test.describe('as someone at the company', () => {
+    test.beforeEach(async ({ context }) => {
+      await context.addCookies(clientState.cookies);
+    });
+
+    test('cancelling a request asks first, keeps focus inside and returns it', async ({ page }) => {
+      await page.goto(await storeOwnRequest('A request cancelled with the keyboard'));
+      const cancelRequest = page
+        .getByRole('region', { name: 'Details' })
+        .getByRole('button', { name: 'Cancel request' });
+
+      await cancelRequest.focus();
+      await page.keyboard.press('Enter');
+      const dialog = page.getByRole('alertdialog', { name: 'Cancel this request?' });
+      await expect(dialog).toBeVisible();
+      // It starts on the way out, which doesn't say "Cancel", and focus stays inside.
+      const keep = dialog.getByRole('button', { name: 'Keep request' });
+      const confirm = dialog.getByRole('button', { name: 'Cancel request' });
+      await expect(keep).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(confirm).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(keep).toBeFocused();
+
+      // Escape and "Keep request" both close it, with focus back on the button.
+      await page.keyboard.press('Escape');
+      await expect(dialog).toHaveCount(0);
+      await expect(cancelRequest).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(keep).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(dialog).toHaveCount(0);
+      await expect(cancelRequest).toBeFocused();
+
+      // Confirming removes the button: focus moves to its card's heading.
+      await page.keyboard.press('Enter');
+      await page.keyboard.press('Tab');
+      await expect(confirm).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(toasts(page)).toContainText('Request cancelled.');
+      await expect(cancelRequest).toHaveCount(0);
+      await expect(page.getByRole('heading', { level: 2, name: 'Details' })).toBeFocused();
+    });
   });
 });
