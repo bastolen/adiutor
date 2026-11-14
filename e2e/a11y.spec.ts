@@ -90,6 +90,9 @@ const APP_PATHS = [
   '/companies/{paging}/members',
   '/companies/{paging}/members?page=2&sort=joined',
   '/companies/{company}/settings',
+  // A company's own requests: more than fit on a page, and the last page of them.
+  '/companies/{paging}',
+  '/companies/{paging}?status=all&sort=raised&page=2',
   '/requests',
   '/requests?status=all&q=no-such-request',
   // More requests than fit on a page: pagination, another sort, the last page.

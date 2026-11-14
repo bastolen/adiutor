@@ -1,5 +1,5 @@
 /**
- * @file Layout of a company's pages (overview, Members, Settings): the
+ * @file Layout of a company's pages (its requests, Members, Settings): the
  * company's header and tabs, then the page. Layouts stay mounted while the
  * pages under them change, so choosing a tab keeps focus on it and the
  * header doesn't reload. Each page still checks the permission it needs.
@@ -20,8 +20,8 @@ import CompanyHeader from './company-header';
  * Titles that name the company, so browser tabs, history and the route
  * announcer (which reads the title after each client-side navigation, when
  * it changed) tell companies apart. The pages below give their own part
- * ("Members"); the overview takes the default. The same check as the pages
- * comes first (cached per request), so a company's name never reaches
+ * ("Members"); the company's first page, which the template doesn't reach,
+ * names the company itself. The same check as the pages comes first (cached per request), so a company's name never reaches
  * someone who may not see it: then every page is "Not found · Adiutor", like
  * the 404 page they get (the check doesn't end in the 404 page itself, which
  * would leave the page without a title). Pages that require a permission

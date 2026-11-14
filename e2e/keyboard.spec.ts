@@ -463,9 +463,9 @@ test.describe('signed in', () => {
     await chooseTab(page, 'Company sections', 'Members', COMPANY_NAME);
     await expect(page).toHaveURL(`/companies/${COMPANY_SLUG}/members`);
     await expect(page).toHaveTitle(`Members · ${COMPANY_NAME} · Adiutor`);
-    await chooseTab(page, 'Company sections', 'Overview', COMPANY_NAME);
+    await chooseTab(page, 'Company sections', 'Requests', COMPANY_NAME);
     await expect(page).toHaveURL(`/companies/${COMPANY_SLUG}`);
-    await expect(page).toHaveTitle(`${COMPANY_NAME} · Adiutor`);
+    await expect(page).toHaveTitle(`Requests · ${COMPANY_NAME} · Adiutor`);
 
     // The account's tabs, reached from the account menu without reloading.
     await accountMenu.click();

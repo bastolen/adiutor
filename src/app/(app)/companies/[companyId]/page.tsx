@@ -1,75 +1,82 @@
 /**
- * @file Company overview, served at `/companies/[companyId]`. This is where
- * the company's requests (tickets) will live. Its title is the company's name
- * (the company layout's default title).
+ * @file A company's requests, served at `/companies/[companyId]`: the
+ * company's first page. The same list as `/requests`, for this company only,
+ * for everyone who may see the company: its members, and the staff.
  */
-import { Eye, Inbox } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import Alert from '@/components/ui/alert';
-import Card from '@/components/ui/card';
-import EmptyState from '@/components/ui/empty-state';
 import { PageSkeleton } from '@/components/ui/skeleton';
+import type { SearchParams } from '@/lib/search-params';
 import { requireCompanyAccess } from '@/server/authz';
+import { companyPermissionMetadata } from '@/server/page-metadata';
 
+import RequestList from '../../_requests/request-list';
 import AccessNotice from '../../access-notice';
 
 /**
- * The overview for a company the user may see. Requests will live here; until
- * they're built, it explains what's coming, worded for whoever is looking:
- * staff viewing a company, a company member, or a
- * Watcher. Its text comes from the `companies` namespace.
+ * Page metadata: "Requests · Adiutor Tests · Adiutor" for those who may see
+ * the company's requests (`requests:view`), and the 404 page's title for
+ * everyone else, who get the 404 page. The title names the company itself:
+ * the layout's title template doesn't reach the page in its own route
+ * segment (see `companyPermissionMetadata`).
+ */
+// i18n-check t('companies.requests.title')
+export const generateMetadata = companyPermissionMetadata(
+  'requests:view',
+  'companies.requests.title',
+);
+
+/**
+ * Loads and shows the company's requests. A deactivated company's requests
+ * can only be read, which the page says; only the staff get that far.
  *
  * @param props - Component props.
  * @param props.params - Route parameters.
- * @returns The overview.
+ * @param props.searchParams - Query parameters: the search, the filters, and the table's sort and
+ *   page (see `RequestList`).
+ * @returns The page content.
  */
-async function Overview({ params }: { params: Promise<{ companyId: string }> }) {
-  const { companyId } = await params;
-  const t = await getTranslations('companies.overview');
-  const { company, permissions, actor } = await requireCompanyAccess(companyId);
-  const role = actor.memberships[company.id] ?? null;
-  // Staff (in a company they aren't a member of) and company members who
-  // can work on requests see what's coming; other company members (Watchers) can only follow.
-  let empty = {
-    icon: Inbox,
-    title: t('title'),
-    description: t('description'),
-  };
-  if (!role) {
-    empty = { ...empty, description: t('staffDescription', { company: company.name }) };
-  } else if (!permissions.has('requests:contribute')) {
-    empty = {
-      icon: Eye,
-      title: t('viewOnlyTitle'),
-      description: t('viewOnlyDescription'),
-    };
-  }
+async function CompanyRequests({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ companyId: string }>;
+  searchParams: Promise<SearchParams>;
+}) {
+  const [{ companyId }, query] = await Promise.all([params, searchParams]);
+  const t = await getTranslations('companies.requests');
+  const { company, actor } = await requireCompanyAccess(companyId, 'requests:view');
 
   return (
     <>
       {/* After stepping down on the Members page, which only Admins see. */}
       <AccessNotice />
       {company.deactivatedAt && <Alert tone="info">{t('deactivated')}</Alert>}
-      <Card flush>
-        <EmptyState icon={empty.icon} title={empty.title} description={empty.description} />
-      </Card>
+      <RequestList
+        // Its links use the company's URL name, also when the page was opened by its ID.
+        path={`/companies/${company.slug}`}
+        searchParams={query}
+        actor={actor}
+        company={company.slug}
+      />
     </>
   );
 }
 
 /**
- * The company overview page.
+ * The company's requests page.
  *
  * @param props - Page props from Next.js.
  * @param props.params - Route parameters.
+ * @param props.searchParams - Query parameters.
  * @returns The page.
  */
-export default function CompanyPage({ params }: PageProps<'/companies/[companyId]'>) {
+export default function CompanyPage({ params, searchParams }: PageProps<'/companies/[companyId]'>) {
   return (
     <Suspense fallback={<PageSkeleton header={false} />}>
-      <Overview params={params} />
+      <CompanyRequests params={params} searchParams={searchParams} />
     </Suspense>
   );
 }

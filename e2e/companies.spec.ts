@@ -92,7 +92,13 @@ test('register a company, accept the invitation and join through a link', async 
   await createAccountFromInvitation(page, 'Link Joiner', 'client-password-1');
   // The role badge next to the company name, and the matching access.
   await expect(page.getByText('Client', { exact: true })).toBeVisible();
-  await expect(page.getByText('Requests are on their way')).toBeVisible();
+  // They land on the company's requests, which they can add to: from the header, and from
+  // where the requests will be listed, as there are none yet.
+  await expect(page).toHaveTitle(`Requests · ${COMPANY_NAME} · Adiutor`);
+  await expect(page.getByRole('main').getByText('No active requests')).toBeVisible();
+  await expect(
+    page.getByRole('main').getByRole('link', { name: 'New request' }).first(),
+  ).toBeVisible();
   await expect(page.getByRole('link', { name: 'Members' })).toHaveCount(0);
 });
 
@@ -221,7 +227,9 @@ test('a company opens by its URL name or its ID, and moves with a new URL name',
   // Both addresses open the company, and its pages' titles name it.
   await page.goto(`/companies/${slug}`);
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
-  await expect(page).toHaveTitle(`${name} · Adiutor`);
+  await expect(page).toHaveTitle(`Requests · ${name} · Adiutor`);
+  // Nothing was asked yet.
+  await expect(page.getByRole('main').getByText('No active requests')).toBeVisible();
   await page.goto(`/companies/${companyId}`);
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
 

@@ -27,7 +27,8 @@ interface PageHeaderProps {
 
 /**
  * The page title (the page's only `h1`), with optional description, actions
- * and back link.
+ * and back link. The actions sit to the right of the title while it keeps
+ * room to read (10rem), and below it on narrower screens.
  *
  * @param props - Header props.
  * @param props.title - The title.
@@ -60,7 +61,8 @@ export default function PageHeader({
       )}
       <div className="flex flex-wrap items-center gap-4">
         {leading}
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
+        {/* At least 10rem wide before it shrinks: with less room than that, the actions move below instead of squeezing the title into a column. */}
+        <div className="flex min-w-0 grow basis-40 flex-col gap-1">
           <h1 className="text-2xl font-semibold text-foreground">{title}</h1>
           {description && <p className="text-sm text-muted-foreground">{description}</p>}
         </div>

@@ -107,6 +107,12 @@ export function globalPermissionMetadata<Props = unknown>(
  * on Members). For everyone else, the page's title (e.g. "Members") still
  * gets the company's name from the layout's template.
  *
+ * The company's first page is the exception: Next doesn't apply a layout's
+ * title template to the page in the layout's own route segment, so that
+ * page's title names the company itself. Every title here is given the
+ * company's name as its `{company}` argument for it
+ * (`companies.requests.title`, "Requests · {company}").
+ *
  * @param permission - The permission the page requires.
  * @param title - The page's title for those who may see it, as a message
  *   key, e.g. `companies.members.title`.
@@ -119,7 +125,10 @@ export function companyPermissionMetadata(
   return async ({ params }) => {
     const { companyId } = await params;
     const access = await findCompanyAccess(companyId);
-    return access?.permissions.has(permission) ? titledMetadata(title) : notFoundMetadata();
+    if (!access?.permissions.has(permission)) {
+      return notFoundMetadata();
+    }
+    return titledMetadata(title, { company: access.company.name });
   };
 }
 

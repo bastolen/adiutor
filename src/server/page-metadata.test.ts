@@ -62,6 +62,7 @@ function signInAs(platformRole: PlatformRole | null): Actor {
  */
 function companyAccessWith(permissions: Permission[]) {
   vi.mocked(findCompanyAccess).mockResolvedValue({
+    company: { name: 'Adiutor Tests' },
     permissions: new Set(permissions),
   } as Awaited<ReturnType<typeof findCompanyAccess>>);
 }
@@ -130,6 +131,13 @@ describe('companyPermissionMetadata', () => {
       companyPermissionMetadata('members:view', 'companies.members.title')(props),
     ).resolves.toEqual({ title: 'Members' });
     expect(findCompanyAccess).toHaveBeenCalledWith('adiutor-tests');
+  });
+
+  it("names the company in a title that asks for it: the company's first page", async () => {
+    companyAccessWith(['company:view', 'requests:view']);
+    await expect(
+      companyPermissionMetadata('requests:view', 'companies.requests.title')(props),
+    ).resolves.toEqual({ title: 'Requests · Adiutor Tests' });
   });
 
   it("is the 404 page's for those who see the company without the permission", async () => {
