@@ -249,6 +249,36 @@ describe('listRequests: filters and search', () => {
     });
   });
 
+  it('finds every request whose number starts with the digits typed', async () => {
+    const company = await createCompany(db);
+    await inSequence(
+      Array.from({ length: 12 }, (_, index) => index + 1),
+      (number) =>
+        storeRequest(company.id, { title: `Request ${String.fromCharCode(64 + number)}` }),
+    );
+    const client = await memberActor(db, company.id, 'client');
+
+    /**
+     * The numbers of the requests a search finds, lowest first.
+     *
+     * @param search - The search term.
+     * @returns The numbers.
+     */
+    const found = async (search: string) =>
+      (await listRequests(ctx, client, { search, sort: 'raised', dir: 'asc' })).items.map(
+        ({ number }) => number,
+      );
+
+    // With a prefix, with "#" and without: the same requests.
+    await inSequence(['AD-1', 'ad 1', '#1', '1', 'OLD-1'], async (search) => {
+      expect(await found(search), search).toEqual([1, 10, 11, 12]);
+    });
+    expect(await found('AD-11')).toEqual([11]);
+    // What a number starts with, not what it holds or ends with.
+    expect(await found('AD-2')).toEqual([2]);
+    expect(await found('AD-13')).toEqual([]);
+  });
+
   it('never finds another company’s request by its number', async () => {
     const [own, other] = [await createCompany(db), await createCompany(db)];
     await storeRequest(other.id);

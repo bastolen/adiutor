@@ -2,7 +2,9 @@
  * @file A request's number as people see and type it. Requests are numbered
  * in one series across Adiutor; the number is shown after a prefix the staff
  * choose ("AD-142"), which is only for display: addresses and searches go by
- * the digits, so changing the prefix breaks nothing.
+ * the digits, so changing the prefix breaks nothing. A search finds every
+ * request whose number starts with the digits typed, so a number narrows the
+ * list as it's typed, like a title does.
  */
 
 /** The prefix request numbers are shown with until the staff choose their own. */
@@ -49,14 +51,16 @@ export function parseRequestNumber(segment: string): number | null {
 }
 
 /**
- * Finds the request number someone searched for, if what they typed is one.
+ * Finds the start of a request number in what someone searched for, if what
+ * they typed is one: its digits, without "#" or a prefix. "AD-1" gives "1",
+ * which the numbers 1, 10 to 19, 100 to 199 and so on start with.
  *
  * @param term - The search term.
- * @returns The number, or `null` when the term is something else.
+ * @returns The digits (1 to 9 of them, never starting with 0), or `null` when the term is
+ *   something else.
  */
-export function requestNumberInSearch(term: string): number | null {
-  const match = NUMBER_IN_SEARCH.exec(term.trim());
-  return match?.[1] ? Number(match[1]) : null;
+export function requestNumberStartInSearch(term: string): string | null {
+  return NUMBER_IN_SEARCH.exec(term.trim())?.[1] ?? null;
 }
 
 /**

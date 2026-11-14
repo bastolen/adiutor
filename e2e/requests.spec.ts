@@ -138,12 +138,25 @@ test('the staff find every company’s requests, and narrow them down', async ({
   await expect(requestRows(page)).toHaveCount(1);
   await expect(requestRows(page).first()).toContainText(SEEDED_REQUESTS.closedCompany.title);
 
-  // By number, with any prefix or none.
+  // By number, with any prefix or none: every request whose number starts with what was typed,
+  // so request 3 and 30, not 13. (Other specs add requests, so the rows aren't counted.)
   await page.getByRole('searchbox', { name: 'Search requests' }).fill('ad-3');
   await page.getByRole('button', { name: 'Search' }).click();
+  await expect(page).toHaveURL('/requests?status=all&q=ad-3');
+  const third = requestRows(page).filter({ hasText: SEEDED_REQUESTS.done.title });
+  await expect(third).toContainText('AD-3');
+  await expect(third).toContainText('Done');
+  await expect(
+    requestRows(page).filter({ hasText: pagedRequestTitle(30 - FIRST_PAGED_REQUEST_NUMBER + 1) }),
+  ).toContainText('AD-30');
+  await expect(
+    main(page).getByText(pagedRequestTitle(13 - FIRST_PAGED_REQUEST_NUMBER + 1)),
+  ).toHaveCount(0);
+  // The whole number finds the one request.
+  await page.getByRole('searchbox', { name: 'Search requests' }).fill('AD-30');
+  await page.getByRole('button', { name: 'Search' }).click();
   await expect(requestRows(page)).toHaveCount(1);
-  await expect(requestRows(page).first()).toContainText(SEEDED_REQUESTS.done.title);
-  await expect(requestRows(page).first()).toContainText('Done');
+  await expect(requestRows(page).first()).toContainText('AD-30');
 
   // Waiting, closed, and the menus next to Sort.
   await page.goto('/requests');
@@ -215,11 +228,11 @@ test('a changed prefix shows on every number, and the old one still finds a requ
       .getByRole('searchbox', { name: 'Search requests' })
       .fill(`AD-${SEEDED_REQUESTS.waiting.number}`);
     await page.getByRole('button', { name: 'Search' }).click();
-    await expect(requestRows(page)).toHaveCount(1);
-    await expect(requestRows(page).first()).toContainText(SEEDED_REQUESTS.waiting.title);
+    const found = requestRows(page).filter({ hasText: SEEDED_REQUESTS.waiting.title });
+    await expect(found).toHaveCount(1);
 
     // The request's address has no prefix, so it stays; its page and title show the new one.
-    await requestRows(page).first().getByRole('link').click();
+    await found.getByRole('link').click();
     await expect(page).toHaveURL(`/requests/${SEEDED_REQUESTS.waiting.number}`);
     await expect(page).toHaveTitle(`Request HELP-${SEEDED_REQUESTS.waiting.number} · Adiutor`);
     // Only the page shown counts: Next keeps the list alive, hidden, with the number in its row.

@@ -2,7 +2,7 @@
  * @file Lists of requests: the companies someone sees requests of, and the
  * requests themselves, across companies or in one, one page at a time.
  */
-import { and, count, eq, ilike, inArray, isNull, or, type SQL, sql } from 'drizzle-orm';
+import { and, count, eq, ilike, inArray, isNull, like, or, type SQL, sql } from 'drizzle-orm';
 
 import { company, request, user } from '@/db/schema';
 import { getPermissions } from '@/lib/authz/permissions';
@@ -13,7 +13,7 @@ import {
   isRequestStatusFilter,
   isRequestType,
   REQUEST_PRIORITIES,
-  requestNumberInSearch,
+  requestNumberStartInSearch,
   type RequestPriority,
   type RequestStatus,
   type RequestStatusFilter,
@@ -158,16 +158,22 @@ function requestOrder(state: TableState<StaffRequestSort>): SQL[] {
 }
 
 /**
- * The condition of a search: the title contains the term, or the term is the
- * request's number.
+ * The condition of a search: the title contains the term, or the term is a
+ * number that the request's number starts with ("AD-1" finds 1, 10 to 19,
+ * 100 and up), so a number narrows the list as it's typed, like a title.
  *
  * @param term - The search term, trimmed and not empty.
  * @returns The condition.
  */
 function matchesSearch(term: string): SQL | undefined {
   const inTitle = ilike(request.title, containsPattern(term));
-  const number = requestNumberInSearch(term);
-  return number === null ? inTitle : or(eq(request.number, number), inTitle);
+  const digits = requestNumberStartInSearch(term);
+  if (digits === null) {
+    return inTitle;
+  }
+  // Only digits, so nothing in it means anything to LIKE. The title search reads every row
+  // the filters leave anyway, so comparing the number as text costs nothing more.
+  return or(like(sql`${request.number}::text`, `${digits}%`), inTitle);
 }
 
 /**

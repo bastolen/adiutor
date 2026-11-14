@@ -51,7 +51,7 @@ export {
   formatRequestNumber,
   parseRequestNumber,
   REQUEST_PREFIX_PATTERN,
-  requestNumberInSearch,
+  requestNumberStartInSearch,
   requestPath,
 } from './number';
 export { cleanMultilineText, splitLinks } from './text';

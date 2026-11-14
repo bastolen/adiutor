@@ -92,7 +92,9 @@ the closed statuses.
   `staff_settings.request_prefix`).
 - A request's address is `/requests/142`, without the prefix, so it doesn't change with it.
 - Searching by number ignores the prefix: "AD-142", "ad-142", an older prefix and "142" all find
-  request 142 (`requestNumberInSearch` in `src/lib/requests/number.ts`).
+  request 142. A number finds every request whose number starts with the digits typed ("AD-1"
+  finds 1, 10 to 19, 100 and up), so it narrows the list as it's typed, like a title does
+  (`requestNumberStartInSearch` in `src/lib/requests/number.ts`). The list keeps its own order.
 - Page titles carry the number, never the request's title ("Request AD-142 · Adiutor"): titles end
   up in the browser's history.
 

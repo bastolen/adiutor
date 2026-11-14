@@ -8,7 +8,7 @@ import {
   formatRequestNumber,
   parseRequestNumber,
   REQUEST_PREFIX_PATTERN,
-  requestNumberInSearch,
+  requestNumberStartInSearch,
   requestPath,
 } from './number';
 
@@ -43,18 +43,27 @@ describe('parseRequestNumber', () => {
   );
 });
 
-describe('requestNumberInSearch', () => {
+describe('requestNumberStartInSearch', () => {
   it.each(['142', '#142', 'AD-142', 'ad-142', 'AD 142', 'AD142', ' ad-142 ', 'REQ-142', 'A1-142'])(
-    'finds 142 in %j',
+    'finds the digits 142 in %j',
     (term) => {
-      expect(requestNumberInSearch(term)).toBe(142);
+      expect(requestNumberStartInSearch(term)).toBe('142');
     },
   );
+
+  it.each([
+    ['1', '1'],
+    ['AD-1', '1'],
+    ['#10', '10'],
+    ['ad-100200300', '100200300'],
+  ])('gives the digits of %j as they were typed: what a number starts with', (term, digits) => {
+    expect(requestNumberStartInSearch(term)).toBe(digits);
+  });
 
   it.each(['printer', 'floor 2 printer', 'AD-', '0', 'AD-0', '142 printers', 'TOOLONG-142', ''])(
     'finds no number in %j',
     (term) => {
-      expect(requestNumberInSearch(term)).toBeNull();
+      expect(requestNumberStartInSearch(term)).toBeNull();
     },
   );
 });
