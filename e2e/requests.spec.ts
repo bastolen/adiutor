@@ -179,7 +179,11 @@ test('the staff find every company’s requests, and narrow them down', async ({
   // A row is one link to its request.
   await requestRows(page).last().getByRole('link').click();
   await expect(page).toHaveURL(`/requests/${FIRST_PAGED_REQUEST_NUMBER + PAGED_REQUEST_COUNT - 1}`);
-  await page.getByRole('link', { name: 'Requests', exact: true }).click();
+  // The menu's Requests item stays current on a request, and the page links back to the list.
+  await expect(
+    page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Requests' }),
+  ).toHaveAttribute('aria-current', 'page');
+  await main(page).getByRole('link', { name: 'Requests', exact: true }).click();
   await expect(page).toHaveURL('/requests');
 });
 

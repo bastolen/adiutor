@@ -2,7 +2,8 @@
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welkom, {name}",
-    "staffDescription": "Open een bedrijf, of bekijk iedereen die Adiutor gebruikt.",
+    "staffDescription": "Werk aan verzoeken, open een bedrijf, of bekijk iedereen die Adiutor gebruikt.",
+    "companyDescription": "{canRaise, select, yes {Dien een verzoek in, of bekijk hoe het met de openstaande verzoeken gaat.} other {Bekijk hoe het met de openstaande verzoeken gaat.}}",
     "mfaRecommendation": {
       "label": "Accountbeveiliging",
       "title": "Beveilig je account",
@@ -17,6 +18,10 @@
       "action": "Bekijk gebruikers zonder MFA"
     },
     "shortcuts": {
+      "requests": {
+        "title": "Verzoeken",
+        "description": "Wat er is gevraagd, en hoe het ermee staat."
+      },
       "users": {
         "title": "Gebruikers",
         "description": "Medewerkers en de mensen van elk bedrijf."
@@ -33,6 +38,10 @@
         "title": "Logs",
         "description": "Het auditlog, de fouten waar mensen tegenaan liepen en de achtergrondtaken."
       }
+    },
+    "yourCompanies": {
+      "title": "{count, plural, one {Je bedrijf} other {Je bedrijven}}",
+      "description": "{count, plural, one {Open het om de verzoeken te zien.} other {Open er een om de verzoeken te zien.}}"
     }
   }
 }

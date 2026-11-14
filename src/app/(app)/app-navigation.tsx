@@ -27,8 +27,8 @@ interface AppNavigationProps {
   /** Their email address. */
   email: string;
   /**
-   * The staff sections they may see (`staffSectionKeys`). Company users have
-   * none, and get no navigation links yet.
+   * The staff sections they may see (`staffSectionKeys`), linked after the
+   * dashboard and Requests, which everyone gets. Company users have none.
    */
   sections: StaffSectionKey[];
   /** Whether a staff member is signed in as this user (the account menu says so). */
@@ -65,14 +65,9 @@ function NavigationPanel({
       >
         <Logo height={26} />
       </Link>
-      {sections.length > 0 ? (
-        <nav aria-label={t('main')} className="flex-1">
-          <NavLinks sections={sections} onNavigate={onNavigate} />
-        </nav>
-      ) : (
-        // No links yet for company users; an empty landmark would only be noise for screen readers.
-        <div className="flex-1" />
-      )}
+      <nav aria-label={t('main')} className="flex-1">
+        <NavLinks sections={sections} onNavigate={onNavigate} />
+      </nav>
       <AccountMenu name={name} email={email} signedInAs={signedInAs} />
     </div>
   );

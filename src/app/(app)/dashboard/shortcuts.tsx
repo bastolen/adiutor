@@ -1,6 +1,7 @@
 /**
- * @file The staff shortcuts on the dashboard: a tile for each staff section
- * the user may see (`staff-sections.ts`).
+ * @file The shortcuts on the dashboard: a tile for Requests, which everyone
+ * gets (`requests-section.ts`), then one for each staff section the user may
+ * see (`staff-sections.ts`).
  */
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
@@ -10,29 +11,38 @@ import IconTile from '@/components/ui/icon-tile';
 import { focusRing } from '@/components/ui/styles';
 import cn from '@/lib/cn';
 
+import REQUESTS_SECTION from '../requests-section';
 import { type StaffSectionKey, staffSections } from '../staff-sections';
 
+/** A tile's section: Requests, or a staff section. */
+type ShortcutKey = typeof REQUESTS_SECTION.key | StaffSectionKey;
+
 /**
- * Props for {@link StaffShortcuts}.
+ * Props for {@link Shortcuts}.
  */
-interface StaffShortcutsProps {
-  /** The staff sections the user may see (`staffSectionKeys`). */
+interface ShortcutsProps {
+  /** The staff sections the user may see (`staffSectionKeys`); none for company users. */
   sections: readonly StaffSectionKey[];
 }
 
 /**
  * A grid of shortcut tiles, each a link with an icon, title and description.
  * One column on phones, and never more than two from 640px, however many
- * tiles there are: an odd last tile keeps the others' width. Its text comes
- * from the `dashboard` namespace.
+ * tiles there are: an odd last tile keeps the others' width, and so does the
+ * single Requests tile of a company user. Its text comes from the `dashboard`
+ * namespace.
  *
  * @param props - Shortcuts props.
- * @param props.sections - The sections to show.
+ * @param props.sections - The staff sections to show after Requests.
  * @returns The list of tiles.
  */
-export default function StaffShortcuts({ sections }: StaffShortcutsProps) {
+export default function Shortcuts({ sections }: ShortcutsProps) {
   const t = useTranslations('dashboard');
-  const text: Record<StaffSectionKey, { title: string; description: string }> = {
+  const text: Record<ShortcutKey, { title: string; description: string }> = {
+    requests: {
+      title: t('shortcuts.requests.title'),
+      description: t('shortcuts.requests.description'),
+    },
     users: { title: t('shortcuts.users.title'), description: t('shortcuts.users.description') },
     companies: {
       title: t('shortcuts.companies.title'),
@@ -44,7 +54,7 @@ export default function StaffShortcuts({ sections }: StaffShortcutsProps) {
 
   return (
     <ul className="grid gap-4 sm:grid-cols-2">
-      {staffSections(sections).map(({ key, href, icon }) => (
+      {[REQUESTS_SECTION, ...staffSections(sections)].map(({ key, href, icon }) => (
         <li key={href}>
           <Link
             href={href}

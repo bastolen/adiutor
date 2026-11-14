@@ -19,6 +19,7 @@ test('an Admin finds users, recognises the staff and filters and searches the li
   const nav = page.getByRole('navigation', { name: 'Main' });
   await expect(nav.getByRole('link')).toHaveText([
     'Dashboard',
+    'Requests',
     'Users',
     'Companies',
     'Staff',

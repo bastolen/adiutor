@@ -4,6 +4,7 @@
     "main": "Hoofdmenu",
     "items": {
       "dashboard": "Dashboard",
+      "requests": "Verzoeken",
       "users": "Gebruikers",
       "companies": "Bedrijven",
       "staff": "Medewerkers",

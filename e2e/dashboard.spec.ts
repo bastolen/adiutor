@@ -2,13 +2,17 @@
  * @file End-to-end tests for the dashboard and the main navigation: the
  * staff page from the dashboard and the menu, what staff who can't manage the
  * staff see, the warning about users whose MFA came from a provider that is
- * off, and the empty navigation of company users.
+ * off, and what company users get: Requests in the menu and on the
+ * dashboard, and their companies.
  */
 
 import {
-  CLIENT_WATCHER,
+  COMPANY_NAME,
+  COMPANY_SLUG,
   GITHUB_ONLY_MANAGER,
   PLATFORM_ADMIN,
+  REQUESTS_CLIENT,
+  SEEDED_REQUESTS,
   SUPPORT_STAFF,
 } from './support/fixtures';
 import { signIn } from './support/helpers';
@@ -21,6 +25,7 @@ test('an Admin opens the staff page from the dashboard and the menu', async ({ p
   // Each tile is named by its title, then its description.
   const main = page.getByRole('main');
   await expect(main.getByRole('listitem').getByRole('link')).toHaveText([
+    /^Requests/,
     /^Users/,
     /^Companies/,
     /^Staff/,
@@ -42,11 +47,13 @@ test("staff who can't manage the staff get no Staff tile or menu item", async ({
   await page.goto('/dashboard');
 
   await expect(page.getByRole('main').getByRole('listitem').getByRole('link')).toHaveText([
+    /^Requests/,
     /^Users/,
     /^Companies/,
   ]);
   await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link')).toHaveText([
     'Dashboard',
+    'Requests',
     'Users',
     'Companies',
   ]);
@@ -69,17 +76,35 @@ test('a staff Admin is warned about users whose MFA came from a provider that is
   ).toBeVisible();
 });
 
-test('company users get an empty menu and dashboard for now', async ({ page }) => {
-  await signIn(page, CLIENT_WATCHER);
+test('company users get Requests in the menu and on the dashboard, and their companies', async ({
+  page,
+}) => {
+  // An account no other test changes, so it stays in one company.
+  await signIn(page, REQUESTS_CLIENT);
 
   await expect(page).toHaveURL('/dashboard');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^Welcome, /);
-  await expect(page.getByRole('navigation', { name: 'Main' })).toHaveCount(0);
-  // Only the MFA recommendation links somewhere (to the Security page).
-  await expect(
-    page.getByRole('main').getByRole('link').filter({ hasNotText: 'Set up' }),
-  ).toHaveCount(0);
+  const nav = page.getByRole('navigation', { name: 'Main' });
+  await expect(nav.getByRole('link')).toHaveText(['Dashboard', 'Requests']);
+  const main = page.getByRole('main');
+  await expect(main).toContainText('Raise a request, or see how the open ones are coming along.');
 
+  // The tile and the menu item both open the requests they may see.
+  await main.getByRole('link', { name: /^Requests/ }).click();
+  await expect(page).toHaveURL('/requests');
+  await expect(main.getByText(SEEDED_REQUESTS.open.title)).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Requests' })).toHaveAttribute('aria-current', 'page');
+  await nav.getByRole('link', { name: 'Dashboard' }).click();
+  await expect(page).toHaveURL('/dashboard');
+
+  // Their company, with their role in it, is the way to its page.
+  const company = page.getByRole('region', { name: 'Your company' });
+  await expect(company.getByRole('listitem')).toHaveText(new RegExp(`${COMPANY_NAME}\\s*Client$`));
+  await company.getByRole('link', { name: COMPANY_NAME }).click();
+  await expect(page).toHaveURL(`/companies/${COMPANY_SLUG}`);
+  await expect(page).toHaveTitle(`Requests · ${COMPANY_NAME} · Adiutor`);
+
+  // The staff pages stay out of reach.
   await page.goto('/admin/users');
   await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
 });

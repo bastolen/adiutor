@@ -1,6 +1,7 @@
 /**
- * @file The main navigation links in the sidebar, for staff: the dashboard,
- * then the staff sections the user may see (`staff-sections.ts`).
+ * @file The main navigation links in the sidebar: the dashboard and Requests
+ * for everyone (`requests-section.ts`), then the staff sections the user may
+ * see (`staff-sections.ts`).
  */
 'use client';
 
@@ -12,14 +13,15 @@ import { useTranslations } from 'next-intl';
 import { focusRing } from '@/components/ui/styles';
 import cn from '@/lib/cn';
 
+import REQUESTS_SECTION from './requests-section';
 import { type StaffSectionKey, staffSections } from './staff-sections';
 
-/** A navigation item: the dashboard, then the user's staff sections. */
+/** A navigation item: the dashboard, Requests, then the user's staff sections. */
 interface NavItem {
   /** Where it goes. The item is current on this path and everything under it. */
   href: string;
   /** Its label (`navigation.items`). */
-  key: 'dashboard' | StaffSectionKey;
+  key: 'dashboard' | typeof REQUESTS_SECTION.key | StaffSectionKey;
   /** Decorative icon. */
   icon: LucideIcon;
 }
@@ -28,14 +30,17 @@ interface NavItem {
  * Props for {@link NavLinks}.
  */
 interface NavLinksProps {
-  /** The staff sections the user may see (`staffSectionKeys`), after the dashboard. */
+  /**
+   * The staff sections the user may see (`staffSectionKeys`), after the
+   * dashboard and Requests; none for company users.
+   */
   sections: readonly StaffSectionKey[];
   /** Called after a link is chosen (closes the mobile menu). */
   onNavigate?: () => void;
 }
 
 /**
- * The staff navigation list. The current page's link is marked with
+ * The navigation list. The current page's link is marked with
  * `aria-current="page"` and highlighted.
  *
  * @param props - Links props.
@@ -48,6 +53,7 @@ export default function NavLinks({ sections, onNavigate = undefined }: NavLinksP
   const pathname = usePathname();
   const labels: Record<NavItem['key'], string> = {
     dashboard: t('items.dashboard'),
+    requests: t('items.requests'),
     users: t('items.users'),
     companies: t('items.companies'),
     staff: t('items.staff'),
@@ -55,6 +61,7 @@ export default function NavLinks({ sections, onNavigate = undefined }: NavLinksP
   };
   const items: NavItem[] = [
     { href: '/dashboard', key: 'dashboard', icon: LayoutDashboard },
+    REQUESTS_SECTION,
     ...staffSections(sections),
   ];
 

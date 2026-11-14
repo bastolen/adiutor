@@ -1,10 +1,11 @@
 /**
- * @file Dashboard, served at `/dashboard`. Staff get a tile for each staff
- * section they may see (and Admins a warning when users lost their provider
- * MFA; Admins and Managers one when background jobs aren't running); company
- * users only see a welcome until
- * their features exist. A note says what happened when users were sent here
- * after leaving the staff or a company, or stepping down (`AccessNotice`).
+ * @file Dashboard, served at `/dashboard`. Everyone gets a tile for
+ * Requests. Staff also get one for each staff section they may see (and
+ * Admins a warning when users lost their provider MFA; Admins and Managers
+ * one when background jobs aren't running); company users get their
+ * companies, each linking to its page. A note says what happened when users
+ * were sent here after leaving the staff or a company, or stepping down
+ * (`AccessNotice`).
  */
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
@@ -19,13 +20,15 @@ import { getActor, getGlobalPermissions } from '@/server/authz';
 import { getTickWarning } from '@/server/jobs';
 import { isMfaRecommendationDismissed } from '@/server/people/mfa-recommendation';
 import { getProviderMfaWarning } from '@/server/people/users';
+import { listRequestCompanies } from '@/server/requests';
 
 import TickWarning from '../_jobs/tick-warning';
 import AccessNotice from '../access-notice';
 import { staffSectionKeys } from '../staff-sections';
 import MfaRecommendation from './mfa-recommendation';
 import ProviderMfaWarning from './provider-mfa-warning';
-import StaffShortcuts from './staff-shortcuts';
+import Shortcuts from './shortcuts';
+import YourCompanies from './your-companies';
 
 /**
  * Page metadata, with the title in the request's language.
@@ -38,9 +41,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * Greets the user and, for staff, shows the shortcuts. Its text comes from
- * the `dashboard` namespace; the recommendation (a client component) gets it
- * through `ClientMessages`.
+ * Greets the user and shows the shortcuts and, for company users, their
+ * companies. Its text comes from the `dashboard` namespace; the
+ * recommendation (a client component) gets it through `ClientMessages`.
  *
  * @returns The dashboard content.
  */
@@ -65,11 +68,28 @@ async function Dashboard() {
   const tickWarning = isStaff ? await getTickWarning(appContext, actor) : null;
 
   if (!isStaff) {
+    // The companies whose requests they see: every active company they're in, by name.
+    const companies = await listRequestCompanies(appContext, actor);
+    const ownCompanies = companies.flatMap(({ id, slug, name }) => {
+      const role = actor.memberships[id];
+      return role ? [{ slug, name, role }] : [];
+    });
     return (
       <>
-        <PageHeader title={t('welcome', { name: firstName })} />
+        <PageHeader
+          title={t('welcome', { name: firstName })}
+          // Nothing to say about requests to someone who is in no company.
+          description={
+            companies.length > 0 &&
+            t('companyDescription', {
+              canRaise: companies.some(({ canRaise }) => canRaise) ? 'yes' : 'no',
+            })
+          }
+        />
         <AccessNotice />
         {recommendation}
+        <Shortcuts sections={[]} />
+        {ownCompanies.length > 0 && <YourCompanies companies={ownCompanies} />}
       </>
     );
   }
@@ -81,7 +101,7 @@ async function Dashboard() {
       {recommendation}
       {providerMfaWarning && <ProviderMfaWarning warning={providerMfaWarning} />}
       {tickWarning && <TickWarning lastTickAt={tickWarning.lastTickAt} linkToJobs />}
-      <StaffShortcuts sections={staffSectionKeys(permissions)} />
+      <Shortcuts sections={staffSectionKeys(permissions)} />
     </>
   );
 }
