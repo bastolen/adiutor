@@ -249,7 +249,10 @@ describe('StepUpForm', () => {
       await user.type(screen.getByLabelText('Code'), '123456');
       await user.click(screen.getByRole('button', { name: 'Confirm' }));
       expect(screen.getByRole('button', { name: 'Confirm' })).toHaveAttribute('aria-busy', 'true');
-      expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Confirm' })).toHaveAttribute(
+        'aria-disabled',
+        'true',
+      );
 
       await act(async () => request.resolve({ data: {}, error: null }));
 

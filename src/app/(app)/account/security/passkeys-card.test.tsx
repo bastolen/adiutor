@@ -154,7 +154,9 @@ describe('PasskeysCard', () => {
 
       const remove = await screen.findByRole('button', { name: 'Remove Work laptop' });
       await waitFor(() => expect(remove).toHaveAttribute('aria-busy', 'true'));
-      expect(remove).toBeDisabled();
+      // Busy, not disabled: it keeps focus until the row goes.
+      expect(remove).toHaveAttribute('aria-disabled', 'true');
+      expect(remove).toBeEnabled();
       finish({ data: { status: true }, error: null });
       expect(await screen.findByRole('status')).toHaveTextContent('Work laptop was removed.');
     });

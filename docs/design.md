@@ -170,9 +170,12 @@ keyboard support.
   page simply shows no reference.
 - **Interaction:** every control has hover, pressed, focus-visible (a 2px ring), disabled and busy
   states. Clickable things show a pointer cursor, disabled ones a not-allowed cursor and busy ones
-  a wait cursor (base rules in `src/app/globals.css`). Buttons disable and show a spinner while
-  their action runs, so nothing is submitted twice. Destructive actions ask for confirmation in a
-  `ConfirmDialog`. A role select only saves when an option is picked (Enter or click), never while
+  a wait cursor (base rules in `src/app/globals.css`). While its action runs a button is busy
+  (`Button`'s `loading`: a spinner, `aria-busy`, `aria-disabled` and the wait cursor) and ignores
+  presses, so nothing is submitted twice. It's busy rather than disabled, because a disabled
+  button loses keyboard focus the moment the action starts and doesn't get it back, which would
+  leave keyboard users at the top of the page after every form they send. Destructive actions ask
+  for confirmation in a `ConfirmDialog`. A role select only saves when an option is picked (Enter or click), never while
   arrowing through the list; on the user's own row it asks first (`confirmChange`, with the
   question for each role worded by the page, e.g. "Step down to Manager?"), and cancelling puts it
   back and returns focus to it. While it saves it's busy (`SelectField`'s `busy`:

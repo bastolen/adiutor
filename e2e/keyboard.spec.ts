@@ -234,6 +234,19 @@ test.describe('signed in', () => {
     await expect(page.getByRole('heading', { name: 'Invite links' })).toBeFocused();
   });
 
+  test('a button keeps focus while its form saves, and after', async ({ page }) => {
+    await page.goto('/admin/staff');
+    const save = page.getByRole('button', { name: 'Save name' });
+
+    // Saving the name unchanged changes nothing, but runs the action.
+    await save.focus();
+    await page.keyboard.press('Enter');
+    await expect(toasts(page)).toContainText('Name saved.');
+    // Busy, not disabled, while it saved: a disabled button drops focus to the top of the page.
+    await expect(save).toBeFocused();
+    await expect(save).toBeEnabled();
+  });
+
   test('toasts are reached with F8 and dismissed with the keyboard', async ({ page }) => {
     await page.goto(`/companies/${COMPANY_SLUG}/members`);
     await page.getByRole('button', { name: 'Create invite link' }).click();
