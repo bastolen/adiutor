@@ -17,6 +17,7 @@ import {
   minutesAgo,
   staffActor,
 } from '../../../tests/integration/helpers';
+import type { Actor } from '../actor';
 import { findRequest, getRequest, THREAD_CHUNK } from './detail';
 import { ctx, db, storeEntry, storeRequest } from './test-helpers';
 
@@ -47,7 +48,7 @@ describe('getRequest', () => {
       type: 'hotfix',
       status: 'open',
       reopenedAt: null,
-      raisedBy: { name: 'casey', side: 'company', isViewer: true },
+      raisedBy: { userId: null, name: 'casey', side: 'company', isViewer: true },
       company: {
         id: company.id,
         name: 'Adiutor Tests Alpha',
@@ -189,21 +190,21 @@ describe('getRequest: the conversation', () => {
     ).toEqual([
       {
         kind: 'comment',
-        author: { name: 'casey', side: 'company', isViewer: true },
+        author: { userId: null, name: 'casey', side: 'company', isViewer: true },
         body: { text: 'Any news?', format: 'plain' },
         from: null,
         to: null,
       },
       {
         kind: 'comment',
-        author: { name: 'sam', side: 'staff', isViewer: false },
+        author: { userId: null, name: 'sam', side: 'staff', isViewer: false },
         body: { text: 'On it.', format: 'plain' },
         from: null,
         to: null,
       },
       {
         kind: 'title',
-        author: { name: 'sam', side: 'staff', isViewer: false },
+        author: { userId: null, name: 'sam', side: 'staff', isViewer: false },
         body: null,
         from: 'Help',
         to: 'The printer is broken',
@@ -223,10 +224,54 @@ describe('getRequest: the conversation', () => {
 
     const detail = await getRequest(ctx, await memberActor(db, company.id, 'watcher'), '1');
 
-    expect(detail.raisedBy).toEqual({ name: null, side: 'staff', isViewer: false });
+    expect(detail.raisedBy).toEqual({ userId: null, name: null, side: 'staff', isViewer: false });
     expect(detail.entries).toMatchObject([
-      { author: { name: null, side: 'staff', isViewer: false }, body: { text: 'On it.' } },
+      {
+        author: { userId: null, name: null, side: 'staff', isViewer: false },
+        body: { text: 'On it.' },
+      },
     ]);
+  });
+
+  it('gives the staff, who have a page for every user, the ID of everyone in it; nobody at the company gets one', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const watcher = await memberActor(db, company.id, 'watcher', 'wren@adiutor.test');
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    const finance = await staffActor(db, 'finance', 'frankie@adiutor.test');
+    const stored = await storeRequest(company.id, { createdBy: client.id });
+    await storeEntry(stored.id, { authorId: support.id, authorSide: 'staff', body: 'On it.' });
+
+    /**
+     * The IDs a reader gets: of who raised the request, then of who wrote its entries.
+     *
+     * @param reader - Whoever reads the request.
+     * @returns The IDs.
+     */
+    const idsFor = async (reader: Actor) => {
+      const detail = await getRequest(ctx, reader, '1');
+      return [detail.raisedBy.userId, ...detail.entries.map(({ author }) => author.userId)];
+    };
+
+    // Those who work on requests, and Finance, who only reads them.
+    expect(await idsFor(support)).toEqual([client.id, support.id]);
+    expect(await idsFor(finance)).toEqual([client.id, support.id]);
+    // Not even their own.
+    expect(await idsFor(client)).toEqual([null, null]);
+    expect(await idsFor(watcher)).toEqual([null, null]);
+    expect(JSON.stringify(await getRequest(ctx, watcher, '1'))).not.toContain(client.id);
+  });
+
+  it('gives nobody the ID of an account that is gone', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    await storeRequest(company.id, { createdBy: client.id });
+    await db.delete(user).where(eq(user.id, client.id));
+
+    const detail = await getRequest(ctx, support, '1');
+
+    expect(detail.raisedBy).toEqual({ userId: null, name: null, side: 'company', isViewer: false });
   });
 
   it('gives the latest entries, and earlier ones a chunk at a time', async () => {

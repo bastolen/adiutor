@@ -31,7 +31,7 @@ function detailOf(detail: Partial<RequestDetail> = {}): RequestDetail {
     status: 'open',
     reopenedAt: null,
     priority: null,
-    raisedBy: { name: 'Casey Client', side: 'company', isViewer: true },
+    raisedBy: { userId: null, name: 'Casey Client', side: 'company', isViewer: true },
     createdAt: new Date('2026-11-13T09:00:00Z'),
     firstResponseAt: null,
     lastActivityAt: new Date('2026-11-13T11:55:00Z'),
@@ -129,7 +129,9 @@ describe('RequestDetails', () => {
 
   it('has no first response for a request the staff raised themselves', async () => {
     await renderDetails({
-      detail: detailOf({ raisedBy: { name: 'Sam Support', side: 'staff', isViewer: false } }),
+      detail: detailOf({
+        raisedBy: { userId: null, name: 'Sam Support', side: 'staff', isViewer: false },
+      }),
     });
 
     expect(screen.queryByText('First response')).not.toBeInTheDocument();

@@ -11,20 +11,25 @@ const NAMES = { company: 'Adiutor Tests Alpha', staff: 'Adiutor Tests' };
 
 describe('personName', () => {
   it('is their own name, or their side’s without one', () => {
-    expect(personName({ name: 'Casey Client', side: 'company', isViewer: false }, NAMES)).toBe(
-      'Casey Client',
-    );
-    expect(personName({ name: null, side: 'company', isViewer: false }, NAMES)).toBe(
+    expect(
+      personName({ userId: null, name: 'Casey Client', side: 'company', isViewer: false }, NAMES),
+    ).toBe('Casey Client');
+    expect(personName({ userId: null, name: null, side: 'company', isViewer: false }, NAMES)).toBe(
       'Adiutor Tests Alpha',
     );
-    expect(personName({ name: null, side: 'staff', isViewer: false }, NAMES)).toBe('Adiutor Tests');
+    expect(personName({ userId: null, name: null, side: 'staff', isViewer: false }, NAMES)).toBe(
+      'Adiutor Tests',
+    );
   });
 });
 
 describe('PersonLine', () => {
   it('shows someone at the company by name, and what follows it', () => {
     render(
-      <PersonLine person={{ name: 'Casey Client', side: 'company', isViewer: false }} names={NAMES}>
+      <PersonLine
+        person={{ userId: null, name: 'Casey Client', side: 'company', isViewer: false }}
+        names={NAMES}
+      >
         <span>2 hours ago</span>
       </PersonLine>,
     );
@@ -37,17 +42,68 @@ describe('PersonLine', () => {
 
   it('labels the staff with the name they are shown with', () => {
     render(
-      <PersonLine person={{ name: 'Sam Support', side: 'staff', isViewer: false }} names={NAMES} />,
+      <PersonLine
+        person={{ userId: null, name: 'Sam Support', side: 'staff', isViewer: false }}
+        names={NAMES}
+      />,
     );
 
     expect(screen.getByText('Sam Support')).toBeInTheDocument();
     expect(screen.getByText('Adiutor Tests')).toBeInTheDocument();
   });
 
+  it('links the name to the user’s page for a reader who got their ID: the staff', () => {
+    render(
+      <PersonLine
+        person={{
+          userId: '0198a8c0-0000-7000-8000-000000000001',
+          name: 'Casey Client',
+          side: 'company',
+          isViewer: false,
+        }}
+        names={NAMES}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: 'Casey Client' })).toHaveAttribute(
+      'href',
+      '/admin/users/0198a8c0-0000-7000-8000-000000000001',
+    );
+  });
+
+  it('shows the name as plain text to everyone else', () => {
+    render(
+      <PersonLine
+        person={{ userId: null, name: 'Casey Client', side: 'company', isViewer: false }}
+        names={NAMES}
+      />,
+    );
+
+    expect(screen.getByText('Casey Client')).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('never links a side’s name, which would read like a link to the company', () => {
+    render(
+      <PersonLine
+        person={{
+          userId: '0198a8c0-0000-7000-8000-000000000001',
+          name: null,
+          side: 'company',
+          isViewer: false,
+        }}
+        names={NAMES}
+      />,
+    );
+
+    expect(screen.getByText('Adiutor Tests Alpha')).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
   it('marks the reader', () => {
     render(
       <PersonLine
-        person={{ name: 'Casey Client', side: 'company', isViewer: true }}
+        person={{ userId: null, name: 'Casey Client', side: 'company', isViewer: true }}
         names={NAMES}
       />,
     );
@@ -56,7 +112,12 @@ describe('PersonLine', () => {
   });
 
   it('shows the side’s name once for someone without a name or an account', () => {
-    render(<PersonLine person={{ name: null, side: 'staff', isViewer: false }} names={NAMES} />);
+    render(
+      <PersonLine
+        person={{ userId: null, name: null, side: 'staff', isViewer: false }}
+        names={NAMES}
+      />,
+    );
 
     expect(screen.getAllByText('Adiutor Tests')).toHaveLength(1);
   });
@@ -66,14 +127,17 @@ describe('PersonAvatar', () => {
   it('takes its initials from the name that is shown', () => {
     const { container, rerender } = render(
       <PersonAvatar
-        person={{ name: 'Sam Support', side: 'staff', isViewer: false }}
+        person={{ userId: null, name: 'Sam Support', side: 'staff', isViewer: false }}
         names={NAMES}
       />,
     );
     expect(container).toHaveTextContent('SS');
 
     rerender(
-      <PersonAvatar person={{ name: null, side: 'company', isViewer: false }} names={NAMES} />,
+      <PersonAvatar
+        person={{ userId: null, name: null, side: 'company', isViewer: false }}
+        names={NAMES}
+      />,
     );
     expect(container).toHaveTextContent('AT');
   });

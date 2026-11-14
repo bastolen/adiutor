@@ -2,12 +2,14 @@
  * @file Shows who raised, wrote or changed something in a request: their
  * name, a label with the staff's name on the staff's side, and "You" for the
  * reader. Never an email address: a company's Clients and Watchers can't see
- * who else is in it, beyond the names in its requests.
+ * who else is in it, beyond the names in its requests. For the staff, who
+ * have a page for every user, the name links to it.
  */
 import type { ReactNode } from 'react';
 
 import Avatar from '@/components/ui/avatar';
 import Badge from '@/components/ui/badge';
+import TextLink from '@/components/ui/text-link';
 import type { RequestPerson } from '@/server/requests';
 
 import YouBadge from '../_people/you-badge';
@@ -48,7 +50,10 @@ export function PersonAvatar({ person, names }: { person: RequestPerson; names: 
 
 /**
  * Someone's name with their labels, in a line that wraps, followed by
- * whatever belongs after it (when they wrote something).
+ * whatever belongs after it (when they wrote something). The name links to
+ * the user's page for readers who got their ID (`RequestPerson.userId`: the
+ * staff). Someone shown by their side's name stays plain text: a link that
+ * reads like the company would open a user.
  *
  * @param props - Component props.
  * @param props.person - The person.
@@ -67,7 +72,15 @@ export default function PersonLine({
 }) {
   return (
     <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-      <span className="font-medium wrap-anywhere text-foreground">{personName(person, names)}</span>
+      {person.userId !== null && person.name !== null ? (
+        <TextLink href={`/admin/users/${person.userId}`} className="wrap-anywhere">
+          {person.name}
+        </TextLink>
+      ) : (
+        <span className="font-medium wrap-anywhere text-foreground">
+          {personName(person, names)}
+        </span>
+      )}
       {/* Someone shown by the staff's name needs no label that repeats it. */}
       {person.side === 'staff' && person.name !== null && <Badge>{names.staff}</Badge>}
       {person.isViewer && <YouBadge />}

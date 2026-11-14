@@ -10,10 +10,15 @@ import renderInLocale from '../../../../../tests/i18n/render';
 import Thread from './thread';
 
 /** Someone at the company, who reads the page. */
-const CASEY: RequestPerson = { name: 'Casey Client', side: 'company', isViewer: true };
+const CASEY: RequestPerson = {
+  userId: null,
+  name: 'Casey Client',
+  side: 'company',
+  isViewer: true,
+};
 
 /** Someone on the staff. */
-const SAM: RequestPerson = { name: 'Sam Support', side: 'staff', isViewer: false };
+const SAM: RequestPerson = { userId: null, name: 'Sam Support', side: 'staff', isViewer: false };
 
 /**
  * An entry of a request's history.
@@ -169,11 +174,11 @@ describe('Thread', () => {
         detail={detailOf({
           entries: [
             entryOf('1', {
-              author: { name: null, side: 'company', isViewer: false },
+              author: { userId: null, name: null, side: 'company', isViewer: false },
               body: { text: 'Any news?', format: 'plain' },
             }),
             entryOf('2', {
-              author: { name: null, side: 'staff', isViewer: false },
+              author: { userId: null, name: null, side: 'staff', isViewer: false },
               body: { text: 'On it.', format: 'plain' },
             }),
           ],

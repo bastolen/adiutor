@@ -7,12 +7,20 @@
  * prefix numbers are shown with, and
  * who only reads: Watchers, Finance, everyone for a
  * deactivated company's request, and a staff member signed in as a user.
+ * The staff reach a person's user page from their name; nobody at a company
+ * does.
  * Each test that changes a request stores its own (`storeRequest`); the
  * seeded ones are only read.
  */
 import type { Page } from '@playwright/test';
 
-import { findCompanyId, setRequestPrefix, storeInvitation, storeRequest } from './support/db';
+import {
+  findCompanyId,
+  findUserId,
+  setRequestPrefix,
+  storeInvitation,
+  storeRequest,
+} from './support/db';
 import {
   CLIENT_WATCHER,
   CLOSED_COMPANY_NAME,
@@ -518,6 +526,36 @@ test('the staff edit a request’s details, and the company never sees its prior
   await expect(main(page).getByText(/priority/i)).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Edit details' })).toHaveCount(0);
   await expect(page.getByRole('combobox', { name: 'Status' })).toHaveCount(0);
+});
+
+test('the staff reach a person’s page from a request, and nobody at the company does', async ({
+  page,
+}) => {
+  const path = `/requests/${SEEDED_REQUESTS.waiting.number}`;
+  const clientId = await findUserId(REQUESTS_CLIENT.email);
+  const staffId = await findUserId(SUPPORT_STAFF.email);
+
+  // For the staff, who have a page for every user, each name is a link to it.
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(path);
+  await expect(
+    conversation(page).getByRole('link', { name: SUPPORT_STAFF.name }).first(),
+  ).toHaveAttribute('href', `/admin/users/${staffId}`);
+  await detail(page, 'Raised by').getByRole('link', { name: REQUESTS_CLIENT.name }).click();
+  await expect(page).toHaveURL(`/admin/users/${clientId}`);
+  await expect(page.getByRole('heading', { level: 1, name: REQUESTS_CLIENT.name })).toBeVisible();
+  await signOut(page);
+
+  // Someone at the company reads the same names, as text: nothing says more about who they are.
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto(path);
+  await expect(conversation(page)).toContainText(SUPPORT_STAFF.name);
+  await expect(detail(page, 'Raised by')).toContainText(REQUESTS_CLIENT.name);
+  await expect(main(page).getByRole('link', { name: SUPPORT_STAFF.name })).toHaveCount(0);
+  await expect(main(page).getByRole('link', { name: REQUESTS_CLIENT.name })).toHaveCount(0);
+  const html = await page.content();
+  expect(html).not.toContain(staffId);
+  expect(html).not.toContain(clientId);
 });
 
 test('a Watcher follows a request without taking part', async ({ page }) => {

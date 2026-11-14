@@ -9,6 +9,7 @@ import { and, eq, inArray, isNull, type SQL, sql } from 'drizzle-orm';
 import type { Database } from '@/db';
 import { company, request } from '@/db/schema';
 import {
+  getGlobalPermissions,
   getPermissions,
   getStaffPermissionsInCompanies,
   type Permission,
@@ -124,6 +125,13 @@ export async function getRequestAccess(
 /** Someone in a request, as its readers see them: their name and side, never their address. */
 export interface RequestPerson {
   /**
+   * Their user ID, for readers who may open a user's page (`users:view`: the
+   * staff), where their name links to; `null` for everyone else, and when
+   * their account is gone. Someone at a company learns nothing about who
+   * else is in it beyond the names in its requests.
+   */
+  userId: string | null;
+  /**
    * Their name, trimmed, or `null` when they have none or their account is
    * gone: the screens then name their side (the company, or the staff).
    */
@@ -150,6 +158,7 @@ export function requestPerson(
   actor: Actor,
 ): RequestPerson {
   return {
+    userId: getGlobalPermissions(actor).has('users:view') ? person.id : null,
     name: person.name?.trim() || null,
     side,
     isViewer: person.id !== null && person.id === actor.id,

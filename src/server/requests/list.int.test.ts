@@ -322,9 +322,21 @@ describe('listRequests: what a request shows', () => {
     expect(
       page.items.map(({ title, raisedBy, company: its }) => [title, raisedBy, its.name]),
     ).toEqual([
-      ['By the client', { name: 'casey', side: 'company', isViewer: true }, 'Adiutor Tests Alpha'],
-      ['By the staff', { name: 'sam', side: 'staff', isViewer: false }, 'Adiutor Tests Alpha'],
+      [
+        'By the client',
+        { userId: null, name: 'casey', side: 'company', isViewer: true },
+        'Adiutor Tests Alpha',
+      ],
+      [
+        'By the staff',
+        { userId: null, name: 'sam', side: 'staff', isViewer: false },
+        'Adiutor Tests Alpha',
+      ],
     ]);
+
+    // The staff also get who it is, for the link to the user's page.
+    const forStaff = await listRequests(ctx, support, { sort: 'raised' });
+    expect(forStaff.items.map(({ raisedBy }) => raisedBy.userId)).toEqual([client.id, support.id]);
   });
 
   it('gives no name, and never an address, for someone without a name or whose account is gone', async () => {
@@ -340,10 +352,12 @@ describe('listRequests: what a request shows', () => {
     const page = await listRequests(ctx, watcher, { sort: 'raised', dir: 'asc' });
 
     expect(page.items.map(({ raisedBy }) => raisedBy)).toEqual([
-      { name: null, side: 'company', isViewer: false },
-      { name: null, side: 'staff', isViewer: false },
+      { userId: null, name: null, side: 'company', isViewer: false },
+      { userId: null, name: null, side: 'staff', isViewer: false },
     ]);
     expect(JSON.stringify(page)).not.toContain('@adiutor.test');
+    // Nor who it is: the nameless account still exists.
+    expect(JSON.stringify(page)).not.toContain(nameless);
   });
 
   it('says when a request was reopened', async () => {

@@ -111,6 +111,10 @@ the closed statuses.
   is in their company. Company users see a staff member's own name with a label that carries the
   name users know the staff by. Someone without a name, or whose account is gone, is shown as
   their side.
+- **For the staff, a name links to the user's page.** The services give a person's ID only to
+  readers who may open that page (`users:view`, which every staff role has; `RequestPerson.userId`
+  from `requestPerson`), so it never reaches a company user's browser. A side's name is never a
+  link.
 
 ## Pages
 
