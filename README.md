@@ -16,11 +16,15 @@ It's for staff who support several companies, such as IT service providers, agen
 consultants: the companies raise requests, and the staff work them through with them. Each company
 manages its own users, and the staff see every company.
 
-**Status:** early development. Accounts, companies, roles, invitations and sign-in security are
-built; requests, the tickets themselves, come next.
+**Status:** early development. Accounts, companies, roles, invitations, sign-in security and
+requests are built; emails about requests, assigning them and approving the work come next.
 
 ## Features
 
+- **Requests.** Companies raise requests, and both sides work each one through in one
+  conversation: replies, a status from Open to Done (or Cancelled), and a type that sets a
+  priority only the staff see. Company Admins and Clients raise, reply, close and reopen;
+  Watchers follow; the staff work on every company's requests. See [Requests](docs/requests.md).
 - **Companies and staff.** Staff add companies and invite each company's first Admin. Users can
   belong to several companies, with a role in each (Admin, Client or Watcher), and staff have their
   own roles (Admin, Manager, Finance and Support). See
@@ -51,8 +55,8 @@ built; requests, the tickets themselves, come next.
   changing; emails reach them in it. Invitations go out in the language the sender picks. See
   [Languages](docs/i18n.md).
 
-**Coming next: requests.** Companies will raise requests, comment on them and approve them, and
-follow them through with the staff. The company roles are already set up for it.
+**Coming next:** emails about requests, assigning a request to a staff member, and an approval
+step for finished work.
 
 ## Tech stack
 
@@ -117,6 +121,7 @@ The [docs](docs/README.md) go into detail, one topic each:
 | [Code style and tooling](docs/code-style.md)              | Linters, formatting, JSDoc, editor setup, Git hooks                             |
 | [CI, releases and dependencies](docs/ci-and-releases.md)  | CI, protecting `main`, security advisories, releases, dependency updates        |
 | [Companies, users and roles](docs/companies-and-roles.md) | Roles and permissions, staff screens, invitations                               |
+| [Requests](docs/requests.md)                              | Statuses, types and priorities, numbers, text, who may do what, the pages       |
 | [Sign-in and accounts](docs/authentication.md)            | Sign-in methods, sessions, account pages, security emails                       |
 | [Multi-factor authentication](docs/mfa.md)                | Second steps, who needs them, confirming sessions                               |
 | [Security measures](docs/security-measures.md)            | Audit log, rate limits, tokens, names, lock order, headers, CSP                 |

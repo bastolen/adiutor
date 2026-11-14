@@ -8,8 +8,8 @@ customers, who raise requests). Staff have a **platform role** on their account 
 and the name users see and Adiutor's default language live in the single-row `staff_settings` table
 (`src/db/schema/staff.ts`).
 **Users** can belong to several companies, with one company role (Admin, Client or Watcher) in
-each. Staff can also be members of companies. The request (ticket) features aren't built yet; the roles below are
-ready for them.
+each. Staff can also be members of companies. What each role may do with requests is in
+[Requests](requests.md).
 
 In the interface, staff screens say **users**, **companies** and **staff** (the `Staff` badge),
 and screens for company users talk about their company by name and about **requests**.
@@ -23,6 +23,8 @@ and screens for company users talk about their company by name and about **reque
 | Manage any company's users                |   ✓   |    ✓    |    –    |    –    |
 | View all companies and their users        |   ✓   |    ✓    |    ✓    |    ✓    |
 | View all users (`/admin/users`)           |   ✓   |    ✓    |    ✓    |    ✓    |
+| Work on every company's requests          |   ✓   |    ✓    |    –    |    ✓    |
+| Read every company's requests             |   ✓   |    ✓    |    ✓    |    ✓    |
 | Reset MFA, sign out, (de)activate         |   ✓   |    –    |    –    |    –    |
 | Delete user accounts                      |   ✓   |    –    |    –    |    –    |
 | View the audit log (`audit:view`)         |   ✓   |    ✓    |    –    |    –    |
@@ -49,11 +51,11 @@ Nobody can sign in as themselves or as a user who turned it off on their Securit
 can be changed while signed in as someone. See
 [Signing in as a user](authentication.md#signing-in-as-a-user).
 
-| Company                                          | Admin | Client | Watcher |
-| ------------------------------------------------ | :---: | :----: | :-----: |
-| Invite and manage users                          |   ✓   |   –    |    –    |
-| Raise, comment on and approve requests (planned) |   ✓   |   ✓    |    –    |
-| View and follow requests                         |   ✓   |   ✓    |    ✓    |
+| Company                                      | Admin | Client | Watcher |
+| -------------------------------------------- | :---: | :----: | :-----: |
+| Invite and manage users                      |   ✓   |   –    |    –    |
+| Raise requests, reply, close and reopen them |   ✓   |   ✓    |    –    |
+| View and follow the company's requests       |   ✓   |   ✓    |    ✓    |
 
 Nobody can give themselves a higher company role either (`isCompanyRoleRaise` in
 `src/lib/authz/guards.ts`): an Admin can step down to Client or Watcher while another Admin remains,
