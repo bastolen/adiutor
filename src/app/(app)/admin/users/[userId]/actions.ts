@@ -124,7 +124,10 @@ export async function reactivateUserAction(
 }
 
 /**
- * Deletes a user's account, then returns to the users list.
+ * Deletes a user's account, then returns to the users list. It refreshes
+ * before it redirects: Next drops the pages it kept alive only for an action
+ * that refreshes, so without it Back would show the deleted user's page as
+ * it was, with controls that seem to work.
  *
  * @param _previous - The previous result (unused).
  * @param formData - Fields `userId` and `confirmEmail`.
@@ -140,6 +143,7 @@ export async function deleteUserAction(
     return { ok: true };
   });
   if (result.ok) {
+    refresh();
     redirect('/admin/users?deleted=1');
   }
   return result;

@@ -138,7 +138,9 @@ async function RequestContent({
       />
 
       {/* Set by the redirect after the request was raised; not part of any link on this page. */}
-      {searchParam(query.raised) === '1' && <ToastOnArrival message={t('justRaised')} />}
+      {searchParam(query.raised) === '1' && (
+        <ToastOnArrival message={t('justRaised')} param="raised" />
+      )}
 
       {detail.company.deactivated && <Alert tone="info">{t('deactivated')}</Alert>}
 

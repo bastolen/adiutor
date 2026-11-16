@@ -99,6 +99,11 @@ keyboard support.
   their fields, busy buttons and confirmations in `useTransientState`, because they come back
   after signing out and the next person on the browser mustn't find the last user's address or
   password.
+- **A change refreshes, also when it redirects:** Next.js drops the pages it kept alive only when
+  a server action refreshes or revalidates (or sets a cookie); a `redirect()` alone leaves them as
+  they were. An action that changes something and then redirects calls `refresh()` first (raising
+  a request, deleting a user, giving a company a new URL name), or Back shows the form still
+  filled in, the list without the new row, or the page of what was just deleted.
 - **A new person means a new page load:** what's kept alive belongs to whoever was signed in, and
   React keeps a field's value even when a page comes back for someone else. So every change of who
   the browser acts as (signing in or out, starting or ending a sign-in as a user, also when it ends
@@ -286,7 +291,10 @@ keyboard support.
   as soon as their action returns, so the toast outlasts a row the refresh removes (`RowAction`'s
   `doneMessage` names the row, e.g. "Invitation to jane@adiutor.dev revoked."); `ResultAlert`
   toasts a form's result, `Alert`'s `alsoToast` an error a component shows itself, and
-  `ToastOnArrival` a confirmation that comes with a redirect ("User deleted."). An action that
+  `ToastOnArrival` a confirmation that comes with a redirect ("User deleted."): the page names the
+  query parameter that asked for it (`?deleted=1`), which leaves the address once it's toasted
+  (`history.replaceState`, keeping the other parameters and the `#section`), so a reload or a
+  copied link doesn't say it again. An action that
   ends with a full page load (`loadFresh`) leaves its toast for the next page with
   `showToastAfterLoad`, which the `Toaster` there shows once ("You're back in your own account.");
   it's kept in the tab's `sessionStorage` and counts for 30 seconds. Results to act on

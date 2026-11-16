@@ -103,13 +103,14 @@ test("an account's language: saved on the account page, kept at sign-out, winnin
   await expect(page.getByRole('combobox', { name: 'Language', exact: true })).toHaveText('Default');
   await saveAccountLanguage(page, 'Language', 'Nederlands', 'Save language');
 
-  // The page reloads in Dutch, on the Language card, and says it's saved.
-  await expect(page).toHaveURL(/\/account\?language=saved#language$/);
+  // The page reloads in Dutch, on the Language card, and says it's saved, once: what asked for
+  // that leaves the address, the card stays in it.
   await expect(page.locator('html')).toHaveAttribute('lang', 'nl-NL');
   await expect(page.getByRole('heading', { name: 'Taal', exact: true })).toBeVisible();
   await expect(toasts(page)).toContainText('Taal opgeslagen.');
+  await expect(page).toHaveURL(/\/account#language$/);
 
-  // A second change starts from that address and reloads just the same, the button usable again.
+  // A second change reloads just the same, the button usable again.
   await saveAccountLanguage(page, 'Taal', 'Español', 'Taal opslaan');
   await expect(page.locator('html')).toHaveAttribute('lang', 'es-ES');
   await expect(page.getByRole('heading', { name: 'Idioma', exact: true })).toBeVisible();

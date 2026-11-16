@@ -1,18 +1,21 @@
 /**
  * @file Tests for the user detail page's MFA reset action (without the
  * Admin's recent confirmation it sends them to the step-up page, which
- * returns to the user's page, and otherwise it resets through the service)
- * and its sign-in as the user (the same, with a strong second step).
+ * returns to the user's page, and otherwise it resets through the service),
+ * its sign-in as the user (the same, with a strong second step) and its
+ * deletion (which refreshes before it goes to the users list, so the pages
+ * Next kept alive are dropped).
  */
+import { refresh } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { startImpersonation } from '@/server/auth/impersonation';
 import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
-import { resetUserMfa } from '@/server/people/user-admin';
+import { deleteUser, resetUserMfa } from '@/server/people/user-admin';
 
-import { resetMfaAction, signInAsAction } from './actions';
+import { deleteUserAction, resetMfaAction, signInAsAction } from './actions';
 
 vi.mock('next/cache', () => ({ refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({
@@ -67,9 +70,43 @@ function signedInAs(actor: object): void {
 }
 
 beforeEach(() => {
+  vi.mocked(refresh).mockClear();
   vi.mocked(redirect).mockClear();
   vi.mocked(resetUserMfa).mockReset();
   signedInAs(confirmedAdmin);
+});
+
+describe('deleteUserAction', () => {
+  beforeEach(() => {
+    vi.mocked(deleteUser).mockReset();
+  });
+
+  it('refreshes, then goes to the users list, which confirms it', async () => {
+    await expect(
+      deleteUserAction(null, form({ userId: USER_ID, confirmEmail: 'sam@adiutor.test' })),
+    ).rejects.toThrow('NEXT_REDIRECT');
+
+    expect(deleteUser).toHaveBeenCalledWith(
+      { name: 'app context' },
+      confirmedAdmin,
+      USER_ID,
+      'sam@adiutor.test',
+    );
+    expect(redirect).toHaveBeenCalledExactlyOnceWith('/admin/users?deleted=1');
+    // A redirect alone would leave the deleted user's page for Back to show.
+    expect(refresh).toHaveBeenCalledBefore(vi.mocked(redirect));
+  });
+
+  it('says why a deletion was refused, and stays on the page as it is', async () => {
+    vi.mocked(deleteUser).mockRejectedValue(new ServiceError('forbidden', 'errors.forbidden'));
+
+    expect(
+      await deleteUserAction(null, form({ userId: USER_ID, confirmEmail: 'sam@adiutor.test' })),
+    ).toMatchObject({ ok: false });
+
+    expect(refresh).not.toHaveBeenCalled();
+    expect(redirect).not.toHaveBeenCalled();
+  });
 });
 
 describe('resetMfaAction', () => {

@@ -57,7 +57,7 @@ async function Settings({
 
   return (
     <>
-      {saved && <ToastOnArrival message={t('saved')} />}
+      {saved && <ToastOnArrival message={t('saved')} param="saved" />}
       <Card title={t('details.title')} description={t('details.description')}>
         <ClientMessages namespaces={['companies.settings.form']}>
           <CompanyForm companyId={company.id} name={company.name} slug={company.slug} />

@@ -306,9 +306,9 @@ test('someone at a company raises a request, which the staff then find', async (
   await page.getByRole('option', { name: /^Bug/ }).click();
   await page.getByRole('button', { name: 'Raise request' }).click();
 
-  // It opens on its own page, which says so once.
-  await expect(page).toHaveURL(/\/requests\/\d+\?raised=1$/);
+  // It opens on its own page, which says so once: the address doesn't ask for it again.
   await expect(toasts(page)).toContainText('Request raised.');
+  await expect(page).toHaveURL(/\/requests\/\d+$/);
   await expect(
     page.getByRole('heading', { level: 1, name: 'The coffee machine app is offline' }),
   ).toBeVisible();
@@ -319,6 +319,18 @@ test('someone at a company raises a request, which the staff then find', async (
   await expect(detail(page, 'Type')).toHaveText('Bug');
   await expect(detail(page, 'Raised by')).toContainText('You');
   const number = new URL(page.url()).pathname.split('/').pop();
+
+  // Back finds the form empty, not filled in and ready to raise the request a second time,
+  // and the list before it with the new request: neither page is shown as it was kept.
+  await page.goBack();
+  await expect(page).toHaveURL('/requests/new');
+  await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue('');
+  await expect(page.getByRole('textbox', { name: 'Description' })).toHaveValue('');
+  await page.goBack();
+  await expect(page).toHaveURL('/requests');
+  await expect(
+    requestRows(page).filter({ hasText: 'The coffee machine app is offline' }).first(),
+  ).toContainText(`AD-${number}`);
   await signOut(page);
 
   // The staff find it at the top of the list, with the priority its type gave it.
@@ -353,12 +365,24 @@ test('the staff raise a request for a company and choose its priority', async ({
   await page.getByRole('option', { name: 'High' }).click();
   await page.getByRole('button', { name: 'Raise request' }).click();
 
-  await expect(page).toHaveURL(/\/requests\/\d+\?raised=1$/);
+  await expect(toasts(page)).toContainText('Request raised.');
+  await expect(page).toHaveURL(/\/requests\/\d+$/);
   await expect(detail(page, 'Priority')).toHaveText('High');
   await expect(detail(page, 'Company')).toHaveText(COMPANY_NAME);
   // Raised by the staff, so there's no first response to wait for.
   await expect(detail(page, 'Raised by')).toContainText(STAFF_NAME);
   await expect(page.getByRole('region', { name: 'Details' })).not.toContainText('First response');
+
+  // Loading the page again doesn't say it was raised a second time. The dialog opens once the
+  // page works again, which is when a toast would have come.
+  await page.reload();
+  await expect(detail(page, 'Priority')).toHaveText('High');
+  await page.getByRole('button', { name: 'Edit details' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Edit this request’s details' });
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(toasts(page).getByText('Request raised.')).toHaveCount(0);
 });
 
 test('nobody raises a request who may not: a Watcher and Finance get no form', async ({ page }) => {

@@ -157,7 +157,7 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
         }
       />
 
-      {deleted && <ToastOnArrival message={t('deleted')} />}
+      {deleted && <ToastOnArrival message={t('deleted')} param="deleted" />}
 
       <div className="flex flex-col gap-4">
         <SearchForm
