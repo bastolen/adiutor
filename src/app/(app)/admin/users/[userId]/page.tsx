@@ -216,6 +216,7 @@ async function UserDetailContent({
           userId={detail.id}
           userName={userName}
           isSelf={isSelf}
+          userDeactivated={detail.deactivatedAt !== null}
           companies={detail.companies}
           table={companiesTable}
           canManageMembers={canManageMembers}

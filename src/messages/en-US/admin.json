@@ -116,7 +116,8 @@
           "description": "They become a member right away, with the role you choose, and get an email.",
           "confirmLabel": "Add to company",
           "company": "Company",
-          "role": "Role"
+          "role": "Role",
+          "accountDeactivated": "This account is deactivated, so it can't be added to a company. Reactivate it first."
         },
         "caption": "Companies of {name}",
         "columns": {

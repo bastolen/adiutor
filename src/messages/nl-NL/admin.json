@@ -116,7 +116,8 @@
           "description": "Diegene wordt meteen lid, met de rol die je kiest, en krijgt een e-mail.",
           "confirmLabel": "Aan bedrijf toevoegen",
           "company": "Bedrijf",
-          "role": "Rol"
+          "role": "Rol",
+          "accountDeactivated": "Dit account is gedeactiveerd, dus het kan niet aan een bedrijf worden toegevoegd. Activeer het eerst opnieuw."
         },
         "caption": "Bedrijven van {name}",
         "columns": {

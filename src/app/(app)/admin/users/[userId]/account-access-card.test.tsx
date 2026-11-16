@@ -3,21 +3,28 @@
  * disabled (and says why) when there's nothing to reset, its dialog mentions
  * GitHub and Google only when accounts are connected and offers to remove
  * the passkeys, and the account can be deactivated or reactivated by its
- * state.
+ * state. A reset needs a recent confirmation, so without one Reset sends
+ * the Admin to the step-up page instead of opening its dialog.
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
+import confirmChangeUrl from '@/lib/sign-in/confirm-url';
 import type { UserDetail } from '@/server/people/user-admin';
 
 import AccountAccessCard from './account-access-card';
 
-/** Mocked server actions. */
-const { deactivateUserAction, reactivateUserAction, resetMfaAction } = vi.hoisted(() => ({
+/** The step-up page, coming back to this card on the user's page. */
+const CONFIRM_URL = confirmChangeUrl('/admin/users/user-1#account-access');
+
+/** Mocked server actions and the router's `push`. */
+const { deactivateUserAction, reactivateUserAction, resetMfaAction, push } = vi.hoisted(() => ({
   deactivateUserAction: vi.fn(),
   reactivateUserAction: vi.fn(),
   resetMfaAction: vi.fn(),
+  push: vi.fn(),
 }));
 
 vi.mock('./actions', () => ({ deactivateUserAction, reactivateUserAction, resetMfaAction }));
@@ -26,10 +33,14 @@ vi.mock('next/navigation', () => ({
   /**
    * Mocked router.
    *
-   * @returns The router.
+   * @returns A router whose `push` is recorded.
    */
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ push, refresh: vi.fn() }),
 }));
+
+beforeEach(() => {
+  push.mockReset();
+});
 
 /** A user with only a password. */
 const PASSWORD_ONLY: UserDetail['mfa'] = {
@@ -110,6 +121,59 @@ describe('AccountAccessCard', () => {
 
     await user.click(screen.getByRole('button', { name: 'Reset' }));
     expect(screen.getByRole('checkbox', { name: label })).not.toBeChecked();
+  });
+
+  describe('on a page that needs a recent confirmation', () => {
+    /**
+     * Renders the card of a user with two-step verification and a passkey,
+     * for an Admin whose changes need a recent confirmation.
+     *
+     * @param windowOpen - Whether the Admin confirmed it's them in the last 15 minutes.
+     */
+    function renderForAdmin(windowOpen: boolean) {
+      const serverTime = Date.now();
+      render(
+        <RecentConfirmationProvider
+          required
+          confirmedUntil={windowOpen ? serverTime + 10 * 60 * 1000 : null}
+          serverTime={serverTime}
+          returnTo="/admin/users/user-1"
+        >
+          <AccountAccessCard
+            userId="user-1"
+            userName="Ada Tester"
+            mfa={{ ...PASSWORD_ONLY, twoFactorEnabled: true, passkeyCount: 1 }}
+            connectedAccounts={0}
+            deactivatedAt={null}
+          />
+        </RecentConfirmationProvider>,
+      );
+    }
+
+    it('sends the Admin to confirm it’s them before the reset dialog opens', async () => {
+      const user = userEvent.setup();
+      renderForAdmin(false);
+
+      await user.click(screen.getByRole('button', { name: 'Reset' }));
+
+      // Before anything is chosen in the dialog, so no choice is lost; back to this card.
+      expect(push).toHaveBeenCalledWith(CONFIRM_URL);
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(resetMfaAction).not.toHaveBeenCalled();
+    });
+
+    it('opens the reset dialog within the confirmation window', async () => {
+      const user = userEvent.setup();
+      renderForAdmin(true);
+
+      await user.click(screen.getByRole('button', { name: 'Reset' }));
+
+      expect(
+        screen.getByRole('dialog', { name: 'Reset two-step verification for Ada Tester?' }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: 'Also remove their passkey' })).not.toBeChecked();
+      expect(push).not.toHaveBeenCalled();
+    });
   });
 
   it('offers to deactivate an active account', () => {

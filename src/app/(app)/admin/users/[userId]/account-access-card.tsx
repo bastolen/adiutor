@@ -2,7 +2,9 @@
  * @file The "Account access" card on the user detail page, for Admins
  * (`users:manage`) on someone else's page: reset two-step verification (which
  * also disconnects their GitHub and Google accounts, and can remove their
- * passkeys), and deactivate or reactivate the account. Text from
+ * passkeys), and deactivate or reactivate the account. A reset needs the
+ * Admin's confirmation with their own second step from the last 15 minutes,
+ * so its button sends them to confirm before its dialog opens. Text from
  * `admin.user.accountAccess`.
  */
 import { useTranslations } from 'next-intl';
@@ -63,7 +65,11 @@ interface AccountAccessCardProps {
 }
 
 /**
- * The controls over the user's account access.
+ * The controls over the user's account access. "Reset" asks the Admin to
+ * confirm it's them first when they haven't lately (`confirmFirst`), before
+ * its dialog opens: asked only once the dialog is submitted (the action's
+ * own check, which stays as the backstop), the choice made in it, removing
+ * the passkeys too, was lost on the way.
  *
  * @param props - Component props.
  * @param props.userId - The user's ID.
@@ -99,6 +105,8 @@ export default function AccountAccessCard({
             focusableWhenDisabled
             action={resetMfaAction}
             fields={fields}
+            // A reset needs a recent confirmation: ask before the dialog opens, not after its choice.
+            confirmFirst
             triggerLabel={t('reset.label')}
             title={t('reset.dialogTitle', { name: userName })}
             description={

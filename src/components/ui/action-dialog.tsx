@@ -65,6 +65,12 @@ interface ActionDialogProps {
    */
   focusableWhenDisabled?: boolean;
   /**
+   * ID of the text that explains the opening button, e.g. why it's turned
+   * off (its `aria-describedby`). With `focusableWhenDisabled`, a keyboard or
+   * screen-reader user reaches the button and hears the reason.
+   */
+  describedBy?: string;
+  /**
    * Runs when the opening button is clicked, before the dialog opens; call
    * `event.preventDefault()` to keep it closed (e.g. to send the user to
    * confirm it's them first).
@@ -182,6 +188,7 @@ function ActionDialogForm({
  * @param props.children - Form fields.
  * @param props.disabled - Disable the opening button.
  * @param props.focusableWhenDisabled - Keep the opening button focusable while disabled.
+ * @param props.describedBy - ID of the text that explains the opening button.
  * @param props.onTriggerClick - Runs before the dialog opens; can keep it closed.
  * @param props.confirmFirst - Send the user to confirm it's them first when needed.
  * @param props.allowedWhileSignedInAs - Keep it enabled while signed in as the user (their own work).
@@ -200,6 +207,7 @@ export default function ActionDialog({
   children = undefined,
   disabled = false,
   focusableWhenDisabled = false,
+  describedBy = undefined,
   onTriggerClick = undefined,
   confirmFirst = false,
   allowedWhileSignedInAs = false,
@@ -265,6 +273,7 @@ export default function ActionDialog({
         disabled={disabled || changesOff}
         // Signed in as a user, it's off for good: only its own disabling keeps focus.
         focusableWhenDisabled={focusableWhenDisabled && !changesOff}
+        aria-describedby={describedBy}
         onClick={(event) => {
           onTriggerClick?.(event);
           if (event.defaultPrevented) {

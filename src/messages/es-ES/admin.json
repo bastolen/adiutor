@@ -116,7 +116,8 @@
           "description": "Pasa a ser miembro de inmediato, con el rol que elijas, y recibe un correo.",
           "confirmLabel": "Añadir a empresa",
           "company": "Empresa",
-          "role": "Rol"
+          "role": "Rol",
+          "accountDeactivated": "Esta cuenta está desactivada, así que no se puede añadir a una empresa. Reactívala primero."
         },
         "caption": "Empresas de {name}",
         "columns": {

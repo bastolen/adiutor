@@ -73,6 +73,36 @@ describe('ActionDialog', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('points its button to the text that explains it', () => {
+    render(
+      <>
+        <ActionDialog
+          action={vi.fn()}
+          triggerLabel="Add to company"
+          title="Add Jane to a company"
+          description="She becomes a member right away."
+          confirmLabel="Add to company"
+          disabled
+          focusableWhenDisabled
+          describedBy="why-off"
+        />
+        <p id="why-off">This account is deactivated. Reactivate it first.</p>
+      </>,
+    );
+
+    const button = screen.getByRole('button', { name: 'Add to company' });
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    expect(button).toHaveAccessibleDescription('This account is deactivated. Reactivate it first.');
+  });
+
+  it('has no description unless it’s given one', () => {
+    render(<ResetMfa nothingLeft={false} />);
+
+    expect(screen.getByRole('button', { name: 'Reset two-step verification' })).not.toHaveAttribute(
+      'aria-describedby',
+    );
+  });
+
   it('is disabled all the same while signed in as a user', () => {
     render(
       <>

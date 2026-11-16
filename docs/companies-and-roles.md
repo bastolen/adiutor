@@ -153,7 +153,10 @@ Admins and Managers who aren't members can still add themselves with any role, a
   - **Companies:** Admins and Managers (`members:manage` in companies) add the user to a company
     right away with a role (they get an email), change their role there, and remove them, with the
     same last-Admin rule and the same security emails as a company's Members page (see
-    [Changing roles and removing people](#changing-roles-and-removing-people)).
+    [Changing roles and removing people](#changing-roles-and-removing-people)). The card offers
+    only what the services allow: a membership of a deactivated company shows its role as a badge
+    and nothing to press, as that company's Members page does, and "Add to company" is turned off
+    for a deactivated account, with the reason below it (`describedBy`).
   - **Staff access** (Admins, `staff:manage`): make the user staff with a role, change it, or remove
     it, with the last-staff-Admin rule; the user gets a security email. Removing it also revokes the
     open staff invitations addressed to them. Admins and Managers must set up a second sign-in step
@@ -167,7 +170,8 @@ Admins and Managers who aren't members can still add themselves with any role, a
   Admins can also (each confirmed in a dialog, logged and emailed to the user):
   - **reset two-step verification** for a lost phone (optionally removing passkeys too), which
     also disconnects their GitHub and Google accounts and needs the Admin's confirmation with
-    their own second step from the last 15 minutes (see [Locked out](mfa.md#locked-out));
+    their own second step from the last 15 minutes, which the button asks for before its dialog
+    opens (see [Locked out](mfa.md#locked-out));
   - **sign the user out everywhere** (which also forgets the devices they trusted);
   - **deactivate or reactivate** the account;
   - **delete** the account, after typing its email address. Memberships, sign-in methods and

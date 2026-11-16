@@ -190,7 +190,11 @@ keyboard support.
   turns off once the page refreshes, such as "Sign out other devices" with none left, "Reset
   two-step verification" with nothing left to reset or "Add to company" for the last company:
   `RowAction` and `ActionDialog` take `focusableWhenDisabled` and hand it on (while signed in as a
-  user they're disabled all the same). Destructive actions ask
+  user they're disabled all the same). Both take `describedBy` too, the ID of the text that says
+  why a button is off, so someone who reaches it with the keyboard hears the reason ("Add to
+  company" for a deactivated account). Don't offer a control whose only outcome is a refusal:
+  leave it out (a deactivated company's memberships have no role select or Remove) or turn it off
+  with its reason. Destructive actions ask
   for confirmation in a `ConfirmDialog`. A role select only saves when an option is picked (Enter or click), never while
   arrowing through the list; on the user's own row it asks first (`confirmChange`, with the
   question for each role worded by the page, e.g. "Step down to Manager?"), and cancelling puts it
