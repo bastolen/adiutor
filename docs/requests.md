@@ -29,7 +29,7 @@ Four permissions in the request's company (`src/lib/authz/permissions.ts`):
 
 | Permission               | What it allows                                                               | Who has it                                         |
 | ------------------------ | ---------------------------------------------------------------------------- | -------------------------------------------------- |
-| `requests:view`          | See the company's requests and their conversations                           | Everyone in the company, and every staff role      |
+| `requests:view`          | See the company's requests and their conversations                           | Everyone in an active company; every staff role    |
 | `requests:contribute`    | Raise requests, reply, mark a request done, cancel it and reopen it          | Company Admin and Client; staff who work on them   |
 | `requests:manage`        | Work on requests as the staff: any status, the title, the type, the priority | Staff Admin, Manager and Support                   |
 | `requests:view-internal` | See what only the staff see: today the priority                              | Every staff role (Finance reads, but doesn't work) |
@@ -38,8 +38,10 @@ Four permissions in the request's company (`src/lib/authz/permissions.ts`):
 - **Finance** reads every company's requests, with the priority, and changes nothing. A staff
   member who can't work on requests but is a Client of a company takes part there as the company.
 - A request someone may not see is "not found" to them, like a company they may not see.
-- A **deactivated company's** requests can only be read, by everyone. They stay on the company's
-  own page and under All, and leave the Active and Waiting lists that cover several companies.
+- A **deactivated company's** requests can only be read, and only by the staff: its members lose
+  access, so its requests are "not found" to them (see
+  [Companies and roles](companies-and-roles.md)). For the staff they stay on the company's own
+  page and under All, and leave the Active and Waiting lists that cover several companies.
 - While a staff member is **signed in as a user**, request pages can be read and every change is
   refused (`assertNotSignedInAs`, see [Signing in as a user](authentication.md#signing-in-as-a-user)).
 - The services check all of this themselves (`src/server/requests/`), and every operation has a

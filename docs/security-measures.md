@@ -145,8 +145,12 @@ relative paths that pass: the redirect targets they read from the URL go through
 
 Invitation and invite-link tokens, and Better Auth's reset, welcome and magic links and
 emailed codes, are stored as SHA-256 hashes (sign-in links with the app's own hasher,
-`hashEmailLinkToken` in `src/lib/sign-in/tokens.ts`, so the page they open can look them up). Emails are sent after the response, so its timing
-doesn't reveal which addresses have an account.
+`hashEmailLinkToken` in `src/lib/sign-in/tokens.ts`, so the page they open can look them up).
+
+Emails are sent after the response, so no answer waits for the mail server, whether or not the
+address has an account. What's left of the difference is Better Auth's own work before it answers
+a password reset request: it stores the link's token for an address with an account and does a
+lookup in its place for one without, a few milliseconds either way.
 
 Session cookies are signed, so the database alone gives no usable session; see
 [Sessions](authentication.md#sessions).

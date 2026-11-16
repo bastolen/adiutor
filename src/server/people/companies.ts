@@ -96,8 +96,8 @@ export async function listCompanies(
  * @param input.name - Company name.
  * @param input.slug - URL name; must be unique.
  * @param input.adminEmail - Email address of the company's first admin.
- * @param input.locale - The language of their invitation; by default the request's, else English
- *   (US). An Admin who has an account with a saved language gets that instead.
+ * @param input.locale - The language of their invitation; by default Adiutor's default language,
+ *   else English (US). An Admin who has an account with a saved language gets that instead.
  * @returns The new company's ID and URL name, and the invitation status.
  * @throws {ServiceError} `forbidden` without `company:create` (also when it's gone by the time the
  *   change is made), `rate_limited` when the actor has sent too many invitations

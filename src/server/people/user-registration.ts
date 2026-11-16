@@ -54,8 +54,8 @@ export type RegisterResult =
  * @param rawEmail - The email address.
  * @param options - How to set the account up.
  * @param options.locale - The new user's language: saved as theirs (`user.locale`) and used for
- *   the welcome email. Without it, nothing is saved and the email is in the request's language,
- *   else English (US).
+ *   the welcome email. Without it, nothing is saved and the email is in Adiutor's default
+ *   language, else English (US).
  * @returns What happened.
  * @throws {ServiceError} `forbidden` without `users:create`, `rate_limited` when sending too many.
  */

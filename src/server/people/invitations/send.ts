@@ -36,8 +36,8 @@ import { assertCanManage, assertInvitable, assertInviteRateLimits, visibleStatus
  * @param input.companyId - The company, or `null` for staff.
  * @param input.email - The email address to invite.
  * @param input.role - The role to give.
- * @param input.locale - The invitation's language; by default the request's, else English (US).
- *   An invitee who has an account with a saved language gets that instead.
+ * @param input.locale - The invitation's language; by default Adiutor's default language, else
+ *   English (US). An invitee who has an account with a saved language gets that instead.
  * @returns The status the actor may see (see {@link visibleStatus}).
  */
 export async function inviteByEmail(
