@@ -75,7 +75,9 @@ Admins and Managers who aren't members can still add themselves with any role, a
   [The last Admin, at the same moment](#staff-screens)).
 - **Authorization matrix:** `src/server/authorization-matrix.int.test.ts` checks every role against
   every service behind a server action, and the page loaders that check roles, on their own
-  company, another company, the staff and another user, down to the kind of refusal. The own-account
+  company, another company, the staff and another user, down to the kind of refusal. What a role
+  is allowed must also succeed: any other refusal (invalid input, a missing confirmation, a limit)
+  fails the matrix unless the operation's row names it. The own-account
   services that take an ID (`revokeOwnSession`, `confirmConnectedProvider`) are tried with another
   user's ID; password changes, which need a second step, are covered in
   `src/server/auth/accounts.int.test.ts`. It also tries every operation with a staff member signed
