@@ -91,6 +91,8 @@ export default function CompaniesCard({
               // Stays (disabled) when there's no company left, so its last message stays visible.
               <ActionDialog
                 disabled={addable.length === 0}
+                // Adding the last company leaves none to add; it keeps focus then.
+                focusableWhenDisabled
                 action={addMemberAction}
                 fields={{ userId }}
                 triggerLabel={t('add.label')}

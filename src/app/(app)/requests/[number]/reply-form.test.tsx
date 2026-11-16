@@ -74,6 +74,41 @@ describe('ReplyForm', () => {
     expect(sent()).toEqual({ request: '142', body: 'Which days change?', status: 'waiting' });
   });
 
+  it.each([
+    ['Send reply', 'Send and wait for the company'],
+    ['Send and wait for the company', 'Send reply'],
+  ])('makes only %s busy while it sends, and disables the other', async (pressed, other) => {
+    /**
+     * Ends the running reply with a result; replaced by the promise's own resolver below.
+     *
+     * @returns Nothing.
+     */
+    let finish: (result: { ok: boolean; message: string }) => void = () => undefined;
+    vi.mocked(replyAction).mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const user = userEvent.setup();
+    render(<ReplyForm request={142} canWait />);
+
+    await user.type(screen.getByRole('textbox', { name: 'Your reply' }), 'On it.');
+    await user.click(screen.getByRole('button', { name: pressed }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: pressed })).toHaveAttribute('aria-busy', 'true'),
+    );
+    expect(screen.getByRole('button', { name: pressed })).toHaveFocus();
+    expect(screen.getByRole('button', { name: other })).toBeDisabled();
+    expect(screen.getByRole('button', { name: other })).not.toHaveAttribute('aria-busy');
+
+    await act(async () => {
+      finish({ ok: false, message: 'This request is closed.' });
+    });
+    expect(screen.getByRole('button', { name: pressed })).not.toHaveAttribute('aria-busy');
+    expect(screen.getByRole('button', { name: other })).toBeEnabled();
+  });
+
   it('sends no status with the first button, also when the second is offered', async () => {
     vi.mocked(replyAction).mockResolvedValue({ ok: true, message: 'Reply sent.' });
     const user = userEvent.setup();

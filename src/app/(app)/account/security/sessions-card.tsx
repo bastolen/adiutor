@@ -61,6 +61,8 @@ export default function SessionsCard({ sessions, table, currentSessionId }: Sess
             action={revokeOtherSessionsAction}
             label={t('security.sessions.signOutOthers')}
             disabled={others <= 0}
+            // Its own action leaves no other device; it keeps focus then.
+            focusableWhenDisabled
             confirm={{
               title: t('security.sessions.signOutOthersTitle'),
               description: t('security.sessions.signOutOthersDescription'),

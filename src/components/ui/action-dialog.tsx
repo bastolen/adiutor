@@ -57,6 +57,14 @@ interface ActionDialogProps {
   /** Disables the opening button, e.g. when there's nothing to act on. */
   disabled?: boolean;
   /**
+   * While `disabled`, keep the opening button focusable and ignoring presses
+   * (`Button`'s `focusableWhenDisabled`), for one that its own action
+   * disables, such as "Reset two-step verification" once nothing is left to
+   * reset: a disabled button would lose keyboard focus after the refresh.
+   * Signed in as a user, it's disabled all the same.
+   */
+  focusableWhenDisabled?: boolean;
+  /**
    * Runs when the opening button is clicked, before the dialog opens; call
    * `event.preventDefault()` to keep it closed (e.g. to send the user to
    * confirm it's them first).
@@ -171,6 +179,7 @@ function ActionDialogForm({
  * @param props.tone - Submit button style.
  * @param props.children - Form fields.
  * @param props.disabled - Disable the opening button.
+ * @param props.focusableWhenDisabled - Keep the opening button focusable while disabled.
  * @param props.onTriggerClick - Runs before the dialog opens; can keep it closed.
  * @param props.confirmFirst - Send the user to confirm it's them first when needed.
  * @param props.allowedWhileSignedInAs - Keep it enabled while signed in as the user (their own work).
@@ -188,6 +197,7 @@ export default function ActionDialog({
   tone = 'danger',
   children = undefined,
   disabled = false,
+  focusableWhenDisabled = false,
   onTriggerClick = undefined,
   confirmFirst = false,
   allowedWhileSignedInAs = false,
@@ -251,6 +261,8 @@ export default function ActionDialog({
         variant={triggerVariant}
         size="sm"
         disabled={disabled || changesOff}
+        // Signed in as a user, it's off for good: only its own disabling keeps focus.
+        focusableWhenDisabled={focusableWhenDisabled && !changesOff}
         onClick={(event) => {
           onTriggerClick?.(event);
           if (event.defaultPrevented) {

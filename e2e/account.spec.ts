@@ -137,13 +137,20 @@ test('a user signs out their other devices, which also forgets trusted browsers'
   const devices = page.getByRole('table', { name: 'Your signed-in devices' });
   await expect(devices.getByRole('row')).toHaveCount(3);
   await expect(devices.getByText('This device')).toBeVisible();
-  await page.getByRole('button', { name: 'Sign out other devices' }).click();
+  const signOutOthers = page
+    .getByRole('main')
+    .getByRole('button', { name: 'Sign out other devices' });
+  await signOutOthers.focus();
+  await page.keyboard.press('Enter');
   await page
     .getByRole('alertdialog')
     .getByRole('button', { name: 'Sign out other devices' })
     .click();
   await expect(toasts(page)).toContainText('Signed out on 1 other device.');
   await expect(devices.getByRole('row')).toHaveCount(2);
+  // No other device is left, so the button is off, yet it keeps focus: disabled, it would drop it.
+  await expect(signOutOthers).toHaveAttribute('aria-disabled', 'true');
+  await expect(signOutOthers).toBeFocused();
 
   await other.goto('/dashboard');
   await expect(other).toHaveURL(/\/auth/);

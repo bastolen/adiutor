@@ -68,6 +68,8 @@ export default function DevicesCard({
                 fields={{ userId }}
                 label={t('signOut.label')}
                 disabled={sessions.total === 0}
+                // Its own action leaves nothing to sign out; it keeps focus then.
+                focusableWhenDisabled
                 confirm={{
                   title: t('signOut.title', { name: userName }),
                   description: t('signOut.description'),

@@ -118,10 +118,13 @@ describe('CompaniesCard', () => {
     expect(screen.getByRole('button', { name: 'Add to company' })).toBeEnabled();
   });
 
-  it('disables Add to company when no company is left', () => {
+  it('turns Add to company off when no company is left, keeping it focusable', () => {
     renderCard({ addable: [] });
 
-    expect(screen.getByRole('button', { name: 'Add to company' })).toBeDisabled();
+    // Adding the last company turns it off: focus must stay on it.
+    const add = screen.getByRole('button', { name: 'Add to company' });
+    expect(add).toHaveAttribute('aria-disabled', 'true');
+    expect(add).toBeEnabled();
   });
 
   it('words adding and removing for the viewer on their own page', async () => {

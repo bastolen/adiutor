@@ -46,6 +46,14 @@ interface RowActionProps {
    */
   disabled?: boolean;
   /**
+   * While `disabled`, stay focusable and ignore presses instead
+   * (`Button`'s `focusableWhenDisabled`), for a button that its own action
+   * disables, such as "Sign out other devices" once none is left: a disabled
+   * button would lose keyboard focus after the refresh. Signed in as a user,
+   * it's disabled all the same.
+   */
+  focusableWhenDisabled?: boolean;
+  /**
    * Runs when the button is clicked, before the action or its confirmation
    * dialog starts; call `event.preventDefault()` to stop it (e.g. to send the
    * user to confirm it's them first).
@@ -83,6 +91,7 @@ interface RowActionProps {
  * @param props.variant - Button style.
  * @param props.confirm - Confirmation dialog text.
  * @param props.disabled - Disable the button.
+ * @param props.focusableWhenDisabled - Keep it focusable while disabled.
  * @param props.onClick - Runs on click, before the action starts.
  * @param props.describedBy - ID of the text that explains the button.
  * @param props.doneMessage - The toast after it worked; defaults to the action's message.
@@ -97,6 +106,7 @@ export default function RowAction({
   variant = 'secondary',
   confirm = undefined,
   disabled = false,
+  focusableWhenDisabled = false,
   onClick = undefined,
   describedBy = undefined,
   doneMessage = undefined,
@@ -143,6 +153,8 @@ export default function RowAction({
       size="sm"
       loading={pending}
       disabled={disabled || changesOff}
+      // Signed in as a user, it's off for good: only its own disabling keeps focus.
+      focusableWhenDisabled={focusableWhenDisabled && !changesOff}
       aria-label={ariaLabel}
       aria-describedby={describedBy}
       onClick={onClick}

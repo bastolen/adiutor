@@ -71,10 +71,12 @@ function renderCard({
 }
 
 describe('AccountAccessCard', () => {
-  it('disables Reset and says why when there is nothing to reset', () => {
+  it('turns Reset off and says why when there is nothing to reset', () => {
     renderCard();
 
-    expect(screen.getByRole('button', { name: 'Reset' })).toBeDisabled();
+    // Off but focusable: its own action leaves nothing to reset, and focus must stay on it.
+    expect(screen.getByRole('button', { name: 'Reset' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: 'Reset' })).toBeEnabled();
     expect(screen.getByText(/^Nothing to reset:/)).toBeInTheDocument();
   });
 

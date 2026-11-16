@@ -95,6 +95,8 @@ export default function AccountAccessCard({
         >
           <ActionDialog
             disabled={!hasSomethingToReset}
+            // Its own action leaves nothing to reset; it keeps focus then.
+            focusableWhenDisabled
             action={resetMfaAction}
             fields={fields}
             triggerLabel={t('reset.label')}
