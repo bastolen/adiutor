@@ -72,6 +72,7 @@ export const request = pgTable(
     createdBy: uuid('created_by').references(() => user.id, { onDelete: 'set null' }),
     /** Which side raised it: someone at the company, or the staff for the company. */
     createdBySide: text('created_by_side', { enum: REQUEST_SIDES }).notNull(),
+    /** When it was raised: the moment its number was taken (`raiseRequest`), not this default. */
     createdAt: createdAt(),
     /** When it was raised, replied to or changed last: what lists sort by. */
     lastActivityAt: timestampTz('last_activity_at').defaultNow().notNull(),
@@ -114,6 +115,11 @@ export const requestEntry = pgTable(
     fromValue: text('from_value'),
     /** What a change set; `null` for a reply. */
     toValue: text('to_value'),
+    /**
+     * When it was written. The services set the moment of the change (the
+     * clock once the request is locked), not this default, which is when the
+     * transaction started: an entry that waited for another would seem older.
+     */
     createdAt: createdAt(),
   },
   (table) => [

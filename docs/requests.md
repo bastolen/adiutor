@@ -152,7 +152,14 @@ the closed statuses.
   Every change refuses someone signed in as a user, checks the permission and that the company is
   active, validates, takes a rate limit (see [Rate limits](security-measures.md#rate-limits)), then
   runs in a transaction that starts with `assertStillManages` and locks the request's row (see
-  [Lock order](security-measures.md#lock-order)).
+  [Lock order](security-measures.md#lock-order)). That transaction refuses again when the company
+  was deactivated meanwhile, which the staff's rights don't depend on; the company's row isn't
+  locked (company rows come first in the lock order), so this narrows the moment in which a change
+  can land just after a deactivation, without closing it.
+- Times come from the database's clock at the moment something is written (`clock_timestamp()`,
+  `CHANGE_MOMENT`), not from the start of its transaction: a reply that waited for another change
+  to the same request is timed after it, as the conversation shows it. A new request's two times
+  (raised, last activity) are one reading, taken with its number.
 - Request work writes **no audit events**: the request's own conversation is the record, and
   nothing in it is a change of sign-in, role or account.
 - `src/app/(app)/_requests/`: what the request pages share (the list, the badges, the text, the

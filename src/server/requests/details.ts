@@ -69,6 +69,7 @@ export default async function updateRequestDetails(
         requestId: locked.id,
         authorId: actor.id,
         authorSide: 'staff' as const,
+        createdAt: CHANGE_MOMENT,
       })),
     );
     // The company sees the title and the type change, never the priority.

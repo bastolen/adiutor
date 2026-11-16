@@ -222,6 +222,19 @@ export interface LockedUser {
   deactivatedAt: Date | null;
 }
 
+/** What {@link assertStillManages} found inside the change's transaction. */
+export interface StillManaged {
+  /** The locked user rows, by ID (the actor's and `alsoLock`'s that still exist). */
+  users: Map<string, LockedUser>;
+  /**
+   * When the company acted on was deactivated, as the transaction read it
+   * (not locked); `null` while it's active, and for the staff. For changes a
+   * deactivated company refuses from everyone, the staff included, whose
+   * rights don't depend on it: a request's (`changeRequest`, `raiseRequest`).
+   */
+  companyDeactivatedAt: Date | null;
+}
+
 /** Options for {@link assertStillManages}. */
 export interface StillManagesOptions {
   /**
@@ -265,6 +278,15 @@ export interface StillManagesOptions {
  * company's own row is read, not locked: deactivating a company revokes
  * nothing, so acting just before it is no different.
  *
+ * What it read of the company is handed back (`companyDeactivatedAt`), so a
+ * change that a deactivated company refuses from the staff too can refuse
+ * on it without reading the row again. That narrows the time in which such a
+ * change can still land after a deactivation to the rest of its
+ * transaction; it doesn't close it. Closing it would take a lock on the
+ * company's row, and company rows are locked before user rows (see "Lock
+ * order" in `docs/security-measures.md`): taking one here, after the user
+ * rows, would invite deadlocks.
+ *
  * @param tx - The change's transaction.
  * @param actor - The acting user, as the request loaded them.
  * @param companyId - The company acted on (an ID already checked), or `null` for staff.
@@ -272,7 +294,7 @@ export interface StillManagesOptions {
  * @param options - Options.
  * @param options.asStaff - Check staff rights only (see {@link StillManagesOptions}).
  * @param options.alsoLock - Other users to lock with the actor (see {@link StillManagesOptions}).
- * @returns The locked user rows, by ID (the actor's and `alsoLock`'s that still exist).
+ * @returns The locked user rows, and when the company was deactivated, as read just now.
  * @throws {ServiceError} `forbidden` when the actor is gone, deactivated or without the permission
  *   by now; `not_found` when the company is gone.
  */
@@ -282,7 +304,7 @@ export async function assertStillManages(
   companyId: string | null,
   permission: Permission,
   { asStaff = false, alsoLock = [] }: StillManagesOptions = {},
-): Promise<Map<string, LockedUser>> {
+): Promise<StillManaged> {
   // One statement, in ID order: the actor and anyone the change is about.
   const rows = await tx
     .select({ id: user.id, platformRole: user.platformRole, deactivatedAt: user.deactivatedAt })
@@ -302,6 +324,7 @@ export async function assertStillManages(
   }
 
   let permissions: Set<Permission>;
+  let companyDeactivatedAt: Date | null = null;
   if (companyId === null) {
     permissions = getPermissions({
       platformRole: self.platformRole,
@@ -324,12 +347,13 @@ export async function assertStillManages(
     if (!found) {
       throw notFoundError();
     }
+    companyDeactivatedAt = found.deactivatedAt;
     permissions = getPermissions({
       platformRole: self.platformRole,
       companyRole: own?.role ?? null,
-      company: { deactivated: found.deactivatedAt !== null },
+      company: { deactivated: companyDeactivatedAt !== null },
     });
   }
   assertPermission(permissions, permission);
-  return locked;
+  return { users: locked, companyDeactivatedAt };
 }

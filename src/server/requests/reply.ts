@@ -59,7 +59,12 @@ export default async function replyToRequest(
 
   const side = requestSide(permissions);
   return changeRequest(ctx, actor, access, workingPermission(permissions), async (tx, locked) => {
-    const entry = { requestId: locked.id, authorId: actor.id, authorSide: side };
+    const entry = {
+      requestId: locked.id,
+      authorId: actor.id,
+      authorSide: side,
+      createdAt: CHANGE_MOMENT,
+    };
     await tx.insert(requestEntry).values({ ...entry, kind: 'comment', body });
     // A status the request can't move to as it is by now is left alone: the reply still counts.
     const status =

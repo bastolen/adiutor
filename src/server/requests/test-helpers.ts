@@ -1,14 +1,15 @@
 /**
- * @file The test context shared by the integration tests of requests, and
+ * @file The test context shared by the integration tests of requests,
  * helpers that store requests and history entries directly, for tests that
- * are about reading them.
+ * are about reading them, and one that deactivates a company while a change
+ * is under way.
  */
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
-import { request, requestCounter, requestEntry } from '@/db/schema';
+import { company, request, requestCounter, requestEntry, user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 
-import { setupTestContext } from '../../../tests/integration/helpers';
+import { atTheSameMoment, setupTestContext } from '../../../tests/integration/helpers';
 
 /**
  * The test database context these tests share. Each test file imports this
@@ -80,4 +81,33 @@ export async function storeEntry(
       .returning(),
     'the stored entry',
   );
+}
+
+/**
+ * Runs a change whose company is deactivated while it's under way: after
+ * the change loaded the company, still active, and before its transaction
+ * reads it again. Another transaction holds the actor's row, as a change of
+ * their role does; the change waits for it at the start of its own
+ * transaction (`assertStillManages`), and the other one deactivates the
+ * company before it ends.
+ *
+ * @param actorId - The acting user.
+ * @param companyId - The company to deactivate meanwhile.
+ * @param change - The change.
+ * @returns How the change ended.
+ */
+export async function deactivatedMeanwhile<T>(
+  actorId: string,
+  companyId: string,
+  change: () => Promise<T>,
+): Promise<PromiseSettledResult<T>> {
+  const { second } = await atTheSameMoment(
+    db,
+    (tx) => tx.select({ id: user.id }).from(user).where(eq(user.id, actorId)).for('update'),
+    change,
+    async (tx) => {
+      await tx.update(company).set({ deactivatedAt: new Date() }).where(eq(company.id, companyId));
+    },
+  );
+  return second;
 }

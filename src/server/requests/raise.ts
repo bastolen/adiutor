@@ -33,10 +33,18 @@ import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
  * row. Whoever takes a number holds the row until their transaction ends, so
  * it's taken right before the request is stored.
  *
+ * It also reads the database's clock once the number is taken, in the same
+ * statement: the moment the request is raised. Not `now()`, which is when
+ * the transaction started, before it waited for its number: a request would
+ * then seem raised before the one numbered just before it. One reading for
+ * the request's two times, which each would otherwise read for itself.
+ *
  * @param tx - The raising transaction.
- * @returns The number.
+ * @returns The number, and the moment it was taken.
  */
-async function nextRequestNumber(tx: DatabaseTransaction): Promise<number> {
+async function nextRequestNumber(
+  tx: DatabaseTransaction,
+): Promise<{ number: number; takenAt: Date }> {
   const counted = await tx
     .insert(requestCounter)
     .values({ lastNumber: 1 })
@@ -44,8 +52,11 @@ async function nextRequestNumber(tx: DatabaseTransaction): Promise<number> {
       target: requestCounter.singleton,
       set: { lastNumber: sql`${requestCounter.lastNumber} + 1` },
     })
-    .returning({ number: requestCounter.lastNumber });
-  return firstRow(counted, 'the request counter').number;
+    .returning({
+      number: requestCounter.lastNumber,
+      takenAt: sql`clock_timestamp()`.mapWith(request.createdAt),
+    });
+  return firstRow(counted, 'the request counter');
 }
 
 /**
@@ -55,7 +66,10 @@ async function nextRequestNumber(tx: DatabaseTransaction): Promise<number> {
  *
  * The transaction first checks the actor's right again as it is by then
  * (`assertStillManages`), so someone who lost it while the request was under
- * way raises nothing.
+ * way raises nothing, and refuses a company deactivated meanwhile as that
+ * check read it: the staff keep their rights there. That narrows the window
+ * rather than closing it (the company's row isn't locked, see
+ * `assertStillManages`).
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `requests:contribute` in the company.
@@ -93,8 +107,16 @@ export default async function raiseRequest(
   await assertRateLimit(ctx, `request:user:${actor.id}`, RATE_LIMITS.requestsPerUser);
 
   return ctx.db.transaction(async (tx) => {
-    await assertStillManages(tx, actor, company.id, 'requests:contribute');
-    const number = await nextRequestNumber(tx);
+    const { companyDeactivatedAt } = await assertStillManages(
+      tx,
+      actor,
+      company.id,
+      'requests:contribute',
+    );
+    if (companyDeactivatedAt) {
+      throw companyDeactivatedError();
+    }
+    const { number, takenAt } = await nextRequestNumber(tx);
     return firstRow(
       await tx
         .insert(request)
@@ -107,6 +129,9 @@ export default async function raiseRequest(
           priority,
           createdBy: actor.id,
           createdBySide: requestSide(permissions),
+          // Raised and last active at one moment: when its number was taken.
+          createdAt: takenAt,
+          lastActivityAt: takenAt,
         })
         .returning({ id: request.id, number: request.number }),
       'the new request',

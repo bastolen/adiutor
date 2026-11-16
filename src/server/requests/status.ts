@@ -18,7 +18,13 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { forbiddenError, ServiceError } from '../errors';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
-import { changeRequest, requestToChange, statusChange, workingPermission } from './change';
+import {
+  CHANGE_MOMENT,
+  changeRequest,
+  requestToChange,
+  statusChange,
+  workingPermission,
+} from './change';
 
 /**
  * Changes a request's status. The staff who work on requests set any
@@ -71,6 +77,7 @@ export default async function changeRequestStatus(
       authorSide: requestSide(permissions),
       fromValue: locked.status,
       toValue: status,
+      createdAt: CHANGE_MOMENT,
     });
     await tx
       .update(request)

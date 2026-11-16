@@ -2,13 +2,15 @@
  * @file Integration tests for raising a request. Which roles may raise one is
  * in the authorization matrix.
  */
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
 
 import { membership, request, requestCounter } from '@/db/schema';
+import { firstRow } from '@/lib/defined';
 
 import {
+  atTheSameMoment,
   createCompany,
   fillRateLimitBucket,
   inSequence,
@@ -17,7 +19,7 @@ import {
 } from '../../../tests/integration/helpers';
 import { RATE_LIMITS } from '../rate-limit';
 import raiseRequest from './raise';
-import { ctx, db } from './test-helpers';
+import { ctx, db, deactivatedMeanwhile } from './test-helpers';
 
 /** A request as a form sends it, without its company. */
 const INPUT = {
@@ -172,6 +174,23 @@ describe('raiseRequest', () => {
     expect(await db.$count(request)).toBe(0);
   });
 
+  it('refuses the staff when the company was deactivated while the request was under way', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+
+    // The staff keep their rights in a deactivated company: only the company itself refuses this.
+    const ended = await deactivatedMeanwhile(support.id, company.id, () =>
+      raiseRequest(ctx, support, { ...INPUT, companyId: company.id }),
+    );
+
+    expect(ended).toMatchObject({
+      status: 'rejected',
+      reason: { code: 'invalid', key: 'errors.companyDeactivated' },
+    });
+    expect(await db.$count(request)).toBe(0);
+    expect(await db.select().from(requestCounter)).toEqual([]);
+  });
+
   it('stops at the limit of requests one person raises', async () => {
     const company = await createCompany(db);
     const client = await memberActor(db, company.id, 'client');
@@ -240,5 +259,33 @@ describe('request numbers', () => {
     await expect(raiseRequest(ctx, client, { ...INPUT, companyId: company.id })).rejects.toThrow();
 
     expect(await db.select().from(requestCounter)).toEqual([]);
+  });
+
+  it('time a request once, by when its number was taken: raised and last active at one moment', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client');
+    let waitedUntil = Infinity;
+
+    // Another request holds the counter, so this one starts and then waits for its number.
+    const { second } = await atTheSameMoment(
+      db,
+      (tx) => tx.insert(requestCounter).values({ lastNumber: 1 }),
+      () => raiseRequest(ctx, client, { ...INPUT, companyId: company.id }),
+      async (tx) => {
+        const { rows } = await tx.execute<{ ms: number }>(
+          sql`select floor(extract(epoch from clock_timestamp()) * 1000)::float8 as ms`,
+        );
+        waitedUntil = firstRow(rows, 'the clock').ms;
+      },
+    );
+
+    if (second.status === 'rejected') {
+      throw second.reason;
+    }
+    expect(second.value.number).toBe(2);
+    const row = await stored(second.value.id);
+    expect(row?.lastActivityAt).toEqual(row?.createdAt);
+    // Not when its transaction started, which was before it waited.
+    expect(row?.createdAt.getTime()).toBeGreaterThanOrEqual(waitedUntil);
   });
 });

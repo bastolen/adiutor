@@ -567,23 +567,32 @@ export async function createSession(
  * invitation). Whatever happens, both have ended before this returns, so no
  * transaction or connection is left open.
  *
+ * With `onceWaiting`, the held transaction does more work once `second`
+ * waits for it, right before it commits: what `second` started before, and
+ * finds done when it goes on.
+ *
  * @param db - The test database client (from {@link setupTestContext}).
  * @param first - The first request's work in its transaction.
  * @param second - The second request.
+ * @param onceWaiting - More work for the first request's transaction, once `second` waits for it.
  * @returns What `first` returned, and how `second` ended.
  */
 export async function atTheSameMoment<F, S>(
   db: Database,
   first: (tx: DatabaseTransaction) => Promise<F>,
   second: () => Promise<S>,
+  onceWaiting?: (tx: DatabaseTransaction) => Promise<void>,
 ): Promise<{ first: F; second: PromiseSettledResult<S> }> {
-  const { promise: released, resolve: release } = Promise.withResolvers<void>();
+  const { promise: released, resolve: release } = Promise.withResolvers<boolean>();
   const { promise: held, resolve: holding } = Promise.withResolvers<number>();
   const firstDone = db.transaction(async (tx) => {
     const result = await first(tx);
     const { rows } = await tx.execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
     holding(firstRow(rows, 'the backend process ID').pid);
-    await released;
+    // Released early (`false`) when `second` never came to wait: nothing more to replay then.
+    if (await released) {
+      await onceWaiting?.(tx);
+    }
     return result;
   });
   let secondDone: Promise<PromiseSettledResult<S>[]> = Promise.resolve([]);
@@ -605,8 +614,9 @@ export async function atTheSameMoment<F, S>(
       },
       { timeout: 5_000 },
     );
+    release(true);
   } finally {
-    release();
+    release(false);
     await Promise.allSettled([firstDone, secondDone]);
   }
   const settled = firstRow(await secondDone, "the second request's result");

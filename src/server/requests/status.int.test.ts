@@ -19,7 +19,7 @@ import {
 } from '../../../tests/integration/helpers';
 import { RATE_LIMITS } from '../rate-limit';
 import changeRequestStatus from './status';
-import { ctx, db, storeRequest } from './test-helpers';
+import { ctx, db, deactivatedMeanwhile, storeRequest } from './test-helpers';
 
 /**
  * Loads a request as it's stored.
@@ -230,6 +230,24 @@ describe('changeRequestStatus: refusals and no-ops', () => {
       changeRequestStatus(ctx, manager, { request: raised.id, status: 'done' }),
     ).rejects.toMatchObject({ code: 'invalid', key: 'errors.companyDeactivated' });
     expect(await stored(raised.id)).toMatchObject({ status: 'open' });
+  });
+
+  it('refuses a change from the staff when the company was deactivated while it was under way', async () => {
+    const company = await createCompany(db);
+    const manager = await staffActor(db, 'manager');
+    const raised = await storeRequest(company.id);
+
+    // The staff keep their rights in a deactivated company: only the company itself refuses this.
+    const ended = await deactivatedMeanwhile(manager.id, company.id, () =>
+      changeRequestStatus(ctx, manager, { request: raised.id, status: 'done' }),
+    );
+
+    expect(ended).toMatchObject({
+      status: 'rejected',
+      reason: { code: 'invalid', key: 'errors.companyDeactivated' },
+    });
+    expect(await stored(raised.id)).toMatchObject({ status: 'open' });
+    expect(await changes(raised.id)).toEqual([]);
   });
 
   it('stops at the limit of changes one person makes', async () => {

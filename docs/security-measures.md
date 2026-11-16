@@ -222,7 +222,10 @@ deadlocking:
    `FOR NO KEY UPDATE`: the request a reply or a change is about (`changeRequest`). Every change
    to a request starts with `assertStillManages`, so it has its `user` and `membership` locks
    (steps 2 and 3) before the request's: deleting an account locks the user first and then
-   clears them from the requests and entries they wrote, in the same order.
+   clears them from the requests and entries they wrote, in the same order. The request's company
+   is read there, never locked (it would come first, step 1): a change refuses when that read
+   finds the company deactivated, which leaves the rest of its transaction for a deactivation to
+   slip in before it.
 8. Sessions and audit events, last.
 
 What a change decides on (how many Admins are left, the acting user's own rights) is read in a new

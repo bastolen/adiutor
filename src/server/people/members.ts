@@ -427,10 +427,13 @@ export async function addMember(
 
   await ctx.db.transaction(async (tx) => {
     // The actor's staff rights and the account, as they are now: one statement, in ID order.
-    const locked = await assertStillManages(tx, actor, access.company.id, 'members:manage', {
-      asStaff: true,
-      alsoLock: [target.id],
-    });
+    const { users: locked } = await assertStillManages(
+      tx,
+      actor,
+      access.company.id,
+      'members:manage',
+      { asStaff: true, alsoLock: [target.id] },
+    );
     const added = locked.get(target.id);
     if (!added) {
       throw notFoundError();

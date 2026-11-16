@@ -20,7 +20,11 @@ import { getRequestAccess, type RequestAccess, type RequestRow } from './access'
 /**
  * The moment a change is made, in the database's clock. Not `now()`, which
  * is when the transaction started: a change that waited for another one
- * would then seem to have come first.
+ * would then seem to have come first. Every entry a change adds to the
+ * history is timed with it (`createdAt`, instead of the column's `now()`),
+ * and so is the request's last activity. Each statement reads the clock
+ * itself, so the times of one change lie microseconds apart, in the order
+ * they were written.
  */
 export const CHANGE_MOMENT = sql`clock_timestamp()`;
 
@@ -72,13 +76,21 @@ export function workingPermission(permissions: ReadonlySet<Permission>): Permiss
  * user and membership rows: before the request, as the lock order asks),
  * then the request's row is locked, and `apply` gets it as it is by then.
  *
+ * The company is checked again too, as that check read it: the staff keep
+ * their rights in a deactivated company, so only this refuses a change of
+ * theirs that was under way when the company was deactivated. It narrows
+ * that window to the rest of the transaction rather than closing it: the
+ * company's row isn't locked, since company rows come before user rows in
+ * the lock order.
+ *
  * @param ctx - Service context.
  * @param actor - The acting user.
  * @param access - The request, as {@link requestToChange} loaded it.
  * @param permission - The permission to check again.
  * @param apply - Makes the change, given the transaction and the locked request.
  * @returns What `apply` returned.
- * @throws {ServiceError} `forbidden` when the actor lost the permission meanwhile.
+ * @throws {ServiceError} `forbidden` when the actor lost the permission meanwhile, `invalid`
+ *   when the company was deactivated meanwhile.
  */
 export function changeRequest<T>(
   ctx: ServiceContext,
@@ -88,7 +100,15 @@ export function changeRequest<T>(
   apply: (tx: DatabaseTransaction, locked: RequestRow) => Promise<T>,
 ): Promise<T> {
   return ctx.db.transaction(async (tx) => {
-    await assertStillManages(tx, actor, access.company.id, permission);
+    const { companyDeactivatedAt } = await assertStillManages(
+      tx,
+      actor,
+      access.company.id,
+      permission,
+    );
+    if (companyDeactivatedAt) {
+      throw companyDeactivatedError();
+    }
     const [locked] = await tx
       .select()
       .from(request)
