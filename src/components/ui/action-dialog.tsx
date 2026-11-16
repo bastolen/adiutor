@@ -160,8 +160,10 @@ function ActionDialogForm({
 
 /**
  * Opens a {@link Modal} with a form posting to a server action. A failed
- * result is shown in the dialog, which stays open (and as a toast in the
- * signed-in app); a successful one closes it, and its message is a toast in
+ * result is shown in the dialog, which stays open: inline only, without a
+ * toast (a toast above the dialog would take the first Escape), in a new
+ * alert each time, so the same refusal twice is announced and takes focus
+ * twice. A successful one closes it, and its message is a toast in
  * the signed-in app (shown as soon as the action returns) or else shown next
  * to the button. Escape or Cancel closes it without submitting, and focus
  * returns to the button; if the action removed the button (e.g. "Make staff"
@@ -217,7 +219,7 @@ export default function ActionDialog({
   const [leaving, setLeaving] = useTransientState(false);
 
   // Toasts a success as soon as the action returns: the refresh may remove this button.
-  // Errors toast where they're shown, in the dialog's `ResultAlert`.
+  // Errors stay in the dialog's `ResultAlert`, inline only (see `InsideDialog`).
   const run = useCallback(
     async (previous: ActionResult | null, formData: FormData) => {
       const next = await action(previous, formData);

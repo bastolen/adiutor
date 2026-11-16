@@ -20,6 +20,11 @@
       "tryAgain": "Opnieuw proberen",
       "goToDashboard": "Naar je dashboard"
     },
+    "notifications": {
+      "label": "Melding",
+      "region": "Meldingen ({hotkey})",
+      "error": "Fout"
+    },
     "relativeTime": {
       "justNow": "zojuist",
       "never": "Nooit"

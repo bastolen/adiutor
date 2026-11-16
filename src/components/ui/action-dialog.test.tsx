@@ -1,14 +1,17 @@
 /**
  * @file Tests for the button that opens a dialog with a short form for an
  * action: an opening button that its own action disables keeps keyboard
- * focus and ignores presses, except while signed in as a user.
+ * focus and ignores presses, except while signed in as a user; a refused
+ * action is shown in the dialog only, anew each time, and one Escape closes
+ * the dialog.
  */
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import ActionDialog from './action-dialog';
 import { SignedInAsMarker } from './signed-in-as';
+import { Toaster } from './toast';
 
 vi.mock('next/navigation', () => ({
   /**
@@ -79,5 +82,50 @@ describe('ActionDialog', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Reset two-step verification' })).toBeDisabled();
+  });
+
+  it('shows a refusal in the dialog only, anew each time, and closes with one Escape', async () => {
+    const user = userEvent.setup();
+    // The same refusal every time, as a new result, like a wrong password typed twice.
+    const action = vi.fn(async () => ({
+      ok: false as const,
+      message: 'That password is incorrect.',
+    }));
+    render(
+      <>
+        <Toaster />
+        <ActionDialog
+          action={action}
+          triggerLabel="Deactivate"
+          title="Deactivate your account?"
+          description="You're signed out on every device right away."
+          confirmLabel="Deactivate my account"
+        />
+      </>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Deactivate' }));
+    const dialog = screen.getByRole('dialog', { name: 'Deactivate your account?' });
+    const submit = within(dialog).getByRole('button', { name: 'Deactivate my account' });
+
+    await user.click(submit);
+    const first = await within(dialog).findByRole('alert');
+    expect(first).toHaveTextContent('That password is incorrect.');
+    expect(first).toHaveFocus();
+
+    await user.click(submit);
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(2));
+    // A new alert in the old one's place, which is announced and takes focus again.
+    await waitFor(() => expect(within(dialog).getByRole('alert')).not.toBe(first));
+    expect(within(dialog).getByRole('alert')).toHaveFocus();
+
+    // No toast above the dialog (the region is hidden from assistive technology meanwhile).
+    await new Promise((resolve) => {
+      setTimeout(resolve, 50);
+    });
+    expect(document.querySelectorAll('[role="region"] li')).toHaveLength(0);
+    expect(screen.getAllByText('That password is incorrect.')).toHaveLength(1);
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 });

@@ -20,6 +20,11 @@
       "tryAgain": "Volver a intentarlo",
       "goToDashboard": "Ir a tu panel"
     },
+    "notifications": {
+      "label": "Notificación",
+      "region": "Notificaciones ({hotkey})",
+      "error": "Error"
+    },
     "relativeTime": {
       "justNow": "hace un momento",
       "never": "Nunca"

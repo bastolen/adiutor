@@ -1,14 +1,16 @@
 /**
- * @file Tests for toasts: shown through `useToast`, in a named region, with
- * an icon per tone and a dismiss button; a success is announced, an error
- * (announced where it's shown inline) isn't announced again. A toast left
- * for the next page shows there once, unless that page comes too late.
+ * @file Tests for toasts: shown through `useToast`, in a region named in the
+ * reader's language, with an icon per tone and a dismiss button; a success is
+ * announced, an error (announced where it's shown inline) only as the word
+ * "Error". A toast left for the next page shows there once, unless that page
+ * comes too late.
  */
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import renderInLocale from '../../../tests/i18n/render';
 import { showToastAfterLoad, Toaster, type ToastTone, useToast } from './toast';
 
 /**
@@ -57,7 +59,8 @@ function Counter() {
 function announced(): string {
   return Array.from(document.querySelectorAll('[aria-live="assertive"], [aria-live="polite"]'))
     .map((region) => region.textContent ?? '')
-    .join(' ');
+    .join(' ')
+    .trim();
 }
 
 describe('Toasts', () => {
@@ -85,15 +88,15 @@ describe('Toasts', () => {
 
     await user.click(screen.getByRole('button', { name: 'Show' }));
 
-    const region = screen.getByRole('region', { name: /^Notifications/ });
+    const region = screen.getByRole('region', { name: 'Notifications (F8)' });
     expect(region).toHaveTextContent('Name saved.');
-    await waitFor(() => expect(announced()).toContain('Name saved.'));
+    await waitFor(() => expect(announced()).toBe('Notification Name saved.'));
 
     await user.click(screen.getByRole('button', { name: 'Dismiss notification' }));
     await waitFor(() => expect(region).not.toHaveTextContent('Name saved.'));
   });
 
-  it('show an error without announcing it again', async () => {
+  it('show an error, announced as the word “Error” only, not its text again', async () => {
     const user = userEvent.setup();
     render(
       <>
@@ -106,12 +109,47 @@ describe('Toasts', () => {
 
     const region = screen.getByRole('region', { name: /^Notifications/ });
     expect(region).toHaveTextContent('That password is incorrect.');
-    // Give Radix the frame it waits before announcing; nothing of the error is said.
-    await new Promise((resolve) => {
-      setTimeout(resolve, 50);
-    });
+    // Radix waits a frame before announcing: the label and the one word, nothing of the error.
+    await waitFor(() => expect(announced()).toBe('Notification Error'));
     expect(announced()).not.toContain('That password is incorrect.');
   });
+
+  it.each([
+    ['en-US', 'Notifications (F8)', 'Notification Name saved.', 'Notification Error'],
+    ['nl-NL', 'Meldingen (F8)', 'Melding Name saved.', 'Melding Fout'],
+    ['es-ES', 'Notificaciones (F8)', 'Notificación Name saved.', 'Notificación Error'],
+  ] as const)(
+    'name the region and word the announcements in %s',
+    async (locale, regionName, success, error) => {
+      const user = userEvent.setup();
+      /**
+       * The page in the language, with a button that shows a toast of a tone.
+       *
+       * @param props - Harness props.
+       * @param props.tone - The toast's tone.
+       * @returns The page.
+       */
+      const page = ({ tone }: { tone: ToastTone }) => (
+        <>
+          <Toaster />
+          <ShowButton message="Name saved." tone={tone} />
+        </>
+      );
+      const { unmount } = renderInLocale(locale, page({ tone: 'success' }));
+
+      // Radix fills in the key that jumps to the region where the name has `{hotkey}`.
+      const region = screen.getByRole('region', { name: regionName });
+      await user.click(screen.getByRole('button', { name: 'Show' }));
+      expect(region).toHaveTextContent('Name saved.');
+      await waitFor(() => expect(announced()).toBe(success));
+      unmount();
+
+      renderInLocale(locale, page({ tone: 'error' }));
+      await user.click(screen.getByRole('button', { name: 'Show' }));
+      // The error's text is announced where it's shown inline: here just the translated word.
+      await waitFor(() => expect(announced()).toBe(error));
+    },
+  );
 
   it('keep the newest three', async () => {
     const user = userEvent.setup();

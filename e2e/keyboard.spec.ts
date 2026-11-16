@@ -545,6 +545,48 @@ test.describe('signed in', () => {
   });
 });
 
+test.describe('an error in a dialog', () => {
+  test.use({ reducedMotion: 'reduce' });
+  // The company's Client: they can deactivate their own account, which asks for the password.
+  test.beforeEach(async ({ context }) => {
+    await context.addCookies(clientState.cookies);
+  });
+
+  test('takes focus each time it comes, and one Escape closes the dialog', async ({ page }) => {
+    const incorrect = 'That password is incorrect.';
+    await page.goto('/account/security');
+    const trigger = page.getByRole('button', { name: 'Deactivate', exact: true });
+    await trigger.focus();
+    await page.keyboard.press('Enter');
+    const dialog = page.getByRole('dialog', { name: 'Deactivate your account?' });
+    const password = dialog.getByLabel('Current password');
+    const error = dialog.getByRole('alert').filter({ hasText: incorrect });
+
+    // A wrong password: the error is shown in the dialog and takes focus.
+    await password.fill('not the password');
+    await page.keyboard.press('Enter');
+    await expect(error).toBeFocused();
+    // The first alert is marked, so the next one is known to be another.
+    await error.evaluate((element) => element.setAttribute('data-seen', ''));
+
+    // The same wrong password again (it stays typed): the same words, in an alert of their own
+    // that takes focus from the field again, so a screen reader announces it a second time.
+    await password.focus();
+    await page.keyboard.press('Enter');
+    await expect(dialog.locator('[role="alert"][data-seen]')).toHaveCount(0);
+    await expect(error).toBeFocused();
+
+    // Inline only: a toast would sit above the dialog and take the first Escape. (The
+    // notifications are hidden from assistive technology while a dialog is open, hence by text.)
+    await expect(page.getByText(incorrect)).toHaveCount(1);
+
+    // One Escape closes the dialog, and focus is back on its button.
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+  });
+});
+
 test.describe('signed in as a user', () => {
   test.use({ reducedMotion: 'reduce' });
 

@@ -20,6 +20,11 @@
       "tryAgain": "Try again",
       "goToDashboard": "Go to your dashboard"
     },
+    "notifications": {
+      "label": "Notification",
+      "region": "Notifications ({hotkey})",
+      "error": "Error"
+    },
     "relativeTime": {
       "justNow": "just now",
       "never": "Never"

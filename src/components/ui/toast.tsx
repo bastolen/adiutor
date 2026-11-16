@@ -2,7 +2,8 @@
  * @file Toasts: short messages about the result of what the user just did,
  * built on Radix UI's Toast. The signed-in app shows every success as a
  * toast, and every error inline (next to the field or button) and as a toast
- * too. The toasts live in one store for the page and are shown by the
+ * too, except an error an open dialog shows, which stays inline (see
+ * `InsideDialog`). The toasts live in one store for the page and are shown by the
  * {@link Toaster} in the layout, beside the content rather than around it
  * (so the layout stays a server component), and they outlast the row, dialog
  * or page that caused them. An action that ends with a full page load
@@ -186,10 +187,13 @@ export function useToast(): ShowToast | null {
 
 /**
  * Shows the toasts at the bottom right (bottom centre on phones), in a
- * region named "Notifications (F8)" that F8 jumps to. A success is announced
- * to screen readers as the result of what the user just did; an error isn't
- * announced again (its text is left out of Radix's announcement), because
- * the inline error next to the field or button already is, or takes focus.
+ * region named "Notifications (F8)" that F8 jumps to, in the reader's
+ * language (Radix's own names are English). A success is announced to screen
+ * readers as the result of what the user just did, after the word
+ * "Notification". An error's text isn't announced again, because the inline
+ * error next to the field or button already is, or takes focus: its toast
+ * announces "Notification" and the one word "Error" in its place, so the
+ * announcement says what appeared instead of the bare word "Notification".
  * Each toast has a dismiss button and can be swiped away. Put one in a
  * layout, next to its content; toasts are offered while it's mounted, and
  * cleared when the last one goes. Once mounted, it shows the toast an action
@@ -199,6 +203,7 @@ export function useToast(): ShowToast | null {
  */
 export function Toaster() {
   const t = useTranslations('common.actions');
+  const tNotifications = useTranslations('common.notifications');
   const toasts = useSyncExternalStore(
     subscribe,
     () => shownToasts,
@@ -226,7 +231,8 @@ export function Toaster() {
   }, []);
 
   return (
-    <Toast.Provider swipeDirection="right">
+    // The label starts every announcement: "Notification Name saved."
+    <Toast.Provider swipeDirection="right" label={tNotifications('label')}>
       {toasts.map(({ id, message, tone }) => {
         const { icon: Icon, iconClass } = tones[tone];
         return (
@@ -243,12 +249,14 @@ export function Toaster() {
             className="pointer-events-auto flex items-start gap-2.5 rounded-lg border border-border bg-raised px-3 py-2.5 text-sm text-foreground shadow-lg outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:animate-slide-in data-[swipe=end]:translate-x-(--radix-toast-swipe-end-x) data-[swipe=move]:translate-x-(--radix-toast-swipe-move-x)"
           >
             <Icon aria-hidden="true" className={cn('mt-0.5 size-4 shrink-0', iconClass)} />
-            {/* An error is announced where it's shown inline; the toast is for the eyes. The
-                attribute is Radix's own marker for text left out of its announcement (its
-                `AnnounceExclude`, which it doesn't export); toast.test.tsx checks it still works. */}
+            {/* An error is announced where it's shown inline; the toast is for the eyes, and
+                says only "Error" after the label. The attributes are Radix's own markers for
+                text left out of its announcement and what to say instead (its `AnnounceExclude`,
+                which it doesn't export); toast.test.tsx checks they still work. */}
             <div
               className="min-w-0 flex-1"
               data-radix-toast-announce-exclude={tone === 'error' ? '' : undefined}
+              data-radix-toast-announce-alt={tone === 'error' ? tNotifications('error') : undefined}
             >
               <Toast.Description>{message}</Toast.Description>
             </div>
@@ -265,7 +273,11 @@ export function Toaster() {
           </Toast.Root>
         );
       })}
-      <Toast.Viewport className="fixed inset-x-0 bottom-0 z-60 mx-auto flex w-full max-w-sm flex-col gap-2 p-4 outline-none sm:right-0 sm:left-auto sm:mx-0" />
+      <Toast.Viewport
+        // Radix puts the key that jumps here (F8) where the name says `{hotkey}`.
+        label={tNotifications('region', { hotkey: '{hotkey}' })}
+        className="fixed inset-x-0 bottom-0 z-60 mx-auto flex w-full max-w-sm flex-col gap-2 p-4 outline-none sm:right-0 sm:left-auto sm:mx-0"
+      />
     </Toast.Provider>
   );
 }

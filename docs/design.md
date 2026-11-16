@@ -241,11 +241,18 @@ keyboard support.
 
 - **Results:** in the signed-in app every success is a toast and every error is shown inline and as
   a toast (`src/components/ui/toast.tsx`, on Radix UI's Toast; the app layout mounts its `Toaster`
-  next to the content, not around it). Toasts sit at the bottom right
-  (bottom centre on phones) in a region named "Notifications (F8)" that F8 jumps to. Successes stay
+  next to the content, not around it). The one exception is an error an open dialog shows, which
+  stays inline: a toast is a layer of its own above the dialog, and Radix gives Escape to the
+  newest layer, so the first Escape would dismiss the toast and leave the dialog open. `Modal`
+  marks its content (`InsideDialog` in `src/components/ui/inside-dialog.tsx`), and `ResultAlert`
+  and `Alert`'s `alsoToast` raise no toast for an error there, so one Escape always closes a
+  dialog. Toasts sit at the bottom right
+  (bottom centre on phones) in a region named "Notifications (F8)" that F8 jumps to, named in the
+  reader's language (`common.notifications`; Radix's own names are English). Successes stay
   6 seconds and errors 10, both pausing while hovered or focused, and each can be dismissed or
-  swiped away. A success toast is announced; an error toast isn't announced again, because the
-  inline error already is (or takes focus). `RowAction`, `ActionDialog` and `RoleSelect` toast
+  swiped away. A success toast is announced, after the word "Notification"; an error toast's text
+  isn't announced again, because the inline error already is (or takes focus), so it announces
+  "Notification" and the one word "Error" in its place. `RowAction`, `ActionDialog` and `RoleSelect` toast
   as soon as their action returns, so the toast outlasts a row the refresh removes (`RowAction`'s
   `doneMessage` names the row, e.g. "Invitation to jane@adiutor.dev revoked."); `ResultAlert`
   toasts a form's result, `Alert`'s `alsoToast` an error a component shows itself, and
@@ -262,7 +269,9 @@ keyboard support.
   counts with its label (`CheckboxField`). Links inside a sentence are exempt, as in WCAG.
 - **Forms:** labels are always visible and help text is linked with `aria-describedby`. Fields
   don't show errors themselves: a failed submit shows an `Alert` (`ResultAlert`) and moves focus
-  to it, and in the signed-in app a toast too.
+  to it, and in the signed-in app a toast too (not in a dialog, see Results). Each result gets an
+  alert of its own (`ResultAlert` keys it on the result), so the same error a second time is
+  announced and takes focus again instead of leaving the page as it was.
   Inline confirmations use `role="status"` and errors `role="alert"`, so screen readers announce
   them. Field text is 16px on every device (`fieldControl` in `src/components/ui/styles.ts`),
   never smaller, because iOS Safari zooms the page in when a field with smaller text gets focus.
@@ -300,7 +309,8 @@ while signed-in pages still show their loading placeholders, and that no field's
 The pages are scanned as the staff Admin, and the ones that look different to someone at a company
 (the dashboard, the requests) also as a Client and as a Watcher.
 `e2e/keyboard.spec.ts` checks the skip link, menus, selects, dialogs, the mobile menu, the request
-controls and cursors using only the keyboard, and that a button keeps focus while its form saves.
+controls and cursors using only the keyboard, that a button keeps focus while its form saves, and
+that an error in a dialog takes focus each time it comes and leaves the dialog one Escape away.
 
 ## Dark mode
 

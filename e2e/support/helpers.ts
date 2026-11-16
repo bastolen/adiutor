@@ -55,13 +55,15 @@ export async function useOwnClientIp(page: Page): Promise<void> {
 
 /**
  * The toasts the signed-in app reports results in (every success, and every
- * error next to its inline message), in their "Notifications (F8)" region.
+ * error next to its inline message, except one an open dialog shows), in
+ * their "Notifications (F8)" region, which is named in the reader's language
+ * ("Meldingen (F8)", "Notificaciones (F8)").
  *
  * @param page - The browser page.
  * @returns The region.
  */
 export function toasts(page: Page): Locator {
-  return page.getByRole('region', { name: /^Notifications/ });
+  return page.getByRole('region', { name: /^(Notifications|Meldingen|Notificaciones) \(F8\)$/ });
 }
 
 /** Pages a signed-in user can land on. */
