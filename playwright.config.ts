@@ -84,6 +84,10 @@ export default defineConfig({
       GITHUB_CLIENT_SECRET: '',
       GOOGLE_CLIENT_ID: '',
       GOOGLE_CLIENT_SECRET: '',
+      // Every test sends its own client address in `X-Forwarded-For` (`e2e/support/test.ts`), so
+      // the server reads addresses with the defaults even if .env names other headers or proxies.
+      CLIENT_IP_HEADERS: '',
+      TRUSTED_PROXIES: '',
     },
   },
 });
