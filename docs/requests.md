@@ -105,6 +105,11 @@ the closed statuses.
 - Descriptions and replies are **plain text**: line breaks are kept, and web addresses (`http://`
   and `https://`) become links that open in a new tab. Titles may hold an address, but are never
   linked.
+- A link ends before the punctuation of the sentence around it (`splitLinks` in
+  `src/lib/requests/text.ts`): full stops, commas, question and exclamation marks, the ellipsis,
+  the full-width marks of Chinese and Japanese, closing quotation marks (”, ’, », ›), and a closing
+  bracket the address didn't open itself. Brackets are counted, so
+  `(see https://adiutor.dev/wiki/Printer_(office))` links up to `(office)`.
 - Each text is stored with a format marker (`description_format`, `body_format`, today always
   `plain`) and shown through one component (`RequestText` in `src/app/(app)/_requests/`), so adding
   Markdown later changes one place and no stored text.
