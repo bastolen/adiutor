@@ -6,7 +6,7 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { type FormEvent, useState } from 'react';
+import type { FormEvent } from 'react';
 
 import Alert from '@/components/ui/alert';
 import AuthHeading from '@/components/ui/auth-heading';
@@ -26,6 +26,11 @@ import { authErrorText, signInErrorText } from '@/lib/sign-in/auth-error-message
  * account's provider MFA (`RESET_ENDS_PROVIDER_MFA`), whose message the
  * server words with the provider's name and what to do instead.
  *
+ * Like the sign-in form, it starts over whenever the page is hidden: Next
+ * keeps the page alive (React's `<Activity>`), and the next person on the
+ * browser mustn't find the passwords typed here, a button still busy, or
+ * the confirmation of someone else's change.
+ *
  * @returns The form.
  */
 export default function ResetPasswordForm() {
@@ -35,11 +40,11 @@ export default function ResetPasswordForm() {
   const welcome = searchParams.get('welcome') === '1';
   const linkError = signInErrorText(t, searchParams.get('error'));
 
-  const [password, setPassword] = useState('');
-  const [confirmation, setConfirmation] = useState('');
-  const [pending, setPending] = useState(false);
+  const [password, setPassword] = useTransientState('');
+  const [confirmation, setConfirmation] = useTransientState('');
+  const [pending, setPending] = useTransientState(false);
   const [error, setError] = useTransientState<string | null>(null);
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useTransientState(false);
 
   /**
    * Saves the new password.

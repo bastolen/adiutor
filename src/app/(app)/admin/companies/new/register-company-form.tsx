@@ -8,6 +8,7 @@
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 
 import { ConfirmFirstNote } from '@/components/auth/recent-confirmation';
 import EmailLanguageField from '@/components/language/email-language-field';
@@ -16,7 +17,7 @@ import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
 import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
 import TextField from '@/components/ui/text-field';
-import { useTransientState, useTransientActionState } from '@/components/ui/use-transient-state';
+import { useTransientActionState } from '@/components/ui/use-transient-state';
 import type { Locale } from '@/lib/i18n/locales';
 import { NAME_MAX_LENGTH, SLUG_MAX_LENGTH, slugify } from '@/lib/input-rules';
 
@@ -31,6 +32,11 @@ import registerCompanyAction from './actions';
  * and there's no submit button. The Email language field starts on Default:
  * the invitation goes out in Adiutor's default language.
  *
+ * What's typed is a draft, so all of it survives leaving the page and coming
+ * back (plain state, like the fields the browser keeps itself). Once the
+ * company is registered the draft is cleared: the form that returns after
+ * the confirmation starts empty, not with the registered company's name.
+ *
  * @param props - Component props.
  * @param props.defaultLocale - Adiutor's default language, named in the Default option.
  * @returns The form.
@@ -44,9 +50,19 @@ export default function RegisterCompanyForm({ defaultLocale }: { defaultLocale: 
     registerCompanyAction,
     null,
   );
-  const [name, setName] = useTransientState('');
-  const [slug, setSlug] = useTransientState('');
-  const [slugEdited, setSlugEdited] = useTransientState(false);
+  const [name, setName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [slugEdited, setSlugEdited] = useState(false);
+  // The result the draft was last checked against: a new, successful one clears the draft.
+  const [seenResult, setSeenResult] = useState(result);
+  if (result !== seenResult) {
+    setSeenResult(result);
+    if (result?.ok) {
+      setName('');
+      setSlug('');
+      setSlugEdited(false);
+    }
+  }
   // A new company starts with no members, so its first Admin is always a new one.
   const confirmFirst = useConfirmBeforeGrant('new', 'admin');
 

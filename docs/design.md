@@ -91,7 +91,14 @@ keyboard support.
   Typed input should, but a "Saved" or error message, or an open dialog, shouldn't still be there when
   you come back. Forms use `useTransientActionState` instead of `useActionState`, and status
   messages and dialog open state use `useTransientState` instead of `useState`
-  (`src/components/ui/use-transient-state.ts`); both reset when the page is hidden.
+  (`src/components/ui/use-transient-state.ts`); both reset when the page is hidden. In the
+  signed-in app a draft survives whole: every field of a form is kept, in plain state or by the
+  browser, never some of them (Add company keeps its name, URL name and admin address together),
+  and a form whose submit went through starts empty again. The signed-out pages for signing in
+  are the exception (sign in, the code step, forgot password, reset password): they keep even
+  their fields, busy buttons and confirmations in `useTransientState`, because they come back
+  after signing out and the next person on the browser mustn't find the last user's address or
+  password.
 - **A new person means a new page load:** what's kept alive belongs to whoever was signed in, and
   React keeps a field's value even when a page comes back for someone else. So every change of who
   the browser acts as (signing in or out, starting or ending a sign-in as a user, also when it ends
