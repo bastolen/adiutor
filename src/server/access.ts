@@ -3,7 +3,7 @@
  * being acted on and works out what the actor may do there, and checks those
  * rights again inside a change's transaction, as they are by then.
  */
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, type SQL } from 'drizzle-orm';
 
 import type { Database, DatabaseTransaction } from '@/db';
 import { company, membership, user } from '@/db/schema';
@@ -17,7 +17,7 @@ import {
   type Permission,
 } from '@/lib/authz/permissions';
 import type { PlatformRole } from '@/lib/authz/roles';
-import { idSchema } from '@/lib/validation';
+import { idSchema, slugSchema } from '@/lib/validation';
 
 import { type Actor, loadActor } from './actor';
 import { forbiddenError, notFoundError, ServiceError } from './errors';
@@ -41,13 +41,35 @@ export interface CompanyAccess {
 }
 
 /**
+ * The condition that finds a company by what its address names it with: its
+ * ID or its URL name, trimmed and in any case. Only what can be one of the
+ * two reaches the database. Anything else (a URL name is lower-case letters,
+ * digits and single dashes, `slugSchema`) names no company, and a character
+ * Postgres refuses in a query, such as NUL from `/companies/%00`, would be an
+ * error instead of "not found".
+ *
+ * @param companyRef - The company's ID or URL name, as given.
+ * @returns The condition, or `null` when it can't name a company.
+ */
+function companyNamedBy(companyRef: string): SQL | null {
+  const reference = companyRef.trim().toLowerCase();
+  const id = idSchema.safeParse(reference);
+  if (id.success) {
+    return eq(company.id, id.data);
+  }
+  const urlName = slugSchema.safeParse(reference);
+  return urlName.success ? eq(company.slug, urlName.data) : null;
+}
+
+/**
  * Loads a company and the actor's permissions in it. Companies the actor may
  * not see are reported as not found, so their existence isn't revealed.
  *
  * The company can be named by its ID or its URL name (`company.slug`, in any
  * case), since both work in its address (`/companies/<id>` and
  * `/companies/<URL name>`). A URL name never looks like an ID
- * (`slugSchema`), so the two can't be confused.
+ * (`slugSchema`), so the two can't be confused. A reference that can be
+ * neither is not found without asking the database ({@link companyNamedBy}).
  *
  * @param db - Database client.
  * @param actor - The acting user.
@@ -60,13 +82,11 @@ export async function getCompanyAccess(
   actor: Actor,
   companyRef: string,
 ): Promise<CompanyAccess> {
-  const byId = idSchema.safeParse(companyRef);
-  const [found] = await db
-    .select()
-    .from(company)
-    .where(
-      byId.success ? eq(company.id, byId.data) : eq(company.slug, companyRef.trim().toLowerCase()),
-    );
+  const named = companyNamedBy(companyRef);
+  if (!named) {
+    throw notFoundError();
+  }
+  const [found] = await db.select().from(company).where(named);
   if (!found) {
     throw notFoundError();
   }

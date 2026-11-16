@@ -153,6 +153,9 @@ describe('listing', () => {
       page: 1,
       size: 25,
     });
+    // A NUL character, which Postgres refuses in a query, is dropped from the search.
+    expect(await slugs('tw\u0000o')).toEqual(['adiutor-tests-two']);
+    expect(await slugs('\u0000')).toEqual(['adiutor-tests-one', 'adiutor-tests-two']);
   });
 
   it('sorts by name ignoring case, with same names in a fixed order, and exactly reversed', async () => {

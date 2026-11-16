@@ -1,26 +1,62 @@
 /**
  * @file Checks for characters that never belong in text people type: control
  * characters, and characters that hide or reorder text. Shared by the input
- * validation (`validation.ts`) and the request text cleaning
- * (`requests/text.ts`), and free of dependencies so both can import it.
+ * validation (`validation.ts`), the request text cleaning
+ * (`requests/text.ts`) and the server code that cleans untrusted text before
+ * a query or a log line (`server/search.ts`, `server/app-errors.ts`), and
+ * free of dependencies so all can import it.
  */
 
 /**
+ * Whether a character is a control character: C0 (U+0000 to U+001F, e.g. NUL,
+ * a line break or a tab), delete (U+007F) or C1 (U+0080 to U+009F). A check
+ * on the code avoids a control-character regex literal.
+ *
+ * @param code - The character's code.
+ * @returns Whether it's a control character.
+ */
+function isControlCode(code: number): boolean {
+  return code <= 0x1f || (code >= 0x7f && code <= 0x9f);
+}
+
+/**
  * Whether a string contains a control character (C0 or C1, e.g. a line break
- * or tab) that never belongs in a display name. A character check avoids a
- * control-character regex literal.
+ * or tab) that never belongs in a display name.
  *
  * @param value - The string to check.
  * @returns Whether any character is a control character.
  */
 export function hasControlCharacter(value: string): boolean {
   for (let i = 0; i < value.length; i += 1) {
-    const code = value.charCodeAt(i);
-    if (code <= 0x1f || (code >= 0x7f && code <= 0x9f)) {
+    if (isControlCode(value.charCodeAt(i))) {
       return true;
     }
   }
   return false;
+}
+
+/**
+ * Takes the control characters ({@link hasControlCharacter}) out of a string,
+ * for text that goes where they do harm: Postgres refuses a NUL character in
+ * a query, and a line break in a log line starts a line of its own.
+ *
+ * @param value - The string.
+ * @param replacement - What each run of control characters becomes; nothing by default.
+ * @returns The string without control characters.
+ */
+export function withoutControlCharacters(value: string, replacement = ''): string {
+  let cleaned = '';
+  let inRun = false;
+  for (let i = 0; i < value.length; i += 1) {
+    const control = isControlCode(value.charCodeAt(i));
+    if (!control) {
+      cleaned += value.charAt(i);
+    } else if (!inRun) {
+      cleaned += replacement;
+    }
+    inRun = control;
+  }
+  return cleaned;
 }
 
 /**

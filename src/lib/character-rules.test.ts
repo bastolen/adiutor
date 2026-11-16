@@ -1,10 +1,14 @@
 /**
- * @file Tests for the character checks shared by the input validation and
- * the request text cleaning.
+ * @file Tests for the character checks shared by the input validation, the
+ * request text cleaning and the cleaning of untrusted text on the server.
  */
 import { describe, expect, it } from 'vitest';
 
-import { hasControlCharacter, hasHiddenCharacter } from './character-rules';
+import {
+  hasControlCharacter,
+  hasHiddenCharacter,
+  withoutControlCharacters,
+} from './character-rules';
 
 describe('hasControlCharacter', () => {
   it.each([
@@ -19,6 +23,21 @@ describe('hasControlCharacter', () => {
 
   it('accepts ordinary text in any script', () => {
     expect(hasControlCharacter('Adiutor Tests, Zoë & علی 🙂')).toBe(false);
+  });
+});
+
+describe('withoutControlCharacters', () => {
+  it('drops every control character, and nothing else', () => {
+    expect(withoutControlCharacters('Adi\u0000utor\r\n Tests\u007f\u0085')).toBe('Adiutor Tests');
+    expect(withoutControlCharacters('\u0000')).toBe('');
+    expect(withoutControlCharacters('Adiutor Tests, Zoë & علی 🙂')).toBe(
+      'Adiutor Tests, Zoë & علی 🙂',
+    );
+  });
+
+  it('puts the replacement where each run of them was', () => {
+    expect(withoutControlCharacters('/dashboard\r\n\tApp error', ' ')).toBe('/dashboard App error');
+    expect(withoutControlCharacters('one\ntwo\nthree', ' ')).toBe('one two three');
   });
 });
 

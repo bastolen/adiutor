@@ -1,8 +1,9 @@
 /**
  * @file Tests for the action the error pages report browser errors with: it
- * checks the report, drops the path's query string, records the error with
- * who is signed in, and returns its reference, or nothing past the limit or
- * when recording fails. Storing it is covered by `app-errors.int.test.ts`.
+ * checks the report (a path with a control character is refused), drops the
+ * path's query string, records the error with who is signed in, and returns
+ * its reference, or nothing past the limit or when recording fails. Storing
+ * it is covered by `app-errors.int.test.ts`.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -82,6 +83,28 @@ describe('reportErrorAction', () => {
     ).resolves.toBeNull();
 
     expect(recordAppError).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ['a line break', '/dashboard\nApp error 7KQ2-M9XD: server render /(app)/admin/users/page'],
+    ['a carriage return', '/dashboard\rApp error 7KQ2-M9XD: server'],
+    ['a NUL character', '/dashboard\u0000'],
+    ['a line break in its query string', '/dashboard?q=\nApp error 7KQ2-M9XD: server'],
+  ])('refuses a path with %s, which would forge a line in the log', async (_name, path) => {
+    vi.mocked(getOptionalActor).mockResolvedValue(null);
+
+    await expect(reportErrorAction({ ...report, path })).resolves.toBeNull();
+
+    expect(recordAppError).not.toHaveBeenCalled();
+  });
+
+  it('accepts a message with line breaks, which is only stored', async () => {
+    vi.mocked(getOptionalActor).mockResolvedValue(null);
+    vi.mocked(recordAppError).mockResolvedValue({ reference: '7KQ2-M9XD', at: AT, stored: true });
+
+    await expect(
+      reportErrorAction({ ...report, message: 'Hydration failed\n  <div>\n  <span>' }),
+    ).resolves.toEqual({ reference: '7KQ2-M9XD', at: AT });
   });
 
   it('accepts a long query string, since it is dropped', async () => {

@@ -2,13 +2,15 @@
  * @file Integration tests for recording errors in the app: what is stored
  * (database values taken out of the message, the path without its query
  * string or tokens, the signed-in user), the reference a digest gives, the
- * log line, and the limit per IP address.
+ * log line (always one line, whatever a request sent), and the limit per IP
+ * address.
  */
 import { DrizzleQueryError } from 'drizzle-orm/errors';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { appError } from '@/db/schema';
-import { firstRow } from '@/lib/defined';
+import { hasControlCharacter } from '@/lib/character-rules';
+import { defined, firstRow } from '@/lib/defined';
 import { referenceFromDigest } from '@/lib/error-reference';
 
 import { createUser, inSequence, setupTestContext } from '../../tests/integration/helpers';
@@ -87,7 +89,8 @@ describe('recordAppError', () => {
         routePath: '/(app)/companies/page',
         path: '/companies',
         name: 'Error',
-        message: 'Failed query: select * from "user" where "email" = $1\nparams: [redacted]',
+        // On one line: the line break before Drizzle's parameters is a space.
+        message: 'Failed query: select * from "user" where "email" = $1 params: [redacted]',
         userId: null,
       },
     ]);
@@ -147,6 +150,34 @@ describe('recordAppError', () => {
     );
     expect(recordedPath('?q=only')).toBeNull();
     expect(recordedPath(null)).toBeNull();
+  });
+
+  it('logs and stores one line, whatever line breaks the report carries', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const forged = 'App error 7KQ2-M9XD: server render /(app)/admin/users/page';
+
+    const recorded = await recordAppError(from('203.0.113.1'), {
+      source: 'browser',
+      error: { name: 'Type\nError', message: `x is undefined\r\n${forged}\u0000` },
+      digest: `12\n${forged}`,
+      routePath: `/(app)/dashboard/page\r\n${forged}`,
+      path: `/dashboard\n${forged}`,
+    });
+
+    const lines = warn.mock.calls.map(([line]) => String(line));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/^App error [2-9A-Z]{4}-[2-9A-Z]{4}: browser /);
+    expect(hasControlCharacter(defined(lines[0], 'the log line'))).toBe(false);
+    expect(recorded.stored).toBe(true);
+    expect(firstRow(await stored(), 'the stored error')).toMatchObject({
+      digest: `12 ${forged}`,
+      routePath: `/(app)/dashboard/page ${forged}`,
+      path: `/dashboard ${forged}`,
+      name: 'Type Error',
+      message: `x is undefined ${forged}`,
+    });
+    expect(recordedPath('/dashboard\r\n\t/admin')).toBe('/dashboard /admin');
+    expect(recordedPath('\n')).toBeNull();
   });
 
   it('gives a browser error a reference of its own and shortens a long message', async () => {

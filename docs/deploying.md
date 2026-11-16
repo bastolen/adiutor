@@ -315,9 +315,12 @@ written, database values are taken out (`src/lib/log-redaction.ts`, installed by
 `src/instrumentation.ts` and at the start of each script): a failed query is logged with its SQL,
 its SQL state and constraint, and Next's `digest` of the error, but `params: [redacted]` instead
 of the values it was sent, and without
-Postgres's `detail` (e.g. `Key (email)=(…)`). That covers Next's own logging of errors
-pages and server actions throw, Better Auth's logger and the app's own messages. Other text in
-an error message stays, such as the address an SMTP server refused. In development without
+Postgres's `detail` (e.g. `Key (email)=(…)`). What Postgres quotes in its own message is
+replaced too (`invalid input syntax for type uuid: "[redacted]"`: it quotes the value it couldn't
+read), unless it's the constraint, table, column, schema or data type the error names. That covers
+Next's own logging of errors pages and server actions throw, Better Auth's logger and the app's own
+messages. Other text in the message of an error that isn't the database's stays, such as the
+address an SMTP server refused. In development without
 `SMTP_URL`, emails are printed in full so their links can be opened (never in production).
 
 ## Looking up an error reference

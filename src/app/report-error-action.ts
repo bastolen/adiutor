@@ -9,6 +9,7 @@
 
 import { z } from 'zod';
 
+import { hasControlCharacter } from '@/lib/character-rules';
 import {
   ERROR_MESSAGE_MAX_LENGTH,
   ERROR_NAME_MAX_LENGTH,
@@ -21,7 +22,12 @@ import { getOptionalActor } from '@/server/authz';
 /**
  * What the error page sends: the error's class name (if it was an `Error`)
  * and message, and the page's path, whose query string and fragment are
- * dropped (they can hold search terms and tokens).
+ * dropped (they can hold search terms and tokens). A path with a control
+ * character is refused: a browser's address never has one, and the path goes
+ * into the server log, where a line break would start a line of its own
+ * (anyone, signed out too, can call this action). The name and message are
+ * only stored, on one line (`recordAppError`); an error's message may well
+ * have line breaks.
  */
 const reportSchema = z.object({
   name: z.string().max(ERROR_NAME_MAX_LENGTH).nullable(),
@@ -29,6 +35,7 @@ const reportSchema = z.object({
   path: z
     .string()
     .max(2048)
+    .refine((path) => !hasControlCharacter(path))
     .transform((path) => path.split(/[?#]/, 1)[0] ?? '')
     .pipe(z.string().max(ERROR_PATH_MAX_LENGTH)),
 });

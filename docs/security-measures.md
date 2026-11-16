@@ -95,7 +95,15 @@ days (the `retention` job, see [Background jobs](jobs.md)). `app_error` stores n
 to 500 characters, goes through `redactLogValue`, `src/lib/log-redaction.ts`), no query strings
 (they can hold search terms and sign-in tokens) and no secret tokens from paths (`/invite/…`,
 `/join/…` and Better Auth's `/api/auth/reset-password/…` are stored with `[token]`). The log line
-of each error holds only its reference, where it happened and the digest.
+of each error holds only its reference, where it happened and the digest, always on one line: the
+error page's action refuses a path with a control character, and whatever is logged or stored has
+its control characters (line breaks among them) turned into spaces, so a request can't add a line
+to the log that looks like another error.
+
+Untrusted text is also cleaned before it reaches a query: a search drops control characters
+(`containsPattern` in `src/server/search.ts`), and a company's address is looked up only when it
+can be an ID or a URL name (`getCompanyAccess`), so a NUL character, which Postgres refuses, gives
+no results or "not found" instead of an error.
 
 ## Client IP
 

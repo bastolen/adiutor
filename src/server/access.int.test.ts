@@ -1,7 +1,9 @@
 /**
  * @file Integration tests for reading a user's permissions as they are now
  * (`currentPermissionsOf`), after a change to their own roles that their
- * actor, loaded before it, doesn't know about.
+ * actor, loaded before it, doesn't know about, and for finding a company by
+ * what its address names it with (`getCompanyAccess`): its ID or URL name,
+ * and "not found" for anything that can be neither.
  */
 import { and, eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -103,5 +105,35 @@ describe('getCompanyAccess', () => {
     await expect(getCompanyAccess(db, outsider, testCompany.slug)).rejects.toMatchObject({
       code: 'not_found',
     });
+  });
+
+  it.each([
+    ['a NUL character, which Postgres refuses in a query', '\u0000'],
+    ['a URL name with a NUL character in it', 'adiutor\u0000tests'],
+    ['a line break', 'adiutor\ntests'],
+    ['characters a URL name never has', 'Adiutor Tests!'],
+    ['nothing', ''],
+  ])('answers not found, without an error, for %s', async (_name, reference) => {
+    const staff = await staffActor(db, 'platform_admin');
+
+    await expect(getCompanyAccess(db, staff, reference)).rejects.toMatchObject({
+      code: 'not_found',
+    });
+  });
+
+  it('finds a company by its ID in any case, and with spaces around either', async () => {
+    const staff = await staffActor(db, 'platform_admin');
+
+    const found = await Promise.all(
+      [testCompany.id.toUpperCase(), ` ${testCompany.id} `, ` ${testCompany.slug} `].map(
+        (reference) => getCompanyAccess(db, staff, reference),
+      ),
+    );
+
+    expect(found.map((access) => access.company.id)).toEqual([
+      testCompany.id,
+      testCompany.id,
+      testCompany.id,
+    ]);
   });
 });
