@@ -317,9 +317,7 @@ test('changing how you sign in needs a confirmation from the last 15 minutes', a
   await clickUntil(newBackupCodes, () =>
     expect(page).toHaveURL(CONFIRM_SIGN_IN_CHANGE_URL, { timeout: 2_000 }),
   );
-  await expect(
-    page.getByText('Changing how you sign in needs a confirmation from the last 15 minutes.'),
-  ).toBeVisible();
+  await expect(page.getByText('This needs a confirmation from the last 15 minutes.')).toBeVisible();
 
   // An authenticator code can't be used twice, so wait for the next one.
   await expect

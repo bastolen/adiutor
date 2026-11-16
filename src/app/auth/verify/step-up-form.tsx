@@ -1,10 +1,11 @@
 /**
  * @file The form of the step-up page: confirms a session that was signed in
- * without a second step, or confirmed too long ago to change how the user
- * signs in, with a code, a passkey or a provider that can prove MFA. Says why
- * a provider didn't confirm it, when that's how the user got back here
- * (`ProviderStepUpNotice`), and why a provider isn't offered for a change to
- * how they sign in (`providersHeldBack`).
+ * without a second step, or confirmed too long ago for what the user came to
+ * do (changing how they sign in, giving someone a role, resetting someone's
+ * two-step verification, signing in as a user), with a code, a passkey or a
+ * provider that can prove MFA. Says why a provider didn't confirm it, when
+ * that's how the user got back here (`ProviderStepUpNotice`), and why a
+ * provider isn't offered for what they came to do (`providersHeldBack`).
  */
 'use client';
 
@@ -45,11 +46,16 @@ type StepUpAction = 'passkey' | 'code' | MfaProvider;
 
 /**
  * Why the session needs confirming, as the `reason` of `auth.stepUp.reason`.
+ * The two reasons for a session that counts already (`confirmedBefore`, and
+ * `secondStep` for an account whose second step isn't MFA) don't name what
+ * the user came to do: the page can't tell a change to how they sign in from
+ * giving someone a role, resetting someone's two-step verification or signing
+ * in as a user.
  *
  * @param roleRequiresMfa - Whether the role requires MFA.
  * @param accountHasMfa - Whether the account has MFA.
  * @param confirmedBefore - Whether this session was confirmed already, but
- *   too long ago to change how the user signs in.
+ *   too long ago for what the user came to do.
  * @returns The reason, e.g. `roleRequiresMfa`.
  */
 function stepUpReason(
@@ -92,7 +98,9 @@ export interface StepUpFormProps {
   accountHasMfa?: boolean;
   /**
    * Whether this session was confirmed already, more than 15 minutes ago: the
-   * Security page sends them here before changing how they sign in.
+   * Security page sends them here before changing how they sign in, and other
+   * pages before giving someone a role, resetting someone's two-step
+   * verification or signing in as a user.
    */
   confirmedBefore?: boolean;
 }

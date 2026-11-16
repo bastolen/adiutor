@@ -18,7 +18,10 @@ email codes, and the guards refuse an earlier one (`EMAIL_CODE_SENT_RECENTLY`, s
 since the last code still works). Using a code ends the wait. **Once an authenticator app is set
 up, email codes aren't accepted any more**, so the inbox alone (which also gets email links and
 password resets) can't get past the app. The app adds single-use backup codes, which only work once the app is set up, so an unfinished setup leaves no way in. "Trust this
-device" skips the step on that browser for 30 days. It's forgotten (the trusted device itself,
+device" skips the step on that browser until 30 days after the last password sign-in there, as
+its label says: each password sign-in that skips the step starts the 30 days again (Better Auth
+replaces the trusted device with a new one, and has no setting for it), so a browser where the
+password is used at least once every 30 days stays trusted. It's forgotten (the trusted device itself,
 not only the browser's cookie, so a copy of the cookie stops working too) when you sign out on
 that browser, when you sign out a device or every other device on the Security page, when the
 password is changed or reset, when MFA is reset or two-step verification is turned off, when an

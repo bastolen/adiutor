@@ -39,6 +39,9 @@ vi.mock('@/lib/sign-in/auth-client', () => ({
 
 vi.mock('@/components/ui/load-fresh', () => ({ default: loadFresh }));
 
+/** The label of the checkbox that trusts the browser, which says how long that lasts. */
+const TRUST_DEVICE = 'Trust this device (until 30 days after your last password sign-in here)';
+
 /**
  * Wraps content in an `<Activity>` that a "Leave" / "Return" button hides and
  * shows, like Next.js does with a page when you navigate away and back.
@@ -72,7 +75,7 @@ describe('TwoFactorForm', () => {
     render(<TwoFactorForm />);
 
     await user.type(screen.getByLabelText('Code'), '123456');
-    await user.click(screen.getByLabelText('Trust this device for 30 days'));
+    await user.click(screen.getByLabelText(TRUST_DEVICE));
     await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
 
     expect(verifyTotp).toHaveBeenCalledWith({ code: '123456', trustDevice: true });
@@ -259,12 +262,12 @@ describe('TwoFactorForm', () => {
     );
 
     await user.type(screen.getByLabelText('Code'), '123456');
-    await user.click(screen.getByLabelText('Trust this device for 30 days'));
+    await user.click(screen.getByLabelText(TRUST_DEVICE));
     await user.click(screen.getByRole('button', { name: 'Leave' }));
     await user.click(screen.getByRole('button', { name: 'Return' }));
 
     expect(screen.getByLabelText('Code')).toHaveValue('');
-    expect(screen.getByLabelText('Trust this device for 30 days')).not.toBeChecked();
+    expect(screen.getByLabelText(TRUST_DEVICE)).not.toBeChecked();
   });
 
   it('is usable again when the browser shows the page from its back/forward cache', async () => {

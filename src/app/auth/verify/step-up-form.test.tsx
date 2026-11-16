@@ -518,14 +518,12 @@ describe('StepUpForm', () => {
         />,
       );
 
-      expect(
-        screen.getByText(/Changing how you sign in needs your second step\./),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/This needs your second step\./)).toBeInTheDocument();
       expect(screen.queryByText(/You turned on MFA/)).not.toBeInTheDocument();
       expect(screen.queryByText(/Your role requires MFA/)).not.toBeInTheDocument();
     });
 
-    it('for a session confirmed too long ago to change how the user signs in', () => {
+    it('for a session confirmed too long ago, without naming what the user came to do', () => {
       render(
         <StepUpForm
           methods={githubOnly}
@@ -537,14 +535,15 @@ describe('StepUpForm', () => {
       );
 
       expect(
-        screen.getByText(
-          /Changing how you sign in needs a confirmation from the last 15 minutes\./,
-        ),
+        screen.getByText(/This needs a confirmation from the last 15 minutes\./),
       ).toBeInTheDocument();
+      // The same page confirms before giving someone a role, resetting someone's two-step
+      // verification and signing in as a user, so it doesn't say it's about how they sign in.
+      expect(screen.queryByText(/how you sign in/)).not.toBeInTheDocument();
       expect(screen.queryByText(/Your role requires MFA/)).not.toBeInTheDocument();
       expect(screen.queryByText(/You turned on MFA/)).not.toBeInTheDocument();
       // GitHub is offered, so nothing says it can't confirm the change.
-      expect(screen.queryByText(/can’t confirm changes/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/can’t confirm this/)).not.toBeInTheDocument();
     });
 
     it('for a change, why GitHub isn’t offered next to a passkey or an authenticator app', () => {
@@ -560,7 +559,7 @@ describe('StepUpForm', () => {
 
       expect(
         screen.getByText(
-          "Changing how you sign in needs a confirmation from the last 15 minutes. GitHub can’t confirm changes to how you sign in while you have a passkey or an authenticator app. Confirm it's you to continue.",
+          "This needs a confirmation from the last 15 minutes. GitHub can’t confirm this while you have a passkey or an authenticator app. Confirm it's you to continue.",
         ),
       ).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Confirm with a passkey' })).toBeInTheDocument();
@@ -570,11 +569,11 @@ describe('StepUpForm', () => {
     it.each([
       [
         'nl-NL',
-        'Om te wijzigen hoe je inlogt, is een bevestiging van de afgelopen 15 minuten nodig. GitHub of Google kan geen wijzigingen aan hoe je inlogt bevestigen zolang je een passkey of authenticator-app hebt. Bevestig dat jij het bent om verder te gaan.',
+        'Hiervoor is een bevestiging van de afgelopen 15 minuten nodig. GitHub of Google kan dit niet bevestigen zolang je een passkey of authenticator-app hebt. Bevestig dat jij het bent om verder te gaan.',
       ],
       [
         'es-ES',
-        'Para cambiar cómo inicias sesión hace falta una confirmación de los últimos 15 minutos. GitHub o Google no puede confirmar cambios en cómo inicias sesión mientras tengas una llave de acceso o una app de autenticación. Confirma que eres tú para continuar.',
+        'Para esto hace falta una confirmación de los últimos 15 minutos. GitHub o Google no puede confirmar esto mientras tengas una llave de acceso o una app de autenticación. Confirma que eres tú para continuar.',
       ],
     ] as const)('says the same in %s, naming the providers in its own words', (locale, text) => {
       renderInLocale(

@@ -161,7 +161,9 @@ test('the code step starts over after signing out, with "Trust this device" unti
     await expect(page).toHaveURL(/\/auth\/two-factor/);
   };
   const code = page.getByRole('textbox', { name: 'Code', exact: true });
-  const trust = page.getByRole('checkbox', { name: 'Trust this device for 30 days' });
+  const trust = page.getByRole('checkbox', {
+    name: 'Trust this device (until 30 days after your last password sign-in here)',
+  });
 
   await page.goto('/auth');
   await passwordStep();

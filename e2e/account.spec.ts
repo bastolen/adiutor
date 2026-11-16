@@ -128,7 +128,9 @@ test('a user signs out their other devices, which also forgets trusted browsers'
   await other
     .getByRole('textbox', { name: 'Code', exact: true })
     .fill(codeForSecret(SESSIONS_CLIENT.totpSecret));
-  await other.getByLabel('Trust this device for 30 days').check();
+  await other
+    .getByLabel('Trust this device (until 30 days after your last password sign-in here)')
+    .check();
   await other.getByRole('button', { name: 'Verify and sign in' }).click();
   await expect(other).toHaveURL('/dashboard');
   await signIn(page, SESSIONS_CLIENT);

@@ -28,9 +28,10 @@ import verifyCode, { type CodeKind } from '@/lib/sign-in/verify-code';
 /**
  * Asks for the second step: a code from the authenticator app (or a backup
  * code instead), or, without an app, an emailed code, which is sent straight
- * away. With "Trust this device", the step is skipped on this browser for 30
- * days, until the user signs out there (sign-out clears it, see
- * `cookiesToClearAtSignOut`).
+ * away. With "Trust this device", the step is skipped on this browser until
+ * 30 days after the last password sign-in there (Better Auth renews the
+ * trusted device each time it skips the step, which the label says), or until
+ * the user signs out there (sign-out clears it, see `cookiesToClearAtSignOut`).
  *
  * The form starts over whenever the page is hidden: Next keeps the page alive
  * (React's `<Activity>`), e.g. after going back to the sign-in page, and

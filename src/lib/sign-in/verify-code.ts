@@ -14,7 +14,7 @@ export type CodeKind = 'totp' | 'otp' | 'backup';
 export interface CodeInput {
   /** The code as typed; it's trimmed before it's sent. */
   code: string;
-  /** Whether to trust this browser for 30 days (the sign-in code step only). */
+  /** Whether to trust this browser, so it skips the code step (the sign-in code step only). */
   trustDevice?: boolean;
 }
 
@@ -24,7 +24,8 @@ export interface CodeInput {
  * @param kind - What the code is.
  * @param input - The code, and at sign-in whether to trust the browser.
  * @param input.code - The code as typed; it's trimmed before it's sent.
- * @param input.trustDevice - Whether to trust this browser for 30 days, when given.
+ * @param input.trustDevice - Whether to trust this browser (until 30 days after
+ *   the last password sign-in there), when given.
  * @returns Better Auth's result, unchanged (`error` when the code was refused).
  */
 export default async function verifyCode(kind: CodeKind, { code, trustDevice }: CodeInput) {

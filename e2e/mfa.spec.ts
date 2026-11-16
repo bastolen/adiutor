@@ -106,7 +106,9 @@ test('a company user turns on email codes and can trust the device until signing
   await expect(resend).toBeFocused();
   await expect(resend).toHaveAttribute('aria-disabled', 'true');
   await page.getByRole('textbox', { name: 'Code', exact: true }).fill(codeIn(signInEmail));
-  await page.getByLabel('Trust this device for 30 days').check();
+  await page
+    .getByLabel('Trust this device (until 30 days after your last password sign-in here)')
+    .check();
   await page.getByRole('button', { name: 'Verify and sign in' }).click();
   await expect(page).toHaveURL('/dashboard');
 
