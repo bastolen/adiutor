@@ -89,6 +89,26 @@ export type ButtonProps = ComponentProps<'button'> & {
 };
 
 /**
+ * The state of one of several buttons that each start an action, of which
+ * only one may run at a time (e.g. "Sign in with a passkey", "Continue with
+ * GitHub" and "Sign in"): the running action's button is busy, so it keeps
+ * keyboard focus, and every other one is disabled, so it can't start a
+ * second action. A single flag for all of them would disable the button
+ * that was pressed, which loses focus, and show a spinner on buttons nobody
+ * pressed.
+ *
+ * @param running - The action that's running, or `null` when none is.
+ * @param action - This button's action.
+ * @returns The `loading` and `disabled` props for this button.
+ */
+export function whileRunning<Action extends string>(
+  running: Action | null,
+  action: Action,
+): Pick<ButtonProps, 'loading' | 'disabled'> {
+  return { loading: running === action, disabled: running !== null && running !== action };
+}
+
+/**
  * Ignores a press on a busy button: nothing is called, and a submit button
  * doesn't submit its form again (also not when Enter in one of the form's
  * fields presses it). Radix triggers skip their own handler for a prevented

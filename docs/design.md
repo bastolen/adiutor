@@ -179,7 +179,11 @@ keyboard support.
   (`Button`'s `loading`: a spinner, `aria-busy`, `aria-disabled` and the wait cursor) and ignores
   presses, so nothing is submitted twice. It's busy rather than disabled, because a disabled
   button loses keyboard focus the moment the action starts and doesn't get it back, which would
-  leave keyboard users at the top of the page after every form they send. Destructive actions ask
+  leave keyboard users at the top of the page after every form they send. Where several buttons
+  each start an action and only one may run at a time (the sign-in page's passkey, provider and
+  password buttons), only the pressed one is busy and the others are disabled
+  (`whileRunning(running, action)` from `src/components/ui/button.tsx`): one flag for all of them
+  would disable the pressed button too, and show a spinner on buttons nobody pressed. Destructive actions ask
   for confirmation in a `ConfirmDialog`. A role select only saves when an option is picked (Enter or click), never while
   arrowing through the list; on the user's own row it asks first (`confirmChange`, with the
   question for each role worded by the page, e.g. "Step down to Manager?"), and cancelling puts it

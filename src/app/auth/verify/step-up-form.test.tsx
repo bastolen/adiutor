@@ -239,6 +239,45 @@ describe('StepUpForm', () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/account'));
   });
 
+  it('keeps focus on the passkey button while its prompt is open, and the others wait', async () => {
+    const user = userEvent.setup();
+    const prompt = deferred<object>();
+    passkey.mockReturnValue(prompt.promise);
+    render(
+      <StepUpForm
+        methods={{ ...none, authenticator: true, passkey: true, providers: ['github'] }}
+        callbackURL="/account"
+      />,
+    );
+    const button = screen.getByRole('button', { name: 'Confirm with a passkey' });
+    const others = [
+      screen.getByRole('button', { name: 'Confirm with GitHub' }),
+      screen.getByRole('button', { name: 'Confirm' }),
+    ];
+
+    button.focus();
+    await user.keyboard('{Enter}');
+
+    // Busy, not disabled: a disabled button would drop focus to the top of the page.
+    expect(button).toHaveFocus();
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(button).toBeEnabled();
+    // The others can't start a second confirmation, and show no spinner of their own.
+    others.forEach((other) => {
+      expect(other).toBeDisabled();
+      expect(other).not.toHaveAttribute('aria-busy');
+    });
+
+    await act(async () => {
+      prompt.resolve({ data: null, error: { code: 'AUTH_CANCELLED', status: 400 } });
+    });
+
+    [button, ...others].forEach((other) => {
+      expect(other).toBeEnabled();
+      expect(other).not.toHaveAttribute('aria-busy');
+    });
+  });
+
   describe('starts over after a confirmation', () => {
     it('is ready again once an authenticator code was accepted', async () => {
       const user = userEvent.setup();

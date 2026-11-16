@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { defined } from '@/lib/defined';
 
-import Button from './button';
+import Button, { whileRunning } from './button';
 
 describe('Button', () => {
   it('is a plain button by default, so it never submits a form by accident', () => {
@@ -126,5 +126,19 @@ describe('Button', () => {
     expect(look).toHaveAttribute('aria-hidden', 'true');
     expect(look.className).not.toMatch(/hover:|focus-visible:|active:/);
     expect(look).toHaveClass('pointer-events-none', 'bg-primary');
+  });
+});
+
+describe('whileRunning', () => {
+  it('leaves every button usable while nothing runs', () => {
+    expect(whileRunning(null, 'passkey')).toEqual({ loading: false, disabled: false });
+  });
+
+  it('makes the running action busy, so its button keeps focus', () => {
+    expect(whileRunning('passkey', 'passkey')).toEqual({ loading: true, disabled: false });
+  });
+
+  it('disables the other actions, which show no spinner', () => {
+    expect(whileRunning<string>('passkey', 'github')).toEqual({ loading: false, disabled: true });
   });
 });

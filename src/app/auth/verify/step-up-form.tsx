@@ -23,7 +23,7 @@ import PROVIDER_ICONS from '@/components/brand/provider-icons';
 import Alert from '@/components/ui/alert';
 import AuthDivider from '@/components/ui/auth-divider';
 import AuthHeading from '@/components/ui/auth-heading';
-import Button from '@/components/ui/button';
+import Button, { whileRunning } from '@/components/ui/button';
 import loadFresh from '@/components/ui/load-fresh';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import type { StepUpMethods } from '@/lib/authz/mfa';
@@ -39,6 +39,9 @@ import {
 import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 import type { TwoFactorMethod } from '@/lib/sign-in/two-factor-path';
 import verifyCode, { type CodeKind } from '@/lib/sign-in/verify-code';
+
+/** A way of confirming that a button starts: a passkey, the code form, or a provider. */
+type StepUpAction = 'passkey' | 'code' | MfaProvider;
 
 /**
  * Why the session needs confirming, as the `reason` of `auth.stepUp.reason`.
@@ -140,7 +143,8 @@ export default function StepUpForm({
   const [mode, setMode] = useState<CodeKind | null>(codeMethod);
   const [code, setCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
-  const [pending, setPending] = useState(false);
+  /** The way of confirming that's running: its button is busy, the others wait (`whileRunning`). */
+  const [running, setRunning] = useState<StepUpAction | null>(null);
   const [sending, setSending] = useState(false);
   const cooldown = useResendCooldown();
   const [error, setError] = useTransientState(initialError);
@@ -156,7 +160,7 @@ export default function StepUpForm({
    */
   const finish = () => {
     clearProviderStepUpNotice();
-    setPending(false);
+    setRunning(null);
     setCode('');
     setCodeSent(false);
     setMode(codeMethod);
@@ -245,12 +249,12 @@ export default function StepUpForm({
     if (!mode) {
       return;
     }
-    setPending(true);
+    setRunning('code');
     setError(null);
     const result = await verifyCode(mode, { code });
     if (result.error) {
       showError(result.error);
-      setPending(false);
+      setRunning(null);
       return;
     }
     finish();
@@ -258,12 +262,12 @@ export default function StepUpForm({
 
   /** Confirms with a passkey, letting the browser ask which one. */
   const confirmWithPasskey = async () => {
-    setPending(true);
+    setRunning('passkey');
     setError(null);
     const result = await authClient.signIn.passkey();
     if (result?.error) {
       setError(authErrorText(t, result.error));
-      setPending(false);
+      setRunning(null);
       return;
     }
     finish();
@@ -279,7 +283,7 @@ export default function StepUpForm({
    * @param provider - The provider.
    */
   const confirmWithProvider = async (provider: MfaProvider) => {
-    setPending(true);
+    setRunning(provider);
     setError(null);
     const errorCallbackURL = `/auth/verify?${new URLSearchParams({ callbackURL, provider })}`;
     const result = await authClient.signIn.social({
@@ -296,7 +300,7 @@ export default function StepUpForm({
           t('stepUp.providerFailed', { provider: PROVIDER_LABELS[provider] }),
         ),
       );
-      setPending(false);
+      setRunning(null);
     }
   };
 
@@ -343,7 +347,12 @@ export default function StepUpForm({
       {(methods.passkey || methods.providers.length > 0) && (
         <div className="flex flex-col gap-3">
           {methods.passkey && (
-            <Button variant="secondary" fullWidth disabled={pending} onClick={confirmWithPasskey}>
+            <Button
+              variant="secondary"
+              fullWidth
+              {...whileRunning(running, 'passkey')}
+              onClick={confirmWithPasskey}
+            >
               <KeyRound aria-hidden="true" />
               {t('stepUp.passkey')}
             </Button>
@@ -355,7 +364,7 @@ export default function StepUpForm({
                 key={provider}
                 variant="secondary"
                 fullWidth
-                disabled={pending}
+                {...whileRunning(running, provider)}
                 onClick={() => confirmWithProvider(provider)}
               >
                 <Icon />
@@ -379,7 +388,7 @@ export default function StepUpForm({
                 value={code}
                 onChange={(event) => setCode(event.target.value)}
               />
-              <Button type="submit" fullWidth loading={pending}>
+              <Button type="submit" fullWidth {...whileRunning(running, 'code')}>
                 {t('stepUp.submit')}
               </Button>
             </form>
@@ -387,7 +396,7 @@ export default function StepUpForm({
             <Button
               variant="secondary"
               fullWidth
-              disabled={pending}
+              disabled={running !== null}
               loading={sending}
               onClick={() => sendCode()}
             >

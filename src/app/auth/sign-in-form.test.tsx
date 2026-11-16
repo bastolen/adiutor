@@ -359,6 +359,48 @@ describe('SignInForm', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('passkey was cancelled');
   });
+
+  it('keeps focus on the passkey button while its prompt is open, and the others wait', async () => {
+    /**
+     * Answers the passkey prompt; replaced by the promise's own resolver below.
+     *
+     * @returns Nothing.
+     */
+    let answer: (result: object) => void = () => undefined;
+    signInPasskey.mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
+    render(<SignInForm providers={['github']} />);
+    const passkey = screen.getByRole('button', { name: 'Sign in with a passkey' });
+    const others = [
+      screen.getByRole('button', { name: 'Continue with GitHub' }),
+      screen.getByRole('button', { name: 'Sign in' }),
+    ];
+
+    passkey.focus();
+    fireEvent.click(passkey);
+
+    // Busy, not disabled: a disabled button would drop focus to the top of the page.
+    expect(passkey).toHaveFocus();
+    expect(passkey).toHaveAttribute('aria-busy', 'true');
+    expect(passkey).toBeEnabled();
+    // The others can't start a second sign-in, and show no spinner of their own.
+    others.forEach((other) => {
+      expect(other).toBeDisabled();
+      expect(other).not.toHaveAttribute('aria-busy');
+    });
+
+    await act(async () => {
+      answer({ data: null, error: { code: 'AUTH_CANCELLED', status: 400 } });
+    });
+
+    [passkey, ...others].forEach((button) => {
+      expect(button).toBeEnabled();
+      expect(button).not.toHaveAttribute('aria-busy');
+    });
+  });
   it('starts over when the page is hidden, so the next person finds an empty form', async () => {
     signInEmail.mockResolvedValue({ data: {}, error: null });
     render(
@@ -390,11 +432,13 @@ describe('SignInForm', () => {
     const github = screen.getByRole('button', { name: 'Continue with GitHub' });
 
     fireEvent.click(github);
-    await vi.waitFor(() => expect(github).toBeDisabled());
+    await vi.waitFor(() => expect(github).toHaveAttribute('aria-busy', 'true'));
+    expect(screen.getByRole('button', { name: 'Sign in with a passkey' })).toBeDisabled();
     act(() => {
       window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
     });
 
-    expect(github).toBeEnabled();
+    expect(github).not.toHaveAttribute('aria-busy');
+    expect(screen.getByRole('button', { name: 'Sign in with a passkey' })).toBeEnabled();
   });
 });
