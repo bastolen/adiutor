@@ -22,13 +22,14 @@ import {
 } from './manage-queue';
 import { findQueuedKind, findRecurringJob } from './registry';
 import type { JobRunResult } from './run';
-import { runJobNow } from './tick';
+import { REQUEST_RUN_SECONDS, runJobNow } from './tick';
 
 /**
- * How long a run started from the Jobs page may keep starting new work, so it
- * ends within the request's 60 seconds; what's left waits for the next tick.
+ * How long a run started from the Jobs page may keep starting new work, in
+ * seconds (40), so it ends within the request's 60 (see
+ * {@link REQUEST_RUN_SECONDS}); what's left waits for the next tick.
  */
-const PAGE_RUN_SECONDS = 45;
+const PAGE_RUN_SECONDS = REQUEST_RUN_SECONDS;
 
 /**
  * Checks the actor may act on the jobs: a staff Admin, as themself.

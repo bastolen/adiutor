@@ -59,8 +59,9 @@ requirement (`hasMfa`) with an authenticator app or a passkey, or when it has no
 every connected provider account has MFA itself; **email codes don't count for them**. Provider
 MFA only comes from providers that can prove it (`MFA_PROVIDERS` in `src/lib/sign-in/oauth-providers.ts`:
 GitHub, whose API says `two_factor_authentication`), checked at every sign-in with or connection
-of such an account (`src/server/auth/provider-mfa.ts`; without a definite answer, the stored value
-stays and that sign-in doesn't count as confirmed). Google can't, so a Google account never
+of such an account (`src/server/auth/provider-mfa.ts`; without a definite answer, which includes
+GitHub not answering within 3 seconds, the stored value stays and that sign-in doesn't count as
+confirmed). Google can't, so a Google account never
 counts. A provider's MFA only counts while its sign-in is configured on the server
 (`availableProviders`). Until an account meets it, every app page sends them to the Security
 page (`getActor()` in `src/server/authz.ts`). When it stops meeting it (2FA turned off at the

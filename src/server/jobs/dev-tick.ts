@@ -5,13 +5,13 @@
  * starts it in development only; production never runs it.
  */
 import type { ServiceContext } from '../context';
-import { runTick } from './tick';
+import { REQUEST_RUN_SECONDS, runTick } from './tick';
 
 /** How often the dev server ticks, in milliseconds. */
 export const DEV_TICK_INTERVAL_MS = 60_000;
 
 /** How long one dev tick may start runs, in seconds, like the endpoint's tick. */
-const DEV_TICK_SECONDS = 45;
+const DEV_TICK_SECONDS = REQUEST_RUN_SECONDS;
 
 /** Marks the ticks started on `globalThis`, which survives the dev server reloading this module. */
 const STARTED = Symbol.for('adiutor.devTick');

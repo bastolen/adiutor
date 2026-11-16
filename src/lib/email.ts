@@ -8,8 +8,9 @@
  *   automated tests).
  * - `SMTP_URL` set: emails are sent over SMTP, reusing up to
  *   {@link SMTP_MAX_CONNECTIONS} open connections (nodemailer's pool), so a
- *   bulk invitation doesn't connect and sign in once per email, with time
- *   limits ({@link SMTP_TIMEOUTS}) so a mail server that hangs fails the
+ *   bulk invitation doesn't connect and sign in once per email, with a time
+ *   limit on the whole send ({@link SEND_TIMEOUT_MS}) and on each of its
+ *   steps ({@link SMTP_TIMEOUTS}), so a mail server that hangs fails the
  *   email instead of holding a request or a job. Settings in the URL win
  *   (e.g. `?maxConnections=1`, or `?pool=false`).
  * - Otherwise, only when `NODE_ENV` is explicitly `development` or `test`:
@@ -23,6 +24,7 @@ import { join } from 'node:path';
 
 import { createTransport } from 'nodemailer';
 
+import { SEND_TIMEOUT_MS } from './email-limits';
 import { env } from './env';
 
 /**
@@ -43,11 +45,11 @@ export interface Email {
 const SMTP_MAX_CONNECTIONS = 3;
 
 /**
- * How long to wait for the mail server, in milliseconds, instead of
- * nodemailer's 2 minutes, 30 seconds and 10 minutes: well within a request,
- * and within the background jobs' tick (45 seconds), so a server that hangs
- * fails one email (which a queued job then tries again) instead of holding
- * the request or the tick until the platform stops it.
+ * How long to wait for the mail server at each step, in milliseconds, instead
+ * of nodemailer's 2 minutes, 30 seconds and 10 minutes. Together they'd let
+ * one send take up to 40 seconds, so they aren't the limit on a send
+ * ({@link SEND_TIMEOUT_MS} is): they close the connection of a send that was
+ * given up, which hands it back to the pool.
  */
 export const SMTP_TIMEOUTS = {
   /** To connect. */
@@ -74,14 +76,43 @@ const transport = env.SMTP_URL
   : null;
 
 /**
- * Sends an email.
+ * Waits for a send over SMTP, for at most {@link SEND_TIMEOUT_MS}. The
+ * transport's own attempt isn't cut off: the mail server may still accept
+ * the email afterwards, so a job that tries again can send it twice, which
+ * jobs accept (they run at least once).
+ *
+ * @param sending - The transport's send.
+ * @throws {Error} What the transport threw, or, when the time ran out first,
+ *   an error with nodemailer's code for a timeout (`ETIMEDOUT`), so callers
+ *   log and handle it like any other failed send ({@link sendFailureOf}).
+ */
+async function withinSendTimeout(sending: Promise<unknown>): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      reject(Object.assign(new Error('Sending the email timed out'), { code: 'ETIMEDOUT' }));
+    }, SEND_TIMEOUT_MS);
+  });
+  try {
+    // The race also handles a send that fails after the time ran out: it's never left unhandled.
+    await Promise.race([sending, timedOut]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Sends an email. Over SMTP, the whole send takes at most
+ * {@link SEND_TIMEOUT_MS}.
  *
  * @param email - The email to send.
  * @param email.to - Recipient address.
  * @param email.subject - Subject line.
  * @param email.text - Plain-text body.
  * @param email.html - HTML body.
- * @throws {Error} Outside development and tests when neither an outbox nor SMTP is configured.
+ * @throws {Error} When the mail server refuses the email or doesn't accept it
+ *   in time; outside development and tests, when neither an outbox nor SMTP
+ *   is configured.
  */
 export async function sendEmail({ to, subject, text, html }: Email): Promise<void> {
   if (env.EMAIL_OUTBOX_DIR) {
@@ -95,7 +126,7 @@ export async function sendEmail({ to, subject, text, html }: Email): Promise<voi
   }
 
   if (transport) {
-    await transport.sendMail({ from: env.EMAIL_FROM, to, subject, text, html });
+    await withinSendTimeout(transport.sendMail({ from: env.EMAIL_FROM, to, subject, text, html }));
     return;
   }
 

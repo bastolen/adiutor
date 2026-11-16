@@ -5,6 +5,7 @@
  * its deadline; and running one job now, whether it's due or not.
  */
 import type { JobTrigger } from '@/db/schema';
+import { SEND_TIMEOUT_MS } from '@/lib/email-limits';
 
 import type { ServiceContext } from '../context';
 import { notFoundError } from '../errors';
@@ -15,6 +16,28 @@ import { runQueue } from './run-queue';
 import { isDue, lastScheduledAt } from './schedule';
 import { loadJobStates } from './state';
 import { recordTick } from './tick-record';
+
+/**
+ * How long the platform lets the function behind a request run, in seconds:
+ * the `maxDuration` of the tick's route (`src/app/api/jobs/route.ts`) and of
+ * the Jobs page, which Next.js needs written out there.
+ */
+const PLATFORM_LIMIT_SECONDS = 60;
+
+/** The time kept for recording a run and answering once its work has ended, in seconds. */
+const WRAP_UP_SECONDS = 5;
+
+/**
+ * How long a run inside a request may keep starting new work, in seconds: the
+ * endpoint's tick and a job started from the Jobs page. Work started just
+ * before this deadline must still end, and be recorded, before the platform
+ * stops the function; the longest such piece of work is one email (or one
+ * group of emails sent together), which takes at most `SEND_TIMEOUT_MS`, 15
+ * seconds. So: 60 − 15 − 5 = 40. A run that the platform stops anyway stays
+ * `running` for its 15-minute lease and loses an attempt.
+ */
+export const REQUEST_RUN_SECONDS =
+  PLATFORM_LIMIT_SECONDS - SEND_TIMEOUT_MS / 1000 - WRAP_UP_SECONDS;
 
 /** What a tick did. */
 export interface TickResult {

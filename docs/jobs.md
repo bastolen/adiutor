@@ -108,10 +108,13 @@ reference under **Logs → Errors**. The run in the history keeps the reference,
 job that failed. The server log gets the job and the reference, never the error's message, which can
 quote personal data.
 
-**The limits:** a tick starts new runs for 45 seconds from the endpoint and 4 minutes from the
+**The limits:** a tick starts new runs for 40 seconds from the endpoint and 4 minutes from the
 command line, and the recurring jobs get at most the first half of that, so the queue always has
-time. On Vercel the platform stops the endpoint's function after 60 seconds. A lease lasts 15
-minutes.
+time. On Vercel the platform stops the endpoint's function after 60 seconds. The 40 follow from
+that (`REQUEST_RUN_SECONDS` in `tick.ts`): work started just before the deadline must still end and
+be recorded, and the longest such piece is one email, which fails after 15 seconds
+(`SEND_TIMEOUT_MS` in `src/lib/email-limits.ts`), plus 5 seconds to answer: 60 − 15 − 5 = 40. A lease
+lasts 15 minutes.
 
 **A run that never finishes** (say, the platform stopped it at 60 seconds) fails too. A recurring
 run always frees its lease when it ends, so a lease that ran out means its run died: the next tick
@@ -156,7 +159,7 @@ next run; the kinds of queued job with how many wait and failed; the failed queu
 runs of the last 30 days that did something, failed or were started by hand. Error references link
 to Logs → Errors for those who may see it (`errors:view`).
 
-Staff Admins (`jobs:manage`) also run a recurring job now (for at most 45 seconds of new work; the
+Staff Admins (`jobs:manage`) also run a recurring job now (for at most 40 seconds of new work; the
 page's `maxDuration` is 60), pause and resume jobs, and retry or discard failed queued jobs, one or
 all of a kind (`controls.ts`). Each is recorded in the audit log, never allowed while signed in as
 someone, and discarding asks first. A failed job of a kind the registry no longer lists can only be
@@ -180,8 +183,10 @@ user), and run even with a pause left in the database.
 3. Test it next to its file (`*.int.test.ts`), calling its `run`.
 
 A job must be safe to run again at any time. Keep each piece of work to seconds, with a time limit
-on every network call (email has one: `SMTP_TIMEOUTS`), and stop starting new pieces at `deadline`,
-leaving the rest for the next run (see [the limits](#failures)).
+on every network call (`ctx.sendEmail` has one: 15 seconds for a whole send, `SEND_TIMEOUT_MS`), and
+stop starting new pieces at `deadline`, leaving the rest for the next run (see
+[the limits](#failures)). A piece of work that can take longer than an email needs the tick's
+deadline moved up with it (`REQUEST_RUN_SECONDS`).
 
 ## Adding a queued job
 

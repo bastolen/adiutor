@@ -127,10 +127,16 @@ In `src/lib/email.ts`, in order:
 
 - `EMAIL_OUTBOX_DIR` set: written there as JSON (the end-to-end tests read them)
 - `SMTP_URL` set: sent over SMTP (Mailpit in development, your provider in production, with
-  `EMAIL_FROM` as the sender), with time limits (`SMTP_TIMEOUTS`: 10 seconds to connect, 10 for the
-  greeting, 20 of silence) instead of nodemailer's minutes, so a mail server that hangs fails one
-  email (which a queued job tries again) instead of holding a request or the background jobs' tick
-  until the platform stops it; settings in `SMTP_URL` still win
+  `EMAIL_FROM` as the sender). A whole send takes at most 15 seconds (`SEND_TIMEOUT_MS` in
+  `src/lib/email-limits.ts`, counted from the call, so waiting for a free connection counts): after
+  that it fails like any other send,
+  so a mail server that hangs fails one email (which a queued job tries again) instead of holding a
+  request or the background jobs' tick until the platform stops it; the tick's own deadline is
+  worked out from it (see [the limits](jobs.md#failures)). The mail server may still accept an
+  email after its send was given up, so a job that tries again can send it twice. Each step also has
+  a limit (`SMTP_TIMEOUTS`: 10 seconds to connect, 10 for the greeting, 20 of silence, instead of
+  nodemailer's minutes), which closes the connection of a send that was given up; settings in
+  `SMTP_URL` still win
 - neither, with `NODE_ENV` set to `development` or `test`: the plain text is printed to the
   server console
 - neither, anywhere else (production, or a script without `NODE_ENV`): sending fails, so links
