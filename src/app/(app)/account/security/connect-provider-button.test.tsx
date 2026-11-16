@@ -1,7 +1,8 @@
 /**
  * @file Tests for the connect-provider button: it starts connecting with the
- * return URLs, shows when that fails (with the reason when the user's role
- * requires MFA that connecting would take away), can be disabled (linked to
+ * return URLs, shows when that fails (with the reason when the server gives
+ * one: the MFA the user's role requires, a sign-in that's too old, too many
+ * requests), can be disabled (linked to
  * the text that explains why), sends the user to confirm it's them first
  * when the Security page asks for a recent confirmation, and forgets a failed
  * attempt once the user leaves the page.
@@ -260,17 +261,47 @@ describe('ConnectProviderButton', () => {
     expect(screen.getByRole('button', { name: 'Connect Google' })).toBeEnabled();
   });
 
-  it('shows the general message for other refusals, even ones with their own message', async () => {
+  it('says to sign out and in again when the sign-in is too old to connect an account', async () => {
+    // A password-only account signed in over an hour ago: trying again would fail every time.
     linkSocial.mockResolvedValue({
-      error: { code: 'SESSION_NOT_FRESH', message: 'Session is not fresh' },
+      error: { status: 403, code: 'SESSION_NOT_FRESH', message: 'Session is not fresh' },
     });
     render(<ConnectProviderButton {...NOTHING_BLOCKED} provider="github" label="GitHub" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Connect GitHub' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Connecting failed. Please try again.',
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(
+      'For your security, sign out and in again before changing this.',
     );
+    expect(alert).not.toHaveTextContent('Connecting failed');
+    expect(alert).not.toHaveTextContent('Session is not fresh');
     expect(push).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Connect GitHub' })).toBeEnabled();
+  });
+
+  it('keeps the general message for a code without a message of its own', async () => {
+    linkSocial.mockResolvedValue({
+      error: { status: 400, code: 'SOMETHING_NEW', message: 'Written for developers' },
+    });
+    render(<ConnectProviderButton {...NOTHING_BLOCKED} provider="github" label="GitHub" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Connect GitHub' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Connecting failed. Please try again.');
+    expect(alert).not.toHaveTextContent('Written for developers');
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('says to wait when there were too many requests', async () => {
+    linkSocial.mockResolvedValue({ error: { status: 429, message: 'Too many requests.' } });
+    render(<ConnectProviderButton {...NOTHING_BLOCKED} provider="github" label="GitHub" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Connect GitHub' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Too many requests. Wait a few seconds and try again.');
+    expect(alert).not.toHaveTextContent('Connecting failed');
   });
 });

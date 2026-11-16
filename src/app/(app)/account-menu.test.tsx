@@ -2,13 +2,15 @@
  * @file Tests for the account menu: it shows the stored theme in its theme
  * row and keeps following the system while closed (choosing a theme is
  * tested with the theme and language button, which uses the same row), and
- * it signs out, or, while a staff member is signed in as the user, goes back
- * to their own account instead.
+ * it signs out (saying so, inline and as a toast, when that fails, and
+ * staying on the page), or, while a staff member is signed in as the user,
+ * goes back to their own account instead.
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { Toaster } from '@/components/ui/toast';
 import { THEME_STORAGE_KEY } from '@/lib/theme';
 
 import AccountMenu from './account-menu';
@@ -102,6 +104,60 @@ describe('AccountMenu', () => {
     // A full page load, so the next person on this browser finds none of these pages kept alive,
     // in this tab or the others, which go to the sign-in page too.
     await vi.waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/auth', { everyTab: true }));
+  });
+
+  it.each([
+    [
+      'the server refuses it',
+      () => signOut.mockResolvedValueOnce({ data: null, error: { status: 500 } }),
+    ],
+    [
+      'the request never gets there',
+      () => signOut.mockRejectedValueOnce(new TypeError('Failed to fetch')),
+    ],
+  ])('says that signing out failed when %s, and stays on the page', async (_, fail) => {
+    const user = userEvent.setup();
+    fail();
+    render(
+      <>
+        <AccountMenu name="Ada Tester" email="ada@adiutor.test" />
+        <Toaster />
+      </>,
+    );
+    const button = screen.getByRole('button', { name: /^Account menu/ });
+    await user.click(button);
+
+    await user.click(screen.getByRole('menuitem', { name: 'Sign out' }));
+
+    // Inline above the button, where screen readers announce it, and as a toast.
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Signing out failed. Please try again.',
+    );
+    expect(screen.getAllByText('Signing out failed. Please try again.')).toHaveLength(2);
+    // Still signed in: the sign-in page would only send them back, in every tab.
+    expect(loadFresh).not.toHaveBeenCalled();
+    // The menu closed and gave focus back to its button, which still works.
+    await vi.waitFor(() => expect(button).toHaveFocus());
+
+    await user.click(button);
+    await user.click(screen.getByRole('menuitem', { name: 'Sign out' }));
+
+    await vi.waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/auth', { everyTab: true }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('lets the user dismiss the message that signing out failed', async () => {
+    const user = userEvent.setup();
+    signOut.mockResolvedValueOnce({ data: null, error: { status: 429 } });
+    render(<AccountMenu name="Ada Tester" email="ada@adiutor.test" />);
+    await user.click(screen.getByRole('button', { name: /^Account menu/ }));
+    await user.click(screen.getByRole('menuitem', { name: 'Sign out' }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }));
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(loadFresh).not.toHaveBeenCalled();
   });
 
   it("goes back to the staff member's own account instead, while signed in as the user", async () => {

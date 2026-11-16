@@ -316,10 +316,23 @@ export default function StepUpForm({
    * Ends the session and loads the sign-in page afresh (`loadFresh`), so no
    * page Next kept alive is left for the next person on this browser, in
    * this tab or the browser's others (`everyTab`), which go to the sign-in
-   * page too.
+   * page too. When signing out fails (the client resolves with an `error`
+   * when the server refuses, and rejects when the request never gets there),
+   * the session hasn't ended: the form says so and nothing loads, since the
+   * sign-in page would only send the user back here.
    */
   const signOut = async () => {
-    await authClient.signOut();
+    setError(null);
+    try {
+      const result = await authClient.signOut();
+      if (result.error) {
+        setError(t('stepUp.signOutFailed'));
+        return;
+      }
+    } catch {
+      setError(t('stepUp.signOutFailed'));
+      return;
+    }
     loadFresh('/auth', { everyTab: true });
   };
 

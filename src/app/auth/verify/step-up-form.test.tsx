@@ -2,8 +2,9 @@
  * @file Tests for the step-up form: which ways to confirm it offers, which
  * Better Auth calls each one makes, how it explains why the session needs
  * confirming, that it starts over after a confirmation (the page stays alive
- * in React's `<Activity>`), and that it says why "Confirm with GitHub" didn't
- * count until the session is confirmed.
+ * in React's `<Activity>`), that it says why "Confirm with GitHub" didn't
+ * count until the session is confirmed, and that a failed sign-out says so
+ * instead of loading the sign-in page.
  */
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -147,6 +148,35 @@ describe('StepUpForm', () => {
     expect(signOut).toHaveBeenCalled();
     await waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/auth', { everyTab: true }));
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      'the server refuses it',
+      () => signOut.mockResolvedValueOnce({ data: null, error: { status: 500 } }),
+    ],
+    [
+      'the request never gets there',
+      () => signOut.mockRejectedValueOnce(new TypeError('Failed to fetch')),
+    ],
+  ])('says that signing out failed when %s, and stays on the page', async (_, fail) => {
+    const user = userEvent.setup();
+    fail();
+    render(<StepUpForm methods={{ ...none, authenticator: true }} callbackURL="/account" />);
+    const button = screen.getByRole('button', { name: 'Sign out' });
+
+    await user.click(button);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Signing out failed. Please try again.',
+    );
+    // Still signed in: the sign-in page would only send them back here, in every tab.
+    expect(loadFresh).not.toHaveBeenCalled();
+
+    // The button still works: a second try that succeeds signs out.
+    await user.click(button);
+    await waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/auth', { everyTab: true }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('checks an authenticator code, then continues', async () => {

@@ -236,6 +236,11 @@ you're still signed in ends your session there the same way, "Trust this device"
 follows). Like signing out, that's not recorded for you and sends no email: it would show you
 their name, IP address or browser.
 
+When signing out fails (the server refuses it, or the request never gets there), nothing loads:
+the user is still signed in, and the sign-in page would only send them back, in every tab. The
+account menu says "Signing out failed. Please try again." above its button (inline and as a
+toast), the step-up page says it in its form, and the control still works.
+
 ## Deactivated accounts
 
 Deactivated accounts can't sign in (a Better Auth hook refuses their sessions with "This account
