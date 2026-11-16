@@ -57,7 +57,10 @@ describe('EmailCodesSetup', () => {
     sent({ data: { status: true }, error: null });
 
     expect(await screen.findByText(/We sent a code to jane@adiutor.test/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Send a new code in 2:30' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Send a new code in 2:30' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
     expect(screen.getByRole('button', { name: 'Turn on' })).not.toHaveAttribute('aria-busy');
   });
 

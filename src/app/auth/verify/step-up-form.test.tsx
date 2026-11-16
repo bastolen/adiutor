@@ -205,7 +205,10 @@ describe('StepUpForm', () => {
     expect(await screen.findByText(/We sent a code to your email address/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Use a backup code' })).not.toBeInTheDocument();
     // No new code until half the first one's lifetime has passed.
-    expect(screen.getByRole('button', { name: 'Send a new code in 2:30' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Send a new code in 2:30' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
 
     act(() => {
       vi.advanceTimersByTime(EMAIL_CODE_RESEND_SECONDS * 1000);

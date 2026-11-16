@@ -45,6 +45,42 @@ describe('Button', () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
+  it('stays focusable while disabled when asked to, ignoring presses without being busy', async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    const { rerender } = render(
+      <Button focusableWhenDisabled onClick={onClick}>
+        Send a new code
+      </Button>,
+    );
+    const button = screen.getByRole('button', { name: 'Send a new code' });
+    button.focus();
+
+    rerender(
+      <Button focusableWhenDisabled disabled onClick={onClick}>
+        Send a new code
+      </Button>,
+    );
+    // A disabled button loses focus the moment it's disabled, and doesn't get it back.
+    expect(button).toBeEnabled();
+    expect(button).toHaveFocus();
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    expect(button).not.toHaveAttribute('aria-busy');
+    await user.click(button);
+    await user.keyboard('{Enter}');
+    expect(onClick).not.toHaveBeenCalled();
+
+    rerender(
+      <Button focusableWhenDisabled onClick={onClick}>
+        Send a new code
+      </Button>,
+    );
+    expect(button).toHaveFocus();
+    expect(button).not.toHaveAttribute('aria-disabled');
+    await user.keyboard('{Enter}');
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
   it('does not submit its form again while loading, from the button or from Enter in a field', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn((event: FormEvent) => event.preventDefault());

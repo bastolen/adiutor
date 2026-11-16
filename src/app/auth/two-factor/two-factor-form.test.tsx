@@ -109,15 +109,24 @@ describe('TwoFactorForm', () => {
     render(<TwoFactorForm />);
 
     await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(1));
-    expect(await screen.findByRole('button', { name: 'Send a new code in 2:30' })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: 'Send a new code in 2:30' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
 
     act(() => {
       vi.advanceTimersByTime(EMAIL_CODE_RESEND_SECONDS * 1000);
     });
-    await user.click(screen.getByRole('button', { name: 'Send a new code' }));
+    const resend = screen.getByRole('button', { name: 'Send a new code' });
+    await user.click(resend);
     expect(sendOtp).toHaveBeenCalledTimes(2);
     expect(await screen.findByText(/We sent a new code to your email address/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Send a new code in 2:30' })).toBeDisabled();
+    // Counting down again, it ignores presses but keeps focus: disabled, it would drop it.
+    expect(resend).toHaveAccessibleName('Send a new code in 2:30');
+    expect(resend).toHaveAttribute('aria-disabled', 'true');
+    expect(resend).toHaveFocus();
+    await user.click(resend);
+    expect(sendOtp).toHaveBeenCalledTimes(2);
     vi.useRealTimers();
   });
 
@@ -139,7 +148,7 @@ describe('TwoFactorForm', () => {
       renderInLocale(locale, <TwoFactorForm />);
 
       expect(await screen.findByText(sent)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: resend })).toBeDisabled();
+      expect(screen.getByRole('button', { name: resend })).toHaveAttribute('aria-disabled', 'true');
     },
   );
 
@@ -173,7 +182,10 @@ describe('TwoFactorForm', () => {
 
     expect(await screen.findByText(EMAIL_CODE_SENT_RECENTLY.message)).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Send a new code in/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Send a new code in/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
   });
 
   it('accepts a backup code instead', async () => {

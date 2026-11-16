@@ -183,7 +183,10 @@ keyboard support.
   each start an action and only one may run at a time (the sign-in page's passkey, provider and
   password buttons), only the pressed one is busy and the others are disabled
   (`whileRunning(running, action)` from `src/components/ui/button.tsx`): one flag for all of them
-  would disable the pressed button too, and show a spinner on buttons nobody pressed. Destructive actions ask
+  would disable the pressed button too, and show a spinner on buttons nobody pressed. A button
+  that its own use makes wait, like "Send a new code" counting down after a code was sent, stays
+  focusable while it can't be pressed (`Button`'s `focusableWhenDisabled`: `aria-disabled`, the
+  not-allowed cursor, presses ignored, no spinner). Destructive actions ask
   for confirmation in a `ConfirmDialog`. A role select only saves when an option is picked (Enter or click), never while
   arrowing through the list; on the user's own row it asks first (`confirmChange`, with the
   question for each role worded by the page, e.g. "Step down to Manager?"), and cancelling puts it

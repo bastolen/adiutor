@@ -99,6 +99,12 @@ test('a company user turns on email codes and can trust the device until signing
   sent = await countEmails(MFA_CLIENT.email);
   expect(await submitPassword(page, MFA_CLIENT)).toBe('code-step');
   const signInEmail = await waitForNewEmail(MFA_CLIENT.email, sent);
+  // The code just sent makes "Send a new code" wait: it ignores Enter, but keeps keyboard focus.
+  const resend = page.getByRole('button', { name: /^Send a new code in/ });
+  await resend.focus();
+  await page.keyboard.press('Enter');
+  await expect(resend).toBeFocused();
+  await expect(resend).toHaveAttribute('aria-disabled', 'true');
   await page.getByRole('textbox', { name: 'Code', exact: true }).fill(codeIn(signInEmail));
   await page.getByLabel('Trust this device for 30 days').check();
   await page.getByRole('button', { name: 'Verify and sign in' }).click();
