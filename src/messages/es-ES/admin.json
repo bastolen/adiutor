@@ -12,9 +12,9 @@
       },
       "filters": {
         "label": "Filtrar usuarios",
-        "option": "{filter, select, staff {Personal} not_staff {Sin personal} without_mfa {Sin MFA} deactivated {Desactivados} other {Todos}}"
+        "option": "{filter, select, staff {Personal} not_staff {No son personal} without_mfa {Sin MFA} deactivated {Desactivados} other {Todos}}"
       },
-      "caption": "{filter, select, staff {{matching, select, yes {Usuarios: personal que coincide con “{search}”} other {Usuarios: personal}}} not_staff {{matching, select, yes {Usuarios: sin personal que coinciden con “{search}”} other {Usuarios: sin personal}}} without_mfa {{matching, select, yes {Usuarios: sin MFA que coinciden con “{search}”} other {Usuarios: sin MFA}}} deactivated {{matching, select, yes {Usuarios: desactivados que coinciden con “{search}”} other {Usuarios: desactivados}}} other {{matching, select, yes {Todos los usuarios que coinciden con “{search}”} other {Todos los usuarios}}}}",
+      "caption": "{filter, select, staff {{matching, select, yes {Usuarios: personal que coincide con “{search}”} other {Usuarios: personal}}} not_staff {{matching, select, yes {Usuarios que no son personal y coinciden con “{search}”} other {Usuarios que no son personal}}} without_mfa {{matching, select, yes {Usuarios: sin MFA que coinciden con “{search}”} other {Usuarios: sin MFA}}} deactivated {{matching, select, yes {Usuarios: desactivados que coinciden con “{search}”} other {Usuarios: desactivados}}} other {{matching, select, yes {Todos los usuarios que coinciden con “{search}”} other {Todos los usuarios}}}}",
       "empty": {
         "default": {
           "title": "Aún no hay usuarios",

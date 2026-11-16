@@ -80,7 +80,7 @@ describe('serviceErrorMessage', () => {
 
   it('names the companies someone is the last Admin of in a whole sentence', () => {
     const sole = new ServiceError('conflict', 'errors.soleAdmin.user.staffAndCompanies', {
-      companies: 'Adiutor Tests',
+      companies: ['Adiutor Tests'],
     });
     expect(serviceErrorMessage(sole, 'en-US')).toBe(
       'This user is the only staff Admin and the only Admin of Adiutor Tests. Make someone else an Admin first.',
@@ -88,6 +88,41 @@ describe('serviceErrorMessage', () => {
     expect(serviceErrorMessage(sole, 'nl-NL')).toBe(
       'Deze gebruiker is de enige beheerder van de medewerkers en de enige beheerder van Adiutor Tests. Maak eerst iemand anders beheerder.',
     );
+  });
+
+  it.each([
+    ['en-US', 'You are the only Admin of A and B. Make someone else an Admin first.'],
+    ['nl-NL', 'Je bent de enige beheerder van A en B. Maak eerst iemand anders beheerder.'],
+    ['es-ES', 'Eres el único administrador de A y B. Haz administrador a otra persona primero.'],
+  ] as const)('joins a list of two names with the “and” of %s', (locale, message) => {
+    const sole = new ServiceError('conflict', 'errors.soleAdmin.self.companies', {
+      companies: ['A', 'B'],
+    });
+    expect(serviceErrorMessage(sole, locale)).toBe(message);
+  });
+
+  it.each([
+    ['en-US', 'This user is the only Admin of A, B, and C. Make someone else an Admin first.'],
+    [
+      'nl-NL',
+      'Deze gebruiker is de enige beheerder van A, B en C. Maak eerst iemand anders beheerder.',
+    ],
+    [
+      'es-ES',
+      'Este usuario es el único administrador de A, B y C. Haz administrador a otra persona primero.',
+    ],
+  ] as const)('joins a longer list as %s does', (locale, message) => {
+    const sole = new ServiceError('conflict', 'errors.soleAdmin.user.companies', {
+      companies: ['A', 'B', 'C'],
+    });
+    expect(serviceErrorMessage(sole, locale)).toBe(message);
+  });
+
+  it('leaves the list on the error as it was given', () => {
+    const companies = ['A', 'B'];
+    const sole = new ServiceError('conflict', 'errors.soleAdmin.self.companies', { companies });
+    serviceErrorMessage(sole, 'es-ES');
+    expect(sole.values).toEqual({ companies: ['A', 'B'] });
   });
 });
 

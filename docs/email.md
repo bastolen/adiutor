@@ -55,7 +55,12 @@ changes, a changed company role and a removal from a company, the pauses after t
 passwords (`password_sign_in_paused`) or codes (`two_factor_locked`), and a staff member signing in
 as the recipient (`impersonation_started`). Each kind's subject, heading
 and text are ICU messages in `emails.securityNotice.<kind>`, and the footer and the advice for when
-it wasn't them are `select`s on the kind (`reason`, `ifNotYou`). Most are queued (the
+it wasn't them are `select`s on the kind (`reason`, `ifNotYou`). The advice follows who can have
+made the change: one the recipient can make themself ends with what to do if it wasn't them (reset
+the password), one only an administrator makes (deactivating or reactivating the account, signing
+it out everywhere, a staff or company role, a removal from a company) says to contact the
+administrator if it wasn't expected, and a reset of two-step verification says to do so right away
+and to change the password. Most are queued (the
 `security-notice` job, see [Security emails](authentication.md#security-emails)), and the job reads
 the names when it sends them, from the IDs it was queued with: `{provider}` from the provider ID,
 `{role}` (named in the recipient's language), `{company}` from the company, `{name}` from the staff

@@ -157,7 +157,7 @@ describe('last admin guard at the same moment', () => {
   const SOLE_ADMIN = expect.objectContaining({
     code: 'conflict',
     key: 'errors.soleAdmin.user.companies',
-    values: { companies: 'Adiutor Tests' },
+    values: { companies: ['Adiutor Tests'] },
   });
 
   it('refuses the second of two admins deactivated at once', async () => {

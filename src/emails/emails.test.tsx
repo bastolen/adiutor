@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import type { Email } from '@/lib/email';
 import { formatDateTime } from '@/lib/format';
 import { LOCALES, type Locale } from '@/lib/i18n/locales';
-import { SECURITY_NOTICE_KINDS } from '@/lib/security-notice-kinds';
+import { SECURITY_NOTICE_KINDS, type SecurityNoticeKind } from '@/lib/security-notice-kinds';
 
 import { accountCreatedEmail } from './account-created';
 import { addedToCompanyEmail } from './added-to-company';
@@ -30,6 +30,46 @@ const appUrl = 'https://adiutor.test';
 
 /** What every English (US) test email shares: the app URL and the language. */
 const english = { appUrl, locale: 'en-US' } as const;
+
+/**
+ * Changes only an administrator makes to someone's account, whose notices
+ * once ended with "If this wasn't you, reset your password": the recipient
+ * can't have made them, so the notice says to contact the administrator.
+ */
+const ADMINISTRATOR_ONLY_KINDS = [
+  'signed_out_everywhere',
+  'account_reactivated',
+  'staff_role_granted',
+  'staff_role_changed',
+  'staff_role_removed',
+] as const satisfies readonly SecurityNoticeKind[];
+
+/**
+ * How a security notice ends, per language: `unexpected` after a change only
+ * an administrator makes, `reset` after a reset of two-step verification, and
+ * `notYou`, the opening of the advice for a change the recipient can make
+ * themself (which neither of the others may have).
+ */
+const NOTICE_ADVICE: Record<Locale, { unexpected: string; reset: string; notYou: string }> = {
+  'en-US': {
+    unexpected: "If you didn't expect this, contact your administrator.",
+    reset:
+      "If you didn't ask for this, contact your administrator right away and change your password.",
+    notYou: "wasn't you",
+  },
+  'nl-NL': {
+    unexpected: 'Had je dit niet verwacht, neem dan contact op met je beheerder.',
+    reset:
+      'Heb je dit niet gevraagd, neem dan meteen contact op met je beheerder en wijzig je wachtwoord.',
+    notYou: 'Was jij dit niet',
+  },
+  'es-ES': {
+    unexpected: 'Si no lo esperabas, ponte en contacto con tu administrador.',
+    reset:
+      'Si no lo has pedido, ponte en contacto con tu administrador enseguida y cambia tu contraseña.',
+    notYou: 'Si no has sido tú',
+  },
+};
 
 /**
  * Checks what every email needs: the linked logo, the button link in the
@@ -91,6 +131,32 @@ describe('two-step verification email', () => {
     expect(email.text.match(/\d{6}/)?.[0]).toBe('482915');
     expect(email.text).toContain('expires in 5 minutes');
   });
+
+  // It has no link, so it isn't among the templates checked by their main link below.
+  it.each(LOCALES)(
+    'is written in %s, with the code first and no link to follow',
+    async (locale) => {
+      const [email, inEnglish] = await Promise.all([
+        twoFactorCodeEmail('jane@adiutor.test', { appUrl, locale, code: '482915' }),
+        twoFactorCodeEmail('jane@adiutor.test', { ...english, code: '482915' }),
+      ]);
+
+      expect(email.html).toContain(`lang="${locale}"`);
+      // A missing message throws outside production; a brace would be an argument left unfilled.
+      expect(email.subject).not.toMatch(/[{}]/);
+      expect(email.text).not.toMatch(/[{}]/);
+      // The first six digits in the text are the code, whatever the language says around it.
+      expect(email.text.match(/\d{6}/)?.[0]).toBe('482915');
+      expect(email.html).toContain('482915');
+      // The code is typed where the sign-in is under way: the only address is the footer's, Adiutor.
+      expect(email.text.match(/https?:\/\/\S+/g)).toEqual([appUrl]);
+      expect(email.text.trimEnd().endsWith(appUrl)).toBe(true);
+      if (locale !== 'en-US') {
+        expect(email.subject).not.toBe(inEnglish.subject);
+        expect(email.text).not.toBe(inEnglish.text);
+      }
+    },
+  );
 });
 
 describe('company emails', () => {
@@ -425,7 +491,21 @@ describe('security notices', () => {
       'Any GitHub or Google accounts connected to your Adiutor account were disconnected',
     );
     expect(email.text).toContain('you were signed out everywhere');
+    // Only an administrator resets it, and it leaves the password as the only thing in the way.
+    expect(email.text).toContain(NOTICE_ADVICE['en-US'].reset);
+    expect(email.text).not.toContain("wasn't you");
   });
+
+  it.each(ADMINISTRATOR_ONLY_KINDS)(
+    'says to contact the administrator after %s, which the recipient can’t have done',
+    async (kind) => {
+      const email = await securityNoticeEmail('jane@adiutor.test', { ...english, kind, when });
+
+      expect(email.text).toContain("If you didn't expect this, contact your administrator.");
+      expect(email.text).not.toContain("wasn't you");
+      expect(email.text).not.toContain('reset your password right away');
+    },
+  );
 
   it.each(SECURITY_NOTICE_KINDS)('renders %s', async (kind) => {
     const email = await securityNoticeEmail('jane@adiutor.test', { ...english, kind, when });
@@ -775,6 +855,50 @@ describe('every template in every language', () => {
       expect(email.subject).not.toBe(inEnglish.subject);
     }
   });
+
+  it.each(
+    LOCALES.flatMap((locale) => ADMINISTRATOR_ONLY_KINDS.map((kind) => [locale, kind] as const)),
+  )('%s: the %s notice says to contact the administrator', async (locale, kind) => {
+    const email = await securityNoticeEmail('jane@adiutor.test', {
+      appUrl,
+      locale,
+      kind,
+      when: new Date('2026-10-23T14:05:00Z'),
+    });
+
+    expect(email.text).toContain(NOTICE_ADVICE[locale].unexpected);
+    expect(email.text).not.toContain(NOTICE_ADVICE[locale].notYou);
+  });
+
+  it.each(LOCALES)(
+    '%s: the notice of a reset of two-step verification has advice of its own',
+    async (locale) => {
+      const email = await securityNoticeEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        kind: 'mfa_reset',
+        when: new Date('2026-10-23T14:05:00Z'),
+      });
+
+      expect(email.text).toContain(NOTICE_ADVICE[locale].reset);
+      expect(email.text).not.toContain(NOTICE_ADVICE[locale].notYou);
+      expect(email.text).not.toContain(NOTICE_ADVICE[locale].unexpected);
+    },
+  );
+
+  it.each(LOCALES)(
+    '%s: a change the recipient can make keeps “if this wasn’t you”',
+    async (locale) => {
+      const email = await securityNoticeEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        kind: 'two_factor_disabled',
+        when: new Date('2026-10-23T14:05:00Z'),
+      });
+
+      expect(email.text).toContain(NOTICE_ADVICE[locale].notYou);
+    },
+  );
 
   it('lets a language put the company before the inviter in the subject', async () => {
     const props = {

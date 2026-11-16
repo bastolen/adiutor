@@ -152,7 +152,7 @@ describe('deactivateOwnAccount', () => {
         expect.objectContaining({
           code: 'conflict',
           key: 'errors.soleAdmin.self.companies',
-          values: { companies: 'Adiutor Tests Client' },
+          values: { companies: ['Adiutor Tests Client'] },
         }),
       ),
     );

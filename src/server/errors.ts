@@ -42,8 +42,13 @@ type ErrorsKey = MessageKeys<Messages['errors'], NestedKeyOf<Messages['errors']>
  */
 export type ErrorMessageKey = `errors.${ErrorsKey}` | ValidationMessageKey;
 
-/** The values a message's ICU arguments take, e.g. `{ minutes: 3 }`. */
-export type ErrorMessageValues = Record<string, string | number>;
+/**
+ * The values a message's ICU arguments take, e.g. `{ minutes: 3 }`. A list of
+ * names (the companies someone is the only Admin of) is given as an array:
+ * {@link errorMessage} joins it as the reader's language does ("A, B and C",
+ * "A, B y C"), which a service can't, as it doesn't know who reads the error.
+ */
+export type ErrorMessageValues = Record<string, string | number | readonly string[]>;
 
 /**
  * An expected problem, such as a missing permission or invalid input. It
@@ -99,11 +104,36 @@ export function isErrorMessageKey(value: string): value is ErrorMessageKey {
 }
 
 /**
+ * Turns a message's values into what its ICU arguments take: a list becomes
+ * one string, joined with the language's "and" (`Intl.ListFormat`), so each
+ * language gets its own commas and conjunction.
+ *
+ * @param locale - The reader's language.
+ * @param values - The values, lists included.
+ * @returns The values with every list joined, or `undefined` without values.
+ */
+function messageArguments(
+  locale: Locale,
+  values: ErrorMessageValues | undefined,
+): Record<string, string | number> | undefined {
+  if (!values) {
+    return undefined;
+  }
+  const list = new Intl.ListFormat(locale, { type: 'conjunction' });
+  return Object.fromEntries(
+    Object.entries(values).map(([name, value]) => [
+      name,
+      typeof value === 'string' || typeof value === 'number' ? value : list.format(value),
+    ]),
+  );
+}
+
+/**
  * Translates an error message.
  *
  * @param locale - The reader's language.
  * @param key - The message.
- * @param values - The values of its arguments, if any.
+ * @param values - The values of its arguments, if any; a list is joined in the reader's language.
  * @returns The message in that language.
  */
 export function errorMessage(
@@ -111,12 +141,13 @@ export function errorMessage(
   key: ErrorMessageKey,
   values?: ErrorMessageValues,
 ): string {
+  const given = messageArguments(locale, values);
   if (key.startsWith('validation.')) {
     const t = translator(locale, 'validation');
-    return t(key.slice('validation.'.length) as Parameters<typeof t>[0], values);
+    return t(key.slice('validation.'.length) as Parameters<typeof t>[0], given);
   }
   const t = translator(locale, 'errors');
-  return t(key.slice('errors.'.length) as ErrorsKey, values);
+  return t(key.slice('errors.'.length) as ErrorsKey, given);
 }
 
 /**

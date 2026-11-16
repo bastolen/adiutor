@@ -200,14 +200,15 @@ export type SoleAdminSubject = 'self' | 'user';
  * The error for a change that would leave the staff or companies without an
  * Admin, e.g. "This user is the only Admin of Adiutor Tests. Make someone
  * else an Admin first." (`errors.soleAdmin.<subject>.<what>`, with the
- * companies' names as `{companies}`).
+ * companies' names as `{companies}`: a list, which whatever shows the error
+ * joins in the reader's language, "A, B and C").
  *
  * @param subject - Who it's about.
  * @param sole - What they're the last Admin of.
  * @returns The error (`conflict`), or `null` when nothing would be left without an Admin.
  */
 export function soleAdminError(subject: SoleAdminSubject, sole: SoleAdminOf): ServiceError | null {
-  const companies = sole.companies.join(', ');
+  const { companies } = sole;
   if (sole.staff && sole.companies.length > 0) {
     return new ServiceError('conflict', `errors.soleAdmin.${subject}.staffAndCompanies`, {
       companies,

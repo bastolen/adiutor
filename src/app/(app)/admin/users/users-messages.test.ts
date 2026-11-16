@@ -11,11 +11,23 @@ describe('users list messages', () => {
   it.each([
     ['en-US', 'Users: Not staff matching "ada"'],
     ['nl-NL', 'Gebruikers: geen medewerkers die overeenkomen met “ada”'],
-    ['es-ES', 'Usuarios: sin personal que coinciden con “ada”'],
+    ['es-ES', 'Usuarios que no son personal y coinciden con “ada”'],
   ] as const)('words the caption with a filter and a search in %s', (locale, caption) => {
     const t = translator(locale, 'admin.users');
 
     expect(t('caption', { filter: 'not_staff', matching: 'yes', search: 'ada' })).toBe(caption);
+  });
+
+  it.each([
+    ['en-US', 'Not staff', 'Users: Not staff'],
+    ['nl-NL', 'Geen medewerkers', 'Gebruikers: geen medewerkers'],
+    // Not "Sin personal", which reads as "without any staff".
+    ['es-ES', 'No son personal', 'Usuarios que no son personal'],
+  ] as const)('names the filter for users who aren’t staff in %s', (locale, option, caption) => {
+    const t = translator(locale, 'admin.users');
+
+    expect(t('filters.option', { filter: 'not_staff' })).toBe(option);
+    expect(t('caption', { filter: 'not_staff', matching: 'no', search: '' })).toBe(caption);
   });
 
   it.each([
