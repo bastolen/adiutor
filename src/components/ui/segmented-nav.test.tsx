@@ -41,7 +41,9 @@ describe('SegmentedNav', () => {
 
     const link = screen.getByRole('link', { name: 'All' });
     expect(link.querySelector('[aria-busy="true"]')).not.toBeNull();
-    // The label keeps its space (hidden, still in the link's name) while the spinner shows.
-    expect(container.querySelector('.invisible')).toHaveTextContent('All');
+    // The label keeps its space and stays the link's name while the spinner shows: it's
+    // transparent, not hidden (`visibility: hidden` would take it out of the accessibility tree).
+    expect(container.querySelector('.opacity-0')).toHaveTextContent('All');
+    expect(container.querySelector('.invisible')).toBeNull();
   });
 });

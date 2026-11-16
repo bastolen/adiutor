@@ -17,6 +17,7 @@
       "apply": "Toepassen",
       "clear": "Wissen",
       "copied": "Gekopieerd",
+      "copyFailed": "Kopiëren mislukt",
       "tryAgain": "Opnieuw proberen",
       "goToDashboard": "Naar je dashboard"
     },

@@ -11,11 +11,16 @@ import { FOLLOW_DEFAULT, type Locale, LOCALE_NAMES, LOCALES } from '@/lib/i18n/l
 
 import LanguageFlag from './language-flag';
 
-/** Every language, in menu order, named in itself (so people find their own) and with its flag. */
+/**
+ * Every language, in menu order, named in itself (so people find their own)
+ * and with its flag. Each name carries its language (`lang`), so a screen
+ * reader says "Nederlands" in Dutch whatever language the page is in.
+ */
 const LANGUAGE_OPTIONS: SelectOption[] = LOCALES.map((locale) => ({
   value: locale,
   label: LOCALE_NAMES[locale],
   icon: <LanguageFlag locale={locale} />,
+  lang: locale,
 }));
 
 /**

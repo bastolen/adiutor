@@ -58,7 +58,9 @@ keyboard support.
     Search (`SearchForm`, on `next/form`) and filter links (`SegmentedNav`) work the same way:
     they load the list within the app without scrolling, keep focus and the pages kept alive, and
     show a busy state (a spinner in the Search button, or in the followed filter link) until the
-    list arrives; without JavaScript, search is a plain GET. A list with more to filter by than
+    list arrives; without JavaScript, search is a plain GET. The spinner sits over the link's
+    label, which turns transparent but stays the link's name (`LinkPendingIndicator`; hiding it
+    would leave the link nameless while its page loads). A list with more to filter by than
     fits in a row of links has a `FilterMenu` per filter next to its Sort menu (the company, type
     and priority of requests): a button that names the filter and, once one is chosen, the choice
     ("Type: Bug"), with the choices as links in a menu, "All" first. It keeps focus like the Sort
@@ -264,7 +266,10 @@ keyboard support.
   ends with a full page load (`loadFresh`) leaves its toast for the next page with
   `showToastAfterLoad`, which the `Toaster` there shows once ("You're back in your own account.");
   it's kept in the tab's `sessionStorage` and counts for 30 seconds. Results to act on
-  stay inline: a new company's "Open the company", a new invite link to copy. The signed-out
+  stay inline: a new company's "Open the company", a new invite link to copy. A copy button
+  (`CopyButton`) says what it did in its own label, announced to screen readers: "Copied" for two
+  seconds, or "Couldn't copy" for five when the browser refuses, then also as an error toast where
+  the page has toasts; what it copies stays on screen next to it, to select by hand. The signed-out
   pages (sign in, the code step, password reset, invitations, `/setup`) show their results inline
   only.
 - **Tap targets:** every control is at least 24×24px (WCAG 2.5.8) without leaning on the rule's

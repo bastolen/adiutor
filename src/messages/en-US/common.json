@@ -17,6 +17,7 @@
       "apply": "Apply",
       "clear": "Clear",
       "copied": "Copied",
+      "copyFailed": "Couldn't copy",
       "tryAgain": "Try again",
       "goToDashboard": "Go to your dashboard"
     },

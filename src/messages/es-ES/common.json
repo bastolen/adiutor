@@ -17,6 +17,7 @@
       "apply": "Aplicar",
       "clear": "Borrar",
       "copied": "Copiado",
+      "copyFailed": "No se pudo copiar",
       "tryAgain": "Volver a intentarlo",
       "goToDashboard": "Ir a tu panel"
     },

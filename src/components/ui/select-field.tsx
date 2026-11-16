@@ -25,6 +25,23 @@ export interface SelectOption {
    * the label names the option.
    */
   icon?: ReactNode;
+  /**
+   * The language the label is written in (a BCP 47 tag such as `nl-NL`), when
+   * it isn't the page's: a language named in itself, like "Nederlands". It's
+   * set on the label in the list and in the closed select, so screen readers
+   * say it in that language (WCAG 3.1.2).
+   */
+  lang?: string;
+}
+
+/**
+ * An option's label, marked with its language when it has one.
+ *
+ * @param option - The option.
+ * @returns The label.
+ */
+function optionLabel(option: SelectOption): ReactNode {
+  return option.lang ? <span lang={option.lang}>{option.label}</span> : option.label;
 }
 
 /**
@@ -66,7 +83,9 @@ interface SelectFieldProps {
  * the choice only changes when an option is picked (Enter, Space or click);
  * arrow keys and typing just move through the list, so nothing is saved by
  * accident. Option descriptions are shown in the list and are part of the
- * option's name (label first); the closed select shows only the label.
+ * option's name (label first); the closed select shows only the label. A
+ * label in another language than the page's carries its `lang`, in the list
+ * and in the closed select.
  * While `busy`, it stays focusable but doesn't open.
  *
  * @param props - Select props.
@@ -164,10 +183,10 @@ export default function SelectField({
                         {option.icon ? (
                           <span className="inline-flex items-center gap-2">
                             {option.icon}
-                            {option.label}
+                            {optionLabel(option)}
                           </span>
                         ) : (
-                          option.label
+                          optionLabel(option)
                         )}
                       </Select.ItemText>
                     </span>
