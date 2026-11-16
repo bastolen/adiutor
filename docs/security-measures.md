@@ -135,7 +135,11 @@ link that signs the browser in to another account. The guards (`src/server/auth/
 check `callbackURL`, `errorCallbackURL` and `newUserCallbackURL` on `/sign-in/magic-link`,
 `/magic-link/verify` (after the confirmation page) and `/sign-in/social`; `callbackURL` and
 `errorCallbackURL` on `/link-social`; `redirectTo` on `/request-password-reset`; and `callbackURL`
-on `/verify-email` and `/send-verification-email`. Fields that aren't sent are fine. A refused
+on `/reset-password/:token` (the link in a reset email, which Better Auth sends on to it with the
+token or an error), `/verify-email` and `/send-verification-email`. A test walks the endpoints the
+browser can reach (`BROWSER_AUTH_PATHS`) and fails when one takes a return address that isn't
+checked (`request-checks.test.ts`); the two it lets through, `/sign-in/email` and `/sign-out`, take
+a `callbackURL` that Better Auth never sends the browser to here. Fields that aren't sent are fine. A refused
 request gets `UNSAFE_RETURN_ADDRESS` (`src/lib/sign-in/sign-in-refusals.ts`); a refused link the
 browser opened goes to the sign-in error page, which explains it. The app's own pages only send
 relative paths that pass: the redirect targets they read from the URL go through
