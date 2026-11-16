@@ -248,8 +248,20 @@ keyboard support.
       card into view and focuses its heading.
     - With focus already inside the card (a result `Alert` with `focusOnShow`), it only scrolls.
     - Otherwise it leaves the page alone.
-  - **Sticky header.** Cards scroll to 5rem from the top below `lg`, clear of the sticky header,
-    and 2.5rem from `lg` up (`scroll-mt-20 lg:scroll-mt-10`).
+  - **Sticky header.** Two layers stick to the top of the screen: the top bar below `lg` (3.5rem
+    tall) and, while a staff member is signed in as a user, the banner at every width. A browser
+    counts a control under them as visible, so a keyboard user who goes back to it (Shift+Tab)
+    wouldn't see it (WCAG 2.4.11). The page therefore tells the browser how much of its top is
+    covered: `html { scroll-padding-top: var(--sticky-top) }` in `src/app/globals.css`, which is
+    where the banner sticks (4rem below `lg`, 1rem from `lg`), plus the banner's height while it
+    shows, plus 0.5rem of room for a focus ring. `SignedInAsMarker` measures the banner (it wraps
+    differently per width and language) and keeps its height in `--signed-in-as-banner-height` on
+    `<html>` while it's mounted. Everything the browser scrolls to lands below the layers: a
+    control that gets focus, an anchor, `scrollIntoView`. When you change the top bar's height or
+    where the banner sticks, change `--sticky-layer-top` with it.
+    Cards add a small margin of their own to that (`scroll-mt-2 lg:scroll-mt-4`), so they land
+    5rem from the top below `lg` and 2.5rem from `lg` up, and lower while the banner shows. Don't
+    give an element the top bar's height as its `scroll-margin-top`: it would count twice.
 
   Pages with section tabs (a company's Requests, Members and Settings; the account's Profile and
   Security) get their header and tabs from a layout (`companies/[companyId]/layout.tsx`,

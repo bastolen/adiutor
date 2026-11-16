@@ -119,6 +119,87 @@ function outlineOf(locator: Locator): Promise<{ style: string; width: string }> 
   });
 }
 
+/** A phone's screen, where the top bar sticks above the content. */
+const PHONE = { width: 375, height: 667 };
+
+/**
+ * The bottom edge of the layers that stick to the top of a small screen: the
+ * top bar and, while signed in as a user, the banner under it.
+ *
+ * @param page - The browser page, signed in.
+ * @returns How far down from the top of the screen they reach, in pixels.
+ */
+async function stickyLayersBottom(page: Page): Promise<number> {
+  const layers = [
+    page.locator('header').filter({ has: page.getByRole('button', { name: 'Open menu' }) }),
+    page.getByRole('region', { name: 'Signed in as someone else' }),
+  ];
+  const bottoms = await Promise.all(
+    layers.map(async (layer) => {
+      const box = (await layer.count()) > 0 ? await layer.boundingBox() : null;
+      return box ? box.y + box.height : 0;
+    }),
+  );
+  return Math.max(...bottoms);
+}
+
+/**
+ * Checks that a control the keyboard goes back to comes out from under the
+ * sticky layers. On the account's Security page, with focus on the Security
+ * tab, it scrolls the Profile tab before it to just under the top of the
+ * screen (where the layers cover it, but the browser counts it as visible)
+ * and presses Shift+Tab.
+ *
+ * @param page - The browser page, signed in, phone-sized and on `/account/security`.
+ */
+async function expectShiftTabClearsStickyLayers(page: Page): Promise<void> {
+  const tabs = page.getByRole('navigation', { name: 'Account sections' });
+  const profile = tabs.getByRole('link', { name: 'Profile' });
+  const security = tabs.getByRole('link', { name: 'Security' });
+  await security.focus();
+
+  // Retried while the page's cards stream in: it has to be long enough to scroll that far.
+  await expect(async () => {
+    await profile.evaluate((element) =>
+      window.scrollBy(0, element.getBoundingClientRect().top - 8),
+    );
+    const top = (await profile.boundingBox())?.y ?? -1;
+    expect(top, 'the Profile tab is on screen').toBeGreaterThanOrEqual(0);
+    expect(top, 'the Profile tab is under the sticky layers').toBeLessThan(
+      await stickyLayersBottom(page),
+    );
+  }).toPass();
+
+  await page.keyboard.press('Shift+Tab');
+  await expect(profile).toBeFocused();
+  await expect(async () => {
+    const top = (await profile.boundingBox())?.y ?? -1;
+    expect(top, 'the focused tab is below the sticky layers').toBeGreaterThanOrEqual(
+      await stickyLayersBottom(page),
+    );
+  }).toPass();
+}
+
+/**
+ * Checks that a card reached by its anchor lands just below the sticky
+ * layers: not under them, and without a second offset on top of the page's
+ * scroll padding.
+ *
+ * @param page - The browser page, signed in and phone-sized.
+ */
+async function expectCardLandsBelowStickyLayers(page: Page): Promise<void> {
+  await page.goto('/account/security#passkeys');
+  const card = page.locator('section#passkeys');
+  await expect(card.locator('[data-card-heading]')).toBeFocused();
+  await expect(async () => {
+    const top = (await card.boundingBox())?.y ?? -1;
+    const layersBottom = await stickyLayersBottom(page);
+    expect(top, 'the card is below the sticky layers').toBeGreaterThanOrEqual(layersBottom);
+    // The card's own margin adds a little room, not another top bar's worth.
+    expect(top, 'the card is close under them').toBeLessThan(layersBottom + 40);
+  }).toPass();
+}
+
 test.describe('signed in', () => {
   test.use({ reducedMotion: 'reduce' });
   test.beforeEach(async ({ context }) => {
@@ -668,6 +749,45 @@ test.describe('signed in as a user', () => {
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/#sign-in-as$/);
     await expect(page.getByRole('heading', { name: 'Sign in as user' })).toBeFocused();
+  });
+});
+
+test.describe('on a phone, under the sticky layers', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('a control reached with Shift+Tab, and a card reached by its anchor, clear the top bar', async ({
+    context,
+    page,
+  }) => {
+    await context.addCookies(adminState.cookies);
+    await page.setViewportSize(PHONE);
+    await page.goto('/account/security');
+
+    await expectShiftTabClearsStickyLayers(page);
+    await expectCardLandsBelowStickyLayers(page);
+  });
+
+  // A session of its own: signing in as someone changes what the shared Admin session shows.
+  test('while signed in as a user, they clear the banner under the top bar too', async ({
+    page,
+  }) => {
+    await signIn(page, PLATFORM_ADMIN);
+    await signInAsUser(page, CLIENT_WATCHER.name);
+    await page.setViewportSize(PHONE);
+    await page.goto('/account/security');
+    const banner = page.getByRole('region', { name: 'Signed in as someone else' });
+    await expect(banner).toBeVisible();
+    // The page knows how tall the banner is, so it can keep what it scrolls to clear of it.
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          document.documentElement.style.getPropertyValue('--signed-in-as-banner-height'),
+        ),
+      )
+      .toMatch(/^\d+px$/);
+
+    await expectShiftTabClearsStickyLayers(page);
+    await expectCardLandsBelowStickyLayers(page);
   });
 });
 

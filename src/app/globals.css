@@ -54,10 +54,43 @@
     caret-color: var(--primary);
   }
 
+  /**
+   * How much of the top of the screen the signed-in app's sticky layers
+   * cover (`--sticky-top`), for `scroll-padding-top` below. Without it the
+   * browser counts a control under them as visible and doesn't scroll when
+   * it gets focus (WCAG 2.4.11).
+   *
+   * - `--sticky-layer-top` is where the signed-in-as banner sticks
+   *   (`top-16 lg:top-4` in `signed-in-as-banner.tsx`): 0.5rem under the
+   *   small screens' top bar, which is 3.5rem tall (`h-14` in
+   *   `app-navigation.tsx`); from `lg` there's no top bar and it sticks 1rem
+   *   from the top. Keep the three in step.
+   * - `--signed-in-as-banner-height` is the banner's height, which
+   *   `SignedInAsMarker` measures and sets on `<html>` while the banner
+   *   shows. It isn't set otherwise.
+   * - The last 0.5rem is room under the lowest layer, so a focus ring
+   *   clears it.
+   */
+  :root {
+    --sticky-layer-top: 4rem;
+    --sticky-top: calc(var(--sticky-layer-top) + var(--signed-in-as-banner-height, 0px) + 0.5rem);
+
+    @variant lg {
+      --sticky-layer-top: 1rem;
+    }
+  }
+
   html {
     /** No grey flash on tap; focus styles show what's active instead. */
     -webkit-tap-highlight-color: transparent;
     text-rendering: optimizelegibility;
+
+    /**
+     * Whatever the browser scrolls to (a control that gets focus, an anchor,
+     * `scrollIntoView`) lands below the sticky layers. Cards add their own
+     * small `scroll-margin-top` to this.
+     */
+    scroll-padding-top: var(--sticky-top);
   }
 
   /** Smooth scrolling for in-page links, unless reduced motion is requested. */

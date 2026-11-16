@@ -47,7 +47,8 @@ interface AnchoredSectionProps {
  * frame after the page has settled, and only while the URL's fragment names
  * it:
  * - with focus nowhere in particular, it scrolls into view (below the sticky
- *   header, by its `scroll-margin-top`) and focuses the card's heading;
+ *   header and banner, by the page's `scroll-padding-top` and its own
+ *   `scroll-margin-top`) and focuses the card's heading;
  * - with focus already inside it (e.g. a result message that took it), it
  *   only scrolls into view;
  * - with focus anywhere else, it leaves the page alone, so it never takes

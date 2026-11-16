@@ -13,10 +13,22 @@
  * keeps pages out of their static shell. The server renders the controls as
  * usual (the marker isn't mounted there yet); the browser disables them as
  * soon as the banner arrives, and the server refuses a change either way.
+ *
+ * The marker also tells the page how tall the banner is
+ * ({@link BANNER_HEIGHT_VARIABLE}): the banner sticks to the top of every
+ * page, and scrolling has to keep what it shows clear of it (`globals.css`).
  */
 'use client';
 
-import { type ReactNode, useEffect, useSyncExternalStore } from 'react';
+import { type ReactNode, useEffect, useRef, useSyncExternalStore } from 'react';
+
+/**
+ * The CSS variable on `<html>` that holds the banner's height while it
+ * shows, e.g. `76px`. `globals.css` adds it to the page's
+ * `scroll-padding-top`, so a control the browser scrolls to (one that gets
+ * focus, an anchor) lands below the banner, not under it.
+ */
+export const BANNER_HEIGHT_VARIABLE = '--signed-in-as-banner-height';
 
 /** How many markers are mounted: one while the banner shows. */
 let mountedMarkers = 0;
@@ -44,11 +56,19 @@ function notify(): void {
 
 /**
  * Marks the tab as signed in as someone while it's mounted. Rendered by the
- * banner, so it goes away with it ("Back to my account", or an end).
+ * banner, directly inside it, so it goes away with it ("Back to my account",
+ * or an end).
  *
- * @returns Nothing visible.
+ * Meanwhile it keeps the height of the element it's in, the banner, in
+ * {@link BANNER_HEIGHT_VARIABLE} on `<html>`: measured when it mounts and
+ * whenever the banner's size changes (its text wraps differently per width
+ * and language), and removed when it goes.
+ *
+ * @returns Nothing visible: a hidden element that tells it where it is.
  */
 export function SignedInAsMarker() {
+  const ref = useRef<HTMLSpanElement>(null);
+
   useEffect(() => {
     mountedMarkers += 1;
     notify();
@@ -57,7 +77,30 @@ export function SignedInAsMarker() {
       notify();
     };
   }, []);
-  return null;
+
+  useEffect(() => {
+    const banner = ref.current?.parentElement;
+    if (!banner) {
+      return undefined;
+    }
+    const root = document.documentElement;
+    /** Notes the banner's height, rounded up to whole pixels so nothing peeks out from under it. */
+    const measure = () => {
+      root.style.setProperty(
+        BANNER_HEIGHT_VARIABLE,
+        `${Math.ceil(banner.getBoundingClientRect().height)}px`,
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(banner);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty(BANNER_HEIGHT_VARIABLE);
+    };
+  }, []);
+
+  return <span ref={ref} hidden />;
 }
 
 /**

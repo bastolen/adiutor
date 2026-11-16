@@ -101,6 +101,7 @@ export default function AppNavigation({
         <NavigationPanel name={name} email={email} sections={sections} signedInAs={signedInAs} />
       </aside>
 
+      {/* Its height (`h-14`) is part of the page's `scroll-padding-top` (`--sticky-top` in globals.css). */}
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-surface/90 px-4 backdrop-blur-sm lg:hidden">
         <Link
           href="/dashboard"
