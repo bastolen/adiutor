@@ -11,6 +11,7 @@
       "tooLong": "Use at most {maximum, number} characters for your name.",
       "controlCharacters": "Remove line breaks and control characters from your name.",
       "hiddenCharacters": "Remove invisible characters and text direction marks from your name.",
+      "noVisibleCharacter": "Use at least one letter, digit or symbol in your name.",
       "webAddress": "Remove web addresses from your name."
     },
     "password": {
@@ -22,6 +23,7 @@
       "tooLong": "Use at most {maximum, number} characters for the company name.",
       "controlCharacters": "Remove line breaks and control characters from the company name.",
       "hiddenCharacters": "Remove invisible characters and text direction marks from the company name.",
+      "noVisibleCharacter": "Use at least one letter, digit or symbol in the company name.",
       "webAddress": "Remove web addresses from the company name."
     },
     "staffName": {
@@ -29,6 +31,7 @@
       "tooLong": "Use at most {maximum, number} characters for the name shown to users.",
       "controlCharacters": "Remove line breaks and control characters from the name shown to users.",
       "hiddenCharacters": "Remove invisible characters and text direction marks from the name shown to users.",
+      "noVisibleCharacter": "Use at least one letter, digit or symbol in the name shown to users.",
       "webAddress": "Remove web addresses from the name shown to users."
     },
     "passkeyName": {

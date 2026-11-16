@@ -1,10 +1,11 @@
 /**
  * @file Checks for characters that never belong in text people type: control
  * characters, and characters that hide or reorder text. Shared by the input
- * validation (`validation.ts`), the request text cleaning
- * (`requests/text.ts`) and the server code that cleans untrusted text before
- * a query or a log line (`server/search.ts`, `server/app-errors.ts`), and
- * free of dependencies so all can import it.
+ * validation (`validation.ts`), the name shown for a user
+ * (`display-name.ts`), the request text cleaning (`requests/text.ts`) and
+ * the server code that cleans untrusted text before a query or a log line
+ * (`server/search.ts`, `server/app-errors.ts`), and free of dependencies so
+ * all can import it, client components too.
  */
 
 /**
@@ -60,16 +61,33 @@ export function withoutControlCharacters(value: string, replacement = ''): strin
 }
 
 /**
- * Characters that hide or reorder text without being seen: the text direction
- * controls (U+061C, U+200E, U+200F, U+202A–U+202E, U+2066–U+2069), invisible
- * characters (U+200B, U+2060–U+2064, U+FEFF) and the line and paragraph
- * separators (U+2028, U+2029). With them, a name can reorder the text around
- * it in an email or look like another name. The zero-width non-joiner and
+ * Characters that hide or reorder text without being seen:
+ *
+ * - the text direction controls (U+061C, U+200E, U+200F, U+202A–U+202E,
+ *   U+2066–U+2069);
+ * - invisible characters: the zero-width space and no-break space (U+200B,
+ *   U+FEFF), the word joiner and invisible operators (U+2060–U+2064), the
+ *   unassigned and deprecated format characters after them (U+2065,
+ *   U+206A–U+206F), the combining grapheme joiner (U+034F), the Khmer
+ *   inherent vowels (U+17B4, U+17B5), the Mongolian vowel separator (U+180E)
+ *   and the tag characters (U+E0000–U+E007F, which also costs the three flags
+ *   written with them);
+ * - the fillers, which are letters to Unicode and blank to the eye: Hangul
+ *   (U+115F, U+1160, U+3164) and its half-width form (U+FFA0);
+ * - the line and paragraph separators (U+2028, U+2029).
+ *
+ * With them, a name can reorder the text around it in an email, look like
+ * another name, or show as nothing at all. The zero-width non-joiner and
  * joiner (U+200C, U+200D) are allowed: Persian, Arabic and Indic names, and
- * emoji sequences, need them.
+ * emoji sequences, need them. So is the variation selector that makes a
+ * character an emoji (U+FE0F).
+ *
+ * The three that are combining marks (U+034F, U+17B4, U+17B5) come first in
+ * the class: after another character, a mark reads as one combined character
+ * with it (ESLint's `no-misleading-character-class`).
  */
 export const HIDDEN_CHARACTER =
-  /[\u{061C}\u{200B}\u{200E}\u{200F}\u{2028}-\u{202E}\u{2060}-\u{2064}\u{2066}-\u{2069}\u{FEFF}]/u;
+  /[\u{034F}\u{17B4}\u{17B5}\u{061C}\u{115F}\u{1160}\u{180E}\u{200B}\u{200E}\u{200F}\u{2028}-\u{202E}\u{2060}-\u{206F}\u{3164}\u{FEFF}\u{FFA0}\u{E0000}-\u{E007F}]/u;
 
 /**
  * Whether a string contains a character that hides or reorders text
@@ -80,4 +98,29 @@ export const HIDDEN_CHARACTER =
  */
 export function hasHiddenCharacter(value: string): boolean {
   return HIDDEN_CHARACTER.test(value);
+}
+
+/**
+ * Every character that shows nothing by itself: the hidden characters
+ * ({@link HIDDEN_CHARACTER}), control and format characters (`\p{Cc}`,
+ * `\p{Cf}`: the joiners among them), separators (`\p{Z}`: every kind of
+ * space), marks (`\p{M}`: accents and variation selectors, which only change
+ * the character before them) and the blank Braille pattern (U+2800).
+ */
+const UNSEEN_CHARACTERS = new RegExp(
+  `${HIDDEN_CHARACTER.source}|[\\p{Cc}\\p{Cf}\\p{Z}\\p{M}\\u{2800}]`,
+  'gu',
+);
+
+/**
+ * Whether a string has at least one character that can be seen: a letter, a
+ * digit, punctuation or a symbol (an emoji is one). A name without one shows
+ * as nothing in lists and emails, e.g. a name of only zero-width joiners,
+ * which the hidden-character rule allows inside a name.
+ *
+ * @param value - The string to check.
+ * @returns Whether anything of it can be seen.
+ */
+export function hasVisibleCharacter(value: string): boolean {
+  return value.replace(UNSEEN_CHARACTERS, '') !== '';
 }

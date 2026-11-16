@@ -11,6 +11,7 @@
       "tooLong": "Gebruik maximaal {maximum, number} tekens voor je naam.",
       "controlCharacters": "Haal regeleinden en besturingstekens uit je naam.",
       "hiddenCharacters": "Haal onzichtbare tekens en tekens voor de tekstrichting uit je naam.",
+      "noVisibleCharacter": "Gebruik minstens één letter, cijfer of symbool in je naam.",
       "webAddress": "Haal webadressen uit je naam."
     },
     "password": {
@@ -22,6 +23,7 @@
       "tooLong": "Gebruik maximaal {maximum, number} tekens voor de bedrijfsnaam.",
       "controlCharacters": "Haal regeleinden en besturingstekens uit de bedrijfsnaam.",
       "hiddenCharacters": "Haal onzichtbare tekens en tekens voor de tekstrichting uit de bedrijfsnaam.",
+      "noVisibleCharacter": "Gebruik minstens één letter, cijfer of symbool in de bedrijfsnaam.",
       "webAddress": "Haal webadressen uit de bedrijfsnaam."
     },
     "staffName": {
@@ -29,6 +31,7 @@
       "tooLong": "Gebruik maximaal {maximum, number} tekens voor de naam die gebruikers zien.",
       "controlCharacters": "Haal regeleinden en besturingstekens uit de naam die gebruikers zien.",
       "hiddenCharacters": "Haal onzichtbare tekens en tekens voor de tekstrichting uit de naam die gebruikers zien.",
+      "noVisibleCharacter": "Gebruik minstens één letter, cijfer of symbool in de naam die gebruikers zien.",
       "webAddress": "Haal webadressen uit de naam die gebruikers zien."
     },
     "passkeyName": {

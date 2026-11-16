@@ -11,6 +11,7 @@
       "tooLong": "Tu nombre puede tener como máximo {maximum, number} caracteres.",
       "controlCharacters": "Quita los saltos de línea y los caracteres de control de tu nombre.",
       "hiddenCharacters": "Quita los caracteres invisibles y las marcas de dirección del texto de tu nombre.",
+      "noVisibleCharacter": "Tu nombre debe tener al menos una letra, un número o un símbolo.",
       "webAddress": "Quita las direcciones web de tu nombre."
     },
     "password": {
@@ -22,6 +23,7 @@
       "tooLong": "El nombre de la empresa puede tener como máximo {maximum, number} caracteres.",
       "controlCharacters": "Quita los saltos de línea y los caracteres de control del nombre de la empresa.",
       "hiddenCharacters": "Quita los caracteres invisibles y las marcas de dirección del texto del nombre de la empresa.",
+      "noVisibleCharacter": "El nombre de la empresa debe tener al menos una letra, un número o un símbolo.",
       "webAddress": "Quita las direcciones web del nombre de la empresa."
     },
     "staffName": {
@@ -29,6 +31,7 @@
       "tooLong": "El nombre visible para los usuarios puede tener como máximo {maximum, number} caracteres.",
       "controlCharacters": "Quita los saltos de línea y los caracteres de control del nombre visible para los usuarios.",
       "hiddenCharacters": "Quita los caracteres invisibles y las marcas de dirección del texto del nombre visible para los usuarios.",
+      "noVisibleCharacter": "El nombre visible para los usuarios debe tener al menos una letra, un número o un símbolo.",
       "webAddress": "Quita las direcciones web del nombre visible para los usuarios."
     },
     "passkeyName": {

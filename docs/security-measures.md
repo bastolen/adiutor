@@ -172,8 +172,13 @@ Session cookies are signed, so the database alone gives no usable session; see
 Display names, company names and the staff name end up in emails the app sends from its own domain
 (an invitation's subject quotes the inviter's name), so `withNameSafety` in `src/lib/validation.ts`
 refuses line breaks and control characters, characters that hide or reorder text (text direction
-controls, zero-width spaces, U+FEFF, line and paragraph separators; the zero-width joiners that
-Persian, Arabic and Indic names need stay allowed), and web addresses. The web-address check reads
+controls, zero-width spaces, U+FEFF, the fillers that are letters to Unicode but blank to the eye
+such as U+3164, tag characters, line and paragraph separators; the zero-width joiners that
+Persian, Arabic and Indic names need stay allowed, and so does the emoji variation selector; the
+list is `HIDDEN_CHARACTER` in `src/lib/character-rules.ts`), and web addresses. A name also needs
+at least one character that can be seen (`hasVisibleCharacter`), so it can't be only joiners or
+accents and show as nothing in a list or an email; for a name saved before that rule,
+`displayName` (`src/lib/display-name.ts`) shows the email address instead. The web-address check reads
 a copy without format characters, normalised with NFKC and with look-alike full stops (`。`, `．`,
 `․`) as `.`, and matches domains in any script and IPv4 addresses, while initials such as
 `J.R.R. Tolkien` and `Adiutor B.V.` pass. It's a denylist, so it can't catch every way of writing an
