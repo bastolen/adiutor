@@ -86,7 +86,9 @@ export default async function RequestDetails({
           </Detail>
         )}
         <Detail term={t('company')}>
-          <TextLink href={`/companies/${detail.company.slug}`}>{detail.company.name}</TextLink>
+          <TextLink standalone href={`/companies/${detail.company.slug}`}>
+            {detail.company.name}
+          </TextLink>
         </Detail>
         <Detail term={t('raisedBy')}>
           <PersonLine person={detail.raisedBy} names={names} />

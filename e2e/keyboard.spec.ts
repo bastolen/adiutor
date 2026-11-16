@@ -106,6 +106,19 @@ function cursorOf(locator: Locator): Promise<string> {
   return locator.evaluate((element) => getComputedStyle(element).cursor);
 }
 
+/**
+ * The outline drawn around an element.
+ *
+ * @param locator - The element.
+ * @returns Its computed `outline-style` and `outline-width`.
+ */
+function outlineOf(locator: Locator): Promise<{ style: string; width: string }> {
+  return locator.evaluate((element) => {
+    const { outlineStyle, outlineWidth } = getComputedStyle(element);
+    return { style: outlineStyle, width: outlineWidth };
+  });
+}
+
 test.describe('signed in', () => {
   test.use({ reducedMotion: 'reduce' });
   test.beforeEach(async ({ context }) => {
@@ -156,6 +169,49 @@ test.describe('signed in', () => {
     await page.keyboard.press('Enter');
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL('/account');
+  });
+
+  (['light', 'dark'] as const).forEach((colorScheme) => {
+    test(`the item the keyboard is on is outlined, not only filled, in ${colorScheme} mode`, async ({
+      page,
+    }) => {
+      // The fill alone is about 1.1:1 against the panel; the outline is the cue (WCAG 1.4.11).
+      await page.emulateMedia({ colorScheme });
+      await page.goto('/dashboard');
+      const trigger = page.getByRole('button', { name: /^Account menu/ });
+      const settings = page.getByRole('menuitem', { name: 'Account settings' });
+      const signOut = page.getByRole('menuitem', { name: 'Sign out' });
+
+      // In a menu: the item that has focus, and only that one.
+      await trigger.focus();
+      await page.keyboard.press('Enter');
+      await expect(settings).toBeFocused();
+      expect(await outlineOf(settings)).toEqual({ style: 'solid', width: '2px' });
+      expect((await outlineOf(signOut)).style).toBe('none');
+      await page.keyboard.press('End');
+      await expect(signOut).toBeFocused();
+      expect(await outlineOf(signOut)).toEqual({ style: 'solid', width: '2px' });
+      expect((await outlineOf(settings)).style).toBe('none');
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('menu')).toHaveCount(0);
+
+      // In a select's list: the same.
+      await page.goto(`/companies/${COMPANY_SLUG}/members`);
+      const role = page.getByRole('combobox', { name: `Role of ${CLIENT_WATCHER.name}` });
+      await openWithEnter(role);
+      const watcher = page.getByRole('option', { name: 'Watcher' });
+      const client = page.getByRole('option', { name: 'Client' });
+      await expect(watcher).toBeFocused();
+      expect(await outlineOf(watcher)).toEqual({ style: 'solid', width: '2px' });
+      expect((await outlineOf(client)).style).toBe('none');
+      await page.keyboard.press('ArrowUp');
+      await expect(client).toBeFocused();
+      expect(await outlineOf(client)).toEqual({ style: 'solid', width: '2px' });
+      expect((await outlineOf(watcher)).style).toBe('none');
+      // Escape leaves the role as it was.
+      await page.keyboard.press('Escape');
+      await expect(role).toBeFocused();
+    });
   });
 
   test('a role is only saved when picked with Enter, not while browsing', async ({ page }) => {

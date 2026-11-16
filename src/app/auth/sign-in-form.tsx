@@ -369,7 +369,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
-            <TextLink href="/auth/forgot-password" className="self-end text-sm">
+            <TextLink standalone href="/auth/forgot-password" className="self-end text-sm">
               {t('signIn.forgotPassword')}
             </TextLink>
           </div>

@@ -75,7 +75,7 @@ function CompanyLinks({ companies }: { companies: UserListItem['companies'] }) {
       {companies.map((company, index) => (
         <Fragment key={company.id}>
           {index > 0 && ', '}
-          <TextLink href={`/companies/${company.slug}`} className="wrap-anywhere">
+          <TextLink standalone href={`/companies/${company.slug}`} className="wrap-anywhere">
             {company.name}
           </TextLink>
         </Fragment>
@@ -221,6 +221,7 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
                         <div className="flex min-w-0 flex-col">
                           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                             <TextLink
+                              standalone
                               href={`/admin/users/${listed.id}`}
                               className="font-medium wrap-anywhere"
                             >

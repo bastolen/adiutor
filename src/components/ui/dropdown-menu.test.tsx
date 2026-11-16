@@ -190,3 +190,54 @@ describe('MenuRadioLinkItem', () => {
     expect(screen.getByRole('menuitemradio', { name: 'Newest first' })).toHaveFocus();
   });
 });
+
+describe('The item the keyboard is on', () => {
+  /** The classes that mark the highlighted item: a fill, and an outline that doesn't lean on it. */
+  const HIGHLIGHT = [
+    'data-highlighted:bg-raised-muted',
+    'data-highlighted:outline-2',
+    'data-highlighted:-outline-offset-2',
+    'data-highlighted:outline-ring',
+  ];
+
+  it('is outlined as well as filled, whatever kind of item it is', async () => {
+    const user = userEvent.setup();
+    render(<LinkMenu />);
+
+    screen.getByRole('button', { name: 'Open' }).focus();
+    await user.keyboard('{Enter}');
+
+    const plain = screen.getByRole('menuitemradio', { name: 'Plain' });
+    const link = screen.getByRole('menuitemradio', { name: 'Oldest first' });
+    expect(plain).toHaveClass(...HIGHLIGHT);
+    expect(link).toHaveClass(...HIGHLIGHT);
+    // Radix marks the item that has focus, which is what the classes style.
+    expect(plain).toHaveAttribute('data-highlighted');
+    expect(link).not.toHaveAttribute('data-highlighted');
+    await user.keyboard('{ArrowDown}');
+    expect(link).toHaveAttribute('data-highlighted');
+    expect(plain).not.toHaveAttribute('data-highlighted');
+  });
+
+  it('is outlined in a menu of plain items too', async () => {
+    const user = userEvent.setup();
+    render(<RowMenu onChoose={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: 'Open' }));
+
+    expect(screen.getByRole('menuitem', { name: 'Before' })).toHaveClass(...HIGHLIGHT);
+  });
+
+  it('never has its outline switched off', async () => {
+    const user = userEvent.setup();
+    render(<LinkMenu />);
+
+    await user.click(screen.getByRole('button', { name: 'Open' }));
+
+    // Either class turns Tailwind's outline style off for the item, so `outline-2` would draw nothing.
+    screen.getAllByRole('menuitemradio').forEach((item) => {
+      expect(item).not.toHaveClass('outline-none');
+      expect(item).not.toHaveClass('outline-hidden');
+    });
+  });
+});

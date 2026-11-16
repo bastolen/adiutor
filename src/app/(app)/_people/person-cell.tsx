@@ -71,7 +71,7 @@ export default function PersonCell({
         <div className="flex min-w-0 flex-col">
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
             {href ? (
-              <TextLink href={href} className="font-medium wrap-anywhere">
+              <TextLink standalone href={href} className="font-medium wrap-anywhere">
                 {name}
               </TextLink>
             ) : (

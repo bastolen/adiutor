@@ -9,7 +9,7 @@ import { type ReactNode, useId, useState } from 'react';
 
 import cn from '@/lib/cn';
 
-import { fieldControl, SCREEN_GUTTER } from './styles';
+import { fieldControl, highlightedItem, SCREEN_GUTTER } from './styles';
 
 /** One option in a {@link SelectField}. */
 export interface SelectOption {
@@ -85,7 +85,8 @@ interface SelectFieldProps {
  * accident. Option descriptions are shown in the list and are part of the
  * option's name (label first); the closed select shows only the label. A
  * label in another language than the page's carries its `lang`, in the list
- * and in the closed select.
+ * and in the closed select. The option the keyboard or pointer is on is
+ * filled and outlined (`highlightedItem`).
  * While `busy`, it stays focusable but doesn't open.
  *
  * @param props - Select props.
@@ -173,7 +174,10 @@ export default function SelectField({
                     aria-labelledby={
                       option.description ? `${optionLabelId} ${optionDescriptionId}` : undefined
                     }
-                    className="relative flex min-h-9 flex-col justify-center rounded-md py-2 pr-3 pl-8 text-sm outline-none select-none data-disabled:opacity-50 data-highlighted:bg-raised-muted"
+                    className={cn(
+                      'relative flex min-h-9 flex-col justify-center rounded-md py-2 pr-3 pl-8 text-sm select-none data-disabled:opacity-50',
+                      highlightedItem,
+                    )}
                   >
                     <Select.ItemIndicator className="absolute top-2.5 left-2 inline-flex">
                       <Check aria-hidden="true" className="size-4 text-highlight" />

@@ -182,7 +182,7 @@ export default function TwoFactorForm() {
       </Alert>
       {expired && (
         <Button asChild variant="secondary">
-          <TextLink href={`/auth?callbackURL=${encodeURIComponent(callbackURL)}`}>
+          <TextLink standalone href={`/auth?callbackURL=${encodeURIComponent(callbackURL)}`}>
             {t('actions.startAgain')}
           </TextLink>
         </Button>
@@ -225,7 +225,9 @@ export default function TwoFactorForm() {
             {mode === 'backup' ? t('actions.useCode') : t('actions.useBackupCode')}
           </Button>
         )}
-        <TextLink href="/auth">{t('actions.backToSignIn')}</TextLink>
+        <TextLink standalone href="/auth">
+          {t('actions.backToSignIn')}
+        </TextLink>
       </div>
     </div>
   );

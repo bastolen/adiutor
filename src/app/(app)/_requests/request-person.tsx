@@ -73,7 +73,7 @@ export default function PersonLine({
   return (
     <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
       {person.userId !== null && person.name !== null ? (
-        <TextLink href={`/admin/users/${person.userId}`} className="wrap-anywhere">
+        <TextLink standalone href={`/admin/users/${person.userId}`} className="wrap-anywhere">
           {person.name}
         </TextLink>
       ) : (

@@ -131,7 +131,12 @@ keyboard support.
   sideways.
 - **Menus and select lists** keep at least the page's 16px side gutter from the screen's edges
   when they would otherwise run off it (`SCREEN_GUTTER` in `src/components/ui/styles.ts`, Radix's
-  `collisionPadding`).
+  `collisionPadding`). The item the keyboard or pointer is on is filled (`raised-muted`) and has
+  an inset 2px outline in the ring colour (`highlightedItem` in the same file, shared by menu items
+  and select options). The fill alone is 1.13:1 against the panel in light mode and 1.21:1 in dark
+  mode, and forced-colours mode drops it; the outline is 7.5:1 and 7.3:1 (WCAG 1.4.11) and is drawn
+  in forced colours too. Items never take `outline-none` or `outline-hidden`: both switch
+  Tailwind's outline style off for the element, so the outline would never show.
 - **Colours:** semantic tokens in `src/styles/theme.css`, each checked for contrast (at least 4.5:1
   for text, 3:1 for input borders) in both modes:
 
@@ -283,6 +288,14 @@ keyboard support.
   spacing exception, so each is easy to tap on a phone. Text links on their own line reach 2px above
   and below the text (`TextLink`, cancelled by a negative margin, so nothing moves), and a checkbox
   counts with its label (`CheckboxField`). Links inside a sentence are exempt, as in WCAG.
+- **Links in text:** a link inside a sentence is underlined (`TextLink`: thin at rest, thicker on
+  hover), because its colour alone doesn't set it apart from the text around it: `highlight` is
+  2.2:1 against body text in light mode and 1.6:1 in dark mode, and WCAG 1.4.1 asks for 3:1 or
+  another cue. That goes for links in a message's `<link>` tag (`t.rich`) and for a link that
+  shares a line of text with them (the company in an audit log entry's "by … · about …" line). A
+  link that stands on its own takes `standalone` and is underlined on hover only: a name in a
+  table, a value in a list of details, "Forgot password?" under its field, a link with a line to
+  itself. When you add a `TextLink`, decide which of the two it is.
 - **Forms:** labels are always visible and help text is linked with `aria-describedby`. Fields
   don't show errors themselves: a failed submit shows an `Alert` (`ResultAlert`) and moves focus
   to it, and in the signed-in app a toast too (not in a dialog, see Results). Each result gets an
@@ -358,7 +371,11 @@ has a palette icon, apart from the options.
   System, the page follows device changes live.
 - **No flicker:** a small inline script in `<head>` (`themeScript` in `src/lib/theme.ts`) sets
   `data-theme="light"` or `"dark"` on `<html>` before the page paints, so the first frame already has
-  the right colours. Without JavaScript, CSS follows the system setting.
+  the right colours. Without JavaScript (or when the script can't read storage), nothing sets
+  `data-theme` and CSS follows the system setting: the colours through `light-dark()`, and the
+  `dark:` variant through `prefers-color-scheme` while `<html>` has no `data-theme`
+  (`@custom-variant dark` in `src/styles/theme.css`), so a dark page gets the logo with light text
+  there too.
 - **Colours:** each semantic colour is defined once in `src/styles/theme.css` as
   `light-dark(<light>, <dark>)`, so both values sit side by side when you check contrast.
 - **Styling:** use the semantic colours (see [Design and accessibility](#design-and-accessibility))

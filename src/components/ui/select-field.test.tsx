@@ -93,6 +93,25 @@ describe('SelectField', () => {
     expect(screen.getByRole('option', { name: 'Default' }).querySelector('[lang]')).toBeNull();
   });
 
+  it('outlines the option the keyboard is on, as well as filling it', async () => {
+    const user = userEvent.setup();
+    render(<SelectField label="Role" options={options} defaultValue="watcher" />);
+
+    await user.click(screen.getByRole('combobox', { name: 'Role' }));
+
+    screen.getAllByRole('option').forEach((option) => {
+      expect(option).toHaveClass(
+        'data-highlighted:bg-raised-muted',
+        'data-highlighted:outline-2',
+        'data-highlighted:-outline-offset-2',
+        'data-highlighted:outline-ring',
+      );
+      // Either class turns Tailwind's outline style off, so `outline-2` would draw nothing.
+      expect(option).not.toHaveClass('outline-none');
+      expect(option).not.toHaveClass('outline-hidden');
+    });
+  });
+
   it('reports the chosen value', async () => {
     const user = userEvent.setup();
     const onValueChange = vi.fn();

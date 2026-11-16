@@ -1,7 +1,8 @@
 /**
  * @file Contrast checks for the colour tokens of raised layers (dialogs,
  * menus, selects, toasts) in `theme.css`, in light and dark mode: text on
- * them stays readable (WCAG AA), and in dark mode they sit a step lighter
+ * them stays readable (WCAG AA), the outline of the item the keyboard is on
+ * shows where its fill doesn't, and in dark mode they sit a step lighter
  * than the page's surfaces so they stand apart.
  */
 import { readFileSync } from 'node:fs';
@@ -91,6 +92,16 @@ describe.each(['light', 'dark'] as const)('raised layers in %s mode', (mode) => 
     expect(
       contrast(colourOf('border-strong', mode), colourOf('raised', mode)),
     ).toBeGreaterThanOrEqual(3);
+  });
+
+  it('mark the highlighted item with an outline, since its fill barely differs from the layer', () => {
+    // The fill of the item the keyboard is on (`highlightedItem`) is no cue by itself...
+    expect(contrast(colourOf('raised-muted', mode), colourOf('raised', mode))).toBeLessThan(3);
+    // ...so its outline, in the ring colour, has to show against the fill and the layer.
+    expect(contrast(colourOf('ring', mode), colourOf('raised-muted', mode))).toBeGreaterThanOrEqual(
+      3,
+    );
+    expect(contrast(colourOf('ring', mode), colourOf('raised', mode))).toBeGreaterThanOrEqual(3);
   });
 });
 

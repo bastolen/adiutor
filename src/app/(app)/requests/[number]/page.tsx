@@ -129,7 +129,9 @@ async function RequestContent({
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-mono">{formatRequestNumber(detail.prefix, detail.number)}</span>
             <span aria-hidden="true">·</span>
-            <TextLink href={`/companies/${detail.company.slug}`}>{detail.company.name}</TextLink>
+            <TextLink standalone href={`/companies/${detail.company.slug}`}>
+              {detail.company.name}
+            </TextLink>
           </span>
         }
         back={{ href: '/requests', label: t('back') }}

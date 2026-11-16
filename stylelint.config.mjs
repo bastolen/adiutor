@@ -17,6 +17,7 @@ const tailwindAtRules = [
   'utility',
   'variant',
   'custom-variant',
+  'slot',
   'apply',
   'source',
   'plugin',
@@ -36,6 +37,12 @@ const config = {
   rules: {
     /** Allow Tailwind's at-rules. */
     'at-rule-no-unknown': [true, { ignoreAtRules: tailwindAtRules }],
+    /**
+     * In the block form of `@custom-variant`, `&` stands for the element the
+     * variant's class is on (Tailwind puts the rules inside that class), so
+     * it has a scoping root there.
+     */
+    'nesting-selector-no-missing-scoping-root': [true, { ignoreAtRules: ['custom-variant'] }],
     /** Allow Tailwind's `theme()` and `--spacing()` style functions. */
     'function-no-unknown': [true, { ignoreFunctions: ['theme', '--spacing', '--alpha'] }],
     /**

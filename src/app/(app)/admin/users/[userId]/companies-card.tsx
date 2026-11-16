@@ -195,6 +195,7 @@ export default function CompaniesCard({
                         <div className="flex flex-col gap-2">
                           <span className="flex flex-wrap items-center gap-2">
                             <TextLink
+                              standalone
                               href={`/companies/${membership.slug}`}
                               className="wrap-anywhere"
                             >

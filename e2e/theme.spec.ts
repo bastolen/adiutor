@@ -1,6 +1,7 @@
 /**
  * @file End-to-end tests for light and dark mode: the floating theme button
- * on the public pages and the theme row in the account menu.
+ * on the public pages, the theme row in the account menu, and the page
+ * without JavaScript, which follows the system setting in CSS alone.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -108,6 +109,25 @@ test('a chosen theme wins over the system setting, which applies without one', a
   expect((await tokenColours(page, null)).colours).toEqual(dark.colours);
   await page.emulateMedia({ colorScheme: 'light' });
   expect((await tokenColours(page, null)).colours).toEqual(light.colours);
+});
+
+(['dark', 'light'] as const).forEach((colorScheme) => {
+  test.describe(`without JavaScript on a ${colorScheme} system`, () => {
+    // Nothing sets `data-theme` then: the colours and the `dark:` variant follow the system in CSS.
+    test.use({ javaScriptEnabled: false, colorScheme });
+
+    test(`the page shows the logo made for a ${colorScheme} page`, async ({ page }) => {
+      await page.goto('/auth');
+      await expect(page.locator('html')).not.toHaveAttribute('data-theme');
+
+      // Both logos are in the page; the `dark:` variant shows one of them.
+      const header = page.getByRole('banner');
+      const onLight = header.locator('img[src*="logo.svg"]');
+      const onDark = header.locator('img[src*="logo-on-dark.svg"]');
+      await expect(colorScheme === 'dark' ? onDark : onLight).toBeVisible();
+      await expect(colorScheme === 'dark' ? onLight : onDark).toBeHidden();
+    });
+  });
 });
 
 test('signed in, the theme is chosen in the account menu, sharing the choice with sign-in', async ({

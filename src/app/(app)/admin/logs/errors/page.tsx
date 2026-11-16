@@ -126,7 +126,9 @@ function ErrorDetails({ error }: { error: RecordedError }) {
       )}
       <DescriptionRow term={t('details.signedIn')}>
         {error.user ? (
-          <TextLink href={`/admin/users/${error.user.id}`}>{displayName(error.user)}</TextLink>
+          <TextLink standalone href={`/admin/users/${error.user.id}`}>
+            {displayName(error.user)}
+          </TextLink>
         ) : (
           t('details.noOne')
         )}
@@ -265,6 +267,7 @@ async function Errors({ searchParams }: { searchParams: Promise<SearchParams> })
                   <Td>
                     <div className="flex flex-col items-start gap-1.5">
                       <TextLink
+                        standalone
                         href={table.withParams({ q: error.reference })}
                         className="font-mono"
                         aria-label={t('lookup.ariaLabel', { reference: error.reference })}
