@@ -96,6 +96,11 @@ kinds are handled with `batchedJobRunner`, and the batch, made with `defineJobBa
 `JOB_BATCHES`). Each job is in exactly one batch, so an email never repeats an earlier one, and a batch
 that throws is attempted again with whatever was queued for its key meanwhile.
 
+**At least once:** a job's work and the note that it's done are two steps. When the note can't be
+written (the database dropped the write), only that job is attempted again, so its work can happen
+twice; the jobs of its batch that were noted stay finished. A failure never puts a finished job back
+in the queue (`retryQueuedJobLater` and giving up only touch jobs that are still `running`).
+
 ## Failures
 
 A failure is recorded as an error in the app (`recordJobError`), so staff Admins look it up by its
@@ -116,7 +121,8 @@ next scheduled moment. A queued job whose attempt died uses up that attempt.
 **The staff Admins are told** when a job keeps failing (`alerts.ts`): after a recurring job's third
 failed run in a row, or when queued jobs are given up. Each active staff Admin gets an email in their
 own language with the error's reference, at most once a day per job, sent straight away rather than
-through the queue.
+through the queue. An alert that reached nobody (not one email could be sent, as when the mail
+server is what's down) doesn't count as the day's alert: the next failure sends it.
 
 **When the ticks stop**, no job runs and none can tell anyone. So every tick notes when it started
 (`job_tick`, `recordTick` in `tick-record.ts`), and when none started in the last 45 minutes
@@ -153,7 +159,9 @@ to Logs → Errors for those who may see it (`errors:view`).
 Staff Admins (`jobs:manage`) also run a recurring job now (for at most 45 seconds of new work; the
 page's `maxDuration` is 60), pause and resume jobs, and retry or discard failed queued jobs, one or
 all of a kind (`controls.ts`). Each is recorded in the audit log, never allowed while signed in as
-someone, and discarding asks first. Jobs that keep Adiutor secure can't be paused (`pausable:
+someone, and discarding asks first. A failed job of a kind the registry no longer lists can only be
+discarded, from the page and from the command line: no tick would take it, so a retry leaves it
+failed (`retryFailedQueuedJobs`). Jobs that keep Adiutor secure can't be paused (`pausable:
 false`: security notices, new staff Admins, leftover provider tokens and finished sign-ins as a
 user), and run even with a pause left in the database.
 

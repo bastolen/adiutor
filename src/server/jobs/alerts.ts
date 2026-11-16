@@ -3,7 +3,9 @@
  * that failed `ALERT_AFTER_FAILED_RUNS` runs in a row, or queued jobs given up
  * after their last attempt. At most one email a day per job, sent straight
  * away (never through the queue, which may be what's broken), each in the
- * Admin's own language. Never throws: a failure is logged.
+ * Admin's own language. An alert that reached nobody doesn't count as the
+ * day's alert: the next failure tries again. Never throws: a failure is
+ * logged.
  */
 import { and, eq, isNull, lt, or, sql } from 'drizzle-orm';
 
@@ -33,34 +35,78 @@ export interface FailingJob {
   reference: string | null;
 }
 
+/** A job's alert, taken by one caller. */
+interface AlertClaim {
+  /** The moment the claim wrote as the job's last alert, which names the claim. */
+  claimedAt: Date;
+  /** When the last alert before it went out, to put back when this one reaches nobody. */
+  previous: Date | null;
+}
+
 /**
  * Takes the job's alert, when none went out in the last
- * {@link ALERT_EVERY_HOURS} hours. Two runs failing at once can't both take it.
+ * {@link ALERT_EVERY_HOURS} hours. Two runs failing at once can't both take
+ * it. The moment is stored in whole milliseconds, so the claim can be found
+ * again by it ({@link releaseAlert}).
  *
  * @param ctx - Service context (only the database is used).
  * @param job - The job's name.
- * @returns Whether this caller may send the alert.
+ * @returns The claim, or `null` when this caller may not send the alert.
  */
-async function claimAlert(ctx: Pick<ServiceContext, 'db'>, job: string): Promise<boolean> {
-  const claimed = await ctx.db
-    .update(jobState)
-    .set({ lastAlertAt: sql`now()` })
-    .where(
-      and(
-        eq(jobState.name, job),
-        or(
-          isNull(jobState.lastAlertAt),
-          lt(jobState.lastAlertAt, sql`now() - make_interval(hours => ${ALERT_EVERY_HOURS})`),
+async function claimAlert(
+  ctx: Pick<ServiceContext, 'db'>,
+  job: string,
+): Promise<AlertClaim | null> {
+  const before = ctx.db.$with('before').as(
+    ctx.db
+      .select({ id: jobState.id, previous: jobState.lastAlertAt })
+      .from(jobState)
+      .where(
+        and(
+          eq(jobState.name, job),
+          or(
+            isNull(jobState.lastAlertAt),
+            lt(jobState.lastAlertAt, sql`now() - make_interval(hours => ${ALERT_EVERY_HOURS})`),
+          ),
         ),
-      ),
-    )
-    .returning({ id: jobState.id });
-  return claimed.length > 0;
+      )
+      .for('update'),
+  );
+  const [claim] = await ctx.db
+    .with(before)
+    .update(jobState)
+    .set({ lastAlertAt: sql`date_trunc('milliseconds', now())` })
+    .from(before)
+    .where(eq(jobState.id, before.id))
+    .returning({ claimedAt: jobState.lastAlertAt, previous: before.previous });
+  return claim?.claimedAt ? { claimedAt: claim.claimedAt, previous: claim.previous } : null;
+}
+
+/**
+ * Gives a claim back, so the next failure may send the alert: the job's last
+ * alert is again the one from before the claim. Only while the stored moment
+ * is still this claim's, so a newer claim is never overwritten.
+ *
+ * @param ctx - Service context (only the database is used).
+ * @param job - The job's name.
+ * @param claim - The claim to give back.
+ */
+async function releaseAlert(
+  ctx: Pick<ServiceContext, 'db'>,
+  job: string,
+  claim: AlertClaim,
+): Promise<void> {
+  await ctx.db
+    .update(jobState)
+    .set({ lastAlertAt: claim.previous })
+    .where(and(eq(jobState.name, job), eq(jobState.lastAlertAt, claim.claimedAt)));
 }
 
 /**
  * Emails every active staff Admin that a job keeps failing, unless they were
- * told about it in the last day.
+ * told about it in the last day. When there are Admins and not one email
+ * could be sent (a mail server that's down is the likeliest reason a job
+ * fails), the day's alert is given back, so the next failure tells them.
  *
  * @param ctx - Service context (database, email, app URL).
  * @param failing - The job and what went wrong.
@@ -71,7 +117,8 @@ export async function alertStaffAdmins(
   failing: FailingJob,
 ): Promise<number> {
   try {
-    if (!(await claimAlert(ctx, failing.job))) {
+    const claim = await claimAlert(ctx, failing.job);
+    if (!claim) {
       return 0;
     }
     const admins = await ctx.db
@@ -107,7 +154,11 @@ export async function alertStaffAdmins(
         }
       }),
     );
-    return sent.filter(Boolean).length;
+    const emailed = sent.filter(Boolean).length;
+    if (admins.length > 0 && emailed === 0) {
+      await releaseAlert(ctx, failing.job, claim);
+    }
+    return emailed;
   } catch (error) {
     // eslint-disable-next-line no-console -- As above; database values are left out by the log redaction.
     console.error(`Telling the staff Admins that job ${failing.job} keeps failing failed`, error);

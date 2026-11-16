@@ -161,11 +161,14 @@ function failedJobs(selection: FailedJobsSelection) {
 
 /**
  * Puts failed jobs back in the queue for the next tick, with a fresh count
- * of attempts.
+ * of attempts. Only jobs of a kind the registry lists go back, whether they
+ * were picked by ID or by kind: no tick takes a job of another kind and the
+ * `retention` job only deletes finished ones, so it would wait forever. Such
+ * a job stays failed, to be discarded.
  *
  * @param db - Database client or transaction.
  * @param selection - Which failed jobs.
- * @returns The jobs that were put back.
+ * @returns The jobs that were put back; none for a kind the registry doesn't list.
  */
 export async function retryFailedQueuedJobs(
   db: DatabaseOrTransaction,
@@ -174,7 +177,15 @@ export async function retryFailedQueuedJobs(
   return db
     .update(queuedJob)
     .set({ status: 'queued', attempts: 0, runAt: sql`now()`, finishedAt: null })
-    .where(failedJobs(selection))
+    .where(
+      and(
+        failedJobs(selection),
+        inArray(
+          queuedJob.kind,
+          QUEUED_JOBS.map((kind) => kind.name),
+        ),
+      ),
+    )
     .returning({ id: queuedJob.id, kind: queuedJob.kind });
 }
 

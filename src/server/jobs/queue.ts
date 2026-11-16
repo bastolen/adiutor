@@ -166,7 +166,9 @@ export async function claimNextQueuedJobs(
 }
 
 /**
- * Notes how a job ended and frees it.
+ * Notes how a job ended and frees it. A job is only given up (`failed`) while
+ * it's still `running`: one that was already noted as done or skipped stays
+ * as it is.
  *
  * @param db - Database client.
  * @param id - The job.
@@ -187,12 +189,16 @@ export async function finishQueuedJob(
       finishedAt: sql`now()`,
       ...(errorReference ? { lastErrorReference: errorReference } : {}),
     })
-    .where(eq(queuedJob.id, id));
+    .where(
+      and(eq(queuedJob.id, id), status === 'failed' ? eq(queuedJob.status, 'running') : undefined),
+    );
 }
 
 /**
  * Puts a job that failed back in the queue, to be tried again after a wait
- * that grows with each attempt (`RETRY_MINUTES`).
+ * that grows with each attempt (`RETRY_MINUTES`). Only a job that's still
+ * `running` goes back: one that was already noted as done or skipped stays
+ * finished, so a failure after it was noted never runs it a second time.
  *
  * @param db - Database client.
  * @param id - The job.
@@ -213,5 +219,5 @@ export async function retryQueuedJobLater(
       runAt: sql`now() + make_interval(mins => ${retryWaitMinutes(attempts)})`,
       ...(errorReference ? { lastErrorReference: errorReference } : {}),
     })
-    .where(eq(queuedJob.id, id));
+    .where(and(eq(queuedJob.id, id), eq(queuedJob.status, 'running')));
 }

@@ -3,7 +3,8 @@
  * due jobs at the tick (the kinds taking turns, each kind's oldest first,
  * once each, even with two ticks at once), skipped jobs, failed jobs tried
  * again after growing waits and then given up, runs that died, paused
- * kinds, the deadline, and coupled jobs that run together in batches.
+ * kinds, the deadline, coupled jobs that run together in batches, and
+ * finished jobs that stay finished when a later write fails.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -23,9 +24,15 @@ import {
   type JobBatch,
   type QueuedJobRunner,
 } from './define';
-import { retryWaitMinutes } from './queue';
+import { finishQueuedJob, retryQueuedJobLater, retryWaitMinutes } from './queue';
 import { runQueue } from './run-queue';
 import { runTick } from './tick';
+
+// Watched, so a test can make one job's "done" write fail; it still writes.
+vi.mock('./queue', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./queue')>();
+  return { ...actual, finishQueuedJob: vi.fn(actual.finishQueuedJob) };
+});
 
 const { ctx, db, sent } = setupTestContext();
 
@@ -478,6 +485,25 @@ describe('running the queue', () => {
   it('waits 5 minutes, 15, an hour, then 6 hours each time', () => {
     expect([1, 2, 3, 4, 5, 9].map(retryWaitMinutes)).toEqual([5, 15, 60, 360, 360, 360]);
   });
+
+  it('never puts a job back, or gives it up, once it was noted as done', async () => {
+    const kind = noteKind('adiutor-tests-note');
+    const id = await add(kind, 'done');
+    await db
+      .update(queuedJob)
+      .set({ status: 'succeeded', attempts: 1, finishedAt: sql`now()` })
+      .where(eq(queuedJob.id, id));
+
+    // What a failure after the job was noted would do, e.g. in the rest of its batch.
+    await retryQueuedJobLater(db, id, 1, 'ERR-ADIUTOR-TESTS');
+    await finishQueuedJob(db, id, 'failed', 'ERR-ADIUTOR-TESTS');
+
+    expect(
+      await db
+        .select({ status: queuedJob.status, reference: queuedJob.lastErrorReference })
+        .from(queuedJob),
+    ).toEqual([{ status: 'succeeded', reference: null }]);
+  });
 });
 
 describe('batches', () => {
@@ -633,6 +659,48 @@ describe('batches', () => {
       'succeeded',
       'succeeded',
     ]);
+  });
+
+  it('leaves the jobs already noted as done alone when one of the batch can’t be noted', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await queueJob(db, statusChanged, { ticketId: ticket1, userId: jane });
+    await queueJob(db, commented, { ticketId: ticket1, userId: jane });
+    // The batch ran, and the first job's "done" write fails; the second one's is written.
+    vi.mocked(finishQueuedJob).mockImplementationOnce(async () => {
+      throw new Error('Adiutor Tests: the database dropped the write');
+    });
+
+    const runs = await run();
+
+    // Only the job that couldn't be noted goes back, to run again later (at least once).
+    expect(
+      await db
+        .select({ kind: queuedJob.kind, status: queuedJob.status })
+        .from(queuedJob)
+        .orderBy(queuedJob.kind),
+    ).toEqual([
+      { kind: commented.name, status: 'succeeded' },
+      { kind: statusChanged.name, status: 'queued' },
+    ]);
+    expect(runs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          job: commented.name,
+          status: 'succeeded',
+          summary: { done: 1, skipped: 0, retried: 0, failed: 0 },
+        }),
+        expect.objectContaining({
+          job: statusChanged.name,
+          status: 'failed',
+          summary: { done: 0, skipped: 0, retried: 1, failed: 0 },
+        }),
+      ]),
+    );
+    // The job that went back runs on its own next time: the finished one isn't in its batch.
+    await db.update(queuedJob).set({ runAt: sql`now() - interval '1 second'` });
+    calls = [];
+    await run();
+    expect(calls).toEqual([[`${statusChanged.name}:${ticket1}:${jane}`]]);
   });
 
   it('marks the jobs the batch skipped, and the rest done', async () => {

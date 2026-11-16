@@ -4,7 +4,9 @@
  * nothing is due. A job with a batch key
  * runs with the rest of its batch, in one call of its group's batch. A job
  * that fails is tried again later, up to its kind's `maxAttempts`, and each
- * failure is recorded as an error with a reference. A run that dies (its
+ * failure is recorded as an error with a reference. A job that ran but
+ * couldn't be noted as done fails on its own, without the rest of its batch
+ * (jobs run at least once). A run that dies (its
  * lease runs out) counts as an attempt too, and a job whose last attempt died
  * is given up. When jobs are given up, the staff Admins are told. Every kind that ran jobs gets one run in the
  * history, with how many were done, skipped, retried and failed.
@@ -67,25 +69,6 @@ export interface QueueRunOptions {
 }
 
 /**
- * Notes that jobs were done or skipped.
- *
- * @param ctx - Service context.
- * @param jobs - The jobs, each with how its run ended.
- * @returns How each ended.
- */
-async function finish(
-  ctx: ServiceContext,
-  jobs: readonly { job: QueuedJob; result: QueuedJobResult }[],
-): Promise<Ending[]> {
-  return Promise.all(
-    jobs.map(async ({ job, result }) => {
-      await finishQueuedJob(ctx.db, job.id, result === 'done' ? 'succeeded' : 'skipped');
-      return { kind: job.kind, ended: result, errorReference: null };
-    }),
-  );
-}
-
-/**
  * Notes that jobs failed: the error is recorded once (with a reference each
  * job keeps), and each job is tried again later, or given up after its
  * kind's last attempt. The log gets the jobs' IDs and attempts, never their
@@ -128,46 +111,79 @@ async function fail(
 }
 
 /**
+ * Notes that jobs were done or skipped. Every job's note is written on its
+ * own and awaited, and only the jobs whose note couldn't be written fail: the
+ * rest of a batch stays finished, instead of going back in the queue to run
+ * a second time.
+ *
+ * @param ctx - Service context.
+ * @param jobs - The jobs, each with its kind and how its run ended.
+ * @returns How each ended: the jobs that were noted, then those that weren't.
+ */
+async function finish(
+  ctx: ServiceContext,
+  jobs: readonly { job: QueuedJob; kind: QueuedJobRunner; result: QueuedJobResult }[],
+): Promise<Ending[]> {
+  const notes = await Promise.allSettled(
+    jobs.map(async ({ job, result }) =>
+      finishQueuedJob(ctx.db, job.id, result === 'done' ? 'succeeded' : 'skipped'),
+    ),
+  );
+  const noted = jobs.filter((_, index) => notes[index]?.status === 'fulfilled');
+  const unnoted = jobs.filter((_, index) => notes[index]?.status === 'rejected');
+  const failure = notes.find((note) => note.status === 'rejected');
+  return [
+    ...noted.map(({ job, result }) => ({ kind: job.kind, ended: result, errorReference: null })),
+    ...(failure ? await fail(ctx, unnoted, failure.reason) : []),
+  ];
+}
+
+/**
  * Runs what one claim took: a job on its own, or a batch through its group's
- * batch, with each job's payload checked by its own kind.
+ * batch, with each job's payload checked by its own kind. When the run
+ * throws, every job it took fails; when a job's ending can't be noted
+ * afterwards, only that job does ({@link finish}).
  *
  * @param ctx - Service context.
  * @param claimed - The jobs, each with its kind.
  * @param batches - The batches by group.
- * @returns How each job ended, in the same order.
+ * @returns How each job ended.
  */
 async function runClaimed(
   ctx: ServiceContext,
   claimed: readonly { job: QueuedJob; kind: QueuedJobRunner }[],
   batches: ReadonlyMap<string, JobBatch>,
 ): Promise<Ending[]> {
+  let ran: { job: QueuedJob; kind: QueuedJobRunner; result: QueuedJobResult }[];
   try {
     const [first] = claimed;
     const solo = claimed.length === 1 && first?.kind.handle ? first : null;
     if (solo?.kind.handle) {
-      const result = await solo.kind.handle(ctx, solo.job);
-      return await finish(ctx, [{ job: solo.job, result }]);
+      ran = [{ ...solo, result: await solo.kind.handle(ctx, solo.job) }];
+    } else {
+      const group = defined(first?.kind.batchGroup, 'the batch group of the claimed jobs');
+      const batch = defined(batches.get(group), `the batch of group ${group}`);
+      const outcome = await batch.run(
+        ctx,
+        claimed.map(({ job, kind }) => ({
+          id: job.id,
+          kind: job.kind,
+          attempts: job.attempts,
+          queuedAt: job.queuedAt,
+          payload: kind.check(job.payload),
+        })),
+      );
+      const skipped = new Set(outcome.skipped ?? []);
+      ran = claimed.map(({ job, kind }) => ({
+        job,
+        kind,
+        result: skipped.has(job.id) ? 'skipped' : 'done',
+      }));
     }
-    const group = defined(first?.kind.batchGroup, 'the batch group of the claimed jobs');
-    const batch = defined(batches.get(group), `the batch of group ${group}`);
-    const outcome = await batch.run(
-      ctx,
-      claimed.map(({ job, kind }) => ({
-        id: job.id,
-        kind: job.kind,
-        attempts: job.attempts,
-        queuedAt: job.queuedAt,
-        payload: kind.check(job.payload),
-      })),
-    );
-    const skipped = new Set(outcome.skipped ?? []);
-    return await finish(
-      ctx,
-      claimed.map(({ job }) => ({ job, result: skipped.has(job.id) ? 'skipped' : 'done' })),
-    );
   } catch (error) {
     return fail(ctx, claimed, error);
   }
+  return finish(ctx, ran);
 }
 
 /** What a run of the queue did. */
