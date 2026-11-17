@@ -85,6 +85,15 @@ describe('describeAuditEvent', () => {
     );
   });
 
+  it('tells an invite link whose use was undone from one that was used', () => {
+    expect(
+      t(describeAuditEvent('invite_link_claimed', { email: 'new@adiutor.test', undone: true })),
+    ).toBe('Invite link made usable again because its email couldn’t be sent');
+    expect(
+      t(describeAuditEvent('invite_link_claimed', { email: 'new@adiutor.test', status: 'sent' })),
+    ).toBe('Used an invite link');
+  });
+
   it('uses the label for everything else', () => {
     expect(t(describeAuditEvent('role_changed', { mfaRequired: true }))).toBe('Changed a role');
     expect(t(describeAuditEvent('sign_in', { reason: 'expired' }))).toBe('Signed in');

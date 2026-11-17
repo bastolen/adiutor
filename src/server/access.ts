@@ -308,7 +308,9 @@ export interface StillManagesOptions {
  * rows, would invite deadlocks.
  *
  * @param tx - The change's transaction.
- * @param actor - The acting user, as the request loaded them.
+ * @param actor - The acting user, as the request loaded them. Only their ID is read (their
+ *   rights come from the locked rows), so it also takes whoever else a change's rights depend
+ *   on: the creator of an invite link whose claim is undone (`claimInviteLink`).
  * @param companyId - The company acted on (an ID already checked), or `null` for staff.
  * @param permission - The permission the change needs.
  * @param options - Options.
@@ -320,7 +322,7 @@ export interface StillManagesOptions {
  */
 export async function assertStillManages(
   tx: DatabaseTransaction,
-  actor: Actor,
+  actor: Pick<Actor, 'id'>,
   companyId: string | null,
   permission: Permission,
   { asStaff = false, alsoLock = [] }: StillManagesOptions = {},

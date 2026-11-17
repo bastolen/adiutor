@@ -283,6 +283,14 @@ staff page also recreates the row. A fresh setup itself isn't recorded in the au
   to it, and the link is used up all the same, so whoever claimed it sees the usual "check your
   inbox" and learns nothing about the address. (An open invitation that came from another link is
   replaced, as before.)
+- **When the email can't be sent:** a claim whose email fails (the mail server is down) is undone,
+  whatever the address: its invitation is revoked and the link can be used again, so an outage
+  doesn't use up a single-use link with nothing in anyone's inbox. Whoever claimed it sees that it
+  failed and can try again; the audit log has the claim and its undoing ("Invite link made usable
+  again because its email couldn't be sent"), and the claim still counts against the limits. The
+  link stays used up when it isn't as the claim left it any more: its creator lost their rights
+  meanwhile (freeing it would give a former Admin's link back), or the invitation was resent,
+  revoked or accepted.
 - **Resending** an invitation sends a new link for it with the same role. One that came from an
   invite link stays one (the link is pointed at the new invitation), so Finance and Support still
   can't accept it, and the Open invitations list marks such invitations "From an invite link".

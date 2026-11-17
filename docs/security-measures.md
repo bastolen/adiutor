@@ -219,15 +219,19 @@ deadlocking:
    (`changeMembership`); the actor `FOR SHARE`, plus the user being added for `addMember`
    (`assertStillManages` in `src/server/access.ts`: creating, resending and revoking invitations
    and invite links, `addMember` and `registerCompany`); the link's creator `FOR KEY SHARE`
-   (`claimInviteLink` in `src/server/people/invite-links.ts`, before it uses the link up); the staff
+   (`claimInviteLink` in `src/server/people/invite-links.ts`, before it uses the link up), or
+   `FOR SHARE` with their rights checked again when a claim is undone because its email couldn't
+   be sent (`undoClaim` there, so a link is never freed for a creator who lost their rights
+   meanwhile); the staff
    member and the user `FOR SHARE` (`startImpersonation` in `src/server/auth/impersonation.ts`, so
    a role change or deactivation of either takes turns with signing in as the user, which then
    decides again with the locked rows).
 3. `membership` rows: the actor's own in the company `FOR SHARE` (`assertStillManages`), the
    company's `FOR UPDATE` (`changeMembership`).
-4. `invite_link` rows: the link a claim uses, the links whose creator loses their rights
-   (`revokeInvitesWithoutManager`), and the link a resend re-points to the new invitation
-   (`resendInvitation`, so an invitation from a link stays one).
+4. `invite_link` rows: the link a claim uses (or frees again when its email couldn't be sent, before
+   it revokes the claim's invitation under the per-address lock), the links whose creator loses
+   their rights (`revokeInvitesWithoutManager`), and the link a resend re-points to the new
+   invitation (`resendInvitation`, so an invitation from a link stays one).
 5. The `rate_limit_bucket` rows a link claim counts against, the creator's and then the
    company's (`assertClaimLimits`). Only claims count inside their transaction; every other
    limit is counted before its transaction starts, so nothing waits for these while holding locks.

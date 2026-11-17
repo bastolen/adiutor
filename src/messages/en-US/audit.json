@@ -57,7 +57,8 @@
       "passwordCheckFailedDeactivate": "Wrong current password entered when deactivating the account",
       "impersonationExpired": "Sign-in as a user ended when its time was up",
       "impersonationNoLongerAllowed": "Sign-in as a user ended because it was no longer allowed",
-      "impersonationSessionEnded": "Sign-in as a user ended with the staff member’s own session"
+      "impersonationSessionEnded": "Sign-in as a user ended with the staff member’s own session",
+      "inviteLinkClaimUndone": "Invite link made usable again because its email couldn’t be sent"
     },
     "groups": {
       "sign-ins": "Sign-ins",
