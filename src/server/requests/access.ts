@@ -14,7 +14,12 @@ import {
   getStaffPermissionsInCompanies,
   type Permission,
 } from '@/lib/authz/permissions';
-import { parseRequestNumber, type RequestSide } from '@/lib/requests';
+import {
+  parseRequestNumber,
+  requestAudience,
+  type RequestAudience,
+  type RequestSide,
+} from '@/lib/requests';
 import { idSchema } from '@/lib/validation';
 
 import { type Company, getCompanyAccess } from '../access';
@@ -120,6 +125,34 @@ export async function getRequestAccess(
     throw notFoundError();
   }
   return { request: found, ...access };
+}
+
+/**
+ * How the screens address the actor about a company's requests: as the
+ * staff, as someone who takes part, or as a follower (`requestAudience`).
+ * It's worked out from their permissions in that company, by the rules
+ * {@link getCompanyAccess} uses, for a request's page and for every row of
+ * a list alike: someone who is a Client in one company and a Watcher in
+ * another reads "waiting for your reply" in the first and "waiting for your
+ * company" in the second, on both.
+ *
+ * @param actor - The reader.
+ * @param inCompany - The company the request is in.
+ * @param inCompany.id - Its ID.
+ * @param inCompany.deactivatedAt - When it was deactivated, or `null` while it's active.
+ * @returns The audience.
+ */
+export function requestAudienceIn(
+  actor: Actor,
+  inCompany: { id: string; deactivatedAt: Date | null },
+): RequestAudience {
+  const companyRole = actor.memberships[inCompany.id] ?? null;
+  const permissions = getPermissions({
+    platformRole: actor.platformRole,
+    companyRole,
+    company: { deactivated: inCompany.deactivatedAt !== null },
+  });
+  return requestAudience(permissions, companyRole !== null);
 }
 
 /** Someone in a request, as its readers see them: their name and side, never their address. */

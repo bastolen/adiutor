@@ -13,6 +13,7 @@ import {
   isRequestStatusFilter,
   isRequestType,
   REQUEST_PRIORITIES,
+  type RequestAudience,
   requestNumberStartInSearch,
   type RequestPriority,
   type RequestStatus,
@@ -31,7 +32,13 @@ import { orderTerms, paginate, textOrder } from '../pagination';
 import getRequestPrefix from '../people/request-prefix';
 import getStaffName from '../people/staff-name';
 import containsPattern from '../search';
-import { type RequestPerson, requestPerson, requestScope, visibleRequests } from './access';
+import {
+  requestAudienceIn,
+  type RequestPerson,
+  requestPerson,
+  requestScope,
+  visibleRequests,
+} from './access';
 
 /** A company whose requests someone sees. */
 export interface RequestCompany {
@@ -132,6 +139,12 @@ export interface RequestListItem {
   createdAt: Date;
   /** When it was raised, replied to or changed last. */
   lastActivityAt: Date;
+  /**
+   * How to address the reader about it: as the staff, as someone who takes
+   * part in its company, or as a follower there. The same as on the
+   * request's own page (`RequestDetail.audience`).
+   */
+  audience: RequestAudience;
 }
 
 /** A request's priority as a number, lowest first, to sort by. */
@@ -264,6 +277,7 @@ export async function listRequests(
           lastActivityAt: request.lastActivityAt,
           createdBySide: request.createdBySide,
           company: { id: company.id, name: company.name, slug: company.slug },
+          companyDeactivatedAt: company.deactivatedAt,
           author: { id: user.id, name: user.name },
         })
         .from(request)
@@ -276,12 +290,19 @@ export async function listRequests(
   );
   return {
     ...page,
-    items: page.items.map(({ author, createdBySide, reopenedAt, ...row }) => ({
-      ...row,
-      reopened: reopenedAt !== null,
-      priority: scope.internal ? row.priority : null,
-      raisedBy: requestPerson(author ?? { id: null, name: null }, createdBySide, actor),
-    })),
+    items: page.items.map(
+      ({ author, createdBySide, reopenedAt, companyDeactivatedAt, ...row }) => ({
+        ...row,
+        reopened: reopenedAt !== null,
+        priority: scope.internal ? row.priority : null,
+        raisedBy: requestPerson(author ?? { id: null, name: null }, createdBySide, actor),
+        // Per company: someone can take part in one and only follow another.
+        audience: requestAudienceIn(actor, {
+          id: row.company.id,
+          deactivatedAt: companyDeactivatedAt,
+        }),
+      }),
+    ),
   };
 }
 

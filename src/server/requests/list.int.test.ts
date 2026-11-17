@@ -16,6 +16,7 @@ import {
   memberActor,
   staffActor,
 } from '../../../tests/integration/helpers';
+import { getRequest } from './detail';
 import { listRequestCompanies, listRequests } from './list';
 import { ctx, db, storeRequest } from './test-helpers';
 
@@ -402,6 +403,62 @@ describe('listRequests: what a request shows', () => {
       ['Reopened', true],
       ['Never closed', false],
     ]);
+  });
+
+  it.each([
+    ['a Client', 'client', null, 'contributor'],
+    ['a Watcher', 'watcher', null, 'follower'],
+    ['Support', null, 'support', 'staff'],
+    ['Finance', null, 'finance', 'staff'],
+    ['Finance who is also a Client', 'client', 'finance', 'contributor'],
+  ] as const)(
+    'tells %s how they are addressed about a waiting request, as its own page does',
+    async (_who, companyRole, staffRole, audience) => {
+      const company = await createCompany(db);
+      await storeRequest(company.id, { status: 'waiting' });
+      const base = staffRole
+        ? await staffActor(db, staffRole)
+        : await memberActor(db, company.id, companyRole);
+      if (staffRole && companyRole) {
+        await addMember(db, company.id, base.id, companyRole);
+      }
+      const reader = await actorFor(db, base.id);
+
+      const page = await listRequests(ctx, reader, { status: 'waiting' });
+
+      expect(page.items.map((item) => item.audience)).toEqual([audience]);
+      expect((await getRequest(ctx, reader, '1')).audience).toBe(audience);
+    },
+  );
+
+  it('addresses someone per company: taking part in one, following in another', async () => {
+    const [alpha, beta] = [await createCompany(db), await createCompany(db)];
+    await storeRequest(alpha.id, { title: 'Where they are a Client', status: 'waiting' });
+    await storeRequest(beta.id, { title: 'Where they are a Watcher', status: 'waiting' });
+    const member = await memberActor(db, alpha.id, 'client');
+    await addMember(db, beta.id, member.id, 'watcher');
+
+    const page = await listRequests(ctx, await actorFor(db, member.id), {
+      status: 'waiting',
+      sort: 'raised',
+      dir: 'asc',
+    });
+
+    expect(page.items.map((item) => [item.title, item.audience])).toEqual([
+      ['Where they are a Client', 'contributor'],
+      ['Where they are a Watcher', 'follower'],
+    ]);
+  });
+
+  it('addresses the staff as the staff about a deactivated company’s request', async () => {
+    const company = await createCompany(db, { deactivated: true });
+    await storeRequest(company.id, { status: 'waiting' });
+
+    const page = await listRequests(ctx, await staffActor(db, 'support'), { status: 'all' });
+
+    expect(page.items.map((item) => item.audience)).toEqual(['staff']);
+    // The company's own row stays what a list gives: nothing about its deactivation.
+    expect(Object.keys(page.items[0]?.company ?? {}).sort()).toEqual(['id', 'name', 'slug']);
   });
 });
 

@@ -302,11 +302,11 @@ export default async function RequestList({
             </thead>
             <tbody>
               {requests.items.map((request) => {
-                // Staff who aren't in the company read it as the staff; its members as themselves.
-                const audience = internal ? 'staff' : 'contributor';
+                // Worded as on the request's own page: the service says how this reader is
+                // addressed in each request's company.
                 const labels = (
                   <>
-                    <StatusBadge status={request.status} audience={audience} />
+                    <StatusBadge status={request.status} audience={request.audience} />
                     {request.reopened && <ReopenedBadge />}
                   </>
                 );

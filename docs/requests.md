@@ -66,7 +66,10 @@ the closed statuses.
   (`request.reopened_at`), and the conversation says who reopened it and when.
 - The waiting status is worded for its reader, as one message: "Waiting for the company" (the
   staff), "Waiting for your reply" (those at the company who can reply), "Waiting for your
-  company" (a Watcher). `requestAudience` decides which.
+  company" (a Watcher). `requestAudience` decides which, from the reader's permissions in the
+  request's company: the services give it with a request's page and with every row of a list
+  (`requestAudienceIn` in `src/server/requests/access.ts`), so someone who is a Client of one
+  company and a Watcher of another reads each request the same way in both places.
 - When two people change a status at the same moment, the second is told the request changed and
   sees the new status, rather than overwriting it (`errors.requests.statusChanged`).
 

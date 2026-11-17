@@ -398,6 +398,10 @@ test('nobody raises a request who may not: a Watcher and Finance get no form', a
   await createAccountFromInvitation(page, 'Reads Only Tester', 'reads-only-tester-password');
   await page.goto('/requests');
   await expect(main(page).getByText(SEEDED_REQUESTS.waiting.title)).toBeVisible();
+  // The list words it as the request's page does: it waits for their company, not for them.
+  const waiting = requestRows(page).filter({ hasText: SEEDED_REQUESTS.waiting.title });
+  await expect(waiting).toContainText('Waiting for your company');
+  await expect(waiting).not.toContainText('Waiting for your reply');
   await expect(main(page).getByRole('link', { name: 'New request' })).toHaveCount(0);
   await page.goto('/requests/new');
   await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
