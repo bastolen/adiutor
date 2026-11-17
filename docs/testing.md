@@ -30,8 +30,9 @@ configurations in VS Code, which turn the time limit off (see
 - **Integration tests** (`*.int.test.ts` next to the code they test, mostly in `src/server/`) run
   the services against a real PostgreSQL test database, `adiutor_test`. It's created and migrated
   automatically and emptied before each test. Because the tests empty it, its name must end in
-  `_test` and it can't be the database in `DATABASE_URL` (same host, port and name); anything else
-  is refused before a test runs (`tests/database/database-url.ts`). They cover the permission rules, the privacy rule,
+  `_test` and it can't be the database in `DATABASE_URL` (same host, port and name, read as the
+  driver reads them, so a `host` or `port` parameter counts); anything else is refused before a
+  test runs (`tests/database/database-url.ts`). They cover the permission rules, the privacy rule,
   single-use links (including two people racing for one), invitations to one address at the same
   moment (`atTheSameMoment` in `tests/integration/helpers.ts`), whole sign-in flows through Better
   Auth (`src/server/auth/password-sign-in.int.test.ts`, and email links in

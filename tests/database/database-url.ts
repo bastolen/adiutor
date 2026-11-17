@@ -4,6 +4,7 @@
  * The tests empty that database, so it must be a test database: one whose
  * name ends in `_test` that isn't the development database.
  */
+import databaseAddress from '../../src/lib/database-address';
 
 /** Database name used for tests when no URL is configured. */
 const TEST_DATABASE = 'adiutor_test';
@@ -18,13 +19,16 @@ interface TestDatabaseSettings {
 
 /**
  * Identifies a database by server and name: host, port (PostgreSQL's 5432
- * when left out) and database name.
+ * when left out) and database name, as the driver reads them
+ * (`databaseAddress`), so a `host` or `port` parameter counts and two ways of
+ * writing one database are one identity.
  *
- * @param url - A connection URL.
+ * @param connectionUrl - A connection URL.
  * @returns The identity, comparable as a string.
  */
-function databaseIdentity(url: URL): string {
-  return `${url.hostname}:${url.port || '5432'}${url.pathname}`;
+function databaseIdentity(connectionUrl: string): string {
+  const { host, port, database } = databaseAddress(connectionUrl);
+  return `${host}:${port}/${database}`;
 }
 
 /**
@@ -57,7 +61,7 @@ function resolveTestDatabaseUrl({ explicit, base }: TestDatabaseSettings): strin
       `The test database's name must end in _test, so the tests never empty another database (got "${name}").`,
     );
   }
-  if (base && databaseIdentity(new URL(base)) === databaseIdentity(url)) {
+  if (base && databaseIdentity(base) === databaseIdentity(url.toString())) {
     throw new Error(
       `The test database must not be the development database (DATABASE_URL, "${name}").`,
     );
