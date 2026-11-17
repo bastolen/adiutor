@@ -226,7 +226,13 @@ keyboard support.
   two-step verification off, a dismissed notice), focus moves to the heading of its card (card
   headings take focus from script, `tabIndex={-1}`) or, outside a card, to the main content
   (`restoreFocusIfLost` in `src/components/ui/focus-fallback.ts`, which focuses it with
-  `focusMainContent`), never to `<body>`.
+  `focusMainContent`), never to `<body>`. A form that gives way to its own confirmation (Add
+  user, Add company, an invite link's "Continue") moves focus to that confirmation (`Alert`'s
+  `focusOnShow`), and a button that brings the form back ("Add another") moves it to the form's
+  first field. Such a form remembers which result was dismissed and shows any other one, never a
+  "show the result" flag that the next submit flips: the hook keeps returning the old result
+  until the new one arrives, so a flag would bring the old confirmation back while the request
+  runs and lose what was typed.
   - **Signed in as someone.** While a staff member is signed in as a user, the controls that change
     something render disabled, and the banner says changes are turned off (see
     [Signing in as a user](authentication.md#signing-in-as-a-user)). The banner mounts

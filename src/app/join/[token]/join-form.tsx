@@ -41,6 +41,9 @@ function accountTag(chunks: ReactNode) {
 /**
  * A join button when signed in; otherwise an email field. After entering an
  * email, the person gets an invitation there, which proves they own it.
+ * Once it has gone through, a confirmation takes the form's place and takes
+ * keyboard focus: the button that had it is gone, and focus would otherwise
+ * fall to `<body>`.
  *
  * @param props - Form props.
  * @param props.token - The token from the link.
@@ -58,7 +61,9 @@ export default function JoinForm({ token, signedInEmail }: JoinFormProps) {
     return (
       <div className="flex flex-col items-start gap-4">
         <IconTile icon={MailCheck} tone="success" size="lg" />
-        <Alert tone="success">{result.message ?? null}</Alert>
+        <Alert tone="success" focusOnShow>
+          {result.message ?? null}
+        </Alert>
       </div>
     );
   }
