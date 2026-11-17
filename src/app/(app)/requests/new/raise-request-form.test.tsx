@@ -120,6 +120,28 @@ describe('RaiseRequestForm', () => {
     expect(screen.getByRole('combobox', { name: 'Company' })).toHaveTextContent('Choose a company');
   });
 
+  it('sends no company while none is chosen, and says which field is missing', async () => {
+    vi.mocked(raiseRequestAction).mockResolvedValue({
+      ok: false,
+      message: 'Choose which company this request is for.',
+    });
+    const user = userEvent.setup();
+    render(<RaiseRequestForm companies={BOTH} choosesPriority={false} />);
+
+    await user.type(screen.getByRole('textbox', { name: 'Title' }), 'A question');
+    await pick(user, 'Type', 'Support');
+    await user.type(screen.getByRole('textbox', { name: 'Description' }), 'How do I export?');
+    await user.click(screen.getByRole('button', { name: 'Raise request' }));
+
+    // An empty company, which the service answers as a field to fill in.
+    await waitFor(() => expect(raiseRequestAction).toHaveBeenCalledTimes(1));
+    expect(sent()).toMatchObject({ company: '', title: 'A question' });
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Choose which company this request is for.',
+    );
+    expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('A question');
+  });
+
   it('lets the staff leave the priority to the type, or choose one', async () => {
     const user = userEvent.setup();
     render(<RaiseRequestForm companies={ALPHA} choosesPriority />);

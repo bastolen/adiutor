@@ -24,6 +24,7 @@ import {
   nameSchema,
   passkeyNameSchema,
   passwordSchema,
+  requestCompanySchema,
   requestDescriptionSchema,
   requestPrefixSchema,
   requestPrioritySchema,
@@ -375,6 +376,23 @@ describe('requestDescriptionSchema and requestReplySchema', () => {
     ['', '  \r\n ', '\u200b\u0000'].forEach((text) => {
       expect(requestDescriptionSchema.safeParse(text).success, text).toBe(false);
       expect(requestReplySchema.safeParse(text).success, text).toBe(false);
+    });
+  });
+});
+
+describe('requestCompanySchema', () => {
+  it('takes a URL name or an ID as it was chosen, trimmed', () => {
+    expect(requestCompanySchema.parse(' adiutor-tests ')).toBe('adiutor-tests');
+    expect(requestCompanySchema.parse('01890a5d-ac96-774b-bcce-b302099a8057')).toBe(
+      '01890a5d-ac96-774b-bcce-b302099a8057',
+    );
+  });
+
+  it('asks for a company when none was chosen', () => {
+    ['', '   ', undefined, null].forEach((value) => {
+      expect(requestCompanySchema.safeParse(value).error?.issues[0]?.message).toBe(
+        'validation.requestCompany',
+      );
     });
   });
 });

@@ -9,6 +9,7 @@ import { request, requestCounter } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { requestSide, startingPriority } from '@/lib/requests';
 import {
+  requestCompanySchema,
   requestDescriptionSchema,
   requestPrioritySchema,
   requestTitleSchema,
@@ -74,7 +75,7 @@ async function nextRequestNumber(
  * @param ctx - Service context.
  * @param actor - The acting user; needs `requests:contribute` in the company.
  * @param input - Form input.
- * @param input.companyId - The company's ID or URL name.
+ * @param input.companyId - The company's ID or URL name; empty when none was chosen.
  * @param input.title - What it's about, in one line.
  * @param input.description - What's asked.
  * @param input.type - What kind of request it is (`REQUEST_TYPES`).
@@ -84,7 +85,8 @@ async function nextRequestNumber(
  *   `not_found` when the actor may not see the company, `forbidden` without
  *   `requests:contribute`, `invalid` when the company is deactivated, `rate_limited` when the
  *   actor has raised too many requests (`RATE_LIMITS.requestsPerUser`).
- * @throws {ZodError} When the title, description, type or priority isn't valid.
+ * @throws {ZodError} When no company was chosen (asked first, like the form does), or the
+ *   title, description, type or priority isn't valid.
  */
 export default async function raiseRequest(
   ctx: ServiceContext,
@@ -92,7 +94,9 @@ export default async function raiseRequest(
   input: { companyId: string; title: string; description: string; type: string; priority?: string },
 ): Promise<{ id: string; number: number }> {
   assertNotSignedInAs(actor);
-  const { company, permissions } = await getCompanyAccess(ctx.db, actor, input.companyId);
+  // A company that wasn't chosen is a field to fill in, not a page that doesn't exist.
+  const companyRef = requestCompanySchema.parse(input.companyId);
+  const { company, permissions } = await getCompanyAccess(ctx.db, actor, companyRef);
   assertPermission(permissions, 'requests:contribute');
   if (company.deactivatedAt) {
     throw companyDeactivatedError();

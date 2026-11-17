@@ -69,6 +69,7 @@
       "empty": "Schrijf eerst je reactie.",
       "tooLong": "Gebruik maximaal {maximum, number} tekens voor je reactie."
     },
+    "requestCompany": "Kies voor welk bedrijf dit verzoek is.",
     "requestType": "Kies wat voor verzoek dit is.",
     "requestPriority": "Kies een prioriteit.",
     "requestStatus": "Kies een status.",

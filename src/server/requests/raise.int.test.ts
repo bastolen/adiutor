@@ -10,6 +10,8 @@ import { membership, request, requestCounter } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 
 import {
+  actorFor,
+  addMember,
   atTheSameMoment,
   createCompany,
   fillRateLimitBucket,
@@ -140,6 +142,51 @@ describe('raiseRequest', () => {
     await expect(
       raiseRequest(ctx, client, { ...INPUT, ...change, companyId: company.id }),
     ).rejects.toBeInstanceOf(ZodError);
+    expect(await db.$count(request)).toBe(0);
+  });
+
+  it.each([
+    ['the staff', ''],
+    ['the staff, who sent spaces', '   '],
+  ])('asks %s for a company when none was chosen, as for any other field', async (_who, none) => {
+    await createCompany(db);
+    const support = await staffActor(db, 'support');
+
+    const refusal = await raiseRequest(ctx, support, { ...INPUT, companyId: none }).catch(
+      (error: unknown) => error,
+    );
+
+    // Not "this page doesn't exist", which is for a company that can't be seen.
+    expect(refusal).toBeInstanceOf(ZodError);
+    expect(refusal).toMatchObject({ issues: [{ message: 'validation.requestCompany' }] });
+    expect(await db.$count(request)).toBe(0);
+  });
+
+  it('asks for a company before anything else that is missing', async () => {
+    const [alpha, beta] = [await createCompany(db), await createCompany(db)];
+    const client = await memberActor(db, alpha.id, 'client');
+    await addMember(db, beta.id, client.id, 'client');
+
+    await expect(
+      raiseRequest(ctx, await actorFor(db, client.id), {
+        companyId: '',
+        title: '',
+        description: '',
+        type: '',
+      }),
+    ).rejects.toMatchObject({ issues: [{ message: 'validation.requestCompany' }] });
+  });
+
+  it('still reports a company that does not exist, or that they may not see, as not found', async () => {
+    const [own, other] = [await createCompany(db), await createCompany(db)];
+    const client = await memberActor(db, own.id, 'client');
+
+    await expect(
+      raiseRequest(ctx, client, { ...INPUT, companyId: 'adiutor-tests-nowhere' }),
+    ).rejects.toMatchObject({ code: 'not_found' });
+    await expect(
+      raiseRequest(ctx, client, { ...INPUT, companyId: other.id }),
+    ).rejects.toMatchObject({ code: 'not_found' });
     expect(await db.$count(request)).toBe(0);
   });
 

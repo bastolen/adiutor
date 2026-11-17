@@ -374,6 +374,17 @@ export const requestReplySchema = multilineText({
   tooLong: 'validation.requestReply.tooLong',
 });
 
+/**
+ * The company a request is raised in, as the form sends it: its URL name or
+ * its ID, trimmed. It only checks that one was chosen (the select starts
+ * empty for whoever has several to choose from); which company it is, and
+ * whether its reader may see it, isn't a rule of the field.
+ */
+export const requestCompanySchema = z
+  .string({ error: 'validation.requestCompany' satisfies ValidationMessageKey })
+  .trim()
+  .min(1, { error: 'validation.requestCompany' satisfies ValidationMessageKey });
+
 /** A request's type, e.g. from the form that raises one. */
 export const requestTypeSchema = z.enum(REQUEST_TYPES, {
   error: 'validation.requestType' satisfies ValidationMessageKey,

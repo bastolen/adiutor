@@ -29,6 +29,7 @@ import {
   REQUEST_STATUS_FILTERS,
   REQUEST_TYPES,
   requestPath,
+  type RequestStatusFilter,
 } from '@/lib/requests';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import { createPageUrl } from '@/lib/tables/page-url';
@@ -85,6 +86,30 @@ interface RequestListProps {
   company?: string;
 }
 
+/** Why a list without requests is empty: nothing matches, nothing is active, or there are none. */
+type EmptyKind = 'noMatch' | 'active' | 'none';
+
+/**
+ * Works out why a list without requests is empty. A search, a company, a
+ * type or a priority narrows the list down, and so do the Waiting and Closed
+ * links: nothing matches them. Active is where the list starts, and All
+ * leaves no request out, so a list that's empty under All without a search
+ * or a filter has no requests yet.
+ *
+ * @param status - The status link the list is on.
+ * @param narrowed - Whether a search or one of the filter menus is in use.
+ * @returns What the empty list is about.
+ */
+function emptyKindOf(status: RequestStatusFilter, narrowed: boolean): EmptyKind {
+  if (narrowed) {
+    return 'noMatch';
+  }
+  if (status === 'active') {
+    return 'active';
+  }
+  return status === 'all' ? 'none' : 'noMatch';
+}
+
 /**
  * The requests the viewer may see, with what narrows them down: a row of
  * status links (the requests that are still worked on first), a search by
@@ -96,6 +121,10 @@ interface RequestListProps {
  * last activity have columns of their own, and the staff get a Priority
  * column; below that they go under the title. Company users never get a
  * priority: the service leaves it out.
+ *
+ * An empty list says why it's empty ({@link emptyKindOf}) and, unless a
+ * search or a filter emptied it, offers "New request" to whoever may raise
+ * one.
  *
  * @param props - Component props.
  * @param props.path - The page the list is on.
@@ -156,13 +185,27 @@ export default async function RequestList({
     { ...filters, q: search },
     await getTranslations('tables'),
   ).table(definition, { ...requested, page: requests.page });
-  const filtered = Boolean(search || chosenCompany || type || priority) || status !== 'active';
   const canRaise = company
     ? companies.some(({ slug, canRaise: may }) => slug === company && may)
     : companies.some(({ canRaise: may }) => may);
   // The company is named in each row only where the list can hold several.
   const showsCompany = !company && companies.length > 1;
   const newButton = canRaise && <NewRequestButton company={company} label={t('new')} />;
+  // What an empty list says, and whether it invites a request: only where one would show up.
+  const emptyKind = emptyKindOf(status, Boolean(search || chosenCompany || type || priority));
+  const mayRaise = { canRaise: canRaise ? 'yes' : 'no' };
+  let emptyText = { title: t('empty.noMatchTitle'), description: t('empty.noMatchDescription') };
+  if (emptyKind === 'active') {
+    emptyText = {
+      title: t('empty.activeTitle'),
+      description: t('empty.activeDescription', mayRaise),
+    };
+  } else if (emptyKind === 'none') {
+    emptyText = {
+      title: t('empty.noneTitle'),
+      description: t('empty.noneDescription', mayRaise),
+    };
+  }
 
   return (
     <>
@@ -267,13 +310,9 @@ export default async function RequestList({
         {requests.total === 0 ? (
           <EmptyState
             icon={Inbox}
-            title={filtered ? t('empty.noMatchTitle') : t('empty.activeTitle')}
-            description={
-              filtered
-                ? t('empty.noMatchDescription')
-                : t('empty.activeDescription', { canRaise: canRaise ? 'yes' : 'no' })
-            }
-            action={filtered ? undefined : newButton || undefined}
+            title={emptyText.title}
+            description={emptyText.description}
+            action={emptyKind === 'noMatch' ? undefined : newButton || undefined}
           />
         ) : (
           <Table

@@ -29,6 +29,8 @@
       "empty": {
         "activeTitle": "Geen actieve verzoeken",
         "activeDescription": "{canRaise, select, yes {Dien een verzoek in en het staat hier totdat het is afgerond.} other {Verzoeken die nog iets nodig hebben, staan hier.}}",
+        "noneTitle": "Nog geen verzoeken",
+        "noneDescription": "{canRaise, select, yes {Dien het eerste verzoek in en het staat hier.} other {Verzoeken staan hier zodra iemand er een indient.}}",
         "noMatchTitle": "Geen verzoeken gevonden",
         "noMatchDescription": "Niets komt overeen met je zoekopdracht of filters."
       }

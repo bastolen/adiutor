@@ -136,10 +136,14 @@ the closed statuses.
   (`FilterMenu`, a sibling of `SortMenu`). It sorts by last activity or the day it was raised,
   and for the staff by priority, and pages like every table (see
   [Design and accessibility](design.md#design-and-accessibility)).
+  A list without requests says why: nothing matches (a search, a filter menu, or the Waiting or
+  Closed link), nothing is active, or, under All, which leaves nothing out, there are no requests
+  yet. The last two offer "New request" to whoever may raise one.
 - **`/companies/<URL name>`**: the same list for one company, the company's first page.
 - **`/requests/new`**: the company (only when there's more than one to choose from), a title, a
   type with what each is for, and a description. The staff also choose a priority, or leave it to
-  the type. It opens the new request.
+  the type. It opens the new request. A company that wasn't chosen is asked for like any other
+  field (`requestCompanySchema`); "not found" is for a company the reader may not see.
 - **`/requests/<number>`**: what was asked (Description), the Conversation with every reply and
   change, oldest first, and a Details bar: status, type, priority (staff), company, who raised
   it and when, the staff's first response and the last activity, with the controls. The bar is on

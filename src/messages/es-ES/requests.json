@@ -29,6 +29,8 @@
       "empty": {
         "activeTitle": "No hay solicitudes activas",
         "activeDescription": "{canRaise, select, yes {Crea una solicitud y aparecerá aquí hasta que esté resuelta.} other {Las solicitudes que aún necesitan algo aparecen aquí.}}",
+        "noneTitle": "Aún no hay solicitudes",
+        "noneDescription": "{canRaise, select, yes {Crea la primera solicitud y aparecerá aquí.} other {Las solicitudes aparecen aquí en cuanto alguien crea una.}}",
         "noMatchTitle": "No hay solicitudes que coincidan",
         "noMatchDescription": "Nada coincide con tu búsqueda o tus filtros."
       }

@@ -69,6 +69,7 @@
       "empty": "Write your reply first.",
       "tooLong": "Use at most {maximum, number} characters for your reply."
     },
+    "requestCompany": "Choose which company this request is for.",
     "requestType": "Choose what kind of request this is.",
     "requestPriority": "Choose a priority.",
     "requestStatus": "Choose a status.",
