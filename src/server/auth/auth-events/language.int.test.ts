@@ -1,8 +1,8 @@
 /**
  * @file Integration tests for the language at sign-in: the browser gets the
- * account's language, an account on Default saves only a language picked in
- * the browser (never a guessed one), and a password whose code step is still
- * to come changes nothing.
+ * account's language, an account on Default saves none (not a guessed one,
+ * and not the one left in the browser, which is removed), and a password
+ * whose code step is still to come changes nothing.
  */
 import { getOAuthState } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
@@ -95,8 +95,11 @@ function passwordSignIn(
 const languageCookies = (setCookie: ReturnType<typeof passwordSignIn>['setCookie']) =>
   setCookie.mock.calls.filter(([name]) => name === 'adiutor.locale').map(([, value]) => value);
 
+/** How a request removes the language cookie from the browser: emptied and expired, on every path. */
+const REMOVED = ['adiutor.locale', '', expect.objectContaining({ maxAge: 0, path: '/' })] as const;
+
 describe('the language at sign-in', () => {
-  it("keeps an account on Default without a language picked in the browser: neither the browser's nor Adiutor's default is saved", async () => {
+  it("keeps an account on Default as it is in a browser without a language cookie: neither the browser's language nor Adiutor's default is saved", async () => {
     await createStaffSettings(db, 'Adiutor Tests', 'es-ES');
     const jane = await createUser(db, 'jane@adiutor.test');
     const sessionId = await createSession(db, jane);
@@ -111,30 +114,36 @@ describe('the language at sign-in', () => {
     expect(languageCookies(setCookie)).toEqual([]);
   });
 
-  it('saves the language picked in the browser for an account on Default', async () => {
+  it('saves nothing for an account on Default, and removes the language left in the browser', async () => {
     await createStaffSettings(db, 'Adiutor Tests', 'es-ES');
     const jane = await createUser(db, 'jane@adiutor.test');
     const sessionId = await createSession(db, jane);
+    // Left by whoever used this browser before: signing out keeps the language cookie.
     const { ctx, setCookie } = passwordSignIn(
-      { cookie: 'adiutor.locale=nl-NL' },
+      { cookie: 'other=1; adiutor.locale=nl-NL' },
       { sessionId, userId: jane },
     );
 
     await afterPasswordSignIn(ctx);
 
-    expect(await savedLocale(jane)).toBe('nl-NL');
-    // The browser already has it.
-    expect(languageCookies(setCookie)).toEqual([]);
+    expect(await savedLocale(jane)).toBeNull();
+    // The browser follows Adiutor's default language from here, like the account.
+    expect(languageCookies(setCookie)).toEqual(['']);
+    expect(setCookie).toHaveBeenCalledWith(...REMOVED);
   });
 
-  it('ignores a language cookie that is not one of the languages', async () => {
+  it('removes a language cookie that is not one of the languages too', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
     const sessionId = await createSession(db, jane);
-    const { ctx } = passwordSignIn({ cookie: 'adiutor.locale=fr-FR' }, { sessionId, userId: jane });
+    const { ctx, setCookie } = passwordSignIn(
+      { cookie: 'adiutor.locale=fr-FR' },
+      { sessionId, userId: jane },
+    );
 
     await afterPasswordSignIn(ctx);
 
     expect(await savedLocale(jane)).toBeNull();
+    expect(setCookie).toHaveBeenCalledWith(...REMOVED);
   });
 
   it("gives the browser the account's language over the one it was using", async () => {
@@ -184,5 +193,19 @@ describe('the language at sign-in', () => {
     await afterAuthRequest(ctx);
 
     expect(languageCookies(setCookie)).toEqual(['es-ES']);
+  });
+
+  it('removes a language left in the browser at a provider sign-in of an account on Default', async () => {
+    const jane = await createUser(db, 'jane@adiutor.test');
+    const sessionId = await createSession(db, jane);
+    const { ctx, setCookie } = githubCallback(new Headers({ cookie: 'adiutor.locale=nl-NL' }), {
+      sessionId,
+      userId: jane,
+    });
+
+    await afterAuthRequest(ctx);
+
+    expect(await savedLocale(jane)).toBeNull();
+    expect(setCookie).toHaveBeenCalledWith(...REMOVED);
   });
 });

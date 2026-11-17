@@ -1,28 +1,34 @@
 /**
- * @file Keeps the browser's language in step with the account at sign-in:
- * the language cookie gets the account's saved language, so the app shows it
- * on any browser. An account on Default (no saved language) keeps following
- * Adiutor's default language, unless this browser has a language someone
- * picked (the cookie, from the signed-out language menu): that choice is
- * saved with the account. A guessed language (Adiutor's default or the
- * browser's) is never saved. Rendering then reads only the cookie
- * (docs/i18n.md, "How the language is chosen").
+ * @file Makes the browser's language mirror the account at sign-in: the
+ * language cookie gets the account's saved language, so the app shows it on
+ * any browser, and for an account on Default (no saved language) the cookie
+ * is removed, so the browser follows Adiutor's default language too.
+ *
+ * Signing in never saves a language with the account. A language cookie left
+ * in the browser says nothing about who picked it: signing out keeps it, and
+ * every sign-in of an account with a saved language writes it. Saving it
+ * would give the next person on a shared browser the last one's language,
+ * for their screens and their emails, and undo a Default chosen in another
+ * browser. A language is saved only when its owner picks it, signed in
+ * (`setOwnLocale`; docs/i18n.md, "How the language is chosen", and decision
+ * 0020). Rendering then reads only the cookie.
  */
-import { and, eq, isNull } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { user } from '@/db/schema';
 import localeCookieOptions from '@/lib/i18n/locale-cookie';
 import { isLocale, LOCALE_COOKIE } from '@/lib/i18n/locales';
-import { localeCookieFromHeaders, localeFromCookie } from '@/lib/i18n/resolve-locale';
 
+import { expireCookie, sentCookie } from './cookies';
 import type { AuthHookContext } from './hook-context';
 
 /**
- * Sets the language cookie from a user's saved language, or, for an account
- * on Default, saves the language picked in this browser. Called once a
- * sign-in's session is settled: never for a password whose code step is
- * still to come, so the password alone changes nothing.
+ * Sets the language cookie to a user's saved language, or, for an account on
+ * Default, removes the one the browser sent (whatever it holds). Nothing is
+ * saved with the account. Called once a sign-in's session is settled: never
+ * for a password whose code step is still to come, so the password alone
+ * changes nothing.
  *
  * @param ctx - The endpoint context, after the request.
  * @param userId - The user who signed in.
@@ -39,14 +45,8 @@ export default async function rememberLanguage(
     ctx.setCookie?.(LOCALE_COOKIE, found.locale, localeCookieOptions());
     return;
   }
-  const picked = localeFromCookie(localeCookieFromHeaders(ctx.headers));
-  if (!picked) {
-    // On Default with nothing picked here: the browser keeps following the default.
-    return;
+  // On Default: a language left in this browser isn't this person's choice, so it goes.
+  if (sentCookie(ctx, LOCALE_COOKIE)) {
+    expireCookie(ctx, LOCALE_COOKIE);
   }
-  // Only while nothing is saved: a choice made meanwhile (another sign-in) stays.
-  await db
-    .update(user)
-    .set({ locale: picked })
-    .where(and(eq(user.id, userId), isNull(user.locale)));
 }

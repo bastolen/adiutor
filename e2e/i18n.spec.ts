@@ -1,15 +1,18 @@
 /**
  * @file End-to-end tests for choosing the language: what the browser asks
  * for, the theme and language menu on the signed-out pages, the account's language
- * (saved, kept at sign-out, winning at sign-in) and an invitation sent in
- * the language its sender picked. Specs that sign in here use fresh accounts,
- * so the seeded users keep English (US) for the other specs.
+ * (saved, kept at sign-out, winning at sign-in), a language left in the
+ * browser (never saved with an account on Default, and removed at sign-in),
+ * the theme and language menu on a page reached signed in (saved with the
+ * account) and an invitation sent in the language its sender picked. Specs
+ * that sign in here use fresh accounts, so the seeded users keep English (US)
+ * for the other specs.
  */
 import { type Page } from '@playwright/test';
 
 import { LOCALE_COOKIE } from '../src/lib/i18n/locales';
 import { findCompanyId, setDefaultLocale, storeInvitation } from './support/db';
-import { COMPANY_NAME, COMPANY_SLUG, PLATFORM_ADMIN } from './support/fixtures';
+import { COMPANY_NAME, COMPANY_SLUG, E2E_BASE_URL, PLATFORM_ADMIN } from './support/fixtures';
 import {
   createAccountFromInvitation,
   freshAddress,
@@ -173,6 +176,67 @@ test("an account on Default follows Adiutor's default language, also after it ch
   } finally {
     await setDefaultLocale('en-US');
   }
+});
+
+test('a language left in the browser is not saved with an account on Default, and goes at sign-in', async ({
+  browser,
+  page,
+}) => {
+  const email = freshAddress('leftover-language');
+  const password = 'leftover-language-password';
+  const companyId = await findCompanyId(COMPANY_SLUG);
+  await page.goto(await storeInvitation({ companyId, email, role: 'client' }));
+  await createAccountFromInvitation(page, 'Leftover Tester', password);
+
+  // A shared browser where the last person left Dutch behind: signing out keeps the language.
+  const shared = await browser.newContext();
+  try {
+    await shared.addCookies([{ name: LOCALE_COOKIE, value: 'nl-NL', url: E2E_BASE_URL }]);
+    const other = await shared.newPage();
+    await useOwnClientIp(other);
+    await other.goto('/auth');
+    await expect(other.locator('html')).toHaveAttribute('lang', 'nl-NL');
+    await other.getByLabel('E-mailadres').fill(email);
+    await other.getByLabel('Wachtwoord').fill(password);
+    await other.getByRole('button', { name: 'Inloggen', exact: true }).click();
+    await expect(other).toHaveURL(/\/(dashboard|companies\/)/);
+
+    // The account still follows Adiutor's default language, and now the browser does too.
+    await expect(other.locator('html')).toHaveAttribute('lang', 'en-US');
+    const cookies = await shared.cookies();
+    expect(cookies.find(({ name }) => name === LOCALE_COOKIE)).toBeUndefined();
+    await other.goto('/account');
+    await expect(other.getByRole('combobox', { name: 'Language', exact: true })).toHaveText(
+      'Default',
+    );
+  } finally {
+    await shared.close();
+  }
+});
+
+test('the theme and language menu on a page reached signed in saves the language with the account', async ({
+  page,
+}) => {
+  const email = freshAddress('corner-language');
+  const companyId = await findCompanyId(COMPANY_SLUG);
+  await page.goto(await storeInvitation({ companyId, email, role: 'client' }));
+  await createAccountFromInvitation(page, 'Corner Tester', 'corner-language-password');
+
+  // The not-found page has no account menu, so it has the theme and language button.
+  await page.goto('/does-not-exist');
+  await chooseLanguage(page, 'Theme and language: System, English (US)', 'Nederlands', 'nl-NL');
+  await expect(page.getByRole('heading', { level: 1, name: 'Pagina niet gevonden' })).toBeVisible();
+
+  // Saved with the account, not only in the cookie: the Language card agrees with the screens.
+  await page.goto('/account');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'nl-NL');
+  await expect(page.getByRole('combobox', { name: 'Taal', exact: true })).toHaveText('Nederlands');
+
+  // Default in that menu saves none again, and the browser follows Adiutor's default language.
+  await page.goto('/does-not-exist');
+  await chooseLanguage(page, 'Thema en taal: Systeem, Nederlands', 'Standaard', 'en-US');
+  await page.goto('/account');
+  await expect(page.getByRole('combobox', { name: 'Language', exact: true })).toHaveText('Default');
 });
 
 test('an invitation sent in Dutch arrives in Dutch', async ({ page }) => {

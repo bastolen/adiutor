@@ -1,6 +1,8 @@
 # 0014. Languages without URLs, with next-intl
 
-- **Status:** Accepted
+- **Status:** Accepted. One rule is superseded by
+  [0020](0020-save-a-language-only-when-its-owner-picks-it.md): a language picked in the signed-out
+  menu is no longer saved with an account at sign-in.
 - **Date:** 2026-11-08
 
 ## Context
