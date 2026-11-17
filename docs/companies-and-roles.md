@@ -289,8 +289,9 @@ staff page also recreates the row. A fresh setup itself isn't recorded in the au
 - **Reminders:** an invitation that's still open a day after it was sent gets one reminder email
   2 days before it expires, with a new link (the old one stops working), sent by
   `pnpm jobs:run`. Addresses that are already members of the company (or, for staff invitations,
-  on the staff) get none: they joined some other way meanwhile. A reminder that can't be sent keeps
-  the old link working, and the next run tries again.
+  on the staff) get none: they joined some other way meanwhile. The old link only stops working
+  once the reminder is out: a reminder that can't be sent, or whose run was stopped halfway, keeps
+  it working, and a later run tries again (see [Background jobs](jobs.md#the-jobs)).
 - **Accepting** (`/invite/…`): signed in with the invited address, you join directly. Signed out,
   you can sign in or create an account (name and password). Joining as staff sets the platform role
   (someone who's already staff keeps theirs) and opens the dashboard.

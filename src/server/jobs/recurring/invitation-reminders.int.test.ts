@@ -1,6 +1,8 @@
 /**
  * @file Integration tests for the job that reminds people of invitations
- * that expire soon, against the test database.
+ * that expire soon, against the test database: who's reminded and when, and
+ * that the link they have only gives way once the reminder is out, whatever
+ * happens to the run meanwhile.
  */
 import { eq, isNull, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -25,7 +27,10 @@ import {
 import type { Actor } from '../../actor';
 import type { ServiceContext } from '../../context';
 import { inviteByEmail } from '../../people/invitations';
-import invitationReminders, { REMINDER_GROUP_SIZE } from './invitation-reminders';
+import invitationReminders, {
+  REMINDER_GROUP_SIZE,
+  REMINDER_LEASE_MINUTES,
+} from './invitation-reminders';
 
 const { ctx, db, sent } = setupTestContext();
 
@@ -94,6 +99,7 @@ describe('invitation-reminders', () => {
     );
     expect(reminded.tokenHash).toBe(hashToken(tokenFrom(defined(sent[0], 'the reminder email'))));
     expect(reminded.reminderSentAt).toBeInstanceOf(Date);
+    expect(reminded.reminderClaimedAt).toBeNull();
   });
 
   it('reminds the soonest-expiring first, a group at a time, leaving the rest at its deadline', async () => {
@@ -291,7 +297,7 @@ describe('invitation-reminders', () => {
         'the invitation',
       );
 
-    it('undoes it, so the old link works and the next run tries again, and sends the others', async () => {
+    it('leaves the link they have and lets go, so the next run tries again, and sends the others', async () => {
       const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
       await inviteByEmail(ctx, companyAdmin, {
         companyId: testCompany.id,
@@ -335,6 +341,7 @@ describe('invitation-reminders', () => {
       const after = await invitationTo('bounces@adiutor.test');
       expect(after.tokenHash).toBe(before.tokenHash);
       expect(after.reminderSentAt).toBeNull();
+      expect(after.reminderClaimedAt).toBeNull();
       // The invitation's ID and the codes only: the error's message quotes the address.
       expect(logged).toHaveBeenCalledWith(
         `Sending the reminder for invitation ${before.id} failed; the next run tries again`,
@@ -372,6 +379,147 @@ describe('invitation-reminders', () => {
       await expect(remind(timingOut)).resolves.toEqual({ sent: 0, failed: 1 });
 
       expect((await invitationTo('resent@adiutor.test')).tokenHash).toBe(resentHash);
+    });
+  });
+
+  describe('while a reminder is on its way', () => {
+    /**
+     * Reads what the job keeps of an invitation.
+     *
+     * @param email - The invited address.
+     * @returns Its stored link, when its reminder was sent and since when a run holds it.
+     */
+    const stateOf = async (email: string) =>
+      firstRow(
+        await db
+          .select({
+            tokenHash: invitation.tokenHash,
+            reminderSentAt: invitation.reminderSentAt,
+            reminderClaimedAt: invitation.reminderClaimedAt,
+          })
+          .from(invitation)
+          .where(eq(invitation.email, email)),
+        'the invitation',
+      );
+
+    /**
+     * Invites an address and ages the invitation until its reminder is due.
+     *
+     * @param email - The address.
+     * @returns The invitation as stored, with the link they were sent.
+     */
+    const dueInvitation = async (email: string) => {
+      await inviteByEmail(ctx, companyAdmin, { companyId: testCompany.id, email, role: 'client' });
+      await age(email, '1 day');
+      sent.length = 0;
+      return stateOf(email);
+    };
+
+    it('keeps the link they have until the email is out, and holds the invitation meanwhile', async () => {
+      const before = await dueInvitation('waiting@adiutor.test');
+      /** Says that the send has started; set by the promise below. */
+      let sendStarted: () => void = () => {};
+      const started = new Promise<void>((resolve) => {
+        sendStarted = resolve;
+      });
+      /** Lets the send finish; set by the promise below. */
+      let letThrough: () => void = () => {};
+      const held = new Promise<void>((resolve) => {
+        letThrough = resolve;
+      });
+      const hanging: ServiceContext = {
+        ...ctx,
+        /**
+         * A mail server that takes the email and then keeps the test waiting.
+         *
+         * @param email - The email.
+         */
+        sendEmail: async (email) => {
+          sendStarted();
+          await held;
+          sent.push(email);
+        },
+      };
+
+      const run = invitationReminders.run(hanging, { deadline: later });
+      await started;
+
+      // Mid-send, as a run the platform stops would leave it: the link they have still works.
+      expect(await stateOf('waiting@adiutor.test')).toEqual({
+        tokenHash: before.tokenHash,
+        reminderSentAt: null,
+        reminderClaimedAt: expect.any(Date),
+      });
+      // A run at the same moment leaves it to the run that holds it.
+      await expect(remind(ctx)).resolves.toEqual({ sent: 0, failed: 0 });
+      expect(sent).toEqual([]);
+
+      letThrough();
+      await expect(run).resolves.toEqual({ summary: { sent: 1, failed: 0 } });
+
+      // Only now does the reminder's link take the place of the one they had.
+      const after = await stateOf('waiting@adiutor.test');
+      expect(after.tokenHash).toBe(hashToken(tokenFrom(defined(sent[0], 'the reminder email'))));
+      expect(after.tokenHash).not.toBe(before.tokenHash);
+      expect(after).toMatchObject({ reminderSentAt: expect.any(Date), reminderClaimedAt: null });
+    });
+
+    it('takes an invitation again once the claim of a run that was stopped has run out', async () => {
+      const stopped = await dueInvitation('stopped@adiutor.test');
+      const held = await dueInvitation('held@adiutor.test');
+      /**
+       * Leaves a claim behind, as a run that was stopped mid-send does.
+       *
+       * @param email - The invited address.
+       * @param minutesAgo - How long ago the run claimed it.
+       */
+      const claimed = async (email: string, minutesAgo: number) => {
+        await db
+          .update(invitation)
+          .set({ reminderClaimedAt: sql`now() - make_interval(mins => ${minutesAgo})` })
+          .where(eq(invitation.email, email));
+      };
+      await claimed('stopped@adiutor.test', REMINDER_LEASE_MINUTES + 1);
+      await claimed('held@adiutor.test', REMINDER_LEASE_MINUTES - 1);
+
+      await expect(remind(ctx)).resolves.toEqual({ sent: 1, failed: 0 });
+
+      // The one whose claim ran out gets a second reminder, with a link that works.
+      expect(sent.map(({ to }) => to)).toEqual(['stopped@adiutor.test']);
+      const after = await stateOf('stopped@adiutor.test');
+      expect(after.tokenHash).toBe(hashToken(tokenFrom(defined(sent[0], 'the reminder email'))));
+      expect(after.tokenHash).not.toBe(stopped.tokenHash);
+      expect(after).toMatchObject({ reminderSentAt: expect.any(Date), reminderClaimedAt: null });
+      // The one a run may still be sending is left alone, link and all.
+      expect(await stateOf('held@adiutor.test')).toEqual({
+        tokenHash: held.tokenHash,
+        reminderSentAt: null,
+        reminderClaimedAt: expect.any(Date),
+      });
+    });
+
+    it('keeps a newer link stored meanwhile, also when the reminder was sent', async () => {
+      await dueInvitation('newer@adiutor.test');
+      const newerHash = hashToken('adiutor-tests-newer-token');
+      const overtaken: ServiceContext = {
+        ...ctx,
+        /**
+         * Sends like the test context, after a newer link was stored for the invitation.
+         *
+         * @param email - The email.
+         */
+        sendEmail: async (email) => {
+          await db
+            .update(invitation)
+            .set({ tokenHash: newerHash })
+            .where(eq(invitation.email, 'newer@adiutor.test'));
+          await ctx.sendEmail(email);
+        },
+      };
+
+      await expect(remind(overtaken)).resolves.toEqual({ sent: 1, failed: 0 });
+
+      expect((await stateOf('newer@adiutor.test')).tokenHash).toBe(newerHash);
     });
   });
 });

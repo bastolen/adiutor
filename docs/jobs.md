@@ -47,6 +47,15 @@ A tick runs every recurring job that's due, one after another, then the queued j
 `retention` deletes 10,000 rows at a time until its deadline, so a large backlog is cleared over a
 few runs without holding the database for long.
 
+`invitation-reminders` sends 3 reminders at a time (as many as the mail pool has connections,
+`SMTP_MAX_CONNECTIONS`), and never lets a run that's stopped cost an invitee their link. A run
+first claims the invitation (`invitation.reminder_claimed_at`), which leaves the link alone; it
+stores the reminder's new link, with `reminder_sent_at`, only once the email is out; and a reminder
+that can't be sent gives the claim back. A run that's stopped mid-send (the platform's 60 seconds,
+a crash) leaves its claim behind: the link they have keeps working, and after 15 minutes
+(`REMINDER_LEASE_MINUTES`) the next run takes the invitation again. That costs a second reminder,
+and the first one's link, if it arrived, never works.
+
 | Kind of queued job  | What it does                                                                                                                                                       |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `security-notice`   | Emails a user about a security change on their account (see [Security emails](authentication.md#security-emails))                                                  |

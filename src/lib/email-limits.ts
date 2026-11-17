@@ -6,6 +6,15 @@
  */
 
 /**
+ * How many SMTP connections are kept open and reused at most, unless
+ * `SMTP_URL` says otherwise. Emails beyond it wait for a free connection, so
+ * a job that sends several at once sends no more than this together (the
+ * invitation reminders' groups): the rest would only wait, with the send's
+ * time limit already running.
+ */
+export const SMTP_MAX_CONNECTIONS = 3;
+
+/**
  * The longest one email may take, in milliseconds, from the call to
  * `sendEmail` until the mail server has accepted it, whichever step it hangs
  * at (waiting for a free connection of the pool counts too). After it the

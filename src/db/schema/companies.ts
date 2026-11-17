@@ -84,6 +84,13 @@ export const invitation = pgTable(
     /** When the "expires soon" reminder was sent, so it's sent only once. */
     reminderSentAt: timestampTz('reminder_sent_at'),
     /**
+     * Since when a run of the reminder job holds the invitation to send its
+     * reminder, so two runs don't both send it; empty again once the reminder
+     * was sent or couldn't be. A claim that's still there after 15 minutes is
+     * from a run that was stopped mid-send, and the next run takes it again.
+     */
+    reminderClaimedAt: timestampTz('reminder_claimed_at'),
+    /**
      * The language the invitation, its resends and its reminder are written
      * in (an invitee who has an account gets their own language instead).
      */

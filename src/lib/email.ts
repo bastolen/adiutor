@@ -24,7 +24,7 @@ import { join } from 'node:path';
 
 import { createTransport } from 'nodemailer';
 
-import { SEND_TIMEOUT_MS } from './email-limits';
+import { SEND_TIMEOUT_MS, SMTP_MAX_CONNECTIONS } from './email-limits';
 import { env } from './env';
 
 /**
@@ -40,9 +40,6 @@ export interface Email {
   /** HTML body. */
   html: string;
 }
-
-/** How many SMTP connections are kept open and reused at most, unless `SMTP_URL` says otherwise. */
-const SMTP_MAX_CONNECTIONS = 3;
 
 /**
  * How long to wait for the mail server at each step, in milliseconds, instead
