@@ -163,13 +163,24 @@ export async function registerCompany(
  * Changes a company's name and URL name. A new URL name changes the
  * company's address (`/companies/<URL name>`; its ID keeps working).
  *
+ * The change and its audit event are one transaction, which first locks the
+ * company's row (`FOR NO KEY UPDATE`; company rows come first in the lock
+ * order, see `docs/security-measures.md`) and reads the name and URL name it
+ * replaces from that row. So a rename is never saved without its event, and
+ * two renames at the same moment take turns: the second one's event starts
+ * from what the first one saved, not from what both read when they began. A
+ * URL name that's taken rolls back both.
+ *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `company:update` in the company.
  * @param input - Form input.
  * @param input.companyId - The company.
  * @param input.name - New name.
  * @param input.slug - New URL name; must be unique.
- * @returns The URL name now, and whether it changed (so the page can move to the new address).
+ * @returns The URL name now, and whether this change changed it (so the page can move to the
+ *   new address).
+ * @throws {ServiceError} `conflict` when the URL name is taken, `not_found` when the company is
+ *   gone.
  */
 export async function updateCompany(
   ctx: ServiceContext,
@@ -182,15 +193,28 @@ export async function updateCompany(
   const name = companyNameSchema.parse(input.name);
   const slug = slugSchema.parse(input.slug);
   try {
-    await ctx.db.update(company).set({ name, slug }).where(eq(company.id, access.company.id));
-    await recordEvent(ctx, {
-      action: 'company_updated',
-      actorUserId: actor.id,
-      companyId: access.company.id,
-      details: {
-        from: { name: access.company.name, slug: access.company.slug },
-        to: { name, slug },
-      },
+    // The catch is around the whole transaction: a unique violation ends it.
+    return await ctx.db.transaction(async (tx) => {
+      const [locked] = await tx
+        .select({ name: company.name, slug: company.slug })
+        .from(company)
+        .where(eq(company.id, access.company.id))
+        .for('no key update');
+      if (!locked) {
+        throw notFoundError();
+      }
+      await tx.update(company).set({ name, slug }).where(eq(company.id, access.company.id));
+      await recordEvent(
+        ctx,
+        {
+          action: 'company_updated',
+          actorUserId: actor.id,
+          companyId: access.company.id,
+          details: { from: { name: locked.name, slug: locked.slug }, to: { name, slug } },
+        },
+        tx,
+      );
+      return { slug, slugChanged: slug !== locked.slug };
     });
   } catch (error) {
     if (isUniqueViolation(error)) {
@@ -198,7 +222,6 @@ export async function updateCompany(
     }
     throw error;
   }
-  return { slug, slugChanged: slug !== access.company.slug };
 }
 
 /**

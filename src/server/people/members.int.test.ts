@@ -1,11 +1,12 @@
 /**
  * @file Integration tests for member management and staff access, also when
  * the actor's own rights change while their request is under way; the
- * invitations of removed members, the security emails members get, and the
- * limit on role changes.
+ * invitations of removed members, the security emails members get (and that
+ * the email to someone added is queued with the change), and the limit on
+ * role changes.
  */
 import { and, asc, eq, isNull } from 'drizzle-orm';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { DatabaseTransaction } from '@/db';
 import {
@@ -39,6 +40,7 @@ import {
   tokenFrom,
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
+import { queueJob } from '../queue';
 import { RATE_LIMITS } from '../rate-limit';
 import { acceptInvitation, inviteByEmail } from './invitations';
 import { createInviteLink } from './invite-links';
@@ -50,6 +52,12 @@ import {
   removeMember,
 } from './members';
 import { deactivateUser, deleteUser, soleAdminOf } from './user-admin';
+
+vi.mock('../queue', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../queue')>();
+  // The real queue, watched, so one test can have it refuse a job.
+  return { ...original, queueJob: vi.fn(original.queueJob) };
+});
 
 const { ctx, db, sent } = setupTestContext();
 
@@ -450,6 +458,8 @@ describe('adding existing users', () => {
     expect(
       (await listMembers(ctx, manager, testCompany.id)).items.find((m) => m.userId === jane)?.role,
     ).toBe('watcher');
+    // Their email is a job in the queue.
+    expect(await queuedJobKinds(db)).toEqual(['added-to-company']);
     await sendQueuedEmails(ctx);
     expect(sent.at(-1)).toMatchObject({
       to: 'jane@adiutor.test',
@@ -459,6 +469,31 @@ describe('adding existing users', () => {
     await expect(
       addMember(ctx, manager, { companyId: testCompany.id, userId: jane, role: 'client' }),
     ).rejects.toMatchObject({ code: 'conflict' });
+    // The refused add queued no second email.
+    expect(await queuedJobKinds(db)).toEqual([]);
+  });
+
+  it('adds nobody when their email can’t be queued, so no error is reported for a member who is in', async () => {
+    const manager = await staffActor(db, 'manager');
+    const jane = await createUser(db, 'jane@adiutor.test');
+    vi.mocked(queueJob).mockRejectedValueOnce(new Error('The queue is down'));
+
+    await expect(
+      addMember(ctx, manager, { companyId: testCompany.id, userId: jane, role: 'watcher' }),
+    ).rejects.toThrow('The queue is down');
+
+    // The job is queued in the change's transaction, so the add went with it.
+    expect(
+      await db.$count(
+        membership,
+        and(eq(membership.companyId, testCompany.id), eq(membership.userId, jane)),
+      ),
+    ).toBe(0);
+    expect(await db.$count(auditEvent, eq(auditEvent.action, 'member_added'))).toBe(0);
+    expect(await queuedJobKinds(db)).toEqual([]);
+    // Trying again adds them, with their email.
+    await addMember(ctx, manager, { companyId: testCompany.id, userId: jane, role: 'watcher' });
+    expect(await queuedJobKinds(db)).toEqual(['added-to-company']);
   });
 
   it('tells someone added in the language they saved, not the adder’s', async () => {

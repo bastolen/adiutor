@@ -24,7 +24,7 @@ One file per email in `src/emails/`:
   someone sent, which the claim keeps: it points to the earlier invitation email and links to the
   sign-in page)
 - `added-to-company.tsx` for someone staff added to a company with a role (`addMember` queues an
-  `added-to-company` job, so it goes out at the next tick; see
+  `added-to-company` job in the transaction that adds them, so it goes out at the next tick; see
   [Background jobs](jobs.md#queued-jobs))
 
 Each exports the template, example `PreviewProps` and a builder that returns the email to send.

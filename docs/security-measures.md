@@ -207,8 +207,10 @@ deadlocking:
 1. `company` rows, `FOR NO KEY UPDATE`, in ID order: the companies whose last active Admin the
    change could take away (`changeMembership` in `src/server/people/members.ts`, and `soleAdminOf`
    in `src/server/people/user-admin/` when deactivating or deleting an account). Deactivating or
-   reactivating a company updates its row, so it takes turns with them too; inserts that only
-   point at the company (memberships, invitations, audit events) don't wait.
+   reactivating a company updates its row, so it takes turns with them too, and so does renaming
+   one (`updateCompany`, whose audit event names what it replaced as read under that lock, so two
+   renames at once record a chain); inserts that only point at the company (memberships,
+   invitations, audit events) don't wait.
 2. `user` rows, in ID order, in one statement: the staff, the target and the actor `FOR UPDATE`
    (`setStaffRole` in `src/server/people/staff.ts`); the user and, for a staff Admin, the other
    active staff Admins `FOR UPDATE` (`soleAdminOf`); the actor and the target `FOR SHARE`
