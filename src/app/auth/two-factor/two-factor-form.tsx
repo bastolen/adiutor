@@ -5,7 +5,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { type FormEvent, useEffect, useRef } from 'react';
+import { type FormEvent, useEffect } from 'react';
 
 import CodeField from '@/components/auth/code-field';
 import ResendCodeButton from '@/components/auth/resend-code-button';
@@ -16,7 +16,7 @@ import Button from '@/components/ui/button';
 import CheckboxField from '@/components/ui/checkbox-field';
 import loadFresh from '@/components/ui/load-fresh';
 import TextLink from '@/components/ui/text-link';
-import { useTransientState } from '@/components/ui/use-transient-state';
+import { useOncePerVisit, useTransientState } from '@/components/ui/use-transient-state';
 import { EMAIL_CODE_MINUTES } from '@/lib/authz/mfa';
 import { getSafeRedirectPath } from '@/lib/redirect';
 import authClient from '@/lib/sign-in/auth-client';
@@ -37,7 +37,13 @@ import verifyCode, { type CodeKind } from '@/lib/sign-in/verify-code';
  * (React's `<Activity>`), e.g. after going back to the sign-in page, and
  * whoever comes back to it mustn't find the last code, a busy button, or
  * "Trust this device" still ticked, which would trust the browser for someone
- * else. Once a code is accepted, the page the user came for loads afresh
+ * else. Coming back is usually a new sign-in: going back to the sign-in page
+ * and signing in again shows this same page again, for a code step whose
+ * code the first email doesn't hold (Better Auth keeps an emailed code with
+ * the sign-in it was asked for). So the emailed code is sent once each time
+ * the page is shown (`useOncePerVisit`), not once in the page's life; when the
+ * server says the last code still works, the form says to use that one.
+ * Once a code is accepted, the page the user came for loads afresh
  * (`loadFresh`), which keeps no page alive. A page the browser restores from
  * its back/forward cache is made usable again too.
  *
@@ -58,7 +64,6 @@ export default function TwoFactorForm() {
   const [notice, setNotice] = useTransientState<string | null>(null);
   const [sending, setSending] = useTransientState(false);
   const cooldown = useResendCooldown();
-  const sentInitialCode = useRef(false);
 
   /**
    * Shows the message for a failed request.
@@ -103,15 +108,14 @@ export default function TwoFactorForm() {
     );
   };
 
-  useEffect(() => {
-    // Send the emailed code straight away (once, also in Strict Mode).
-    if (method === 'otp' && !sentInitialCode.current) {
-      sentInitialCode.current = true;
+  // Send the emailed code straight away: once per visit (also in Strict Mode), so again when the
+  // page is shown again, which is usually for a new sign-in.
+  useOncePerVisit(() => {
+    if (method === 'otp') {
       // It shows its own errors.
       void sendCode();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Runs once on mount.
-  }, []);
+  });
 
   useEffect(() => {
     /**

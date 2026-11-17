@@ -37,7 +37,9 @@ whether or not it has an account: 10 wrong passwords per 15 minutes, 5 email lin
 resets per hour, and per user 5 emailed codes and 5 wrong step-up codes per 15 minutes
 (`src/server/auth/auth-guards/`). Emailed codes also wait for each other: one per user every 2.5
 minutes, half a code's lifetime (`EMAIL_CODE_RESEND_SECONDS`), checked first so a refused one
-doesn't count, and ended once a code is used. Setting up email codes waits too, but isn't counted
+doesn't count, and ended once a code is used or a password sign-in starts a new code step (the
+last code can't be used for it; the 5 per 15 minutes still cap what a password can send). Setting
+up email codes waits too, but isn't counted
 towards the 5, so it doesn't eat into the sign-in budget. Each password sign-in takes one of the address's attempts before
 its password is checked and gives it back unless the password was wrong, and each step-up code
 takes one of the user's attempts the same way, so requests sent at the same moment can't all get

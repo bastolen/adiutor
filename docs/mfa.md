@@ -15,7 +15,14 @@ for a code from an authenticator app, or one sent by email (it works for 5 minut
 for once half the last one's lifetime has passed (2.5 minutes, `EMAIL_CODE_RESEND_SECONDS`): "Send
 a new code" counts down until then, at the code step, on the step-up page and while setting up
 email codes, and the guards refuse an earlier one (`EMAIL_CODE_SENT_RECENTLY`, shown as a notice,
-since the last code still works). Using a code ends the wait. **Once an authenticator app is set
+since the last code still works). Using a code ends the wait. So does a password sign-in that
+starts a new code step (`afterPasswordSignIn`): Better Auth keeps an emailed code with the sign-in
+it was asked for, so after going back and signing in again the last code can't be used, and the
+wait would only keep a code that works from being sent. The 5 codes per 15 minutes per user still
+apply. The code step, and the step-up page when email codes are its only way, send their code once
+each time the page is shown, not once in the page's life (pages stay alive; `useOncePerVisit` in
+`src/components/ui/use-transient-state.ts`), so a new sign-in gets its own code. **Once an
+authenticator app is set
 up, email codes aren't accepted any more**, so the inbox alone (which also gets email links and
 password resets) can't get past the app. The app adds single-use backup codes, which only work once the app is set up, so an unfinished setup leaves no way in. "Trust this
 device" skips the step on that browser until 30 days after the last password sign-in there, as

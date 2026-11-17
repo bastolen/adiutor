@@ -2,13 +2,14 @@
  * @file Tests for the step-up form: which ways to confirm it offers, which
  * Better Auth calls each one makes, how it explains why the session needs
  * confirming, that it starts over after a confirmation (the page stays alive
- * in React's `<Activity>`), that it says why "Confirm with GitHub" didn't
+ * in React's `<Activity>`) and emails its code once each time it's shown,
+ * that it says why "Confirm with GitHub" didn't
  * count until the session is confirmed, and that a failed sign-out says so
  * instead of loading the sign-in page.
  */
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Activity } from 'react';
+import { Activity, StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EMAIL_CODE_RESEND_SECONDS, type StepUpMethods } from '@/lib/authz/mfa';
@@ -17,6 +18,7 @@ import {
   PROVIDER_STEP_UP_COOKIE,
   REVERIFY_HINT,
 } from '@/lib/sign-in/oauth-providers';
+import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 
 import renderInLocale from '../../../../tests/i18n/render';
 import StepUpForm, { type StepUpFormProps } from './step-up-form';
@@ -92,8 +94,8 @@ const none: StepUpMethods = { authenticator: false, email: false, passkey: false
  * alive between visits.
  *
  * @param props - The form's props.
- * @returns `leaveAndReturn`, which hides the page and shows it again, like
- *   navigating away and coming back.
+ * @returns `leaveAndReturn`, which hides the page and shows it again a moment
+ *   later, like navigating away and coming back.
  */
 function renderOnPage(props: StepUpFormProps) {
   /**
@@ -109,9 +111,10 @@ function renderOnPage(props: StepUpFormProps) {
   );
   const view = render(page('visible'));
   return {
-    /** Hides the page, then shows it again. */
-    leaveAndReturn: () => {
+    /** Hides the page, then shows it again once what it does on leaving has run. */
+    leaveAndReturn: async () => {
       view.rerender(page('hidden'));
+      await act(async () => {});
       view.rerender(page('visible'));
     },
   };
@@ -346,7 +349,7 @@ describe('StepUpForm', () => {
       await user.click(screen.getByRole('button', { name: 'Confirm' }));
       await waitFor(() => expect(replace).toHaveBeenCalledWith('/account/security'));
 
-      leaveAndReturn();
+      await leaveAndReturn();
 
       expect(screen.queryByLabelText('Backup code')).not.toBeInTheDocument();
       expect(screen.getByLabelText('Code')).toHaveValue('');
@@ -368,7 +371,7 @@ describe('StepUpForm', () => {
       expect(verifyOtp).toHaveBeenCalledWith({ code: '654321' });
       await waitFor(() => expect(replace).toHaveBeenCalledWith('/account/security'));
 
-      leaveAndReturn();
+      await leaveAndReturn();
 
       await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(2));
       expect(await screen.findByText(/We sent a code to your email address/)).toBeInTheDocument();
@@ -377,7 +380,7 @@ describe('StepUpForm', () => {
       expect(screen.getByRole('button', { name: 'Confirm' })).not.toHaveAttribute('aria-busy');
     });
 
-    it('doesn’t email another code when the user comes back without confirming', async () => {
+    it('emails a code again when the user comes back without confirming, and says so', async () => {
       const { leaveAndReturn } = renderOnPage({
         methods: { ...none, email: true },
         callbackURL: '/account/security',
@@ -385,10 +388,43 @@ describe('StepUpForm', () => {
       await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(1));
       expect(await screen.findByLabelText('Code')).toBeInTheDocument();
 
-      leaveAndReturn();
+      await leaveAndReturn();
 
+      // The first code may have run out by now; before, nothing was sent and nothing said.
+      await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(2));
+      expect(await screen.findByText(/We sent a code to your email address/)).toBeInTheDocument();
       expect(screen.getByLabelText('Code')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /^Send a new code/ })).toBeInTheDocument();
+    });
+
+    it('says to use the last code when the server says it still works', async () => {
+      const { leaveAndReturn } = renderOnPage({
+        methods: { ...none, email: true },
+        callbackURL: '/account/security',
+      });
+      await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(1));
+      expect(await screen.findByLabelText('Code')).toBeInTheDocument();
+      sendOtp.mockResolvedValueOnce({
+        data: null,
+        error: { status: 429, code: EMAIL_CODE_SENT_RECENTLY.code },
+      });
+
+      await leaveAndReturn();
+
+      expect(await screen.findByText(EMAIL_CODE_SENT_RECENTLY.message)).toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Code')).toBeInTheDocument();
+      expect(sendOtp).toHaveBeenCalledTimes(2);
+    });
+
+    it('emails one code on mount in Strict Mode, which runs effects twice', async () => {
+      render(
+        <StrictMode>
+          <StepUpForm methods={{ ...none, email: true }} callbackURL="/account" />
+        </StrictMode>,
+      );
+
+      expect(await screen.findByText(/We sent a code to your email address/)).toBeInTheDocument();
       expect(sendOtp).toHaveBeenCalledTimes(1);
     });
 
@@ -405,7 +441,7 @@ describe('StepUpForm', () => {
       await user.click(screen.getByRole('button', { name: 'Confirm with a passkey' }));
       await waitFor(() => expect(replace).toHaveBeenCalledWith('/account/security'));
 
-      leaveAndReturn();
+      await leaveAndReturn();
 
       expect(screen.queryByLabelText('Code')).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Send a new code' })).not.toBeInTheDocument();

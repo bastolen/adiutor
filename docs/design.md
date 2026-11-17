@@ -91,7 +91,10 @@ keyboard support.
   Typed input should, but a "Saved" or error message, or an open dialog, shouldn't still be there when
   you come back. Forms use `useTransientActionState` instead of `useActionState`, and status
   messages and dialog open state use `useTransientState` instead of `useState`
-  (`src/components/ui/use-transient-state.ts`); both reset when the page is hidden. In the
+  (`src/components/ui/use-transient-state.ts`); both reset when the page is hidden. What a page
+  does once when it opens (the code step emailing its code) it does again when it's shown again:
+  `useOncePerVisit` runs it once each time the page is shown, also through Strict Mode's second
+  run of the effects, so development doesn't do it twice. In the
   signed-in app a draft survives whole: every field of a form is kept, in plain state or by the
   browser, never some of them (Add company keeps its name, URL name and admin address together),
   and a form whose submit went through starts empty again. The signed-out pages for signing in

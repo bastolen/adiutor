@@ -1,12 +1,15 @@
 /**
- * @file State that resets when the user leaves the page.
+ * @file State that resets when the user leaves the page, and what a page
+ * does once per visit.
  *
  * With Cache Components, Next.js keeps recently visited pages alive with
  * React's `<Activity>` instead of unmounting them, so their state survives
  * navigation. That's right for drafts, but not for messages about something
  * that just happened ("Name saved.") or for open dialogs: coming back to the
  * page should show it fresh. When `<Activity>` hides a page it runs layout
- * effect cleanups, which is where these hooks reset.
+ * effect cleanups, which is where these hooks reset. What a page does once
+ * when it opens (emailing a code) it should do again when the user comes back
+ * to it: `useOncePerVisit` runs it once each time the page is shown.
  *
  * React 19 also resets a `<form action>` after every submit, whatever the
  * result, so a refused submit would wipe what the user typed.
@@ -22,6 +25,8 @@ import {
   startTransition,
   useActionState,
   useCallback,
+  useEffect,
+  useEffectEvent,
   useLayoutEffect,
   useRef,
   useState,
@@ -42,6 +47,53 @@ export function useTransientState<T>(initialState: T): [T, Dispatch<SetStateActi
   useLayoutEffect(() => () => setValue(() => initial), [initial]);
 
   return [value, setValue];
+}
+
+/**
+ * Runs something once each time the page is shown: when it opens, and again
+ * when the user comes back to it after it was hidden (pages stay alive in
+ * `<Activity>`, which runs their effects again when it shows them). Use it
+ * for what a page does by itself on opening, such as emailing a code: coming
+ * back is a new visit, often for something new (a new sign-in), so doing it
+ * once in the page's life isn't enough.
+ *
+ * It runs once per visit also in React's Strict Mode, which (in development)
+ * cleans every effect up and sets it up again right after showing a page, to
+ * check that effects can take it. So a note that it ran can't be state (the
+ * second run would still see the first render's value), nor a ref reset in
+ * the clean-up (it would be reset between the two runs). The clean-up only
+ * notes that the page went, and a microtask forgets that it ran if the page
+ * is still gone a moment later: Strict Mode sets the effects up again in the
+ * same breath, before any microtask runs, while a page that `<Activity>`
+ * hides stays hidden.
+ *
+ * @param run - What to do; the latest one given is the one that runs.
+ */
+export function useOncePerVisit(run: () => void): void {
+  // Whether it ran during this visit of the page.
+  const ran = useRef(false);
+  // Whether the page is shown: its layout effects are set up.
+  const shown = useRef(false);
+  const runLatest = useEffectEvent(run);
+
+  useLayoutEffect(() => {
+    shown.current = true;
+    return () => {
+      shown.current = false;
+      queueMicrotask(() => {
+        if (!shown.current) {
+          ran.current = false;
+        }
+      });
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!ran.current) {
+      ran.current = true;
+      runLatest();
+    }
+  }, []);
 }
 
 /** Options for {@link useTransientActionState}. */

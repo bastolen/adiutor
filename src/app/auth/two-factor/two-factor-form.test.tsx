@@ -1,9 +1,11 @@
 /**
- * @file Tests for the second sign-in step.
+ * @file Tests for the second sign-in step: checking each kind of code, the
+ * emailed code sent once each time the page is shown, and starting over when
+ * the page is hidden (it stays alive in React's `<Activity>`).
  */
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Activity, type ReactNode, useState } from 'react';
+import { Activity, type ReactNode, StrictMode, useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EMAIL_CODE_RESEND_SECONDS } from '@/lib/authz/mfa';
@@ -268,6 +270,78 @@ describe('TwoFactorForm', () => {
 
     expect(screen.getByLabelText('Code')).toHaveValue('');
     expect(screen.getByLabelText(TRUST_DEVICE)).not.toBeChecked();
+  });
+
+  it('emails a new code when the page is shown again, as after going back and signing in again', async () => {
+    const user = userEvent.setup();
+    searchParams = new URLSearchParams({ methods: 'otp' });
+    render(
+      <Page>
+        <TwoFactorForm />
+      </Page>,
+    );
+    await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(/We sent a code to your email address/)).toBeInTheDocument();
+
+    // Back to the sign-in page, and a new sign-in shows this same page again.
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    expect(sendOtp).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: 'Return' }));
+
+    // The first email's code belongs to the sign-in it replaced: before, nothing was sent and
+    // nothing said.
+    await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText(/We sent a code to your email address/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Code')).toHaveValue('');
+  });
+
+  it('says to use the last code when the page is shown again and the server says it still works', async () => {
+    const user = userEvent.setup();
+    searchParams = new URLSearchParams({ methods: 'otp' });
+    render(
+      <Page>
+        <TwoFactorForm />
+      </Page>,
+    );
+    await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(1));
+    // The same sign-in, e.g. back and forward in the browser's history.
+    sendOtp.mockResolvedValueOnce({
+      data: null,
+      error: { status: 429, code: EMAIL_CODE_SENT_RECENTLY.code },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    await user.click(screen.getByRole('button', { name: 'Return' }));
+
+    expect(await screen.findByText(EMAIL_CODE_SENT_RECENTLY.message)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(sendOtp).toHaveBeenCalledTimes(2);
+  });
+
+  it('emails one code on mount in Strict Mode, which runs effects twice', async () => {
+    searchParams = new URLSearchParams({ methods: 'otp' });
+    render(
+      <StrictMode>
+        <TwoFactorForm />
+      </StrictMode>,
+    );
+
+    expect(await screen.findByText(/We sent a code to your email address/)).toBeInTheDocument();
+    expect(sendOtp).toHaveBeenCalledTimes(1);
+  });
+
+  it('emails no code when the page is shown again for an authenticator app', async () => {
+    const user = userEvent.setup();
+    render(
+      <Page>
+        <TwoFactorForm />
+      </Page>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    await user.click(screen.getByRole('button', { name: 'Return' }));
+
+    expect(sendOtp).not.toHaveBeenCalled();
   });
 
   it('is usable again when the browser shows the page from its back/forward cache', async () => {

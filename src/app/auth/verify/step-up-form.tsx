@@ -12,7 +12,7 @@
 import { KeyRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { type FormEvent, useState } from 'react';
 
 import CodeField from '@/components/auth/code-field';
 import ProviderStepUpNotice, {
@@ -26,7 +26,7 @@ import AuthDivider from '@/components/ui/auth-divider';
 import AuthHeading from '@/components/ui/auth-heading';
 import Button, { whileRunning } from '@/components/ui/button';
 import loadFresh from '@/components/ui/load-fresh';
-import { useTransientState } from '@/components/ui/use-transient-state';
+import { useOncePerVisit, useTransientState } from '@/components/ui/use-transient-state';
 import type { StepUpMethods } from '@/lib/authz/mfa';
 import { EMAIL_CODE_MINUTES } from '@/lib/authz/mfa';
 import authClient from '@/lib/sign-in/auth-client';
@@ -157,7 +157,6 @@ export default function StepUpForm({
   const cooldown = useResendCooldown();
   const [error, setError] = useTransientState(initialError);
   const [notice, setNotice] = useTransientState<string | null>(null);
-  const sentInitialCode = useRef(false);
 
   /**
    * Continues to the page the user came for. The form starts over, since the
@@ -174,7 +173,6 @@ export default function StepUpForm({
     setMode(codeMethod);
     // A used code ends the guards' wait for a new one too.
     cooldown.reset();
-    sentInitialCode.current = false;
     router.replace(callbackURL);
     router.refresh();
   };
@@ -223,16 +221,16 @@ export default function StepUpForm({
     );
   };
 
-  useEffect(() => {
-    // With email codes as the only option, send one straight away (once per visit, also in Strict
-    // Mode; effects run again when the page is shown again).
-    if (emailOnly && !sentInitialCode.current) {
-      sentInitialCode.current = true;
+  // With email codes as the only option, send one straight away: once per visit (also in Strict
+  // Mode), so again when the page is shown again, whether or not the last visit confirmed. The
+  // last code may have run out, or belong to a session since replaced; when the server says it
+  // still works, `sendCode` says to use that one.
+  useOncePerVisit(() => {
+    if (emailOnly) {
       // It shows its own errors.
       void sendCode();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Runs once on mount.
-  }, []);
+  });
 
   /**
    * Switches between the code and backup codes.

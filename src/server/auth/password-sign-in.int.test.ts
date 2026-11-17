@@ -23,7 +23,11 @@
  *   and the owner is told once when wrong codes pause signing in with a
  *   code (Better Auth's account lockout), without the device that typed them;
  * - an emailed code is in the account's language, else the browser's, and so
- *   is a verification link (English (US) outside a request).
+ *   is a verification link (English (US) outside a request);
+ * - signing in again ends the wait for a new emailed code, since Better Auth
+ *   keeps a code with the sign-in it was asked for and the last one can't be
+ *   used for the new code step (`afterPasswordSignIn`), while the wait within
+ *   one sign-in, other users' waits and the 5 codes per 15 minutes stay.
  */
 import { hashPassword } from 'better-auth/crypto';
 import { asc, desc, eq } from 'drizzle-orm';
@@ -44,6 +48,7 @@ import {
   createUser,
   emailLanguage,
   enableTwoFactor,
+  inSequence,
   lastActiveAt,
   sendQueuedEmails,
   setUserLocale,
@@ -655,6 +660,72 @@ describe('signing in with a password', () => {
     ]);
     expect(await sessionsOf(jane)).toEqual([]);
     expect(await lastActiveAt(db, jane)).toBeNull();
+  });
+});
+
+describe('an emailed code after signing in again', () => {
+  /**
+   * Asks for an emailed code and reads why it was refused.
+   *
+   * @param browser - The browser, at the code step.
+   * @returns The response's status and error code.
+   */
+  const refusedCode = async (browser: Browser) => {
+    const response = await browser.post('two-factor/send-otp');
+    const { code } = (await response.json()) as { code?: string };
+    return [response.status, code];
+  };
+
+  it('is sent straight away, since the last one belongs to the sign-in it replaced', async () => {
+    const jane = await createUserWithPassword('jane@adiutor.test');
+    await enableTwoFactor(db, jane, 'email');
+    const browser = newBrowser();
+    await signInWithPassword(browser, 'jane@adiutor.test');
+    const first = await emailedCode(browser);
+    // Within the wait, for the same sign-in: its code still works, so no new one.
+    expect(await refusedCode(browser)).toEqual([429, 'EMAIL_CODE_SENT_RECENTLY']);
+
+    // Back to the sign-in page and in again: a new code step, which the first code isn't for.
+    await signInWithPassword(browser, 'jane@adiutor.test');
+    const stale = await browser.post('two-factor/verify-otp', { code: first });
+    expect(stale.status).toBe(400);
+    expect(await stale.json()).toMatchObject({ code: 'OTP_HAS_EXPIRED' });
+
+    // So its own code is sent without waiting for the first one's 2.5 minutes, and signs in.
+    const second = await emailedCode(browser);
+    expect((await browser.post('two-factor/verify-otp', { code: second })).status).toBe(200);
+    expect(await sessionsOf(jane)).toHaveLength(1);
+  });
+
+  it('still waits within one sign-in, and for someone else’s sign-in', async () => {
+    const jane = await createUserWithPassword('jane@adiutor.test');
+    const sam = await createUserWithPassword('sam@adiutor.test');
+    await enableTwoFactor(db, jane, 'email');
+    await enableTwoFactor(db, sam, 'email');
+    const janes = newBrowser();
+    await signInWithPassword(janes, 'jane@adiutor.test');
+    await emailedCode(janes);
+
+    // Sam signing in ends his own wait, not Jane's.
+    await signInWithPassword(newBrowser(), 'sam@adiutor.test');
+
+    expect(await refusedCode(janes)).toEqual([429, 'EMAIL_CODE_SENT_RECENTLY']);
+  });
+
+  it('is still limited to 5 per 15 minutes, however often the password is typed', async () => {
+    const jane = await createUserWithPassword('jane@adiutor.test');
+    await enableTwoFactor(db, jane, 'email');
+    const browser = newBrowser();
+    // One code per sign-in, five times.
+    const statuses = await inSequence([1, 2, 3, 4, 5], async () => {
+      await signInWithPassword(browser, 'jane@adiutor.test');
+      return (await browser.post('two-factor/send-otp')).status;
+    });
+    expect(statuses).toEqual([200, 200, 200, 200, 200]);
+
+    // The sixth sign-in may ask at once too, but there are no codes left to send.
+    await signInWithPassword(browser, 'jane@adiutor.test');
+    expect(await refusedCode(browser)).toEqual([429, 'TOO_MANY_ATTEMPTS']);
   });
 });
 

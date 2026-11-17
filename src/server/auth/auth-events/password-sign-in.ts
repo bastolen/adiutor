@@ -1,6 +1,7 @@
 /**
  * @file The hook after a password sign-in: the session's MFA level when no code
- * step follows, and the audit event when one does.
+ * step follows, and when one does, the audit event and the end of the wait
+ * for a new emailed code.
  */
 import { eq } from 'drizzle-orm';
 
@@ -10,6 +11,7 @@ import { signInMethodFromPath } from '@/lib/authz/mfa';
 import { normalizeEmail } from '@/lib/email-address';
 
 import { recordEvent } from '../../audit';
+import { endEmailCodeCooldown } from '../auth-guards';
 import { type AuthHookContext, safely, auditContext } from './hook-context';
 import rememberLanguage from './language';
 import { recordSignIn } from './session-hooks';
@@ -47,7 +49,14 @@ function startedCodeStep(returned: unknown): boolean {
  *   that the password was right (`sign_in_code_pending`), without an actor:
  *   whoever typed it may not be the user, so the user's own activity leaves
  *   out the IP address and browser (`listOwnActivity`). The user isn't
- *   active yet. The code step records the sign-in if it's finished.
+ *   active yet. The code step records the sign-in if it's finished. The
+ *   user's wait before a new emailed code ends too: Better Auth keeps an
+ *   emailed code with the sign-in it was asked for (`2fa-otp-<its two-factor
+ *   cookie>`), so a code sent for an earlier sign-in can't be used for this
+ *   one. The wait would only make the code step say "use the code we sent",
+ *   which answers "expired", and keep it from sending one that works. How
+ *   many codes a user gets (`emailCodesPerUser`) isn't reset: it still caps
+ *   what someone with the password can send.
  *
  * Wrong passwords are recorded by {@link afterAuthRequest}.
  *
@@ -85,6 +94,8 @@ export async function afterPasswordSignIn(ctx: AuthHookContext): Promise<void> {
     if (!pending) {
       return;
     }
+    // On its own, so a failure doesn't skip the record below.
+    await safely('end the email code cooldown', () => endEmailCodeCooldown(pending.id));
     await recordEvent(auditContext(ctx.headers), {
       action: 'sign_in_code_pending',
       actorUserId: null,
