@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import { account, passkey, twoFactor, user } from '@/db/schema';
-import type { MfaState } from '@/lib/authz/mfa';
+import type { MfaRole, MfaState } from '@/lib/authz/mfa';
 
 import {
   connectGitHub,
@@ -64,6 +64,25 @@ async function overviewOf(userId: string) {
     { db },
     (await loadActor(db, userId)) ?? { id: userId, mfaState: null },
   );
+}
+
+/**
+ * Works out a user's step-up methods the way the step-up page does: from the
+ * setup their actor brings (none for an unknown user), under the MFA rules of
+ * the given role.
+ *
+ * @param userId - The user.
+ * @param mfaRole - Which MFA rules apply to them, or `null`.
+ * @param options - Whether it's for a change to how they sign in, or for a strong second step.
+ * @returns Their methods.
+ */
+async function stepUpMethodsOf(
+  userId: string,
+  mfaRole: MfaRole | null,
+  options?: Parameters<typeof getStepUpMethods>[1],
+) {
+  const mfaState = (await loadActor(db, userId))?.mfaState ?? null;
+  return getStepUpMethods({ mfaState, mfaRole }, options);
 }
 
 describe('getSecurityOverview', () => {
@@ -179,13 +198,13 @@ describe('getStepUpMethods', () => {
     const jane = await createUser(db, 'jane@adiutor.test');
     await enableTwoFactor(db, jane);
 
-    expect(await getStepUpMethods({ db }, jane, null)).toEqual({
+    expect(await stepUpMethodsOf(jane, null)).toEqual({
       authenticator: true,
       email: false,
       passkey: false,
       providers: [],
     });
-    expect(await getStepUpMethods({ db }, UNKNOWN_USER, null)).toEqual({
+    expect(await stepUpMethodsOf(UNKNOWN_USER, null)).toEqual({
       authenticator: false,
       email: false,
       passkey: false,
@@ -193,14 +212,26 @@ describe('getStepUpMethods', () => {
     });
   });
 
+  it('takes the setup from the actor, without asking the database', () => {
+    // What the actor brings decides: no user with this setup is stored.
+    const loadedWithActor: MfaState = { ...NOTHING_SET_UP, passkeyCount: 1 };
+
+    expect(getStepUpMethods({ mfaState: loadedWithActor, mfaRole: null })).toEqual({
+      authenticator: false,
+      email: false,
+      passkey: true,
+      providers: [],
+    });
+  });
+
   it('offers a provider with 2FA only while its sign-in is on', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
     await connectGitHub(db, jane);
-    expect((await getStepUpMethods({ db }, jane, 'manager')).providers).toEqual(['github']);
+    expect((await stepUpMethodsOf(jane, 'manager')).providers).toEqual(['github']);
 
     turnOffGitHubSignIn();
 
-    expect(await getStepUpMethods({ db }, jane, 'manager')).toEqual({
+    expect(await stepUpMethodsOf(jane, 'manager')).toEqual({
       authenticator: false,
       email: false,
       passkey: false,
@@ -218,20 +249,20 @@ describe('getStepUpMethods', () => {
       await enableTwoFactor(db, withApp);
 
       // To confirm a session, GitHub still does.
-      expect(await getStepUpMethods({ db }, withPasskey, 'manager')).toEqual({
+      expect(await stepUpMethodsOf(withPasskey, 'manager')).toEqual({
         authenticator: false,
         email: false,
         passkey: true,
         providers: ['github'],
       });
-      expect(await getStepUpMethods({ db }, withPasskey, 'manager', { forChange: true })).toEqual({
+      expect(await stepUpMethodsOf(withPasskey, 'manager', { forChange: true })).toEqual({
         authenticator: false,
         email: false,
         passkey: true,
         providers: [],
         providersHeldBack: ['github'],
       });
-      expect(await getStepUpMethods({ db }, withApp, null, { forChange: true })).toEqual({
+      expect(await stepUpMethodsOf(withApp, null, { forChange: true })).toEqual({
         authenticator: true,
         email: false,
         passkey: false,
@@ -247,15 +278,13 @@ describe('getStepUpMethods', () => {
       await connectGitHub(db, withEmailCodes);
       await enableTwoFactor(db, withEmailCodes, 'email');
 
-      expect(
-        await getStepUpMethods({ db }, githubOnly, 'company_admin', { forChange: true }),
-      ).toEqual({
+      expect(await stepUpMethodsOf(githubOnly, 'company_admin', { forChange: true })).toEqual({
         authenticator: false,
         email: false,
         passkey: false,
         providers: ['github'],
       });
-      expect(await getStepUpMethods({ db }, withEmailCodes, null, { forChange: true })).toEqual({
+      expect(await stepUpMethodsOf(withEmailCodes, null, { forChange: true })).toEqual({
         authenticator: false,
         email: true,
         passkey: false,
@@ -264,7 +293,7 @@ describe('getStepUpMethods', () => {
     });
 
     it('offers nothing for unknown users', async () => {
-      expect(await getStepUpMethods({ db }, UNKNOWN_USER, null, { forChange: true })).toEqual({
+      expect(await stepUpMethodsOf(UNKNOWN_USER, null, { forChange: true })).toEqual({
         authenticator: false,
         email: false,
         passkey: false,
@@ -279,13 +308,13 @@ describe('getStepUpMethods', () => {
       await enableTwoFactor(db, support, 'email');
       await addPasskey(support, 'Laptop', new Date('2026-01-01T10:00:00Z'));
 
-      expect(await getStepUpMethods({ db }, support, 'support', { forChange: true })).toEqual({
+      expect(await stepUpMethodsOf(support, 'support', { forChange: true })).toEqual({
         authenticator: false,
         email: true,
         passkey: true,
         providers: [],
       });
-      expect(await getStepUpMethods({ db }, support, 'support', { strong: true })).toEqual({
+      expect(await stepUpMethodsOf(support, 'support', { strong: true })).toEqual({
         authenticator: false,
         email: false,
         passkey: true,
@@ -299,13 +328,13 @@ describe('getStepUpMethods', () => {
       const emailCodesOnly = await createUser(db, 'john@adiutor.test');
       await enableTwoFactor(db, emailCodesOnly, 'email');
 
-      expect(await getStepUpMethods({ db }, githubOnly, 'support', { strong: true })).toEqual({
+      expect(await stepUpMethodsOf(githubOnly, 'support', { strong: true })).toEqual({
         authenticator: false,
         email: false,
         passkey: false,
         providers: ['github'],
       });
-      expect(await getStepUpMethods({ db }, emailCodesOnly, 'support', { strong: true })).toEqual({
+      expect(await stepUpMethodsOf(emailCodesOnly, 'support', { strong: true })).toEqual({
         authenticator: false,
         email: false,
         passkey: false,
