@@ -6,10 +6,10 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
 import { SignedInAsMarker } from '@/components/ui/signed-in-as';
 import { defined } from '@/lib/defined';
 
+import ConfirmationWindow from '../../../../tests/ui/confirmation-window';
 import InviteForm from './invite-form';
 
 vi.mock('next/navigation', () => ({
@@ -223,14 +223,9 @@ describe('InviteForm', () => {
      */
     const renderUnconfirmed = (companyId: string | null, formRoles = roles) =>
       render(
-        <RecentConfirmationProvider
-          required
-          confirmedUntil={null}
-          serverTime={Date.now()}
-          returnTo="/admin/staff"
-        >
+        <ConfirmationWindow windowOpen={false} returnTo="/admin/staff">
           <InviteForm companyId={companyId} roles={formRoles} />
-        </RecentConfirmationProvider>,
+        </ConfirmationWindow>,
       );
 
     it('asks to confirm it’s you instead of sending staff invitations', () => {

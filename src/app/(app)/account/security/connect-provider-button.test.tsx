@@ -8,13 +8,14 @@
  * attempt once the user leaves the page.
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { Activity, type ReactNode, useState } from 'react';
+import { type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
 import Card from '@/components/ui/card';
 import confirmChangeUrl from '@/lib/sign-in/confirm-url';
 
+import Page from '../../../../../tests/ui/page';
 import ConnectProviderButton from './connect-provider-button';
 
 /** The step-up page, coming back to the Security page (outside a card here). */
@@ -57,26 +58,6 @@ function NotConfirmedRecently({ children }: { children: ReactNode }) {
     >
       {children}
     </RecentConfirmationProvider>
-  );
-}
-
-/**
- * Wraps content in an `<Activity>` that a "Leave" / "Return" button hides and
- * shows, like Next.js does with a page when you navigate away and back.
- *
- * @param props - Harness props.
- * @param props.children - The page content.
- * @returns The harness.
- */
-function Page({ children }: { children: ReactNode }) {
-  const [visible, setVisible] = useState(true);
-  return (
-    <>
-      <button type="button" onClick={() => setVisible((value) => !value)}>
-        {visible ? 'Leave' : 'Return'}
-      </button>
-      <Activity mode={visible ? 'visible' : 'hidden'}>{children}</Activity>
-    </>
   );
 }
 

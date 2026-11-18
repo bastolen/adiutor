@@ -10,10 +10,10 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
 import confirmChangeUrl from '@/lib/sign-in/confirm-url';
 import type { UserDetail } from '@/server/people/user-admin';
 
+import ConfirmationWindow from '../../../../../../tests/ui/confirmation-window';
 import AccountAccessCard from './account-access-card';
 
 /** The step-up page, coming back to this card on the user's page. */
@@ -131,14 +131,8 @@ describe('AccountAccessCard', () => {
      * @param windowOpen - Whether the Admin confirmed it's them in the last 15 minutes.
      */
     function renderForAdmin(windowOpen: boolean) {
-      const serverTime = Date.now();
       render(
-        <RecentConfirmationProvider
-          required
-          confirmedUntil={windowOpen ? serverTime + 10 * 60 * 1000 : null}
-          serverTime={serverTime}
-          returnTo="/admin/users/user-1"
-        >
+        <ConfirmationWindow windowOpen={windowOpen} returnTo="/admin/users/user-1">
           <AccountAccessCard
             userId="user-1"
             userName="Ada Tester"
@@ -146,7 +140,7 @@ describe('AccountAccessCard', () => {
             connectedAccounts={0}
             deactivatedAt={null}
           />
-        </RecentConfirmationProvider>,
+        </ConfirmationWindow>,
       );
     }
 

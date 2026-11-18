@@ -15,6 +15,7 @@ import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
 import { deleteUser, resetUserMfa } from '@/server/people/user-admin';
 
+import form from '../../../../../../tests/ui/form';
 import { deleteUserAction, resetMfaAction, signInAsAction } from './actions';
 
 vi.mock('next/cache', () => ({ refresh: vi.fn() }));
@@ -47,18 +48,6 @@ const confirmedAdmin = {
   canConfirmSessions: true,
   mfaConfirmedUntil: new Date(Date.now() + 14 * 60_000),
 };
-
-/**
- * Builds the reset dialog's form.
- *
- * @param fields - The fields.
- * @returns The form data.
- */
-function form(fields: Record<string, string>): FormData {
-  const data = new FormData();
-  Object.entries(fields).forEach(([name, value]) => data.set(name, value));
-  return data;
-}
 
 /**
  * Makes `getActor` return an actor.

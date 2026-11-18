@@ -12,11 +12,11 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
 import { defined } from '@/lib/defined';
 import confirmChangeUrl from '@/lib/sign-in/confirm-url';
 import type { ConnectedProvider } from '@/server/auth/accounts';
 
+import ConfirmationWindow from '../../../../../tests/ui/confirmation-window';
 import ConnectedAccountsCard from './connected-accounts-card';
 
 /** The step-up page, coming back to this card on the Security page. */
@@ -85,20 +85,14 @@ const CONNECT_REASON = 'Your role requires MFA, and only GitHub with 2FA counts.
  * @param windowOpen - Whether the confirmation window is still open.
  */
 function renderOnSecurityPage(connected: ConnectedProvider[], windowOpen: boolean) {
-  const serverTime = Date.now();
   render(
-    <RecentConfirmationProvider
-      required
-      confirmedUntil={windowOpen ? serverTime + 10 * 60 * 1000 : null}
-      serverTime={serverTime}
-      returnTo="/account/security"
-    >
+    <ConfirmationWindow windowOpen={windowOpen} returnTo="/account/security">
       <ConnectedAccountsCard
         {...NOTHING_BLOCKED}
         providers={['github', 'google']}
         connected={connected}
       />
-    </RecentConfirmationProvider>,
+    </ConfirmationWindow>,
   );
 }
 

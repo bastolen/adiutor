@@ -6,19 +6,8 @@ import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_SIGNED_IN_PATH } from '@/lib/redirect';
 
+import form from '../../../tests/ui/form';
 import confirmChangeUrl, { confirmChangeUrlFor, confirmStrongUrlFor } from './confirm-url';
-
-/**
- * Builds a submitted form.
- *
- * @param fields - Its fields.
- * @returns The form data.
- */
-function form(fields: Record<string, string>): FormData {
-  const data = new FormData();
-  Object.entries(fields).forEach(([name, value]) => data.set(name, value));
-  return data;
-}
 
 describe('confirmChangeUrl', () => {
   it('opens the step-up page in change mode, returning to the page', () => {

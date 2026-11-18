@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getActor } from '@/server/authz';
 import { runJobFromPage } from '@/server/jobs';
 
+import form from '../../../../../../tests/ui/form';
 import { runJobAction } from './actions';
 
 vi.mock('next/cache', () => ({ refresh: vi.fn() }));
@@ -23,18 +24,6 @@ vi.mock('@/server/jobs', () => ({
 
 /** The acting staff Admin. */
 const admin = { id: 'admin-1' } as Awaited<ReturnType<typeof getActor>>;
-
-/**
- * Builds a form.
- *
- * @param fields - The fields.
- * @returns The form data.
- */
-function form(fields: Record<string, string>): FormData {
-  const data = new FormData();
-  Object.entries(fields).forEach(([name, value]) => data.set(name, value));
-  return data;
-}
 
 beforeEach(() => {
   vi.mocked(getActor).mockResolvedValue(admin);

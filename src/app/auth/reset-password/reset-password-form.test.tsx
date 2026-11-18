@@ -6,9 +6,9 @@
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Activity, type ReactNode, useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import Page from '../../../../tests/ui/page';
 import ResetPasswordForm from './reset-password-form';
 
 /** Mocked Better Auth client method. */
@@ -30,26 +30,6 @@ vi.mock('@/lib/sign-in/auth-client', () => ({ default: { resetPassword } }));
 
 /** A password long enough to be accepted. */
 const PASSWORD = 'a long passphrase for tests';
-
-/**
- * Wraps content in an `<Activity>` that a "Leave" / "Return" button hides and
- * shows, like Next.js does with a page when you navigate away and back.
- *
- * @param props - Harness props.
- * @param props.children - The page content.
- * @returns The harness.
- */
-function Page({ children }: { children: ReactNode }) {
-  const [visible, setVisible] = useState(true);
-  return (
-    <>
-      <button type="button" onClick={() => setVisible((value) => !value)}>
-        {visible ? 'Leave' : 'Return'}
-      </button>
-      <Activity mode={visible ? 'visible' : 'hidden'}>{children}</Activity>
-    </>
-  );
-}
 
 describe('ResetPasswordForm', () => {
   beforeEach(() => {

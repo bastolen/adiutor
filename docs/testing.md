@@ -20,6 +20,11 @@ configurations in VS Code, which turn the time limit off (see
   (word order, plurals), render with `renderInLocale(locale, ui)` from `tests/i18n/render.tsx`, or
   translate outside React with `translator(locale, namespace)`. End-to-end tests run in English
   (US) (`locale` in `playwright.config.ts`).
+- **Components and actions:** what several unit tests of components and server actions share lives
+  in `tests/ui/`: `Page` (`page.tsx`, hides and shows its content in an `<Activity>` with a "Leave" /
+  "Return" button, like Next.js keeping a page alive), `form` (`form.ts`, builds `FormData` from an
+  object) and `ConfirmationWindow` (`confirmation-window.tsx`, provides a required confirmation
+  window, open or run out, to a card or form).
 - **A module split into a folder** (see "Modules that outgrow one file" in
   [Code style](code-style.md)) has a test file next to each of its files, and the helpers they
   share in the folder's `test-helpers.ts`. When the tests share a database test context, that file

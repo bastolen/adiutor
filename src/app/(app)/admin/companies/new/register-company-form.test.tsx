@@ -5,11 +5,11 @@
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Activity, type ReactNode, useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { defined } from '@/lib/defined';
 
+import Page from '../../../../../../tests/ui/page';
 import RegisterCompanyForm from './register-company-form';
 
 vi.mock('next/navigation', () => ({
@@ -25,26 +25,6 @@ vi.mock('next/navigation', () => ({
 const { registerCompanyAction } = vi.hoisted(() => ({ registerCompanyAction: vi.fn() }));
 
 vi.mock('./actions', () => ({ default: registerCompanyAction }));
-
-/**
- * Wraps content in an `<Activity>` that a "Leave" / "Return" button hides and
- * shows, like Next.js does with a page when you navigate away and back.
- *
- * @param props - Harness props.
- * @param props.children - The page content.
- * @returns The harness.
- */
-function Page({ children }: { children: ReactNode }) {
-  const [visible, setVisible] = useState(true);
-  return (
-    <>
-      <button type="button" onClick={() => setVisible((value) => !value)}>
-        {visible ? 'Leave' : 'Return'}
-      </button>
-      <Activity mode={visible ? 'visible' : 'hidden'}>{children}</Activity>
-    </>
-  );
-}
 
 describe('RegisterCompanyForm', () => {
   beforeEach(() => {

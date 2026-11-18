@@ -6,12 +6,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
 import Card from '@/components/ui/card';
 import { Toaster } from '@/components/ui/toast';
 import { defined } from '@/lib/defined';
 
 import renderInLocale from '../../../../tests/i18n/render';
+import ConfirmationWindow from '../../../../tests/ui/confirmation-window';
 import RoleSelect from './role-select';
 
 /** Mocked router. */
@@ -274,12 +274,7 @@ describe('RoleSelect', () => {
      */
     const renderUnconfirmed = (currentRole: string) =>
       render(
-        <RecentConfirmationProvider
-          required
-          confirmedUntil={null}
-          serverTime={Date.now()}
-          returnTo="/admin/staff"
-        >
+        <ConfirmationWindow windowOpen={false} returnTo="/admin/staff">
           <Card id="people" title="People">
             <RoleSelect
               action={changeRoleAction}
@@ -294,7 +289,7 @@ describe('RoleSelect', () => {
               target="staff"
             />
           </Card>
-        </RecentConfirmationProvider>,
+        </ConfirmationWindow>,
       );
 
     beforeEach(() => {

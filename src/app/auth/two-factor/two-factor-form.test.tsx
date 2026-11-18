@@ -5,13 +5,14 @@
  */
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Activity, type ReactNode, StrictMode, useState } from 'react';
+import { StrictMode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EMAIL_CODE_RESEND_SECONDS } from '@/lib/authz/mfa';
 import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 
 import renderInLocale from '../../../../tests/i18n/render';
+import Page from '../../../../tests/ui/page';
 import TwoFactorForm from './two-factor-form';
 
 /** Mocked Better Auth client methods and full page load. */
@@ -43,26 +44,6 @@ vi.mock('@/components/ui/load-fresh', () => ({ default: loadFresh }));
 
 /** The label of the checkbox that trusts the browser, which says how long that lasts. */
 const TRUST_DEVICE = 'Trust this device (until 30 days after your last password sign-in here)';
-
-/**
- * Wraps content in an `<Activity>` that a "Leave" / "Return" button hides and
- * shows, like Next.js does with a page when you navigate away and back.
- *
- * @param props - Harness props.
- * @param props.children - The page content.
- * @returns The harness.
- */
-function Page({ children }: { children: ReactNode }) {
-  const [visible, setVisible] = useState(true);
-  return (
-    <>
-      <button type="button" onClick={() => setVisible((value) => !value)}>
-        {visible ? 'Leave' : 'Return'}
-      </button>
-      <Activity mode={visible ? 'visible' : 'hidden'}>{children}</Activity>
-    </>
-  );
-}
 
 describe('TwoFactorForm', () => {
   beforeEach(() => {

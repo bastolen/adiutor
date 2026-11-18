@@ -4,32 +4,13 @@
  */
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Activity, type ReactNode, StrictMode, useState } from 'react';
+import { StrictMode, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { defined } from '@/lib/defined';
 
+import Page from '../../../tests/ui/page';
 import { useOncePerVisit, useTransientActionState, useTransientState } from './use-transient-state';
-
-/**
- * Wraps content in an `<Activity>` that a "Leave" / "Return" button hides and
- * shows, like Next.js does with a page when you navigate away and back.
- *
- * @param props - Harness props.
- * @param props.children - The page content.
- * @returns The harness.
- */
-function Page({ children }: { children: ReactNode }) {
-  const [visible, setVisible] = useState(true);
-  return (
-    <>
-      <button type="button" onClick={() => setVisible((value) => !value)}>
-        {visible ? 'Leave' : 'Return'}
-      </button>
-      <Activity mode={visible ? 'visible' : 'hidden'}>{children}</Activity>
-    </>
-  );
-}
 
 /**
  * A message set by a button, kept in {@link useTransientState}.

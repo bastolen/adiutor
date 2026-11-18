@@ -2,10 +2,10 @@
  * @file Tests for the sign-in form.
  */
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { Activity, type ReactNode, useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import renderInLocale from '../../../tests/i18n/render';
+import Page from '../../../tests/ui/page';
 import SignInForm from './sign-in-form';
 
 /** Mocked Better Auth client methods, router and full page load. */
@@ -58,26 +58,6 @@ vi.mock('@/lib/sign-in/auth-client', () => ({
 }));
 
 vi.mock('@/components/ui/load-fresh', () => ({ default: loadFresh }));
-
-/**
- * Wraps content in an `<Activity>` that a "Leave" / "Return" button hides and
- * shows, like Next.js does with a page when you navigate away and back.
- *
- * @param props - Harness props.
- * @param props.children - The page content.
- * @returns The harness.
- */
-function Page({ children }: { children: ReactNode }) {
-  const [visible, setVisible] = useState(true);
-  return (
-    <>
-      <button type="button" onClick={() => setVisible((value) => !value)}>
-        {visible ? 'Leave' : 'Return'}
-      </button>
-      <Activity mode={visible ? 'visible' : 'hidden'}>{children}</Activity>
-    </>
-  );
-}
 
 describe('SignInForm', () => {
   beforeEach(() => {

@@ -20,6 +20,7 @@ import { ServiceError } from '@/server/errors';
 import { deactivateOwnAccount } from '@/server/people/user-admin';
 
 import { testLocale } from '../../../../../tests/i18n/next-intl-mocks';
+import form from '../../../../../tests/ui/form';
 import {
   deactivateAccountAction,
   passwordAction,
@@ -63,18 +64,6 @@ vi.mock('@/server/people/user-admin', () => ({ deactivateOwnAccount: vi.fn() }))
 
 /** The signed-in user, without a second step. */
 const actor = { id: 'user-1', canConfirmSessions: false, mfaConfirmedUntil: null };
-
-/**
- * Builds the form a user submits.
- *
- * @param fields - The fields.
- * @returns The form data.
- */
-function form(fields: Record<string, string>): FormData {
-  const data = new FormData();
-  Object.entries(fields).forEach(([name, value]) => data.set(name, value));
-  return data;
-}
 
 /** A first password, typed twice. */
 const firstPassword = form({
