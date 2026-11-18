@@ -5,8 +5,7 @@
  * `admin.jobs.runs`.
  */
 import { History } from 'lucide-react';
-import { useLocale, useTranslations } from 'next-intl';
-import type { ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 
 import Card from '@/components/ui/card';
 import EmptyState from '@/components/ui/empty-state';
@@ -14,27 +13,14 @@ import { paginationFooter } from '@/components/ui/pagination';
 import RelativeTime from '@/components/ui/relative-time';
 import SortMenu from '@/components/ui/sort-menu';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
-import TextLink from '@/components/ui/text-link';
 import displayName from '@/lib/display-name';
-import { formatDateTime } from '@/lib/format';
 import type { TableLinks } from '@/lib/tables/page-url';
 import { type Paged } from '@/lib/tables/table-state';
 import type { JobRunSort } from '@/lib/tables/tables';
 import type { JobRunEntry } from '@/server/jobs';
 
+import { userLink } from '../../../_people/rich-tags';
 import { ErrorReference, JobName, RunStatusBadge, RunSummary } from './job-parts';
-
-/**
- * Makes the `<link>` tag of a rich message a link to a user's page.
- *
- * @param userId - The user's ID.
- * @returns The renderer `t.rich` takes for the tag.
- */
-function userLink(userId: string) {
-  return function UserLink(chunks: ReactNode) {
-    return <TextLink href={`/admin/users/${userId}`}>{chunks}</TextLink>;
-  };
-}
 
 /**
  * What started a run: the tick, the command line, or a staff Admin on the
@@ -80,7 +66,6 @@ interface JobRunsCardProps {
  */
 export default function JobRunsCard({ runs, table, canLookUp }: JobRunsCardProps) {
   const t = useTranslations('admin.jobs.runs');
-  const locale = useLocale();
   return (
     <Card
       title={t('title')}
@@ -129,8 +114,7 @@ export default function JobRunsCard({ runs, table, canLookUp }: JobRunsCardProps
                     </div>
                   </Td>
                   <Td className="hidden whitespace-nowrap text-muted-foreground sm:table-cell">
-                    <RelativeTime date={run.startedAt} />
-                    <span className="sr-only">, {formatDateTime(run.startedAt, locale)}</span>
+                    <RelativeTime date={run.startedAt} spokenExact />
                   </Td>
                   <Td className="hidden text-sm text-muted-foreground md:table-cell">{outcome}</Td>
                 </Tr>

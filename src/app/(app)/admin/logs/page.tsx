@@ -7,7 +7,7 @@
  */
 import { ScrollText } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { getLocale, getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { type ReactNode, Suspense } from 'react';
 
 import Alert from '@/components/ui/alert';
@@ -25,7 +25,6 @@ import TextLink from '@/components/ui/text-link';
 import { AUDIT_GROUP_KEYS, describeAuditEvent, isAuditGroup } from '@/lib/audit-actions';
 import { parseDayRange } from '@/lib/day-range';
 import displayName from '@/lib/display-name';
-import { formatDateTime } from '@/lib/format';
 import formatIpAddress from '@/lib/request/ip-address';
 import { describeUserAgent } from '@/lib/request/user-agent';
 import { type SearchParams, searchParam } from '@/lib/search-params';
@@ -37,24 +36,14 @@ import { type AuditEntry, listAuditLog } from '@/server/audit';
 import { requireGlobalPermission } from '@/server/authz';
 import { globalPermissionMetadata } from '@/server/page-metadata';
 
+import { userLink } from '../../_people/rich-tags';
+
 /**
  * Page metadata: "Audit log · Adiutor" for those who may see the page (`audit:view`), and
  * the 404 page's title for everyone else, who get the 404 page.
  */
 // i18n-check t('admin.logs.title')
 export const generateMetadata = globalPermissionMetadata('audit:view', 'admin.logs.title');
-
-/**
- * Makes the `<link>` tag of a rich message a link to a user's page.
- *
- * @param userId - The user's ID.
- * @returns The renderer `t.rich` takes for the tag.
- */
-function userLink(userId: string) {
-  return function UserLink(chunks: ReactNode) {
-    return <TextLink href={`/admin/users/${userId}`}>{chunks}</TextLink>;
-  };
-}
 
 /**
  * Shows the `<code>` tag of a rich message as a job's name, as the command
@@ -180,7 +169,6 @@ function Origin({ event }: { event: AuditEntry }) {
  * @returns The page content.
  */
 async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const locale = await getLocale();
   const t = await getTranslations('admin.logs');
   const tAudit = await getTranslations('audit');
   const tDates = await getTranslations('admin.dateRange');
@@ -331,8 +319,7 @@ async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> 
                     </div>
                   </Td>
                   <Td className="hidden whitespace-nowrap text-muted-foreground sm:table-cell">
-                    <RelativeTime date={event.at} />
-                    <span className="sr-only">, {formatDateTime(event.at, locale)}</span>
+                    <RelativeTime date={event.at} spokenExact />
                   </Td>
                   <Td className="hidden text-sm text-muted-foreground lg:table-cell">
                     <Origin event={event} />

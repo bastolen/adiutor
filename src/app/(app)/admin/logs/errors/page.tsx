@@ -8,7 +8,7 @@
  */
 import { SearchX, ShieldCheck } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import { getLocale, getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { Fragment, Suspense } from 'react';
 
 import Badge from '@/components/ui/badge';
@@ -200,7 +200,6 @@ function LookupResult({
  * @returns The page content.
  */
 async function Errors({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const locale = await getLocale();
   const t = await getTranslations('admin.errors');
   const actor = await requireGlobalPermission('errors:view');
   const params = await searchParams;
@@ -285,8 +284,7 @@ async function Errors({ searchParams }: { searchParams: Promise<SearchParams> })
                     {error.path && <span className="block font-mono text-xs">{error.path}</span>}
                   </Td>
                   <Td className="hidden whitespace-nowrap text-muted-foreground sm:table-cell">
-                    <RelativeTime date={error.at} />
-                    <span className="sr-only">, {formatDateTime(error.at, locale)}</span>
+                    <RelativeTime date={error.at} spokenExact />
                   </Td>
                 </Tr>
               ))}
