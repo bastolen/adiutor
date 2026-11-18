@@ -133,6 +133,28 @@ describe('a request list without requests', () => {
     expect(newRequest()).toHaveAttribute('href', '/requests/new?company=adiutor-tests');
   });
 
+  it('renders the header it is given before the list, from the companies and settings it loaded', async () => {
+    const renderHeader = vi.fn(
+      ({ staffName, canRaise }: { staffName: string; canRaise: boolean }) => (
+        <h1>{`${staffName} ${canRaise ? 'may' : 'may not'} raise`}</h1>
+      ),
+    );
+
+    render(await RequestList({ path: '/requests', searchParams: {}, actor: viewer, renderHeader }));
+
+    expect(renderHeader).toHaveBeenCalledExactlyOnceWith({
+      staffName: 'Adiutor Tests',
+      canRaise: true,
+    });
+    const heading = screen.getByRole('heading', { level: 1 });
+    expect(heading).toHaveTextContent('Adiutor Tests may raise');
+    expect(heading.compareDocumentPosition(screen.getByText('No active requests'))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(listRequestCompanies).toHaveBeenCalledOnce();
+    expect(getRequestSettings).toHaveBeenCalledOnce();
+  });
+
   it.each([
     ['nl-NL', 'Nog geen verzoeken', 'Dien het eerste verzoek in en het staat hier.'],
     ['es-ES', 'Aún no hay solicitudes', 'Crea la primera solicitud y aparecerá aquí.'],

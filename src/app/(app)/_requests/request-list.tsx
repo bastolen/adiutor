@@ -6,6 +6,7 @@
 import { ChevronRight, Inbox, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
+import type { ReactNode } from 'react';
 
 import Button from '@/components/ui/button';
 import Card from '@/components/ui/card';
@@ -83,6 +84,13 @@ interface RequestListProps {
    * filtered by one.
    */
   company?: string;
+  /**
+   * Renders what comes before the list (a page's header) from what the list
+   * has loaded anyway, so the page needn't load it again: the name the staff
+   * are shown with, and whether the viewer may raise a request in the
+   * companies the list covers.
+   */
+  renderHeader?: (loaded: { staffName: string; canRaise: boolean }) => ReactNode;
 }
 
 /** Why a list without requests is empty: nothing matches, nothing is active, or there are none. */
@@ -130,13 +138,15 @@ function emptyKindOf(status: RequestStatusFilter, narrowed: boolean): EmptyKind 
  * @param props.searchParams - The page's query parameters.
  * @param props.actor - The viewer.
  * @param props.company - The company whose list this is, on its own page.
- * @returns The filters and the table (or an empty state).
+ * @param props.renderHeader - Renders what comes before the list, from what the list loaded.
+ * @returns The header, if any, the filters and the table (or an empty state).
  */
 export default async function RequestList({
   path,
   searchParams,
   actor,
   company = undefined,
+  renderHeader = undefined,
 }: RequestListProps) {
   const t = await getTranslations('requests.list');
   const tRequests = await getTranslations('requests');
@@ -208,6 +218,7 @@ export default async function RequestList({
 
   return (
     <>
+      {renderHeader?.({ staffName: settings.staffName, canRaise })}
       <div className="flex flex-col gap-4">
         <SegmentedNav
           label={t('statusLabel')}
