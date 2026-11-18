@@ -13,10 +13,11 @@
  */
 'use client';
 
-import { NextIntlClientProvider, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { useEffect, useSyncExternalStore } from 'react';
 
 import fontVariables from '@/lib/fonts';
+import IntlClientProvider from '@/lib/i18n/intl-client-provider';
 import {
   DEFAULT_LOCALE,
   isLocale,
@@ -24,8 +25,6 @@ import {
   type Locale,
   localeForLanguages,
 } from '@/lib/i18n/locales';
-import { onMessageError } from '@/lib/i18n/message-errors';
-import { TIME_ZONE } from '@/lib/i18n/time-zone';
 import { applyStoredTheme, THEME_STORAGE_KEY } from '@/lib/theme';
 import enUsCommon from '@/messages/en-US/common.json';
 import esEsCommon from '@/messages/es-ES/common.json';
@@ -107,15 +106,10 @@ export default function GlobalError({ error, retry }: ErrorPageProps) {
   return (
     <html lang={locale} className={fontVariables}>
       <body className="bg-background text-foreground antialiased">
-        <NextIntlClientProvider
-          locale={locale}
-          messages={COMMON_MESSAGES[locale]}
-          timeZone={TIME_ZONE}
-          onError={onMessageError}
-        >
+        <IntlClientProvider locale={locale} messages={COMMON_MESSAGES[locale]}>
           <ErrorTitle />
           <RootError error={error} retry={retry} />
-        </NextIntlClientProvider>
+        </IntlClientProvider>
       </body>
     </html>
   );

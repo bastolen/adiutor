@@ -61,6 +61,7 @@ function renderSelect(confirmChange?: typeof ownRow) {
       memberName="Jane"
       currentRole="admin"
       roles={roles}
+      target="company"
       confirmChange={confirmChange}
     />,
   );
@@ -186,6 +187,7 @@ describe('RoleSelect', () => {
           memberName="Jane"
           currentRole="admin"
           roles={roles}
+          target="company"
         />
       </>,
     );
@@ -211,6 +213,7 @@ describe('RoleSelect', () => {
         memberName="Jane"
         currentRole="admin"
         roles={roles}
+        target="company"
       />,
     );
     expect(screen.getByRole('combobox', { name: 'Rol van Jane' })).toBeInTheDocument();

@@ -32,7 +32,7 @@ interface AppNavigationProps {
    */
   sections: StaffSectionKey[];
   /** Whether a staff member is signed in as this user (the account menu says so). */
-  signedInAs?: boolean;
+  signedInAs: boolean;
 }
 
 /**
@@ -51,7 +51,7 @@ function NavigationPanel({
   name,
   email,
   sections,
-  signedInAs = false,
+  signedInAs,
   onNavigate = undefined,
 }: AppNavigationProps & { onNavigate?: () => void }) {
   const t = useTranslations('navigation');
@@ -86,12 +86,7 @@ function NavigationPanel({
  * @param props.signedInAs - Whether a staff member is signed in as the user.
  * @returns The navigation.
  */
-export default function AppNavigation({
-  name,
-  email,
-  sections,
-  signedInAs = false,
-}: AppNavigationProps) {
+export default function AppNavigation({ name, email, sections, signedInAs }: AppNavigationProps) {
   const t = useTranslations('navigation');
   const [open, setOpen] = useTransientState(false);
 
