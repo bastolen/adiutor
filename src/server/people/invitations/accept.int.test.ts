@@ -6,7 +6,7 @@
  */
 import { hashPassword, verifyPassword } from 'better-auth/crypto';
 import { and, eq, isNull, sql } from 'drizzle-orm';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   account,
@@ -22,39 +22,22 @@ import { defined, firstRow } from '@/lib/defined';
 import {
   actorFor,
   addMember,
-  createCompany,
-  createStaffSettings,
   createUser,
   inSequence,
-  memberActor,
   queuedJobKinds,
   staffActor,
   tokenFrom,
 } from '../../../../tests/integration/helpers';
-import type { Actor } from '../../actor';
 import { hitRateLimit } from '../../rate-limit';
 import { claimInviteLink, createInviteLink } from '../invite-links';
 import { acceptInvitation, acceptInvitationWithNewAccount, getInvitationPreview } from './accept';
 import { inviteByEmail } from './send';
-import { db, ctx, sent } from './test-helpers';
+import { companyAdmin, db, ctx, sent, testCompany } from './test-helpers';
 
 vi.mock('better-auth/crypto', async (importOriginal) => {
   const original = await importOriginal<typeof import('better-auth/crypto')>();
   // The real hash, watched: an invitation that can't be used must not cost one.
   return { ...original, hashPassword: vi.fn(original.hashPassword) };
-});
-
-/** Shared fixtures, recreated before each test. */
-let testCompany: Awaited<ReturnType<typeof createCompany>>;
-let companyAdmin: Actor;
-
-beforeEach(async () => {
-  await createStaffSettings(db);
-  testCompany = await createCompany(db);
-  companyAdmin = await memberActor(db, testCompany.id, 'admin');
-  await staffActor(db, 'manager');
-  await memberActor(db, testCompany.id, 'client', 'member@adiutor.test');
-  await createUser(db, 'existing@adiutor.test');
 });
 
 describe('accepting', () => {

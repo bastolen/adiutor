@@ -3,15 +3,13 @@
  * at once, the invitation's language, and who may invite.
  */
 import { eq, sql } from 'drizzle-orm';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { company, invitation, staffSettings, user } from '@/db/schema';
 import { defined } from '@/lib/defined';
 
 import {
   createCompany,
-  createStaffSettings,
-  createUser,
   emailLanguage,
   inLanguage,
   inSequence,
@@ -19,24 +17,9 @@ import {
   setUserLocale,
   staffActor,
 } from '../../../../tests/integration/helpers';
-import type { Actor } from '../../actor';
 import { listPendingInvitations } from './manage';
 import { type BulkInviteResult, inviteByEmail, inviteManyByEmail } from './send';
-import { db, ctx, sent } from './test-helpers';
-
-/** Shared fixtures, recreated before each test. */
-let testCompany: Awaited<ReturnType<typeof createCompany>>;
-let companyAdmin: Actor;
-let staffManager: Actor;
-
-beforeEach(async () => {
-  await createStaffSettings(db);
-  testCompany = await createCompany(db);
-  companyAdmin = await memberActor(db, testCompany.id, 'admin');
-  staffManager = await staffActor(db, 'manager');
-  await memberActor(db, testCompany.id, 'client', 'member@adiutor.test');
-  await createUser(db, 'existing@adiutor.test');
-});
+import { companyAdmin, db, ctx, sent, staffManager, testCompany } from './test-helpers';
 
 describe('inviteByEmail privacy', () => {
   it('gives a company admin the same result for new, existing and member emails', async () => {

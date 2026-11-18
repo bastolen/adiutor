@@ -4,18 +4,15 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { defined } from '@/lib/defined';
-
-import { createUser, setupTestContext } from '../../../tests/integration/helpers';
-import { loadActor } from '../actor';
+import { actorFor, createUser, setupTestContext } from '../../../tests/integration/helpers';
 import { dismissMfaRecommendation, isMfaRecommendationDismissed } from './mfa-recommendation';
 
 const { ctx, db } = setupTestContext();
 
 describe('dismissMfaRecommendation', () => {
   it('hides the recommendation for the user who dismissed it, and only for them', async () => {
-    const jane = defined(await loadActor(db, await createUser(db, 'jane@adiutor.test')), 'Jane');
-    const sam = defined(await loadActor(db, await createUser(db, 'sam@adiutor.test')), 'Sam');
+    const jane = await actorFor(db, await createUser(db, 'jane@adiutor.test'));
+    const sam = await actorFor(db, await createUser(db, 'sam@adiutor.test'));
 
     await expect(isMfaRecommendationDismissed(ctx, jane)).resolves.toBe(false);
     await dismissMfaRecommendation(ctx, jane);
@@ -25,7 +22,7 @@ describe('dismissMfaRecommendation', () => {
   });
 
   it('keeps it dismissed when it is dismissed again', async () => {
-    const jane = defined(await loadActor(db, await createUser(db, 'jane@adiutor.test')), 'Jane');
+    const jane = await actorFor(db, await createUser(db, 'jane@adiutor.test'));
 
     await dismissMfaRecommendation(ctx, jane);
     await dismissMfaRecommendation(ctx, jane);

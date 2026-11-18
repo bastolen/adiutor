@@ -14,8 +14,6 @@ import { defined, firstRow } from '@/lib/defined';
 import {
   atTheSameMoment,
   createCompany,
-  createStaffSettings,
-  createUser,
   emailLanguage,
   inLanguage,
   memberActor,
@@ -27,20 +25,7 @@ import type { Actor } from '../../actor';
 import { getInvitationPreview } from './accept';
 import { listPendingInvitations, resendInvitation, revokeInvitation } from './manage';
 import { inviteByEmail } from './send';
-import { db, ctx, sent } from './test-helpers';
-
-/** Shared fixtures, recreated before each test. */
-let testCompany: Awaited<ReturnType<typeof createCompany>>;
-let companyAdmin: Actor;
-
-beforeEach(async () => {
-  await createStaffSettings(db);
-  testCompany = await createCompany(db);
-  companyAdmin = await memberActor(db, testCompany.id, 'admin');
-  await staffActor(db, 'manager');
-  await memberActor(db, testCompany.id, 'client', 'member@adiutor.test');
-  await createUser(db, 'existing@adiutor.test');
-});
+import { companyAdmin, db, ctx, sent, testCompany } from './test-helpers';
 
 describe('re-inviting, resending and revoking', () => {
   it('keeps only the newest link working', async () => {
