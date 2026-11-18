@@ -1,12 +1,11 @@
 /**
  * @file Resets the end-to-end test database and adds the seeded accounts and
- * companies from `fixtures.ts`. Looking at or changing the database during a
- * test is `db.ts`.
+ * companies from `fixtures.ts`, through the short connection of
+ * `withTestDatabase`. Looking at or changing the database during a test is
+ * `db.ts`.
  */
 import { hashPassword } from 'better-auth/crypto';
 import { eq } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Client } from 'pg';
 
 import * as schema from '../../src/db/schema';
 import type { CompanyRole, PlatformRole } from '../../src/lib/authz/roles';
@@ -15,6 +14,7 @@ import { generateToken, hashToken } from '../../src/lib/sign-in/tokens';
 import { storeAuthenticator } from '../../tests/auth/authenticator';
 import emptyDatabase from '../../tests/database/empty-database';
 import storeRequests from '../../tests/database/store-requests';
+import { withTestDatabase } from './db';
 import {
   CLIENT_WATCHER,
   CLOSED_COMPANY_ADMIN,
@@ -60,32 +60,18 @@ import {
 /**
  * Empties the test database, as on a fresh install: every user, company, the
  * staff settings, verification tokens and rate limits.
- *
- * @param databaseUrl - Connection string of the test database.
  */
-export async function emptyTestDatabase(databaseUrl: string): Promise<void> {
-  const client = new Client({ connectionString: databaseUrl });
-  await client.connect();
-  try {
-    await emptyDatabase(drizzle(client));
-  } finally {
-    await client.end();
-  }
+export async function emptyTestDatabase(): Promise<void> {
+  await withTestDatabase((db) => emptyDatabase(db));
 }
 
 /**
  * Empties the database and creates the staff (its name, Admin and Manager),
  * plus a company with the users the tests use. Both are named "Adiutor Tests".
- *
- * @param databaseUrl - Connection string of the test database.
  */
-export default async function seedTestDatabase(databaseUrl: string): Promise<void> {
-  await emptyTestDatabase(databaseUrl);
-  const client = new Client({ connectionString: databaseUrl });
-  await client.connect();
-  const db = drizzle(client, { schema });
-
-  try {
+export default async function seedTestDatabase(): Promise<void> {
+  await emptyTestDatabase();
+  await withTestDatabase(async (db) => {
     /**
      * Creates a user with a password: on the staff (with a platform role) or
      * in a company.
@@ -378,7 +364,5 @@ export default async function seedTestDatabase(databaseUrl: string): Promise<voi
         at: new Date(joinedFrom + index * 60_000),
       })),
     ]);
-  } finally {
-    await client.end();
-  }
+  });
 }
