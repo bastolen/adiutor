@@ -13,12 +13,11 @@ import EmptyState from '@/components/ui/empty-state';
 import FilterMenu from '@/components/ui/filter-menu';
 import { paginationFooter } from '@/components/ui/pagination';
 import RelativeTime from '@/components/ui/relative-time';
+import RowLink from '@/components/ui/row-link';
 import SearchForm from '@/components/ui/search-form';
 import SegmentedNav from '@/components/ui/segmented-nav';
 import SortMenu from '@/components/ui/sort-menu';
-import { focusRing } from '@/components/ui/styles';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
-import cn from '@/lib/cn';
 import {
   DEFAULT_REQUEST_STATUS_FILTER,
   formatRequestNumber,
@@ -348,15 +347,7 @@ export default async function RequestList({
                       <div className="flex min-w-0 flex-col gap-1">
                         {/* The link covers the whole row, so the row is one click target; on its own
                             it's 2px taller above and below too, like every text link (at least 24px). */}
-                        <Link
-                          href={requestPath(request.number)}
-                          className={cn(
-                            '-my-0.5 rounded-sm py-0.5 font-medium wrap-anywhere text-foreground group-hover:underline group-hover:underline-offset-4 after:absolute after:inset-0',
-                            focusRing,
-                          )}
-                        >
-                          {request.title}
-                        </Link>
+                        <RowLink href={requestPath(request.number)}>{request.title}</RowLink>
                         <span className="flex flex-wrap items-center gap-x-2 text-xs wrap-anywhere text-muted-foreground">
                           <span className="font-mono">
                             {formatRequestNumber(settings.prefix, request.number)}

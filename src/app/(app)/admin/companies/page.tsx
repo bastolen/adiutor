@@ -14,12 +14,11 @@ import Card from '@/components/ui/card';
 import EmptyState from '@/components/ui/empty-state';
 import PageHeader from '@/components/ui/page-header';
 import { paginationFooter } from '@/components/ui/pagination';
+import RowLink from '@/components/ui/row-link';
 import SearchForm from '@/components/ui/search-form';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import SortMenu from '@/components/ui/sort-menu';
-import { focusRing } from '@/components/ui/styles';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
-import cn from '@/lib/cn';
 import formatDate from '@/lib/format';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import { createPageUrl } from '@/lib/tables/page-url';
@@ -131,15 +130,7 @@ async function CompanyList({ searchParams }: { searchParams: Promise<SearchParam
                         <div className="flex min-w-0 flex-col">
                           {/* The link covers the whole row, so the row is one click target; on its own it's
                             2px taller above and below too, like every text link (at least 24px). */}
-                          <Link
-                            href={`/companies/${company.slug}`}
-                            className={cn(
-                              '-my-0.5 rounded-sm py-0.5 font-medium wrap-anywhere text-foreground group-hover:underline group-hover:underline-offset-4 after:absolute after:inset-0',
-                              focusRing,
-                            )}
-                          >
-                            {company.name}
-                          </Link>
+                          <RowLink href={`/companies/${company.slug}`}>{company.name}</RowLink>
                           <span className="font-mono text-xs wrap-anywhere text-muted-foreground">
                             {company.slug}
                           </span>

@@ -13,7 +13,8 @@ keyboard support.
   `Card`, `PageHeader`, `AuthHeading`, `AuthDivider`, `Table`, `Badge`, `Alert` (optionally
   dismissible), `Banner` (a notice with an icon, title and actions, e.g. on the dashboard),
   `ResultAlert`, `ConfirmDialog`, `DropdownMenu`, `Sheet` (a slide-over panel), `EmptyState`,
-  `IconRow`, `IconTile` (a decorative icon on a tinted square), `DescriptionList` (labels and
+  `IconRow`, `IconTile` (a decorative icon on a tinted square), `RowLink` (the name in a table row
+  or list item, stretched so the whole row is one click target), `DescriptionList` (labels and
   values), `Skeleton`, `Pagination`, `SortMenu`, `FilterMenu`, ...). Menus, selects, dialogs and
   sheets are
   built on [Radix UI](https://www.radix-ui.com), and only `src/components/ui/` imports it. Radix
