@@ -13,7 +13,14 @@ import {
   SESSIONS_CLIENT,
   UNVERIFIED_USER,
 } from './support/fixtures';
-import { openUser, signIn, submitPassword, toasts, useOwnClientIp } from './support/helpers';
+import {
+  fillAndSubmitSignIn,
+  openUser,
+  signIn,
+  submitPassword,
+  toasts,
+  useOwnClientIp,
+} from './support/helpers';
 import { countEmails, linkIn, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
 import { codeForSecret } from './support/totp';
@@ -95,9 +102,7 @@ test('a user deactivates their account and an Admin reactivates it', async ({ pa
   // Signing in is refused (from an address of its own: this is the third sign-in in seconds).
   await useOwnClientIp(page);
   await page.goto('/auth');
-  await page.getByLabel('Email').fill(DEACTIVATE_CLIENT.email);
-  await page.getByLabel('Password').fill(DEACTIVATE_CLIENT.password);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await fillAndSubmitSignIn(page, DEACTIVATE_CLIENT);
   await expect(
     page.getByRole('alert').filter({ hasText: 'This account is deactivated.' }),
   ).toBeVisible();

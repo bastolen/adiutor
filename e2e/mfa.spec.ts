@@ -19,6 +19,7 @@ import {
   SUPPORT_STAFF,
 } from './support/fixtures';
 import {
+  confirmWithAuthenticator,
   openSignInLink,
   setUpAuthenticator,
   signIn,
@@ -29,7 +30,6 @@ import {
 } from './support/helpers';
 import { codeIn, countEmails, linkIn, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
-import { codeForSecret } from './support/totp';
 
 test('a Manager must set up MFA first, then signs in with an authenticator or a backup code', async ({
   page,
@@ -241,10 +241,7 @@ test('an Admin signing in with an email link confirms the session with a code', 
   await expect(page).toHaveURL(/\/auth\/verify\?callbackURL=%2Fadmin%2Fusers/);
   await expect(page.getByRole('heading', { name: /^Confirm it.s you$/ })).toBeVisible();
 
-  await page
-    .getByRole('textbox', { name: 'Code', exact: true })
-    .fill(codeForSecret(PLATFORM_ADMIN.totpSecret));
-  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
+  await confirmWithAuthenticator(page, PLATFORM_ADMIN.totpSecret);
   await expect(page).toHaveURL('/admin/users');
 
   // The session is confirmed now: other pages don't ask again.
