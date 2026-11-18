@@ -12,15 +12,6 @@ import { defined } from '@/lib/defined';
 import ConfirmationWindow from '../../../../tests/ui/confirmation-window';
 import InviteForm from './invite-form';
 
-vi.mock('next/navigation', () => ({
-  /**
-   * Mocked router (the recent confirmation check uses it).
-   *
-   * @returns A router whose `push` does nothing.
-   */
-  useRouter: () => ({ push: vi.fn() }),
-}));
-
 /** Mocked server action. */
 const { inviteAction } = vi.hoisted(() => ({ inviteAction: vi.fn() }));
 

@@ -16,15 +16,6 @@ const { changeStaffRoleAction, removeFromStaffAction } = vi.hoisted(() => ({
 
 vi.mock('../../../_people/staff-actions', () => ({ changeStaffRoleAction, removeFromStaffAction }));
 
-vi.mock('next/navigation', () => ({
-  /**
-   * Mocked router.
-   *
-   * @returns The router.
-   */
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
-
 describe('StaffAccessCard', () => {
   it('offers to make someone who isn’t staff a staff member', () => {
     render(<StaffAccessCard userId="user-1" userName="Ada Tester" staffRole={null} />);

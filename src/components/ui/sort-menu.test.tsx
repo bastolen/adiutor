@@ -4,20 +4,11 @@
  */
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import type { SortOption } from '@/lib/tables/table-state';
 
 import SortMenu from './sort-menu';
-
-vi.mock('next/navigation', () => ({
-  /**
-   * Mocked router; choosing a sort pushes its link.
-   *
-   * @returns The router.
-   */
-  useRouter: () => ({ push: vi.fn() }),
-}));
 
 /** Three ways to sort the members, sorted by name from A to Z. */
 const OPTIONS: readonly SortOption[] = [

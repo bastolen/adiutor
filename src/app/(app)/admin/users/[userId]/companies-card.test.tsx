@@ -34,15 +34,6 @@ vi.mock('../../../_people/member-actions', () => ({
   removeMemberAction,
 }));
 
-vi.mock('next/navigation', () => ({
-  /**
-   * Mocked router, for the Sort menu and the role select.
-   *
-   * @returns The router.
-   */
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
-
 /** A membership of the user. */
 const MEMBERSHIP: UserCompany = {
   id: '01970000-0000-7000-8000-000000000101',

@@ -12,15 +12,6 @@ import { defined } from '@/lib/defined';
 import Page from '../../../../../../tests/ui/page';
 import RegisterCompanyForm from './register-company-form';
 
-vi.mock('next/navigation', () => ({
-  /**
-   * Mocked router (the recent confirmation check uses it).
-   *
-   * @returns A router whose `push` does nothing.
-   */
-  useRouter: () => ({ push: vi.fn() }),
-}));
-
 /** Mocked server action. */
 const { registerCompanyAction } = vi.hoisted(() => ({ registerCompanyAction: vi.fn() }));
 

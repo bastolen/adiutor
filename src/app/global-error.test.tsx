@@ -12,15 +12,6 @@ import { THEME_STORAGE_KEY } from '@/lib/theme';
 import GlobalError from './global-error';
 import reportErrorAction from './report-error-action';
 
-vi.mock('next/navigation', () => ({
-  /**
-   * Mocked router.
-   *
-   * @returns A router that does nothing.
-   */
-  useRouter: () => ({ back: vi.fn() }),
-}));
-
 vi.mock('./report-error-action', () => ({ default: vi.fn(async () => null) }));
 
 // The language button's action reads the server's configuration; nothing here changes the language.

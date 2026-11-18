@@ -13,15 +13,6 @@ import EditDetails from './edit-details';
 
 vi.mock('./actions', () => ({ updateDetailsAction: vi.fn() }));
 
-vi.mock('next/navigation', () => ({
-  /**
-   * Mocked router (the dialog's recent confirmation check uses it).
-   *
-   * @returns A router that goes nowhere.
-   */
-  useRouter: () => ({ push: vi.fn() }),
-}));
-
 afterEach(() => {
   vi.mocked(updateDetailsAction).mockReset();
 });

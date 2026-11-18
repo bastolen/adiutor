@@ -21,15 +21,6 @@ import {
 } from './signed-in-as';
 import TextField from './text-field';
 
-vi.mock('next/navigation', () => ({
-  /**
-   * Mocked router, for the confirmation step of the dialog.
-   *
-   * @returns The router.
-   */
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
-
 /**
  * Says whether changes are turned off, as text to check.
  *

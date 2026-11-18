@@ -20,6 +20,10 @@ configurations in VS Code, which turn the time limit off (see
   (word order, plurals), render with `renderInLocale(locale, ui)` from `tests/i18n/render.tsx`, or
   translate outside React with `translator(locale, namespace)`. End-to-end tests run in English
   (US) (`locale` in `playwright.config.ts`).
+- **Navigation:** `vitest.setup.ts` also gives component tests a router that does nothing
+  (`useRouter` from `next/navigation`: `push`, `refresh`, `back` and `replace`; the rest of the
+  module stays real). A test that checks navigation must mock `next/navigation` itself, which
+  replaces that default.
 - **Components and actions:** what several unit tests of components and server actions share lives
   in `tests/ui/`: `Page` (`page.tsx`, hides and shows its content in an `<Activity>` with a "Leave" /
   "Return" button, like Next.js keeping a page alive), `form` (`form.ts`, builds `FormData` from an

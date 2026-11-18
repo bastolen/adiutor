@@ -15,14 +15,6 @@ import { testLocale } from '../../../../tests/i18n/next-intl-mocks';
 import renderInLocale from '../../../../tests/i18n/render';
 import RequestList from './request-list';
 
-vi.mock('next/navigation', () => ({
-  /**
-   * Mocked router; the filter menus push their links with it.
-   *
-   * @returns The router.
-   */
-  useRouter: () => ({ push: vi.fn() }),
-}));
 vi.mock('@/server/app-context', () => ({ default: { name: 'app context' } }));
 vi.mock('@/server/authz', () => ({
   /**

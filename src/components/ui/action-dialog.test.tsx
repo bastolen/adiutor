@@ -13,15 +13,6 @@ import ActionDialog from './action-dialog';
 import { SignedInAsMarker } from './signed-in-as';
 import { Toaster } from './toast';
 
-vi.mock('next/navigation', () => ({
-  /**
-   * Mocked router.
-   *
-   * @returns The router.
-   */
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
-
 /**
  * "Reset two-step verification", which its own action turns off once nothing
  * is left to reset.

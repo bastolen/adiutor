@@ -4,7 +4,8 @@
  * Registers Testing Library's DOM matchers (e.g. `toBeInTheDocument()`),
  * unmounts rendered components after each test, and stands in for next-intl
  * so everything renders in English (US) without a request or a provider
- * (`tests/i18n/next-intl-mocks.ts`; `renderInLocale` for other languages).
+ * (`tests/i18n/next-intl-mocks.ts`; `renderInLocale` for other languages),
+ * and gives components a router that does nothing.
  */
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
@@ -34,6 +35,30 @@ vi.mock('next/font/google', () => {
     style: { fontFamily: '' },
   });
   return { Inter: font, JetBrains_Mono: font };
+});
+/**
+ * Outside Next.js there is no router: components that call `useRouter` get one
+ * whose `push`, `refresh`, `back` and `replace` do nothing. Everything else in
+ * `next/navigation` stays real (`redirect`, `notFound`, `usePathname`,
+ * `useSearchParams`). A test that checks navigation mocks the module itself;
+ * a per-file `vi.mock` replaces this one.
+ */
+vi.mock('next/navigation', async (importOriginal) => {
+  const router = {
+    push: vi.fn(),
+    refresh: vi.fn(),
+    back: vi.fn(),
+    replace: vi.fn(),
+  };
+  return {
+    ...(await importOriginal<typeof import('next/navigation')>()),
+    /**
+     * Stands in for the router hook.
+     *
+     * @returns The same router every time, with functions that do nothing.
+     */
+    useRouter: () => router,
+  };
 });
 vi.mock('@/lib/i18n/request-locale', () => ({
   /**

@@ -8,15 +8,6 @@ import { describe, expect, it, vi } from 'vitest';
 import renderInLocale from '../../../../tests/i18n/render';
 import InviteLinkForm from './invite-link-form';
 
-vi.mock('next/navigation', () => ({
-  /**
-   * Mocked router (the recent confirmation check uses it).
-   *
-   * @returns A router whose `push` does nothing.
-   */
-  useRouter: () => ({ push: vi.fn() }),
-}));
-
 vi.mock('./invitation-actions', () => ({ createInviteLinkAction: vi.fn() }));
 
 /** Role options as the page passes them for a company. */

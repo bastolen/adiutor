@@ -4,19 +4,10 @@
  */
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import renderInLocale from '../../../tests/i18n/render';
 import FilterMenu, { type FilterOption } from './filter-menu';
-
-vi.mock('next/navigation', () => ({
-  /**
-   * Mocked router; choosing a filter pushes its link.
-   *
-   * @returns The router.
-   */
-  useRouter: () => ({ push: vi.fn() }),
-}));
 
 /**
  * The types of requests to filter by.

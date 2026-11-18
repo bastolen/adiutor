@@ -23,15 +23,6 @@ const { resendInvitationAction, revokeInvitationAction } = vi.hoisted(() => ({
 
 vi.mock('./invitation-actions', () => ({ resendInvitationAction, revokeInvitationAction }));
 
-vi.mock('next/navigation', () => ({
-  /**
-   * Mocked router, for the Sort menu.
-   *
-   * @returns The router.
-   */
-  useRouter: () => ({ push: vi.fn() }),
-}));
-
 /**
  * Builds an open invitation.
  *
