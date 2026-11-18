@@ -201,8 +201,16 @@ interface World {
   requests: { own: string; other: string };
 }
 
-/** A request's details as the staff's form sends them, with a new title. */
-const NEW_DETAILS = { title: 'The printer on floor 2 is broken', type: 'hotfix', priority: 'high' };
+/**
+ * A request's details as the staff's form sends them, with a new title, and
+ * the details it started from: those of {@link NEW_REQUEST}, a bug.
+ */
+const NEW_DETAILS = {
+  title: 'The printer on floor 2 is broken',
+  type: 'hotfix',
+  priority: 'high',
+  was: { title: 'The printer is broken', type: 'bug', priority: 'normal' },
+};
 
 /** A request as its form sends it, without its company. */
 const NEW_REQUEST = {

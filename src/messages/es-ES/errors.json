@@ -84,7 +84,8 @@
       "noFailedJobs": "Aquí ya no queda nada que reintentar ni descartar: puede que alguien ya lo haya hecho."
     },
     "requests": {
-      "statusChanged": "El estado de esta solicitud ha cambiado entretanto. Compruébalo y vuelve a intentarlo."
+      "statusChanged": "El estado de esta solicitud ha cambiado entretanto. Compruébalo y vuelve a intentarlo.",
+      "detailsChanged": "Los datos de esta solicitud han cambiado entretanto. Compruébalos y vuelve a intentarlo."
     }
   }
 }

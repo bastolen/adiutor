@@ -86,6 +86,16 @@ the closed statuses.
   can show it by accident, and a change of priority doesn't count as the request's last activity.
 - **Details:** the staff can change a request's title, type and priority (Edit details). Each
   change is a line in the conversation. Descriptions and replies are never edited.
+- **Only what its editor changed is saved.** The dialog sends the three details and the values it
+  opened with (`was_title`, `was_type`, `was_priority`); `updateRequestDetails` takes a detail as
+  changed only when the two differ. A detail the editor left alone keeps what a colleague gave it
+  meanwhile (someone who fixes a typo in the title doesn't put back the priority their page still
+  showed), and isn't checked against the rules either. A detail the editor did change is saved
+  while it's still what they saw. If a colleague changed it to something else, nothing is saved:
+  the editor is told the details changed (`errors.requests.detailsChanged`) and the page is
+  refreshed, so the dialog starts from the request as it is when it's opened again. If the
+  colleague made the same change, there's nothing left to do. The priority a newly picked type
+  brings counts as the editor's choice.
 
 ## Numbers
 

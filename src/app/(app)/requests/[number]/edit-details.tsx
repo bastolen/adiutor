@@ -38,23 +38,34 @@ interface Details {
  * type's own, as raising a request of that type would, until a priority is
  * picked by hand; what's saved is what the fields show.
  *
+ * The values the fields started from go with them (`was_title`, `was_type`,
+ * `was_priority`), so only what the editor changed is saved: a detail they
+ * left alone keeps what a colleague gave it since this page was loaded.
+ * They're the details the dialog opened with, kept while it's open, also
+ * when the page behind it is refreshed: the fields don't follow a refresh
+ * either, and the two have to stay what the editor saw.
+ *
  * @param props - Component props.
  * @param props.details - The request's details as they are.
  * @returns The fields.
  */
 function DetailsFields({ details }: { details: Details }) {
   const t = useTranslations('requests');
-  const [type, setType] = useState<string>(details.type);
-  const [priority, setPriority] = useState<string>(details.priority);
+  const [started] = useState(details);
+  const [type, setType] = useState<string>(started.type);
+  const [priority, setPriority] = useState<string>(started.priority);
   const [priorityPicked, setPriorityPicked] = useState(false);
 
   return (
     <>
+      <input type="hidden" name="was_title" value={started.title} />
+      <input type="hidden" name="was_type" value={started.type} />
+      <input type="hidden" name="was_priority" value={started.priority} />
       <TextField
         label={t('controls.titleLabel')}
         name="title"
         maxLength={REQUEST_TITLE_MAX_LENGTH}
-        defaultValue={details.title}
+        defaultValue={started.title}
         autoComplete="off"
         required
       />
@@ -90,7 +101,10 @@ function DetailsFields({ details }: { details: Details }) {
 
 /**
  * A button that opens a dialog to change a request's title, type and
- * priority. Each change shows in the request's history.
+ * priority. Each change shows in the request's history. When a colleague
+ * changed the same detail meanwhile, the dialog says so and stays open; the
+ * page behind it then shows the request as it is, which the dialog starts
+ * from when it's opened again.
  *
  * @param props - Component props.
  * @param props.request - The request's number.
