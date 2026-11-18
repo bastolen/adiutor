@@ -44,22 +44,42 @@ export async function signedSessionToken(ctx: SessionCookieContext | null): Prom
   return (await ctx.getSignedCookie(name, secret)) || null;
 }
 
+/** The live session a request was made with, as its signed session cookie names it. */
+export interface SignedSession {
+  /** Its ID. */
+  id: string;
+  /** Its user. */
+  userId: string;
+  /** Whether its sign-in, or a later step-up, had a second factor. */
+  mfaVerified: boolean | null;
+  /** Which second factor, if known. */
+  mfaMethod: string | null;
+  /** When it was proven, if known. */
+  mfaVerifiedAt: Date | null;
+}
+
 /**
  * Finds the live session a request was made with: the one its validly
  * signed session cookie names, if it hasn't expired.
  *
  * @param ctx - The endpoint context.
- * @returns The session's ID and user, or `null` without such a session.
+ * @returns The session's ID, user and MFA facts, or `null` without such a session.
  */
 export async function signedSession(
   ctx: SessionCookieContext | null,
-): Promise<{ id: string; userId: string } | null> {
+): Promise<SignedSession | null> {
   const token = await signedSessionToken(ctx);
   if (!token) {
     return null;
   }
   const [found] = await db
-    .select({ id: sessionTable.id, userId: sessionTable.userId })
+    .select({
+      id: sessionTable.id,
+      userId: sessionTable.userId,
+      mfaVerified: sessionTable.mfaVerified,
+      mfaMethod: sessionTable.mfaMethod,
+      mfaVerifiedAt: sessionTable.mfaVerifiedAt,
+    })
     .from(sessionTable)
     .where(and(eq(sessionTable.token, token), gt(sessionTable.expiresAt, sql`now()`)));
   return found ?? null;

@@ -140,9 +140,7 @@ async function reactToSignInChange(
         // count, so neither does a browser trusted after one: every trusted device is forgotten.
         await forgetTrustedDevices(db, userId);
         await markSessionVerified(ctx.context.session.session.id, 'authenticator');
-        await auditAndNotify(ctx, 'two_factor_enabled', userId, {
-          details: { method: mfaMethodFromPath(path) },
-        });
+        await auditAndNotify(ctx, 'two_factor_enabled', userId, { details: { method } });
       } else if (sessionUser.twoFactorEnabled) {
         // Signed in already: the step-up page confirmed this session with a code. Email codes
         // only count where the rules allow them (the guard refuses them elsewhere anyway).
@@ -151,14 +149,12 @@ async function reactToSignInChange(
           method !== 'email_code' || (mfa !== null && allowsEmailCodes(mfa.state, mfa.mfaRole));
         if (method && allowed) {
           await markSessionVerified(ctx.context.session.session.id, method);
-          await audit(ctx, 'mfa_verified', userId, { method: mfaMethodFromPath(path) });
+          await audit(ctx, 'mfa_verified', userId, { method });
         }
       } else {
         // Signed in without it yet: this turned two-step verification on (and Better Auth
         // replaced the session; `beforeSessionCreate` decided whether the new one counts).
-        await auditAndNotify(ctx, 'two_factor_enabled', userId, {
-          details: { method: mfaMethodFromPath(path) },
-        });
+        await auditAndNotify(ctx, 'two_factor_enabled', userId, { details: { method } });
       }
       break;
     }
