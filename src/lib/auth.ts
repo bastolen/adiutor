@@ -226,10 +226,6 @@ function passwordSignInEvents() {
  * The Better Auth instance. Its HTTP API is served from `/api/auth/*`, and
  * server code can call `auth.api` directly.
  */
-
-/**
- *
- */
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: 'pg', schema }),
   advanced: {

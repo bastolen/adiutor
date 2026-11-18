@@ -1,7 +1,7 @@
 /**
  * @file Form to add a company and invite its first admin. Its text comes from
  * `admin.addCompany.form` and `people.confirmBeforeGrant`, so the page passes
- * `admin` and `people` through `ClientMessages`.
+ * `admin.addCompany.form` and `people` through `ClientMessages`.
  */
 'use client';
 
