@@ -181,7 +181,7 @@ async function changeMembership(
       throw notFoundError();
     }
     const [locked] = await tx
-      .select({ name: company.name, deactivatedAt: company.deactivatedAt })
+      .select({ deactivatedAt: company.deactivatedAt })
       .from(company)
       .where(eq(company.id, access.company.id))
       .for('no key update');
@@ -410,12 +410,7 @@ export async function addMember(
   }
   const id = parseId(input.userId);
   const [target] = await ctx.db
-    .select({
-      id: user.id,
-      email: user.email,
-      locale: user.locale,
-      deactivatedAt: user.deactivatedAt,
-    })
+    .select({ id: user.id, deactivatedAt: user.deactivatedAt })
     .from(user)
     .where(eq(user.id, id));
   if (!target) {

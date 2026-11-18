@@ -602,13 +602,17 @@ export async function claimInviteLink(
     // After the link (the bucket rows come after invite links in the lock order), before the
     // per-address lock; a refusal rolls back, so the link stays unused.
     await assertClaimLimits(tx, used.createdBy, used.companyId);
-    let name = await getStaffName(tx);
-    if (used.companyId !== null) {
-      ({ name } = firstRow(
-        await tx.select({ name: company.name }).from(company).where(eq(company.id, used.companyId)),
-        "the link's company",
-      ));
-    }
+    // The staff's name only for a link to the staff: a company's link shows the company's.
+    const { name } =
+      used.companyId === null
+        ? { name: await getStaffName(tx) }
+        : firstRow(
+            await tx
+              .select({ name: company.name })
+              .from(company)
+              .where(eq(company.id, used.companyId)),
+            "the link's company",
+          );
     // Keeps an open invitation a person sent to the address (`already_invited`), creating none.
     const result = await createInvitationRecord(tx, {
       target: { companyId: used.companyId, name },

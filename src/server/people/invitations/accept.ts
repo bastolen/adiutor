@@ -43,12 +43,12 @@ import { auditTarget } from './rules';
  * @param tx - Database client or transaction.
  * @param token - The token from the link.
  * @param lock - Lock the row until the transaction ends (when accepting).
- * @returns The invitation and its company (`null` for staff), or `null`.
+ * @returns The invitation and its company's name (`null` for staff), or `null`.
  */
 async function findUsableInvitation(tx: DatabaseOrTransaction, token: string, lock = false) {
   // For staff invitations there's no company, so the deactivation check below passes.
   const query = tx
-    .select({ invitation, company })
+    .select({ invitation, companyName: company.name })
     .from(invitation)
     .leftJoin(company, eq(company.id, invitation.companyId))
     .where(
@@ -122,7 +122,7 @@ export async function getInvitationPreview(
     return null;
   }
   const [companyName, fromInviteLink] = await Promise.all([
-    found.company?.name ?? getStaffName(ctx.db),
+    found.companyName ?? getStaffName(ctx.db),
     isFromInviteLink(ctx.db, found.invitation.id),
   ]);
   return { companyName, role: found.invitation.role, fromInviteLink };
