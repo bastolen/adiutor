@@ -6,23 +6,11 @@
 'use client';
 
 import { ArrowUpDown } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useTransition } from 'react';
 
 import type { SortOption } from '@/lib/tables/table-state';
 
-import Button from './button';
-import {
-  MenuContent,
-  MenuLabel,
-  MenuRadioGroup,
-  MenuRadioLinkItem,
-  MenuRoot,
-  MenuTrigger,
-} from './dropdown-menu';
-import Spinner from './spinner';
-import { useTransientState } from './use-transient-state';
+import LinkRadioMenu from './link-radio-menu';
 
 /**
  * Props for {@link SortMenu}.
@@ -42,7 +30,7 @@ interface SortMenuProps {
  * behaviour (arrow keys, Escape, focus back on the button) comes with it.
  * The menu closes as soon as a choice is made; until the newly sorted rows
  * arrive, the button is busy (a spinner and `aria-busy`). It closes when the
- * user navigates away.
+ * user navigates away. The shared part is {@link LinkRadioMenu}.
  *
  * @param props - Menu props.
  * @param props.label - What the rows are.
@@ -51,15 +39,14 @@ interface SortMenuProps {
  */
 export default function SortMenu({ label, options }: SortMenuProps) {
   const t = useTranslations('common.sort');
-  const [open, setOpen] = useTransientState(false);
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const current = options.find((option) => option.current);
   return (
-    <MenuRoot open={open} onOpenChange={setOpen}>
-      <MenuTrigger asChild>
-        <Button variant="secondary" size="sm" aria-busy={pending || undefined}>
-          {pending ? <Spinner /> : <ArrowUpDown aria-hidden="true" />}
+    <LinkRadioMenu
+      icon={ArrowUpDown}
+      align="end"
+      menuLabel={t('sortBy')}
+      options={options}
+      renderTrigger={(current) => (
+        <>
           {/* On phones the button says Sort; from 640px (`sm`), how the table is sorted. Both
               are part of its name, which says what's sorted too. */}
           <span aria-hidden="true" className={current ? 'sm:hidden' : undefined}>
@@ -75,28 +62,8 @@ export default function SortMenu({ label, options }: SortMenuProps) {
               ? t('triggerSorted', { rows: label, sort: current.label })
               : t('trigger', { rows: label })}
           </span>
-        </Button>
-      </MenuTrigger>
-      <MenuContent align="end">
-        <MenuLabel>{t('sortBy')}</MenuLabel>
-        <MenuRadioGroup value={current?.value}>
-          {options.map((option) => (
-            <MenuRadioLinkItem
-              key={option.value}
-              value={option.value}
-              href={option.href}
-              scroll={false}
-              // Navigates in a transition of its own, so the button shows it's busy.
-              onNavigate={(event) => {
-                event.preventDefault();
-                startTransition(() => router.push(option.href, { scroll: false }));
-              }}
-            >
-              {option.label}
-            </MenuRadioLinkItem>
-          ))}
-        </MenuRadioGroup>
-      </MenuContent>
-    </MenuRoot>
+        </>
+      )}
+    />
   );
 }

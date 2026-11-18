@@ -22,7 +22,7 @@ keyboard support.
   dialogs and returned to the button that opened them. In a menu, `MenuRadioRow` with
   `MenuIconRadioItem`s shows a choice as a segmented row of icons (like the theme in the account
   menu); ArrowLeft and ArrowRight also move within it. `MenuRadioLinkItem` is a radio item that is
-  a link (the sorts in `SortMenu`, the choices in `FilterMenu`). A `Badge`'s tone says what kind of status it is: `success` for
+  a link (the sorts in `SortMenu`, the choices in `FilterMenu`; both are built on `LinkRadioMenu`, which holds the open state, the busy button and the navigation). A `Badge`'s tone says what kind of status it is: `success` for
   active or verified, `warning` for something that needs attention (expired, not verified),
   `danger` for deactivated or revoked, and `accent` (outlined in the link colour) for what's about
   the viewer, like "You" on their own row. A status keeps one tone on every screen, which
