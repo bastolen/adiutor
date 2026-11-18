@@ -4,9 +4,9 @@
  * `invite-links.ts` (with no company). Managing the staff needs
  * `staff:manage` (platform Admins).
  */
-import { and, asc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { asc, eq, inArray, isNotNull, or } from 'drizzle-orm';
 
-import type { DatabaseOrTransaction, DatabaseTransaction } from '@/db';
+import type { DatabaseTransaction } from '@/db';
 import { staffSettings, user } from '@/db/schema';
 import { isStaffRoleRaise, wouldLeaveNoAdmin } from '@/lib/authz/guards';
 import { PLATFORM_ADMIN_ROLE, type PlatformRole } from '@/lib/authz/roles';
@@ -439,34 +439,4 @@ export async function removeFromStaff(
 ): Promise<void> {
   assertNotSignedInAs(actor);
   await setStaffRole(ctx, actor, userId, null);
-}
-
-/**
- * Checks whether the staff has another active Admin than this user, for the
- * guards on deactivating and deleting accounts. It only reads: the caller
- * locks the rows it relies on first (`soleAdminOf` locks the staff Admins'
- * rows in ID order), and runs this as a new statement afterwards, so it sees
- * every change committed before those locks were granted.
- *
- * @param ctx - Where to read from.
- * @param ctx.db - Database client or transaction.
- * @param userId - The user to leave out.
- * @returns Whether someone else can still manage the staff.
- */
-export async function hasOtherActiveAdmin(
-  ctx: { db: DatabaseOrTransaction },
-  userId: string,
-): Promise<boolean> {
-  const [other] = await ctx.db
-    .select({ id: user.id })
-    .from(user)
-    .where(
-      and(
-        eq(user.platformRole, PLATFORM_ADMIN_ROLE),
-        isNull(user.deactivatedAt),
-        sql`${user.id} <> ${userId}`,
-      ),
-    )
-    .limit(1);
-  return Boolean(other);
 }
