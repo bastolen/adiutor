@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/bastolen/adiutor/compare/v0.3.0...v0.4.0) (2026-11-18)
+
+
+### Features
+
+* add requests that companies raise and work through with the staff ([#43](https://github.com/bastolen/adiutor/issues/43)) ([b3c03dc](https://github.com/bastolen/adiutor/commit/b3c03dc453b0192ea8ab379a6532d9035b7c3e35))
+
+
+### Bug Fixes
+
+* correct the defects found by scanning the whole application ([#47](https://github.com/bastolen/adiutor/issues/47)) ([13f37f9](https://github.com/bastolen/adiutor/commit/13f37f94563433df0c337304aae6e1472ba3037c))
+
 ## [0.3.0](https://github.com/bastolen/adiutor/compare/v0.2.0...v0.3.0) (2026-11-13)
 
 
