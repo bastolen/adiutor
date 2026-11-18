@@ -203,7 +203,9 @@ Admins and Managers who aren't members can still add themselves with any role, a
   it starts. Every change to people checks those rights again inside its transaction, from the
   user's own rows as it locks them: inviting, resending and revoking invitations, creating and
   revoking invite links, adding members and registering companies (`assertStillManages` in
-  `src/server/access.ts`), and changing staff or company roles and removing people (`setStaffRole`
+  `src/server/access.ts`; invitations and invite links call it through `assertStillManagesPeople`,
+  which picks the permission for the staff or the company), and changing staff or company roles
+  and removing people (`setStaffRole`
   and `changeMembership` work the rights out from the rows they lock, with the same permission rules
   as when the request started, `getGlobalPermissions` and `getPermissions` (both in `src/lib/authz/permissions.ts`), never by comparing
   roles). So someone demoted, removed or

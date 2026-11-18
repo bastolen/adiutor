@@ -348,11 +348,7 @@ export async function assertStillManages(
   let permissions: Set<Permission>;
   let companyDeactivatedAt: Date | null = null;
   if (companyId === null) {
-    permissions = getPermissions({
-      platformRole: self.platformRole,
-      companyRole: null,
-      company: null,
-    });
+    permissions = getGlobalPermissions(self);
   } else {
     // A new statement, after the user rows: memberships come after users in the lock order.
     const [own] = asStaff
@@ -378,4 +374,28 @@ export async function assertStillManages(
   }
   assertPermission(permissions, permission);
   return { users: locked, companyDeactivatedAt };
+}
+
+/**
+ * Checks again, inside a change's transaction, that the actor still manages
+ * the people the change is about: the staff (`staff:manage`) or a company's
+ * members (`members:manage`), whichever `companyId` names. It is
+ * {@link assertStillManages} with the permission of {@link managePermission},
+ * so a call can't pair `staff:manage` with a company, and like it must be the
+ * first statement of the transaction. For invitations and invite links.
+ *
+ * @param tx - The change's transaction.
+ * @param actor - The acting user, or whoever else the change's rights depend on (only their ID
+ *   is read; see {@link assertStillManages}).
+ * @param companyId - The company acted on (an ID already checked), or `null` for staff.
+ * @returns The locked user rows, and when the company was deactivated, as read just now.
+ * @throws {ServiceError} `forbidden` when the actor is gone, deactivated or without the permission
+ *   by now; `not_found` when the company is gone.
+ */
+export async function assertStillManagesPeople(
+  tx: DatabaseTransaction,
+  actor: Pick<Actor, 'id'>,
+  companyId: string | null,
+): Promise<StillManaged> {
+  return assertStillManages(tx, actor, companyId, managePermission(companyId));
 }

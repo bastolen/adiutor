@@ -7,7 +7,7 @@ import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import type { DatabaseOrTransaction, DatabaseTransaction } from '@/db';
 import { invitation, inviteLink, membership, user } from '@/db/schema';
-import { getPermissions } from '@/lib/authz/permissions';
+import { getGlobalPermissions, getPermissions } from '@/lib/authz/permissions';
 import { type CompanyRole } from '@/lib/authz/roles';
 
 import { managePermission } from '../../access';
@@ -68,7 +68,7 @@ export async function revokeInvitesWithoutManager(
     }
     const permission = managePermission(companyId);
     if (companyId === null) {
-      return getPermissions({ platformRole, companyRole: null, company: null }).has(permission);
+      return getGlobalPermissions({ platformRole }).has(permission);
     }
     return getPermissions({
       platformRole,

@@ -3,7 +3,9 @@
  * (`currentPermissionsOf`), after a change to their own roles that their
  * actor, loaded before it, doesn't know about, and for finding a company by
  * what its address names it with (`getCompanyAccess`): its ID or URL name,
- * and "not found" for anything that can be neither.
+ * and "not found" for anything that can be neither. Also for the check that
+ * someone still manages the staff's or a company's people
+ * (`assertStillManagesPeople`), with the permission that goes with each.
  */
 import { and, eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -17,7 +19,7 @@ import {
   setupTestContext,
   staffActor,
 } from '../../tests/integration/helpers';
-import { currentPermissionsOf, getCompanyAccess } from './access';
+import { assertStillManagesPeople, currentPermissionsOf, getCompanyAccess } from './access';
 
 const { db } = setupTestContext();
 
@@ -135,5 +137,49 @@ describe('getCompanyAccess', () => {
       testCompany.id,
       testCompany.id,
     ]);
+  });
+});
+
+describe('assertStillManagesPeople', () => {
+  /**
+   * Runs the check in a transaction of its own, as a change would.
+   *
+   * @param actor - Who is checked.
+   * @param actor.id - Their user ID.
+   * @param companyId - The company, or `null` for the staff.
+   * @returns What the check found.
+   */
+  const check = (actor: { id: string }, companyId: string | null) =>
+    db.transaction((tx) => assertStillManagesPeople(tx, actor, companyId));
+
+  it('asks for staff:manage for the staff and members:manage in a company', async () => {
+    const staffAdmin = await staffActor(db, 'platform_admin', 'staff-boss@adiutor.test');
+    const staffManager = await staffActor(db, 'manager', 'staff-manager@adiutor.test');
+    const companyAdmin = await memberActor(db, testCompany.id, 'admin', 'boss@adiutor.test');
+
+    await expect(check(staffAdmin, null)).resolves.toMatchObject({ companyDeactivatedAt: null });
+    await expect(check(staffManager, testCompany.id)).resolves.toMatchObject({
+      companyDeactivatedAt: null,
+    });
+    await expect(check(companyAdmin, testCompany.id)).resolves.toMatchObject({
+      companyDeactivatedAt: null,
+    });
+    // Managing a company's people is not managing the staff.
+    await expect(check(staffManager, null)).rejects.toMatchObject({ code: 'forbidden' });
+    await expect(check(companyAdmin, null)).rejects.toMatchObject({ code: 'forbidden' });
+  });
+
+  it('goes by the rows as they are now, not by the actor the request loaded', async () => {
+    const companyAdmin = await memberActor(db, testCompany.id, 'admin', 'boss@adiutor.test');
+    const staffAdmin = await staffActor(db, 'platform_admin', 'staff-boss@adiutor.test');
+
+    await db
+      .update(membership)
+      .set({ role: 'client' })
+      .where(and(eq(membership.userId, companyAdmin.id), eq(membership.companyId, testCompany.id)));
+    await db.update(user).set({ platformRole: 'manager' }).where(eq(user.id, staffAdmin.id));
+
+    await expect(check(companyAdmin, testCompany.id)).rejects.toMatchObject({ code: 'forbidden' });
+    await expect(check(staffAdmin, null)).rejects.toMatchObject({ code: 'forbidden' });
   });
 });

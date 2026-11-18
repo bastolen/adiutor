@@ -30,9 +30,8 @@ import { emailSchema, roleSchema } from '@/lib/validation';
 
 import {
   assertConfirmedForGrant,
-  assertStillManages,
+  assertStillManagesPeople,
   getTargetAccess,
-  managePermission,
   assertNotSignedInAs,
 } from '../access';
 import type { Actor } from '../actor';
@@ -90,9 +89,9 @@ export interface InviteLinkSummary {
  * Creates a single-use invite link. The token is returned only now; it isn't
  * stored, so the link can't be shown again later. The link and its audit
  * event are written in one transaction, which first checks the actor's rights
- * again as they are by then (`assertStillManages`): a link created by an
- * Admin demoted, removed or deactivated at that moment would otherwise escape
- * `revokeInvitesWithoutManager`.
+ * again as they are by then (`assertStillManagesPeople`): a link created by
+ * an Admin demoted, removed or deactivated at that moment would otherwise
+ * escape `revokeInvitesWithoutManager`.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `members:manage`, or `staff:manage` for staff.
@@ -122,7 +121,7 @@ export async function createInviteLink(
   const token = generateToken();
   const created = await ctx.db.transaction(async (tx) => {
     // The rights the actor was loaded with may be gone by now: only their rows as locked count.
-    await assertStillManages(tx, actor, companyId, managePermission(companyId));
+    await assertStillManagesPeople(tx, actor, companyId);
     const inserted = firstRow(
       await tx
         .insert(inviteLink)
@@ -219,7 +218,7 @@ export async function listInviteLinks(
 /**
  * Revokes an unused invite link, with its audit event, in one transaction
  * that first checks the actor's rights again as they are by then
- * (`assertStillManages`).
+ * (`assertStillManagesPeople`).
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `members:manage`, or `staff:manage` for staff.
@@ -239,7 +238,7 @@ export async function revokeInviteLink(
   const id = parseId(input.linkId);
   await ctx.db.transaction(async (tx) => {
     // The rights the actor was loaded with may be gone by now: only their rows as locked count.
-    await assertStillManages(tx, actor, companyId, managePermission(companyId));
+    await assertStillManagesPeople(tx, actor, companyId);
     const [revoked] = await tx
       .update(inviteLink)
       .set({ revokedAt: sql`now()` })
@@ -386,8 +385,8 @@ interface CommittedClaim {
 
 /**
  * Whether a link's creator may still manage the people the link is for, read
- * from their rows as it locks them (`assertStillManages`, the first statement
- * of its transaction).
+ * from their rows as it locks them (`assertStillManagesPeople`, the first
+ * statement of its transaction).
  *
  * @param tx - The transaction.
  * @param createdBy - Who created the link.
@@ -400,7 +399,7 @@ async function creatorStillManages(
   companyId: string | null,
 ): Promise<boolean> {
   try {
-    await assertStillManages(tx, { id: createdBy }, companyId, managePermission(companyId));
+    await assertStillManagesPeople(tx, { id: createdBy }, companyId);
     return true;
   } catch (error) {
     if (error instanceof ServiceError) {
