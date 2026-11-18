@@ -90,7 +90,11 @@ exist. A password without the code step, an email link, a provider that can't pr
 counting after that provider's sign-in is turned off. **Anyone with MFA** who has such a session is sent to the step-up page (`/auth/verify`)
 to confirm it before they continue, from every page (`isSessionMfaVerified`). For roles that
 require MFA only strong factors count: not email codes, and not a trusted device. Wrong step-up
-codes are limited to 5 per 15 minutes per user. Setting up a first method from an unconfirmed
+codes are limited to 5 per 15 minutes per user, and each is recorded (`mfa_failed`). Only a code
+that was compared and refused counts and is recorded (`isWrongCodeWithSession` in
+`src/server/auth/auth-events/`): an emailed code that expired, too many tries for one code or an
+error isn't a wrong code, so it gives its attempt back and the user's activity doesn't say one was
+entered. Setting up a first method from an unconfirmed
 session confirms it, since there was nothing to protect before.
 
 ## Confirm with GitHub

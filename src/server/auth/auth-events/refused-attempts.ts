@@ -14,7 +14,7 @@ import { hitRateLimit, peekRateLimit, releaseRateLimitHit } from '../../rate-lim
 import { hasPassword } from '../accounts';
 import { CODE_PATHS, pendingCodeSignInOf } from '../auth-guards';
 import { queueSecurityNotice } from '../security-notices';
-import type { FinishedRequest } from './finished-request';
+import { type FinishedRequest, isWrongCodeWithSession } from './finished-request';
 import { type AuthHookContext, auditContext, runAfterResponse, audit } from './hook-context';
 
 /** How often a user is told that their password sign-in was paused, at most. */
@@ -157,7 +157,9 @@ async function reactToRefusedSignInCode(
 /**
  * Reacts to a request that failed: records a failed password sign-in (and
  * tells the owner when wrong passwords paused password sign-in), a wrong code
- * on the step-up page, or a code refused at a password sign-in's code step.
+ * on the step-up page (only a code that was compared and refused,
+ * `isWrongCodeWithSession`: not an expired one or another refusal), or a code
+ * refused at a password sign-in's code step.
  *
  * @param ctx - The endpoint context, with its response.
  * @param request - The facts about the request.
@@ -190,9 +192,13 @@ export async function reactToFailure(
   }
 
   if (failed && sessionUser && CODE_PATHS.has(path)) {
-    // A wrong code on the step-up page, counted above (sign-in attempts are limited by Better
-    // Auth itself).
-    await audit(ctx, 'mfa_failed', sessionUser.id, { method: mfaMethodFromPath(path) });
+    // Only a wrong code on the step-up page is recorded: the same answer as what was counted
+    // above (sign-in attempts are limited by Better Auth itself). An expired emailed code, too
+    // many tries, a method that isn't on or a server error compared no code, so the user's
+    // activity doesn't say a wrong code was entered.
+    if (isWrongCodeWithSession(request)) {
+      await audit(ctx, 'mfa_failed', sessionUser.id, { method: mfaMethodFromPath(path) });
+    }
     return true;
   }
 

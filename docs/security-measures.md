@@ -10,7 +10,8 @@ The reasons behind the trust and confirmation rules are in the decision records
 
 The audit log (`audit_event`, `src/server/audit.ts`) records sign-ins (one per sign-in; failed ones; and
 right passwords whose sign-in then asked for the code, recorded without an actor), wrong second-step
-codes (on the step-up page, and at the code step of a sign-in without an actor), MFA changes,
+codes (on the step-up page, and at the code step of a sign-in without an actor; only codes that
+were compared and refused, not an expired one or another refusal), MFA changes,
 password and provider changes, wrong current passwords typed in a signed-in session
 (`password_check_failed`), revoked sessions, account deactivation, reactivation and deletion,
 MFA resets, role changes, removed members, invitations and invite links, company changes, and staff

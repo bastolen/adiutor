@@ -6,6 +6,7 @@ import { isAPIError } from 'better-auth/api';
 
 import { normalizeEmail } from '@/lib/email-address';
 
+import { CODE_PATHS } from '../auth-guards';
 import type { AuthHookContext } from './hook-context';
 
 /** The facts about a finished Better Auth request that the phases of {@link afterAuthRequest} share. */
@@ -43,4 +44,30 @@ export function finishedRequest(ctx: AuthHookContext, path: string): FinishedReq
     userId: sessionUser?.id ?? ctx.context.newSession?.user.id ?? null,
     email: path === '/sign-in/email' ? normalizeEmail(ctx.body?.email) : null,
   };
+}
+
+/**
+ * Whether a request checked a code with a session (the step-up page, or
+ * setting up two-step verification) and that code was wrong. With a session,
+ * Better Auth answers 401 only for a code it compared. Its other refusals
+ * there compared none: an emailed code that expired, too many tries for one
+ * code, a method that isn't turned on (all 400), a request that crossed
+ * another (409), or an error of the server.
+ *
+ * It's the one answer for both what counts towards the step-up limit
+ * (`settleStepUpAttempt`) and what the audit log records as a wrong code
+ * (`mfa_failed`), so the two never disagree: a code that wasn't compared
+ * gives its attempt back and isn't recorded.
+ *
+ * @param request - The facts about the request.
+ * @returns Whether a code was compared and refused.
+ */
+export function isWrongCodeWithSession(request: FinishedRequest): boolean {
+  const { path, returned, sessionUser } = request;
+  return (
+    sessionUser !== null &&
+    CODE_PATHS.has(path) &&
+    isAPIError(returned) &&
+    returned.statusCode === 401
+  );
 }

@@ -94,6 +94,13 @@ describe('describeAuditEvent', () => {
     ).toBe('Used an invite link');
   });
 
+  it('tells someone who kept their role from someone who joined', () => {
+    expect(
+      t(describeAuditEvent('member_joined', { role: 'client', kept: true, invited: 'admin' })),
+    ).toBe('Used an invitation and kept the role they had');
+    expect(t(describeAuditEvent('member_joined', { role: 'admin' }))).toBe('Joined a company');
+  });
+
   it('uses the label for everything else', () => {
     expect(t(describeAuditEvent('role_changed', { mfaRequired: true }))).toBe('Changed a role');
     expect(t(describeAuditEvent('sign_in', { reason: 'expired' }))).toBe('Signed in');

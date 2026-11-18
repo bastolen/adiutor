@@ -165,7 +165,8 @@ type AuditEventDescription =
   | 'impersonationExpired'
   | 'impersonationNoLongerAllowed'
   | 'impersonationSessionEnded'
-  | 'inviteLinkClaimUndone';
+  | 'inviteLinkClaimUndone'
+  | 'memberJoinedKept';
 
 /**
  * The more precise descriptions of `impersonation_ended`, by why it ended
@@ -190,7 +191,8 @@ export type AuditEventMessageKey = `actions.${AuditAction}` | `events.${AuditEve
  * some sessions, a wrong code at sign-in rather than on the step-up page,
  * what a wrong current password was typed for, why a sign-in as a user
  * ended, an invite link that became usable again because its email couldn't
- * be sent). The caller translates the
+ * be sent, an invitation used by someone who was in already and kept their
+ * role). The caller translates the
  * key in the reader's language, `getTranslations('audit')`.
  *
  * @param action - What happened.
@@ -227,6 +229,10 @@ export function describeAuditEvent(
   // Recorded by `claimInviteLink` when the email of a claim couldn't be sent and it was undone.
   if (action === 'invite_link_claimed' && details.undone === true) {
     return 'events.inviteLinkClaimUndone';
+  }
+  // Someone who was in already used an invitation or invite link: nothing was given (`join`).
+  if (action === 'member_joined' && details.kept === true) {
+    return 'events.memberJoinedKept';
   }
   return `actions.${action}`;
 }

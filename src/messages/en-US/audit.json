@@ -58,7 +58,8 @@
       "impersonationExpired": "Sign-in as a user ended when its time was up",
       "impersonationNoLongerAllowed": "Sign-in as a user ended because it was no longer allowed",
       "impersonationSessionEnded": "Sign-in as a user ended with the staff member’s own session",
-      "inviteLinkClaimUndone": "Invite link made usable again because its email couldn’t be sent"
+      "inviteLinkClaimUndone": "Invite link made usable again because its email couldn’t be sent",
+      "memberJoinedKept": "Used an invitation and kept the role they had"
     },
     "groups": {
       "sign-ins": "Sign-ins",

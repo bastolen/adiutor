@@ -6,10 +6,11 @@
 import { asc, eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { auditEvent, invitation, inviteLink } from '@/db/schema';
+import { auditEvent, invitation, inviteLink, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
 import {
+  addMember,
   atTheSameMoment,
   createCompany,
   createStaffSettings,
@@ -242,6 +243,40 @@ describe.each([
         details: { ...marker, role, via: 'invite_link' },
       },
     ]);
+  });
+
+  it('records that someone who was in already kept their role when they use an invite link', async () => {
+    const companyId = staff ? null : testCompany.id;
+    const john = await createUser(db, 'john@adiutor.test');
+    // Already in, with another role than the link gives: a staff Manager, or a Watcher.
+    if (staff) {
+      await db.update(user).set({ platformRole: 'manager' }).where(eq(user.id, john));
+    } else {
+      await addMember(db, testCompany.id, john, 'watcher');
+    }
+    const link = await createInviteLink(ctx, admin, { companyId, role, validDays: 7 });
+
+    await joinWithInviteLink(ctx, defined(link.url.split('/join/')[1], 'the link token'), {
+      id: john,
+      email: 'john@adiutor.test',
+      platformRole: staff ? 'manager' : null,
+    });
+
+    const { marker } = target();
+    expect((await events()).at(-1)).toEqual({
+      action: 'member_joined',
+      actorUserId: john,
+      targetUserId: john,
+      companyId: target().companyId,
+      // The role they have, not the one the link was for.
+      details: {
+        ...marker,
+        role: staff ? 'manager' : 'watcher',
+        kept: true,
+        invited: role,
+        via: 'invite_link',
+      },
+    });
   });
 });
 

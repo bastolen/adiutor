@@ -258,6 +258,46 @@ describe('describeOwnActivity', () => {
     ).toBe('Added to staff');
   });
 
+  it('says that an invitation used while already in gave nothing: the role was kept', () => {
+    expect(
+      describeInEnglish(
+        event({
+          action: 'member_joined',
+          company: { name: 'Adiutor Tests' },
+          details: { role: 'client', kept: true, invited: 'admin', via: 'invite_link' },
+        }),
+        ME,
+      ),
+    ).toBe('Used an invitation to Adiutor Tests and kept the role you had');
+    expect(
+      describeInEnglish(
+        event({
+          action: 'member_joined',
+          details: { staff: true, role: 'support', kept: true, invited: 'platform_admin' },
+        }),
+        ME,
+      ),
+    ).toBe('Used an invitation to the staff and kept the role you had');
+    // A company that's gone since: the audit log's words, which don't say "joined" either.
+    expect(
+      describeInEnglish(
+        event({ action: 'member_joined', details: { role: 'client', kept: true } }),
+        ME,
+      ),
+    ).toBe('Used an invitation and kept the role they had');
+    // Joining for real reads as before.
+    expect(
+      describeInEnglish(
+        event({
+          action: 'member_joined',
+          company: { name: 'Adiutor Tests' },
+          details: { role: 'client' },
+        }),
+        ME,
+      ),
+    ).toBe('Joined Adiutor Tests');
+  });
+
   it('describes accounts and memberships created by staff', () => {
     const admin = { id: 'admin-1', name: 'Alex Admin' };
     expect(describeInEnglish(event({ action: 'account_created', actor: admin }), ME)).toBe(

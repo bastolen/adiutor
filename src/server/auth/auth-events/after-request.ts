@@ -33,7 +33,7 @@ import {
   replacePreviousSession,
 } from './browser-cleanup';
 import { setNextPageCookie } from './cookies';
-import { type FinishedRequest, finishedRequest } from './finished-request';
+import { type FinishedRequest, finishedRequest, isWrongCodeWithSession } from './finished-request';
 import { type AuthHookContext, safely, audit, auditAndNotify } from './hook-context';
 import rememberLanguage from './language';
 import { refreshProviderMfa, stepUpOutcomeOf, forgetProviderTokens } from './provider-accounts';
@@ -92,9 +92,9 @@ async function settleAttempts(ctx: AuthHookContext, request: FinishedRequest): P
   if (sessionUser && CODE_PATHS.has(path)) {
     // A code checked with a session (the step-up page, or setting up two-step verification): a
     // wrong code keeps the attempt it took (`auth-guards/`); anything else gives it back: a right
-    // code, or one Better Auth refused without comparing it (e.g. an expired email code). With a
-    // session, Better Auth only answers 401 for a code it compared.
-    const wrongCode = isAPIError(returned) && returned.statusCode === 401;
+    // code, or one Better Auth refused without comparing it (e.g. an expired email code). The
+    // same answer decides what's recorded as a wrong code (`reactToFailure`).
+    const wrongCode = isWrongCodeWithSession(request);
     await safely('settle step-up attempt', () =>
       settleStepUpAttempt(ctx, sessionUser.id, wrongCode),
     );

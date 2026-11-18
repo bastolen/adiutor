@@ -58,7 +58,8 @@
       "impersonationExpired": "La sesión como un usuario terminó al agotarse el tiempo",
       "impersonationNoLongerAllowed": "La sesión como un usuario terminó porque ya no estaba permitida",
       "impersonationSessionEnded": "La sesión como un usuario terminó con la propia sesión del miembro del personal",
-      "inviteLinkClaimUndone": "Enlace de invitación disponible de nuevo porque no se pudo enviar el correo"
+      "inviteLinkClaimUndone": "Enlace de invitación disponible de nuevo porque no se pudo enviar el correo",
+      "memberJoinedKept": "Invitación usada conservando el rol que ya tenía"
     },
     "groups": {
       "sign-ins": "Inicios de sesión",

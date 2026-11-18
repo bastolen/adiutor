@@ -175,7 +175,9 @@ Admins and Managers who aren't members can still add themselves with any role, a
     their own second step from the last 15 minutes, which the button asks for before its dialog
     opens (see [Locked out](mfa.md#locked-out));
   - **sign the user out everywhere** (which also forgets the devices they trusted);
-  - **deactivate or reactivate** the account;
+  - **deactivate or reactivate** the account (deactivating one that's deactivated already is
+    refused, also when two Admins do it at the same moment: the second waits for the account's
+    row and finds it deactivated, so it's recorded and emailed once);
   - **delete** the account, after typing its email address. Memberships, sign-in methods and
     sessions go with it, the open invitations and invite links they sent are revoked (used
     ones stay in the history, without an inviter), and so are the open invitations addressed to
@@ -302,7 +304,11 @@ staff page also recreates the row. A fresh setup itself isn't recorded in the au
   it working, and a later run tries again (see [Background jobs](jobs.md#the-jobs)).
 - **Accepting** (`/invite/…`): signed in with the invited address, you join directly. Signed out,
   you can sign in or create an account (name and password). Joining as staff sets the platform role
-  (someone who's already staff keeps theirs) and opens the dashboard.
+  (someone who's already staff keeps theirs) and opens the dashboard. The audit log records what
+  happened: someone who was in already (on the staff, or a member of the company) keeps their
+  role, and the event says so ("Used an invitation and kept the role they had", with the role they
+  have and the one the invitation or invite link was for) instead of saying they joined with the
+  invited role.
 
 ### Changing roles and removing people
 

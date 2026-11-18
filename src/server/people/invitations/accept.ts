@@ -9,6 +9,7 @@ import type { DatabaseOrTransaction } from '@/db';
 import { company, invitation, inviteLink, membership, user } from '@/db/schema';
 import { mayUseInviteLinks } from '@/lib/authz/permissions';
 import {
+  type CompanyRole,
   isCompanyRole,
   isPlatformRole,
   PLATFORM_ADMIN_ROLE,
@@ -127,8 +128,80 @@ export async function getInvitationPreview(
   return { companyName, role: found.invitation.role, fromInviteLink };
 }
 
+/** What giving someone a role came to. */
+interface RoleGiven {
+  /** Whether the role was given: they weren't on the staff, or in the company, before. */
+  granted: boolean;
+  /** The role they have there now: the one given, or the one they had already and keep. */
+  role: Role | null;
+}
+
 /**
- * Makes the change of `joinTarget`.
+ * Makes a user staff with a role, unless they're on the staff already: then
+ * they keep the role they have.
+ *
+ * @param tx - Transaction.
+ * @param userId - The user.
+ * @param role - The staff role to give.
+ * @returns Whether it was given, and the staff role they have now.
+ */
+async function giveStaffRole(
+  tx: DatabaseOrTransaction,
+  userId: string,
+  role: PlatformRole,
+): Promise<RoleGiven> {
+  const joined = await tx
+    .update(user)
+    .set({ platformRole: role })
+    .where(and(eq(user.id, userId), isNull(user.platformRole)))
+    .returning({ id: user.id });
+  if (joined.length > 0) {
+    return { granted: true, role };
+  }
+  const [current] = await tx
+    .select({ role: user.platformRole })
+    .from(user)
+    .where(eq(user.id, userId));
+  return { granted: false, role: current?.role ?? null };
+}
+
+/**
+ * Makes a user a member of a company with a role, unless they're a member
+ * already: then they keep the role they have.
+ *
+ * @param tx - Transaction.
+ * @param companyId - The company.
+ * @param userId - The user.
+ * @param role - The company role to give.
+ * @returns Whether it was given, and the role they have in the company now.
+ */
+async function giveMembership(
+  tx: DatabaseOrTransaction,
+  companyId: string,
+  userId: string,
+  role: CompanyRole,
+): Promise<RoleGiven> {
+  const joined = await tx
+    .insert(membership)
+    .values({ companyId, userId, role })
+    .onConflictDoNothing({ target: [membership.companyId, membership.userId] })
+    .returning({ id: membership.id });
+  if (joined.length > 0) {
+    return { granted: true, role };
+  }
+  const [current] = await tx
+    .select({ role: membership.role })
+    .from(membership)
+    .where(and(eq(membership.companyId, companyId), eq(membership.userId, userId)));
+  return { granted: false, role: current?.role ?? null };
+}
+
+/**
+ * Makes the change of `joinTarget`, and records what happened
+ * (`member_joined`): the role that was given, or, for someone who was in
+ * already, the role they keep (`kept`, with the role the invitation or link
+ * was for as `invited`). So the audit log never says a Client joined as Admin
+ * because they opened an Admin invite link for their own company.
  *
  * @param ctx - Service context (for the audit log).
  * @param tx - Transaction.
@@ -145,37 +218,32 @@ async function join(
   input: { companyId: string | null; role: Role; userId: string; details: Record<string, unknown> },
 ): Promise<boolean> {
   const { companyId, role, userId } = input;
-  let becameStaffAdmin = false;
+  let given: RoleGiven;
   if (companyId === null) {
     if (!isPlatformRole(role)) {
       throw new ServiceError('invalid', CHOOSE_STAFF_ROLE_MESSAGE);
     }
-    const joined = await tx
-      .update(user)
-      .set({ platformRole: role })
-      .where(and(eq(user.id, userId), isNull(user.platformRole)))
-      .returning({ id: user.id });
-    becameStaffAdmin = joined.length > 0 && role === PLATFORM_ADMIN_ROLE;
+    given = await giveStaffRole(tx, userId, role);
   } else {
     if (!isCompanyRole(role)) {
       throw new ServiceError('invalid', CHOOSE_COMPANY_ROLE_MESSAGE);
     }
-    await tx
-      .insert(membership)
-      .values({ companyId, userId, role })
-      .onConflictDoNothing({ target: [membership.companyId, membership.userId] });
+    given = await giveMembership(tx, companyId, userId, role);
   }
+  const details = given.granted
+    ? { role, ...input.details }
+    : { role: given.role, kept: true, invited: role, ...input.details };
   await recordEvent(
     ctx,
     {
       action: 'member_joined',
       actorUserId: userId,
       targetUserId: userId,
-      ...auditTarget(companyId, { role, ...input.details }),
+      ...auditTarget(companyId, details),
     },
     tx,
   );
-  return becameStaffAdmin;
+  return given.granted && companyId === null && role === PLATFORM_ADMIN_ROLE;
 }
 
 /**
