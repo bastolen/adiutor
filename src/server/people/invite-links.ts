@@ -49,6 +49,7 @@ import {
   assertInviteCompanyLimit,
   assertInviteSenderLimit,
   assertRateLimit,
+  ipRateLimitKey,
   RATE_LIMITS,
 } from '../rate-limit';
 import { requesterLocale } from '../recipient-locale';
@@ -570,14 +571,10 @@ export async function claimInviteLink(
   rawEmail: string,
 ): Promise<{ status: 'sent' | 'invalid' }> {
   const email = emailSchema.parse(rawEmail);
-  const request = ctx.requestInfo ? await ctx.requestInfo() : null;
+  const claimsKey = await ipRateLimitKey(ctx, 'invite-link-claim');
   // The confirmation is in the language of whoever opened the link, and so is the invitation.
   const locale = await requesterLocale(ctx);
-  await assertRateLimit(
-    ctx,
-    `invite-link-claim:ip:${request?.ip ?? 'unknown'}`,
-    RATE_LIMITS.linkClaimsPerIp,
-  );
+  await assertRateLimit(ctx, claimsKey, RATE_LIMITS.linkClaimsPerIp);
   const created = await ctx.db.transaction(async (tx) => {
     const [usable] = await tx
       .select({ createdBy: inviteLink.createdBy })

@@ -222,6 +222,25 @@ export async function assertRateLimit(
 }
 
 /**
+ * Builds the key of a limit per IP address, `<purpose>:ip:<address>`, from
+ * the address of the request being served (`ctx.requestInfo`). Outside a
+ * request, or when the address isn't known, the key ends in `unknown`: those
+ * hits share one bucket per purpose, so the limit still holds. Keys are
+ * stored: changing a purpose resets its live counts.
+ *
+ * @param ctx - Service context; `requestInfo` gives the IP address.
+ * @param purpose - What's limited, e.g. `invite-link-claim`.
+ * @returns The key, e.g. `invite-link-claim:ip:203.0.113.7`.
+ */
+export async function ipRateLimitKey(
+  ctx: Pick<ServiceContext, 'requestInfo'>,
+  purpose: string,
+): Promise<string> {
+  const request = ctx.requestInfo ? await ctx.requestInfo() : null;
+  return `${purpose}:ip:${request?.ip ?? 'unknown'}`;
+}
+
+/**
  * Counts an email a user sends to someone else (an invitation, a resend, a
  * new member's notice, a registered user's welcome, a new company's first
  * Admin invitation, or the invitation a claimed invite link of theirs sends)

@@ -12,7 +12,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 
 import type { ServiceContext } from '../context';
-import { hitRateLimit, RATE_LIMITS } from '../rate-limit';
+import { hitRateLimit, ipRateLimitKey, RATE_LIMITS } from '../rate-limit';
 import type { JobSummary } from './define';
 import { REQUEST_RUN_SECONDS, runTick, type TickResult } from './tick';
 
@@ -236,12 +236,8 @@ export async function answerTickRequest(
     return { response: { status: 503, body: { status: 'disabled' } }, afterAnswer: null };
   }
   if (!isAuthorized(authorization, secret)) {
-    const request = ctx.requestInfo ? await ctx.requestInfo() : null;
-    const { allowed } = await hitRateLimit(
-      ctx,
-      `job-tick-miss:ip:${request?.ip ?? 'unknown'}`,
-      RATE_LIMITS.jobTickMissesPerIp,
-    );
+    const key = await ipRateLimitKey(ctx, 'job-tick-miss');
+    const { allowed } = await hitRateLimit(ctx, key, RATE_LIMITS.jobTickMissesPerIp);
     return {
       response: allowed
         ? { status: 401, body: { status: 'unauthorized' } }

@@ -70,6 +70,8 @@ user and hour: 60 requests raised, 200 replies and 300 changes of a status or of
 anyone does by hand and few enough to stop a flood), and the errors stored for
 admins (see [Recorded errors](#recorded-errors)). All are kept in
 `rate_limit_bucket` (`src/server/rate-limit.ts`), with a clear "Try again in N minutes" message.
+The limits per IP address build their key in one place (`ipRateLimitKey` there); requests whose
+address isn't known share one bucket per limit.
 A claimed invite link also counts as an invitation its creator sends, against their limit and
 the company's (or the staff's), in the claim's transaction once the link is used up
 (`assertClaimLimits` in `src/server/people/invite-links.ts`): past either, the claim is refused

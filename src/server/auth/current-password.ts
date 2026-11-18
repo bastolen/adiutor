@@ -13,12 +13,7 @@ import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
 import type { ServiceContext } from '../context';
 import { ServiceError } from '../errors';
-import {
-  hitRateLimit,
-  RATE_LIMITS,
-  releaseRateLimitHit,
-  tooManyAttemptsError,
-} from '../rate-limit';
+import { assertRateLimit, RATE_LIMITS, releaseRateLimitHit } from '../rate-limit';
 
 /**
  * What a current password is checked for, recorded with a wrong one
@@ -62,14 +57,7 @@ export async function checkCurrentPassword(
   check: () => Promise<boolean>,
 ): Promise<void> {
   const key = wrongCurrentPasswordsKey(actor.id);
-  const { allowed, retryAfterSeconds } = await hitRateLimit(
-    ctx,
-    key,
-    RATE_LIMITS.wrongCurrentPasswordsPerUser,
-  );
-  if (!allowed) {
-    throw tooManyAttemptsError(retryAfterSeconds);
-  }
+  await assertRateLimit(ctx, key, RATE_LIMITS.wrongCurrentPasswordsPerUser);
 
   let right: boolean;
   try {

@@ -13,7 +13,7 @@ import { firstRow } from '@/lib/defined';
 import type { ServiceContext } from '../context';
 import { createReference } from '../error-reference';
 import { isUniqueViolation } from '../errors';
-import { hitRateLimit, RATE_LIMITS } from '../rate-limit';
+import { hitRateLimit, ipRateLimitKey, RATE_LIMITS } from '../rate-limit';
 
 /** How many days stored sign-in errors are kept (the `retention` job deletes older ones). */
 export const SIGN_IN_ERROR_RETENTION_DAYS = 7;
@@ -101,12 +101,8 @@ export async function recordSignInError(
 ): Promise<RecordedSignInError> {
   const code = cleanErrorCode(error.code);
   const description = error.description?.trim().slice(0, MAX_DESCRIPTION_LENGTH) || null;
-  const request = ctx.requestInfo ? await ctx.requestInfo() : null;
-  const { allowed } = await hitRateLimit(
-    ctx,
-    `sign-in-error:ip:${request?.ip ?? 'unknown'}`,
-    RATE_LIMITS.signInErrorsPerIp,
-  );
+  const key = await ipRateLimitKey(ctx, 'sign-in-error');
+  const { allowed } = await hitRateLimit(ctx, key, RATE_LIMITS.signInErrorsPerIp);
 
   let recorded: RecordedSignInError = { reference: createReference(), at: new Date() };
   if (allowed) {

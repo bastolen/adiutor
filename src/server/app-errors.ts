@@ -25,7 +25,7 @@ import { redactLogValue } from '@/lib/log-redaction';
 
 import type { ServiceContext } from './context';
 import { createReference } from './error-reference';
-import { hitRateLimit, RATE_LIMITS } from './rate-limit';
+import { hitRateLimit, ipRateLimitKey, RATE_LIMITS } from './rate-limit';
 
 /** How many days stored errors are kept (the `retention` job deletes older ones). */
 export const APP_ERROR_RETENTION_DAYS = 7;
@@ -149,16 +149,9 @@ export async function recordAppError(
   // eslint-disable-next-line no-console -- Where it happened only: the message may name someone, and logs never do.
   console.warn(`App error ${reference}: ${where}${digest ? ` (digest ${digest})` : ''}`);
 
-  const request = ctx.requestInfo ? await ctx.requestInfo() : null;
+  const key = await ipRateLimitKey(ctx, 'app-error');
   const allowed =
-    report.source === 'job' ||
-    (
-      await hitRateLimit(
-        ctx,
-        `app-error:ip:${request?.ip ?? 'unknown'}`,
-        RATE_LIMITS.appErrorsPerIp,
-      )
-    ).allowed;
+    report.source === 'job' || (await hitRateLimit(ctx, key, RATE_LIMITS.appErrorsPerIp)).allowed;
   if (!allowed) {
     return { reference, at: new Date(), stored: false };
   }

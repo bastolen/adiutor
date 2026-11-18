@@ -3,8 +3,8 @@
  * claimed at the same moment as another claim, an invitation or a change to
  * their creator's rights, and when they're created by someone losing theirs;
  * a claim keeping an invitation an Admin sent, claims counted against the
- * invitation limits, a claim undone because its email couldn't be sent, and
- * resending an invitation that came from a link.
+ * invitation limits and the limit per IP address, a claim undone because its
+ * email couldn't be sent, and resending an invitation that came from a link.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -699,6 +699,35 @@ describe('invite link claims and the invitation limits', () => {
 
     // It works again once the window has passed.
     await db.delete(rateLimitBucket).where(eq(rateLimitBucket.key, key()));
+    expect(await claimInviteLink(ctx, token, 'late@adiutor.test')).toEqual({ status: 'sent' });
+  });
+
+  it('count each claim against the IP address it came from, refusing past its limit', async () => {
+    /**
+     * The request's client, as `requestInfoFromHeaders` would give it.
+     *
+     * @returns The IP address, without a browser.
+     */
+    const requestInfo = async () => ({ ip: '203.0.113.7', userAgent: null });
+    const fromAddress = { ...ctx, requestInfo };
+
+    await claimInviteLink(fromAddress, await newLinkToken(), 'first@adiutor.test');
+    await claimInviteLink(ctx, await newLinkToken(), 'second@adiutor.test');
+
+    expect(await rateLimitHits(db, 'invite-link-claim:ip:203.0.113.7')).toBe(1);
+    // Outside a request there's no address: those claims share one bucket.
+    expect(await rateLimitHits(db, 'invite-link-claim:ip:unknown')).toBe(1);
+
+    await db
+      .update(rateLimitBucket)
+      .set({ count: RATE_LIMITS.linkClaimsPerIp.limit })
+      .where(eq(rateLimitBucket.key, 'invite-link-claim:ip:203.0.113.7'));
+    const token = await newLinkToken();
+    await expect(claimInviteLink(fromAddress, token, 'late@adiutor.test')).rejects.toMatchObject({
+      code: 'rate_limited',
+      key: 'errors.tooManyAttempts',
+    });
+    // Refused before the link is looked at: it stays usable, from another address too.
     expect(await claimInviteLink(ctx, token, 'late@adiutor.test')).toEqual({ status: 'sent' });
   });
 
