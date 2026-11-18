@@ -51,7 +51,6 @@ function inOneCompany(canRaise: boolean): void {
       id: 'company',
       name: 'Adiutor Tests',
       slug: 'adiutor-tests',
-      deactivated: false,
       canRaise,
     },
   ]);

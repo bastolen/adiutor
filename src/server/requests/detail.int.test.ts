@@ -12,6 +12,7 @@ import {
   addMember,
   createCompany,
   createStaffSettings,
+  createUser,
   inSequence,
   memberActor,
   minutesAgo,
@@ -260,6 +261,26 @@ describe('getRequest: the conversation', () => {
     expect(await idsFor(client)).toEqual([null, null]);
     expect(await idsFor(watcher)).toEqual([null, null]);
     expect(JSON.stringify(await getRequest(ctx, watcher, '1'))).not.toContain(client.id);
+  });
+
+  it('gives no name, and never an address, for someone without a name or whose account is gone', async () => {
+    const company = await createCompany(db);
+    const nameless = await createUser(db, 'nameless@adiutor.test');
+    await db.update(user).set({ name: '  ' }).where(eq(user.id, nameless));
+    const gone = await createUser(db, 'gone@adiutor.test');
+    await storeRequest(company.id, { title: 'Nameless', createdBy: nameless });
+    await storeRequest(company.id, { title: 'Gone', createdBy: gone, createdBySide: 'staff' });
+    await db.delete(user).where(eq(user.id, gone));
+    const watcher = await memberActor(db, company.id, 'watcher');
+
+    const first = await getRequest(ctx, watcher, '1');
+    const second = await getRequest(ctx, watcher, '2');
+
+    expect(first.raisedBy).toEqual({ userId: null, name: null, side: 'company', isViewer: false });
+    expect(second.raisedBy).toEqual({ userId: null, name: null, side: 'staff', isViewer: false });
+    expect(JSON.stringify([first, second])).not.toContain('@adiutor.test');
+    // Nor who it is: the nameless account still exists.
+    expect(JSON.stringify([first, second])).not.toContain(nameless);
   });
 
   it('gives nobody the ID of an account that is gone', async () => {

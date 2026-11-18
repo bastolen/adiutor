@@ -5,7 +5,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { company as companyTable, request, user } from '@/db/schema';
+import { company as companyTable, request } from '@/db/schema';
 
 import {
   actorFor,
@@ -337,60 +337,6 @@ describe('listRequests: order and pages', () => {
 });
 
 describe('listRequests: what a request shows', () => {
-  it('names who raised it and their side, and marks the reader’s own', async () => {
-    const company = await createCompany(db, { name: 'Adiutor Tests Alpha' });
-    const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
-    const support = await staffActor(db, 'support', 'sam@adiutor.test');
-    await storeRequest(company.id, {
-      title: 'By the staff',
-      createdBy: support.id,
-      createdBySide: 'staff',
-    });
-    await storeRequest(company.id, { title: 'By the client', createdBy: client.id });
-
-    const page = await listRequests(ctx, client, { sort: 'raised' });
-
-    expect(
-      page.items.map(({ title, raisedBy, company: its }) => [title, raisedBy, its.name]),
-    ).toEqual([
-      [
-        'By the client',
-        { userId: null, name: 'casey', side: 'company', isViewer: true },
-        'Adiutor Tests Alpha',
-      ],
-      [
-        'By the staff',
-        { userId: null, name: 'sam', side: 'staff', isViewer: false },
-        'Adiutor Tests Alpha',
-      ],
-    ]);
-
-    // The staff also get who it is, for the link to the user's page.
-    const forStaff = await listRequests(ctx, support, { sort: 'raised' });
-    expect(forStaff.items.map(({ raisedBy }) => raisedBy.userId)).toEqual([client.id, support.id]);
-  });
-
-  it('gives no name, and never an address, for someone without a name or whose account is gone', async () => {
-    const company = await createCompany(db);
-    const nameless = await createUser(db, 'nameless@adiutor.test');
-    await db.update(user).set({ name: '  ' }).where(eq(user.id, nameless));
-    const gone = await createUser(db, 'gone@adiutor.test');
-    await storeRequest(company.id, { title: 'Nameless', createdBy: nameless });
-    await storeRequest(company.id, { title: 'Gone', createdBy: gone, createdBySide: 'staff' });
-    await db.delete(user).where(eq(user.id, gone));
-    const watcher = await memberActor(db, company.id, 'watcher');
-
-    const page = await listRequests(ctx, watcher, { sort: 'raised', dir: 'asc' });
-
-    expect(page.items.map(({ raisedBy }) => raisedBy)).toEqual([
-      { userId: null, name: null, side: 'company', isViewer: false },
-      { userId: null, name: null, side: 'staff', isViewer: false },
-    ]);
-    expect(JSON.stringify(page)).not.toContain('@adiutor.test');
-    // Nor who it is: the nameless account still exists.
-    expect(JSON.stringify(page)).not.toContain(nameless);
-  });
-
   it('says when a request was reopened', async () => {
     const company = await createCompany(db);
     await storeRequest(company.id, { title: 'Reopened', reopenedAt: new Date() });
@@ -470,9 +416,9 @@ describe('listRequestCompanies', () => {
     const [support, finance] = [await staffActor(db, 'support'), await staffActor(db, 'finance')];
 
     expect(await listRequestCompanies(ctx, support)).toEqual([
-      { id: alpha.id, name: alpha.name, slug: alpha.slug, deactivated: false, canRaise: true },
-      { id: beta.id, name: beta.name, slug: beta.slug, deactivated: false, canRaise: true },
-      { id: closed.id, name: closed.name, slug: closed.slug, deactivated: true, canRaise: false },
+      { id: alpha.id, name: alpha.name, slug: alpha.slug, canRaise: true },
+      { id: beta.id, name: beta.name, slug: beta.slug, canRaise: true },
+      { id: closed.id, name: closed.name, slug: closed.slug, canRaise: false },
     ]);
     // Finance reads requests, and raises none.
     expect((await listRequestCompanies(ctx, finance)).map(({ canRaise }) => canRaise)).toEqual([
