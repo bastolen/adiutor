@@ -8,11 +8,11 @@
 import { useTranslations } from 'next-intl';
 
 import Card from '@/components/ui/card';
-import Pagination from '@/components/ui/pagination';
+import { paginationFooter } from '@/components/ui/pagination';
 import RowAction from '@/components/ui/row-action';
 import SortMenu from '@/components/ui/sort-menu';
 import { type TableLinks } from '@/lib/tables/page-url';
-import { type Paged, showsPagination } from '@/lib/tables/table-state';
+import { type Paged } from '@/lib/tables/table-state';
 import type { DeviceSort } from '@/lib/tables/tables';
 import type { UserSession } from '@/server/people/user-admin';
 
@@ -72,11 +72,7 @@ export default function SessionsCard({ sessions, table, currentSessionId }: Sess
         </>
       }
       flush
-      footer={
-        showsPagination(sessions.total) && (
-          <Pagination {...table.pagination(sessions, t('security.sessions.rows'))} />
-        )
-      }
+      footer={paginationFooter(table, sessions, t('security.sessions.rows'))}
     >
       <DevicesTable
         devices={sessions}

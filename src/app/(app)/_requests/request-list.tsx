@@ -11,7 +11,7 @@ import Button from '@/components/ui/button';
 import Card from '@/components/ui/card';
 import EmptyState from '@/components/ui/empty-state';
 import FilterMenu from '@/components/ui/filter-menu';
-import Pagination from '@/components/ui/pagination';
+import { paginationFooter } from '@/components/ui/pagination';
 import RelativeTime from '@/components/ui/relative-time';
 import SearchForm from '@/components/ui/search-form';
 import SegmentedNav from '@/components/ui/segmented-nav';
@@ -33,7 +33,7 @@ import {
 } from '@/lib/requests';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import { createPageUrl } from '@/lib/tables/page-url';
-import { parseTableState, showsPagination, type TableDefinition } from '@/lib/tables/table-state';
+import { parseTableState, type TableDefinition } from '@/lib/tables/table-state';
 import { REQUESTS_TABLE, STAFF_REQUESTS_TABLE } from '@/lib/tables/tables';
 import type { Actor } from '@/server/actor';
 import appContext from '@/server/app-context';
@@ -299,14 +299,7 @@ export default async function RequestList({
         </div>
       </div>
 
-      <Card
-        flush
-        footer={
-          showsPagination(requests.total) && (
-            <Pagination {...table.pagination(requests, t('rows'))} />
-          )
-        }
-      >
+      <Card flush footer={paginationFooter(table, requests, t('rows'))}>
         {requests.total === 0 ? (
           <EmptyState
             icon={Inbox}

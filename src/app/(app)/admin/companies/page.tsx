@@ -13,7 +13,7 @@ import Button from '@/components/ui/button';
 import Card from '@/components/ui/card';
 import EmptyState from '@/components/ui/empty-state';
 import PageHeader from '@/components/ui/page-header';
-import Pagination from '@/components/ui/pagination';
+import { paginationFooter } from '@/components/ui/pagination';
 import SearchForm from '@/components/ui/search-form';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import SortMenu from '@/components/ui/sort-menu';
@@ -23,7 +23,7 @@ import cn from '@/lib/cn';
 import formatDate from '@/lib/format';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import { createPageUrl } from '@/lib/tables/page-url';
-import { parseTableState, showsPagination } from '@/lib/tables/table-state';
+import { parseTableState } from '@/lib/tables/table-state';
 import { COMPANIES_TABLE } from '@/lib/tables/tables';
 import appContext from '@/server/app-context';
 import { getGlobalPermissions, requireGlobalPermission } from '@/server/authz';
@@ -87,14 +87,7 @@ async function CompanyList({ searchParams }: { searchParams: Promise<SearchParam
         {companies.total > 0 && <SortMenu label={t('rows')} options={table.sortOptions()} />}
       </div>
 
-      <Card
-        flush
-        footer={
-          showsPagination(companies.total) && (
-            <Pagination {...table.pagination(companies, t('rows'))} />
-          )
-        }
-      >
+      <Card flush footer={paginationFooter(table, companies, t('rows'))}>
         {companies.total === 0 ? (
           <EmptyState
             icon={Building2}

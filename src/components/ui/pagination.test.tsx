@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PageLinkItem, PaginationLinks } from '@/lib/tables/table-state';
 
 import renderInLocale from '../../../tests/i18n/render';
-import Pagination from './pagination';
+import Pagination, { paginationFooter } from './pagination';
 
 // Next's Link only calls `onNavigate` once the app router is mounted, which it isn't in these
 // tests: this stand-in calls it for every plain click, as a client navigation would.
@@ -553,6 +553,43 @@ describe('Pagination', () => {
 
       expect(document.body).toHaveFocus();
     });
+  });
+});
+
+describe('paginationFooter', () => {
+  it('is nothing when every row fits on one page', () => {
+    const pagination = vi.fn(() => SECOND_PAGE);
+
+    const footer = paginationFooter(
+      { pagination },
+      { items: [], total: 10, page: 1, size: 25 },
+      'members',
+    );
+
+    expect(footer).toBe(false);
+    expect(pagination).not.toHaveBeenCalled();
+  });
+
+  it('is the pagination of the rows it is given when they take more than one page', () => {
+    const pagination = vi.fn(() => SECOND_PAGE);
+    const paged = { items: [], total: 132, page: 2, size: 25 as const };
+
+    render(paginationFooter({ pagination }, paged, 'members'));
+
+    expect(pagination).toHaveBeenCalledWith(paged, 'members');
+    expect(screen.getByRole('status')).toHaveTextContent('26–50 of 132');
+  });
+
+  it('shows from the first row past what fits on one page', () => {
+    const pagination = vi.fn(() => SECOND_PAGE);
+
+    const footer = paginationFooter(
+      { pagination },
+      { items: [], total: 11, page: 1, size: 25 },
+      'members',
+    );
+
+    expect(footer).not.toBe(false);
   });
 });
 

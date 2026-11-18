@@ -10,7 +10,7 @@ import type { ReactNode } from 'react';
 
 import Card from '@/components/ui/card';
 import EmptyState from '@/components/ui/empty-state';
-import Pagination from '@/components/ui/pagination';
+import { paginationFooter } from '@/components/ui/pagination';
 import RelativeTime from '@/components/ui/relative-time';
 import SortMenu from '@/components/ui/sort-menu';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
@@ -18,7 +18,7 @@ import TextLink from '@/components/ui/text-link';
 import displayName from '@/lib/display-name';
 import { formatDateTime } from '@/lib/format';
 import type { TableLinks } from '@/lib/tables/page-url';
-import { type Paged, showsPagination } from '@/lib/tables/table-state';
+import { type Paged } from '@/lib/tables/table-state';
 import type { JobRunSort } from '@/lib/tables/tables';
 import type { JobRunEntry } from '@/server/jobs';
 
@@ -87,7 +87,7 @@ export default function JobRunsCard({ runs, table, canLookUp }: JobRunsCardProps
       description={t('description')}
       actions={runs.total > 0 && <SortMenu label={t('rows')} options={table.sortOptions()} />}
       flush={runs.total > 0}
-      footer={showsPagination(runs.total) && <Pagination {...table.pagination(runs, t('rows'))} />}
+      footer={paginationFooter(table, runs, t('rows'))}
     >
       {runs.total === 0 ? (
         <EmptyState icon={History} title={t('emptyTitle')} description={t('emptyDescription')} />

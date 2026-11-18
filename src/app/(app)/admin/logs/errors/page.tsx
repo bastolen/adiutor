@@ -15,7 +15,7 @@ import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
 import { DescriptionList, DescriptionRow } from '@/components/ui/description-list';
 import EmptyState from '@/components/ui/empty-state';
-import Pagination from '@/components/ui/pagination';
+import { paginationFooter } from '@/components/ui/pagination';
 import RelativeTime from '@/components/ui/relative-time';
 import SearchForm from '@/components/ui/search-form';
 import { PageSkeleton } from '@/components/ui/skeleton';
@@ -26,7 +26,7 @@ import displayName from '@/lib/display-name';
 import { formatDateTime } from '@/lib/format';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import { createPageUrl } from '@/lib/tables/page-url';
-import { parseTableState, showsPagination } from '@/lib/tables/table-state';
+import { parseTableState } from '@/lib/tables/table-state';
 import { ERRORS_TABLE } from '@/lib/tables/tables';
 import appContext from '@/server/app-context';
 import { requireGlobalPermission } from '@/server/authz';
@@ -238,11 +238,7 @@ async function Errors({ searchParams }: { searchParams: Promise<SearchParams> })
           recent.total > 0 && <SortMenu label={t('recent.rows')} options={table.sortOptions()} />
         }
         flush={recent.total > 0}
-        footer={
-          showsPagination(recent.total) && (
-            <Pagination {...table.pagination(recent, t('recent.rows'))} />
-          )
-        }
+        footer={paginationFooter(table, recent, t('recent.rows'))}
       >
         {recent.total === 0 ? (
           <EmptyState

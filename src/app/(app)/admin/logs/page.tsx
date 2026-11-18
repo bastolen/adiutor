@@ -14,7 +14,7 @@ import Alert from '@/components/ui/alert';
 import Card from '@/components/ui/card';
 import DateRangeForm from '@/components/ui/date-range-form';
 import EmptyState from '@/components/ui/empty-state';
-import Pagination from '@/components/ui/pagination';
+import { paginationFooter } from '@/components/ui/pagination';
 import RelativeTime from '@/components/ui/relative-time';
 import SearchForm from '@/components/ui/search-form';
 import SegmentedNav from '@/components/ui/segmented-nav';
@@ -30,7 +30,7 @@ import formatIpAddress from '@/lib/request/ip-address';
 import { describeUserAgent } from '@/lib/request/user-agent';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import { createPageUrl } from '@/lib/tables/page-url';
-import { parseTableState, showsPagination } from '@/lib/tables/table-state';
+import { parseTableState } from '@/lib/tables/table-state';
 import { AUDIT_LOG_TABLE } from '@/lib/tables/tables';
 import appContext from '@/server/app-context';
 import { type AuditEntry, listAuditLog } from '@/server/audit';
@@ -292,12 +292,7 @@ async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> 
         </div>
       </div>
 
-      <Card
-        flush
-        footer={
-          showsPagination(events.total) && <Pagination {...table.pagination(events, t('rows'))} />
-        }
-      >
+      <Card flush footer={paginationFooter(table, events, t('rows'))}>
         {events.total === 0 ? (
           <EmptyState icon={ScrollText} title={empty.title} description={empty.description} />
         ) : (

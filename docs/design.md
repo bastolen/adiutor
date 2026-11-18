@@ -46,7 +46,8 @@ keyboard support.
     tables build their first cell with `PersonCell` (`src/app/(app)/_people/person-cell.tsx`).
   - **Pages:** 25, 50 or 100 rows per page, chosen in the table's footer (`Pagination`: "Showing
     26–50 of 132", Previous, the page numbers and Next). The footer only shows with more than 10
-    rows.
+    rows: a card gets it from `paginationFooter`, which gives nothing for a table that fits on
+    one page.
   - **In the address:** each table keeps its state in the query string with its own prefix
     (`sort`, `dir`, `page` and `size` for a page's main table; `inv-…`, `links-…`, `companies-…`
     and `devices-…` for the others), leaving defaults out, so a sorted page can be bookmarked and

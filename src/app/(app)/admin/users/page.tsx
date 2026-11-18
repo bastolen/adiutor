@@ -15,7 +15,7 @@ import Button from '@/components/ui/button';
 import Card from '@/components/ui/card';
 import EmptyState from '@/components/ui/empty-state';
 import PageHeader from '@/components/ui/page-header';
-import Pagination from '@/components/ui/pagination';
+import { paginationFooter } from '@/components/ui/pagination';
 import SearchForm from '@/components/ui/search-form';
 import SegmentedNav from '@/components/ui/segmented-nav';
 import { PageSkeleton } from '@/components/ui/skeleton';
@@ -26,7 +26,7 @@ import ToastOnArrival from '@/components/ui/toast-on-arrival';
 import displayName from '@/lib/display-name';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import { createPageUrl } from '@/lib/tables/page-url';
-import { parseTableState, showsPagination } from '@/lib/tables/table-state';
+import { parseTableState } from '@/lib/tables/table-state';
 import { USERS_TABLE } from '@/lib/tables/tables';
 import appContext from '@/server/app-context';
 import { getGlobalPermissions, requireGlobalPermission } from '@/server/authz';
@@ -180,12 +180,7 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
         </div>
       </div>
 
-      <Card
-        flush
-        footer={
-          showsPagination(users.total) && <Pagination {...table.pagination(users, t('rows'))} />
-        }
-      >
+      <Card flush footer={paginationFooter(table, users, t('rows'))}>
         {users.total === 0 ? (
           <EmptyState icon={Users} title={empty.title} description={empty.description} />
         ) : (

@@ -15,7 +15,7 @@ import { useId } from 'react';
 import ActionDialog from '@/components/ui/action-dialog';
 import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
-import Pagination from '@/components/ui/pagination';
+import { paginationFooter } from '@/components/ui/pagination';
 import RowAction from '@/components/ui/row-action';
 import SelectField from '@/components/ui/select-field';
 import SortMenu from '@/components/ui/sort-menu';
@@ -24,7 +24,7 @@ import TextLink from '@/components/ui/text-link';
 import { COMPANY_ROLES, roleOptions } from '@/lib/authz/roles';
 import formatDate from '@/lib/format';
 import { type TableLinks } from '@/lib/tables/page-url';
-import { type Paged, showsPagination } from '@/lib/tables/table-state';
+import { type Paged } from '@/lib/tables/table-state';
 import type { UserCompanySort } from '@/lib/tables/tables';
 import type { AddableCompany } from '@/server/people/members';
 import type { UserCompany } from '@/server/people/user-admin';
@@ -143,11 +143,7 @@ export default function CompaniesCard({
         )
       }
       flush={companies.total > 0 || addRefused}
-      footer={
-        showsPagination(companies.total) && (
-          <Pagination {...table.pagination(companies, t('rows'))} />
-        )
-      }
+      footer={paginationFooter(table, companies, t('rows'))}
     >
       {/* One child or none: the card keeps its bottom space only when there's nothing below. */}
       {(companies.total > 0 || addRefused) && (
