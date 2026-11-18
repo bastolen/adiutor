@@ -62,6 +62,9 @@ work. It reads the same validated `.env` as the app (so `BETTER_AUTH_URL` must b
 to run (`src/lib/dev-seed-guard.ts`) in production, when `BETTER_AUTH_URL` isn't on this machine
 (`localhost`, `127.0.0.1`, `[::1]` or a `.localhost` name, as on a server whose database happens to
 listen on `localhost`), against the test database or against a database that isn't on this machine.
+The database's host is read as the driver reads it (`src/lib/database-address.ts`): a `host`
+parameter wins over the URL's own host, so `…@localhost/adiutor?host=db.adiutor.dev` is refused,
+and so are a socket's folder (`?host=/cloudsql/…`), a list of hosts and a URL without a host.
 
 The seeded accounts all use `@adiutor.test` addresses, which can't receive mail from GitHub or
 Google. To sign in with your own provider account, add `--admin-mail` with its verified address:

@@ -8,17 +8,18 @@ import { useTranslations } from 'next-intl';
 import { type FormEvent, useState } from 'react';
 
 import CodeField from '@/components/auth/code-field';
-import { useRecentConfirmation } from '@/components/auth/recent-confirmation';
 import ResendCodeButton from '@/components/auth/resend-code-button';
 import useResendCooldown from '@/components/auth/use-resend-cooldown';
 import Alert from '@/components/ui/alert';
 import Button from '@/components/ui/button';
 import Modal from '@/components/ui/modal';
 import { EMAIL_CODE_MINUTES } from '@/lib/authz/mfa';
-import { authCodeText, authErrorText } from '@/lib/sign-in/auth-error-messages';
+import { authCodeText } from '@/lib/sign-in/auth-error-messages';
 import loadAuthClient from '@/lib/sign-in/load-auth-client';
 import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 import verifyCode from '@/lib/sign-in/verify-code';
+
+import useRefusalText from './use-refusal-text';
 
 /**
  * Props for {@link EmailCodesSetup}.
@@ -44,7 +45,7 @@ interface EmailCodesSetupProps {
 function EmailCodesSteps({ email, onDone }: { email: string; onDone: () => void }) {
   const t = useTranslations('account');
   const tAuth = useTranslations('auth');
-  const { askToConfirmOnRefusal } = useRecentConfirmation();
+  const refusalText = useRefusalText();
   const [sent, setSent] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [code, setCode] = useState('');
@@ -73,8 +74,9 @@ function EmailCodesSteps({ email, onDone }: { email: string; onDone: () => void 
       return;
     }
     if (result.error) {
-      if (!askToConfirmOnRefusal(result.error.code)) {
-        setError(authErrorText(tAuth, result.error));
+      const text = refusalText(result.error);
+      if (text !== null) {
+        setError(text);
       }
       return;
     }
@@ -99,8 +101,9 @@ function EmailCodesSteps({ email, onDone }: { email: string; onDone: () => void 
     const result = await verifyCode('otp', { code });
     setPending(false);
     if (result.error) {
-      if (!askToConfirmOnRefusal(result.error.code)) {
-        setError(authErrorText(tAuth, result.error));
+      const text = refusalText(result.error);
+      if (text !== null) {
+        setError(text);
       }
       return;
     }

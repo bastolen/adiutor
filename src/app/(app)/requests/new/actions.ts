@@ -3,6 +3,7 @@
  */
 'use server';
 
+import { refresh } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import type { ActionResult } from '@/lib/action-result';
@@ -16,6 +17,11 @@ import { raiseRequest } from '@/server/requests';
 /**
  * Raises a request and goes to its page, which confirms it. A priority only
  * counts from the staff; the service ignores it otherwise.
+ *
+ * It refreshes before it redirects: Next drops the pages it kept alive only
+ * for an action that refreshes, and a redirect alone leaves them as they
+ * were. Back would then show this form still filled in, ready to raise the
+ * request again, and the list before it without the new request.
  *
  * @param _previous - The previous result (unused).
  * @param formData - Fields `company` (its URL name), `title`, `type`, `description` and,
@@ -35,6 +41,7 @@ export default async function raiseRequestAction(
       description: field(formData, 'description'),
       priority: field(formData, 'priority'),
     });
+    refresh();
     redirect(`${requestPath(number)}?raised=1`);
   });
 }

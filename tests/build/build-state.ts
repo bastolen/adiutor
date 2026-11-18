@@ -9,10 +9,17 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 
-/** What `next build` reads, from the repository root. */
+/**
+ * What `next build` reads, from the repository root. `drizzle` is in it
+ * because the build holds the list of migrations
+ * (`src/server/migration-check.ts` imports `drizzle/meta/_journal.json`): a
+ * build from before a new migration would compare the migrated test database
+ * with the older list and report itself unhealthy.
+ */
 const BUILD_INPUTS = [
   'src',
   'public',
+  'drizzle',
   'next.config.ts',
   'tsconfig.json',
   'package.json',

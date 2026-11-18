@@ -2,13 +2,17 @@
  * @file Integration tests for raising a request. Which roles may raise one is
  * in the authorization matrix.
  */
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
 
 import { membership, request, requestCounter } from '@/db/schema';
+import { firstRow } from '@/lib/defined';
 
 import {
+  actorFor,
+  addMember,
+  atTheSameMoment,
   createCompany,
   fillRateLimitBucket,
   inSequence,
@@ -17,7 +21,7 @@ import {
 } from '../../../tests/integration/helpers';
 import { RATE_LIMITS } from '../rate-limit';
 import raiseRequest from './raise';
-import { ctx, db } from './test-helpers';
+import { ctx, db, deactivatedMeanwhile, storedRequest } from './test-helpers';
 
 /** A request as a form sends it, without its company. */
 const INPUT = {
@@ -25,17 +29,6 @@ const INPUT = {
   description: 'It prints blank pages.',
   type: 'bug',
 } as const;
-
-/**
- * Loads a request as it's stored.
- *
- * @param id - The request's ID.
- * @returns The row.
- */
-async function stored(id: string) {
-  const [found] = await db.select().from(request).where(eq(request.id, id));
-  return found;
-}
 
 describe('raiseRequest', () => {
   it('stores what was asked, by whom and from which side, open and with its type’s priority', async () => {
@@ -45,7 +38,7 @@ describe('raiseRequest', () => {
     const raised = await raiseRequest(ctx, client, { ...INPUT, companyId: company.id });
 
     expect(raised.number).toBe(1);
-    expect(await stored(raised.id)).toMatchObject({
+    expect(await storedRequest(raised.id)).toMatchObject({
       number: 1,
       companyId: company.id,
       title: 'The printer is broken',
@@ -66,7 +59,7 @@ describe('raiseRequest', () => {
 
     const raised = await raiseRequest(ctx, client, { ...INPUT, companyId: 'adiutor-tests-raise' });
 
-    expect(await stored(raised.id)).toMatchObject({ companyId: company.id });
+    expect(await storedRequest(raised.id)).toMatchObject({ companyId: company.id });
   });
 
   it.each([
@@ -80,7 +73,7 @@ describe('raiseRequest', () => {
 
     const raised = await raiseRequest(ctx, client, { ...INPUT, type, companyId: company.id });
 
-    expect(await stored(raised.id)).toMatchObject({ type, priority });
+    expect(await storedRequest(raised.id)).toMatchObject({ type, priority });
   });
 
   it('ignores a priority from the company: the type decides', async () => {
@@ -94,7 +87,7 @@ describe('raiseRequest', () => {
       companyId: company.id,
     });
 
-    expect(await stored(raised.id)).toMatchObject({ priority: 'low' });
+    expect(await storedRequest(raised.id)).toMatchObject({ priority: 'low' });
   });
 
   it('lets the staff choose the priority, or leave it to the type, and notes their side', async () => {
@@ -105,8 +98,11 @@ describe('raiseRequest', () => {
     const chosen = await raiseRequest(ctx, support, { ...input, priority: 'high' });
     const left = await raiseRequest(ctx, support, { ...input, priority: '' });
 
-    expect(await stored(chosen.id)).toMatchObject({ priority: 'high', createdBySide: 'staff' });
-    expect(await stored(left.id)).toMatchObject({ priority: 'low', createdBySide: 'staff' });
+    expect(await storedRequest(chosen.id)).toMatchObject({
+      priority: 'high',
+      createdBySide: 'staff',
+    });
+    expect(await storedRequest(left.id)).toMatchObject({ priority: 'low', createdBySide: 'staff' });
   });
 
   it('cleans the title and the description', async () => {
@@ -120,7 +116,7 @@ describe('raiseRequest', () => {
       type: 'bug',
     });
 
-    expect(await stored(raised.id)).toMatchObject({
+    expect(await storedRequest(raised.id)).toMatchObject({
       title: 'The printer is broken',
       description: 'Steps:\n1. Print\n2. Look',
     });
@@ -138,6 +134,51 @@ describe('raiseRequest', () => {
     await expect(
       raiseRequest(ctx, client, { ...INPUT, ...change, companyId: company.id }),
     ).rejects.toBeInstanceOf(ZodError);
+    expect(await db.$count(request)).toBe(0);
+  });
+
+  it.each([
+    ['the staff', ''],
+    ['the staff, who sent spaces', '   '],
+  ])('asks %s for a company when none was chosen, as for any other field', async (_who, none) => {
+    await createCompany(db);
+    const support = await staffActor(db, 'support');
+
+    const refusal = await raiseRequest(ctx, support, { ...INPUT, companyId: none }).catch(
+      (error: unknown) => error,
+    );
+
+    // Not "this page doesn't exist", which is for a company that can't be seen.
+    expect(refusal).toBeInstanceOf(ZodError);
+    expect(refusal).toMatchObject({ issues: [{ message: 'validation.requestCompany' }] });
+    expect(await db.$count(request)).toBe(0);
+  });
+
+  it('asks for a company before anything else that is missing', async () => {
+    const [alpha, beta] = [await createCompany(db), await createCompany(db)];
+    const client = await memberActor(db, alpha.id, 'client');
+    await addMember(db, beta.id, client.id, 'client');
+
+    await expect(
+      raiseRequest(ctx, await actorFor(db, client.id), {
+        companyId: '',
+        title: '',
+        description: '',
+        type: '',
+      }),
+    ).rejects.toMatchObject({ issues: [{ message: 'validation.requestCompany' }] });
+  });
+
+  it('still reports a company that does not exist, or that they may not see, as not found', async () => {
+    const [own, other] = [await createCompany(db), await createCompany(db)];
+    const client = await memberActor(db, own.id, 'client');
+
+    await expect(
+      raiseRequest(ctx, client, { ...INPUT, companyId: 'adiutor-tests-nowhere' }),
+    ).rejects.toMatchObject({ code: 'not_found' });
+    await expect(
+      raiseRequest(ctx, client, { ...INPUT, companyId: other.id }),
+    ).rejects.toMatchObject({ code: 'not_found' });
     expect(await db.$count(request)).toBe(0);
   });
 
@@ -170,6 +211,23 @@ describe('raiseRequest', () => {
       raiseRequest(ctx, client, { ...INPUT, companyId: company.id }),
     ).rejects.toMatchObject({ code: 'forbidden' });
     expect(await db.$count(request)).toBe(0);
+  });
+
+  it('refuses the staff when the company was deactivated while the request was under way', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+
+    // The staff keep their rights in a deactivated company: only the company itself refuses this.
+    const ended = await deactivatedMeanwhile(support.id, company.id, () =>
+      raiseRequest(ctx, support, { ...INPUT, companyId: company.id }),
+    );
+
+    expect(ended).toMatchObject({
+      status: 'rejected',
+      reason: { code: 'invalid', key: 'errors.companyDeactivated' },
+    });
+    expect(await db.$count(request)).toBe(0);
+    expect(await db.select().from(requestCounter)).toEqual([]);
   });
 
   it('stops at the limit of requests one person raises', async () => {
@@ -240,5 +298,33 @@ describe('request numbers', () => {
     await expect(raiseRequest(ctx, client, { ...INPUT, companyId: company.id })).rejects.toThrow();
 
     expect(await db.select().from(requestCounter)).toEqual([]);
+  });
+
+  it('time a request once, by when its number was taken: raised and last active at one moment', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client');
+    let waitedUntil = Infinity;
+
+    // Another request holds the counter, so this one starts and then waits for its number.
+    const { second } = await atTheSameMoment(
+      db,
+      (tx) => tx.insert(requestCounter).values({ lastNumber: 1 }),
+      () => raiseRequest(ctx, client, { ...INPUT, companyId: company.id }),
+      async (tx) => {
+        const { rows } = await tx.execute<{ ms: number }>(
+          sql`select floor(extract(epoch from clock_timestamp()) * 1000)::float8 as ms`,
+        );
+        waitedUntil = firstRow(rows, 'the clock').ms;
+      },
+    );
+
+    if (second.status === 'rejected') {
+      throw second.reason;
+    }
+    expect(second.value.number).toBe(2);
+    const row = await storedRequest(second.value.id);
+    expect(row?.lastActivityAt).toEqual(row?.createdAt);
+    // Not when its transaction started, which was before it waited.
+    expect(row?.createdAt.getTime()).toBeGreaterThanOrEqual(waitedUntil);
   });
 });

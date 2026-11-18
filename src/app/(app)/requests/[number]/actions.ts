@@ -14,6 +14,7 @@ import field from '@/lib/form-data';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
 import { getActor } from '@/server/authz';
+import { ServiceError } from '@/server/errors';
 import { changeRequestStatus, replyToRequest, updateRequestDetails } from '@/server/requests';
 
 /**
@@ -66,10 +67,18 @@ export async function changeStatusAction(
 }
 
 /**
- * Changes a request's title, type and priority.
+ * Changes a request's title, type and priority: the ones the form changed
+ * from what it started with (`was_title`, `was_type`, `was_priority`), so a
+ * detail its editor left alone keeps what a colleague gave it meanwhile.
+ *
+ * When a colleague changed the same detail meanwhile, nothing is saved and
+ * the page is refreshed all the same: it then shows the request as it is,
+ * and the dialog starts from that the next time it's opened, instead of
+ * running into the same refusal again.
  *
  * @param _previous - The previous result (unused).
- * @param formData - Fields `request` (its number), `title`, `type` and `priority`.
+ * @param formData - Fields `request` (its number), `title`, `type` and `priority`, and the
+ *   values the form started from: `was_title`, `was_type` and `was_priority`.
  * @returns A confirmation, or why it failed.
  */
 export async function updateDetailsAction(
@@ -83,6 +92,16 @@ export async function updateDetailsAction(
       title: field(formData, 'title'),
       type: field(formData, 'type'),
       priority: field(formData, 'priority'),
+      was: {
+        title: field(formData, 'was_title'),
+        type: field(formData, 'was_type'),
+        priority: field(formData, 'was_priority'),
+      },
+    }).catch((error: unknown) => {
+      if (error instanceof ServiceError && error.code === 'conflict') {
+        refresh();
+      }
+      throw error;
     });
     refresh();
     const t = await getTranslations('requests.saved');

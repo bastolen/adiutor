@@ -19,6 +19,7 @@ import {
   createUser,
   enableTwoFactor,
   memberActor,
+  rateLimitHits,
   staffActor,
   startAuthenticatorSetup,
   turnOffGitHubSignIn,
@@ -320,11 +321,7 @@ describe('an authenticator code checked with a session', () => {
    * @returns The count, or `null` when none were counted.
    */
   async function wrongStepUps(userId: string): Promise<number | null> {
-    const [bucket] = await db
-      .select({ count: rateLimitBucket.count })
-      .from(rateLimitBucket)
-      .where(eq(rateLimitBucket.key, `step-up-failed:user:${userId}`));
-    return bucket?.count ?? null;
+    return rateLimitHits(db, `step-up-failed:user:${userId}`);
   }
 
   it('gives back the attempt a right step-up code took before it was checked', async () => {
@@ -340,25 +337,47 @@ describe('an authenticator code checked with a session', () => {
     expect(await wrongStepUps(support.id)).toBe(0);
   });
 
-  it('gives back the attempt of a code Better Auth refused without comparing it', async () => {
-    const support = await staffActor(db, 'support');
-    await enableTwoFactor(db, support.id, 'email');
-    const ctx = {
-      ...(await authenticatorCode(await createSession(db, support.id), support.id)),
-      path: '/two-factor/verify-otp',
-    };
+  it.each([
+    [
+      'an emailed code that expired before it was entered',
+      new APIError('BAD_REQUEST', { message: 'OTP has expired', code: 'OTP_HAS_EXPIRED' }),
+    ],
+    [
+      'too many tries for one emailed code',
+      new APIError('BAD_REQUEST', {
+        message: 'Too many attempts. Please request a new code.',
+        code: 'TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE',
+      }),
+    ],
+    [
+      'a method that isn’t turned on',
+      new APIError('BAD_REQUEST', { message: 'TOTP not enabled', code: 'TOTP_NOT_ENABLED' }),
+    ],
+    ['a request that crossed another', new APIError('CONFLICT', { message: 'Conflict' })],
+    [
+      'an error of the server',
+      new APIError('INTERNAL_SERVER_ERROR', { message: 'Internal server error' }),
+    ],
+  ])(
+    'gives back the attempt and records no wrong code for %s: none was compared',
+    async (_name, refusal) => {
+      const support = await staffActor(db, 'support');
+      await enableTwoFactor(db, support.id, 'email');
+      const ctx = {
+        ...(await authenticatorCode(await createSession(db, support.id), support.id)),
+        path: '/two-factor/verify-otp',
+      };
 
-    await beforeAuthRequest(ctx);
-    expect(await wrongStepUps(support.id)).toBe(1);
-    // The emailed code expired before it was entered.
-    ctx.context.returned = new APIError('BAD_REQUEST', {
-      message: 'OTP has expired',
-      code: 'OTP_HAS_EXPIRED',
-    });
-    await afterAuthRequest({ ...ctx, context: ctx.context });
+      await beforeAuthRequest(ctx);
+      expect(await wrongStepUps(support.id)).toBe(1);
+      ctx.context.returned = refusal;
+      await afterAuthRequest({ ...ctx, context: ctx.context });
 
-    expect(await wrongStepUps(support.id)).toBe(0);
-  });
+      expect(await wrongStepUps(support.id)).toBe(0);
+      // The user's activity doesn't say a wrong code was entered.
+      expect(await events()).toEqual([]);
+    },
+  );
 
   it('keeps the attempt a wrong step-up code took, counting it once', async () => {
     const support = await staffActor(db, 'support');

@@ -12,6 +12,10 @@
  *   next to GitHub), and the welcome link of a new account still sets its
  *   first password;
  * - a link that isn't valid gets Better Auth's own answer, as before;
+ * - the link in a reset email goes on to the reset page with its token, but
+ *   never to a return address that isn't a page of the app (an endpoint under
+ *   `/api`, such as a sign-in link), whether its token is valid or not
+ *   (`refuseUnsafeReturnAddresses`);
  * - a reset takes the user's sign-in change lock, like the other sign-in
  *   changes, and gives it back afterwards;
  * - the reset email is in the account's language, else the browser's.
@@ -135,6 +139,22 @@ async function requestResetLink(email: string): Promise<string> {
     throw new Error('No reset link in the email');
   }
   return token;
+}
+
+/**
+ * Opens the link of a reset email: Better Auth's `GET /reset-password/:token`,
+ * which sends the browser on to the link's return address.
+ *
+ * @param token - The link's token.
+ * @param callbackURL - The link's return address.
+ * @returns The response.
+ */
+function openResetLink(token: string, callbackURL: string): Promise<Response> {
+  return auth.handler(
+    new Request(
+      `${env.BETTER_AUTH_URL}/api/auth/reset-password/${token}?${new URLSearchParams({ callbackURL })}`,
+    ),
+  );
 }
 
 /**
@@ -320,6 +340,58 @@ describe('the welcome link of a new account', () => {
     expect(await credentialCount(registered.userId)).toBe(1);
     expect(await signInWithNewPassword('new.person@adiutor.test')).toBe(200);
     expect(await lockIsFree(registered.userId)).toBe(true);
+  });
+});
+
+describe('the link in a reset email', () => {
+  /** Where the guard sends a link the browser opened with an unsafe return address. */
+  const ERROR_PAGE = '/sign-in-error?error=UNSAFE_RETURN_ADDRESS';
+
+  /** A return address that goes on to a sign-in link, which the browser would open with its cookies. */
+  const CHAINED = '/api/auth/magic-link/verify?token=attacker&callbackURL=/dashboard';
+
+  it('goes on to the reset page with its token, as emailed', async () => {
+    await createUser(db, 'john@adiutor.test');
+    const token = await requestResetLink('john@adiutor.test');
+    // The link as Better Auth wrote it into the email, with the return address the form asked for.
+    const [email] = vi.mocked(sendEmail).mock.calls.map(([call]) => call);
+    const link = defined(
+      /https?:\/\/\S+\/reset-password\/[\w-]+\?callbackURL=[^\s"<]+/.exec(email?.text ?? '')?.[0],
+      'the reset link',
+    );
+
+    const response = await auth.handler(new Request(link));
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get('location')).toBe(
+      `${new URL('/auth/reset-password', env.BETTER_AUTH_URL)}?token=${token}`,
+    );
+  });
+
+  it('says so on the reset page when its token is not valid', async () => {
+    const response = await openResetLink(generateToken(), '/auth/reset-password');
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get('location')).toBe(
+      `${new URL('/auth/reset-password', env.BETTER_AUTH_URL)}?error=INVALID_TOKEN`,
+    );
+  });
+
+  it('never goes on to an endpoint or another site, whether its token is valid or not', async () => {
+    const john = await createUser(db, 'john@adiutor.test');
+    const valid = await storeResetLink(john);
+
+    // Better Auth would send the browser on with `?error=INVALID_TOKEN` or `?token=…` added.
+    const unknown = await openResetLink('x', CHAINED);
+    const known = await openResetLink(valid, CHAINED);
+    const elsewhere = await openResetLink(valid, '//evil.adiutor.test/reset');
+
+    [unknown, known, elsewhere].forEach((response) => {
+      expect(response.status).toBe(302);
+      expect(response.headers.get('location')).toBe(ERROR_PAGE);
+    });
+    // The link wasn't used: it still sets the password.
+    expect((await resetPassword(valid)).status).toBe(200);
   });
 });
 

@@ -11,12 +11,7 @@ import { user, verification } from '@/db/schema';
 import { emailLinkVerificationIdentifier } from '@/lib/sign-in/tokens';
 
 import type { ServiceContext } from '../context';
-import {
-  hitRateLimit,
-  RATE_LIMITS,
-  releaseRateLimitHit,
-  tooManyAttemptsError,
-} from '../rate-limit';
+import { assertRateLimit, ipRateLimitKey, RATE_LIMITS, releaseRateLimitHit } from '../rate-limit';
 
 /** The account a sign-in link signs in to, as the page shows it. */
 export interface EmailLinkPreview {
@@ -66,16 +61,8 @@ export async function getEmailLinkPreview(
   ctx: ServiceContext,
   token: string,
 ): Promise<EmailLinkPreview | null> {
-  const request = ctx.requestInfo ? await ctx.requestInfo() : null;
-  const key = `email-link-miss:ip:${request?.ip ?? 'unknown'}`;
-  const { allowed, retryAfterSeconds } = await hitRateLimit(
-    ctx,
-    key,
-    RATE_LIMITS.emailLinkMissesPerIp,
-  );
-  if (!allowed) {
-    throw tooManyAttemptsError(retryAfterSeconds);
-  }
+  const key = await ipRateLimitKey(ctx, 'email-link-miss');
+  await assertRateLimit(ctx, key, RATE_LIMITS.emailLinkMissesPerIp);
 
   const [link] = await ctx.db
     .select({ value: verification.value })

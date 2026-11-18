@@ -1,6 +1,8 @@
 /**
  * @file The hourly job that reminds people of invitations that expire soon,
- * soonest first, a group at a time until its deadline.
+ * soonest first, a group at a time until its deadline. A run holds an
+ * invitation while it sends the reminder, and the link they have only gives
+ * way to the reminder's once the email is out.
  */
 import { and, asc, eq, exists, gt, isNotNull, isNull, lt, notExists, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
@@ -9,6 +11,7 @@ import { company, invitation, membership, user } from '@/db/schema';
 import { invitationReminderEmail } from '@/emails/invitation-reminder';
 import displayName from '@/lib/display-name';
 import { sendFailureOf } from '@/lib/email';
+import { SMTP_MAX_CONNECTIONS } from '@/lib/email-limits';
 import { isLocale } from '@/lib/i18n/locales';
 import { generateToken, hashToken } from '@/lib/sign-in/tokens';
 
@@ -20,11 +23,22 @@ import { defineRecurringJob } from '../define';
 const REMINDER_BEFORE_HOURS = 48;
 
 /**
- * How many reminders go out at once. The run checks its deadline before each
- * group, so a long list never keeps it past the request; the rest wait for
- * the next run, which is in time: they're due 48 hours before expiry.
+ * How many reminders go out at once: as many as the mail pool has
+ * connections, so none of a group waits for a connection while its send's
+ * time limit runs, and a group ends within that limit even when the mail
+ * server hangs. The run checks its deadline before each group, so a long
+ * list never keeps it past the request; the rest wait for the next run, which
+ * is in time: they're due 48 hours before expiry.
  */
-export const REMINDER_GROUP_SIZE = 20;
+export const REMINDER_GROUP_SIZE = SMTP_MAX_CONNECTIONS;
+
+/**
+ * How long a run holds an invitation whose reminder it's sending, in
+ * minutes. A send takes seconds, so a claim that's older is from a run that
+ * was stopped mid-send (the platform's time limit, a crash): the next run
+ * takes the invitation again.
+ */
+export const REMINDER_LEASE_MINUTES = 15;
 
 /** What {@link sendInvitationReminders} did. */
 interface ReminderResults {
@@ -35,8 +49,22 @@ interface ReminderResults {
 }
 
 /**
+ * The condition for invitations no run is sending the reminder of: never
+ * claimed, or claimed by a run that died ({@link REMINDER_LEASE_MINUTES}).
+ *
+ * @returns The SQL condition.
+ */
+function unclaimed() {
+  return or(
+    isNull(invitation.reminderClaimedAt),
+    lt(invitation.reminderClaimedAt, sql`now() - make_interval(mins => ${REMINDER_LEASE_MINUTES})`),
+  );
+}
+
+/**
  * Loads the open invitations whose reminder is due (see
- * {@link sendInvitationReminders}), soonest-expiring first.
+ * {@link sendInvitationReminders}) and that no other run holds,
+ * soonest-expiring first.
  *
  * @param ctx - Service context.
  * @returns The invitations, with what their reminders need.
@@ -53,7 +81,7 @@ async function loadDueInvitations(ctx: ServiceContext) {
       email: invitation.email,
       role: invitation.role,
       expiresAt: invitation.expiresAt,
-      // To put back if the reminder can't be sent.
+      // The link they have: the reminder's only replaces it while it's still this one.
       tokenHash: invitation.tokenHash,
       companyName: company.name,
       inviterName: user.name,
@@ -71,6 +99,7 @@ async function loadDueInvitations(ctx: ServiceContext) {
         isNull(invitation.acceptedAt),
         isNull(invitation.revokedAt),
         isNull(invitation.reminderSentAt),
+        unclaimed(),
         isNull(company.deactivatedAt),
         gt(invitation.expiresAt, sql`now()`),
         lt(invitation.expiresAt, sql`now() + make_interval(hours => ${REMINDER_BEFORE_HOURS})`),
@@ -113,8 +142,22 @@ type DueInvitation = Awaited<ReturnType<typeof loadDueInvitations>>[number];
 type ReminderResult = 'sent' | 'failed' | 'skipped';
 
 /**
- * Sends one reminder with a new link, after claiming it, and undoes the
- * claim when it can't be sent.
+ * Sends one reminder with a new link, in three steps, so that being stopped
+ * between any two never costs the invitee their link:
+ * 1. Claim the invitation ({@link REMINDER_LEASE_MINUTES}), so two runs at
+ *    once don't both send its reminder. The stored link stays as it is.
+ * 2. Send the email. When it can't be sent, the claim is given back and the
+ *    next run tries again.
+ * 3. Only then store the reminder's link in place of the one they had, note
+ *    that the reminder was sent and clear the claim, in one update. It only
+ *    applies while the stored link is still the one this run read: a newer
+ *    link stored meanwhile wins.
+ *
+ * A run that's stopped during step 2 or before step 3 (the platform's time
+ * limit, a crash) leaves the claim behind and the link untouched: the link
+ * they have keeps working, the reminder that may have gone out has a link
+ * that never will, and once the claim has run out the next run sends a
+ * second reminder, whose link does work.
  *
  * @param ctx - Service context.
  * @param found - The invitation.
@@ -127,17 +170,15 @@ async function remind(
   staffName: string,
 ): Promise<ReminderResult> {
   const targetName = found.companyName ?? staffName;
-  const token = generateToken();
-  const tokenHash = hashToken(token);
-  // Claim the reminder first, so two runs at once don't both send it.
   const [claimed] = await ctx.db
     .update(invitation)
-    .set({ tokenHash, reminderSentAt: sql`now()` })
-    .where(and(eq(invitation.id, found.id), isNull(invitation.reminderSentAt)))
+    .set({ reminderClaimedAt: sql`now()` })
+    .where(and(eq(invitation.id, found.id), isNull(invitation.reminderSentAt), unclaimed()))
     .returning({ id: invitation.id });
   if (!claimed) {
     return 'skipped';
   }
+  const token = generateToken();
   try {
     await ctx.sendEmail(
       await invitationReminderEmail(found.email, {
@@ -153,14 +194,12 @@ async function remind(
         expiresAt: found.expiresAt,
       }),
     );
-    return 'sent';
   } catch (error) {
-    // Undo the claim, so the link they have works again and the next run retries. Only while
-    // the link is still the reminder's: a resend meanwhile has sent them a newer one.
+    // Give the claim back, so the next run tries again; the link they have was never touched.
     await ctx.db
       .update(invitation)
-      .set({ tokenHash: found.tokenHash, reminderSentAt: null })
-      .where(and(eq(invitation.id, found.id), eq(invitation.tokenHash, tokenHash)));
+      .set({ reminderClaimedAt: null })
+      .where(eq(invitation.id, found.id));
     // eslint-disable-next-line no-console -- The job has no caller to report one failure to.
     console.error(
       `Sending the reminder for invitation ${found.id} failed; the next run tries again`,
@@ -168,18 +207,26 @@ async function remind(
     );
     return 'failed';
   }
+  // The email is out: its link takes the place of the one they had, unless that one changed.
+  await ctx.db
+    .update(invitation)
+    .set({ tokenHash: hashToken(token), reminderSentAt: sql`now()`, reminderClaimedAt: null })
+    .where(and(eq(invitation.id, found.id), eq(invitation.tokenHash, found.tokenHash)));
+  return 'sent';
 }
 
 /**
  * Emails a reminder for each open invitation that expires within
  * {@link REMINDER_BEFORE_HOURS} hours, once per invitation, for staff and
- * active companies. Each reminder has a new link (the old one stops working),
- * because only a hash of the link's token is stored.
+ * active companies. Each reminder has a new link (the old one stops working
+ * once the reminder is out), because only a hash of the link's token is
+ * stored.
  *
- * A reminder that can't be sent is undone: the invitation gets its old link
- * back and stays due, so the link the invitee has keeps working and the next
- * run tries again. One failure doesn't stop the others. With SMTP, the pooled
- * transport (`src/lib/email.ts`) caps how many go out at once.
+ * A reminder that can't be sent changes nothing: the invitation keeps its
+ * link and stays due, so the link the invitee has keeps working and the next
+ * run tries again. One failure doesn't stop the others. A run that's stopped
+ * while a reminder is on its way costs a second reminder later, never the
+ * invitee's link ({@link remind}).
  *
  * Invitations whose address already belongs to a member of the company (or,
  * for the staff, to someone on the staff) are skipped: they joined some other

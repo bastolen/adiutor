@@ -129,14 +129,18 @@ async function RequestContent({
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-mono">{formatRequestNumber(detail.prefix, detail.number)}</span>
             <span aria-hidden="true">·</span>
-            <TextLink href={`/companies/${detail.company.slug}`}>{detail.company.name}</TextLink>
+            <TextLink standalone href={`/companies/${detail.company.slug}`}>
+              {detail.company.name}
+            </TextLink>
           </span>
         }
         back={{ href: '/requests', label: t('back') }}
       />
 
       {/* Set by the redirect after the request was raised; not part of any link on this page. */}
-      {searchParam(query.raised) === '1' && <ToastOnArrival message={t('justRaised')} />}
+      {searchParam(query.raised) === '1' && (
+        <ToastOnArrival message={t('justRaised')} param="raised" />
+      )}
 
       {detail.company.deactivated && <Alert tone="info">{t('deactivated')}</Alert>}
 

@@ -10,9 +10,8 @@ import { emailSchema, roleSchema } from '@/lib/validation';
 
 import {
   assertConfirmedForGrant,
-  assertStillManages,
+  assertStillManagesPeople,
   getTargetAccess,
-  managePermission,
   assertNotSignedInAs,
 } from '../../access';
 import type { Actor } from '../../actor';
@@ -26,9 +25,9 @@ import { assertCanManage, assertInvitable, assertInviteRateLimits, visibleStatus
  * single-address service that {@link inviteManyByEmail} (the forms' bulk
  * invite) runs for each address. Exported for the authorization matrix and
  * the integration tests. The actor's rights are checked again as the first
- * step of the transaction (`assertStillManages`), before the per-address
- * lock, so an Admin demoted, removed or deactivated while the request was
- * under way can't send it.
+ * step of the transaction (`assertStillManagesPeople`), before the
+ * per-address lock, so an Admin demoted, removed or deactivated while the
+ * request was under way can't send it.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `members:manage` in the company, or `staff:manage`.
@@ -36,8 +35,8 @@ import { assertCanManage, assertInvitable, assertInviteRateLimits, visibleStatus
  * @param input.companyId - The company, or `null` for staff.
  * @param input.email - The email address to invite.
  * @param input.role - The role to give.
- * @param input.locale - The invitation's language; by default the request's, else English (US).
- *   An invitee who has an account with a saved language gets that instead.
+ * @param input.locale - The invitation's language; by default Adiutor's default language, else
+ *   English (US). An invitee who has an account with a saved language gets that instead.
  * @returns The status the actor may see (see {@link visibleStatus}).
  */
 export async function inviteByEmail(
@@ -58,7 +57,7 @@ export async function inviteByEmail(
 
   const created = await ctx.db.transaction(async (tx) => {
     // The rights the actor was loaded with may be gone by now: only their rows as locked count.
-    await assertStillManages(tx, actor, companyId, managePermission(companyId));
+    await assertStillManagesPeople(tx, actor, companyId);
     return createSentInvitation(ctx, tx, actor, {
       target: { companyId, name: access.name },
       email,
@@ -93,7 +92,8 @@ export type BulkInviteResult =
  * reached, for example), and so is a deadlock that ended an address's
  * transaction (nothing was sent to it), so the results of the addresses
  * already sent aren't lost. Each address still goes through `inviteByEmail`,
- * which checks the rights again in its transaction (`assertStillManages`).
+ * which checks the rights again in its transaction
+ * (`assertStillManagesPeople`).
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `members:manage`, or `staff:manage` for staff.

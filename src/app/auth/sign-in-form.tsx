@@ -16,10 +16,11 @@ import Alert from '@/components/ui/alert';
 import AuthDivider from '@/components/ui/auth-divider';
 import AuthHeading from '@/components/ui/auth-heading';
 import Badge from '@/components/ui/badge';
-import Button from '@/components/ui/button';
+import Button, { whileRunning } from '@/components/ui/button';
 import loadFresh from '@/components/ui/load-fresh';
 import TextField from '@/components/ui/text-field';
 import TextLink from '@/components/ui/text-link';
+import { usePageRestored } from '@/components/ui/use-page-restored';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import { getSafeRedirectPath, sectionFromHash, withSection } from '@/lib/redirect';
 import authClient from '@/lib/sign-in/auth-client';
@@ -41,6 +42,9 @@ interface SignInFormProps {
 
 /** Sign in with a password, or get a link by email. */
 type Method = 'password' | 'magic-link';
+
+/** A way of signing in that a button starts: a passkey, the email form, or an OAuth provider. */
+type SignInAction = 'passkey' | 'form' | OAuthProvider;
 
 /** How Better Auth's last-used cookie names the email form's methods. */
 const lastUsedName: Record<Method, string> = { password: 'email', 'magic-link': 'magic-link' };
@@ -150,7 +154,8 @@ export default function SignInForm({ providers }: SignInFormProps) {
   const [method, setMethod] = useTransientState<Method>('password');
   const [email, setEmail] = useTransientState('');
   const [password, setPassword] = useTransientState('');
-  const [pending, setPending] = useTransientState(false);
+  /** The way of signing in that's running: its button is busy, the others wait (`whileRunning`). */
+  const [running, setRunning] = useTransientState<SignInAction | null>(null);
   const [error, setError] = useTransientState(signInErrorText(t, searchParams.get('error')));
   /** A note another page sent the user here with (`?notice=`), then the result of sending a link. */
   const [success, setSuccess] = useTransientState(signInNoticeText(t, searchParams.get('notice')));
@@ -170,9 +175,11 @@ export default function SignInForm({ providers }: SignInFormProps) {
    * for whoever was signed in on this browser before. The browser's other
    * tabs load their own page afresh too (`everyTab`): a sign-in page open
    * there goes on, signed in.
+   *
+   * @param action - The way of signing in that worked, whose button stays busy.
    */
-  const finish = () => {
-    setPending(true);
+  const finish = (action: SignInAction) => {
+    setRunning(action);
     loadFresh(destination(), { everyTab: true });
   };
 
@@ -188,7 +195,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
       }
       const result = await authClient.signIn.passkey({ autoFill: true });
       if (active && !result?.error) {
-        finish();
+        finish('passkey');
       }
     };
     // A passkey offer that fails is just not shown, like one that's dismissed.
@@ -199,21 +206,9 @@ export default function SignInForm({ providers }: SignInFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Runs once on mount; `finish` only reads values that don't change while signing in.
   }, []);
 
-  useEffect(() => {
-    /**
-     * Makes the buttons usable again when the browser shows the page from its
-     * back/forward cache (e.g. Back from GitHub or Google).
-     *
-     * @param event - The page being shown.
-     */
-    const reset = (event: PageTransitionEvent) => {
-      if (event.persisted) {
-        setPending(false);
-      }
-    };
-    window.addEventListener('pageshow', reset);
-    return () => window.removeEventListener('pageshow', reset);
-  }, [setPending]);
+  // Makes the buttons usable again when the browser shows the page from its
+  // back/forward cache (e.g. Back from GitHub or Google).
+  usePageRestored(() => setRunning(null));
 
   /**
    * Signs in with the chosen method.
@@ -222,7 +217,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
    */
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setPending(true);
+    setRunning('form');
     setError(null);
     setSuccess(null);
 
@@ -232,7 +227,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
         setError(
           result.error.status === 401 ? t('signIn.wrongPassword') : authErrorText(t, result.error),
         );
-        setPending(false);
+        setRunning(null);
         return;
       }
       // With two-step verification on, the password is right but the code step comes first.
@@ -241,7 +236,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
         router.push(twoFactorPath(destination(), outcome.twoFactorMethods ?? []));
         return;
       }
-      finish();
+      finish('form');
       return;
     }
 
@@ -251,7 +246,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
       callbackURL: target,
       errorCallbackURL: errorPageFor(target),
     });
-    setPending(false);
+    setRunning(null);
     if (result.error) {
       setError(authErrorText(t, result.error, t('signIn.linkFailed')));
       return;
@@ -261,16 +256,16 @@ export default function SignInForm({ providers }: SignInFormProps) {
 
   /** Signs in with a passkey, letting the browser ask which one. */
   const signInWithPasskey = async () => {
-    setPending(true);
+    setRunning('passkey');
     setError(null);
     setSuccess(null);
     const result = await authClient.signIn.passkey();
     if (result?.error) {
       setError(authErrorText(t, result.error));
-      setPending(false);
+      setRunning(null);
       return;
     }
-    finish();
+    finish('passkey');
   };
 
   /**
@@ -279,7 +274,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
    * @param provider - The OAuth provider.
    */
   const signInWith = async (provider: OAuthProvider) => {
-    setPending(true);
+    setRunning(provider);
     setError(null);
     const target = destination();
     const result = await authClient.signIn.social({
@@ -289,7 +284,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
     });
     if (result.error) {
       setError(authErrorText(t, result.error));
-      setPending(false);
+      setRunning(null);
     }
   };
 
@@ -312,7 +307,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
         <Button
           variant="secondary"
           fullWidth
-          disabled={pending}
+          {...whileRunning(running, 'passkey')}
           onClick={signInWithPasskey}
           aria-describedby={describedBy('passkey')}
         >
@@ -327,7 +322,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
               key={provider}
               variant="secondary"
               fullWidth
-              disabled={pending}
+              {...whileRunning(running, provider)}
               onClick={() => signInWith(provider)}
               aria-describedby={describedBy(provider)}
             >
@@ -363,7 +358,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
-            <TextLink href="/auth/forgot-password" className="self-end text-sm">
+            <TextLink standalone href="/auth/forgot-password" className="self-end text-sm">
               {t('signIn.forgotPassword')}
             </TextLink>
           </div>
@@ -371,7 +366,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
         <Button
           type="submit"
           fullWidth
-          loading={pending}
+          {...whileRunning(running, 'form')}
           aria-describedby={describedBy(lastUsedName[method])}
         >
           {method === 'password' ? t('signIn.submitPassword') : t('signIn.submitLink')}

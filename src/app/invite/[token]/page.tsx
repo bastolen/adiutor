@@ -5,13 +5,9 @@
  */
 import { Suspense } from 'react';
 
-import InvitationHeading from '@/components/auth/invitation-heading';
-import InviteLinksNotAllowed from '@/components/auth/invite-links-not-allowed';
-import SetUpMfaFirst from '@/components/auth/set-up-mfa-first';
+import InvitationView from '@/components/auth/invitation-view';
 import UnusableLink from '@/components/auth/unusable-link';
 import { FormSkeleton } from '@/components/ui/skeleton';
-import { mustSetUpMfa } from '@/lib/authz/mfa';
-import { mayUseInviteLinks } from '@/lib/authz/permissions';
 import ClientMessages from '@/lib/i18n/client-messages';
 import appContext from '@/server/app-context';
 import { getOptionalActor } from '@/server/authz';
@@ -37,19 +33,10 @@ async function Invitation({ params }: { params: Promise<{ token: string }> }) {
     return <UnusableLink />;
   }
 
-  // Finance and Support can't accept what an invite link sent; a role that needs MFA sets it up first.
-  let step = <AcceptInvitation token={token} signedInEmail={actor?.email ?? null} />;
-  if (actor && preview.fromInviteLink && !mayUseInviteLinks(actor.platformRole)) {
-    step = <InviteLinksNotAllowed />;
-  } else if (actor && mustSetUpMfa(actor)) {
-    step = <SetUpMfaFirst />;
-  }
-
   return (
-    <div className="flex flex-col gap-8">
-      <InvitationHeading companyName={preview.companyName} roleId={preview.role} />
-      {step}
-    </div>
+    <InvitationView preview={preview} actor={actor} linkBased={preview.fromInviteLink}>
+      <AcceptInvitation token={token} signedInEmail={actor?.email ?? null} />
+    </InvitationView>
   );
 }
 

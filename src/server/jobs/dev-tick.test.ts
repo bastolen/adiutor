@@ -9,7 +9,8 @@ import type { ServiceContext } from '../context';
 import { DEV_TICK_INTERVAL_MS, startDevTick } from './dev-tick';
 import { runTick } from './tick';
 
-vi.mock('./tick', () => ({ runTick: vi.fn() }));
+// The tick is stood in for; the dev tick also reads how long a tick may start runs from it.
+vi.mock('./tick', () => ({ runTick: vi.fn(), REQUEST_RUN_SECONDS: 40 }));
 
 /** The context the ticks get; the tick itself is mocked, so nothing in it is used. */
 const ctx = { baseUrl: 'https://adiutor.test' } as ServiceContext;

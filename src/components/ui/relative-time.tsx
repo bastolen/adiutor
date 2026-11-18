@@ -12,6 +12,12 @@ import { formatDateTime, formatRelative } from '@/lib/format';
 interface RelativeTimeProps {
   /** When it happened, or `null` if it never did. */
   date: Date | null;
+  /**
+   * Also adds the exact time as text only screen readers hear (", 12 Nov
+   * 2026, 10:00"), right after the `<time>`, for tables where the tooltip is
+   * all there is otherwise. Nothing is added when `date` is `null`.
+   */
+  spokenExact?: boolean;
 }
 
 /**
@@ -20,9 +26,10 @@ interface RelativeTimeProps {
  *
  * @param props - Component props.
  * @param props.date - The moment.
+ * @param props.spokenExact - Add the exact time for screen readers.
  * @returns The time.
  */
-export default function RelativeTime({ date }: RelativeTimeProps) {
+export default function RelativeTime({ date, spokenExact = false }: RelativeTimeProps) {
   const t = useTranslations('common.relativeTime');
   const locale = useLocale();
   if (!date) {
@@ -30,8 +37,11 @@ export default function RelativeTime({ date }: RelativeTimeProps) {
   }
   const exact = formatDateTime(date, locale);
   return (
-    <time dateTime={date.toISOString()} title={exact}>
-      {formatRelative(date, locale, { justNow: t('justNow') })}
-    </time>
+    <>
+      <time dateTime={date.toISOString()} title={exact}>
+        {formatRelative(date, locale, { justNow: t('justNow') })}
+      </time>
+      {spokenExact && <span className="sr-only">, {exact}</span>}
+    </>
   );
 }

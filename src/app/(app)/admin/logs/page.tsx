@@ -7,14 +7,14 @@
  */
 import { ScrollText } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { getLocale, getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { type ReactNode, Suspense } from 'react';
 
 import Alert from '@/components/ui/alert';
 import Card from '@/components/ui/card';
 import DateRangeForm from '@/components/ui/date-range-form';
 import EmptyState from '@/components/ui/empty-state';
-import Pagination from '@/components/ui/pagination';
+import { paginationFooter } from '@/components/ui/pagination';
 import RelativeTime from '@/components/ui/relative-time';
 import SearchForm from '@/components/ui/search-form';
 import SegmentedNav from '@/components/ui/segmented-nav';
@@ -25,17 +25,18 @@ import TextLink from '@/components/ui/text-link';
 import { AUDIT_GROUP_KEYS, describeAuditEvent, isAuditGroup } from '@/lib/audit-actions';
 import { parseDayRange } from '@/lib/day-range';
 import displayName from '@/lib/display-name';
-import { formatDateTime } from '@/lib/format';
-import formatIpAddress from '@/lib/request/ip-address';
+import { describeIpAddress } from '@/lib/request/ip-address';
 import { describeUserAgent } from '@/lib/request/user-agent';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import { createPageUrl } from '@/lib/tables/page-url';
-import { parseTableState, showsPagination } from '@/lib/tables/table-state';
+import { parseTableState } from '@/lib/tables/table-state';
 import { AUDIT_LOG_TABLE } from '@/lib/tables/tables';
 import appContext from '@/server/app-context';
 import { type AuditEntry, listAuditLog } from '@/server/audit';
 import { requireGlobalPermission } from '@/server/authz';
 import { globalPermissionMetadata } from '@/server/page-metadata';
+
+import { userLink } from '../../_people/rich-tags';
 
 /**
  * Page metadata: "Audit log · Adiutor" for those who may see the page (`audit:view`), and
@@ -43,18 +44,6 @@ import { globalPermissionMetadata } from '@/server/page-metadata';
  */
 // i18n-check t('admin.logs.title')
 export const generateMetadata = globalPermissionMetadata('audit:view', 'admin.logs.title');
-
-/**
- * Makes the `<link>` tag of a rich message a link to a user's page.
- *
- * @param userId - The user's ID.
- * @returns The renderer `t.rich` takes for the tag.
- */
-function userLink(userId: string) {
-  return function UserLink(chunks: ReactNode) {
-    return <TextLink href={`/admin/users/${userId}`}>{chunks}</TextLink>;
-  };
-}
 
 /**
  * Shows the `<code>` tag of a rich message as a job's name, as the command
@@ -167,7 +156,9 @@ function Origin({ event }: { event: AuditEntry }) {
   return (
     <span className="flex flex-wrap gap-x-1.5">
       {event.userAgent && <span>{tCommon('device', describeUserAgent(event.userAgent))}</span>}
-      {event.ip && <span className="font-mono">{formatIpAddress(event.ip)}</span>}
+      {event.ip && (
+        <span className="font-mono">{tCommon('ipAddress', describeIpAddress(event.ip))}</span>
+      )}
     </span>
   );
 }
@@ -180,7 +171,6 @@ function Origin({ event }: { event: AuditEntry }) {
  * @returns The page content.
  */
 async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const locale = await getLocale();
   const t = await getTranslations('admin.logs');
   const tAudit = await getTranslations('audit');
   const tDates = await getTranslations('admin.dateRange');
@@ -292,12 +282,7 @@ async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> 
         </div>
       </div>
 
-      <Card
-        flush
-        footer={
-          showsPagination(events.total) && <Pagination {...table.pagination(events, t('rows'))} />
-        }
-      >
+      <Card flush footer={paginationFooter(table, events, t('rows'))}>
         {events.total === 0 ? (
           <EmptyState icon={ScrollText} title={empty.title} description={empty.description} />
         ) : (
@@ -336,8 +321,7 @@ async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> 
                     </div>
                   </Td>
                   <Td className="hidden whitespace-nowrap text-muted-foreground sm:table-cell">
-                    <RelativeTime date={event.at} />
-                    <span className="sr-only">, {formatDateTime(event.at, locale)}</span>
+                    <RelativeTime date={event.at} spokenExact />
                   </Td>
                   <Td className="hidden text-sm text-muted-foreground lg:table-cell">
                     <Origin event={event} />

@@ -88,6 +88,8 @@
       "addedToCompany": "{by, select, self {Se te añadió a {company} como {role}} admin {Un administrador te añadió a {company} como {role}} other {{name} te añadió a {company} como {role}}}",
       "joinedStaff": "Se te añadió al personal",
       "joinedCompany": "Te uniste a {company}",
+      "keptStaffRole": "Usaste una invitación al personal y conservaste el rol que tenías",
+      "keptCompanyRole": "Usaste una invitación a {company} y conservaste el rol que tenías",
       "removedFromStaff": "{by, select, self {Se te quitó del personal} admin {Un administrador te quitó del personal} other {{name} te quitó del personal}}",
       "removedFromCompany": "{by, select, self {Se te quitó de {company}} admin {Un administrador te quitó de {company}} other {{name} te quitó de {company}}}",
       "staffRoleChanged": "{by, select, self {Tu rol en el personal cambió a {role}} admin {Un administrador cambió tu rol en el personal a {role}} other {{name} cambió tu rol en el personal a {role}}}",

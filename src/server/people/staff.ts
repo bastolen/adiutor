@@ -4,9 +4,9 @@
  * `invite-links.ts` (with no company). Managing the staff needs
  * `staff:manage` (platform Admins).
  */
-import { and, asc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { asc, eq, inArray, isNotNull, or } from 'drizzle-orm';
 
-import type { DatabaseOrTransaction } from '@/db';
+import type { DatabaseTransaction } from '@/db';
 import { staffSettings, user } from '@/db/schema';
 import { isStaffRoleRaise, wouldLeaveNoAdmin } from '@/lib/authz/guards';
 import { PLATFORM_ADMIN_ROLE, type PlatformRole } from '@/lib/authz/roles';
@@ -79,6 +79,37 @@ export async function getStaffSettings(
   return { name, defaultLocale, requestPrefix };
 }
 
+/** A change to the staff's settings: the values to set in the single `staff_settings` row. */
+type StaffSettingsChange = Partial<
+  Pick<typeof staffSettings.$inferInsert, 'name' | 'defaultLocale' | 'requestPrefix'>
+>;
+
+/**
+ * Saves a change to the staff's settings: locks the settings row
+ * (`FOR UPDATE`, so two changes take turns) and updates it. When the row is
+ * missing (it was lost), it's created again with the change, and with the
+ * name users then see ("Adiutor", `getStaffName`) unless the change is the
+ * name.
+ *
+ * @param tx - The change's transaction.
+ * @param change - The values to set.
+ * @returns The name before the change, or `null` when there was no row.
+ */
+async function saveStaffSettings(
+  tx: DatabaseTransaction,
+  change: StaffSettingsChange,
+): Promise<string | null> {
+  const [before] = await tx.select({ name: staffSettings.name }).from(staffSettings).for('update');
+  if (before) {
+    await tx.update(staffSettings).set(change);
+  } else {
+    await tx
+      .insert(staffSettings)
+      .values({ name: change.name ?? (await getStaffName(tx)), ...change });
+  }
+  return before?.name ?? null;
+}
+
 /**
  * Sets the prefix request numbers are shown with ("AD" in "AD-142"). Only
  * how numbers look changes: a request keeps its number and its address, and
@@ -101,14 +132,7 @@ export async function setRequestPrefix(
   assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'staff:manage');
   const requestPrefix = requestPrefixSchema.parse(prefix);
-  await ctx.db.transaction(async (tx) => {
-    const [found] = await tx.select({ id: staffSettings.id }).from(staffSettings).for('update');
-    if (found) {
-      await tx.update(staffSettings).set({ requestPrefix });
-    } else {
-      await tx.insert(staffSettings).values({ name: await getStaffName(tx), requestPrefix });
-    }
-  });
+  await ctx.db.transaction((tx) => saveStaffSettings(tx, { requestPrefix }));
   return requestPrefix;
 }
 
@@ -133,14 +157,7 @@ export async function setDefaultLocale(
   assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'staff:manage');
   const defaultLocale = localeSchema.parse(locale);
-  await ctx.db.transaction(async (tx) => {
-    const [found] = await tx.select({ id: staffSettings.id }).from(staffSettings).for('update');
-    if (found) {
-      await tx.update(staffSettings).set({ defaultLocale });
-    } else {
-      await tx.insert(staffSettings).values({ name: await getStaffName(tx), defaultLocale });
-    }
-  });
+  await ctx.db.transaction((tx) => saveStaffSettings(tx, { defaultLocale }));
   return defaultLocale;
 }
 
@@ -162,21 +179,13 @@ export async function renameStaff(
   assertPermission(getGlobalPermissions(actor), 'staff:manage');
   const name = staffNameSchema.parse(rawName);
   await ctx.db.transaction(async (tx) => {
-    const [before] = await tx
-      .select({ name: staffSettings.name })
-      .from(staffSettings)
-      .for('update');
-    if (before) {
-      await tx.update(staffSettings).set({ name });
-    } else {
-      await tx.insert(staffSettings).values({ name });
-    }
+    const from = await saveStaffSettings(tx, { name });
     await recordEvent(
       ctx,
       {
         action: 'staff_renamed',
         actorUserId: actor.id,
-        details: { staff: true, from: before?.name ?? null, to: name },
+        details: { staff: true, from, to: name },
       },
       tx,
     );
@@ -430,34 +439,4 @@ export async function removeFromStaff(
 ): Promise<void> {
   assertNotSignedInAs(actor);
   await setStaffRole(ctx, actor, userId, null);
-}
-
-/**
- * Checks whether the staff has another active Admin than this user, for the
- * guards on deactivating and deleting accounts. It only reads: the caller
- * locks the rows it relies on first (`soleAdminOf` locks the staff Admins'
- * rows in ID order), and runs this as a new statement afterwards, so it sees
- * every change committed before those locks were granted.
- *
- * @param ctx - Where to read from.
- * @param ctx.db - Database client or transaction.
- * @param userId - The user to leave out.
- * @returns Whether someone else can still manage the staff.
- */
-export async function hasOtherActiveAdmin(
-  ctx: { db: DatabaseOrTransaction },
-  userId: string,
-): Promise<boolean> {
-  const [other] = await ctx.db
-    .select({ id: user.id })
-    .from(user)
-    .where(
-      and(
-        eq(user.platformRole, PLATFORM_ADMIN_ROLE),
-        isNull(user.deactivatedAt),
-        sql`${user.id} <> ${userId}`,
-      ),
-    )
-    .limit(1);
-  return Boolean(other);
 }

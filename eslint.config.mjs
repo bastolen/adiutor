@@ -200,7 +200,11 @@ const projectRulesConfig = [
     rules: {
       /** Command-line scripts report to the terminal. */
       'no-console': 'off',
-      /** Scripts only run during development. */
+      /**
+       * Scripts may import devDependencies: most are development tools, and the few that
+       * run on servers (`jobs:run`, `setup:platform`, `sessions:revoke-all`) run from the
+       * image, which keeps its source and scripts (docs/deploying.md).
+       */
       'import-x/no-extraneous-dependencies': ['error', { devDependencies: true }],
     },
   },
@@ -511,6 +515,17 @@ const TEXT_PROPS =
   '/^(aria-label|aria-description|alt|title|placeholder|label|description|heading|hint|[a-z]+Label)$/';
 
 /**
+ * The options of `react/jsx-no-literals` for the UI and the email templates:
+ * no text in JSX (props are the job of `literalTextPropSyntax`), apart from
+ * the punctuation and symbols that go between translated parts.
+ */
+const jsxNoLiteralsOptions = {
+  noStrings: false,
+  ignoreProps: true,
+  allowedStrings: ['·', '–', '—', '…', '(', ')', ',', ':', '/', '%', '|'],
+};
+
+/**
  * Text written straight into a text prop instead of coming from the
  * catalogues (CLAUDE.md, "Languages").
  */
@@ -573,14 +588,7 @@ const claudeRulesConfig = [
     files: ['src/app/**/*.tsx', 'src/components/**/*.tsx'],
     ignores: TEST_FILES,
     rules: {
-      'react/jsx-no-literals': [
-        'error',
-        {
-          noStrings: false,
-          ignoreProps: true,
-          allowedStrings: ['·', '–', '—', '…', '(', ')', ',', ':', '/', '%', '|'],
-        },
-      ],
+      'react/jsx-no-literals': ['error', jsxNoLiteralsOptions],
       'no-restricted-syntax': [
         'error',
         ...airbnbRestrictedSyntaxWithoutForOf,
@@ -601,14 +609,7 @@ const claudeRulesConfig = [
     files: ['src/emails/**/*.tsx'],
     ignores: TEST_FILES,
     rules: {
-      'react/jsx-no-literals': [
-        'error',
-        {
-          noStrings: false,
-          ignoreProps: true,
-          allowedStrings: ['·', '–', '—', '…', '(', ')', ',', ':', '/', '%', '|'],
-        },
-      ],
+      'react/jsx-no-literals': ['error', jsxNoLiteralsOptions],
       'no-restricted-syntax': [
         'error',
         ...airbnbRestrictedSyntaxWithoutForOf,

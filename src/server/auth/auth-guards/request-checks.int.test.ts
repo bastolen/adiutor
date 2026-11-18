@@ -104,6 +104,7 @@ describe('return addresses', () => {
     ['/sign-in/social', 'body', ['callbackURL', 'errorCallbackURL', 'newUserCallbackURL']],
     ['/link-social', 'body', ['callbackURL', 'errorCallbackURL']],
     ['/request-password-reset', 'body', ['redirectTo']],
+    ['/reset-password/:token', 'query', ['callbackURL']],
     ['/verify-email', 'query', ['callbackURL']],
     ['/send-verification-email', 'body', ['callbackURL']],
   ] as const;

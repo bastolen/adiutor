@@ -2,7 +2,9 @@
  * @file The "Send a new code" button of every form that emails a code (the
  * sign-in code step, the step-up page and setting up email codes): busy while
  * a code is being sent, and counting down while the last one is too recent
- * for a new one (`useResendCooldown`). Its text is in `common`
+ * for a new one (`useResendCooldown`). Counting down, it ignores presses but
+ * keeps keyboard focus (`focusableWhenDisabled`): it's usually the button
+ * that was just pressed. Its text is in `common`
  * (`common.resendCode`), since the Security page uses it too.
  */
 'use client';
@@ -32,8 +34,10 @@ export function formatCountdown(seconds: number): string {
 }
 
 /**
- * "Send a new code", or "Send a new code in 2:30" (disabled) while the last
- * code is too recent for a new one.
+ * "Send a new code", or "Send a new code in 2:30" while the last code is too
+ * recent for a new one: then it can't be pressed, yet stays focusable, so
+ * pressing it doesn't drop keyboard focus to the top of the page once the
+ * new code is sent.
  *
  * @param props - Button props.
  * @param props.onClick - Sends a new code.
@@ -49,6 +53,7 @@ export default function ResendCodeButton({ onClick, sending, waitSeconds }: Rese
       size="sm"
       loading={sending}
       disabled={waitSeconds > 0}
+      focusableWhenDisabled
       onClick={onClick}
     >
       {waitSeconds > 0

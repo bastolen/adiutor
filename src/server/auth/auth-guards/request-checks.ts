@@ -43,7 +43,7 @@ export function confirmSignInLinkFirst(ctx: AuthGuardContext): void {
 const CALLBACK_FIELDS = ['callbackURL', 'errorCallbackURL', 'newUserCallbackURL'] as const;
 
 /** Where an endpoint takes its return addresses, and which ones. */
-interface ReturnAddressFields {
+export interface ReturnAddressFields {
   /** The JSON body, or the query of a link the browser opens (`GET`). */
   readonly in: 'body' | 'query';
   /** The fields that hold return addresses. */
@@ -52,16 +52,26 @@ interface ReturnAddressFields {
 
 /**
  * The endpoints that take return addresses, checked with
- * `isSafeAppRedirect` ({@link refuseUnsafeReturnAddresses}).
+ * `isSafeAppRedirect` ({@link refuseUnsafeReturnAddresses}), by the path
+ * Better Auth registers them with, which is what the hooks get: the pattern
+ * (`/reset-password/:token`), not the path of the request.
  * `/send-verification-email` is closed over HTTP, but the server calls it;
- * `/verify-email` is the link it emails.
+ * `/verify-email` is the link it emails. `/reset-password/:token` is the link
+ * of a reset email: Better Auth sends the browser on to its `callbackURL`
+ * with the token, or with `error=INVALID_TOKEN`, having only checked that
+ * it's on this site.
+ *
+ * `request-checks.test.ts` fails when an endpoint the browser can reach takes
+ * a return address that isn't listed here: add it, or say there why Better
+ * Auth never sends the browser to it.
  */
-const RETURN_ADDRESS_FIELDS: ReadonlyMap<string, ReturnAddressFields> = new Map([
+export const RETURN_ADDRESS_FIELDS: ReadonlyMap<string, ReturnAddressFields> = new Map([
   ['/sign-in/magic-link', { in: 'body', fields: CALLBACK_FIELDS }],
   ['/magic-link/verify', { in: 'query', fields: CALLBACK_FIELDS }],
   ['/sign-in/social', { in: 'body', fields: CALLBACK_FIELDS }],
   ['/link-social', { in: 'body', fields: ['callbackURL', 'errorCallbackURL'] }],
   ['/request-password-reset', { in: 'body', fields: ['redirectTo'] }],
+  ['/reset-password/:token', { in: 'query', fields: ['callbackURL'] }],
   ['/verify-email', { in: 'query', fields: ['callbackURL'] }],
   ['/send-verification-email', { in: 'body', fields: ['callbackURL'] }],
 ]);

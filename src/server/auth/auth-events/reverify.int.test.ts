@@ -12,6 +12,7 @@ import { sendEmail } from '@/lib/email';
 import { PROVIDER_STEP_UP_COOKIE } from '@/lib/sign-in/oauth-providers';
 
 import {
+  connectProvider,
   createSession,
   createUser,
   inSequence,
@@ -77,21 +78,7 @@ describe('refusing a re-verify with another account', () => {
     githubId: number,
     options: { confirmed?: boolean; accessToken?: string } = {},
   ): Promise<string> {
-    const created = firstRow(
-      await db
-        .insert(account)
-        .values({
-          userId,
-          accountId: String(githubId),
-          providerId: 'github',
-          mfaVerified: true,
-          confirmed: options.confirmed ?? true,
-          accessToken: options.accessToken,
-        })
-        .returning({ id: account.id }),
-      'the new account',
-    );
-    return created.id;
+    return connectProvider(db, userId, { accountId: String(githubId), ...options });
   }
 
   /**
@@ -462,9 +449,7 @@ describe('checking the user an incoming identity is for', () => {
   it('refuses a re-verify with another user’s account as that, before saying they’re deactivated', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
     const john = await createUser(db, 'john@adiutor.test');
-    await db
-      .insert(account)
-      .values({ userId: john, accountId: '4242', providerId: 'github', mfaVerified: true });
+    await connectProvider(db, john, { accountId: '4242' });
     await deactivate(john);
     const current = await createSession(db, jane);
     markReverify(jane, current);
@@ -477,9 +462,7 @@ describe('checking the user an incoming identity is for', () => {
 
   it('refuses a re-verify’s own user when they were deactivated meanwhile', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
-    await db
-      .insert(account)
-      .values({ userId: jane, accountId: '4242', providerId: 'github', mfaVerified: true });
+    await connectProvider(db, jane, { accountId: '4242' });
     const current = await createSession(db, jane);
     markReverify(jane, current);
     await deactivate(jane);

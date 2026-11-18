@@ -3,14 +3,14 @@
  * session, its MFA level, and whether the browser still has the session a
  * re-verify started from.
  */
-import { and, eq, gt, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { session as sessionTable } from '@/db/schema';
 import { type MfaMethod } from '@/lib/authz/mfa';
 
 import { type ReverifyMarker } from '../reverify-marker';
-import { signedSession, signedSessionToken } from '../signed-session';
+import { type SignedSession, signedSession } from '../signed-session';
 import type { AuthHookContext } from './hook-context';
 
 /**
@@ -31,42 +31,20 @@ export async function hasReverifySession(
 
 /**
  * Finds the session a request was made with, if it belongs to this user and
- * hasn't expired (read from the signed session cookie, `signedSessionToken`,
- * without touching it).
+ * hasn't expired (`signedSession`, read from the signed session cookie
+ * without touching it). A session token is unique, so the browser's session
+ * is this user's or it isn't.
  *
  * @param ctx - The endpoint context.
  * @param userId - The user.
- * @returns The session's ID and MFA facts, or `null` without one.
+ * @returns The session (its ID, user and MFA facts), or `null` without one.
  */
 export async function ownSession(
   ctx: AuthHookContext | null,
   userId: string,
-): Promise<{
-  id: string;
-  mfaVerified: boolean | null;
-  mfaMethod: string | null;
-  mfaVerifiedAt: Date | null;
-} | null> {
-  const token = await signedSessionToken(ctx);
-  if (!token) {
-    return null;
-  }
-  const [found] = await db
-    .select({
-      id: sessionTable.id,
-      mfaVerified: sessionTable.mfaVerified,
-      mfaMethod: sessionTable.mfaMethod,
-      mfaVerifiedAt: sessionTable.mfaVerifiedAt,
-    })
-    .from(sessionTable)
-    .where(
-      and(
-        eq(sessionTable.token, token),
-        eq(sessionTable.userId, userId),
-        gt(sessionTable.expiresAt, sql`now()`),
-      ),
-    );
-  return found ?? null;
+): Promise<SignedSession | null> {
+  const current = await signedSession(ctx);
+  return current?.userId === userId ? current : null;
 }
 
 /**

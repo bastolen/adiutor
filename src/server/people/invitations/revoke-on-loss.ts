@@ -7,7 +7,7 @@ import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import type { DatabaseOrTransaction, DatabaseTransaction } from '@/db';
 import { invitation, inviteLink, membership, user } from '@/db/schema';
-import { getPermissions } from '@/lib/authz/permissions';
+import { getGlobalPermissions, getPermissions } from '@/lib/authz/permissions';
 import { type CompanyRole } from '@/lib/authz/roles';
 
 import { managePermission } from '../../access';
@@ -37,14 +37,13 @@ import { sameTarget, auditTarget } from './rules';
  * @param userId - Who created them.
  * @param options - Options.
  * @param options.all - Revoke everything they created, whatever their rights.
- * @returns How many invitations and links were revoked.
  */
 export async function revokeInvitesWithoutManager(
   ctx: ServiceContext,
   tx: DatabaseOrTransaction,
   userId: string,
   { all = false }: { all?: boolean } = {},
-): Promise<number> {
+): Promise<void> {
   // One query at a time: a transaction runs on one connection, which can't run queries in parallel.
   const [found] = await tx
     .select({ platformRole: user.platformRole })
@@ -68,7 +67,7 @@ export async function revokeInvitesWithoutManager(
     }
     const permission = managePermission(companyId);
     if (companyId === null) {
-      return getPermissions({ platformRole, companyRole: null, company: null }).has(permission);
+      return getGlobalPermissions({ platformRole }).has(permission);
     }
     return getPermissions({
       platformRole,
@@ -152,7 +151,6 @@ export async function revokeInvitesWithoutManager(
       tx,
     );
   }
-  return total;
 }
 
 /** Whose invitations to revoke: one company's or the staff's (`companyId: null`), or all of them. */
@@ -179,20 +177,21 @@ export type InvitationsToRevoke = { companyId: string | null } | 'all';
  * if it had been sent just after the deletion, which anyone allowed to invite
  * may do anyway.
  *
+ * When it revoked any, an `invitation_revoked` event records how many, with
+ * the reason (`member_removed` or `account_closed`).
+ *
  * @param ctx - Service context (for the audit log).
  * @param tx - The removal's or deletion's transaction.
  * @param email - The person's email address.
  * @param target - `{ companyId }` for one company, `{ companyId: null }` for the staff, or `'all'`
  *   for every company and the staff (when the account is deleted).
- * @returns How many invitations were revoked; when any were, an `invitation_revoked` event
- *   records how many, with the reason (`member_removed` or `account_closed`).
  */
 export async function revokeInvitationsTo(
   ctx: ServiceContext,
   tx: DatabaseTransaction,
   email: string,
   target: InvitationsToRevoke,
-): Promise<number> {
+): Promise<void> {
   // Invitations store addresses in lower case.
   const address = email.toLowerCase();
   const open = and(
@@ -237,5 +236,4 @@ export async function revokeInvitationsTo(
       tx,
     );
   }
-  return revoked.length;
 }

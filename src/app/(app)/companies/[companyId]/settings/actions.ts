@@ -17,7 +17,10 @@ import { setCompanyActive, updateCompany } from '@/server/people/companies';
 /**
  * Saves the company's name and URL name. A new URL name moves the company to
  * a new address, so the page follows it there (`?saved=1` confirms it on
- * arrival) instead of reloading the old one, which no longer resolves.
+ * arrival) instead of reloading the old one, which no longer resolves. It
+ * refreshes first there too: Next drops the pages it kept alive only for an
+ * action that refreshes, and they still show the old name and link to the
+ * old address.
  *
  * @param _previous - The previous result (unused).
  * @param formData - Fields `companyId`, `name` and `slug`.
@@ -34,12 +37,13 @@ export async function updateCompanyAction(
       name: field(formData, 'name'),
       slug: field(formData, 'slug'),
     });
+    // Before the redirect too: only a refresh drops the pages kept alive, which show the old name.
+    refresh();
     // The old address no longer resolves: follow the company to its new one (`runAction` passes
     // the redirect on).
     if (slugChanged) {
       redirect(`/companies/${slug}/settings?saved=1`);
     }
-    refresh();
     const t = await getTranslations('companies.settings');
     return { ok: true, message: t('saved') };
   });

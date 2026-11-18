@@ -13,21 +13,20 @@ import EditDetails from './edit-details';
 
 vi.mock('./actions', () => ({ updateDetailsAction: vi.fn() }));
 
-vi.mock('next/navigation', () => ({
-  /**
-   * Mocked router (the dialog's recent confirmation check uses it).
-   *
-   * @returns A router that goes nowhere.
-   */
-  useRouter: () => ({ push: vi.fn() }),
-}));
-
 afterEach(() => {
   vi.mocked(updateDetailsAction).mockReset();
 });
 
 /** A request's details as they are. */
 const DETAILS = { title: 'Help', type: 'bug', priority: 'normal' } as const;
+
+/**
+ * What the action was sent last.
+ *
+ * @returns The form's fields.
+ */
+const sent = () =>
+  Object.fromEntries(defined(vi.mocked(updateDetailsAction).mock.calls.at(-1), 'the last call')[1]);
 
 /**
  * Opens the dialog.
@@ -78,10 +77,59 @@ describe('EditDetails', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Save details' }));
 
     await waitFor(() => expect(updateDetailsAction).toHaveBeenCalledTimes(1));
-    expect(
-      Object.fromEntries(defined(vi.mocked(updateDetailsAction).mock.calls[0], 'the call')[1]),
-    ).toEqual({ request: '142', title: 'The printer is broken', type: 'bug', priority: 'low' });
+    // With what it started from, so only what was changed is saved.
+    expect(sent()).toEqual({
+      request: '142',
+      title: 'The printer is broken',
+      type: 'bug',
+      priority: 'low',
+      was_title: 'Help',
+      was_type: 'bug',
+      was_priority: 'normal',
+    });
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('keeps saying what it started from when the page behind it is refreshed, until it is opened again', async () => {
+    vi.mocked(updateDetailsAction).mockResolvedValue({ ok: true, message: 'Details saved.' });
+    const user = userEvent.setup();
+    const { rerender } = render(<EditDetails request={142} details={DETAILS} />);
+
+    const dialog = await openDialog(user);
+    // A colleague raised the priority, and the page behind the dialog shows it.
+    rerender(<EditDetails request={142} details={{ ...DETAILS, priority: 'high' }} />);
+
+    // The fields still show what the editor saw, and so does what goes with them.
+    expect(within(dialog).getByRole('combobox', { name: 'Priority' })).toHaveTextContent('Normal');
+    await user.click(within(dialog).getByRole('button', { name: 'Save details' }));
+    await waitFor(() => expect(updateDetailsAction).toHaveBeenCalledTimes(1));
+    expect(sent()).toMatchObject({ priority: 'normal', was_priority: 'normal' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    // Opened again, it starts from the request as it is now.
+    const reopened = await openDialog(user);
+    expect(within(reopened).getByRole('combobox', { name: 'Priority' })).toHaveTextContent('High');
+    await user.click(within(reopened).getByRole('button', { name: 'Save details' }));
+    await waitFor(() => expect(updateDetailsAction).toHaveBeenCalledTimes(2));
+    expect(sent()).toMatchObject({ priority: 'high', was_priority: 'high' });
+  });
+
+  it('sends the priority a new type brought as a change, and the one it started from with it', async () => {
+    vi.mocked(updateDetailsAction).mockResolvedValue({ ok: true, message: 'Details saved.' });
+    const user = userEvent.setup();
+    render(<EditDetails request={142} details={DETAILS} />);
+
+    const dialog = await openDialog(user);
+    await pick(user, 'Type', 'Hotfix');
+    await user.click(within(dialog).getByRole('button', { name: 'Save details' }));
+
+    await waitFor(() => expect(updateDetailsAction).toHaveBeenCalledTimes(1));
+    expect(sent()).toMatchObject({
+      type: 'hotfix',
+      priority: 'high',
+      was_type: 'bug',
+      was_priority: 'normal',
+    });
   });
 
   it('moves the priority to a newly picked type’s own', async () => {

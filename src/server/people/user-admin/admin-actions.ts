@@ -200,7 +200,22 @@ export async function deactivate(
 }
 
 /**
+ * The refusal for deactivating an account that's deactivated already.
+ *
+ * @returns The error (`conflict`).
+ */
+function alreadyDeactivatedError(): ServiceError {
+  return new ServiceError('conflict', 'errors.users.alreadyDeactivated');
+}
+
+/**
  * Deactivates someone else's account.
+ *
+ * Whether the account is deactivated already is checked twice: as the
+ * request finds it, and again once its row is locked (`assertNotSoleAdmin`
+ * locks it). Of two deactivations at the same moment the second waits for
+ * that lock and then finds the first one's, so the audit log records the
+ * deactivation once and the user gets one email about it.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `users:manage`.
@@ -217,9 +232,14 @@ export async function deactivateUser(
   const { targetId } = await ctx.db.transaction(async (tx) => {
     const target = await loadTarget(tx, actor, userId);
     if (target.deactivatedAt) {
-      throw new ServiceError('conflict', 'errors.users.alreadyDeactivated');
+      throw alreadyDeactivatedError();
     }
     await assertNotSoleAdmin(tx, target.id, 'user');
+    // A new statement, with the row locked: it sees a deactivation that committed meanwhile.
+    const locked = await loadTarget(tx, actor, target.id);
+    if (locked.deactivatedAt) {
+      throw alreadyDeactivatedError();
+    }
     await deactivate(ctx, tx, target.id);
     await recordEvent(
       ctx,

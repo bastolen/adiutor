@@ -16,8 +16,8 @@ import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
 import {
   CHANGE_MOMENT,
   changeRequest,
+  recordStatusChange,
   requestToChange,
-  statusChange,
   workingPermission,
 } from './change';
 
@@ -59,7 +59,12 @@ export default async function replyToRequest(
 
   const side = requestSide(permissions);
   return changeRequest(ctx, actor, access, workingPermission(permissions), async (tx, locked) => {
-    const entry = { requestId: locked.id, authorId: actor.id, authorSide: side };
+    const entry = {
+      requestId: locked.id,
+      authorId: actor.id,
+      authorSide: side,
+      createdAt: CHANGE_MOMENT,
+    };
     await tx.insert(requestEntry).values({ ...entry, kind: 'comment', body });
     // A status the request can't move to as it is by now is left alone: the reply still counts.
     const status =
@@ -74,13 +79,7 @@ export default async function replyToRequest(
       return { status };
     }
     // After the reply, so the history reads: the reply, then what it did to the status.
-    await tx
-      .insert(requestEntry)
-      .values({ ...entry, kind: 'status', fromValue: locked.status, toValue: status });
-    await tx
-      .update(request)
-      .set(statusChange(locked.status, status))
-      .where(eq(request.id, locked.id));
+    await recordStatusChange(tx, locked, status, { id: actor.id, side });
     return { status };
   });
 }

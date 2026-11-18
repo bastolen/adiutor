@@ -1,7 +1,7 @@
 /**
- * @file Tests for the "Send a new code" button and its countdown: disabled and
- * counting down while the last code is too recent, ready once the wait is
- * over, and busy while a code is being sent.
+ * @file Tests for the "Send a new code" button and its countdown: counting
+ * down while the last code is too recent, ignoring presses but keeping focus,
+ * ready once the wait is over, and busy while a code is being sent.
  */
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -17,16 +17,23 @@ import useResendCooldown from './use-resend-cooldown';
  *
  * @param props - Harness props.
  * @param props.sending - Whether a code is being sent.
+ * @param props.onResend - Called when the button sends a new code.
  * @returns The harness.
  */
-function Harness({ sending = false }: { sending?: boolean }) {
+function Harness({
+  sending = false,
+  onResend = () => {},
+}: {
+  sending?: boolean;
+  onResend?: () => void;
+}) {
   const cooldown = useResendCooldown();
   return (
     <>
       <button type="button" onClick={cooldown.start}>
         Sent
       </button>
-      <ResendCodeButton onClick={() => {}} sending={sending} waitSeconds={cooldown.waitSeconds} />
+      <ResendCodeButton onClick={onResend} sending={sending} waitSeconds={cooldown.waitSeconds} />
     </>
   );
 }
@@ -50,22 +57,38 @@ describe('ResendCodeButton', () => {
     vi.useRealTimers();
   });
 
-  it('counts down after a code was sent, and is ready once the wait is over', () => {
-    render(<Harness />);
-    expect(screen.getByRole('button', { name: 'Send a new code' })).toBeEnabled();
+  it('counts down after a code was sent, keeping focus, and is ready once the wait is over', () => {
+    const onResend = vi.fn();
+    render(<Harness onResend={onResend} />);
+    const button = screen.getByRole('button', { name: 'Send a new code' });
+    expect(button).toBeEnabled();
+    expect(button).not.toHaveAttribute('aria-disabled');
 
+    button.focus();
     fireEvent.click(screen.getByRole('button', { name: 'Sent' }));
-    expect(screen.getByRole('button', { name: 'Send a new code in 2:30' })).toBeDisabled();
+    button.focus();
+    expect(button).toHaveAccessibleName('Send a new code in 2:30');
+    // It can't be pressed, but it isn't disabled: a disabled button would drop keyboard focus.
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    expect(button).not.toHaveAttribute('aria-busy');
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    expect(onResend).not.toHaveBeenCalled();
 
     act(() => {
       vi.advanceTimersByTime(30_000);
     });
-    expect(screen.getByRole('button', { name: 'Send a new code in 2:00' })).toBeDisabled();
+    expect(button).toHaveAccessibleName('Send a new code in 2:00');
+    expect(button).toHaveFocus();
 
     act(() => {
       vi.advanceTimersByTime((EMAIL_CODE_RESEND_SECONDS - 30) * 1000);
     });
-    expect(screen.getByRole('button', { name: 'Send a new code' })).toBeEnabled();
+    expect(button).toHaveAccessibleName('Send a new code');
+    expect(button).not.toHaveAttribute('aria-disabled');
+    expect(button).toHaveFocus();
+    fireEvent.click(button);
+    expect(onResend).toHaveBeenCalledTimes(1);
   });
 
   it('is busy while a code is being sent', () => {

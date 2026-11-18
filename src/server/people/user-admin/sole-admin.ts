@@ -4,14 +4,13 @@
  * changes at the same moment take turns), the refusal that goes with it
  * (`soleAdminError`) and the check the changes use (`assertNotSoleAdmin`).
  */
-import { and, asc, eq, inArray, isNull, ne, or } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 
 import type { DatabaseOrTransaction } from '@/db';
 import { company, membership, user } from '@/db/schema';
 import { COMPANY_ADMIN_ROLE, PLATFORM_ADMIN_ROLE, type PlatformRole } from '@/lib/authz/roles';
 
 import { concurrentChangeError, notFoundError, ServiceError } from '../../errors';
-import { hasOtherActiveAdmin } from '../staff';
 
 /** What a user is the last Admin of who can still sign in. */
 export interface SoleAdminOf {
@@ -97,6 +96,32 @@ async function lockSoleAdminRows(
 }
 
 /**
+ * Checks whether the staff has another active Admin than this user. It only
+ * reads: {@link soleAdminOf} locks the rows it relies on first (the staff
+ * Admins' rows in ID order, {@link lockSoleAdminRows}), and runs this as a
+ * new statement afterwards, so it sees every change committed before those
+ * locks were granted.
+ *
+ * @param db - Database client or transaction.
+ * @param userId - The user to leave out.
+ * @returns Whether someone else can still manage the staff.
+ */
+async function hasOtherActiveAdmin(db: DatabaseOrTransaction, userId: string): Promise<boolean> {
+  const [other] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(
+      and(
+        eq(user.platformRole, PLATFORM_ADMIN_ROLE),
+        isNull(user.deactivatedAt),
+        sql`${user.id} <> ${userId}`,
+      ),
+    )
+    .limit(1);
+  return Boolean(other);
+}
+
+/**
  * Finds what a user is the only Admin of who can still sign in: the staff and
  * active companies.
  *
@@ -143,7 +168,7 @@ export async function soleAdminOf(
   }
   // From here on, new statements: they see what was committed before the locks were granted.
   const lastStaffAdmin =
-    platformRole === PLATFORM_ADMIN_ROLE && !(await hasOtherActiveAdmin({ db }, userId));
+    platformRole === PLATFORM_ADMIN_ROLE && !(await hasOtherActiveAdmin(db, userId));
 
   const adminOf = await db
     .select({ id: company.id, name: company.name })
@@ -200,14 +225,15 @@ export type SoleAdminSubject = 'self' | 'user';
  * The error for a change that would leave the staff or companies without an
  * Admin, e.g. "This user is the only Admin of Adiutor Tests. Make someone
  * else an Admin first." (`errors.soleAdmin.<subject>.<what>`, with the
- * companies' names as `{companies}`).
+ * companies' names as `{companies}`: a list, which whatever shows the error
+ * joins in the reader's language, "A, B and C").
  *
  * @param subject - Who it's about.
  * @param sole - What they're the last Admin of.
  * @returns The error (`conflict`), or `null` when nothing would be left without an Admin.
  */
 export function soleAdminError(subject: SoleAdminSubject, sole: SoleAdminOf): ServiceError | null {
-  const companies = sole.companies.join(', ');
+  const { companies } = sole;
   if (sole.staff && sole.companies.length > 0) {
     return new ServiceError('conflict', `errors.soleAdmin.${subject}.staffAndCompanies`, {
       companies,

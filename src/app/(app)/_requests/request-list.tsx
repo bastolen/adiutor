@@ -6,19 +6,19 @@
 import { ChevronRight, Inbox, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
+import type { ReactNode } from 'react';
 
 import Button from '@/components/ui/button';
 import Card from '@/components/ui/card';
 import EmptyState from '@/components/ui/empty-state';
 import FilterMenu from '@/components/ui/filter-menu';
-import Pagination from '@/components/ui/pagination';
+import { paginationFooter } from '@/components/ui/pagination';
 import RelativeTime from '@/components/ui/relative-time';
+import RowLink from '@/components/ui/row-link';
 import SearchForm from '@/components/ui/search-form';
 import SegmentedNav from '@/components/ui/segmented-nav';
 import SortMenu from '@/components/ui/sort-menu';
-import { focusRing } from '@/components/ui/styles';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
-import cn from '@/lib/cn';
 import {
   DEFAULT_REQUEST_STATUS_FILTER,
   formatRequestNumber,
@@ -29,10 +29,11 @@ import {
   REQUEST_STATUS_FILTERS,
   REQUEST_TYPES,
   requestPath,
+  type RequestStatusFilter,
 } from '@/lib/requests';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import { createPageUrl } from '@/lib/tables/page-url';
-import { parseTableState, showsPagination, type TableDefinition } from '@/lib/tables/table-state';
+import { parseTableState, type TableDefinition } from '@/lib/tables/table-state';
 import { REQUESTS_TABLE, STAFF_REQUESTS_TABLE } from '@/lib/tables/tables';
 import type { Actor } from '@/server/actor';
 import appContext from '@/server/app-context';
@@ -83,6 +84,37 @@ interface RequestListProps {
    * filtered by one.
    */
   company?: string;
+  /**
+   * Renders what comes before the list (a page's header) from what the list
+   * has loaded anyway, so the page needn't load it again: the name the staff
+   * are shown with, and whether the viewer may raise a request in the
+   * companies the list covers.
+   */
+  renderHeader?: (loaded: { staffName: string; canRaise: boolean }) => ReactNode;
+}
+
+/** Why a list without requests is empty: nothing matches, nothing is active, or there are none. */
+type EmptyKind = 'noMatch' | 'active' | 'none';
+
+/**
+ * Works out why a list without requests is empty. A search, a company, a
+ * type or a priority narrows the list down, and so do the Waiting and Closed
+ * links: nothing matches them. Active is where the list starts, and All
+ * leaves no request out, so a list that's empty under All without a search
+ * or a filter has no requests yet.
+ *
+ * @param status - The status link the list is on.
+ * @param narrowed - Whether a search or one of the filter menus is in use.
+ * @returns What the empty list is about.
+ */
+function emptyKindOf(status: RequestStatusFilter, narrowed: boolean): EmptyKind {
+  if (narrowed) {
+    return 'noMatch';
+  }
+  if (status === 'active') {
+    return 'active';
+  }
+  return status === 'all' ? 'none' : 'noMatch';
 }
 
 /**
@@ -97,18 +129,24 @@ interface RequestListProps {
  * column; below that they go under the title. Company users never get a
  * priority: the service leaves it out.
  *
+ * An empty list says why it's empty ({@link emptyKindOf}) and, unless a
+ * search or a filter emptied it, offers "New request" to whoever may raise
+ * one.
+ *
  * @param props - Component props.
  * @param props.path - The page the list is on.
  * @param props.searchParams - The page's query parameters.
  * @param props.actor - The viewer.
  * @param props.company - The company whose list this is, on its own page.
- * @returns The filters and the table (or an empty state).
+ * @param props.renderHeader - Renders what comes before the list, from what the list loaded.
+ * @returns The header, if any, the filters and the table (or an empty state).
  */
 export default async function RequestList({
   path,
   searchParams,
   actor,
   company = undefined,
+  renderHeader = undefined,
 }: RequestListProps) {
   const t = await getTranslations('requests.list');
   const tRequests = await getTranslations('requests');
@@ -156,16 +194,61 @@ export default async function RequestList({
     { ...filters, q: search },
     await getTranslations('tables'),
   ).table(definition, { ...requested, page: requests.page });
-  const filtered = Boolean(search || chosenCompany || type || priority) || status !== 'active';
+  /**
+   * The options of a filter menu: "all" first (no value for the parameter),
+   * then one per item, each linking to the list with that value, and the
+   * chosen one marked as the current one.
+   *
+   * @param param - The query parameter the menu filters by.
+   * @param allLabel - The text of the option that removes the filter.
+   * @param chosen - The value the list is filtered by now, if any.
+   * @param items - The values to choose from, with their labels.
+   * @returns The menu's options.
+   */
+  const filterOptions = (
+    param: 'company' | 'type' | 'priority',
+    allLabel: string,
+    chosen: string | undefined,
+    items: { value: string; label: string }[],
+  ) => [
+    {
+      value: '',
+      label: allLabel,
+      href: table.withParams({ [param]: undefined }),
+      current: !chosen,
+    },
+    ...items.map(({ value, label }) => ({
+      value,
+      label,
+      href: table.withParams({ [param]: value }),
+      current: value === chosen,
+    })),
+  ];
   const canRaise = company
     ? companies.some(({ slug, canRaise: may }) => slug === company && may)
     : companies.some(({ canRaise: may }) => may);
   // The company is named in each row only where the list can hold several.
   const showsCompany = !company && companies.length > 1;
   const newButton = canRaise && <NewRequestButton company={company} label={t('new')} />;
+  // What an empty list says, and whether it invites a request: only where one would show up.
+  const emptyKind = emptyKindOf(status, Boolean(search || chosenCompany || type || priority));
+  const mayRaise = { canRaise: canRaise ? 'yes' : 'no' };
+  let emptyText = { title: t('empty.noMatchTitle'), description: t('empty.noMatchDescription') };
+  if (emptyKind === 'active') {
+    emptyText = {
+      title: t('empty.activeTitle'),
+      description: t('empty.activeDescription', mayRaise),
+    };
+  } else if (emptyKind === 'none') {
+    emptyText = {
+      title: t('empty.noneTitle'),
+      description: t('empty.noneDescription', mayRaise),
+    };
+  }
 
   return (
     <>
+      {renderHeader?.({ staffName: settings.staffName, canRaise })}
       <div className="flex flex-col gap-4">
         <SegmentedNav
           label={t('statusLabel')}
@@ -197,58 +280,40 @@ export default async function RequestList({
               <FilterMenu
                 label={t('companyFilter')}
                 menuLabel={t('companyMenu')}
-                options={[
-                  {
-                    value: '',
-                    label: t('allCompanies'),
-                    href: table.withParams({ company: undefined }),
-                    current: !chosenCompany,
-                  },
-                  ...companies.map(({ slug, name }) => ({
-                    value: slug,
-                    label: name,
-                    href: table.withParams({ company: slug }),
-                    current: slug === chosenCompany,
-                  })),
-                ]}
+                options={filterOptions(
+                  'company',
+                  t('allCompanies'),
+                  chosenCompany,
+                  companies.map(({ slug, name }) => ({ value: slug, label: name })),
+                )}
               />
             )}
             <FilterMenu
               label={t('typeFilter')}
               menuLabel={t('typeMenu')}
-              options={[
-                {
-                  value: '',
-                  label: t('allTypes'),
-                  href: table.withParams({ type: undefined }),
-                  current: !type,
-                },
-                ...REQUEST_TYPES.map((value) => ({
+              options={filterOptions(
+                'type',
+                t('allTypes'),
+                type,
+                REQUEST_TYPES.map((value) => ({
                   value,
                   label: tRequests('type', { type: value }),
-                  href: table.withParams({ type: value }),
-                  current: value === type,
                 })),
-              ]}
+              )}
             />
             {internal && (
               <FilterMenu
                 label={t('priorityFilter')}
                 menuLabel={t('priorityMenu')}
-                options={[
-                  {
-                    value: '',
-                    label: t('allPriorities'),
-                    href: table.withParams({ priority: undefined }),
-                    current: !priority,
-                  },
-                  ...REQUEST_PRIORITIES.map((value) => ({
+                options={filterOptions(
+                  'priority',
+                  t('allPriorities'),
+                  priority,
+                  REQUEST_PRIORITIES.map((value) => ({
                     value,
                     label: tRequests('priority', { priority: value }),
-                    href: table.withParams({ priority: value }),
-                    current: value === priority,
                   })),
-                ]}
+                )}
               />
             )}
             {requests.total > 0 && <SortMenu label={t('rows')} options={table.sortOptions()} />}
@@ -256,24 +321,13 @@ export default async function RequestList({
         </div>
       </div>
 
-      <Card
-        flush
-        footer={
-          showsPagination(requests.total) && (
-            <Pagination {...table.pagination(requests, t('rows'))} />
-          )
-        }
-      >
+      <Card flush footer={paginationFooter(table, requests, t('rows'))}>
         {requests.total === 0 ? (
           <EmptyState
             icon={Inbox}
-            title={filtered ? t('empty.noMatchTitle') : t('empty.activeTitle')}
-            description={
-              filtered
-                ? t('empty.noMatchDescription')
-                : t('empty.activeDescription', { canRaise: canRaise ? 'yes' : 'no' })
-            }
-            action={filtered ? undefined : newButton || undefined}
+            title={emptyText.title}
+            description={emptyText.description}
+            action={emptyKind === 'noMatch' ? undefined : newButton || undefined}
           />
         ) : (
           <Table
@@ -302,11 +356,11 @@ export default async function RequestList({
             </thead>
             <tbody>
               {requests.items.map((request) => {
-                // Staff who aren't in the company read it as the staff; its members as themselves.
-                const audience = internal ? 'staff' : 'contributor';
+                // Worded as on the request's own page: the service says how this reader is
+                // addressed in each request's company.
                 const labels = (
                   <>
-                    <StatusBadge status={request.status} audience={audience} />
+                    <StatusBadge status={request.status} audience={request.audience} />
                     {request.reopened && <ReopenedBadge />}
                   </>
                 );
@@ -316,15 +370,7 @@ export default async function RequestList({
                       <div className="flex min-w-0 flex-col gap-1">
                         {/* The link covers the whole row, so the row is one click target; on its own
                             it's 2px taller above and below too, like every text link (at least 24px). */}
-                        <Link
-                          href={requestPath(request.number)}
-                          className={cn(
-                            '-my-0.5 rounded-sm py-0.5 font-medium wrap-anywhere text-foreground group-hover:underline group-hover:underline-offset-4 after:absolute after:inset-0',
-                            focusRing,
-                          )}
-                        >
-                          {request.title}
-                        </Link>
+                        <RowLink href={requestPath(request.number)}>{request.title}</RowLink>
                         <span className="flex flex-wrap items-center gap-x-2 text-xs wrap-anywhere text-muted-foreground">
                           <span className="font-mono">
                             {formatRequestNumber(settings.prefix, request.number)}

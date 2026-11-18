@@ -84,7 +84,8 @@
       "noFailedJobs": "There's nothing left to retry or discard here: someone may have done it already."
     },
     "requests": {
-      "statusChanged": "This request’s status changed in the meantime. Check it and try again."
+      "statusChanged": "This request’s status changed in the meantime. Check it and try again.",
+      "detailsChanged": "This request’s details changed in the meantime. Check them and try again."
     }
   }
 }

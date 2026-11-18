@@ -22,6 +22,7 @@ import {
   createUser,
   enableTwoFactor,
   inSequence,
+  rateLimitHits,
   setupTestContext,
   staffActor,
   turnOffGitHubSignIn,
@@ -637,11 +638,7 @@ describe('changeOwnPassword', () => {
    * @returns The count in the current window, or `null` without one.
    */
   async function wrongCount(userId: string): Promise<number | null> {
-    const [bucket] = await db
-      .select({ count: rateLimitBucket.count })
-      .from(rateLimitBucket)
-      .where(eq(rateLimitBucket.key, wrongCurrentPasswordsKey(userId)));
-    return bucket?.count ?? null;
+    return rateLimitHits(db, wrongCurrentPasswordsKey(userId));
   }
 
   it('records each wrong current password, and refuses after five without checking', async () => {

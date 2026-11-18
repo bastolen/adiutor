@@ -78,6 +78,14 @@ export type ButtonProps = ComponentProps<'button'> & {
    * busy, not disabled, so it keeps keyboard focus (see {@link Button}).
    */
   loading?: boolean;
+  /**
+   * While `disabled`, stay focusable and ignore presses instead of being
+   * disabled: `aria-disabled`, with the disabled look and cursor. For a
+   * button that its own use makes wait, such as "Send a new code" counting
+   * down after a code was sent, which would otherwise lose keyboard focus
+   * the moment it's pressed (see {@link Button}).
+   */
+  focusableWhenDisabled?: boolean;
   /** Render the child element (e.g. a link) with the button's styles instead of a `<button>`. */
   asChild?: boolean;
   /**
@@ -89,7 +97,28 @@ export type ButtonProps = ComponentProps<'button'> & {
 };
 
 /**
- * Ignores a press on a busy button: nothing is called, and a submit button
+ * The state of one of several buttons that each start an action, of which
+ * only one may run at a time (e.g. "Sign in with a passkey", "Continue with
+ * GitHub" and "Sign in"): the running action's button is busy, so it keeps
+ * keyboard focus, and every other one is disabled, so it can't start a
+ * second action. A single flag for all of them would disable the button
+ * that was pressed, which loses focus, and show a spinner on buttons nobody
+ * pressed.
+ *
+ * @param running - The action that's running, or `null` when none is.
+ * @param action - This button's action.
+ * @returns The `loading` and `disabled` props for this button.
+ */
+export function whileRunning<Action extends string>(
+  running: Action | null,
+  action: Action,
+): Pick<ButtonProps, 'loading' | 'disabled'> {
+  return { loading: running === action, disabled: running !== null && running !== action };
+}
+
+/**
+ * Ignores a press on a busy button, or a disabled one that stays focusable
+ * (`focusableWhenDisabled`): nothing is called, and a submit button
  * doesn't submit its form again (also not when Enter in one of the form's
  * fields presses it). Radix triggers skip their own handler for a prevented
  * press too.
@@ -107,20 +136,23 @@ function ignorePress(event: MouseEvent<HTMLButtonElement>): void {
  * spinner and the wait cursor, and it ignores presses, which prevents double
  * submissions. A disabled button would lose keyboard focus the moment the
  * action starts, and not get it back, leaving keyboard users at the top of
- * the page after every form they send. With `decorative`, it's only a
- * picture of a button (see the prop).
+ * the page after every form they send. For the same reason, a button that
+ * its own use makes wait (`focusableWhenDisabled`) is `aria-disabled` while
+ * it's disabled, and ignores presses, rather than disabled. With
+ * `decorative`, it's only a picture of a button (see the prop).
  *
  * @param props - Button props.
  * @param props.variant - Visual style.
  * @param props.size - Size.
  * @param props.fullWidth - Stretch to the container's width.
  * @param props.loading - Busy state.
+ * @param props.focusableWhenDisabled - Stay focusable while disabled.
  * @param props.asChild - Style the child element instead of rendering a button.
  * @param props.decorative - Render a non-interactive look-alike.
  * @param props.className - Extra classes.
  * @param props.type - Button type.
  * @param props.disabled - Disabled state.
- * @param props.onClick - Called when it's pressed, unless it's busy.
+ * @param props.onClick - Called when it's pressed, unless it's busy or disabled.
  * @param props.children - Content.
  * @returns The button.
  */
@@ -129,6 +161,7 @@ export default function Button({
   size = 'md',
   fullWidth = false,
   loading = false,
+  focusableWhenDisabled = false,
   asChild = false,
   decorative = false,
   className = '',
@@ -159,7 +192,7 @@ export default function Button({
 
   const classes = cn(
     baseClasses,
-    // A busy button (`aria-disabled`) looks like a disabled one.
+    // A busy button, or a disabled one that stays focusable (`aria-disabled`), looks like a disabled one.
     'transition-[background-color,border-color,color,box-shadow,transform] active:scale-[0.98] disabled:opacity-55 disabled:active:scale-100 aria-disabled:opacity-55 aria-disabled:active:scale-100',
     focusRing,
     variantClasses[variant].look,
@@ -177,17 +210,20 @@ export default function Button({
     );
   }
 
+  // Busy, or disabled but focusable: it keeps focus and ignores presses instead of being disabled.
+  const ignoresPresses = loading || (disabled && focusableWhenDisabled);
+
   return (
     <button
       // eslint-disable-next-line react/button-has-type -- `type` defaults to "button" above.
       type={type}
       data-button=""
       className={classes}
-      disabled={disabled}
+      disabled={disabled && !focusableWhenDisabled}
       aria-busy={loading || undefined}
-      aria-disabled={loading || undefined}
+      aria-disabled={ignoresPresses || undefined}
       {...props}
-      onClick={loading ? ignorePress : onClick}
+      onClick={ignoresPresses ? ignorePress : onClick}
     >
       {loading && <Spinner />}
       {children}

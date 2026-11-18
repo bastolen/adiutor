@@ -13,7 +13,8 @@ keyboard support.
   `Card`, `PageHeader`, `AuthHeading`, `AuthDivider`, `Table`, `Badge`, `Alert` (optionally
   dismissible), `Banner` (a notice with an icon, title and actions, e.g. on the dashboard),
   `ResultAlert`, `ConfirmDialog`, `DropdownMenu`, `Sheet` (a slide-over panel), `EmptyState`,
-  `IconRow`, `IconTile` (a decorative icon on a tinted square), `DescriptionList` (labels and
+  `IconRow`, `IconTile` (a decorative icon on a tinted square), `RowLink` (the name in a table row
+  or list item, stretched so the whole row is one click target), `DescriptionList` (labels and
   values), `Skeleton`, `Pagination`, `SortMenu`, `FilterMenu`, ...). Menus, selects, dialogs and
   sheets are
   built on [Radix UI](https://www.radix-ui.com), and only `src/components/ui/` imports it. Radix
@@ -21,7 +22,7 @@ keyboard support.
   dialogs and returned to the button that opened them. In a menu, `MenuRadioRow` with
   `MenuIconRadioItem`s shows a choice as a segmented row of icons (like the theme in the account
   menu); ArrowLeft and ArrowRight also move within it. `MenuRadioLinkItem` is a radio item that is
-  a link (the sorts in `SortMenu`, the choices in `FilterMenu`). A `Badge`'s tone says what kind of status it is: `success` for
+  a link (the sorts in `SortMenu`, the choices in `FilterMenu`; both are built on `LinkRadioMenu`, which holds the open state, the busy button and the navigation). A `Badge`'s tone says what kind of status it is: `success` for
   active or verified, `warning` for something that needs attention (expired, not verified),
   `danger` for deactivated or revoked, and `accent` (outlined in the link colour) for what's about
   the viewer, like "You" on their own row. A status keeps one tone on every screen, which
@@ -46,7 +47,8 @@ keyboard support.
     tables build their first cell with `PersonCell` (`src/app/(app)/_people/person-cell.tsx`).
   - **Pages:** 25, 50 or 100 rows per page, chosen in the table's footer (`Pagination`: "Showing
     26–50 of 132", Previous, the page numbers and Next). The footer only shows with more than 10
-    rows.
+    rows: a card gets it from `paginationFooter`, which gives nothing for a table that fits on
+    one page.
   - **In the address:** each table keeps its state in the query string with its own prefix
     (`sort`, `dir`, `page` and `size` for a page's main table; `inv-…`, `links-…`, `companies-…`
     and `devices-…` for the others), leaving defaults out, so a sorted page can be bookmarked and
@@ -58,7 +60,9 @@ keyboard support.
     Search (`SearchForm`, on `next/form`) and filter links (`SegmentedNav`) work the same way:
     they load the list within the app without scrolling, keep focus and the pages kept alive, and
     show a busy state (a spinner in the Search button, or in the followed filter link) until the
-    list arrives; without JavaScript, search is a plain GET. A list with more to filter by than
+    list arrives; without JavaScript, search is a plain GET. The spinner sits over the link's
+    label, which turns transparent but stays the link's name (`LinkPendingIndicator`; hiding it
+    would leave the link nameless while its page loads). A list with more to filter by than
     fits in a row of links has a `FilterMenu` per filter next to its Sort menu (the company, type
     and priority of requests): a button that names the filter and, once one is chosen, the choice
     ("Type: Bug"), with the choices as links in a menu, "All" first. It keeps focus like the Sort
@@ -89,7 +93,22 @@ keyboard support.
   Typed input should, but a "Saved" or error message, or an open dialog, shouldn't still be there when
   you come back. Forms use `useTransientActionState` instead of `useActionState`, and status
   messages and dialog open state use `useTransientState` instead of `useState`
-  (`src/components/ui/use-transient-state.ts`); both reset when the page is hidden.
+  (`src/components/ui/use-transient-state.ts`); both reset when the page is hidden. What a page
+  does once when it opens (the code step emailing its code) it does again when it's shown again:
+  `useOncePerVisit` runs it once each time the page is shown, also through Strict Mode's second
+  run of the effects, so development doesn't do it twice. In the
+  signed-in app a draft survives whole: every field of a form is kept, in plain state or by the
+  browser, never some of them (Add company keeps its name, URL name and admin address together),
+  and a form whose submit went through starts empty again. The signed-out pages for signing in
+  are the exception (sign in, the code step, forgot password, reset password): they keep even
+  their fields, busy buttons and confirmations in `useTransientState`, because they come back
+  after signing out and the next person on the browser mustn't find the last user's address or
+  password.
+- **A change refreshes, also when it redirects:** Next.js drops the pages it kept alive only when
+  a server action refreshes or revalidates (or sets a cookie); a `redirect()` alone leaves them as
+  they were. An action that changes something and then redirects calls `refresh()` first (raising
+  a request, deleting a user, giving a company a new URL name), or Back shows the form still
+  filled in, the list without the new row, or the page of what was just deleted.
 - **A new person means a new page load:** what's kept alive belongs to whoever was signed in, and
   React keeps a field's value even when a page comes back for someone else. So every change of who
   the browser acts as (signing in or out, starting or ending a sign-in as a user, also when it ends
@@ -104,14 +123,16 @@ keyboard support.
   whatever the result. Forms pass both the action and the hook's `onSubmit`
   (`<form action={formAction} onSubmit={onSubmit}>`), which runs the action itself and clears the
   form only after a successful result (`resetOnSuccess`, on by default). Forms that edit a saved
-  setting (the staff page's default language) pass `resetOnSuccess: false`: there's nothing to
-  clear, and a cleared `SelectField` goes back to the value it showed when the page loaded (Radix
-  Select restores that on a form reset), not the one just saved. A bulk invite that sent some
+  setting with a select (the staff page's default language) pass `resetOnSuccess: false`: a
+  cleared `SelectField` goes back to the value it showed when the page loaded (Radix Select
+  restores that on a form reset), not the one just saved. Forms that edit a saved setting in a
+  text field (a name, the request prefix) keep the reset: it's what makes the field show the
+  value as it was saved (trimmed, the prefix in capitals) rather than as it was typed. A bulk invite that sent some
   invitations keeps just the addresses that weren't sent. The sign-in pages are the exception to keeping typed input: the sign-in form and the code step keep their
   fields, busy state and "Trust this device" in `useTransientState` too, because they come back
   when someone goes back to them (from the code step to the sign-in page, say), and whoever does
   mustn't find the last user's details or a button still busy. They also reset a busy button when the browser restores them from its
-  back/forward cache (`pageshow`).
+  back/forward cache (`pageshow`, through `usePageRestored`).
 - **Illustrations** (like the example request on the sign-in pages) are `inert`, and use
   `<Button decorative>` for buttons that only look like buttons: no hover, focus or press effects.
 - **Button labels** stay on one line when they fit. A button is never wider than its container
@@ -122,7 +143,12 @@ keyboard support.
   sideways.
 - **Menus and select lists** keep at least the page's 16px side gutter from the screen's edges
   when they would otherwise run off it (`SCREEN_GUTTER` in `src/components/ui/styles.ts`, Radix's
-  `collisionPadding`).
+  `collisionPadding`). The item the keyboard or pointer is on is filled (`raised-muted`) and has
+  an inset 2px outline in the ring colour (`highlightedItem` in the same file, shared by menu items
+  and select options). The fill alone is 1.13:1 against the panel in light mode and 1.21:1 in dark
+  mode, and forced-colours mode drops it; the outline is 7.5:1 and 7.3:1 (WCAG 1.4.11) and is drawn
+  in forced colours too. Items never take `outline-none` or `outline-hidden`: both switch
+  Tailwind's outline style off for the element, so the outline would never show.
 - **Colours:** semantic tokens in `src/styles/theme.css`, each checked for contrast (at least 4.5:1
   for text, 3:1 for input borders) in both modes:
 
@@ -179,7 +205,22 @@ keyboard support.
   (`Button`'s `loading`: a spinner, `aria-busy`, `aria-disabled` and the wait cursor) and ignores
   presses, so nothing is submitted twice. It's busy rather than disabled, because a disabled
   button loses keyboard focus the moment the action starts and doesn't get it back, which would
-  leave keyboard users at the top of the page after every form they send. Destructive actions ask
+  leave keyboard users at the top of the page after every form they send. Where several buttons
+  each start an action and only one may run at a time (the sign-in page's passkey, provider and
+  password buttons, or a request's two reply buttons), only the pressed one is busy and the others are disabled
+  (`whileRunning(running, action)` from `src/components/ui/button.tsx`): one flag for all of them
+  would disable the pressed button too, and show a spinner on buttons nobody pressed. A button
+  that its own use makes wait, like "Send a new code" counting down after a code was sent, stays
+  focusable while it can't be pressed (`Button`'s `focusableWhenDisabled`: `aria-disabled`, the
+  not-allowed cursor, presses ignored, no spinner). The same goes for a button its own action
+  turns off once the page refreshes, such as "Sign out other devices" with none left, "Reset
+  two-step verification" with nothing left to reset or "Add to company" for the last company:
+  `RowAction` and `ActionDialog` take `focusableWhenDisabled` and hand it on (while signed in as a
+  user they're disabled all the same). Both take `describedBy` too, the ID of the text that says
+  why a button is off, so someone who reaches it with the keyboard hears the reason ("Add to
+  company" for a deactivated account). Don't offer a control whose only outcome is a refusal:
+  leave it out (a deactivated company's memberships have no role select or Remove) or turn it off
+  with its reason. Destructive actions ask
   for confirmation in a `ConfirmDialog`. A role select only saves when an option is picked (Enter or click), never while
   arrowing through the list; on the user's own row it asks first (`confirmChange`, with the
   question for each role worded by the page, e.g. "Step down to Manager?"), and cancelling puts it
@@ -192,7 +233,13 @@ keyboard support.
   two-step verification off, a dismissed notice), focus moves to the heading of its card (card
   headings take focus from script, `tabIndex={-1}`) or, outside a card, to the main content
   (`restoreFocusIfLost` in `src/components/ui/focus-fallback.ts`, which focuses it with
-  `focusMainContent`), never to `<body>`.
+  `focusMainContent`), never to `<body>`. A form that gives way to its own confirmation (Add
+  user, Add company, an invite link's "Continue") moves focus to that confirmation (`Alert`'s
+  `focusOnShow`), and a button that brings the form back ("Add another") moves it to the form's
+  first field. Such a form remembers which result was dismissed and shows any other one, never a
+  "show the result" flag that the next submit flips: the hook keeps returning the old result
+  until the new one arrives, so a flag would bring the old confirmation back while the request
+  runs and lose what was typed.
   - **Signed in as someone.** While a staff member is signed in as a user, the controls that change
     something render disabled, and the banner says changes are turned off (see
     [Signing in as a user](authentication.md#signing-in-as-a-user)). The banner mounts
@@ -219,8 +266,20 @@ keyboard support.
       card into view and focuses its heading.
     - With focus already inside the card (a result `Alert` with `focusOnShow`), it only scrolls.
     - Otherwise it leaves the page alone.
-  - **Sticky header.** Cards scroll to 5rem from the top below `lg`, clear of the sticky header,
-    and 2.5rem from `lg` up (`scroll-mt-20 lg:scroll-mt-10`).
+  - **Sticky header.** Two layers stick to the top of the screen: the top bar below `lg` (3.5rem
+    tall) and, while a staff member is signed in as a user, the banner at every width. A browser
+    counts a control under them as visible, so a keyboard user who goes back to it (Shift+Tab)
+    wouldn't see it (WCAG 2.4.11). The page therefore tells the browser how much of its top is
+    covered: `html { scroll-padding-top: var(--sticky-top) }` in `src/app/globals.css`, which is
+    where the banner sticks (4rem below `lg`, 1rem from `lg`), plus the banner's height while it
+    shows, plus 0.5rem of room for a focus ring. `SignedInAsMarker` measures the banner (it wraps
+    differently per width and language) and keeps its height in `--signed-in-as-banner-height` on
+    `<html>` while it's mounted. Everything the browser scrolls to lands below the layers: a
+    control that gets focus, an anchor, `scrollIntoView`. When you change the top bar's height or
+    where the banner sticks, change `--sticky-layer-top` with it.
+    Cards add a small margin of their own to that (`scroll-mt-2 lg:scroll-mt-4`), so they land
+    5rem from the top below `lg` and 2.5rem from `lg` up, and lower while the banner shows. Don't
+    give an element the top bar's height as its `scroll-margin-top`: it would count twice.
 
   Pages with section tabs (a company's Requests, Members and Settings; the account's Profile and
   Security) get their header and tabs from a layout (`companies/[companyId]/layout.tsx`,
@@ -230,28 +289,52 @@ keyboard support.
 
 - **Results:** in the signed-in app every success is a toast and every error is shown inline and as
   a toast (`src/components/ui/toast.tsx`, on Radix UI's Toast; the app layout mounts its `Toaster`
-  next to the content, not around it). Toasts sit at the bottom right
-  (bottom centre on phones) in a region named "Notifications (F8)" that F8 jumps to. Successes stay
+  next to the content, not around it). The one exception is an error an open dialog shows, which
+  stays inline: a toast is a layer of its own above the dialog, and Radix gives Escape to the
+  newest layer, so the first Escape would dismiss the toast and leave the dialog open. `Modal`
+  marks its content (`InsideDialog` in `src/components/ui/inside-dialog.tsx`), and `ResultAlert`
+  and `Alert`'s `alsoToast` raise no toast for an error there, so one Escape always closes a
+  dialog. Toasts sit at the bottom right
+  (bottom centre on phones) in a region named "Notifications (F8)" that F8 jumps to, named in the
+  reader's language (`common.notifications`; Radix's own names are English). Successes stay
   6 seconds and errors 10, both pausing while hovered or focused, and each can be dismissed or
-  swiped away. A success toast is announced; an error toast isn't announced again, because the
-  inline error already is (or takes focus). `RowAction`, `ActionDialog` and `RoleSelect` toast
+  swiped away. A success toast is announced, after the word "Notification"; an error toast's text
+  isn't announced again, because the inline error already is (or takes focus), so it announces
+  "Notification" and the one word "Error" in its place, politely, so it waits for the inline
+  error being read out instead of cutting it off. `RowAction`, `ActionDialog` and `RoleSelect` toast
   as soon as their action returns, so the toast outlasts a row the refresh removes (`RowAction`'s
   `doneMessage` names the row, e.g. "Invitation to jane@adiutor.dev revoked."); `ResultAlert`
   toasts a form's result, `Alert`'s `alsoToast` an error a component shows itself, and
-  `ToastOnArrival` a confirmation that comes with a redirect ("User deleted."). An action that
+  `ToastOnArrival` a confirmation that comes with a redirect ("User deleted."): the page names the
+  query parameter that asked for it (`?deleted=1`), which leaves the address once it's toasted
+  (`history.replaceState`, keeping the other parameters and the `#section`), so a reload or a
+  copied link doesn't say it again. An action that
   ends with a full page load (`loadFresh`) leaves its toast for the next page with
   `showToastAfterLoad`, which the `Toaster` there shows once ("You're back in your own account.");
   it's kept in the tab's `sessionStorage` and counts for 30 seconds. Results to act on
-  stay inline: a new company's "Open the company", a new invite link to copy. The signed-out
+  stay inline: a new company's "Open the company", a new invite link to copy. A copy button
+  (`CopyButton`) says what it did in its own label, announced to screen readers: "Copied" for two
+  seconds, or "Couldn't copy" for five when the browser refuses, then also as an error toast where
+  the page has toasts; what it copies stays on screen next to it, to select by hand. The signed-out
   pages (sign in, the code step, password reset, invitations, `/setup`) show their results inline
   only.
 - **Tap targets:** every control is at least 24×24px (WCAG 2.5.8) without leaning on the rule's
   spacing exception, so each is easy to tap on a phone. Text links on their own line reach 2px above
   and below the text (`TextLink`, cancelled by a negative margin, so nothing moves), and a checkbox
   counts with its label (`CheckboxField`). Links inside a sentence are exempt, as in WCAG.
+- **Links in text:** a link inside a sentence is underlined (`TextLink`: thin at rest, thicker on
+  hover), because its colour alone doesn't set it apart from the text around it: `highlight` is
+  2.2:1 against body text in light mode and 1.6:1 in dark mode, and WCAG 1.4.1 asks for 3:1 or
+  another cue. That goes for links in a message's `<link>` tag (`t.rich`) and for a link that
+  shares a line of text with them (the company in an audit log entry's "by … · about …" line). A
+  link that stands on its own takes `standalone` and is underlined on hover only: a name in a
+  table, a value in a list of details, "Forgot password?" under its field, a link with a line to
+  itself. When you add a `TextLink`, decide which of the two it is.
 - **Forms:** labels are always visible and help text is linked with `aria-describedby`. Fields
   don't show errors themselves: a failed submit shows an `Alert` (`ResultAlert`) and moves focus
-  to it, and in the signed-in app a toast too.
+  to it, and in the signed-in app a toast too (not in a dialog, see Results). Each result gets an
+  alert of its own (`ResultAlert` keys it on the result), so the same error a second time is
+  announced and takes focus again instead of leaving the page as it was.
   Inline confirmations use `role="status"` and errors `role="alert"`, so screen readers announce
   them. Field text is 16px on every device (`fieldControl` in `src/components/ui/styles.ts`),
   never smaller, because iOS Safari zooms the page in when a field with smaller text gets focus.
@@ -289,7 +372,8 @@ while signed-in pages still show their loading placeholders, and that no field's
 The pages are scanned as the staff Admin, and the ones that look different to someone at a company
 (the dashboard, the requests) also as a Client and as a Watcher.
 `e2e/keyboard.spec.ts` checks the skip link, menus, selects, dialogs, the mobile menu, the request
-controls and cursors using only the keyboard, and that a button keeps focus while its form saves.
+controls and cursors using only the keyboard, that a button keeps focus while its form saves, and
+that an error in a dialog takes focus each time it comes and leaves the dialog one Escape away.
 
 ## Dark mode
 
@@ -321,7 +405,11 @@ has a palette icon, apart from the options.
   System, the page follows device changes live.
 - **No flicker:** a small inline script in `<head>` (`themeScript` in `src/lib/theme.ts`) sets
   `data-theme="light"` or `"dark"` on `<html>` before the page paints, so the first frame already has
-  the right colours. Without JavaScript, CSS follows the system setting.
+  the right colours. Without JavaScript (or when the script can't read storage), nothing sets
+  `data-theme` and CSS follows the system setting: the colours through `light-dark()`, and the
+  `dark:` variant through `prefers-color-scheme` while `<html>` has no `data-theme`
+  (`@custom-variant dark` in `src/styles/theme.css`), so a dark page gets the logo with light text
+  there too.
 - **Colours:** each semantic colour is defined once in `src/styles/theme.css` as
   `light-dark(<light>, <dark>)`, so both values sit side by side when you check contrast.
 - **Styling:** use the semantic colours (see [Design and accessibility](#design-and-accessibility))

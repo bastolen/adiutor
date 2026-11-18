@@ -3,12 +3,13 @@
  * claimed at the same moment as another claim, an invitation or a change to
  * their creator's rights, and when they're created by someone losing theirs;
  * a claim keeping an invitation an Admin sent, claims counted against the
- * invitation limits, and resending an invitation that came from a link.
+ * invitation limits and the limit per IP address, a claim undone because its
+ * email couldn't be sent, and resending an invitation that came from a link.
  */
 import { randomUUID } from 'node:crypto';
 
 import { and, eq, isNull, sql } from 'drizzle-orm';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { DatabaseTransaction } from '@/db';
 import {
@@ -21,6 +22,7 @@ import {
   user,
 } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
+import type { Email } from '@/lib/email';
 import { hashToken } from '@/lib/sign-in/tokens';
 
 import {
@@ -38,6 +40,7 @@ import {
   tokenFrom,
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
+import type { ServiceContext } from '../context';
 import { RATE_LIMITS } from '../rate-limit';
 import {
   acceptInvitation,
@@ -699,6 +702,35 @@ describe('invite link claims and the invitation limits', () => {
     expect(await claimInviteLink(ctx, token, 'late@adiutor.test')).toEqual({ status: 'sent' });
   });
 
+  it('count each claim against the IP address it came from, refusing past its limit', async () => {
+    /**
+     * The request's client, as `requestInfoFromHeaders` would give it.
+     *
+     * @returns The IP address, without a browser.
+     */
+    const requestInfo = async () => ({ ip: '203.0.113.7', userAgent: null });
+    const fromAddress = { ...ctx, requestInfo };
+
+    await claimInviteLink(fromAddress, await newLinkToken(), 'first@adiutor.test');
+    await claimInviteLink(ctx, await newLinkToken(), 'second@adiutor.test');
+
+    expect(await rateLimitHits(db, 'invite-link-claim:ip:203.0.113.7')).toBe(1);
+    // Outside a request there's no address: those claims share one bucket.
+    expect(await rateLimitHits(db, 'invite-link-claim:ip:unknown')).toBe(1);
+
+    await db
+      .update(rateLimitBucket)
+      .set({ count: RATE_LIMITS.linkClaimsPerIp.limit })
+      .where(eq(rateLimitBucket.key, 'invite-link-claim:ip:203.0.113.7'));
+    const token = await newLinkToken();
+    await expect(claimInviteLink(fromAddress, token, 'late@adiutor.test')).rejects.toMatchObject({
+      code: 'rate_limited',
+      key: 'errors.tooManyAttempts',
+    });
+    // Refused before the link is looked at: it stays usable, from another address too.
+    expect(await claimInviteLink(ctx, token, 'late@adiutor.test')).toEqual({ status: 'sent' });
+  });
+
   it('refuse a staff link claim past the staff limit, whatever the address', async () => {
     const staffAdmin = await staffActor(db, 'platform_admin');
     const { url } = await createInviteLink(ctx, staffAdmin, {
@@ -719,6 +751,248 @@ describe('invite link claims and the invitation limits', () => {
       ),
     ).rejects.toEqual(LIMITED);
     expect(sent).toEqual([]);
+  });
+});
+
+describe('an invite link claim whose email can’t be sent', () => {
+  /** What sending throws while the mail server is down; its message quotes the address. */
+  const MAIL_DOWN = Object.assign(new Error('Connection refused for new@adiutor.test'), {
+    code: 'ECONNECTION',
+  });
+
+  /** A link nobody has used, as its row says it. */
+  const UNUSED = { usedAt: null, usedByEmail: null, invitationId: null, revokedAt: null };
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /**
+   * A service context whose mail server is down.
+   *
+   * @param before - What happens between the claim and its failed send, given the email.
+   * @returns The context.
+   */
+  function withMailDown(before: (email: Email) => Promise<unknown> = async () => {}) {
+    /**
+     * Fails to send an email, after whatever happens first.
+     *
+     * @param email - The email.
+     */
+    const sendEmail = async (email: Email): Promise<void> => {
+      await before(email);
+      throw MAIL_DOWN;
+    };
+    return { ...ctx, sendEmail } satisfies ServiceContext;
+  }
+
+  /**
+   * Reads the one invite link.
+   *
+   * @returns Who used it, its invitation and whether it was revoked.
+   */
+  async function theLink() {
+    return firstRow(
+      await db
+        .select({
+          usedAt: inviteLink.usedAt,
+          usedByEmail: inviteLink.usedByEmail,
+          invitationId: inviteLink.invitationId,
+          revokedAt: inviteLink.revokedAt,
+        })
+        .from(inviteLink),
+      'the invite link',
+    );
+  }
+
+  /**
+   * Lists the invitations that are still open.
+   *
+   * @returns Their IDs and addresses.
+   */
+  async function openInvitations() {
+    return db
+      .select({ id: invitation.id, email: invitation.email })
+      .from(invitation)
+      .where(and(isNull(invitation.acceptedAt), isNull(invitation.revokedAt)))
+      .orderBy(invitation.id);
+  }
+
+  it('frees the link and revokes its invitation, so claiming it again works', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const token = await newLinkToken();
+
+    await expect(claimInviteLink(withMailDown(), token, 'New@Adiutor.test')).rejects.toBe(
+      MAIL_DOWN,
+    );
+
+    // The link is as it was, and the invitation the claim created is revoked.
+    expect(await theLink()).toEqual(UNUSED);
+    expect(await getInviteLinkPreview(ctx, token)).not.toBeNull();
+    expect(await openInvitations()).toEqual([]);
+    expect(await db.$count(invitation)).toBe(1);
+    // The claim and its undoing are both in the audit log.
+    const claims = await db
+      .select({ details: auditEvent.details })
+      .from(auditEvent)
+      .where(eq(auditEvent.action, 'invite_link_claimed'))
+      .orderBy(auditEvent.id);
+    expect(claims.map(({ details }) => details)).toEqual([
+      { email: 'new@adiutor.test', role: 'client', status: 'sent' },
+      { email: 'new@adiutor.test', role: 'client', undone: true },
+    ]);
+    // The log says what became of the link, with the mail server's codes and no address.
+    expect(logged.mock.calls).toEqual([
+      [
+        expect.stringMatching(
+          /^Sending the email for the claim of invite link [0-9a-f-]{36} failed; the link can be used again$/,
+        ),
+        { code: 'ECONNECTION', responseCode: null },
+      ],
+    ]);
+    expect(JSON.stringify(logged.mock.calls)).not.toContain('adiutor.test');
+    // The failed claim still counts against the invitation limits.
+    expect(await rateLimitHits(db, `invite:user:${admin.id}`)).toBe(1);
+
+    // Once the mail server is back, the same link works.
+    expect(await claimInviteLink(ctx, token, 'new@adiutor.test')).toEqual({ status: 'sent' });
+    expect(sent.map((email) => email.to)).toEqual(['new@adiutor.test']);
+    expect(await getInvitationPreview(ctx, tokenFrom(defined(sent[0], 'the email')))).toMatchObject(
+      { fromInviteLink: true },
+    );
+    expect(await openInvitations()).toHaveLength(1);
+    expect(await rateLimitHits(db, `invite:user:${admin.id}`)).toBe(2);
+  });
+
+  it.each([
+    [
+      'is already a member',
+      async () => {
+        await memberActor(db, testCompany.id, 'watcher', 'known@adiutor.test');
+      },
+    ],
+    [
+      'already has an invitation someone sent',
+      async () => {
+        await inviteByEmail(ctx, admin, {
+          companyId: testCompany.id,
+          email: 'known@adiutor.test',
+          role: 'admin',
+        });
+        sent.length = 0;
+      },
+    ],
+  ])('frees the link just the same when the address %s', async (_, arrange) => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await arrange();
+    const openBefore = await openInvitations();
+    const token = await newLinkToken();
+
+    // The same failure as for any other address.
+    await expect(claimInviteLink(withMailDown(), token, 'known@adiutor.test')).rejects.toBe(
+      MAIL_DOWN,
+    );
+
+    expect(await theLink()).toEqual(UNUSED);
+    // The claim created no invitation, so undoing it revoked none: what was open still is.
+    expect(await openInvitations()).toEqual(openBefore);
+    expect(await claimInviteLink(ctx, token, 'new@adiutor.test')).toEqual({ status: 'sent' });
+  });
+
+  it('keeps the link used up when its creator lost their rights meanwhile', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // Another Admin, so the company keeps one.
+    await memberActor(db, testCompany.id, 'admin');
+    const staffAdmin = await staffActor(db, 'platform_admin');
+    const token = await newLinkToken();
+    /**
+     * Removes the link's creator from the company, which revokes what they sent.
+     *
+     * @returns Nothing.
+     */
+    const removeCreator = async () =>
+      removeMember(ctx, staffAdmin, {
+        companyId: testCompany.id,
+        membershipId: firstRow(
+          await db
+            .select({ id: membership.id })
+            .from(membership)
+            .where(eq(membership.userId, admin.id)),
+          'the creator membership',
+        ).id,
+      });
+
+    await expect(
+      claimInviteLink(withMailDown(removeCreator), token, 'new@adiutor.test'),
+    ).rejects.toBe(MAIL_DOWN);
+
+    // Freeing it would give a former Admin's link back: it stays used, and nothing is open.
+    expect(await theLink()).toMatchObject({ usedByEmail: 'new@adiutor.test', revokedAt: null });
+    expect(await getInviteLinkPreview(ctx, token)).toBeNull();
+    expect(await claimInviteLink(ctx, token, 'new@adiutor.test')).toEqual({ status: 'invalid' });
+    expect(await openInvitations()).toEqual([]);
+    expect(logged.mock.calls.map(([line]) => line)).toEqual([
+      expect.stringMatching(/failed; the link stays used up$/),
+    ]);
+  });
+
+  it('keeps the link used up when its invitation was resent meanwhile, whose email was sent', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const token = await newLinkToken();
+    /**
+     * Resends the invitation the claim created, as an Admin who saw it in the list would.
+     *
+     * @returns Nothing.
+     */
+    const resend = async () =>
+      resendInvitation(ctx, admin, {
+        companyId: testCompany.id,
+        invitationId: firstRow(await openInvitations(), 'the claimed invitation').id,
+      });
+
+    await expect(claimInviteLink(withMailDown(resend), token, 'new@adiutor.test')).rejects.toBe(
+      MAIL_DOWN,
+    );
+
+    // The resend's invitation is open, its email went out, and the link points at it.
+    const open = await openInvitations();
+    expect(open).toEqual([{ id: expect.any(String), email: 'new@adiutor.test' }]);
+    expect(sent.map((email) => email.to)).toEqual(['new@adiutor.test']);
+    expect(await theLink()).toMatchObject({
+      usedByEmail: 'new@adiutor.test',
+      invitationId: open[0]?.id,
+    });
+  });
+
+  it('keeps the link used up when the invitation was accepted: the email got through after all', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const invitee = await createUser(db, 'new@adiutor.test');
+    const token = await newLinkToken();
+    /**
+     * Accepts the invitation with the link from its email.
+     *
+     * @param email - The email the send reported as failed.
+     * @returns What accepting it answered.
+     */
+    const accept = async (email: Email) =>
+      acceptInvitation(ctx, tokenFrom(email), {
+        id: invitee,
+        email: 'new@adiutor.test',
+        platformRole: null,
+      });
+
+    await expect(claimInviteLink(withMailDown(accept), token, 'new@adiutor.test')).rejects.toBe(
+      MAIL_DOWN,
+    );
+
+    expect(await theLink()).toMatchObject({ usedByEmail: 'new@adiutor.test', revokedAt: null });
+    expect(await getInviteLinkPreview(ctx, token)).toBeNull();
+    expect(
+      await db.$count(
+        membership,
+        and(eq(membership.companyId, testCompany.id), eq(membership.userId, invitee)),
+      ),
+    ).toBe(1);
   });
 });
 

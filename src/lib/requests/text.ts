@@ -57,16 +57,43 @@ export interface TextPart {
 /** A web address with its scheme, up to the next space, quote or angle bracket. */
 const WEB_ADDRESS = /https?:\/\/[^\s<>"'`]+/gi;
 
-/** What may end a sentence right after a web address without being part of it. */
-const TRAILING_PUNCTUATION = /[.,;:!?]+$/;
+/**
+ * What may follow a web address without being part of it: the punctuation
+ * that ends or pauses a sentence (also the ellipsis and the full-width marks
+ * of Chinese and Japanese), and the quotation marks that close what the
+ * address was quoted in (”, ’, » and ›; the straight ones never get into an
+ * address, see {@link WEB_ADDRESS}).
+ */
+const TRAILING_PUNCTUATION = /[.,;:!?…。、！？”’»›]+$/u;
 
-/** A closing bracket and the bracket that opens it. */
-const BRACKETS: Record<string, string> = { ')': '(', ']': '[', '}': '{' };
+/** A closing bracket and the bracket that opens it, also the full-width and corner ones. */
+const BRACKETS: Record<string, string> = {
+  ')': '(',
+  ']': '[',
+  '}': '{',
+  '）': '（',
+  '」': '「',
+  '』': '『',
+};
+
+/**
+ * Counts how often a character is in a text.
+ *
+ * @param text - The text.
+ * @param character - The character.
+ * @returns How many times it occurs.
+ */
+function occurrences(text: string, character: string): number {
+  return text.split(character).length - 1;
+}
 
 /**
  * Takes the punctuation off the end of a web address that belongs to the
- * sentence around it: full stops and commas, and a closing bracket the
- * address never opened ("(see https://adiutor.dev/docs)").
+ * sentence around it: full stops, commas and closing quotation marks, and a
+ * closing bracket the address didn't open itself. Brackets are counted, not
+ * looked for: "(see https://adiutor.dev/wiki/Printer_(office))" ends with
+ * two closing brackets and opened one, so the last one is the sentence's and
+ * the one before it stays.
  *
  * @param address - The address as it was matched.
  * @returns The address without that punctuation.
@@ -79,7 +106,8 @@ function withoutTrailingPunctuation(address: string): string {
     trimmed = trimmed.replace(TRAILING_PUNCTUATION, '');
     const last = trimmed.slice(-1);
     const opening = BRACKETS[last];
-    if (opening && !trimmed.includes(opening)) {
+    // One closing bracket at a time, so each is weighed against what's left of the address.
+    if (opening && occurrences(trimmed, last) > occurrences(trimmed, opening)) {
       trimmed = trimmed.slice(0, -1);
     }
   }

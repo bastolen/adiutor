@@ -11,9 +11,9 @@ import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
 import confirmChangeUrl from '@/lib/sign-in/confirm-url';
 
+import ConfirmationWindow from '../../../../../tests/ui/confirmation-window';
 import TwoFactorCard from './two-factor-card';
 
 /** The step-up page, coming back to this card on the Security page. */
@@ -75,16 +75,10 @@ const on: ComponentProps<typeof TwoFactorCard> = {
  * @param windowOpen - Whether the confirmation window is still open.
  */
 function renderCard(props: ComponentProps<typeof TwoFactorCard>, windowOpen: boolean) {
-  const serverTime = Date.now();
   render(
-    <RecentConfirmationProvider
-      required
-      confirmedUntil={windowOpen ? serverTime + 10 * 60 * 1000 : null}
-      serverTime={serverTime}
-      returnTo="/account/security"
-    >
+    <ConfirmationWindow windowOpen={windowOpen} returnTo="/account/security">
       <TwoFactorCard {...props} />
-    </RecentConfirmationProvider>,
+    </ConfirmationWindow>,
   );
 }
 

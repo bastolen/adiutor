@@ -57,7 +57,9 @@
       "passwordCheckFailedDeactivate": "Verkeerd huidig wachtwoord ingevoerd bij het deactiveren van het account",
       "impersonationExpired": "Inloggen als een gebruiker is gestopt toen de tijd om was",
       "impersonationNoLongerAllowed": "Inloggen als een gebruiker is gestopt omdat het niet meer was toegestaan",
-      "impersonationSessionEnded": "Inloggen als een gebruiker is gestopt met de eigen sessie van de medewerker"
+      "impersonationSessionEnded": "Inloggen als een gebruiker is gestopt met de eigen sessie van de medewerker",
+      "inviteLinkClaimUndone": "Uitnodigingslink weer bruikbaar gemaakt omdat de e-mail niet kon worden verstuurd",
+      "memberJoinedKept": "Uitnodiging gebruikt en de eigen rol gehouden"
     },
     "groups": {
       "sign-ins": "Inloggen",

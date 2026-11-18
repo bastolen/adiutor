@@ -1,6 +1,7 @@
 /**
  * @file End-to-end tests for requests: the list with its filters, search,
- * sorting and pages, raising a request (someone at a company, and the staff
+ * sorting and pages, and what it says without requests, raising a request
+ * (someone at a company, and the staff
  * for a company), and a request's page: its description, details and
  * conversation, the staff and a company working a request through (status,
  * replies, done, reopened, cancelled), the staff editing its details, the
@@ -12,9 +13,12 @@
  * Each test that changes a request stores its own (`storeRequest`); the
  * seeded ones are only read.
  */
+import { randomUUID } from 'node:crypto';
+
 import type { Page } from '@playwright/test';
 
 import {
+  createCompany,
   findCompanyId,
   findUserId,
   setRequestPrefix,
@@ -306,9 +310,9 @@ test('someone at a company raises a request, which the staff then find', async (
   await page.getByRole('option', { name: /^Bug/ }).click();
   await page.getByRole('button', { name: 'Raise request' }).click();
 
-  // It opens on its own page, which says so once.
-  await expect(page).toHaveURL(/\/requests\/\d+\?raised=1$/);
+  // It opens on its own page, which says so once: the address doesn't ask for it again.
   await expect(toasts(page)).toContainText('Request raised.');
+  await expect(page).toHaveURL(/\/requests\/\d+$/);
   await expect(
     page.getByRole('heading', { level: 1, name: 'The coffee machine app is offline' }),
   ).toBeVisible();
@@ -319,6 +323,18 @@ test('someone at a company raises a request, which the staff then find', async (
   await expect(detail(page, 'Type')).toHaveText('Bug');
   await expect(detail(page, 'Raised by')).toContainText('You');
   const number = new URL(page.url()).pathname.split('/').pop();
+
+  // Back finds the form empty, not filled in and ready to raise the request a second time,
+  // and the list before it with the new request: neither page is shown as it was kept.
+  await page.goBack();
+  await expect(page).toHaveURL('/requests/new');
+  await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue('');
+  await expect(page.getByRole('textbox', { name: 'Description' })).toHaveValue('');
+  await page.goBack();
+  await expect(page).toHaveURL('/requests');
+  await expect(
+    requestRows(page).filter({ hasText: 'The coffee machine app is offline' }).first(),
+  ).toContainText(`AD-${number}`);
   await signOut(page);
 
   // The staff find it at the top of the list, with the priority its type gave it.
@@ -333,6 +349,16 @@ test('someone at a company raises a request, which the staff then find', async (
 
 test('the staff raise a request for a company and choose its priority', async ({ page }) => {
   await signIn(page, SUPPORT_STAFF);
+  // Without a company it's a field to fill in, not a page that doesn't exist.
+  await page.goto('/requests/new');
+  await expect(page.getByRole('combobox', { name: 'Company' })).toHaveText('Choose a company');
+  await page.getByRole('textbox', { name: 'Title' }).fill('Add a colleague to the mailing list');
+  await page.getByRole('textbox', { name: 'Description' }).fill('Asked by phone.');
+  await page.getByRole('button', { name: 'Raise request' }).click();
+  await expect(main(page).getByRole('alert')).toContainText(
+    'Choose which company this request is for.',
+  );
+
   // From a company's own list the company is chosen already.
   await page.goto(`/requests/new?company=${COMPANY_SLUG}`);
   await expect(page.getByRole('combobox', { name: 'Company' })).toHaveText(COMPANY_NAME);
@@ -353,12 +379,52 @@ test('the staff raise a request for a company and choose its priority', async ({
   await page.getByRole('option', { name: 'High' }).click();
   await page.getByRole('button', { name: 'Raise request' }).click();
 
-  await expect(page).toHaveURL(/\/requests\/\d+\?raised=1$/);
+  await expect(toasts(page)).toContainText('Request raised.');
+  await expect(page).toHaveURL(/\/requests\/\d+$/);
   await expect(detail(page, 'Priority')).toHaveText('High');
   await expect(detail(page, 'Company')).toHaveText(COMPANY_NAME);
   // Raised by the staff, so there's no first response to wait for.
   await expect(detail(page, 'Raised by')).toContainText(STAFF_NAME);
   await expect(page.getByRole('region', { name: 'Details' })).not.toContainText('First response');
+
+  // Loading the page again doesn't say it was raised a second time. The dialog opens once the
+  // page works again, which is when a toast would have come.
+  await page.reload();
+  await expect(detail(page, 'Priority')).toHaveText('High');
+  await page.getByRole('button', { name: 'Edit details' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Edit this request’s details' });
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(toasts(page).getByText('Request raised.')).toHaveCount(0);
+});
+
+test('a company without requests invites its first one, under All too', async ({ page }) => {
+  // A company of this test's own, so no other spec raises a request in it.
+  const slug = `adiutor-tests-first-${randomUUID().slice(0, 8)}`;
+  await createCompany({ name: 'Adiutor Tests First', slug });
+  await signIn(page, SUPPORT_STAFF);
+
+  await page.goto(`/companies/${slug}`);
+  await expect(main(page).getByText('No active requests')).toBeVisible();
+
+  // All leaves nothing out: it isn't that nothing matches, there are no requests yet.
+  const filters = page.getByRole('navigation', { name: 'Filter requests by status' });
+  await filters.getByRole('link', { name: 'All' }).click();
+  await expect(page).toHaveURL(`/companies/${slug}?status=all`);
+  await expect(main(page).getByText('No requests yet')).toBeVisible();
+  await expect(main(page).getByText('Raise the first request and it shows up here.')).toBeVisible();
+  await expect(main(page).getByText('No matching requests')).toHaveCount(0);
+
+  // Closed narrows the list down, so there nothing matches.
+  await filters.getByRole('link', { name: 'Closed' }).click();
+  await expect(main(page).getByText('No matching requests')).toBeVisible();
+
+  // The invitation under All opens the form for this company.
+  await filters.getByRole('link', { name: 'All' }).click();
+  await expect(main(page).getByText('No requests yet')).toBeVisible();
+  await main(page).getByRole('link', { name: 'New request' }).last().click();
+  await expect(page).toHaveURL(`/requests/new?company=${slug}`);
 });
 
 test('nobody raises a request who may not: a Watcher and Finance get no form', async ({ page }) => {
@@ -374,6 +440,10 @@ test('nobody raises a request who may not: a Watcher and Finance get no form', a
   await createAccountFromInvitation(page, 'Reads Only Tester', 'reads-only-tester-password');
   await page.goto('/requests');
   await expect(main(page).getByText(SEEDED_REQUESTS.waiting.title)).toBeVisible();
+  // The list words it as the request's page does: it waits for their company, not for them.
+  const waiting = requestRows(page).filter({ hasText: SEEDED_REQUESTS.waiting.title });
+  await expect(waiting).toContainText('Waiting for your company');
+  await expect(waiting).not.toContainText('Waiting for your reply');
   await expect(main(page).getByRole('link', { name: 'New request' })).toHaveCount(0);
   await page.goto('/requests/new');
   await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();

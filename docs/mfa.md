@@ -15,10 +15,20 @@ for a code from an authenticator app, or one sent by email (it works for 5 minut
 for once half the last one's lifetime has passed (2.5 minutes, `EMAIL_CODE_RESEND_SECONDS`): "Send
 a new code" counts down until then, at the code step, on the step-up page and while setting up
 email codes, and the guards refuse an earlier one (`EMAIL_CODE_SENT_RECENTLY`, shown as a notice,
-since the last code still works). Using a code ends the wait. **Once an authenticator app is set
+since the last code still works). Using a code ends the wait. So does a password sign-in that
+starts a new code step (`afterPasswordSignIn`): Better Auth keeps an emailed code with the sign-in
+it was asked for, so after going back and signing in again the last code can't be used, and the
+wait would only keep a code that works from being sent. The 5 codes per 15 minutes per user still
+apply. The code step, and the step-up page when email codes are its only way, send their code once
+each time the page is shown, not once in the page's life (pages stay alive; `useOncePerVisit` in
+`src/components/ui/use-transient-state.ts`), so a new sign-in gets its own code. **Once an
+authenticator app is set
 up, email codes aren't accepted any more**, so the inbox alone (which also gets email links and
 password resets) can't get past the app. The app adds single-use backup codes, which only work once the app is set up, so an unfinished setup leaves no way in. "Trust this
-device" skips the step on that browser for 30 days. It's forgotten (the trusted device itself,
+device" skips the step on that browser until 30 days after the last password sign-in there, as
+its label says: each password sign-in that skips the step starts the 30 days again (Better Auth
+replaces the trusted device with a new one, and has no setting for it), so a browser where the
+password is used at least once every 30 days stays trusted. It's forgotten (the trusted device itself,
 not only the browser's cookie, so a copy of the cookie stops working too) when you sign out on
 that browser, when you sign out a device or every other device on the Security page, when the
 password is changed or reset, when MFA is reset or two-step verification is turned off, when an
@@ -56,8 +66,9 @@ requirement (`hasMfa`) with an authenticator app or a passkey, or when it has no
 every connected provider account has MFA itself; **email codes don't count for them**. Provider
 MFA only comes from providers that can prove it (`MFA_PROVIDERS` in `src/lib/sign-in/oauth-providers.ts`:
 GitHub, whose API says `two_factor_authentication`), checked at every sign-in with or connection
-of such an account (`src/server/auth/provider-mfa.ts`; without a definite answer, the stored value
-stays and that sign-in doesn't count as confirmed). Google can't, so a Google account never
+of such an account (`src/server/auth/provider-mfa.ts`; without a definite answer, which includes
+GitHub not answering within 3 seconds, the stored value stays and that sign-in doesn't count as
+confirmed). Google can't, so a Google account never
 counts. A provider's MFA only counts while its sign-in is configured on the server
 (`availableProviders`). Until an account meets it, every app page sends them to the Security
 page (`getActor()` in `src/server/authz.ts`). When it stops meeting it (2FA turned off at the
@@ -79,7 +90,11 @@ exist. A password without the code step, an email link, a provider that can't pr
 counting after that provider's sign-in is turned off. **Anyone with MFA** who has such a session is sent to the step-up page (`/auth/verify`)
 to confirm it before they continue, from every page (`isSessionMfaVerified`). For roles that
 require MFA only strong factors count: not email codes, and not a trusted device. Wrong step-up
-codes are limited to 5 per 15 minutes per user. Setting up a first method from an unconfirmed
+codes are limited to 5 per 15 minutes per user, and each is recorded (`mfa_failed`). Only a code
+that was compared and refused counts and is recorded (`isWrongCodeWithSession` in
+`src/server/auth/auth-events/`): an emailed code that expired, too many tries for one code or an
+error isn't a wrong code, so it gives its attempt back and the user's activity doesn't say one was
+entered. Setting up a first method from an unconfirmed
 session confirms it, since there was nothing to protect before.
 
 ## Confirm with GitHub
@@ -223,8 +238,10 @@ get a security email, and the audit log names the providers whose accounts were 
 (never the accounts).
 
 The Admin needs a confirmation with their own second step from the last 15 minutes, as for
-changing their own sign-in methods: without one, the action sends them to the step-up page in its
-change mode, which brings them back to the user's page. The reset holds the user's sign-in change
+changing their own sign-in methods: without one, the Reset button sends them to the step-up page in
+its change mode before its dialog opens (`ActionDialog`'s `confirmFirst`), so what they choose in
+the dialog isn't lost on the way, and brings them back to the card on the user's page. The action
+checks it again and sends them there itself if the window closed meanwhile. The reset holds the user's sign-in change
 lock (`withSignInChangeLock`), so it's refused while a change of theirs is being made, such as
 connecting an account, rather than crossing it. Admins can't reset their own account; they use
 their Security page.

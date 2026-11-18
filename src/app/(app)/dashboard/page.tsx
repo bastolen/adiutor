@@ -54,22 +54,25 @@ async function Dashboard() {
   const isStaff = permissions.has('users:view');
   const firstName = displayName(actor).split(' ')[0] ?? '';
 
-  // Recommended for everyone who isn't required to have MFA (those can't get here without it),
-  // until they dismiss it: saved with the account, so it's known here and never pops in late.
-  const recommendation = !actor.mfaEnabled &&
-    !(await isMfaRecommendationDismissed(appContext, actor)) && (
-      <ClientMessages namespaces={['dashboard.mfaRecommendation']}>
-        <MfaRecommendation />
-      </ClientMessages>
-    );
-  // For staff Admins: users who lost their MFA because a provider isn't configured here.
-  const providerMfaWarning = isStaff ? await getProviderMfaWarning(appContext, actor) : null;
-  // For staff who see the jobs: no job runs while the ticks are stopped, and none can say so.
-  const tickWarning = isStaff ? await getTickWarning(appContext, actor) : null;
+  // The lookups don't depend on each other, so they start together. Recommended for everyone
+  // who isn't required to have MFA (those can't get here without it), until they dismiss it:
+  // saved with the account, so it's known here and never pops in late. For staff Admins: users
+  // who lost their MFA because a provider isn't configured here. For staff who see the jobs: no
+  // job runs while the ticks are stopped, and none can say so. For everyone else: the companies
+  // whose requests they see, every active company they're in, by name.
+  const [dismissed, providerMfaWarning, tickWarning, companies] = await Promise.all([
+    actor.mfaEnabled ? true : isMfaRecommendationDismissed(appContext, actor),
+    isStaff ? getProviderMfaWarning(appContext, actor) : null,
+    isStaff ? getTickWarning(appContext, actor) : null,
+    isStaff ? [] : listRequestCompanies(appContext, actor),
+  ]);
+  const recommendation = !dismissed && (
+    <ClientMessages namespaces={['dashboard.mfaRecommendation']}>
+      <MfaRecommendation />
+    </ClientMessages>
+  );
 
   if (!isStaff) {
-    // The companies whose requests they see: every active company they're in, by name.
-    const companies = await listRequestCompanies(appContext, actor);
     const ownCompanies = companies.flatMap(({ id, slug, name }) => {
       const role = actor.memberships[id];
       return role ? [{ slug, name, role }] : [];

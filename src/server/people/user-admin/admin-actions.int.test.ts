@@ -35,6 +35,7 @@ import {
   enableTwoFactor,
   inLanguage,
   inSequence,
+  queuedJobKinds,
   sendQueuedEmails,
   setUserLocale,
   staffActor,
@@ -276,6 +277,45 @@ describe('admin actions', () => {
       'Your Adiutor account was deactivated',
       'Your Adiutor account was reactivated',
     ]);
+  });
+
+  it('refuses a deactivation someone else made while the request waited for the account', async () => {
+    const { second } = await atTheSameMoment(
+      db,
+      // Another Admin's deactivation, not committed yet when the request reads the account.
+      (tx) => tx.update(user).set({ deactivatedAt: new Date() }).where(eq(user.id, jane)),
+      () => deactivateUser(ctx, admin, jane),
+    );
+
+    expect(second).toMatchObject({
+      status: 'rejected',
+      reason: expect.objectContaining({
+        code: 'conflict',
+        key: 'errors.users.alreadyDeactivated',
+      }),
+    });
+    // Nothing recorded and nobody told a second time.
+    expect(await actionsAbout(jane)).toEqual([]);
+    expect(await queuedJobKinds(db)).toEqual([]);
+  });
+
+  it('records two deactivations at the same moment once, with one email', async () => {
+    const otherAdmin = await staffActor(db, 'platform_admin', 'other.admin@adiutor.test');
+
+    const results = await Promise.allSettled([
+      deactivateUser(ctx, admin, jane),
+      deactivateUser(ctx, otherAdmin, jane),
+    ]);
+
+    expect(results.map(({ status }) => status).sort()).toEqual(['fulfilled', 'rejected']);
+    expect(results.find(({ status }) => status === 'rejected')).toMatchObject({
+      reason: expect.objectContaining({
+        code: 'conflict',
+        key: 'errors.users.alreadyDeactivated',
+      }),
+    });
+    expect(await actionsAbout(jane)).toEqual(['account_deactivated']);
+    expect(await queuedJobKinds(db)).toEqual(['security-notice']);
   });
 
   it("never names the Admin's device or IP address in the user's security emails", async () => {

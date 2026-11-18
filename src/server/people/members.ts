@@ -181,7 +181,7 @@ async function changeMembership(
       throw notFoundError();
     }
     const [locked] = await tx
-      .select({ name: company.name, deactivatedAt: company.deactivatedAt })
+      .select({ deactivatedAt: company.deactivatedAt })
       .from(company)
       .where(eq(company.id, access.company.id))
       .for('no key update');
@@ -371,9 +371,10 @@ export async function removeMember(
 
 /**
  * Adds an existing user to a company with a role, right away (no
- * invitation), and emails them. Staff only, from the user detail page:
- * company admins invite people instead, so nobody joins a company without
- * accepting. Counts against the sender's invitation limit.
+ * invitation), and emails them (a job queued in the same transaction, so it
+ * exists exactly when the member was added). Staff only, from the user
+ * detail page: company admins invite people instead, so nobody joins a
+ * company without accepting. Counts against the sender's invitation limit.
  *
  * The transaction first locks the actor's and the user's rows (`FOR SHARE`,
  * in ID order, one statement, via `assertStillManages`) and checks again,
@@ -409,12 +410,7 @@ export async function addMember(
   }
   const id = parseId(input.userId);
   const [target] = await ctx.db
-    .select({
-      id: user.id,
-      email: user.email,
-      locale: user.locale,
-      deactivatedAt: user.deactivatedAt,
-    })
+    .select({ id: user.id, deactivatedAt: user.deactivatedAt })
     .from(user)
     .where(eq(user.id, id));
   if (!target) {
@@ -427,10 +423,13 @@ export async function addMember(
 
   await ctx.db.transaction(async (tx) => {
     // The actor's staff rights and the account, as they are now: one statement, in ID order.
-    const locked = await assertStillManages(tx, actor, access.company.id, 'members:manage', {
-      asStaff: true,
-      alsoLock: [target.id],
-    });
+    const { users: locked } = await assertStillManages(
+      tx,
+      actor,
+      access.company.id,
+      'members:manage',
+      { asStaff: true, alsoLock: [target.id] },
+    );
     const added = locked.get(target.id);
     if (!added) {
       throw notFoundError();
@@ -468,14 +467,15 @@ export async function addMember(
       },
       { companyId: access.company.id },
     );
-  });
-
-  // Queued once the member is added: a mail outage retries it, and never fails the change.
-  await queueJob(ctx.db, addedToCompanyJob, {
-    userId: target.id,
-    companyId: access.company.id,
-    role,
-    addedBy: actor.id,
+    // Queued in the change's transaction, so the email's job exists exactly when the member was
+    // added: a queue that can't take it undoes the add, instead of reporting an error for a
+    // member who is in. Sending happens later, so a mail outage is retried and fails nothing.
+    await queueJob(tx, addedToCompanyJob, {
+      userId: target.id,
+      companyId: access.company.id,
+      role,
+      addedBy: actor.id,
+    });
   });
 }
 

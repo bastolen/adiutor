@@ -10,7 +10,11 @@ import { env } from '@/lib/env';
 import appContext from '@/server/app-context';
 import { answerTickRequest, TICK_CONTINUATION_HEADER } from '@/server/jobs';
 
-/** How long the platform lets a tick run, in seconds; the tick itself stops starting runs sooner. */
+/**
+ * How long the platform lets a tick run, in seconds; the tick itself stops
+ * starting runs after 40, which is worked out from this limit
+ * (`REQUEST_RUN_SECONDS` in `src/server/jobs/tick.ts`).
+ */
 export const maxDuration = 60;
 
 /**

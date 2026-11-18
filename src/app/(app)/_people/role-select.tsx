@@ -57,12 +57,12 @@ interface RoleSelectProps {
    */
   confirmChange?: RoleChangeConfirmation;
   /**
-   * Whether these are staff roles or a company's roles. With it, picking a
-   * role that needs a recent confirmation (making someone staff, a higher
-   * staff role, or a company's Admin) sends the user to confirm it's them
-   * first, when they haven't lately; nothing is saved.
+   * Whether these are staff roles or a company's roles. Picking a role that
+   * needs a recent confirmation (making someone staff, a higher staff role,
+   * or a company's Admin) sends the user to confirm it's them first, when
+   * they haven't lately; nothing is saved.
    */
-  target?: 'staff' | 'company';
+  target: 'staff' | 'company';
 }
 
 /**
@@ -74,9 +74,9 @@ interface RoleSelectProps {
  * so keyboard focus stays on it. In the signed-in app the outcome is a toast
  * (a refusal is also shown next to the select).
  *
- * With `target`, a role that needs a recent confirmation the user doesn't
- * have sends them to confirm it's them first (`useRecentConfirmation`); the
- * select stays on the saved role.
+ * A role that needs a recent confirmation the user doesn't have (see
+ * `target`) sends them to confirm it's them first (`useRecentConfirmation`);
+ * the select stays on the saved role.
  *
  * With `confirmChange`, picking a role opens a confirmation dialog instead:
  * confirming saves the picked role, cancelling (or Escape) puts the select
@@ -102,7 +102,7 @@ export default function RoleSelect({
   currentRole,
   roles,
   confirmChange = undefined,
-  target = undefined,
+  target,
 }: RoleSelectProps) {
   const t = useTranslations('people.roleSelect');
   // Roles don't change while a staff member is signed in as the user.
@@ -192,7 +192,6 @@ export default function RoleSelect({
             onValueChange={(role) => {
               // A raise that needs a recent confirmation: confirm first, save nothing.
               if (
-                target &&
                 isRole(role) &&
                 grantNeedsConfirmation({
                   target: { type: target },

@@ -29,7 +29,7 @@ Four permissions in the request's company (`src/lib/authz/permissions.ts`):
 
 | Permission               | What it allows                                                               | Who has it                                         |
 | ------------------------ | ---------------------------------------------------------------------------- | -------------------------------------------------- |
-| `requests:view`          | See the company's requests and their conversations                           | Everyone in the company, and every staff role      |
+| `requests:view`          | See the company's requests and their conversations                           | Everyone in an active company; every staff role    |
 | `requests:contribute`    | Raise requests, reply, mark a request done, cancel it and reopen it          | Company Admin and Client; staff who work on them   |
 | `requests:manage`        | Work on requests as the staff: any status, the title, the type, the priority | Staff Admin, Manager and Support                   |
 | `requests:view-internal` | See what only the staff see: today the priority                              | Every staff role (Finance reads, but doesn't work) |
@@ -38,8 +38,10 @@ Four permissions in the request's company (`src/lib/authz/permissions.ts`):
 - **Finance** reads every company's requests, with the priority, and changes nothing. A staff
   member who can't work on requests but is a Client of a company takes part there as the company.
 - A request someone may not see is "not found" to them, like a company they may not see.
-- A **deactivated company's** requests can only be read, by everyone. They stay on the company's
-  own page and under All, and leave the Active and Waiting lists that cover several companies.
+- A **deactivated company's** requests can only be read, and only by the staff: its members lose
+  access, so its requests are "not found" to them (see
+  [Companies and roles](companies-and-roles.md)). For the staff they stay on the company's own
+  page and under All, and leave the Active and Waiting lists that cover several companies.
 - While a staff member is **signed in as a user**, request pages can be read and every change is
   refused (`assertNotSignedInAs`, see [Signing in as a user](authentication.md#signing-in-as-a-user)).
 - The services check all of this themselves (`src/server/requests/`), and every operation has a
@@ -64,7 +66,10 @@ the closed statuses.
   (`request.reopened_at`), and the conversation says who reopened it and when.
 - The waiting status is worded for its reader, as one message: "Waiting for the company" (the
   staff), "Waiting for your reply" (those at the company who can reply), "Waiting for your
-  company" (a Watcher). `requestAudience` decides which.
+  company" (a Watcher). `requestAudience` decides which, from the reader's permissions in the
+  request's company: the services give it with a request's page and with every row of a list
+  (`requestAudienceIn` in `src/server/requests/access.ts`), so someone who is a Client of one
+  company and a Watcher of another reads each request the same way in both places.
 - When two people change a status at the same moment, the second is told the request changed and
   sees the new status, rather than overwriting it (`errors.requests.statusChanged`).
 
@@ -81,6 +86,16 @@ the closed statuses.
   can show it by accident, and a change of priority doesn't count as the request's last activity.
 - **Details:** the staff can change a request's title, type and priority (Edit details). Each
   change is a line in the conversation. Descriptions and replies are never edited.
+- **Only what its editor changed is saved.** The dialog sends the three details and the values it
+  opened with (`was_title`, `was_type`, `was_priority`); `updateRequestDetails` takes a detail as
+  changed only when the two differ. A detail the editor left alone keeps what a colleague gave it
+  meanwhile (someone who fixes a typo in the title doesn't put back the priority their page still
+  showed), and isn't checked against the rules either. A detail the editor did change is saved
+  while it's still what they saw. If a colleague changed it to something else, nothing is saved:
+  the editor is told the details changed (`errors.requests.detailsChanged`) and the page is
+  refreshed, so the dialog starts from the request as it is when it's opened again. If the
+  colleague made the same change, there's nothing left to do. The priority a newly picked type
+  brings counts as the editor's choice.
 
 ## Numbers
 
@@ -103,6 +118,11 @@ the closed statuses.
 - Descriptions and replies are **plain text**: line breaks are kept, and web addresses (`http://`
   and `https://`) become links that open in a new tab. Titles may hold an address, but are never
   linked.
+- A link ends before the punctuation of the sentence around it (`splitLinks` in
+  `src/lib/requests/text.ts`): full stops, commas, question and exclamation marks, the ellipsis,
+  the full-width marks of Chinese and Japanese, closing quotation marks (”, ’, », ›), and a closing
+  bracket the address didn't open itself. Brackets are counted, so
+  `(see https://adiutor.dev/wiki/Printer_(office))` links up to `(office)`.
 - Each text is stored with a format marker (`description_format`, `body_format`, today always
   `plain`) and shown through one component (`RequestText` in `src/app/(app)/_requests/`), so adding
   Markdown later changes one place and no stored text.
@@ -126,10 +146,14 @@ the closed statuses.
   (`FilterMenu`, a sibling of `SortMenu`). It sorts by last activity or the day it was raised,
   and for the staff by priority, and pages like every table (see
   [Design and accessibility](design.md#design-and-accessibility)).
+  A list without requests says why: nothing matches (a search, a filter menu, or the Waiting or
+  Closed link), nothing is active, or, under All, which leaves nothing out, there are no requests
+  yet. The last two offer "New request" to whoever may raise one.
 - **`/companies/<URL name>`**: the same list for one company, the company's first page.
 - **`/requests/new`**: the company (only when there's more than one to choose from), a title, a
   type with what each is for, and a description. The staff also choose a priority, or leave it to
-  the type. It opens the new request.
+  the type. It opens the new request. A company that wasn't chosen is asked for like any other
+  field (`requestCompanySchema`); "not found" is for a company the reader may not see.
 - **`/requests/<number>`**: what was asked (Description), the Conversation with every reply and
   change, oldest first, and a Details bar: status, type, priority (staff), company, who raised
   it and when, the staff's first response and the last activity, with the controls. The bar is on
@@ -149,8 +173,15 @@ the closed statuses.
   `getRequest`, `raiseRequest`, `replyToRequest`, `changeRequestStatus`, `updateRequestDetails`.
   Every change refuses someone signed in as a user, checks the permission and that the company is
   active, validates, takes a rate limit (see [Rate limits](security-measures.md#rate-limits)), then
-  runs in a transaction that starts with `assertStillManages` and locks the request's row (see
-  [Lock order](security-measures.md#lock-order)).
+  runs in a transaction that starts with `assertStillMayChange` (`assertStillManages`, then the company) and locks the request's row (see
+  [Lock order](security-measures.md#lock-order)). That transaction refuses again when the company
+  was deactivated meanwhile, which the staff's rights don't depend on; the company's row isn't
+  locked (company rows come first in the lock order), so this narrows the moment in which a change
+  can land just after a deactivation, without closing it.
+- Times come from the database's clock at the moment something is written (`clock_timestamp()`,
+  `CHANGE_MOMENT`), not from the start of its transaction: a reply that waited for another change
+  to the same request is timed after it, as the conversation shows it. A new request's two times
+  (raised, last activity) are one reading, taken with its number.
 - Request work writes **no audit events**: the request's own conversation is the record, and
   nothing in it is a change of sign-in, role or account.
 - `src/app/(app)/_requests/`: what the request pages share (the list, the badges, the text, the

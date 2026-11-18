@@ -10,14 +10,14 @@ import { useLocale, useTranslations } from 'next-intl';
 
 import Card from '@/components/ui/card';
 import EmptyState from '@/components/ui/empty-state';
-import Pagination from '@/components/ui/pagination';
+import { paginationFooter } from '@/components/ui/pagination';
 import RelativeTime from '@/components/ui/relative-time';
 import RowAction from '@/components/ui/row-action';
 import SortMenu from '@/components/ui/sort-menu';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
-import { formatDateTime, formatRelative } from '@/lib/format';
+import { formatRelative } from '@/lib/format';
 import type { TableLinks } from '@/lib/tables/page-url';
-import { type Paged, showsPagination } from '@/lib/tables/table-state';
+import { type Paged } from '@/lib/tables/table-state';
 import type { FailedJobSort } from '@/lib/tables/tables';
 import type { FailedJobEntry } from '@/server/jobs';
 
@@ -94,7 +94,6 @@ interface FailedJobsCardProps {
  */
 export default function FailedJobsCard({ jobs, table, canLookUp, canManage }: FailedJobsCardProps) {
   const t = useTranslations('admin.jobs.failed');
-  const locale = useLocale();
   return (
     <Card
       id={table.section}
@@ -102,7 +101,7 @@ export default function FailedJobsCard({ jobs, table, canLookUp, canManage }: Fa
       description={t('description')}
       actions={jobs.total > 0 && <SortMenu label={t('rows')} options={table.sortOptions()} />}
       flush={jobs.total > 0}
-      footer={showsPagination(jobs.total) && <Pagination {...table.pagination(jobs, t('rows'))} />}
+      footer={paginationFooter(table, jobs, t('rows'))}
     >
       {jobs.total === 0 ? (
         <EmptyState
@@ -147,10 +146,7 @@ export default function FailedJobsCard({ jobs, table, canLookUp, canManage }: Fa
                     </div>
                   </Td>
                   <Td className="hidden whitespace-nowrap text-muted-foreground sm:table-cell">
-                    <RelativeTime date={job.failedAt} />
-                    {job.failedAt && (
-                      <span className="sr-only">, {formatDateTime(job.failedAt, locale)}</span>
-                    )}
+                    <RelativeTime date={job.failedAt} spokenExact />
                   </Td>
                   <Td className="hidden text-sm md:table-cell">{error}</Td>
                 </Tr>

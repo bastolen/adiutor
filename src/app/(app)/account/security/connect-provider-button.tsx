@@ -11,7 +11,7 @@ import Button from '@/components/ui/button';
 import { useSignedInAs } from '@/components/ui/signed-in-as';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import { SECURITY_PAGE } from '@/lib/redirect';
-import { signInChangeRefusalText } from '@/lib/sign-in/auth-error-messages';
+import { authErrorText } from '@/lib/sign-in/auth-error-messages';
 import loadAuthClient from '@/lib/sign-in/load-auth-client';
 import type { OAuthProvider } from '@/lib/sign-in/oauth-providers';
 
@@ -51,6 +51,12 @@ function connectedUrl(returnTo: string, provider: OAuthProvider): string {
  * Better Auth's `error=<code>` when it fails, which it puts before the
  * anchor). Without a recent confirmation with their second step, it sends
  * them to confirm first.
+ *
+ * A refusal says why in the reader's language (`authErrorText`), as the other
+ * cards on the page do: "sign out and in again" for a sign-in that's too old
+ * (which trying again never fixes), the rule for a role that requires MFA,
+ * another change still running, too many requests. Only a failure without a
+ * message of its own says "Connecting failed. Please try again."
  *
  * @param props - Button props.
  * @param props.provider - The provider.
@@ -93,9 +99,7 @@ export default function ConnectProviderButton({
       if (askToConfirmOnRefusal(result.error.code)) {
         return;
       }
-      setFailure(
-        signInChangeRefusalText(tAuth, result.error.code) ?? t('security.connected.connectFailed'),
-      );
+      setFailure(authErrorText(tAuth, result.error, t('security.connected.connectFailed')));
     }
   };
 

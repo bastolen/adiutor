@@ -1,13 +1,16 @@
 /**
  * @file A table's pagination, for its card's footer: which rows are shown,
  * links to the other pages and a choice of rows per page (see
- * `src/lib/tables/table-state.ts`, which builds the links).
+ * `src/lib/tables/table-state.ts`, which builds the links), and the footer
+ * itself (`paginationFooter`), which is only there when the rows don't fit
+ * on one page.
  */
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
 
 import cn from '@/lib/cn';
-import type { PaginationLinks } from '@/lib/tables/table-state';
+import { type Paged, type PaginationLinks, showsPagination } from '@/lib/tables/table-state';
 
 import LinkPendingIndicator from './link-pending';
 import PaginationNav from './pagination-nav';
@@ -98,4 +101,24 @@ export default function Pagination({
       </div>
     </div>
   );
+}
+
+/**
+ * The footer of a table's card: the pagination when the rows don't fit on
+ * one page, and nothing otherwise (`showsPagination`). It's a function, not
+ * a component, because `Card` shows a footer for anything it's given: a
+ * component that renders nothing would still leave an empty footer.
+ *
+ * @param table - The table's links, from `PageUrl.table()`.
+ * @param table.pagination - Builds the pagination's content.
+ * @param paged - The rows shown, with how many there are in all.
+ * @param label - What the rows are, in the plural.
+ * @returns The pagination, or `false` when every row fits on one page.
+ */
+export function paginationFooter(
+  table: { pagination(paged: Paged<unknown>, label: string): PaginationLinks },
+  paged: Paged<unknown>,
+  label: string,
+): ReactNode {
+  return showsPagination(paged.total) && <Pagination {...table.pagination(paged, label)} />;
 }

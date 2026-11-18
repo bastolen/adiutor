@@ -1,34 +1,16 @@
 /**
- * @file Tests for the state hooks that reset when the page is hidden.
+ * @file Tests for the state hooks that reset when the page is hidden, and
+ * for what a page does once per visit.
  */
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Activity, type ReactNode, useState } from 'react';
+import { StrictMode, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { defined } from '@/lib/defined';
 
-import { useTransientActionState, useTransientState } from './use-transient-state';
-
-/**
- * Wraps content in an `<Activity>` that a "Leave" / "Return" button hides and
- * shows, like Next.js does with a page when you navigate away and back.
- *
- * @param props - Harness props.
- * @param props.children - The page content.
- * @returns The harness.
- */
-function Page({ children }: { children: ReactNode }) {
-  const [visible, setVisible] = useState(true);
-  return (
-    <>
-      <button type="button" onClick={() => setVisible((value) => !value)}>
-        {visible ? 'Leave' : 'Return'}
-      </button>
-      <Activity mode={visible ? 'visible' : 'hidden'}>{children}</Activity>
-    </>
-  );
-}
+import Page from '../../../tests/ui/page';
+import { useOncePerVisit, useTransientActionState, useTransientState } from './use-transient-state';
 
 /**
  * A message set by a button, kept in {@link useTransientState}.
@@ -44,6 +26,24 @@ function Notice() {
       </button>
       {message && <p role="status">{message}</p>}
     </>
+  );
+}
+
+/**
+ * Does something once per visit of its page, as a form emails a code when it
+ * opens, with {@link useOncePerVisit}. A button changes what it does.
+ *
+ * @param props - Component props.
+ * @param props.onVisit - What it does once per visit, with the name it has then.
+ * @returns The button.
+ */
+function OncePerVisit({ onVisit }: { onVisit: (name: string) => void }) {
+  const [name, setName] = useState('first');
+  useOncePerVisit(() => onVisit(name));
+  return (
+    <button type="button" onClick={() => setName('second')}>
+      Rename
+    </button>
   );
 }
 
@@ -127,6 +127,63 @@ describe('useTransientState', () => {
     await user.click(screen.getByRole('button', { name: 'Leave' }));
     await user.click(screen.getByRole('button', { name: 'Return' }));
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+});
+
+describe('useOncePerVisit', () => {
+  it('runs when the page opens, and again each time it is shown again', async () => {
+    const user = userEvent.setup();
+    const onVisit = vi.fn();
+    render(
+      <Page>
+        <OncePerVisit onVisit={onVisit} />
+      </Page>,
+    );
+    expect(onVisit).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    expect(onVisit).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: 'Return' }));
+    expect(onVisit).toHaveBeenCalledTimes(2);
+
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    await user.click(screen.getByRole('button', { name: 'Return' }));
+    expect(onVisit).toHaveBeenCalledTimes(3);
+  });
+
+  it('runs once while Strict Mode runs the effects a second time, on mount and on return', async () => {
+    const user = userEvent.setup();
+    const onVisit = vi.fn();
+    render(
+      <StrictMode>
+        <Page>
+          <OncePerVisit onVisit={onVisit} />
+        </Page>
+      </StrictMode>,
+    );
+    // Not twice: Strict Mode cleaned the effects up and set them up again, but the page never went.
+    expect(onVisit).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    await user.click(screen.getByRole('button', { name: 'Return' }));
+    expect(onVisit).toHaveBeenCalledTimes(2);
+  });
+
+  it('runs what the page gave it last, without running again when that changes', async () => {
+    const user = userEvent.setup();
+    const onVisit = vi.fn();
+    render(
+      <Page>
+        <OncePerVisit onVisit={onVisit} />
+      </Page>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Rename' }));
+    expect(onVisit.mock.calls).toEqual([['first']]);
+
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    await user.click(screen.getByRole('button', { name: 'Return' }));
+    expect(onVisit.mock.calls).toEqual([['first'], ['second']]);
   });
 });
 

@@ -19,7 +19,7 @@ describe('soleAdminOf', () => {
     await expect(deactivateUser(ctx, admin, companyAdmin)).rejects.toMatchObject({
       code: 'conflict',
       key: 'errors.soleAdmin.user.companies',
-      values: { companies: 'Adiutor Tests Client' },
+      values: { companies: ['Adiutor Tests Client'] },
     });
 
     // A second Admin who is deactivated doesn't count.

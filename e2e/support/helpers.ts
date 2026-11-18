@@ -55,13 +55,15 @@ export async function useOwnClientIp(page: Page): Promise<void> {
 
 /**
  * The toasts the signed-in app reports results in (every success, and every
- * error next to its inline message), in their "Notifications (F8)" region.
+ * error next to its inline message, except one an open dialog shows), in
+ * their "Notifications (F8)" region, which is named in the reader's language
+ * ("Meldingen (F8)", "Notificaciones (F8)").
  *
  * @param page - The browser page.
  * @returns The region.
  */
 export function toasts(page: Page): Locator {
-  return page.getByRole('region', { name: /^Notifications/ });
+  return page.getByRole('region', { name: /^(Notifications|Meldingen|Notificaciones) \(F8\)$/ });
 }
 
 /** Pages a signed-in user can land on. */
@@ -92,6 +94,24 @@ async function enterAuthenticatorCode(page: Page, totpSecret: string, attempt = 
 }
 
 /**
+ * Fills the email and password on the sign-in form and clicks Sign in,
+ * without waiting for the result.
+ *
+ * @param page - The browser page, on the sign-in page.
+ * @param account - The account to sign in with.
+ * @param account.email - Email address.
+ * @param account.password - Password.
+ */
+export async function fillAndSubmitSignIn(
+  page: Page,
+  account: { email: string; password: string },
+): Promise<void> {
+  await page.getByLabel('Email').fill(account.email);
+  await page.getByLabel('Password').fill(account.password);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+}
+
+/**
  * Submits the password sign-in form and waits for the result: the app or the
  * code step. The tests run against a production build, where Better Auth
  * limits sign-ins to 3 per 10 seconds per address. Each test has its own
@@ -113,9 +133,7 @@ export async function submitPassword(
   attempt = 1,
 ): Promise<'code-step' | 'signed-in'> {
   await page.goto(from);
-  await page.getByLabel('Email').fill(account.email);
-  await page.getByLabel('Password').fill(account.password);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await fillAndSubmitSignIn(page, account);
 
   /**
    * Whether the code step is showing.
@@ -163,6 +181,19 @@ export async function signIn(
     await enterAuthenticatorCode(page, account.totpSecret);
   }
   await expect(page).toHaveURL(SIGNED_IN_URL);
+}
+
+/**
+ * Confirms it's the user on the "Confirm it's you" page: fills the current
+ * authenticator code and presses Confirm. A caller that already used the
+ * current code for something else waits for the next one first.
+ *
+ * @param page - The browser page, on the confirmation page (`/auth/verify`).
+ * @param totpSecret - The account's raw authenticator secret.
+ */
+export async function confirmWithAuthenticator(page: Page, totpSecret: string): Promise<void> {
+  await page.getByRole('textbox', { name: 'Code', exact: true }).fill(codeForSecret(totpSecret));
+  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
 }
 
 /**
@@ -360,4 +391,23 @@ export async function createInviteLink(page: Page, role: string): Promise<string
   await page.getByRole('option', { name: new RegExp(`^${role}\\b`) }).click();
   await linkForm.getByRole('button', { name: 'Create invite link' }).click();
   return page.getByRole('textbox', { name: 'Invite link' }).inputValue();
+}
+
+/**
+ * Sends an invitation with the form on the Members page of a company or the
+ * Staff page, without waiting for the result.
+ *
+ * @param page - The browser page, signed in and on the Members or Staff page.
+ * @param email - The address to invite.
+ * @param role - The role's name in the menu, e.g. "Client".
+ */
+export async function sendInvitation(page: Page, email: string, role: string): Promise<void> {
+  const inviteForm = page
+    .locator('form')
+    .filter({ has: page.getByRole('button', { name: 'Send invitations' }) });
+  await inviteForm.getByLabel('Email addresses').fill(email);
+  await inviteForm.getByRole('combobox', { name: 'Role', exact: true }).click();
+  // Each option's name also holds its description ("Client Raises requests …").
+  await page.getByRole('option', { name: new RegExp(`^${role}\\b`) }).click();
+  await inviteForm.getByRole('button', { name: 'Send invitations' }).click();
 }

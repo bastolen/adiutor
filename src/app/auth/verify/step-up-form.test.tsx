@@ -2,12 +2,14 @@
  * @file Tests for the step-up form: which ways to confirm it offers, which
  * Better Auth calls each one makes, how it explains why the session needs
  * confirming, that it starts over after a confirmation (the page stays alive
- * in React's `<Activity>`), and that it says why "Confirm with GitHub" didn't
- * count until the session is confirmed.
+ * in React's `<Activity>`) and emails its code once each time it's shown,
+ * that it says why "Confirm with GitHub" didn't
+ * count until the session is confirmed, and that a failed sign-out says so
+ * instead of loading the sign-in page.
  */
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Activity } from 'react';
+import { Activity, StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EMAIL_CODE_RESEND_SECONDS, type StepUpMethods } from '@/lib/authz/mfa';
@@ -16,6 +18,7 @@ import {
   PROVIDER_STEP_UP_COOKIE,
   REVERIFY_HINT,
 } from '@/lib/sign-in/oauth-providers';
+import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 
 import renderInLocale from '../../../../tests/i18n/render';
 import StepUpForm, { type StepUpFormProps } from './step-up-form';
@@ -91,8 +94,8 @@ const none: StepUpMethods = { authenticator: false, email: false, passkey: false
  * alive between visits.
  *
  * @param props - The form's props.
- * @returns `leaveAndReturn`, which hides the page and shows it again, like
- *   navigating away and coming back.
+ * @returns `leaveAndReturn`, which hides the page and shows it again a moment
+ *   later, like navigating away and coming back.
  */
 function renderOnPage(props: StepUpFormProps) {
   /**
@@ -108,9 +111,10 @@ function renderOnPage(props: StepUpFormProps) {
   );
   const view = render(page('visible'));
   return {
-    /** Hides the page, then shows it again. */
-    leaveAndReturn: () => {
+    /** Hides the page, then shows it again once what it does on leaving has run. */
+    leaveAndReturn: async () => {
       view.rerender(page('hidden'));
+      await act(async () => {});
       view.rerender(page('visible'));
     },
   };
@@ -147,6 +151,35 @@ describe('StepUpForm', () => {
     expect(signOut).toHaveBeenCalled();
     await waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/auth', { everyTab: true }));
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      'the server refuses it',
+      () => signOut.mockResolvedValueOnce({ data: null, error: { status: 500 } }),
+    ],
+    [
+      'the request never gets there',
+      () => signOut.mockRejectedValueOnce(new TypeError('Failed to fetch')),
+    ],
+  ])('says that signing out failed when %s, and stays on the page', async (_, fail) => {
+    const user = userEvent.setup();
+    fail();
+    render(<StepUpForm methods={{ ...none, authenticator: true }} callbackURL="/account" />);
+    const button = screen.getByRole('button', { name: 'Sign out' });
+
+    await user.click(button);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Signing out failed. Please try again.',
+    );
+    // Still signed in: the sign-in page would only send them back here, in every tab.
+    expect(loadFresh).not.toHaveBeenCalled();
+
+    // The button still works: a second try that succeeds signs out.
+    await user.click(button);
+    await waitFor(() => expect(loadFresh).toHaveBeenCalledWith('/auth', { everyTab: true }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('checks an authenticator code, then continues', async () => {
@@ -205,7 +238,10 @@ describe('StepUpForm', () => {
     expect(await screen.findByText(/We sent a code to your email address/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Use a backup code' })).not.toBeInTheDocument();
     // No new code until half the first one's lifetime has passed.
-    expect(screen.getByRole('button', { name: 'Send a new code in 2:30' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Send a new code in 2:30' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
 
     act(() => {
       vi.advanceTimersByTime(EMAIL_CODE_RESEND_SECONDS * 1000);
@@ -237,6 +273,45 @@ describe('StepUpForm', () => {
     await user.click(screen.getByRole('button', { name: 'Confirm with a passkey' }));
     expect(passkey).toHaveBeenCalled();
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/account'));
+  });
+
+  it('keeps focus on the passkey button while its prompt is open, and the others wait', async () => {
+    const user = userEvent.setup();
+    const prompt = deferred<object>();
+    passkey.mockReturnValue(prompt.promise);
+    render(
+      <StepUpForm
+        methods={{ ...none, authenticator: true, passkey: true, providers: ['github'] }}
+        callbackURL="/account"
+      />,
+    );
+    const button = screen.getByRole('button', { name: 'Confirm with a passkey' });
+    const others = [
+      screen.getByRole('button', { name: 'Confirm with GitHub' }),
+      screen.getByRole('button', { name: 'Confirm' }),
+    ];
+
+    button.focus();
+    await user.keyboard('{Enter}');
+
+    // Busy, not disabled: a disabled button would drop focus to the top of the page.
+    expect(button).toHaveFocus();
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(button).toBeEnabled();
+    // The others can't start a second confirmation, and show no spinner of their own.
+    others.forEach((other) => {
+      expect(other).toBeDisabled();
+      expect(other).not.toHaveAttribute('aria-busy');
+    });
+
+    await act(async () => {
+      prompt.resolve({ data: null, error: { code: 'AUTH_CANCELLED', status: 400 } });
+    });
+
+    [button, ...others].forEach((other) => {
+      expect(other).toBeEnabled();
+      expect(other).not.toHaveAttribute('aria-busy');
+    });
   });
 
   describe('starts over after a confirmation', () => {
@@ -274,7 +349,7 @@ describe('StepUpForm', () => {
       await user.click(screen.getByRole('button', { name: 'Confirm' }));
       await waitFor(() => expect(replace).toHaveBeenCalledWith('/account/security'));
 
-      leaveAndReturn();
+      await leaveAndReturn();
 
       expect(screen.queryByLabelText('Backup code')).not.toBeInTheDocument();
       expect(screen.getByLabelText('Code')).toHaveValue('');
@@ -296,7 +371,7 @@ describe('StepUpForm', () => {
       expect(verifyOtp).toHaveBeenCalledWith({ code: '654321' });
       await waitFor(() => expect(replace).toHaveBeenCalledWith('/account/security'));
 
-      leaveAndReturn();
+      await leaveAndReturn();
 
       await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(2));
       expect(await screen.findByText(/We sent a code to your email address/)).toBeInTheDocument();
@@ -305,7 +380,7 @@ describe('StepUpForm', () => {
       expect(screen.getByRole('button', { name: 'Confirm' })).not.toHaveAttribute('aria-busy');
     });
 
-    it('doesn’t email another code when the user comes back without confirming', async () => {
+    it('emails a code again when the user comes back without confirming, and says so', async () => {
       const { leaveAndReturn } = renderOnPage({
         methods: { ...none, email: true },
         callbackURL: '/account/security',
@@ -313,10 +388,43 @@ describe('StepUpForm', () => {
       await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(1));
       expect(await screen.findByLabelText('Code')).toBeInTheDocument();
 
-      leaveAndReturn();
+      await leaveAndReturn();
 
+      // The first code may have run out by now; before, nothing was sent and nothing said.
+      await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(2));
+      expect(await screen.findByText(/We sent a code to your email address/)).toBeInTheDocument();
       expect(screen.getByLabelText('Code')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /^Send a new code/ })).toBeInTheDocument();
+    });
+
+    it('says to use the last code when the server says it still works', async () => {
+      const { leaveAndReturn } = renderOnPage({
+        methods: { ...none, email: true },
+        callbackURL: '/account/security',
+      });
+      await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(1));
+      expect(await screen.findByLabelText('Code')).toBeInTheDocument();
+      sendOtp.mockResolvedValueOnce({
+        data: null,
+        error: { status: 429, code: EMAIL_CODE_SENT_RECENTLY.code },
+      });
+
+      await leaveAndReturn();
+
+      expect(await screen.findByText(EMAIL_CODE_SENT_RECENTLY.message)).toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Code')).toBeInTheDocument();
+      expect(sendOtp).toHaveBeenCalledTimes(2);
+    });
+
+    it('emails one code on mount in Strict Mode, which runs effects twice', async () => {
+      render(
+        <StrictMode>
+          <StepUpForm methods={{ ...none, email: true }} callbackURL="/account" />
+        </StrictMode>,
+      );
+
+      expect(await screen.findByText(/We sent a code to your email address/)).toBeInTheDocument();
       expect(sendOtp).toHaveBeenCalledTimes(1);
     });
 
@@ -333,7 +441,7 @@ describe('StepUpForm', () => {
       await user.click(screen.getByRole('button', { name: 'Confirm with a passkey' }));
       await waitFor(() => expect(replace).toHaveBeenCalledWith('/account/security'));
 
-      leaveAndReturn();
+      await leaveAndReturn();
 
       expect(screen.queryByLabelText('Code')).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Send a new code' })).not.toBeInTheDocument();
@@ -476,14 +584,12 @@ describe('StepUpForm', () => {
         />,
       );
 
-      expect(
-        screen.getByText(/Changing how you sign in needs your second step\./),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/This needs your second step\./)).toBeInTheDocument();
       expect(screen.queryByText(/You turned on MFA/)).not.toBeInTheDocument();
       expect(screen.queryByText(/Your role requires MFA/)).not.toBeInTheDocument();
     });
 
-    it('for a session confirmed too long ago to change how the user signs in', () => {
+    it('for a session confirmed too long ago, without naming what the user came to do', () => {
       render(
         <StepUpForm
           methods={githubOnly}
@@ -495,14 +601,15 @@ describe('StepUpForm', () => {
       );
 
       expect(
-        screen.getByText(
-          /Changing how you sign in needs a confirmation from the last 15 minutes\./,
-        ),
+        screen.getByText(/This needs a confirmation from the last 15 minutes\./),
       ).toBeInTheDocument();
+      // The same page confirms before giving someone a role, resetting someone's two-step
+      // verification and signing in as a user, so it doesn't say it's about how they sign in.
+      expect(screen.queryByText(/how you sign in/)).not.toBeInTheDocument();
       expect(screen.queryByText(/Your role requires MFA/)).not.toBeInTheDocument();
       expect(screen.queryByText(/You turned on MFA/)).not.toBeInTheDocument();
       // GitHub is offered, so nothing says it can't confirm the change.
-      expect(screen.queryByText(/can’t confirm changes/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/can’t confirm this/)).not.toBeInTheDocument();
     });
 
     it('for a change, why GitHub isn’t offered next to a passkey or an authenticator app', () => {
@@ -518,7 +625,7 @@ describe('StepUpForm', () => {
 
       expect(
         screen.getByText(
-          "Changing how you sign in needs a confirmation from the last 15 minutes. GitHub can’t confirm changes to how you sign in while you have a passkey or an authenticator app. Confirm it's you to continue.",
+          "This needs a confirmation from the last 15 minutes. GitHub can’t confirm this while you have a passkey or an authenticator app. Confirm it's you to continue.",
         ),
       ).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Confirm with a passkey' })).toBeInTheDocument();
@@ -528,11 +635,11 @@ describe('StepUpForm', () => {
     it.each([
       [
         'nl-NL',
-        'Om te wijzigen hoe je inlogt, is een bevestiging van de afgelopen 15 minuten nodig. GitHub of Google kan geen wijzigingen aan hoe je inlogt bevestigen zolang je een passkey of authenticator-app hebt. Bevestig dat jij het bent om verder te gaan.',
+        'Hiervoor is een bevestiging van de afgelopen 15 minuten nodig. GitHub of Google kan dit niet bevestigen zolang je een passkey of authenticator-app hebt. Bevestig dat jij het bent om verder te gaan.',
       ],
       [
         'es-ES',
-        'Para cambiar cómo inicias sesión hace falta una confirmación de los últimos 15 minutos. GitHub o Google no puede confirmar cambios en cómo inicias sesión mientras tengas una llave de acceso o una app de autenticación. Confirma que eres tú para continuar.',
+        'Para esto hace falta una confirmación de los últimos 15 minutos. GitHub o Google no puede confirmar esto mientras tengas una llave de acceso o una app de autenticación. Confirma que eres tú para continuar.',
       ],
     ] as const)('says the same in %s, naming the providers in its own words', (locale, text) => {
       renderInLocale(

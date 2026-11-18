@@ -1,7 +1,8 @@
 /**
  * @file Formats IP addresses for people: IPv6 addresses in their short form
  * (Better Auth stores them expanded and masked to their /64 network), and
- * this computer's own addresses as "Local".
+ * this computer's own addresses and a missing one as a `kind` that the
+ * `common.ipAddress` message words ("Local", "Unknown") in the reader's language.
  */
 
 /**
@@ -37,14 +38,25 @@ function compressIpv6(address: string): string {
 }
 
 /**
- * Formats an IP address for display.
+ * An address as the `common.ipAddress` message takes it:
+ * `t('ipAddress', describeIpAddress(ip))`. `kind` says whether it is this
+ * computer's own address (`local`), not known (`unknown`) or an address to
+ * show as it is (`address`, with the address in its short form in `address`;
+ * empty for the other two). A record rather than an interface, so it fits a
+ * message's values.
+ */
+export type IpAddressDescription = Record<'kind' | 'address', string>;
+
+/**
+ * Describes an IP address for display. The words "Local" and "Unknown" are
+ * the message's, so each reader gets them in their own language.
  *
  * @param address - The stored address, if known.
- * @returns The address, "Local" for this computer, or "Unknown".
+ * @returns The kind of address and, for a real one, its short form.
  */
-export default function formatIpAddress(address: string | null | undefined): string {
+export function describeIpAddress(address: string | null | undefined): IpAddressDescription {
   if (!address) {
-    return 'Unknown';
+    return { kind: 'unknown', address: '' };
   }
   const short = address.includes(':') ? compressIpv6(address.toLowerCase()) : address;
   if (
@@ -53,7 +65,7 @@ export default function formatIpAddress(address: string | null | undefined): str
     short.startsWith('127.') ||
     short === '::ffff:127.0.0.1'
   ) {
-    return 'Local';
+    return { kind: 'local', address: '' };
   }
-  return short;
+  return { kind: 'address', address: short };
 }

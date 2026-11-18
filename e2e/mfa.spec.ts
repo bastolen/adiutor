@@ -19,6 +19,7 @@ import {
   SUPPORT_STAFF,
 } from './support/fixtures';
 import {
+  confirmWithAuthenticator,
   openSignInLink,
   setUpAuthenticator,
   signIn,
@@ -29,7 +30,6 @@ import {
 } from './support/helpers';
 import { codeIn, countEmails, linkIn, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
-import { codeForSecret } from './support/totp';
 
 test('a Manager must set up MFA first, then signs in with an authenticator or a backup code', async ({
   page,
@@ -99,8 +99,16 @@ test('a company user turns on email codes and can trust the device until signing
   sent = await countEmails(MFA_CLIENT.email);
   expect(await submitPassword(page, MFA_CLIENT)).toBe('code-step');
   const signInEmail = await waitForNewEmail(MFA_CLIENT.email, sent);
+  // The code just sent makes "Send a new code" wait: it ignores Enter, but keeps keyboard focus.
+  const resend = page.getByRole('button', { name: /^Send a new code in/ });
+  await resend.focus();
+  await page.keyboard.press('Enter');
+  await expect(resend).toBeFocused();
+  await expect(resend).toHaveAttribute('aria-disabled', 'true');
   await page.getByRole('textbox', { name: 'Code', exact: true }).fill(codeIn(signInEmail));
-  await page.getByLabel('Trust this device for 30 days').check();
+  await page
+    .getByLabel('Trust this device (until 30 days after your last password sign-in here)')
+    .check();
   await page.getByRole('button', { name: 'Verify and sign in' }).click();
   await expect(page).toHaveURL('/dashboard');
 
@@ -233,10 +241,7 @@ test('an Admin signing in with an email link confirms the session with a code', 
   await expect(page).toHaveURL(/\/auth\/verify\?callbackURL=%2Fadmin%2Fusers/);
   await expect(page.getByRole('heading', { name: /^Confirm it.s you$/ })).toBeVisible();
 
-  await page
-    .getByRole('textbox', { name: 'Code', exact: true })
-    .fill(codeForSecret(PLATFORM_ADMIN.totpSecret));
-  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
+  await confirmWithAuthenticator(page, PLATFORM_ADMIN.totpSecret);
   await expect(page).toHaveURL('/admin/users');
 
   // The session is confirmed now: other pages don't ask again.

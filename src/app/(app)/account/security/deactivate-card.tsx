@@ -21,7 +21,7 @@ import { deactivateAccountAction } from './actions';
 const SECTION = 'deactivate';
 
 /** The sign-in page, saying the account is deactivated, which loads once it's done. */
-export const DEACTIVATED_PATH = '/auth?error=ACCOUNT_DEACTIVATED';
+const DEACTIVATED_PATH = '/auth?error=ACCOUNT_DEACTIVATED';
 
 /**
  * Props for {@link DeactivateCard}.

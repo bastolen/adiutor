@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { defined } from '@/lib/defined';
 
-import Button from './button';
+import Button, { whileRunning } from './button';
 
 describe('Button', () => {
   it('is a plain button by default, so it never submits a form by accident', () => {
@@ -39,6 +39,42 @@ describe('Button', () => {
     expect(onClick).not.toHaveBeenCalled();
 
     rerender(<Button onClick={onClick}>Save</Button>);
+    expect(button).toHaveFocus();
+    expect(button).not.toHaveAttribute('aria-disabled');
+    await user.keyboard('{Enter}');
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays focusable while disabled when asked to, ignoring presses without being busy', async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    const { rerender } = render(
+      <Button focusableWhenDisabled onClick={onClick}>
+        Send a new code
+      </Button>,
+    );
+    const button = screen.getByRole('button', { name: 'Send a new code' });
+    button.focus();
+
+    rerender(
+      <Button focusableWhenDisabled disabled onClick={onClick}>
+        Send a new code
+      </Button>,
+    );
+    // A disabled button loses focus the moment it's disabled, and doesn't get it back.
+    expect(button).toBeEnabled();
+    expect(button).toHaveFocus();
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    expect(button).not.toHaveAttribute('aria-busy');
+    await user.click(button);
+    await user.keyboard('{Enter}');
+    expect(onClick).not.toHaveBeenCalled();
+
+    rerender(
+      <Button focusableWhenDisabled onClick={onClick}>
+        Send a new code
+      </Button>,
+    );
     expect(button).toHaveFocus();
     expect(button).not.toHaveAttribute('aria-disabled');
     await user.keyboard('{Enter}');
@@ -126,5 +162,19 @@ describe('Button', () => {
     expect(look).toHaveAttribute('aria-hidden', 'true');
     expect(look.className).not.toMatch(/hover:|focus-visible:|active:/);
     expect(look).toHaveClass('pointer-events-none', 'bg-primary');
+  });
+});
+
+describe('whileRunning', () => {
+  it('leaves every button usable while nothing runs', () => {
+    expect(whileRunning(null, 'passkey')).toEqual({ loading: false, disabled: false });
+  });
+
+  it('makes the running action busy, so its button keeps focus', () => {
+    expect(whileRunning('passkey', 'passkey')).toEqual({ loading: true, disabled: false });
+  });
+
+  it('disables the other actions, which show no spinner', () => {
+    expect(whileRunning<string>('passkey', 'github')).toEqual({ loading: false, disabled: true });
   });
 });

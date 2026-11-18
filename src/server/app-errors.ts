@@ -13,6 +13,7 @@
  * message (without database values) and who was signed in.
  */
 import { type AppErrorRouteType, type AppErrorSource, appError } from '@/db/schema';
+import { withoutControlCharacters } from '@/lib/character-rules';
 import { firstRow } from '@/lib/defined';
 import { referenceFromDigest } from '@/lib/error-reference';
 import {
@@ -24,7 +25,7 @@ import { redactLogValue } from '@/lib/log-redaction';
 
 import type { ServiceContext } from './context';
 import { createReference } from './error-reference';
-import { hitRateLimit, RATE_LIMITS } from './rate-limit';
+import { hitRateLimit, ipRateLimitKey, RATE_LIMITS } from './rate-limit';
 
 /** How many days stored errors are kept (the `retention` job deletes older ones). */
 export const APP_ERROR_RETENTION_DAYS = 7;
@@ -62,20 +63,24 @@ export interface RecordedAppError {
 }
 
 /**
- * Trims a text and cuts it to a length.
+ * Makes a text one line, trims it and cuts it to a length. Every run of
+ * control characters (line breaks among them) becomes a space, since some of
+ * these texts come from whoever sends a request: a path with a line break
+ * would otherwise add a line to the log that looks like another error.
  *
  * @param text - The text, if any.
  * @param length - The longest it may be.
  * @returns The text, or `null` when there's nothing left.
  */
 function shorten(text: string | null | undefined, length: number): string | null {
-  return text?.trim().slice(0, length) || null;
+  const oneLine = withoutControlCharacters(text ?? '', ' ');
+  return oneLine.trim().slice(0, length) || null;
 }
 
 /**
  * The page path as it's stored and logged: without its query string or
  * fragment (they can hold search terms and sign-in tokens), with the token
- * of a secret link replaced by `[token]`, and shortened.
+ * of a secret link replaced by `[token]`, on one line and shortened.
  *
  * @param path - The path, e.g. `/companies?q=adiutor`.
  * @returns The path, e.g. `/companies`, or `null` when there's none.
@@ -115,10 +120,11 @@ function describeError(error: unknown): { name: string | null; message: string |
 
 /**
  * Records an unexpected error: one line in the server log with the
- * reference, where it happened and the digest (nothing personal), written
- * first, so it's there even when the database isn't; then a row with the
- * error's name and message (database values taken out, shortened) and who
- * was signed in. The rows are limited per IP address
+ * reference, where it happened and the digest (nothing personal, and never a
+ * line break, whatever the request sent), written first, so it's there even
+ * when the database isn't; then a row with the error's name and message
+ * (database values taken out, on one line, shortened) and who was signed in.
+ * The rows are limited per IP address
  * (`RATE_LIMITS.appErrorsPerIp`), so errors can't be used to fill the table;
  * past the limit the error is only logged. Errors of background jobs have no
  * IP address and no visitor who could cause them, so they're never limited:
@@ -143,16 +149,9 @@ export async function recordAppError(
   // eslint-disable-next-line no-console -- Where it happened only: the message may name someone, and logs never do.
   console.warn(`App error ${reference}: ${where}${digest ? ` (digest ${digest})` : ''}`);
 
-  const request = ctx.requestInfo ? await ctx.requestInfo() : null;
+  const key = await ipRateLimitKey(ctx, 'app-error');
   const allowed =
-    report.source === 'job' ||
-    (
-      await hitRateLimit(
-        ctx,
-        `app-error:ip:${request?.ip ?? 'unknown'}`,
-        RATE_LIMITS.appErrorsPerIp,
-      )
-    ).allowed;
+    report.source === 'job' || (await hitRateLimit(ctx, key, RATE_LIMITS.appErrorsPerIp)).allowed;
   if (!allowed) {
     return { reference, at: new Date(), stored: false };
   }

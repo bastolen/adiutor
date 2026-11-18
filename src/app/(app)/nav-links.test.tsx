@@ -7,6 +7,9 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { LOCALES } from '@/lib/i18n/locales';
+import translator from '@/lib/i18n/translator';
+
 import NavLinks from './nav-links';
 
 /** The mocked current path. */
@@ -64,5 +67,11 @@ describe('NavLinks', () => {
     render(<NavLinks sections={['users', 'companies', 'staff', 'logs']} />);
 
     expect(screen.getByRole('link', { name: 'Logs' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it.each(LOCALES)('names the Logs section as its page is headed, in %s', (locale) => {
+    expect(translator(locale, 'navigation')('items.logs')).toBe(
+      translator(locale, 'admin.logs')('header.title'),
+    );
   });
 });

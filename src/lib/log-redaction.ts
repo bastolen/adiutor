@@ -1,9 +1,11 @@
 /**
  * @file Keeps database values out of the server's logs. A failed query's
  * error carries every value it was sent: Drizzle's message ends with
- * `params: …` and Postgres's error adds a `detail` such as
- * `Key (email)=(…) already exists.` Those can be email addresses, names, IP
- * addresses, browsers, password hashes and session tokens.
+ * `params: …`, Postgres's error adds a `detail` such as
+ * `Key (email)=(…) already exists.`, and its message quotes a value it
+ * couldn't read (`invalid input syntax for type uuid: "…"`). Those can be
+ * email addresses, names, IP addresses, browsers, password hashes and session
+ * tokens.
  *
  * {@link installLogRedaction} makes every `console` call drop them, so Next's
  * own error logging, Better Auth's logger and the app's code are covered
@@ -33,6 +35,12 @@ const POSTGRES_FIELDS = [
   'constraint',
   'routine',
 ] as const;
+
+/**
+ * The fields of a Postgres error that name what failed. What Postgres quotes
+ * in its message stays only when it's one of these names.
+ */
+const POSTGRES_NAME_FIELDS = ['schema', 'table', 'column', 'dataType', 'constraint'] as const;
 
 /** How deep {@link redactLogValue} looks into causes, fields, plain objects and arrays. */
 const MAX_DEPTH = 4;
@@ -68,6 +76,60 @@ function isDrizzleQueryError(value: Error): value is Error & { query: string; pa
 function isPostgresError(value: Error): boolean {
   const fields = value as unknown as Record<string, unknown>;
   return typeof fields.severity === 'string' && typeof fields.code === 'string';
+}
+
+/**
+ * Replaces what Postgres quotes in its message, unless it's a name the error
+ * itself gives (its constraint, table, column, schema or data type). Postgres
+ * quotes the value it couldn't read, which is whatever the query was sent:
+ * `invalid input syntax for type uuid: "…"`, `invalid input value for enum
+ * company_role: "…"`. Everything from the first quote that isn't such a name
+ * up to the message's last quote goes, so a value with quotes of its own
+ * can't end the cut early. The words around it, which say what failed, stay.
+ * (Postgres's messages in English, its default; the names of things the
+ * query itself spells out, such as a missing table, go too: the query is
+ * logged with them.)
+ *
+ * @param message - The message of a Postgres error.
+ * @param names - The names the error gives in its fields.
+ * @returns The message with the quoted values replaced.
+ */
+function redactQuotedValues(message: string, names: readonly string[]): string {
+  let open = message.indexOf('"');
+  while (open !== -1) {
+    const from = open;
+    const name = names.find((candidate) => message.startsWith(`"${candidate}"`, from));
+    if (name === undefined) {
+      const close = message.lastIndexOf('"');
+      const after = close > from ? message.slice(close + 1) : '';
+      return `${message.slice(0, from)}"${REDACTED}"${after}`;
+    }
+    open = message.indexOf('"', from + name.length + 2);
+  }
+  return message;
+}
+
+/**
+ * An error's message without database values: a failed query's message is
+ * rebuilt from its SQL rather than cut, so no value can end the cut; a
+ * Postgres error loses the values it quotes ({@link redactQuotedValues}).
+ *
+ * @param error - The error.
+ * @returns The message to log.
+ */
+function redactedMessage(error: Error): string {
+  if (isDrizzleQueryError(error)) {
+    return `Failed query: ${error.query}\nparams: ${REDACTED}`;
+  }
+  const message = redactText(error.message);
+  if (!isPostgresError(error)) {
+    return message;
+  }
+  const fields = error as unknown as Record<string, unknown>;
+  const names = POSTGRES_NAME_FIELDS.map((field) => fields[field]).filter(
+    (name): name is string => typeof name === 'string' && name !== '',
+  );
+  return redactQuotedValues(message, names);
 }
 
 /**
@@ -117,10 +179,7 @@ function holdsDatabaseValues(value: unknown, depth: number): boolean {
  * @returns The copy.
  */
 function redactError(error: Error, depth: number): Error {
-  // A failed query's message is rebuilt from its SQL rather than cut, so no value can end the cut.
-  const message = isDrizzleQueryError(error)
-    ? `Failed query: ${error.query}\nparams: ${REDACTED}`
-    : redactText(error.message);
+  const message = redactedMessage(error);
   const copy = new Error(message);
   copy.name = error.name;
   copy.stack =
@@ -164,7 +223,8 @@ function redactError(error: Error, depth: number): Error {
 
 /**
  * Removes database values from something about to be logged: Drizzle's
- * parameters and Postgres's `detail`, in errors (and their causes), strings,
+ * parameters, Postgres's `detail` and the values Postgres quotes in its
+ * message, in errors (and their causes), strings,
  * and plain objects and arrays holding them. Anything without them is
  * returned as it is (the same object), so other errors keep their class.
  *

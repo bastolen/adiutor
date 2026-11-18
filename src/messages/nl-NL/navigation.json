@@ -8,7 +8,7 @@
       "users": "Gebruikers",
       "companies": "Bedrijven",
       "staff": "Medewerkers",
-      "logs": "Logboek"
+      "logs": "Logs"
     },
     "openMenu": "Menu openen",
     "menu": "Menu",
@@ -17,6 +17,7 @@
     "accountMenu": "Accountmenu:",
     "accountSettings": "Accountinstellingen",
     "signOut": "Uitloggen",
+    "signOutFailed": "Uitloggen is mislukt. Probeer het opnieuw.",
     "signedInAs": {
       "label": "Ingelogd als iemand anders",
       "text": "Je bent ingelogd als {name} ({email}) en kunt niets wijzigen. Dit stopt om {time}.",

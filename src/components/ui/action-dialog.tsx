@@ -57,6 +57,20 @@ interface ActionDialogProps {
   /** Disables the opening button, e.g. when there's nothing to act on. */
   disabled?: boolean;
   /**
+   * While `disabled`, keep the opening button focusable and ignoring presses
+   * (`Button`'s `focusableWhenDisabled`), for one that its own action
+   * disables, such as "Reset two-step verification" once nothing is left to
+   * reset: a disabled button would lose keyboard focus after the refresh.
+   * Signed in as a user, it's disabled all the same.
+   */
+  focusableWhenDisabled?: boolean;
+  /**
+   * ID of the text that explains the opening button, e.g. why it's turned
+   * off (its `aria-describedby`). With `focusableWhenDisabled`, a keyboard or
+   * screen-reader user reaches the button and hears the reason.
+   */
+  describedBy?: string;
+  /**
    * Runs when the opening button is clicked, before the dialog opens; call
    * `event.preventDefault()` to keep it closed (e.g. to send the user to
    * confirm it's them first).
@@ -152,8 +166,10 @@ function ActionDialogForm({
 
 /**
  * Opens a {@link Modal} with a form posting to a server action. A failed
- * result is shown in the dialog, which stays open (and as a toast in the
- * signed-in app); a successful one closes it, and its message is a toast in
+ * result is shown in the dialog, which stays open: inline only, without a
+ * toast (a toast above the dialog would take the first Escape), in a new
+ * alert each time, so the same refusal twice is announced and takes focus
+ * twice. A successful one closes it, and its message is a toast in
  * the signed-in app (shown as soon as the action returns) or else shown next
  * to the button. Escape or Cancel closes it without submitting, and focus
  * returns to the button; if the action removed the button (e.g. "Make staff"
@@ -171,6 +187,8 @@ function ActionDialogForm({
  * @param props.tone - Submit button style.
  * @param props.children - Form fields.
  * @param props.disabled - Disable the opening button.
+ * @param props.focusableWhenDisabled - Keep the opening button focusable while disabled.
+ * @param props.describedBy - ID of the text that explains the opening button.
  * @param props.onTriggerClick - Runs before the dialog opens; can keep it closed.
  * @param props.confirmFirst - Send the user to confirm it's them first when needed.
  * @param props.allowedWhileSignedInAs - Keep it enabled while signed in as the user (their own work).
@@ -188,6 +206,8 @@ export default function ActionDialog({
   tone = 'danger',
   children = undefined,
   disabled = false,
+  focusableWhenDisabled = false,
+  describedBy = undefined,
   onTriggerClick = undefined,
   confirmFirst = false,
   allowedWhileSignedInAs = false,
@@ -207,7 +227,7 @@ export default function ActionDialog({
   const [leaving, setLeaving] = useTransientState(false);
 
   // Toasts a success as soon as the action returns: the refresh may remove this button.
-  // Errors toast where they're shown, in the dialog's `ResultAlert`.
+  // Errors stay in the dialog's `ResultAlert`, inline only (see `InsideDialog`).
   const run = useCallback(
     async (previous: ActionResult | null, formData: FormData) => {
       const next = await action(previous, formData);
@@ -251,6 +271,9 @@ export default function ActionDialog({
         variant={triggerVariant}
         size="sm"
         disabled={disabled || changesOff}
+        // Signed in as a user, it's off for good: only its own disabling keeps focus.
+        focusableWhenDisabled={focusableWhenDisabled && !changesOff}
+        aria-describedby={describedBy}
         onClick={(event) => {
           onTriggerClick?.(event);
           if (event.defaultPrevented) {

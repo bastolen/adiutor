@@ -12,7 +12,7 @@ import { type ComponentProps, type KeyboardEvent, type ReactNode, useId } from '
 
 import cn from '@/lib/cn';
 
-import { focusRing, SCREEN_GUTTER } from './styles';
+import { focusRing, highlightedItem, SCREEN_GUTTER } from './styles';
 
 /** The menu root; controls open state. */
 export const MenuRoot = DropdownMenu.Root;
@@ -23,9 +23,15 @@ export const MenuTrigger = DropdownMenu.Trigger;
 /** A group of radio items; `value` and `onValueChange` control the choice. */
 export const MenuRadioGroup = DropdownMenu.RadioGroup;
 
-/** Classes shared by menu items. */
-const itemClasses =
-  'relative flex h-9 items-center gap-2 rounded-md px-2 text-sm text-foreground outline-none select-none data-disabled:opacity-50 data-highlighted:bg-raised-muted [&_svg]:size-4 [&_svg]:text-muted-foreground';
+/**
+ * Classes shared by menu items. The item the keyboard or pointer is on is
+ * filled and outlined ({@link highlightedItem}), so it shows without telling
+ * two near-equal fills apart.
+ */
+const itemClasses = cn(
+  'relative flex h-9 items-center gap-2 rounded-md px-2 text-sm text-foreground select-none data-disabled:opacity-50 [&_svg]:size-4 [&_svg]:text-muted-foreground',
+  highlightedItem,
+);
 
 /**
  * The menu panel, rendered in a portal above the page.

@@ -5,9 +5,6 @@
  * link with an address an Admin already invited leaves that invitation
  * working.
  */
-
-import { type Page } from '@playwright/test';
-
 import expectAccessible from './support/axe';
 import {
   COMPANY_NAME,
@@ -21,6 +18,7 @@ import {
   createAccountFromInvitation,
   createInviteLink,
   freshAddress,
+  sendInvitation,
   signIn,
   toasts,
   useOwnClientIp,
@@ -28,20 +26,10 @@ import {
 import { countEmails, linkIn, waitForEmail, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
 
-/**
- * Opens the Members page of a seeded company.
- *
- * @param page - The browser page, signed in as staff.
- * @param slug - The company's URL name.
- */
-async function openMembers(page: Page, slug: string): Promise<void> {
-  await page.goto(`/companies/${slug}/members`);
-}
-
 test("a Support staff member sees why they can't use an invite link", async ({ page, browser }) => {
   // A staff Admin creates a Client link for the test company.
   await signIn(page, PLATFORM_ADMIN);
-  await openMembers(page, COMPANY_SLUG);
+  await page.goto(`/companies/${COMPANY_SLUG}/members`);
   const inviteLink = await createInviteLink(page, 'Client');
 
   const context = await browser.newContext({ reducedMotion: 'reduce' });
@@ -64,7 +52,7 @@ test('joining as an Admin with a link from a session without MFA signs you out t
   browser,
 }) => {
   await signIn(page, PLATFORM_ADMIN);
-  await openMembers(page, OWNED_COMPANY_SLUG);
+  await page.goto(`/companies/${OWNED_COMPANY_SLUG}/members`);
   const inviteLink = await createInviteLink(page, 'Admin');
 
   const context = await browser.newContext({ reducedMotion: 'reduce' });
@@ -91,15 +79,8 @@ test("claiming a link with an address an Admin invited keeps the Admin's invitat
 
   // A staff Admin invites the address as Client.
   await signIn(page, PLATFORM_ADMIN);
-  await openMembers(page, COMPANY_SLUG);
-  const inviteForm = page
-    .locator('form')
-    .filter({ has: page.getByRole('button', { name: 'Send invitations' }) });
-  await inviteForm.getByLabel('Email addresses').fill(email);
-  await inviteForm.getByRole('combobox', { name: 'Role', exact: true }).click();
-  // Each option's name also holds its description ("Client Raises requests …").
-  await page.getByRole('option', { name: /^Client\b/ }).click();
-  await inviteForm.getByRole('button', { name: 'Send invitations' }).click();
+  await page.goto(`/companies/${COMPANY_SLUG}/members`);
+  await sendInvitation(page, email, 'Client');
   await expect(toasts(page)).toContainText(`Invitation sent to ${email}.`);
   const invitation = await waitForEmail(email);
 

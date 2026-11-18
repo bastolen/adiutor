@@ -2,8 +2,11 @@
  * @file The signed-in user's own language: saved with the account, so emails
  * reach them in it and every browser they sign in on shows it (the language
  * cookie is set at sign-in from it, `rememberLanguage`), or Default, which
- * saves none and follows Adiutor's default language. Not a security change:
- * no audit event or notice.
+ * saves none and follows Adiutor's default language. A person's own choice
+ * is only saved here, when they make it signed in: on the account page's
+ * Language card, or in the theme and language menu of a page they reach
+ * signed in. A language cookie at sign-in never is (decision 0020). Not a
+ * security change: no audit event or notice.
  */
 import { eq } from 'drizzle-orm';
 

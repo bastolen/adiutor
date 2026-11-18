@@ -1,11 +1,45 @@
 /**
- * @file Tests for the rate limit message (the limits themselves are covered
- * by the integration tests).
+ * @file Tests for the rate limit message and the key of a limit per IP
+ * address (the limits themselves are covered by the integration tests).
  */
 import { describe, expect, it } from 'vitest';
 
 import { serviceErrorMessage } from './errors';
-import { tooManyAttemptsError, waitMinutes } from './rate-limit';
+import { ipRateLimitKey, tooManyAttemptsError, waitMinutes } from './rate-limit';
+
+describe('ipRateLimitKey', () => {
+  /**
+   * A service context of a request from an IP address.
+   *
+   * @param ip - The client's address, or `null` when it isn't known.
+   * @returns The part of the context the key is built from.
+   */
+  const from = (ip: string | null) => ({
+    /**
+     * The request's client, as `requestInfoFromHeaders` would give it.
+     *
+     * @returns The IP address, without a browser.
+     */
+    requestInfo: async () => ({ ip, userAgent: null }),
+  });
+
+  it.each([
+    ['app-error', '203.0.113.7', 'app-error:ip:203.0.113.7'],
+    ['invite-link-claim', '2001:db8::7', 'invite-link-claim:ip:2001:db8::7'],
+  ])('names the purpose %s and the address %s', async (purpose, ip, key) => {
+    await expect(ipRateLimitKey(from(ip), purpose)).resolves.toBe(key);
+  });
+
+  it('counts requests whose address is unknown together', async () => {
+    await expect(ipRateLimitKey(from(null), 'sign-in-error')).resolves.toBe(
+      'sign-in-error:ip:unknown',
+    );
+  });
+
+  it('counts what happens outside a request with the unknown addresses', async () => {
+    await expect(ipRateLimitKey({}, 'job-tick-miss')).resolves.toBe('job-tick-miss:ip:unknown');
+  });
+});
 
 describe('waitMinutes', () => {
   it.each([

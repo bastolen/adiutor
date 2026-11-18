@@ -8,7 +8,7 @@ import type { JobRunStatus } from '@/db/schema';
 import type { ServiceContext } from '../context';
 import { RECURRING_JOBS } from './registry';
 import { isDue, nextScheduledAt } from './schedule';
-import { loadJobStates } from './state';
+import { isPaused, loadJobStates } from './state';
 
 /** One job in the overview. */
 export interface JobListing {
@@ -52,7 +52,7 @@ export async function listJobs(
     const state = states.get(job.name);
     const lastStartedAt = state?.lastStartedAt ?? null;
     const pausable = job.pausable !== false;
-    const paused = pausable && Boolean(state?.pausedAt);
+    const paused = isPaused(state, pausable);
     const due = !paused && isDue(job.schedule, lastStartedAt, now);
     let nextRunAt: Date | null = null;
     if (!paused) {

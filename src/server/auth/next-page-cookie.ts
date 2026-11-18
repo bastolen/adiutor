@@ -9,7 +9,7 @@
 import { secureCookies } from '@/lib/env';
 
 /** How long such a cookie lasts, in seconds: long enough for the next page to load. */
-export const NEXT_PAGE_COOKIE_SECONDS = 300;
+const NEXT_PAGE_COOKIE_SECONDS = 300;
 
 /**
  * The settings of a cookie for the next page: for 5 minutes, on every path

@@ -24,7 +24,7 @@ One file per email in `src/emails/`:
   someone sent, which the claim keeps: it points to the earlier invitation email and links to the
   sign-in page)
 - `added-to-company.tsx` for someone staff added to a company with a role (`addMember` queues an
-  `added-to-company` job, so it goes out at the next tick; see
+  `added-to-company` job in the transaction that adds them, so it goes out at the next tick; see
   [Background jobs](jobs.md#queued-jobs))
 
 Each exports the template, example `PreviewProps` and a builder that returns the email to send.
@@ -55,7 +55,12 @@ changes, a changed company role and a removal from a company, the pauses after t
 passwords (`password_sign_in_paused`) or codes (`two_factor_locked`), and a staff member signing in
 as the recipient (`impersonation_started`). Each kind's subject, heading
 and text are ICU messages in `emails.securityNotice.<kind>`, and the footer and the advice for when
-it wasn't them are `select`s on the kind (`reason`, `ifNotYou`). Most are queued (the
+it wasn't them are `select`s on the kind (`reason`, `ifNotYou`). The advice follows who can have
+made the change: one the recipient can make themself ends with what to do if it wasn't them (reset
+the password), one only an administrator makes (deactivating or reactivating the account, signing
+it out everywhere, a staff or company role, a removal from a company) says to contact the
+administrator if it wasn't expected, and a reset of two-step verification says to do so right away
+and to change the password. Most are queued (the
 `security-notice` job, see [Security emails](authentication.md#security-emails)), and the job reads
 the names when it sends them, from the IDs it was queued with: `{provider}` from the provider ID,
 `{role}` (named in the recipient's language), `{company}` from the company, `{name}` from the staff
@@ -122,10 +127,16 @@ In `src/lib/email.ts`, in order:
 
 - `EMAIL_OUTBOX_DIR` set: written there as JSON (the end-to-end tests read them)
 - `SMTP_URL` set: sent over SMTP (Mailpit in development, your provider in production, with
-  `EMAIL_FROM` as the sender), with time limits (`SMTP_TIMEOUTS`: 10 seconds to connect, 10 for the
-  greeting, 20 of silence) instead of nodemailer's minutes, so a mail server that hangs fails one
-  email (which a queued job tries again) instead of holding a request or the background jobs' tick
-  until the platform stops it; settings in `SMTP_URL` still win
+  `EMAIL_FROM` as the sender). A whole send takes at most 15 seconds (`SEND_TIMEOUT_MS` in
+  `src/lib/email-limits.ts`, counted from the call, so waiting for a free connection counts): after
+  that it fails like any other send,
+  so a mail server that hangs fails one email (which a queued job tries again) instead of holding a
+  request or the background jobs' tick until the platform stops it; the tick's own deadline is
+  worked out from it (see [the limits](jobs.md#failures)). The mail server may still accept an
+  email after its send was given up, so a job that tries again can send it twice. Each step also has
+  a limit (`SMTP_TIMEOUTS`: 10 seconds to connect, 10 for the greeting, 20 of silence, instead of
+  nodemailer's minutes), which closes the connection of a send that was given up; settings in
+  `SMTP_URL` still win
 - neither, with `NODE_ENV` set to `development` or `test`: the plain text is printed to the
   server console
 - neither, anywhere else (production, or a script without `NODE_ENV`): sending fails, so links

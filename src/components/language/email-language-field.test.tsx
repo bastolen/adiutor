@@ -34,4 +34,16 @@ describe('EmailLanguageField', () => {
       'Español',
     ]);
   });
+
+  it('names each language in itself, marked with its language for screen readers', async () => {
+    const user = userEvent.setup();
+    renderInLocale('en-US', <EmailLanguageField purpose="account" defaultLocale="en-US" />);
+
+    await user.click(screen.getByRole('combobox', { name: 'Email language' }));
+
+    expect(screen.getByText('Nederlands')).toHaveAttribute('lang', 'nl-NL');
+    expect(screen.getByText('Español')).toHaveAttribute('lang', 'es-ES');
+    // Default is worded in the page's language.
+    expect(screen.getAllByRole('option')[0]?.querySelector('[lang]')).toBeNull();
+  });
 });

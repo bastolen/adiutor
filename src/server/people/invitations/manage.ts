@@ -12,9 +12,8 @@ import { INVITATIONS_TABLE, type InvitationSort } from '@/lib/tables/tables';
 
 import {
   assertConfirmedForGrant,
-  assertStillManages,
+  assertStillManagesPeople,
   getTargetAccess,
-  managePermission,
   assertNotSignedInAs,
 } from '../../access';
 import type { Actor } from '../../actor';
@@ -150,7 +149,7 @@ async function findTargetInvitation(
 /**
  * Sends a fresh link for an open invitation; the old link stops working. The
  * actor's rights are checked again as the first step of the transaction
- * (`assertStillManages`), before the per-address lock.
+ * (`assertStillManagesPeople`), before the per-address lock.
  *
  * An invitation that came from an invite link stays one: the resend locks the
  * link that points to it (before the per-address lock: invite links come
@@ -182,7 +181,7 @@ export async function resendInvitation(
   await assertInviteRateLimits(ctx, actor, companyId);
   const created = await ctx.db.transaction(async (tx) => {
     // First, before the per-address lock (see "Lock order" in `docs/security-measures.md`).
-    await assertStillManages(tx, actor, companyId, managePermission(companyId));
+    await assertStillManagesPeople(tx, actor, companyId);
     const found = await findTargetInvitation(tx, companyId, input.invitationId);
     // The invite link it came from, if any, before the per-address lock (see "Lock order" in
     // `docs/security-measures.md`). Locked, so a resend at the same moment waits here.
@@ -224,8 +223,8 @@ export async function resendInvitation(
 
 /**
  * Revokes an open invitation; its link stops working. The actor's rights are
- * checked again as the first step of the transaction (`assertStillManages`),
- * before the per-address lock.
+ * checked again as the first step of the transaction
+ * (`assertStillManagesPeople`), before the per-address lock.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `members:manage`, or `staff:manage` for staff.
@@ -244,7 +243,7 @@ export async function revokeInvitation(
   const companyId = access.company?.id ?? null;
   await ctx.db.transaction(async (tx) => {
     // First, before the per-address lock (see "Lock order" in `docs/security-measures.md`).
-    await assertStillManages(tx, actor, companyId, managePermission(companyId));
+    await assertStillManagesPeople(tx, actor, companyId);
     const found = await findTargetInvitation(tx, companyId, input.invitationId);
     // Take turns with a resend at the same moment, which would otherwise send a new link for the
     // invitation this revokes (see `createInvitationRecord`).

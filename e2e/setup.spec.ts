@@ -4,7 +4,6 @@
  * the other specs keep their data.
  */
 
-import getTestDatabaseUrl from '../tests/database/database-url';
 import expectAccessible from './support/axe';
 import { removeStaffSettings } from './support/db';
 import { STAFF_NAME } from './support/fixtures';
@@ -13,14 +12,14 @@ import { expect, test } from './support/test';
 
 test.describe('first run', () => {
   test.afterAll(async () => {
-    await seedTestDatabase(getTestDatabaseUrl());
+    await seedTestDatabase();
   });
 
   test('sign-in redirects to setup, which names the staff, sets the default language and creates its Admin', async ({
     browser,
     page,
   }) => {
-    await emptyTestDatabase(getTestDatabaseUrl());
+    await emptyTestDatabase();
 
     await page.goto('/auth');
     await expect(page).toHaveURL('/setup');
@@ -79,7 +78,7 @@ test.describe('first run', () => {
 
   test("isn't offered once accounts exist, even if nothing is set up", async ({ page }) => {
     // E.g. the staff settings row was lost: accounts exist, but there's no settings row.
-    await seedTestDatabase(getTestDatabaseUrl());
+    await seedTestDatabase();
     await removeStaffSettings();
 
     await page.goto('/auth');

@@ -60,6 +60,41 @@ test('an Admin registers a user, who chooses a password from the welcome email',
   await expect(page).toHaveURL('/dashboard');
 });
 
+test('"Add another" starts an empty form, which keeps an address the server refuses', async ({
+  page,
+}) => {
+  const email = freshAddress('first');
+  await signIn(page, PLATFORM_ADMIN);
+  await registerUser(page, email);
+
+  // A new, empty form with focus on its email field: the button that had focus is gone.
+  await page.getByRole('button', { name: 'Add another' }).click();
+  const field = page.getByLabel('Email', { exact: true });
+  await expect(field).toBeFocused();
+  await expect(field).toHaveValue('');
+  await expect(page.getByRole('link', { name: 'Open user' })).toHaveCount(0);
+
+  // The browser lets an address without a top-level domain through; the server refuses it.
+  await field.fill('colleague@adiutor');
+  await page.getByRole('button', { name: 'Add user' }).click();
+  const error = page.getByRole('main').getByRole('alert');
+  await expect(error).toHaveText('Enter a valid email address.');
+  await expect(error).toBeFocused();
+  // What was typed is still there, and the first user's confirmation never came back.
+  await expect(field).toHaveValue('colleague@adiutor');
+  await expect(page.getByRole('link', { name: 'Open user' })).toHaveCount(0);
+  await expect(page.getByText(`Account created for ${email}.`)).toHaveCount(0);
+
+  // Corrected, it goes through, and the confirmation is the new user's.
+  const second = freshAddress('second');
+  await field.fill(second);
+  await page.getByRole('button', { name: 'Add user' }).click();
+  // Within the content: the refusal's toast may still be up.
+  await expect(page.getByRole('main').getByRole('status')).toContainText(
+    `Account created for ${second}.`,
+  );
+});
+
 test('an Admin adds a user to a company and gives them staff access from their page', async ({
   page,
 }) => {
@@ -161,12 +196,17 @@ test('an Admin resets two-step verification, deletes a user, and on their own pa
   await expect(remove.getByRole('alert')).toHaveText('Type the email address exactly to confirm.');
   await remove.getByLabel('Email address').fill(DELETE_CLIENT.email);
   await remove.getByRole('button', { name: 'Delete account' }).click();
-  await expect(page).toHaveURL('/admin/users?deleted=1');
   await expect(toasts(page)).toContainText('User deleted.');
-  // Rows only (the previous page stays in the DOM, hidden, for back navigation).
+  // Said once: what asked for it leaves the address.
+  await expect(page).toHaveURL('/admin/users');
   await expect(page.getByRole('row').filter({ hasText: DELETE_CLIENT.email })).toHaveCount(0);
+  // Back doesn't show the deleted user's page as it was kept: there's nobody there anymore.
+  await page.goBack();
+  await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: DELETE_CLIENT.name })).toHaveCount(0);
 
   // The reset user signs in with just their password now.
+  await page.goto('/admin/users');
   await signOut(page);
   await signIn(page, RESET_CLIENT);
 });

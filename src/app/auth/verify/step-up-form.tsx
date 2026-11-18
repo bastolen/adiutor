@@ -1,17 +1,18 @@
 /**
  * @file The form of the step-up page: confirms a session that was signed in
- * without a second step, or confirmed too long ago to change how the user
- * signs in, with a code, a passkey or a provider that can prove MFA. Says why
- * a provider didn't confirm it, when that's how the user got back here
- * (`ProviderStepUpNotice`), and why a provider isn't offered for a change to
- * how they sign in (`providersHeldBack`).
+ * without a second step, or confirmed too long ago for what the user came to
+ * do (changing how they sign in, giving someone a role, resetting someone's
+ * two-step verification, signing in as a user), with a code, a passkey or a
+ * provider that can prove MFA. Says why a provider didn't confirm it, when
+ * that's how the user got back here (`ProviderStepUpNotice`), and why a
+ * provider isn't offered for what they came to do (`providersHeldBack`).
  */
 'use client';
 
 import { KeyRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { type FormEvent, useState } from 'react';
 
 import CodeField from '@/components/auth/code-field';
 import ProviderStepUpNotice, {
@@ -23,9 +24,9 @@ import PROVIDER_ICONS from '@/components/brand/provider-icons';
 import Alert from '@/components/ui/alert';
 import AuthDivider from '@/components/ui/auth-divider';
 import AuthHeading from '@/components/ui/auth-heading';
-import Button from '@/components/ui/button';
+import Button, { whileRunning } from '@/components/ui/button';
 import loadFresh from '@/components/ui/load-fresh';
-import { useTransientState } from '@/components/ui/use-transient-state';
+import { useOncePerVisit, useTransientState } from '@/components/ui/use-transient-state';
 import type { StepUpMethods } from '@/lib/authz/mfa';
 import { EMAIL_CODE_MINUTES } from '@/lib/authz/mfa';
 import authClient from '@/lib/sign-in/auth-client';
@@ -40,13 +41,21 @@ import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 import type { TwoFactorMethod } from '@/lib/sign-in/two-factor-path';
 import verifyCode, { type CodeKind } from '@/lib/sign-in/verify-code';
 
+/** A way of confirming that a button starts: a passkey, the code form, or a provider. */
+type StepUpAction = 'passkey' | 'code' | MfaProvider;
+
 /**
  * Why the session needs confirming, as the `reason` of `auth.stepUp.reason`.
+ * The two reasons for a session that counts already (`confirmedBefore`, and
+ * `secondStep` for an account whose second step isn't MFA) don't name what
+ * the user came to do: the page can't tell a change to how they sign in from
+ * giving someone a role, resetting someone's two-step verification or signing
+ * in as a user.
  *
  * @param roleRequiresMfa - Whether the role requires MFA.
  * @param accountHasMfa - Whether the account has MFA.
  * @param confirmedBefore - Whether this session was confirmed already, but
- *   too long ago to change how the user signs in.
+ *   too long ago for what the user came to do.
  * @returns The reason, e.g. `roleRequiresMfa`.
  */
 function stepUpReason(
@@ -89,7 +98,9 @@ export interface StepUpFormProps {
   accountHasMfa?: boolean;
   /**
    * Whether this session was confirmed already, more than 15 minutes ago: the
-   * Security page sends them here before changing how they sign in.
+   * Security page sends them here before changing how they sign in, and other
+   * pages before giving someone a role, resetting someone's two-step
+   * verification or signing in as a user.
    */
   confirmedBefore?: boolean;
 }
@@ -140,12 +151,12 @@ export default function StepUpForm({
   const [mode, setMode] = useState<CodeKind | null>(codeMethod);
   const [code, setCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
-  const [pending, setPending] = useState(false);
+  /** The way of confirming that's running: its button is busy, the others wait (`whileRunning`). */
+  const [running, setRunning] = useState<StepUpAction | null>(null);
   const [sending, setSending] = useState(false);
   const cooldown = useResendCooldown();
   const [error, setError] = useTransientState(initialError);
   const [notice, setNotice] = useTransientState<string | null>(null);
-  const sentInitialCode = useRef(false);
 
   /**
    * Continues to the page the user came for. The form starts over, since the
@@ -156,13 +167,12 @@ export default function StepUpForm({
    */
   const finish = () => {
     clearProviderStepUpNotice();
-    setPending(false);
+    setRunning(null);
     setCode('');
     setCodeSent(false);
     setMode(codeMethod);
     // A used code ends the guards' wait for a new one too.
     cooldown.reset();
-    sentInitialCode.current = false;
     router.replace(callbackURL);
     router.refresh();
   };
@@ -211,16 +221,16 @@ export default function StepUpForm({
     );
   };
 
-  useEffect(() => {
-    // With email codes as the only option, send one straight away (once per visit, also in Strict
-    // Mode; effects run again when the page is shown again).
-    if (emailOnly && !sentInitialCode.current) {
-      sentInitialCode.current = true;
+  // With email codes as the only option, send one straight away: once per visit (also in Strict
+  // Mode), so again when the page is shown again, whether or not the last visit confirmed. The
+  // last code may have run out, or belong to a session since replaced; when the server says it
+  // still works, `sendCode` says to use that one.
+  useOncePerVisit(() => {
+    if (emailOnly) {
       // It shows its own errors.
       void sendCode();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Runs once on mount.
-  }, []);
+  });
 
   /**
    * Switches between the code and backup codes.
@@ -245,12 +255,12 @@ export default function StepUpForm({
     if (!mode) {
       return;
     }
-    setPending(true);
+    setRunning('code');
     setError(null);
     const result = await verifyCode(mode, { code });
     if (result.error) {
       showError(result.error);
-      setPending(false);
+      setRunning(null);
       return;
     }
     finish();
@@ -258,12 +268,12 @@ export default function StepUpForm({
 
   /** Confirms with a passkey, letting the browser ask which one. */
   const confirmWithPasskey = async () => {
-    setPending(true);
+    setRunning('passkey');
     setError(null);
     const result = await authClient.signIn.passkey();
     if (result?.error) {
       setError(authErrorText(t, result.error));
-      setPending(false);
+      setRunning(null);
       return;
     }
     finish();
@@ -279,7 +289,7 @@ export default function StepUpForm({
    * @param provider - The provider.
    */
   const confirmWithProvider = async (provider: MfaProvider) => {
-    setPending(true);
+    setRunning(provider);
     setError(null);
     const errorCallbackURL = `/auth/verify?${new URLSearchParams({ callbackURL, provider })}`;
     const result = await authClient.signIn.social({
@@ -296,7 +306,7 @@ export default function StepUpForm({
           t('stepUp.providerFailed', { provider: PROVIDER_LABELS[provider] }),
         ),
       );
-      setPending(false);
+      setRunning(null);
     }
   };
 
@@ -304,10 +314,23 @@ export default function StepUpForm({
    * Ends the session and loads the sign-in page afresh (`loadFresh`), so no
    * page Next kept alive is left for the next person on this browser, in
    * this tab or the browser's others (`everyTab`), which go to the sign-in
-   * page too.
+   * page too. When signing out fails (the client resolves with an `error`
+   * when the server refuses, and rejects when the request never gets there),
+   * the session hasn't ended: the form says so and nothing loads, since the
+   * sign-in page would only send the user back here.
    */
   const signOut = async () => {
-    await authClient.signOut();
+    setError(null);
+    try {
+      const result = await authClient.signOut();
+      if (result.error) {
+        setError(t('stepUp.signOutFailed'));
+        return;
+      }
+    } catch {
+      setError(t('stepUp.signOutFailed'));
+      return;
+    }
     loadFresh('/auth', { everyTab: true });
   };
 
@@ -343,7 +366,12 @@ export default function StepUpForm({
       {(methods.passkey || methods.providers.length > 0) && (
         <div className="flex flex-col gap-3">
           {methods.passkey && (
-            <Button variant="secondary" fullWidth disabled={pending} onClick={confirmWithPasskey}>
+            <Button
+              variant="secondary"
+              fullWidth
+              {...whileRunning(running, 'passkey')}
+              onClick={confirmWithPasskey}
+            >
               <KeyRound aria-hidden="true" />
               {t('stepUp.passkey')}
             </Button>
@@ -355,7 +383,7 @@ export default function StepUpForm({
                 key={provider}
                 variant="secondary"
                 fullWidth
-                disabled={pending}
+                {...whileRunning(running, provider)}
                 onClick={() => confirmWithProvider(provider)}
               >
                 <Icon />
@@ -379,7 +407,7 @@ export default function StepUpForm({
                 value={code}
                 onChange={(event) => setCode(event.target.value)}
               />
-              <Button type="submit" fullWidth loading={pending}>
+              <Button type="submit" fullWidth {...whileRunning(running, 'code')}>
                 {t('stepUp.submit')}
               </Button>
             </form>
@@ -387,7 +415,7 @@ export default function StepUpForm({
             <Button
               variant="secondary"
               fullWidth
-              disabled={pending}
+              disabled={running !== null}
               loading={sending}
               onClick={() => sendCode()}
             >

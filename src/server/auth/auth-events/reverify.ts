@@ -17,7 +17,7 @@ import { ACCOUNT_DEACTIVATED, REVERIFY_WRONG_ACCOUNT } from '@/lib/sign-in/sign-
 
 import { requestState, takeRequestState } from '../request-state';
 import { currentReverify, type ReverifyMarker } from '../reverify-marker';
-import { sentCookie, expireCookie } from './cookies';
+import { expireCookieIfSent } from './cookies';
 import { type AuthHookContext, safely, audit } from './hook-context';
 import { hasReverifySession } from './session-records';
 
@@ -188,9 +188,7 @@ export async function recordRefusedReverify(
   if (refusedReverify) {
     await safely('record refused re-verify', async () => {
       // An earlier attempt's notice would show next to this refusal's message: drop it.
-      if (sentCookie(ctx, PROVIDER_STEP_UP_COOKIE)) {
-        expireCookie(ctx, PROVIDER_STEP_UP_COOKIE);
-      }
+      expireCookieIfSent(ctx, PROVIDER_STEP_UP_COOKIE);
       await audit(ctx, 'mfa_failed', refusedReverify.userId, {
         method: refusedReverify.providerId,
         reason: 'different_account',

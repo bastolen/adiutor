@@ -76,6 +76,76 @@ describe('splitLinks', () => {
     ]);
   });
 
+  it('ends an address with brackets of its own before the bracket of the sentence', () => {
+    const address = 'https://adiutor.dev/wiki/Printer_(office)';
+    expect(splitLinks(`(see ${address})`)).toEqual([
+      { text: '(see ', href: null },
+      { text: address, href: address },
+      { text: ')', href: null },
+    ]);
+    expect(splitLinks(`[${address}]`)).toEqual([
+      { text: '[', href: null },
+      { text: address, href: address },
+      { text: ']', href: null },
+    ]);
+  });
+
+  it('ends an address at its own last bracket when more closing brackets and a full stop follow', () => {
+    expect(splitLinks('https://adiutor.dev/a_(b)).')).toEqual([
+      { text: 'https://adiutor.dev/a_(b)', href: 'https://adiutor.dev/a_(b)' },
+      { text: ').', href: null },
+    ]);
+    expect(splitLinks('((https://adiutor.dev/a_(b)_(c))),')).toEqual([
+      { text: '((', href: null },
+      { text: 'https://adiutor.dev/a_(b)_(c)', href: 'https://adiutor.dev/a_(b)_(c)' },
+      { text: ')),', href: null },
+    ]);
+  });
+
+  it('keeps full-width and corner brackets the address opened, and leaves out the ones it did not', () => {
+    expect(splitLinks('（https://adiutor.dev/x）')).toEqual([
+      { text: '（', href: null },
+      { text: 'https://adiutor.dev/x', href: 'https://adiutor.dev/x' },
+      { text: '）', href: null },
+    ]);
+    const [inside] = splitLinks('https://adiutor.dev/x（y）');
+    expect(inside?.text).toBe('https://adiutor.dev/x（y）');
+  });
+
+  it.each([
+    ['”', '“https://adiutor.dev/x”'],
+    ['’', '‘https://adiutor.dev/x’'],
+    ['»', '«https://adiutor.dev/x»'],
+    ['›', '‹https://adiutor.dev/x›'],
+    ['…', 'https://adiutor.dev/x…'],
+    ['。', 'https://adiutor.dev/x。'],
+    ['、', 'https://adiutor.dev/x、'],
+    ['！', 'https://adiutor.dev/x！'],
+    ['？', 'https://adiutor.dev/x？'],
+    ['）', 'https://adiutor.dev/x）'],
+    ['」', '「https://adiutor.dev/x」'],
+    ['』', '『https://adiutor.dev/x』'],
+    ['”.', 'https://adiutor.dev/x”.'],
+    ['.’»', 'https://adiutor.dev/x.’»'],
+  ])('leaves a closing %s out of the address', (closing, text) => {
+    const parts = splitLinks(text);
+    expect(parts.find((part) => part.href !== null)).toEqual({
+      text: 'https://adiutor.dev/x',
+      href: 'https://adiutor.dev/x',
+    });
+    expect(parts.at(-1)).toEqual({ text: closing, href: null });
+    expect(parts.map((part) => part.text).join('')).toBe(text);
+  });
+
+  it('keeps those marks inside an address', () => {
+    expect(splitLinks('https://adiutor.dev/l’atelier/«a»/b')).toEqual([
+      {
+        text: 'https://adiutor.dev/l’atelier/«a»/b',
+        href: 'https://adiutor.dev/l%E2%80%99atelier/%C2%ABa%C2%BB/b',
+      },
+    ]);
+  });
+
   it('links only what was spelled out with http or https', () => {
     const text =
       'adiutor.dev www.adiutor.dev javascript:alert(1) ftp://adiutor.dev mailto:a@adiutor.dev';

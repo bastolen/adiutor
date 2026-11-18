@@ -88,6 +88,8 @@
       "addedToCompany": "{by, select, self {Added to {company} as {role}} admin {Added to {company} as {role} by an administrator} other {Added to {company} as {role} by {name}}}",
       "joinedStaff": "Added to staff",
       "joinedCompany": "Joined {company}",
+      "keptStaffRole": "Used an invitation to the staff and kept the role you had",
+      "keptCompanyRole": "Used an invitation to {company} and kept the role you had",
       "removedFromStaff": "{by, select, self {Removed from staff} admin {Removed from staff by an administrator} other {Removed from staff by {name}}}",
       "removedFromCompany": "{by, select, self {Removed from {company}} admin {Removed from {company} by an administrator} other {Removed from {company} by {name}}}",
       "staffRoleChanged": "{by, select, self {Staff role changed to {role}} admin {Staff role changed to {role} by an administrator} other {Staff role changed to {role} by {name}}}",

@@ -9,6 +9,7 @@ import type { DatabaseOrTransaction } from '@/db';
 import { company, invitation, inviteLink, membership, user } from '@/db/schema';
 import { mayUseInviteLinks } from '@/lib/authz/permissions';
 import {
+  type CompanyRole,
   isCompanyRole,
   isPlatformRole,
   PLATFORM_ADMIN_ROLE,
@@ -42,12 +43,12 @@ import { auditTarget } from './rules';
  * @param tx - Database client or transaction.
  * @param token - The token from the link.
  * @param lock - Lock the row until the transaction ends (when accepting).
- * @returns The invitation and its company (`null` for staff), or `null`.
+ * @returns The invitation and its company's name (`null` for staff), or `null`.
  */
 async function findUsableInvitation(tx: DatabaseOrTransaction, token: string, lock = false) {
   // For staff invitations there's no company, so the deactivation check below passes.
   const query = tx
-    .select({ invitation, company })
+    .select({ invitation, companyName: company.name })
     .from(invitation)
     .leftJoin(company, eq(company.id, invitation.companyId))
     .where(
@@ -121,14 +122,86 @@ export async function getInvitationPreview(
     return null;
   }
   const [companyName, fromInviteLink] = await Promise.all([
-    found.company?.name ?? getStaffName(ctx.db),
+    found.companyName ?? getStaffName(ctx.db),
     isFromInviteLink(ctx.db, found.invitation.id),
   ]);
   return { companyName, role: found.invitation.role, fromInviteLink };
 }
 
+/** What giving someone a role came to. */
+interface RoleGiven {
+  /** Whether the role was given: they weren't on the staff, or in the company, before. */
+  granted: boolean;
+  /** The role they have there now: the one given, or the one they had already and keep. */
+  role: Role | null;
+}
+
 /**
- * Makes the change of `joinTarget`.
+ * Makes a user staff with a role, unless they're on the staff already: then
+ * they keep the role they have.
+ *
+ * @param tx - Transaction.
+ * @param userId - The user.
+ * @param role - The staff role to give.
+ * @returns Whether it was given, and the staff role they have now.
+ */
+async function giveStaffRole(
+  tx: DatabaseOrTransaction,
+  userId: string,
+  role: PlatformRole,
+): Promise<RoleGiven> {
+  const joined = await tx
+    .update(user)
+    .set({ platformRole: role })
+    .where(and(eq(user.id, userId), isNull(user.platformRole)))
+    .returning({ id: user.id });
+  if (joined.length > 0) {
+    return { granted: true, role };
+  }
+  const [current] = await tx
+    .select({ role: user.platformRole })
+    .from(user)
+    .where(eq(user.id, userId));
+  return { granted: false, role: current?.role ?? null };
+}
+
+/**
+ * Makes a user a member of a company with a role, unless they're a member
+ * already: then they keep the role they have.
+ *
+ * @param tx - Transaction.
+ * @param companyId - The company.
+ * @param userId - The user.
+ * @param role - The company role to give.
+ * @returns Whether it was given, and the role they have in the company now.
+ */
+async function giveMembership(
+  tx: DatabaseOrTransaction,
+  companyId: string,
+  userId: string,
+  role: CompanyRole,
+): Promise<RoleGiven> {
+  const joined = await tx
+    .insert(membership)
+    .values({ companyId, userId, role })
+    .onConflictDoNothing({ target: [membership.companyId, membership.userId] })
+    .returning({ id: membership.id });
+  if (joined.length > 0) {
+    return { granted: true, role };
+  }
+  const [current] = await tx
+    .select({ role: membership.role })
+    .from(membership)
+    .where(and(eq(membership.companyId, companyId), eq(membership.userId, userId)));
+  return { granted: false, role: current?.role ?? null };
+}
+
+/**
+ * Makes the change of `joinTarget`, and records what happened
+ * (`member_joined`): the role that was given, or, for someone who was in
+ * already, the role they keep (`kept`, with the role the invitation or link
+ * was for as `invited`). So the audit log never says a Client joined as Admin
+ * because they opened an Admin invite link for their own company.
  *
  * @param ctx - Service context (for the audit log).
  * @param tx - Transaction.
@@ -145,37 +218,32 @@ async function join(
   input: { companyId: string | null; role: Role; userId: string; details: Record<string, unknown> },
 ): Promise<boolean> {
   const { companyId, role, userId } = input;
-  let becameStaffAdmin = false;
+  let given: RoleGiven;
   if (companyId === null) {
     if (!isPlatformRole(role)) {
       throw new ServiceError('invalid', CHOOSE_STAFF_ROLE_MESSAGE);
     }
-    const joined = await tx
-      .update(user)
-      .set({ platformRole: role })
-      .where(and(eq(user.id, userId), isNull(user.platformRole)))
-      .returning({ id: user.id });
-    becameStaffAdmin = joined.length > 0 && role === PLATFORM_ADMIN_ROLE;
+    given = await giveStaffRole(tx, userId, role);
   } else {
     if (!isCompanyRole(role)) {
       throw new ServiceError('invalid', CHOOSE_COMPANY_ROLE_MESSAGE);
     }
-    await tx
-      .insert(membership)
-      .values({ companyId, userId, role })
-      .onConflictDoNothing({ target: [membership.companyId, membership.userId] });
+    given = await giveMembership(tx, companyId, userId, role);
   }
+  const details = given.granted
+    ? { role, ...input.details }
+    : { role: given.role, kept: true, invited: role, ...input.details };
   await recordEvent(
     ctx,
     {
       action: 'member_joined',
       actorUserId: userId,
       targetUserId: userId,
-      ...auditTarget(companyId, { role, ...input.details }),
+      ...auditTarget(companyId, details),
     },
     tx,
   );
-  return becameStaffAdmin;
+  return given.granted && companyId === null && role === PLATFORM_ADMIN_ROLE;
 }
 
 /**
@@ -330,6 +398,14 @@ export type CreateAccountResult =
  * verified. If the address already has an account, nothing changes and the
  * person is asked to sign in instead.
  *
+ * The invitation and the address's account are looked up twice: first
+ * without a lock, before the password is hashed, and again in the
+ * transaction with the invitation locked, which is what decides. The page is
+ * open to anyone, signed out, and the hash is slow on purpose, so a token
+ * that can't be used (or an address that has an account) is answered before
+ * it costs one. Only someone holding the emailed token can get the
+ * `account_exists` answer, as before.
+ *
  * @param ctx - Service context.
  * @param token - The token from the link.
  * @param input - The new account's details.
@@ -344,6 +420,18 @@ export async function acceptInvitationWithNewAccount(
 ): Promise<CreateAccountResult> {
   const name = nameSchema.parse(input.name);
   const password = passwordSchema.parse(input.password);
+  // Refuse before the (deliberately slow) password hash; checked again in the transaction.
+  const candidate = await findUsableInvitation(ctx.db, token);
+  if (!candidate) {
+    return { status: 'invalid' };
+  }
+  const [taken] = await ctx.db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, candidate.invitation.email));
+  if (taken) {
+    return { status: 'account_exists' };
+  }
   const passwordHash = await hashPassword(password);
 
   const { result, newStaffAdmin } = await ctx.db.transaction(

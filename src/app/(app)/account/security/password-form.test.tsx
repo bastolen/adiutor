@@ -7,10 +7,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
 import { defined } from '@/lib/defined';
 import confirmChangeUrl from '@/lib/sign-in/confirm-url';
 
+import ConfirmationWindow from '../../../../../tests/ui/confirmation-window';
 import PasswordForm from './password-form';
 
 /** The step-up page, coming back to the Security page (outside a card here). */
@@ -45,14 +45,9 @@ beforeEach(() => {
  */
 function renderWithoutConfirmation(hasPassword: boolean) {
   render(
-    <RecentConfirmationProvider
-      required
-      confirmedUntil={null}
-      serverTime={Date.now()}
-      returnTo="/account/security"
-    >
+    <ConfirmationWindow windowOpen={false} returnTo="/account/security">
       <PasswordForm hasPassword={hasPassword} blockedReason={null} />
-    </RecentConfirmationProvider>,
+    </ConfirmationWindow>,
   );
 }
 

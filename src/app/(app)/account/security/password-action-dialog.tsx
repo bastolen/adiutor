@@ -7,13 +7,12 @@
 import { useTranslations } from 'next-intl';
 import { type FormEvent, type ReactNode, useState } from 'react';
 
-import { useRecentConfirmation } from '@/components/auth/recent-confirmation';
 import Alert from '@/components/ui/alert';
 import Button, { type ButtonProps } from '@/components/ui/button';
 import Modal from '@/components/ui/modal';
-import { authErrorText } from '@/lib/sign-in/auth-error-messages';
 
 import PasswordField from './password-field';
+import useRefusalText from './use-refusal-text';
 
 /** What the action returns: nothing when it worked, or Better Auth's error. */
 interface ActionOutcome {
@@ -78,8 +77,7 @@ function PasswordActionForm({
   onCancel,
 }: PasswordActionFormProps) {
   const tCommon = useTranslations('common');
-  const tAuth = useTranslations('auth');
-  const { askToConfirmOnRefusal } = useRecentConfirmation();
+  const refusalText = useRefusalText();
   const [password, setPassword] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,8 +94,9 @@ function PasswordActionForm({
     const result = await action(hasPassword ? password : undefined);
     setPending(false);
     if (result.error) {
-      if (!askToConfirmOnRefusal(result.error.code)) {
-        setError(authErrorText(tAuth, result.error));
+      const text = refusalText(result.error);
+      if (text !== null) {
+        setError(text);
       }
       return;
     }

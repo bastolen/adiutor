@@ -45,7 +45,9 @@ interface CardProps {
  * footer, with 24px padding on every side. It's a `<section>` labelled by its
  * heading, so screen readers can jump to it. With an `id`, users who come
  * back to the page with that anchor land on it, with focus on its heading,
- * and scrolling to it leaves room for the sticky header on small screens.
+ * and scrolling to it leaves room for the sticky header on small screens and
+ * for the signed-in-as banner (the page's `scroll-padding-top` in
+ * `globals.css`, plus a little room of the card's own).
  *
  * @param props - Card props.
  * @param props.id - The card's anchor.
@@ -71,8 +73,9 @@ export default function Card({
   const headingId = useId();
   const labelledBy = title ? headingId : undefined;
   const className = cn(
-    // Scrolled to below the sticky header (3.5rem) on small screens, with the same space above.
-    'relative scroll-mt-20 overflow-hidden rounded-xl border bg-surface shadow-xs lg:scroll-mt-10',
+    // Scrolled to below the sticky layers (the page's `scroll-padding-top`), with a little more
+    // room above: 5rem from the top below `lg` and 2.5rem from `lg`, lower while the banner shows.
+    'relative scroll-mt-2 overflow-hidden rounded-xl border bg-surface shadow-xs lg:scroll-mt-4',
     tone === 'danger' ? 'border-danger/40' : 'border-border',
   );
 

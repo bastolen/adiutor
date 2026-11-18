@@ -75,7 +75,9 @@ Admins and Managers who aren't members can still add themselves with any role, a
   [The last Admin, at the same moment](#staff-screens)).
 - **Authorization matrix:** `src/server/authorization-matrix.int.test.ts` checks every role against
   every service behind a server action, and the page loaders that check roles, on their own
-  company, another company, the staff and another user, down to the kind of refusal. The own-account
+  company, another company, the staff and another user, down to the kind of refusal. What a role
+  is allowed must also succeed: any other refusal (invalid input, a missing confirmation, a limit)
+  fails the matrix unless the operation's row names it. The own-account
   services that take an ID (`revokeOwnSession`, `confirmConnectedProvider`) are tried with another
   user's ID; password changes, which need a second step, are covered in
   `src/server/auth/accounts.int.test.ts`. It also tries every operation with a staff member signed
@@ -153,7 +155,10 @@ Admins and Managers who aren't members can still add themselves with any role, a
   - **Companies:** Admins and Managers (`members:manage` in companies) add the user to a company
     right away with a role (they get an email), change their role there, and remove them, with the
     same last-Admin rule and the same security emails as a company's Members page (see
-    [Changing roles and removing people](#changing-roles-and-removing-people)).
+    [Changing roles and removing people](#changing-roles-and-removing-people)). The card offers
+    only what the services allow: a membership of a deactivated company shows its role as a badge
+    and nothing to press, as that company's Members page does, and "Add to company" is turned off
+    for a deactivated account, with the reason below it (`describedBy`).
   - **Staff access** (Admins, `staff:manage`): make the user staff with a role, change it, or remove
     it, with the last-staff-Admin rule; the user gets a security email. Removing it also revokes the
     open staff invitations addressed to them. Admins and Managers must set up a second sign-in step
@@ -167,9 +172,12 @@ Admins and Managers who aren't members can still add themselves with any role, a
   Admins can also (each confirmed in a dialog, logged and emailed to the user):
   - **reset two-step verification** for a lost phone (optionally removing passkeys too), which
     also disconnects their GitHub and Google accounts and needs the Admin's confirmation with
-    their own second step from the last 15 minutes (see [Locked out](mfa.md#locked-out));
+    their own second step from the last 15 minutes, which the button asks for before its dialog
+    opens (see [Locked out](mfa.md#locked-out));
   - **sign the user out everywhere** (which also forgets the devices they trusted);
-  - **deactivate or reactivate** the account;
+  - **deactivate or reactivate** the account (deactivating one that's deactivated already is
+    refused, also when two Admins do it at the same moment: the second waits for the account's
+    row and finds it deactivated, so it's recorded and emailed once);
   - **delete** the account, after typing its email address. Memberships, sign-in methods and
     sessions go with it, the open invitations and invite links they sent are revoked (used
     ones stay in the history, without an inviter), and so are the open invitations addressed to
@@ -195,7 +203,9 @@ Admins and Managers who aren't members can still add themselves with any role, a
   it starts. Every change to people checks those rights again inside its transaction, from the
   user's own rows as it locks them: inviting, resending and revoking invitations, creating and
   revoking invite links, adding members and registering companies (`assertStillManages` in
-  `src/server/access.ts`), and changing staff or company roles and removing people (`setStaffRole`
+  `src/server/access.ts`; invitations and invite links call it through `assertStillManagesPeople`,
+  which picks the permission for the staff or the company), and changing staff or company roles
+  and removing people (`setStaffRole`
   and `changeMembership` work the rights out from the rows they lock, with the same permission rules
   as when the request started, `getGlobalPermissions` and `getPermissions` (both in `src/lib/authz/permissions.ts`), never by comparing
   roles). So someone demoted, removed or
@@ -277,17 +287,30 @@ staff page also recreates the row. A fresh setup itself isn't recorded in the au
   to it, and the link is used up all the same, so whoever claimed it sees the usual "check your
   inbox" and learns nothing about the address. (An open invitation that came from another link is
   replaced, as before.)
+- **When the email can't be sent:** a claim whose email fails (the mail server is down) is undone,
+  whatever the address: its invitation is revoked and the link can be used again, so an outage
+  doesn't use up a single-use link with nothing in anyone's inbox. Whoever claimed it sees that it
+  failed and can try again; the audit log has the claim and its undoing ("Invite link made usable
+  again because its email couldn't be sent"), and the claim still counts against the limits. The
+  link stays used up when it isn't as the claim left it any more: its creator lost their rights
+  meanwhile (freeing it would give a former Admin's link back), or the invitation was resent,
+  revoked or accepted.
 - **Resending** an invitation sends a new link for it with the same role. One that came from an
   invite link stays one (the link is pointed at the new invitation), so Finance and Support still
   can't accept it, and the Open invitations list marks such invitations "From an invite link".
 - **Reminders:** an invitation that's still open a day after it was sent gets one reminder email
   2 days before it expires, with a new link (the old one stops working), sent by
   `pnpm jobs:run`. Addresses that are already members of the company (or, for staff invitations,
-  on the staff) get none: they joined some other way meanwhile. A reminder that can't be sent keeps
-  the old link working, and the next run tries again.
+  on the staff) get none: they joined some other way meanwhile. The old link only stops working
+  once the reminder is out: a reminder that can't be sent, or whose run was stopped halfway, keeps
+  it working, and a later run tries again (see [Background jobs](jobs.md#the-jobs)).
 - **Accepting** (`/invite/…`): signed in with the invited address, you join directly. Signed out,
   you can sign in or create an account (name and password). Joining as staff sets the platform role
-  (someone who's already staff keeps theirs) and opens the dashboard.
+  (someone who's already staff keeps theirs) and opens the dashboard. The audit log records what
+  happened: someone who was in already (on the staff, or a member of the company) keeps their
+  role, and the event says so ("Used an invitation and kept the role they had", with the role they
+  have and the one the invitation or invite link was for) instead of saying they joined with the
+  invited role.
 
 ### Changing roles and removing people
 

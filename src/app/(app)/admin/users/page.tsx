@@ -15,7 +15,7 @@ import Button from '@/components/ui/button';
 import Card from '@/components/ui/card';
 import EmptyState from '@/components/ui/empty-state';
 import PageHeader from '@/components/ui/page-header';
-import Pagination from '@/components/ui/pagination';
+import { paginationFooter } from '@/components/ui/pagination';
 import SearchForm from '@/components/ui/search-form';
 import SegmentedNav from '@/components/ui/segmented-nav';
 import { PageSkeleton } from '@/components/ui/skeleton';
@@ -26,7 +26,7 @@ import ToastOnArrival from '@/components/ui/toast-on-arrival';
 import displayName from '@/lib/display-name';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import { createPageUrl } from '@/lib/tables/page-url';
-import { parseTableState, showsPagination } from '@/lib/tables/table-state';
+import { parseTableState } from '@/lib/tables/table-state';
 import { USERS_TABLE } from '@/lib/tables/tables';
 import appContext from '@/server/app-context';
 import { getGlobalPermissions, requireGlobalPermission } from '@/server/authz';
@@ -75,7 +75,7 @@ function CompanyLinks({ companies }: { companies: UserListItem['companies'] }) {
       {companies.map((company, index) => (
         <Fragment key={company.id}>
           {index > 0 && ', '}
-          <TextLink href={`/companies/${company.slug}`} className="wrap-anywhere">
+          <TextLink standalone href={`/companies/${company.slug}`} className="wrap-anywhere">
             {company.name}
           </TextLink>
         </Fragment>
@@ -157,7 +157,7 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
         }
       />
 
-      {deleted && <ToastOnArrival message={t('deleted')} />}
+      {deleted && <ToastOnArrival message={t('deleted')} param="deleted" />}
 
       <div className="flex flex-col gap-4">
         <SearchForm
@@ -180,12 +180,7 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
         </div>
       </div>
 
-      <Card
-        flush
-        footer={
-          showsPagination(users.total) && <Pagination {...table.pagination(users, t('rows'))} />
-        }
-      >
+      <Card flush footer={paginationFooter(table, users, t('rows'))}>
         {users.total === 0 ? (
           <EmptyState icon={Users} title={empty.title} description={empty.description} />
         ) : (
@@ -221,6 +216,7 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
                         <div className="flex min-w-0 flex-col">
                           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                             <TextLink
+                              standalone
                               href={`/admin/users/${listed.id}`}
                               className="font-medium wrap-anywhere"
                             >

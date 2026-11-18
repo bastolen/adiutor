@@ -11,7 +11,7 @@ import { COMPANY_ROLES } from '@/lib/authz/roles';
 
 import { defineQueuedKind } from './define';
 
-/** The "you were added to a company" email: queue it once the member is added. */
+/** The "you were added to a company" email: queue it in the transaction that adds the member. */
 export const addedToCompanyJob = defineQueuedKind({
   name: 'added-to-company',
   payload: z.object({

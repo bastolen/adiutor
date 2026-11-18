@@ -12,15 +12,16 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 
 import type { ServiceContext } from '../context';
-import { hitRateLimit, RATE_LIMITS } from '../rate-limit';
+import { hitRateLimit, ipRateLimitKey, RATE_LIMITS } from '../rate-limit';
 import type { JobSummary } from './define';
-import { runTick, type TickResult } from './tick';
+import { REQUEST_RUN_SECONDS, runTick, type TickResult } from './tick';
 
 /**
- * How long one tick from the endpoint may keep starting runs, in seconds:
- * well within the route's `maxDuration` of 60, so it answers in time.
+ * How long one tick from the endpoint may keep starting runs, in seconds (40):
+ * the route's `maxDuration` of 60, less the 15 seconds one email can take and
+ * 5 to answer (see {@link REQUEST_RUN_SECONDS}), so it answers in time.
  */
-const ENDPOINT_TICK_SECONDS = 45;
+const ENDPOINT_TICK_SECONDS = REQUEST_RUN_SECONDS;
 
 /** The endpoint's path, which a continuation calls on the app's own address. */
 const TICK_PATH = '/api/jobs';
@@ -29,7 +30,7 @@ const TICK_PATH = '/api/jobs';
 export const TICK_CONTINUATION_HEADER = 'x-adiutor-tick-continuation';
 
 /**
- * How many times in a row a tick continues itself at most: about 7½ minutes
+ * How many times in a row a tick continues itself at most: nearly 7 minutes
  * of extra work, after which the next tick takes over.
  */
 export const MAX_TICK_CONTINUATIONS = 10;
@@ -235,12 +236,8 @@ export async function answerTickRequest(
     return { response: { status: 503, body: { status: 'disabled' } }, afterAnswer: null };
   }
   if (!isAuthorized(authorization, secret)) {
-    const request = ctx.requestInfo ? await ctx.requestInfo() : null;
-    const { allowed } = await hitRateLimit(
-      ctx,
-      `job-tick-miss:ip:${request?.ip ?? 'unknown'}`,
-      RATE_LIMITS.jobTickMissesPerIp,
-    );
+    const key = await ipRateLimitKey(ctx, 'job-tick-miss');
+    const { allowed } = await hitRateLimit(ctx, key, RATE_LIMITS.jobTickMissesPerIp);
     return {
       response: allowed
         ? { status: 401, body: { status: 'unauthorized' } }

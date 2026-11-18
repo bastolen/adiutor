@@ -88,6 +88,8 @@
       "addedToCompany": "{by, select, self {Als {role} toegevoegd aan {company}} admin {Een beheerder heeft je als {role} toegevoegd aan {company}} other {{name} heeft je als {role} toegevoegd aan {company}}}",
       "joinedStaff": "Toegevoegd aan de medewerkers",
       "joinedCompany": "Lid geworden van {company}",
+      "keptStaffRole": "Een uitnodiging voor de medewerkers gebruikt en de rol gehouden die je had",
+      "keptCompanyRole": "Een uitnodiging voor {company} gebruikt en de rol gehouden die je had",
       "removedFromStaff": "{by, select, self {Verwijderd uit de medewerkers} admin {Een beheerder heeft je verwijderd uit de medewerkers} other {{name} heeft je verwijderd uit de medewerkers}}",
       "removedFromCompany": "{by, select, self {Verwijderd uit {company}} admin {Een beheerder heeft je verwijderd uit {company}} other {{name} heeft je verwijderd uit {company}}}",
       "staffRoleChanged": "{by, select, self {Rol bij de medewerkers gewijzigd in {role}} admin {Een beheerder heeft je rol bij de medewerkers gewijzigd in {role}} other {{name} heeft je rol bij de medewerkers gewijzigd in {role}}}",

@@ -6,16 +6,16 @@ import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
 
 import { user } from '@/db/schema';
-import { defined, firstRow } from '@/lib/defined';
+import { firstRow } from '@/lib/defined';
 
 import {
+  actorFor,
   createStaffSettings,
   createUser,
   setupTestContext,
   setUserLocale,
   staffActor,
 } from '../../../tests/integration/helpers';
-import { loadActor } from '../actor';
 import setOwnLocale, { ownLanguage } from './own-locale';
 
 const { ctx, db } = setupTestContext();
@@ -37,7 +37,7 @@ describe('setOwnLocale', () => {
   it("saves the user's own language, and only theirs", async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
     const sam = await createUser(db, 'sam@adiutor.test');
-    const actor = defined(await loadActor(db, jane), 'the actor');
+    const actor = await actorFor(db, jane);
 
     await expect(setOwnLocale(ctx, actor, 'es-ES')).resolves.toBe('es-ES');
 
@@ -48,7 +48,7 @@ describe('setOwnLocale', () => {
   it('saves Default as no language, so the account follows Adiutor’s default', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
     await setUserLocale(db, jane, 'nl-NL');
-    const actor = defined(await loadActor(db, jane), 'the actor');
+    const actor = await actorFor(db, jane);
 
     await expect(setOwnLocale(ctx, actor, 'default')).resolves.toBeNull();
 
@@ -69,7 +69,7 @@ describe('ownLanguage', () => {
     await createStaffSettings(db, 'Adiutor Tests', 'es-ES');
     const jane = await createUser(db, 'jane@adiutor.test');
     await setUserLocale(db, jane, 'nl-NL');
-    const actor = defined(await loadActor(db, jane), 'the actor');
+    const actor = await actorFor(db, jane);
 
     await expect(ownLanguage(ctx, actor)).resolves.toEqual({
       choice: 'nl-NL',
@@ -79,7 +79,7 @@ describe('ownLanguage', () => {
 
   it('gives Default for an account without a saved language, and English (US) before setup', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
-    const actor = defined(await loadActor(db, jane), 'the actor');
+    const actor = await actorFor(db, jane);
 
     await expect(ownLanguage(ctx, actor)).resolves.toEqual({
       choice: 'default',

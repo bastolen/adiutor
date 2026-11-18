@@ -1,42 +1,43 @@
 /**
  * @file Integration tests for accepting an invitation, signed in or by creating
- * an account.
+ * an account (which hashes the password only for an invitation that can be
+ * used), and for what the audit log records when whoever accepts it was in
+ * already and keeps their role.
  */
-import { verifyPassword } from 'better-auth/crypto';
+import { hashPassword, verifyPassword } from 'better-auth/crypto';
 import { and, eq, isNull, sql } from 'drizzle-orm';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { account, company, invitation, membership, rateLimitBucket, user } from '@/db/schema';
+import {
+  account,
+  auditEvent,
+  company,
+  invitation,
+  membership,
+  rateLimitBucket,
+  user,
+} from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
 import {
   actorFor,
-  createCompany,
-  createStaffSettings,
+  addMember,
   createUser,
   inSequence,
-  memberActor,
+  queuedJobKinds,
   staffActor,
   tokenFrom,
 } from '../../../../tests/integration/helpers';
-import type { Actor } from '../../actor';
 import { hitRateLimit } from '../../rate-limit';
 import { claimInviteLink, createInviteLink } from '../invite-links';
 import { acceptInvitation, acceptInvitationWithNewAccount, getInvitationPreview } from './accept';
 import { inviteByEmail } from './send';
-import { db, ctx, sent } from './test-helpers';
+import { companyAdmin, db, ctx, sent, testCompany } from './test-helpers';
 
-/** Shared fixtures, recreated before each test. */
-let testCompany: Awaited<ReturnType<typeof createCompany>>;
-let companyAdmin: Actor;
-
-beforeEach(async () => {
-  await createStaffSettings(db);
-  testCompany = await createCompany(db);
-  companyAdmin = await memberActor(db, testCompany.id, 'admin');
-  await staffActor(db, 'manager');
-  await memberActor(db, testCompany.id, 'client', 'member@adiutor.test');
-  await createUser(db, 'existing@adiutor.test');
+vi.mock('better-auth/crypto', async (importOriginal) => {
+  const original = await importOriginal<typeof import('better-auth/crypto')>();
+  // The real hash, watched: an invitation that can't be used must not cost one.
+  return { ...original, hashPassword: vi.fn(original.hashPassword) };
 });
 
 describe('accepting', () => {
@@ -116,11 +117,124 @@ describe('accepting', () => {
 
   it('asks existing users to sign in instead of creating an account', async () => {
     const token = await invite('existing@adiutor.test');
+    vi.mocked(hashPassword).mockClear();
+
     expect(
       await acceptInvitationWithNewAccount(ctx, token, { name: 'X', password: 'password-123' }),
     ).toEqual({ status: 'account_exists' });
+
+    // Answered before the slow password hash.
+    expect(hashPassword).not.toHaveBeenCalled();
     // The invitation is still usable after signing in.
     expect(await getInvitationPreview(ctx, token)).not.toBeNull();
+  });
+
+  it('hashes the password once when it creates the account', async () => {
+    const token = await invite('new@adiutor.test');
+    vi.mocked(hashPassword).mockClear();
+
+    await acceptInvitationWithNewAccount(ctx, token, {
+      name: 'New Person',
+      password: 'correct-horse-1',
+    });
+
+    expect(vi.mocked(hashPassword).mock.calls).toEqual([['correct-horse-1']]);
+  });
+
+  it.each([
+    ['a token nobody was sent', async () => 'adiutor-tests-made-up-token'],
+    [
+      'a revoked invitation',
+      async () => {
+        const token = await invite('new@adiutor.test');
+        await db
+          .update(invitation)
+          .set({ revokedAt: sql`now()` })
+          .where(eq(invitation.email, 'new@adiutor.test'));
+        return token;
+      },
+    ],
+    [
+      'an expired invitation',
+      async () => {
+        const token = await invite('new@adiutor.test');
+        await db
+          .update(invitation)
+          .set({ expiresAt: sql`now() - interval '1 minute'` })
+          .where(eq(invitation.email, 'new@adiutor.test'));
+        return token;
+      },
+    ],
+    [
+      'an invitation that was accepted already',
+      async () => {
+        const token = await invite('new@adiutor.test');
+        await acceptInvitationWithNewAccount(ctx, token, {
+          name: 'New Person',
+          password: 'correct-horse-1',
+        });
+        return token;
+      },
+    ],
+  ])('answers %s without hashing the password', async (_name, arrange) => {
+    const token = await arrange();
+    const users = await db.$count(user);
+    vi.mocked(hashPassword).mockClear();
+
+    expect(
+      await acceptInvitationWithNewAccount(ctx, token, { name: 'X', password: 'password-123' }),
+    ).toEqual({ status: 'invalid' });
+
+    // A loop of made-up tokens costs a lookup each, not a hash.
+    expect(hashPassword).not.toHaveBeenCalled();
+    expect(await db.$count(user)).toBe(users);
+  });
+
+  it('still decides in the transaction: an account made while the password was hashed is found', async () => {
+    const token = await invite('new@adiutor.test');
+    // Someone else creates the account for the address between the first look and the transaction.
+    vi.mocked(hashPassword).mockImplementationOnce(async () => {
+      await createUser(db, 'new@adiutor.test');
+      return 'adiutor-tests-hash';
+    });
+
+    expect(
+      await acceptInvitationWithNewAccount(ctx, token, {
+        name: 'New Person',
+        password: 'correct-horse-1',
+      }),
+    ).toEqual({ status: 'account_exists' });
+
+    // No second account, no membership, and the invitation is still there for signing in.
+    const [made] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, 'new@adiutor.test'));
+    expect(await db.$count(user, eq(user.email, 'new@adiutor.test'))).toBe(1);
+    expect(
+      await db.$count(membership, eq(membership.userId, defined(made, 'the account').id)),
+    ).toBe(0);
+    expect(await getInvitationPreview(ctx, token)).not.toBeNull();
+  });
+
+  it('still decides in the transaction: an invitation revoked while the password was hashed is refused', async () => {
+    const token = await invite('new@adiutor.test');
+    vi.mocked(hashPassword).mockImplementationOnce(async () => {
+      await db
+        .update(invitation)
+        .set({ revokedAt: sql`now()` })
+        .where(eq(invitation.email, 'new@adiutor.test'));
+      return 'adiutor-tests-hash';
+    });
+
+    expect(
+      await acceptInvitationWithNewAccount(ctx, token, {
+        name: 'New Person',
+        password: 'correct-horse-1',
+      }),
+    ).toEqual({ status: 'invalid' });
+
+    expect(await db.$count(user, eq(user.email, 'new@adiutor.test'))).toBe(0);
   });
 
   it('joins as the signed-in user with the invited email only', async () => {
@@ -179,5 +293,127 @@ describe('accepting', () => {
     expect(
       await acceptInvitationWithNewAccount(ctx, token, { name: 'X', password: 'password-123' }),
     ).toEqual({ status: 'invalid' });
+  });
+});
+
+describe('accepting an invitation when already in', () => {
+  /**
+   * Reads the `member_joined` events, oldest first.
+   *
+   * @returns Who joined, where, and the details.
+   */
+  async function joinedEvents() {
+    return db
+      .select({
+        actorUserId: auditEvent.actorUserId,
+        targetUserId: auditEvent.targetUserId,
+        companyId: auditEvent.companyId,
+        details: auditEvent.details,
+      })
+      .from(auditEvent)
+      .where(eq(auditEvent.action, 'member_joined'))
+      .orderBy(auditEvent.id);
+  }
+
+  /**
+   * Finds the user the fixtures created for `existing@adiutor.test`.
+   *
+   * @returns Their row.
+   */
+  async function existingUser() {
+    return firstRow(
+      await db.select().from(user).where(eq(user.email, 'existing@adiutor.test')),
+      'the existing user',
+    );
+  }
+
+  it('records that a member kept the role they had, not that they joined as Admin', async () => {
+    await inviteByEmail(ctx, companyAdmin, {
+      companyId: testCompany.id,
+      email: 'existing@adiutor.test',
+      role: 'admin',
+    });
+    const token = tokenFrom(defined(sent.at(-1), 'the invitation email'));
+    const existing = await existingUser();
+    // They joined another way while the invitation was open.
+    await addMember(db, testCompany.id, existing.id, 'watcher');
+
+    expect(await acceptInvitation(ctx, token, existing)).toEqual({
+      status: 'joined',
+      companyId: testCompany.id,
+    });
+
+    const [joined] = await db
+      .select({ role: membership.role })
+      .from(membership)
+      .where(and(eq(membership.companyId, testCompany.id), eq(membership.userId, existing.id)));
+    expect(joined).toEqual({ role: 'watcher' });
+    expect(await joinedEvents()).toEqual([
+      {
+        actorUserId: existing.id,
+        targetUserId: existing.id,
+        companyId: testCompany.id,
+        details: { role: 'watcher', kept: true, invited: 'admin', email: 'existing@adiutor.test' },
+      },
+    ]);
+    // The invitation is used up all the same.
+    expect(await getInvitationPreview(ctx, token)).toBeNull();
+  });
+
+  it('records that someone on the staff kept their role, and tells no staff Admin of a new one', async () => {
+    const staffAdmin = await staffActor(db, 'platform_admin');
+    // Another staff Admin, who would be told of a new one.
+    await staffActor(db, 'platform_admin', 'other.admin@adiutor.test');
+    await inviteByEmail(ctx, staffAdmin, {
+      companyId: null,
+      email: 'existing@adiutor.test',
+      role: 'platform_admin',
+    });
+    const token = tokenFrom(defined(sent.at(-1), 'the invitation email'));
+    const existing = await existingUser();
+    // Made Support while the Admin invitation was open.
+    await db.update(user).set({ platformRole: 'support' }).where(eq(user.id, existing.id));
+
+    expect(await acceptInvitation(ctx, token, { ...existing, platformRole: 'support' })).toEqual({
+      status: 'joined',
+      companyId: null,
+    });
+
+    expect((await existingUser()).platformRole).toBe('support');
+    expect(await joinedEvents()).toEqual([
+      {
+        actorUserId: existing.id,
+        targetUserId: existing.id,
+        companyId: null,
+        details: {
+          staff: true,
+          role: 'support',
+          kept: true,
+          invited: 'platform_admin',
+          email: 'existing@adiutor.test',
+        },
+      },
+    ]);
+    expect(await queuedJobKinds(db)).not.toContain('staff-admin-added');
+  });
+
+  it('still records the role that was given to someone who wasn’t in yet', async () => {
+    await inviteByEmail(ctx, companyAdmin, {
+      companyId: testCompany.id,
+      email: 'existing@adiutor.test',
+      role: 'client',
+    });
+    const existing = await existingUser();
+
+    await acceptInvitation(ctx, tokenFrom(defined(sent.at(-1), 'the invitation email')), existing);
+
+    expect(await joinedEvents()).toEqual([
+      {
+        actorUserId: existing.id,
+        targetUserId: existing.id,
+        companyId: testCompany.id,
+        details: { role: 'client', email: 'existing@adiutor.test' },
+      },
+    ]);
   });
 });

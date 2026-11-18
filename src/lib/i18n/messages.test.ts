@@ -1,10 +1,10 @@
 /**
  * @file Tests for merging the catalogues and picking what a page passes to
- * the browser.
+ * the browser. That every language is complete is checked by
+ * `pnpm lint:messages`.
  */
 import { describe, expect, it } from 'vitest';
 
-import { LOCALES } from './locales';
 import { mergeMessages, messagesFor, pickMessages } from './messages';
 
 describe('mergeMessages', () => {
@@ -17,10 +17,6 @@ describe('mergeMessages', () => {
 });
 
 describe('messagesFor', () => {
-  it.each(LOCALES)('gives every message in %s', (locale) => {
-    expect(Object.keys(messagesFor(locale))).toEqual(Object.keys(messagesFor('en-US')));
-  });
-
   it('speaks each language', () => {
     expect(messagesFor('en-US').common.loading).toBe('Loading…');
     expect(messagesFor('nl-NL').common.loading).toBe('Laden…');

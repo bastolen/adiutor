@@ -82,5 +82,6 @@ The folders of the repository and what belongs in each. Back to the [documentati
 - `tests/`: helpers the test runners share: `auth/` (authenticator-app codes and storing an
   authenticator), `database/` (which database the tests use, and preparing it), `integration/` (the
   integration tests' setup, which points `@/db` at the test database, and helpers), `i18n/`
-  (next-intl's stand-ins for unit tests, and rendering in another language) and `build/` (whether a
-  local e2e run can reuse the last build).
+  (next-intl's stand-ins for unit tests, and rendering in another language), `ui/` (what component
+  and action tests share: the kept-alive page, the form data and the confirmation window) and
+  `build/` (whether a local e2e run can reuse the last build).

@@ -22,13 +22,14 @@ import {
 } from './manage-queue';
 import { findQueuedKind, findRecurringJob } from './registry';
 import type { JobRunResult } from './run';
-import { runJobNow } from './tick';
+import { REQUEST_RUN_SECONDS, runJobNow } from './tick';
 
 /**
- * How long a run started from the Jobs page may keep starting new work, so it
- * ends within the request's 60 seconds; what's left waits for the next tick.
+ * How long a run started from the Jobs page may keep starting new work, in
+ * seconds (40), so it ends within the request's 60 (see
+ * {@link REQUEST_RUN_SECONDS}); what's left waits for the next tick.
  */
-const PAGE_RUN_SECONDS = 45;
+const PAGE_RUN_SECONDS = REQUEST_RUN_SECONDS;
 
 /**
  * Checks the actor may act on the jobs: a staff Admin, as themself.
@@ -181,8 +182,9 @@ const MAX_KIND_LENGTH = 100;
 /**
  * Reads which failed jobs a staff Admin picked: one by its ID, or every one
  * of a kind. Retrying needs a kind the registry lists, as no tick runs the
- * others; discarding also takes a kind it no longer lists, to clear its
- * leftover jobs.
+ * others (a job picked by ID is checked when it's put back:
+ * `retryFailedQueuedJobs` leaves one of another kind failed); discarding also
+ * takes a kind it no longer lists, to clear its leftover jobs.
  *
  * @param selection - The selection as given.
  * @param retry - Whether the jobs are to be retried.
@@ -226,7 +228,8 @@ async function changeFailedJobs(
       : await discardFailedQueuedJobs(tx, checked);
     const [first] = changed;
     if (!first) {
-      // Someone else retried or discarded them first, or the ID was never a failed job.
+      // Someone else retried or discarded them first, the ID was never a failed job, or it's a
+      // job to retry of a kind the registry no longer lists.
       throw new ServiceError('conflict', 'errors.jobs.noFailedJobs');
     }
     await recordEvent(

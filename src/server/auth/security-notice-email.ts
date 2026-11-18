@@ -9,7 +9,7 @@ import type { Role } from '@/lib/authz/roles';
 import type { Email } from '@/lib/email';
 import type { Locale } from '@/lib/i18n/locales';
 import translator from '@/lib/i18n/translator';
-import formatIpAddress from '@/lib/request/ip-address';
+import { describeIpAddress } from '@/lib/request/ip-address';
 import { describeUserAgent } from '@/lib/request/user-agent';
 import type { SecurityNoticeKind } from '@/lib/security-notice-kinds';
 
@@ -69,7 +69,9 @@ export default async function buildSecurityNotice(
     device: origin?.userAgent
       ? translator(language, 'common')('device', describeUserAgent(origin.userAgent))
       : null,
-    ip: origin?.ip ? formatIpAddress(origin.ip) : null,
+    ip: origin?.ip
+      ? translator(language, 'common')('ipAddress', describeIpAddress(origin.ip))
+      : null,
     ...names,
   });
 }

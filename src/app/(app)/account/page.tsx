@@ -140,7 +140,9 @@ async function AccountSettings({ searchParams }: { searchParams: Promise<Account
         title={t('profile.languageTitle')}
         description={t('profile.languageDescription')}
       >
-        {params.language === 'saved' && <ToastOnArrival message={t('profile.languageSaved')} />}
+        {params.language === 'saved' && (
+          <ToastOnArrival message={t('profile.languageSaved')} param="language" />
+        )}
         <ClientMessages namespaces={['account']}>
           <LanguageForm choice={language.choice} defaultLocale={language.defaultLocale} />
         </ClientMessages>

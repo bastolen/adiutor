@@ -6,7 +6,7 @@
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { type FormEvent, useState } from 'react';
+import type { FormEvent } from 'react';
 
 import Alert from '@/components/ui/alert';
 import AuthHeading from '@/components/ui/auth-heading';
@@ -22,12 +22,17 @@ import { authErrorText } from '@/lib/sign-in/auth-error-messages';
  * find out who has an account. A refusal is worded from its code
  * (`authErrorText`), or as the server words it when it says how long to wait.
  *
+ * Like the sign-in form, it starts over whenever the page is hidden: Next
+ * keeps the page alive (React's `<Activity>`), and the next person on the
+ * browser mustn't find the last address typed here, its confirmation, or a
+ * button still busy.
+ *
  * @returns The form.
  */
 export default function ForgotPasswordForm() {
   const t = useTranslations('auth');
-  const [email, setEmail] = useState('');
-  const [pending, setPending] = useState(false);
+  const [email, setEmail] = useTransientState('');
+  const [pending, setPending] = useTransientState(false);
   const [error, setError] = useTransientState<string | null>(null);
   const [sent, setSent] = useTransientState(false);
 

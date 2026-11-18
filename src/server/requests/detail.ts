@@ -8,7 +8,6 @@ import { requestEntry, user } from '@/db/schema';
 import type { Permission } from '@/lib/authz/permissions';
 import { firstRow } from '@/lib/defined';
 import {
-  requestAudience,
   type RequestAudience,
   type RequestEntryKind,
   type RequestPriority,
@@ -21,7 +20,7 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import getRequestPrefix from '../people/request-prefix';
 import getStaffName from '../people/staff-name';
-import { getRequestAccess, type RequestPerson, requestPerson } from './access';
+import { getRequestAccess, requestAudienceIn, type RequestPerson, requestPerson } from './access';
 
 /** How many entries of a request's history are loaded at a time: the latest ones first. */
 export const THREAD_CHUNK = 50;
@@ -214,7 +213,7 @@ export async function getRequest(
       deactivated: company.deactivatedAt !== null,
     },
     permissions,
-    audience: requestAudience(permissions, actor.memberships[company.id] !== undefined),
+    audience: requestAudienceIn(actor, company),
     staffName,
     entries,
     earlierEntries: firstRow(total, 'the entry count').total - entries.length,

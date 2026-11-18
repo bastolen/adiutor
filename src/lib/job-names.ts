@@ -38,7 +38,7 @@ export type JobName = (typeof RECURRING_JOB_NAMES)[number] | (typeof QUEUED_JOB_
  * @param name - The name.
  * @returns Whether it's in {@link QUEUED_JOB_NAMES}.
  */
-export function isQueuedJobName(name: string): name is (typeof QUEUED_JOB_NAMES)[number] {
+function isQueuedJobName(name: string): name is (typeof QUEUED_JOB_NAMES)[number] {
   return (QUEUED_JOB_NAMES as readonly string[]).includes(name);
 }
 
@@ -54,7 +54,7 @@ export function isJobName(name: string): name is JobName {
 }
 
 /** What a run can count; each has its words in `jobs.summary`. */
-export const JOB_SUMMARY_KEYS = [
+const JOB_SUMMARY_KEYS = [
   /** Queued jobs: done, skipped, to try again, given up. */
   'done',
   'skipped',

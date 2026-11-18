@@ -5,8 +5,9 @@
  * the sign-in page stays in the browser's language. Neither says who. That
  * also forgets "Trust this device", and anything that names someone (e.g. the
  * provider-linked notice), so the next person on the browser starts clean;
- * their own sign-in gives the browser their language. Safe for Client
- * Components.
+ * their own sign-in gives the browser their account's language, or removes
+ * the language cookie when their account is on Default (`rememberLanguage`),
+ * and never saves the one left here. Safe for Client Components.
  */
 import { LOCALE_COOKIE } from '@/lib/i18n/locales';
 

@@ -2,8 +2,8 @@
  * @file Integration tests for telling the staff Admins that a job keeps
  * failing, against the test database: after three failed runs in a row
  * (a run that never finished counts), or when queued jobs are given up; only active staff Admins, in their own
- * language; at most once a day per job; and a mail problem never stops the
- * tick.
+ * language; at most once a day per job, unless the alert reached nobody; and
+ * a mail problem never stops the tick.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -153,6 +153,50 @@ describe('alerts about a recurring job', () => {
     await tickAt(10, mailDown(ctx));
     await tickAt(11, mailDown(ctx));
     await expect(tickAt(12, mailDown(ctx))).resolves.toBeUndefined();
+  });
+
+  it('go out with the next failure when no email could be sent', async () => {
+    // The Admins were last told over a day ago; that moment comes back when today's alert fails.
+    await db
+      .insert(jobState)
+      .values({ name: broken.name, lastAlertAt: sql`now() - interval '25 hours'` });
+    const [before] = await db.select({ lastAlertAt: jobState.lastAlertAt }).from(jobState);
+    await tickAt(10, mailDown(ctx));
+    await tickAt(11, mailDown(ctx));
+    await tickAt(12, mailDown(ctx));
+    expect(alerted()).toEqual([]);
+    expect(await db.select({ lastAlertAt: jobState.lastAlertAt }).from(jobState)).toEqual([before]);
+
+    // The mail server is back: the very next failed run tells them, without a day's wait.
+    await tickAt(13);
+
+    expect(alerted()).toEqual(['alex@adiutor.test', 'blake@adiutor.test']);
+  });
+
+  it('count as the day’s alert once one Admin was emailed', async () => {
+    /** The context, with a mail server that refuses one Admin's address. */
+    const refusingAlex: ServiceContext = {
+      ...ctx,
+      /**
+       * Sends to everyone but Alex.
+       *
+       * @param email - The email.
+       */
+      sendEmail: async (email) => {
+        if (email.to === 'alex@adiutor.test') {
+          throw new Error('Adiutor Tests: the mail server refused the address');
+        }
+        await ctx.sendEmail(email);
+      },
+    };
+    await tickAt(10, refusingAlex);
+    await tickAt(11, refusingAlex);
+    await tickAt(12, refusingAlex);
+    expect(alerted()).toEqual(['blake@adiutor.test']);
+
+    await tickAt(13);
+
+    expect(alerted()).toEqual(['blake@adiutor.test']);
   });
 });
 

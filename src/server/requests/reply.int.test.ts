@@ -2,7 +2,7 @@
  * @file Integration tests for replying to a request. Which roles may reply
  * is in the authorization matrix.
  */
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
 
@@ -12,6 +12,7 @@ import { REQUEST_TEXT_MAX_LENGTH } from '@/lib/input-rules';
 import {
   actorFor,
   addMember,
+  atTheSameMoment,
   createCompany,
   fillRateLimitBucket,
   memberActor,
@@ -20,7 +21,7 @@ import {
 } from '../../../tests/integration/helpers';
 import { RATE_LIMITS } from '../rate-limit';
 import replyToRequest from './reply';
-import { ctx, db, storeRequest } from './test-helpers';
+import { ctx, db, deactivatedMeanwhile, storeRequest, storedRequest } from './test-helpers';
 
 /**
  * The entries of a request's history, in order, as rows to compare.
@@ -41,17 +42,6 @@ async function history(requestId: string) {
     fromValue,
     toValue,
   }));
-}
-
-/**
- * Loads a request as it's stored.
- *
- * @param id - The request's ID.
- * @returns The row.
- */
-async function stored(id: string) {
-  const [found] = await db.select().from(request).where(eq(request.id, id));
-  return found;
 }
 
 describe('replyToRequest', () => {
@@ -77,7 +67,7 @@ describe('replyToRequest', () => {
         bodyFormat: 'plain',
       },
     ]);
-    const after = await stored(raised.id);
+    const after = await storedRequest(raised.id);
     expect(after?.status).toBe('open');
     expect(after?.lastActivityAt.getTime()).toBeGreaterThan(minutesAgo(1).getTime());
   });
@@ -117,7 +107,10 @@ describe('replyToRequest', () => {
         toValue: 'in_progress',
       },
     ]);
-    expect(await stored(raised.id)).toMatchObject({ status: 'in_progress', reopenedAt: null });
+    expect(await storedRequest(raised.id)).toMatchObject({
+      status: 'in_progress',
+      reopenedAt: null,
+    });
   });
 
   it('keeps a request waiting when the staff add to their own question', async () => {
@@ -208,7 +201,7 @@ describe('replyToRequest', () => {
       expect(await replyToRequest(ctx, support, { request: raised.id, body: 'Welcome.' })).toEqual({
         status,
       });
-      expect(await stored(raised.id)).toMatchObject({ status, reopenedAt: null });
+      expect(await storedRequest(raised.id)).toMatchObject({ status, reopenedAt: null });
     },
   );
 
@@ -275,6 +268,64 @@ describe('replyToRequest', () => {
       replyToRequest(ctx, client, { request: raised.id, body: 'Any news?' }),
     ).rejects.toMatchObject({ code: 'forbidden' });
     expect(await history(raised.id)).toEqual([]);
+  });
+
+  it('refuses a reply from the staff when the company was deactivated while it was under way', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const raised = await storeRequest(company.id);
+
+    const ended = await deactivatedMeanwhile(support.id, company.id, () =>
+      replyToRequest(ctx, support, { request: raised.id, body: 'On it.' }),
+    );
+
+    expect(ended).toMatchObject({
+      status: 'rejected',
+      reason: { code: 'invalid', key: 'errors.companyDeactivated' },
+    });
+    expect(await history(raised.id)).toEqual([]);
+  });
+
+  it('times a reply that waited for another change by when it was written, not when it started', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client');
+    const raised = await storeRequest(company.id, { lastActivityAt: minutesAgo(60) });
+
+    // Another change holds the request, and writes its entry only once the reply waits for it.
+    const { second } = await atTheSameMoment(
+      db,
+      (tx) =>
+        tx
+          .select({ id: request.id })
+          .from(request)
+          .where(eq(request.id, raised.id))
+          .for('no key update'),
+      () => replyToRequest(ctx, client, { request: raised.id, body: 'And it jams.' }),
+      async (tx) => {
+        await tx.insert(requestEntry).values({
+          requestId: raised.id,
+          kind: 'comment',
+          authorSide: 'staff',
+          body: 'Which printer is it?',
+          createdAt: sql`clock_timestamp()`,
+        });
+      },
+    );
+
+    expect(second.status).toBe('fulfilled');
+    const entries = await db
+      .select()
+      .from(requestEntry)
+      .where(eq(requestEntry.requestId, raised.id))
+      .orderBy(requestEntry.id);
+    expect(entries.map(({ body }) => body)).toEqual(['Which printer is it?', 'And it jams.']);
+    // In the conversation's order, no entry is timed before the one above it.
+    const times = entries.map(({ createdAt }) => createdAt.getTime());
+    expect(times).toEqual([...times].sort((a, b) => a - b));
+    // The last activity is the reply: read from the clock right after its entry was.
+    const lastActivity = (await storedRequest(raised.id))?.lastActivityAt.getTime();
+    expect(lastActivity).toBeGreaterThanOrEqual(times[1] ?? Infinity);
+    expect(lastActivity).toBeLessThan((times[1] ?? 0) + 1_000);
   });
 
   it('stops at the limit of replies one person writes', async () => {

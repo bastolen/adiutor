@@ -11,9 +11,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
 import confirmChangeUrl from '@/lib/sign-in/confirm-url';
 
+import ConfirmationWindow from '../../../../../tests/ui/confirmation-window';
 import DeactivateCard from './deactivate-card';
 
 /** The step-up page, coming back to this card on the Security page. */
@@ -51,16 +51,10 @@ function renderCard(
   props: { hasPassword: boolean; blockedReason: string | null },
   windowOpen: boolean,
 ) {
-  const serverTime = Date.now();
   render(
-    <RecentConfirmationProvider
-      required
-      confirmedUntil={windowOpen ? serverTime + 10 * 60 * 1000 : null}
-      serverTime={serverTime}
-      returnTo="/account/security"
-    >
+    <ConfirmationWindow windowOpen={windowOpen} returnTo="/account/security">
       <DeactivateCard {...props} />
-    </RecentConfirmationProvider>,
+    </ConfirmationWindow>,
   );
 }
 

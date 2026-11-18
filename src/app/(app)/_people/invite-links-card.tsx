@@ -10,7 +10,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import Badge, { type BadgeTone } from '@/components/ui/badge';
 import Card from '@/components/ui/card';
 import EmptyState from '@/components/ui/empty-state';
-import Pagination from '@/components/ui/pagination';
+import { paginationFooter } from '@/components/ui/pagination';
 import RowAction from '@/components/ui/row-action';
 import type { SelectOption } from '@/components/ui/select-field';
 import SortMenu from '@/components/ui/sort-menu';
@@ -18,7 +18,7 @@ import { Table, Td, Th, Tr } from '@/components/ui/table';
 import formatDate from '@/lib/format';
 import { type Locale } from '@/lib/i18n/locales';
 import { type TableLinks } from '@/lib/tables/page-url';
-import { type Paged, showsPagination } from '@/lib/tables/table-state';
+import { type Paged } from '@/lib/tables/table-state';
 import type { InviteLinkSort } from '@/lib/tables/tables';
 import type { InviteLinkStatus, InviteLinkSummary } from '@/server/people/invite-links';
 
@@ -115,9 +115,7 @@ export default function InviteLinksCard({
       description={tLinks('description')}
       actions={links.total > 0 && <SortMenu label={tLinks('rows')} options={table.sortOptions()} />}
       flush
-      footer={
-        showsPagination(links.total) && <Pagination {...table.pagination(links, tLinks('rows'))} />
-      }
+      footer={paginationFooter(table, links, tLinks('rows'))}
     >
       {canManage && (
         <div className="border-b border-border px-6 pb-6">

@@ -17,8 +17,14 @@
       "apply": "Toepassen",
       "clear": "Wissen",
       "copied": "Gekopieerd",
+      "copyFailed": "Kopiëren mislukt",
       "tryAgain": "Opnieuw proberen",
       "goToDashboard": "Naar je dashboard"
+    },
+    "notifications": {
+      "label": "Melding",
+      "region": "Meldingen ({hotkey})",
+      "error": "Fout"
     },
     "relativeTime": {
       "justNow": "zojuist",
@@ -120,6 +126,7 @@
       "description": "Deze pagina kon niet laden. Probeer het opnieuw, of ga naar je dashboard."
     },
     "device": "{browser, select, unknown {Onbekende browser} other {{browser}}} op {os, select, unknown {onbekend systeem} other {{os}}}",
+    "ipAddress": "{kind, select, local {Lokaal} unknown {Onbekend} other {{address}}}",
     "language": {
       "label": "Taal",
       "emailField": "Taal van de e-mail",

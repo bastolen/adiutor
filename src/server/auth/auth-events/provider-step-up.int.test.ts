@@ -183,6 +183,18 @@ describe('confirming a session with GitHub on the step-up page', () => {
       },
       'unchecked',
     ],
+    [
+      'GitHub doesn’t answer in time',
+      () => {
+        // What `fetch` rejects with when the check's time limit runs out (`AbortSignal.timeout`).
+        vi.spyOn(globalThis, 'fetch').mockRejectedValue(
+          new DOMException('The operation was aborted due to timeout', 'TimeoutError'),
+        );
+        // The failure is logged; keep the test output clean.
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+      },
+      'unchecked',
+    ],
   ])(
     'records a sign-in with GitHub when %s, since a session was still created with it, and tells the next page why',
     async (_, standIn: () => void, outcome: string) => {

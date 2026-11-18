@@ -10,7 +10,7 @@
 import { asc, eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { auditEvent, jobRun, jobState } from '@/db/schema';
+import { auditEvent, jobRun, jobState, queuedJob } from '@/db/schema';
 
 import { setupTestContext, staffActor, storeQueuedJob } from '../../../tests/integration/helpers';
 import {
@@ -192,6 +192,24 @@ describe('retryFailedJobs and discardFailedJobs', () => {
         details: { job: 'adiutor-tests-gone', count: 2 },
       },
     ]);
+  });
+
+  it('retries no job of a kind the registry no longer lists by its ID, and records nothing', async () => {
+    const admin = await staffActor(db, 'platform_admin', 'alex@adiutor.test');
+    const gone = await storeQueuedJob(db, 'adiutor-tests-gone');
+
+    // Answered like an ID that names no failed job: no tick would ever take it.
+    await expect(retryFailedJobs(ctx, admin, { id: gone })).rejects.toMatchObject({
+      code: 'conflict',
+      key: 'errors.jobs.noFailedJobs',
+    });
+
+    expect(
+      await db.select({ status: queuedJob.status }).from(queuedJob).where(eq(queuedJob.id, gone)),
+    ).toEqual([{ status: 'failed' }]);
+    expect(await events()).toEqual([]);
+    // It can still be discarded.
+    await expect(discardFailedJobs(ctx, admin, { id: gone })).resolves.toBe(1);
   });
 
   it('answers a malformed ID as one that doesn’t exist', async () => {

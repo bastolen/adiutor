@@ -86,7 +86,7 @@ export async function sessionExists(sessionId: string): Promise<boolean> {
  * Sends the security emails that wait in the queue (as the next tick would),
  * through the mocked `sendEmail` the hooks would use.
  */
-export async function sendQueuedNotices(): Promise<void> {
+async function sendQueuedNotices(): Promise<void> {
   await sendQueuedEmails({ ...services, sendEmail });
 }
 
@@ -304,7 +304,7 @@ export function githubCallback(
 /**
  * The cookies a request set to tell the next page something of its own: all
  * but the language cookie, which every sign-in sets from the account's
- * language (`rememberLanguage`), and the one that tells the other tabs, which
+ * language or removes (`rememberLanguage`), and the one that tells the other tabs, which
  * every provider sign-in sets when the browser acts as someone else now
  * (`ACTING_AS_CHANGED_COOKIE`). For tests about the other cookies.
  *

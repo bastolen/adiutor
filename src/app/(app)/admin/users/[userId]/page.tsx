@@ -203,19 +203,17 @@ async function UserDetailContent({
 
       <SecurityCard mfa={detail.mfa} accountNames={detail.accountNames} />
 
-      {canManageStaff && (
-        // The role select in the card translates with `people`.
-        <ClientMessages namespaces={['people.roleSelect']}>
-          <StaffAccessCard userId={detail.id} userName={userName} staffRole={detail.staffRole} />
-        </ClientMessages>
-      )}
-
-      {/* The role selects in the card translate with `people`. */}
+      {/* The role selects in both cards translate with `people`. */}
       <ClientMessages namespaces={['people.roleSelect']}>
+        {canManageStaff && (
+          <StaffAccessCard userId={detail.id} userName={userName} staffRole={detail.staffRole} />
+        )}
+
         <CompaniesCard
           userId={detail.id}
           userName={userName}
           isSelf={isSelf}
+          userDeactivated={detail.deactivatedAt !== null}
           companies={detail.companies}
           table={companiesTable}
           canManageMembers={canManageMembers}

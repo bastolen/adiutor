@@ -35,7 +35,8 @@ export const generateMetadata = globalPermissionMetadata('jobs:view', 'admin.job
 
 /**
  * How long the page's server actions may take, in seconds: running a job now
- * starts new work for at most 45 of them (`PAGE_RUN_SECONDS`).
+ * starts new work for at most 40 of them (`PAGE_RUN_SECONDS`, which is worked
+ * out from this limit: `REQUEST_RUN_SECONDS` in `src/server/jobs/tick.ts`).
  */
 export const maxDuration = 60;
 

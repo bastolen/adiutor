@@ -210,6 +210,7 @@ export function ErrorReference({
   }
   return (
     <TextLink
+      standalone
       href={`/admin/logs/errors?${new URLSearchParams({ q: reference }).toString()}`}
       className="font-mono whitespace-nowrap"
       aria-label={t('errorReferenceLink', { reference })}

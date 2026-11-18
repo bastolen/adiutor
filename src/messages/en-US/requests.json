@@ -29,6 +29,8 @@
       "empty": {
         "activeTitle": "No active requests",
         "activeDescription": "{canRaise, select, yes {Raise a request and it shows up here until it’s done.} other {Requests that still need something show up here.}}",
+        "noneTitle": "No requests yet",
+        "noneDescription": "{canRaise, select, yes {Raise the first request and it shows up here.} other {Requests show up here once someone raises one.}}",
         "noMatchTitle": "No matching requests",
         "noMatchDescription": "Nothing matches your search or filters."
       }

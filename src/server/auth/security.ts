@@ -7,7 +7,6 @@ import { asc, eq } from 'drizzle-orm';
 
 import { passkey } from '@/db/schema';
 import {
-  type MfaRole,
   type MfaState,
   NO_STEP_UP_METHODS,
   type StepUpMethods,
@@ -19,7 +18,6 @@ import { availableProviders } from '@/lib/sign-in/providers';
 
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
-import { loadMfaStates } from './mfa-state';
 
 /** A passkey as shown on the Security page. */
 export interface PasskeySummary {
@@ -81,36 +79,36 @@ export async function getSecurityOverview(
 }
 
 /**
- * Loads the ways a user can confirm a session that didn't have a second
- * step (see `stepUpMethods`). Only for the user themselves. To confirm a
- * change to how they sign in, only the methods that open the window for it
- * are offered (`windowOpeningMethods`): not GitHub next to a passkey or an
- * authenticator app, where it would confirm the session but allow no change.
- * To confirm with a strong second step whatever the role (before signing in
- * as someone), only those that open that window are (`strongStepUpMethods`):
- * never email codes.
+ * Works out the ways a user can confirm a session that didn't have a second
+ * step (see `stepUpMethods`). Only for the user themselves. Their setup comes
+ * from the actor, which loaded it in this request (`loadActor`), so nothing
+ * is queried here. To confirm a change to how they sign in, only the methods
+ * that open the window for it are offered (`windowOpeningMethods`): not
+ * GitHub next to a passkey or an authenticator app, where it would confirm
+ * the session but allow no change. To confirm with a strong second step
+ * whatever the role (before signing in as someone), only those that open
+ * that window are (`strongStepUpMethods`): never email codes.
  *
- * @param ctx - Service context.
- * @param userId - The signed-in user's ID.
- * @param mfaRole - Which MFA rules apply to them (see `mfaRoleOf`), or `null`.
+ * @param actor - The signed-in user.
+ * @param actor.mfaState - Their sign-in setup, as loaded with them, or `null`
+ *   if they disappeared meanwhile.
+ * @param actor.mfaRole - Which MFA rules apply to them (see `mfaRoleOf`), or `null`.
  * @param options - Options.
  * @param options.forChange - Whether the confirmation is for a change to how they sign in.
  * @param options.strong - Whether it must be a strong second step whatever the role.
- * @returns The available methods.
+ * @returns The available methods: none for a user without a setup.
  */
-export async function getStepUpMethods(
-  ctx: Pick<ServiceContext, 'db'>,
-  userId: string,
-  mfaRole: MfaRole | null,
+export function getStepUpMethods(
+  actor: Pick<Actor, 'mfaState' | 'mfaRole'>,
   { forChange = false, strong = false }: { forChange?: boolean; strong?: boolean } = {},
-): Promise<StepUpMethods> {
-  const state = (await loadMfaStates(ctx.db, [userId])).get(userId);
+): StepUpMethods {
+  const state = actor.mfaState;
   if (!state) {
     return NO_STEP_UP_METHODS;
   }
   if (strong) {
     return strongStepUpMethods(state, availableProviders);
   }
-  const methods = stepUpMethods(state, mfaRole, availableProviders);
+  const methods = stepUpMethods(state, actor.mfaRole, availableProviders);
   return forChange ? windowOpeningMethods(methods) : methods;
 }

@@ -6,8 +6,8 @@
 
 import { MailCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { ReactNode } from 'react';
 
+import accountTag from '@/components/auth/account-tag';
 import Alert from '@/components/ui/alert';
 import Button from '@/components/ui/button';
 import IconTile from '@/components/ui/icon-tile';
@@ -28,19 +28,11 @@ interface JoinFormProps {
 }
 
 /**
- * Shows the signed-in account's address in a sentence, emphasised (the
- * `<account>` tag of `auth.join.joinAs`).
- *
- * @param chunks - The address, where the sentence places it.
- * @returns The emphasised address.
- */
-function accountTag(chunks: ReactNode) {
-  return <span className="font-medium text-foreground">{chunks}</span>;
-}
-
-/**
  * A join button when signed in; otherwise an email field. After entering an
  * email, the person gets an invitation there, which proves they own it.
+ * Once it has gone through, a confirmation takes the form's place and takes
+ * keyboard focus: the button that had it is gone, and focus would otherwise
+ * fall to `<body>`.
  *
  * @param props - Form props.
  * @param props.token - The token from the link.
@@ -58,7 +50,9 @@ export default function JoinForm({ token, signedInEmail }: JoinFormProps) {
     return (
       <div className="flex flex-col items-start gap-4">
         <IconTile icon={MailCheck} tone="success" size="lg" />
-        <Alert tone="success">{result.message ?? null}</Alert>
+        <Alert tone="success" focusOnShow>
+          {result.message ?? null}
+        </Alert>
       </div>
     );
   }

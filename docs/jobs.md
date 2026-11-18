@@ -47,6 +47,15 @@ A tick runs every recurring job that's due, one after another, then the queued j
 `retention` deletes 10,000 rows at a time until its deadline, so a large backlog is cleared over a
 few runs without holding the database for long.
 
+`invitation-reminders` sends 3 reminders at a time (as many as the mail pool has connections,
+`SMTP_MAX_CONNECTIONS`), and never lets a run that's stopped cost an invitee their link. A run
+first claims the invitation (`invitation.reminder_claimed_at`), which leaves the link alone; it
+stores the reminder's new link, with `reminder_sent_at`, only once the email is out; and a reminder
+that can't be sent gives the claim back. A run that's stopped mid-send (the platform's 60 seconds,
+a crash) leaves its claim behind: the link they have keeps working, and after 15 minutes
+(`REMINDER_LEASE_MINUTES`) the next run takes the invitation again. That costs a second reminder,
+and the first one's link, if it arrived, never works.
+
 | Kind of queued job  | What it does                                                                                                                                                       |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `security-notice`   | Emails a user about a security change on their account (see [Security emails](authentication.md#security-emails))                                                  |
@@ -96,6 +105,11 @@ kinds are handled with `batchedJobRunner`, and the batch, made with `defineJobBa
 `JOB_BATCHES`). Each job is in exactly one batch, so an email never repeats an earlier one, and a batch
 that throws is attempted again with whatever was queued for its key meanwhile.
 
+**At least once:** a job's work and the note that it's done are two steps. When the note can't be
+written (the database dropped the write), only that job is attempted again, so its work can happen
+twice; the jobs of its batch that were noted stay finished. A failure never puts a finished job back
+in the queue (`retryQueuedJobLater` and giving up only touch jobs that are still `running`).
+
 ## Failures
 
 A failure is recorded as an error in the app (`recordJobError`), so staff Admins look it up by its
@@ -103,10 +117,13 @@ reference under **Logs → Errors**. The run in the history keeps the reference,
 job that failed. The server log gets the job and the reference, never the error's message, which can
 quote personal data.
 
-**The limits:** a tick starts new runs for 45 seconds from the endpoint and 4 minutes from the
+**The limits:** a tick starts new runs for 40 seconds from the endpoint and 4 minutes from the
 command line, and the recurring jobs get at most the first half of that, so the queue always has
-time. On Vercel the platform stops the endpoint's function after 60 seconds. A lease lasts 15
-minutes.
+time. On Vercel the platform stops the endpoint's function after 60 seconds. The 40 follow from
+that (`REQUEST_RUN_SECONDS` in `tick.ts`): work started just before the deadline must still end and
+be recorded, and the longest such piece is one email, which fails after 15 seconds
+(`SEND_TIMEOUT_MS` in `src/lib/email-limits.ts`), plus 5 seconds to answer: 60 − 15 − 5 = 40. A lease
+lasts 15 minutes.
 
 **A run that never finishes** (say, the platform stopped it at 60 seconds) fails too. A recurring
 run always frees its lease when it ends, so a lease that ran out means its run died: the next tick
@@ -116,7 +133,8 @@ next scheduled moment. A queued job whose attempt died uses up that attempt.
 **The staff Admins are told** when a job keeps failing (`alerts.ts`): after a recurring job's third
 failed run in a row, or when queued jobs are given up. Each active staff Admin gets an email in their
 own language with the error's reference, at most once a day per job, sent straight away rather than
-through the queue.
+through the queue. An alert that reached nobody (not one email could be sent, as when the mail
+server is what's down) doesn't count as the day's alert: the next failure sends it.
 
 **When the ticks stop**, no job runs and none can tell anyone. So every tick notes when it started
 (`job_tick`, `recordTick` in `tick-record.ts`), and when none started in the last 45 minutes
@@ -150,10 +168,12 @@ next run; the kinds of queued job with how many wait and failed; the failed queu
 runs of the last 30 days that did something, failed or were started by hand. Error references link
 to Logs → Errors for those who may see it (`errors:view`).
 
-Staff Admins (`jobs:manage`) also run a recurring job now (for at most 45 seconds of new work; the
+Staff Admins (`jobs:manage`) also run a recurring job now (for at most 40 seconds of new work; the
 page's `maxDuration` is 60), pause and resume jobs, and retry or discard failed queued jobs, one or
 all of a kind (`controls.ts`). Each is recorded in the audit log, never allowed while signed in as
-someone, and discarding asks first. Jobs that keep Adiutor secure can't be paused (`pausable:
+someone, and discarding asks first. A failed job of a kind the registry no longer lists can only be
+discarded, from the page and from the command line: no tick would take it, so a retry leaves it
+failed (`retryFailedQueuedJobs`). Jobs that keep Adiutor secure can't be paused (`pausable:
 false`: security notices, new staff Admins, leftover provider tokens and finished sign-ins as a
 user), and run even with a pause left in the database.
 
@@ -172,8 +192,10 @@ user), and run even with a pause left in the database.
 3. Test it next to its file (`*.int.test.ts`), calling its `run`.
 
 A job must be safe to run again at any time. Keep each piece of work to seconds, with a time limit
-on every network call (email has one: `SMTP_TIMEOUTS`), and stop starting new pieces at `deadline`,
-leaving the rest for the next run (see [the limits](#failures)).
+on every network call (`ctx.sendEmail` has one: 15 seconds for a whole send, `SEND_TIMEOUT_MS`), and
+stop starting new pieces at `deadline`, leaving the rest for the next run (see
+[the limits](#failures)). A piece of work that can take longer than an email needs the tick's
+deadline moved up with it (`REQUEST_RUN_SECONDS`).
 
 ## Adding a queued job
 

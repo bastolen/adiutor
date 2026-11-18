@@ -1,15 +1,18 @@
 /**
- * @file Tests for the second sign-in step.
+ * @file Tests for the second sign-in step: checking each kind of code, the
+ * emailed code sent once each time the page is shown, and starting over when
+ * the page is hidden (it stays alive in React's `<Activity>`).
  */
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Activity, type ReactNode, useState } from 'react';
+import { StrictMode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EMAIL_CODE_RESEND_SECONDS } from '@/lib/authz/mfa';
 import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 
 import renderInLocale from '../../../../tests/i18n/render';
+import Page from '../../../../tests/ui/page';
 import TwoFactorForm from './two-factor-form';
 
 /** Mocked Better Auth client methods and full page load. */
@@ -39,25 +42,8 @@ vi.mock('@/lib/sign-in/auth-client', () => ({
 
 vi.mock('@/components/ui/load-fresh', () => ({ default: loadFresh }));
 
-/**
- * Wraps content in an `<Activity>` that a "Leave" / "Return" button hides and
- * shows, like Next.js does with a page when you navigate away and back.
- *
- * @param props - Harness props.
- * @param props.children - The page content.
- * @returns The harness.
- */
-function Page({ children }: { children: ReactNode }) {
-  const [visible, setVisible] = useState(true);
-  return (
-    <>
-      <button type="button" onClick={() => setVisible((value) => !value)}>
-        {visible ? 'Leave' : 'Return'}
-      </button>
-      <Activity mode={visible ? 'visible' : 'hidden'}>{children}</Activity>
-    </>
-  );
-}
+/** The label of the checkbox that trusts the browser, which says how long that lasts. */
+const TRUST_DEVICE = 'Trust this device (until 30 days after your last password sign-in here)';
 
 describe('TwoFactorForm', () => {
   beforeEach(() => {
@@ -72,7 +58,7 @@ describe('TwoFactorForm', () => {
     render(<TwoFactorForm />);
 
     await user.type(screen.getByLabelText('Code'), '123456');
-    await user.click(screen.getByLabelText('Trust this device for 30 days'));
+    await user.click(screen.getByLabelText(TRUST_DEVICE));
     await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
 
     expect(verifyTotp).toHaveBeenCalledWith({ code: '123456', trustDevice: true });
@@ -109,15 +95,24 @@ describe('TwoFactorForm', () => {
     render(<TwoFactorForm />);
 
     await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(1));
-    expect(await screen.findByRole('button', { name: 'Send a new code in 2:30' })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: 'Send a new code in 2:30' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
 
     act(() => {
       vi.advanceTimersByTime(EMAIL_CODE_RESEND_SECONDS * 1000);
     });
-    await user.click(screen.getByRole('button', { name: 'Send a new code' }));
+    const resend = screen.getByRole('button', { name: 'Send a new code' });
+    await user.click(resend);
     expect(sendOtp).toHaveBeenCalledTimes(2);
     expect(await screen.findByText(/We sent a new code to your email address/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Send a new code in 2:30' })).toBeDisabled();
+    // Counting down again, it ignores presses but keeps focus: disabled, it would drop it.
+    expect(resend).toHaveAccessibleName('Send a new code in 2:30');
+    expect(resend).toHaveAttribute('aria-disabled', 'true');
+    expect(resend).toHaveFocus();
+    await user.click(resend);
+    expect(sendOtp).toHaveBeenCalledTimes(2);
     vi.useRealTimers();
   });
 
@@ -139,7 +134,7 @@ describe('TwoFactorForm', () => {
       renderInLocale(locale, <TwoFactorForm />);
 
       expect(await screen.findByText(sent)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: resend })).toBeDisabled();
+      expect(screen.getByRole('button', { name: resend })).toHaveAttribute('aria-disabled', 'true');
     },
   );
 
@@ -173,7 +168,10 @@ describe('TwoFactorForm', () => {
 
     expect(await screen.findByText(EMAIL_CODE_SENT_RECENTLY.message)).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Send a new code in/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Send a new code in/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
   });
 
   it('accepts a backup code instead', async () => {
@@ -247,12 +245,84 @@ describe('TwoFactorForm', () => {
     );
 
     await user.type(screen.getByLabelText('Code'), '123456');
-    await user.click(screen.getByLabelText('Trust this device for 30 days'));
+    await user.click(screen.getByLabelText(TRUST_DEVICE));
     await user.click(screen.getByRole('button', { name: 'Leave' }));
     await user.click(screen.getByRole('button', { name: 'Return' }));
 
     expect(screen.getByLabelText('Code')).toHaveValue('');
-    expect(screen.getByLabelText('Trust this device for 30 days')).not.toBeChecked();
+    expect(screen.getByLabelText(TRUST_DEVICE)).not.toBeChecked();
+  });
+
+  it('emails a new code when the page is shown again, as after going back and signing in again', async () => {
+    const user = userEvent.setup();
+    searchParams = new URLSearchParams({ methods: 'otp' });
+    render(
+      <Page>
+        <TwoFactorForm />
+      </Page>,
+    );
+    await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(/We sent a code to your email address/)).toBeInTheDocument();
+
+    // Back to the sign-in page, and a new sign-in shows this same page again.
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    expect(sendOtp).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: 'Return' }));
+
+    // The first email's code belongs to the sign-in it replaced: before, nothing was sent and
+    // nothing said.
+    await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText(/We sent a code to your email address/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Code')).toHaveValue('');
+  });
+
+  it('says to use the last code when the page is shown again and the server says it still works', async () => {
+    const user = userEvent.setup();
+    searchParams = new URLSearchParams({ methods: 'otp' });
+    render(
+      <Page>
+        <TwoFactorForm />
+      </Page>,
+    );
+    await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(1));
+    // The same sign-in, e.g. back and forward in the browser's history.
+    sendOtp.mockResolvedValueOnce({
+      data: null,
+      error: { status: 429, code: EMAIL_CODE_SENT_RECENTLY.code },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    await user.click(screen.getByRole('button', { name: 'Return' }));
+
+    expect(await screen.findByText(EMAIL_CODE_SENT_RECENTLY.message)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(sendOtp).toHaveBeenCalledTimes(2);
+  });
+
+  it('emails one code on mount in Strict Mode, which runs effects twice', async () => {
+    searchParams = new URLSearchParams({ methods: 'otp' });
+    render(
+      <StrictMode>
+        <TwoFactorForm />
+      </StrictMode>,
+    );
+
+    expect(await screen.findByText(/We sent a code to your email address/)).toBeInTheDocument();
+    expect(sendOtp).toHaveBeenCalledTimes(1);
+  });
+
+  it('emails no code when the page is shown again for an authenticator app', async () => {
+    const user = userEvent.setup();
+    render(
+      <Page>
+        <TwoFactorForm />
+      </Page>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    await user.click(screen.getByRole('button', { name: 'Return' }));
+
+    expect(sendOtp).not.toHaveBeenCalled();
   });
 
   it('is usable again when the browser shows the page from its back/forward cache', async () => {

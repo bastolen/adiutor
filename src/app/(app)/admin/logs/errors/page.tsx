@@ -8,14 +8,14 @@
  */
 import { SearchX, ShieldCheck } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import { getLocale, getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { Fragment, Suspense } from 'react';
 
 import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
 import { DescriptionList, DescriptionRow } from '@/components/ui/description-list';
 import EmptyState from '@/components/ui/empty-state';
-import Pagination from '@/components/ui/pagination';
+import { paginationFooter } from '@/components/ui/pagination';
 import RelativeTime from '@/components/ui/relative-time';
 import SearchForm from '@/components/ui/search-form';
 import { PageSkeleton } from '@/components/ui/skeleton';
@@ -26,7 +26,7 @@ import displayName from '@/lib/display-name';
 import { formatDateTime } from '@/lib/format';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import { createPageUrl } from '@/lib/tables/page-url';
-import { parseTableState, showsPagination } from '@/lib/tables/table-state';
+import { parseTableState } from '@/lib/tables/table-state';
 import { ERRORS_TABLE } from '@/lib/tables/tables';
 import appContext from '@/server/app-context';
 import { requireGlobalPermission } from '@/server/authz';
@@ -126,7 +126,9 @@ function ErrorDetails({ error }: { error: RecordedError }) {
       )}
       <DescriptionRow term={t('details.signedIn')}>
         {error.user ? (
-          <TextLink href={`/admin/users/${error.user.id}`}>{displayName(error.user)}</TextLink>
+          <TextLink standalone href={`/admin/users/${error.user.id}`}>
+            {displayName(error.user)}
+          </TextLink>
         ) : (
           t('details.noOne')
         )}
@@ -198,7 +200,6 @@ function LookupResult({
  * @returns The page content.
  */
 async function Errors({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const locale = await getLocale();
   const t = await getTranslations('admin.errors');
   const actor = await requireGlobalPermission('errors:view');
   const params = await searchParams;
@@ -236,11 +237,7 @@ async function Errors({ searchParams }: { searchParams: Promise<SearchParams> })
           recent.total > 0 && <SortMenu label={t('recent.rows')} options={table.sortOptions()} />
         }
         flush={recent.total > 0}
-        footer={
-          showsPagination(recent.total) && (
-            <Pagination {...table.pagination(recent, t('recent.rows'))} />
-          )
-        }
+        footer={paginationFooter(table, recent, t('recent.rows'))}
       >
         {recent.total === 0 ? (
           <EmptyState
@@ -265,6 +262,7 @@ async function Errors({ searchParams }: { searchParams: Promise<SearchParams> })
                   <Td>
                     <div className="flex flex-col items-start gap-1.5">
                       <TextLink
+                        standalone
                         href={table.withParams({ q: error.reference })}
                         className="font-mono"
                         aria-label={t('lookup.ariaLabel', { reference: error.reference })}
@@ -286,8 +284,7 @@ async function Errors({ searchParams }: { searchParams: Promise<SearchParams> })
                     {error.path && <span className="block font-mono text-xs">{error.path}</span>}
                   </Td>
                   <Td className="hidden whitespace-nowrap text-muted-foreground sm:table-cell">
-                    <RelativeTime date={error.at} />
-                    <span className="sr-only">, {formatDateTime(error.at, locale)}</span>
+                    <RelativeTime date={error.at} spokenExact />
                   </Td>
                 </Tr>
               ))}

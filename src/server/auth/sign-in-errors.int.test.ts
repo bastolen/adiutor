@@ -8,8 +8,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { signInError } from '@/db/schema';
 
-import { createUser, inSequence, setupTestContext } from '../../../tests/integration/helpers';
-import type { ServiceContext } from '../context';
+import {
+  createUser,
+  fromIp,
+  inSequence,
+  setupTestContext,
+} from '../../../tests/integration/helpers';
 import { RATE_LIMITS } from '../rate-limit';
 import { recordSignInError } from './sign-in-errors';
 
@@ -18,22 +22,6 @@ const { db, ctx } = setupTestContext();
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-/**
- * The service context of a request from an IP address.
- *
- * @param ip - The client's address.
- * @returns The context.
- */
-function from(ip: string): ServiceContext {
-  /**
-   * The request's client, as `requestInfoFromHeaders` would give it.
-   *
-   * @returns The IP address, without a browser.
-   */
-  const requestInfo = async () => ({ ip, userAgent: null });
-  return { ...ctx, requestInfo };
-}
 
 /**
  * Reads the stored sign-in errors.
@@ -56,7 +44,7 @@ describe('recordSignInError', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const userId = await createUser(db, 'jane@adiutor.test');
 
-    const recorded = await recordSignInError(from('203.0.113.1'), {
+    const recorded = await recordSignInError(fromIp(ctx, '203.0.113.1'), {
       code: 'state_mismatch',
       description: '  State mismatch for jane@adiutor.test  ',
       userId,
@@ -78,8 +66,14 @@ describe('recordSignInError', () => {
   it('stores an odd code as UNKNOWN, a long description shortened and an empty one as none', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    await recordSignInError(from('203.0.113.1'), { code: '<b>', description: 'x'.repeat(900) });
-    await recordSignInError(from('203.0.113.1'), { code: 'access_denied', description: '   ' });
+    await recordSignInError(fromIp(ctx, '203.0.113.1'), {
+      code: '<b>',
+      description: 'x'.repeat(900),
+    });
+    await recordSignInError(fromIp(ctx, '203.0.113.1'), {
+      code: 'access_denied',
+      description: '   ',
+    });
 
     const rows = await stored();
     expect(rows.map(({ code }) => code).sort()).toEqual(['UNKNOWN', 'access_denied']);
@@ -92,7 +86,7 @@ describe('recordSignInError', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const references = await inSequence(Array.from({ length: 15 }), () =>
-      recordSignInError(from('203.0.113.1'), { code: 'state_mismatch' }).then(
+      recordSignInError(fromIp(ctx, '203.0.113.1'), { code: 'state_mismatch' }).then(
         ({ reference }) => reference,
       ),
     );
@@ -106,10 +100,10 @@ describe('recordSignInError', () => {
     const { limit } = RATE_LIMITS.signInErrorsPerIp;
 
     await inSequence(Array.from({ length: limit }), () =>
-      recordSignInError(from('203.0.113.66'), { code: 'state_mismatch' }),
+      recordSignInError(fromIp(ctx, '203.0.113.66'), { code: 'state_mismatch' }),
     );
-    const over = await recordSignInError(from('203.0.113.66'), { code: 'state_mismatch' });
-    await recordSignInError(from('203.0.113.1'), { code: 'state_mismatch' });
+    const over = await recordSignInError(fromIp(ctx, '203.0.113.66'), { code: 'state_mismatch' });
+    await recordSignInError(fromIp(ctx, '203.0.113.1'), { code: 'state_mismatch' });
 
     expect(over.reference).toMatch(/^[2-9A-Z]{4}-[2-9A-Z]{4}$/);
     expect(warn).toHaveBeenLastCalledWith(expect.stringMatching(/^Sign-in error [2-9A-Z-]{9}: /));

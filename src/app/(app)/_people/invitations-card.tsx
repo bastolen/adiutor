@@ -8,13 +8,13 @@ import { useLocale, useTranslations } from 'next-intl';
 import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
 import EmptyState from '@/components/ui/empty-state';
-import Pagination from '@/components/ui/pagination';
+import { paginationFooter } from '@/components/ui/pagination';
 import RowAction from '@/components/ui/row-action';
 import SortMenu from '@/components/ui/sort-menu';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
 import formatDate from '@/lib/format';
 import { type TableLinks } from '@/lib/tables/page-url';
-import { type Paged, showsPagination } from '@/lib/tables/table-state';
+import { type Paged } from '@/lib/tables/table-state';
 import type { InvitationSort } from '@/lib/tables/tables';
 import type { PendingInvitation } from '@/server/people/invitations';
 
@@ -67,11 +67,7 @@ export default function InvitationsCard({
         )
       }
       flush
-      footer={
-        showsPagination(invitations.total) && (
-          <Pagination {...table.pagination(invitations, t('invitations.rows'))} />
-        )
-      }
+      footer={paginationFooter(table, invitations, t('invitations.rows'))}
     >
       {invitations.total === 0 ? (
         <EmptyState

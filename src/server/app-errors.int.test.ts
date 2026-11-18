@@ -2,18 +2,19 @@
  * @file Integration tests for recording errors in the app: what is stored
  * (database values taken out of the message, the path without its query
  * string or tokens, the signed-in user), the reference a digest gives, the
- * log line, and the limit per IP address.
+ * log line (always one line, whatever a request sent), and the limit per IP
+ * address.
  */
 import { DrizzleQueryError } from 'drizzle-orm/errors';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { appError } from '@/db/schema';
-import { firstRow } from '@/lib/defined';
+import { hasControlCharacter } from '@/lib/character-rules';
+import { defined, firstRow } from '@/lib/defined';
 import { referenceFromDigest } from '@/lib/error-reference';
 
-import { createUser, inSequence, setupTestContext } from '../../tests/integration/helpers';
+import { createUser, fromIp, inSequence, setupTestContext } from '../../tests/integration/helpers';
 import { recordAppError, recordedPath } from './app-errors';
-import type { ServiceContext } from './context';
 import { RATE_LIMITS } from './rate-limit';
 
 const { db, ctx } = setupTestContext();
@@ -21,22 +22,6 @@ const { db, ctx } = setupTestContext();
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-/**
- * The service context of a request from an IP address.
- *
- * @param ip - The client's address.
- * @returns The context.
- */
-function from(ip: string): ServiceContext {
-  /**
-   * The request's client, as `requestInfoFromHeaders` would give it.
-   *
-   * @returns The IP address, without a browser.
-   */
-  const requestInfo = async () => ({ ip, userAgent: null });
-  return { ...ctx, requestInfo };
-}
 
 /**
  * Reads the stored errors.
@@ -67,7 +52,7 @@ describe('recordAppError', () => {
       { digest: '2828711936' },
     );
 
-    const recorded = await recordAppError(from('203.0.113.1'), {
+    const recorded = await recordAppError(fromIp(ctx, '203.0.113.1'), {
       source: 'server',
       error,
       digest: '2828711936',
@@ -87,7 +72,8 @@ describe('recordAppError', () => {
         routePath: '/(app)/companies/page',
         path: '/companies',
         name: 'Error',
-        message: 'Failed query: select * from "user" where "email" = $1\nparams: [redacted]',
+        // On one line: the line break before Drizzle's parameters is a space.
+        message: 'Failed query: select * from "user" where "email" = $1 params: [redacted]',
         userId: null,
       },
     ]);
@@ -108,8 +94,8 @@ describe('recordAppError', () => {
       userId,
     };
 
-    await recordAppError(from('203.0.113.1'), report);
-    await recordAppError(from('203.0.113.1'), report);
+    await recordAppError(fromIp(ctx, '203.0.113.1'), report);
+    await recordAppError(fromIp(ctx, '203.0.113.1'), report);
 
     const rows = await stored();
     expect(rows).toHaveLength(2);
@@ -126,12 +112,12 @@ describe('recordAppError', () => {
   it('keeps the path without its query string, and without the token of a secret link', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    await recordAppError(from('203.0.113.1'), {
+    await recordAppError(fromIp(ctx, '203.0.113.1'), {
       source: 'browser',
       error: { name: 'TypeError', message: 'x is undefined' },
       path: '/admin/users?q=jane%40adiutor.test#results',
     });
-    await recordAppError(from('203.0.113.1'), {
+    await recordAppError(fromIp(ctx, '203.0.113.1'), {
       source: 'server',
       error: new Error('x'),
       path: '/invite/adiutor-tests-secret-token?from=email',
@@ -149,10 +135,38 @@ describe('recordAppError', () => {
     expect(recordedPath(null)).toBeNull();
   });
 
+  it('logs and stores one line, whatever line breaks the report carries', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const forged = 'App error 7KQ2-M9XD: server render /(app)/admin/users/page';
+
+    const recorded = await recordAppError(fromIp(ctx, '203.0.113.1'), {
+      source: 'browser',
+      error: { name: 'Type\nError', message: `x is undefined\r\n${forged}\u0000` },
+      digest: `12\n${forged}`,
+      routePath: `/(app)/dashboard/page\r\n${forged}`,
+      path: `/dashboard\n${forged}`,
+    });
+
+    const lines = warn.mock.calls.map(([line]) => String(line));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/^App error [2-9A-Z]{4}-[2-9A-Z]{4}: browser /);
+    expect(hasControlCharacter(defined(lines[0], 'the log line'))).toBe(false);
+    expect(recorded.stored).toBe(true);
+    expect(firstRow(await stored(), 'the stored error')).toMatchObject({
+      digest: `12 ${forged}`,
+      routePath: `/(app)/dashboard/page ${forged}`,
+      path: `/dashboard ${forged}`,
+      name: 'Type Error',
+      message: `x is undefined ${forged}`,
+    });
+    expect(recordedPath('/dashboard\r\n\t/admin')).toBe('/dashboard /admin');
+    expect(recordedPath('\n')).toBeNull();
+  });
+
   it('gives a browser error a reference of its own and shortens a long message', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    const recorded = await recordAppError(from('203.0.113.1'), {
+    const recorded = await recordAppError(fromIp(ctx, '203.0.113.1'), {
       source: 'browser',
       error: { name: null, message: 'x'.repeat(900) },
       path: '/dashboard',
@@ -171,10 +185,10 @@ describe('recordAppError', () => {
     const report = { source: 'browser' as const, error: { message: 'x' }, path: '/dashboard' };
 
     await inSequence(Array.from({ length: limit }), () =>
-      recordAppError(from('203.0.113.66'), report),
+      recordAppError(fromIp(ctx, '203.0.113.66'), report),
     );
-    const over = await recordAppError(from('203.0.113.66'), report);
-    await recordAppError(from('203.0.113.1'), report);
+    const over = await recordAppError(fromIp(ctx, '203.0.113.66'), report);
+    await recordAppError(fromIp(ctx, '203.0.113.1'), report);
 
     expect(over).toMatchObject({ stored: false });
     expect(warn).toHaveBeenCalledWith(`App error ${over.reference}: browser /dashboard`);

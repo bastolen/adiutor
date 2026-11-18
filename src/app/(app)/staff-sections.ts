@@ -25,7 +25,7 @@ export interface StaffSection {
 }
 
 /** The staff sections, in order. */
-export const STAFF_SECTIONS: readonly StaffSection[] = [
+const STAFF_SECTIONS: readonly StaffSection[] = [
   { key: 'users', href: '/admin/users', icon: Users, permission: 'users:view' },
   { key: 'companies', href: '/admin/companies', icon: Building2, permission: 'company:view' },
   { key: 'staff', href: '/admin/staff', icon: UserCog, permission: 'staff:manage' },

@@ -1,10 +1,13 @@
 /**
  * @file Trusted devices: browsers where the user ticked "Trust this device"
- * at the code step, which skip that step for 30 days. Better Auth keeps one
- * verification row per device (`trust-device-…`, valued with the user's
- * ID); its cookie also needs an HMAC with the auth secret, so the identifier
- * is stored as is (see `verification.storeIdentifier` in `src/lib/auth.ts`).
- * The browser's cookie holds `<HMAC>!<identifier>`.
+ * at the code step, which skip that step until 30 days after the last
+ * password sign-in there. Better Auth keeps one verification row per device
+ * (`trust-device-…`, valued with the user's ID) and replaces it with a new
+ * one, good for another 30 days, at every password sign-in that skips the
+ * step (its two-factor plugin has no setting for that). Its cookie also needs
+ * an HMAC with the auth secret, so the identifier is stored as is (see
+ * `verification.storeIdentifier` in `src/lib/auth.ts`). The browser's cookie
+ * holds `<HMAC>!<identifier>`.
  */
 import { and, eq, like } from 'drizzle-orm';
 

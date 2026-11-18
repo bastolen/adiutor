@@ -9,10 +9,14 @@ import { describe, expect, it } from 'vitest';
 
 import { account } from '@/db/schema';
 import { canConfirmSessions, hasMfa } from '@/lib/authz/mfa';
-import { firstRow } from '@/lib/defined';
 import { availableProviders } from '@/lib/sign-in/providers';
 
-import { createUser, setupTestContext, staffActor } from '../../../tests/integration/helpers';
+import {
+  connectProvider,
+  createUser,
+  setupTestContext,
+  staffActor,
+} from '../../../tests/integration/helpers';
 import { loadMfaContext, loadMfaStates } from './mfa-state';
 
 const { db } = setupTestContext();
@@ -26,20 +30,7 @@ const { db } = setupTestContext();
  * @returns The account row's ID.
  */
 async function connectGitHubWith2fa(userId: string, confirmed: boolean): Promise<string> {
-  const created = firstRow(
-    await db
-      .insert(account)
-      .values({
-        userId,
-        accountId: `github-${userId}`,
-        providerId: 'github',
-        mfaVerified: true,
-        confirmed,
-      })
-      .returning({ id: account.id }),
-    'the new account',
-  );
-  return created.id;
+  return connectProvider(db, userId, { mfaVerified: true, confirmed });
 }
 
 /**
@@ -99,13 +90,11 @@ describe('provider accounts', () => {
   it('come with their account row’s ID, the one Better Auth’s unlink takes', async () => {
     const manager = await staffActor(db, 'manager');
     const github = await connectGitHubWith2fa(manager.id, true);
-    const google = firstRow(
-      await db
-        .insert(account)
-        .values({ userId: manager.id, accountId: 'google-manager', providerId: 'google' })
-        .returning({ id: account.id }),
-      'the new account',
-    );
+    // Without two-factor authentication at Google (the helper's default is with).
+    const google = await connectProvider(db, manager.id, {
+      providerId: 'google',
+      mfaVerified: false,
+    });
 
     const providerAccounts = (await loadMfaStates(db, [manager.id])).get(
       manager.id,
@@ -115,7 +104,7 @@ describe('provider accounts', () => {
     expect(providerAccounts).toEqual(
       expect.arrayContaining([
         { id: github, providerId: 'github', mfaVerified: true },
-        { id: google.id, providerId: 'google', mfaVerified: false },
+        { id: google, providerId: 'google', mfaVerified: false },
       ]),
     );
   });

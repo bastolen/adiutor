@@ -8,9 +8,11 @@
 import { backdateMfaConfirmation, setDefaultLocale } from './support/db';
 import { COMPANY_SLUG, PLATFORM_ADMIN, STAFF_NAME } from './support/fixtures';
 import {
+  confirmWithAuthenticator,
   createAccountFromInvitation,
   createInviteLink,
   freshAddress,
+  sendInvitation,
   setUpAuthenticator,
   signIn,
   toasts,
@@ -132,13 +134,7 @@ test('an Admin invites a Manager by email, changes their role, and keeps an Admi
   await signIn(page, PLATFORM_ADMIN);
   await page.goto('/admin/staff');
 
-  const inviteForm = page
-    .locator('form')
-    .filter({ has: page.getByRole('button', { name: 'Send invitations' }) });
-  await inviteForm.getByLabel('Email addresses').fill(email);
-  await inviteForm.getByRole('combobox', { name: 'Role', exact: true }).click();
-  await page.getByRole('option', { name: 'Manager' }).click();
-  await inviteForm.getByRole('button', { name: 'Send invitations' }).click();
+  await sendInvitation(page, email, 'Manager');
   await expect(toasts(page)).toContainText(`Invitation sent to ${email}.`);
 
   // They accept with a new account and land on setting up MFA, as Managers must.
@@ -147,10 +143,12 @@ test('an Admin invites a Manager by email, changes their role, and keeps an Admi
   expect(invitation.subject).toBe(`E2E Admin invited you to join ${STAFF_NAME} on Adiutor`);
   await invited.goto(linkIn(invitation));
   await expect(invited.getByRole('heading', { name: `Join ${STAFF_NAME}` })).toBeVisible();
-  await invited.getByLabel('Your name').fill('New Manager');
-  await invited.getByLabel('Password', { exact: true }).fill('new-manager-password');
-  await invited.getByRole('button', { name: 'Create account and join' }).click();
-  await expect(invited).toHaveURL('/account/security?setup=required');
+  await createAccountFromInvitation(
+    invited,
+    'New Manager',
+    'new-manager-password',
+    '/account/security?setup=required',
+  );
   await invited.context().close();
 
   // The Admin sees them on the staff and makes them Finance.
@@ -180,13 +178,7 @@ test('a second staff Admin steps down after a confirmation, and lands on the das
   const email = freshAddress('second.admin');
   await signIn(page, PLATFORM_ADMIN);
   await page.goto('/admin/staff');
-  const inviteForm = page
-    .locator('form')
-    .filter({ has: page.getByRole('button', { name: 'Send invitations' }) });
-  await inviteForm.getByLabel('Email addresses').fill(email);
-  await inviteForm.getByRole('combobox', { name: 'Role', exact: true }).click();
-  await page.getByRole('option', { name: /^Admin/ }).click();
-  await inviteForm.getByRole('button', { name: 'Send invitations' }).click();
+  await sendInvitation(page, email, 'Admin');
   await expect(toasts(page)).toContainText(`Invitation sent to ${email}.`);
 
   // They join and set up MFA, as staff Admins must.
@@ -300,10 +292,7 @@ test('an Admin who confirmed long ago confirms it’s them before giving staff o
   await expect
     .poll(() => codeForSecret(PLATFORM_ADMIN.totpSecret), { timeout: 35_000, intervals: [1_000] })
     .not.toBe(signInCode);
-  await page
-    .getByRole('textbox', { name: 'Code', exact: true })
-    .fill(codeForSecret(PLATFORM_ADMIN.totpSecret));
-  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
+  await confirmWithAuthenticator(page, PLATFORM_ADMIN.totpSecret);
 
   // Back on the card where they clicked: scrolled to, with focus on its heading.
   await expect(page).toHaveURL('/admin/staff#invitations', { timeout: 15_000 });

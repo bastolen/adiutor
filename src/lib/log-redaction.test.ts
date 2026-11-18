@@ -1,7 +1,7 @@
 /**
  * @file Tests for keeping database values out of the logs: Drizzle's
- * parameters and Postgres's `detail` go, what failed stays, and anything
- * else is logged as it is.
+ * parameters, Postgres's `detail` and the values Postgres quotes in its
+ * message go, what failed stays, and anything else is logged as it is.
  */
 import { inspect } from 'node:util';
 
@@ -83,6 +83,99 @@ describe('redactLogValue', () => {
     });
     expect(redacted.cause).not.toHaveProperty('detail');
     expect(redacted.cause).not.toHaveProperty('where');
+  });
+
+  it.each([
+    [
+      'a value that is no ID',
+      `invalid input syntax for type uuid: "${EMAIL}"`,
+      { code: '22P02', routine: 'string_to_uuid' },
+      'invalid input syntax for type uuid: "[redacted]"',
+    ],
+    [
+      'a value that is no member of an enum',
+      `invalid input value for enum company_role: "${EMAIL}"`,
+      { code: '22P02', routine: 'enum_in' },
+      'invalid input value for enum company_role: "[redacted]"',
+    ],
+    [
+      'a value with quotes of its own',
+      `invalid input syntax for type uuid: "x" ${EMAIL} "y"`,
+      { code: '22P02' },
+      'invalid input syntax for type uuid: "[redacted]"',
+    ],
+    [
+      'a value in the middle of the message',
+      `value "${EMAIL}" is out of range for type integer`,
+      { code: '22003' },
+      'value "[redacted]" is out of range for type integer',
+    ],
+    [
+      'a value after the names the error gives',
+      `new row for relation "user" violates check constraint "user_name_check": "${EMAIL}"`,
+      { code: '23514', table: 'user', constraint: 'user_name_check' },
+      'new row for relation "user" violates check constraint "user_name_check": "[redacted]"',
+    ],
+    [
+      'a quote that never closes',
+      `invalid input syntax for type uuid: "${EMAIL}`,
+      { code: '22P02' },
+      'invalid input syntax for type uuid: "[redacted]"',
+    ],
+  ])(
+    'replaces what Postgres quotes in its message (%s), keeping what failed',
+    (_name, message, fields, expected) => {
+      const postgres = Object.assign(new Error(message), {
+        name: 'error',
+        severity: 'ERROR',
+        ...fields,
+      });
+      const failed = new DrizzleQueryError(
+        'select "id" from "user" where "id" = $1',
+        [EMAIL],
+        postgres,
+      );
+      expect(printed(failed)).toContain(EMAIL);
+
+      const redacted = redactLogValue(failed) as Error & { cause: Error };
+
+      expect(printed(redacted)).not.toContain(EMAIL);
+      expect(redacted.cause.message).toBe(expected);
+      expect(redacted.cause.stack).toContain(expected);
+      expect(redacted.cause).toMatchObject({ severity: 'ERROR', ...fields });
+      // On its own (a query that didn't go through Drizzle), the same.
+      expect((redactLogValue(postgres) as Error).message).toBe(expected);
+    },
+  );
+
+  it('keeps the constraint, table, column, schema and data type Postgres names in its message', () => {
+    const notNull = Object.assign(
+      new Error('null value in column "name" of relation "user" violates not-null constraint'),
+      {
+        name: 'error',
+        severity: 'ERROR',
+        code: '23502',
+        schema: 'public',
+        table: 'user',
+        column: 'name',
+      },
+    );
+    const domain = Object.assign(
+      new Error('value for domain "slug" violates check constraint "slug_check"'),
+      {
+        name: 'error',
+        severity: 'ERROR',
+        code: '23514',
+        dataType: 'slug',
+        constraint: 'slug_check',
+      },
+    );
+
+    expect((redactLogValue(notNull) as Error).message).toBe(notNull.message);
+    expect((redactLogValue(domain) as Error).message).toBe(domain.message);
+    expect((redactLogValue(duplicateEmailError()) as Error).message).toBe(
+      'duplicate key value violates unique constraint "user_email_unique"',
+    );
   });
 
   it("keeps Next's digest, so the error page's reference finds the log line", () => {

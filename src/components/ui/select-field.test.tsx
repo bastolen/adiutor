@@ -1,7 +1,7 @@
 /**
  * @file Tests for the select field, including its busy state.
  */
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -66,6 +66,50 @@ describe('SelectField', () => {
     await user.click(select);
     const option = screen.getByRole('option', { name: 'Español' });
     expect(option.querySelector('[data-testid="es"]')).not.toBeNull();
+  });
+
+  it('marks a label in another language with its language, in the list and when chosen', async () => {
+    const user = userEvent.setup();
+    render(
+      <SelectField
+        label="Language"
+        options={[
+          { value: 'default', label: 'Default' },
+          { value: 'nl-NL', label: 'Nederlands', lang: 'nl-NL' },
+          { value: 'es-ES', label: 'Español', lang: 'es-ES', icon: <svg aria-hidden="true" /> },
+        ]}
+        defaultValue="nl-NL"
+      />,
+    );
+
+    // The closed select: a screen reader says the chosen language's name in that language.
+    const select = screen.getByRole('combobox', { name: 'Language' });
+    expect(within(select).getByText('Nederlands')).toHaveAttribute('lang', 'nl-NL');
+
+    await user.click(select);
+    const spanish = screen.getByRole('option', { name: 'Español' });
+    expect(within(spanish).getByText('Español')).toHaveAttribute('lang', 'es-ES');
+    // A label in the page's own language carries none.
+    expect(screen.getByRole('option', { name: 'Default' }).querySelector('[lang]')).toBeNull();
+  });
+
+  it('outlines the option the keyboard is on, as well as filling it', async () => {
+    const user = userEvent.setup();
+    render(<SelectField label="Role" options={options} defaultValue="watcher" />);
+
+    await user.click(screen.getByRole('combobox', { name: 'Role' }));
+
+    screen.getAllByRole('option').forEach((option) => {
+      expect(option).toHaveClass(
+        'data-highlighted:bg-raised-muted',
+        'data-highlighted:outline-2',
+        'data-highlighted:-outline-offset-2',
+        'data-highlighted:outline-ring',
+      );
+      // Either class turns Tailwind's outline style off, so `outline-2` would draw nothing.
+      expect(option).not.toHaveClass('outline-none');
+      expect(option).not.toHaveClass('outline-hidden');
+    });
   });
 
   it('reports the chosen value', async () => {

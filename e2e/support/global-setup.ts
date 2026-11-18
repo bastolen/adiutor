@@ -15,6 +15,6 @@ import seedTestDatabase from './seed';
 export default async function globalSetup(): Promise<void> {
   const databaseUrl = getTestDatabaseUrl();
   await prepareTestDatabase(databaseUrl);
-  await seedTestDatabase(databaseUrl);
+  await seedTestDatabase();
   await rm(OUTBOX_DIR, { recursive: true, force: true });
 }

@@ -97,10 +97,11 @@ function providerValue(providerId: unknown): string {
 }
 
 /**
- * Describes the events about memberships (being added, joining, being
- * removed, a new role), and the rest with the audit log's own words (e.g.
- * "Added a passkey"). Events about a company that's gone, or with a role
- * that isn't one any more, fall back on those words too.
+ * Describes the events about memberships (being added, joining, using an
+ * invitation while already in and keeping the role they had, being removed,
+ * a new role), and the rest with the audit log's own words (e.g. "Added a
+ * passkey"). Events about a company that's gone, or with a role that isn't
+ * one any more, fall back on those words too.
  *
  * @param entry - The event.
  * @param entry.action - What happened.
@@ -118,7 +119,9 @@ function describeMembership(
   translators: OwnActivityTranslators,
 ): string {
   const onStaff = details.staff === true;
-  const general = translators.audit(`actions.${action}`);
+  // Used an invitation or invite link while already in: nothing was given, they kept their role.
+  const kept = action === 'member_joined' && details.kept === true;
+  const general = translators.audit(kept ? 'events.memberJoinedKept' : `actions.${action}`);
   if (!onStaff && !company) {
     return general;
   }
@@ -134,6 +137,11 @@ function describeMembership(
         : t('ownActivity.addedToCompany', { ...by, role, company: companyName });
     }
     case 'member_joined':
+      if (kept) {
+        return onStaff
+          ? t('ownActivity.keptStaffRole')
+          : t('ownActivity.keptCompanyRole', { company: companyName });
+      }
       return onStaff
         ? t('ownActivity.joinedStaff')
         : t('ownActivity.joinedCompany', { company: companyName });

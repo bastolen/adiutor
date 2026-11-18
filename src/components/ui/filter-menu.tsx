@@ -7,33 +7,18 @@
 'use client';
 
 import { ListFilter } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useTransition } from 'react';
 
-import Button from './button';
-import {
-  MenuContent,
-  MenuLabel,
-  MenuRadioGroup,
-  MenuRadioLinkItem,
-  MenuRoot,
-  MenuTrigger,
-} from './dropdown-menu';
-import Spinner from './spinner';
-import { useTransientState } from './use-transient-state';
+import type { SortOption } from '@/lib/tables/table-state';
 
-/** One choice of a {@link FilterMenu}. */
-export interface FilterOption {
-  /** The choice's value, unique in the menu; `''` for the choice that shows everything. */
-  value: string;
-  /** Visible text, e.g. "Bug". */
-  label: string;
-  /** The page with this choice made (build it with `TableLinks.withParams`). */
-  href: string;
-  /** Whether it's the current choice. */
-  current: boolean;
-}
+import LinkRadioMenu from './link-radio-menu';
+
+/**
+ * One choice of a {@link FilterMenu}: the same shape as a sort choice
+ * (`value` is `''` for the choice that shows everything; `href` is built with
+ * `TableLinks.withParams`).
+ */
+export type FilterOption = SortOption;
 
 /**
  * Props for {@link FilterMenu}.
@@ -55,7 +40,7 @@ interface FilterMenuProps {
  * behaviour (arrow keys, Escape, focus back on the button) comes with it.
  * The menu closes as soon as a choice is made; until the filtered rows
  * arrive, the button is busy (a spinner and `aria-busy`). It closes when the
- * user navigates away.
+ * user navigates away. The shared part is {@link LinkRadioMenu}.
  *
  * @param props - Menu props.
  * @param props.label - What's filtered by.
@@ -65,40 +50,17 @@ interface FilterMenuProps {
  */
 export default function FilterMenu({ label, menuLabel, options }: FilterMenuProps) {
   const t = useTranslations('common.filter');
-  const [open, setOpen] = useTransientState(false);
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const current = options.find((option) => option.current);
   return (
-    <MenuRoot open={open} onOpenChange={setOpen}>
-      <MenuTrigger asChild>
-        <Button variant="secondary" size="sm" aria-busy={pending || undefined}>
-          {pending ? <Spinner /> : <ListFilter aria-hidden="true" />}
-          {current && current.value !== ''
-            ? t('chosen', { filter: label, choice: current.label })
-            : label}
-        </Button>
-      </MenuTrigger>
-      <MenuContent align="start">
-        <MenuLabel>{menuLabel}</MenuLabel>
-        <MenuRadioGroup value={current?.value}>
-          {options.map((option) => (
-            <MenuRadioLinkItem
-              key={option.value}
-              value={option.value}
-              href={option.href}
-              scroll={false}
-              // Navigates in a transition of its own, so the button shows it's busy.
-              onNavigate={(event) => {
-                event.preventDefault();
-                startTransition(() => router.push(option.href, { scroll: false }));
-              }}
-            >
-              {option.label}
-            </MenuRadioLinkItem>
-          ))}
-        </MenuRadioGroup>
-      </MenuContent>
-    </MenuRoot>
+    <LinkRadioMenu
+      icon={ListFilter}
+      align="start"
+      menuLabel={menuLabel}
+      options={options}
+      renderTrigger={(current) =>
+        current && current.value !== ''
+          ? t('chosen', { filter: label, choice: current.label })
+          : label
+      }
+    />
   );
 }

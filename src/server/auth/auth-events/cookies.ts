@@ -14,7 +14,7 @@ import type { AuthHookContext } from './hook-context';
  * @param name - The cookie's name.
  * @returns Whether its `Cookie` header has it.
  */
-export function sentCookie(ctx: AuthHookContext, name: string): boolean {
+function sentCookie(ctx: AuthHookContext, name: string): boolean {
   return ctx.headers?.get('cookie')?.includes(`${name}=`) ?? false;
 }
 
@@ -49,4 +49,17 @@ export function expireCookie(ctx: AuthHookContext, name: string): void {
     // Cookies named `__Secure-` or `__Host-` can only be changed by a secure response.
     secure: secureCookies || /^__(Secure|Host)-/.test(name),
   });
+}
+
+/**
+ * Expires a cookie in the browser, only when the request sent it: a browser
+ * that doesn't have it is told nothing.
+ *
+ * @param ctx - The endpoint context, after the request.
+ * @param name - The cookie's name.
+ */
+export function expireCookieIfSent(ctx: AuthHookContext, name: string): void {
+  if (sentCookie(ctx, name)) {
+    expireCookie(ctx, name);
+  }
 }

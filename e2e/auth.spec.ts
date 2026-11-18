@@ -14,6 +14,7 @@ import { PROVIDER_LINKED_COOKIE } from '../src/lib/sign-in/oauth-providers';
 import { storeSignInLink } from './support/db';
 import { CLIENT_WATCHER, SESSIONS_CLIENT, SUPPORT_STAFF } from './support/fixtures';
 import {
+  fillAndSubmitSignIn,
   openAccountSettings,
   openSignInLink,
   signIn,
@@ -85,9 +86,7 @@ test('the sign-in form is empty after signing out, for the next person to sign i
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeEnabled();
 
   // And the next person can sign in straight away.
-  await page.getByLabel('Email').fill(CLIENT_WATCHER.email);
-  await page.getByLabel('Password').fill(CLIENT_WATCHER.password);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await fillAndSubmitSignIn(page, CLIENT_WATCHER);
   await expect(page).toHaveURL(/\/(dashboard|companies\/)/);
 });
 
@@ -155,13 +154,13 @@ test('the code step starts over after signing out, with "Trust this device" unti
    * Signs in with the password, up to the code step.
    */
   const passwordStep = async () => {
-    await page.getByLabel('Email').fill(SESSIONS_CLIENT.email);
-    await page.getByLabel('Password').fill(SESSIONS_CLIENT.password);
-    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await fillAndSubmitSignIn(page, SESSIONS_CLIENT);
     await expect(page).toHaveURL(/\/auth\/two-factor/);
   };
   const code = page.getByRole('textbox', { name: 'Code', exact: true });
-  const trust = page.getByRole('checkbox', { name: 'Trust this device for 30 days' });
+  const trust = page.getByRole('checkbox', {
+    name: 'Trust this device (until 30 days after your last password sign-in here)',
+  });
 
   await page.goto('/auth');
   await passwordStep();

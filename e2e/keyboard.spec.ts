@@ -10,7 +10,7 @@ import {
   providerLinkedCookieValue,
   providerStepUpCookieValue,
 } from '../src/lib/sign-in/oauth-providers';
-import { storeRequest } from './support/db';
+import { forgetLimitsOf, storeRequest } from './support/db';
 import {
   CLIENT_WATCHER,
   COMPANY_NAME,
@@ -106,6 +106,107 @@ function cursorOf(locator: Locator): Promise<string> {
   return locator.evaluate((element) => getComputedStyle(element).cursor);
 }
 
+/**
+ * The outline drawn around an element. Read it with `expect.poll`: with
+ * reduced motion every change of style still runs a transition of a few
+ * microseconds, so a value read at once can be the one it starts from (3px,
+ * the width an outline has before any is set).
+ *
+ * @param locator - The element.
+ * @returns Its computed `outline-style` and `outline-width`.
+ */
+function outlineOf(locator: Locator): Promise<{ style: string; width: string }> {
+  return locator.evaluate((element) => {
+    const { outlineStyle, outlineWidth } = getComputedStyle(element);
+    return { style: outlineStyle, width: outlineWidth };
+  });
+}
+
+/** A phone's screen, where the top bar sticks above the content. */
+const PHONE = { width: 375, height: 667 };
+
+/**
+ * The bottom edge of the layers that stick to the top of a small screen: the
+ * top bar and, while signed in as a user, the banner under it.
+ *
+ * @param page - The browser page, signed in.
+ * @returns How far down from the top of the screen they reach, in pixels.
+ */
+async function stickyLayersBottom(page: Page): Promise<number> {
+  const layers = [
+    page.locator('header').filter({ has: page.getByRole('button', { name: 'Open menu' }) }),
+    page.getByRole('region', { name: 'Signed in as someone else' }),
+  ];
+  const bottoms = await Promise.all(
+    layers.map(async (layer) => {
+      const box = (await layer.count()) > 0 ? await layer.boundingBox() : null;
+      return box ? box.y + box.height : 0;
+    }),
+  );
+  return Math.max(...bottoms);
+}
+
+/**
+ * Checks that a control the keyboard goes back to comes out from under the
+ * sticky layers. On the account's Security page, with focus on the Security
+ * tab, it scrolls the Profile tab before it to just under the top of the
+ * screen (where the layers cover it, but the browser counts it as visible)
+ * and presses Shift+Tab.
+ *
+ * @param page - The browser page, signed in, phone-sized and on `/account/security`.
+ */
+async function expectShiftTabClearsStickyLayers(page: Page): Promise<void> {
+  const tabs = page.getByRole('navigation', { name: 'Account sections' });
+  const profile = tabs.getByRole('link', { name: 'Profile' });
+  const security = tabs.getByRole('link', { name: 'Security' });
+  await security.focus();
+
+  // Retried while the page's cards stream in: it has to be long enough to scroll that far.
+  await expect(async () => {
+    await profile.evaluate((element) =>
+      window.scrollBy(0, element.getBoundingClientRect().top - 8),
+    );
+    const top = (await profile.boundingBox())?.y ?? -1;
+    expect(top, 'the Profile tab is on screen').toBeGreaterThanOrEqual(0);
+    expect(top, 'the Profile tab is under the sticky layers').toBeLessThan(
+      await stickyLayersBottom(page),
+    );
+  }).toPass();
+
+  await page.keyboard.press('Shift+Tab');
+  await expect(profile).toBeFocused();
+  await expect(async () => {
+    const top = (await profile.boundingBox())?.y ?? -1;
+    expect(top, 'the focused tab is below the sticky layers').toBeGreaterThanOrEqual(
+      await stickyLayersBottom(page),
+    );
+  }).toPass();
+}
+
+/**
+ * Checks that a card reached by its anchor lands just below the sticky
+ * layers: not under them, and without a second offset on top of the page's
+ * scroll padding.
+ *
+ * @param page - The browser page, signed in and phone-sized.
+ */
+async function expectCardLandsBelowStickyLayers(page: Page): Promise<void> {
+  // A page load of its own: with focus still on a control, the page leaves it where it is
+  // instead of moving it to the card's heading (and an address that differs only by its
+  // anchor wouldn't load the page again).
+  await page.goto('about:blank');
+  await page.goto('/account/security#passkeys');
+  const card = page.locator('section#passkeys');
+  await expect(card.locator('[data-card-heading]')).toBeFocused();
+  await expect(async () => {
+    const top = (await card.boundingBox())?.y ?? -1;
+    const layersBottom = await stickyLayersBottom(page);
+    expect(top, 'the card is below the sticky layers').toBeGreaterThanOrEqual(layersBottom);
+    // The card's own margin adds a little room, not another top bar's worth.
+    expect(top, 'the card is close under them').toBeLessThan(layersBottom + 40);
+  }).toPass();
+}
+
 test.describe('signed in', () => {
   test.use({ reducedMotion: 'reduce' });
   test.beforeEach(async ({ context }) => {
@@ -156,6 +257,49 @@ test.describe('signed in', () => {
     await page.keyboard.press('Enter');
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL('/account');
+  });
+
+  (['light', 'dark'] as const).forEach((colorScheme) => {
+    test(`the item the keyboard is on is outlined, not only filled, in ${colorScheme} mode`, async ({
+      page,
+    }) => {
+      // The fill alone is about 1.1:1 against the panel; the outline is the cue (WCAG 1.4.11).
+      await page.emulateMedia({ colorScheme });
+      await page.goto('/dashboard');
+      const trigger = page.getByRole('button', { name: /^Account menu/ });
+      const settings = page.getByRole('menuitem', { name: 'Account settings' });
+      const signOut = page.getByRole('menuitem', { name: 'Sign out' });
+
+      // In a menu: the item that has focus, and only that one.
+      await trigger.focus();
+      await page.keyboard.press('Enter');
+      await expect(settings).toBeFocused();
+      await expect.poll(() => outlineOf(settings)).toEqual({ style: 'solid', width: '2px' });
+      await expect.poll(async () => (await outlineOf(signOut)).style).toBe('none');
+      await page.keyboard.press('End');
+      await expect(signOut).toBeFocused();
+      await expect.poll(() => outlineOf(signOut)).toEqual({ style: 'solid', width: '2px' });
+      await expect.poll(async () => (await outlineOf(settings)).style).toBe('none');
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('menu')).toHaveCount(0);
+
+      // In a select's list: the same.
+      await page.goto(`/companies/${COMPANY_SLUG}/members`);
+      const role = page.getByRole('combobox', { name: `Role of ${CLIENT_WATCHER.name}` });
+      await openWithEnter(role);
+      const watcher = page.getByRole('option', { name: 'Watcher' });
+      const client = page.getByRole('option', { name: 'Client' });
+      await expect(watcher).toBeFocused();
+      await expect.poll(() => outlineOf(watcher)).toEqual({ style: 'solid', width: '2px' });
+      await expect.poll(async () => (await outlineOf(client)).style).toBe('none');
+      await page.keyboard.press('ArrowUp');
+      await expect(client).toBeFocused();
+      await expect.poll(() => outlineOf(client)).toEqual({ style: 'solid', width: '2px' });
+      await expect.poll(async () => (await outlineOf(watcher)).style).toBe('none');
+      // Escape leaves the role as it was.
+      await page.keyboard.press('Escape');
+      await expect(role).toBeFocused();
+    });
   });
 
   test('a role is only saved when picked with Enter, not while browsing', async ({ page }) => {
@@ -545,6 +689,50 @@ test.describe('signed in', () => {
   });
 });
 
+test.describe('an error in a dialog', () => {
+  test.use({ reducedMotion: 'reduce' });
+  // The company's Client: they can deactivate their own account, which asks for the password.
+  test.beforeEach(async ({ context }) => {
+    // The test enters two of the five wrong passwords a user gets: a retry starts from none.
+    await forgetLimitsOf(REQUESTS_CLIENT.email);
+    await context.addCookies(clientState.cookies);
+  });
+
+  test('takes focus each time it comes, and one Escape closes the dialog', async ({ page }) => {
+    const incorrect = 'That password is incorrect.';
+    await page.goto('/account/security');
+    const trigger = page.getByRole('button', { name: 'Deactivate', exact: true });
+    await trigger.focus();
+    await page.keyboard.press('Enter');
+    const dialog = page.getByRole('dialog', { name: 'Deactivate your account?' });
+    const password = dialog.getByLabel('Current password');
+    const error = dialog.getByRole('alert').filter({ hasText: incorrect });
+
+    // A wrong password: the error is shown in the dialog and takes focus.
+    await password.fill('not the password');
+    await page.keyboard.press('Enter');
+    await expect(error).toBeFocused();
+    // The first alert is marked, so the next one is known to be another.
+    await error.evaluate((element) => element.setAttribute('data-seen', ''));
+
+    // The same wrong password again (it stays typed): the same words, in an alert of their own
+    // that takes focus from the field again, so a screen reader announces it a second time.
+    await password.focus();
+    await page.keyboard.press('Enter');
+    await expect(dialog.locator('[role="alert"][data-seen]')).toHaveCount(0);
+    await expect(error).toBeFocused();
+
+    // Inline only: a toast would sit above the dialog and take the first Escape. (The
+    // notifications are hidden from assistive technology while a dialog is open, hence by text.)
+    await expect(page.getByText(incorrect)).toHaveCount(1);
+
+    // One Escape closes the dialog, and focus is back on its button.
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+  });
+});
+
 test.describe('signed in as a user', () => {
   test.use({ reducedMotion: 'reduce' });
 
@@ -570,6 +758,50 @@ test.describe('signed in as a user', () => {
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/#sign-in-as$/);
     await expect(page.getByRole('heading', { name: 'Sign in as user' })).toBeFocused();
+  });
+});
+
+test.describe('on a phone, under the sticky layers', () => {
+  test.use({ reducedMotion: 'reduce' });
+  // The second test signs in as a user, which counts towards the Admin's ten an hour: forgotten
+  // afterwards, so the specs after this one have as many left as before.
+  test.afterEach(async () => {
+    await forgetLimitsOf(PLATFORM_ADMIN.email);
+  });
+
+  test('a control reached with Shift+Tab, and a card reached by its anchor, clear the top bar', async ({
+    context,
+    page,
+  }) => {
+    await context.addCookies(adminState.cookies);
+    await page.setViewportSize(PHONE);
+    await page.goto('/account/security');
+
+    await expectShiftTabClearsStickyLayers(page);
+    await expectCardLandsBelowStickyLayers(page);
+  });
+
+  // A session of its own: signing in as someone changes what the shared Admin session shows.
+  test('while signed in as a user, they clear the banner under the top bar too', async ({
+    page,
+  }) => {
+    await signIn(page, PLATFORM_ADMIN);
+    await signInAsUser(page, CLIENT_WATCHER.name);
+    await page.setViewportSize(PHONE);
+    await page.goto('/account/security');
+    const banner = page.getByRole('region', { name: 'Signed in as someone else' });
+    await expect(banner).toBeVisible();
+    // The page knows how tall the banner is, so it can keep what it scrolls to clear of it.
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          document.documentElement.style.getPropertyValue('--signed-in-as-banner-height'),
+        ),
+      )
+      .toMatch(/^\d+px$/);
+
+    await expectShiftTabClearsStickyLayers(page);
+    await expectCardLandsBelowStickyLayers(page);
   });
 });
 

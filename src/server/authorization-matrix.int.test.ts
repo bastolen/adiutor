@@ -17,8 +17,12 @@
  * in `auth/impersonation.int.test.ts`. The own-account services that take
  * an ID (`revokeOwnSession`, `confirmConnectedProvider`) are tried with
  * another user's ID, and `deactivateOwnAccount` with a password; its refusal
- * of the last Admin is the last test below (a conflict, which the matrix
- * counts as allowed).
+ * of the last Admin is the last test below.
+ *
+ * An operation the permission checks let through must also succeed: another
+ * refusal (invalid input, a missing confirmation, a limit) fails the matrix
+ * unless the operation's row in `ALSO_ALLOWED` names its code, so a service
+ * that refuses for the wrong reason can't pass as "allowed".
  *
  * While a staff member is signed in as the acting user, every operation that
  * changes something is refused (`signed_in_as`, see `assertNotSignedInAs`),
@@ -62,7 +66,7 @@ import {
   startImpersonation,
 } from './auth/impersonation';
 import { revokeOwnSession } from './auth/sessions';
-import { ServiceError } from './errors';
+import { ServiceError, type ServiceErrorCode } from './errors';
 import {
   discardFailedJobs,
   listFailedJobs,
@@ -197,8 +201,16 @@ interface World {
   requests: { own: string; other: string };
 }
 
-/** A request's details as the staff's form sends them, with a new title. */
-const NEW_DETAILS = { title: 'The printer on floor 2 is broken', type: 'hotfix', priority: 'high' };
+/**
+ * A request's details as the staff's form sends them, with a new title, and
+ * the details it started from: those of {@link NEW_REQUEST}, a bug.
+ */
+const NEW_DETAILS = {
+  title: 'The printer on floor 2 is broken',
+  type: 'hotfix',
+  priority: 'high',
+  was: { title: 'The printer is broken', type: 'bug', priority: 'normal' },
+};
 
 /** A request as its form sends it, without its company. */
 const NEW_REQUEST = {
@@ -253,6 +265,8 @@ function listOperations(): Operation[] {
     ['list members (own)', (w) => listMembers(ctx, w.actor, w.own.id)],
     ['list members (other)', (w) => listMembers(ctx, w.actor, w.other.id)],
     ['list invitations (own)', (w) => listPendingInvitations(ctx, w.actor, w.own.id)],
+    ['list invitations (other)', (w) => listPendingInvitations(ctx, w.actor, w.other.id)],
+    ['list invite links (own)', (w) => listInviteLinks(ctx, w.actor, w.own.id)],
     ['list invite links (other)', (w) => listInviteLinks(ctx, w.actor, w.other.id)],
     [
       'invite (own)',
@@ -327,6 +341,11 @@ function listOperations(): Operation[] {
       (w) => createInviteLink(ctx, w.actor, { companyId: w.own.id, role: 'watcher', validDays: 1 }),
     ],
     [
+      'create invite link (other)',
+      (w) =>
+        createInviteLink(ctx, w.actor, { companyId: w.other.id, role: 'watcher', validDays: 1 }),
+    ],
+    [
       'revoke invite link (own)',
       (w) => revokeInviteLink(ctx, w.actor, { companyId: w.own.id, linkId: w.linksToRevoke.own }),
     ],
@@ -394,13 +413,46 @@ function listOperations(): Operation[] {
       (w) => addMember(ctx, w.actor, { companyId: w.own.id, userId: w.outsider, role: 'watcher' }),
     ],
     [
+      'add existing user (other)',
+      (w) =>
+        addMember(ctx, w.actor, { companyId: w.other.id, userId: w.outsider, role: 'watcher' }),
+    ],
+    // A new name each, so the rename changes something; the URL name stays.
+    [
       'rename company (own)',
       (w) =>
-        updateCompany(ctx, w.actor, { companyId: w.own.id, name: w.own.name, slug: w.own.slug }),
+        updateCompany(ctx, w.actor, {
+          companyId: w.own.id,
+          name: `${w.own.name} Renamed`,
+          slug: w.own.slug,
+        }),
     ],
     [
-      '(de)activate company (own)',
+      'rename company (other)',
+      (w) =>
+        updateCompany(ctx, w.actor, {
+          companyId: w.other.id,
+          name: `${w.other.name} Renamed`,
+          slug: w.other.slug,
+        }),
+    ],
+    // Each company is deactivated and then reactivated, so both really change it and the
+    // operations after them find it active again.
+    [
+      'deactivate company (own)',
+      (w) => setCompanyActive(ctx, w.actor, { companyId: w.own.id, active: false }),
+    ],
+    [
+      'reactivate company (own)',
       (w) => setCompanyActive(ctx, w.actor, { companyId: w.own.id, active: true }),
+    ],
+    [
+      'deactivate company (other)',
+      (w) => setCompanyActive(ctx, w.actor, { companyId: w.other.id, active: false }),
+    ],
+    [
+      'reactivate company (other)',
+      (w) => setCompanyActive(ctx, w.actor, { companyId: w.other.id, active: true }),
     ],
     ['list companies', (w) => listCompanies(ctx, w.actor)],
     [
@@ -577,6 +629,8 @@ const READS: ReadonlySet<string> = new Set([
   'list members (own)',
   'list members (other)',
   'list invitations (own)',
+  'list invitations (other)',
+  'list invite links (own)',
   'list invite links (other)',
   'list companies',
   'list staff invitations',
@@ -610,6 +664,22 @@ const OWN_WORK: ReadonlySet<string> = new Set(['dismiss own MFA recommendation']
 /** What happens when a role tries an operation. */
 type Outcome = 'allowed' | 'forbidden' | 'not_found';
 
+/** A refusal that an operation's row doesn't expect, by its code: it fails the matrix. */
+type Unexpected = `refused: ${ServiceErrorCode}`;
+
+/**
+ * The refusals that still count as allowed, per operation: what its service
+ * answers, in the world the matrix builds, once the permission checks have
+ * let the actor through. An operation without a row here must succeed when
+ * it's allowed, so invalid input, a missing confirmation or a limit fails the
+ * matrix instead of passing for "allowed".
+ */
+const ALSO_ALLOWED: Readonly<Record<string, readonly ServiceErrorCode[]>> = {
+  // The company may close a request, but can't cancel one that's done already, as the operation
+  // before left it: the status rules answer that the status changed, after the permission passed.
+  'cancel request (own)': ['conflict'],
+};
+
 /** The letters used in `EXPECTED`. */
 const OUTCOME_LETTERS: Record<string, Outcome> = {
   A: 'allowed',
@@ -636,6 +706,9 @@ const EXPECTED: Record<string, string> = {
   'list members (own)': 'FFAAAAA',
   'list members (other)': 'NNNAAAA',
   'list invitations (own)': 'FFAAAAA',
+  'list invitations (other)': 'NNNAAAA',
+  // Invite links are shown to whoever sees the members (`members:view`).
+  'list invite links (own)': 'FFAAAAA',
   'list invite links (other)': 'NNNAAAA',
   'invite (own)': 'FFAFFAA',
   'invite (other)': 'NNNFFAA',
@@ -647,6 +720,7 @@ const EXPECTED: Record<string, string> = {
   'revoke invitation (own)': 'FFAFFAA',
   'revoke invitation (other)': 'NNNFFAA',
   'create invite link (own)': 'FFAFFAA',
+  'create invite link (other)': 'NNNFFAA',
   'revoke invite link (own)': 'FFAFFAA',
   'revoke invite link (other)': 'NNNFFAA',
   // Finance and Support can't use invite links; everyone else can (a link is for whoever has it).
@@ -659,9 +733,18 @@ const EXPECTED: Record<string, string> = {
   'remove member (other)': 'NNNFFAA',
   // Nobody raises their own role, not even staff who manage members ('admin' is no raise for an Admin).
   'raise own role (own)': 'FFAFFFF',
+  // Only staff add someone directly, and that's checked before the company is looked up, so a
+  // company's users get the same refusal for another company as for their own.
   'add existing user (own)': 'FFFFFAA',
+  'add existing user (other)': 'FFFFFAA',
+  // A company's name and whether it's active are the staff's (`company:update` and
+  // `company:deactivate`: staff Admins and Managers), never its own Admin's.
   'rename company (own)': 'FFFFFAA',
-  '(de)activate company (own)': 'FFFFFAA',
+  'rename company (other)': 'NNNFFAA',
+  'deactivate company (own)': 'FFFFFAA',
+  'reactivate company (own)': 'FFFFFAA',
+  'deactivate company (other)': 'NNNFFAA',
+  'reactivate company (other)': 'NNNFFAA',
   'list companies': 'FFFAAAA',
   'add company': 'FFFFFAA',
   'invite staff': 'FFFFFFA',
@@ -904,13 +987,16 @@ async function createWorld(role: MatrixRole): Promise<World> {
 
 /**
  * Runs an operation and reports whether the permission checks let it through,
- * and if not, how they refused. Other refusals (a conflict, invalid input)
- * still mean it was allowed.
+ * and if not, how they refused. Any other refusal counts as allowed only when
+ * the operation's row in {@link ALSO_ALLOWED} names its code; otherwise it's
+ * reported as it is, which fails the matrix.
  *
+ * @param name - The operation's name.
  * @param run - The operation.
- * @returns `allowed`, `forbidden` or `not_found`.
+ * @returns `allowed`, `forbidden` or `not_found`, or `refused: <code>` for a refusal the
+ *   operation's row doesn't expect.
  */
-async function outcome(run: () => Promise<unknown>): Promise<Outcome> {
+async function outcome(name: string, run: () => Promise<unknown>): Promise<Outcome | Unexpected> {
   try {
     await run();
     return 'allowed';
@@ -918,7 +1004,10 @@ async function outcome(run: () => Promise<unknown>): Promise<Outcome> {
     if (!(error instanceof ServiceError)) {
       throw error;
     }
-    return error.code === 'forbidden' || error.code === 'not_found' ? error.code : 'allowed';
+    if (error.code === 'forbidden' || error.code === 'not_found') {
+      return error.code;
+    }
+    return ALSO_ALLOWED[name]?.includes(error.code) ? 'allowed' : `refused: ${error.code}`;
   }
 }
 
@@ -943,7 +1032,7 @@ async function outcomeCode(run: () => Promise<unknown>): Promise<string> {
 describe('authorization matrix', () => {
   it('expects an outcome of every operation for every role', () => {
     expect(Object.keys(EXPECTED).sort()).toEqual([...OPERATIONS.keys()].sort());
-    [...READS, ...OWN_WORK].forEach((name) => {
+    [...READS, ...OWN_WORK, ...Object.keys(ALSO_ALLOWED)].forEach((name) => {
       expect(OPERATIONS.has(name), name).toBe(true);
     });
     Object.entries(EXPECTED).forEach(([operation, letters]) => {
@@ -960,7 +1049,7 @@ describe('authorization matrix', () => {
     const names = [...OPERATIONS.keys()];
     const results = await inSequence(names, async (name) => [
       name,
-      await outcome(() => defined(OPERATIONS.get(name), `the ${name} operation`)(world)),
+      await outcome(name, () => defined(OPERATIONS.get(name), `the ${name} operation`)(world)),
     ]);
     const expected = names.map((name) => [name, expectedOutcome(name, role)]);
     expect(Object.fromEntries(results)).toEqual(Object.fromEntries(expected));
@@ -991,7 +1080,7 @@ describe('authorization matrix', () => {
          * @returns What the operation returns.
          */
         const run = () => defined(OPERATIONS.get(name), `the ${name} operation`)(signedInAs);
-        return [name, READS.has(name) ? await outcome(run) : await outcomeCode(run)];
+        return [name, READS.has(name) ? await outcome(name, run) : await outcomeCode(run)];
       });
       const expected = names.map((name) => {
         if (READS.has(name)) {

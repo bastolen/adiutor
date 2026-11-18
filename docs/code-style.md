@@ -53,7 +53,8 @@ The linters and formatters, the JSDoc rule, the editor setup and the Git hooks. 
   quotes, semicolons, trailing commas, 100-character lines). It runs inside ESLint and Stylelint,
   and sorts Tailwind classes.
 - **Stylelint** (`stylelint.config.mjs`) checks CSS with the standard rules, allows
-  Tailwind's at-rules (`@theme`, `@utility`, `@apply`, ...) and enforces JSDoc-style comments.
+  Tailwind's at-rules (`@theme`, `@utility`, `@apply`, `@custom-variant` with its `@slot` and the
+  `&` its rules start with, ...) and enforces JSDoc-style comments.
 - **Tailwind classes** are sorted by Prettier's Tailwind plugin, in `className` and in helpers like
   `clsx()` and `cn()`, and in `@apply` in CSS. Because Prettier runs inside ESLint and
   Stylelint, `pnpm lint` reports classes in the wrong order and `pnpm lint:fix` sorts them.

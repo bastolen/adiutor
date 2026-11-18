@@ -153,6 +153,9 @@ describe('listing', () => {
       page: 1,
       size: 25,
     });
+    // A NUL character, which Postgres refuses in a query, is dropped from the search.
+    expect(await slugs('tw\u0000o')).toEqual(['adiutor-tests-two']);
+    expect(await slugs('\u0000')).toEqual(['adiutor-tests-one', 'adiutor-tests-two']);
   });
 
   it('sorts by name ignoring case, with same names in a fixed order, and exactly reversed', async () => {
@@ -418,5 +421,68 @@ describe('updateCompany', () => {
         },
       },
     ]);
+  });
+
+  it('records a rename from what another rename saved while it waited for the company', async () => {
+    const testCompany = await createCompany(db);
+
+    const { second } = await atTheSameMoment(
+      db,
+      // Someone else's rename, not committed yet when the request reads the company.
+      (tx) =>
+        tx
+          .update(company)
+          .set({ name: 'Adiutor Tests First', slug: 'adiutor-tests-first' })
+          .where(eq(company.id, testCompany.id)),
+      () =>
+        updateCompany(ctx, manager, {
+          companyId: testCompany.id,
+          name: 'Adiutor Tests Second',
+          slug: 'adiutor-tests-first',
+        }),
+    );
+
+    // The URL name is the one the other rename saved, so this one didn't change it.
+    expect(second).toEqual({
+      status: 'fulfilled',
+      value: { slug: 'adiutor-tests-first', slugChanged: false },
+    });
+    expect(await companyEvents()).toEqual([
+      {
+        action: 'company_updated',
+        actorUserId: manager.id,
+        companyId: testCompany.id,
+        details: {
+          from: { name: 'Adiutor Tests First', slug: 'adiutor-tests-first' },
+          to: { name: 'Adiutor Tests Second', slug: 'adiutor-tests-first' },
+        },
+      },
+    ]);
+  });
+
+  it('records two renames at the same moment as a chain: the later one starts from the earlier', async () => {
+    const testCompany = await createCompany(db);
+
+    await Promise.all(
+      ['Adiutor Tests One', 'Adiutor Tests Two'].map((name) =>
+        updateCompany(ctx, manager, { companyId: testCompany.id, name, slug: testCompany.slug }),
+      ),
+    );
+
+    const renames = (await companyEvents()).map(
+      ({ details }) => details as { from: { name: string }; to: { name: string } },
+    );
+    expect(renames).toHaveLength(2);
+    // Whichever got the company first started from its name; the other from what that one saved.
+    const earlier = defined(
+      renames.find(({ from }) => from.name === testCompany.name),
+      'the rename that started from the first name',
+    );
+    const later = defined(
+      renames.find((rename) => rename !== earlier),
+      'the other rename',
+    );
+    expect(later.from).toEqual(earlier.to);
+    expect((await getCompanyAccess(db, manager, testCompany.id)).company.name).toBe(later.to.name);
   });
 });

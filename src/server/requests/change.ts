@@ -7,9 +7,9 @@
 import { eq, type SQL, sql } from 'drizzle-orm';
 
 import type { DatabaseTransaction } from '@/db';
-import { request } from '@/db/schema';
+import { request, requestEntry } from '@/db/schema';
 import type { Permission } from '@/lib/authz/permissions';
-import { isClosedStatus, isReopening, type RequestStatus } from '@/lib/requests';
+import { isClosedStatus, isReopening, type RequestSide, type RequestStatus } from '@/lib/requests';
 
 import { assertNotSignedInAs, assertPermission, assertStillManages } from '../access';
 import type { Actor } from '../actor';
@@ -20,7 +20,11 @@ import { getRequestAccess, type RequestAccess, type RequestRow } from './access'
 /**
  * The moment a change is made, in the database's clock. Not `now()`, which
  * is when the transaction started: a change that waited for another one
- * would then seem to have come first.
+ * would then seem to have come first. Every entry a change adds to the
+ * history is timed with it (`createdAt`, instead of the column's `now()`),
+ * and so is the request's last activity. Each statement reads the clock
+ * itself, so the times of one change lie microseconds apart, in the order
+ * they were written.
  */
 export const CHANGE_MOMENT = sql`clock_timestamp()`;
 
@@ -67,10 +71,39 @@ export function workingPermission(permissions: ReadonlySet<Permission>): Permiss
 }
 
 /**
- * Makes a change to a request in a transaction. First the actor's rights are
- * checked again as they are now (`assertStillManages`, which locks their
- * user and membership rows: before the request, as the lock order asks),
- * then the request's row is locked, and `apply` gets it as it is by then.
+ * Checks, first thing inside the transaction of a change, that the actor
+ * still may make it: their rights as they are now (`assertStillManages`,
+ * which locks their user and membership rows: before the request, as the
+ * lock order asks), and the company as that check read it. The staff keep
+ * their rights in a deactivated company, so only this refuses a change of
+ * theirs that was under way when the company was deactivated. It narrows
+ * that window to the rest of the transaction rather than closing it: the
+ * company's row isn't locked, since company rows come before user rows in
+ * the lock order.
+ *
+ * @param tx - The change's transaction.
+ * @param actor - The acting user.
+ * @param companyId - The request's company (or the one a request is raised in).
+ * @param permission - The permission to check again.
+ * @throws {ServiceError} `forbidden` when the actor lost the permission meanwhile, `invalid`
+ *   when the company was deactivated meanwhile.
+ */
+export async function assertStillMayChange(
+  tx: DatabaseTransaction,
+  actor: Actor,
+  companyId: string,
+  permission: Permission,
+): Promise<void> {
+  const { companyDeactivatedAt } = await assertStillManages(tx, actor, companyId, permission);
+  if (companyDeactivatedAt) {
+    throw companyDeactivatedError();
+  }
+}
+
+/**
+ * Makes a change to a request in a transaction. First the actor's rights
+ * and the company are checked again ({@link assertStillMayChange}), then the
+ * request's row is locked, and `apply` gets it as it is by then.
  *
  * @param ctx - Service context.
  * @param actor - The acting user.
@@ -78,7 +111,8 @@ export function workingPermission(permissions: ReadonlySet<Permission>): Permiss
  * @param permission - The permission to check again.
  * @param apply - Makes the change, given the transaction and the locked request.
  * @returns What `apply` returned.
- * @throws {ServiceError} `forbidden` when the actor lost the permission meanwhile.
+ * @throws {ServiceError} `forbidden` when the actor lost the permission meanwhile, `invalid`
+ *   when the company was deactivated meanwhile.
  */
 export function changeRequest<T>(
   ctx: ServiceContext,
@@ -88,7 +122,7 @@ export function changeRequest<T>(
   apply: (tx: DatabaseTransaction, locked: RequestRow) => Promise<T>,
 ): Promise<T> {
   return ctx.db.transaction(async (tx) => {
-    await assertStillManages(tx, actor, access.company.id, permission);
+    await assertStillMayChange(tx, actor, access.company.id, permission);
     const [locked] = await tx
       .select()
       .from(request)
@@ -119,4 +153,34 @@ export function statusChange(
     return { ...change, reopenedAt: CHANGE_MOMENT };
   }
   return isClosedStatus(to) ? { ...change, reopenedAt: null } : change;
+}
+
+/**
+ * Records a status change in a locked request's history and on its row: the
+ * entry, timed with {@link CHANGE_MOMENT}, then the request's new status,
+ * reopening time and last activity ({@link statusChange}).
+ *
+ * @param tx - The change's transaction.
+ * @param locked - The request, locked, with the status it has.
+ * @param to - The status it gets.
+ * @param author - Who changes it: their ID and the side they are on.
+ * @param author.id - The acting user's ID.
+ * @param author.side - The side they take part on.
+ */
+export async function recordStatusChange(
+  tx: DatabaseTransaction,
+  locked: RequestRow,
+  to: RequestStatus,
+  author: { id: string; side: RequestSide },
+): Promise<void> {
+  await tx.insert(requestEntry).values({
+    requestId: locked.id,
+    kind: 'status',
+    authorId: author.id,
+    authorSide: author.side,
+    fromValue: locked.status,
+    toValue: to,
+    createdAt: CHANGE_MOMENT,
+  });
+  await tx.update(request).set(statusChange(locked.status, to)).where(eq(request.id, locked.id));
 }

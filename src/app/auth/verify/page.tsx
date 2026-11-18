@@ -41,7 +41,6 @@ import ClientMessages from '@/lib/i18n/client-messages';
 import { DEFAULT_SIGNED_IN_PATH, getSafeRedirectPath } from '@/lib/redirect';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import { reverifyErrorText } from '@/lib/sign-in/auth-error-messages';
-import appContext from '@/server/app-context';
 import { getStepUpMethods } from '@/server/auth/security';
 import { getOptionalActor } from '@/server/authz';
 
@@ -93,11 +92,8 @@ async function StepUp({ searchParams }: { searchParams: Promise<SearchParams> })
   // A confirmed session is only here for a change to how the user signs in.
   const forChange = strong || searchParam(params.for) === 'change' || actor.sessionMfaVerified;
   // Only the providers configured here (`availableProviders`) are offered, and for a change only
-  // the methods that open its window.
-  const methods = await getStepUpMethods(appContext, actor.id, actor.mfaRole, {
-    forChange,
-    strong,
-  });
+  // the methods that open its window. They come from the setup the actor was loaded with.
+  const methods = getStepUpMethods(actor, { forChange, strong });
   // A different account than the user's own confirmed one names the provider, and never says
   // whether an address has an account (`reverifyErrorText`).
   const initialError = reverifyErrorText(

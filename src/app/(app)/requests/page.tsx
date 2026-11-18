@@ -11,9 +11,7 @@ import { Suspense } from 'react';
 import PageHeader from '@/components/ui/page-header';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import type { SearchParams } from '@/lib/search-params';
-import appContext from '@/server/app-context';
 import { getActor, getStaffPermissionsInCompanies } from '@/server/authz';
-import { getRequestSettings, listRequestCompanies } from '@/server/requests';
 
 import RequestList, { NewRequestButton } from '../_requests/request-list';
 
@@ -28,8 +26,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * Loads and shows the list, with a button to raise a request for those who
- * may raise one somewhere.
+ * Shows the list under its header, which has a button to raise a request for
+ * those who may raise one somewhere. The list loads the companies and settings
+ * the header needs and hands them to it.
  *
  * @param props - Component props.
  * @param props.searchParams - Query parameters: the search, the filters, and the table's sort and
@@ -39,27 +38,25 @@ export async function generateMetadata(): Promise<Metadata> {
 async function Requests({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const t = await getTranslations('requests.list');
   const actor = await getActor();
-  const [params, companies, settings] = await Promise.all([
-    searchParams,
-    listRequestCompanies(appContext, actor),
-    getRequestSettings(appContext),
-  ]);
+  const params = await searchParams;
   const staff = getStaffPermissionsInCompanies(actor).has('requests:view');
 
   return (
-    <>
-      <PageHeader
-        title={t('title')}
-        description={t('description', {
-          audience: staff ? 'staff' : 'company',
-          staff: settings.staffName,
-        })}
-        actions={
-          companies.some(({ canRaise }) => canRaise) && <NewRequestButton label={t('new')} />
-        }
-      />
-      <RequestList path="/requests" searchParams={params} actor={actor} />
-    </>
+    <RequestList
+      path="/requests"
+      searchParams={params}
+      actor={actor}
+      renderHeader={({ staffName, canRaise }) => (
+        <PageHeader
+          title={t('title')}
+          description={t('description', {
+            audience: staff ? 'staff' : 'company',
+            staff: staffName,
+          })}
+          actions={canRaise && <NewRequestButton label={t('new')} />}
+        />
+      )}
+    />
   );
 }
 

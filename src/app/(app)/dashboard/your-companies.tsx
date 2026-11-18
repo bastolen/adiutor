@@ -5,15 +5,13 @@
  * lists no companies.
  */
 import { ChevronRight } from 'lucide-react';
-import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 
 import Avatar from '@/components/ui/avatar';
 import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
-import { focusRing } from '@/components/ui/styles';
+import RowLink from '@/components/ui/row-link';
 import type { CompanyRole } from '@/lib/authz/roles';
-import cn from '@/lib/cn';
 
 /** A company on the card. */
 export interface OwnCompany {
@@ -56,15 +54,7 @@ export default function YourCompanies({ companies }: YourCompaniesProps) {
             <span className="flex min-w-0 flex-1 flex-col items-start gap-1">
               {/* The link covers the whole row, so the row is one click target; on its own it's
                   2px taller above and below too, like every text link (at least 24px). */}
-              <Link
-                href={`/companies/${slug}`}
-                className={cn(
-                  '-my-0.5 rounded-sm py-0.5 font-medium wrap-anywhere text-foreground group-hover:underline group-hover:underline-offset-4 after:absolute after:inset-0',
-                  focusRing,
-                )}
-              >
-                {name}
-              </Link>
+              <RowLink href={`/companies/${slug}`}>{name}</RowLink>
               <Badge>{tRoles(`${role}.label`)}</Badge>
             </span>
             <ChevronRight

@@ -13,7 +13,7 @@ import { PROVIDER_LINKED_COOKIE, PROVIDER_STEP_UP_COOKIE } from '@/lib/sign-in/o
 import { requestState } from '../request-state';
 import { signedSessionToken } from '../signed-session';
 import { forgetTrustedDevice, trustedDeviceUser } from '../trusted-devices';
-import { expireCookie, sentCookie } from './cookies';
+import { expireCookie, expireCookieIfSent } from './cookies';
 import type { AuthHookContext } from './hook-context';
 
 /** Better Auth's name for the trusted-device cookie ("Trust this device" at the code step). */
@@ -155,13 +155,10 @@ export function clearCookiesAtSignOut(ctx: AuthHookContext): void {
  * @param ctx - The endpoint context, after the request.
  */
 export function clearStaleProviderLinkedCookie(ctx: AuthHookContext): void {
-  if (!sentCookie(ctx, PROVIDER_LINKED_COOKIE)) {
-    return;
-  }
   if (!ctx.context.newSession || requestState(ctx.context).providerLinkedCookieSet) {
     return;
   }
-  expireCookie(ctx, PROVIDER_LINKED_COOKIE);
+  expireCookieIfSent(ctx, PROVIDER_LINKED_COOKIE);
 }
 
 /**
@@ -176,11 +173,8 @@ export function clearStaleProviderLinkedCookie(ctx: AuthHookContext): void {
  * @param ctx - The endpoint context, after the request.
  */
 export function clearStaleProviderStepUpCookie(ctx: AuthHookContext): void {
-  if (!sentCookie(ctx, PROVIDER_STEP_UP_COOKIE)) {
-    return;
-  }
   if (!ctx.context.newSession || requestState(ctx.context).pendingProviderStepUp) {
     return;
   }
-  expireCookie(ctx, PROVIDER_STEP_UP_COOKIE);
+  expireCookieIfSent(ctx, PROVIDER_STEP_UP_COOKIE);
 }

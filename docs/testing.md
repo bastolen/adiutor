@@ -20,18 +20,30 @@ configurations in VS Code, which turn the time limit off (see
   (word order, plurals), render with `renderInLocale(locale, ui)` from `tests/i18n/render.tsx`, or
   translate outside React with `translator(locale, namespace)`. End-to-end tests run in English
   (US) (`locale` in `playwright.config.ts`).
+- **Navigation:** `vitest.setup.ts` also gives component tests a router that does nothing
+  (`useRouter` from `next/navigation`: `push`, `refresh`, `back` and `replace`; the rest of the
+  module stays real). A test that checks navigation must mock `next/navigation` itself, which
+  replaces that default.
+- **Components and actions:** what several unit tests of components and server actions share lives
+  in `tests/ui/`: `Page` (`page.tsx`, hides and shows its content in an `<Activity>` with a "Leave" /
+  "Return" button, like Next.js keeping a page alive), `form` (`form.ts`, builds `FormData` from an
+  object) and `ConfirmationWindow` (`confirmation-window.tsx`, provides a required confirmation
+  window, open or run out, to a card or form).
 - **A module split into a folder** (see "Modules that outgrow one file" in
   [Code style](code-style.md)) has a test file next to each of its files, and the helpers they
   share in the folder's `test-helpers.ts`. When the tests share a database test context, that file
-  calls `setupTestContext()` once; every test file still declares its own `vi.mock` calls and hooks,
-  since Vitest hoists those per file. The one mock every integration file needs, `@/db` pointing
+  calls `setupTestContext()` once, and sets up the fixtures every test file needs in one
+  `beforeEach` after it, exported as live bindings (`user-admin/` and `invitations/` do); every
+  test file still declares its own `vi.mock` calls, since Vitest hoists those per file, and the
+  hooks only it needs. The one mock every integration file needs, `@/db` pointing
   at the test database, is declared once in `tests/integration/setup.ts` (a `setupFiles` entry of
   the integration project), so no file copies it.
 - **Integration tests** (`*.int.test.ts` next to the code they test, mostly in `src/server/`) run
   the services against a real PostgreSQL test database, `adiutor_test`. It's created and migrated
   automatically and emptied before each test. Because the tests empty it, its name must end in
-  `_test` and it can't be the database in `DATABASE_URL` (same host, port and name); anything else
-  is refused before a test runs (`tests/database/database-url.ts`). They cover the permission rules, the privacy rule,
+  `_test` and it can't be the database in `DATABASE_URL` (same host, port and name, read as the
+  driver reads them, so a `host` or `port` parameter counts); anything else is refused before a
+  test runs (`tests/database/database-url.ts`). They cover the permission rules, the privacy rule,
   single-use links (including two people racing for one), invitations to one address at the same
   moment (`atTheSameMoment` in `tests/integration/helpers.ts`), whole sign-in flows through Better
   Auth (`src/server/auth/password-sign-in.int.test.ts`, and email links in
@@ -49,7 +61,7 @@ configurations in VS Code, which turn the time limit off (see
   [Design and accessibility](design.md#design-and-accessibility).
   - **Running and build reuse:** install the browser once with
     `pnpm exec playwright install chromium`, then run them with `pnpm test:e2e`. Locally they reuse
-    the last build when nothing it reads (`src/` apart from unit tests, `public/`,
+    the last build when nothing it reads (`src/` apart from unit tests, `public/`, `drizzle/`,
     `next.config.ts`, `tsconfig.json`, `package.json`, the lockfile) changed since
     (`tests/build/build-state.ts`), so rerunning a spec after editing only specs starts at once;
     `E2E_REBUILD=1 pnpm test:e2e` builds anyway (e.g. after an edit saved while a build was
@@ -57,7 +69,9 @@ configurations in VS Code, which turn the time limit off (see
   - **Isolation:** every test gets its own client address (`X-Forwarded-For`, set in
     `e2e/support/test.ts`), so Better Auth's per-IP limits (3 sign-ins per 10 seconds, sign-in
     links, codes) don't carry over between tests; a test that signs in more often than that gives
-    a page another address with `useOwnClientIp`. A test that uses up state (locks, deletes or
+    a page another address with `useOwnClientIp`. The test server reads that header with the
+    default settings: `playwright.config.ts` blanks `CLIENT_IP_HEADERS` and `TRUSTED_PROXIES`, so
+    your `.env` can't change whose address a test has. A test that uses up state (locks, deletes or
     changes an account) has its own seeded account or a fresh address. The seed includes a
     company, "Adiutor Tests Paging", with more members, invite links and requests than fit on a
     page, used by the pagination tests (`e2e/tables.spec.ts`) and the accessibility and keyboard

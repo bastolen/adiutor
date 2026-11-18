@@ -10,7 +10,7 @@ import { RecentConfirmationProvider } from '@/components/auth/recent-confirmatio
 import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
 import PageHeader from '@/components/ui/page-header';
-import Pagination from '@/components/ui/pagination';
+import { paginationFooter } from '@/components/ui/pagination';
 import RowAction from '@/components/ui/row-action';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import SortMenu from '@/components/ui/sort-menu';
@@ -22,7 +22,7 @@ import { INVITATION_VALID_DAYS } from '@/lib/invitation-lifetimes';
 import type { SearchParams } from '@/lib/search-params';
 import { confirmationWindow } from '@/lib/sign-in/confirm-url';
 import { createPageUrl } from '@/lib/tables/page-url';
-import { parseTableState, showsPagination } from '@/lib/tables/table-state';
+import { parseTableState } from '@/lib/tables/table-state';
 import { INVITATIONS_TABLE, INVITE_LINKS_TABLE, STAFF_TABLE } from '@/lib/tables/tables';
 import appContext from '@/server/app-context';
 import { requireGlobalPermission } from '@/server/authz';
@@ -111,11 +111,7 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
           description={t('people.description', { count: members.total })}
           actions={<SortMenu label={t('people.rows')} options={table.sortOptions()} />}
           flush
-          footer={
-            showsPagination(members.total) && (
-              <Pagination {...table.pagination(members, t('people.rows'))} />
-            )
-          }
+          footer={paginationFooter(table, members, t('people.rows'))}
         >
           <Table caption={table.caption(t('people.caption'), members)}>
             <thead>

@@ -30,8 +30,8 @@ export const generateMetadata = globalPermissionMetadata(
 
 /**
  * Checks the permission, then shows the heading and the form (text from
- * `admin.addCompany`; the form is a client component, so `admin` and
- * `people` go through `ClientMessages`).
+ * `admin.addCompany`; the form is a client component, so
+ * `admin.addCompany.form` and `people` go through `ClientMessages`).
  *
  * @returns The heading and the form card.
  */

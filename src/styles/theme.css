@@ -215,5 +215,22 @@
 /**
  * `dark:` variant: applies when dark mode is active, whether chosen by the
  * user or taken from the system setting.
+ *
+ * With a theme on `<html>` (`data-theme`, set by the inline script), it
+ * follows that. Without one (no JavaScript, or storage the script can't
+ * read), the colours above follow the system setting through
+ * `light-dark()`, so the variant follows the system setting too: otherwise
+ * a dark page would show what's meant for a light one, like the logo with
+ * dark text.
  */
-@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+@custom-variant dark {
+  &:where([data-theme='dark'], [data-theme='dark'] *) {
+    @slot;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme]), :root:not([data-theme]) *) {
+      @slot;
+    }
+  }
+}

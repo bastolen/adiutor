@@ -14,7 +14,7 @@ import type { MessageKeys, NestedKeyOf } from 'use-intl/core';
 import { z } from 'zod';
 
 import { COMPANY_ROLES, isRole, PLATFORM_ROLES } from './authz/roles';
-import { hasControlCharacter, hasHiddenCharacter } from './character-rules';
+import { hasControlCharacter, hasHiddenCharacter, hasVisibleCharacter } from './character-rules';
 import { FOLLOW_DEFAULT, LOCALES } from './i18n/locales';
 import type { Messages } from './i18n/messages';
 import {
@@ -176,7 +176,9 @@ function withCharacterSafety<T extends z.ZodType<string>>(schema: T, field: Name
 
 /**
  * Adds the shared display-name rules to a string schema: the character rules
- * ({@link withCharacterSafety}) and no web addresses, since these names are
+ * ({@link withCharacterSafety}), at least one character that can be seen
+ * (`hasVisibleCharacter`: a name of only joiners or accents would show as
+ * nothing in lists and emails) and no web addresses, since these names are
  * quoted in emails.
  *
  * @param schema - The length-checked name schema.
@@ -187,9 +189,13 @@ function withNameSafety<T extends z.ZodType<string>>(
   schema: T,
   field: Exclude<NameField, 'passkeyName' | 'impersonationReason' | 'requestTitle'>,
 ) {
-  return withCharacterSafety(schema, field).refine((value) => !containsWebAddress(value), {
-    error: `validation.${field}.webAddress` satisfies ValidationMessageKey,
-  });
+  return withCharacterSafety(schema, field)
+    .refine((value) => hasVisibleCharacter(value), {
+      error: `validation.${field}.noVisibleCharacter` satisfies ValidationMessageKey,
+    })
+    .refine((value) => !containsWebAddress(value), {
+      error: `validation.${field}.webAddress` satisfies ValidationMessageKey,
+    });
 }
 
 /**
@@ -367,6 +373,17 @@ export const requestReplySchema = multilineText({
   empty: 'validation.requestReply.empty',
   tooLong: 'validation.requestReply.tooLong',
 });
+
+/**
+ * The company a request is raised in, as the form sends it: its URL name or
+ * its ID, trimmed. It only checks that one was chosen (the select starts
+ * empty for whoever has several to choose from); which company it is, and
+ * whether its reader may see it, isn't a rule of the field.
+ */
+export const requestCompanySchema = z
+  .string({ error: 'validation.requestCompany' satisfies ValidationMessageKey })
+  .trim()
+  .min(1, { error: 'validation.requestCompany' satisfies ValidationMessageKey });
 
 /** A request's type, e.g. from the form that raises one. */
 export const requestTypeSchema = z.enum(REQUEST_TYPES, {

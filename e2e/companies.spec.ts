@@ -255,8 +255,9 @@ test('a company opens by its URL name or its ID, and moves with a new URL name',
   // A new URL name moves the page to its new address, and the old one no longer opens it.
   await page.getByLabel('URL name').fill(`${slug}-moved`);
   await page.getByRole('button', { name: 'Save changes' }).click();
-  await expect(page).toHaveURL(new RegExp(`/companies/${slug}-moved/settings\\?saved=1$`));
   await expect(toasts(page)).toContainText('Saved.');
+  // Said once: what asked for it leaves the address.
+  await expect(page).toHaveURL(new RegExp(`/companies/${slug}-moved/settings$`));
   await page.goto(`/companies/${slug}`);
   await expect(page.getByRole('heading', { level: 1, name })).toHaveCount(0);
 });

@@ -24,6 +24,7 @@ import {
   nameSchema,
   passkeyNameSchema,
   passwordSchema,
+  requestCompanySchema,
   requestDescriptionSchema,
   requestPrefixSchema,
   requestPrioritySchema,
@@ -161,6 +162,19 @@ describe('display names (person and company)', () => {
       'Alex\u{2060} Admin',
       'Alex\u{2063} Admin',
       'Alex\u{FEFF} Admin',
+      'Alex\u{34F} Admin',
+      'Alex\u{17B4} Admin',
+      'a\u{180E}',
+      'Alex\u{2065} Admin',
+      'Alex\u{206A} Admin',
+      // Fillers: letters to Unicode, blank to the eye. A name of only one shows as nothing.
+      '\u{3164}',
+      '\u{3164}\u{3164}',
+      'Alex\u{115F} Admin',
+      'Alex\u{1160} Admin',
+      'Alex\u{FFA0} Admin',
+      // Tag characters.
+      '\u{E0041}x',
       // Line and paragraph separators.
       'Alex\u{2028}Admin',
       'Alex\u{2029}Admin',
@@ -174,6 +188,55 @@ describe('display names (person and company)', () => {
     });
     // At either end they're trimmed away, like spaces.
     expect(nameSchema.parse('\u{FEFF}Alex Admin\u{2028}')).toBe('Alex Admin');
+  });
+
+  it('reject a name with nothing to see in it', () => {
+    [
+      // The joiners names need are allowed inside a name, but aren't a name.
+      '\u{200C}\u{200C}',
+      '\u{200D}\u{200D}',
+      // Accents and variation selectors change a character; alone they show nothing.
+      '\u{301}\u{301}',
+      '\u{FE0F}\u{FE0F}',
+      // A soft hyphen and a blank Braille pattern.
+      '\u{AD}\u{AD}',
+      '\u{2800}\u{2800}',
+    ].forEach((name) => {
+      expect(
+        nameSchema.safeParse(name).error?.issues.map((issue) => issue.message),
+        name,
+      ).toEqual(['validation.name.noVisibleCharacter']);
+      expect(
+        companyNameSchema.safeParse(name).error?.issues.map((issue) => issue.message),
+        name,
+      ).toEqual(['validation.companyName.noVisibleCharacter']);
+      expect(
+        staffNameSchema.safeParse(name).error?.issues.map((issue) => issue.message),
+        name,
+      ).toEqual(['validation.staffName.noVisibleCharacter']);
+    });
+    // One such character is no name either.
+    expect(nameSchema.safeParse('\u{200C}').success).toBe(false);
+    // A filler is refused as a hidden character first: that message says what to remove.
+    expect(nameSchema.safeParse('\u{3164}').error?.issues[0]?.message).toBe(
+      'validation.name.hiddenCharacters',
+    );
+  });
+
+  it('accept names whose joiners, accents and emoji come with something to see', () => {
+    [
+      // Persian "mi-khaham", with a zero-width non-joiner (U+200C) after the prefix.
+      '\u{645}\u{6CC}\u{200C}\u{62E}\u{648}\u{627}\u{647}\u{645}',
+      // An emoji made with the variation selector (U+FE0F), alone and after a name.
+      '\u{2764}\u{FE0F}\u{2764}\u{FE0F}',
+      'Adiutor Tests \u{2764}\u{FE0F}',
+      // A letter with a combining accent.
+      'Zoe\u{308}',
+    ].forEach((name) => {
+      expect(nameSchema.safeParse(name).success, name).toBe(true);
+      expect(companyNameSchema.safeParse(name).success, name).toBe(true);
+      expect(staffNameSchema.safeParse(name).success, name).toBe(true);
+    });
   });
 
   it('reject web addresses written with look-alike dots, full-width letters or hidden characters', () => {
@@ -313,6 +376,23 @@ describe('requestDescriptionSchema and requestReplySchema', () => {
     ['', '  \r\n ', '\u200b\u0000'].forEach((text) => {
       expect(requestDescriptionSchema.safeParse(text).success, text).toBe(false);
       expect(requestReplySchema.safeParse(text).success, text).toBe(false);
+    });
+  });
+});
+
+describe('requestCompanySchema', () => {
+  it('takes a URL name or an ID as it was chosen, trimmed', () => {
+    expect(requestCompanySchema.parse(' adiutor-tests ')).toBe('adiutor-tests');
+    expect(requestCompanySchema.parse('01890a5d-ac96-774b-bcce-b302099a8057')).toBe(
+      '01890a5d-ac96-774b-bcce-b302099a8057',
+    );
+  });
+
+  it('asks for a company when none was chosen', () => {
+    ['', '   ', undefined, null].forEach((value) => {
+      expect(requestCompanySchema.safeParse(value).error?.issues[0]?.message).toBe(
+        'validation.requestCompany',
+      );
     });
   });
 });

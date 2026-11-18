@@ -1,7 +1,7 @@
 /**
  * @file Tests for the alert: its role per tone, focus on show, the optional
  * dismiss button (after which focus moves to the main content), and
- * `alsoToast`.
+ * `alsoToast`, which raises no toast inside a dialog.
  */
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import Alert from './alert';
+import { InsideDialog } from './inside-dialog';
 import { Toaster } from './toast';
 
 describe('Alert', () => {
@@ -123,5 +124,27 @@ describe('Alert', () => {
       </>,
     );
     expect(toasts.querySelectorAll('li')).toHaveLength(1);
+  });
+
+  it('raises no toast with alsoToast inside a dialog, where the message stays inline', async () => {
+    render(
+      <>
+        <Toaster />
+        <InsideDialog>
+          <Alert tone="error" focusOnShow alsoToast>
+            That code didn’t work.
+          </Alert>
+        </InsideDialog>
+      </>,
+    );
+
+    expect(screen.getByRole('alert')).toHaveFocus();
+    // Give the toast the moment it would take to show.
+    await new Promise((resolve) => {
+      setTimeout(resolve, 50);
+    });
+    const toasts = screen.getByRole('region', { name: /^Notifications/ });
+    expect(toasts).not.toHaveTextContent('That code didn’t work.');
+    expect(toasts.querySelectorAll('li')).toHaveLength(0);
   });
 });

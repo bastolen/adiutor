@@ -12,10 +12,10 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
 import confirmChangeUrl from '@/lib/sign-in/confirm-url';
 import type { PasskeySummary } from '@/server/auth/security';
 
+import ConfirmationWindow from '../../../../../tests/ui/confirmation-window';
 import PasskeysCard from './passkeys-card';
 
 /** The step-up page, coming back to this card on the Security page. */
@@ -57,16 +57,10 @@ const laptop: PasskeySummary = {
  * @param windowOpen - Whether the confirmation window is still open.
  */
 function renderCard(windowOpen: boolean) {
-  const serverTime = Date.now();
   render(
-    <RecentConfirmationProvider
-      required
-      confirmedUntil={windowOpen ? serverTime + 10 * 60 * 1000 : null}
-      serverTime={serverTime}
-      returnTo="/account/security"
-    >
+    <ConfirmationWindow windowOpen={windowOpen} returnTo="/account/security">
       <PasskeysCard passkeys={[laptop]} removeLastBlockedReason={null} />
-    </RecentConfirmationProvider>,
+    </ConfirmationWindow>,
   );
 }
 

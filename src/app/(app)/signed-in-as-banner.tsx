@@ -6,6 +6,9 @@
  * stays at the top of the content while the page scrolls (below the small
  * screens' top bar), and marks the tab as signed in as someone
  * (`SignedInAsMarker`), so controls that change something render disabled.
+ * The marker also measures the banner, so scrolling keeps focused controls
+ * and anchors clear of it (`--sticky-top` in `globals.css`, which knows
+ * where the banner sticks: keep its `top-16 lg:top-4` in step with it).
  * Once it ends by itself (its time, or the rules), the tab loads afresh
  * (`ReloadWhenSignedInAsEnds`).
  * Text from `navigation.signedInAs`.

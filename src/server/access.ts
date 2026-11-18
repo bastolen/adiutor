@@ -3,7 +3,7 @@
  * being acted on and works out what the actor may do there, and checks those
  * rights again inside a change's transaction, as they are by then.
  */
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, type SQL } from 'drizzle-orm';
 
 import type { Database, DatabaseTransaction } from '@/db';
 import { company, membership, user } from '@/db/schema';
@@ -17,7 +17,7 @@ import {
   type Permission,
 } from '@/lib/authz/permissions';
 import type { PlatformRole } from '@/lib/authz/roles';
-import { idSchema } from '@/lib/validation';
+import { idSchema, slugSchema } from '@/lib/validation';
 
 import { type Actor, loadActor } from './actor';
 import { forbiddenError, notFoundError, ServiceError } from './errors';
@@ -41,13 +41,35 @@ export interface CompanyAccess {
 }
 
 /**
+ * The condition that finds a company by what its address names it with: its
+ * ID or its URL name, trimmed and in any case. Only what can be one of the
+ * two reaches the database. Anything else (a URL name is lower-case letters,
+ * digits and single dashes, `slugSchema`) names no company, and a character
+ * Postgres refuses in a query, such as NUL from `/companies/%00`, would be an
+ * error instead of "not found".
+ *
+ * @param companyRef - The company's ID or URL name, as given.
+ * @returns The condition, or `null` when it can't name a company.
+ */
+function companyNamedBy(companyRef: string): SQL | null {
+  const reference = companyRef.trim().toLowerCase();
+  const id = idSchema.safeParse(reference);
+  if (id.success) {
+    return eq(company.id, id.data);
+  }
+  const urlName = slugSchema.safeParse(reference);
+  return urlName.success ? eq(company.slug, urlName.data) : null;
+}
+
+/**
  * Loads a company and the actor's permissions in it. Companies the actor may
  * not see are reported as not found, so their existence isn't revealed.
  *
  * The company can be named by its ID or its URL name (`company.slug`, in any
  * case), since both work in its address (`/companies/<id>` and
  * `/companies/<URL name>`). A URL name never looks like an ID
- * (`slugSchema`), so the two can't be confused.
+ * (`slugSchema`), so the two can't be confused. A reference that can be
+ * neither is not found without asking the database ({@link companyNamedBy}).
  *
  * @param db - Database client.
  * @param actor - The acting user.
@@ -60,13 +82,11 @@ export async function getCompanyAccess(
   actor: Actor,
   companyRef: string,
 ): Promise<CompanyAccess> {
-  const byId = idSchema.safeParse(companyRef);
-  const [found] = await db
-    .select()
-    .from(company)
-    .where(
-      byId.success ? eq(company.id, byId.data) : eq(company.slug, companyRef.trim().toLowerCase()),
-    );
+  const named = companyNamedBy(companyRef);
+  if (!named) {
+    throw notFoundError();
+  }
+  const [found] = await db.select().from(company).where(named);
   if (!found) {
     throw notFoundError();
   }
@@ -222,6 +242,19 @@ export interface LockedUser {
   deactivatedAt: Date | null;
 }
 
+/** What {@link assertStillManages} found inside the change's transaction. */
+export interface StillManaged {
+  /** The locked user rows, by ID (the actor's and `alsoLock`'s that still exist). */
+  users: Map<string, LockedUser>;
+  /**
+   * When the company acted on was deactivated, as the transaction read it
+   * (not locked); `null` while it's active, and for the staff. For changes a
+   * deactivated company refuses from everyone, the staff included, whose
+   * rights don't depend on it: a request's (`changeRequest`, `raiseRequest`).
+   */
+  companyDeactivatedAt: Date | null;
+}
+
 /** Options for {@link assertStillManages}. */
 export interface StillManagesOptions {
   /**
@@ -265,24 +298,35 @@ export interface StillManagesOptions {
  * company's own row is read, not locked: deactivating a company revokes
  * nothing, so acting just before it is no different.
  *
+ * What it read of the company is handed back (`companyDeactivatedAt`), so a
+ * change that a deactivated company refuses from the staff too can refuse
+ * on it without reading the row again. That narrows the time in which such a
+ * change can still land after a deactivation to the rest of its
+ * transaction; it doesn't close it. Closing it would take a lock on the
+ * company's row, and company rows are locked before user rows (see "Lock
+ * order" in `docs/security-measures.md`): taking one here, after the user
+ * rows, would invite deadlocks.
+ *
  * @param tx - The change's transaction.
- * @param actor - The acting user, as the request loaded them.
+ * @param actor - The acting user, as the request loaded them. Only their ID is read (their
+ *   rights come from the locked rows), so it also takes whoever else a change's rights depend
+ *   on: the creator of an invite link whose claim is undone (`claimInviteLink`).
  * @param companyId - The company acted on (an ID already checked), or `null` for staff.
  * @param permission - The permission the change needs.
  * @param options - Options.
  * @param options.asStaff - Check staff rights only (see {@link StillManagesOptions}).
  * @param options.alsoLock - Other users to lock with the actor (see {@link StillManagesOptions}).
- * @returns The locked user rows, by ID (the actor's and `alsoLock`'s that still exist).
+ * @returns The locked user rows, and when the company was deactivated, as read just now.
  * @throws {ServiceError} `forbidden` when the actor is gone, deactivated or without the permission
  *   by now; `not_found` when the company is gone.
  */
 export async function assertStillManages(
   tx: DatabaseTransaction,
-  actor: Actor,
+  actor: Pick<Actor, 'id'>,
   companyId: string | null,
   permission: Permission,
   { asStaff = false, alsoLock = [] }: StillManagesOptions = {},
-): Promise<Map<string, LockedUser>> {
+): Promise<StillManaged> {
   // One statement, in ID order: the actor and anyone the change is about.
   const rows = await tx
     .select({ id: user.id, platformRole: user.platformRole, deactivatedAt: user.deactivatedAt })
@@ -302,12 +346,9 @@ export async function assertStillManages(
   }
 
   let permissions: Set<Permission>;
+  let companyDeactivatedAt: Date | null = null;
   if (companyId === null) {
-    permissions = getPermissions({
-      platformRole: self.platformRole,
-      companyRole: null,
-      company: null,
-    });
+    permissions = getGlobalPermissions(self);
   } else {
     // A new statement, after the user rows: memberships come after users in the lock order.
     const [own] = asStaff
@@ -324,12 +365,37 @@ export async function assertStillManages(
     if (!found) {
       throw notFoundError();
     }
+    companyDeactivatedAt = found.deactivatedAt;
     permissions = getPermissions({
       platformRole: self.platformRole,
       companyRole: own?.role ?? null,
-      company: { deactivated: found.deactivatedAt !== null },
+      company: { deactivated: companyDeactivatedAt !== null },
     });
   }
   assertPermission(permissions, permission);
-  return locked;
+  return { users: locked, companyDeactivatedAt };
+}
+
+/**
+ * Checks again, inside a change's transaction, that the actor still manages
+ * the people the change is about: the staff (`staff:manage`) or a company's
+ * members (`members:manage`), whichever `companyId` names. It is
+ * {@link assertStillManages} with the permission of {@link managePermission},
+ * so a call can't pair `staff:manage` with a company, and like it must be the
+ * first statement of the transaction. For invitations and invite links.
+ *
+ * @param tx - The change's transaction.
+ * @param actor - The acting user, or whoever else the change's rights depend on (only their ID
+ *   is read; see {@link assertStillManages}).
+ * @param companyId - The company acted on (an ID already checked), or `null` for staff.
+ * @returns The locked user rows, and when the company was deactivated, as read just now.
+ * @throws {ServiceError} `forbidden` when the actor is gone, deactivated or without the permission
+ *   by now; `not_found` when the company is gone.
+ */
+export async function assertStillManagesPeople(
+  tx: DatabaseTransaction,
+  actor: Pick<Actor, 'id'>,
+  companyId: string | null,
+): Promise<StillManaged> {
+  return assertStillManages(tx, actor, companyId, managePermission(companyId));
 }

@@ -8,26 +8,14 @@
  * docs/decisions/0017-staff-sign-in-as-users.md.
  */
 import { getTranslations } from 'next-intl/server';
-import type { ReactNode } from 'react';
 
 import Alert from '@/components/ui/alert';
-import TextLink from '@/components/ui/text-link';
 import type { PersonalDataShown } from '@/lib/authz/impersonation';
 import { mustSetUpMfa } from '@/lib/authz/mfa';
 import displayName from '@/lib/display-name';
 import type { Actor } from '@/server/actor';
 
-/**
- * Makes the `<link>` tag of the note a link to the user's page.
- *
- * @param userId - The user's ID.
- * @returns The renderer `t.rich` takes for the tag.
- */
-function userLink(userId: string) {
-  return function UserLink(chunks: ReactNode) {
-    return <TextLink href={`/admin/users/${userId}`}>{chunks}</TextLink>;
-  };
-}
+import { userLink } from '../_people/rich-tags';
 
 /**
  * Says the pages are the user's, read-only; which details are left out, if

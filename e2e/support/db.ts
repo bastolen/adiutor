@@ -12,7 +12,7 @@
  * Each opens its own short connection to the test database (`withTestDatabase`).
  * Resetting and seeding the database is `seed.ts`.
  */
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, like, sql } from 'drizzle-orm';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Client } from 'pg';
 
@@ -35,7 +35,7 @@ import storeRequests from '../../tests/database/store-requests';
 const INVITE_LINK_LIFETIME_MS = 7 * 24 * 60 * 60_000;
 
 /** A Drizzle client on the test database. */
-type TestDatabase = NodePgDatabase<typeof schema>;
+export type TestDatabase = NodePgDatabase<typeof schema>;
 
 /**
  * Runs a function on the test database through its own short connection,
@@ -45,7 +45,7 @@ type TestDatabase = NodePgDatabase<typeof schema>;
  * @param run - What to do with the database.
  * @returns What `run` returns.
  */
-async function withTestDatabase<T>(run: (db: TestDatabase) => Promise<T>): Promise<T> {
+export async function withTestDatabase<T>(run: (db: TestDatabase) => Promise<T>): Promise<T> {
   const client = new Client({ connectionString: getTestDatabaseUrl() });
   await client.connect();
   try {
@@ -111,6 +111,24 @@ export async function findUserId(email: string): Promise<string> {
       throw new Error(`No user ${email}`);
     }
     return found.id;
+  });
+}
+
+/**
+ * Forgets what the rate limits counted for a user (their per-user limits,
+ * such as wrong current passwords), so a test that runs into one on purpose
+ * starts from none, also when it's retried: what an earlier try counted
+ * would otherwise add up to the limit, and the retry would fail on "too many
+ * attempts" instead of on what it checks.
+ *
+ * @param email - The user's email address.
+ */
+export async function forgetLimitsOf(email: string): Promise<void> {
+  const userId = await findUserId(email);
+  await withTestDatabase(async (db) => {
+    await db
+      .delete(schema.rateLimitBucket)
+      .where(like(schema.rateLimitBucket.key, `%:user:${userId}`));
   });
 }
 

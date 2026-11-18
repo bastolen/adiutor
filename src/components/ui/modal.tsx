@@ -1,6 +1,7 @@
 /**
  * @file Modal dialog for short tasks (forms, setup steps), built on Radix
- * Dialog.
+ * Dialog. Its content knows it's inside a dialog (`InsideDialog`), so an
+ * error it shows inline raises no toast above the dialog.
  */
 'use client';
 
@@ -10,6 +11,7 @@ import { Dialog } from 'radix-ui';
 import { type ReactNode, useRef } from 'react';
 
 import Button from './button';
+import { InsideDialog } from './inside-dialog';
 
 /**
  * Props for {@link Modal}.
@@ -31,6 +33,9 @@ interface ModalProps {
  * A dialog following the WAI-ARIA dialog pattern: focus moves into it and
  * stays there, Escape or the close button closes it, and focus returns to
  * what opened it (also when it's opened from code rather than a trigger).
+ * An error shown in it (`ResultAlert`, `Alert`'s `alsoToast`) stays inline,
+ * without a toast: a toast would be a layer above the dialog and take the
+ * first Escape, so one Escape always closes the dialog.
  * Use `ConfirmDialog` for yes/no questions instead.
  *
  * @param props - Dialog props.
@@ -85,7 +90,7 @@ export default function Modal({
               </Button>
             </Dialog.Close>
           </div>
-          {children}
+          <InsideDialog>{children}</InsideDialog>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

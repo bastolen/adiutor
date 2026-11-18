@@ -5,7 +5,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { type FormEvent, useEffect, useRef } from 'react';
+import type { FormEvent } from 'react';
 
 import CodeField from '@/components/auth/code-field';
 import ResendCodeButton from '@/components/auth/resend-code-button';
@@ -16,7 +16,8 @@ import Button from '@/components/ui/button';
 import CheckboxField from '@/components/ui/checkbox-field';
 import loadFresh from '@/components/ui/load-fresh';
 import TextLink from '@/components/ui/text-link';
-import { useTransientState } from '@/components/ui/use-transient-state';
+import { usePageRestored } from '@/components/ui/use-page-restored';
+import { useOncePerVisit, useTransientState } from '@/components/ui/use-transient-state';
 import { EMAIL_CODE_MINUTES } from '@/lib/authz/mfa';
 import { getSafeRedirectPath } from '@/lib/redirect';
 import authClient from '@/lib/sign-in/auth-client';
@@ -28,15 +29,22 @@ import verifyCode, { type CodeKind } from '@/lib/sign-in/verify-code';
 /**
  * Asks for the second step: a code from the authenticator app (or a backup
  * code instead), or, without an app, an emailed code, which is sent straight
- * away. With "Trust this device", the step is skipped on this browser for 30
- * days, until the user signs out there (sign-out clears it, see
- * `cookiesToClearAtSignOut`).
+ * away. With "Trust this device", the step is skipped on this browser until
+ * 30 days after the last password sign-in there (Better Auth renews the
+ * trusted device each time it skips the step, which the label says), or until
+ * the user signs out there (sign-out clears it, see `cookiesToClearAtSignOut`).
  *
  * The form starts over whenever the page is hidden: Next keeps the page alive
  * (React's `<Activity>`), e.g. after going back to the sign-in page, and
  * whoever comes back to it mustn't find the last code, a busy button, or
  * "Trust this device" still ticked, which would trust the browser for someone
- * else. Once a code is accepted, the page the user came for loads afresh
+ * else. Coming back is usually a new sign-in: going back to the sign-in page
+ * and signing in again shows this same page again, for a code step whose
+ * code the first email doesn't hold (Better Auth keeps an emailed code with
+ * the sign-in it was asked for). So the emailed code is sent once each time
+ * the page is shown (`useOncePerVisit`), not once in the page's life; when the
+ * server says the last code still works, the form says to use that one.
+ * Once a code is accepted, the page the user came for loads afresh
  * (`loadFresh`), which keeps no page alive. A page the browser restores from
  * its back/forward cache is made usable again too.
  *
@@ -57,7 +65,6 @@ export default function TwoFactorForm() {
   const [notice, setNotice] = useTransientState<string | null>(null);
   const [sending, setSending] = useTransientState(false);
   const cooldown = useResendCooldown();
-  const sentInitialCode = useRef(false);
 
   /**
    * Shows the message for a failed request.
@@ -102,31 +109,18 @@ export default function TwoFactorForm() {
     );
   };
 
-  useEffect(() => {
-    // Send the emailed code straight away (once, also in Strict Mode).
-    if (method === 'otp' && !sentInitialCode.current) {
-      sentInitialCode.current = true;
+  // Send the emailed code straight away: once per visit (also in Strict Mode), so again when the
+  // page is shown again, which is usually for a new sign-in.
+  useOncePerVisit(() => {
+    if (method === 'otp') {
       // It shows its own errors.
       void sendCode();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Runs once on mount.
-  }, []);
+  });
 
-  useEffect(() => {
-    /**
-     * Makes the form usable again when the browser shows the page from its
-     * back/forward cache.
-     *
-     * @param event - The page being shown.
-     */
-    const reset = (event: PageTransitionEvent) => {
-      if (event.persisted) {
-        setPending(false);
-      }
-    };
-    window.addEventListener('pageshow', reset);
-    return () => window.removeEventListener('pageshow', reset);
-  }, [setPending]);
+  // Makes the form usable again when the browser shows the page from its
+  // back/forward cache.
+  usePageRestored(() => setPending(false));
 
   /**
    * Loads the page the user came for afresh (`loadFresh`), the button busy
@@ -182,7 +176,7 @@ export default function TwoFactorForm() {
       </Alert>
       {expired && (
         <Button asChild variant="secondary">
-          <TextLink href={`/auth?callbackURL=${encodeURIComponent(callbackURL)}`}>
+          <TextLink standalone href={`/auth?callbackURL=${encodeURIComponent(callbackURL)}`}>
             {t('actions.startAgain')}
           </TextLink>
         </Button>
@@ -225,7 +219,9 @@ export default function TwoFactorForm() {
             {mode === 'backup' ? t('actions.useCode') : t('actions.useBackupCode')}
           </Button>
         )}
-        <TextLink href="/auth">{t('actions.backToSignIn')}</TextLink>
+        <TextLink standalone href="/auth">
+          {t('actions.backToSignIn')}
+        </TextLink>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 /**
  * @file Tests for the link pending indicator: it shows the icon while the
  * link's page isn't loading, and a spinner in its place (without moving
- * anything) while it is.
+ * anything) while it is, leaving a wrapped label as the link's name.
  */
 import { render, screen } from '@testing-library/react';
 import Link, { useLinkStatus } from 'next/link';
@@ -26,6 +26,20 @@ function IndicatorLink() {
       <LinkPendingIndicator>
         <svg data-testid="icon" aria-hidden="true" />
       </LinkPendingIndicator>
+    </Link>
+  );
+}
+
+/**
+ * Renders a link whose whole label is inside the indicator, like the
+ * segmented filter links do.
+ *
+ * @returns The link.
+ */
+function LabelLink() {
+  return (
+    <Link href="/users?status=deactivated">
+      <LinkPendingIndicator>Deactivated</LinkPendingIndicator>
     </Link>
   );
 }
@@ -62,7 +76,7 @@ describe('LinkPendingIndicator', () => {
     it('does not hide its children', () => {
       render(<IndicatorLink />);
 
-      expect(screen.getByTestId('icon').parentElement).not.toHaveClass('invisible');
+      expect(screen.getByTestId('icon').parentElement).not.toHaveClass('opacity-0');
     });
   });
 
@@ -79,12 +93,28 @@ describe('LinkPendingIndicator', () => {
       expect(busy[0]).toContainElement(screen.getByTestId('icon'));
     });
 
-    it('keeps the children in place but invisible, so nothing moves', () => {
+    it('keeps the children in place but transparent, so nothing moves', () => {
       render(<IndicatorLink />);
 
       const icon = screen.getByTestId('icon');
       expect(icon).toBeInTheDocument();
-      expect(icon.parentElement).toHaveClass('invisible');
+      expect(icon.parentElement).toHaveClass('opacity-0');
+    });
+
+    it('never hides the children from assistive technology', () => {
+      render(<IndicatorLink />);
+
+      // `visibility: hidden` would take a wrapped label out of the accessibility tree.
+      expect(screen.getByTestId('icon').parentElement).not.toHaveClass('invisible');
+      expect(screen.getByTestId('icon').parentElement).not.toHaveClass('hidden');
+    });
+
+    it('keeps the name of a link whose label it wraps', () => {
+      render(<LabelLink />);
+
+      const link = screen.getByRole('link', { name: 'Deactivated' });
+      expect(link.querySelector('[aria-busy="true"]')).not.toBeNull();
+      expect(screen.getByText('Deactivated')).toHaveClass('opacity-0');
     });
 
     it('shows a spinner over them', () => {

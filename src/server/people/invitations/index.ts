@@ -44,3 +44,5 @@ export type {
 } from './accept';
 export { revokeInvitesWithoutManager, revokeInvitationsTo } from './revoke-on-loss';
 export type { InvitationsToRevoke } from './revoke-on-loss';
+/** The per-address lock, for the claim of an invite link that revokes its own invitation again. */
+export { lockInvitationsOf } from './locks';

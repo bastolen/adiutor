@@ -9,7 +9,7 @@ import { type ReactNode, useId, useState } from 'react';
 
 import cn from '@/lib/cn';
 
-import { fieldControl, SCREEN_GUTTER } from './styles';
+import { fieldControl, highlightedItem, SCREEN_GUTTER } from './styles';
 
 /** One option in a {@link SelectField}. */
 export interface SelectOption {
@@ -25,6 +25,23 @@ export interface SelectOption {
    * the label names the option.
    */
   icon?: ReactNode;
+  /**
+   * The language the label is written in (a BCP 47 tag such as `nl-NL`), when
+   * it isn't the page's: a language named in itself, like "Nederlands". It's
+   * set on the label in the list and in the closed select, so screen readers
+   * say it in that language (WCAG 3.1.2).
+   */
+  lang?: string;
+}
+
+/**
+ * An option's label, marked with its language when it has one.
+ *
+ * @param option - The option.
+ * @returns The label.
+ */
+function optionLabel(option: SelectOption): ReactNode {
+  return option.lang ? <span lang={option.lang}>{option.label}</span> : option.label;
 }
 
 /**
@@ -66,7 +83,10 @@ interface SelectFieldProps {
  * the choice only changes when an option is picked (Enter, Space or click);
  * arrow keys and typing just move through the list, so nothing is saved by
  * accident. Option descriptions are shown in the list and are part of the
- * option's name (label first); the closed select shows only the label.
+ * option's name (label first); the closed select shows only the label. A
+ * label in another language than the page's carries its `lang`, in the list
+ * and in the closed select. The option the keyboard or pointer is on is
+ * filled and outlined (`highlightedItem`).
  * While `busy`, it stays focusable but doesn't open.
  *
  * @param props - Select props.
@@ -154,7 +174,10 @@ export default function SelectField({
                     aria-labelledby={
                       option.description ? `${optionLabelId} ${optionDescriptionId}` : undefined
                     }
-                    className="relative flex min-h-9 flex-col justify-center rounded-md py-2 pr-3 pl-8 text-sm outline-none select-none data-disabled:opacity-50 data-highlighted:bg-raised-muted"
+                    className={cn(
+                      'relative flex min-h-9 flex-col justify-center rounded-md py-2 pr-3 pl-8 text-sm select-none data-disabled:opacity-50',
+                      highlightedItem,
+                    )}
                   >
                     <Select.ItemIndicator className="absolute top-2.5 left-2 inline-flex">
                       <Check aria-hidden="true" className="size-4 text-highlight" />
@@ -164,10 +187,10 @@ export default function SelectField({
                         {option.icon ? (
                           <span className="inline-flex items-center gap-2">
                             {option.icon}
-                            {option.label}
+                            {optionLabel(option)}
                           </span>
                         ) : (
-                          option.label
+                          optionLabel(option)
                         )}
                       </Select.ItemText>
                     </span>

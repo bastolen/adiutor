@@ -6,8 +6,8 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import type { ReactNode } from 'react';
 
+import accountTag from '@/components/auth/account-tag';
 import AuthDivider from '@/components/ui/auth-divider';
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
@@ -25,17 +25,6 @@ interface AcceptInvitationProps {
   token: string;
   /** Email of the signed-in user, or `null` when signed out. */
   signedInEmail: string | null;
-}
-
-/**
- * Shows the signed-in account's address in a sentence, emphasised (the
- * `<account>` tag of `auth.invite.signedInAs`).
- *
- * @param chunks - The address, where the sentence places it.
- * @returns The emphasised address.
- */
-function accountTag(chunks: ReactNode) {
-  return <span className="font-medium text-foreground">{chunks}</span>;
 }
 
 /**

@@ -36,6 +36,8 @@ import {
   SUPPORT_STAFF,
 } from './support/fixtures';
 import {
+  confirmWithAuthenticator,
+  fillAndSubmitSignIn,
   freshAddress,
   openSignInLink,
   randomClientIp,
@@ -210,10 +212,7 @@ test('a company user with MFA confirms it after an email link', async ({ page })
   await signInWithEmailLink(page, STEP_UP_CLIENT.email);
   await expect(page).toHaveURL(/\/auth\/verify\?callbackURL=%2Fdashboard/);
   await expect(page.getByText('You turned on MFA')).toBeVisible();
-  await page
-    .getByRole('textbox', { name: 'Code', exact: true })
-    .fill(codeForSecret(STEP_UP_CLIENT.totpSecret));
-  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
+  await confirmWithAuthenticator(page, STEP_UP_CLIENT.totpSecret);
   await expect(page).toHaveURL('/dashboard');
 });
 
@@ -261,10 +260,7 @@ test("a Manager's email-link session can't add a way in until it's confirmed", a
   ).toMatchObject({ status: 403 });
 
   // Confirmed with the authenticator app, adding a passkey is allowed.
-  await page
-    .getByRole('textbox', { name: 'Code', exact: true })
-    .fill(codeForSecret(STEP_UP_MANAGER.totpSecret));
-  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
+  await confirmWithAuthenticator(page, STEP_UP_MANAGER.totpSecret);
   await expect(page).toHaveURL('/dashboard');
   expect((await callAuth(page, 'GET', '/passkey/generate-register-options')).status).toBe(200);
 });
@@ -317,9 +313,7 @@ test('changing how you sign in needs a confirmation from the last 15 minutes', a
   await clickUntil(newBackupCodes, () =>
     expect(page).toHaveURL(CONFIRM_SIGN_IN_CHANGE_URL, { timeout: 2_000 }),
   );
-  await expect(
-    page.getByText('Changing how you sign in needs a confirmation from the last 15 minutes.'),
-  ).toBeVisible();
+  await expect(page.getByText('This needs a confirmation from the last 15 minutes.')).toBeVisible();
 
   // An authenticator code can't be used twice, so wait for the next one.
   await expect
@@ -328,10 +322,7 @@ test('changing how you sign in needs a confirmation from the last 15 minutes', a
       intervals: [1_000],
     })
     .not.toBe(signInCode);
-  await page
-    .getByRole('textbox', { name: 'Code', exact: true })
-    .fill(codeForSecret(RECENT_MFA_CLIENT.totpSecret));
-  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
+  await confirmWithAuthenticator(page, RECENT_MFA_CLIENT.totpSecret);
   // Checking the code and rendering the Security page again can take a while in a busy suite.
   // Back on the card where they started, with focus on its heading.
   await expect(page).toHaveURL('/account/security#two-step', { timeout: 15_000 });
@@ -562,9 +553,7 @@ test('wrong passwords pause password sign-in for an address, and a password rese
 
   // The sign-in page says what still works.
   await page.goto('/auth');
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(PAUSED_CLIENT.password);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await fillAndSubmitSignIn(page, { email, password: PAUSED_CLIENT.password });
   await expect(
     page.getByRole('alert').filter({ hasText: 'Password sign-in for this address is paused' }),
   ).toContainText('Sign in with an email link or a passkey, or reset your password');

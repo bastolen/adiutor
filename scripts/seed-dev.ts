@@ -286,6 +286,30 @@ async function main(): Promise<number> {
       };
 
       /**
+       * Sets up an authenticator app for a user, storing its secret and backup
+       * codes encrypted, as Better Auth does.
+       *
+       * @param userId - The user.
+       * @param rawSecret - The authenticator's setup key.
+       * @param backupCodes - The backup codes they hold.
+       */
+      const addAuthenticator = async (
+        userId: string,
+        rawSecret: string,
+        backupCodes: string[] = [],
+      ) => {
+        await tx.insert(schema.twoFactor).values({
+          userId,
+          secret: await symmetricEncrypt({ key: encryptionSecret, data: rawSecret }),
+          backupCodes: await symmetricEncrypt({
+            key: encryptionSecret,
+            data: JSON.stringify(backupCodes),
+          }),
+          verified: true,
+        });
+      };
+
+      /**
        * Puts a user on the staff with a platform role.
        *
        * @param userId - The user.
@@ -330,24 +354,11 @@ async function main(): Promise<number> {
         lastActiveMinutesAgo: 3,
       });
       await addToStaff(admin, 'platform_admin');
-      await tx.insert(schema.twoFactor).values({
-        userId: admin,
-        secret: await symmetricEncrypt({ key: encryptionSecret, data: ADMIN_TOTP_SECRET }),
-        backupCodes: await symmetricEncrypt({
-          key: encryptionSecret,
-          data: JSON.stringify(ADMIN_BACKUP_CODES),
-        }),
-        verified: true,
-      });
+      await addAuthenticator(admin, ADMIN_TOTP_SECRET, ADMIN_BACKUP_CODES);
 
       const manager = await addUser('manager@adiutor.test', 'Morgan Manager', { twoFactor: true });
       await addToStaff(manager, 'manager');
-      await tx.insert(schema.twoFactor).values({
-        userId: manager,
-        secret: await symmetricEncrypt({ key: encryptionSecret, data: MANAGER_TOTP_SECRET }),
-        backupCodes: await symmetricEncrypt({ key: encryptionSecret, data: JSON.stringify([]) }),
-        verified: true,
-      });
+      await addAuthenticator(manager, MANAGER_TOTP_SECRET);
       await addToStaff(
         await addUser('manager.email@adiutor.test', 'Mel Manager', { twoFactor: true }),
         'manager',
@@ -383,12 +394,7 @@ async function main(): Promise<number> {
       const alphaAdmin = await addUser('alpha.admin@adiutor.test', 'Avery Alpha', {
         twoFactor: true,
       });
-      await tx.insert(schema.twoFactor).values({
-        userId: alphaAdmin,
-        secret: await symmetricEncrypt({ key: encryptionSecret, data: ALPHA_ADMIN_TOTP_SECRET }),
-        backupCodes: await symmetricEncrypt({ key: encryptionSecret, data: JSON.stringify([]) }),
-        verified: true,
-      });
+      await addAuthenticator(alphaAdmin, ALPHA_ADMIN_TOTP_SECRET);
       await addMember(alpha, alphaAdmin, 'admin');
       const alphaClient = await addUser('alpha.client@adiutor.test', 'Casey Client', {
         twoFactor: true,

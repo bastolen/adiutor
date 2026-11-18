@@ -13,7 +13,14 @@ import {
   SESSIONS_CLIENT,
   UNVERIFIED_USER,
 } from './support/fixtures';
-import { openUser, signIn, submitPassword, toasts, useOwnClientIp } from './support/helpers';
+import {
+  fillAndSubmitSignIn,
+  openUser,
+  signIn,
+  submitPassword,
+  toasts,
+  useOwnClientIp,
+} from './support/helpers';
 import { countEmails, linkIn, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
 import { codeForSecret } from './support/totp';
@@ -95,9 +102,7 @@ test('a user deactivates their account and an Admin reactivates it', async ({ pa
   // Signing in is refused (from an address of its own: this is the third sign-in in seconds).
   await useOwnClientIp(page);
   await page.goto('/auth');
-  await page.getByLabel('Email').fill(DEACTIVATE_CLIENT.email);
-  await page.getByLabel('Password').fill(DEACTIVATE_CLIENT.password);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await fillAndSubmitSignIn(page, DEACTIVATE_CLIENT);
   await expect(
     page.getByRole('alert').filter({ hasText: 'This account is deactivated.' }),
   ).toBeVisible();
@@ -128,7 +133,9 @@ test('a user signs out their other devices, which also forgets trusted browsers'
   await other
     .getByRole('textbox', { name: 'Code', exact: true })
     .fill(codeForSecret(SESSIONS_CLIENT.totpSecret));
-  await other.getByLabel('Trust this device for 30 days').check();
+  await other
+    .getByLabel('Trust this device (until 30 days after your last password sign-in here)')
+    .check();
   await other.getByRole('button', { name: 'Verify and sign in' }).click();
   await expect(other).toHaveURL('/dashboard');
   await signIn(page, SESSIONS_CLIENT);
@@ -137,13 +144,20 @@ test('a user signs out their other devices, which also forgets trusted browsers'
   const devices = page.getByRole('table', { name: 'Your signed-in devices' });
   await expect(devices.getByRole('row')).toHaveCount(3);
   await expect(devices.getByText('This device')).toBeVisible();
-  await page.getByRole('button', { name: 'Sign out other devices' }).click();
+  const signOutOthers = page
+    .getByRole('main')
+    .getByRole('button', { name: 'Sign out other devices' });
+  await signOutOthers.focus();
+  await page.keyboard.press('Enter');
   await page
     .getByRole('alertdialog')
     .getByRole('button', { name: 'Sign out other devices' })
     .click();
   await expect(toasts(page)).toContainText('Signed out on 1 other device.');
   await expect(devices.getByRole('row')).toHaveCount(2);
+  // No other device is left, so the button is off, yet it keeps focus: disabled, it would drop it.
+  await expect(signOutOthers).toHaveAttribute('aria-disabled', 'true');
+  await expect(signOutOthers).toBeFocused();
 
   await other.goto('/dashboard');
   await expect(other).toHaveURL(/\/auth/);

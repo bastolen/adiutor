@@ -33,7 +33,9 @@ export const AUTH_GUARD_LIMITS = {
   /**
    * One emailed code per user per half a code's lifetime, setting up
    * included: a new one can't be asked for while the last still works for a
-   * while. Using a code ends the wait (`endEmailCodeCooldown`).
+   * while. Using a code ends the wait, and so does a password sign-in that
+   * starts a new code step, which the last code can't be used for
+   * (`endEmailCodeCooldown`).
    */
   emailCodeCooldown: { limit: 1, windowSeconds: EMAIL_CODE_RESEND_SECONDS },
 } as const satisfies Record<string, RateLimitRule>;
@@ -137,11 +139,14 @@ export async function limitEmailCode(
 }
 
 /**
- * Ends the wait for a new emailed code once a code was used (the after hook,
- * for a code Better Auth accepted): the wait is there so no one asks for
- * codes while one is still out, and a used code isn't.
+ * Ends the wait for a new emailed code once the last one can't be used any
+ * more: it was used (the after hook, for a code Better Auth accepted), or a
+ * password sign-in started a new code step (`afterPasswordSignIn`), which
+ * Better Auth keeps its own code for. The wait is there so no one asks for
+ * codes while one is still out, and such a code isn't. The number of codes
+ * per user (`emailCodesPerUser`) is never reset here.
  *
- * @param userId - Whose code was used.
+ * @param userId - Whose wait ends.
  */
 export async function endEmailCodeCooldown(userId: string): Promise<void> {
   await resetRateLimit(db, KEYS.emailCodeCooldown(userId));

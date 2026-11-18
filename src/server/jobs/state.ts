@@ -36,6 +36,22 @@ export interface JobState {
 }
 
 /**
+ * Whether a job is paused: a pause is set and the job can be paused. A pause
+ * only counts for a job that can be paused (so one from before the job
+ * became unpausable doesn't stop it).
+ *
+ * @param state - The job's state, or `undefined` when it never ran.
+ * @param pausable - Whether the job can be paused.
+ * @returns `true` when the job is paused.
+ */
+export function isPaused(
+  state: Pick<JobState, 'pausedAt'> | undefined,
+  pausable: boolean,
+): boolean {
+  return pausable && Boolean(state?.pausedAt);
+}
+
+/**
  * Reads the state of every job that has one (jobs that never ran have none).
  *
  * @param db - Database client.

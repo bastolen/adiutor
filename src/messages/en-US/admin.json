@@ -116,7 +116,8 @@
           "description": "They become a member right away, with the role you choose, and get an email.",
           "confirmLabel": "Add to company",
           "company": "Company",
-          "role": "Role"
+          "role": "Role",
+          "accountDeactivated": "This account is deactivated, so it can't be added to a company. Reactivate it first."
         },
         "caption": "Companies of {name}",
         "columns": {
@@ -218,11 +219,6 @@
         "reasonLabel": "Reason (optional)",
         "reasonHint": "For example, the request you're looking into. Only staff who see the audit log can read it.",
         "refused": {
-          "staffAdmin": "Nobody can sign in as a staff Admin.",
-          "staff": "Only staff Admins can sign in as staff.",
-          "companyAdmin": "Support can't sign in as a company Admin.",
-          "deactivated": "This account is deactivated, so nobody can sign in as this user.",
-          "optedOut": "This user has turned off sign-ins by staff.",
           "needsMfa": "To sign in as someone, first add a passkey or set up an authenticator app on your <link>Security page</link>."
         }
       }

@@ -14,6 +14,7 @@ import { defined } from '@/lib/defined';
 
 import Card from './card';
 import RowAction from './row-action';
+import { SignedInAsMarker } from './signed-in-as';
 import { Toaster } from './toast';
 
 /**
@@ -120,6 +121,59 @@ describe('RowAction', () => {
 
     await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
     expect(await screen.findByRole('alert')).toHaveTextContent('at least one admin');
+  });
+
+  describe('focusableWhenDisabled', () => {
+    it('keeps focus when its own action disables it, and ignores presses then', async () => {
+      const user = userEvent.setup();
+      const action = vi.fn().mockResolvedValue({ ok: true, message: 'Signed out.' });
+      /**
+       * "Sign out other devices", which its own action turns off.
+       *
+       * @param props - Harness props.
+       * @param props.none - Whether no other device is left.
+       * @returns The row action.
+       */
+      function SignOutOthers({ none }: { none: boolean }) {
+        return (
+          <RowAction
+            action={action}
+            label="Sign out other devices"
+            disabled={none}
+            focusableWhenDisabled
+            confirm={{
+              title: 'Sign out other devices?',
+              description: 'They need to sign in again.',
+            }}
+          />
+        );
+      }
+      const { rerender } = render(<SignOutOthers none={false} />);
+      const button = screen.getByRole('button', { name: 'Sign out other devices' });
+      button.focus();
+
+      // The refresh after the action: no other device is left.
+      rerender(<SignOutOthers none />);
+
+      expect(button).toHaveFocus();
+      expect(button).toBeEnabled();
+      expect(button).toHaveAttribute('aria-disabled', 'true');
+      await user.click(button);
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(action).not.toHaveBeenCalled();
+    });
+
+    it('is disabled all the same while signed in as a user', () => {
+      render(
+        <>
+          <SignedInAsMarker />
+          <RowAction action={vi.fn()} label="Sign out other devices" focusableWhenDisabled />
+        </>,
+      );
+
+      expect(screen.getByRole('button', { name: 'Sign out other devices' })).toBeDisabled();
+    });
   });
 
   describe('describedBy', () => {

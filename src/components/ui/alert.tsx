@@ -12,6 +12,7 @@ import cn from '@/lib/cn';
 
 import Button from './button';
 import restoreFocusIfLost from './focus-fallback';
+import { useInsideDialog } from './inside-dialog';
 import { useToast } from './toast';
 
 /** Icon and classes per tone. */
@@ -44,7 +45,9 @@ interface AlertProps {
   /**
    * Also show the message as a toast when it appears (in the signed-in app,
    * where a `Toaster` is mounted), e.g. for an error an action returned, which
-   * the app shows inline and as a toast. Only text messages are toasted.
+   * the app shows inline and as a toast. Only text messages are toasted, and
+   * none inside a dialog (`Modal`), where the message stays inline: a toast
+   * above the dialog would take the first Escape.
    */
   alsoToast?: boolean;
 }
@@ -62,7 +65,8 @@ interface AlertProps {
  * @param props.onDismiss - Called when dismissed; adds the dismiss button. Focus then moves to
  *   the card's heading or the main content (`restoreFocusIfLost`), not to `<body>`.
  * @param props.dismissLabel - The dismiss button's name.
- * @param props.alsoToast - Also show the message as a toast when it appears.
+ * @param props.alsoToast - Also show the message as a toast when it appears, unless it's
+ *   inside a dialog.
  * @returns The alert, or nothing when there's no message.
  */
 export default function Alert({
@@ -76,6 +80,8 @@ export default function Alert({
   const t = useTranslations('common.actions');
   const ref = useRef<HTMLDivElement>(null);
   const showToast = useToast();
+  // In a dialog the message stays inline: a toast above it would take the first Escape.
+  const insideDialog = useInsideDialog();
   // The message last toasted; cleared when the message goes, so the same one shows again later.
   const toasted = useRef<string | null>(null);
 
@@ -90,12 +96,18 @@ export default function Alert({
       toasted.current = null;
       return;
     }
-    if (!alsoToast || !showToast || typeof children !== 'string' || toasted.current === children) {
+    if (
+      !alsoToast ||
+      insideDialog ||
+      !showToast ||
+      typeof children !== 'string' ||
+      toasted.current === children
+    ) {
       return;
     }
     toasted.current = children;
     showToast(children, { tone: tone === 'error' ? 'error' : 'success' });
-  }, [alsoToast, children, showToast, tone]);
+  }, [alsoToast, children, insideDialog, showToast, tone]);
 
   if (!children) {
     return null;

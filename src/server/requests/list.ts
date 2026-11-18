@@ -4,7 +4,7 @@
  */
 import { and, count, eq, ilike, inArray, isNull, like, or, type SQL, sql } from 'drizzle-orm';
 
-import { company, request, user } from '@/db/schema';
+import { company, request } from '@/db/schema';
 import { getPermissions } from '@/lib/authz/permissions';
 import { firstRow } from '@/lib/defined';
 import {
@@ -13,6 +13,7 @@ import {
   isRequestStatusFilter,
   isRequestType,
   REQUEST_PRIORITIES,
+  type RequestAudience,
   requestNumberStartInSearch,
   type RequestPriority,
   type RequestStatus,
@@ -31,7 +32,7 @@ import { orderTerms, paginate, textOrder } from '../pagination';
 import getRequestPrefix from '../people/request-prefix';
 import getStaffName from '../people/staff-name';
 import containsPattern from '../search';
-import { type RequestPerson, requestPerson, requestScope, visibleRequests } from './access';
+import { requestAudienceIn, requestScope, visibleRequests } from './access';
 
 /** A company whose requests someone sees. */
 export interface RequestCompany {
@@ -41,8 +42,6 @@ export interface RequestCompany {
   name: string;
   /** Its URL name. */
   slug: string;
-  /** Whether it's deactivated: its requests can then only be read. */
-  deactivated: boolean;
   /** Whether they may raise a request in it. */
   canRaise: boolean;
 }
@@ -88,7 +87,6 @@ export async function listRequestCompanies(
     // The staff keep their rights in a deactivated company, but its requests are read-only.
     return {
       ...row,
-      deactivated,
       canRaise: !deactivated && permissions.has('requests:contribute'),
     };
   });
@@ -126,12 +124,14 @@ export interface RequestListItem {
   priority: RequestPriority | null;
   /** Its company. */
   company: { id: string; name: string; slug: string };
-  /** Who raised it. */
-  raisedBy: RequestPerson;
-  /** When it was raised. */
-  createdAt: Date;
   /** When it was raised, replied to or changed last. */
   lastActivityAt: Date;
+  /**
+   * How to address the reader about it: as the staff, as someone who takes
+   * part in its company, or as a follower there. The same as on the
+   * request's own page (`RequestDetail.audience`).
+   */
+  audience: RequestAudience;
 }
 
 /** A request's priority as a number, lowest first, to sort by. */
@@ -260,15 +260,12 @@ export async function listRequests(
           reopenedAt: request.reopenedAt,
           type: request.type,
           priority: request.priority,
-          createdAt: request.createdAt,
           lastActivityAt: request.lastActivityAt,
-          createdBySide: request.createdBySide,
           company: { id: company.id, name: company.name, slug: company.slug },
-          author: { id: user.id, name: user.name },
+          companyDeactivatedAt: company.deactivatedAt,
         })
         .from(request)
         .innerJoin(company, eq(request.companyId, company.id))
-        .leftJoin(user, eq(request.createdBy, user.id))
         .where(where)
         .orderBy(...order)
         .limit(limit)
@@ -276,11 +273,15 @@ export async function listRequests(
   );
   return {
     ...page,
-    items: page.items.map(({ author, createdBySide, reopenedAt, ...row }) => ({
+    items: page.items.map(({ reopenedAt, companyDeactivatedAt, ...row }) => ({
       ...row,
       reopened: reopenedAt !== null,
       priority: scope.internal ? row.priority : null,
-      raisedBy: requestPerson(author ?? { id: null, name: null }, createdBySide, actor),
+      // Per company: someone can take part in one and only follow another.
+      audience: requestAudienceIn(actor, {
+        id: row.company.id,
+        deactivatedAt: companyDeactivatedAt,
+      }),
     })),
   };
 }

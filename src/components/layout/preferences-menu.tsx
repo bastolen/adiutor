@@ -4,7 +4,10 @@
  * bottom-right corner from tablet width, and at the end of the page below
  * that, where a fixed button would cover the page's last links on a small
  * phone. Signed in, the theme is a row in the account menu and
- * the language is chosen on the account page, saved with the account.
+ * the language is chosen on the account page, saved with the account. On the
+ * pages with this button that a signed-in person reaches (the step-up page,
+ * an invitation, the not-found and error pages), a language chosen here is
+ * saved with their account too (`setLanguageAction`).
  */
 'use client';
 
@@ -54,8 +57,10 @@ import setLanguageAction from './language-action';
  * Arrow keys move through the items (left and right also within the theme
  * row), Enter or Space chooses, and Escape closes the menu and returns focus
  * to the button. Choosing another language sets the cookie (Default deletes
- * it) and reloads the page in it, so every part of the page (and pages kept
- * alive) changes at once; the button is busy until then.
+ * it), saves it with the account of whoever is signed in, and reloads the page
+ * in it, so every part of the page (and pages kept alive) changes at once; the
+ * button is busy until then. A refused choice (a staff member signed in as
+ * the user) changes nothing.
  *
  * @param props - Component props.
  * @param props.className - Where it sits below tablet width, in the page's flow (from tablet

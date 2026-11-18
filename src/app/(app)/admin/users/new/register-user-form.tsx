@@ -6,7 +6,7 @@
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import EmailLanguageField from '@/components/language/email-language-field';
 import Alert from '@/components/ui/alert';
@@ -26,6 +26,12 @@ import registerUserAction from './actions';
  * `ClientMessages` (namespace `admin`). The Email language field starts on
  * Default, so the new account follows Adiutor's default language.
  *
+ * "Add another" dismisses the result it was shown with, for good: the form
+ * that comes back is a new, empty one with focus on its email field (the
+ * button that had focus is gone), and it stays, with what's typed in it,
+ * while the next address is sent and when that one is refused. Only a new
+ * result is shown.
+ *
  * @param props - Component props.
  * @param props.defaultLocale - Adiutor's default language, named in the Default option.
  * @returns The form.
@@ -35,19 +41,32 @@ export default function RegisterUserForm({ defaultLocale }: { defaultLocale: Loc
   // Changes are turned off while a staff member is signed in as the user.
   const changesOff = useSignedInAs();
   const [result, formAction, pending, onSubmit] = useTransientActionState(registerUserAction, null);
-  // A new form after "Add another", so the old result doesn't show again.
+  // The result "Add another" was pressed on. The hook keeps returning it until the next one
+  // arrives, so it's left out by what it is, not by a flag a new submit would have to flip.
+  const [dismissed, setDismissed] = useState(result);
+  // A new form after "Add another", so it starts empty.
   const [attempt, setAttempt] = useState(0);
-  const [showResult, setShowResult] = useState(true);
+  const emailField = useRef<HTMLInputElement>(null);
+  // Set by "Add another": the new form's email field takes focus once it's there.
+  const focusEmailField = useRef(false);
+  const shown = result === dismissed ? null : result;
 
-  if (showResult && result?.ok && result.data) {
+  useEffect(() => {
+    if (focusEmailField.current) {
+      focusEmailField.current = false;
+      emailField.current?.focus();
+    }
+  }, [attempt]);
+
+  if (shown?.ok && shown.data) {
     return (
       <div className="flex flex-col items-start gap-4">
-        <Alert tone={result.data.created ? 'success' : 'info'} focusOnShow>
-          {result.message ?? null}
+        <Alert tone={shown.data.created ? 'success' : 'info'} focusOnShow>
+          {shown.message ?? null}
         </Alert>
         <div className="flex flex-wrap gap-3">
           <Button asChild>
-            <Link href={`/admin/users/${result.data.userId}`}>
+            <Link href={`/admin/users/${shown.data.userId}`}>
               {t('openUser')}
               <ArrowRight aria-hidden="true" className="size-4" />
             </Link>
@@ -55,7 +74,8 @@ export default function RegisterUserForm({ defaultLocale }: { defaultLocale: Loc
           <Button
             variant="secondary"
             onClick={() => {
-              setShowResult(false);
+              setDismissed(result);
+              focusEmailField.current = true;
               setAttempt((value) => value + 1);
             }}
           >
@@ -67,18 +87,11 @@ export default function RegisterUserForm({ defaultLocale }: { defaultLocale: Loc
   }
 
   return (
-    <form
-      key={attempt}
-      action={formAction}
-      onSubmit={(event) => {
-        setShowResult(true);
-        onSubmit(event);
-      }}
-      className="flex flex-col gap-4"
-    >
+    <form key={attempt} action={formAction} onSubmit={onSubmit} className="flex flex-col gap-4">
       <ChangesFieldset>
-        {showResult && <ResultAlert result={result} errorsOnly />}
+        <ResultAlert result={shown} errorsOnly />
         <TextField
+          ref={emailField}
           label={t('email')}
           type="email"
           name="email"

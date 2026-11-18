@@ -2,9 +2,6 @@
  * @file Changing a request's status: the staff move it along, and either
  * side marks it done, cancels it or reopens it.
  */
-import { eq } from 'drizzle-orm';
-
-import { request, requestEntry } from '@/db/schema';
 import {
   isReopening,
   mayChangeStatus,
@@ -18,7 +15,7 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { forbiddenError, ServiceError } from '../errors';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
-import { changeRequest, requestToChange, statusChange, workingPermission } from './change';
+import { changeRequest, recordStatusChange, requestToChange, workingPermission } from './change';
 
 /**
  * Changes a request's status. The staff who work on requests set any
@@ -64,18 +61,10 @@ export default async function changeRequestStatus(
     if (!mayChangeStatus(permissions, locked.status, status)) {
       throw new ServiceError('conflict', 'errors.requests.statusChanged');
     }
-    await tx.insert(requestEntry).values({
-      requestId: locked.id,
-      kind: 'status',
-      authorId: actor.id,
-      authorSide: requestSide(permissions),
-      fromValue: locked.status,
-      toValue: status,
+    await recordStatusChange(tx, locked, status, {
+      id: actor.id,
+      side: requestSide(permissions),
     });
-    await tx
-      .update(request)
-      .set(statusChange(locked.status, status))
-      .where(eq(request.id, locked.id));
     return { changed: true, reopened: isReopening(locked.status, status), status };
   });
 }

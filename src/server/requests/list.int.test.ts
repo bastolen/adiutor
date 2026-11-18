@@ -5,7 +5,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { company as companyTable, request, user } from '@/db/schema';
+import { company as companyTable, request } from '@/db/schema';
 
 import {
   actorFor,
@@ -16,6 +16,7 @@ import {
   memberActor,
   staffActor,
 } from '../../../tests/integration/helpers';
+import { getRequest } from './detail';
 import { listRequestCompanies, listRequests } from './list';
 import { ctx, db, storeRequest } from './test-helpers';
 
@@ -336,60 +337,6 @@ describe('listRequests: order and pages', () => {
 });
 
 describe('listRequests: what a request shows', () => {
-  it('names who raised it and their side, and marks the reader’s own', async () => {
-    const company = await createCompany(db, { name: 'Adiutor Tests Alpha' });
-    const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
-    const support = await staffActor(db, 'support', 'sam@adiutor.test');
-    await storeRequest(company.id, {
-      title: 'By the staff',
-      createdBy: support.id,
-      createdBySide: 'staff',
-    });
-    await storeRequest(company.id, { title: 'By the client', createdBy: client.id });
-
-    const page = await listRequests(ctx, client, { sort: 'raised' });
-
-    expect(
-      page.items.map(({ title, raisedBy, company: its }) => [title, raisedBy, its.name]),
-    ).toEqual([
-      [
-        'By the client',
-        { userId: null, name: 'casey', side: 'company', isViewer: true },
-        'Adiutor Tests Alpha',
-      ],
-      [
-        'By the staff',
-        { userId: null, name: 'sam', side: 'staff', isViewer: false },
-        'Adiutor Tests Alpha',
-      ],
-    ]);
-
-    // The staff also get who it is, for the link to the user's page.
-    const forStaff = await listRequests(ctx, support, { sort: 'raised' });
-    expect(forStaff.items.map(({ raisedBy }) => raisedBy.userId)).toEqual([client.id, support.id]);
-  });
-
-  it('gives no name, and never an address, for someone without a name or whose account is gone', async () => {
-    const company = await createCompany(db);
-    const nameless = await createUser(db, 'nameless@adiutor.test');
-    await db.update(user).set({ name: '  ' }).where(eq(user.id, nameless));
-    const gone = await createUser(db, 'gone@adiutor.test');
-    await storeRequest(company.id, { title: 'Nameless', createdBy: nameless });
-    await storeRequest(company.id, { title: 'Gone', createdBy: gone, createdBySide: 'staff' });
-    await db.delete(user).where(eq(user.id, gone));
-    const watcher = await memberActor(db, company.id, 'watcher');
-
-    const page = await listRequests(ctx, watcher, { sort: 'raised', dir: 'asc' });
-
-    expect(page.items.map(({ raisedBy }) => raisedBy)).toEqual([
-      { userId: null, name: null, side: 'company', isViewer: false },
-      { userId: null, name: null, side: 'staff', isViewer: false },
-    ]);
-    expect(JSON.stringify(page)).not.toContain('@adiutor.test');
-    // Nor who it is: the nameless account still exists.
-    expect(JSON.stringify(page)).not.toContain(nameless);
-  });
-
   it('says when a request was reopened', async () => {
     const company = await createCompany(db);
     await storeRequest(company.id, { title: 'Reopened', reopenedAt: new Date() });
@@ -403,6 +350,62 @@ describe('listRequests: what a request shows', () => {
       ['Never closed', false],
     ]);
   });
+
+  it.each([
+    ['a Client', 'client', null, 'contributor'],
+    ['a Watcher', 'watcher', null, 'follower'],
+    ['Support', null, 'support', 'staff'],
+    ['Finance', null, 'finance', 'staff'],
+    ['Finance who is also a Client', 'client', 'finance', 'contributor'],
+  ] as const)(
+    'tells %s how they are addressed about a waiting request, as its own page does',
+    async (_who, companyRole, staffRole, audience) => {
+      const company = await createCompany(db);
+      await storeRequest(company.id, { status: 'waiting' });
+      const base = staffRole
+        ? await staffActor(db, staffRole)
+        : await memberActor(db, company.id, companyRole);
+      if (staffRole && companyRole) {
+        await addMember(db, company.id, base.id, companyRole);
+      }
+      const reader = await actorFor(db, base.id);
+
+      const page = await listRequests(ctx, reader, { status: 'waiting' });
+
+      expect(page.items.map((item) => item.audience)).toEqual([audience]);
+      expect((await getRequest(ctx, reader, '1')).audience).toBe(audience);
+    },
+  );
+
+  it('addresses someone per company: taking part in one, following in another', async () => {
+    const [alpha, beta] = [await createCompany(db), await createCompany(db)];
+    await storeRequest(alpha.id, { title: 'Where they are a Client', status: 'waiting' });
+    await storeRequest(beta.id, { title: 'Where they are a Watcher', status: 'waiting' });
+    const member = await memberActor(db, alpha.id, 'client');
+    await addMember(db, beta.id, member.id, 'watcher');
+
+    const page = await listRequests(ctx, await actorFor(db, member.id), {
+      status: 'waiting',
+      sort: 'raised',
+      dir: 'asc',
+    });
+
+    expect(page.items.map((item) => [item.title, item.audience])).toEqual([
+      ['Where they are a Client', 'contributor'],
+      ['Where they are a Watcher', 'follower'],
+    ]);
+  });
+
+  it('addresses the staff as the staff about a deactivated company’s request', async () => {
+    const company = await createCompany(db, { deactivated: true });
+    await storeRequest(company.id, { status: 'waiting' });
+
+    const page = await listRequests(ctx, await staffActor(db, 'support'), { status: 'all' });
+
+    expect(page.items.map((item) => item.audience)).toEqual(['staff']);
+    // The company's own row stays what a list gives: nothing about its deactivation.
+    expect(Object.keys(page.items[0]?.company ?? {}).sort()).toEqual(['id', 'name', 'slug']);
+  });
 });
 
 describe('listRequestCompanies', () => {
@@ -413,9 +416,9 @@ describe('listRequestCompanies', () => {
     const [support, finance] = [await staffActor(db, 'support'), await staffActor(db, 'finance')];
 
     expect(await listRequestCompanies(ctx, support)).toEqual([
-      { id: alpha.id, name: alpha.name, slug: alpha.slug, deactivated: false, canRaise: true },
-      { id: beta.id, name: beta.name, slug: beta.slug, deactivated: false, canRaise: true },
-      { id: closed.id, name: closed.name, slug: closed.slug, deactivated: true, canRaise: false },
+      { id: alpha.id, name: alpha.name, slug: alpha.slug, canRaise: true },
+      { id: beta.id, name: beta.name, slug: beta.slug, canRaise: true },
+      { id: closed.id, name: closed.name, slug: closed.slug, canRaise: false },
     ]);
     // Finance reads requests, and raises none.
     expect((await listRequestCompanies(ctx, finance)).map(({ canRaise }) => canRaise)).toEqual([
