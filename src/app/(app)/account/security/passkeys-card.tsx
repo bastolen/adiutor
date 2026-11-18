@@ -22,9 +22,11 @@ import { useToast } from '@/components/ui/toast';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import formatDate from '@/lib/format';
 import { PASSKEY_NAME_MAX_LENGTH } from '@/lib/input-rules';
-import { authErrorText, signInErrorText } from '@/lib/sign-in/auth-error-messages';
+import { signInErrorText } from '@/lib/sign-in/auth-error-messages';
 import loadAuthClient from '@/lib/sign-in/load-auth-client';
 import type { PasskeySummary } from '@/server/auth/security';
+
+import useRefusalText from './use-refusal-text';
 
 /** The card's anchor, which the step-up page comes back to (it renders the card itself). */
 const SECTION = 'passkeys';
@@ -140,11 +142,11 @@ function NameDialog({
  */
 export default function PasskeysCard({ passkeys, removeLastBlockedReason }: PasskeysCardProps) {
   const t = useTranslations('account');
-  const tAuth = useTranslations('auth');
   const locale = useLocale();
   const defaultName = t('security.passkeys.defaultName');
   const router = useRouter();
   const { askToConfirm, askToConfirmOnRefusal } = useRecentConfirmation(SECTION);
+  const refusalText = useRefusalText(SECTION);
   // Nothing changes while a staff member is signed in as the user.
   const changesOff = useSignedInAs();
   const [adding, setAdding] = useTransientState(false);
@@ -184,8 +186,9 @@ export default function PasskeysCard({ passkeys, removeLastBlockedReason }: Pass
     const result = await authClient.passkey.deletePasskey({ id: passkey.id });
     if (result.error) {
       setRemoving(null);
-      if (!askToConfirmOnRefusal(result.error.code)) {
-        setError(authErrorText(tAuth, result.error));
+      const text = refusalText(result.error);
+      if (text !== null) {
+        setError(text);
       }
       return;
     }

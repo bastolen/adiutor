@@ -9,16 +9,15 @@ import { useTranslations } from 'next-intl';
 import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
 
 import CodeField from '@/components/auth/code-field';
-import { useRecentConfirmation } from '@/components/auth/recent-confirmation';
 import Alert from '@/components/ui/alert';
 import Button from '@/components/ui/button';
 import Modal from '@/components/ui/modal';
-import { authErrorText } from '@/lib/sign-in/auth-error-messages';
 import loadAuthClient from '@/lib/sign-in/load-auth-client';
 import verifyCode from '@/lib/sign-in/verify-code';
 
 import BackupCodes from './backup-codes';
 import PasswordField from './password-field';
+import useRefusalText from './use-refusal-text';
 
 /** The setup steps. */
 type Step = 'password' | 'scan' | 'backup';
@@ -77,8 +76,7 @@ function AuthenticatorSteps({
   onFinish: () => void;
 }) {
   const t = useTranslations('account');
-  const tAuth = useTranslations('auth');
-  const { askToConfirmOnRefusal } = useRecentConfirmation();
+  const refusalText = useRefusalText();
   const [step, setStep] = useState<Step>('password');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
@@ -127,8 +125,9 @@ function AuthenticatorSteps({
     });
     setPending(false);
     if (result.error) {
-      if (!askToConfirmOnRefusal(result.error.code)) {
-        setError(authErrorText(tAuth, result.error));
+      const text = refusalText(result.error);
+      if (text !== null) {
+        setError(text);
       }
       return;
     }
@@ -151,8 +150,9 @@ function AuthenticatorSteps({
     const result = await verifyCode('totp', { code });
     setPending(false);
     if (result.error) {
-      if (!askToConfirmOnRefusal(result.error.code)) {
-        setError(authErrorText(tAuth, result.error));
+      const text = refusalText(result.error);
+      if (text !== null) {
+        setError(text);
       }
       return;
     }
