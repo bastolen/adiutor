@@ -112,6 +112,9 @@ describe('Toasts', () => {
     // Radix waits a frame before announcing: the label and the one word, nothing of the error.
     await waitFor(() => expect(announced()).toBe('Notification Error'));
     expect(announced()).not.toContain('That password is incorrect.');
+    // Politely, so it waits for the inline error being read out instead of cutting it off.
+    expect(document.querySelector('[aria-live="assertive"]')).toBeNull();
+    expect(document.querySelector('[aria-live="polite"]')).toHaveTextContent('Error');
   });
 
   it.each([

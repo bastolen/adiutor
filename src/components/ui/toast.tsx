@@ -194,6 +194,9 @@ export function useToast(): ShowToast | null {
  * error next to the field or button already is, or takes focus: its toast
  * announces "Notification" and the one word "Error" in its place, so the
  * announcement says what appeared instead of the bare word "Notification".
+ * That one is polite (Radix's `background` type): it waits for the inline
+ * error a screen reader is reading out instead of cutting it off, while a
+ * success is announced at once.
  * Each toast has a dismiss button and can be swiped away. Put one in a
  * layout, next to its content; toasts are offered while it's mounted, and
  * cleared when the last one goes. Once mounted, it shows the toast an action
@@ -238,7 +241,8 @@ export function Toaster() {
         return (
           <Toast.Root
             key={id}
-            type="foreground"
+            // An error waits its turn (polite), so it can't cut off the inline error being read out.
+            type={tone === 'error' ? 'background' : 'foreground'}
             duration={TOAST_DURATIONS[tone]}
             onOpenChange={(open) => {
               if (!open) {
