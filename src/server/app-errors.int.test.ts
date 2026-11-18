@@ -13,9 +13,8 @@ import { hasControlCharacter } from '@/lib/character-rules';
 import { defined, firstRow } from '@/lib/defined';
 import { referenceFromDigest } from '@/lib/error-reference';
 
-import { createUser, inSequence, setupTestContext } from '../../tests/integration/helpers';
+import { createUser, fromIp, inSequence, setupTestContext } from '../../tests/integration/helpers';
 import { recordAppError, recordedPath } from './app-errors';
-import type { ServiceContext } from './context';
 import { RATE_LIMITS } from './rate-limit';
 
 const { db, ctx } = setupTestContext();
@@ -23,22 +22,6 @@ const { db, ctx } = setupTestContext();
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-/**
- * The service context of a request from an IP address.
- *
- * @param ip - The client's address.
- * @returns The context.
- */
-function from(ip: string): ServiceContext {
-  /**
-   * The request's client, as `requestInfoFromHeaders` would give it.
-   *
-   * @returns The IP address, without a browser.
-   */
-  const requestInfo = async () => ({ ip, userAgent: null });
-  return { ...ctx, requestInfo };
-}
 
 /**
  * Reads the stored errors.
@@ -69,7 +52,7 @@ describe('recordAppError', () => {
       { digest: '2828711936' },
     );
 
-    const recorded = await recordAppError(from('203.0.113.1'), {
+    const recorded = await recordAppError(fromIp(ctx, '203.0.113.1'), {
       source: 'server',
       error,
       digest: '2828711936',
@@ -111,8 +94,8 @@ describe('recordAppError', () => {
       userId,
     };
 
-    await recordAppError(from('203.0.113.1'), report);
-    await recordAppError(from('203.0.113.1'), report);
+    await recordAppError(fromIp(ctx, '203.0.113.1'), report);
+    await recordAppError(fromIp(ctx, '203.0.113.1'), report);
 
     const rows = await stored();
     expect(rows).toHaveLength(2);
@@ -129,12 +112,12 @@ describe('recordAppError', () => {
   it('keeps the path without its query string, and without the token of a secret link', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    await recordAppError(from('203.0.113.1'), {
+    await recordAppError(fromIp(ctx, '203.0.113.1'), {
       source: 'browser',
       error: { name: 'TypeError', message: 'x is undefined' },
       path: '/admin/users?q=jane%40adiutor.test#results',
     });
-    await recordAppError(from('203.0.113.1'), {
+    await recordAppError(fromIp(ctx, '203.0.113.1'), {
       source: 'server',
       error: new Error('x'),
       path: '/invite/adiutor-tests-secret-token?from=email',
@@ -156,7 +139,7 @@ describe('recordAppError', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const forged = 'App error 7KQ2-M9XD: server render /(app)/admin/users/page';
 
-    const recorded = await recordAppError(from('203.0.113.1'), {
+    const recorded = await recordAppError(fromIp(ctx, '203.0.113.1'), {
       source: 'browser',
       error: { name: 'Type\nError', message: `x is undefined\r\n${forged}\u0000` },
       digest: `12\n${forged}`,
@@ -183,7 +166,7 @@ describe('recordAppError', () => {
   it('gives a browser error a reference of its own and shortens a long message', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    const recorded = await recordAppError(from('203.0.113.1'), {
+    const recorded = await recordAppError(fromIp(ctx, '203.0.113.1'), {
       source: 'browser',
       error: { name: null, message: 'x'.repeat(900) },
       path: '/dashboard',
@@ -202,10 +185,10 @@ describe('recordAppError', () => {
     const report = { source: 'browser' as const, error: { message: 'x' }, path: '/dashboard' };
 
     await inSequence(Array.from({ length: limit }), () =>
-      recordAppError(from('203.0.113.66'), report),
+      recordAppError(fromIp(ctx, '203.0.113.66'), report),
     );
-    const over = await recordAppError(from('203.0.113.66'), report);
-    await recordAppError(from('203.0.113.1'), report);
+    const over = await recordAppError(fromIp(ctx, '203.0.113.66'), report);
+    await recordAppError(fromIp(ctx, '203.0.113.1'), report);
 
     expect(over).toMatchObject({ stored: false });
     expect(warn).toHaveBeenCalledWith(`App error ${over.reference}: browser /dashboard`);

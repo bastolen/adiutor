@@ -19,6 +19,7 @@ import {
   createUser,
   enableTwoFactor,
   memberActor,
+  rateLimitHits,
   staffActor,
   startAuthenticatorSetup,
   turnOffGitHubSignIn,
@@ -320,11 +321,7 @@ describe('an authenticator code checked with a session', () => {
    * @returns The count, or `null` when none were counted.
    */
   async function wrongStepUps(userId: string): Promise<number | null> {
-    const [bucket] = await db
-      .select({ count: rateLimitBucket.count })
-      .from(rateLimitBucket)
-      .where(eq(rateLimitBucket.key, `step-up-failed:user:${userId}`));
-    return bucket?.count ?? null;
+    return rateLimitHits(db, `step-up-failed:user:${userId}`);
   }
 
   it('gives back the attempt a right step-up code took before it was checked', async () => {

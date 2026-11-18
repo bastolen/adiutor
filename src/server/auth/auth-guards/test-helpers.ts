@@ -10,7 +10,7 @@ import { rateLimitBucket, user } from '@/db/schema';
 import type { MfaMethod } from '@/lib/authz/mfa';
 import { firstRow } from '@/lib/defined';
 
-import { inSequence, setupTestContext } from '../../../../tests/integration/helpers';
+import { inSequence, rateLimitHits, setupTestContext } from '../../../../tests/integration/helpers';
 import { beforeAuthRequest } from './before-request';
 import { releaseSignInChangeLockOf } from './change-lock';
 import type { AuthGuardContext } from './paths';
@@ -130,11 +130,7 @@ export async function outcomeOf(path: string, body: Record<string, unknown> = {}
  * @returns The count, or `null` when it was never hit.
  */
 export async function hits(key: string): Promise<number | null> {
-  const [bucket] = await db
-    .select({ count: rateLimitBucket.count })
-    .from(rateLimitBucket)
-    .where(eq(rateLimitBucket.key, key));
-  return bucket?.count ?? null;
+  return rateLimitHits(db, key);
 }
 
 /**

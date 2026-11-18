@@ -5,11 +5,13 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { account, passkey, twoFactor, user } from '@/db/schema';
+import { passkey, twoFactor, user } from '@/db/schema';
 import type { MfaRole, MfaState } from '@/lib/authz/mfa';
 
 import {
+  addPassword,
   connectGitHub,
+  connectProvider,
   createUser,
   enableTwoFactor,
   setupTestContext,
@@ -130,14 +132,11 @@ describe('getSecurityOverview', () => {
 
   it('knows whether the account has a password', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
-    await db
-      .insert(account)
-      .values({ userId: jane, accountId: 'github-jane', providerId: 'github' });
+    // Without two-factor authentication at GitHub (the helper's default is with).
+    await connectProvider(db, jane, { mfaVerified: false });
     expect((await overviewOf(jane)).mfaState.hasPassword).toBe(false);
 
-    await db
-      .insert(account)
-      .values({ userId: jane, accountId: jane, providerId: 'credential', password: 'hashed' });
+    await addPassword(db, jane);
     expect((await overviewOf(jane)).mfaState.hasPassword).toBe(true);
   });
 

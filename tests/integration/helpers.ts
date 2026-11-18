@@ -503,6 +503,26 @@ export function inLanguage<C extends ServiceContext>(ctx: C, locale: Locale): C 
 }
 
 /**
+ * A service context whose request comes from an IP address, as the app's
+ * does (`requestInfoFromHeaders`).
+ *
+ * @param ctx - The test context.
+ * @param ip - The client's address.
+ * @returns The context, with `requestInfo`.
+ */
+export function fromIp<C extends ServiceContext>(ctx: C, ip: string): C {
+  return {
+    ...ctx,
+    /**
+     * The request's client.
+     *
+     * @returns The IP address, without a browser.
+     */
+    requestInfo: async () => ({ ip, userAgent: null }),
+  };
+}
+
+/**
  * Extracts the invitation or invite-link token from an email's text.
  *
  * @param email - The email.
