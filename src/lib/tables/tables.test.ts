@@ -13,8 +13,10 @@ import {
   COMPANIES_TABLE,
   DEVICES_TABLE,
   ERRORS_TABLE,
+  FAILED_JOBS_TABLE,
   INVITATIONS_TABLE,
   INVITE_LINKS_TABLE,
+  JOB_RUNS_TABLE,
   MEMBERS_TABLE,
   REQUESTS_TABLE,
   STAFF_REQUESTS_TABLE,
@@ -37,6 +39,8 @@ const TABLES: { name: string; table: TableDefinition }[] = [
   { name: 'ERRORS_TABLE', table: ERRORS_TABLE },
   { name: 'REQUESTS_TABLE', table: REQUESTS_TABLE },
   { name: 'STAFF_REQUESTS_TABLE', table: STAFF_REQUESTS_TABLE },
+  { name: 'JOB_RUNS_TABLE', table: JOB_RUNS_TABLE },
+  { name: 'FAILED_JOBS_TABLE', table: FAILED_JOBS_TABLE },
 ];
 
 /** The query parameters every table has, after its prefix. */
@@ -84,6 +88,7 @@ describe('table definitions', () => {
     },
     { page: 'the staff', tables: [STAFF_TABLE, INVITATIONS_TABLE, INVITE_LINKS_TABLE] },
     { page: "a user's page", tables: [USER_COMPANIES_TABLE, DEVICES_TABLE] },
+    { page: 'the jobs page', tables: [JOB_RUNS_TABLE, FAILED_JOBS_TABLE] },
   ])('keeps the tables on $page apart', ({ tables }) => {
     const prefixes = tables.map(({ prefix }) => prefix);
     expect(new Set(prefixes).size).toBe(prefixes.length);
@@ -97,6 +102,7 @@ describe('table definitions', () => {
       INVITATIONS_TABLE,
       INVITE_LINKS_TABLE,
       DEVICES_TABLE,
+      FAILED_JOBS_TABLE,
     ].map(({ prefix }) => prefix);
     expect(new Set(prefixes).size).toBe(prefixes.length);
     expect(prefixes).not.toContain('');
