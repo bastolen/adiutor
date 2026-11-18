@@ -11,7 +11,7 @@ import type { SortDirection } from '@/lib/tables/table-state';
 
 import { orderTerms } from '../pagination';
 import { findQueuedKind, QUEUED_JOBS } from './registry';
-import { loadJobStates } from './state';
+import { isPaused, loadJobStates } from './state';
 
 /** One kind of queued job in the overview. */
 export interface QueuedKindListing {
@@ -66,7 +66,7 @@ export async function listQueuedKinds(db: Database): Promise<QueuedKindListing[]
       name,
       known: registered.includes(name),
       pausable: pausable.has(name),
-      paused: pausable.has(name) && Boolean(states.get(name)?.pausedAt),
+      paused: isPaused(states.get(name), pausable.has(name)),
       waiting: of(['queued', 'running']),
       failed: of(['failed']),
     };

@@ -26,7 +26,7 @@ import {
 import recordJobError from './record-error';
 import { JOB_BATCHES, QUEUED_JOBS } from './registry';
 import type { JobRunResult } from './run';
-import { finishJobRun, loadJobStates } from './state';
+import { finishJobRun, isPaused, loadJobStates } from './state';
 
 /** What one kind's jobs did during a tick. */
 interface KindCounts {
@@ -214,7 +214,7 @@ function runnableKinds(
 ): QueuedJobRunner[] {
   return kinds.filter(
     (kind) =>
-      (!states.get(kind.name)?.pausedAt || !kind.pausable) &&
+      !isPaused(states.get(kind.name), kind.pausable) &&
       (kind.handle !== null || (kind.batchGroup !== null && batchesByGroup.has(kind.batchGroup))),
   );
 }

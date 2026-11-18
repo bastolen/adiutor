@@ -14,7 +14,7 @@ import { findRecurringJob, RECURRING_JOBS } from './registry';
 import { type JobRunResult, recordUnfinishedRuns, runRecurringJob } from './run';
 import { runQueue } from './run-queue';
 import { isDue, lastScheduledAt } from './schedule';
-import { loadJobStates } from './state';
+import { isPaused, loadJobStates } from './state';
 import { recordTick } from './tick-record';
 
 /**
@@ -101,9 +101,10 @@ export async function runTick(
   const states = await loadJobStates(ctx.db);
   const due = jobs.filter((job) => {
     const state = states.get(job.name);
-    // A pause only counts for a job that can be paused.
-    const paused = Boolean(state?.pausedAt) && job.pausable !== false;
-    return !paused && isDue(job.schedule, state?.lastStartedAt ?? null, now);
+    return (
+      !isPaused(state, job.pausable !== false) &&
+      isDue(job.schedule, state?.lastStartedAt ?? null, now)
+    );
   });
   const leftForNextTick: string[] = [];
   // The recurring jobs' share: the first half of what's left of the tick.
