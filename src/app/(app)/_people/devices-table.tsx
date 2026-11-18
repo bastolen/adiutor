@@ -12,7 +12,7 @@ import type { ReactNode } from 'react';
 import Badge from '@/components/ui/badge';
 import RelativeTime from '@/components/ui/relative-time';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
-import formatIpAddress from '@/lib/request/ip-address';
+import { describeIpAddress } from '@/lib/request/ip-address';
 import { describeUserAgent } from '@/lib/request/user-agent';
 import type { TableLinks } from '@/lib/tables/page-url';
 import type { Paged } from '@/lib/tables/table-state';
@@ -108,13 +108,15 @@ export default function DevicesTable({
                     {t.rich('devices.signedInAgo', { time: timeTag(device.createdAt) })}
                     <span className="sm:hidden">
                       {' · '}
-                      <span className="font-mono">{formatIpAddress(device.ipAddress)}</span>
+                      <span className="font-mono">
+                        {tCommon('ipAddress', describeIpAddress(device.ipAddress))}
+                      </span>
                     </span>
                   </span>
                 </div>
               </Td>
               <Td className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
-                {formatIpAddress(device.ipAddress)}
+                {tCommon('ipAddress', describeIpAddress(device.ipAddress))}
               </Td>
               <Td className="hidden text-muted-foreground md:table-cell">
                 <RelativeTime date={device.createdAt} />

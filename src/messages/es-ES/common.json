@@ -126,6 +126,7 @@
       "description": "Esta página no se ha podido cargar. Vuelve a intentarlo o ve a tu panel."
     },
     "device": "{browser, select, unknown {Navegador desconocido} other {{browser}}} en {os, select, unknown {sistema desconocido} other {{os}}}",
+    "ipAddress": "{kind, select, local {Local} unknown {Desconocida} other {{address}}}",
     "language": {
       "label": "Idioma",
       "emailField": "Idioma del correo",

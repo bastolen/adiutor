@@ -126,6 +126,7 @@
       "description": "This page couldn't load. Try again, or go to your dashboard."
     },
     "device": "{browser, select, unknown {Unknown browser} other {{browser}}} on {os, select, unknown {unknown system} other {{os}}}",
+    "ipAddress": "{kind, select, local {Local} unknown {Unknown} other {{address}}}",
     "language": {
       "label": "Language",
       "emailField": "Email language",

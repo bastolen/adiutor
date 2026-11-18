@@ -4,6 +4,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import renderInLocale from '../../../tests/i18n/render';
 import ActivityList from './activity-list';
 
 describe('ActivityList', () => {
@@ -34,5 +35,20 @@ describe('ActivityList', () => {
     expect(items[0]).toHaveTextContent('Chrome on macOS');
     expect(items[0]).toHaveTextContent('203.0.113.7');
     expect(items[1]).not.toHaveTextContent('·');
+  });
+
+  it('words this computer and an unknown address in the reader’s language', () => {
+    renderInLocale(
+      'nl-NL',
+      <ActivityList
+        label="Je recente activiteit"
+        items={[
+          { id: '1', description: 'Ingelogd', at: new Date(Date.now() - 5 * 60_000), ip: '::1' },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole('listitem')).toHaveTextContent('· Lokaal');
+    expect(screen.queryByText(/Local/)).toBeNull();
   });
 });

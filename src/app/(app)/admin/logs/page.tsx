@@ -25,7 +25,7 @@ import TextLink from '@/components/ui/text-link';
 import { AUDIT_GROUP_KEYS, describeAuditEvent, isAuditGroup } from '@/lib/audit-actions';
 import { parseDayRange } from '@/lib/day-range';
 import displayName from '@/lib/display-name';
-import formatIpAddress from '@/lib/request/ip-address';
+import { describeIpAddress } from '@/lib/request/ip-address';
 import { describeUserAgent } from '@/lib/request/user-agent';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import { createPageUrl } from '@/lib/tables/page-url';
@@ -156,7 +156,9 @@ function Origin({ event }: { event: AuditEntry }) {
   return (
     <span className="flex flex-wrap gap-x-1.5">
       {event.userAgent && <span>{tCommon('device', describeUserAgent(event.userAgent))}</span>}
-      {event.ip && <span className="font-mono">{formatIpAddress(event.ip)}</span>}
+      {event.ip && (
+        <span className="font-mono">{tCommon('ipAddress', describeIpAddress(event.ip))}</span>
+      )}
     </span>
   );
 }

@@ -5,7 +5,7 @@
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
-import formatIpAddress from '@/lib/request/ip-address';
+import { describeIpAddress } from '@/lib/request/ip-address';
 import { describeUserAgent } from '@/lib/request/user-agent';
 
 import RelativeTime from './relative-time';
@@ -58,7 +58,9 @@ export default function ActivityList({ items, label }: ActivityListProps) {
             <span className="flex shrink-0 flex-wrap gap-x-1.5 text-xs text-muted-foreground sm:justify-end">
               <RelativeTime date={item.at} />
               {device && <span>· {device}</span>}
-              {item.ip && <span className="font-mono">· {formatIpAddress(item.ip)}</span>}
+              {item.ip && (
+                <span className="font-mono">· {t('ipAddress', describeIpAddress(item.ip))}</span>
+              )}
             </span>
           </li>
         );
