@@ -10,7 +10,7 @@ import {
   providerLinkedCookieValue,
   providerStepUpCookieValue,
 } from '../src/lib/sign-in/oauth-providers';
-import { storeRequest } from './support/db';
+import { forgetLimitsOf, storeRequest } from './support/db';
 import {
   CLIENT_WATCHER,
   COMPANY_NAME,
@@ -686,6 +686,8 @@ test.describe('an error in a dialog', () => {
   test.use({ reducedMotion: 'reduce' });
   // The company's Client: they can deactivate their own account, which asks for the password.
   test.beforeEach(async ({ context }) => {
+    // The test enters two of the five wrong passwords a user gets: a retry starts from none.
+    await forgetLimitsOf(REQUESTS_CLIENT.email);
     await context.addCookies(clientState.cookies);
   });
 
