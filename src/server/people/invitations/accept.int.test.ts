@@ -1,11 +1,12 @@
 /**
  * @file Integration tests for accepting an invitation, signed in or by creating
- * an account, and for what the audit log records when whoever accepts it was
- * in already and keeps their role.
+ * an account (which hashes the password only for an invitation that can be
+ * used), and for what the audit log records when whoever accepts it was in
+ * already and keeps their role.
  */
-import { verifyPassword } from 'better-auth/crypto';
+import { hashPassword, verifyPassword } from 'better-auth/crypto';
 import { and, eq, isNull, sql } from 'drizzle-orm';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   account,
@@ -36,6 +37,12 @@ import { claimInviteLink, createInviteLink } from '../invite-links';
 import { acceptInvitation, acceptInvitationWithNewAccount, getInvitationPreview } from './accept';
 import { inviteByEmail } from './send';
 import { db, ctx, sent } from './test-helpers';
+
+vi.mock('better-auth/crypto', async (importOriginal) => {
+  const original = await importOriginal<typeof import('better-auth/crypto')>();
+  // The real hash, watched: an invitation that can't be used must not cost one.
+  return { ...original, hashPassword: vi.fn(original.hashPassword) };
+});
 
 /** Shared fixtures, recreated before each test. */
 let testCompany: Awaited<ReturnType<typeof createCompany>>;
@@ -127,11 +134,124 @@ describe('accepting', () => {
 
   it('asks existing users to sign in instead of creating an account', async () => {
     const token = await invite('existing@adiutor.test');
+    vi.mocked(hashPassword).mockClear();
+
     expect(
       await acceptInvitationWithNewAccount(ctx, token, { name: 'X', password: 'password-123' }),
     ).toEqual({ status: 'account_exists' });
+
+    // Answered before the slow password hash.
+    expect(hashPassword).not.toHaveBeenCalled();
     // The invitation is still usable after signing in.
     expect(await getInvitationPreview(ctx, token)).not.toBeNull();
+  });
+
+  it('hashes the password once when it creates the account', async () => {
+    const token = await invite('new@adiutor.test');
+    vi.mocked(hashPassword).mockClear();
+
+    await acceptInvitationWithNewAccount(ctx, token, {
+      name: 'New Person',
+      password: 'correct-horse-1',
+    });
+
+    expect(vi.mocked(hashPassword).mock.calls).toEqual([['correct-horse-1']]);
+  });
+
+  it.each([
+    ['a token nobody was sent', async () => 'adiutor-tests-made-up-token'],
+    [
+      'a revoked invitation',
+      async () => {
+        const token = await invite('new@adiutor.test');
+        await db
+          .update(invitation)
+          .set({ revokedAt: sql`now()` })
+          .where(eq(invitation.email, 'new@adiutor.test'));
+        return token;
+      },
+    ],
+    [
+      'an expired invitation',
+      async () => {
+        const token = await invite('new@adiutor.test');
+        await db
+          .update(invitation)
+          .set({ expiresAt: sql`now() - interval '1 minute'` })
+          .where(eq(invitation.email, 'new@adiutor.test'));
+        return token;
+      },
+    ],
+    [
+      'an invitation that was accepted already',
+      async () => {
+        const token = await invite('new@adiutor.test');
+        await acceptInvitationWithNewAccount(ctx, token, {
+          name: 'New Person',
+          password: 'correct-horse-1',
+        });
+        return token;
+      },
+    ],
+  ])('answers %s without hashing the password', async (_name, arrange) => {
+    const token = await arrange();
+    const users = await db.$count(user);
+    vi.mocked(hashPassword).mockClear();
+
+    expect(
+      await acceptInvitationWithNewAccount(ctx, token, { name: 'X', password: 'password-123' }),
+    ).toEqual({ status: 'invalid' });
+
+    // A loop of made-up tokens costs a lookup each, not a hash.
+    expect(hashPassword).not.toHaveBeenCalled();
+    expect(await db.$count(user)).toBe(users);
+  });
+
+  it('still decides in the transaction: an account made while the password was hashed is found', async () => {
+    const token = await invite('new@adiutor.test');
+    // Someone else creates the account for the address between the first look and the transaction.
+    vi.mocked(hashPassword).mockImplementationOnce(async () => {
+      await createUser(db, 'new@adiutor.test');
+      return 'adiutor-tests-hash';
+    });
+
+    expect(
+      await acceptInvitationWithNewAccount(ctx, token, {
+        name: 'New Person',
+        password: 'correct-horse-1',
+      }),
+    ).toEqual({ status: 'account_exists' });
+
+    // No second account, no membership, and the invitation is still there for signing in.
+    const [made] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, 'new@adiutor.test'));
+    expect(await db.$count(user, eq(user.email, 'new@adiutor.test'))).toBe(1);
+    expect(
+      await db.$count(membership, eq(membership.userId, defined(made, 'the account').id)),
+    ).toBe(0);
+    expect(await getInvitationPreview(ctx, token)).not.toBeNull();
+  });
+
+  it('still decides in the transaction: an invitation revoked while the password was hashed is refused', async () => {
+    const token = await invite('new@adiutor.test');
+    vi.mocked(hashPassword).mockImplementationOnce(async () => {
+      await db
+        .update(invitation)
+        .set({ revokedAt: sql`now()` })
+        .where(eq(invitation.email, 'new@adiutor.test'));
+      return 'adiutor-tests-hash';
+    });
+
+    expect(
+      await acceptInvitationWithNewAccount(ctx, token, {
+        name: 'New Person',
+        password: 'correct-horse-1',
+      }),
+    ).toEqual({ status: 'invalid' });
+
+    expect(await db.$count(user, eq(user.email, 'new@adiutor.test'))).toBe(0);
   });
 
   it('joins as the signed-in user with the invited email only', async () => {

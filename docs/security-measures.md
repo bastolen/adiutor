@@ -167,6 +167,12 @@ address has an account. What's left of the difference is Better Auth's own work 
 a password reset request: it stores the link's token for an address with an account and does a
 lookup in its place for one without, a few milliseconds either way.
 
+Creating an account from an invitation (`acceptInvitationWithNewAccount`, open to anyone who is
+signed out) looks the invitation up, and an account for its address, before it hashes the
+password: the hash is slow on purpose, and a loop of made-up tokens would otherwise cost one
+each. Both are checked again in the transaction, with the invitation locked, as first-run setup
+does (`src/server/setup.ts`).
+
 Session cookies are signed, so the database alone gives no usable session; see
 [Sessions](authentication.md#sessions).
 
