@@ -9,12 +9,13 @@ import { MailCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useEffect, useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from 'react';
 
 import Alert from '@/components/ui/alert';
 import AuthHeading from '@/components/ui/auth-heading';
 import Button from '@/components/ui/button';
 import IconTile from '@/components/ui/icon-tile';
+import { usePageRestored } from '@/components/ui/use-page-restored';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import { getSafeRedirectPath } from '@/lib/redirect';
 import { MAGIC_LINK_VERIFY_PATH } from '@/lib/sign-in/email-link';
@@ -110,21 +111,9 @@ export default function EmailLinkForm({ account, signedIn }: EmailLinkFormProps)
       : []),
   ];
 
-  useEffect(() => {
-    /**
-     * Makes the button usable again when the browser shows the page from its
-     * back/forward cache (e.g. Back after signing in).
-     *
-     * @param event - The page being shown.
-     */
-    const reset = (event: PageTransitionEvent) => {
-      if (event.persisted) {
-        setPending(false);
-      }
-    };
-    window.addEventListener('pageshow', reset);
-    return () => window.removeEventListener('pageshow', reset);
-  }, [setPending]);
+  // Makes the button usable again when the browser shows the page from its
+  // back/forward cache (e.g. Back after signing in).
+  usePageRestored(() => setPending(false));
 
   const icon = <IconTile icon={MailCheck} size="lg" />;
 

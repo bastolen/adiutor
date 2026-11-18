@@ -20,6 +20,7 @@ import Button, { whileRunning } from '@/components/ui/button';
 import loadFresh from '@/components/ui/load-fresh';
 import TextField from '@/components/ui/text-field';
 import TextLink from '@/components/ui/text-link';
+import { usePageRestored } from '@/components/ui/use-page-restored';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import { getSafeRedirectPath, sectionFromHash, withSection } from '@/lib/redirect';
 import authClient from '@/lib/sign-in/auth-client';
@@ -205,21 +206,9 @@ export default function SignInForm({ providers }: SignInFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Runs once on mount; `finish` only reads values that don't change while signing in.
   }, []);
 
-  useEffect(() => {
-    /**
-     * Makes the buttons usable again when the browser shows the page from its
-     * back/forward cache (e.g. Back from GitHub or Google).
-     *
-     * @param event - The page being shown.
-     */
-    const reset = (event: PageTransitionEvent) => {
-      if (event.persisted) {
-        setRunning(null);
-      }
-    };
-    window.addEventListener('pageshow', reset);
-    return () => window.removeEventListener('pageshow', reset);
-  }, [setRunning]);
+  // Makes the buttons usable again when the browser shows the page from its
+  // back/forward cache (e.g. Back from GitHub or Google).
+  usePageRestored(() => setRunning(null));
 
   /**
    * Signs in with the chosen method.

@@ -5,7 +5,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { type FormEvent, useEffect } from 'react';
+import type { FormEvent } from 'react';
 
 import CodeField from '@/components/auth/code-field';
 import ResendCodeButton from '@/components/auth/resend-code-button';
@@ -16,6 +16,7 @@ import Button from '@/components/ui/button';
 import CheckboxField from '@/components/ui/checkbox-field';
 import loadFresh from '@/components/ui/load-fresh';
 import TextLink from '@/components/ui/text-link';
+import { usePageRestored } from '@/components/ui/use-page-restored';
 import { useOncePerVisit, useTransientState } from '@/components/ui/use-transient-state';
 import { EMAIL_CODE_MINUTES } from '@/lib/authz/mfa';
 import { getSafeRedirectPath } from '@/lib/redirect';
@@ -117,21 +118,9 @@ export default function TwoFactorForm() {
     }
   });
 
-  useEffect(() => {
-    /**
-     * Makes the form usable again when the browser shows the page from its
-     * back/forward cache.
-     *
-     * @param event - The page being shown.
-     */
-    const reset = (event: PageTransitionEvent) => {
-      if (event.persisted) {
-        setPending(false);
-      }
-    };
-    window.addEventListener('pageshow', reset);
-    return () => window.removeEventListener('pageshow', reset);
-  }, [setPending]);
+  // Makes the form usable again when the browser shows the page from its
+  // back/forward cache.
+  usePageRestored(() => setPending(false));
 
   /**
    * Loads the page the user came for afresh (`loadFresh`), the button busy

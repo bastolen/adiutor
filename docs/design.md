@@ -130,7 +130,7 @@ keyboard support.
   fields, busy state and "Trust this device" in `useTransientState` too, because they come back
   when someone goes back to them (from the code step to the sign-in page, say), and whoever does
   mustn't find the last user's details or a button still busy. They also reset a busy button when the browser restores them from its
-  back/forward cache (`pageshow`).
+  back/forward cache (`pageshow`, through `usePageRestored`).
 - **Illustrations** (like the example request on the sign-in pages) are `inert`, and use
   `<Button decorative>` for buttons that only look like buttons: no hover, focus or press effects.
 - **Button labels** stay on one line when they fit. A button is never wider than its container
