@@ -29,7 +29,7 @@ export type PageSize = (typeof PAGE_SIZES)[number];
 export const DEFAULT_PAGE_SIZE: PageSize = 25;
 
 /** Tables with at most this many rows show no pagination at all. */
-export const PAGINATION_THRESHOLD = 10;
+const PAGINATION_THRESHOLD = 10;
 
 /** Sort direction. */
 export type SortDirection = 'asc' | 'desc';

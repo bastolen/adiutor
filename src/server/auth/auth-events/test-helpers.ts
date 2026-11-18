@@ -86,7 +86,7 @@ export async function sessionExists(sessionId: string): Promise<boolean> {
  * Sends the security emails that wait in the queue (as the next tick would),
  * through the mocked `sendEmail` the hooks would use.
  */
-export async function sendQueuedNotices(): Promise<void> {
+async function sendQueuedNotices(): Promise<void> {
   await sendQueuedEmails({ ...services, sendEmail });
 }
 

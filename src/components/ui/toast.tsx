@@ -48,7 +48,7 @@ interface ShownToast {
  * toast is hovered or focused and while the window isn't, so there's time to
  * read it (WCAG 2.2.1); errors stay longer.
  */
-export const TOAST_DURATIONS: Record<ToastTone, number> = { success: 6000, error: 10000 };
+const TOAST_DURATIONS: Record<ToastTone, number> = { success: 6000, error: 10000 };
 
 /** How many toasts show at once; a new one replaces the oldest. */
 const MAX_TOASTS = 3;

@@ -16,7 +16,7 @@
  *
  * Only these codes are shown: the address bar is the user's to change.
  */
-export const ACCESS_NOTICE_CODES = [
+const ACCESS_NOTICE_CODES = [
   'stepped-down',
   'left-staff',
   'left-company',

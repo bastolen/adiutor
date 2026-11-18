@@ -16,10 +16,10 @@ import { SIGN_IN_ERROR_RETENTION_DAYS } from '../../auth/sign-in-errors';
 import { defineRecurringJob } from '../define';
 
 /** How long audit events are kept, in days. */
-export const AUDIT_RETENTION_DAYS = 365;
+const AUDIT_RETENTION_DAYS = 365;
 
 /** How long the history of job runs, and queued jobs that are done, are kept, in days. */
-export const JOB_HISTORY_RETENTION_DAYS = 30;
+const JOB_HISTORY_RETENTION_DAYS = 30;
 
 /**
  * How many rows one statement deletes at most, so a large backlog never

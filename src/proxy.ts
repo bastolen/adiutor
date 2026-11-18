@@ -27,7 +27,7 @@ import PATHNAME_HEADER from '@/lib/request/pathname-header';
  * is the background jobs' tick, for a cron service: it checks its own secret
  * (`answerTickRequest`), since the proxy is never the security check.
  */
-export const PUBLIC_PATHS = [
+const PUBLIC_PATHS = [
   '/auth',
   '/invite',
   '/join',
