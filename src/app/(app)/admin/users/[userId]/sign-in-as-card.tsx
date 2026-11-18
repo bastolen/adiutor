@@ -10,7 +10,8 @@
  * dashboard loads afresh as the user (`loadOnSuccess`), and so does the page
  * in each of the browser's other tabs, so no page Next kept alive still
  * shows the staff member's own values. Text from
- * `admin.user.signInAs`. See docs/decisions/0017-staff-sign-in-as-users.md.
+ * `admin.user.signInAs`, except the refusals the server words too, which come
+ * from `errors.impersonation`. See docs/decisions/0017-staff-sign-in-as-users.md.
  */
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
@@ -77,14 +78,15 @@ export default function SignInAsCard({
   returnTo,
 }: SignInAsCardProps) {
   const t = useTranslations('admin.user.signInAs');
+  const tRefused = useTranslations('errors.impersonation');
   const values = { name: userName, minutes: IMPERSONATION_MINUTES };
   /** Why it isn't possible, for the refusals. */
   const refusals: Record<Exclude<SignInAsCardProps['verdict'], 'allowed'>, ReactNode> = {
-    staff_admin: t('refused.staffAdmin'),
-    staff: t('refused.staff'),
-    company_admin: t('refused.companyAdmin'),
-    deactivated: t('refused.deactivated'),
-    opted_out: t('refused.optedOut'),
+    staff_admin: tRefused('staffAdmin'),
+    staff: tRefused('staff'),
+    company_admin: tRefused('companyAdmin'),
+    deactivated: tRefused('deactivated'),
+    opted_out: tRefused('optedOut'),
     needs_mfa: t.rich('refused.needsMfa', { link: securityLink }),
   };
   return (

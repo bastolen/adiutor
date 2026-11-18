@@ -219,11 +219,6 @@
         "reasonLabel": "Motivo (opcional)",
         "reasonHint": "Por ejemplo, la solicitud que estás revisando. Solo el personal que ve el registro de auditoría puede leerlo.",
         "refused": {
-          "staffAdmin": "Nadie puede iniciar sesión como un administrador del personal.",
-          "staff": "Solo los administradores del personal pueden iniciar sesión como alguien del personal.",
-          "companyAdmin": "Soporte no puede iniciar sesión como un administrador de una empresa.",
-          "deactivated": "Esta cuenta está desactivada, así que nadie puede iniciar sesión como este usuario.",
-          "optedOut": "Este usuario ha desactivado el inicio de sesión del personal.",
           "needsMfa": "Para iniciar sesión como otra persona, primero añade una llave de acceso o configura una app de autenticación en tu <link>página Seguridad</link>."
         }
       }
