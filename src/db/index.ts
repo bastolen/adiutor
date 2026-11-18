@@ -21,8 +21,10 @@ export type PoolOptions = Omit<PoolConfig, 'connectionString'>;
  * new one to open, and for a free one when all of the pool's are in use.
  * `pg` waits without end by default, so a database host that drops packets
  * would hold every request, and `/api/health`, until the platform stops it.
+ * Ten seconds leaves room for a database that has to wake up first (a
+ * suspended Neon compute), which a shorter wait could take for a dead host.
  */
-const CONNECTION_TIMEOUT_MS = 5_000;
+const CONNECTION_TIMEOUT_MS = 10_000;
 
 /**
  * How long a connection may be silent before the operating system starts

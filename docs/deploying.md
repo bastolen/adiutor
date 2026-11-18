@@ -154,7 +154,7 @@ Run `pnpm jobs:run` from cron every 5 minutes, as in [Background jobs](#backgrou
 **Health check:** `GET /api/health` answers `200 {"status":"ok"}` when the database answers and has
 every migration in `drizzle/` applied, and `503 {"status":"unavailable"}` otherwise, so a load
 balancer or platform holds traffic from a server that can't reach its database or wasn't migrated.
-A database host that doesn't answer at all makes it 503 too, 5 seconds after the check started,
+A database host that doesn't answer at all makes it 503 too, 10 seconds after the check started,
 rather than leaving it hanging: that's how long the app waits for a connection (see **Database**
 under [Before sharing the address](#before-sharing-the-address)). Only a check that goes out on a
 connection opened in the 10 seconds before the host went away can take longer.
@@ -183,7 +183,7 @@ What to set up on a server before sharing its address:
   [Installing and upgrading](#installing-and-upgrading), and migrate again before starting each new
   release.
 - **Database:** the app keeps up to 10 connections per server process (`src/db/index.ts`). It
-  gives up connecting after 5 seconds (also when all 10 are busy that long), and has the operating
+  gives up connecting after 10 seconds (also when all 10 are busy that long), and has the operating
   system check a connection that falls silent while a query waits on it (TCP keep-alive after 10
   seconds), so a database host that stops answering fails requests instead of holding them until
   the platform stops them. It sets no time limit on statements itself: `pg` could only send one as
