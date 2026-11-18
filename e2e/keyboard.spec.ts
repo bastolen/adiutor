@@ -107,7 +107,10 @@ function cursorOf(locator: Locator): Promise<string> {
 }
 
 /**
- * The outline drawn around an element.
+ * The outline drawn around an element. Read it with `expect.poll`: with
+ * reduced motion every change of style still runs a transition of a few
+ * microseconds, so a value read at once can be the one it starts from (3px,
+ * the width an outline has before any is set).
  *
  * @param locator - The element.
  * @returns Its computed `outline-style` and `outline-width`.
@@ -188,6 +191,10 @@ async function expectShiftTabClearsStickyLayers(page: Page): Promise<void> {
  * @param page - The browser page, signed in and phone-sized.
  */
 async function expectCardLandsBelowStickyLayers(page: Page): Promise<void> {
+  // A page load of its own: with focus still on a control, the page leaves it where it is
+  // instead of moving it to the card's heading (and an address that differs only by its
+  // anchor wouldn't load the page again).
+  await page.goto('about:blank');
   await page.goto('/account/security#passkeys');
   const card = page.locator('section#passkeys');
   await expect(card.locator('[data-card-heading]')).toBeFocused();
@@ -267,12 +274,12 @@ test.describe('signed in', () => {
       await trigger.focus();
       await page.keyboard.press('Enter');
       await expect(settings).toBeFocused();
-      expect(await outlineOf(settings)).toEqual({ style: 'solid', width: '2px' });
-      expect((await outlineOf(signOut)).style).toBe('none');
+      await expect.poll(() => outlineOf(settings)).toEqual({ style: 'solid', width: '2px' });
+      await expect.poll(async () => (await outlineOf(signOut)).style).toBe('none');
       await page.keyboard.press('End');
       await expect(signOut).toBeFocused();
-      expect(await outlineOf(signOut)).toEqual({ style: 'solid', width: '2px' });
-      expect((await outlineOf(settings)).style).toBe('none');
+      await expect.poll(() => outlineOf(signOut)).toEqual({ style: 'solid', width: '2px' });
+      await expect.poll(async () => (await outlineOf(settings)).style).toBe('none');
       await page.keyboard.press('Escape');
       await expect(page.getByRole('menu')).toHaveCount(0);
 
@@ -283,12 +290,12 @@ test.describe('signed in', () => {
       const watcher = page.getByRole('option', { name: 'Watcher' });
       const client = page.getByRole('option', { name: 'Client' });
       await expect(watcher).toBeFocused();
-      expect(await outlineOf(watcher)).toEqual({ style: 'solid', width: '2px' });
-      expect((await outlineOf(client)).style).toBe('none');
+      await expect.poll(() => outlineOf(watcher)).toEqual({ style: 'solid', width: '2px' });
+      await expect.poll(async () => (await outlineOf(client)).style).toBe('none');
       await page.keyboard.press('ArrowUp');
       await expect(client).toBeFocused();
-      expect(await outlineOf(client)).toEqual({ style: 'solid', width: '2px' });
-      expect((await outlineOf(watcher)).style).toBe('none');
+      await expect.poll(() => outlineOf(client)).toEqual({ style: 'solid', width: '2px' });
+      await expect.poll(async () => (await outlineOf(watcher)).style).toBe('none');
       // Escape leaves the role as it was.
       await page.keyboard.press('Escape');
       await expect(role).toBeFocused();
@@ -756,6 +763,11 @@ test.describe('signed in as a user', () => {
 
 test.describe('on a phone, under the sticky layers', () => {
   test.use({ reducedMotion: 'reduce' });
+  // The second test signs in as a user, which counts towards the Admin's ten an hour: forgotten
+  // afterwards, so the specs after this one have as many left as before.
+  test.afterEach(async () => {
+    await forgetLimitsOf(PLATFORM_ADMIN.email);
+  });
 
   test('a control reached with Shift+Tab, and a card reached by its anchor, clear the top bar', async ({
     context,
