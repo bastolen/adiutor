@@ -105,6 +105,25 @@ describe('one change to how a user signs in at a time', () => {
     expect(lockHeldWhileRead).toEqual([1]);
   });
 
+  it("isn't taken by a request that can't take MFA away, which goes ahead while a change is made", async () => {
+    const manager = await managerWithTwoPasskeys();
+    const lockHeldWhileRead: (number | null)[] = [];
+    vi.mocked(loadMfaContext).mockImplementationOnce(async (database, userId) => {
+      lockHeldWhileRead.push(await hits(`sign-in-change:user:${userId}`));
+      return realLoadMfaContext(database, userId);
+    });
+
+    // New backup codes are no such change (`signInChangeOf`): the checks run without the lock.
+    expect(await outcomeOf('/two-factor/generate-backup-codes')).toBe('allowed');
+    expect(lockHeldWhileRead).toEqual([null]);
+
+    // Nor do they wait for one that holds it, and that one keeps it.
+    const held = await takeSignInChangeLock({ db }, manager);
+    expect(await outcomeOf('/two-factor/generate-backup-codes')).toBe('allowed');
+    expect(await outcomeOf('/passkey/delete-passkey')).toBe('SIGN_IN_CHANGE_IN_PROGRESS');
+    await releaseSignInChangeLock({ db }, defined(held, 'the sign-in change lock'));
+  });
+
   it('is given back when the change is refused', async () => {
     const manager = await staffActor(db, 'manager');
     await addPasskey(db, manager.id);

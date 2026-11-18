@@ -36,7 +36,7 @@ import {
   takeRequestState,
 } from '../request-state';
 import { currentReverify, type ReverifyMarker } from '../reverify-marker';
-import { setNextPageCookie, sentCookie, expireCookie } from './cookies';
+import { setNextPageCookie, expireCookieIfSent } from './cookies';
 import { type AuthHookContext, withRequestInfo, safely } from './hook-context';
 import { noteRefusedReverify } from './reverify';
 import { ownSession, hasReverifySession } from './session-records';
@@ -393,8 +393,8 @@ export async function recordProviderSession(
       PROVIDER_STEP_UP_COOKIE,
       providerStepUpCookieValue(providerId, check.outcome),
     );
-  } else if (sentCookie(ctx, PROVIDER_STEP_UP_COOKIE)) {
-    expireCookie(ctx, PROVIDER_STEP_UP_COOKIE);
+  } else {
+    expireCookieIfSent(ctx, PROVIDER_STEP_UP_COOKIE);
   }
   const method = signInMethodFromPath(path, { providerId, signedIn: true, providerMfa });
   if (method) {

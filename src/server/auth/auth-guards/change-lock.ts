@@ -7,6 +7,7 @@ import { type SignInChange } from '@/lib/authz/mfa';
 
 import { requestState, takeRequestState } from '../request-state';
 import { releaseSignInChangeLock, takeSignInChangeLock } from '../sign-in-change-lock';
+import { type AuthGuardContext, refuseSignInChangeInProgress } from './paths';
 
 /**
  * Works out which change a request makes to how the user signs in, as far as
@@ -37,6 +38,39 @@ export function signInChangeOf(
     default:
       return null;
   }
+}
+
+/**
+ * Runs a guard's checks on a change to how a user signs in while holding
+ * that user's lock: the lock is taken before the checks read anything about
+ * the user, so two changes at the same moment can't both pass them. While
+ * another change holds it, the request is refused and the checks never run.
+ * When the checks refuse the request (or fail), the lock is given back right
+ * away; otherwise the request keeps it until
+ * {@link releaseSignInChangeLockOf} gives it back afterwards.
+ *
+ * @param ctx - The endpoint context.
+ * @param userId - The user whose sign-in the request changes.
+ * @param check - The checks, which throw to refuse the request.
+ * @throws {APIError} `CONFLICT` with code `SIGN_IN_CHANGE_IN_PROGRESS` while
+ *   another change holds the lock; otherwise whatever the checks throw.
+ */
+export async function checkUnderSignInChangeLock(
+  ctx: AuthGuardContext,
+  userId: string,
+  check: () => Promise<void>,
+): Promise<void> {
+  const lock = await takeSignInChangeLock({ db }, userId);
+  if (!lock) {
+    refuseSignInChangeInProgress(ctx);
+  }
+  try {
+    await check();
+  } catch (error) {
+    await releaseSignInChangeLock({ db }, lock);
+    throw error;
+  }
+  requestState(ctx.context).heldSignInChangeLock = lock;
 }
 
 /**

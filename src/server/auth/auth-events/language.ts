@@ -20,7 +20,7 @@ import { user } from '@/db/schema';
 import localeCookieOptions from '@/lib/i18n/locale-cookie';
 import { isLocale, LOCALE_COOKIE } from '@/lib/i18n/locales';
 
-import { expireCookie, sentCookie } from './cookies';
+import { expireCookieIfSent } from './cookies';
 import type { AuthHookContext } from './hook-context';
 
 /**
@@ -46,7 +46,5 @@ export default async function rememberLanguage(
     return;
   }
   // On Default: a language left in this browser isn't this person's choice, so it goes.
-  if (sentCookie(ctx, LOCALE_COOKIE)) {
-    expireCookie(ctx, LOCALE_COOKIE);
-  }
+  expireCookieIfSent(ctx, LOCALE_COOKIE);
 }

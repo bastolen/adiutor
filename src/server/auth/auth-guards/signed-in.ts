@@ -28,9 +28,8 @@ import {
 
 import { loadMfaContext } from '../mfa-state';
 import { requestState } from '../request-state';
-import { releaseSignInChangeLock, takeSignInChangeLock } from '../sign-in-change-lock';
 import { limitEmailCode, reserveStepUpAttempt } from './attempts';
-import { signInChangeOf } from './change-lock';
+import { checkUnderSignInChangeLock, signInChangeOf } from './change-lock';
 import {
   type AuthGuardContext,
   RENAME_PATHS,
@@ -40,7 +39,6 @@ import {
   EMAIL_CODE_PATHS,
   refuseEmailCodes,
   CODE_PATHS,
-  refuseSignInChangeInProgress,
 } from './paths';
 import { refusalBody } from './refusal-messages';
 
@@ -172,7 +170,8 @@ async function checkSignedInRequest(
  * signs in first takes the user's lock, before anything about them is read,
  * so two at the same moment can't both pass the checks; it's given back
  * after the request ({@link releaseSignInChangeLockOf}), or right away when
- * the change is refused.
+ * the change is refused ({@link checkUnderSignInChangeLock}). Any other
+ * request takes no lock.
  *
  * @param ctx - The endpoint context.
  * @param path - The endpoint path.
@@ -185,19 +184,11 @@ export async function checkSignedIn(
   session: SignedInSession,
 ): Promise<void> {
   const change = signInChangeOf(path, ctx.body);
-  const lock = change ? await takeSignInChangeLock({ db }, session.user.id) : null;
-  if (change && !lock) {
-    refuseSignInChangeInProgress(ctx);
+  if (!change) {
+    await checkSignedInRequest(ctx, path, session, null);
+    return;
   }
-  try {
-    await checkSignedInRequest(ctx, path, session, change);
-  } catch (error) {
-    if (lock) {
-      await releaseSignInChangeLock({ db }, lock);
-    }
-    throw error;
-  }
-  if (lock) {
-    requestState(ctx.context).heldSignInChangeLock = lock;
-  }
+  await checkUnderSignInChangeLock(ctx, session.user.id, () =>
+    checkSignedInRequest(ctx, path, session, change),
+  );
 }

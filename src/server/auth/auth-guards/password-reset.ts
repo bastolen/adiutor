@@ -9,9 +9,8 @@ import { mfaGivingProviders, requiresMfa, wouldEndMfa } from '@/lib/authz/mfa';
 import { availableProviders } from '@/lib/sign-in/providers';
 
 import { loadMfaContext } from '../mfa-state';
-import { requestState } from '../request-state';
-import { releaseSignInChangeLock, takeSignInChangeLock } from '../sign-in-change-lock';
-import { type AuthGuardContext, refuseSignInChangeInProgress } from './paths';
+import { checkUnderSignInChangeLock } from './change-lock';
+import type { AuthGuardContext } from './paths';
 import { resetEndsProviderMfaBody } from './refusal-messages';
 
 /**
@@ -91,7 +90,7 @@ async function refuseResetEndingMfa(ctx: AuthGuardContext, userId: string): Prom
  * changes, so a change at the same moment (removing the passkey that keeps
  * their MFA) can't slip in between the check and the new password; it's given
  * back after the request ({@link releaseSignInChangeLockOf}), or right away
- * when the reset is refused.
+ * when the reset is refused ({@link checkUnderSignInChangeLock}).
  *
  * @param ctx - The endpoint context.
  * @throws {APIError} `CONFLICT` with code `SIGN_IN_CHANGE_IN_PROGRESS` while
@@ -103,15 +102,5 @@ export async function checkPasswordReset(ctx: AuthGuardContext): Promise<void> {
   if (!userId) {
     return;
   }
-  const lock = await takeSignInChangeLock({ db }, userId);
-  if (!lock) {
-    refuseSignInChangeInProgress(ctx);
-  }
-  try {
-    await refuseResetEndingMfa(ctx, userId);
-  } catch (error) {
-    await releaseSignInChangeLock({ db }, lock);
-    throw error;
-  }
-  requestState(ctx.context).heldSignInChangeLock = lock;
+  await checkUnderSignInChangeLock(ctx, userId, () => refuseResetEndingMfa(ctx, userId));
 }
