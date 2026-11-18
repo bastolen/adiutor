@@ -16,16 +16,12 @@ import {
   requestTypeSchema,
 } from '@/lib/validation';
 
-import {
-  assertNotSignedInAs,
-  assertPermission,
-  assertStillManages,
-  getCompanyAccess,
-} from '../access';
+import { assertNotSignedInAs, assertPermission, getCompanyAccess } from '../access';
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { companyDeactivatedError } from '../errors';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
+import { assertStillMayChange } from './change';
 
 /**
  * Takes the next request number: one more than the last, in the raising
@@ -65,12 +61,9 @@ async function nextRequestNumber(
  * sets its priority; only the staff who work on requests can choose another
  * priority, and from anyone else a priority is ignored.
  *
- * The transaction first checks the actor's right again as it is by then
- * (`assertStillManages`), so someone who lost it while the request was under
- * way raises nothing, and refuses a company deactivated meanwhile as that
- * check read it: the staff keep their rights there. That narrows the window
- * rather than closing it (the company's row isn't locked, see
- * `assertStillManages`).
+ * The transaction first checks the actor's right and the company again as
+ * they are by then (`assertStillMayChange`), so someone who lost the right
+ * while the request was under way raises nothing.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `requests:contribute` in the company.
@@ -111,15 +104,7 @@ export default async function raiseRequest(
   await assertRateLimit(ctx, `request:user:${actor.id}`, RATE_LIMITS.requestsPerUser);
 
   return ctx.db.transaction(async (tx) => {
-    const { companyDeactivatedAt } = await assertStillManages(
-      tx,
-      actor,
-      company.id,
-      'requests:contribute',
-    );
-    if (companyDeactivatedAt) {
-      throw companyDeactivatedError();
-    }
+    await assertStillMayChange(tx, actor, company.id, 'requests:contribute');
     const { number, takenAt } = await nextRequestNumber(tx);
     return firstRow(
       await tx

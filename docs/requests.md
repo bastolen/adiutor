@@ -173,7 +173,7 @@ the closed statuses.
   `getRequest`, `raiseRequest`, `replyToRequest`, `changeRequestStatus`, `updateRequestDetails`.
   Every change refuses someone signed in as a user, checks the permission and that the company is
   active, validates, takes a rate limit (see [Rate limits](security-measures.md#rate-limits)), then
-  runs in a transaction that starts with `assertStillManages` and locks the request's row (see
+  runs in a transaction that starts with `assertStillMayChange` (`assertStillManages`, then the company) and locks the request's row (see
   [Lock order](security-measures.md#lock-order)). That transaction refuses again when the company
   was deactivated meanwhile, which the staff's rights don't depend on; the company's row isn't
   locked (company rows come first in the lock order), so this narrows the moment in which a change
