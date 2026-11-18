@@ -111,3 +111,35 @@ export async function deactivatedMeanwhile<T>(
   );
   return second;
 }
+
+/**
+ * Loads a request as it's stored.
+ *
+ * @param id - The request's ID.
+ * @returns The row, or `undefined` when there is none.
+ */
+export async function storedRequest(id: string) {
+  const [found] = await db.select().from(request).where(eq(request.id, id));
+  return found;
+}
+
+/**
+ * The entries in a request's history, in order: replies and changes alike.
+ *
+ * @param requestId - The request.
+ * @returns Each entry as `[kind, from, to, side]`: its kind, the values a change went from and to
+ *   (`null` for a reply), and the side of whoever wrote it.
+ */
+export async function changesOf(requestId: string) {
+  const entries = await db
+    .select()
+    .from(requestEntry)
+    .where(eq(requestEntry.requestId, requestId))
+    .orderBy(requestEntry.id);
+  return entries.map(({ kind, fromValue, toValue, authorSide }) => [
+    kind,
+    fromValue,
+    toValue,
+    authorSide,
+  ]);
+}

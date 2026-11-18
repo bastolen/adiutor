@@ -21,7 +21,7 @@ import {
 } from '../../../tests/integration/helpers';
 import { RATE_LIMITS } from '../rate-limit';
 import raiseRequest from './raise';
-import { ctx, db, deactivatedMeanwhile } from './test-helpers';
+import { ctx, db, deactivatedMeanwhile, storedRequest } from './test-helpers';
 
 /** A request as a form sends it, without its company. */
 const INPUT = {
@@ -29,17 +29,6 @@ const INPUT = {
   description: 'It prints blank pages.',
   type: 'bug',
 } as const;
-
-/**
- * Loads a request as it's stored.
- *
- * @param id - The request's ID.
- * @returns The row.
- */
-async function stored(id: string) {
-  const [found] = await db.select().from(request).where(eq(request.id, id));
-  return found;
-}
 
 describe('raiseRequest', () => {
   it('stores what was asked, by whom and from which side, open and with its type’s priority', async () => {
@@ -49,7 +38,7 @@ describe('raiseRequest', () => {
     const raised = await raiseRequest(ctx, client, { ...INPUT, companyId: company.id });
 
     expect(raised.number).toBe(1);
-    expect(await stored(raised.id)).toMatchObject({
+    expect(await storedRequest(raised.id)).toMatchObject({
       number: 1,
       companyId: company.id,
       title: 'The printer is broken',
@@ -70,7 +59,7 @@ describe('raiseRequest', () => {
 
     const raised = await raiseRequest(ctx, client, { ...INPUT, companyId: 'adiutor-tests-raise' });
 
-    expect(await stored(raised.id)).toMatchObject({ companyId: company.id });
+    expect(await storedRequest(raised.id)).toMatchObject({ companyId: company.id });
   });
 
   it.each([
@@ -84,7 +73,7 @@ describe('raiseRequest', () => {
 
     const raised = await raiseRequest(ctx, client, { ...INPUT, type, companyId: company.id });
 
-    expect(await stored(raised.id)).toMatchObject({ type, priority });
+    expect(await storedRequest(raised.id)).toMatchObject({ type, priority });
   });
 
   it('ignores a priority from the company: the type decides', async () => {
@@ -98,7 +87,7 @@ describe('raiseRequest', () => {
       companyId: company.id,
     });
 
-    expect(await stored(raised.id)).toMatchObject({ priority: 'low' });
+    expect(await storedRequest(raised.id)).toMatchObject({ priority: 'low' });
   });
 
   it('lets the staff choose the priority, or leave it to the type, and notes their side', async () => {
@@ -109,8 +98,11 @@ describe('raiseRequest', () => {
     const chosen = await raiseRequest(ctx, support, { ...input, priority: 'high' });
     const left = await raiseRequest(ctx, support, { ...input, priority: '' });
 
-    expect(await stored(chosen.id)).toMatchObject({ priority: 'high', createdBySide: 'staff' });
-    expect(await stored(left.id)).toMatchObject({ priority: 'low', createdBySide: 'staff' });
+    expect(await storedRequest(chosen.id)).toMatchObject({
+      priority: 'high',
+      createdBySide: 'staff',
+    });
+    expect(await storedRequest(left.id)).toMatchObject({ priority: 'low', createdBySide: 'staff' });
   });
 
   it('cleans the title and the description', async () => {
@@ -124,7 +116,7 @@ describe('raiseRequest', () => {
       type: 'bug',
     });
 
-    expect(await stored(raised.id)).toMatchObject({
+    expect(await storedRequest(raised.id)).toMatchObject({
       title: 'The printer is broken',
       description: 'Steps:\n1. Print\n2. Look',
     });
@@ -330,7 +322,7 @@ describe('request numbers', () => {
       throw second.reason;
     }
     expect(second.value.number).toBe(2);
-    const row = await stored(second.value.id);
+    const row = await storedRequest(second.value.id);
     expect(row?.lastActivityAt).toEqual(row?.createdAt);
     // Not when its transaction started, which was before it waited.
     expect(row?.createdAt.getTime()).toBeGreaterThanOrEqual(waitedUntil);

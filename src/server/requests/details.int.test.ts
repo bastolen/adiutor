@@ -8,7 +8,7 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
 
-import { request, requestEntry } from '@/db/schema';
+import { request } from '@/db/schema';
 import { REQUEST_TITLE_MAX_LENGTH } from '@/lib/input-rules';
 
 import {
@@ -20,7 +20,7 @@ import {
 } from '../../../tests/integration/helpers';
 import { RATE_LIMITS } from '../rate-limit';
 import updateRequestDetails from './details';
-import { ctx, db, storeRequest } from './test-helpers';
+import { changesOf, ctx, db, storeRequest, storedRequest } from './test-helpers';
 
 /** The details of a stored request: what its form shows, and sends back when nothing is changed. */
 const SAME = { title: 'The printer is broken', type: 'bug', priority: 'normal' } as const;
@@ -37,37 +37,6 @@ const edited = (change: Partial<Record<keyof typeof SAME, string>> = {}) => ({
   ...change,
   was: SAME,
 });
-
-/**
- * Loads a request as it's stored.
- *
- * @param id - The request's ID.
- * @returns The row.
- */
-async function stored(id: string) {
-  const [found] = await db.select().from(request).where(eq(request.id, id));
-  return found;
-}
-
-/**
- * The changes in a request's history, in order.
- *
- * @param requestId - The request.
- * @returns Each change as `[kind, from, to, side]`.
- */
-async function changes(requestId: string) {
-  const entries = await db
-    .select()
-    .from(requestEntry)
-    .where(eq(requestEntry.requestId, requestId))
-    .orderBy(requestEntry.id);
-  return entries.map(({ kind, fromValue, toValue, authorSide }) => [
-    kind,
-    fromValue,
-    toValue,
-    authorSide,
-  ]);
-}
 
 describe('updateRequestDetails', () => {
   it('changes the title, type and priority, each with a line in the history', async () => {
@@ -87,17 +56,17 @@ describe('updateRequestDetails', () => {
     });
 
     expect(result).toEqual({ changed: 3 });
-    expect(await stored(raised.id)).toMatchObject({
+    expect(await storedRequest(raised.id)).toMatchObject({
       title: 'The printer on floor 2 is broken',
       type: 'hotfix',
       priority: 'high',
     });
-    expect(await changes(raised.id)).toEqual([
+    expect(await changesOf(raised.id)).toEqual([
       ['title', 'Help', 'The printer on floor 2 is broken', 'staff'],
       ['type', 'bug', 'hotfix', 'staff'],
       ['priority', 'normal', 'high', 'staff'],
     ]);
-    expect((await stored(raised.id))?.lastActivityAt.getTime()).toBeGreaterThan(
+    expect((await storedRequest(raised.id))?.lastActivityAt.getTime()).toBeGreaterThan(
       minutesAgo(1).getTime(),
     );
   });
@@ -111,8 +80,8 @@ describe('updateRequestDetails', () => {
     const result = await updateRequestDetails(ctx, support, { ...edited(), request: raised.id });
 
     expect(result).toEqual({ changed: 0 });
-    expect(await changes(raised.id)).toEqual([]);
-    expect((await stored(raised.id))?.lastActivityAt).toEqual(at);
+    expect(await changesOf(raised.id)).toEqual([]);
+    expect((await storedRequest(raised.id))?.lastActivityAt).toEqual(at);
   });
 
   it('leaves the priority alone when only the type changes', async () => {
@@ -122,8 +91,8 @@ describe('updateRequestDetails', () => {
 
     await updateRequestDetails(ctx, support, { ...edited({ type: 'hotfix' }), request: raised.id });
 
-    expect(await stored(raised.id)).toMatchObject({ type: 'hotfix', priority: 'normal' });
-    expect(await changes(raised.id)).toEqual([['type', 'bug', 'hotfix', 'staff']]);
+    expect(await storedRequest(raised.id)).toMatchObject({ type: 'hotfix', priority: 'normal' });
+    expect(await changesOf(raised.id)).toEqual([['type', 'bug', 'hotfix', 'staff']]);
   });
 
   it('does not count a change of the priority alone as activity: the company does not see it', async () => {
@@ -138,7 +107,7 @@ describe('updateRequestDetails', () => {
     });
 
     expect(result).toEqual({ changed: 1 });
-    expect(await stored(raised.id)).toMatchObject({ priority: 'low', lastActivityAt: at });
+    expect(await storedRequest(raised.id)).toMatchObject({ priority: 'low', lastActivityAt: at });
   });
 
   it.each([
@@ -155,7 +124,7 @@ describe('updateRequestDetails', () => {
     await expect(
       updateRequestDetails(ctx, support, { ...edited(change), request: raised.id }),
     ).rejects.toBeInstanceOf(ZodError);
-    expect(await changes(raised.id)).toEqual([]);
+    expect(await changesOf(raised.id)).toEqual([]);
   });
 
   it('refuses a change to a request of a deactivated company', async () => {
@@ -169,7 +138,7 @@ describe('updateRequestDetails', () => {
         request: raised.id,
       }),
     ).rejects.toMatchObject({ code: 'invalid', key: 'errors.companyDeactivated' });
-    expect(await stored(raised.id)).toMatchObject({ title: 'The printer is broken' });
+    expect(await storedRequest(raised.id)).toMatchObject({ title: 'The printer is broken' });
   });
 
   it('stops at the limit of changes one person makes', async () => {
@@ -188,7 +157,7 @@ describe('updateRequestDetails', () => {
         request: raised.id,
       }),
     ).rejects.toMatchObject({ code: 'rate_limited' });
-    expect(await stored(raised.id)).toMatchObject({ title: 'The printer is broken' });
+    expect(await storedRequest(raised.id)).toMatchObject({ title: 'The printer is broken' });
   });
 });
 
@@ -215,12 +184,12 @@ describe('updateRequestDetails: a colleague changed the request meanwhile', () =
     });
 
     expect(result).toEqual({ changed: 1 });
-    expect(await stored(raised.id)).toMatchObject({
+    expect(await storedRequest(raised.id)).toMatchObject({
       title: 'The printer is broken',
       priority: 'high',
     });
     // One line for the title, and none that says Alex changed the priority.
-    expect(await changes(raised.id)).toEqual([
+    expect(await changesOf(raised.id)).toEqual([
       ['priority', 'normal', 'high', 'staff'],
       ['title', 'The printr is broken', 'The printer is broken', 'staff'],
     ]);
@@ -248,7 +217,7 @@ describe('updateRequestDetails: a colleague changed the request meanwhile', () =
     );
 
     expect(second).toMatchObject({ status: 'fulfilled', value: { changed: 1 } });
-    expect(await stored(raised.id)).toMatchObject({
+    expect(await storedRequest(raised.id)).toMatchObject({
       title: 'The printer is broken',
       priority: 'high',
     });
@@ -269,12 +238,12 @@ describe('updateRequestDetails: a colleague changed the request meanwhile', () =
       }),
     ).rejects.toMatchObject({ code: 'conflict', key: 'errors.requests.detailsChanged' });
 
-    expect(await stored(raised.id)).toMatchObject({
+    expect(await storedRequest(raised.id)).toMatchObject({
       title: 'The printer is broken',
       priority: 'high',
       lastActivityAt: at,
     });
-    expect(await changes(raised.id)).toEqual([['priority', 'normal', 'high', 'staff']]);
+    expect(await changesOf(raised.id)).toEqual([['priority', 'normal', 'high', 'staff']]);
   });
 
   it('counts the priority a new type brought as the editor’s choice', async () => {
@@ -291,7 +260,7 @@ describe('updateRequestDetails: a colleague changed the request meanwhile', () =
       }),
     ).rejects.toMatchObject({ code: 'conflict', key: 'errors.requests.detailsChanged' });
 
-    expect(await stored(raised.id)).toMatchObject({ type: 'bug', priority: 'low' });
+    expect(await storedRequest(raised.id)).toMatchObject({ type: 'bug', priority: 'low' });
   });
 
   it('has nothing left to do when they made the same change', async () => {
@@ -306,7 +275,7 @@ describe('updateRequestDetails: a colleague changed the request meanwhile', () =
     });
 
     expect(result).toEqual({ changed: 0 });
-    expect(await changes(raised.id)).toEqual([['priority', 'normal', 'high', 'staff']]);
+    expect(await changesOf(raised.id)).toEqual([['priority', 'normal', 'high', 'staff']]);
   });
 
   it('changes nothing when the form sends back what it started from, whatever they changed', async () => {
@@ -319,8 +288,8 @@ describe('updateRequestDetails: a colleague changed the request meanwhile', () =
     const result = await updateRequestDetails(ctx, alex, { ...edited(), request: raised.id });
 
     expect(result).toEqual({ changed: 0 });
-    expect(await stored(raised.id)).toMatchObject(theirs);
-    expect(await changes(raised.id)).toHaveLength(3);
+    expect(await storedRequest(raised.id)).toMatchObject(theirs);
+    expect(await changesOf(raised.id)).toHaveLength(3);
   });
 });
 
@@ -336,7 +305,7 @@ describe('updateRequestDetails: what the editor left alone', () => {
     });
 
     expect(result).toEqual({ changed: 0 });
-    expect(await changes(raised.id)).toEqual([]);
+    expect(await changesOf(raised.id)).toEqual([]);
   });
 
   it('is not held to the rules: a title that is too long by now stays until someone corrects it', async () => {
@@ -372,7 +341,7 @@ describe('updateRequestDetails: what the editor left alone', () => {
         request: raised.id,
       }),
     ).toEqual({ changed: 1 });
-    expect(await stored(raised.id)).toMatchObject({
+    expect(await storedRequest(raised.id)).toMatchObject({
       title: 'The printer is broken',
       priority: 'high',
     });
@@ -397,6 +366,6 @@ describe('updateRequestDetails: what the editor left alone', () => {
         request: raised.id,
       }),
     ).rejects.toMatchObject({ code: 'conflict', key: 'errors.requests.detailsChanged' });
-    expect(await changes(raised.id)).toEqual([]);
+    expect(await changesOf(raised.id)).toEqual([]);
   });
 });

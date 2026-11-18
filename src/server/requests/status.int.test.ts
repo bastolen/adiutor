@@ -2,11 +2,9 @@
  * @file Integration tests for changing a request's status. Which roles may
  * change it is in the authorization matrix.
  */
-import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
 
-import { request, requestEntry } from '@/db/schema';
 import { REQUEST_STATUSES } from '@/lib/requests';
 
 import {
@@ -19,38 +17,14 @@ import {
 } from '../../../tests/integration/helpers';
 import { RATE_LIMITS } from '../rate-limit';
 import changeRequestStatus from './status';
-import { ctx, db, deactivatedMeanwhile, storeRequest } from './test-helpers';
-
-/**
- * Loads a request as it's stored.
- *
- * @param id - The request's ID.
- * @returns The row.
- */
-async function stored(id: string) {
-  const [found] = await db.select().from(request).where(eq(request.id, id));
-  return found;
-}
-
-/**
- * The status changes in a request's history, in order.
- *
- * @param requestId - The request.
- * @returns Each change as `[from, to, side]`.
- */
-async function changes(requestId: string) {
-  const entries = await db
-    .select()
-    .from(requestEntry)
-    .where(eq(requestEntry.requestId, requestId))
-    .orderBy(requestEntry.id);
-  return entries.map(({ kind, fromValue, toValue, authorSide }) => [
-    kind,
-    fromValue,
-    toValue,
-    authorSide,
-  ]);
-}
+import {
+  changesOf,
+  ctx,
+  db,
+  deactivatedMeanwhile,
+  storeRequest,
+  storedRequest,
+} from './test-helpers';
 
 describe('changeRequestStatus: the staff', () => {
   it('move a request through every status, each change in its history', async () => {
@@ -68,13 +42,13 @@ describe('changeRequestStatus: the staff', () => {
       { changed: true, reopened: false, status: 'waiting' },
       { changed: true, reopened: false, status: 'done' },
     ]);
-    expect(await changes(raised.id)).toEqual([
+    expect(await changesOf(raised.id)).toEqual([
       ['status', 'open', 'todo', 'staff'],
       ['status', 'todo', 'in_progress', 'staff'],
       ['status', 'in_progress', 'waiting', 'staff'],
       ['status', 'waiting', 'done', 'staff'],
     ]);
-    const after = await stored(raised.id);
+    const after = await storedRequest(raised.id);
     expect(after).toMatchObject({ status: 'done', reopenedAt: null });
     expect(after?.lastActivityAt.getTime()).toBeGreaterThan(minutesAgo(1).getTime());
   });
@@ -102,14 +76,14 @@ describe('changeRequestStatus: the staff', () => {
     expect(
       await changeRequestStatus(ctx, support, { request: raised.id, status: 'in_progress' }),
     ).toEqual({ changed: true, reopened: true, status: 'in_progress' });
-    const reopened = await stored(raised.id);
+    const reopened = await storedRequest(raised.id);
     expect(reopened?.reopenedAt?.getTime()).toBeGreaterThan(minutesAgo(1).getTime());
 
     // It stays marked while it's worked on, and loses the mark when it's closed again.
     await changeRequestStatus(ctx, support, { request: raised.id, status: 'waiting' });
-    expect((await stored(raised.id))?.reopenedAt).toEqual(reopened?.reopenedAt);
+    expect((await storedRequest(raised.id))?.reopenedAt).toEqual(reopened?.reopenedAt);
     await changeRequestStatus(ctx, support, { request: raised.id, status: 'cancelled' });
-    expect((await stored(raised.id))?.reopenedAt).toBeNull();
+    expect((await storedRequest(raised.id))?.reopenedAt).toBeNull();
   });
 
   it('do not reopen a request by moving it from done to cancelled', async () => {
@@ -119,7 +93,7 @@ describe('changeRequestStatus: the staff', () => {
 
     await changeRequestStatus(ctx, support, { request: raised.id, status: 'cancelled' });
 
-    expect(await stored(raised.id)).toMatchObject({ status: 'cancelled', reopenedAt: null });
+    expect(await storedRequest(raised.id)).toMatchObject({ status: 'cancelled', reopenedAt: null });
   });
 });
 
@@ -137,7 +111,7 @@ describe('changeRequestStatus: the company', () => {
     const result = await changeRequestStatus(ctx, client, { request: raised.id, status: to });
 
     expect(result).toEqual({ changed: true, reopened: false, status: to });
-    expect(await changes(raised.id)).toEqual([['status', from, to, 'company']]);
+    expect(await changesOf(raised.id)).toEqual([['status', from, to, 'company']]);
   });
 
   it.each(['done', 'cancelled'] as const)(
@@ -150,8 +124,8 @@ describe('changeRequestStatus: the company', () => {
       const result = await changeRequestStatus(ctx, admin, { request: raised.id, status: 'open' });
 
       expect(result).toEqual({ changed: true, reopened: true, status: 'open' });
-      expect(await changes(raised.id)).toEqual([['status', from, 'open', 'company']]);
-      const after = await stored(raised.id);
+      expect(await changesOf(raised.id)).toEqual([['status', from, 'open', 'company']]);
+      const after = await storedRequest(raised.id);
       expect(after?.status).toBe('open');
       expect(after?.reopenedAt?.getTime()).toBeGreaterThan(minutesAgo(1).getTime());
     },
@@ -165,7 +139,7 @@ describe('changeRequestStatus: the company', () => {
     await expect(
       changeRequestStatus(ctx, client, { request: raised.id, status }),
     ).rejects.toMatchObject({ code: 'forbidden' });
-    expect(await changes(raised.id)).toEqual([]);
+    expect(await changesOf(raised.id)).toEqual([]);
   });
 
   it.each([
@@ -180,7 +154,7 @@ describe('changeRequestStatus: the company', () => {
     await expect(
       changeRequestStatus(ctx, client, { request: raised.id, status: to }),
     ).rejects.toMatchObject({ code: 'conflict', key: 'errors.requests.statusChanged' });
-    expect(await stored(raised.id)).toMatchObject({ status: from });
+    expect(await storedRequest(raised.id)).toMatchObject({ status: from });
   });
 });
 
@@ -207,8 +181,8 @@ describe('changeRequestStatus: refusals and no-ops', () => {
         status: 'done',
       },
     );
-    expect(await changes(raised.id)).toEqual([]);
-    expect((await stored(raised.id))?.lastActivityAt).toEqual(at);
+    expect(await changesOf(raised.id)).toEqual([]);
+    expect((await storedRequest(raised.id))?.lastActivityAt).toEqual(at);
   });
 
   it('refuses a status that does not exist', async () => {
@@ -229,7 +203,7 @@ describe('changeRequestStatus: refusals and no-ops', () => {
     await expect(
       changeRequestStatus(ctx, manager, { request: raised.id, status: 'done' }),
     ).rejects.toMatchObject({ code: 'invalid', key: 'errors.companyDeactivated' });
-    expect(await stored(raised.id)).toMatchObject({ status: 'open' });
+    expect(await storedRequest(raised.id)).toMatchObject({ status: 'open' });
   });
 
   it('refuses a change from the staff when the company was deactivated while it was under way', async () => {
@@ -246,8 +220,8 @@ describe('changeRequestStatus: refusals and no-ops', () => {
       status: 'rejected',
       reason: { code: 'invalid', key: 'errors.companyDeactivated' },
     });
-    expect(await stored(raised.id)).toMatchObject({ status: 'open' });
-    expect(await changes(raised.id)).toEqual([]);
+    expect(await storedRequest(raised.id)).toMatchObject({ status: 'open' });
+    expect(await changesOf(raised.id)).toEqual([]);
   });
 
   it('stops at the limit of changes one person makes', async () => {
@@ -263,6 +237,6 @@ describe('changeRequestStatus: refusals and no-ops', () => {
     await expect(
       changeRequestStatus(ctx, support, { request: raised.id, status: 'todo' }),
     ).rejects.toMatchObject({ code: 'rate_limited' });
-    expect(await stored(raised.id)).toMatchObject({ status: 'open' });
+    expect(await storedRequest(raised.id)).toMatchObject({ status: 'open' });
   });
 });
