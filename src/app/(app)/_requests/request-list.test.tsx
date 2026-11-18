@@ -5,6 +5,7 @@
  * offers to raise one.
  */
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Actor } from '@/server/actor';
@@ -153,6 +154,22 @@ describe('a request list without requests', () => {
     );
     expect(listRequestCompanies).toHaveBeenCalledOnce();
     expect(getRequestSettings).toHaveBeenCalledOnce();
+  });
+
+  it('offers the type menu with "all" first, linking to the list with each value', async () => {
+    await renderList({ status: 'all', type: 'bug' });
+
+    await userEvent.click(screen.getByRole('button', { name: /Bug/ }));
+
+    const options = screen.getAllByRole('menuitemradio');
+    expect(options[0]).toHaveTextContent('All');
+    expect(options[0]).toHaveAttribute('aria-checked', 'false');
+    expect(options[0]).toHaveAttribute('href', '/requests?status=all');
+    const bug = screen.getByRole('menuitemradio', { name: 'Bug' });
+    expect(bug).toHaveAttribute('aria-checked', 'true');
+    expect(bug).toHaveAttribute('href', '/requests?status=all&type=bug');
+    // The priority menu is for the staff only, and the company menu for several companies.
+    expect(screen.queryByRole('button', { name: /priority/i })).not.toBeInTheDocument();
   });
 
   it.each([

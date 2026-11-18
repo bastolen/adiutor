@@ -194,6 +194,36 @@ export default async function RequestList({
     { ...filters, q: search },
     await getTranslations('tables'),
   ).table(definition, { ...requested, page: requests.page });
+  /**
+   * The options of a filter menu: "all" first (no value for the parameter),
+   * then one per item, each linking to the list with that value, and the
+   * chosen one marked as the current one.
+   *
+   * @param param - The query parameter the menu filters by.
+   * @param allLabel - The text of the option that removes the filter.
+   * @param chosen - The value the list is filtered by now, if any.
+   * @param items - The values to choose from, with their labels.
+   * @returns The menu's options.
+   */
+  const filterOptions = (
+    param: 'company' | 'type' | 'priority',
+    allLabel: string,
+    chosen: string | undefined,
+    items: { value: string; label: string }[],
+  ) => [
+    {
+      value: '',
+      label: allLabel,
+      href: table.withParams({ [param]: undefined }),
+      current: !chosen,
+    },
+    ...items.map(({ value, label }) => ({
+      value,
+      label,
+      href: table.withParams({ [param]: value }),
+      current: value === chosen,
+    })),
+  ];
   const canRaise = company
     ? companies.some(({ slug, canRaise: may }) => slug === company && may)
     : companies.some(({ canRaise: may }) => may);
@@ -250,58 +280,40 @@ export default async function RequestList({
               <FilterMenu
                 label={t('companyFilter')}
                 menuLabel={t('companyMenu')}
-                options={[
-                  {
-                    value: '',
-                    label: t('allCompanies'),
-                    href: table.withParams({ company: undefined }),
-                    current: !chosenCompany,
-                  },
-                  ...companies.map(({ slug, name }) => ({
-                    value: slug,
-                    label: name,
-                    href: table.withParams({ company: slug }),
-                    current: slug === chosenCompany,
-                  })),
-                ]}
+                options={filterOptions(
+                  'company',
+                  t('allCompanies'),
+                  chosenCompany,
+                  companies.map(({ slug, name }) => ({ value: slug, label: name })),
+                )}
               />
             )}
             <FilterMenu
               label={t('typeFilter')}
               menuLabel={t('typeMenu')}
-              options={[
-                {
-                  value: '',
-                  label: t('allTypes'),
-                  href: table.withParams({ type: undefined }),
-                  current: !type,
-                },
-                ...REQUEST_TYPES.map((value) => ({
+              options={filterOptions(
+                'type',
+                t('allTypes'),
+                type,
+                REQUEST_TYPES.map((value) => ({
                   value,
                   label: tRequests('type', { type: value }),
-                  href: table.withParams({ type: value }),
-                  current: value === type,
                 })),
-              ]}
+              )}
             />
             {internal && (
               <FilterMenu
                 label={t('priorityFilter')}
                 menuLabel={t('priorityMenu')}
-                options={[
-                  {
-                    value: '',
-                    label: t('allPriorities'),
-                    href: table.withParams({ priority: undefined }),
-                    current: !priority,
-                  },
-                  ...REQUEST_PRIORITIES.map((value) => ({
+                options={filterOptions(
+                  'priority',
+                  t('allPriorities'),
+                  priority,
+                  REQUEST_PRIORITIES.map((value) => ({
                     value,
                     label: tRequests('priority', { priority: value }),
-                    href: table.withParams({ priority: value }),
-                    current: value === priority,
                   })),
-                ]}
+                )}
               />
             )}
             {requests.total > 0 && <SortMenu label={t('rows')} options={table.sortOptions()} />}
