@@ -17,9 +17,10 @@ import type { JobSummary } from './define';
 import { REQUEST_RUN_SECONDS, runTick, type TickResult } from './tick';
 
 /**
- * How long one tick from the endpoint may keep starting runs, in seconds (40):
- * the route's `maxDuration` of 60, less the 15 seconds one email can take and
- * 5 to answer (see {@link REQUEST_RUN_SECONDS}), so it answers in time.
+ * How long one tick from the endpoint may keep starting runs, in seconds (25):
+ * the route's `maxDuration` of 60, less the 15 seconds one email can take, 15
+ * for the alert a failure sends and 5 to answer (see
+ * {@link REQUEST_RUN_SECONDS}), so it answers in time.
  */
 const ENDPOINT_TICK_SECONDS = REQUEST_RUN_SECONDS;
 
@@ -31,9 +32,10 @@ export const TICK_CONTINUATION_HEADER = 'x-adiutor-tick-continuation';
 
 /**
  * How many times in a row a tick continues itself at most: nearly 7 minutes
- * of extra work, after which the next tick takes over.
+ * of extra work (16 times {@link ENDPOINT_TICK_SECONDS}), after which the
+ * next tick takes over.
  */
-export const MAX_TICK_CONTINUATIONS = 10;
+export const MAX_TICK_CONTINUATIONS = 16;
 
 /**
  * How long a continuation waits for the continued call's 202, in
