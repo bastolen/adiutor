@@ -95,6 +95,61 @@ describe('accepting', () => {
     expect(await getInvitationPreview(ctx, token)).toBeNull();
   });
 
+  it.each([
+    ['an invitation sent by email', 'emailed@adiutor.test', false],
+    ['the invitation an invite link sent', 'linked@adiutor.test', true],
+  ])(
+    'records the account made from %s, by and about its new user, before joining',
+    async (_from, email, fromLink) => {
+      let token: string;
+      if (fromLink) {
+        const { url } = await createInviteLink(ctx, companyAdmin, {
+          companyId: testCompany.id,
+          role: 'client',
+          validDays: 1,
+        });
+        await claimInviteLink(ctx, defined(url.split('/join/')[1], 'the link token'), email);
+        token = tokenFrom(defined(sent.at(-1), 'the last email'));
+      } else {
+        token = await invite(email);
+      }
+
+      await acceptInvitationWithNewAccount(ctx, token, {
+        name: 'New Person',
+        password: 'correct-horse-1',
+      });
+
+      const created = firstRow(
+        await db.select({ id: user.id }).from(user).where(eq(user.email, email)),
+        'the new user',
+      );
+      expect(
+        await db
+          .select({
+            action: auditEvent.action,
+            actorUserId: auditEvent.actorUserId,
+            targetUserId: auditEvent.targetUserId,
+            details: auditEvent.details,
+          })
+          .from(auditEvent)
+          .where(eq(auditEvent.targetUserId, created.id))
+          .orderBy(auditEvent.id),
+      ).toEqual([
+        {
+          action: 'account_created',
+          actorUserId: created.id,
+          targetUserId: created.id,
+          details: { email },
+        },
+        expect.objectContaining({
+          action: 'member_joined',
+          actorUserId: created.id,
+          targetUserId: created.id,
+        }),
+      ]);
+    },
+  );
+
   it('lifts a pause on password sign-in for the invited address, which the invitation proves', async () => {
     const token = await invite('new@adiutor.test');
     const failed = { limit: 10, windowSeconds: 15 * 60 };

@@ -13,7 +13,8 @@ right passwords whose sign-in then asked for the code, recorded without an actor
 codes (on the step-up page, and at the code step of a sign-in without an actor; only codes that
 were compared and refused, not an expired one or another refusal), MFA changes,
 password and provider changes, wrong current passwords typed in a signed-in session
-(`password_check_failed`), revoked sessions, account deactivation, reactivation and deletion,
+(`password_check_failed`), revoked sessions, account creation (by an Admin, by accepting an
+invitation, or at setup), deactivation, reactivation and deletion,
 MFA resets, role changes, removed members, invitations and invite links, company changes, and staff
 signing in as a user (`impersonation_started`, with the optional reason the staff member gave, and
 `impersonation_ended`, with why it ended: going back, its time being up, no longer being allowed, or

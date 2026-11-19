@@ -396,7 +396,9 @@ export type CreateAccountResult =
  * Accepts an invitation by creating a new account for the invited address.
  * The token proves the person can read that inbox, so the email counts as
  * verified. If the address already has an account, nothing changes and the
- * person is asked to sign in instead.
+ * person is asked to sign in instead. The new account is recorded in the
+ * audit log (`account_created`, by and about the new user, with its address)
+ * in the same transaction as joining (`member_joined`).
  *
  * The invitation and the address's account are looked up twice: first
  * without a lock, before the password is hashed, and again in the
@@ -452,6 +454,17 @@ export async function acceptInvitationWithNewAccount(
           .values({ name, email, emailVerified: true })
           .returning({ id: user.id }),
         'the new user',
+      );
+      // They made it themself, as with joining: by and about the new user.
+      await recordEvent(
+        ctx,
+        {
+          action: 'account_created',
+          actorUserId: created.id,
+          targetUserId: created.id,
+          details: { email },
+        },
+        tx,
       );
       // The emailed invitation proves the inbox, like a password reset, so this also lifts the
       // pause from wrong passwords typed for the address before.
