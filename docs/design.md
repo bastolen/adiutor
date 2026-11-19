@@ -336,7 +336,13 @@ keyboard support.
 - **Tap targets:** every control is at least 24×24px (WCAG 2.5.8) without leaning on the rule's
   spacing exception, so each is easy to tap on a phone. Text links on their own line reach 2px above
   and below the text (`TextLink`, cancelled by a negative margin, so nothing moves), and a checkbox
-  counts with its label (`CheckboxField`). Links inside a sentence are exempt, as in WCAG.
+  counts with its label (`CheckboxField`). Links inside a sentence are exempt, as in WCAG. That
+  2px reaches 24px only on a link that's a block, which takes the whole line's height: an inline
+  link adds it to the font's height instead (21px for small text). So a link in a row of details
+  rather than a sentence, like the audit log's "by … · about … · company" line, is a flex item (its
+  part a `flex items-baseline gap-x-1` row), and a row that wraps keeps 4px between its lines so
+  the links don't overlap. The 24px check takes every inline link for one in a sentence, so it
+  can't catch an inline link there.
 - **Links in text:** a link inside a sentence is underlined (`TextLink`: thin at rest, thicker on
   hover), because its colour alone doesn't set it apart from the text around it: `highlight` is
   2.2:1 against body text in light mode and 1.6:1 in dark mode, and WCAG 1.4.1 asks for 3:1 or
