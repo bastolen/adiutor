@@ -750,6 +750,43 @@ test('the toolbar formats a reply for someone who doesn’t type Markdown', asyn
   ).toHaveAttribute('href', 'https://adiutor.test/manual');
 });
 
+test('a block of code is coloured while it’s written, in the language picked for it', async ({
+  page,
+}) => {
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'A reply with a block of code',
+  });
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  const editor = await markdownEditor(page, 'Your reply');
+  const toolbar = page.getByRole('toolbar', { name: 'Formatting' });
+
+  // Three backticks and a language start a block; its languages load now, and colour it.
+  await editor.click();
+  await page.keyboard.type('```ts ');
+  await page.keyboard.type('const answer = 42;');
+  await expect(editor.locator('figcaption')).toHaveText('TypeScript');
+  await expect(editor.locator('pre [class*="hljs-keyword"]')).toHaveText('const');
+
+  // Another language from the toolbar's menu, which is there while the cursor is in the block.
+  await toolbar.getByRole('button', { name: 'Language: TypeScript' }).click();
+  await page.getByRole('menuitemradio', { name: 'JavaScript' }).click();
+  await expect(editor.locator('figcaption')).toHaveText('JavaScript');
+  await expect(editor).toBeFocused();
+  await expect(editor.locator('pre [class*="hljs-keyword"]')).toHaveText('const');
+
+  // Sent, it's a block in that language.
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  const sent = page
+    .getByRole('region', { name: 'Conversation' })
+    .getByRole('group', { name: 'JavaScript code' });
+  await expect(sent).toHaveText('const answer = 42;');
+  await expect(sent.locator('[class*="hljs-keyword"]')).toHaveText('const');
+});
+
 test('Markdown that is pasted is formatted, and a tag stays the text it is', async ({ page }) => {
   const number = await storeRequest({
     companySlug: COMPANY_SLUG,

@@ -38,8 +38,9 @@ import {
 } from '../dropdown-menu';
 import Modal from '../modal';
 import TextField from '../text-field';
-import { Toolbar, ToolbarButton, ToolbarSeparator } from '../toolbar';
+import { Toolbar, ToolbarButton, ToolbarSeparator, ToolbarTextButton } from '../toolbar';
 import { useTransientState } from '../use-transient-state';
+import type { CodeLanguageChoice } from './languages';
 
 /** What's on where the cursor is, for the buttons that switch something. */
 export interface FormattingState {
@@ -65,6 +66,8 @@ export interface FormattingState {
   quote: boolean;
   /** Whether it's in a block of code. */
   codeBlock: boolean;
+  /** The language the block of code at the cursor names, as it was written, or `null`. */
+  codeLanguage: string | null;
   /** Whether the list item at the cursor can be nested under the one above it. */
   canNest: boolean;
   /** Whether it can be lifted out of the list it's nested in. */
@@ -100,6 +103,12 @@ export type FormattingCommand =
       type: 'link';
       /** The address to link to, or `null` to remove the link. */
       address: string | null;
+    }
+  | {
+      /** Say which language the block of code at the cursor is in. */
+      type: 'codeLanguage';
+      /** The language's key, or `null` for no language. */
+      language: string | null;
     };
 
 /** The lowest heading the menu offers; a deeper one (typed with more `#`) shows as this one. */
@@ -176,26 +185,41 @@ function LinkForm({
  * The toolbar. Each button names what it does, and one that switches
  * something says whether it's on. Without a state (before the editor is
  * there, or while the field is switched off) every button is disabled.
- * What the heading menu and the link dialog ask for is passed on once they
- * have closed, so the text gets the focus afterwards, not their button.
+ * What a menu and the link dialog ask for is passed on once they have
+ * closed, so the text gets the focus afterwards, not their button.
+ *
+ *
+ * While the cursor is in a block of code, a menu at the end picks its
+ * language, once the languages are known.
  *
  * @param props - Component props.
  * @param props.state - What's on at the cursor, or `null` while there's no editor to act on.
  * @param props.onCommand - Called with what a pressed button asks for.
+ * @param props.languages - The languages a block of code can be in, or `null` until they've loaded.
+ * @param props.languageName - Gives a language's name as people know it, once the languages have loaded.
  * @returns The toolbar.
  */
 export default function FormattingToolbar({
   state,
   onCommand,
+  languages = null,
+  languageName = undefined,
 }: {
   state: FormattingState | null;
   onCommand: (command: FormattingCommand) => void;
+  languages?: CodeLanguageChoice[] | null;
+  languageName?: (language: string) => string | null;
 }) {
   const t = useTranslations('common.markdown.toolbar');
   const tLink = useTranslations('common.markdown.linkDialog');
   // The dialog is closed again when the user comes back to a page that was kept.
   const [linking, setLinking] = useTransientState(false);
   const off = state === null;
+  // The language of the block of code at the cursor: its name, and its key among the choices
+  // (it may have been typed as an alias, "ts").
+  const written = state?.codeLanguage ?? null;
+  const codeName = written === null ? null : (languageName?.(written) ?? written);
+  const codeChoice = languages?.find((choice) => choice.name === codeName)?.id ?? written ?? '';
   // What the heading menu or the link dialog asked for, until that layer has closed.
   const [waiting, setWaiting] = useState<FormattingCommand | null>(null);
   const pass = useEffectEvent(onCommand);
@@ -278,6 +302,32 @@ export default function FormattingToolbar({
         <ToolbarSeparator />
         <ToolbarButton label={t('quote')} icon={TextQuote} {...toggle('quote')} />
         <ToolbarButton label={t('codeBlock')} icon={SquareCode} {...toggle('codeBlock')} />
+        {state?.codeBlock && languages && (
+          <MenuRoot>
+            <MenuTrigger asChild>
+              <ToolbarTextButton
+                aria-label={t('codeLanguage', { language: codeName ?? t('noLanguage') })}
+              >
+                {codeName ?? t('noLanguage')}
+              </ToolbarTextButton>
+            </MenuTrigger>
+            <MenuContent align="end" className="max-h-72 overflow-y-auto">
+              <MenuRadioGroup
+                value={codeChoice}
+                onValueChange={(language) =>
+                  setWaiting({ type: 'codeLanguage', language: language || null })
+                }
+              >
+                <MenuRadioItem value="">{t('noLanguage')}</MenuRadioItem>
+                {languages.map((choice) => (
+                  <MenuRadioItem key={choice.id} value={choice.id}>
+                    {choice.name}
+                  </MenuRadioItem>
+                ))}
+              </MenuRadioGroup>
+            </MenuContent>
+          </MenuRoot>
+        )}
       </Toolbar>
       <Modal
         open={linking}

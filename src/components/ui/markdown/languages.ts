@@ -50,3 +50,16 @@ Object.entries(CODE_LANGUAGES).forEach(([language, grammar]) => {
 export function codeLanguageName(language: string): string | null {
   return NAMES.getLanguage(language)?.name ?? null;
 }
+
+/** A language someone can pick for a block of code. */
+export interface CodeLanguageChoice {
+  /** The language's key, as a block of code names it. */
+  id: string;
+  /** Its name as people know it. */
+  name: string;
+}
+
+/** The languages to pick from, by name. */
+export const CODE_LANGUAGE_CHOICES: CodeLanguageChoice[] = Object.keys(CODE_LANGUAGES)
+  .map((id) => ({ id, name: codeLanguageName(id) ?? id }))
+  .sort((a, b) => a.name.localeCompare(b.name, 'en'));

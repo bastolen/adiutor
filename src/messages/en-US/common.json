@@ -173,7 +173,9 @@
         "nest": "Nest the list item",
         "lift": "Lift the list item",
         "quote": "Quotation",
-        "codeBlock": "Block of code"
+        "codeBlock": "Block of code",
+        "codeLanguage": "Language: {language}",
+        "noLanguage": "No language"
       },
       "linkDialog": {
         "title": "Link",

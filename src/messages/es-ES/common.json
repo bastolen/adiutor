@@ -173,7 +173,9 @@
         "nest": "Anidar el elemento de la lista",
         "lift": "Sacar el elemento de la lista",
         "quote": "Cita",
-        "codeBlock": "Bloque de código"
+        "codeBlock": "Bloque de código",
+        "codeLanguage": "Lenguaje: {language}",
+        "noLanguage": "Sin lenguaje"
       },
       "linkDialog": {
         "title": "Enlace",

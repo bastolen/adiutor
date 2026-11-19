@@ -755,8 +755,15 @@ test.describe('on a 320px wide screen', () => {
         await expect(editor.locator('pre')).toHaveText('const a = 1;');
         await expectAccessible(page);
 
-        // The toolbar's two layers: the heading menu, and the dialog for a link.
+        // The toolbar's layers: the language menu of the block of code the cursor is in, the
+        // heading menu, and the dialog for a link.
         const toolbar = page.getByRole('toolbar', { name: 'Formatting' });
+        await expect(editor.locator('figcaption')).toHaveText('TypeScript');
+        await expectAccessible(page);
+        await toolbar.getByRole('button', { name: 'Language: TypeScript' }).click();
+        await expect(page.getByRole('menu')).toBeVisible();
+        await expectAccessible(page, '[role="menu"]');
+        await page.keyboard.press('Escape');
         await toolbar.getByRole('button', { name: 'Heading' }).click();
         await expect(page.getByRole('menu')).toBeVisible();
         await expectAccessible(page, '[role="menu"]');

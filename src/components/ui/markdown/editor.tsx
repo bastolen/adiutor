@@ -12,10 +12,11 @@
 
 import { type Editor, EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import { useTranslations } from 'next-intl';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 
 import { editorExtensions, readMarkdown, writeMarkdown } from './editor-extensions';
-import { format, formattingOf } from './editor-formatting';
+import { format, formattingOf, hasCode, highlightCode } from './editor-formatting';
+import { knownCodeLanguages, subscribeToCodeLanguages } from './editor-highlighter';
 import FormattingToolbar, { type FormattingState } from './formatting-toolbar';
 import { markdownStyles } from './styles';
 
@@ -91,6 +92,7 @@ export default function MarkdownEditor({
          * @returns The name.
          */
         task: (task, done) => t('taskCheckbox', { done: done ? 'yes' : 'no', task }),
+        code: t('code'),
       }),
     [t],
   );
@@ -161,9 +163,32 @@ export default function MarkdownEditor({
       current ? formattingOf(current) : null,
   });
 
+  // The languages of highlighted code are a download of their own, fetched once a text has a
+  // block of code. The toolbar's language menu and the blocks' captions follow them.
+  const languages = useSyncExternalStore(subscribeToCodeLanguages, knownCodeLanguages, () => null);
+  const withCode = useEditorState({
+    editor,
+    /**
+     * Looks for a block of code in the text.
+     *
+     * @param current - What the editor passes.
+     * @param current.editor - The editor, once it's there.
+     * @returns Whether the text has one.
+     */
+    selector: ({ editor: current }) => (current ? hasCode(current) : false),
+  });
+  useEffect(() => {
+    if (editor && withCode) {
+      // It never rejects: without the languages the code just stays uncoloured.
+      highlightCode(editor).catch(() => undefined);
+    }
+  }, [editor, withCode]);
+
   return (
     <>
       <FormattingToolbar
+        languages={languages?.choices ?? null}
+        languageName={languages?.nameOf}
         state={disabled ? null : formatting}
         onCommand={(command) => {
           if (editor) {

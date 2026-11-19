@@ -38,11 +38,11 @@ export const markdownStyles = {
   codeBlock:
     'overflow-x-auto p-3 font-mono text-[0.9em] leading-6 wrap-normal whitespace-pre focus-visible:-outline-offset-2 [&>code]:border-0 [&>code]:bg-transparent [&>code]:p-0 [&>code]:text-[1em]',
   /**
-   * A block of code while it's written: the same box, with the code wrapping
-   * rather than scrolling, so the cursor stays in sight.
+   * The code of a block while it's written, in the same box as where it's
+   * read ({@link markdownStyles.codeFigure}): it wraps rather than scrolls, so
+   * the cursor stays in sight.
    */
-  editorCodeBlock:
-    'rounded-lg border border-border bg-background p-3 font-mono text-[0.9em] leading-6 [&>code]:border-0 [&>code]:bg-transparent [&>code]:p-0 [&>code]:text-[1em]',
+  editorCode: 'p-3 font-mono text-[0.9em] leading-6',
   /**
    * A thing to do while it's written: its checkbox, as tall as a line of
    * text (24px, the least a target may be), then its text.

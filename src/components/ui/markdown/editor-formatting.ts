@@ -5,6 +5,7 @@
  */
 import type { Editor } from '@tiptap/react';
 
+import { loadCodeLanguages } from './editor-highlighter';
 import type { FormattingCommand, FormattingState } from './formatting-toolbar';
 
 /** The kinds of list item: of a list, and of a list of things to do. */
@@ -21,6 +22,7 @@ const HEADING_LEVELS = [1, 2, 3] as const;
  */
 export function formattingOf(editor: Editor): FormattingState {
   const address: unknown = editor.getAttributes('link').href;
+  const language: unknown = editor.getAttributes('codeBlock').language;
   return {
     bold: editor.isActive('bold'),
     italic: editor.isActive('italic'),
@@ -33,6 +35,7 @@ export function formattingOf(editor: Editor): FormattingState {
     taskList: editor.isActive('taskList'),
     quote: editor.isActive('blockquote'),
     codeBlock: editor.isActive('codeBlock'),
+    codeLanguage: typeof language === 'string' && language ? language : null,
     canNest: LIST_ITEMS.some((item) => editor.can().sinkListItem(item)),
     canLift: LIST_ITEMS.some((item) => editor.can().liftListItem(item)),
   };
@@ -114,7 +117,52 @@ export function format(editor: Editor, command: FormattingCommand) {
       }
       break;
     }
+    case 'codeLanguage':
+      chain.updateAttributes('codeBlock', { language: command.language }).run();
+      break;
     default:
       link(editor, command.address);
   }
+}
+
+/**
+ * Whether a text has a block of code.
+ *
+ * @param editor - The editor.
+ * @returns Whether its text holds one.
+ */
+export function hasCode(editor: Editor): boolean {
+  let found = false;
+  editor.state.doc.descendants((node) => {
+    found ||= node.type.name === 'codeBlock';
+    return !found;
+  });
+  return found;
+}
+
+/**
+ * Loads the languages of highlighted code and colours the editor's blocks
+ * with them. The blocks are touched without changing them, which is what
+ * makes the highlighter look at them again; it's no step to undo.
+ *
+ * @param editor - The editor.
+ * @returns A promise that settles when the code is coloured, or the languages couldn't be loaded.
+ */
+export async function highlightCode(editor: Editor): Promise<void> {
+  try {
+    await loadCodeLanguages();
+  } catch {
+    // Without the languages the code stays uncoloured, here; it's coloured where it's read.
+    return;
+  }
+  if (editor.isDestroyed) {
+    return;
+  }
+  const { tr } = editor.state;
+  editor.state.doc.descendants((node, position) => {
+    if (node.type.name === 'codeBlock') {
+      tr.setNodeMarkup(position, undefined, node.attrs);
+    }
+  });
+  editor.view.dispatch(tr.setMeta('addToHistory', false));
 }

@@ -88,6 +88,22 @@ describe('MarkdownEditor', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Bold' })).toBeEnabled());
   });
 
+  it('shows a block of code under its language, coloured once the languages have loaded', async () => {
+    renderEditor({ markdown: '```ts\nconst a = 1;\n```\n\n```\nconst b = 2;\n```' });
+
+    const editor = await screen.findByRole('textbox', { name: 'Your reply' });
+    // The languages are fetched because the text has code; then the block is coloured and named.
+    await waitFor(() => expect(editor.querySelector('.hljs-keyword')).toHaveTextContent('const'));
+    const captions = [...editor.querySelectorAll('figcaption')].map(
+      (caption) => caption.textContent,
+    );
+    expect(captions).toEqual(['TypeScript', 'Code']);
+    // A block that names no language is never coloured: no language is guessed.
+    const [, plain] = [...editor.querySelectorAll('pre')];
+    expect(plain).toHaveTextContent('const b = 2;');
+    expect(plain?.querySelector('[class*="hljs-"]')).not.toBeInTheDocument();
+  });
+
   it('doesn’t report being filled as a change', async () => {
     const { onChange } = renderEditor({ markdown: 'Text from before.' });
 

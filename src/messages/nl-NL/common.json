@@ -173,7 +173,9 @@
         "nest": "Lijstitem laten inspringen",
         "lift": "Lijstitem terugzetten",
         "quote": "Citaat",
-        "codeBlock": "Codeblok"
+        "codeBlock": "Codeblok",
+        "codeLanguage": "Taal: {language}",
+        "noLanguage": "Geen taal"
       },
       "linkDialog": {
         "title": "Link",

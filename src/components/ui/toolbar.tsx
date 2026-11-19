@@ -5,7 +5,7 @@
  */
 'use client';
 
-import type { LucideIcon } from 'lucide-react';
+import { ChevronDown, type LucideIcon } from 'lucide-react';
 import { Toolbar as RadixToolbar } from 'radix-ui';
 import type { ComponentProps, ReactNode } from 'react';
 
@@ -99,6 +99,39 @@ export function ToolbarButton({
       {...props}
     >
       <Icon aria-hidden="true" />
+    </RadixToolbar.Button>
+  );
+}
+
+/**
+ * A button of a toolbar that shows a value in words, such as a menu's
+ * current choice. Its accessible name comes from `aria-label`, which says
+ * what the value is of and includes the value.
+ *
+ * @param props - Button props.
+ * @param props.className - Extra classes.
+ * @param props.type - Button type.
+ * @param props.children - The value shown.
+ * @returns The button.
+ */
+export function ToolbarTextButton({
+  className = '',
+  type = 'button',
+  children = null,
+  ...props
+}: ComponentProps<typeof RadixToolbar.Button>) {
+  return (
+    <RadixToolbar.Button
+      type={type}
+      className={cn(
+        toolbarButtonClasses,
+        'w-auto max-w-40 gap-1 px-2 text-sm font-medium',
+        className,
+      )}
+      {...props}
+    >
+      <span className="truncate">{children}</span>
+      <ChevronDown aria-hidden="true" />
     </RadixToolbar.Button>
   );
 }

@@ -27,6 +27,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { linkTarget } from '@/lib/requests';
 
 import { writtenLinkClasses } from '../external-link';
+import editorCodeBlock from './editor-code-block';
 import { markdownStyles } from './styles';
 
 /** The texts the editor's content needs, in the reader's language. */
@@ -46,6 +47,8 @@ export interface EditorLabels {
    * @returns The checkbox's accessible name.
    */
   task: (task: string, done: boolean) => string;
+  /** The caption of a block of code that names no language ("Code"). */
+  code: string;
 }
 
 /**
@@ -346,9 +349,9 @@ const MarkdownPaste = Extension.create({
 
 /**
  * Builds the editor's extensions: the formatting Markdown has (headings,
- * emphasis, lists, things to do, quotations, code, tables, links), with the
- * same classes as where a text is read, and Markdown as what the content is
- * read from and written to.
+ * emphasis, lists, things to do, quotations, code that's highlighted, tables,
+ * links), with the same classes as where a text is read, and Markdown as
+ * what the content is read from and written to.
  *
  * @param labels - The texts the content needs.
  * @returns The extensions.
@@ -357,6 +360,7 @@ export function editorExtensions(labels: EditorLabels): Extensions {
   return [
     StarterKit.configure({
       // These come in their own form below; Markdown has no underline.
+      codeBlock: false,
       link: false,
       listItem: false,
       listKeymap: false,
@@ -366,9 +370,9 @@ export function editorExtensions(labels: EditorLabels): Extensions {
       orderedList: { HTMLAttributes: { class: markdownStyles.orderedList } },
       blockquote: { HTMLAttributes: { class: markdownStyles.quote } },
       code: { HTMLAttributes: { class: markdownStyles.inlineCode } },
-      codeBlock: { HTMLAttributes: { class: markdownStyles.editorCodeBlock } },
       horizontalRule: { HTMLAttributes: { class: markdownStyles.rule } },
     }),
+    editorCodeBlock(labels.code),
     EditorListItem.configure({ HTMLAttributes: { class: markdownStyles.listItem } }),
     EditorListKeymap,
     TaskList.configure({ HTMLAttributes: { class: markdownStyles.taskList } }),

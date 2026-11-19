@@ -35,6 +35,7 @@ function editorWith(markdown = ''): Editor {
        * @returns The name.
        */
       task: (task, done) => `${done ? 'Done' : 'To do'}: ${task}`,
+      code: 'Code',
     }),
   });
   editors.push(editor);

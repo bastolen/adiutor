@@ -6,7 +6,7 @@ import { Editor } from '@tiptap/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { editorExtensions, readMarkdown, writeMarkdown } from './editor-extensions';
-import { format, formattingOf } from './editor-formatting';
+import { format, formattingOf, hasCode, highlightCode } from './editor-formatting';
 
 /** The editors made by a test, to take down after it. */
 const editors: Editor[] = [];
@@ -37,6 +37,7 @@ function editorAt(markdown: string, word: string, select = false): Editor {
        * @returns The name.
        */
       task: (task) => task,
+      code: 'Code',
     }),
   });
   editors.push(editor);
@@ -74,6 +75,7 @@ describe('formattingOf', () => {
       taskList: false,
       quote: false,
       codeBlock: false,
+      codeLanguage: null,
       canNest: false,
       canLift: false,
     });
@@ -95,6 +97,12 @@ describe('formattingOf', () => {
     expect(formattingOf(editorAt('```\ncode\n```', 'code')).codeBlock).toBe(true);
     expect(formattingOf(editorAt('1. first', 'first')).orderedList).toBe(true);
     expect(formattingOf(editorAt('- [ ] todo', 'todo')).taskList).toBe(true);
+  });
+
+  it('finds the language the block of code at the cursor names', () => {
+    expect(formattingOf(editorAt('```ts\ncode\n```', 'code')).codeLanguage).toBe('ts');
+    expect(formattingOf(editorAt('```\ncode\n```', 'code')).codeLanguage).toBeNull();
+    expect(formattingOf(editorAt('plain text', 'plain')).codeLanguage).toBeNull();
   });
 
   it('knows whether a list item can be nested or lifted', () => {
@@ -199,5 +207,37 @@ describe('format', () => {
 
     format(editor, { type: 'link', address: null });
     expect(writeMarkdown(editor)).toBe('see the docs here');
+  });
+});
+
+describe('the language of a block of code', () => {
+  it('is set and taken off from the toolbar', () => {
+    const editor = editorAt('```\nprint(1)\n```', 'print');
+
+    format(editor, { type: 'codeLanguage', language: 'python' });
+    expect(writeMarkdown(editor)).toBe('```python\nprint(1)\n```');
+
+    format(editor, { type: 'codeLanguage', language: null });
+    expect(writeMarkdown(editor)).toBe('```\nprint(1)\n```');
+  });
+});
+
+describe('hasCode', () => {
+  it('finds a block of code anywhere in the text, and none in a text without', () => {
+    expect(hasCode(editorAt('text\n\n> ```\n> quoted code\n> ```', 'text'))).toBe(true);
+    expect(hasCode(editorAt('text with `code` in a sentence', 'text'))).toBe(false);
+  });
+});
+
+describe('highlightCode', () => {
+  it('looks at the code again without changing the text or adding a step to undo', async () => {
+    // (That the code is then coloured shows in the editor itself: `editor.test.tsx`.)
+    const editor = editorAt('```ts\nconst a = 1;\n```\n\n```\nconst b = 2;\n```', 'const a');
+    const before = writeMarkdown(editor);
+
+    await highlightCode(editor);
+
+    expect(writeMarkdown(editor)).toBe(before);
+    expect(editor.can().undo()).toBe(false);
   });
 });
