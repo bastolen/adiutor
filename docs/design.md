@@ -170,6 +170,13 @@ keyboard support.
   Never make text lighter with opacity (`text-foreground/60`): contrast can't be guaranteed that
   way. Brand orange is too light for small text on white, so errors use the darker `danger`.
 
+  Highlighted code has its own tokens (`code-comment`, `code-keyword`, `code-string`,
+  `code-number`, `code-title`, `code-type`, `code-attribute`), which `src/styles/code.css` gives
+  to the classes highlight.js puts on the parts of a block of code. Code stands on `background`,
+  in a block and in a sentence; each token is 6:1 or more on it in both modes, and
+  `src/styles/theme.test.ts` checks that. A new kind of token gets its colour there, never a
+  fixed one in a component.
+
 - **Font:** Inter for text and JetBrains Mono for codes, URL names and references, which Adiutor
   ships (`src/lib/fonts.ts`, served from its own domain), so text looks and measures the same on
   every device and in CI; line height = font size + 8px. Emails use the device's own font, since

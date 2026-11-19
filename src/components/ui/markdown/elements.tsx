@@ -3,7 +3,8 @@
  * for links, images, lists, tables, quotes and code, so formatted text looks
  * like the rest of Adiutor and follows its rules for what someone else wrote.
  */
-import type { Components } from 'hast-util-to-jsx-runtime';
+import type { Element } from 'hast';
+import type { Components, ExtraProps } from 'hast-util-to-jsx-runtime';
 import { Square, SquareCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ComponentProps } from 'react';
@@ -14,6 +15,7 @@ import { linkTarget } from '@/lib/requests';
 import ExternalLink, { writtenLinkClasses } from '../external-link';
 import { focusRing } from '../styles';
 import { Td, Th, Tr } from '../table';
+import { codeLanguageName } from './languages';
 import { headingSize, markdownStyles } from './styles';
 
 /** The ID the parser gives the heading of a text's footnotes; every text's is the same. */
@@ -204,19 +206,67 @@ function MarkdownCode({ className, children = null }: ComponentProps<'code'>) {
   return <code className={cn(markdownStyles.inlineCode, className)}>{children}</code>;
 }
 
+/** The class the parser gives a block's code for the language the block names. */
+const LANGUAGE_CLASS = /^language-(.+)$/;
+
 /**
- * A block of code, always written left to right.
+ * Reads the language a block of code names after its opening backticks.
+ *
+ * @param block - The block's node in the text's tree.
+ * @returns The language as it was written, or `null` for a block that names none.
+ */
+function namedLanguage(block: Element | undefined): string | null {
+  const code = block?.children.find((child) => child.type === 'element');
+  const classes = code?.type === 'element' ? code.properties.className : null;
+  if (!Array.isArray(classes)) {
+    return null;
+  }
+  const match = classes.map((name) => LANGUAGE_CLASS.exec(String(name))).find(Boolean);
+  return match?.[1] ?? null;
+}
+
+/**
+ * A block of code, with the language it's in as its caption: the language's
+ * name where we know it ("TypeScript" for `ts`), else as it was written, and
+ * "Code" for a block that names none. The code is always written left to
+ * right. It scrolls sideways when it's wider than the text, so it can be
+ * reached and scrolled with the keyboard, and says what it holds.
  *
  * @param props - The block's attributes.
+ * @param props.node - The block's node in the text's tree, for the language it names.
  * @param props.children - Its code element.
  * @returns The block.
  */
-function MarkdownCodeBlock({ children = null }: ComponentProps<'pre'>) {
+function MarkdownCodeBlock({ node, children = null }: ComponentProps<'pre'> & ExtraProps) {
+  const t = useTranslations('common.markdown');
+  const language = namedLanguage(node);
+  const name = language === null ? null : (codeLanguageName(language) ?? language);
   return (
-    <pre dir="ltr" className={markdownStyles.codeBlock}>
-      {children}
-    </pre>
+    <figure className={markdownStyles.codeFigure}>
+      <figcaption className={markdownStyles.codeCaption}>{name ?? t('code')}</figcaption>
+      <pre
+        dir="ltr"
+        role="group"
+        aria-label={name === null ? t('code') : t('codeIn', { language: name })}
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- A box that scrolls must be reachable with the keyboard to be scrolled with it (WCAG 2.1.1).
+        tabIndex={0}
+        className={cn(focusRing, markdownStyles.codeBlock)}
+      >
+        {children}
+      </pre>
+    </figure>
   );
+}
+
+/**
+ * A table's row.
+ *
+ * @param props - The row's attributes.
+ * @param props.children - Its cells.
+ * @returns The row.
+ */
+function MarkdownRow({ children = null }: ComponentProps<'tr'>) {
+  return <Tr>{children}</Tr>;
 }
 
 /**
@@ -371,7 +421,7 @@ export default function markdownElements({
     code: MarkdownCode,
     pre: MarkdownCodeBlock,
     table: MarkdownTable,
-    tr: Tr,
+    tr: MarkdownRow,
     th: MarkdownHeaderCell,
     td: MarkdownCell,
     section: MarkdownFootnotes,

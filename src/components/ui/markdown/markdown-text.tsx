@@ -77,6 +77,8 @@ export default function MarkdownText({
         jsx,
         jsxs,
         components: markdownElements({ id, headingLevel }),
+        // A block of code reads the language it names from its node.
+        passNode: true,
         // A column's alignment reaches the cell as `align`, which becomes a class, not a style.
         tableCellAlignToStyle: false,
       })}

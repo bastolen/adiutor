@@ -153,7 +153,9 @@
       "backToReference": "Volver a la referencia {number, number}",
       "taskDone": "Hecho:",
       "taskOpen": "Pendiente:",
-      "table": "Tabla"
+      "table": "Tabla",
+      "code": "Código",
+      "codeIn": "Código {language}"
     }
   }
 }

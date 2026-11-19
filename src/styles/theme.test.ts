@@ -1,9 +1,10 @@
 /**
- * @file Contrast checks for the colour tokens of raised layers (dialogs,
- * menus, selects, toasts) in `theme.css`, in light and dark mode: text on
- * them stays readable (WCAG AA), the outline of the item the keyboard is on
- * shows where its fill doesn't, and in dark mode they sit a step lighter
- * than the page's surfaces so they stand apart.
+ * @file Contrast checks for colour tokens in `theme.css`, in light and dark
+ * mode. Raised layers (dialogs, menus, selects, toasts): text on them stays
+ * readable (WCAG AA), the outline of the item the keyboard is on shows where
+ * its fill doesn't, and in dark mode they sit a step lighter than the page's
+ * surfaces so they stand apart. Highlighted code: every colour stays
+ * readable on the background code stands on.
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -116,5 +117,24 @@ describe('raised layers in dark mode', () => {
     expect(luminance(colourOf('raised-muted', 'dark'))).toBeGreaterThan(
       luminance(colourOf('raised', 'dark')),
     );
+  });
+});
+
+describe.each(['light', 'dark'] as const)('highlighted code in %s mode', (mode) => {
+  it.each(['comment', 'keyword', 'string', 'number', 'title', 'type', 'attribute'])(
+    'keeps a %s readable on the background code stands on (4.5:1 or more)',
+    (kind) => {
+      expect(
+        contrast(colourOf(`code-${kind}`, mode), colourOf('background', mode)),
+      ).toBeGreaterThanOrEqual(4.5);
+    },
+  );
+
+  it('keeps the caption and plain code readable there too', () => {
+    ['muted-foreground', 'foreground'].forEach((text) => {
+      expect(contrast(colourOf(text, mode), colourOf('background', mode))).toBeGreaterThanOrEqual(
+        4.5,
+      );
+    });
   });
 });

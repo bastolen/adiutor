@@ -1,0 +1,80 @@
+/**
+ * @file Colours of highlighted code. The highlighter (highlight.js) marks
+ * the parts of a block of code with classes; this file gives each kind its
+ * colour from the theme's `code` tokens (`theme.css`), so code follows light
+ * and dark mode like everything else. Classes with an underscore in their
+ * name are highlight.js's own, and are matched as attributes: a class
+ * selector may not hold one here.
+ */
+
+/** A comment, or a quotation in Markdown. */
+.hljs-comment,
+.hljs-quote {
+  color: var(--code-comment);
+  font-style: italic;
+}
+
+/** Notes for the compiler or the shell, and addresses. */
+.hljs-meta,
+.hljs-link {
+  color: var(--code-comment);
+}
+
+/** The language's own words. */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-doctag {
+  color: var(--code-keyword);
+}
+
+/** Text in quotes, patterns, and the added lines of a diff. */
+.hljs-string,
+.hljs-regexp,
+.hljs-addition {
+  color: var(--code-string);
+}
+
+/** Numbers and fixed values. */
+.hljs-number,
+.hljs-literal,
+.hljs-symbol,
+.hljs-bullet {
+  color: var(--code-number);
+}
+
+/** Names of functions, sections and selectors. */
+.hljs-title,
+.hljs-section,
+.hljs-selector-id,
+.hljs-selector-class {
+  color: var(--code-title);
+}
+
+/** Types, classes, tags and what a language has built in. */
+.hljs-type,
+.hljs-name,
+.hljs-selector-pseudo,
+[class~='hljs-built_in'],
+.hljs-title[class~='class_'] {
+  color: var(--code-type);
+}
+
+/** Attributes, properties, variables, and the removed lines of a diff. */
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-property,
+.hljs-deletion {
+  color: var(--code-attribute);
+}
+
+/** Emphasis in Markdown. */
+.hljs-emphasis {
+  font-style: italic;
+}
+
+/** Strong emphasis in Markdown. */
+.hljs-strong {
+  font-weight: 600;
+}

@@ -67,13 +67,64 @@ describe('MarkdownText: formatting', () => {
     expect(container.querySelector('hr')).toBeInTheDocument();
   });
 
-  it('shows a block of code left to right, with the language it names', () => {
+  it('shows a block of code under the name of its language, coloured and left to right', () => {
     const container = show('```ts\nconst a = 1;\n```');
 
-    const block = container.querySelector('pre');
+    // The caption is what people see; the block's name is what a screen reader says on reaching it.
+    const figure = screen.getByRole('figure');
+    expect(within(figure).getByText('TypeScript').tagName).toBe('FIGCAPTION');
+    const block = within(figure).getByRole('group', { name: 'TypeScript code' });
+    expect(block.tagName).toBe('PRE');
     expect(block).toHaveAttribute('dir', 'ltr');
-    expect(block?.querySelector('code')).toHaveClass('language-ts');
     expect(block).toHaveTextContent('const a = 1;');
+    expect(block.querySelector('code')).toHaveClass('language-ts');
+    // The highlighter marked the keyword and the number.
+    expect(container.querySelector('.hljs-keyword')).toHaveTextContent('const');
+    expect(container.querySelector('.hljs-number')).toHaveTextContent('1');
+  });
+
+  it('lets the keyboard reach a block of code, to scroll it', () => {
+    show('```json\n{ "a": 1 }\n```');
+
+    expect(screen.getByRole('group', { name: 'JSON code' })).toHaveAttribute('tabindex', '0');
+  });
+
+  it.each([
+    ['sh', 'Bash'],
+    ['yml', 'YAML'],
+    ['dockerfile', 'Dockerfile'],
+    ['powershell', 'PowerShell'],
+  ])('names a block written as %s %s', (language, name) => {
+    const container = show(`\`\`\`${language}\nx\n\`\`\``);
+
+    expect(container.querySelector('figcaption')?.textContent).toBe(name);
+    expect(screen.getByRole('group', { name: `${name} code` })).toBeInTheDocument();
+  });
+
+  it('shows a language it doesn’t know as it was written, without colours', () => {
+    const container = show('```mermaid\ngraph TD;\n```');
+
+    expect(container.querySelector('figcaption')?.textContent).toBe('mermaid');
+    expect(screen.getByRole('group', { name: 'mermaid code' })).toHaveTextContent('graph TD;');
+    expect(container.querySelector('[class*="hljs-"]')).not.toBeInTheDocument();
+  });
+
+  it('never guesses the language of a block that names none', () => {
+    const container = show('```\nconst a = 1;\n```\n\n    indented = True');
+
+    expect(screen.getAllByRole('group', { name: 'Code' })).toHaveLength(2);
+    expect(
+      [...container.querySelectorAll('figcaption')].map((caption) => caption.textContent),
+    ).toEqual(['Code', 'Code']);
+    expect(container.querySelector('[class*="hljs-"]')).not.toBeInTheDocument();
+  });
+
+  it('leaves code in a sentence uncoloured', () => {
+    const container = show('Run `const a = 1` first.');
+
+    expect(container.querySelector('code')).toHaveTextContent('const a = 1');
+    expect(container.querySelector('pre')).not.toBeInTheDocument();
+    expect(container.querySelector('[class*="hljs-"]')).not.toBeInTheDocument();
   });
 
   it('shows tasks as marks with their meaning in words, not as checkboxes', () => {
@@ -226,6 +277,8 @@ describe('MarkdownText: what someone typed is shown, never run', () => {
     const code = container.querySelector('pre code');
     expect(code?.getAttributeNames()).toEqual(['class']);
     expect(code?.className).toContain('language-js');
+    // The caption shows what was written, as text.
+    expect(container.querySelector('figcaption')?.textContent).toBe('js"><img/src=x');
   });
 });
 

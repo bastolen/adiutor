@@ -26,12 +26,17 @@ export const markdownStyles = {
   quote: 'flex flex-col gap-3 border-l-2 border-border-strong pl-3 text-muted-foreground',
   /** Code inside a sentence. */
   inlineCode: 'rounded-sm border border-border bg-background px-1 py-px font-mono text-[0.9em]',
+  /** A block of code with its caption: a box on the page's background. */
+  codeFigure: 'overflow-hidden rounded-lg border border-border bg-background',
+  /** The caption of a block of code: the language it's in. */
+  codeCaption: 'border-b border-border px-3 py-1.5 text-xs font-medium text-muted-foreground',
   /**
-   * A block of code. It scrolls sideways rather than wrapping, and the code
-   * element inside it drops the look of code in a sentence.
+   * The code of a block. It scrolls sideways rather than wrapping, shows its
+   * focus ring inside the box (which would cut off one outside it), and the
+   * code element in it drops the look of code in a sentence.
    */
   codeBlock:
-    'overflow-x-auto rounded-lg border border-border bg-background p-3 font-mono text-[0.9em] leading-6 wrap-normal whitespace-pre [&>code]:border-0 [&>code]:bg-transparent [&>code]:p-0 [&>code]:text-[1em]',
+    'overflow-x-auto p-3 font-mono text-[0.9em] leading-6 wrap-normal whitespace-pre focus-visible:-outline-offset-2 [&>code]:border-0 [&>code]:bg-transparent [&>code]:p-0 [&>code]:text-[1em]',
   /** A line between two parts of a text. */
   rule: 'border-border',
   /** What a table scrolls sideways in when it's wider than the text. */

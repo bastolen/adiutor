@@ -1,12 +1,13 @@
 /**
  * @file Global stylesheet, loaded once by the root layout.
  *
- * Imports Tailwind CSS and the Adiutor theme, then sets base behaviour that
- * applies everywhere: cursors, text selection, motion preferences and
- * autofill colours.
+ * Imports Tailwind CSS, the Adiutor theme and the colours of highlighted
+ * code, then sets base behaviour that applies everywhere: cursors, text
+ * selection, motion preferences and autofill colours.
  */
 @import 'tailwindcss';
 @import '../styles/theme.css';
+@import '../styles/code.css';
 
 @layer base {
   /**

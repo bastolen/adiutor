@@ -153,7 +153,9 @@
       "backToReference": "Terug naar verwijzing {number, number}",
       "taskDone": "Klaar:",
       "taskOpen": "Te doen:",
-      "table": "Tabel"
+      "table": "Tabel",
+      "code": "Code",
+      "codeIn": "{language}-code"
     }
   }
 }

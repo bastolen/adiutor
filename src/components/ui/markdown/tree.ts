@@ -7,6 +7,7 @@
  */
 import type { Root } from 'hast';
 import type { Nodes } from 'mdast';
+import rehypeHighlight from 'rehype-highlight';
 import rehypeSanitize from 'rehype-sanitize';
 import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
@@ -14,6 +15,7 @@ import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import { type Processor, unified } from 'unified';
 
+import { CODE_LANGUAGES } from './languages';
 import SANITIZE_SCHEMA from './sanitize';
 
 /**
@@ -81,6 +83,33 @@ function withoutHtml(this: Processor) {
   ];
 }
 
+/**
+ * Builds what colours the code of the blocks that name a language we know.
+ * It never guesses a language.
+ *
+ * @returns The highlighter.
+ */
+function buildHighlighter() {
+  return unified().use(rehypeHighlight, { languages: CODE_LANGUAGES }).freeze();
+}
+
+/**
+ * The highlighter, built once, on first use: building it reads every
+ * grammar, which a page that shows up to fifty texts shouldn't do fifty times.
+ */
+let highlighter: ReturnType<typeof buildHighlighter> | undefined;
+
+/**
+ * Colours the code in a tree, in place.
+ *
+ * @param tree - The tree of a text, after the allow-list.
+ */
+function highlight(tree: Root) {
+  const ready = highlighter ?? buildHighlighter();
+  highlighter = ready;
+  ready.runSync(tree);
+}
+
 /** What rendering a text needs to know about the page it's on. */
 export interface MarkdownTreeOptions {
   /** A name no other text on the page has, for the IDs of the text's footnotes. */
@@ -97,7 +126,9 @@ export interface MarkdownTreeOptions {
 }
 
 /**
- * Parses a Markdown text into the tree to render.
+ * Parses a Markdown text into the tree to render. The allow-list runs
+ * before the highlighter, so the highlighter's markup is the only markup
+ * added after it.
  *
  * The footnotes' label is written as an `h1`; where it's rendered, headings
  * are lowered to fit the page like every heading in the text.
@@ -134,7 +165,9 @@ export default function markdownTree(text: string, options: MarkdownTreeOptions)
     if (nestingDepth(parsed) > MAX_NESTING) {
       return null;
     }
-    return processor.runSync(parsed);
+    const tree = processor.runSync(parsed);
+    highlight(tree);
+    return tree;
   } catch (error) {
     // Nested so deeply that the parser's own walk through the tree overflowed the stack.
     if (error instanceof RangeError) {

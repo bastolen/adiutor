@@ -41,6 +41,8 @@ const MARKDOWN_RENDERING = [
   'rehype-sanitize',
   'rehype-highlight',
   'hast-util-to-jsx-runtime',
+  'lowlight',
+  'highlight.js',
 ];
 
 /** The modules client components must not load with the page, and why. */
