@@ -10,9 +10,9 @@ import { type FormEvent, useLayoutEffect, useRef, useState } from 'react';
 
 import Button, { whileRunning } from '@/components/ui/button';
 import restoreFocusIfLost from '@/components/ui/focus-fallback';
+import MarkdownField from '@/components/ui/markdown/markdown-field';
 import ResultAlert from '@/components/ui/result-alert';
 import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
-import TextAreaField from '@/components/ui/textarea-field';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import { REQUEST_TEXT_MAX_LENGTH } from '@/lib/input-rules';
 
@@ -74,7 +74,7 @@ export default function ReplyForm({ request, canWait }: { request: number; canWa
       <ChangesFieldset>
         <input type="hidden" name="request" value={request} />
         <ResultAlert result={result} />
-        <TextAreaField
+        <MarkdownField
           label={t('label')}
           description={t('hint')}
           name="body"

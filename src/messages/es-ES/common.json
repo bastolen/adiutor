@@ -155,7 +155,9 @@
       "taskOpen": "Pendiente:",
       "table": "Tabla",
       "code": "Código",
-      "codeIn": "Código {language}"
+      "codeIn": "Código {language}",
+      "taskCheckbox": "{done, select, yes {Hecho: {task}} other {Pendiente: {task}}}",
+      "tooLong": "Este texto tiene más de {maximum, number} caracteres. Acórtalo antes de enviarlo."
     }
   }
 }

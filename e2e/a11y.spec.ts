@@ -43,6 +43,7 @@ import {
 import {
   adminStorageState,
   freshAddress,
+  markdownEditor,
   openSignInLink,
   signIn,
   signInAsUser,
@@ -730,6 +731,29 @@ test.describe('on a 320px wide screen', () => {
           await page.goto(resolvePath(path));
           await expectAccessible(page);
         });
+      });
+
+      test('the editor of a reply, with formatted text in it', async ({ context, page }) => {
+        await context.addCookies(clientState.cookies);
+        // The seeded open request, which stays as it is: the reply is typed, never sent.
+        await page.goto(`/requests/${SEEDED_REQUESTS.open.number}`);
+        const editor = await markdownEditor(page, 'Your reply');
+        await editor.click();
+        await page.keyboard.type('## A heading');
+        await page.keyboard.press('Enter');
+        await page.keyboard.type('With **bold**, `code` and https://adiutor.test/docs in it.');
+        await page.keyboard.press('Enter');
+        await page.keyboard.type('[ ] a thing to do');
+        await page.keyboard.press('Enter');
+        await page.keyboard.press('Enter');
+        await page.keyboard.type('> a quotation');
+        await page.keyboard.press('Enter');
+        await page.keyboard.press('Enter');
+        await page.keyboard.type('```ts ');
+        await page.keyboard.type('const a = 1;');
+        await expect(editor.getByRole('checkbox', { name: 'To do: a thing to do' })).toBeVisible();
+        await expect(editor.locator('pre')).toHaveText('const a = 1;');
+        await expectAccessible(page);
       });
 
       test('the dialog that asks before a request is cancelled', async ({ context, page }) => {

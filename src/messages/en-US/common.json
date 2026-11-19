@@ -155,7 +155,9 @@
       "taskOpen": "To do:",
       "table": "Table",
       "code": "Code",
-      "codeIn": "{language} code"
+      "codeIn": "{language} code",
+      "taskCheckbox": "{done, select, yes {Done: {task}} other {To do: {task}}}",
+      "tooLong": "This text is longer than {maximum, number} characters. Shorten it before you send it."
     }
   }
 }

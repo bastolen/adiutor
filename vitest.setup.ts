@@ -23,6 +23,16 @@ vi.mock('next-intl', async (importOriginal) => nextIntlMock(await importOriginal
  * `src/client-imports.test.ts`.
  */
 vi.mock('server-only', () => ({}));
+/**
+ * The Markdown editor never loads in a unit test, so a Markdown field stays
+ * the plain text field it starts as and a test can type into it: the editor
+ * needs a real browser to be typed in, which the end-to-end tests give it. A
+ * test of the editor itself asks for it (`vi.importActual`), and a per-file
+ * `vi.mock` replaces this one.
+ */
+vi.mock('@/components/ui/markdown/editor', () => {
+  throw new Error('The Markdown editor is not loaded in unit tests');
+});
 vi.mock('next-intl/server', () => nextIntlServerMock());
 /**
  * `next/font` only works inside Next.js's compiler; in tests each font gives

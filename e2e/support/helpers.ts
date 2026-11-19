@@ -54,6 +54,20 @@ export async function useOwnClientIp(page: Page): Promise<void> {
 }
 
 /**
+ * The editor of a Markdown field (a request's description, a reply), once it
+ * has taken the place of the plain text field the page starts with.
+ *
+ * @param page - The browser page.
+ * @param name - The field's label.
+ * @returns The editor.
+ */
+export async function markdownEditor(page: Page, name: string): Promise<Locator> {
+  const editor = page.getByRole('textbox', { name });
+  await expect(editor).toHaveAttribute('contenteditable', 'true');
+  return editor;
+}
+
+/**
  * The toasts the signed-in app reports results in (every success, and every
  * error next to its inline message, except one an open dialog shows), in
  * their "Notifications (F8)" region, which is named in the reader's language

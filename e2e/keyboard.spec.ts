@@ -22,6 +22,7 @@ import {
 } from './support/fixtures';
 import {
   adminStorageState,
+  markdownEditor,
   openUser,
   signIn,
   signInAsUser,
@@ -1002,7 +1003,7 @@ test.describe('requests', () => {
 
     test('a reply is sent with the keyboard, and focus is never lost', async ({ page }) => {
       await page.goto(await storeOwnRequest('A reply sent with the keyboard'));
-      const reply = page.getByRole('textbox', { name: 'Your reply' });
+      const reply = await markdownEditor(page, 'Your reply');
       const send = page.getByRole('button', { name: 'Send reply' });
       const sendAndWait = page.getByRole('button', { name: 'Send and wait for the company' });
 
@@ -1013,8 +1014,25 @@ test.describe('requests', () => {
       await expect(send).toBeFocused();
       await page.keyboard.press('Enter');
       await expect(toasts(page)).toContainText('Reply sent.');
-      await expect(reply).toHaveValue('');
+      await expect(reply).toHaveText('');
       await expect(send).toBeFocused();
+
+      // In a list Tab leaves the editor too, instead of nesting the item: nobody gets stuck.
+      await reply.focus();
+      await page.keyboard.type('- one');
+      await page.keyboard.press('Enter');
+      await page.keyboard.type('two');
+      await expect(reply.getByRole('listitem')).toHaveCount(2);
+      await page.keyboard.press('Tab');
+      await expect(send).toBeFocused();
+      await page.keyboard.press('Shift+Tab');
+      await expect(reply).toBeFocused();
+      // The item nests with its own shortcut, and the text is cleared for the next step.
+      await page.keyboard.press('ControlOrMeta+]');
+      await expect(reply.locator('ul ul > li')).toHaveText('two');
+      await page.keyboard.press('ControlOrMeta+a');
+      await page.keyboard.press('Delete');
+      await expect(reply).toHaveText('');
 
       // "Send and wait for the company" goes once the request waits: focus moves to the
       // conversation's heading, not to nowhere.

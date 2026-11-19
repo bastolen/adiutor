@@ -1,0 +1,79 @@
+/**
+ * @file What the Markdown editor needs to work as an editor: the rules its
+ * library (ProseMirror, under Tiptap) would otherwise add to the page with a
+ * script. How the text in it looks comes from the classes on its elements
+ * (`src/components/ui/markdown/styles.ts`). The library's own class names
+ * have capitals, so they're matched as attributes: a class selector may not
+ * hold them here.
+ */
+
+/**
+ * The editable area. Spaces and line breaks are kept as typed, long words
+ * wrap, and ligatures are off so the cursor never lands inside one.
+ */
+.tiptap {
+  position: relative;
+  overflow-wrap: break-word;
+  white-space: break-spaces;
+  font-variant-ligatures: none;
+}
+
+/** A part that isn't edited in place (an image's label) wraps like text around it. */
+.tiptap [contenteditable='false'] {
+  white-space: normal;
+}
+
+/** Code keeps its spaces and breaks, and wraps so the cursor stays in sight. */
+.tiptap pre {
+  white-space: pre-wrap;
+}
+
+/** A marker the library puts between parts that can't hold the cursor; never shown. */
+.tiptap img[class~='ProseMirror-separator'] {
+  display: inline;
+  width: 0;
+  height: 0;
+  margin: 0;
+  border: none;
+}
+
+/**
+ * The cursor where no text can hold it: before a table or a block of code
+ * at the start of the text. A short blinking line, only while the editor has
+ * focus.
+ */
+[class~='ProseMirror-gapcursor'] {
+  position: absolute;
+  display: none;
+  margin: 0;
+  pointer-events: none;
+}
+
+[class~='ProseMirror-gapcursor']::after {
+  position: absolute;
+  top: -2px;
+  display: block;
+  width: 20px;
+  border-top: 1px solid var(--foreground);
+  content: '';
+  animation: editor-cursor-blink 1.1s steps(2, start) infinite;
+}
+
+[class~='ProseMirror-focused'] [class~='ProseMirror-gapcursor'] {
+  display: block;
+}
+
+@keyframes editor-cursor-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+/** While a part is selected as a whole, the text selection and cursor around it are hidden. */
+[class~='ProseMirror-hideselection'] *::selection {
+  background: transparent;
+}
+
+[class~='ProseMirror-hideselection'] * {
+  caret-color: transparent;
+}

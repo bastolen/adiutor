@@ -45,6 +45,7 @@ import {
 import {
   createAccountFromInvitation,
   freshAddress,
+  markdownEditor,
   signIn,
   signInAsUser,
   signOut,
@@ -329,7 +330,7 @@ test('someone at a company raises a request, which the staff then find', async (
   await page.goBack();
   await expect(page).toHaveURL('/requests/new');
   await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue('');
-  await expect(page.getByRole('textbox', { name: 'Description' })).toHaveValue('');
+  await expect(await markdownEditor(page, 'Description')).toHaveText('');
   await page.goBack();
   await expect(page).toHaveURL('/requests');
   await expect(
@@ -496,7 +497,7 @@ test('the staff and a company work a request through, and close and reopen it', 
     .fill('Is it plugged in?\nAnd which floor?');
   await page.getByRole('button', { name: 'Send and wait for the company' }).click();
   await expect(toasts(page)).toContainText('Reply sent.');
-  await expect(page.getByRole('textbox', { name: 'Your reply' })).toHaveValue('');
+  await expect(await markdownEditor(page, 'Your reply')).toHaveText('');
   await expect(status).toHaveText('Waiting for the company');
   await expect(conversation(page)).toContainText('Is it plugged in?');
   // The staff's first reply is the first response.
@@ -639,6 +640,151 @@ test('the staff reach a person’s page from a request, and nobody at the compan
   const html = await page.content();
   expect(html).not.toContain(staffId);
   expect(html).not.toContain(clientId);
+});
+
+test('a reply formats itself while it’s typed, and reads the same once it’s sent', async ({
+  page,
+}) => {
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'A reply typed as Markdown',
+  });
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  const editor = await markdownEditor(page, 'Your reply');
+
+  // Markdown turns into formatting as it's typed.
+  await editor.click();
+  await page.keyboard.type('# The plan');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type(
+    'It is **urgent**, see `config.yml` and https://adiutor.test/plan first.',
+  );
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('- order the part');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('fit it');
+  await expect(editor.getByRole('heading', { level: 1, name: 'The plan' })).toBeVisible();
+  await expect(editor.locator('strong')).toHaveText('urgent');
+  await expect(editor.locator('code')).toHaveText('config.yml');
+  await expect(editor.getByRole('link', { name: 'https://adiutor.test/plan' })).toBeVisible();
+  await expect(editor.getByRole('listitem')).toHaveText(['order the part', 'fit it']);
+  // The marks themselves are gone from the text.
+  await expect(editor).not.toContainText('**');
+  await expect(editor).not.toContainText('#');
+
+  // Sent, it reads the same, and the editor is empty for the next reply.
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  const thread = page.getByRole('region', { name: 'Conversation' });
+  await expect(thread.getByRole('heading', { level: 3, name: 'The plan' })).toBeVisible();
+  await expect(thread.locator('strong')).toHaveText('urgent');
+  await expect(thread.locator('code')).toHaveText('config.yml');
+  await expect(
+    thread.getByRole('link', { name: /^https:\/\/adiutor\.test\/plan/ }),
+  ).toHaveAttribute('target', '_blank');
+  await expect(thread.locator('ul > li')).toHaveText(['order the part', 'fit it']);
+  await expect(await markdownEditor(page, 'Your reply')).toHaveText('');
+});
+
+test('Markdown that is pasted is formatted, and a tag stays the text it is', async ({ page }) => {
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'A reply pasted as Markdown',
+  });
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  const editor = await markdownEditor(page, 'Your reply');
+
+  // Plain text on the clipboard, as copied from a text file.
+  await editor.click();
+  await editor.evaluate((element) => {
+    const clipboard = new DataTransfer();
+    clipboard.setData(
+      'text/plain',
+      'Steps to **reproduce**:\n\n1. Open the page\n2. Press <b>Save</b>\n\n```bash\nnpm test\n```',
+    );
+    element.dispatchEvent(
+      new ClipboardEvent('paste', { clipboardData: clipboard, bubbles: true, cancelable: true }),
+    );
+  });
+  await expect(editor.locator('strong')).toHaveText('reproduce');
+  await expect(editor.getByRole('listitem')).toHaveCount(2);
+  await expect(editor.locator('pre')).toHaveText('npm test');
+  // The tag is text, here and once it's sent.
+  await expect(editor.getByRole('listitem').nth(1)).toHaveText('Press <b>Save</b>');
+
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  const thread = page.getByRole('region', { name: 'Conversation' });
+  await expect(thread.locator('strong')).toHaveText('reproduce');
+  // (The conversation is a list itself, so the numbered list is the one inside it.)
+  await expect(thread.locator('ol ol > li').nth(1)).toHaveText('Press <b>Save</b>');
+  await expect(thread.locator('b')).toHaveCount(0);
+  await expect(thread.getByRole('group', { name: 'Bash code' })).toHaveText('npm test');
+});
+
+test('a reply that isn’t sent yet is still there after leaving the page and coming back', async ({
+  page,
+}) => {
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'A reply left half written',
+  });
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  const editor = await markdownEditor(page, 'Your reply');
+  await editor.click();
+  await page.keyboard.type('Half a **reply**');
+  await expect(editor.locator('strong')).toHaveText('reply');
+
+  // The page is kept while the user is elsewhere, and its editor starts again from the text.
+  await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
+  await expect(page).toHaveURL('/dashboard');
+  await page.goBack();
+  await expect(page).toHaveURL(`/requests/${number}`);
+  const kept = await markdownEditor(page, 'Your reply');
+  await expect(kept).toHaveText('Half a reply');
+  await expect(kept.locator('strong')).toHaveText('reply');
+
+  // And it's sent as it was written.
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  await expect(page.getByRole('region', { name: 'Conversation' }).locator('strong')).toHaveText(
+    'reply',
+  );
+});
+
+test('the editor isn’t sent with the page: it loads once the page is there', async ({ page }) => {
+  await signIn(page, REQUESTS_CLIENT);
+
+  // The scripts the page itself asks for, as its HTML names them.
+  const response = await page.request.get('/requests/new');
+  const html = await response.text();
+  const scripts = [...html.matchAll(/<script[^>]+src="([^"]+\.js)[^"]*"/g)].flatMap(([, src]) =>
+    src ? [src] : [],
+  );
+  expect(scripts.length).toBeGreaterThan(5);
+  const sources = await Promise.all(
+    scripts.map(async (src) => (await page.request.get(src)).text()),
+  );
+  // None of them holds the editor: its library hides the selection with a class of this name.
+  expect(sources.filter((source) => source.includes('ProseMirror-hideselection'))).toEqual([]);
+
+  // The page then loads it by itself, and the plain field becomes the editor.
+  const loaded: string[] = [];
+  page.on('response', (loadedResponse) => {
+    if (loadedResponse.url().endsWith('.js')) {
+      loaded.push(loadedResponse.url());
+    }
+  });
+  await page.goto('/requests/new');
+  await markdownEditor(page, 'Description');
+  const later = loaded.filter((url) => !scripts.some((src) => url.endsWith(src)));
+  expect(later.length).toBeGreaterThan(0);
 });
 
 test('a request written in Markdown is shown formatted, and nothing in it loads', async ({

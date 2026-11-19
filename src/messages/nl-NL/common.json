@@ -155,7 +155,9 @@
       "taskOpen": "Te doen:",
       "table": "Tabel",
       "code": "Code",
-      "codeIn": "{language}-code"
+      "codeIn": "{language}-code",
+      "taskCheckbox": "{done, select, yes {Klaar: {task}} other {Te doen: {task}}}",
+      "tooLong": "Deze tekst is langer dan {maximum, number} tekens. Kort hem in voordat je hem verstuurt."
     }
   }
 }

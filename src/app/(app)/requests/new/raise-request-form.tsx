@@ -9,11 +9,11 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
 import Button from '@/components/ui/button';
+import MarkdownField from '@/components/ui/markdown/markdown-field';
 import ResultAlert from '@/components/ui/result-alert';
 import SelectField from '@/components/ui/select-field';
 import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
 import TextField from '@/components/ui/text-field';
-import TextAreaField from '@/components/ui/textarea-field';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import { REQUEST_TEXT_MAX_LENGTH, REQUEST_TITLE_MAX_LENGTH } from '@/lib/input-rules';
 import { REQUEST_PRIORITIES, REQUEST_TYPES } from '@/lib/requests';
@@ -105,7 +105,7 @@ export default function RaiseRequestForm({
           placeholder={t('new.typePlaceholder')}
           disabled={changesOff}
         />
-        <TextAreaField
+        <MarkdownField
           label={t('new.descriptionLabel')}
           name="description"
           rows={8}
