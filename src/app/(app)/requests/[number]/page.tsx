@@ -16,6 +16,7 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
+import WidePage from '@/components/layout/wide-page';
 import Alert from '@/components/ui/alert';
 import Card from '@/components/ui/card';
 import PageHeader from '@/components/ui/page-header';
@@ -264,9 +265,12 @@ async function RequestContent({
  * @returns The page.
  */
 export default function RequestPage({ params, searchParams }: PageProps<'/requests/[number]'>) {
+  // A request is text to read and write: on a wide screen it gets more room than other pages.
   return (
-    <Suspense fallback={<PageSkeleton />}>
-      <RequestContent params={params} searchParams={searchParams} />
-    </Suspense>
+    <WidePage>
+      <Suspense fallback={<PageSkeleton />}>
+        <RequestContent params={params} searchParams={searchParams} />
+      </Suspense>
+    </WidePage>
   );
 }

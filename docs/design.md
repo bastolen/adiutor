@@ -68,8 +68,9 @@ keyboard support.
     ("Type: Bug"), with the choices as links in a menu, "All" first. It keeps focus like the Sort
     menu does. It needs JavaScript, unlike the search and the status links.
   - **Widths:** no table scrolls sideways. The content area stops growing at 1280px (`xl`,
-    `max-w-5xl` in the app layout), so a table gets no more columns past that. Columns that don't
-    fit move under the name instead:
+    `max-w-5xl` in the app layout), so a table gets no more columns past that. (Only a page that's
+    mostly text to read and write, a request, grows further: see "Layout" below.) Columns that
+    don't fit move under the name instead:
     - **Activity:** people tables show when someone was last active and when they joined in
       one Activity column from 1280px, and under the name below that
       (`src/app/(app)/_people/activity.tsx`).
@@ -193,6 +194,13 @@ keyboard support.
   leaves it: with a lasting `tabIndex={-1}`, a click in the content on something that can't take
   focus, like a disabled field, would hand focus to it, and Chrome then draws a blinking text
   cursor in the field.
+  The content of every page stops growing at 1280px of screen. A request's page may be wider
+  (`WidePage` in `src/components/layout/wide-page.tsx`): from that width it grows with the room
+  next to the menu, up to 1280px of content, so the
+  conversation and the editor of a reply get the room, with the details still beside them. It
+  measures that room in the content column (a container in the app layout), not the screen, so
+  a scrollbar never makes it scroll sideways. Don't use it for a page with a table of records:
+  those are laid out for the content's usual width.
 - **Errors:** when a page or server action fails unexpectedly, an error page takes the page's
   place, built like the 404 pages: "Something went wrong", "This page couldn't load. Try again, or
   go to your dashboard.", **Try again** (busy while the page loads again), **Go to your dashboard**

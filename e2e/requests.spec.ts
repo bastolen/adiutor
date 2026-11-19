@@ -716,6 +716,49 @@ test('the editor is tall enough to write in, and can be dragged taller', async (
   expect((await description.boundingBox())?.height).toBeGreaterThanOrEqual(340);
 });
 
+test('a request uses the room of a wide screen, with its details still beside it', async ({
+  page,
+}) => {
+  await signIn(page, REQUESTS_CLIENT);
+  /**
+   * Whether the page scrolls sideways.
+   *
+   * @returns Whether it's wider than the window.
+   */
+  const scrollsSideways = () =>
+    page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+
+  // At 1280px, where the app's content stops growing, a request is as wide as every page.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(`/requests/${SEEDED_REQUESTS.open.number}`);
+  const reply = await markdownEditor(page, 'Your reply');
+  const narrow = (await reply.boundingBox())?.width ?? 0;
+  expect(narrow).toBeLessThan(600);
+  expect(await scrollsSideways()).toBe(false);
+
+  // On a wider screen it grows, and the reply's editor with it; the details stay beside it.
+  await page.setViewportSize({ width: 1512, height: 982 });
+  await expect.poll(async () => (await reply.boundingBox())?.width).toBeGreaterThanOrEqual(760);
+  const thread = await page.getByRole('region', { name: 'Conversation' }).boundingBox();
+  const details = await page.getByRole('region', { name: 'Details' }).boundingBox();
+  expect(details?.x).toBeGreaterThan((thread?.x ?? 0) + (thread?.width ?? 0));
+  expect(await scrollsSideways()).toBe(false);
+
+  // It stops growing at 1280px of content, however wide the screen.
+  await page.setViewportSize({ width: 2560, height: 1300 });
+  await expect.poll(async () => (await reply.boundingBox())?.width).toBeLessThanOrEqual(810);
+  expect(await scrollsSideways()).toBe(false);
+
+  // A new request's form is wide enough to write a description in.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/requests/new');
+  const description = await markdownEditor(page, 'Description');
+  expect((await description.boundingBox())?.width).toBeGreaterThanOrEqual(800);
+  expect(await scrollsSideways()).toBe(false);
+});
+
 test('the toolbar formats a reply for someone who doesn’t type Markdown', async ({ page }) => {
   const number = await storeRequest({
     companySlug: COMPANY_SLUG,

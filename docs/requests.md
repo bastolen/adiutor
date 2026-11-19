@@ -226,6 +226,8 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
   change, oldest first, and a Details bar: status, type, priority (staff), company, who raised
   it and when, the staff's first response and the last activity, with the controls. The bar is on
   the right on wide screens, and between the description and the conversation on narrower ones.
+  On a screen wider than 1280px the page grows past the width other pages have, up to 1280px of
+  content (`WidePage`), so the conversation and the reply's editor get the room.
   The conversation loads its latest 50 entries, with a link for earlier ones (`?earlier=`).
 - The **menu** has Requests for everyone, and the **dashboard** a Requests tile; see
   [Navigation and dashboard](companies-and-roles.md#navigation-and-dashboard).
