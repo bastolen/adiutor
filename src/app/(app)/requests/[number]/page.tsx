@@ -161,7 +161,11 @@ async function RequestContent({
                   </span>
                 </PersonLine>
               </div>
-              <RequestText text={detail.description} className="text-sm text-foreground" />
+              <RequestText
+                text={detail.description}
+                id="description"
+                className="text-sm text-foreground"
+              />
             </div>
           </Card>
         </div>

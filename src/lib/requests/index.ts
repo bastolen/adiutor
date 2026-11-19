@@ -54,5 +54,5 @@ export {
   requestNumberStartInSearch,
   requestPath,
 } from './number';
-export { cleanMultilineText, splitLinks } from './text';
+export { cleanMultilineText, linkTarget, splitLinks } from './text';
 export type { TextPart } from './text';

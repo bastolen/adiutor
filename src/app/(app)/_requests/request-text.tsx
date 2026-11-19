@@ -1,9 +1,10 @@
 /**
  * @file Shows a text someone wrote in a request: its description or a reply.
- * Every such text goes through this component, so the day texts can be
- * written in another format (Markdown), this is the one place that changes.
+ * Every such text goes through this component, which shows it in the format
+ * it was written in: plain text, or Markdown.
  */
 import ExternalLink from '@/components/ui/external-link';
+import MarkdownText from '@/components/ui/markdown/markdown-text';
 import cn from '@/lib/cn';
 import { splitLinks, type TextPart } from '@/lib/requests';
 import type { RequestText as RequestTextValue } from '@/server/requests';
@@ -30,27 +31,20 @@ function placed(parts: TextPart[]): PlacedPart[] {
 }
 
 /**
- * A request's text as it was written: plain text with its line breaks, in
- * its own writing direction (`dir="auto"`, so a text in a right-to-left
- * script can't reorder the page around it). Web addresses written with
- * `http://` or `https://` are links ({@link ExternalLink}).
+ * A text as it was written: plain text with its line breaks, in its own
+ * writing direction (`dir="auto"`, so a text in a right-to-left script can't
+ * reorder the page around it). Web addresses written with `http://` or
+ * `https://` are links ({@link ExternalLink}).
  *
  * @param props - Component props.
- * @param props.text - The text and its format.
+ * @param props.text - The text.
  * @param props.className - Extra classes for the paragraph.
  * @returns The text.
  */
-export default function RequestText({
-  text,
-  className = '',
-}: {
-  text: RequestTextValue;
-  className?: string;
-}) {
-  // Only plain text exists today; another format gets its own rendering here.
+function PlainText({ text, className }: { text: string; className: string }) {
   return (
     <p dir="auto" className={cn('wrap-anywhere whitespace-pre-wrap', className)}>
-      {placed(splitLinks(text.text)).map((part) =>
+      {placed(splitLinks(text)).map((part) =>
         part.href === null ? (
           part.text
         ) : (
@@ -61,4 +55,32 @@ export default function RequestText({
       )}
     </p>
   );
+}
+
+/**
+ * A request's text, in the format it was stored with. A plain text is shown
+ * as it was written. A Markdown text is shown formatted ({@link MarkdownText}),
+ * unless formatting it would cost too much (a text nested hundreds of levels
+ * deep): then it's shown as it was written, too.
+ *
+ * @param props - Component props.
+ * @param props.text - The text and its format.
+ * @param props.id - A name no other text on the page has, for the IDs inside a formatted text.
+ * @param props.className - Extra classes for the element around the text.
+ * @returns The text.
+ */
+export default function RequestText({
+  text,
+  id,
+  className = '',
+}: {
+  text: RequestTextValue;
+  id: string;
+  className?: string;
+}) {
+  const plain = <PlainText text={text.text} className={className} />;
+  if (text.format === 'markdown') {
+    return <MarkdownText text={text.text} id={id} className={className} fallback={plain} />;
+  }
+  return plain;
 }

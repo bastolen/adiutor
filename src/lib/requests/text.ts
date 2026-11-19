@@ -115,12 +115,14 @@ function withoutTrailingPunctuation(address: string): string {
 }
 
 /**
- * Where a web address links to, if it's one a browser can open.
+ * Where a web address links to, if it's one a browser can open. Only whole
+ * `http` and `https` addresses count: an address without a scheme or a host
+ * would open a page of Adiutor itself, and any other scheme isn't a page.
  *
  * @param address - The address as it was written.
  * @returns The address to link to, or `null` when it isn't a usable http or https address.
  */
-function linkTarget(address: string): string | null {
+export function linkTarget(address: string): string | null {
   if (!URL.canParse(address)) {
     return null;
   }

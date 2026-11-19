@@ -145,6 +145,15 @@
     },
     "externalLink": {
       "newTab": "(opent in een nieuw tabblad)"
+    },
+    "markdown": {
+      "image": "Afbeelding",
+      "imageNamed": "{description} (afbeelding)",
+      "footnotes": "Voetnoten",
+      "backToReference": "Terug naar verwijzing {number, number}",
+      "taskDone": "Klaar:",
+      "taskOpen": "Te doen:",
+      "table": "Tabel"
     }
   }
 }

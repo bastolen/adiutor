@@ -145,6 +145,15 @@
     },
     "externalLink": {
       "newTab": "(opens in a new tab)"
+    },
+    "markdown": {
+      "image": "Image",
+      "imageNamed": "{description} (image)",
+      "footnotes": "Footnotes",
+      "backToReference": "Back to reference {number, number}",
+      "taskDone": "Done:",
+      "taskOpen": "To do:",
+      "table": "Table"
     }
   }
 }

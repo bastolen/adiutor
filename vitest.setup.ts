@@ -16,6 +16,13 @@ import { DEFAULT_LOCALE } from '@/lib/i18n/locales';
 import { nextIntlMock, nextIntlServerMock, testLocale } from './tests/i18n/next-intl-mocks';
 
 vi.mock('next-intl', async (importOriginal) => nextIntlMock(await importOriginal()));
+/**
+ * `server-only` refuses to load outside a Server Component; the tests render
+ * the components that import it (the Markdown renderer) in a simulated
+ * browser. What keeps it out of the real browser is the build, and
+ * `src/client-imports.test.ts`.
+ */
+vi.mock('server-only', () => ({}));
 vi.mock('next-intl/server', () => nextIntlServerMock());
 /**
  * `next/font` only works inside Next.js's compiler; in tests each font gives

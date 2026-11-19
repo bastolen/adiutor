@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { cleanMultilineText, splitLinks } from './text';
+import { cleanMultilineText, linkTarget, splitLinks } from './text';
 
 describe('cleanMultilineText', () => {
   it('turns every line ending into a line break', () => {
@@ -165,5 +165,32 @@ describe('splitLinks', () => {
         .map((part) => part.text)
         .join(''),
     ).toBe(text);
+  });
+});
+
+describe('linkTarget', () => {
+  it('gives whole http and https addresses, as a browser reads them', () => {
+    expect(linkTarget('https://adiutor.dev/docs?page=2#top')).toBe(
+      'https://adiutor.dev/docs?page=2#top',
+    );
+    expect(linkTarget('http://www.adiutor.dev')).toBe('http://www.adiutor.dev/');
+  });
+
+  it.each([
+    // eslint-disable-next-line no-script-url -- An address the rule under test must refuse.
+    'javascript:alert(1)',
+    // eslint-disable-next-line no-script-url -- The same address in capitals.
+    'JAVASCRIPT:alert(1)',
+    'data:text/html,hello',
+    'mailto:user@adiutor.dev',
+    'ftp://adiutor.dev/file',
+    '/admin/staff',
+    '//adiutor.dev/docs',
+    '#top',
+    'adiutor.dev',
+    'https://',
+    '',
+  ])('gives nothing for %s', (address) => {
+    expect(linkTarget(address)).toBeNull();
   });
 });

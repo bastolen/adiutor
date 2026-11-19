@@ -145,6 +145,15 @@
     },
     "externalLink": {
       "newTab": "(se abre en una pestaña nueva)"
+    },
+    "markdown": {
+      "image": "Imagen",
+      "imageNamed": "{description} (imagen)",
+      "footnotes": "Notas al pie",
+      "backToReference": "Volver a la referencia {number, number}",
+      "taskDone": "Hecho:",
+      "taskOpen": "Pendiente:",
+      "table": "Tabla"
     }
   }
 }
