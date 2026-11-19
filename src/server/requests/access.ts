@@ -14,6 +14,7 @@ import {
   getStaffPermissionsInCompanies,
   type Permission,
 } from '@/lib/authz/permissions';
+import { visibleName } from '@/lib/display-name';
 import {
   parseRequestNumber,
   requestAudience,
@@ -176,7 +177,8 @@ export interface RequestPerson {
 }
 
 /**
- * Describes someone in a request for its readers.
+ * Describes someone in a request for its readers. A name with nothing to see
+ * in it (`visibleName`) counts as no name, so the page shows their side's.
  *
  * @param person - Their account, as joined to what they wrote.
  * @param person.id - Their user ID, or `null` when the account is gone.
@@ -192,7 +194,7 @@ export function requestPerson(
 ): RequestPerson {
   return {
     userId: getGlobalPermissions(actor).has('users:view') ? person.id : null,
-    name: person.name?.trim() || null,
+    name: visibleName(person.name),
     side,
     isViewer: person.id !== null && person.id === actor.id,
   };

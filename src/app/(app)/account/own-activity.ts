@@ -11,6 +11,7 @@ import type { useTranslations } from 'next-intl';
 import type { AuditAction } from '@/lib/audit-actions';
 import type { SignInMethod } from '@/lib/authz/mfa';
 import { isRole } from '@/lib/authz/roles';
+import { visibleName } from '@/lib/display-name';
 import {
   isOAuthProvider,
   type OAuthProvider,
@@ -272,7 +273,8 @@ function describeAction(
 /**
  * Describes an event about the user's own account. Changes made by someone
  * else say who did it ("by Alex Admin"), by name only, or "by an
- * administrator" for an account without a name.
+ * administrator" for an account without a name, or with one that has
+ * nothing to see in it (`visibleName`).
  *
  * @param entry - The event.
  * @param userId - The user whose account it is.
@@ -286,7 +288,7 @@ export default function describeOwnActivity(
 ): string {
   let by: ByValues = { by: 'self', name: '' };
   if (entry.actor && entry.actor.id !== userId) {
-    const name = entry.actor.name.trim();
+    const name = visibleName(entry.actor.name);
     by = name ? { by: 'other', name } : { by: 'admin', name: '' };
   }
   return describeAction(entry, by, translators.account, translators);
