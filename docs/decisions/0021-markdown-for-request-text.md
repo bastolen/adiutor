@@ -49,6 +49,11 @@ How it works is in [Requests](../requests.md). The choices behind it:
   `mdast-util-to-hast` before 13.2.1 and `prosemirror-view` before 1.42.3.
 - The editor reads Markdown with its own parser, so in rare cases a text looks different while
   typing than after it's sent. The server's rendering is the one that counts.
+- The editor has no footnotes and builds no table from scratch: a footnote typed in it is sent as
+  plain text, and a pasted table stays a table. Both are still shown when a text has them.
+- The editor is about 165 kB of JavaScript, gzipped, and the languages of highlighted code another
+  40 kB. Neither comes with a page: the field loads the editor once the page is there, and
+  the editor the languages once a text has a block of code.
 - Mentions come later. Markdown has no syntax for one, so the stored text will need a marker for a
   person; the format marker leaves room for that, and the editor has an extension for it.
 - Emails about requests come later too. Their plain-text part can carry a text as it was written:

@@ -223,6 +223,11 @@ load or mislead in a reader's browser:
   emphasis marks than the parser pairs quickly, is shown as plain text (`MAX_NESTING`,
   `MAX_EMPHASIS_RUNS`). The limit of 10,000 characters bounds the rest: the parser and the
   highlighter's patterns never run on more.
+- **The editor is a convenience, never a check.** It follows the same rules while a text is
+  written (HTML stays text, only whole `http` and `https` addresses are links, an image is never
+  loaded; `src/components/ui/markdown/editor-extensions.ts`), but all it produces is Markdown,
+  which goes through everything above like text typed into a plain field. Its libraries are kept
+  current like every dependency (`pnpm audit`): a paste into an editor is input from elsewhere.
 
 ## Provider tokens aren't kept
 

@@ -153,8 +153,44 @@ the closed statuses.
   nested more than 100 levels deep (`MAX_NESTING`; React renders a level per call, and the
   parser's own walk overflows the stack at a few thousand), or with more than 2,500 runs of `*`
   or `_` (`MAX_EMPHASIS_RUNS`; the parser's time grows with their number squared).
-- The fields for a description and a reply say that Markdown works; an editor that formats while
-  typing is the next change.
+
+### Writing a text
+
+A description and a reply are written in a **Markdown field** (`MarkdownField` in
+`src/components/ui/markdown/`), which gives the form Markdown under the field's name.
+
+- **It starts as a plain text field,** under the formatting toolbar with its buttons switched off,
+  so it works at once and without JavaScript. The page then loads the editor by itself
+  (`import()`, about 165 kB gzipped, never with the page's own scripts; an end-to-end test checks
+  that), and the editor takes the field's place: what was typed so far is read as Markdown, and
+  the cursor stays in the field. If the editor can't load, the plain field stays.
+- **The editor shows the text as it will be read,** and Markdown turns into formatting by itself:
+  typed (`**bold**`, `# `, `- `, `1. `, `> `, `[ ] `, three backticks and a language), and pasted.
+  Text that's inserted in one go without being a paste (dictation) stays as it is.
+- **The toolbar** does the same for people who don't type Markdown: bold, italic, strikethrough,
+  code, a link (its dialog takes only a whole `http` or `https` address), a heading menu, the
+  three kinds of list, nesting and lifting a list item, a quotation and a block of code. A button
+  that switches something says whether it's on. After a menu or the dialog, the text has the focus
+  again.
+- **A block of code** is coloured while it's written, under its language's name, as where it's
+  read. The languages are a download of their own (about 40 kB gzipped), fetched the first time a
+  text has a block of code. While the cursor is in a block, a menu at the end of the toolbar picks its language; a
+  block without one is never coloured.
+- **The keyboard:** the toolbar is one stop before the text (arrow keys move between its buttons),
+  and Tab and Shift+Tab always leave the text, also in a list or a table, so nobody gets stuck in
+  it. A list item nests and lifts with Ctrl or Cmd and `]` or `[`.
+- **The editor follows the server's rules** (`editor-extensions.ts`): HTML is text, only whole
+  `http` and `https` addresses are links, and an image is kept as it was written and shown by its
+  description. It's still never trusted: the server cleans, limits and renders what it sends like
+  any other text.
+- **What the editor doesn't have:** footnotes (one typed in it is sent as plain text) and a way to
+  build a table from scratch (a pasted Markdown table stays a table, with cells to edit).
+- **A text that isn't sent yet stays** while its page is kept alive: the field keeps the Markdown
+  and the editor starts from it again. The field is empty after a text was sent, and keeps the
+  text after a refused submit. Filling the editor is never a step to undo.
+
+### Cleaning, limits and names
+
 - Text is cleaned before it's stored (`cleanMultilineText`): line endings become `\n`, and hidden
   and control characters are dropped rather than refused. A title has at most 150 characters, a
   description or reply 10,000 (`src/lib/input-rules.ts`).
@@ -217,7 +253,9 @@ the closed statuses.
   people). `src/app/(app)/requests/`: the pages themselves.
 - `src/components/ui/markdown/`: what shows a Markdown text: the pipeline with its limits
   (`tree.ts`), the allow-list (`sanitize.ts`), the elements (`elements.tsx`), the languages of
-  highlighted code (`languages.ts`) and the class names (`styles.ts`).
+  highlighted code (`languages.ts`) and the class names (`styles.ts`). And what writes one: the
+  field (`markdown-field.tsx`), the toolbar (`formatting-toolbar.tsx`), and the editor's own files
+  (`editor*.ts(x)`), which only `import()` reaches.
 - Example requests for development and the end-to-end tests come from
   `tests/database/store-requests.ts` (see [Testing](testing.md)). One of them is written in
   Markdown with every kind of formatting (`tests/database/formatted-request.ts`).

@@ -337,6 +337,14 @@ keyboard support.
   link that stands on its own takes `standalone` and is underlined on hover only: a name in a
   table, a value in a list of details, "Forgot password?" under its field, a link with a line to
   itself. When you add a `TextLink`, decide which of the two it is.
+- **Markdown** is shown with `MarkdownText` (on the server only) and written in `MarkdownField`,
+  both in `src/components/ui/markdown/`; see [Requests](requests.md#text). The field's editor
+  loads after the page, in place of a plain text field under the same toolbar, so nothing moves.
+  Its toolbar is the `Toolbar` component (`src/components/ui/toolbar.tsx`, Radix Toolbar): one
+  stop for Tab with the arrow keys between its buttons, each an icon named by its label, and a
+  button that switches something says whether it's on (`aria-pressed`, shown by a fill and a line
+  in the colour of control borders, 3:1). Tab always leaves the text. A task's checkbox in the
+  editor is 24px, the least a target may be.
 - **Forms:** labels are always visible and help text is linked with `aria-describedby`. Fields
   don't show errors themselves: a failed submit shows an `Alert` (`ResultAlert`) and moves focus
   to it, and in the signed-in app a toast too (not in a dialog, see Results). Each result gets an
