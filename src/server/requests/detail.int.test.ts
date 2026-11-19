@@ -45,7 +45,7 @@ describe('getRequest', () => {
       number: 1,
       prefix: 'AD',
       title: 'The printer is broken',
-      description: { text: 'It prints blank pages.', format: 'plain' },
+      description: { text: 'It prints blank pages.', format: 'markdown' },
       type: 'hotfix',
       status: 'open',
       reopenedAt: null,
@@ -174,7 +174,8 @@ describe('getRequest: the conversation', () => {
     const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
     const support = await staffActor(db, 'support', 'sam@adiutor.test');
     const stored = await storeRequest(company.id, { createdBy: client.id });
-    await storeEntry(stored.id, { authorId: client.id, body: 'Any news?' });
+    // The first reply is from before Markdown: each text comes with the format it was stored in.
+    await storeEntry(stored.id, { authorId: client.id, body: 'Any news?', bodyFormat: 'plain' });
     await storeEntry(stored.id, { authorId: support.id, authorSide: 'staff', body: 'On it.' });
     await storeEntry(stored.id, {
       kind: 'title',
@@ -199,7 +200,7 @@ describe('getRequest: the conversation', () => {
       {
         kind: 'comment',
         author: { userId: null, name: 'sam', side: 'staff', isViewer: false },
-        body: { text: 'On it.', format: 'plain' },
+        body: { text: 'On it.', format: 'markdown' },
         from: null,
         to: null,
       },

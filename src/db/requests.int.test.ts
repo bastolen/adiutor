@@ -46,11 +46,11 @@ async function storeRequest(number: number) {
 }
 
 describe('the request table', () => {
-  it('starts a request open, in plain text, with its activity at its creation', async () => {
+  it('starts a request open, in Markdown, with its activity at its creation', async () => {
     const { request: created } = await storeRequest(1);
     expect(created).toMatchObject({
       status: 'open',
-      descriptionFormat: 'plain',
+      descriptionFormat: 'markdown',
       reopenedAt: null,
     });
     expect(created.lastActivityAt).toEqual(created.createdAt);
@@ -98,13 +98,16 @@ describe('the request_entry table', () => {
       { ...entry, kind: 'comment', body: 'On it.' },
       { ...entry, kind: 'status', fromValue: 'open', toValue: 'todo' },
       { ...entry, kind: 'title', fromValue: 'Help', toValue: 'The printer is broken' },
+      // A reply from before Markdown keeps its own format.
+      { ...entry, kind: 'comment', body: 'Written long ago.', bodyFormat: 'plain' },
     ]);
 
     const entries = await db.select().from(requestEntry).orderBy(requestEntry.id);
     expect(entries.map(({ kind, bodyFormat }) => [kind, bodyFormat])).toEqual([
+      ['comment', 'markdown'],
+      ['status', 'markdown'],
+      ['title', 'markdown'],
       ['comment', 'plain'],
-      ['status', 'plain'],
-      ['title', 'plain'],
     ]);
   });
 

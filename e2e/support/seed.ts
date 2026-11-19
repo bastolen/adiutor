@@ -13,6 +13,11 @@ import { firstRow } from '../../src/lib/defined';
 import { generateToken, hashToken } from '../../src/lib/sign-in/tokens';
 import { storeAuthenticator } from '../../tests/auth/authenticator';
 import emptyDatabase from '../../tests/database/empty-database';
+import {
+  FORMATTED_CLIENT_REPLY,
+  FORMATTED_DESCRIPTION,
+  FORMATTED_STAFF_REPLY,
+} from '../../tests/database/formatted-request';
 import storeRequests from '../../tests/database/store-requests';
 import { withTestDatabase } from './db';
 import {
@@ -284,6 +289,8 @@ export default async function seedTestDatabase(): Promise<void> {
         companyId: clientCompany.id,
         title: SEEDED_REQUESTS.waiting.title,
         description: 'Our opening hours change next month. Can you update them on the website?',
+        // Written before Markdown: the one seeded text that's still shown as plain text.
+        format: 'plain',
         type: 'support',
         priority: 'high',
         status: 'waiting',
@@ -352,6 +359,22 @@ export default async function seedTestDatabase(): Promise<void> {
         at: hoursAgo(400),
         entries: [
           { by: byStaff, at: hoursAgo(390), change: 'status', from: 'open', to: 'in_progress' },
+        ],
+      },
+      {
+        companyId: clientCompany.id,
+        title: SEEDED_REQUESTS.formatted.title,
+        description: FORMATTED_DESCRIPTION,
+        type: 'new_feature',
+        priority: 'low',
+        status: 'done',
+        raisedBy: byClient,
+        at: hoursAgo(500),
+        entries: [
+          { by: byStaff, at: hoursAgo(480), change: 'status', from: 'open', to: 'in_progress' },
+          { by: byStaff, at: hoursAgo(470), reply: FORMATTED_STAFF_REPLY },
+          { by: byClient, at: hoursAgo(460), reply: FORMATTED_CLIENT_REPLY },
+          { by: byStaff, at: hoursAgo(450), change: 'status', from: 'in_progress', to: 'done' },
         ],
       },
       ...Array.from({ length: PAGED_REQUEST_COUNT }, (_, index) => ({

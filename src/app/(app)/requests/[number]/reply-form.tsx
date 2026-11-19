@@ -76,6 +76,7 @@ export default function ReplyForm({ request, canWait }: { request: number; canWa
         <ResultAlert result={result} />
         <TextAreaField
           label={t('label')}
+          description={t('hint')}
           name="body"
           rows={4}
           maxLength={REQUEST_TEXT_MAX_LENGTH}

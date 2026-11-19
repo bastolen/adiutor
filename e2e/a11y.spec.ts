@@ -106,6 +106,9 @@ const APP_PATHS = [
   '/requests/new',
   // A request with a conversation: replies from both sides, a link, and changes.
   '/requests/1',
+  // A request written in Markdown: headings, lists, a table, a quotation, an image as a link,
+  // a footnote, and highlighted code, whose colours have to be readable in both modes.
+  '/requests/6',
   '/companies/does-not-exist',
   '/does-not-exist',
 ];
@@ -121,6 +124,7 @@ const CLIENT_PATHS = [
   '/requests',
   '/requests/new',
   '/requests/1',
+  '/requests/6',
   '/companies/{company}',
 ];
 

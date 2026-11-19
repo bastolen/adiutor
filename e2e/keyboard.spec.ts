@@ -18,6 +18,7 @@ import {
   PAGING_COMPANY_SLUG,
   PLATFORM_ADMIN,
   REQUESTS_CLIENT,
+  SEEDED_REQUESTS,
 } from './support/fixtures';
 import {
   adminStorageState,
@@ -943,6 +944,34 @@ test.describe('requests', () => {
       await expect(page).toHaveURL('/requests?type=hotfix');
       // The button now says what's chosen, and still has focus.
       await expect(page.getByRole('button', { name: 'Type: Hotfix' })).toBeFocused();
+    });
+
+    test('code and a table in a request’s text are reached and scrolled with the keyboard', async ({
+      page,
+    }) => {
+      await page.goto(`/requests/${SEEDED_REQUESTS.formatted.number}`);
+
+      // A table sits in a box that scrolls on a narrow screen, so the box takes focus.
+      const table = page.getByRole('group', { name: 'Table' });
+      await table.focus();
+      await expect(table).toBeFocused();
+
+      // A block of code wider than the page: the arrow keys scroll it once it has focus.
+      const code = page.getByRole('group', { name: 'Bash code' });
+      expect(await code.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
+        true,
+      );
+      await code.focus();
+      await expect(code).toBeFocused();
+      await page.keyboard.press('ArrowRight');
+      await expect.poll(() => code.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+
+      // Tab reaches it from the block before it, and the ring shows which one has focus.
+      const config = page.getByRole('group', { name: 'Nginx config code' });
+      await config.focus();
+      await page.keyboard.press('Tab');
+      await expect(code).toBeFocused();
+      await expect.poll(() => outlineOf(code)).toEqual({ style: 'solid', width: '2px' });
     });
 
     test('a status is only saved when picked with Enter, not while browsing', async ({ page }) => {

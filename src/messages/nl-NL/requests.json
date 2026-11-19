@@ -46,7 +46,7 @@
       "typeLabel": "Type",
       "typePlaceholder": "Kies een type",
       "descriptionLabel": "Beschrijving",
-      "descriptionHint": "Wat heb je nodig, en wat heb je al geprobeerd? Voeg webadressen toe als die helpen.",
+      "descriptionHint": "Wat heb je nodig, en wat heb je al geprobeerd? Je kunt je tekst opmaken met Markdown, zoals **vet**, lijsten en `code`.",
       "priorityLabel": "Prioriteit",
       "priorityFromType": "Bepaald door het type",
       "priorityHint": "Alleen medewerkers zien de prioriteit.",
@@ -88,6 +88,7 @@
     },
     "reply": {
       "label": "Je reactie",
+      "hint": "Je kunt je tekst opmaken met Markdown, zoals **vet**, lijsten en `code`.",
       "send": "Reactie versturen",
       "sendAndWait": "Versturen en op het bedrijf wachten",
       "sent": "Reactie verstuurd."

@@ -46,7 +46,7 @@
       "typeLabel": "Type",
       "typePlaceholder": "Choose a type",
       "descriptionLabel": "Description",
-      "descriptionHint": "What do you need, and what have you tried? Add web addresses if they help.",
+      "descriptionHint": "What do you need, and what have you tried? You can format your text with Markdown, such as **bold**, lists and `code`.",
       "priorityLabel": "Priority",
       "priorityFromType": "Set by the type",
       "priorityHint": "Only staff see the priority.",
@@ -88,6 +88,7 @@
     },
     "reply": {
       "label": "Your reply",
+      "hint": "You can format your text with Markdown, such as **bold**, lists and `code`.",
       "send": "Send reply",
       "sendAndWait": "Send and wait for the company",
       "sent": "Reply sent."

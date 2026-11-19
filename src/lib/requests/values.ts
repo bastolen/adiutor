@@ -151,6 +151,13 @@ export const REQUEST_TEXT_FORMATS = ['plain', 'markdown'] as const;
 export type RequestTextFormat = (typeof REQUEST_TEXT_FORMATS)[number];
 
 /**
+ * The format every new description and reply is written in. Nobody chooses
+ * one: a text is Markdown from the moment Markdown exists, and the texts
+ * stored before it keep `plain`.
+ */
+export const WRITTEN_TEXT_FORMAT: RequestTextFormat = 'markdown';
+
+/**
  * The status filters of a request list: requests that still need something
  * (`active`), those waiting for the company's reply (`waiting`), those done
  * or cancelled (`closed`), and every request (`all`).

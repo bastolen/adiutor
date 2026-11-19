@@ -23,7 +23,8 @@ requests are built; emails about requests, assigning them and approving the work
 
 - **Requests.** Companies raise requests, and both sides work each one through in one
   conversation: replies, a status from Open to Done (or Cancelled), and a type that sets a
-  priority only the staff see. Company Admins and Clients raise, reply, close and reopen;
+  priority only the staff see. Descriptions and replies are written in Markdown, with lists,
+  tables and highlighted code. Company Admins and Clients raise, reply, close and reopen;
   Watchers follow; the staff work on every company's requests. See [Requests](docs/requests.md).
 - **Companies and staff.** Staff add companies and invite each company's first Admin. Users can
   belong to several companies, with a role in each (Admin, Client or Watcher), and staff have their

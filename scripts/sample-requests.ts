@@ -1,9 +1,15 @@
 /**
  * @file Sample requests for local development, so the request pages have
  * something to show: every status and type, a reopened request, requests
- * raised by the company and by the staff, and a conversation with replies
- * from both sides. Used by `scripts/seed-dev.ts`.
+ * raised by the company and by the staff, a conversation with replies from
+ * both sides, and one request written in Markdown with every kind of
+ * formatting. Used by `scripts/seed-dev.ts`.
  */
+import {
+  FORMATTED_CLIENT_REPLY,
+  FORMATTED_DESCRIPTION,
+  FORMATTED_STAFF_REPLY,
+} from '../tests/database/formatted-request';
 import type { SamplePerson, SampleRequest } from '../tests/database/store-requests';
 
 /** An hour in milliseconds. */
@@ -220,6 +226,22 @@ export default function sampleRequests(world: SampleRequestWorld): SampleRequest
       raisedBy: gale,
       at: ago(15),
       entries: [{ by: sam, at: ago(14), change: 'status', from: 'open', to: 'in_progress' }],
+    },
+    {
+      // Written in Markdown, with every kind of formatting a request can show.
+      companyId: world.alpha,
+      title: 'Move the intranet to the new server',
+      description: FORMATTED_DESCRIPTION,
+      type: 'new_feature',
+      priority: 'low',
+      status: 'in_progress',
+      raisedBy: avery,
+      at: ago(6),
+      entries: [
+        { by: sam, at: ago(5), change: 'status', from: 'open', to: 'in_progress' },
+        { by: sam, at: ago(4), reply: FORMATTED_STAFF_REPLY },
+        { by: avery, at: ago(3), reply: FORMATTED_CLIENT_REPLY },
+      ],
     },
   ];
 }

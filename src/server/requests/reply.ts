@@ -5,7 +5,13 @@
 import { eq } from 'drizzle-orm';
 
 import { request, requestEntry } from '@/db/schema';
-import { maySetStatus, mayChangeStatus, requestSide, statusAfterReply } from '@/lib/requests';
+import {
+  maySetStatus,
+  mayChangeStatus,
+  requestSide,
+  statusAfterReply,
+  WRITTEN_TEXT_FORMAT,
+} from '@/lib/requests';
 import type { RequestStatus } from '@/lib/requests';
 import { requestReplySchema, requestStatusSchema } from '@/lib/validation';
 
@@ -65,7 +71,9 @@ export default async function replyToRequest(
       authorSide: side,
       createdAt: CHANGE_MOMENT,
     };
-    await tx.insert(requestEntry).values({ ...entry, kind: 'comment', body });
+    await tx
+      .insert(requestEntry)
+      .values({ ...entry, kind: 'comment', body, bodyFormat: WRITTEN_TEXT_FORMAT });
     // A status the request can't move to as it is by now is left alone: the reply still counts.
     const status =
       asked && mayChangeStatus(permissions, locked.status, asked)

@@ -5,11 +5,12 @@ Back to the [documentation](README.md).
 A request is what a company raises with the staff: a problem, a question or something new. Both
 sides work it through in one conversation until it's done or no longer needed. This page says how
 requests behave and where the code is; why they're built this way is in
-[decision 0019](decisions/0019-requests-one-series-plain-text-and-a-history.md).
+[decision 0019](decisions/0019-requests-one-series-plain-text-and-a-history.md), and for their
+text in [decision 0021](decisions/0021-markdown-for-request-text.md).
 
 Not built yet, each for a later change: emails about requests, assigning a request to a staff
-member, an approval step, internal staff notes, attachments, Markdown, types the staff manage
-themselves, and working on a request while signed in as a user.
+member, an approval step, internal staff notes, attachments, types the staff manage themselves,
+and working on a request while signed in as a user.
 
 ## Words
 
@@ -115,17 +116,45 @@ the closed statuses.
 
 ## Text
 
-- Descriptions and replies are **plain text**: line breaks are kept, and web addresses (`http://`
-  and `https://`) become links that open in a new tab. Titles may hold an address, but are never
+- Descriptions and replies are **Markdown**: CommonMark with GitHub Flavored Markdown's additions
+  (tables, strikethrough, lists of things to do, addresses that link themselves, footnotes), and
+  a line break stays a line break. Titles are plain text; they may hold an address, but are never
   linked.
-- A link ends before the punctuation of the sentence around it (`splitLinks` in
-  `src/lib/requests/text.ts`): full stops, commas, question and exclamation marks, the ellipsis,
-  the full-width marks of Chinese and Japanese, closing quotation marks (”, ’, », ›), and a closing
-  bracket the address didn't open itself. Brackets are counted, so
+- **Every new text is Markdown, and nobody chooses.** Each text is stored with a format marker
+  (`description_format`, `body_format`): `markdown` for every text written since Markdown
+  (`WRITTEN_TEXT_FORMAT`, which the services write and the columns default to), `plain` for the
+  texts stored before it. A text is never read as a format it wasn't written in.
+- **A plain text is shown as it was written:** line breaks are kept, and web addresses (`http://`
+  and `https://`) become links. A link ends before the punctuation of the sentence around it
+  (`splitLinks` in `src/lib/requests/text.ts`): full stops, commas, question and exclamation
+  marks, the ellipsis, the full-width marks of Chinese and Japanese, closing quotation marks (”,
+  ’, », ›), and a closing bracket the address didn't open itself. Brackets are counted, so
   `(see https://adiutor.dev/wiki/Printer_(office))` links up to `(office)`.
-- Each text is stored with a format marker (`description_format`, `body_format`, today always
-  `plain`) and shown through one component (`RequestText` in `src/app/(app)/_requests/`), so adding
-  Markdown later changes one place and no stored text.
+- Every text is shown through one component (`RequestText` in `src/app/(app)/_requests/`), which
+  picks the renderer by the marker. The Markdown one is `MarkdownText` in
+  `src/components/ui/markdown/`. It runs on the server only: the browser gets the finished
+  elements, never the parser or the highlighter (`src/client-imports.test.ts`).
+- **What the writer typed is shown, never run** (see
+  [Text people write](security-measures.md#text-people-write)): HTML stays the text it was typed
+  as; only whole `http` and `https` addresses become links (`linkTarget`), which open in a new
+  tab; and an image is a link to it, named by its description, and is never loaded.
+- **Headings** in a text start right below the heading of the card they're in: a text's highest
+  heading is an `h3` on a request's page (where cards are `h2`), whether it was written with one
+  `#` or three, and the ones below it follow in order. So a text can't break the page's outline or
+  skip a level at its start (`highestHeading`).
+- **Code:** a block that names its language (three backticks and `ts`, say) is highlighted, under
+  the language's name. The languages are highlight.js's common ones plus Dockerfile, nginx,
+  PowerShell, Apache, HTTP and properties (`CODE_LANGUAGES`); a language is never guessed, and a
+  block in any other language is shown without colours. The colours are the `code-*` tokens (see
+  [Design and accessibility](design.md#design-and-accessibility)). A block of code and a table
+  scroll sideways when they're wider than the text, can be reached and scrolled with the
+  keyboard, and say what they hold.
+- **A text that would cost too much to format is shown as plain text** (`markdownTree`): one
+  nested more than 100 levels deep (`MAX_NESTING`; React renders a level per call, and the
+  parser's own walk overflows the stack at a few thousand), or with more than 2,500 runs of `*`
+  or `_` (`MAX_EMPHASIS_RUNS`; the parser's time grows with their number squared).
+- The fields for a description and a reply say that Markdown works; an editor that formats while
+  typing is the next change.
 - Text is cleaned before it's stored (`cleanMultilineText`): line endings become `\n`, and hidden
   and control characters are dropped rather than refused. A title has at most 150 characters, a
   description or reply 10,000 (`src/lib/input-rules.ts`).
@@ -186,5 +215,9 @@ the closed statuses.
   nothing in it is a change of sign-in, role or account.
 - `src/app/(app)/_requests/`: what the request pages share (the list, the badges, the text, the
   people). `src/app/(app)/requests/`: the pages themselves.
+- `src/components/ui/markdown/`: what shows a Markdown text: the pipeline with its limits
+  (`tree.ts`), the allow-list (`sanitize.ts`), the elements (`elements.tsx`), the languages of
+  highlighted code (`languages.ts`) and the class names (`styles.ts`).
 - Example requests for development and the end-to-end tests come from
-  `tests/database/store-requests.ts` (see [Testing](testing.md)).
+  `tests/database/store-requests.ts` (see [Testing](testing.md)). One of them is written in
+  Markdown with every kind of formatting (`tests/database/formatted-request.ts`).

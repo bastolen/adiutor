@@ -641,6 +641,51 @@ test('the staff reach a person’s page from a request, and nobody at the compan
   expect(html).not.toContain(clientId);
 });
 
+test('a request written in Markdown is shown formatted, and nothing in it loads', async ({
+  page,
+}) => {
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto(`/requests/${SEEDED_REQUESTS.formatted.number}`);
+
+  // What was asked: a heading below the card's own, a list, a table, and an address that opens
+  // in a new tab.
+  const description = page.getByRole('region', { name: 'Description' });
+  await expect(description.getByRole('heading', { level: 3, name: 'What we need' })).toBeVisible();
+  await expect(description.locator('strong', { hasText: '1 July' })).toBeVisible();
+  await expect(description.getByRole('listitem')).toHaveCount(3);
+  const table = description.getByRole('group', { name: 'Table' });
+  await expect(table.getByRole('columnheader', { name: 'When' })).toBeVisible();
+  await expect(table.getByRole('cell', { name: '24 June' })).toBeVisible();
+  const address = description.getByRole('link', {
+    name: /^https:\/\/adiutor\.test\/docs\/intranet/,
+  });
+  await expect(address).toHaveAttribute('target', '_blank');
+  await expect(address).toHaveAttribute('rel', 'noopener noreferrer nofollow');
+
+  // The staff's reply: code under the name of its language, coloured; a quotation; things to do.
+  const thread = page.getByRole('region', { name: 'Conversation' });
+  const config = thread.getByRole('group', { name: 'Nginx config code' });
+  await expect(config).toContainText('server_name intranet.adiutor.test;');
+  await expect(config.locator('[class*="hljs-"]').first()).toBeVisible();
+  await expect(thread.getByRole('group', { name: 'Bash code' })).toContainText('curl --include');
+  await expect(thread.locator('blockquote')).toContainText('pointed at it');
+  await expect(thread.locator('ul > li').filter({ hasText: 'Your test' })).toHaveText(
+    'To do: Your test',
+  );
+  await expect(thread.getByRole('checkbox')).toHaveCount(0);
+
+  // An image is a link to it, and is never loaded.
+  const image = thread.getByRole('link', { name: /^The new home page \(image\)/ });
+  await expect(image).toHaveAttribute('href', 'https://adiutor.test/intranet-home.png');
+  await expect(page.locator('img[src*="intranet-home"]')).toHaveCount(0);
+
+  // The company's answer: its footnote and the reference lead to each other.
+  await thread.getByRole('link', { name: '1', exact: true }).click();
+  await expect(page).toHaveURL(/-fn-1$/);
+  await thread.getByRole('link', { name: 'Back to reference 1' }).click();
+  await expect(page).toHaveURL(/-fnref-1$/);
+});
+
 test('a Watcher follows a request without taking part', async ({ page }) => {
   await signIn(page, CLIENT_WATCHER);
   await page.goto(`/requests/${SEEDED_REQUESTS.waiting.number}`);

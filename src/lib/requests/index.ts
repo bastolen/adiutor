@@ -26,6 +26,7 @@ export {
   REQUEST_TYPES,
   startingPriority,
   statusesOfFilter,
+  WRITTEN_TEXT_FORMAT,
 } from './values';
 export type {
   RequestEntryKind,
