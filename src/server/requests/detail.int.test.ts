@@ -269,19 +269,26 @@ describe('getRequest: the conversation', () => {
     const nameless = await createUser(db, 'nameless@adiutor.test');
     await db.update(user).set({ name: '  ' }).where(eq(user.id, nameless));
     const gone = await createUser(db, 'gone@adiutor.test');
+    // An old name of only characters that show nothing: a zero-width space and a Hangul filler.
+    const invisible = await createUser(db, 'invisible@adiutor.test');
+    await db.update(user).set({ name: '\u{200B}\u{3164}' }).where(eq(user.id, invisible));
     await storeRequest(company.id, { title: 'Nameless', createdBy: nameless });
     await storeRequest(company.id, { title: 'Gone', createdBy: gone, createdBySide: 'staff' });
+    await storeRequest(company.id, { title: 'Invisible', createdBy: invisible });
     await db.delete(user).where(eq(user.id, gone));
     const watcher = await memberActor(db, company.id, 'watcher');
 
     const first = await getRequest(ctx, watcher, '1');
     const second = await getRequest(ctx, watcher, '2');
+    const third = await getRequest(ctx, watcher, '3');
 
     expect(first.raisedBy).toEqual({ userId: null, name: null, side: 'company', isViewer: false });
     expect(second.raisedBy).toEqual({ userId: null, name: null, side: 'staff', isViewer: false });
-    expect(JSON.stringify([first, second])).not.toContain('@adiutor.test');
-    // Nor who it is: the nameless account still exists.
-    expect(JSON.stringify([first, second])).not.toContain(nameless);
+    expect(third.raisedBy).toEqual({ userId: null, name: null, side: 'company', isViewer: false });
+    expect(JSON.stringify([first, second, third])).not.toContain('@adiutor.test');
+    // Nor who it is: the nameless accounts still exist.
+    expect(JSON.stringify([first, second, third])).not.toContain(nameless);
+    expect(JSON.stringify([first, second, third])).not.toContain(invisible);
   });
 
   it('gives nobody the ID of an account that is gone', async () => {

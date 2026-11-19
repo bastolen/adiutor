@@ -240,6 +240,13 @@ describe('describeOwnActivity', () => {
     expect(
       describeInEnglish(event({ action: 'mfa_reset', actor: { id: 'admin-1', name: ' ' } }), ME),
     ).toBe('Two-step verification reset by an administrator');
+    // An old name of only a zero-width space shows nothing either.
+    expect(
+      describeInEnglish(
+        event({ action: 'mfa_reset', actor: { id: 'admin-1', name: '\u{200B}' } }),
+        ME,
+      ),
+    ).toBe('Two-step verification reset by an administrator');
   });
 
   it('describes staff events without a company', () => {
