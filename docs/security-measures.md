@@ -36,10 +36,11 @@ Better Auth's own limits (per IP address) are stored in the database
 (`rate_limit`), so they hold across restarts and instances. On top of those, per email address
 whether or not it has an account: 10 wrong passwords per 15 minutes, 5 email links and 5 password
 resets per hour, and per user 5 emailed codes and 5 wrong step-up codes per 15 minutes
-(`src/server/auth/auth-guards/`). Emailed codes also wait for each other: one per user every 2.5
-minutes, half a code's lifetime (`EMAIL_CODE_RESEND_SECONDS`), checked first so a refused one
-doesn't count, and ended once a code is used or a password sign-in starts a new code step (the
-last code can't be used for it; the 5 per 15 minutes still cap what a password can send). Setting
+(`src/server/auth/auth-guards/`). Emailed codes also wait for each other: one per sign-in or
+session every 2.5 minutes, half a code's lifetime (`EMAIL_CODE_RESEND_SECONDS`), as Better Auth
+keeps the code with the sign-in or session it was asked for, checked first so a refused one
+doesn't count, and ended once a session's code is used (the 5 per 15 minutes per user still cap
+what a password can send). Setting
 up email codes waits too, but isn't counted
 towards the 5, so it doesn't eat into the sign-in budget. Each password sign-in takes one of the address's attempts before
 its password is checked and gives it back unless the password was wrong, and each step-up code

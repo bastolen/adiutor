@@ -24,7 +24,8 @@ import {
   startAuthenticatorSetup,
   turnOffGitHubSignIn,
 } from '../../../../tests/integration/helpers';
-import { type AuthGuardContext, beforeAuthRequest } from '../auth-guards';
+import { type AuthGuardContext, beforeAuthRequest, sessionCodeChallenge } from '../auth-guards';
+import { requestState } from '../request-state';
 import { takeSignInChangeLock } from '../sign-in-change-lock';
 import { afterAuthRequest } from './after-request';
 import type { AuthHookContext } from './hook-context';
@@ -98,35 +99,63 @@ describe('confirming a session with a code', () => {
     expect(await sessionMfa(sessionId)).toEqual({ mfaVerified: false, mfaMethod: null });
   });
 
-  it('ends the wait for a new emailed code once a code is used, not after a wrong one', async () => {
+  it("ends its session's wait for a new emailed code once a code is used, not after a wrong one", async () => {
     const support = await staffActor(db, 'support');
     await enableTwoFactor(db, support.id, 'email');
     const sessionId = await createSession(db, support.id);
-    const cooldown = `email-code-cooldown:user:${support.id}`;
-    await db
-      .insert(rateLimitBucket)
-      .values({ key: cooldown, count: 1, resetAt: new Date(Date.now() + 150_000) });
+    const otherSession = await createSession(db, support.id);
     /**
-     * Whether the user is still waiting for a new code.
+     * The key of a session's wait for a new code.
      *
+     * @param id - The session.
+     * @returns The key.
+     */
+    const cooldownOf = (id: string) => `email-code-cooldown:${sessionCodeChallenge(id)}`;
+    await db.insert(rateLimitBucket).values(
+      [sessionId, otherSession].map((id) => ({
+        key: cooldownOf(id),
+        count: 1,
+        resetAt: new Date(Date.now() + 150_000),
+      })),
+    );
+    /**
+     * Whether a session is still waiting for a new code.
+     *
+     * @param id - The session.
      * @returns Whether the wait's bucket is there.
      */
-    const waiting = async () =>
-      (await db.select().from(rateLimitBucket).where(eq(rateLimitBucket.key, cooldown))).length > 0;
-
-    await afterAuthRequest(
-      await requestWithSession(
+    const waiting = async (id: string) =>
+      (
+        await db
+          .select()
+          .from(rateLimitBucket)
+          .where(eq(rateLimitBucket.key, cooldownOf(id)))
+      ).length > 0;
+    /**
+     * A code checked with the session, with the challenge the signed-in checks hand over.
+     *
+     * @param returned - What Better Auth answered; nothing for an accepted code.
+     * @returns The request.
+     */
+    const verifyCode = async (returned?: unknown) => {
+      const ctx = await requestWithSession(
         '/two-factor/verify-otp',
         { sessionId, userId: support.id },
-        new APIError('UNAUTHORIZED', { message: 'Invalid code' }),
-      ),
-    );
-    expect(await waiting()).toBe(true);
+        returned,
+      );
+      requestState(ctx.context).emailCodeChallenge = sessionCodeChallenge(sessionId);
+      return ctx;
+    };
 
     await afterAuthRequest(
-      await requestWithSession('/two-factor/verify-otp', { sessionId, userId: support.id }),
+      await verifyCode(new APIError('UNAUTHORIZED', { message: 'Invalid code' })),
     );
-    expect(await waiting()).toBe(false);
+    expect(await waiting(sessionId)).toBe(true);
+
+    await afterAuthRequest(await verifyCode());
+    expect(await waiting(sessionId)).toBe(false);
+    // Another session's code is still out: its wait stays.
+    expect(await waiting(otherSession)).toBe(true);
   });
 
   it('confirms the session with an email code only where email codes count', async () => {

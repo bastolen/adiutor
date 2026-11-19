@@ -68,8 +68,8 @@ describe('a password sign-in waiting for its code step', () => {
     await enableTwoFactor(db, manager.id, 'email');
     const sendCode = request('/two-factor/send-otp', { pendingUserId: manager.id });
 
-    await sendCodesOverTime(5, sendCode, manager.id);
-    await waitForNextCode(manager.id);
+    await sendCodesOverTime(5, sendCode);
+    await waitForNextCode();
     await expect(beforeAuthRequest(sendCode)).rejects.toEqual(refusedWith('TOO_MANY_ATTEMPTS'));
     expect(await hits(`email-code:user:${manager.id}`)).toBe(6);
   });

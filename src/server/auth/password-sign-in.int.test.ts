@@ -706,7 +706,7 @@ describe('an emailed code after signing in again', () => {
     await signInWithPassword(janes, 'jane@adiutor.test');
     await emailedCode(janes);
 
-    // Sam signing in ends his own wait, not Jane's.
+    // Sam's sign-in is a challenge of his own: Jane's wait stays.
     await signInWithPassword(newBrowser(), 'sam@adiutor.test');
 
     expect(await refusedCode(janes)).toEqual([429, 'EMAIL_CODE_SENT_RECENTLY']);

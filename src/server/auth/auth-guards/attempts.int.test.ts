@@ -17,8 +17,10 @@ import { clearFailedSignIns } from '../failed-sign-ins';
 import {
   countFailedSignIn,
   endEmailCodeCooldown,
+  sessionCodeChallenge,
   settlePasswordAttempt,
   settleStepUpAttempt,
+  signInCodeChallenge,
 } from './attempts';
 import { beforeAuthRequest } from './before-request';
 import {
@@ -209,8 +211,8 @@ describe('confirming a session (step-up)', () => {
     await enableTwoFactor(db, support.id, 'email');
     await signedIn(support.id);
 
-    await sendCodesOverTime(5, request('/two-factor/send-otp'), support.id);
-    await waitForNextCode(support.id);
+    await sendCodesOverTime(5, request('/two-factor/send-otp'));
+    await waitForNextCode();
     await expect(beforeAuthRequest(request('/two-factor/send-otp'))).rejects.toEqual(
       refusedWith('TOO_MANY_ATTEMPTS'),
     );
@@ -305,16 +307,78 @@ describe('the wait for a new emailed code', () => {
     expect(await hits(`email-code:user:${stepUp.id}`)).toBe(1);
   });
 
-  it('lets a new code through once the wait is over, or once a code was used', async () => {
+  it('lets a new code through once the wait is over, or, signed in, once a code was used', async () => {
     const support = await staffActor(db, 'support');
     await enableTwoFactor(db, support.id, 'email');
     const sendCode = request('/two-factor/send-otp', { pendingUserId: support.id });
 
     await beforeAuthRequest(sendCode);
-    await waitForNextCode(support.id);
+    await waitForNextCode();
     await expect(beforeAuthRequest(sendCode)).resolves.toBeUndefined();
 
-    await endEmailCodeCooldown(support.id);
-    await expect(beforeAuthRequest(sendCode)).resolves.toBeUndefined();
+    await signedIn(support.id, { sessionId: 'session-a' });
+    await beforeAuthRequest(request('/two-factor/send-otp'));
+    await endEmailCodeCooldown(sessionCodeChallenge('session-a'));
+    await expect(beforeAuthRequest(request('/two-factor/send-otp'))).resolves.toBeUndefined();
+  });
+
+  it('waits per sign-in, the code Better Auth keeps with it, not per user', async () => {
+    const support = await staffActor(db, 'support');
+    await enableTwoFactor(db, support.id, 'email');
+    /**
+     * Asks for a code at a sign-in's code step.
+     *
+     * @param pendingSignIn - The sign-in.
+     * @returns The guards' answer.
+     */
+    const sendCode = (pendingSignIn: string) =>
+      beforeAuthRequest(
+        request('/two-factor/send-otp', { pendingUserId: support.id, pendingSignIn }),
+      );
+
+    await sendCode('first-sign-in');
+    // Signing in again starts a code step the first code can't be used for: it gets its own.
+    await expect(sendCode('second-sign-in')).resolves.toBeUndefined();
+    await expect(sendCode('first-sign-in')).rejects.toEqual(
+      refusedWith('EMAIL_CODE_SENT_RECENTLY'),
+    );
+    // The wait's key doesn't hold the sign-in's identifier, which lets the sign-in finish.
+    expect(await hits('email-code-cooldown:sign-in:first-sign-in')).toBeNull();
+    expect(
+      await hits(`email-code-cooldown:${signInCodeChallenge('first-sign-in')}`),
+    ).not.toBeNull();
+  });
+
+  it('waits per session on the step-up page, so another session gets its own code at once', async () => {
+    const support = await staffActor(db, 'support');
+    await enableTwoFactor(db, support.id, 'email');
+
+    await signedIn(support.id, { sessionId: 'session-a' });
+    await beforeAuthRequest(request('/two-factor/send-otp'));
+    await signedIn(support.id, { sessionId: 'session-b' });
+    await expect(beforeAuthRequest(request('/two-factor/send-otp'))).resolves.toBeUndefined();
+    await signedIn(support.id, { sessionId: 'session-a' });
+    await expect(beforeAuthRequest(request('/two-factor/send-otp'))).rejects.toEqual(
+      refusedWith('EMAIL_CODE_SENT_RECENTLY'),
+    );
+  });
+
+  it('still limits the codes of all sessions of a user together', async () => {
+    const support = await staffActor(db, 'support');
+    await enableTwoFactor(db, support.id, 'email');
+    /**
+     * Asks for a step-up code in a session of its own.
+     *
+     * @param sessionId - The session.
+     * @returns The guards' answer.
+     */
+    const sendCodeIn = async (sessionId: string) => {
+      await signedIn(support.id, { sessionId });
+      return beforeAuthRequest(request('/two-factor/send-otp'));
+    };
+
+    await inSequence(['a', 'b', 'c', 'd', 'e'], sendCodeIn);
+    await expect(sendCodeIn('f')).rejects.toEqual(refusedWith('TOO_MANY_ATTEMPTS'));
+    expect(await hits(`email-code:user:${support.id}`)).toBe(6);
   });
 });

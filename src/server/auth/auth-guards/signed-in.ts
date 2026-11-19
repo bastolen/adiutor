@@ -28,7 +28,7 @@ import {
 
 import { loadMfaContext } from '../mfa-state';
 import { requestState } from '../request-state';
-import { limitEmailCode, reserveStepUpAttempt } from './attempts';
+import { limitEmailCode, reserveStepUpAttempt, sessionCodeChallenge } from './attempts';
 import { checkUnderSignInChangeLock, signInChangeOf } from './change-lock';
 import {
   type AuthGuardContext,
@@ -78,6 +78,8 @@ function refuseTwoFactorAlreadyOff(ctx: AuthGuardContext): never {
 interface SignedInSession {
   /** The session's MFA facts. */
   session: SessionMfaInput & {
+    /** Its ID, which an emailed code for it belongs to with the user. */
+    id: string;
     /** When it signed in. */
     createdAt?: Date | string | null;
   };
@@ -149,10 +151,15 @@ async function checkSignedInRequest(
   if (EMAIL_CODE_PATHS.has(path) && !allowsEmailCodes(state, mfaRole)) {
     refuseEmailCodes(ctx);
   }
-  // An emailed code waits for the last one (setting up too), and on the step-up page counts
-  // towards the user's limit; setting up email codes doesn't count.
+  // An emailed code waits for the last one of this session (setting up too), the code Better Auth
+  // keeps with it, and on the step-up page counts towards the user's limit; setting up doesn't.
+  const challenge = sessionCodeChallenge(session.session.id);
   if (path === '/two-factor/send-otp') {
-    await limitEmailCode(ctx, session.user.id, !settingUp);
+    await limitEmailCode(ctx, session.user.id, !settingUp, challenge);
+  }
+  if (path === '/two-factor/verify-otp') {
+    // So the reactions after the request end this session's wait once the code was used.
+    requestState(ctx.context).emailCodeChallenge = challenge;
   }
   if (settingUp) {
     return;
