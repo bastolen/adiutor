@@ -32,13 +32,17 @@ export function freshAddress(prefix: string): string {
 }
 
 /**
- * A random client IP address (from the documentation range 198.51.100.0/24),
- * to send as `X-Forwarded-For`.
+ * A random client IP address, to send as `X-Forwarded-For`: one of about
+ * 130,000 in 198.18.0.0/15, the block set aside for testing (RFC 2544).
+ * Better Auth counts its limits per address, and its window only starts
+ * again after 10 seconds without a request from that address, so an address
+ * a test used moments earlier would carry its count over. With this many,
+ * tests close together practically never share one.
  *
  * @returns The address.
  */
 export function randomClientIp(): string {
-  return `198.51.100.${randomInt(1, 255)}`;
+  return `198.${randomInt(18, 20)}.${randomInt(0, 256)}.${randomInt(1, 255)}`;
 }
 
 /**
