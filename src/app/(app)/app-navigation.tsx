@@ -68,7 +68,7 @@ function NavigationPanel({
       <nav aria-label={t('main')} className="flex-1">
         <NavLinks sections={sections} onNavigate={onNavigate} />
       </nav>
-      <AccountMenu name={name} email={email} signedInAs={signedInAs} />
+      <AccountMenu name={name} email={email} signedInAs={signedInAs} onNavigate={onNavigate} />
     </div>
   );
 }
@@ -77,7 +77,7 @@ function NavigationPanel({
  * The navigation. On large screens it's a fixed sidebar. On small screens, a
  * top bar with a menu button opens it in a side `Sheet`: focus stays inside
  * while it's open, Escape closes it (focus goes back to the menu button), and
- * choosing a link closes it.
+ * choosing a link closes it, also "Account settings" in its account menu.
  *
  * @param props - Navigation props.
  * @param props.name - The user's name.

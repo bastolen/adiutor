@@ -566,6 +566,35 @@ test.describe('signed in', () => {
     await expect(page.getByRole('button', { name: 'Open menu' })).toBeFocused();
   });
 
+  test("choosing Account settings in the mobile menu's account menu closes the mobile menu", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/dashboard');
+    const open = page.getByRole('button', { name: 'Open menu' });
+    const menu = page.getByRole('dialog', { name: 'Menu' });
+
+    // With the keyboard: the account menu, then Enter on Account settings.
+    await open.click();
+    await menu.getByRole('button', { name: /^Account menu/ }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('menuitem', { name: 'Account settings' })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL('/account');
+    await expect(page.getByRole('menu')).toHaveCount(0);
+    await expect(menu).toHaveCount(0);
+    // Back on the button that opened the mobile menu, like after Escape.
+    await expect(open).toBeFocused();
+
+    // With a tap, from another page.
+    await page.goto('/dashboard');
+    await open.click();
+    await menu.getByRole('button', { name: /^Account menu/ }).click();
+    await page.getByRole('menuitem', { name: 'Account settings' }).click();
+    await expect(page).toHaveURL('/account');
+    await expect(menu).toHaveCount(0);
+  });
+
   test('clickable things show a pointer, disabled ones a not-allowed cursor', async ({ page }) => {
     await page.goto(`/companies/${COMPANY_SLUG}/members`);
 

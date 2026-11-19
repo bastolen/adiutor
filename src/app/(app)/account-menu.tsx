@@ -45,6 +45,11 @@ interface AccountMenuProps {
    * the staff member's own session).
    */
   signedInAs?: boolean;
+  /**
+   * Called when "Account settings" is chosen, which goes to another page: the
+   * mobile menu around the account menu closes, as for its other links.
+   */
+  onNavigate?: () => void;
 }
 
 /**
@@ -54,6 +59,11 @@ interface AccountMenuProps {
  * "Sign out". Keyboard: Enter or Space opens it, arrow keys move (left and
  * right too within the theme row), Escape closes and returns focus to the
  * button.
+ *
+ * Choosing "Account settings" also calls `onNavigate`, so the mobile menu it
+ * sits in closes when the page changes, like after its other links. The other
+ * items load a new page anyway (Sign out, "Back to my account") or keep the
+ * menu around them open (the theme).
  *
  * The auth client (for "Sign out") isn't part of the page: it loads when the
  * menu opens (`loadAuthClient`).
@@ -74,9 +84,15 @@ interface AccountMenuProps {
  * @param props.name - The user's name.
  * @param props.email - Their email address.
  * @param props.signedInAs - Whether a staff member is signed in as the user.
+ * @param props.onNavigate - Called when "Account settings" is chosen.
  * @returns The account menu.
  */
-export default function AccountMenu({ name, email, signedInAs = false }: AccountMenuProps) {
+export default function AccountMenu({
+  name,
+  email,
+  signedInAs = false,
+  onNavigate = undefined,
+}: AccountMenuProps) {
   const t = useTranslations('navigation');
   const { goBack } = useBackToOwnAccount();
   const { preference, setPreference } = useThemePreference();
@@ -148,7 +164,7 @@ export default function AccountMenu({ name, email, signedInAs = false }: Account
         </MenuTrigger>
         <MenuContent side="top" align="start" className="w-(--radix-dropdown-menu-trigger-width)">
           <MenuLabel>{email}</MenuLabel>
-          <MenuItem asChild>
+          <MenuItem asChild onSelect={onNavigate}>
             <Link href="/account">
               <UserRound aria-hidden="true" />
               {t('accountSettings')}
