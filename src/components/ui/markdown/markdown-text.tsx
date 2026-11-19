@@ -14,7 +14,7 @@ import cn from '@/lib/cn';
 
 import markdownElements from './elements';
 import { markdownStyles } from './styles';
-import markdownTree from './tree';
+import markdownTree, { highestHeading } from './tree';
 
 /** Props for {@link MarkdownText}. */
 interface MarkdownTextProps {
@@ -23,8 +23,9 @@ interface MarkdownTextProps {
   /** A name no other text on the page has, for the IDs of the text's footnotes. */
   id: string;
   /**
-   * The level of the text's highest heading: one below the heading the text
-   * is shown under. Defaults to 3, for a text in a card (whose title is an `h2`).
+   * The level the text's highest heading gets: one below the heading the
+   * text is shown under. Defaults to 3, for a text in a card (whose title is
+   * an `h2`).
    */
   headingLevel?: number;
   /** Extra classes for the element around the text. */
@@ -37,8 +38,9 @@ interface MarkdownTextProps {
  * A Markdown text as formatted text: headings, lists, tables, quotes, links
  * and code. What the writer typed is shown, never run: HTML stays text,
  * only `http` and `https` addresses are links (opened in a new tab), and an
- * image is a link to it. Headings start below the page's own, so a text
- * can't break the outline.
+ * image is a link to it. Headings start right below the page's own,
+ * whatever number of `#` the highest was written with, so a text can't break
+ * the outline.
  *
  * @param props - Component props.
  * @param props.text - The text.
@@ -76,7 +78,7 @@ export default function MarkdownText({
         Fragment,
         jsx,
         jsxs,
-        components: markdownElements({ id, headingLevel }),
+        components: markdownElements({ id, headingLevel, highestHeading: highestHeading(tree) }),
         // A block of code reads the language it names from its node.
         passNode: true,
         // A column's alignment reaches the cell as `align`, which becomes a class, not a style.

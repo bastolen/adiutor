@@ -69,6 +69,35 @@ export function nestingDepth(tree: Nodes): number {
   return deepest;
 }
 
+/** The ID the parser gives the heading of a text's footnotes; every text's is the same. */
+export const FOOTNOTE_LABEL_ID = 'footnote-label';
+
+/** A heading's tag name, with its depth. */
+const HEADING_TAG = /^h([1-6])$/;
+
+/**
+ * Finds the depth of a text's highest heading: 1 for a text that has a `#`,
+ * 2 for one whose headings start at `##`. The footnotes' label, which the
+ * parser adds, doesn't count.
+ *
+ * @param tree - The text's tree.
+ * @returns The lowest number of `#` any of its headings was written with; 1 without headings.
+ */
+export function highestHeading(tree: Root): number {
+  let highest: number | null = null;
+  const waiting: Root['children'] = [...tree.children];
+  for (let node = waiting.pop(); node; node = waiting.pop()) {
+    if (node.type === 'element') {
+      const depth = HEADING_TAG.exec(node.tagName)?.[1];
+      if (depth && node.properties.id !== FOOTNOTE_LABEL_ID) {
+        highest = Math.min(highest ?? Number(depth), Number(depth));
+      }
+      waiting.push(...node.children);
+    }
+  }
+  return highest ?? 1;
+}
+
 /**
  * Stops the parser from reading HTML: a tag stays the text it was typed as,
  * so "use the <b> tag" shows as written and nothing someone typed becomes an

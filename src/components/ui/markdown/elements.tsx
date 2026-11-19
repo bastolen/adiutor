@@ -17,9 +17,7 @@ import { focusRing } from '../styles';
 import { Td, Th, Tr } from '../table';
 import { codeLanguageName } from './languages';
 import { headingSize, markdownStyles } from './styles';
-
-/** The ID the parser gives the heading of a text's footnotes; every text's is the same. */
-const FOOTNOTE_LABEL_ID = 'footnote-label';
+import { FOOTNOTE_LABEL_ID } from './tree';
 
 /** The lowest heading HTML has. */
 const LOWEST_HEADING = 6;
@@ -28,8 +26,10 @@ const LOWEST_HEADING = 6;
 export interface MarkdownElementsOptions {
   /** A name no other text on the page has, for the IDs of the text's footnotes. */
   id: string;
-  /** The level of the text's highest heading (`#`), below the heading it's shown under. */
+  /** The level the text's highest heading gets: one below the heading the text is shown under. */
   headingLevel: number;
+  /** How many `#` the text's highest heading was written with (`highestHeading`). */
+  highestHeading: number;
 }
 
 /**
@@ -325,18 +325,22 @@ type MarkdownLinkProps = ComponentProps<'a'> & {
  *
  * @param options - The text's name on the page and the level its headings start at.
  * @param options.id - The text's name on the page.
- * @param options.headingLevel - The level of the text's highest heading.
+ * @param options.headingLevel - The level the text's highest heading gets.
+ * @param options.highestHeading - How many `#` that heading was written with.
  * @returns The components to render the text's tree with.
  */
 export default function markdownElements({
   id,
   headingLevel,
+  highestHeading,
 }: MarkdownElementsOptions): Components {
   /**
-   * Builds the component of a heading written with `depth` marks. Headings
-   * keep their order but start below the heading the text is shown under,
-   * so a text can't break the page's outline. The footnotes' label is hidden
-   * from sight, and its ID gets the text's name.
+   * Builds the component of a heading written with `depth` marks. The text's
+   * highest heading gets the level the page gives, whether it was written
+   * with one `#` or three, and the ones below it follow in their order: so
+   * a text can't break the page's outline or skip a level at its start. The
+   * footnotes' label is a heading at that first level, hidden from sight,
+   * and its ID gets the text's name.
    *
    * @param depth - How many `#` the heading was written with.
    * @returns The heading's component.
@@ -351,14 +355,16 @@ export default function markdownElements({
      * @returns The heading.
      */
     function MarkdownHeading({ id: headingId, children = null }: ComponentProps<'h1'>) {
-      const Tag = `h${Math.min(headingLevel + depth - 1, LOWEST_HEADING)}` as 'h1';
       if (headingId === FOOTNOTE_LABEL_ID) {
+        const Label = `h${Math.min(headingLevel, LOWEST_HEADING)}` as 'h1';
         return (
-          <Tag id={`${id}-${FOOTNOTE_LABEL_ID}`} className="sr-only">
+          <Label id={`${id}-${FOOTNOTE_LABEL_ID}`} className="sr-only">
             {children}
-          </Tag>
+          </Label>
         );
       }
+      const level = headingLevel + depth - highestHeading;
+      const Tag = `h${Math.min(level, LOWEST_HEADING)}` as 'h1';
       return (
         <Tag dir="auto" className={cn(markdownStyles.heading, headingSize(depth))}>
           {children}

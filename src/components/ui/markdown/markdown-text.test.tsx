@@ -37,6 +37,21 @@ describe('MarkdownText: formatting', () => {
     expect(screen.getByRole('heading', { level: 6, name: 'Sixth' })).toBeInTheDocument();
   });
 
+  it('starts at the text’s own highest heading, so no level is skipped', () => {
+    show('## Written with two\n\n### And with three\n\n## Two again');
+
+    expect(screen.getByRole('heading', { level: 3, name: 'Written with two' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 4, name: 'And with three' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Two again' })).toBeInTheDocument();
+  });
+
+  it('keeps the footnotes’ heading at the first level, also below deeper headings', () => {
+    show('### Only a small heading\n\nChecked[^1].\n\n[^1]: On Monday.');
+
+    expect(screen.getByRole('heading', { level: 3, name: 'Only a small heading' })).toBeVisible();
+    expect(screen.getByRole('heading', { level: 3, name: 'Footnotes' })).toBeInTheDocument();
+  });
+
   it('starts headings where the page says', () => {
     show('# First', { headingLevel: 2 });
 

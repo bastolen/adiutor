@@ -4,7 +4,13 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import markdownTree, { emphasisRuns, MAX_EMPHASIS_RUNS, MAX_NESTING, nestingDepth } from './tree';
+import markdownTree, {
+  emphasisRuns,
+  highestHeading,
+  MAX_EMPHASIS_RUNS,
+  MAX_NESTING,
+  nestingDepth,
+} from './tree';
 
 /** What a page gives with a text. */
 const OPTIONS = {
@@ -73,5 +79,32 @@ describe('markdownTree', () => {
     expect(
       markdownTree('> > > > > a quote of a quote\n\n- a\n  - b\n    - c', OPTIONS),
     ).not.toBeNull();
+  });
+});
+
+describe('highestHeading', () => {
+  /**
+   * Parses a text and finds its highest heading.
+   *
+   * @param text - The text.
+   * @returns The depth of its highest heading.
+   */
+  const of = (text: string) => {
+    const tree = markdownTree(text, OPTIONS);
+    if (tree === null) {
+      throw new Error('The text has no tree');
+    }
+    return highestHeading(tree);
+  };
+
+  it('is the lowest number of marks a heading was written with', () => {
+    expect(of('# One\n\n### Three')).toBe(1);
+    expect(of('### Three\n\n## Two\n\n> #### In a quotation')).toBe(2);
+    expect(of('- item\n\n  #### In a list')).toBe(4);
+  });
+
+  it('is 1 for a text without headings, and leaves the footnotes’ label out', () => {
+    expect(of('No headings here.')).toBe(1);
+    expect(of('### Three\n\nChecked[^1].\n\n[^1]: On Monday.')).toBe(3);
   });
 });
