@@ -140,7 +140,9 @@ In `src/lib/email.ts`, in order:
 - neither, with `NODE_ENV` set to `development` or `test`: the plain text is printed to the
   server console
 - neither, anywhere else (production, or a script without `NODE_ENV`): sending fails, so links
-  never end up in logs
+  never end up in logs. A production server in that state says so in its log when it starts
+  (`src/server/email-check.ts`, run by `register` in `src/instrumentation.ts`), so it isn't found
+  out only when someone's sign-in link doesn't arrive
 - `EMAIL_OUTBOX_DIR` is refused in production unless `E2E_TESTS=1` (the end-to-end tests)
 
 A failed send is logged with `sendFailureOf` (also in `src/lib/email.ts`): only nodemailer's error code
