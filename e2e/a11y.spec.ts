@@ -506,6 +506,74 @@ test.describe('on a 320px wide screen', () => {
   });
 });
 
+test.describe('in forced-colours mode', () => {
+  // Windows High Contrast and other contrast themes: system colours, no fills or shadows.
+  test.use({ forcedColors: 'active' });
+
+  test.beforeEach(async ({ context }) => {
+    await context.addCookies(adminState.cookies);
+  });
+
+  /**
+   * Each visible current item on the page (`aria-current`): its name, its
+   * outline, and the outlines of the other links in its list.
+   *
+   * @param page - The browser page, loaded.
+   * @returns The current items.
+   */
+  const currentItems = (page: Page) =>
+    page.locator('a[aria-current]').evaluateAll((links) => {
+      /**
+       * Whether an element takes up room on the page (the sidebar on a narrow screen doesn't).
+       *
+       * @param element - The element.
+       * @returns Whether it's shown.
+       */
+      const visible = (element: Element) => element.getBoundingClientRect().width > 0;
+      return links.filter(visible).map((link) => {
+        const style = getComputedStyle(link);
+        const list = link.closest('ul') ?? link.parentElement;
+        const others = [...(list?.querySelectorAll('a:not([aria-current])') ?? [])]
+          .filter(visible)
+          .map((other) => getComputedStyle(other).outlineStyle);
+        return {
+          name: (link.textContent ?? '').trim(),
+          outline: `${style.outlineStyle} ${style.outlineWidth}`,
+          others,
+        };
+      });
+    });
+
+  test('the current page, tab, filter, page number and rows per page stand out, not by colour', async ({
+    page,
+  }) => {
+    await page.goto('/requests');
+    await expect(page.getByRole('heading', { level: 1, name: 'Requests' })).toBeVisible();
+    const onRequests = await currentItems(page);
+    // The sidebar's link and the Active filter.
+    expect(onRequests.map(({ name }) => name)).toEqual(
+      expect.arrayContaining(['Requests', 'Active']),
+    );
+
+    await page.goto(resolvePath('/companies/{paging}/members'));
+    await expect(page.getByRole('navigation', { name: /^Pages of/ })).toBeVisible();
+    const onMembers = await currentItems(page);
+    // The company's Members tab, page 1 and the rows per page.
+    expect(onMembers.map(({ name }) => name)).toEqual(
+      expect.arrayContaining([
+        'Members',
+        expect.stringMatching(/1$/),
+        expect.stringMatching(/^25/),
+      ]),
+    );
+
+    [...onRequests, ...onMembers].forEach(({ name, outline, others }) => {
+      expect(outline, `the outline of ${name}`).toBe('solid 2px');
+      expect(others, `the outlines next to ${name}`).not.toContain('solid');
+    });
+  });
+});
+
 (['light', 'dark'] as const).forEach((colorScheme) => {
   test.describe(`${colorScheme} mode`, () => {
     // Overlays animate in; with reduced motion they appear at once, so axe sees final colours.

@@ -150,6 +150,12 @@ keyboard support.
   mode, and forced-colours mode drops it; the outline is 7.5:1 and 7.3:1 (WCAG 1.4.11) and is drawn
   in forced colours too. Items never take `outline-none` or `outline-hidden`: both switch
   Tailwind's outline style off for the element, so the outline would never show.
+- **The current item** of a navigation (`aria-current`: the page in the sidebar, a tab, a filter
+  such as Active, a page number, the rows per page) stands out by a fill, a shadow or a coloured
+  line, which forced-colours mode (Windows High Contrast) replaces with system colours. In that
+  mode it gets the same inset 2px outline as a menu's highlighted item instead (`currentItem` in
+  `src/components/ui/styles.ts`), except while it has keyboard focus, when the focus ring shows. A
+  component that marks a current item adds `currentItem` to every item, next to `focusRing`.
 - **Colours:** semantic tokens in `src/styles/theme.css`, each checked for contrast (at least 4.5:1
   for text, 3:1 for input borders) in both modes:
 

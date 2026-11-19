@@ -24,6 +24,24 @@ export const highlightedItem =
   'data-highlighted:bg-raised-muted data-highlighted:outline-2 data-highlighted:-outline-offset-2 data-highlighted:outline-ring';
 
 /**
+ * The cue for the current item of a navigation (`aria-current`: the page in
+ * the sidebar, a tab, a filter, a page number, the rows per page) that
+ * doesn't rely on colour. Those items stand out by a fill, a shadow or a
+ * coloured line, which forced-colours mode (Windows High Contrast and other
+ * contrast themes) replaces with system colours, so in that mode the current
+ * item gets an inset 2px outline instead, the cue {@link highlightedItem}
+ * gives a menu's item, drawn in a system colour.
+ *
+ * It applies only in forced-colours mode and only to an item with
+ * `aria-current`, so a component adds it to every item, like
+ * {@link focusRing}. While the item has keyboard focus the focus ring (also
+ * an outline) shows instead. As with `highlightedItem`, never add
+ * `outline-none` or `outline-hidden` to the item.
+ */
+export const currentItem =
+  'forced-colors:aria-[current]:not-focus-visible:outline-2 forced-colors:aria-[current]:not-focus-visible:-outline-offset-2';
+
+/**
  * Styles shared by text inputs and select triggers. The text is 16px
  * (`text-base`) on every device, never smaller: iOS Safari zooms the page in
  * when a field with smaller text gets focus. The line height stays 20px
