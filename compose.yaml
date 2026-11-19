@@ -22,7 +22,7 @@ services:
   # Mailpit catches every email the app sends in development (SMTP on port 1025, matching SMTP_URL in
   # .env.example) and shows them at http://localhost:8025. Nothing is delivered to real inboxes.
   mail:
-    image: axllent/mailpit:v1.33.1
+    image: axllent/mailpit:v1.34.0
     environment:
       # Keep the most recent emails only.
       MP_MAX_MESSAGES: 500
