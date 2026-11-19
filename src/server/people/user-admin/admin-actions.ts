@@ -51,15 +51,24 @@ function targetIdOf(actor: Actor, userId: string): string {
  * @param db - Database client or transaction.
  * @param actor - The acting user.
  * @param userId - The target (unvalidated input is fine).
+ * @param options - How to read.
+ * @param options.lock - Lock the target's row (`FOR UPDATE`, inside a transaction). A read that
+ *   waited for the lock sees the row as the change it waited for left it.
  * @returns The target's ID, email and deactivation.
  * @throws {ServiceError} `not_found` or `invalid` for yourself.
  */
-async function loadTarget(db: DatabaseOrTransaction, actor: Actor, userId: string) {
+async function loadTarget(
+  db: DatabaseOrTransaction,
+  actor: Actor,
+  userId: string,
+  options: { lock?: boolean } = {},
+) {
   const id = targetIdOf(actor, userId);
-  const [target] = await db
+  const query = db
     .select({ id: user.id, email: user.email, name: user.name, deactivatedAt: user.deactivatedAt })
     .from(user)
     .where(eq(user.id, id));
+  const [target] = await (options.lock ? query.for('update') : query);
   if (!target) {
     throw notFoundError();
   }
@@ -254,6 +263,11 @@ export async function deactivateUser(
 /**
  * Reactivates a deactivated account, so it can sign in again.
  *
+ * The account's row is locked as it's read, before whether it's deactivated
+ * is checked. Of two reactivations at the same moment the second waits for
+ * that lock and then finds the account active, so the audit log records the
+ * reactivation once and the user gets one email about it.
+ *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `users:manage`.
  * @param userId - The user.
@@ -267,7 +281,7 @@ export async function reactivateUser(
   assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'users:manage');
   const { targetId } = await ctx.db.transaction(async (tx) => {
-    const target = await loadTarget(tx, actor, userId);
+    const target = await loadTarget(tx, actor, userId, { lock: true });
     if (!target.deactivatedAt) {
       throw new ServiceError('conflict', 'errors.users.alreadyActive');
     }

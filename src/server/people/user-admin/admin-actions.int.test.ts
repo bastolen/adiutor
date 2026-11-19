@@ -318,6 +318,42 @@ describe('admin actions', () => {
     expect(await queuedJobKinds(db)).toEqual(['security-notice']);
   });
 
+  it('refuses a reactivation someone else made while the request waited for the account', async () => {
+    await db.update(user).set({ deactivatedAt: new Date() }).where(eq(user.id, jane));
+
+    const { second } = await atTheSameMoment(
+      db,
+      // Another Admin's reactivation, not committed yet when the request reads the account.
+      (tx) => tx.update(user).set({ deactivatedAt: null }).where(eq(user.id, jane)),
+      () => reactivateUser(ctx, admin, jane),
+    );
+
+    expect(second).toMatchObject({
+      status: 'rejected',
+      reason: expect.objectContaining({ code: 'conflict', key: 'errors.users.alreadyActive' }),
+    });
+    // Nothing recorded and nobody told a second time.
+    expect(await actionsAbout(jane)).toEqual([]);
+    expect(await queuedJobKinds(db)).toEqual([]);
+  });
+
+  it('records two reactivations at the same moment once, with one email', async () => {
+    await db.update(user).set({ deactivatedAt: new Date() }).where(eq(user.id, jane));
+    const otherAdmin = await staffActor(db, 'platform_admin', 'other.admin@adiutor.test');
+
+    const results = await Promise.allSettled([
+      reactivateUser(ctx, admin, jane),
+      reactivateUser(ctx, otherAdmin, jane),
+    ]);
+
+    expect(results.map(({ status }) => status).sort()).toEqual(['fulfilled', 'rejected']);
+    expect(results.find(({ status }) => status === 'rejected')).toMatchObject({
+      reason: expect.objectContaining({ code: 'conflict', key: 'errors.users.alreadyActive' }),
+    });
+    expect(await actionsAbout(jane)).toEqual(['account_reactivated']);
+    expect(await queuedJobKinds(db)).toEqual(['security-notice']);
+  });
+
   it("never names the Admin's device or IP address in the user's security emails", async () => {
     await resetUserMfa(fromKnownDevice, await adminConfirmedAt(), jane);
     await signOutUserEverywhere(fromKnownDevice, admin, jane);

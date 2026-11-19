@@ -175,9 +175,10 @@ Admins and Managers who aren't members can still add themselves with any role, a
     their own second step from the last 15 minutes, which the button asks for before its dialog
     opens (see [Locked out](mfa.md#locked-out));
   - **sign the user out everywhere** (which also forgets the devices they trusted);
-  - **deactivate or reactivate** the account (deactivating one that's deactivated already is
-    refused, also when two Admins do it at the same moment: the second waits for the account's
-    row and finds it deactivated, so it's recorded and emailed once);
+  - **deactivate or reactivate** the account (deactivating one that's deactivated already, or
+    reactivating one that's active, is refused, also when two Admins do it at the same moment: the
+    second waits for the account's row and finds the first one's change, so it's recorded and
+    emailed once);
   - **delete** the account, after typing its email address. Memberships, sign-in methods and
     sessions go with it, the open invitations and invite links they sent are revoked (used
     ones stay in the history, without an inviter), and so are the open invitations addressed to
