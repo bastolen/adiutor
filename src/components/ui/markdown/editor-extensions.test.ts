@@ -124,6 +124,16 @@ describe('reading and writing Markdown', () => {
     expect(markdown).toMatch(/^\| Day +\| Hours +\|\n\| :-+ \| -+: \|\n\| Monday +\| 9 to 5 +\|$/);
   });
 
+  it('starts from the text it was given: undoing doesn’t take it out', () => {
+    const editor = editorWith('Text from before the editor was there.');
+
+    expect(editor.can().undo()).toBe(false);
+    editor.commands.insertContent(' More.');
+    editor.commands.undo();
+    expect(writeMarkdown(editor)).toBe('Text from before the editor was there.');
+    expect(editor.can().undo()).toBe(false);
+  });
+
   it('writes nothing for an editor without text', () => {
     expect(writeMarkdown(editorWith(''))).toBe('');
     expect(writeMarkdown(editorWith('   \n\n'))).toBe('');

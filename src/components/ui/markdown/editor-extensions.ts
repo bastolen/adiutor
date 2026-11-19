@@ -266,14 +266,20 @@ function turnHtmlOff(editor: Editor) {
 }
 
 /**
- * Puts a Markdown text in the editor, in place of what it holds.
+ * Puts a Markdown text in the editor, in place of what it holds. It's where
+ * the editor starts from, not something its writer did: undoing never takes
+ * it out again.
  *
  * @param editor - The editor.
  * @param markdown - The text.
  */
 export function readMarkdown(editor: Editor, markdown: string) {
   turnHtmlOff(editor);
-  editor.commands.setContent(markdown, { contentType: 'markdown', emitUpdate: false });
+  editor
+    .chain()
+    .setMeta('addToHistory', false)
+    .setContent(markdown, { contentType: 'markdown', emitUpdate: false })
+    .run();
 }
 
 /**
