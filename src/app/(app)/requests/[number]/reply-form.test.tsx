@@ -59,7 +59,14 @@ describe('ReplyForm', () => {
   it('offers no second button to those who cannot wait for the company', () => {
     render(<ReplyForm request={142} canWait={false} />);
 
-    expect(screen.getAllByRole('button')).toHaveLength(1);
+    // The field's formatting toolbar has buttons of its own; these are the form's.
+    expect(screen.getByRole('button', { name: 'Send reply' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Send and wait for the company' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button').filter((button) => button.getAttribute('type') === 'submit'),
+    ).toHaveLength(1);
   });
 
   it('lets the staff send it and wait for the company in one go', async () => {

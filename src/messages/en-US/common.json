@@ -157,7 +157,32 @@
       "code": "Code",
       "codeIn": "{language} code",
       "taskCheckbox": "{done, select, yes {Done: {task}} other {To do: {task}}}",
-      "tooLong": "This text is longer than {maximum, number} characters. Shorten it before you send it."
+      "tooLong": "This text is longer than {maximum, number} characters. Shorten it before you send it.",
+      "toolbar": {
+        "label": "Formatting",
+        "bold": "Bold",
+        "italic": "Italic",
+        "strike": "Strikethrough",
+        "code": "Code",
+        "link": "Link",
+        "heading": "Heading",
+        "headingOption": "{level, select, 0 {Normal text} 1 {Heading} 2 {Subheading} other {Small heading}}",
+        "bulletList": "Bullet list",
+        "orderedList": "Numbered list",
+        "taskList": "List of things to do",
+        "nest": "Nest the list item",
+        "lift": "Lift the list item",
+        "quote": "Quotation",
+        "codeBlock": "Block of code"
+      },
+      "linkDialog": {
+        "title": "Link",
+        "description": "The selected text becomes a link to this address. Without selected text, the address itself is added.",
+        "address": "Web address",
+        "save": "Save link",
+        "remove": "Remove link",
+        "invalid": "Enter a whole web address that starts with http:// or https://."
+      }
     }
   }
 }

@@ -1007,6 +1007,42 @@ test.describe('requests', () => {
       const send = page.getByRole('button', { name: 'Send reply' });
       const sendAndWait = page.getByRole('button', { name: 'Send and wait for the company' });
 
+      // The toolbar is one stop before the editor: the arrow keys move between its buttons,
+      // Enter presses one, and focus goes back to the text. (This comes before anything is sent:
+      // the toast about a sent reply is a layer too, and would take the first Escape.)
+      const toolbar = page.getByRole('toolbar', { name: 'Formatting' });
+      await reply.focus();
+      await page.keyboard.press('Shift+Tab');
+      await expect(toolbar.getByRole('button', { name: 'Bold' })).toBeFocused();
+      await page.keyboard.press('ArrowRight');
+      await expect(toolbar.getByRole('button', { name: 'Italic' })).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(reply).toBeFocused();
+      await page.keyboard.type('slanted');
+      await expect(reply.locator('em')).toHaveText('slanted');
+      // The link dialog closes with Escape, and focus returns to its button.
+      // (Coming back, focus is on the button it was on; each arrow key moves it one on.)
+      await page.keyboard.press('Shift+Tab');
+      await expect(toolbar.getByRole('button', { name: 'Italic' })).toBeFocused();
+      await page.keyboard.press('ArrowRight');
+      await expect(toolbar.getByRole('button', { name: 'Strikethrough' })).toBeFocused();
+      await page.keyboard.press('ArrowRight');
+      await expect(toolbar.getByRole('button', { name: 'Code', exact: true })).toBeFocused();
+      await page.keyboard.press('ArrowRight');
+      const linkButton = toolbar.getByRole('button', { name: 'Link' });
+      await expect(linkButton).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(page.getByRole('dialog', { name: 'Link' })).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog', { name: 'Link' })).toHaveCount(0);
+      await expect(linkButton).toBeFocused();
+      // Tab goes on to the text, which is cleared for the next step.
+      await page.keyboard.press('Tab');
+      await expect(reply).toBeFocused();
+      await page.keyboard.press('ControlOrMeta+a');
+      await page.keyboard.press('Delete');
+      await expect(reply).toHaveText('');
+
       // The field, then its buttons. Sending keeps focus on the button, which stays.
       await reply.focus();
       await page.keyboard.type('We are looking into it.');

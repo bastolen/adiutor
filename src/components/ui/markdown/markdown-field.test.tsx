@@ -84,6 +84,14 @@ describe('MarkdownField, before the editor is there', () => {
     expect(field).toHaveAccessibleDescription('Markdown works.');
   });
 
+  it('has the formatting toolbar already, switched off until the editor is there', () => {
+    renderField();
+
+    const toolbar = screen.getByRole('toolbar', { name: 'Formatting' });
+    expect(toolbar).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bold' })).toBeDisabled();
+  });
+
   it('sends what was typed in it', () => {
     const form = renderField();
 

@@ -61,7 +61,13 @@ export const markdownStyles = {
    * of the editable area in it, and greys out when the editor is switched off.
    */
   editorFrame:
-    'rounded-lg border border-border-strong bg-surface shadow-xs transition-colors hover:border-foreground/60 has-[[aria-disabled=true]]:bg-muted has-[[aria-disabled=true]]:hover:border-border-strong has-[[role=textbox]:focus]:border-ring has-[[role=textbox]:focus]:outline-2 has-[[role=textbox]:focus]:outline-offset-0 has-[[role=textbox]:focus]:outline-ring/40',
+    'rounded-lg border border-border-strong bg-surface shadow-xs transition-colors hover:border-foreground/60 has-[:is(textarea,[role=textbox]):focus]:border-ring has-[:is(textarea,[role=textbox]):focus]:outline-2 has-[:is(textarea,[role=textbox]):focus]:outline-offset-0 has-[:is(textarea,[role=textbox]):focus]:outline-ring/40 has-[:is(textarea:disabled,[aria-disabled=true])]:bg-muted has-[:is(textarea:disabled,[aria-disabled=true])]:hover:border-border-strong',
+  /**
+   * The plain text field the box holds before the editor is there: the same
+   * text, without a border of its own.
+   */
+  plainField:
+    'block min-h-20 w-full resize-y bg-transparent px-3 py-2 text-base leading-6 text-foreground outline-none disabled:text-muted-foreground',
   /** A line between two parts of a text. */
   rule: 'border-border',
   /** What a table scrolls sideways in when it's wider than the text. */

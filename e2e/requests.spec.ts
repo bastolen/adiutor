@@ -688,6 +688,68 @@ test('a reply formats itself while it’s typed, and reads the same once it’s 
   await expect(await markdownEditor(page, 'Your reply')).toHaveText('');
 });
 
+test('the toolbar formats a reply for someone who doesn’t type Markdown', async ({ page }) => {
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'A reply formatted with the buttons',
+  });
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  const editor = await markdownEditor(page, 'Your reply');
+  const toolbar = page.getByRole('toolbar', { name: 'Formatting' });
+  const bold = toolbar.getByRole('button', { name: 'Bold' });
+
+  // Bold: switched on, typed in, switched off. The button says whether it's on.
+  await editor.click();
+  await page.keyboard.type('This is ');
+  await bold.click();
+  await expect(bold).toHaveAttribute('aria-pressed', 'true');
+  await expect(editor).toBeFocused();
+  await page.keyboard.type('important');
+  await bold.click();
+  await expect(bold).toHaveAttribute('aria-pressed', 'false');
+  await expect(editor).toBeFocused();
+  await page.keyboard.type(' today.');
+  await expect(editor.locator('strong')).toHaveText('important');
+
+  // A heading from the menu, for the line the cursor is on.
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('What we did');
+  await toolbar.getByRole('button', { name: 'Heading' }).click();
+  await page.getByRole('menuitemradio', { name: 'Subheading' }).click();
+  await expect(editor.getByRole('heading', { level: 2, name: 'What we did' })).toBeVisible();
+  // The text has the focus again, not the menu's button.
+  await expect(editor).toBeFocused();
+
+  // A list, and a link through its dialog, which takes only a whole web address.
+  await page.keyboard.press('Enter');
+  await toolbar.getByRole('button', { name: 'Bullet list' }).click();
+  await expect(editor).toBeFocused();
+  await page.keyboard.type('Read ');
+  await toolbar.getByRole('button', { name: 'Link' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Link' });
+  await dialog.getByRole('textbox', { name: 'Web address' }).fill('adiutor.test/manual');
+  await dialog.getByRole('button', { name: 'Save link' }).click();
+  await expect(dialog.getByRole('alert')).toContainText('Enter a whole web address');
+  await dialog.getByRole('textbox', { name: 'Web address' }).fill('https://adiutor.test/manual');
+  await dialog.getByRole('button', { name: 'Save link' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(editor.getByRole('link', { name: 'https://adiutor.test/manual' })).toBeVisible();
+  await expect(editor).toBeFocused();
+
+  // Sent, the reply reads as it was written.
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  const thread = page.getByRole('region', { name: 'Conversation' });
+  await expect(thread.locator('strong')).toHaveText('important');
+  await expect(thread.getByRole('heading', { level: 3, name: 'What we did' })).toBeVisible();
+  await expect(thread.locator('ul > li')).toContainText('Read');
+  await expect(
+    thread.getByRole('link', { name: /^https:\/\/adiutor\.test\/manual/ }),
+  ).toHaveAttribute('href', 'https://adiutor.test/manual');
+});
+
 test('Markdown that is pasted is formatted, and a tag stays the text it is', async ({ page }) => {
   const number = await storeRequest({
     companySlug: COMPANY_SLUG,

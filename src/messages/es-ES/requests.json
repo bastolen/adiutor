@@ -46,7 +46,7 @@
       "typeLabel": "Tipo",
       "typePlaceholder": "Elige un tipo",
       "descriptionLabel": "Descripción",
-      "descriptionHint": "¿Qué necesitas y qué has probado ya? Puedes dar formato a tu texto con Markdown, como **negrita**, listas y `código`.",
+      "descriptionHint": "¿Qué necesitas y qué has probado ya? Da formato a tu texto con los botones, o escribe Markdown como **negrita**, listas y `código`.",
       "priorityLabel": "Prioridad",
       "priorityFromType": "Según el tipo",
       "priorityHint": "Solo el personal ve la prioridad.",
@@ -88,7 +88,7 @@
     },
     "reply": {
       "label": "Tu respuesta",
-      "hint": "Puedes dar formato a tu texto con Markdown, como **negrita**, listas y `código`.",
+      "hint": "Da formato a tu texto con los botones, o escribe Markdown como **negrita**, listas y `código`.",
       "send": "Enviar respuesta",
       "sendAndWait": "Enviar y esperar a la empresa",
       "sent": "Respuesta enviada."

@@ -157,7 +157,32 @@
       "code": "Code",
       "codeIn": "{language}-code",
       "taskCheckbox": "{done, select, yes {Klaar: {task}} other {Te doen: {task}}}",
-      "tooLong": "Deze tekst is langer dan {maximum, number} tekens. Kort hem in voordat je hem verstuurt."
+      "tooLong": "Deze tekst is langer dan {maximum, number} tekens. Kort hem in voordat je hem verstuurt.",
+      "toolbar": {
+        "label": "Opmaak",
+        "bold": "Vet",
+        "italic": "Cursief",
+        "strike": "Doorhalen",
+        "code": "Code",
+        "link": "Link",
+        "heading": "Kop",
+        "headingOption": "{level, select, 0 {Gewone tekst} 1 {Kop} 2 {Tussenkop} other {Kleine kop}}",
+        "bulletList": "Lijst met opsommingstekens",
+        "orderedList": "Genummerde lijst",
+        "taskList": "Takenlijst",
+        "nest": "Lijstitem laten inspringen",
+        "lift": "Lijstitem terugzetten",
+        "quote": "Citaat",
+        "codeBlock": "Codeblok"
+      },
+      "linkDialog": {
+        "title": "Link",
+        "description": "De geselecteerde tekst wordt een link naar dit adres. Zonder geselecteerde tekst wordt het adres zelf toegevoegd.",
+        "address": "Webadres",
+        "save": "Link opslaan",
+        "remove": "Link verwijderen",
+        "invalid": "Vul een volledig webadres in dat begint met http:// of https://."
+      }
     }
   }
 }

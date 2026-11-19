@@ -9,9 +9,12 @@
 import { useTranslations } from 'next-intl';
 import { type ComponentType, useEffect, useId, useRef, useState } from 'react';
 
-import TextAreaField from '../textarea-field';
 import type { MarkdownEditorProps } from './editor';
+import FormattingToolbar from './formatting-toolbar';
 import { markdownStyles } from './styles';
+
+/** What the toolbar's buttons do before the editor is there: nothing (they're disabled). */
+function ignore() {}
 
 /** Props for {@link MarkdownField}. */
 interface MarkdownFieldProps {
@@ -35,8 +38,9 @@ interface MarkdownFieldProps {
  * A labelled field for Markdown.
  *
  * - **Before the editor is there** (and when it can't load) it's a plain
- *   text field. What's typed there is read as Markdown when the editor takes
- *   over, with the cursor kept in the field.
+ *   text field under the formatting toolbar, whose buttons are switched off
+ *   until the editor is there. What's typed there is read as Markdown when
+ *   the editor takes over, with the cursor kept in the field.
  * - **The editor** shows the text as it will be read. Its Markdown goes to
  *   the form in a hidden field with the field's name, so the form's action
  *   gets the same thing either way.
@@ -117,17 +121,33 @@ export default function MarkdownField({
   }, [hasEditor]);
 
   if (!Editor) {
+    // The same box and toolbar as the editor has, so nothing moves when it takes over. The
+    // toolbar's buttons wait for the editor: they format what's selected in it.
     return (
-      <TextAreaField
-        ref={plainField}
-        label={label}
-        name={name}
-        description={description}
-        rows={rows}
-        maxLength={maxLength}
-        required={required}
-        disabled={disabled}
-      />
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor={id} className="text-sm font-medium text-foreground">
+          {label}
+        </label>
+        <div className={markdownStyles.editorFrame}>
+          <FormattingToolbar state={null} onCommand={ignore} />
+          <textarea
+            ref={plainField}
+            id={id}
+            name={name}
+            rows={rows}
+            maxLength={maxLength}
+            required={required}
+            disabled={disabled}
+            aria-describedby={description ? descriptionId : undefined}
+            className={markdownStyles.plainField}
+          />
+        </div>
+        {description && (
+          <p id={descriptionId} className="text-xs text-muted-foreground">
+            {description}
+          </p>
+        )}
+      </div>
     );
   }
 

@@ -4,7 +4,7 @@
  * passed on. Typing in it needs a real browser, which the end-to-end tests
  * have.
  */
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { MarkdownEditorProps } from './editor';
@@ -79,6 +79,15 @@ describe('MarkdownEditor', () => {
     expect(editor.querySelector('img[src]')).not.toBeInTheDocument();
   });
 
+  it('has its formatting toolbar before the text, ready once the editor is', async () => {
+    renderEditor({ markdown: 'Some text.' });
+
+    const editor = await screen.findByRole('textbox', { name: 'Your reply' });
+    const toolbar = screen.getByRole('toolbar', { name: 'Formatting' });
+    expect(toolbar.compareDocumentPosition(editor)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Bold' })).toBeEnabled());
+  });
+
   it('doesn’t report being filled as a change', async () => {
     const { onChange } = renderEditor({ markdown: 'Text from before.' });
 
@@ -95,6 +104,7 @@ describe('MarkdownEditor', () => {
     expect(editor).toHaveAttribute('contenteditable', 'false');
     expect(editor).toHaveAttribute('aria-disabled', 'true');
     expect(editor).toHaveTextContent('Read only.');
+    expect(screen.getByRole('button', { name: 'Bold' })).toBeDisabled();
 
     rerender(ui({ disabled: false }));
     expect(editor).toHaveAttribute('contenteditable', 'true');

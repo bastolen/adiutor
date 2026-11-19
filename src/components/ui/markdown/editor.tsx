@@ -1,7 +1,8 @@
 /**
  * @file The editor of a Markdown field: the text as it will be read, which
- * formats itself while it's written. Typing Markdown (`**bold**`, `# `, `- `,
- * three backticks) turns into formatting, and so does pasting it.
+ * formats itself while it's written, under a toolbar with the same
+ * formatting as buttons. Typing Markdown (`**bold**`, `# `, `- `, three
+ * backticks) turns into formatting, and so does pasting it.
  *
  * It's a lot of JavaScript, so nothing imports it with the page:
  * `MarkdownField` loads it with `import()` once the page is there, and shows
@@ -9,11 +10,13 @@
  */
 'use client';
 
-import { type Editor, EditorContent, useEditor } from '@tiptap/react';
+import { type Editor, EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useRef } from 'react';
 
 import { editorExtensions, readMarkdown, writeMarkdown } from './editor-extensions';
+import { format, formattingOf } from './editor-formatting';
+import FormattingToolbar, { type FormattingState } from './formatting-toolbar';
 import { markdownStyles } from './styles';
 
 /** The height of a line of text in the editor, in rem (`leading-6`). */
@@ -44,9 +47,9 @@ export interface MarkdownEditorProps {
 }
 
 /**
- * The editable text. It's a text field to a screen reader (`textbox`, of
- * several lines), named and described by the elements around it. Tab and
- * Shift+Tab leave it.
+ * The toolbar and the editable text. The text is a text field to a screen
+ * reader (`textbox`, of several lines), named and described by the elements
+ * around it. Tab and Shift+Tab leave it; the toolbar comes before it.
  *
  * @param props - Component props.
  * @param props.markdown - The Markdown to start with.
@@ -144,5 +147,31 @@ export default function MarkdownEditor({
     editor?.setEditable(!disabled);
   }, [editor, disabled]);
 
-  return <EditorContent editor={editor} />;
+  // What the toolbar's buttons show: it follows the cursor.
+  const formatting = useEditorState({
+    editor,
+    /**
+     * Reads what's on at the cursor.
+     *
+     * @param current - What the editor passes.
+     * @param current.editor - The editor, once it's there.
+     * @returns The formatting, or `null` while there's no editor.
+     */
+    selector: ({ editor: current }): FormattingState | null =>
+      current ? formattingOf(current) : null,
+  });
+
+  return (
+    <>
+      <FormattingToolbar
+        state={disabled ? null : formatting}
+        onCommand={(command) => {
+          if (editor) {
+            format(editor, command);
+          }
+        }}
+      />
+      <EditorContent editor={editor} />
+    </>
+  );
 }

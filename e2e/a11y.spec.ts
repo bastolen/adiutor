@@ -754,6 +754,19 @@ test.describe('on a 320px wide screen', () => {
         await expect(editor.getByRole('checkbox', { name: 'To do: a thing to do' })).toBeVisible();
         await expect(editor.locator('pre')).toHaveText('const a = 1;');
         await expectAccessible(page);
+
+        // The toolbar's two layers: the heading menu, and the dialog for a link.
+        const toolbar = page.getByRole('toolbar', { name: 'Formatting' });
+        await toolbar.getByRole('button', { name: 'Heading' }).click();
+        await expect(page.getByRole('menu')).toBeVisible();
+        await expectAccessible(page, '[role="menu"]');
+        await page.keyboard.press('Escape');
+        await toolbar.getByRole('button', { name: 'Link' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Link' });
+        await expect(dialog).toBeVisible();
+        await dialog.getByRole('button', { name: 'Save link' }).click();
+        await expect(dialog.getByRole('alert')).toBeVisible();
+        await expectAccessible(page, '[role="dialog"]');
       });
 
       test('the dialog that asks before a request is cancelled', async ({ context, page }) => {
