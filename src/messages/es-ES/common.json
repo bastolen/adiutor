@@ -7,6 +7,7 @@
     "loading": "Cargando…",
     "skipToContent": "Saltar al contenido principal",
     "homeLink": "Inicio de Adiutor",
+    "companyWithUrlName": "{name} ({urlName})",
     "actions": {
       "cancel": "Cancelar",
       "close": "Cerrar",

@@ -450,8 +450,9 @@ describe('adding existing users', () => {
     const manager = await staffActor(db, 'manager');
     const jane = await createUser(db, 'jane@adiutor.test');
 
+    // With the URL name, which tells it apart from a company with the same name.
     expect(await listAddableCompanies(ctx, manager, jane)).toEqual([
-      expect.objectContaining({ id: testCompany.id }),
+      { id: testCompany.id, name: testCompany.name, slug: testCompany.slug },
     ]);
     await addMember(ctx, manager, { companyId: testCompany.id, userId: jane, role: 'watcher' });
 

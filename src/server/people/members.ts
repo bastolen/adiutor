@@ -485,6 +485,8 @@ export interface AddableCompany {
   id: string;
   /** Company name. */
   name: string;
+  /** Its URL name, which tells it apart from a company with the same name. */
+  slug: string;
 }
 
 /**
@@ -503,7 +505,7 @@ export async function listAddableCompanies(
   assertPermission(getGlobalPermissions(actor), 'company:view');
   const id = parseId(userId);
   return ctx.db
-    .select({ id: company.id, name: company.name })
+    .select({ id: company.id, name: company.name, slug: company.slug })
     .from(company)
     .where(
       and(

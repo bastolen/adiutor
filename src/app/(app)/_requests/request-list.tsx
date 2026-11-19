@@ -1,7 +1,9 @@
 /**
  * @file A list of requests with its filters, search, sorting and pages: the
  * requests the viewer may see across companies (`/requests`), or one
- * company's on its own page. Its text comes from `requests.list`.
+ * company's on its own page. Its text comes from `requests.list`. The
+ * Company filter names a company by its URL name too when another has the
+ * same name (`companyChoiceLabels`).
  */
 import { ChevronRight, Inbox, Plus } from 'lucide-react';
 import Link from 'next/link';
@@ -19,6 +21,7 @@ import SearchForm from '@/components/ui/search-form';
 import SegmentedNav from '@/components/ui/segmented-nav';
 import SortMenu from '@/components/ui/sort-menu';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
+import { companyChoiceLabels } from '@/lib/company-choices';
 import {
   DEFAULT_REQUEST_STATUS_FILTER,
   formatRequestNumber,
@@ -150,6 +153,7 @@ export default async function RequestList({
 }: RequestListProps) {
   const t = await getTranslations('requests.list');
   const tRequests = await getTranslations('requests');
+  const tCommon = await getTranslations('common');
   // The staff see priorities; everyone else gets none from the service either.
   const internal = getStaffPermissionsInCompanies(actor).has('requests:view-internal');
   // One table, which the staff can also sort by priority.
@@ -284,7 +288,9 @@ export default async function RequestList({
                   'company',
                   t('allCompanies'),
                   chosenCompany,
-                  companies.map(({ slug, name }) => ({ value: slug, label: name })),
+                  companyChoiceLabels(companies, ({ name, slug }) =>
+                    tCommon('companyWithUrlName', { name, urlName: slug }),
+                  ).map(({ slug, label }) => ({ value: slug, label })),
                 )}
               />
             )}
