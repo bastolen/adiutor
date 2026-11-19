@@ -27,6 +27,40 @@ interface ImportRule {
   allowedFrom?: string[];
 }
 
+/**
+ * The libraries that turn Markdown into what a page shows. They run on the
+ * server only: a parser and a highlighter are far too much JavaScript to send
+ * along with a page.
+ */
+const MARKDOWN_RENDERING = [
+  'unified',
+  'remark-parse',
+  'remark-gfm',
+  'remark-breaks',
+  'remark-rehype',
+  'rehype-sanitize',
+  'rehype-highlight',
+  'hast-util-to-jsx-runtime',
+];
+
+/**
+ * The libraries of the Markdown editor, and the highlighter it shares with
+ * the server. They're only for the editor's own files, which no page loads
+ * with itself: `MarkdownField` loads the editor with `import()`.
+ */
+const MARKDOWN_EDITOR = [
+  '@tiptap/react',
+  '@tiptap/pm',
+  '@tiptap/starter-kit',
+  '@tiptap/markdown',
+  '@tiptap/extension-code-block-lowlight',
+  '@tiptap/extension-link',
+  '@tiptap/extension-list',
+  '@tiptap/extension-table',
+  'lowlight',
+  'highlight.js',
+];
+
 /** The modules client components must not load with the page, and why. */
 const RULES: ImportRule[] = [
   {
@@ -78,6 +112,22 @@ const RULES: ImportRule[] = [
     module: 'src/lib/i18n/resolve-locale.ts',
     instead:
       'read the language with `useLocale()`; `isLocale` and `localeForLanguages` (`src/lib/i18n/locales.ts`) need no libraries.',
+  },
+  ...MARKDOWN_RENDERING.map((module) => ({
+    module,
+    instead:
+      'Markdown is rendered on the server: render it in a Server Component and pass the result to the client component as `children`.',
+  })),
+  ...MARKDOWN_EDITOR.map((module) => ({
+    module,
+    instead:
+      'the Markdown editor loads with `import()` from `MarkdownField`; only its own files import its libraries.',
+    allowedFrom: ['src/components/ui/markdown/editor'],
+  })),
+  {
+    module: 'src/components/ui/markdown/editor.tsx',
+    instead: 'use `MarkdownField`, which loads the editor with `import()` once the page is there.',
+    allowedFrom: ['src/components/ui/markdown/editor'],
   },
 ];
 

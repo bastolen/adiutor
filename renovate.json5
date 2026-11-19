@@ -70,6 +70,15 @@
       minimumReleaseAgeBehaviour: 'timestamp-optional',
     },
     {
+      /**
+       * highlight.js stays on the version lowlight depends on (`~11.11`), so the app loads one
+       * copy and the grammars run on the version they were written for. Raise this, and the
+       * range in `package.json`, when lowlight moves.
+       */
+      matchPackageNames: ['highlight.js'],
+      allowedVersions: '~11.11.0',
+    },
+    {
       /** Group all minor and patch updates into one PR. */
       matchUpdateTypes: ['minor', 'patch'],
       groupName: 'all non-major dependencies',

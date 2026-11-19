@@ -45,6 +45,7 @@ import {
 import {
   createAccountFromInvitation,
   freshAddress,
+  markdownEditor,
   signIn,
   signInAsUser,
   signOut,
@@ -329,7 +330,7 @@ test('someone at a company raises a request, which the staff then find', async (
   await page.goBack();
   await expect(page).toHaveURL('/requests/new');
   await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue('');
-  await expect(page.getByRole('textbox', { name: 'Description' })).toHaveValue('');
+  await expect(await markdownEditor(page, 'Description')).toHaveText('');
   await page.goBack();
   await expect(page).toHaveURL('/requests');
   await expect(
@@ -496,7 +497,7 @@ test('the staff and a company work a request through, and close and reopen it', 
     .fill('Is it plugged in?\nAnd which floor?');
   await page.getByRole('button', { name: 'Send and wait for the company' }).click();
   await expect(toasts(page)).toContainText('Reply sent.');
-  await expect(page.getByRole('textbox', { name: 'Your reply' })).toHaveValue('');
+  await expect(await markdownEditor(page, 'Your reply')).toHaveText('');
   await expect(status).toHaveText('Waiting for the company');
   await expect(conversation(page)).toContainText('Is it plugged in?');
   // The staff's first reply is the first response.
@@ -639,6 +640,366 @@ test('the staff reach a person’s page from a request, and nobody at the compan
   const html = await page.content();
   expect(html).not.toContain(staffId);
   expect(html).not.toContain(clientId);
+});
+
+test('a reply formats itself while it’s typed, and reads the same once it’s sent', async ({
+  page,
+}) => {
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'A reply typed as Markdown',
+  });
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  const editor = await markdownEditor(page, 'Your reply');
+
+  // Markdown turns into formatting as it's typed.
+  await editor.click();
+  await page.keyboard.type('# The plan');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type(
+    'It is **urgent**, see `config.yml` and https://adiutor.test/plan first.',
+  );
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('- order the part');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('fit it');
+  await expect(editor.getByRole('heading', { level: 1, name: 'The plan' })).toBeVisible();
+  await expect(editor.locator('strong')).toHaveText('urgent');
+  await expect(editor.locator('code')).toHaveText('config.yml');
+  await expect(editor.getByRole('link', { name: 'https://adiutor.test/plan' })).toBeVisible();
+  await expect(editor.getByRole('listitem')).toHaveText(['order the part', 'fit it']);
+  // The marks themselves are gone from the text.
+  await expect(editor).not.toContainText('**');
+  await expect(editor).not.toContainText('#');
+
+  // Sent, it reads the same, and the editor is empty for the next reply.
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  const thread = page.getByRole('region', { name: 'Conversation' });
+  await expect(thread.getByRole('heading', { level: 3, name: 'The plan' })).toBeVisible();
+  await expect(thread.locator('strong')).toHaveText('urgent');
+  await expect(thread.locator('code')).toHaveText('config.yml');
+  await expect(
+    thread.getByRole('link', { name: /^https:\/\/adiutor\.test\/plan/ }),
+  ).toHaveAttribute('target', '_blank');
+  await expect(thread.locator('ul > li')).toHaveText(['order the part', 'fit it']);
+  await expect(await markdownEditor(page, 'Your reply')).toHaveText('');
+});
+
+test('the editor is tall enough to write in, and can be dragged taller', async ({ page }) => {
+  await signIn(page, REQUESTS_CLIENT);
+
+  // A reply starts at eight lines, a description at fourteen; both grow with their text.
+  await page.goto(`/requests/${SEEDED_REQUESTS.open.number}`);
+  const reply = await markdownEditor(page, 'Your reply');
+  expect((await reply.boundingBox())?.height).toBeGreaterThanOrEqual(200);
+
+  // Dragging the corner at the bottom makes it taller, as a plain text field's does.
+  await reply.scrollIntoViewIfNeeded();
+  const { x = 0, y = 0, width = 0, height = 0 } = (await reply.boundingBox()) ?? {};
+  await page.mouse.move(x + width - 2, y + height - 2);
+  await page.mouse.down();
+  await page.mouse.move(x + width - 2, y + height + 120, { steps: 10 });
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await reply.boundingBox())?.height)
+    .toBeGreaterThanOrEqual(height + 100);
+  // A click in the room that made lands in the text.
+  const taller = (await reply.boundingBox())?.height ?? 0;
+  await reply.click({ position: { x: width / 2, y: taller - 20 } });
+  await expect(reply).toBeFocused();
+
+  await page.goto('/requests/new');
+  const description = await markdownEditor(page, 'Description');
+  expect((await description.boundingBox())?.height).toBeGreaterThanOrEqual(340);
+});
+
+test('a request uses the room of a wide screen, with its details still beside it', async ({
+  page,
+}) => {
+  await signIn(page, REQUESTS_CLIENT);
+  /**
+   * Whether the page scrolls sideways.
+   *
+   * @returns Whether it's wider than the window.
+   */
+  const scrollsSideways = () =>
+    page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+
+  // At 1280px, where the app's content stops growing, a request is as wide as every page.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(`/requests/${SEEDED_REQUESTS.open.number}`);
+  const reply = await markdownEditor(page, 'Your reply');
+  const narrow = (await reply.boundingBox())?.width ?? 0;
+  expect(narrow).toBeLessThan(600);
+  expect(await scrollsSideways()).toBe(false);
+
+  // On a wider screen it grows, and the reply's editor with it; the details stay beside it.
+  await page.setViewportSize({ width: 1512, height: 982 });
+  await expect.poll(async () => (await reply.boundingBox())?.width).toBeGreaterThanOrEqual(760);
+  const thread = await page.getByRole('region', { name: 'Conversation' }).boundingBox();
+  const details = await page.getByRole('region', { name: 'Details' }).boundingBox();
+  expect(details?.x).toBeGreaterThan((thread?.x ?? 0) + (thread?.width ?? 0));
+  expect(await scrollsSideways()).toBe(false);
+
+  // It stops growing at 1280px of content, however wide the screen.
+  await page.setViewportSize({ width: 2560, height: 1300 });
+  await expect.poll(async () => (await reply.boundingBox())?.width).toBeLessThanOrEqual(810);
+  expect(await scrollsSideways()).toBe(false);
+
+  // A new request's form is wide enough to write a description in.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/requests/new');
+  const description = await markdownEditor(page, 'Description');
+  expect((await description.boundingBox())?.width).toBeGreaterThanOrEqual(800);
+  expect(await scrollsSideways()).toBe(false);
+});
+
+test('the toolbar formats a reply for someone who doesn’t type Markdown', async ({ page }) => {
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'A reply formatted with the buttons',
+  });
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  const editor = await markdownEditor(page, 'Your reply');
+  const toolbar = page.getByRole('toolbar', { name: 'Formatting' });
+  const bold = toolbar.getByRole('button', { name: 'Bold' });
+
+  // Bold: switched on, typed in, switched off. The button says whether it's on.
+  await editor.click();
+  await page.keyboard.type('This is ');
+  await bold.click();
+  await expect(bold).toHaveAttribute('aria-pressed', 'true');
+  await expect(editor).toBeFocused();
+  await page.keyboard.type('important');
+  await bold.click();
+  await expect(bold).toHaveAttribute('aria-pressed', 'false');
+  await expect(editor).toBeFocused();
+  await page.keyboard.type(' today.');
+  await expect(editor.locator('strong')).toHaveText('important');
+
+  // A heading from the menu, for the line the cursor is on.
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('What we did');
+  await toolbar.getByRole('button', { name: 'Heading' }).click();
+  await page.getByRole('menuitemradio', { name: 'Subheading' }).click();
+  await expect(editor.getByRole('heading', { level: 2, name: 'What we did' })).toBeVisible();
+  // The text has the focus again, not the menu's button.
+  await expect(editor).toBeFocused();
+
+  // A list, and a link through its dialog, which takes only a whole web address.
+  await page.keyboard.press('Enter');
+  await toolbar.getByRole('button', { name: 'Bullet list' }).click();
+  await expect(editor).toBeFocused();
+  await page.keyboard.type('Read ');
+  await toolbar.getByRole('button', { name: 'Link' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Link' });
+  await dialog.getByRole('textbox', { name: 'Web address' }).fill('adiutor.test/manual');
+  await dialog.getByRole('button', { name: 'Save link' }).click();
+  await expect(dialog.getByRole('alert')).toContainText('Enter a whole web address');
+  await dialog.getByRole('textbox', { name: 'Web address' }).fill('https://adiutor.test/manual');
+  await dialog.getByRole('button', { name: 'Save link' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(editor.getByRole('link', { name: 'https://adiutor.test/manual' })).toBeVisible();
+  await expect(editor).toBeFocused();
+
+  // Sent, the reply reads as it was written.
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  const thread = page.getByRole('region', { name: 'Conversation' });
+  await expect(thread.locator('strong')).toHaveText('important');
+  await expect(thread.getByRole('heading', { level: 3, name: 'What we did' })).toBeVisible();
+  await expect(thread.locator('ul > li')).toContainText('Read');
+  await expect(
+    thread.getByRole('link', { name: /^https:\/\/adiutor\.test\/manual/ }),
+  ).toHaveAttribute('href', 'https://adiutor.test/manual');
+});
+
+test('a block of code is coloured while it’s written, in the language picked for it', async ({
+  page,
+}) => {
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'A reply with a block of code',
+  });
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  const editor = await markdownEditor(page, 'Your reply');
+  const toolbar = page.getByRole('toolbar', { name: 'Formatting' });
+
+  // Three backticks and a language start a block; its languages load now, and colour it.
+  await editor.click();
+  await page.keyboard.type('```ts ');
+  await page.keyboard.type('const answer = 42;');
+  await expect(editor.locator('figcaption')).toHaveText('TypeScript');
+  await expect(editor.locator('pre [class*="hljs-keyword"]')).toHaveText('const');
+
+  // Another language from the toolbar's menu, which is there while the cursor is in the block.
+  await toolbar.getByRole('button', { name: 'Language: TypeScript' }).click();
+  await page.getByRole('menuitemradio', { name: 'JavaScript' }).click();
+  await expect(editor.locator('figcaption')).toHaveText('JavaScript');
+  await expect(editor).toBeFocused();
+  await expect(editor.locator('pre [class*="hljs-keyword"]')).toHaveText('const');
+
+  // Sent, it's a block in that language.
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  const sent = page
+    .getByRole('region', { name: 'Conversation' })
+    .getByRole('group', { name: 'JavaScript code' });
+  await expect(sent).toHaveText('const answer = 42;');
+  await expect(sent.locator('[class*="hljs-keyword"]')).toHaveText('const');
+});
+
+test('Markdown that is pasted is formatted, and a tag stays the text it is', async ({ page }) => {
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'A reply pasted as Markdown',
+  });
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  const editor = await markdownEditor(page, 'Your reply');
+
+  // Plain text on the clipboard, as copied from a text file.
+  await editor.click();
+  await editor.evaluate((element) => {
+    const clipboard = new DataTransfer();
+    clipboard.setData(
+      'text/plain',
+      'Steps to **reproduce**:\n\n1. Open the page\n2. Press <b>Save</b>\n\n```bash\nnpm test\n```',
+    );
+    element.dispatchEvent(
+      new ClipboardEvent('paste', { clipboardData: clipboard, bubbles: true, cancelable: true }),
+    );
+  });
+  await expect(editor.locator('strong')).toHaveText('reproduce');
+  await expect(editor.getByRole('listitem')).toHaveCount(2);
+  await expect(editor.locator('pre')).toHaveText('npm test');
+  // The tag is text, here and once it's sent.
+  await expect(editor.getByRole('listitem').nth(1)).toHaveText('Press <b>Save</b>');
+
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  const thread = page.getByRole('region', { name: 'Conversation' });
+  await expect(thread.locator('strong')).toHaveText('reproduce');
+  // (The conversation is a list itself, so the numbered list is the one inside it.)
+  await expect(thread.locator('ol ol > li').nth(1)).toHaveText('Press <b>Save</b>');
+  await expect(thread.locator('b')).toHaveCount(0);
+  await expect(thread.getByRole('group', { name: 'Bash code' })).toHaveText('npm test');
+});
+
+test('a reply that isn’t sent yet is still there after leaving the page and coming back', async ({
+  page,
+}) => {
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'A reply left half written',
+  });
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  const editor = await markdownEditor(page, 'Your reply');
+  await editor.click();
+  await page.keyboard.type('Half a **reply**');
+  await expect(editor.locator('strong')).toHaveText('reply');
+
+  // The page is kept while the user is elsewhere, and its editor starts again from the text.
+  await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
+  await expect(page).toHaveURL('/dashboard');
+  await page.goBack();
+  await expect(page).toHaveURL(`/requests/${number}`);
+  const kept = await markdownEditor(page, 'Your reply');
+  await expect(kept).toHaveText('Half a reply');
+  await expect(kept.locator('strong')).toHaveText('reply');
+
+  // And it's sent as it was written.
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  await expect(page.getByRole('region', { name: 'Conversation' }).locator('strong')).toHaveText(
+    'reply',
+  );
+});
+
+test('the editor isn’t sent with the page: it loads once the page is there', async ({ page }) => {
+  await signIn(page, REQUESTS_CLIENT);
+
+  // The scripts the page itself asks for, as its HTML names them.
+  const response = await page.request.get('/requests/new');
+  const html = await response.text();
+  const scripts = [...html.matchAll(/<script[^>]+src="([^"]+\.js)[^"]*"/g)].flatMap(([, src]) =>
+    src ? [src] : [],
+  );
+  expect(scripts.length).toBeGreaterThan(5);
+  const sources = await Promise.all(
+    scripts.map(async (src) => (await page.request.get(src)).text()),
+  );
+  // None of them holds the editor: its library hides the selection with a class of this name.
+  expect(sources.filter((source) => source.includes('ProseMirror-hideselection'))).toEqual([]);
+
+  // The page then loads it by itself, and the plain field becomes the editor.
+  const loaded: string[] = [];
+  page.on('response', (loadedResponse) => {
+    if (loadedResponse.url().endsWith('.js')) {
+      loaded.push(loadedResponse.url());
+    }
+  });
+  await page.goto('/requests/new');
+  await markdownEditor(page, 'Description');
+  const later = loaded.filter((url) => !scripts.some((src) => url.endsWith(src)));
+  expect(later.length).toBeGreaterThan(0);
+});
+
+test('a request written in Markdown is shown formatted, and nothing in it loads', async ({
+  page,
+}) => {
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto(`/requests/${SEEDED_REQUESTS.formatted.number}`);
+
+  // What was asked: a heading below the card's own, a list, a table, and an address that opens
+  // in a new tab.
+  const description = page.getByRole('region', { name: 'Description' });
+  await expect(description.getByRole('heading', { level: 3, name: 'What we need' })).toBeVisible();
+  await expect(description.locator('strong', { hasText: '1 July' })).toBeVisible();
+  await expect(description.getByRole('listitem')).toHaveCount(3);
+  const table = description.getByRole('group', { name: 'Table' });
+  await expect(table.getByRole('columnheader', { name: 'When' })).toBeVisible();
+  await expect(table.getByRole('cell', { name: '24 June' })).toBeVisible();
+  const address = description.getByRole('link', {
+    name: /^https:\/\/adiutor\.test\/docs\/intranet/,
+  });
+  await expect(address).toHaveAttribute('target', '_blank');
+  await expect(address).toHaveAttribute('rel', 'noopener noreferrer nofollow');
+
+  // The staff's reply: code under the name of its language, coloured; a quotation; things to do.
+  const thread = page.getByRole('region', { name: 'Conversation' });
+  const config = thread.getByRole('group', { name: 'Nginx config code' });
+  await expect(config).toContainText('server_name intranet.adiutor.test;');
+  await expect(config.locator('[class*="hljs-"]').first()).toBeVisible();
+  await expect(thread.getByRole('group', { name: 'Bash code' })).toContainText('curl --include');
+  await expect(thread.locator('blockquote')).toContainText('pointed at it');
+  await expect(thread.locator('ul > li').filter({ hasText: 'Your test' })).toHaveText(
+    'To do: Your test',
+  );
+  await expect(thread.getByRole('checkbox')).toHaveCount(0);
+
+  // An image is a link to it, and is never loaded.
+  const image = thread.getByRole('link', { name: /^The new home page \(image\)/ });
+  await expect(image).toHaveAttribute('href', 'https://adiutor.test/intranet-home.png');
+  await expect(page.locator('img[src*="intranet-home"]')).toHaveCount(0);
+
+  // The company's answer: its footnote and the reference lead to each other.
+  await thread.getByRole('link', { name: '1', exact: true }).click();
+  await expect(page).toHaveURL(/-fn-1$/);
+  await thread.getByRole('link', { name: 'Back to reference 1' }).click();
+  await expect(page).toHaveURL(/-fnref-1$/);
 });
 
 test('a Watcher follows a request without taking part', async ({ page }) => {

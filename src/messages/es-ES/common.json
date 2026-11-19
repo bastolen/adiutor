@@ -142,6 +142,49 @@
     },
     "preferences": {
       "button": "Tema e idioma: {theme, select, light {Claro} dark {Oscuro} other {Sistema}}, {language}"
+    },
+    "externalLink": {
+      "newTab": "(se abre en una pestaña nueva)"
+    },
+    "markdown": {
+      "image": "Imagen",
+      "imageNamed": "{description} (imagen)",
+      "footnotes": "Notas al pie",
+      "backToReference": "Volver a la referencia {number, number}",
+      "taskDone": "Hecho:",
+      "taskOpen": "Pendiente:",
+      "table": "Tabla",
+      "code": "Código",
+      "codeIn": "Código {language}",
+      "taskCheckbox": "{done, select, yes {Hecho: {task}} other {Pendiente: {task}}}",
+      "tooLong": "Este texto tiene más de {maximum, number} caracteres. Acórtalo antes de enviarlo.",
+      "toolbar": {
+        "label": "Formato",
+        "bold": "Negrita",
+        "italic": "Cursiva",
+        "strike": "Tachado",
+        "code": "Código",
+        "link": "Enlace",
+        "heading": "Título",
+        "headingOption": "{level, select, 0 {Texto normal} 1 {Título} 2 {Subtítulo} other {Título pequeño}}",
+        "bulletList": "Lista con viñetas",
+        "orderedList": "Lista numerada",
+        "taskList": "Lista de tareas",
+        "nest": "Anidar el elemento de la lista",
+        "lift": "Sacar el elemento de la lista",
+        "quote": "Cita",
+        "codeBlock": "Bloque de código",
+        "codeLanguage": "Lenguaje: {language}",
+        "noLanguage": "Sin lenguaje"
+      },
+      "linkDialog": {
+        "title": "Enlace",
+        "description": "El texto seleccionado se convierte en un enlace a esta dirección. Sin texto seleccionado, se añade la dirección misma.",
+        "address": "Dirección web",
+        "save": "Guardar enlace",
+        "remove": "Quitar enlace",
+        "invalid": "Escribe una dirección web completa que empiece por http:// o https://."
+      }
     }
   }
 }

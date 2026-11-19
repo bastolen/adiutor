@@ -64,7 +64,7 @@ describe('replyToRequest', () => {
         authorId: client.id,
         authorSide: 'company',
         body: 'Any news?\nIt still prints blank pages.',
-        bodyFormat: 'plain',
+        bodyFormat: 'markdown',
       },
     ]);
     const after = await storedRequest(raised.id);

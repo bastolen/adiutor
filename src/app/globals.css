@@ -1,12 +1,15 @@
 /**
  * @file Global stylesheet, loaded once by the root layout.
  *
- * Imports Tailwind CSS and the Adiutor theme, then sets base behaviour that
- * applies everywhere: cursors, text selection, motion preferences and
- * autofill colours.
+ * Imports Tailwind CSS, the Adiutor theme, the colours of highlighted code
+ * and what the Markdown editor needs, then sets base behaviour that applies
+ * everywhere: cursors, text selection, motion preferences and autofill
+ * colours.
  */
 @import 'tailwindcss';
 @import '../styles/theme.css';
+@import '../styles/code.css';
+@import '../styles/editor.css';
 
 @layer base {
   /**

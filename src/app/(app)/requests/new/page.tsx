@@ -97,7 +97,7 @@ async function NewRequest({ searchParams }: { searchParams: Promise<SearchParams
  */
 export default function NewRequestPage({ searchParams }: PageProps<'/requests/new'>) {
   return (
-    <div className="flex max-w-2xl flex-col gap-6">
+    <div className="flex max-w-4xl flex-col gap-6">
       <Suspense fallback={<PageSkeleton />}>
         <NewRequest searchParams={searchParams} />
       </Suspense>

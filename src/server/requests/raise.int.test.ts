@@ -43,7 +43,7 @@ describe('raiseRequest', () => {
       companyId: company.id,
       title: 'The printer is broken',
       description: 'It prints blank pages.',
-      descriptionFormat: 'plain',
+      descriptionFormat: 'markdown',
       type: 'bug',
       priority: 'normal',
       status: 'open',

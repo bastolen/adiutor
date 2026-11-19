@@ -7,7 +7,7 @@ import { sql } from 'drizzle-orm';
 import type { DatabaseTransaction } from '@/db';
 import { request, requestCounter } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
-import { requestSide, startingPriority } from '@/lib/requests';
+import { requestSide, startingPriority, WRITTEN_TEXT_FORMAT } from '@/lib/requests';
 import {
   requestCompanySchema,
   requestDescriptionSchema,
@@ -114,6 +114,7 @@ export default async function raiseRequest(
           companyId: company.id,
           title,
           description,
+          descriptionFormat: WRITTEN_TEXT_FORMAT,
           type,
           priority,
           createdBy: actor.id,

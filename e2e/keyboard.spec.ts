@@ -18,9 +18,11 @@ import {
   PAGING_COMPANY_SLUG,
   PLATFORM_ADMIN,
   REQUESTS_CLIENT,
+  SEEDED_REQUESTS,
 } from './support/fixtures';
 import {
   adminStorageState,
+  markdownEditor,
   openUser,
   signIn,
   signInAsUser,
@@ -945,6 +947,34 @@ test.describe('requests', () => {
       await expect(page.getByRole('button', { name: 'Type: Hotfix' })).toBeFocused();
     });
 
+    test('code and a table in a request’s text are reached and scrolled with the keyboard', async ({
+      page,
+    }) => {
+      await page.goto(`/requests/${SEEDED_REQUESTS.formatted.number}`);
+
+      // A table sits in a box that scrolls on a narrow screen, so the box takes focus.
+      const table = page.getByRole('group', { name: 'Table' });
+      await table.focus();
+      await expect(table).toBeFocused();
+
+      // A block of code wider than the page: the arrow keys scroll it once it has focus.
+      const code = page.getByRole('group', { name: 'Bash code' });
+      expect(await code.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
+        true,
+      );
+      await code.focus();
+      await expect(code).toBeFocused();
+      await page.keyboard.press('ArrowRight');
+      await expect.poll(() => code.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+
+      // Tab reaches it from the block before it, and the ring shows which one has focus.
+      const config = page.getByRole('group', { name: 'Nginx config code' });
+      await config.focus();
+      await page.keyboard.press('Tab');
+      await expect(code).toBeFocused();
+      await expect.poll(() => outlineOf(code)).toEqual({ style: 'solid', width: '2px' });
+    });
+
     test('a status is only saved when picked with Enter, not while browsing', async ({ page }) => {
       await page.goto(await storeOwnRequest('A status picked with the keyboard'));
       const status = page.getByRole('combobox', { name: 'Status' });
@@ -973,9 +1003,45 @@ test.describe('requests', () => {
 
     test('a reply is sent with the keyboard, and focus is never lost', async ({ page }) => {
       await page.goto(await storeOwnRequest('A reply sent with the keyboard'));
-      const reply = page.getByRole('textbox', { name: 'Your reply' });
+      const reply = await markdownEditor(page, 'Your reply');
       const send = page.getByRole('button', { name: 'Send reply' });
       const sendAndWait = page.getByRole('button', { name: 'Send and wait for the company' });
+
+      // The toolbar is one stop before the editor: the arrow keys move between its buttons,
+      // Enter presses one, and focus goes back to the text. (This comes before anything is sent:
+      // the toast about a sent reply is a layer too, and would take the first Escape.)
+      const toolbar = page.getByRole('toolbar', { name: 'Formatting' });
+      await reply.focus();
+      await page.keyboard.press('Shift+Tab');
+      await expect(toolbar.getByRole('button', { name: 'Bold' })).toBeFocused();
+      await page.keyboard.press('ArrowRight');
+      await expect(toolbar.getByRole('button', { name: 'Italic' })).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(reply).toBeFocused();
+      await page.keyboard.type('slanted');
+      await expect(reply.locator('em')).toHaveText('slanted');
+      // The link dialog closes with Escape, and focus returns to its button.
+      // (Coming back, focus is on the button it was on; each arrow key moves it one on.)
+      await page.keyboard.press('Shift+Tab');
+      await expect(toolbar.getByRole('button', { name: 'Italic' })).toBeFocused();
+      await page.keyboard.press('ArrowRight');
+      await expect(toolbar.getByRole('button', { name: 'Strikethrough' })).toBeFocused();
+      await page.keyboard.press('ArrowRight');
+      await expect(toolbar.getByRole('button', { name: 'Code', exact: true })).toBeFocused();
+      await page.keyboard.press('ArrowRight');
+      const linkButton = toolbar.getByRole('button', { name: 'Link' });
+      await expect(linkButton).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(page.getByRole('dialog', { name: 'Link' })).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog', { name: 'Link' })).toHaveCount(0);
+      await expect(linkButton).toBeFocused();
+      // Tab goes on to the text, which is cleared for the next step.
+      await page.keyboard.press('Tab');
+      await expect(reply).toBeFocused();
+      await page.keyboard.press('ControlOrMeta+a');
+      await page.keyboard.press('Delete');
+      await expect(reply).toHaveText('');
 
       // The field, then its buttons. Sending keeps focus on the button, which stays.
       await reply.focus();
@@ -984,8 +1050,25 @@ test.describe('requests', () => {
       await expect(send).toBeFocused();
       await page.keyboard.press('Enter');
       await expect(toasts(page)).toContainText('Reply sent.');
-      await expect(reply).toHaveValue('');
+      await expect(reply).toHaveText('');
       await expect(send).toBeFocused();
+
+      // In a list Tab leaves the editor too, instead of nesting the item: nobody gets stuck.
+      await reply.focus();
+      await page.keyboard.type('- one');
+      await page.keyboard.press('Enter');
+      await page.keyboard.type('two');
+      await expect(reply.getByRole('listitem')).toHaveCount(2);
+      await page.keyboard.press('Tab');
+      await expect(send).toBeFocused();
+      await page.keyboard.press('Shift+Tab');
+      await expect(reply).toBeFocused();
+      // The item nests with its own shortcut, and the text is cleared for the next step.
+      await page.keyboard.press('ControlOrMeta+]');
+      await expect(reply.locator('ul ul > li')).toHaveText('two');
+      await page.keyboard.press('ControlOrMeta+a');
+      await page.keyboard.press('Delete');
+      await expect(reply).toHaveText('');
 
       // "Send and wait for the company" goes once the request waits: focus moves to the
       // conversation's heading, not to nowhere.

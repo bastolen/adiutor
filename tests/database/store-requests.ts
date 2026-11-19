@@ -15,6 +15,7 @@ import {
   type RequestPriority,
   type RequestSide,
   type RequestStatus,
+  type RequestTextFormat,
   type RequestType,
 } from '../../src/lib/requests';
 
@@ -39,6 +40,8 @@ export type SampleEntry = {
   | {
       /** The reply's text. */
       reply: string;
+      /** The format it's written in; Markdown, as every new text is, when left out. */
+      format?: RequestTextFormat;
     }
   | {
       /** What changed. */
@@ -58,6 +61,8 @@ export interface SampleRequest {
   title: string;
   /** What's asked. */
   description: string;
+  /** The format the description is written in; Markdown, as every new text is, when left out. */
+  format?: RequestTextFormat;
   /** Its type. */
   type: RequestType;
   /** Its priority, as it is now. */
@@ -108,6 +113,7 @@ export default async function storeRequests(
         companyId: sample.companyId,
         title: sample.title,
         description: sample.description,
+        descriptionFormat: sample.format,
         type: sample.type,
         priority: sample.priority,
         status,
@@ -124,7 +130,13 @@ export default async function storeRequests(
       // eslint-disable-next-line no-await-in-loop -- Same.
       await db.insert(schema.requestEntry).values(
         'reply' in entry
-          ? { ...written, kind: 'comment', body: entry.reply, createdAt: entry.at }
+          ? {
+              ...written,
+              kind: 'comment',
+              body: entry.reply,
+              bodyFormat: entry.format,
+              createdAt: entry.at,
+            }
           : {
               ...written,
               kind: entry.change,

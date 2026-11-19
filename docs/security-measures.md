@@ -197,6 +197,38 @@ address (`adiutor-login dot com`); it stops the ones mail clients turn into link
 follow the same character rules and are at most 64 characters (`passkeyNameSchema`), checked by the
 auth guards where Better Auth's passkey plugin takes them.
 
+## Text people write
+
+A request's description and replies are written by one side and read by the other, in Markdown
+(see [Requests](requests.md#text) and
+[decision 0021](decisions/0021-markdown-for-request-text.md)). What someone types must never run,
+load or mislead in a reader's browser:
+
+- **No HTML.** The parser doesn't read HTML at all (`withoutHtml` in
+  `src/components/ui/markdown/tree.ts`), so a tag is the text it was typed as. A text becomes a
+  tree of our own React elements, never an HTML string, and ESLint refuses
+  `dangerouslySetInnerHTML`.
+- **An allow-list** of elements, attributes and address schemes
+  (`src/components/ui/markdown/sanitize.ts`) runs on the tree before the highlighter adds its
+  markup. It's the second check: it holds if the parser or one of its plugins ever lets
+  something else through.
+- **Links only for whole `http` and `https` addresses** (`linkTarget`): not a path of Adiutor
+  itself, which could send a reader to a page that does something, and not `mailto:`,
+  `javascript:` or `data:`. A link opens in a new tab with `rel="noopener noreferrer nofollow"`,
+  and says so to a screen reader.
+- **No images.** Every reader's browser would fetch an image from its host, which tells that host
+  their IP address and when they read the request. An image is a link to it instead; the Content
+  Security Policy (`img-src 'self'`) wouldn't load it either.
+- **No text that costs too much.** A text nested deeper than a page can render, or with more
+  emphasis marks than the parser pairs quickly, is shown as plain text (`MAX_NESTING`,
+  `MAX_EMPHASIS_RUNS`). The limit of 10,000 characters bounds the rest: the parser and the
+  highlighter's patterns never run on more.
+- **The editor is a convenience, never a check.** It follows the same rules while a text is
+  written (HTML stays text, only whole `http` and `https` addresses are links, an image is never
+  loaded; `src/components/ui/markdown/editor-extensions.ts`), but all it produces is Markdown,
+  which goes through everything above like text typed into a plain field. Its libraries are kept
+  current like every dependency (`pnpm audit`): a paste into an editor is input from elsewhere.
+
 ## Provider tokens aren't kept
 
 Refresh and ID tokens are never stored, nor the access tokens of

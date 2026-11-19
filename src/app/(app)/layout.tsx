@@ -37,19 +37,22 @@ export default function AppLayout({ children }: LayoutProps<'/'>) {
       >
         <Navigation />
       </Suspense>
-      <main
-        id="main"
-        className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 outline-none sm:px-6 lg:px-10 lg:py-10"
-      >
-        {/* First in the content, so it's what the skip link and a screen reader reach first. */}
-        <Suspense fallback={null}>
-          <SignedInAsBanner />
-        </Suspense>
-        {/* After "Confirm with GitHub" didn't count, also on the Security page's MFA setup. */}
-        <ProviderStepUpNotice />
-        <ProviderLinkedNotice />
-        {children}
-      </main>
+      {/* The room next to the menu, which a page that may be wider measures (`WidePage`). */}
+      <div className="@container">
+        <main
+          id="main"
+          className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 outline-none sm:px-6 lg:px-10 lg:py-10"
+        >
+          {/* First in the content, so it's what the skip link and a screen reader reach first. */}
+          <Suspense fallback={null}>
+            <SignedInAsBanner />
+          </Suspense>
+          {/* After "Confirm with GitHub" didn't count, also on the Security page's MFA setup. */}
+          <ProviderStepUpNotice />
+          <ProviderLinkedNotice />
+          {children}
+        </main>
+      </div>
       {/* Beside the content, not around it: the layout stays a server component. */}
       <Toaster />
     </div>

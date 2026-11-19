@@ -27,6 +27,7 @@ import {
   REQUEST_STATUSES,
   REQUEST_TEXT_FORMATS,
   REQUEST_TYPES,
+  WRITTEN_TEXT_FORMAT,
 } from '../../lib/requests';
 import { user } from './auth';
 import { createdAt, id, timestampTz } from './columns';
@@ -50,10 +51,10 @@ export const request = pgTable(
     title: text('title').notNull(),
     /** What was asked, as it was written. Never changed afterwards. */
     description: text('description').notNull(),
-    /** The format `description` is written in, so it's never read as a later format. */
+    /** The format `description` is written in, so it's never read as another format. */
     descriptionFormat: text('description_format', { enum: REQUEST_TEXT_FORMATS })
       .notNull()
-      .default('plain'),
+      .default(WRITTEN_TEXT_FORMAT),
     /** What kind of request it is, chosen by whoever raised it. The staff can change it. */
     type: text('type', { enum: REQUEST_TYPES }).notNull(),
     /**
@@ -109,8 +110,10 @@ export const requestEntry = pgTable(
     authorSide: text('author_side', { enum: REQUEST_SIDES }).notNull(),
     /** A reply's text; `null` for a change. */
     body: text('body'),
-    /** The format `body` is written in, so it's never read as a later format. */
-    bodyFormat: text('body_format', { enum: REQUEST_TEXT_FORMATS }).notNull().default('plain'),
+    /** The format `body` is written in, so it's never read as another format. */
+    bodyFormat: text('body_format', { enum: REQUEST_TEXT_FORMATS })
+      .notNull()
+      .default(WRITTEN_TEXT_FORMAT),
     /** What a change replaced: a status, type or priority, or the earlier title. */
     fromValue: text('from_value'),
     /** What a change set; `null` for a reply. */

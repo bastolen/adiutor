@@ -26,6 +26,7 @@ export {
   REQUEST_TYPES,
   startingPriority,
   statusesOfFilter,
+  WRITTEN_TEXT_FORMAT,
 } from './values';
 export type {
   RequestEntryKind,
@@ -54,5 +55,5 @@ export {
   requestNumberStartInSearch,
   requestPath,
 } from './number';
-export { cleanMultilineText, splitLinks } from './text';
+export { cleanMultilineText, linkTarget, splitLinks } from './text';
 export type { TextPart } from './text';

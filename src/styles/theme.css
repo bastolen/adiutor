@@ -169,6 +169,19 @@
   --warning: light-dark(#8a5000, #ffc266);
   --warning-soft: light-dark(#fcf1dc, #3a2e18);
 
+  /**
+   * Highlighted code (`code.css`): comments, the language's own words, text
+   * in quotes, numbers, names of functions, types, and attributes. Code
+   * stands on `background`, where each is 6:1 or more in both modes.
+   */
+  --code-comment: light-dark(#55556d, #a3a3c2);
+  --code-keyword: light-dark(#7b2d8e, #d9a8f7);
+  --code-string: light-dark(#0b6b4c, #4ae39e);
+  --code-number: light-dark(#8a5000, #ffc266);
+  --code-title: light-dark(#1f4fb3, #8fb8ff);
+  --code-type: light-dark(#0e5655, #5fe0cf);
+  --code-attribute: light-dark(#b42a00, #ff9473);
+
   color-scheme: light dark;
 }
 

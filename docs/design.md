@@ -68,8 +68,9 @@ keyboard support.
     ("Type: Bug"), with the choices as links in a menu, "All" first. It keeps focus like the Sort
     menu does. It needs JavaScript, unlike the search and the status links.
   - **Widths:** no table scrolls sideways. The content area stops growing at 1280px (`xl`,
-    `max-w-5xl` in the app layout), so a table gets no more columns past that. Columns that don't
-    fit move under the name instead:
+    `max-w-5xl` in the app layout), so a table gets no more columns past that. (Only a page that's
+    mostly text to read and write, a request, grows further: see "Layout" below.) Columns that
+    don't fit move under the name instead:
     - **Activity:** people tables show when someone was last active and when they joined in
       one Activity column from 1280px, and under the name below that
       (`src/app/(app)/_people/activity.tsx`).
@@ -170,6 +171,13 @@ keyboard support.
   Never make text lighter with opacity (`text-foreground/60`): contrast can't be guaranteed that
   way. Brand orange is too light for small text on white, so errors use the darker `danger`.
 
+  Highlighted code has its own tokens (`code-comment`, `code-keyword`, `code-string`,
+  `code-number`, `code-title`, `code-type`, `code-attribute`), which `src/styles/code.css` gives
+  to the classes highlight.js puts on the parts of a block of code. Code stands on `background`,
+  in a block and in a sentence; each token is 6:1 or more on it in both modes, and
+  `src/styles/theme.test.ts` checks that. A new kind of token gets its colour there, never a
+  fixed one in a component.
+
 - **Font:** Inter for text and JetBrains Mono for codes, URL names and references, which Adiutor
   ships (`src/lib/fonts.ts`, served from its own domain), so text looks and measures the same on
   every device and in CI; line height = font size + 8px. Emails use the device's own font, since
@@ -186,6 +194,13 @@ keyboard support.
   leaves it: with a lasting `tabIndex={-1}`, a click in the content on something that can't take
   focus, like a disabled field, would hand focus to it, and Chrome then draws a blinking text
   cursor in the field.
+  The content of every page stops growing at 1280px of screen. A request's page may be wider
+  (`WidePage` in `src/components/layout/wide-page.tsx`): from that width it grows with the room
+  next to the menu, up to 1280px of content, so the
+  conversation and the editor of a reply get the room, with the details still beside them. It
+  measures that room in the content column (a container in the app layout), not the screen, so
+  a scrollbar never makes it scroll sideways. Don't use it for a page with a table of records:
+  those are laid out for the content's usual width.
 - **Errors:** when a page or server action fails unexpectedly, an error page takes the page's
   place, built like the 404 pages: "Something went wrong", "This page couldn't load. Try again, or
   go to your dashboard.", **Try again** (busy while the page loads again), **Go to your dashboard**
@@ -330,6 +345,14 @@ keyboard support.
   link that stands on its own takes `standalone` and is underlined on hover only: a name in a
   table, a value in a list of details, "Forgot password?" under its field, a link with a line to
   itself. When you add a `TextLink`, decide which of the two it is.
+- **Markdown** is shown with `MarkdownText` (on the server only) and written in `MarkdownField`,
+  both in `src/components/ui/markdown/`; see [Requests](requests.md#text). The field's editor
+  loads after the page, in place of a plain text field under the same toolbar, so nothing moves.
+  Its toolbar is the `Toolbar` component (`src/components/ui/toolbar.tsx`, Radix Toolbar): one
+  stop for Tab with the arrow keys between its buttons, each an icon named by its label, and a
+  button that switches something says whether it's on (`aria-pressed`, shown by a fill and a line
+  in the colour of control borders, 3:1). Tab always leaves the text. A task's checkbox in the
+  editor is 24px, the least a target may be.
 - **Forms:** labels are always visible and help text is linked with `aria-describedby`. Fields
   don't show errors themselves: a failed submit shows an `Alert` (`ResultAlert`) and moves focus
   to it, and in the signed-in app a toast too (not in a dialog, see Results). Each result gets an

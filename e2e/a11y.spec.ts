@@ -43,6 +43,7 @@ import {
 import {
   adminStorageState,
   freshAddress,
+  markdownEditor,
   openSignInLink,
   signIn,
   signInAsUser,
@@ -106,6 +107,9 @@ const APP_PATHS = [
   '/requests/new',
   // A request with a conversation: replies from both sides, a link, and changes.
   '/requests/1',
+  // A request written in Markdown: headings, lists, a table, a quotation, an image as a link,
+  // a footnote, and highlighted code, whose colours have to be readable in both modes.
+  '/requests/6',
   '/companies/does-not-exist',
   '/does-not-exist',
 ];
@@ -121,6 +125,7 @@ const CLIENT_PATHS = [
   '/requests',
   '/requests/new',
   '/requests/1',
+  '/requests/6',
   '/companies/{company}',
 ];
 
@@ -726,6 +731,49 @@ test.describe('on a 320px wide screen', () => {
           await page.goto(resolvePath(path));
           await expectAccessible(page);
         });
+      });
+
+      test('the editor of a reply, with formatted text in it', async ({ context, page }) => {
+        await context.addCookies(clientState.cookies);
+        // The seeded open request, which stays as it is: the reply is typed, never sent.
+        await page.goto(`/requests/${SEEDED_REQUESTS.open.number}`);
+        const editor = await markdownEditor(page, 'Your reply');
+        await editor.click();
+        await page.keyboard.type('## A heading');
+        await page.keyboard.press('Enter');
+        await page.keyboard.type('With **bold**, `code` and https://adiutor.test/docs in it.');
+        await page.keyboard.press('Enter');
+        await page.keyboard.type('[ ] a thing to do');
+        await page.keyboard.press('Enter');
+        await page.keyboard.press('Enter');
+        await page.keyboard.type('> a quotation');
+        await page.keyboard.press('Enter');
+        await page.keyboard.press('Enter');
+        await page.keyboard.type('```ts ');
+        await page.keyboard.type('const a = 1;');
+        await expect(editor.getByRole('checkbox', { name: 'To do: a thing to do' })).toBeVisible();
+        await expect(editor.locator('pre')).toHaveText('const a = 1;');
+        await expectAccessible(page);
+
+        // The toolbar's layers: the language menu of the block of code the cursor is in, the
+        // heading menu, and the dialog for a link.
+        const toolbar = page.getByRole('toolbar', { name: 'Formatting' });
+        await expect(editor.locator('figcaption')).toHaveText('TypeScript');
+        await expectAccessible(page);
+        await toolbar.getByRole('button', { name: 'Language: TypeScript' }).click();
+        await expect(page.getByRole('menu')).toBeVisible();
+        await expectAccessible(page, '[role="menu"]');
+        await page.keyboard.press('Escape');
+        await toolbar.getByRole('button', { name: 'Heading' }).click();
+        await expect(page.getByRole('menu')).toBeVisible();
+        await expectAccessible(page, '[role="menu"]');
+        await page.keyboard.press('Escape');
+        await toolbar.getByRole('button', { name: 'Link' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Link' });
+        await expect(dialog).toBeVisible();
+        await dialog.getByRole('button', { name: 'Save link' }).click();
+        await expect(dialog.getByRole('alert')).toBeVisible();
+        await expectAccessible(page, '[role="dialog"]');
       });
 
       test('the dialog that asks before a request is cancelled', async ({ context, page }) => {

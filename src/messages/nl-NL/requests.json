@@ -46,7 +46,7 @@
       "typeLabel": "Type",
       "typePlaceholder": "Kies een type",
       "descriptionLabel": "Beschrijving",
-      "descriptionHint": "Wat heb je nodig, en wat heb je al geprobeerd? Voeg webadressen toe als die helpen.",
+      "descriptionHint": "Wat heb je nodig, en wat heb je al geprobeerd? Maak je tekst op met de knoppen, of typ Markdown zoals **vet**, lijsten en `code`.",
       "priorityLabel": "Prioriteit",
       "priorityFromType": "Bepaald door het type",
       "priorityHint": "Alleen medewerkers zien de prioriteit.",
@@ -86,11 +86,9 @@
       "type": "Type gewijzigd van {from} naar {to}.",
       "priority": "Prioriteit gewijzigd van {from} naar {to}."
     },
-    "text": {
-      "newTab": "(opent in een nieuw tabblad)"
-    },
     "reply": {
       "label": "Je reactie",
+      "hint": "Maak je tekst op met de knoppen, of typ Markdown zoals **vet**, lijsten en `code`.",
       "send": "Reactie versturen",
       "sendAndWait": "Versturen en op het bedrijf wachten",
       "sent": "Reactie verstuurd."

@@ -20,6 +20,13 @@ configurations in VS Code, which turn the time limit off (see
   (word order, plurals), render with `renderInLocale(locale, ui)` from `tests/i18n/render.tsx`, or
   translate outside React with `translator(locale, namespace)`. End-to-end tests run in English
   (US) (`locale` in `playwright.config.ts`).
+- **The Markdown editor** never loads in a unit test (`vitest.setup.ts` makes its module fail to
+  load), so a Markdown field stays the plain text field it starts as and a test types into it as
+  into any field. Typing in the editor needs a real browser: the end-to-end tests do that, waiting
+  for the editor with `markdownEditor(page, label)` (`e2e/support/helpers.ts`). What the editor
+  knows of Markdown is tested without a browser, on an editor without a page
+  (`editor-extensions.test.ts`, `editor-formatting.test.ts`); a test of the editor component asks
+  for the real module with `vi.importActual` (`editor.test.tsx`).
 - **Navigation:** `vitest.setup.ts` also gives component tests a router that does nothing
   (`useRouter` from `next/navigation`: `push`, `refresh`, `back` and `replace`; the rest of the
   module stays real). A test that checks navigation must mock `next/navigation` itself, which
@@ -76,9 +83,11 @@ configurations in VS Code, which turn the time limit off (see
     company, "Adiutor Tests Paging", with more members, invite links and requests than fit on a
     page, used by the pagination tests (`e2e/tables.spec.ts`) and the accessibility and keyboard
     checks of paginated tables (`e2e/a11y.spec.ts`, `e2e/keyboard.spec.ts`); no test changes its
-    data. The same goes for the five seeded requests the pages are read with (`SEEDED_REQUESTS`
-    in `e2e/support/fixtures.ts`): a test that changes a request raises its own. Both seeds store
-    their requests with `tests/database/store-requests.ts`.
+    data. The same goes for the six seeded requests the pages are read with (`SEEDED_REQUESTS`
+    in `e2e/support/fixtures.ts`): a test that changes a request raises its own. One of them is
+    written in Markdown with every kind of formatting (`tests/database/formatted-request.ts`),
+    and the first one's description is still plain text, as every text was before Markdown. Both
+    seeds store their requests with `tests/database/store-requests.ts`.
   - **Other specs' data:** the specs run one after another on one database, and each leaves what
     it made: a second company called "Adiutor Tests Client", a closed request, the seeded Watcher
     as a Client of another company. So a test looks for its own rows instead of counting a list,

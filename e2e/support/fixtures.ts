@@ -297,8 +297,9 @@ export const REQUESTS_CLIENT = {
 
 /**
  * The seeded requests, by what they're for. No test changes them: a test
- * that changes a request raises its own. The first four are the test
- * company's ({@link COMPANY_NAME}).
+ * that changes a request raises its own. All but the fifth are the test
+ * company's ({@link COMPANY_NAME}). The first one's description is plain
+ * text, as every text was before Markdown; every other text is Markdown.
  */
 export const SEEDED_REQUESTS = {
   /**
@@ -315,6 +316,12 @@ export const SEEDED_REQUESTS = {
   reopened: { number: 4, title: 'Invoices show the wrong address' },
   /** In the deactivated company ({@link CLOSED_COMPANY_NAME}): the staff can read it, nobody can change it. */
   closedCompany: { number: 5, title: 'Renew the SSL certificate' },
+  /**
+   * Done, and written in Markdown with every kind of formatting
+   * (`tests/database/formatted-request.ts`): headings, lists, a table, code,
+   * a quotation, links, an image and a footnote.
+   */
+  formatted: { number: 6, title: 'Move the intranet to the new server' },
 } as const;
 
 /** How many requests the paging company has: more than one page of 25, all open. */

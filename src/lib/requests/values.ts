@@ -141,14 +141,21 @@ export const REQUEST_ENTRY_KINDS = ['comment', 'status', 'title', 'type', 'prior
 export type RequestEntryKind = (typeof REQUEST_ENTRY_KINDS)[number];
 
 /**
- * The formats a description or comment is stored in. Only plain text today;
- * the format is stored with each text so texts written now are never read as
- * a later format (Markdown).
+ * The formats a description or comment is stored in: plain text, as every
+ * text was written before Markdown, and Markdown. The format is stored with
+ * each text, so a text is never read as a format it wasn't written in.
  */
-export const REQUEST_TEXT_FORMATS = ['plain'] as const;
+export const REQUEST_TEXT_FORMATS = ['plain', 'markdown'] as const;
 
 /** One text format. */
 export type RequestTextFormat = (typeof REQUEST_TEXT_FORMATS)[number];
+
+/**
+ * The format every new description and reply is written in. Nobody chooses
+ * one: a text is Markdown from the moment Markdown exists, and the texts
+ * stored before it keep `plain`.
+ */
+export const WRITTEN_TEXT_FORMAT: RequestTextFormat = 'markdown';
 
 /**
  * The status filters of a request list: requests that still need something
