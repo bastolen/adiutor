@@ -20,7 +20,11 @@ import { knownCodeLanguages, subscribeToCodeLanguages } from './editor-highlight
 import FormattingToolbar, { type FormattingState } from './formatting-toolbar';
 import { markdownStyles } from './styles';
 
-/** The height of a line of text in the editor, in rem (`leading-6`). */
+/**
+ * The height of a line of text in the editor, in rem (`leading-6`). With the
+ * 1rem of padding around the text, the editor is as high as the plain text
+ * field of as many rows, so nothing moves when it takes that field's place.
+ */
 const LINE_HEIGHT = 1.5;
 
 /** Props for {@link MarkdownEditor}. */
@@ -50,7 +54,9 @@ export interface MarkdownEditorProps {
 /**
  * The toolbar and the editable text. The text is a text field to a screen
  * reader (`textbox`, of several lines), named and described by the elements
- * around it. Tab and Shift+Tab leave it; the toolbar comes before it.
+ * around it. Tab and Shift+Tab leave it; the toolbar comes before it. The
+ * text's box grows with the text, and its bottom edge can be dragged to make
+ * it taller, as a plain text field's can.
  *
  * @param props - Component props.
  * @param props.markdown - The Markdown to start with.
@@ -116,7 +122,6 @@ export default function MarkdownEditor({
         ...(required ? { 'aria-required': 'true' } : {}),
         ...(disabled ? { 'aria-disabled': 'true' } : {}),
         class: markdownStyles.editor,
-        style: `min-height: ${rows * LINE_HEIGHT + 1}rem`,
       },
     },
     /**
@@ -196,7 +201,13 @@ export default function MarkdownEditor({
           }
         }}
       />
-      <EditorContent editor={editor} />
+      {/* As high as its lines at least, taller with its text, and as tall as it's dragged. */}
+      <div
+        className={markdownStyles.editorArea}
+        style={{ minHeight: `${rows * LINE_HEIGHT + 1}rem` }}
+      >
+        <EditorContent editor={editor} className="flex flex-1 flex-col" />
+      </div>
     </>
   );
 }

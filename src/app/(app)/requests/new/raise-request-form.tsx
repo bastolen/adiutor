@@ -108,7 +108,7 @@ export default function RaiseRequestForm({
         <MarkdownField
           label={t('new.descriptionLabel')}
           name="description"
-          rows={8}
+          rows={14}
           maxLength={REQUEST_TEXT_MAX_LENGTH}
           description={t('new.descriptionHint')}
           required

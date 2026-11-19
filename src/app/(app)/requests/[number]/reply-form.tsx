@@ -78,7 +78,7 @@ export default function ReplyForm({ request, canWait }: { request: number; canWa
           label={t('label')}
           description={t('hint')}
           name="body"
-          rows={4}
+          rows={8}
           maxLength={REQUEST_TEXT_MAX_LENGTH}
           required
           disabled={changesOff}

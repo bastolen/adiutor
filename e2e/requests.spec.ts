@@ -688,6 +688,34 @@ test('a reply formats itself while it’s typed, and reads the same once it’s 
   await expect(await markdownEditor(page, 'Your reply')).toHaveText('');
 });
 
+test('the editor is tall enough to write in, and can be dragged taller', async ({ page }) => {
+  await signIn(page, REQUESTS_CLIENT);
+
+  // A reply starts at eight lines, a description at fourteen; both grow with their text.
+  await page.goto(`/requests/${SEEDED_REQUESTS.open.number}`);
+  const reply = await markdownEditor(page, 'Your reply');
+  expect((await reply.boundingBox())?.height).toBeGreaterThanOrEqual(200);
+
+  // Dragging the corner at the bottom makes it taller, as a plain text field's does.
+  await reply.scrollIntoViewIfNeeded();
+  const { x = 0, y = 0, width = 0, height = 0 } = (await reply.boundingBox()) ?? {};
+  await page.mouse.move(x + width - 2, y + height - 2);
+  await page.mouse.down();
+  await page.mouse.move(x + width - 2, y + height + 120, { steps: 10 });
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await reply.boundingBox())?.height)
+    .toBeGreaterThanOrEqual(height + 100);
+  // A click in the room that made lands in the text.
+  const taller = (await reply.boundingBox())?.height ?? 0;
+  await reply.click({ position: { x: width / 2, y: taller - 20 } });
+  await expect(reply).toBeFocused();
+
+  await page.goto('/requests/new');
+  const description = await markdownEditor(page, 'Description');
+  expect((await description.boundingBox())?.height).toBeGreaterThanOrEqual(340);
+});
+
 test('the toolbar formats a reply for someone who doesn’t type Markdown', async ({ page }) => {
   const number = await storeRequest({
     companySlug: COMPANY_SLUG,

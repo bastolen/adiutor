@@ -52,10 +52,17 @@ export const markdownStyles = {
    * The editable area of the editor: the text as it will be read, a step
    * between its blocks, headings in their sizes, a table with lines, a task's
    * checkbox at 24px, and a ring around a part that's selected as a whole (an
-   * image). Its focus shows on the box around it.
+   * image). It fills the box it's in, and its focus shows on the box around
+   * that.
    */
   editor:
-    'px-3 py-2 text-base leading-6 wrap-anywhere text-foreground outline-none [&_:is(h3,h4,h5,h6)]:text-[1em] [&_[class~=ProseMirror-selectednode]]:outline-2 [&_[class~=ProseMirror-selectednode]]:outline-ring [&_h1]:text-lg [&_h2]:text-base [&_input[type=checkbox]]:size-6 [&_input[type=checkbox]]:accent-primary [&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-2 [&_td]:align-top [&_th]:border [&_th]:border-border [&_th]:bg-muted [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-medium [&>*+*]:mt-3',
+    'flex-1 px-3 py-2 text-base leading-6 wrap-anywhere text-foreground outline-none [&_:is(h3,h4,h5,h6)]:text-[1em] [&_[class~=ProseMirror-selectednode]]:outline-2 [&_[class~=ProseMirror-selectednode]]:outline-ring [&_h1]:text-lg [&_h2]:text-base [&_input[type=checkbox]]:size-6 [&_input[type=checkbox]]:accent-primary [&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-2 [&_td]:align-top [&_th]:border [&_th]:border-border [&_th]:bg-muted [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-medium [&>*+*]:mt-3',
+  /**
+   * What the editable area sits in: a box that can be dragged taller by its
+   * bottom edge, and scrolls when the text is taller than it was dragged to.
+   * The editable area fills it, so a click anywhere in it lands in the text.
+   */
+  editorArea: 'flex resize-y flex-col overflow-y-auto',
   /**
    * The box around the editor, with the look of a field: it shows the focus
    * of the editable area in it, and greys out when the editor is switched off.

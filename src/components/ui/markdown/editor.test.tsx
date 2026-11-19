@@ -59,6 +59,18 @@ describe('MarkdownEditor', () => {
     expect(editor).toHaveAccessibleDescription('Markdown works.');
   });
 
+  it('is as high as its rows to start with, and its box can be dragged taller', async () => {
+    renderEditor({ rows: 8 });
+
+    const editor = await screen.findByRole('textbox', { name: 'Your reply' });
+    const area = editor.closest('.resize-y');
+    // Eight lines of 1.5rem and the padding: what a plain text field of eight rows is.
+    expect(area?.getAttribute('style')).toBe('min-height: 13rem;');
+    expect(area).toHaveClass('resize-y', 'overflow-y-auto');
+    // The text fills the box, so a click anywhere in it lands in the text.
+    expect(editor).toHaveClass('flex-1');
+  });
+
   it('shows the Markdown it starts with, formatted', async () => {
     renderEditor({ markdown: '# Title\n\nSome **bold** text.\n\n- [ ] call back' });
 

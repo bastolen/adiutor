@@ -185,6 +185,9 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
   any other text.
 - **What the editor doesn't have:** footnotes (one typed in it is sent as plain text) and a way to
   build a table from scratch (a pasted Markdown table stays a table, with cells to edit).
+- **Its size:** a reply's field starts eight lines high and a description's fourteen. It grows
+  with its text, and its bottom edge can be dragged to make it taller, as a plain text field's
+  can.
 - **A text that isn't sent yet stays** while its page is kept alive: the field keeps the Markdown
   and the editor starts from it again. The field is empty after a text was sent, and keeps the
   text after a refused submit. Filling the editor is never a step to undo.
