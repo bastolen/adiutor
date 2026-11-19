@@ -256,7 +256,8 @@ deadlocking:
    invitations, audit events) don't wait.
 2. `user` rows, in ID order, in one statement: the staff, the target and the actor `FOR UPDATE`
    (`setStaffRole` in `src/server/people/staff.ts`); the user and, for a staff Admin, the other
-   active staff Admins `FOR UPDATE` (`soleAdminOf`); the actor and the target `FOR SHARE`
+   active staff Admins `FOR UPDATE` (`soleAdminOf`); the user `FOR UPDATE` when reactivating an
+   account (`reactivateUser` in `src/server/people/user-admin/`); the actor and the target `FOR SHARE`
    (`changeMembership`); the actor `FOR SHARE`, plus the user being added for `addMember`
    (`assertStillManages` in `src/server/access.ts`: creating, resending and revoking invitations
    and invite links, `addMember` and `registerCompany`); the link's creator `FOR KEY SHARE`
