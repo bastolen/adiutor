@@ -8,6 +8,7 @@
 
 import { useTranslations } from 'next-intl';
 import { type ComponentType, useEffect, useId, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 
 import type { MarkdownEditorProps } from './editor';
 import FormattingToolbar from './formatting-toolbar';
@@ -91,9 +92,14 @@ export default function MarkdownField({
         if (cancelled || !field) {
           return;
         }
-        setMarkdown(field.value);
-        setHadFocus(document.activeElement === field);
-        setEditor(() => loaded.default);
+        // At once: the plain field's text is read and the editor takes its place in one go. Left
+        // to React's own timing, what's typed or pasted between the two would be lost with the
+        // field.
+        flushSync(() => {
+          setMarkdown(field.value);
+          setHadFocus(document.activeElement === field);
+          setEditor(() => loaded.default);
+        });
       },
       () => {
         // The editor couldn't be loaded: the plain field stays, and works.

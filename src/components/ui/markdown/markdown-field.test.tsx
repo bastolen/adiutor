@@ -128,6 +128,33 @@ describe('MarkdownField, once the editor has loaded', () => {
     expect(sent(form)).toBe('# Typed early');
   });
 
+  it('takes the plain field’s place in the same moment it reads its text', async () => {
+    renderField();
+    const plain = screen.getByRole('textbox', { name: 'Your reply' });
+    // Right after its text is read: is the plain field still there to type in? If it were,
+    // what's typed or pasted in that moment would be lost with it.
+    let thereAfterRead: boolean | null = null;
+    Object.defineProperty(plain, 'value', {
+      configurable: true,
+      /**
+       * Gives the field's text, and looks a moment later whether the field is still there.
+       *
+       * @returns The text.
+       */
+      get: () => {
+        queueMicrotask(() => {
+          thereAfterRead ??= plain.isConnected;
+        });
+        return 'Typed just in time';
+      },
+    });
+
+    await findEditor();
+
+    expect(thereAfterRead).toBe(false);
+    expect(screen.getByTestId('started-with')).toHaveTextContent('Typed just in time');
+  });
+
   it('doesn’t take the focus when the field didn’t have it', async () => {
     renderField();
 
