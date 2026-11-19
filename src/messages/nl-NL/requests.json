@@ -86,9 +86,6 @@
       "type": "Type gewijzigd van {from} naar {to}.",
       "priority": "Prioriteit gewijzigd van {from} naar {to}."
     },
-    "text": {
-      "newTab": "(opent in een nieuw tabblad)"
-    },
     "reply": {
       "label": "Je reactie",
       "send": "Reactie versturen",

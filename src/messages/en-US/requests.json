@@ -86,9 +86,6 @@
       "type": "Changed the type from {from} to {to}.",
       "priority": "Changed the priority from {from} to {to}."
     },
-    "text": {
-      "newTab": "(opens in a new tab)"
-    },
     "reply": {
       "label": "Your reply",
       "send": "Send reply",

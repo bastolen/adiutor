@@ -3,9 +3,7 @@
  * Every such text goes through this component, so the day texts can be
  * written in another format (Markdown), this is the one place that changes.
  */
-import { useTranslations } from 'next-intl';
-
-import { focusRing } from '@/components/ui/styles';
+import ExternalLink from '@/components/ui/external-link';
 import cn from '@/lib/cn';
 import { splitLinks, type TextPart } from '@/lib/requests';
 import type { RequestText as RequestTextValue } from '@/server/requests';
@@ -35,9 +33,7 @@ function placed(parts: TextPart[]): PlacedPart[] {
  * A request's text as it was written: plain text with its line breaks, in
  * its own writing direction (`dir="auto"`, so a text in a right-to-left
  * script can't reorder the page around it). Web addresses written with
- * `http://` or `https://` are links that open in a new tab, which a screen
- * reader hears. They're links someone else wrote, so the page they open gets
- * no referrer, no way back to this window and no ranking from the link.
+ * `http://` or `https://` are links ({@link ExternalLink}).
  *
  * @param props - Component props.
  * @param props.text - The text and its format.
@@ -51,7 +47,6 @@ export default function RequestText({
   text: RequestTextValue;
   className?: string;
 }) {
-  const t = useTranslations('requests.text');
   // Only plain text exists today; another format gets its own rendering here.
   return (
     <p dir="auto" className={cn('wrap-anywhere whitespace-pre-wrap', className)}>
@@ -59,19 +54,9 @@ export default function RequestText({
         part.href === null ? (
           part.text
         ) : (
-          <a
-            key={part.offset}
-            href={part.href}
-            target="_blank"
-            rel="noopener noreferrer nofollow"
-            className={cn(
-              'rounded-sm font-medium text-highlight underline underline-offset-4',
-              focusRing,
-            )}
-          >
+          <ExternalLink key={part.offset} href={part.href}>
             {part.text}
-            <span className="sr-only"> {t('newTab')}</span>
-          </a>
+          </ExternalLink>
         ),
       )}
     </p>

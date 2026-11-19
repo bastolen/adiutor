@@ -142,6 +142,9 @@
     },
     "preferences": {
       "button": "Thema en taal: {theme, select, light {Licht} dark {Donker} other {Systeem}}, {language}"
+    },
+    "externalLink": {
+      "newTab": "(opent in een nieuw tabblad)"
     }
   }
 }

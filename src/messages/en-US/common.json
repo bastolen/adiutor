@@ -142,6 +142,9 @@
     },
     "preferences": {
       "button": "Theme and language: {theme, select, light {Light} dark {Dark} other {System}}, {language}"
+    },
+    "externalLink": {
+      "newTab": "(opens in a new tab)"
     }
   }
 }
