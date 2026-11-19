@@ -72,6 +72,12 @@ export function nestingDepth(tree: Nodes): number {
 /** The ID the parser gives the heading of a text's footnotes; every text's is the same. */
 export const FOOTNOTE_LABEL_ID = 'footnote-label';
 
+/**
+ * The arrow of the link from a footnote back to the text, followed by the
+ * character that asks for it as text: alone, some systems draw it as an emoji.
+ */
+const FOOTNOTE_BACK_ARROW = '\u21A9\uFE0E';
+
 /** A heading's tag name, with its depth. */
 const HEADING_TAG = /^h([1-6])$/;
 
@@ -180,6 +186,7 @@ export default function markdownTree(text: string, options: MarkdownTreeOptions)
       clobberPrefix: `${options.id}-`,
       footnoteLabel: options.footnoteLabel,
       footnoteLabelTagName: 'h1',
+      footnoteBackContent: FOOTNOTE_BACK_ARROW,
       /**
        * Names the link from a footnote back to the text; the parser counts footnotes from 0.
        *

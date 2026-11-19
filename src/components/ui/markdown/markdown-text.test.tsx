@@ -169,6 +169,8 @@ describe('MarkdownText: formatting', () => {
     expect(note?.id).toBe('reply-7-fn-1');
     const back = within(note as HTMLElement).getByRole('link', { name: 'Back to reference 1' });
     expect(back).toHaveAttribute('href', `#${reference?.id}`);
+    // The arrow is asked for as text, so it isn't drawn as an emoji.
+    expect(back.textContent).toBe('\u21A9\uFE0E');
     // The notes' heading is for screen readers, and the reference is described by it.
     const label = screen.getByRole('heading', { level: 3, name: 'Footnotes' });
     expect(label).toHaveClass('sr-only');
