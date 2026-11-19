@@ -76,7 +76,10 @@ configurations in VS Code, which turn the time limit off (see
   - **Isolation:** every test gets its own client address (`X-Forwarded-For`, set in
     `e2e/support/test.ts`), so Better Auth's per-IP limits (3 sign-ins per 10 seconds, sign-in
     links, codes) don't carry over between tests; a test that signs in more often than that gives
-    a page another address with `useOwnClientIp`. The test server reads that header with the
+    a page another address with `useOwnClientIp`. Better Auth's window only starts again after 10
+    seconds without a request from an address, so `randomClientIp` draws from about 130,000 (in
+    `198.18.0.0/15`, the block set aside for testing): tests close together practically never
+    share one. The test server reads that header with the
     default settings: `playwright.config.ts` blanks `CLIENT_IP_HEADERS` and `TRUSTED_PROXIES`, so
     your `.env` can't change whose address a test has. A test that uses up state (locks, deletes or
     changes an account) has its own seeded account or a fresh address. The seed includes a
