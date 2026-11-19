@@ -164,6 +164,32 @@ describe('a request list without requests', () => {
     expect(screen.queryByRole('button', { name: /priority/i })).not.toBeInTheDocument();
   });
 
+  it('tells two companies with the same name apart in the company menu by their URL names', async () => {
+    vi.mocked(listRequestCompanies).mockResolvedValue([
+      { id: 'company-1', name: 'Adiutor Tests', slug: 'adiutor-tests', canRaise: true },
+      { id: 'company-2', name: 'Adiutor Tests', slug: 'adiutor-tests-north', canRaise: true },
+      {
+        id: 'company-3',
+        name: 'Adiutor Tests Paging',
+        slug: 'adiutor-tests-paging',
+        canRaise: true,
+      },
+    ]);
+    await renderList({ status: 'all' });
+
+    await userEvent.click(screen.getByRole('button', { name: /Company/ }));
+
+    expect(screen.getAllByRole('menuitemradio').map((option) => option.textContent)).toEqual([
+      'All',
+      'Adiutor Tests (adiutor-tests)',
+      'Adiutor Tests (adiutor-tests-north)',
+      'Adiutor Tests Paging',
+    ]);
+    expect(
+      screen.getByRole('menuitemradio', { name: 'Adiutor Tests (adiutor-tests-north)' }),
+    ).toHaveAttribute('href', '/requests?status=all&company=adiutor-tests-north');
+  });
+
   it.each([
     ['nl-NL', 'Nog geen verzoeken', 'Dien het eerste verzoek in en het staat hier.'],
     ['es-ES', 'Aún no hay solicitudes', 'Crea la primera solicitud y aparecerá aquí.'],

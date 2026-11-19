@@ -7,6 +7,7 @@
     "loading": "Laden…",
     "skipToContent": "Direct naar de inhoud",
     "homeLink": "Startpagina van Adiutor",
+    "companyWithUrlName": "{name} ({urlName})",
     "actions": {
       "cancel": "Annuleren",
       "close": "Sluiten",
