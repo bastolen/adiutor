@@ -5,6 +5,7 @@
  * name ends in `_test` that isn't the development database.
  */
 import databaseAddress from '../../src/lib/database-address';
+import loadEnvFile from '../env-file';
 
 /** Database name used for tests when no URL is configured. */
 const TEST_DATABASE = 'adiutor_test';
@@ -77,11 +78,7 @@ function resolveTestDatabaseUrl({ explicit, base }: TestDatabaseSettings): strin
  * @throws {Error} If neither variable is set, or the result may not be a test database.
  */
 export default function getTestDatabaseUrl(): string {
-  try {
-    process.loadEnvFile();
-  } catch {
-    // No .env file (e.g. in CI); the variables come from the environment.
-  }
+  loadEnvFile();
   return resolveTestDatabaseUrl({
     explicit: process.env.DATABASE_URL_TEST,
     base: process.env.DATABASE_URL,
