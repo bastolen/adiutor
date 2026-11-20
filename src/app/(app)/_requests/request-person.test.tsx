@@ -4,7 +4,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import PersonLine, { PersonAvatar, personName } from './request-person';
+import PersonLine, { PeopleAvatars, PersonAvatar, personName } from './request-person';
 
 /** The names of the two sides of a request. */
 const NAMES = { company: 'Adiutor Tests Alpha', staff: 'Adiutor Tests' };
@@ -50,6 +50,20 @@ describe('PersonLine', () => {
 
     expect(screen.getByText('Sam Support')).toBeInTheDocument();
     expect(screen.getByText('Adiutor Tests')).toBeInTheDocument();
+  });
+
+  it('leaves the label out where everyone listed is staff, and still says who the viewer is', () => {
+    render(
+      <PersonLine
+        person={{ userId: null, name: 'Sam Support', side: 'staff', isViewer: true }}
+        names={NAMES}
+        sideLabel={false}
+      />,
+    );
+
+    expect(screen.getByText('Sam Support')).toBeInTheDocument();
+    expect(screen.queryByText('Adiutor Tests')).not.toBeInTheDocument();
+    expect(screen.getByText('You')).toBeInTheDocument();
   });
 
   it('links the name to the user’s page for a reader who got their ID: the staff', () => {
@@ -140,5 +154,28 @@ describe('PersonAvatar', () => {
       />,
     );
     expect(container).toHaveTextContent('AT');
+  });
+});
+
+describe('PeopleAvatars', () => {
+  it('shows an avatar per person, each with the name on hover, hidden from screen readers', () => {
+    const { container } = render(
+      <PeopleAvatars
+        people={[
+          { userId: null, name: 'Morgan Manager', side: 'staff', isViewer: false },
+          { userId: null, name: null, side: 'staff', isViewer: false },
+        ]}
+        names={NAMES}
+      />,
+    );
+
+    const avatars = [...container.querySelectorAll('[title]')];
+    // Someone without a name is shown by the staff's name, as everywhere in a request.
+    expect(avatars.map((avatar) => avatar.getAttribute('title'))).toEqual([
+      'Morgan Manager',
+      'Adiutor Tests',
+    ]);
+    expect(avatars.map((avatar) => avatar.textContent)).toEqual(['MM', 'AT']);
+    expect(avatars.every((avatar) => avatar.getAttribute('aria-hidden') === 'true')).toBe(true);
   });
 });

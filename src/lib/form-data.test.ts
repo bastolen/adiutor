@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import field, { localeField } from './form-data';
+import field, { fieldValues, localeField } from './form-data';
 
 describe('field', () => {
   it('returns a text value unchanged, without trimming', () => {
@@ -20,6 +20,21 @@ describe('field', () => {
     const formData = new FormData();
     formData.set('avatar', new File(['content'], 'avatar.txt', { type: 'text/plain' }));
     expect(field(formData, 'avatar')).toBe('');
+  });
+});
+
+describe('fieldValues', () => {
+  it('returns every text value of a field, in order, leaving files out', () => {
+    const formData = new FormData();
+    formData.append('assignee', 'first');
+    formData.append('assignee', new File(['x'], 'x.txt'));
+    formData.append('assignee', 'second');
+
+    expect(fieldValues(formData, 'assignee')).toEqual(['first', 'second']);
+  });
+
+  it('returns nothing for a missing field', () => {
+    expect(fieldValues(new FormData(), 'assignee')).toEqual([]);
   });
 });
 

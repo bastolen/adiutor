@@ -1,8 +1,9 @@
 /**
- * @file The details of a request next to its conversation: its status, type
- * and (for the staff) priority, its company, who raised it and when, when
- * the staff first replied and when it last had activity, with the controls
- * its viewer may use. Its text comes from `requests.detail`.
+ * @file The details of a request next to its conversation: its status, who
+ * it's assigned to, its type and (for the staff) priority, its company, who
+ * raised it and when, when the staff first replied and when it last had
+ * activity, with the controls its viewer may use. Its text comes from
+ * `requests.detail`.
  */
 import { getLocale, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
@@ -19,7 +20,7 @@ import {
   StatusBadge,
   TypeBadge,
 } from '../../_requests/request-badges';
-import PersonLine from '../../_requests/request-person';
+import PersonLine, { PersonAvatar } from '../../_requests/request-person';
 
 /**
  * One detail: its name above its value.
@@ -43,8 +44,11 @@ function Detail({ term, children }: { term: string; children: ReactNode }) {
 /**
  * The Details card of a request's page. The status is a select for the
  * staff who work on requests (`statusControl`), a label for everyone else;
- * a reopened request says so next to it. Readers who don't get the priority
- * see no row for it. The first response is how long the staff took to reply
+ * a reopened request says so next to it. Everyone sees who it's assigned
+ * to, one person per line with their avatar, without the staff label (only
+ * staff are assigned), and the staff who work on requests get the
+ * buttons that change it below them (`assigneeControls`). Readers who don't
+ * get the priority see no row for it. The first response is how long the staff took to reply
  * for the first time, with the moment itself on hover; a request the staff
  * raised themselves has none to wait for.
  *
@@ -54,6 +58,7 @@ function Detail({ term, children }: { term: string; children: ReactNode }) {
  * @param props - Component props.
  * @param props.detail - The request, as its reader gets it.
  * @param props.statusControl - The staff's status select, instead of the status label.
+ * @param props.assigneeControls - The staff's "Assign to me" and "Change assignees" buttons.
  * @param props.controls - The buttons under the details: Edit details, or Mark as done, Cancel
  *   request and Reopen.
  * @returns The card.
@@ -61,10 +66,12 @@ function Detail({ term, children }: { term: string; children: ReactNode }) {
 export default async function RequestDetails({
   detail,
   statusControl = null,
+  assigneeControls = null,
   controls = null,
 }: {
   detail: RequestDetail;
   statusControl?: ReactNode;
+  assigneeControls?: ReactNode;
   controls?: ReactNode;
 }) {
   const [t, locale] = await Promise.all([getTranslations('requests.detail'), getLocale()]);
@@ -76,6 +83,25 @@ export default async function RequestDetails({
         <Detail term={t('status')}>
           {statusControl || <StatusBadge status={detail.status} audience={detail.audience} />}
           {detail.reopenedAt && <ReopenedBadge />}
+        </Detail>
+        <Detail term={t('assignedTo')}>
+          <div className="flex w-full min-w-0 flex-col gap-2">
+            {detail.assignees.length > 0 ? (
+              <ul className="flex flex-col gap-1.5">
+                {detail.assignees.map((person, index) => (
+                  // eslint-disable-next-line react/no-array-index-key -- readers at the company get no IDs, and the list is read whole on each render
+                  <li key={index} className="flex min-w-0 items-center gap-2">
+                    <PersonAvatar person={person} names={names} size="xs" />
+                    {/* Only staff are assigned: no label to say so. */}
+                    <PersonLine person={person} names={names} sideLabel={false} />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <span className="text-muted-foreground">{t('notAssigned')}</span>
+            )}
+            {assigneeControls && <div className="flex flex-wrap gap-2">{assigneeControls}</div>}
+          </div>
         </Detail>
         <Detail term={t('type')}>
           <TypeBadge type={detail.type} />

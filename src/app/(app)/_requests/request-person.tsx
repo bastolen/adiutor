@@ -42,10 +42,57 @@ export function personName(person: RequestPerson, names: SideNames): string {
  * @param props - Component props.
  * @param props.person - The person.
  * @param props.names - The names of the two sides.
+ * @param props.size - Its size: `sm` next to what someone wrote, `xs` in a list of names.
  * @returns The avatar.
  */
-export function PersonAvatar({ person, names }: { person: RequestPerson; names: SideNames }) {
-  return <Avatar name={personName(person, names)} size="sm" brand={person.side === 'staff'} />;
+export function PersonAvatar({
+  person,
+  names,
+  size = 'sm',
+}: {
+  person: RequestPerson;
+  names: SideNames;
+  size?: 'xs' | 'sm';
+}) {
+  return <Avatar name={personName(person, names)} size={size} brand={person.side === 'staff'} />;
+}
+
+/**
+ * The avatars of several people in a row, overlapping a little, each with
+ * the person's name on hover (where the names don't fit, as in a table).
+ * The avatars are hidden from screen readers: whoever uses this gives the
+ * names as text too.
+ *
+ * @param props - Component props.
+ * @param props.people - The people, in the order to show them.
+ * @param props.names - The names of the two sides.
+ * @returns The row of avatars.
+ */
+export function PeopleAvatars({
+  people,
+  names,
+}: {
+  people: readonly RequestPerson[];
+  names: SideNames;
+}) {
+  return (
+    <span className="flex -space-x-2">
+      {people.map((person, index) => {
+        const name = personName(person, names);
+        return (
+          <Avatar
+            // eslint-disable-next-line react/no-array-index-key -- names can repeat and readers at the company get no IDs; the row is read whole on each render
+            key={index}
+            name={name}
+            size="sm"
+            brand={person.side === 'staff'}
+            title={name}
+            className="ring-2 ring-surface"
+          />
+        );
+      })}
+    </span>
+  );
 }
 
 /**
@@ -58,16 +105,20 @@ export function PersonAvatar({ person, names }: { person: RequestPerson; names: 
  * @param props - Component props.
  * @param props.person - The person.
  * @param props.names - The names of the two sides.
+ * @param props.sideLabel - Whether a staff member gets the label with the staff's name; left
+ *   out where everyone listed is staff anyway (the assignees).
  * @param props.children - What follows the name, e.g. a time.
  * @returns The line.
  */
 export default function PersonLine({
   person,
   names,
+  sideLabel = true,
   children = null,
 }: {
   person: RequestPerson;
   names: SideNames;
+  sideLabel?: boolean;
   children?: ReactNode;
 }) {
   return (
@@ -82,7 +133,7 @@ export default function PersonLine({
         </span>
       )}
       {/* Someone shown by the staff's name needs no label that repeats it. */}
-      {person.side === 'staff' && person.name !== null && <Badge>{names.staff}</Badge>}
+      {sideLabel && person.side === 'staff' && person.name !== null && <Badge>{names.staff}</Badge>}
       {person.isViewer && <YouBadge />}
       {children}
     </p>

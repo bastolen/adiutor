@@ -1,8 +1,9 @@
 /**
- * @file Server actions for a request's page: replying, changing the status
- * and changing the details. The services check who may do what; these read
- * the form, refresh the page and word the confirmation in the request's
- * language (`requests.reply`, `requests.saved`).
+ * @file Server actions for a request's page: replying, changing the status,
+ * changing the details and changing who it's assigned to. The services check
+ * who may do what; these read the form, refresh the page and word the
+ * confirmation in the request's language (`requests.reply`,
+ * `requests.saved`).
  */
 'use server';
 
@@ -10,12 +11,17 @@ import { refresh } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
 
 import type { ActionResult } from '@/lib/action-result';
-import field from '@/lib/form-data';
+import field, { fieldValues } from '@/lib/form-data';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
 import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
-import { changeRequestStatus, replyToRequest, updateRequestDetails } from '@/server/requests';
+import {
+  changeAssignees,
+  changeRequestStatus,
+  replyToRequest,
+  updateRequestDetails,
+} from '@/server/requests';
 
 /**
  * Replies to a request. The staff's second button sends `status` with it, to
@@ -106,5 +112,37 @@ export async function updateDetailsAction(
     refresh();
     const t = await getTranslations('requests.saved');
     return { ok: true, message: t('details', { changed }) };
+  });
+}
+
+/**
+ * Changes who a request is assigned to: the people to add (`add`, as
+ * "Assign to me" sends it), and what the dialog's checkboxes changed. The
+ * dialog sends who's ticked (`assignee`) and who was assigned when it
+ * opened (`was_assignee`), so only what its editor changed is saved: someone
+ * a colleague assigned or removed meanwhile, whom the editor left alone,
+ * stays as the colleague left them.
+ *
+ * @param _previous - The previous result (unused).
+ * @param formData - Field `request` (its number), and any of `add`, `assignee` and
+ *   `was_assignee`, each a user ID and sent once per person.
+ * @returns A confirmation, or why it failed.
+ */
+export async function changeAssigneesAction(
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const actor = await getActor();
+    const ticked = fieldValues(formData, 'assignee');
+    const was = fieldValues(formData, 'was_assignee');
+    const { added, removed } = await changeAssignees(appContext, actor, {
+      request: field(formData, 'request'),
+      add: [...fieldValues(formData, 'add'), ...ticked.filter((id) => !was.includes(id))],
+      remove: was.filter((id) => !ticked.includes(id)),
+    });
+    refresh();
+    const t = await getTranslations('requests.saved');
+    return { ok: true, message: t('assignees', { changed: added + removed }) };
   });
 }

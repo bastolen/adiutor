@@ -72,7 +72,9 @@
       "noResponse": "Aún no",
       "lastActivity": "Última actividad",
       "back": "Solicitudes",
-      "justRaised": "Solicitud creada."
+      "justRaised": "Solicitud creada.",
+      "assignedTo": "Asignada a",
+      "notAssigned": "Sin asignar todavía"
     },
     "status": "{status, select, open {Abierta} todo {Por hacer} in_progress {En curso} waiting {{audience, select, contributor {A la espera de tu respuesta} follower {A la espera de tu empresa} other {A la espera de la empresa}}} done {Resuelta} cancelled {Cancelada} other {Desconocido}}",
     "reopened": "Reabierta",
@@ -110,11 +112,21 @@
       "typeLabel": "Tipo",
       "priorityLabel": "Prioridad",
       "priorityHint": "Un tipo nuevo fija su propia prioridad hasta que elijas una.",
-      "saveDetails": "Guardar datos"
+      "saveDetails": "Guardar datos",
+      "assignToMe": "Asignármela",
+      "changeAssignees": "Cambiar asignación",
+      "assigneesTitle": "Cambiar a quién está asignada",
+      "assigneesDescription": "Todos los que participan en la solicitud ven a quién está asignada, también la empresa, y cada cambio aparece en su historial.",
+      "assigneesLabel": "Personal que trabaja en solicitudes",
+      "assigneeYou": "{name} (tú)",
+      "unnamedStaff": "Un miembro del personal sin nombre",
+      "saveAssignees": "Guardar asignación"
     },
     "saved": {
       "status": "{change, select, reopened {Solicitud reabierta.} done {Solicitud marcada como resuelta.} cancelled {Solicitud cancelada.} other {Estado guardado.}}",
-      "details": "{changed, plural, =0 {No ha cambiado nada.} other {Datos guardados.}}"
+      "details": "{changed, plural, =0 {No ha cambiado nada.} other {Datos guardados.}}",
+      "assignees": "{changed, plural, =0 {No ha cambiado nada.} other {Asignación guardada.}}",
+      "assignedYou": "Ahora tienes asignada esta solicitud."
     }
   }
 }

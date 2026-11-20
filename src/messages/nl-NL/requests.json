@@ -72,7 +72,9 @@
       "noResponse": "Nog niet",
       "lastActivity": "Laatste activiteit",
       "back": "Verzoeken",
-      "justRaised": "Verzoek ingediend."
+      "justRaised": "Verzoek ingediend.",
+      "assignedTo": "Toegewezen aan",
+      "notAssigned": "Nog niet toegewezen"
     },
     "status": "{status, select, open {Open} todo {Te doen} in_progress {In behandeling} waiting {{audience, select, contributor {Wacht op jouw reactie} follower {Wacht op je bedrijf} other {Wacht op het bedrijf}}} done {Afgerond} cancelled {Geannuleerd} other {Onbekend}}",
     "reopened": "Heropend",
@@ -110,11 +112,21 @@
       "typeLabel": "Type",
       "priorityLabel": "Prioriteit",
       "priorityHint": "Een nieuw type bepaalt zelf de prioriteit totdat je er een kiest.",
-      "saveDetails": "Gegevens opslaan"
+      "saveDetails": "Gegevens opslaan",
+      "assignToMe": "Aan mij toewijzen",
+      "changeAssignees": "Toewijzing wijzigen",
+      "assigneesTitle": "Wijzigen aan wie dit verzoek is toegewezen",
+      "assigneesDescription": "Iedereen bij het verzoek ziet aan wie het is toegewezen, ook het bedrijf, en elke wijziging staat in de geschiedenis.",
+      "assigneesLabel": "Medewerkers die aan verzoeken werken",
+      "assigneeYou": "{name} (jij)",
+      "unnamedStaff": "Een medewerker zonder naam",
+      "saveAssignees": "Toewijzing opslaan"
     },
     "saved": {
       "status": "{change, select, reopened {Verzoek heropend.} done {Verzoek gemarkeerd als afgerond.} cancelled {Verzoek geannuleerd.} other {Status opgeslagen.}}",
-      "details": "{changed, plural, =0 {Er is niets gewijzigd.} other {Gegevens opgeslagen.}}"
+      "details": "{changed, plural, =0 {Er is niets gewijzigd.} other {Gegevens opgeslagen.}}",
+      "assignees": "{changed, plural, =0 {Er is niets gewijzigd.} other {Toewijzing opgeslagen.}}",
+      "assignedYou": "Dit verzoek is aan je toegewezen."
     }
   }
 }

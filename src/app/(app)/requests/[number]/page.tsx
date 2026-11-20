@@ -1,14 +1,14 @@
 /**
  * @file A request's page, served at `/requests/[number]`: its description
  * (what was asked, by whom), its conversation, and next to them its details:
- * status, type and (for the staff) priority, company, who raised it and
- * when, the staff's first response and its last activity.
+ * status, who it's assigned to, type and (for the staff) priority, company,
+ * who raised it and when, the staff's first response and its last activity.
  * Everyone who may see the request may open it: the staff, and the members
  * of its company while it's active. Anyone else gets the 404 page, as for a
  * number no request has.
  *
  * Those who take part can reply. The staff who work on requests also pick
- * its status and edit its title, type and priority; people at the company
+ * its status, assign it and edit its title, type and priority; people at the company
  * mark it done, cancel it or reopen it. A deactivated company's requests
  * show no controls: they can only be read.
  */
@@ -38,11 +38,18 @@ import appContext from '@/server/app-context';
 import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
 import { checkedPageMetadata } from '@/server/page-metadata';
-import { findRequest, getRequest, MAX_EARLIER_CHUNKS, type RequestDetail } from '@/server/requests';
+import {
+  findRequest,
+  getRequest,
+  listAssignableStaff,
+  MAX_EARLIER_CHUNKS,
+  type RequestDetail,
+} from '@/server/requests';
 
 import PersonLine, { PersonAvatar } from '../../_requests/request-person';
 import RequestText from '../../_requests/request-text';
-import { changeStatusAction } from './actions';
+import { changeAssigneesAction, changeStatusAction } from './actions';
+import ChangeAssignees, { type AssigneeChoice } from './change-assignees';
 import EditDetails from './edit-details';
 import ReplyForm from './reply-form';
 import RequestDetails from './request-details';
@@ -76,8 +83,8 @@ const EARLIER_PATTERN = /^[1-9]\d?$/;
 
 /**
  * Loads and shows a request, with the controls its viewer may use. The
- * client components below (`ReplyForm`, `StatusSelect`, `EditDetails`) get
- * `requests` through `ClientMessages`.
+ * client components below (`ReplyForm`, `StatusSelect`, `EditDetails`,
+ * `ChangeAssignees`) get `requests` through `ClientMessages`.
  *
  * @param props - Component props.
  * @param props.params - Route parameters: the request's number.
@@ -119,6 +126,19 @@ async function RequestContent({
   // What someone at the company may do with the request as it is: close it, or reopen it.
   const choices = contributes && !manages ? statusChoices(detail.permissions, detail.status) : [];
   const fields = { request: String(detail.number) };
+  // Who the staff may assign: everyone who can be, and anyone assigned now who no longer could
+  // be (gone meanwhile), so the dialog can still remove them.
+  const assigned = detail.assignees.flatMap(({ userId }) => (userId ? [userId] : []));
+  const assigneeChoices: AssigneeChoice[] = [];
+  if (manages) {
+    const staff = await listAssignableStaff(appContext, actor);
+    assigneeChoices.push(...staff.map(({ id, name }) => ({ id, name, isViewer: id === actor.id })));
+    detail.assignees.forEach(({ userId, name, isViewer }) => {
+      if (userId && !staff.some(({ id }) => id === userId)) {
+        assigneeChoices.push({ id: userId, name, isViewer });
+      }
+    });
+  }
 
   const names = { company: detail.company.name, staff: detail.staffName };
 
@@ -185,6 +205,25 @@ async function RequestContent({
                   }))}
                 />
               ) : null
+            }
+            assigneeControls={
+              manages && (
+                <>
+                  {!detail.assignees.some(({ isViewer }) => isViewer) && (
+                    <RowAction
+                      action={changeAssigneesAction}
+                      fields={{ ...fields, add: actor.id }}
+                      label={tRequests('controls.assignToMe')}
+                      doneMessage={tRequests('saved.assignedYou')}
+                    />
+                  )}
+                  <ChangeAssignees
+                    request={detail.number}
+                    choices={assigneeChoices}
+                    assigned={assigned}
+                  />
+                </>
+              )
             }
             controls={
               (manages || choices.length > 0) && (

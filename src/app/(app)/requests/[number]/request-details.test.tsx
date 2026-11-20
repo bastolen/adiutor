@@ -92,6 +92,51 @@ describe('RequestDetails', () => {
     expect(screen.queryByText('Priority')).not.toBeInTheDocument();
   });
 
+  it('lists everyone it is assigned to, without the staff label, to everyone on the request', async () => {
+    await renderDetails({
+      detail: detailOf({
+        assignees: [
+          { userId: null, name: 'Morgan Manager', side: 'staff', isViewer: false },
+          { userId: null, name: 'Sam Support', side: 'staff', isViewer: false },
+        ],
+      }),
+    });
+
+    const people = within(valueOf('Assigned to')).getAllByRole('listitem');
+    // Each with their avatar; only staff are assigned, so nothing labels them as such.
+    expect(people.map((item) => item.textContent)).toEqual(['MMMorgan Manager', 'SSSam Support']);
+    expect(within(people[0] ?? document.body).getByText('MM')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    );
+    // Company users get no IDs, so no names link to a user's page.
+    expect(within(valueOf('Assigned to')).queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('says nobody is assigned yet', async () => {
+    await renderDetails({ detail: detailOf() });
+
+    expect(valueOf('Assigned to')).toHaveTextContent('Not assigned yet');
+    expect(within(valueOf('Assigned to')).queryByRole('list')).not.toBeInTheDocument();
+  });
+
+  it('links the staff to the page of each person assigned, and puts their buttons below', async () => {
+    await renderDetails({
+      detail: detailOf({
+        audience: 'staff',
+        assignees: [{ userId: 'sam-id', name: 'Sam Support', side: 'staff', isViewer: false }],
+      }),
+      assigneeControls: <button type="button">Assign to me</button>,
+    });
+
+    expect(
+      within(valueOf('Assigned to')).getByRole('link', { name: 'Sam Support' }),
+    ).toHaveAttribute('href', '/admin/users/sam-id');
+    expect(
+      within(valueOf('Assigned to')).getByRole('button', { name: 'Assign to me' }),
+    ).toBeInTheDocument();
+  });
+
   it('shows the staff the priority, under its own name', async () => {
     await renderDetails({ detail: detailOf({ priority: 'high', audience: 'staff' }) });
 
