@@ -13,7 +13,7 @@ import { check, index, pgEnum, pgTable, text, uniqueIndex, uuid } from 'drizzle-
 import { COMPANY_ROLES, PLATFORM_ROLES, ROLE_IDS } from '../../lib/authz/roles';
 import { DEFAULT_LOCALE, LOCALES } from '../../lib/i18n/locales';
 import { user } from './auth';
-import { createdAt, id, timestampTz } from './columns';
+import { createdAt, id, oneOf, timestampTz } from './columns';
 
 /** Roles in a company; see `src/lib/authz/roles.ts`. */
 export const companyRole = pgEnum('company_role', COMPANY_ROLES);
@@ -118,6 +118,7 @@ export const invitation = pgTable(
       'invitation_role_fits_target',
       sql`(${table.companyId} is null) = (${table.role} in (${platformRoleList}))`,
     ),
+    oneOf('invitation_locale_valid', table.locale, LOCALES),
   ],
 );
 

@@ -30,7 +30,7 @@ import {
   WRITTEN_TEXT_FORMAT,
 } from '../../lib/requests';
 import { user } from './auth';
-import { createdAt, id, timestampTz } from './columns';
+import { createdAt, id, oneOf, timestampTz } from './columns';
 import { company } from './companies';
 
 /** A request a company raised with the staff, or the staff raised for it. */
@@ -86,6 +86,11 @@ export const request = pgTable(
     /** Every company's requests by their last activity, for the staff. */
     index('request_activity_idx').on(table.lastActivityAt, table.id),
     index('request_created_by_idx').on(table.createdBy),
+    oneOf('request_type_valid', table.type, REQUEST_TYPES),
+    oneOf('request_priority_valid', table.priority, REQUEST_PRIORITIES),
+    oneOf('request_status_valid', table.status, REQUEST_STATUSES),
+    oneOf('request_created_by_side_valid', table.createdBySide, REQUEST_SIDES),
+    oneOf('request_description_format_valid', table.descriptionFormat, REQUEST_TEXT_FORMATS),
   ],
 );
 
@@ -134,6 +139,9 @@ export const requestEntry = pgTable(
       'request_entry_kind_fits_values',
       sql`(${table.kind} = 'comment') = (${table.body} is not null) and (${table.kind} = 'comment') = (${table.toValue} is null)`,
     ),
+    oneOf('request_entry_kind_valid', table.kind, REQUEST_ENTRY_KINDS),
+    oneOf('request_entry_author_side_valid', table.authorSide, REQUEST_SIDES),
+    oneOf('request_entry_body_format_valid', table.bodyFormat, REQUEST_TEXT_FORMATS),
   ],
 );
 

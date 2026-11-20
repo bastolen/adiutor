@@ -18,7 +18,7 @@ import {
 } from 'drizzle-orm/pg-core';
 
 import { user } from './auth';
-import { createdAt, id, timestampTz } from './columns';
+import { createdAt, id, oneOf, timestampTz } from './columns';
 
 /** How a run of a job ended. */
 export const JOB_RUN_STATUSES = ['succeeded', 'failed'] as const;
@@ -68,6 +68,7 @@ export const jobState = pgTable(
   (table) => [
     uniqueIndex('job_state_name_idx').on(table.name),
     index('job_state_paused_by_idx').on(table.pausedBy),
+    oneOf('job_state_last_status_valid', table.lastStatus, JOB_RUN_STATUSES),
   ],
 );
 
@@ -120,6 +121,8 @@ export const jobRun = pgTable(
     index('job_run_job_started_at_idx').on(table.job, table.startedAt),
     index('job_run_started_at_idx').on(table.startedAt),
     index('job_run_started_by_idx').on(table.startedBy),
+    oneOf('job_run_trigger_valid', table.trigger, JOB_TRIGGERS),
+    oneOf('job_run_status_valid', table.status, JOB_RUN_STATUSES),
   ],
 );
 
@@ -180,5 +183,6 @@ export const queuedJob = pgTable(
     // Counts and lists by status (the Jobs page, failed jobs, runs that died), then kind.
     index('queued_job_status_kind_idx').on(table.status, table.kind),
     index('queued_job_finished_at_idx').on(table.finishedAt),
+    oneOf('queued_job_status_valid', table.status, QUEUED_JOB_STATUSES),
   ],
 );

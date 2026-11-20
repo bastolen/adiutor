@@ -1,6 +1,7 @@
 /**
  * @file Tests that the database follows the project's rules: UUIDv7 IDs, no
- * auto-increment columns, and an index for every foreign key.
+ * auto-increment columns, an index for every foreign key, and a CHECK
+ * constraint on every text column that only allows certain values.
  */
 import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
@@ -54,5 +55,60 @@ describe('database rules', () => {
         )
     `);
     expect(rows).toEqual([]);
+  });
+
+  /** The text columns that only allow certain values, each with its `_valid` check (`oneOf`). */
+  const VALUE_CHECKS = [
+    'app_error_route_type_valid',
+    'app_error_source_valid',
+    'invitation_locale_valid',
+    'job_run_status_valid',
+    'job_run_trigger_valid',
+    'job_state_last_status_valid',
+    'queued_job_status_valid',
+    'request_created_by_side_valid',
+    'request_description_format_valid',
+    'request_entry_author_side_valid',
+    'request_entry_body_format_valid',
+    'request_entry_kind_valid',
+    'request_priority_valid',
+    'request_status_valid',
+    'request_type_valid',
+    'staff_settings_default_locale_valid',
+  ];
+
+  it('limits every text column with a fixed set of values to those values', async () => {
+    const { rows } = await db.execute<{ name: string }>(sql`
+      select con.conname as name
+      from pg_constraint con
+      join pg_namespace ns on ns.oid = con.connamespace
+      where con.contype = 'c' and ns.nspname = 'public' and con.conname like '%\_valid'
+      order by con.conname
+    `);
+    expect(rows.map(({ name }) => name)).toEqual(VALUE_CHECKS);
+  });
+
+  it('refuses a value outside the list, and leaves an optional column optional', async () => {
+    /**
+     * Stores an error with the given source and route type.
+     *
+     * @param source - Where it happened.
+     * @param routeType - What the server was doing, if anything.
+     * @returns The database's error code, or `stored`.
+     */
+    const store = async (source: string, routeType: string | null) => {
+      try {
+        await db.execute(
+          sql`insert into app_error (reference, source, route_type) values ('TEST-0001', ${source}, ${routeType})`,
+        );
+        return 'stored';
+      } catch (error) {
+        return (error as { cause?: { code?: string } }).cause?.code ?? String(error);
+      }
+    };
+
+    expect(await store('nowhere', null)).toBe('23514');
+    expect(await store('server', 'somewhere')).toBe('23514');
+    expect(await store('job', null)).toBe('stored');
   });
 });

@@ -9,7 +9,7 @@ import { boolean, check, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core'
 
 import { DEFAULT_LOCALE, LOCALES } from '../../lib/i18n/locales';
 import { DEFAULT_REQUEST_PREFIX } from '../../lib/requests';
-import { createdAt, id, timestampTz } from './columns';
+import { createdAt, id, oneOf, timestampTz } from './columns';
 
 /** Settings for the staff (the people who handle requests from companies). Always a single row. */
 export const staffSettings = pgTable(
@@ -41,5 +41,6 @@ export const staffSettings = pgTable(
     /** There is exactly one settings row. */
     uniqueIndex('staff_settings_singleton_idx').on(table.singleton),
     check('staff_settings_singleton_true', sql`${table.singleton}`),
+    oneOf('staff_settings_default_locale_valid', table.defaultLocale, LOCALES),
   ],
 );

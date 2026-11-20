@@ -6,7 +6,7 @@ import { index, integer, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle
 
 import type { AuditAction } from '../../lib/audit-actions';
 import { session, user } from './auth';
-import { createdAt, id, timestampTz } from './columns';
+import { createdAt, id, oneOf, timestampTz } from './columns';
 import { company } from './companies';
 
 /**
@@ -70,17 +70,23 @@ export const signInError = pgTable(
 );
 
 /**
- * Where an error in the app happened: on the server, in the browser, or in a
- * background job (its name is the error's `route_path`).
+ * Where an error in the app can happen: on the server, in the browser, or in
+ * a background job (its name is the error's `route_path`).
  */
-export type AppErrorSource = 'server' | 'browser' | 'job';
+export const APP_ERROR_SOURCES = ['server', 'browser', 'job'] as const;
+
+/** Where an error in the app happened (see {@link APP_ERROR_SOURCES}). */
+export type AppErrorSource = (typeof APP_ERROR_SOURCES)[number];
 
 /**
- * What the server was doing when an error happened, as Next.js reports it to
- * `onRequestError`: rendering a page (`render`), running a server action
+ * What the server can be doing when an error happens, as Next.js reports it
+ * to `onRequestError`: rendering a page (`render`), running a server action
  * (`action`), a route handler (`route`) or the proxy (`proxy`).
  */
-export type AppErrorRouteType = 'render' | 'action' | 'route' | 'proxy';
+export const APP_ERROR_ROUTE_TYPES = ['render', 'action', 'route', 'proxy'] as const;
+
+/** What the server was doing when an error happened (see {@link APP_ERROR_ROUTE_TYPES}). */
+export type AppErrorRouteType = (typeof APP_ERROR_ROUTE_TYPES)[number];
 
 /**
  * Unexpected errors in the app (pages, server actions, route handlers, and
@@ -124,6 +130,8 @@ export const appError = pgTable(
     index('app_error_reference_idx').on(table.reference),
     index('app_error_user_idx').on(table.userId),
     index('app_error_created_at_idx').on(table.createdAt),
+    oneOf('app_error_source_valid', table.source, APP_ERROR_SOURCES),
+    oneOf('app_error_route_type_valid', table.routeType, APP_ERROR_ROUTE_TYPES),
   ],
 );
 
