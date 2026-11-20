@@ -47,7 +47,15 @@ configurations in VS Code, which turn the time limit off (see
   the integration project), so no file copies it.
 - **Integration tests** (`*.int.test.ts` next to the code they test, mostly in `src/server/`) run
   the services against a real PostgreSQL test database, `adiutor_test`. It's created and migrated
-  automatically and emptied before each test. Because the tests empty it, its name must end in
+  automatically and emptied before each test by `tests/database/empty-database.ts` (which the
+  end-to-end and development seeds use too): one statement deletes the rows of every table in the
+  Drizzle schema, tables that reference others first, so a new table is emptied without being
+  listed anywhere. It deletes rather than truncates: `TRUNCATE` gives every table and index new
+  files and PostgreSQL removes the old ones only at the next checkpoint, so a full run piled up
+  over a hundred thousand files, which the Docker bind mount of local development syncs and
+  deletes slowly (dropping the database afterwards could hang); deleting is quicker too. Nothing
+  needs restarting between tests, since no ID comes from a sequence.
+  Because the tests empty it, its name must end in
   `_test` and it can't be the database in `DATABASE_URL` (same host, port and name, read as the
   driver reads them, so a `host` or `port` parameter counts); anything else is refused before a
   test runs (`tests/database/database-url.ts`). They cover the permission rules, the privacy rule,
