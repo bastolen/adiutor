@@ -186,7 +186,7 @@ export const requestEntry = pgTable(
      * no other kind has a subject.
      */
     check(
-      'request_entry_assignment_valid',
+      'request_entry_assignment_fits_values',
       sql`case when ${table.kind} = 'assignee' then ${table.toValue} in (${sql.raw(
         ASSIGNMENT_CHANGES.map((change) => `'${change}'`).join(', '),
       )}) else ${table.subjectUserId} is null end`,

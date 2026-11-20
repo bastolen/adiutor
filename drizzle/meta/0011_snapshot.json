@@ -1,5 +1,5 @@
 {
-  "id": "80dfb010-b995-49a5-8737-cbfaea7d8ba9",
+  "id": "fa065a98-dcfb-4264-b5de-76b97d65039f",
   "prevId": "dd202a67-1a29-4b03-8052-e6abadb1fe69",
   "version": "7",
   "dialect": "postgresql",
@@ -2386,8 +2386,8 @@
           "name": "request_entry_kind_fits_values",
           "value": "(\"request_entry\".\"kind\" = 'comment') = (\"request_entry\".\"body\" is not null) and (\"request_entry\".\"kind\" = 'comment') = (\"request_entry\".\"to_value\" is null)"
         },
-        "request_entry_assignment_valid": {
-          "name": "request_entry_assignment_valid",
+        "request_entry_assignment_fits_values": {
+          "name": "request_entry_assignment_fits_values",
           "value": "case when \"request_entry\".\"kind\" = 'assignee' then \"request_entry\".\"to_value\" in ('assigned', 'unassigned') else \"request_entry\".\"subject_user_id\" is null end"
         },
         "request_entry_kind_valid": {

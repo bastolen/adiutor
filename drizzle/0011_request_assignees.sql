@@ -13,5 +13,5 @@ CREATE UNIQUE INDEX "request_assignee_request_user_idx" ON "request_assignee" US
 CREATE INDEX "request_assignee_user_idx" ON "request_assignee" USING btree ("user_id","request_id");--> statement-breakpoint
 ALTER TABLE "request_entry" ADD CONSTRAINT "request_entry_subject_user_id_user_id_fk" FOREIGN KEY ("subject_user_id") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "request_entry_subject_idx" ON "request_entry" USING btree ("subject_user_id");--> statement-breakpoint
-ALTER TABLE "request_entry" ADD CONSTRAINT "request_entry_assignment_valid" CHECK (case when "request_entry"."kind" = 'assignee' then "request_entry"."to_value" in ('assigned', 'unassigned') else "request_entry"."subject_user_id" is null end);--> statement-breakpoint
+ALTER TABLE "request_entry" ADD CONSTRAINT "request_entry_assignment_fits_values" CHECK (case when "request_entry"."kind" = 'assignee' then "request_entry"."to_value" in ('assigned', 'unassigned') else "request_entry"."subject_user_id" is null end);--> statement-breakpoint
 ALTER TABLE "request_entry" ADD CONSTRAINT "request_entry_kind_valid" CHECK ("request_entry"."kind" in ('comment', 'status', 'title', 'type', 'priority', 'assignee'));
