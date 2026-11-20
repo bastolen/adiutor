@@ -2,7 +2,10 @@
  * @file A request's number as people see and type it. Requests are numbered
  * in one series across Adiutor; the number is shown after a prefix the staff
  * choose ("AD-142"), which is only for display: addresses and searches go by
- * the digits, so changing the prefix breaks nothing. A search finds every
+ * the digits, so changing the prefix breaks nothing. An address may also
+ * name a request the way people see it, with the current prefix
+ * (`/requests/AD-142`, or the short link `/r/AD-142`): it redirects to the
+ * digits. A search finds every
  * request whose number starts with the digits typed, so a number narrows the
  * list as it's typed, like a title does.
  */
@@ -48,6 +51,27 @@ export function formatRequestNumber(prefix: string, number: number): string {
  */
 export function parseRequestNumber(segment: string): number | null {
   return NUMBER_SEGMENT.test(segment) ? Number(segment) : null;
+}
+
+/**
+ * Reads a request in an address the way people may write it: its number
+ * (`142`), or its number after the staff's current prefix, in any case
+ * (`AD-142`, `ad-142`). Only the current prefix counts, so an address with
+ * another prefix names no request.
+ *
+ * @param segment - The part of the address that names the request.
+ * @param prefix - The staff's current prefix, e.g. "AD".
+ * @returns The number, or `null` when the segment names no request.
+ */
+export function parseRequestReference(segment: string, prefix: string): number | null {
+  const separator = segment.indexOf('-');
+  if (separator === -1) {
+    return parseRequestNumber(segment);
+  }
+  if (segment.slice(0, separator).toUpperCase() !== prefix.toUpperCase()) {
+    return null;
+  }
+  return parseRequestNumber(segment.slice(separator + 1));
 }
 
 /**
