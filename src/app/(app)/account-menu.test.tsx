@@ -68,6 +68,14 @@ describe('AccountMenu', () => {
     vi.clearAllMocks();
   });
 
+  it('shows the user’s picture on its button', () => {
+    const { container } = render(
+      <AccountMenu name="Ada Tester" email="ada@adiutor.test" picture="/avatars/ada?v=1" />,
+    );
+
+    expect(container.querySelector('img')).toHaveAttribute('src', '/avatars/ada?v=1');
+  });
+
   it('shows the email address as the name for a user without a name', async () => {
     render(<AccountMenu name="  " email="ada@adiutor.test" />);
 

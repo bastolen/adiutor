@@ -212,7 +212,12 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
                   <Tr key={listed.id}>
                     <Td className={isSelf ? ownRowCell : undefined}>
                       <div className="flex items-center gap-3">
-                        <Avatar name={shownName} size="sm" brand={listed.staffRole !== null} />
+                        <Avatar
+                          name={shownName}
+                          size="sm"
+                          brand={listed.staffRole !== null}
+                          src={listed.picture}
+                        />
                         <div className="flex min-w-0 flex-col">
                           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                             <TextLink

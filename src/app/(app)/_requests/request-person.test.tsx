@@ -12,14 +12,23 @@ const NAMES = { company: 'Adiutor Tests Alpha', staff: 'Adiutor Tests' };
 describe('personName', () => {
   it('is their own name, or their side’s without one', () => {
     expect(
-      personName({ userId: null, name: 'Casey Client', side: 'company', isViewer: false }, NAMES),
+      personName(
+        { userId: null, name: 'Casey Client', side: 'company', isViewer: false, picture: null },
+        NAMES,
+      ),
     ).toBe('Casey Client');
-    expect(personName({ userId: null, name: null, side: 'company', isViewer: false }, NAMES)).toBe(
-      'Adiutor Tests Alpha',
-    );
-    expect(personName({ userId: null, name: null, side: 'staff', isViewer: false }, NAMES)).toBe(
-      'Adiutor Tests',
-    );
+    expect(
+      personName(
+        { userId: null, name: null, side: 'company', isViewer: false, picture: null },
+        NAMES,
+      ),
+    ).toBe('Adiutor Tests Alpha');
+    expect(
+      personName(
+        { userId: null, name: null, side: 'staff', isViewer: false, picture: null },
+        NAMES,
+      ),
+    ).toBe('Adiutor Tests');
   });
 });
 
@@ -27,7 +36,13 @@ describe('PersonLine', () => {
   it('shows someone at the company by name, and what follows it', () => {
     render(
       <PersonLine
-        person={{ userId: null, name: 'Casey Client', side: 'company', isViewer: false }}
+        person={{
+          userId: null,
+          name: 'Casey Client',
+          side: 'company',
+          isViewer: false,
+          picture: null,
+        }}
         names={NAMES}
       >
         <span>2 hours ago</span>
@@ -43,7 +58,13 @@ describe('PersonLine', () => {
   it('labels the staff with the name they are shown with', () => {
     render(
       <PersonLine
-        person={{ userId: null, name: 'Sam Support', side: 'staff', isViewer: false }}
+        person={{
+          userId: null,
+          name: 'Sam Support',
+          side: 'staff',
+          isViewer: false,
+          picture: null,
+        }}
         names={NAMES}
       />,
     );
@@ -55,7 +76,7 @@ describe('PersonLine', () => {
   it('leaves the label out where everyone listed is staff, and still says who the viewer is', () => {
     render(
       <PersonLine
-        person={{ userId: null, name: 'Sam Support', side: 'staff', isViewer: true }}
+        person={{ userId: null, name: 'Sam Support', side: 'staff', isViewer: true, picture: null }}
         names={NAMES}
         sideLabel={false}
       />,
@@ -74,6 +95,7 @@ describe('PersonLine', () => {
           name: 'Casey Client',
           side: 'company',
           isViewer: false,
+          picture: null,
         }}
         names={NAMES}
       />,
@@ -88,7 +110,13 @@ describe('PersonLine', () => {
   it('shows the name as plain text to everyone else', () => {
     render(
       <PersonLine
-        person={{ userId: null, name: 'Casey Client', side: 'company', isViewer: false }}
+        person={{
+          userId: null,
+          name: 'Casey Client',
+          side: 'company',
+          isViewer: false,
+          picture: null,
+        }}
         names={NAMES}
       />,
     );
@@ -105,6 +133,7 @@ describe('PersonLine', () => {
           name: null,
           side: 'company',
           isViewer: false,
+          picture: null,
         }}
         names={NAMES}
       />,
@@ -117,7 +146,13 @@ describe('PersonLine', () => {
   it('marks the reader', () => {
     render(
       <PersonLine
-        person={{ userId: null, name: 'Casey Client', side: 'company', isViewer: true }}
+        person={{
+          userId: null,
+          name: 'Casey Client',
+          side: 'company',
+          isViewer: true,
+          picture: null,
+        }}
         names={NAMES}
       />,
     );
@@ -128,7 +163,7 @@ describe('PersonLine', () => {
   it('shows the side’s name once for someone without a name or an account', () => {
     render(
       <PersonLine
-        person={{ userId: null, name: null, side: 'staff', isViewer: false }}
+        person={{ userId: null, name: null, side: 'staff', isViewer: false, picture: null }}
         names={NAMES}
       />,
     );
@@ -141,7 +176,13 @@ describe('PersonAvatar', () => {
   it('takes its initials from the name that is shown', () => {
     const { container, rerender } = render(
       <PersonAvatar
-        person={{ userId: null, name: 'Sam Support', side: 'staff', isViewer: false }}
+        person={{
+          userId: null,
+          name: 'Sam Support',
+          side: 'staff',
+          isViewer: false,
+          picture: null,
+        }}
         names={NAMES}
       />,
     );
@@ -149,11 +190,29 @@ describe('PersonAvatar', () => {
 
     rerender(
       <PersonAvatar
-        person={{ userId: null, name: null, side: 'company', isViewer: false }}
+        person={{ userId: null, name: null, side: 'company', isViewer: false, picture: null }}
         names={NAMES}
       />,
     );
     expect(container).toHaveTextContent('AT');
+  });
+
+  it('shows their picture over the initials', () => {
+    const { container } = render(
+      <PersonAvatar
+        person={{
+          userId: null,
+          name: 'Sam Support',
+          side: 'staff',
+          isViewer: false,
+          picture: '/avatars/sam?v=1',
+        }}
+        names={NAMES}
+      />,
+    );
+
+    expect(container.querySelector('img')).toHaveAttribute('src', '/avatars/sam?v=1');
+    expect(container).toHaveTextContent('SS');
   });
 });
 
@@ -162,8 +221,8 @@ describe('PeopleAvatars', () => {
     const { container } = render(
       <PeopleAvatars
         people={[
-          { userId: null, name: 'Morgan Manager', side: 'staff', isViewer: false },
-          { userId: null, name: null, side: 'staff', isViewer: false },
+          { userId: null, name: 'Morgan Manager', side: 'staff', isViewer: false, picture: null },
+          { userId: null, name: null, side: 'staff', isViewer: false, picture: null },
         ]}
         names={NAMES}
       />,

@@ -36,8 +36,8 @@ export function personName(person: RequestPerson, names: SideNames): string {
 }
 
 /**
- * Someone's avatar in a request: their initials, in the brand colour for
- * the staff.
+ * Someone's avatar in a request: their picture, or their initials, in the
+ * brand colour for the staff.
  *
  * @param props - Component props.
  * @param props.person - The person.
@@ -54,7 +54,14 @@ export function PersonAvatar({
   names: SideNames;
   size?: 'xs' | 'sm';
 }) {
-  return <Avatar name={personName(person, names)} size={size} brand={person.side === 'staff'} />;
+  return (
+    <Avatar
+      name={personName(person, names)}
+      size={size}
+      brand={person.side === 'staff'}
+      src={person.picture}
+    />
+  );
 }
 
 /**
@@ -87,6 +94,7 @@ export function PeopleAvatars({
             size="sm"
             brand={person.side === 'staff'}
             title={name}
+            src={person.picture}
             className="ring-2 ring-surface"
           />
         );

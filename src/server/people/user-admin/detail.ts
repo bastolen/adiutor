@@ -22,6 +22,7 @@ import { loadMfaContext } from '../../auth/mfa-state';
 import type { ServiceContext } from '../../context';
 import { notFoundError, parseId } from '../../errors';
 import { orderTerms, paginate, textOrder } from '../../pagination';
+import { loadPictures } from '../pictures';
 import { asSeenWith, loadSessionRows, type UserSession } from './sessions';
 
 /** A company the user belongs to, on the detail page. */
@@ -82,6 +83,8 @@ export interface UserDetail {
   sessions: Paged<UserSession> | null;
   /** Their recent audit log entries, or `null` without `audit:view`. */
   activity: AuditEntry[] | null;
+  /** Their picture's address (`loadPictures`), or `null` for their initials. */
+  picture: string | null;
   /**
    * The names of their provider accounts at the providers (a GitHub username,
    * a Google email address), by account ID, or `null` without `users:manage`
@@ -215,6 +218,7 @@ export async function getUserDetail(
     sessions: sessions && asSeenWith(sessions, mfaRole),
     activity,
     accountNames,
+    picture: (await loadPictures(ctx.db, [found.id])).get(found.id) ?? null,
   };
 }
 

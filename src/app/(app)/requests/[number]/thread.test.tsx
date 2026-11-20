@@ -16,13 +16,20 @@ const CASEY: RequestPerson = {
   name: 'Casey Client',
   side: 'company',
   isViewer: true,
+  picture: null,
 };
 
 /** The address of the request's page. */
 const ADDRESS = 'https://adiutor.test/requests/142';
 
 /** Someone on the staff. */
-const SAM: RequestPerson = { userId: null, name: 'Sam Support', side: 'staff', isViewer: false };
+const SAM: RequestPerson = {
+  userId: null,
+  name: 'Sam Support',
+  side: 'staff',
+  isViewer: false,
+  picture: null,
+};
 
 /** A colleague of Sam's. */
 const MORGAN: RequestPerson = {
@@ -30,6 +37,7 @@ const MORGAN: RequestPerson = {
   name: 'Morgan Manager',
   side: 'staff',
   isViewer: false,
+  picture: null,
 };
 
 /**
@@ -227,11 +235,11 @@ describe('Thread', () => {
         detail={detailOf({
           entries: [
             entryOf('1', {
-              author: { userId: null, name: null, side: 'company', isViewer: false },
+              author: { userId: null, name: null, side: 'company', isViewer: false, picture: null },
               body: { text: 'Any news?', format: 'plain' },
             }),
             entryOf('2', {
-              author: { userId: null, name: null, side: 'staff', isViewer: false },
+              author: { userId: null, name: null, side: 'staff', isViewer: false, picture: null },
               body: { text: 'On it.', format: 'plain' },
             }),
           ],
@@ -255,7 +263,7 @@ describe('Thread', () => {
             entryOf('1', { body: { text: '```bash\nnpm test\n```', format: 'markdown' } }),
             entryOf('2', {
               // Someone whose account is gone is named by their side, as next to the reply.
-              author: { userId: null, name: null, side: 'company', isViewer: false },
+              author: { userId: null, name: null, side: 'company', isViewer: false, picture: null },
               createdAt: new Date('2026-11-13T08:00:00Z'),
               body: { text: '```sql\nselect 1;\n```', format: 'markdown' },
             }),

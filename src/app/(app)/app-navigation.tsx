@@ -33,6 +33,8 @@ interface AppNavigationProps {
   sections: StaffSectionKey[];
   /** Whether a staff member is signed in as this user (the account menu says so). */
   signedInAs: boolean;
+  /** Their picture's address, or `null` for their initials. */
+  picture: string | null;
 }
 
 /**
@@ -44,6 +46,7 @@ interface AppNavigationProps {
  * @param props.email - Their email address.
  * @param props.sections - The staff sections to link to.
  * @param props.signedInAs - Whether a staff member is signed in as the user.
+ * @param props.picture - Their picture.
  * @param props.onNavigate - Called after navigating.
  * @returns The panel content.
  */
@@ -52,6 +55,7 @@ function NavigationPanel({
   email,
   sections,
   signedInAs,
+  picture,
   onNavigate = undefined,
 }: AppNavigationProps & { onNavigate?: () => void }) {
   const t = useTranslations('navigation');
@@ -68,7 +72,13 @@ function NavigationPanel({
       <nav aria-label={t('main')} className="flex-1">
         <NavLinks sections={sections} onNavigate={onNavigate} />
       </nav>
-      <AccountMenu name={name} email={email} signedInAs={signedInAs} onNavigate={onNavigate} />
+      <AccountMenu
+        name={name}
+        email={email}
+        signedInAs={signedInAs}
+        picture={picture}
+        onNavigate={onNavigate}
+      />
     </div>
   );
 }
@@ -84,16 +94,29 @@ function NavigationPanel({
  * @param props.email - Their email address.
  * @param props.sections - The staff sections to link to.
  * @param props.signedInAs - Whether a staff member is signed in as the user.
+ * @param props.picture - Their picture.
  * @returns The navigation.
  */
-export default function AppNavigation({ name, email, sections, signedInAs }: AppNavigationProps) {
+export default function AppNavigation({
+  name,
+  email,
+  sections,
+  signedInAs,
+  picture,
+}: AppNavigationProps) {
   const t = useTranslations('navigation');
   const [open, setOpen] = useTransientState(false);
 
   return (
     <>
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-border bg-surface lg:block">
-        <NavigationPanel name={name} email={email} sections={sections} signedInAs={signedInAs} />
+        <NavigationPanel
+          name={name}
+          email={email}
+          sections={sections}
+          signedInAs={signedInAs}
+          picture={picture}
+        />
       </aside>
 
       {/* Its height (`h-14`) is part of the page's `scroll-padding-top` (`--sticky-top` in globals.css). */}
@@ -122,6 +145,7 @@ export default function AppNavigation({ name, email, sections, signedInAs }: App
             email={email}
             sections={sections}
             signedInAs={signedInAs}
+            picture={picture}
             onNavigate={() => setOpen(false)}
           />
         </Sheet>

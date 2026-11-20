@@ -39,6 +39,7 @@ import { assertRoleChangeLimit } from '../rate-limit';
 import { defaultLanguage } from '../recipient-locale';
 import { unassignFrom } from '../requests';
 import { revokeInvitationsTo, revokeInvitesWithoutManager } from './invitations';
+import { loadPictures } from './pictures';
 import getRequestPrefix from './request-prefix';
 import notifyStaffAdminAdded from './staff-admin-notice';
 import getStaffName from './staff-name';
@@ -59,6 +60,8 @@ export interface StaffMember {
   createdAt: Date;
   /** When their account was deactivated, or `null` while active. */
   deactivatedAt: Date | null;
+  /** Their picture's address (`loadPictures`), or `null` for their initials. */
+  picture: string | null;
 }
 
 /**
@@ -240,9 +243,15 @@ export async function listStaff(
         .limit(limit)
         .offset(offset),
   );
+  const pictures = await loadPictures(
+    ctx.db,
+    page.items.map(({ userId }) => userId),
+  );
   return {
     ...page,
-    items: page.items.flatMap((row) => (row.role ? [{ ...row, role: row.role }] : [])),
+    items: page.items.flatMap((row) =>
+      row.role ? [{ ...row, role: row.role, picture: pictures.get(row.userId) ?? null }] : [],
+    ),
   };
 }
 

@@ -167,7 +167,14 @@ async function UserDetailContent({
     >
       <PageHeader
         back={{ href: '/admin/users', label: t('back') }}
-        leading={<Avatar name={userName} size="lg" brand={detail.staffRole !== null} />}
+        leading={
+          <Avatar
+            name={userName}
+            size="lg"
+            brand={detail.staffRole !== null}
+            src={detail.picture}
+          />
+        }
         title={userName}
         description={detail.email}
       >

@@ -58,6 +58,7 @@ import {
   STEP_UP_MANAGER,
   STEP_UP_CLIENT,
   SUPPORT_STAFF,
+  SUPPORT_STAFF_PICTURE,
   SESSIONS_CLIENT,
   UNVERIFIED_USER,
 } from './fixtures';
@@ -144,6 +145,14 @@ export default async function seedTestDatabase(): Promise<void> {
     const platformAdmin = await addPerson(PLATFORM_ADMIN, { platformRole: 'platform_admin' });
     await addPerson(PLATFORM_MANAGER, { platformRole: 'manager' });
     const support = await addPerson(SUPPORT_STAFF, { platformRole: 'support' });
+    // A Google account with a picture, so avatars show one (Google never counts as MFA).
+    await db.insert(schema.account).values({
+      userId: support,
+      accountId: 'e2e-support-google',
+      providerId: 'google',
+      accountName: SUPPORT_STAFF.email,
+      accountImage: SUPPORT_STAFF_PICTURE,
+    });
     await addPerson(FINANCE_STAFF, { platformRole: 'finance' });
     await addPerson(NAMELESS_SUPPORT, { platformRole: 'support' });
 
