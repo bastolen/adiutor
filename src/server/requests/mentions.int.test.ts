@@ -25,7 +25,8 @@ import {
   staffActor,
 } from '../../../tests/integration/helpers';
 import { getRequest } from './detail';
-import { listMentionable, mentionKey } from './mentions';
+import mentionKey from './mention-key';
+import { listMentionable } from './mentions';
 import raiseRequest from './raise';
 import replyToRequest from './reply';
 import { ctx, db, storeAssignees, storeEntry, storeRequest } from './test-helpers';

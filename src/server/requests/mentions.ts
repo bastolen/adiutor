@@ -15,8 +15,6 @@
  * key that's only valid in the request's company ({@link mentionKey}); once
  * it's stored, by the ID of the mention's row.
  */
-import { createHmac } from 'node:crypto';
-
 import { and, eq, inArray, isNotNull, isNull, ne, or } from 'drizzle-orm';
 
 import type { Database, DatabaseTransaction } from '@/db';
@@ -30,10 +28,8 @@ import {
 } from '@/db/schema';
 import { getStaffPermissionsInCompanies } from '@/lib/authz/permissions';
 import { visibleName } from '@/lib/display-name';
-import { env } from '@/lib/env';
 import {
   MAX_MENTIONS_PER_TEXT,
-  MENTION_KEY_LENGTH,
   type RequestSide,
   storeWrittenMentions,
   writtenMentionKeys,
@@ -43,6 +39,7 @@ import { assertPermission, getCompanyAccess } from '../access';
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { getRequestAccess, READING_STAFF_ROLES } from './access';
+import mentionKey from './mention-key';
 import { subscribeAutomatically } from './subscribers';
 
 /** Someone who can be mentioned, as the list at "@" shows them. */
@@ -74,33 +71,6 @@ interface TextPlace {
   companyId: string;
   /** The request's ID; `null` for a request that's still being written. */
   requestId: string | null;
-}
-
-/**
- * The secret the keys are made with: its own, worked out from the app's
- * secret once, so a key is never a signature of anything else.
- */
-let keySecret: Buffer | undefined;
-
-/**
- * The key that stands for a person in a text that's being written in a
- * company. It's the same every time, so a text that was kept in the browser
- * still names them, and it can't be turned back into who they are or used in
- * another company. Nothing is stored for it: the server makes the keys of
- * the people who may be mentioned again and compares.
- *
- * @param companyId - The company the text is written in.
- * @param userId - The person.
- * @returns Their key there.
- */
-export function mentionKey(companyId: string, userId: string): string {
-  keySecret ??= createHmac('sha256', env.BETTER_AUTH_SECRET)
-    .update('adiutor mention keys')
-    .digest();
-  return createHmac('sha256', keySecret)
-    .update(`${companyId}:${userId}`)
-    .digest('base64url')
-    .slice(0, MENTION_KEY_LENGTH);
 }
 
 /**
@@ -260,7 +230,9 @@ export async function listMentionable(
  * markers at those rows. Called in the transaction that stored the text,
  * right after it: the text's row comes first, since a mention belongs to it.
  *
- * Whoever is mentioned is subscribed to the request (`subscribeAutomatically`).
+ * Whoever is mentioned is subscribed to the request (`subscribeAutomatically`),
+ * unless the text mentioned them already before an edit (`before`): editing
+ * a text doesn't put back someone who unsubscribed since.
  *
  * Only the markers of people the writer may mention there count, and the
  * first {@link MAX_MENTIONS_PER_TEXT} people of those; every other marker
@@ -274,11 +246,14 @@ export async function listMentionable(
  * @param text.requestId - The request.
  * @param text.entryId - The reply the text is; `null` for the request's description.
  * @param text.written - The text.
+ * @param before - The user IDs of the people the text mentioned before it was edited; nobody
+ *   for a new text.
  */
 export async function storeMentions(
   tx: DatabaseTransaction,
   actor: Actor,
   text: { companyId: string; requestId: string; entryId: string | null; written: string },
+  before: readonly string[] = [],
 ): Promise<void> {
   const { companyId, requestId, entryId, written } = text;
   const keys = writtenMentionKeys(written);
@@ -308,7 +283,7 @@ export async function storeMentions(
   await subscribeAutomatically(
     tx,
     requestId,
-    mentioned.map(({ id }) => id),
+    mentioned.flatMap(({ id }) => (before.includes(id) ? [] : [id])),
   );
   const stored = storeWrittenMentions(written, (key) => rowOf.get(key) ?? null);
   if (entryId === null) {

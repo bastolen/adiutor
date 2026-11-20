@@ -1361,6 +1361,44 @@ test.describe('requests', () => {
       await expect(unsubscribe).toBeFocused();
     });
 
+    test('a description is edited with the keyboard, and focus returns to its Edit button', async ({
+      page,
+    }) => {
+      await page.goto(await storeOwnRequest('A description edited with the keyboard'));
+      const description = page.getByRole('region', { name: 'Description' });
+      const edit = description.getByRole('button', { name: 'Edit description' });
+      const editor = description.getByRole('textbox', { name: 'Description' });
+      const save = description.getByRole('button', { name: 'Save' });
+      const cancel = description.getByRole('button', { name: 'Cancel' });
+
+      // Edit opens the editor with focus in the text; Tab goes on to Save, then Cancel.
+      await edit.focus();
+      await page.keyboard.press('Enter');
+      await expect(editor).toHaveAttribute('contenteditable', 'true');
+      await expect(editor).toBeFocused();
+      await page.keyboard.type(' Not kept.');
+      await page.keyboard.press('Tab');
+      await expect(save).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(cancel).toBeFocused();
+      // Cancel puts the text back, with focus on the Edit button.
+      await page.keyboard.press('Enter');
+      await expect(editor).toHaveCount(0);
+      await expect(description).not.toContainText('Not kept.');
+      await expect(edit).toBeFocused();
+
+      // Saving does the same, once the text is saved.
+      await page.keyboard.press('Enter');
+      await expect(editor).toHaveAttribute('contenteditable', 'true');
+      await expect(editor).toBeFocused();
+      await page.keyboard.type(' Kept.');
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Enter');
+      await expect(toasts(page)).toContainText('Changes saved.');
+      await expect(description).toContainText('Kept.');
+      await expect(edit).toBeFocused();
+    });
+
     test('cancelling a request asks first, keeps focus inside and returns it', async ({ page }) => {
       await page.goto(await storeOwnRequest('A request cancelled with the keyboard'));
       const cancelRequest = page

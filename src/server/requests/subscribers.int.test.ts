@@ -31,7 +31,8 @@ import { deactivateUser, deleteUser } from '../people/user-admin';
 import { RATE_LIMITS } from '../rate-limit';
 import { changeAssignees } from './assignees';
 import { getRequest } from './detail';
-import { mentionKey } from './mentions';
+import { editReply } from './edits';
+import mentionKey from './mention-key';
 import raiseRequest from './raise';
 import replyToRequest from './reply';
 import {
@@ -70,6 +71,16 @@ async function storeSubscribers(requestId: string, userIds: readonly string[]): 
     .insert(requestParticipant)
     .values(userIds.map((userId) => ({ requestId, userId, role: 'subscriber' as const })));
 }
+
+/**
+ * The keys that stand for people in a company, as the dialog sends them.
+ *
+ * @param companyId - The company.
+ * @param userIds - The people.
+ * @returns Their keys there.
+ */
+const keysOf = (companyId: string, ...userIds: string[]) =>
+  userIds.map((userId) => mentionKey(companyId, userId));
 
 /**
  * The names of the people in a list, with the staff marked.
@@ -178,7 +189,7 @@ describe('changeSubscribers', () => {
     expect(
       await changeSubscribers(ctx, support, {
         request: raised.id,
-        add: [client.id, watcher.id, finance.id, client.id],
+        add: keysOf(company.id, client.id, watcher.id, finance.id, client.id),
         remove: [],
       }),
     ).toEqual({ added: 3, removed: 0 });
@@ -187,8 +198,8 @@ describe('changeSubscribers', () => {
     expect(
       await changeSubscribers(ctx, support, {
         request: raised.id,
-        add: [client.id],
-        remove: [watcher.id, support.id],
+        add: keysOf(company.id, client.id),
+        remove: keysOf(company.id, watcher.id, support.id),
       }),
     ).toEqual({ added: 0, removed: 1 });
 
@@ -204,8 +215,8 @@ describe('changeSubscribers', () => {
 
     await changeSubscribers(ctx, support, {
       request: raised.id,
-      add: [client.id],
-      remove: [client.id],
+      add: keysOf(company.id, client.id),
+      remove: keysOf(company.id, client.id),
     });
 
     expect(await subscribersOf(raised.id)).toEqual([client.id]);
@@ -221,21 +232,33 @@ describe('changeSubscribers', () => {
     await storeSubscribers(raised.id, [support.id]);
 
     expect(
-      await changeSubscribers(ctx, admin, { request: raised.id, add: [colleague.id], remove: [] }),
+      await changeSubscribers(ctx, admin, {
+        request: raised.id,
+        add: keysOf(company.id, colleague.id),
+        remove: [],
+      }),
     ).toEqual({ added: 1, removed: 0 });
     // Someone on the staff, or at another company, isn't theirs to subscribe.
     await expect(
-      changeSubscribers(ctx, admin, { request: raised.id, add: [support.id], remove: [] }),
+      changeSubscribers(ctx, admin, {
+        request: raised.id,
+        add: keysOf(company.id, support.id),
+        remove: [],
+      }),
     ).rejects.toMatchObject({ code: 'invalid', key: 'errors.requests.notSubscribable' });
     await expect(
-      changeSubscribers(ctx, admin, { request: raised.id, add: [outsider.id], remove: [] }),
+      changeSubscribers(ctx, admin, {
+        request: raised.id,
+        add: keysOf(company.id, outsider.id),
+        remove: [],
+      }),
     ).rejects.toMatchObject({ code: 'invalid', key: 'errors.requests.notSubscribable' });
     // And a staff member who follows along is left alone, without a word about it.
     expect(
       await changeSubscribers(ctx, admin, {
         request: raised.id,
         add: [],
-        remove: [support.id, colleague.id],
+        remove: keysOf(company.id, support.id, colleague.id),
       }),
     ).toEqual({ added: 0, removed: 1 });
 
@@ -249,7 +272,11 @@ describe('changeSubscribers', () => {
     await addMember(db, company.id, both.id, 'client');
     const raised = await storeRequest(company.id);
 
-    await changeSubscribers(ctx, admin, { request: raised.id, add: [both.id], remove: [] });
+    await changeSubscribers(ctx, admin, {
+      request: raised.id,
+      add: keysOf(company.id, both.id),
+      remove: [],
+    });
 
     expect(await subscribersOf(raised.id)).toEqual([both.id]);
   });
@@ -264,7 +291,11 @@ describe('changeSubscribers', () => {
     for (const actor of [client, watcher, finance]) {
       // eslint-disable-next-line no-await-in-loop -- One after another, on one connection.
       await expect(
-        changeSubscribers(ctx, actor, { request: raised.id, add: [watcher.id], remove: [] }),
+        changeSubscribers(ctx, actor, {
+          request: raised.id,
+          add: keysOf(company.id, watcher.id),
+          remove: [],
+        }),
       ).rejects.toMatchObject({ code: 'forbidden' });
     }
     expect(await subscribersOf(raised.id)).toEqual([]);
@@ -281,13 +312,17 @@ describe('changeSubscribers', () => {
     for (const id of [left.id, stranger, '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b']) {
       // eslint-disable-next-line no-await-in-loop -- One after another, on one connection.
       await expect(
-        changeSubscribers(ctx, support, { request: raised.id, add: [id], remove: [] }),
+        changeSubscribers(ctx, support, {
+          request: raised.id,
+          add: keysOf(company.id, id),
+          remove: [],
+        }),
       ).rejects.toMatchObject({ code: 'invalid', key: 'errors.requests.notSubscribable' });
     }
     expect(await subscribersOf(raised.id)).toEqual([]);
   });
 
-  it('lets the staff take off someone who can no longer be subscribed', async () => {
+  it('leaves alone a key that stands for nobody the actor can subscribe', async () => {
     const company = await createCompany(db);
     const support = await staffActor(db, 'support');
     const left = await memberActor(db, company.id, 'client');
@@ -295,24 +330,47 @@ describe('changeSubscribers', () => {
     await storeSubscribers(raised.id, [left.id]);
     await db.delete(membership).where(eq(membership.userId, left.id));
 
+    // Someone who left is no longer listed as a subscriber either (`loadSubscribers`).
     expect(
-      await changeSubscribers(ctx, support, { request: raised.id, add: [], remove: [left.id] }),
-    ).toEqual({ added: 0, removed: 1 });
+      await changeSubscribers(ctx, support, {
+        request: raised.id,
+        add: [],
+        remove: keysOf(company.id, left.id),
+      }),
+    ).toEqual({ added: 0, removed: 0 });
   });
 
-  it('takes user IDs only, and not more than a change holds', async () => {
+  it('takes a key only where it was made for: another company’s means nothing', async () => {
+    const company = await createCompany(db);
+    const other = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const client = await memberActor(db, company.id, 'client');
+    const raised = await storeRequest(company.id);
+
+    await expect(
+      changeSubscribers(ctx, support, {
+        request: raised.id,
+        add: keysOf(other.id, client.id),
+        remove: [],
+      }),
+    ).rejects.toMatchObject({ code: 'invalid', key: 'errors.requests.notSubscribable' });
+    // Nor does a user ID, which the dialog never holds.
+    await expect(
+      changeSubscribers(ctx, support, { request: raised.id, add: [client.id], remove: [] }),
+    ).rejects.toBeInstanceOf(ZodError);
+    expect(await subscribersOf(raised.id)).toEqual([]);
+  });
+
+  it('takes no more than a change holds', async () => {
     const company = await createCompany(db);
     const support = await staffActor(db, 'support');
     const raised = await storeRequest(company.id);
 
     await expect(
-      changeSubscribers(ctx, support, { request: raised.id, add: ['someone'], remove: [] }),
-    ).rejects.toBeInstanceOf(ZodError);
-    await expect(
       changeSubscribers(ctx, support, {
         request: raised.id,
         add: [],
-        remove: Array.from({ length: MAX_SUBSCRIBER_CHANGES + 1 }, () => support.id),
+        remove: Array.from({ length: MAX_SUBSCRIBER_CHANGES + 1 }, (_, index) => `key-${index}`),
       }),
     ).rejects.toBeInstanceOf(ZodError);
   });
@@ -352,7 +410,16 @@ describe('listSubscribable', () => {
     const raised = await storeRequest(company.id);
     await storeSubscribers(raised.id, [support.id]);
 
-    expect(names(await listSubscribable(ctx, admin, raised.id))).toEqual(['anna', 'both', 'wim']);
+    const listed = await listSubscribable(ctx, admin, raised.id);
+
+    expect(names(listed)).toEqual(['anna', 'both', 'wim']);
+    // Each by a key, which is all the dialog needs: no user ID reaches a company's browser.
+    expect(listed.map(({ key, isViewer }) => [key, isViewer])).toEqual([
+      [mentionKey(company.id, admin.id), true],
+      [mentionKey(company.id, both.id), false],
+      [expect.any(String), false],
+    ]);
+    expect(JSON.stringify(listed)).not.toContain(both.id);
   });
 
   it('leaves out who the request is assigned to: they follow it as that', async () => {
@@ -421,6 +488,31 @@ describe('who is subscribed automatically', () => {
     await replyToRequest(ctx, client, { request: raised.id, body: 'It still prints blank pages.' });
 
     expect(await subscribersOf(raised.id)).toEqual([client.id]);
+  });
+});
+
+describe('editing a text', () => {
+  it('subscribes who the edit mentions newly, not who unsubscribed since they were mentioned', async () => {
+    const company = await createCompany(db);
+    const casey = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const wim = await memberActor(db, company.id, 'watcher', 'wim@adiutor.test');
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    const raised = await storeRequest(company.id);
+    const toCasey = writtenMentionMarker('casey', mentionKey(company.id, casey.id));
+    const toWim = writtenMentionMarker('wim', mentionKey(company.id, wim.id));
+    await replyToRequest(ctx, support, { request: raised.id, body: `Which one, ${toCasey}?` });
+    const [reply] = await db.select({ id: requestEntry.id }).from(requestEntry);
+    await unsubscribe(ctx, casey, { request: raised.id });
+    expect(await subscribersOf(raised.id)).toEqual([support.id]);
+
+    await editReply(ctx, support, {
+      request: raised.id,
+      entry: reply?.id ?? '',
+      text: `Which one, ${toCasey} or ${toWim}?`,
+      edits: 0,
+    });
+
+    expect(await subscribersOf(raised.id)).toEqual([support.id, wim.id].sort());
   });
 });
 
@@ -566,7 +658,7 @@ describe('losing access to a request', () => {
 describe('the subscribers of the requests there were', () => {
   /** What the migration does for the requests that were there before it: its last statement. */
   const backfill =
-    readFileSync(path.join(process.cwd(), 'drizzle/0014_request_participants.sql'), 'utf8')
+    readFileSync(path.join(process.cwd(), 'drizzle/0015_request_participants.sql'), 'utf8')
       .split('--> statement-breakpoint')
       .at(-1) ?? '';
 

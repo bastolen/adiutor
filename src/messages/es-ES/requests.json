@@ -150,7 +150,21 @@
       "assignees": "{changed, plural, =0 {No ha cambiado nada.} other {Asignación guardada.}}",
       "assignedYou": "Ahora tienes asignada esta solicitud.",
       "subscribers": "{changed, plural, =0 {No ha cambiado nada.} other {Suscriptores guardados.}}",
-      "subscription": "{change, select, subscribed {Te has suscrito a esta solicitud.} other {Has cancelado tu suscripción a esta solicitud.}}"
+      "subscription": "{change, select, subscribed {Te has suscrito a esta solicitud.} other {Has cancelado tu suscripción a esta solicitud.}}",
+      "text": "{changed, select, yes {Cambios guardados.} other {No ha cambiado nada.}}"
+    },
+    "edit": {
+      "editDescription": "Editar descripción",
+      "editReply": "Editar respuesta",
+      "descriptionLabel": "Descripción",
+      "replyLabel": "Respuesta",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "edited": "Editado",
+      "editedAt": "Editado el {time}",
+      "versionsTitle": "Versiones anteriores",
+      "versionsDescription": "Lo que decía este texto antes de editarlo, la más reciente primero. Solo el personal las ve.",
+      "versionLine": "{name} lo cambió el {time}."
     }
   }
 }

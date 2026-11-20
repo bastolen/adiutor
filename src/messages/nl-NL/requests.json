@@ -150,7 +150,21 @@
       "assignees": "{changed, plural, =0 {Er is niets gewijzigd.} other {Toewijzing opgeslagen.}}",
       "assignedYou": "Dit verzoek is aan je toegewezen.",
       "subscribers": "{changed, plural, =0 {Er is niets gewijzigd.} other {Abonnees opgeslagen.}}",
-      "subscription": "{change, select, subscribed {Je bent geabonneerd op dit verzoek.} other {Je bent niet meer geabonneerd op dit verzoek.}}"
+      "subscription": "{change, select, subscribed {Je bent geabonneerd op dit verzoek.} other {Je bent niet meer geabonneerd op dit verzoek.}}",
+      "text": "{changed, select, yes {Wijzigingen opgeslagen.} other {Er is niets gewijzigd.}}"
+    },
+    "edit": {
+      "editDescription": "Beschrijving bewerken",
+      "editReply": "Reactie bewerken",
+      "descriptionLabel": "Beschrijving",
+      "replyLabel": "Reactie",
+      "save": "Opslaan",
+      "cancel": "Annuleren",
+      "edited": "Bewerkt",
+      "editedAt": "Bewerkt op {time}",
+      "versionsTitle": "Eerdere versies",
+      "versionsDescription": "Wat deze tekst zei voor de bewerkingen, de nieuwste eerst. Alleen medewerkers zien deze.",
+      "versionLine": "{name} heeft dit gewijzigd op {time}."
     }
   }
 }

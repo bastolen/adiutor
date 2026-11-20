@@ -1,4 +1,4 @@
-# 0024. The people on a request: one table with roles, and subscribing as a preference
+# 0025. The people on a request: one table with roles, and subscribing as a preference
 
 - **Status:** Accepted
 - **Date:** 2026-11-20

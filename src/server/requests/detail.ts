@@ -6,10 +6,18 @@
 import { and, count, desc, eq, min, ne } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
-import { requestEntry, requestMention, requestParticipant, user } from '@/db/schema';
+import {
+  requestEntry,
+  requestMention,
+  requestParticipant,
+  requestTextVersion,
+  user,
+} from '@/db/schema';
 import type { Permission } from '@/lib/authz/permissions';
 import { firstRow } from '@/lib/defined';
 import {
+  mayEditDescription,
+  mayEditReply,
   parseRequestReference,
   type RequestAudience,
   type RequestEntryKind,
@@ -26,6 +34,7 @@ import { loadPictures } from '../people/pictures';
 import getRequestPrefix from '../people/request-prefix';
 import getStaffName from '../people/staff-name';
 import { getRequestAccess, requestAudienceIn, type RequestPerson, requestPerson } from './access';
+import { editableText, type TextMention } from './edits';
 import { loadSubscribers } from './subscribers';
 
 /** The account an `assignee` entry is about, joined next to its author's. */
@@ -49,6 +58,29 @@ export interface RequestText {
    * ID names nobody. Left out for a text that mentions nobody.
    */
   mentions?: Record<string, RequestPerson>;
+  /** When it was last edited; `null` or left out while it's as it was written. */
+  editedAt?: Date | null;
+  /**
+   * For a reader who may edit it now (`mayEditDescription`, `mayEditReply`):
+   * the text as its editor starts from it, with its mentions as ones that
+   * are being written, and how many times it was edited, which the edit
+   * sends back so an edit someone made meanwhile isn't overwritten.
+   */
+  edit?: { markdown: string; edits: number };
+  /** Its earlier versions, newest first, for the staff (`requests:view-internal`) only. */
+  versions?: TextVersion[];
+}
+
+/** An earlier version of a request's text, as the staff read it. */
+export interface TextVersion {
+  /** The text as it was before the edit, its mentions as plain names. */
+  text: string;
+  /** Its format. */
+  format: RequestTextFormat;
+  /** Who edited it away. */
+  editedBy: RequestPerson;
+  /** When. */
+  at: Date;
 }
 
 /** One entry of a request's history, as its readers see it. */
@@ -212,6 +244,7 @@ export async function getRequest(
     assignees,
     following,
     mentioned,
+    versions,
     staffName,
     prefix,
     firstResponse,
@@ -243,6 +276,19 @@ export async function getRequest(
       .from(requestMention)
       .leftJoin(user, eq(requestMention.userId, user.id))
       .where(eq(requestMention.requestId, found.id)),
+    ctx.db
+      .select({
+        entryId: requestTextVersion.entryId,
+        text: requestTextVersion.body,
+        format: requestTextVersion.bodyFormat,
+        editedBySide: requestTextVersion.editedBySide,
+        at: requestTextVersion.createdAt,
+        editedBy: { id: user.id, name: user.name },
+      })
+      .from(requestTextVersion)
+      .leftJoin(user, eq(requestTextVersion.editedBy, user.id))
+      .where(eq(requestTextVersion.requestId, found.id))
+      .orderBy(desc(requestTextVersion.id)),
     getStaffName(ctx.db),
     getRequestPrefix(ctx.db),
     ctx.db
@@ -264,6 +310,7 @@ export async function getRequest(
         createdAt: requestEntry.createdAt,
         body: requestEntry.body,
         bodyFormat: requestEntry.bodyFormat,
+        editedAt: requestEntry.editedAt,
         from: requestEntry.fromValue,
         to: requestEntry.toValue,
         author: { id: user.id, name: user.name },
@@ -286,6 +333,54 @@ export async function getRequest(
     mentionsOf.set(entryId, ofText);
   });
 
+  // What each text was before its edits: everyone gets how many there were (to edit it), only the
+  // staff get the versions themselves.
+  const versionsOf = new Map<string | null, TextVersion[]>();
+  versions.forEach(({ entryId, editedBy, editedBySide, ...version }) => {
+    const ofText = versionsOf.get(entryId) ?? [];
+    ofText.push({
+      ...version,
+      editedBy: requestPerson(editedBy ?? { id: null, name: null }, editedBySide, actor),
+    });
+    versionsOf.set(entryId, ofText);
+  });
+  const textMentions = new Map<string | null, TextMention[]>();
+  mentioned.forEach(({ entryId, ...mention }) => {
+    textMentions.set(entryId, [...(textMentions.get(entryId) ?? []), mention]);
+  });
+  const names = { company: company.name, staff: staffName };
+  // Nothing of a deactivated company's request changes, so nothing of it is edited.
+  const editable = company.deactivatedAt === null;
+  /**
+   * What a text adds for its readers: when it was edited, what its editor
+   * starts from (for a reader who may edit it), and its versions (staff).
+   *
+   * @param entryId - The reply; `null` for the description.
+   * @param stored - The text as it's stored.
+   * @param editedAt - When it was last edited.
+   * @param mayEdit - Whether the reader may edit it now.
+   * @returns The text's extra fields.
+   */
+  const editsOf = (
+    entryId: string | null,
+    stored: string,
+    editedAt: Date | null,
+    mayEdit: boolean,
+  ): Pick<RequestText, 'editedAt' | 'edit' | 'versions'> => {
+    const ofText = versionsOf.get(entryId) ?? [];
+    return {
+      editedAt,
+      ...(editable &&
+        mayEdit && {
+          edit: {
+            markdown: editableText(stored, textMentions.get(entryId) ?? [], company.id, names),
+            edits: ofText.length,
+          },
+        }),
+      ...(internal && ofText.length > 0 && { versions: ofText }),
+    };
+  };
+
   // Everyone the page names, with their pictures, in one go.
   // The subscribers the reader may see: the company's own for someone at the company, and
   // never someone the request is assigned to, who is listed as that.
@@ -302,13 +397,23 @@ export async function getRequest(
   ]);
   const entries = latest
     .reverse()
-    .map(({ author, authorSide, body, bodyFormat, subject, ...entry }) => ({
+    .map(({ author, authorSide, body, bodyFormat, subject, editedAt, ...entry }) => ({
       ...entry,
       author: requestPerson(author ?? { id: null, name: null }, authorSide, actor, pictures),
       body:
         body === null
           ? null
-          : { text: body, format: bodyFormat, mentions: mentionsOf.get(entry.id) },
+          : {
+              text: body,
+              format: bodyFormat,
+              mentions: mentionsOf.get(entry.id),
+              ...editsOf(
+                entry.id,
+                body,
+                editedAt,
+                mayEditReply(permissions, found.status, author?.id === actor.id),
+              ),
+            },
       // An assignment's subject is always on the staff's side, also once their account is gone.
       subject:
         entry.kind === 'assignee'
@@ -326,6 +431,12 @@ export async function getRequest(
       text: found.description,
       format: found.descriptionFormat,
       mentions: mentionsOf.get(null),
+      ...editsOf(
+        null,
+        found.description,
+        found.descriptionEditedAt,
+        mayEditDescription(permissions, found.status),
+      ),
     },
     type: found.type,
     status: found.status,

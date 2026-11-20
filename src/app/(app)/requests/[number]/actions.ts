@@ -1,8 +1,8 @@
 /**
  * @file Server actions for a request's page: replying, changing the status,
- * changing the details, changing who it's assigned to, and subscribing to
- * it. The services check who may do what; these read the form, refresh the
- * page and word the confirmation in the request's language
+ * changing the details, changing who it's assigned to, editing a text and
+ * subscribing to it. The services check who may do what; these read the
+ * form, refresh the page and word the confirmation in the request's language
  * (`requests.reply`, `requests.saved`).
  */
 'use server';
@@ -20,6 +20,8 @@ import {
   changeAssignees,
   changeRequestStatus,
   changeSubscribers,
+  editReply,
+  editRequestDescription,
   replyToRequest,
   subscribe,
   unsubscribe,
@@ -151,6 +153,47 @@ export async function changeAssigneesAction(
 }
 
 /**
+ * Edits a request's description, or a reply (`entry`). The form sends how
+ * many times the text had been edited when it opened (`edits`), so an edit
+ * someone made meanwhile isn't overwritten: then nothing is saved, and the
+ * page is refreshed all the same, so it shows the text as it is.
+ *
+ * @param _previous - The previous result (unused).
+ * @param formData - Fields `request` (its number), `entry` (a reply's ID; empty for the
+ *   description), `text` and `edits`.
+ * @returns A confirmation, or why it failed.
+ */
+export async function editTextAction(
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const actor = await getActor();
+    const entry = field(formData, 'entry');
+    const counted = Number(field(formData, 'edits'));
+    const input = {
+      request: field(formData, 'request'),
+      text: field(formData, 'text'),
+      // A count that isn't one can't match: the edit is refused as made meanwhile.
+      edits: Number.isSafeInteger(counted) ? counted : -1,
+    };
+    const { changed } = await (
+      entry
+        ? editReply(appContext, actor, { ...input, entry })
+        : editRequestDescription(appContext, actor, input)
+    ).catch((error: unknown) => {
+      if (error instanceof ServiceError && error.code === 'conflict') {
+        refresh();
+      }
+      throw error;
+    });
+    refresh();
+    const t = await getTranslations('requests.saved');
+    return { ok: true, message: t('text', { changed: changed ? 'yes' : 'no' }) };
+  });
+}
+
+/**
  * Subscribes the actor to a request, or unsubscribes them: the one button
  * under a request's subscribers sends `subscribe` with `yes` to follow it,
  * and with anything else to stop.
@@ -190,7 +233,7 @@ export async function changeSubscriptionAction(
  *
  * @param _previous - The previous result (unused).
  * @param formData - Field `request` (its number), and `subscriber` and `was_subscriber`, each
- *   a user ID and sent once per person.
+ *   a person's key (as the dialog got it) and sent once per person.
  * @returns A confirmation, or why it failed.
  */
 export async function changeSubscribersAction(

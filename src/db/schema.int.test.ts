@@ -75,6 +75,8 @@ describe('database rules', () => {
     'request_participant_role_valid',
     'request_priority_valid',
     'request_status_valid',
+    'request_text_version_body_format_valid',
+    'request_text_version_edited_by_side_valid',
     'request_type_valid',
     'staff_settings_default_locale_valid',
   ];

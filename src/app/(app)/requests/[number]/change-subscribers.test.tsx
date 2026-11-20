@@ -20,17 +20,17 @@ afterEach(() => {
 /**
  * Someone the dialog offers.
  *
- * @param id - Their user ID.
+ * @param key - The key that stands for them.
  * @param name - Their name.
  * @param is - What differs from someone at the company who isn't subscribed.
  * @returns The choice.
  */
 const choice = (
-  id: string,
+  key: string,
   name: string,
   is: Partial<SubscriberChoice> = {},
 ): SubscriberChoice => ({
-  id,
+  key,
   name,
   staff: false,
   subscribed: false,
@@ -162,7 +162,7 @@ describe('ChangeSubscribers', () => {
     const dialog = await openDialog(user);
     // Anna subscribed herself meanwhile, and the page behind the dialog shows it.
     const refreshed = EVERYONE.map((person) =>
-      person.id === 'anna' ? { ...person, subscribed: true } : person,
+      person.key === 'anna' ? { ...person, subscribed: true } : person,
     );
     rerender(<ChangeSubscribers {...props} choices={refreshed} />);
 

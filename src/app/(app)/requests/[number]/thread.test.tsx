@@ -3,12 +3,16 @@
  */
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { RequestDetail, RequestEntryView, RequestPerson } from '@/server/requests';
 
 import renderInLocale from '../../../../../tests/i18n/render';
 import Thread from './thread';
+
+// An editable reply's editor sends its text through a server action.
+vi.mock('./actions', () => ({ editTextAction: vi.fn() }));
+vi.mock('../../_requests/mention-actions', () => ({ mentionChoicesAction: vi.fn() }));
 
 /** Someone at the company, who reads the page. */
 const CASEY: RequestPerson = {

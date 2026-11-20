@@ -141,3 +141,19 @@ export function nameStoredMentions(text: string, name: (id: string) => string | 
     return named === null ? marker : `@${named}`;
   });
 }
+
+/**
+ * Turns the markers of a stored text back into markers of one that's being
+ * written, to edit it: each mention gets the person's name and key again, so
+ * the editor shows it and it's stored afresh when the text is saved
+ * ({@link storeWrittenMentions}). A mention of nobody (the account is gone)
+ * becomes plain text.
+ *
+ * @param text - The stored text.
+ * @param written - Gives the written marker (or the plain text) for a mention's ID, or `null`
+ *   for a mention that isn't the text's: its marker stays as it is.
+ * @returns The text to edit.
+ */
+export function editStoredMentions(text: string, written: (id: string) => string | null): string {
+  return text.replace(STORED_MARKERS, (marker: string, id: string) => written(id) ?? marker);
+}

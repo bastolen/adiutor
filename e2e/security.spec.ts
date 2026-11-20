@@ -129,7 +129,7 @@ test('page addresses ending like a file still get the policy, and static files a
 }) => {
   // Not skipped by their extension: these still go through the app (here, to sign in).
   const pages = await Promise.all(
-    ['/companies/x.png', '/nope.png', '/invite/abc.xml'].map((path) =>
+    ['/companies/x.png', '/nope.png', '/invite/abc.xml', '/companies/favicon.ico'].map((path) =>
       request.get(path, { maxRedirects: 0 }),
     ),
   );
@@ -137,10 +137,17 @@ test('page addresses ending like a file still get the policy, and static files a
     expect(response.headers()['content-security-policy']).toContain("'strict-dynamic'");
   });
   // The logos and icons: nothing in them may run, even opened directly.
+  const strict = "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox";
   const logo = await request.get('/brand/logo.svg');
-  expect(logo.headers()['content-security-policy']).toBe(
-    "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox",
-  );
+  expect(logo.headers()['content-security-policy']).toBe(strict);
+  // The icon a browser or a tool asks for without reading the page: an icon also for someone
+  // who isn't signed in, never the way to the sign-in page.
+  const favicon = await request.get('/favicon.ico', { maxRedirects: 0 });
+  expect(favicon.status()).toBe(200);
+  expect(favicon.headers()['content-type']).toBe('image/x-icon');
+  expect(favicon.headers()['content-security-policy']).toBe(strict);
+  // An .ico file starts with these four bytes, and says how many pictures it holds: three sizes.
+  expect([...(await favicon.body()).subarray(0, 6)]).toEqual([0, 0, 1, 0, 3, 0]);
 });
 
 test("only scripts with the request's nonce run", async ({ request, page, cspViolations }) => {

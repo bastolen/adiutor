@@ -12,22 +12,17 @@ import { useState } from 'react';
 
 import ActionDialog from '@/components/ui/action-dialog';
 import CheckboxField from '@/components/ui/checkbox-field';
+import type { SubscribablePerson } from '@/server/requests';
 
 import { changeSubscribersAction } from './actions';
 
-/** Someone the dialog offers to subscribe. */
-export interface SubscriberChoice {
-  /** Their user ID. */
-  id: string;
-  /** Their name. */
-  name: string;
-  /** Whether they're listed with the staff; nobody is, for a company's Admin. */
-  staff: boolean;
-  /** Whether they're subscribed now. */
-  subscribed: boolean;
-  /** Whether they're the one changing the subscribers. */
-  isViewer: boolean;
-}
+/**
+ * Someone the dialog offers to subscribe: their name, the key that stands
+ * for them (never a user ID), whether they're listed with the staff (nobody
+ * is, for a company's Admin), whether they're subscribed now and whether
+ * they're the one changing the subscribers.
+ */
+export type SubscriberChoice = SubscribablePerson;
 
 /**
  * The dialog's checkboxes: the people at the request's company, then the
@@ -65,17 +60,17 @@ function SubscriberFields({
     <div className="flex flex-col gap-6">
       {started
         .filter(({ subscribed }) => subscribed)
-        .map(({ id }) => (
-          <input key={id} type="hidden" name="was_subscriber" value={id} />
+        .map(({ key }) => (
+          <input key={key} type="hidden" name="was_subscriber" value={key} />
         ))}
       {groups.map(({ id, legend, people }) => (
         <fieldset key={id} className="flex flex-col gap-3">
           <legend className="mb-3 text-sm font-medium text-foreground">{legend}</legend>
           {people.map((choice) => (
             <CheckboxField
-              key={choice.id}
+              key={choice.key}
               name="subscriber"
-              value={choice.id}
+              value={choice.key}
               label={choice.isViewer ? t('personYou', { name: choice.name }) : choice.name}
               defaultChecked={choice.subscribed}
             />

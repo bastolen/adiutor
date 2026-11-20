@@ -370,7 +370,7 @@ markup can't run script. Next.js adds the nonce to its own scripts; the root lay
 (`x-nonce`) for the theme script. Reading it makes every page render per request, with an empty
 static shell (`instant = false` on the root layout only turns off Cache Components' empty-shell
 check). Styles keep `'unsafe-inline'` (React and Radix use `style` attributes). The logos and icons
-the proxy skips (`/brand/`, `/icon.svg`) get a fixed policy that runs nothing
+the proxy skips (`/brand/`, `/icon.svg`, `/favicon.ico`) get a fixed policy that runs nothing
 (`next.config.ts`). One known gap: Next.js's built-in page for errors outside rendering is
 prerendered, so its scripts carry no nonce; it still shows its message and Reload button. Raw
 HTML (`dangerouslySetInnerHTML`) is a lint error except for the theme script, and e2e tests fail

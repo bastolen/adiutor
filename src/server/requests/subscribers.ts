@@ -13,6 +13,9 @@
  *   mentioned in it is subscribed ({@link subscribeAutomatically}), and can
  *   unsubscribe. Replying or being mentioned again subscribes them again.
  * - **Losing access ends it** ({@link unsubscribeFrom}).
+ * - **No user ID reaches a company's browser:** the dialog that changes
+ *   subscribers names each person by their key in the request's company
+ *   (`mentionKey`), for the staff and a company's Admins alike.
  *
  * Subscribing is a preference, not work on the request: it leaves no entry
  * in the history and doesn't count as activity.
@@ -24,8 +27,12 @@ import type { Database, DatabaseTransaction } from '@/db';
 import { membership, request, requestParticipant, user } from '@/db/schema';
 import type { PlatformRole } from '@/lib/authz/roles';
 import { visibleName } from '@/lib/display-name';
-import { type RequestParticipantRole, subscriberScope } from '@/lib/requests';
-import { idSchema } from '@/lib/validation';
+import {
+  MENTION_KEY_LENGTH,
+  type RequestParticipantRole,
+  type SubscriberScope,
+  subscriberScope,
+} from '@/lib/requests';
 
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
@@ -34,6 +41,7 @@ import { orderTerms, textOrder } from '../pagination';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
 import { getRequestAccess, READING_STAFF_ROLES } from './access';
 import { CHANGE_MOMENT, changeRequest, requestToChange } from './change';
+import mentionKey from './mention-key';
 
 /** The rows of the people subscribed to a request, among everyone on it. */
 const SUBSCRIBED = eq(requestParticipant.role, 'subscriber');
@@ -41,19 +49,27 @@ const SUBSCRIBED = eq(requestParticipant.role, 'subscriber');
 /** The most people one change subscribes or unsubscribes. */
 export const MAX_SUBSCRIBER_CHANGES = 50;
 
-/** The user IDs of a change: at most {@link MAX_SUBSCRIBER_CHANGES}. */
-const subscriberIdsSchema = z.array(idSchema).max(MAX_SUBSCRIBER_CHANGES);
+/** The keys of a change: at most {@link MAX_SUBSCRIBER_CHANGES}, none longer than a key is. */
+const subscriberKeysSchema = z
+  .array(z.string().max(MENTION_KEY_LENGTH))
+  .max(MAX_SUBSCRIBER_CHANGES);
 
 /** Someone who can be subscribed to a request, as the dialog that changes subscribers lists them. */
 export interface SubscribablePerson {
-  /** Their user ID. Only the staff and a company's Admins get this list, who see IDs already. */
-  id: string;
+  /**
+   * What stands for them in the dialog (`mentionKey`): only valid in the
+   * request's company, and it says nothing about who they are. Never a user
+   * ID, which a company's Admin doesn't get.
+   */
+  key: string;
   /** Their name. */
   name: string;
   /** Whether they're on the staff's side; the list gives them the staff's label. */
   staff: boolean;
   /** Whether they're subscribed now. */
   subscribed: boolean;
+  /** Whether they're the one who asked for the list. */
+  isViewer: boolean;
 }
 
 /** Someone who can be subscribed in a company, as the services know them. */
@@ -235,32 +251,48 @@ export async function unsubscribe(
 }
 
 /**
+ * Whether someone's subscription is within a scope: anyone who can be
+ * subscribed for the staff who work on requests, the company's own people
+ * for its Admins.
+ *
+ * @param scope - Whose subscriptions the actor may change.
+ * @param person - Someone who can be subscribed.
+ * @returns Whether they're in it.
+ */
+function inScope(scope: SubscriberScope, person: Subscribable): boolean {
+  return scope === 'everyone' || (scope === 'colleagues' && person.member);
+}
+
+/**
  * Subscribes people to a request and unsubscribes others, each a change of
  * its own: someone subscribed already isn't added again, and someone who
  * isn't subscribed isn't removed. Someone in both lists is added.
  *
- * Whose subscriptions the actor may change is their scope
- * (`subscriberScope`): everyone's for the staff who work on requests, their
- * colleagues' for a company's Admins. Whoever is added is locked with the
- * actor (`FOR SHARE`) and checked as they are by then: an active account
- * that reads the request, and within the actor's scope. Someone to remove
- * who is outside the scope is left alone without a word, so a company's
- * Admin learns nothing about which staff members follow a request.
+ * People are named by their key in the request's company (`mentionKey`, as
+ * {@link listSubscribable} gives it), never by a user ID. Whose
+ * subscriptions the actor may change is their scope (`subscriberScope`):
+ * everyone's for the staff who work on requests, their colleagues' for a
+ * company's Admins. A key to add must stand for someone in that scope, who
+ * is then locked with the actor (`FOR SHARE`) and checked again as they are
+ * by then: an active account that reads the request. A key to remove that
+ * stands for nobody in the scope is left alone without a word, so a
+ * company's Admin learns nothing about which staff members follow a request.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `requests:manage` in the request's company (the staff),
  *   or `members:manage` (a company's Admins).
  * @param input - Form input.
  * @param input.request - The request's number or ID.
- * @param input.add - The user IDs to subscribe.
- * @param input.remove - The user IDs to unsubscribe.
+ * @param input.add - The keys of the people to subscribe.
+ * @param input.remove - The keys of the people to unsubscribe.
  * @returns How many people were added and removed.
  * @throws {ServiceError} `signed_in_as` while a staff member is signed in as the actor,
  *   `not_found` when the actor may not see the request, `forbidden` for someone who may only
- *   change their own subscription, `invalid` when the company is deactivated or someone to add
- *   can't be subscribed by the actor (`errors.requests.notSubscribable`), `rate_limited` when
- *   the actor has changed requests too often (`RATE_LIMITS.requestChangesPerUser`).
- * @throws {ZodError} When a list holds something that isn't a user ID, or too many.
+ *   change their own subscription, `invalid` when the company is deactivated or a key to add
+ *   stands for nobody the actor can subscribe (`errors.requests.notSubscribable`),
+ *   `rate_limited` when the actor has changed requests too often
+ *   (`RATE_LIMITS.requestChangesPerUser`).
+ * @throws {ZodError} When a list holds something that can't be a key, or too many.
  */
 export async function changeSubscribers(
   ctx: ServiceContext,
@@ -272,11 +304,24 @@ export async function changeSubscribers(
   if (scope === 'self') {
     throw forbiddenError();
   }
-  const add = [...new Set(subscriberIdsSchema.parse(input.add))];
-  const remove = [...new Set(subscriberIdsSchema.parse(input.remove))].filter(
-    (id) => !add.includes(id),
+  const addKeys = [...new Set(subscriberKeysSchema.parse(input.add))];
+  const removeKeys = [...new Set(subscriberKeysSchema.parse(input.remove))].filter(
+    (key) => !addKeys.includes(key),
   );
   await assertRateLimit(ctx, `request-change:user:${actor.id}`, RATE_LIMITS.requestChangesPerUser);
+
+  // Who the keys stand for, among the people whose subscription is the actor's to change.
+  const companyId = access.company.id;
+  const offered = new Map(
+    (await subscribable(ctx.db, companyId))
+      .filter((person) => inScope(scope, person))
+      .map(({ id }) => [mentionKey(companyId, id), id]),
+  );
+  const add = addKeys.flatMap((key) => offered.get(key) ?? []);
+  if (add.length < addKeys.length) {
+    throw new ServiceError('invalid', 'errors.requests.notSubscribable');
+  }
+  const remove = removeKeys.flatMap((key) => offered.get(key) ?? []);
 
   return changeRequest(
     ctx,
@@ -284,27 +329,11 @@ export async function changeSubscribers(
     access,
     scope === 'everyone' ? 'requests:manage' : 'members:manage',
     async (tx, locked) => {
-      const people = new Map(
-        (await subscribable(tx, locked.companyId, [...add, ...remove])).map((person) => [
-          person.id,
-          person,
-        ]),
-      );
-      /**
-       * Whether someone's subscription is the actor's to change.
-       *
-       * @param id - Their user ID.
-       * @returns Whether they can be subscribed, and are within the actor's scope.
-       */
-      const inScope = (id: string) => {
-        const person = people.get(id);
-        return person !== undefined && (scope === 'everyone' || person.member);
-      };
-      if (!add.every(inScope)) {
+      // As they are by now, with their rows locked: still someone the actor can subscribe.
+      const still = await subscribable(tx, locked.companyId, add);
+      if (still.length < add.length || !still.every((person) => inScope(scope, person))) {
         throw new ServiceError('invalid', 'errors.requests.notSubscribable');
       }
-      // Someone who can no longer be subscribed is still the staff's to take off.
-      const removing = remove.filter((id) => scope === 'everyone' || inScope(id));
       const added =
         add.length === 0
           ? []
@@ -321,14 +350,14 @@ export async function changeSubscribers(
               .onConflictDoNothing()
               .returning({ id: requestParticipant.id });
       const removed =
-        removing.length === 0
+        remove.length === 0
           ? []
           : await tx
               .delete(requestParticipant)
               .where(
                 and(
                   eq(requestParticipant.requestId, locked.id),
-                  inArray(requestParticipant.userId, removing),
+                  inArray(requestParticipant.userId, remove),
                   SUBSCRIBED,
                 ),
               )
@@ -343,7 +372,8 @@ export async function changeSubscribers(
  * Lists whose subscription to a request the actor may change, for the
  * dialog that changes subscribers: everyone who can be subscribed for the
  * staff who work on requests, their colleagues for a company's Admins. By
- * name, with whether they're subscribed now. Someone without a name to show
+ * name, each with their key in the request's company and whether they're
+ * subscribed now; never a user ID. Someone without a name to show
  * isn't listed; they can still subscribe themselves. Neither is someone the
  * request is assigned to: they follow it as that, and the request lists them
  * as that.
@@ -384,23 +414,24 @@ export async function listSubscribable(
   const subscribed = usersWith('subscriber');
   const assigned = usersWith('assignee');
   return people
-    .filter((person) => !assigned.has(person.id) && (scope === 'everyone' || person.member))
+    .filter((person) => !assigned.has(person.id) && inScope(scope, person))
     .flatMap(({ id, name, staff }) => {
       const shown = visibleName(name);
       return shown === null
         ? []
         : [
             {
-              id,
+              key: mentionKey(company.id, id),
               name: shown,
               staff: scope === 'everyone' && staff,
               subscribed: subscribed.has(id),
+              isViewer: id === actor.id,
             },
           ];
     })
     .sort(
       (a, b) =>
-        a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }) || a.id.localeCompare(b.id),
+        a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }) || a.key.localeCompare(b.key),
     );
 }
 

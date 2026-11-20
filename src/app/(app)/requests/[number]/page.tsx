@@ -62,6 +62,8 @@ import { changeAssigneesAction, changeStatusAction, changeSubscriptionAction } f
 import ChangeAssignees, { type AssigneeChoice } from './change-assignees';
 import ChangeSubscribers from './change-subscribers';
 import EditDetails from './edit-details';
+import EditableText from './editable-text';
+import EditedNote from './edited-note';
 import ReplyForm from './reply-form';
 import RequestDetails from './request-details';
 import StatusSelect from './status-select';
@@ -162,16 +164,26 @@ async function RequestContent({
   // Whose subscriptions the viewer changes besides their own, and who they can subscribe then.
   const scope = detail.company.deactivated ? 'self' : subscriberScope(detail.permissions);
   const subscriberChoices =
-    scope === 'self'
-      ? []
-      : (await listSubscribable(appContext, actor, String(detail.number))).map((person) => ({
-          ...person,
-          isViewer: person.id === actor.id,
-        }));
+    scope === 'self' ? [] : await listSubscribable(appContext, actor, String(detail.number));
 
   const names = { company: detail.company.name, staff: detail.staffName };
   // The request's whole address, for the note above code copied from its texts.
   const address = `${appContext.baseUrl}${requestPath(detail.number)}`;
+
+  const descriptionSource = {
+    url: address,
+    writer: personName(detail.raisedBy, names),
+    at: detail.createdAt,
+  };
+  const descriptionText = (
+    <RequestText
+      text={detail.description}
+      id="description"
+      className="text-sm text-foreground"
+      source={descriptionSource}
+      names={names}
+    />
+  );
 
   return (
     <ClientMessages namespaces={['requests']}>
@@ -208,22 +220,24 @@ async function RequestContent({
               <div className="flex items-center gap-3">
                 <PersonAvatar person={detail.raisedBy} names={names} />
                 <PersonLine person={detail.raisedBy} names={names}>
-                  <span className="text-muted-foreground">
+                  <span className="flex items-center gap-x-2 text-muted-foreground">
                     <RelativeTime date={detail.createdAt} />
+                    <EditedNote
+                      text={detail.description}
+                      id="description"
+                      source={descriptionSource}
+                      names={names}
+                    />
                   </span>
                 </PersonLine>
               </div>
-              <RequestText
-                text={detail.description}
-                id="description"
-                className="text-sm text-foreground"
-                source={{
-                  url: address,
-                  writer: personName(detail.raisedBy, names),
-                  at: detail.createdAt,
-                }}
-                names={names}
-              />
+              {detail.description.edit ? (
+                <EditableText request={detail.number} entry={null} edit={detail.description.edit}>
+                  {descriptionText}
+                </EditableText>
+              ) : (
+                descriptionText
+              )}
             </div>
           </Card>
         </div>
