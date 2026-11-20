@@ -3,6 +3,7 @@
  * nothing someone typed runs, loads or misleads in a reader's browser.
  */
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import MarkdownText from './markdown-text';
@@ -132,6 +133,62 @@ describe('MarkdownText: formatting', () => {
       [...container.querySelectorAll('figcaption')].map((caption) => caption.textContent),
     ).toEqual(['Code', 'Code']);
     expect(container.querySelector('[class*="hljs-"]')).not.toBeInTheDocument();
+  });
+
+  it('copies a block of code as it was written, without the line break at its end', async () => {
+    const user = userEvent.setup();
+    show('```ts\nconst a: number = 1;\n\n  return a;\n```');
+
+    await user.click(screen.getByRole('button', { name: 'Copy code' }));
+
+    // The highlighter split the code into coloured parts; what's copied is the code again.
+    expect(await navigator.clipboard.readText()).toBe('const a: number = 1;\n\n  return a;');
+    expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
+  });
+
+  it('copies the code below the text’s note, as a comment in the block’s language', async () => {
+    const user = userEvent.setup();
+    render(
+      <MarkdownText
+        text={'```sh\nnpm test\n```\n\n```json\n{ "a": 1 }\n```\n\n```\nplain\n```'}
+        id="text"
+        codeNote={['Source: https://adiutor.test/requests/11', 'Written by Sam Support']}
+        fallback={null}
+      />,
+    );
+    const [bash, json, plain] = screen.getAllByRole('button', { name: 'Copy code' });
+
+    await user.click(bash as HTMLElement);
+    expect(await navigator.clipboard.readText()).toBe(
+      '# Source: https://adiutor.test/requests/11\n# Written by Sam Support\nnpm test',
+    );
+
+    // JSON has no comments, and a block without a language could be anything: only the code.
+    await user.click(json as HTMLElement);
+    expect(await navigator.clipboard.readText()).toBe('{ "a": 1 }');
+    await user.click(plain as HTMLElement);
+    expect(await navigator.clipboard.readText()).toBe('plain');
+  });
+
+  it('puts the copy button between a block’s caption and its code, outside both', () => {
+    show('```ts\nconst a = 1;\n```');
+
+    const figure = screen.getByRole('figure');
+    const button = within(figure).getByRole('button', { name: 'Copy code' });
+    // The caption still names the block by its language alone.
+    expect(figure.querySelector('figcaption')?.textContent).toBe('TypeScript');
+    expect(figure.firstElementChild?.tagName).toBe('FIGCAPTION');
+    const code = within(figure).getByRole('group', { name: 'TypeScript code' });
+    expect(code).not.toContainElement(button);
+    // The button comes first in the tab order, as on the screen.
+    expect([...figure.querySelectorAll('button, pre')]).toEqual([button, code]);
+  });
+
+  it('has no copy button for a block without code', () => {
+    show('```ts\n```');
+
+    expect(screen.getByRole('group', { name: 'TypeScript code' })).toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
   it('leaves code in a sentence uncoloured', () => {

@@ -7,7 +7,7 @@ import { Check, CircleAlert, Copy } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef } from 'react';
 
-import Button from './button';
+import Button, { type ButtonProps } from './button';
 import { useToast } from './toast';
 import { useTransientState } from './use-transient-state';
 
@@ -35,6 +35,10 @@ interface CopyButtonProps {
   value: string;
   /** Button text. */
   label: string;
+  /** Size. Defaults to `md`; `sm` where it sits in a row with a caption, e.g. above a block of code. */
+  size?: ButtonProps['size'];
+  /** Look. Defaults to `secondary`; `ghost` where it mustn't draw the eye from what it copies. */
+  variant?: Extract<ButtonProps['variant'], 'secondary' | 'ghost'>;
 }
 
 /**
@@ -48,9 +52,16 @@ interface CopyButtonProps {
  * @param props - Button props.
  * @param props.value - The text to copy.
  * @param props.label - Button text.
+ * @param props.size - Size.
+ * @param props.variant - Look.
  * @returns The button.
  */
-export default function CopyButton({ value, label }: CopyButtonProps) {
+export default function CopyButton({
+  value,
+  label,
+  size = 'md',
+  variant = 'secondary',
+}: CopyButtonProps) {
   const t = useTranslations('common.actions');
   const showToast = useToast();
   const [outcome, setOutcome] = useTransientState<CopyOutcome>('idle');
@@ -87,7 +98,7 @@ export default function CopyButton({ value, label }: CopyButtonProps) {
   const texts = { idle: label, copied: t('copied'), failed: t('copyFailed') };
 
   return (
-    <Button variant="secondary" onClick={copy}>
+    <Button variant={variant} size={size} onClick={copy}>
       <Icon aria-hidden="true" />
       <span aria-live="polite">{texts[outcome]}</span>
     </Button>

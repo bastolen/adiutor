@@ -96,6 +96,10 @@
       "priority": "Changed the priority from {from} to {to}.",
       "assignee": "{change, select, assigned {{self, select, yes {Assigned themselves to this request.} other {{known, select, yes {Assigned {name} to this request.} other {Assigned a staff member to this request.}}}}} other {{self, select, yes {Removed themselves from this request.} other {{known, select, yes {Removed {name} from this request.} other {Removed a staff member from this request.}}}}}}"
     },
+    "codeNote": {
+      "source": "Source: {url}",
+      "writtenBy": "Written by {name} on {date}"
+    },
     "reply": {
       "label": "Your reply",
       "hint": "Format your text with the buttons, or type Markdown such as **bold**, lists and `code`.",

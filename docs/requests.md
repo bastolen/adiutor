@@ -151,7 +151,12 @@ the closed statuses.
 - Numbers are shown with a **prefix** the staff Admins choose on the Staff page (`AD` by default:
   `AD-142`; one to five letters or digits, starting with a letter, saved in capitals;
   `staff_settings.request_prefix`).
-- A request's address is `/requests/142`, without the prefix, so it doesn't change with it.
+- A request's address is `/requests/142`, without the prefix, so it doesn't change with it. The
+  number as people see it, `/requests/AD-142`, redirects there, and so do the short links
+  `/r/142` and `/r/AD-142`. Only the current prefix counts, in any case (`ad-142`): another prefix,
+  or anything that isn't a request number, gives the 404 page (`parseRequestReference`,
+  `findRequestNumber`). A redirect goes to the number whether or not the request exists or the
+  reader may see it, so it reveals nothing: the request's page decides that.
 - Searching by number ignores the prefix: "AD-142", "ad-142", an older prefix and "142" all find
   request 142. A number finds every request whose number starts with the digits typed ("AD-1"
   finds 1, 10 to 19, 100 and up), so it narrows the list as it's typed, like a title does
@@ -194,6 +199,20 @@ the closed statuses.
   [Design and accessibility](design.md#design-and-accessibility)). A block of code and a table
   scroll sideways when they're wider than the text, can be reached and scrolled with the
   keyboard, and say what they hold.
+- **Copying code:** a block of code has a "Copy code" button next to its language (`CopyButton`),
+  before the code in the tab order. It copies the code as it was written, without the line break at
+  its end, so a pasted command doesn't run by itself. Above the code it puts a note of where the
+  code is from, so it can be traced once it sits in a file: the request's address, then who wrote
+  the text and on which day (`TextSource`, in the reader's language, with the name the page shows
+  next to the text). The note is a comment in the block's language (`withCodeNote` in
+  `code-note.ts`: `#`, `//`, `--`, `;`, `'`, `;;`, `/* */` or `<!-- -->`, also for a language
+  written by an alias). A note must never break what's pasted, so the code is copied alone where
+  a comment can't go or could end up shown: JSON, plain text, a block without a language or in one
+  we don't highlight, Markdown, a diff, an HTTP message, PHP, and a shell or Python session. Lines
+  that have to stay first (a `#!` line, an XML declaration, a doctype, a Dockerfile's directives)
+  keep their place, with the note below them. A new language in `CODE_LANGUAGES` gets its choice in
+  `COMMENT_SIGNS`. Selecting code by hand copies it without a note, and a block has no button while
+  it's written.
 - **A text that would cost too much to format is shown as plain text** (`markdownTree`): one
   nested more than 100 levels deep (`MAX_NESTING`; React renders a level per call, and the
   parser's own walk overflows the stack at a few thousand), or with more than 2,500 runs of `*`
@@ -288,9 +307,9 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
 - `src/db/schema/requests.ts`: `request`, `request_assignee` (who's assigned), `request_entry`
   (the conversation and the history in one table, ordered by ID) and `request_counter`.
 - `src/server/requests/` (a folder module): `listRequestCompanies`, `listRequests`, `findRequest`,
-  `getRequest`, `raiseRequest`, `replyToRequest`, `changeRequestStatus`, `updateRequestDetails`,
-  `changeAssignees`, `listAssignableStaff`, `countAssignedRequests`, and `unassignFrom` for the
-  services that end someone's request work.
+  `findRequestNumber`, `getRequest`, `raiseRequest`, `replyToRequest`, `changeRequestStatus`,
+  `updateRequestDetails`, `changeAssignees`, `listAssignableStaff`, `countAssignedRequests`, and
+  `unassignFrom` for the services that end someone's request work.
   Every change refuses someone signed in as a user, checks the permission and that the company is
   active, validates, takes a rate limit (see [Rate limits](security-measures.md#rate-limits)), then
   runs in a transaction that starts with `assertStillMayChange` (`assertStillManages`, then the company) and locks the request's row (see
@@ -308,7 +327,8 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
   people). `src/app/(app)/requests/`: the pages themselves.
 - `src/components/ui/markdown/`: what shows a Markdown text: the pipeline with its limits
   (`tree.ts`), the allow-list (`sanitize.ts`), the elements (`elements.tsx`), the languages of
-  highlighted code (`languages.ts`) and the class names (`styles.ts`). And what writes one: the
+  highlighted code (`languages.ts`), the note above copied code (`code-note.ts`) and the class
+  names (`styles.ts`). And what writes one: the
   field (`markdown-field.tsx`), the toolbar (`formatting-toolbar.tsx`), and the editor's own files
   (`editor*.ts(x)`), which only `import()` reaches.
 - Example requests for development and the end-to-end tests come from

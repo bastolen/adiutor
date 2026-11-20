@@ -3,6 +3,9 @@
  * (what was asked, by whom), its conversation, and next to them its details:
  * status, who it's assigned to, type and (for the staff) priority, company,
  * who raised it and when, the staff's first response and its last activity.
+ * The number as people see it, with the staff's current prefix
+ * (`/requests/AD-142`), redirects here, as do the short links `/r/142` and
+ * `/r/AD-142`.
  * Everyone who may see the request may open it: the staff, and the members
  * of its company while it's active. Anyone else gets the 404 page, as for a
  * number no request has.
@@ -12,7 +15,7 @@
  * mark it done, cancel it or reopen it. A deactivated company's requests
  * show no controls: they can only be read.
  */
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
@@ -29,6 +32,7 @@ import ClientMessages from '@/lib/i18n/client-messages';
 import {
   formatRequestNumber,
   isClosedStatus,
+  parseRequestNumber,
   REQUEST_STATUSES,
   requestPath,
   statusChoices,
@@ -40,13 +44,14 @@ import { ServiceError } from '@/server/errors';
 import { checkedPageMetadata } from '@/server/page-metadata';
 import {
   findRequest,
+  findRequestNumber,
   getRequest,
   listAssignableStaff,
   MAX_EARLIER_CHUNKS,
   type RequestDetail,
 } from '@/server/requests';
 
-import PersonLine, { PersonAvatar } from '../../_requests/request-person';
+import PersonLine, { PersonAvatar, personName } from '../../_requests/request-person';
 import RequestText from '../../_requests/request-text';
 import { changeAssigneesAction, changeStatusAction } from './actions';
 import ChangeAssignees, { type AssigneeChoice } from './change-assignees';
@@ -82,9 +87,11 @@ export const generateMetadata = checkedPageMetadata(
 const EARLIER_PATTERN = /^[1-9]\d?$/;
 
 /**
- * Loads and shows a request, with the controls its viewer may use. The
- * client components below (`ReplyForm`, `StatusSelect`, `EditDetails`,
- * `ChangeAssignees`) get `requests` through `ClientMessages`.
+ * Loads and shows a request, with the controls its viewer may use. An
+ * address with the number as people see it (`AD-142`, the current prefix)
+ * redirects to the digits first. The client components below (`ReplyForm`,
+ * `StatusSelect`, `EditDetails`, `ChangeAssignees`) get `requests` through
+ * `ClientMessages`.
  *
  * @param props - Component props.
  * @param props.params - Route parameters: the request's number.
@@ -103,6 +110,13 @@ async function RequestContent({
   const tRequests = await getTranslations('requests');
   const actor = await getActor();
   const [{ number }, query] = await Promise.all([params, searchParams]);
+  // The number as people see it, with the current prefix (`AD-142`): the page is at the digits.
+  if (parseRequestNumber(number) === null) {
+    const digits = await findRequestNumber(appContext, number);
+    if (digits !== null) {
+      redirect(requestPath(digits));
+    }
+  }
   const asked = searchParam(query.earlier);
   const earlier =
     asked && EARLIER_PATTERN.test(asked) ? Math.min(Number(asked), MAX_EARLIER_CHUNKS) : 0;
@@ -141,6 +155,8 @@ async function RequestContent({
   }
 
   const names = { company: detail.company.name, staff: detail.staffName };
+  // The request's whole address, for the note above code copied from its texts.
+  const address = `${appContext.baseUrl}${requestPath(detail.number)}`;
 
   return (
     <ClientMessages namespaces={['requests']}>
@@ -186,6 +202,11 @@ async function RequestContent({
                 text={detail.description}
                 id="description"
                 className="text-sm text-foreground"
+                source={{
+                  url: address,
+                  writer: personName(detail.raisedBy, names),
+                  at: detail.createdAt,
+                }}
               />
             </div>
           </Card>
@@ -275,7 +296,7 @@ async function RequestContent({
         <div className="xl:col-start-1 xl:row-start-2">
           <Card title={t('conversation')}>
             <div className="flex flex-col gap-6">
-              <Thread detail={detail} earlierHref={earlierHref} />
+              <Thread detail={detail} address={address} earlierHref={earlierHref} />
               {contributes && (
                 <div className={detail.entries.length > 0 ? 'border-t border-border pt-6' : ''}>
                   <ReplyForm

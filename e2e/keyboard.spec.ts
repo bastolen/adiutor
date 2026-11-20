@@ -978,7 +978,9 @@ test.describe('requests', () => {
 
     test('code and a table in a request’s text are reached and scrolled with the keyboard', async ({
       page,
+      context,
     }) => {
+      await context.grantPermissions(['clipboard-write']);
       await page.goto(`/requests/${SEEDED_REQUESTS.formatted.number}`);
 
       // A table sits in a box that scrolls on a narrow screen, so the box takes focus.
@@ -996,9 +998,30 @@ test.describe('requests', () => {
       await page.keyboard.press('ArrowRight');
       await expect.poll(() => code.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
 
-      // Tab reaches it from the block before it, and the ring shows which one has focus.
+      // Tab reaches the next block from the block before it: first the button that copies its
+      // code, then the code, and the ring shows which one has focus.
       const config = page.getByRole('group', { name: 'Nginx config code' });
+      const copy = page
+        .getByRole('figure')
+        .filter({ has: code })
+        .getByRole('button', { name: 'Copy code' });
       await config.focus();
+      await page.keyboard.press('Tab');
+      await expect(copy).toBeFocused();
+      await expect.poll(() => outlineOf(copy)).toEqual({ style: 'solid', width: '2px' });
+      // The ring lies inside the block's box, which cuts off what's outside it.
+      expect(
+        await copy.evaluate((button) => {
+          const box = button.closest('figure')?.getBoundingClientRect();
+          const own = button.getBoundingClientRect();
+          // The ring is 2px wide, 2px away from the button.
+          return box !== undefined && own.top - 4 >= box.top && own.right + 4 <= box.right;
+        }),
+      ).toBe(true);
+      // Enter copies, and the button that says so keeps the focus.
+      await page.keyboard.press('Enter');
+      const copiedButton = page.getByRole('button', { name: 'Copied' });
+      await expect(copiedButton).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(code).toBeFocused();
       await expect.poll(() => outlineOf(code)).toEqual({ style: 'solid', width: '2px' });

@@ -10,6 +10,7 @@ import { requestAssignee, requestEntry, user } from '@/db/schema';
 import type { Permission } from '@/lib/authz/permissions';
 import { firstRow } from '@/lib/defined';
 import {
+  parseRequestReference,
   type RequestAudience,
   type RequestEntryKind,
   type RequestPriority,
@@ -119,6 +120,22 @@ export interface RequestDetail {
   entries: RequestEntryView[];
   /** How many earlier entries there are that aren't shown. */
   earlierEntries: number;
+}
+
+/**
+ * Reads the request an address names: its number, or its number after the
+ * staff's current prefix (`AD-142`), for the addresses that redirect to a
+ * request's page (`/requests/AD-142`, `/r/142`, `/r/AD-142`). It checks no
+ * access: it only turns an address into a number. The redirect goes there
+ * whether or not the request exists or the reader may see it, and the
+ * request's page decides that, so a redirect reveals nothing.
+ *
+ * @param ctx - Service context.
+ * @param ref - The part of the address that names the request.
+ * @returns The request's number, or `null` when the address names none.
+ */
+export async function findRequestNumber(ctx: ServiceContext, ref: string): Promise<number | null> {
+  return parseRequestReference(ref.trim(), await getRequestPrefix(ctx.db));
 }
 
 /**

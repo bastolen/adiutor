@@ -31,6 +31,7 @@ import {
   CLOSED_COMPANY_NAME,
   COMPANY_NAME,
   COMPANY_SLUG,
+  E2E_BASE_URL,
   FINANCE_STAFF,
   FIRST_PAGED_REQUEST_NUMBER,
   PAGED_REQUEST_COUNT,
@@ -238,6 +239,17 @@ test('a changed prefix shows on every number, and the old one still finds a requ
     const found = requestRows(page).filter({ hasText: SEEDED_REQUESTS.waiting.title });
     await expect(found).toHaveCount(1);
 
+    // A short link counts the current prefix only: the old one names no request any more.
+    await page.goto(`/r/HELP-${SEEDED_REQUESTS.waiting.number}`);
+    await expect(page).toHaveURL(`/requests/${SEEDED_REQUESTS.waiting.number}`);
+    await page.goto(`/r/AD-${SEEDED_REQUESTS.waiting.number}`);
+    await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
+    await page.goto('/requests?status=all');
+    await page
+      .getByRole('searchbox', { name: 'Search requests' })
+      .fill(`AD-${SEEDED_REQUESTS.waiting.number}`);
+    await page.getByRole('button', { name: 'Search' }).click();
+
     // The request's address has no prefix, so it stays; its page and title show the new one.
     await found.getByRole('link').click();
     await expect(page).toHaveURL(`/requests/${SEEDED_REQUESTS.waiting.number}`);
@@ -258,6 +270,33 @@ test('a changed prefix shows on every number, and the old one still finds a requ
   }
   await page.reload();
   await expect(page).toHaveTitle(`Request AD-${SEEDED_REQUESTS.waiting.number} · Adiutor`);
+});
+
+test('the number as people see it, and the short links, open the request', async ({ page }) => {
+  await signIn(page, REQUESTS_CLIENT);
+  const { number, title } = SEEDED_REQUESTS.waiting;
+
+  for (const address of [
+    `/requests/AD-${number}`,
+    `/requests/ad-${number}`,
+    `/r/AD-${number}`,
+    `/r/${number}`,
+  ]) {
+    // eslint-disable-next-line no-await-in-loop -- One address after another, in one browser.
+    await page.goto(address);
+    // eslint-disable-next-line no-await-in-loop -- Checked for each address.
+    await expect(page).toHaveURL(`/requests/${number}`);
+    // eslint-disable-next-line no-await-in-loop -- Checked for each address.
+    await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+  }
+
+  // Another prefix, or anything that isn't a request number, names no request.
+  for (const address of [`/r/XY-${number}`, '/r/abc', `/requests/XY-${number}`]) {
+    // eslint-disable-next-line no-await-in-loop -- One address after another, in one browser.
+    await page.goto(address);
+    // eslint-disable-next-line no-await-in-loop -- Checked for each address.
+    await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
+  }
 });
 
 test('someone at a company sees its requests only, without priorities', async ({ page }) => {
@@ -1090,6 +1129,60 @@ test('a request written in Markdown is shown formatted, and nothing in it loads'
   await expect(page).toHaveURL(/-fn-1$/);
   await thread.getByRole('link', { name: 'Back to reference 1' }).click();
   await expect(page).toHaveURL(/-fnref-1$/);
+});
+
+test('a block of code is copied below a note of where it’s from', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto(`/requests/${SEEDED_REQUESTS.formatted.number}`);
+  const thread = page.getByRole('region', { name: 'Conversation' });
+  /**
+   * The block of code in a language, with its caption and its button.
+   *
+   * @param name - The name of the code, e.g. "Bash code".
+   * @returns The block.
+   */
+  const block = (name: string) =>
+    thread.getByRole('figure').filter({ has: page.getByRole('group', { name }) });
+  /**
+   * Reads what was copied.
+   *
+   * @returns The clipboard's text.
+   */
+  const copied = () => page.evaluate(() => navigator.clipboard.readText());
+  // The request's address and who wrote the reply, on the day they did, as two lines of comment.
+  const address = `${E2E_BASE_URL}/requests/${SEEDED_REQUESTS.formatted.number}`;
+  const note = new RegExp(
+    `^# Source: ${address}\\n# Written by ${SUPPORT_STAFF.name} on [A-Z][a-z]{2} \\d{1,2}, \\d{4}\\n`,
+  );
+
+  // A command: the note, then the command as it was written, without a line break after it.
+  const command = block('Bash code');
+  await command.getByRole('button', { name: 'Copy code' }).click();
+  await expect(command.getByRole('button', { name: 'Copied' })).toBeVisible();
+  const [source, written, ...code] = (await copied()).split('\n');
+  expect(`${source}\n${written}\n`).toMatch(note);
+  expect(code).toEqual([
+    'curl --include --header "Accept: application/json" --header "X-Checked-By: Adiutor Tests" --max-time 10 https://intranet.adiutor.test/health',
+  ]);
+  // The button says so for a moment, then offers to copy again.
+  await expect(command.getByRole('button', { name: 'Copy code' })).toBeVisible();
+
+  // A configuration of several lines keeps its lines, its spaces and its empty line.
+  await block('Nginx config code').getByRole('button', { name: 'Copy code' }).click();
+  await expect.poll(copied).toMatch(note);
+  expect((await copied()).replace(note, '')).toBe(
+    [
+      'server {',
+      '  listen 443 ssl;',
+      '  server_name intranet.adiutor.test;',
+      '',
+      '  location / {',
+      '    proxy_pass http://127.0.0.1:3000;',
+      '  }',
+      '}',
+    ].join('\n'),
+  );
 });
 
 test('a Watcher follows a request without taking part', async ({ page }) => {

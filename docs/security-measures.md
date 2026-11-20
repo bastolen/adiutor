@@ -225,6 +225,13 @@ load or mislead in a reader's browser:
   emphasis marks than the parser pairs quickly, is shown as plain text (`MAX_NESTING`,
   `MAX_EMPHASIS_RUNS`). The limit of 10,000 characters bounds the rest: the parser and the
   highlighter's patterns never run on more.
+- **Nothing in a copied note becomes code.** The button on a block of code copies it below a
+  comment that names the request and who wrote the text (`withCodeNote` in
+  `src/components/ui/markdown/code-note.ts`), and a name is something a person typed. Every line
+  of the note stays one line (each kind of line break becomes a space), so a name can't start a
+  line of its own in what a reader pastes into a terminal or a file. Where a comment has an end
+  (`*/`, `-->`), a note that holds what would end it isn't written at all: the code is copied
+  alone.
 - **The editor is a convenience, never a check.** It follows the same rules while a text is
   written (HTML stays text, only whole `http` and `https` addresses are links, an image is never
   loaded; `src/components/ui/markdown/editor-extensions.ts`), but all it produces is Markdown,

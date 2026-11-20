@@ -96,6 +96,10 @@
       "priority": "Prioriteit gewijzigd van {from} naar {to}.",
       "assignee": "{change, select, assigned {{self, select, yes {Zichzelf aan dit verzoek toegewezen.} other {{known, select, yes {{name} aan dit verzoek toegewezen.} other {Een medewerker aan dit verzoek toegewezen.}}}}} other {{self, select, yes {Zichzelf van dit verzoek gehaald.} other {{known, select, yes {{name} van dit verzoek gehaald.} other {Een medewerker van dit verzoek gehaald.}}}}}}"
     },
+    "codeNote": {
+      "source": "Bron: {url}",
+      "writtenBy": "Geschreven door {name} op {date}"
+    },
     "reply": {
       "label": "Je reactie",
       "hint": "Maak je tekst op met de knoppen, of typ Markdown zoals **vet**, lijsten en `code`.",

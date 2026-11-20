@@ -51,6 +51,28 @@ export function codeLanguageName(language: string): string | null {
   return NAMES.getLanguage(language)?.name ?? null;
 }
 
+/**
+ * The language each name stands for: every alias by its language's key
+ * (`ts` by `typescript`), then every key by itself, so a key always wins.
+ */
+const LANGUAGE_IDS = new Map<string, string>([
+  ...Object.keys(CODE_LANGUAGES).flatMap((id) =>
+    (NAMES.getLanguage(id)?.aliases ?? []).map((alias) => [alias.toLowerCase(), id] as const),
+  ),
+  ...Object.keys(CODE_LANGUAGES).map((id) => [id, id] as const),
+]);
+
+/**
+ * The language a block of code is in, by its key.
+ *
+ * @param language - The language as a block of code names it: its key or an
+ *   alias (`typescript` or `ts`), in any case.
+ * @returns Its key (`typescript`), or `null` for a language that isn't highlighted.
+ */
+export function codeLanguageId(language: string): string | null {
+  return LANGUAGE_IDS.get(language.toLowerCase()) ?? null;
+}
+
 /** A language someone can pick for a block of code. */
 export interface CodeLanguageChoice {
   /** The language's key, as a block of code names it. */

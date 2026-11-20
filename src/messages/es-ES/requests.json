@@ -96,6 +96,10 @@
       "priority": "Prioridad cambiada de {from} a {to}.",
       "assignee": "{change, select, assigned {{self, select, yes {Se asignó esta solicitud.} other {{known, select, yes {Asignó esta solicitud a {name}.} other {Asignó esta solicitud a un miembro del personal.}}}}} other {{self, select, yes {Se quitó de esta solicitud.} other {{known, select, yes {Quitó a {name} de esta solicitud.} other {Quitó a un miembro del personal de esta solicitud.}}}}}}"
     },
+    "codeNote": {
+      "source": "Fuente: {url}",
+      "writtenBy": "Escrito por {name} el {date}"
+    },
     "reply": {
       "label": "Tu respuesta",
       "hint": "Da formato a tu texto con los botones, o escribe Markdown como **negrita**, listas y `código`.",

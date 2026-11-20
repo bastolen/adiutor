@@ -336,7 +336,9 @@ keyboard support.
   stay inline: a new company's "Open the company", a new invite link to copy. A copy button
   (`CopyButton`) says what it did in its own label, announced to screen readers: "Copied" for two
   seconds, or "Couldn't copy" for five when the browser refuses, then also as an error toast where
-  the page has toasts; what it copies stays on screen next to it, to select by hand. The signed-out
+  the page has toasts; what it copies stays on screen next to it, to select by hand. It's a
+  secondary button by default, and small and quiet (`size="sm"`, `variant="ghost"`) in the caption
+  row of a block of code, where it mustn't draw the eye from the code. The signed-out
   pages (sign in, the code step, password reset, invitations, `/setup`) show their results inline
   only.
 - **Tap targets:** every control is at least 24×24px (WCAG 2.5.8) without leaning on the rule's
