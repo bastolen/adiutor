@@ -1,6 +1,7 @@
 /**
  * @file The Profile page of the account, served at `/account`: name, email
- * (with verification), language (one of the languages, or Default), a
+ * (with verification), picture (a connected account's, or initials),
+ * language (one of the languages, or Default), a
  * summary of sign-in security and recent activity on
  * the account (sign-ins and changes, from the audit log). Password, passkeys,
  * two-step verification and connected accounts are on the Security page. The
@@ -23,11 +24,13 @@ import RowAction from '@/components/ui/row-action';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import ToastOnArrival from '@/components/ui/toast-on-arrival';
 import { personalDataShown } from '@/lib/authz/impersonation';
+import displayName from '@/lib/display-name';
 import ClientMessages from '@/lib/i18n/client-messages';
 import appContext from '@/server/app-context';
 import { listOwnActivity } from '@/server/audit';
 import { getActor } from '@/server/authz';
 import { ownLanguage } from '@/server/people/own-locale';
+import { ownPictureChoices } from '@/server/people/pictures';
 
 import accountMessage, {
   type AccountParams,
@@ -38,6 +41,7 @@ import { sendVerificationAction } from './actions';
 import LanguageForm from './language-form';
 import NameForm from './name-form';
 import describeOwnActivity from './own-activity';
+import PictureForm from './picture-form';
 import SignedInAsNote from './signed-in-as-note';
 
 /**
@@ -62,10 +66,11 @@ async function AccountSettings({ searchParams }: { searchParams: Promise<Account
   // A staff member signed in as the user sees the page read-only, with only the personal details
   // they see on the user's page.
   const shown = personalDataShown(actor);
-  const [params, ownActivity, language, t, tAuth, tAudit, tRoles] = await Promise.all([
+  const [params, ownActivity, language, picture, t, tAuth, tAudit, tRoles] = await Promise.all([
     searchParams,
     listOwnActivity(appContext, actor),
     ownLanguage(appContext, actor),
+    ownPictureChoices(appContext, actor),
     getTranslations('account'),
     getTranslations('auth'),
     getTranslations('audit'),
@@ -132,6 +137,16 @@ async function AccountSettings({ searchParams }: { searchParams: Promise<Account
       <Card title={t('profile.nameTitle')} description={t('profile.nameDescription')}>
         <ClientMessages namespaces={['account']}>
           <NameForm name={actor.name} />
+        </ClientMessages>
+      </Card>
+      <Card title={t('profile.pictureTitle')} description={t('profile.pictureDescription')}>
+        <ClientMessages namespaces={['account']}>
+          <PictureForm
+            name={displayName(actor)}
+            options={picture.choices}
+            shown={picture.shown}
+            chosen={picture.source !== null}
+          />
         </ClientMessages>
       </Card>
       <Card
