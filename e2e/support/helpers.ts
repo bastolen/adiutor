@@ -84,6 +84,25 @@ export function toasts(page: Page): Locator {
   return page.getByRole('region', { name: /^(Notifications|Meldingen|Notificaciones) \(F8\)$/ });
 }
 
+/** A transparent 1×1 PNG, for pictures the browser is answered with. */
+const TINY_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+  'base64',
+);
+
+/**
+ * Answers every request for a person's picture (`/avatars/*`) in the
+ * browser with a tiny PNG, so no test makes Adiutor fetch it from GitHub or
+ * Google.
+ *
+ * @param page - The browser page.
+ */
+export async function answerPictures(page: Page): Promise<void> {
+  await page.route('**/avatars/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'image/png', body: TINY_PNG }),
+  );
+}
+
 /** Pages a signed-in user can land on. */
 const SIGNED_IN_URL = /\/(dashboard|companies\/|account)/;
 

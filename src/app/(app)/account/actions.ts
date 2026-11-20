@@ -22,6 +22,7 @@ import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
 import { assertNotSignedInAs, getActor } from '@/server/authz';
 import setOwnLocale from '@/server/people/own-locale';
+import { setOwnPicture } from '@/server/people/pictures';
 import { assertRateLimit, RATE_LIMITS } from '@/server/rate-limit';
 
 import { LANGUAGE_SECTION, VERIFIED_RETURN_PATH } from './account-messages';
@@ -55,6 +56,28 @@ export async function saveLanguageAction(
       cookieStore.delete(LOCALE_COOKIE);
     }
     return { ok: true, data: LANGUAGE_SAVED_PATH };
+  });
+}
+
+/**
+ * Saves which picture the signed-in user shows: the picture of one of their
+ * connected accounts, or their initials. The page is refreshed, so the new
+ * picture shows wherever they appear on it.
+ *
+ * @param _previous - The previous result (unused).
+ * @param formData - Field `picture`: `initials` or a provider ID.
+ * @returns A confirmation, or why it failed.
+ */
+export async function savePictureAction(
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const actor = await getActor({ allowMissingMfa: true });
+    await setOwnPicture(appContext, actor, field(formData, 'picture'));
+    refresh();
+    const t = await getTranslations('account');
+    return { ok: true, message: t('profile.pictureSaved') };
   });
 }
 

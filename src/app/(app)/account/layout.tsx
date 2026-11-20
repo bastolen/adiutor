@@ -7,7 +7,9 @@
 import { Suspense } from 'react';
 
 import { PageHeaderSkeleton } from '@/components/ui/skeleton';
+import appContext from '@/server/app-context';
 import { getActor } from '@/server/authz';
+import { loadPictures } from '@/server/people/pictures';
 
 import AccountHeader from './account-header';
 
@@ -20,7 +22,10 @@ import AccountHeader from './account-header';
  */
 async function AccountHeaderLoader() {
   const actor = await getActor({ allowMissingMfa: true });
-  return <AccountHeader name={actor.name} email={actor.email} />;
+  const pictures = await loadPictures(appContext.db, [actor.id]);
+  return (
+    <AccountHeader name={actor.name} email={actor.email} picture={pictures.get(actor.id) ?? null} />
+  );
 }
 
 /**

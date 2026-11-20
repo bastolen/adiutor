@@ -1,7 +1,7 @@
 /**
  * @file Tests for the OAuth provider list: which providers can prove MFA,
  * how their names are joined in a sentence, how their accounts are named and
- * identified, and the next-page cookies (an account connected, a step-up
+ * identified, where their pictures may come from, and the next-page cookies (an account connected, a step-up
  * that didn't count).
  */
 import { describe, expect, it } from 'vitest';
@@ -10,8 +10,11 @@ import {
   accountIdFromProfile,
   accountNameFromProfile,
   cleanAccountName,
+  imageFromProfile,
   isMfaProvider,
+  isProviderImageUrl,
   MAX_ACCOUNT_NAME_LENGTH,
+  MAX_IMAGE_URL_LENGTH,
   MFA_PROVIDERS,
   OAUTH_PROVIDERS,
   parseProviderLinkedCookie,
@@ -97,6 +100,49 @@ describe('account names', () => {
     );
     expect(cleanAccountName('a'.repeat(MAX_ACCOUNT_NAME_LENGTH + 1))).toBeNull();
     expect(cleanAccountName(undefined)).toBeNull();
+  });
+});
+
+describe('account pictures', () => {
+  it('reads GitHub’s and Google’s picture from their own hosts', () => {
+    expect(
+      imageFromProfile('github', { avatar_url: 'https://avatars.githubusercontent.com/u/1?v=4' }),
+    ).toBe('https://avatars.githubusercontent.com/u/1?v=4');
+    expect(
+      imageFromProfile('google', { picture: 'https://lh3.googleusercontent.com/a/abc=s96-c' }),
+    ).toBe('https://lh3.googleusercontent.com/a/abc=s96-c');
+  });
+
+  it.each([
+    ['another host', 'https://example.org/me.png'],
+    ['a host that only ends like it', 'https://evil-avatars.githubusercontent.com.example.org/1'],
+    ['plain http', 'http://avatars.githubusercontent.com/u/1'],
+    ['a port', 'https://avatars.githubusercontent.com:8443/u/1'],
+    ['credentials', 'https://user:pass@avatars.githubusercontent.com/u/1'],
+    ['no address', 'not an address'],
+    ['something else than text', 42],
+    [
+      'an address that is too long',
+      `https://avatars.githubusercontent.com/${'a'.repeat(MAX_IMAGE_URL_LENGTH)}`,
+    ],
+  ])('keeps no picture from %s', (_what, value) => {
+    expect(isProviderImageUrl('github', value)).toBe(false);
+    expect(imageFromProfile('github', { avatar_url: value })).toBeNull();
+  });
+
+  it('keeps no picture from another provider’s host, or without the claim', () => {
+    expect(
+      imageFromProfile('google', { picture: 'https://avatars.githubusercontent.com/u/1' }),
+    ).toBeNull();
+    expect(imageFromProfile('github', { login: 'adiutor' })).toBeNull();
+    expect(imageFromProfile('github', null)).toBeNull();
+    // Only the profile's own key: an inherited one doesn't count.
+    expect(
+      imageFromProfile(
+        'github',
+        Object.create({ avatar_url: 'https://avatars.githubusercontent.com/u/1' }),
+      ),
+    ).toBeNull();
   });
 });
 

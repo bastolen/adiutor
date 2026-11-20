@@ -1,6 +1,6 @@
 /**
  * @file Integration tests for naming provider accounts from the provider's
- * profile.
+ * profile, and keeping their pictures.
  */
 import { getOAuthState } from 'better-auth/api';
 import { afterEach, beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
@@ -18,7 +18,7 @@ import {
   afterAccountCreate,
   beforeAccountCreate,
   beforeAccountUpdate,
-  noteProviderAccountName,
+  noteProviderProfile,
 } from './provider-accounts';
 import {
   db,
@@ -55,7 +55,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('naming a provider account', () => {
+describe('naming a provider account, and keeping its picture', () => {
   /**
    * The source Better Auth hands `validateUserInfo` for a GitHub sign-in or
    * connection.
@@ -80,7 +80,7 @@ describe('naming a provider account', () => {
   it('stores the name from the profile when the account is created', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
     const { ctx } = githubCallback();
-    noteProviderAccountName(githubSource({ id: 1, login: 'adiutor-tests' }), sameRequest(ctx));
+    noteProviderProfile(githubSource({ id: 1, login: 'adiutor-tests' }), sameRequest(ctx));
 
     const result = await beforeAccountCreate(
       { userId: jane, providerId: 'github', accountId: '1' },
@@ -93,7 +93,7 @@ describe('naming a provider account', () => {
 
   it('refreshes the name when signing in again, next to dropping the tokens', () => {
     const { ctx } = githubCallback();
-    noteProviderAccountName(githubSource({ login: 'adiutor-tests-renamed' }), sameRequest(ctx));
+    noteProviderProfile(githubSource({ login: 'adiutor-tests-renamed' }), sameRequest(ctx));
 
     const { data } = beforeAccountUpdate(
       { providerId: 'github', accessToken: 'token', idToken: 'id-token' },
@@ -111,7 +111,7 @@ describe('naming a provider account', () => {
 
   it('only names an account of the same provider, in the same request, once', () => {
     const { ctx } = githubCallback();
-    noteProviderAccountName(githubSource({ login: 'adiutor-tests' }), ctx);
+    noteProviderProfile(githubSource({ login: 'adiutor-tests' }), ctx);
 
     expect(beforeAccountUpdate({ providerId: 'google' }, ctx).data).not.toHaveProperty(
       'accountName',
@@ -127,9 +127,9 @@ describe('naming a provider account', () => {
 
   it('keeps the stored name when the profile has none', async () => {
     const { ctx } = githubCallback();
-    noteProviderAccountName(githubSource({ login: 'adiutor-tests' }), ctx);
+    noteProviderProfile(githubSource({ login: 'adiutor-tests' }), ctx);
     // A later sign-in in that request whose profile has no username.
-    noteProviderAccountName(githubSource({ id: 1 }), ctx);
+    noteProviderProfile(githubSource({ id: 1 }), ctx);
 
     expect(beforeAccountUpdate({ providerId: 'github' }, ctx).data).not.toHaveProperty(
       'accountName',
@@ -137,6 +137,48 @@ describe('naming a provider account', () => {
     expect(beforeAccountUpdate({ providerId: 'github' }, null).data).not.toHaveProperty(
       'accountName',
     );
+  });
+
+  it('keeps the picture from the profile with the name, at every sign-in', () => {
+    const { ctx } = githubCallback();
+    noteProviderProfile(
+      githubSource({
+        login: 'adiutor-tests',
+        avatar_url: 'https://avatars.githubusercontent.com/u/1?v=4',
+      }),
+      sameRequest(ctx),
+    );
+
+    expect(beforeAccountUpdate({ providerId: 'github' }, ctx).data).toEqual({
+      providerId: 'github',
+      accountName: 'adiutor-tests',
+      accountImage: 'https://avatars.githubusercontent.com/u/1?v=4',
+    });
+  });
+
+  it('keeps no picture from another host, and leaves the stored one alone', () => {
+    const { ctx } = githubCallback();
+    noteProviderProfile(
+      githubSource({ login: 'adiutor-tests', avatar_url: 'https://example.org/me.png' }),
+      ctx,
+    );
+
+    const { data } = beforeAccountUpdate({ providerId: 'github' }, ctx);
+
+    expect(data).toEqual({ providerId: 'github', accountName: 'adiutor-tests' });
+  });
+
+  it('keeps a picture when the profile has one but no name', () => {
+    const { ctx } = githubCallback();
+    noteProviderProfile(
+      githubSource({ avatar_url: 'https://avatars.githubusercontent.com/u/1' }),
+      ctx,
+    );
+
+    expect(beforeAccountUpdate({ providerId: 'github' }, ctx).data).toEqual({
+      providerId: 'github',
+      accountImage: 'https://avatars.githubusercontent.com/u/1',
+    });
   });
 
   it('never throws, whatever the profile, so it never refuses a sign-in', () => {
@@ -155,11 +197,11 @@ describe('naming a provider account', () => {
       },
     });
 
-    expect(() => noteProviderAccountName(githubSource(hostile), ctx)).not.toThrow();
-    expect(() => noteProviderAccountName(githubSource({ login: 'x' }), null)).not.toThrow();
-    expect(() => noteProviderAccountName({ method: 'magic-link' }, ctx)).not.toThrow();
+    expect(() => noteProviderProfile(githubSource(hostile), ctx)).not.toThrow();
+    expect(() => noteProviderProfile(githubSource({ login: 'x' }), null)).not.toThrow();
+    expect(() => noteProviderProfile({ method: 'magic-link' }, ctx)).not.toThrow();
     expect(() =>
-      noteProviderAccountName({ method: 'oauth', oauth: { providerId: 'gitlab' } }, ctx),
+      noteProviderProfile({ method: 'oauth', oauth: { providerId: 'gitlab' } }, ctx),
     ).not.toThrow();
 
     expect(beforeAccountUpdate({ providerId: 'github' }, ctx).data).not.toHaveProperty(

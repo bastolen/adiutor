@@ -241,7 +241,13 @@ describe('a request list for the staff', () => {
     type: 'bug',
     priority: 'normal',
     company: { id: 'company', name: 'Adiutor Tests', slug: 'adiutor-tests' },
-    assignees: assignees.map((name) => ({ userId: name, name, side: 'staff', isViewer: false })),
+    assignees: assignees.map((name) => ({
+      userId: name,
+      name,
+      side: 'staff',
+      isViewer: false,
+      picture: null,
+    })),
     lastActivityAt: new Date('2026-11-13T09:00:00Z'),
     audience: 'staff',
   });

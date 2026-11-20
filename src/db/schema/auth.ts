@@ -41,6 +41,9 @@ export const user = pgTable('user', {
     withTimezone: true,
   }),
   allowStaffSignIn: boolean('allow_staff_sign_in').default(true),
+  avatarSource: text('avatar_source', {
+    enum: ['initials', 'github', 'google'],
+  }),
 });
 
 /** Better Auth's `session` table. */
@@ -94,6 +97,7 @@ export const account = pgTable(
     mfaVerified: boolean('mfa_verified').default(false),
     confirmed: boolean('confirmed').default(true),
     accountName: text('account_name'),
+    accountImage: text('account_image'),
   },
   (table) => [index('account_userId_idx').on(table.userId)],
 );

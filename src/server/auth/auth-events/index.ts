@@ -32,7 +32,7 @@
 export type { AuthHookContext } from './hook-context';
 export {
   withoutKeptTokens,
-  noteProviderAccountName,
+  noteProviderProfile,
   beforeAccountUpdate,
   beforeAccountCreate,
   afterAccountCreate,

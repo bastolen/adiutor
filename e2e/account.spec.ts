@@ -10,10 +10,13 @@ import { type Browser, type Page } from '@playwright/test';
 import {
   DEACTIVATE_CLIENT,
   PLATFORM_ADMIN,
+  SEEDED_REQUESTS,
   SESSIONS_CLIENT,
+  SUPPORT_STAFF,
   UNVERIFIED_USER,
 } from './support/fixtures';
 import {
+  answerPictures,
   fillAndSubmitSignIn,
   openUser,
   signIn,
@@ -36,6 +39,42 @@ async function adminPage(browser: Browser): Promise<Page> {
   await signIn(page, PLATFORM_ADMIN);
   return page;
 }
+
+test('a user shows the picture of an account they connected, or their initials', async ({
+  page,
+}) => {
+  await answerPictures(page);
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto('/account');
+  const accountMenu = page.getByRole('button', { name: /^Account menu/ });
+  const choice = page.getByRole('group', { name: 'Show' });
+  const google = choice.getByRole('radio', { name: `Google · ${SUPPORT_STAFF.email}` });
+
+  // Until they choose: the picture of the account they connected first, from Adiutor's address.
+  await expect(google).toBeChecked();
+  await expect(
+    page.getByText('Until you choose, the picture of the account you connected first is shown.'),
+  ).toBeVisible();
+  await expect(accountMenu.locator('img')).toHaveAttribute(
+    'src',
+    /^\/avatars\/[0-9a-f-]+\?v=[0-9a-f]{8}$/,
+  );
+
+  await choice.getByRole('radio', { name: 'Initials' }).check();
+  await page.getByRole('button', { name: 'Save picture' }).click();
+  await expect(toasts(page)).toContainText('Picture saved.');
+  await expect(accountMenu.locator('img')).toHaveCount(0);
+  await expect(page.getByText(/^Until you choose/)).toHaveCount(0);
+
+  // Back to the picture, which also shows on the requests they work on.
+  await google.check();
+  await page.getByRole('button', { name: 'Save picture' }).click();
+  await expect(accountMenu.locator('img')).toHaveCount(1);
+  await page.goto(`/requests/${SEEDED_REQUESTS.waiting.number}`);
+  await expect(
+    page.getByRole('region', { name: 'Conversation' }).locator('img[src^="/avatars/"]').first(),
+  ).toBeVisible();
+});
 
 test('verify your email from the account page, keeping your password', async ({
   page,

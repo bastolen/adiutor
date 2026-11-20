@@ -415,10 +415,18 @@ whole sentence per event, with who made the change, if not you, where each langu
   `src/lib/sign-in/oauth-providers.ts`), which also tells several accounts of one provider apart. The
   name is stored when the account is connected and refreshed at every sign-in with it (Better
   Auth hands the provider's profile only to `user.validateUserInfo`, which notes it for the
-  account hooks: `noteProviderAccountName` in `src/server/auth/auth-events/provider-accounts.ts`; noting it never
+  account hooks: `noteProviderProfile` in `src/server/auth/auth-events/provider-accounts.ts`; noting it never
   refuses a sign-in, and only a re-verify with another account than your own confirmed one is
   refused there). Accounts connected before names were stored show none until their next
   sign-in.
+- **Pictures:** the same noting keeps the address of the account's picture at the provider
+  (`account.accountImage`: GitHub's `avatar_url`, Google's `picture`, `PROVIDER_IMAGE_CLAIMS`),
+  but only an `https` address on the provider's own picture hosts (`isProviderImageUrl`). Someone
+  shows the picture of the confirmed account they connected first, or the one they choose on the
+  account page, or their initials (`pictureAccount` in `src/lib/sign-in/pictures.ts`,
+  `user.avatarSource`). The picture is served from Adiutor's own address, never the provider's
+  (see [decision 0022](decisions/0022-profile-pictures-from-providers.md)). Accounts connected
+  before pictures were kept get one at their next sign-in.
   Connecting and disconnecting need a recent
   confirmation (or, without a second step, a sign-in from the last hour), and an email link
   always remains as a way to sign in. Connecting returns to this tab. A connection

@@ -179,6 +179,8 @@ export async function startAuthenticatorSetup(db: Database, userId: string): Pro
  * @param options.accessToken - Its access token; none by default.
  * @param options.updatedAt - When it was last used to sign in; defaults to now.
  * @param options.accountId - The provider's ID for the account; random by default.
+ * @param options.accountImage - The address of its picture at the provider.
+ * @param options.createdAt - When it was connected; now by default.
  * @returns The account row's ID (what Better Auth's unlink takes).
  */
 export async function connectProvider(
@@ -192,6 +194,8 @@ export async function connectProvider(
     accessToken?: string;
     updatedAt?: Date;
     accountId?: string;
+    accountImage?: string;
+    createdAt?: Date;
   } = {},
 ): Promise<string> {
   const providerId = options.providerId ?? 'github';
@@ -207,6 +211,8 @@ export async function connectProvider(
         accountName: options.accountName,
         accessToken: options.accessToken,
         updatedAt: options.updatedAt,
+        accountImage: options.accountImage,
+        createdAt: options.createdAt,
       })
       .returning({ id: account.id }),
     'the new account',

@@ -1,7 +1,7 @@
 /**
  * @file Tests for the avatar and the initials it shows.
  */
-import { render } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import Avatar, { initialsOf } from './avatar';
@@ -48,5 +48,38 @@ describe('Avatar', () => {
 
     expect(container.firstElementChild).toHaveAttribute('title', 'Jane Doe');
     expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('draws a picture over the initials, which stay for when it can’t load', () => {
+    const { container } = render(<Avatar name="Jane Doe" src="/avatars/1?v=1" />);
+
+    const picture = container.querySelector('img');
+    expect(picture).toHaveAttribute('src', '/avatars/1?v=1');
+    expect(picture).toHaveAttribute('alt', '');
+    expect(container.firstElementChild).toHaveTextContent('JD');
+  });
+
+  it('shows the initials once the picture fails to load', () => {
+    const { container } = render(<Avatar name="Jane Doe" src="/avatars/1?v=1" />);
+
+    fireEvent.error(container.querySelector('img') ?? document.body);
+
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.firstElementChild).toHaveTextContent('JD');
+  });
+
+  it('tries a new picture again after an earlier one failed', () => {
+    const { container, rerender } = render(<Avatar name="Jane Doe" src="/avatars/1?v=1" />);
+    fireEvent.error(container.querySelector('img') ?? document.body);
+
+    rerender(<Avatar name="Jane Doe" src="/avatars/1?v=2" />);
+
+    expect(container.querySelector('img')).toHaveAttribute('src', '/avatars/1?v=2');
+  });
+
+  it('draws no picture without one', () => {
+    const { container } = render(<Avatar name="Jane Doe" src={null} />);
+
+    expect(container.querySelector('img')).toBeNull();
   });
 });

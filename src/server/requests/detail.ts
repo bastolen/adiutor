@@ -22,6 +22,7 @@ import {
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { orderTerms, textOrder } from '../pagination';
+import { loadPictures } from '../people/pictures';
 import getRequestPrefix from '../people/request-prefix';
 import getStaffName from '../people/staff-name';
 import { getRequestAccess, requestAudienceIn, type RequestPerson, requestPerson } from './access';
@@ -237,16 +238,22 @@ export async function getRequest(
       .limit(THREAD_CHUNK * (earlier + 1)),
   ]);
 
+  // Everyone the page names, with their pictures, in one go.
+  const pictures = await loadPictures(ctx.db, [
+    found.createdBy,
+    ...assignees.map(({ id }) => id),
+    ...latest.flatMap(({ author, subject }) => [author?.id ?? null, subject?.id ?? null]),
+  ]);
   const entries = latest
     .reverse()
     .map(({ author, authorSide, body, bodyFormat, subject, ...entry }) => ({
       ...entry,
-      author: requestPerson(author ?? { id: null, name: null }, authorSide, actor),
+      author: requestPerson(author ?? { id: null, name: null }, authorSide, actor, pictures),
       body: body === null ? null : { text: body, format: bodyFormat },
       // An assignment's subject is always on the staff's side, also once their account is gone.
       subject:
         entry.kind === 'assignee'
-          ? requestPerson(subject ?? { id: null, name: null }, 'staff', actor)
+          ? requestPerson(subject ?? { id: null, name: null }, 'staff', actor, pictures)
           : null,
       subjectIsAuthor:
         entry.kind === 'assignee' && Boolean(subject?.id) && subject?.id === author?.id,
@@ -261,8 +268,13 @@ export async function getRequest(
     status: found.status,
     reopenedAt: found.reopenedAt,
     priority: internal ? found.priority : null,
-    raisedBy: requestPerson(raisedBy[0] ?? { id: null, name: null }, found.createdBySide, actor),
-    assignees: assignees.map((person) => requestPerson(person, 'staff', actor)),
+    raisedBy: requestPerson(
+      raisedBy[0] ?? { id: null, name: null },
+      found.createdBySide,
+      actor,
+      pictures,
+    ),
+    assignees: assignees.map((person) => requestPerson(person, 'staff', actor, pictures)),
     createdAt: found.createdAt,
     firstResponseAt: firstResponse[0]?.at ?? null,
     lastActivityAt: found.lastActivityAt,

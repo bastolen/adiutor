@@ -167,6 +167,7 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
                       email={member.email}
                       isSelf={isSelf}
                       brand
+                      picture={member.picture}
                       href={`/admin/users/${member.userId}`}
                       badges={
                         member.deactivatedAt && (

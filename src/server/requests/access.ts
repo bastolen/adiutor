@@ -174,6 +174,11 @@ export interface RequestPerson {
   side: RequestSide;
   /** Whether they're the one reading. */
   isViewer: boolean;
+  /**
+   * Their picture's address (`loadPictures`), or `null` for their initials,
+   * and when their account is gone. Everyone who reads their name gets it.
+   */
+  picture: string | null;
 }
 
 /**
@@ -185,17 +190,20 @@ export interface RequestPerson {
  * @param person.name - Their name, or `null` when the account is gone.
  * @param side - The side they acted as.
  * @param actor - Whoever reads it.
+ * @param pictures - The pictures of the people in what's read (`loadPictures`), by user ID.
  * @returns The person.
  */
 export function requestPerson(
   person: { id: string | null; name: string | null },
   side: RequestSide,
   actor: Actor,
+  pictures: ReadonlyMap<string, string | null> = new Map(),
 ): RequestPerson {
   return {
     userId: getGlobalPermissions(actor).has('users:view') ? person.id : null,
     name: visibleName(person.name),
     side,
     isViewer: person.id !== null && person.id === actor.id,
+    picture: person.id === null ? null : (pictures.get(person.id) ?? null),
   };
 }

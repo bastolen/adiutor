@@ -275,6 +275,10 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
   is in their company. Company users see a staff member's own name with a label that carries the
   name users know the staff by. Someone without a name (or with an old one that has nothing to
   see in it, `visibleName`), or whose account is gone, is shown as their side.
+- **Avatars show people's pictures:** a person's avatar shows the picture they chose from a connected
+  GitHub or Google account, or their initials (`RequestPerson.picture`, loaded for the whole page with
+  `loadPictures`; see [decision 0022](decisions/0022-profile-pictures-from-providers.md)). Everyone
+  who reads their name gets it; the picture's address says nothing more about who they are.
 - **For the staff, a name links to the user's page.** The services give a person's ID only to
   readers who may open that page (`users:view`, which every staff role has; `RequestPerson.userId`
   from `requestPerson`), so it never reaches a company user's browser. A side's name is never a

@@ -31,7 +31,13 @@ function detailOf(detail: Partial<RequestDetail> = {}): RequestDetail {
     status: 'open',
     reopenedAt: null,
     priority: null,
-    raisedBy: { userId: null, name: 'Casey Client', side: 'company', isViewer: true },
+    raisedBy: {
+      userId: null,
+      name: 'Casey Client',
+      side: 'company',
+      isViewer: true,
+      picture: null,
+    },
     assignees: [],
     createdAt: new Date('2026-11-13T09:00:00Z'),
     firstResponseAt: null,
@@ -96,8 +102,8 @@ describe('RequestDetails', () => {
     await renderDetails({
       detail: detailOf({
         assignees: [
-          { userId: null, name: 'Morgan Manager', side: 'staff', isViewer: false },
-          { userId: null, name: 'Sam Support', side: 'staff', isViewer: false },
+          { userId: null, name: 'Morgan Manager', side: 'staff', isViewer: false, picture: null },
+          { userId: null, name: 'Sam Support', side: 'staff', isViewer: false, picture: null },
         ],
       }),
     });
@@ -124,7 +130,9 @@ describe('RequestDetails', () => {
     await renderDetails({
       detail: detailOf({
         audience: 'staff',
-        assignees: [{ userId: 'sam-id', name: 'Sam Support', side: 'staff', isViewer: false }],
+        assignees: [
+          { userId: 'sam-id', name: 'Sam Support', side: 'staff', isViewer: false, picture: null },
+        ],
       }),
       assigneeControls: <button type="button">Assign to me</button>,
     });
@@ -176,7 +184,13 @@ describe('RequestDetails', () => {
   it('has no first response for a request the staff raised themselves', async () => {
     await renderDetails({
       detail: detailOf({
-        raisedBy: { userId: null, name: 'Sam Support', side: 'staff', isViewer: false },
+        raisedBy: {
+          userId: null,
+          name: 'Sam Support',
+          side: 'staff',
+          isViewer: false,
+          picture: null,
+        },
       }),
     });
 

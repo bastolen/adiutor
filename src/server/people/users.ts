@@ -26,6 +26,7 @@ import {
 import type { ServiceContext } from '../context';
 import { paginate, peopleOrder, slicePage } from '../pagination';
 import containsPattern from '../search';
+import { loadPictures } from './pictures';
 
 /**
  * Ways to narrow the users list, in the order the page offers them:
@@ -69,6 +70,8 @@ export interface UserListItem {
   staffRole: PlatformRole | null;
   /** The companies they belong to, by name, with the URL name their links use. */
   companies: { id: string; name: string; slug: string }[];
+  /** Their picture's address (`loadPictures`), or `null` for their initials. */
+  picture: string | null;
 }
 
 /** Options for {@link listUsers}: search, filter, and the table's sort and page. */
@@ -247,12 +250,17 @@ export async function listUsers(
     };
     companies = byUser;
   }
+  const pictures = await loadPictures(
+    ctx.db,
+    page.items.map(({ id }) => id),
+  );
   return {
     ...page,
     items: page.items.map((row): UserListItem => ({
       ...row,
       staffRole: row.staffRole ?? null,
       companies: companies.get(row.id) ?? [],
+      picture: pictures.get(row.id) ?? null,
     })),
   };
 }

@@ -23,6 +23,8 @@ interface PersonCellProps {
   isSelf: boolean;
   /** Whether the avatar uses the brand colours (staff). */
   brand?: boolean;
+  /** Their picture's address, or `null` for their initials. */
+  picture?: string | null;
   /** Where the name links to, if anywhere (e.g. the user's page). */
   href?: string;
   /** Badges after the name and "You", e.g. "Deactivated". */
@@ -46,6 +48,7 @@ interface PersonCellProps {
  * @param props.email - Their address.
  * @param props.isSelf - Whether it's the user's own row.
  * @param props.brand - Brand colours for the avatar.
+ * @param props.picture - Their picture.
  * @param props.href - Where the name links to.
  * @param props.badges - More badges.
  * @param props.role - The role, for narrow screens.
@@ -58,6 +61,7 @@ export default function PersonCell({
   email,
   isSelf,
   brand = false,
+  picture = null,
   href = undefined,
   badges = null,
   role,
@@ -67,7 +71,7 @@ export default function PersonCell({
   return (
     <Td className={isSelf ? ownRowCell : undefined}>
       <div className="flex items-center gap-3">
-        <Avatar name={name} size="sm" brand={brand} />
+        <Avatar name={name} size="sm" brand={brand} src={picture} />
         <div className="flex min-w-0 flex-col">
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
             {href ? (
