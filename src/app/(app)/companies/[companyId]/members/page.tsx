@@ -182,6 +182,7 @@ async function Members({
                         name={shownName}
                         email={member.email}
                         isSelf={isSelf}
+                        picture={member.picture}
                         role={role}
                         lastActiveAt={member.lastActiveAt}
                         joinedAt={member.createdAt}

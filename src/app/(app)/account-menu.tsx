@@ -50,6 +50,8 @@ interface AccountMenuProps {
    * mobile menu around the account menu closes, as for its other links.
    */
   onNavigate?: () => void;
+  /** Their picture's address, or `null` (or left out) for their initials. */
+  picture?: string | null;
 }
 
 /**
@@ -85,6 +87,7 @@ interface AccountMenuProps {
  * @param props.email - Their email address.
  * @param props.signedInAs - Whether a staff member is signed in as the user.
  * @param props.onNavigate - Called when "Account settings" is chosen.
+ * @param props.picture - Their picture.
  * @returns The account menu.
  */
 export default function AccountMenu({
@@ -92,6 +95,7 @@ export default function AccountMenu({
   email,
   signedInAs = false,
   onNavigate = undefined,
+  picture = null,
 }: AccountMenuProps) {
   const t = useTranslations('navigation');
   const { goBack } = useBackToOwnAccount();
@@ -148,7 +152,7 @@ export default function AccountMenu({
             focusRing,
           )}
         >
-          <Avatar name={shownName} size="sm" />
+          <Avatar name={shownName} size="sm" src={picture} />
           <span className="flex min-w-0 flex-1 flex-col">
             {/* Part of the button's name, which then contains its visible text (WCAG 2.5.3). */}
             <span className="sr-only">{t('accountMenu')}</span>

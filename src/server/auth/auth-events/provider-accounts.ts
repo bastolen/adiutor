@@ -1,6 +1,6 @@
 /**
  * @file The hooks for provider accounts (GitHub, Google): no OAuth tokens kept,
- * their account names, whether a new one is confirmed, their provider MFA
+ * their account names and pictures, whether a new one is confirmed, their provider MFA
  * kept up to date, and the audit events and notices when one is connected
  * or disconnected.
  */
@@ -16,6 +16,7 @@ import {
 } from '@/lib/authz/mfa';
 import {
   accountNameFromProfile,
+  imageFromProfile,
   isMfaProvider,
   isOAuthProvider,
   type MfaProvider,
@@ -59,13 +60,14 @@ export function withoutKeptTokens<T extends object>(data: T): T {
 }
 
 /**
- * Notes the name of the provider account a sign-in or connection is about
- * (a GitHub username, a Google email address: `accountNameFromProfile`), for
- * the account hooks of the same request to store. Called from Better Auth's
- * `user.validateUserInfo`, the one place it hands over the provider's
- * profile, which runs before every account it creates or updates with a
- * provider. It must never refuse anyone, so this never throws, and it logs
- * nothing about the profile.
+ * Notes the name and the picture of the provider account a sign-in or
+ * connection is about (a GitHub username, a Google email address:
+ * `accountNameFromProfile`; the picture's address on the provider's own
+ * hosts: `imageFromProfile`), for the account hooks of the same request to
+ * store. Called from Better Auth's `user.validateUserInfo`, the one place it
+ * hands over the provider's profile, which runs before every account it
+ * creates or updates with a provider. It must never refuse anyone, so this
+ * never throws, and it logs nothing about the profile.
  *
  * @param source - Where the incoming identity comes from.
  * @param source.method - How (`oauth` for a provider).
@@ -74,7 +76,7 @@ export function withoutKeptTokens<T extends object>(data: T): T {
  * @param source.oauth.profile - Its raw profile (user info or ID token claims), unchecked.
  * @param ctx - The endpoint context.
  */
-export function noteProviderAccountName(
+export function noteProviderProfile(
   source: { method: string; oauth?: { providerId: string; profile?: unknown } },
   ctx: AuthHookContext | null,
 ): void {
@@ -84,44 +86,53 @@ export function noteProviderAccountName(
       return;
     }
     const name = accountNameFromProfile(providerId, source.oauth?.profile);
+    const image = imageFromProfile(providerId, source.oauth?.profile);
     const state = requestState(ctx.context);
-    if (name) {
-      state.providerAccountName = { providerId, name };
+    if (name || image) {
+      state.providerProfile = { providerId, name, image };
     } else {
-      delete state.providerAccountName;
+      delete state.providerProfile;
     }
   } catch {
     // eslint-disable-next-line no-console -- Never the profile: only that it failed.
-    console.error('Reading the provider account name failed');
+    console.error('Reading the provider profile failed');
   }
 }
 
+/** The account fields {@link withProfile} adds. */
+interface ProfileFields {
+  accountName?: string;
+  accountImage?: string;
+}
+
 /**
- * Adds the name noted for this request ({@link noteProviderAccountName}) to a
- * provider account about to be stored, when it's for the same provider. A
- * stored name is never removed: without a noted name, the data is unchanged.
+ * Adds the name and picture noted for this request
+ * ({@link noteProviderProfile}) to a provider account about to be stored,
+ * when it's for the same provider. A stored name or picture is never
+ * removed: without a noted one, it stays as it is.
  *
  * @param data - The account fields about to be stored.
  * @param ctx - The endpoint storing them.
- * @returns The fields, with `accountName` when one was noted.
+ * @returns The fields, with `accountName` and `accountImage` when they were noted.
  */
-function withAccountName<T extends object>(
-  data: T,
-  ctx: AuthHookContext | null,
-): T & { accountName?: string } {
+function withProfile<T extends object>(data: T, ctx: AuthHookContext | null): T & ProfileFields {
   const context = ctx?.context;
-  const noted = context ? requestState(context).providerAccountName : undefined;
+  const noted = context ? requestState(context).providerProfile : undefined;
   if (!context || !noted || !('providerId' in data) || data.providerId !== noted.providerId) {
     return data;
   }
-  takeRequestState(context, 'providerAccountName');
-  return { ...data, accountName: noted.name };
+  takeRequestState(context, 'providerProfile');
+  return {
+    ...data,
+    ...(noted.name && { accountName: noted.name }),
+    ...(noted.image && { accountImage: noted.image }),
+  };
 }
 
 /**
  * Before Better Auth changes an account (e.g. new tokens at a sign-in): see
- * {@link withoutKeptTokens}. A sign-in also refreshes the account's name,
- * which may have changed at the provider ({@link withAccountName}).
+ * {@link withoutKeptTokens}. A sign-in also refreshes the account's name
+ * and picture, which may have changed at the provider ({@link withProfile}).
  *
  * @param data - The changed fields.
  * @param ctx - The endpoint changing them.
@@ -130,8 +141,8 @@ function withAccountName<T extends object>(
 export function beforeAccountUpdate<T extends object>(
   data: T,
   ctx: AuthHookContext | null = null,
-): { data: T & { accountName?: string } } {
-  return { data: withAccountName(withoutKeptTokens(data), ctx) };
+): { data: T & ProfileFields } {
+  return { data: withProfile(withoutKeptTokens(data), ctx) };
 }
 
 /**
@@ -301,7 +312,7 @@ async function withConfirmation<T extends { userId: string; providerId: string }
  * confirms it on the Security page. Without a second step yet, it counts
  * right away, like a first passkey. The OAuth tokens the app doesn't keep
  * are left out ({@link withoutKeptTokens}), and the account's name at the
- * provider is added ({@link withAccountName}).
+ * provider is added ({@link withProfile}).
  *
  * @param data - The account about to be created.
  * @param data.userId - Its user.
@@ -316,7 +327,7 @@ export async function beforeAccountCreate<T extends { userId: string; providerId
   if (data.providerId === 'credential') {
     return { data };
   }
-  return { data: await withConfirmation(withAccountName(withoutKeptTokens(data), ctx), ctx) };
+  return { data: await withConfirmation(withProfile(withoutKeptTokens(data), ctx), ctx) };
 }
 
 /**
@@ -350,7 +361,7 @@ async function hasOtherSignInMethod(userId: string): Promise<boolean> {
  * @param created.userId - Its user.
  * @param created.providerId - `credential`, `github` or `google`.
  * @param created.confirmed - Whether it counts yet (see {@link beforeAccountCreate}).
- * @param created.accountName - Its name at the provider, if known (see {@link withAccountName}).
+ * @param created.accountName - Its name at the provider, if known (see {@link withProfile}).
  * @param ctx - The endpoint that created it.
  */
 export async function afterAccountCreate(

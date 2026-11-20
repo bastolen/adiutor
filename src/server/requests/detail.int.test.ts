@@ -49,7 +49,7 @@ describe('getRequest', () => {
       type: 'hotfix',
       status: 'open',
       reopenedAt: null,
-      raisedBy: { userId: null, name: 'casey', side: 'company', isViewer: true },
+      raisedBy: { userId: null, name: 'casey', side: 'company', isViewer: true, picture: null },
       company: {
         id: company.id,
         name: 'Adiutor Tests Alpha',
@@ -192,21 +192,21 @@ describe('getRequest: the conversation', () => {
     ).toEqual([
       {
         kind: 'comment',
-        author: { userId: null, name: 'casey', side: 'company', isViewer: true },
+        author: { userId: null, name: 'casey', side: 'company', isViewer: true, picture: null },
         body: { text: 'Any news?', format: 'plain' },
         from: null,
         to: null,
       },
       {
         kind: 'comment',
-        author: { userId: null, name: 'sam', side: 'staff', isViewer: false },
+        author: { userId: null, name: 'sam', side: 'staff', isViewer: false, picture: null },
         body: { text: 'On it.', format: 'markdown' },
         from: null,
         to: null,
       },
       {
         kind: 'title',
-        author: { userId: null, name: 'sam', side: 'staff', isViewer: false },
+        author: { userId: null, name: 'sam', side: 'staff', isViewer: false, picture: null },
         body: null,
         from: 'Help',
         to: 'The printer is broken',
@@ -226,10 +226,16 @@ describe('getRequest: the conversation', () => {
 
     const detail = await getRequest(ctx, await memberActor(db, company.id, 'watcher'), '1');
 
-    expect(detail.raisedBy).toEqual({ userId: null, name: null, side: 'staff', isViewer: false });
+    expect(detail.raisedBy).toEqual({
+      userId: null,
+      name: null,
+      side: 'staff',
+      isViewer: false,
+      picture: null,
+    });
     expect(detail.entries).toMatchObject([
       {
-        author: { userId: null, name: null, side: 'staff', isViewer: false },
+        author: { userId: null, name: null, side: 'staff', isViewer: false, picture: null },
         body: { text: 'On it.' },
       },
     ]);
@@ -282,9 +288,27 @@ describe('getRequest: the conversation', () => {
     const second = await getRequest(ctx, watcher, '2');
     const third = await getRequest(ctx, watcher, '3');
 
-    expect(first.raisedBy).toEqual({ userId: null, name: null, side: 'company', isViewer: false });
-    expect(second.raisedBy).toEqual({ userId: null, name: null, side: 'staff', isViewer: false });
-    expect(third.raisedBy).toEqual({ userId: null, name: null, side: 'company', isViewer: false });
+    expect(first.raisedBy).toEqual({
+      userId: null,
+      name: null,
+      side: 'company',
+      isViewer: false,
+      picture: null,
+    });
+    expect(second.raisedBy).toEqual({
+      userId: null,
+      name: null,
+      side: 'staff',
+      isViewer: false,
+      picture: null,
+    });
+    expect(third.raisedBy).toEqual({
+      userId: null,
+      name: null,
+      side: 'company',
+      isViewer: false,
+      picture: null,
+    });
     expect(JSON.stringify([first, second, third])).not.toContain('@adiutor.test');
     // Nor who it is: the nameless accounts still exist.
     expect(JSON.stringify([first, second, third])).not.toContain(nameless);
@@ -300,7 +324,13 @@ describe('getRequest: the conversation', () => {
 
     const detail = await getRequest(ctx, support, '1');
 
-    expect(detail.raisedBy).toEqual({ userId: null, name: null, side: 'company', isViewer: false });
+    expect(detail.raisedBy).toEqual({
+      userId: null,
+      name: null,
+      side: 'company',
+      isViewer: false,
+      picture: null,
+    });
   });
 
   it('gives the latest entries, and earlier ones a chunk at a time', async () => {
@@ -353,12 +383,12 @@ describe('getRequest: the assignees', () => {
     const forClient = await getRequest(ctx, client, stored.id);
 
     expect(forStaff.assignees).toEqual([
-      { userId: manager.id, name: 'Morgan Manager', side: 'staff', isViewer: false },
-      { userId: support.id, name: 'Sam Support', side: 'staff', isViewer: true },
+      { userId: manager.id, name: 'Morgan Manager', side: 'staff', isViewer: false, picture: null },
+      { userId: support.id, name: 'Sam Support', side: 'staff', isViewer: true, picture: null },
     ]);
     expect(forClient.assignees).toEqual([
-      { userId: null, name: 'Morgan Manager', side: 'staff', isViewer: false },
-      { userId: null, name: 'Sam Support', side: 'staff', isViewer: false },
+      { userId: null, name: 'Morgan Manager', side: 'staff', isViewer: false, picture: null },
+      { userId: null, name: 'Sam Support', side: 'staff', isViewer: false, picture: null },
     ]);
   });
 
@@ -407,13 +437,19 @@ describe('getRequest: the assignees', () => {
       {
         kind: 'assignee',
         to: 'assigned',
-        subject: { userId: null, name: 'Sam Support', side: 'staff', isViewer: false },
+        subject: {
+          userId: null,
+          name: 'Sam Support',
+          side: 'staff',
+          isViewer: false,
+          picture: null,
+        },
         subjectIsAuthor: true,
       },
       {
         kind: 'assignee',
         to: 'unassigned',
-        subject: { userId: null, name: null, side: 'staff', isViewer: false },
+        subject: { userId: null, name: null, side: 'staff', isViewer: false, picture: null },
         subjectIsAuthor: false,
       },
       { kind: 'comment', to: null, subject: null, subjectIsAuthor: false },

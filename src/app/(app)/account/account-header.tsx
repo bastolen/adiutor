@@ -17,6 +17,8 @@ interface AccountHeaderProps {
   name: string;
   /** Their email address. */
   email: string;
+  /** Their picture's address, or `null` (or left out) for their initials. */
+  picture?: string | null;
 }
 
 /**
@@ -26,15 +28,16 @@ interface AccountHeaderProps {
  * @param props - Header props.
  * @param props.name - The user's name.
  * @param props.email - Their email address.
+ * @param props.picture - Their picture.
  * @returns The header.
  */
-export default function AccountHeader({ name, email }: AccountHeaderProps) {
+export default function AccountHeader({ name, email, picture = null }: AccountHeaderProps) {
   const t = useTranslations('account');
   return (
     <PageHeader
       title={t('header.title')}
       description={t('header.description')}
-      leading={<Avatar name={displayName({ name, email })} size="lg" />}
+      leading={<Avatar name={displayName({ name, email })} size="lg" src={picture} />}
     >
       <SegmentTabNav
         label={t('header.sections')}

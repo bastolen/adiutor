@@ -1,4 +1,4 @@
-# 0022. Mentions: a marker in the text that points at a row, and a list by what the writer may know
+# 0023. Mentions: a marker in the text that points at a row, and a list by what the writer may know
 
 - **Status:** Accepted
 - **Date:** 2026-11-20

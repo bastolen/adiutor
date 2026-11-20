@@ -107,6 +107,7 @@ import {
 } from './people/members';
 import { dismissMfaRecommendation } from './people/mfa-recommendation';
 import setOwnLocale from './people/own-locale';
+import { setOwnPicture } from './people/pictures';
 import {
   changeStaffRole,
   getStaffSettings,
@@ -486,6 +487,7 @@ function listOperations(): Operation[] {
     ['list staff', (w) => listStaff(ctx, w.actor)],
     ['view staff settings', (w) => getStaffSettings(ctx, w.actor)],
     ['choose own language', (w) => setOwnLocale(ctx, w.actor, 'nl-NL')],
+    ['choose own picture', (w) => setOwnPicture(ctx, w.actor, 'initials')],
     ['dismiss own MFA recommendation', (w) => dismissMfaRecommendation(ctx, w.actor)],
     ['turn off sign-ins by staff', (w) => setStaffSignInAllowed(ctx, w.actor, false)],
     ["sign out another user's device", (w) => revokeOwnSession(ctx, w.actor, w.othersSession)],
@@ -791,8 +793,9 @@ const EXPECTED: Record<string, string> = {
   'list staff invitations': 'FFFFFFA',
   'list staff': 'FFFFFFA',
   'view staff settings': 'FFFFFFA',
-  // Everyone chooses their own language, and nobody else's.
+  // Everyone chooses their own language and picture, and nobody else's.
   'choose own language': 'AAAAAAA',
+  'choose own picture': 'AAAAAAA',
   // Everyone dismisses their own MFA recommendation, and nobody else's.
   'dismiss own MFA recommendation': 'AAAAAAA',
   // Everyone's own account, whatever their role.

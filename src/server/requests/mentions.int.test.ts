@@ -378,15 +378,39 @@ describe('reading a request with mentions', () => {
 
     // The staff get the IDs their links to a user's page need.
     expect(forStaff.description.mentions).toEqual({
-      [inDescription?.id ?? '']: { userId: wim.id, name: 'wim', side: 'company', isViewer: false },
+      [inDescription?.id ?? '']: {
+        userId: wim.id,
+        name: 'wim',
+        side: 'company',
+        isViewer: false,
+        picture: null,
+      },
     });
     // Someone at the company gets names, and whether it's them: never an ID.
     expect(forCasey.description.mentions).toEqual({
-      [inDescription?.id ?? '']: { userId: null, name: 'wim', side: 'company', isViewer: false },
+      [inDescription?.id ?? '']: {
+        userId: null,
+        name: 'wim',
+        side: 'company',
+        isViewer: false,
+        picture: null,
+      },
     });
     expect(forCasey.entries[0]?.body?.mentions).toEqual({
-      [toCasey?.id ?? '']: { userId: null, name: 'casey', side: 'company', isViewer: true },
-      [toWim?.id ?? '']: { userId: null, name: 'wim', side: 'company', isViewer: false },
+      [toCasey?.id ?? '']: {
+        userId: null,
+        name: 'casey',
+        side: 'company',
+        isViewer: true,
+        picture: null,
+      },
+      [toWim?.id ?? '']: {
+        userId: null,
+        name: 'wim',
+        side: 'company',
+        isViewer: false,
+        picture: null,
+      },
     });
   });
 
@@ -409,9 +433,21 @@ describe('reading a request with mentions', () => {
 
     const detail = await getRequest(ctx, await actorFor(db, casey.id), raised.id);
     expect(detail.entries[0]?.body?.mentions).toEqual({
-      [toWim?.id ?? '']: { userId: null, name: 'Wim de Wit', side: 'company', isViewer: false },
+      [toWim?.id ?? '']: {
+        userId: null,
+        name: 'Wim de Wit',
+        side: 'company',
+        isViewer: false,
+        picture: null,
+      },
       // The mention stays, on the staff's side, without the name the account took with it.
-      [toFenna?.id ?? '']: { userId: null, name: null, side: 'staff', isViewer: false },
+      [toFenna?.id ?? '']: {
+        userId: null,
+        name: null,
+        side: 'staff',
+        isViewer: false,
+        picture: null,
+      },
     });
     expect((await mentionsIn(raised.id))[1]).toMatchObject({ userId: null, side: 'staff' });
   });

@@ -4,7 +4,7 @@
  * the hook tests can't prove. The provider account's name is stored and
  * refreshed: Better Auth hands the profile only to `user.validateUserInfo`,
  * and the account hooks of the same request store it
- * (`noteProviderAccountName`). "Confirm with GitHub" on the step-up page is
+ * (`noteProviderProfile`). "Confirm with GitHub" on the step-up page is
  * recorded as confirming the session: the session hook leaves it for the
  * reactions after the request (`afterSessionCreate`, `afterAuthRequest`),
  * which share the request's `ctx.context`; when GitHub's 2FA is off, the new

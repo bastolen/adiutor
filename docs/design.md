@@ -138,6 +138,13 @@ keyboard support.
   when someone goes back to them (from the code step to the sign-in page, say), and whoever does
   mustn't find the last user's details or a button still busy. They also reset a busy button when the browser restores them from its
   back/forward cache (`pageshow`, through `usePageRestored`).
+- **Avatars** (`Avatar`) show initials, or a person's picture over them (`src`, from
+  `/avatars/<account>`, see [decision 0022](decisions/0022-profile-pictures-from-providers.md)). The
+  picture (`AvatarPicture`) takes itself away when it can't load, also when it failed before the
+  page's scripts were running, so the initials behind it show; a new address gets a new try. Avatars
+  are decorative (`alt=""`): the name stands next to them, or, where several stand in a row without
+  names (`PeopleAvatars`, a table's Assigned to column), each has the name as its `title` on hover
+  and the names are there as text for screen readers.
 - **Illustrations** (like the example request on the sign-in pages) are `inert`, and use
   `<Button decorative>` for buttons that only look like buttons: no hover, focus or press effects.
 - **Button labels** stay on one line when they fit. A button is never wider than its container
@@ -348,7 +355,7 @@ keyboard support.
 - **Tap targets:** every control is at least 24×24px (WCAG 2.5.8) without leaning on the rule's
   spacing exception, so each is easy to tap on a phone. Text links on their own line reach 2px above
   and below the text (`TextLink`, cancelled by a negative margin, so nothing moves), and a checkbox
-  counts with its label (`CheckboxField`). Links inside a sentence are exempt, as in WCAG. That
+  or radio button counts with its label (`CheckboxField`, `RadioField`). Links inside a sentence are exempt, as in WCAG. That
   2px reaches 24px only on a link that's a block, which takes the whole line's height: an inline
   link adds it to the font's height instead (21px for small text). So a link in a row of details
   rather than a sentence, like the audit log's "by … · about … · company" line, is a flex item (its

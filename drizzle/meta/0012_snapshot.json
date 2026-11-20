@@ -1,5 +1,5 @@
 {
-  "id": "a4a8ed07-2d8f-40c7-980e-fc8112ad28ec",
+  "id": "de7ca936-23b9-480c-95c0-980b4308c119",
   "prevId": "fa065a98-dcfb-4264-b5de-76b97d65039f",
   "version": "7",
   "dialect": "postgresql",
@@ -104,6 +104,12 @@
         },
         "account_name": {
           "name": "account_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "account_image": {
+          "name": "account_image",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -634,6 +640,12 @@
           "primaryKey": false,
           "notNull": false,
           "default": true
+        },
+        "avatar_source": {
+          "name": "avatar_source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -2401,148 +2413,6 @@
         "request_entry_body_format_valid": {
           "name": "request_entry_body_format_valid",
           "value": "\"request_entry\".\"body_format\" in ('plain', 'markdown')"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.request_mention": {
-      "name": "request_mention",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "uuidv7()"
-        },
-        "request_id": {
-          "name": "request_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "entry_id": {
-          "name": "entry_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "side": {
-          "name": "side",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "request_mention_request_idx": {
-          "name": "request_mention_request_idx",
-          "columns": [
-            {
-              "expression": "request_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "request_mention_entry_idx": {
-          "name": "request_mention_entry_idx",
-          "columns": [
-            {
-              "expression": "entry_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "request_mention_user_idx": {
-          "name": "request_mention_user_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "request_mention_request_id_request_id_fk": {
-          "name": "request_mention_request_id_request_id_fk",
-          "tableFrom": "request_mention",
-          "tableTo": "request",
-          "columnsFrom": [
-            "request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "request_mention_entry_id_request_entry_id_fk": {
-          "name": "request_mention_entry_id_request_entry_id_fk",
-          "tableFrom": "request_mention",
-          "tableTo": "request_entry",
-          "columnsFrom": [
-            "entry_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "request_mention_user_id_user_id_fk": {
-          "name": "request_mention_user_id_user_id_fk",
-          "tableFrom": "request_mention",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "request_mention_side_valid": {
-          "name": "request_mention_side_valid",
-          "value": "\"request_mention\".\"side\" in ('company', 'staff')"
         }
       },
       "isRLSEnabled": false

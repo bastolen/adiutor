@@ -56,6 +56,13 @@ export const SUPPORT_STAFF = {
   password: 'e2e-support-password',
 } as const;
 
+/**
+ * The picture of {@link SUPPORT_STAFF}'s Google account, which the seed
+ * connects: what their avatars show until they choose otherwise. Tests answer
+ * `/avatars/*` in the browser, so nothing ever fetches it.
+ */
+export const SUPPORT_STAFF_PICTURE = 'https://lh3.googleusercontent.com/a/e2e-support=s96-c';
+
 /** A Finance member of the staff: reads every company's requests, and changes none. */
 export const FINANCE_STAFF = {
   name: 'E2E Finance',

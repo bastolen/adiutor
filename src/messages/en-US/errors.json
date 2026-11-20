@@ -87,6 +87,9 @@
       "statusChanged": "This request’s status changed in the meantime. Check it and try again.",
       "detailsChanged": "This request’s details changed in the meantime. Check them and try again.",
       "notAssignable": "Only active staff who work on requests can be assigned. Check who you chose and try again."
+    },
+    "account": {
+      "pictureUnavailable": "Pick one of your connected accounts that has a picture, or your initials."
     }
   }
 }

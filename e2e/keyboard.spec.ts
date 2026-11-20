@@ -20,9 +20,11 @@ import {
   PLATFORM_ADMIN,
   REQUESTS_CLIENT,
   SEEDED_REQUESTS,
+  SUPPORT_STAFF,
 } from './support/fixtures';
 import {
   adminStorageState,
+  answerPictures,
   markdownEditor,
   openUser,
   signIn,
@@ -882,6 +884,26 @@ test.describe('signed out', () => {
     await expect(
       page.getByRole('button', { name: 'Thema en taal: Systeem, Nederlands' }),
     ).toBeVisible();
+  });
+});
+
+test.describe('the picture choice', () => {
+  test('the arrow keys move between the pictures, and Tab leaves them as one stop', async ({
+    page,
+  }) => {
+    await answerPictures(page);
+    await signIn(page, SUPPORT_STAFF);
+    await page.goto('/account');
+    const google = page.getByRole('radio', { name: `Google · ${SUPPORT_STAFF.email}` });
+    const initials = page.getByRole('radio', { name: 'Initials' });
+
+    await google.focus();
+    await page.keyboard.press('ArrowDown');
+    await expect(initials).toBeFocused();
+    await expect(initials).toBeChecked();
+    await page.keyboard.press('Tab');
+    // Nothing is saved: the choice only changes with Save picture.
+    await expect(page.getByRole('button', { name: 'Save picture' })).toBeFocused();
   });
 });
 

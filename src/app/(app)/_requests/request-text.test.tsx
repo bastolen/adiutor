@@ -189,10 +189,22 @@ describe('RequestText', () => {
           text: `Ask [@](mention:${SAM}) or [@](mention:${GONE}), [@](mention:${CASEY}).`,
           format: 'markdown',
           mentions: {
-            [SAM]: { userId: null, name: 'Sam Support', side: 'staff', isViewer: false },
+            [SAM]: {
+              userId: null,
+              name: 'Sam Support',
+              side: 'staff',
+              isViewer: false,
+              picture: null,
+            },
             // Someone whose account is gone is their side, as next to what they wrote.
-            [GONE]: { userId: null, name: null, side: 'company', isViewer: false },
-            [CASEY]: { userId: null, name: 'Casey Client', side: 'company', isViewer: true },
+            [GONE]: { userId: null, name: null, side: 'company', isViewer: false, picture: null },
+            [CASEY]: {
+              userId: null,
+              name: 'Casey Client',
+              side: 'company',
+              isViewer: true,
+              picture: null,
+            },
           },
         }}
         source={SOURCE}
@@ -215,8 +227,20 @@ describe('RequestText', () => {
           text: `[@](mention:${SAM}) and [@](mention:${GONE})`,
           format: 'markdown',
           mentions: {
-            [SAM]: { userId: 'sam-id', name: 'Sam Support', side: 'staff', isViewer: false },
-            [GONE]: { userId: 'nameless-id', name: null, side: 'staff', isViewer: false },
+            [SAM]: {
+              userId: 'sam-id',
+              name: 'Sam Support',
+              side: 'staff',
+              isViewer: false,
+              picture: null,
+            },
+            [GONE]: {
+              userId: 'nameless-id',
+              name: null,
+              side: 'staff',
+              isViewer: false,
+              picture: null,
+            },
           },
         }}
         source={SOURCE}
@@ -241,7 +265,13 @@ describe('RequestText', () => {
           text,
           format: 'markdown',
           mentions: {
-            [SAM]: { userId: null, name: 'Sam Support', side: 'staff', isViewer: false },
+            [SAM]: {
+              userId: null,
+              name: 'Sam Support',
+              side: 'staff',
+              isViewer: false,
+              picture: null,
+            },
           },
         }}
         source={SOURCE}

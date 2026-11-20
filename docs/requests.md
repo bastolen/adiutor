@@ -272,7 +272,7 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
 ### Mentions
 
 A description or a reply can mention people. Why it's built this way is in
-[decision 0022](decisions/0022-mentions-as-markers-to-rows.md).
+[decision 0023](decisions/0023-mentions-as-markers-to-rows.md).
 
 - **A mention is a marker that looks like a link** (`src/lib/requests/mentions.ts`). While a text
   is written it's `[@Sam](mention:KEY)`: the person's name, and a key of 22 characters that
@@ -342,6 +342,10 @@ A description or a reply can mention people. Why it's built this way is in
   of who can be mentioned (see [Mentions](#mentions)). Company users see a staff member's own name with a label that carries the
   name users know the staff by. Someone without a name (or with an old one that has nothing to
   see in it, `visibleName`), or whose account is gone, is shown as their side.
+- **Avatars show people's pictures:** a person's avatar shows the picture they chose from a connected
+  GitHub or Google account, or their initials (`RequestPerson.picture`, loaded for the whole page with
+  `loadPictures`; see [decision 0022](decisions/0022-profile-pictures-from-providers.md)). Everyone
+  who reads their name gets it; the picture's address says nothing more about who they are.
 - **For the staff, a name links to the user's page.** The services give a person's ID only to
   readers who may open that page (`users:view`, which every staff role has; `RequestPerson.userId`
   from `requestPerson`), so it never reaches a company user's browser. A side's name is never a

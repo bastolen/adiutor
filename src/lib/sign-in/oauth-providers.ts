@@ -1,15 +1,17 @@
 /**
  * @file The OAuth providers a user can connect, their display names, how
  * their accounts are named (a GitHub username, a Google email address) and
- * identified, which of them can prove MFA, the hint "Confirm with GitHub"
+ * identified, where their accounts' pictures come from, which of them can
+ * prove MFA, the hint "Confirm with GitHub"
  * sends with its sign-in, and the short-lived cookies that tell the next
  * page about a sign-in with one (an account connected, a step-up that didn't
  * confirm the session). Safe for Client Components; server code imports them
  * from here too.
  *
  * Adding a provider: its ID (Better Auth's provider ID), label, account
- * name claims ({@link PROVIDER_ACCOUNT_NAME_CLAIMS}) and account ID claim
- * ({@link PROVIDER_ACCOUNT_ID_CLAIMS}) here, and in {@link MFA_PROVIDERS}
+ * name claims ({@link PROVIDER_ACCOUNT_NAME_CLAIMS}), account ID claim
+ * ({@link PROVIDER_ACCOUNT_ID_CLAIMS}), picture claim
+ * ({@link PROVIDER_IMAGE_CLAIMS}) and picture hosts here, and in {@link MFA_PROVIDERS}
  * when its API says whether the user's account has two-factor
  * authentication; its credentials in `src/lib/env-schema.ts`, `.env.example`
  * and `src/lib/sign-in/providers.ts`; its `socialProviders` entry in
@@ -143,6 +145,78 @@ export function accountNameFromProfile(provider: OAuthProvider, profile: unknown
     return null;
   }
   return cleanAccountName((profile as Record<string, unknown>)[claim]);
+}
+
+/**
+ * The claim of a provider's profile that holds the address of the account's
+ * picture: GitHub's `avatar_url`, Google's `picture`. Noted at every sign-in
+ * or connection with the provider and kept with the account
+ * (`account.accountImage`), so the person can use it as their picture.
+ * Adiutor fetches it from the server and serves it from its own address;
+ * the address itself never reaches a browser.
+ */
+export const PROVIDER_IMAGE_CLAIMS: Record<OAuthProvider, string> = {
+  github: 'avatar_url',
+  google: 'picture',
+};
+
+/** The longest picture address kept. */
+export const MAX_IMAGE_URL_LENGTH = 2048;
+
+/**
+ * The hosts each provider serves its accounts' pictures from. A picture
+ * address on any other host is never kept, so the server never fetches an
+ * address a profile could point anywhere.
+ */
+const PROVIDER_IMAGE_HOSTS: Record<OAuthProvider, RegExp> = {
+  github: /^avatars\.githubusercontent\.com$/,
+  google: /^[a-z0-9-]+\.googleusercontent\.com$/,
+};
+
+/**
+ * Whether an address is one a provider serves its accounts' pictures from:
+ * `https`, on one of its picture hosts, without a port or credentials, and
+ * not too long.
+ *
+ * @param provider - The provider.
+ * @param value - The address, unchecked.
+ * @returns Whether it may be kept and fetched.
+ */
+export function isProviderImageUrl(provider: OAuthProvider, value: unknown): value is string {
+  if (typeof value !== 'string' || value.length > MAX_IMAGE_URL_LENGTH) {
+    return false;
+  }
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  return (
+    url.protocol === 'https:' &&
+    url.port === '' &&
+    url.username === '' &&
+    url.password === '' &&
+    PROVIDER_IMAGE_HOSTS[provider].test(url.hostname)
+  );
+}
+
+/**
+ * Reads the address of the account's picture from a provider's profile,
+ * from its claim in {@link PROVIDER_IMAGE_CLAIMS} (the profile's own keys
+ * only), when it's on the provider's own picture hosts.
+ *
+ * @param provider - The provider.
+ * @param profile - The provider's profile (user info or ID token claims), unchecked.
+ * @returns The address, or `null` when there's no usable one.
+ */
+export function imageFromProfile(provider: OAuthProvider, profile: unknown): string | null {
+  const claim = PROVIDER_IMAGE_CLAIMS[provider];
+  if (!profile || typeof profile !== 'object' || !Object.hasOwn(profile, claim)) {
+    return null;
+  }
+  const value = (profile as Record<string, unknown>)[claim];
+  return isProviderImageUrl(provider, value) ? value : null;
 }
 
 /**

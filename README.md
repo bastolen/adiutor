@@ -37,6 +37,8 @@ come next.
   once, with a reminder before an invitation expires. There's no public sign-up.
 - **Sign-in.** Email and password, passkeys, email links, and GitHub or Google accounts. See
   [Sign-in and accounts](docs/authentication.md).
+- **Pictures.** People show the picture of a GitHub or Google account they connected, or their
+  initials, chosen on their account page. Adiutor serves the picture itself and stores no files.
 - **Multi-factor authentication.** Authenticator apps, passkeys, email codes and backup codes.
   Required for staff Admins and Managers and for company Admins, and changing a sign-in method
   needs a recent confirmation. See [Multi-factor authentication](docs/mfa.md).

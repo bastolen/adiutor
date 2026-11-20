@@ -1,7 +1,10 @@
 /**
- * @file Initials in a rounded square, for people and companies.
+ * @file Initials in a rounded square, for people and companies, or a
+ * person's picture over them.
  */
 import cn from '@/lib/cn';
+
+import AvatarPicture from './avatar-picture';
 
 /**
  * Takes up to two initials from a name (or an email address).
@@ -45,11 +48,18 @@ interface AvatarProps {
   title?: string;
   /** Extra classes, e.g. the ring that sets avatars in a row apart. */
   className?: string;
+  /**
+   * A person's picture (`/avatars/<account>`), drawn over the initials, which
+   * show whenever it can't load.
+   */
+  src?: string | null;
 }
 
 /**
- * An avatar with initials. Decorative: the name is shown next to it, or (in
- * a row of avatars) on hover and as text for screen readers.
+ * An avatar with initials, or a person's picture over them. Decorative: the
+ * name is shown next to it, or (in a row of avatars) on hover and as text
+ * for screen readers. A picture that can't load takes itself away
+ * (`AvatarPicture`), so the initials behind it show.
  *
  * @param props - Avatar props.
  * @param props.name - The name.
@@ -57,6 +67,7 @@ interface AvatarProps {
  * @param props.brand - Use the brand colour.
  * @param props.title - The name to show on hover.
  * @param props.className - Extra classes.
+ * @param props.src - A person's picture.
  * @returns The avatar.
  */
 export default function Avatar({
@@ -65,19 +76,21 @@ export default function Avatar({
   brand = false,
   title = undefined,
   className = '',
+  src = null,
 }: AvatarProps) {
   return (
     <span
       aria-hidden="true"
       title={title}
       className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-lg font-semibold',
+        'relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-lg font-semibold',
         brand ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
         sizeClasses[size],
         className,
       )}
     >
       {initialsOf(name)}
+      {src && <AvatarPicture key={src} src={src} />}
     </span>
   );
 }

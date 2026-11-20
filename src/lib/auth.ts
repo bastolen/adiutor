@@ -42,6 +42,7 @@ import { LAST_USED_LOGIN_METHOD_COOKIE } from './sign-in/auth-cookies';
 import { DISABLED_AUTH_PATHS } from './sign-in/auth-endpoints';
 import { parseAuthSecrets } from './sign-in/auth-secrets';
 import { EMAIL_LINK_MINUTES, emailLinkUrl } from './sign-in/email-link';
+import { AVATAR_SOURCES } from './sign-in/pictures';
 import { providerCredentials } from './sign-in/providers';
 import { hashEmailLinkToken } from './sign-in/tokens';
 
@@ -398,8 +399,8 @@ export const auth = betterAuth({
     /**
      * Better Auth refuses the sign-in when this throws or returns an error.
      * It's the one place Better Auth hands over a provider's profile, so it
-     * notes the provider account's name there (`noteProviderAccountName`) for
-     * the account hooks to store; that never refuses anyone, so it's caught.
+     * notes the provider account's name and picture there
+     * (`noteProviderProfile`) for the account hooks to store; that never refuses anyone, so it's caught.
      * Only the check of the incoming user refuses (`checkIncomingUser`): a
      * sign-in marked as "Confirm with GitHub" on the step-up page whose
      * provider account isn't the user's own confirmed one (`checkReverify`,
@@ -419,10 +420,10 @@ export const auth = betterAuth({
      */
     validateUserInfo: async ({ user, source }, ctx) => {
       try {
-        (await loadAuthEvents()).noteProviderAccountName(source, toHookContext(ctx));
+        (await loadAuthEvents()).noteProviderProfile(source, toHookContext(ctx));
       } catch {
         // eslint-disable-next-line no-console -- Sign-in goes on; the failure should show up in the logs.
-        console.error('Noting the provider account name failed');
+        console.error('Noting the provider profile failed');
       }
       return (await loadAuthEvents()).checkIncomingUser({ user, source }, toHookContext(ctx));
     },
@@ -455,6 +456,14 @@ export const auth = betterAuth({
        * Auth's endpoints (`setStaffSignInAllowed`).
        */
       allowStaffSignIn: { type: 'boolean', required: false, defaultValue: true, input: false },
+      /**
+       * Which picture the user shows: their initials, or the picture of
+       * their account with a provider (`AVATAR_SOURCES`). Empty until they
+       * choose, which shows the picture of the account they connected first
+       * (`pictureAccount`). Never set through Better Auth's endpoints
+       * (`setOwnPicture`).
+       */
+      avatarSource: { type: [...AVATAR_SOURCES], required: false, input: false },
     },
   },
 
@@ -606,6 +615,15 @@ export const auth = betterAuth({
        * that haven't signed in since names were added.
        */
       accountName: { type: 'string', required: false, input: false },
+      /**
+       * The address of the account's picture at its provider
+       * (`PROVIDER_IMAGE_CLAIMS`), as of its last sign-in or connection,
+       * kept only on the provider's own picture hosts. Adiutor fetches it
+       * and serves it from its own address (`/avatars/<account>`); the
+       * address never reaches a browser. Empty for accounts that haven't
+       * signed in since pictures were added.
+       */
+      accountImage: { type: 'string', required: false, input: false },
     },
   },
 

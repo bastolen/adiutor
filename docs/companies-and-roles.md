@@ -143,7 +143,9 @@ Admins and Managers who aren't members can still add themselves with any role, a
   (see [Background jobs](jobs.md#for-staff)). The errors page is "not found" for Managers.
 - **Users page** (`/admin/users`, `users:view`): every account in a table, sorted by name
   until another order is chosen from the Sort menu (email, last active or joined), with staff marked with a
-  brand-coloured avatar and a "Staff · role" badge. Under each name it lists the user's
+  brand-coloured avatar and a "Staff · role" badge. Each avatar shows the person's picture when they
+  have one (see [Sign-in and accounts](authentication.md#security-accountsecurity), "Pictures"), here
+  and in the Staff and Members tables and on the user's page. Under each name it lists the user's
   companies (linking to them) and MFA status ("MFA on", "No MFA", or "Needs MFA" when their role
   requires it); it also shows when they were last active and when they joined, with "Deactivated" and "Email not verified" badges. It
   can be searched by name or email, and filtered to All, Staff, Not staff, Without MFA or

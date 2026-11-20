@@ -31,6 +31,7 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { notFoundError } from '../errors';
 import { orderTerms, paginate, textOrder } from '../pagination';
+import { loadPictures } from '../people/pictures';
 import getRequestPrefix from '../people/request-prefix';
 import getStaffName from '../people/staff-name';
 import containsPattern from '../search';
@@ -193,7 +194,7 @@ function matchesSearch(term: string): SQL | undefined {
 }
 
 /**
- * Loads who a page of requests is assigned to, in one query.
+ * Loads who a page of requests is assigned to, with their pictures.
  *
  * @param ctx - Service context.
  * @param actor - The reader, for what they may learn about each person (`requestPerson`).
@@ -215,9 +216,13 @@ async function assigneesOf(
     .innerJoin(user, eq(requestAssignee.userId, user.id))
     .where(inArray(requestAssignee.requestId, requestIds))
     .orderBy(...orderTerms('asc', textOrder(user.name), user.id));
+  const pictures = await loadPictures(
+    ctx.db,
+    rows.map(({ id }) => id),
+  );
   rows.forEach(({ requestId, ...person }) => {
     const people = assigned.get(requestId) ?? [];
-    people.push(requestPerson(person, 'staff', actor));
+    people.push(requestPerson(person, 'staff', actor, pictures));
     assigned.set(requestId, people);
   });
   return assigned;

@@ -39,6 +39,7 @@ import { paginate, peopleOrder } from '../pagination';
 import { addedToCompanyJob, queueJob } from '../queue';
 import { assertInviteSenderLimit, assertRoleChangeLimit } from '../rate-limit';
 import { revokeInvitationsTo, revokeInvitesWithoutManager } from './invitations';
+import { loadPictures } from './pictures';
 
 /** A member as shown on the members page. */
 export interface Member {
@@ -56,6 +57,8 @@ export interface Member {
   createdAt: Date;
   /** When they last did something in the app, or `null` if never. */
   lastActiveAt: Date | null;
+  /** Their picture's address (`loadPictures`), or `null` for their initials. */
+  picture: string | null;
 }
 
 /**
@@ -78,7 +81,7 @@ export async function listMembers(
   assertPermission(access.permissions, 'members:view');
   const state = resolveTableState(MEMBERS_TABLE, options);
   const where = eq(membership.companyId, access.company.id);
-  return paginate(
+  const page = await paginate(
     state,
     () => ctx.db.$count(membership, where),
     (limit, offset) =>
@@ -107,6 +110,14 @@ export async function listMembers(
         .limit(limit)
         .offset(offset),
   );
+  const pictures = await loadPictures(
+    ctx.db,
+    page.items.map(({ userId }) => userId),
+  );
+  return {
+    ...page,
+    items: page.items.map((row) => ({ ...row, picture: pictures.get(row.userId) ?? null })),
+  };
 }
 
 /**
