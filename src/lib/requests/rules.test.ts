@@ -7,6 +7,7 @@ import { getPermissions, type Permission } from '../authz/permissions';
 import type { CompanyRole, PlatformRole } from '../authz/roles';
 import {
   isReopening,
+  mayBeAssigned,
   mayChangeStatus,
   maySetStatus,
   requestAudience,
@@ -162,5 +163,20 @@ describe('statusAfterReply', () => {
     expect(statusAfterReply('company', 'open')).toBe('open');
     expect(statusAfterReply('company', 'done')).toBe('done');
     expect(statusAfterReply('company', 'cancelled')).toBe('cancelled');
+  });
+});
+
+describe('mayBeAssigned', () => {
+  it('takes the staff who work on requests', () => {
+    expect(mayBeAssigned(permissionsOf('platform_admin', null))).toBe(true);
+    expect(mayBeAssigned(permissionsOf('manager', null))).toBe(true);
+    expect(mayBeAssigned(support)).toBe(true);
+  });
+
+  it('refuses Finance, who only read requests, and the people of a company', () => {
+    expect(mayBeAssigned(finance)).toBe(false);
+    expect(mayBeAssigned(permissionsOf(null, 'admin'))).toBe(false);
+    expect(mayBeAssigned(client)).toBe(false);
+    expect(mayBeAssigned(watcher)).toBe(false);
   });
 });

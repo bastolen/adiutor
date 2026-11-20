@@ -1,6 +1,7 @@
 /**
  * @file The values a request can have: its statuses, types and priorities,
- * the two sides of a request, the kinds of entry in its history, the formats
+ * the two sides of a request, the kinds of entry in its history and what an
+ * assignment entry records, the formats
  * its text is stored in and the status filters of a request list. Free of
  * dependencies, so the database schema, the services and client components
  * can all import it.
@@ -132,13 +133,41 @@ export const REQUEST_SIDES = ['company', 'staff'] as const;
 export type RequestSide = (typeof REQUEST_SIDES)[number];
 
 /**
- * The kinds of entry in a request's history: a comment, or a change of its
- * status, title, type or priority.
+ * The kinds of entry in a request's history: a comment, a change of its
+ * status, title, type or priority, or someone assigned to it or removed
+ * from it (`assignee`).
  */
-export const REQUEST_ENTRY_KINDS = ['comment', 'status', 'title', 'type', 'priority'] as const;
+export const REQUEST_ENTRY_KINDS = [
+  'comment',
+  'status',
+  'title',
+  'type',
+  'priority',
+  'assignee',
+] as const;
 
 /** One kind of history entry. */
 export type RequestEntryKind = (typeof REQUEST_ENTRY_KINDS)[number];
+
+/**
+ * What an `assignee` entry records about the staff member it's about: that
+ * they were assigned to the request, or removed from it. Stored as the
+ * entry's new value, so every change keeps one.
+ */
+export const ASSIGNMENT_CHANGES = ['assigned', 'unassigned'] as const;
+
+/** One assignment change. */
+export type AssignmentChange = (typeof ASSIGNMENT_CHANGES)[number];
+
+/**
+ * Whether a value is an assignment change.
+ *
+ * @param value - The value to check.
+ * @returns Whether it's one of {@link ASSIGNMENT_CHANGES}.
+ */
+export function isAssignmentChange(value: unknown): value is AssignmentChange {
+  return isOneOf(ASSIGNMENT_CHANGES, value);
+}
 
 /**
  * The formats a description or comment is stored in: plain text, as every

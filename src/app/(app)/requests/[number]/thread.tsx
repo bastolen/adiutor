@@ -1,10 +1,10 @@
 /**
- * @file A request's conversation: every reply and every change of its
- * status, title, type or priority, oldest first. Each entry names who wrote
+ * @file A request's conversation: every reply, every change of its status,
+ * title, type or priority, and everyone assigned or removed, oldest first. Each entry names who wrote
  * or changed it and when. What was asked is the page's Description, above
  * it. Its text comes from the `requests` namespace.
  */
-import { CircleDot, Flag, type LucideIcon, Pencil, Tag } from 'lucide-react';
+import { CircleDot, Flag, type LucideIcon, Pencil, Tag, UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
@@ -32,6 +32,7 @@ const CHANGE_ICONS: Record<Exclude<RequestEntryView['kind'], 'comment'>, LucideI
   title: Pencil,
   type: Tag,
   priority: Flag,
+  assignee: UserRound,
 };
 
 /**
@@ -77,8 +78,10 @@ function Entry({
 /**
  * What a change did, as a sentence without its subject (the entry's first
  * line names who made it): "Changed the status from Open to In progress."
- * Closing and reopening a request have sentences of their own. A value this
- * version doesn't know is shown as it was stored.
+ * Closing and reopening a request have sentences of their own, and so does
+ * someone who assigned or removed themselves. Someone assigned or removed
+ * whose account is gone is "a staff member". A value this version doesn't
+ * know is shown as it was stored.
  *
  * @param props - Component props.
  * @param props.entry - The change.
@@ -117,6 +120,13 @@ function ChangeText({ entry, audience }: { entry: RequestEntryView; audience: Re
       return t('entry.priority', {
         from: isRequestPriority(from) ? t('priority', { priority: from }) : from,
         to: isRequestPriority(to) ? t('priority', { priority: to }) : to,
+      });
+    case 'assignee':
+      return t('entry.assignee', {
+        change: to === 'unassigned' ? 'unassigned' : 'assigned',
+        self: entry.subjectIsAuthor ? 'yes' : 'no',
+        known: entry.subject?.name ? 'yes' : 'no',
+        name: entry.subject?.name ?? '',
       });
     default:
       return t('entry.title', { from, to });

@@ -5,7 +5,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { company as companyTable, request } from '@/db/schema';
+import { company as companyTable, request, user } from '@/db/schema';
 
 import {
   actorFor,
@@ -16,9 +16,10 @@ import {
   memberActor,
   staffActor,
 } from '../../../tests/integration/helpers';
+import type { Actor } from '../actor';
 import { getRequest } from './detail';
 import { listRequestCompanies, listRequests } from './list';
-import { ctx, db, storeRequest } from './test-helpers';
+import { ctx, db, storeAssignees, storeRequest } from './test-helpers';
 
 /**
  * The titles of a page of requests, in order.
@@ -219,6 +220,44 @@ describe('listRequests: filters and search', () => {
     expect((await listRequests(ctx, client, { type: 'question' })).total).toBe(2);
   });
 
+  it('shows the staff the requests someone is assigned to, or nobody is', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const manager = await staffActor(db, 'manager');
+    const mine = await storeRequest(company.id, { title: 'Mine' });
+    const shared = await storeRequest(company.id, { title: 'Shared' });
+    const theirs = await storeRequest(company.id, { title: 'Theirs' });
+    await storeRequest(company.id, { title: 'Nobody' });
+    await storeAssignees(mine.id, [support.id]);
+    await storeAssignees(shared.id, [support.id, manager.id]);
+    await storeAssignees(theirs.id, [manager.id]);
+
+    /**
+     * The titles Sam's list shows for an assignee filter, oldest first.
+     *
+     * @param assignee - The filter.
+     * @returns The titles.
+     */
+    const list = async (assignee: string) =>
+      titles(await listRequests(ctx, support, { assignee, sort: 'raised', dir: 'asc' }));
+    expect(await list('me')).toEqual(['Mine', 'Shared']);
+    expect(await list(manager.id)).toEqual(['Shared', 'Theirs']);
+    expect(await list('none')).toEqual(['Nobody']);
+    expect(await list('someone')).toEqual(['Mine', 'Shared', 'Theirs', 'Nobody']);
+  });
+
+  it('ignores the assignee filter for the company', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const client = await memberActor(db, company.id, 'client');
+    const assigned = await storeRequest(company.id, { title: 'Assigned' });
+    await storeRequest(company.id, { title: 'Nobody' });
+    await storeAssignees(assigned.id, [support.id]);
+
+    expect((await listRequests(ctx, client, { assignee: 'none' })).total).toBe(2);
+    expect((await listRequests(ctx, client, { assignee: support.id })).total).toBe(2);
+  });
+
   it('searches titles, ignoring case and taking % and _ literally', async () => {
     const company = await createCompany(db);
     await storeRequest(company.id, { title: 'The Printer is broken' });
@@ -376,6 +415,43 @@ describe('listRequests: what a request shows', () => {
       expect((await getRequest(ctx, reader, '1')).audience).toBe(audience);
     },
   );
+
+  it('names who each request is assigned to, by name, with their IDs for the staff only', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const manager = await staffActor(db, 'manager');
+    const client = await memberActor(db, company.id, 'client');
+    await db.update(user).set({ name: 'Sam Support' }).where(eq(user.id, support.id));
+    await db.update(user).set({ name: 'Morgan Manager' }).where(eq(user.id, manager.id));
+    const assigned = await storeRequest(company.id, { title: 'Assigned' });
+    await storeRequest(company.id, { title: 'Nobody' });
+    await storeAssignees(assigned.id, [support.id, manager.id]);
+
+    /**
+     * Who each request is assigned to, as a reader's list gives it, oldest first.
+     *
+     * @param reader - Whoever reads the list.
+     * @returns Each request's assignees, with their IDs and names.
+     */
+    const assigneesFor = async (reader: Actor) =>
+      (await listRequests(ctx, reader, { sort: 'raised', dir: 'asc' })).items.map(({ assignees }) =>
+        assignees.map(({ userId, name }) => ({ userId, name })),
+      );
+    expect(await assigneesFor(support)).toEqual([
+      [
+        { userId: manager.id, name: 'Morgan Manager' },
+        { userId: support.id, name: 'Sam Support' },
+      ],
+      [],
+    ]);
+    expect(await assigneesFor(client)).toEqual([
+      [
+        { userId: null, name: 'Morgan Manager' },
+        { userId: null, name: 'Sam Support' },
+      ],
+      [],
+    ]);
+  });
 
   it('addresses someone per company: taking part in one, following in another', async () => {
     const [alpha, beta] = [await createCompany(db), await createCompany(db)];

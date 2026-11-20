@@ -40,5 +40,13 @@ describe('Avatar', () => {
 
     expect(container.firstElementChild).toHaveTextContent('JD');
     expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'true');
+    expect(container.firstElementChild).not.toHaveAttribute('title');
+  });
+
+  it('shows the name on hover when it stands without it', () => {
+    const { container } = render(<Avatar name="Jane Doe" size="xs" title="Jane Doe" />);
+
+    expect(container.firstElementChild).toHaveAttribute('title', 'Jane Doe');
+    expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'true');
   });
 });

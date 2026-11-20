@@ -24,6 +24,7 @@ and screens for company users talk about their company by name and about **reque
 | View all companies and their users        |   ✓   |    ✓    |    ✓    |    ✓    |
 | View all users (`/admin/users`)           |   ✓   |    ✓    |    ✓    |    ✓    |
 | Work on every company's requests          |   ✓   |    ✓    |    –    |    ✓    |
+| Be assigned to requests                   |   ✓   |    ✓    |    –    |    ✓    |
 | Read every company's requests             |   ✓   |    ✓    |    ✓    |    ✓    |
 | Reset MFA, sign out, (de)activate         |   ✓   |    –    |    –    |    –    |
 | Delete user accounts                      |   ✓   |    –    |    –    |    –    |
@@ -96,6 +97,9 @@ Admins and Managers who aren't members can still add themselves with any role, a
 - **Everyone:** the menu has Dashboard and **Requests** (`/requests`: every request the user may
   see), and the dashboard has a Requests tile. Requests is declared once for both
   (`src/app/(app)/requests-section.ts`), like the staff sections (`staff-sections.ts`).
+- **Staff who work on requests** (Admin, Manager, Support) also get an **Assigned to you** tile
+  after Requests: how many active requests are assigned to them, linking to the list with its
+  Assignee filter on Me (`/requests?assignee=me`; see [Assigning](requests.md#assigning)).
 - **Staff:** the menu also has Users and Companies, and the dashboard a tile for each. Admins
   (`staff:manage`) also get **Staff** in the menu and as a tile on the dashboard, which opens the
   staff page. Admins and Managers (`audit:view`) also get **Logs**, last in the menu and as a tile
@@ -217,7 +221,11 @@ Admins and Managers who aren't members can still add themselves with any role, a
   me Admin" included), and whatever they created just before is revoked with the rest. The
   invitations and invite links someone sent are revoked whenever they or anyone else take away
   their right to manage a company or the staff: a role change, a removal, a deactivation or a
-  deletion (`revokeInvitesWithoutManager`), so a former Admin keeps no way back in. A link of
+  deletion (`revokeInvitesWithoutManager`), so a former Admin keeps no way back in. In the same
+  way, someone who stops working on requests (a staff role without request work, leaving the
+  staff, a deactivation or a deletion) is taken off every request assigned to them, with a line in
+  each request's history (`unassignFrom`; see [Assigning](requests.md#assigning)); reactivating
+  them doesn't put them back. A link of
   theirs claimed at that very moment leaves no open invitation either: the claim locks the link's
   creator before the link, so it takes turns with the change (see
   [Lock order](security-measures.md#lock-order)).

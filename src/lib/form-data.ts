@@ -19,6 +19,19 @@ export default function field(formData: FormData, name: string): string {
 }
 
 /**
+ * Reads every value of a field a form sends several times, such as a group
+ * of checkboxes with one name.
+ *
+ * @param formData - The submitted form.
+ * @param name - The field name.
+ * @returns The text values in the order submitted (not trimmed); files are left out, and a
+ * missing field gives an empty list.
+ */
+export function fieldValues(formData: FormData, name: string): string[] {
+  return formData.getAll(name).filter((value): value is string => typeof value === 'string');
+}
+
+/**
  * Reads a language field (`EmailLanguageField`) from a form.
  *
  * @param formData - The submitted form.

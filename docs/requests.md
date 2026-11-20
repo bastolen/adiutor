@@ -8,9 +8,9 @@ requests behave and where the code is; why they're built this way is in
 [decision 0019](decisions/0019-requests-one-series-plain-text-and-a-history.md), and for their
 text in [decision 0021](decisions/0021-markdown-for-request-text.md).
 
-Not built yet, each for a later change: emails about requests, assigning a request to a staff
-member, an approval step, internal staff notes, attachments, types the staff manage themselves,
-and working on a request while signed in as a user.
+Not built yet, each for a later change: emails about requests (also to the staff assigned to one),
+an approval step, internal staff notes, attachments, types the staff manage themselves, and
+working on a request while signed in as a user.
 
 ## Words
 
@@ -23,17 +23,19 @@ and working on a request while signed in as a user.
   and change remembers its side, so the conversation still says who wrote what after an account
   is deleted.
 - **Raise:** to create a request ("raise a request", never "ticket" or "issue" in the screens).
+- **Assignee:** a staff member assigned to a request, one of the people who work on it. A request
+  can have several, or none (see [Assigning](#assigning)).
 
 ## Who may do what
 
 Four permissions in the request's company (`src/lib/authz/permissions.ts`):
 
-| Permission               | What it allows                                                               | Who has it                                         |
-| ------------------------ | ---------------------------------------------------------------------------- | -------------------------------------------------- |
-| `requests:view`          | See the company's requests and their conversations                           | Everyone in an active company; every staff role    |
-| `requests:contribute`    | Raise requests, reply, mark a request done, cancel it and reopen it          | Company Admin and Client; staff who work on them   |
-| `requests:manage`        | Work on requests as the staff: any status, the title, the type, the priority | Staff Admin, Manager and Support                   |
-| `requests:view-internal` | See what only the staff see: today the priority                              | Every staff role (Finance reads, but doesn't work) |
+| Permission               | What it allows                                                                               | Who has it                                         |
+| ------------------------ | -------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `requests:view`          | See the company's requests and their conversations                                           | Everyone in an active company; every staff role    |
+| `requests:contribute`    | Raise requests, reply, mark a request done, cancel it and reopen it                          | Company Admin and Client; staff who work on them   |
+| `requests:manage`        | Work on requests as the staff: any status, the title, the type, the priority, who's assigned | Staff Admin, Manager and Support                   |
+| `requests:view-internal` | See what only the staff see: today the priority                                              | Every staff role (Finance reads, but doesn't work) |
 
 - Everyone in a company sees all of the company's requests. A **Watcher** only reads.
 - **Finance** reads every company's requests, with the priority, and changes nothing. A staff
@@ -97,6 +99,49 @@ the closed statuses.
   refreshed, so the dialog starts from the request as it is when it's opened again. If the
   colleague made the same change, there's nothing left to do. The priority a newly picked type
   brings counts as the editor's choice.
+
+## Assigning
+
+- **Who can be assigned:** the staff who work on requests: Admins, Managers and Support
+  (`mayBeAssigned` in `src/lib/requests/rules.ts`, which takes their staff permissions in
+  companies). Finance reads requests but works on none, and a company's own people take part as
+  the company, so neither can be assigned. A request can have several assignees, or none; they're
+  stored in `request_assignee`.
+- **Who assigns:** any staff member who works on requests assigns a request to any of them,
+  themselves included, and removes any of them. On a request's page, the Details have an
+  **Assigned to** row with every assignee, one per line with their avatar, and under it two buttons: **Assign to me**
+  (while the viewer isn't one of them) and **Change assignees**, a dialog with a checkbox for each
+  staff member who can be assigned, the viewer first and the current assignees ticked.
+- **Everyone on the request sees who's assigned,** the company too: by name, without the staff
+  label the staff's replies have, since only staff are assigned. A name links to the user's page for the staff only (see
+  [Cleaning, limits and names](#cleaning-limits-and-names)).
+- **Each person is a change of their own** (`changeAssignees` in
+  `src/server/requests/assignees.ts`): someone already on the request isn't added again, someone
+  already off it isn't removed again, and what a colleague did meanwhile about anyone else stays.
+  The dialog sends who's ticked and who was assigned when it opened, and the action adds and
+  removes only what its editor changed, so nothing is refused because the request changed.
+- **Whoever is added is checked as they are by then:** their user row is locked with the actor's
+  (`FOR SHARE`, in one statement, in ID order) and must be an active account whose staff role works
+  on requests, or the change is refused (`errors.requests.notAssignable`). So a role change, a
+  deactivation or a deletion takes turns with being assigned (see
+  [Lock order](security-measures.md#lock-order)).
+- **The history:** every person assigned or removed is an entry (`request_entry.kind` `assignee`):
+  "Assigned Sam Support to this request.", "Assigned themselves to this request.", "Removed Sam
+  Support from this request.", "Removed themselves from this request." Whether they were assigned or
+  removed is the entry's new value (`ASSIGNMENT_CHANGES`); who it's about is `subject_user_id`,
+  which is cleared when their account is deleted, so the history then says "a staff member" and
+  keeps no ID of a deleted account. The company sees these entries, so they count as the request's
+  last activity. Assigning never changes the status.
+- **Someone who stops working on requests is taken off theirs** (`unassignFrom`): a staff role
+  without request work or none (`setStaffRole`), a deactivation (`deactivate`, which both kinds of
+  deactivation use) or a deletion (`deleteUser`, before the account goes). Each request gets an
+  entry by nobody in particular, shown as the staff. Reactivating the account doesn't put them back.
+- **Finding your own:** the staff's request lists have an **Assignee** filter (Me for those who can
+  be assigned, Not assigned, or one staff member: `assignee=me`, `none` or a user ID) and an
+  **Assigned to** column with an avatar per person (`PeopleAvatars`), each showing the name on
+  hover; the avatars sit in a copy of the row's link that the keyboard and screen readers skip,
+  so a click opens the request and screen readers read the names as text, and the staff who can be assigned get an **Assigned to you** tile on the
+  dashboard with how many active requests are assigned to them (`countAssignedRequests`).
 
 ## Numbers
 
@@ -242,7 +287,8 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
   the company (when there's more than one), the type and, for the staff, the priority
   (`FilterMenu`, a sibling of `SortMenu`). It sorts by last activity or the day it was raised,
   and for the staff by priority, and pages like every table (see
-  [Design and accessibility](design.md#design-and-accessibility)).
+  [Design and accessibility](design.md#design-and-accessibility)). The staff also filter by
+  assignee and see who each request is assigned to (see [Assigning](#assigning)).
   A list without requests says why: nothing matches (a search, a filter menu, or the Waiting or
   Closed link), nothing is active, or, under All, which leaves nothing out, there are no requests
   yet. The last two offer "New request" to whoever may raise one.
@@ -252,13 +298,15 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
   the type. It opens the new request. A company that wasn't chosen is asked for like any other
   field (`requestCompanySchema`); "not found" is for a company the reader may not see.
 - **`/requests/<number>`**: what was asked (Description), the Conversation with every reply and
-  change, oldest first, and a Details bar: status, type, priority (staff), company, who raised
-  it and when, the staff's first response and the last activity, with the controls. The bar is on
+  change, oldest first, and a Details bar: status, who it's assigned to, type, priority (staff),
+  company, who raised it and when, the staff's first response and the last activity, with the
+  controls. The bar is on
   the right on wide screens, and between the description and the conversation on narrower ones.
   On a screen wider than 1280px the page grows past the width other pages have, up to 1280px of
   content (`WidePage`), so the conversation and the reply's editor get the room.
   The conversation loads its latest 50 entries, with a link for earlier ones (`?earlier=`).
-- The **menu** has Requests for everyone, and the **dashboard** a Requests tile; see
+- The **menu** has Requests for everyone, and the **dashboard** a Requests tile, and an Assigned
+  to you tile for the staff who can be assigned; see
   [Navigation and dashboard](companies-and-roles.md#navigation-and-dashboard).
 
 ## In the code
@@ -266,10 +314,12 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
 - `src/lib/requests/` (a folder module, free of zod and server code, so the database schema,
   the services and client components all import it): the values, the rules above, the number
   and the text. Not to be confused with `src/lib/request/`, which is about HTTP requests.
-- `src/db/schema/requests.ts`: `request`, `request_entry` (the conversation and the history in one
-  table, ordered by ID) and `request_counter`.
+- `src/db/schema/requests.ts`: `request`, `request_assignee` (who's assigned), `request_entry`
+  (the conversation and the history in one table, ordered by ID) and `request_counter`.
 - `src/server/requests/` (a folder module): `listRequestCompanies`, `listRequests`, `findRequest`,
-  `findRequestNumber`, `getRequest`, `raiseRequest`, `replyToRequest`, `changeRequestStatus`, `updateRequestDetails`.
+  `findRequestNumber`, `getRequest`, `raiseRequest`, `replyToRequest`, `changeRequestStatus`,
+  `updateRequestDetails`, `changeAssignees`, `listAssignableStaff`, `countAssignedRequests`, and
+  `unassignFrom` for the services that end someone's request work.
   Every change refuses someone signed in as a user, checks the permission and that the company is
   active, validates, takes a rate limit (see [Rate limits](security-measures.md#rate-limits)), then
   runs in a transaction that starts with `assertStillMayChange` (`assertStillManages`, then the company) and locks the request's row (see

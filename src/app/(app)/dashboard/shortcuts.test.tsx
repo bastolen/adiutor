@@ -1,7 +1,8 @@
 /**
- * @file Tests for the shortcuts on the dashboard: a tile for Requests, then
- * one for each of the user's staff sections, named by its title and followed
- * by its description (which sections each role gets is tested in
+ * @file Tests for the shortcuts on the dashboard: a tile for Requests, one
+ * for the requests assigned to the staff who work on them, then one for each
+ * of the user's staff sections, named by its title and followed by its
+ * description (which sections each role gets is tested in
  * `staff-sections.test.ts`).
  */
 import { render, screen } from '@testing-library/react';
@@ -37,6 +38,28 @@ describe('Shortcuts', () => {
     expect(screen.getByRole('link', { name: /^Logs/ })).toHaveTextContent(
       'The audit log, the errors people ran into and the background jobs.',
     );
+  });
+
+  it('shows the staff who work on requests what is assigned to them, after Requests', () => {
+    render(<Shortcuts sections={['users']} assigned={3} />);
+
+    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+      '/requests',
+      '/requests?assignee=me',
+      '/admin/users',
+    ]);
+    expect(screen.getByRole('link', { name: /^Assigned to you/ })).toHaveTextContent(
+      '3 active requests are assigned to you.',
+    );
+  });
+
+  it.each([
+    [1, '1 active request is assigned to you.'],
+    [0, 'Nothing is assigned to you right now.'],
+  ])('words %i assigned requests', (assigned, description) => {
+    render(<Shortcuts sections={[]} assigned={assigned} />);
+
+    expect(screen.getByRole('link', { name: /^Assigned to you/ })).toHaveTextContent(description);
   });
 
   it('leaves out the sections the user may not see', () => {

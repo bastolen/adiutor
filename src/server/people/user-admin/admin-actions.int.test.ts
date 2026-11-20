@@ -26,6 +26,7 @@ import {
   actorFor,
   addMember,
   addPassword,
+  assignmentsOfRequest,
   atTheSameMoment,
   connectProvider,
   createCompany,
@@ -39,6 +40,7 @@ import {
   sendQueuedEmails,
   setUserLocale,
   staffActor,
+  storeAssignedRequest,
   tokenFrom,
 } from '../../../../tests/integration/helpers';
 import { listOwnActivity, recordEvent } from '../../audit';
@@ -577,6 +579,36 @@ describe('invitations of people who lose access', () => {
         })
         .from(inviteLink),
     ).toEqual([{ createdBy: null, usedAt: null, revokedAt: expect.any(Date) }]);
+  });
+});
+
+describe('requests of people who lose access', () => {
+  it('are no longer assigned to an account that is deactivated, with a line in each history', async () => {
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    const colleague = await staffActor(db, 'manager', 'morgan@adiutor.test');
+    const assigned = await storeAssignedRequest(db, testCompany.id, [support.id, colleague.id]);
+
+    await deactivateUser(ctx, admin, support.id);
+
+    expect(await assignmentsOfRequest(db, assigned)).toEqual({
+      assignees: [colleague.id],
+      entries: [['unassigned', support.id, null]],
+    });
+    // Reactivating them doesn't put them back.
+    await reactivateUser(ctx, admin, support.id);
+    expect((await assignmentsOfRequest(db, assigned)).assignees).toEqual([colleague.id]);
+  });
+
+  it('are no longer assigned to an account that is deleted, and keep no ID of it', async () => {
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    const assigned = await storeAssignedRequest(db, testCompany.id, [support.id]);
+
+    await deleteUser(ctx, admin, support.id, 'sam@adiutor.test');
+
+    expect(await assignmentsOfRequest(db, assigned)).toEqual({
+      assignees: [],
+      entries: [['unassigned', null, null]],
+    });
   });
 });
 

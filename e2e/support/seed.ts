@@ -141,7 +141,7 @@ export default async function seedTestDatabase(): Promise<void> {
     await db.insert(schema.staffSettings).values({ name: STAFF_NAME });
     // A tick just ran, so pages don't warn that background jobs aren't running.
     await db.insert(schema.jobTick).values({ lastStartedAt: new Date() });
-    await addPerson(PLATFORM_ADMIN, { platformRole: 'platform_admin' });
+    const platformAdmin = await addPerson(PLATFORM_ADMIN, { platformRole: 'platform_admin' });
     await addPerson(PLATFORM_MANAGER, { platformRole: 'manager' });
     const support = await addPerson(SUPPORT_STAFF, { platformRole: 'support' });
     await addPerson(FINANCE_STAFF, { platformRole: 'finance' });
@@ -299,6 +299,7 @@ export default async function seedTestDatabase(): Promise<void> {
         entries: [
           { by: byClient, at: hoursAgo(70), reply: 'It’s for the summer schedule, from 1 July.' },
           { by: byStaff, at: hoursAgo(48), change: 'status', from: 'open', to: 'in_progress' },
+          { by: byStaff, at: hoursAgo(48), assign: 'assigned', subject: support },
           { by: byStaff, at: hoursAgo(47), change: 'priority', from: 'normal', to: 'high' },
           {
             by: byStaff,
@@ -307,6 +308,7 @@ export default async function seedTestDatabase(): Promise<void> {
           },
           { by: byStaff, at: hoursAgo(2), change: 'status', from: 'in_progress', to: 'waiting' },
         ],
+        assignees: [support],
       },
       {
         companyId: clientCompany.id,
@@ -346,7 +348,10 @@ export default async function seedTestDatabase(): Promise<void> {
           { by: byClient, at: hoursAgo(30), reply: 'The email still has the old address.' },
           { by: byClient, at: hoursAgo(30), change: 'status', from: 'done', to: 'open' },
           { by: byStaff, at: hoursAgo(24), change: 'status', from: 'open', to: 'in_progress' },
+          { by: byStaff, at: hoursAgo(24), assign: 'assigned', subject: support },
+          { by: byStaff, at: hoursAgo(24), assign: 'assigned', subject: platformAdmin },
         ],
+        assignees: [support, platformAdmin],
       },
       {
         companyId: closedCompany.id,

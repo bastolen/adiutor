@@ -269,7 +269,9 @@ deadlocking:
    account (`reactivateUser` in `src/server/people/user-admin/`); the actor and the target `FOR SHARE`
    (`changeMembership`); the actor `FOR SHARE`, plus the user being added for `addMember`
    (`assertStillManages` in `src/server/access.ts`: creating, resending and revoking invitations
-   and invite links, `addMember` and `registerCompany`); the link's creator `FOR KEY SHARE`
+   and invite links, `addMember` and `registerCompany`), plus the staff members a change assigns to
+   a request (`changeAssignees`, so a role change, deactivation or deletion of one of them takes
+   turns with being assigned); the link's creator `FOR KEY SHARE`
    (`claimInviteLink` in `src/server/people/invite-links.ts`, before it uses the link up), or
    `FOR SHARE` with their rights checked again when a claim is undone because its email couldn't
    be sent (`undoClaim` there, so a link is never freed for a creator who lost their rights
@@ -298,7 +300,10 @@ deadlocking:
    `FOR NO KEY UPDATE`: the request a reply or a change is about (`changeRequest`). Every change
    to a request starts with `assertStillManages`, so it has its `user` and `membership` locks
    (steps 2 and 3) before the request's: deleting an account locks the user first and then
-   clears them from the requests and entries they wrote, in the same order. The request's company
+   clears them from the requests and entries they wrote, in the same order. Taking someone off the
+   requests they're assigned to when they stop working on requests (`unassignFrom`: a staff role
+   without request work, a deactivation, a deletion) locks those requests in ID order, after the
+   person's user row and any invitation locks of the same change. The request's company
    is read there, never locked (it would come first, step 1): a change refuses when that read
    finds the company deactivated, which leaves the rest of its transaction for a deactivation to
    slip in before it.

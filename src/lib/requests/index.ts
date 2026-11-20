@@ -10,8 +10,10 @@
  */
 export {
   ACTIVE_REQUEST_STATUSES,
+  ASSIGNMENT_CHANGES,
   CLOSED_REQUEST_STATUSES,
   DEFAULT_REQUEST_STATUS_FILTER,
+  isAssignmentChange,
   isClosedStatus,
   isRequestPriority,
   isRequestStatus,
@@ -29,6 +31,7 @@ export {
   WRITTEN_TEXT_FORMAT,
 } from './values';
 export type {
+  AssignmentChange,
   RequestEntryKind,
   RequestPriority,
   RequestSide,
@@ -39,6 +42,7 @@ export type {
 } from './values';
 export {
   isReopening,
+  mayBeAssigned,
   mayChangeStatus,
   maySetStatus,
   requestAudience,

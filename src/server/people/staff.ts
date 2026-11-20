@@ -11,6 +11,7 @@ import { staffSettings, user } from '@/db/schema';
 import { isStaffRoleRaise, wouldLeaveNoAdmin } from '@/lib/authz/guards';
 import { PLATFORM_ADMIN_ROLE, type PlatformRole } from '@/lib/authz/roles';
 import type { Locale } from '@/lib/i18n/locales';
+import { mayBeAssigned } from '@/lib/requests';
 import { type Paged, resolveTableState, type TableState } from '@/lib/tables/table-state';
 import { type PeopleSort, STAFF_TABLE } from '@/lib/tables/tables';
 import {
@@ -25,6 +26,7 @@ import {
   assertConfirmedForGrant,
   assertPermission,
   getGlobalPermissions,
+  getStaffPermissionsInCompanies,
 } from '../access';
 import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
@@ -35,6 +37,7 @@ import { forbiddenError, notFoundError, ServiceError, parseId } from '../errors'
 import { paginate, peopleOrder } from '../pagination';
 import { assertRoleChangeLimit } from '../rate-limit';
 import { defaultLanguage } from '../recipient-locale';
+import { unassignFrom } from '../requests';
 import { revokeInvitationsTo, revokeInvitesWithoutManager } from './invitations';
 import getRequestPrefix from './request-prefix';
 import notifyStaffAdminAdded from './staff-admin-notice';
@@ -374,6 +377,11 @@ async function setStaffRole(
       // above: invite links come before the per-address locks.
       if (newRole === null) {
         await revokeInvitationsTo(ctx, tx, target.email, { companyId: null });
+      }
+      // Without request work they're taken off the requests they're on: after the invitations,
+      // since requests come last in the lock order.
+      if (!mayBeAssigned(getStaffPermissionsInCompanies({ platformRole: newRole }))) {
+        await unassignFrom(tx, target.id);
       }
       await recordEvent(
         ctx,

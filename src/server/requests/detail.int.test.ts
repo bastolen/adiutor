@@ -20,7 +20,7 @@ import {
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
 import { findRequest, findRequestNumber, getRequest, THREAD_CHUNK } from './detail';
-import { ctx, db, storeEntry, storeRequest } from './test-helpers';
+import { ctx, db, storeAssignees, storeEntry, storeRequest } from './test-helpers';
 
 describe('getRequest', () => {
   it('gives a request with its company, who raised it and how its number is shown', async () => {
@@ -335,6 +335,89 @@ describe('getRequest: the conversation', () => {
     expect(await shown(-3)).toEqual(['Reply 56', 'Reply 105', THREAD_CHUNK, 55]);
     expect(await shown(Number.NaN)).toEqual(['Reply 56', 'Reply 105', THREAD_CHUNK, 55]);
     expect(await shown(1.5)).toEqual(['Reply 56', 'Reply 105', THREAD_CHUNK, 55]);
+  });
+});
+
+describe('getRequest: the assignees', () => {
+  it('gives everyone on the request the staff it is assigned to, by name, and their IDs only to the staff', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client');
+    const support = await staffActor(db, 'support');
+    const manager = await staffActor(db, 'manager');
+    await db.update(user).set({ name: 'Sam Support' }).where(eq(user.id, support.id));
+    await db.update(user).set({ name: 'Morgan Manager' }).where(eq(user.id, manager.id));
+    const stored = await storeRequest(company.id);
+    await storeAssignees(stored.id, [support.id, manager.id]);
+
+    const forStaff = await getRequest(ctx, support, stored.id);
+    const forClient = await getRequest(ctx, client, stored.id);
+
+    expect(forStaff.assignees).toEqual([
+      { userId: manager.id, name: 'Morgan Manager', side: 'staff', isViewer: false },
+      { userId: support.id, name: 'Sam Support', side: 'staff', isViewer: true },
+    ]);
+    expect(forClient.assignees).toEqual([
+      { userId: null, name: 'Morgan Manager', side: 'staff', isViewer: false },
+      { userId: null, name: 'Sam Support', side: 'staff', isViewer: false },
+    ]);
+  });
+
+  it('has nobody while the request is not assigned', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const stored = await storeRequest(company.id);
+
+    expect((await getRequest(ctx, support, stored.id)).assignees).toEqual([]);
+  });
+
+  it('says who each assignment entry is about, on the staff side, without a name once the account is gone', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client');
+    const support = await staffActor(db, 'support');
+    const gone = await staffActor(db, 'manager');
+    await db.update(user).set({ name: 'Sam Support' }).where(eq(user.id, support.id));
+    const stored = await storeRequest(company.id);
+    await storeEntry(stored.id, {
+      kind: 'assignee',
+      authorId: support.id,
+      authorSide: 'staff',
+      subjectUserId: support.id,
+      toValue: 'assigned',
+    });
+    await storeEntry(stored.id, {
+      kind: 'assignee',
+      authorId: support.id,
+      authorSide: 'staff',
+      subjectUserId: gone.id,
+      toValue: 'unassigned',
+    });
+    await storeEntry(stored.id, { authorId: client.id });
+    await db.delete(user).where(eq(user.id, gone.id));
+
+    const { entries } = await getRequest(ctx, client, stored.id);
+
+    expect(
+      entries.map(({ kind, to, subject, subjectIsAuthor }) => ({
+        kind,
+        to,
+        subject,
+        subjectIsAuthor,
+      })),
+    ).toEqual([
+      {
+        kind: 'assignee',
+        to: 'assigned',
+        subject: { userId: null, name: 'Sam Support', side: 'staff', isViewer: false },
+        subjectIsAuthor: true,
+      },
+      {
+        kind: 'assignee',
+        to: 'unassigned',
+        subject: { userId: null, name: null, side: 'staff', isViewer: false },
+        subjectIsAuthor: false,
+      },
+      { kind: 'comment', to: null, subject: null, subjectIsAuthor: false },
+    ]);
   });
 });
 

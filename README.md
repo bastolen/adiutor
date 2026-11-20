@@ -17,7 +17,8 @@ consultants: the companies raise requests, and the staff work them through with 
 manages its own users, and the staff see every company.
 
 **Status:** early development. Accounts, companies, roles, invitations, sign-in security and
-requests are built; emails about requests, assigning them and approving the work come next.
+requests, with staff assigned to them, are built; emails about requests and approving the work
+come next.
 
 ## Features
 
@@ -25,7 +26,8 @@ requests are built; emails about requests, assigning them and approving the work
   conversation: replies, a status from Open to Done (or Cancelled), and a type that sets a
   priority only the staff see. Descriptions and replies are written in an editor that turns
   Markdown into formatting as it's typed, with lists, tables and highlighted code. Company Admins and Clients raise, reply, close and reopen;
-  Watchers follow; the staff work on every company's requests. See [Requests](docs/requests.md).
+  Watchers follow; the staff work on every company's requests and assign each to one or more of
+  themselves, which everyone on the request sees. See [Requests](docs/requests.md).
 - **Companies and staff.** Staff add companies and invite each company's first Admin. Users can
   belong to several companies, with a role in each (Admin, Client or Watcher), and staff have their
   own roles (Admin, Manager, Finance and Support). See
@@ -56,8 +58,7 @@ requests are built; emails about requests, assigning them and approving the work
   changing; emails reach them in it. Invitations go out in the language the sender picks. See
   [Languages](docs/i18n.md).
 
-**Coming next:** emails about requests, assigning a request to a staff member, and an approval
-step for finished work.
+**Coming next:** emails about requests, and an approval step for finished work.
 
 ## Tech stack
 

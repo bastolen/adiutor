@@ -22,6 +22,10 @@
         "title": "Verzoeken",
         "description": "Wat er is gevraagd, en hoe het ermee staat."
       },
+      "assigned": {
+        "title": "Aan jou toegewezen",
+        "description": "{count, plural, =0 {Er is nu niets aan je toegewezen.} one {# actief verzoek is aan je toegewezen.} other {# actieve verzoeken zijn aan je toegewezen.}}"
+      },
       "users": {
         "title": "Gebruikers",
         "description": "Medewerkers en de mensen van elk bedrijf."

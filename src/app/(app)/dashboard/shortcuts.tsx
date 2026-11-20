@@ -1,9 +1,10 @@
 /**
  * @file The shortcuts on the dashboard: a tile for Requests, which everyone
- * gets (`requests-section.ts`), then one for each staff section the user may
- * see (`staff-sections.ts`).
+ * gets (`requests-section.ts`), one for the requests assigned to the staff
+ * who work on them, then one for each staff section the user may see
+ * (`staff-sections.ts`).
  */
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 
@@ -14,8 +15,14 @@ import cn from '@/lib/cn';
 import REQUESTS_SECTION from '../requests-section';
 import { type StaffSectionKey, staffSections } from '../staff-sections';
 
-/** A tile's section: Requests, or a staff section. */
-type ShortcutKey = typeof REQUESTS_SECTION.key | StaffSectionKey;
+/**
+ * The tile of the requests assigned to the viewer: the Requests list with
+ * its assignee filter on "Me".
+ */
+const ASSIGNED_TILE = { key: 'assigned', href: '/requests?assignee=me', icon: UserRound } as const;
+
+/** A tile's section: Requests, the requests assigned to the viewer, or a staff section. */
+type ShortcutKey = typeof REQUESTS_SECTION.key | typeof ASSIGNED_TILE.key | StaffSectionKey;
 
 /**
  * Props for {@link Shortcuts}.
@@ -23,6 +30,12 @@ type ShortcutKey = typeof REQUESTS_SECTION.key | StaffSectionKey;
 interface ShortcutsProps {
   /** The staff sections the user may see (`staffSectionKeys`); none for company users. */
   sections: readonly StaffSectionKey[];
+  /**
+   * How many active requests are assigned to the user, for the staff who
+   * work on requests (`countAssignedRequests`); `null` or left out for
+   * everyone else, who get no tile for it.
+   */
+  assigned?: number | null;
 }
 
 /**
@@ -34,14 +47,19 @@ interface ShortcutsProps {
  *
  * @param props - Shortcuts props.
  * @param props.sections - The staff sections to show after Requests.
+ * @param props.assigned - How many active requests are assigned to the user, for its tile.
  * @returns The list of tiles.
  */
-export default function Shortcuts({ sections }: ShortcutsProps) {
+export default function Shortcuts({ sections, assigned = null }: ShortcutsProps) {
   const t = useTranslations('dashboard');
   const text: Record<ShortcutKey, { title: string; description: string }> = {
     requests: {
       title: t('shortcuts.requests.title'),
       description: t('shortcuts.requests.description'),
+    },
+    assigned: {
+      title: t('shortcuts.assigned.title'),
+      description: t('shortcuts.assigned.description', { count: assigned ?? 0 }),
     },
     users: { title: t('shortcuts.users.title'), description: t('shortcuts.users.description') },
     companies: {
@@ -54,7 +72,11 @@ export default function Shortcuts({ sections }: ShortcutsProps) {
 
   return (
     <ul className="grid gap-4 sm:grid-cols-2">
-      {[REQUESTS_SECTION, ...staffSections(sections)].map(({ key, href, icon }) => (
+      {[
+        REQUESTS_SECTION,
+        ...(assigned === null ? [] : [ASSIGNED_TILE]),
+        ...staffSections(sections),
+      ].map(({ key, href, icon }) => (
         <li key={href}>
           <Link
             href={href}
