@@ -730,7 +730,7 @@ test.describe('in forced-colours mode', () => {
         await expectAccessible(page);
       });
 
-      test('a request’s open filter menu, status select and edit dialog', async ({ page }) => {
+      test('a request’s open filter menu, status select and dialogs', async ({ page }) => {
         await page.goto('/requests');
         await page.getByRole('button', { name: 'Type', exact: true }).click();
         await expect(page.getByRole('menu')).toBeVisible();
@@ -746,6 +746,12 @@ test.describe('in forced-colours mode', () => {
 
         await page.getByRole('button', { name: 'Edit details' }).click();
         await expect(page.getByRole('dialog')).toBeVisible();
+        await expectAccessible(page, '[role="dialog"]');
+        await page.keyboard.press('Escape');
+
+        // Everyone who can be subscribed, in their two groups; closed again without saving.
+        await page.getByRole('button', { name: 'Change subscribers' }).click();
+        await expect(page.getByRole('dialog', { name: 'Change who’s subscribed' })).toBeVisible();
         await expectAccessible(page, '[role="dialog"]');
       });
 

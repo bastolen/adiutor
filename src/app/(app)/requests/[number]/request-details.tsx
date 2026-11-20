@@ -1,9 +1,9 @@
 /**
  * @file The details of a request next to its conversation: its status, who
- * it's assigned to, its type and (for the staff) priority, its company, who
- * raised it and when, when the staff first replied and when it last had
- * activity, with the controls its viewer may use. Its text comes from
- * `requests.detail`.
+ * it's assigned to, who is subscribed to it, its type and (for the staff)
+ * priority, its company, who raised it and when, when the staff first
+ * replied and when it last had activity, with the controls its viewer may
+ * use. Its text comes from `requests.detail`.
  */
 import { getLocale, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
@@ -47,7 +47,11 @@ function Detail({ term, children }: { term: string; children: ReactNode }) {
  * a reopened request says so next to it. Everyone sees who it's assigned
  * to, one person per line with their avatar, without the staff label (only
  * staff are assigned), and the staff who work on requests get the
- * buttons that change it below them (`assigneeControls`). Readers who don't
+ * buttons that change it below them (`assigneeControls`). Under them are the
+ * subscribers the reader may see (everyone for the staff, the company's own
+ * people for the company), with the button to subscribe or unsubscribe and,
+ * for whoever changes other people's subscriptions, the one that opens their
+ * dialog (`subscriberControls`). Readers who don't
  * get the priority see no row for it. The first response is how long the staff took to reply
  * for the first time, with the moment itself on hover; a request the staff
  * raised themselves has none to wait for.
@@ -59,6 +63,7 @@ function Detail({ term, children }: { term: string; children: ReactNode }) {
  * @param props.detail - The request, as its reader gets it.
  * @param props.statusControl - The staff's status select, instead of the status label.
  * @param props.assigneeControls - The staff's "Assign to me" and "Change assignees" buttons.
+ * @param props.subscriberControls - "Subscribe" or "Unsubscribe", and "Change subscribers".
  * @param props.controls - The buttons under the details: Edit details, or Mark as done, Cancel
  *   request and Reopen.
  * @returns The card.
@@ -67,15 +72,19 @@ export default async function RequestDetails({
   detail,
   statusControl = null,
   assigneeControls = null,
+  subscriberControls = null,
   controls = null,
 }: {
   detail: RequestDetail;
   statusControl?: ReactNode;
   assigneeControls?: ReactNode;
+  subscriberControls?: ReactNode;
   controls?: ReactNode;
 }) {
   const [t, locale] = await Promise.all([getTranslations('requests.detail'), getLocale()]);
   const names = { company: detail.company.name, staff: detail.staffName };
+  // The staff are shown every subscriber; the company its own people, so "nobody" is about them.
+  const seesEverySubscriber = detail.permissions.has('requests:view-internal');
 
   return (
     <Card title={t('details')}>
@@ -101,6 +110,28 @@ export default async function RequestDetails({
               <span className="text-muted-foreground">{t('notAssigned')}</span>
             )}
             {assigneeControls && <div className="flex flex-wrap gap-2">{assigneeControls}</div>}
+          </div>
+        </Detail>
+        <Detail term={t('subscribers')}>
+          <div className="flex w-full min-w-0 flex-col gap-2">
+            {detail.subscribers.length > 0 ? (
+              <ul className="flex flex-col gap-1.5">
+                {detail.subscribers.map((person, index) => (
+                  // eslint-disable-next-line react/no-array-index-key -- readers at the company get no IDs, and the list is read whole on each render
+                  <li key={index} className="flex min-w-0 items-center gap-2">
+                    <PersonAvatar person={person} names={names} size="xs" />
+                    <PersonLine person={person} names={names} />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <span className="text-muted-foreground">
+                {seesEverySubscriber
+                  ? t('noSubscribers')
+                  : t('noSubscribersCompany', { company: detail.company.name })}
+              </span>
+            )}
+            {subscriberControls && <div className="flex flex-wrap gap-2">{subscriberControls}</div>}
           </div>
         </Detail>
         <Detail term={t('type')}>

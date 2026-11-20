@@ -25,7 +25,9 @@ and screens for company users talk about their company by name and about **reque
 | View all users (`/admin/users`)           |   ✓   |    ✓    |    ✓    |    ✓    |
 | Work on every company's requests          |   ✓   |    ✓    |    –    |    ✓    |
 | Be assigned to requests                   |   ✓   |    ✓    |    –    |    ✓    |
+| Change who is subscribed to a request     |   ✓   |    ✓    |    –    |    ✓    |
 | Read every company's requests             |   ✓   |    ✓    |    ✓    |    ✓    |
+| Subscribe to a request                    |   ✓   |    ✓    |    ✓    |    ✓    |
 | Reset MFA, sign out, (de)activate         |   ✓   |    –    |    –    |    –    |
 | Delete user accounts                      |   ✓   |    –    |    –    |    –    |
 | View the audit log (`audit:view`)         |   ✓   |    ✓    |    –    |    –    |
@@ -56,7 +58,9 @@ can be changed while signed in as someone. See
 | -------------------------------------------- | :---: | :----: | :-----: |
 | Invite and manage users                      |   ✓   |   –    |    –    |
 | Raise requests, reply, close and reopen them |   ✓   |   ✓    |    –    |
+| Subscribe colleagues to a request            |   ✓   |   –    |    –    |
 | View and follow the company's requests       |   ✓   |   ✓    |    ✓    |
+| Subscribe to a request                       |   ✓   |   ✓    |    ✓    |
 
 Nobody can give themselves a higher company role either (`isCompanyRoleRaise` in
 `src/lib/authz/guards.ts`): an Admin can step down to Client or Watcher while another Admin remains,

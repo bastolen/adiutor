@@ -24,7 +24,7 @@ import type { Database, DatabaseTransaction } from '@/db';
 import { membership, request, requestParticipant, user } from '@/db/schema';
 import type { PlatformRole } from '@/lib/authz/roles';
 import { visibleName } from '@/lib/display-name';
-import { subscriberScope } from '@/lib/requests';
+import { type RequestParticipantRole, subscriberScope } from '@/lib/requests';
 import { idSchema } from '@/lib/validation';
 
 import type { Actor } from '../actor';
@@ -344,7 +344,9 @@ export async function changeSubscribers(
  * dialog that changes subscribers: everyone who can be subscribed for the
  * staff who work on requests, their colleagues for a company's Admins. By
  * name, with whether they're subscribed now. Someone without a name to show
- * isn't listed; they can still subscribe themselves.
+ * isn't listed; they can still subscribe themselves. Neither is someone the
+ * request is assigned to: they follow it as that, and the request lists them
+ * as that.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `requests:manage` in the request's company, or
@@ -364,16 +366,25 @@ export async function listSubscribable(
   if (scope === 'self') {
     throw forbiddenError();
   }
-  const [people, subscribers] = await Promise.all([
+  const [people, onRequest] = await Promise.all([
     subscribable(ctx.db, company.id),
     ctx.db
-      .select({ userId: requestParticipant.userId })
+      .select({ userId: requestParticipant.userId, role: requestParticipant.role })
       .from(requestParticipant)
-      .where(and(eq(requestParticipant.requestId, found.id), SUBSCRIBED)),
+      .where(eq(requestParticipant.requestId, found.id)),
   ]);
-  const subscribed = new Set(subscribers.map(({ userId }) => userId));
+  /**
+   * The people on the request with a role.
+   *
+   * @param as - The role.
+   * @returns Their user IDs.
+   */
+  const usersWith = (as: RequestParticipantRole) =>
+    new Set(onRequest.flatMap(({ userId, role }) => (role === as ? [userId] : [])));
+  const subscribed = usersWith('subscriber');
+  const assigned = usersWith('assignee');
   return people
-    .filter((person) => scope === 'everyone' || person.member)
+    .filter((person) => !assigned.has(person.id) && (scope === 'everyone' || person.member))
     .flatMap(({ id, name, staff }) => {
       const shown = visibleName(name);
       return shown === null

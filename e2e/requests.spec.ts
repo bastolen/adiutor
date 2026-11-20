@@ -49,6 +49,7 @@ import {
   createAccountFromInvitation,
   freshAddress,
   markdownEditor,
+  setUpAuthenticator,
   signIn,
   signInAsUser,
   signOut,
@@ -87,7 +88,8 @@ const detail = (page: Page, term: string) =>
     .locator('xpath=following-sibling::dd[1]');
 
 /**
- * Checks that a request's page offers nothing to change it with.
+ * Checks that a request's page offers nothing to change the request with.
+ * Following it is still its reader's own: that button isn't looked at here.
  *
  * @param page - The browser page, on a request.
  */
@@ -741,6 +743,146 @@ test('the staff assign a request, find it as theirs, and the company sees who wo
   await expect(assigned().getByRole('button')).toHaveCount(0);
 });
 
+test('people subscribe to a request, and the staff change who else follows it', async ({
+  page,
+}) => {
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: `Follow this ${randomUUID().slice(0, 8)}`,
+  });
+  /**
+   * The Subscribers detail of the request on the page.
+   *
+   * @returns Its value.
+   */
+  const subscribers = () => detail(page, 'Subscribers');
+  /**
+   * One of the people listed as subscribed.
+   *
+   * @param name - Their name.
+   * @returns Their line.
+   */
+  const subscriber = (name: string) =>
+    subscribers().getByRole('listitem').filter({ hasText: name });
+
+  // A Watcher, who can't reply, follows it all the same; whoever raised it does already.
+  await signIn(page, CLIENT_WATCHER);
+  await page.goto(`/requests/${number}`);
+  await expect(subscribers().getByRole('listitem')).toHaveCount(1);
+  await expect(subscriber(REQUESTS_CLIENT.name)).toBeVisible();
+  await subscribers().getByRole('button', { name: 'Subscribe', exact: true }).click();
+  await expect(toasts(page)).toContainText('You’re subscribed to this request.');
+  await expect(subscribers().getByRole('listitem')).toHaveCount(2);
+  await expect(subscriber(CLIENT_WATCHER.name)).toContainText('You');
+  // The button stays where it is and says what it does now, so focus stays on it.
+  const unsubscribe = subscribers().getByRole('button', { name: 'Unsubscribe' });
+  await expect(unsubscribe).toBeFocused();
+  await unsubscribe.click();
+  await expect(toasts(page)).toContainText('You’re no longer subscribed to this request.');
+  await expect(subscribers().getByRole('listitem')).toHaveCount(1);
+  await subscribers().getByRole('button', { name: 'Subscribe', exact: true }).click();
+  await expect(subscribers().getByRole('listitem')).toHaveCount(2);
+  // Other people's subscriptions aren't theirs to change.
+  await expect(subscribers().getByRole('button', { name: 'Change subscribers' })).toHaveCount(0);
+  await signOut(page);
+
+  // The staff who work on requests see everyone who follows it, and change who does: anyone at
+  // the company, and anyone on the staff.
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  await expect(subscribers().getByRole('listitem')).toHaveCount(2);
+  await subscribers().getByRole('button', { name: 'Change subscribers' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Change who’s subscribed' });
+  const people = dialog.getByRole('group', { name: `People at ${COMPANY_NAME}` });
+  const staff = dialog.getByRole('group', { name: 'Staff' });
+  await expect(
+    people.getByRole('checkbox', { name: REQUESTS_CLIENT.name, exact: true }),
+  ).toBeChecked();
+  await expect(
+    staff.getByRole('checkbox', { name: `${SUPPORT_STAFF.name} (you)`, exact: true }),
+  ).not.toBeChecked();
+  await people.getByRole('checkbox', { name: CLIENT_WATCHER.name, exact: true }).uncheck();
+  await staff.getByRole('checkbox', { name: FINANCE_STAFF.name, exact: true }).check();
+  await dialog.getByRole('button', { name: 'Save subscribers' }).click();
+  await expect(toasts(page)).toContainText('Subscribers saved.');
+  await expect(dialog).toHaveCount(0);
+  await expect(subscribers().getByRole('button', { name: 'Change subscribers' })).toBeFocused();
+  await expect(subscribers().getByRole('listitem')).toHaveCount(2);
+  await expect(subscriber(CLIENT_WATCHER.name)).toHaveCount(0);
+  // A staff member is labelled as one, like in the conversation.
+  await expect(subscriber(FINANCE_STAFF.name)).toContainText(STAFF_NAME);
+  // Following is no work on the request: its history says nothing about it.
+  await expect(page.getByRole('region', { name: 'Conversation' })).toContainText('No replies yet.');
+
+  // A reply subscribes its writer.
+  await page.getByRole('textbox', { name: 'Your reply' }).fill('We’re looking into it.');
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  await expect(subscriber(SUPPORT_STAFF.name)).toContainText('You');
+  await expect(subscribers().getByRole('button', { name: 'Unsubscribe' })).toBeVisible();
+  await signOut(page);
+
+  // Someone at the company sees who of their company follows it, never which staff members do.
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto(`/requests/${number}`);
+  await expect(subscribers().getByRole('listitem')).toHaveCount(1);
+  await expect(subscriber(REQUESTS_CLIENT.name)).toContainText('You');
+  await expect(main(page)).not.toContainText(FINANCE_STAFF.name);
+  await expect(subscribers().getByRole('button', { name: 'Unsubscribe' })).toBeVisible();
+  await expect(subscribers().getByRole('button', { name: 'Change subscribers' })).toHaveCount(0);
+});
+
+test('a company’s Admin subscribes a colleague, and is offered nobody from the staff', async ({
+  page,
+}) => {
+  // A company of this test's own, with a colleague who follows and an Admin.
+  const slug = `adiutor-tests-following-${randomUUID().slice(0, 8)}`;
+  const companyId = await createCompany({ name: 'Adiutor Tests Following', slug });
+  await page.goto(
+    await storeInvitation({
+      companyId,
+      email: freshAddress('following-watcher'),
+      role: 'watcher',
+    }),
+  );
+  await createAccountFromInvitation(page, 'Follows Along Tester', 'follows-along-password');
+  await signOut(page);
+  const adminEmail = freshAddress('following-admin');
+  await page.goto(await storeInvitation({ companyId, email: adminEmail, role: 'admin' }));
+  await createAccountFromInvitation(
+    page,
+    'Subscribing Admin Tester',
+    'subscribing-admin-password',
+    '/account/security?setup=required',
+  );
+  await setUpAuthenticator(page, 'subscribing-admin-password');
+  const number = await storeRequest({
+    companySlug: slug,
+    raisedBy: adminEmail,
+    title: 'A request for a colleague to follow',
+  });
+
+  await page.goto(`/requests/${number}`);
+  const subscribers = detail(page, 'Subscribers');
+  await expect(subscribers.getByRole('listitem')).toHaveCount(1);
+  await subscribers.getByRole('button', { name: 'Change subscribers' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Change who’s subscribed' });
+  // Their colleagues, themselves among them, and nobody else.
+  await expect(dialog.getByRole('group')).toHaveCount(1);
+  const people = dialog.getByRole('group', { name: 'People at Adiutor Tests Following' });
+  await expect(people.getByRole('checkbox')).toHaveCount(2);
+  await expect(
+    people.getByRole('checkbox', { name: 'Subscribing Admin Tester (you)' }),
+  ).toBeChecked();
+  await expect(dialog).toContainText('Everyone at your company sees who’s subscribed.');
+  await people.getByRole('checkbox', { name: 'Follows Along Tester' }).check();
+  await dialog.getByRole('button', { name: 'Save subscribers' }).click();
+  await expect(toasts(page)).toContainText('Subscribers saved.');
+  await expect(subscribers.getByRole('listitem')).toHaveCount(2);
+  await expect(subscribers).toContainText('Follows Along Tester');
+});
+
 test('the staff reach a person’s page from a request, and nobody at the company does', async ({
   page,
 }) => {
@@ -1387,6 +1529,10 @@ test('Finance reads a request with its priority, and changes nothing', async ({ 
   // The staff's first reply came long after it was raised.
   await expect(detail(page, 'First response')).toContainText('after it was raised');
   await expectReadOnly(page);
+  // Following it is theirs; other people's subscriptions are for the staff who work on requests.
+  const subscribers = detail(page, 'Subscribers');
+  await expect(subscribers.getByRole('button', { name: 'Subscribe', exact: true })).toBeVisible();
+  await expect(subscribers.getByRole('button', { name: 'Change subscribers' })).toHaveCount(0);
 });
 
 test('a deactivated company’s request can only be read, also by the staff', async ({ page }) => {
@@ -1404,6 +1550,10 @@ test('a deactivated company’s request can only be read, also by the staff', as
     main(page).getByText('This company is deactivated, so its requests can only be read.'),
   ).toBeVisible();
   await expectReadOnly(page);
+  // Nobody subscribes there either.
+  await expect(
+    main(page).getByRole('button', { name: /^(Subscribe|Unsubscribe|Change subscribers)$/ }),
+  ).toHaveCount(0);
 });
 
 test('nothing about a request can be changed while a staff member is signed in as a user', async ({
@@ -1424,5 +1574,7 @@ test('nothing about a request can be changed while a staff member is signed in a
   await expect(page.getByRole('button', { name: 'Send reply' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Mark as done' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Cancel request' })).toBeDisabled();
+  // Whoever raised it follows it, and that stays as it is too.
+  await expect(page.getByRole('button', { name: 'Unsubscribe' })).toBeDisabled();
   await expect(main(page).getByText(/priority/i)).toHaveCount(0);
 });

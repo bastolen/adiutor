@@ -171,7 +171,16 @@ subscribers are who emails about it will reach. Why it's built this way is in
   company's Admin can't subscribe a staff member, and a staff member they ask to take off is left
   alone without a word, so they learn nothing about which staff members follow a request.
   `listSubscribable` lists who the actor can subscribe, with their user IDs: only for the staff
-  and for a company's Admins, who see those IDs in the members list already.
+  and for a company's Admins, who see those IDs in the members list already. It leaves out the
+  people the request is assigned to, who follow it as that.
+- **On a request's page,** the Details have a **Subscribers** row under Assigned to: every
+  subscriber the reader may see, one per line with their avatar, a staff member with the staff's
+  label. Under it is **Subscribe** or **Unsubscribe**: one button that stays where it is, so the
+  keyboard keeps its place when its text changes. Someone the request is assigned to gets no such
+  button. Whoever changes other people's subscriptions also gets **Change subscribers**, a dialog
+  with a checkbox per person, the subscribers ticked: the people at the company in one group and,
+  for the staff, the staff in another. Like the assignees' dialog it saves only what its editor
+  changed. A deactivated company's request has neither button.
 - **Automatically** (`subscribeAutomatically`, in the transaction of the change): whoever raises a
   request, replies to it or is mentioned in it is subscribed. Someone who unsubscribes stays
   unsubscribed until they reply or are mentioned again.
@@ -421,7 +430,8 @@ A description or a reply can mention people. Why it's built this way is in
   the type. It opens the new request. A company that wasn't chosen is asked for like any other
   field (`requestCompanySchema`); "not found" is for a company the reader may not see.
 - **`/requests/<number>`**: what was asked (Description), the Conversation with every reply and
-  change, oldest first, and a Details bar: status, who it's assigned to, type, priority (staff),
+  change, oldest first, and a Details bar: status, who it's assigned to, who is subscribed, type,
+  priority (staff),
   company, who raised it and when, the staff's first response and the last activity, with the
   controls. The bar is on
   the right on wide screens, and between the description and the conversation on narrower ones.

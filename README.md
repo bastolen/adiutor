@@ -17,8 +17,8 @@ consultants: the companies raise requests, and the staff work them through with 
 manages its own users, and the staff see every company.
 
 **Status:** early development. Accounts, companies, roles, invitations, sign-in security and
-requests, with staff assigned to them, are built; emails about requests and approving the work
-come next.
+requests, with staff assigned and people subscribed to them, are built; emails about requests
+and approving the work come next.
 
 ## Features
 
@@ -28,7 +28,9 @@ come next.
   Markdown into formatting as it's typed, with lists, tables and highlighted code, and can mention
   people, picked from a list at "@". Company Admins and Clients raise, reply, close and reopen;
   Watchers follow; the staff work on every company's requests and assign each to one or more of
-  themselves, which everyone on the request sees. See [Requests](docs/requests.md).
+  themselves, which everyone on the request sees. Everyone who reads a request can subscribe to
+  it, and whoever raises it, replies to it or is mentioned in it is subscribed. See
+  [Requests](docs/requests.md).
 - **Companies and staff.** Staff add companies and invite each company's first Admin. Users can
   belong to several companies, with a role in each (Admin, Client or Watcher), and staff have their
   own roles (Admin, Manager, Finance and Support). See

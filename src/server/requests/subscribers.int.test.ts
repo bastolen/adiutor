@@ -355,6 +355,21 @@ describe('listSubscribable', () => {
     expect(names(await listSubscribable(ctx, admin, raised.id))).toEqual(['anna', 'both', 'wim']);
   });
 
+  it('leaves out who the request is assigned to: they follow it as that', async () => {
+    const company = await createCompany(db);
+    await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    const manager = await staffActor(db, 'manager', 'mo@adiutor.test');
+    const raised = await storeRequest(company.id);
+    await changeAssignees(ctx, support, { request: raised.id, add: [manager.id], remove: [] });
+    await storeSubscribers(raised.id, [manager.id]);
+
+    expect(names(await listSubscribable(ctx, support, raised.id))).toEqual([
+      'casey',
+      'sam (staff)',
+    ]);
+  });
+
   it('is only for whoever may change other people’s subscriptions', async () => {
     const company = await createCompany(db);
     const client = await memberActor(db, company.id, 'client');

@@ -147,6 +147,73 @@ describe('RequestDetails', () => {
     ).toBeInTheDocument();
   });
 
+  it('lists a reader at the company the subscribers from their company, by name', async () => {
+    await renderDetails({
+      detail: detailOf({
+        subscribers: [
+          { userId: null, name: 'Casey Client', side: 'company', isViewer: true, picture: null },
+          { userId: null, name: 'Wim Watcher', side: 'company', isViewer: false, picture: null },
+        ],
+        subscribed: true,
+      }),
+    });
+
+    const people = within(valueOf('Subscribers')).getAllByRole('listitem');
+    expect(people).toHaveLength(2);
+    expect(people[0]).toHaveTextContent('Casey Client');
+    expect(people[0]).toHaveTextContent('You');
+    expect(people[1]).toHaveTextContent('Wim Watcher');
+    expect(within(valueOf('Subscribers')).queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('shows the staff every subscriber, the staff with their label and a link each', async () => {
+    await renderDetails({
+      detail: detailOf({
+        audience: 'staff',
+        permissions: new Set(['requests:view', 'requests:view-internal']),
+        subscribers: [
+          {
+            userId: 'casey',
+            name: 'Casey Client',
+            side: 'company',
+            isViewer: false,
+            picture: null,
+          },
+          { userId: 'fenna', name: 'Fenna Finance', side: 'staff', isViewer: false, picture: null },
+        ],
+      }),
+    });
+
+    const [casey, fenna] = within(valueOf('Subscribers')).getAllByRole('listitem');
+    expect(casey).not.toHaveTextContent('Adiutor Tests');
+    expect(fenna).toHaveTextContent('Adiutor Tests');
+    expect(
+      within(valueOf('Subscribers')).getByRole('link', { name: 'Fenna Finance' }),
+    ).toHaveAttribute('href', '/admin/users/fenna');
+  });
+
+  it('says nobody is subscribed: at the company to its readers, at all to the staff', async () => {
+    await renderDetails({ detail: detailOf() });
+    expect(valueOf('Subscribers')).toHaveTextContent('Nobody at Adiutor Tests Alpha yet');
+    expect(within(valueOf('Subscribers')).queryByRole('list')).not.toBeInTheDocument();
+  });
+
+  it('says nobody at all is subscribed to the staff, and puts the buttons below', async () => {
+    await renderDetails({
+      detail: detailOf({
+        audience: 'staff',
+        permissions: new Set(['requests:view', 'requests:view-internal']),
+      }),
+      subscriberControls: <button type="button">Subscribe</button>,
+    });
+
+    expect(valueOf('Subscribers')).toHaveTextContent('Nobody yet');
+    expect(valueOf('Subscribers')).not.toHaveTextContent('Adiutor Tests Alpha');
+    expect(
+      within(valueOf('Subscribers')).getByRole('button', { name: 'Subscribe' }),
+    ).toBeInTheDocument();
+  });
+
   it('shows the staff the priority, under its own name', async () => {
     await renderDetails({ detail: detailOf({ priority: 'high', audience: 'staff' }) });
 
@@ -229,9 +296,19 @@ describe('RequestDetails', () => {
   });
 
   it.each([
-    ['nl-NL', 'Gegevens', 'Ingediend door', 'Eerste reactie', '2 uur na het indienen'],
-    ['es-ES', 'Datos', 'Creada por', 'Primera respuesta', '2 horas después de crearla'],
-  ] as const)('speaks %s', async (locale, heading, raisedBy, firstResponse, after) => {
+    [
+      'nl-NL',
+      ['Gegevens', 'Ingediend door', 'Eerste reactie', '2 uur na het indienen'],
+      ['Abonnees', 'Nog niemand bij Adiutor Tests Alpha'],
+    ],
+    [
+      'es-ES',
+      ['Datos', 'Creada por', 'Primera respuesta', '2 horas después de crearla'],
+      ['Suscriptores', 'Nadie de Adiutor Tests Alpha todavía'],
+    ],
+  ] as const)('speaks %s', async (locale, details, subscribing) => {
+    const [heading, raisedBy, firstResponse, after] = details;
+    const [subscribers, nobody] = subscribing;
     testLocale.current = locale;
     await renderDetails({
       detail: detailOf({ firstResponseAt: new Date('2026-11-13T11:00:00Z') }),
@@ -240,5 +317,6 @@ describe('RequestDetails', () => {
     expect(screen.getByRole('heading', { level: 2, name: heading })).toBeInTheDocument();
     expect(valueOf(raisedBy)).toHaveTextContent('Casey Client');
     expect(valueOf(firstResponse)).toHaveTextContent(after);
+    expect(valueOf(subscribers)).toHaveTextContent(nobody);
   });
 });

@@ -81,7 +81,10 @@
       "back": "Verzoeken",
       "justRaised": "Verzoek ingediend.",
       "assignedTo": "Toegewezen aan",
-      "notAssigned": "Nog niet toegewezen"
+      "notAssigned": "Nog niet toegewezen",
+      "subscribers": "Abonnees",
+      "noSubscribers": "Nog niemand",
+      "noSubscribersCompany": "Nog niemand bij {company}"
     },
     "status": "{status, select, open {Open} todo {Te doen} in_progress {In behandeling} waiting {{audience, select, contributor {Wacht op jouw reactie} follower {Wacht op je bedrijf} other {Wacht op het bedrijf}}} done {Afgerond} cancelled {Geannuleerd} other {Onbekend}}",
     "reopened": "Heropend",
@@ -129,15 +132,25 @@
       "assigneesTitle": "Wijzigen aan wie dit verzoek is toegewezen",
       "assigneesDescription": "Iedereen bij het verzoek ziet aan wie het is toegewezen, ook het bedrijf, en elke wijziging staat in de geschiedenis.",
       "assigneesLabel": "Medewerkers die aan verzoeken werken",
-      "assigneeYou": "{name} (jij)",
+      "personYou": "{name} (jij)",
       "unnamedStaff": "Een medewerker zonder naam",
-      "saveAssignees": "Toewijzing opslaan"
+      "saveAssignees": "Toewijzing opslaan",
+      "subscribe": "Abonneren",
+      "unsubscribe": "Abonnement opzeggen",
+      "changeSubscribers": "Abonnees wijzigen",
+      "subscribersTitle": "Wijzigen wie geabonneerd is",
+      "subscribersDescription": "{scope, select, everyone {Abonnees volgen dit verzoek en krijgen de e-mails erover zodra die worden verstuurd. Het bedrijf ziet wie van de eigen mensen geabonneerd is, niet welke medewerkers.} other {Abonnees volgen dit verzoek en krijgen de e-mails erover zodra die worden verstuurd. Iedereen bij je bedrijf ziet wie geabonneerd is.}}",
+      "subscribersCompany": "Mensen bij {company}",
+      "subscribersStaff": "Medewerkers",
+      "saveSubscribers": "Abonnees opslaan"
     },
     "saved": {
       "status": "{change, select, reopened {Verzoek heropend.} done {Verzoek gemarkeerd als afgerond.} cancelled {Verzoek geannuleerd.} other {Status opgeslagen.}}",
       "details": "{changed, plural, =0 {Er is niets gewijzigd.} other {Gegevens opgeslagen.}}",
       "assignees": "{changed, plural, =0 {Er is niets gewijzigd.} other {Toewijzing opgeslagen.}}",
-      "assignedYou": "Dit verzoek is aan je toegewezen."
+      "assignedYou": "Dit verzoek is aan je toegewezen.",
+      "subscribers": "{changed, plural, =0 {Er is niets gewijzigd.} other {Abonnees opgeslagen.}}",
+      "subscription": "{change, select, subscribed {Je bent geabonneerd op dit verzoek.} other {Je bent niet meer geabonneerd op dit verzoek.}}"
     }
   }
 }
