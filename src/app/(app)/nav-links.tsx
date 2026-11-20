@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
-import { focusRing } from '@/components/ui/styles';
+import { currentItem, focusRing } from '@/components/ui/styles';
 import cn from '@/lib/cn';
 
 import REQUESTS_SECTION from './requests-section';
@@ -41,7 +41,8 @@ interface NavLinksProps {
 
 /**
  * The navigation list. The current page's link is marked with
- * `aria-current="page"` and highlighted.
+ * `aria-current="page"` and highlighted (outlined in forced-colours mode,
+ * `currentItem`).
  *
  * @param props - Links props.
  * @param props.sections - The staff sections to link to.
@@ -78,6 +79,7 @@ export default function NavLinks({ sections, onNavigate = undefined }: NavLinksP
               className={cn(
                 'flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition-colors',
                 focusRing,
+                currentItem,
                 current
                   ? 'bg-muted text-foreground'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground',

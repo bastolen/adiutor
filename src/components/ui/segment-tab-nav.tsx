@@ -10,7 +10,7 @@ import { useSelectedLayoutSegment } from 'next/navigation';
 
 import cn from '@/lib/cn';
 
-import { focusRing } from './styles';
+import { currentItem, focusRing } from './styles';
 
 /** One tab in a {@link SegmentTabNav}. */
 interface SegmentTab {
@@ -34,7 +34,8 @@ interface SegmentTabNavProps {
 
 /**
  * A row of section links with an underline under the open section's, marked
- * with `aria-current="page"`. Each section is its own page, so these are
+ * with `aria-current="page"` (and outlined in forced-colours mode, where every
+ * link's line looks the same: `currentItem`). Each section is its own page, so these are
  * links, not ARIA tabs. Render it from the layout of the sections, not from
  * their pages.
  *
@@ -58,6 +59,7 @@ export default function SegmentTabNav({ label, items }: SegmentTabNavProps) {
                 className={cn(
                   'inline-flex h-10 items-center border-b-2 px-3 text-sm font-medium transition-colors',
                   focusRing,
+                  currentItem,
                   isCurrent
                     ? 'border-highlight text-foreground'
                     : 'border-transparent text-muted-foreground hover:border-border-strong hover:text-foreground',
