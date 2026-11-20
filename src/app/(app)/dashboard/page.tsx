@@ -1,6 +1,7 @@
 /**
  * @file Dashboard, served at `/dashboard`. Everyone gets a tile for
- * Requests. Staff also get one for each staff section they may see (and
+ * Requests, and the staff who work on requests one for what's assigned to
+ * them. Staff also get one for each staff section they may see (and
  * Admins a warning when users lost their provider MFA; Admins and Managers
  * one when background jobs aren't running); company users get their
  * companies, each linking to its page. A note says what happened when users
@@ -15,12 +16,13 @@ import PageHeader from '@/components/ui/page-header';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import displayName from '@/lib/display-name';
 import ClientMessages from '@/lib/i18n/client-messages';
+import { mayBeAssigned } from '@/lib/requests';
 import appContext from '@/server/app-context';
-import { getActor, getGlobalPermissions } from '@/server/authz';
+import { getActor, getGlobalPermissions, getStaffPermissionsInCompanies } from '@/server/authz';
 import { getTickWarning } from '@/server/jobs';
 import { isMfaRecommendationDismissed } from '@/server/people/mfa-recommendation';
 import { getProviderMfaWarning } from '@/server/people/users';
-import { listRequestCompanies } from '@/server/requests';
+import { countAssignedRequests, listRequestCompanies } from '@/server/requests';
 
 import TickWarning from '../_jobs/tick-warning';
 import AccessNotice from '../access-notice';
@@ -52,6 +54,7 @@ async function Dashboard() {
   const actor = await getActor();
   const permissions = getGlobalPermissions(actor);
   const isStaff = permissions.has('users:view');
+  const canBeAssigned = mayBeAssigned(getStaffPermissionsInCompanies(actor));
   const firstName = displayName(actor).split(' ')[0] ?? '';
 
   // The lookups don't depend on each other, so they start together. Recommended for everyone
@@ -59,12 +62,14 @@ async function Dashboard() {
   // saved with the account, so it's known here and never pops in late. For staff Admins: users
   // who lost their MFA because a provider isn't configured here. For staff who see the jobs: no
   // job runs while the ticks are stopped, and none can say so. For everyone else: the companies
-  // whose requests they see, every active company they're in, by name.
-  const [dismissed, providerMfaWarning, tickWarning, companies] = await Promise.all([
+  // whose requests they see, every active company they're in, by name. For the staff who work on
+  // requests: how many active requests are assigned to them.
+  const [dismissed, providerMfaWarning, tickWarning, companies, assigned] = await Promise.all([
     actor.mfaEnabled ? true : isMfaRecommendationDismissed(appContext, actor),
     isStaff ? getProviderMfaWarning(appContext, actor) : null,
     isStaff ? getTickWarning(appContext, actor) : null,
     isStaff ? [] : listRequestCompanies(appContext, actor),
+    canBeAssigned ? countAssignedRequests(appContext, actor) : null,
   ]);
   const recommendation = !dismissed && (
     <ClientMessages namespaces={['dashboard.mfaRecommendation']}>
@@ -104,7 +109,7 @@ async function Dashboard() {
       {recommendation}
       {providerMfaWarning && <ProviderMfaWarning warning={providerMfaWarning} />}
       {tickWarning && <TickWarning lastTickAt={tickWarning.lastTickAt} linkToJobs />}
-      <Shortcuts sections={staffSectionKeys(permissions)} />
+      <Shortcuts sections={staffSectionKeys(permissions)} assigned={assigned} />
     </>
   );
 }

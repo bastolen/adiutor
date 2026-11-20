@@ -22,6 +22,10 @@
         "title": "Solicitudes",
         "description": "Lo que se ha pedido y en qué punto está."
       },
+      "assigned": {
+        "title": "Asignadas a ti",
+        "description": "{count, plural, =0 {Ahora no tienes nada asignado.} one {Tienes # solicitud activa asignada.} other {Tienes # solicitudes activas asignadas.}}"
+      },
       "users": {
         "title": "Usuarios",
         "description": "El personal y las personas de cada empresa."

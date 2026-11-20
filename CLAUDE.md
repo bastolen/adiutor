@@ -9,7 +9,7 @@
 
 - Adiutor is a shared service desk, a ticketing system where companies raise requests with the staff and work them through together by commenting, explaining, approving and reporting. Prepaid hours and billing will come later but aren't designed yet; don't mention them in the UI until they are.
 - Wording: staff screens talk about "users", "companies" and "staff" (never "clients", "your team" or "organization"); screens for company users talk about "your company" or its name, and about "requests". "Client" is only the name of a company role (Admin, Client, Watcher). Marketing text speaks to companies. Staff have `user.platform_role` (see `src/lib/authz/roles.ts`), and the name users see and Adiutor's default language are the single `staff_settings` row. Invitations and invite links without a company are for staff.
-- Requests are built (`docs/requests.md`), with their text in Markdown; emails about them, assigning, approval, internal notes and attachments aren't. Don't add navigation or pages for features that don't exist; hint at them in descriptions and empty states instead.
+- Requests are built (`docs/requests.md`), with their text in Markdown and staff assigned to them; emails about them, approval, internal notes and attachments aren't. Don't add navigation or pages for features that don't exist; hint at them in descriptions and empty states instead.
 
 ## Documentation
 

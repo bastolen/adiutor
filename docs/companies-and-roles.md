@@ -97,6 +97,9 @@ Admins and Managers who aren't members can still add themselves with any role, a
 - **Everyone:** the menu has Dashboard and **Requests** (`/requests`: every request the user may
   see), and the dashboard has a Requests tile. Requests is declared once for both
   (`src/app/(app)/requests-section.ts`), like the staff sections (`staff-sections.ts`).
+- **Staff who work on requests** (Admin, Manager, Support) also get an **Assigned to you** tile
+  after Requests: how many active requests are assigned to them, linking to the list with its
+  Assignee filter on Me (`/requests?assignee=me`; see [Assigning](requests.md#assigning)).
 - **Staff:** the menu also has Users and Companies, and the dashboard a tile for each. Admins
   (`staff:manage`) also get **Staff** in the menu and as a tile on the dashboard, which opens the
   staff page. Admins and Managers (`audit:view`) also get **Logs**, last in the menu and as a tile

@@ -11,6 +11,7 @@ import type { PgDatabase } from 'drizzle-orm/pg-core';
 import * as schema from '../../src/db/schema';
 import { firstRow } from '../../src/lib/defined';
 import {
+  type AssignmentChange,
   isClosedStatus,
   type RequestPriority,
   type RequestSide,
@@ -30,7 +31,10 @@ export interface SamplePerson {
   side: RequestSide;
 }
 
-/** One entry of an example request's history: a reply, or a change. */
+/**
+ * One entry of an example request's history: a reply, a change, or a staff
+ * member assigned or removed.
+ */
 export type SampleEntry = {
   /** Who wrote or changed it. */
   by: SamplePerson;
@@ -50,6 +54,12 @@ export type SampleEntry = {
       from: string;
       /** What it became. */
       to: string;
+    }
+  | {
+      /** Whether the staff member was assigned or removed. */
+      assign: AssignmentChange;
+      /** The staff member's user ID. */
+      subject: string;
     }
 );
 
@@ -77,6 +87,49 @@ export interface SampleRequest {
   at: Date;
   /** Its history, oldest first. */
   entries?: SampleEntry[];
+  /** The user IDs of the staff assigned to it now; nobody when left out. */
+  assignees?: string[];
+}
+
+/**
+ * The row of one entry of an example request's history.
+ *
+ * @param written - The request it's in, and who wrote it on which side.
+ * @param written.requestId - The request.
+ * @param written.authorId - Who wrote or changed it.
+ * @param written.authorSide - The side they act as.
+ * @param entry - The entry.
+ * @returns The values to insert.
+ */
+function entryValues(
+  written: { requestId: string; authorId: string; authorSide: RequestSide },
+  entry: SampleEntry,
+): typeof schema.requestEntry.$inferInsert {
+  if ('reply' in entry) {
+    return {
+      ...written,
+      kind: 'comment',
+      body: entry.reply,
+      bodyFormat: entry.format,
+      createdAt: entry.at,
+    };
+  }
+  if ('assign' in entry) {
+    return {
+      ...written,
+      kind: 'assignee',
+      subjectUserId: entry.subject,
+      toValue: entry.assign,
+      createdAt: entry.at,
+    };
+  }
+  return {
+    ...written,
+    kind: entry.change,
+    fromValue: entry.from,
+    toValue: entry.to,
+    createdAt: entry.at,
+  };
 }
 
 /**
@@ -84,7 +137,8 @@ export interface SampleRequest {
  * counter to the last number.
  *
  * Each request's last activity is its latest entry the company sees (every
- * one but a change of priority), or the moment it was raised. A reopened
+ * one but a change of priority), or the moment it was raised. Its assignees
+ * are stored as they are now; its entries say how they came to be. A reopened
  * request counts as reopened at that moment.
  *
  * @param db - Database client, or a transaction.
@@ -128,23 +182,13 @@ export default async function storeRequests(
     for (const entry of entries) {
       const written = { requestId: stored.id, authorId: entry.by.id, authorSide: entry.by.side };
       // eslint-disable-next-line no-await-in-loop -- Same.
-      await db.insert(schema.requestEntry).values(
-        'reply' in entry
-          ? {
-              ...written,
-              kind: 'comment',
-              body: entry.reply,
-              bodyFormat: entry.format,
-              createdAt: entry.at,
-            }
-          : {
-              ...written,
-              kind: entry.change,
-              fromValue: entry.from,
-              toValue: entry.to,
-              createdAt: entry.at,
-            },
-      );
+      await db.insert(schema.requestEntry).values(entryValues(written, entry));
+    }
+    if (sample.assignees && sample.assignees.length > 0) {
+      // eslint-disable-next-line no-await-in-loop -- Same.
+      await db
+        .insert(schema.requestAssignee)
+        .values(sample.assignees.map((userId) => ({ requestId: stored.id, userId })));
     }
     numbers.push(number);
   }

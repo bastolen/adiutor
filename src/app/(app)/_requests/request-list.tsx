@@ -7,7 +7,7 @@
  */
 import { ChevronRight, Inbox, Plus } from 'lucide-react';
 import Link from 'next/link';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
 import Button from '@/components/ui/button';
@@ -22,12 +22,14 @@ import SegmentedNav from '@/components/ui/segmented-nav';
 import SortMenu from '@/components/ui/sort-menu';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
 import { companyChoiceLabels } from '@/lib/company-choices';
+import { formatList } from '@/lib/format';
 import {
   DEFAULT_REQUEST_STATUS_FILTER,
   formatRequestNumber,
   isRequestPriority,
   isRequestStatusFilter,
   isRequestType,
+  mayBeAssigned,
   REQUEST_PRIORITIES,
   REQUEST_STATUS_FILTERS,
   REQUEST_TYPES,
@@ -41,9 +43,16 @@ import { REQUESTS_TABLE, STAFF_REQUESTS_TABLE } from '@/lib/tables/tables';
 import type { Actor } from '@/server/actor';
 import appContext from '@/server/app-context';
 import { getStaffPermissionsInCompanies } from '@/server/authz';
-import { getRequestSettings, listRequestCompanies, listRequests } from '@/server/requests';
+import {
+  getRequestSettings,
+  listAssignableStaff,
+  listRequestCompanies,
+  listRequests,
+  type RequestListItem,
+} from '@/server/requests';
 
 import { PriorityBadge, ReopenedBadge, StatusBadge } from './request-badges';
+import { PeopleAvatars, personName } from './request-person';
 
 /**
  * The link to the form that raises a request, as a button.
@@ -101,7 +110,7 @@ type EmptyKind = 'noMatch' | 'active' | 'none';
 
 /**
  * Works out why a list without requests is empty. A search, a company, a
- * type or a priority narrows the list down, and so do the Waiting and Closed
+ * type, a priority or an assignee narrows the list down, and so do the Waiting and Closed
  * links: nothing matches them. Active is where the list starts, and All
  * leaves no request out, so a list that's empty under All without a search
  * or a filter has no requests yet.
@@ -124,13 +133,17 @@ function emptyKindOf(status: RequestStatusFilter, narrowed: boolean): EmptyKind 
  * The requests the viewer may see, with what narrows them down: a row of
  * status links (the requests that are still worked on first), a search by
  * title or number, and menus for the company (when there's more than one to
- * choose from), the type and, for the staff, the priority, next to the Sort
- * menu.
+ * choose from), the type and, for the staff, the priority and the assignee
+ * (Me, for those who can be assigned, Not assigned, or one staff member),
+ * next to the Sort menu.
  *
  * Each row is one link to its request. From tablet width the status and the
  * last activity have columns of their own, and the staff get a Priority
- * column; below that they go under the title. Company users never get a
- * priority: the service leaves it out.
+ * column, and an Assigned to column with an avatar per person (the name on
+ * hover, and as text for screen readers); below that they go under the
+ * title. Company users
+ * never get a priority: the service leaves it out. They see who a request
+ * is assigned to on its page.
  *
  * An empty list says why it's empty ({@link emptyKindOf}) and, unless a
  * search or a filter emptied it, offers "New request" to whoever may raise
@@ -166,11 +179,24 @@ export default async function RequestList({
   const priorityParam = searchParam(searchParams.priority);
   const priority = internal && isRequestPriority(priorityParam) ? priorityParam : undefined;
   const requested = parseTableState(definition, searchParams);
+  const assigneeParam = searchParam(searchParams.assignee);
+  // "Me" only for those who can be assigned; one staff member for the others.
+  const canBeAssigned = mayBeAssigned(getStaffPermissionsInCompanies(actor));
 
-  const [companies, settings] = await Promise.all([
+  const [companies, settings, assignable, locale] = await Promise.all([
     listRequestCompanies(appContext, actor),
     getRequestSettings(appContext),
+    internal ? listAssignableStaff(appContext, actor) : [],
+    getLocale(),
   ]);
+  // An assignee to filter by only counts when it's one the menu offers.
+  const assignee =
+    internal &&
+    (assigneeParam === 'none' ||
+      (assigneeParam === 'me' && canBeAssigned) ||
+      assignable.some(({ id }) => id === assigneeParam))
+      ? assigneeParam
+      : undefined;
   // A company to filter by only counts when it's one the viewer sees.
   const companyParam = company ? undefined : searchParam(searchParams.company);
   const chosenCompany = companies.find(({ slug }) => slug === companyParam)?.slug;
@@ -180,6 +206,7 @@ export default async function RequestList({
     company: company ?? chosenCompany,
     type,
     priority,
+    assignee,
     ...requested,
     // The table checked the sort against its own sorts; this only tells TypeScript which it is.
     sort:
@@ -192,6 +219,7 @@ export default async function RequestList({
     company: chosenCompany,
     type,
     priority,
+    assignee,
   };
   const table = createPageUrl(
     path,
@@ -210,7 +238,7 @@ export default async function RequestList({
    * @returns The menu's options.
    */
   const filterOptions = (
-    param: 'company' | 'type' | 'priority',
+    param: 'company' | 'type' | 'priority' | 'assignee',
     allLabel: string,
     chosen: string | undefined,
     items: { value: string; label: string }[],
@@ -235,7 +263,31 @@ export default async function RequestList({
   const showsCompany = !company && companies.length > 1;
   const newButton = canRaise && <NewRequestButton company={company} label={t('new')} />;
   // What an empty list says, and whether it invites a request: only where one would show up.
-  const emptyKind = emptyKindOf(status, Boolean(search || chosenCompany || type || priority));
+  const emptyKind = emptyKindOf(
+    status,
+    Boolean(search || chosenCompany || type || priority || assignee),
+  );
+  const names = { company: '', staff: settings.staffName };
+  /**
+   * The avatars of who a request is assigned to, each with its name on
+   * hover. They sit in a copy of the row's link, above the link that covers
+   * the row, so hovering one shows its name and clicking one still opens the
+   * request; the copy is left out of the keyboard's and screen readers' way,
+   * which get the names as text next to it.
+   *
+   * @param request - The request.
+   * @returns The linked avatars.
+   */
+  const avatarsOf = (request: RequestListItem) => (
+    <Link
+      href={requestPath(request.number)}
+      tabIndex={-1}
+      aria-hidden="true"
+      className="relative z-10 inline-flex w-fit"
+    >
+      <PeopleAvatars people={request.assignees} names={names} />
+    </Link>
+  );
   const mayRaise = { canRaise: canRaise ? 'yes' : 'no' };
   let emptyText = { title: t('empty.noMatchTitle'), description: t('empty.noMatchDescription') };
   if (emptyKind === 'active') {
@@ -322,6 +374,23 @@ export default async function RequestList({
                 )}
               />
             )}
+            {internal && (
+              <FilterMenu
+                label={t('assigneeFilter')}
+                menuLabel={t('assigneeMenu')}
+                options={filterOptions('assignee', t('anyAssignee'), assignee, [
+                  ...(canBeAssigned ? [{ value: 'me', label: t('assignedToMe') }] : []),
+                  { value: 'none', label: t('unassigned') },
+                  // The viewer is "Me" already.
+                  ...assignable
+                    .filter(({ id }) => !canBeAssigned || id !== actor.id)
+                    .map(({ id, name }) => ({
+                      value: id,
+                      label: name ?? tRequests('controls.unnamedStaff'),
+                    })),
+                ])}
+              />
+            )}
             {requests.total > 0 && <SortMenu label={t('rows')} options={table.sortOptions()} />}
           </div>
         </div>
@@ -352,6 +421,11 @@ export default async function RequestList({
                     {t('columns.priority')}
                   </Th>
                 )}
+                {internal && (
+                  <Th className="hidden whitespace-nowrap md:table-cell">
+                    {t('columns.assignees')}
+                  </Th>
+                )}
                 <Th aria-sort={table.ariaSort('activity')} className="hidden md:table-cell">
                   {t('columns.activity')}
                 </Th>
@@ -370,6 +444,7 @@ export default async function RequestList({
                     {request.reopened && <ReopenedBadge />}
                   </>
                 );
+                const assigneeNames = request.assignees.map((person) => personName(person, names));
                 return (
                   <Tr key={request.id} className="group relative">
                     <Td>
@@ -394,6 +469,14 @@ export default async function RequestList({
                         <span className="mt-1 flex flex-wrap items-center gap-2 md:hidden">
                           {labels}
                           {request.priority && <PriorityBadge priority={request.priority} />}
+                          {internal && request.assignees.length > 0 && (
+                            <>
+                              {avatarsOf(request)}
+                              <span className="sr-only">
+                                {t('assignedToNames', { names: formatList(assigneeNames, locale) })}
+                              </span>
+                            </>
+                          )}
                         </span>
                         <span className="text-xs text-muted-foreground md:hidden">
                           <RelativeTime date={request.lastActivityAt} />
@@ -406,6 +489,21 @@ export default async function RequestList({
                     {internal && (
                       <Td className="hidden md:table-cell">
                         {request.priority && <PriorityBadge priority={request.priority} short />}
+                      </Td>
+                    )}
+                    {internal && (
+                      <Td className="hidden md:table-cell">
+                        {request.assignees.length > 0 ? (
+                          <>
+                            {avatarsOf(request)}
+                            <span className="sr-only">{formatList(assigneeNames, locale)}</span>
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            <span aria-hidden="true">—</span>
+                            <span className="sr-only">{t('unassigned')}</span>
+                          </span>
+                        )}
                       </Td>
                     )}
                     <Td className="hidden whitespace-nowrap text-muted-foreground md:table-cell">

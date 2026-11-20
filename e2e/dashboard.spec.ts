@@ -1,7 +1,7 @@
 /**
  * @file End-to-end tests for the dashboard and the main navigation: the
  * staff page from the dashboard and the menu, what staff who can't manage the
- * staff see, the warning about users whose MFA came from a provider that is
+ * staff see (and the tile of the requests assigned to them), the warning about users whose MFA came from a provider that is
  * off, and what company users get: Requests in the menu and on the
  * dashboard, and their companies.
  */
@@ -26,6 +26,7 @@ test('an Admin opens the staff page from the dashboard and the menu', async ({ p
   const main = page.getByRole('main');
   await expect(main.getByRole('listitem').getByRole('link')).toHaveText([
     /^Requests/,
+    /^Assigned to you/,
     /^Users/,
     /^Companies/,
     /^Staff/,
@@ -46,11 +47,13 @@ test("staff who can't manage the staff get no Staff tile or menu item", async ({
   await signIn(page, SUPPORT_STAFF);
   await page.goto('/dashboard');
 
-  await expect(page.getByRole('main').getByRole('listitem').getByRole('link')).toHaveText([
-    /^Requests/,
-    /^Users/,
-    /^Companies/,
-  ]);
+  const tiles = page.getByRole('main').getByRole('listitem').getByRole('link');
+  await expect(tiles).toHaveText([/^Requests/, /^Assigned to you/, /^Users/, /^Companies/]);
+  // Support works on requests: the tile leads to the ones assigned to them.
+  await expect(tiles.filter({ hasText: /^Assigned to you/ })).toHaveAttribute(
+    'href',
+    '/requests?assignee=me',
+  );
   await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link')).toHaveText([
     'Dashboard',
     'Requests',

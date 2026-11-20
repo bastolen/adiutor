@@ -2,33 +2,45 @@
  * @file Tests for what a request list says when it has nothing to show:
  * nothing matches a search or a filter, nothing is active, or (under All,
  * which leaves nothing out) there are no requests yet, and whether it then
- * offers to raise one.
+ * offers to raise one; its filter menus; and what the staff see of who each
+ * request is assigned to.
  */
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { Permission } from '@/lib/authz/permissions';
 import type { Actor } from '@/server/actor';
-import { getRequestSettings, listRequestCompanies, listRequests } from '@/server/requests';
+import { getStaffPermissionsInCompanies } from '@/server/authz';
+import {
+  getRequestSettings,
+  listAssignableStaff,
+  listRequestCompanies,
+  listRequests,
+  type RequestListItem,
+} from '@/server/requests';
 
 import { testLocale } from '../../../../tests/i18n/next-intl-mocks';
 import renderInLocale from '../../../../tests/i18n/render';
 import RequestList from './request-list';
 
 vi.mock('@/server/app-context', () => ({ default: { name: 'app context' } }));
-vi.mock('@/server/authz', () => ({
-  /**
-   * The viewer's staff permissions: none, as for someone at a company.
-   *
-   * @returns No permissions.
-   */
-  getStaffPermissionsInCompanies: () => new Set(),
-}));
+// The viewer's staff permissions: none by default, as for someone at a company.
+vi.mock('@/server/authz', () => ({ getStaffPermissionsInCompanies: vi.fn() }));
 vi.mock('@/server/requests', () => ({
   getRequestSettings: vi.fn(),
+  listAssignableStaff: vi.fn(),
   listRequestCompanies: vi.fn(),
   listRequests: vi.fn(),
 }));
+
+/** What a staff member who works on requests may do in every company. */
+const STAFF_WORK = new Set<Permission>([
+  'requests:view',
+  'requests:contribute',
+  'requests:manage',
+  'requests:view-internal',
+]);
 
 /** Someone at a company; the mocked services decide what they see and may do. */
 const viewer = { id: 'client-1' } as Actor;
@@ -66,6 +78,8 @@ async function renderList(searchParams: Record<string, string> = {}) {
 const newRequest = () => screen.queryByRole('link', { name: 'New request' });
 
 beforeEach(() => {
+  vi.mocked(getStaffPermissionsInCompanies).mockReturnValue(new Set());
+  vi.mocked(listAssignableStaff).mockResolvedValue([]);
   vi.mocked(getRequestSettings).mockResolvedValue({ prefix: 'AD', staffName: 'Adiutor Tests' });
   vi.mocked(listRequests).mockResolvedValue({ items: [], total: 0, page: 1, size: 25 });
   inOneCompany(true);
@@ -204,5 +218,146 @@ describe('a request list without requests', () => {
     const main = within(document.body);
     expect(main.getByText(title)).toBeInTheDocument();
     expect(main.getByText(description)).toBeInTheDocument();
+  });
+});
+
+describe('a request list for the staff', () => {
+  /** The staff member reading the list. */
+  const sam = { id: 'sam' } as Actor;
+
+  /**
+   * A request in the list.
+   *
+   * @param title - Its title.
+   * @param assignees - The names of the staff it's assigned to.
+   * @returns The row.
+   */
+  const itemOf = (title: string, assignees: string[]): RequestListItem => ({
+    id: title,
+    number: 1,
+    title,
+    status: 'open',
+    reopened: false,
+    type: 'bug',
+    priority: 'normal',
+    company: { id: 'company', name: 'Adiutor Tests', slug: 'adiutor-tests' },
+    assignees: assignees.map((name) => ({ userId: name, name, side: 'staff', isViewer: false })),
+    lastActivityAt: new Date('2026-11-13T09:00:00Z'),
+    audience: 'staff',
+  });
+
+  /**
+   * Renders the list for Sam, who works on requests.
+   *
+   * @param searchParams - The page's query parameters.
+   */
+  const renderForStaff = async (searchParams: Record<string, string> = {}) => {
+    render(await RequestList({ path: '/requests', searchParams, actor: sam }));
+  };
+
+  beforeEach(() => {
+    vi.mocked(getStaffPermissionsInCompanies).mockReturnValue(STAFF_WORK);
+    vi.mocked(listAssignableStaff).mockResolvedValue([
+      { id: 'morgan', name: 'Morgan Manager' },
+      { id: 'sam', name: 'Sam Support' },
+      { id: 'nameless', name: null },
+    ]);
+  });
+
+  it('shows who each request is assigned to as avatars, with the names on hover and as text', async () => {
+    vi.mocked(listRequests).mockResolvedValue({
+      items: [itemOf('Shared', ['Morgan Manager', 'Sam Support']), itemOf('Nobody', [])],
+      total: 2,
+      page: 1,
+      size: 25,
+    });
+
+    await renderForStaff();
+
+    expect(screen.getByRole('columnheader', { name: 'Assigned to' })).toBeInTheDocument();
+    const [shared, nobody] = screen.getAllByRole('row').slice(1);
+    // Request, Status, Priority, then Assigned to.
+    const cell = within(shared ?? document.body).getAllByRole('cell')[3];
+    // In the column (and under the title for a phone): an avatar per person, its name on hover.
+    expect(
+      [...(cell?.querySelectorAll('[title]') ?? [])].map((avatar) => avatar.getAttribute('title')),
+    ).toEqual(['Morgan Manager', 'Sam Support']);
+    // The avatars open the request too, but stay out of the keyboard's and screen readers' way.
+    const avatarLink = cell?.querySelector('a');
+    expect(avatarLink).toHaveAttribute('href', '/requests/1');
+    expect(avatarLink).toHaveAttribute('tabindex', '-1');
+    expect(avatarLink).toHaveAttribute('aria-hidden', 'true');
+    // Screen readers get the names as text.
+    expect(cell).toHaveTextContent('Morgan Manager and Sam Support');
+    expect(shared).toHaveTextContent('Assigned to Morgan Manager and Sam Support');
+    expect(nobody).toHaveTextContent('Not assigned');
+  });
+
+  it('filters by Me, Not assigned or a staff member, with "anyone" first', async () => {
+    await renderForStaff({ status: 'all', assignee: 'morgan' });
+
+    await userEvent.click(screen.getByRole('button', { name: /Assignee/ }));
+
+    const options = screen.getAllByRole('menuitemradio');
+    // Sam is "Me", so not again by name.
+    expect(options.map((option) => option.textContent)).toEqual([
+      'Anyone',
+      'Me',
+      'Not assigned',
+      'Morgan Manager',
+      'A staff member without a name',
+    ]);
+    expect(options[0]).toHaveAttribute('href', '/requests?status=all');
+    expect(screen.getByRole('menuitemradio', { name: 'Me' })).toHaveAttribute(
+      'href',
+      '/requests?status=all&assignee=me',
+    );
+    expect(screen.getByRole('menuitemradio', { name: 'Morgan Manager' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    expect(listRequests).toHaveBeenLastCalledWith(
+      { name: 'app context' },
+      sam,
+      expect.objectContaining({ assignee: 'morgan' }),
+    );
+  });
+
+  it('ignores an assignee the menu does not offer', async () => {
+    await renderForStaff({ assignee: 'someone-else' });
+
+    expect(listRequests).toHaveBeenLastCalledWith(
+      { name: 'app context' },
+      sam,
+      expect.objectContaining({ assignee: undefined }),
+    );
+  });
+
+  it('gives Finance, who can not be assigned, no "Me"', async () => {
+    vi.mocked(getStaffPermissionsInCompanies).mockReturnValue(
+      new Set<Permission>(['requests:view', 'requests:view-internal']),
+    );
+
+    await renderForStaff();
+    await userEvent.click(screen.getByRole('button', { name: /Assignee/ }));
+
+    expect(screen.queryByRole('menuitemradio', { name: 'Me' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitemradio', { name: 'Sam Support' })).toBeInTheDocument();
+  });
+
+  it('gives company users no assignee column or filter', async () => {
+    vi.mocked(getStaffPermissionsInCompanies).mockReturnValue(new Set());
+    vi.mocked(listRequests).mockResolvedValue({
+      items: [itemOf('Shared', ['Sam Support'])],
+      total: 1,
+      page: 1,
+      size: 25,
+    });
+
+    await renderForStaff();
+
+    expect(screen.queryByRole('columnheader', { name: 'Assigned to' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Assignee/ })).not.toBeInTheDocument();
+    expect(listAssignableStaff).not.toHaveBeenCalled();
   });
 });

@@ -4,8 +4,9 @@
  * (someone at a company, and the staff
  * for a company), and a request's page: its description, details and
  * conversation, the staff and a company working a request through (status,
- * replies, done, reopened, cancelled), the staff editing its details, the
- * prefix numbers are shown with, and
+ * replies, done, reopened, cancelled), the staff editing its details and
+ * assigning it (and finding what's assigned to them), the prefix numbers
+ * are shown with, and
  * who only reads: Watchers, Finance, everyone for a
  * deactivated company's request, and a staff member signed in as a user.
  * The staff reach a person's user page from their name; nobody at a company
@@ -37,6 +38,7 @@ import {
   PAGING_COMPANY_NAME,
   PAGING_COMPANY_SLUG,
   PLATFORM_ADMIN,
+  PLATFORM_MANAGER,
   REQUESTS_CLIENT,
   SEEDED_REQUESTS,
   STAFF_NAME,
@@ -93,7 +95,7 @@ async function expectReadOnly(page: Page) {
   await expect(page.getByRole('combobox', { name: 'Status' })).toHaveCount(0);
   await expect(
     main(page).getByRole('button', {
-      name: /^(Send reply|Mark as done|Cancel request|Reopen|Edit details)$/,
+      name: /^(Send reply|Mark as done|Cancel request|Reopen|Edit details|Assign to me|Change assignees)$/,
     }),
   ).toHaveCount(0);
 }
@@ -612,6 +614,92 @@ test('the staff edit a request’s details, and the company never sees its prior
   await expect(main(page).getByText(/priority/i)).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Edit details' })).toHaveCount(0);
   await expect(page.getByRole('combobox', { name: 'Status' })).toHaveCount(0);
+});
+
+test('the staff assign a request, find it as theirs, and the company sees who works on it', async ({
+  page,
+}) => {
+  const title = `Assign this ${randomUUID().slice(0, 8)}`;
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title,
+  });
+  /**
+   * The Assigned to detail of the request on the page.
+   *
+   * @returns Its value.
+   */
+  const assigned = () => detail(page, 'Assigned to');
+
+  // One click puts the staff member on it; the button goes, so focus moves to the card.
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  await expect(assigned()).toContainText('Not assigned yet');
+  await assigned().getByRole('button', { name: 'Assign to me' }).click();
+  await expect(toasts(page)).toContainText('You’re assigned to this request.');
+  await expect(assigned().getByRole('listitem')).toHaveCount(1);
+  await expect(assigned()).toContainText(SUPPORT_STAFF.name);
+  await expect(assigned().getByRole('button', { name: 'Assign to me' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { level: 2, name: 'Details' })).toBeFocused();
+  await expect(conversation(page)).toContainText('Assigned themselves to this request.');
+
+  // The dialog adds a colleague: everyone who works on requests, the viewer first and ticked.
+  await assigned().getByRole('button', { name: 'Change assignees' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Change who’s assigned' });
+  await expect(dialog.getByRole('checkbox').first()).toHaveAccessibleName(
+    `${SUPPORT_STAFF.name} (you)`,
+  );
+  await expect(dialog.getByRole('checkbox', { name: `${SUPPORT_STAFF.name} (you)` })).toBeChecked();
+  await expect(dialog.getByRole('checkbox', { name: FINANCE_STAFF.name })).toHaveCount(0);
+  await dialog.getByRole('checkbox', { name: PLATFORM_MANAGER.name }).check();
+  await dialog.getByRole('button', { name: 'Save assignees' }).click();
+  await expect(toasts(page)).toContainText('Assignees saved.');
+  await expect(dialog).toHaveCount(0);
+  await expect(assigned().getByRole('button', { name: 'Change assignees' })).toBeFocused();
+  await expect(assigned().getByRole('listitem')).toHaveCount(2);
+  await expect(conversation(page)).toContainText(
+    `Assigned ${PLATFORM_MANAGER.name} to this request.`,
+  );
+
+  // The list's assignee filter finds it as theirs, and the dashboard leads there too.
+  await page.goto('/requests');
+  await main(page)
+    .getByRole('button', { name: /^Assignee/ })
+    .click();
+  await page.getByRole('menuitemradio', { name: 'Me', exact: true }).click();
+  await expect(page).toHaveURL(/assignee=me/);
+  const row = requestRows(page).filter({ hasText: title });
+  await expect(row).toContainText(SUPPORT_STAFF.name);
+  await expect(row).toContainText(PLATFORM_MANAGER.name);
+  await page.goto('/dashboard');
+  await main(page)
+    .getByRole('link', { name: /^Assigned to you/ })
+    .click();
+  await expect(page).toHaveURL('/requests?assignee=me');
+  await expect(requestRows(page).filter({ hasText: title })).toHaveCount(1);
+
+  // Stepping off it leaves the colleague on it.
+  await page.goto(`/requests/${number}`);
+  await assigned().getByRole('button', { name: 'Change assignees' }).click();
+  await dialog.getByRole('checkbox', { name: `${SUPPORT_STAFF.name} (you)` }).uncheck();
+  await dialog.getByRole('button', { name: 'Save assignees' }).click();
+  await expect(toasts(page)).toContainText('Assignees saved.');
+  await expect(conversation(page)).toContainText('Removed themselves from this request.');
+  await expect(assigned().getByRole('listitem')).toHaveCount(1);
+  await expect(assigned().getByRole('button', { name: 'Assign to me' })).toBeVisible();
+  await signOut(page);
+
+  // Someone at the company sees who works on it, and how that came to be, and changes nothing.
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto(`/requests/${number}`);
+  await expect(assigned()).toContainText(PLATFORM_MANAGER.name);
+  await expect(assigned()).not.toContainText(SUPPORT_STAFF.name);
+  await expect(conversation(page)).toContainText('Assigned themselves to this request.');
+  await expect(conversation(page)).toContainText(
+    `Assigned ${PLATFORM_MANAGER.name} to this request.`,
+  );
+  await expect(assigned().getByRole('button')).toHaveCount(0);
 });
 
 test('the staff reach a person’s page from a request, and nobody at the company does', async ({

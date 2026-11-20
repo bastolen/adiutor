@@ -22,6 +22,10 @@
         "title": "Requests",
         "description": "What was asked, and where it stands."
       },
+      "assigned": {
+        "title": "Assigned to you",
+        "description": "{count, plural, =0 {Nothing is assigned to you right now.} one {# active request is assigned to you.} other {# active requests are assigned to you.}}"
+      },
       "users": {
         "title": "Users",
         "description": "Staff and the people of each company."

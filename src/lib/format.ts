@@ -1,6 +1,6 @@
 /**
- * @file Formatting for dates and times shown in the UI and in emails, in
- * the reader's language. Times are in UTC and say so (`TIME_ZONE`), so
+ * @file Formatting for dates, times, durations and lists of names shown in
+ * the UI and in emails, in the reader's language. Times are in UTC and say so (`TIME_ZONE`), so
  * server and browser render the same text. Server Components pass the
  * request's locale (`getLocale()` or `useLocale()`), emails the recipient's.
  */
@@ -172,4 +172,22 @@ export function formatDuration(milliseconds: number, locale: Locale): string {
     new Intl.NumberFormat(locale, { style: 'unit', unit, unitDisplay: 'long' });
   durationFormats.set(key, format);
   return format.format(Math.round(minutes / DURATION_UNITS[unit]));
+}
+
+/** List formats by locale, made once each. */
+const listFormats = new Map<string, Intl.ListFormat>();
+
+/**
+ * Joins names into one list the way the reader's language does ("Sam and
+ * Morgan", "Sam, Morgan and Robin"), to go into a sentence as one argument.
+ *
+ * @param items - The names, in the order to show them.
+ * @param locale - The reader's language.
+ * @returns The list, e.g. "Sam Support and Morgan Manager".
+ */
+export function formatList(items: readonly string[], locale: Locale): string {
+  const format =
+    listFormats.get(locale) ?? new Intl.ListFormat(locale, { style: 'long', type: 'conjunction' });
+  listFormats.set(locale, format);
+  return format.format(items);
 }

@@ -2,8 +2,8 @@
  * @file Sample requests for local development, so the request pages have
  * something to show: every status and type, a reopened request, requests
  * raised by the company and by the staff, a conversation with replies from
- * both sides, and one request written in Markdown with every kind of
- * formatting. Used by `scripts/seed-dev.ts`.
+ * both sides, requests assigned to one or two staff members, and one request
+ * written in Markdown with every kind of formatting. Used by `scripts/seed-dev.ts`.
  */
 import {
   FORMATTED_CLIENT_REPLY,
@@ -179,8 +179,10 @@ export default function sampleRequests(world: SampleRequestWorld): SampleRequest
       at: ago(0, 7),
       entries: [
         { by: sam, at: ago(0, 6), change: 'status', from: 'open', to: 'in_progress' },
+        { by: sam, at: ago(0, 6), assign: 'assigned', subject: world.support },
         { by: sam, at: ago(0, 6), reply: 'We’re on it and will let you know within the hour.' },
       ],
+      assignees: [world.support],
     },
     {
       companyId: world.alpha,
@@ -203,9 +205,11 @@ export default function sampleRequests(world: SampleRequestWorld): SampleRequest
       entries: [
         { by: morgan, at: ago(3), change: 'priority', from: 'normal', to: 'high' },
         { by: morgan, at: ago(2), change: 'status', from: 'open', to: 'in_progress' },
+        { by: morgan, at: ago(2), assign: 'assigned', subject: world.manager },
         { by: morgan, at: ago(2), reply: 'Which browser are you using when it does nothing?' },
         { by: morgan, at: ago(2), change: 'status', from: 'in_progress', to: 'waiting' },
       ],
+      assignees: [world.manager],
     },
     {
       companyId: world.beta,
@@ -239,9 +243,12 @@ export default function sampleRequests(world: SampleRequestWorld): SampleRequest
       at: ago(6),
       entries: [
         { by: sam, at: ago(5), change: 'status', from: 'open', to: 'in_progress' },
+        { by: sam, at: ago(5), assign: 'assigned', subject: world.support },
+        { by: sam, at: ago(5), assign: 'assigned', subject: world.manager },
         { by: sam, at: ago(4), reply: FORMATTED_STAFF_REPLY },
         { by: avery, at: ago(3), reply: FORMATTED_CLIENT_REPLY },
       ],
+      assignees: [world.support, world.manager],
     },
   ];
 }

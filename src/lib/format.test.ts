@@ -3,7 +3,13 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import formatDate, { formatDateTime, formatDuration, formatRelative, formatTime } from './format';
+import formatDate, {
+  formatDateTime,
+  formatDuration,
+  formatList,
+  formatRelative,
+  formatTime,
+} from './format';
 
 const NOW = new Date('2026-10-23T12:00:00Z');
 
@@ -95,5 +101,19 @@ describe('formatDuration', () => {
     expect(formatDuration(45 * MINUTE, locale)).toBe(minutes);
     expect(formatDuration(120 * MINUTE, locale)).toBe(hours);
     expect(formatDuration(3 * 24 * 60 * MINUTE, locale)).toBe(days);
+  });
+});
+
+describe('formatList', () => {
+  it.each([
+    ['en-US', 'Sam Support, Morgan Manager, and Robin Admin'],
+    ['nl-NL', 'Sam Support, Morgan Manager en Robin Admin'],
+    ['es-ES', 'Sam Support, Morgan Manager y Robin Admin'],
+  ] as const)('joins names the way %s does', (locale, expected) => {
+    expect(formatList(['Sam Support', 'Morgan Manager', 'Robin Admin'], locale)).toBe(expected);
+  });
+
+  it('gives one name as it is', () => {
+    expect(formatList(['Sam Support'], 'en-US')).toBe('Sam Support');
   });
 });
