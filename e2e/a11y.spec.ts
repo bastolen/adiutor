@@ -749,6 +749,17 @@ test.describe('in forced-colours mode', () => {
         await expectAccessible(page, '[role="dialog"]');
       });
 
+      test('a request’s reply, with its editor opened large', async ({ page }) => {
+        // The seeded request, which nothing here changes: nothing is written or sent.
+        await page.goto('/requests/1');
+        const large = page.getByRole('button', { name: 'Large view' });
+        // The button waits for the editor to load.
+        await expect(large).toBeEnabled();
+        await large.click();
+        await expect(page.getByRole('dialog', { name: 'Your reply' })).toBeVisible();
+        await expectAccessible(page, '[role="dialog"]');
+      });
+
       test('a toast', async ({ page }) => {
         // Saving the staff name unchanged changes nothing, but shows its toast.
         await page.goto('/admin/staff');

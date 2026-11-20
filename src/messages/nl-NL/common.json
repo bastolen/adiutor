@@ -176,7 +176,8 @@
         "quote": "Citaat",
         "codeBlock": "Codeblok",
         "codeLanguage": "Taal: {language}",
-        "noLanguage": "Geen taal"
+        "noLanguage": "Geen taal",
+        "large": "Grote weergave"
       },
       "linkDialog": {
         "title": "Link",

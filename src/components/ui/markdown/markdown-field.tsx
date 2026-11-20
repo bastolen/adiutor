@@ -50,6 +50,9 @@ interface MarkdownFieldProps {
  * - **A page that's kept alive** while the user is elsewhere loses the
  *   editor's inner state; the Markdown is kept here, and the editor starts
  *   from it again.
+ * - **The editor can be opened large** from its toolbar, in a dialog named
+ *   by the label. What the field says about a text that's too long shows
+ *   there as well.
  *
  * @param props - Field props.
  * @param props.label - Visible label text.
@@ -157,7 +160,12 @@ export default function MarkdownField({
     );
   }
 
-  const tooLong = maxLength !== undefined && markdown.length > maxLength;
+  // Said below the field, and below the text while the editor is open large.
+  const tooLong = maxLength !== undefined && markdown.length > maxLength && (
+    <p role="status" className="text-xs font-medium text-danger">
+      {t('tooLong', { maximum: maxLength })}
+    </p>
+  );
   return (
     <div className="flex flex-col gap-1.5">
       <span id={labelId} className="text-sm font-medium text-foreground">
@@ -168,12 +176,14 @@ export default function MarkdownField({
           key={resets}
           markdown={markdown}
           onChange={setMarkdown}
+          label={label}
           labelledBy={labelId}
           describedBy={description ? descriptionId : undefined}
           rows={rows}
           disabled={disabled}
           required={required}
           focusOnStart={hadFocus}
+          below={tooLong}
         />
       </div>
       <input ref={sentField} type="hidden" name={name} value={markdown} disabled={disabled} />
@@ -182,11 +192,7 @@ export default function MarkdownField({
           {description}
         </p>
       )}
-      {tooLong && (
-        <p role="status" className="text-xs font-medium text-danger">
-          {t('tooLong', { maximum: maxLength })}
-        </p>
-      )}
+      {tooLong}
     </div>
   );
 }

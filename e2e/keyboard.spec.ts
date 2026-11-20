@@ -1030,6 +1030,67 @@ test.describe('requests', () => {
       await expect(status).toHaveText('To do');
     });
 
+    test('the editor opens large and comes back with the keyboard, the cursor in its place', async ({
+      page,
+    }) => {
+      await page.goto(await storeOwnRequest('A reply written large with the keyboard'));
+      const reply = await markdownEditor(page, 'Your reply');
+      await reply.focus();
+      await page.keyboard.type('one four');
+      // The cursor goes back to before "four", and the text goes on there. (Typing there also
+      // has the editor take the cursor's new place: it follows the cursor while it has the
+      // focus, and a test's keys come faster than it hears of them.)
+      await page.keyboard.press('ArrowLeft');
+      await page.keyboard.press('ArrowLeft');
+      await page.keyboard.press('ArrowLeft');
+      await page.keyboard.press('ArrowLeft');
+      await page.keyboard.type('two ');
+      await expect(reply).toHaveText('one two four');
+
+      // The toolbar is one stop before the text, and the button is its last: End reaches it.
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('End');
+      await expect(page.getByRole('button', { name: 'Large view' })).toBeFocused();
+      await page.keyboard.press('Enter');
+
+      // The text has the focus in the dialog, and typing goes on where the cursor was.
+      const dialog = page.getByRole('dialog', { name: 'Your reply' });
+      const large = dialog.getByRole('textbox', { name: 'Your reply' });
+      await expect(large).toBeFocused();
+      await page.keyboard.type('three ');
+      await expect(large).toHaveText('one two three four');
+
+      // Tab leaves the text and stays in the dialog: its close button, its toolbar, the text.
+      await page.keyboard.press('Tab');
+      await expect(dialog.getByRole('button', { name: 'Close' })).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(dialog.getByRole('button', { name: 'Bold' })).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(large).toBeFocused();
+      await page.keyboard.press('Shift+Tab');
+      await expect(dialog.getByRole('button', { name: 'Bold' })).toBeFocused();
+      await page.keyboard.press('Tab');
+
+      // Escape closes it: the text has the focus on the page, the cursor still in its place.
+      await page.keyboard.press('Escape');
+      await expect(dialog).toBeHidden();
+      await expect(reply).toBeFocused();
+      await page.keyboard.type('and ');
+      await expect(reply).toHaveText('one two three and four');
+
+      // And the button brings it back as well as Escape does.
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('End');
+      await page.keyboard.press('Enter');
+      await expect(large).toBeFocused();
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('End');
+      await expect(dialog.getByRole('button', { name: 'Large view' })).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(dialog).toBeHidden();
+      await expect(reply).toBeFocused();
+    });
+
     test('a reply is sent with the keyboard, and focus is never lost', async ({ page }) => {
       await page.goto(await storeOwnRequest('A reply sent with the keyboard'));
       const reply = await markdownEditor(page, 'Your reply');

@@ -1,7 +1,7 @@
 /**
- * @file Tests for the modal dialog: its name and description, and that an
- * error it shows stays inline, without a toast above the dialog, so one
- * Escape closes it.
+ * @file Tests for the modal dialog: its name and description, its sizes,
+ * where the focus goes when it opens and closes, and that an error it shows
+ * stays inline, without a toast above the dialog, so one Escape closes it.
  */
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -50,6 +50,38 @@ function toastCount(): number {
   return document.querySelectorAll('[role="region"] li').length;
 }
 
+/**
+ * A page whose dialog is opened to go on with the text in it, and gives the
+ * focus to another button on the page than the one that opened it when it
+ * closes.
+ *
+ * @returns The page.
+ */
+function WritingPage() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>
+        Open large
+      </button>
+      <button type="button" id="after">
+        Where it goes on
+      </button>
+      <Modal
+        open={open}
+        onOpenChange={setOpen}
+        title="Your reply"
+        size="large"
+        initialFocus={() => document.getElementById('text')?.focus()}
+        finalFocus={() => document.getElementById('after')?.focus()}
+      >
+        <button type="button">First control</button>
+        <textarea id="text" aria-label="Text" />
+      </Modal>
+    </>
+  );
+}
+
 describe('Modal', () => {
   it('is a dialog named by its title and described by its explanation', () => {
     render(<Page error={null} />);
@@ -57,6 +89,66 @@ describe('Modal', () => {
     const dialog = screen.getByRole('dialog', { name: 'Turn off two-step verification?' });
     expect(dialog).toHaveAccessibleDescription('You sign in with your password only.');
     expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+  });
+
+  it('is as wide as a short form by default, and fills most of the window when it’s large', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<Page error={null} />);
+    expect(screen.getByRole('dialog')).toHaveClass('max-w-md', 'overflow-y-auto');
+    unmount();
+
+    render(<WritingPage />);
+    await user.click(screen.getByRole('button', { name: 'Open large' }));
+
+    // The whole screen where it's narrow; from there on most of the window.
+    const dialog = screen.getByRole('dialog', { name: 'Your reply' });
+    expect(dialog).toHaveClass('h-dvh', 'w-full', 'sm:max-w-[60rem]');
+    expect(dialog).not.toHaveClass('max-w-md');
+  });
+
+  it('gives the focus to what it’s told to, when it opens and when it closes', async () => {
+    const user = userEvent.setup();
+    render(<WritingPage />);
+
+    await user.click(screen.getByRole('button', { name: 'Open large' }));
+    // Not its first control, and not the close button.
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Text' })).toHaveFocus());
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    // Not the button that opened it.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Where it goes on' })).toHaveFocus(),
+    );
+  });
+
+  it('gives the focus back to what opened it when it’s told nothing else', async () => {
+    const user = userEvent.setup();
+    /**
+     * A page with a button that opens a dialog.
+     *
+     * @returns The page.
+     */
+    function OpenerPage() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Edit details
+          </button>
+          <Modal open={open} onOpenChange={setOpen} title="Edit details">
+            <button type="button">Save</button>
+          </Modal>
+        </>
+      );
+    }
+    render(<OpenerPage />);
+
+    await user.click(screen.getByRole('button', { name: 'Edit details' }));
+    await screen.findByRole('dialog');
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Edit details' })).toHaveFocus());
   });
 
   it('shows an error inline only, so one Escape closes the dialog', async () => {

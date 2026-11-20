@@ -18,6 +18,8 @@ import {
   ListIndentIncrease,
   ListOrdered,
   ListTodo,
+  Maximize2,
+  Minimize2,
   SquareCode,
   Strikethrough,
   TextQuote,
@@ -195,11 +197,18 @@ function LinkForm({
  * While the cursor is in a block of code, a menu at the end picks its
  * language, once the languages are known.
  *
+ * The last button, at the toolbar's far end, opens the editor large and
+ * brings it back (`onLarge`), and says which it is now. It stays usable
+ * while the editor is large, also when the field is switched off meanwhile,
+ * so the large view can always be left with it.
+ *
  * @param props - Component props.
  * @param props.state - What's on at the cursor, or `null` while there's no editor to act on.
  * @param props.onCommand - Called with what a pressed button asks for.
  * @param props.languages - The languages a block of code can be in, or `null` until they've loaded.
  * @param props.languageName - Gives a language's name as people know it, once the languages have loaded.
+ * @param props.large - Whether the editor is open large.
+ * @param props.onLarge - Called to open the editor large, or to bring it back; without it the button is switched off.
  * @returns The toolbar.
  */
 export default function FormattingToolbar({
@@ -207,11 +216,15 @@ export default function FormattingToolbar({
   onCommand,
   languages = null,
   languageName = undefined,
+  large = false,
+  onLarge = undefined,
 }: {
   state: FormattingState | null;
   onCommand: (command: FormattingCommand) => void;
   languages?: CodeLanguageChoice[] | null;
   languageName?: (language: string) => string | null;
+  large?: boolean;
+  onLarge?: () => void;
 }) {
   const t = useTranslations('common.markdown.toolbar');
   const tLink = useTranslations('common.markdown.linkDialog');
@@ -355,6 +368,14 @@ export default function FormattingToolbar({
             </MenuContent>
           </MenuRoot>
         )}
+        <ToolbarButton
+          label={t('large')}
+          icon={large ? Minimize2 : Maximize2}
+          pressed={large}
+          disabled={onLarge === undefined || (off && !large)}
+          onClick={onLarge}
+          className="ml-auto"
+        />
       </Toolbar>
       <Modal
         open={linking}

@@ -176,7 +176,8 @@
         "quote": "Quotation",
         "codeBlock": "Block of code",
         "codeLanguage": "Language: {language}",
-        "noLanguage": "No language"
+        "noLanguage": "No language",
+        "large": "Large view"
       },
       "linkDialog": {
         "title": "Link",

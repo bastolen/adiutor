@@ -27,11 +27,14 @@ vi.mock('./editor', () => ({
       aria-disabled={props.disabled}
       data-rows={props.rows}
       data-focus={props.focusOnStart}
+      data-label={props.label}
     >
       <span data-testid="started-with">{props.markdown}</span>
       <button type="button" onClick={() => props.onChange('**typed** in the editor')}>
         Type
       </button>
+      {/* What the editor shows below its text while it's open large. */}
+      <div data-testid="below-large">{props.below}</div>
     </div>
   ),
 }));
@@ -188,9 +191,18 @@ describe('MarkdownField, once the editor has loaded', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Type' }));
 
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'This text is longer than 10 characters. Shorten it before you send it.',
-    );
+    const message = 'This text is longer than 10 characters. Shorten it before you send it.';
+    // Below the field, and handed to the editor for below its text while it's open large.
+    const said = screen.getAllByRole('status');
+    expect(said).toHaveLength(2);
+    said.forEach((status) => expect(status).toHaveTextContent(message));
+    expect(screen.getByTestId('below-large')).toHaveTextContent(message);
+  });
+
+  it('gives the editor the field’s label, the title of its large view', async () => {
+    renderField();
+
+    expect(await findEditor()).toHaveAttribute('data-label', 'Your reply');
   });
 
   it('says nothing about the length of a text that fits', async () => {
