@@ -157,6 +157,7 @@
       "table": "Tabel",
       "code": "Code",
       "codeIn": "{language}-code",
+      "copyCode": "Code kopiëren",
       "taskCheckbox": "{done, select, yes {Klaar: {task}} other {Te doen: {task}}}",
       "tooLong": "Deze tekst is langer dan {maximum, number} tekens. Kort hem in voordat je hem verstuurt.",
       "toolbar": {

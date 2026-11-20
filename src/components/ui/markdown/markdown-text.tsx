@@ -16,6 +16,9 @@ import markdownElements from './elements';
 import { markdownStyles } from './styles';
 import markdownTree, { highestHeading } from './tree';
 
+/** The note of a text that has none. */
+const NO_NOTE: readonly string[] = [];
+
 /** Props for {@link MarkdownText}. */
 interface MarkdownTextProps {
   /** The text, as it was stored. */
@@ -30,6 +33,13 @@ interface MarkdownTextProps {
   headingLevel?: number;
   /** Extra classes for the element around the text. */
   className?: string;
+  /**
+   * What to say above a block's code when its button copies it, a line each:
+   * where the text is from and who wrote it. It's written as a comment in the
+   * block's language, and left out where that has none (`withCodeNote`).
+   * Without it, the code is copied alone.
+   */
+  codeNote?: readonly string[];
   /** What to show for a text that costs too much to format: the text as plain text. */
   fallback: ReactNode;
 }
@@ -40,13 +50,15 @@ interface MarkdownTextProps {
  * only `http` and `https` addresses are links (opened in a new tab), and an
  * image is a link to it. Headings start right below the page's own,
  * whatever number of `#` the highest was written with, so a text can't break
- * the outline.
+ * the outline. A block of code has a button that copies it, below the
+ * text's note where it has one.
  *
  * @param props - Component props.
  * @param props.text - The text.
  * @param props.id - The text's name on the page.
  * @param props.headingLevel - The level of the text's highest heading.
  * @param props.className - Extra classes.
+ * @param props.codeNote - What to say above copied code.
  * @param props.fallback - What to show when the text can't be formatted.
  * @returns The formatted text, or the fallback.
  */
@@ -55,6 +67,7 @@ export default function MarkdownText({
   id,
   headingLevel = 3,
   className = '',
+  codeNote = NO_NOTE,
   fallback,
 }: MarkdownTextProps) {
   const t = useTranslations('common.markdown');
@@ -78,8 +91,13 @@ export default function MarkdownText({
         Fragment,
         jsx,
         jsxs,
-        components: markdownElements({ id, headingLevel, highestHeading: highestHeading(tree) }),
-        // A block of code reads the language it names from its node.
+        components: markdownElements({
+          id,
+          headingLevel,
+          highestHeading: highestHeading(tree),
+          codeNote,
+        }),
+        // A block of code reads the language it names, and its code, from its node.
         passNode: true,
         // A column's alignment reaches the cell as `align`, which becomes a class, not a style.
         tableCellAlignToStyle: false,

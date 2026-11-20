@@ -86,6 +86,10 @@
       "type": "Tipo cambiado de {from} a {to}.",
       "priority": "Prioridad cambiada de {from} a {to}."
     },
+    "codeNote": {
+      "source": "Fuente: {url}",
+      "writtenBy": "Escrito por {name} el {date}"
+    },
     "reply": {
       "label": "Tu respuesta",
       "hint": "Da formato a tu texto con los botones, o escribe Markdown como **negrita**, listas y `código`.",
