@@ -1,0 +1,65 @@
+/**
+ * @file The people a request's text can mention, for the list at "@" in the
+ * reply form and the form for a new request. A read, asked for by the
+ * editor the first time someone types "@": it changes nothing, so it's
+ * allowed while a staff member is signed in as a user.
+ */
+'use server';
+
+import type { MentionChoice } from '@/components/ui/markdown/mentions';
+import appContext from '@/server/app-context';
+import { getActor } from '@/server/authz';
+import { ServiceError } from '@/server/errors';
+import getStaffName from '@/server/people/staff-name';
+import { listMentionable } from '@/server/requests';
+
+/**
+ * Reads where a text is written from what the browser sent: a request, or a
+ * company.
+ *
+ * @param where - What the browser sent.
+ * @returns The request or the company, or `null` for anything else.
+ */
+function textPlace(where: unknown): { request: string } | { company: string } | null {
+  if (typeof where !== 'object' || where === null) {
+    return null;
+  }
+  if ('request' in where && typeof where.request === 'string') {
+    return { request: where.request };
+  }
+  if ('company' in where && typeof where.company === 'string') {
+    return { company: where.company };
+  }
+  return null;
+}
+
+/**
+ * Lists who the viewer can mention in a text (`listMentionable`): a key and
+ * a name each, and the staff's name as the label of a staff member. Never an
+ * ID or an address.
+ *
+ * @param where - The request the text is a reply to (its number), or the
+ *   company a new request is raised for (its URL name).
+ * @returns The people; nobody for a request or a company the viewer may not
+ *   write in, like for one that doesn't exist.
+ */
+export async function mentionChoicesAction(where: unknown): Promise<MentionChoice[]> {
+  const place = textPlace(where);
+  if (place === null) {
+    return [];
+  }
+  const actor = await getActor();
+  try {
+    const [people, staffName] = await Promise.all([
+      listMentionable(appContext, actor, place),
+      getStaffName(appContext.db),
+    ]);
+    return people.map(({ key, name, staff }) => ({ key, name, label: staff ? staffName : null }));
+  } catch (error) {
+    // Whatever the viewer may not see or write in has nobody to mention.
+    if (error instanceof ServiceError) {
+      return [];
+    }
+    throw error;
+  }
+}

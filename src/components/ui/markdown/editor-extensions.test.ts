@@ -221,6 +221,74 @@ describe('links', () => {
   });
 });
 
+describe('mentions', () => {
+  /** The key of someone picked from the list. */
+  const SAM = 'Sam0000000000000000000';
+
+  it('reads the marker of a mention as the person’s name after an @, in one piece', () => {
+    const editor = editorWith(`Ask [@Sam Support](mention:${SAM}) about it.`);
+
+    const mention = editor.view.dom.querySelector('[data-mention]');
+    expect(mention).toHaveTextContent('@Sam Support');
+    // The look a mention has where a text is read.
+    expect(mention).toHaveClass('border', 'font-medium');
+    expect(editor.view.dom.querySelector('a')).toBeNull();
+    expect(editor.getText()).toBe('Ask @Sam Support about it.');
+    // One piece: it has no text of its own to put the cursor in.
+    expect(editor.getJSON().content?.[0]?.content?.[1]).toEqual({
+      type: 'writtenMention',
+      attrs: { key: SAM, name: 'Sam Support' },
+    });
+  });
+
+  it('writes a mention back as the marker the server takes for one', () => {
+    expect(roundTrip(`Ask [@Sam Support](mention:${SAM}) about it.`)).toBe(
+      `Ask [@Sam Support](mention:${SAM}) about it.`,
+    );
+  });
+
+  it('keeps a name with brackets in it whole, both ways', () => {
+    const marker = `[@Sam \\[on call\\]](mention:${SAM})`;
+    const editor = editorWith(marker);
+
+    expect(editor.getText()).toBe('@Sam [on call]');
+    expect(writeMarkdown(editor)).toBe(marker);
+  });
+
+  it('writes a mention that was put in the text by the list', () => {
+    const editor = editorWith('Ask ');
+
+    editor
+      .chain()
+      .focus('end')
+      .insertContent([
+        { type: 'writtenMention', attrs: { key: SAM, name: 'Sam Support' } },
+        { type: 'text', text: ' today' },
+      ])
+      .run();
+
+    expect(writeMarkdown(editor)).toBe(`Ask [@Sam Support](mention:${SAM}) today`);
+  });
+
+  it('takes no other link for a mention: its text stays text, as where it’s read', () => {
+    const texts = [
+      // Stored already: the row's ID, which only the server writes.
+      '[@](mention:019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b)',
+      // A key without the "@" of a mention.
+      `[Sam Support](mention:${SAM})`,
+      // Not a key.
+      '[@Sam Support](mention:nobody)',
+    ];
+    texts.forEach((text) => {
+      const editor = editorWith(text);
+
+      expect(editor.view.dom.querySelector('[data-mention]'), text).toBeNull();
+      expect(editor.view.dom.querySelector('a'), text).toBeNull();
+    });
+    expect(editorWith(texts[2]).getText()).toBe('@Sam Support');
+  });
+});
+
 describe('the keyboard', () => {
   /**
    * Presses a key in an editor.

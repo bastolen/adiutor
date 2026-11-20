@@ -180,6 +180,12 @@
         "noLanguage": "Sin lenguaje",
         "large": "Vista grande"
       },
+      "mentions": {
+        "label": "Personas para mencionar",
+        "loading": "Cargando…",
+        "none": "Nadie con ese nombre",
+        "failed": "No se pudo cargar la lista"
+      },
       "linkDialog": {
         "title": "Enlace",
         "description": "El texto seleccionado se convierte en un enlace a esta dirección. Sin texto seleccionado, se añade la dirección misma.",

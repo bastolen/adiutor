@@ -28,6 +28,7 @@ vi.mock('./editor', () => ({
       data-rows={props.rows}
       data-focus={props.focusOnStart}
       data-label={props.label}
+      data-mentions={props.mentions ? 'yes' : 'no'}
     >
       <span data-testid="started-with">{props.markdown}</span>
       <button type="button" onClick={() => props.onChange('**typed** in the editor')}>
@@ -65,6 +66,13 @@ async function findEditor(): Promise<HTMLElement> {
   });
   return screen.getByRole('textbox', { name: 'Your reply' });
 }
+
+/**
+ * Gives the people a text can mention: nobody, here.
+ *
+ * @returns Nobody.
+ */
+const nobodyToMention = () => Promise.resolve([]);
 
 /**
  * The Markdown the form would send.
@@ -197,6 +205,18 @@ describe('MarkdownField, once the editor has loaded', () => {
     expect(said).toHaveLength(2);
     said.forEach((status) => expect(status).toHaveTextContent(message));
     expect(screen.getByTestId('below-large')).toHaveTextContent(message);
+  });
+
+  it('hands the editor who the text can mention, when the form says', async () => {
+    renderField({ mentions: nobodyToMention });
+
+    expect(await findEditor()).toHaveAttribute('data-mentions', 'yes');
+  });
+
+  it('gives the editor nobody to mention otherwise', async () => {
+    renderField();
+
+    expect(await findEditor()).toHaveAttribute('data-mentions', 'no');
   });
 
   it('gives the editor the field’s label, the title of its large view', async () => {

@@ -180,6 +180,12 @@
         "noLanguage": "No language",
         "large": "Large view"
       },
+      "mentions": {
+        "label": "People to mention",
+        "loading": "Loading…",
+        "none": "Nobody by that name",
+        "failed": "Couldn't load the list"
+      },
       "linkDialog": {
         "title": "Link",
         "description": "The selected text becomes a link to this address. Without selected text, the address itself is added.",

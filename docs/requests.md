@@ -8,7 +8,8 @@ requests behave and where the code is; why they're built this way is in
 [decision 0019](decisions/0019-requests-one-series-plain-text-and-a-history.md), and for their
 text in [decision 0021](decisions/0021-markdown-for-request-text.md).
 
-Not built yet, each for a later change: emails about requests (also to the staff assigned to one),
+Not built yet, each for a later change: emails about requests (also to the staff assigned to one
+and to the people a text mentions),
 an approval step, internal staff notes, attachments, types the staff manage themselves, and
 working on a request while signed in as a user.
 
@@ -253,6 +254,8 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
 - **The keyboard:** the toolbar is one stop before the text (arrow keys move between its buttons),
   and Tab and Shift+Tab always leave the text, also in a list or a table, so nobody gets stuck in
   it. A list item nests and lifts with Ctrl or Cmd and `]` or `[`.
+- **Mentions:** typing "@" opens a list of the people the text can mention; see
+  [Mentions](#mentions).
 - **The editor follows the server's rules** (`editor-extensions.ts`): HTML is text, only whole
   `http` and `https` addresses are links, and an image is kept as it was written and shown by its
   description. It's still never trusted: the server cleans, limits and renders what it sends like
@@ -307,6 +310,27 @@ A description or a reply can mention people. Why it's built this way is in
   shows the person, or, for a marker that isn't one of the text's, the link's text: it never
   links to such an address. A text shown as it was written, because formatting it would cost too
   much, names the people too (`nameStoredMentions`).
+- **Writing** (`MarkdownField`'s `mentions`, a function that gives the people; the request forms
+  pass one that calls `mentionChoicesAction`, a server action that only reads): typing "@" at the
+  start of a line or after a space opens a list of people at the cursor, so an email address
+  opens nothing, and neither does an "@" in code. The people are asked for the first time the list
+  opens, and again only when the form's company changes. What's typed after the "@" narrows the
+  list, without regard for case or accents and with spaces, to at most eight people: names that
+  start with it first. Once what's typed has a space and is nobody's name, the list closes by
+  itself ("meet @ 5 pm"); one word that's nobody's name says "Nobody by that name". The arrow
+  keys move through the list, around at the ends, Enter or a click mentions the person, and
+  Escape or a click elsewhere closes it and leaves what was typed as text. Tab leaves the text, as
+  always, and the list closes.
+- **The list never has the focus** (`editor-mentions.tsx`): it stays in the text, which says it
+  has a list (`aria-haspopup`) and points at the option the keys are on
+  (`aria-activedescendant`). The list is a Radix popover placed at the cursor, without a dialog's
+  role, and a layer of its own: in the editor's large view, Escape closes the list first and the
+  view second.
+- **In the text being written** a mention is one piece (`WrittenMention` in
+  `editor-extensions.ts`): the name after an "@", looking as it will where the text is read,
+  deleted as a whole. Its Markdown is the marker with the person's key, so a text the page kept
+  still shows its mentions, and a marker of any other shape is the text of its link, as where a
+  text is read. A staff member is listed with the staff's name as their label.
 
 ### Cleaning, limits and names
 

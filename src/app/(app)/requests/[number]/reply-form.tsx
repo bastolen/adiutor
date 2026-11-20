@@ -6,7 +6,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { type FormEvent, useLayoutEffect, useRef, useState } from 'react';
+import { type FormEvent, useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 import Button, { whileRunning } from '@/components/ui/button';
 import restoreFocusIfLost from '@/components/ui/focus-fallback';
@@ -16,6 +16,7 @@ import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import { REQUEST_TEXT_MAX_LENGTH } from '@/lib/input-rules';
 
+import { mentionChoicesAction } from '../../_requests/mention-actions';
 import { replyAction } from './actions';
 
 /** The form's two buttons: send the reply, or send it and wait for the company. */
@@ -47,6 +48,11 @@ export default function ReplyForm({ request, canWait }: { request: number; canWa
   const send = whileRunning<ReplyButton>(running, 'send');
   const sendAndWait = whileRunning<ReplyButton>(running, 'sendAndWait');
   const formRef = useRef<HTMLFormElement>(null);
+  // Who the reply can mention: asked for when someone types "@".
+  const loadMentions = useCallback(
+    () => mentionChoicesAction({ request: String(request) }),
+    [request],
+  );
   // Whether "Send and wait for the company" was there at the last render.
   const couldWait = useRef(canWait);
 
@@ -82,6 +88,7 @@ export default function ReplyForm({ request, canWait }: { request: number; canWa
           maxLength={REQUEST_TEXT_MAX_LENGTH}
           required
           disabled={changesOff}
+          mentions={loadMentions}
         />
         <div className="flex flex-wrap gap-2">
           <Button type="submit" loading={send.loading} disabled={changesOff || send.disabled}>

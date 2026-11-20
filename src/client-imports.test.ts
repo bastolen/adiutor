@@ -57,6 +57,7 @@ const MARKDOWN_EDITOR = [
   '@tiptap/extension-link',
   '@tiptap/extension-list',
   '@tiptap/extension-table',
+  '@tiptap/suggestion',
   'lowlight',
   'highlight.js',
 ];
