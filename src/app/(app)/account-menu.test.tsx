@@ -4,7 +4,8 @@
  * tested with the theme and language button, which uses the same row), and
  * it signs out (saying so, inline and as a toast, when that fails, and
  * staying on the page), or, while a staff member is signed in as the user,
- * goes back to their own account instead.
+ * goes back to their own account instead. Choosing Account settings tells the
+ * mobile menu around it to close.
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -84,6 +85,28 @@ describe('AccountMenu', () => {
     expect(screen.getByRole('menuitemradio', { name: 'Light' })).toBeChecked();
     expect(screen.getByRole('menuitemradio', { name: 'System' })).not.toBeChecked();
     expect(screen.getByRole('menuitemradio', { name: 'Dark' })).not.toBeChecked();
+  });
+
+  it('says Account settings goes to another page, so the mobile menu around it closes', async () => {
+    const onNavigate = vi.fn();
+    const user = userEvent.setup();
+    render(<AccountMenu name="Ada Tester" email="ada@adiutor.test" onNavigate={onNavigate} />);
+    const trigger = screen.getByRole('button', { name: /^Account menu/ });
+
+    // Choosing a theme keeps the page, and the menus around it.
+    await user.click(trigger);
+    await user.click(screen.getByRole('menuitemradio', { name: 'Light' }));
+    expect(onNavigate).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('menuitem', { name: 'Account settings' }));
+    expect(onNavigate).toHaveBeenCalledOnce();
+
+    // With the keyboard too.
+    trigger.focus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('menuitem', { name: 'Account settings' })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(onNavigate).toHaveBeenCalledTimes(2);
   });
 
   it('follows the system while the menu is closed', () => {
