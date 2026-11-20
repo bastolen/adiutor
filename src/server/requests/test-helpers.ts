@@ -1,12 +1,13 @@
 /**
  * @file The test context shared by the integration tests of requests,
- * helpers that store requests and history entries directly, for tests that
- * are about reading them, and one that deactivates a company while a change
+ * helpers that store requests, assignees and history entries directly, for
+ * tests that are about reading them, helpers that read assignees and
+ * assignment entries back, and one that deactivates a company while a change
  * is under way.
  */
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
-import { company, request, requestCounter, requestEntry, user } from '@/db/schema';
+import { company, request, requestAssignee, requestCounter, requestEntry, user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 
 import { atTheSameMoment, setupTestContext } from '../../../tests/integration/helpers';
@@ -142,4 +143,44 @@ export async function changesOf(requestId: string) {
     toValue,
     authorSide,
   ]);
+}
+
+/**
+ * Assigns staff members to a request without going through the service.
+ *
+ * @param requestId - The request.
+ * @param userIds - The staff members.
+ */
+export async function storeAssignees(requestId: string, userIds: readonly string[]): Promise<void> {
+  await db.insert(requestAssignee).values(userIds.map((userId) => ({ requestId, userId })));
+}
+
+/**
+ * The staff members a request is assigned to, as stored.
+ *
+ * @param requestId - The request.
+ * @returns Their user IDs, sorted.
+ */
+export async function assigneesOf(requestId: string): Promise<string[]> {
+  const rows = await db
+    .select({ userId: requestAssignee.userId })
+    .from(requestAssignee)
+    .where(eq(requestAssignee.requestId, requestId));
+  return rows.map(({ userId }) => userId).sort();
+}
+
+/**
+ * The assignment entries in a request's history, in order.
+ *
+ * @param requestId - The request.
+ * @returns Each entry as `[change, subject, author]`: assigned or unassigned, the staff member
+ *   it's about (`null` once their account is gone), and who did it (`null` for nobody).
+ */
+export async function assignmentsOf(requestId: string) {
+  const entries = await db
+    .select()
+    .from(requestEntry)
+    .where(and(eq(requestEntry.requestId, requestId), eq(requestEntry.kind, 'assignee')))
+    .orderBy(requestEntry.id);
+  return entries.map(({ toValue, subjectUserId, authorId }) => [toValue, subjectUserId, authorId]);
 }

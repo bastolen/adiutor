@@ -84,7 +84,8 @@
       "status": "{change, select, reopened {Solicitud reabierta.} done {Solicitud marcada como resuelta.} cancelled {Solicitud cancelada.} other {Estado cambiado de {from} a {to}.}}",
       "title": "Título cambiado de «{from}» a «{to}».",
       "type": "Tipo cambiado de {from} a {to}.",
-      "priority": "Prioridad cambiada de {from} a {to}."
+      "priority": "Prioridad cambiada de {from} a {to}.",
+      "assignee": "{change, select, assigned {{self, select, yes {Se asignó esta solicitud.} other {{known, select, yes {Asignó esta solicitud a {name}.} other {Asignó esta solicitud a un miembro del personal.}}}}} other {{self, select, yes {Se quitó de esta solicitud.} other {{known, select, yes {Quitó a {name} de esta solicitud.} other {Quitó a un miembro del personal de esta solicitud.}}}}}}"
     },
     "reply": {
       "label": "Tu respuesta",

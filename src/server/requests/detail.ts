@@ -1,10 +1,12 @@
 /**
- * @file One request as its readers see it: its details, the company it's in,
- * what the reader may do with it, and its conversation.
+ * @file One request as its readers see it: its details, who it's assigned
+ * to, the company it's in, what the reader may do with it, and its
+ * conversation.
  */
 import { and, count, desc, eq, min, ne } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 
-import { requestEntry, user } from '@/db/schema';
+import { requestAssignee, requestEntry, user } from '@/db/schema';
 import type { Permission } from '@/lib/authz/permissions';
 import { firstRow } from '@/lib/defined';
 import {
@@ -18,9 +20,13 @@ import {
 
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
+import { orderTerms, textOrder } from '../pagination';
 import getRequestPrefix from '../people/request-prefix';
 import getStaffName from '../people/staff-name';
 import { getRequestAccess, requestAudienceIn, type RequestPerson, requestPerson } from './access';
+
+/** The account an `assignee` entry is about, joined next to its author's. */
+const subjectUser = alias(user, 'subject_user');
 
 /** How many entries of a request's history are loaded at a time: the latest ones first. */
 export const THREAD_CHUNK = 50;
@@ -40,7 +46,10 @@ export interface RequestText {
 export interface RequestEntryView {
   /** The entry's ID. */
   id: string;
-  /** What it is: a reply, or a change of the status, title, type or priority. */
+  /**
+   * What it is: a reply, a change of the status, title, type or priority, or
+   * someone assigned or removed (`assignee`).
+   */
   kind: RequestEntryKind;
   /** Who wrote or changed it. */
   author: RequestPerson;
@@ -50,8 +59,22 @@ export interface RequestEntryView {
   body: RequestText | null;
   /** What a change replaced, or `null`. */
   from: string | null;
-  /** What a change set; `null` for a reply. */
+  /**
+   * What a change set; `null` for a reply. For an `assignee` entry, whether
+   * its subject was assigned or removed (`ASSIGNMENT_CHANGES`).
+   */
   to: string | null;
+  /**
+   * Who an `assignee` entry is about, on the staff's side (without a name
+   * once their account is gone); `null` for every other kind.
+   */
+  subject: RequestPerson | null;
+  /**
+   * Whether an `assignee` entry's subject made it themselves: assigned
+   * themselves, or removed themselves. Worked out here, where the IDs are,
+   * since readers at the company get none.
+   */
+  subjectIsAuthor: boolean;
 }
 
 /** A request with everything its page shows. */
@@ -76,6 +99,8 @@ export interface RequestDetail {
   priority: RequestPriority | null;
   /** Who raised it. */
   raisedBy: RequestPerson;
+  /** The staff members it's assigned to, by name; empty while nobody is. */
+  assignees: RequestPerson[];
   /** When it was raised. */
   createdAt: Date;
   /** When the staff first replied to it, or `null` while they haven't. */
@@ -148,13 +173,19 @@ export async function getRequest(
     internal ? undefined : ne(requestEntry.kind, 'priority'),
   );
 
-  const [raisedBy, staffName, prefix, firstResponse, total, latest] = await Promise.all([
+  const [raisedBy, assignees, staffName, prefix, firstResponse, total, latest] = await Promise.all([
     found.createdBy
       ? ctx.db
           .select({ id: user.id, name: user.name })
           .from(user)
           .where(eq(user.id, found.createdBy))
       : [],
+    ctx.db
+      .select({ id: user.id, name: user.name })
+      .from(requestAssignee)
+      .innerJoin(user, eq(requestAssignee.userId, user.id))
+      .where(eq(requestAssignee.requestId, found.id))
+      .orderBy(...orderTerms('asc', textOrder(user.name), user.id)),
     getStaffName(ctx.db),
     getRequestPrefix(ctx.db),
     ctx.db
@@ -179,19 +210,30 @@ export async function getRequest(
         from: requestEntry.fromValue,
         to: requestEntry.toValue,
         author: { id: user.id, name: user.name },
+        subject: { id: subjectUser.id, name: subjectUser.name },
       })
       .from(requestEntry)
       .leftJoin(user, eq(requestEntry.authorId, user.id))
+      .leftJoin(subjectUser, eq(requestEntry.subjectUserId, subjectUser.id))
       .where(shown)
       .orderBy(desc(requestEntry.id))
       .limit(THREAD_CHUNK * (earlier + 1)),
   ]);
 
-  const entries = latest.reverse().map(({ author, authorSide, body, bodyFormat, ...entry }) => ({
-    ...entry,
-    author: requestPerson(author ?? { id: null, name: null }, authorSide, actor),
-    body: body === null ? null : { text: body, format: bodyFormat },
-  }));
+  const entries = latest
+    .reverse()
+    .map(({ author, authorSide, body, bodyFormat, subject, ...entry }) => ({
+      ...entry,
+      author: requestPerson(author ?? { id: null, name: null }, authorSide, actor),
+      body: body === null ? null : { text: body, format: bodyFormat },
+      // An assignment's subject is always on the staff's side, also once their account is gone.
+      subject:
+        entry.kind === 'assignee'
+          ? requestPerson(subject ?? { id: null, name: null }, 'staff', actor)
+          : null,
+      subjectIsAuthor:
+        entry.kind === 'assignee' && Boolean(subject?.id) && subject?.id === author?.id,
+    }));
   return {
     id: found.id,
     number: found.number,
@@ -203,6 +245,7 @@ export async function getRequest(
     reopenedAt: found.reopenedAt,
     priority: internal ? found.priority : null,
     raisedBy: requestPerson(raisedBy[0] ?? { id: null, name: null }, found.createdBySide, actor),
+    assignees: assignees.map((person) => requestPerson(person, 'staff', actor)),
     createdAt: found.createdAt,
     firstResponseAt: firstResponse[0]?.at ?? null,
     lastActivityAt: found.lastActivityAt,

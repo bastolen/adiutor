@@ -2,7 +2,7 @@
  * @file The rules of working on a request, as pure functions of someone's
  * permissions in the request's company (`src/lib/authz/permissions.ts`):
  * which side they act as, how the screens address them, which status changes
- * they may make and what a reply does to the status.
+ * they may make, what a reply does to the status and who can be assigned.
  *
  * The staff who work on requests (`requests:manage`) set any status. People
  * who take part from the company (`requests:contribute`) can mark a request
@@ -136,4 +136,18 @@ export function statusChoices(
  */
 export function statusAfterReply(side: RequestSide, status: RequestStatus): RequestStatus {
   return side === 'company' && status === 'waiting' ? 'in_progress' : status;
+}
+
+/**
+ * Whether someone can be assigned to a request: a staff member who works on
+ * requests (Admin, Manager or Support). Staff roles count in every company
+ * alike, so this takes their staff permissions in companies
+ * (`getStaffPermissionsInCompanies`). Finance reads requests but doesn't
+ * work on them, and a company's own people take part as the company.
+ *
+ * @param permissions - Their staff permissions in companies.
+ * @returns Whether they can be assigned.
+ */
+export function mayBeAssigned(permissions: ReadonlySet<Permission>): boolean {
+  return permissions.has('requests:manage');
 }

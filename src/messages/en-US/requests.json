@@ -84,7 +84,8 @@
       "status": "{change, select, reopened {Reopened this request.} done {Marked this request as done.} cancelled {Cancelled this request.} other {Changed the status from {from} to {to}.}}",
       "title": "Changed the title from “{from}” to “{to}”.",
       "type": "Changed the type from {from} to {to}.",
-      "priority": "Changed the priority from {from} to {to}."
+      "priority": "Changed the priority from {from} to {to}.",
+      "assignee": "{change, select, assigned {{self, select, yes {Assigned themselves to this request.} other {{known, select, yes {Assigned {name} to this request.} other {Assigned a staff member to this request.}}}}} other {{self, select, yes {Removed themselves from this request.} other {{known, select, yes {Removed {name} from this request.} other {Removed a staff member from this request.}}}}}}"
     },
     "reply": {
       "label": "Your reply",

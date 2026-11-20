@@ -9,7 +9,7 @@
  */
 import { and, eq, inArray } from 'drizzle-orm';
 
-import type { DatabaseOrTransaction } from '@/db';
+import type { DatabaseOrTransaction, DatabaseTransaction } from '@/db';
 import { account, passkey, twoFactor, user } from '@/db/schema';
 import { needsRecentConfirmation } from '@/lib/authz/mfa';
 import { normalizeEmail } from '@/lib/email-address';
@@ -23,6 +23,7 @@ import { endSessionsOf } from '../../auth/sessions';
 import { withSignInChangeLock } from '../../auth/sign-in-change-lock';
 import type { ServiceContext } from '../../context';
 import { notFoundError, ServiceError, parseId } from '../../errors';
+import { unassignFrom } from '../../requests';
 import { revokeInvitationsTo, revokeInvitesWithoutManager } from '../invitations';
 import { assertNotSoleAdmin } from './sole-admin';
 
@@ -191,7 +192,8 @@ export async function signOutUserEverywhere(
  * Deactivates an account: signs it out everywhere and forgets its trusted
  * devices (so a stolen browser that was trusted can't skip the code step
  * after a reactivation), revokes the invitations and invite links it sent,
- * and refuses new sign-ins until an Admin reactivates it. Call it after the locking last-Admin check
+ * takes it off the requests it's assigned to (`unassignFrom`), and refuses
+ * new sign-ins until an Admin reactivates it. Call it after the locking last-Admin check
  * (`assertNotSoleAdmin`), which has locked the account's row.
  *
  * @param ctx - Service context (for the audit log).
@@ -200,12 +202,14 @@ export async function signOutUserEverywhere(
  */
 export async function deactivate(
   ctx: ServiceContext,
-  db: DatabaseOrTransaction,
+  db: DatabaseTransaction,
   userId: string,
 ): Promise<void> {
   await db.update(user).set({ deactivatedAt: new Date() }).where(eq(user.id, userId));
   await endSessionsOf(db, userId);
   await revokeInvitesWithoutManager(ctx, db, userId, { all: true });
+  // A deactivated account works on no requests: off the ones it's on (requests come last).
+  await unassignFrom(db, userId);
 }
 
 /**
@@ -350,6 +354,8 @@ export async function deleteUser(
     await revokeInvitesWithoutManager(ctx, tx, target.id, { all: true });
     // And those addressed to them would let a new account for the address join.
     await revokeInvitationsTo(ctx, tx, locked.email, 'all');
+    // Off the requests they're on, before the row goes, so each request's history says so.
+    await unassignFrom(tx, target.id);
     await recordEvent(
       ctx,
       {

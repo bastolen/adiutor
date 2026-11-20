@@ -20,6 +20,14 @@ const CASEY: RequestPerson = {
 /** Someone on the staff. */
 const SAM: RequestPerson = { userId: null, name: 'Sam Support', side: 'staff', isViewer: false };
 
+/** A colleague of Sam's. */
+const MORGAN: RequestPerson = {
+  userId: null,
+  name: 'Morgan Manager',
+  side: 'staff',
+  isViewer: false,
+};
+
 /**
  * An entry of a request's history.
  *
@@ -36,6 +44,8 @@ function entryOf(id: string, entry: Partial<RequestEntryView>): RequestEntryView
     body: null,
     from: null,
     to: null,
+    subject: null,
+    subjectIsAuthor: false,
     ...entry,
   };
 }
@@ -58,6 +68,7 @@ function detailOf(detail: Partial<RequestDetail> = {}): RequestDetail {
     reopenedAt: null,
     priority: null,
     raisedBy: CASEY,
+    assignees: [],
     createdAt: new Date('2026-11-10T09:00:00Z'),
     firstResponseAt: null,
     lastActivityAt: new Date('2026-11-10T09:00:00Z'),
@@ -159,6 +170,36 @@ describe('Thread', () => {
       'a value it does not know',
       { kind: 'status', from: 'open', to: 'on_hold' },
       'Changed the status from Open to on_hold.',
+    ],
+    [
+      'assigning a colleague',
+      { kind: 'assignee', to: 'assigned', subject: MORGAN },
+      'Assigned Morgan Manager to this request.',
+    ],
+    [
+      'assigning themselves',
+      { kind: 'assignee', to: 'assigned', subject: SAM, subjectIsAuthor: true },
+      'Assigned themselves to this request.',
+    ],
+    [
+      'removing a colleague',
+      { kind: 'assignee', to: 'unassigned', subject: MORGAN },
+      'Removed Morgan Manager from this request.',
+    ],
+    [
+      'removing themselves',
+      { kind: 'assignee', to: 'unassigned', subject: SAM, subjectIsAuthor: true },
+      'Removed themselves from this request.',
+    ],
+    [
+      'assigning someone whose account is gone',
+      { kind: 'assignee', to: 'assigned', subject: { ...MORGAN, name: null } },
+      'Assigned a staff member to this request.',
+    ],
+    [
+      'removing someone whose account is gone',
+      { kind: 'assignee', to: 'unassigned', subject: { ...MORGAN, name: null } },
+      'Removed a staff member from this request.',
     ],
   ])('says what %s did, after who did it', (_what, change, sentence) => {
     render(<Thread detail={detailOf({ entries: [entryOf('1', change)] })} earlierHref={null} />);

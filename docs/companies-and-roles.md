@@ -24,6 +24,7 @@ and screens for company users talk about their company by name and about **reque
 | View all companies and their users        |   ✓   |    ✓    |    ✓    |    ✓    |
 | View all users (`/admin/users`)           |   ✓   |    ✓    |    ✓    |    ✓    |
 | Work on every company's requests          |   ✓   |    ✓    |    –    |    ✓    |
+| Be assigned to requests                   |   ✓   |    ✓    |    –    |    ✓    |
 | Read every company's requests             |   ✓   |    ✓    |    ✓    |    ✓    |
 | Reset MFA, sign out, (de)activate         |   ✓   |    –    |    –    |    –    |
 | Delete user accounts                      |   ✓   |    –    |    –    |    –    |
@@ -217,7 +218,11 @@ Admins and Managers who aren't members can still add themselves with any role, a
   me Admin" included), and whatever they created just before is revoked with the rest. The
   invitations and invite links someone sent are revoked whenever they or anyone else take away
   their right to manage a company or the staff: a role change, a removal, a deactivation or a
-  deletion (`revokeInvitesWithoutManager`), so a former Admin keeps no way back in. A link of
+  deletion (`revokeInvitesWithoutManager`), so a former Admin keeps no way back in. In the same
+  way, someone who stops working on requests (a staff role without request work, leaving the
+  staff, a deactivation or a deletion) is taken off every request assigned to them, with a line in
+  each request's history (`unassignFrom`; see [Assigning](requests.md#assigning)); reactivating
+  them doesn't put them back. A link of
   theirs claimed at that very moment leaves no open invitation either: the claim locks the link's
   creator before the link, so it takes turns with the change (see
   [Lock order](security-measures.md#lock-order)).

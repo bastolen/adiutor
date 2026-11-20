@@ -11,6 +11,7 @@ import { defined, firstRow } from '@/lib/defined';
 
 import {
   actorFor,
+  assignmentsOfRequest,
   atTheSameMoment,
   createCompany,
   createStaffSettings,
@@ -22,6 +23,7 @@ import {
   sendQueuedEmails,
   setupTestContext,
   staffActor,
+  storeAssignedRequest,
   tokenFrom,
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
@@ -477,6 +479,35 @@ describe('losing staff rights', () => {
     // Off the staff, they manage nothing.
     await removeFromStaff(ctx, admin, second.id);
     expect(await db.select().from(invitation).where(isNull(invitation.revokedAt))).toEqual([]);
+  });
+
+  it('takes someone off their requests once their role works on no requests, each with a line', async () => {
+    const testCompany = await createCompany(db);
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    const first = await storeAssignedRequest(db, testCompany.id, [manager.id, support.id]);
+    const second = await storeAssignedRequest(db, testCompany.id, [manager.id]);
+
+    // Support still works on requests.
+    await changeStaffRole(ctx, admin, { userId: manager.id, role: 'support' });
+    expect((await assignmentsOfRequest(db, first)).assignees).toHaveLength(2);
+
+    // Finance reads them, but works on none.
+    await changeStaffRole(ctx, admin, { userId: manager.id, role: 'finance' });
+    expect(await assignmentsOfRequest(db, first)).toEqual({
+      assignees: [support.id],
+      entries: [['unassigned', manager.id, null]],
+    });
+    expect((await assignmentsOfRequest(db, second)).assignees).toEqual([]);
+
+    // Off the staff, they work on none either.
+    await removeFromStaff(ctx, admin, support.id);
+    expect(await assignmentsOfRequest(db, first)).toEqual({
+      assignees: [],
+      entries: [
+        ['unassigned', manager.id, null],
+        ['unassigned', support.id, null],
+      ],
+    });
   });
 
   it('revokes the open staff invitations addressed to someone taken off the staff', async () => {

@@ -11,7 +11,12 @@ import { request, requestEntry } from '@/db/schema';
 import type { Permission } from '@/lib/authz/permissions';
 import { isClosedStatus, isReopening, type RequestSide, type RequestStatus } from '@/lib/requests';
 
-import { assertNotSignedInAs, assertPermission, assertStillManages } from '../access';
+import {
+  assertNotSignedInAs,
+  assertPermission,
+  assertStillManages,
+  type LockedUser,
+} from '../access';
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { companyDeactivatedError, notFoundError } from '../errors';
@@ -85,6 +90,9 @@ export function workingPermission(permissions: ReadonlySet<Permission>): Permiss
  * @param actor - The acting user.
  * @param companyId - The request's company (or the one a request is raised in).
  * @param permission - The permission to check again.
+ * @param alsoLock - Other users the change is about (the staff members it assigns), locked
+ *   `FOR SHARE` in the same statement as the actor, in ID order.
+ * @returns The locked user rows, by ID: the actor's and those of `alsoLock` that exist.
  * @throws {ServiceError} `forbidden` when the actor lost the permission meanwhile, `invalid`
  *   when the company was deactivated meanwhile.
  */
@@ -93,11 +101,19 @@ export async function assertStillMayChange(
   actor: Actor,
   companyId: string,
   permission: Permission,
-): Promise<void> {
-  const { companyDeactivatedAt } = await assertStillManages(tx, actor, companyId, permission);
+  alsoLock: readonly string[] = [],
+): Promise<Map<string, LockedUser>> {
+  const { users, companyDeactivatedAt } = await assertStillManages(
+    tx,
+    actor,
+    companyId,
+    permission,
+    { alsoLock },
+  );
   if (companyDeactivatedAt) {
     throw companyDeactivatedError();
   }
+  return users;
 }
 
 /**
@@ -109,7 +125,11 @@ export async function assertStillMayChange(
  * @param actor - The acting user.
  * @param access - The request, as {@link requestToChange} loaded it.
  * @param permission - The permission to check again.
- * @param apply - Makes the change, given the transaction and the locked request.
+ * @param apply - Makes the change, given the transaction, the locked request and the locked
+ *   user rows (the actor's, and those of `options.alsoLock` that exist).
+ * @param options - Options.
+ * @param options.alsoLock - Other users the change is about, locked with the actor's before
+ *   the request (see {@link assertStillMayChange}).
  * @returns What `apply` returned.
  * @throws {ServiceError} `forbidden` when the actor lost the permission meanwhile, `invalid`
  *   when the company was deactivated meanwhile.
@@ -119,10 +139,21 @@ export function changeRequest<T>(
   actor: Actor,
   access: RequestAccess,
   permission: Permission,
-  apply: (tx: DatabaseTransaction, locked: RequestRow) => Promise<T>,
+  apply: (
+    tx: DatabaseTransaction,
+    locked: RequestRow,
+    users: Map<string, LockedUser>,
+  ) => Promise<T>,
+  options: { alsoLock?: readonly string[] } = {},
 ): Promise<T> {
   return ctx.db.transaction(async (tx) => {
-    await assertStillMayChange(tx, actor, access.company.id, permission);
+    const users = await assertStillMayChange(
+      tx,
+      actor,
+      access.company.id,
+      permission,
+      options.alsoLock,
+    );
     const [locked] = await tx
       .select()
       .from(request)
@@ -131,7 +162,7 @@ export function changeRequest<T>(
     if (!locked) {
       throw notFoundError();
     }
-    return apply(tx, locked);
+    return apply(tx, locked, users);
   });
 }
 

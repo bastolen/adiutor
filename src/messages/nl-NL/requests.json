@@ -84,7 +84,8 @@
       "status": "{change, select, reopened {Verzoek heropend.} done {Verzoek als afgerond gemarkeerd.} cancelled {Verzoek geannuleerd.} other {Status gewijzigd van {from} naar {to}.}}",
       "title": "Titel gewijzigd van “{from}” naar “{to}”.",
       "type": "Type gewijzigd van {from} naar {to}.",
-      "priority": "Prioriteit gewijzigd van {from} naar {to}."
+      "priority": "Prioriteit gewijzigd van {from} naar {to}.",
+      "assignee": "{change, select, assigned {{self, select, yes {Zichzelf aan dit verzoek toegewezen.} other {{known, select, yes {{name} aan dit verzoek toegewezen.} other {Een medewerker aan dit verzoek toegewezen.}}}}} other {{self, select, yes {Zichzelf van dit verzoek gehaald.} other {{known, select, yes {{name} van dit verzoek gehaald.} other {Een medewerker van dit verzoek gehaald.}}}}}}"
     },
     "reply": {
       "label": "Je reactie",

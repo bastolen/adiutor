@@ -32,6 +32,7 @@ function detailOf(detail: Partial<RequestDetail> = {}): RequestDetail {
     reopenedAt: null,
     priority: null,
     raisedBy: { userId: null, name: 'Casey Client', side: 'company', isViewer: true },
+    assignees: [],
     createdAt: new Date('2026-11-13T09:00:00Z'),
     firstResponseAt: null,
     lastActivityAt: new Date('2026-11-13T11:55:00Z'),

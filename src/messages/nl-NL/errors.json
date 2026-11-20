@@ -85,7 +85,8 @@
     },
     "requests": {
       "statusChanged": "De status van dit verzoek is intussen gewijzigd. Bekijk het en probeer het opnieuw.",
-      "detailsChanged": "De gegevens van dit verzoek zijn intussen gewijzigd. Bekijk ze en probeer het opnieuw."
+      "detailsChanged": "De gegevens van dit verzoek zijn intussen gewijzigd. Bekijk ze en probeer het opnieuw.",
+      "notAssignable": "Alleen actieve medewerkers die aan verzoeken werken kunnen worden toegewezen. Controleer wie je hebt gekozen en probeer het opnieuw."
     }
   }
 }

@@ -130,9 +130,12 @@ import { registerUser } from './people/user-registration';
 import { listUsers } from './people/users';
 import { findErrorReference, listRecentErrors } from './recorded-errors';
 import {
+  changeAssignees,
   changeRequestStatus,
+  countAssignedRequests,
   findRequest,
   getRequest,
+  listAssignableStaff,
   listRequestCompanies,
   listRequests,
   raiseRequest,
@@ -605,6 +608,19 @@ function listOperations(): Operation[] {
       'edit request details (other)',
       (w) => updateRequestDetails(ctx, w.actor, { ...NEW_DETAILS, request: w.requests.other }),
     ],
+    // The actor assigns themselves: anyone who may assign can be assigned.
+    [
+      'assign request (own)',
+      (w) =>
+        changeAssignees(ctx, w.actor, { request: w.requests.own, add: [w.actor.id], remove: [] }),
+    ],
+    [
+      'assign request (other)',
+      (w) =>
+        changeAssignees(ctx, w.actor, { request: w.requests.other, add: [w.actor.id], remove: [] }),
+    ],
+    ['list staff to assign', (w) => listAssignableStaff(ctx, w.actor)],
+    ['count own assigned requests', (w) => countAssignedRequests(ctx, w.actor)],
     [
       'deactivate own account',
       async (w) => {
@@ -656,6 +672,8 @@ const READS: ReadonlySet<string> = new Set([
   'look up a request (other)',
   'view request (own)',
   'view request (other)',
+  'list staff to assign',
+  'count own assigned requests',
 ]);
 
 /** What a user may still change while a staff member is signed in as them: their own work. */
@@ -818,6 +836,13 @@ const EXPECTED: Record<string, string> = {
   'set request status (other)': 'NNNAFAA',
   'edit request details (own)': 'FFFAFAA',
   'edit request details (other)': 'NNNAFAA',
+  // The staff who work on requests assign them; Finance reads who's assigned, like the company.
+  'assign request (own)': 'FFFAFAA',
+  'assign request (other)': 'NNNAFAA',
+  // The staff's controls and filters name who can be assigned; only the staff get the list.
+  'list staff to assign': 'FFFAAAA',
+  // Everyone counts what's assigned to them (the dashboard): nothing, for whoever can't be.
+  'count own assigned requests': 'AAAAAAA',
   // Everyone may deactivate their own account (each world has other Admins).
   'deactivate own account': 'AAAAAAA',
 };
