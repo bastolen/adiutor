@@ -71,7 +71,9 @@ const SANITIZE_SCHEMA: Schema = {
     section: ['dataFootnotes', ['className', 'footnotes']],
     ...Object.fromEntries(HEADINGS.map((heading) => [heading, ['id', ['className', 'sr-only']]])),
   },
-  protocols: { href: ['http', 'https'], src: ['http', 'https'] },
+  // `mention` is the address of a mention's marker, which names a person and no place: the
+  // link's element shows the person, or the link's text, and never links to such an address.
+  protocols: { href: ['http', 'https', 'mention'], src: ['http', 'https'] },
   required: { input: { disabled: true, type: 'checkbox' } },
 };
 

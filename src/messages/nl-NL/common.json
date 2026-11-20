@@ -180,6 +180,12 @@
         "noLanguage": "Geen taal",
         "large": "Grote weergave"
       },
+      "mentions": {
+        "label": "Mensen om te noemen",
+        "loading": "Laden…",
+        "none": "Niemand met die naam",
+        "failed": "De lijst kon niet worden geladen"
+      },
       "linkDialog": {
         "title": "Link",
         "description": "De geselecteerde tekst wordt een link naar dit adres. Zonder geselecteerde tekst wordt het adres zelf toegevoegd.",

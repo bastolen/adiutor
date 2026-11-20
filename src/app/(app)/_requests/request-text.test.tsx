@@ -8,6 +8,14 @@ import { describe, expect, it } from 'vitest';
 import renderInLocale from '../../../../tests/i18n/render';
 import RequestText, { type TextSource } from './request-text';
 
+/** The IDs the markers of three mentions name. */
+const SAM = '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b';
+const CASEY = '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7c';
+const GONE = '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7d';
+
+/** The names of the two sides of the request the texts are in. */
+const NAMES = { company: 'Adiutor Tests Alpha', staff: 'Adiutor Tests' };
+
 /** Where the texts below are from: a reply by Sam in request 142. */
 const SOURCE: TextSource = {
   url: 'https://adiutor.test/requests/142',
@@ -22,6 +30,7 @@ describe('RequestText', () => {
         id="text"
         text={{ text: 'Steps:\n\n1. Open the page\n2. Wait', format: 'plain' }}
         source={SOURCE}
+        names={NAMES}
       />,
     );
 
@@ -38,6 +47,7 @@ describe('RequestText', () => {
         id="text"
         text={{ text: 'See https://adiutor.dev/docs, then reply.', format: 'plain' }}
         source={SOURCE}
+        names={NAMES}
       />,
     );
 
@@ -58,6 +68,7 @@ describe('RequestText', () => {
         id="text"
         text={{ text: 'adiutor.dev or javascript:alert(1) <a href="x">y</a>', format: 'plain' }}
         source={SOURCE}
+        names={NAMES}
       />,
     );
 
@@ -73,6 +84,7 @@ describe('RequestText', () => {
         text={{ text: 'Any news?', format: 'plain' }}
         className="bg-muted"
         source={SOURCE}
+        names={NAMES}
       />,
     );
 
@@ -85,6 +97,7 @@ describe('RequestText', () => {
         id="text"
         text={{ text: '# Not a heading\n**not bold**', format: 'plain' }}
         source={SOURCE}
+        names={NAMES}
       />,
     );
 
@@ -99,6 +112,7 @@ describe('RequestText', () => {
         text={{ text: '# Steps\n\n1. Open the **page**\n2. Wait', format: 'markdown' }}
         className="bg-muted"
         source={SOURCE}
+        names={NAMES}
       />,
     );
 
@@ -116,6 +130,7 @@ describe('RequestText', () => {
         text={{ text, format: 'markdown' }}
         className="bg-muted"
         source={SOURCE}
+        names={NAMES}
       />,
     );
 
@@ -133,6 +148,7 @@ describe('RequestText', () => {
         id="text"
         text={{ text: 'Run this:\n\n```bash\nnpm test\n```', format: 'markdown' }}
         source={SOURCE}
+        names={NAMES}
       />,
     );
 
@@ -155,6 +171,7 @@ describe('RequestText', () => {
         id="text"
         text={{ text: '```sql\nselect 1;\n```', format: 'markdown' }}
         source={SOURCE}
+        names={NAMES}
       />,
     );
 
@@ -162,6 +179,109 @@ describe('RequestText', () => {
 
     expect(await navigator.clipboard.readText()).toBe(
       `-- ${source}: https://adiutor.test/requests/142\n-- ${written}\nselect 1;`,
+    );
+  });
+  it('names the people a Markdown text mentions as the page does: by name, or by their side', () => {
+    const { container } = render(
+      <RequestText
+        id="text"
+        text={{
+          text: `Ask [@](mention:${SAM}) or [@](mention:${GONE}), [@](mention:${CASEY}).`,
+          format: 'markdown',
+          mentions: {
+            [SAM]: {
+              userId: null,
+              name: 'Sam Support',
+              side: 'staff',
+              isViewer: false,
+              picture: null,
+            },
+            // Someone whose account is gone is their side, as next to what they wrote.
+            [GONE]: { userId: null, name: null, side: 'company', isViewer: false, picture: null },
+            [CASEY]: {
+              userId: null,
+              name: 'Casey Client',
+              side: 'company',
+              isViewer: true,
+              picture: null,
+            },
+          },
+        }}
+        source={SOURCE}
+        names={NAMES}
+      />,
+    );
+
+    expect(container.textContent).toBe('Ask @Sam Support or @Adiutor Tests Alpha, @Casey Client.');
+    // The reader's own mention stands out; nobody is a link for someone at a company.
+    expect(screen.getByText('@Casey Client')).toHaveClass('border-highlight');
+    expect(screen.getByText('@Sam Support')).not.toHaveClass('border-highlight');
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('links a mention to the user’s page for a reader who got their ID, but never a side’s name', () => {
+    render(
+      <RequestText
+        id="text"
+        text={{
+          text: `[@](mention:${SAM}) and [@](mention:${GONE})`,
+          format: 'markdown',
+          mentions: {
+            [SAM]: {
+              userId: 'sam-id',
+              name: 'Sam Support',
+              side: 'staff',
+              isViewer: false,
+              picture: null,
+            },
+            [GONE]: {
+              userId: 'nameless-id',
+              name: null,
+              side: 'staff',
+              isViewer: false,
+              picture: null,
+            },
+          },
+        }}
+        source={SOURCE}
+        names={NAMES}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: '@Sam Support' })).toHaveAttribute(
+      'href',
+      '/admin/users/sam-id',
+    );
+    expect(screen.getAllByRole('link')).toHaveLength(1);
+    expect(screen.getByText('@Adiutor Tests').tagName).toBe('SPAN');
+  });
+
+  it('names the people a text mentions also where it’s shown as it was written', () => {
+    const text = `${'>'.repeat(500)} ask [@](mention:${SAM}), not [@](mention:${CASEY})`;
+    const { container } = render(
+      <RequestText
+        id="text"
+        text={{
+          text,
+          format: 'markdown',
+          mentions: {
+            [SAM]: {
+              userId: null,
+              name: 'Sam Support',
+              side: 'staff',
+              isViewer: false,
+              picture: null,
+            },
+          },
+        }}
+        source={SOURCE}
+        names={NAMES}
+      />,
+    );
+
+    // A marker that isn't one of the text's stays what it is.
+    expect(container.querySelector('p')?.textContent).toBe(
+      `${'>'.repeat(500)} ask @Sam Support, not [@](mention:${CASEY})`,
     );
   });
 });

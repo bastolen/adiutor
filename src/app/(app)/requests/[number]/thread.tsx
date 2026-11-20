@@ -189,6 +189,7 @@ export default function Thread({
                     writer: personName(entry.author, names),
                     at: entry.createdAt,
                   }}
+                  names={names}
                 />
               )}
             </Entry>

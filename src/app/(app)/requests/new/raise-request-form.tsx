@@ -7,7 +7,7 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import Button from '@/components/ui/button';
 import MarkdownField from '@/components/ui/markdown/markdown-field';
@@ -20,6 +20,7 @@ import { companyChoiceLabels } from '@/lib/company-choices';
 import { REQUEST_TEXT_MAX_LENGTH, REQUEST_TITLE_MAX_LENGTH } from '@/lib/input-rules';
 import { REQUEST_PRIORITIES, REQUEST_TYPES } from '@/lib/requests';
 
+import { mentionChoicesAction } from '../../_requests/mention-actions';
 import raiseRequestAction from './actions';
 
 /** The priority select's first choice: leave the priority to the request's type. */
@@ -71,6 +72,15 @@ export default function RaiseRequestForm({
   const [result, formAction, pending, onSubmit] = useTransientActionState(raiseRequestAction, null);
   const [priority, setPriority] = useState(FROM_TYPE);
   const [only] = companies;
+  // The company the request is for, as far as it's chosen: who the description can mention
+  // depends on it.
+  const [chosen, setChosen] = useState(
+    companies.length === 1 && only ? only.slug : (company ?? ''),
+  );
+  const loadMentions = useCallback(
+    () => (chosen ? mentionChoicesAction({ company: chosen }) : Promise.resolve([])),
+    [chosen],
+  );
 
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-5">
@@ -86,6 +96,7 @@ export default function RaiseRequestForm({
               tCommon('companyWithUrlName', { name, urlName: slug }),
             ).map(({ slug, label }) => ({ value: slug, label }))}
             defaultValue={company ?? ''}
+            onValueChange={setChosen}
             placeholder={t('new.companyPlaceholder')}
             disabled={changesOff}
           />
@@ -119,6 +130,7 @@ export default function RaiseRequestForm({
           description={t('new.descriptionHint')}
           required
           disabled={changesOff}
+          mentions={loadMentions}
         />
         {choosesPriority && (
           <>

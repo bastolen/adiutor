@@ -37,3 +37,5 @@ export {
   unassignFrom,
 } from './assignees';
 export type { AssignableStaffMember } from './assignees';
+export { listMentionable } from './mentions';
+export type { MentionablePerson } from './mentions';

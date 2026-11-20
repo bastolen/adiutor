@@ -1025,6 +1025,109 @@ test('Markdown that is pasted is formatted, and a tag stays the text it is', asy
   await expect(thread.getByRole('group', { name: 'Bash code' })).toHaveText('npm test');
 });
 
+test('people are mentioned from the list at @, by what the writer may know', async ({ page }) => {
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'A reply that mentions someone',
+  });
+  const list = page.getByRole('listbox', { name: 'People to mention' });
+  const thread = page.getByRole('region', { name: 'Conversation' });
+
+  // The staff can mention the staff, with their label, and everyone at the company.
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  const editor = await markdownEditor(page, 'Your reply');
+  await editor.click();
+  await page.keyboard.type('Thanks @e2e fin');
+  await expect(list.getByRole('option')).toHaveText([`${FINANCE_STAFF.name}${STAFF_NAME}`]);
+  // Escape closes the list, and what was typed stays the text it is.
+  await page.keyboard.press('Escape');
+  await expect(list).toBeHidden();
+  await expect(editor).toBeFocused();
+  // A name is narrowed as it's typed, spaces and all, and Enter picks it.
+  await page.keyboard.type(' and @e2e requests cl');
+  await expect(list.getByRole('option')).toHaveText([REQUESTS_CLIENT.name]);
+  await page.keyboard.press('Enter');
+  await expect(list).toBeHidden();
+  await expect(editor.locator('[data-mention]')).toHaveText(`@${REQUESTS_CLIENT.name}`);
+  await expect(editor).toBeFocused();
+  await page.keyboard.type('can you check?');
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+
+  // For the staff the mention links to the user's page. A name that was only typed is text.
+  await expect(thread).toContainText(`Thanks @e2e fin and @${REQUESTS_CLIENT.name} can you check?`);
+  const clientId = await findUserId(REQUESTS_CLIENT.email);
+  await expect(thread.getByRole('link', { name: `@${REQUESTS_CLIENT.name}` })).toHaveAttribute(
+    'href',
+    `/admin/users/${clientId}`,
+  );
+  await expect(thread.locator('[data-mention]')).toHaveCount(1);
+
+  // The person mentioned sees their mention set apart, and no link.
+  await signOut(page);
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto(`/requests/${number}`);
+  const mention = thread.locator('[data-mention]');
+  await expect(mention).toHaveText(`@${REQUESTS_CLIENT.name}`);
+  await expect(mention).toHaveClass(/border-highlight/);
+  await expect(thread.getByRole('link', { name: `@${REQUESTS_CLIENT.name}` })).toHaveCount(0);
+
+  // Someone at the company can mention the staff member who replied, but nobody else on the
+  // staff: what's typed is nobody's name to them, and the list closes by itself.
+  const reply = await markdownEditor(page, 'Your reply');
+  await reply.click();
+  await page.keyboard.type('@e2e fin');
+  await expect(list).toBeHidden();
+  await page.keyboard.type(' @e2e sup');
+  await expect(list.getByRole('option')).toHaveText([`${SUPPORT_STAFF.name}${STAFF_NAME}`]);
+  await list.getByRole('option').click();
+  await expect(reply).toBeFocused();
+  // And a colleague, who the request hasn't shown them yet.
+  await page.keyboard.type('and @e2e wat');
+  await expect(list.getByRole('option')).toHaveText([CLIENT_WATCHER.name]);
+  await page.keyboard.press('Enter');
+  await expect(reply.locator('[data-mention]')).toHaveText([
+    `@${SUPPORT_STAFF.name}`,
+    `@${CLIENT_WATCHER.name}`,
+  ]);
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  await expect(thread.locator('[data-mention]')).toHaveText([
+    `@${REQUESTS_CLIENT.name}`,
+    `@${SUPPORT_STAFF.name}`,
+    `@${CLIENT_WATCHER.name}`,
+  ]);
+  // Nothing in the page names anyone by an ID.
+  expect(await page.content()).not.toContain(clientId);
+});
+
+test('a new request’s description mentions a colleague', async ({ page }) => {
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto('/requests/new');
+  await page.getByRole('textbox', { name: 'Title' }).fill('A request that mentions a colleague');
+  await page.getByRole('combobox', { name: 'Type' }).click();
+  await page.getByRole('option', { name: /^Bug/ }).click();
+  const description = await markdownEditor(page, 'Description');
+  const list = page.getByRole('listbox', { name: 'People to mention' });
+  await description.click();
+  await page.keyboard.type('@e2e wat');
+  await expect(list.getByRole('option')).toHaveText([CLIENT_WATCHER.name]);
+  await page.keyboard.press('Enter');
+  await expect(description.locator('[data-mention]')).toHaveText(`@${CLIENT_WATCHER.name}`);
+  // Their colleagues only: a request that isn't raised yet shows them nobody on the staff, so
+  // a staff member's name is nobody's to them, and the list closes by itself.
+  await page.keyboard.type('saw it first, not @e2e sup');
+  await expect(list).toBeHidden();
+  await page.getByRole('button', { name: 'Raise request' }).click();
+
+  await expect(page).toHaveURL(/\/requests\/\d+$/);
+  const asked = page.getByRole('region', { name: 'Description' });
+  await expect(asked.locator('[data-mention]')).toHaveText(`@${CLIENT_WATCHER.name}`);
+  await expect(asked).toContainText(`@${CLIENT_WATCHER.name} saw it first, not @e2e sup`);
+});
+
 test('a reply is written on in the large view, and sent from the page', async ({ page }) => {
   const number = await storeRequest({
     companySlug: COMPANY_SLUG,
@@ -1183,6 +1286,14 @@ test('a request written in Markdown is shown formatted, and nothing in it loads'
   const image = thread.getByRole('link', { name: /^The new home page \(image\)/ });
   await expect(image).toHaveAttribute('href', 'https://adiutor.test/intranet-home.png');
   await expect(page.locator('img[src*="intranet-home"]')).toHaveCount(0);
+
+  // The company's answer mentions the staff member it thanks: by name, set apart from the text,
+  // and no link for someone at the company. It's not the reader who is mentioned.
+  const mention = thread.locator('[data-mention]');
+  await expect(mention).toHaveText(`@${SUPPORT_STAFF.name}`);
+  await expect(mention).not.toHaveClass(/border-highlight/);
+  await expect(thread.getByRole('link', { name: `@${SUPPORT_STAFF.name}` })).toHaveCount(0);
+  await expect(thread).toContainText(`Thanks, @${SUPPORT_STAFF.name}!`);
 
   // The company's answer: its footnote and the reference lead to each other.
   await thread.getByRole('link', { name: '1', exact: true }).click();

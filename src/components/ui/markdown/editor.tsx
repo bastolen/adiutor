@@ -13,7 +13,15 @@
 
 import { type Editor, EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import { useTranslations } from 'next-intl';
-import { type ReactNode, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import {
+  type ReactNode,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 
 import cn from '@/lib/cn';
 
@@ -22,7 +30,13 @@ import { useTransientState } from '../use-transient-state';
 import { editorExtensions, readMarkdown, writeMarkdown } from './editor-extensions';
 import { format, formattingOf, hasCode, highlightCode } from './editor-formatting';
 import { knownCodeLanguages, subscribeToCodeLanguages } from './editor-highlighter';
+import MentionPopover, {
+  createMentionList,
+  type MentionListState,
+  mentionOptionId,
+} from './editor-mentions';
 import FormattingToolbar, { type FormattingState } from './formatting-toolbar';
+import type { MentionLoader } from './mentions';
 import { markdownStyles } from './styles';
 
 /**
@@ -34,6 +48,24 @@ const LINE_HEIGHT = 1.5;
 
 /** What the buttons of the toolbar that keeps the editor's place do: nothing (they're switched off). */
 function ignore() {}
+
+/**
+ * Follows the list of people of an editor that has none: nothing ever changes.
+ *
+ * @returns Stops following, which is nothing to do.
+ */
+function followNothing() {
+  return ignore;
+}
+
+/**
+ * What the list of people shows for an editor that has none.
+ *
+ * @returns Nothing.
+ */
+function noMentionList(): MentionListState | null {
+  return null;
+}
 
 /** Props for {@link MarkdownEditor}. */
 export interface MarkdownEditorProps {
@@ -64,6 +96,12 @@ export interface MarkdownEditorProps {
    * field says about the text below itself, such as that it's too long.
    */
   below?: ReactNode;
+  /**
+   * Gives the people the text can mention; with it, typing "@" opens a list
+   * of them. Whether the editor has the list is settled when it starts: a
+   * loader that comes later is ignored, one that's replaced is followed.
+   */
+  mentions?: MentionLoader;
 }
 
 /**
@@ -83,6 +121,10 @@ export interface MarkdownEditorProps {
  * off, so nothing moves. A page that was kept alive comes back with the
  * editor in the field.
  *
+ * With a loader of people (`mentions`), typing "@" opens a list of them at
+ * the cursor (`MentionPopover`). The focus stays in the text, which says it
+ * has a list and points at the option the arrow keys are on.
+ *
  * @param props - Component props.
  * @param props.markdown - The Markdown to start with.
  * @param props.onChange - Called with the Markdown when the content changes.
@@ -94,6 +136,7 @@ export interface MarkdownEditorProps {
  * @param props.required - Whether a text is required.
  * @param props.focusOnStart - Whether to take focus once it's there.
  * @param props.below - What stands below the text while it's open large.
+ * @param props.mentions - Gives the people the text can mention.
  * @returns The editor.
  */
 export default function MarkdownEditor({
@@ -107,8 +150,23 @@ export default function MarkdownEditor({
   required,
   focusOnStart,
   below = null,
+  mentions = undefined,
 }: MarkdownEditorProps) {
   const t = useTranslations('common.markdown');
+  // The list of people at "@", for a text that can mention people. Made once: the editor's
+  // extensions can't change after it started.
+  const [mentionList] = useState(() => (mentions ? createMentionList(mentions) : null));
+  const mentionListId = useId();
+  const mentioning = useSyncExternalStore(
+    mentionList?.subscribe ?? followNothing,
+    mentionList?.getSnapshot ?? noMentionList,
+    noMentionList,
+  );
+  useEffect(() => {
+    if (mentionList && mentions) {
+      mentionList.setLoader(mentions);
+    }
+  }, [mentionList, mentions]);
   // Whether the editor is open large. Closed again when the user comes back to a page that was kept.
   const [large, setLarge] = useTransientState(false);
   // The text's box in the field, and how high it was when the editor opened large: its place
@@ -117,25 +175,28 @@ export default function MarkdownEditor({
   const [heldHeight, setHeldHeight] = useState(0);
   const extensions = useMemo(
     () =>
-      editorExtensions({
-        /**
-         * Labels an image by its description.
-         *
-         * @param description - The description, or nothing.
-         * @returns The label.
-         */
-        image: (description) => (description ? t('imageNamed', { description }) : t('image')),
-        /**
-         * Names a task's checkbox.
-         *
-         * @param task - The task's text.
-         * @param done - Whether it's ticked.
-         * @returns The name.
-         */
-        task: (task, done) => t('taskCheckbox', { done: done ? 'yes' : 'no', task }),
-        code: t('code'),
-      }),
-    [t],
+      editorExtensions(
+        {
+          /**
+           * Labels an image by its description.
+           *
+           * @param description - The description, or nothing.
+           * @returns The label.
+           */
+          image: (description) => (description ? t('imageNamed', { description }) : t('image')),
+          /**
+           * Names a task's checkbox.
+           *
+           * @param task - The task's text.
+           * @param done - Whether it's ticked.
+           * @returns The name.
+           */
+          task: (task, done) => t('taskCheckbox', { done: done ? 'yes' : 'no', task }),
+          code: t('code'),
+        },
+        mentionList,
+      ),
+    [t, mentionList],
   );
   // The editors that hold the text so far. A new editor reports a change while it's still empty
   // (when a page that was kept alive is shown again, the editor is made anew): that isn't
@@ -156,6 +217,14 @@ export default function MarkdownEditor({
         ...(describedBy ? { 'aria-describedby': describedBy } : {}),
         ...(required ? { 'aria-required': 'true' } : {}),
         ...(disabled ? { 'aria-disabled': 'true' } : {}),
+        // A text that can mention people has a list, and points at the option the keys are on.
+        ...(mentionList ? { 'aria-haspopup': 'listbox' } : {}),
+        ...(mentioning && mentioning.choices.length > 0
+          ? {
+              'aria-controls': mentionListId,
+              'aria-activedescendant': mentionOptionId(mentionListId, mentioning.active),
+            }
+          : {}),
         class: markdownStyles.editor,
       },
     },
@@ -277,6 +346,7 @@ export default function MarkdownEditor({
           </div>
         </>
       )}
+      {mentionList && <MentionPopover list={mentionList} listId={mentionListId} />}
       {/* The dialog goes in the same step as the field takes the text back. Left to close by
           itself it would let go of the text a step later, after the field asked for it. */}
       {large && (

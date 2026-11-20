@@ -6,7 +6,7 @@
 import { and, count, desc, eq, min, ne } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
-import { requestAssignee, requestEntry, user } from '@/db/schema';
+import { requestAssignee, requestEntry, requestMention, user } from '@/db/schema';
 import type { Permission } from '@/lib/authz/permissions';
 import { firstRow } from '@/lib/defined';
 import {
@@ -42,6 +42,12 @@ export interface RequestText {
   text: string;
   /** Its format. */
   format: RequestTextFormat;
+  /**
+   * The people the text mentions, by the ID their marker in the text names
+   * (`storedMentionId`). Only the text's own: a marker with another text's
+   * ID names nobody. Left out for a text that mentions nobody.
+   */
+  mentions?: Record<string, RequestPerson>;
 }
 
 /** One entry of a request's history, as its readers see it. */
@@ -191,52 +197,72 @@ export async function getRequest(
     internal ? undefined : ne(requestEntry.kind, 'priority'),
   );
 
-  const [raisedBy, assignees, staffName, prefix, firstResponse, total, latest] = await Promise.all([
-    found.createdBy
-      ? ctx.db
-          .select({ id: user.id, name: user.name })
-          .from(user)
-          .where(eq(user.id, found.createdBy))
-      : [],
-    ctx.db
-      .select({ id: user.id, name: user.name })
-      .from(requestAssignee)
-      .innerJoin(user, eq(requestAssignee.userId, user.id))
-      .where(eq(requestAssignee.requestId, found.id))
-      .orderBy(...orderTerms('asc', textOrder(user.name), user.id)),
-    getStaffName(ctx.db),
-    getRequestPrefix(ctx.db),
-    ctx.db
-      .select({ at: min(requestEntry.createdAt) })
-      .from(requestEntry)
-      .where(
-        and(
-          eq(requestEntry.requestId, found.id),
-          eq(requestEntry.kind, 'comment'),
-          eq(requestEntry.authorSide, 'staff'),
+  const [raisedBy, assignees, mentioned, staffName, prefix, firstResponse, total, latest] =
+    await Promise.all([
+      found.createdBy
+        ? ctx.db
+            .select({ id: user.id, name: user.name })
+            .from(user)
+            .where(eq(user.id, found.createdBy))
+        : [],
+      ctx.db
+        .select({ id: user.id, name: user.name })
+        .from(requestAssignee)
+        .innerJoin(user, eq(requestAssignee.userId, user.id))
+        .where(eq(requestAssignee.requestId, found.id))
+        .orderBy(...orderTerms('asc', textOrder(user.name), user.id)),
+      ctx.db
+        .select({
+          id: requestMention.id,
+          entryId: requestMention.entryId,
+          side: requestMention.side,
+          person: { id: user.id, name: user.name },
+        })
+        .from(requestMention)
+        .leftJoin(user, eq(requestMention.userId, user.id))
+        .where(eq(requestMention.requestId, found.id)),
+      getStaffName(ctx.db),
+      getRequestPrefix(ctx.db),
+      ctx.db
+        .select({ at: min(requestEntry.createdAt) })
+        .from(requestEntry)
+        .where(
+          and(
+            eq(requestEntry.requestId, found.id),
+            eq(requestEntry.kind, 'comment'),
+            eq(requestEntry.authorSide, 'staff'),
+          ),
         ),
-      ),
-    ctx.db.select({ total: count() }).from(requestEntry).where(shown),
-    ctx.db
-      .select({
-        id: requestEntry.id,
-        kind: requestEntry.kind,
-        authorSide: requestEntry.authorSide,
-        createdAt: requestEntry.createdAt,
-        body: requestEntry.body,
-        bodyFormat: requestEntry.bodyFormat,
-        from: requestEntry.fromValue,
-        to: requestEntry.toValue,
-        author: { id: user.id, name: user.name },
-        subject: { id: subjectUser.id, name: subjectUser.name },
-      })
-      .from(requestEntry)
-      .leftJoin(user, eq(requestEntry.authorId, user.id))
-      .leftJoin(subjectUser, eq(requestEntry.subjectUserId, subjectUser.id))
-      .where(shown)
-      .orderBy(desc(requestEntry.id))
-      .limit(THREAD_CHUNK * (earlier + 1)),
-  ]);
+      ctx.db.select({ total: count() }).from(requestEntry).where(shown),
+      ctx.db
+        .select({
+          id: requestEntry.id,
+          kind: requestEntry.kind,
+          authorSide: requestEntry.authorSide,
+          createdAt: requestEntry.createdAt,
+          body: requestEntry.body,
+          bodyFormat: requestEntry.bodyFormat,
+          from: requestEntry.fromValue,
+          to: requestEntry.toValue,
+          author: { id: user.id, name: user.name },
+          subject: { id: subjectUser.id, name: subjectUser.name },
+        })
+        .from(requestEntry)
+        .leftJoin(user, eq(requestEntry.authorId, user.id))
+        .leftJoin(subjectUser, eq(requestEntry.subjectUserId, subjectUser.id))
+        .where(shown)
+        .orderBy(desc(requestEntry.id))
+        .limit(THREAD_CHUNK * (earlier + 1)),
+    ]);
+
+  // Each text's own mentions: the description's under no entry, a reply's under its entry. A
+  // mention shows a name, never a picture.
+  const mentionsOf = new Map<string | null, Record<string, RequestPerson>>();
+  mentioned.forEach(({ id, entryId, side, person }) => {
+    const ofText = mentionsOf.get(entryId) ?? {};
+    ofText[id] = requestPerson(person ?? { id: null, name: null }, side, actor);
+    mentionsOf.set(entryId, ofText);
+  });
 
   // Everyone the page names, with their pictures, in one go.
   const pictures = await loadPictures(ctx.db, [
@@ -249,7 +275,10 @@ export async function getRequest(
     .map(({ author, authorSide, body, bodyFormat, subject, ...entry }) => ({
       ...entry,
       author: requestPerson(author ?? { id: null, name: null }, authorSide, actor, pictures),
-      body: body === null ? null : { text: body, format: bodyFormat },
+      body:
+        body === null
+          ? null
+          : { text: body, format: bodyFormat, mentions: mentionsOf.get(entry.id) },
       // An assignment's subject is always on the staff's side, also once their account is gone.
       subject:
         entry.kind === 'assignee'
@@ -263,7 +292,11 @@ export async function getRequest(
     number: found.number,
     prefix,
     title: found.title,
-    description: { text: found.description, format: found.descriptionFormat },
+    description: {
+      text: found.description,
+      format: found.descriptionFormat,
+      mentions: mentionsOf.get(null),
+    },
     type: found.type,
     status: found.status,
     reopenedAt: found.reopenedAt,

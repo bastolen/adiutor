@@ -246,7 +246,7 @@ export default function sampleRequests(world: SampleRequestWorld): SampleRequest
         { by: sam, at: ago(5), assign: 'assigned', subject: world.support },
         { by: sam, at: ago(5), assign: 'assigned', subject: world.manager },
         { by: sam, at: ago(4), reply: FORMATTED_STAFF_REPLY },
-        { by: avery, at: ago(3), reply: FORMATTED_CLIENT_REPLY },
+        { by: avery, at: ago(3), reply: FORMATTED_CLIENT_REPLY, mentions: [sam] },
       ],
       assignees: [world.support, world.manager],
     },

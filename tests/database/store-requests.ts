@@ -5,6 +5,7 @@
  * times the examples say, and the request counter is left at the last
  * number, so requests raised afterwards continue from it.
  */
+import { eq } from 'drizzle-orm';
 import type { NodePgQueryResultHKT } from 'drizzle-orm/node-postgres';
 import type { PgDatabase } from 'drizzle-orm/pg-core';
 
@@ -18,6 +19,7 @@ import {
   type RequestStatus,
   type RequestTextFormat,
   type RequestType,
+  storedMentionMarker,
 } from '../../src/lib/requests';
 
 /** A Drizzle client on the app's schema, or the open transaction of one. */
@@ -46,6 +48,11 @@ export type SampleEntry = {
       reply: string;
       /** The format it's written in; Markdown, as every new text is, when left out. */
       format?: RequestTextFormat;
+      /**
+       * The people the reply mentions: the first is who {@link sampleMention}
+       * 0 stands for in its text, and so on.
+       */
+      mentions?: SamplePerson[];
     }
   | {
       /** What changed. */
@@ -89,6 +96,17 @@ export interface SampleRequest {
   entries?: SampleEntry[];
   /** The user IDs of the staff assigned to it now; nobody when left out. */
   assignees?: string[];
+}
+
+/**
+ * Stands for someone an example reply mentions, in its text, until the reply
+ * is stored and the mention has a row to point at.
+ *
+ * @param index - Their place among the people the reply mentions, from 0.
+ * @returns What to write in the reply's text.
+ */
+export function sampleMention(index: number): string {
+  return `{{mention ${index}}}`;
 }
 
 /**
@@ -182,7 +200,36 @@ export default async function storeRequests(
     for (const entry of entries) {
       const written = { requestId: stored.id, authorId: entry.by.id, authorSide: entry.by.side };
       // eslint-disable-next-line no-await-in-loop -- Same.
-      await db.insert(schema.requestEntry).values(entryValues(written, entry));
+      const [reply] = await db
+        .insert(schema.requestEntry)
+        .values(entryValues(written, entry))
+        .returning({ id: schema.requestEntry.id, body: schema.requestEntry.body });
+      const mentioned = 'reply' in entry ? (entry.mentions ?? []) : [];
+      if (reply && mentioned.length > 0) {
+        // As the service stores them: a row per person, and the text's markers point at the rows.
+        // eslint-disable-next-line no-await-in-loop -- Same.
+        const mentions = await db
+          .insert(schema.requestMention)
+          .values(
+            mentioned.map((person) => ({
+              requestId: stored.id,
+              entryId: reply.id,
+              userId: person.id,
+              side: person.side,
+            })),
+          )
+          .returning({ id: schema.requestMention.id });
+        const body = mentions.reduce(
+          (text, mention, place) =>
+            text.replaceAll(sampleMention(place), storedMentionMarker(mention.id)),
+          reply.body ?? '',
+        );
+        // eslint-disable-next-line no-await-in-loop -- Same.
+        await db
+          .update(schema.requestEntry)
+          .set({ body })
+          .where(eq(schema.requestEntry.id, reply.id));
+      }
     }
     if (sample.assignees && sample.assignees.length > 0) {
       // eslint-disable-next-line no-await-in-loop -- Same.

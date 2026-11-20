@@ -13,6 +13,8 @@ import raiseRequestAction from './actions';
 import RaiseRequestForm from './raise-request-form';
 
 vi.mock('./actions', () => ({ default: vi.fn() }));
+// The list of people at "@" is asked from the server, which isn't here.
+vi.mock('../../_requests/mention-actions', () => ({ mentionChoicesAction: vi.fn() }));
 
 afterEach(() => {
   vi.mocked(raiseRequestAction).mockReset();

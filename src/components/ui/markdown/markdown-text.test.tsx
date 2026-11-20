@@ -376,3 +376,111 @@ describe('MarkdownText: texts that cost too much', () => {
     expect(container.textContent).toContain('[[[[');
   });
 });
+
+describe('MarkdownText: mentions', () => {
+  /** The IDs two markers name. */
+  const SAM = '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b';
+  const CASEY = '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7c';
+
+  /**
+   * Renders a text that mentions people.
+   *
+   * @param text - The text.
+   * @param mentions - Who its markers name.
+   * @returns The rendered element.
+   */
+  function showMentions(
+    text: string,
+    mentions: Parameters<typeof MarkdownText>[0]['mentions'] = {
+      [SAM]: { name: 'Sam Support', isViewer: false, href: null },
+      [CASEY]: { name: 'Casey Client', isViewer: true, href: null },
+    },
+  ) {
+    return render(
+      <MarkdownText
+        text={text}
+        id="text"
+        mentions={mentions}
+        fallback={<p>shown as plain text</p>}
+      />,
+    ).container;
+  }
+
+  it('shows a mention as the person’s name after an @, inside its sentence', () => {
+    const container = showMentions(`Can [@](mention:${SAM}) look at this?`);
+
+    expect(container.querySelector('p')?.textContent).toBe('Can @Sam Support look at this?');
+    const mention = screen.getByText('@Sam Support');
+    expect(mention.tagName).toBe('SPAN');
+    expect(mention).toHaveAttribute('data-mention');
+    // Set apart by a line around it and its weight, not by a colour alone.
+    expect(mention).toHaveClass('border', 'border-border-strong', 'font-medium');
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('names the person as the page does now, whatever the marker’s own text says', () => {
+    const container = showMentions(`[@An old name](mention:${SAM})`);
+
+    expect(container.textContent).toBe('@Sam Support');
+  });
+
+  it('sets a mention of the reader apart from the others', () => {
+    showMentions(`[@](mention:${SAM}) and [@](mention:${CASEY})`);
+
+    expect(screen.getByText('@Casey Client')).toHaveClass('border-highlight', 'font-semibold');
+    expect(screen.getByText('@Sam Support')).not.toHaveClass('border-highlight');
+  });
+
+  it('links to the person’s page for a reader who may open it', () => {
+    showMentions(`Ask [@](mention:${SAM}).`, {
+      [SAM]: { name: 'Sam Support', isViewer: false, href: '/admin/users/sam' },
+    });
+
+    const link = screen.getByRole('link', { name: '@Sam Support' });
+    expect(link).toHaveAttribute('href', '/admin/users/sam');
+    // A page of Adiutor itself: it opens here, not in a new tab.
+    expect(link).not.toHaveAttribute('target');
+    expect(link).toHaveAttribute('data-mention');
+  });
+
+  it('shows a marker that names nobody the text mentions as its text, and links nowhere', () => {
+    const container = showMentions(
+      [
+        // A mention of another text.
+        '[@Someone](mention:019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7d)',
+        // A marker as a writer's browser sends it, which the server didn't take for a mention.
+        '[@Typed by hand](mention:Sam0000000000000000000)',
+        // Not a marker at all.
+        '[@Odd](mention:)',
+      ].join(' and '),
+    );
+
+    expect(container.textContent).toBe('@Someone and @Typed by hand and @Odd');
+    expect(container.querySelector('[data-mention]')).not.toBeInTheDocument();
+    expect(container.querySelector('a')).not.toBeInTheDocument();
+  });
+
+  it('never takes a name that is a property of every object for a mention', () => {
+    const container = showMentions('[@x](mention:constructor) [@y](mention:__proto__)', {});
+
+    expect(container.textContent).toBe('@x @y');
+    expect(container.querySelector('[data-mention]')).not.toBeInTheDocument();
+  });
+
+  it('leaves a marker in code as the code it is', () => {
+    const container = showMentions(
+      `\`[@](mention:${SAM})\`\n\n\`\`\`\n[@](mention:${SAM})\n\`\`\``,
+    );
+
+    expect(container.querySelector('[data-mention]')).not.toBeInTheDocument();
+    expect(container.querySelector('p code')?.textContent).toBe(`[@](mention:${SAM})`);
+    expect(container.querySelector('pre')?.textContent).toBe(`[@](mention:${SAM})\n`);
+  });
+
+  it('shows a text without mentions the same, with or without the list', () => {
+    const container = showMentions('See https://adiutor.dev/docs.', undefined);
+
+    expect(screen.getByRole('link')).toHaveAttribute('href', 'https://adiutor.dev/docs');
+    expect(container.querySelector('[data-mention]')).not.toBeInTheDocument();
+  });
+});

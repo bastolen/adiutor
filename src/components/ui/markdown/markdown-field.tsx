@@ -12,6 +12,7 @@ import { flushSync } from 'react-dom';
 
 import type { MarkdownEditorProps } from './editor';
 import FormattingToolbar from './formatting-toolbar';
+import type { MentionLoader } from './mentions';
 import { markdownStyles } from './styles';
 
 /** What the toolbar's buttons do before the editor is there: nothing (they're disabled). */
@@ -33,6 +34,13 @@ interface MarkdownFieldProps {
   required?: boolean;
   /** Whether the field is switched off. */
   disabled?: boolean;
+  /**
+   * Gives the people the text can mention (see {@link MentionLoader}). With
+   * it, typing "@" in the editor opens a list of them; the text then holds
+   * a marker with the key of whoever was picked. Keep it the same function
+   * while it gives the same people (`useCallback`).
+   */
+  mentions?: MentionLoader;
 }
 
 /**
@@ -62,6 +70,7 @@ interface MarkdownFieldProps {
  * @param props.maxLength - The most characters the Markdown may have.
  * @param props.required - Whether a text is required.
  * @param props.disabled - Whether the field is switched off.
+ * @param props.mentions - Gives the people the text can mention.
  * @returns The field.
  */
 export default function MarkdownField({
@@ -72,6 +81,7 @@ export default function MarkdownField({
   maxLength = undefined,
   required = false,
   disabled = false,
+  mentions = undefined,
 }: MarkdownFieldProps) {
   const t = useTranslations('common.markdown');
   const id = useId();
@@ -184,6 +194,7 @@ export default function MarkdownField({
           required={required}
           focusOnStart={hadFocus}
           below={tooLong}
+          mentions={mentions}
         />
       </div>
       <input ref={sentField} type="hidden" name={name} value={markdown} disabled={disabled} />

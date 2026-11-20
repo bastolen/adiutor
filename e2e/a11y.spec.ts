@@ -749,6 +749,17 @@ test.describe('in forced-colours mode', () => {
         await expectAccessible(page, '[role="dialog"]');
       });
 
+      test('a request’s reply, with the list of people at @ open', async ({ page }) => {
+        // The seeded request, which nothing here changes: nothing is sent.
+        await page.goto('/requests/1');
+        const reply = page.getByRole('textbox', { name: 'Your reply' });
+        await expect(reply).toHaveAttribute('contenteditable', 'true');
+        await reply.click();
+        await page.keyboard.type('@e2e');
+        await expect(page.getByRole('listbox', { name: 'People to mention' })).toBeVisible();
+        await expectAccessible(page);
+      });
+
       test('a request’s reply, with its editor opened large', async ({ page }) => {
         // The seeded request, which nothing here changes: nothing is written or sent.
         await page.goto('/requests/1');

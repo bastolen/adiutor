@@ -5,6 +5,7 @@
 import { eq } from 'drizzle-orm';
 
 import { request, requestEntry } from '@/db/schema';
+import { firstRow } from '@/lib/defined';
 import {
   maySetStatus,
   mayChangeStatus,
@@ -26,6 +27,7 @@ import {
   requestToChange,
   workingPermission,
 } from './change';
+import { storeMentions } from './mentions';
 
 /**
  * Replies to a request, and may set its status with the reply: the staff
@@ -71,9 +73,20 @@ export default async function replyToRequest(
       authorSide: side,
       createdAt: CHANGE_MOMENT,
     };
-    await tx
-      .insert(requestEntry)
-      .values({ ...entry, kind: 'comment', body, bodyFormat: WRITTEN_TEXT_FORMAT });
+    const reply = firstRow(
+      await tx
+        .insert(requestEntry)
+        .values({ ...entry, kind: 'comment', body, bodyFormat: WRITTEN_TEXT_FORMAT })
+        .returning({ id: requestEntry.id }),
+      'the new reply',
+    );
+    // The people the reply mentions, once the reply they belong to is there.
+    await storeMentions(tx, actor, {
+      companyId: locked.companyId,
+      requestId: locked.id,
+      entryId: reply.id,
+      written: body,
+    });
     // A status the request can't move to as it is by now is left alone: the reply still counts.
     const status =
       asked && mayChangeStatus(permissions, locked.status, asked)

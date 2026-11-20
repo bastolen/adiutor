@@ -8,7 +8,8 @@ requests behave and where the code is; why they're built this way is in
 [decision 0019](decisions/0019-requests-one-series-plain-text-and-a-history.md), and for their
 text in [decision 0021](decisions/0021-markdown-for-request-text.md).
 
-Not built yet, each for a later change: emails about requests (also to the staff assigned to one),
+Not built yet, each for a later change: emails about requests (also to the staff assigned to one
+and to the people a text mentions),
 an approval step, internal staff notes, attachments, types the staff manage themselves, and
 working on a request while signed in as a user.
 
@@ -253,6 +254,8 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
 - **The keyboard:** the toolbar is one stop before the text (arrow keys move between its buttons),
   and Tab and Shift+Tab always leave the text, also in a list or a table, so nobody gets stuck in
   it. A list item nests and lifts with Ctrl or Cmd and `]` or `[`.
+- **Mentions:** typing "@" opens a list of the people the text can mention; see
+  [Mentions](#mentions).
 - **The editor follows the server's rules** (`editor-extensions.ts`): HTML is text, only whole
   `http` and `https` addresses are links, and an image is kept as it was written and shown by its
   description. It's still never trusted: the server cleans, limits and renders what it sends like
@@ -266,13 +269,77 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
   and the editor starts from it again. The field is empty after a text was sent, and keeps the
   text after a refused submit. Filling the editor is never a step to undo.
 
+### Mentions
+
+A description or a reply can mention people. Why it's built this way is in
+[decision 0023](decisions/0023-mentions-as-markers-to-rows.md).
+
+- **A mention is a marker that looks like a link** (`src/lib/requests/mentions.ts`). While a text
+  is written it's `[@Sam](mention:KEY)`: the person's name, and a key of 22 characters that
+  stands for them. Once the text is stored it's `[@](mention:ID)`, where the ID is the mention's
+  row in `request_mention` (the request, the reply or `null` for the description, the person, and
+  the side they were on). The stored text holds no name and no user ID.
+- **The key** (`mentionKey`) is a keyed hash of the person and the company, made from
+  `BETTER_AUTH_SECRET` through a secret of its own. It's the same every time, means nothing in
+  another company, and can't be turned back into a person: when a text is sent, the server makes
+  the keys of the people who may be mentioned again and compares. So no user ID reaches someone
+  at a company.
+- **Who may be mentioned** (`listMentionable`, for whoever may write there:
+  `requests:contribute`): the staff can mention everyone at the request's company and every staff
+  member who reads requests; someone at the company can mention their colleagues, and the staff
+  members whose names the request already shows them (who raised it, replied, changed it, is or
+  was assigned; not who only changed the priority, which they don't see). For a request that isn't
+  raised yet, someone at the company gets their colleagues only. Never the writer themselves, a
+  deactivated account, or someone without a name to show; someone on the staff who is also in the
+  company is listed once. The list gives a key, a name and whether they're staff, by name.
+- **Storing** (`storeMentions`, in the transaction of `raiseRequest` and `replyToRequest`, right
+  after the text's row): the markers of people the writer may mention there become rows, one per
+  person however often the text names them, and the text's markers are pointed at them. At most
+  20 people per text (`MAX_MENTIONS_PER_TEXT`). Every other marker stays as it was typed (another
+  company's key, a key nobody has, a marker typed with a row's ID): nothing is refused.
+- **Reading** (`getRequest`): each text comes with the people it mentions, by the ID its markers
+  name, as the reader may see them (`requestPerson`: a name, their side, whether it's the reader,
+  and an ID for the staff only). A text gets its own mentions only, so a marker with another
+  text's row names nobody. Someone whose account is gone stays mentioned, by their side.
+- **Showing** (`RequestText`, which hands `MarkdownText` its `mentions`): a mention is the
+  person's name after an "@", as the page names them (their own name, or their side's), with a
+  line around it and in a heavier weight, so it's set apart by more than a colour, also in
+  forced-colours mode. A mention of the reader has the line and the name in the colour of
+  highlights. For the staff the name links to the user's page; a side's name never does. The
+  marker reaches the link's element through the allow-list's `mention` scheme, and that element
+  shows the person, or, for a marker that isn't one of the text's, the link's text: it never
+  links to such an address. A text shown as it was written, because formatting it would cost too
+  much, names the people too (`nameStoredMentions`).
+- **Writing** (`MarkdownField`'s `mentions`, a function that gives the people; the request forms
+  pass one that calls `mentionChoicesAction`, a server action that only reads): typing "@" at the
+  start of a line or after a space opens a list of people at the cursor, so an email address
+  opens nothing, and neither does an "@" in code. The people are asked for the first time the list
+  opens, and again only when the form's company changes. What's typed after the "@" narrows the
+  list, without regard for case or accents and with spaces, to at most eight people: names that
+  start with it first. Once what's typed has a space and is nobody's name, the list closes by
+  itself ("meet @ 5 pm"); one word that's nobody's name says "Nobody by that name". The arrow
+  keys move through the list, around at the ends, Enter or a click mentions the person, and
+  Escape or a click elsewhere closes it and leaves what was typed as text. Tab leaves the text, as
+  always, and the list closes.
+- **The list never has the focus** (`editor-mentions.tsx`): it stays in the text, which says it
+  has a list (`aria-haspopup`) and points at the option the keys are on
+  (`aria-activedescendant`). The list is a Radix popover placed at the cursor, without a dialog's
+  role, and a layer of its own: in the editor's large view, Escape closes the list first and the
+  view second.
+- **In the text being written** a mention is one piece (`WrittenMention` in
+  `editor-extensions.ts`): the name after an "@", looking as it will where the text is read,
+  deleted as a whole. Its Markdown is the marker with the person's key, so a text the page kept
+  still shows its mentions, and a marker of any other shape is the text of its link, as where a
+  text is read. A staff member is listed with the staff's name as their label.
+
 ### Cleaning, limits and names
 
 - Text is cleaned before it's stored (`cleanMultilineText`): line endings become `\n`, and hidden
   and control characters are dropped rather than refused. A title has at most 150 characters, a
   description or reply 10,000 (`src/lib/input-rules.ts`).
 - People appear **by name only**, never by email address: Clients and Watchers can't see who else
-  is in their company. Company users see a staff member's own name with a label that carries the
+  is in their company, beyond the names in its requests and, for whoever may write, in the list
+  of who can be mentioned (see [Mentions](#mentions)). Company users see a staff member's own name with a label that carries the
   name users know the staff by. Someone without a name (or with an old one that has nothing to
   see in it, `visibleName`), or whose account is gone, is shown as their side.
 - **Avatars show people's pictures:** a person's avatar shows the picture they chose from a connected
@@ -319,11 +386,12 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
   the services and client components all import it): the values, the rules above, the number
   and the text. Not to be confused with `src/lib/request/`, which is about HTTP requests.
 - `src/db/schema/requests.ts`: `request`, `request_assignee` (who's assigned), `request_entry`
-  (the conversation and the history in one table, ordered by ID) and `request_counter`.
+  (the conversation and the history in one table, ordered by ID), `request_mention` (who a text
+  mentions) and `request_counter`.
 - `src/server/requests/` (a folder module): `listRequestCompanies`, `listRequests`, `findRequest`,
   `findRequestNumber`, `getRequest`, `raiseRequest`, `replyToRequest`, `changeRequestStatus`,
-  `updateRequestDetails`, `changeAssignees`, `listAssignableStaff`, `countAssignedRequests`, and
-  `unassignFrom` for the services that end someone's request work.
+  `updateRequestDetails`, `changeAssignees`, `listAssignableStaff`, `countAssignedRequests`,
+  `listMentionable`, and `unassignFrom` for the services that end someone's request work.
   Every change refuses someone signed in as a user, checks the permission and that the company is
   active, validates, takes a rate limit (see [Rate limits](security-measures.md#rate-limits)), then
   runs in a transaction that starts with `assertStillMayChange` (`assertStillManages`, then the company) and locks the request's row (see

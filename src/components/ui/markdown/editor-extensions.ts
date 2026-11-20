@@ -7,6 +7,9 @@
  * - Only whole `http` and `https` addresses are links.
  * - An image is kept as it was written and shown by its description; it's
  *   never loaded.
+ * - A mention is the marker of someone picked from the list at "@": a link
+ *   to their key, shown as their name. A marker of any other shape is the
+ *   text of its link, as where a text is read.
  * - Tab and Shift+Tab are never taken: they leave the editor, like any field.
  */
 import { Link } from '@tiptap/extension-link';
@@ -14,7 +17,7 @@ import { ListItem, ListKeymap, TaskItem, TaskList } from '@tiptap/extension-list
 import { Table, TableKit } from '@tiptap/extension-table';
 import { Markdown } from '@tiptap/markdown';
 import { Slice } from '@tiptap/pm/model';
-import { Plugin } from '@tiptap/pm/state';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 import {
   type Editor,
   Extension,
@@ -23,11 +26,14 @@ import {
   Node,
 } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { exitSuggestion, Suggestion } from '@tiptap/suggestion';
 
-import { linkTarget } from '@/lib/requests';
+import { linkTarget, writtenMentionKey, writtenMentionMarker } from '@/lib/requests';
 
 import { writtenLinkClasses } from '../external-link';
 import editorCodeBlock from './editor-code-block';
+import type { MentionList } from './editor-mentions';
+import type { MentionChoice } from './mentions';
 import { markdownStyles } from './styles';
 
 /** The texts the editor's content needs, in the reader's language. */
@@ -146,9 +152,32 @@ const EditorTable = Table.extend({
   },
 });
 
+/** A part of a line as the Markdown reader hands it over: its text, and the parts inside it. */
+interface InlineToken {
+  /** The part's own text, with what was escaped as the character it stands for. */
+  text?: string;
+  /** The parts inside it, when it has any (emphasis, say). */
+  tokens?: InlineToken[];
+}
+
+/**
+ * The text of a link as it reads, without the formatting inside it.
+ *
+ * @param tokens - The link's parts.
+ * @returns Their text.
+ */
+function plainText(tokens: readonly InlineToken[]): string {
+  return tokens
+    .map((token) => (token.tokens ? plainText(token.tokens) : (token.text ?? '')))
+    .join('');
+}
+
 /**
  * A link. When Markdown is read, an address that isn't a whole `http` or
  * `https` address gives no link, only its text: what the server does too.
+ * The marker of a mention is the exception: a link whose text starts with
+ * "@" and whose address is someone's key becomes the mention of them
+ * ({@link WrittenMention}).
  */
 const WrittenLink = Link.extend({
   /**
@@ -156,13 +185,201 @@ const WrittenLink = Link.extend({
    *
    * @param token - The parser's link.
    * @param helpers - The Markdown reader's helpers.
-   * @returns The link's text, linked when its address may be.
+   * @returns A mention, or the link's text, linked when its address may be.
    */
   parseMarkdown: (token, helpers) => {
+    const address = typeof token.href === 'string' ? token.href : '';
+    const key = writtenMentionKey(address);
+    const label = plainText(token.tokens ?? []);
+    if (key !== null && label.startsWith('@')) {
+      return { type: 'writtenMention', attrs: { key, name: label.slice(1) } };
+    }
     const text = helpers.parseInline(token.tokens ?? []);
-    return typeof token.href === 'string' && linkTarget(token.href) !== null
-      ? helpers.applyMark('link', text, { href: token.href })
-      : text;
+    return linkTarget(address) !== null ? helpers.applyMark('link', text, { href: address }) : text;
+  },
+});
+
+/**
+ * A mention of someone, picked from the list at "@": their name after an
+ * "@", as one piece that's deleted as a whole. In Markdown it's the marker
+ * the server takes for a mention (`writtenMentionMarker`): the name, linked
+ * to the key that stands for the person. It's read back from that marker by
+ * {@link WrittenLink}, so a text that was kept still shows its mentions.
+ */
+const WrittenMention = Node.create({
+  name: 'writtenMention',
+  group: 'inline',
+  inline: true,
+  atom: true,
+  /**
+   * What the node remembers.
+   *
+   * @returns The person's key, and their name as the list showed it.
+   */
+  addAttributes() {
+    return { key: { default: '' }, name: { default: '' } };
+  },
+  /**
+   * How the node looks in the editor.
+   *
+   * @param props - What's rendered.
+   * @param props.node - The mention.
+   * @returns A span with the name after an "@", as where a text is read.
+   */
+  renderHTML({ node }) {
+    return [
+      'span',
+      { class: markdownStyles.mention, 'data-mention': '' },
+      `@${String(node.attrs.name)}`,
+    ];
+  },
+  /**
+   * What the node is as plain text.
+   *
+   * @param props - What's rendered.
+   * @param props.node - The mention.
+   * @returns The name after an "@".
+   */
+  renderText({ node }) {
+    return `@${String(node.attrs.name)}`;
+  },
+  /**
+   * Writes the mention as Markdown.
+   *
+   * @param node - The node.
+   * @returns Its marker.
+   */
+  renderMarkdown: (node) =>
+    writtenMentionMarker(String(node.attrs?.name ?? ''), String(node.attrs?.key ?? '')),
+});
+
+/** The name of the plugin that follows what's typed after an "@". */
+const MENTION_TRIGGER = new PluginKey('mentionTrigger');
+
+/**
+ * Opens the list of people while a name is typed after an "@" (at the start
+ * of a line or after a space, so an email address opens nothing; the name
+ * may have spaces), and puts
+ * the mention of whoever is picked in its place, with a space after it. Not
+ * in code, where an "@" is code. The list itself, and what the keys do in
+ * it, is the {@link MentionList}'s; Escape and a click elsewhere close it.
+ * Without a list the extension does nothing.
+ */
+const MentionTrigger = Extension.create<{ list: MentionList | null }>({
+  name: 'mentionTrigger',
+  /**
+   * The extension's options.
+   *
+   * @returns No list, until one is given.
+   */
+  addOptions() {
+    return { list: null };
+  },
+  /**
+   * The plugin that follows what's typed.
+   *
+   * @returns The plugin, or none without a list.
+   */
+  addProseMirrorPlugins() {
+    const { list } = this.options;
+    if (list === null) {
+      return [];
+    }
+    const { editor } = this;
+    return [
+      Suggestion<MentionChoice, MentionChoice>({
+        editor,
+        pluginKey: MENTION_TRIGGER,
+        char: '@',
+        // A name has spaces. The list closes itself once what's typed can't be a name any more.
+        allowSpaces: true,
+        /**
+         * Whether a name can be typed here: not in code.
+         *
+         * @param props - Where the "@" is.
+         * @param props.state - The editor's state.
+         * @param props.range - The place of the "@" and what follows it.
+         * @returns Whether the list may open.
+         */
+        allow: ({ state, range }) => {
+          const $from = state.doc.resolve(range.from);
+          const inCode = $from.marks().some((mark) => mark.type.spec.code);
+          return !$from.parent.type.spec.code && !inCode;
+        },
+        /**
+         * Puts the mention in place of what was typed.
+         *
+         * @param props - What was picked, and where.
+         * @param props.range - The place of the "@" and what follows it.
+         * @param props.props - Who was picked.
+         */
+        command: ({ range, props }) => {
+          editor
+            .chain()
+            .focus()
+            .insertContentAt(range, [
+              { type: 'writtenMention', attrs: { key: props.key, name: props.name } },
+              { type: 'text', text: ' ' },
+            ])
+            .run();
+        },
+        /**
+         * Passes what's typed on to the list.
+         *
+         * @returns What to do as the typing starts, goes on and ends, and with a key.
+         */
+        render: () => {
+          /**
+           * Tells the list what's typed now.
+           *
+           * @param props - The trigger's state.
+           * @param props.query - What's typed after the "@".
+           * @param props.clientRect - Measures where that is.
+           * @param props.command - Puts a mention in its place.
+           */
+          const show = ({
+            query,
+            clientRect,
+            command,
+          }: {
+            query: string;
+            clientRect?: (() => DOMRect | null) | null;
+            command: (choice: MentionChoice) => void;
+          }) => {
+            list.show({
+              query,
+              /**
+               * Measures where the name is typed.
+               *
+               * @returns Its box, or `null` when it can't be measured.
+               */
+              rect: () => clientRect?.() ?? null,
+              pick: command,
+              /** Closes the list; what was typed stays text. */
+              close: () => {
+                exitSuggestion(editor.view, MENTION_TRIGGER);
+              },
+            });
+          };
+          return {
+            onStart: show,
+            onUpdate: show,
+            /** The typing ended: with a mention, or because the cursor left. */
+            onExit: () => {
+              list.hide();
+            },
+            /**
+             * Lets the list have a key first.
+             *
+             * @param props - The key press.
+             * @param props.event - The key.
+             * @returns Whether the list took it.
+             */
+            onKeyDown: ({ event }) => list.keyDown(event),
+          };
+        },
+      }),
+    ];
   },
 });
 
@@ -354,9 +571,13 @@ const MarkdownPaste = Extension.create({
  * what the content is read from and written to.
  *
  * @param labels - The texts the content needs.
+ * @param mentions - The list of people at "@", for a text that can mention people.
  * @returns The extensions.
  */
-export function editorExtensions(labels: EditorLabels): Extensions {
+export function editorExtensions(
+  labels: EditorLabels,
+  mentions: MentionList | null = null,
+): Extensions {
   return [
     StarterKit.configure({
       // These come in their own form below; Markdown has no underline.
@@ -413,6 +634,8 @@ export function editorExtensions(labels: EditorLabels): Extensions {
       HTMLAttributes: { class: writtenLinkClasses, rel: 'noopener noreferrer nofollow' },
     }),
     WrittenImage.configure({ image: labels.image }),
+    WrittenMention,
+    MentionTrigger.configure({ list: mentions }),
     MarkdownPaste,
     // GitHub Flavored Markdown, with every line break kept: as the server reads it.
     Markdown.configure({ markedOptions: { gfm: true, breaks: true } }),

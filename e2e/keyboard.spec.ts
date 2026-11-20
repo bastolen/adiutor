@@ -15,6 +15,7 @@ import {
   CLIENT_WATCHER,
   COMPANY_NAME,
   COMPANY_SLUG,
+  FINANCE_STAFF,
   PAGING_COMPANY_SLUG,
   PLATFORM_ADMIN,
   REQUESTS_CLIENT,
@@ -1134,6 +1135,85 @@ test.describe('requests', () => {
       await page.keyboard.press('Enter');
       await expect(dialog).toBeHidden();
       await expect(reply).toBeFocused();
+    });
+
+    test('someone is mentioned with the keyboard, and Escape closes the list before the large view', async ({
+      page,
+    }) => {
+      await page.goto(await storeOwnRequest('A mention made with the keyboard'));
+      const reply = await markdownEditor(page, 'Your reply');
+      const list = page.getByRole('listbox', { name: 'People to mention' });
+      /**
+       * The option the text points at: the one Enter picks.
+       *
+       * @param text - The text the list belongs to.
+       * @returns The option's name.
+       */
+      const pointedAt = (text: typeof reply) =>
+        text.evaluate(
+          (element) =>
+            document.getElementById(element.getAttribute('aria-activedescendant') ?? '')
+              ?.textContent ?? null,
+        );
+
+      // The text says it has a list, and typing "@" opens it without moving the focus.
+      await expect(reply).toHaveAttribute('aria-haspopup', 'listbox');
+      await reply.focus();
+      await page.keyboard.type('@e2e');
+      await expect(list).toBeVisible();
+      await expect(reply).toBeFocused();
+      await expect(reply).toHaveAttribute('aria-controls', (await list.getAttribute('id')) ?? '');
+
+      // The arrow keys move through the people; the text points at the one they're on.
+      const options = list.getByRole('option');
+      const first = await options.nth(0).textContent();
+      const second = await options.nth(1).textContent();
+      await expect.poll(() => pointedAt(reply)).toBe(first);
+      await page.keyboard.press('ArrowDown');
+      await expect.poll(() => pointedAt(reply)).toBe(second);
+      await expect(options.nth(1)).toHaveAttribute('aria-selected', 'true');
+      await page.keyboard.press('ArrowUp');
+      await expect.poll(() => pointedAt(reply)).toBe(first);
+
+      // Escape closes the list and leaves the text as it is, with the focus.
+      await page.keyboard.press('Escape');
+      await expect(list).toBeHidden();
+      await expect(reply).toBeFocused();
+      await expect(reply).toHaveText('@e2e');
+      await expect(reply).not.toHaveAttribute('aria-activedescendant');
+
+      // Tab leaves the text also while the list is open, and the list closes.
+      await page.keyboard.type(' @e2e');
+      await expect(list).toBeVisible();
+      await page.keyboard.press('Tab');
+      await expect(reply).not.toBeFocused();
+      await expect(list).toBeHidden();
+
+      // In the large view, Escape closes the list first and the view second.
+      await page.keyboard.press('Shift+Tab');
+      await expect(reply).toBeFocused();
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('End');
+      await expect(page.getByRole('button', { name: 'Large view' })).toBeFocused();
+      await page.keyboard.press('Enter');
+      const dialog = page.getByRole('dialog', { name: 'Your reply' });
+      const large = dialog.getByRole('textbox', { name: 'Your reply' });
+      await expect(large).toBeFocused();
+      await page.keyboard.type(' @e2e adm');
+      await expect(list.getByRole('option')).toHaveCount(0);
+      await page.keyboard.type(' @e2e fin');
+      await expect(list.getByRole('option')).toHaveCount(1);
+      await page.keyboard.press('Escape');
+      await expect(list).toBeHidden();
+      await expect(dialog).toBeVisible();
+      await expect(large).toBeFocused();
+      // Enter picks someone there as on the page.
+      await page.keyboard.type(' @e2e fin');
+      await page.keyboard.press('Enter');
+      await expect(large.locator('[data-mention]')).toHaveText(`@${FINANCE_STAFF.name}`);
+      await page.keyboard.press('Escape');
+      await expect(dialog).toBeHidden();
+      await expect(reply.locator('[data-mention]')).toHaveText(`@${FINANCE_STAFF.name}`);
     });
 
     test('a reply is sent with the keyboard, and focus is never lost', async ({ page }) => {

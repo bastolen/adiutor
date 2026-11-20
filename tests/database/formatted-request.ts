@@ -1,12 +1,13 @@
 /**
  * @file The texts of an example request written in Markdown, with every kind
  * of formatting a request can show: headings, lists, a table, a quotation,
- * links, an image, things to do, a footnote, and blocks of code (one too
- * wide for the page, which has to scroll). Used by the development seed
+ * links, an image, things to do, a footnote, a mention, and blocks of code
+ * (one too wide for the page, which has to scroll). Used by the development seed
  * (`scripts/sample-requests.ts`) and the end-to-end seed
  * (`e2e/support/seed.ts`), so the pages are looked at with the same text
  * they're tested with.
  */
+import { sampleMention } from './store-requests';
 
 /** What's asked: a heading, a numbered list, code in a sentence, a table and an address. */
 export const FORMATTED_DESCRIPTION = `We want to move the intranet before **1 July**.
@@ -57,7 +58,10 @@ That's done as well. What's left:
 
 ![The new home page](https://adiutor.test/intranet-home.png)`;
 
-/** The company's answer: emphasis and a footnote. */
-export const FORMATTED_CLIENT_REPLY = `Tested by three of us, and *everything* works[^1].
+/**
+ * The company's answer: emphasis, a footnote and a mention of the staff
+ * member it answers (the first person the reply mentions, see `sampleMention`).
+ */
+export const FORMATTED_CLIENT_REPLY = `Tested by three of us, and *everything* works[^1]. Thanks, ${sampleMention(0)}!
 
 [^1]: Except the logo, which is still the old one.`;
