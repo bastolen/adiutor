@@ -39,11 +39,12 @@ export interface PendingProviderStepUp {
 /** What one request carries between its hooks. */
 export interface AuthRequestState {
   /**
-   * The provider account name noted from the provider's profile
-   * (`noteProviderAccountName`, from `user.validateUserInfo`), until an
-   * account hook of the request stores it (`withAccountName`, which takes it).
+   * The provider account's name and picture noted from the provider's
+   * profile (`noteProviderProfile`, from `user.validateUserInfo`), until an
+   * account hook of the request stores them (`withProfile`, which takes
+   * them). Either is `null` when the profile had no usable one.
    */
-  providerAccountName?: { providerId: OAuthProvider; name: string };
+  providerProfile?: { providerId: OAuthProvider; name: string | null; image: string | null };
   /**
    * A re-verify refused for another account than the user's own
    * (`checkReverify`, or the backstop in `beforeSessionCreate`): who started

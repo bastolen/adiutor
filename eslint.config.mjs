@@ -554,6 +554,9 @@ const claudeRulesConfig = [
       'src/lib/sign-in/oauth-providers.ts',
       'src/lib/sign-in/providers.ts',
       'src/server/auth/provider-mfa.ts',
+      // Written by `pnpm auth:schema` from Better Auth's config, which spells out the enum of
+      // `user.avatarSource` (`AVATAR_SOURCES`): the provider IDs as values, never a comparison.
+      'src/db/schema/auth.ts',
     ],
     rules: {
       'no-restricted-syntax': [
