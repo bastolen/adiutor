@@ -2,7 +2,8 @@
  * @file The editor of a Markdown field: the text as it will be read, which
  * formats itself while it's written, under a toolbar with the same
  * formatting as buttons. Typing Markdown (`**bold**`, `# `, `- `, three
- * backticks) turns into formatting, and so does pasting it.
+ * backticks) turns into formatting, and so does pasting it. The toolbar's
+ * last button opens the editor large, in a dialog over the page.
  *
  * It's a lot of JavaScript, so nothing imports it with the page:
  * `MarkdownField` loads it with `import()` once the page is there, and shows
@@ -12,8 +13,12 @@
 
 import { type Editor, EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import { useTranslations } from 'next-intl';
-import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
+import cn from '@/lib/cn';
+
+import Modal from '../modal';
+import { useTransientState } from '../use-transient-state';
 import { editorExtensions, readMarkdown, writeMarkdown } from './editor-extensions';
 import { format, formattingOf, hasCode, highlightCode } from './editor-formatting';
 import { knownCodeLanguages, subscribeToCodeLanguages } from './editor-highlighter';
@@ -27,6 +32,9 @@ import { markdownStyles } from './styles';
  */
 const LINE_HEIGHT = 1.5;
 
+/** What the buttons of the toolbar that keeps the editor's place do: nothing (they're switched off). */
+function ignore() {}
+
 /** Props for {@link MarkdownEditor}. */
 export interface MarkdownEditorProps {
   /** The Markdown the editor starts with. */
@@ -37,6 +45,8 @@ export interface MarkdownEditorProps {
    * @param markdown - The content as Markdown.
    */
   onChange: (markdown: string) => void;
+  /** The field's label: the title of the dialog the editor opens large in. */
+  label: string;
   /** The ID of the element that labels the editor. */
   labelledBy: string;
   /** The ID of the element that describes it, if there is one. */
@@ -49,6 +59,11 @@ export interface MarkdownEditorProps {
   required: boolean;
   /** Whether to put the cursor at the end of the text once the editor is there. */
   focusOnStart: boolean;
+  /**
+   * What stands below the text while the editor is open large: what the
+   * field says about the text below itself, such as that it's too long.
+   */
+  below?: ReactNode;
 }
 
 /**
@@ -58,28 +73,48 @@ export interface MarkdownEditorProps {
  * text's box grows with the text, and its bottom edge can be dragged to make
  * it taller, as a plain text field's can.
  *
+ * The toolbar's last button opens the editor large: a dialog over the page,
+ * named by the field's label, with the toolbar and the text filling it. It's
+ * this editor, shown there instead of in the field, so the text, the cursor
+ * and what can be undone stay as they were, both ways. The text has the
+ * focus when the dialog opens and when it closes (the button again, Escape,
+ * the close button), like after the toolbar's menus. The field keeps its
+ * place and height on the page meanwhile, with a toolbar that's switched
+ * off, so nothing moves. A page that was kept alive comes back with the
+ * editor in the field.
+ *
  * @param props - Component props.
  * @param props.markdown - The Markdown to start with.
  * @param props.onChange - Called with the Markdown when the content changes.
+ * @param props.label - The field's label.
  * @param props.labelledBy - The label's ID.
  * @param props.describedBy - The description's ID.
  * @param props.rows - The least height, in lines.
  * @param props.disabled - Whether the editor is switched off.
  * @param props.required - Whether a text is required.
  * @param props.focusOnStart - Whether to take focus once it's there.
+ * @param props.below - What stands below the text while it's open large.
  * @returns The editor.
  */
 export default function MarkdownEditor({
   markdown,
   onChange,
+  label,
   labelledBy,
   describedBy = undefined,
   rows,
   disabled,
   required,
   focusOnStart,
+  below = null,
 }: MarkdownEditorProps) {
   const t = useTranslations('common.markdown');
+  // Whether the editor is open large. Closed again when the user comes back to a page that was kept.
+  const [large, setLarge] = useTransientState(false);
+  // The text's box in the field, and how high it was when the editor opened large: its place
+  // in the field keeps that height, so the page doesn't move.
+  const area = useRef<HTMLDivElement>(null);
+  const [heldHeight, setHeldHeight] = useState(0);
   const extensions = useMemo(
     () =>
       editorExtensions({
@@ -189,25 +224,77 @@ export default function MarkdownEditor({
     }
   }, [editor, withCode]);
 
+  /**
+   * Gives the text the focus, with the cursor where it was. The dialog asks
+   * for it a moment after it closed, when the page may have gone already.
+   */
+  const focusText = () => {
+    if (editor && !editor.isDestroyed) {
+      editor.commands.focus();
+    }
+  };
+
+  // The toolbar and the text are shown in one place at a time: in the field, or in the dialog.
+  const toolbar = (
+    <FormattingToolbar
+      languages={languages?.choices ?? null}
+      languageName={languages?.nameOf}
+      state={disabled ? null : formatting}
+      onCommand={(command) => {
+        if (editor) {
+          format(editor, command);
+        }
+      }}
+      large={large}
+      onLarge={() => {
+        if (!large) {
+          setHeldHeight(area.current?.offsetHeight ?? 0);
+        }
+        setLarge(!large);
+      }}
+    />
+  );
+  const text = <EditorContent editor={editor} className="flex flex-1 flex-col" />;
+
   return (
     <>
-      <FormattingToolbar
-        languages={languages?.choices ?? null}
-        languageName={languages?.nameOf}
-        state={disabled ? null : formatting}
-        onCommand={(command) => {
-          if (editor) {
-            format(editor, command);
-          }
-        }}
-      />
-      {/* As high as its lines at least, taller with its text, and as tall as it's dragged. */}
-      <div
-        className={markdownStyles.editorArea}
-        style={{ minHeight: `${rows * LINE_HEIGHT + 1}rem` }}
-      >
-        <EditorContent editor={editor} className="flex flex-1 flex-col" />
-      </div>
+      {large ? (
+        <>
+          {/* The editor's place in the field: as it looks before the editor is there. */}
+          <FormattingToolbar state={null} onCommand={ignore} />
+          <div aria-hidden="true" style={{ height: heldHeight }} />
+        </>
+      ) : (
+        <>
+          {toolbar}
+          {/* As high as its lines at least, taller with its text, and as tall as it's dragged. */}
+          <div
+            ref={area}
+            className={markdownStyles.editorArea}
+            style={{ minHeight: `${rows * LINE_HEIGHT + 1}rem` }}
+          >
+            {text}
+          </div>
+        </>
+      )}
+      {/* The dialog goes in the same step as the field takes the text back. Left to close by
+          itself it would let go of the text a step later, after the field asked for it. */}
+      {large && (
+        <Modal
+          open
+          onOpenChange={setLarge}
+          title={label}
+          size="large"
+          initialFocus={focusText}
+          finalFocus={focusText}
+        >
+          <div className={cn(markdownStyles.editorFrame, markdownStyles.editorFrameLarge)}>
+            {toolbar}
+            <div className={markdownStyles.editorAreaLarge}>{text}</div>
+          </div>
+          {below}
+        </Modal>
+      )}
     </>
   );
 }

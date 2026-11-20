@@ -195,6 +195,16 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
   read. The languages are a download of their own (about 40 kB gzipped), fetched the first time a
   text has a block of code. While the cursor is in a block, a menu at the end of the toolbar picks its language; a
   block without one is never coloured.
+- **A large view:** the toolbar's last button ("Large view", a toggle that says whether it's on)
+  opens the editor in a dialog over the page, named by the field's label: up to 60rem wide and
+  nearly as tall as the window, the whole screen on a phone (`Modal`'s `large` size). It's the same
+  editor, shown there instead of in the field, so the text, the cursor and what can be undone stay
+  as they were, both ways. The button again, Escape, the close button or a click outside brings it
+  back, and the text has the focus when the view opens and when it closes, as after the toolbar's
+  menus. The field keeps its place and height on the page meanwhile, so nothing moves, and what
+  the field says about a text that's too long shows in the view too. It's only for writing: the
+  form is sent from the page. The dialog is taken away in the same step as the field takes the
+  text back; closed by itself it would let go of the text a step too late.
 - **The keyboard:** the toolbar is one stop before the text (arrow keys move between its buttons),
   and Tab and Shift+Tab always leave the text, also in a list or a table, so nobody gets stuck in
   it. A list item nests and lifts with Ctrl or Cmd and `]` or `[`.

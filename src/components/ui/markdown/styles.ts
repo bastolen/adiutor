@@ -88,6 +88,17 @@ export const markdownStyles = {
    */
   editorArea: 'flex resize-y flex-col overflow-y-auto',
   /**
+   * What the editable area sits in while the editor is open large: it takes
+   * the height that's left in the dialog and scrolls its text there, without
+   * an edge to drag.
+   */
+  editorAreaLarge: 'flex min-h-0 flex-1 flex-col overflow-y-auto',
+  /**
+   * What the box around the editor adds while it's open large: it fills the
+   * dialog's height, with the toolbar at its top and the text below it.
+   */
+  editorFrameLarge: 'flex min-h-0 flex-1 flex-col',
+  /**
    * The box around the editor, with the look of a field: it shows the focus
    * of the editable area in it, and greys out when the editor is switched off.
    */

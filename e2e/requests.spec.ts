@@ -937,6 +937,66 @@ test('Markdown that is pasted is formatted, and a tag stays the text it is', asy
   await expect(thread.getByRole('group', { name: 'Bash code' })).toHaveText('npm test');
 });
 
+test('a reply is written on in the large view, and sent from the page', async ({ page }) => {
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'A reply written in the large view',
+  });
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  const editor = await markdownEditor(page, 'Your reply');
+  await editor.click();
+  await page.keyboard.type('Started on the page.');
+  // Found by its element: behind an open dialog the page has no roles to find it by.
+  const send = page.locator('button', { hasText: 'Send reply' });
+  const sendAt = await send.boundingBox();
+
+  // The same editor, in a dialog named like the field, with the cursor where it was.
+  await page.getByRole('button', { name: 'Large view' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Your reply' });
+  const large = dialog.getByRole('textbox', { name: 'Your reply' });
+  await expect(large).toBeFocused();
+  await expect(large).toHaveText('Started on the page.');
+  // It has room: more than half of the window's height, where the field has eight lines.
+  const size = await large.boundingBox();
+  expect(size?.height).toBeGreaterThan((page.viewportSize()?.height ?? 0) / 2);
+  // The page behind it didn't move.
+  expect((await send.boundingBox())?.y).toBe(sendAt?.y);
+
+  // What was typed on the page can be undone and brought back here.
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(large).not.toHaveText('Started on the page.');
+  await page.keyboard.press('ControlOrMeta+Shift+z');
+  await expect(large).toHaveText('Started on the page.');
+
+  // Writing goes on, with the dialog's own toolbar.
+  await page.keyboard.type(' Finished in the **large** view. ');
+  await expect(large.locator('strong')).toHaveText('large');
+  // The button gives the text the focus back, a moment after it's pressed.
+  await dialog.getByRole('button', { name: 'Bold' }).click();
+  await expect(large).toBeFocused();
+  await page.keyboard.type('Really.');
+  await expect(large.locator('strong').last()).toHaveText('Really.');
+
+  // Back on the page with Escape: the field holds everything, and the text has the focus.
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  const back = await markdownEditor(page, 'Your reply');
+  await expect(back).toBeFocused();
+  await expect(back).toHaveText('Started on the page. Finished in the large view. Really.');
+  await expect(page.getByRole('button', { name: 'Large view' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+
+  await send.click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  const thread = page.getByRole('region', { name: 'Conversation' });
+  await expect(thread).toContainText('Started on the page. Finished in the large view. Really.');
+  await expect(thread.locator('strong')).toHaveText(['large', 'Really.']);
+});
+
 test('a reply that isn’t sent yet is still there after leaving the page and coming back', async ({
   page,
 }) => {

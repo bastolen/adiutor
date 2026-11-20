@@ -19,7 +19,11 @@ keyboard support.
   sheets are
   built on [Radix UI](https://www.radix-ui.com), and only `src/components/ui/` imports it. Radix
   follows the WAI-ARIA patterns: arrow keys, typeahead, Escape to close, focus kept inside
-  dialogs and returned to the button that opened them. In a menu, `MenuRadioRow` with
+  dialogs and returned to the button that opened them. `Modal` is as wide as a short form, or
+  `large` (most of the window, the whole screen on a phone, its content filling the height) for
+  something to write with room; where the focus shouldn't go to its first control or back to
+  its opener, it's told what gets it instead (`initialFocus`, `finalFocus`: the Markdown editor's
+  large view gives it to the text both times). In a menu, `MenuRadioRow` with
   `MenuIconRadioItem`s shows a choice as a segmented row of icons (like the theme in the account
   menu); ArrowLeft and ArrowRight also move within it. `MenuRadioLinkItem` is a radio item that is
   a link (the sorts in `SortMenu`, the choices in `FilterMenu`; both are built on `LinkRadioMenu`, which holds the open state, the busy button and the navigation). A `Badge`'s tone says what kind of status it is: `success` for

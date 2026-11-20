@@ -61,6 +61,7 @@ describe('FormattingToolbar', () => {
       'Lift the list item',
       'Quotation',
       'Block of code',
+      'Large view',
     ]);
   });
 
@@ -101,6 +102,41 @@ describe('FormattingToolbar', () => {
     await user.click(screen.getByRole('button', { name }));
 
     expect(onCommand).toHaveBeenCalledExactlyOnceWith({ type });
+  });
+
+  it('opens the editor large and brings it back, and says which it is', async () => {
+    const user = userEvent.setup();
+    const onLarge = vi.fn();
+    const { rerender } = render(
+      <FormattingToolbar state={PLAIN} onCommand={vi.fn()} onLarge={onLarge} />,
+    );
+    const button = screen.getByRole('button', { name: 'Large view' });
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+
+    await user.click(button);
+    expect(onLarge).toHaveBeenCalledTimes(1);
+
+    rerender(<FormattingToolbar state={PLAIN} onCommand={vi.fn()} large onLarge={onLarge} />);
+    expect(screen.getByRole('button', { name: 'Large view' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  it('can’t open the editor large before there is one, but can always bring it back', () => {
+    const { rerender } = render(
+      <FormattingToolbar state={null} onCommand={vi.fn()} onLarge={vi.fn()} />,
+    );
+    expect(screen.getByRole('button', { name: 'Large view' })).toBeDisabled();
+
+    // The field was switched off while its editor is open large: the way back stays.
+    rerender(<FormattingToolbar state={null} onCommand={vi.fn()} large onLarge={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Large view' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Bold' })).toBeDisabled();
+
+    // A toolbar that only keeps the editor's place has nothing to open.
+    rerender(<FormattingToolbar state={PLAIN} onCommand={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Large view' })).toBeDisabled();
   });
 
   it('nests and lifts a list item only where that can be done', async () => {

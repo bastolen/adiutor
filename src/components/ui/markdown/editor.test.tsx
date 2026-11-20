@@ -4,13 +4,39 @@
  * passed on. Typing in it needs a real browser, which the end-to-end tests
  * have.
  */
-import { render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import type { MarkdownEditorProps } from './editor';
 
 // Unit tests don't load the editor (`vitest.setup.ts`); this file is about it.
 const { default: MarkdownEditor } = await vi.importActual<typeof import('./editor')>('./editor');
+
+/**
+ * The rectangles of a range where nothing is laid out: none.
+ *
+ * @returns An empty list.
+ */
+function noRectangles(): DOMRectList {
+  return [] as unknown as DOMRectList;
+}
+
+/**
+ * The box of a range where nothing is laid out: one without a size.
+ *
+ * @returns The box.
+ */
+function noBox(): DOMRect {
+  return new DOMRect();
+}
+
+beforeAll(() => {
+  // The editor scrolls the cursor into view when it takes the focus, and asks where the cursor
+  // is for that. Nothing is laid out here, and a range can't be asked at all.
+  Range.prototype.getClientRects = noRectangles;
+  Range.prototype.getBoundingClientRect = noBox;
+});
 
 /**
  * Renders the editor with a label and a description next to it.
@@ -33,6 +59,7 @@ function renderEditor(props: Partial<MarkdownEditorProps> = {}) {
       <MarkdownEditor
         markdown=""
         onChange={onChange}
+        label="Your reply"
         labelledBy="label"
         describedBy="hint"
         rows={4}
@@ -123,6 +150,89 @@ describe('MarkdownEditor', () => {
 
     // Passing that on would overwrite the text with what a still empty editor holds.
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('opens large in a dialog named by the field’s label, with its toolbar and the same text', async () => {
+    const user = userEvent.setup();
+    renderEditor({ markdown: 'A **long** text.', below: <p role="status">Too long.</p> });
+    const inField = await screen.findByRole('textbox', { name: 'Your reply' });
+    expect(inField).toHaveTextContent('A long text.');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    // What the field says below itself isn't the editor's to show there.
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Large view' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Your reply' });
+    const large = within(dialog).getByRole('textbox', { name: 'Your reply' });
+    // It's the editor itself that's shown there, formatted as it was.
+    expect(large).toBe(inField);
+    expect(large.querySelector('strong')).toHaveTextContent('long');
+    expect(within(dialog).getByRole('toolbar', { name: 'Formatting' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Large view' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    // Its text fills the dialog and scrolls there, without an edge to drag.
+    expect(large.closest('.overflow-y-auto')).not.toHaveClass('resize-y');
+    // What the field says about the text shows below it.
+    expect(within(dialog).getByRole('status')).toHaveTextContent('Too long.');
+  });
+
+  it('comes back to the field from the large view, with the same button', async () => {
+    const user = userEvent.setup();
+    renderEditor({ markdown: 'Back again.' });
+    const inField = await screen.findByRole('textbox', { name: 'Your reply' });
+    await user.click(screen.getByRole('button', { name: 'Large view' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Your reply' });
+
+    await user.click(within(dialog).getByRole('button', { name: 'Large view' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    const back = screen.getByRole('textbox', { name: 'Your reply' });
+    expect(back).toBe(inField);
+    expect(back).toHaveTextContent('Back again.');
+    expect(back.closest('.resize-y')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Large view' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
+
+  it('leaves the large view with Escape and with the dialog’s close button', async () => {
+    const user = userEvent.setup();
+    renderEditor({ markdown: 'Still here.' });
+    await screen.findByRole('textbox', { name: 'Your reply' });
+
+    await user.click(screen.getByRole('button', { name: 'Large view' }));
+    await screen.findByRole('dialog', { name: 'Your reply' });
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: 'Large view' }));
+    await user.click(
+      within(await screen.findByRole('dialog', { name: 'Your reply' })).getByRole('button', {
+        name: 'Close',
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('textbox', { name: 'Your reply' })).toHaveTextContent('Still here.');
+  });
+
+  it('keeps the field’s toolbar in its place, switched off, while the editor is open large', async () => {
+    const user = userEvent.setup();
+    const { container } = renderEditor();
+    await screen.findByRole('textbox', { name: 'Your reply' });
+
+    await user.click(screen.getByRole('button', { name: 'Large view' }));
+    await screen.findByRole('dialog', { name: 'Your reply' });
+
+    // The page behind a dialog is hidden from assistive technology, so it's found by its element.
+    const kept = container.querySelector('[role="toolbar"]');
+    expect(kept).not.toBeNull();
+    kept?.querySelectorAll('button').forEach((button) => {
+      expect(button).toBeDisabled();
+    });
   });
 
   it('can be read but not changed while it’s switched off', async () => {

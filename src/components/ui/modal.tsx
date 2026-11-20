@@ -1,7 +1,8 @@
 /**
- * @file Modal dialog for short tasks (forms, setup steps), built on Radix
- * Dialog. Its content knows it's inside a dialog (`InsideDialog`), so an
- * error it shows inline raises no toast above the dialog.
+ * @file Modal dialog for short tasks (forms, setup steps), and, large, for
+ * something to write with room, built on Radix Dialog. Its content knows
+ * it's inside a dialog (`InsideDialog`), so an error it shows inline raises
+ * no toast above the dialog.
  */
 'use client';
 
@@ -10,8 +11,24 @@ import { useTranslations } from 'next-intl';
 import { Dialog } from 'radix-ui';
 import { type ReactNode, useRef } from 'react';
 
+import cn from '@/lib/cn';
+
 import Button from './button';
 import { InsideDialog } from './inside-dialog';
+
+/**
+ * Classes per size of the dialog's panel. `md` is as wide as a short form
+ * and as tall as its content, which scrolls when the window is lower. `large`
+ * is for something to write with room: as tall as the window allows and up
+ * to 60rem wide, with its content filling the height (the content scrolls
+ * what's too tall itself); on a narrow screen it's the whole screen, without
+ * a border or round corners.
+ */
+const sizeClasses = {
+  md: 'max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md gap-5 overflow-y-auto rounded-xl border p-6',
+  large:
+    'h-dvh w-full gap-4 p-4 sm:h-[calc(100dvh-4rem)] sm:w-[calc(100%-4rem)] sm:max-w-[60rem] sm:rounded-xl sm:border sm:p-6',
+} as const;
 
 /**
  * Props for {@link Modal}.
@@ -25,6 +42,19 @@ interface ModalProps {
   title: string;
   /** Short explanation below the title. */
   description?: ReactNode;
+  /** The panel's size. Defaults to `md`; `large` fills most of the window. */
+  size?: keyof typeof sizeClasses;
+  /**
+   * Takes the focus when the dialog opens, instead of the dialog's first
+   * control: for a dialog that's opened to go on with something, such as a
+   * text that's being written.
+   */
+  initialFocus?: () => void;
+  /**
+   * Takes the focus when the dialog closes, instead of what opened it: for
+   * when that isn't where it was any more.
+   */
+  finalFocus?: () => void;
   /** The dialog's content. */
   children: ReactNode;
 }
@@ -38,11 +68,18 @@ interface ModalProps {
  * first Escape, so one Escape always closes the dialog.
  * Use `ConfirmDialog` for yes/no questions instead.
  *
+ * A caller can say what gets the focus instead, when it opens
+ * (`initialFocus`) and when it closes (`finalFocus`); focus never stays
+ * behind on the page, or on nothing.
+ *
  * @param props - Dialog props.
  * @param props.open - Open state.
  * @param props.onOpenChange - Open state handler.
  * @param props.title - Title.
  * @param props.description - Explanation.
+ * @param props.size - The panel's size.
+ * @param props.initialFocus - What takes the focus when it opens.
+ * @param props.finalFocus - What takes the focus when it closes.
  * @param props.children - Content.
  * @returns The dialog.
  */
@@ -51,6 +88,9 @@ export default function Modal({
   onOpenChange,
   title,
   description = undefined,
+  size = 'md',
+  initialFocus = undefined,
+  finalFocus = undefined,
   children,
 }: ModalProps) {
   const t = useTranslations('common.actions');
@@ -62,16 +102,26 @@ export default function Modal({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-overlay backdrop-blur-[2px] data-[state=open]:animate-fade-in" />
         <Dialog.Content
-          onOpenAutoFocus={() => {
+          onOpenAutoFocus={(event) => {
             opener.current = document.activeElement as HTMLElement | null;
+            if (initialFocus) {
+              event.preventDefault();
+              initialFocus();
+            }
           }}
           onCloseAutoFocus={(event) => {
-            if (opener.current?.isConnected) {
+            if (finalFocus) {
+              event.preventDefault();
+              finalFocus();
+            } else if (opener.current?.isConnected) {
               event.preventDefault();
               opener.current.focus();
             }
           }}
-          className="fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col gap-5 overflow-y-auto rounded-xl border border-border bg-raised p-6 shadow-xl data-[state=open]:animate-pop-in"
+          className={cn(
+            'fixed top-1/2 left-1/2 z-50 flex -translate-x-1/2 -translate-y-1/2 flex-col border-border bg-raised shadow-xl data-[state=open]:animate-pop-in',
+            sizeClasses[size],
+          )}
         >
           <div className="flex items-start justify-between gap-4">
             <div className="flex flex-col gap-2">
