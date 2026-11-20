@@ -95,6 +95,7 @@ export type { AuthGuardContext } from './paths';
 export {
   endEmailCodeCooldown,
   countFailedSignIn,
+  sessionCodeChallenge,
   settlePasswordAttempt,
   settleStepUpAttempt,
 } from './attempts';

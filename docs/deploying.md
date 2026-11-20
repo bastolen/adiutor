@@ -206,7 +206,8 @@ What to set up on a server before sharing its address:
   (`getProviderMfaWarning`), and the Users list shows them as "Needs MFA".
 - **First run:** complete `/setup` (or run `pnpm setup:platform`) right after deploying. Until then
   the first visitor becomes the staff Admin (see [First run](companies-and-roles.md#first-run)).
-- **Email:** set `SMTP_URL` with TLS, since the emails carry sign-in links:
+- **Email:** set `SMTP_URL` (without it, every email fails, and the server logs a warning when it
+  starts). Use TLS, since the emails carry sign-in links:
   `smtps://user:password@smtp.adiutor.dev:465` (TLS from the start), or
   `smtp://user:password@smtp.adiutor.dev:587?requireTLS=true` (STARTTLS, required). A plain
   `smtp://` URL only uses STARTTLS when the server offers it, so someone on the network could strip

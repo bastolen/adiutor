@@ -76,8 +76,9 @@ the endpoint calls itself again after answering (`afterAnswer`, run with `after(
 doesn't wait for the next tick. The call goes to the app's own address (`BETTER_AUTH_URL`, never a
 host from the request) with the secret, the step in `x-adiutor-tick-continuation` and, on a
 protected Preview, `x-vercel-protection-bypass`. A continued call answers 202 at once and runs its
-tick afterwards, so no function waits on another. It stops after 10 steps in a row
-(`MAX_TICK_CONTINUATIONS`), or when only jobs waiting for a later attempt are left. A continuation
+tick afterwards, so no function waits on another. It stops after 16 steps in a row
+(`MAX_TICK_CONTINUATIONS`, nearly 7 minutes of extra work), or when only jobs waiting for a later
+attempt are left. A continuation
 that fails is logged, and the next tick takes over. `pnpm jobs:run` doesn't continue: it runs until
 the queue is empty or its time is up.
 
@@ -117,13 +118,14 @@ reference under **Logs → Errors**. The run in the history keeps the reference,
 job that failed. The server log gets the job and the reference, never the error's message, which can
 quote personal data.
 
-**The limits:** a tick starts new runs for 40 seconds from the endpoint and 4 minutes from the
-command line, and the recurring jobs get at most the first half of that, so the queue always has
-time. On Vercel the platform stops the endpoint's function after 60 seconds. The 40 follow from
-that (`REQUEST_RUN_SECONDS` in `tick.ts`): work started just before the deadline must still end and
-be recorded, and the longest such piece is one email, which fails after 15 seconds
-(`SEND_TIMEOUT_MS` in `src/lib/email-limits.ts`), plus 5 seconds to answer: 60 − 15 − 5 = 40. A lease
-lasts 15 minutes.
+**The limits:** a tick starts new runs for 25 seconds from the endpoint (and when a job is run
+from the Jobs page) and 4 minutes from the command line, and the recurring jobs get at most the
+first half of that, so the queue always has time. On Vercel the platform stops the endpoint's
+function after 60 seconds. The 25 follow from that (`REQUEST_RUN_SECONDS` in `tick.ts`): work
+started just before the deadline must still end and be recorded. The longest such piece is one
+email, which fails after 15 seconds (`SEND_TIMEOUT_MS` in `src/lib/email-limits.ts`); when that
+job fails for good, the staff Admins' alert follows (below), up to another 15; then 5 seconds to
+answer: 60 − 15 − 15 − 5 = 25. A lease lasts 15 minutes.
 
 **A run that never finishes** (say, the platform stopped it at 60 seconds) fails too. A recurring
 run always frees its lease when it ends, so a lease that ran out means its run died: the next tick
@@ -133,7 +135,8 @@ next scheduled moment. A queued job whose attempt died uses up that attempt.
 **The staff Admins are told** when a job keeps failing (`alerts.ts`): after a recurring job's third
 failed run in a row, or when queued jobs are given up. Each active staff Admin gets an email in their
 own language with the error's reference, at most once a day per job, sent straight away rather than
-through the queue. An alert that reached nobody (not one email could be sent, as when the mail
+through the queue, in time the tick keeps for it (see the limits above): an alert cut off mid-send
+would be lost and still count as the day's. An alert that reached nobody (not one email could be sent, as when the mail
 server is what's down) doesn't count as the day's alert: the next failure sends it.
 
 **When the ticks stop**, no job runs and none can tell anyone. So every tick notes when it started

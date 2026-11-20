@@ -17,6 +17,7 @@ import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Client } from 'pg';
 
 import * as schema from '../../src/db/schema';
+import type { AuditAction } from '../../src/lib/audit-actions';
 import type { CompanyRole } from '../../src/lib/authz/roles';
 import { firstRow } from '../../src/lib/defined';
 import type { Locale } from '../../src/lib/i18n/locales';
@@ -111,6 +112,42 @@ export async function findUserId(email: string): Promise<string> {
       throw new Error(`No user ${email}`);
     }
     return found.id;
+  });
+}
+
+/**
+ * Stores an audit log entry by one seeded user about another in a company,
+ * so the audit log and the user's page show the line that names who acted,
+ * whom it was about and the company (each a link).
+ *
+ * @param event - The entry.
+ * @param event.action - What happened.
+ * @param event.actorEmail - Who did it.
+ * @param event.targetEmail - Whom it was about.
+ * @param event.companyId - Which company it was about.
+ * @param event.details - What the entry's description reads from.
+ */
+export async function storeAuditEvent({
+  action,
+  actorEmail,
+  targetEmail,
+  companyId,
+  details,
+}: {
+  action: AuditAction;
+  actorEmail: string;
+  targetEmail: string;
+  companyId: string;
+  details: Record<string, unknown>;
+}): Promise<void> {
+  const [actorUserId, targetUserId] = await Promise.all([
+    findUserId(actorEmail),
+    findUserId(targetEmail),
+  ]);
+  await withTestDatabase(async (db) => {
+    await db
+      .insert(schema.auditEvent)
+      .values({ action, actorUserId, targetUserId, companyId, details });
   });
 }
 
@@ -332,6 +369,32 @@ export async function clearMfaRecommendationDismissal(email: string): Promise<vo
       .set({ mfaRecommendationDismissedAt: null })
       .where(eq(schema.user.email, email));
   });
+}
+
+/**
+ * Turns two-step verification off for a seeded account, as before a test
+ * turned it on: no email codes or authenticator (`two_factor` rows), no
+ * device it trusts, and none of its per-user limits counted. A test that
+ * turns it on calls this first, so a retry starts where the first attempt
+ * did.
+ *
+ * @param email - The user's address.
+ */
+export async function resetMfaOf(email: string): Promise<void> {
+  const userId = await findUserId(email);
+  await withTestDatabase(async (db) => {
+    await db.update(schema.user).set({ twoFactorEnabled: false }).where(eq(schema.user.id, userId));
+    await db.delete(schema.twoFactor).where(eq(schema.twoFactor.userId, userId));
+    await db
+      .delete(schema.verification)
+      .where(
+        and(
+          like(schema.verification.identifier, 'trust-device-%'),
+          eq(schema.verification.value, userId),
+        ),
+      );
+  });
+  await forgetLimitsOf(email);
 }
 
 /**

@@ -126,6 +126,9 @@ export interface SetupResult {
  * user). Without it, an existing email makes the insert fail like any other
  * clash, so it can never promote an account.
  *
+ * A new Admin's account is recorded in the audit log (`account_created`, by
+ * and about them, with its address and `setup: true`).
+ *
  * Two simultaneous setups can't both succeed: the database allows only one
  * settings row, and the losing request gets the same "already set up" error.
  *
@@ -223,6 +226,16 @@ export async function setUpPlatform(
           })
           .returning({ id: user.id }),
         'the first staff Admin',
+      );
+      await recordEvent(
+        ctx,
+        {
+          action: 'account_created',
+          actorUserId: userId,
+          targetUserId: userId,
+          details: { email, setup: true },
+        },
+        tx,
       );
       // The password was chosen just now, so this also lifts the pause from wrong ones typed for
       // the address before.

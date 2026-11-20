@@ -7,7 +7,7 @@
  * the recommendation for everyone else.
  */
 
-import { clearMfaRecommendationDismissal, storeSignInLink } from './support/db';
+import { clearMfaRecommendationDismissal, resetMfaOf, storeSignInLink } from './support/db';
 import {
   CLIENT_WATCHER,
   CLOSED_COMPANY_ADMIN,
@@ -81,6 +81,8 @@ test("a company's Admin must set up MFA, but not while the company is deactivate
 test('a company user turns on email codes and can trust the device until signing out', async ({
   page,
 }) => {
+  // The test turns email codes on: a retry starts again from an account without them.
+  await resetMfaOf(MFA_CLIENT.email);
   await signIn(page, MFA_CLIENT);
   await page.goto('/account/security');
 

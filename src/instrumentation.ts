@@ -5,7 +5,8 @@
  * own logging of errors that pages, route handlers and server actions
  * throw, and in development it warns when the database is missing
  * migrations from `drizzle/` (`src/server/migration-check.ts`) and runs the
- * background jobs' tick every minute (`startDevTick`);
+ * background jobs' tick every minute (`startDevTick`), and in production it
+ * warns when the server can't send email (`src/server/email-check.ts`);
  * `onRequestError` records each of those errors in `app_error`
  * (`src/server/request-errors.ts`), under the reference the error page shows.
  */
@@ -14,10 +15,11 @@ import type { Instrumentation } from 'next';
 /**
  * Sets up the server process before it handles requests: makes its logs
  * drop database values and, in development, starts checking the database
- * for pending migrations and ticking the background jobs. Neither is
- * awaited, since Next waits for `register` before serving requests and a
- * slow or unreachable database must not hold that up; each logs what it
- * finds and never fails startup.
+ * for pending migrations and ticking the background jobs, or, in
+ * production, checks that it can send email. None of those is awaited,
+ * since Next waits for `register` before serving requests and a slow or
+ * unreachable database must not hold that up; each logs what it finds and
+ * never fails startup.
  *
  * @returns Nothing, once it's set up.
  */
@@ -39,6 +41,15 @@ export async function register(): Promise<void> {
         .then(({ startDevTick }) => startDevTick())
         .catch(() => {
           // startDevTick logs a failed tick itself; nothing here may affect startup.
+        });
+    }
+    // eslint-disable-next-line no-restricted-properties -- Next.js sets NODE_ENV and replaces it at build time, before anything here imports `env`.
+    if (process.env.NODE_ENV === 'production') {
+      // Without a mail server every email fails when it's sent; the log says so from the start.
+      void import('./server/email-check')
+        .then(({ warnIfEmailCantBeSent }) => warnIfEmailCantBeSent())
+        .catch(() => {
+          // A warning only: nothing here may affect startup.
         });
     }
   }

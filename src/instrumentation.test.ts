@@ -1,7 +1,8 @@
 /**
  * @file Tests for the server's instrumentation hooks: `register` makes the
  * Node.js server's logs drop database values and, in development only,
- * starts the pending-migrations check without waiting for it, and
+ * starts the pending-migrations check without waiting for it (in production,
+ * the check that it can send email), and
  * `onRequestError` records the errors the server reports without ever
  * throwing. Both leave other runtimes alone.
  */
@@ -13,11 +14,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { defined } from '@/lib/defined';
 
+import { warnIfEmailCantBeSent } from './server/email-check';
 import { checkMigrations } from './server/migration-check';
 import recordRequestError from './server/request-errors';
 
 vi.mock('./server/request-errors', () => ({ default: vi.fn() }));
 vi.mock('./server/migration-check', () => ({ checkMigrations: vi.fn() }));
+vi.mock('./server/email-check', () => ({ warnIfEmailCantBeSent: vi.fn() }));
 
 /**
  * Builds Drizzle's error for a failed query that was sent an email address.
@@ -51,6 +54,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.mocked(recordRequestError).mockReset();
   vi.mocked(checkMigrations).mockReset();
+  vi.mocked(warnIfEmailCantBeSent).mockReset();
 });
 
 describe('register', () => {
@@ -80,6 +84,58 @@ describe('register', () => {
     console.warn(error);
 
     expect(defined(logged.mock.calls[0], 'the first call')[0]).toBe(error);
+  });
+});
+
+describe('register: sending email', () => {
+  it('checks that a production server can send email when it starts', async () => {
+    vi.stubEnv('NEXT_RUNTIME', 'nodejs');
+    vi.stubEnv('NODE_ENV', 'production');
+    const { register } = await import('./instrumentation');
+
+    await register();
+    await vi.dynamicImportSettled();
+
+    expect(warnIfEmailCantBeSent).toHaveBeenCalledOnce();
+  });
+
+  it('never fails startup, even when the check itself fails', async () => {
+    vi.stubEnv('NEXT_RUNTIME', 'nodejs');
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.mocked(warnIfEmailCantBeSent).mockImplementation(() => {
+      throw new Error('Invalid environment variables');
+    });
+    const { register } = await import('./instrumentation');
+
+    await expect(register()).resolves.toBeUndefined();
+    await vi.dynamicImportSettled();
+
+    expect(warnIfEmailCantBeSent).toHaveBeenCalledOnce();
+  });
+
+  it.each(['development', 'test'])(
+    "doesn't check outside production (%s), which prints emails",
+    async (nodeEnv) => {
+      vi.stubEnv('NEXT_RUNTIME', 'nodejs');
+      vi.stubEnv('NODE_ENV', nodeEnv);
+      const { register } = await import('./instrumentation');
+
+      await register();
+      await vi.dynamicImportSettled();
+
+      expect(warnIfEmailCantBeSent).not.toHaveBeenCalled();
+    },
+  );
+
+  it("doesn't check on the edge runtime", async () => {
+    vi.stubEnv('NEXT_RUNTIME', 'edge');
+    vi.stubEnv('NODE_ENV', 'production');
+    const { register } = await import('./instrumentation');
+
+    await register();
+    await vi.dynamicImportSettled();
+
+    expect(warnIfEmailCantBeSent).not.toHaveBeenCalled();
   });
 });
 

@@ -117,7 +117,7 @@ describe('changing sign-in methods', () => {
     await expect(beforeAuthRequest(sendCode)).rejects.toEqual(
       refusedWith('EMAIL_CODE_SENT_RECENTLY'),
     );
-    await sendCodesOverTime(6, sendCode, newcomer);
+    await sendCodesOverTime(6, sendCode);
     expect(await hits(`email-code:user:${newcomer}`)).toBeNull();
   });
 });

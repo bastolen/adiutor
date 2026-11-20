@@ -12,7 +12,8 @@ import { answerTickRequest, TICK_CONTINUATION_HEADER } from '@/server/jobs';
 
 /**
  * How long the platform lets a tick run, in seconds; the tick itself stops
- * starting runs after 40, which is worked out from this limit
+ * starting runs after 25, which is worked out from this limit, leaving room
+ * for a last email and the alert of a job that failed
  * (`REQUEST_RUN_SECONDS` in `src/server/jobs/tick.ts`).
  */
 export const maxDuration = 60;

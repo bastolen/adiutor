@@ -3,8 +3,9 @@
  * a lease keeps two runs of a job apart, failures are counted without
  * stopping the others, the recurring jobs get at most half of the tick so
  * the queue always has time, the deadline leaves the rest for the next
- * tick, a run that did nothing stays out of the history, and a run whose
- * lease ran out is recorded as failed, once.
+ * tick, a run that did nothing stays out of the history, a run whose
+ * lease ran out is recorded as failed, once, and a tick in a request keeps
+ * time for a last email and an alert after its deadline.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -13,12 +14,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
 import { appError, jobRun, jobState, queuedJob } from '@/db/schema';
+import { SEND_TIMEOUT_MS } from '@/lib/email-limits';
 
 import { later, setupTestContext } from '../../../tests/integration/helpers';
 import { defineQueuedKind, queueJob } from '../queue';
 import { defineRecurringJob, handleQueuedJob } from './define';
 import { history, hourlyJob } from './test-helpers';
-import { runTick } from './tick';
+import { PLATFORM_LIMIT_SECONDS, REQUEST_RUN_SECONDS, runTick, WRAP_UP_SECONDS } from './tick';
 
 const { ctx, db } = setupTestContext();
 
@@ -469,5 +471,18 @@ describe('runs that never finished', () => {
 
     expect(result.runs).toEqual([]);
     expect(await history(db, job.name)).toEqual([]);
+  });
+});
+
+describe('the time a tick in a request keeps starting work', () => {
+  it('leaves room, after work started at the deadline, for its last email, an alert and answering', () => {
+    const lastEmail = SEND_TIMEOUT_MS / 1000;
+    // A job that fails for good on that email: the staff Admins' alert, emails sent together.
+    const alert = SEND_TIMEOUT_MS / 1000;
+
+    expect(REQUEST_RUN_SECONDS + lastEmail + alert + WRAP_UP_SECONDS).toBeLessThanOrEqual(
+      PLATFORM_LIMIT_SECONDS,
+    );
+    expect(REQUEST_RUN_SECONDS).toBe(25);
   });
 });
