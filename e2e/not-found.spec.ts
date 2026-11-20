@@ -161,12 +161,13 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
 
     await eachInTurn(
       [
-        // The paging company's, the deactivated company's, and numbers no request has.
+        // The paging company's, the deactivated company's, numbers no request has, and a number
+        // with another prefix than the current one (with "AD" it redirects to the number).
         `/requests/${FIRST_PAGED_REQUEST_NUMBER}`,
         `/requests/${SEEDED_REQUESTS.closedCompany.number}`,
         '/requests/999999',
         '/requests/0',
-        '/requests/AD-1',
+        '/requests/XY-1',
       ],
       async (path) => {
         await expectNotFound(page, path);

@@ -51,6 +51,7 @@ export {
   DEFAULT_REQUEST_PREFIX,
   formatRequestNumber,
   parseRequestNumber,
+  parseRequestReference,
   REQUEST_PREFIX_PATTERN,
   requestNumberStartInSearch,
   requestPath,

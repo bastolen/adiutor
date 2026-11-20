@@ -106,7 +106,12 @@ the closed statuses.
 - Numbers are shown with a **prefix** the staff Admins choose on the Staff page (`AD` by default:
   `AD-142`; one to five letters or digits, starting with a letter, saved in capitals;
   `staff_settings.request_prefix`).
-- A request's address is `/requests/142`, without the prefix, so it doesn't change with it.
+- A request's address is `/requests/142`, without the prefix, so it doesn't change with it. The
+  number as people see it, `/requests/AD-142`, redirects there, and so do the short links
+  `/r/142` and `/r/AD-142`. Only the current prefix counts, in any case (`ad-142`): another prefix,
+  or anything that isn't a request number, gives the 404 page (`parseRequestReference`,
+  `findRequestNumber`). A redirect goes to the number whether or not the request exists or the
+  reader may see it, so it reveals nothing: the request's page decides that.
 - Searching by number ignores the prefix: "AD-142", "ad-142", an older prefix and "142" all find
   request 142. A number finds every request whose number starts with the digits typed ("AD-1"
   finds 1, 10 to 19, 100 and up), so it narrows the list as it's typed, like a title does
@@ -240,7 +245,7 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
 - `src/db/schema/requests.ts`: `request`, `request_entry` (the conversation and the history in one
   table, ordered by ID) and `request_counter`.
 - `src/server/requests/` (a folder module): `listRequestCompanies`, `listRequests`, `findRequest`,
-  `getRequest`, `raiseRequest`, `replyToRequest`, `changeRequestStatus`, `updateRequestDetails`.
+  `findRequestNumber`, `getRequest`, `raiseRequest`, `replyToRequest`, `changeRequestStatus`, `updateRequestDetails`.
   Every change refuses someone signed in as a user, checks the permission and that the company is
   active, validates, takes a rate limit (see [Rate limits](security-measures.md#rate-limits)), then
   runs in a transaction that starts with `assertStillMayChange` (`assertStillManages`, then the company) and locks the request's row (see

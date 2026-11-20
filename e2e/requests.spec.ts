@@ -236,6 +236,17 @@ test('a changed prefix shows on every number, and the old one still finds a requ
     const found = requestRows(page).filter({ hasText: SEEDED_REQUESTS.waiting.title });
     await expect(found).toHaveCount(1);
 
+    // A short link counts the current prefix only: the old one names no request any more.
+    await page.goto(`/r/HELP-${SEEDED_REQUESTS.waiting.number}`);
+    await expect(page).toHaveURL(`/requests/${SEEDED_REQUESTS.waiting.number}`);
+    await page.goto(`/r/AD-${SEEDED_REQUESTS.waiting.number}`);
+    await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
+    await page.goto('/requests?status=all');
+    await page
+      .getByRole('searchbox', { name: 'Search requests' })
+      .fill(`AD-${SEEDED_REQUESTS.waiting.number}`);
+    await page.getByRole('button', { name: 'Search' }).click();
+
     // The request's address has no prefix, so it stays; its page and title show the new one.
     await found.getByRole('link').click();
     await expect(page).toHaveURL(`/requests/${SEEDED_REQUESTS.waiting.number}`);
@@ -256,6 +267,33 @@ test('a changed prefix shows on every number, and the old one still finds a requ
   }
   await page.reload();
   await expect(page).toHaveTitle(`Request AD-${SEEDED_REQUESTS.waiting.number} · Adiutor`);
+});
+
+test('the number as people see it, and the short links, open the request', async ({ page }) => {
+  await signIn(page, REQUESTS_CLIENT);
+  const { number, title } = SEEDED_REQUESTS.waiting;
+
+  for (const address of [
+    `/requests/AD-${number}`,
+    `/requests/ad-${number}`,
+    `/r/AD-${number}`,
+    `/r/${number}`,
+  ]) {
+    // eslint-disable-next-line no-await-in-loop -- One address after another, in one browser.
+    await page.goto(address);
+    // eslint-disable-next-line no-await-in-loop -- Checked for each address.
+    await expect(page).toHaveURL(`/requests/${number}`);
+    // eslint-disable-next-line no-await-in-loop -- Checked for each address.
+    await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+  }
+
+  // Another prefix, or anything that isn't a request number, names no request.
+  for (const address of [`/r/XY-${number}`, '/r/abc', `/requests/XY-${number}`]) {
+    // eslint-disable-next-line no-await-in-loop -- One address after another, in one browser.
+    await page.goto(address);
+    // eslint-disable-next-line no-await-in-loop -- Checked for each address.
+    await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
+  }
 });
 
 test('someone at a company sees its requests only, without priorities', async ({ page }) => {

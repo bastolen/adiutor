@@ -19,7 +19,7 @@ import {
   staffActor,
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
-import { findRequest, getRequest, THREAD_CHUNK } from './detail';
+import { findRequest, findRequestNumber, getRequest, THREAD_CHUNK } from './detail';
 import { ctx, db, storeEntry, storeRequest } from './test-helpers';
 
 describe('getRequest', () => {
@@ -372,6 +372,24 @@ describe('getRequest: when things happened', () => {
 
     expect(detail.firstResponseAt).toBeNull();
     expect(detail.lastActivityAt).toEqual(stored.lastActivityAt);
+  });
+});
+
+describe('findRequestNumber', () => {
+  it('reads the number, or the number after the prefix the staff chose, and nothing else', async () => {
+    await createStaffSettings(db);
+    await db.update(staffSettings).set({ requestPrefix: 'HELP' });
+
+    expect(await findRequestNumber(ctx, '12')).toBe(12);
+    expect(await findRequestNumber(ctx, 'HELP-12')).toBe(12);
+    expect(await findRequestNumber(ctx, 'help-12')).toBe(12);
+    // The prefix before the change no longer counts.
+    expect(await findRequestNumber(ctx, 'AD-12')).toBeNull();
+    expect(await findRequestNumber(ctx, 'abc')).toBeNull();
+  });
+
+  it('reads "AD" before Adiutor is set up', async () => {
+    expect(await findRequestNumber(ctx, 'AD-3')).toBe(3);
   });
 });
 

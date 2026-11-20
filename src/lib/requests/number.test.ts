@@ -7,6 +7,7 @@ import {
   DEFAULT_REQUEST_PREFIX,
   formatRequestNumber,
   parseRequestNumber,
+  parseRequestReference,
   REQUEST_PREFIX_PATTERN,
   requestNumberStartInSearch,
   requestPath,
@@ -16,6 +17,36 @@ describe('formatRequestNumber', () => {
   it('writes the number after the prefix', () => {
     expect(formatRequestNumber(DEFAULT_REQUEST_PREFIX, 142)).toBe('AD-142');
     expect(formatRequestNumber('HELP', 7)).toBe('HELP-7');
+  });
+});
+
+describe('parseRequestReference', () => {
+  it.each([
+    ['142', 142],
+    ['AD-142', 142],
+    ['ad-142', 142],
+    ['Ad-9', 9],
+  ])('reads %j with the prefix AD', (segment, number) => {
+    expect(parseRequestReference(segment, 'AD')).toBe(number);
+  });
+
+  it.each([
+    'XY-142',
+    'AD-042',
+    'AD-',
+    '-142',
+    'AD142',
+    'AD 142',
+    '142a',
+    'AD-1234567890',
+    'AD-1-2',
+  ])('names no request with %j', (segment) => {
+    expect(parseRequestReference(segment, 'AD')).toBeNull();
+  });
+
+  it('counts only the prefix it is given: an earlier one names no request', () => {
+    expect(parseRequestReference('HELP-7', 'HELP')).toBe(7);
+    expect(parseRequestReference('AD-7', 'HELP')).toBeNull();
   });
 });
 
