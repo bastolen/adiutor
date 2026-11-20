@@ -62,6 +62,18 @@ describe('parseEnv', () => {
     );
   });
 
+  it('reads the end-to-end tests’ port as a number, when a checkout sets one', () => {
+    expect(parseEnv({ ...validEnv, E2E_PORT: '3105' }).E2E_PORT).toBe(3105);
+    expect(parseEnv({ ...validEnv, E2E_PORT: '' }).E2E_PORT).toBeUndefined();
+    expect(parseEnv(validEnv).E2E_PORT).toBeUndefined();
+  });
+
+  it('rejects an end-to-end port that no server may be given', () => {
+    ['80', '70000', '3100.5', 'three thousand'].forEach((E2E_PORT) => {
+      expect(() => parseEnv({ ...validEnv, E2E_PORT }), E2E_PORT).toThrow(/at E2E_PORT/);
+    });
+  });
+
   it('refuses an email outbox in production, except for the end-to-end tests', () => {
     const production = { ...validEnv, NODE_ENV: 'production', EMAIL_OUTBOX_DIR: '/tmp/outbox' };
     expect(() => parseEnv(production)).toThrow(/EMAIL_OUTBOX_DIR/);

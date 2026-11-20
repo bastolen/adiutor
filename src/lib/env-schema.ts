@@ -146,6 +146,15 @@ const envSchema = z
     /** PostgreSQL connection string for the integration and end-to-end test database. */
     DATABASE_URL_TEST: z.preprocess(emptyToUndefined, z.url().optional()),
     /**
+     * The port the end-to-end tests start their server on, for a checkout
+     * that runs them next to another one; 3100 when it isn't set. The app
+     * itself never reads it (`e2e/support/fixtures.ts` does).
+     */
+    E2E_PORT: z.preprocess(
+      emptyToUndefined,
+      z.coerce.number().int().min(1024).max(65535).optional(),
+    ),
+    /**
      * Request headers to read the client's IP address from, in order, e.g.
      * `x-real-ip` behind nginx or `cf-connecting-ip` behind Cloudflare. Used
      * for rate limits, the audit log and security emails. Defaults to

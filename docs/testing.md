@@ -68,7 +68,7 @@ configurations in VS Code, which turn the time limit off (see
   stores a queued job directly (`storeQueuedJob`), gives a context whose mail server is down
   (`mailDown`) and a deadline no test reaches (`later`): use them rather than a copy.
 - **End-to-end tests** use [Playwright](https://playwright.dev), in `e2e/` (`playwright.config.ts`).
-  They build and start their own server on port 3100 against the seeded test database, and read
+  They build and start their own server on port 3100 (or the port `E2E_PORT` names) against the seeded test database, and read
   emails from `e2e/.outbox`; your dev server and database aren't touched. Before reading, the email
   helpers (`e2e/support/outbox.ts`) start the [background jobs](jobs.md)' tick on that server
   (`/api/jobs`, with the test `CRON_SECRET`), so emails waiting in the queue go out first. They include the
@@ -81,6 +81,13 @@ configurations in VS Code, which turn the time limit off (see
     (`tests/build/build-state.ts`), so rerunning a spec after editing only specs starts at once;
     `E2E_REBUILD=1 pnpm test:e2e` builds anyway (e.g. after an edit saved while a build was
     running).
+  - **Two checkouts at once:** the tests' server takes one port and empties one database, so a
+    second checkout of the repository (a colleague's, or a git worktree) gives itself its own of
+    both, in its `.env` or on the command line: `E2E_PORT` (a whole number from 1024 to 65535;
+    3100 when it isn't set) and `DATABASE_URL_TEST` (a database whose name ends in `_test`). The
+    tests' addresses and the email helper follow the port (`E2E_BASE_URL` in
+    `e2e/support/fixtures.ts`), and a build isn't tied to it, so it's still reused. Playwright
+    never uses a server that's already listening on the port: it stops and says so.
   - **Isolation:** every test gets its own client address (`X-Forwarded-For`, set in
     `e2e/support/test.ts`), so Better Auth's per-IP limits (3 sign-ins per 10 seconds, sign-in
     links, codes) don't carry over between tests; a test that signs in more often than that gives

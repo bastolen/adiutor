@@ -1,7 +1,8 @@
 /**
  * @file Playwright configuration for end-to-end tests in `e2e/`.
  *
- * The tests run against their own server on port 3100, using the test
+ * The tests run against their own server on port 3100 (or the port
+ * `E2E_PORT` names, see `e2e/support/fixtures.ts`), using the test
  * database (prepared and seeded by `e2e/support/global-setup.ts`) and writing emails
  * to `e2e/.outbox` instead of sending them. Locally the app is built first,
  * unless nothing the build reads changed since the last one
