@@ -27,6 +27,8 @@
     "test:watch": "vitest --project unit",
     "test:integration": "vitest run --project integration",
     "test:e2e": "playwright test",
+    "check:schema": "pnpm auth:schema && git diff --exit-code src/db/schema/auth.ts && pnpm db:generate && git status --porcelain drizzle/ && test -z \"$(git status --porcelain drizzle/)\"",
+    "ci:local": "pnpm check:schema && pnpm audit --prod && pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm test:integration && pnpm test:e2e",
     "services:up": "docker compose up -d --wait",
     "services:down": "docker compose down",
     "db:generate": "drizzle-kit generate",

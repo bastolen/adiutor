@@ -20,6 +20,12 @@ which the PR title check uses too): pnpm, Node from `.nvmrc` with pnpm's store c
 | End-to-end tests (1/2), (2/2) | a production build, then half the specs each (`pnpm test:e2e --shard=1/2`), with a report per shard | PostgreSQL |
 | CI passed                     | fails when any other job failed or was cancelled, and records a run where every test passed         | none       |
 
+**Locally:** `pnpm ci:local` runs every job's checks one after another, in this order, and stops at
+the first failure: `pnpm check:schema` (the schema checks below), `pnpm audit --prod`, lint, format
+check, type-check, and the unit, integration and end-to-end tests. Run it on a committed tree with
+`pnpm services:up` running; it takes about 25 to 30 minutes. Only the PR title check stays on
+GitHub. When a job in `ci.yml` changes, change the script in `package.json` too.
+
 **CI passed** is the one check protecting `main` requires (see [Protecting main](#protecting-main)),
 so jobs and shards can change without touching the rules. Each job has its own time limit (15 to 30
 minutes), so a hung step can't hold a runner for GitHub's default of 6 hours.

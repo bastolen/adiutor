@@ -106,6 +106,7 @@ pnpm test:integration                   # service tests against the test databas
 pnpm exec playwright install chromium   # once, for the end-to-end tests
 pnpm test:e2e                           # end-to-end tests
 pnpm lint && pnpm format:check && pnpm typecheck
+pnpm ci:local                           # everything CI checks, in one go
 ```
 
 The integration and end-to-end tests need `pnpm services:up` running. See [Testing](docs/testing.md).
