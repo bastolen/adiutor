@@ -133,6 +133,7 @@ import { findErrorReference, listRecentErrors } from './recorded-errors';
 import {
   changeAssignees,
   changeRequestStatus,
+  changeSubscribers,
   countAssignedRequests,
   findRequest,
   getRequest,
@@ -140,8 +141,11 @@ import {
   listMentionable,
   listRequestCompanies,
   listRequests,
+  listSubscribable,
   raiseRequest,
   replyToRequest,
+  subscribe,
+  unsubscribe,
   updateRequestDetails,
 } from './requests';
 
@@ -640,6 +644,39 @@ function listOperations(): Operation[] {
       (w) => listMentionable(ctx, w.actor, { company: w.other.id }),
     ],
     ['count own assigned requests', (w) => countAssignedRequests(ctx, w.actor)],
+    ['subscribe to request (own)', (w) => subscribe(ctx, w.actor, { request: w.requests.own })],
+    ['subscribe to request (other)', (w) => subscribe(ctx, w.actor, { request: w.requests.other })],
+    [
+      'unsubscribe from request (own)',
+      (w) => unsubscribe(ctx, w.actor, { request: w.requests.own }),
+    ],
+    [
+      'unsubscribe from request (other)',
+      (w) => unsubscribe(ctx, w.actor, { request: w.requests.other }),
+    ],
+    // The actor subscribes themselves, through what changes anyone's subscription.
+    [
+      'change request subscribers (own)',
+      (w) =>
+        changeSubscribers(ctx, w.actor, { request: w.requests.own, add: [w.actor.id], remove: [] }),
+    ],
+    [
+      'change request subscribers (other)',
+      (w) =>
+        changeSubscribers(ctx, w.actor, {
+          request: w.requests.other,
+          add: [w.actor.id],
+          remove: [],
+        }),
+    ],
+    [
+      'list who can be subscribed to a request (own)',
+      (w) => listSubscribable(ctx, w.actor, w.requests.own),
+    ],
+    [
+      'list who can be subscribed to a request (other)',
+      (w) => listSubscribable(ctx, w.actor, w.requests.other),
+    ],
     [
       'deactivate own account',
       async (w) => {
@@ -697,6 +734,8 @@ const READS: ReadonlySet<string> = new Set([
   'list who can be mentioned in a new request (own)',
   'list who can be mentioned in a new request (other)',
   'count own assigned requests',
+  'list who can be subscribed to a request (own)',
+  'list who can be subscribed to a request (other)',
 ]);
 
 /** What a user may still change while a staff member is signed in as them: their own work. */
@@ -872,6 +911,17 @@ const EXPECTED: Record<string, string> = {
   'list who can be mentioned in a new request (other)': 'NNNAFAA',
   // Everyone counts what's assigned to them (the dashboard): nothing, for whoever can't be.
   'count own assigned requests': 'AAAAAAA',
+  // Everyone who reads a request follows it if they like, also who can't reply to it.
+  'subscribe to request (own)': 'AAAAAAA',
+  'subscribe to request (other)': 'NNNAAAA',
+  'unsubscribe from request (own)': 'AAAAAAA',
+  'unsubscribe from request (other)': 'NNNAAAA',
+  // Other people's subscriptions are for the staff who work on requests, and for a company's
+  // Admins among their colleagues; so is the list of who can be subscribed.
+  'change request subscribers (own)': 'FFAAFAA',
+  'change request subscribers (other)': 'NNNAFAA',
+  'list who can be subscribed to a request (own)': 'FFAAFAA',
+  'list who can be subscribed to a request (other)': 'NNNAFAA',
   // Everyone may deactivate their own account (each world has other Admins).
   'deactivate own account': 'AAAAAAA',
 };

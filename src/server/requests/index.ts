@@ -38,4 +38,13 @@ export {
 } from './assignees';
 export type { AssignableStaffMember } from './assignees';
 export { listMentionable } from './mentions';
+export {
+  changeSubscribers,
+  listSubscribable,
+  MAX_SUBSCRIBER_CHANGES,
+  subscribe,
+  unsubscribe,
+  unsubscribeFrom,
+} from './subscribers';
+export type { SubscribablePerson } from './subscribers';
 export type { MentionablePerson } from './mentions';

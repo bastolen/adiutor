@@ -23,6 +23,7 @@ import { companyDeactivatedError } from '../errors';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
 import { assertStillMayChange } from './change';
 import { storeMentions } from './mentions';
+import { subscribeAutomatically } from './subscribers';
 
 /**
  * Takes the next request number: one more than the last, in the raising
@@ -127,6 +128,8 @@ export default async function raiseRequest(
         .returning({ id: request.id, number: request.number }),
       'the new request',
     );
+    // Whoever raises a request follows it, and so do the people its description mentions.
+    await subscribeAutomatically(tx, raised.id, [actor.id]);
     // The people the description mentions, once the request it belongs to is there.
     await storeMentions(tx, actor, {
       companyId: company.id,

@@ -20,6 +20,7 @@ export {
   isRequestStatusFilter,
   isRequestType,
   REQUEST_ENTRY_KINDS,
+  REQUEST_PARTICIPANT_ROLES,
   REQUEST_PRIORITIES,
   REQUEST_SIDES,
   REQUEST_STATUS_FILTERS,
@@ -33,6 +34,7 @@ export {
 export type {
   AssignmentChange,
   RequestEntryKind,
+  RequestParticipantRole,
   RequestPriority,
   RequestSide,
   RequestStatus,
@@ -49,8 +51,9 @@ export {
   requestSide,
   statusAfterReply,
   statusChoices,
+  subscriberScope,
 } from './rules';
-export type { RequestAudience } from './rules';
+export type { RequestAudience, SubscriberScope } from './rules';
 export {
   DEFAULT_REQUEST_PREFIX,
   formatRequestNumber,

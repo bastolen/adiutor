@@ -14,6 +14,7 @@ import {
   getStaffPermissionsInCompanies,
   type Permission,
 } from '@/lib/authz/permissions';
+import { PLATFORM_ROLES } from '@/lib/authz/roles';
 import { visibleName } from '@/lib/display-name';
 import {
   parseRequestNumber,
@@ -29,6 +30,14 @@ import { notFoundError } from '../errors';
 
 /** A request row. */
 export type RequestRow = typeof request.$inferSelect;
+
+/**
+ * The staff roles whose members read every company's requests: who a
+ * mention can reach, and who can be subscribed to a request, from the staff.
+ */
+export const READING_STAFF_ROLES = PLATFORM_ROLES.filter((platformRole) =>
+  getStaffPermissionsInCompanies({ platformRole }).has('requests:view'),
+);
 
 /** Which requests someone sees across companies, and how much of them. */
 export interface RequestScope {

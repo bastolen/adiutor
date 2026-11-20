@@ -23,13 +23,12 @@ import type { Database, DatabaseTransaction } from '@/db';
 import {
   membership,
   request,
-  requestAssignee,
+  requestParticipant,
   requestEntry,
   requestMention,
   user,
 } from '@/db/schema';
 import { getStaffPermissionsInCompanies } from '@/lib/authz/permissions';
-import { PLATFORM_ROLES } from '@/lib/authz/roles';
 import { visibleName } from '@/lib/display-name';
 import { env } from '@/lib/env';
 import {
@@ -43,12 +42,8 @@ import {
 import { assertPermission, getCompanyAccess } from '../access';
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
-import { getRequestAccess } from './access';
-
-/** The staff roles whose members read requests, so a mention can reach them. */
-const READING_STAFF_ROLES = PLATFORM_ROLES.filter((platformRole) =>
-  getStaffPermissionsInCompanies({ platformRole }).has('requests:view'),
-);
+import { getRequestAccess, READING_STAFF_ROLES } from './access';
+import { subscribeAutomatically } from './subscribers';
 
 /** Someone who can be mentioned, as the list at "@" shows them. */
 export interface MentionablePerson {
@@ -171,9 +166,14 @@ async function mentionable(
             inArray(
               user.id,
               db
-                .select({ id: requestAssignee.userId })
-                .from(requestAssignee)
-                .where(eq(requestAssignee.requestId, place.requestId)),
+                .select({ id: requestParticipant.userId })
+                .from(requestParticipant)
+                .where(
+                  and(
+                    eq(requestParticipant.requestId, place.requestId),
+                    eq(requestParticipant.role, 'assignee'),
+                  ),
+                ),
             ),
             inArray(
               user.id,
@@ -260,6 +260,8 @@ export async function listMentionable(
  * markers at those rows. Called in the transaction that stored the text,
  * right after it: the text's row comes first, since a mention belongs to it.
  *
+ * Whoever is mentioned is subscribed to the request (`subscribeAutomatically`).
+ *
  * Only the markers of people the writer may mention there count, and the
  * first {@link MAX_MENTIONS_PER_TEXT} people of those; every other marker
  * stays in the text as it was written, where it shows as its link's text. A
@@ -301,6 +303,12 @@ export async function storeMentions(
     rows.flatMap((row) =>
       row.userId === null ? [] : [[mentionKey(companyId, row.userId), row.id] as const],
     ),
+  );
+  // Someone who is mentioned follows the request from then on.
+  await subscribeAutomatically(
+    tx,
+    requestId,
+    mentioned.map(({ id }) => id),
   );
   const stored = storeWrittenMentions(written, (key) => rowOf.get(key) ?? null);
   if (entryId === null) {

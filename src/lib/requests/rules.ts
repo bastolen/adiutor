@@ -151,3 +151,27 @@ export function statusAfterReply(side: RequestSide, status: RequestStatus): Requ
 export function mayBeAssigned(permissions: ReadonlySet<Permission>): boolean {
   return permissions.has('requests:manage');
 }
+
+/**
+ * Whose subscriptions to a request someone may change: everyone's who can
+ * be subscribed to it, their colleagues' at the request's company, or only
+ * their own.
+ */
+export type SubscriberScope = 'everyone' | 'colleagues' | 'self';
+
+/**
+ * Whose subscriptions someone may change, besides their own. The staff who
+ * work on requests subscribe and unsubscribe anyone who can be subscribed:
+ * the request's company and the staff. A company's Admins, who manage its
+ * members, do so for their colleagues, and never learn which staff members
+ * follow a request. Everyone else changes only their own.
+ *
+ * @param permissions - Their permissions in the request's company.
+ * @returns The scope.
+ */
+export function subscriberScope(permissions: ReadonlySet<Permission>): SubscriberScope {
+  if (permissions.has('requests:manage')) {
+    return 'everyone';
+  }
+  return permissions.has('members:manage') ? 'colleagues' : 'self';
+}

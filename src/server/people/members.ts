@@ -38,6 +38,7 @@ import {
 import { paginate, peopleOrder } from '../pagination';
 import { addedToCompanyJob, queueJob } from '../queue';
 import { assertInviteSenderLimit, assertRoleChangeLimit } from '../rate-limit';
+import { unsubscribeFrom } from '../requests';
 import { revokeInvitationsTo, revokeInvitesWithoutManager } from './invitations';
 import { loadPictures } from './pictures';
 
@@ -304,6 +305,9 @@ async function changeMembership(
         // higher role. After the links above: invite links come before the per-address locks.
         if (!newRole) {
           await revokeInvitationsTo(ctx, tx, targetUser.email, { companyId: access.company.id });
+          // Out of the company, they no longer read its requests: off the ones they followed.
+          // After the invitations, since requests come last in the lock order.
+          await unsubscribeFrom(tx, target.userId);
         }
         await recordEvent(
           ctx,

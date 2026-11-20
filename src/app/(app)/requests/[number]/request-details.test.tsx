@@ -39,6 +39,8 @@ function detailOf(detail: Partial<RequestDetail> = {}): RequestDetail {
       picture: null,
     },
     assignees: [],
+    subscribers: [],
+    subscribed: false,
     createdAt: new Date('2026-11-13T09:00:00Z'),
     firstResponseAt: null,
     lastActivityAt: new Date('2026-11-13T11:55:00Z'),

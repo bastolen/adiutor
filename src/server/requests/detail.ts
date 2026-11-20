@@ -6,7 +6,7 @@
 import { and, count, desc, eq, min, ne } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
-import { requestAssignee, requestEntry, requestMention, user } from '@/db/schema';
+import { requestEntry, requestMention, requestParticipant, user } from '@/db/schema';
 import type { Permission } from '@/lib/authz/permissions';
 import { firstRow } from '@/lib/defined';
 import {
@@ -26,6 +26,7 @@ import { loadPictures } from '../people/pictures';
 import getRequestPrefix from '../people/request-prefix';
 import getStaffName from '../people/staff-name';
 import { getRequestAccess, requestAudienceIn, type RequestPerson, requestPerson } from './access';
+import { loadSubscribers } from './subscribers';
 
 /** The account an `assignee` entry is about, joined next to its author's. */
 const subjectUser = alias(user, 'subject_user');
@@ -109,6 +110,15 @@ export interface RequestDetail {
   raisedBy: RequestPerson;
   /** The staff members it's assigned to, by name; empty while nobody is. */
   assignees: RequestPerson[];
+  /**
+   * The people subscribed to it that the reader may see, by name, without
+   * the ones it's assigned to (they're listed as assignees). The staff see
+   * everyone; someone at the company sees the subscribers from their own
+   * company, and not which staff members follow along.
+   */
+  subscribers: RequestPerson[];
+  /** Whether the reader is subscribed to it themselves. */
+  subscribed: boolean;
   /** When it was raised. */
   createdAt: Date;
   /** When the staff first replied to it, or `null` while they haven't. */
@@ -197,63 +207,75 @@ export async function getRequest(
     internal ? undefined : ne(requestEntry.kind, 'priority'),
   );
 
-  const [raisedBy, assignees, mentioned, staffName, prefix, firstResponse, total, latest] =
-    await Promise.all([
-      found.createdBy
-        ? ctx.db
-            .select({ id: user.id, name: user.name })
-            .from(user)
-            .where(eq(user.id, found.createdBy))
-        : [],
-      ctx.db
-        .select({ id: user.id, name: user.name })
-        .from(requestAssignee)
-        .innerJoin(user, eq(requestAssignee.userId, user.id))
-        .where(eq(requestAssignee.requestId, found.id))
-        .orderBy(...orderTerms('asc', textOrder(user.name), user.id)),
-      ctx.db
-        .select({
-          id: requestMention.id,
-          entryId: requestMention.entryId,
-          side: requestMention.side,
-          person: { id: user.id, name: user.name },
-        })
-        .from(requestMention)
-        .leftJoin(user, eq(requestMention.userId, user.id))
-        .where(eq(requestMention.requestId, found.id)),
-      getStaffName(ctx.db),
-      getRequestPrefix(ctx.db),
-      ctx.db
-        .select({ at: min(requestEntry.createdAt) })
-        .from(requestEntry)
-        .where(
-          and(
-            eq(requestEntry.requestId, found.id),
-            eq(requestEntry.kind, 'comment'),
-            eq(requestEntry.authorSide, 'staff'),
-          ),
+  const [
+    raisedBy,
+    assignees,
+    following,
+    mentioned,
+    staffName,
+    prefix,
+    firstResponse,
+    total,
+    latest,
+  ] = await Promise.all([
+    found.createdBy
+      ? ctx.db
+          .select({ id: user.id, name: user.name })
+          .from(user)
+          .where(eq(user.id, found.createdBy))
+      : [],
+    ctx.db
+      .select({ id: user.id, name: user.name })
+      .from(requestParticipant)
+      .innerJoin(user, eq(requestParticipant.userId, user.id))
+      .where(
+        and(eq(requestParticipant.requestId, found.id), eq(requestParticipant.role, 'assignee')),
+      )
+      .orderBy(...orderTerms('asc', textOrder(user.name), user.id)),
+    loadSubscribers(ctx.db, found),
+    ctx.db
+      .select({
+        id: requestMention.id,
+        entryId: requestMention.entryId,
+        side: requestMention.side,
+        person: { id: user.id, name: user.name },
+      })
+      .from(requestMention)
+      .leftJoin(user, eq(requestMention.userId, user.id))
+      .where(eq(requestMention.requestId, found.id)),
+    getStaffName(ctx.db),
+    getRequestPrefix(ctx.db),
+    ctx.db
+      .select({ at: min(requestEntry.createdAt) })
+      .from(requestEntry)
+      .where(
+        and(
+          eq(requestEntry.requestId, found.id),
+          eq(requestEntry.kind, 'comment'),
+          eq(requestEntry.authorSide, 'staff'),
         ),
-      ctx.db.select({ total: count() }).from(requestEntry).where(shown),
-      ctx.db
-        .select({
-          id: requestEntry.id,
-          kind: requestEntry.kind,
-          authorSide: requestEntry.authorSide,
-          createdAt: requestEntry.createdAt,
-          body: requestEntry.body,
-          bodyFormat: requestEntry.bodyFormat,
-          from: requestEntry.fromValue,
-          to: requestEntry.toValue,
-          author: { id: user.id, name: user.name },
-          subject: { id: subjectUser.id, name: subjectUser.name },
-        })
-        .from(requestEntry)
-        .leftJoin(user, eq(requestEntry.authorId, user.id))
-        .leftJoin(subjectUser, eq(requestEntry.subjectUserId, subjectUser.id))
-        .where(shown)
-        .orderBy(desc(requestEntry.id))
-        .limit(THREAD_CHUNK * (earlier + 1)),
-    ]);
+      ),
+    ctx.db.select({ total: count() }).from(requestEntry).where(shown),
+    ctx.db
+      .select({
+        id: requestEntry.id,
+        kind: requestEntry.kind,
+        authorSide: requestEntry.authorSide,
+        createdAt: requestEntry.createdAt,
+        body: requestEntry.body,
+        bodyFormat: requestEntry.bodyFormat,
+        from: requestEntry.fromValue,
+        to: requestEntry.toValue,
+        author: { id: user.id, name: user.name },
+        subject: { id: subjectUser.id, name: subjectUser.name },
+      })
+      .from(requestEntry)
+      .leftJoin(user, eq(requestEntry.authorId, user.id))
+      .leftJoin(subjectUser, eq(requestEntry.subjectUserId, subjectUser.id))
+      .where(shown)
+      .orderBy(desc(requestEntry.id))
+      .limit(THREAD_CHUNK * (earlier + 1)),
+  ]);
 
   // Each text's own mentions: the description's under no entry, a reply's under its entry. A
   // mention shows a name, never a picture.
@@ -265,9 +287,17 @@ export async function getRequest(
   });
 
   // Everyone the page names, with their pictures, in one go.
+  // The subscribers the reader may see: the company's own for someone at the company, and
+  // never someone the request is assigned to, who is listed as that.
+  const assigned = new Set(assignees.map(({ id }) => id));
+  const subscribers = following.filter(
+    ({ id, member }) => !assigned.has(id) && (internal || member),
+  );
+
   const pictures = await loadPictures(ctx.db, [
     found.createdBy,
     ...assignees.map(({ id }) => id),
+    ...subscribers.map(({ id }) => id),
     ...latest.flatMap(({ author, subject }) => [author?.id ?? null, subject?.id ?? null]),
   ]);
   const entries = latest
@@ -308,6 +338,11 @@ export async function getRequest(
       pictures,
     ),
     assignees: assignees.map((person) => requestPerson(person, 'staff', actor, pictures)),
+    // Someone on the staff who is also in the company is a colleague to the company's readers.
+    subscribers: subscribers.map(({ id, name, staff }) =>
+      requestPerson({ id, name }, internal && staff ? 'staff' : 'company', actor, pictures),
+    ),
+    subscribed: following.some(({ id }) => id === actor.id),
     createdAt: found.createdAt,
     firstResponseAt: firstResponse[0]?.at ?? null,
     lastActivityAt: found.lastActivityAt,
