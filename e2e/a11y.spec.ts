@@ -26,6 +26,7 @@ import expectAccessible from './support/axe';
 import {
   findCompanyId,
   findUserId,
+  storeAuditEvent,
   storeInvitation,
   storeInviteLink,
   storeSignInLink,
@@ -186,6 +187,14 @@ test.beforeAll(async ({ browser }) => {
     role: 'client',
   });
   inviteLinkPath = await storeInviteLink({ companyId, role: 'client' });
+  // An entry whose line names who acted, whom it was about and the company, each a link.
+  await storeAuditEvent({
+    action: 'role_changed',
+    actorEmail: PLATFORM_ADMIN.email,
+    targetEmail: CLIENT_WATCHER.email,
+    companyId,
+    details: { from: 'client', to: 'watcher' },
+  });
   userId = await findUserId(CLIENT_WATCHER.email);
   adminState = await adminStorageState(browser);
   clientState = await storageStateFor(browser, REQUESTS_CLIENT);
@@ -459,6 +468,36 @@ test.describe('on a 320px wide screen', () => {
       ).toHaveCount(1);
     });
 
+    test('the links in an audit log entry’s line of who and which company are 24px tall, apart', async ({
+      page,
+    }) => {
+      await page.goto('/admin/logs');
+      const line = page
+        .getByRole('row')
+        .filter({ hasText: `about ${CLIENT_WATCHER.name}` })
+        .first();
+      const boxes = await Promise.all(
+        [PLATFORM_ADMIN.name, CLIENT_WATCHER.name, COMPANY_NAME].map(async (name) =>
+          defined(
+            await line.getByRole('link', { name, exact: true }).boundingBox(),
+            `the link to ${name}`,
+          ),
+        ),
+      );
+      boxes.forEach((box) => expect(box.height).toBeGreaterThanOrEqual(24));
+      // On this narrow screen the line wraps: links on different rows don't overlap.
+      boxes.forEach((box, index) =>
+        boxes.slice(index + 1).forEach((other) => {
+          const apart =
+            box.x + box.width <= other.x ||
+            other.x + other.width <= box.x ||
+            box.y + box.height <= other.y ||
+            other.y + other.height <= box.y;
+          expect(apart).toBe(true);
+        }),
+      );
+    });
+
     test('the Sort menu keeps clear of the screen edges', async ({ page }) => {
       await page.goto('/admin/users');
       await page.getByRole('button', { name: /^Sort users/ }).click();
@@ -502,6 +541,74 @@ test.describe('on a 320px wide screen', () => {
         await expectNoSidewaysScroll(page);
         await expectFieldsDontZoom(page);
       });
+    });
+  });
+});
+
+test.describe('in forced-colours mode', () => {
+  // Windows High Contrast and other contrast themes: system colours, no fills or shadows.
+  test.use({ forcedColors: 'active' });
+
+  test.beforeEach(async ({ context }) => {
+    await context.addCookies(adminState.cookies);
+  });
+
+  /**
+   * Each visible current item on the page (`aria-current`): its name, its
+   * outline, and the outlines of the other links in its list.
+   *
+   * @param page - The browser page, loaded.
+   * @returns The current items.
+   */
+  const currentItems = (page: Page) =>
+    page.locator('a[aria-current]').evaluateAll((links) => {
+      /**
+       * Whether an element takes up room on the page (the sidebar on a narrow screen doesn't).
+       *
+       * @param element - The element.
+       * @returns Whether it's shown.
+       */
+      const visible = (element: Element) => element.getBoundingClientRect().width > 0;
+      return links.filter(visible).map((link) => {
+        const style = getComputedStyle(link);
+        const list = link.closest('ul') ?? link.parentElement;
+        const others = [...(list?.querySelectorAll('a:not([aria-current])') ?? [])]
+          .filter(visible)
+          .map((other) => getComputedStyle(other).outlineStyle);
+        return {
+          name: (link.textContent ?? '').trim(),
+          outline: `${style.outlineStyle} ${style.outlineWidth}`,
+          others,
+        };
+      });
+    });
+
+  test('the current page, tab, filter, page number and rows per page stand out, not by colour', async ({
+    page,
+  }) => {
+    await page.goto('/requests');
+    await expect(page.getByRole('heading', { level: 1, name: 'Requests' })).toBeVisible();
+    const onRequests = await currentItems(page);
+    // The sidebar's link and the Active filter.
+    expect(onRequests.map(({ name }) => name)).toEqual(
+      expect.arrayContaining(['Requests', 'Active']),
+    );
+
+    await page.goto(resolvePath('/companies/{paging}/members'));
+    await expect(page.getByRole('navigation', { name: /^Pages of/ })).toBeVisible();
+    const onMembers = await currentItems(page);
+    // The company's Members tab, page 1 and the rows per page.
+    expect(onMembers.map(({ name }) => name)).toEqual(
+      expect.arrayContaining([
+        'Members',
+        expect.stringMatching(/1$/),
+        expect.stringMatching(/^25/),
+      ]),
+    );
+
+    [...onRequests, ...onMembers].forEach(({ name, outline, others }) => {
+      expect(outline, `the outline of ${name}`).toBe('solid 2px');
+      expect(others, `the outlines next to ${name}`).not.toContain('solid');
     });
   });
 });

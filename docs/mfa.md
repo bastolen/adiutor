@@ -15,11 +15,13 @@ for a code from an authenticator app, or one sent by email (it works for 5 minut
 for once half the last one's lifetime has passed (2.5 minutes, `EMAIL_CODE_RESEND_SECONDS`): "Send
 a new code" counts down until then, at the code step, on the step-up page and while setting up
 email codes, and the guards refuse an earlier one (`EMAIL_CODE_SENT_RECENTLY`, shown as a notice,
-since the last code still works). Using a code ends the wait. So does a password sign-in that
-starts a new code step (`afterPasswordSignIn`): Better Auth keeps an emailed code with the sign-in
-it was asked for, so after going back and signing in again the last code can't be used, and the
-wait would only keep a code that works from being sent. The 5 codes per 15 minutes per user still
-apply. The code step, and the step-up page when email codes are its only way, send their code once
+since the last code still works). The wait is per sign-in or session, as the code is: Better Auth
+keeps an emailed code with the sign-in it was asked for (its two-factor cookie), or with the
+signed-in session (the step-up page, setting up email codes). So after going back and signing in
+again, or in another browser, a code that works is sent at once, instead of a pointer to one that
+can't be used there (`limitEmailCode` in `src/server/auth/auth-guards/attempts.ts`, which stores
+only a hash of the sign-in's cookie). Using a code ends its session's wait. The 5 codes per 15
+minutes per user still apply to all of them together. The code step, and the step-up page when email codes are its only way, send their code once
 each time the page is shown, not once in the page's life (pages stay alive; `useOncePerVisit` in
 `src/components/ui/use-transient-state.ts`), so a new sign-in gets its own code. **Once an
 authenticator app is set

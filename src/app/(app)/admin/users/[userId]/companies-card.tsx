@@ -5,9 +5,11 @@
  * role in one and remove them from one, on their own page too (worded for
  * themselves). It offers only what the services allow: a deactivated
  * company's membership shows its role and nothing to press, and a
- * deactivated account can't be added to a company, which the card says. Text
- * from `admin.user.companies`; the role selects in it translate with
- * `people`, which the page passes with `ClientMessages`.
+ * deactivated account can't be added to a company, which the card says. The
+ * company select names a company by its URL name too when another has the
+ * same name (`companyChoiceLabels`). Text from `admin.user.companies`; the
+ * role selects in it translate with `people`, which the page passes with
+ * `ClientMessages`.
  */
 import { useLocale, useTranslations } from 'next-intl';
 import { useId } from 'react';
@@ -22,6 +24,7 @@ import SortMenu from '@/components/ui/sort-menu';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
 import TextLink from '@/components/ui/text-link';
 import { COMPANY_ROLES, roleOptions } from '@/lib/authz/roles';
+import { companyChoiceLabels } from '@/lib/company-choices';
 import formatDate from '@/lib/format';
 import { type TableLinks } from '@/lib/tables/page-url';
 import { type Paged } from '@/lib/tables/table-state';
@@ -93,6 +96,7 @@ export default function CompaniesCard({
   const locale = useLocale();
   const t = useTranslations('admin.user.companies');
   const tRoles = useTranslations('roles');
+  const tCommon = useTranslations('common');
   const companyRoleOptions = roleOptions(COMPANY_ROLES, tRoles);
   // A deactivated account can't be added to a company: the button is off and the card says why.
   const addRefused = canManageMembers && userDeactivated;
@@ -128,7 +132,9 @@ export default function CompaniesCard({
                 <SelectField
                   label={t('add.company')}
                   name="companyId"
-                  options={addable.map((company) => ({ value: company.id, label: company.name }))}
+                  options={companyChoiceLabels(addable, ({ name, slug }) =>
+                    tCommon('companyWithUrlName', { name, urlName: slug }),
+                  ).map(({ id, label }) => ({ value: id, label }))}
                   defaultValue={addable[0]?.id}
                 />
                 <SelectField

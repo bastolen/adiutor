@@ -3,6 +3,8 @@
  * user and emailed codes per address or user, counted before the check and
  * settled by the reactions after the request.
  */
+import { createHash } from 'node:crypto';
+
 import { APIError } from 'better-auth/api';
 
 import { db } from '@/db';
@@ -31,11 +33,13 @@ export const AUTH_GUARD_LIMITS = {
   /** Email codes sent, per user (not counting setting up email codes). */
   emailCodesPerUser: { limit: 5, windowSeconds: 15 * 60 },
   /**
-   * One emailed code per user per half a code's lifetime, setting up
+   * One emailed code per challenge per half a code's lifetime, setting up
    * included: a new one can't be asked for while the last still works for a
-   * while. Using a code ends the wait, and so does a password sign-in that
-   * starts a new code step, which the last code can't be used for
-   * (`endEmailCodeCooldown`).
+   * while. A challenge is what Better Auth keeps the code with, a pending
+   * sign-in or a signed-in session ({@link signInCodeChallenge},
+   * {@link sessionCodeChallenge}), so another sign-in or session, which the
+   * last code can't be used for, never waits for it. Using a code ends its
+   * session's wait (`endEmailCodeCooldown`).
    */
   emailCodeCooldown: { limit: 1, windowSeconds: EMAIL_CODE_RESEND_SECONDS },
 } as const satisfies Record<string, RateLimitRule>;
@@ -68,13 +72,38 @@ const KEYS = {
    */
   emailCodes: (userId: string) => `email-code:user:${userId}`,
   /**
-   * The wait before a user may ask for another emailed code.
+   * The wait before another emailed code may be asked for in a challenge.
    *
-   * @param userId - The user.
+   * @param challenge - The challenge ({@link signInCodeChallenge}, {@link sessionCodeChallenge}).
    * @returns The key.
    */
-  emailCodeCooldown: (userId: string) => `email-code-cooldown:user:${userId}`,
+  emailCodeCooldown: (challenge: string) => `email-code-cooldown:${challenge}`,
 };
+
+/**
+ * Names a pending sign-in's code step as the challenge an emailed code
+ * belongs to: Better Auth keeps the code with the sign-in's two-factor
+ * cookie. The identifier is hashed, since it's what lets the sign-in finish
+ * and mustn't be stored as it is.
+ *
+ * @param identifier - The pending sign-in's identifier (its signed two-factor cookie's value).
+ * @returns The challenge.
+ */
+export function signInCodeChallenge(identifier: string): string {
+  return `sign-in:${createHash('sha256').update(identifier).digest('base64url')}`;
+}
+
+/**
+ * Names a signed-in session as the challenge an emailed code belongs to (the
+ * step-up page, setting up email codes): Better Auth keeps the code with the
+ * user and the session.
+ *
+ * @param sessionId - The session's ID.
+ * @returns The challenge.
+ */
+export function sessionCodeChallenge(sessionId: string): string {
+  return `session:${sessionId}`;
+}
 
 /**
  * Refuses a request for a used-up limit, saying how long to wait in the
@@ -109,14 +138,18 @@ export async function limit(
 }
 
 /**
- * Lets an emailed code through only once the wait since the user's last one
- * is over (`EMAIL_CODE_RESEND_SECONDS`), and counts it towards their limit
- * unless they're setting up email codes. The wait comes first, so a refused
- * request doesn't use up one of the codes.
+ * Lets an emailed code through only once the wait since the challenge's last
+ * one is over (`EMAIL_CODE_RESEND_SECONDS`), and counts it towards the user's
+ * limit unless they're setting up email codes. The wait is per challenge, as
+ * Better Auth keeps the code: another sign-in or session gets a code of its
+ * own at once, and the user's limit still caps them all. The wait comes
+ * first, so a refused request doesn't use up one of the codes.
  *
  * @param ctx - The endpoint context.
  * @param userId - Who the code is for.
  * @param counted - Whether it counts towards the user's limit of email codes.
+ * @param challenge - What the code belongs to ({@link signInCodeChallenge},
+ *   {@link sessionCodeChallenge}).
  * @throws {APIError} `TOO_MANY_REQUESTS`: `EMAIL_CODE_SENT_RECENTLY` within the wait,
  *   `TOO_MANY_ATTEMPTS` past the limit.
  */
@@ -124,10 +157,11 @@ export async function limitEmailCode(
   ctx: AuthGuardContext,
   userId: string,
   counted: boolean,
+  challenge: string,
 ): Promise<void> {
   const { allowed } = await hitRateLimit(
     { db },
-    KEYS.emailCodeCooldown(userId),
+    KEYS.emailCodeCooldown(challenge),
     AUTH_GUARD_LIMITS.emailCodeCooldown,
   );
   if (!allowed) {
@@ -139,17 +173,16 @@ export async function limitEmailCode(
 }
 
 /**
- * Ends the wait for a new emailed code once the last one can't be used any
- * more: it was used (the after hook, for a code Better Auth accepted), or a
- * password sign-in started a new code step (`afterPasswordSignIn`), which
- * Better Auth keeps its own code for. The wait is there so no one asks for
- * codes while one is still out, and such a code isn't. The number of codes
- * per user (`emailCodesPerUser`) is never reset here.
+ * Ends a session's wait for a new emailed code once its last one was used
+ * (the after hook, for a code Better Auth accepted): the session may need
+ * another code for its next confirmation. A sign-in's code needs no such
+ * end, since its challenge ends with the sign-in. The number of codes per
+ * user (`emailCodesPerUser`) is never reset here.
  *
- * @param userId - Whose wait ends.
+ * @param challenge - Whose wait ends ({@link sessionCodeChallenge}).
  */
-export async function endEmailCodeCooldown(userId: string): Promise<void> {
-  await resetRateLimit(db, KEYS.emailCodeCooldown(userId));
+export async function endEmailCodeCooldown(challenge: string): Promise<void> {
+  await resetRateLimit(db, KEYS.emailCodeCooldown(challenge));
 }
 
 /**

@@ -23,7 +23,7 @@ import {
   TextQuote,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { type FormEvent, useEffect, useEffectEvent, useState } from 'react';
+import { type FormEvent, useEffect, useEffectEvent, useRef, useState } from 'react';
 
 import { linkTarget } from '@/lib/requests';
 
@@ -186,7 +186,10 @@ function LinkForm({
  * something says whether it's on. Without a state (before the editor is
  * there, or while the field is switched off) every button is disabled.
  * What a menu and the link dialog ask for is passed on once they have
- * closed, so the text gets the focus afterwards, not their button.
+ * closed, so the text gets the focus afterwards, not their button: a menu
+ * passes it on when it would give its button the focus back
+ * (`onCloseAutoFocus`) and doesn't; the dialog a moment after it closed.
+ * Closing a menu without a choice (Escape) gives its button the focus back.
  *
  *
  * While the cursor is in a block of code, a menu at the end picks its
@@ -220,16 +223,34 @@ export default function FormattingToolbar({
   const written = state?.codeLanguage ?? null;
   const codeName = written === null ? null : (languageName?.(written) ?? written);
   const codeChoice = languages?.find((choice) => choice.name === codeName)?.id ?? written ?? '';
-  // What the heading menu or the link dialog asked for, until that layer has closed.
+  // What the link dialog asked for, until it has closed.
   const [waiting, setWaiting] = useState<FormattingCommand | null>(null);
   const pass = useEffectEvent(onCommand);
+  // What the heading or language menu asked for, until it closes.
+  const chosen = useRef<FormattingCommand | null>(null);
+
+  /**
+   * Passes on what a menu asked for as it closes, instead of letting it give
+   * its button the focus back: the command gives the text the focus. A menu
+   * closed without a choice gives its button the focus back as usual.
+   *
+   * @param event - The menu's focus-return event.
+   */
+  const passChoice = (event: Event) => {
+    const command = chosen.current;
+    if (command) {
+      chosen.current = null;
+      event.preventDefault();
+      onCommand(command);
+    }
+  };
 
   useEffect(() => {
     if (waiting === null) {
       return undefined;
     }
-    // A layer that closes gives the focus back to its button a moment later. The command goes
-    // out after that, so the editor then takes the focus for the text, every time.
+    // The dialog gives the focus back to its button as it closes. The command goes out a moment
+    // later, so the editor then takes the focus for the text.
     const timer = setTimeout(() => {
       setWaiting(null);
       pass(waiting);
@@ -271,10 +292,12 @@ export default function FormattingToolbar({
           <MenuTrigger asChild>
             <ToolbarButton label={t('heading')} icon={Heading} disabled={off} />
           </MenuTrigger>
-          <MenuContent align="start">
+          <MenuContent align="start" onCloseAutoFocus={passChoice}>
             <MenuRadioGroup
               value={String(Math.min(state?.heading ?? 0, LOWEST_OFFERED_HEADING))}
-              onValueChange={(level) => setWaiting({ type: 'heading', level: Number(level) })}
+              onValueChange={(level) => {
+                chosen.current = { type: 'heading', level: Number(level) };
+              }}
             >
               {HEADING_CHOICES.map((level) => (
                 <MenuRadioItem key={level} value={String(level)}>
@@ -311,12 +334,16 @@ export default function FormattingToolbar({
                 {codeName ?? t('noLanguage')}
               </ToolbarTextButton>
             </MenuTrigger>
-            <MenuContent align="end" className="max-h-72 overflow-y-auto">
+            <MenuContent
+              align="end"
+              className="max-h-72 overflow-y-auto"
+              onCloseAutoFocus={passChoice}
+            >
               <MenuRadioGroup
                 value={codeChoice}
-                onValueChange={(language) =>
-                  setWaiting({ type: 'codeLanguage', language: language || null })
-                }
+                onValueChange={(language) => {
+                  chosen.current = { type: 'codeLanguage', language: language || null };
+                }}
               >
                 <MenuRadioItem value="">{t('noLanguage')}</MenuRadioItem>
                 {languages.map((choice) => (

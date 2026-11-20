@@ -15,7 +15,7 @@ import type { PaginationLinks } from '@/lib/tables/table-state';
 import Button from './button';
 import { isShown } from './focus-fallback';
 import LinkPendingIndicator from './link-pending';
-import { focusRing } from './styles';
+import { currentItem, focusRing } from './styles';
 
 /**
  * Props for {@link PaginationNav}.
@@ -128,6 +128,7 @@ export default function PaginationNav({
                 className={cn(
                   'inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm font-medium tabular-nums transition-colors',
                   focusRing,
+                  currentItem,
                   item.current
                     ? 'bg-primary text-primary-foreground'
                     : 'text-foreground hover:bg-muted',

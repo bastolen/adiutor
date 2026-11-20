@@ -310,6 +310,8 @@ describe('describeOwnActivity', () => {
     expect(describeInEnglish(event({ action: 'account_created', actor: admin }), ME)).toBe(
       'Account created by Alex Admin',
     );
+    // Made by accepting an invitation, or at setup: by themself.
+    expect(describeInEnglish(event({ action: 'account_created' }), ME)).toBe('Account created');
     expect(
       describeInEnglish(
         event({

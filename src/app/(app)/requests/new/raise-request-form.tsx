@@ -1,6 +1,7 @@
 /**
  * @file The form that raises a request. Its text comes from the `requests`
- * namespace, which the page passes through `ClientMessages`.
+ * namespace, which the page passes through `ClientMessages`, and the label of
+ * a company that shares its name from `common`.
  */
 'use client';
 
@@ -15,6 +16,7 @@ import SelectField from '@/components/ui/select-field';
 import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
 import TextField from '@/components/ui/text-field';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
+import { companyChoiceLabels } from '@/lib/company-choices';
 import { REQUEST_TEXT_MAX_LENGTH, REQUEST_TITLE_MAX_LENGTH } from '@/lib/input-rules';
 import { REQUEST_PRIORITIES, REQUEST_TYPES } from '@/lib/requests';
 
@@ -45,7 +47,8 @@ interface RaiseRequestFormProps {
 
 /**
  * A form with the request's company (a select only when there's more than
- * one to choose from), title, type and description. Each type says what it's
+ * one to choose from, naming a company by its URL name too when another has
+ * the same name: `companyChoiceLabels`), title, type and description. Each type says what it's
  * for. The staff also get a priority, which the type sets unless they choose
  * one; nobody else sees a priority. A refused request keeps what was typed;
  * a raised one opens its page.
@@ -62,6 +65,7 @@ export default function RaiseRequestForm({
   choosesPriority,
 }: RaiseRequestFormProps) {
   const t = useTranslations('requests');
+  const tCommon = useTranslations('common');
   // Changes are turned off while a staff member is signed in as the user.
   const changesOff = useSignedInAs();
   const [result, formAction, pending, onSubmit] = useTransientActionState(raiseRequestAction, null);
@@ -78,7 +82,9 @@ export default function RaiseRequestForm({
           <SelectField
             label={t('new.company')}
             name="company"
-            options={companies.map(({ slug, name }) => ({ value: slug, label: name }))}
+            options={companyChoiceLabels(companies, ({ name, slug }) =>
+              tCommon('companyWithUrlName', { name, urlName: slug }),
+            ).map(({ slug, label }) => ({ value: slug, label }))}
             defaultValue={company ?? ''}
             placeholder={t('new.companyPlaceholder')}
             disabled={changesOff}

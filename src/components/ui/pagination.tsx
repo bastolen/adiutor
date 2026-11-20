@@ -14,7 +14,7 @@ import { type Paged, type PaginationLinks, showsPagination } from '@/lib/tables/
 
 import LinkPendingIndicator from './link-pending';
 import PaginationNav from './pagination-nav';
-import { focusRing } from './styles';
+import { currentItem, focusRing } from './styles';
 
 /**
  * "Showing 26–50 of 132", the page links (with more than one page) and the
@@ -83,7 +83,8 @@ export default function Pagination({
                   className={cn(
                     'inline-flex h-7 min-w-9 items-center justify-center rounded-md px-2 text-sm font-medium tabular-nums transition-colors',
                     focusRing,
-                    // The same look as the current page, so it stands out clearly.
+                    currentItem,
+                    // The same look as the current page, so it stands out clearly (`currentItem` outlines both in forced colours).
                     option.current
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:bg-surface hover:text-foreground',

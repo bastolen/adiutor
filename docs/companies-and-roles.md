@@ -111,7 +111,10 @@ Admins and Managers who aren't members can still add themselves with any role, a
   use the ID, so a link in an inbox still works after the URL name changes. Changing the URL name in
   the company's settings changes its address: the page moves to the new one (and confirms with
   "Saved."), and links with the old URL name stop working. A URL name can't look like an ID
-  (`slugSchema`), so the two never collide.
+  (`slugSchema`), so the two never collide. Names may repeat, URL names can't: where someone picks
+  a company (raising a request, the Company filter of the request lists, adding someone to a
+  company), a company whose name another in the choice shares shows its URL name too, as
+  "Adiutor Tests (adiutor-tests)" (`companyChoiceLabels` in `src/lib/company-choices.ts`).
 
 ## Staff screens
 

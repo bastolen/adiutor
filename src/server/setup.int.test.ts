@@ -55,6 +55,28 @@ describe('setUpPlatform', () => {
     ).toBe(true);
   });
 
+  it('records the new Admin’s account, by and about them', async () => {
+    const { userId } = await setUpPlatform({ db }, input);
+
+    expect(
+      await db
+        .select({
+          action: auditEvent.action,
+          actorUserId: auditEvent.actorUserId,
+          targetUserId: auditEvent.targetUserId,
+          details: auditEvent.details,
+        })
+        .from(auditEvent),
+    ).toEqual([
+      {
+        action: 'account_created',
+        actorUserId: userId,
+        targetUserId: userId,
+        details: { email: 'setup@adiutor.test', setup: true },
+      },
+    ]);
+  });
+
   it("lifts a pause on password sign-in for the new Admin's address, whose password was just chosen", async () => {
     const failed = { limit: 10, windowSeconds: 15 * 60 };
     await hitRateLimit({ db }, 'sign-in-failed:email:setup@adiutor.test', failed);

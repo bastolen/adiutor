@@ -23,6 +23,7 @@ import {
   endEmailCodeCooldown,
 } from '../auth-guards';
 import { loadMfaContext } from '../mfa-state';
+import { requestState } from '../request-state';
 import { signedSession } from '../signed-session';
 import { forgetTrustedDevices } from '../trusted-devices';
 import {
@@ -79,7 +80,7 @@ async function settleRequest(ctx: AuthHookContext, path: string): Promise<void> 
  * @returns Whether this sign-in paused password sign-in for the address.
  */
 async function settleAttempts(ctx: AuthHookContext, request: FinishedRequest): Promise<boolean> {
-  const { path, returned, failed, sessionUser, userId, email } = request;
+  const { path, returned, failed, sessionUser, email } = request;
   let paused = false;
   if (path === '/sign-in/email') {
     await safely('settle password attempt', async () => {
@@ -99,10 +100,12 @@ async function settleAttempts(ctx: AuthHookContext, request: FinishedRequest): P
       settleStepUpAttempt(ctx, sessionUser.id, wrongCode),
     );
   }
-  if (path === '/two-factor/verify-otp' && !failed && userId) {
-    // An emailed code was used (at sign-in, on the step-up page, or turning email codes on): the
-    // next one needn't wait (`EMAIL_CODE_RESEND_SECONDS`).
-    await safely('end the email code cooldown', () => endEmailCodeCooldown(userId));
+  // An emailed code checked with a session was used (on the step-up page, or turning email codes
+  // on): that session's next one needn't wait (`EMAIL_CODE_RESEND_SECONDS`). A code at a sign-in's
+  // code step needs nothing: its challenge ends with the sign-in.
+  const challenge = requestState(ctx.context).emailCodeChallenge;
+  if (path === '/two-factor/verify-otp' && !failed && challenge) {
+    await safely('end the email code cooldown', () => endEmailCodeCooldown(challenge));
   }
   return paused;
 }

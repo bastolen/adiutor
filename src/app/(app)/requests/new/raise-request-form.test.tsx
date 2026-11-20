@@ -114,6 +114,24 @@ describe('RaiseRequestForm', () => {
     expect(sent()).toMatchObject({ company: 'adiutor-tests-alpha', type: 'support' });
   });
 
+  it('tells two companies with the same name apart by their URL names', async () => {
+    const user = userEvent.setup();
+    const twins = [
+      { slug: 'adiutor-tests', name: 'Adiutor Tests' },
+      { slug: 'adiutor-tests-north', name: 'Adiutor Tests' },
+      ...ALPHA,
+    ];
+    render(<RaiseRequestForm companies={twins} choosesPriority={false} />);
+
+    await user.click(screen.getByRole('combobox', { name: 'Company' }));
+
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Adiutor Tests (adiutor-tests)',
+      'Adiutor Tests (adiutor-tests-north)',
+      'Adiutor Tests Alpha',
+    ]);
+  });
+
   it('asks for a company when none was chosen for them', () => {
     render(<RaiseRequestForm companies={BOTH} choosesPriority={false} />);
 

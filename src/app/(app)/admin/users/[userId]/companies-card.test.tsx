@@ -16,6 +16,7 @@ import translator from '@/lib/i18n/translator';
 import { createPageUrl } from '@/lib/tables/page-url';
 import { parseTableState } from '@/lib/tables/table-state';
 import { USER_COMPANIES_TABLE } from '@/lib/tables/tables';
+import type { AddableCompany } from '@/server/people/members';
 import type { UserCompany } from '@/server/people/user-admin';
 
 import renderInLocale from '../../../../../../tests/i18n/render';
@@ -78,14 +79,20 @@ function renderCard({
   canManageMembers = true,
   isSelf = false,
   userDeactivated = false,
-  addable = [{ id: '01970000-0000-7000-8000-000000000103', name: 'Adiutor Tests Paging' }],
+  addable = [
+    {
+      id: '01970000-0000-7000-8000-000000000103',
+      name: 'Adiutor Tests Paging',
+      slug: 'adiutor-tests-paging',
+    },
+  ],
   locale = 'en-US',
 }: {
   memberships?: UserCompany[];
   canManageMembers?: boolean;
   isSelf?: boolean;
   userDeactivated?: boolean;
-  addable?: { id: string; name: string }[];
+  addable?: AddableCompany[];
   locale?: Locale;
 } = {}) {
   renderInLocale(
@@ -249,6 +256,38 @@ describe('CompaniesCard', () => {
 
     await user.click(screen.getByRole('button', { name: 'Add to company' }));
     expect(screen.getByRole('dialog', { name: 'Add Ada Tester to a company' })).toBeInTheDocument();
+  });
+
+  it('tells two companies with the same name apart by their URL names', async () => {
+    const user = userEvent.setup();
+    renderCard({
+      addable: [
+        {
+          id: '01970000-0000-7000-8000-000000000201',
+          name: 'Adiutor Tests',
+          slug: 'adiutor-tests',
+        },
+        {
+          id: '01970000-0000-7000-8000-000000000202',
+          name: 'Adiutor Tests',
+          slug: 'adiutor-tests-north',
+        },
+        {
+          id: '01970000-0000-7000-8000-000000000103',
+          name: 'Adiutor Tests Paging',
+          slug: 'adiutor-tests-paging',
+        },
+      ],
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Add to company' }));
+    await user.click(screen.getByRole('combobox', { name: 'Company' }));
+
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Adiutor Tests (adiutor-tests)',
+      'Adiutor Tests (adiutor-tests-north)',
+      'Adiutor Tests Paging',
+    ]);
   });
 
   it('shows the role as a badge, without actions, to staff who may not manage members', () => {

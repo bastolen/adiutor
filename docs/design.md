@@ -150,6 +150,12 @@ keyboard support.
   mode, and forced-colours mode drops it; the outline is 7.5:1 and 7.3:1 (WCAG 1.4.11) and is drawn
   in forced colours too. Items never take `outline-none` or `outline-hidden`: both switch
   Tailwind's outline style off for the element, so the outline would never show.
+- **The current item** of a navigation (`aria-current`: the page in the sidebar, a tab, a filter
+  such as Active, a page number, the rows per page) stands out by a fill, a shadow or a coloured
+  line, which forced-colours mode (Windows High Contrast) replaces with system colours. In that
+  mode it gets the same inset 2px outline as a menu's highlighted item instead (`currentItem` in
+  `src/components/ui/styles.ts`), except while it has keyboard focus, when the focus ring shows. A
+  component that marks a current item adds `currentItem` to every item, next to `focusRing`.
 - **Colours:** semantic tokens in `src/styles/theme.css`, each checked for contrast (at least 4.5:1
   for text, 3:1 for input borders) in both modes:
 
@@ -336,7 +342,13 @@ keyboard support.
 - **Tap targets:** every control is at least 24×24px (WCAG 2.5.8) without leaning on the rule's
   spacing exception, so each is easy to tap on a phone. Text links on their own line reach 2px above
   and below the text (`TextLink`, cancelled by a negative margin, so nothing moves), and a checkbox
-  counts with its label (`CheckboxField`). Links inside a sentence are exempt, as in WCAG.
+  counts with its label (`CheckboxField`). Links inside a sentence are exempt, as in WCAG. That
+  2px reaches 24px only on a link that's a block, which takes the whole line's height: an inline
+  link adds it to the font's height instead (21px for small text). So a link in a row of details
+  rather than a sentence, like the audit log's "by … · about … · company" line, is a flex item (its
+  part a `flex items-baseline gap-x-1` row), and a row that wraps keeps 4px between its lines so
+  the links don't overlap. The 24px check takes every inline link for one in a sentence, so it
+  can't catch an inline link there.
 - **Links in text:** a link inside a sentence is underlined (`TextLink`: thin at rest, thicker on
   hover), because its colour alone doesn't set it apart from the text around it: `highlight` is
   2.2:1 against body text in light mode and 1.6:1 in dark mode, and WCAG 1.4.1 asks for 3:1 or

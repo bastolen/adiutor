@@ -13,7 +13,8 @@ right passwords whose sign-in then asked for the code, recorded without an actor
 codes (on the step-up page, and at the code step of a sign-in without an actor; only codes that
 were compared and refused, not an expired one or another refusal), MFA changes,
 password and provider changes, wrong current passwords typed in a signed-in session
-(`password_check_failed`), revoked sessions, account deactivation, reactivation and deletion,
+(`password_check_failed`), revoked sessions, account creation (by an Admin, by accepting an
+invitation, or at setup), deactivation, reactivation and deletion,
 MFA resets, role changes, removed members, invitations and invite links, company changes, and staff
 signing in as a user (`impersonation_started`, with the optional reason the staff member gave, and
 `impersonation_ended`, with why it ended: going back, its time being up, no longer being allowed, or
@@ -36,10 +37,11 @@ Better Auth's own limits (per IP address) are stored in the database
 (`rate_limit`), so they hold across restarts and instances. On top of those, per email address
 whether or not it has an account: 10 wrong passwords per 15 minutes, 5 email links and 5 password
 resets per hour, and per user 5 emailed codes and 5 wrong step-up codes per 15 minutes
-(`src/server/auth/auth-guards/`). Emailed codes also wait for each other: one per user every 2.5
-minutes, half a code's lifetime (`EMAIL_CODE_RESEND_SECONDS`), checked first so a refused one
-doesn't count, and ended once a code is used or a password sign-in starts a new code step (the
-last code can't be used for it; the 5 per 15 minutes still cap what a password can send). Setting
+(`src/server/auth/auth-guards/`). Emailed codes also wait for each other: one per sign-in or
+session every 2.5 minutes, half a code's lifetime (`EMAIL_CODE_RESEND_SECONDS`), as Better Auth
+keeps the code with the sign-in or session it was asked for, checked first so a refused one
+doesn't count, and ended once a session's code is used (the 5 per 15 minutes per user still cap
+what a password can send). Setting
 up email codes waits too, but isn't counted
 towards the 5, so it doesn't eat into the sign-in budget. Each password sign-in takes one of the address's attempts before
 its password is checked and gives it back unless the password was wrong, and each step-up code

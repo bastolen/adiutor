@@ -20,9 +20,10 @@ export const SMTP_MAX_CONNECTIONS = 3;
  * at (waiting for a free connection of the pool counts too). After it the
  * send fails like any other, so a queued job tries the email again and a
  * request answers. The background jobs count on it: a tick stops starting
- * work this long, plus a margin, before the platform stops its function
- * (`REQUEST_RUN_SECONDS` in `src/server/jobs/tick.ts`), so an email started
- * just before the tick's deadline still ends in time.
+ * work twice this long, plus a margin, before the platform stops its
+ * function (`REQUEST_RUN_SECONDS` in `src/server/jobs/tick.ts`), so an email
+ * started just before the tick's deadline, and the staff Admins' alert when
+ * that job then fails, still end in time.
  *
  * The attempt itself isn't cut off: the mail server may still accept the
  * email after the send was reported as failed, until the transport's own

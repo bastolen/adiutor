@@ -20,11 +20,23 @@ import {
 } from '../../../../tests/integration/helpers';
 import { listOwnActivity } from '../../audit';
 import { type AuthGuardContext, beforeAuthRequest } from '../auth-guards';
+import { queueSecurityNotice } from '../security-notices';
 import { afterAuthRequest } from './after-request';
 import type { AuthHookContext } from './hook-context';
 import { db, subjects, events, services } from './test-helpers';
 
 vi.mock('@/lib/email', () => ({ sendEmail: vi.fn() }));
+
+/** The real queueing of security notices, which the test about timing holds back. */
+const notices = vi.hoisted(() => ({
+  queue: undefined as undefined | typeof import('../security-notices').queueSecurityNotice,
+}));
+
+vi.mock('../security-notices', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../security-notices')>();
+  notices.queue = actual.queueSecurityNotice;
+  return { ...actual, queueSecurityNotice: vi.fn(actual.queueSecurityNotice) };
+});
 
 // The checks before a request read its session from Better Auth, and the reactions read the OAuth
 // state (only there during a request); the tests hand both over.
@@ -188,11 +200,23 @@ describe('wrong passwords', () => {
     await createUserWithPassword('jane@adiutor.test');
     await failSignIns(9, 'jane@adiutor.test');
     const runInBackground = vi.fn<(task: Promise<unknown>) => void>();
+    // The work starts at once in the background: it's held back until the test has checked that
+    // nothing went out with the response, so that check doesn't race it.
+    const { promise: gate, resolve: open } = Promise.withResolvers<void>();
+    const queue = defined(notices.queue, 'the real queueing of notices');
+    vi.mocked(queueSecurityNotice).mockImplementationOnce(async (...args) => {
+      await gate;
+      return queue(...args);
+    });
 
-    await signInWithPassword('jane@adiutor.test', { runInBackground });
+    try {
+      await signInWithPassword('jane@adiutor.test', { runInBackground });
 
-    expect(runInBackground).toHaveBeenCalledTimes(1);
-    expect(await subjects()).toEqual([]);
+      expect(runInBackground).toHaveBeenCalledTimes(1);
+      expect(await subjects()).toEqual([]);
+    } finally {
+      open();
+    }
     await defined(runInBackground.mock.calls[0], 'the background task')[0];
     expect(await subjects()).toEqual(['Password sign-in to your Adiutor account is paused']);
   });

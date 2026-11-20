@@ -360,16 +360,18 @@ test('the staff raise a request for a company and choose its priority', async ({
     'Choose which company this request is for.',
   );
 
-  // From a company's own list the company is chosen already.
+  // From a company's own list the company is chosen already. Other specs add companies with the
+  // same name, and then the select names it by its URL name too.
+  const chosen = new RegExp(`^${COMPANY_NAME}( \\(${COMPANY_SLUG}\\))?$`);
   await page.goto(`/requests/new?company=${COMPANY_SLUG}`);
-  await expect(page.getByRole('combobox', { name: 'Company' })).toHaveText(COMPANY_NAME);
+  await expect(page.getByRole('combobox', { name: 'Company' })).toHaveText(chosen);
   // A deactivated company's requests can only be read, so it isn't offered.
   await page.getByRole('combobox', { name: 'Company' }).click();
   await expect(page.getByRole('option', { name: CLOSED_COMPANY_NAME })).toHaveCount(0);
-  // The chosen company stays chosen. Its name isn't picked from the list: other specs add
-  // companies with the same name.
+  // The chosen company stays chosen. It isn't picked from the list by its name, which other
+  // companies share.
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('combobox', { name: 'Company' })).toHaveText(COMPANY_NAME);
+  await expect(page.getByRole('combobox', { name: 'Company' })).toHaveText(chosen);
 
   await page.getByRole('textbox', { name: 'Title' }).fill('Add a colleague to the mailing list');
   await page.getByRole('combobox', { name: 'Type' }).click();
