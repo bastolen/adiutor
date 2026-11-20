@@ -4,8 +4,43 @@
  */
 import { resolve } from 'node:path';
 
-/** Port of the app server started for the tests (separate from `pnpm dev`). */
-export const E2E_PORT = 3100;
+import loadEnvFile from '../../tests/env-file';
+
+/** The port the tests' server takes when none is chosen. */
+const DEFAULT_E2E_PORT = 3100;
+
+/** The lowest and highest port a server may be given: above the ports that need special rights. */
+const PORT_RANGE = { lowest: 1024, highest: 65535 };
+
+/**
+ * Reads the port for the tests' server: `E2E_PORT`, from the environment or
+ * the checkout's `.env`, or {@link DEFAULT_E2E_PORT} when it isn't set. A
+ * second checkout of the repository picks another port (and a test database
+ * of its own, `DATABASE_URL_TEST`), so both can run the tests at once.
+ *
+ * @returns The port.
+ * @throws {Error} When `E2E_PORT` isn't a whole number a server may listen on.
+ */
+function chosenPort(): number {
+  loadEnvFile();
+  const chosen = process.env.E2E_PORT;
+  if (chosen === undefined || chosen === '') {
+    return DEFAULT_E2E_PORT;
+  }
+  const port = Number(chosen);
+  if (!Number.isInteger(port) || port < PORT_RANGE.lowest || port > PORT_RANGE.highest) {
+    throw new Error(
+      `E2E_PORT must be a whole number from ${PORT_RANGE.lowest} to ${PORT_RANGE.highest} (got "${chosen}").`,
+    );
+  }
+  return port;
+}
+
+/**
+ * Port of the app server started for the tests (separate from `pnpm dev`):
+ * 3100, or the one `E2E_PORT` names.
+ */
+export const E2E_PORT = chosenPort();
 
 /** Base URL of that server. */
 export const E2E_BASE_URL = `http://localhost:${E2E_PORT}`;
