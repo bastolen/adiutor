@@ -132,6 +132,8 @@ Things that can look like a problem but aren't:
 | `pnpm test:watch`          | Run the unit tests in watch mode                                                                            |
 | `pnpm test:integration`    | Run the service tests against the test database (Vitest)                                                    |
 | `pnpm test:e2e`            | Run the end-to-end tests (Playwright)                                                                       |
+| `pnpm check:schema`        | Check that Better Auth's tables and the migrations match the config and the schema, as CI does              |
+| `pnpm ci:local`            | Run every check CI runs, one after another (see [CI](ci-and-releases.md))                                   |
 | `pnpm services:up`         | Start PostgreSQL and Mailpit (Docker)                                                                       |
 | `pnpm services:down`       | Stop them (database data is kept)                                                                           |
 | `pnpm email:dev`           | Preview the email templates at <http://localhost:3001>                                                      |
