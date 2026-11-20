@@ -43,6 +43,8 @@ export type {
 export {
   isReopening,
   mayBeAssigned,
+  mayEditDescription,
+  mayEditReply,
   mayChangeStatus,
   maySetStatus,
   requestAudience,
@@ -63,6 +65,7 @@ export {
 export { cleanMultilineText, linkTarget, splitLinks } from './text';
 export type { TextPart } from './text';
 export {
+  editStoredMentions,
   MAX_MENTIONS_PER_TEXT,
   MENTION_KEY_LENGTH,
   nameStoredMentions,
