@@ -88,6 +88,14 @@ export interface AuthRequestState {
    */
   pendingCodeSignIn?: string;
   /**
+   * The challenge an emailed code checked with a session belongs to
+   * (`sessionCodeChallenge`): set by the signed-in checks (`auth-guards/`)
+   * for `/two-factor/verify-otp`, read after the request
+   * (`afterAuthRequest`) to end that session's wait for a new code once the
+   * code was used.
+   */
+  emailCodeChallenge?: string;
+  /**
    * The sign-in change lock the guards (or the OAuth callback,
    * `holdSignInChangeLock`) took for this request, until
    * `releaseSignInChangeLockOf` takes it and gives it back after the request.

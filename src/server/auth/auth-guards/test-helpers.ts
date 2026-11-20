@@ -3,7 +3,7 @@
  * of the checks before Better Auth requests.
  */
 import { getSessionFromCtx } from 'better-auth/api';
-import { eq } from 'drizzle-orm';
+import { eq, like } from 'drizzle-orm';
 import { expect, vi } from 'vitest';
 
 import { rateLimitBucket, user } from '@/db/schema';
@@ -30,11 +30,18 @@ export const { db } = setupTestContext();
  * @param options.email - The `email` in the body.
  * @param options.body - The whole body (instead of `email`).
  * @param options.pendingUserId - The user of a password sign-in waiting for its code step.
+ * @param options.pendingSignIn - That sign-in's identifier (its two-factor cookie); one per
+ *   sign-in, `pending-sign-in` unless a test has several.
  * @returns The context.
  */
 export function request(
   path: string,
-  options: { email?: string; body?: Record<string, unknown>; pendingUserId?: string } = {},
+  options: {
+    email?: string;
+    body?: Record<string, unknown>;
+    pendingUserId?: string;
+    pendingSignIn?: string;
+  } = {},
 ): AuthGuardContext {
   return {
     path,
@@ -44,7 +51,8 @@ export function request(
      *
      * @returns Its identifier, or `null` without a pending sign-in.
      */
-    getSignedCookie: async () => (options.pendingUserId ? 'pending-sign-in' : null),
+    getSignedCookie: async () =>
+      options.pendingUserId ? (options.pendingSignIn ?? 'pending-sign-in') : null,
     context: {
       secret: 'adiutor-tests-secret',
       /**
@@ -78,10 +86,16 @@ export function request(
  * @param options.verifiedAt - When it was confirmed; defaults to now with `verifiedWith` (a
  *   sign-in or step-up just now), otherwise `null`.
  * @param options.signedInAt - When it signed in (Better Auth's `createdAt`); defaults to now.
+ * @param options.sessionId - The session's ID; one per user unless a test has several.
  */
 export async function signedIn(
   userId: string,
-  options: { verifiedWith?: MfaMethod; verifiedAt?: Date | null; signedInAt?: Date } = {},
+  options: {
+    verifiedWith?: MfaMethod;
+    verifiedAt?: Date | null;
+    signedInAt?: Date;
+    sessionId?: string;
+  } = {},
 ): Promise<void> {
   const found = firstRow(
     await db
@@ -93,6 +107,7 @@ export async function signedIn(
   const justNow = options.verifiedWith ? new Date() : null;
   vi.mocked(getSessionFromCtx).mockResolvedValue({
     session: {
+      id: options.sessionId ?? `session-of-${userId}`,
       createdAt: options.signedInAt ?? new Date(),
       mfaVerified: Boolean(options.verifiedWith),
       mfaMethod: options.verifiedWith ?? null,
@@ -144,16 +159,14 @@ export async function repeat(times: number, ctx: AuthGuardContext): Promise<void
 }
 
 /**
- * Lets the wait for a user's next emailed code pass, as if
- * `EMAIL_CODE_RESEND_SECONDS` had gone by.
- *
- * @param userId - The user.
+ * Lets every wait for a next emailed code pass (the waits are per sign-in or
+ * session), as if `EMAIL_CODE_RESEND_SECONDS` had gone by.
  */
-export async function waitForNextCode(userId: string): Promise<void> {
+export async function waitForNextCode(): Promise<void> {
   await db
     .update(rateLimitBucket)
     .set({ resetAt: new Date(Date.now() - 1000) })
-    .where(eq(rateLimitBucket.key, `email-code-cooldown:user:${userId}`));
+    .where(like(rateLimitBucket.key, 'email-code-cooldown:%'));
 }
 
 /**
@@ -162,15 +175,10 @@ export async function waitForNextCode(userId: string): Promise<void> {
  *
  * @param times - How often.
  * @param ctx - The request.
- * @param userId - Whose codes they are.
  */
-export async function sendCodesOverTime(
-  times: number,
-  ctx: AuthGuardContext,
-  userId: string,
-): Promise<void> {
+export async function sendCodesOverTime(times: number, ctx: AuthGuardContext): Promise<void> {
   await inSequence(Array.from({ length: times }), async () => {
-    await waitForNextCode(userId);
+    await waitForNextCode();
     await beforeAuthRequest(ctx);
   });
 }

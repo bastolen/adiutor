@@ -8,7 +8,7 @@ import { allowsEmailCodesAtSignIn } from '@/lib/authz/mfa';
 
 import { loadMfaContext } from '../mfa-state';
 import { requestState } from '../request-state';
-import { limitEmailCode } from './attempts';
+import { limitEmailCode, signInCodeChallenge } from './attempts';
 import {
   type AuthGuardContext,
   refuseUnfinishedBackupCodes,
@@ -17,20 +17,23 @@ import {
 } from './paths';
 
 /**
- * Finds the user of a sign-in that's waiting for its code step, from Better
- * Auth's two-factor cookie.
+ * Finds a sign-in that's waiting for its code step, from Better Auth's
+ * two-factor cookie: its user, and the challenge an emailed code for it
+ * belongs to (`signInCodeChallenge`).
  *
  * @param ctx - The endpoint context.
- * @returns The user's ID, or `null` without a (valid) pending sign-in.
+ * @returns The user's ID and the challenge, or `null` without a (valid) pending sign-in.
  */
-async function pendingSignInUser(ctx: AuthGuardContext): Promise<string | null> {
+async function pendingSignIn(
+  ctx: AuthGuardContext,
+): Promise<{ userId: string; challenge: string } | null> {
   const cookie = ctx.context.createAuthCookie('two_factor');
   const identifier = await ctx.getSignedCookie(cookie.name, ctx.context.secret);
   if (!identifier) {
     return null;
   }
   const found = await ctx.context.internalAdapter.findVerificationValue(identifier);
-  return found?.value ?? null;
+  return found?.value ? { userId: found.value, challenge: signInCodeChallenge(identifier) } : null;
 }
 
 /**
@@ -52,7 +55,8 @@ export function pendingCodeSignInOf(ctx: { context: object }): string | null {
  * only where they're accepted at sign-in (`allowsEmailCodesAtSignIn`), and
  * emailed codes limited per user. Wrong codes there are limited by Better
  * Auth itself (5 per sign-in or emailed code, and a pause after
- * `TWO_FACTOR_LOCK_ATTEMPTS` in a row). Each code it goes on to check hands
+ * `TWO_FACTOR_LOCK_ATTEMPTS` in a row). An emailed code waits for the last one
+ * of this sign-in only, the code Better Auth keeps with it. Each code it goes on to check hands
  * its user to the reactions after the request ({@link pendingCodeSignInOf}),
  * which record a wrong one. A request without a (valid) pending sign-in is
  * left to Better Auth, which refuses it.
@@ -62,10 +66,11 @@ export function pendingCodeSignInOf(ctx: { context: object }): string | null {
  * @throws {APIError} When the request is refused.
  */
 export async function checkCodeStep(ctx: AuthGuardContext, path: string): Promise<void> {
-  const userId = await pendingSignInUser(ctx);
-  if (!userId) {
+  const pending = await pendingSignIn(ctx);
+  if (!pending) {
     return;
   }
+  const { userId, challenge } = pending;
   // An authenticator code needs no checks here: Better Auth refuses it without an app.
   const mfa = path === '/two-factor/verify-totp' ? null : await loadMfaContext(db, userId);
   if (path === '/two-factor/verify-backup-code' && mfa && !mfa.state.authenticator) {
@@ -75,7 +80,7 @@ export async function checkCodeStep(ctx: AuthGuardContext, path: string): Promis
     refuseEmailCodes(ctx);
   }
   if (path === '/two-factor/send-otp') {
-    await limitEmailCode(ctx, userId, true);
+    await limitEmailCode(ctx, userId, true, challenge);
     return;
   }
   // Last, so only a code Better Auth goes on to check is handed over.
