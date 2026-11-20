@@ -149,6 +149,20 @@ the closed statuses.
   [Design and accessibility](design.md#design-and-accessibility)). A block of code and a table
   scroll sideways when they're wider than the text, can be reached and scrolled with the
   keyboard, and say what they hold.
+- **Copying code:** a block of code has a "Copy code" button next to its language (`CopyButton`),
+  before the code in the tab order. It copies the code as it was written, without the line break at
+  its end, so a pasted command doesn't run by itself. Above the code it puts a note of where the
+  code is from, so it can be traced once it sits in a file: the request's address, then who wrote
+  the text and on which day (`TextSource`, in the reader's language, with the name the page shows
+  next to the text). The note is a comment in the block's language (`withCodeNote` in
+  `code-note.ts`: `#`, `//`, `--`, `;`, `'`, `;;`, `/* */` or `<!-- -->`, also for a language
+  written by an alias). A note must never break what's pasted, so the code is copied alone where
+  a comment can't go or could end up shown: JSON, plain text, a block without a language or in one
+  we don't highlight, Markdown, a diff, an HTTP message, PHP, and a shell or Python session. Lines
+  that have to stay first (a `#!` line, an XML declaration, a doctype, a Dockerfile's directives)
+  keep their place, with the note below them. A new language in `CODE_LANGUAGES` gets its choice in
+  `COMMENT_SIGNS`. Selecting code by hand copies it without a note, and a block has no button while
+  it's written.
 - **A text that would cost too much to format is shown as plain text** (`markdownTree`): one
   nested more than 100 levels deep (`MAX_NESTING`; React renders a level per call, and the
   parser's own walk overflows the stack at a few thousand), or with more than 2,500 runs of `*`
@@ -258,7 +272,8 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
   people). `src/app/(app)/requests/`: the pages themselves.
 - `src/components/ui/markdown/`: what shows a Markdown text: the pipeline with its limits
   (`tree.ts`), the allow-list (`sanitize.ts`), the elements (`elements.tsx`), the languages of
-  highlighted code (`languages.ts`) and the class names (`styles.ts`). And what writes one: the
+  highlighted code (`languages.ts`), the note above copied code (`code-note.ts`) and the class
+  names (`styles.ts`). And what writes one: the
   field (`markdown-field.tsx`), the toolbar (`formatting-toolbar.tsx`), and the editor's own files
   (`editor*.ts(x)`), which only `import()` reaches.
 - Example requests for development and the end-to-end tests come from

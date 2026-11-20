@@ -2,6 +2,7 @@
  * @file Tests for a request's conversation.
  */
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import type { RequestDetail, RequestEntryView, RequestPerson } from '@/server/requests';
@@ -16,6 +17,9 @@ const CASEY: RequestPerson = {
   side: 'company',
   isViewer: true,
 };
+
+/** The address of the request's page. */
+const ADDRESS = 'https://adiutor.test/requests/142';
 
 /** Someone on the staff. */
 const SAM: RequestPerson = { userId: null, name: 'Sam Support', side: 'staff', isViewer: false };
@@ -88,7 +92,7 @@ const entryTexts = () =>
 
 describe('Thread', () => {
   it('says so when nobody has replied yet', () => {
-    render(<Thread detail={detailOf()} earlierHref={null} />);
+    render(<Thread address={ADDRESS} detail={detailOf()} earlierHref={null} />);
 
     expect(screen.getByText('No replies yet.')).toBeInTheDocument();
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
@@ -99,6 +103,7 @@ describe('Thread', () => {
   it('shows the replies in order, each with who wrote it', () => {
     render(
       <Thread
+        address={ADDRESS}
         detail={detailOf({
           entries: [
             entryOf('1', { body: { text: 'Which days change?', format: 'plain' } }),
@@ -161,7 +166,13 @@ describe('Thread', () => {
       'Changed the status from Open to on_hold.',
     ],
   ])('says what %s did, after who did it', (_what, change, sentence) => {
-    render(<Thread detail={detailOf({ entries: [entryOf('1', change)] })} earlierHref={null} />);
+    render(
+      <Thread
+        address={ADDRESS}
+        detail={detailOf({ entries: [entryOf('1', change)] })}
+        earlierHref={null}
+      />,
+    );
 
     const [changed] = within(screen.getByRole('list')).getAllByRole('listitem');
     expect(changed).toHaveTextContent('Sam Support');
@@ -171,6 +182,7 @@ describe('Thread', () => {
   it('names the side of someone without a name or whose account is gone', () => {
     render(
       <Thread
+        address={ADDRESS}
         detail={detailOf({
           entries: [
             entryOf('1', {
@@ -192,9 +204,42 @@ describe('Thread', () => {
     expect(entryTexts()[1]).not.toContain('Adiutor Tests Alpha');
   });
 
+  it('copies code from a reply below the request’s address, who wrote the reply and when', async () => {
+    const user = userEvent.setup();
+    render(
+      <Thread
+        address={ADDRESS}
+        detail={detailOf({
+          entries: [
+            entryOf('1', { body: { text: '```bash\nnpm test\n```', format: 'markdown' } }),
+            entryOf('2', {
+              // Someone whose account is gone is named by their side, as next to the reply.
+              author: { userId: null, name: null, side: 'company', isViewer: false },
+              createdAt: new Date('2026-11-13T08:00:00Z'),
+              body: { text: '```sql\nselect 1;\n```', format: 'markdown' },
+            }),
+          ],
+        })}
+        earlierHref={null}
+      />,
+    );
+    const [first, second] = screen.getAllByRole('button', { name: 'Copy code' });
+
+    await user.click(first as HTMLElement);
+    expect(await navigator.clipboard.readText()).toBe(
+      '# Source: https://adiutor.test/requests/142\n# Written by Sam Support on Nov 12, 2026\nnpm test',
+    );
+
+    await user.click(second as HTMLElement);
+    expect(await navigator.clipboard.readText()).toBe(
+      '-- Source: https://adiutor.test/requests/142\n-- Written by Adiutor Tests Alpha on Nov 13, 2026\nselect 1;',
+    );
+  });
+
   it('offers the earlier entries first, when there are more', () => {
     render(
       <Thread
+        address={ADDRESS}
         detail={detailOf({
           entries: [entryOf('1', { body: { text: 'Reply 56', format: 'plain' } })],
           earlierEntries: 55,
@@ -219,6 +264,7 @@ describe('Thread', () => {
     renderInLocale(
       locale,
       <Thread
+        address={ADDRESS}
         detail={detailOf({
           entries: [entryOf('1', { kind: 'status', from: 'open', to: 'todo' })],
           earlierEntries: 3,

@@ -40,7 +40,7 @@ import { ServiceError } from '@/server/errors';
 import { checkedPageMetadata } from '@/server/page-metadata';
 import { findRequest, getRequest, MAX_EARLIER_CHUNKS, type RequestDetail } from '@/server/requests';
 
-import PersonLine, { PersonAvatar } from '../../_requests/request-person';
+import PersonLine, { PersonAvatar, personName } from '../../_requests/request-person';
 import RequestText from '../../_requests/request-text';
 import { changeStatusAction } from './actions';
 import EditDetails from './edit-details';
@@ -121,6 +121,8 @@ async function RequestContent({
   const fields = { request: String(detail.number) };
 
   const names = { company: detail.company.name, staff: detail.staffName };
+  // The request's whole address, for the note above code copied from its texts.
+  const address = `${appContext.baseUrl}${requestPath(detail.number)}`;
 
   return (
     <ClientMessages namespaces={['requests']}>
@@ -166,6 +168,11 @@ async function RequestContent({
                 text={detail.description}
                 id="description"
                 className="text-sm text-foreground"
+                source={{
+                  url: address,
+                  writer: personName(detail.raisedBy, names),
+                  at: detail.createdAt,
+                }}
               />
             </div>
           </Card>
@@ -236,7 +243,7 @@ async function RequestContent({
         <div className="xl:col-start-1 xl:row-start-2">
           <Card title={t('conversation')}>
             <div className="flex flex-col gap-6">
-              <Thread detail={detail} earlierHref={earlierHref} />
+              <Thread detail={detail} address={address} earlierHref={earlierHref} />
               {contributes && (
                 <div className={detail.entries.length > 0 ? 'border-t border-border pt-6' : ''}>
                   <ReplyForm

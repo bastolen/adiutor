@@ -18,7 +18,11 @@ import {
 } from '@/lib/requests';
 import type { RequestDetail, RequestEntryView, RequestPerson } from '@/server/requests';
 
-import PersonLine, { PersonAvatar, type SideNames } from '../../_requests/request-person';
+import PersonLine, {
+  PersonAvatar,
+  personName,
+  type SideNames,
+} from '../../_requests/request-person';
 import RequestText from '../../_requests/request-text';
 import ShowEarlierLink from './show-earlier-link';
 
@@ -126,14 +130,17 @@ function ChangeText({ entry, audience }: { entry: RequestEntryView; audience: Re
  *
  * @param props - Component props.
  * @param props.detail - The request, as its reader gets it.
+ * @param props.address - The whole address of the request's page, for the note above code copied from a reply.
  * @param props.earlierHref - The page with earlier entries, or `null` when all are shown.
  * @returns The list of entries, or a line saying there are none.
  */
 export default function Thread({
   detail,
+  address,
   earlierHref,
 }: {
   detail: RequestDetail;
+  address: string;
   earlierHref: string | null;
 }) {
   const t = useTranslations('requests.detail');
@@ -167,6 +174,11 @@ export default function Thread({
                   text={entry.body}
                   id={entry.id}
                   className="rounded-lg bg-muted px-3 py-2 text-sm text-foreground"
+                  source={{
+                    url: address,
+                    writer: personName(entry.author, names),
+                    at: entry.createdAt,
+                  }}
                 />
               )}
             </Entry>

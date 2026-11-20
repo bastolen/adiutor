@@ -31,6 +31,30 @@ export const markdownStyles = {
   /** The caption of a block of code: the language it's in. */
   codeCaption: 'border-b border-border px-3 py-1.5 text-xs font-medium text-muted-foreground',
   /**
+   * What a block of code adds to its box where it's read: two columns, for
+   * the caption and the button that copies the code, with the code below
+   * them across both.
+   */
+  codeFigureRead: 'grid grid-cols-[minmax(0,1fr)_auto]',
+  /**
+   * What the caption adds where it's read: its text in the middle of the row,
+   * which the button next to it makes taller, and a long name of a language
+   * wraps rather than pushing the button out of the box.
+   */
+  codeCaptionRead: 'flex items-center wrap-anywhere',
+  /**
+   * The cell of the button that copies a block's code, at the end of the
+   * caption's row and with the same line below it. Its room around the button
+   * keeps the button's focus ring inside the box, which cuts off what's
+   * outside it.
+   */
+  codeCopy: 'flex items-center border-b border-border p-1',
+  /**
+   * What lies across both columns of a block where it's read: its code, below
+   * the caption and the button, and the caption of a block without a button.
+   */
+  codeAcross: 'col-span-2',
+  /**
    * The code of a block. It scrolls sideways rather than wrapping, shows its
    * focus ring inside the box (which would cut off one outside it), and the
    * code element in it drops the look of code in a sentence.

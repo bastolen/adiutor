@@ -30,6 +30,7 @@ import {
   CLOSED_COMPANY_NAME,
   COMPANY_NAME,
   COMPANY_SLUG,
+  E2E_BASE_URL,
   FINANCE_STAFF,
   FIRST_PAGED_REQUEST_NUMBER,
   PAGED_REQUEST_COUNT,
@@ -1002,6 +1003,60 @@ test('a request written in Markdown is shown formatted, and nothing in it loads'
   await expect(page).toHaveURL(/-fn-1$/);
   await thread.getByRole('link', { name: 'Back to reference 1' }).click();
   await expect(page).toHaveURL(/-fnref-1$/);
+});
+
+test('a block of code is copied below a note of where it’s from', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto(`/requests/${SEEDED_REQUESTS.formatted.number}`);
+  const thread = page.getByRole('region', { name: 'Conversation' });
+  /**
+   * The block of code in a language, with its caption and its button.
+   *
+   * @param name - The name of the code, e.g. "Bash code".
+   * @returns The block.
+   */
+  const block = (name: string) =>
+    thread.getByRole('figure').filter({ has: page.getByRole('group', { name }) });
+  /**
+   * Reads what was copied.
+   *
+   * @returns The clipboard's text.
+   */
+  const copied = () => page.evaluate(() => navigator.clipboard.readText());
+  // The request's address and who wrote the reply, on the day they did, as two lines of comment.
+  const address = `${E2E_BASE_URL}/requests/${SEEDED_REQUESTS.formatted.number}`;
+  const note = new RegExp(
+    `^# Source: ${address}\\n# Written by ${SUPPORT_STAFF.name} on [A-Z][a-z]{2} \\d{1,2}, \\d{4}\\n`,
+  );
+
+  // A command: the note, then the command as it was written, without a line break after it.
+  const command = block('Bash code');
+  await command.getByRole('button', { name: 'Copy code' }).click();
+  await expect(command.getByRole('button', { name: 'Copied' })).toBeVisible();
+  const [source, written, ...code] = (await copied()).split('\n');
+  expect(`${source}\n${written}\n`).toMatch(note);
+  expect(code).toEqual([
+    'curl --include --header "Accept: application/json" --header "X-Checked-By: Adiutor Tests" --max-time 10 https://intranet.adiutor.test/health',
+  ]);
+  // The button says so for a moment, then offers to copy again.
+  await expect(command.getByRole('button', { name: 'Copy code' })).toBeVisible();
+
+  // A configuration of several lines keeps its lines, its spaces and its empty line.
+  await block('Nginx config code').getByRole('button', { name: 'Copy code' }).click();
+  await expect.poll(copied).toMatch(note);
+  expect((await copied()).replace(note, '')).toBe(
+    [
+      'server {',
+      '  listen 443 ssl;',
+      '  server_name intranet.adiutor.test;',
+      '',
+      '  location / {',
+      '    proxy_pass http://127.0.0.1:3000;',
+      '  }',
+      '}',
+    ].join('\n'),
+  );
 });
 
 test('a Watcher follows a request without taking part', async ({ page }) => {

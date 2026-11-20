@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 
 import { describe, expect, it } from 'vitest';
 
-import { CODE_LANGUAGES, codeLanguageName } from './languages';
+import { CODE_LANGUAGES, codeLanguageId, codeLanguageName } from './languages';
 
 describe('codeLanguageName', () => {
   it.each([
@@ -32,6 +32,33 @@ describe('codeLanguageName', () => {
     Object.keys(CODE_LANGUAGES).forEach((language) => {
       expect(codeLanguageName(language), language).toEqual(expect.any(String));
     });
+  });
+});
+
+describe('codeLanguageId', () => {
+  it.each([
+    ['typescript', 'typescript'],
+    ['ts', 'typescript'],
+    ['TSX', 'typescript'],
+    ['sh', 'bash'],
+    ['yml', 'yaml'],
+    ['html', 'xml'],
+    ['toml', 'ini'],
+    ['docker', 'dockerfile'],
+  ])('finds the language %s stands for: %s', (language, id) => {
+    expect(codeLanguageId(language)).toBe(id);
+  });
+
+  it('knows every language in the list by its own key', () => {
+    Object.keys(CODE_LANGUAGES).forEach((language) => {
+      expect(codeLanguageId(language), language).toBe(language);
+    });
+  });
+
+  it('has none for a language that isn’t highlighted', () => {
+    expect(codeLanguageId('mermaid')).toBeNull();
+    expect(codeLanguageId('')).toBeNull();
+    expect(codeLanguageId('constructor')).toBeNull();
   });
 });
 

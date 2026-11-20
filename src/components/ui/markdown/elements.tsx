@@ -3,7 +3,7 @@
  * for links, images, lists, tables, quotes and code, so formatted text looks
  * like the rest of Adiutor and follows its rules for what someone else wrote.
  */
-import type { Element } from 'hast';
+import type { Element, ElementContent } from 'hast';
 import type { Components, ExtraProps } from 'hast-util-to-jsx-runtime';
 import { Square, SquareCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -12,9 +12,11 @@ import type { ComponentProps } from 'react';
 import cn from '@/lib/cn';
 import { linkTarget } from '@/lib/requests';
 
+import CopyButton from '../copy-button';
 import ExternalLink, { writtenLinkClasses } from '../external-link';
 import { focusRing } from '../styles';
 import { Td, Th, Tr } from '../table';
+import withCodeNote from './code-note';
 import { codeLanguageName } from './languages';
 import { headingSize, markdownStyles } from './styles';
 import { FOOTNOTE_LABEL_ID } from './tree';
@@ -30,6 +32,11 @@ export interface MarkdownElementsOptions {
   headingLevel: number;
   /** How many `#` the text's highest heading was written with (`highestHeading`). */
   highestHeading: number;
+  /**
+   * What to say above a block's code when it's copied, a line each: where
+   * the text is from and who wrote it. Nothing for a text without a note.
+   */
+  codeNote: readonly string[];
 }
 
 /**
@@ -226,31 +233,87 @@ function namedLanguage(block: Element | undefined): string | null {
 }
 
 /**
+ * The text of a part of the text's tree: its own, or that of everything in
+ * it (the highlighter splits a block's code into coloured parts).
+ *
+ * @param node - The part.
+ * @returns Its text.
+ */
+function textOf(node: ElementContent): string {
+  if (node.type === 'text') {
+    return node.value;
+  }
+  return node.type === 'element' ? node.children.map(textOf).join('') : '';
+}
+
+/**
+ * A block's code as it was written, without the line break the parser ends
+ * it with: pasted in a terminal, a command mustn't run by itself.
+ *
+ * @param block - The block's node in the text's tree.
+ * @returns The code.
+ */
+function writtenCode(block: Element | undefined): string {
+  const code = block === undefined ? '' : textOf(block);
+  return code.endsWith('\n') ? code.slice(0, -1) : code;
+}
+
+/**
  * A block of code, with the language it's in as its caption: the language's
  * name where we know it ("TypeScript" for `ts`), else as it was written, and
  * "Code" for a block that names none. The code is always written left to
  * right. It scrolls sideways when it's wider than the text, so it can be
  * reached and scrolled with the keyboard, and says what it holds.
  *
- * @param props - The block's attributes.
- * @param props.node - The block's node in the text's tree, for the language it names.
+ * Next to the caption a button copies the code, as it was written, below
+ * the text's note as a comment in the block's language (`withCodeNote`). It
+ * comes before the code, as on the screen, and stays out of the caption, so
+ * the block is still named by its language alone. A block without code has
+ * no button.
+ *
+ * @param props - The block's attributes, and the text's note.
+ * @param props.node - The block's node in the text's tree, for its language and its code.
+ * @param props.note - What to say above the code when it's copied, a line each.
  * @param props.children - Its code element.
  * @returns The block.
  */
-function MarkdownCodeBlock({ node, children = null }: ComponentProps<'pre'> & ExtraProps) {
+function MarkdownCodeBlock({
+  node,
+  note,
+  children = null,
+}: ComponentProps<'pre'> & ExtraProps & { note: readonly string[] }) {
   const t = useTranslations('common.markdown');
   const language = namedLanguage(node);
   const name = language === null ? null : (codeLanguageName(language) ?? language);
+  const code = writtenCode(node);
   return (
-    <figure className={markdownStyles.codeFigure}>
-      <figcaption className={markdownStyles.codeCaption}>{name ?? t('code')}</figcaption>
+    <figure className={cn(markdownStyles.codeFigure, markdownStyles.codeFigureRead)}>
+      <figcaption
+        className={cn(
+          markdownStyles.codeCaption,
+          markdownStyles.codeCaptionRead,
+          code === '' && markdownStyles.codeAcross,
+        )}
+      >
+        {name ?? t('code')}
+      </figcaption>
+      {code !== '' && (
+        <div className={markdownStyles.codeCopy}>
+          <CopyButton
+            value={withCodeNote(code, language, note)}
+            label={t('copyCode')}
+            size="sm"
+            variant="ghost"
+          />
+        </div>
+      )}
       <pre
         dir="ltr"
         role="group"
         aria-label={name === null ? t('code') : t('codeIn', { language: name })}
         // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- A box that scrolls must be reachable with the keyboard to be scrolled with it (WCAG 2.1.1).
         tabIndex={0}
-        className={cn(focusRing, markdownStyles.codeBlock)}
+        className={cn(focusRing, markdownStyles.codeBlock, markdownStyles.codeAcross)}
       >
         {children}
       </pre>
@@ -327,12 +390,14 @@ type MarkdownLinkProps = ComponentProps<'a'> & {
  * @param options.id - The text's name on the page.
  * @param options.headingLevel - The level the text's highest heading gets.
  * @param options.highestHeading - How many `#` that heading was written with.
+ * @param options.codeNote - What to say above a block's code when it's copied.
  * @returns The components to render the text's tree with.
  */
 export default function markdownElements({
   id,
   headingLevel,
   highestHeading,
+  codeNote,
 }: MarkdownElementsOptions): Components {
   /**
    * Builds the component of a heading written with `depth` marks. The text's
@@ -408,6 +473,22 @@ export default function markdownElements({
     );
   }
 
+  /**
+   * A block of code in this text, copied below the text's note.
+   *
+   * @param props - The block's attributes.
+   * @param props.node - The block's node in the text's tree.
+   * @param props.children - Its code element.
+   * @returns The block.
+   */
+  function NotedCodeBlock({ node, children = null }: ComponentProps<'pre'> & ExtraProps) {
+    return (
+      <MarkdownCodeBlock node={node} note={codeNote}>
+        {children}
+      </MarkdownCodeBlock>
+    );
+  }
+
   return {
     h1: heading(1),
     h2: heading(2),
@@ -425,7 +506,7 @@ export default function markdownElements({
     blockquote: MarkdownQuote,
     hr: MarkdownRule,
     code: MarkdownCode,
-    pre: MarkdownCodeBlock,
+    pre: NotedCodeBlock,
     table: MarkdownTable,
     tr: MarkdownRow,
     th: MarkdownHeaderCell,

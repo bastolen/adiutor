@@ -86,6 +86,10 @@
       "type": "Type gewijzigd van {from} naar {to}.",
       "priority": "Prioriteit gewijzigd van {from} naar {to}."
     },
+    "codeNote": {
+      "source": "Bron: {url}",
+      "writtenBy": "Geschreven door {name} op {date}"
+    },
     "reply": {
       "label": "Je reactie",
       "hint": "Maak je tekst op met de knoppen, of typ Markdown zoals **vet**, lijsten en `code`.",
