@@ -26,6 +26,7 @@ import expectAccessible from './support/axe';
 import {
   findCompanyId,
   findUserId,
+  storeAuditEvent,
   storeInvitation,
   storeInviteLink,
   storeSignInLink,
@@ -186,6 +187,14 @@ test.beforeAll(async ({ browser }) => {
     role: 'client',
   });
   inviteLinkPath = await storeInviteLink({ companyId, role: 'client' });
+  // An entry whose line names who acted, whom it was about and the company, each a link.
+  await storeAuditEvent({
+    action: 'role_changed',
+    actorEmail: PLATFORM_ADMIN.email,
+    targetEmail: CLIENT_WATCHER.email,
+    companyId,
+    details: { from: 'client', to: 'watcher' },
+  });
   userId = await findUserId(CLIENT_WATCHER.email);
   adminState = await adminStorageState(browser);
   clientState = await storageStateFor(browser, REQUESTS_CLIENT);
@@ -457,6 +466,36 @@ test.describe('on a 320px wide screen', () => {
       await expect(
         nameCell.getByText('Active', { exact: true }).filter({ visible: true }),
       ).toHaveCount(1);
+    });
+
+    test('the links in an audit log entry’s line of who and which company are 24px tall, apart', async ({
+      page,
+    }) => {
+      await page.goto('/admin/logs');
+      const line = page
+        .getByRole('row')
+        .filter({ hasText: `about ${CLIENT_WATCHER.name}` })
+        .first();
+      const boxes = await Promise.all(
+        [PLATFORM_ADMIN.name, CLIENT_WATCHER.name, COMPANY_NAME].map(async (name) =>
+          defined(
+            await line.getByRole('link', { name, exact: true }).boundingBox(),
+            `the link to ${name}`,
+          ),
+        ),
+      );
+      boxes.forEach((box) => expect(box.height).toBeGreaterThanOrEqual(24));
+      // On this narrow screen the line wraps: links on different rows don't overlap.
+      boxes.forEach((box, index) =>
+        boxes.slice(index + 1).forEach((other) => {
+          const apart =
+            box.x + box.width <= other.x ||
+            other.x + other.width <= box.x ||
+            box.y + box.height <= other.y ||
+            other.y + other.height <= box.y;
+          expect(apart).toBe(true);
+        }),
+      );
     });
 
     test('the Sort menu keeps clear of the screen edges', async ({ page }) => {

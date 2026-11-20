@@ -17,6 +17,7 @@ import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Client } from 'pg';
 
 import * as schema from '../../src/db/schema';
+import type { AuditAction } from '../../src/lib/audit-actions';
 import type { CompanyRole } from '../../src/lib/authz/roles';
 import { firstRow } from '../../src/lib/defined';
 import type { Locale } from '../../src/lib/i18n/locales';
@@ -111,6 +112,42 @@ export async function findUserId(email: string): Promise<string> {
       throw new Error(`No user ${email}`);
     }
     return found.id;
+  });
+}
+
+/**
+ * Stores an audit log entry by one seeded user about another in a company,
+ * so the audit log and the user's page show the line that names who acted,
+ * whom it was about and the company (each a link).
+ *
+ * @param event - The entry.
+ * @param event.action - What happened.
+ * @param event.actorEmail - Who did it.
+ * @param event.targetEmail - Whom it was about.
+ * @param event.companyId - Which company it was about.
+ * @param event.details - What the entry's description reads from.
+ */
+export async function storeAuditEvent({
+  action,
+  actorEmail,
+  targetEmail,
+  companyId,
+  details,
+}: {
+  action: AuditAction;
+  actorEmail: string;
+  targetEmail: string;
+  companyId: string;
+  details: Record<string, unknown>;
+}): Promise<void> {
+  const [actorUserId, targetUserId] = await Promise.all([
+    findUserId(actorEmail),
+    findUserId(targetEmail),
+  ]);
+  await withTestDatabase(async (db) => {
+    await db
+      .insert(schema.auditEvent)
+      .values({ action, actorUserId, targetUserId, companyId, details });
   });
 }
 

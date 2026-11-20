@@ -60,6 +60,14 @@ function jobName(chunks: ReactNode) {
  * Who acted, whom it was about, which company and which background job, as
  * a line under an event's description. Its text comes from `admin.logs`.
  *
+ * The line is a row of details, not a sentence, so its links must be 24px
+ * tall to tap (WCAG 2.5.8). Each link is a flex item: "by …" and "about …"
+ * are flex rows of their own, with the space as a gap, and the company link
+ * stands in the line itself. As a block, a link takes the whole line's height
+ * plus `TextLink`'s 2px above and below; inline, it would only add those to
+ * the font's height and stay at 21px. When the line wraps, its rows keep 4px
+ * apart, so the links' boxes don't overlap.
+ *
  * @param props - Component props.
  * @param props.event - The event.
  * @returns The line, or nothing when the event involves no one.
@@ -70,7 +78,7 @@ function Involved({ event }: { event: AuditEntry }) {
   const parts = [];
   if (actor) {
     parts.push(
-      <span key="actor">
+      <span key="actor" className="flex items-baseline gap-x-1">
         {t.rich('by', {
           name: displayName(actor),
           link: userLink(actor.id),
@@ -80,7 +88,7 @@ function Involved({ event }: { event: AuditEntry }) {
   }
   if (target && target.id !== actor?.id) {
     parts.push(
-      <span key="target">
+      <span key="target" className="flex items-baseline gap-x-1">
         {t.rich('about', {
           name: displayName(target),
           link: userLink(target.id),
@@ -90,9 +98,9 @@ function Involved({ event }: { event: AuditEntry }) {
   }
   if (company) {
     parts.push(
-      <span key="company">
-        <TextLink href={`/companies/${company.id}`}>{company.name}</TextLink>
-      </span>,
+      <TextLink key="company" href={`/companies/${company.id}`}>
+        {company.name}
+      </TextLink>,
     );
   } else if (event.details.staff === true) {
     parts.push(<span key="staff">{t('staff')}</span>);
@@ -112,7 +120,7 @@ function Involved({ event }: { event: AuditEntry }) {
     return null;
   }
   return (
-    <span className="flex flex-wrap gap-x-1.5 text-sm wrap-anywhere text-muted-foreground">
+    <span className="flex flex-wrap gap-x-1.5 gap-y-1 text-sm wrap-anywhere text-muted-foreground">
       {parts.flatMap((part, index) =>
         // Each part has its own key; its separator takes it too.
         index === 0 ? [part] : [<span key={`before-${part.key}`}>·</span>, part],
