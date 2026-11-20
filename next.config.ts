@@ -61,7 +61,7 @@ const nextConfig: NextConfig = {
     return [
       { source: '/:path*', headers: securityHeaders },
       // The static files the proxy doesn't handle: nothing in them may run.
-      ...['/brand/:path*', '/icon.svg'].map((source) => ({
+      ...['/brand/:path*', '/icon.svg', '/favicon.ico'].map((source) => ({
         source,
         headers: [{ key: 'Content-Security-Policy', value: STATIC_FILE_POLICY }],
       })),

@@ -476,6 +476,12 @@ Logos and icons live in `public/brand/`, cropped to their content with no backgr
 | `logo-on-dark.svg`                 | Dark backgrounds (ink)              |
 | `logo-white.svg`, `icon-white.svg` | The brand gradient or accent colour |
 
+The icon in a browser's tab is `src/app/icon.svg` (the same picture as `public/brand/icon.svg`),
+and, for browsers and tools that ask for `/favicon.ico` instead, `src/app/favicon.ico`: that icon
+drawn at 16, 32 and 48 pixels, the three as PNG pictures in one `.ico` file. Next.js serves both
+and adds their links to every page (its file convention for icons). When the icon changes, make
+the `.ico` again from the SVG.
+
 `src/styles/theme.css` is the Tailwind theme: the brand colours (`brand-teal`, `brand-green`,
 `brand-orange`, `ink`), the fonts (Inter and JetBrains Mono, then the system fonts as fallbacks),
 text sizes with line height = font size + 8px, short entrance animations, and the semantic colours
