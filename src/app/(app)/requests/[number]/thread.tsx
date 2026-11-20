@@ -24,6 +24,8 @@ import PersonLine, {
   type SideNames,
 } from '../../_requests/request-person';
 import RequestText from '../../_requests/request-text';
+import EditableText from './editable-text';
+import EditedNote from './edited-note';
 import ShowEarlierLink from './show-earlier-link';
 
 /** The icon of each kind of change. */
@@ -44,6 +46,7 @@ const CHANGE_ICONS: Record<Exclude<RequestEntryView['kind'], 'comment'>, LucideI
  * @param props.person - Who wrote or changed it.
  * @param props.names - The names of the two sides.
  * @param props.at - When.
+ * @param props.edited - What follows the time: "Edited", for an edited reply.
  * @param props.children - What they wrote or changed.
  * @returns The list item.
  */
@@ -52,12 +55,14 @@ function Entry({
   person,
   names,
   at,
+  edited = null,
   children,
 }: {
   leading: ReactNode;
   person: RequestPerson;
   names: SideNames;
   at: Date;
+  edited?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -65,8 +70,9 @@ function Entry({
       {leading}
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <PersonLine person={person} names={names}>
-          <span className="text-muted-foreground">
+          <span className="flex items-center gap-x-2 text-muted-foreground">
             <RelativeTime date={at} />
+            {edited}
           </span>
         </PersonLine>
         {children}
@@ -171,6 +177,20 @@ export default function Thread({
       )}
       {detail.entries.map((entry) => {
         if (entry.kind === 'comment') {
+          const source = {
+            url: address,
+            writer: personName(entry.author, names),
+            at: entry.createdAt,
+          };
+          const text = entry.body && (
+            <RequestText
+              text={entry.body}
+              id={entry.id}
+              className="rounded-lg bg-muted px-3 py-2 text-sm text-foreground"
+              source={source}
+              names={names}
+            />
+          );
           return (
             <Entry
               key={entry.id}
@@ -178,19 +198,18 @@ export default function Thread({
               person={entry.author}
               names={names}
               at={entry.createdAt}
+              edited={
+                entry.body && (
+                  <EditedNote text={entry.body} id={entry.id} source={source} names={names} />
+                )
+              }
             >
-              {entry.body && (
-                <RequestText
-                  text={entry.body}
-                  id={entry.id}
-                  className="rounded-lg bg-muted px-3 py-2 text-sm text-foreground"
-                  source={{
-                    url: address,
-                    writer: personName(entry.author, names),
-                    at: entry.createdAt,
-                  }}
-                  names={names}
-                />
+              {entry.body?.edit ? (
+                <EditableText request={detail.number} entry={entry.id} edit={entry.body.edit}>
+                  {text}
+                </EditableText>
+              ) : (
+                text
               )}
             </Entry>
           );

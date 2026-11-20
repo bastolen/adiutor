@@ -137,7 +137,21 @@
       "status": "{change, select, reopened {Request reopened.} done {Request marked as done.} cancelled {Request cancelled.} other {Status saved.}}",
       "details": "{changed, plural, =0 {Nothing changed.} other {Details saved.}}",
       "assignees": "{changed, plural, =0 {Nothing changed.} other {Assignees saved.}}",
-      "assignedYou": "You’re assigned to this request."
+      "assignedYou": "You’re assigned to this request.",
+      "text": "{changed, select, yes {Changes saved.} other {Nothing changed.}}"
+    },
+    "edit": {
+      "editDescription": "Edit description",
+      "editReply": "Edit reply",
+      "descriptionLabel": "Description",
+      "replyLabel": "Reply",
+      "save": "Save",
+      "cancel": "Cancel",
+      "edited": "Edited",
+      "editedAt": "Edited {time}",
+      "versionsTitle": "Earlier versions",
+      "versionsDescription": "What this text said before its edits, newest first. Only the staff see these.",
+      "versionLine": "{name} changed this on {time}."
     }
   }
 }

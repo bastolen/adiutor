@@ -5,8 +5,9 @@
  * for a company), and a request's page: its description, details and
  * conversation, the staff and a company working a request through (status,
  * replies, done, reopened, cancelled), the staff editing its details and
- * assigning it (and finding what's assigned to them), the prefix numbers
- * are shown with, and
+ * assigning it (and finding what's assigned to them), editing a
+ * description or a reply (and the earlier versions the staff read), the
+ * prefix numbers are shown with, and
  * who only reads: Watchers, Finance, everyone for a
  * deactivated company's request, and a staff member signed in as a user.
  * The staff reach a person's user page from their name; nobody at a company
@@ -96,7 +97,7 @@ async function expectReadOnly(page: Page) {
   await expect(page.getByRole('combobox', { name: 'Status' })).toHaveCount(0);
   await expect(
     main(page).getByRole('button', {
-      name: /^(Send reply|Mark as done|Cancel request|Reopen|Edit details|Assign to me|Change assignees)$/,
+      name: /^(Send reply|Mark as done|Cancel request|Reopen|Edit details|Edit description|Edit reply|Assign to me|Change assignees)$/,
     }),
   ).toHaveCount(0);
 }
@@ -1356,6 +1357,142 @@ test('a block of code is copied below a note of where it’s from', async ({ pag
   );
 });
 
+test('someone at a company edits the description, and the staff read what it said before', async ({
+  page,
+}) => {
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'The printer on floor 2 jams',
+    description: 'It jams on every page.',
+  });
+
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto(`/requests/${number}`);
+  const description = page.getByRole('region', { name: 'Description' });
+  const editDescription = description.getByRole('button', { name: 'Edit description' });
+  await expect(description.getByText('Edited', { exact: true })).toHaveCount(0);
+
+  // The text opens in the editor in its place, with the cursor at its end.
+  await editDescription.click();
+  const editor = description.getByRole('textbox', { name: 'Description' });
+  await expect(editor).toHaveAttribute('contenteditable', 'true');
+  await expect(editor).toHaveText('It jams on every page.');
+  await expect(editor).toBeFocused();
+  await page.keyboard.type(' Only when it prints on **both** sides.');
+  await description.getByRole('button', { name: 'Save' }).click();
+  await expect(toasts(page)).toContainText('Changes saved.');
+  await expect(editor).toHaveCount(0);
+  await expect(description).toContainText(
+    'It jams on every page. Only when it prints on both sides.',
+  );
+  await expect(description.locator('strong', { hasText: 'both' })).toBeVisible();
+  await expect(editDescription).toBeFocused();
+  // Everyone sees that it was edited, and when; what it said before is for the staff.
+  const edited = description.getByText('Edited', { exact: true });
+  await expect(edited).toHaveAttribute('title', /^Edited /);
+  await expect(description.getByRole('button', { name: 'Edited' })).toHaveCount(0);
+
+  // Saving it as it is changes nothing.
+  await editDescription.click();
+  await expect(editor).toHaveAttribute('contenteditable', 'true');
+  await expect(editor).toBeFocused();
+  await description.getByRole('button', { name: 'Save' }).click();
+  await expect(toasts(page)).toContainText('Nothing changed.');
+  await signOut(page);
+
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  const versionsButton = description.getByRole('button', { name: 'Edited' });
+  await versionsButton.click();
+  const versions = page.getByRole('dialog', { name: 'Earlier versions' });
+  await expect(versions).toContainText(`${REQUESTS_CLIENT.name} changed this on`);
+  await expect(versions).toContainText('It jams on every page.');
+  await expect(versions).not.toContainText('both sides');
+  await page.keyboard.press('Escape');
+  await expect(versions).toHaveCount(0);
+  await expect(versionsButton).toBeFocused();
+});
+
+test('the staff edit their own reply, which the company sees was edited', async ({ page }) => {
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'The VPN drops every hour',
+  });
+
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  await page.getByRole('textbox', { name: 'Your reply' }).fill('Restart the router.');
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  const reply = conversation(page).getByRole('listitem').filter({ hasText: 'Restart the router' });
+
+  await reply.getByRole('button', { name: 'Edit reply' }).click();
+  const editor = reply.getByRole('textbox', { name: 'Reply', exact: true });
+  await expect(editor).toHaveAttribute('contenteditable', 'true');
+  await expect(editor).toBeFocused();
+  // Cancel puts the text back as it was.
+  await page.keyboard.type(' Not saved.');
+  await reply.getByRole('button', { name: 'Cancel' }).click();
+  await expect(reply).not.toContainText('Not saved.');
+  await expect(reply.getByRole('button', { name: 'Edit reply' })).toBeFocused();
+
+  await reply.getByRole('button', { name: 'Edit reply' }).click();
+  // The editor takes over from the plain field it starts as, then takes the focus: only then
+  // is it typed in.
+  await expect(editor).toHaveAttribute('contenteditable', 'true');
+  await expect(editor).toBeFocused();
+  await expect(editor).toHaveText('Restart the router.');
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.type('Restart the router, then the laptop.');
+  await reply.getByRole('button', { name: 'Save' }).click();
+  await expect(toasts(page)).toContainText('Changes saved.');
+  await expect(reply).toContainText('Restart the router, then the laptop.');
+  await reply.getByRole('button', { name: 'Edited' }).click();
+  const versions = page.getByRole('dialog', { name: 'Earlier versions' });
+  await expect(versions).toContainText(`${SUPPORT_STAFF.name} changed this on`);
+  await expect(versions).toContainText('Restart the router.');
+  // Closed with its button: the toast about the save is a layer too, and would take an Escape.
+  await versions.getByRole('button', { name: 'Close' }).click();
+  await expect(versions).toHaveCount(0);
+  await signOut(page);
+
+  // The company sees that it was edited, and can't edit it: it isn't theirs.
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto(`/requests/${number}`);
+  await expect(reply).toContainText('Restart the router, then the laptop.');
+  await expect(reply.getByText('Edited', { exact: true })).toBeVisible();
+  await expect(reply.getByRole('button', { name: 'Edited' })).toHaveCount(0);
+  await expect(reply.getByRole('button', { name: 'Edit reply' })).toHaveCount(0);
+  // The description is theirs to edit.
+  await expect(
+    page.getByRole('region', { name: 'Description' }).getByRole('button', {
+      name: 'Edit description',
+    }),
+  ).toBeVisible();
+});
+
+test('nothing is edited once a request is done', async ({ page }) => {
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'A printer that works again',
+    status: 'done',
+  });
+
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto(`/requests/${number}`);
+  // A reply can still be sent, but neither it nor the description can be edited.
+  await page.getByRole('textbox', { name: 'Your reply' }).fill('Thanks, it works now.');
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  await expect(conversation(page)).toContainText('Thanks, it works now.');
+  await expect(main(page).getByRole('button', { name: /^Edit (description|reply)$/ })).toHaveCount(
+    0,
+  );
+});
+
 test('a Watcher follows a request without taking part', async ({ page }) => {
   await signIn(page, CLIENT_WATCHER);
   await page.goto(`/requests/${SEEDED_REQUESTS.waiting.number}`);
@@ -1424,5 +1561,6 @@ test('nothing about a request can be changed while a staff member is signed in a
   await expect(page.getByRole('button', { name: 'Send reply' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Mark as done' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Cancel request' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Edit description' })).toBeDisabled();
   await expect(main(page).getByText(/priority/i)).toHaveCount(0);
 });

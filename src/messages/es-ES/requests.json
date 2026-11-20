@@ -137,7 +137,21 @@
       "status": "{change, select, reopened {Solicitud reabierta.} done {Solicitud marcada como resuelta.} cancelled {Solicitud cancelada.} other {Estado guardado.}}",
       "details": "{changed, plural, =0 {No ha cambiado nada.} other {Datos guardados.}}",
       "assignees": "{changed, plural, =0 {No ha cambiado nada.} other {Asignación guardada.}}",
-      "assignedYou": "Ahora tienes asignada esta solicitud."
+      "assignedYou": "Ahora tienes asignada esta solicitud.",
+      "text": "{changed, select, yes {Cambios guardados.} other {No ha cambiado nada.}}"
+    },
+    "edit": {
+      "editDescription": "Editar descripción",
+      "editReply": "Editar respuesta",
+      "descriptionLabel": "Descripción",
+      "replyLabel": "Respuesta",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "edited": "Editado",
+      "editedAt": "Editado el {time}",
+      "versionsTitle": "Versiones anteriores",
+      "versionsDescription": "Lo que decía este texto antes de editarlo, la más reciente primero. Solo el personal las ve.",
+      "versionLine": "{name} lo cambió el {time}."
     }
   }
 }

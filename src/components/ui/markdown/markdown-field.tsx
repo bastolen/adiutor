@@ -41,6 +41,10 @@ interface MarkdownFieldProps {
    * while it gives the same people (`useCallback`).
    */
   mentions?: MentionLoader;
+  /** The text the field starts with, e.g. the one that's being edited. Empty by default. */
+  defaultValue?: string;
+  /** Whether the field takes focus when it appears (it opened because someone asked to edit). */
+  autoFocus?: boolean;
 }
 
 /**
@@ -53,8 +57,9 @@ interface MarkdownFieldProps {
  * - **The editor** shows the text as it will be read. Its Markdown goes to
  *   the form in a hidden field with the field's name, so the form's action
  *   gets the same thing either way.
- * - **When the form is reset** (after a text was sent) the editor is empty
- *   again; a refused submit keeps the text.
+ * - **When the form is reset** (after a text was sent) the editor holds what
+ *   it started with again (empty, or `defaultValue`); a refused submit keeps
+ *   the text.
  * - **A page that's kept alive** while the user is elsewhere loses the
  *   editor's inner state; the Markdown is kept here, and the editor starts
  *   from it again.
@@ -71,6 +76,8 @@ interface MarkdownFieldProps {
  * @param props.required - Whether a text is required.
  * @param props.disabled - Whether the field is switched off.
  * @param props.mentions - Gives the people the text can mention.
+ * @param props.defaultValue - The text the field starts with.
+ * @param props.autoFocus - Whether the field takes focus when it appears.
  * @returns The field.
  */
 export default function MarkdownField({
@@ -82,6 +89,8 @@ export default function MarkdownField({
   required = false,
   disabled = false,
   mentions = undefined,
+  defaultValue = '',
+  autoFocus = false,
 }: MarkdownFieldProps) {
   const t = useTranslations('common.markdown');
   const id = useId();
@@ -129,15 +138,15 @@ export default function MarkdownField({
     if (!hasEditor || !form) {
       return undefined;
     }
-    /** Empties the editor with the rest of the form. */
+    /** Puts the editor back to what it started with, with the rest of the form. */
     const clear = () => {
-      setMarkdown('');
+      setMarkdown(defaultValue);
       setHadFocus(false);
       setResets((count) => count + 1);
     };
     form.addEventListener('reset', clear);
     return () => form.removeEventListener('reset', clear);
-  }, [hasEditor]);
+  }, [hasEditor, defaultValue]);
 
   if (!Editor) {
     // The same box and toolbar as the editor has, so nothing moves when it takes over. The
@@ -157,6 +166,9 @@ export default function MarkdownField({
             maxLength={maxLength}
             required={required}
             disabled={disabled}
+            defaultValue={defaultValue}
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- Only where the field opens because the user just asked to edit: focus goes where they're about to type.
+            autoFocus={autoFocus}
             aria-describedby={description ? descriptionId : undefined}
             className={markdownStyles.plainField}
           />
