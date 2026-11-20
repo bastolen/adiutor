@@ -22,6 +22,7 @@ import type { ServiceContext } from '../context';
 import { companyDeactivatedError } from '../errors';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
 import { assertStillMayChange } from './change';
+import { storeMentions } from './mentions';
 
 /**
  * Takes the next request number: one more than the last, in the raising
@@ -106,7 +107,7 @@ export default async function raiseRequest(
   return ctx.db.transaction(async (tx) => {
     await assertStillMayChange(tx, actor, company.id, 'requests:contribute');
     const { number, takenAt } = await nextRequestNumber(tx);
-    return firstRow(
+    const raised = firstRow(
       await tx
         .insert(request)
         .values({
@@ -126,5 +127,13 @@ export default async function raiseRequest(
         .returning({ id: request.id, number: request.number }),
       'the new request',
     );
+    // The people the description mentions, once the request it belongs to is there.
+    await storeMentions(tx, actor, {
+      companyId: company.id,
+      requestId: raised.id,
+      entryId: null,
+      written: description,
+    });
+    return raised;
   });
 }

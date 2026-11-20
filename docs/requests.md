@@ -266,13 +266,47 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
   and the editor starts from it again. The field is empty after a text was sent, and keeps the
   text after a refused submit. Filling the editor is never a step to undo.
 
+### Mentions
+
+A description or a reply can mention people. Why it's built this way is in
+[decision 0022](decisions/0022-mentions-as-markers-to-rows.md).
+
+- **A mention is a marker that looks like a link** (`src/lib/requests/mentions.ts`). While a text
+  is written it's `[@Sam](mention:KEY)`: the person's name, and a key of 22 characters that
+  stands for them. Once the text is stored it's `[@](mention:ID)`, where the ID is the mention's
+  row in `request_mention` (the request, the reply or `null` for the description, the person, and
+  the side they were on). The stored text holds no name and no user ID.
+- **The key** (`mentionKey`) is a keyed hash of the person and the company, made from
+  `BETTER_AUTH_SECRET` through a secret of its own. It's the same every time, means nothing in
+  another company, and can't be turned back into a person: when a text is sent, the server makes
+  the keys of the people who may be mentioned again and compares. So no user ID reaches someone
+  at a company.
+- **Who may be mentioned** (`listMentionable`, for whoever may write there:
+  `requests:contribute`): the staff can mention everyone at the request's company and every staff
+  member who reads requests; someone at the company can mention their colleagues, and the staff
+  members whose names the request already shows them (who raised it, replied, changed it, is or
+  was assigned; not who only changed the priority, which they don't see). For a request that isn't
+  raised yet, someone at the company gets their colleagues only. Never the writer themselves, a
+  deactivated account, or someone without a name to show; someone on the staff who is also in the
+  company is listed once. The list gives a key, a name and whether they're staff, by name.
+- **Storing** (`storeMentions`, in the transaction of `raiseRequest` and `replyToRequest`, right
+  after the text's row): the markers of people the writer may mention there become rows, one per
+  person however often the text names them, and the text's markers are pointed at them. At most
+  20 people per text (`MAX_MENTIONS_PER_TEXT`). Every other marker stays as it was typed (another
+  company's key, a key nobody has, a marker typed with a row's ID): nothing is refused.
+- **Reading** (`getRequest`): each text comes with the people it mentions, by the ID its markers
+  name, as the reader may see them (`requestPerson`: a name, their side, whether it's the reader,
+  and an ID for the staff only). A text gets its own mentions only, so a marker with another
+  text's row names nobody. Someone whose account is gone stays mentioned, by their side.
+
 ### Cleaning, limits and names
 
 - Text is cleaned before it's stored (`cleanMultilineText`): line endings become `\n`, and hidden
   and control characters are dropped rather than refused. A title has at most 150 characters, a
   description or reply 10,000 (`src/lib/input-rules.ts`).
 - People appear **by name only**, never by email address: Clients and Watchers can't see who else
-  is in their company. Company users see a staff member's own name with a label that carries the
+  is in their company, beyond the names in its requests and, for whoever may write, in the list
+  of who can be mentioned (see [Mentions](#mentions)). Company users see a staff member's own name with a label that carries the
   name users know the staff by. Someone without a name (or with an old one that has nothing to
   see in it, `visibleName`), or whose account is gone, is shown as their side.
 - **For the staff, a name links to the user's page.** The services give a person's ID only to
@@ -315,11 +349,12 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
   the services and client components all import it): the values, the rules above, the number
   and the text. Not to be confused with `src/lib/request/`, which is about HTTP requests.
 - `src/db/schema/requests.ts`: `request`, `request_assignee` (who's assigned), `request_entry`
-  (the conversation and the history in one table, ordered by ID) and `request_counter`.
+  (the conversation and the history in one table, ordered by ID), `request_mention` (who a text
+  mentions) and `request_counter`.
 - `src/server/requests/` (a folder module): `listRequestCompanies`, `listRequests`, `findRequest`,
   `findRequestNumber`, `getRequest`, `raiseRequest`, `replyToRequest`, `changeRequestStatus`,
-  `updateRequestDetails`, `changeAssignees`, `listAssignableStaff`, `countAssignedRequests`, and
-  `unassignFrom` for the services that end someone's request work.
+  `updateRequestDetails`, `changeAssignees`, `listAssignableStaff`, `countAssignedRequests`,
+  `listMentionable`, and `unassignFrom` for the services that end someone's request work.
   Every change refuses someone signed in as a user, checks the permission and that the company is
   active, validates, takes a rate limit (see [Rate limits](security-measures.md#rate-limits)), then
   runs in a transaction that starts with `assertStillMayChange` (`assertStillManages`, then the company) and locks the request's row (see

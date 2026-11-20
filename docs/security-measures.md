@@ -225,6 +225,12 @@ load or mislead in a reader's browser:
   emphasis marks than the parser pairs quickly, is shown as plain text (`MAX_NESTING`,
   `MAX_EMPHASIS_RUNS`). The limit of 10,000 characters bounds the rest: the parser and the
   highlighter's patterns never run on more.
+- **A mention never carries an ID or a name.** While a text is written, a person is a key that's
+  only valid in the request's company (`mentionKey`, a keyed hash); the stored text points at a
+  row in `request_mention`. Who it is, is looked up on the server when the text is read, per text,
+  with the names the reader may see. A marker the writer may not use for a mention (another
+  company's key, a guessed one, a typed row ID) stays text. See
+  [Mentions](requests.md#mentions).
 - **Nothing in a copied note becomes code.** The button on a block of code copies it below a
   comment that names the request and who wrote the text (`withCodeNote` in
   `src/components/ui/markdown/code-note.ts`), and a name is something a person typed. Every line

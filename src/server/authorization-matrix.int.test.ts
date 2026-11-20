@@ -136,6 +136,7 @@ import {
   findRequest,
   getRequest,
   listAssignableStaff,
+  listMentionable,
   listRequestCompanies,
   listRequests,
   raiseRequest,
@@ -620,6 +621,22 @@ function listOperations(): Operation[] {
         changeAssignees(ctx, w.actor, { request: w.requests.other, add: [w.actor.id], remove: [] }),
     ],
     ['list staff to assign', (w) => listAssignableStaff(ctx, w.actor)],
+    [
+      'list who can be mentioned in a request (own)',
+      (w) => listMentionable(ctx, w.actor, { request: w.requests.own }),
+    ],
+    [
+      'list who can be mentioned in a request (other)',
+      (w) => listMentionable(ctx, w.actor, { request: w.requests.other }),
+    ],
+    [
+      'list who can be mentioned in a new request (own)',
+      (w) => listMentionable(ctx, w.actor, { company: w.own.id }),
+    ],
+    [
+      'list who can be mentioned in a new request (other)',
+      (w) => listMentionable(ctx, w.actor, { company: w.other.id }),
+    ],
     ['count own assigned requests', (w) => countAssignedRequests(ctx, w.actor)],
     [
       'deactivate own account',
@@ -673,6 +690,10 @@ const READS: ReadonlySet<string> = new Set([
   'view request (own)',
   'view request (other)',
   'list staff to assign',
+  'list who can be mentioned in a request (own)',
+  'list who can be mentioned in a request (other)',
+  'list who can be mentioned in a new request (own)',
+  'list who can be mentioned in a new request (other)',
   'count own assigned requests',
 ]);
 
@@ -841,6 +862,11 @@ const EXPECTED: Record<string, string> = {
   'assign request (other)': 'NNNAFAA',
   // The staff's controls and filters name who can be assigned; only the staff get the list.
   'list staff to assign': 'FFFAAAA',
+  // The list at "@" is for whoever may write there: not a Watcher, and not Finance.
+  'list who can be mentioned in a request (own)': 'FAAAFAA',
+  'list who can be mentioned in a request (other)': 'NNNAFAA',
+  'list who can be mentioned in a new request (own)': 'FAAAFAA',
+  'list who can be mentioned in a new request (other)': 'NNNAFAA',
   // Everyone counts what's assigned to them (the dashboard): nothing, for whoever can't be.
   'count own assigned requests': 'AAAAAAA',
   // Everyone may deactivate their own account (each world has other Admins).

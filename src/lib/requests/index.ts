@@ -62,3 +62,14 @@ export {
 } from './number';
 export { cleanMultilineText, linkTarget, splitLinks } from './text';
 export type { TextPart } from './text';
+export {
+  MAX_MENTIONS_PER_TEXT,
+  MENTION_KEY_LENGTH,
+  nameStoredMentions,
+  storedMentionId,
+  storedMentionMarker,
+  storeWrittenMentions,
+  writtenMentionKey,
+  writtenMentionKeys,
+  writtenMentionMarker,
+} from './mentions';
