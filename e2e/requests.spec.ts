@@ -1184,6 +1184,14 @@ test('a request written in Markdown is shown formatted, and nothing in it loads'
   await expect(image).toHaveAttribute('href', 'https://adiutor.test/intranet-home.png');
   await expect(page.locator('img[src*="intranet-home"]')).toHaveCount(0);
 
+  // The company's answer mentions the staff member it thanks: by name, set apart from the text,
+  // and no link for someone at the company. It's not the reader who is mentioned.
+  const mention = thread.locator('[data-mention]');
+  await expect(mention).toHaveText(`@${SUPPORT_STAFF.name}`);
+  await expect(mention).not.toHaveClass(/border-highlight/);
+  await expect(thread.getByRole('link', { name: `@${SUPPORT_STAFF.name}` })).toHaveCount(0);
+  await expect(thread).toContainText(`Thanks, @${SUPPORT_STAFF.name}!`);
+
   // The company's answer: its footnote and the reference lead to each other.
   await thread.getByRole('link', { name: '1', exact: true }).click();
   await expect(page).toHaveURL(/-fn-1$/);

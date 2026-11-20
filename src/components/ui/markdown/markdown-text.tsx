@@ -12,12 +12,15 @@ import { Fragment, jsx, jsxs } from 'react/jsx-runtime';
 
 import cn from '@/lib/cn';
 
-import markdownElements from './elements';
+import markdownElements, { type ShownMention } from './elements';
 import { markdownStyles } from './styles';
 import markdownTree, { highestHeading } from './tree';
 
 /** The note of a text that has none. */
 const NO_NOTE: readonly string[] = [];
+
+/** The mentions of a text that has none. */
+const NO_MENTIONS: Readonly<Record<string, ShownMention>> = {};
 
 /** Props for {@link MarkdownText}. */
 interface MarkdownTextProps {
@@ -40,6 +43,13 @@ interface MarkdownTextProps {
    * Without it, the code is copied alone.
    */
   codeNote?: readonly string[];
+  /**
+   * The people the text mentions, by the ID their marker in the text names
+   * (`storedMentionId`): who they are is looked up before the text is shown,
+   * never read from the text. A marker that names none of them shows as its
+   * link's text.
+   */
+  mentions?: Readonly<Record<string, ShownMention>>;
   /** What to show for a text that costs too much to format: the text as plain text. */
   fallback: ReactNode;
 }
@@ -51,7 +61,8 @@ interface MarkdownTextProps {
  * image is a link to it. Headings start right below the page's own,
  * whatever number of `#` the highest was written with, so a text can't break
  * the outline. A block of code has a button that copies it, below the
- * text's note where it has one.
+ * text's note where it has one. A mention of a person shows their name
+ * after an "@".
  *
  * @param props - Component props.
  * @param props.text - The text.
@@ -59,6 +70,7 @@ interface MarkdownTextProps {
  * @param props.headingLevel - The level of the text's highest heading.
  * @param props.className - Extra classes.
  * @param props.codeNote - What to say above copied code.
+ * @param props.mentions - The people the text mentions.
  * @param props.fallback - What to show when the text can't be formatted.
  * @returns The formatted text, or the fallback.
  */
@@ -68,6 +80,7 @@ export default function MarkdownText({
   headingLevel = 3,
   className = '',
   codeNote = NO_NOTE,
+  mentions = NO_MENTIONS,
   fallback,
 }: MarkdownTextProps) {
   const t = useTranslations('common.markdown');
@@ -96,6 +109,7 @@ export default function MarkdownText({
           headingLevel,
           highestHeading: highestHeading(tree),
           codeNote,
+          mentions,
         }),
         // A block of code reads the language it names, and its code, from its node.
         passNode: true,

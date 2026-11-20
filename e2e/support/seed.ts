@@ -378,7 +378,12 @@ export default async function seedTestDatabase(): Promise<void> {
         entries: [
           { by: byStaff, at: hoursAgo(480), change: 'status', from: 'open', to: 'in_progress' },
           { by: byStaff, at: hoursAgo(470), reply: FORMATTED_STAFF_REPLY },
-          { by: byClient, at: hoursAgo(460), reply: FORMATTED_CLIENT_REPLY },
+          {
+            by: byClient,
+            at: hoursAgo(460),
+            reply: FORMATTED_CLIENT_REPLY,
+            mentions: [byStaff],
+          },
           { by: byStaff, at: hoursAgo(450), change: 'status', from: 'in_progress', to: 'done' },
         ],
       },

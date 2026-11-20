@@ -298,6 +298,15 @@ A description or a reply can mention people. Why it's built this way is in
   name, as the reader may see them (`requestPerson`: a name, their side, whether it's the reader,
   and an ID for the staff only). A text gets its own mentions only, so a marker with another
   text's row names nobody. Someone whose account is gone stays mentioned, by their side.
+- **Showing** (`RequestText`, which hands `MarkdownText` its `mentions`): a mention is the
+  person's name after an "@", as the page names them (their own name, or their side's), with a
+  line around it and in a heavier weight, so it's set apart by more than a colour, also in
+  forced-colours mode. A mention of the reader has the line and the name in the colour of
+  highlights. For the staff the name links to the user's page; a side's name never does. The
+  marker reaches the link's element through the allow-list's `mention` scheme, and that element
+  shows the person, or, for a marker that isn't one of the text's, the link's text: it never
+  links to such an address. A text shown as it was written, because formatting it would cost too
+  much, names the people too (`nameStoredMentions`).
 
 ### Cleaning, limits and names
 

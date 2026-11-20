@@ -207,6 +207,7 @@ async function RequestContent({
                   writer: personName(detail.raisedBy, names),
                   at: detail.createdAt,
                 }}
+                names={names}
               />
             </div>
           </Card>

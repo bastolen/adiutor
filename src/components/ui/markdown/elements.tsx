@@ -10,12 +10,13 @@ import { useTranslations } from 'next-intl';
 import type { ComponentProps } from 'react';
 
 import cn from '@/lib/cn';
-import { linkTarget } from '@/lib/requests';
+import { linkTarget, storedMentionId } from '@/lib/requests';
 
 import CopyButton from '../copy-button';
 import ExternalLink, { writtenLinkClasses } from '../external-link';
 import { focusRing } from '../styles';
 import { Td, Th, Tr } from '../table';
+import TextLink from '../text-link';
 import withCodeNote from './code-note';
 import { codeLanguageName } from './languages';
 import { headingSize, markdownStyles } from './styles';
@@ -23,6 +24,16 @@ import { FOOTNOTE_LABEL_ID } from './tree';
 
 /** The lowest heading HTML has. */
 const LOWEST_HEADING = 6;
+
+/** A mention of a person, as a text shows it. */
+export interface ShownMention {
+  /** The person's name, as the page names them. */
+  name: string;
+  /** Whether it's the reader who is mentioned. */
+  isViewer: boolean;
+  /** The person's page, for a reader who may open it; `null` for everyone else. */
+  href: string | null;
+}
 
 /** What the elements need to know about the text they're in. */
 export interface MarkdownElementsOptions {
@@ -37,6 +48,11 @@ export interface MarkdownElementsOptions {
    * the text is from and who wrote it. Nothing for a text without a note.
    */
   codeNote: readonly string[];
+  /**
+   * The people the text mentions, by the ID its markers name. A marker
+   * that names none of them isn't a mention: it shows as its link's text.
+   */
+  mentions: Readonly<Record<string, ShownMention>>;
 }
 
 /**
@@ -322,6 +338,30 @@ function MarkdownCodeBlock({
 }
 
 /**
+ * A mention of a person: their name after an "@", set apart from the text
+ * around it, and more clearly when it names the reader. For a reader who may
+ * open the person's page, it links there.
+ *
+ * @param props - Component props.
+ * @param props.mention - Who is mentioned, as the page names them.
+ * @returns The mention.
+ */
+function MarkdownMention({ mention }: { mention: ShownMention }) {
+  const classes = mention.isViewer ? markdownStyles.mentionOfViewer : markdownStyles.mention;
+  // The sign of a mention, the same in every language, then the name.
+  const text = `@${mention.name}`;
+  return mention.href === null ? (
+    <span data-mention="" className={classes}>
+      {text}
+    </span>
+  ) : (
+    <TextLink standalone data-mention="" href={mention.href} className={classes}>
+      {text}
+    </TextLink>
+  );
+}
+
+/**
  * A table's row.
  *
  * @param props - The row's attributes.
@@ -391,6 +431,7 @@ type MarkdownLinkProps = ComponentProps<'a'> & {
  * @param options.headingLevel - The level the text's highest heading gets.
  * @param options.highestHeading - How many `#` that heading was written with.
  * @param options.codeNote - What to say above a block's code when it's copied.
+ * @param options.mentions - The people the text mentions.
  * @returns The components to render the text's tree with.
  */
 export default function markdownElements({
@@ -398,6 +439,7 @@ export default function markdownElements({
   headingLevel,
   highestHeading,
   codeNote,
+  mentions,
 }: MarkdownElementsOptions): Components {
   /**
    * Builds the component of a heading written with `depth` marks. The text's
@@ -464,6 +506,14 @@ export default function markdownElements({
           {children}
         </a>
       );
+    }
+    // A mention's marker is a link whose address names the mention. One that names nobody the
+    // text mentions falls through, and is shown as its text like any address that's no place.
+    const mentionId = typeof href === 'string' ? storedMentionId(href) : null;
+    const mention =
+      mentionId !== null && Object.hasOwn(mentions, mentionId) ? mentions[mentionId] : undefined;
+    if (mention) {
+      return <MarkdownMention mention={mention} />;
     }
     const target = typeof href === 'string' ? linkTarget(href) : null;
     return target === null ? (

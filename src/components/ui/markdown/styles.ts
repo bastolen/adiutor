@@ -110,6 +110,19 @@ export const markdownStyles = {
    */
   plainField:
     'block min-h-20 w-full resize-y bg-transparent px-3 py-2 text-base leading-6 text-foreground outline-none disabled:text-muted-foreground',
+  /**
+   * A mention of a person: their name after an "@", set apart from the text
+   * around it by a line around it and its weight. The line shows on a card
+   * and in a reply's box alike, and in forced-colours mode.
+   */
+  mention: 'rounded-sm border border-border-strong px-1 font-medium text-foreground',
+  /**
+   * A mention that names the reader: the line and the name in the colour of
+   * highlights, on the card's own colour, and heavier, so it stands out by
+   * more than its colour.
+   */
+  mentionOfViewer:
+    'rounded-sm border border-highlight bg-surface px-1 font-semibold text-highlight',
   /** A line between two parts of a text. */
   rule: 'border-border',
   /** What a table scrolls sideways in when it's wider than the text. */

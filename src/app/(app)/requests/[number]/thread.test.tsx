@@ -277,6 +277,32 @@ describe('Thread', () => {
     );
   });
 
+  it('names the people a reply mentions, and sets a mention of the reader apart', () => {
+    const toCasey = '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b';
+    const toSam = '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7c';
+    render(
+      <Thread
+        address={ADDRESS}
+        detail={detailOf({
+          entries: [
+            entryOf('1', {
+              body: {
+                text: `[@](mention:${toCasey}), ask [@](mention:${toSam}).`,
+                format: 'markdown',
+                mentions: { [toCasey]: CASEY, [toSam]: SAM },
+              },
+            }),
+          ],
+        })}
+        earlierHref={null}
+      />,
+    );
+
+    expect(entryTexts()[0]).toContain('@Casey Client, ask @Sam Support.');
+    expect(screen.getByText('@Casey Client')).toHaveClass('border-highlight');
+    expect(screen.getByText('@Sam Support')).not.toHaveClass('border-highlight');
+  });
+
   it('offers the earlier entries first, when there are more', () => {
     render(
       <Thread
