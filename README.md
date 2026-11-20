@@ -26,9 +26,11 @@ come next.
   conversation: replies, a status from Open to Done (or Cancelled), and a type that sets a
   priority only the staff see. Descriptions and replies are written in an editor that turns
   Markdown into formatting as it's typed, with lists, tables and highlighted code, and can mention
-  people, picked from a list at "@". Company Admins and Clients raise, reply, close and reopen;
-  Watchers follow; the staff work on every company's requests and assign each to one or more of
-  themselves, which everyone on the request sees. See [Requests](docs/requests.md).
+  people, picked from a list at "@". Authors can edit their replies, and the description can be
+  edited while the request is open; the staff can read what a text said before. Company Admins
+  and Clients raise, reply, close and reopen; Watchers follow; the staff work on every company's
+  requests and assign each to one or more of themselves, which everyone on the request sees. See
+  [Requests](docs/requests.md).
 - **Companies and staff.** Staff add companies and invite each company's first Admin. Users can
   belong to several companies, with a role in each (Admin, Client or Watcher), and staff have their
   own roles (Admin, Manager, Finance and Support). See

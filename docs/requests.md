@@ -31,12 +31,12 @@ working on a request while signed in as a user.
 
 Four permissions in the request's company (`src/lib/authz/permissions.ts`):
 
-| Permission               | What it allows                                                                               | Who has it                                         |
-| ------------------------ | -------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| `requests:view`          | See the company's requests and their conversations                                           | Everyone in an active company; every staff role    |
-| `requests:contribute`    | Raise requests, reply, mark a request done, cancel it and reopen it                          | Company Admin and Client; staff who work on them   |
-| `requests:manage`        | Work on requests as the staff: any status, the title, the type, the priority, who's assigned | Staff Admin, Manager and Support                   |
-| `requests:view-internal` | See what only the staff see: today the priority                                              | Every staff role (Finance reads, but doesn't work) |
+| Permission               | What it allows                                                                                                  | Who has it                                         |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `requests:view`          | See the company's requests and their conversations                                                              | Everyone in an active company; every staff role    |
+| `requests:contribute`    | Raise requests, reply, mark a request done, cancel it and reopen it, edit the description and their own replies | Company Admin and Client; staff who work on them   |
+| `requests:manage`        | Work on requests as the staff: any status, the title, the type, the priority, who's assigned                    | Staff Admin, Manager and Support                   |
+| `requests:view-internal` | See what only the staff see: today the priority                                                                 | Every staff role (Finance reads, but doesn't work) |
 
 - Everyone in a company sees all of the company's requests. A **Watcher** only reads.
 - **Finance** reads every company's requests, with the priority, and changes nothing. A staff
@@ -89,7 +89,8 @@ the closed statuses.
   services leave it out of what they return to anyone without `requests:view-internal`, so no page
   can show it by accident, and a change of priority doesn't count as the request's last activity.
 - **Details:** the staff can change a request's title, type and priority (Edit details). Each
-  change is a line in the conversation. Descriptions and replies are never edited.
+  change is a line in the conversation. The description and replies are edited by their own
+  rules (see [Editing a text](#editing-a-text)).
 - **Only what its editor changed is saved.** The dialog sends the three details and the values it
   opened with (`was_title`, `was_type`, `was_priority`); `updateRequestDetails` takes a detail as
   changed only when the two differ. A detail the editor left alone keeps what a colleague gave it
@@ -268,6 +269,34 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
 - **A text that isn't sent yet stays** while its page is kept alive: the field keeps the Markdown
   and the editor starts from it again. The field is empty after a text was sent, and keeps the
   text after a refused submit. Filling the editor is never a step to undo.
+
+### Editing a text
+
+Why it works this way is in [decision 0024](decisions/0024-edit-replies-and-descriptions.md).
+
+- **Who edits what:** a reply only by the person who wrote it; the description by the staff who
+  work on requests and by anyone at the company who takes part (an Admin or Client, not a
+  Watcher). The title stays the staff's (Edit details). Only while the request is open: a done or
+  cancelled request's texts stay as they are (`mayEditDescription`, `mayEditReply` in
+  `src/lib/requests/rules.ts`).
+- **On the page:** a pencil button next to a text its reader may edit ("Edit description", "Edit
+  reply") swaps the text for the Markdown field holding it (`EditableText`), with Save and Cancel.
+  Both put the text back and focus on the button again; a refused save keeps the field open with
+  what was typed. The field starts from the text with its mentions as ones that are being written
+  (`editableText` in `src/server/requests/edits.ts`), so they're kept, and stored afresh on save.
+- **"Edited":** an edited text says so after its time, with when on hover
+  (`request.description_edited_at`, `request_entry.edited_at`). For the staff it's a button that
+  opens **Earlier versions**: every text the edits replaced, newest first, with who changed it and
+  when (`request_text_version`, given to readers with `requests:view-internal` only; their
+  mentions are plain "@Name" text). Nobody at the company sees them.
+- **No edit is lost:** the editor sends how many times the text was edited when they started; an
+  edit made meanwhile is refused (`errors.requests.textChanged`) and the page shows the text as it
+  is. An unchanged text saves nothing.
+- **Not activity:** an edit doesn't move the request's last activity, and it adds nothing to the
+  conversation.
+- **In the code:** `editRequestDescription` and `editReply`, through `changeRequest` like every
+  change: refused while signed in as a user, for a deactivated company, past the rate limit of
+  request changes, and for a closed request (`errors.requests.closedNoEdit`).
 
 ### Mentions
 

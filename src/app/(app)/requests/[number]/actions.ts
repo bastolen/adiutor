@@ -1,6 +1,6 @@
 /**
  * @file Server actions for a request's page: replying, changing the status,
- * changing the details and changing who it's assigned to. The services check
+ * changing the details, changing who it's assigned to and editing a text. The services check
  * who may do what; these read the form, refresh the page and word the
  * confirmation in the request's language (`requests.reply`,
  * `requests.saved`).
@@ -19,6 +19,8 @@ import { ServiceError } from '@/server/errors';
 import {
   changeAssignees,
   changeRequestStatus,
+  editReply,
+  editRequestDescription,
   replyToRequest,
   updateRequestDetails,
 } from '@/server/requests';
@@ -144,5 +146,46 @@ export async function changeAssigneesAction(
     refresh();
     const t = await getTranslations('requests.saved');
     return { ok: true, message: t('assignees', { changed: added + removed }) };
+  });
+}
+
+/**
+ * Edits a request's description, or a reply (`entry`). The form sends how
+ * many times the text had been edited when it opened (`edits`), so an edit
+ * someone made meanwhile isn't overwritten: then nothing is saved, and the
+ * page is refreshed all the same, so it shows the text as it is.
+ *
+ * @param _previous - The previous result (unused).
+ * @param formData - Fields `request` (its number), `entry` (a reply's ID; empty for the
+ *   description), `text` and `edits`.
+ * @returns A confirmation, or why it failed.
+ */
+export async function editTextAction(
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const actor = await getActor();
+    const entry = field(formData, 'entry');
+    const counted = Number(field(formData, 'edits'));
+    const input = {
+      request: field(formData, 'request'),
+      text: field(formData, 'text'),
+      // A count that isn't one can't match: the edit is refused as made meanwhile.
+      edits: Number.isSafeInteger(counted) ? counted : -1,
+    };
+    const { changed } = await (
+      entry
+        ? editReply(appContext, actor, { ...input, entry })
+        : editRequestDescription(appContext, actor, input)
+    ).catch((error: unknown) => {
+      if (error instanceof ServiceError && error.code === 'conflict') {
+        refresh();
+      }
+      throw error;
+    });
+    refresh();
+    const t = await getTranslations('requests.saved');
+    return { ok: true, message: t('text', { changed: changed ? 'yes' : 'no' }) };
   });
 }

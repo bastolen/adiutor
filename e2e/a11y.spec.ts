@@ -29,6 +29,7 @@ import {
   storeAuditEvent,
   storeInvitation,
   storeInviteLink,
+  storeRequest,
   storeSignInLink,
 } from './support/db';
 import {
@@ -768,6 +769,31 @@ test.describe('in forced-colours mode', () => {
         await expect(large).toBeEnabled();
         await large.click();
         await expect(page.getByRole('dialog', { name: 'Your reply' })).toBeVisible();
+        await expectAccessible(page, '[role="dialog"]');
+      });
+
+      test('a description being edited, and the earlier versions of an edited one', async ({
+        page,
+      }) => {
+        // A request of the test's own: the description is edited and saved.
+        const number = await storeRequest({
+          companySlug: COMPANY_SLUG,
+          raisedBy: REQUESTS_CLIENT.email,
+          title: 'A description edited for the scan',
+          description: 'As it was first written.',
+        });
+        await page.goto(`/requests/${number}`);
+        const description = page.getByRole('region', { name: 'Description' });
+        await description.getByRole('button', { name: 'Edit description' }).click();
+        const editor = await markdownEditor(page, 'Description');
+        await expect(editor).toBeFocused();
+        await page.keyboard.type(' And as it was changed.');
+        await expectAccessible(page);
+
+        await description.getByRole('button', { name: 'Save' }).click();
+        await expect(toasts(page)).toContainText('Changes saved.');
+        await description.getByRole('button', { name: 'Edited' }).click();
+        await expect(page.getByRole('dialog', { name: 'Earlier versions' })).toBeVisible();
         await expectAccessible(page, '[role="dialog"]');
       });
 

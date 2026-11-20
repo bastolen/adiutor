@@ -6,10 +6,18 @@
 import { and, count, desc, eq, min, ne } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
-import { requestAssignee, requestEntry, requestMention, user } from '@/db/schema';
+import {
+  requestAssignee,
+  requestEntry,
+  requestMention,
+  requestTextVersion,
+  user,
+} from '@/db/schema';
 import type { Permission } from '@/lib/authz/permissions';
 import { firstRow } from '@/lib/defined';
 import {
+  mayEditDescription,
+  mayEditReply,
   parseRequestReference,
   type RequestAudience,
   type RequestEntryKind,
@@ -26,6 +34,7 @@ import { loadPictures } from '../people/pictures';
 import getRequestPrefix from '../people/request-prefix';
 import getStaffName from '../people/staff-name';
 import { getRequestAccess, requestAudienceIn, type RequestPerson, requestPerson } from './access';
+import { editableText, type TextMention } from './edits';
 
 /** The account an `assignee` entry is about, joined next to its author's. */
 const subjectUser = alias(user, 'subject_user');
@@ -48,6 +57,29 @@ export interface RequestText {
    * ID names nobody. Left out for a text that mentions nobody.
    */
   mentions?: Record<string, RequestPerson>;
+  /** When it was last edited; `null` or left out while it's as it was written. */
+  editedAt?: Date | null;
+  /**
+   * For a reader who may edit it now (`mayEditDescription`, `mayEditReply`):
+   * the text as its editor starts from it, with its mentions as ones that
+   * are being written, and how many times it was edited, which the edit
+   * sends back so an edit someone made meanwhile isn't overwritten.
+   */
+  edit?: { markdown: string; edits: number };
+  /** Its earlier versions, newest first, for the staff (`requests:view-internal`) only. */
+  versions?: TextVersion[];
+}
+
+/** An earlier version of a request's text, as the staff read it. */
+export interface TextVersion {
+  /** The text as it was before the edit, its mentions as plain names. */
+  text: string;
+  /** Its format. */
+  format: RequestTextFormat;
+  /** Who edited it away. */
+  editedBy: RequestPerson;
+  /** When. */
+  at: Date;
 }
 
 /** One entry of a request's history, as its readers see it. */
@@ -197,63 +229,86 @@ export async function getRequest(
     internal ? undefined : ne(requestEntry.kind, 'priority'),
   );
 
-  const [raisedBy, assignees, mentioned, staffName, prefix, firstResponse, total, latest] =
-    await Promise.all([
-      found.createdBy
-        ? ctx.db
-            .select({ id: user.id, name: user.name })
-            .from(user)
-            .where(eq(user.id, found.createdBy))
-        : [],
-      ctx.db
-        .select({ id: user.id, name: user.name })
-        .from(requestAssignee)
-        .innerJoin(user, eq(requestAssignee.userId, user.id))
-        .where(eq(requestAssignee.requestId, found.id))
-        .orderBy(...orderTerms('asc', textOrder(user.name), user.id)),
-      ctx.db
-        .select({
-          id: requestMention.id,
-          entryId: requestMention.entryId,
-          side: requestMention.side,
-          person: { id: user.id, name: user.name },
-        })
-        .from(requestMention)
-        .leftJoin(user, eq(requestMention.userId, user.id))
-        .where(eq(requestMention.requestId, found.id)),
-      getStaffName(ctx.db),
-      getRequestPrefix(ctx.db),
-      ctx.db
-        .select({ at: min(requestEntry.createdAt) })
-        .from(requestEntry)
-        .where(
-          and(
-            eq(requestEntry.requestId, found.id),
-            eq(requestEntry.kind, 'comment'),
-            eq(requestEntry.authorSide, 'staff'),
-          ),
+  const [
+    raisedBy,
+    assignees,
+    mentioned,
+    versions,
+    staffName,
+    prefix,
+    firstResponse,
+    total,
+    latest,
+  ] = await Promise.all([
+    found.createdBy
+      ? ctx.db
+          .select({ id: user.id, name: user.name })
+          .from(user)
+          .where(eq(user.id, found.createdBy))
+      : [],
+    ctx.db
+      .select({ id: user.id, name: user.name })
+      .from(requestAssignee)
+      .innerJoin(user, eq(requestAssignee.userId, user.id))
+      .where(eq(requestAssignee.requestId, found.id))
+      .orderBy(...orderTerms('asc', textOrder(user.name), user.id)),
+    ctx.db
+      .select({
+        id: requestMention.id,
+        entryId: requestMention.entryId,
+        side: requestMention.side,
+        person: { id: user.id, name: user.name },
+      })
+      .from(requestMention)
+      .leftJoin(user, eq(requestMention.userId, user.id))
+      .where(eq(requestMention.requestId, found.id)),
+    ctx.db
+      .select({
+        entryId: requestTextVersion.entryId,
+        text: requestTextVersion.body,
+        format: requestTextVersion.bodyFormat,
+        editedBySide: requestTextVersion.editedBySide,
+        at: requestTextVersion.createdAt,
+        editedBy: { id: user.id, name: user.name },
+      })
+      .from(requestTextVersion)
+      .leftJoin(user, eq(requestTextVersion.editedBy, user.id))
+      .where(eq(requestTextVersion.requestId, found.id))
+      .orderBy(desc(requestTextVersion.id)),
+    getStaffName(ctx.db),
+    getRequestPrefix(ctx.db),
+    ctx.db
+      .select({ at: min(requestEntry.createdAt) })
+      .from(requestEntry)
+      .where(
+        and(
+          eq(requestEntry.requestId, found.id),
+          eq(requestEntry.kind, 'comment'),
+          eq(requestEntry.authorSide, 'staff'),
         ),
-      ctx.db.select({ total: count() }).from(requestEntry).where(shown),
-      ctx.db
-        .select({
-          id: requestEntry.id,
-          kind: requestEntry.kind,
-          authorSide: requestEntry.authorSide,
-          createdAt: requestEntry.createdAt,
-          body: requestEntry.body,
-          bodyFormat: requestEntry.bodyFormat,
-          from: requestEntry.fromValue,
-          to: requestEntry.toValue,
-          author: { id: user.id, name: user.name },
-          subject: { id: subjectUser.id, name: subjectUser.name },
-        })
-        .from(requestEntry)
-        .leftJoin(user, eq(requestEntry.authorId, user.id))
-        .leftJoin(subjectUser, eq(requestEntry.subjectUserId, subjectUser.id))
-        .where(shown)
-        .orderBy(desc(requestEntry.id))
-        .limit(THREAD_CHUNK * (earlier + 1)),
-    ]);
+      ),
+    ctx.db.select({ total: count() }).from(requestEntry).where(shown),
+    ctx.db
+      .select({
+        id: requestEntry.id,
+        kind: requestEntry.kind,
+        authorSide: requestEntry.authorSide,
+        createdAt: requestEntry.createdAt,
+        body: requestEntry.body,
+        bodyFormat: requestEntry.bodyFormat,
+        editedAt: requestEntry.editedAt,
+        from: requestEntry.fromValue,
+        to: requestEntry.toValue,
+        author: { id: user.id, name: user.name },
+        subject: { id: subjectUser.id, name: subjectUser.name },
+      })
+      .from(requestEntry)
+      .leftJoin(user, eq(requestEntry.authorId, user.id))
+      .leftJoin(subjectUser, eq(requestEntry.subjectUserId, subjectUser.id))
+      .where(shown)
+      .orderBy(desc(requestEntry.id))
+      .limit(THREAD_CHUNK * (earlier + 1)),
+  ]);
 
   // Each text's own mentions: the description's under no entry, a reply's under its entry. A
   // mention shows a name, never a picture.
@@ -264,6 +319,54 @@ export async function getRequest(
     mentionsOf.set(entryId, ofText);
   });
 
+  // What each text was before its edits: everyone gets how many there were (to edit it), only the
+  // staff get the versions themselves.
+  const versionsOf = new Map<string | null, TextVersion[]>();
+  versions.forEach(({ entryId, editedBy, editedBySide, ...version }) => {
+    const ofText = versionsOf.get(entryId) ?? [];
+    ofText.push({
+      ...version,
+      editedBy: requestPerson(editedBy ?? { id: null, name: null }, editedBySide, actor),
+    });
+    versionsOf.set(entryId, ofText);
+  });
+  const textMentions = new Map<string | null, TextMention[]>();
+  mentioned.forEach(({ entryId, ...mention }) => {
+    textMentions.set(entryId, [...(textMentions.get(entryId) ?? []), mention]);
+  });
+  const names = { company: company.name, staff: staffName };
+  // Nothing of a deactivated company's request changes, so nothing of it is edited.
+  const editable = company.deactivatedAt === null;
+  /**
+   * What a text adds for its readers: when it was edited, what its editor
+   * starts from (for a reader who may edit it), and its versions (staff).
+   *
+   * @param entryId - The reply; `null` for the description.
+   * @param stored - The text as it's stored.
+   * @param editedAt - When it was last edited.
+   * @param mayEdit - Whether the reader may edit it now.
+   * @returns The text's extra fields.
+   */
+  const editsOf = (
+    entryId: string | null,
+    stored: string,
+    editedAt: Date | null,
+    mayEdit: boolean,
+  ): Pick<RequestText, 'editedAt' | 'edit' | 'versions'> => {
+    const ofText = versionsOf.get(entryId) ?? [];
+    return {
+      editedAt,
+      ...(editable &&
+        mayEdit && {
+          edit: {
+            markdown: editableText(stored, textMentions.get(entryId) ?? [], company.id, names),
+            edits: ofText.length,
+          },
+        }),
+      ...(internal && ofText.length > 0 && { versions: ofText }),
+    };
+  };
+
   // Everyone the page names, with their pictures, in one go.
   const pictures = await loadPictures(ctx.db, [
     found.createdBy,
@@ -272,13 +375,23 @@ export async function getRequest(
   ]);
   const entries = latest
     .reverse()
-    .map(({ author, authorSide, body, bodyFormat, subject, ...entry }) => ({
+    .map(({ author, authorSide, body, bodyFormat, subject, editedAt, ...entry }) => ({
       ...entry,
       author: requestPerson(author ?? { id: null, name: null }, authorSide, actor, pictures),
       body:
         body === null
           ? null
-          : { text: body, format: bodyFormat, mentions: mentionsOf.get(entry.id) },
+          : {
+              text: body,
+              format: bodyFormat,
+              mentions: mentionsOf.get(entry.id),
+              ...editsOf(
+                entry.id,
+                body,
+                editedAt,
+                mayEditReply(permissions, found.status, author?.id === actor.id),
+              ),
+            },
       // An assignment's subject is always on the staff's side, also once their account is gone.
       subject:
         entry.kind === 'assignee'
@@ -296,6 +409,12 @@ export async function getRequest(
       text: found.description,
       format: found.descriptionFormat,
       mentions: mentionsOf.get(null),
+      ...editsOf(
+        null,
+        found.description,
+        found.descriptionEditedAt,
+        mayEditDescription(permissions, found.status),
+      ),
     },
     type: found.type,
     status: found.status,

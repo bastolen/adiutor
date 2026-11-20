@@ -193,14 +193,20 @@ describe('getRequest: the conversation', () => {
       {
         kind: 'comment',
         author: { userId: null, name: 'casey', side: 'company', isViewer: true, picture: null },
-        body: { text: 'Any news?', format: 'plain' },
+        // Their own reply, which they may edit: the editor starts from its text.
+        body: {
+          text: 'Any news?',
+          format: 'plain',
+          editedAt: null,
+          edit: { markdown: 'Any news?', edits: 0 },
+        },
         from: null,
         to: null,
       },
       {
         kind: 'comment',
         author: { userId: null, name: 'sam', side: 'staff', isViewer: false, picture: null },
-        body: { text: 'On it.', format: 'markdown' },
+        body: { text: 'On it.', format: 'markdown', editedAt: null },
         from: null,
         to: null,
       },

@@ -137,7 +137,21 @@
       "status": "{change, select, reopened {Verzoek heropend.} done {Verzoek gemarkeerd als afgerond.} cancelled {Verzoek geannuleerd.} other {Status opgeslagen.}}",
       "details": "{changed, plural, =0 {Er is niets gewijzigd.} other {Gegevens opgeslagen.}}",
       "assignees": "{changed, plural, =0 {Er is niets gewijzigd.} other {Toewijzing opgeslagen.}}",
-      "assignedYou": "Dit verzoek is aan je toegewezen."
+      "assignedYou": "Dit verzoek is aan je toegewezen.",
+      "text": "{changed, select, yes {Wijzigingen opgeslagen.} other {Er is niets gewijzigd.}}"
+    },
+    "edit": {
+      "editDescription": "Beschrijving bewerken",
+      "editReply": "Reactie bewerken",
+      "descriptionLabel": "Beschrijving",
+      "replyLabel": "Reactie",
+      "save": "Opslaan",
+      "cancel": "Annuleren",
+      "edited": "Bewerkt",
+      "editedAt": "Bewerkt op {time}",
+      "versionsTitle": "Eerdere versies",
+      "versionsDescription": "Wat deze tekst zei voor de bewerkingen, de nieuwste eerst. Alleen medewerkers zien deze.",
+      "versionLine": "{name} heeft dit gewijzigd op {time}."
     }
   }
 }

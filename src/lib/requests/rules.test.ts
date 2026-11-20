@@ -9,6 +9,8 @@ import {
   isReopening,
   mayBeAssigned,
   mayChangeStatus,
+  mayEditDescription,
+  mayEditReply,
   maySetStatus,
   requestAudience,
   requestSide,
@@ -178,5 +180,31 @@ describe('mayBeAssigned', () => {
     expect(mayBeAssigned(permissionsOf(null, 'admin'))).toBe(false);
     expect(mayBeAssigned(client)).toBe(false);
     expect(mayBeAssigned(watcher)).toBe(false);
+  });
+});
+
+describe('mayEditDescription', () => {
+  it('lets the staff who work on requests and the company’s people who take part edit it', () => {
+    expect(mayEditDescription(support, 'open')).toBe(true);
+    expect(mayEditDescription(client, 'waiting')).toBe(true);
+    expect(mayEditDescription(permissionsOf(null, 'admin'), 'in_progress')).toBe(true);
+  });
+
+  it('refuses Watchers and Finance, who only read, and a closed request', () => {
+    expect(mayEditDescription(watcher, 'open')).toBe(false);
+    expect(mayEditDescription(finance, 'open')).toBe(false);
+    expect(mayEditDescription(support, 'done')).toBe(false);
+    expect(mayEditDescription(client, 'cancelled')).toBe(false);
+  });
+});
+
+describe('mayEditReply', () => {
+  it('lets only the one who wrote it edit it, while the request is open', () => {
+    expect(mayEditReply(client, 'open', true)).toBe(true);
+    expect(mayEditReply(support, 'todo', true)).toBe(true);
+    expect(mayEditReply(support, 'open', false)).toBe(false);
+    expect(mayEditReply(client, 'done', true)).toBe(false);
+    // Someone who no longer takes part (now a Watcher) can't edit what they wrote.
+    expect(mayEditReply(watcher, 'open', true)).toBe(false);
   });
 });

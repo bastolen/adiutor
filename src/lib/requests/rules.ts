@@ -2,7 +2,8 @@
  * @file The rules of working on a request, as pure functions of someone's
  * permissions in the request's company (`src/lib/authz/permissions.ts`):
  * which side they act as, how the screens address them, which status changes
- * they may make, what a reply does to the status and who can be assigned.
+ * they may make, what a reply does to the status, who can be assigned, and
+ * who may edit a request's description and its replies.
  *
  * The staff who work on requests (`requests:manage`) set any status. People
  * who take part from the company (`requests:contribute`) can mark a request
@@ -150,4 +151,40 @@ export function statusAfterReply(side: RequestSide, status: RequestStatus): Requ
  */
 export function mayBeAssigned(permissions: ReadonlySet<Permission>): boolean {
   return permissions.has('requests:manage');
+}
+
+/**
+ * Whether someone may edit a request's description: while it's open, the
+ * staff who work on requests, and anyone at the company who takes part (a
+ * Watcher only reads). Its title stays the staff's (Edit details).
+ *
+ * @param permissions - Their permissions in the request's company.
+ * @param status - The request's status.
+ * @returns Whether they may.
+ */
+export function mayEditDescription(
+  permissions: ReadonlySet<Permission>,
+  status: RequestStatus,
+): boolean {
+  return (
+    !isClosedStatus(status) &&
+    (permissions.has('requests:manage') || permissions.has('requests:contribute'))
+  );
+}
+
+/**
+ * Whether someone may edit a reply: only the one who wrote it, while the
+ * request is open, and only while they still take part in it or work on it.
+ *
+ * @param permissions - Their permissions in the request's company.
+ * @param status - The request's status.
+ * @param isAuthor - Whether they wrote the reply.
+ * @returns Whether they may.
+ */
+export function mayEditReply(
+  permissions: ReadonlySet<Permission>,
+  status: RequestStatus,
+  isAuthor: boolean,
+): boolean {
+  return isAuthor && mayEditDescription(permissions, status);
 }

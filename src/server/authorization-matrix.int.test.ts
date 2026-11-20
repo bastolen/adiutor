@@ -133,6 +133,8 @@ import { findErrorReference, listRecentErrors } from './recorded-errors';
 import {
   changeAssignees,
   changeRequestStatus,
+  editReply,
+  editRequestDescription,
   countAssignedRequests,
   findRequest,
   getRequest,
@@ -624,6 +626,35 @@ function listOperations(): Operation[] {
     ],
     ['list staff to assign', (w) => listAssignableStaff(ctx, w.actor)],
     [
+      'edit request description (own)',
+      (w) =>
+        editRequestDescription(ctx, w.actor, {
+          request: w.requests.own,
+          text: 'The printer prints blank pages since Monday.',
+          edits: 0,
+        }),
+    ],
+    [
+      'edit request description (other)',
+      (w) =>
+        editRequestDescription(ctx, w.actor, {
+          request: w.requests.other,
+          text: 'The printer prints blank pages since Monday.',
+          edits: 0,
+        }),
+    ],
+    // Nobody in the world wrote a reply to edit: past the permission, it's someone else's.
+    [
+      'edit a reply that is not your own (own)',
+      (w) =>
+        editReply(ctx, w.actor, {
+          request: w.requests.own,
+          entry: '0198a8c0-0000-7000-8000-000000000099',
+          text: 'Mine now.',
+          edits: 0,
+        }),
+    ],
+    [
       'list who can be mentioned in a request (own)',
       (w) => listMentionable(ctx, w.actor, { request: w.requests.own }),
     ],
@@ -865,6 +896,11 @@ const EXPECTED: Record<string, string> = {
   'assign request (other)': 'NNNAFAA',
   // The staff's controls and filters name who can be assigned; only the staff get the list.
   'list staff to assign': 'FFFAAAA',
+  // A request's description is edited by whoever takes part, and by the staff who work on requests.
+  'edit request description (own)': 'FAAAFAA',
+  'edit request description (other)': 'NNNAFAA',
+  // Past the permission, a reply is only ever its author's to edit.
+  'edit a reply that is not your own (own)': 'FNNNFNN',
   // The list at "@" is for whoever may write there: not a Watcher, and not Finance.
   'list who can be mentioned in a request (own)': 'FAAAFAA',
   'list who can be mentioned in a request (other)': 'NNNAFAA',

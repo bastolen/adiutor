@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  editStoredMentions,
   MENTION_KEY_LENGTH,
   nameStoredMentions,
   storedMentionId,
@@ -106,5 +107,27 @@ describe('a mention in a stored text', () => {
     expect(nameStoredMentions(text, (id) => (id === FIRST ? 'Casey Client' : null))).toBe(
       `Ask @Casey Client or [@](mention:${SECOND}), not [@x](mention:${SAM}).`,
     );
+  });
+});
+
+describe('editing a stored text', () => {
+  it('turns each mention back into one that’s being written, and a gone one into text', () => {
+    const sam = '0198a8c0-0000-7000-8000-000000000001';
+    const gone = '0198a8c0-0000-7000-8000-000000000002';
+    const text = `Hi ${storedMentionMarker(sam)} and ${storedMentionMarker(gone)}.`;
+
+    const edited = editStoredMentions(text, (id) =>
+      id === sam ? writtenMentionMarker('Sam Support', 'k'.repeat(MENTION_KEY_LENGTH)) : '@Adiutor',
+    );
+
+    expect(edited).toBe(
+      `Hi [@Sam Support](mention:${'k'.repeat(MENTION_KEY_LENGTH)}) and @Adiutor.`,
+    );
+  });
+
+  it('leaves a marker that isn’t the text’s as it is', () => {
+    const text = storedMentionMarker('0198a8c0-0000-7000-8000-000000000003');
+
+    expect(editStoredMentions(text, () => null)).toBe(text);
   });
 });
