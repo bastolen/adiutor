@@ -1,9 +1,10 @@
 /**
- * @file Tests for the account's language form.
+ * @file Tests for the account's language form. How the page loads afresh is
+ * `loadFresh`'s own concern (`load-fresh.test.ts`), so it's mocked here.
  */
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { SignedInAsMarker } from '@/components/ui/signed-in-as';
 
@@ -11,28 +12,19 @@ import renderInLocale from '../../../../tests/i18n/render';
 import { saveLanguageAction } from './actions';
 import LanguageForm from './language-form';
 
+/** The full page load, mocked. */
+const { loadFresh } = vi.hoisted(() => ({ loadFresh: vi.fn() }));
+
 vi.mock('./actions', () => ({ saveLanguageAction: vi.fn() }));
+vi.mock('@/components/ui/load-fresh', () => ({ default: loadFresh }));
 
 /** Where the action sends the page once the language is saved. */
 const SAVED_PATH = '/account?language=saved#language';
 
-/** Stands in for `window.location.reload`, which jsdom can't do. */
-const reload = vi.fn();
-
-/** Stands in for `window.location.assign`, to show it isn't used. */
-const assign = vi.fn();
-
-beforeEach(() => {
-  vi.stubGlobal('location', { ...window.location, assign, reload });
-});
-
 afterEach(() => {
-  vi.unstubAllGlobals();
   vi.restoreAllMocks();
-  reload.mockClear();
-  assign.mockClear();
+  loadFresh.mockClear();
   vi.mocked(saveLanguageAction).mockReset();
-  window.history.replaceState(null, '', '/');
 });
 
 describe('LanguageForm', () => {
@@ -85,29 +77,15 @@ describe('LanguageForm', () => {
     expect(formData?.get('locale')).toBe('default');
   });
 
-  it('reloads the page where the action says once the language is saved', async () => {
-    vi.mocked(saveLanguageAction).mockResolvedValue({ ok: true, data: SAVED_PATH });
-    const replaceState = vi.spyOn(window.history, 'replaceState');
-    const user = userEvent.setup();
-    renderInLocale('en-US', <LanguageForm choice="en-US" defaultLocale="en-US" />);
-
-    await user.click(screen.getByRole('button', { name: 'Save language' }));
-
-    await waitFor(() => expect(reload).toHaveBeenCalledOnce());
-    expect(replaceState).toHaveBeenCalledWith(window.history.state, '', SAVED_PATH);
-  });
-
-  it('reloads the page also when it is already at that address, after an earlier change', async () => {
-    // Going to the same address with a `#section` only scrolls, which left the button busy.
-    window.history.replaceState(null, '', SAVED_PATH);
+  it('loads the page where the action says afresh once the language is saved', async () => {
     vi.mocked(saveLanguageAction).mockResolvedValue({ ok: true, data: SAVED_PATH });
     const user = userEvent.setup();
     renderInLocale('es-ES', <LanguageForm choice="es-ES" defaultLocale="en-US" />);
 
     await user.click(screen.getByRole('button', { name: 'Guardar idioma' }));
 
-    await waitFor(() => expect(reload).toHaveBeenCalledOnce());
-    expect(assign).not.toHaveBeenCalled();
+    // Also when the page is at that address already: `loadFresh` reloads it in place then.
+    await waitFor(() => expect(loadFresh).toHaveBeenCalledExactlyOnceWith(SAVED_PATH));
   });
 
   it('shows why saving failed, and stays', async () => {
@@ -121,7 +99,7 @@ describe('LanguageForm', () => {
     await user.click(screen.getByRole('button', { name: 'Save language' }));
 
     expect(await screen.findByText('Choose one of the languages.')).toBeInTheDocument();
-    expect(reload).not.toHaveBeenCalled();
+    expect(loadFresh).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Save language' })).toBeEnabled();
   });
 });

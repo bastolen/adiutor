@@ -134,6 +134,35 @@ describe('FormattingToolbar', () => {
     );
   });
 
+  it('gives the text the focus after a heading is picked, and its button after Escape', async () => {
+    const user = userEvent.setup();
+    // Stands in for the editor, which takes the focus when it gets a command.
+    const onCommand = vi.fn(() => screen.getByRole('textbox', { name: 'Text' }).focus());
+    render(
+      <>
+        <textarea aria-label="Text" />
+        <FormattingToolbar state={PLAIN} onCommand={onCommand} />
+      </>,
+    );
+    const heading = screen.getByRole('button', { name: 'Heading' });
+
+    await user.click(heading);
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(heading).toHaveFocus());
+    expect(onCommand).not.toHaveBeenCalled();
+
+    await user.click(heading);
+    await user.click(screen.getByRole('menuitemradio', { name: 'Subheading' }));
+    await waitFor(() =>
+      expect(onCommand).toHaveBeenCalledExactlyOnceWith({ type: 'heading', level: 2 }),
+    );
+    // Whatever the menu would still do on its way out, the text keeps the focus.
+    await new Promise((resolve) => {
+      setTimeout(resolve, 50);
+    });
+    expect(screen.getByRole('textbox', { name: 'Text' })).toHaveFocus();
+  });
+
   it('shows a heading typed with more marks than it offers as its smallest', async () => {
     const user = userEvent.setup();
     renderToolbar({ ...PLAIN, heading: 5 });

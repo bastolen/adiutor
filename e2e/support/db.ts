@@ -372,6 +372,32 @@ export async function clearMfaRecommendationDismissal(email: string): Promise<vo
 }
 
 /**
+ * Turns two-step verification off for a seeded account, as before a test
+ * turned it on: no email codes or authenticator (`two_factor` rows), no
+ * device it trusts, and none of its per-user limits counted. A test that
+ * turns it on calls this first, so a retry starts where the first attempt
+ * did.
+ *
+ * @param email - The user's address.
+ */
+export async function resetMfaOf(email: string): Promise<void> {
+  const userId = await findUserId(email);
+  await withTestDatabase(async (db) => {
+    await db.update(schema.user).set({ twoFactorEnabled: false }).where(eq(schema.user.id, userId));
+    await db.delete(schema.twoFactor).where(eq(schema.twoFactor.userId, userId));
+    await db
+      .delete(schema.verification)
+      .where(
+        and(
+          like(schema.verification.identifier, 'trust-device-%'),
+          eq(schema.verification.value, userId),
+        ),
+      );
+  });
+  await forgetLimitsOf(email);
+}
+
+/**
  * Stores a sign-in link for a user the way Better Auth's magic-link plugin
  * does, as if they had asked for one, without sending an email (so tests
  * don't run into the limit on emails per address).
