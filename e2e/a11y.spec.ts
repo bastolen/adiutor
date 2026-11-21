@@ -731,7 +731,7 @@ test.describe('in forced-colours mode', () => {
         await expectAccessible(page);
       });
 
-      test('a request’s open filter menu, status select and edit dialog', async ({ page }) => {
+      test('a request’s open filter menu, status select and dialogs', async ({ page }) => {
         await page.goto('/requests');
         await page.getByRole('button', { name: 'Type', exact: true }).click();
         await expect(page.getByRole('menu')).toBeVisible();
@@ -748,6 +748,18 @@ test.describe('in forced-colours mode', () => {
         await page.getByRole('button', { name: 'Edit details' }).click();
         await expect(page.getByRole('dialog')).toBeVisible();
         await expectAccessible(page, '[role="dialog"]');
+        await page.keyboard.press('Escape');
+
+        // Everyone who can be subscribed, in their two groups; closed again without saving.
+        await page.getByRole('button', { name: 'Change subscribers' }).click();
+        await expect(page.getByRole('dialog', { name: 'Change who’s subscribed' })).toBeVisible();
+        await expectAccessible(page, '[role="dialog"]');
+        await page.keyboard.press('Escape');
+
+        // The subscribers' names, behind their avatars: a panel next to the page, not over it.
+        await page.getByRole('button', { name: /^Show the \d+ subscribers?$/ }).click();
+        await expect(page.getByRole('dialog', { name: 'Subscribers' })).toBeVisible();
+        await expectAccessible(page);
       });
 
       test('a request’s reply, with the list of people at @ open', async ({ page }) => {
@@ -795,6 +807,45 @@ test.describe('in forced-colours mode', () => {
         await description.getByRole('button', { name: 'Edited' }).click();
         await expect(page.getByRole('dialog', { name: 'Earlier versions' })).toBeVisible();
         await expectAccessible(page, '[role="dialog"]');
+      });
+
+      test('the tab an internal note is written on, and a conversation with a note', async ({
+        page,
+      }) => {
+        // A request of the test's own: a note is added to it.
+        const number = await storeRequest({
+          companySlug: COMPANY_SLUG,
+          raisedBy: REQUESTS_CLIENT.email,
+          title: 'A note added for the scan',
+        });
+        await page.goto(`/requests/${number}`);
+        await page
+          .getByRole('tablist', { name: 'Write' })
+          .getByRole('tab', { name: 'Internal note' })
+          .click();
+        const note = await markdownEditor(page, 'Your note');
+        await note.click();
+        await page.keyboard.type('Probably the toner.');
+        await page.getByRole('button', { name: 'Add note' }).click();
+        await expect(toasts(page)).toContainText('Note added.');
+        await expect(page.getByRole('region', { name: 'Conversation' })).toContainText(
+          'Internal note',
+        );
+        await expectAccessible(page);
+      });
+
+      test('the dialog that adds a request type', async ({ page }) => {
+        // Only opened and closed: nothing is added.
+        await page.goto('/admin/staff');
+        await page
+          .getByRole('region', { name: 'Request types' })
+          .getByRole('button', { name: 'Add type' })
+          .click();
+        const dialog = page.getByRole('dialog', { name: 'Add a request type' });
+        await expect(dialog).toBeVisible();
+        await expectAccessible(page, '[role="dialog"]');
+        await page.keyboard.press('Escape');
+        await expect(dialog).toHaveCount(0);
       });
 
       test('a toast', async ({ page }) => {

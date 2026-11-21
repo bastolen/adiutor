@@ -20,7 +20,7 @@
     "signOutFailed": "No se ha podido cerrar sesión. Vuelve a intentarlo.",
     "signedInAs": {
       "label": "Sesión iniciada como otra persona",
-      "text": "Has iniciado sesión como {name} ({email}) y los cambios están desactivados. Termina a las {time}.",
+      "text": "Has iniciado sesión como {name} ({email}). Puedes trabajar en sus solicitudes; todo lo demás es de solo lectura. Termina a las {time}.",
       "back": "Volver a mi cuenta",
       "backDone": "Has vuelto a tu propia cuenta.",
       "ended": "El inicio de sesión como el usuario ha terminado. Has vuelto a tu propia cuenta.",

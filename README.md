@@ -17,19 +17,21 @@ consultants: the companies raise requests, and the staff work them through with 
 manages its own users, and the staff see every company.
 
 **Status:** early development. Accounts, companies, roles, invitations, sign-in security and
-requests, with staff assigned to them, are built; emails about requests and approving the work
-come next.
+requests, with staff assigned and people subscribed to them, are built; emails about requests
+and approving the work come next.
 
 ## Features
 
 - **Requests.** Companies raise requests, and both sides work each one through in one
-  conversation: replies, a status from Open to Done (or Cancelled), and a type that sets a
-  priority only the staff see. Descriptions and replies are written in an editor that turns
+  conversation: replies, a status from Open to Done (or Cancelled), and a type (the staff's
+  own list) that sets a priority only the staff see. Descriptions and replies are written in an editor that turns
   Markdown into formatting as it's typed, with lists, tables and highlighted code, and can mention
   people, picked from a list at "@". Authors can edit their replies, and the description can be
-  edited while the request is open; the staff can read what a text said before. Company Admins
-  and Clients raise, reply, close and reopen; Watchers follow; the staff work on every company's
-  requests and assign each to one or more of themselves, which everyone on the request sees. See
+  edited while the request is open; the staff can read what a text said before, and write
+  internal notes the company never sees. Company Admins and Clients raise, reply, close and
+  reopen; Watchers follow; the staff work on every company's requests and assign each to one or
+  more of themselves, which everyone on the request sees. Everyone who reads a request can
+  subscribe to it, and whoever raises it, replies to it or is mentioned in it is subscribed. See
   [Requests](docs/requests.md).
 - **Companies and staff.** Staff add companies and invite each company's first Admin. Users can
   belong to several companies, with a role in each (Admin, Client or Watcher), and staff have their
@@ -50,8 +52,9 @@ come next.
   guard the rest, and staff Admins can look up the error references people send them. See
   [Security measures](docs/security-measures.md).
 - **Sign in as a user.** Staff Admins, Managers and Support can see Adiutor the way a user does, to
-  check what isn't working for them. It lasts 30 minutes at most, needs strong MFA, shows a banner
-  and changes nothing in the user's name. The user gets an email, and every start is in the audit
+  check what isn't working for them. It lasts 30 minutes at most, needs strong MFA and shows a
+  banner. Only the user's request work can be done, and their requests show them who did it;
+  nothing else changes in their name. The user gets an email, and every start is in the audit
   log. See [Signing in as a user](docs/authentication.md#signing-in-as-a-user).
 - **Background jobs.** Reminders, clean-ups and emails that can wait a few minutes run in the
   background, and are tried again when they fail. Staff Admins and Managers see them under Logs →

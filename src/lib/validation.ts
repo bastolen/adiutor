@@ -26,6 +26,8 @@ import {
   PASSKEY_NAME_MAX_LENGTH,
   REQUEST_TEXT_MAX_LENGTH,
   REQUEST_TITLE_MAX_LENGTH,
+  REQUEST_TYPE_DESCRIPTION_MAX_LENGTH,
+  REQUEST_TYPE_NAME_MAX_LENGTH,
   SLUG_MAX_LENGTH,
 } from './input-rules';
 import {
@@ -33,7 +35,7 @@ import {
   REQUEST_PREFIX_PATTERN,
   REQUEST_PRIORITIES,
   REQUEST_STATUSES,
-  REQUEST_TYPES,
+  REQUEST_TYPE_KEY_PATTERN,
 } from './requests';
 
 /**
@@ -163,7 +165,14 @@ function containsWebAddress(value: string): boolean {
  * it's about.
  */
 type NameField =
-  'name' | 'companyName' | 'staffName' | 'passkeyName' | 'impersonationReason' | 'requestTitle';
+  | 'name'
+  | 'companyName'
+  | 'staffName'
+  | 'passkeyName'
+  | 'impersonationReason'
+  | 'requestTitle'
+  | 'requestTypeName'
+  | 'requestTypeDescription';
 
 /**
  * Adds the shared character rules to a string schema: no control characters
@@ -197,7 +206,10 @@ function withCharacterSafety<T extends z.ZodType<string>>(schema: T, field: Name
  */
 function withNameSafety<T extends z.ZodType<string>>(
   schema: T,
-  field: Exclude<NameField, 'passkeyName' | 'impersonationReason' | 'requestTitle'>,
+  field: Exclude<
+    NameField,
+    'passkeyName' | 'impersonationReason' | 'requestTitle' | 'requestTypeDescription'
+  >,
 ) {
   return withCharacterSafety(schema, field)
     .refine((value) => hasVisibleCharacter(value), {
@@ -395,10 +407,39 @@ export const requestCompanySchema = z
   .trim()
   .min(1, { error: 'validation.requestCompany' satisfies ValidationMessageKey });
 
-/** A request's type, e.g. from the form that raises one. */
-export const requestTypeSchema = z.enum(REQUEST_TYPES, {
-  error: 'validation.requestType' satisfies ValidationMessageKey,
-});
+/**
+ * A request type's key, e.g. from the form that raises one. Only its form is
+ * checked here: whether a type with that key exists, and may be chosen, is
+ * for the services, which look it up.
+ */
+export const requestTypeSchema = z
+  .string()
+  .trim()
+  .regex(REQUEST_TYPE_KEY_PATTERN, {
+    error: 'validation.requestType' satisfies ValidationMessageKey,
+  });
+
+/** A request type's name, which the staff choose: one text for every language. */
+export const requestTypeNameSchema = withNameSafety(
+  lengthLimited({
+    min: 1,
+    max: REQUEST_TYPE_NAME_MAX_LENGTH,
+    tooShort: 'validation.requestTypeName.empty',
+    tooLong: 'validation.requestTypeName.tooLong',
+  }),
+  'requestTypeName',
+);
+
+/** What a request type is for, shown with it when a request is raised: one line. */
+export const requestTypeDescriptionSchema = withCharacterSafety(
+  lengthLimited({
+    min: 1,
+    max: REQUEST_TYPE_DESCRIPTION_MAX_LENGTH,
+    tooShort: 'validation.requestTypeDescription.empty',
+    tooLong: 'validation.requestTypeDescription.tooLong',
+  }),
+  'requestTypeDescription',
+);
 
 /** A request's priority, which only staff choose. */
 export const requestPrioritySchema = z.enum(REQUEST_PRIORITIES, {

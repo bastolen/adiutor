@@ -1,19 +1,31 @@
 /**
- * @file Tests for the actions that change a request's details and its
- * assignees. The details action passes on what the form started from, and
- * refreshes the page also when a colleague changed the same detail
- * meanwhile, so the dialog starts from the request as it is when it's opened
- * again. The assignees action adds and removes only what the dialog's
- * checkboxes changed. The services' own rules are in `src/server/requests`.
+ * @file Tests for the actions that change a request's details, its
+ * assignees and its subscribers. The details action passes on what the form
+ * started from, and refreshes the page also when a colleague changed the
+ * same detail meanwhile, so the dialog starts from the request as it is when
+ * it's opened again. The assignees and subscribers actions add and remove
+ * only what their dialog's checkboxes changed. The services' own rules are
+ * in `src/server/requests`.
  */
 import { refresh } from 'next/cache';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
-import { changeAssignees, updateRequestDetails } from '@/server/requests';
+import {
+  changeAssignees,
+  changeSubscribers,
+  subscribe,
+  unsubscribe,
+  updateRequestDetails,
+} from '@/server/requests';
 
-import { changeAssigneesAction, updateDetailsAction } from './actions';
+import {
+  changeAssigneesAction,
+  changeSubscribersAction,
+  changeSubscriptionAction,
+  updateDetailsAction,
+} from './actions';
 
 vi.mock('next/cache', () => ({ refresh: vi.fn() }));
 vi.mock('@/server/app-context', () => ({ default: { name: 'app context' } }));
@@ -21,7 +33,10 @@ vi.mock('@/server/authz', () => ({ getActor: vi.fn() }));
 vi.mock('@/server/requests', () => ({
   changeAssignees: vi.fn(),
   changeRequestStatus: vi.fn(),
+  changeSubscribers: vi.fn(),
   replyToRequest: vi.fn(),
+  subscribe: vi.fn(),
+  unsubscribe: vi.fn(),
   updateRequestDetails: vi.fn(),
 }));
 
@@ -163,5 +178,105 @@ describe('changeAssigneesAction', () => {
       ok: true,
       message: 'Nothing changed.',
     });
+  });
+});
+
+/**
+ * Builds a form for request 142 from its fields, each sent once per value.
+ *
+ * @param fields - The fields and their values.
+ * @returns The form data.
+ */
+function formOf(fields: Record<string, string[]>): FormData {
+  const data = new FormData();
+  data.set('request', '142');
+  Object.entries(fields).forEach(([name, values]) =>
+    values.forEach((value) => data.append(name, value)),
+  );
+  return data;
+}
+
+describe('changeSubscriptionAction', () => {
+  beforeEach(() => {
+    vi.mocked(subscribe).mockReset().mockResolvedValue({ subscribed: true });
+    vi.mocked(unsubscribe).mockReset().mockResolvedValue({ unsubscribed: true });
+  });
+
+  it('subscribes whoever pressed Subscribe, and says so', async () => {
+    expect(await changeSubscriptionAction(null, formOf({ subscribe: ['yes'] }))).toEqual({
+      ok: true,
+      message: 'You’re subscribed to this request.',
+    });
+
+    expect(subscribe).toHaveBeenCalledWith({ name: 'app context' }, support, { request: '142' });
+    expect(unsubscribe).not.toHaveBeenCalled();
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('unsubscribes whoever pressed Unsubscribe, and says so', async () => {
+    expect(await changeSubscriptionAction(null, formOf({ subscribe: ['no'] }))).toEqual({
+      ok: true,
+      message: 'You’re no longer subscribed to this request.',
+    });
+
+    expect(unsubscribe).toHaveBeenCalledWith({ name: 'app context' }, support, { request: '142' });
+    expect(subscribe).not.toHaveBeenCalled();
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('says why when it is refused, and leaves the page as it is', async () => {
+    vi.mocked(subscribe).mockRejectedValue(new ServiceError('forbidden', 'errors.forbidden'));
+
+    expect(await changeSubscriptionAction(null, formOf({ subscribe: ['yes'] }))).toMatchObject({
+      ok: false,
+    });
+
+    expect(refresh).not.toHaveBeenCalled();
+  });
+});
+
+describe('changeSubscribersAction', () => {
+  beforeEach(() => {
+    vi.mocked(changeSubscribers).mockReset();
+  });
+
+  it('subscribes who was ticked and unsubscribes who was unticked, leaving the rest alone', async () => {
+    vi.mocked(changeSubscribers).mockResolvedValue({ added: 1, removed: 1 });
+
+    expect(
+      await changeSubscribersAction(
+        null,
+        formOf({ subscriber: ['kept', 'new'], was_subscriber: ['kept', 'gone'] }),
+      ),
+    ).toEqual({ ok: true, message: 'Subscribers saved.' });
+
+    expect(changeSubscribers).toHaveBeenCalledWith({ name: 'app context' }, support, {
+      request: '142',
+      add: ['new'],
+      remove: ['gone'],
+    });
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('says so when nothing changed', async () => {
+    vi.mocked(changeSubscribers).mockResolvedValue({ added: 0, removed: 0 });
+
+    expect(await changeSubscribersAction(null, formOf({}))).toEqual({
+      ok: true,
+      message: 'Nothing changed.',
+    });
+  });
+
+  it('says who can’t be subscribed when the service refuses someone', async () => {
+    vi.mocked(changeSubscribers).mockRejectedValue(
+      new ServiceError('invalid', 'errors.requests.notSubscribable'),
+    );
+
+    expect(await changeSubscribersAction(null, formOf({ subscriber: ['gone'] }))).toEqual({
+      ok: false,
+      message:
+        'Only active people who can read this request can be subscribed. Check who you chose and try again.',
+    });
+    expect(refresh).not.toHaveBeenCalled();
   });
 });

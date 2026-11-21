@@ -72,11 +72,12 @@ describe('database rules', () => {
     'request_entry_body_format_valid',
     'request_entry_kind_valid',
     'request_mention_side_valid',
+    'request_participant_role_valid',
     'request_priority_valid',
     'request_status_valid',
     'request_text_version_body_format_valid',
     'request_text_version_edited_by_side_valid',
-    'request_type_valid',
+    'request_type_starting_priority_valid',
     'staff_settings_default_locale_valid',
   ];
 

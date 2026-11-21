@@ -10,6 +10,7 @@ import {
   PASSKEY_NAME_MAX_LENGTH,
   REQUEST_PREFIX_MAX_LENGTH,
   REQUEST_TEXT_MAX_LENGTH,
+  REQUEST_TYPE_NAME_MAX_LENGTH,
   REQUEST_TITLE_MAX_LENGTH,
   SLUG_MAX_LENGTH,
 } from './input-rules';
@@ -31,6 +32,8 @@ import {
   requestReplySchema,
   requestStatusSchema,
   requestTitleSchema,
+  requestTypeDescriptionSchema,
+  requestTypeNameSchema,
   requestTypeSchema,
   roleSchema,
   slugSchema,
@@ -400,7 +403,10 @@ describe('requestCompanySchema', () => {
 describe('request types, priorities and statuses', () => {
   it('accept their own values only', () => {
     expect(requestTypeSchema.parse('new_feature')).toBe('new_feature');
-    expect(requestTypeSchema.safeParse('question').success).toBe(false);
+    // Any key of the right form: whether a type has it is for the services.
+    expect(requestTypeSchema.parse('printers_2')).toBe('printers_2');
+    expect(requestTypeSchema.safeParse('New feature').success).toBe(false);
+    expect(requestTypeSchema.safeParse('').success).toBe(false);
     expect(requestPrioritySchema.parse('high')).toBe('high');
     expect(requestPrioritySchema.safeParse('urgent').success).toBe(false);
     expect(requestStatusSchema.parse('in_progress').toString()).toBe('in_progress');
@@ -503,7 +509,23 @@ describe('messages', () => {
       message: 'validation.requestReply.tooLong',
       maximum: REQUEST_TEXT_MAX_LENGTH,
     });
-    expect(issueFor(requestTypeSchema, 'question')?.message).toBe('validation.requestType');
+    expect(issueFor(requestTypeSchema, 'New feature')?.message).toBe('validation.requestType');
+    expect(issueFor(requestTypeNameSchema, ' ')?.message).toBe('validation.requestTypeName.empty');
+    expect(
+      issueFor(requestTypeNameSchema, 'a'.repeat(REQUEST_TYPE_NAME_MAX_LENGTH + 1)),
+    ).toMatchObject({
+      message: 'validation.requestTypeName.tooLong',
+      maximum: REQUEST_TYPE_NAME_MAX_LENGTH,
+    });
+    expect(issueFor(requestTypeNameSchema, 'See https://adiutor.dev')?.message).toBe(
+      'validation.requestTypeName.webAddress',
+    );
+    expect(issueFor(requestTypeDescriptionSchema, '')?.message).toBe(
+      'validation.requestTypeDescription.empty',
+    );
+    expect(issueFor(requestTypeDescriptionSchema, 'Two\nlines')?.message).toBe(
+      'validation.requestTypeDescription.controlCharacters',
+    );
     expect(issueFor(requestPrioritySchema, 'urgent')?.message).toBe('validation.requestPriority');
     expect(issueFor(requestStatusSchema, 'closed')?.message).toBe('validation.requestStatus');
     expect(issueFor(requestPrefixSchema, 'a-d')?.message).toBe('validation.requestPrefix');

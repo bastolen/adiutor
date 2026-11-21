@@ -1,8 +1,9 @@
 /**
  * @file A request's page, served at `/requests/[number]`: its description
  * (what was asked, by whom), its conversation, and next to them its details:
- * status, who it's assigned to, type and (for the staff) priority, company,
- * who raised it and when, the staff's first response and its last activity.
+ * status, who it's assigned to and who is subscribed, type and (for the
+ * staff) priority, company, who raised it and when, the staff's first
+ * response and its last activity.
  * The number as people see it, with the staff's current prefix
  * (`/requests/AD-142`), redirects here, as do the short links `/r/142` and
  * `/r/AD-142`.
@@ -12,8 +13,10 @@
  *
  * Those who take part can reply. The staff who work on requests also pick
  * its status, assign it and edit its title, type and priority; people at the company
- * mark it done, cancel it or reopen it. A deactivated company's requests
- * show no controls: they can only be read.
+ * mark it done, cancel it or reopen it. Everyone who reads it can subscribe
+ * to it, and the staff who work on requests and the company's Admins change
+ * who else is subscribed. A deactivated company's requests show no controls:
+ * they can only be read.
  */
 import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -32,10 +35,12 @@ import ClientMessages from '@/lib/i18n/client-messages';
 import {
   formatRequestNumber,
   isClosedStatus,
+  mayWriteNote,
   parseRequestNumber,
   REQUEST_STATUSES,
   requestPath,
   statusChoices,
+  subscriberScope,
 } from '@/lib/requests';
 import { searchParam, type SearchParams } from '@/lib/search-params';
 import appContext from '@/server/app-context';
@@ -47,21 +52,26 @@ import {
   findRequestNumber,
   getRequest,
   listAssignableStaff,
+  listRequestTypes,
+  listSubscribable,
   MAX_EARLIER_CHUNKS,
   type RequestDetail,
 } from '@/server/requests';
 
 import PersonLine, { PersonAvatar, personName } from '../../_requests/request-person';
 import RequestText from '../../_requests/request-text';
-import { changeAssigneesAction, changeStatusAction } from './actions';
+import SignedInAsMark from '../../_requests/signed-in-as-mark';
+import { changeAssigneesAction, changeStatusAction, changeSubscriptionAction } from './actions';
 import ChangeAssignees, { type AssigneeChoice } from './change-assignees';
-import EditDetails from './edit-details';
+import ChangeSubscribers from './change-subscribers';
+import EditDetails, { type EditableType } from './edit-details';
 import EditableText from './editable-text';
 import EditedNote from './edited-note';
 import ReplyForm from './reply-form';
 import RequestDetails from './request-details';
 import StatusSelect from './status-select';
 import Thread from './thread';
+import WriteTabs from './write-tabs';
 
 /**
  * Page metadata: "Request AD-142 · Adiutor" for those who may see the
@@ -92,8 +102,8 @@ const EARLIER_PATTERN = /^[1-9]\d?$/;
  * Loads and shows a request, with the controls its viewer may use. An
  * address with the number as people see it (`AD-142`, the current prefix)
  * redirects to the digits first. The client components below (`ReplyForm`,
- * `StatusSelect`, `EditDetails`, `ChangeAssignees`) get `requests` through
- * `ClientMessages`.
+ * `StatusSelect`, `EditDetails`, `ChangeAssignees`, `ChangeSubscribers`) get
+ * `requests` through `ClientMessages`.
  *
  * @param props - Component props.
  * @param props.params - Route parameters: the request's number.
@@ -142,12 +152,24 @@ async function RequestContent({
   // What someone at the company may do with the request as it is: close it, or reopen it.
   const choices = contributes && !manages ? statusChoices(detail.permissions, detail.status) : [];
   const fields = { request: String(detail.number) };
+  // "Send and wait for the company": only on a request that's worked on and doesn't wait already.
+  const canWait = manages && !isClosedStatus(detail.status) && detail.status !== 'waiting';
   // Who the staff may assign: everyone who can be, and anyone assigned now who no longer could
   // be (gone meanwhile), so the dialog can still remove them.
   const assigned = detail.assignees.flatMap(({ userId }) => (userId ? [userId] : []));
   const assigneeChoices: AssigneeChoice[] = [];
+  // The types the request can be given: the active ones, and the one it has, archived or not.
+  const typeChoices: EditableType[] = [];
   if (manages) {
-    const staff = await listAssignableStaff(appContext, actor);
+    const [staff, types] = await Promise.all([
+      listAssignableStaff(appContext, actor),
+      listRequestTypes(appContext, actor),
+    ]);
+    types.forEach(({ key, name, startingPriority, archived }) => {
+      if (startingPriority && (!archived || key === detail.type)) {
+        typeChoices.push({ key, name, startingPriority });
+      }
+    });
     assigneeChoices.push(...staff.map(({ id, name }) => ({ id, name, isViewer: id === actor.id })));
     detail.assignees.forEach(({ userId, name, isViewer }) => {
       if (userId && !staff.some(({ id }) => id === userId)) {
@@ -155,6 +177,10 @@ async function RequestContent({
       }
     });
   }
+  // Whose subscriptions the viewer changes besides their own, and who they can subscribe then.
+  const scope = detail.company.deactivated ? 'self' : subscriberScope(detail.permissions);
+  const subscriberChoices =
+    scope === 'self' ? [] : await listSubscribable(appContext, actor, String(detail.number));
 
   const names = { company: detail.company.name, staff: detail.staffName };
   // The request's whole address, for the note above code copied from its texts.
@@ -210,8 +236,13 @@ async function RequestContent({
               <div className="flex items-center gap-3">
                 <PersonAvatar person={detail.raisedBy} names={names} />
                 <PersonLine person={detail.raisedBy} names={names}>
-                  <span className="flex items-center gap-x-2 text-muted-foreground">
+                  <span className="flex flex-wrap items-center gap-x-2 text-muted-foreground">
                     <RelativeTime date={detail.createdAt} />
+                    <SignedInAsMark
+                      mark={detail.raisedSignedInAs}
+                      author={detail.raisedBy}
+                      names={names}
+                    />
                     <EditedNote
                       text={detail.description}
                       id="description"
@@ -253,6 +284,7 @@ async function RequestContent({
                   {!detail.assignees.some(({ isViewer }) => isViewer) && (
                     <RowAction
                       action={changeAssigneesAction}
+                      allowedWhileSignedInAs
                       fields={{ ...fields, add: actor.id }}
                       label={tRequests('controls.assignToMe')}
                       doneMessage={tRequests('saved.assignedYou')}
@@ -263,6 +295,34 @@ async function RequestContent({
                     choices={assigneeChoices}
                     assigned={assigned}
                   />
+                </>
+              )
+            }
+            subscriberControls={
+              !detail.company.deactivated && (
+                <>
+                  {/* Someone it's assigned to follows it as that. One button that stays where it
+                      is, so the keyboard keeps its place when its text changes. */}
+                  {!detail.assignees.some(({ isViewer }) => isViewer) && (
+                    <RowAction
+                      action={changeSubscriptionAction}
+                      allowedWhileSignedInAs
+                      fields={{ ...fields, subscribe: detail.subscribed ? 'no' : 'yes' }}
+                      label={
+                        detail.subscribed
+                          ? tRequests('controls.unsubscribe')
+                          : tRequests('controls.subscribe')
+                      }
+                    />
+                  )}
+                  {scope !== 'self' && (
+                    <ChangeSubscribers
+                      request={detail.number}
+                      choices={subscriberChoices}
+                      company={detail.company.name}
+                      scope={scope}
+                    />
+                  )}
                 </>
               )
             }
@@ -277,11 +337,13 @@ async function RequestContent({
                         type: detail.type,
                         priority: detail.priority,
                       }}
+                      types={typeChoices}
                     />
                   )}
                   {choices.includes('done') && (
                     <RowAction
                       action={changeStatusAction}
+                      allowedWhileSignedInAs
                       fields={{ ...fields, status: 'done' }}
                       label={tRequests('controls.markDone')}
                       variant="primary"
@@ -290,6 +352,7 @@ async function RequestContent({
                   {choices.includes('cancelled') && (
                     <RowAction
                       action={changeStatusAction}
+                      allowedWhileSignedInAs
                       fields={{ ...fields, status: 'cancelled' }}
                       label={tRequests('controls.cancel')}
                       confirm={{
@@ -303,6 +366,7 @@ async function RequestContent({
                   {choices.includes('open') && (
                     <RowAction
                       action={changeStatusAction}
+                      allowedWhileSignedInAs
                       fields={{ ...fields, status: 'open' }}
                       label={tRequests('controls.reopen')}
                     />
@@ -319,13 +383,12 @@ async function RequestContent({
               <Thread detail={detail} address={address} earlierHref={earlierHref} />
               {contributes && (
                 <div className={detail.entries.length > 0 ? 'border-t border-border pt-6' : ''}>
-                  <ReplyForm
-                    request={detail.number}
-                    // Only on a request that's worked on and doesn't wait for the company already.
-                    canWait={
-                      manages && !isClosedStatus(detail.status) && detail.status !== 'waiting'
-                    }
-                  />
+                  {mayWriteNote(detail.permissions) ? (
+                    // The staff who work on requests also write internal notes, on a tab of their own.
+                    <WriteTabs request={detail.number} canWait={canWait} />
+                  ) : (
+                    <ReplyForm request={detail.number} canWait={canWait} />
+                  )}
                 </div>
               )}
             </div>

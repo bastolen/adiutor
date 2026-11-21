@@ -31,6 +31,7 @@ import { globalPermissionMetadata } from '@/server/page-metadata';
 import { listPendingInvitations } from '@/server/people/invitations';
 import { listInviteLinks } from '@/server/people/invite-links';
 import { getStaffSettings, listStaff } from '@/server/people/staff';
+import { listRequestTypes } from '@/server/requests';
 
 import { ActivityColumn } from '../../_people/activity';
 import InvitationsCard from '../../_people/invitations-card';
@@ -42,6 +43,7 @@ import { changeStaffRoleAction, removeFromStaffAction } from '../../_people/staf
 import DefaultLanguageForm from './default-language-form';
 import DefaultTimeZoneForm from './default-time-zone-form';
 import RequestPrefixForm from './request-prefix-form';
+import RequestTypesCard from './request-types-card';
 import StaffNameForm from './staff-name-form';
 
 /**
@@ -70,11 +72,12 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
   const staffRequested = parseTableState(STAFF_TABLE, query);
   const invitationsRequested = parseTableState(INVITATIONS_TABLE, query);
   const linksRequested = parseTableState(INVITE_LINKS_TABLE, query);
-  const [settings, members, invitations, links] = await Promise.all([
+  const [settings, members, invitations, links, types] = await Promise.all([
     getStaffSettings(appContext, actor),
     listStaff(appContext, actor, staffRequested),
     listPendingInvitations(appContext, actor, null, invitationsRequested),
     listInviteLinks(appContext, actor, null, linksRequested),
+    listRequestTypes(appContext, actor),
   ]);
   const url = createPageUrl('/admin/staff', {}, await getTranslations('tables'));
   const language = await getTranslations('common.language');
@@ -91,6 +94,7 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
         'admin.staff.name',
         'admin.staff.timeZone',
         'admin.staff.requestNumbers',
+        'admin.staff.requestTypes',
         'people',
       ]}
     >
@@ -120,6 +124,8 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
         <Card title={t('requestNumbers.title')} description={t('requestNumbers.description')}>
           <RequestPrefixForm prefix={settings.requestPrefix} />
         </Card>
+
+        <RequestTypesCard types={types} />
 
         <Card
           id="people"

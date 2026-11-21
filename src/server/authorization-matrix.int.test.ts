@@ -38,7 +38,7 @@ import { hashPassword } from 'better-auth/crypto';
 import { and, eq, isNull } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { account, invitation, inviteLink, membership, user } from '@/db/schema';
+import { account, impersonation, invitation, inviteLink, membership, user } from '@/db/schema';
 import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { defined, firstRow } from '@/lib/defined';
 import { hashToken } from '@/lib/sign-in/tokens';
@@ -133,20 +133,31 @@ import { registerUser } from './people/user-registration';
 import { listUsers } from './people/users';
 import { findErrorReference, listRecentErrors } from './recorded-errors';
 import {
+  addNote,
+  addRequestType,
+  archiveRequestType,
   changeAssignees,
   changeRequestStatus,
+  changeSubscribers,
+  countAssignedRequests,
   editReply,
   editRequestDescription,
-  countAssignedRequests,
   findRequest,
   getRequest,
   listAssignableStaff,
   listMentionable,
   listRequestCompanies,
   listRequests,
+  listRequestTypes,
+  listSubscribable,
+  moveRequestType,
   raiseRequest,
   replyToRequest,
+  restoreRequestType,
+  subscribe,
+  unsubscribe,
   updateRequestDetails,
+  updateRequestType,
 } from './requests';
 
 const { ctx, db, sent } = setupTestContext();
@@ -506,6 +517,29 @@ function listOperations(): Operation[] {
     ['set default language', (w) => setDefaultLocale(ctx, w.actor, 'nl-NL')],
     ['set default time zone', (w) => setDefaultTimeZone(ctx, w.actor, 'Europe/Amsterdam')],
     ['set request prefix', (w) => setRequestPrefix(ctx, w.actor, 'HELP')],
+    ['list request types', (w) => listRequestTypes(ctx, w.actor)],
+    [
+      'add request type',
+      (w) =>
+        addRequestType(ctx, w.actor, {
+          name: 'Printers',
+          description: 'A printer acts up.',
+          startingPriority: 'normal',
+        }),
+    ],
+    [
+      'edit request type',
+      (w) =>
+        updateRequestType(ctx, w.actor, {
+          type: 'support',
+          name: 'Help',
+          description: 'A question.',
+          startingPriority: 'normal',
+        }),
+    ],
+    ['move request type', (w) => moveRequestType(ctx, w.actor, { type: 'bug', direction: 'up' })],
+    ['archive request type', (w) => archiveRequestType(ctx, w.actor, { type: 'new_feature' })],
+    ['restore request type', (w) => restoreRequestType(ctx, w.actor, { type: 'new_feature' })],
     [
       'change staff role',
       (w) => changeStaffRole(ctx, w.actor, { userId: w.staffMember, role: 'finance' }),
@@ -660,6 +694,14 @@ function listOperations(): Operation[] {
         }),
     ],
     [
+      'add internal note (own)',
+      (w) => addNote(ctx, w.actor, { request: w.requests.own, body: 'Probably the toner.' }),
+    ],
+    [
+      'add internal note (other)',
+      (w) => addNote(ctx, w.actor, { request: w.requests.other, body: 'Probably the toner.' }),
+    ],
+    [
       'list who can be mentioned in a request (own)',
       (w) => listMentionable(ctx, w.actor, { request: w.requests.own }),
     ],
@@ -676,6 +718,34 @@ function listOperations(): Operation[] {
       (w) => listMentionable(ctx, w.actor, { company: w.other.id }),
     ],
     ['count own assigned requests', (w) => countAssignedRequests(ctx, w.actor)],
+    ['subscribe to request (own)', (w) => subscribe(ctx, w.actor, { request: w.requests.own })],
+    ['subscribe to request (other)', (w) => subscribe(ctx, w.actor, { request: w.requests.other })],
+    [
+      'unsubscribe from request (own)',
+      (w) => unsubscribe(ctx, w.actor, { request: w.requests.own }),
+    ],
+    [
+      'unsubscribe from request (other)',
+      (w) => unsubscribe(ctx, w.actor, { request: w.requests.other }),
+    ],
+    // A change that names nobody: the rights to change other people's subscriptions are checked
+    // all the same (people are named by a key, which `subscribers.int.test.ts` covers).
+    [
+      'change request subscribers (own)',
+      (w) => changeSubscribers(ctx, w.actor, { request: w.requests.own, add: [], remove: [] }),
+    ],
+    [
+      'change request subscribers (other)',
+      (w) => changeSubscribers(ctx, w.actor, { request: w.requests.other, add: [], remove: [] }),
+    ],
+    [
+      'list who can be subscribed to a request (own)',
+      (w) => listSubscribable(ctx, w.actor, w.requests.own),
+    ],
+    [
+      'list who can be subscribed to a request (other)',
+      (w) => listSubscribable(ctx, w.actor, w.requests.other),
+    ],
     [
       'deactivate own account',
       async (w) => {
@@ -707,6 +777,7 @@ const READS: ReadonlySet<string> = new Set([
   'list staff invitations',
   'list staff',
   'view staff settings',
+  'list request types',
   'list users',
   'view user',
   'check a user exists',
@@ -733,10 +804,45 @@ const READS: ReadonlySet<string> = new Set([
   'list who can be mentioned in a new request (own)',
   'list who can be mentioned in a new request (other)',
   'count own assigned requests',
+  'list who can be subscribed to a request (own)',
+  'list who can be subscribed to a request (other)',
 ]);
 
-/** What a user may still change while a staff member is signed in as them: their own work. */
-const OWN_WORK: ReadonlySet<string> = new Set(['dismiss own MFA recommendation']);
+/**
+ * What a user may still change while a staff member is signed in as them:
+ * their own work, which then gets what it gets for the user. Their request
+ * work records the staff member (decision 0028); managing request types is
+ * staff settings, and refused.
+ */
+const OWN_WORK: ReadonlySet<string> = new Set([
+  'dismiss own MFA recommendation',
+  'raise request (own)',
+  'raise request (other)',
+  'reply to request (own)',
+  'reply to request (other)',
+  'reply and wait for the company (own)',
+  'mark request done (own)',
+  'cancel request (own)',
+  'reopen request (own)',
+  'set request status (own)',
+  'set request status (other)',
+  'edit request details (own)',
+  'edit request details (other)',
+  'assign request (own)',
+  'assign request (other)',
+  'edit request description (own)',
+  'edit request description (other)',
+  'edit a reply that is not your own (own)',
+  'add internal note (own)',
+  'add internal note (other)',
+  // Subscriptions too; one changed this way goes to the audit log (decision 0025).
+  'subscribe to request (own)',
+  'subscribe to request (other)',
+  'unsubscribe from request (own)',
+  'unsubscribe from request (other)',
+  'change request subscribers (own)',
+  'change request subscribers (other)',
+]);
 
 /** What happens when a role tries an operation. */
 type Outcome = 'allowed' | 'forbidden' | 'not_found';
@@ -845,6 +951,13 @@ const EXPECTED: Record<string, string> = {
   'set default language': 'FFFFFFA',
   'set default time zone': 'FFFFFFA',
   'set request prefix': 'FFFFFFA',
+  // Everyone who reads requests sees the types; only staff Admins change them.
+  'list request types': 'AAAAAAA',
+  'add request type': 'FFFFFFA',
+  'edit request type': 'FFFFFFA',
+  'move request type': 'FFFFFFA',
+  'archive request type': 'FFFFFFA',
+  'restore request type': 'FFFFFFA',
   'change staff role': 'FFFFFFA',
   'remove from staff': 'FFFFFFA',
   'list users': 'FFFAAAA',
@@ -909,6 +1022,9 @@ const EXPECTED: Record<string, string> = {
   'edit request description (other)': 'NNNAFAA',
   // Past the permission, a reply is only ever its author's to edit.
   'edit a reply that is not your own (own)': 'FNNNFNN',
+  // Internal notes are written by the staff who work on requests; Finance reads them.
+  'add internal note (own)': 'FFFAFAA',
+  'add internal note (other)': 'NNNAFAA',
   // The list at "@" is for whoever may write there: not a Watcher, and not Finance.
   'list who can be mentioned in a request (own)': 'FAAAFAA',
   'list who can be mentioned in a request (other)': 'NNNAFAA',
@@ -916,6 +1032,17 @@ const EXPECTED: Record<string, string> = {
   'list who can be mentioned in a new request (other)': 'NNNAFAA',
   // Everyone counts what's assigned to them (the dashboard): nothing, for whoever can't be.
   'count own assigned requests': 'AAAAAAA',
+  // Everyone who reads a request follows it if they like, also who can't reply to it.
+  'subscribe to request (own)': 'AAAAAAA',
+  'subscribe to request (other)': 'NNNAAAA',
+  'unsubscribe from request (own)': 'AAAAAAA',
+  'unsubscribe from request (other)': 'NNNAAAA',
+  // Other people's subscriptions are for the staff who work on requests, and for a company's
+  // Admins among their colleagues; so is the list of who can be subscribed.
+  'change request subscribers (own)': 'FFAAFAA',
+  'change request subscribers (other)': 'NNNAFAA',
+  'list who can be subscribed to a request (own)': 'FFAAFAA',
+  'list who can be subscribed to a request (other)': 'NNNAFAA',
   // Everyone may deactivate their own account (each world has other Admins).
   'deactivate own account': 'AAAAAAA',
 };
@@ -1154,9 +1281,16 @@ describe('authorization matrix', () => {
   });
 
   it.each(['client', 'company admin', 'platform admin'] as const)(
-    'refuses every change while a staff member is signed in as a %s, and still reads as them',
+    'refuses every change but their own work while a staff member is signed in as a %s, and still reads as them',
     async (role) => {
       const world = await createWorld(role);
+      // The sign-in itself, which request work checks again in its transaction.
+      await db.insert(impersonation).values({
+        staffUserId: world.outsider,
+        userId: world.actor.id,
+        returnTo: '/dashboard',
+        expiresAt: new Date(Date.now() + 30 * 60_000),
+      });
       const signedInAs: World = {
         ...world,
         actor: {
@@ -1178,14 +1312,13 @@ describe('authorization matrix', () => {
          * @returns What the operation returns.
          */
         const run = () => defined(OPERATIONS.get(name), `the ${name} operation`)(signedInAs);
-        return [name, READS.has(name) ? await outcome(name, run) : await outcomeCode(run)];
+        const asUser = READS.has(name) || OWN_WORK.has(name);
+        return [name, asUser ? await outcome(name, run) : await outcomeCode(run)];
       });
-      const expected = names.map((name) => {
-        if (READS.has(name)) {
-          return [name, expectedOutcome(name, role)];
-        }
-        return [name, OWN_WORK.has(name) ? 'done' : 'signed_in_as'];
-      });
+      const expected = names.map((name) => [
+        name,
+        READS.has(name) || OWN_WORK.has(name) ? expectedOutcome(name, role) : 'signed_in_as',
+      ]);
       expect(Object.fromEntries(results)).toEqual(Object.fromEntries(expected));
     },
   );

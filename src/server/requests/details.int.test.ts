@@ -20,7 +20,7 @@ import {
 } from '../../../tests/integration/helpers';
 import { RATE_LIMITS } from '../rate-limit';
 import updateRequestDetails from './details';
-import { changesOf, ctx, db, storeRequest, storedRequest } from './test-helpers';
+import { changesOf, ctx, db, storedRequest, storeRequest, storeRequestType } from './test-helpers';
 
 /** The details of a stored request: what its form shows, and sends back when nothing is changed. */
 const SAME = { title: 'The printer is broken', type: 'bug', priority: 'normal' } as const;
@@ -113,7 +113,7 @@ describe('updateRequestDetails', () => {
   it.each([
     ['no title', { title: ' ' }],
     ['a title of two lines', { title: 'The printer\nis broken' }],
-    ['an unknown type', { type: 'question' }],
+    ['a type that isn’t a key', { type: 'New feature' }],
     ['an unknown priority', { priority: 'urgent' }],
     ['no priority', { priority: '' }],
   ])('refuses %s', async (_name, change) => {
@@ -125,6 +125,33 @@ describe('updateRequestDetails', () => {
       updateRequestDetails(ctx, support, { ...edited(change), request: raised.id }),
     ).rejects.toBeInstanceOf(ZodError);
     expect(await changesOf(raised.id)).toEqual([]);
+  });
+
+  it('refuses an archived type, and keeps one a request already has', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    await storeRequestType({ key: 'printers', archivedAt: new Date() });
+    const raised = await storeRequest(company.id);
+
+    await expect(
+      updateRequestDetails(ctx, support, {
+        ...edited({ type: 'printers' }),
+        request: raised.id,
+      }),
+    ).rejects.toMatchObject({ code: 'invalid', key: 'errors.requestTypes.unavailable' });
+
+    // A request of the archived type keeps it when another detail changes.
+    const old = await storeRequest(company.id, { type: 'printers' });
+    expect(
+      await updateRequestDetails(ctx, support, {
+        request: old.id,
+        title: 'Another title',
+        type: 'printers',
+        priority: 'normal',
+        was: { title: 'The printer is broken', type: 'printers', priority: 'normal' },
+      }),
+    ).toEqual({ changed: 1 });
+    expect(await storedRequest(old.id)).toMatchObject({ type: 'printers' });
   });
 
   it('refuses a change to a request of a deactivated company', async () => {

@@ -20,6 +20,14 @@ afterEach(() => {
 /** A request's details as they are. */
 const DETAILS = { title: 'Help', type: 'bug', priority: 'normal' } as const;
 
+/** The types to choose from, each with the priority it starts a request with. */
+const TYPES = [
+  { key: 'hotfix', name: 'Hotfix', startingPriority: 'high' },
+  { key: 'bug', name: 'Bug', startingPriority: 'normal' },
+  { key: 'support', name: 'Support', startingPriority: 'normal' },
+  { key: 'new_feature', name: 'New feature', startingPriority: 'low' },
+] as const;
+
 /**
  * What the action was sent last.
  *
@@ -54,7 +62,7 @@ async function pick(user: ReturnType<typeof userEvent.setup>, select: string, op
 describe('EditDetails', () => {
   it('starts with the request’s details', async () => {
     const user = userEvent.setup();
-    render(<EditDetails request={142} details={DETAILS} />);
+    render(<EditDetails request={142} details={DETAILS} types={TYPES} />);
 
     const dialog = await openDialog(user);
 
@@ -67,7 +75,7 @@ describe('EditDetails', () => {
   it('saves the title, type and priority for its request', async () => {
     vi.mocked(updateDetailsAction).mockResolvedValue({ ok: true, message: 'Details saved.' });
     const user = userEvent.setup();
-    render(<EditDetails request={142} details={DETAILS} />);
+    render(<EditDetails request={142} details={DETAILS} types={TYPES} />);
 
     const dialog = await openDialog(user);
     const title = within(dialog).getByRole('textbox', { name: 'Title' });
@@ -93,11 +101,13 @@ describe('EditDetails', () => {
   it('keeps saying what it started from when the page behind it is refreshed, until it is opened again', async () => {
     vi.mocked(updateDetailsAction).mockResolvedValue({ ok: true, message: 'Details saved.' });
     const user = userEvent.setup();
-    const { rerender } = render(<EditDetails request={142} details={DETAILS} />);
+    const { rerender } = render(<EditDetails request={142} details={DETAILS} types={TYPES} />);
 
     const dialog = await openDialog(user);
     // A colleague raised the priority, and the page behind the dialog shows it.
-    rerender(<EditDetails request={142} details={{ ...DETAILS, priority: 'high' }} />);
+    rerender(
+      <EditDetails request={142} details={{ ...DETAILS, priority: 'high' }} types={TYPES} />,
+    );
 
     // The fields still show what the editor saw, and so does what goes with them.
     expect(within(dialog).getByRole('combobox', { name: 'Priority' })).toHaveTextContent('Normal');
@@ -117,7 +127,7 @@ describe('EditDetails', () => {
   it('sends the priority a new type brought as a change, and the one it started from with it', async () => {
     vi.mocked(updateDetailsAction).mockResolvedValue({ ok: true, message: 'Details saved.' });
     const user = userEvent.setup();
-    render(<EditDetails request={142} details={DETAILS} />);
+    render(<EditDetails request={142} details={DETAILS} types={TYPES} />);
 
     const dialog = await openDialog(user);
     await pick(user, 'Type', 'Hotfix');
@@ -134,7 +144,7 @@ describe('EditDetails', () => {
 
   it('moves the priority to a newly picked type’s own', async () => {
     const user = userEvent.setup();
-    render(<EditDetails request={142} details={DETAILS} />);
+    render(<EditDetails request={142} details={DETAILS} types={TYPES} />);
 
     const dialog = await openDialog(user);
     await pick(user, 'Type', 'Hotfix');
@@ -146,7 +156,7 @@ describe('EditDetails', () => {
 
   it('leaves a priority that was picked by hand alone when the type changes', async () => {
     const user = userEvent.setup();
-    render(<EditDetails request={142} details={DETAILS} />);
+    render(<EditDetails request={142} details={DETAILS} types={TYPES} />);
 
     const dialog = await openDialog(user);
     await pick(user, 'Priority', 'Low');
@@ -161,7 +171,7 @@ describe('EditDetails', () => {
       message: 'Enter a title for the request.',
     });
     const user = userEvent.setup();
-    render(<EditDetails request={142} details={DETAILS} />);
+    render(<EditDetails request={142} details={DETAILS} types={TYPES} />);
 
     const dialog = await openDialog(user);
     await pick(user, 'Type', 'Support');
@@ -175,7 +185,7 @@ describe('EditDetails', () => {
 
   it('starts over with the saved details when it is opened again', async () => {
     const user = userEvent.setup();
-    render(<EditDetails request={142} details={DETAILS} />);
+    render(<EditDetails request={142} details={DETAILS} types={TYPES} />);
 
     await openDialog(user);
     await pick(user, 'Type', 'Hotfix');
@@ -191,7 +201,7 @@ describe('EditDetails', () => {
     ['es-ES', 'Editar datos', 'Título', 'Prioridad', 'Guardar datos'],
   ] as const)('speaks %s', async (locale, open, title, priority, save) => {
     const user = userEvent.setup();
-    renderInLocale(locale, <EditDetails request={142} details={DETAILS} />);
+    renderInLocale(locale, <EditDetails request={142} details={DETAILS} types={TYPES} />);
 
     await user.click(screen.getByRole('button', { name: open }));
 

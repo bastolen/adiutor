@@ -5,9 +5,17 @@
  * assignment entries back, and one that deactivates a company while a change
  * is under way.
  */
-import { and, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 
-import { company, request, requestAssignee, requestCounter, requestEntry, user } from '@/db/schema';
+import {
+  company,
+  request,
+  requestParticipant,
+  requestCounter,
+  requestEntry,
+  requestType,
+  user,
+} from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 
 import { atTheSameMoment, setupTestContext } from '../../../tests/integration/helpers';
@@ -68,7 +76,7 @@ export async function storeEntry(
   requestId: string,
   values: Partial<typeof requestEntry.$inferInsert> = {},
 ) {
-  const change = values.kind !== undefined && values.kind !== 'comment';
+  const change = values.kind !== undefined && values.kind !== 'comment' && values.kind !== 'note';
   return firstRow(
     await db
       .insert(requestEntry)
@@ -152,7 +160,9 @@ export async function changesOf(requestId: string) {
  * @param userIds - The staff members.
  */
 export async function storeAssignees(requestId: string, userIds: readonly string[]): Promise<void> {
-  await db.insert(requestAssignee).values(userIds.map((userId) => ({ requestId, userId })));
+  await db
+    .insert(requestParticipant)
+    .values(userIds.map((userId) => ({ requestId, userId, role: 'assignee' as const })));
 }
 
 /**
@@ -163,9 +173,11 @@ export async function storeAssignees(requestId: string, userIds: readonly string
  */
 export async function assigneesOf(requestId: string): Promise<string[]> {
   const rows = await db
-    .select({ userId: requestAssignee.userId })
-    .from(requestAssignee)
-    .where(eq(requestAssignee.requestId, requestId));
+    .select({ userId: requestParticipant.userId })
+    .from(requestParticipant)
+    .where(
+      and(eq(requestParticipant.requestId, requestId), eq(requestParticipant.role, 'assignee')),
+    );
   return rows.map(({ userId }) => userId).sort();
 }
 
@@ -183,4 +195,33 @@ export async function assignmentsOf(requestId: string) {
     .where(and(eq(requestEntry.requestId, requestId), eq(requestEntry.kind, 'assignee')))
     .orderBy(requestEntry.id);
   return entries.map(({ toValue, subjectUserId, authorId }) => [toValue, subjectUserId, authorId]);
+}
+
+/**
+ * Stores a request type the staff added, after the built-in ones, without
+ * going through a service.
+ *
+ * @param values - The type: `printers`, starting at Normal, by default.
+ * @returns The stored type.
+ */
+export async function storeRequestType(values: Partial<typeof requestType.$inferInsert> = {}) {
+  const [last] = await db
+    .select({ position: requestType.position })
+    .from(requestType)
+    .orderBy(desc(requestType.position))
+    .limit(1);
+  return firstRow(
+    await db
+      .insert(requestType)
+      .values({
+        key: 'printers',
+        name: 'Printers',
+        description: 'A printer acts up.',
+        startingPriority: 'normal',
+        position: (last?.position ?? 0) + 1,
+        ...values,
+      })
+      .returning(),
+    'the stored type',
+  );
 }

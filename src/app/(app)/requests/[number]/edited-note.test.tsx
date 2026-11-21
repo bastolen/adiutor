@@ -89,4 +89,34 @@ describe('EditedNote', () => {
     expect(versions[1]).toContain('Adiutor Tests Alpha changed this on Nov 13, 2026, 12:00 PM.');
     expect(versions[1]).toContain('First.');
   });
+
+  it('says when the last edit and a version were made while signed in as the editor', async () => {
+    const user = userEvent.setup();
+    const editedBy = {
+      userId: null,
+      name: 'Casey Client',
+      side: 'company',
+      isViewer: true,
+    } as const;
+    renderNote({
+      text: 'Second.',
+      format: 'markdown',
+      editedAt: new Date('2026-11-14T10:30:00Z'),
+      editedSignedInAs: { staffName: 'Ann Staff', editedBy: { ...editedBy, picture: null } },
+      versions: [
+        {
+          text: 'First.',
+          format: 'markdown',
+          editedBy: { ...editedBy, picture: null },
+          signedInAs: { staffName: null },
+          at: new Date('2026-11-14T10:30:00Z'),
+        },
+      ],
+    });
+
+    expect(screen.getByText('Ann Staff made this edit while signed in as you')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Edited' }));
+    const dialog = screen.getByRole('dialog', { name: 'Earlier versions' });
+    expect(dialog).toHaveTextContent('A staff member made this edit while signed in as you');
+  });
 });

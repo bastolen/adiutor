@@ -80,11 +80,14 @@ function detailOf(detail: Partial<RequestDetail> = {}): RequestDetail {
     title: 'Update the opening hours on the website',
     description: { text: 'Our opening hours change next month.', format: 'plain' },
     type: 'support',
+    typeName: 'Support',
     status: 'open',
     reopenedAt: null,
     priority: null,
     raisedBy: CASEY,
     assignees: [],
+    subscribers: [],
+    subscribed: false,
     createdAt: new Date('2026-11-10T09:00:00Z'),
     firstResponseAt: null,
     lastActivityAt: new Date('2026-11-10T09:00:00Z'),
@@ -175,8 +178,9 @@ describe('Thread', () => {
     ],
     [
       'a new type',
-      { kind: 'type', from: 'bug', to: 'new_feature' },
-      'Changed the type from Bug to New feature.',
+      // The service gives the types' names.
+      { kind: 'type', from: 'Bug', to: 'Printers' },
+      'Changed the type from Bug to Printers.',
     ],
     [
       'a new priority',
@@ -315,6 +319,42 @@ describe('Thread', () => {
     expect(screen.getByText('@Sam Support')).not.toHaveClass('border-highlight');
   });
 
+  it('shows an internal note on the staff’s side as one, with its own Edit button', () => {
+    render(
+      <Thread
+        address={ADDRESS}
+        detail={detailOf({
+          audience: 'staff',
+          entries: [
+            entryOf('1', { author: CASEY, body: { text: 'Any news?', format: 'markdown' } }),
+            entryOf('2', {
+              kind: 'note',
+              body: {
+                text: 'Probably the toner.',
+                format: 'markdown',
+                edit: { markdown: 'Probably the toner.', edits: 0 },
+              },
+            }),
+          ],
+        })}
+        earlierHref={null}
+      />,
+    );
+
+    const [reply, note] = within(screen.getByRole('list')).getAllByRole('listitem');
+    expect(reply).not.toHaveTextContent('Internal note');
+    expect(note).toHaveTextContent('Sam Support');
+    expect(note).toHaveTextContent('Internal note');
+    expect(
+      within(note as HTMLElement)
+        .getByText('Probably the toner.')
+        .closest('.bg-warning-soft'),
+    ).not.toBeNull();
+    expect(
+      within(note as HTMLElement).getByRole('button', { name: 'Edit note' }),
+    ).toBeInTheDocument();
+  });
+
   it('offers the earlier entries first, when there are more', () => {
     render(
       <Thread
@@ -354,5 +394,38 @@ describe('Thread', () => {
 
     expect(screen.getByText(sentence)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: earlier })).toBeInTheDocument();
+  });
+
+  it('says which reply and change a staff member made while signed in as their author', () => {
+    render(
+      <Thread
+        address={ADDRESS}
+        detail={detailOf({
+          entries: [
+            entryOf('1', {
+              author: CASEY,
+              body: { text: 'Monday to Friday.', format: 'plain' },
+              signedInAs: { staffName: 'Ann Staff' },
+            }),
+            entryOf('2', {
+              author: { ...CASEY, isViewer: false },
+              kind: 'status',
+              from: 'open',
+              to: 'done',
+              signedInAs: { staffName: null },
+            }),
+            entryOf('3', { body: { text: 'Thanks.', format: 'plain' } }),
+          ],
+        })}
+        earlierHref={null}
+      />,
+    );
+
+    const [reply, change, own] = entryTexts();
+    expect(reply).toContain('Ann Staff did this while signed in as you');
+    // For a reader who isn't the author (a staff Admin), the author is named; once the staff
+    // member's account is gone, they're "a staff member".
+    expect(change).toContain('A staff member did this while signed in as Casey Client');
+    expect(own).not.toContain('signed in as');
   });
 });

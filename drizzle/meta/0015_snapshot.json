@@ -1,5 +1,5 @@
 {
-  "id": "d841065c-94b5-4e5d-ba17-dfc9e76b224c",
+  "id": "a28ceb79-0894-4847-a926-c7090eacdad0",
   "prevId": "009be82f-7323-4572-bd9a-9121d261e270",
   "version": "7",
   "dialect": "postgresql",
@@ -628,12 +628,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "time_zone": {
-          "name": "time_zone",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "mfa_recommendation_dismissed_at": {
           "name": "mfa_recommendation_dismissed_at",
           "type": "timestamp with time zone",
@@ -905,12 +899,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'en-US'"
-        },
-        "time_zone": {
-          "name": "time_zone",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -2420,7 +2408,7 @@
       "checkConstraints": {
         "request_entry_kind_fits_values": {
           "name": "request_entry_kind_fits_values",
-          "value": "(\"request_entry\".\"kind\" = 'comment') = (\"request_entry\".\"body\" is not null) and (\"request_entry\".\"kind\" = 'comment') = (\"request_entry\".\"to_value\" is null)"
+          "value": "(\"request_entry\".\"kind\" in ('comment', 'note')) = (\"request_entry\".\"body\" is not null) and (\"request_entry\".\"kind\" in ('comment', 'note')) = (\"request_entry\".\"to_value\" is null)"
         },
         "request_entry_assignment_fits_values": {
           "name": "request_entry_assignment_fits_values",
@@ -2428,7 +2416,7 @@
         },
         "request_entry_kind_valid": {
           "name": "request_entry_kind_valid",
-          "value": "\"request_entry\".\"kind\" in ('comment', 'status', 'title', 'type', 'priority', 'assignee')"
+          "value": "\"request_entry\".\"kind\" in ('comment', 'note', 'status', 'title', 'type', 'priority', 'assignee')"
         },
         "request_entry_author_side_valid": {
           "name": "request_entry_author_side_valid",
@@ -3459,13 +3447,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'en-US'"
-        },
-        "default_time_zone": {
-          "name": "default_time_zone",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'UTC'"
         },
         "request_prefix": {
           "name": "request_prefix",

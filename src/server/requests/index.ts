@@ -24,8 +24,15 @@ export {
   MAX_EARLIER_CHUNKS,
   THREAD_CHUNK,
 } from './detail';
-export type { RequestDetail, RequestEntryView, RequestText, TextVersion } from './detail';
+export type {
+  RequestDetail,
+  RequestEntryView,
+  RequestText,
+  SignedInAsMark,
+  TextVersion,
+} from './detail';
 export { editReply, editRequestDescription } from './edits';
+export { default as addNote } from './notes';
 export { default as raiseRequest } from './raise';
 export { default as replyToRequest } from './reply';
 export { default as changeRequestStatus } from './status';
@@ -39,4 +46,23 @@ export {
 } from './assignees';
 export type { AssignableStaffMember } from './assignees';
 export { listMentionable } from './mentions';
+export {
+  changeSubscribers,
+  listSubscribable,
+  MAX_SUBSCRIBER_CHANGES,
+  subscribe,
+  unsubscribe,
+  unsubscribeFrom,
+} from './subscribers';
+export type { SubscribablePerson } from './subscribers';
 export type { MentionablePerson } from './mentions';
+export {
+  addRequestType,
+  archiveRequestType,
+  listRequestTypes,
+  moveRequestType,
+  nameBuiltInRequestTypes,
+  restoreRequestType,
+  updateRequestType,
+} from './types';
+export type { RequestTypeView } from './types';

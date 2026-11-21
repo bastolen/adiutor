@@ -5,7 +5,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import { afterAll, beforeEach, expect, inject, vi } from 'vitest';
 
 import { createDatabase, type Database, type DatabaseTransaction } from '@/db';
@@ -18,7 +18,7 @@ import {
   type QueuedJobStatus,
   rateLimitBucket,
   request,
-  requestAssignee,
+  requestParticipant,
   requestEntry,
   session,
   staffSettings,
@@ -360,8 +360,10 @@ export async function storeAssignedRequest(
   );
   if (assigneeIds.length > 0) {
     await db
-      .insert(requestAssignee)
-      .values(assigneeIds.map((userId) => ({ requestId: stored.id, userId })));
+      .insert(requestParticipant)
+      .values(
+        assigneeIds.map((userId) => ({ requestId: stored.id, userId, role: 'assignee' as const })),
+      );
   }
   return stored.id;
 }
@@ -377,9 +379,11 @@ export async function storeAssignedRequest(
  */
 export async function assignmentsOfRequest(db: Database, requestId: string) {
   const assignees = await db
-    .select({ userId: requestAssignee.userId })
-    .from(requestAssignee)
-    .where(eq(requestAssignee.requestId, requestId));
+    .select({ userId: requestParticipant.userId })
+    .from(requestParticipant)
+    .where(
+      and(eq(requestParticipant.requestId, requestId), eq(requestParticipant.role, 'assignee')),
+    );
   const entries = await db
     .select()
     .from(requestEntry)

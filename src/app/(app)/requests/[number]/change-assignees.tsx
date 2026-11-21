@@ -59,7 +59,7 @@ function AssigneeFields({
    */
   const labelOf = (choice: AssigneeChoice) => {
     const name = choice.name ?? t('unnamedStaff');
-    return choice.isViewer ? t('assigneeYou', { name }) : name;
+    return choice.isViewer ? t('personYou', { name }) : name;
   };
 
   return (
@@ -112,6 +112,7 @@ export default function ChangeAssignees({
       description={t('assigneesDescription')}
       confirmLabel={t('saveAssignees')}
       tone="primary"
+      allowedWhileSignedInAs
     >
       <AssigneeFields choices={choices} assigned={assigned} />
     </ActionDialog>

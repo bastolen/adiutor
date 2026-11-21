@@ -2,12 +2,12 @@
  * @file The labels of a request: its status, that it was reopened, its type
  * and its priority. Every screen shows them with these components, so each
  * one keeps one tone and one wording wherever a request appears. Their text
- * comes from the `requests` namespace.
+ * comes from the `requests` namespace; a type's name is the staff's own.
  */
 import { useTranslations } from 'next-intl';
 
 import Badge, { type BadgeTone } from '@/components/ui/badge';
-import type { RequestAudience, RequestPriority, RequestStatus, RequestType } from '@/lib/requests';
+import type { RequestAudience, RequestPriority, RequestStatus } from '@/lib/requests';
 
 /**
  * The tone of each status: a request that waits for the company asks for
@@ -60,15 +60,14 @@ export function ReopenedBadge() {
 }
 
 /**
- * A request's type.
+ * A request's type, by the name the staff gave it.
  *
  * @param props - Component props.
- * @param props.type - The type.
+ * @param props.name - The type's name.
  * @returns The badge.
  */
-export function TypeBadge({ type }: { type: RequestType }) {
-  const t = useTranslations('requests');
-  return <Badge>{t('type', { type })}</Badge>;
+export function TypeBadge({ name }: { name: string }) {
+  return <Badge>{name}</Badge>;
 }
 
 /**

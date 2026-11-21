@@ -15,6 +15,7 @@
       "typeFilter": "Type",
       "typeMenu": "Filteren op type",
       "allTypes": "Alle",
+      "archivedType": "{name} (gearchiveerd)",
       "priorityFilter": "Prioriteit",
       "priorityMenu": "Filteren op prioriteit",
       "allPriorities": "Alle",
@@ -81,12 +82,15 @@
       "back": "Verzoeken",
       "justRaised": "Verzoek ingediend.",
       "assignedTo": "Toegewezen aan",
-      "notAssigned": "Nog niet toegewezen"
+      "notAssigned": "Nog niet toegewezen",
+      "subscribers": "Abonnees",
+      "noSubscribers": "Nog niemand",
+      "noSubscribersCompany": "Nog niemand bij {company}",
+      "showSubscribers": "{count, plural, one {De # abonnee tonen} other {De # abonnees tonen}}",
+      "moreSubscribers": "+{count, number}"
     },
     "status": "{status, select, open {Open} todo {Te doen} in_progress {In behandeling} waiting {{audience, select, contributor {Wacht op jouw reactie} follower {Wacht op je bedrijf} other {Wacht op het bedrijf}}} done {Afgerond} cancelled {Geannuleerd} other {Onbekend}}",
     "reopened": "Heropend",
-    "type": "{type, select, hotfix {Hotfix} bug {Bug} support {Support} new_feature {Nieuwe functie} other {Onbekend}}",
-    "typeDescription": "{type, select, hotfix {Er is iets kapot dat meteen moet worden opgelost.} bug {Iets werkt niet zoals het hoort.} support {Een vraag, of hulp bij iets.} new_feature {Iets nieuws, of een wijziging in hoe iets werkt.} other {Een ander soort verzoek.}}",
     "priority": "{priority, select, low {Laag} normal {Normaal} high {Hoog} other {Onbekend}}",
     "priorityBadge": "{priority, select, low {Lage prioriteit} normal {Normale prioriteit} high {Hoge prioriteit} other {Onbekende prioriteit}}",
     "entry": {
@@ -106,6 +110,16 @@
       "send": "Reactie versturen",
       "sendAndWait": "Versturen en op het bedrijf wachten",
       "sent": "Reactie verstuurd."
+    },
+    "note": {
+      "tabsLabel": "Schrijven",
+      "replyTab": "Reactie",
+      "noteTab": "Interne notitie",
+      "staffOnly": "Alleen medewerkers zien interne notities.",
+      "label": "Je notitie",
+      "add": "Notitie toevoegen",
+      "added": "Notitie toegevoegd.",
+      "badge": "Interne notitie"
     },
     "controls": {
       "status": "Status",
@@ -129,15 +143,25 @@
       "assigneesTitle": "Wijzigen aan wie dit verzoek is toegewezen",
       "assigneesDescription": "Iedereen bij het verzoek ziet aan wie het is toegewezen, ook het bedrijf, en elke wijziging staat in de geschiedenis.",
       "assigneesLabel": "Medewerkers die aan verzoeken werken",
-      "assigneeYou": "{name} (jij)",
+      "personYou": "{name} (jij)",
       "unnamedStaff": "Een medewerker zonder naam",
-      "saveAssignees": "Toewijzing opslaan"
+      "saveAssignees": "Toewijzing opslaan",
+      "subscribe": "Abonneren",
+      "unsubscribe": "Abonnement opzeggen",
+      "changeSubscribers": "Abonnees wijzigen",
+      "subscribersTitle": "Wijzigen wie geabonneerd is",
+      "subscribersDescription": "{scope, select, everyone {Abonnees volgen dit verzoek en krijgen de e-mails erover zodra die worden verstuurd. Het bedrijf ziet wie van de eigen mensen geabonneerd is, niet welke medewerkers.} other {Abonnees volgen dit verzoek en krijgen de e-mails erover zodra die worden verstuurd. Iedereen bij je bedrijf ziet wie geabonneerd is.}}",
+      "subscribersCompany": "Mensen bij {company}",
+      "subscribersStaff": "Medewerkers",
+      "saveSubscribers": "Abonnees opslaan"
     },
     "saved": {
       "status": "{change, select, reopened {Verzoek heropend.} done {Verzoek gemarkeerd als afgerond.} cancelled {Verzoek geannuleerd.} other {Status opgeslagen.}}",
       "details": "{changed, plural, =0 {Er is niets gewijzigd.} other {Gegevens opgeslagen.}}",
       "assignees": "{changed, plural, =0 {Er is niets gewijzigd.} other {Toewijzing opgeslagen.}}",
       "assignedYou": "Dit verzoek is aan je toegewezen.",
+      "subscribers": "{changed, plural, =0 {Er is niets gewijzigd.} other {Abonnees opgeslagen.}}",
+      "subscription": "{change, select, subscribed {Je bent geabonneerd op dit verzoek.} other {Je bent niet meer geabonneerd op dit verzoek.}}",
       "text": "{changed, select, yes {Wijzigingen opgeslagen.} other {Er is niets gewijzigd.}}"
     },
     "edit": {
@@ -151,7 +175,37 @@
       "editedAt": "Bewerkt op {time}",
       "versionsTitle": "Eerdere versies",
       "versionsDescription": "Wat deze tekst zei voor de bewerkingen, de nieuwste eerst. Alleen medewerkers zien deze.",
-      "versionLine": "{name} heeft dit gewijzigd op {time}."
+      "versionLine": "{name} heeft dit gewijzigd op {time}.",
+      "editNote": "Notitie bewerken",
+      "noteLabel": "Notitie"
+    },
+    "signedInAs": {
+      "workForYou": "Gedaan door {staff}, ingelogd als jou",
+      "workForYouUnnamed": "Gedaan door een medewerker, ingelogd als jou",
+      "workFor": "Gedaan door {staff}, ingelogd als {name}",
+      "workForUnnamed": "Gedaan door een medewerker, ingelogd als {name}",
+      "editForYou": "Bewerkt door {staff}, ingelogd als jou",
+      "editForYouUnnamed": "Bewerkt door een medewerker, ingelogd als jou",
+      "editFor": "Bewerkt door {staff}, ingelogd als {name}",
+      "editForUnnamed": "Bewerkt door een medewerker, ingelogd als {name}"
+    },
+    "builtInTypes": {
+      "hotfix": {
+        "name": "Hotfix",
+        "description": "Er is iets kapot dat meteen moet worden opgelost."
+      },
+      "bug": {
+        "name": "Bug",
+        "description": "Iets werkt niet zoals het hoort."
+      },
+      "support": {
+        "name": "Support",
+        "description": "Een vraag, of hulp bij iets."
+      },
+      "new_feature": {
+        "name": "Nieuwe functie",
+        "description": "Iets nieuws, of een wijziging in hoe iets werkt."
+      }
     }
   }
 }

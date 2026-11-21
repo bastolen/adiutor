@@ -15,6 +15,7 @@
       "typeFilter": "Tipo",
       "typeMenu": "Filtrar por tipo",
       "allTypes": "Todos",
+      "archivedType": "{name} (archivado)",
       "priorityFilter": "Prioridad",
       "priorityMenu": "Filtrar por prioridad",
       "allPriorities": "Todas",
@@ -81,12 +82,15 @@
       "back": "Solicitudes",
       "justRaised": "Solicitud creada.",
       "assignedTo": "Asignada a",
-      "notAssigned": "Sin asignar todavía"
+      "notAssigned": "Sin asignar todavía",
+      "subscribers": "Suscriptores",
+      "noSubscribers": "Nadie todavía",
+      "noSubscribersCompany": "Nadie de {company} todavía",
+      "showSubscribers": "{count, plural, one {Mostrar el # suscriptor} other {Mostrar los # suscriptores}}",
+      "moreSubscribers": "+{count, number}"
     },
     "status": "{status, select, open {Abierta} todo {Por hacer} in_progress {En curso} waiting {{audience, select, contributor {A la espera de tu respuesta} follower {A la espera de tu empresa} other {A la espera de la empresa}}} done {Resuelta} cancelled {Cancelada} other {Desconocido}}",
     "reopened": "Reabierta",
-    "type": "{type, select, hotfix {Corrección urgente} bug {Error} support {Soporte} new_feature {Nueva función} other {Desconocido}}",
-    "typeDescription": "{type, select, hotfix {Algo está roto y hay que arreglarlo ya.} bug {Algo no funciona como debería.} support {Una pregunta o ayuda con algo.} new_feature {Algo nuevo o un cambio en cómo funciona algo.} other {Otro tipo de solicitud.}}",
     "priority": "{priority, select, low {Baja} normal {Normal} high {Alta} other {Desconocida}}",
     "priorityBadge": "{priority, select, low {Prioridad baja} normal {Prioridad normal} high {Prioridad alta} other {Prioridad desconocida}}",
     "entry": {
@@ -106,6 +110,16 @@
       "send": "Enviar respuesta",
       "sendAndWait": "Enviar y esperar a la empresa",
       "sent": "Respuesta enviada."
+    },
+    "note": {
+      "tabsLabel": "Escribir",
+      "replyTab": "Respuesta",
+      "noteTab": "Nota interna",
+      "staffOnly": "Solo el personal ve las notas internas.",
+      "label": "Tu nota",
+      "add": "Añadir nota",
+      "added": "Nota añadida.",
+      "badge": "Nota interna"
     },
     "controls": {
       "status": "Estado",
@@ -129,15 +143,25 @@
       "assigneesTitle": "Cambiar a quién está asignada",
       "assigneesDescription": "Todos los que participan en la solicitud ven a quién está asignada, también la empresa, y cada cambio aparece en su historial.",
       "assigneesLabel": "Personal que trabaja en solicitudes",
-      "assigneeYou": "{name} (tú)",
+      "personYou": "{name} (tú)",
       "unnamedStaff": "Un miembro del personal sin nombre",
-      "saveAssignees": "Guardar asignación"
+      "saveAssignees": "Guardar asignación",
+      "subscribe": "Suscribirme",
+      "unsubscribe": "Cancelar suscripción",
+      "changeSubscribers": "Cambiar suscriptores",
+      "subscribersTitle": "Cambiar quién tiene suscripción",
+      "subscribersDescription": "{scope, select, everyone {Los suscriptores siguen esta solicitud y recibirán los correos sobre ella cuando se envíen. La empresa ve quién de los suyos tiene suscripción, no qué miembros del personal.} other {Los suscriptores siguen esta solicitud y recibirán los correos sobre ella cuando se envíen. Todas las personas de tu empresa ven quién tiene suscripción.}}",
+      "subscribersCompany": "Personas de {company}",
+      "subscribersStaff": "Personal",
+      "saveSubscribers": "Guardar suscriptores"
     },
     "saved": {
       "status": "{change, select, reopened {Solicitud reabierta.} done {Solicitud marcada como resuelta.} cancelled {Solicitud cancelada.} other {Estado guardado.}}",
       "details": "{changed, plural, =0 {No ha cambiado nada.} other {Datos guardados.}}",
       "assignees": "{changed, plural, =0 {No ha cambiado nada.} other {Asignación guardada.}}",
       "assignedYou": "Ahora tienes asignada esta solicitud.",
+      "subscribers": "{changed, plural, =0 {No ha cambiado nada.} other {Suscriptores guardados.}}",
+      "subscription": "{change, select, subscribed {Te has suscrito a esta solicitud.} other {Has cancelado tu suscripción a esta solicitud.}}",
       "text": "{changed, select, yes {Cambios guardados.} other {No ha cambiado nada.}}"
     },
     "edit": {
@@ -151,7 +175,37 @@
       "editedAt": "Editado el {time}",
       "versionsTitle": "Versiones anteriores",
       "versionsDescription": "Lo que decía este texto antes de editarlo, la más reciente primero. Solo el personal las ve.",
-      "versionLine": "{name} lo cambió el {time}."
+      "versionLine": "{name} lo cambió el {time}.",
+      "editNote": "Editar nota",
+      "noteLabel": "Nota"
+    },
+    "signedInAs": {
+      "workForYou": "Lo hizo {staff} con la sesión iniciada como tú",
+      "workForYouUnnamed": "Lo hizo alguien del personal con la sesión iniciada como tú",
+      "workFor": "Lo hizo {staff} con la sesión iniciada como {name}",
+      "workForUnnamed": "Lo hizo alguien del personal con la sesión iniciada como {name}",
+      "editForYou": "Lo editó {staff} con la sesión iniciada como tú",
+      "editForYouUnnamed": "Lo editó alguien del personal con la sesión iniciada como tú",
+      "editFor": "Lo editó {staff} con la sesión iniciada como {name}",
+      "editForUnnamed": "Lo editó alguien del personal con la sesión iniciada como {name}"
+    },
+    "builtInTypes": {
+      "hotfix": {
+        "name": "Corrección urgente",
+        "description": "Algo está roto y hay que arreglarlo ya."
+      },
+      "bug": {
+        "name": "Error",
+        "description": "Algo no funciona como debería."
+      },
+      "support": {
+        "name": "Soporte",
+        "description": "Una pregunta o ayuda con algo."
+      },
+      "new_feature": {
+        "name": "Nueva función",
+        "description": "Algo nuevo o un cambio en cómo funciona algo."
+      }
     }
   }
 }

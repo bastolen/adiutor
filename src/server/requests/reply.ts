@@ -20,6 +20,7 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { forbiddenError } from '../errors';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
+import { actingUserId, signedInAsWork } from '../signed-in-as';
 import {
   CHANGE_MOMENT,
   changeRequest,
@@ -28,6 +29,7 @@ import {
   workingPermission,
 } from './change';
 import { storeMentions } from './mentions';
+import { subscribeAutomatically } from './subscribers';
 
 /**
  * Replies to a request, and may set its status with the reply: the staff
@@ -44,7 +46,7 @@ import { storeMentions } from './mentions';
  * @param input.body - The reply.
  * @param input.status - A status to set with it (`REQUEST_STATUSES`); empty to leave that to the reply.
  * @returns The request's status after the reply.
- * @throws {ServiceError} `signed_in_as` while a staff member is signed in as the actor,
+ * @throws {ServiceError} `signed_in_as` when the sign-in as the actor ended meanwhile,
  *   `not_found` when the actor may not see the request, `forbidden` without
  *   `requests:contribute` or when the status isn't theirs to set, `invalid` when the company is
  *   deactivated, `rate_limited` when the actor has replied too often
@@ -63,7 +65,11 @@ export default async function replyToRequest(
   if (asked && !maySetStatus(permissions, asked)) {
     throw forbiddenError();
   }
-  await assertRateLimit(ctx, `request-reply:user:${actor.id}`, RATE_LIMITS.requestRepliesPerUser);
+  await assertRateLimit(
+    ctx,
+    `request-reply:user:${actingUserId(actor)}`,
+    RATE_LIMITS.requestRepliesPerUser,
+  );
 
   const side = requestSide(permissions);
   return changeRequest(ctx, actor, access, workingPermission(permissions), async (tx, locked) => {
@@ -71,6 +77,7 @@ export default async function replyToRequest(
       requestId: locked.id,
       authorId: actor.id,
       authorSide: side,
+      ...signedInAsWork(actor),
       createdAt: CHANGE_MOMENT,
     };
     const reply = firstRow(
@@ -80,6 +87,8 @@ export default async function replyToRequest(
         .returning({ id: requestEntry.id }),
       'the new reply',
     );
+    // Whoever replies follows the request from then on, and so do the people the reply mentions.
+    await subscribeAutomatically(tx, locked.id, [actor.id]);
     // The people the reply mentions, once the reply they belong to is there.
     await storeMentions(tx, actor, {
       companyId: locked.companyId,
@@ -100,7 +109,7 @@ export default async function replyToRequest(
       return { status };
     }
     // After the reply, so the history reads: the reply, then what it did to the status.
-    await recordStatusChange(tx, locked, status, { id: actor.id, side });
+    await recordStatusChange(tx, locked, status, actor, side);
     return { status };
   });
 }

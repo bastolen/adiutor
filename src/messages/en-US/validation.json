@@ -71,6 +71,20 @@
     },
     "requestCompany": "Choose which company this request is for.",
     "requestType": "Choose what kind of request this is.",
+    "requestTypeName": {
+      "empty": "Enter a name for the type.",
+      "tooLong": "Use at most {maximum, number} characters for the type’s name.",
+      "controlCharacters": "Remove line breaks and control characters from the type’s name.",
+      "hiddenCharacters": "Remove invisible characters and text direction marks from the type’s name.",
+      "noVisibleCharacter": "Use at least one letter, digit or symbol in the type’s name.",
+      "webAddress": "Remove web addresses from the type’s name."
+    },
+    "requestTypeDescription": {
+      "empty": "Say what the type is for.",
+      "tooLong": "Use at most {maximum, number} characters to say what the type is for.",
+      "controlCharacters": "Remove line breaks and control characters from what the type is for.",
+      "hiddenCharacters": "Remove invisible characters and text direction marks from what the type is for."
+    },
     "requestPriority": "Choose a priority.",
     "requestStatus": "Choose a status.",
     "requestPrefix": "Use one to five letters or digits for the prefix, starting with a letter, e.g. AD.",

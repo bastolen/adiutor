@@ -52,7 +52,7 @@ export const PERMISSIONS = [
   'requests:contribute',
   /** Work on a company's requests as staff: set any status, change their details and priority. */
   'requests:manage',
-  /** See what only staff see on a request: its priority. */
+  /** See what only staff see on a request: its priority and its internal notes. */
   'requests:view-internal',
 ] as const;
 

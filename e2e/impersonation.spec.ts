@@ -50,7 +50,7 @@ test('a staff Admin signs in as a Manager, changes nothing, and goes back', asyn
   // The banner and the account menu say whom the Admin is signed in as.
   const banner = page.getByRole('region', { name: 'Signed in as someone else' });
   await expect(banner).toContainText(
-    `You're signed in as ${STEP_UP_MANAGER.name} (${STEP_UP_MANAGER.email}), with changes turned off.`,
+    `You're signed in as ${STEP_UP_MANAGER.name} (${STEP_UP_MANAGER.email}). You can work on their requests; everything else is read-only.`,
   );
   await expect(page.getByRole('button', { name: /^Account menu/ })).toContainText('Signed in as');
 
@@ -154,7 +154,7 @@ test("the Admin's other tabs load afresh as the user, and back, without a click"
   await signInAsUser(page, STEP_UP_MANAGER.name);
 
   // Without a click, the other tab loads its page afresh as the Manager: the banner, their name,
-  // and changes turned off.
+  // and changes turned off outside requests.
   await expect(otherBanner).toBeVisible();
   await expect(other).toHaveURL('/account');
   await expect(otherName).toHaveValue(STEP_UP_MANAGER.name);

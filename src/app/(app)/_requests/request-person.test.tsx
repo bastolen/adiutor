@@ -236,5 +236,24 @@ describe('PeopleAvatars', () => {
     ]);
     expect(avatars.map((avatar) => avatar.textContent)).toEqual(['MM', 'AT']);
     expect(avatars.every((avatar) => avatar.getAttribute('aria-hidden') === 'true')).toBe(true);
+    // Everyone is shown: nothing says there are more.
+    expect(container).not.toHaveTextContent('+');
+  });
+
+  it('says how many more people there are after the ones it shows', () => {
+    const { container } = render(
+      <PeopleAvatars
+        people={[
+          { userId: null, name: 'Casey Client', side: 'company', isViewer: false, picture: null },
+        ]}
+        names={NAMES}
+        more="+3"
+      />,
+    );
+
+    const more = screen.getByText('+3');
+    // Like the avatars: for the eye, with the names given as text elsewhere.
+    expect(more).toHaveAttribute('aria-hidden', 'true');
+    expect(container.querySelectorAll('[title]')).toHaveLength(1);
   });
 });

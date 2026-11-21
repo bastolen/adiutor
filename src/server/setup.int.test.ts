@@ -5,7 +5,14 @@ import { verifyPassword } from 'better-auth/crypto';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { account, auditEvent, rateLimitBucket, staffSettings, user } from '@/db/schema';
+import {
+  account,
+  auditEvent,
+  rateLimitBucket,
+  requestType,
+  staffSettings,
+  user,
+} from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
 import { createUser, setupTestContext } from '../../tests/integration/helpers';
@@ -146,6 +153,27 @@ describe('setUpPlatform', () => {
     ).toEqual([{ defaultLocale: 'nl-NL' }]);
     const admin = firstRow(await db.select().from(user).where(eq(user.id, userId)), 'the Admin');
     expect(admin.locale).toBe('es-ES');
+  });
+
+  it('names the built-in request types in the language it’s set up in', async () => {
+    await db
+      .update(requestType)
+      .set({ name: 'Changed', updatedAt: new Date() })
+      .where(eq(requestType.key, 'support'));
+
+    await setUpPlatform({ db }, { ...input, defaultLocale: 'nl-NL' });
+
+    const names = await db
+      .select({ key: requestType.key, name: requestType.name })
+      .from(requestType)
+      .orderBy(requestType.position);
+    expect(names).toEqual([
+      { key: 'hotfix', name: 'Hotfix' },
+      { key: 'bug', name: 'Bug' },
+      // One the staff changed already keeps its name.
+      { key: 'support', name: 'Changed' },
+      { key: 'new_feature', name: 'Nieuwe functie' },
+    ]);
   });
 
   it('starts the Admin on Default when they set up in the default language they chose', async () => {

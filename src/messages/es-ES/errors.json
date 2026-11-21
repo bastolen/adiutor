@@ -16,7 +16,8 @@
       "needsMfa": "Para iniciar sesión como otra persona, primero añade una llave de acceso o configura una app de autenticación en la página Seguridad.",
       "confirmationRequired": "Confirma que eres tú con tu segundo paso antes de iniciar sesión como otra persona.",
       "alreadyStarted": "Ya has iniciado sesión como otra persona. Vuelve primero a tu propia cuenta.",
-      "changesOff": "Esto no se puede cambiar mientras has iniciado sesión como otra persona. Vuelve primero a tu propia cuenta."
+      "changesOff": "Esto no se puede cambiar mientras has iniciado sesión como otra persona. Vuelve primero a tu propia cuenta.",
+      "ended": "Tu sesión como este usuario ha terminado, así que no se ha cambiado nada."
     },
     "setup": {
       "alreadySetUp": "Adiutor ya está configurado. Inicia sesión.",
@@ -87,11 +88,16 @@
       "statusChanged": "El estado de esta solicitud ha cambiado entretanto. Compruébalo y vuelve a intentarlo.",
       "detailsChanged": "Los datos de esta solicitud han cambiado entretanto. Compruébalos y vuelve a intentarlo.",
       "notAssignable": "Solo se puede asignar a personal activo que trabaje en solicitudes. Comprueba a quién has elegido y vuelve a intentarlo.",
+      "notSubscribable": "Solo se puede suscribir a personas activas que puedan leer esta solicitud. Comprueba a quién has elegido y vuelve a intentarlo.",
       "closedNoEdit": "Esta solicitud está cerrada, así que sus textos ya no se pueden editar.",
       "textChanged": "Alguien ha editado este texto entretanto. Compruébalo y vuelve a intentarlo."
     },
     "account": {
       "pictureUnavailable": "Elige una de tus cuentas conectadas que tenga foto, o tus iniciales."
+    },
+    "requestTypes": {
+      "unavailable": "Este tipo ya no se puede elegir. Elige otro.",
+      "lastActive": "Deja al menos un tipo sin archivar, o no se podrá abrir ninguna solicitud."
     }
   }
 }

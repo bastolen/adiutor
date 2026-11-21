@@ -188,3 +188,57 @@ export function mayEditReply(
 ): boolean {
   return isAuthor && mayEditDescription(permissions, status);
 }
+
+/**
+ * Whether someone may write an internal note on a request: only the staff
+ * who work on requests (`requests:manage`). Finance reads notes
+ * (`requests:view-internal`) but doesn't write them, and nobody at a company
+ * ever sees one.
+ *
+ * @param permissions - Their permissions in the request's company.
+ * @returns Whether they may.
+ */
+export function mayWriteNote(permissions: ReadonlySet<Permission>): boolean {
+  return permissions.has('requests:manage');
+}
+
+/**
+ * Whether someone may edit an internal note: only the one who wrote it,
+ * while the request is open, and only while they still work on requests.
+ *
+ * @param permissions - Their permissions in the request's company.
+ * @param status - The request's status.
+ * @param isAuthor - Whether they wrote the note.
+ * @returns Whether they may.
+ */
+export function mayEditNote(
+  permissions: ReadonlySet<Permission>,
+  status: RequestStatus,
+  isAuthor: boolean,
+): boolean {
+  return isAuthor && !isClosedStatus(status) && mayWriteNote(permissions);
+}
+
+/**
+ * Whose subscriptions to a request someone may change: everyone's who can
+ * be subscribed to it, their colleagues' at the request's company, or only
+ * their own.
+ */
+export type SubscriberScope = 'everyone' | 'colleagues' | 'self';
+
+/**
+ * Whose subscriptions someone may change, besides their own. The staff who
+ * work on requests subscribe and unsubscribe anyone who can be subscribed:
+ * the request's company and the staff. A company's Admins, who manage its
+ * members, do so for their colleagues, and never learn which staff members
+ * follow a request. Everyone else changes only their own.
+ *
+ * @param permissions - Their permissions in the request's company.
+ * @returns The scope.
+ */
+export function subscriberScope(permissions: ReadonlySet<Permission>): SubscriberScope {
+  if (permissions.has('requests:manage')) {
+    return 'everyone';
+  }
+  return permissions.has('members:manage') ? 'colleagues' : 'self';
+}

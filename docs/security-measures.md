@@ -67,9 +67,11 @@ opened with a link that can't be used (20 per 15 minutes per IP address, so link
 guessed by looking them up; past it, the page offers no way to continue), wrong secrets sent to
 the background jobs' endpoint (20 per 15 minutes per IP address, `RATE_LIMITS.jobTickMissesPerIp`;
 past it the endpoint answers 429, while the right secret still works), work on requests (per
-user and hour: 60 requests raised, 200 replies and 300 changes of a status or of details;
+user and hour: 60 requests raised, 200 replies and notes, and 300 changes of a status, of
+details or of the people on a request;
 `RATE_LIMITS.requestsPerUser`, `requestRepliesPerUser` and `requestChangesPerUser`, far more than
-anyone does by hand and few enough to stop a flood), and the errors stored for
+anyone does by hand and few enough to stop a flood; work a staff member does while signed in as a
+user counts against the staff member, `actingUserId`), and the errors stored for
 admins (see [Recorded errors](#recorded-errors)). All are kept in
 `rate_limit_bucket` (`src/server/rate-limit.ts`), with a clear "Try again in N minutes" message.
 The limits per IP address build their key in one place (`ipRateLimitKey` there); requests whose
@@ -297,7 +299,8 @@ deadlocking:
    (`assertStillManages` in `src/server/access.ts`: creating, resending and revoking invitations
    and invite links, `addMember` and `registerCompany`), plus the staff members a change assigns to
    a request (`changeAssignees`, so a role change, deactivation or deletion of one of them takes
-   turns with being assigned); the link's creator `FOR KEY SHARE`
+   turns with being assigned) and the people a change subscribes to one (`changeSubscribers`, for
+   the same reason); the link's creator `FOR KEY SHARE`
    (`claimInviteLink` in `src/server/people/invite-links.ts`, before it uses the link up), or
    `FOR SHARE` with their rights checked again when a claim is undone because its email couldn't
    be sent (`undoClaim` there, so a link is never freed for a creator who lost their rights
@@ -329,7 +332,12 @@ deadlocking:
    clears them from the requests and entries they wrote, in the same order. Taking someone off the
    requests they're assigned to when they stop working on requests (`unassignFrom`: a staff role
    without request work, a deactivation, a deletion) locks those requests in ID order, after the
-   person's user row and any invitation locks of the same change. The request's company
+   person's user row and any invitation locks of the same change. Ending someone's subscriptions
+   when they lose access (`unsubscribeFrom`) comes last in its change too, and locks no request:
+   it deletes the person's own rows in `request_participant`. A removal from a company only shares
+   the person's user row with a change that subscribes them, so a row can be left behind when both
+   happen at once; who is subscribed is read with `loadSubscribers`, which leaves out whoever
+   can't read the request (see [Subscribing](requests.md#subscribing)). The request's company
    is read there, never locked (it would come first, step 1): a change refuses when that read
    finds the company deactivated, which leaves the rest of its transaction for a deactivation to
    slip in before it.

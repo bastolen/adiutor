@@ -18,7 +18,6 @@ import {
   type RequestSide,
   type RequestStatus,
   type RequestTextFormat,
-  type RequestType,
   storedMentionMarker,
 } from '../../src/lib/requests';
 
@@ -81,7 +80,7 @@ export interface SampleRequest {
   /** The format the description is written in; Markdown, as every new text is, when left out. */
   format?: RequestTextFormat;
   /** Its type. */
-  type: RequestType;
+  type: string;
   /** Its priority, as it is now. */
   priority: RequestPriority;
   /** Its status, as it is now; open when left out. */
@@ -156,8 +155,10 @@ function entryValues(
  *
  * Each request's last activity is its latest entry the company sees (every
  * one but a change of priority), or the moment it was raised. Its assignees
- * are stored as they are now; its entries say how they came to be. A reopened
- * request counts as reopened at that moment.
+ * are stored as they are now; its entries say how they came to be. Its
+ * subscribers are who the services would have subscribed: whoever raised it,
+ * replied to it or is mentioned in it. A reopened request counts as reopened
+ * at that moment.
  *
  * @param db - Database client, or a transaction.
  * @param requests - The requests, in the order of their numbers.
@@ -231,12 +232,26 @@ export default async function storeRequests(
           .where(eq(schema.requestEntry.id, reply.id));
       }
     }
-    if (sample.assignees && sample.assignees.length > 0) {
-      // eslint-disable-next-line no-await-in-loop -- Same.
-      await db
-        .insert(schema.requestAssignee)
-        .values(sample.assignees.map((userId) => ({ requestId: stored.id, userId })));
-    }
+    // As the services leave it: whoever raised it, replied to it or is mentioned in it follows it.
+    const subscribers = new Set([
+      sample.raisedBy.id,
+      ...entries.flatMap((entry) =>
+        'reply' in entry ? [entry.by.id, ...(entry.mentions ?? []).map(({ id }) => id)] : [],
+      ),
+    ]);
+    // eslint-disable-next-line no-await-in-loop -- Same.
+    await db.insert(schema.requestParticipant).values([
+      ...(sample.assignees ?? []).map((userId) => ({
+        requestId: stored.id,
+        userId,
+        role: 'assignee' as const,
+      })),
+      ...[...subscribers].map((userId) => ({
+        requestId: stored.id,
+        userId,
+        role: 'subscriber' as const,
+      })),
+    ]);
     numbers.push(number);
   }
   const lastNumber = numbers.at(-1);

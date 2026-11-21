@@ -3,12 +3,17 @@
  * and listing them for staff (the whole log, or one user's) and, about their
  * own account, for each user.
  */
-import { and, count, eq, gte, ilike, inArray, lt, or, type SQL } from 'drizzle-orm';
+import { and, count, eq, gte, ilike, inArray, lt, notInArray, or, type SQL } from 'drizzle-orm';
 import { alias, type PgColumn, union } from 'drizzle-orm/pg-core';
 
 import type { DatabaseOrTransaction } from '@/db';
 import { auditEvent, company, user } from '@/db/schema';
-import { type AuditAction, type AuditGroup, AUDIT_GROUPS } from '@/lib/audit-actions';
+import {
+  type AuditAction,
+  type AuditGroup,
+  AUDIT_GROUPS,
+  STAFF_ONLY_AUDIT_ACTIONS,
+} from '@/lib/audit-actions';
 import { firstRow } from '@/lib/defined';
 import {
   type Paged,
@@ -287,9 +292,15 @@ export async function listOwnActivity(
   actor: Actor,
   limit = 20,
 ): Promise<AuditEntry[]> {
-  const entries = await queryAuditEntries(ctx.db, [eq(auditEvent.targetUserId, actor.id)], {
-    limit,
-  });
+  const entries = await queryAuditEntries(
+    ctx.db,
+    [
+      eq(auditEvent.targetUserId, actor.id),
+      // What a staff member did while signed in as them is for the staff who see the audit log.
+      notInArray(auditEvent.action, [...STAFF_ONLY_AUDIT_ACTIONS]),
+    ],
+    { limit },
+  );
   // Every event the user caused records them as its actor. Failed sign-ins have none (anyone can
   // send them), nor do passwords waiting for their code and wrong codes at that step (anyone with
   // the password can). The IP address and browser of anyone else are theirs.

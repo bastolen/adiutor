@@ -15,6 +15,7 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { forbiddenError, ServiceError } from '../errors';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
+import { actingUserId } from '../signed-in-as';
 import { changeRequest, recordStatusChange, requestToChange, workingPermission } from './change';
 
 /**
@@ -33,7 +34,7 @@ import { changeRequest, recordStatusChange, requestToChange, workingPermission }
  * @param input.request - The request's number or ID.
  * @param input.status - The new status (`REQUEST_STATUSES`).
  * @returns Whether anything changed, whether that reopened the request, and its status.
- * @throws {ServiceError} `signed_in_as` while a staff member is signed in as the actor,
+ * @throws {ServiceError} `signed_in_as` when the sign-in as the actor ended meanwhile,
  *   `not_found` when the actor may not see the request, `forbidden` without
  *   `requests:contribute` or when the status isn't theirs to set, `invalid` when the company is
  *   deactivated, `rate_limited` when the actor has changed requests too often
@@ -52,7 +53,11 @@ export default async function changeRequestStatus(
   if (!maySetStatus(permissions, status)) {
     throw forbiddenError();
   }
-  await assertRateLimit(ctx, `request-change:user:${actor.id}`, RATE_LIMITS.requestChangesPerUser);
+  await assertRateLimit(
+    ctx,
+    `request-change:user:${actingUserId(actor)}`,
+    RATE_LIMITS.requestChangesPerUser,
+  );
 
   return changeRequest(ctx, actor, access, workingPermission(permissions), async (tx, locked) => {
     if (locked.status === status) {
@@ -61,10 +66,7 @@ export default async function changeRequestStatus(
     if (!mayChangeStatus(permissions, locked.status, status)) {
       throw new ServiceError('conflict', 'errors.requests.statusChanged');
     }
-    await recordStatusChange(tx, locked, status, {
-      id: actor.id,
-      side: requestSide(permissions),
-    });
+    await recordStatusChange(tx, locked, status, actor, requestSide(permissions));
     return { changed: true, reopened: isReopening(locked.status, status), status };
   });
 }

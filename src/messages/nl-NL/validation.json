@@ -71,6 +71,20 @@
     },
     "requestCompany": "Kies voor welk bedrijf dit verzoek is.",
     "requestType": "Kies wat voor verzoek dit is.",
+    "requestTypeName": {
+      "empty": "Vul een naam in voor het type.",
+      "tooLong": "Gebruik maximaal {maximum, number} tekens voor de naam van het type.",
+      "controlCharacters": "Haal regeleinden en stuurtekens uit de naam van het type.",
+      "hiddenCharacters": "Haal onzichtbare tekens en tekens voor de schrijfrichting uit de naam van het type.",
+      "noVisibleCharacter": "Gebruik minstens één letter, cijfer of symbool in de naam van het type.",
+      "webAddress": "Haal webadressen uit de naam van het type."
+    },
+    "requestTypeDescription": {
+      "empty": "Vertel waar het type voor is.",
+      "tooLong": "Gebruik maximaal {maximum, number} tekens om te vertellen waar het type voor is.",
+      "controlCharacters": "Haal regeleinden en stuurtekens uit de tekst over waar het type voor is.",
+      "hiddenCharacters": "Haal onzichtbare tekens en tekens voor de schrijfrichting uit de tekst over waar het type voor is."
+    },
     "requestPriority": "Kies een prioriteit.",
     "requestStatus": "Kies een status.",
     "requestPrefix": "Gebruik één tot vijf letters of cijfers voor het voorvoegsel, beginnend met een letter, bijvoorbeeld AD.",

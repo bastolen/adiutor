@@ -13,8 +13,10 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { ServiceError } from '../errors';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
+import { actingUserId, signedInAsWork } from '../signed-in-as';
 import type { RequestRow } from './access';
 import { CHANGE_MOMENT, changeRequest, requestToChange } from './change';
+import { typeToGive } from './types';
 
 /** The details the staff can change, in the order their changes show in the history. */
 const DETAILS = ['title', 'type', 'priority'] as const;
@@ -84,16 +86,17 @@ function editOf<T extends string>(
  * @param input - Form input.
  * @param input.request - The request's number or ID.
  * @param input.title - The title.
- * @param input.type - The type (`REQUEST_TYPES`).
+ * @param input.type - The type's key; a new one must exist and not be archived.
  * @param input.priority - The priority (`REQUEST_PRIORITIES`).
  * @param input.was - The details the form started from, which its editor saw.
  * @param input.was.title - The title it started from.
  * @param input.was.type - The type it started from.
  * @param input.was.priority - The priority it started from.
  * @returns How many of the three changed.
- * @throws {ServiceError} `signed_in_as` while a staff member is signed in as the actor,
+ * @throws {ServiceError} `signed_in_as` when the sign-in as the actor ended meanwhile,
  *   `not_found` when the actor may not see the request, `forbidden` without `requests:manage`,
- *   `invalid` when the company is deactivated, `rate_limited` when the actor has changed
+ *   `invalid` when the company is deactivated or a new type can't be chosen
+ *   (`errors.requestTypes.unavailable`), `rate_limited` when the actor has changed
  *   requests too often (`RATE_LIMITS.requestChangesPerUser`), `conflict` when a detail the
  *   editor changed was changed to something else meanwhile.
  * @throws {ZodError} When a title, type or priority the editor chose isn't valid.
@@ -115,7 +118,15 @@ export default async function updateRequestDetails(
     type: editOf(requestTypeSchema, input.type, input.was.type),
     priority: editOf(requestPrioritySchema, input.priority, input.was.priority),
   };
-  await assertRateLimit(ctx, `request-change:user:${actor.id}`, RATE_LIMITS.requestChangesPerUser);
+  // A type the editor picked must still be one to pick; the one a request has stays even archived.
+  if (edits.type) {
+    await typeToGive(ctx.db, edits.type.to);
+  }
+  await assertRateLimit(
+    ctx,
+    `request-change:user:${actingUserId(actor)}`,
+    RATE_LIMITS.requestChangesPerUser,
+  );
 
   return changeRequest(ctx, actor, access, 'requests:manage', async (tx, locked) => {
     const values: Partial<DetailValues> = {};
@@ -149,6 +160,7 @@ export default async function updateRequestDetails(
         requestId: locked.id,
         authorId: actor.id,
         authorSide: 'staff' as const,
+        ...signedInAsWork(actor),
         createdAt: CHANGE_MOMENT,
       })),
     );

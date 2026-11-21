@@ -26,7 +26,9 @@ and screens for company users talk about their company by name and about **reque
 | View all users (`/admin/users`)           |   ✓   |    ✓    |    ✓    |    ✓    |
 | Work on every company's requests          |   ✓   |    ✓    |    –    |    ✓    |
 | Be assigned to requests                   |   ✓   |    ✓    |    –    |    ✓    |
+| Change who is subscribed to a request     |   ✓   |    ✓    |    –    |    ✓    |
 | Read every company's requests             |   ✓   |    ✓    |    ✓    |    ✓    |
+| Subscribe to a request                    |   ✓   |    ✓    |    ✓    |    ✓    |
 | Reset MFA, sign out, (de)activate         |   ✓   |    –    |    –    |    –    |
 | Delete user accounts                      |   ✓   |    –    |    –    |    –    |
 | View the audit log (`audit:view`)         |   ✓   |    ✓    |    –    |    –    |
@@ -49,15 +51,18 @@ Each role can sign in as different users:
 - Managers: company users;
 - Support: company users who aren't an Admin in any company.
 
-Nobody can sign in as themselves or as a user who turned it off on their Security page, and nothing
-can be changed while signed in as someone. See
+Nobody can sign in as themselves or as a user who turned it off on their Security page. While
+signed in as someone, only their request work can be done, and it records the staff member
+([decision 0028](decisions/0028-request-work-while-signed-in-as-a-user.md)). See
 [Signing in as a user](authentication.md#signing-in-as-a-user).
 
 | Company                                      | Admin | Client | Watcher |
 | -------------------------------------------- | :---: | :----: | :-----: |
 | Invite and manage users                      |   ✓   |   –    |    –    |
 | Raise requests, reply, close and reopen them |   ✓   |   ✓    |    –    |
+| Subscribe colleagues to a request            |   ✓   |   –    |    –    |
 | View and follow the company's requests       |   ✓   |   ✓    |    ✓    |
+| Subscribe to a request                       |   ✓   |   ✓    |    ✓    |
 
 Nobody can give themselves a higher company role either (`isCompanyRoleRaise` in
 `src/lib/authz/guards.ts`): an Admin can step down to Client or Watcher while another Admin remains,
@@ -125,9 +130,10 @@ Admins and Managers who aren't members can still add themselves with any role, a
 
 - **Staff page** (`/admin/staff`, `staff:manage`, Admins): change the name shown to users (in
   invitations and wherever users see who's helping them) and Adiutor's default language (for
-  everyone who hasn't chosen one; see [Languages](i18n.md#how-the-language-is-chosen)) and time zone
-  (for signed-out pages and everyone whose zone isn't known yet; see
-  [Time zones](i18n.md#time-zones)), see the staff with their role, when
+  everyone who hasn't chosen one; see [Languages](i18n.md#how-the-language-is-chosen)), its time
+  zone (for signed-out pages and everyone whose zone isn't known yet; see
+  [Time zones](i18n.md#time-zones)), the prefix of request numbers and the request types (see
+  [Requests](requests.md#types-and-priorities)), see the staff with their role, when
   they were last active and when their account was created ("Joined"), change roles, remove people from staff (their account stays), and invite
   staff by email or single-use invite link. Staff invitations and links have no company
   (`company_id` is null) and give a platform role; a database check keeps staff rows on platform
