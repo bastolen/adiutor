@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import { LOCALES } from '@/lib/i18n/locales';
 import translator from '@/lib/i18n/translator';
-import { REQUEST_PRIORITIES, REQUEST_STATUSES, REQUEST_TYPES } from '@/lib/requests';
+import { REQUEST_PRIORITIES, REQUEST_STATUSES } from '@/lib/requests';
 
 import renderInLocale from '../../../../tests/i18n/render';
 import { PriorityBadge, ReopenedBadge, StatusBadge, TypeBadge } from './request-badges';
@@ -34,16 +34,16 @@ describe('StatusBadge', () => {
 });
 
 describe('ReopenedBadge, TypeBadge and PriorityBadge', () => {
-  it('say that a request was reopened, and what type it is', () => {
+  it('say that a request was reopened, and what type it is by the name the staff gave it', () => {
     render(
       <>
         <ReopenedBadge />
-        <TypeBadge type="new_feature" />
+        <TypeBadge name="Printers" />
       </>,
     );
 
     expect(screen.getByText('Reopened')).toBeInTheDocument();
-    expect(screen.getByText('New feature')).toBeInTheDocument();
+    expect(screen.getByText('Printers')).toBeInTheDocument();
   });
 
   it('names the priority on its own, and leaves "priority" out next to a label that says it', () => {
@@ -59,15 +59,14 @@ describe('ReopenedBadge, TypeBadge and PriorityBadge', () => {
   });
 
   it.each([
-    ['nl-NL', ['Wacht op jouw reactie', 'Heropend', 'Support', 'Lage prioriteit', 'Hoog']],
-    ['es-ES', ['A la espera de tu respuesta', 'Reabierta', 'Soporte', 'Prioridad baja', 'Alta']],
+    ['nl-NL', ['Wacht op jouw reactie', 'Heropend', 'Lage prioriteit', 'Hoog']],
+    ['es-ES', ['A la espera de tu respuesta', 'Reabierta', 'Prioridad baja', 'Alta']],
   ] as const)('speak %s', (locale, labels) => {
     renderInLocale(
       locale,
       <>
         <StatusBadge status="waiting" audience="contributor" />
         <ReopenedBadge />
-        <TypeBadge type="support" />
         <PriorityBadge priority="low" />
         <PriorityBadge priority="high" short />
       </>,
@@ -78,7 +77,7 @@ describe('ReopenedBadge, TypeBadge and PriorityBadge', () => {
 });
 
 describe('the request labels in every language', () => {
-  it.each(LOCALES)('name every status, type and priority in %s', (locale) => {
+  it.each(LOCALES)('name every status and priority in %s', (locale) => {
     const t = translator(locale, 'requests');
     const unknown = t('status', { status: 'nonsense', audience: 'staff' });
     const labels = [
@@ -87,7 +86,6 @@ describe('the request labels in every language', () => {
           t('status', { status, audience }),
         ),
       ),
-      ...REQUEST_TYPES.map((type) => t('type', { type })),
       ...REQUEST_PRIORITIES.map((priority) => t('priority', { priority })),
       ...REQUEST_PRIORITIES.map((priority) => t('priorityBadge', { priority })),
     ];
@@ -96,11 +94,7 @@ describe('the request labels in every language', () => {
       expect(label).not.toBe('');
       expect(label).not.toBe(unknown);
     });
-    // Each status has its own name, and so has each type and each priority.
-    /**
-     *
-     * @param values
-     */
+    // Each status has its own name, and so has each priority.
     /**
      * How many different names a list of labels has.
      *
@@ -111,7 +105,6 @@ describe('the request labels in every language', () => {
     expect(
       names(REQUEST_STATUSES.map((status) => t('status', { status, audience: 'staff' }))),
     ).toBe(REQUEST_STATUSES.length);
-    expect(names(REQUEST_TYPES.map((type) => t('type', { type })))).toBe(REQUEST_TYPES.length);
     expect(names(REQUEST_PRIORITIES.map((priority) => t('priority', { priority })))).toBe(
       REQUEST_PRIORITIES.length,
     );

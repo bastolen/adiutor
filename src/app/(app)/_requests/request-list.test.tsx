@@ -17,6 +17,7 @@ import {
   listAssignableStaff,
   listRequestCompanies,
   listRequests,
+  listRequestTypes,
   type RequestListItem,
 } from '@/server/requests';
 
@@ -32,6 +33,7 @@ vi.mock('@/server/requests', () => ({
   listAssignableStaff: vi.fn(),
   listRequestCompanies: vi.fn(),
   listRequests: vi.fn(),
+  listRequestTypes: vi.fn(),
 }));
 
 /** What a staff member who works on requests may do in every company. */
@@ -80,6 +82,22 @@ const newRequest = () => screen.queryByRole('link', { name: 'New request' });
 beforeEach(() => {
   vi.mocked(getStaffPermissionsInCompanies).mockReturnValue(new Set());
   vi.mocked(listAssignableStaff).mockResolvedValue([]);
+  vi.mocked(listRequestTypes).mockResolvedValue([
+    {
+      key: 'bug',
+      name: 'Bug',
+      description: 'Something doesn’t work.',
+      startingPriority: null,
+      archived: false,
+    },
+    {
+      key: 'printers',
+      name: 'Printers',
+      description: 'A printer acts up.',
+      startingPriority: null,
+      archived: true,
+    },
+  ]);
   vi.mocked(getRequestSettings).mockResolvedValue({ prefix: 'AD', staffName: 'Adiutor Tests' });
   vi.mocked(listRequests).mockResolvedValue({ items: [], total: 0, page: 1, size: 25 });
   inOneCompany(true);
@@ -174,6 +192,11 @@ describe('a request list without requests', () => {
     const bug = screen.getByRole('menuitemradio', { name: 'Bug' });
     expect(bug).toHaveAttribute('aria-checked', 'true');
     expect(bug).toHaveAttribute('href', '/requests?status=all&type=bug');
+    // The staff's own types, archived ones too, for the requests that still have them.
+    expect(screen.getByRole('menuitemradio', { name: 'Printers (archived)' })).toHaveAttribute(
+      'href',
+      '/requests?status=all&type=printers',
+    );
     // The priority menu is for the staff only, and the company menu for several companies.
     expect(screen.queryByRole('button', { name: /priority/i })).not.toBeInTheDocument();
   });
@@ -239,6 +262,7 @@ describe('a request list for the staff', () => {
     status: 'open',
     reopened: false,
     type: 'bug',
+    typeName: 'Bug',
     priority: 'normal',
     company: { id: 'company', name: 'Adiutor Tests', slug: 'adiutor-tests' },
     assignees: assignees.map((name) => ({

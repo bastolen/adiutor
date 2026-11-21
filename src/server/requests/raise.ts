@@ -7,13 +7,12 @@ import { sql } from 'drizzle-orm';
 import type { DatabaseTransaction } from '@/db';
 import { request, requestCounter } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
-import { requestSide, startingPriority, WRITTEN_TEXT_FORMAT } from '@/lib/requests';
+import { requestSide, WRITTEN_TEXT_FORMAT } from '@/lib/requests';
 import {
   requestCompanySchema,
   requestDescriptionSchema,
   requestPrioritySchema,
   requestTitleSchema,
-  requestTypeSchema,
 } from '@/lib/validation';
 
 import { assertNotSignedInAs, assertPermission, getCompanyAccess } from '../access';
@@ -23,6 +22,7 @@ import { companyDeactivatedError } from '../errors';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
 import { assertStillMayChange } from './change';
 import { storeMentions } from './mentions';
+import { typeToGive } from './types';
 
 /**
  * Takes the next request number: one more than the last, in the raising
@@ -72,13 +72,15 @@ async function nextRequestNumber(
  * @param input.companyId - The company's ID or URL name; empty when none was chosen.
  * @param input.title - What it's about, in one line.
  * @param input.description - What's asked.
- * @param input.type - What kind of request it is (`REQUEST_TYPES`).
+ * @param input.type - What kind of request it is: a type's key, which must exist and not be
+ *   archived.
  * @param input.priority - A priority, from the staff (`REQUEST_PRIORITIES`); empty for the type's.
  * @returns The new request's ID and number.
  * @throws {ServiceError} `signed_in_as` while a staff member is signed in as the actor,
  *   `not_found` when the actor may not see the company, `forbidden` without
- *   `requests:contribute`, `invalid` when the company is deactivated, `rate_limited` when the
- *   actor has raised too many requests (`RATE_LIMITS.requestsPerUser`).
+ *   `requests:contribute`, `invalid` when the company is deactivated or the type can't be
+ *   chosen (`errors.requestTypes.unavailable`), `rate_limited` when the actor has raised too
+ *   many requests (`RATE_LIMITS.requestsPerUser`).
  * @throws {ZodError} When no company was chosen (asked first, like the form does), or the
  *   title, description, type or priority isn't valid.
  */
@@ -97,11 +99,11 @@ export default async function raiseRequest(
   }
   const title = requestTitleSchema.parse(input.title);
   const description = requestDescriptionSchema.parse(input.description);
-  const type = requestTypeSchema.parse(input.type);
+  const { key: type, startingPriority } = await typeToGive(ctx.db, input.type);
   const priority =
     permissions.has('requests:manage') && input.priority
       ? requestPrioritySchema.parse(input.priority)
-      : startingPriority(type);
+      : startingPriority;
   await assertRateLimit(ctx, `request:user:${actor.id}`, RATE_LIMITS.requestsPerUser);
 
   return ctx.db.transaction(async (tx) => {

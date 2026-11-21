@@ -30,6 +30,7 @@ import { withMfaPromotion } from './auth/mfa-promotion';
 import addPasswordCredential from './auth/password-credential';
 import type { ServiceContext } from './context';
 import { isUniqueViolation, ServiceError } from './errors';
+import { nameBuiltInRequestTypes } from './requests';
 
 /**
  * The error for setting up an installation that's already set up.
@@ -172,6 +173,8 @@ export async function setUpPlatform(
         throw alreadySetUpError();
       }
       await tx.insert(staffSettings).values({ name: staffName, defaultLocale });
+      // The built-in request types were named before there was a language: name them in this one.
+      await nameBuiltInRequestTypes(tx, defaultLocale);
 
       const [existing] = allowExisting
         ? await tx

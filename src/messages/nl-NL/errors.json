@@ -92,6 +92,10 @@
     },
     "account": {
       "pictureUnavailable": "Kies een van je gekoppelde accounts met een foto, of je initialen."
+    },
+    "requestTypes": {
+      "unavailable": "Dit type kan niet meer worden gekozen. Kies een ander.",
+      "lastActive": "Houd minstens één type dat niet gearchiveerd is, anders kan er geen verzoek worden ingediend."
     }
   }
 }

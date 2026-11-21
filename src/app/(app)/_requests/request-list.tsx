@@ -28,11 +28,9 @@ import {
   formatRequestNumber,
   isRequestPriority,
   isRequestStatusFilter,
-  isRequestType,
   mayBeAssigned,
   REQUEST_PRIORITIES,
   REQUEST_STATUS_FILTERS,
-  REQUEST_TYPES,
   requestPath,
   type RequestStatusFilter,
 } from '@/lib/requests';
@@ -47,6 +45,7 @@ import {
   getRequestSettings,
   listAssignableStaff,
   listRequestCompanies,
+  listRequestTypes,
   listRequests,
   type RequestListItem,
 } from '@/server/requests';
@@ -175,7 +174,6 @@ export default async function RequestList({
   const statusParam = searchParam(searchParams.status);
   const status = isRequestStatusFilter(statusParam) ? statusParam : DEFAULT_REQUEST_STATUS_FILTER;
   const typeParam = searchParam(searchParams.type);
-  const type = isRequestType(typeParam) ? typeParam : undefined;
   const priorityParam = searchParam(searchParams.priority);
   const priority = internal && isRequestPriority(priorityParam) ? priorityParam : undefined;
   const requested = parseTableState(definition, searchParams);
@@ -183,12 +181,15 @@ export default async function RequestList({
   // "Me" only for those who can be assigned; one staff member for the others.
   const canBeAssigned = mayBeAssigned(getStaffPermissionsInCompanies(actor));
 
-  const [companies, settings, assignable, locale] = await Promise.all([
+  const [companies, settings, assignable, types, locale] = await Promise.all([
     listRequestCompanies(appContext, actor),
     getRequestSettings(appContext),
     internal ? listAssignableStaff(appContext, actor) : [],
+    listRequestTypes(appContext, actor),
     getLocale(),
   ]);
+  // A type to filter by only counts when it's one the menu offers: every type, archived ones too.
+  const type = types.find(({ key }) => key === typeParam)?.key;
   // An assignee to filter by only counts when it's one the menu offers.
   const assignee =
     internal &&
@@ -353,9 +354,9 @@ export default async function RequestList({
                 'type',
                 t('allTypes'),
                 type,
-                REQUEST_TYPES.map((value) => ({
-                  value,
-                  label: tRequests('type', { type: value }),
+                types.map(({ key, name, archived }) => ({
+                  value: key,
+                  label: archived ? t('archivedType', { name }) : name,
                 })),
               )}
             />
@@ -457,7 +458,7 @@ export default async function RequestList({
                             {formatRequestNumber(settings.prefix, request.number)}
                           </span>
                           <span aria-hidden="true">·</span>
-                          <span>{tRequests('type', { type: request.type })}</span>
+                          <span>{request.typeName}</span>
                           {showsCompany && (
                             <>
                               <span aria-hidden="true">·</span>
