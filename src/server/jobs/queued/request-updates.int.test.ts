@@ -139,7 +139,7 @@ describe('the emails about requests', () => {
     expect(textTo('casey@adiutor.test')).toContain('sam proposed a solution.');
     expect(textTo('casey@adiutor.test')).toContain('Does this solve your request?');
     expect(textTo('casey@adiutor.test').match(/https?:\/\/\S+/)?.[0]).toMatch(
-      /^https:\/\/adiutor\.test\/requests\/142#entry-[0-9a-f-]{36}$/,
+      /^https:\/\/adiutor\.test\/requests\/142\?entry=([0-9a-f-]{36})#entry-\1$/,
     );
     const [approve, deny] = links('casey@adiutor.test') ?? [];
     expect(approve).toMatch(/\/approve$/);
@@ -221,7 +221,7 @@ describe('the emails about requests', () => {
       .from(requestEntry)
       .where(and(eq(requestEntry.requestId, raised.id), eq(requestEntry.kind, 'comment')));
     expect(toWatcher?.text.match(/https?:\/\/\S+/)?.[0]).toBe(
-      `https://adiutor.test/requests/142#entry-${reply?.id}`,
+      `https://adiutor.test/requests/142?entry=${reply?.id}#entry-${reply?.id}`,
     );
     [toStaff, toWatcher].forEach((email) => {
       expect(email?.html).not.toContain('casey@adiutor.test');

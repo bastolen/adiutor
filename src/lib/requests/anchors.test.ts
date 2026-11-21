@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { isSectionId } from '../redirect';
-import { DESCRIPTION_ANCHOR, entryAnchor, isEntryAnchor } from './anchors';
+import { DESCRIPTION_ANCHOR, entryAnchor, isEntryAnchor, requestPathAt } from './anchors';
 
 /** An entry's ID, as the database gives it. */
 const ENTRY_ID = '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b';
@@ -22,5 +22,13 @@ describe('anchors', () => {
     expect(isEntryAnchor('entry-1')).toBe(false);
     expect(isEntryAnchor('entry-')).toBe(false);
     expect(isEntryAnchor(null)).toBe(false);
+  });
+
+  it('opens a request at an entry, named in the query too, or at its description', () => {
+    expect(requestPathAt(142, entryAnchor(ENTRY_ID))).toBe(
+      `/requests/142?entry=${ENTRY_ID}#entry-${ENTRY_ID}`,
+    );
+    expect(requestPathAt(142, DESCRIPTION_ANCHOR)).toBe('/requests/142#request-description');
+    expect(requestPathAt(142, null)).toBe('/requests/142');
   });
 });

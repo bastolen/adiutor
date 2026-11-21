@@ -302,7 +302,10 @@ written and sent is in [Email](email.md), and the jobs that send them in
   for the staff). The subject is the number and the title ("AD-142: The printer is broken"), the
   same for every email about the request, so mail apps keep them together. Its link opens the
   request at the first news it tells of that has a place on the page (`RequestUpdate.anchor`:
-  that entry, or the description for a mention in it), so the page scrolls there. Replies to the
+  that entry, or the description for a mention in it), so the page scrolls there. A link to an
+  entry names it in the query as well (`/requests/142?entry=<ID>#entry-<ID>`, `requestPathAt`):
+  the anchor never reaches the server, so the query is what lets the page always show that
+  entry, whatever the reader's activity filter. Replies to the
   email aren't read, and it says so. An email that tells someone at the company of a solution they may
   answer has Approve and Deny buttons of their own (see [Solutions](#solutions)), made when it's
   sent (`RequestUpdate.answerable`).

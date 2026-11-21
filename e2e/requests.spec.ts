@@ -1082,7 +1082,7 @@ test('an email’s link opens the request at the reply it tells of, also through
   await signOut(page);
 
   const link = linkIn(await waitForEmailAbout(REQUESTS_CLIENT.email, title));
-  expect(link).toMatch(new RegExp(`/requests/${number}#entry-[0-9a-f-]{36}$`));
+  expect(link).toMatch(new RegExp(`/requests/${number}\\?entry=([0-9a-f-]{36})#entry-\\1$`));
   const entry = page.locator(`#${link.split('#')[1]}`);
 
   // Signed out, the link goes through signing in and still lands on the reply.
