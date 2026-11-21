@@ -253,7 +253,7 @@
     "requestUpdate": {
       "subject": "{reference}: {title}",
       "preview": "{event, select, reply {{name} replied.} status {{name} changed the status.} assigned {{name} assigned this request to you.} mentioned {{name} mentioned you.} other {{name} subscribed you to this request.}}",
-      "reason": "{role, select, assignee {You’re receiving this because this request is assigned to you.} other {You’re receiving this because you’re subscribed to this request. To stop, open the request and choose Unsubscribe.}}",
+      "reason": "{role, select, assignee {You’re receiving this because this request is assigned to you. You can turn off emails about requests in <account>your account</account>.} other {You’re receiving this because you’re subscribed to this request. To stop, open the request and choose Unsubscribe, or turn off emails about requests in <account>your account</account>.}}",
       "where": "<link>{reference}</link> · {company}",
       "reply": "<strong>{name}</strong> replied:",
       "status": "{change, select, reopened {<strong>{name}</strong> reopened this request.} done {<strong>{name}</strong> marked this request as done.} cancelled {<strong>{name}</strong> cancelled this request.} other {<strong>{name}</strong> changed the status from {from} to {to}.}}",

@@ -109,6 +109,7 @@ import { dismissMfaRecommendation } from './people/mfa-recommendation';
 import setOwnLocale from './people/own-locale';
 import saveFirstTimeZone, { setOwnTimeZone } from './people/own-time-zone';
 import { setOwnPicture } from './people/pictures';
+import { setOwnRequestEmails } from './people/request-emails';
 import {
   changeStaffRole,
   getStaffSettings,
@@ -505,6 +506,7 @@ function listOperations(): Operation[] {
     ['save own first time zone', (w) => saveFirstTimeZone(ctx, w.actor, 'Europe/Amsterdam')],
     ['choose own time zone', (w) => setOwnTimeZone(ctx, w.actor, 'Europe/Amsterdam')],
     ['choose own picture', (w) => setOwnPicture(ctx, w.actor, 'initials')],
+    ['turn off own emails about requests', (w) => setOwnRequestEmails(ctx, w.actor, false)],
     ['dismiss own MFA recommendation', (w) => dismissMfaRecommendation(ctx, w.actor)],
     ['turn off sign-ins by staff', (w) => setStaffSignInAllowed(ctx, w.actor, false)],
     ["sign out another user's device", (w) => revokeOwnSession(ctx, w.actor, w.othersSession)],
@@ -943,6 +945,8 @@ const EXPECTED: Record<string, string> = {
   'save own first time zone': 'AAAAAAA',
   'choose own time zone': 'AAAAAAA',
   'choose own picture': 'AAAAAAA',
+  // Everyone chooses whether they get emails about requests, for themselves only.
+  'turn off own emails about requests': 'AAAAAAA',
   // Everyone dismisses their own MFA recommendation, and nobody else's.
   'dismiss own MFA recommendation': 'AAAAAAA',
   // Everyone's own account, whatever their role.

@@ -116,6 +116,28 @@ function requestLinkTag(href: string) {
 }
 
 /**
+ * Where someone turns emails about requests off: their account's Profile
+ * page, at its card for them.
+ */
+export const REQUEST_EMAILS_PATH = '/account#request-emails';
+
+/**
+ * The link to the account's setting, for the `<account>` tag of the footer.
+ *
+ * @param href - The setting's address.
+ * @returns The tag's renderer.
+ */
+function accountLinkTag(href: string) {
+  return function accountTag(chunks: ReactNode) {
+    return (
+      <Link href={href} style={{ color: colors.muted, textDecoration: 'underline' }}>
+        {chunks}
+      </Link>
+    );
+  };
+}
+
+/**
  * What a status change did, as the sentence about it is chosen: it
  * reopened the request, marked it done or cancelled it, or moved it to
  * another status.
@@ -254,7 +276,10 @@ export default function RequestUpdateEmail({
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
-      reason={t('reason', { role })}
+      reason={t.rich('reason', {
+        role,
+        account: accountLinkTag(`${appUrl}${REQUEST_EMAILS_PATH}`),
+      })}
     >
       <EmailHeading>{title}</EmailHeading>
       <EmailNote>

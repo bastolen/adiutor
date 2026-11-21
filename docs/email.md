@@ -27,8 +27,9 @@ One file per email in `src/emails/`:
   status, and for someone who is put on one (assigned, mentioned, or subscribed by someone
   else): one email per person and request with everything that happened, each reply in full
   (`EmailMarkdown`), the statuses in the reader's words, the request's number as its first link
-  and a subject without words of its own, the request's number and title (the `request-update`
-  jobs, batched; see [Emails](requests.md#emails))
+  and a subject without words of its own, the request's number and title, and a footer that links
+  to the account's setting that turns them off (the `request-update` jobs, batched; see
+  [Emails](requests.md#emails))
 - `added-to-company.tsx` for someone staff added to a company with a role (`addMember` queues an
   `added-to-company` job in the transaction that adds them, so it goes out at the next tick; see
   [Background jobs](jobs.md#queued-jobs))

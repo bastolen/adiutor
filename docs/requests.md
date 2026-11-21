@@ -265,9 +265,13 @@ written and sent is in [Email](email.md), and the jobs that send them in
 - **Only who is still on the request is told:** when the email is sent, someone whose account is
   deactivated, who can no longer read the request, or who is no longer on it (unsubscribed,
   unassigned) gets nothing, and their jobs are skipped. News that's no longer true is left out
-  too: an assignment that was taken back, a mention an edit removed. The footer says why the reader gets the
-  email (the request is assigned to them, or they're subscribed) and that Unsubscribe on the
-  request's page stops it.
+  too: an assignment that was taken back, a mention an edit removed.
+- **Turning them off:** Unsubscribe on a request's page stops that request's emails. **Emails
+  about requests** on the account's Profile page (`user.request_emails`, on by default;
+  `setOwnRequestEmails`) stops all of them, also for the requests assigned to someone; it's
+  checked when an email is sent, so it also stops what's on its way. The footer says why the
+  reader gets the email (the request is assigned to them, or they're subscribed) and links to
+  both: Unsubscribe for a subscriber, and the account's card (`/account#request-emails`).
 - **In the reader's language** (`recipientLocale`), like every email.
 - **Nothing meant for the staff reaches a company:** replies, status changes and assignments are
   what everyone on a request sees anyway; a change of priority is never queued.

@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD COLUMN "request_emails" boolean DEFAULT true;

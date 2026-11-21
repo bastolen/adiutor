@@ -371,6 +371,9 @@ describe('staff-made changes', () => {
     expect(email.text).toContain('Casey Client marked this request as done.');
     expect(email.text).toContain('Casey Client reopened this request.');
     expect(email.text).toContain('you’re subscribed to this request');
+    // The footer says where to stop them all: the account's card for them.
+    expect(email.html).toContain(`href="${appUrl}/account#request-emails"`);
+    expect(email.text).toContain(`your account ${appUrl}/account#request-emails`);
     expect(email.text).toContain('Replies to this email aren’t read.');
     // An image someone wrote is a link, never loaded: the logo is the email's only image.
     expect(email.html.match(/<img /g)).toHaveLength(1);

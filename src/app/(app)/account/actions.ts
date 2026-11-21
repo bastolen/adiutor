@@ -1,6 +1,6 @@
 /**
  * @file Server actions for the Profile page of the account (name, language,
- * time zone and email verification). They go through Better Auth, so its rules apply. Their
+ * time zone, picture, emails about requests and email verification). They go through Better Auth, so its rules apply. Their
  * messages are in the request's language. The Security page's actions are in
  * `./security/actions.ts`.
  */
@@ -26,6 +26,7 @@ import { assertNotSignedInAs, getActor } from '@/server/authz';
 import setOwnLocale from '@/server/people/own-locale';
 import saveFirstTimeZone, { setOwnTimeZone } from '@/server/people/own-time-zone';
 import { setOwnPicture } from '@/server/people/pictures';
+import { setOwnRequestEmails } from '@/server/people/request-emails';
 import { assertRateLimit, RATE_LIMITS } from '@/server/rate-limit';
 
 import { LANGUAGE_SECTION, TIME_ZONE_SECTION, VERIFIED_RETURN_PATH } from './account-messages';
@@ -186,5 +187,31 @@ export async function sendVerificationAction(): Promise<ActionResult> {
       throw error;
     }
     return { ok: true, message: t('profile.verificationSent', { email: actor.email }) };
+  });
+}
+
+/**
+ * Turns emails about requests on or off for the signed-in user
+ * (`setOwnRequestEmails`). The page is refreshed, so the card shows what's
+ * set.
+ *
+ * @param _previous - The previous result (unused).
+ * @param formData - Field `on`: `true` to turn them on, `false` to turn them off.
+ * @returns A confirmation, or why it failed.
+ */
+export async function requestEmailsAction(
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const actor = await getActor({ allowMissingMfa: true });
+    const on = field(formData, 'on') === 'true';
+    await setOwnRequestEmails(appContext, actor, on);
+    refresh();
+    const t = await getTranslations('account');
+    return {
+      ok: true,
+      message: on ? t('profile.requestEmailsTurnedOn') : t('profile.requestEmailsTurnedOff'),
+    };
   });
 }

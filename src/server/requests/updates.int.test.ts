@@ -576,4 +576,23 @@ describe('what one person’s email may show', () => {
     // Never the ID of whoever did it.
     expect(JSON.stringify(update?.items)).not.toContain(admin.id);
   });
+
+  it('gives nothing to someone who turned emails about requests off, assigned or not', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client');
+    const support = await staffActor(db, 'support');
+    const raised = await storeRequest(company.id);
+    await changeAssignees(ctx, support, { request: raised.id, add: [support.id], remove: [] });
+    await replyToRequest(ctx, client, { request: raised.id, body: 'Any news?' });
+    const queued = await newsFor(support.id);
+    expect(
+      await readRequestUpdate(ctx, { requestId: raised.id, userId: support.id }, queued),
+    ).not.toBeNull();
+
+    await db.update(user).set({ requestEmails: false }).where(eq(user.id, support.id));
+
+    expect(
+      await readRequestUpdate(ctx, { requestId: raised.id, userId: support.id }, queued),
+    ).toBeNull();
+  });
 });

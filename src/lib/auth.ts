@@ -474,6 +474,12 @@ export const auth = betterAuth({
        * (`setOwnPicture`).
        */
       avatarSource: { type: [...AVATAR_SOURCES], required: false, input: false },
+      /**
+       * Whether the user gets emails about requests (`readRequestUpdate`); on
+       * unless they turned it off on their account's Profile page. Never set
+       * through Better Auth's endpoints (`setOwnRequestEmails`).
+       */
+      requestEmails: { type: 'boolean', required: false, defaultValue: true, input: false },
     },
   },
 

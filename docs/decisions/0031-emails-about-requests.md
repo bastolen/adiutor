@@ -32,6 +32,9 @@ How it works is in [Requests](../requests.md#emails). The choices behind it:
   (`EmailMarkdown`).
 - **The subject is the request's number and title,** the same every time, so mail apps keep the
   emails about a request together.
+- **Off per request, or for all of them:** Unsubscribe on the request, or one account setting,
+  "Emails about requests", which also silences the requests assigned to someone. A link in the
+  email that unsubscribes without signing in isn't built: it would act for whoever has the email.
 
 ## Consequences
 

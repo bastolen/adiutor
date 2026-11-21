@@ -253,7 +253,7 @@
     "requestUpdate": {
       "subject": "{reference}: {title}",
       "preview": "{event, select, reply {{name} heeft gereageerd.} status {{name} heeft de status gewijzigd.} assigned {{name} heeft dit verzoek aan jou toegewezen.} mentioned {{name} heeft je genoemd.} other {{name} heeft je op dit verzoek geabonneerd.}}",
-      "reason": "{role, select, assignee {Je ontvangt dit omdat dit verzoek aan jou is toegewezen.} other {Je ontvangt dit omdat je op dit verzoek bent geabonneerd. Wil je dat niet meer, open dan het verzoek en kies Abonnement opzeggen.}}",
+      "reason": "{role, select, assignee {Je ontvangt dit omdat dit verzoek aan jou is toegewezen. Je kunt e-mails over verzoeken uitzetten in <account>je account</account>.} other {Je ontvangt dit omdat je op dit verzoek bent geabonneerd. Wil je dat niet meer, open dan het verzoek en kies Abonnement opzeggen, of zet e-mails over verzoeken uit in <account>je account</account>.}}",
       "where": "<link>{reference}</link> · {company}",
       "reply": "<strong>{name}</strong> heeft gereageerd:",
       "status": "{change, select, reopened {<strong>{name}</strong> heeft dit verzoek heropend.} done {<strong>{name}</strong> heeft dit verzoek als afgerond gemarkeerd.} cancelled {<strong>{name}</strong> heeft dit verzoek geannuleerd.} other {<strong>{name}</strong> heeft de status gewijzigd van {from} naar {to}.}}",

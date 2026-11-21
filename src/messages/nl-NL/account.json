@@ -57,7 +57,15 @@
       "browserTimeZone": "Deze browser staat op {zone}.",
       "useBrowserTimeZone": "Zone van deze browser gebruiken",
       "saveTimeZone": "Tijdzone opslaan",
-      "timeZoneSaved": "Tijdzone opgeslagen."
+      "timeZoneSaved": "Tijdzone opgeslagen.",
+      "requestEmailsTitle": "E-mails over verzoeken",
+      "requestEmailsDescription": "Een e-mail wanneer iemand reageert op een verzoek waar je bij hoort of de status ervan wijzigt, en wanneer iemand je aan een verzoek toevoegt. Een abonnement opzeggen stopt de e-mails van dat verzoek; deze uitzetten stopt ze allemaal, ook voor verzoeken die aan jou zijn toegewezen.",
+      "requestEmailsOn": "Aan",
+      "requestEmailsOff": "Uit",
+      "requestEmailsTurnOff": "Uitzetten",
+      "requestEmailsTurnOn": "Aanzetten",
+      "requestEmailsTurnedOff": "E-mails over verzoeken uitgezet.",
+      "requestEmailsTurnedOn": "E-mails over verzoeken aangezet."
     },
     "messages": {
       "verificationExpired": "Deze bevestigingslink is verlopen. Stuur een nieuwe.",

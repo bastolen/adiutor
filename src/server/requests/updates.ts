@@ -319,9 +319,10 @@ export interface RequestUpdate {
 
 /**
  * Reads what one person's email about a request may show, when it's sent.
- * They get nothing when their account is deactivated, they can no longer
- * read the request, or they're no longer on it (unassigned, unsubscribed):
- * only the people on a request are told about it.
+ * They get nothing when their account is deactivated, they turned emails
+ * about requests off in their account, they can no longer read the request,
+ * or they're no longer on it (unassigned, unsubscribed): only the people on
+ * a request are told about it.
  *
  * People are named as the request's page names them (their own name, or
  * their side's: the company's, or the staff's), and the statuses are worded
@@ -368,6 +369,7 @@ export async function readRequestUpdate(
         name: user.name,
         email: user.email,
         locale: user.locale,
+        requestEmails: user.requestEmails,
         platformRole: user.platformRole,
         deactivatedAt: user.deactivatedAt,
         companyRole: membership.role,
@@ -406,7 +408,13 @@ export async function readRequestUpdate(
       company: { deactivated: found.companyDeactivatedAt !== null },
     });
   const reader = people.find(({ id }) => id === about.userId);
-  if (!reader || reader.deactivatedAt !== null || roles.length === 0) {
+  // Turned off in their account (a row from before the setting existed counts as on).
+  if (
+    !reader ||
+    reader.deactivatedAt !== null ||
+    reader.requestEmails === false ||
+    roles.length === 0
+  ) {
     return null;
   }
   const permissions = permissionsOf(reader);
