@@ -1,6 +1,6 @@
 # 0017. Staff can sign in as users
 
-- **Status:** Accepted
+- **Status:** Accepted; request work while signed in as a user is designed in [0028](0028-request-work-while-signed-in-as-a-user.md)
 - **Date:** 2026-11-11
 
 ## Context

@@ -120,7 +120,7 @@ describe('EditableText', () => {
     expect(editTextAction).not.toHaveBeenCalled();
   });
 
-  it('turns the button off while a staff member is signed in as the user', () => {
+  it('keeps the button on while a staff member is signed in as the user: their own work', () => {
     renderInLocale(
       'en-US',
       <>
@@ -131,6 +131,6 @@ describe('EditableText', () => {
       </>,
     );
 
-    expect(screen.getByRole('button', { name: 'Edit description' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Edit description' })).toBeEnabled();
   });
 });

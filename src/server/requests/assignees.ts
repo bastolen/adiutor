@@ -23,6 +23,7 @@ import type { ServiceContext } from '../context';
 import { ServiceError } from '../errors';
 import { orderTerms, textOrder } from '../pagination';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
+import { actingUserId, signedInAsWork } from '../signed-in-as';
 import { requestScope, visibleRequests } from './access';
 import { CHANGE_MOMENT, changeRequest, requestToChange } from './change';
 
@@ -69,20 +70,22 @@ function isAssignable(person: LockedUser | undefined): boolean {
  * @param requestId - The request.
  * @param subjectUserId - The staff member it's about.
  * @param change - Whether they were assigned or removed.
- * @param authorId - Who did it, or `null` when Adiutor did (they stopped working on requests).
+ * @param author - Who did it (a staff member signed in as them is recorded too), or `null`
+ *   when Adiutor did (they stopped working on requests).
  * @returns The entry's values.
  */
 function assignmentEntry(
   requestId: string,
   subjectUserId: string,
   change: AssignmentChange,
-  authorId: string | null,
+  author: Actor | null,
 ) {
   return {
     requestId,
     kind: 'assignee' as const,
-    authorId,
+    authorId: author?.id ?? null,
     authorSide: 'staff' as const,
+    ...(author ? signedInAsWork(author) : {}),
     subjectUserId,
     toValue: change,
     createdAt: CHANGE_MOMENT,
@@ -113,7 +116,7 @@ function assignmentEntry(
  * @param input.add - The user IDs to assign.
  * @param input.remove - The user IDs to remove.
  * @returns How many people were added and removed.
- * @throws {ServiceError} `signed_in_as` while a staff member is signed in as the actor,
+ * @throws {ServiceError} `signed_in_as` when the sign-in as the actor ended meanwhile,
  *   `not_found` when the actor may not see the request, `forbidden` without `requests:manage`,
  *   `invalid` when the company is deactivated or someone to add can't be assigned
  *   (`errors.requests.notAssignable`), `rate_limited` when the actor has changed requests too
@@ -130,7 +133,11 @@ export async function changeAssignees(
   const remove = [...new Set(assigneeIdsSchema.parse(input.remove))].filter(
     (id) => !add.includes(id),
   );
-  await assertRateLimit(ctx, `request-change:user:${actor.id}`, RATE_LIMITS.requestChangesPerUser);
+  await assertRateLimit(
+    ctx,
+    `request-change:user:${actingUserId(actor)}`,
+    RATE_LIMITS.requestChangesPerUser,
+  );
 
   return changeRequest(
     ctx,
@@ -174,8 +181,8 @@ export async function changeAssignees(
       await tx
         .insert(requestEntry)
         .values([
-          ...adding.map((id) => assignmentEntry(locked.id, id, 'assigned', actor.id)),
-          ...removing.map((id) => assignmentEntry(locked.id, id, 'unassigned', actor.id)),
+          ...adding.map((id) => assignmentEntry(locked.id, id, 'assigned', actor)),
+          ...removing.map((id) => assignmentEntry(locked.id, id, 'unassigned', actor)),
         ]);
       await tx
         .update(request)

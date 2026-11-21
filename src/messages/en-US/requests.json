@@ -164,6 +164,16 @@
       "editNote": "Edit note",
       "noteLabel": "Note"
     },
+    "signedInAs": {
+      "workForYou": "{staff} did this while signed in as you",
+      "workForYouUnnamed": "A staff member did this while signed in as you",
+      "workFor": "{staff} did this while signed in as {name}",
+      "workForUnnamed": "A staff member did this while signed in as {name}",
+      "editForYou": "{staff} made this edit while signed in as you",
+      "editForYouUnnamed": "A staff member made this edit while signed in as you",
+      "editFor": "{staff} made this edit while signed in as {name}",
+      "editForUnnamed": "A staff member made this edit while signed in as {name}"
+    },
     "builtInTypes": {
       "hotfix": {
         "name": "Hotfix",

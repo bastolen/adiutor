@@ -164,6 +164,16 @@
       "editNote": "Notitie bewerken",
       "noteLabel": "Notitie"
     },
+    "signedInAs": {
+      "workForYou": "Gedaan door {staff}, ingelogd als jou",
+      "workForYouUnnamed": "Gedaan door een medewerker, ingelogd als jou",
+      "workFor": "Gedaan door {staff}, ingelogd als {name}",
+      "workForUnnamed": "Gedaan door een medewerker, ingelogd als {name}",
+      "editForYou": "Bewerkt door {staff}, ingelogd als jou",
+      "editForYouUnnamed": "Bewerkt door een medewerker, ingelogd als jou",
+      "editFor": "Bewerkt door {staff}, ingelogd als {name}",
+      "editForUnnamed": "Bewerkt door een medewerker, ingelogd als {name}"
+    },
     "builtInTypes": {
       "hotfix": {
         "name": "Hotfix",

@@ -55,6 +55,7 @@ import {
 
 import PersonLine, { PersonAvatar, personName } from '../../_requests/request-person';
 import RequestText from '../../_requests/request-text';
+import SignedInAsMark from '../../_requests/signed-in-as-mark';
 import { changeAssigneesAction, changeStatusAction } from './actions';
 import ChangeAssignees, { type AssigneeChoice } from './change-assignees';
 import EditDetails, { type EditableType } from './edit-details';
@@ -225,8 +226,13 @@ async function RequestContent({
               <div className="flex items-center gap-3">
                 <PersonAvatar person={detail.raisedBy} names={names} />
                 <PersonLine person={detail.raisedBy} names={names}>
-                  <span className="flex items-center gap-x-2 text-muted-foreground">
+                  <span className="flex flex-wrap items-center gap-x-2 text-muted-foreground">
                     <RelativeTime date={detail.createdAt} />
+                    <SignedInAsMark
+                      mark={detail.raisedSignedInAs}
+                      author={detail.raisedBy}
+                      names={names}
+                    />
                     <EditedNote
                       text={detail.description}
                       id="description"
@@ -268,6 +274,7 @@ async function RequestContent({
                   {!detail.assignees.some(({ isViewer }) => isViewer) && (
                     <RowAction
                       action={changeAssigneesAction}
+                      allowedWhileSignedInAs
                       fields={{ ...fields, add: actor.id }}
                       label={tRequests('controls.assignToMe')}
                       doneMessage={tRequests('saved.assignedYou')}
@@ -298,6 +305,7 @@ async function RequestContent({
                   {choices.includes('done') && (
                     <RowAction
                       action={changeStatusAction}
+                      allowedWhileSignedInAs
                       fields={{ ...fields, status: 'done' }}
                       label={tRequests('controls.markDone')}
                       variant="primary"
@@ -306,6 +314,7 @@ async function RequestContent({
                   {choices.includes('cancelled') && (
                     <RowAction
                       action={changeStatusAction}
+                      allowedWhileSignedInAs
                       fields={{ ...fields, status: 'cancelled' }}
                       label={tRequests('controls.cancel')}
                       confirm={{
@@ -319,6 +328,7 @@ async function RequestContent({
                   {choices.includes('open') && (
                     <RowAction
                       action={changeStatusAction}
+                      allowedWhileSignedInAs
                       fields={{ ...fields, status: 'open' }}
                       label={tRequests('controls.reopen')}
                     />

@@ -13,7 +13,6 @@ import { type ReactNode, useCallback, useEffect, useRef } from 'react';
 import Button from '@/components/ui/button';
 import MarkdownField from '@/components/ui/markdown/markdown-field';
 import ResultAlert from '@/components/ui/result-alert';
-import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
 import { useToast } from '@/components/ui/toast';
 import { useTransientActionState, useTransientState } from '@/components/ui/use-transient-state';
 import type { ActionResult } from '@/lib/action-result';
@@ -42,8 +41,8 @@ interface EditableTextProps {
  * it, with Save and Cancel. Saving refreshes the page, so the text shows as
  * saved; a success is a toast, a refusal shows above the editor and as a
  * toast, and the editor stays open with what was typed. Cancel, and a save,
- * put the text back and focus on the Edit button again. The button is off
- * while a staff member is signed in as the user.
+ * put the text back and focus on the Edit button again. A staff member
+ * signed in as the user may edit it too (decision 0028).
  *
  * Whether the reader may edit the text is decided on the server: the page
  * only renders this for a text they may edit.
@@ -64,7 +63,6 @@ export default function EditableText({
   children,
 }: EditableTextProps) {
   const t = useTranslations('requests.edit');
-  const changesOff = useSignedInAs();
   const showToast = useToast();
   const [editing, setEditing] = useTransientState(false);
   const button = useRef<HTMLButtonElement>(null);
@@ -111,37 +109,35 @@ export default function EditableText({
   if (editing) {
     return (
       <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-3">
-        <ChangesFieldset>
-          <input type="hidden" name="request" value={request} />
-          <input type="hidden" name="entry" value={entry ?? ''} />
-          <input type="hidden" name="edits" value={edit.edits} />
-          <ResultAlert result={result} errorsOnly />
-          <MarkdownField
-            label={fieldLabel}
-            name="text"
-            rows={entry ? 6 : 10}
-            maxLength={REQUEST_TEXT_MAX_LENGTH}
-            required
-            defaultValue={edit.markdown}
-            autoFocus
-            mentions={loadMentions}
-          />
-          <div className="flex flex-wrap gap-2">
-            <Button type="submit" loading={pending}>
-              {t('save')}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                backToButton.current = true;
-                setEditing(false);
-              }}
-            >
-              {t('cancel')}
-            </Button>
-          </div>
-        </ChangesFieldset>
+        <input type="hidden" name="request" value={request} />
+        <input type="hidden" name="entry" value={entry ?? ''} />
+        <input type="hidden" name="edits" value={edit.edits} />
+        <ResultAlert result={result} errorsOnly />
+        <MarkdownField
+          label={fieldLabel}
+          name="text"
+          rows={entry ? 6 : 10}
+          maxLength={REQUEST_TEXT_MAX_LENGTH}
+          required
+          defaultValue={edit.markdown}
+          autoFocus
+          mentions={loadMentions}
+        />
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" loading={pending}>
+            {t('save')}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              backToButton.current = true;
+              setEditing(false);
+            }}
+          >
+            {t('cancel')}
+          </Button>
+        </div>
       </form>
     );
   }
@@ -156,7 +152,6 @@ export default function EditableText({
         size="sm"
         aria-label={name}
         title={name}
-        disabled={changesOff}
         onClick={() => setEditing(true)}
       >
         <Pencil aria-hidden="true" />

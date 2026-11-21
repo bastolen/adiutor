@@ -393,4 +393,37 @@ describe('Thread', () => {
     expect(screen.getByText(sentence)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: earlier })).toBeInTheDocument();
   });
+
+  it('says which reply and change a staff member made while signed in as their author', () => {
+    render(
+      <Thread
+        address={ADDRESS}
+        detail={detailOf({
+          entries: [
+            entryOf('1', {
+              author: CASEY,
+              body: { text: 'Monday to Friday.', format: 'plain' },
+              signedInAs: { staffName: 'Ann Staff' },
+            }),
+            entryOf('2', {
+              author: { ...CASEY, isViewer: false },
+              kind: 'status',
+              from: 'open',
+              to: 'done',
+              signedInAs: { staffName: null },
+            }),
+            entryOf('3', { body: { text: 'Thanks.', format: 'plain' } }),
+          ],
+        })}
+        earlierHref={null}
+      />,
+    );
+
+    const [reply, change, own] = entryTexts();
+    expect(reply).toContain('Ann Staff did this while signed in as you');
+    // For a reader who isn't the author (a staff Admin), the author is named; once the staff
+    // member's account is gone, they're "a staff member".
+    expect(change).toContain('A staff member did this while signed in as Casey Client');
+    expect(own).not.toContain('signed in as');
+  });
 });

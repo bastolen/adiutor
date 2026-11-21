@@ -24,7 +24,13 @@ export {
   MAX_EARLIER_CHUNKS,
   THREAD_CHUNK,
 } from './detail';
-export type { RequestDetail, RequestEntryView, RequestText, TextVersion } from './detail';
+export type {
+  RequestDetail,
+  RequestEntryView,
+  RequestText,
+  SignedInAsMark,
+  TextVersion,
+} from './detail';
 export { editReply, editRequestDescription } from './edits';
 export { default as addNote } from './notes';
 export { default as raiseRequest } from './raise';

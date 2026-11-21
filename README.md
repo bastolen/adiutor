@@ -50,8 +50,9 @@ come next.
   guard the rest, and staff Admins can look up the error references people send them. See
   [Security measures](docs/security-measures.md).
 - **Sign in as a user.** Staff Admins, Managers and Support can see Adiutor the way a user does, to
-  check what isn't working for them. It lasts 30 minutes at most, needs strong MFA, shows a banner
-  and changes nothing in the user's name. The user gets an email, and every start is in the audit
+  check what isn't working for them. It lasts 30 minutes at most, needs strong MFA and shows a
+  banner. Only the user's request work can be done, and their requests show them who did it;
+  nothing else changes in their name. The user gets an email, and every start is in the audit
   log. See [Signing in as a user](docs/authentication.md#signing-in-as-a-user).
 - **Background jobs.** Reminders, clean-ups and emails that can wait a few minutes run in the
   background, and are tried again when they fail. Staff Admins and Managers see them under Logs →
