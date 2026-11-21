@@ -5,7 +5,10 @@
  *
  * - **Who is told:** a reply and a status change go to the people on the
  *   request, its assignees and subscribers, never the one who did it
- *   ({@link tellPeopleOnRequest}). Being put on a request goes to the one
+ *   ({@link tellPeopleOnRequest}). An internal note goes only to the staff
+ *   on it and the staff it mentions ({@link tellStaffOnRequest}): nobody at
+ *   the company is ever told about a note, which the email checks again
+ *   when it's read. Being put on a request goes to the one
  *   it's about, unless they did it themselves: assigned
  *   ({@link tellAssigned}), mentioned in a text ({@link tellMentioned}) or
  *   subscribed by someone else ({@link tellSubscribed}). One job per person
@@ -28,7 +31,7 @@ import {
   requestParticipant,
   user,
 } from '@/db/schema';
-import { getPermissions } from '@/lib/authz/permissions';
+import { getPermissions, getStaffPermissionsInCompanies } from '@/lib/authz/permissions';
 import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { visibleName } from '@/lib/display-name';
 import {
@@ -130,6 +133,80 @@ export async function tellPeopleOnRequest(
     ),
   );
   return people.length;
+}
+
+/**
+ * Keeps the staff who read internal notes (`requests:view-internal`) out of a
+ * list of people: an internal note is told to them, and to nobody else.
+ *
+ * @param tx - The change's transaction.
+ * @param userIds - The people.
+ * @returns Those of them who read notes as staff, each once.
+ */
+export async function staffWhoReadNotes(
+  tx: DatabaseTransaction,
+  userIds: readonly string[],
+): Promise<string[]> {
+  const ids = [...new Set(userIds)];
+  if (ids.length === 0) {
+    return [];
+  }
+  const people = await tx
+    .select({ id: user.id, platformRole: user.platformRole })
+    .from(user)
+    .where(inArray(user.id, ids));
+  return people
+    .filter((person) =>
+      getStaffPermissionsInCompanies({ platformRole: person.platformRole }).has(
+        'requests:view-internal',
+      ),
+    )
+    .map(({ id }) => id);
+}
+
+/**
+ * Queues an internal note for the staff on the request (its assignees and its
+ * subscribers who read notes) and the staff it mentions, never whoever wrote
+ * it, and never anyone at the company: a mention in a note of someone at the
+ * company tells them nothing. Someone it mentions is told of the note as a
+ * mention of them. Call it in the transaction of the note, after
+ * `storeMentions`.
+ *
+ * @param tx - The change's transaction.
+ * @param about - The request, and who wrote the note.
+ * @param about.request - The request.
+ * @param about.request.id - Its ID.
+ * @param about.request.companyId - Its company.
+ * @param about.actorId - Who wrote the note: they aren't told about it.
+ * @param entryId - The note.
+ * @param mentioned - The people the note mentions.
+ * @returns How many people it's queued for.
+ */
+export async function tellStaffOnRequest(
+  tx: DatabaseTransaction,
+  about: { request: { id: string; companyId: string }; actorId: string },
+  entryId: string,
+  mentioned: readonly string[] = [],
+): Promise<number> {
+  const onRequest = await loadPeopleOn(tx, about.request);
+  const staff = (await staffWhoReadNotes(tx, [...onRequest, ...mentioned])).filter(
+    (userId) => userId !== about.actorId,
+  );
+  await queueNews(
+    tx,
+    staff.map((userId) =>
+      mentioned.includes(userId)
+        ? {
+            requestId: about.request.id,
+            userId,
+            event: 'mentioned' as const,
+            entryId,
+            byUserId: about.actorId,
+          }
+        : { requestId: about.request.id, userId, event: 'note' as const, entryId, byUserId: null },
+    ),
+  );
+  return staff.length;
 }
 
 /**
@@ -255,6 +332,14 @@ export type RequestUpdateItem =
       text: RequestUpdateText;
     }
   | {
+      /** Someone wrote an internal note: only ever for a reader who reads notes. */
+      event: 'note';
+      /** Who. */
+      by: string;
+      /** The note. */
+      text: RequestUpdateText;
+    }
+  | {
       /** Someone changed the status. */
       event: 'status';
       /** Who. */
@@ -275,8 +360,8 @@ export type RequestUpdateItem =
       event: 'mentioned';
       /** Who. */
       by: string;
-      /** Where: in the request's description, or in a reply. */
-      where: 'description' | 'reply';
+      /** Where: in the request's description, a reply, or an internal note (for the staff). */
+      where: 'description' | 'reply' | 'note';
       /** The text that mentions them. */
       text: RequestUpdateText;
     }
@@ -329,7 +414,10 @@ export interface RequestUpdate {
  * for the reader (`audience`). News that's no longer true is left out: an
  * entry that's gone, an assignment that was taken back, a mention an edit
  * removed. A reply that mentions the reader is told once, as the mention,
- * and the same news queued twice is told once.
+ * and the same news queued twice is told once. An internal note, or a
+ * mention in one, is told only to a reader who reads notes
+ * (`requests:view-internal`): for anyone else it's left out, whatever
+ * queued it, so nobody at the company hears of a note.
  *
  * @param ctx - Service context.
  * @param about - Whose email, about which request.
@@ -421,6 +509,8 @@ export async function readRequestUpdate(
   if (!permissions.has('requests:view')) {
     return null;
   }
+  // Only the staff read internal notes: for anyone else a note, or a mention in one, is left out.
+  const readsNotes = permissions.has('requests:view-internal');
   const assigned = roles.some(({ role }) => role === 'assignee');
   const subscribed = roles.some(({ role }) => role === 'subscriber');
 
@@ -538,6 +628,9 @@ export async function readRequestUpdate(
     if (event === 'reply' && entry?.kind === 'comment' && entry.body !== null) {
       return { event, by, text: textOf(entry.body, entry.bodyFormat, entry.id) };
     }
+    if (event === 'note' && readsNotes && entry?.kind === 'note' && entry.body !== null) {
+      return { event, by, text: textOf(entry.body, entry.bodyFormat, entry.id) };
+    }
     if (
       event === 'status' &&
       entry?.kind === 'status' &&
@@ -567,6 +660,9 @@ export async function readRequestUpdate(
       if (entry?.kind === 'comment' && entry.body !== null) {
         return { event, by, where: 'reply', text: textOf(entry.body, entry.bodyFormat, entry.id) };
       }
+      if (readsNotes && entry?.kind === 'note' && entry.body !== null) {
+        return { event, by, where: 'note', text: textOf(entry.body, entry.bodyFormat, entry.id) };
+      }
     }
     if (event === 'subscribed' && subscribed) {
       return { event, by };
@@ -583,10 +679,12 @@ export async function readRequestUpdate(
     .forEach((piece) => {
       const key = `${piece.event}:${piece.entryId ?? ''}`;
       // The same news queued twice (a job that ran but couldn't be noted as done) is told once,
-      // and a reply that's told as a mention isn't told again as a reply.
+      // and a reply or note that's told as a mention isn't told again on its own.
       if (
         told.has(key) ||
-        (piece.event === 'reply' && piece.entryId !== null && mentionedIn.has(piece.entryId))
+        ((piece.event === 'reply' || piece.event === 'note') &&
+          piece.entryId !== null &&
+          mentionedIn.has(piece.entryId))
       ) {
         return;
       }

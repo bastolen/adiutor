@@ -37,6 +37,14 @@ export type RequestUpdateEmailItem =
       text: EmailText;
     }
   | {
+      /** Someone wrote an internal note: only ever in an email to the staff. */
+      event: 'note';
+      /** Who. */
+      by: string;
+      /** The note, with the people it mentions by name. */
+      text: EmailText;
+    }
+  | {
       /** Someone changed the status. */
       event: 'status';
       /** Who. */
@@ -57,8 +65,8 @@ export type RequestUpdateEmailItem =
       event: 'mentioned';
       /** Who. */
       by: string;
-      /** Where: in the request's description, or in a reply. */
-      where: 'description' | 'reply';
+      /** Where: in the request's description, a reply, or an internal note (for the staff). */
+      where: 'description' | 'reply' | 'note';
       /** The text that mentions them. */
       text: EmailText;
     }
@@ -210,11 +218,21 @@ function UpdateItem({
       </Section>
     );
   }
+  if (item.event === 'note') {
+    return (
+      <Section>
+        <EmailParagraph>{t.rich('note', who)}</EmailParagraph>
+        <WrittenText text={item.text} id={id} locale={locale} />
+        <EmailNote>{t('noteOnlyStaff')}</EmailNote>
+      </Section>
+    );
+  }
   if (item.event === 'mentioned') {
     return (
       <Section>
         <EmailParagraph>{t.rich('mentioned', { ...who, where: item.where })}</EmailParagraph>
         <WrittenText text={item.text} id={id} locale={locale} />
+        {item.where === 'note' && <EmailNote>{t('noteOnlyStaff')}</EmailNote>}
       </Section>
     );
   }
@@ -237,8 +255,9 @@ function UpdateItem({
 /**
  * Tells the reader what happened to a request they're on: its title and
  * number (a link to it), then each piece of news in the order it happened.
- * A reply and a text that mentions the reader are shown in full, formatted
- * as on the request's page (`EmailMarkdown`); a status change, an assignment
+ * A reply, an internal note (only ever in an email to the staff, marked as
+ * one) and a text that mentions the reader are shown in full, formatted as
+ * on the request's page (`EmailMarkdown`); a status change, an assignment
  * and a subscription in a sentence, with the statuses worded for the reader.
  * A button opens the request, and a note says replies to the email aren't
  * read.

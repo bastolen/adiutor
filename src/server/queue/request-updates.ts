@@ -11,12 +11,14 @@ import { defineQueuedKind } from './define';
 
 /**
  * What an email about a request can tell someone: someone else replied
- * (`reply`) or changed its status (`status`), or put them on the request:
- * assigned it to them (`assigned`), mentioned them in one of its texts
- * (`mentioned`) or subscribed them to it (`subscribed`).
+ * (`reply`), wrote an internal note (`note`, only ever for the staff) or
+ * changed its status (`status`), or put them on the request: assigned it to
+ * them (`assigned`), mentioned them in one of its texts (`mentioned`) or
+ * subscribed them to it (`subscribed`).
  */
 export const REQUEST_UPDATE_EVENTS = [
   'reply',
+  'note',
   'status',
   'assigned',
   'mentioned',
@@ -40,8 +42,9 @@ export const requestUpdateJob = defineQueuedKind({
     /** What happened. */
     event: z.enum(REQUEST_UPDATE_EVENTS),
     /**
-     * The entry of the request's history it's about: the reply, the status
-     * change, the assignment, or the reply that mentions them. `null` for a
+     * The entry of the request's history it's about: the reply, the note,
+     * the status change, the assignment, or the reply or note that mentions
+     * them. `null` for a
      * mention in the description, and for being subscribed.
      */
     entryId: z.uuid().nullable(),

@@ -7,7 +7,14 @@
 import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { membership, queuedJob, requestEntry, requestParticipant, user } from '@/db/schema';
+import {
+  membership,
+  queuedJob,
+  requestEntry,
+  requestMention,
+  requestParticipant,
+  user,
+} from '@/db/schema';
 import { writtenMentionMarker } from '@/lib/requests';
 
 import {
@@ -233,20 +240,45 @@ describe('who is told they were put on a request', () => {
     expect(await queuedFor({ client, watcher, support })).toEqual(['watcher:mentioned']);
   });
 
-  it('tells nobody about an internal note, also when it or an edit of it mentions someone', async () => {
+  it('tells the staff on the request about an internal note, never anyone at the company', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const support = await staffActor(db, 'support');
+    const manager = await staffActor(db, 'manager');
+    const finance = await staffActor(db, 'finance');
+    const admin = await staffActor(db, 'platform_admin');
+    const raised = await storeRequest(company.id);
+    await storeSubscribers(raised.id, [client.id, manager.id, finance.id]);
+    await db
+      .insert(requestParticipant)
+      .values({ requestId: raised.id, userId: admin.id, role: 'assignee' });
+    const toCasey = writtenMentionMarker('casey', mentionKey(company.id, client.id));
+    const toMorgan = writtenMentionMarker('morgan', mentionKey(company.id, manager.id));
+
+    await addNote(ctx, support, { request: raised.id, body: `Ask ${toMorgan}, not ${toCasey}.` });
+
+    // The assignee and the staff subscribers hear of it; the staff it mentions as a mention. The
+    // client it mentions, and the writer, hear nothing.
+    expect(await queuedFor({ client, manager, finance, admin, support })).toEqual([
+      'admin:note',
+      'finance:note',
+      'manager:mentioned',
+    ]);
+  });
+
+  it('tells the staff an edit of a note mentions newly, and still nobody at the company', async () => {
     const company = await createCompany(db);
     const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
     const support = await staffActor(db, 'support');
     const manager = await staffActor(db, 'manager');
     const raised = await storeRequest(company.id);
-    await storeSubscribers(raised.id, [client.id, manager.id]);
-    const toCasey = writtenMentionMarker('casey', mentionKey(company.id, client.id));
-    const toMorgan = writtenMentionMarker('morgan', mentionKey(company.id, manager.id));
-    await addNote(ctx, support, { request: raised.id, body: `Ask ${toMorgan} first.` });
+    await addNote(ctx, support, { request: raised.id, body: 'Ask around first.' });
     const [note] = await db
       .select({ id: requestEntry.id })
       .from(requestEntry)
       .where(eq(requestEntry.kind, 'note'));
+    const toCasey = writtenMentionMarker('casey', mentionKey(company.id, client.id));
+    const toMorgan = writtenMentionMarker('morgan', mentionKey(company.id, manager.id));
 
     await editReply(ctx, support, {
       request: raised.id,
@@ -255,7 +287,7 @@ describe('who is told they were put on a request', () => {
       edits: 0,
     });
 
-    expect(await queuedFor({ client, manager, support })).toEqual([]);
+    expect(await queuedFor({ client, manager, support })).toEqual(['manager:mentioned']);
   });
 
   it('tells someone another person subscribed, not someone who subscribed themselves', async () => {
@@ -594,5 +626,60 @@ describe('what one person’s email may show', () => {
     expect(
       await readRequestUpdate(ctx, { requestId: raised.id, userId: support.id }, queued),
     ).toBeNull();
+  });
+
+  it('shows a note and a reply of the same few minutes in one email to the staff', async () => {
+    await createStaffSettings(db);
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    const manager = await staffActor(db, 'manager', 'morgan@adiutor.test');
+    const raised = await storeRequest(company.id);
+    await storeSubscribers(raised.id, [client.id, manager.id]);
+    await addNote(ctx, support, { request: raised.id, body: 'The toner is empty.' });
+    await replyToRequest(ctx, support, { request: raised.id, body: 'We are on it.' });
+
+    const update = await readRequestUpdate(
+      ctx,
+      { requestId: raised.id, userId: manager.id },
+      await newsFor(manager.id),
+    );
+
+    expect(update?.items).toMatchObject([
+      { event: 'note', by: 'sam', text: { text: 'The toner is empty.' } },
+      { event: 'reply', by: 'sam', text: { text: 'We are on it.' } },
+    ]);
+    // The client only hears of the reply.
+    const forClient = await readRequestUpdate(
+      ctx,
+      { requestId: raised.id, userId: client.id },
+      await newsFor(client.id),
+    );
+    expect(forClient?.items.map(({ event }) => event)).toEqual(['reply']);
+  });
+
+  it('leaves a note out for anyone at the company, whatever queued it', async () => {
+    await createStaffSettings(db);
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const support = await staffActor(db, 'support');
+    const raised = await storeRequest(company.id);
+    await storeSubscribers(raised.id, [client.id]);
+    const note = await storeEntry(raised.id, { kind: 'note', body: 'Between us.' });
+    // A note that mentions them, so the mention would be told to anyone allowed to read it.
+    await db
+      .insert(requestMention)
+      .values({ requestId: raised.id, entryId: note.id, userId: client.id, side: 'company' });
+    // News about the note, as a mistake elsewhere might queue it for the client.
+    const news = ['note', 'mentioned'].map((event, index) => ({
+      jobId: `0000000${index}`,
+      event: event as QueuedRequestNews['event'],
+      entryId: note.id,
+      byUserId: support.id,
+    }));
+
+    expect(await readRequestUpdate(ctx, { requestId: raised.id, userId: client.id }, news)).toBe(
+      null,
+    );
   });
 });
