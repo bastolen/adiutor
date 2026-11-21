@@ -52,9 +52,12 @@ interface ModalProps {
   initialFocus?: () => void;
   /**
    * Takes the focus when the dialog closes, instead of what opened it: for
-   * when that isn't where it was any more.
+   * when that isn't where it was any more, or for what the dialog asked for
+   * to happen at that moment (so nothing takes the focus afterwards). It
+   * returns `false` when it has nothing to focus after all: what opened the
+   * dialog gets the focus back, as without it.
    */
-  finalFocus?: () => void;
+  finalFocus?: () => boolean | void;
   /** The dialog's content. */
   children: ReactNode;
 }
@@ -110,9 +113,8 @@ export default function Modal({
             }
           }}
           onCloseAutoFocus={(event) => {
-            if (finalFocus) {
+            if (finalFocus && finalFocus() !== false) {
               event.preventDefault();
-              finalFocus();
             } else if (opener.current?.isConnected) {
               event.preventDefault();
               opener.current.focus();
