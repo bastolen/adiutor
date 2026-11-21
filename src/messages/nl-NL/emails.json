@@ -263,6 +263,10 @@
       "mentioned": "{where, select, description {<strong>{name}</strong> heeft je genoemd in de beschrijving:} note {<strong>{name}</strong> heeft je genoemd in een interne notitie:} other {<strong>{name}</strong> heeft je genoemd in een reactie:}}",
       "subscribed": "<strong>{name}</strong> heeft je op dit verzoek geabonneerd.",
       "button": "Verzoek openen",
+      "answerQuestion": "Lost dit je verzoek op?",
+      "approve": "Goedkeuren",
+      "deny": "Afwijzen",
+      "answerNote": "Goedkeuren rondt het verzoek af. Afwijzen stuurt het terug naar de medewerkers, en daarna kun je laten weten wat er nog niet goed is. Deze knoppen werken alleen voor jou, en maar één keer.",
       "noReply": "Antwoorden op deze e-mail worden niet gelezen. Open het verzoek om te reageren."
     }
   }

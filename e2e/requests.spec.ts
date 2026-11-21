@@ -22,6 +22,7 @@ import { randomUUID } from 'node:crypto';
 
 import type { Page } from '@playwright/test';
 
+import { defined } from '../src/lib/defined';
 import {
   createCompany,
   findCompanyId,
@@ -1015,6 +1016,50 @@ test('the client denies a solution and says what’s still wrong, which goes bac
   await expect(detail(page, 'Status')).toHaveText('In progress');
   await expect(conversation(page)).toContainText('It still prints blank pages.');
   await expect(conversation(page)).toContainText('Didn’t approve the solution.');
+});
+
+test('the email’s Approve button answers on a click, and a mail scanner only gets a page with a button', async ({
+  page,
+  request: scanner,
+}) => {
+  const title = `Solution by email ${randomUUID().slice(0, 8)}`;
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title,
+    status: 'in_progress',
+  });
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  await page.getByRole('textbox', { name: 'Your reply' }).fill('Fixed: a new toner is in.');
+  await page.getByRole('button', { name: 'Send as solution' }).click();
+  await expect(toasts(page)).toContainText('Solution sent.');
+  await signOut(page);
+
+  const email = await waitForEmailAbout(REQUESTS_CLIENT.email, title);
+  expect(email.text).toContain('Does this solve your request?');
+  const approve = defined(
+    email.text.match(/https?:\/\/\S+\/answer\/[^\s/]+\/approve/)?.[0],
+    'the Approve link',
+  );
+
+  // A scanner fetches the link without a person's click: it gets a page with a button, and nothing changes.
+  const scanned = await scanner.get(approve);
+  expect(scanned.url()).toMatch(/\/answer\/[^/]+\?answer=approve$/);
+  expect(await scanned.text()).toContain('Approve the solution for');
+
+  // The client clicks it in their mail app: it answers straight away, without signing in.
+  await page.setContent(`<a href="${approve}">Approve</a>`);
+  await page.getByRole('link', { name: 'Approve' }).click();
+  await expect(page.getByRole('heading', { name: 'You approved the solution' })).toBeVisible();
+  // The link worked once: opening it again only says what it did.
+  await page.goto(approve.replace(/\/approve$/, ''));
+  await expect(page.getByRole('heading', { name: 'You approved the solution' })).toBeVisible();
+
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto(`/requests/${number}`);
+  await expect(detail(page, 'Status')).toHaveText('Done');
+  await expect(conversation(page)).toContainText('Approved the solution.');
 });
 
 test('turning emails about requests off stops them, and turning them on brings them back', async ({

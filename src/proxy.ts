@@ -26,8 +26,11 @@ import PATHNAME_HEADER from '@/lib/request/pathname-header';
  * balancers and monitors, and says only whether the app is up. `/api/jobs`
  * is the background jobs' tick, for a cron service: it checks its own secret
  * (`answerTickRequest`), since the proxy is never the security check.
+ * `/answer` holds the links in an email that answer a proposed solution
+ * (decision 0033): each works only with its secret token, for its person.
  */
 const PUBLIC_PATHS = [
+  '/answer',
   '/auth',
   '/invite',
   '/join',

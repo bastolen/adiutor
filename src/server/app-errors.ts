@@ -22,6 +22,7 @@ import {
   ERROR_PATH_MAX_LENGTH,
 } from '@/lib/input-rules';
 import { redactLogValue } from '@/lib/log-redaction';
+import { ANSWER_LINK_PATH } from '@/lib/requests';
 
 import type { ServiceContext } from './context';
 import { createReference } from './error-reference';
@@ -31,10 +32,16 @@ import { hitRateLimit, ipRateLimitKey, RATE_LIMITS } from './rate-limit';
 export const APP_ERROR_RETENTION_DAYS = 7;
 
 /**
- * Paths whose next segment is a secret token: invitations, invite links and
- * Better Auth's password reset links. The token is never stored or logged.
+ * Paths whose next segment is a secret token: invitations, invite links,
+ * the answer links of an email about a solution (decision 0033) and Better
+ * Auth's password reset links. The token is never stored or logged.
  */
-const SECRET_PATH_PREFIXES = ['/invite/', '/join/', '/api/auth/reset-password/'] as const;
+const SECRET_PATH_PREFIXES = [
+  '/invite/',
+  '/join/',
+  `${ANSWER_LINK_PATH}/`,
+  '/api/auth/reset-password/',
+] as const;
 
 /** An error to record. */
 export interface AppErrorReport {

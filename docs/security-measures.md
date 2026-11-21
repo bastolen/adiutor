@@ -64,7 +64,9 @@ invite-link claims (per IP address), verification emails (per user), starting to
 (10 an hour per staff member, `RATE_LIMITS.impersonationsPerUser`, since each start emails the
 user), sign-in link pages
 opened with a link that can't be used (20 per 15 minutes per IP address, so links can't be
-guessed by looking them up; past it, the page offers no way to continue), wrong secrets sent to
+guessed by looking them up; past it, the page offers no way to continue), answer links of an
+email about a solution that don't exist (20 per 15 minutes per IP address,
+`RATE_LIMITS.answerLinkMissesPerIp`, for the same reason), wrong secrets sent to
 the background jobs' endpoint (20 per 15 minutes per IP address, `RATE_LIMITS.jobTickMissesPerIp`;
 past it the endpoint answers 429, while the right secret still works), work on requests (per
 user and hour: 60 requests raised, 200 replies and notes, and 300 changes of a status, of
@@ -103,7 +105,8 @@ address and no visitor behind them, so they're never limited. Rows are deleted a
 days (the `retention` job, see [Background jobs](jobs.md)). `app_error` stores no database values (the message, cut
 to 500 characters, goes through `redactLogValue`, `src/lib/log-redaction.ts`), no query strings
 (they can hold search terms and sign-in tokens) and no secret tokens from paths (`/invite/…`,
-`/join/…` and Better Auth's `/api/auth/reset-password/…` are stored with `[token]`). The log line
+`/join/…`, `/answer/…` and Better Auth's `/api/auth/reset-password/…` are stored with
+`[token]`). The log line
 of each error holds only its reference, where it happened and the digest, always on one line: the
 error page's action refuses a path with a control character, and whatever is logged or stored has
 its control characters (line breaks among them) turned into spaces, so a request can't add a line
@@ -164,9 +167,19 @@ relative paths that pass: the redirect targets they read from the URL go through
 
 ## Tokens
 
-Invitation and invite-link tokens, and Better Auth's reset, welcome and magic links and
-emailed codes, are stored as SHA-256 hashes (sign-in links with the app's own hasher,
-`hashEmailLinkToken` in `src/lib/sign-in/tokens.ts`, so the page they open can look them up).
+Invitation and invite-link tokens, the answer links of an email about a solution, and Better
+Auth's reset, welcome and magic links and emailed codes, are stored as SHA-256 hashes (sign-in
+links with the app's own hasher, `hashEmailLinkToken` in `src/lib/sign-in/tokens.ts`, so the page
+they open can look them up).
+
+The answer links (`/answer/<token>/approve` and `/deny`, a public path; decision 0033) are the
+one kind of email link that changes something without signing in. Each answers one proposal, as
+the person the email went to, once, for 14 days, and only while that proposal still waits and
+the person may still answer it (an active account, a member with `requests:contribute`, an active
+company), all checked again when it's used, with the same service as the request's page. It
+answers on a `GET` only for a person's click (`Sec-Fetch-User: ?1`); a mail scanner's visit
+changes nothing and gets a page with a button. The link can't read the request, sign anyone in or
+do anything else, and its token is never logged or stored in recorded errors.
 
 Emails are sent after the response, so no answer waits for the mail server, whether or not the
 address has an account. What's left of the difference is Better Auth's own work before it answers

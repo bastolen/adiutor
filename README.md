@@ -17,8 +17,8 @@ consultants: the companies raise requests, and the staff work them through with 
 manages its own users, and the staff see every company.
 
 **Status:** early development. Accounts, companies, roles, invitations, sign-in security and
-requests, with staff assigned and people subscribed to them and emails about what happens to
-them, are built; approving the work comes next.
+requests, with staff assigned and people subscribed to them, emails about what happens to them
+and solutions the company approves, are built; attachments come next.
 
 ## Features
 
@@ -34,7 +34,9 @@ them, are built; approving the work comes next.
   subscribe to it, and whoever raises it, replies to it or is mentioned in it is subscribed. The
   people on a request get an email when someone replies or changes its status, and so does someone
   who is assigned to one, mentioned in one or subscribed by someone else: one email with
-  everything, the reply in full, which they can turn off per request or in their account. See
+  everything, the reply in full, which they can turn off per request or in their account. The
+  staff can send a reply as the solution: the company's Admins and Clients approve it, which
+  closes the request, or deny it, on the request or with a button in the email. See
   [Requests](docs/requests.md).
 - **Companies and staff.** Staff add companies and invite each company's first Admin. Users can
   belong to several companies, with a role in each (Admin, Client or Watcher), and staff have their

@@ -116,6 +116,26 @@
       "approved": "You approved the solution. The request is done.",
       "denied": "You didn’t approve the solution. The request is back with the staff."
     },
+    "answerLink": {
+      "title": "Your answer",
+      "askHeading": "{answer, select, approve {Approve the solution for {reference}?} deny {Deny the solution for {reference}?} other {Does the solution for {reference} solve your request?}}",
+      "askDescription": "{answer, select, approve {Approving closes the request.} deny {Denying sends the request back to the staff. You can then tell them what’s still wrong on the request’s page.} other {Approving closes the request. Denying sends it back to the staff.}}",
+      "approve": "Approve",
+      "deny": "Deny",
+      "usedHeading": "{answer, select, approve {You approved the solution} other {You didn’t approve the solution}}",
+      "usedDescription": "{answer, select, approve {{reference} is done. Thanks for letting the staff know.} other {{reference} is back with the staff. To tell them what’s still wrong, open the request.}}",
+      "expiredHeading": "This link has expired",
+      "expiredDescription": "You can still answer on the page of {reference}.",
+      "overtakenHeading": "This solution no longer waits for your answer",
+      "overtakenDescription": "{reference} changed since the email was sent: someone answered, or the staff took the solution back. Open the request to see where it stands.",
+      "unavailableHeading": "You can no longer answer here",
+      "unavailableDescription": "Your access to {reference} changed since the email was sent.",
+      "unknownHeading": "This link doesn’t work",
+      "unknownDescription": "Check that you opened the whole link from the email. You can also answer on the request’s page in Adiutor.",
+      "problemHeading": "This link can’t be used right now",
+      "openRequest": "Open request",
+      "goToAdiutor": "Go to Adiutor"
+    },
     "reply": {
       "sendAsSolution": "Send as solution",
       "solutionSent": "Solution sent. The request waits for the company’s approval.",

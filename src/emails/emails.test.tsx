@@ -413,6 +413,48 @@ describe('staff-made changes', () => {
     expectBasics(email, url);
   });
 
+  it('asks someone at the company to approve or deny a solution, with links of their own', async () => {
+    const url = `${appUrl}/requests/142`;
+    const email = await requestUpdateEmail('jane@adiutor.test', {
+      ...english,
+      reference: 'AD-142',
+      title: 'The printer is broken',
+      companyName: 'Adiutor Tests',
+      url,
+      role: 'subscriber',
+      audience: 'contributor',
+      items: [
+        {
+          event: 'reply',
+          by: 'Sam Support',
+          text: { text: 'The toner was empty.', format: 'plain', mentions: {} },
+        },
+        {
+          event: 'status',
+          by: 'Sam Support',
+          bySide: 'staff',
+          from: 'in_progress',
+          to: 'proposed',
+        },
+      ],
+      answerLinks: {
+        approve: `${appUrl}/answer/t0k3n/approve`,
+        deny: `${appUrl}/answer/t0k3n/deny`,
+      },
+    });
+
+    expect(email.text).toContain('Sam Support proposed a solution.');
+    expect(email.text).toContain('Does this solve your request?');
+    // The two answers take the place of "Open request"; the request stays the first link.
+    expect(email.html).toContain(`href="${appUrl}/answer/t0k3n/approve"`);
+    expect(email.html).toContain(`href="${appUrl}/answer/t0k3n/deny"`);
+    expect(email.text).toMatch(/Approve\s+https:\/\/\S+\/answer\/t0k3n\/approve/);
+    expect(email.text).toMatch(/Deny\s+https:\/\/\S+\/answer\/t0k3n\/deny/);
+    expect(email.text).not.toContain('Open request');
+    expect(email.text).toContain('These buttons work only for you, and only once.');
+    expectBasics(email, url);
+  });
+
   it('says a request’s email is for its assignee, and escapes what people wrote', async () => {
     const email = await requestUpdateEmail('jane@adiutor.test', {
       ...english,
@@ -968,6 +1010,39 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = 
     return { email, url };
   },
   /**
+   * The email about a solution, to someone who may answer it.
+   *
+   * @param locale - The language.
+   * @returns The email and its main link.
+   */
+  'a solution to answer': async (locale) => {
+    const url = `${appUrl}/requests/142`;
+    const email = await requestUpdateEmail('jane@adiutor.test', {
+      appUrl,
+      locale,
+      reference: 'AD-142',
+      title: 'Adiutor Tests',
+      companyName: 'Adiutor Tests',
+      url,
+      role: 'subscriber',
+      audience: 'contributor',
+      items: [
+        {
+          event: 'status',
+          by: 'Sam Support',
+          bySide: 'staff',
+          from: 'in_progress',
+          to: 'proposed',
+        },
+      ],
+      answerLinks: {
+        approve: `${appUrl}/answer/t0k3n/approve`,
+        deny: `${appUrl}/answer/t0k3n/deny`,
+      },
+    });
+    return { email, url };
+  },
+  /**
    * The "job keeps failing" email.
    *
    * @param locale - The language.
@@ -1012,7 +1087,7 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = 
  * about a request has the request's number and title, the same in every
  * language, so mail apps keep the emails about one request together.
  */
-const SUBJECTS_WITHOUT_WORDS: readonly string[] = ['news about a request'];
+const SUBJECTS_WITHOUT_WORDS: readonly string[] = ['news about a request', 'a solution to answer'];
 
 describe('every template in every language', () => {
   /** Every template in every language, as `[locale, template]`. */

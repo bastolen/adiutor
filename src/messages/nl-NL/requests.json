@@ -116,6 +116,26 @@
       "approved": "Je hebt de oplossing goedgekeurd. Het verzoek is afgerond.",
       "denied": "Je hebt de oplossing niet goedgekeurd. Het verzoek ligt weer bij de medewerkers."
     },
+    "answerLink": {
+      "title": "Je antwoord",
+      "askHeading": "{answer, select, approve {De oplossing voor {reference} goedkeuren?} deny {De oplossing voor {reference} afwijzen?} other {Lost de oplossing voor {reference} je verzoek op?}}",
+      "askDescription": "{answer, select, approve {Goedkeuren rondt het verzoek af.} deny {Afwijzen stuurt het verzoek terug naar de medewerkers. Daarna kun je op de pagina van het verzoek laten weten wat er nog niet goed is.} other {Goedkeuren rondt het verzoek af. Afwijzen stuurt het terug naar de medewerkers.}}",
+      "approve": "Goedkeuren",
+      "deny": "Afwijzen",
+      "usedHeading": "{answer, select, approve {Je hebt de oplossing goedgekeurd} other {Je hebt de oplossing niet goedgekeurd}}",
+      "usedDescription": "{answer, select, approve {{reference} is afgerond. Bedankt dat je het de medewerkers laat weten.} other {{reference} ligt weer bij de medewerkers. Open het verzoek om te laten weten wat er nog niet goed is.}}",
+      "expiredHeading": "Deze link is verlopen",
+      "expiredDescription": "Je kunt nog steeds antwoorden op de pagina van {reference}.",
+      "overtakenHeading": "Deze oplossing wacht niet meer op je antwoord",
+      "overtakenDescription": "{reference} is veranderd sinds de e-mail is verstuurd: iemand heeft geantwoord, of de medewerkers hebben de oplossing teruggenomen. Open het verzoek om te zien hoe het ervoor staat.",
+      "unavailableHeading": "Je kunt hier niet meer antwoorden",
+      "unavailableDescription": "Je toegang tot {reference} is veranderd sinds de e-mail is verstuurd.",
+      "unknownHeading": "Deze link werkt niet",
+      "unknownDescription": "Controleer of je de hele link uit de e-mail hebt geopend. Je kunt ook antwoorden op de pagina van het verzoek in Adiutor.",
+      "problemHeading": "Deze link kan nu niet worden gebruikt",
+      "openRequest": "Verzoek openen",
+      "goToAdiutor": "Naar Adiutor"
+    },
     "reply": {
       "sendAsSolution": "Versturen als oplossing",
       "solutionSent": "Oplossing verstuurd. Het verzoek wacht op goedkeuring van het bedrijf.",

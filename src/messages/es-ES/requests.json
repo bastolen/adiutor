@@ -116,6 +116,26 @@
       "approved": "Has aprobado la solución. La solicitud está resuelta.",
       "denied": "No has aprobado la solución. La solicitud vuelve al personal."
     },
+    "answerLink": {
+      "title": "Tu respuesta",
+      "askHeading": "{answer, select, approve {¿Aprobar la solución de {reference}?} deny {¿Rechazar la solución de {reference}?} other {¿La solución de {reference} resuelve tu solicitud?}}",
+      "askDescription": "{answer, select, approve {Si la apruebas, la solicitud se cierra.} deny {Si la rechazas, la solicitud vuelve al personal. Después puedes decirles qué sigue sin funcionar en la página de la solicitud.} other {Si la apruebas, la solicitud se cierra. Si la rechazas, vuelve al personal.}}",
+      "approve": "Aprobar",
+      "deny": "Rechazar",
+      "usedHeading": "{answer, select, approve {Has aprobado la solución} other {No has aprobado la solución}}",
+      "usedDescription": "{answer, select, approve {{reference} está resuelta. Gracias por avisar al personal.} other {{reference} vuelve al personal. Para decirles qué sigue sin funcionar, abre la solicitud.}}",
+      "expiredHeading": "Este enlace ha caducado",
+      "expiredDescription": "Todavía puedes responder en la página de {reference}.",
+      "overtakenHeading": "Esta solución ya no espera tu respuesta",
+      "overtakenDescription": "{reference} ha cambiado desde que se envió el correo: alguien ha respondido o el personal ha retirado la solución. Abre la solicitud para ver cómo está.",
+      "unavailableHeading": "Ya no puedes responder aquí",
+      "unavailableDescription": "Tu acceso a {reference} ha cambiado desde que se envió el correo.",
+      "unknownHeading": "Este enlace no funciona",
+      "unknownDescription": "Comprueba que has abierto el enlace completo del correo. También puedes responder en la página de la solicitud en Adiutor.",
+      "problemHeading": "Este enlace no se puede usar ahora",
+      "openRequest": "Abrir solicitud",
+      "goToAdiutor": "Ir a Adiutor"
+    },
     "reply": {
       "sendAsSolution": "Enviar como solución",
       "solutionSent": "Solución enviada. La solicitud espera la aprobación de la empresa.",

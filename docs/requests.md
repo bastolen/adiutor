@@ -106,6 +106,17 @@ The staff can say a request is fixed without closing it, for the company to conf
   field and puts the request back In progress (`answerSolution`, `statusAfterAnswer`). A reason
   is stored as their reply right before the change. A plain reply leaves the solution waiting:
   only the buttons answer it.
+- **From the email:** the email that tells an Admin or Client of the solution has **Approve** and
+  **Deny** buttons instead of "Open request". Each opens a link of their own
+  (`/answer/<token>/approve` or `/deny`, a public path) that answers without signing in, once,
+  only for them and that proposal, for 14 days (`createAnswerLink`, made by the email's job;
+  `answerByLink`, with the same rules as the page). A person's click answers straight away
+  (`Sec-Fetch-User: ?1`, `isPersonsClick`); any other visit, such as a mail scanner checking the
+  link, ends on the link's page (`/answer/<token>`), which asks for a button press first. The page
+  then says what happened, and a link that can't answer any more says why: used, expired,
+  overtaken (answered in the app, withdrawn, closed) or its person no longer able to answer.
+  Only the email that tells of the proposal has the buttons; a later email while it still waits
+  doesn't.
 - **In the history:** "Proposed a solution.", "Approved the solution.", "Didn't approve the
   solution." (`statusChangeKind`, which the emails use too).
 
@@ -290,7 +301,9 @@ written and sent is in [Email](email.md), and the jobs that send them in
   ("Waiting for your reply" for someone at the company who takes part, "Waiting for the company"
   for the staff). The subject is the number and the title ("AD-142: The printer is broken"), the
   same for every email about the request, so mail apps keep them together. Replies to the email
-  aren't read, and it says so.
+  aren't read, and it says so. An email that tells someone at the company of a solution they may
+  answer has Approve and Deny buttons of their own (see [Solutions](#solutions)), made when it's
+  sent (`RequestUpdate.answerable`).
 - **Only who is still on the request is told:** when the email is sent, someone whose account is
   deactivated, who can no longer read the request, or who is no longer on it (unsubscribed,
   unassigned) gets nothing, and their jobs are skipped. News that's no longer true is left out

@@ -97,6 +97,11 @@ export interface RequestUpdateEmailProps extends EmailBaseProps {
   audience: RequestAudience;
   /** What happened, in the order it happened. */
   items: readonly RequestUpdateEmailItem[];
+  /**
+   * The reader's links that approve or deny the solution the email tells of
+   * (decision 0033): only for someone at the company who may answer it.
+   */
+  answerLinks?: { approve: string; deny: string };
 }
 
 /**
@@ -245,8 +250,10 @@ function UpdateItem({
  * one) and a text that mentions the reader are shown in full, formatted as
  * on the request's page (`EmailMarkdown`); a status change, an assignment
  * and a subscription in a sentence, with the statuses worded for the reader.
- * A button opens the request, and a note says replies to the email aren't
- * read.
+ * A button opens the request; for someone at the company who may answer a
+ * solution the email tells of, Approve and Deny buttons (`answerLinks`, links
+ * that work once and only for them) take its place. A note says replies to
+ * the email aren't read.
  *
  * @param props - Template props.
  * @param props.appUrl - Public app URL.
@@ -257,6 +264,7 @@ function UpdateItem({
  * @param props.role - Why the reader gets the email.
  * @param props.audience - How to word the statuses.
  * @param props.items - What happened.
+ * @param props.answerLinks - The reader's links that answer the solution, if they may.
  * @param props.locale - The recipient's language.
  * @param props.logoSrc - Logo URL override.
  * @returns The email.
@@ -270,6 +278,7 @@ export default function RequestUpdateEmail({
   role,
   audience,
   items,
+  answerLinks = undefined,
   locale,
   logoSrc = undefined,
 }: RequestUpdateEmailProps) {
@@ -300,7 +309,18 @@ export default function RequestUpdateEmail({
           locale={locale}
         />
       ))}
-      <EmailButton href={url}>{t('button')}</EmailButton>
+      {answerLinks ? (
+        <Section>
+          <EmailParagraph>{t('answerQuestion')}</EmailParagraph>
+          <EmailButton href={answerLinks.approve}>{t('approve')}</EmailButton>
+          <EmailButton href={answerLinks.deny} variant="secondary">
+            {t('deny')}
+          </EmailButton>
+          <EmailNote>{t('answerNote')}</EmailNote>
+        </Section>
+      ) : (
+        <EmailButton href={url}>{t('button')}</EmailButton>
+      )}
       <EmailNote>{t('noReply')}</EmailNote>
     </EmailLayout>
   );

@@ -28,6 +28,7 @@ import {
   findUserId,
   storeAuditEvent,
   storeInvitation,
+  storeAnswerLink,
   storeInviteLink,
   storeRequest,
   storeSignInLink,
@@ -63,6 +64,7 @@ const PUBLIC_PATHS = [
   '/auth/reset-password?token=not-a-real-token',
   '/invite/not-a-real-token',
   '/join/not-a-real-token',
+  '/answer/not-a-real-token',
   '/auth/does-not-exist',
   '/auth/two-factor?methods=totp,otp',
   '/auth/email-link?token=not-a-real-token',
@@ -635,6 +637,20 @@ test.describe('in forced-colours mode', () => {
     test('an invite link’s email form, signed out', async ({ page }) => {
       await page.goto(inviteLinkPath);
       await expect(page.getByRole('button', { name: 'Continue' })).toBeVisible();
+      await expectAccessible(page);
+    });
+
+    test('an email’s answer link that asks for a button press, signed out', async ({ page }) => {
+      // A request of the test's own, waiting for the client's approval; the link isn't used.
+      const number = await storeRequest({
+        companySlug: COMPANY_SLUG,
+        raisedBy: REQUESTS_CLIENT.email,
+        title: 'A solution to answer by email',
+        status: 'proposed',
+      });
+      const path = await storeAnswerLink({ requestNumber: number, email: REQUESTS_CLIENT.email });
+      await page.goto(`${path}?answer=approve`);
+      await expect(page.getByRole('button', { name: 'Approve' })).toBeVisible();
       await expectAccessible(page);
     });
 

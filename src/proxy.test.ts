@@ -17,8 +17,10 @@ function signedOut(path: string) {
 }
 
 describe('isPublicPath', () => {
-  it('allows the sign-in, invitation, join and setup pages, the auth API and the health check', () => {
+  it('allows the sign-in, invitation, join, answer and setup pages, the auth API and the health check', () => {
     [
+      '/answer/abc',
+      '/answer/abc/approve',
       '/auth',
       '/auth/forgot-password',
       '/invite/abc',
@@ -39,6 +41,7 @@ describe('isPublicPath', () => {
       '/account',
       '/authors',
       '/setups',
+      '/answers',
       '/api/other',
       '/api/healthy',
       '/api/jobsite',

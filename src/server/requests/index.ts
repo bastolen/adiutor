@@ -38,6 +38,8 @@ export { default as raiseRequest } from './raise';
 export { default as replyToRequest } from './reply';
 export { default as changeRequestStatus } from './status';
 export { default as answerSolution } from './solutions';
+export { answerByLink, createAnswerLink, readAnswerLink } from './answer-links';
+export type { AnswerLinkView } from './answer-links';
 export { default as updateRequestDetails } from './details';
 export {
   changeAssignees,

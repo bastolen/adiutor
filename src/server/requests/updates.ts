@@ -37,6 +37,7 @@ import { visibleName } from '@/lib/display-name';
 import {
   formatRequestNumber,
   isRequestStatus,
+  mayAnswerSolution,
   requestAudience,
   type RequestAudience,
   type RequestParticipantRole,
@@ -51,6 +52,7 @@ import getRequestPrefix from '../people/request-prefix';
 import getStaffName from '../people/staff-name';
 import { queueJob, requestUpdateJob, type RequestUpdateEvent } from '../queue';
 import { loadPeopleOn } from './participants';
+import currentProposalEntryId from './proposals';
 
 /** A reply or a status change, as the change that made it queues it for the people on the request. */
 export interface RequestNews {
@@ -400,6 +402,13 @@ export interface RequestUpdate {
   };
   /** What happened, in the order it was queued. */
   items: RequestUpdateItem[];
+  /**
+   * The proposal the reader may answer from the email (Approve and Deny,
+   * decision 0033): only when the news includes the change that made the
+   * request wait for approval, the request still waits for that proposal,
+   * and the reader may answer it (`mayAnswerSolution`).
+   */
+  answerable?: { proposalEntryId: string };
   /** The jobs whose news isn't in the email, because what they were about is gone. */
   skipped: string[];
 }
@@ -441,6 +450,7 @@ export async function readRequestUpdate(
       description: request.description,
       descriptionFormat: request.descriptionFormat,
       companyId: request.companyId,
+      status: request.status,
       companyName: company.name,
       companyDeactivatedAt: company.deactivatedAt,
     })
@@ -701,6 +711,13 @@ export async function readRequestUpdate(
   if (items.length === 0) {
     return null;
   }
+  // The email answers a proposal it tells of, while the request still waits for that one.
+  const proposalEntryId = mayAnswerSolution(permissions, found.status)
+    ? await currentProposalEntryId(db, about.requestId)
+    : null;
+  const tellsProposal = news.some(
+    ({ event, entryId }) => event === 'status' && entryId !== null && entryId === proposalEntryId,
+  );
   return {
     recipient: { email: reader.email, locale: reader.locale ?? null },
     role: assigned ? 'assignee' : 'subscriber',
@@ -712,6 +729,7 @@ export async function readRequestUpdate(
       companyName: found.companyName,
     },
     items,
+    ...(proposalEntryId && tellsProposal && { answerable: { proposalEntryId } }),
     skipped,
   };
 }
