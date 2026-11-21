@@ -1,12 +1,15 @@
 /**
  * @file End-to-end tests for the staff page: renaming the staff, choosing the
- * prefix of request numbers, inviting staff by email and by invite link, changing staff roles with the
+ * prefix of request numbers, managing request types (and raising a request
+ * with one, until it's archived), inviting staff by email and by invite link, changing staff roles with the
  * last-Admin guard, a staff Admin stepping down themselves, and confirming
  * it's you before giving a staff role or a company's Admin role, coming back
  * to the card where you clicked.
  */
+import { randomUUID } from 'node:crypto';
+
 import { backdateMfaConfirmation, setDefaultLocale } from './support/db';
-import { COMPANY_SLUG, PLATFORM_ADMIN, STAFF_NAME } from './support/fixtures';
+import { COMPANY_SLUG, PLATFORM_ADMIN, REQUESTS_CLIENT, STAFF_NAME } from './support/fixtures';
 import {
   confirmWithAuthenticator,
   createAccountFromInvitation,
@@ -15,6 +18,7 @@ import {
   sendInvitation,
   setUpAuthenticator,
   signIn,
+  signOut,
   toasts,
   useOwnClientIp,
 } from './support/helpers';
@@ -86,6 +90,89 @@ test('an Admin chooses the prefix request numbers are shown with', async ({ page
   await page.getByRole('button', { name: 'Save prefix' }).click();
   await expect(toasts(page)).toContainText('Prefix saved.');
   await expect(prefix).toHaveValue('AD');
+});
+
+test('an Admin adds a request type, which a company raises requests with until it’s archived', async ({
+  page,
+}) => {
+  // A name of this run's own: types are never deleted, so a run that's retried adds another.
+  const run = randomUUID().slice(0, 6);
+  const added = `Label printers ${run}`;
+  const renamed = `Labels ${run}`;
+  const card = page.getByRole('region', { name: 'Request types' });
+  const types = card.getByRole('list', { name: 'Request types' }).getByRole('listitem');
+
+  await signIn(page, PLATFORM_ADMIN);
+  await page.goto('/admin/staff');
+  await card.getByRole('button', { name: 'Add type' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Add a request type' });
+  await dialog.getByRole('textbox', { name: 'Name' }).fill(added);
+  await dialog.getByRole('textbox', { name: 'What it’s for' }).fill('A label printer acts up.');
+  await dialog.getByRole('combobox', { name: 'Starting priority' }).click();
+  await page.getByRole('option', { name: 'High' }).click();
+  await dialog.getByRole('button', { name: 'Add type' }).click();
+  await expect(toasts(page)).toContainText('Type added.');
+  // At the end, with what it's for and its starting priority.
+  await expect(types.last()).toContainText(added);
+  await expect(types.last()).toContainText('A label printer acts up.');
+  await expect(types.last()).toContainText('High priority');
+
+  // A new name keeps the type; moving it swaps it with its neighbour, and back.
+  await card.getByRole('button', { name: `Edit ${added}` }).click();
+  const edit = page.getByRole('dialog', { name: `Edit ${added}` });
+  await edit.getByRole('textbox', { name: 'Name' }).fill(renamed);
+  await edit.getByRole('button', { name: 'Save type' }).click();
+  await expect(toasts(page)).toContainText('Type saved.');
+  await expect(types.last()).toContainText(renamed);
+  await card.getByRole('button', { name: `Move ${renamed} up` }).click();
+  await expect(types.last()).not.toContainText(renamed);
+  await expect(types.nth(-2)).toContainText(renamed);
+  await card.getByRole('button', { name: `Move ${renamed} down` }).click();
+  await expect(types.last()).toContainText(renamed);
+  // The last type can't go down: the button is off, and keeps focus.
+  await expect(card.getByRole('button', { name: `Move ${renamed} down` })).toBeFocused();
+  await expect(card.getByRole('button', { name: `Move ${renamed} down` })).toHaveAttribute(
+    'aria-disabled',
+    'true',
+  );
+  await signOut(page);
+
+  // Someone at a company raises a request with it, and sees what it's for.
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto('/requests/new');
+  await page.getByRole('textbox', { name: 'Title' }).fill(`The label printer ${run} jams`);
+  await page.getByRole('textbox', { name: 'Description' }).fill('Every third label.');
+  await page.getByRole('combobox', { name: 'Type' }).click();
+  await expect(page.getByRole('option', { name: renamed })).toContainText(
+    'A label printer acts up.',
+  );
+  await page.getByRole('option', { name: renamed }).click();
+  await page.getByRole('button', { name: 'Raise request' }).click();
+  await expect(toasts(page)).toContainText('Request raised.');
+  const requestUrl = page.url();
+  const details = page.getByRole('region', { name: 'Details' });
+  await expect(details).toContainText(renamed);
+  await signOut(page);
+
+  // Archived, it's no longer offered; the request keeps it.
+  await signIn(page, PLATFORM_ADMIN);
+  await page.goto('/admin/staff');
+  await card.getByRole('button', { name: `Archive ${renamed}` }).click();
+  const confirm = page.getByRole('alertdialog', { name: `Archive ${renamed}?` });
+  await confirm.getByRole('button', { name: 'Archive type' }).click();
+  await expect(toasts(page)).toContainText(`${renamed} archived.`);
+  await expect(types.last()).toContainText('Archived');
+  await expect(card.getByRole('button', { name: `Restore ${renamed}` })).toBeVisible();
+  await signOut(page);
+
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto('/requests/new');
+  await page.getByRole('combobox', { name: 'Type' }).click();
+  await expect(page.getByRole('option', { name: /^Bug/ })).toBeVisible();
+  await expect(page.getByRole('option', { name: renamed })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await page.goto(requestUrl);
+  await expect(details).toContainText(renamed);
 });
 
 test("an Admin changes Adiutor's default language, which visitors without a choice get", async ({
