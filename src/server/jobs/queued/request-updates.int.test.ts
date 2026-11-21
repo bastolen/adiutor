@@ -1,15 +1,24 @@
 /**
  * @file Integration tests for the emails about requests, against the test
  * database: everything queued for one person about one request goes out as
- * one email, in their language and worded for them; someone who is no longer
- * on the request gets none; and a mail problem leaves the news in the queue.
+ * one email, in their language and worded for them, with a link of their
+ * own that signs them in; someone who is no longer on the request gets none;
+ * and a mail problem leaves the news in the queue.
  */
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { queuedJob, request, requestCounter, requestParticipant, user } from '@/db/schema';
+import {
+  queuedJob,
+  request,
+  requestCounter,
+  requestParticipant,
+  requestSignInLink,
+  user,
+} from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { writtenMentionMarker } from '@/lib/requests';
+import { hashToken } from '@/lib/sign-in/tokens';
 
 import {
   createCompany,
@@ -128,8 +137,24 @@ describe('the emails about requests', () => {
     expect(toWatcher?.text).toContain(
       'casey changed the status from Waiting for your company to In progress.',
     );
-    // The first link is the request, and nothing names an address or a person's ID.
-    expect(toWatcher?.text.match(/https?:\/\/\S+/)?.[0]).toBe('https://adiutor.test/requests/142');
+    // The first link is the reader's own link that signs them in and opens the request (decision
+    // 0035), and nothing names an address or a person's ID.
+    const watcherLink = new URL(toWatcher?.text.match(/https?:\/\/\S+/)?.[0] ?? '');
+    expect(`${watcherLink.origin}${watcherLink.pathname}`).toBe(
+      'https://adiutor.test/api/auth/request-link/sign-in',
+    );
+    const token = watcherLink.searchParams.get('token') ?? '';
+    expect(
+      await db
+        .select({ userId: requestSignInLink.userId, requestId: requestSignInLink.requestId })
+        .from(requestSignInLink)
+        .where(eq(requestSignInLink.tokenHash, hashToken(token))),
+    ).toEqual([{ userId: watcher.id, requestId: raised.id }]);
+    // Each reader gets a link of their own, and only its hash is stored.
+    expect(toStaff?.text).not.toContain(token);
+    expect(
+      await db.select().from(requestSignInLink).where(eq(requestSignInLink.tokenHash, token)),
+    ).toEqual([]);
     [toStaff, toWatcher].forEach((email) => {
       expect(email?.html).not.toContain('casey@adiutor.test');
       expect(email?.html).not.toContain(client.id);

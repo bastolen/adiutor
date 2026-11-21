@@ -34,8 +34,8 @@ them, are built; approving the work comes next.
   subscribe to it, and whoever raises it, replies to it or is mentioned in it is subscribed. The
   people on a request get an email when someone replies or changes its status, and so does someone
   who is assigned to one, mentioned in one or subscribed by someone else: one email with
-  everything, the reply in full, which they can turn off per request or in their account. See
-  [Requests](docs/requests.md).
+  everything, the reply in full, which they can turn off per request or in their account. Its
+  links sign the reader in, so one click opens the request. See [Requests](docs/requests.md).
 - **Companies and staff.** Staff add companies and invite each company's first Admin. Users can
   belong to several companies, with a role in each (Admin, Client or Watcher), and staff have their
   own roles (Admin, Manager, Finance and Support). See

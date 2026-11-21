@@ -263,7 +263,8 @@
       "mentioned": "{where, select, description {<strong>{name}</strong> heeft je genoemd in de beschrijving:} note {<strong>{name}</strong> heeft je genoemd in een interne notitie:} other {<strong>{name}</strong> heeft je genoemd in een reactie:}}",
       "subscribed": "<strong>{name}</strong> heeft je op dit verzoek geabonneerd.",
       "button": "Verzoek openen",
-      "noReply": "Antwoorden op deze e-mail worden niet gelezen. Open het verzoek om te reageren."
+      "noReply": "Antwoorden op deze e-mail worden niet gelezen. Open het verzoek om te reageren.",
+      "signInNote": "{days, plural, one {Met de links in deze e-mail log je # dag lang in bij Adiutor, dus stuur hem niet door.} other {Met de links in deze e-mail log je # dagen lang in bij Adiutor, dus stuur hem niet door.}}"
     }
   }
 }

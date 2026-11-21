@@ -311,7 +311,8 @@ describe('staff-made changes', () => {
   });
 
   it('tells someone on a request what happened to it, with the reply in full', async () => {
-    const url = `${appUrl}/requests/142`;
+    // The reader's own link, which signs them in (decision 0035).
+    const url = `${appUrl}/api/auth/request-link/sign-in?token=adiutor-tests-token`;
     const email = await requestUpdateEmail('jane@adiutor.test', {
       ...english,
       reference: 'AD-142',
@@ -375,6 +376,10 @@ describe('staff-made changes', () => {
     expect(email.html).toContain(`href="${appUrl}/account#request-emails"`);
     expect(email.text).toContain(`your account ${appUrl}/account#request-emails`);
     expect(email.text).toContain('Replies to this email aren’t read.');
+    // Its links sign the reader in, so it says not to forward it.
+    expect(email.text).toContain(
+      'The links in this email sign you in to Adiutor for 14 days, so don’t forward it.',
+    );
     // An image someone wrote is a link, never loaded: the logo is the email's only image.
     expect(email.html.match(/<img /g)).toHaveLength(1);
     // The request comes before any link someone wrote in a reply.

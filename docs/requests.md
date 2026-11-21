@@ -267,6 +267,11 @@ written and sent is in [Email](email.md), and the jobs that send them in
   for the staff). The subject is the number and the title ("AD-142: The printer is broken"), the
   same for every email about the request, so mail apps keep them together. Replies to the email
   aren't read, and it says so.
+- **Its links sign the reader in:** the request's number and the button are the reader's own link,
+  made as the email is sent (`createRequestLink`), which signs them in and opens the request for
+  14 days, without the step-up page ([decision 0035](decisions/0035-sign-in-links-in-request-emails.md);
+  see [Links in emails about requests](authentication.md#links-in-emails-about-requests)). The
+  email says so, and not to forward it.
 - **Only who is still on the request is told:** when the email is sent, someone whose account is
   deactivated, who can no longer read the request, or who is no longer on it (unsubscribed,
   unassigned) gets nothing, and their jobs are skipped. News that's no longer true is left out

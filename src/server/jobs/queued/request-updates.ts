@@ -3,13 +3,16 @@
  * email for everything queued for one person about one request, in their
  * language. What the email may show is read when it's sent
  * (`readRequestUpdate`), so someone who is no longer on the request or can
- * no longer read it gets nothing, and their jobs are skipped. A mail problem
- * throws, so the batch is tried again later with whatever was queued for it
- * meanwhile.
+ * no longer read it gets nothing, and their jobs are skipped. Its links sign
+ * the reader in and open the request (`createRequestLink`, decision 0035),
+ * with a link made for each email as it's sent. A mail problem throws, so the
+ * batch is tried again later with whatever was queued for it meanwhile (and
+ * a new link: the old one was never sent, and expires).
  */
 import { requestUpdateEmail } from '@/emails/request-update';
-import { requestPath } from '@/lib/requests';
+import { requestLinkPath } from '@/lib/sign-in/request-link';
 
+import { createRequestLink } from '../../auth/request-links';
 import { REQUEST_UPDATES_GROUP, requestUpdateJob } from '../../queue';
 import recipientLocale from '../../recipient-locale';
 import { readRequestUpdate } from '../../requests';
@@ -44,9 +47,13 @@ export const requestUpdatesBatch = defineJobBatch({
           ),
         )
       : null;
-    if (update === null) {
+    if (first === undefined || update === null) {
       return { skipped: jobs.map(({ id }) => id) };
     }
+    const linkToken = await createRequestLink(ctx.db, {
+      userId: first.userId,
+      requestId: first.requestId,
+    });
     await ctx.sendEmail(
       await requestUpdateEmail(update.recipient.email, {
         appUrl: ctx.baseUrl,
@@ -54,7 +61,7 @@ export const requestUpdatesBatch = defineJobBatch({
         reference: update.request.reference,
         title: update.request.title,
         companyName: update.request.companyName,
-        url: `${ctx.baseUrl}${requestPath(update.request.number)}`,
+        url: `${ctx.baseUrl}${requestLinkPath(linkToken)}`,
         role: update.role,
         audience: update.audience,
         items: update.items,

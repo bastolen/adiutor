@@ -263,7 +263,8 @@
       "mentioned": "{where, select, description {<strong>{name}</strong> te ha mencionado en la descripción:} note {<strong>{name}</strong> te ha mencionado en una nota interna:} other {<strong>{name}</strong> te ha mencionado en una respuesta:}}",
       "subscribed": "<strong>{name}</strong> te ha suscrito a esta solicitud.",
       "button": "Abrir solicitud",
-      "noReply": "Nadie lee las respuestas a este correo. Para responder, abre la solicitud."
+      "noReply": "Nadie lee las respuestas a este correo. Para responder, abre la solicitud.",
+      "signInNote": "{days, plural, one {Los enlaces de este correo inician tu sesión en Adiutor durante # día, así que no lo reenvíes.} other {Los enlaces de este correo inician tu sesión en Adiutor durante # días, así que no lo reenvíes.}}"
     }
   }
 }

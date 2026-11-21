@@ -50,6 +50,7 @@ import {
   SUPPORT_STAFF,
 } from './support/fixtures';
 import {
+  clickLinkInEmail,
   createAccountFromInvitation,
   freshAddress,
   markdownEditor,
@@ -888,10 +889,9 @@ test('a reply and the status it sets reach the other side’s inbox as one email
   // Whoever wrote it isn't told about it.
   expect(await emailsAbout(SUPPORT_STAFF.email, title)).toHaveLength(0);
 
-  // The email's link opens the request, for the one it was sent to.
+  // The email's link signs in the one it was sent to and opens the request (decision 0035).
   await signOut(page);
-  await signIn(page, REQUESTS_CLIENT);
-  await page.goto(linkIn(email));
+  await clickLinkInEmail(page, linkIn(email));
   await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
 
   // Their answer goes to the staff member, who replied and so follows it too.
