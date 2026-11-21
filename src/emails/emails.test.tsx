@@ -333,9 +333,33 @@ describe('staff-made changes', () => {
         { event: 'status', by: 'Sam Support', from: 'in_progress', to: 'waiting' },
         { event: 'status', by: 'Casey Client', from: 'waiting', to: 'done' },
         { event: 'status', by: 'Casey Client', from: 'done', to: 'open' },
+        { event: 'assigned', by: 'Morgan Manager' },
+        { event: 'subscribed', by: 'Anna Admin' },
+        {
+          event: 'mentioned',
+          by: 'Casey Client',
+          where: 'description',
+          text: { text: 'It prints blank pages.', format: 'plain', mentions: {} },
+        },
+        {
+          event: 'mentioned',
+          by: 'Sam Support',
+          where: 'reply',
+          text: {
+            text: 'Ask [@](mention:019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b).',
+            format: 'markdown',
+            mentions: { '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b': 'Jane Tester' },
+          },
+        },
       ],
     });
 
+    // What put the reader on the request, each in a sentence of its own.
+    expect(email.text).toContain('Morgan Manager assigned this request to you.');
+    expect(email.text).toContain('Anna Admin subscribed you to this request.');
+    expect(email.text).toContain('Casey Client mentioned you in the description:');
+    expect(email.text).toContain('Sam Support mentioned you in a reply:');
+    expect(email.text).toContain('Ask @Jane Tester.');
     // The number and the title, the same for every email about the request.
     expect(email.subject).toBe('AD-142: The printer is broken');
     expect(email.text).toContain('Sam Support replied:');
@@ -891,6 +915,14 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = 
           text: { text: 'https://adiutor.test/manual', format: 'markdown', mentions: {} },
         },
         { event: 'status', by: 'Sam Support', from: 'open', to: 'waiting' },
+        { event: 'assigned', by: 'Sam Support' },
+        { event: 'subscribed', by: 'Sam Support' },
+        {
+          event: 'mentioned',
+          by: 'Sam Support',
+          where: 'description',
+          text: { text: 'Adiutor Tests', format: 'plain', mentions: {} },
+        },
       ],
     });
     return { email, url };

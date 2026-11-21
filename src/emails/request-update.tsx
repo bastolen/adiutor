@@ -1,7 +1,8 @@
 /**
  * @file Email telling someone on a request what happened to it: who replied,
- * with the reply, and who changed its status. Several pieces of news about
- * one request are one email.
+ * with the reply, who changed its status, and what put them on it (assigned
+ * to them, a text that mentions them, someone who subscribed them). Several
+ * pieces of news about one request are one email.
  */
 import type { ReactNode } from 'react';
 import { Link, Section } from 'react-email';
@@ -12,6 +13,7 @@ import EmailMarkdown, { type EmailText } from '@/components/email/email-markdown
 import { EmailHeading, EmailNote, EmailParagraph } from '@/components/email/email-text';
 import { colors } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
+import type { Locale } from '@/lib/i18n/locales';
 import translator from '@/lib/i18n/translator';
 import {
   isClosedStatus,
@@ -24,12 +26,12 @@ import {
 import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
 import renderEmail from './render';
 
-/** One thing the email tells its reader. */
+/** One thing the email tells its reader. Each names who did it, as the request's page names them. */
 export type RequestUpdateEmailItem =
   | {
       /** Someone replied. */
       event: 'reply';
-      /** Who, by the name the request's page gives them. */
+      /** Who. */
       by: string;
       /** The reply, with the people it mentions by name. */
       text: EmailText;
@@ -37,12 +39,34 @@ export type RequestUpdateEmailItem =
   | {
       /** Someone changed the status. */
       event: 'status';
-      /** Who, by the name the request's page gives them. */
+      /** Who. */
       by: string;
       /** The status it had. */
       from: RequestStatus;
       /** The status it got. */
       to: RequestStatus;
+    }
+  | {
+      /** Someone assigned the request to the reader. */
+      event: 'assigned';
+      /** Who. */
+      by: string;
+    }
+  | {
+      /** Someone mentioned the reader. */
+      event: 'mentioned';
+      /** Who. */
+      by: string;
+      /** Where: in the request's description, or in a reply. */
+      where: 'description' | 'reply';
+      /** The text that mentions them. */
+      text: EmailText;
+    }
+  | {
+      /** Someone subscribed the reader to the request. */
+      event: 'subscribed';
+      /** Who. */
+      by: string;
     };
 
 /**
@@ -108,12 +132,94 @@ function changeOf(from: RequestStatus, to: RequestStatus): string {
 }
 
 /**
+ * A text someone wrote, set apart from the email's own words by a line on
+ * its left, formatted as on the request's page (`EmailMarkdown`).
+ *
+ * @param props - Component props.
+ * @param props.text - The text.
+ * @param props.id - A name no other text in the email has.
+ * @param props.locale - The email's language.
+ * @returns The text.
+ */
+function WrittenText({ text, id, locale }: { text: EmailText; id: string; locale: Locale }) {
+  return (
+    <Section
+      style={{
+        borderLeft: `3px solid ${colors.border}`,
+        margin: '0 0 20px',
+        padding: '0 0 0 16px',
+      }}
+    >
+      <EmailMarkdown value={text} id={id} locale={locale} />
+    </Section>
+  );
+}
+
+/**
+ * One piece of news: a sentence that says who did what, and for a reply or
+ * a mention the text itself.
+ *
+ * @param props - Component props.
+ * @param props.item - The news.
+ * @param props.id - A name no other piece of news in the email has, for its text.
+ * @param props.audience - How to word the request's statuses for the reader.
+ * @param props.locale - The email's language.
+ * @returns The news.
+ */
+function UpdateItem({
+  item,
+  id,
+  audience,
+  locale,
+}: {
+  item: RequestUpdateEmailItem;
+  id: string;
+  audience: RequestAudience;
+  locale: Locale;
+}) {
+  const t = translator(locale, 'emails.requestUpdate');
+  const tRequests = translator(locale, 'requests');
+  const who = { name: item.by, strong: strongTag };
+  if (item.event === 'reply') {
+    return (
+      <Section>
+        <EmailParagraph>{t.rich('reply', who)}</EmailParagraph>
+        <WrittenText text={item.text} id={id} locale={locale} />
+      </Section>
+    );
+  }
+  if (item.event === 'mentioned') {
+    return (
+      <Section>
+        <EmailParagraph>{t.rich('mentioned', { ...who, where: item.where })}</EmailParagraph>
+        <WrittenText text={item.text} id={id} locale={locale} />
+      </Section>
+    );
+  }
+  if (item.event === 'status') {
+    return (
+      <EmailParagraph>
+        {t.rich('status', {
+          ...who,
+          change: changeOf(item.from, item.to),
+          // The statuses in the reader's words.
+          from: tRequests('status', { status: item.from, audience }),
+          to: tRequests('status', { status: item.to, audience }),
+        })}
+      </EmailParagraph>
+    );
+  }
+  return <EmailParagraph>{t.rich(item.event, who)}</EmailParagraph>;
+}
+
+/**
  * Tells the reader what happened to a request they're on: its title and
  * number (a link to it), then each piece of news in the order it happened.
- * A reply is shown in full, formatted as on the request's page
- * (`EmailMarkdown`); a status change in a sentence, with the statuses worded
- * for the reader. A button opens the request, and a note says replies to
- * the email aren't read.
+ * A reply and a text that mentions the reader are shown in full, formatted
+ * as on the request's page (`EmailMarkdown`); a status change, an assignment
+ * and a subscription in a sentence, with the statuses worded for the reader.
+ * A button opens the request, and a note says replies to the email aren't
+ * read.
  *
  * @param props - Template props.
  * @param props.appUrl - Public app URL.
@@ -141,15 +247,7 @@ export default function RequestUpdateEmail({
   logoSrc = undefined,
 }: RequestUpdateEmailProps) {
   const t = translator(locale, 'emails.requestUpdate');
-  const tRequests = translator(locale, 'requests');
   const [first] = items;
-  /**
-   * A status in the reader's words.
-   *
-   * @param status - The status.
-   * @returns Its name.
-   */
-  const statusName = (status: RequestStatus) => tRequests('status', { status, audience });
   return (
     <EmailLayout
       preview={first ? t('preview', { event: first.event, name: first.by }) : title}
@@ -162,34 +260,16 @@ export default function RequestUpdateEmail({
       <EmailNote>
         {t.rich('where', { reference, company: companyName, link: requestLinkTag(url) })}
       </EmailNote>
-      {items.map((item, index) =>
-        item.event === 'reply' ? (
+      {items.map((item, index) => (
+        <UpdateItem
           // eslint-disable-next-line react/no-array-index-key -- the news is a fixed list, rendered once
-          <Section key={index}>
-            <EmailParagraph>{t.rich('reply', { name: item.by, strong: strongTag })}</EmailParagraph>
-            <Section
-              style={{
-                borderLeft: `3px solid ${colors.border}`,
-                margin: '0 0 20px',
-                padding: '0 0 0 16px',
-              }}
-            >
-              <EmailMarkdown value={item.text} id={`text-${index}`} locale={locale} />
-            </Section>
-          </Section>
-        ) : (
-          // eslint-disable-next-line react/no-array-index-key -- the news is a fixed list, rendered once
-          <EmailParagraph key={index}>
-            {t.rich('status', {
-              change: changeOf(item.from, item.to),
-              name: item.by,
-              from: statusName(item.from),
-              to: statusName(item.to),
-              strong: strongTag,
-            })}
-          </EmailParagraph>
-        ),
-      )}
+          key={index}
+          item={item}
+          id={`text-${index}`}
+          audience={audience}
+          locale={locale}
+        />
+      ))}
       <EmailButton href={url}>{t('button')}</EmailButton>
       <EmailNote>{t('noReply')}</EmailNote>
     </EmailLayout>
@@ -225,6 +305,7 @@ RequestUpdateEmail.PreviewProps = {
       },
     },
     { event: 'status', by: 'Sam Doe', from: 'in_progress', to: 'waiting' },
+    { event: 'assigned', by: 'Alex Doe' },
   ],
 } satisfies RequestUpdateEmailProps;
 

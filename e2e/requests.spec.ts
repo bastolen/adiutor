@@ -707,6 +707,10 @@ test('the staff assign a request, find it as theirs, and the company sees who wo
   await expect(conversation(page)).toContainText(
     `Assigned ${PLATFORM_MANAGER.name} to this request.`,
   );
+  // The colleague hears of it by email; taking a request yourself emails nobody.
+  const assignedEmail = await waitForEmailAbout(PLATFORM_MANAGER.email, title);
+  expect(assignedEmail.text).toContain(`${SUPPORT_STAFF.name} assigned this request to you.`);
+  expect(await emailsAbout(SUPPORT_STAFF.email, title)).toHaveLength(0);
 
   // The list's assignee filter finds it as theirs, and the dashboard leads there too.
   await page.goto('/requests');

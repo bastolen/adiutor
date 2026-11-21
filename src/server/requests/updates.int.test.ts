@@ -17,10 +17,13 @@ import {
   staffActor,
 } from '../../../tests/integration/helpers';
 import { changeAssignees } from './assignees';
+import { editReply, editRequestDescription } from './edits';
 import mentionKey from './mention-key';
+import addNote from './notes';
+import raiseRequest from './raise';
 import replyToRequest from './reply';
 import changeRequestStatus from './status';
-import { unsubscribe } from './subscribers';
+import { changeSubscribers, subscribe, unsubscribe } from './subscribers';
 import { ctx, db, storeEntry, storeRequest } from './test-helpers';
 import { type QueuedRequestNews, readRequestUpdate } from './updates';
 
@@ -68,8 +71,10 @@ async function newsFor(userId: string): Promise<QueuedRequestNews[]> {
     .from(queuedJob)
     .where(eq(queuedJob.kind, 'request-update'));
   return jobs.flatMap(({ id, payload }) => {
-    const news = payload as { userId: string; event: 'reply' | 'status'; entryId: string };
-    return news.userId === userId ? [{ jobId: id, event: news.event, entryId: news.entryId }] : [];
+    const news = payload as { userId: string } & Omit<QueuedRequestNews, 'jobId'>;
+    return news.userId === userId
+      ? [{ jobId: id, event: news.event, entryId: news.entryId, byUserId: news.byUserId }]
+      : [];
   });
 }
 
@@ -137,7 +142,8 @@ describe('who is told', () => {
       body: `Which one, ${writtenMentionMarker('casey', mentionKey(company.id, client.id))}?`,
     });
 
-    expect(await queuedFor({ client, support })).toEqual(['client:reply']);
+    // Told once, as the mention: the reply is what mentions them.
+    expect(await queuedFor({ client, support })).toEqual(['client:mentioned']);
   });
 
   it('queues nothing when nobody else is on the request', async () => {
@@ -169,6 +175,108 @@ describe('who is told', () => {
   });
 });
 
+describe('who is told they were put on a request', () => {
+  it('tells a staff member a colleague assigned it to, not one who took it themselves', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const manager = await staffActor(db, 'manager');
+    const raised = await storeRequest(company.id);
+
+    await changeAssignees(ctx, support, {
+      request: raised.id,
+      add: [support.id, manager.id],
+      remove: [],
+    });
+    // Being taken off it is no news.
+    await changeAssignees(ctx, support, { request: raised.id, add: [], remove: [manager.id] });
+
+    expect(await queuedFor({ support, manager })).toEqual(['manager:assigned']);
+  });
+
+  it('tells the people a new request’s description mentions, and nobody else', async () => {
+    const company = await createCompany(db);
+    const admin = await memberActor(db, company.id, 'admin', 'anna@adiutor.test');
+    const watcher = await memberActor(db, company.id, 'watcher', 'wim@adiutor.test');
+    const support = await staffActor(db, 'support');
+
+    await raiseRequest(ctx, admin, {
+      companyId: company.id,
+      title: 'The printer is broken',
+      description: `${writtenMentionMarker('wim', mentionKey(company.id, watcher.id))} saw it first.`,
+      type: 'bug',
+    });
+
+    // A new request emails nobody: not the staff, and not whoever raised it.
+    expect(await queuedFor({ admin, watcher, support })).toEqual(['watcher:mentioned']);
+  });
+
+  it('tells someone an edit mentions newly, not someone the text mentioned already', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const watcher = await memberActor(db, company.id, 'watcher', 'wim@adiutor.test');
+    const support = await staffActor(db, 'support');
+    const raised = await storeRequest(company.id);
+    const toCasey = writtenMentionMarker('casey', mentionKey(company.id, client.id));
+    const toWim = writtenMentionMarker('wim', mentionKey(company.id, watcher.id));
+    await replyToRequest(ctx, support, { request: raised.id, body: `Which one, ${toCasey}?` });
+    const [reply] = await db.select({ id: requestEntry.id }).from(requestEntry);
+    await db.delete(queuedJob);
+
+    await editReply(ctx, support, {
+      request: raised.id,
+      entry: reply?.id ?? '',
+      text: `Which one, ${toCasey} or ${toWim}?`,
+      edits: 0,
+    });
+
+    // An edit is no news to the people on the request: only the mention it adds is.
+    expect(await queuedFor({ client, watcher, support })).toEqual(['watcher:mentioned']);
+  });
+
+  it('tells nobody about an internal note, also when it or an edit of it mentions someone', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const support = await staffActor(db, 'support');
+    const manager = await staffActor(db, 'manager');
+    const raised = await storeRequest(company.id);
+    await storeSubscribers(raised.id, [client.id, manager.id]);
+    const toCasey = writtenMentionMarker('casey', mentionKey(company.id, client.id));
+    const toMorgan = writtenMentionMarker('morgan', mentionKey(company.id, manager.id));
+    await addNote(ctx, support, { request: raised.id, body: `Ask ${toMorgan} first.` });
+    const [note] = await db
+      .select({ id: requestEntry.id })
+      .from(requestEntry)
+      .where(eq(requestEntry.kind, 'note'));
+
+    await editReply(ctx, support, {
+      request: raised.id,
+      entry: note?.id ?? '',
+      text: `Ask ${toMorgan} first, then ${toCasey}.`,
+      edits: 0,
+    });
+
+    expect(await queuedFor({ client, manager, support })).toEqual([]);
+  });
+
+  it('tells someone another person subscribed, not someone who subscribed themselves', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client');
+    const watcher = await memberActor(db, company.id, 'watcher');
+    const support = await staffActor(db, 'support');
+    const raised = await storeRequest(company.id);
+    await subscribe(ctx, watcher, { request: raised.id });
+
+    await changeSubscribers(ctx, support, {
+      request: raised.id,
+      // The watcher follows it already, so nothing changes for them.
+      add: [client.id, watcher.id, support.id].map((id) => mentionKey(company.id, id)),
+      remove: [],
+    });
+
+    expect(await queuedFor({ client, watcher, support })).toEqual(['client:subscribed']);
+  });
+});
+
 describe('what one person’s email may show', () => {
   it('tells what happened in order, with names, the reply and its mentions', async () => {
     await createStaffSettings(db);
@@ -177,10 +285,12 @@ describe('what one person’s email may show', () => {
     const support = await staffActor(db, 'support', 'sam@adiutor.test');
     const raised = await storeRequest(company.id, { title: 'The printer is broken' });
     await storeSubscribers(raised.id, [watcher.id, support.id]);
-    const toWim = writtenMentionMarker('wim', mentionKey(company.id, watcher.id));
+    // The reply mentions a colleague: the reader gets it as a reply, with that colleague's name.
+    const colleague = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const toCasey = writtenMentionMarker('casey', mentionKey(company.id, colleague.id));
     await replyToRequest(ctx, support, {
       request: raised.id,
-      body: `Which one? ${toWim} knows.`,
+      body: `Which one? ${toCasey} knows.`,
       status: 'waiting',
     });
 
@@ -209,13 +319,13 @@ describe('what one person’s email may show', () => {
     // The reply as it's stored, with who its marker names: by name, as the page shows them.
     const text = reply?.event === 'reply' ? reply.text : undefined;
     expect(text?.format).toBe('markdown');
-    expect(Object.values(text?.mentions ?? {})).toEqual(['wim']);
+    expect(Object.values(text?.mentions ?? {})).toEqual(['casey']);
     expect(text?.text).toContain(`(mention:${Object.keys(text?.mentions ?? {})[0]})`);
     // Names only: no address, and no ID of a person.
     const shown = JSON.stringify(update?.items);
     expect(shown).not.toContain('@adiutor.test');
     expect(shown).not.toContain(support.id);
-    expect(shown).not.toContain(watcher.id);
+    expect(shown).not.toContain(colleague.id);
   });
 
   it('says why they get it and words it for them: an assignee on the staff', async () => {
@@ -246,8 +356,8 @@ describe('what one person’s email may show', () => {
     const byCompany = await storeEntry(raised.id, { authorSide: 'company', body: 'From us.' });
 
     const update = await readRequestUpdate(ctx, { requestId: raised.id, userId: watcher.id }, [
-      { jobId: 'job-1', event: 'reply', entryId: byStaff.id },
-      { jobId: 'job-2', event: 'reply', entryId: byCompany.id },
+      { jobId: 'job-1', event: 'reply', entryId: byStaff.id, byUserId: null },
+      { jobId: 'job-2', event: 'reply', entryId: byCompany.id, byUserId: null },
     ]);
 
     expect(update?.items.map(({ by }) => by)).toEqual([
@@ -296,12 +406,12 @@ describe('what one person’s email may show', () => {
     await db.delete(requestEntry).where(eq(requestEntry.id, gone.id));
 
     const update = await readRequestUpdate(ctx, { requestId: raised.id, userId: watcher.id }, [
-      { jobId: 'job-1', event: 'reply', entryId: kept.id },
-      { jobId: 'job-2', event: 'reply', entryId: gone.id },
+      { jobId: 'job-1', event: 'reply', entryId: kept.id, byUserId: null },
+      { jobId: 'job-2', event: 'reply', entryId: gone.id, byUserId: null },
       // The same news twice, as a job that ran but couldn't be noted as done leaves it.
-      { jobId: 'job-3', event: 'reply', entryId: kept.id },
+      { jobId: 'job-3', event: 'reply', entryId: kept.id, byUserId: null },
       // News that doesn't fit its entry: a reply is no status change.
-      { jobId: 'job-4', event: 'status', entryId: kept.id },
+      { jobId: 'job-4', event: 'status', entryId: kept.id, byUserId: null },
     ]);
 
     expect(update?.items).toHaveLength(1);
@@ -319,14 +429,14 @@ describe('what one person’s email may show', () => {
     // An entry of another request isn't this request's news.
     expect(
       await readRequestUpdate(ctx, { requestId: raised.id, userId: watcher.id }, [
-        { jobId: 'job-1', event: 'reply', entryId: elsewhere.id },
+        { jobId: 'job-1', event: 'reply', entryId: elsewhere.id, byUserId: null },
       ]),
     ).toBeNull();
     expect(
       await readRequestUpdate(
         ctx,
         { requestId: '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b', userId: watcher.id },
-        [{ jobId: 'job-1', event: 'reply', entryId: elsewhere.id }],
+        [{ jobId: 'job-1', event: 'reply', entryId: elsewhere.id, byUserId: null }],
       ),
     ).toBeNull();
   });
@@ -351,5 +461,119 @@ describe('what one person’s email may show', () => {
     );
 
     expect(update?.role).toBe('assignee');
+  });
+
+  it('tells a reply that mentions the reader once, as the mention', async () => {
+    await createStaffSettings(db);
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    const raised = await storeRequest(company.id);
+    await storeSubscribers(raised.id, [client.id]);
+    await replyToRequest(ctx, support, {
+      request: raised.id,
+      body: `Which one, ${writtenMentionMarker('casey', mentionKey(company.id, client.id))}?`,
+    });
+    const [reply] = await db.select({ id: requestEntry.id }).from(requestEntry);
+    const queued = await newsFor(client.id);
+
+    const update = await readRequestUpdate(ctx, { requestId: raised.id, userId: client.id }, [
+      ...queued,
+      // The reply itself, as if it had been queued for them too.
+      { jobId: 'zzz', event: 'reply', entryId: reply?.id ?? '', byUserId: null },
+    ]);
+
+    expect(update?.items).toHaveLength(1);
+    expect(update?.items[0]).toMatchObject({ event: 'mentioned', by: 'sam', where: 'reply' });
+    expect(update?.skipped).toEqual([]);
+  });
+
+  it('shows the description to someone it mentions, until an edit takes the mention out', async () => {
+    await createStaffSettings(db);
+    const company = await createCompany(db);
+    const admin = await memberActor(db, company.id, 'admin', 'anna@adiutor.test');
+    const watcher = await memberActor(db, company.id, 'watcher', 'wim@adiutor.test');
+    const raised = await raiseRequest(ctx, admin, {
+      companyId: company.id,
+      title: 'The printer is broken',
+      description: `${writtenMentionMarker('wim', mentionKey(company.id, watcher.id))} saw it first.`,
+      type: 'bug',
+    });
+    const queued = await newsFor(watcher.id);
+
+    const update = await readRequestUpdate(
+      ctx,
+      { requestId: raised.id, userId: watcher.id },
+      queued,
+    );
+
+    const [item] = update?.items ?? [];
+    expect(item).toMatchObject({ event: 'mentioned', by: 'anna', where: 'description' });
+    const text = item?.event === 'mentioned' ? item.text : undefined;
+    expect(text?.text).toContain('saw it first.');
+    expect(Object.values(text?.mentions ?? {})).toEqual(['wim']);
+
+    await editRequestDescription(ctx, admin, {
+      request: raised.id,
+      text: 'Someone saw it first.',
+      edits: 0,
+    });
+
+    // No longer true, and the only news they had: no email.
+    expect(
+      await readRequestUpdate(ctx, { requestId: raised.id, userId: watcher.id }, queued),
+    ).toBeNull();
+  });
+
+  it('says who assigned it to them, unless it was taken back since', async () => {
+    await createStaffSettings(db);
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    const manager = await staffActor(db, 'manager', 'mo@adiutor.test');
+    const raised = await storeRequest(company.id);
+    await changeAssignees(ctx, support, { request: raised.id, add: [manager.id], remove: [] });
+    const queued = await newsFor(manager.id);
+    /**
+     * Reads the manager's email.
+     *
+     * @returns What it may show.
+     */
+    const read = () => readRequestUpdate(ctx, { requestId: raised.id, userId: manager.id }, queued);
+
+    expect(await read()).toMatchObject({
+      role: 'assignee',
+      items: [{ event: 'assigned', by: 'sam' }],
+    });
+
+    await changeAssignees(ctx, support, { request: raised.id, add: [], remove: [manager.id] });
+
+    expect(await read()).toBeNull();
+  });
+
+  it('says who subscribed them, by the name the request gives that person', async () => {
+    await createStaffSettings(db);
+    const company = await createCompany(db);
+    const admin = await memberActor(db, company.id, 'admin', 'anna@adiutor.test');
+    const watcher = await memberActor(db, company.id, 'watcher', 'wim@adiutor.test');
+    const raised = await storeRequest(company.id);
+    await changeSubscribers(ctx, admin, {
+      request: raised.id,
+      add: [mentionKey(company.id, watcher.id)],
+      remove: [],
+    });
+    const queued = await newsFor(watcher.id);
+
+    const update = await readRequestUpdate(
+      ctx,
+      { requestId: raised.id, userId: watcher.id },
+      queued,
+    );
+
+    expect(update).toMatchObject({
+      role: 'subscriber',
+      items: [{ event: 'subscribed', by: 'anna' }],
+    });
+    // Never the ID of whoever did it.
+    expect(JSON.stringify(update?.items)).not.toContain(admin.id);
   });
 });

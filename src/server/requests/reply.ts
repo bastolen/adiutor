@@ -93,7 +93,7 @@ export default async function replyToRequest(
     // Whoever replies follows the request from then on, and so do the people the reply mentions.
     await subscribeAutomatically(tx, locked.id, [actor.id]);
     // The people the reply mentions, once the reply they belong to is there.
-    await storeMentions(tx, actor, {
+    const mentioned = await storeMentions(tx, actor, {
       companyId: locked.companyId,
       requestId: locked.id,
       entryId: reply.id,
@@ -110,16 +110,21 @@ export default async function replyToRequest(
         .update(request)
         .set({ lastActivityAt: CHANGE_MOMENT })
         .where(eq(request.id, locked.id));
-      await tellPeopleOnRequest(tx, told, [{ event: 'reply', entryId: reply.id }]);
+      await tellPeopleOnRequest(tx, told, [{ event: 'reply', entryId: reply.id }], mentioned);
       return { status };
     }
     // After the reply, so the history reads: the reply, then what it did to the status.
     const changed = await recordStatusChange(tx, locked, status, actor, side);
     // The people on the request hear of both, in one email.
-    await tellPeopleOnRequest(tx, told, [
-      { event: 'reply', entryId: reply.id },
-      { event: 'status', entryId: changed },
-    ]);
+    await tellPeopleOnRequest(
+      tx,
+      told,
+      [
+        { event: 'reply', entryId: reply.id },
+        { event: 'status', entryId: changed },
+      ],
+      mentioned,
+    );
     return { status };
   });
 }

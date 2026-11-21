@@ -20,8 +20,9 @@ How it works is in [Requests](../requests.md#emails). The choices behind it:
 
 - **The people on a request are told, never whoever did it,** and one place decides who
   (`tellPeopleOnRequest`).
-- **A reply and a status change are news.** A new request emails nobody, and neither does a
-  changed title, type or priority.
+- **A reply and a status change are news for everyone on the request; being put on it is news
+  for the one it's about:** assigned, mentioned, or subscribed by someone else. A new request
+  emails nobody, and neither does a changed title, type or priority.
 - **One email per person and request per tick,** from a job per person and piece of news with a
   shared batch key: the batches' first use.
 - **Queued with the change, read when sent.** The job holds IDs. Who still gets the email, the

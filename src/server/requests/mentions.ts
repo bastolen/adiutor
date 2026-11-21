@@ -251,6 +251,7 @@ export async function listMentionable(
  *   it mentions are subscribed, never someone at the company.
  * @param before - The user IDs of the people the text mentioned before it was edited; nobody
  *   for a new text.
+ * @returns The user IDs of the people the text mentions now.
  */
 export async function storeMentions(
   tx: DatabaseTransaction,
@@ -263,11 +264,11 @@ export async function storeMentions(
     staffOnly?: boolean;
   },
   before: readonly string[] = [],
-): Promise<void> {
+): Promise<string[]> {
   const { companyId, requestId, entryId, written } = text;
   const keys = writtenMentionKeys(written);
   if (keys.length === 0) {
-    return;
+    return [];
   }
   const byKey = new Map(
     (await mentionable(tx, actor, { companyId, requestId })).map((person) => [
@@ -277,7 +278,7 @@ export async function storeMentions(
   );
   const mentioned = keys.flatMap((key) => byKey.get(key) ?? []).slice(0, MAX_MENTIONS_PER_TEXT);
   if (mentioned.length === 0) {
-    return;
+    return [];
   }
   const rows = await tx
     .insert(requestMention)
@@ -302,4 +303,5 @@ export async function storeMentions(
   } else {
     await tx.update(requestEntry).set({ body: stored }).where(eq(requestEntry.id, entryId));
   }
+  return mentioned.map(({ id }) => id);
 }

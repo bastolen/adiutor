@@ -235,19 +235,26 @@ it's built this way is in [decision 0031](decisions/0031-emails-about-requests.m
 written and sent is in [Email](email.md), and the jobs that send them in
 [Background jobs](jobs.md#queued-jobs).
 
-- **What is told:** a reply, and a change of status (also the one a reply brings, and done,
-  cancelled and reopened). A new request emails nobody: it shows in the list and on the dashboard.
-  A changed title, type or priority, and an edited text, email nobody either.
-- **Who is told** (`tellPeopleOnRequest` in `src/server/requests/updates.ts`, the one place that
-  decides it): everyone on the request, its assignees and its subscribers (`loadSubscribers`),
-  except whoever did it. A job per person and piece of news (`request-update`) is queued in the
+- **What is told:** a reply, a change of status (also the one a reply brings, and done, cancelled
+  and reopened), and being put on the request: assigned to it, mentioned in one of its texts, or
+  subscribed by someone else. A new request emails nobody but the people its description
+  mentions: it shows in the list and on the dashboard. A changed title, type or priority, an
+  edited text (unless the edit adds a mention) and being taken off a request email nobody.
+- **Who is told** (`src/server/requests/updates.ts`, the one place that decides it): a reply and
+  a status change go to everyone on the request, its assignees and its subscribers
+  (`tellPeopleOnRequest`, from `loadPeopleOn`), except whoever did it. Being put on a request goes
+  to the one it's about, unless they did it themselves: a staff member a colleague assigned
+  (`tellAssigned`), someone a description or a reply mentions, also when an edit adds the mention
+  (`tellMentioned`; a new reply that mentions someone is told to them once, as the mention), and
+  someone another person subscribed (`tellSubscribed`). A job per person and piece of news (`request-update`) is queued in the
   transaction of the change, so the news exists exactly when the change was saved. Its payload
   holds IDs only.
 - **One email per person and request per tick:** the jobs of one person about one request share a
   batch key, so a reply and the status change that came with it, or three replies in five
   minutes, are one email, in the order they happened.
 - **What the email shows** is read when it's sent (`readRequestUpdate`): the request's title, its
-  number as a link, its company, who did what, and each reply in full, formatted as on the page
+  number as a link, its company, who did what, and each reply (and a text that mentions the
+  reader) in full, formatted as on the page
   (`EmailMarkdown`; see [Text people write](security-measures.md#text-people-write)). People are
   named as the request's page names them, their own name or their side's, never by an address or
   an ID, and the people a reply mentions by name. The statuses are worded for the reader
@@ -257,12 +264,13 @@ written and sent is in [Email](email.md), and the jobs that send them in
   aren't read, and it says so.
 - **Only who is still on the request is told:** when the email is sent, someone whose account is
   deactivated, who can no longer read the request, or who is no longer on it (unsubscribed,
-  unassigned) gets nothing, and their jobs are skipped. The footer says why the reader gets the
+  unassigned) gets nothing, and their jobs are skipped. News that's no longer true is left out
+  too: an assignment that was taken back, a mention an edit removed. The footer says why the reader gets the
   email (the request is assigned to them, or they're subscribed) and that Unsubscribe on the
   request's page stops it.
 - **In the reader's language** (`recipientLocale`), like every email.
-- **Nothing meant for the staff reaches a company:** only replies and status changes are news,
-  which everyone on a request sees; a change of priority is never queued.
+- **Nothing meant for the staff reaches a company:** replies, status changes and assignments are
+  what everyone on a request sees anyway; a change of priority is never queued.
 
 ## Numbers
 

@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import { queuedJob, request, requestCounter, requestParticipant, user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
+import { writtenMentionMarker } from '@/lib/requests';
 
 import {
   createCompany,
@@ -19,7 +20,14 @@ import {
   setupTestContext,
   staffActor,
 } from '../../../../tests/integration/helpers';
-import { replyToRequest, unsubscribe } from '../../requests';
+import {
+  changeAssignees,
+  changeSubscribers,
+  listMentionable,
+  listSubscribable,
+  replyToRequest,
+  unsubscribe,
+} from '../../requests';
 
 const { ctx, db, sent } = setupTestContext();
 
@@ -48,13 +56,15 @@ async function storeWaitingRequest(companyId: string, subscribers: readonly { id
       .returning({ id: request.id, number: request.number }),
     'the stored request',
   );
-  await db.insert(requestParticipant).values(
-    subscribers.map(({ id }) => ({
-      requestId: stored.id,
-      userId: id,
-      role: 'subscriber' as const,
-    })),
-  );
+  if (subscribers.length > 0) {
+    await db.insert(requestParticipant).values(
+      subscribers.map(({ id }) => ({
+        requestId: stored.id,
+        userId: id,
+        role: 'subscriber' as const,
+      })),
+    );
+  }
   return stored;
 }
 
@@ -157,5 +167,50 @@ describe('the emails about requests', () => {
     const text = sent[0]?.text ?? '';
     expect(text.indexOf('First.')).toBeGreaterThan(-1);
     expect(text.indexOf('Second.')).toBeGreaterThan(text.indexOf('First.'));
+  });
+
+  it('tell someone what put them on a request: assigned, mentioned, subscribed', async () => {
+    await createStaffSettings(db);
+    const company = await createCompany(db);
+    const admin = await memberActor(db, company.id, 'admin', 'anna@adiutor.test');
+    await memberActor(db, company.id, 'watcher', 'wim@adiutor.test');
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    const manager = await staffActor(db, 'manager', 'mo@adiutor.test');
+    const raised = await storeWaitingRequest(company.id, []);
+
+    // The Admin subscribes a colleague, the staff assign a colleague and mention the Admin.
+    await changeSubscribers(ctx, admin, {
+      request: raised.id,
+      add: (await listSubscribable(ctx, admin, raised.id))
+        .filter(({ name }) => name === 'wim')
+        .map(({ key }) => key),
+      remove: [],
+    });
+    await changeAssignees(ctx, support, { request: raised.id, add: [manager.id], remove: [] });
+    const [toAnna] = (await listMentionable(ctx, support, { request: raised.id })).filter(
+      ({ name }) => name === 'anna',
+    );
+    await replyToRequest(ctx, support, {
+      request: raised.id,
+      body: `Is it this one, ${writtenMentionMarker('anna', toAnna?.key ?? '')}?`,
+    });
+    await sendQueuedEmails(ctx);
+
+    /**
+     * The text of the email to someone.
+     *
+     * @param to - Their address.
+     * @returns The email's plain text.
+     */
+    const textTo = (to: string) => sent.find((email) => email.to === to)?.text ?? '';
+    expect(textTo('wim@adiutor.test')).toContain('anna subscribed you to this request.');
+    // They follow it from then on, so the reply reaches them too, in the same email.
+    expect(textTo('wim@adiutor.test')).toContain('sam replied:');
+    expect(textTo('mo@adiutor.test')).toContain('sam assigned this request to you.');
+    expect(textTo('mo@adiutor.test')).toContain('this request is assigned to you');
+    expect(textTo('anna@adiutor.test')).toContain('sam mentioned you in a reply:');
+    expect(textTo('anna@adiutor.test')).toContain('Is it this one, @anna?');
+    expect(textTo('anna@adiutor.test')).not.toContain('sam replied:');
+    expect(sent).toHaveLength(3);
   });
 });

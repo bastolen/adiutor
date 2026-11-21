@@ -32,7 +32,8 @@ them, are built; approving the work comes next.
   reopen; Watchers follow; the staff work on every company's requests and assign each to one or
   more of themselves, which everyone on the request sees. Everyone who reads a request can
   subscribe to it, and whoever raises it, replies to it or is mentioned in it is subscribed. The
-  people on a request get an email when someone replies or changes its status: one email with
+  people on a request get an email when someone replies or changes its status, and so does someone
+  who is assigned to one, mentioned in one or subscribed by someone else: one email with
   everything, the reply in full. See
   [Requests](docs/requests.md).
 - **Companies and staff.** Staff add companies and invite each company's first Admin. Users can

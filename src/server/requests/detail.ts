@@ -38,7 +38,7 @@ import getRequestPrefix from '../people/request-prefix';
 import getStaffName from '../people/staff-name';
 import { getRequestAccess, requestAudienceIn, type RequestPerson, requestPerson } from './access';
 import { editableText, type TextMention } from './edits';
-import { loadSubscribers } from './subscribers';
+import { loadSubscribers } from './participants';
 import { requestTypeNames } from './types';
 
 /** The account an `assignee` entry is about, joined next to its author's. */
