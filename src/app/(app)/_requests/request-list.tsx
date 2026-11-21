@@ -1,5 +1,6 @@
 /**
- * @file A list of requests with its filters, search, sorting and pages: the
+ * @file A list of requests with its filters (`request-filters.tsx`), search,
+ * sorting and pages: the
  * requests the viewer may see across companies (`/requests`), or one
  * company's on its own page. Its text comes from `requests.list`. The
  * Company filter names a company by its URL name too when another has the
@@ -13,31 +14,14 @@ import type { ReactNode } from 'react';
 import Button from '@/components/ui/button';
 import Card from '@/components/ui/card';
 import EmptyState from '@/components/ui/empty-state';
-import FilterMenu from '@/components/ui/filter-menu';
 import { paginationFooter } from '@/components/ui/pagination';
 import RelativeTime from '@/components/ui/relative-time';
 import RowLink from '@/components/ui/row-link';
-import SearchForm from '@/components/ui/search-form';
-import SegmentedNav from '@/components/ui/segmented-nav';
-import SortMenu from '@/components/ui/sort-menu';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
-import { companyChoiceLabels } from '@/lib/company-choices';
 import { formatList } from '@/lib/format';
-import {
-  DEFAULT_REQUEST_STATUS_FILTER,
-  formatRequestNumber,
-  isRequestPriority,
-  isRequestStatusFilter,
-  mayBeAssigned,
-  REQUEST_PRIORITIES,
-  REQUEST_STATUS_FILTERS,
-  requestPath,
-  type RequestStatusFilter,
-} from '@/lib/requests';
-import { type SearchParams, searchParam } from '@/lib/search-params';
+import { formatRequestNumber, requestPath, type RequestStatusFilter } from '@/lib/requests';
+import type { SearchParams } from '@/lib/search-params';
 import { createPageUrl } from '@/lib/tables/page-url';
-import { parseTableState, type TableDefinition } from '@/lib/tables/table-state';
-import { REQUESTS_TABLE, STAFF_REQUESTS_TABLE } from '@/lib/tables/tables';
 import type { Actor } from '@/server/actor';
 import appContext from '@/server/app-context';
 import { getStaffPermissionsInCompanies } from '@/server/authz';
@@ -51,6 +35,7 @@ import {
 } from '@/server/requests';
 
 import { PriorityBadge, ReopenedBadge, StatusBadge } from './request-badges';
+import { RequestFilterBar, parseRequestFilters } from './request-filters';
 import { PeopleAvatars, personName } from './request-person';
 
 /**
@@ -164,110 +149,44 @@ export default async function RequestList({
   renderHeader = undefined,
 }: RequestListProps) {
   const t = await getTranslations('requests.list');
-  const tRequests = await getTranslations('requests');
-  const tCommon = await getTranslations('common');
-  // The staff see priorities; everyone else gets none from the service either.
-  const internal = getStaffPermissionsInCompanies(actor).has('requests:view-internal');
-  // One table, which the staff can also sort by priority.
-  const definition: TableDefinition = internal ? STAFF_REQUESTS_TABLE : REQUESTS_TABLE;
-  const search = searchParam(searchParams.q)?.trim() ?? '';
-  const statusParam = searchParam(searchParams.status);
-  const status = isRequestStatusFilter(statusParam) ? statusParam : DEFAULT_REQUEST_STATUS_FILTER;
-  const typeParam = searchParam(searchParams.type);
-  const priorityParam = searchParam(searchParams.priority);
-  const priority = internal && isRequestPriority(priorityParam) ? priorityParam : undefined;
-  const requested = parseTableState(definition, searchParams);
-  const assigneeParam = searchParam(searchParams.assignee);
-  // "Me" only for those who can be assigned; one staff member for the others.
-  const canBeAssigned = mayBeAssigned(getStaffPermissionsInCompanies(actor));
-
   const [companies, settings, assignable, types, locale] = await Promise.all([
     listRequestCompanies(appContext, actor),
     getRequestSettings(appContext),
-    internal ? listAssignableStaff(appContext, actor) : [],
+    getStaffPermissionsInCompanies(actor).has('requests:view-internal')
+      ? listAssignableStaff(appContext, actor)
+      : [],
     listRequestTypes(appContext, actor),
     getLocale(),
   ]);
-  // A type to filter by only counts when it's one the menu offers: every type, archived ones too.
-  const type = types.find(({ key }) => key === typeParam)?.key;
-  // An assignee to filter by only counts when it's one the menu offers.
-  const assignee =
-    internal &&
-    (assigneeParam === 'none' ||
-      (assigneeParam === 'me' && canBeAssigned) ||
-      assignable.some(({ id }) => id === assigneeParam))
-      ? assigneeParam
-      : undefined;
-  // A company to filter by only counts when it's one the viewer sees.
-  const companyParam = company ? undefined : searchParam(searchParams.company);
-  const chosenCompany = companies.find(({ slug }) => slug === companyParam)?.slug;
+  const filters = parseRequestFilters({
+    searchParams,
+    actor,
+    company,
+    companies,
+    types,
+    assignable,
+  });
+  const { internal, search, status, requested, showsCompany } = filters;
   const requests = await listRequests(appContext, actor, {
     search,
     status,
-    company: company ?? chosenCompany,
-    type,
-    priority,
-    assignee,
+    company: company ?? filters.company,
+    type: filters.type,
+    priority: filters.priority,
+    assignee: filters.assignee,
     ...requested,
-    // The table checked the sort against its own sorts; this only tells TypeScript which it is.
-    sort:
-      requested.sort === 'raised' || requested.sort === 'priority' ? requested.sort : 'activity',
   });
 
-  // In the order the search form submits them, so links and searches agree.
-  const filters = {
-    status: status === DEFAULT_REQUEST_STATUS_FILTER ? undefined : status,
-    company: chosenCompany,
-    type,
-    priority,
-    assignee,
-  };
-  const table = createPageUrl(
-    path,
-    { ...filters, q: search },
-    await getTranslations('tables'),
-  ).table(definition, { ...requested, page: requests.page });
-  /**
-   * The options of a filter menu: "all" first (no value for the parameter),
-   * then one per item, each linking to the list with that value, and the
-   * chosen one marked as the current one.
-   *
-   * @param param - The query parameter the menu filters by.
-   * @param allLabel - The text of the option that removes the filter.
-   * @param chosen - The value the list is filtered by now, if any.
-   * @param items - The values to choose from, with their labels.
-   * @returns The menu's options.
-   */
-  const filterOptions = (
-    param: 'company' | 'type' | 'priority' | 'assignee',
-    allLabel: string,
-    chosen: string | undefined,
-    items: { value: string; label: string }[],
-  ) => [
-    {
-      value: '',
-      label: allLabel,
-      href: table.withParams({ [param]: undefined }),
-      current: !chosen,
-    },
-    ...items.map(({ value, label }) => ({
-      value,
-      label,
-      href: table.withParams({ [param]: value }),
-      current: value === chosen,
-    })),
-  ];
+  const table = createPageUrl(path, filters.pageParams, await getTranslations('tables')).table(
+    filters.definition,
+    { ...requested, page: requests.page },
+  );
   const canRaise = company
     ? companies.some(({ slug, canRaise: may }) => slug === company && may)
     : companies.some(({ canRaise: may }) => may);
-  // The company is named in each row only where the list can hold several.
-  const showsCompany = !company && companies.length > 1;
   const newButton = canRaise && <NewRequestButton company={company} label={t('new')} />;
   // What an empty list says, and whether it invites a request: only where one would show up.
-  const emptyKind = emptyKindOf(
-    status,
-    Boolean(search || chosenCompany || type || priority || assignee),
-  );
+  const emptyKind = emptyKindOf(status, filters.narrowed);
   const names = { company: '', staff: settings.staffName };
   /**
    * The avatars of who a request is assigned to, each with its name on
@@ -306,96 +225,15 @@ export default async function RequestList({
   return (
     <>
       {renderHeader?.({ staffName: settings.staffName, canRaise })}
-      <div className="flex flex-col gap-4">
-        <SegmentedNav
-          label={t('statusLabel')}
-          items={REQUEST_STATUS_FILTERS.map((value) => ({
-            href: table.withParams({
-              status: value === DEFAULT_REQUEST_STATUS_FILTER ? undefined : value,
-            }),
-            label: t('statusOption', { status: value }),
-            current: value === status,
-          }))}
-        />
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <SearchForm
-            id="request-search"
-            label={t('searchLabel')}
-            placeholder={t('searchPlaceholder')}
-            defaultValue={search}
-            hiddenFields={{
-              ...Object.fromEntries(
-                Object.entries(filters).filter(
-                  (entry): entry is [string, string] => entry[1] !== undefined,
-                ),
-              ),
-              ...table.hiddenFields(),
-            }}
-          />
-          <div className="flex flex-wrap items-center gap-2">
-            {showsCompany && (
-              <FilterMenu
-                label={t('companyFilter')}
-                menuLabel={t('companyMenu')}
-                options={filterOptions(
-                  'company',
-                  t('allCompanies'),
-                  chosenCompany,
-                  companyChoiceLabels(companies, ({ name, slug }) =>
-                    tCommon('companyWithUrlName', { name, urlName: slug }),
-                  ).map(({ slug, label }) => ({ value: slug, label })),
-                )}
-              />
-            )}
-            <FilterMenu
-              label={t('typeFilter')}
-              menuLabel={t('typeMenu')}
-              options={filterOptions(
-                'type',
-                t('allTypes'),
-                type,
-                types.map(({ key, name, archived }) => ({
-                  value: key,
-                  label: archived ? t('archivedType', { name }) : name,
-                })),
-              )}
-            />
-            {internal && (
-              <FilterMenu
-                label={t('priorityFilter')}
-                menuLabel={t('priorityMenu')}
-                options={filterOptions(
-                  'priority',
-                  t('allPriorities'),
-                  priority,
-                  REQUEST_PRIORITIES.map((value) => ({
-                    value,
-                    label: tRequests('priority', { priority: value }),
-                  })),
-                )}
-              />
-            )}
-            {internal && (
-              <FilterMenu
-                label={t('assigneeFilter')}
-                menuLabel={t('assigneeMenu')}
-                options={filterOptions('assignee', t('anyAssignee'), assignee, [
-                  ...(canBeAssigned ? [{ value: 'me', label: t('assignedToMe') }] : []),
-                  { value: 'none', label: t('unassigned') },
-                  // The viewer is "Me" already.
-                  ...assignable
-                    .filter(({ id }) => !canBeAssigned || id !== actor.id)
-                    .map(({ id, name }) => ({
-                      value: id,
-                      label: name ?? tRequests('controls.unnamedStaff'),
-                    })),
-                ])}
-              />
-            )}
-            {requests.total > 0 && <SortMenu label={t('rows')} options={table.sortOptions()} />}
-          </div>
-        </div>
-      </div>
+      <RequestFilterBar
+        filters={filters}
+        table={table}
+        actor={actor}
+        companies={companies}
+        types={types}
+        assignable={assignable}
+        sortable={requests.total > 0}
+      />
 
       <Card flush footer={paginationFooter(table, requests, t('rows'))}>
         {requests.total === 0 ? (

@@ -17,8 +17,21 @@
  */
 export type { RequestPerson } from './access';
 export { setActivityView } from './activity-view';
-export { getRequestSettings, listRequestCompanies, listRequests } from './list';
-export type { ListRequestsOptions, RequestCompany, RequestListItem } from './list';
+export {
+  getRequestSettings,
+  listRequestCompanies,
+  listRequests,
+  loadRequestListItems,
+  requestListColumns,
+  requestListCondition,
+} from './list';
+export type {
+  ListRequestsOptions,
+  RequestCompany,
+  RequestListFilters,
+  RequestListItem,
+  RequestListRow,
+} from './list';
 export {
   findRequest,
   findRequestNumber,

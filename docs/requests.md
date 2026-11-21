@@ -730,7 +730,9 @@ says so with a "Show everything" button.
   subscribed), `request_entry`
   (the conversation, its internal notes and the history in one table, ordered by ID) and
   `request_mention` (who a text mentions). The counter is the `requests.last_number` setting.
-- `src/server/requests/` (a folder module): `listRequestCompanies`, `listRequests`, `findRequest`,
+- `src/server/requests/` (a folder module): `listRequestCompanies`, `listRequests` (built from
+  `requestListCondition`, the WHERE every view of the requests shares, and `loadRequestListItems`,
+  which turns selected `requestListColumns` rows into `RequestListItem`s), `findRequest`,
   `findRequestNumber`, `getRequest`, `setActivityView` (how the reader reads the activity),
   `raiseRequest`, `replyToRequest`, `addNote`, `changeRequestStatus`,
   `updateRequestDetails`, `changeAssignees`, `listAssignableStaff`, `countAssignedRequests`,
@@ -755,7 +757,8 @@ says so with a "Show everything" button.
   nothing in it is a change of sign-in, role or account. The one exception is a change of
   subscriptions while signed in as a user, which the conversation doesn't show (see
   [Signed in as a user](#signed-in-as-a-user)).
-- `src/app/(app)/_requests/`: what the request pages share (the list, the badges, the text, the
+- `src/app/(app)/_requests/`: what the request pages share (the list, its filters
+  (`parseRequestFilters` and `RequestFilterBar` in `request-filters.tsx`), the badges, the text, the
   people). `src/app/(app)/requests/`: the pages themselves.
 - `src/components/ui/markdown/`: what shows a Markdown text: the pipeline with its limits
   (`tree.ts`), the allow-list (`sanitize.ts`), the elements (`elements.tsx`), the languages of
