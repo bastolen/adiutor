@@ -904,6 +904,50 @@ test('a reply and the status it sets reach the other side’s inbox as one email
   expect(answer.text).toContain('from Waiting for the company to In progress');
 });
 
+test('an internal note reaches the staff on the request by email, and no one at the company', async ({
+  page,
+}) => {
+  const title = `Note by email ${randomUUID().slice(0, 8)}`;
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title,
+  });
+
+  // A staff Admin replies, and so follows the request.
+  await signIn(page, PLATFORM_ADMIN);
+  await page.goto(`/requests/${number}`);
+  await page.getByRole('textbox', { name: 'Your reply' }).fill('Looking into it.');
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  await signOut(page);
+
+  // A colleague writes a note for the staff.
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  await page
+    .getByRole('tablist', { name: 'Write' })
+    .getByRole('tab', { name: 'Internal note' })
+    .click();
+  const note = await markdownEditor(page, 'Your note');
+  await note.click();
+  await page.keyboard.type('The toner is empty.');
+  await page.getByRole('button', { name: 'Add note' }).click();
+  await expect(toasts(page)).toContainText('Note added.');
+
+  const email = await waitForEmailAbout(PLATFORM_ADMIN.email, title);
+  expect(email.text).toContain(`${SUPPORT_STAFF.name} wrote an internal note:`);
+  expect(email.text).toContain('The toner is empty.');
+  expect(email.text).toContain('Internal note: only the staff see this.');
+  // The client follows the request too, and hears of the reply, never of the note.
+  const toClient = await emailsAbout(REQUESTS_CLIENT.email, title);
+  expect(toClient.length).toBeGreaterThan(0);
+  toClient.forEach((sent) => {
+    expect(sent.text).not.toContain('toner');
+    expect(sent.text).not.toContain('internal note');
+  });
+});
+
 test('turning emails about requests off stops them, and turning them on brings them back', async ({
   page,
 }) => {

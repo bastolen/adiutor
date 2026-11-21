@@ -1,6 +1,6 @@
 # 0026. Internal notes: a kind of entry only the staff read
 
-- **Status:** Accepted
+- **Status:** Accepted; notes are emailed to the staff since [0032](0032-internal-notes-email-the-staff.md)
 - **Date:** 2026-11-20
 
 ## Context

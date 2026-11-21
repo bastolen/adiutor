@@ -1,6 +1,8 @@
 /**
  * @file Internal notes on a request: what the staff write for each other,
- * which nobody at the company ever reads (decision 0026).
+ * which nobody at the company ever reads (decision 0026). A note is emailed
+ * to the staff on the request and the staff it mentions, never to anyone at
+ * the company (decision 0032).
  */
 import { requestEntry } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
@@ -14,6 +16,7 @@ import { actingUserId, signedInAsWork } from '../signed-in-as';
 import { CHANGE_MOMENT, changeRequest, requestToChange } from './change';
 import { storeMentions } from './mentions';
 import { subscribeAutomatically } from './subscribers';
+import { tellStaffOnRequest } from './updates';
 
 /**
  * Adds an internal note to a request's conversation, written by a staff
@@ -72,12 +75,14 @@ export default async function addNote(
     // Whoever writes a note follows the request; of the people it mentions, only the staff do.
     await subscribeAutomatically(tx, locked.id, [actor.id]);
     // The people the note mentions, once the note they belong to is there.
-    await storeMentions(tx, actor, {
+    const mentioned = await storeMentions(tx, actor, {
       companyId: locked.companyId,
       requestId: locked.id,
       entryId: note.id,
       written: body,
       staffOnly: true,
     });
+    // The staff on the request, and the staff it mentions, hear of it by email; nobody else does.
+    await tellStaffOnRequest(tx, { request: locked, actorId: actor.id }, note.id, mentioned);
   });
 }

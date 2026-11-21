@@ -40,7 +40,7 @@ import { actingUserId, signedInAsWork } from '../signed-in-as';
 import { CHANGE_MOMENT, changeRequest, requestToChange, workingPermission } from './change';
 import mentionKey from './mention-key';
 import { storeMentions } from './mentions';
-import { tellMentioned } from './updates';
+import { staffWhoReadNotes, tellMentioned } from './updates';
 
 /** Someone a stored text mentions, as its mention row names them. */
 export interface TextMention {
@@ -134,7 +134,7 @@ interface EditedText {
  * @param edit.side - The side the editor acts as.
  * @param edit.names - The names of the two sides.
  * @param edit.staffOnly - Whether only the staff read the text (an internal note): then only the
- *   staff it mentions are subscribed.
+ *   staff it mentions are subscribed and told.
  * @returns Whether the text changed.
  * @throws {ServiceError} `invalid` for a closed request (`errors.requests.closedNoEdit`),
  *   `conflict` when someone edited the text meanwhile (`errors.requests.textChanged`).
@@ -233,14 +233,13 @@ async function applyEdit(
     },
     before,
   );
-  // An internal note emails nobody: only the staff read it, and nothing about it is told.
-  if (!edit.staffOnly) {
-    await tellMentioned(
-      tx,
-      { requestId: text.requestId, entryId: text.entryId, actorId: actor.id },
-      mentioned.filter((userId) => !before.includes(userId)),
-    );
-  }
+  // Someone the edit mentions newly hears of it; of an internal note, only the staff do.
+  const newlyMentioned = mentioned.filter((userId) => !before.includes(userId));
+  await tellMentioned(
+    tx,
+    { requestId: text.requestId, entryId: text.entryId, actorId: actor.id },
+    edit.staffOnly ? await staffWhoReadNotes(tx, newlyMentioned) : newlyMentioned,
+  );
   return { changed: true };
 }
 
