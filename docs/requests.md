@@ -235,8 +235,8 @@ it's built this way is in [decision 0031](decisions/0031-emails-about-requests.m
 written and sent is in [Email](email.md), and the jobs that send them in
 [Background jobs](jobs.md#queued-jobs).
 
-- **What is told:** a reply, a change of status (also the one a reply brings, and done, cancelled
-  and reopened), and being put on the request: assigned to it, mentioned in one of its texts, or
+- **What is told:** a reply, an internal note (to the staff only), a change of status (also the
+  one a reply brings, and done, cancelled and reopened), and being put on the request: assigned to it, mentioned in one of its texts, or
   subscribed by someone else. A new request emails nobody but the people its description
   mentions: it shows in the list and on the dashboard. A changed title, type or priority, an
   edited text (unless the edit adds a mention) and being taken off a request email nobody.
@@ -246,12 +246,17 @@ written and sent is in [Email](email.md), and the jobs that send them in
   to the one it's about, unless they did it themselves: a staff member a colleague assigned
   (`tellAssigned`), someone a description or a reply mentions, also when an edit adds the mention
   (`tellMentioned`; a new reply that mentions someone is told to them once, as the mention), and
-  someone another person subscribed (`tellSubscribed`). A job per person and piece of news (`request-update`) is queued in the
+  someone another person subscribed (`tellSubscribed`). An internal note goes to the staff on the
+  request (its assignees and its subscribers who read notes) and the staff it mentions, also
+  when an edit adds the mention, never to whoever wrote it and never to anyone at the company
+  (`tellStaffOnRequest`, `staffWhoReadNotes`;
+  [decision 0032](decisions/0032-internal-notes-email-the-staff.md)). A job per person and piece
+  of news (`request-update`) is queued in the
   transaction of the change, so the news exists exactly when the change was saved. Its payload
   holds IDs only.
 - **One email per person and request per tick:** the jobs of one person about one request share a
-  batch key, so a reply and the status change that came with it, or three replies in five
-  minutes, are one email, in the order they happened.
+  batch key, so a reply and the status change that came with it, a note beside them, or three
+  replies in five minutes, are one email, in the order they happened.
 - **What the email shows** is read when it's sent (`readRequestUpdate`): the request's title, its
   number as a link, its company, who did what, and each reply (and a text that mentions the
   reader) in full, formatted as on the page
@@ -274,7 +279,10 @@ written and sent is in [Email](email.md), and the jobs that send them in
   both: Unsubscribe for a subscriber, and the account's card (`/account#request-emails`).
 - **In the reader's language** (`recipientLocale`), like every email.
 - **Nothing meant for the staff reaches a company:** replies, status changes and assignments are
-  what everyone on a request sees anyway; a change of priority is never queued.
+  what everyone on a request sees anyway; a change of priority is never queued. An internal note,
+  or a mention in one, is queued for the staff only, and `readRequestUpdate` checks again: it
+  builds a note item only for a reader with `requests:view-internal`, so a note queued for anyone
+  else by mistake is left out, and an email with nothing left isn't sent.
 
 ## Numbers
 
@@ -448,8 +456,9 @@ Why it's built this way is in [decision 0026](decisions/0026-internal-notes-as-a
   response, and doesn't move the request's last activity, which company users see and the lists
   sort by.
 - **Mentions:** a note can mention anyone a reply can. Someone at the company it mentions never
-  sees it; a later email about mentions must not tell them about a note, and a mention in a note
-  never subscribes them to the request.
+  sees it, isn't emailed about it, and isn't subscribed by it.
+- **Emails:** a note is emailed in full to the staff on the request and the staff it mentions,
+  marked as an internal note, and never to anyone at the company (see [Emails](#emails)).
 - **Editing:** like a reply, by its author while the request is open and while they still work on
   requests (`mayEditNote`), through `editReply`, with its earlier versions kept.
 - **On the page:** for the staff who work on requests, the reply form has two tabs, Reply and

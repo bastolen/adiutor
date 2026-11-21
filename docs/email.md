@@ -24,8 +24,9 @@ One file per email in `src/emails/`:
   someone sent, which the claim keeps: it points to the earlier invitation email and links to the
   sign-in page)
 - `request-update.tsx` for the people on a request when someone replies to it or changes its
-  status, and for someone who is put on one (assigned, mentioned, or subscribed by someone
-  else): one email per person and request with everything that happened, each reply in full
+  status, for the staff on it when someone writes an internal note (marked as one, and never for
+  anyone at the company), and for someone who is put on one (assigned, mentioned, or subscribed
+  by someone else): one email per person and request with everything that happened, each reply in full
   (`EmailMarkdown`), the statuses in the reader's words, the request's number as its first link
   and a subject without words of its own, the request's number and title, and a footer that links
   to the account's setting that turns them off (the `request-update` jobs, batched; see

@@ -381,6 +381,38 @@ describe('staff-made changes', () => {
     expectBasics(email, url);
   });
 
+  it('shows the staff an internal note in full, marked as one', async () => {
+    const url = `${appUrl}/requests/142`;
+    const email = await requestUpdateEmail('jane@adiutor.test', {
+      ...english,
+      reference: 'AD-142',
+      title: 'The printer is broken',
+      companyName: 'Adiutor Tests',
+      url,
+      role: 'assignee',
+      audience: 'staff',
+      items: [
+        {
+          event: 'note',
+          by: 'Sam Support',
+          text: { text: 'The toner is **empty**.', format: 'markdown', mentions: {} },
+        },
+        {
+          event: 'mentioned',
+          by: 'Morgan Manager',
+          where: 'note',
+          text: { text: 'Ask Jane.', format: 'plain', mentions: {} },
+        },
+      ],
+    });
+
+    expect(email.text).toContain('Sam Support wrote an internal note:');
+    expect(email.html).toContain('<strong>empty</strong>');
+    expect(email.text).toContain('Morgan Manager mentioned you in an internal note:');
+    expect(email.text.match(/Internal note: only the staff see this\./g)).toHaveLength(2);
+    expectBasics(email, url);
+  });
+
   it('says a request’s email is for its assignee, and escapes what people wrote', async () => {
     const email = await requestUpdateEmail('jane@adiutor.test', {
       ...english,
@@ -918,6 +950,11 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = 
           text: { text: 'https://adiutor.test/manual', format: 'markdown', mentions: {} },
         },
         { event: 'status', by: 'Sam Support', from: 'open', to: 'waiting' },
+        {
+          event: 'note',
+          by: 'Sam Support',
+          text: { text: 'Adiutor Tests', format: 'plain', mentions: {} },
+        },
         { event: 'assigned', by: 'Sam Support' },
         { event: 'subscribed', by: 'Sam Support' },
         {

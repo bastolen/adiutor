@@ -22,6 +22,7 @@ import {
   staffActor,
 } from '../../../../tests/integration/helpers';
 import {
+  addNote,
   changeAssignees,
   changeSubscribers,
   listMentionable,
@@ -70,6 +71,31 @@ async function storeWaitingRequest(companyId: string, subscribers: readonly { id
 }
 
 describe('the emails about requests', () => {
+  it('send an internal note to the staff in the same email as a reply, and nothing of it to the company', async () => {
+    await createStaffSettings(db);
+    const company = await createCompany(db, { name: 'Adiutor Tests Client' });
+    const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    const manager = await staffActor(db, 'manager', 'morgan@adiutor.test');
+    const raised = await storeWaitingRequest(company.id, [client, manager]);
+
+    await addNote(ctx, support, { request: raised.id, body: 'The toner is **empty**.' });
+    await replyToRequest(ctx, support, { request: raised.id, body: 'We are on it.' });
+    await sendQueuedEmails(ctx);
+
+    expect(sent.map(({ to }) => to).sort()).toEqual(['casey@adiutor.test', 'morgan@adiutor.test']);
+    const toStaff = sent.find(({ to }) => to === 'morgan@adiutor.test');
+    const toClient = sent.find(({ to }) => to === 'casey@adiutor.test');
+    expect(toStaff?.text).toContain('sam wrote an internal note:');
+    expect(toStaff?.html).toContain('<strong>empty</strong>');
+    expect(toStaff?.text).toContain('Internal note: only the staff see this.');
+    expect(toStaff?.text).toContain('sam replied:');
+    // The client hears of the reply, and of no note.
+    expect(toClient?.text).toContain('sam replied:');
+    expect(toClient?.text).not.toContain('note');
+    expect(toClient?.html).not.toContain('empty');
+  });
+
   it('send one email per person for a reply and the status change it brought, worded for each', async () => {
     await createStaffSettings(db);
     const company = await createCompany(db, { name: 'Adiutor Tests Client' });
