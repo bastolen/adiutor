@@ -30,7 +30,11 @@ One file per email in `src/emails/`:
   (`EmailMarkdown`), the statuses in the reader's words, the request's number as its first link
   and a subject without words of its own, the request's number and title, and a footer that links
   to the account's setting that turns them off (the `request-update` jobs, batched; see
-  [Emails](requests.md#emails))
+  [Emails](requests.md#emails)). When it tells an Admin or Client of a solution they may answer,
+  Approve (the main button) and Deny (`EmailButton`'s `secondary` variant) take the place of
+  "Open request": links of their own that answer once without signing in, made by the job as it
+  sends the email ([Solutions](requests.md#solutions),
+  [decision 0033](decisions/0033-solutions-the-company-approves.md))
 - `added-to-company.tsx` for someone staff added to a company with a role (`addMember` queues an
   `added-to-company` job in the transaction that adds them, so it goes out at the next tick; see
   [Background jobs](jobs.md#queued-jobs))

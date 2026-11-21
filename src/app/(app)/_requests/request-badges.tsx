@@ -18,6 +18,7 @@ const STATUS_TONES: Record<RequestStatus, BadgeTone> = {
   todo: 'neutral',
   in_progress: 'neutral',
   waiting: 'warning',
+  proposed: 'warning',
   done: 'success',
   cancelled: 'neutral',
 };

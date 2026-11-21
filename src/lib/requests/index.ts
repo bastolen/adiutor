@@ -46,20 +46,25 @@ export type {
 } from './values';
 export {
   isReopening,
+  mayAnswerSolution,
   mayBeAssigned,
   mayEditDescription,
   mayEditNote,
   mayEditReply,
   mayChangeStatus,
+  mayProposeSolution,
   maySetStatus,
   mayWriteNote,
   requestAudience,
   requestSide,
+  SOLUTION_ANSWERS,
+  statusAfterAnswer,
   statusAfterReply,
+  statusChangeKind,
   statusChoices,
   subscriberScope,
 } from './rules';
-export type { RequestAudience, SubscriberScope } from './rules';
+export type { RequestAudience, SolutionAnswer, SubscriberScope } from './rules';
 export {
   DEFAULT_REQUEST_PREFIX,
   formatRequestNumber,
@@ -69,6 +74,7 @@ export {
   requestNumberStartInSearch,
   requestPath,
 } from './number';
+export { ANSWER_LINK_PATH, answerLinkPath } from './answer-link';
 export { cleanMultilineText, linkTarget, splitLinks } from './text';
 export type { TextPart } from './text';
 export {

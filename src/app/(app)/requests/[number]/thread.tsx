@@ -15,10 +15,10 @@ import Badge from '@/components/ui/badge';
 import RelativeTime from '@/components/ui/relative-time';
 import cn from '@/lib/cn';
 import {
-  isReopening,
   isRequestPriority,
   isRequestStatus,
   type RequestAudience,
+  statusChangeKind,
   type WrittenEntryKind,
 } from '@/lib/requests';
 import type { RequestDetail, RequestEntryView, RequestPerson } from '@/server/requests';
@@ -116,12 +116,11 @@ function ChangeText({ entry, audience }: { entry: RequestEntryView; audience: Re
 
   switch (entry.kind) {
     case 'status': {
-      let change = 'moved';
-      if (isRequestStatus(from) && isRequestStatus(to) && isReopening(from, to)) {
-        change = 'reopened';
-      } else if (to === 'done' || to === 'cancelled') {
-        change = to;
-      }
+      // A status this version doesn't know is told as a move, with the stored value.
+      const change =
+        isRequestStatus(from) && isRequestStatus(to)
+          ? statusChangeKind(from, to, entry.author.side)
+          : 'moved';
       return t('entry.status', { change, from: statusLabel(from), to: statusLabel(to) });
     }
     case 'type':

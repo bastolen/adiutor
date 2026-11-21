@@ -128,6 +128,9 @@ describe('recordAppError', () => {
       '/invite/[token]',
     ]);
     expect(recordedPath('/join/adiutor-tests-secret-token/more')).toBe('/join/[token]/more');
+    expect(recordedPath('/answer/adiutor-tests-secret-token/approve')).toBe(
+      '/answer/[token]/approve',
+    );
     expect(recordedPath('/api/auth/reset-password/adiutor-tests-secret-token?callbackURL=/')).toBe(
       '/api/auth/reset-password/[token]',
     );

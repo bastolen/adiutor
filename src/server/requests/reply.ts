@@ -9,6 +9,7 @@ import { firstRow } from '@/lib/defined';
 import {
   maySetStatus,
   mayChangeStatus,
+  mayProposeSolution,
   requestSide,
   statusAfterReply,
   WRITTEN_TEXT_FORMAT,
@@ -99,11 +100,13 @@ export default async function replyToRequest(
       entryId: reply.id,
       written: body,
     });
-    // A status the request can't move to as it is by now is left alone: the reply still counts.
-    const status =
-      asked && mayChangeStatus(permissions, locked.status, asked)
-        ? asked
-        : statusAfterReply(side, locked.status);
+    // A status the request can't move to as it is by now is left alone: the reply still counts. A
+    // reply sent as the solution makes it wait for the company's approval (decision 0033).
+    const allowed =
+      asked === 'proposed'
+        ? mayProposeSolution(permissions, locked.status)
+        : asked !== null && mayChangeStatus(permissions, locked.status, asked);
+    const status = asked && allowed ? asked : statusAfterReply(side, locked.status);
     const told = { request: locked, actorId: actor.id };
     if (status === locked.status) {
       await tx

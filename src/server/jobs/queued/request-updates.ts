@@ -3,16 +3,19 @@
  * email for everything queued for one person about one request, in their
  * language. What the email may show is read when it's sent
  * (`readRequestUpdate`), so someone who is no longer on the request or can
- * no longer read it gets nothing, and their jobs are skipped. A mail problem
- * throws, so the batch is tried again later with whatever was queued for it
- * meanwhile.
+ * no longer read it gets nothing, and their jobs are skipped. An email that
+ * tells someone at the company of a solution they may answer gets its own
+ * Approve and Deny links (`createAnswerLink`, decision 0033), made as it's
+ * sent. A mail problem throws, so the batch is tried again later with
+ * whatever was queued for it meanwhile (and new links: the old ones are
+ * never sent, and expire).
  */
 import { requestUpdateEmail } from '@/emails/request-update';
-import { requestPath } from '@/lib/requests';
+import { answerLinkPath, requestPath } from '@/lib/requests';
 
 import { REQUEST_UPDATES_GROUP, requestUpdateJob } from '../../queue';
 import recipientLocale from '../../recipient-locale';
-import { readRequestUpdate } from '../../requests';
+import { createAnswerLink, readRequestUpdate } from '../../requests';
 import { batchedJobRunner, defineJobBatch } from '../define';
 
 /** The kind of the queued news about requests, for the runner: its batch runs its jobs. */
@@ -44,9 +47,16 @@ export const requestUpdatesBatch = defineJobBatch({
           ),
         )
       : null;
-    if (update === null) {
+    if (first === undefined || update === null) {
       return { skipped: jobs.map(({ id }) => id) };
     }
+    const answerToken = update.answerable
+      ? await createAnswerLink(ctx.db, {
+          requestId: first.requestId,
+          userId: first.userId,
+          proposalEntryId: update.answerable.proposalEntryId,
+        })
+      : null;
     await ctx.sendEmail(
       await requestUpdateEmail(update.recipient.email, {
         appUrl: ctx.baseUrl,
@@ -58,6 +68,12 @@ export const requestUpdatesBatch = defineJobBatch({
         role: update.role,
         audience: update.audience,
         items: update.items,
+        ...(answerToken !== null && {
+          answerLinks: {
+            approve: `${ctx.baseUrl}${answerLinkPath(answerToken, 'approve')}`,
+            deny: `${ctx.baseUrl}${answerLinkPath(answerToken, 'deny')}`,
+          },
+        }),
       }),
     );
     return { skipped: update.skipped };
