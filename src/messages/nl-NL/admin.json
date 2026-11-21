@@ -214,7 +214,7 @@
         "allowed": "Wijzigen staat uit terwijl je als {name} bent ingelogd, en die persoon krijgt een e-mail dat je dat deed.",
         "label": "Inloggen als gebruiker",
         "dialogTitle": "Inloggen als {name}?",
-        "dialogDescription": "{minutes, plural, one {Je ziet Adiutor hooguit # minuut zoals {name} het ziet, daarna ben je terug in je eigen account. Je kunt niets wijzigen terwijl je als die persoon bent ingelogd, en die krijgt een e-mail met jouw naam.} other {Je ziet Adiutor hooguit # minuten zoals {name} het ziet, daarna ben je terug in je eigen account. Je kunt niets wijzigen terwijl je als die persoon bent ingelogd, en die krijgt een e-mail met jouw naam.}}",
+        "dialogDescription": "{minutes, plural, one {Je ziet Adiutor hooguit # minuut zoals {name} het ziet, daarna ben je terug in je eigen account. Je kunt aan de verzoeken van die persoon werken, en die ziet dat jij het was; verder kun je niets wijzigen. Die persoon krijgt een e-mail met jouw naam.} other {Je ziet Adiutor hooguit # minuten zoals {name} het ziet, daarna ben je terug in je eigen account. Je kunt aan de verzoeken van die persoon werken, en die ziet dat jij het was; verder kun je niets wijzigen. Die persoon krijgt een e-mail met jouw naam.}}",
         "confirmLabel": "Inloggen als {name}",
         "reasonLabel": "Reden (optioneel)",
         "reasonHint": "Bijvoorbeeld het verzoek waar je naar kijkt. Alleen medewerkers die de auditlog zien, kunnen het lezen.",

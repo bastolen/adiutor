@@ -13,7 +13,6 @@ import Button from '@/components/ui/button';
 import MarkdownField from '@/components/ui/markdown/markdown-field';
 import ResultAlert from '@/components/ui/result-alert';
 import SelectField from '@/components/ui/select-field';
-import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
 import TextField from '@/components/ui/text-field';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import { companyChoiceLabels } from '@/lib/company-choices';
@@ -81,8 +80,6 @@ export default function RaiseRequestForm({
 }: RaiseRequestFormProps) {
   const t = useTranslations('requests');
   const tCommon = useTranslations('common');
-  // Changes are turned off while a staff member is signed in as the user.
-  const changesOff = useSignedInAs();
   const [result, formAction, pending, onSubmit] = useTransientActionState(raiseRequestAction, null);
   const [priority, setPriority] = useState(FROM_TYPE);
   const [only] = companies;
@@ -98,83 +95,76 @@ export default function RaiseRequestForm({
 
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-5">
-      <ChangesFieldset>
-        <ResultAlert result={result} errorsOnly />
-        {companies.length === 1 && only ? (
-          <input type="hidden" name="company" value={only.slug} />
-        ) : (
-          <SelectField
-            label={t('new.company')}
-            name="company"
-            options={companyChoiceLabels(companies, ({ name, slug }) =>
-              tCommon('companyWithUrlName', { name, urlName: slug }),
-            ).map(({ slug, label }) => ({ value: slug, label }))}
-            defaultValue={company ?? ''}
-            onValueChange={setChosen}
-            placeholder={t('new.companyPlaceholder')}
-            disabled={changesOff}
-          />
-        )}
-        <TextField
-          label={t('new.titleLabel')}
-          name="title"
-          maxLength={REQUEST_TITLE_MAX_LENGTH}
-          description={t('new.titleHint')}
-          autoComplete="off"
-          required
-          disabled={changesOff}
-        />
+      <ResultAlert result={result} errorsOnly />
+      {companies.length === 1 && only ? (
+        <input type="hidden" name="company" value={only.slug} />
+      ) : (
         <SelectField
-          label={t('new.typeLabel')}
-          name="type"
-          options={types.map(({ key, name, description }) => ({
-            value: key,
-            label: name,
-            description,
-          }))}
-          defaultValue=""
-          placeholder={t('new.typePlaceholder')}
-          disabled={changesOff}
+          label={t('new.company')}
+          name="company"
+          options={companyChoiceLabels(companies, ({ name, slug }) =>
+            tCommon('companyWithUrlName', { name, urlName: slug }),
+          ).map(({ slug, label }) => ({ value: slug, label }))}
+          defaultValue={company ?? ''}
+          onValueChange={setChosen}
+          placeholder={t('new.companyPlaceholder')}
         />
-        <MarkdownField
-          label={t('new.descriptionLabel')}
-          name="description"
-          rows={14}
-          maxLength={REQUEST_TEXT_MAX_LENGTH}
-          description={t('new.descriptionHint')}
-          required
-          disabled={changesOff}
-          mentions={loadMentions}
-        />
-        {choosesPriority && (
-          <>
-            {/* The select can't hold an empty value, so "set by the type" is sent as none. */}
-            <input type="hidden" name="priority" value={priority === FROM_TYPE ? '' : priority} />
-            <SelectField
-              label={t('new.priorityLabel')}
-              options={[
-                { value: FROM_TYPE, label: t('new.priorityFromType') },
-                ...REQUEST_PRIORITIES.map((value) => ({
-                  value,
-                  label: t('priority', { priority: value }),
-                })),
-              ]}
-              value={priority}
-              onValueChange={setPriority}
-              description={t('new.priorityHint')}
-              disabled={changesOff}
-            />
-          </>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" loading={pending} disabled={changesOff}>
-            {t('new.submit')}
-          </Button>
-          <Button asChild variant="secondary">
-            <Link href="/requests">{t('new.cancel')}</Link>
-          </Button>
-        </div>
-      </ChangesFieldset>
+      )}
+      <TextField
+        label={t('new.titleLabel')}
+        name="title"
+        maxLength={REQUEST_TITLE_MAX_LENGTH}
+        description={t('new.titleHint')}
+        autoComplete="off"
+        required
+      />
+      <SelectField
+        label={t('new.typeLabel')}
+        name="type"
+        options={types.map(({ key, name, description }) => ({
+          value: key,
+          label: name,
+          description,
+        }))}
+        defaultValue=""
+        placeholder={t('new.typePlaceholder')}
+      />
+      <MarkdownField
+        label={t('new.descriptionLabel')}
+        name="description"
+        rows={14}
+        maxLength={REQUEST_TEXT_MAX_LENGTH}
+        description={t('new.descriptionHint')}
+        required
+        mentions={loadMentions}
+      />
+      {choosesPriority && (
+        <>
+          {/* The select can't hold an empty value, so "set by the type" is sent as none. */}
+          <input type="hidden" name="priority" value={priority === FROM_TYPE ? '' : priority} />
+          <SelectField
+            label={t('new.priorityLabel')}
+            options={[
+              { value: FROM_TYPE, label: t('new.priorityFromType') },
+              ...REQUEST_PRIORITIES.map((value) => ({
+                value,
+                label: t('priority', { priority: value }),
+              })),
+            ]}
+            value={priority}
+            onValueChange={setPriority}
+            description={t('new.priorityHint')}
+          />
+        </>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" loading={pending}>
+          {t('new.submit')}
+        </Button>
+        <Button asChild variant="secondary">
+          <Link href="/requests">{t('new.cancel')}</Link>
+        </Button>
+      </div>
     </form>
   );
 }

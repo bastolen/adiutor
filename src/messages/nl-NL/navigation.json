@@ -20,7 +20,7 @@
     "signOutFailed": "Uitloggen is mislukt. Probeer het opnieuw.",
     "signedInAs": {
       "label": "Ingelogd als iemand anders",
-      "text": "Je bent ingelogd als {name} ({email}) en kunt niets wijzigen. Dit stopt om {time}.",
+      "text": "Je bent ingelogd als {name} ({email}). Je kunt aan de verzoeken van deze persoon werken; al het andere kun je alleen bekijken. Dit stopt om {time}.",
       "back": "Terug naar mijn account",
       "backDone": "Je bent terug in je eigen account.",
       "ended": "Inloggen als de gebruiker is gestopt. Je bent terug in je eigen account.",

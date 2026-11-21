@@ -2,8 +2,10 @@
  * @file A request's conversation: every reply, every internal note (which
  * only the staff get from the service), every change of its status, title,
  * type or priority, and everyone assigned or removed, oldest first. Each
- * entry names who wrote or changed it and when. What was asked is the page's
- * Description, above it. Its text comes from the `requests` namespace.
+ * entry names who wrote or changed it and when, and, for the readers who may
+ * know, that a staff member did it while signed in as its author. What was
+ * asked is the page's Description, above it. Its text comes from the
+ * `requests` namespace.
  */
 import { CircleDot, Flag, Lock, type LucideIcon, Pencil, Tag, UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -27,6 +29,7 @@ import PersonLine, {
   type SideNames,
 } from '../../_requests/request-person';
 import RequestText from '../../_requests/request-text';
+import SignedInAsMark from '../../_requests/signed-in-as-mark';
 import EditableText from './editable-text';
 import EditedNote from './edited-note';
 import ShowEarlierLink from './show-earlier-link';
@@ -49,7 +52,8 @@ const CHANGE_ICONS: Record<Exclude<RequestEntryView['kind'], WrittenEntryKind>, 
  * @param props.person - Who wrote or changed it.
  * @param props.names - The names of the two sides.
  * @param props.at - When.
- * @param props.afterTime - What follows the time: a note's badge, and "Edited" for an edited text.
+ * @param props.afterTime - What follows the time: a note's badge, the mark of work done while
+ *   signed in as its author, and "Edited" for an edited text.
  * @param props.children - What they wrote or changed.
  * @returns The list item.
  */
@@ -73,7 +77,7 @@ function Entry({
       {leading}
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <PersonLine person={person} names={names}>
-          <span className="flex items-center gap-x-2 text-muted-foreground">
+          <span className="flex flex-wrap items-center gap-x-2 text-muted-foreground">
             <RelativeTime date={at} />
             {afterTime}
           </span>
@@ -214,6 +218,7 @@ export default function Thread({
                       {tNote('badge')}
                     </Badge>
                   )}
+                  <SignedInAsMark mark={entry.signedInAs} author={entry.author} names={names} />
                   {entry.body && (
                     <EditedNote text={entry.body} id={entry.id} source={source} names={names} />
                   )}
@@ -247,6 +252,9 @@ export default function Thread({
             person={entry.author}
             names={names}
             at={entry.createdAt}
+            afterTime={
+              <SignedInAsMark mark={entry.signedInAs} author={entry.author} names={names} />
+            }
           >
             <p className="text-sm wrap-anywhere text-muted-foreground">
               <ChangeText entry={entry} audience={detail.audience} />

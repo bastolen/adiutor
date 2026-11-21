@@ -164,6 +164,16 @@
       "editNote": "Editar nota",
       "noteLabel": "Nota"
     },
+    "signedInAs": {
+      "workForYou": "Lo hizo {staff} con la sesión iniciada como tú",
+      "workForYouUnnamed": "Lo hizo alguien del personal con la sesión iniciada como tú",
+      "workFor": "Lo hizo {staff} con la sesión iniciada como {name}",
+      "workForUnnamed": "Lo hizo alguien del personal con la sesión iniciada como {name}",
+      "editForYou": "Lo editó {staff} con la sesión iniciada como tú",
+      "editForYouUnnamed": "Lo editó alguien del personal con la sesión iniciada como tú",
+      "editFor": "Lo editó {staff} con la sesión iniciada como {name}",
+      "editForUnnamed": "Lo editó alguien del personal con la sesión iniciada como {name}"
+    },
     "builtInTypes": {
       "hotfix": {
         "name": "Corrección urgente",

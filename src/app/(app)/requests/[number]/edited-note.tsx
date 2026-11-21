@@ -1,7 +1,9 @@
 /**
  * @file What follows the time of a description or reply that was edited: a
  * separator and the "Edited" mark, with the text's earlier versions rendered
- * for the staff. Its text comes from `requests.edit`.
+ * for the staff, and the mark of an edit made while signed in as its editor
+ * for the readers who may know. Its text comes from `requests.edit` (and the
+ * mark's from `requests.signedInAs`).
  */
 import { useLocale, useTranslations } from 'next-intl';
 
@@ -10,12 +12,16 @@ import type { RequestText as RequestTextValue } from '@/server/requests';
 
 import { personName, type SideNames } from '../../_requests/request-person';
 import RequestText, { type TextSource } from '../../_requests/request-text';
+import SignedInAsMark from '../../_requests/signed-in-as-mark';
 import EditedMark from './edited-mark';
 
 /**
  * "· Edited" after a text's time, or nothing for a text that was never
  * edited. The staff, who get the text's versions from the service, get them
  * here too, newest first, each as it read and with who changed it and when.
+ * An edit a staff member made while signed in as its editor says so, after
+ * "Edited" for the last edit and under its line for a version, to the
+ * readers the service tells.
  *
  * @param props - Component props.
  * @param props.text - The text, with when it was edited and (for the staff) its versions.
@@ -51,6 +57,17 @@ export default function EditedNote({
               time: formatDateTime(version.at, locale),
             })}
           </p>
+          {version.signedInAs && (
+            <p className="text-xs">
+              <SignedInAsMark
+                mark={version.signedInAs}
+                author={version.editedBy}
+                names={names}
+                kind="edit"
+                separated={false}
+              />
+            </p>
+          )}
           <RequestText
             text={{ text: version.text, format: version.format }}
             id={`${id}-version-${index}`}
@@ -66,6 +83,14 @@ export default function EditedNote({
     <>
       <span aria-hidden="true">·</span>
       <EditedMark editedAt={text.editedAt} versions={versions} />
+      {text.editedSignedInAs && (
+        <SignedInAsMark
+          mark={text.editedSignedInAs}
+          author={text.editedSignedInAs.editedBy}
+          names={names}
+          kind="edit"
+        />
+      )}
     </>
   );
 }

@@ -112,6 +112,7 @@ export default function ChangeAssignees({
       description={t('assigneesDescription')}
       confirmLabel={t('saveAssignees')}
       tone="primary"
+      allowedWhileSignedInAs
     >
       <AssigneeFields choices={choices} assigned={assigned} />
     </ActionDialog>

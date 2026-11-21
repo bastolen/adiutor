@@ -136,6 +136,7 @@ export default function EditDetails({
       description={t('editDescription')}
       confirmLabel={t('saveDetails')}
       tone="primary"
+      allowedWhileSignedInAs
     >
       <DetailsFields details={details} types={types} />
     </ActionDialog>

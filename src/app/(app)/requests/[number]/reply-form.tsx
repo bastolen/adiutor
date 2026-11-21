@@ -12,7 +12,6 @@ import Button, { whileRunning } from '@/components/ui/button';
 import restoreFocusIfLost from '@/components/ui/focus-fallback';
 import MarkdownField from '@/components/ui/markdown/markdown-field';
 import ResultAlert from '@/components/ui/result-alert';
-import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import { REQUEST_TEXT_MAX_LENGTH } from '@/lib/input-rules';
 
@@ -39,8 +38,6 @@ type ReplyButton = 'send' | 'sendAndWait';
  */
 export default function ReplyForm({ request, canWait }: { request: number; canWait: boolean }) {
   const t = useTranslations('requests.reply');
-  // Changes are turned off while a staff member is signed in as the user.
-  const changesOff = useSignedInAs();
   const [result, formAction, pending, onSubmit] = useTransientActionState(replyAction, null);
   // The button that sent the reply running now (Send, also for a submit without a button).
   const [pressed, setPressed] = useState<ReplyButton>('send');
@@ -77,37 +74,34 @@ export default function ReplyForm({ request, canWait }: { request: number; canWa
 
   return (
     <form ref={formRef} action={formAction} onSubmit={submit} className="flex flex-col gap-4">
-      <ChangesFieldset>
-        <input type="hidden" name="request" value={request} />
-        <ResultAlert result={result} />
-        <MarkdownField
-          label={t('label')}
-          description={t('hint')}
-          name="body"
-          rows={8}
-          maxLength={REQUEST_TEXT_MAX_LENGTH}
-          required
-          disabled={changesOff}
-          mentions={loadMentions}
-        />
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" loading={send.loading} disabled={changesOff || send.disabled}>
-            {t('send')}
+      <input type="hidden" name="request" value={request} />
+      <ResultAlert result={result} />
+      <MarkdownField
+        label={t('label')}
+        description={t('hint')}
+        name="body"
+        rows={8}
+        maxLength={REQUEST_TEXT_MAX_LENGTH}
+        required
+        mentions={loadMentions}
+      />
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" loading={send.loading} disabled={send.disabled}>
+          {t('send')}
+        </Button>
+        {canWait && (
+          <Button
+            type="submit"
+            variant="secondary"
+            name="status"
+            value="waiting"
+            loading={sendAndWait.loading}
+            disabled={sendAndWait.disabled}
+          >
+            {t('sendAndWait')}
           </Button>
-          {canWait && (
-            <Button
-              type="submit"
-              variant="secondary"
-              name="status"
-              value="waiting"
-              loading={sendAndWait.loading}
-              disabled={changesOff || sendAndWait.disabled}
-            >
-              {t('sendAndWait')}
-            </Button>
-          )}
-        </div>
-      </ChangesFieldset>
+        )}
+      </div>
     </form>
   );
 }

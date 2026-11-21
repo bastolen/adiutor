@@ -9,7 +9,6 @@ import { useTranslations } from 'next-intl';
 import { startTransition, useCallback, useRef } from 'react';
 
 import SelectField, { type SelectOption } from '@/components/ui/select-field';
-import { useSignedInAs } from '@/components/ui/signed-in-as';
 import Spinner from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toast';
 import { useTransientActionState, useTransientState } from '@/components/ui/use-transient-state';
@@ -41,8 +40,6 @@ export default function StatusSelect({
   options: readonly SelectOption[];
 }) {
   const t = useTranslations('requests.controls');
-  // The status doesn't change while a staff member is signed in as the user.
-  const changesOff = useSignedInAs();
   const showToast = useToast();
   // Toasts as soon as the action returns, like `RowAction`.
   const run = useCallback(
@@ -84,7 +81,6 @@ export default function StatusSelect({
             options={options}
             value={shown}
             busy={pending}
-            disabled={changesOff}
             onValueChange={(next) => {
               const form = formRef.current;
               if (!form || next === shown) {
