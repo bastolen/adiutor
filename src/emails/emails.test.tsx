@@ -330,9 +330,9 @@ describe('staff-made changes', () => {
             mentions: {},
           },
         },
-        { event: 'status', by: 'Sam Support', from: 'in_progress', to: 'waiting' },
-        { event: 'status', by: 'Casey Client', from: 'waiting', to: 'done' },
-        { event: 'status', by: 'Casey Client', from: 'done', to: 'open' },
+        { event: 'status', by: 'Sam Support', bySide: 'staff', from: 'in_progress', to: 'waiting' },
+        { event: 'status', by: 'Casey Client', bySide: 'company', from: 'waiting', to: 'done' },
+        { event: 'status', by: 'Casey Client', bySide: 'company', from: 'done', to: 'open' },
         { event: 'assigned', by: 'Morgan Manager' },
         { event: 'subscribed', by: 'Anna Admin' },
         {
@@ -949,7 +949,7 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = 
           by: 'Sam Support',
           text: { text: 'https://adiutor.test/manual', format: 'markdown', mentions: {} },
         },
-        { event: 'status', by: 'Sam Support', from: 'open', to: 'waiting' },
+        { event: 'status', by: 'Sam Support', bySide: 'staff', from: 'open', to: 'waiting' },
         {
           event: 'note',
           by: 'Sam Support',

@@ -53,7 +53,8 @@ export default async function changeRequestStatus(
   const access = await requestToChange(ctx, actor, input.request, 'requests:contribute');
   const { permissions } = access;
   const status = requestStatusSchema.parse(input.status);
-  if (!maySetStatus(permissions, status)) {
+  // Waiting for approval comes only with the reply that holds the solution (`replyToRequest`).
+  if (status === 'proposed' || !maySetStatus(permissions, status)) {
     throw forbiddenError();
   }
   await assertRateLimit(

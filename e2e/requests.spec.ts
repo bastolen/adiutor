@@ -948,6 +948,75 @@ test('an internal note reaches the staff on the request by email, and no one at 
   });
 });
 
+test('the staff send a solution, and the client approves it on the request', async ({ page }) => {
+  const title = `Solution to approve ${randomUUID().slice(0, 8)}`;
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title,
+    status: 'in_progress',
+  });
+
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  await page.getByRole('textbox', { name: 'Your reply' }).fill('Fixed: the toner was empty.');
+  await page.getByRole('button', { name: 'Send as solution' }).click();
+  await expect(toasts(page)).toContainText('Solution sent.');
+  await expect(detail(page, 'Status')).toContainText('Waiting for approval');
+  await expect(conversation(page)).toContainText('Proposed a solution.');
+  // It's sent: the button goes until the company has answered.
+  await expect(page.getByRole('button', { name: 'Send as solution' })).toHaveCount(0);
+  await signOut(page);
+
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto(`/requests/${number}`);
+  await expect(detail(page, 'Status')).toHaveText('Waiting for your approval');
+  const notice = page.getByRole('region', { name: 'The staff proposed a solution' });
+  await expect(notice).toBeVisible();
+  // They approve rather than mark it as done.
+  await expect(page.getByRole('button', { name: 'Mark as done' })).toHaveCount(0);
+  await notice.getByRole('button', { name: 'Approve' }).click();
+  await expect(toasts(page)).toContainText('You approved the solution.');
+  await expect(detail(page, 'Status')).toHaveText('Done');
+  await expect(conversation(page)).toContainText('Approved the solution.');
+  await expect(notice).toHaveCount(0);
+});
+
+test('the client denies a solution and says what’s still wrong, which goes back to the staff', async ({
+  page,
+}) => {
+  const title = `Solution to deny ${randomUUID().slice(0, 8)}`;
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title,
+    status: 'in_progress',
+  });
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  await page.getByRole('textbox', { name: 'Your reply' }).fill('Fixed, I think.');
+  await page.getByRole('button', { name: 'Send as solution' }).click();
+  await expect(toasts(page)).toContainText('Solution sent.');
+  await signOut(page);
+
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto(`/requests/${number}`);
+  await page
+    .getByRole('region', { name: 'The staff proposed a solution' })
+    .getByRole('button', { name: 'Deny' })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Doesn’t it solve your request?' });
+  const reason = await markdownEditor(page, 'What’s still wrong?');
+  await reason.click();
+  await page.keyboard.type('It still prints blank pages.');
+  await dialog.getByRole('button', { name: 'Deny solution' }).click();
+  await expect(toasts(page)).toContainText('You didn’t approve the solution.');
+  await expect(dialog).toHaveCount(0);
+  await expect(detail(page, 'Status')).toHaveText('In progress');
+  await expect(conversation(page)).toContainText('It still prints blank pages.');
+  await expect(conversation(page)).toContainText('Didn’t approve the solution.');
+});
+
 test('turning emails about requests off stops them, and turning them on brings them back', async ({
   page,
 }) => {

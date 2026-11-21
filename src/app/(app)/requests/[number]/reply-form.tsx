@@ -18,25 +18,38 @@ import { REQUEST_TEXT_MAX_LENGTH } from '@/lib/input-rules';
 import { mentionChoicesAction } from '../../_requests/mention-actions';
 import { replyAction } from './actions';
 
-/** The form's two buttons: send the reply, or send it and wait for the company. */
-type ReplyButton = 'send' | 'sendAndWait';
+/**
+ * The form's buttons: send the reply, send it and wait for the company, or
+ * send it as the solution, for the company to approve.
+ */
+type ReplyButton = 'send' | 'sendAndWait' | 'sendAsSolution';
 
 /**
  * A text field with a button that sends the reply. For the staff, on a
  * request they can still put a question to, a second button sends it and
- * sets the request to wait for the company's answer. After a reply is sent
- * the field is empty again; a refused one keeps what was typed. The second
- * button goes once the request waits: if it had focus, focus moves to the
- * conversation's heading instead of being lost. While a reply is sent, only
- * the button that sent it is busy, and the other is disabled
- * (`whileRunning`).
+ * sets the request to wait for the company's answer, and a third sends it as
+ * the solution, which makes the request wait for the company's approval
+ * (decision 0033). After a reply is sent the field is empty again; a refused
+ * one keeps what was typed. A button that goes once the request waits takes
+ * focus with it: if it had focus, focus moves to the conversation's heading
+ * instead of being lost. While a reply is sent, only the button that sent it
+ * is busy, and the others are disabled (`whileRunning`).
  *
  * @param props - Form props.
  * @param props.request - The request's number.
  * @param props.canWait - Whether to offer "Send and wait for the company".
+ * @param props.canPropose - Whether to offer "Send as solution".
  * @returns The form.
  */
-export default function ReplyForm({ request, canWait }: { request: number; canWait: boolean }) {
+export default function ReplyForm({
+  request,
+  canWait,
+  canPropose = false,
+}: {
+  request: number;
+  canWait: boolean;
+  canPropose?: boolean;
+}) {
   const t = useTranslations('requests.reply');
   const [result, formAction, pending, onSubmit] = useTransientActionState(replyAction, null);
   // The button that sent the reply running now (Send, also for a submit without a button).
@@ -44,22 +57,25 @@ export default function ReplyForm({ request, canWait }: { request: number; canWa
   const running = pending ? pressed : null;
   const send = whileRunning<ReplyButton>(running, 'send');
   const sendAndWait = whileRunning<ReplyButton>(running, 'sendAndWait');
+  const sendAsSolution = whileRunning<ReplyButton>(running, 'sendAsSolution');
   const formRef = useRef<HTMLFormElement>(null);
   // Who the reply can mention: asked for when someone types "@".
   const loadMentions = useCallback(
     () => mentionChoicesAction({ request: String(request) }),
     [request],
   );
-  // Whether "Send and wait for the company" was there at the last render.
+  // Whether "Send and wait for the company" and "Send as solution" were there at the last render.
   const couldWait = useRef(canWait);
+  const couldPropose = useRef(canPropose);
 
   useLayoutEffect(() => {
-    // That button just went (the request waits now): don't leave focus on <body>.
-    if (couldWait.current && !canWait) {
+    // A button just went (the request waits now): don't leave focus on <body>.
+    if ((couldWait.current && !canWait) || (couldPropose.current && !canPropose)) {
       restoreFocusIfLost(formRef.current);
     }
     couldWait.current = canWait;
-  }, [canWait]);
+    couldPropose.current = canPropose;
+  }, [canWait, canPropose]);
 
   /**
    * Notes which button sent the form, then sends it.
@@ -68,7 +84,14 @@ export default function ReplyForm({ request, canWait }: { request: number; canWa
    */
   const submit = (event: FormEvent<HTMLFormElement>) => {
     const { submitter } = event.nativeEvent as SubmitEvent;
-    setPressed(submitter?.getAttribute('value') === 'waiting' ? 'sendAndWait' : 'send');
+    const status = submitter?.getAttribute('value');
+    if (status === 'waiting') {
+      setPressed('sendAndWait');
+    } else if (status === 'proposed') {
+      setPressed('sendAsSolution');
+    } else {
+      setPressed('send');
+    }
     onSubmit(event);
   };
 
@@ -99,6 +122,18 @@ export default function ReplyForm({ request, canWait }: { request: number; canWa
             disabled={sendAndWait.disabled}
           >
             {t('sendAndWait')}
+          </Button>
+        )}
+        {canPropose && (
+          <Button
+            type="submit"
+            variant="secondary"
+            name="status"
+            value="proposed"
+            loading={sendAsSolution.loading}
+            disabled={sendAsSolution.disabled}
+          >
+            {t('sendAsSolution')}
           </Button>
         )}
       </div>

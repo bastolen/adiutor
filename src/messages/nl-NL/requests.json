@@ -89,12 +89,12 @@
       "showSubscribers": "{count, plural, one {De # abonnee tonen} other {De # abonnees tonen}}",
       "moreSubscribers": "+{count, number}"
     },
-    "status": "{status, select, open {Open} todo {Te doen} in_progress {In behandeling} waiting {{audience, select, contributor {Wacht op jouw reactie} follower {Wacht op je bedrijf} other {Wacht op het bedrijf}}} done {Afgerond} cancelled {Geannuleerd} other {Onbekend}}",
+    "status": "{status, select, open {Open} todo {Te doen} in_progress {In behandeling} waiting {{audience, select, contributor {Wacht op jouw reactie} follower {Wacht op je bedrijf} other {Wacht op het bedrijf}}} proposed {{audience, select, contributor {Wacht op jouw goedkeuring} follower {Wacht op goedkeuring van je bedrijf} other {Wacht op goedkeuring}}} done {Afgerond} cancelled {Geannuleerd} other {Onbekend}}",
     "reopened": "Heropend",
     "priority": "{priority, select, low {Laag} normal {Normaal} high {Hoog} other {Onbekend}}",
     "priorityBadge": "{priority, select, low {Lage prioriteit} normal {Normale prioriteit} high {Hoge prioriteit} other {Onbekende prioriteit}}",
     "entry": {
-      "status": "{change, select, reopened {Verzoek heropend.} done {Verzoek als afgerond gemarkeerd.} cancelled {Verzoek geannuleerd.} other {Status gewijzigd van {from} naar {to}.}}",
+      "status": "{change, select, reopened {Verzoek heropend.} done {Verzoek als afgerond gemarkeerd.} cancelled {Verzoek geannuleerd.} proposed {Oplossing voorgesteld.} approved {Oplossing goedgekeurd.} denied {Oplossing niet goedgekeurd.} other {Status gewijzigd van {from} naar {to}.}}",
       "title": "Titel gewijzigd van “{from}” naar “{to}”.",
       "type": "Type gewijzigd van {from} naar {to}.",
       "priority": "Prioriteit gewijzigd van {from} naar {to}.",
@@ -104,7 +104,21 @@
       "source": "Bron: {url}",
       "writtenBy": "Geschreven door {name} op {date}"
     },
+    "solution": {
+      "title": "De medewerkers hebben een oplossing voorgesteld",
+      "description": "Lost die je verzoek op? Keur hem goed om het verzoek af te ronden, of laat weten wat er nog niet goed is.",
+      "approve": "Goedkeuren",
+      "deny": "Afwijzen",
+      "denyTitle": "Lost dit je verzoek niet op?",
+      "denyDescription": "Het verzoek gaat terug naar de medewerkers. Laat ze weten wat er nog niet goed is, als je wilt.",
+      "reasonLabel": "Wat is er nog niet goed?",
+      "denyConfirm": "Oplossing afwijzen",
+      "approved": "Je hebt de oplossing goedgekeurd. Het verzoek is afgerond.",
+      "denied": "Je hebt de oplossing niet goedgekeurd. Het verzoek ligt weer bij de medewerkers."
+    },
     "reply": {
+      "sendAsSolution": "Versturen als oplossing",
+      "solutionSent": "Oplossing verstuurd. Het verzoek wacht op goedkeuring van het bedrijf.",
       "label": "Je reactie",
       "hint": "Maak je tekst op met de knoppen, of typ Markdown zoals **vet**, lijsten en `code`.",
       "send": "Reactie versturen",

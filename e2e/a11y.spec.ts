@@ -982,6 +982,29 @@ test.describe('in forced-colours mode', () => {
         await expectAccessible(page, '[role="dialog"]');
       });
 
+      test('a solution that waits for the client’s approval, and the dialog that denies it', async ({
+        context,
+        page,
+      }) => {
+        await context.addCookies(clientState.cookies);
+        // A request of the test's own, waiting for approval: the dialog is closed without answering.
+        const number = await storeRequest({
+          companySlug: COMPANY_SLUG,
+          raisedBy: REQUESTS_CLIENT.email,
+          title: 'A solution for the scan',
+          status: 'proposed',
+        });
+        await page.goto(`/requests/${number}`);
+        await expect(
+          page.getByRole('region', { name: 'The staff proposed a solution' }),
+        ).toBeVisible();
+        await expectAccessible(page);
+        await page.getByRole('button', { name: 'Deny' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Doesn’t it solve your request?' });
+        await expect(dialog).toBeVisible();
+        await expectAccessible(page, '[role="dialog"]');
+      });
+
       test('the dialog that asks before a request is cancelled', async ({ context, page }) => {
         await context.addCookies(clientState.cookies);
         // The seeded open request, which stays as it is: the dialog is closed with "Keep request".

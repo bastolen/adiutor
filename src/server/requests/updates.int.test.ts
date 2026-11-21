@@ -347,7 +347,13 @@ describe('what one person’s email may show', () => {
     expect(update?.items).toHaveLength(2);
     const [reply, status] = update?.items ?? [];
     expect(reply).toMatchObject({ event: 'reply', by: 'sam' });
-    expect(status).toEqual({ event: 'status', by: 'sam', from: 'open', to: 'waiting' });
+    expect(status).toEqual({
+      event: 'status',
+      by: 'sam',
+      bySide: 'staff',
+      from: 'open',
+      to: 'waiting',
+    });
     // The reply as it's stored, with who its marker names: by name, as the page shows them.
     const text = reply?.event === 'reply' ? reply.text : undefined;
     expect(text?.format).toBe('markdown');

@@ -89,12 +89,12 @@
       "showSubscribers": "{count, plural, one {Show the # subscriber} other {Show the # subscribers}}",
       "moreSubscribers": "+{count, number}"
     },
-    "status": "{status, select, open {Open} todo {To do} in_progress {In progress} waiting {{audience, select, contributor {Waiting for your reply} follower {Waiting for your company} other {Waiting for the company}}} done {Done} cancelled {Cancelled} other {Unknown}}",
+    "status": "{status, select, open {Open} todo {To do} in_progress {In progress} waiting {{audience, select, contributor {Waiting for your reply} follower {Waiting for your company} other {Waiting for the company}}} proposed {{audience, select, contributor {Waiting for your approval} follower {Waiting for your company’s approval} other {Waiting for approval}}} done {Done} cancelled {Cancelled} other {Unknown}}",
     "reopened": "Reopened",
     "priority": "{priority, select, low {Low} normal {Normal} high {High} other {Unknown}}",
     "priorityBadge": "{priority, select, low {Low priority} normal {Normal priority} high {High priority} other {Unknown priority}}",
     "entry": {
-      "status": "{change, select, reopened {Reopened this request.} done {Marked this request as done.} cancelled {Cancelled this request.} other {Changed the status from {from} to {to}.}}",
+      "status": "{change, select, reopened {Reopened this request.} done {Marked this request as done.} cancelled {Cancelled this request.} proposed {Proposed a solution.} approved {Approved the solution.} denied {Didn’t approve the solution.} other {Changed the status from {from} to {to}.}}",
       "title": "Changed the title from “{from}” to “{to}”.",
       "type": "Changed the type from {from} to {to}.",
       "priority": "Changed the priority from {from} to {to}.",
@@ -104,7 +104,21 @@
       "source": "Source: {url}",
       "writtenBy": "Written by {name} on {date}"
     },
+    "solution": {
+      "title": "The staff proposed a solution",
+      "description": "Does it solve your request? Approve it to close the request, or say what’s still wrong.",
+      "approve": "Approve",
+      "deny": "Deny",
+      "denyTitle": "Doesn’t it solve your request?",
+      "denyDescription": "The request goes back to the staff. Tell them what’s still wrong, if you like.",
+      "reasonLabel": "What’s still wrong?",
+      "denyConfirm": "Deny solution",
+      "approved": "You approved the solution. The request is done.",
+      "denied": "You didn’t approve the solution. The request is back with the staff."
+    },
     "reply": {
+      "sendAsSolution": "Send as solution",
+      "solutionSent": "Solution sent. The request waits for the company’s approval.",
       "label": "Your reply",
       "hint": "Format your text with the buttons, or type Markdown such as **bold**, lists and `code`.",
       "send": "Send reply",

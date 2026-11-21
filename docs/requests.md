@@ -33,12 +33,12 @@ Not built yet, each for a later change: an approval step, and attachments.
 
 Four permissions in the request's company (`src/lib/authz/permissions.ts`):
 
-| Permission               | What it allows                                                                                                  | Who has it                                         |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| `requests:view`          | See the company's requests and their conversations                                                              | Everyone in an active company; every staff role    |
-| `requests:contribute`    | Raise requests, reply, mark a request done, cancel it and reopen it, edit the description and their own replies | Company Admin and Client; staff who work on them   |
-| `requests:manage`        | Work on requests as the staff: any status, the title, the type, the priority, who's assigned, internal notes    | Staff Admin, Manager and Support                   |
-| `requests:view-internal` | See what only the staff see: the priority and internal notes                                                    | Every staff role (Finance reads, but doesn't work) |
+| Permission               | What it allows                                                                                                                              | Who has it                                         |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `requests:view`          | See the company's requests and their conversations                                                                                          | Everyone in an active company; every staff role    |
+| `requests:contribute`    | Raise requests, reply, mark a request done, cancel it and reopen it, approve or deny a solution, edit the description and their own replies | Company Admin and Client; staff who work on them   |
+| `requests:manage`        | Work on requests as the staff: any status, a solution, the title, the type, the priority, who's assigned, internal notes                    | Staff Admin, Manager and Support                   |
+| `requests:view-internal` | See what only the staff see: the priority and internal notes                                                                                | Every staff role (Finance reads, but doesn't work) |
 
 - Everyone in a company sees all of the company's requests. A **Watcher** only reads.
 - **Finance** reads every company's requests, with the priority and the internal notes, and
@@ -61,15 +61,17 @@ Four permissions in the request's company (`src/lib/authz/permissions.ts`):
 
 ## Statuses
 
-Open → To do → In progress → Waiting for the company → Done, and Cancelled for a request that
-isn't needed anymore (`REQUEST_STATUSES` in `src/lib/requests/values.ts`). Done and Cancelled are
-the closed statuses.
+Open → To do → In progress → Waiting for the company → Waiting for approval → Done, and Cancelled
+for a request that isn't needed anymore (`REQUEST_STATUSES` in `src/lib/requests/values.ts`). Done
+and Cancelled are the closed statuses.
 
 - **The staff** who work on requests set any status on any request, with the status select on the
-  request's page. It saves when a status is picked, never while moving through the list.
+  request's page, except Waiting for approval (see [Solutions](#solutions)). It saves when a status
+  is picked, never while moving through the list.
 - **Company Admins and Clients** have three buttons instead: **Mark as done**, **Cancel request**
   (from any status but Done; it asks first) and **Reopen** (a done or cancelled request). They
-  can't set the other statuses (`mayChangeStatus`).
+  can't set the other statuses (`mayChangeStatus`). While a solution waits for them, they approve
+  or deny it instead of marking the request as done.
 - **A reply from the company** to a request that waits for it puts the request back in progress
   (`statusAfterReply`). No other reply changes the status: a reply to a closed request doesn't
   reopen it.
@@ -84,6 +86,28 @@ the closed statuses.
   company and a Watcher of another reads each request the same way in both places.
 - When two people change a status at the same moment, the second is told the request changed and
   sees the new status, rather than overwriting it (`errors.requests.statusChanged`).
+
+### Solutions
+
+The staff can say a request is fixed without closing it, for the company to confirm
+([decision 0033](decisions/0033-solutions-the-company-approves.md)).
+
+- **Sending one:** the reply form has a third button for the staff who work on requests, **Send
+  as solution** (`mayProposeSolution`: a request that's still worked on and doesn't wait for an
+  approval already). It sends the reply and sets **Waiting for approval** (`proposed`) in one
+  change and one email (`replyToRequest` with `status: 'proposed'`). The status select never
+  offers it, and `changeRequestStatus` refuses it, so a proposal always has its text.
+- **Its words:** "Waiting for approval" (the staff), "Waiting for your approval" (Admins and
+  Clients), "Waiting for your company's approval" (a Watcher). It shows under the Waiting tab, and
+  its badge is the warning tone, like waiting.
+- **Answering:** while a solution waits, the company's Admins and Clients (`mayAnswerSolution`,
+  never a Watcher or the staff) see a notice above the reply form with **Approve**, which closes
+  the request (Done), and **Deny**, which opens a dialog with an optional "What's still wrong?"
+  field and puts the request back In progress (`answerSolution`, `statusAfterAnswer`). A reason
+  is stored as their reply right before the change. A plain reply leaves the solution waiting:
+  only the buttons answer it.
+- **In the history:** "Proposed a solution.", "Approved the solution.", "Didn't approve the
+  solution." (`statusChangeKind`, which the emails use too).
 
 ## Types and priorities
 

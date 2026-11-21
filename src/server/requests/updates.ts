@@ -344,6 +344,8 @@ export type RequestUpdateItem =
       event: 'status';
       /** Who. */
       by: string;
+      /** The side they changed it as: the company's answer to a solution reads differently. */
+      bySide: RequestSide;
       /** The status it had. */
       from: RequestStatus;
       /** The status it got. */
@@ -637,7 +639,7 @@ export async function readRequestUpdate(
       isRequestStatus(entry.from) &&
       isRequestStatus(entry.to)
     ) {
-      return { event, by, from: entry.from, to: entry.to };
+      return { event, by, bySide: entry.authorSide, from: entry.from, to: entry.to };
     }
     if (
       event === 'assigned' &&

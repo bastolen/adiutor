@@ -58,8 +58,9 @@ describe('changeRequestStatus: the staff', () => {
     const manager = await staffActor(db, 'manager');
     const raised = await storeRequest(company.id, { status: 'cancelled' });
 
+    // Waiting for approval comes only with a solution (`replyToRequest`), never picked.
     const moves = await inSequence(
-      [...REQUEST_STATUSES].reverse(),
+      REQUEST_STATUSES.filter((status) => status !== 'proposed').reverse(),
       async (status) =>
         (await changeRequestStatus(ctx, manager, { request: raised.id, status })).changed,
     );

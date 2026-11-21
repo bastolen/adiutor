@@ -7,16 +7,20 @@ import { getPermissions, type Permission } from '../authz/permissions';
 import type { CompanyRole, PlatformRole } from '../authz/roles';
 import {
   isReopening,
+  mayAnswerSolution,
   mayBeAssigned,
   mayChangeStatus,
   mayEditDescription,
   mayEditNote,
   mayEditReply,
+  mayProposeSolution,
   maySetStatus,
   mayWriteNote,
   requestAudience,
   requestSide,
+  statusAfterAnswer,
   statusAfterReply,
+  statusChangeKind,
   statusChoices,
   subscriberScope,
 } from './rules';
@@ -92,10 +96,11 @@ describe('isReopening', () => {
 });
 
 describe('mayChangeStatus', () => {
-  it('lets the staff who work on requests set any other status', () => {
+  it('lets the staff who work on requests set any other status, but waiting for approval', () => {
     REQUEST_STATUSES.forEach((from) => {
       REQUEST_STATUSES.forEach((to) => {
-        expect(mayChangeStatus(support, from, to)).toBe(from !== to);
+        // Waiting for approval comes only with the reply that holds the solution.
+        expect(mayChangeStatus(support, from, to)).toBe(from !== to && to !== 'proposed');
       });
     });
   });
@@ -253,5 +258,47 @@ describe('subscriberScope', () => {
     expect(subscriberScope(client)).toBe('self');
     expect(subscriberScope(watcher)).toBe('self');
     expect(subscriberScope(permissionsOf('finance', 'client'))).toBe('self');
+  });
+});
+
+describe('a solution the company approves', () => {
+  it('is proposed by the staff who work on requests, with a reply, while the request is worked on', () => {
+    expect(mayProposeSolution(support, 'in_progress')).toBe(true);
+    expect(mayProposeSolution(support, 'waiting')).toBe(true);
+    expect(mayProposeSolution(support, 'proposed')).toBe(false);
+    expect(mayProposeSolution(support, 'done')).toBe(false);
+    expect(mayProposeSolution(finance, 'in_progress')).toBe(false);
+    expect(mayProposeSolution(client, 'in_progress')).toBe(false);
+    // Never through an ordinary change of status.
+    expect(statusChoices(support, 'in_progress')).not.toContain('proposed');
+    expect(mayChangeStatus(support, 'in_progress', 'proposed')).toBe(false);
+  });
+
+  it('is answered by the company’s Admins and Clients, while it waits for them', () => {
+    expect(mayAnswerSolution(client, 'proposed')).toBe(true);
+    expect(mayAnswerSolution(permissionsOf(null, 'admin'), 'proposed')).toBe(true);
+    expect(mayAnswerSolution(watcher, 'proposed')).toBe(false);
+    expect(mayAnswerSolution(support, 'proposed')).toBe(false);
+    expect(mayAnswerSolution(client, 'waiting')).toBe(false);
+  });
+
+  it('closes the request when approved and puts it back in progress when denied', () => {
+    expect(statusAfterAnswer('approve')).toBe('done');
+    expect(statusAfterAnswer('deny')).toBe('in_progress');
+    // The company can still cancel, but approves rather than marks it as done.
+    expect(statusChoices(client, 'proposed')).toEqual(['cancelled']);
+    // A reply doesn't answer it.
+    expect(statusAfterReply('company', 'proposed')).toBe('proposed');
+  });
+
+  it('names each change of status for the sentence that tells it', () => {
+    expect(statusChangeKind('in_progress', 'proposed', 'staff')).toBe('proposed');
+    expect(statusChangeKind('proposed', 'done', 'company')).toBe('approved');
+    expect(statusChangeKind('proposed', 'in_progress', 'company')).toBe('denied');
+    // The staff taking it back is an ordinary move.
+    expect(statusChangeKind('proposed', 'in_progress', 'staff')).toBe('moved');
+    expect(statusChangeKind('done', 'open', 'company')).toBe('reopened');
+    expect(statusChangeKind('open', 'cancelled', 'company')).toBe('cancelled');
+    expect(statusChangeKind('open', 'todo', 'staff')).toBe('moved');
   });
 });

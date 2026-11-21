@@ -19,6 +19,7 @@ import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
 import {
   addNote,
+  answerSolution,
   changeAssignees,
   changeRequestStatus,
   changeSubscribers,
@@ -44,14 +45,15 @@ export async function replyAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor();
+    const asked = field(formData, 'status');
     await replyToRequest(appContext, actor, {
       request: field(formData, 'request'),
       body: field(formData, 'body'),
-      status: field(formData, 'status'),
+      status: asked,
     });
     refresh();
     const t = await getTranslations('requests.reply');
-    return { ok: true, message: t('sent') };
+    return { ok: true, message: asked === 'proposed' ? t('solutionSent') : t('sent') };
   });
 }
 
@@ -75,6 +77,32 @@ export async function noteAction(
     refresh();
     const t = await getTranslations('requests.note');
     return { ok: true, message: t('added') };
+  });
+}
+
+/**
+ * Approves or denies the solution a request waits on, from the company's
+ * buttons; a denial may say what's still wrong.
+ *
+ * @param _previous - The previous result (unused).
+ * @param formData - Fields `request` (its number), `answer` and, for a denial, `body`.
+ * @returns A confirmation, or why it failed.
+ */
+export async function answerSolutionAction(
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const actor = await getActor();
+    const answer = field(formData, 'answer');
+    await answerSolution(appContext, actor, {
+      request: field(formData, 'request'),
+      answer,
+      body: field(formData, 'body'),
+    });
+    refresh();
+    const t = await getTranslations('requests.solution');
+    return { ok: true, message: answer === 'approve' ? t('approved') : t('denied') };
   });
 }
 

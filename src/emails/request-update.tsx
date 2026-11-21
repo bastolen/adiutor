@@ -16,11 +16,11 @@ import type { Email } from '@/lib/email';
 import type { Locale } from '@/lib/i18n/locales';
 import translator from '@/lib/i18n/translator';
 import {
-  isClosedStatus,
-  isReopening,
   type RequestAudience,
   type RequestParticipantRole,
+  type RequestSide,
   type RequestStatus,
+  statusChangeKind,
 } from '@/lib/requests';
 
 import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
@@ -49,6 +49,8 @@ export type RequestUpdateEmailItem =
       event: 'status';
       /** Who. */
       by: string;
+      /** The side they changed it as: the company's answer to a solution reads differently. */
+      bySide: RequestSide;
       /** The status it had. */
       from: RequestStatus;
       /** The status it got. */
@@ -146,22 +148,6 @@ function accountLinkTag(href: string) {
 }
 
 /**
- * What a status change did, as the sentence about it is chosen: it
- * reopened the request, marked it done or cancelled it, or moved it to
- * another status.
- *
- * @param from - The status it had.
- * @param to - The status it got.
- * @returns Which sentence tells it.
- */
-function changeOf(from: RequestStatus, to: RequestStatus): string {
-  if (isReopening(from, to)) {
-    return 'reopened';
-  }
-  return isClosedStatus(to) ? to : 'other';
-}
-
-/**
  * A text someone wrote, set apart from the email's own words by a line on
  * its left, formatted as on the request's page (`EmailMarkdown`).
  *
@@ -241,7 +227,7 @@ function UpdateItem({
       <EmailParagraph>
         {t.rich('status', {
           ...who,
-          change: changeOf(item.from, item.to),
+          change: statusChangeKind(item.from, item.to, item.bySide),
           // The statuses in the reader's words.
           from: tRequests('status', { status: item.from, audience }),
           to: tRequests('status', { status: item.to, audience }),
@@ -348,7 +334,7 @@ RequestUpdateEmail.PreviewProps = {
         mentions: {},
       },
     },
-    { event: 'status', by: 'Sam Doe', from: 'in_progress', to: 'waiting' },
+    { event: 'status', by: 'Sam Doe', bySide: 'staff', from: 'in_progress', to: 'waiting' },
     { event: 'assigned', by: 'Alex Doe' },
   ],
 } satisfies RequestUpdateEmailProps;
