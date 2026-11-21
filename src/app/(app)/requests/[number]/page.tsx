@@ -398,7 +398,7 @@ async function RequestContent({
                     <RowAction
                       action={changeStatusAction}
                       allowedWhileSignedInAs
-                      fields={{ ...fields, status: 'done' }}
+                      fields={{ ...fields, status: 'done', from: detail.status }}
                       label={tRequests('controls.markDone')}
                       variant="primary"
                     />
@@ -407,7 +407,7 @@ async function RequestContent({
                     <RowAction
                       action={changeStatusAction}
                       allowedWhileSignedInAs
-                      fields={{ ...fields, status: 'cancelled' }}
+                      fields={{ ...fields, status: 'cancelled', from: detail.status }}
                       label={tRequests('controls.cancel')}
                       confirm={{
                         title: tRequests('controls.cancelTitle'),
@@ -421,7 +421,7 @@ async function RequestContent({
                     <RowAction
                       action={changeStatusAction}
                       allowedWhileSignedInAs
-                      fields={{ ...fields, status: 'open' }}
+                      fields={{ ...fields, status: 'open', from: detail.status }}
                       label={tRequests('controls.reopen')}
                     />
                   )}

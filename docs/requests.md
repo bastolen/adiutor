@@ -85,7 +85,11 @@ and Cancelled are the closed statuses.
   (`requestAudienceIn` in `src/server/requests/access.ts`), so someone who is a Client of one
   company and a Watcher of another reads each request the same way in both places.
 - When two people change a status at the same moment, the second is told the request changed and
-  sees the new status, rather than overwriting it (`errors.requests.statusChanged`).
+  sees the request as it is, rather than overwriting it (`errors.requests.statusChanged`). The
+  status select and the buttons send the status they showed (`from`), so the change is refused
+  when the request has another status by now, also for the staff, who may make any move; the
+  action then refreshes the page. A change without `from` is refused only when the move is no
+  longer allowed.
 
 ### Solutions
 

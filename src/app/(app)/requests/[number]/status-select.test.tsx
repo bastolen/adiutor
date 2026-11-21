@@ -40,7 +40,7 @@ describe('StatusSelect', () => {
     await waitFor(() => expect(changeStatusAction).toHaveBeenCalledTimes(1));
     expect(
       Object.fromEntries(defined(vi.mocked(changeStatusAction).mock.calls[0], 'the call')[1]),
-    ).toEqual({ request: '142', status: 'todo' });
+    ).toEqual({ request: '142', status: 'todo', from: 'open' });
     // Not replaced, so keyboard focus stays where it was.
     expect(screen.getByRole('combobox', { name: 'Status' })).toBe(select);
     expect(select).toHaveFocus();
