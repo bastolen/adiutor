@@ -7,6 +7,8 @@
  * replies, done, reopened, cancelled), the staff editing its details and
  * assigning it (and finding what's assigned to them), editing a
  * description or a reply (and the earlier versions the staff read), the
+ * staff's internal notes (which Finance reads and the company never sees),
+ * the
  * prefix numbers are shown with, and
  * who only reads: Watchers, Finance, everyone for a
  * deactivated company's request, and a staff member signed in as a user.
@@ -1491,6 +1493,77 @@ test('nothing is edited once a request is done', async ({ page }) => {
   await expect(main(page).getByRole('button', { name: /^Edit (description|reply)$/ })).toHaveCount(
     0,
   );
+});
+
+test('the staff write an internal note, which Finance reads and the company never sees', async ({
+  page,
+}) => {
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'The label printer prints blank labels',
+  });
+  const list = page.getByRole('listbox', { name: 'People to mention' });
+  const write = page.getByRole('tablist', { name: 'Write' });
+
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  await expect(write.getByRole('tab', { name: 'Reply' })).toHaveAttribute('aria-selected', 'true');
+  // A reply that's started stays on its own tab.
+  await page.getByRole('textbox', { name: 'Your reply' }).fill('Not sent yet.');
+  await write.getByRole('tab', { name: 'Internal note' }).click();
+  await expect(page.getByRole('textbox', { name: 'Your reply' })).toBeHidden();
+  await expect(main(page).getByText('Only the staff see internal notes.')).toBeVisible();
+
+  // A note can mention someone at the company.
+  const note = await markdownEditor(page, 'Your note');
+  await note.click();
+  await page.keyboard.type('Probably the toner. @e2e requests cl');
+  await expect(list.getByRole('option')).toHaveText([REQUESTS_CLIENT.name]);
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('asked twice.');
+  await page.getByRole('button', { name: 'Add note' }).click();
+  await expect(toasts(page)).toContainText('Note added.');
+  await expect(note).toHaveText('');
+  const entry = conversation(page).getByRole('listitem').filter({ hasText: 'Probably the toner.' });
+  await expect(entry).toContainText('Internal note');
+  await expect(entry).toContainText(`@${REQUESTS_CLIENT.name} asked twice.`);
+  // Nothing the company sees changed.
+  await expect(page.getByRole('combobox', { name: 'Status' })).toHaveText('Open');
+  await expect(detail(page, 'First response')).toHaveText('Not yet');
+  await write.getByRole('tab', { name: 'Reply' }).click();
+  await expect(page.getByRole('textbox', { name: 'Your reply' })).toHaveText('Not sent yet.');
+
+  // Its author edits it, like a reply.
+  await entry.getByRole('button', { name: 'Edit note' }).click();
+  const editor = entry.getByRole('textbox', { name: 'Note', exact: true });
+  await expect(editor).toHaveAttribute('contenteditable', 'true');
+  await expect(editor).toBeFocused();
+  await page.keyboard.type(' Toner ordered.');
+  await entry.getByRole('button', { name: 'Save' }).click();
+  await expect(toasts(page)).toContainText('Changes saved.');
+  await expect(entry).toContainText('asked twice. Toner ordered.');
+  await signOut(page);
+
+  // Finance reads it, and writes none.
+  await signIn(page, FINANCE_STAFF);
+  await page.goto(`/requests/${number}`);
+  await expect(entry).toContainText('Internal note');
+  await expect(entry).toContainText('Toner ordered.');
+  await expect(write).toHaveCount(0);
+  await signOut(page);
+
+  // The company never sees it, also not the person it mentions.
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto(`/requests/${number}`);
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'The label printer prints blank labels' }),
+  ).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Conversation' })).toContainText('No replies yet.');
+  await expect(main(page)).not.toContainText('toner');
+  await expect(main(page).getByText('Internal note')).toHaveCount(0);
+  await expect(write).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'Your reply' })).toBeVisible();
 });
 
 test('a Watcher follows a request without taking part', async ({ page }) => {

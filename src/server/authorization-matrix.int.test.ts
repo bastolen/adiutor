@@ -131,11 +131,12 @@ import { registerUser } from './people/user-registration';
 import { listUsers } from './people/users';
 import { findErrorReference, listRecentErrors } from './recorded-errors';
 import {
+  addNote,
   changeAssignees,
   changeRequestStatus,
+  countAssignedRequests,
   editReply,
   editRequestDescription,
-  countAssignedRequests,
   findRequest,
   getRequest,
   listAssignableStaff,
@@ -655,6 +656,14 @@ function listOperations(): Operation[] {
         }),
     ],
     [
+      'add internal note (own)',
+      (w) => addNote(ctx, w.actor, { request: w.requests.own, body: 'Probably the toner.' }),
+    ],
+    [
+      'add internal note (other)',
+      (w) => addNote(ctx, w.actor, { request: w.requests.other, body: 'Probably the toner.' }),
+    ],
+    [
       'list who can be mentioned in a request (own)',
       (w) => listMentionable(ctx, w.actor, { request: w.requests.own }),
     ],
@@ -901,6 +910,9 @@ const EXPECTED: Record<string, string> = {
   'edit request description (other)': 'NNNAFAA',
   // Past the permission, a reply is only ever its author's to edit.
   'edit a reply that is not your own (own)': 'FNNNFNN',
+  // Internal notes are written by the staff who work on requests; Finance reads them.
+  'add internal note (own)': 'FFFAFAA',
+  'add internal note (other)': 'NNNAFAA',
   // The list at "@" is for whoever may write there: not a Watcher, and not Finance.
   'list who can be mentioned in a request (own)': 'FAAAFAA',
   'list who can be mentioned in a request (other)': 'NNNAFAA',

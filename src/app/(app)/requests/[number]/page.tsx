@@ -32,6 +32,7 @@ import ClientMessages from '@/lib/i18n/client-messages';
 import {
   formatRequestNumber,
   isClosedStatus,
+  mayWriteNote,
   parseRequestNumber,
   REQUEST_STATUSES,
   requestPath,
@@ -62,6 +63,7 @@ import ReplyForm from './reply-form';
 import RequestDetails from './request-details';
 import StatusSelect from './status-select';
 import Thread from './thread';
+import WriteTabs from './write-tabs';
 
 /**
  * Page metadata: "Request AD-142 · Adiutor" for those who may see the
@@ -142,6 +144,8 @@ async function RequestContent({
   // What someone at the company may do with the request as it is: close it, or reopen it.
   const choices = contributes && !manages ? statusChoices(detail.permissions, detail.status) : [];
   const fields = { request: String(detail.number) };
+  // "Send and wait for the company": only on a request that's worked on and doesn't wait already.
+  const canWait = manages && !isClosedStatus(detail.status) && detail.status !== 'waiting';
   // Who the staff may assign: everyone who can be, and anyone assigned now who no longer could
   // be (gone meanwhile), so the dialog can still remove them.
   const assigned = detail.assignees.flatMap(({ userId }) => (userId ? [userId] : []));
@@ -319,13 +323,12 @@ async function RequestContent({
               <Thread detail={detail} address={address} earlierHref={earlierHref} />
               {contributes && (
                 <div className={detail.entries.length > 0 ? 'border-t border-border pt-6' : ''}>
-                  <ReplyForm
-                    request={detail.number}
-                    // Only on a request that's worked on and doesn't wait for the company already.
-                    canWait={
-                      manages && !isClosedStatus(detail.status) && detail.status !== 'waiting'
-                    }
-                  />
+                  {mayWriteNote(detail.permissions) ? (
+                    // The staff who work on requests also write internal notes, on a tab of their own.
+                    <WriteTabs request={detail.number} canWait={canWait} />
+                  ) : (
+                    <ReplyForm request={detail.number} canWait={canWait} />
+                  )}
                 </div>
               )}
             </div>

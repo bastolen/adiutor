@@ -3,7 +3,7 @@
  * to, the company it's in, what the reader may do with it, and its
  * conversation.
  */
-import { and, count, desc, eq, min, ne } from 'drizzle-orm';
+import { and, count, desc, eq, isNull, min, notInArray, or } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
 import {
@@ -17,6 +17,7 @@ import type { Permission } from '@/lib/authz/permissions';
 import { firstRow } from '@/lib/defined';
 import {
   mayEditDescription,
+  mayEditNote,
   mayEditReply,
   parseRequestReference,
   type RequestAudience,
@@ -25,6 +26,7 @@ import {
   type RequestStatus,
   type RequestTextFormat,
   type RequestType,
+  STAFF_ONLY_ENTRY_KINDS,
 } from '@/lib/requests';
 
 import type { Actor } from '../actor';
@@ -87,15 +89,16 @@ export interface RequestEntryView {
   /** The entry's ID. */
   id: string;
   /**
-   * What it is: a reply, a change of the status, title, type or priority, or
-   * someone assigned or removed (`assignee`).
+   * What it is: a reply, an internal note (only ever for the staff), a change
+   * of the status, title, type or priority, or someone assigned or removed
+   * (`assignee`).
    */
   kind: RequestEntryKind;
   /** Who wrote or changed it. */
   author: RequestPerson;
   /** When. */
   createdAt: Date;
-  /** A reply's text; `null` for a change. */
+  /** A reply's or a note's text; `null` for a change. */
   body: RequestText | null;
   /** What a change replaced, or `null`. */
   from: string | null;
@@ -224,10 +227,25 @@ export async function getRequest(
   const earlier = Number.isSafeInteger(options.earlier)
     ? Math.min(Math.max(options.earlier ?? 0, 0), MAX_EARLIER_CHUNKS)
     : 0;
+  // What only the staff see (a change of priority, an internal note) is left out for everyone
+  // else: of the entries, of the count of earlier ones, and of the texts' mentions and versions.
   const shown = and(
     eq(requestEntry.requestId, found.id),
-    internal ? undefined : ne(requestEntry.kind, 'priority'),
+    internal ? undefined : notInArray(requestEntry.kind, [...STAFF_ONLY_ENTRY_KINDS]),
   );
+  /**
+   * Leaves out the rows of a text the reader isn't shown: the description is
+   * shown to every reader, an entry's text only when its entry is.
+   *
+   * @param entryId - The column with the row's entry; `null` for the description.
+   * @returns The condition, or nothing for the staff, who are shown every text.
+   */
+  const ofShownText = (
+    entryId: typeof requestMention.entryId | typeof requestTextVersion.entryId,
+  ) =>
+    internal
+      ? undefined
+      : or(isNull(entryId), notInArray(requestEntry.kind, [...STAFF_ONLY_ENTRY_KINDS]));
 
   const [
     raisedBy,
@@ -261,7 +279,8 @@ export async function getRequest(
       })
       .from(requestMention)
       .leftJoin(user, eq(requestMention.userId, user.id))
-      .where(eq(requestMention.requestId, found.id)),
+      .leftJoin(requestEntry, eq(requestMention.entryId, requestEntry.id))
+      .where(and(eq(requestMention.requestId, found.id), ofShownText(requestMention.entryId))),
     ctx.db
       .select({
         entryId: requestTextVersion.entryId,
@@ -273,7 +292,10 @@ export async function getRequest(
       })
       .from(requestTextVersion)
       .leftJoin(user, eq(requestTextVersion.editedBy, user.id))
-      .where(eq(requestTextVersion.requestId, found.id))
+      .leftJoin(requestEntry, eq(requestTextVersion.entryId, requestEntry.id))
+      .where(
+        and(eq(requestTextVersion.requestId, found.id), ofShownText(requestTextVersion.entryId)),
+      )
       .orderBy(desc(requestTextVersion.id)),
     getStaffName(ctx.db),
     getRequestPrefix(ctx.db),
@@ -389,7 +411,11 @@ export async function getRequest(
                 entry.id,
                 body,
                 editedAt,
-                mayEditReply(permissions, found.status, author?.id === actor.id),
+                (entry.kind === 'note' ? mayEditNote : mayEditReply)(
+                  permissions,
+                  found.status,
+                  author?.id === actor.id,
+                ),
               ),
             },
       // An assignment's subject is always on the staff's side, also once their account is gone.

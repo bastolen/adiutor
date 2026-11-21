@@ -107,6 +107,16 @@
       "sendAndWait": "Send and wait for the company",
       "sent": "Reply sent."
     },
+    "note": {
+      "tabsLabel": "Write",
+      "replyTab": "Reply",
+      "noteTab": "Internal note",
+      "staffOnly": "Only the staff see internal notes.",
+      "label": "Your note",
+      "add": "Add note",
+      "added": "Note added.",
+      "badge": "Internal note"
+    },
     "controls": {
       "status": "Status",
       "saving": "Saving…",
@@ -151,7 +161,9 @@
       "editedAt": "Edited {time}",
       "versionsTitle": "Earlier versions",
       "versionsDescription": "What this text said before its edits, newest first. Only the staff see these.",
-      "versionLine": "{name} changed this on {time}."
+      "versionLine": "{name} changed this on {time}.",
+      "editNote": "Edit note",
+      "noteLabel": "Note"
     }
   }
 }

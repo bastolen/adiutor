@@ -26,8 +26,10 @@ import { editTextAction } from './actions';
 interface EditableTextProps {
   /** The request's number. */
   request: number;
-  /** The reply's ID; `null` for the request's description. */
+  /** The reply's or note's ID; `null` for the request's description. */
   entry: string | null;
+  /** Whether the entry is an internal note: the button and field say "note". */
+  note?: boolean;
   /** What the editor starts from, and how many times the text was edited (sent back). */
   edit: { markdown: string; edits: number };
   /** The text as it reads, rendered on the server. */
@@ -35,8 +37,8 @@ interface EditableTextProps {
 }
 
 /**
- * The text with an Edit button (a pencil, named "Edit description" or "Edit
- * reply") beside it. The button swaps the text for a Markdown editor holding
+ * The text with an Edit button (a pencil, named "Edit description", "Edit
+ * reply" or "Edit note") beside it. The button swaps the text for a Markdown editor holding
  * it, with Save and Cancel. Saving refreshes the page, so the text shows as
  * saved; a success is a toast, a refusal shows above the editor and as a
  * toast, and the editor stays open with what was typed. Cancel, and a save,
@@ -48,12 +50,19 @@ interface EditableTextProps {
  *
  * @param props - Component props.
  * @param props.request - The request's number.
- * @param props.entry - The reply's ID, or `null` for the description.
+ * @param props.entry - The reply's or note's ID, or `null` for the description.
+ * @param props.note - Whether it's an internal note.
  * @param props.edit - What the editor starts from.
  * @param props.children - The text as it reads.
  * @returns The text and its button, or the editor.
  */
-export default function EditableText({ request, entry, edit, children }: EditableTextProps) {
+export default function EditableText({
+  request,
+  entry,
+  note = false,
+  edit,
+  children,
+}: EditableTextProps) {
   const t = useTranslations('requests.edit');
   const changesOff = useSignedInAs();
   const showToast = useToast();
@@ -81,6 +90,16 @@ export default function EditableText({ request, entry, edit, children }: Editabl
     [setEditing, showToast],
   );
   const [result, formAction, pending, onSubmit] = useTransientActionState(run, null);
+  // What the button and the field are called: for the description, a reply or a note.
+  let name = t('editDescription');
+  let fieldLabel = t('descriptionLabel');
+  if (note) {
+    name = t('editNote');
+    fieldLabel = t('noteLabel');
+  } else if (entry) {
+    name = t('editReply');
+    fieldLabel = t('replyLabel');
+  }
 
   useEffect(() => {
     if (!editing && backToButton.current) {
@@ -98,7 +117,7 @@ export default function EditableText({ request, entry, edit, children }: Editabl
           <input type="hidden" name="edits" value={edit.edits} />
           <ResultAlert result={result} errorsOnly />
           <MarkdownField
-            label={entry ? t('replyLabel') : t('descriptionLabel')}
+            label={fieldLabel}
             name="text"
             rows={entry ? 6 : 10}
             maxLength={REQUEST_TEXT_MAX_LENGTH}
@@ -127,7 +146,6 @@ export default function EditableText({ request, entry, edit, children }: Editabl
     );
   }
 
-  const name = entry ? t('editReply') : t('editDescription');
   return (
     <div className="flex items-start gap-2">
       <div className="min-w-0 flex-1">{children}</div>

@@ -133,12 +133,14 @@ export const REQUEST_SIDES = ['company', 'staff'] as const;
 export type RequestSide = (typeof REQUEST_SIDES)[number];
 
 /**
- * The kinds of entry in a request's history: a comment, a change of its
- * status, title, type or priority, or someone assigned to it or removed
- * from it (`assignee`).
+ * The kinds of entry in a request's history: a comment (a reply), an
+ * internal note only the staff read (`note`), a change of its status,
+ * title, type or priority, or someone assigned to it or removed from it
+ * (`assignee`).
  */
 export const REQUEST_ENTRY_KINDS = [
   'comment',
+  'note',
   'status',
   'title',
   'type',
@@ -148,6 +150,30 @@ export const REQUEST_ENTRY_KINDS = [
 
 /** One kind of history entry. */
 export type RequestEntryKind = (typeof REQUEST_ENTRY_KINDS)[number];
+
+/**
+ * The kinds of entry that hold a text someone wrote: a reply and an
+ * internal note. Each has a body; no other kind has one.
+ */
+export const WRITTEN_ENTRY_KINDS = [
+  'comment',
+  'note',
+] as const satisfies readonly RequestEntryKind[];
+
+/** A kind of entry that holds a text. */
+export type WrittenEntryKind = (typeof WRITTEN_ENTRY_KINDS)[number];
+
+/**
+ * The kinds of entry only readers with `requests:view-internal` (the staff)
+ * see: a change of priority and an internal note. The services leave them
+ * out of everything a company user gets (the conversation, the count of
+ * earlier entries, the staff a company writer may mention), and they never
+ * count as the request's last activity.
+ */
+export const STAFF_ONLY_ENTRY_KINDS = [
+  'priority',
+  'note',
+] as const satisfies readonly RequestEntryKind[];
 
 /**
  * What an `assignee` entry records about the staff member it's about: that

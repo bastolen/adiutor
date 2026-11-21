@@ -1,20 +1,24 @@
 /**
- * @file A request's conversation: every reply, every change of its status,
- * title, type or priority, and everyone assigned or removed, oldest first. Each entry names who wrote
- * or changed it and when. What was asked is the page's Description, above
- * it. Its text comes from the `requests` namespace.
+ * @file A request's conversation: every reply, every internal note (which
+ * only the staff get from the service), every change of its status, title,
+ * type or priority, and everyone assigned or removed, oldest first. Each
+ * entry names who wrote or changed it and when. What was asked is the page's
+ * Description, above it. Its text comes from the `requests` namespace.
  */
-import { CircleDot, Flag, type LucideIcon, Pencil, Tag, UserRound } from 'lucide-react';
+import { CircleDot, Flag, Lock, type LucideIcon, Pencil, Tag, UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
+import Badge from '@/components/ui/badge';
 import RelativeTime from '@/components/ui/relative-time';
+import cn from '@/lib/cn';
 import {
   isReopening,
   isRequestPriority,
   isRequestStatus,
   isRequestType,
   type RequestAudience,
+  type WrittenEntryKind,
 } from '@/lib/requests';
 import type { RequestDetail, RequestEntryView, RequestPerson } from '@/server/requests';
 
@@ -29,7 +33,7 @@ import EditedNote from './edited-note';
 import ShowEarlierLink from './show-earlier-link';
 
 /** The icon of each kind of change. */
-const CHANGE_ICONS: Record<Exclude<RequestEntryView['kind'], 'comment'>, LucideIcon> = {
+const CHANGE_ICONS: Record<Exclude<RequestEntryView['kind'], WrittenEntryKind>, LucideIcon> = {
   status: CircleDot,
   title: Pencil,
   type: Tag,
@@ -46,7 +50,7 @@ const CHANGE_ICONS: Record<Exclude<RequestEntryView['kind'], 'comment'>, LucideI
  * @param props.person - Who wrote or changed it.
  * @param props.names - The names of the two sides.
  * @param props.at - When.
- * @param props.edited - What follows the time: "Edited", for an edited reply.
+ * @param props.afterTime - What follows the time: a note's badge, and "Edited" for an edited text.
  * @param props.children - What they wrote or changed.
  * @returns The list item.
  */
@@ -55,14 +59,14 @@ function Entry({
   person,
   names,
   at,
-  edited = null,
+  afterTime = null,
   children,
 }: {
   leading: ReactNode;
   person: RequestPerson;
   names: SideNames;
   at: Date;
-  edited?: ReactNode;
+  afterTime?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -72,7 +76,7 @@ function Entry({
         <PersonLine person={person} names={names}>
           <span className="flex items-center gap-x-2 text-muted-foreground">
             <RelativeTime date={at} />
-            {edited}
+            {afterTime}
           </span>
         </PersonLine>
         {children}
@@ -160,6 +164,7 @@ export default function Thread({
   earlierHref: string | null;
 }) {
   const t = useTranslations('requests.detail');
+  const tNote = useTranslations('requests.note');
   const names: SideNames = { company: detail.company.name, staff: detail.staffName };
 
   if (detail.entries.length === 0) {
@@ -176,7 +181,10 @@ export default function Thread({
         </li>
       )}
       {detail.entries.map((entry) => {
-        if (entry.kind === 'comment') {
+        if (entry.kind === 'comment' || entry.kind === 'note') {
+          // An internal note reads like a reply, on the amber surface and with a badge that says
+          // only the staff see it.
+          const note = entry.kind === 'note';
           const source = {
             url: address,
             writer: personName(entry.author, names),
@@ -186,7 +194,10 @@ export default function Thread({
             <RequestText
               text={entry.body}
               id={entry.id}
-              className="rounded-lg bg-muted px-3 py-2 text-sm text-foreground"
+              className={cn(
+                'rounded-lg px-3 py-2 text-sm text-foreground',
+                note ? 'bg-warning-soft' : 'bg-muted',
+              )}
               source={source}
               names={names}
             />
@@ -198,14 +209,27 @@ export default function Thread({
               person={entry.author}
               names={names}
               at={entry.createdAt}
-              edited={
-                entry.body && (
-                  <EditedNote text={entry.body} id={entry.id} source={source} names={names} />
-                )
+              afterTime={
+                <>
+                  {note && (
+                    <Badge tone="warning">
+                      <Lock aria-hidden="true" className="mr-1 size-3" />
+                      {tNote('badge')}
+                    </Badge>
+                  )}
+                  {entry.body && (
+                    <EditedNote text={entry.body} id={entry.id} source={source} names={names} />
+                  )}
+                </>
               }
             >
               {entry.body?.edit ? (
-                <EditableText request={detail.number} entry={entry.id} edit={entry.body.edit}>
+                <EditableText
+                  request={detail.number}
+                  entry={entry.id}
+                  note={note}
+                  edit={entry.body.edit}
+                >
                   {text}
                 </EditableText>
               ) : (

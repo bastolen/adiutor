@@ -210,6 +210,40 @@ describe('FormattingToolbar', () => {
 });
 
 describe('FormattingToolbar: the link dialog', () => {
+  it('gives the text the focus once it has closed with a link, and its button after Escape', async () => {
+    const user = userEvent.setup();
+    // Stands in for the editor, which takes the focus when it gets a command.
+    const onCommand = vi.fn(() => screen.getByRole('textbox', { name: 'Text' }).focus());
+    render(
+      <>
+        <textarea aria-label="Text" />
+        <FormattingToolbar state={PLAIN} onCommand={onCommand} />
+      </>,
+    );
+    const link = screen.getByRole('button', { name: 'Link' });
+
+    await user.click(link);
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(link).toHaveFocus());
+    expect(onCommand).not.toHaveBeenCalled();
+
+    await user.click(link);
+    await user.type(screen.getByRole('textbox', { name: 'Web address' }), 'https://adiutor.dev/');
+    await user.click(screen.getByRole('button', { name: 'Save link' }));
+    await waitFor(() =>
+      expect(onCommand).toHaveBeenCalledExactlyOnceWith({
+        type: 'link',
+        address: 'https://adiutor.dev/',
+      }),
+    );
+    // The command went out as the dialog handed the focus back: nothing takes it from the text
+    // afterwards, however late the dialog's own clean-up runs.
+    await new Promise((resolve) => {
+      setTimeout(resolve, 50);
+    });
+    expect(screen.getByRole('textbox', { name: 'Text' })).toHaveFocus();
+  });
+
   it('asks for a web address and links to it', async () => {
     const user = userEvent.setup();
     const onCommand = renderToolbar();
