@@ -13,6 +13,7 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { ServiceError } from '../errors';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
+import { actingUserId, signedInAsWork } from '../signed-in-as';
 import type { RequestRow } from './access';
 import { CHANGE_MOMENT, changeRequest, requestToChange } from './change';
 import { typeToGive } from './types';
@@ -92,7 +93,7 @@ function editOf<T extends string>(
  * @param input.was.type - The type it started from.
  * @param input.was.priority - The priority it started from.
  * @returns How many of the three changed.
- * @throws {ServiceError} `signed_in_as` while a staff member is signed in as the actor,
+ * @throws {ServiceError} `signed_in_as` when the sign-in as the actor ended meanwhile,
  *   `not_found` when the actor may not see the request, `forbidden` without `requests:manage`,
  *   `invalid` when the company is deactivated or a new type can't be chosen
  *   (`errors.requestTypes.unavailable`), `rate_limited` when the actor has changed
@@ -121,7 +122,11 @@ export default async function updateRequestDetails(
   if (edits.type) {
     await typeToGive(ctx.db, edits.type.to);
   }
-  await assertRateLimit(ctx, `request-change:user:${actor.id}`, RATE_LIMITS.requestChangesPerUser);
+  await assertRateLimit(
+    ctx,
+    `request-change:user:${actingUserId(actor)}`,
+    RATE_LIMITS.requestChangesPerUser,
+  );
 
   return changeRequest(ctx, actor, access, 'requests:manage', async (tx, locked) => {
     const values: Partial<DetailValues> = {};
@@ -155,6 +160,7 @@ export default async function updateRequestDetails(
         requestId: locked.id,
         authorId: actor.id,
         authorSide: 'staff' as const,
+        ...signedInAsWork(actor),
         createdAt: CHANGE_MOMENT,
       })),
     );

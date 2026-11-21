@@ -10,6 +10,7 @@ import {
   type ImpersonationVerdict,
   mayImpersonate,
   mayImpersonateAnyone,
+  maySeeSignedInAsWork,
   personalDataShown,
 } from './impersonation';
 import { getGlobalPermissions } from './permissions';
@@ -192,5 +193,27 @@ describe('personalDataShown', () => {
     expect(shownTo('platform_admin')).toEqual({ devices: true, accountNames: true, origins: true });
     expect(shownTo('manager')).toEqual({ devices: false, accountNames: false, origins: true });
     expect(shownTo('support')).toEqual({ devices: false, accountNames: false, origins: false });
+  });
+});
+
+describe('maySeeSignedInAsWork', () => {
+  it('tells the person the work shows as theirs', () => {
+    expect(maySeeSignedInAsWork({ isAuthor: true, globalPermissions: new Set() })).toBe(true);
+  });
+
+  it('tells the staff who see the audit log, and nobody else', () => {
+    /**
+     * Whether a staff role who isn't the author is told.
+     *
+     * @param role - The staff role.
+     * @returns Whether they're told.
+     */
+    const told = (role: PlatformRole) =>
+      maySeeSignedInAsWork({
+        isAuthor: false,
+        globalPermissions: getGlobalPermissions({ platformRole: role }),
+      });
+    expect(PLATFORM_ROLES.filter(told)).toEqual(['platform_admin', 'manager']);
+    expect(maySeeSignedInAsWork({ isAuthor: false, globalPermissions: new Set() })).toBe(false);
   });
 });

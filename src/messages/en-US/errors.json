@@ -16,7 +16,8 @@
       "needsMfa": "To sign in as someone, first add a passkey or set up an authenticator app on your Security page.",
       "confirmationRequired": "Confirm it’s you with your second step before signing in as someone.",
       "alreadyStarted": "You're already signed in as someone. Go back to your own account first.",
-      "changesOff": "This can't be changed while you're signed in as someone else. Go back to your own account first."
+      "changesOff": "This can't be changed while you're signed in as someone else. Go back to your own account first.",
+      "ended": "Your sign-in as this user has ended, so nothing was changed."
     },
     "setup": {
       "alreadySetUp": "Adiutor is already set up. Sign in instead.",

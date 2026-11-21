@@ -16,7 +16,8 @@
       "needsMfa": "Voeg eerst een passkey of een authenticator-app toe op de pagina Beveiliging om als iemand anders in te loggen.",
       "confirmationRequired": "Bevestig met je tweede stap dat jij het bent, voordat je als iemand anders inlogt.",
       "alreadyStarted": "Je bent al ingelogd als iemand anders. Ga eerst terug naar je eigen account.",
-      "changesOff": "Dit kan niet worden gewijzigd terwijl je als iemand anders bent ingelogd. Ga eerst terug naar je eigen account."
+      "changesOff": "Dit kan niet worden gewijzigd terwijl je als iemand anders bent ingelogd. Ga eerst terug naar je eigen account.",
+      "ended": "Je bent niet meer als deze gebruiker ingelogd, dus er is niets gewijzigd."
     },
     "setup": {
       "alreadySetUp": "Adiutor is al ingesteld. Log gewoon in.",

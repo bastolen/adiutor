@@ -4,22 +4,18 @@
  * they are by then, locks the request, and only then reads what it changes,
  * so two changes to one request take turns and each sees the other's result.
  */
-import { eq, type SQL, sql } from 'drizzle-orm';
+import { and, eq, gt, type SQL, sql } from 'drizzle-orm';
 
 import type { DatabaseTransaction } from '@/db';
-import { request, requestEntry } from '@/db/schema';
+import { impersonation, request, requestEntry } from '@/db/schema';
 import type { Permission } from '@/lib/authz/permissions';
 import { isClosedStatus, isReopening, type RequestSide, type RequestStatus } from '@/lib/requests';
 
-import {
-  assertNotSignedInAs,
-  assertPermission,
-  assertStillManages,
-  type LockedUser,
-} from '../access';
+import { assertPermission, assertStillManages, type LockedUser } from '../access';
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
-import { companyDeactivatedError, notFoundError } from '../errors';
+import { companyDeactivatedError, notFoundError, ServiceError } from '../errors';
+import { signedInAsWork } from '../signed-in-as';
 import { getRequestAccess, type RequestAccess, type RequestRow } from './access';
 
 /**
@@ -35,16 +31,17 @@ export const CHANGE_MOMENT = sql`clock_timestamp()`;
 
 /**
  * Loads the request a change is about and checks that the actor may make
- * it: not while a staff member is signed in as them, only with the
- * permission, and never in a deactivated company, whose requests can only be
- * read.
+ * it: only with the permission, and never in a deactivated company, whose
+ * requests can only be read. A staff member signed in as the actor may make
+ * it too, as the user's own work: the actor's rights decide, and the change
+ * records the staff member (`signedInAsWork`, decision 0028).
  *
  * @param ctx - Service context.
  * @param actor - The acting user.
  * @param ref - The request's number or ID.
  * @param permission - The permission the change needs.
  * @returns The request, its company and the actor's permissions there.
- * @throws {ServiceError} `signed_in_as`, `not_found` when the actor may not see the request,
+ * @throws {ServiceError} `not_found` when the actor may not see the request,
  *   `forbidden` without the permission, `invalid` when the company is deactivated.
  */
 export async function requestToChange(
@@ -53,7 +50,6 @@ export async function requestToChange(
   ref: string,
   permission: Permission,
 ): Promise<RequestAccess> {
-  assertNotSignedInAs(actor);
   const access = await getRequestAccess(ctx.db, actor, ref);
   assertPermission(access.permissions, permission);
   if (access.company.deactivatedAt) {
@@ -76,10 +72,44 @@ export function workingPermission(permissions: ReadonlySet<Permission>): Permiss
 }
 
 /**
+ * Refuses a change made while signed in as the actor once that sign-in is
+ * over: ended, or its time up. The staff member's row of it is read
+ * `FOR SHARE`, so it can't end before the change's transaction does (ending
+ * it deletes the row). Its time limit is the same check the request's actor
+ * passed (`actorSignedInAs`), now in the database's clock.
+ *
+ * @param tx - The change's transaction.
+ * @param actor - The acting user.
+ * @throws {ServiceError} `signed_in_as` with `errors.impersonation.ended`.
+ */
+async function assertStillSignedInAs(tx: DatabaseTransaction, actor: Actor): Promise<void> {
+  if (!actor.signedInAs) {
+    return;
+  }
+  const [holds] = await tx
+    .select({ id: impersonation.id })
+    .from(impersonation)
+    .where(
+      and(
+        eq(impersonation.staffUserId, actor.signedInAs.staffId),
+        eq(impersonation.userId, actor.id),
+        gt(impersonation.expiresAt, sql`clock_timestamp()`),
+      ),
+    )
+    .limit(1)
+    .for('share');
+  if (!holds) {
+    throw new ServiceError('signed_in_as', 'errors.impersonation.ended');
+  }
+}
+
+/**
  * Checks, first thing inside the transaction of a change, that the actor
  * still may make it: their rights as they are now (`assertStillManages`,
  * which locks their user and membership rows: before the request, as the
- * lock order asks), and the company as that check read it. The staff keep
+ * lock order asks), the company as that check read it, and, while a staff
+ * member is signed in as them, that the sign-in still holds
+ * (`assertStillSignedInAs`). The staff keep
  * their rights in a deactivated company, so only this refuses a change of
  * theirs that was under way when the company was deactivated. It narrows
  * that window to the rest of the transaction rather than closing it: the
@@ -94,7 +124,8 @@ export function workingPermission(permissions: ReadonlySet<Permission>): Permiss
  *   `FOR SHARE` in the same statement as the actor, in ID order.
  * @returns The locked user rows, by ID: the actor's and those of `alsoLock` that exist.
  * @throws {ServiceError} `forbidden` when the actor lost the permission meanwhile, `invalid`
- *   when the company was deactivated meanwhile.
+ *   when the company was deactivated meanwhile, `signed_in_as` when the sign-in as the actor
+ *   ended meanwhile.
  */
 export async function assertStillMayChange(
   tx: DatabaseTransaction,
@@ -113,6 +144,7 @@ export async function assertStillMayChange(
   if (companyDeactivatedAt) {
     throw companyDeactivatedError();
   }
+  await assertStillSignedInAs(tx, actor);
   return users;
 }
 
@@ -194,21 +226,22 @@ export function statusChange(
  * @param tx - The change's transaction.
  * @param locked - The request, locked, with the status it has.
  * @param to - The status it gets.
- * @param author - Who changes it: their ID and the side they are on.
- * @param author.id - The acting user's ID.
- * @param author.side - The side they take part on.
+ * @param actor - Who changes it (a staff member signed in as them is recorded too).
+ * @param side - The side they take part on.
  */
 export async function recordStatusChange(
   tx: DatabaseTransaction,
   locked: RequestRow,
   to: RequestStatus,
-  author: { id: string; side: RequestSide },
+  actor: Actor,
+  side: RequestSide,
 ): Promise<void> {
   await tx.insert(requestEntry).values({
     requestId: locked.id,
     kind: 'status',
-    authorId: author.id,
-    authorSide: author.side,
+    authorId: actor.id,
+    authorSide: side,
+    ...signedInAsWork(actor),
     fromValue: locked.status,
     toValue: to,
     createdAt: CHANGE_MOMENT,

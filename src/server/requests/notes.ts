@@ -10,6 +10,7 @@ import { requestReplySchema } from '@/lib/validation';
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
+import { actingUserId, signedInAsWork } from '../signed-in-as';
 import { CHANGE_MOMENT, changeRequest, requestToChange } from './change';
 import { storeMentions } from './mentions';
 
@@ -31,7 +32,7 @@ import { storeMentions } from './mentions';
  * @param input - Form input.
  * @param input.request - The request's number or ID.
  * @param input.body - The note.
- * @throws {ServiceError} `signed_in_as` while a staff member is signed in as the actor,
+ * @throws {ServiceError} `signed_in_as` when the sign-in as the actor ended meanwhile,
  *   `not_found` when the actor may not see the request, `forbidden` without
  *   `requests:manage`, `invalid` when the company is deactivated, `rate_limited` when the
  *   actor has written too often (`RATE_LIMITS.requestRepliesPerUser`).
@@ -44,7 +45,11 @@ export default async function addNote(
 ): Promise<void> {
   const access = await requestToChange(ctx, actor, input.request, 'requests:manage');
   const body = requestReplySchema.parse(input.body);
-  await assertRateLimit(ctx, `request-reply:user:${actor.id}`, RATE_LIMITS.requestRepliesPerUser);
+  await assertRateLimit(
+    ctx,
+    `request-reply:user:${actingUserId(actor)}`,
+    RATE_LIMITS.requestRepliesPerUser,
+  );
 
   await changeRequest(ctx, actor, access, 'requests:manage', async (tx, locked) => {
     const note = firstRow(
@@ -55,6 +60,7 @@ export default async function addNote(
           kind: 'note',
           authorId: actor.id,
           authorSide: 'staff',
+          ...signedInAsWork(actor),
           body,
           bodyFormat: WRITTEN_TEXT_FORMAT,
           createdAt: CHANGE_MOMENT,

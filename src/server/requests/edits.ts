@@ -36,6 +36,7 @@ import type { ServiceContext } from '../context';
 import { notFoundError, ServiceError } from '../errors';
 import getStaffName from '../people/staff-name';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
+import { actingUserId, signedInAsWork } from '../signed-in-as';
 import { CHANGE_MOMENT, changeRequest, requestToChange, workingPermission } from './change';
 import { mentionKey, storeMentions } from './mentions';
 
@@ -194,6 +195,7 @@ async function applyEdit(
     bodyFormat: text.format,
     editedBy: actor.id,
     editedBySide: edit.side,
+    ...signedInAsWork(actor),
     createdAt: CHANGE_MOMENT,
   });
   await tx.delete(requestMention).where(mentionsOfText);
@@ -233,7 +235,7 @@ async function applyEdit(
  * @param input.text - The new description.
  * @param input.edits - How many times it had been edited when the editor started (the form's).
  * @returns Whether it changed.
- * @throws {ServiceError} `signed_in_as` while a staff member is signed in as the actor,
+ * @throws {ServiceError} `signed_in_as` when the sign-in as the actor ended meanwhile,
  *   `not_found` when the actor may not see the request, `forbidden` without
  *   `requests:contribute`, `invalid` when the company is deactivated or the request is closed,
  *   `rate_limited` past `RATE_LIMITS.requestChangesPerUser`, `conflict` when someone edited it
@@ -247,7 +249,11 @@ export async function editRequestDescription(
 ): Promise<{ changed: boolean }> {
   const access = await requestToChange(ctx, actor, input.request, 'requests:contribute');
   const written = requestDescriptionSchema.parse(input.text);
-  await assertRateLimit(ctx, `request-change:user:${actor.id}`, RATE_LIMITS.requestChangesPerUser);
+  await assertRateLimit(
+    ctx,
+    `request-change:user:${actingUserId(actor)}`,
+    RATE_LIMITS.requestChangesPerUser,
+  );
   const { permissions, company } = access;
   const staff = await getStaffName(ctx.db);
   return changeRequest(ctx, actor, access, workingPermission(permissions), async (tx, locked) =>
@@ -300,7 +306,11 @@ export async function editReply(
     throw notFoundError();
   }
   const written = requestReplySchema.parse(input.text);
-  await assertRateLimit(ctx, `request-change:user:${actor.id}`, RATE_LIMITS.requestChangesPerUser);
+  await assertRateLimit(
+    ctx,
+    `request-change:user:${actingUserId(actor)}`,
+    RATE_LIMITS.requestChangesPerUser,
+  );
   const { permissions, company } = access;
   const staff = await getStaffName(ctx.db);
   return changeRequest(ctx, actor, access, workingPermission(permissions), async (tx, locked) => {
