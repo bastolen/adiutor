@@ -33,6 +33,12 @@ export interface ShownMention {
   isViewer: boolean;
   /** The person's page, for a reader who may open it; `null` for everyone else. */
   href: string | null;
+  /**
+   * Their key, for a reader who may write in the request (`MentionedPerson`):
+   * it goes on the mention's element, so the editor reads the mention back
+   * when it's copied into a text. `null` for everyone else.
+   */
+  key: string | null;
 }
 
 /** What the elements need to know about the text they're in. */
@@ -340,7 +346,9 @@ function MarkdownCodeBlock({
 /**
  * A mention of a person: their name after an "@", set apart from the text
  * around it, and more clearly when it names the reader. For a reader who may
- * open the person's page, it links there.
+ * open the person's page, it links there. For a reader who may write in the
+ * request it carries the person's key (`data-mention-key`), which the editor
+ * reads back when the mention is copied into a text.
  *
  * @param props - Component props.
  * @param props.mention - Who is mentioned, as the page names them.
@@ -350,12 +358,19 @@ function MarkdownMention({ mention }: { mention: ShownMention }) {
   const classes = mention.isViewer ? markdownStyles.mentionOfViewer : markdownStyles.mention;
   // The sign of a mention, the same in every language, then the name.
   const text = `@${mention.name}`;
+  const key = mention.key ?? undefined;
   return mention.href === null ? (
-    <span data-mention="" className={classes}>
+    <span data-mention="" data-mention-key={key} className={classes}>
       {text}
     </span>
   ) : (
-    <TextLink standalone data-mention="" href={mention.href} className={classes}>
+    <TextLink
+      standalone
+      data-mention=""
+      data-mention-key={key}
+      href={mention.href}
+      className={classes}
+    >
       {text}
     </TextLink>
   );

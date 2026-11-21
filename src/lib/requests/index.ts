@@ -73,6 +73,7 @@ export { cleanMultilineText, linkTarget, splitLinks } from './text';
 export type { TextPart } from './text';
 export {
   editStoredMentions,
+  isMentionKey,
   MAX_MENTIONS_PER_TEXT,
   MENTION_KEY_LENGTH,
   nameStoredMentions,

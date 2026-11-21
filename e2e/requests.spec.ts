@@ -1354,6 +1354,74 @@ test('Markdown that is pasted is formatted, and a tag stays the text it is', asy
   await expect(thread.getByRole('group', { name: 'Bash code' })).toHaveText('npm test');
 });
 
+test('a mention that is copied and pasted is still a mention once it is sent', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'A mention copied and pasted',
+  });
+  const thread = page.getByRole('region', { name: 'Conversation' });
+  const clientId = await findUserId(REQUESTS_CLIENT.email);
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  const editor = await markdownEditor(page, 'Your reply');
+
+  // A reply that mentions someone picked from the list at "@".
+  await editor.click();
+  await page.keyboard.type('**Please** check, @e2e requests cl');
+  await page.getByRole('listbox', { name: 'People to mention' }).getByRole('option').click();
+  await page.keyboard.type('thanks.');
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+
+  // Copied from the conversation, as someone selects it, and pasted: the mention is one.
+  const posted = thread.locator('ol > li').filter({ hasText: 'Please check' });
+  await posted
+    .locator('[data-mention]')
+    .locator('xpath=../..')
+    .evaluate((text) => {
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+    });
+  await page.keyboard.press('ControlOrMeta+C');
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+V');
+  await expect(editor.locator('[data-mention]')).toHaveText(`@${REQUESTS_CLIENT.name}`);
+
+  // Copied in the editor and pasted twice in its place: still a mention, and not in bold (the
+  // look a mention has where it's read isn't formatting).
+  await expect(editor.locator('strong [data-mention]')).toHaveCount(0);
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.press('ControlOrMeta+C');
+  await page.keyboard.press('Backspace');
+  await page.keyboard.press('ControlOrMeta+V');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('ControlOrMeta+V');
+  await expect(editor.locator('[data-mention]')).toHaveText([
+    `@${REQUESTS_CLIENT.name}`,
+    `@${REQUESTS_CLIENT.name}`,
+  ]);
+
+  // Sent, both mention the person, with the formatting around them, and no address in the text
+  // leads to the person's page.
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  const sent = thread.locator('ol > li').last();
+  const mentions = sent.getByRole('link', { name: `@${REQUESTS_CLIENT.name}` });
+  await expect(mentions).toHaveCount(2);
+  await expect(mentions.first()).toHaveAttribute('href', `/admin/users/${clientId}`);
+  await expect(mentions.last()).toHaveAttribute('href', `/admin/users/${clientId}`);
+  await expect(sent.locator('strong')).toHaveText(['Please', 'Please']);
+  await expect(sent.locator('a[href^="http"]')).toHaveCount(0);
+  await expect(sent).toContainText(`Please check, @${REQUESTS_CLIENT.name} thanks.`);
+});
+
 test('people are mentioned from the list at @, by what the writer may know', async ({ page }) => {
   const number = await storeRequest({
     companySlug: COMPANY_SLUG,

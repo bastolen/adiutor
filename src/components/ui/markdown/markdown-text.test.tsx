@@ -392,8 +392,8 @@ describe('MarkdownText: mentions', () => {
   function showMentions(
     text: string,
     mentions: Parameters<typeof MarkdownText>[0]['mentions'] = {
-      [SAM]: { name: 'Sam Support', isViewer: false, href: null },
-      [CASEY]: { name: 'Casey Client', isViewer: true, href: null },
+      [SAM]: { name: 'Sam Support', isViewer: false, href: null, key: null },
+      [CASEY]: { name: 'Casey Client', isViewer: true, href: null, key: null },
     },
   ) {
     return render(
@@ -416,6 +416,29 @@ describe('MarkdownText: mentions', () => {
     // Set apart by a line around it and its weight, not by a colour alone.
     expect(mention).toHaveClass('border', 'border-border-strong', 'font-medium');
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    // A reader who may not write in the request gets no key.
+    expect(mention).not.toHaveAttribute('data-mention-key');
+  });
+
+  it('gives a mention the person’s key for a reader who may write, so a copy of it stays one', () => {
+    showMentions(`Ask [@](mention:${SAM}) or [@](mention:${CASEY}).`, {
+      [SAM]: {
+        name: 'Sam Support',
+        isViewer: false,
+        href: '/admin/users/sam',
+        key: 'samsKeyInThisCompany01',
+      },
+      [CASEY]: { name: 'Casey Client', isViewer: true, href: null, key: 'caseysKeyInThisCompan' },
+    });
+
+    expect(screen.getByRole('link', { name: '@Sam Support' })).toHaveAttribute(
+      'data-mention-key',
+      'samsKeyInThisCompany01',
+    );
+    expect(screen.getByText('@Casey Client')).toHaveAttribute(
+      'data-mention-key',
+      'caseysKeyInThisCompan',
+    );
   });
 
   it('names the person as the page does now, whatever the marker’s own text says', () => {
@@ -433,7 +456,7 @@ describe('MarkdownText: mentions', () => {
 
   it('links to the person’s page for a reader who may open it', () => {
     showMentions(`Ask [@](mention:${SAM}).`, {
-      [SAM]: { name: 'Sam Support', isViewer: false, href: '/admin/users/sam' },
+      [SAM]: { name: 'Sam Support', isViewer: false, href: '/admin/users/sam', key: null },
     });
 
     const link = screen.getByRole('link', { name: '@Sam Support' });

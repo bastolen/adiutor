@@ -26,6 +26,7 @@ export {
   THREAD_CHUNK,
 } from './detail';
 export type {
+  MentionedPerson,
   RequestDetail,
   RequestEntryView,
   RequestText,
