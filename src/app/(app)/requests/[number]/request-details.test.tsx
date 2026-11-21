@@ -2,6 +2,7 @@
  * @file Tests for the Details card of a request's page.
  */
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { RequestDetail } from '@/server/requests';
@@ -147,7 +148,8 @@ describe('RequestDetails', () => {
     ).toBeInTheDocument();
   });
 
-  it('lists a reader at the company the subscribers from their company, by name', async () => {
+  it('shows a reader at the company the subscribers from their company as avatars, with their names behind them', async () => {
+    const user = userEvent.setup();
     await renderDetails({
       detail: detailOf({
         subscribers: [
@@ -158,15 +160,30 @@ describe('RequestDetails', () => {
       }),
     });
 
-    const people = within(valueOf('Subscribers')).getAllByRole('listitem');
+    // Avatars only, each with the name on hover; the names are behind the button.
+    const button = within(valueOf('Subscribers')).getByRole('button', {
+      name: 'Show the 2 subscribers',
+    });
+    expect([...button.querySelectorAll('[title]')].map((avatar) => avatar.textContent)).toEqual([
+      'CC',
+      'WW',
+    ]);
+    expect(valueOf('Subscribers')).not.toHaveTextContent('Casey Client');
+
+    await user.click(button);
+
+    const people = within(screen.getByRole('dialog', { name: 'Subscribers' })).getAllByRole(
+      'listitem',
+    );
     expect(people).toHaveLength(2);
     expect(people[0]).toHaveTextContent('Casey Client');
     expect(people[0]).toHaveTextContent('You');
     expect(people[1]).toHaveTextContent('Wim Watcher');
-    expect(within(valueOf('Subscribers')).queryByRole('link')).not.toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).queryByRole('link')).not.toBeInTheDocument();
   });
 
-  it('shows the staff every subscriber, the staff with their label and a link each', async () => {
+  it('shows the staff every subscriber by name, with a link each and no label for the staff', async () => {
+    const user = userEvent.setup();
     await renderDetails({
       detail: detailOf({
         audience: 'staff',
@@ -184,12 +201,66 @@ describe('RequestDetails', () => {
       }),
     });
 
-    const [casey, fenna] = within(valueOf('Subscribers')).getAllByRole('listitem');
-    expect(casey).not.toHaveTextContent('Adiutor Tests');
-    expect(fenna).toHaveTextContent('Adiutor Tests');
+    await user.click(screen.getByRole('button', { name: 'Show the 2 subscribers' }));
+
+    const panel = screen.getByRole('dialog', { name: 'Subscribers' });
+    expect(within(panel).getByRole('link', { name: 'Fenna Finance' })).toHaveAttribute(
+      'href',
+      '/admin/users/fenna',
+    );
+    expect(within(panel).getByRole('link', { name: 'Casey Client' })).toHaveAttribute(
+      'href',
+      '/admin/users/casey',
+    );
+    // Names only: nothing labels who is on the staff.
+    expect(panel).not.toHaveTextContent('Adiutor Tests');
+  });
+
+  it('shows at most four avatars, then how many more subscribers there are', async () => {
+    const user = userEvent.setup();
+    const names = ['Anna Admin', 'Bo Baker', 'Casey Client', 'Dee Doe', 'Eli East', 'Fay Field'];
+    await renderDetails({
+      detail: detailOf({
+        subscribers: names.map((name) => ({
+          userId: null,
+          name,
+          side: 'company' as const,
+          isViewer: false,
+          picture: null,
+        })),
+      }),
+    });
+
+    const button = within(valueOf('Subscribers')).getByRole('button', {
+      name: 'Show the 6 subscribers',
+    });
+    expect([...button.querySelectorAll('[title]')].map((avatar) => avatar.textContent)).toEqual([
+      'AA',
+      'BB',
+      'CC',
+      'DD',
+    ]);
+    expect(button).toHaveTextContent('+2');
+
+    // Everyone is behind it, also the ones without an avatar in the row.
+    await user.click(button);
     expect(
-      within(valueOf('Subscribers')).getByRole('link', { name: 'Fenna Finance' }),
-    ).toHaveAttribute('href', '/admin/users/fenna');
+      within(screen.getByRole('dialog', { name: 'Subscribers' }))
+        .getAllByRole('listitem')
+        .map((item) => item.textContent?.replace(/^[A-Z]{2}/, '')),
+    ).toEqual(names);
+  });
+
+  it('says one subscriber as one', async () => {
+    await renderDetails({
+      detail: detailOf({
+        subscribers: [
+          { userId: null, name: 'Casey Client', side: 'company', isViewer: false, picture: null },
+        ],
+      }),
+    });
+
+    expect(screen.getByRole('button', { name: 'Show the 1 subscriber' })).toBeInTheDocument();
   });
 
   it('says nobody is subscribed: at the company to its readers, at all to the staff', async () => {

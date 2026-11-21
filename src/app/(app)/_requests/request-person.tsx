@@ -68,22 +68,26 @@ export function PersonAvatar({
  * The avatars of several people in a row, overlapping a little, each with
  * the person's name on hover (where the names don't fit, as in a table).
  * The avatars are hidden from screen readers: whoever uses this gives the
- * names as text too.
+ * names as text too. Where only the first few people are shown, a block of
+ * the same size after them says how many more there are (`more`).
  *
  * @param props - Component props.
  * @param props.people - The people, in the order to show them.
  * @param props.names - The names of the two sides.
+ * @param props.more - What the block after the avatars says, e.g. "+3"; no block when left out.
  * @returns The row of avatars.
  */
 export function PeopleAvatars({
   people,
   names,
+  more = null,
 }: {
   people: readonly RequestPerson[];
   names: SideNames;
+  more?: string | null;
 }) {
   return (
-    <span className="flex -space-x-2">
+    <span className="flex -space-x-1">
       {people.map((person, index) => {
         const name = personName(person, names);
         return (
@@ -99,6 +103,14 @@ export function PeopleAvatars({
           />
         );
       })}
+      {more !== null && (
+        <span
+          aria-hidden="true"
+          className="relative inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-lg bg-muted px-1 text-xs font-semibold text-foreground ring-2 ring-surface"
+        >
+          {more}
+        </span>
+      )}
     </span>
   );
 }

@@ -84,7 +84,9 @@
       "notAssigned": "Not assigned yet",
       "subscribers": "Subscribers",
       "noSubscribers": "Nobody yet",
-      "noSubscribersCompany": "Nobody at {company} yet"
+      "noSubscribersCompany": "Nobody at {company} yet",
+      "showSubscribers": "{count, plural, one {Show the # subscriber} other {Show the # subscribers}}",
+      "moreSubscribers": "+{count, number}"
     },
     "status": "{status, select, open {Open} todo {To do} in_progress {In progress} waiting {{audience, select, contributor {Waiting for your reply} follower {Waiting for your company} other {Waiting for the company}}} done {Done} cancelled {Cancelled} other {Unknown}}",
     "reopened": "Reopened",

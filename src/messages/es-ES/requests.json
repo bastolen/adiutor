@@ -84,7 +84,9 @@
       "notAssigned": "Sin asignar todavía",
       "subscribers": "Suscriptores",
       "noSubscribers": "Nadie todavía",
-      "noSubscribersCompany": "Nadie de {company} todavía"
+      "noSubscribersCompany": "Nadie de {company} todavía",
+      "showSubscribers": "{count, plural, one {Mostrar el # suscriptor} other {Mostrar los # suscriptores}}",
+      "moreSubscribers": "+{count, number}"
     },
     "status": "{status, select, open {Abierta} todo {Por hacer} in_progress {En curso} waiting {{audience, select, contributor {A la espera de tu respuesta} follower {A la espera de tu empresa} other {A la espera de la empresa}}} done {Resuelta} cancelled {Cancelada} other {Desconocido}}",
     "reopened": "Reabierta",

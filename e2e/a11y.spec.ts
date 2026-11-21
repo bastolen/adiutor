@@ -754,6 +754,12 @@ test.describe('in forced-colours mode', () => {
         await page.getByRole('button', { name: 'Change subscribers' }).click();
         await expect(page.getByRole('dialog', { name: 'Change who’s subscribed' })).toBeVisible();
         await expectAccessible(page, '[role="dialog"]');
+        await page.keyboard.press('Escape');
+
+        // The subscribers' names, behind their avatars: a panel next to the page, not over it.
+        await page.getByRole('button', { name: /^Show the \d+ subscribers?$/ }).click();
+        await expect(page.getByRole('dialog', { name: 'Subscribers' })).toBeVisible();
+        await expectAccessible(page);
       });
 
       test('a request’s reply, with the list of people at @ open', async ({ page }) => {

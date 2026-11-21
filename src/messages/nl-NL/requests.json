@@ -84,7 +84,9 @@
       "notAssigned": "Nog niet toegewezen",
       "subscribers": "Abonnees",
       "noSubscribers": "Nog niemand",
-      "noSubscribersCompany": "Nog niemand bij {company}"
+      "noSubscribersCompany": "Nog niemand bij {company}",
+      "showSubscribers": "{count, plural, one {De # abonnee tonen} other {De # abonnees tonen}}",
+      "moreSubscribers": "+{count, number}"
     },
     "status": "{status, select, open {Open} todo {Te doen} in_progress {In behandeling} waiting {{audience, select, contributor {Wacht op jouw reactie} follower {Wacht op je bedrijf} other {Wacht op het bedrijf}}} done {Afgerond} cancelled {Geannuleerd} other {Onbekend}}",
     "reopened": "Heropend",

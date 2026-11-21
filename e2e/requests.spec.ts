@@ -759,31 +759,42 @@ test('people subscribe to a request, and the staff change who else follows it', 
    */
   const subscribers = () => detail(page, 'Subscribers');
   /**
-   * One of the people listed as subscribed.
+   * The subscribers' avatars: a button named by how many there are, which opens their names.
    *
-   * @param name - Their name.
-   * @returns Their line.
+   * @param count - How many subscribers the reader should see.
+   * @returns The button.
    */
-  const subscriber = (name: string) =>
-    subscribers().getByRole('listitem').filter({ hasText: name });
+  const avatars = (count: number) =>
+    subscribers().getByRole('button', {
+      name: `Show the ${count} subscriber${count === 1 ? '' : 's'}`,
+    });
+  /** The panel with the subscribers' names, while it's open. */
+  const names = page.getByRole('dialog', { name: 'Subscribers' });
 
   // A Watcher, who can't reply, follows it all the same; whoever raised it does already.
   await signIn(page, CLIENT_WATCHER);
   await page.goto(`/requests/${number}`);
-  await expect(subscribers().getByRole('listitem')).toHaveCount(1);
-  await expect(subscriber(REQUESTS_CLIENT.name)).toBeVisible();
+  await expect(avatars(1)).toBeVisible();
+  // Avatars only: the names are behind them.
+  await expect(subscribers()).not.toContainText(REQUESTS_CLIENT.name);
   await subscribers().getByRole('button', { name: 'Subscribe', exact: true }).click();
   await expect(toasts(page)).toContainText('You’re subscribed to this request.');
-  await expect(subscribers().getByRole('listitem')).toHaveCount(2);
-  await expect(subscriber(CLIENT_WATCHER.name)).toContainText('You');
   // The button stays where it is and says what it does now, so focus stays on it.
   const unsubscribe = subscribers().getByRole('button', { name: 'Unsubscribe' });
   await expect(unsubscribe).toBeFocused();
+  await avatars(2).click();
+  await expect(names.getByRole('listitem')).toHaveCount(2);
+  await expect(names.getByRole('listitem').filter({ hasText: CLIENT_WATCHER.name })).toContainText(
+    'You',
+  );
+  await page.keyboard.press('Escape');
+  await expect(names).toHaveCount(0);
+  await expect(avatars(2)).toBeFocused();
   await unsubscribe.click();
   await expect(toasts(page)).toContainText('You’re no longer subscribed to this request.');
-  await expect(subscribers().getByRole('listitem')).toHaveCount(1);
+  await expect(avatars(1)).toBeVisible();
   await subscribers().getByRole('button', { name: 'Subscribe', exact: true }).click();
-  await expect(subscribers().getByRole('listitem')).toHaveCount(2);
+  await expect(avatars(2)).toBeVisible();
   // Other people's subscriptions aren't theirs to change.
   await expect(subscribers().getByRole('button', { name: 'Change subscribers' })).toHaveCount(0);
   await signOut(page);
@@ -792,7 +803,7 @@ test('people subscribe to a request, and the staff change who else follows it', 
   // the company, and anyone on the staff.
   await signIn(page, SUPPORT_STAFF);
   await page.goto(`/requests/${number}`);
-  await expect(subscribers().getByRole('listitem')).toHaveCount(2);
+  await expect(avatars(2)).toBeVisible();
   await subscribers().getByRole('button', { name: 'Change subscribers' }).click();
   const dialog = page.getByRole('dialog', { name: 'Change who’s subscribed' });
   const people = dialog.getByRole('group', { name: `People at ${COMPANY_NAME}` });
@@ -809,10 +820,12 @@ test('people subscribe to a request, and the staff change who else follows it', 
   await expect(toasts(page)).toContainText('Subscribers saved.');
   await expect(dialog).toHaveCount(0);
   await expect(subscribers().getByRole('button', { name: 'Change subscribers' })).toBeFocused();
-  await expect(subscribers().getByRole('listitem')).toHaveCount(2);
-  await expect(subscriber(CLIENT_WATCHER.name)).toHaveCount(0);
-  // A staff member is labelled as one, like in the conversation.
-  await expect(subscriber(FINANCE_STAFF.name)).toContainText(STAFF_NAME);
+  await avatars(2).click();
+  await expect(names.getByRole('listitem').filter({ hasText: CLIENT_WATCHER.name })).toHaveCount(0);
+  // By name, for the staff with a link to the person's page; nothing labels who is on the staff.
+  await expect(names.getByRole('link', { name: FINANCE_STAFF.name })).toBeVisible();
+  await expect(names).not.toContainText(STAFF_NAME);
+  await page.keyboard.press('Escape');
   // Following is no work on the request: its history says nothing about it.
   await expect(page.getByRole('region', { name: 'Conversation' })).toContainText('No replies yet.');
 
@@ -820,15 +833,19 @@ test('people subscribe to a request, and the staff change who else follows it', 
   await page.getByRole('textbox', { name: 'Your reply' }).fill('We’re looking into it.');
   await page.getByRole('button', { name: 'Send reply' }).click();
   await expect(toasts(page)).toContainText('Reply sent.');
-  await expect(subscriber(SUPPORT_STAFF.name)).toContainText('You');
+  await expect(avatars(3)).toBeVisible();
   await expect(subscribers().getByRole('button', { name: 'Unsubscribe' })).toBeVisible();
   await signOut(page);
 
   // Someone at the company sees who of their company follows it, never which staff members do.
   await signIn(page, REQUESTS_CLIENT);
   await page.goto(`/requests/${number}`);
-  await expect(subscribers().getByRole('listitem')).toHaveCount(1);
-  await expect(subscriber(REQUESTS_CLIENT.name)).toContainText('You');
+  await avatars(1).click();
+  await expect(names.getByRole('listitem')).toHaveCount(1);
+  await expect(names.getByRole('listitem')).toContainText(REQUESTS_CLIENT.name);
+  await expect(names.getByRole('listitem')).toContainText('You');
+  await expect(names).not.toContainText(FINANCE_STAFF.name);
+  await page.keyboard.press('Escape');
   await expect(main(page)).not.toContainText(FINANCE_STAFF.name);
   await expect(subscribers().getByRole('button', { name: 'Unsubscribe' })).toBeVisible();
   await expect(subscribers().getByRole('button', { name: 'Change subscribers' })).toHaveCount(0);
@@ -840,13 +857,8 @@ test('a company’s Admin subscribes a colleague, and is offered nobody from the
   // A company of this test's own, with a colleague who follows and an Admin.
   const slug = `adiutor-tests-following-${randomUUID().slice(0, 8)}`;
   const companyId = await createCompany({ name: 'Adiutor Tests Following', slug });
-  await page.goto(
-    await storeInvitation({
-      companyId,
-      email: freshAddress('following-watcher'),
-      role: 'watcher',
-    }),
-  );
+  const colleagueEmail = freshAddress('following-watcher');
+  await page.goto(await storeInvitation({ companyId, email: colleagueEmail, role: 'watcher' }));
   await createAccountFromInvitation(page, 'Follows Along Tester', 'follows-along-password');
   await signOut(page);
   const adminEmail = freshAddress('following-admin');
@@ -866,7 +878,7 @@ test('a company’s Admin subscribes a colleague, and is offered nobody from the
 
   await page.goto(`/requests/${number}`);
   const subscribers = detail(page, 'Subscribers');
-  await expect(subscribers.getByRole('listitem')).toHaveCount(1);
+  await expect(subscribers.getByRole('button', { name: 'Show the 1 subscriber' })).toBeVisible();
   await subscribers.getByRole('button', { name: 'Change subscribers' }).click();
   const dialog = page.getByRole('dialog', { name: 'Change who’s subscribed' });
   // Their colleagues, themselves among them, and nobody else.
@@ -877,11 +889,15 @@ test('a company’s Admin subscribes a colleague, and is offered nobody from the
     people.getByRole('checkbox', { name: 'Subscribing Admin Tester (you)' }),
   ).toBeChecked();
   await expect(dialog).toContainText('Everyone at your company sees who’s subscribed.');
+  // People are named by a key there: a colleague's user ID never reaches the browser.
+  expect(await page.content()).not.toContain(await findUserId(colleagueEmail));
   await people.getByRole('checkbox', { name: 'Follows Along Tester' }).check();
   await dialog.getByRole('button', { name: 'Save subscribers' }).click();
   await expect(toasts(page)).toContainText('Subscribers saved.');
-  await expect(subscribers.getByRole('listitem')).toHaveCount(2);
-  await expect(subscribers).toContainText('Follows Along Tester');
+  await subscribers.getByRole('button', { name: 'Show the 2 subscribers' }).click();
+  await expect(page.getByRole('dialog', { name: 'Subscribers' })).toContainText(
+    'Follows Along Tester',
+  );
 });
 
 test('the staff reach a person’s page from a request, and nobody at the company does', async ({

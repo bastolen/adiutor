@@ -1334,13 +1334,43 @@ test.describe('requests', () => {
       await expect(toasts(page)).toContainText('Subscribers saved.');
       await expect(dialog).toHaveCount(0);
       await expect(change).toBeFocused();
-      await expect(details).toContainText(FINANCE_STAFF.name);
+      // Whoever raised it, and now Finance.
+      await expect(details.getByRole('button', { name: 'Show the 2 subscribers' })).toBeVisible();
     });
   });
 
   test.describe('as someone at the company', () => {
     test.beforeEach(async ({ context }) => {
       await context.addCookies(clientState.cookies);
+    });
+
+    test('the subscribers’ names open from their avatars, and Escape returns focus', async ({
+      page,
+    }) => {
+      await page.goto(await storeOwnRequest('Subscribers read with the keyboard'));
+      // Whoever raised a request follows it.
+      const avatars = page
+        .getByRole('region', { name: 'Details' })
+        .getByRole('button', { name: 'Show the 1 subscriber' });
+      const names = page.getByRole('dialog', { name: 'Subscribers' });
+
+      // Enter opens the names, with focus in the panel; Escape closes it and returns focus.
+      await avatars.focus();
+      await expect(avatars).toHaveAttribute('aria-expanded', 'false');
+      await page.keyboard.press('Enter');
+      await expect(names).toContainText(REQUESTS_CLIENT.name);
+      await expect(avatars).toHaveAttribute('aria-expanded', 'true');
+      await expect(names).toBeFocused();
+      await page.keyboard.press('Escape');
+      await expect(names).toHaveCount(0);
+      await expect(avatars).toBeFocused();
+
+      // Space opens it too.
+      await page.keyboard.press('Space');
+      await expect(names).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(names).toHaveCount(0);
+      await expect(avatars).toBeFocused();
     });
 
     test('unsubscribing and subscribing again keep focus on the one button', async ({ page }) => {

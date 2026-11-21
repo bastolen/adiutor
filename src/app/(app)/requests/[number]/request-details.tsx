@@ -9,6 +9,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
 import Card from '@/components/ui/card';
+import Popover from '@/components/ui/popover';
 import RelativeTime from '@/components/ui/relative-time';
 import TextLink from '@/components/ui/text-link';
 import { formatDateTime, formatDuration } from '@/lib/format';
@@ -20,7 +21,10 @@ import {
   StatusBadge,
   TypeBadge,
 } from '../../_requests/request-badges';
-import PersonLine, { PersonAvatar } from '../../_requests/request-person';
+import PersonLine, { PeopleAvatars, PersonAvatar } from '../../_requests/request-person';
+
+/** The most subscribers shown as an avatar; a block after them says how many more there are. */
+const MAX_SUBSCRIBER_AVATARS = 4;
 
 /**
  * One detail: its name above its value.
@@ -49,9 +53,11 @@ function Detail({ term, children }: { term: string; children: ReactNode }) {
  * staff are assigned), and the staff who work on requests get the
  * buttons that change it below them (`assigneeControls`). Under them are the
  * subscribers the reader may see (everyone for the staff, the company's own
- * people for the company), with the button to subscribe or unsubscribe and,
- * for whoever changes other people's subscriptions, the one that opens their
- * dialog (`subscriberControls`). Readers who don't
+ * people for the company), as a row of avatars: the first few, then how many
+ * more there are. The row is a button that opens their names. Below it are
+ * the button to subscribe or unsubscribe and, for whoever changes other
+ * people's subscriptions, the one that opens their dialog
+ * (`subscriberControls`). Readers who don't
  * get the priority see no row for it. The first response is how long the staff took to reply
  * for the first time, with the moment itself on hover; a request the staff
  * raised themselves has none to wait for.
@@ -85,6 +91,8 @@ export default async function RequestDetails({
   const names = { company: detail.company.name, staff: detail.staffName };
   // The staff are shown every subscriber; the company its own people, so "nobody" is about them.
   const seesEverySubscriber = detail.permissions.has('requests:view-internal');
+  const subscriberAvatars = detail.subscribers.slice(0, MAX_SUBSCRIBER_AVATARS);
+  const moreSubscribers = detail.subscribers.length - subscriberAvatars.length;
 
   return (
     <Card title={t('details')}>
@@ -115,15 +123,34 @@ export default async function RequestDetails({
         <Detail term={t('subscribers')}>
           <div className="flex w-full min-w-0 flex-col gap-2">
             {detail.subscribers.length > 0 ? (
-              <ul className="flex flex-col gap-1.5">
-                {detail.subscribers.map((person, index) => (
-                  // eslint-disable-next-line react/no-array-index-key -- readers at the company get no IDs, and the list is read whole on each render
-                  <li key={index} className="flex min-w-0 items-center gap-2">
-                    <PersonAvatar person={person} names={names} size="xs" />
-                    <PersonLine person={person} names={names} />
-                  </li>
-                ))}
-              </ul>
+              <div className="flex">
+                <Popover
+                  label={t('subscribers')}
+                  triggerLabel={t('showSubscribers', { count: detail.subscribers.length })}
+                  trigger={
+                    <PeopleAvatars
+                      people={subscriberAvatars}
+                      names={names}
+                      more={
+                        moreSubscribers > 0
+                          ? t('moreSubscribers', { count: moreSubscribers })
+                          : null
+                      }
+                    />
+                  }
+                >
+                  <ul className="flex flex-col gap-2">
+                    {detail.subscribers.map((person, index) => (
+                      // eslint-disable-next-line react/no-array-index-key -- readers at the company get no IDs, and the list is read whole on each render
+                      <li key={index} className="flex min-w-0 items-center gap-2">
+                        <PersonAvatar person={person} names={names} size="xs" />
+                        {/* By name only: who is on the staff's side isn't said here. */}
+                        <PersonLine person={person} names={names} sideLabel={false} />
+                      </li>
+                    ))}
+                  </ul>
+                </Popover>
+              </div>
             ) : (
               <span className="text-muted-foreground">
                 {seesEverySubscriber

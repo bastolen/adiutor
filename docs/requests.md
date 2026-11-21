@@ -175,9 +175,11 @@ subscribers are who emails about it will reach. Why it's built this way is in
   request's company (`mentionKey`, the key a mention uses), and `changeSubscribers` takes those
   keys: no user ID reaches a company's browser. It leaves out the people the request is assigned
   to, who follow it as that.
-- **On a request's page,** the Details have a **Subscribers** row under Assigned to: every
-  subscriber the reader may see, one per line with their avatar, a staff member with the staff's
-  label. Under it is **Subscribe** or **Unsubscribe**: one button that stays where it is, so the
+- **On a request's page,** the Details have a **Subscribers** row under Assigned to, kept small:
+  the avatars of the subscribers the reader may see, at most four, then a block that says how
+  many more there are ("+3"). Each avatar shows its name on hover, and the row is one button that
+  opens everyone's names in a small panel (`Popover`), by name only: nothing labels who is on the
+  staff. Under it is **Subscribe** or **Unsubscribe**: one button that stays where it is, so the
   keyboard keeps its place when its text changes. Someone the request is assigned to gets no such
   button. Whoever changes other people's subscriptions also gets **Change subscribers**, a dialog
   with a checkbox per person, the subscribers ticked: the people at the company in one group and,
