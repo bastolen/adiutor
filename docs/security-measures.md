@@ -227,6 +227,12 @@ load or mislead in a reader's browser:
   emphasis marks than the parser pairs quickly, is shown as plain text (`MAX_NESTING`,
   `MAX_EMPHASIS_RUNS`). The limit of 10,000 characters bounds the rest: the parser and the
   highlighter's patterns never run on more.
+- **In an email, the same tree and the same rules.** A text an email shows is rendered from that
+  tree with inline styles (`EmailMarkdown` in `src/components/email/email-markdown.tsx`): what was
+  typed as HTML is text, only whole `http` and `https` addresses link, and an image is a link,
+  which matters as much in a mail app, where a loaded image tells its host who opened the email
+  and when. Nothing gets a class or an ID, code has no colours, and a text too costly to format
+  is the plain text it is.
 - **A mention never carries an ID or a name.** While a text is written, a person is a key that's
   only valid in the request's company (`mentionKey`, a keyed hash); the stored text points at a
   row in `request_mention`. Who it is, is looked up on the server when the text is read, per text,

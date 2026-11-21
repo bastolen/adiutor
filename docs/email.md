@@ -45,6 +45,12 @@ see [Emails](i18n.md#emails). Templates share the frame and building blocks in
 - `EmailButton`, `EmailHeading`, `EmailParagraph`, `EmailNote`, `EmailCode` (a one-time code in
   a monospace box) and `LinkFallback`
 - `RoleSummary`, which names the role and what it can do from the `roles` catalogue
+- `EmailMarkdown`, which shows a request's description or reply formatted, from the tree the
+  request's page renders, so the rules for what someone else wrote hold in an email too (see
+  [Text people write](security-measures.md#text-people-write)): headings below the email's own,
+  lists, tables (in columns in the email's plain text), quotes and code without colours, images
+  as links, the people it mentions by name, and the plain text for a text stored as plain text or
+  too costly to format
 - the colours and fonts in `theme.ts` (`fontFamily`, `monoFontFamily`), which match the app's
   light theme as inline styles; the fonts are the device's own, not the Inter and JetBrains Mono the
   app ships, because many email clients block or strip web fonts

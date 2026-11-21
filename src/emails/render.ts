@@ -9,13 +9,16 @@ import type { Email } from '@/lib/email';
 
 /**
  * How the plain-text version is written: links as "text https://…" (no
- * brackets, and the address only once when the text is the address itself)
- * and no images.
+ * brackets, and the address only once when the text is the address itself),
+ * no images, and a table someone wrote (`data-text-table`, see
+ * `EmailMarkdown`) in columns. Every other table lays out the email itself
+ * and stays plain blocks of text.
  */
 const PLAIN_TEXT_OPTIONS = {
   selectors: [
     { selector: 'a', options: { linkBrackets: false as const, hideLinkHrefIfSameAsText: true } },
     { selector: 'img', format: 'skip' },
+    { selector: 'table[data-text-table]', format: 'dataTable' },
   ],
 };
 
