@@ -13,8 +13,10 @@ import type { ReactNode } from 'react';
 
 import Badge from '@/components/ui/badge';
 import RelativeTime from '@/components/ui/relative-time';
+import { focusRing } from '@/components/ui/styles';
 import cn from '@/lib/cn';
 import {
+  entryAnchor,
   isRequestPriority,
   isRequestStatus,
   type RequestAudience,
@@ -32,6 +34,7 @@ import RequestText from '../../_requests/request-text';
 import SignedInAsMark from '../../_requests/signed-in-as-mark';
 import EditableText from './editable-text';
 import EditedNote from './edited-note';
+import EntryOnArrival from './entry-on-arrival';
 import ShowEarlierLink from './show-earlier-link';
 
 /** The icon of each kind of change. */
@@ -45,9 +48,13 @@ const CHANGE_ICONS: Record<Exclude<RequestEntryView['kind'], WrittenEntryKind>, 
 
 /**
  * One entry of the conversation: something in front (an avatar, or an
- * icon), who it's by and when, and what they wrote or changed below.
+ * icon), who it's by and when, and what they wrote or changed below. Its
+ * anchor (`#entry-<ID>`) is what the emails about the request link to: the
+ * page scrolls to it and focuses it (`EntryOnArrival`), and while the address
+ * names it, an outline marks it.
  *
  * @param props - Component props.
+ * @param props.id - The entry's ID.
  * @param props.leading - What stands in front: the person's avatar, or a change's icon.
  * @param props.person - Who wrote or changed it.
  * @param props.names - The names of the two sides.
@@ -58,6 +65,7 @@ const CHANGE_ICONS: Record<Exclude<RequestEntryView['kind'], WrittenEntryKind>, 
  * @returns The list item.
  */
 function Entry({
+  id,
   leading,
   person,
   names,
@@ -65,6 +73,7 @@ function Entry({
   afterTime = null,
   children,
 }: {
+  id: string;
   leading: ReactNode;
   person: RequestPerson;
   names: SideNames;
@@ -73,7 +82,16 @@ function Entry({
   children: ReactNode;
 }) {
   return (
-    <li className="flex gap-3">
+    <li
+      id={entryAnchor(id)}
+      // Focused only when a link brings the reader to it; never in the tab order.
+      tabIndex={-1}
+      className={cn(
+        'flex scroll-mt-4 gap-3 rounded-lg lg:scroll-mt-6',
+        'target:outline-2 target:outline-offset-[6px] target:outline-border-strong',
+        focusRing,
+      )}
+    >
       {leading}
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <PersonLine person={person} names={names}>
@@ -173,6 +191,7 @@ export default function Thread({
 
   return (
     <ol className="flex flex-col gap-5">
+      <EntryOnArrival />
       {earlierHref && (
         <li>
           <ShowEarlierLink href={earlierHref}>
@@ -205,6 +224,7 @@ export default function Thread({
           return (
             <Entry
               key={entry.id}
+              id={entry.id}
               leading={<PersonAvatar person={entry.author} names={names} />}
               person={entry.author}
               names={names}
@@ -243,6 +263,7 @@ export default function Thread({
         return (
           <Entry
             key={entry.id}
+            id={entry.id}
             leading={
               <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground">
                 <Icon aria-hidden="true" className="size-4" />

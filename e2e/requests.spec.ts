@@ -52,6 +52,7 @@ import {
 } from './support/fixtures';
 import {
   createAccountFromInvitation,
+  fillAndSubmitSignIn,
   freshAddress,
   markdownEditor,
   setUpAuthenticator,
@@ -1060,6 +1061,44 @@ test('the email’s Approve button answers on a click, and a mail scanner only g
   await page.goto(`/requests/${number}`);
   await expect(detail(page, 'Status')).toHaveText('Done');
   await expect(conversation(page)).toContainText('Approved the solution.');
+});
+
+test('an email’s link opens the request at the reply it tells of, also through signing in', async ({
+  page,
+}) => {
+  const title = `Long conversation ${randomUUID().slice(0, 8)}`;
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title,
+    status: 'in_progress',
+    earlierReplies: 15,
+  });
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  await page.getByRole('textbox', { name: 'Your reply' }).fill('The reply the email links to.');
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  await signOut(page);
+
+  const link = linkIn(await waitForEmailAbout(REQUESTS_CLIENT.email, title));
+  expect(link).toMatch(new RegExp(`/requests/${number}\\?entry=([0-9a-f-]{36})#entry-\\1$`));
+  const entry = page.locator(`#${link.split('#')[1]}`);
+
+  // Signed out, the link goes through signing in and still lands on the reply.
+  await page.goto(link);
+  await expect(page).toHaveURL(/\/auth/);
+  await fillAndSubmitSignIn(page, REQUESTS_CLIENT);
+  await expect(page).toHaveURL(link);
+  await expect(entry).toContainText('The reply the email links to.');
+  await expect(entry).toBeInViewport();
+  await expect(entry).toBeFocused();
+
+  // Signed in, opening it again lands there straight away.
+  await page.goto('/dashboard');
+  await page.goto(link);
+  await expect(entry).toBeInViewport();
+  await expect(entry).toBeFocused();
 });
 
 test('turning emails about requests off stops them, and turning them on brings them back', async ({

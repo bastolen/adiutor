@@ -4,10 +4,17 @@
  * one email, in their language and worded for them; someone who is no longer
  * on the request gets none; and a mail problem leaves the news in the queue.
  */
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { queuedJob, request, requestAnswerLink, requestParticipant, user } from '@/db/schema';
+import {
+  queuedJob,
+  request,
+  requestAnswerLink,
+  requestEntry,
+  requestParticipant,
+  user,
+} from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { writtenMentionMarker } from '@/lib/requests';
 
@@ -131,8 +138,8 @@ describe('the emails about requests', () => {
     // The client: their own two links, and still the request as the first link.
     expect(textTo('casey@adiutor.test')).toContain('sam proposed a solution.');
     expect(textTo('casey@adiutor.test')).toContain('Does this solve your request?');
-    expect(textTo('casey@adiutor.test').match(/https?:\/\/\S+/)?.[0]).toBe(
-      'https://adiutor.test/requests/142',
+    expect(textTo('casey@adiutor.test').match(/https?:\/\/\S+/)?.[0]).toMatch(
+      /^https:\/\/adiutor\.test\/requests\/142\?entry=([0-9a-f-]{36})#entry-\1$/,
     );
     const [approve, deny] = links('casey@adiutor.test') ?? [];
     expect(approve).toMatch(/\/approve$/);
@@ -208,7 +215,14 @@ describe('the emails about requests', () => {
       'casey changed the status from Waiting for your company to In progress.',
     );
     // The first link is the request, and nothing names an address or a person's ID.
-    expect(toWatcher?.text.match(/https?:\/\/\S+/)?.[0]).toBe('https://adiutor.test/requests/142');
+    // It opens the request at the reply, the first news the email tells of.
+    const [reply] = await db
+      .select({ id: requestEntry.id })
+      .from(requestEntry)
+      .where(and(eq(requestEntry.requestId, raised.id), eq(requestEntry.kind, 'comment')));
+    expect(toWatcher?.text.match(/https?:\/\/\S+/)?.[0]).toBe(
+      `https://adiutor.test/requests/142?entry=${reply?.id}#entry-${reply?.id}`,
+    );
     [toStaff, toWatcher].forEach((email) => {
       expect(email?.html).not.toContain('casey@adiutor.test');
       expect(email?.html).not.toContain(client.id);
