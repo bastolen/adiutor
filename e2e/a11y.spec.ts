@@ -114,6 +114,9 @@ const APP_PATHS = [
   '/requests?status=all&q=no-such-request',
   // More requests than fit on a page: pagination, another sort, the last page.
   '/requests?company=adiutor-tests-paging&sort=raised&page=2',
+  // The board: a lane per status, the open ones fuller than they show, and empty ones.
+  '/requests/board',
+  '/requests/board?q=no-such-request',
   '/requests/new',
   // A request with a conversation: replies from both sides, a link, and changes.
   '/requests/1',
@@ -127,20 +130,22 @@ const APP_PATHS = [
 /**
  * Pages that look different to someone at a company than to the staff,
  * scanned as a Client: the dashboard with their companies, the requests
- * without priorities, the form for a new one without a priority, a request
- * with the company's own controls, and their company's page.
+ * without priorities (as a list and as a board, with the Move menus a Client
+ * gets), the form for a new one without a priority, a request with the
+ * company's own controls, and their company's page.
  */
 const CLIENT_PATHS = [
   '/dashboard',
   '/requests',
+  '/requests/board',
   '/requests/new',
   '/requests/1',
   '/requests/6',
   '/companies/{company}',
 ];
 
-/** Pages scanned as a Watcher, who only reads: no form, no controls. */
-const WATCHER_PATHS = ['/dashboard', '/requests/1'];
+/** Pages scanned as a Watcher, who only reads: no form, no controls, no Move menus. */
+const WATCHER_PATHS = ['/dashboard', '/requests/board', '/requests/1'];
 
 /** Sign-in cookies of the staff Admin, shared by the signed-in scans. */
 let adminState: StorageState;
@@ -550,6 +555,33 @@ test.describe('on a 320px wide screen', () => {
         await expectNoSidewaysScroll(page);
         await expectFieldsDontZoom(page);
       });
+    });
+
+    WATCHER_PATHS.forEach((path) => {
+      test(`${path} fits without sideways scrolling, as a Watcher`, async ({ context, page }) => {
+        await context.addCookies(watcherState.cookies);
+        await page.goto(resolvePath(path));
+        await expectNoSidewaysScroll(page);
+      });
+    });
+
+    test('the board’s lanes are stacked, each folding away with its count', async ({
+      context,
+      page,
+    }) => {
+      await context.addCookies(clientState.cookies);
+      await page.goto('/requests/board');
+      // Stacked, so the row doesn't scroll and isn't a stop for the keyboard.
+      const lanes = page.getByRole('group', { name: 'Lanes' });
+      await expect(lanes).not.toHaveAttribute('tabindex');
+      const open = page.getByRole('button', { name: /^Open, \d+ requests?$/ });
+      await expect(open).toHaveAttribute('aria-expanded', 'true');
+      const cards = page.locator('[data-lane="open"] ul');
+      await expect(cards).toBeVisible();
+      await open.click();
+      await expect(open).toHaveAttribute('aria-expanded', 'false');
+      await expect(cards).toBeHidden();
+      await expectNoSidewaysScroll(page);
     });
   });
 });
@@ -978,6 +1010,32 @@ test.describe('in forced-colours mode', () => {
           await page.goto(resolvePath(path));
           await expectAccessible(page);
         });
+      });
+
+      test('a card’s Move menu on the board, and the question before cancelling, as a Client', async ({
+        context,
+        page,
+      }) => {
+        await context.addCookies(clientState.cookies);
+        // The seeded open request, which stays as it is: the menu and the dialog are only opened.
+        await page.goto(`/requests/board?q=${encodeURIComponent(SEEDED_REQUESTS.open.title)}`);
+        await page.getByRole('button', { name: `Move AD-${SEEDED_REQUESTS.open.number}` }).click();
+        const menu = page.getByRole('menu');
+        // A Client closes a request or cancels it; the other lanes are the staff's.
+        await expect(menu.getByRole('menuitem')).toHaveText(['Done', 'Cancelled']);
+        await expectAccessible(page, '[role="menu"]');
+        await menu.getByRole('menuitem', { name: 'Cancelled' }).click();
+        await expect(page.getByRole('alertdialog')).toBeVisible();
+        await expectAccessible(page, '[role="alertdialog"]');
+        await page.keyboard.press('Escape');
+        await expect(page.getByRole('alertdialog')).toBeHidden();
+      });
+
+      test('the board has no Move menus for a Watcher', async ({ context, page }) => {
+        await context.addCookies(watcherState.cookies);
+        await page.goto(`/requests/board?q=${encodeURIComponent(SEEDED_REQUESTS.open.title)}`);
+        await expect(page.getByRole('link', { name: SEEDED_REQUESTS.open.title })).toBeVisible();
+        await expect(page.getByRole('button', { name: /^Move AD-/ })).toHaveCount(0);
       });
 
       test('the editor of a reply, with formatted text in it', async ({ context, page }) => {

@@ -213,6 +213,18 @@ export function parseRequestFilters({
 }
 
 /**
+ * The page's own parameters without the ones that pick statuses (the status
+ * link and `?only=`): what the List and Board views share, since the board
+ * has a lane per status instead, and what its links to the list start from.
+ *
+ * @param filters - The filters ({@link parseRequestFilters}).
+ * @returns The parameters, for `createPageUrl`.
+ */
+export function viewParams(filters: RequestFilters): Record<string, string | undefined> {
+  return { ...filters.pageParams, status: undefined, [ONLY_STATUS_PARAM]: undefined };
+}
+
+/**
  * Props for {@link RequestFilterBar}.
  */
 interface RequestFilterBarProps {

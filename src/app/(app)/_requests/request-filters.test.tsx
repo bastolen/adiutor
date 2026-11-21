@@ -1,7 +1,8 @@
 /**
  * @file Tests for {@link parseRequestFilters}: what it reads from a page's
  * query parameters, what it drops for each kind of reader, and the order of
- * the parameters links are built from.
+ * the parameters links are built from; and for {@link viewParams}, what the
+ * list and the board share.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -9,7 +10,7 @@ import type { Permission } from '@/lib/authz/permissions';
 import type { Actor } from '@/server/actor';
 import { getStaffPermissionsInCompanies } from '@/server/authz';
 
-import { parseRequestFilters } from './request-filters';
+import { parseRequestFilters, viewParams } from './request-filters';
 
 vi.mock('@/server/authz', () => ({ getStaffPermissionsInCompanies: vi.fn() }));
 
@@ -203,5 +204,30 @@ describe('parseRequestFilters', () => {
   it('reads the table state from the parameters', () => {
     const filters = parse({ sort: 'raised', dir: 'asc', page: '3', size: '50' });
     expect(filters.requested).toEqual({ sort: 'raised', dir: 'asc', page: 3, size: 50 });
+  });
+});
+
+describe('viewParams', () => {
+  it('keeps what narrows the requests down, and drops what picks their statuses', () => {
+    vi.mocked(getStaffPermissionsInCompanies).mockReturnValue(STAFF_WORK);
+    const filters = parse({
+      q: 'printer',
+      status: 'closed',
+      only: 'done',
+      company: 'adiutor-tests',
+      type: 'question',
+      priority: 'high',
+      assignee: 'me',
+    });
+
+    expect(viewParams(filters)).toEqual({
+      status: undefined,
+      only: undefined,
+      company: 'adiutor-tests',
+      type: 'question',
+      priority: 'high',
+      assignee: 'me',
+      q: 'printer',
+    });
   });
 });

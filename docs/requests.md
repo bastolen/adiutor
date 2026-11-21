@@ -7,8 +7,9 @@ sides work it through in one conversation until it's done or no longer needed. T
 requests behave and where the code is; why they're built this way is in
 [decision 0019](decisions/0019-requests-one-series-plain-text-and-a-history.md), for their
 text in [decision 0021](decisions/0021-markdown-for-request-text.md), and for the people on a
-request in [decision 0025](decisions/0025-people-on-a-request-one-table-with-roles.md), and for
-the emails about it in [decision 0031](decisions/0031-emails-about-requests.md).
+request in [decision 0025](decisions/0025-people-on-a-request-one-table-with-roles.md), for
+the emails about it in [decision 0031](decisions/0031-emails-about-requests.md), and for the
+board in [decision 0037](decisions/0037-a-board-of-requests.md).
 
 Not built yet, each for a later change: an approval step, and attachments.
 
@@ -67,7 +68,8 @@ and Cancelled are the closed statuses.
 
 - **The staff** who work on requests set any status on any request, with the status select on the
   request's page, except Waiting for approval (see [Solutions](#solutions)). It saves when a status
-  is picked, never while moving through the list.
+  is picked, never while moving through the list. On the board, moving a card to another lane
+  changes its status the same way, for everyone who may (see [The board](#the-board)).
 - **Company Admins and Clients** have three buttons instead: **Mark as done**, **Cancel request**
   (from any status but Done; it asks first) and **Reopen** (a done or cancelled request). They
   can't set the other statuses (`mayChangeStatus`). While a solution waits for them, they approve
@@ -86,10 +88,10 @@ and Cancelled are the closed statuses.
   company and a Watcher of another reads each request the same way in both places.
 - When two people change a status at the same moment, the second is told the request changed and
   sees the request as it is, rather than overwriting it (`errors.requests.statusChanged`). The
-  status select and the buttons send the status they showed (`from`), so the change is refused
-  when the request has another status by now, also for the staff, who may make any move; the
-  action then refreshes the page. A change without `from` is refused only when the move is no
-  longer allowed.
+  status select, the buttons and the board's Move menus send the status they showed (`from`), so
+  the change is refused when the request has another status by now, also for the staff, who may
+  make any move; the action then refreshes the page. A change without `from` is refused only when
+  the move is no longer allowed.
 
 ### Solutions
 
@@ -702,7 +704,13 @@ says so with a "Show everything" button.
   A list without requests says why: nothing matches (a search, a filter menu, or the Waiting or
   Closed link), nothing is active, or, under All, which leaves nothing out, there are no requests
   yet. The last two offer "New request" to whoever may raise one.
-- **`/companies/<URL name>`**: the same list for one company, the company's first page.
+  A List | Board toggle under the heading switches to the board with the same search, filters
+  and sort.
+- **`/requests/board`**, for everyone signed in: the same requests in a lane per status, with the
+  list's search, filter menus and sort, and a Move menu on each card the reader may move (see
+  [The board](#the-board)).
+- **`/companies/<URL name>`**: the same list for one company, the company's first page (no board
+  there yet).
 - **`/requests/new`**: the company (only when there's more than one to choose from), a title, a
   type with what each is for, and a description. The staff also choose a priority, or leave it to
   the type. It opens the new request. A company that wasn't chosen is asked for like any other
@@ -728,6 +736,60 @@ says so with a "Show everything" button.
   to you tile for the staff who can be assigned; see
   [Navigation and dashboard](companies-and-roles.md#navigation-and-dashboard).
 
+### The board
+
+`/requests/board` shows the requests the reader may see across companies in a lane per status
+([decision 0037](decisions/0037-a-board-of-requests.md)), next to the list and with its header,
+its search and filter menus (`parseRequestFilters`, `RequestFilterBar` without the status links)
+and its sort. The List | Board toggle (`RequestViewToggle`) keeps the search, the filter menus,
+the sort and the size (`size`), and drops the status link, `?only=` and the page.
+
+- **Lanes:** one per status, in the order a request moves through them (`BOARD_LANES`), each named
+  in the words of the reader's strongest part (`laneAudience`: "Waiting for your reply" for
+  someone who takes part in any company) with its true count. A card whose company addresses its
+  reader otherwise (a Client of one company and a Watcher of another) says its status in its own
+  words. An empty lane says so.
+- **How many cards:** lanes aren't tables, so they have no pages. An open lane shows the first
+  25, 50 or 100 cards in the list's sort ("Cards per lane", one size for every lane, as links like
+  the list's rows per page: `PageSizeLinks`); Done and Cancelled show their latest 10 by last
+  activity (`CLOSED_LANE_LIMIT`), whatever the sort. A lane that holds more ends in "See all 132",
+  the list with `?only=<status>` and the board's filters and sort. Across companies, the open
+  lanes leave out a deactivated company's requests, as the Active list does, and the closed lanes
+  keep them.
+- **Cards:** the number, the type, the title (a link stretched over the card), the priority (the
+  staff only), the company when the reader sees several, Reopened, who it's assigned to and the
+  last activity.
+- **Moving cards:** each card the reader may move has a Move menu ("Move AD-142" to screen readers)
+  with the lanes it may go to: `moves`, which `listBoard` gives each card (`statusChoices` with the
+  reader's permissions in its company, none in a deactivated company), so the browser never gets
+  permissions. The staff who work on requests move a card to any lane but Waiting for approval; a
+  company's Admins and Clients move one that's still worked on to Done (not while it waits for
+  their approval, which they give on the request) or Cancelled, and a closed one back to Open.
+  Watchers, Finance and anyone in a deactivated company only read, and get no menu. Done and
+  Cancelled ask first, in the words of the request page's Cancel. `moveRequestAction` calls
+  `changeRequestStatus` with `from` (the lane the board showed), then refreshes the board; a move
+  from a board that's out of date is refused and the board shows the card where it is. Each move
+  is one of the 300 changes an hour a person may make to requests, and is request work, so it's
+  allowed while signed in as a user.
+- **While a card moves** it's already at the top of its new lane, with both counts changed
+  (`useOptimistic` with `placeMovedCard`), and its Move button alone is busy ("Moving…", still
+  focusable). A toast says where it went ("AD-142 moved to In progress."); a refusal shows above
+  the lanes and as a toast, and the card goes back. Focus follows the card to its Move button in
+  the new lane (found by `data-request` once the move is on screen), or to the lane's heading
+  when the card isn't on the board anymore (`restoreFocusIfLost`).
+- **Layout:** from tablet width the lanes sit side by side, at least 15rem each, in a row that
+  scrolls sideways inside its own box ("Lanes", reachable and scrolled with the keyboard while it
+  overflows); the page itself never does, and the board doesn't widen the page (no `WidePage`).
+  Below tablet width the lanes are stacked, each folding away from its heading with its count.
+- **In the code:** the rules in `src/lib/requests/board.ts` (lanes, closed lanes, the lanes'
+  words, why a drop is refused, placing a moved card); `listBoard` in
+  `src/server/requests/board.ts`, which picks and counts each status's cards in one windowed query
+  for the open lanes and one for the closed ones, then loads the cards' rows as the list does
+  (`loadRequestListItems`); the page in `src/app/(app)/requests/board/`, and in
+  `src/app/(app)/_requests/` the server part (`request-board.tsx`, which renders each card's
+  content), the browser part (`board.tsx`, `board-lane.tsx`, `board-card.tsx`, `move-menu.tsx`) and
+  the action (`board-actions.ts`).
+
 ## In the code
 
 - `src/lib/requests/` (a folder module, free of zod and server code, so the database schema,
@@ -738,8 +800,9 @@ says so with a "Show everything" button.
   (the conversation, its internal notes and the history in one table, ordered by ID) and
   `request_mention` (who a text mentions). The counter is the `requests.last_number` setting.
 - `src/server/requests/` (a folder module): `listRequestCompanies`, `listRequests` (built from
-  `requestListCondition`, the WHERE every view of the requests shares, and `loadRequestListItems`,
-  which turns selected `requestListColumns` rows into `RequestListItem`s), `findRequest`,
+  `requestListCondition`, the WHERE every view of the requests shares, `requestListOrder`, its
+  sort, and `loadRequestListItems`, which turns selected `requestListColumns` rows into
+  `RequestListItem`s), `listBoard` (the board's lanes, see [The board](#the-board)), `findRequest`,
   `findRequestNumber`, `getRequest`, `setActivityView` (how the reader reads the activity),
   `raiseRequest`, `replyToRequest`, `addNote`, `changeRequestStatus`,
   `updateRequestDetails`, `changeAssignees`, `listAssignableStaff`, `countAssignedRequests`,
@@ -765,8 +828,9 @@ says so with a "Show everything" button.
   subscriptions while signed in as a user, which the conversation doesn't show (see
   [Signed in as a user](#signed-in-as-a-user)).
 - `src/app/(app)/_requests/`: what the request pages share (the list, its filters
-  (`parseRequestFilters` and `RequestFilterBar` in `request-filters.tsx`), the badges, the text, the
-  people). `src/app/(app)/requests/`: the pages themselves.
+  (`parseRequestFilters` and `RequestFilterBar` in `request-filters.tsx`), the header and its
+  toggle between the list and the board, the board, the badges, the text, the people).
+  `src/app/(app)/requests/`: the pages themselves.
 - `src/components/ui/markdown/`: what shows a Markdown text: the pipeline with its limits
   (`tree.ts`), the allow-list (`sanitize.ts`), the elements (`elements.tsx`), the languages of
   highlighted code (`languages.ts`), the note above copied code (`code-note.ts`) and the class

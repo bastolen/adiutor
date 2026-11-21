@@ -45,6 +45,27 @@
         "noMatchDescription": "Nothing matches your search or filters."
       }
     },
+    "board": {
+      "title": "Request board",
+      "viewLabel": "View requests as",
+      "view": "{view, select, list {List} other {Board}}",
+      "cardsPerLane": "Cards per lane",
+      "cardsPerLaneOption": "{size, number} cards per lane",
+      "lanes": "Lanes",
+      "laneHeading": "{lane}, {count, plural, one {# request} other {# requests}}",
+      "emptyLane": "No requests",
+      "seeAll": "See all {count, number}",
+      "seeAllLabel": "See all {count, number} requests in {lane}",
+      "lastActivity": "Last activity",
+      "move": "Move",
+      "moving": "Moving…",
+      "moveCard": "Move {reference}",
+      "movingCard": "Moving {reference}…",
+      "moveTo": "Move to",
+      "moved": "{status, select, open {{reference} moved to Open.} todo {{reference} moved to To do.} in_progress {{reference} moved to In progress.} waiting {{reference} moved to Waiting for the company.} proposed {{reference} moved to Waiting for approval.} done {{reference} moved to Done.} cancelled {{reference} moved to Cancelled.} other {{reference} moved.}}",
+      "confirmTitle": "{to, select, done {Mark {reference} as done?} other {Cancel {reference}?}}",
+      "doneDescription": "Everyone on the request is told. It can be reopened later."
+    },
     "new": {
       "title": "New request",
       "description": "{audience, select, staff {Raise a request for a company, for example after a phone call.} other {Tell {staff} what you need. They’ll reply on the request’s page.}}",

@@ -45,6 +45,27 @@
         "noMatchDescription": "Nada coincide con tu búsqueda o tus filtros."
       }
     },
+    "board": {
+      "title": "Tablero de solicitudes",
+      "viewLabel": "Ver solicitudes como",
+      "view": "{view, select, list {Lista} other {Tablero}}",
+      "cardsPerLane": "Tarjetas por columna",
+      "cardsPerLaneOption": "{size, number} tarjetas por columna",
+      "lanes": "Columnas",
+      "laneHeading": "{lane}, {count, plural, one {# solicitud} other {# solicitudes}}",
+      "emptyLane": "Ninguna solicitud",
+      "seeAll": "Ver las {count, number}",
+      "seeAllLabel": "Ver las {count, number} solicitudes de {lane}",
+      "lastActivity": "Última actividad",
+      "move": "Mover",
+      "moving": "Moviendo…",
+      "moveCard": "Mover {reference}",
+      "movingCard": "Moviendo {reference}…",
+      "moveTo": "Mover a",
+      "moved": "{status, select, open {{reference} movida a Abierta.} todo {{reference} movida a Por hacer.} in_progress {{reference} movida a En curso.} waiting {{reference} movida a A la espera de la empresa.} proposed {{reference} movida a A la espera de aprobación.} done {{reference} movida a Resuelta.} cancelled {{reference} movida a Cancelada.} other {{reference} movida.}}",
+      "confirmTitle": "{to, select, done {¿Marcar {reference} como resuelta?} other {¿Cancelar {reference}?}}",
+      "doneDescription": "Se avisa a todas las personas de la solicitud. Se puede reabrir más adelante."
+    },
     "new": {
       "title": "Nueva solicitud",
       "description": "{audience, select, staff {Crea una solicitud para una empresa, por ejemplo tras una llamada.} other {Cuéntale a {staff} lo que necesitas. Te responderán en la página de la solicitud.}}",

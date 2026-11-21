@@ -35,7 +35,7 @@ import {
 } from '@/server/requests';
 
 import { PriorityBadge, ReopenedBadge, StatusBadge } from './request-badges';
-import { RequestFilterBar, parseRequestFilters } from './request-filters';
+import { RequestFilterBar, type RequestFilters, parseRequestFilters } from './request-filters';
 import { PeopleAvatars, personName } from './request-person';
 
 /**
@@ -83,10 +83,14 @@ interface RequestListProps {
   /**
    * Renders what comes before the list (a page's header) from what the list
    * has loaded anyway, so the page needn't load it again: the name the staff
-   * are shown with, and whether the viewer may raise a request in the
-   * companies the list covers.
+   * are shown with, whether the viewer may raise a request in the companies
+   * the list covers, and the filters it read (for the List | Board toggle).
    */
-  renderHeader?: (loaded: { staffName: string; canRaise: boolean }) => ReactNode;
+  renderHeader?: (loaded: {
+    staffName: string;
+    canRaise: boolean;
+    filters: RequestFilters;
+  }) => ReactNode;
 }
 
 /** Why a list without requests is empty: nothing matches, nothing is active, or there are none. */
@@ -225,7 +229,7 @@ export default async function RequestList({
 
   return (
     <>
-      {renderHeader?.({ staffName: settings.staffName, canRaise })}
+      {renderHeader?.({ staffName: settings.staffName, canRaise, filters })}
       <RequestFilterBar
         filters={filters}
         table={table}

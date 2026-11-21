@@ -163,12 +163,13 @@ const PRIORITY_RANK = sql`case ${request.priority} ${sql.join(
 )} end`;
 
 /**
- * The ORDER BY terms of a request list.
+ * The ORDER BY terms of a request list, and of a lane of the board, which
+ * keeps the list's sort.
  *
  * @param state - The table's state.
  * @returns The terms, ending with the request's ID.
  */
-function requestOrder(state: TableState<StaffRequestSort>): SQL[] {
+export function requestListOrder(state: TableState<StaffRequestSort>): SQL[] {
   switch (state.sort) {
     case 'raised':
       return orderTerms(state.dir, request.createdAt, request.id);
@@ -177,6 +178,28 @@ function requestOrder(state: TableState<StaffRequestSort>): SQL[] {
     default:
       return orderTerms(state.dir, request.lastActivityAt, request.id);
   }
+}
+
+/**
+ * Completes and checks the sort, direction, page and size a list of
+ * requests (or the board) was asked for: the staff's table, which also
+ * sorts by priority, or everyone else's, for whom a priority sort is the
+ * default sort instead.
+ *
+ * @param actor - The reader.
+ * @param table - What was asked for (any part may be missing).
+ * @returns The state.
+ */
+export function requestTableState(
+  actor: Actor,
+  table: Partial<TableState<StaffRequestSort>>,
+): TableState<StaffRequestSort> {
+  return requestScope(actor).internal
+    ? resolveTableState(STAFF_REQUESTS_TABLE, table)
+    : resolveTableState(REQUESTS_TABLE, {
+        ...table,
+        sort: table.sort === 'priority' ? undefined : table.sort,
+      });
 }
 
 /**
@@ -428,14 +451,8 @@ export async function listRequests(
   actor: Actor,
   options: ListRequestsOptions = {},
 ): Promise<Paged<RequestListItem>> {
-  const scope = requestScope(actor);
   const { search, status, only, company: companyRef, type, priority, assignee, ...table } = options;
-  const state: TableState<StaffRequestSort> = scope.internal
-    ? resolveTableState(STAFF_REQUESTS_TABLE, table)
-    : resolveTableState(REQUESTS_TABLE, {
-        ...table,
-        sort: table.sort === 'priority' ? undefined : table.sort,
-      });
+  const state = requestTableState(actor, table);
   const filter: RequestStatusFilter = isRequestStatusFilter(status)
     ? status
     : DEFAULT_REQUEST_STATUS_FILTER;
@@ -447,7 +464,7 @@ export async function listRequests(
     priority,
     assignee,
   });
-  const order = requestOrder(state);
+  const order = requestListOrder(state);
 
   const page = await paginate(
     state,

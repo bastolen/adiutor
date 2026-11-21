@@ -15,6 +15,9 @@
  * them.
  * The staff reach a person's user page from their name; nobody at a company
  * does.
+ * The board: switching to it, moving a card with its Move menu, Done and
+ * Cancelled asking first, a move from a board that's out of date, and a
+ * lane's link to the list of all its requests.
  * Each test that changes a request stores its own (`storeRequest`); the
  * seeded ones are only read.
  */
@@ -29,6 +32,7 @@ import {
   findUserId,
   resetActivityView,
   setRequestPrefix,
+  setStoredRequestStatus,
   storeEntries,
   storeInvitation,
   storeRequest,
@@ -2333,4 +2337,172 @@ test('the activity shows the groups and order its reader chose, on every visit',
   ]);
   await page.keyboard.press('Escape');
   await expect(entries).toHaveCount(3);
+});
+
+/**
+ * A lane of the board on the page.
+ *
+ * @param page - The browser page, on the board.
+ * @param name - The lane's name, in the reader's words.
+ * @returns The lane's section.
+ */
+const boardLane = (page: Page, name: string) =>
+  page.getByRole('region', { name: new RegExp(`^${name}, \\d+ requests?$`) });
+
+/**
+ * Opens the board narrowed down to a test's own requests by their title.
+ *
+ * @param page - The browser page, signed in.
+ * @param search - What their titles have in common.
+ */
+async function openBoard(page: Page, search: string): Promise<void> {
+  await page.goto(`/requests/board?q=${encodeURIComponent(search)}`);
+}
+
+test('the staff switch the requests to a board and move a card with its Move menu', async ({
+  page,
+}) => {
+  const title = `A card for the board ${randomUUID().slice(0, 8)}`;
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title,
+  });
+
+  await signIn(page, SUPPORT_STAFF);
+  // The List | Board toggle keeps the search.
+  await page.goto(`/requests?q=${encodeURIComponent(title)}`);
+  await page
+    .getByRole('navigation', { name: 'View requests as' })
+    .getByRole('link', { name: 'Board' })
+    .click();
+  await expect(page).toHaveURL(
+    `/requests/board?q=${encodeURIComponent(title).replace(/%20/g, '+')}`,
+  );
+  await expect(page).toHaveTitle('Request board · Adiutor');
+  await expect(page.getByRole('link', { name: 'Board', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  const open = boardLane(page, 'Open');
+  await expect(open.getByRole('link', { name: title })).toBeVisible();
+  // The staff's lanes and the card's number; the company has no lane of its own words here.
+  await expect(boardLane(page, 'Waiting for the company')).toBeVisible();
+  await expect(open).toContainText(`AD-${number}`);
+
+  await open.getByRole('button', { name: `Move AD-${number}` }).click();
+  await expect(page.getByRole('menu').getByRole('menuitem')).toHaveText([
+    'To do',
+    'In progress',
+    'Waiting for the company',
+    'Done',
+    'Cancelled',
+  ]);
+  await page.getByRole('menuitem', { name: 'In progress' }).click();
+  await expect(toasts(page)).toContainText(`AD-${number} moved to In progress.`);
+  await expect(boardLane(page, 'In progress').getByRole('link', { name: title })).toBeVisible();
+  await expect(open.getByRole('link', { name: title })).toHaveCount(0);
+
+  // The request's page agrees, and its history says who moved it.
+  await boardLane(page, 'In progress').getByRole('link', { name: title }).click();
+  await expect(page.getByRole('combobox', { name: 'Status' })).toHaveText('In progress');
+  await expect(conversation(page)).toContainText('Changed the status from Open to In progress.');
+});
+
+test('moving a card on the board to Done or Cancelled asks first, also for a Client', async ({
+  page,
+}) => {
+  const title = `A card to close ${randomUUID().slice(0, 8)}`;
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title,
+  });
+
+  await signIn(page, REQUESTS_CLIENT);
+  await openBoard(page, title);
+  // A Client's lanes are worded for them.
+  await expect(boardLane(page, 'Waiting for your reply')).toBeVisible();
+  const move = boardLane(page, 'Open').getByRole('button', { name: `Move AD-${number}` });
+
+  // Keeping it changes nothing.
+  await move.click();
+  await page.getByRole('menuitem', { name: 'Cancelled' }).click();
+  const cancel = page.getByRole('alertdialog', { name: `Cancel AD-${number}?` });
+  await expect(cancel).toContainText('It can be reopened later.');
+  await cancel.getByRole('button', { name: 'Keep request' }).click();
+  await expect(cancel).toBeHidden();
+  await expect(move).toBeFocused();
+  await expect(boardLane(page, 'Open').getByRole('link', { name: title })).toBeVisible();
+
+  await move.click();
+  await page.getByRole('menuitem', { name: 'Done' }).click();
+  const done = page.getByRole('alertdialog', { name: `Mark AD-${number} as done?` });
+  await done.getByRole('button', { name: 'Mark as done' }).click();
+  await expect(toasts(page)).toContainText(`AD-${number} moved to Done.`);
+  const closed = boardLane(page, 'Done');
+  await expect(closed.getByRole('link', { name: title })).toBeVisible();
+  // Focus followed the card, whose menu now reopens it.
+  const moved = closed.getByRole('button', { name: `Move AD-${number}` });
+  await expect(moved).toBeFocused();
+  await moved.click();
+  await expect(page.getByRole('menu').getByRole('menuitem')).toHaveText(['Open']);
+  await page.keyboard.press('Escape');
+});
+
+test('a move from a board that’s out of date is refused, and the board shows the card as it is', async ({
+  page,
+}) => {
+  const title = `A card someone else moved ${randomUUID().slice(0, 8)}`;
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title,
+  });
+
+  await signIn(page, SUPPORT_STAFF);
+  await openBoard(page, title);
+  await expect(boardLane(page, 'Open').getByRole('link', { name: title })).toBeVisible();
+  // A colleague moves it to To do meanwhile.
+  await setStoredRequestStatus(number, 'todo');
+
+  await boardLane(page, 'Open')
+    .getByRole('button', { name: `Move AD-${number}` })
+    .click();
+  await page.getByRole('menuitem', { name: 'In progress' }).click();
+  await expect(main(page).getByRole('alert')).toContainText(
+    'This request’s status changed in the meantime. Check it and try again.',
+  );
+  await expect(toasts(page)).toContainText('This request’s status changed in the meantime.');
+  // Not overwritten: the board now shows it where the colleague put it.
+  await expect(boardLane(page, 'To do').getByRole('link', { name: title })).toBeVisible();
+  await expect(boardLane(page, 'In progress').getByRole('link', { name: title })).toHaveCount(0);
+});
+
+test('a lane of the board with more requests than it shows opens the list of them all', async ({
+  page,
+}) => {
+  const prefix = `Closed for the board ${randomUUID().slice(0, 8)}`;
+  // Eleven done requests: one more than the Done lane shows.
+  await Array.from({ length: 11 }, (_, index) => index).reduce(async (previous, index) => {
+    await previous;
+    await storeRequest({
+      companySlug: COMPANY_SLUG,
+      raisedBy: REQUESTS_CLIENT.email,
+      title: `${prefix} ${index + 1}`,
+      status: 'done',
+    });
+  }, Promise.resolve());
+
+  await signIn(page, SUPPORT_STAFF);
+  await openBoard(page, prefix);
+  const done = boardLane(page, 'Done');
+  await expect(done.getByRole('link', { name: new RegExp(`^${prefix}`) })).toHaveCount(10);
+  await done.getByRole('link', { name: 'See all 11 requests in Done' }).click();
+
+  await expect(page).toHaveURL(
+    `/requests?only=done&q=${encodeURIComponent(prefix).replace(/%20/g, '+')}`,
+  );
+  await expect(main(page)).toContainText('Only requests with this status:');
+  await expect(requestRows(page)).toHaveCount(11);
 });

@@ -158,7 +158,7 @@ describe('a request list without requests', () => {
     expect(newRequest()).toHaveAttribute('href', '/requests/new?company=adiutor-tests');
   });
 
-  it('renders the header it is given before the list, from the companies and settings it loaded', async () => {
+  it('renders the header it is given before the list, from the companies, settings and filters it loaded', async () => {
     const renderHeader = vi.fn(
       ({ staffName, canRaise }: { staffName: string; canRaise: boolean }) => (
         <h1>{`${staffName} ${canRaise ? 'may' : 'may not'} raise`}</h1>
@@ -170,6 +170,8 @@ describe('a request list without requests', () => {
     expect(renderHeader).toHaveBeenCalledExactlyOnceWith({
       staffName: 'Adiutor Tests',
       canRaise: true,
+      // For the List | Board toggle, which keeps them.
+      filters: expect.objectContaining({ status: 'active', search: '' }),
     });
     const heading = screen.getByRole('heading', { level: 1 });
     expect(heading).toHaveTextContent('Adiutor Tests may raise');

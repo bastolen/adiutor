@@ -16,7 +16,8 @@ keyboard support.
   panel to read that opens from a button, such as the names behind a row of avatars), `EmptyState`,
   `IconRow`, `IconTile` (a decorative icon on a tinted square), `RowLink` (the name in a table row
   or list item, stretched so the whole row is one click target), `DescriptionList` (labels and
-  values), `Skeleton`, `Pagination`, `SortMenu`, `FilterMenu`, ...). Menus, selects, dialogs and
+  values), `Skeleton`, `Pagination` (with `PageSizeLinks`, its choice of sizes, on its own for a
+  view without pages), `SortMenu`, `FilterMenu`, ...). Menus, selects, dialogs and
   sheets are
   built on [Radix UI](https://www.radix-ui.com), and only `src/components/ui/` imports it. Radix
   follows the WAI-ARIA patterns: arrow keys, typeahead, Escape to close, focus kept inside
@@ -91,6 +92,30 @@ keyboard support.
       1920px, with a seeded staff member who has no name and a long address.
   - **List services** take the table's state and return one page with the total
     (`Paged<T>`); each sort ends with the row's ID, so pages don't overlap and reversing is exact.
+- **The board** of requests (`/requests/board`, see [The board](requests.md#the-board)) is the one
+  view of records that isn't a table: a lane per status, each card a list item. Lanes have no
+  pagination footer (an open lane shows 25, 50 or 100 cards, chosen like rows per page with
+  `PageSizeLinks`; a lane with more links to the list), but they keep the list's sort, from its
+  Sort menu. The pattern:
+  - **Moving without dragging:** every card the reader may move has a Move menu (a Radix menu)
+    listing the lanes it may go to, which works with a single click or tap, the keyboard and
+    screen readers alike. That's WCAG 2.5.7 Dragging Movements: whatever can be dragged can also
+    be done with a single pointer, and the keyboard alone doesn't count. Dragging, when it comes,
+    is an extra for the pointer on wider screens; the menu stays. Moves that email the company
+    (Done, Cancelled) ask first.
+  - **A busy card, not a busy board:** a moved card shows in its new lane at once
+    (`useOptimistic`), and only its Move button is busy ("Moving…", focusable, presses ignored);
+    every other card stays usable.
+  - **Focus follows the card:** a card that changes lanes is removed and added again, so focus
+    is put back on its Move button in the new lane (`data-request`), or on the lane's heading
+    when the card isn't shown anymore; a lane is a `data-card` section for `restoreFocusIfLost`.
+  - **Width:** the lanes, at least 15rem each, sit in a row that scrolls sideways inside a named
+    group the keyboard reaches while it overflows (`tabIndex={0}`, like a wide code block), so
+    the page never scrolls sideways and isn't widened (no `WidePage`). Below tablet width the
+    lanes are stacked, each folding away with its count (`aria-expanded` on its heading's button).
+  - **Colours:** a lane is a step back from its cards in both modes (`muted` behind `surface`
+    cards in light mode, `surface` behind `raised` ones in dark mode, where `surface` is the darker
+    of the two); the count, the empty lane and the card's details use `muted-foreground`.
 - **Cards** have 24px padding on every side. Settings with actions use full-width rows (what it does
   on the left, the button on the right). Destructive settings that can't be undone, like deleting or
   deactivating an account, get their own `Card` with `tone="danger"`.
