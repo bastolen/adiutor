@@ -11,6 +11,7 @@ import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useSyncExternalStore } from 'react';
 
+import AccountSummary, { accountLabel, type NamedAccount } from '@/components/auth/account-summary';
 import Alert from '@/components/ui/alert';
 import AuthHeading from '@/components/ui/auth-heading';
 import Button from '@/components/ui/button';
@@ -19,8 +20,6 @@ import { usePageRestored } from '@/components/ui/use-page-restored';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import { getSafeRedirectPath } from '@/lib/redirect';
 import { MAGIC_LINK_VERIFY_PATH } from '@/lib/sign-in/email-link';
-
-import AccountSummary, { accountLabel, type NamedAccount } from './account-summary';
 
 /** Whoever is signed in in this browser, as the page names them. */
 export interface SignedInAccount extends NamedAccount {

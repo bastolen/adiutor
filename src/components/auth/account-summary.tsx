@@ -1,6 +1,7 @@
 /**
- * @file The account the page sign-in emails link to is about: its avatar,
- * name and email address.
+ * @file The account a sign-in link from an email signs in to, as its
+ * confirmation page shows it (`/auth/email-link`, `/auth/request-link`): its
+ * avatar, name and email address.
  */
 import Avatar from '@/components/ui/avatar';
 import displayName from '@/lib/display-name';
