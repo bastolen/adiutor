@@ -3,7 +3,8 @@
  * email for everything queued for one person about one request, in their
  * language. What the email may show is read when it's sent
  * (`readRequestUpdate`), so someone who is no longer on the request or can
- * no longer read it gets nothing, and their jobs are skipped. An email that
+ * no longer read it gets nothing, and their jobs are skipped. Its link opens
+ * the request at the first news it tells of (`RequestUpdate.anchor`). An email that
  * tells someone at the company of a solution they may answer gets its own
  * Approve and Deny links (`createAnswerLink`, decision 0033), made as it's
  * sent. A mail problem throws, so the batch is tried again later with
@@ -11,6 +12,7 @@
  * never sent, and expire).
  */
 import { requestUpdateEmail } from '@/emails/request-update';
+import { withSection } from '@/lib/redirect';
 import { answerLinkPath, requestPath } from '@/lib/requests';
 
 import { REQUEST_UPDATES_GROUP, requestUpdateJob } from '../../queue';
@@ -64,7 +66,8 @@ export const requestUpdatesBatch = defineJobBatch({
         reference: update.request.reference,
         title: update.request.title,
         companyName: update.request.companyName,
-        url: `${ctx.baseUrl}${requestPath(update.request.number)}`,
+        // The request, opened at the first news the email tells of.
+        url: withSection(`${ctx.baseUrl}${requestPath(update.request.number)}`, update.anchor),
         role: update.role,
         audience: update.audience,
         items: update.items,

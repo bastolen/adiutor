@@ -326,13 +326,16 @@ describe('what one person’s email may show', () => {
       status: 'waiting',
     });
 
+    const queued = await newsFor(watcher.id);
     const update = await readRequestUpdate(
       ctx,
       { requestId: raised.id, userId: watcher.id },
-      await newsFor(watcher.id),
+      queued,
     );
 
     expect(update).toMatchObject({
+      // The email opens the request at the reply, the first news it tells of.
+      anchor: `entry-${queued.find(({ event }) => event === 'reply')?.entryId}`,
       recipient: { email: 'wim@adiutor.test', locale: null },
       role: 'subscriber',
       audience: 'follower',
@@ -547,6 +550,8 @@ describe('what one person’s email may show', () => {
 
     const [item] = update?.items ?? [];
     expect(item).toMatchObject({ event: 'mentioned', by: 'anna', where: 'description' });
+    // The email opens the request at its description.
+    expect(update?.anchor).toBe('request-description');
     const text = item?.event === 'mentioned' ? item.text : undefined;
     expect(text?.text).toContain('saw it first.');
     expect(Object.values(text?.mentions ?? {})).toEqual(['wim']);
@@ -561,6 +566,38 @@ describe('what one person’s email may show', () => {
     expect(
       await readRequestUpdate(ctx, { requestId: raised.id, userId: watcher.id }, queued),
     ).toBeNull();
+  });
+
+  it('opens a company reader’s email at the reply, never at a note before it', async () => {
+    await createStaffSettings(db);
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    const manager = await staffActor(db, 'manager', 'mo@adiutor.test');
+    const raised = await storeRequest(company.id);
+    await storeSubscribers(raised.id, [client.id, manager.id]);
+    await addNote(ctx, support, { request: raised.id, body: 'The toner is empty.' });
+    await replyToRequest(ctx, support, { request: raised.id, body: 'We are on it.' });
+    /**
+     * Reads someone's email, with the anchor its news should give.
+     *
+     * @param userId - The reader.
+     * @param event - The news whose entry the email should open at.
+     * @returns The anchor it has, and the one expected.
+     */
+    const anchors = async (userId: string, event: string) => {
+      const queued = await newsFor(userId);
+      const update = await readRequestUpdate(ctx, { requestId: raised.id, userId }, queued);
+      const expected = queued.find((news) => news.event === event)?.entryId;
+      return { anchor: update?.anchor, expected: `entry-${expected}` };
+    };
+
+    // The staff member's email opens at the note, the first news it tells of.
+    const toManager = await anchors(manager.id, 'note');
+    expect(toManager.anchor).toBe(toManager.expected);
+    // The client's email never tells of the note, so it opens at the reply.
+    const toClient = await anchors(client.id, 'reply');
+    expect(toClient.anchor).toBe(toClient.expected);
   });
 
   it('says who assigned it to them, unless it was taken back since', async () => {
@@ -610,6 +647,8 @@ describe('what one person’s email may show', () => {
     expect(update).toMatchObject({
       role: 'subscriber',
       items: [{ event: 'subscribed', by: 'anna' }],
+      // Being subscribed leaves no entry: the email opens the request at the top.
+      anchor: null,
     });
     // Never the ID of whoever did it.
     expect(JSON.stringify(update?.items)).not.toContain(admin.id);
