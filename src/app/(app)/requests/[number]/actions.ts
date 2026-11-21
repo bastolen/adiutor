@@ -1,9 +1,10 @@
 /**
- * @file Server actions for a request's page: replying, changing the status,
- * changing the details, changing who it's assigned to, editing a text and
- * subscribing to it. The services check who may do what; these read the
- * form, refresh the page and word the confirmation in the request's language
- * (`requests.reply`, `requests.saved`).
+ * @file Server actions for a request's page: replying, adding an internal
+ * note, changing the status, changing the details, changing who it's
+ * assigned to, editing a text and subscribing to it. The services check who
+ * may do what; these read the form, refresh the page and word the
+ * confirmation in the request's language (`requests.reply`, `requests.note`,
+ * `requests.saved`).
  */
 'use server';
 
@@ -17,6 +18,7 @@ import appContext from '@/server/app-context';
 import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
 import {
+  addNote,
   changeAssignees,
   changeRequestStatus,
   changeSubscribers,
@@ -50,6 +52,29 @@ export async function replyAction(
     refresh();
     const t = await getTranslations('requests.reply');
     return { ok: true, message: t('sent') };
+  });
+}
+
+/**
+ * Adds an internal note to a request, which only the staff read.
+ *
+ * @param _previous - The previous result (unused).
+ * @param formData - Fields `request` (its number) and `body`.
+ * @returns A confirmation, or why it failed.
+ */
+export async function noteAction(
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const actor = await getActor();
+    await addNote(appContext, actor, {
+      request: field(formData, 'request'),
+      body: field(formData, 'body'),
+    });
+    refresh();
+    const t = await getTranslations('requests.note');
+    return { ok: true, message: t('added') };
   });
 }
 

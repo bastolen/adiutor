@@ -658,7 +658,7 @@ describe('losing access to a request', () => {
 describe('the subscribers of the requests there were', () => {
   /** What the migration does for the requests that were there before it: its last statement. */
   const backfill =
-    readFileSync(path.join(process.cwd(), 'drizzle/0015_request_participants.sql'), 'utf8')
+    readFileSync(path.join(process.cwd(), 'drizzle/0018_request_participants.sql'), 'utf8')
       .split('--> statement-breakpoint')
       .at(-1) ?? '';
 

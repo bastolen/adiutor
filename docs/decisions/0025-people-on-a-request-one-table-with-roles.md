@@ -31,6 +31,10 @@ How it works is in [Requests](../requests.md#subscribing). The choices behind it
   follow along.
 - **A subscription ends with the access,** and only counts while its person can read the request
   (`loadSubscribers`).
+- **A mention in an internal note subscribes only the staff it mentions,** and its author; never
+  someone at the company, who can't read it.
+- **A staff member signed in as a user may change that user's subscriptions** (decision 0028),
+  and since that leaves no history, it goes to the audit log, for the staff who see it.
 
 ## Consequences
 
@@ -40,7 +44,8 @@ How it works is in [Requests](../requests.md#subscribing). The choices behind it
   never an ID or an address.
 - Whatever tells the people on a request something takes the subscribers from `loadSubscribers`,
   so someone who lost access is never told.
-- The history doesn't say who subscribed whom, or when.
+- The history doesn't say who subscribed whom, or when; only the audit log does, and only for a
+  change made while signed in as a user.
 
 ## Alternatives considered
 

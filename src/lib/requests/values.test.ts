@@ -10,11 +10,10 @@ import {
   isRequestPriority,
   isRequestStatus,
   isRequestStatusFilter,
-  isRequestType,
+  isRequestTypeKey,
   REQUEST_STATUS_FILTERS,
   REQUEST_STATUSES,
-  REQUEST_TYPES,
-  startingPriority,
+  requestTypeKeyFromName,
   statusesOfFilter,
 } from './values';
 
@@ -32,18 +31,24 @@ describe('request statuses', () => {
   });
 });
 
-describe('the priority a type starts with', () => {
+describe('the key a new request type gets from its name', () => {
   it.each([
-    ['hotfix', 'high'],
-    ['bug', 'normal'],
-    ['support', 'normal'],
-    ['new_feature', 'low'],
-  ] as const)('%s starts %s', (type, priority) => {
-    expect(startingPriority(type)).toBe(priority);
+    ['Printers', 'printers'],
+    ['New feature', 'new_feature'],
+    ['  Hardware & Repairs!  ', 'hardware_repairs'],
+    ['Café opening hours', 'cafe_opening_hours'],
+    ['Één ding', 'een_ding'],
+    ['🖨️', 'type'],
+    ['A name that goes on for much longer than a key may', 'a_name_that_goes_on_for_much_lon'],
+  ])('makes %j into %s', (name, key) => {
+    const made = requestTypeKeyFromName(name, () => false);
+    expect(made).toBe(key);
+    expect(isRequestTypeKey(made)).toBe(true);
   });
 
-  it('is set for every type', () => {
-    REQUEST_TYPES.forEach((type) => expect(isRequestPriority(startingPriority(type))).toBe(true));
+  it('adds a number when the key is taken, also by an archived type', () => {
+    const taken = new Set(['printers', 'printers_2']);
+    expect(requestTypeKeyFromName('Printers', (key) => taken.has(key))).toBe('printers_3');
   });
 });
 
@@ -68,8 +73,10 @@ describe('the guards', () => {
   it('accept the values and refuse everything else', () => {
     expect(isRequestStatus('in_progress')).toBe(true);
     expect(isRequestStatus('closed')).toBe(false);
-    expect(isRequestType('new_feature')).toBe(true);
-    expect(isRequestType('question')).toBe(false);
+    expect(isRequestTypeKey('new_feature')).toBe(true);
+    expect(isRequestTypeKey('New feature')).toBe(false);
+    expect(isRequestTypeKey('')).toBe(false);
+    expect(isRequestTypeKey('a'.repeat(41))).toBe(false);
     expect(isRequestPriority('high')).toBe(true);
     expect(isRequestPriority('urgent')).toBe(false);
     expect(isRequestStatusFilter('closed')).toBe(true);

@@ -50,8 +50,9 @@ Each role can sign in as different users:
 - Managers: company users;
 - Support: company users who aren't an Admin in any company.
 
-Nobody can sign in as themselves or as a user who turned it off on their Security page, and nothing
-can be changed while signed in as someone. See
+Nobody can sign in as themselves or as a user who turned it off on their Security page. While
+signed in as someone, only their request work can be done, and it records the staff member
+([decision 0028](decisions/0028-request-work-while-signed-in-as-a-user.md)). See
 [Signing in as a user](authentication.md#signing-in-as-a-user).
 
 | Company                                      | Admin | Client | Watcher |
@@ -128,7 +129,9 @@ Admins and Managers who aren't members can still add themselves with any role, a
 
 - **Staff page** (`/admin/staff`, `staff:manage`, Admins): change the name shown to users (in
   invitations and wherever users see who's helping them) and Adiutor's default language (for
-  everyone who hasn't chosen one; see [Languages](i18n.md#how-the-language-is-chosen)), see the staff with their role, when
+  everyone who hasn't chosen one; see [Languages](i18n.md#how-the-language-is-chosen)), the
+  prefix of request numbers and the request types (see
+  [Requests](requests.md#types-and-priorities)), see the staff with their role, when
   they were last active and when their account was created ("Joined"), change roles, remove people from staff (their account stays), and invite
   staff by email or single-use invite link. Staff invitations and links have no company
   (`company_id` is null) and give a platform role; a database check keeps staff rows on platform

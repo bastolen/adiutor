@@ -1,5 +1,5 @@
 {
-  "id": "04158539-0fe7-47d1-9137-1637a888f3e8",
+  "id": "a28ceb79-0894-4847-a926-c7090eacdad0",
   "prevId": "009be82f-7323-4572-bd9a-9121d261e270",
   "version": "7",
   "dialect": "postgresql",
@@ -2065,6 +2065,115 @@
       },
       "isRLSEnabled": false
     },
+    "public.request_assignee": {
+      "name": "request_assignee",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "request_assignee_request_user_idx": {
+          "name": "request_assignee_request_user_idx",
+          "columns": [
+            {
+              "expression": "request_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "request_assignee_user_idx": {
+          "name": "request_assignee_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "request_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "request_assignee_request_id_request_id_fk": {
+          "name": "request_assignee_request_id_request_id_fk",
+          "tableFrom": "request_assignee",
+          "tableTo": "request",
+          "columnsFrom": [
+            "request_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "request_assignee_user_id_user_id_fk": {
+          "name": "request_assignee_user_id_user_id_fk",
+          "tableFrom": "request_assignee",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.request_counter": {
       "name": "request_counter",
       "schema": "",
@@ -2299,7 +2408,7 @@
       "checkConstraints": {
         "request_entry_kind_fits_values": {
           "name": "request_entry_kind_fits_values",
-          "value": "(\"request_entry\".\"kind\" = 'comment') = (\"request_entry\".\"body\" is not null) and (\"request_entry\".\"kind\" = 'comment') = (\"request_entry\".\"to_value\" is null)"
+          "value": "(\"request_entry\".\"kind\" in ('comment', 'note')) = (\"request_entry\".\"body\" is not null) and (\"request_entry\".\"kind\" in ('comment', 'note')) = (\"request_entry\".\"to_value\" is null)"
         },
         "request_entry_assignment_fits_values": {
           "name": "request_entry_assignment_fits_values",
@@ -2307,7 +2416,7 @@
         },
         "request_entry_kind_valid": {
           "name": "request_entry_kind_valid",
-          "value": "\"request_entry\".\"kind\" in ('comment', 'status', 'title', 'type', 'priority', 'assignee')"
+          "value": "\"request_entry\".\"kind\" in ('comment', 'note', 'status', 'title', 'type', 'priority', 'assignee')"
         },
         "request_entry_author_side_valid": {
           "name": "request_entry_author_side_valid",
@@ -2458,138 +2567,6 @@
         "request_mention_side_valid": {
           "name": "request_mention_side_valid",
           "value": "\"request_mention\".\"side\" in ('company', 'staff')"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.request_participant": {
-      "name": "request_participant",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "uuidv7()"
-        },
-        "request_id": {
-          "name": "request_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "role": {
-          "name": "role",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "request_participant_request_user_role_idx": {
-          "name": "request_participant_request_user_role_idx",
-          "columns": [
-            {
-              "expression": "request_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "role",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "request_participant_user_idx": {
-          "name": "request_participant_user_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "role",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "request_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "request_participant_request_id_request_id_fk": {
-          "name": "request_participant_request_id_request_id_fk",
-          "tableFrom": "request_participant",
-          "tableTo": "request",
-          "columnsFrom": [
-            "request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "request_participant_user_id_user_id_fk": {
-          "name": "request_participant_user_id_user_id_fk",
-          "tableFrom": "request_participant",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "request_participant_role_valid": {
-          "name": "request_participant_role_valid",
-          "value": "\"request_participant\".\"role\" in ('assignee', 'subscriber')"
         }
       },
       "isRLSEnabled": false

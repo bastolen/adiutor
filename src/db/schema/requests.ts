@@ -28,12 +28,59 @@ import {
   REQUEST_SIDES,
   REQUEST_STATUSES,
   REQUEST_TEXT_FORMATS,
-  REQUEST_TYPES,
+  WRITTEN_ENTRY_KINDS,
   WRITTEN_TEXT_FORMAT,
 } from '../../lib/requests';
 import { user } from './auth';
 import { createdAt, id, oneOf, timestampTz } from './columns';
 import { company } from './companies';
+
+/** The kinds of entry that hold a text, as a list for a check constraint. */
+const WRITTEN_KINDS = WRITTEN_ENTRY_KINDS.map((kind) => `'${kind}'`).join(', ');
+
+/**
+ * A kind of request the staff offer, which whoever raises a request picks:
+ * the four built-in ones (Hotfix, Bug, Support, New feature) to begin with,
+ * then whatever staff Admins add on the Staff page (decision 0027). A type is
+ * never deleted: archived, it can't be picked any more, and the requests that
+ * have it keep it.
+ */
+export const requestType = pgTable(
+  'request_type',
+  {
+    id: id(),
+    /**
+     * What requests, their history and the list's `?type=` filter hold
+     * (`REQUEST_TYPE_KEY_PATTERN`). Made from the name when the type is added
+     * (`requestTypeKeyFromName`), and never changed or reused.
+     */
+    key: text('key').notNull(),
+    /** Its name, one text for every language, like the staff name. */
+    name: text('name').notNull(),
+    /** What it's for, shown with it when a request is raised. */
+    description: text('description').notNull(),
+    /** The priority a request of this type starts with, until the staff change it. */
+    startingPriority: text('starting_priority', { enum: REQUEST_PRIORITIES }).notNull(),
+    /** Its place in every list of types, from 1. */
+    position: integer('position').notNull(),
+    /** When it was archived, or `null` while it can be picked. */
+    archivedAt: timestampTz('archived_at'),
+    createdAt: createdAt(),
+    /**
+     * When the staff last changed it, or `null` while it's as it was added
+     * (setup names an unchanged built-in type in its language).
+     */
+    updatedAt: timestampTz('updated_at'),
+  },
+  (table) => [
+    /** One type per key, which requests point at. */
+    uniqueIndex('request_type_key_idx').on(table.key),
+    /** One type per place, in the order every list shows. */
+    uniqueIndex('request_type_position_idx').on(table.position),
+    check('request_type_key_form', sql`${table.key} ~ '^[a-z0-9_]{1,40}$'`),
+    oneOf('request_type_starting_priority_valid', table.startingPriority, REQUEST_PRIORITIES),
+  ],
+);
 
 /** A request a company raised with the staff, or the staff raised for it. */
 export const request = pgTable(
@@ -63,8 +110,13 @@ export const request = pgTable(
       .default(WRITTEN_TEXT_FORMAT),
     /** When the description was last edited, or `null` while it's as it was written. */
     descriptionEditedAt: timestampTz('description_edited_at'),
-    /** What kind of request it is, chosen by whoever raised it. The staff can change it. */
-    type: text('type', { enum: REQUEST_TYPES }).notNull(),
+    /**
+     * What kind of request it is, chosen by whoever raised it: a type's key.
+     * The staff can change it.
+     */
+    type: text('type')
+      .notNull()
+      .references(() => requestType.key),
     /**
      * How urgent it is: the type's starting priority until the staff change
      * it. Only staff see it.
@@ -81,6 +133,16 @@ export const request = pgTable(
     createdBy: uuid('created_by').references(() => user.id, { onDelete: 'set null' }),
     /** Which side raised it: someone at the company, or the staff for the company. */
     createdBySide: text('created_by_side', { enum: REQUEST_SIDES }).notNull(),
+    /**
+     * Whether a staff member raised it while signed in as `createdBy`
+     * (decision 0028). Kept once the staff member's account is gone, so the
+     * request still says a staff member did it.
+     */
+    createdSignedInAs: boolean('created_signed_in_as').default(false).notNull(),
+    /** The staff member who was signed in as `createdBy`, while their account exists. */
+    createdSignedInAsStaffId: uuid('created_signed_in_as_staff_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
     /** When it was raised: the moment its number was taken (`raiseRequest`), not this default. */
     createdAt: createdAt(),
     /** When it was raised, replied to or changed last: what lists sort by. */
@@ -94,11 +156,18 @@ export const request = pgTable(
     /** Every company's requests by their last activity, for the staff. */
     index('request_activity_idx').on(table.lastActivityAt, table.id),
     index('request_created_by_idx').on(table.createdBy),
-    oneOf('request_type_valid', table.type, REQUEST_TYPES),
+    index('request_created_signed_in_as_staff_idx').on(table.createdSignedInAsStaffId),
+    /** The requests of a type; also serves the type foreign key. */
+    index('request_type_idx').on(table.type),
     oneOf('request_priority_valid', table.priority, REQUEST_PRIORITIES),
     oneOf('request_status_valid', table.status, REQUEST_STATUSES),
     oneOf('request_created_by_side_valid', table.createdBySide, REQUEST_SIDES),
     oneOf('request_description_format_valid', table.descriptionFormat, REQUEST_TEXT_FORMATS),
+    /** A staff member is named only for a request raised while signed in as someone. */
+    check(
+      'request_created_signed_in_as_fits',
+      sql`${table.createdSignedInAsStaffId} is null or ${table.createdSignedInAs}`,
+    ),
   ],
 );
 
@@ -148,7 +217,8 @@ export const requestParticipant = pgTable(
 );
 
 /**
- * One entry in a request's history: a reply, a change of its status, title,
+ * One entry in a request's history: a reply, an internal note only the staff
+ * read, a change of its status, title,
  * type or priority, or a staff member assigned to it or removed from it. A
  * request's entries in ID order are its
  * conversation: IDs are time-ordered, and entries written in one change (a
@@ -168,16 +238,25 @@ export const requestEntry = pgTable(
     /** Which side they acted as, kept so the history still says so once the account is gone. */
     authorSide: text('author_side', { enum: REQUEST_SIDES }).notNull(),
     /**
-     * A reply's text; `null` for a change. Edited only by its author, through
-     * `editReply`, while the request is open; each edit keeps the text it
-     * replaced as a `request_text_version`.
+     * Whether a staff member wrote or changed it while signed in as the
+     * author (decision 0028). Kept once the staff member's account is gone.
+     */
+    signedInAs: boolean('signed_in_as').default(false).notNull(),
+    /** The staff member who was signed in as the author, while their account exists. */
+    signedInAsStaffId: uuid('signed_in_as_staff_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    /**
+     * A reply's or a note's text; `null` for a change. Edited only by its
+     * author, through `editReply`, while the request is open; each edit keeps
+     * the text it replaced as a `request_text_version`.
      */
     body: text('body'),
     /** The format `body` is written in, so it's never read as another format. */
     bodyFormat: text('body_format', { enum: REQUEST_TEXT_FORMATS })
       .notNull()
       .default(WRITTEN_TEXT_FORMAT),
-    /** When a reply was last edited, or `null` while it's as it was written. */
+    /** When a reply or note was last edited, or `null` while it's as it was written. */
     editedAt: timestampTz('edited_at'),
     /** What a change replaced: a status, type or priority, or the earlier title. */
     fromValue: text('from_value'),
@@ -205,10 +284,14 @@ export const requestEntry = pgTable(
     index('request_entry_request_idx').on(table.requestId, table.id),
     index('request_entry_author_idx').on(table.authorId),
     index('request_entry_subject_idx').on(table.subjectUserId),
-    /** A reply has a text and no new value; a change has a new value and no text. */
+    index('request_entry_signed_in_as_staff_idx').on(table.signedInAsStaffId),
+    /**
+     * A reply or a note has a text and no new value; a change has a new value
+     * and no text.
+     */
     check(
       'request_entry_kind_fits_values',
-      sql`(${table.kind} = 'comment') = (${table.body} is not null) and (${table.kind} = 'comment') = (${table.toValue} is null)`,
+      sql`(${table.kind} in (${sql.raw(WRITTEN_KINDS)})) = (${table.body} is not null) and (${table.kind} in (${sql.raw(WRITTEN_KINDS)})) = (${table.toValue} is null)`,
     ),
     /**
      * An assignment entry says whether its subject was assigned or removed;
@@ -223,6 +306,11 @@ export const requestEntry = pgTable(
     oneOf('request_entry_kind_valid', table.kind, REQUEST_ENTRY_KINDS),
     oneOf('request_entry_author_side_valid', table.authorSide, REQUEST_SIDES),
     oneOf('request_entry_body_format_valid', table.bodyFormat, REQUEST_TEXT_FORMATS),
+    /** A staff member is named only for an entry made while signed in as someone. */
+    check(
+      'request_entry_signed_in_as_fits',
+      sql`${table.signedInAsStaffId} is null or ${table.signedInAs}`,
+    ),
   ],
 );
 
@@ -285,6 +373,15 @@ export const requestTextVersion = pgTable(
     editedBy: uuid('edited_by').references(() => user.id, { onDelete: 'set null' }),
     /** The side they edited it as, kept so the versions still say so once the account is gone. */
     editedBySide: text('edited_by_side', { enum: REQUEST_SIDES }).notNull(),
+    /**
+     * Whether a staff member made the edit while signed in as `editedBy`
+     * (decision 0028). Kept once the staff member's account is gone.
+     */
+    signedInAs: boolean('signed_in_as').default(false).notNull(),
+    /** The staff member who was signed in as `editedBy`, while their account exists. */
+    signedInAsStaffId: uuid('signed_in_as_staff_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
     /** When it was edited away: the moment of the edit (`CHANGE_MOMENT`). */
     createdAt: createdAt(),
   },
@@ -293,8 +390,14 @@ export const requestTextVersion = pgTable(
     index('request_text_version_request_idx').on(table.requestId, table.id),
     index('request_text_version_entry_idx').on(table.entryId),
     index('request_text_version_edited_by_idx').on(table.editedBy),
+    index('request_text_version_signed_in_as_staff_idx').on(table.signedInAsStaffId),
     oneOf('request_text_version_body_format_valid', table.bodyFormat, REQUEST_TEXT_FORMATS),
     oneOf('request_text_version_edited_by_side_valid', table.editedBySide, REQUEST_SIDES),
+    /** A staff member is named only for an edit made while signed in as someone. */
+    check(
+      'request_text_version_signed_in_as_fits',
+      sql`${table.signedInAsStaffId} is null or ${table.signedInAs}`,
+    ),
   ],
 );
 

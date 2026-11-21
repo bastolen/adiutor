@@ -18,7 +18,6 @@ import {
   type RequestSide,
   type RequestStatus,
   type RequestTextFormat,
-  type RequestType,
   storedMentionMarker,
 } from '../../src/lib/requests';
 
@@ -81,7 +80,7 @@ export interface SampleRequest {
   /** The format the description is written in; Markdown, as every new text is, when left out. */
   format?: RequestTextFormat;
   /** Its type. */
-  type: RequestType;
+  type: string;
   /** Its priority, as it is now. */
   priority: RequestPriority;
   /** Its status, as it is now; open when left out. */

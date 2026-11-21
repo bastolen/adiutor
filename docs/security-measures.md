@@ -67,10 +67,11 @@ opened with a link that can't be used (20 per 15 minutes per IP address, so link
 guessed by looking them up; past it, the page offers no way to continue), wrong secrets sent to
 the background jobs' endpoint (20 per 15 minutes per IP address, `RATE_LIMITS.jobTickMissesPerIp`;
 past it the endpoint answers 429, while the right secret still works), work on requests (per
-user and hour: 60 requests raised, 200 replies and 300 changes of a status, of details or of
-the people on a request;
+user and hour: 60 requests raised, 200 replies and notes, and 300 changes of a status, of
+details or of the people on a request;
 `RATE_LIMITS.requestsPerUser`, `requestRepliesPerUser` and `requestChangesPerUser`, far more than
-anyone does by hand and few enough to stop a flood), and the errors stored for
+anyone does by hand and few enough to stop a flood; work a staff member does while signed in as a
+user counts against the staff member, `actingUserId`), and the errors stored for
 admins (see [Recorded errors](#recorded-errors)). All are kept in
 `rate_limit_bucket` (`src/server/rate-limit.ts`), with a clear "Try again in N minutes" message.
 The limits per IP address build their key in one place (`ipRateLimitKey` there); requests whose

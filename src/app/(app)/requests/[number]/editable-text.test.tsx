@@ -56,6 +56,19 @@ describe('EditableText', () => {
     expect(screen.getByRole('button', { name: 'Edit description' })).toBeInTheDocument();
   });
 
+  it('names the button and the field for an internal note', async () => {
+    const user = userEvent.setup();
+    renderInLocale(
+      'en-US',
+      <EditableText request={142} entry="note-1" note edit={{ markdown: 'Toner.', edits: 0 }}>
+        <p>Toner.</p>
+      </EditableText>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Edit note' }));
+    expect(screen.getByRole('textbox', { name: 'Note' })).toHaveValue('Toner.');
+  });
+
   it('opens the editor with the text, and saves it with how many edits it started from', async () => {
     vi.mocked(editTextAction).mockResolvedValue({ ok: true, message: 'Changes saved.' });
     const user = userEvent.setup();
@@ -107,7 +120,7 @@ describe('EditableText', () => {
     expect(editTextAction).not.toHaveBeenCalled();
   });
 
-  it('turns the button off while a staff member is signed in as the user', () => {
+  it('keeps the button on while a staff member is signed in as the user: their own work', () => {
     renderInLocale(
       'en-US',
       <>
@@ -118,6 +131,6 @@ describe('EditableText', () => {
       </>,
     );
 
-    expect(screen.getByRole('button', { name: 'Edit description' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Edit description' })).toBeEnabled();
   });
 });

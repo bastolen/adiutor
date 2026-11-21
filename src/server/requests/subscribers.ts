@@ -35,10 +35,12 @@ import {
 } from '@/lib/requests';
 
 import type { Actor } from '../actor';
+import { recordEvent } from '../audit';
 import type { ServiceContext } from '../context';
 import { forbiddenError, ServiceError } from '../errors';
 import { orderTerms, textOrder } from '../pagination';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
+import { actingUserId } from '../signed-in-as';
 import { getRequestAccess, READING_STAFF_ROLES } from './access';
 import { CHANGE_MOMENT, changeRequest, requestToChange } from './change';
 import mentionKey from './mention-key';
@@ -183,6 +185,56 @@ export async function loadSubscribers(
 }
 
 /**
+ * Records a change of subscriptions made while a staff member is signed in as
+ * the actor, in the audit log: it leaves no entry in the request's history,
+ * so this is where it shows who really made it (decision 0025). Only staff
+ * who see the audit log read it; the user's own Recent activity leaves it
+ * out (`STAFF_ONLY_AUDIT_ACTIONS`). Nothing is recorded for the user's own
+ * changes.
+ *
+ * @param ctx - Service context (for the request's IP address and browser).
+ * @param tx - The change's transaction.
+ * @param actor - The acting user.
+ * @param locked - The request, as it's locked.
+ * @param locked.id - Its ID.
+ * @param locked.number - Its number.
+ * @param locked.companyId - Its company.
+ * @param change - Who was subscribed and unsubscribed (user IDs).
+ * @param change.subscribed - Who was subscribed.
+ * @param change.unsubscribed - Who was unsubscribed.
+ */
+async function recordWorkWhileSignedInAs(
+  ctx: ServiceContext,
+  tx: DatabaseTransaction,
+  actor: Actor,
+  locked: { id: string; number: number; companyId: string },
+  { subscribed = [], unsubscribed = [] }: { subscribed?: string[]; unsubscribed?: string[] },
+): Promise<void> {
+  if (!actor.signedInAs) {
+    return;
+  }
+  await recordEvent(
+    ctx,
+    {
+      action: 'request_subscribers_changed',
+      actorUserId: actor.signedInAs.staffId,
+      targetUserId: actor.id,
+      companyId: locked.companyId,
+      details: {
+        request: locked.number,
+        requestId: locked.id,
+        subscribed,
+        unsubscribed,
+        // Names, so the line survives the accounts' deletion.
+        staffMember: actor.signedInAs.staffName,
+        signedInAs: { name: actor.name, email: actor.email },
+      },
+    },
+    tx,
+  );
+}
+
+/**
  * Subscribes the actor to a request.
  *
  * @param ctx - Service context.
@@ -190,8 +242,7 @@ export async function loadSubscribers(
  * @param input - Form input.
  * @param input.request - The request's number or ID.
  * @returns Whether they weren't subscribed before.
- * @throws {ServiceError} `signed_in_as` while a staff member is signed in as the actor,
- *   `not_found` when the actor may not see the request, `invalid` when the company is
+ * @throws {ServiceError} `not_found` when the actor may not see the request, `invalid` when the company is
  *   deactivated, `rate_limited` when the actor has changed requests too often
  *   (`RATE_LIMITS.requestChangesPerUser`).
  */
@@ -201,7 +252,11 @@ export async function subscribe(
   input: { request: string },
 ): Promise<{ subscribed: boolean }> {
   const access = await requestToChange(ctx, actor, input.request, 'requests:view');
-  await assertRateLimit(ctx, `request-change:user:${actor.id}`, RATE_LIMITS.requestChangesPerUser);
+  await assertRateLimit(
+    ctx,
+    `request-change:user:${actingUserId(actor)}`,
+    RATE_LIMITS.requestChangesPerUser,
+  );
   return changeRequest(ctx, actor, access, 'requests:view', async (tx, locked) => {
     const added = await tx
       .insert(requestParticipant)
@@ -213,6 +268,9 @@ export async function subscribe(
       })
       .onConflictDoNothing()
       .returning({ id: requestParticipant.id });
+    if (added.length > 0) {
+      await recordWorkWhileSignedInAs(ctx, tx, actor, locked, { subscribed: [actor.id] });
+    }
     return { subscribed: added.length > 0 };
   });
 }
@@ -234,7 +292,11 @@ export async function unsubscribe(
   input: { request: string },
 ): Promise<{ unsubscribed: boolean }> {
   const access = await requestToChange(ctx, actor, input.request, 'requests:view');
-  await assertRateLimit(ctx, `request-change:user:${actor.id}`, RATE_LIMITS.requestChangesPerUser);
+  await assertRateLimit(
+    ctx,
+    `request-change:user:${actingUserId(actor)}`,
+    RATE_LIMITS.requestChangesPerUser,
+  );
   return changeRequest(ctx, actor, access, 'requests:view', async (tx, locked) => {
     const removed = await tx
       .delete(requestParticipant)
@@ -246,6 +308,9 @@ export async function unsubscribe(
         ),
       )
       .returning({ id: requestParticipant.id });
+    if (removed.length > 0) {
+      await recordWorkWhileSignedInAs(ctx, tx, actor, locked, { unsubscribed: [actor.id] });
+    }
     return { unsubscribed: removed.length > 0 };
   });
 }
@@ -286,8 +351,7 @@ function inScope(scope: SubscriberScope, person: Subscribable): boolean {
  * @param input.add - The keys of the people to subscribe.
  * @param input.remove - The keys of the people to unsubscribe.
  * @returns How many people were added and removed.
- * @throws {ServiceError} `signed_in_as` while a staff member is signed in as the actor,
- *   `not_found` when the actor may not see the request, `forbidden` for someone who may only
+ * @throws {ServiceError} `not_found` when the actor may not see the request, `forbidden` for someone who may only
  *   change their own subscription, `invalid` when the company is deactivated or a key to add
  *   stands for nobody the actor can subscribe (`errors.requests.notSubscribable`),
  *   `rate_limited` when the actor has changed requests too often
@@ -308,7 +372,11 @@ export async function changeSubscribers(
   const removeKeys = [...new Set(subscriberKeysSchema.parse(input.remove))].filter(
     (key) => !addKeys.includes(key),
   );
-  await assertRateLimit(ctx, `request-change:user:${actor.id}`, RATE_LIMITS.requestChangesPerUser);
+  await assertRateLimit(
+    ctx,
+    `request-change:user:${actingUserId(actor)}`,
+    RATE_LIMITS.requestChangesPerUser,
+  );
 
   // Who the keys stand for, among the people whose subscription is the actor's to change.
   const companyId = access.company.id;
@@ -348,7 +416,7 @@ export async function changeSubscribers(
                 })),
               )
               .onConflictDoNothing()
-              .returning({ id: requestParticipant.id });
+              .returning({ userId: requestParticipant.userId });
       const removed =
         remove.length === 0
           ? []
@@ -361,7 +429,13 @@ export async function changeSubscribers(
                   SUBSCRIBED,
                 ),
               )
-              .returning({ id: requestParticipant.id });
+              .returning({ userId: requestParticipant.userId });
+      if (added.length > 0 || removed.length > 0) {
+        await recordWorkWhileSignedInAs(ctx, tx, actor, locked, {
+          subscribed: added.map(({ userId }) => userId),
+          unsubscribed: removed.map(({ userId }) => userId),
+        });
+      }
       return { added: added.length, removed: removed.length };
     },
     { alsoLock: add },

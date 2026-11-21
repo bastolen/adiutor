@@ -809,6 +809,45 @@ test.describe('in forced-colours mode', () => {
         await expectAccessible(page, '[role="dialog"]');
       });
 
+      test('the tab an internal note is written on, and a conversation with a note', async ({
+        page,
+      }) => {
+        // A request of the test's own: a note is added to it.
+        const number = await storeRequest({
+          companySlug: COMPANY_SLUG,
+          raisedBy: REQUESTS_CLIENT.email,
+          title: 'A note added for the scan',
+        });
+        await page.goto(`/requests/${number}`);
+        await page
+          .getByRole('tablist', { name: 'Write' })
+          .getByRole('tab', { name: 'Internal note' })
+          .click();
+        const note = await markdownEditor(page, 'Your note');
+        await note.click();
+        await page.keyboard.type('Probably the toner.');
+        await page.getByRole('button', { name: 'Add note' }).click();
+        await expect(toasts(page)).toContainText('Note added.');
+        await expect(page.getByRole('region', { name: 'Conversation' })).toContainText(
+          'Internal note',
+        );
+        await expectAccessible(page);
+      });
+
+      test('the dialog that adds a request type', async ({ page }) => {
+        // Only opened and closed: nothing is added.
+        await page.goto('/admin/staff');
+        await page
+          .getByRole('region', { name: 'Request types' })
+          .getByRole('button', { name: 'Add type' })
+          .click();
+        const dialog = page.getByRole('dialog', { name: 'Add a request type' });
+        await expect(dialog).toBeVisible();
+        await expectAccessible(page, '[role="dialog"]');
+        await page.keyboard.press('Escape');
+        await expect(dialog).toHaveCount(0);
+      });
+
       test('a toast', async ({ page }) => {
         // Saving the staff name unchanged changes nothing, but shows its toast.
         await page.goto('/admin/staff');

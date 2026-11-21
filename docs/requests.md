@@ -10,9 +10,7 @@ text in [decision 0021](decisions/0021-markdown-for-request-text.md), and for th
 request in [decision 0025](decisions/0025-people-on-a-request-one-table-with-roles.md).
 
 Not built yet, each for a later change: emails about requests (to the people on one, its
-assignees and subscribers, and to the people a text mentions),
-an approval step, internal staff notes, attachments, types the staff manage themselves, and
-working on a request while signed in as a user.
+assignees and subscribers, and to the people a text mentions), an approval step, and attachments.
 
 ## Words
 
@@ -39,11 +37,12 @@ Four permissions in the request's company (`src/lib/authz/permissions.ts`):
 | ------------------------ | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
 | `requests:view`          | See the company's requests and their conversations                                                              | Everyone in an active company; every staff role    |
 | `requests:contribute`    | Raise requests, reply, mark a request done, cancel it and reopen it, edit the description and their own replies | Company Admin and Client; staff who work on them   |
-| `requests:manage`        | Work on requests as the staff: any status, the title, the type, the priority, who's assigned                    | Staff Admin, Manager and Support                   |
-| `requests:view-internal` | See what only the staff see: today the priority                                                                 | Every staff role (Finance reads, but doesn't work) |
+| `requests:manage`        | Work on requests as the staff: any status, the title, the type, the priority, who's assigned, internal notes    | Staff Admin, Manager and Support                   |
+| `requests:view-internal` | See what only the staff see: the priority and internal notes                                                    | Every staff role (Finance reads, but doesn't work) |
 
 - Everyone in a company sees all of the company's requests. A **Watcher** only reads.
-- **Finance** reads every company's requests, with the priority, and changes nothing. A staff
+- **Finance** reads every company's requests, with the priority and the internal notes, and
+  changes nothing. A staff
   member who can't work on requests but is a Client of a company takes part there as the company.
 - **Subscribing** takes no more than reading: everyone who sees a request subscribes and
   unsubscribes themselves. Other people's subscriptions are for the staff who work on requests
@@ -54,8 +53,9 @@ Four permissions in the request's company (`src/lib/authz/permissions.ts`):
   access, so its requests are "not found" to them (see
   [Companies and roles](companies-and-roles.md)). For the staff they stay on the company's own
   page and under All, and leave the Active and Waiting lists that cover several companies.
-- While a staff member is **signed in as a user**, request pages can be read and every change is
-  refused (`assertNotSignedInAs`, see [Signing in as a user](authentication.md#signing-in-as-a-user)).
+- While a staff member is **signed in as a user**, they can do that user's request work, which
+  records them (see [Signed in as a user](#signed-in-as-a-user)); managing request types stays
+  off.
 - The services check all of this themselves (`src/server/requests/`), and every operation has a
   row in `src/server/authorization-matrix.int.test.ts`.
 
@@ -87,12 +87,30 @@ the closed statuses.
 
 ## Types and priorities
 
-- **Types:** Hotfix, Bug, Support and New feature (`REQUEST_TYPES`). They're built in and
-  translated, and stored as plain keys, so a later change can turn them into a list the staff
-  manage without touching existing requests.
-- **Priorities:** Low, Normal and High. A request starts with its type's priority (Hotfix: High;
-  Bug and Support: Normal; New feature: Low; `startingPriority`). Only the staff set one, when
-  they raise a request for a company or later.
+- **Types** are the staff's own (`request_type`, decision
+  [0027](decisions/0027-request-types-the-staff-manage.md)). A fresh install has the four that were
+  built in: Hotfix, Bug, Support and New feature, named in the language it's set up in. Each type
+  has a name and what it's for (one text for every language, like the staff name), the priority a
+  new request of it starts with, and a place in the order every list shows.
+- **Keys:** a request, its history and the list's `?type=` filter hold a type's key
+  (`request.type` points at `request_type.key`). A new type gets its key from its name
+  (`requestTypeKeyFromName`: "Printers" becomes `printers`, then `printers_2`); a rename keeps
+  it, and no key is reused, since types are never deleted.
+- **Managing them** (Staff page, Request types; staff Admins, `staff:manage`): add a type, edit its
+  name, what it's for and its starting priority, move it up or down, archive or restore it
+  (`addRequestType`, `updateRequestType`, `moveRequestType`, `archiveRequestType`,
+  `restoreRequestType` in `src/server/requests/types.ts`). Each change but a move is in the audit
+  log (`request_type_added`, `_changed`, `_archived`, `_restored`).
+- **Archived types** aren't offered when a request is raised or its details are edited
+  (`errors.requestTypes.unavailable`), but the requests that have one keep it, Edit details still
+  shows it for them, and the list's filter and the history still name it. The last type that
+  isn't archived can't be (`errors.requestTypes.lastActive`).
+- **Names everywhere:** the services give each request's type name, and the names in a type
+  change, as they're called now (`listRequests`, `getRequest`); every reader gets the types
+  (`listRequestTypes`), the starting priorities only the staff.
+- **Priorities:** Low, Normal and High. A request starts with its type's starting priority. Only
+  the staff set one, when they raise a request for a company or later; a type's new starting
+  priority is for requests raised from then on.
 - **Company users never see a priority:** no label, filter, sort or line in the conversation. The
   services leave it out of what they return to anyone without `requests:view-internal`, so no page
   can show it by accident, and a change of priority doesn't count as the request's last activity.
@@ -194,9 +212,9 @@ subscribers are who emails about it will reach. Why it's built this way is in
   never which staff members follow along; someone on the staff who is also in the company is a
   colleague to them. Every reader is told whether they're subscribed themselves.
 - **Not work on the request:** subscribing leaves no entry in the history and doesn't count as the
-  request's last activity. It's still a change like the others: refused while a staff member is
-  signed in as the user and in a deactivated company, and counted against the limit on changes
-  to requests.
+  request's last activity. It's still a change like the others: refused in a deactivated company,
+  and counted against the limit on changes to requests. A staff member signed in as the user may
+  change their subscriptions as the user could (see [Signed in as a user](#signed-in-as-a-user)).
 - **Losing access ends it** (`unsubscribeFrom`, in the transaction of the change, after it): being
   removed from the company (`changeMembership`), a change of staff role or leaving the staff
   (`setStaffRole`), and a deactivation (`deactivate`) take the person off the requests they can no
@@ -207,7 +225,7 @@ subscribers are who emails about it will reach. Why it's built this way is in
   read the request by now. A row left behind when someone loses access at the very moment they're
   subscribed is never shown, and whatever tells subscribers something later must take them from
   there too.
-- **The requests there were** got their subscribers from migration `0015_request_participants`:
+- **The requests there were** got their subscribers from migration `0018_request_participants`:
   whoever raised them, replied to them or was mentioned in them, as far as they still read them.
 
 ## Numbers
@@ -360,12 +378,40 @@ Why it works this way is in [decision 0024](decisions/0024-edit-replies-and-desc
 - **Not activity:** an edit doesn't move the request's last activity, and it adds nothing to the
   conversation.
 - **In the code:** `editRequestDescription` and `editReply`, through `changeRequest` like every
-  change: refused while signed in as a user, for a deactivated company, past the rate limit of
-  request changes, and for a closed request (`errors.requests.closedNoEdit`).
+  change: refused for a deactivated company, past the rate limit of request changes, and for a
+  closed request (`errors.requests.closedNoEdit`). An edit a staff member makes while signed in
+  as the editor says so (see [Signed in as a user](#signed-in-as-a-user)).
+
+### Internal notes
+
+What the staff write for each other on a request: a cause they suspect, a hand-over, a reminder.
+Why it's built this way is in [decision 0026](decisions/0026-internal-notes-as-a-kind-of-entry.md).
+
+- **A note is an entry of its own kind** (`note`), in the conversation with the replies. Only
+  readers with `requests:view-internal` get it: `getRequest` leaves out every kind in
+  `STAFF_ONLY_ENTRY_KINDS` (`src/lib/requests/values.ts`: a change of priority and a note) for
+  anyone else, from the entries, from the count of earlier ones, and from the mentions and
+  versions it loads. So nobody at the company learns that a note exists.
+- **Who writes them:** the staff who work on requests (`mayWriteNote`, `requests:manage`), with
+  `addNote` (`src/server/requests/notes.ts`), also on a done or cancelled request. Finance reads
+  them. A note counts towards the same limit as replies.
+- **Nothing changes for the company:** a note doesn't change the status, isn't the staff's first
+  response, and doesn't move the request's last activity, which company users see and the lists
+  sort by.
+- **Mentions:** a note can mention anyone a reply can. Someone at the company it mentions never
+  sees it; a later email about mentions must not tell them about a note, and a mention in a note
+  never subscribes them to the request.
+- **Editing:** like a reply, by its author while the request is open and while they still work on
+  requests (`mayEditNote`), through `editReply`, with its earlier versions kept.
+- **On the page:** for the staff who work on requests, the reply form has two tabs, Reply and
+  Internal note (`WriteTabs`, on the `Tabs` component), each with its own form and draft. The
+  note's form sits on the amber surface (`warning-soft`) and says only the staff see it. In the
+  conversation a note reads like a reply, on the amber surface, with an "Internal note" badge and
+  a lock.
 
 ### Mentions
 
-A description or a reply can mention people. Why it's built this way is in
+A description, a reply or a note can mention people. Why it's built this way is in
 [decision 0023](decisions/0023-mentions-as-markers-to-rows.md).
 
 - **A mention is a marker that looks like a link** (`src/lib/requests/mentions.ts`). While a text
@@ -382,11 +428,12 @@ A description or a reply can mention people. Why it's built this way is in
   `requests:contribute`): the staff can mention everyone at the request's company and every staff
   member who reads requests; someone at the company can mention their colleagues, and the staff
   members whose names the request already shows them (who raised it, replied, changed it, is or
-  was assigned; not who only changed the priority, which they don't see). For a request that isn't
+  was assigned; not who only changed the priority or wrote an internal note, which they don't
+  see). For a request that isn't
   raised yet, someone at the company gets their colleagues only. Never the writer themselves, a
   deactivated account, or someone without a name to show; someone on the staff who is also in the
   company is listed once. The list gives a key, a name and whether they're staff, by name.
-- **Storing** (`storeMentions`, in the transaction of `raiseRequest` and `replyToRequest`, right
+- **Storing** (`storeMentions`, in the transaction of `raiseRequest`, `replyToRequest` and `addNote`, right
   after the text's row): the markers of people the writer may mention there become rows, one per
   person however often the text names them, and the text's markers are pointed at them. At most
   20 people per text (`MAX_MENTIONS_PER_TEXT`). Every other marker stays as it was typed (another
@@ -445,6 +492,36 @@ A description or a reply can mention people. Why it's built this way is in
   from `requestPerson`), so it never reaches a company user's browser. A side's name is never a
   link.
 
+## Signed in as a user
+
+A staff member signed in as a user
+([decision 0028](decisions/0028-request-work-while-signed-in-as-a-user.md), and
+[Signing in as a user](authentication.md#signing-in-as-a-user)) can do the request work that user
+may do, with the user's rights: raise, reply, change the status, edit the user's texts, subscribe
+and unsubscribe and, signed in as a staff member, write notes, change details and assign. Managing request types is staff
+settings, and refused.
+
+- **The record:** the row that names the user as who did it (the request, the entry, the text
+  version) also holds a flag and the staff member (`created_signed_in_as` and
+  `created_signed_in_as_staff_id` on `request`, `signed_in_as` and `signed_in_as_staff_id` on
+  `request_entry` and `request_text_version`), from `signedInAsWork`. The author stays the user.
+  The flag outlives the staff member's account; the staff ID doesn't.
+- **Who's told:** only the user and the staff who see the audit log (`audit:view`:
+  `maySeeSignedInAsWork` in `src/lib/authz/impersonation.ts`). The service gives them a mark
+  (`signedInAs` on an entry or a version, `raisedSignedInAs`, `editedSignedInAs` for a text's last
+  edit) with the staff member's name, or `null` once the account is gone, and leaves it out for
+  everyone else.
+- **On the page:** `SignedInAsMark` after the time: "Ann did this while signed in as you" for the
+  user, "Ann did this while signed in as Pat" for Admins and Managers, and "A staff member" once
+  the account is gone. An edit says "made this edit", after "Edited" and under a version's line.
+- **Rate limits** count against the staff member (`actingUserId`), and the change's transaction
+  checks again that the sign-in still holds (its row read `FOR SHARE`, code `signed_in_as` with
+  `errors.impersonation.ended`).
+- **Subscriptions** leave no history, so a change of them made while signed in as the user goes to
+  the audit log instead (`request_subscribers_changed`, in the Sign-ins group): by the staff member,
+  about the user, with the request and who was subscribed or unsubscribed. Only staff who see the
+  audit log read it; the user's own Recent activity leaves it out (`STAFF_ONLY_AUDIT_ACTIONS`).
+
 ## Pages
 
 - **`/requests`**, for everyone signed in: every request they may see. The status links (Active,
@@ -463,8 +540,8 @@ A description or a reply can mention people. Why it's built this way is in
   the type. It opens the new request. A company that wasn't chosen is asked for like any other
   field (`requestCompanySchema`); "not found" is for a company the reader may not see.
 - **`/requests/<number>`**: what was asked (Description), the Conversation with every reply and
-  change, oldest first, and a Details bar: status, who it's assigned to, who is subscribed, type,
-  priority (staff),
+  change (and, for the staff, every internal note), oldest first, and a Details bar: status, who
+  it's assigned to, who is subscribed, type, priority (staff),
   company, who raised it and when, the staff's first response and the last activity, with the
   controls. The bar is on
   the right on wide screens, and between the description and the conversation on narrower ones.
@@ -482,17 +559,19 @@ A description or a reply can mention people. Why it's built this way is in
   and the text. Not to be confused with `src/lib/request/`, which is about HTTP requests.
 - `src/db/schema/requests.ts`: `request`, `request_participant` (who's assigned and who's
   subscribed), `request_entry`
-  (the conversation and the history in one table, ordered by ID), `request_mention` (who a text
+  (the conversation, its internal notes and the history in one table, ordered by ID), `request_mention` (who a text
   mentions) and `request_counter`.
 - `src/server/requests/` (a folder module): `listRequestCompanies`, `listRequests`, `findRequest`,
-  `findRequestNumber`, `getRequest`, `raiseRequest`, `replyToRequest`, `changeRequestStatus`,
+  `findRequestNumber`, `getRequest`, `raiseRequest`, `replyToRequest`, `addNote`, `changeRequestStatus`,
   `updateRequestDetails`, `changeAssignees`, `listAssignableStaff`, `countAssignedRequests`,
   `listMentionable`, `subscribe`, `unsubscribe`, `changeSubscribers`, `listSubscribable`, and
   `unassignFrom` and `unsubscribeFrom` for the services that end someone's request work or their
   access.
-  Every change refuses someone signed in as a user, checks the permission and that the company is
-  active, validates, takes a rate limit (see [Rate limits](security-measures.md#rate-limits)), then
-  runs in a transaction that starts with `assertStillMayChange` (`assertStillManages`, then the company) and locks the request's row (see
+  Every change checks the permission and that the company is active, validates, takes a rate
+  limit keyed on who is acting (`actingUserId`; see
+  [Rate limits](security-measures.md#rate-limits)), then runs in a transaction that starts with
+  `assertStillMayChange` (`assertStillManages`, then the company, then a sign-in as the actor
+  still holding) and locks the request's row (see
   [Lock order](security-measures.md#lock-order)). That transaction refuses again when the company
   was deactivated meanwhile, which the staff's rights don't depend on; the company's row isn't
   locked (company rows come first in the lock order), so this narrows the moment in which a change
@@ -502,7 +581,9 @@ A description or a reply can mention people. Why it's built this way is in
   to the same request is timed after it, as the conversation shows it. A new request's two times
   (raised, last activity) are one reading, taken with its number.
 - Request work writes **no audit events**: the request's own conversation is the record, and
-  nothing in it is a change of sign-in, role or account.
+  nothing in it is a change of sign-in, role or account. The one exception is a change of
+  subscriptions while signed in as a user, which the conversation doesn't show (see
+  [Signed in as a user](#signed-in-as-a-user)).
 - `src/app/(app)/_requests/`: what the request pages share (the list, the badges, the text, the
   people). `src/app/(app)/requests/`: the pages themselves.
 - `src/components/ui/markdown/`: what shows a Markdown text: the pipeline with its limits

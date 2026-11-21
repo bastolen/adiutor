@@ -11,7 +11,7 @@
  * written (`editableText`), and stores them afresh with the new text; the
  * version keeps them as plain "@Name" text.
  */
-import { and, count, eq, isNull } from 'drizzle-orm';
+import { and, count, eq, inArray, isNull } from 'drizzle-orm';
 
 import type { DatabaseTransaction } from '@/db';
 import { request, requestEntry, requestMention, requestTextVersion, user } from '@/db/schema';
@@ -20,10 +20,12 @@ import { visibleName } from '@/lib/display-name';
 import {
   editStoredMentions,
   mayEditDescription,
+  mayEditNote,
   mayEditReply,
   nameStoredMentions,
   type RequestSide,
   requestSide,
+  WRITTEN_ENTRY_KINDS,
   WRITTEN_TEXT_FORMAT,
   writtenMentionMarker,
 } from '@/lib/requests';
@@ -34,6 +36,7 @@ import type { ServiceContext } from '../context';
 import { notFoundError, ServiceError } from '../errors';
 import getStaffName from '../people/staff-name';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
+import { actingUserId, signedInAsWork } from '../signed-in-as';
 import { CHANGE_MOMENT, changeRequest, requestToChange, workingPermission } from './change';
 import mentionKey from './mention-key';
 import { storeMentions } from './mentions';
@@ -129,6 +132,8 @@ interface EditedText {
  * @param edit.companyId - The request's company.
  * @param edit.side - The side the editor acts as.
  * @param edit.names - The names of the two sides.
+ * @param edit.staffOnly - Whether only the staff read the text (an internal note): then only the
+ *   staff it mentions are subscribed.
  * @returns Whether the text changed.
  * @throws {ServiceError} `invalid` for a closed request (`errors.requests.closedNoEdit`),
  *   `conflict` when someone edited the text meanwhile (`errors.requests.textChanged`).
@@ -144,6 +149,7 @@ async function applyEdit(
     companyId: string;
     side: RequestSide;
     names: SideNames;
+    staffOnly: boolean;
   },
 ): Promise<{ changed: boolean }> {
   const { text, written, companyId, names } = edit;
@@ -193,6 +199,7 @@ async function applyEdit(
     bodyFormat: text.format,
     editedBy: actor.id,
     editedBySide: edit.side,
+    ...signedInAsWork(actor),
     createdAt: CHANGE_MOMENT,
   });
   await tx.delete(requestMention).where(mentionsOfText);
@@ -214,7 +221,13 @@ async function applyEdit(
   await storeMentions(
     tx,
     actor,
-    { companyId, requestId: text.requestId, entryId: text.entryId, written },
+    {
+      companyId,
+      requestId: text.requestId,
+      entryId: text.entryId,
+      written,
+      staffOnly: edit.staffOnly,
+    },
     // Whoever the text mentioned already isn't subscribed again for an edit.
     mentions.flatMap(({ person }) => (person?.id ? [person.id] : [])),
   );
@@ -233,7 +246,7 @@ async function applyEdit(
  * @param input.text - The new description.
  * @param input.edits - How many times it had been edited when the editor started (the form's).
  * @returns Whether it changed.
- * @throws {ServiceError} `signed_in_as` while a staff member is signed in as the actor,
+ * @throws {ServiceError} `signed_in_as` when the sign-in as the actor ended meanwhile,
  *   `not_found` when the actor may not see the request, `forbidden` without
  *   `requests:contribute`, `invalid` when the company is deactivated or the request is closed,
  *   `rate_limited` past `RATE_LIMITS.requestChangesPerUser`, `conflict` when someone edited it
@@ -247,7 +260,11 @@ export async function editRequestDescription(
 ): Promise<{ changed: boolean }> {
   const access = await requestToChange(ctx, actor, input.request, 'requests:contribute');
   const written = requestDescriptionSchema.parse(input.text);
-  await assertRateLimit(ctx, `request-change:user:${actor.id}`, RATE_LIMITS.requestChangesPerUser);
+  await assertRateLimit(
+    ctx,
+    `request-change:user:${actingUserId(actor)}`,
+    RATE_LIMITS.requestChangesPerUser,
+  );
   const { permissions, company } = access;
   const staff = await getStaffName(ctx.db);
   return changeRequest(ctx, actor, access, workingPermission(permissions), async (tx, locked) =>
@@ -264,15 +281,17 @@ export async function editRequestDescription(
       companyId: locked.companyId,
       side: requestSide(permissions),
       names: { company: company.name, staff },
+      staffOnly: false,
     }),
   );
 }
 
 /**
- * Edits a reply: only the one who wrote it may, while the request is open
- * and they still take part or work on requests (`mayEditReply`). Someone
- * else's reply, or an entry that isn't a reply, is "not found". See
- * {@link applyEdit} for what an edit does.
+ * Edits a reply or an internal note: only the one who wrote it may, while
+ * the request is open and they still take part or work on requests
+ * (`mayEditReply`; for a note, while they still work on requests:
+ * `mayEditNote`). Someone else's reply or note, or an entry that holds no
+ * text, is "not found". See {@link applyEdit} for what an edit does.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `requests:contribute` in the request's company.
@@ -299,18 +318,26 @@ export async function editReply(
     throw notFoundError();
   }
   const written = requestReplySchema.parse(input.text);
-  await assertRateLimit(ctx, `request-change:user:${actor.id}`, RATE_LIMITS.requestChangesPerUser);
+  await assertRateLimit(
+    ctx,
+    `request-change:user:${actingUserId(actor)}`,
+    RATE_LIMITS.requestChangesPerUser,
+  );
   const { permissions, company } = access;
   const staff = await getStaffName(ctx.db);
   return changeRequest(ctx, actor, access, workingPermission(permissions), async (tx, locked) => {
     const [reply] = await tx
-      .select({ body: requestEntry.body, bodyFormat: requestEntry.bodyFormat })
+      .select({
+        kind: requestEntry.kind,
+        body: requestEntry.body,
+        bodyFormat: requestEntry.bodyFormat,
+      })
       .from(requestEntry)
       .where(
         and(
           eq(requestEntry.id, entryId.data),
           eq(requestEntry.requestId, locked.id),
-          eq(requestEntry.kind, 'comment'),
+          inArray(requestEntry.kind, [...WRITTEN_ENTRY_KINDS]),
           eq(requestEntry.authorId, actor.id),
         ),
       );
@@ -326,11 +353,16 @@ export async function editReply(
       },
       written,
       edits: input.edits,
-      // The query above found the reply only as the actor's own.
-      allowed: mayEditReply(permissions, locked.status, true),
+      // The query above found the reply or note only as the actor's own.
+      allowed: (reply.kind === 'note' ? mayEditNote : mayEditReply)(
+        permissions,
+        locked.status,
+        true,
+      ),
       companyId: locked.companyId,
       side: requestSide(permissions),
       names: { company: company.name, staff },
+      staffOnly: reply.kind === 'note',
     });
   });
 }

@@ -68,22 +68,56 @@ export function isRequestStatus(value: unknown): value is RequestStatus {
 }
 
 /**
- * What a request is about. Built in for now, and stored as these keys so a
- * later list that staff manage can take them over.
+ * The form of a request type's key: lower-case letters, digits and
+ * underscores, at most 40 characters. A key never changes once its type is
+ * added: requests, their history and the list's `?type=` filter hold it.
+ * Which types there are is data (`request_type`), never a list in code.
  */
-export const REQUEST_TYPES = ['hotfix', 'bug', 'support', 'new_feature'] as const;
+export const REQUEST_TYPE_KEY_PATTERN = /^[a-z0-9_]{1,40}$/;
 
-/** One type of request. */
-export type RequestType = (typeof REQUEST_TYPES)[number];
+/** The longest key a type gets from its name, leaving room for a number added to it. */
+const KEY_FROM_NAME_MAX_LENGTH = 32;
 
 /**
- * Whether a value is a request type.
+ * Whether a value has the form of a request type's key. It says nothing about
+ * whether a type with that key exists; the services look that up.
  *
  * @param value - The value to check.
- * @returns Whether it's one of {@link REQUEST_TYPES}.
+ * @returns Whether it's a well-formed key.
  */
-export function isRequestType(value: unknown): value is RequestType {
-  return isOneOf(REQUEST_TYPES, value);
+export function isRequestTypeKey(value: unknown): value is string {
+  return typeof value === 'string' && REQUEST_TYPE_KEY_PATTERN.test(value);
+}
+
+/**
+ * The key a new request type gets from its name: its letters and digits
+ * without accents, in lower case, with underscores between words, and a
+ * number added when the key is taken ("Printers" becomes `printers`, then
+ * `printers_2`). A name without a letter or digit to use (only symbols, or a
+ * script without a Latin form) becomes `type`.
+ *
+ * @param name - The type's name.
+ * @param taken - Whether a key is taken already (by any type, archived ones too).
+ * @returns A key that isn't taken.
+ */
+export function requestTypeKeyFromName(name: string, taken: (key: string) => boolean): string {
+  const base =
+    name
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, KEY_FROM_NAME_MAX_LENGTH)
+      .replace(/_+$/, '') || 'type';
+  if (!taken(base)) {
+    return base;
+  }
+  let number = 2;
+  while (taken(`${base}_${number}`)) {
+    number += 1;
+  }
+  return `${base}_${number}`;
 }
 
 /** How urgent a request is, from least to most. Only staff set and see it. */
@@ -102,25 +136,6 @@ export function isRequestPriority(value: unknown): value is RequestPriority {
   return isOneOf(REQUEST_PRIORITIES, value);
 }
 
-/** The priority a request of each type starts with, until staff change it. */
-const STARTING_PRIORITIES: Record<RequestType, RequestPriority> = {
-  hotfix: 'high',
-  bug: 'normal',
-  support: 'normal',
-  new_feature: 'low',
-};
-
-/**
- * The priority a request of a type starts with. Whoever raises a request
- * chooses its type, not its priority; staff can change it afterwards.
- *
- * @param type - The request's type.
- * @returns The priority.
- */
-export function startingPriority(type: RequestType): RequestPriority {
-  return STARTING_PRIORITIES[type];
-}
-
 /**
  * The two sides of a request: the company that raised it and the staff who
  * handle it. Stored with everything someone writes or changes, so the
@@ -133,12 +148,14 @@ export const REQUEST_SIDES = ['company', 'staff'] as const;
 export type RequestSide = (typeof REQUEST_SIDES)[number];
 
 /**
- * The kinds of entry in a request's history: a comment, a change of its
- * status, title, type or priority, or someone assigned to it or removed
- * from it (`assignee`).
+ * The kinds of entry in a request's history: a comment (a reply), an
+ * internal note only the staff read (`note`), a change of its status,
+ * title, type or priority, or someone assigned to it or removed from it
+ * (`assignee`).
  */
 export const REQUEST_ENTRY_KINDS = [
   'comment',
+  'note',
   'status',
   'title',
   'type',
@@ -148,6 +165,30 @@ export const REQUEST_ENTRY_KINDS = [
 
 /** One kind of history entry. */
 export type RequestEntryKind = (typeof REQUEST_ENTRY_KINDS)[number];
+
+/**
+ * The kinds of entry that hold a text someone wrote: a reply and an
+ * internal note. Each has a body; no other kind has one.
+ */
+export const WRITTEN_ENTRY_KINDS = [
+  'comment',
+  'note',
+] as const satisfies readonly RequestEntryKind[];
+
+/** A kind of entry that holds a text. */
+export type WrittenEntryKind = (typeof WRITTEN_ENTRY_KINDS)[number];
+
+/**
+ * The kinds of entry only readers with `requests:view-internal` (the staff)
+ * see: a change of priority and an internal note. The services leave them
+ * out of everything a company user gets (the conversation, the count of
+ * earlier entries, the staff a company writer may mention), and they never
+ * count as the request's last activity.
+ */
+export const STAFF_ONLY_ENTRY_KINDS = [
+  'priority',
+  'note',
+] as const satisfies readonly RequestEntryKind[];
 
 /**
  * What someone on a request is there as: assigned to it (a staff member who

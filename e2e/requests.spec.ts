@@ -7,9 +7,12 @@
  * replies, done, reopened, cancelled), the staff editing its details and
  * assigning it (and finding what's assigned to them), editing a
  * description or a reply (and the earlier versions the staff read), the
+ * staff's internal notes (which Finance reads and the company never sees),
+ * the
  * prefix numbers are shown with, and
- * who only reads: Watchers, Finance, everyone for a
- * deactivated company's request, and a staff member signed in as a user.
+ * who only reads: Watchers, Finance, and everyone for a deactivated
+ * company's request; and a staff member signed in as a user, who replies for
+ * them.
  * The staff reach a person's user page from their name; nobody at a company
  * does.
  * Each test that changes a request stores its own (`storeRequest`); the
@@ -1651,6 +1654,77 @@ test('nothing is edited once a request is done', async ({ page }) => {
   );
 });
 
+test('the staff write an internal note, which Finance reads and the company never sees', async ({
+  page,
+}) => {
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'The label printer prints blank labels',
+  });
+  const list = page.getByRole('listbox', { name: 'People to mention' });
+  const write = page.getByRole('tablist', { name: 'Write' });
+
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  await expect(write.getByRole('tab', { name: 'Reply' })).toHaveAttribute('aria-selected', 'true');
+  // A reply that's started stays on its own tab.
+  await page.getByRole('textbox', { name: 'Your reply' }).fill('Not sent yet.');
+  await write.getByRole('tab', { name: 'Internal note' }).click();
+  await expect(page.getByRole('textbox', { name: 'Your reply' })).toBeHidden();
+  await expect(main(page).getByText('Only the staff see internal notes.')).toBeVisible();
+
+  // A note can mention someone at the company.
+  const note = await markdownEditor(page, 'Your note');
+  await note.click();
+  await page.keyboard.type('Probably the toner. @e2e requests cl');
+  await expect(list.getByRole('option')).toHaveText([REQUESTS_CLIENT.name]);
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('asked twice.');
+  await page.getByRole('button', { name: 'Add note' }).click();
+  await expect(toasts(page)).toContainText('Note added.');
+  await expect(note).toHaveText('');
+  const entry = conversation(page).getByRole('listitem').filter({ hasText: 'Probably the toner.' });
+  await expect(entry).toContainText('Internal note');
+  await expect(entry).toContainText(`@${REQUESTS_CLIENT.name} asked twice.`);
+  // Nothing the company sees changed.
+  await expect(page.getByRole('combobox', { name: 'Status' })).toHaveText('Open');
+  await expect(detail(page, 'First response')).toHaveText('Not yet');
+  await write.getByRole('tab', { name: 'Reply' }).click();
+  await expect(page.getByRole('textbox', { name: 'Your reply' })).toHaveText('Not sent yet.');
+
+  // Its author edits it, like a reply.
+  await entry.getByRole('button', { name: 'Edit note' }).click();
+  const editor = entry.getByRole('textbox', { name: 'Note', exact: true });
+  await expect(editor).toHaveAttribute('contenteditable', 'true');
+  await expect(editor).toBeFocused();
+  await page.keyboard.type(' Toner ordered.');
+  await entry.getByRole('button', { name: 'Save' }).click();
+  await expect(toasts(page)).toContainText('Changes saved.');
+  await expect(entry).toContainText('asked twice. Toner ordered.');
+  await signOut(page);
+
+  // Finance reads it, and writes none.
+  await signIn(page, FINANCE_STAFF);
+  await page.goto(`/requests/${number}`);
+  await expect(entry).toContainText('Internal note');
+  await expect(entry).toContainText('Toner ordered.');
+  await expect(write).toHaveCount(0);
+  await signOut(page);
+
+  // The company never sees it, also not the person it mentions.
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto(`/requests/${number}`);
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'The label printer prints blank labels' }),
+  ).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Conversation' })).toContainText('No replies yet.');
+  await expect(main(page)).not.toContainText('toner');
+  await expect(main(page).getByText('Internal note')).toHaveCount(0);
+  await expect(write).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'Your reply' })).toBeVisible();
+});
+
 test('a Watcher follows a request without taking part', async ({ page }) => {
   await signIn(page, CLIENT_WATCHER);
   await page.goto(`/requests/${SEEDED_REQUESTS.waiting.number}`);
@@ -1709,26 +1783,56 @@ test('a deactivated company’s request can only be read, also by the staff', as
   ).toHaveCount(0);
 });
 
-test('nothing about a request can be changed while a staff member is signed in as a user', async ({
+test('a staff member signed in as a user replies for them, and only that user and Admins are told', async ({
   page,
 }) => {
   const number = await storeRequest({
     companySlug: COMPANY_SLUG,
     raisedBy: REQUESTS_CLIENT.email,
-    title: 'A request to look at',
+    title: 'A request to answer for the client',
   });
+  const reply = 'Sent on your behalf.';
   await signIn(page, PLATFORM_ADMIN);
   await signInAsUser(page, REQUESTS_CLIENT.name);
 
   await page.goto(`/requests/${number}`);
-  await expect(page.getByRole('heading', { level: 1, name: 'A request to look at' })).toBeVisible();
-  // They see what the user sees, and every control is off.
-  await expect(page.getByRole('textbox', { name: 'Your reply' })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Send reply' })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Mark as done' })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Cancel request' })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Edit description' })).toBeDisabled();
-  // Whoever raised it follows it, and that stays as it is too.
-  await expect(page.getByRole('button', { name: 'Unsubscribe' })).toBeDisabled();
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'A request to answer for the client' }),
+  ).toBeVisible();
+  // They see what the user sees, without a priority, and can do the user's request work.
   await expect(main(page).getByText(/priority/i)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Mark as done' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Edit description' })).toBeEnabled();
+  await page.getByRole('textbox', { name: 'Your reply' }).fill(reply);
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  const sent = conversation(page).getByRole('listitem').filter({ hasText: reply });
+  // The reply is the client's, and says to them who sent it.
+  await expect(sent).toContainText(REQUESTS_CLIENT.name);
+  await expect(sent).toContainText(`${PLATFORM_ADMIN.name} did this while signed in as you`);
+  // Subscriptions too, which leave no history: the audit log records them instead.
+  await page.getByRole('button', { name: 'Unsubscribe' }).click();
+  await expect(page.getByRole('button', { name: 'Subscribe', exact: true })).toBeVisible();
+
+  // Back in their own account, the Admin (who sees the audit log) reads whom it was for.
+  await page
+    .getByRole('region', { name: 'Signed in as someone else' })
+    .getByRole('button', { name: 'Back to my account' })
+    .click();
+  await expect(page.getByRole('region', { name: 'Signed in as someone else' })).toHaveCount(0);
+  await page.goto(`/requests/${number}`);
+  await expect(sent).toContainText(
+    `${PLATFORM_ADMIN.name} did this while signed in as ${REQUESTS_CLIENT.name}`,
+  );
+  await page.goto('/admin/logs');
+  await expect(
+    page.getByText('Changed a request’s subscribers while signed in as a user').first(),
+  ).toBeVisible();
+  await signOut(page);
+
+  // A colleague at the company reads it as the client's own reply.
+  await signIn(page, CLIENT_WATCHER);
+  await page.goto(`/requests/${number}`);
+  await expect(sent).toContainText(REQUESTS_CLIENT.name);
+  await expect(sent).not.toContainText('signed in as');
 });

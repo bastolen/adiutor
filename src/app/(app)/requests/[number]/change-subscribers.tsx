@@ -116,6 +116,7 @@ export default function ChangeSubscribers({
       description={t('subscribersDescription', { scope })}
       confirmLabel={t('saveSubscribers')}
       tone="primary"
+      allowedWhileSignedInAs
     >
       <SubscriberFields choices={choices} company={company} />
     </ActionDialog>

@@ -274,16 +274,17 @@ keyboard support.
   until the new one arrives, so a flag would bring the old confirmation back while the request
   runs and lose what was typed.
   - **Signed in as someone.** While a staff member is signed in as a user, the controls that change
-    something render disabled, and the banner says changes are turned off (see
-    [Signing in as a user](authentication.md#signing-in-as-a-user)). The banner mounts
+    something render disabled, except the request work the user may do, and the banner says so
+    (see [Signing in as a user](authentication.md#signing-in-as-a-user)). The banner mounts
     `SignedInAsMarker`, and controls read `useSignedInAs` (`src/components/ui/signed-in-as.tsx`).
     `RowAction`, `ActionDialog` and `RoleSelect` do it themselves; pass `allowedWhileSignedInAs`
     for the user's own work. Forms that change something pass the hook's value as `disabled` to
     each field, select and submit button, so the attribute is on the control itself (Radix selects
     read their own `disabled`). They also wrap their contents in `ChangesFieldset`, a disabled
     fieldset then, which turns off anything a form missed, without a box or a group of its own.
-    Reads (search, filters, sorting, paging) stay as they are. The server refuses changes
-    either way, so a control that misses this still changes nothing.
+    Reads (search, filters, sorting, paging) stay as they are, and so do the request forms and
+    controls (the user's own work). The server refuses other changes either way, so a control
+    that misses this still changes nothing.
   - **Card anchors.** A `Card` whose controls can send the user away and back (a confirmation, a
     provider, an emailed link) gets an `id`, a section ID like `invitations` (see
     [Coming back to where you were](authentication.md#coming-back-to-where-you-were)). The

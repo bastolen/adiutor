@@ -24,7 +24,10 @@ FROM (
 	UNION
 	SELECT "request_id", "author_id" FROM "request_entry" WHERE "kind" = 'comment'
 	UNION
-	SELECT "request_id", "user_id" FROM "request_mention"
+	-- Mentions in the description and in replies; a mention in an internal note subscribes nobody here.
+	SELECT "request_mention"."request_id", "request_mention"."user_id" FROM "request_mention"
+	LEFT JOIN "request_entry" ON "request_entry"."id" = "request_mention"."entry_id"
+	WHERE "request_mention"."entry_id" IS NULL OR "request_entry"."kind" = 'comment'
 ) "involved"
 JOIN "request" ON "request"."id" = "involved"."request_id"
 JOIN "user" ON "user"."id" = "involved"."user_id"

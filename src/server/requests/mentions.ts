@@ -15,7 +15,7 @@
  * key that's only valid in the request's company ({@link mentionKey}); once
  * it's stored, by the ID of the mention's row.
  */
-import { and, eq, inArray, isNotNull, isNull, ne, or } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, notInArray, or } from 'drizzle-orm';
 
 import type { Database, DatabaseTransaction } from '@/db';
 import {
@@ -31,6 +31,7 @@ import { visibleName } from '@/lib/display-name';
 import {
   MAX_MENTIONS_PER_TEXT,
   type RequestSide,
+  STAFF_ONLY_ENTRY_KINDS,
   storeWrittenMentions,
   writtenMentionKeys,
 } from '@/lib/requests';
@@ -101,8 +102,8 @@ async function mentionable(
   if (getStaffPermissionsInCompanies(actor).has('requests:view-internal')) {
     staff = await db.select(person).from(user).where(and(readsRequests, active));
   } else if (place.requestId !== null) {
-    // The staff members the request shows someone at the company by name. A change of
-    // priority is the one entry they don't see.
+    // The staff members the request shows someone at the company by name: not the authors of
+    // what only the staff see (a change of priority, an internal note).
     const entries = eq(requestEntry.requestId, place.requestId);
     staff = await db
       .select(person)
@@ -121,7 +122,7 @@ async function mentionable(
                   and(
                     entries,
                     eq(requestEntry.authorSide, 'staff'),
-                    ne(requestEntry.kind, 'priority'),
+                    notInArray(requestEntry.kind, [...STAFF_ONLY_ENTRY_KINDS]),
                     isNotNull(requestEntry.authorId),
                   ),
                 ),
@@ -246,13 +247,21 @@ export async function listMentionable(
  * @param text.requestId - The request.
  * @param text.entryId - The reply the text is; `null` for the request's description.
  * @param text.written - The text.
+ * @param text.staffOnly - Whether only the staff read it (an internal note): then only the staff
+ *   it mentions are subscribed, never someone at the company.
  * @param before - The user IDs of the people the text mentioned before it was edited; nobody
  *   for a new text.
  */
 export async function storeMentions(
   tx: DatabaseTransaction,
   actor: Actor,
-  text: { companyId: string; requestId: string; entryId: string | null; written: string },
+  text: {
+    companyId: string;
+    requestId: string;
+    entryId: string | null;
+    written: string;
+    staffOnly?: boolean;
+  },
   before: readonly string[] = [],
 ): Promise<void> {
   const { companyId, requestId, entryId, written } = text;
@@ -283,7 +292,9 @@ export async function storeMentions(
   await subscribeAutomatically(
     tx,
     requestId,
-    mentioned.flatMap(({ id }) => (before.includes(id) ? [] : [id])),
+    mentioned.flatMap(({ id, side }) =>
+      before.includes(id) || (text.staffOnly === true && side !== 'staff') ? [] : [id],
+    ),
   );
   const stored = storeWrittenMentions(written, (key) => rowOf.get(key) ?? null);
   if (entryId === null) {
