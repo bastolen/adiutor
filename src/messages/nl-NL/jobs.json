@@ -3,7 +3,7 @@
     "descriptions": {
       "leftover-provider-tokens": "Wist de tokens die een inlogprovider aan Adiutor gaf als inloggen ermee niet is afgerond.",
       "finished-sign-ins-as-users": "Beëindigt inloggen als gebruiker wanneer de tijd om is, en legt dat vast in het auditlog.",
-      "expired-sign-in-data": "Verwijdert verlopen inloglinks, codes en sessies, en verlopen limieten op pogingen.",
+      "expired-sign-in-data": "Verwijdert verlopen inloglinks, codes en sessies, beëindigde links uit e-mails over verzoeken, en verlopen limieten op pogingen.",
       "invitation-reminders": "Herinnert mensen eenmalig aan uitnodigingen die ze nog niet hebben geaccepteerd, twee dagen voordat ze verlopen.",
       "retention": "Verwijdert auditgebeurtenissen na een jaar, fouten na 7 dagen en de geschiedenis van taken na 30 dagen.",
       "security-notice": "Laat mensen weten wanneer er iets aan de beveiliging van hun account verandert.",
@@ -20,6 +20,7 @@
       "accounts": "{count, plural, one {Tokens van # account gewist} other {Tokens van # accounts gewist}}",
       "ended": "{count, plural, one {# keer inloggen als gebruiker beëindigd} other {# keer inloggen als gebruiker beëindigd}}",
       "verifications": "{count, plural, one {# link of code verwijderd} other {# links en codes verwijderd}}",
+      "requestLinks": "{count, plural, one {# link uit een e-mail over een verzoek verwijderd} other {# links uit e-mails over verzoeken verwijderd}}",
       "sessions": "{count, plural, one {# sessie verwijderd} other {# sessies verwijderd}}",
       "rateLimits": "{count, plural, one {# limiet verwijderd} other {# limieten verwijderd}}",
       "auditEvents": "{count, plural, one {# auditgebeurtenis verwijderd} other {# auditgebeurtenissen verwijderd}}",

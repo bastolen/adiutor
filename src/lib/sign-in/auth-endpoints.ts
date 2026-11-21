@@ -9,11 +9,15 @@
  * or upgrade can't open one by accident: decide which list it belongs in.
  */
 
-/** Endpoints the browser uses: sign-in and its links, the code step, passkeys and security settings. */
+/**
+ * Endpoints the browser uses: sign-in and its links (the link in an email
+ * about a request among them), the code step, passkeys and security settings.
+ */
 export const BROWSER_AUTH_PATHS = [
   '/sign-in/email',
   '/sign-in/magic-link',
   '/magic-link/verify',
+  '/request-link/sign-in',
   '/sign-in/social',
   '/callback/:id',
   '/link-social',

@@ -54,8 +54,8 @@ import {
   SUPPORT_STAFF,
 } from './support/fixtures';
 import {
+  clickLinkInEmail,
   createAccountFromInvitation,
-  fillAndSubmitSignIn,
   freshAddress,
   markdownEditor,
   setUpAuthenticator,
@@ -893,10 +893,9 @@ test('a reply and the status it sets reach the other side’s inbox as one email
   // Whoever wrote it isn't told about it.
   expect(await emailsAbout(SUPPORT_STAFF.email, title)).toHaveLength(0);
 
-  // The email's link opens the request, for the one it was sent to.
+  // The email's link signs in the one it was sent to and opens the request (decision 0036).
   await signOut(page);
-  await signIn(page, REQUESTS_CLIENT);
-  await page.goto(linkIn(email));
+  await clickLinkInEmail(page, linkIn(email));
   await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
 
   // Their answer goes to the staff member, who replied and so follows it too.
@@ -1066,7 +1065,7 @@ test('the email’s Approve button answers on a click, and a mail scanner only g
   await expect(conversation(page)).toContainText('Approved the solution.');
 });
 
-test('an email’s link opens the request at the reply it tells of, also through signing in', async ({
+test('an email’s link signs its reader in and opens the request at the reply it tells of', async ({
   page,
 }) => {
   const title = `Long conversation ${randomUUID().slice(0, 8)}`;
@@ -1084,22 +1083,35 @@ test('an email’s link opens the request at the reply it tells of, also through
   await expect(toasts(page)).toContainText('Reply sent.');
   await signOut(page);
 
+  // The reader's own link that signs them in, naming the reply and with its anchor (decision 0036).
   const link = linkIn(await waitForEmailAbout(REQUESTS_CLIENT.email, title));
-  expect(link).toMatch(new RegExp(`/requests/${number}\\?entry=([0-9a-f-]{36})#entry-\\1$`));
-  const entry = page.locator(`#${link.split('#')[1]}`);
+  expect(link).toMatch(
+    /\/api\/auth\/request-link\/sign-in\?token=[\w-]+&entry=([0-9a-f-]{36})#entry-\1$/,
+  );
+  const anchor = link.split('#')[1];
+  const entry = page.locator(`#${anchor}`);
+  const atReply = new RegExp(`/requests/${number}\\?entry=[0-9a-f-]{36}#${anchor}$`);
 
-  // Signed out, the link goes through signing in and still lands on the reply.
-  await page.goto(link);
-  await expect(page).toHaveURL(/\/auth/);
-  await fillAndSubmitSignIn(page, REQUESTS_CLIENT);
-  await expect(page).toHaveURL(link);
+  // Signed out, a click signs them in and lands on the reply: the link passes the entry on, and
+  // the anchor survives the redirect.
+  await clickLinkInEmail(page, link);
+  await expect(page).toHaveURL(atReply);
   await expect(entry).toContainText('The reply the email links to.');
   await expect(entry).toBeInViewport();
   await expect(entry).toBeFocused();
 
-  // Signed in, opening it again lands there straight away.
+  // Signed in, a click on it again lands there straight away.
   await page.goto('/dashboard');
-  await page.goto(link);
+  await clickLinkInEmail(page, link);
+  await expect(entry).toBeInViewport();
+  await expect(entry).toBeFocused();
+
+  // A browser that doesn't say a person clicked (an app's own browser) gets the confirmation page
+  // first; its Continue still lands on the reply.
+  await signOut(page);
+  await page.goto(link.replace('/api/auth/request-link/sign-in', '/auth/request-link'));
+  await page.getByRole('button', { name: /^Continue to / }).click();
+  await expect(page).toHaveURL(atReply);
   await expect(entry).toBeInViewport();
   await expect(entry).toBeFocused();
 });

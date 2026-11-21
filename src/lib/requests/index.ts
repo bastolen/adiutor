@@ -96,8 +96,11 @@ export {
   DESCRIPTION_ANCHOR,
   ENTRY_PARAM,
   entryAnchor,
+  entryIdOf,
   isEntryAnchor,
+  isEntryId,
   requestPathAt,
+  requestPathWithEntry,
 } from './anchors';
 export { cleanMultilineText, linkTarget, splitLinks } from './text';
 export type { TextPart } from './text';

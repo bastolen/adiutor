@@ -67,8 +67,12 @@ const JOB_SUMMARY_KEYS = [
   'accounts',
   /** Sign-ins as a user that were ended. */
   'ended',
-  /** Expired sign-in links and codes, sessions and finished rate limits deleted. */
+  /**
+   * Expired sign-in links and codes, ended links in emails about requests,
+   * sessions and finished rate limits deleted.
+   */
   'verifications',
+  'requestLinks',
   'sessions',
   'rateLimits',
   /** Old audit events, errors, runs and finished queued jobs deleted. */

@@ -35,12 +35,20 @@ export interface UserSession {
   expiresAt: Date;
   /** Whether its sign-in was MFA verified (shown as "MFA Verified"). */
   mfaVerified: boolean;
+  /**
+   * Whether the link in an email about a request signed it in (shown as
+   * "Email link", decision 0036), so a session from a forwarded email is easy
+   * to spot.
+   */
+  fromRequestLink: boolean;
 }
 
 /** A session row as stored, before it's judged against the MFA rules (see {@link asSeenWith}). */
-export type StoredSession = Omit<UserSession, 'mfaVerified'> & {
+export type StoredSession = Omit<UserSession, 'mfaVerified' | 'fromRequestLink'> & {
   /** Whether a second step was recorded for it. */
   mfaVerified: boolean | null;
+  /** Whether the link in an email about a request signed it in, if recorded. */
+  fromRequestLink: boolean | null;
   /** How that second step was taken, if recorded. */
   mfaMethod: string | null;
 };
@@ -74,6 +82,7 @@ export async function loadSessionRows(
           expiresAt: session.expiresAt,
           mfaVerified: session.mfaVerified,
           mfaMethod: session.mfaMethod,
+          fromRequestLink: session.fromRequestLink,
         })
         .from(session)
         .where(where)
@@ -100,6 +109,7 @@ export function asSeenWith(
     ...rows,
     items: rows.items.map(({ mfaMethod, ...row }) => ({
       ...row,
+      fromRequestLink: row.fromRequestLink ?? false,
       mfaVerified: isSessionMfaVerified(
         { mfaVerified: row.mfaVerified ?? false, mfaMethod },
         mfaRole,

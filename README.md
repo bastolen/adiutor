@@ -36,10 +36,10 @@ and solutions the company approves, are built; attachments come next.
   subscribe to it, and whoever raises it, replies to it or is mentioned in it is subscribed. The
   people on a request get an email when someone replies or changes its status, and so does someone
   who is assigned to one, mentioned in one or subscribed by someone else: one email with
-  everything, the reply in full, which they can turn off per request or in their account. The
-  staff can send a reply as the solution: the company's Admins and Clients approve it, which
-  closes the request, or deny it, on the request or with a button in the email. See
-  [Requests](docs/requests.md).
+  everything, the reply in full, which they can turn off per request or in their account. Its
+  links sign the reader in, so one click opens the request. The staff can send a reply as the
+  solution: the company's Admins and Clients approve it, which closes the request, or deny it, on
+  the request or with a button in the email. See [Requests](docs/requests.md).
 - **Companies and staff.** Staff add companies and invite each company's first Admin. Users can
   belong to several companies, with a role in each (Admin, Client or Watcher), and staff have their
   own roles (Admin, Manager, Finance and Support). See

@@ -267,7 +267,8 @@
       "approve": "Approve",
       "deny": "Deny",
       "answerNote": "Approving closes the request. Denying sends it back to the staff, and you can then tell them what’s still wrong. These buttons work only for you, and only once.",
-      "noReply": "Replies to this email aren’t read. To answer, open the request."
+      "noReply": "Replies to this email aren’t read. To answer, open the request.",
+      "signInNote": "{days, plural, one {The links in this email sign you in to Adiutor for # day, so don’t forward it.} other {The links in this email sign you in to Adiutor for # days, so don’t forward it.}}"
     }
   }
 }

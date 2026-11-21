@@ -296,7 +296,13 @@ describe('refusing a re-verify with another account', () => {
       await expect(
         beforeSessionCreate({ userId: jane }, githubCallback(await signedInHeaders(current)).ctx),
       ).resolves.toEqual({
-        data: { userId: jane, mfaVerified: false, mfaMethod: null, mfaVerifiedAt: null },
+        data: {
+          userId: jane,
+          mfaVerified: false,
+          mfaMethod: null,
+          mfaVerifiedAt: null,
+          fromRequestLink: false,
+        },
       });
     });
 
@@ -310,7 +316,13 @@ describe('refusing a re-verify with another account', () => {
       await expect(
         beforeSessionCreate({ userId: jane }, githubCallback(await signedInHeaders(current)).ctx),
       ).resolves.toEqual({
-        data: { userId: jane, mfaVerified: true, mfaMethod: 'passkey', mfaVerifiedAt: confirmedAt },
+        data: {
+          userId: jane,
+          mfaVerified: true,
+          mfaMethod: 'passkey',
+          mfaVerifiedAt: confirmedAt,
+          fromRequestLink: false,
+        },
       });
     });
 
@@ -347,7 +359,13 @@ describe('refusing a re-verify with another account', () => {
       await expect(
         beforeSessionCreate({ userId: jane }, githubCallback(headers).ctx),
       ).resolves.toEqual({
-        data: { userId: jane, mfaVerified: false, mfaMethod: null, mfaVerifiedAt: null },
+        data: {
+          userId: jane,
+          mfaVerified: false,
+          mfaMethod: null,
+          mfaVerifiedAt: null,
+          fromRequestLink: false,
+        },
       });
     });
   });

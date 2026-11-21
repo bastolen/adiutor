@@ -1,6 +1,6 @@
 # 0031. Emails about requests: one per person and request, with the whole reply
 
-- **Status:** Accepted; internal notes are emailed to the staff since [0032](0032-internal-notes-email-the-staff.md)
+- **Status:** Accepted; internal notes are emailed to the staff since [0032](0032-internal-notes-email-the-staff.md); its links sign the recipient in since [0036](0036-sign-in-links-in-request-emails.md)
 - **Date:** 2026-11-21
 
 ## Context

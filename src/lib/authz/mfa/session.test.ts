@@ -10,6 +10,8 @@ import {
   isSessionMfaVerified,
   mfaConfirmedUntil,
   RECENT_MFA_MS,
+  sessionMfaOf,
+  signedInAtOf,
 } from './session';
 import type { MfaState } from './state';
 import {
@@ -203,5 +205,69 @@ describe('isMfaConfirmedRecently', () => {
   it('checks against the current time by default', () => {
     expect(isMfaConfirmedRecently(new Date(Date.now() + 60_000))).toBe(true);
     expect(isMfaConfirmedRecently(new Date(Date.now() - 1))).toBe(false);
+  });
+});
+
+describe('sessionMfaOf', () => {
+  it('fills in what a reader left out', () => {
+    expect(sessionMfaOf({})).toEqual({
+      mfaVerified: false,
+      mfaMethod: null,
+      mfaVerifiedAt: null,
+      fromRequestLink: false,
+    });
+    expect(sessionMfaOf({ fromRequestLink: null }).fromRequestLink).toBe(false);
+    expect(sessionMfaOf({ fromRequestLink: true }).fromRequestLink).toBe(true);
+  });
+});
+
+describe('a session the link in an email about a request started', () => {
+  /** Such a session, as Better Auth stores it: no second factor. */
+  const linked = sessionMfaOf({ fromRequestLink: true });
+
+  it("doesn't count as having had a second factor, for any role", () => {
+    expect(isSessionMfaVerified(linked, null)).toBe(false);
+    REQUIRED_ROLES.forEach((role) => {
+      expect(isSessionMfaVerified(linked, role)).toBe(false);
+    });
+  });
+
+  it('opens no window for changing sign-in methods', () => {
+    [...REQUIRED_ROLES, ...OPTIONAL_ROLES].forEach((role) => {
+      expect(mfaConfirmedUntil(linked, role, authenticatorApp)).toBeNull();
+    });
+    expect(mfaConfirmedUntil(linked, null, bare)).toBeNull();
+  });
+
+  it('opens the window as usual once it was confirmed with a second step', () => {
+    const verifiedAt = new Date('2026-10-26T12:00:00Z');
+    expect(
+      mfaConfirmedUntil(
+        { ...linked, mfaVerified: true, mfaMethod: 'authenticator', mfaVerifiedAt: verifiedAt },
+        null,
+        authenticatorApp,
+      ),
+    ).toEqual(new Date(verifiedAt.getTime() + RECENT_MFA_MS));
+  });
+});
+
+describe('signedInAtOf', () => {
+  /** When the session signed in. */
+  const createdAt = new Date('2026-10-26T12:00:00Z');
+
+  it("is the session's sign-in time", () => {
+    expect(signedInAtOf({ createdAt })).toEqual(createdAt);
+    expect(signedInAtOf({ createdAt: createdAt.toISOString(), fromRequestLink: false })).toEqual(
+      createdAt,
+    );
+  });
+
+  it('is unknown without one', () => {
+    expect(signedInAtOf({})).toBeNull();
+    expect(signedInAtOf({ createdAt: null })).toBeNull();
+  });
+
+  it('never counts for a session the link in an email about a request started', () => {
+    expect(signedInAtOf({ createdAt, fromRequestLink: true })).toBeNull();
   });
 });

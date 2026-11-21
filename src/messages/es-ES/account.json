@@ -79,7 +79,7 @@
       "disconnectFailed": "No se ha podido desconectar. Vuelve a intentarlo."
     },
     "ownActivity": {
-      "signIn": "{method, select, password {Sesión iniciada con una contraseña} password_and_authenticator {Sesión iniciada con una contraseña y un código de la app de autenticación} password_and_email_code {Sesión iniciada con una contraseña y un código por correo} backup_code {Sesión iniciada con un código de respaldo} passkey {Sesión iniciada con una llave de acceso} email_link {Sesión iniciada con un enlace por correo} provider {Sesión iniciada con {provider}} other {Sesión iniciada}}",
+      "signIn": "{method, select, password {Sesión iniciada con una contraseña} password_and_authenticator {Sesión iniciada con una contraseña y un código de la app de autenticación} password_and_email_code {Sesión iniciada con una contraseña y un código por correo} backup_code {Sesión iniciada con un código de respaldo} passkey {Sesión iniciada con una llave de acceso} email_link {Sesión iniciada con un enlace por correo} request_link {Sesión iniciada con el enlace de un correo sobre una solicitud} provider {Sesión iniciada con {provider}} other {Sesión iniciada}}",
       "signInFailed": "Intento de inicio de sesión fallido con una contraseña incorrecta",
       "codePending": "Introdujiste tu contraseña; después, el inicio de sesión pidió tu código",
       "mfaVerified": "Inicio de sesión verificado con MFA",

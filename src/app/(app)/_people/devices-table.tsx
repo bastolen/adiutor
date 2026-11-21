@@ -1,8 +1,9 @@
 /**
  * @file The table of signed-in devices, shared by the Security page (a
  * user's own devices) and the user detail page (what staff Admins see):
- * browser and system, IP address, when it signed in and whether that sign-in
- * was MFA verified. The card around it (title, sort menu, pagination and the
+ * browser and system, IP address, when it signed in, whether that sign-in
+ * was MFA verified, and whether the link in an email about a request signed
+ * it in. The card around it (title, sort menu, pagination and the
  * sign-out buttons) is the page's, in the page's words; the table's own text
  * comes from the `people` namespace.
  */
@@ -102,6 +103,7 @@ export default function DevicesTable({
                     {label}
                     {current && <Badge tone="brand">{t('devices.thisDevice')}</Badge>}
                     {device.mfaVerified && <Badge tone="success">{t('devices.mfaVerified')}</Badge>}
+                    {device.fromRequestLink && <Badge>{t('devices.fromRequestLink')}</Badge>}
                   </span>
                   {/* When it signed in goes here below tablet width, its IP on phones. */}
                   <span className="text-xs text-muted-foreground md:hidden">

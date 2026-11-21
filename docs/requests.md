@@ -302,13 +302,19 @@ written and sent is in [Email](email.md), and the jobs that send them in
   for the staff). The subject is the number and the title ("AD-142: The printer is broken"), the
   same for every email about the request, so mail apps keep them together. Its link opens the
   request at the first news it tells of that has a place on the page (`RequestUpdate.anchor`:
-  that entry, or the description for a mention in it), so the page scrolls there. A link to an
-  entry names it in the query as well (`/requests/142?entry=<ID>#entry-<ID>`, `requestPathAt`):
-  the anchor never reaches the server, so the query is what lets the page always show that
-  entry, whatever the reader's activity filter. Replies to the
-  email aren't read, and it says so. An email that tells someone at the company of a solution they may
+  that entry, or the description for a mention in it), so the page scrolls there. The reader's
+  sign-in link (below) names the entry too (`…/request-link/sign-in?token=…&entry=<ID>#entry-<ID>`)
+  and passes it on to the request (`?entry=<ID>`, `requestPathWithEntry`), also through its
+  confirmation page, so the page shows that entry whatever the reader's activity filter; the
+  browser keeps the anchor through the link's redirect. Replies to the email
+  aren't read, and it says so. An email that tells someone at the company of a solution they may
   answer has Approve and Deny buttons of their own (see [Solutions](#solutions)), made when it's
   sent (`RequestUpdate.answerable`).
+- **Its links sign the reader in:** the request's number and the button are the reader's own link,
+  made as the email is sent (`createRequestLink`), which signs them in and opens the request for
+  14 days, without the step-up page ([decision 0036](decisions/0036-sign-in-links-in-request-emails.md);
+  see [Links in emails about requests](authentication.md#links-in-emails-about-requests)). The
+  email says so, and not to forward it.
 - **Only who is still on the request is told:** when the email is sent, someone whose account is
   deactivated, who can no longer read the request, or who is no longer on it (unsubscribed,
   unassigned) gets nothing, and their jobs are skipped. News that's no longer true is left out

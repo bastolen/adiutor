@@ -267,7 +267,8 @@
       "approve": "Aprobar",
       "deny": "Rechazar",
       "answerNote": "Si la apruebas, la solicitud se cierra. Si la rechazas, vuelve al personal y después puedes decirles qué sigue sin funcionar. Estos botones solo funcionan para ti, y solo una vez.",
-      "noReply": "Nadie lee las respuestas a este correo. Para responder, abre la solicitud."
+      "noReply": "Nadie lee las respuestas a este correo. Para responder, abre la solicitud.",
+      "signInNote": "{days, plural, one {Los enlaces de este correo inician tu sesión en Adiutor durante # día, así que no lo reenvíes.} other {Los enlaces de este correo inician tu sesión en Adiutor durante # días, así que no lo reenvíes.}}"
     }
   }
 }

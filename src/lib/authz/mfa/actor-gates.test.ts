@@ -39,6 +39,7 @@ describe('mustStepUp', () => {
     mfaEnabled: true,
     mfaRequired: false,
     sessionMfaVerified: false,
+    fromRequestLink: false,
   };
 
   it('asks users with MFA to confirm a session without a second factor', () => {
@@ -48,6 +49,14 @@ describe('mustStepUp', () => {
 
   it("asks roles that require MFA to confirm with a second step that doesn't count yet", () => {
     expect(mustStepUp({ ...unconfirmed, mfaEnabled: false, mfaRequired: true })).toBe(true);
+  });
+
+  it('never asks a session the link in an email about a request started, whatever the role', () => {
+    expect(mustStepUp({ ...unconfirmed, fromRequestLink: true })).toBe(false);
+    expect(mustStepUp({ ...unconfirmed, mfaRequired: true, fromRequestLink: true })).toBe(false);
+    expect(
+      mustStepUp({ ...unconfirmed, mfaEnabled: false, mfaRequired: true, fromRequestLink: true }),
+    ).toBe(false);
   });
 
   it('never asks users without a second step, or without MFA whose role allows that', () => {

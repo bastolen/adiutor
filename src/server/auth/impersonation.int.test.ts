@@ -13,6 +13,7 @@ import { ZodError } from 'zod';
 import { auditEvent, impersonation, membership, session, user } from '@/db/schema';
 import type { MfaMethod } from '@/lib/authz/mfa';
 import type { PlatformRole } from '@/lib/authz/roles';
+import { defined } from '@/lib/defined';
 import { IMPERSONATION_REASON_MAX_LENGTH } from '@/lib/input-rules';
 
 import {
@@ -257,6 +258,24 @@ describe('startImpersonation', () => {
 
     expect(error.code).toBe('confirmation_required');
     expect(error.key).toBe('errors.impersonation.confirmationRequired');
+  });
+
+  it('asks a session the link in an email about a request started to confirm first', async () => {
+    const staff = await staffActor(db, 'platform_admin', 'link.admin@adiutor.test');
+    await addPasskey(db, staff.id);
+    const sessionId = await createSession(db, staff.id);
+    const linked = await loadActor(db, staff.id, {
+      id: sessionId,
+      mfaVerified: false,
+      fromRequestLink: true,
+      createdAt: new Date(),
+    });
+    const userId = await companyUser();
+
+    const error = await refusal(defined(linked, 'the staff member'), userId);
+
+    expect(error.code).toBe('confirmation_required');
+    expect(await db.select().from(impersonation)).toEqual([]);
   });
 
   it('needs a session, and one sign-in as someone at a time in it', async () => {

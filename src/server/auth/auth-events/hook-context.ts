@@ -53,6 +53,8 @@ export interface AuthHookContext {
         mfaVerified?: boolean | null;
         mfaMethod?: string | null;
         mfaVerifiedAt?: Date | string | null;
+        /** Whether the link in an email about a request started it (decision 0036). */
+        fromRequestLink?: boolean | null;
         /** When it signed in (Better Auth may pass it as a string). */
         createdAt?: Date | string | null;
         /** When it ends. */

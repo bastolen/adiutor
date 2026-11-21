@@ -45,6 +45,7 @@ import { parseAuthSecrets } from './sign-in/auth-secrets';
 import { EMAIL_LINK_MINUTES, emailLinkUrl } from './sign-in/email-link';
 import { AVATAR_SOURCES } from './sign-in/pictures';
 import { providerCredentials } from './sign-in/providers';
+import requestLinkSignIn from './sign-in/request-link-plugin';
 import { hashEmailLinkToken } from './sign-in/tokens';
 
 /**
@@ -539,6 +540,13 @@ export const auth = betterAuth({
        * needs one from the last 15 minutes (`mfaConfirmedUntil`).
        */
       mfaVerifiedAt: { type: 'date', required: false, input: false },
+      /**
+       * Whether the link in an email about a request started this session
+       * (decision 0036): it isn't sent to the step-up page, but opens no
+       * window for changing sign-in methods and never counts as a fresh
+       * sign-in (`SessionMfa.fromRequestLink`). Set by `beforeSessionCreate`.
+       */
+      fromRequestLink: { type: 'boolean', required: false, defaultValue: false, input: false },
     },
   },
 
@@ -858,6 +866,11 @@ export const auth = betterAuth({
         },
       },
     }),
+    /**
+     * The link in an email about a request, which signs its recipient in
+     * (decision 0036, `src/lib/sign-in/request-link-plugin.ts`).
+     */
+    requestLinkSignIn(),
     /**
      * Remembers the last sign-in method in a (non-secret) cookie, so the
      * sign-in page can mark it "Last used". A password sign-in finished with

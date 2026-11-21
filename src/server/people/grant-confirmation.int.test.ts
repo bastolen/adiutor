@@ -102,6 +102,26 @@ const freshAdmin = async () =>
   confirmedAgo(await staffMember('platform_admin', 'fresh.admin@adiutor.test'), 1);
 
 /**
+ * A staff Admin with an authenticator app, signed in just now with the link
+ * in an email about a request (decision 0036): no second step at all.
+ *
+ * @returns The actor.
+ */
+async function linkSignedInAdmin(): Promise<Actor> {
+  const userId = await staffMember('platform_admin', 'link.admin@adiutor.test');
+  await enableTwoFactor(db, userId);
+  return defined(
+    await loadActor(db, userId, {
+      id: 'adiutor-tests-session',
+      mfaVerified: false,
+      fromRequestLink: true,
+      createdAt: new Date(),
+    }),
+    'the actor',
+  );
+}
+
+/**
  * Checks that nothing was counted or created by a refused grant.
  */
 async function expectNothingDone() {
@@ -132,6 +152,24 @@ describe('staff grants', () => {
     ).rejects.toMatchObject(NEEDS_CONFIRMATION);
 
     await expectNothingDone();
+  });
+
+  it('refuse a session the link in an email about a request started, however recent', async () => {
+    const actor = await linkSignedInAdmin();
+    const outsider = await createUser(db, 'outsider@adiutor.test');
+
+    await expect(
+      inviteByEmail(ctx, actor, { companyId: null, email: 'new@adiutor.test', role: 'support' }),
+    ).rejects.toMatchObject(NEEDS_CONFIRMATION);
+    await expect(
+      createInviteLink(ctx, actor, { companyId: null, role: 'support', validDays: 7 }),
+    ).rejects.toMatchObject(NEEDS_CONFIRMATION);
+    await expectNothingDone();
+
+    await expect(
+      changeStaffRole(ctx, actor, { userId: outsider, role: 'support' }),
+    ).rejects.toMatchObject(NEEDS_CONFIRMATION);
+    expect((await db.select().from(user).where(eq(user.id, outsider)))[0]?.platformRole).toBeNull();
   });
 
   it('send them with a recent confirmation, and refuse resending without one', async () => {

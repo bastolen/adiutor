@@ -15,6 +15,7 @@ describe('sign-in paths', () => {
     expect(mfaMethodFromPath('/passkey/verify-authentication')).toBe('passkey');
     expect(mfaMethodFromPath('/sign-in/email')).toBeNull();
     expect(mfaMethodFromPath('/magic-link/verify')).toBeNull();
+    expect(mfaMethodFromPath('/request-link/sign-in')).toBeNull();
     expect(mfaMethodFromPath(undefined)).toBeNull();
   });
 
@@ -28,6 +29,7 @@ describe('sign-in paths', () => {
     expect(signInMethodFromPath('/callback/:id', { providerId: 'google' })).toBe('google');
     expect(signInMethodFromPath('/callback/:id', { providerId: 'unknown' })).toBe('other');
     expect(signInMethodFromPath('/magic-link/verify')).toBe('email_link');
+    expect(signInMethodFromPath('/request-link/sign-in')).toBe('request_link');
     expect(signInMethodFromPath('/two-factor/enable')).toBeNull();
     expect(signInMethodFromPath(undefined)).toBeNull();
   });

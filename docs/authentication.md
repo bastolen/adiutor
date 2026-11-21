@@ -76,6 +76,54 @@ page. The guards refuse such addresses when the link is asked for and again when
 confirmation page only passes pages of the app on (`getSafeRedirectPath`). The email goes to the
 account's stored address, not the address as typed (the lookup ignores case).
 
+## Links in emails about requests
+
+The links in an email about a request (see [Requests](requests.md#emails)) sign its recipient in
+and open the request ([decision 0036](decisions/0036-sign-in-links-in-request-emails.md)). Each
+email gets its own link, made by the job that sends it (`createRequestLink` in
+`src/server/auth/request-links.ts`): a token whose SHA-256 hash is stored in
+`request_sign_in_link`, with the person, the request and an end 14 days later
+(`REQUEST_LINK_DAYS` in `src/lib/sign-in/request-link.ts`). The email says that its links sign
+you in, and not to forward it.
+
+The link goes straight to Better Auth's endpoint, `/api/auth/request-link/sign-in?token=…` (the
+plugin in `src/lib/sign-in/request-link-plugin.ts`; the app decides in `followRequestLink`):
+
+- **A person's click** (`Sec-Fetch-User: ?1`, `isPersonsClick`) on a link that can still be used,
+  with nobody signed in in that browser, creates a session as Better Auth's own email link does,
+  so every session hook runs, and sends the browser to the request with a full page load. The
+  email's `#…` stays on the address over the redirect. Other tabs load afresh as after any sign-in
+  (see [Sign-in methods](#sign-in-methods)). Clicking again, later or in another browser, signs in
+  again while the link lasts; at most 10 times an hour per link
+  (`requestLinkSignInsPerLink`), after which it goes to the sign-in page, returning to the
+  request.
+- **Signed in as that person already**, it opens the request without a new session.
+- **Anything else goes to its confirmation page** (`/auth/request-link`, built like the email
+  link's): a program or a browser that doesn't say a person clicked (a mail scanner gets no
+  session and adds no device), someone else signed in in that browser (the page names the link's
+  account and says that continuing switches to it; only the page's own Continue, a same-origin
+  click marked `confirmed=1`, may switch), a staff member signed in as a user (the page asks them
+  to go back to their own account first), or a link that no longer works. The page looks the link
+  up without using it (`getRequestLinkView`); tokens that aren't links count against the IP address
+  (`requestLinkMissesPerIp`).
+
+A link no longer works once it expired, or when its person is deactivated or can no longer read the
+request (staff who read requests, or a member of its active company, decided when it's used). It
+also ends early whenever the user's trusted devices are forgotten (`forgetSecondStepSkips` in
+`src/server/auth/second-step-skips.ts`): signing out everywhere or one device, an Admin's
+sign-out, an MFA reset or deactivation, a password change or reset, two-step verification turned
+off, an authenticator app set up next to email codes, and `pnpm sessions:revoke-all`. An ended link
+still names its request on the confirmation page until the hourly `expired-sign-in-data` job
+deletes it.
+
+The session it starts (`session.from_request_link`) isn't sent to the step-up page, whatever the
+role, but it proved no second step: it opens no window for changing sign-in methods and never
+counts as a fresh sign-in (see
+[Changing sign-in methods needs a recent confirmation](mfa.md#changing-sign-in-methods-needs-a-recent-confirmation)).
+So every change that needs a recent confirmation asks for one straight away. It's recorded as a
+sign-in (`sign_in` with method `request_link`), sends no security email (no sign-in does), and the
+device list marks it "Email link".
+
 ## Coming back to where you were
 
 Whenever the app sends someone away and back, the return address keeps where they were: the page,
@@ -450,9 +498,11 @@ whole sentence per event, with who made the change, if not you, where each langu
   second step, or without one a sign-in from the last hour, like the changes above
   (`setFirstPassword`).
 - **Signed-in devices:** every browser where you're signed in (browser and system, IP address,
-  when, and an "MFA Verified" badge when that sign-in had MFA), with "Sign out" per device and "Sign out other
-  devices". Both also forget every browser you trusted at the code step, this one included (see
-  [Signing out](#signing-out)).
+  when, an "MFA Verified" badge when that sign-in had MFA, and an "Email link" badge when the link
+  in an email about a request signed it in), with "Sign out" per device and "Sign out other
+  devices". Both also forget every browser you trusted at the code step, this one included, and
+  end the links in your emails about requests (see [Signing out](#signing-out) and
+  [Links in emails about requests](#links-in-emails-about-requests)).
 - **Sign-ins by staff:** whether staff may sign in as you (see
   [Signing in as a user](#signing-in-as-a-user)): on by default, with **Turn off** and **Turn on**
   (`setStaffSignInAllowed`, recorded as `staff_sign_in_turned_off` or `staff_sign_in_turned_on`).

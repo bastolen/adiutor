@@ -79,7 +79,7 @@
       "disconnectFailed": "Disconnecting failed. Please try again."
     },
     "ownActivity": {
-      "signIn": "{method, select, password {Signed in with a password} password_and_authenticator {Signed in with a password and an authenticator code} password_and_email_code {Signed in with a password and an email code} backup_code {Signed in with a backup code} passkey {Signed in with a passkey} email_link {Signed in with an email link} provider {Signed in with {provider}} other {Signed in}}",
+      "signIn": "{method, select, password {Signed in with a password} password_and_authenticator {Signed in with a password and an authenticator code} password_and_email_code {Signed in with a password and an email code} backup_code {Signed in with a backup code} passkey {Signed in with a passkey} email_link {Signed in with an email link} request_link {Signed in with the link in an email about a request} provider {Signed in with {provider}} other {Signed in}}",
       "signInFailed": "Failed sign-in attempt with a wrong password",
       "codePending": "Entered your password; the sign-in then asked for your code",
       "mfaVerified": "Verified a sign-in with MFA",

@@ -33,6 +33,7 @@
     "devices": {
       "thisDevice": "Este dispositivo",
       "mfaVerified": "Verificado con MFA",
+      "fromRequestLink": "Enlace por correo",
       "signedInAgo": "Sesión iniciada <time></time>"
     },
     "invitations": {

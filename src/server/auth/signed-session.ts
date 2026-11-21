@@ -56,6 +56,8 @@ export interface SignedSession {
   mfaMethod: string | null;
   /** When it was proven, if known. */
   mfaVerifiedAt: Date | null;
+  /** Whether the link in an email about a request started it (decision 0036). */
+  fromRequestLink: boolean | null;
 }
 
 /**
@@ -79,6 +81,7 @@ export async function signedSession(
       mfaVerified: sessionTable.mfaVerified,
       mfaMethod: sessionTable.mfaMethod,
       mfaVerifiedAt: sessionTable.mfaVerifiedAt,
+      fromRequestLink: sessionTable.fromRequestLink,
     })
     .from(sessionTable)
     .where(and(eq(sessionTable.token, token), gt(sessionTable.expiresAt, sql`now()`)));

@@ -9,7 +9,7 @@ import { account, user } from '@/db/schema';
 
 import { clearFailedSignIns } from '../failed-sign-ins';
 import { databaseHookState } from '../request-state';
-import { forgetTrustedDevices } from '../trusted-devices';
+import { forgetSecondStepSkips } from '../second-step-skips';
 import { safely, audit, auditAndNotify, type AuthHookContext } from './hook-context';
 
 /** How recent a password sign-in must be to count as just created by the reset. */
@@ -18,7 +18,7 @@ const JUST_CREATED_MS = 60_000;
 /**
  * After a password reset by email link. The link proves the person reads
  * that inbox, so the email address counts as verified, devices trusted for
- * the code step are forgotten, and a pause on password sign-in after wrong
+ * the code step are forgotten and links in emails about requests ended, and a pause on password sign-in after wrong
  * passwords is lifted. When the reset set the
  * account's first password (the welcome link of a registered account), it's
  * recorded as such by `afterAccountCreate`, so nothing more happens here.
@@ -33,8 +33,9 @@ export async function onPasswordReset(userId: string, headers?: Headers): Promis
       .set({ emailVerified: true })
       .where(and(eq(user.id, userId), eq(user.emailVerified, false)));
     // A new password starts afresh: earlier "trust this device" choices no longer skip the code,
-    // and wrong passwords typed before (by anyone) no longer pause password sign-in.
-    await forgetTrustedDevices(db, userId);
+    // links in earlier emails about requests no longer sign in, and wrong passwords typed before
+    // (by anyone) no longer pause password sign-in.
+    await forgetSecondStepSkips(db, userId);
     const [owner] = await db.select({ email: user.email }).from(user).where(eq(user.id, userId));
     if (owner) {
       await clearFailedSignIns(db, owner.email);

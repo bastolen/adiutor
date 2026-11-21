@@ -7,9 +7,11 @@
  * Checks whether a request is a navigation that a person caused: browsers
  * send `Sec-Fetch-User: ?1` only when someone clicked a link or typed the
  * address, never for a page's own fetches, prefetches, or programs that
- * fetch a link without a browser. Used by the links that act on a click
- * (an email's Approve and Deny buttons, decision 0033); a program that drives
- * a whole browser can still look like a person, which those links accept.
+ * fetch a link without a browser. Used by the links in emails that act on a
+ * click: an email's Approve and Deny buttons (decision 0033), and the link in
+ * an email about a request, which signs its recipient in only on one
+ * (decision 0036). A program that drives a whole browser can still look like
+ * a person, which those links accept.
  *
  * @param headers - The request's headers.
  * @returns Whether a person clicked or typed the link.

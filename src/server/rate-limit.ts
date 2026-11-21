@@ -46,6 +46,18 @@ export const RATE_LIMITS = {
    */
   emailLinkMissesPerIp: { limit: 20, windowSeconds: 15 * 60 },
   /**
+   * Request links (decision 0036) looked up from one IP address with a token
+   * that isn't one, by their endpoint or their confirmation page: looking
+   * links up can't be used to guess them.
+   */
+  requestLinkMissesPerIp: { limit: 20, windowSeconds: 15 * 60 },
+  /**
+   * Sign-ins with one request link: far more than one person clicks, few
+   * enough that a forwarded or leaked link can't pile up signed-in devices.
+   * Past it, the link goes to the sign-in page instead.
+   */
+  requestLinkSignInsPerLink: { limit: 10, windowSeconds: 60 * 60 },
+  /**
    * Answer links (Approve or Deny in an email about a solution) opened from
    * one IP address that don't exist: looking links up can't be used to guess
    * them.

@@ -267,7 +267,8 @@
       "approve": "Goedkeuren",
       "deny": "Afwijzen",
       "answerNote": "Goedkeuren rondt het verzoek af. Afwijzen stuurt het terug naar de medewerkers, en daarna kun je laten weten wat er nog niet goed is. Deze knoppen werken alleen voor jou, en maar één keer.",
-      "noReply": "Antwoorden op deze e-mail worden niet gelezen. Open het verzoek om te reageren."
+      "noReply": "Antwoorden op deze e-mail worden niet gelezen. Open het verzoek om te reageren.",
+      "signInNote": "{days, plural, one {Met de links in deze e-mail log je # dag lang in bij Adiutor, dus stuur hem niet door.} other {Met de links in deze e-mail log je # dagen lang in bij Adiutor, dus stuur hem niet door.}}"
     }
   }
 }

@@ -33,6 +33,7 @@
     "devices": {
       "thisDevice": "This device",
       "mfaVerified": "MFA Verified",
+      "fromRequestLink": "Email link",
       "signedInAgo": "Signed in <time></time>"
     },
     "invitations": {

@@ -79,7 +79,7 @@
       "disconnectFailed": "Ontkoppelen is mislukt. Probeer het opnieuw."
     },
     "ownActivity": {
-      "signIn": "{method, select, password {Ingelogd met een wachtwoord} password_and_authenticator {Ingelogd met een wachtwoord en een code uit je authenticator-app} password_and_email_code {Ingelogd met een wachtwoord en een code per e-mail} backup_code {Ingelogd met een back-upcode} passkey {Ingelogd met een passkey} email_link {Ingelogd met een e-maillink} provider {Ingelogd met {provider}} other {Ingelogd}}",
+      "signIn": "{method, select, password {Ingelogd met een wachtwoord} password_and_authenticator {Ingelogd met een wachtwoord en een code uit je authenticator-app} password_and_email_code {Ingelogd met een wachtwoord en een code per e-mail} backup_code {Ingelogd met een back-upcode} passkey {Ingelogd met een passkey} email_link {Ingelogd met een e-maillink} request_link {Ingelogd met de link in een e-mail over een verzoek} provider {Ingelogd met {provider}} other {Ingelogd}}",
       "signInFailed": "Mislukte inlogpoging met een verkeerd wachtwoord",
       "codePending": "Je wachtwoord ingevoerd; daarna vroeg het inloggen om je code",
       "mfaVerified": "Inloggen bevestigd met MFA",

@@ -21,6 +21,7 @@ import {
   providerLinkedCookieValue,
   providerStepUpCookieValue,
 } from '../src/lib/sign-in/oauth-providers';
+import { requestLinkPagePath } from '../src/lib/sign-in/request-link';
 import { REVERIFY_WRONG_ACCOUNT } from '../src/lib/sign-in/sign-in-refusals';
 import expectAccessible from './support/axe';
 import {
@@ -31,6 +32,7 @@ import {
   storeAnswerLink,
   storeInviteLink,
   storeRequest,
+  storeRequestLink,
   storeSignInLink,
 } from './support/db';
 import {
@@ -69,6 +71,8 @@ const PUBLIC_PATHS = [
   '/auth/two-factor?methods=totp,otp',
   '/auth/email-link?token=not-a-real-token',
   '/auth/email-link',
+  '/auth/request-link?token=not-a-real-token',
+  '/auth/request-link',
   '/sign-in-error?error=state_mismatch',
   '/sign-in-error',
 ];
@@ -659,6 +663,15 @@ test.describe('in forced-colours mode', () => {
       await page.getByRole('button', { name: /^Theme and language:/ }).click();
       await expect(page.getByRole('menu')).toBeVisible();
       await expectAccessible(page, '[role="menu"]');
+    });
+
+    test('the page of the link in an email about a request, naming the account', async ({
+      page,
+    }) => {
+      const token = await storeRequestLink(CLIENT_WATCHER.email, SEEDED_REQUESTS.open.number);
+      await page.goto(requestLinkPagePath(token));
+      await expect(page.getByText(CLIENT_WATCHER.name, { exact: true })).toBeVisible();
+      await expectAccessible(page);
     });
 
     test('a sign-in link page that names the account, signed out', async ({ page }) => {

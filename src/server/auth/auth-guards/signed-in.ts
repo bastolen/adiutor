@@ -13,6 +13,7 @@ import {
   isSessionMfaVerified,
   mfaConfirmedUntil,
   needsFreshSignIn,
+  signedInAtOf,
   type SessionMfaInput,
   sessionMfaOf,
   type SignInChange,
@@ -130,7 +131,8 @@ async function checkSignedInRequest(
   if (settingUp && hasSecondStep && !confirmed) {
     throw new APIError('FORBIDDEN', refusalBody(ctx, MFA_VERIFICATION_REQUIRED.code));
   }
-  const signedInAt = session.session.createdAt ? new Date(session.session.createdAt) : null;
+  // A session the link in an email about a request started never counts as fresh (decision 0036).
+  const signedInAt = signedInAtOf(session.session);
   // Without a second step, a sign-in from the last hour instead (`needsFreshSignIn`), so an old
   // (stolen) session can't add the first way in. (A first password is set through
   // `setFirstPassword`, which applies this rule itself: Better Auth's `setPassword` is server-only

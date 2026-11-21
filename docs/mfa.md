@@ -90,7 +90,11 @@ at that moment, so a promotion or a deactivated company takes effect in sessions
 exist. A password without the code step, an email link, a provider that can't prove MFA
 (Google), or a provider account without 2FA doesn't. A session confirmed with a provider keeps
 counting after that provider's sign-in is turned off. **Anyone with MFA** who has such a session is sent to the step-up page (`/auth/verify`)
-to confirm it before they continue, from every page (`isSessionMfaVerified`). For roles that
+to confirm it before they continue, from every page (`isSessionMfaVerified`). The one exception
+is a session the link in an email about a request started (`fromRequestLink`, `mustStepUp`;
+[decision 0036](decisions/0036-sign-in-links-in-request-emails.md)), whatever the role: it isn't
+sent there, but it doesn't count as confirmed either, so the next section's changes ask for the
+second step straight away. For roles that
 require MFA only strong factors count: not email codes, and not a trusted device. Wrong step-up
 codes are limited to 5 per 15 minutes per user, and each is recorded (`mfa_failed`). Only a code
 that was compared and refused counts and is recorded (`isWrongCodeWithSession` in
@@ -158,7 +162,8 @@ next to a password), adding or removing passkeys, connecting, confirming or disc
 provider account, two-step verification, backup codes or a first password (which would
 otherwise stop provider MFA counting) needs a confirmation with that second step from the last
 15 minutes (`mfaConfirmedUntil`, from `session.mfa_verified_at`: the sign-in or the latest
-step-up; a trusted device doesn't count, nor does GitHub on an account with a passkey or an
+step-up; a trusted device doesn't count, nor does a session the link in an email about a request
+started until it's confirmed, nor GitHub on an account with a passkey or an
 authenticator app, see [Confirm with GitHub](#confirm-with-github)). So a stolen session can't add its own way in, however
 long ago it was confirmed. This is refused also when Better Auth's endpoints are called
 directly (`src/server/auth/auth-guards/`); renaming a passkey only needs a confirmed session.
@@ -171,7 +176,9 @@ Better Auth's own `freshAge` check is off (a code step-up doesn't renew it); acc
 second step need a sign-in from the last hour for any of these changes instead
 (`needsFreshSignIn`, from the session's `createdAt`, which a session Better Auth replaces keeps,
 see [Sessions](authentication.md#sessions); a session whose sign-in time is unknown counts as too
-old), so an old (stolen) session can't add the account's first way in. That covers adding a
+old, and so does one the link in an email about a request started, `signedInAtOf`: that link
+works for 14 days and for whoever has the email), so an old (stolen) session can't add the
+account's first way in. That covers adding a
 passkey, connecting or disconnecting a provider account, turning two-step verification on or off
 and backup codes (the guards, for Better Auth's endpoints), and setting a first password and confirming a
 provider account connected at sign-in (`setFirstPassword` and `confirmConnectedProvider` in

@@ -22,6 +22,7 @@ import {
   type RequestStatus,
   statusChangeKind,
 } from '@/lib/requests';
+import { REQUEST_LINK_DAYS } from '@/lib/sign-in/request-link';
 
 import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
 import renderEmail from './render';
@@ -89,7 +90,10 @@ export interface RequestUpdateEmailProps extends EmailBaseProps {
   title: string;
   /** The name of the request's company. */
   companyName: string;
-  /** Link to the request in Adiutor. */
+  /**
+   * The reader's link that signs them in to Adiutor and opens the request
+   * (`requestLinkPath`, decision 0036).
+   */
   url: string;
   /** Why the reader gets the email: the request is assigned to them, or they're subscribed. */
   role: RequestParticipantRole;
@@ -253,14 +257,15 @@ function UpdateItem({
  * A button opens the request; for someone at the company who may answer a
  * solution the email tells of, Approve and Deny buttons (`answerLinks`, links
  * that work once and only for them) take its place. A note says replies to
- * the email aren't read.
+ * the email aren't read. The links to the request sign the reader in (`url`,
+ * decision 0036), so a last note says so, and not to forward the email.
  *
  * @param props - Template props.
  * @param props.appUrl - Public app URL.
  * @param props.reference - The request's number as people see it.
  * @param props.title - The request's title.
  * @param props.companyName - The request's company.
- * @param props.url - Link to the request.
+ * @param props.url - The reader's link that signs them in and opens the request.
  * @param props.role - Why the reader gets the email.
  * @param props.audience - How to word the statuses.
  * @param props.items - What happened.
@@ -322,6 +327,7 @@ export default function RequestUpdateEmail({
         <EmailButton href={url}>{t('button')}</EmailButton>
       )}
       <EmailNote>{t('noReply')}</EmailNote>
+      <EmailNote>{t('signInNote', { days: REQUEST_LINK_DAYS })}</EmailNote>
     </EmailLayout>
   );
 }
@@ -332,7 +338,7 @@ RequestUpdateEmail.PreviewProps = {
   reference: 'AD-142',
   title: 'The printer on the second floor prints blank pages',
   companyName: 'Adiutor',
-  url: 'https://adiutor.dev/requests/142',
+  url: 'https://adiutor.dev/api/auth/request-link/sign-in?token=example',
   role: 'subscriber',
   audience: 'contributor',
   items: [

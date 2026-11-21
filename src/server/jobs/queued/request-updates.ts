@@ -3,18 +3,22 @@
  * email for everything queued for one person about one request, in their
  * language. What the email may show is read when it's sent
  * (`readRequestUpdate`), so someone who is no longer on the request or can
- * no longer read it gets nothing, and their jobs are skipped. Its link opens
- * the request at the first news it tells of (`RequestUpdate.anchor`, through
- * `requestPathAt`, which also names an entry in the query). An email that
- * tells someone at the company of a solution they may answer gets its own
- * Approve and Deny links (`createAnswerLink`, decision 0033), made as it's
- * sent. A mail problem throws, so the batch is tried again later with
- * whatever was queued for it meanwhile (and new links: the old ones are
- * never sent, and expire).
+ * no longer read it gets nothing, and their jobs are skipped. Its links sign
+ * the reader in and open the request (`createRequestLink`, decision 0036) at
+ * the first news it tells of (`RequestUpdate.anchor`, which the browser keeps
+ * through the link's redirect, and the link names the entry, which it passes
+ * on in the query),
+ * and an email that tells someone at the company of a solution they may
+ * answer gets its own Approve and Deny links (`createAnswerLink`, decision
+ * 0033), all made as it's sent. A mail problem throws, so the batch is tried
+ * again later with whatever was queued for it meanwhile (and new links: the
+ * old ones were never sent, and expire).
  */
 import { requestUpdateEmail } from '@/emails/request-update';
-import { answerLinkPath, requestPathAt } from '@/lib/requests';
+import { answerLinkPath, entryIdOf } from '@/lib/requests';
+import { requestLinkPath } from '@/lib/sign-in/request-link';
 
+import { createRequestLink } from '../../auth/request-links';
 import { REQUEST_UPDATES_GROUP, requestUpdateJob } from '../../queue';
 import recipientLocale from '../../recipient-locale';
 import { createAnswerLink, readRequestUpdate } from '../../requests';
@@ -52,6 +56,10 @@ export const requestUpdatesBatch = defineJobBatch({
     if (first === undefined || update === null) {
       return { skipped: jobs.map(({ id }) => id) };
     }
+    const linkToken = await createRequestLink(ctx.db, {
+      userId: first.userId,
+      requestId: first.requestId,
+    });
     const answerToken = update.answerable
       ? await createAnswerLink(ctx.db, {
           requestId: first.requestId,
@@ -66,8 +74,11 @@ export const requestUpdatesBatch = defineJobBatch({
         reference: update.request.reference,
         title: update.request.title,
         companyName: update.request.companyName,
-        // The request, opened at the first news the email tells of.
-        url: `${ctx.baseUrl}${requestPathAt(update.request.number, update.anchor)}`,
+        // The reader's own link that signs them in, opening the request at the first news the email
+        // tells of: the browser keeps the anchor through the link's redirect.
+        url: `${ctx.baseUrl}${requestLinkPath(linkToken, { entry: entryIdOf(update.anchor) })}${
+          update.anchor ? `#${update.anchor}` : ''
+        }`,
         role: update.role,
         audience: update.audience,
         items: update.items,

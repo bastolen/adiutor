@@ -24,6 +24,7 @@ import {
   type ProviderStepUpOutcome,
 } from '@/lib/sign-in/oauth-providers';
 import { availableProviders } from '@/lib/sign-in/providers';
+import { REQUEST_LINK_ENDPOINT } from '@/lib/sign-in/request-link';
 import { ACCOUNT_DEACTIVATED, REVERIFY_WRONG_ACCOUNT } from '@/lib/sign-in/sign-in-refusals';
 
 import { recordEvent } from '../../audit';
@@ -66,7 +67,8 @@ const AGE_KEEPING_PATHS = new Set([
 /**
  * Copies a session's second step, as it was, to the session that takes its
  * place: the same confirmation, which opens no new window for changing
- * sign-in methods.
+ * sign-in methods, and whether the link in an email about a request started
+ * it (`fromRequestLink`), which the new session stays.
  *
  * @param previous - The session being replaced.
  * @returns The new session's MFA facts.
@@ -125,7 +127,9 @@ async function reverifiedSession(ctx: AuthHookContext | null, marker: ReverifyMa
  * was connected or stored; this is the check for every other sign-in, and the
  * backstop for that one), and records
  * whether (and how, and when: `mfaVerifiedAt`, which starts the 15 minutes
- * for changing sign-in methods) the sign-in had a second factor. A session
+ * for changing sign-in methods) the sign-in had a second factor, and whether
+ * the link in an email about a request started it (`fromRequestLink`,
+ * decision 0036: no second factor, but no step-up page either). A session
  * that replaces the signed-in one for the same sign-in
  * ({@link SESSION_REPLACING_PATHS}) keeps its facts. Such a session, and one
  * a code that turns two-step verification on replaces
@@ -223,6 +227,8 @@ export async function beforeSessionCreate(
       mfaVerified: method !== null,
       mfaMethod: method,
       mfaVerifiedAt: method !== null ? new Date() : null,
+      // Only the link in an email about a request starts such a session (decision 0036).
+      fromRequestLink: ctx?.path === REQUEST_LINK_ENDPOINT,
       ...age,
     },
   };
