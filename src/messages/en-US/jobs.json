@@ -8,7 +8,8 @@
       "retention": "Deletes audit events after a year, errors after 7 days, and the history of jobs after 30 days.",
       "security-notice": "Tells people about changes to the security of their account.",
       "added-to-company": "Tells people that staff added them to a company.",
-      "staff-admin-added": "Tells the staff Admins that someone became a staff Admin."
+      "staff-admin-added": "Tells the staff Admins that someone became a staff Admin.",
+      "request-update": "Tells the people on a request what happened to it."
     },
     "summary": {
       "done": "{count, number} done",

@@ -249,6 +249,16 @@
         "heading": "{name} ha iniciado sesión como tú",
         "body": "{minutes, plural, one {{name}, de {staff}, ha iniciado sesión como tú en Adiutor para ver lo que ves y comprobar qué no funciona. Termina como mucho en # minuto. Mientras tanto, nadie puede cambiar tus métodos de inicio de sesión, tu cuenta ni el acceso de nadie. Si prefieres que el personal no inicie sesión como tú, puedes desactivarlo en tu página Seguridad.} other {{name}, de {staff}, ha iniciado sesión como tú en Adiutor para ver lo que ves y comprobar qué no funciona. Termina como mucho en # minutos. Mientras tanto, nadie puede cambiar tus métodos de inicio de sesión, tu cuenta ni el acceso de nadie. Si prefieres que el personal no inicie sesión como tú, puedes desactivarlo en tu página Seguridad.}}"
       }
+    },
+    "requestUpdate": {
+      "subject": "{reference}: {title}",
+      "preview": "{event, select, reply {{name} ha respondido.} other {{name} ha cambiado el estado.}}",
+      "reason": "{role, select, assignee {Recibes esto porque esta solicitud está asignada a ti.} other {Recibes esto porque tienes una suscripción a esta solicitud. Para dejar de recibirlo, abre la solicitud y elige Cancelar suscripción.}}",
+      "where": "<link>{reference}</link> · {company}",
+      "reply": "<strong>{name}</strong> ha respondido:",
+      "status": "{change, select, reopened {<strong>{name}</strong> ha reabierto esta solicitud.} done {<strong>{name}</strong> ha marcado esta solicitud como resuelta.} cancelled {<strong>{name}</strong> ha cancelado esta solicitud.} other {<strong>{name}</strong> ha cambiado el estado de {from} a {to}.}}",
+      "button": "Abrir solicitud",
+      "noReply": "Nadie lee las respuestas a este correo. Para responder, abre la solicitud."
     }
   }
 }

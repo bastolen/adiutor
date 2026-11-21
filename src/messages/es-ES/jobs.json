@@ -8,7 +8,8 @@
       "retention": "Elimina los eventos de auditoría al cabo de un año, los errores a los 7 días y el historial de tareas a los 30 días.",
       "security-notice": "Avisa a las personas de los cambios en la seguridad de su cuenta.",
       "added-to-company": "Avisa a las personas de que el personal las ha añadido a una empresa.",
-      "staff-admin-added": "Avisa a los administradores del personal de que alguien se ha convertido en administrador del personal."
+      "staff-admin-added": "Avisa a los administradores del personal de que alguien se ha convertido en administrador del personal.",
+      "request-update": "Avisa a las personas de una solicitud de lo que ha pasado con ella."
     },
     "summary": {
       "done": "{count, plural, one {# hecha} other {# hechas}}",

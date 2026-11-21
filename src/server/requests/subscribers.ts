@@ -1,8 +1,8 @@
 /**
  * @file Who is subscribed to a request: the people who follow it, next to
  * the staff members it's assigned to. Everyone on a request (assigned or
- * subscribed, rows of `request_participant`) is who a notification about it
- * will reach; nothing is sent yet.
+ * subscribed, rows of `request_participant`) is who the emails about it
+ * reach (`updates.ts`).
  *
  * - **Who can be subscribed:** an active account that can read the request:
  *   a staff member who reads requests, or someone at the request's company.

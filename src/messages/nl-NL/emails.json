@@ -249,6 +249,16 @@
         "heading": "{name} heeft als jou ingelogd",
         "body": "{minutes, plural, one {{name} van {staff} heeft als jou ingelogd op Adiutor, om te zien wat jij ziet en te controleren wat er niet werkt. Het stopt na hooguit # minuut. Ondertussen kan niemand je inlogmethoden, je account of iemands toegang wijzigen. Wil je liever niet dat medewerkers als jou inloggen, dan kun je dit uitzetten op je pagina Beveiliging.} other {{name} van {staff} heeft als jou ingelogd op Adiutor, om te zien wat jij ziet en te controleren wat er niet werkt. Het stopt na hooguit # minuten. Ondertussen kan niemand je inlogmethoden, je account of iemands toegang wijzigen. Wil je liever niet dat medewerkers als jou inloggen, dan kun je dit uitzetten op je pagina Beveiliging.}}"
       }
+    },
+    "requestUpdate": {
+      "subject": "{reference}: {title}",
+      "preview": "{event, select, reply {{name} heeft gereageerd.} other {{name} heeft de status gewijzigd.}}",
+      "reason": "{role, select, assignee {Je ontvangt dit omdat dit verzoek aan jou is toegewezen.} other {Je ontvangt dit omdat je op dit verzoek bent geabonneerd. Wil je dat niet meer, open dan het verzoek en kies Abonnement opzeggen.}}",
+      "where": "<link>{reference}</link> · {company}",
+      "reply": "<strong>{name}</strong> heeft gereageerd:",
+      "status": "{change, select, reopened {<strong>{name}</strong> heeft dit verzoek heropend.} done {<strong>{name}</strong> heeft dit verzoek als afgerond gemarkeerd.} cancelled {<strong>{name}</strong> heeft dit verzoek geannuleerd.} other {<strong>{name}</strong> heeft de status gewijzigd van {from} naar {to}.}}",
+      "button": "Verzoek openen",
+      "noReply": "Antwoorden op deze e-mail worden niet gelezen. Open het verzoek om te reageren."
     }
   }
 }
