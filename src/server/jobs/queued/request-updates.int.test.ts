@@ -5,13 +5,14 @@
  * own that signs them in; someone who is no longer on the request gets none;
  * and a mail problem leaves the news in the queue.
  */
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import {
   queuedJob,
   request,
   requestAnswerLink,
+  requestEntry,
   requestParticipant,
   requestSignInLink,
   user,
@@ -142,7 +143,7 @@ describe('the emails about requests', () => {
     expect(textTo('casey@adiutor.test')).toContain('sam proposed a solution.');
     expect(textTo('casey@adiutor.test')).toContain('Does this solve your request?');
     expect(textTo('casey@adiutor.test').match(/https?:\/\/\S+/)?.[0]).toMatch(
-      /^https:\/\/adiutor\.test\/api\/auth\/request-link\/sign-in\?token=[\w-]+$/,
+      /^https:\/\/adiutor\.test\/api\/auth\/request-link\/sign-in\?token=[\w-]+#entry-[0-9a-f-]{36}$/,
     );
     const [approve, deny] = links('casey@adiutor.test') ?? [];
     expect(approve).toMatch(/\/approve$/);
@@ -218,11 +219,17 @@ describe('the emails about requests', () => {
       'casey changed the status from Waiting for your company to In progress.',
     );
     // The first link is the reader's own link that signs them in and opens the request (decision
-    // 0036), and nothing names an address or a person's ID.
+    // 0036) at the reply, the first news the email tells of, and nothing names an address or a
+    // person's ID.
     const watcherLink = new URL(toWatcher?.text.match(/https?:\/\/\S+/)?.[0] ?? '');
     expect(`${watcherLink.origin}${watcherLink.pathname}`).toBe(
       'https://adiutor.test/api/auth/request-link/sign-in',
     );
+    const [reply] = await db
+      .select({ id: requestEntry.id })
+      .from(requestEntry)
+      .where(and(eq(requestEntry.requestId, raised.id), eq(requestEntry.kind, 'comment')));
+    expect(watcherLink.hash).toBe(`#entry-${reply?.id}`);
     const token = watcherLink.searchParams.get('token') ?? '';
     expect(
       await db

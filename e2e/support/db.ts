@@ -704,7 +704,10 @@ export async function findSignInError(
  * @param request.type - Its type; a bug when left out.
  * @param request.priority - Its priority; normal when left out.
  * @param request.status - Its status; open when left out.
- * @param request.at - When it was raised; now when left out.
+ * @param request.at - When it was raised; now when left out. With earlier replies, it was
+ *   raised a minute before the first of them instead, and the last is a minute before `at`.
+ * @param request.earlierReplies - How many replies its raiser wrote before `at`, a minute apart,
+ *   for a conversation long enough to scroll; none when left out.
  * @returns The request's number.
  */
 export async function storeRequest({
@@ -716,6 +719,7 @@ export async function storeRequest({
   priority = 'normal',
   status = 'open',
   at = new Date(),
+  earlierReplies = 0,
 }: {
   companySlug: string;
   raisedBy: string;
@@ -725,6 +729,7 @@ export async function storeRequest({
   priority?: RequestPriority;
   status?: RequestStatus;
   at?: Date;
+  earlierReplies?: number;
 }): Promise<number> {
   return withTestDatabase(async (db) => {
     const company = firstRow(
@@ -753,7 +758,14 @@ export async function storeRequest({
           priority,
           status,
           raisedBy: { id: author.id, side: 'company' },
-          at,
+          // Raised at `at`; with earlier replies, a minute before the first, so anything added now
+          // comes last.
+          at: earlierReplies > 0 ? new Date(at.getTime() - (earlierReplies + 1) * 60_000) : at,
+          entries: Array.from({ length: earlierReplies }, (_, index) => ({
+            by: { id: author.id, side: 'company' as const },
+            at: new Date(at.getTime() - (earlierReplies - index) * 60_000),
+            reply: `Earlier reply ${index + 1}, to make the conversation long.`,
+          })),
         },
       ],
       counter['requests.last_number'] + 1,

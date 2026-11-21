@@ -48,9 +48,10 @@ test('the link in an email about a request signs its reader in and opens the req
   expect(email.text).toContain(
     'The links in this email sign you in to Adiutor for 14 days, so don’t forward it.',
   );
-  // Signed out, with an authenticator app: the link opens the request, without the step-up page.
+  // Signed out, with an authenticator app: the link opens the request at the reply, without the
+  // step-up page.
   await clickLinkInEmail(page, linkIn(email));
-  await expect(page).toHaveURL(`/requests/${number}`);
+  await expect(page).toHaveURL(new RegExp(`/requests/${number}#entry-[0-9a-f-]{36}$`));
   await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
 
   // The rest of the app is open too, but adding a way in asks for the second step first.
@@ -64,7 +65,7 @@ test('the link in an email about a request signs its reader in and opens the req
 
   // Clicked again, it opens the request in the session it started.
   await clickLinkInEmail(page, linkIn(email));
-  await expect(page).toHaveURL(`/requests/${number}`);
+  await expect(page).toHaveURL(new RegExp(`/requests/${number}#entry-[0-9a-f-]{36}$`));
 });
 
 test('a Manager is signed in without the second step, which a grant still asks for', async ({

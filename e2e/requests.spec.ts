@@ -1062,6 +1062,43 @@ test('the email’s Approve button answers on a click, and a mail scanner only g
   await expect(conversation(page)).toContainText('Approved the solution.');
 });
 
+test('an email’s link signs its reader in and opens the request at the reply it tells of', async ({
+  page,
+}) => {
+  const title = `Long conversation ${randomUUID().slice(0, 8)}`;
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title,
+    status: 'in_progress',
+    earlierReplies: 15,
+  });
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  await page.getByRole('textbox', { name: 'Your reply' }).fill('The reply the email links to.');
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  await signOut(page);
+
+  // The reader's own link that signs them in, with the reply's anchor (decisions 0036 and 0033).
+  const link = linkIn(await waitForEmailAbout(REQUESTS_CLIENT.email, title));
+  expect(link).toMatch(/\/api\/auth\/request-link\/sign-in\?token=[\w-]+#entry-[0-9a-f-]{36}$/);
+  const entry = page.locator(`#${link.split('#')[1]}`);
+
+  // Signed out, a click signs them in and lands on the reply: the anchor survives the redirect.
+  await clickLinkInEmail(page, link);
+  await expect(page).toHaveURL(new RegExp(`/requests/${number}#${link.split('#')[1]}$`));
+  await expect(entry).toContainText('The reply the email links to.');
+  await expect(entry).toBeInViewport();
+  await expect(entry).toBeFocused();
+
+  // Signed in, a click on it again lands there straight away.
+  await page.goto('/dashboard');
+  await clickLinkInEmail(page, link);
+  await expect(entry).toBeInViewport();
+  await expect(entry).toBeFocused();
+});
+
 test('turning emails about requests off stops them, and turning them on brings them back', async ({
   page,
 }) => {

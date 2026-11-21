@@ -4,7 +4,9 @@
  * language. What the email may show is read when it's sent
  * (`readRequestUpdate`), so someone who is no longer on the request or can
  * no longer read it gets nothing, and their jobs are skipped. Its links sign
- * the reader in and open the request (`createRequestLink`, decision 0036),
+ * the reader in and open the request (`createRequestLink`, decision 0036) at
+ * the first news it tells of (`RequestUpdate.anchor`, which the browser keeps
+ * through the link's redirect),
  * and an email that tells someone at the company of a solution they may
  * answer gets its own Approve and Deny links (`createAnswerLink`, decision
  * 0033), all made as it's sent. A mail problem throws, so the batch is tried
@@ -71,7 +73,9 @@ export const requestUpdatesBatch = defineJobBatch({
         reference: update.request.reference,
         title: update.request.title,
         companyName: update.request.companyName,
-        url: `${ctx.baseUrl}${requestLinkPath(linkToken)}`,
+        // The reader's own link that signs them in, opening the request at the first news the email
+        // tells of: the browser keeps the anchor through the link's redirect.
+        url: `${ctx.baseUrl}${requestLinkPath(linkToken)}${update.anchor ? `#${update.anchor}` : ''}`,
         role: update.role,
         audience: update.audience,
         items: update.items,

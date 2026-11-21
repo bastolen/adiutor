@@ -35,6 +35,8 @@ import { getPermissions, getStaffPermissionsInCompanies } from '@/lib/authz/perm
 import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { visibleName } from '@/lib/display-name';
 import {
+  DESCRIPTION_ANCHOR,
+  entryAnchor,
   formatRequestNumber,
   isRequestStatus,
   mayAnswerSolution,
@@ -403,6 +405,13 @@ export interface RequestUpdate {
   /** What happened, in the order it was queued. */
   items: RequestUpdateItem[];
   /**
+   * Where on the request's page the email's link opens: the anchor of the
+   * first news it tells of that has a place there (an entry of the activity,
+   * `#entry-<ID>`, or the description for a mention in it), or `null` when
+   * none has one (being subscribed leaves no entry).
+   */
+  anchor: string | null;
+  /**
    * The proposal the reader may answer from the email (Approve and Deny,
    * decision 0033): only when the news includes the change that made the
    * request wait for approval, the request still waits for that proposal,
@@ -682,9 +691,26 @@ export async function readRequestUpdate(
     return null;
   };
 
+  /**
+   * Where a piece of news has its place on the request's page.
+   *
+   * @param piece - The news.
+   * @param item - What the email tells of it.
+   * @returns Its anchor, or `null` when it has none.
+   */
+  const anchorOf = (piece: QueuedRequestNews, item: RequestUpdateItem): string | null => {
+    if (item.event === 'mentioned' && item.where === 'description') {
+      return DESCRIPTION_ANCHOR;
+    }
+    return item.event === 'subscribed' || piece.entryId === null
+      ? null
+      : entryAnchor(piece.entryId);
+  };
+
   const told = new Set<string>();
   const skipped: string[] = [];
   const items: RequestUpdateItem[] = [];
+  let anchor: string | null = null;
   // Job IDs are in the order the news was queued.
   [...news]
     .sort((a, b) => a.jobId.localeCompare(b.jobId))
@@ -707,6 +733,7 @@ export async function readRequestUpdate(
       }
       told.add(key);
       items.push(item);
+      anchor ??= anchorOf(piece, item);
     });
   if (items.length === 0) {
     return null;
@@ -729,6 +756,7 @@ export async function readRequestUpdate(
       companyName: found.companyName,
     },
     items,
+    anchor,
     ...(proposalEntryId && tellsProposal && { answerable: { proposalEntryId } }),
     skipped,
   };

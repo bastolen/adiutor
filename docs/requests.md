@@ -300,7 +300,13 @@ written and sent is in [Email](email.md), and the jobs that send them in
   an ID, and the people a reply mentions by name. The statuses are worded for the reader
   ("Waiting for your reply" for someone at the company who takes part, "Waiting for the company"
   for the staff). The subject is the number and the title ("AD-142: The printer is broken"), the
-  same for every email about the request, so mail apps keep them together. Replies to the email
+  same for every email about the request, so mail apps keep them together. Its link opens the
+  request at the first news it tells of that has a place on the page (`RequestUpdate.anchor`:
+  that entry, or the description for a mention in it), so the page scrolls there: the anchor
+  goes on the end of the reader's sign-in link (below), and the browser keeps it through the
+  link's redirect. A link to the page itself would name the entry in the query too
+  (`requestPathAt`: `/requests/142?entry=<ID>#entry-<ID>`), so the page shows it whatever the
+  reader's activity filter; the sign-in link doesn't carry the query yet. Replies to the email
   aren't read, and it says so. An email that tells someone at the company of a solution they may
   answer has Approve and Deny buttons of their own (see [Solutions](#solutions)), made when it's
   sent (`RequestUpdate.answerable`).
@@ -666,6 +672,12 @@ settings, and refused.
   On a screen wider than 1280px the page grows past the width other pages have, up to 1280px of
   content (`WidePage`), so the conversation and the reply's editor get the room.
   The conversation loads its latest 50 entries, with a link for earlier ones (`?earlier=`).
+  Each entry has an anchor (`#entry-<entry ID>`, `entryAnchor`) and the description has one
+  (`#request-description`), which the emails link to. Arriving with one, the page brings that
+  entry into view below the sticky header and focuses it when focus is nowhere in particular
+  (`EntryOnArrival`, like `AnchoredSection` for a card), and an outline marks it while the address
+  names it. An entry older than the 50 shown isn't on the page, which then opens as usual. Both
+  anchors are section IDs, so signing in on the way keeps them.
 - The **menu** has Requests for everyone, and the **dashboard** a Requests tile, and an Assigned
   to you tile for the staff who can be assigned; see
   [Navigation and dashboard](companies-and-roles.md#navigation-and-dashboard).
