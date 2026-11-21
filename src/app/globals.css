@@ -22,6 +22,7 @@
   [role='button']:not([aria-disabled='true']),
   [role='menuitem'],
   [role='menuitemradio'],
+  [role='menuitemcheckbox'],
   [role='option'],
   [role='tab'],
   summary,
