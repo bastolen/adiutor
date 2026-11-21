@@ -9,9 +9,9 @@
 import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { jobRun, jobState, jobTick, queuedJob } from '@/db/schema';
+import { jobRun, jobState, queuedJob } from '@/db/schema';
 
-import { setupTestContext, staffActor } from '../../../tests/integration/helpers';
+import { saveSettings, setupTestContext, staffActor } from '../../../tests/integration/helpers';
 import { getTickWarning, listFailedJobs, listJobRuns, loadJobsOverview } from './overview';
 import { recordTick } from './tick-record';
 
@@ -107,7 +107,7 @@ describe('the ticks', () => {
     await recordTick(db);
     await expect(getTickWarning(ctx, admin)).resolves.toBeNull();
 
-    await db.update(jobTick).set({ lastStartedAt: sql`now() - interval '2 hours'` });
+    await saveSettings(db, { 'jobs.last_tick': new Date(Date.now() - 2 * 60 * 60_000) });
     await expect(getTickWarning(ctx, admin)).resolves.toEqual({ lastTickAt: expect.any(Date) });
   });
 });

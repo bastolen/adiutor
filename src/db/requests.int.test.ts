@@ -1,19 +1,15 @@
 /**
  * @file Tests for what the database itself guarantees about requests: one
- * number each, entries that are a reply or a change, a single counter row,
- * and a history that outlives the accounts in it.
+ * number each, entries that are a reply or a change, and a history that
+ * outlives the accounts in it. The request counter is a setting, tested with
+ * the settings (`src/server/settings/`).
  */
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import {
-  createCompany,
-  createStaffSettings,
-  createUser,
-  setupTestContext,
-} from '../../tests/integration/helpers';
+import { createCompany, createUser, setupTestContext } from '../../tests/integration/helpers';
 import { firstRow } from '../lib/defined';
-import { request, requestCounter, requestEntry, staffSettings, user } from './schema';
+import { request, requestEntry, user } from './schema';
 
 const { db } = setupTestContext();
 
@@ -138,22 +134,5 @@ describe('the request_entry table', () => {
     await db.delete(request).where(eq(request.id, created.id));
 
     expect(await db.select().from(requestEntry)).toEqual([]);
-  });
-});
-
-describe('the request_counter table', () => {
-  it('holds one row only', async () => {
-    await db.insert(requestCounter).values({ lastNumber: 1 });
-    await expect(db.insert(requestCounter).values({ lastNumber: 2 })).rejects.toThrow();
-  });
-});
-
-describe('the staff settings', () => {
-  it('show request numbers with "AD" until the staff choose a prefix', async () => {
-    await createStaffSettings(db);
-    const [settings] = await db
-      .select({ requestPrefix: staffSettings.requestPrefix })
-      .from(staffSettings);
-    expect(settings).toEqual({ requestPrefix: 'AD' });
   });
 });

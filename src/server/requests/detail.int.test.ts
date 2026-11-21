@@ -5,7 +5,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { company as companyTable, staffSettings, user } from '@/db/schema';
+import { company as companyTable, user } from '@/db/schema';
 
 import {
   actorFor,
@@ -16,6 +16,7 @@ import {
   inSequence,
   memberActor,
   minutesAgo,
+  saveSettings,
   staffActor,
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
@@ -503,7 +504,7 @@ describe('getRequest: when things happened', () => {
 describe('findRequestNumber', () => {
   it('reads the number, or the number after the prefix the staff chose, and nothing else', async () => {
     await createStaffSettings(db);
-    await db.update(staffSettings).set({ requestPrefix: 'HELP' });
+    await saveSettings(db, { 'requests.prefix': 'HELP' });
 
     expect(await findRequestNumber(ctx, '12')).toBe(12);
     expect(await findRequestNumber(ctx, 'HELP-12')).toBe(12);
@@ -521,7 +522,7 @@ describe('findRequestNumber', () => {
 describe('findRequest', () => {
   it('gives the number and the prefix the staff chose', async () => {
     await createStaffSettings(db);
-    await db.update(staffSettings).set({ requestPrefix: 'HELP' });
+    await saveSettings(db, { 'requests.prefix': 'HELP' });
     const company = await createCompany(db);
     await storeRequest(company.id);
     const second = await storeRequest(company.id);

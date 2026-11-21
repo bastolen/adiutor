@@ -141,7 +141,7 @@ would be lost and still count as the day's. An alert that reached nobody (not on
 server is what's down) doesn't count as the day's alert: the next failure sends it.
 
 **When the ticks stop**, no job runs and none can tell anyone. So every tick notes when it started
-(`job_tick`, `recordTick` in `tick-record.ts`), and when none started in the last 45 minutes
+(the `jobs.last_tick` setting, `recordTick` in `tick-record.ts`), and when none started in the last 45 minutes
 (`TICK_LATE_MINUTES`; Vercel's 15-minute schedule can fire up to 30 minutes apart), or none ever did,
 the Jobs page and the dashboard of staff who see the jobs warn that background jobs aren't running
 (`getTickWarning`).

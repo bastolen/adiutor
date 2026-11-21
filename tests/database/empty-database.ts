@@ -123,12 +123,13 @@ const DELETE_EVERY_ROW = sql`do $$ begin ${sql.join(
 
 /**
  * Empties the database as on a fresh install: every table in the schema,
- * including users, companies, the staff settings, rate limits, jobs and the
- * request counter, and leaves the built-in request types
- * (`BUILT_IN_REQUEST_TYPES`), which a fresh install has. A new table is
- * emptied too, since the tables come from the schema. Nothing needs restarting: no ID or default comes from a sequence
+ * including users, companies, the settings (the staff's, setup, the request
+ * counter and the last tick), rate limits and jobs, and leaves the built-in
+ * request types (`BUILT_IN_REQUEST_TYPES`), which a fresh install has. A new
+ * table is emptied too, since the tables come from the schema. Nothing needs
+ * restarting: no ID or default comes from a sequence
  * (`src/db/schema.int.test.ts` checks it), and the request numbers come from
- * `request_counter` rows, which go with the rest.
+ * the `requests.last_number` setting, which goes with the rest.
  *
  * @param executor - The database client, or a transaction.
  */

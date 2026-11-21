@@ -1,5 +1,5 @@
 {
-  "id": "fe174a7c-480b-4b03-8e52-545bfc909d85",
+  "id": "aa902623-efbb-4389-989b-b318f958e988",
   "prevId": "579b73aa-d9b6-470a-9a3f-567142e6be33",
   "version": "7",
   "dialect": "postgresql",
@@ -396,13 +396,6 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
-        },
-        "from_request_link": {
-          "name": "from_request_link",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
         }
       },
       "indexes": {
@@ -1631,60 +1624,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.job_tick": {
-      "name": "job_tick",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "uuidv7()"
-        },
-        "singleton": {
-          "name": "singleton",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "last_started_at": {
-          "name": "last_started_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "job_tick_singleton_idx": {
-          "name": "job_tick_singleton_idx",
-          "columns": [
-            {
-              "expression": "singleton",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "job_tick_singleton_true": {
-          "name": "job_tick_singleton_true",
-          "value": "\"job_tick\".\"singleton\""
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.queued_job": {
       "name": "queued_job",
       "schema": "",
@@ -2156,60 +2095,6 @@
         "request_created_signed_in_as_fits": {
           "name": "request_created_signed_in_as_fits",
           "value": "\"request\".\"created_signed_in_as_staff_id\" is null or \"request\".\"created_signed_in_as\""
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.request_counter": {
-      "name": "request_counter",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "uuidv7()"
-        },
-        "singleton": {
-          "name": "singleton",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "last_number": {
-          "name": "last_number",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "request_counter_singleton_idx": {
-          "name": "request_counter_singleton_idx",
-          "columns": [
-            {
-              "expression": "singleton",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "request_counter_singleton_true": {
-          "name": "request_counter_singleton_true",
-          "value": "\"request_counter\".\"singleton\""
         }
       },
       "isRLSEnabled": false
@@ -3741,8 +3626,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.request_sign_in_link": {
-      "name": "request_sign_in_link",
+    "public.setting": {
+      "name": "setting",
       "schema": "",
       "columns": {
         "id": {
@@ -3752,198 +3637,17 @@
           "notNull": true,
           "default": "uuidv7()"
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "request_id": {
-          "name": "request_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "token_hash": {
-          "name": "token_hash",
+        "key": {
+          "name": "key",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "timestamp with time zone",
+        "value": {
+          "name": "value",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": true
-        },
-        "last_used_at": {
-          "name": "last_used_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "request_sign_in_link_token_hash_idx": {
-          "name": "request_sign_in_link_token_hash_idx",
-          "columns": [
-            {
-              "expression": "token_hash",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "request_sign_in_link_user_idx": {
-          "name": "request_sign_in_link_user_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "request_sign_in_link_request_idx": {
-          "name": "request_sign_in_link_request_idx",
-          "columns": [
-            {
-              "expression": "request_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "request_sign_in_link_expires_at_idx": {
-          "name": "request_sign_in_link_expires_at_idx",
-          "columns": [
-            {
-              "expression": "expires_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "request_sign_in_link_user_id_user_id_fk": {
-          "name": "request_sign_in_link_user_id_user_id_fk",
-          "tableFrom": "request_sign_in_link",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "request_sign_in_link_request_id_request_id_fk": {
-          "name": "request_sign_in_link_request_id_request_id_fk",
-          "tableFrom": "request_sign_in_link",
-          "tableTo": "request",
-          "columnsFrom": [
-            "request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.staff_settings": {
-      "name": "staff_settings",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "uuidv7()"
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "default_locale": {
-          "name": "default_locale",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'en-US'"
-        },
-        "default_time_zone": {
-          "name": "default_time_zone",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'UTC'"
-        },
-        "offered_locales": {
-          "name": "offered_locales",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "array['en-US', 'nl-NL', 'es-ES']::text[]"
-        },
-        "request_prefix": {
-          "name": "request_prefix",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'AD'"
-        },
-        "singleton": {
-          "name": "singleton",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
@@ -3954,11 +3658,11 @@
         }
       },
       "indexes": {
-        "staff_settings_singleton_idx": {
-          "name": "staff_settings_singleton_idx",
+        "setting_key_idx": {
+          "name": "setting_key_idx",
           "columns": [
             {
-              "expression": "singleton",
+              "expression": "key",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3974,24 +3678,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {
-        "staff_settings_singleton_true": {
-          "name": "staff_settings_singleton_true",
-          "value": "\"staff_settings\".\"singleton\""
-        },
-        "staff_settings_default_locale_valid": {
-          "name": "staff_settings_default_locale_valid",
-          "value": "\"staff_settings\".\"default_locale\" in ('en-US', 'nl-NL', 'es-ES')"
-        },
-        "staff_settings_offered_locales_known": {
-          "name": "staff_settings_offered_locales_known",
-          "value": "cardinality(\"staff_settings\".\"offered_locales\") > 0 and \"staff_settings\".\"offered_locales\" <@ array['en-US', 'nl-NL', 'es-ES']::text[]"
-        },
-        "staff_settings_default_locale_offered": {
-          "name": "staff_settings_default_locale_offered",
-          "value": "\"staff_settings\".\"default_locale\" = any(\"staff_settings\".\"offered_locales\")"
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     }
   },

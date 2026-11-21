@@ -66,12 +66,13 @@ import { firstRow } from '../src/lib/defined';
 import devSeedRefusal from '../src/lib/dev-seed-guard';
 import { sendEmail } from '../src/lib/email';
 import { appUrl, env } from '../src/lib/env';
-import { DEFAULT_LOCALE } from '../src/lib/i18n/locales';
+import { DEFAULT_LOCALE, LOCALES } from '../src/lib/i18n/locales';
 import { INVITATION_VALID_DAYS } from '../src/lib/invitation-lifetimes';
 import { installLogRedaction } from '../src/lib/log-redaction';
 import { encryptionKey, parseAuthSecrets } from '../src/lib/sign-in/auth-secrets';
 import { generateToken, hashToken } from '../src/lib/sign-in/tokens';
 import { emailSchema } from '../src/lib/validation';
+import { addSetting, writeSettings } from '../src/server/settings';
 import emptyDatabase from '../tests/database/empty-database';
 import storeRequests from '../tests/database/store-requests';
 import { sampleErrors } from './sample-errors';
@@ -343,10 +344,14 @@ async function main(): Promise<number> {
           .values({ companyId, userId, role, createdAt: daysFromNow(-25) });
       };
 
-      // The staff name, and the companies.
-      await tx
-        .insert(schema.staffSettings)
-        .values({ name: STAFF_NAME, defaultTimeZone: DEV_TIME_ZONE });
+      // Set up: the staff name and the other settings setup writes, then the companies.
+      await addSetting(tx, 'setup.completed_at', new Date());
+      await writeSettings(tx, {
+        'staff.name': STAFF_NAME,
+        'staff.default_locale': DEFAULT_LOCALE,
+        'staff.offered_locales': [...LOCALES],
+        'staff.default_time_zone': DEV_TIME_ZONE,
+      });
       const alpha = await addCompany('Adiutor Tests Alpha', 'adiutor-tests-alpha');
       const beta = await addCompany('Adiutor Tests Beta', 'adiutor-tests-beta');
       const gamma = await addCompany('Adiutor Tests Gamma', 'adiutor-tests-gamma', true);

@@ -6,5 +6,5 @@ export * from './companies';
 export * from './jobs';
 export * from './requests';
 export * from './security';
+export * from './settings';
 export * from './sign-in-links';
-export * from './staff';

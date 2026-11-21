@@ -159,8 +159,15 @@
     {
       "idx": 22,
       "version": "7",
-      "when": 1795289757315,
-      "tag": "0024_request_sign_in_links",
+      "when": 1795286322895,
+      "tag": "0022_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1795291908666,
+      "tag": "0023_request_sign_in_links",
       "breakpoints": true
     }
   ]

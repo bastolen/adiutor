@@ -5,7 +5,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 
-import { company, invitation, staffSettings, user } from '@/db/schema';
+import { company, invitation, user } from '@/db/schema';
 import { defined } from '@/lib/defined';
 
 import {
@@ -14,6 +14,7 @@ import {
   inLanguage,
   inSequence,
   memberActor,
+  saveSettings,
   setUserLocale,
   staffActor,
 } from '../../../../tests/integration/helpers';
@@ -226,7 +227,7 @@ describe('inviteManyByEmail', () => {
 
 describe('the invitation’s language', () => {
   it('is the one chosen, else Adiutor’s default (never the sender’s), and is stored with it', async () => {
-    await db.update(staffSettings).set({ defaultLocale: 'es-ES' });
+    await saveSettings(db, { 'staff.default_locale': 'es-ES' });
     const input = { companyId: testCompany.id, role: 'client' };
     await inviteByEmail(ctx, companyAdmin, { ...input, email: 'nl@adiutor.test', locale: 'nl-NL' });
     await inviteByEmail(inLanguage(ctx, 'en-US'), companyAdmin, {
@@ -252,7 +253,7 @@ describe('the invitation’s language', () => {
   });
 
   it('refuses a language that’s turned off, and sends nothing', async () => {
-    await db.update(staffSettings).set({ offeredLocales: ['en-US', 'es-ES'] });
+    await saveSettings(db, { 'staff.offered_locales': ['en-US', 'es-ES'] });
 
     await expect(
       inviteByEmail(ctx, companyAdmin, {

@@ -7,13 +7,14 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { user, staffSettings } from '@/db/schema';
+import { user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 
 import {
   actorFor,
   createStaffSettings,
   createUser,
+  saveSettings,
   setupTestContext,
 } from '../../../tests/integration/helpers';
 import { loadActor } from '../actor';
@@ -111,7 +112,7 @@ describe('setOwnTimeZone', () => {
 describe('ownTimeZone', () => {
   it('gives the account’s zone and Adiutor’s default, which stands in while it has none', async () => {
     await createStaffSettings(db);
-    await db.update(staffSettings).set({ defaultTimeZone: 'Europe/Amsterdam' });
+    await saveSettings(db, { 'staff.default_time_zone': 'Europe/Amsterdam' });
     const jane = await createUser(db, 'jane@adiutor.test');
 
     expect(await ownTimeZone(ctx, await actorFor(db, jane))).toEqual({

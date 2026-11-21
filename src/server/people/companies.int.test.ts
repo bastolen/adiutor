@@ -5,7 +5,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { auditEvent, company, invitation, rateLimitBucket, staffSettings, user } from '@/db/schema';
+import { auditEvent, company, invitation, rateLimitBucket, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
 import {
@@ -16,6 +16,7 @@ import {
   inLanguage,
   inSequence,
   memberActor,
+  saveSettings,
   setupTestContext,
   staffActor,
 } from '../../../tests/integration/helpers';
@@ -53,7 +54,7 @@ describe('registerCompany', () => {
   });
 
   it('invites the first admin in the chosen language, or on Default in Adiutor’s default', async () => {
-    await db.update(staffSettings).set({ defaultLocale: 'es-ES' });
+    await saveSettings(db, { 'staff.default_locale': 'es-ES' });
     await registerCompany(ctx, manager, {
       name: 'Adiutor Tests Dutch',
       slug: 'adiutor-tests-dutch',

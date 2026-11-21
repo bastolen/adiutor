@@ -8,14 +8,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import {
-  queuedJob,
-  request,
-  requestCounter,
-  requestParticipant,
-  requestSignInLink,
-  user,
-} from '@/db/schema';
+import { queuedJob, request, requestParticipant, requestSignInLink, user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { writtenMentionMarker } from '@/lib/requests';
 import { hashToken } from '@/lib/sign-in/tokens';
@@ -25,6 +18,7 @@ import {
   createStaffSettings,
   mailDown,
   memberActor,
+  saveSettings,
   sendQueuedEmails,
   setupTestContext,
   staffActor,
@@ -49,7 +43,7 @@ const { ctx, db, sent } = setupTestContext();
  * @returns The request's ID and number.
  */
 async function storeWaitingRequest(companyId: string, subscribers: readonly { id: string }[]) {
-  await db.insert(requestCounter).values({ lastNumber: 142 });
+  await saveSettings(db, { 'requests.last_number': 142 });
   const stored = firstRow(
     await db
       .insert(request)
