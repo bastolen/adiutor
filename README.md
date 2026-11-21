@@ -28,7 +28,9 @@ them, are built; approving the work comes next.
   Markdown into formatting as it's typed, with lists, tables and highlighted code, and can mention
   people, picked from a list at "@". Authors can edit their replies, and the description can be
   edited while the request is open; the staff can read what a text said before, and write
-  internal notes the company never sees. Company Admins and Clients raise, reply, close and
+  internal notes the company never sees. Everyone chooses which parts of a request's activity
+  they see (replies, notes, status changes, other changes) and whether the newest comes first,
+  saved with their account. Company Admins and Clients raise, reply, close and
   reopen; Watchers follow; the staff work on every company's requests and assign each to one or
   more of themselves, which everyone on the request sees. Everyone who reads a request can
   subscribe to it, and whoever raises it, replies to it or is mentioned in it is subscribed. The

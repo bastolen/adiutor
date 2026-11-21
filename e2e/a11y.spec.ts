@@ -745,6 +745,16 @@ test.describe('in forced-colours mode', () => {
         await expectAccessible(page, '[role="listbox"]');
         await page.keyboard.press('Escape');
 
+        // What the activity shows, with the notes ticked along with Replies, and its order.
+        await page.getByRole('button', { name: 'Show: Everything' }).click();
+        await expect(page.getByRole('menuitemcheckbox', { name: 'Internal notes' })).toBeVisible();
+        await expectAccessible(page, '[role="menu"]');
+        await page.keyboard.press('Escape');
+        await page.getByRole('button', { name: 'Oldest first' }).click();
+        await expect(page.getByRole('menuitemradio', { name: 'Newest first' })).toBeVisible();
+        await expectAccessible(page, '[role="menu"]');
+        await page.keyboard.press('Escape');
+
         await page.getByRole('button', { name: 'Edit details' }).click();
         await expect(page.getByRole('dialog')).toBeVisible();
         await expectAccessible(page, '[role="dialog"]');

@@ -1,5 +1,6 @@
 /**
- * @file Tests for a request's conversation.
+ * @file Tests for a request's conversation, in either order, and what it
+ * says when the groups its reader chose leave nothing to show.
  */
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -8,10 +9,12 @@ import { describe, expect, it, vi } from 'vitest';
 import type { RequestDetail, RequestEntryView, RequestPerson } from '@/server/requests';
 
 import renderInLocale from '../../../../../tests/i18n/render';
+import { saveActivityViewAction } from './actions';
+import { ActivityViewProvider } from './activity-view';
 import Thread from './thread';
 
-// An editable reply's editor sends its text through a server action.
-vi.mock('./actions', () => ({ editTextAction: vi.fn() }));
+// An editable reply's editor sends its text through a server action, and so does the view.
+vi.mock('./actions', () => ({ editTextAction: vi.fn(), saveActivityViewAction: vi.fn() }));
 vi.mock('../../_requests/mention-actions', () => ({ mentionChoicesAction: vi.fn() }));
 
 /** Someone at the company, who reads the page. */
@@ -375,6 +378,51 @@ describe('Thread', () => {
     });
     expect(link).toHaveAttribute('href', '/requests/142?earlier=1');
     expect(items[1]).toHaveTextContent('Reply 56');
+  });
+
+  it('offers the earlier entries last, below the oldest one shown, with the newest first', () => {
+    render(
+      <Thread
+        address={ADDRESS}
+        detail={detailOf({
+          activity: { order: 'newest', groups: null },
+          entries: [
+            entryOf('2', { body: { text: 'Reply 57', format: 'plain' } }),
+            entryOf('1', { body: { text: 'Reply 56', format: 'plain' } }),
+          ],
+          earlierEntries: 55,
+        })}
+        earlierHref="/requests/142?earlier=1"
+      />,
+    );
+
+    const items = within(screen.getByRole('list')).getAllByRole('listitem');
+    expect(items).toHaveLength(3);
+    expect(items[0]).toHaveTextContent('Reply 57');
+    expect(items[1]).toHaveTextContent('Reply 56');
+    expect(
+      within(items[2] as HTMLElement).getByRole('link', {
+        name: 'Show earlier activity (55 more)',
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('says when the groups chosen leave nothing to show, and shows everything again', async () => {
+    vi.mocked(saveActivityViewAction).mockResolvedValue({ ok: true });
+    const user = userEvent.setup();
+    const activity = { order: 'oldest', groups: ['status'] } as const;
+    render(
+      <ActivityViewProvider view={activity} offered={['replies', 'status', 'changes']}>
+        <Thread address={ADDRESS} detail={detailOf({ activity })} earlierHref={null} />
+      </ActivityViewProvider>,
+    );
+
+    expect(
+      screen.getByText('Nothing in the activity matches what you chose to show.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('No replies yet.')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Show everything' }));
+    expect(saveActivityViewAction).toHaveBeenCalledWith({ groups: null });
   });
 
   it.each([

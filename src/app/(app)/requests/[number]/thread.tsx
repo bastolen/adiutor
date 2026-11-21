@@ -1,11 +1,12 @@
 /**
  * @file A request's conversation: every reply, every internal note (which
  * only the staff get from the service), every change of its status, title,
- * type or priority, and everyone assigned or removed, oldest first. Each
- * entry names who wrote or changed it and when, and, for the readers who may
- * know, that a staff member did it while signed in as its author. What was
- * asked is the page's Description, above it. Its text comes from the
- * `requests` namespace.
+ * type or priority, and everyone assigned or removed, in the groups and
+ * order the reader chose (oldest first unless they chose newest first; the
+ * service applies the choice). Each entry names who wrote or changed it and
+ * when, and, for the readers who may know, that a staff member did it while
+ * signed in as its author. What was asked is the page's Description, above
+ * it. Its text comes from the `requests` namespace.
  */
 import { CircleDot, Flag, Lock, type LucideIcon, Pencil, Tag, UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -30,6 +31,7 @@ import PersonLine, {
 } from '../../_requests/request-person';
 import RequestText from '../../_requests/request-text';
 import SignedInAsMark from '../../_requests/signed-in-as-mark';
+import { ShowEverythingButton } from './activity-view';
 import EditableText from './editable-text';
 import EditedNote from './edited-note';
 import ShowEarlierLink from './show-earlier-link';
@@ -145,9 +147,12 @@ function ChangeText({ entry, audience }: { entry: RequestEntryView; audience: Re
 }
 
 /**
- * The conversation of a request: its entries, oldest first. When the request
- * has more entries than are loaded, a link to show earlier ones comes first.
- * Without any entry yet, it says so.
+ * The conversation of a request: its entries, in the reader's order. When
+ * the request has more entries than are loaded, a link to show earlier ones
+ * comes before the oldest one shown: first with the oldest first, last with
+ * the newest first. Without any entry yet, it says so; when the groups the
+ * reader chose leave nothing to show, it says that instead, with a button
+ * that shows everything again (in an `ActivityViewProvider`).
  *
  * @param props - Component props.
  * @param props.detail - The request, as its reader gets it.
@@ -168,19 +173,30 @@ export default function Thread({
   const tNote = useTranslations('requests.note');
   const names: SideNames = { company: detail.company.name, staff: detail.staffName };
 
+  if (detail.entries.length === 0 && detail.activity.groups !== null) {
+    return (
+      <div className="flex flex-col items-start gap-3">
+        <p className="text-sm text-muted-foreground">{t('activity.nothingShown')}</p>
+        <ShowEverythingButton>{t('activity.showEverything')}</ShowEverythingButton>
+      </div>
+    );
+  }
   if (detail.entries.length === 0) {
     return <p className="text-sm text-muted-foreground">{t('noReplies')}</p>;
   }
 
+  const earlierLink = earlierHref && (
+    <li>
+      <ShowEarlierLink href={earlierHref}>
+        {t('showEarlier', { count: detail.earlierEntries })}
+      </ShowEarlierLink>
+    </li>
+  );
+  const newestFirst = detail.activity.order === 'newest';
+
   return (
     <ol className="flex flex-col gap-5">
-      {earlierHref && (
-        <li>
-          <ShowEarlierLink href={earlierHref}>
-            {t('showEarlier', { count: detail.earlierEntries })}
-          </ShowEarlierLink>
-        </li>
-      )}
+      {!newestFirst && earlierLink}
       {detail.entries.map((entry) => {
         if (entry.kind === 'comment' || entry.kind === 'note') {
           // An internal note reads like a reply, on the amber surface and with a badge that says
@@ -262,6 +278,7 @@ export default function Thread({
           </Entry>
         );
       })}
+      {newestFirst && earlierLink}
     </ol>
   );
 }

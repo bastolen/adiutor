@@ -1,10 +1,10 @@
 /**
  * @file Server actions for a request's page: replying, adding an internal
  * note, changing the status, changing the details, changing who it's
- * assigned to, editing a text and subscribing to it. The services check who
- * may do what; these read the form, refresh the page and word the
- * confirmation in the request's language (`requests.reply`, `requests.note`,
- * `requests.saved`).
+ * assigned to, editing a text, subscribing to it, and saving how the reader
+ * reads its activity. The services check who may do what; these read the
+ * form, refresh the page and word the confirmation in the request's language
+ * (`requests.reply`, `requests.note`, `requests.saved`).
  */
 'use server';
 
@@ -25,6 +25,7 @@ import {
   editReply,
   editRequestDescription,
   replyToRequest,
+  setActivityView,
   subscribe,
   unsubscribe,
   updateRequestDetails,
@@ -277,5 +278,29 @@ export async function changeSubscribersAction(
     refresh();
     const t = await getTranslations('requests.saved');
     return { ok: true, message: t('subscribers', { changed: added + removed }) };
+  });
+}
+
+/**
+ * Saves how the reader reads a request's activity, from the menus on its
+ * page: its order, the groups it shows, or both. It's saved with their
+ * account, so it holds on every request. The page is refreshed so the
+ * activity shows that way at once; there's no confirmation, since the
+ * activity changing is one.
+ *
+ * @param view - What the menus chose: `order` and/or `groups` (`null` for everything).
+ * @param view.order - The order, `oldest` or `newest`.
+ * @param view.groups - The groups shown, or `null` for everything.
+ * @returns Success without a message, or why it failed.
+ */
+export async function saveActivityViewAction(view: {
+  order?: string;
+  groups?: readonly string[] | null;
+}): Promise<ActionResult> {
+  return runAction(async () => {
+    const actor = await getActor();
+    await setActivityView(appContext, actor, view);
+    refresh();
+    return { ok: true };
   });
 }

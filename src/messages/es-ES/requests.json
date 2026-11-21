@@ -66,6 +66,18 @@
       "deactivated": "Esta empresa está desactivada, así que sus solicitudes solo se pueden leer.",
       "conversation": "Conversación",
       "showEarlier": "Mostrar actividad anterior ({count, number} más)",
+      "activity": {
+        "showMenu": "Mostrar",
+        "show": "Mostrar: {groups}",
+        "everything": "Todo",
+        "group": "{group, select, replies {Respuestas} notes {Notas internas} status {Cambios de estado} other {Otros cambios}}",
+        "repliesWithNotes": "Con las notas internas",
+        "includedInReplies": "Incluidas en Respuestas",
+        "orderMenu": "Orden",
+        "order": "{order, select, newest {Primero lo más reciente} other {Primero lo más antiguo}}",
+        "nothingShown": "Nada en la actividad coincide con lo que elegiste mostrar.",
+        "showEverything": "Mostrar todo"
+      },
       "description": "Descripción",
       "details": "Datos",
       "noReplies": "Aún no hay respuestas.",
