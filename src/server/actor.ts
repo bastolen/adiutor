@@ -10,6 +10,7 @@ import {
   hasMfa,
   hasStrongMfa,
   isSessionMfaVerified,
+  signedInAtOf,
   mfaConfirmedUntil,
   type MfaRole,
   mfaRoleOf,
@@ -100,6 +101,13 @@ export interface Actor {
    */
   sessionMfaVerified: boolean;
   /**
+   * Whether the link in an email about a request started the current session
+   * (decision 0035): it isn't sent to the step-up page (`mustStepUp`), but it
+   * never opens the window for changing sign-in methods or counts as a fresh
+   * sign-in.
+   */
+  fromRequestLink: boolean;
+  /**
    * Until when the current session may change how the user signs in (15
    * minutes after its last confirmation with a second step that counts; with
    * a provider such as GitHub only when the account has no passkey or
@@ -120,7 +128,9 @@ export interface Actor {
   strongMfaConfirmedUntil: Date | null;
   /**
    * When the current session signed in (`session.createdAt`), or `null`
-   * outside a request (see `needsFreshSignIn`).
+   * outside a request and for a session the link in an email about a request
+   * started, which never counts as a fresh sign-in (see `needsFreshSignIn`,
+   * `signedInAtOf`).
    */
   signedInAt: Date | null;
   /**
@@ -165,6 +175,7 @@ export interface Actor {
  * @param session.mfaVerified - Whether its sign-in, or a later step-up, had a second factor.
  * @param session.mfaMethod - Which second factor, if known.
  * @param session.mfaVerifiedAt - When it was proven, if known.
+ * @param session.fromRequestLink - Whether the link in an email about a request started it.
  * @param session.createdAt - When it signed in, if known.
  * @returns The actor, or `null` if the user doesn't exist.
  */
@@ -228,12 +239,13 @@ export async function loadActor(
       ? canConfirmSessions(mfaState, mfaRole, availableProviders)
       : false,
     sessionMfaVerified: isSessionMfaVerified(sessionMfa, mfaRole),
+    fromRequestLink: sessionMfa.fromRequestLink,
     // A provider's confirmation is judged by the setup (`hasStrongerStepThanProvider`); without one
     // there's no second step to have confirmed with.
     mfaConfirmedUntil: mfaState ? mfaConfirmedUntil(sessionMfa, mfaRole, mfaState) : null,
     strongMfa: mfaState ? hasStrongMfa(mfaState, availableProviders) : false,
     strongMfaConfirmedUntil: mfaState ? strongMfaConfirmedUntil(sessionMfa, mfaState) : null,
-    signedInAt: session.createdAt ? new Date(session.createdAt) : null,
+    signedInAt: signedInAtOf({ ...session, fromRequestLink: sessionMfa.fromRequestLink }),
     sessionId: session.id ?? null,
     // Set by `getOptionalActor` when the session belongs to a staff member signed in as the user.
     signedInAs: null,

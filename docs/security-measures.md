@@ -8,7 +8,8 @@ The reasons behind the trust and confirmation rules are in the decision records
 
 ## Audit log
 
-The audit log (`audit_event`, `src/server/audit.ts`) records sign-ins (one per sign-in; failed ones; and
+The audit log (`audit_event`, `src/server/audit.ts`) records sign-ins (one per sign-in, with how,
+e.g. `request_link` for the link in an email about a request; failed ones; and
 right passwords whose sign-in then asked for the code, recorded without an actor), wrong second-step
 codes (on the step-up page, and at the code step of a sign-in without an actor; only codes that
 were compared and refused, not an expired one or another refusal), MFA changes,
@@ -64,7 +65,11 @@ invite-link claims (per IP address), verification emails (per user), starting to
 (10 an hour per staff member, `RATE_LIMITS.impersonationsPerUser`, since each start emails the
 user), sign-in link pages
 opened with a link that can't be used (20 per 15 minutes per IP address, so links can't be
-guessed by looking them up; past it, the page offers no way to continue), wrong secrets sent to
+guessed by looking them up; past it, the page offers no way to continue), tokens that aren't
+links in emails about requests, opened at their endpoint or their confirmation page (20 per 15
+minutes per IP address, `RATE_LIMITS.requestLinkMissesPerIp`), sign-ins with one such link (10 an
+hour, `requestLinkSignInsPerLink`, so a forwarded or leaked link can't pile up devices; past it
+the link goes to the sign-in page), wrong secrets sent to
 the background jobs' endpoint (20 per 15 minutes per IP address, `RATE_LIMITS.jobTickMissesPerIp`;
 past it the endpoint answers 429, while the right secret still works), work on requests (per
 user and hour: 60 requests raised, 200 replies and notes, and 300 changes of a status, of
@@ -136,9 +141,17 @@ but not the ones that keep people informed or clean up sign-in data (security no
 Admins, leftover provider tokens, finished sign-ins as a user), so a stolen staff Admin session can't
 silence the emails that would give it away. While a staff member is signed in as a user, the guards refuse every
 endpoint, from the browser or from server code, except reading the session and signing out
-(`refuseWhileSignedInAs` in `src/server/auth/auth-guards/`). The session is the staff member's, so
+(`refuseWhileSignedInAs` in `src/server/auth/auth-guards/`); the link in an email about a request,
+which a browser opens, goes to its confirmation page instead, which asks them to go back to their
+own account first. The session is the staff member's, so
 an endpoint would act on their own account (see
 [Signing in as a user](authentication.md#signing-in-as-a-user)).
+
+The link in an email about a request (`/request-link/sign-in`, an endpoint of the app's own
+plugin) takes no return address: it always opens its own request, by the number stored with the
+link. It signs in only on a person's click and never switches from someone else signed in in that
+browser without its confirmation page's same-origin Continue (see
+[Links in emails about requests](authentication.md#links-in-emails-about-requests)).
 
 Return addresses must be pages of the app (`isSafeAppRedirect` in `src/lib/redirect.ts`): a path
 that starts with a single `/`, has no control characters, spaces or backslashes, stays on the site
@@ -164,9 +177,11 @@ relative paths that pass: the redirect targets they read from the URL go through
 
 ## Tokens
 
-Invitation and invite-link tokens, and Better Auth's reset, welcome and magic links and
-emailed codes, are stored as SHA-256 hashes (sign-in links with the app's own hasher,
-`hashEmailLinkToken` in `src/lib/sign-in/tokens.ts`, so the page they open can look them up).
+Invitation and invite-link tokens, the links in emails about requests (`request_sign_in_link`,
+see [Links in emails about requests](authentication.md#links-in-emails-about-requests)), and
+Better Auth's reset, welcome and magic links and emailed codes, are stored as SHA-256 hashes
+(sign-in links with the app's own hasher, `hashEmailLinkToken` in `src/lib/sign-in/tokens.ts`, so
+the page they open can look them up).
 
 Emails are sent after the response, so no answer waits for the mail server, whether or not the
 address has an account. What's left of the difference is Better Auth's own work before it answers

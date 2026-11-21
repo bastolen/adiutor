@@ -1,6 +1,6 @@
 # 0004. Recent confirmation for sign-in changes and lasting access
 
-- **Status:** Accepted
+- **Status:** Accepted; a session from a link in an email about a request never counts as confirmed or fresh ([0035](0035-sign-in-links-in-request-emails.md))
 - **Date:** 2026-11-07 (recorded after the decision was made)
 
 ## Context

@@ -1,13 +1,14 @@
 /**
  * @file The hourly job that deletes sign-in data nobody can use any more:
- * expired sign-in links, codes and reset tokens, expired sessions, and
+ * expired sign-in links, codes and reset tokens, the links in emails about
+ * requests that expired or were ended, expired sessions, and
  * finished rate-limit windows (the app's and Better Auth's). Invitations and
  * invite links are kept as history; their tokens are stored hashed and stop
  * working when they expire.
  */
 import { lt, sql } from 'drizzle-orm';
 
-import { rateLimit, rateLimitBucket, session, verification } from '@/db/schema';
+import { rateLimit, rateLimitBucket, requestSignInLink, session, verification } from '@/db/schema';
 
 import { defineRecurringJob } from '../define';
 
@@ -24,11 +25,15 @@ export default defineRecurringJob({
    * @returns How many rows were deleted per kind.
    */
   run: async (ctx) => {
-    const [verifications, sessions, buckets, betterAuthLimits] = await Promise.all([
+    const [verifications, requestLinks, sessions, buckets, betterAuthLimits] = await Promise.all([
       ctx.db
         .delete(verification)
         .where(lt(verification.expiresAt, sql`now()`))
         .returning({ id: verification.id }),
+      ctx.db
+        .delete(requestSignInLink)
+        .where(lt(requestSignInLink.expiresAt, sql`now()`))
+        .returning({ id: requestSignInLink.id }),
       ctx.db
         .delete(session)
         .where(lt(session.expiresAt, sql`now()`))
@@ -46,6 +51,7 @@ export default defineRecurringJob({
     return {
       summary: {
         verifications: verifications.length,
+        requestLinks: requestLinks.length,
         sessions: sessions.length,
         rateLimits: buckets.length + betterAuthLimits.length,
       },

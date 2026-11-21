@@ -3,7 +3,9 @@
  * device, from the Security page), and everyone's or one user's from the
  * command line after a suspected leak (`pnpm sessions:revoke-all`). Each also
  * forgets the trusted devices of whoever it signs out, so a stolen browser
- * that was trusted can't skip the code step at its next sign-in.
+ * that was trusted can't skip the code step at its next sign-in, and ends
+ * the links in their emails about requests (`forgetSecondStepSkips`), so an
+ * old email can't sign them in again.
  * {@link endSessionsOf} does both in one call, for every path that signs a
  * user out (also an Admin's sign-out, MFA reset and deactivation).
  */
@@ -18,14 +20,15 @@ import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
 import type { ServiceContext } from '../context';
 import { notFoundError, ServiceError, parseId } from '../errors';
+import { forgetAllSecondStepSkips, forgetSecondStepSkips } from './second-step-skips';
 import { queueSecurityNotice } from './security-notices';
-import { forgetAllTrustedDevices, forgetTrustedDevices } from './trusted-devices';
 
 /**
- * Ends a user's sessions (all of them, or all but one) and forgets every
- * device they trusted at the code step ("Trust this device"), in one call,
- * so no way of signing someone out can leave a trusted browser able to skip
- * the code step later. Every path that signs a user out uses it, except
+ * Ends a user's sessions (all of them, or all but one), forgets every
+ * device they trusted at the code step ("Trust this device") and ends the
+ * links in their emails about requests, in one call, so no way of signing
+ * someone out can leave a trusted browser able to skip the code step, or an
+ * old email able to sign them in, later. Every path that signs a user out uses it, except
  * signing out one device by ID ({@link revokeOwnSession}) and signing out
  * everyone at once.
  *
@@ -44,16 +47,17 @@ export async function endSessionsOf(
     .delete(session)
     .where(and(eq(session.userId, userId), except ? ne(session.id, except) : undefined))
     .returning({ id: session.id });
-  await forgetTrustedDevices(db, userId);
+  await forgetSecondStepSkips(db, userId);
   return deleted.length;
 }
 
 /**
- * Signs the user out on one of their other devices, and forgets every device
- * they trusted at the code step ("Trust this device"), this one included: a
- * session doesn't say which trusted device is its browser's, and a device the
- * user signs out may be one they lost, which mustn't skip the code step at
- * its next sign-in.
+ * Signs the user out on one of their other devices, forgets every device
+ * they trusted at the code step ("Trust this device"), this one included, and
+ * ends the links in their emails about requests: a session doesn't say which
+ * trusted device or link is its browser's, and a device the user signs out
+ * may be one they lost, which mustn't skip the code step or sign in from an
+ * old email at its next sign-in.
  *
  * @param ctx - Service context.
  * @param actor - The signed-in user.
@@ -79,7 +83,7 @@ export async function revokeOwnSession(
     if (deleted.length === 0) {
       throw notFoundError();
     }
-    await forgetTrustedDevices(tx, actor.id);
+    await forgetSecondStepSkips(tx, actor.id);
     await recordEvent(
       ctx,
       { action: 'session_revoked', actorUserId: actor.id, targetUserId: actor.id },
@@ -89,9 +93,10 @@ export async function revokeOwnSession(
 }
 
 /**
- * Signs the user out on every device except this one, and forgets every
- * device they trusted at the code step ("Trust this device"), this one
- * included, so none of the others skips the code step at its next sign-in.
+ * Signs the user out on every device except this one, forgets every device
+ * they trusted at the code step ("Trust this device"), this one included, and
+ * ends the links in their emails about requests, so none of the others skips
+ * the code step or signs in from an old email at its next sign-in.
  *
  * @param ctx - Service context.
  * @param actor - The signed-in user.
@@ -133,7 +138,7 @@ export interface RevokeAllResult {
  * after a suspected leak of the database or a session (`pnpm
  * sessions:revoke-all`), so no stolen session keeps working. Trusted devices
  * are forgotten too, so a stolen one can't skip the code step at its next
- * sign-in. Records it in the audit log; one user also gets a security email,
+ * sign-in, and links in emails about requests are ended. Records it in the audit log; one user also gets a security email,
  * queued for the next tick (everyone doesn't: tell them yourself if needed).
  *
  * @param ctx - Service context (database and email; there's no request).
@@ -163,7 +168,7 @@ export async function revokeAllSessions(
       count = await endSessionsOf(tx, target.id);
     } else {
       count = (await tx.delete(session).returning({ id: session.id })).length;
-      await forgetAllTrustedDevices(tx);
+      await forgetAllSecondStepSkips(tx);
     }
     await recordEvent(
       ctx,

@@ -14,7 +14,7 @@ import {
   type Page,
 } from '@playwright/test';
 
-import { PLATFORM_ADMIN } from './fixtures';
+import { E2E_BASE_URL, PLATFORM_ADMIN } from './fixtures';
 import { codeForSecret, codeForSetupKey } from './totp';
 
 /** How long Better Auth's sign-in rate limit window lasts (3 attempts per 10 seconds). */
@@ -321,6 +321,23 @@ export async function openAccountSettings(page: Page): Promise<void> {
 export async function openSignInLink(page: Page, url: string): Promise<void> {
   await page.goto(url);
   await page.getByRole('button', { name: 'Continue signing in' }).click();
+}
+
+/**
+ * Opens a link from an email the way a click in a webmail tab does: a
+ * navigation a person made from another site (`Sec-Fetch-Site: cross-site`,
+ * `Sec-Fetch-User: ?1`), which the link in an email about a request needs to
+ * sign in straight away (`isPersonsClick`, decision 0035).
+ *
+ * @param page - The browser page.
+ * @param url - The link, absolute or a path on the test server.
+ */
+export async function clickLinkInEmail(page: Page, url: string): Promise<void> {
+  const href = new URL(url, E2E_BASE_URL).toString();
+  await page.goto('about:blank');
+  await page.setContent(`<a href="${href.replaceAll('"', '&quot;')}">Open the request</a>`);
+  await page.getByRole('link', { name: 'Open the request' }).click();
+  await page.waitForURL((current) => current.origin === new URL(E2E_BASE_URL).origin);
 }
 
 /** The cookies and local storage of a signed-in browser context. */

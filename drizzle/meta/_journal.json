@@ -155,6 +155,13 @@
       "when": 1795273336992,
       "tag": "0021_request_emails",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1795289757315,
+      "tag": "0024_request_sign_in_links",
+      "breakpoints": true
     }
   ]
 }

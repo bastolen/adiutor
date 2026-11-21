@@ -33,6 +33,7 @@
     "devices": {
       "thisDevice": "Dit apparaat",
       "mfaVerified": "Met MFA bevestigd",
+      "fromRequestLink": "E-maillink",
       "signedInAgo": "Ingelogd <time></time>"
     },
     "invitations": {

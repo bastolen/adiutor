@@ -17,6 +17,12 @@ export interface ActorMfa {
   canConfirmSessions: boolean;
   /** Whether this session's sign-in, or a later step-up, counts ({@link isSessionMfaVerified}). */
   sessionMfaVerified: boolean;
+  /**
+   * Whether this session was started from the link in an email about a
+   * request (`SessionMfa.fromRequestLink`), which is never sent to the
+   * step-up page ({@link mustStepUp}).
+   */
+  fromRequestLink: boolean;
   /** Until when this session may change sign-in methods ({@link mfaConfirmedUntil}). */
   mfaConfirmedUntil: Date | null;
   /**
@@ -47,14 +53,28 @@ export function mustSetUpMfa(
  * requires MFA whose only second step doesn't count yet (a provider next to
  * a password), so whoever set that password can't set MFA up for them.
  *
+ * Never a session started from the link in an email about a request
+ * (decision 0035): that link signs its recipient in for normal use, whatever
+ * their role. It proved no second factor, so every change that needs a
+ * recent confirmation still asks for one straight away
+ * ({@link needsRecentConfirmation}, `mfaConfirmedUntil`), and so does
+ * setting up MFA when the role requires it ({@link mustSetUpMfa} still
+ * applies).
+ *
  * @param actor - The user's MFA facts.
  * @returns Whether they're sent to the step-up page.
  */
 export function mustStepUp(
-  actor: Pick<ActorMfa, 'canConfirmSessions' | 'mfaEnabled' | 'mfaRequired' | 'sessionMfaVerified'>,
+  actor: Pick<
+    ActorMfa,
+    'canConfirmSessions' | 'mfaEnabled' | 'mfaRequired' | 'sessionMfaVerified' | 'fromRequestLink'
+  >,
 ): boolean {
   return (
-    actor.canConfirmSessions && (actor.mfaEnabled || actor.mfaRequired) && !actor.sessionMfaVerified
+    !actor.fromRequestLink &&
+    actor.canConfirmSessions &&
+    (actor.mfaEnabled || actor.mfaRequired) &&
+    !actor.sessionMfaVerified
   );
 }
 

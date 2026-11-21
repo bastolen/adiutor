@@ -87,6 +87,7 @@ export function request(
  *   sign-in or step-up just now), otherwise `null`.
  * @param options.signedInAt - When it signed in (Better Auth's `createdAt`); defaults to now.
  * @param options.sessionId - The session's ID; one per user unless a test has several.
+ * @param options.fromRequestLink - Whether the link in an email about a request started it.
  */
 export async function signedIn(
   userId: string,
@@ -95,6 +96,7 @@ export async function signedIn(
     verifiedAt?: Date | null;
     signedInAt?: Date;
     sessionId?: string;
+    fromRequestLink?: boolean;
   } = {},
 ): Promise<void> {
   const found = firstRow(
@@ -112,6 +114,7 @@ export async function signedIn(
       mfaVerified: Boolean(options.verifiedWith),
       mfaMethod: options.verifiedWith ?? null,
       mfaVerifiedAt: options.verifiedAt === undefined ? justNow : options.verifiedAt,
+      fromRequestLink: options.fromRequestLink ?? false,
     },
     user: { id: userId, twoFactorEnabled: found.twoFactorEnabled },
   } as unknown as Awaited<ReturnType<typeof getSessionFromCtx>>);

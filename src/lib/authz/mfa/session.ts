@@ -28,6 +28,15 @@ export interface SessionMfa {
   mfaMethod: string | null;
   /** When it was proven, if known (Better Auth may pass a string). */
   mfaVerifiedAt: Date | string | null;
+  /**
+   * Whether it was started from the link in an email about a request
+   * (decision 0035): it isn't sent to the step-up page (`mustStepUp`), but
+   * it proved no second factor, so it opens no window for changing sign-in
+   * methods, and it never counts as a fresh sign-in ({@link signedInAtOf}).
+   * Missing or `null` counts as `false`; the rules about second steps don't
+   * read it.
+   */
+  fromRequestLink?: boolean | null;
 }
 
 /** A session's MFA facts as a reader gets them: any may be missing or `null`. */
@@ -38,14 +47,39 @@ export type SessionMfaInput = { [Key in keyof SessionMfa]?: SessionMfa[Key] | nu
  * a hook or a query), where any may be missing, into what the rules take.
  *
  * @param raw - The session, or just its MFA fields.
- * @returns The facts, with a missing `mfaVerified` as `false` and missing others as `null`.
+ * @returns The facts, with a missing `mfaVerified` or `fromRequestLink` as
+ *   `false` and missing others as `null`.
  */
-export function sessionMfaOf(raw: SessionMfaInput): SessionMfa {
+export function sessionMfaOf(raw: SessionMfaInput): SessionMfa & { fromRequestLink: boolean } {
   return {
     mfaVerified: raw.mfaVerified ?? false,
     mfaMethod: raw.mfaMethod ?? null,
     mfaVerifiedAt: raw.mfaVerifiedAt ?? null,
+    fromRequestLink: raw.fromRequestLink ?? false,
   };
+}
+
+/**
+ * When a session signed in, for the one-hour rule (`needsFreshSignIn`): its
+ * `createdAt`, except for a session started from the link in an email about
+ * a request, which never counts as a fresh sign-in. That link works for 14
+ * days and for whoever has the email, so it proves nothing recent: an
+ * account without a second step signs in again before it adds its first way
+ * in, like any old session.
+ *
+ * @param session - The session's sign-in time and whether a request link started it.
+ * @param session.createdAt - When it signed in, if known (Better Auth may pass a string).
+ * @param session.fromRequestLink - Whether the link in an email about a request started it.
+ * @returns The sign-in time, or `null` when it's unknown or doesn't count.
+ */
+export function signedInAtOf(session: {
+  createdAt?: Date | string | null;
+  fromRequestLink?: boolean | null;
+}): Date | null {
+  if (session.fromRequestLink || !session.createdAt) {
+    return null;
+  }
+  return new Date(session.createdAt);
 }
 
 /** The second-factor method of each Better Auth endpoint that proves one. */

@@ -69,6 +69,7 @@ export const session = pgTable(
     mfaVerified: boolean('mfa_verified').default(false),
     mfaMethod: text('mfa_method'),
     mfaVerifiedAt: timestamp('mfa_verified_at', { withTimezone: true }),
+    fromRequestLink: boolean('from_request_link').default(false),
   },
   (table) => [index('session_userId_idx').on(table.userId)],
 );

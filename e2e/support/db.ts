@@ -24,6 +24,7 @@ import { type Locale, LOCALES } from '../../src/lib/i18n/locales';
 import { INVITATION_VALID_DAYS } from '../../src/lib/invitation-lifetimes';
 import type { RequestPriority, RequestStatus } from '../../src/lib/requests';
 import { EMAIL_LINK_MINUTES, EMAIL_LINK_PATH } from '../../src/lib/sign-in/email-link';
+import { REQUEST_LINK_DAYS } from '../../src/lib/sign-in/request-link';
 import {
   emailLinkVerificationIdentifier,
   generateToken,
@@ -468,6 +469,46 @@ export async function storeSignInLink(email: string): Promise<string> {
     });
   });
   return `${EMAIL_LINK_PATH}?${new URLSearchParams({ token, callbackURL: '/dashboard' })}`;
+}
+
+/**
+ * Stores the link in an email about a request the way the job that sends
+ * the email does (only the token's hash, for 14 days), without sending an
+ * email, for tests that open it (decision 0035).
+ *
+ * @param email - The address of the person it signs in.
+ * @param number - The number of the request it opens.
+ * @param options - Options.
+ * @param options.ended - Store it as ended already, as signing out everywhere leaves it.
+ * @returns The link's token (`requestLinkPath` builds the link, `requestLinkPagePath` its
+ *   confirmation page).
+ */
+export async function storeRequestLink(
+  email: string,
+  number: number,
+  { ended = false } = {},
+): Promise<string> {
+  const token = generateToken();
+  await withTestDatabase(async (db) => {
+    const person = firstRow(
+      await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, email)),
+      'the person',
+    );
+    const stored = firstRow(
+      await db
+        .select({ id: schema.request.id })
+        .from(schema.request)
+        .where(eq(schema.request.number, number)),
+      'the request',
+    );
+    await db.insert(schema.requestSignInLink).values({
+      userId: person.id,
+      requestId: stored.id,
+      tokenHash: hashToken(token),
+      expiresAt: ended ? sql`now()` : sql`now() + make_interval(days => ${REQUEST_LINK_DAYS})`,
+    });
+  });
+  return token;
 }
 
 /**

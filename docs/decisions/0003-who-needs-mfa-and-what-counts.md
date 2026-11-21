@@ -1,6 +1,6 @@
 # 0003. Who needs MFA, and what counts
 
-- **Status:** Accepted
+- **Status:** Accepted; a link in an email about a request skips the step-up page since [0035](0035-sign-in-links-in-request-emails.md)
 - **Date:** 2026-11-07 (recorded after the decision was made)
 
 ## Context

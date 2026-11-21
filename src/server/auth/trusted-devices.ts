@@ -23,9 +23,10 @@ const TRUST_DEVICE_PREFIX = 'trust-device-';
  * verification turned off, an authenticator app is set up next to email
  * codes, their password is changed or reset, they sign out one or all of
  * their other devices on the Security page, their account is deactivated, or
- * they're signed out everywhere (by an Admin or from the command line). Most
- * of these go through `endSessionsOf` in `./sessions.ts`, which ends the
- * sessions and forgets the devices together.
+ * they're signed out everywhere (by an Admin or from the command line). Each
+ * of these calls `forgetSecondStepSkips` (`./second-step-skips.ts`), which
+ * also ends the links in emails about requests; most go through
+ * `endSessionsOf` in `./sessions.ts`, which ends the sessions too.
  *
  * @param db - Database client or transaction.
  * @param userId - The user.

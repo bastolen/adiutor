@@ -24,8 +24,8 @@ import {
 } from '../auth-guards';
 import { loadMfaContext } from '../mfa-state';
 import { requestState } from '../request-state';
+import { forgetSecondStepSkips } from '../second-step-skips';
 import { signedSession } from '../signed-session';
-import { forgetTrustedDevices } from '../trusted-devices';
 import {
   clearCookiesAtSignOut,
   clearStaleProviderLinkedCookie,
@@ -141,8 +141,9 @@ async function reactToSignInChange(
       if (sessionUser.twoFactorEnabled && finishesAuthenticatorSetup(ctx)) {
         // Not a step-up: this code finished setting up an authenticator app next to email codes
         // (the guard checked this request), so it's a new way to sign in. Email codes no longer
-        // count, so neither does a browser trusted after one: every trusted device is forgotten.
-        await forgetTrustedDevices(db, userId);
+        // count, so neither does a browser trusted after one: every trusted device is forgotten,
+        // and every link in an email about a request ended.
+        await forgetSecondStepSkips(db, userId);
         await markSessionVerified(ctx.context.session.session.id, 'authenticator');
         await auditAndNotify(ctx, 'two_factor_enabled', userId, { details: { method } });
       } else if (sessionUser.twoFactorEnabled) {
@@ -163,7 +164,7 @@ async function reactToSignInChange(
       break;
     }
     case '/two-factor/disable':
-      await forgetTrustedDevices(db, userId);
+      await forgetSecondStepSkips(db, userId);
       await auditAndNotify(ctx, 'two_factor_disabled', userId);
       break;
     case '/two-factor/generate-backup-codes':
@@ -191,8 +192,9 @@ async function reactToSignInChange(
       break;
     case '/change-password':
       // A new password starts afresh, as a reset does: no earlier "Trust this device" skips the
-      // code step with it (a synced password manager would hand it to a stolen browser).
-      await forgetTrustedDevices(db, userId);
+      // code step with it (a synced password manager would hand it to a stolen browser), and no
+      // earlier link in an email about a request signs in.
+      await forgetSecondStepSkips(db, userId);
       await auditAndNotify(ctx, 'password_changed', userId);
       break;
     // Session revocation is audited where it happens (`sessions.ts`); Better Auth's own

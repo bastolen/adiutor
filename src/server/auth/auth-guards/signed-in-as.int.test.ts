@@ -3,6 +3,7 @@
  * member is signed in as a user: the session is theirs, so nothing may change
  * through it, except signing out; reading the session stays open.
  */
+import { APIError } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
 
@@ -32,12 +33,18 @@ const SECRET = 'adiutor-tests-secret';
  * @param path - The endpoint.
  * @param sessionCookie - What reading the signed session cookie gives: a session's token, `false`
  *   for a cookie whose signature doesn't check out, `null` without one.
+ * @param query - The query of a link the browser opens; empty by default.
  * @returns The context.
  */
-function requestWith(path: string, sessionCookie: string | false | null): AuthGuardContext {
+function requestWith(
+  path: string,
+  sessionCookie: string | false | null,
+  query: Record<string, string> = {},
+): AuthGuardContext {
   return {
     path,
     body: {},
+    query,
     /**
      * Reads the signed session cookie, as Better Auth does.
      *
@@ -105,6 +112,18 @@ describe('refusing Better Auth while signed in as someone', () => {
 
     await expect(beforeAuthRequest(requestWith(path, token))).rejects.toEqual(
       refusedWith(SIGNED_IN_AS_SOMEONE.code),
+    );
+  });
+
+  it('sends the link in an email about a request to its confirmation page instead', async () => {
+    const { token } = await sessionSignedInAs();
+
+    const refusal = await beforeAuthRequest(
+      requestWith('/request-link/sign-in', token, { token: 'link-token' }),
+    ).catch((error: unknown) => error);
+    expect(refusal).toBeInstanceOf(APIError);
+    expect(refusal instanceof APIError ? new Headers(refusal.headers).get('location') : null).toBe(
+      '/auth/request-link?token=link-token',
     );
   });
 

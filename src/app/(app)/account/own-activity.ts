@@ -69,6 +69,7 @@ const SIGN_IN_METHODS = {
   backup_code: true,
   passkey: true,
   email_link: true,
+  request_link: true,
 } as const satisfies Record<Exclude<SignInMethod, OAuthProvider | 'other'>, true>;
 
 /**

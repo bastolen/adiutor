@@ -3,6 +3,7 @@
  * that created the session.
  */
 import { isMfaProvider, isOAuthProvider, type OAuthProvider } from '../../sign-in/oauth-providers';
+import { REQUEST_LINK_ENDPOINT } from '../../sign-in/request-link';
 import { mfaMethodFromPath } from './session';
 
 /** How someone signed in, for the audit log. */
@@ -13,6 +14,7 @@ export type SignInMethod =
   | 'backup_code'
   | 'passkey'
   | 'email_link'
+  | 'request_link'
   | OAuthProvider
   | 'other';
 
@@ -83,6 +85,8 @@ export function signInMethodFromPath(
       return 'passkey';
     case '/magic-link/verify':
       return 'email_link';
+    case REQUEST_LINK_ENDPOINT:
+      return 'request_link';
     default:
       if (path?.startsWith('/callback/')) {
         return isOAuthProvider(providerId) ? providerId : 'other';

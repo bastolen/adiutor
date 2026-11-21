@@ -173,7 +173,7 @@ describe('answerTickRequest', () => {
     expect('runs' in response.body && response.body.runs).toContainEqual({
       job: 'expired-sign-in-data',
       status: 'succeeded',
-      summary: { verifications: 0, sessions: 0, rateLimits: 0 },
+      summary: { verifications: 0, requestLinks: 0, sessions: 0, rateLimits: 0 },
     });
     // It did nothing, so the history leaves it out; its state says it ran.
     expect(

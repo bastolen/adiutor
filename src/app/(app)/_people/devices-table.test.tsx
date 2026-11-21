@@ -31,15 +31,19 @@ function device(overrides: Partial<UserSession>): UserSession {
     updatedAt: new Date('2026-01-02T10:00:00Z'),
     expiresAt: new Date('2026-02-02T10:00:00Z'),
     mfaVerified: false,
+    fromRequestLink: false,
     ...overrides,
   };
 }
 
-/** Two devices: the viewer's own (MFA verified) and another one. */
+/**
+ * Two devices: the viewer's own (MFA verified) and another one, signed in
+ * with the link in an email about a request.
+ */
 const DEVICES = {
   items: [
     device({ id: 'session-1', mfaVerified: true }),
-    device({ id: 'session-2', userAgent: null, ipAddress: null }),
+    device({ id: 'session-2', userAgent: null, ipAddress: null, fromRequestLink: true }),
   ],
   total: 2,
   page: 1,
@@ -79,8 +83,10 @@ describe('DevicesTable', () => {
     expect(own).toHaveTextContent('This device');
     expect(own).toHaveTextContent('MFA Verified');
     expect(own).toHaveTextContent('203.0.113.7');
+    expect(own).not.toHaveTextContent('Email link');
     expect(other).not.toHaveTextContent('This device');
     expect(other).not.toHaveTextContent('MFA Verified');
+    expect(other).toHaveTextContent('Email link');
   });
 
   it('marks the sorted column', () => {

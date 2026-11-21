@@ -547,6 +547,54 @@ describe('a sign-in from the last hour', () => {
   });
 });
 
+describe('a session the link in an email about a request started', () => {
+  it('asks for a confirmation straight away, though it signed in just now', async () => {
+    const support = await staffActor(db, 'support');
+    await enableTwoFactor(db, support.id);
+    await addPasskey(db, support.id);
+
+    await signedIn(support.id, { fromRequestLink: true });
+    expect(
+      await outcomesOf([
+        '/passkey/generate-register-options',
+        '/passkey/update-passkey',
+        '/two-factor/disable',
+        '/two-factor/generate-backup-codes',
+      ]),
+    ).toEqual([
+      'MFA_VERIFICATION_REQUIRED',
+      'MFA_VERIFICATION_REQUIRED',
+      'MFA_VERIFICATION_REQUIRED',
+      'MFA_VERIFICATION_REQUIRED',
+    ]);
+  });
+
+  it('asks for the same from a role that requires MFA', async () => {
+    const manager = await staffActor(db, 'manager');
+    await addPasskey(db, manager.id);
+
+    await signedIn(manager.id, { fromRequestLink: true });
+    expect(await outcomeOf('/passkey/generate-register-options')).toBe('MFA_VERIFICATION_REQUIRED');
+  });
+
+  it('never counts as a fresh sign-in on an account without a second step', async () => {
+    const newcomer = await createUser(db, 'newcomer@adiutor.test');
+    await connectGitHub(db, newcomer, false);
+
+    await signedIn(newcomer, { fromRequestLink: true });
+    expect(await outcomeOf('/passkey/generate-register-options')).toBe('SESSION_NOT_FRESH');
+    expect(await outcomeOf('/two-factor/enable')).toBe('SESSION_NOT_FRESH');
+  });
+
+  it('allows the change once it was confirmed with a second step', async () => {
+    const support = await staffActor(db, 'support');
+    await enableTwoFactor(db, support.id);
+
+    await signedIn(support.id, { fromRequestLink: true, verifiedWith: 'authenticator' });
+    expect(await outcomeOf('/passkey/generate-register-options')).toBe('allowed');
+  });
+});
+
 describe('finishing an authenticator app setup next to email codes', () => {
   it('needs a recent confirmation, like adding any other sign-in method', async () => {
     const support = await staffActor(db, 'support');

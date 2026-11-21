@@ -62,6 +62,7 @@ export {
   mfaConfirmedUntil,
   isMfaConfirmedRecently,
   sessionMfaOf,
+  signedInAtOf,
 } from './session';
 export type { MfaMethod, SessionMfa, SessionMfaInput } from './session';
 export { hasStrongMfa, strongMfaConfirmedUntil, strongStepUpMethods } from './strong';

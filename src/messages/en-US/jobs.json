@@ -3,7 +3,7 @@
     "descriptions": {
       "leftover-provider-tokens": "Clears the tokens a sign-in provider gave Adiutor when a sign-in with it didn’t finish.",
       "finished-sign-ins-as-users": "Ends the sign-ins as a user whose time is up, and records it in the audit log.",
-      "expired-sign-in-data": "Deletes expired sign-in links, codes and sessions, and rate limits that are over.",
+      "expired-sign-in-data": "Deletes expired sign-in links, codes and sessions, the links in emails about requests that ended, and rate limits that are over.",
       "invitation-reminders": "Reminds people of invitations they haven’t accepted, once, two days before they expire.",
       "retention": "Deletes audit events after a year, errors after 7 days, and the history of jobs after 30 days.",
       "security-notice": "Tells people about changes to the security of their account.",
@@ -20,6 +20,7 @@
       "accounts": "{count, plural, one {# account’s tokens cleared} other {# accounts’ tokens cleared}}",
       "ended": "{count, plural, one {# sign-in as a user ended} other {# sign-ins as a user ended}}",
       "verifications": "{count, plural, one {# link or code deleted} other {# links and codes deleted}}",
+      "requestLinks": "{count, plural, one {# link from a request email deleted} other {# links from request emails deleted}}",
       "sessions": "{count, plural, one {# session deleted} other {# sessions deleted}}",
       "rateLimits": "{count, plural, one {# rate limit deleted} other {# rate limits deleted}}",
       "auditEvents": "{count, plural, one {# audit event deleted} other {# audit events deleted}}",
