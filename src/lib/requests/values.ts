@@ -191,6 +191,16 @@ export const STAFF_ONLY_ENTRY_KINDS = [
 ] as const satisfies readonly RequestEntryKind[];
 
 /**
+ * What someone on a request is there as: assigned to it (a staff member who
+ * works on it), or subscribed to it (anyone who follows it). Someone can be
+ * both. Everyone on a request is who a later notification about it reaches.
+ */
+export const REQUEST_PARTICIPANT_ROLES = ['assignee', 'subscriber'] as const;
+
+/** One role on a request. */
+export type RequestParticipantRole = (typeof REQUEST_PARTICIPANT_ROLES)[number];
+
+/**
  * What an `assignee` entry records about the staff member it's about: that
  * they were assigned to the request, or removed from it. Stored as the
  * entry's new value, so every change keeps one.

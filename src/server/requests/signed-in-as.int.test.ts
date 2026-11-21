@@ -3,13 +3,15 @@
  * signed in as a user (decision 0028): each kind of change records the staff
  * member, the work counts against the staff member's rate limits, a sign-in
  * that ended changes nothing, and only the user and the staff who see the
- * audit log are told. Which operations are allowed is in the authorization
- * matrix.
+ * audit log are told. A change of subscriptions, which leaves no history, goes
+ * to the audit log instead (decision 0025). Which operations are allowed is
+ * in the authorization matrix.
  */
 import { and, eq, like } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import {
+  auditEvent,
   impersonation,
   rateLimitBucket,
   request,
@@ -21,6 +23,7 @@ import { firstRow } from '@/lib/defined';
 
 import { createCompany, memberActor, staffActor } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
+import { listOwnActivity } from '../audit';
 import { changeAssignees } from './assignees';
 import { getRequest } from './detail';
 import updateRequestDetails from './details';
@@ -29,6 +32,7 @@ import addNote from './notes';
 import raiseRequest from './raise';
 import replyToRequest from './reply';
 import changeRequestStatus from './status';
+import { subscribe, unsubscribe } from './subscribers';
 import { ctx, db, storeRequest } from './test-helpers';
 import { addRequestType } from './types';
 
@@ -316,5 +320,62 @@ describe('who is told about work done while signed in as someone', () => {
     const theirs = await getRequest(ctx, colleague, raised.id);
     expect(theirs).not.toHaveProperty('raisedSignedInAs');
     expect(theirs.description).not.toHaveProperty('editedSignedInAs');
+  });
+});
+
+describe('subscriptions changed while signed in as someone', () => {
+  it('go to the audit log, by the staff member about the user, and not to the user’s own activity', async () => {
+    const company = await createCompany(db);
+    const admin = await staffActor(db, 'platform_admin');
+    const watcher = await memberActor(db, company.id, 'watcher');
+    const raised = await storeRequest(company.id);
+    const asWatcher = await signInAs(admin, watcher);
+
+    await expect(subscribe(ctx, asWatcher, { request: raised.id })).resolves.toEqual({
+      subscribed: true,
+    });
+    await expect(unsubscribe(ctx, asWatcher, { request: raised.id })).resolves.toEqual({
+      unsubscribed: true,
+    });
+
+    const events = await db
+      .select()
+      .from(auditEvent)
+      .where(eq(auditEvent.action, 'request_subscribers_changed'))
+      .orderBy(auditEvent.at);
+    expect(events).toHaveLength(2);
+    expect(events[0]).toMatchObject({
+      actorUserId: admin.id,
+      targetUserId: watcher.id,
+      companyId: company.id,
+      // The staff member's name as the sign-in has it, so the line survives their account.
+      details: { requestId: raised.id, subscribed: [watcher.id], staffMember: admin.name },
+    });
+    expect(events[1]).toMatchObject({ details: { unsubscribed: [watcher.id] } });
+    const own = await listOwnActivity(ctx, watcher);
+    expect(own.map(({ action }) => action)).not.toContain('request_subscribers_changed');
+  });
+
+  it('count against the staff member’s rate limit, and the user’s own change records nothing', async () => {
+    const company = await createCompany(db);
+    const admin = await staffActor(db, 'platform_admin');
+    const client = await memberActor(db, company.id, 'client');
+    const raised = await storeRequest(company.id);
+
+    await subscribe(ctx, await signInAs(admin, client), { request: raised.id });
+    await unsubscribe(ctx, client, { request: raised.id });
+
+    const buckets = await db
+      .select({ key: rateLimitBucket.key })
+      .from(rateLimitBucket)
+      .where(like(rateLimitBucket.key, 'request-change:user:%'));
+    expect(buckets.map(({ key }) => key).sort()).toEqual(
+      [`request-change:user:${admin.id}`, `request-change:user:${client.id}`].sort(),
+    );
+    const events = await db
+      .select({ actorUserId: auditEvent.actorUserId })
+      .from(auditEvent)
+      .where(eq(auditEvent.action, 'request_subscribers_changed'));
+    expect(events).toEqual([{ actorUserId: admin.id }]);
   });
 });

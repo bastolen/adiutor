@@ -1337,9 +1337,96 @@ test.describe('requests', () => {
     });
   });
 
+  test.describe('as the staff, on a request’s subscribers', () => {
+    test.beforeEach(async ({ context }) => {
+      await context.addCookies(adminState.cookies);
+    });
+
+    test('the subscribers dialog is worked with the keyboard, and returns focus', async ({
+      page,
+    }) => {
+      await page.goto(await storeOwnRequest('Subscribers changed with the keyboard'));
+      const details = page.getByRole('region', { name: 'Details' });
+      const change = details.getByRole('button', { name: 'Change subscribers' });
+      const dialog = page.getByRole('dialog', { name: 'Change who’s subscribed' });
+      const finance = dialog.getByRole('checkbox', { name: FINANCE_STAFF.name, exact: true });
+
+      // Enter opens it with focus inside; Space ticks; Escape closes it without saving.
+      await change.focus();
+      await page.keyboard.press('Enter');
+      await expect(dialog).toBeVisible();
+      await expect(dialog.locator(':focus')).toHaveCount(1);
+      await finance.focus();
+      await page.keyboard.press('Space');
+      await expect(finance).toBeChecked();
+      await page.keyboard.press('Escape');
+      await expect(dialog).toHaveCount(0);
+      await expect(change).toBeFocused();
+
+      // Opened again it starts from the request as it is; Enter in it saves.
+      await page.keyboard.press('Enter');
+      await expect(finance).not.toBeChecked();
+      await finance.focus();
+      await page.keyboard.press('Space');
+      await page.keyboard.press('Enter');
+      await expect(toasts(page)).toContainText('Subscribers saved.');
+      await expect(dialog).toHaveCount(0);
+      await expect(change).toBeFocused();
+      // Whoever raised it, and now Finance.
+      await expect(details.getByRole('button', { name: 'Show the 2 subscribers' })).toBeVisible();
+    });
+  });
+
   test.describe('as someone at the company', () => {
     test.beforeEach(async ({ context }) => {
       await context.addCookies(clientState.cookies);
+    });
+
+    test('the subscribers’ names open from their avatars, and Escape returns focus', async ({
+      page,
+    }) => {
+      await page.goto(await storeOwnRequest('Subscribers read with the keyboard'));
+      // Whoever raised a request follows it.
+      const avatars = page
+        .getByRole('region', { name: 'Details' })
+        .getByRole('button', { name: 'Show the 1 subscriber' });
+      const names = page.getByRole('dialog', { name: 'Subscribers' });
+
+      // Enter opens the names, with focus in the panel; Escape closes it and returns focus.
+      await avatars.focus();
+      await expect(avatars).toHaveAttribute('aria-expanded', 'false');
+      await page.keyboard.press('Enter');
+      await expect(names).toContainText(REQUESTS_CLIENT.name);
+      await expect(avatars).toHaveAttribute('aria-expanded', 'true');
+      await expect(names).toBeFocused();
+      await page.keyboard.press('Escape');
+      await expect(names).toHaveCount(0);
+      await expect(avatars).toBeFocused();
+
+      // Space opens it too.
+      await page.keyboard.press('Space');
+      await expect(names).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(names).toHaveCount(0);
+      await expect(avatars).toBeFocused();
+    });
+
+    test('unsubscribing and subscribing again keep focus on the one button', async ({ page }) => {
+      await page.goto(await storeOwnRequest('A request followed with the keyboard'));
+      const details = page.getByRole('region', { name: 'Details' });
+      // Whoever raised a request follows it.
+      const unsubscribe = details.getByRole('button', { name: 'Unsubscribe' });
+      const subscribe = details.getByRole('button', { name: 'Subscribe', exact: true });
+
+      await unsubscribe.focus();
+      await page.keyboard.press('Enter');
+      await expect(toasts(page)).toContainText('You’re no longer subscribed to this request.');
+      // The button says what it does now, and is still where the keyboard is.
+      await expect(unsubscribe).toHaveCount(0);
+      await expect(subscribe).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(toasts(page)).toContainText('You’re subscribed to this request.');
+      await expect(unsubscribe).toBeFocused();
     });
 
     test('a description is edited with the keyboard, and focus returns to its Edit button', async ({

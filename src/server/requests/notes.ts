@@ -13,6 +13,7 @@ import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
 import { actingUserId, signedInAsWork } from '../signed-in-as';
 import { CHANGE_MOMENT, changeRequest, requestToChange } from './change';
 import { storeMentions } from './mentions';
+import { subscribeAutomatically } from './subscribers';
 
 /**
  * Adds an internal note to a request's conversation, written by a staff
@@ -68,12 +69,15 @@ export default async function addNote(
         .returning({ id: requestEntry.id }),
       'the new note',
     );
+    // Whoever writes a note follows the request; of the people it mentions, only the staff do.
+    await subscribeAutomatically(tx, locked.id, [actor.id]);
     // The people the note mentions, once the note they belong to is there.
     await storeMentions(tx, actor, {
       companyId: locked.companyId,
       requestId: locked.id,
       entryId: note.id,
       written: body,
+      staffOnly: true,
     });
   });
 }

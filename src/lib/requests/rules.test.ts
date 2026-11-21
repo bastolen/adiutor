@@ -18,6 +18,7 @@ import {
   requestSide,
   statusAfterReply,
   statusChoices,
+  subscriberScope,
 } from './rules';
 import { REQUEST_STATUSES, type RequestStatus } from './values';
 
@@ -230,5 +231,27 @@ describe('mayEditNote', () => {
     expect(mayEditNote(support, 'done', true)).toBe(false);
     // A staff member who now only reads requests (Finance) can't edit what they wrote.
     expect(mayEditNote(finance, 'open', true)).toBe(false);
+  });
+});
+
+describe('subscriberScope', () => {
+  it('lets the staff who work on requests change anyone’s subscription', () => {
+    expect(subscriberScope(permissionsOf('platform_admin', null))).toBe('everyone');
+    expect(subscriberScope(permissionsOf('manager', null))).toBe('everyone');
+    expect(subscriberScope(support)).toBe('everyone');
+    // Also in a company they're a member of.
+    expect(subscriberScope(permissionsOf('support', 'watcher'))).toBe('everyone');
+  });
+
+  it('lets a company’s Admins change their colleagues’', () => {
+    expect(subscriberScope(permissionsOf(null, 'admin'))).toBe('colleagues');
+    expect(subscriberScope(permissionsOf('finance', 'admin'))).toBe('colleagues');
+  });
+
+  it('leaves everyone else their own: Finance, Clients and Watchers', () => {
+    expect(subscriberScope(finance)).toBe('self');
+    expect(subscriberScope(client)).toBe('self');
+    expect(subscriberScope(watcher)).toBe('self');
+    expect(subscriberScope(permissionsOf('finance', 'client'))).toBe('self');
   });
 });

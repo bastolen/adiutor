@@ -86,6 +86,8 @@ function detailOf(detail: Partial<RequestDetail> = {}): RequestDetail {
     priority: null,
     raisedBy: CASEY,
     assignees: [],
+    subscribers: [],
+    subscribed: false,
     createdAt: new Date('2026-11-10T09:00:00Z'),
     firstResponseAt: null,
     lastActivityAt: new Date('2026-11-10T09:00:00Z'),

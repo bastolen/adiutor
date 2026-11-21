@@ -5,7 +5,7 @@
  */
 import { and, count, eq, ilike, inArray, isNull, like, not, or, type SQL, sql } from 'drizzle-orm';
 
-import { company, request, requestAssignee, requestType, user } from '@/db/schema';
+import { company, request, requestParticipant, requestType, user } from '@/db/schema';
 import { getPermissions } from '@/lib/authz/permissions';
 import { firstRow } from '@/lib/defined';
 import {
@@ -212,10 +212,15 @@ async function assigneesOf(
     return assigned;
   }
   const rows = await ctx.db
-    .select({ requestId: requestAssignee.requestId, id: user.id, name: user.name })
-    .from(requestAssignee)
-    .innerJoin(user, eq(requestAssignee.userId, user.id))
-    .where(inArray(requestAssignee.requestId, requestIds))
+    .select({ requestId: requestParticipant.requestId, id: user.id, name: user.name })
+    .from(requestParticipant)
+    .innerJoin(user, eq(requestParticipant.userId, user.id))
+    .where(
+      and(
+        inArray(requestParticipant.requestId, requestIds),
+        eq(requestParticipant.role, 'assignee'),
+      ),
+    )
     .orderBy(...orderTerms('asc', textOrder(user.name), user.id));
   const pictures = await loadPictures(
     ctx.db,
@@ -245,8 +250,8 @@ function assignedTo(assignee: string, actor: Actor): SQL | undefined {
    * @returns The condition.
    */
   const anyone = (userId?: string) =>
-    sql`exists (select 1 from ${requestAssignee} where ${requestAssignee.requestId} = ${request.id}${
-      userId === undefined ? sql`` : sql` and ${requestAssignee.userId} = ${userId}`
+    sql`exists (select 1 from ${requestParticipant} where ${requestParticipant.requestId} = ${request.id} and ${requestParticipant.role} = 'assignee'${
+      userId === undefined ? sql`` : sql` and ${requestParticipant.userId} = ${userId}`
     })`;
   if (assignee === 'none') {
     return not(anyone());

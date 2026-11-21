@@ -1,5 +1,5 @@
 {
-  "id": "8ffd75b8-4358-45ed-b5d0-98c7efdac52b",
+  "id": "8a08403e-eae6-4b77-886f-0fc5b4510b92",
   "prevId": "649a0f99-7660-437d-a3fc-b2bcdc55ec2b",
   "version": "7",
   "dialect": "postgresql",
@@ -2134,115 +2134,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.request_assignee": {
-      "name": "request_assignee",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "uuidv7()"
-        },
-        "request_id": {
-          "name": "request_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "request_assignee_request_user_idx": {
-          "name": "request_assignee_request_user_idx",
-          "columns": [
-            {
-              "expression": "request_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "request_assignee_user_idx": {
-          "name": "request_assignee_user_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "request_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "request_assignee_request_id_request_id_fk": {
-          "name": "request_assignee_request_id_request_id_fk",
-          "tableFrom": "request_assignee",
-          "tableTo": "request",
-          "columnsFrom": [
-            "request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "request_assignee_user_id_user_id_fk": {
-          "name": "request_assignee_user_id_user_id_fk",
-          "tableFrom": "request_assignee",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.request_counter": {
       "name": "request_counter",
       "schema": "",
@@ -2681,6 +2572,138 @@
         "request_mention_side_valid": {
           "name": "request_mention_side_valid",
           "value": "\"request_mention\".\"side\" in ('company', 'staff')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.request_participant": {
+      "name": "request_participant",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "request_participant_request_user_role_idx": {
+          "name": "request_participant_request_user_role_idx",
+          "columns": [
+            {
+              "expression": "request_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "role",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "request_participant_user_idx": {
+          "name": "request_participant_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "role",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "request_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "request_participant_request_id_request_id_fk": {
+          "name": "request_participant_request_id_request_id_fk",
+          "tableFrom": "request_participant",
+          "tableTo": "request",
+          "columnsFrom": [
+            "request_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "request_participant_user_id_user_id_fk": {
+          "name": "request_participant_user_id_user_id_fk",
+          "tableFrom": "request_participant",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "request_participant_role_valid": {
+          "name": "request_participant_role_valid",
+          "value": "\"request_participant\".\"role\" in ('assignee', 'subscriber')"
         }
       },
       "isRLSEnabled": false
@@ -3716,13 +3739,6 @@
           "notNull": true,
           "default": "'en-US'"
         },
-        "offered_locales": {
-          "name": "offered_locales",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "array['en-US', 'nl-NL', 'es-ES']::text[]"
-        },
         "request_prefix": {
           "name": "request_prefix",
           "type": "text",
@@ -3781,14 +3797,6 @@
         "staff_settings_default_locale_valid": {
           "name": "staff_settings_default_locale_valid",
           "value": "\"staff_settings\".\"default_locale\" in ('en-US', 'nl-NL', 'es-ES')"
-        },
-        "staff_settings_offered_locales_known": {
-          "name": "staff_settings_offered_locales_known",
-          "value": "cardinality(\"staff_settings\".\"offered_locales\") > 0 and \"staff_settings\".\"offered_locales\" <@ array['en-US', 'nl-NL', 'es-ES']::text[]"
-        },
-        "staff_settings_default_locale_offered": {
-          "name": "staff_settings_default_locale_offered",
-          "value": "\"staff_settings\".\"default_locale\" = any(\"staff_settings\".\"offered_locales\")"
         }
       },
       "isRLSEnabled": false

@@ -23,7 +23,7 @@ import { endSessionsOf } from '../../auth/sessions';
 import { withSignInChangeLock } from '../../auth/sign-in-change-lock';
 import type { ServiceContext } from '../../context';
 import { notFoundError, ServiceError, parseId } from '../../errors';
-import { unassignFrom } from '../../requests';
+import { unassignFrom, unsubscribeFrom } from '../../requests';
 import { revokeInvitationsTo, revokeInvitesWithoutManager } from '../invitations';
 import { assertNotSoleAdmin } from './sole-admin';
 
@@ -210,6 +210,8 @@ export async function deactivate(
   await revokeInvitesWithoutManager(ctx, db, userId, { all: true });
   // A deactivated account works on no requests: off the ones it's on (requests come last).
   await unassignFrom(db, userId);
+  // And it follows none.
+  await unsubscribeFrom(db, userId);
 }
 
 /**

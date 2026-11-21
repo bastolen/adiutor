@@ -37,7 +37,7 @@ import type { ServiceContext } from '../context';
 import { forbiddenError, notFoundError, ServiceError, parseId } from '../errors';
 import { paginate, peopleOrder } from '../pagination';
 import { assertRoleChangeLimit } from '../rate-limit';
-import { unassignFrom } from '../requests';
+import { unassignFrom, unsubscribeFrom } from '../requests';
 import { revokeInvitationsTo, revokeInvitesWithoutManager } from './invitations';
 import { loadPictures } from './pictures';
 import getRequestPrefix from './request-prefix';
@@ -415,6 +415,8 @@ async function setStaffRole(
       if (!mayBeAssigned(getStaffPermissionsInCompanies({ platformRole: newRole }))) {
         await unassignFrom(tx, target.id);
       }
+      // And off the requests they followed that they can no longer read.
+      await unsubscribeFrom(tx, target.id);
       await recordEvent(
         ctx,
         {

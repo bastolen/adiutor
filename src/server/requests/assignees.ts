@@ -9,7 +9,7 @@ import { and, asc, count, eq, exists, inArray, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import type { DatabaseTransaction } from '@/db';
-import { company, request, requestAssignee, requestEntry, user } from '@/db/schema';
+import { company, request, requestParticipant, requestEntry, user } from '@/db/schema';
 import { getStaffPermissionsInCompanies } from '@/lib/authz/permissions';
 import { PLATFORM_ROLES } from '@/lib/authz/roles';
 import { firstRow } from '@/lib/defined';
@@ -35,6 +35,9 @@ export const MAX_ASSIGNEE_CHANGES = 50;
 
 /** The people a change adds or removes: user IDs, at most {@link MAX_ASSIGNEE_CHANGES}. */
 const assigneeIdsSchema = z.array(idSchema).max(MAX_ASSIGNEE_CHANGES);
+
+/** The rows of the people a request is assigned to, among everyone on it. */
+const ASSIGNED = eq(requestParticipant.role, 'assignee');
 
 /** The staff roles whose members can be assigned: those who work on requests. */
 const ASSIGNABLE_ROLES = PLATFORM_ROLES.filter((platformRole) =>
@@ -151,9 +154,9 @@ export async function changeAssignees(
       const onIt = new Set(
         (
           await tx
-            .select({ userId: requestAssignee.userId })
-            .from(requestAssignee)
-            .where(eq(requestAssignee.requestId, locked.id))
+            .select({ userId: requestParticipant.userId })
+            .from(requestParticipant)
+            .where(and(eq(requestParticipant.requestId, locked.id), ASSIGNED))
         ).map(({ userId }) => userId),
       );
       const adding = add.filter((id) => !onIt.has(id));
@@ -162,19 +165,23 @@ export async function changeAssignees(
         return { added: 0, removed: 0 };
       }
       if (adding.length > 0) {
-        await tx
-          .insert(requestAssignee)
-          .values(
-            adding.map((userId) => ({ requestId: locked.id, userId, createdAt: CHANGE_MOMENT })),
-          );
+        await tx.insert(requestParticipant).values(
+          adding.map((userId) => ({
+            requestId: locked.id,
+            userId,
+            role: 'assignee' as const,
+            createdAt: CHANGE_MOMENT,
+          })),
+        );
       }
       if (removing.length > 0) {
         await tx
-          .delete(requestAssignee)
+          .delete(requestParticipant)
           .where(
             and(
-              eq(requestAssignee.requestId, locked.id),
-              inArray(requestAssignee.userId, removing),
+              eq(requestParticipant.requestId, locked.id),
+              inArray(requestParticipant.userId, removing),
+              ASSIGNED,
             ),
           );
       }
@@ -221,9 +228,13 @@ export async function unassignFrom(tx: DatabaseTransaction, userId: string): Pro
       exists(
         tx
           .select({ one: sql`1` })
-          .from(requestAssignee)
+          .from(requestParticipant)
           .where(
-            and(eq(requestAssignee.requestId, request.id), eq(requestAssignee.userId, userId)),
+            and(
+              eq(requestParticipant.requestId, request.id),
+              eq(requestParticipant.userId, userId),
+              ASSIGNED,
+            ),
           ),
       ),
     )
@@ -233,17 +244,18 @@ export async function unassignFrom(tx: DatabaseTransaction, userId: string): Pro
     return 0;
   }
   const removed = await tx
-    .delete(requestAssignee)
+    .delete(requestParticipant)
     .where(
       and(
-        eq(requestAssignee.userId, userId),
+        eq(requestParticipant.userId, userId),
+        ASSIGNED,
         inArray(
-          requestAssignee.requestId,
+          requestParticipant.requestId,
           assigned.map(({ id }) => id),
         ),
       ),
     )
-    .returning({ requestId: requestAssignee.requestId });
+    .returning({ requestId: requestParticipant.requestId });
   if (removed.length === 0) {
     return 0;
   }
@@ -292,12 +304,13 @@ export async function listAssignableStaff(
 export async function countAssignedRequests(ctx: ServiceContext, actor: Actor): Promise<number> {
   const rows = await ctx.db
     .select({ total: count() })
-    .from(requestAssignee)
-    .innerJoin(request, eq(request.id, requestAssignee.requestId))
+    .from(requestParticipant)
+    .innerJoin(request, eq(request.id, requestParticipant.requestId))
     .innerJoin(company, eq(company.id, request.companyId))
     .where(
       and(
-        eq(requestAssignee.userId, actor.id),
+        eq(requestParticipant.userId, actor.id),
+        ASSIGNED,
         inArray(request.status, [...ACTIVE_REQUEST_STATUSES]),
         isNull(company.deactivatedAt),
         visibleRequests(requestScope(actor)),

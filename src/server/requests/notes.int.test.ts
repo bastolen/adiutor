@@ -21,8 +21,10 @@ import {
 import { RATE_LIMITS } from '../rate-limit';
 import { getRequest, THREAD_CHUNK } from './detail';
 import { editReply } from './edits';
-import { listMentionable, mentionKey } from './mentions';
+import mentionKey from './mention-key';
+import { listMentionable } from './mentions';
 import addNote from './notes';
+import { loadSubscribers } from './subscribers';
 import { ctx, db, storeEntry, storeRequest, storedRequest } from './test-helpers';
 
 /**
@@ -167,6 +169,61 @@ describe('addNote', () => {
     expect(rows).toMatchObject([{ userId: client.id, side: 'company' }]);
     const [note] = await history(raised.id);
     expect(note?.body).toBe(`Ask ${storedMentionMarker(rows[0]?.id ?? '')} first.`);
+  });
+});
+
+describe('who a note subscribes', () => {
+  /**
+   * The IDs of the people subscribed to a request.
+   *
+   * @param raised - The request.
+   * @param raised.id - Its ID.
+   * @param raised.companyId - Its company.
+   * @returns Their user IDs, sorted.
+   */
+  async function subscribers(raised: { id: string; companyId: string }) {
+    return (await loadSubscribers(db, raised)).map(({ id }) => id).sort();
+  }
+
+  it('subscribes its author and the staff it mentions, never someone at the company', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const manager = await staffActor(db, 'manager');
+    const client = await memberActor(db, company.id, 'client');
+    const raised = await storeRequest(company.id);
+    const staffMarker = writtenMentionMarker('Morgan Manager', mentionKey(company.id, manager.id));
+    const clientMarker = writtenMentionMarker('Casey Client', mentionKey(company.id, client.id));
+
+    await addNote(ctx, support, {
+      request: raised.id,
+      body: `${staffMarker}, can you check before we ask ${clientMarker}?`,
+    });
+
+    expect(await subscribers({ id: raised.id, companyId: company.id })).toEqual(
+      [support.id, manager.id].sort(),
+    );
+  });
+
+  it('subscribes nobody at the company when an edit of a note mentions them', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const client = await memberActor(db, company.id, 'client');
+    const raised = await storeRequest(company.id);
+    await addNote(ctx, support, { request: raised.id, body: 'Probably the toner.' });
+    const [note] = await db
+      .select({ id: requestEntry.id })
+      .from(requestEntry)
+      .where(eq(requestEntry.requestId, raised.id));
+    const marker = writtenMentionMarker('Casey Client', mentionKey(company.id, client.id));
+
+    await editReply(ctx, support, {
+      request: raised.id,
+      entry: note?.id ?? '',
+      text: `Probably the toner; ${marker} would know.`,
+      edits: 0,
+    });
+
+    expect(await subscribers({ id: raised.id, companyId: company.id })).toEqual([support.id]);
   });
 });
 

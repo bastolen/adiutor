@@ -38,7 +38,8 @@ import getStaffName from '../people/staff-name';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
 import { actingUserId, signedInAsWork } from '../signed-in-as';
 import { CHANGE_MOMENT, changeRequest, requestToChange, workingPermission } from './change';
-import { mentionKey, storeMentions } from './mentions';
+import mentionKey from './mention-key';
+import { storeMentions } from './mentions';
 
 /** Someone a stored text mentions, as its mention row names them. */
 export interface TextMention {
@@ -131,6 +132,8 @@ interface EditedText {
  * @param edit.companyId - The request's company.
  * @param edit.side - The side the editor acts as.
  * @param edit.names - The names of the two sides.
+ * @param edit.staffOnly - Whether only the staff read the text (an internal note): then only the
+ *   staff it mentions are subscribed.
  * @returns Whether the text changed.
  * @throws {ServiceError} `invalid` for a closed request (`errors.requests.closedNoEdit`),
  *   `conflict` when someone edited the text meanwhile (`errors.requests.textChanged`).
@@ -146,6 +149,7 @@ async function applyEdit(
     companyId: string;
     side: RequestSide;
     names: SideNames;
+    staffOnly: boolean;
   },
 ): Promise<{ changed: boolean }> {
   const { text, written, companyId, names } = edit;
@@ -214,12 +218,19 @@ async function applyEdit(
       .set({ body: written, bodyFormat: WRITTEN_TEXT_FORMAT, editedAt: CHANGE_MOMENT })
       .where(eq(requestEntry.id, text.entryId));
   }
-  await storeMentions(tx, actor, {
-    companyId,
-    requestId: text.requestId,
-    entryId: text.entryId,
-    written,
-  });
+  await storeMentions(
+    tx,
+    actor,
+    {
+      companyId,
+      requestId: text.requestId,
+      entryId: text.entryId,
+      written,
+      staffOnly: edit.staffOnly,
+    },
+    // Whoever the text mentioned already isn't subscribed again for an edit.
+    mentions.flatMap(({ person }) => (person?.id ? [person.id] : [])),
+  );
   return { changed: true };
 }
 
@@ -270,6 +281,7 @@ export async function editRequestDescription(
       companyId: locked.companyId,
       side: requestSide(permissions),
       names: { company: company.name, staff },
+      staffOnly: false,
     }),
   );
 }
@@ -350,6 +362,7 @@ export async function editReply(
       companyId: locked.companyId,
       side: requestSide(permissions),
       names: { company: company.name, staff },
+      staffOnly: reply.kind === 'note',
     });
   });
 }
