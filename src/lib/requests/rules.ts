@@ -74,7 +74,10 @@ const CONTRIBUTOR_STATUSES: readonly RequestStatus[] = ['open', 'done', 'cancell
  * Whether someone may ever give a request a status, whatever status it has
  * now. Asking for a status this refuses is asking for something they may
  * not do; a status it allows can still be the wrong move for the request as
- * it is by then ({@link mayChangeStatus}).
+ * it is by then ({@link mayChangeStatus}). Waiting for approval (`proposed`)
+ * is the staff's, and comes only with the reply that holds the solution
+ * ({@link mayProposeSolution}); the company leaves it by approving or denying
+ * ({@link mayAnswerSolution}), or by cancelling.
  *
  * @param permissions - Their permissions in the request's company.
  * @param to - The status they want.
@@ -89,7 +92,9 @@ export function maySetStatus(permissions: ReadonlySet<Permission>, to: RequestSt
 
 /**
  * Whether someone may change a request's status. A change to the status it
- * already has is never allowed: there's nothing to change.
+ * already has is never allowed: there's nothing to change. Nor is a change
+ * to waiting for approval: that comes only with the reply that holds the
+ * solution ({@link mayProposeSolution}).
  *
  * @param permissions - Their permissions in the request's company.
  * @param from - The status the request has.
@@ -101,14 +106,99 @@ export function mayChangeStatus(
   from: RequestStatus,
   to: RequestStatus,
 ): boolean {
-  if (from === to || !maySetStatus(permissions, to)) {
+  if (from === to || to === 'proposed' || !maySetStatus(permissions, to)) {
     return false;
   }
   if (permissions.has('requests:manage')) {
     return true;
   }
-  // The company closes a request that's still worked on, and reopens a closed one.
+  // The company closes a request that's still worked on, and reopens a closed one. A solution
+  // that waits for approval is approved or denied (`answerSolution`), not marked as done.
+  if (from === 'proposed' && to === 'done') {
+    return false;
+  }
   return to === 'open' ? isClosedStatus(from) : !isClosedStatus(from);
+}
+
+/**
+ * What a change of status was, for the sentence that tells it: reopening,
+ * closing (done or cancelled), proposing a solution, the company's answer to
+ * one (approved or denied), or another move.
+ *
+ * @param from - The status it had.
+ * @param to - The status it got.
+ * @param side - The side that changed it.
+ * @returns The kind of change.
+ */
+export function statusChangeKind(
+  from: RequestStatus,
+  to: RequestStatus,
+  side: RequestSide,
+): 'reopened' | 'done' | 'cancelled' | 'proposed' | 'approved' | 'denied' | 'moved' {
+  if (isReopening(from, to)) {
+    return 'reopened';
+  }
+  if (from === 'proposed' && side === 'company' && (to === 'done' || to === 'in_progress')) {
+    return to === 'done' ? 'approved' : 'denied';
+  }
+  if (to === 'done' || to === 'cancelled' || to === 'proposed') {
+    return to;
+  }
+  return 'moved';
+}
+
+/**
+ * Whether someone may send a reply as the solution, so the request waits for
+ * the company's approval (`proposed`, decision 0033): the staff who work on
+ * requests, on a request that's still worked on and doesn't wait for an
+ * approval already.
+ *
+ * @param permissions - Their permissions in the request's company.
+ * @param from - The status the request has.
+ * @returns Whether they may.
+ */
+export function mayProposeSolution(
+  permissions: ReadonlySet<Permission>,
+  from: RequestStatus,
+): boolean {
+  return permissions.has('requests:manage') && !isClosedStatus(from) && from !== 'proposed';
+}
+
+/** How the company answers a solution the staff sent: it solves the request, or it doesn't. */
+export const SOLUTION_ANSWERS = ['approve', 'deny'] as const;
+
+/** One answer to a solution. */
+export type SolutionAnswer = (typeof SOLUTION_ANSWERS)[number];
+
+/**
+ * Whether someone may approve or deny the solution a request waits on:
+ * someone at the company who takes part in its requests (an Admin or a
+ * Client, not a Watcher), and not the staff, who sent it.
+ *
+ * @param permissions - Their permissions in the request's company.
+ * @param from - The status the request has.
+ * @returns Whether they may.
+ */
+export function mayAnswerSolution(
+  permissions: ReadonlySet<Permission>,
+  from: RequestStatus,
+): boolean {
+  return (
+    from === 'proposed' &&
+    permissions.has('requests:contribute') &&
+    !permissions.has('requests:manage')
+  );
+}
+
+/**
+ * The status an answer to a solution gives the request: approving closes
+ * it, denying puts it back in progress.
+ *
+ * @param answer - The answer.
+ * @returns The status.
+ */
+export function statusAfterAnswer(answer: SolutionAnswer): RequestStatus {
+  return answer === 'approve' ? 'done' : 'in_progress';
 }
 
 /**

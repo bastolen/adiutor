@@ -19,7 +19,7 @@ import {
 
 describe('request statuses', () => {
   it('are either still worked on or closed, never both', () => {
-    expect(ACTIVE_REQUEST_STATUSES).toEqual(['open', 'todo', 'in_progress', 'waiting']);
+    expect(ACTIVE_REQUEST_STATUSES).toEqual(['open', 'todo', 'in_progress', 'waiting', 'proposed']);
     expect(CLOSED_REQUEST_STATUSES).toEqual(['done', 'cancelled']);
     expect([...ACTIVE_REQUEST_STATUSES, ...CLOSED_REQUEST_STATUSES]).toEqual([...REQUEST_STATUSES]);
   });
@@ -55,7 +55,8 @@ describe('the key a new request type gets from its name', () => {
 describe('the status filters', () => {
   it('show what their name says', () => {
     expect(statusesOfFilter('active')).toEqual(ACTIVE_REQUEST_STATUSES);
-    expect(statusesOfFilter('waiting')).toEqual(['waiting']);
+    // Waiting for the company: its reply, or its approval of a solution.
+    expect(statusesOfFilter('waiting')).toEqual(['waiting', 'proposed']);
     expect(statusesOfFilter('closed')).toEqual(['done', 'cancelled']);
     expect(statusesOfFilter('all')).toBeNull();
   });

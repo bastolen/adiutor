@@ -22,9 +22,18 @@ import ReplyForm from './reply-form';
  * @param props - Component props.
  * @param props.request - The request's number.
  * @param props.canWait - Whether the reply form offers "Send and wait for the company".
+ * @param props.canPropose - Whether the reply form offers "Send as solution".
  * @returns The tabs.
  */
-export default function WriteTabs({ request, canWait }: { request: number; canWait: boolean }) {
+export default function WriteTabs({
+  request,
+  canWait,
+  canPropose = false,
+}: {
+  request: number;
+  canWait: boolean;
+  canPropose?: boolean;
+}) {
   const t = useTranslations('requests.note');
   return (
     <Tabs
@@ -34,7 +43,7 @@ export default function WriteTabs({ request, canWait }: { request: number; canWa
           value: 'reply',
           label: t('replyTab'),
           icon: MessageSquare,
-          content: <ReplyForm request={request} canWait={canWait} />,
+          content: <ReplyForm request={request} canWait={canWait} canPropose={canPropose} />,
         },
         {
           value: 'note',

@@ -31,6 +31,7 @@ import {
   REQUEST_SIDES,
   REQUEST_STATUSES,
   REQUEST_TEXT_FORMATS,
+  SOLUTION_ANSWERS,
   WRITTEN_ENTRY_KINDS,
   WRITTEN_TEXT_FORMAT,
 } from '../../lib/requests';
@@ -400,6 +401,54 @@ export const requestTextVersion = pgTable(
     check(
       'request_text_version_signed_in_as_fits',
       sql`${table.signedInAsStaffId} is null or ${table.signedInAs}`,
+    ),
+  ],
+);
+
+/**
+ * A link in an email that answers a solution the staff sent (decision 0033):
+ * one per person the email went to and proposal, so Approve and Deny work
+ * without signing in, once, only for that person and that proposal. Only the
+ * token's hash is stored. A link is used up by its answer, and goes stale
+ * when it expires or the request no longer waits for that proposal. The rows
+ * go with the request, the person or the proposal.
+ */
+export const requestAnswerLink = pgTable(
+  'request_answer_link',
+  {
+    id: id(),
+    requestId: uuid('request_id')
+      .notNull()
+      .references(() => request.id, { onDelete: 'cascade' }),
+    /** Who the email went to, and whose answer the link gives. */
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    /** The status entry that made the request wait for approval: the proposal it answers. */
+    proposalEntryId: uuid('proposal_entry_id')
+      .notNull()
+      .references(() => requestEntry.id, { onDelete: 'cascade' }),
+    /** The token's SHA-256 (`hashToken`); the token itself is only ever in the email. */
+    tokenHash: text('token_hash').notNull(),
+    /** When it stops working, if it's still unused. */
+    expiresAt: timestampTz('expires_at').notNull(),
+    /** When its answer was given, or `null` while it's unused. */
+    usedAt: timestampTz('used_at'),
+    /** The answer it gave, once used. */
+    answer: text('answer', { enum: SOLUTION_ANSWERS }),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    uniqueIndex('request_answer_link_token_idx').on(table.tokenHash),
+    /** A request's links; also serves the request foreign key. */
+    index('request_answer_link_request_idx').on(table.requestId),
+    index('request_answer_link_user_idx').on(table.userId),
+    index('request_answer_link_proposal_idx').on(table.proposalEntryId),
+    oneOf('request_answer_link_answer_valid', table.answer, SOLUTION_ANSWERS),
+    /** An answer exactly when it's used. */
+    check(
+      'request_answer_link_used_fits',
+      sql`(${table.usedAt} is null) = (${table.answer} is null)`,
     ),
   ],
 );

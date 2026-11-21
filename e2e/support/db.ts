@@ -23,6 +23,7 @@ import { firstRow } from '../../src/lib/defined';
 import { type Locale, LOCALES } from '../../src/lib/i18n/locales';
 import { INVITATION_VALID_DAYS } from '../../src/lib/invitation-lifetimes';
 import type { RequestPriority, RequestStatus } from '../../src/lib/requests';
+import { answerLinkPath } from '../../src/lib/requests';
 import { EMAIL_LINK_MINUTES, EMAIL_LINK_PATH } from '../../src/lib/sign-in/email-link';
 import {
   emailLinkVerificationIdentifier,
@@ -464,6 +465,61 @@ export async function storeSignInLink(email: string): Promise<string> {
     });
   });
   return `${EMAIL_LINK_PATH}?${new URLSearchParams({ token, callbackURL: '/dashboard' })}`;
+}
+
+/**
+ * Stores an email's answer link the way the email's job does (only the
+ * token's hash), for a request that waits for approval: it gives the request
+ * the status entry that proposed the solution and makes the link for a
+ * member of its company. For tests that open the link's page.
+ *
+ * @param link - The link.
+ * @param link.requestNumber - A request stored with the status `proposed`.
+ * @param link.email - The member the link answers for.
+ * @returns The path of the link's page (`/answer/<token>`).
+ */
+export async function storeAnswerLink({
+  requestNumber,
+  email,
+}: {
+  requestNumber: number;
+  email: string;
+}): Promise<string> {
+  const token = generateToken();
+  await withTestDatabase(async (db) => {
+    const stored = firstRow(
+      await db
+        .select({ id: schema.request.id })
+        .from(schema.request)
+        .where(eq(schema.request.number, requestNumber)),
+      'the request',
+    );
+    const member = firstRow(
+      await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, email)),
+      'the member',
+    );
+    const proposal = firstRow(
+      await db
+        .insert(schema.requestEntry)
+        .values({
+          requestId: stored.id,
+          kind: 'status',
+          authorSide: 'staff',
+          fromValue: 'in_progress',
+          toValue: 'proposed',
+        })
+        .returning({ id: schema.requestEntry.id }),
+      'the proposal',
+    );
+    await db.insert(schema.requestAnswerLink).values({
+      requestId: stored.id,
+      userId: member.id,
+      proposalEntryId: proposal.id,
+      tokenHash: hashToken(token),
+      expiresAt: new Date(Date.now() + 14 * 86_400_000),
+    });
+  });
+  return answerLinkPath(token);
 }
 
 /**

@@ -1,6 +1,6 @@
 {
-  "id": "59387c6e-8dae-49f1-be63-cf2132cfb7f3",
-  "prevId": "aa902623-efbb-4389-989b-b318f958e988",
+  "id": "34050d2a-8ad1-40e6-a822-4a854e6353f4",
+  "prevId": "8a011278-e198-4d14-bfc3-81686c4d30fe",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2094,7 +2094,7 @@
         },
         "request_status_valid": {
           "name": "request_status_valid",
-          "value": "\"request\".\"status\" in ('open', 'todo', 'in_progress', 'waiting', 'done', 'cancelled')"
+          "value": "\"request\".\"status\" in ('open', 'todo', 'in_progress', 'waiting', 'proposed', 'done', 'cancelled')"
         },
         "request_created_by_side_valid": {
           "name": "request_created_by_side_valid",
@@ -2107,6 +2107,185 @@
         "request_created_signed_in_as_fits": {
           "name": "request_created_signed_in_as_fits",
           "value": "\"request\".\"created_signed_in_as_staff_id\" is null or \"request\".\"created_signed_in_as\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.request_answer_link": {
+      "name": "request_answer_link",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "proposal_entry_id": {
+          "name": "proposal_entry_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "answer": {
+          "name": "answer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "request_answer_link_token_idx": {
+          "name": "request_answer_link_token_idx",
+          "columns": [
+            {
+              "expression": "token_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "request_answer_link_request_idx": {
+          "name": "request_answer_link_request_idx",
+          "columns": [
+            {
+              "expression": "request_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "request_answer_link_user_idx": {
+          "name": "request_answer_link_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "request_answer_link_proposal_idx": {
+          "name": "request_answer_link_proposal_idx",
+          "columns": [
+            {
+              "expression": "proposal_entry_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "request_answer_link_request_id_request_id_fk": {
+          "name": "request_answer_link_request_id_request_id_fk",
+          "tableFrom": "request_answer_link",
+          "tableTo": "request",
+          "columnsFrom": [
+            "request_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "request_answer_link_user_id_user_id_fk": {
+          "name": "request_answer_link_user_id_user_id_fk",
+          "tableFrom": "request_answer_link",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "request_answer_link_proposal_entry_id_request_entry_id_fk": {
+          "name": "request_answer_link_proposal_entry_id_request_entry_id_fk",
+          "tableFrom": "request_answer_link",
+          "tableTo": "request_entry",
+          "columnsFrom": [
+            "proposal_entry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "request_answer_link_answer_valid": {
+          "name": "request_answer_link_answer_valid",
+          "value": "\"request_answer_link\".\"answer\" in ('approve', 'deny')"
+        },
+        "request_answer_link_used_fits": {
+          "name": "request_answer_link_used_fits",
+          "value": "(\"request_answer_link\".\"used_at\" is null) = (\"request_answer_link\".\"answer\" is null)"
         }
       },
       "isRLSEnabled": false

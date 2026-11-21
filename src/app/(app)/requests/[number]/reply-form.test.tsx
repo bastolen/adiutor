@@ -97,6 +97,24 @@ describe('ReplyForm', () => {
     expect(sent()).toEqual({ request: '142', body: 'Which days change?', status: 'waiting' });
   });
 
+  it('lets the staff send it as the solution, for the company to approve', async () => {
+    vi.mocked(replyAction).mockResolvedValue({ ok: true, message: 'Solution sent.' });
+    const user = userEvent.setup();
+    render(<ReplyForm request={142} canWait canPropose />);
+
+    await user.type(screen.getByRole('textbox', { name: 'Your reply' }), 'Fixed: new toner.');
+    await user.click(screen.getByRole('button', { name: 'Send as solution' }));
+
+    await waitFor(() => expect(replyAction).toHaveBeenCalledTimes(1));
+    expect(sent()).toEqual({ request: '142', body: 'Fixed: new toner.', status: 'proposed' });
+  });
+
+  it('offers no solution button to those who cannot propose one', () => {
+    render(<ReplyForm request={142} canWait />);
+
+    expect(screen.queryByRole('button', { name: 'Send as solution' })).not.toBeInTheDocument();
+  });
+
   it.each([
     ['Send reply', 'Send and wait for the company'],
     ['Send and wait for the company', 'Send reply'],

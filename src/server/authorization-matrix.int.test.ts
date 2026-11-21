@@ -135,6 +135,7 @@ import { listUsers } from './people/users';
 import { findErrorReference, listRecentErrors } from './recorded-errors';
 import {
   addNote,
+  answerSolution,
   addRequestType,
   archiveRequestType,
   changeAssignees,
@@ -646,6 +647,21 @@ function listOperations(): Operation[] {
       'reopen request (own)',
       (w) => changeRequestStatus(ctx, w.actor, { request: w.requests.own, status: 'open' }),
     ],
+    // The staff send a solution; the company answers one (here the request only waits for an
+    // approval when a staff role sent it just before, so the company's answer finds it changed).
+    [
+      'send a reply as the solution (own)',
+      (w) =>
+        replyToRequest(ctx, w.actor, {
+          request: w.requests.own,
+          body: 'Fixed: the toner was empty.',
+          status: 'proposed',
+        }),
+    ],
+    [
+      'answer a solution (own)',
+      (w) => answerSolution(ctx, w.actor, { request: w.requests.own, answer: 'approve' }),
+    ],
     [
       'set request status (own)',
       (w) => changeRequestStatus(ctx, w.actor, { request: w.requests.own, status: 'todo' }),
@@ -834,6 +850,8 @@ const OWN_WORK: ReadonlySet<string> = new Set([
   'mark request done (own)',
   'cancel request (own)',
   'reopen request (own)',
+  'send a reply as the solution (own)',
+  'answer a solution (own)',
   'set request status (own)',
   'set request status (other)',
   'edit request details (own)',
@@ -871,6 +889,9 @@ const ALSO_ALLOWED: Readonly<Record<string, readonly ServiceErrorCode[]>> = {
   // The company may close a request, but can't cancel one that's done already, as the operation
   // before left it: the status rules answer that the status changed, after the permission passed.
   'cancel request (own)': ['conflict'],
+  // The company may answer a solution, but here the request doesn't wait for one: the answer
+  // finds it changed, after the permission passed.
+  'answer a solution (own)': ['conflict'],
 };
 
 /** The letters used in `EXPECTED`. */
@@ -1021,6 +1042,9 @@ const EXPECTED: Record<string, string> = {
   'mark request done (own)': 'FAAAFAA',
   'cancel request (own)': 'FAAAFAA',
   'reopen request (own)': 'FAAAFAA',
+  // The staff who work on requests send a solution; the company's Admins and Clients answer it.
+  'send a reply as the solution (own)': 'FFFAFAA',
+  'answer a solution (own)': 'FAAFFFF',
   // Every other status, and a request's details, are the staff's.
   'set request status (own)': 'FFFAFAA',
   'set request status (other)': 'NNNAFAA',
