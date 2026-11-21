@@ -26,6 +26,7 @@ import { recordEvent } from '../audit';
 import { withMfaPromotion } from '../auth/mfa-promotion';
 import type { ServiceContext } from '../context';
 import { isUniqueViolation, notFoundError, ServiceError } from '../errors';
+import assertLanguageOffered from '../offered-language';
 import { orderTerms, paginate, textOrder } from '../pagination';
 import { assertInviteSenderLimit } from '../rate-limit';
 import containsPattern from '../search';
@@ -96,8 +97,8 @@ export async function listCompanies(
  * @param input.name - Company name.
  * @param input.slug - URL name; must be unique.
  * @param input.adminEmail - Email address of the company's first admin.
- * @param input.locale - The language of their invitation; by default Adiutor's default language,
- *   else English (US). An Admin who has an account with a saved language gets that instead.
+ * @param input.locale - The language of their invitation, one Adiutor offers; by default
+ *   Adiutor's default language, else English (US). An Admin who has an account with a saved language gets that instead.
  * @returns The new company's ID and URL name, and the invitation status.
  * @throws {ServiceError} `forbidden` without `company:create` (also when it's gone by the time the
  *   change is made), `rate_limited` when the actor has sent too many invitations
@@ -113,6 +114,7 @@ export async function registerCompany(
   const name = companyNameSchema.parse(input.name);
   const slug = slugSchema.parse(input.slug);
   const adminEmail = emailSchema.parse(input.adminEmail);
+  await assertLanguageOffered(ctx.db, input.locale);
   // Its first Admin gets the company's Admin role, which needs a recent confirmation.
   assertConfirmedForGrant(actor, { target: { type: 'company' }, role: COMPANY_ADMIN_ROLE });
   // The first Admin's invitation is an email sent to someone else, like any invitation.

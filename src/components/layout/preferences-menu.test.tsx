@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { OfferedLanguagesProvider } from '@/components/language/offered-languages';
 import { THEME_STORAGE_KEY } from '@/lib/theme';
 
 import renderInLocale from '../../../tests/i18n/render';
@@ -270,6 +271,40 @@ describe('PreferencesMenu', () => {
 
       await waitFor(() => expect(reload).toHaveBeenCalled());
       expect(setLanguageAction).toHaveBeenCalledWith('en-US');
+    });
+
+    it('offers only the languages that are on; a cookie for one that’s off ticks Default', async () => {
+      chooseInBrowser('nl-NL');
+      const user = userEvent.setup();
+      render(
+        <OfferedLanguagesProvider offered={['en-US', 'es-ES']}>
+          <PreferencesMenu />
+        </OfferedLanguagesProvider>,
+      );
+
+      await user.click(screen.getByRole('button', { name: FRESH_NAME }));
+
+      const languages = screen.getAllByRole('menuitemradio').slice(3);
+      expect(languages.map((item) => item.textContent)).toEqual([
+        'Default',
+        'English (US)',
+        'Español',
+      ]);
+      expect(screen.getByRole('menuitemradio', { name: 'Default' })).toBeChecked();
+    });
+
+    it('offers no language with just one on: the button is for the theme alone', async () => {
+      const user = userEvent.setup();
+      render(
+        <OfferedLanguagesProvider offered={['en-US']}>
+          <PreferencesMenu />
+        </OfferedLanguagesProvider>,
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Theme: System' }));
+
+      expect(screen.getAllByRole('menuitemradio')).toHaveLength(3);
+      expect(screen.queryByText('Language')).not.toBeInTheDocument();
     });
   });
 });

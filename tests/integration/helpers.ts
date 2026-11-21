@@ -29,7 +29,7 @@ import type { MfaMethod } from '@/lib/authz/mfa';
 import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { defined, firstRow } from '@/lib/defined';
 import type { Email } from '@/lib/email';
-import type { Locale } from '@/lib/i18n/locales';
+import { type Locale, LOCALES } from '@/lib/i18n/locales';
 import { MFA_PROVIDERS, type OAuthProvider } from '@/lib/sign-in/oauth-providers';
 import { availableProviders, configuredProviders } from '@/lib/sign-in/providers';
 import { type Actor, loadActor } from '@/server/actor';
@@ -289,13 +289,15 @@ export async function addPassword(db: Database, userId: string): Promise<void> {
  * @param db - Test database.
  * @param name - The name shown to users; defaults to "Adiutor Tests".
  * @param defaultLocale - Adiutor's default language; defaults to English (US).
+ * @param offeredLocales - The languages it offers; every language by default.
  */
 export async function createStaffSettings(
   db: Database,
   name = 'Adiutor Tests',
   defaultLocale: Locale = 'en-US',
+  offeredLocales: Locale[] = [...LOCALES],
 ): Promise<void> {
-  await db.insert(staffSettings).values({ name, defaultLocale });
+  await db.insert(staffSettings).values({ name, defaultLocale, offeredLocales });
 }
 
 /**

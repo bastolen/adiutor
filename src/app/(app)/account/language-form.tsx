@@ -13,7 +13,7 @@ import ResultAlert from '@/components/ui/result-alert';
 import SelectField from '@/components/ui/select-field';
 import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
-import type { LanguageChoice, Locale } from '@/lib/i18n/locales';
+import { type LanguageChoice, type Locale, LOCALE_NAMES } from '@/lib/i18n/locales';
 
 import { saveLanguageAction } from './actions';
 
@@ -23,12 +23,19 @@ interface LanguageFormProps {
   choice: LanguageChoice;
   /** Adiutor's default language, named in the Default option. */
   defaultLocale: Locale;
+  /**
+   * The account's saved language while it's turned off (the choice then
+   * starts on Default, which is what applies), else `null`.
+   */
+  notOffered?: Locale | null;
 }
 
 /**
  * A language select with a save button, starting on the account's saved
  * choice. Default comes first: it saves no language, so the account follows
- * Adiutor's default language, also after a staff Admin changes it. Saving
+ * Adiutor's default language, also after a staff Admin changes it. Only the
+ * languages Adiutor offers are choices; a saved language that's turned off
+ * starts the select on Default, and the field says so (decision 0029). Saving
  * reloads the page in the new language (a soft refresh would leave pages kept
  * alive in the old one), at the address the action gives, where the page says
  * it's saved. Errors stay in the form, as alert and toast.
@@ -40,9 +47,14 @@ interface LanguageFormProps {
  * @param props - Component props.
  * @param props.choice - The saved choice.
  * @param props.defaultLocale - Adiutor's default language.
+ * @param props.notOffered - The saved language while it's turned off.
  * @returns The form.
  */
-export default function LanguageForm({ choice, defaultLocale }: LanguageFormProps) {
+export default function LanguageForm({
+  choice,
+  defaultLocale,
+  notOffered = null,
+}: LanguageFormProps) {
   const t = useTranslations('account');
   // Changes are turned off while a staff member is signed in as the user.
   const changesOff = useSignedInAs();
@@ -64,6 +76,11 @@ export default function LanguageForm({ choice, defaultLocale }: LanguageFormProp
           name="locale"
           options={options}
           defaultValue={choice}
+          description={
+            notOffered
+              ? t('profile.languageNotOffered', { language: LOCALE_NAMES[notOffered] })
+              : undefined
+          }
           className="sm:max-w-xs"
           disabled={changesOff}
         />

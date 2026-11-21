@@ -4,8 +4,11 @@
  * (and, for Add user, the new account) uses the choice. Add user and Add
  * company offer Default first and start on it: the email goes out in
  * Adiutor's default language, and a new account keeps following it. The
- * invite form starts on the sender's own language. Read it with `localeField`
- * in the action, which gives `undefined` for Default.
+ * invite form starts on the sender's own language. Only the languages
+ * Adiutor offers are choices, and with just one there's nothing to choose:
+ * the field doesn't show, and the email goes out in the default language.
+ * Read it with `localeField` in the action, which gives `undefined` for
+ * Default (and for no field).
  */
 'use client';
 
@@ -14,7 +17,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import SelectField from '@/components/ui/select-field';
 import { FOLLOW_DEFAULT, type Locale } from '@/lib/i18n/locales';
 
-import LANGUAGE_OPTIONS, { useLanguageChoiceOptions } from './language-options';
+import { useLanguageChoiceOptions, useOfferedLanguageOptions } from './language-options';
 
 /** Props of {@link EmailLanguageField}. */
 interface EmailLanguageFieldProps {
@@ -30,14 +33,15 @@ interface EmailLanguageFieldProps {
 }
 
 /**
- * A select named `locale` with every language (with its flag), Default first
- * when the form offers it, and a hint saying what the language is for.
+ * A select named `locale` with the languages Adiutor offers (with their
+ * flags), Default first when the form offers it, and a hint saying what the
+ * language is for; nothing with only one language offered.
  *
  * @param props - Field props.
  * @param props.purpose - What the language is for, which the hint says.
  * @param props.defaultLocale - Adiutor's default language, to offer Default.
  * @param props.disabled - Turn the field off.
- * @returns The field.
+ * @returns The field, or nothing.
  */
 export default function EmailLanguageField({
   purpose,
@@ -47,11 +51,15 @@ export default function EmailLanguageField({
   const t = useTranslations('common.language');
   const locale = useLocale();
   const choices = useLanguageChoiceOptions(defaultLocale ?? locale);
+  const languages = useOfferedLanguageOptions();
+  if (languages.length <= 1) {
+    return null;
+  }
   return (
     <SelectField
       label={t('emailField')}
       name="locale"
-      options={defaultLocale ? choices : LANGUAGE_OPTIONS}
+      options={defaultLocale ? choices : languages}
       defaultValue={defaultLocale ? FOLLOW_DEFAULT : locale}
       description={purpose === 'invitation' ? t('emailHintInvitation') : t('emailHintAccount')}
       disabled={disabled}

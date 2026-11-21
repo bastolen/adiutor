@@ -7,7 +7,7 @@
 import { eq, isNull, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { company, invitation, user } from '@/db/schema';
+import { company, invitation, staffSettings, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 import type { Email } from '@/lib/email';
 import { hashToken } from '@/lib/sign-in/tokens';
@@ -211,6 +211,26 @@ describe('invitation-reminders', () => {
     expect(textTo('known@adiutor.test')).toMatch(/ E[SD]T\./);
     // No settings row in these tests: Adiutor's default is UTC.
     expect(textTo('nobody@adiutor.test')).toMatch(/ UTC\./);
+  });
+
+  it('reminds in the default language once the invitation’s language is turned off', async () => {
+    await inviteByEmail(ctx, companyAdmin, {
+      companyId: testCompany.id,
+      role: 'client',
+      locale: 'nl-NL',
+      email: 'new@adiutor.test',
+    });
+    await age('new@adiutor.test', '1 day');
+    await db.insert(staffSettings).values({
+      name: 'Adiutor Tests',
+      defaultLocale: 'en-US',
+      offeredLocales: ['en-US', 'es-ES'],
+    });
+    sent.length = 0;
+
+    await expect(remind(ctx)).resolves.toEqual({ sent: 1, failed: 0 });
+
+    expect(emailLanguage(defined(sent[0], 'the reminder'))).toBe('en-US');
   });
 
   it('skips fresh, revoked and deactivated-company invitations, but not a due one beside them', async () => {

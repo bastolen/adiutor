@@ -32,6 +32,17 @@ export const staffSettings = pgTable(
      */
     defaultTimeZone: text('default_time_zone').notNull().default(DEFAULT_TIME_ZONE),
     /**
+     * The languages Adiutor offers, which staff Admins turn on and off on the
+     * staff page: only these are offered and used, and whoever chose one
+     * that's off gets the default language until it's on again (decision
+     * 0029). Always holds the default. A language added to `LOCALES` later
+     * starts off: the rows that exist don't list it.
+     */
+    offeredLocales: text('offered_locales', { enum: LOCALES })
+      .array()
+      .notNull()
+      .default(sql`array[${sql.raw(LOCALES.map((locale) => `'${locale}'`).join(', '))}]::text[]`),
+    /**
      * What request numbers are shown with ("AD" in "AD-142"), changeable on
      * the staff page. Only for display: a request's number and address don't
      * change with it.
@@ -50,5 +61,17 @@ export const staffSettings = pgTable(
     uniqueIndex('staff_settings_singleton_idx').on(table.singleton),
     check('staff_settings_singleton_true', sql`${table.singleton}`),
     oneOf('staff_settings_default_locale_valid', table.defaultLocale, LOCALES),
+    /** Only languages Adiutor has, and at least one. */
+    check(
+      'staff_settings_offered_locales_known',
+      sql`cardinality(${table.offeredLocales}) > 0 and ${table.offeredLocales} <@ array[${sql.raw(
+        LOCALES.map((locale) => `'${locale}'`).join(', '),
+      )}]::text[]`,
+    ),
+    /** The default language is always one that's offered. */
+    check(
+      'staff_settings_default_locale_offered',
+      sql`${table.defaultLocale} = any(${table.offeredLocales})`,
+    ),
   ],
 );

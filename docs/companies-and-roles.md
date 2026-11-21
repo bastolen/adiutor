@@ -129,10 +129,11 @@ Admins and Managers who aren't members can still add themselves with any role, a
 ## Staff screens
 
 - **Staff page** (`/admin/staff`, `staff:manage`, Admins): change the name shown to users (in
-  invitations and wherever users see who's helping them) and Adiutor's default language (for
-  everyone who hasn't chosen one; see [Languages](i18n.md#how-the-language-is-chosen)), its time
-  zone (for signed-out pages and everyone whose zone isn't known yet; see
-  [Time zones](i18n.md#time-zones)), the prefix of request numbers and the request types (see
+  invitations and wherever users see who's helping them), the languages Adiutor offers and its
+  default language (for everyone who hasn't chosen one; see
+  [Offered languages](i18n.md#offered-languages)), its time zone (for signed-out pages and
+  everyone whose zone isn't known yet; see [Time zones](i18n.md#time-zones)), the prefix of request
+  numbers and the request types (see
   [Requests](requests.md#types-and-priorities)), see the staff with their role, when
   they were last active and when their account was created ("Joined"), change roles, remove people from staff (their account stays), and invite
   staff by email or single-use invite link. Staff invitations and links have no company

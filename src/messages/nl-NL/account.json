@@ -47,6 +47,7 @@
       "verificationSent": "We hebben een bevestigingslink naar {email} gestuurd. De link is 1 uur geldig.",
       "languageTitle": "Taal",
       "languageDescription": "Adiutor en de e-mails die je ontvangt gebruiken deze taal.",
+      "languageNotOffered": "Je hebt {language} gekozen, maar die taal wordt nu niet aangeboden. Tot die weer aan staat, gebruikt Adiutor de standaardtaal.",
       "languageLabel": "Taal",
       "saveLanguage": "Taal opslaan",
       "languageSaved": "Taal opgeslagen.",

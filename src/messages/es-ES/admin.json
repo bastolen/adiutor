@@ -250,6 +250,15 @@
         "save": "Guardar nombre",
         "saved": "Nombre guardado."
       },
+      "languages": {
+        "title": "Idiomas",
+        "description": "Elige qué idiomas ofrece Adiutor y su idioma predeterminado para quien aún no haya elegido el suyo. Quien haya elegido un idioma que desactives recibe el predeterminado hasta que vuelva a estar activo.",
+        "offeredLabel": "Idiomas ofrecidos",
+        "alwaysOn": "Siempre activo: es el idioma predeterminado.",
+        "defaultHint": "Solo un idioma que se ofrece puede ser el predeterminado.",
+        "save": "Guardar idiomas",
+        "saved": "Idiomas guardados."
+      },
       "timeZone": {
         "title": "Zona horaria predeterminada",
         "description": "Adiutor usa esta zona en las páginas para quien no ha iniciado sesión, en los correos a quien no tiene zona, y para todos hasta que su navegador fije la suya.",

@@ -84,6 +84,15 @@ export const localeSchema = z.enum(LOCALES, {
 });
 
 /**
+ * Adiutor's languages from the staff page: the default language and the
+ * languages to offer (any of `LOCALES`; the service adds the default).
+ */
+export const languageSettingsSchema = z.object({
+  defaultLocale: localeSchema,
+  offered: z.array(localeSchema),
+});
+
+/**
  * A language choice: a language, or `FOLLOW_DEFAULT` to follow Adiutor's
  * default language, e.g. from the account's Language card.
  */

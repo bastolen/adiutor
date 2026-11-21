@@ -20,7 +20,7 @@ import * as schema from '../../src/db/schema';
 import type { AuditAction } from '../../src/lib/audit-actions';
 import type { CompanyRole } from '../../src/lib/authz/roles';
 import { firstRow } from '../../src/lib/defined';
-import type { Locale } from '../../src/lib/i18n/locales';
+import { type Locale, LOCALES } from '../../src/lib/i18n/locales';
 import { INVITATION_VALID_DAYS } from '../../src/lib/invitation-lifetimes';
 import type { RequestPriority, RequestStatus } from '../../src/lib/requests';
 import { EMAIL_LINK_MINUTES, EMAIL_LINK_PATH } from '../../src/lib/sign-in/email-link';
@@ -354,14 +354,18 @@ export async function removeStaffSettings(): Promise<void> {
 }
 
 /**
- * Sets Adiutor's default language directly, e.g. to put it back after a test
- * changed it on the staff page.
+ * Sets Adiutor's default language and the languages it offers directly, e.g.
+ * to put them back after a test changed them on the staff page.
  *
- * @param locale - The language.
+ * @param locale - The default language.
+ * @param offered - The languages to offer; every language by default.
  */
-export async function setDefaultLocale(locale: Locale): Promise<void> {
+export async function setDefaultLocale(
+  locale: Locale,
+  offered: Locale[] = [...LOCALES],
+): Promise<void> {
   await withTestDatabase(async (db) => {
-    await db.update(schema.staffSettings).set({ defaultLocale: locale });
+    await db.update(schema.staffSettings).set({ defaultLocale: locale, offeredLocales: offered });
   });
 }
 

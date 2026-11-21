@@ -62,6 +62,19 @@ describe('setOwnLocale', () => {
     await expect(setOwnLocale(ctx, admin, 'fr-FR')).rejects.toThrow('validation.locale');
     expect(await savedLocale(admin.id)).toBeNull();
   });
+
+  it('refuses a language that’s turned off, but not Default', async () => {
+    await createStaffSettings(db, 'Adiutor Tests', 'en-US', ['en-US', 'es-ES']);
+    const jane = await createUser(db, 'jane@adiutor.test');
+    const actor = await actorFor(db, jane);
+
+    await expect(setOwnLocale(ctx, actor, 'nl-NL')).rejects.toMatchObject({
+      code: 'invalid',
+      key: 'errors.language.notOffered',
+    });
+    await expect(setOwnLocale(ctx, actor, 'default')).resolves.toBeNull();
+    expect(await savedLocale(jane)).toBeNull();
+  });
 });
 
 describe('ownLanguage', () => {
@@ -74,6 +87,8 @@ describe('ownLanguage', () => {
     await expect(ownLanguage(ctx, actor)).resolves.toEqual({
       choice: 'nl-NL',
       defaultLocale: 'es-ES',
+      notOffered: null,
+      offered: ['en-US', 'nl-NL', 'es-ES'],
     });
   });
 
@@ -84,6 +99,22 @@ describe('ownLanguage', () => {
     await expect(ownLanguage(ctx, actor)).resolves.toEqual({
       choice: 'default',
       defaultLocale: 'en-US',
+      notOffered: null,
+      offered: ['en-US', 'nl-NL', 'es-ES'],
+    });
+  });
+
+  it('gives Default for a saved language that’s turned off, and names it', async () => {
+    await createStaffSettings(db, 'Adiutor Tests', 'es-ES', ['en-US', 'es-ES']);
+    const jane = await createUser(db, 'jane@adiutor.test');
+    await setUserLocale(db, jane, 'nl-NL');
+    const actor = await actorFor(db, jane);
+
+    await expect(ownLanguage(ctx, actor)).resolves.toEqual({
+      choice: 'default',
+      defaultLocale: 'es-ES',
+      notOffered: 'nl-NL',
+      offered: ['en-US', 'es-ES'],
     });
   });
 });

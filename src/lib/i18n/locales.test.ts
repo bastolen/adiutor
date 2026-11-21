@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { isLocale, localeForLanguages, LOCALES } from './locales';
+import { isLocale, localeForLanguages, LOCALES, offeredLocale } from './locales';
 
 describe('isLocale', () => {
   it.each(LOCALES)('accepts %s', (locale) => {
@@ -28,5 +28,14 @@ describe('localeForLanguages', () => {
   it('finds nothing for languages we don’t speak', () => {
     expect(localeForLanguages(['fr-FR', 'de'])).toBeNull();
     expect(localeForLanguages([])).toBeNull();
+  });
+});
+
+describe('offeredLocale', () => {
+  it('gives a language only while it’s offered', () => {
+    expect(offeredLocale('nl-NL', LOCALES)).toBe('nl-NL');
+    expect(offeredLocale('nl-NL', ['en-US', 'es-ES'])).toBeNull();
+    expect(offeredLocale('fr-FR', LOCALES)).toBeNull();
+    expect(offeredLocale(null, LOCALES)).toBeNull();
   });
 });

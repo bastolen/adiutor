@@ -155,19 +155,26 @@ async function AccountSettings({ searchParams }: { searchParams: Promise<Account
           />
         </ClientMessages>
       </Card>
-      <Card
-        // The page reloads here after the language changed.
-        id={LANGUAGE_SECTION}
-        title={t('profile.languageTitle')}
-        description={t('profile.languageDescription')}
-      >
-        {params.language === 'saved' && (
-          <ToastOnArrival message={t('profile.languageSaved')} param="language" />
-        )}
-        <ClientMessages namespaces={['account']}>
-          <LanguageForm choice={language.choice} defaultLocale={language.defaultLocale} />
-        </ClientMessages>
-      </Card>
+      {/* With only one language offered there's nothing to choose. */}
+      {language.offered.length > 1 && (
+        <Card
+          // The page reloads here after the language changed.
+          id={LANGUAGE_SECTION}
+          title={t('profile.languageTitle')}
+          description={t('profile.languageDescription')}
+        >
+          {params.language === 'saved' && (
+            <ToastOnArrival message={t('profile.languageSaved')} param="language" />
+          )}
+          <ClientMessages namespaces={['account']}>
+            <LanguageForm
+              choice={language.choice}
+              defaultLocale={language.defaultLocale}
+              notOffered={language.notOffered}
+            />
+          </ClientMessages>
+        </Card>
+      )}
       <Card
         // The page reloads here after the time zone changed.
         id={TIME_ZONE_SECTION}

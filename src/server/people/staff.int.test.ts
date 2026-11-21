@@ -47,8 +47,8 @@ import {
   listStaff,
   removeFromStaff,
   renameStaff,
-  setDefaultLocale,
   setDefaultTimeZone,
+  setLanguages,
   setRequestPrefix,
 } from './staff';
 
@@ -84,6 +84,7 @@ describe('staff settings and people', () => {
     expect(await getStaffSettings(ctx, admin)).toEqual({
       name: 'Adiutor Support',
       defaultLocale: 'en-US',
+      offeredLocales: ['en-US', 'nl-NL', 'es-ES'],
       defaultTimeZone: 'UTC',
       requestPrefix: 'AD',
     });
@@ -100,6 +101,7 @@ describe('staff settings and people', () => {
     expect(await getStaffSettings(ctx, admin)).toEqual({
       name: 'Adiutor Support',
       defaultLocale: 'en-US',
+      offeredLocales: ['en-US', 'nl-NL', 'es-ES'],
       defaultTimeZone: 'UTC',
       requestPrefix: 'AD',
     });
@@ -110,17 +112,20 @@ describe('staff settings and people', () => {
     expect(entry.details).toMatchObject({ from: null, to: 'Adiutor Support' });
   });
 
-  it("sets Adiutor's default language, keeping the name", async () => {
-    await expect(setDefaultLocale(ctx, admin, 'nl-NL')).resolves.toBe('nl-NL');
+  it("sets Adiutor's languages, keeping the name, and always offers the default", async () => {
+    await expect(
+      setLanguages(ctx, admin, { defaultLocale: 'nl-NL', offered: ['es-ES'] }),
+    ).resolves.toEqual({ defaultLocale: 'nl-NL', offeredLocales: ['nl-NL', 'es-ES'] });
 
     expect(await getStaffSettings(ctx, admin)).toEqual({
       name: 'Adiutor Tests',
       defaultLocale: 'nl-NL',
+      offeredLocales: ['nl-NL', 'es-ES'],
       defaultTimeZone: 'UTC',
       requestPrefix: 'AD',
     });
-    await expect(setDefaultLocale(ctx, admin, 'fr-FR')).rejects.toThrow('validation.locale');
-    expect((await getStaffSettings(ctx, admin)).defaultLocale).toBe('nl-NL');
+    // Not a security change: nothing in the audit log.
+    expect(await db.select().from(auditEvent)).toEqual([]);
   });
 
   it("sets Adiutor's default time zone, keeping the rest, with nothing in the audit log", async () => {
@@ -131,6 +136,7 @@ describe('staff settings and people', () => {
     expect(await getStaffSettings(ctx, admin)).toEqual({
       name: 'Adiutor Tests',
       defaultLocale: 'en-US',
+      offeredLocales: ['en-US', 'nl-NL', 'es-ES'],
       defaultTimeZone: 'Europe/Amsterdam',
       requestPrefix: 'AD',
     });
@@ -141,27 +147,46 @@ describe('staff settings and people', () => {
     expect(await db.select().from(auditEvent)).toEqual([]);
   });
 
-  it('creates the settings again with the default language when they were lost', async () => {
+  it.each([
+    ['an unknown default', { defaultLocale: 'fr-FR', offered: ['en-US'] }],
+    ['an unknown language to offer', { defaultLocale: 'en-US', offered: ['fr-FR'] }],
+    ['no list of languages', { defaultLocale: 'en-US', offered: 'nl-NL' }],
+  ])('refuses %s', async (_name, input) => {
+    await expect(setLanguages(ctx, admin, input)).rejects.toThrow();
+    expect(await getStaffSettings(ctx, admin)).toMatchObject({
+      defaultLocale: 'en-US',
+      offeredLocales: ['en-US', 'nl-NL', 'es-ES'],
+    });
+  });
+
+  it('keeps the default offered in the database too', async () => {
+    await expect(db.update(staffSettings).set({ offeredLocales: ['nl-NL'] })).rejects.toThrow();
+    await expect(db.update(staffSettings).set({ offeredLocales: [] })).rejects.toThrow();
+  });
+
+  it('creates the settings again with the languages when they were lost', async () => {
     await db.delete(staffSettings);
 
-    await setDefaultLocale(ctx, admin, 'es-ES');
+    await setLanguages(ctx, admin, { defaultLocale: 'es-ES', offered: ['en-US'] });
 
     expect(await getStaffSettings(ctx, admin)).toEqual({
       name: 'Adiutor',
       defaultLocale: 'es-ES',
+      offeredLocales: ['en-US', 'es-ES'],
       defaultTimeZone: 'UTC',
       requestPrefix: 'AD',
     });
   });
 
   it('sets the prefix of request numbers, in capitals, keeping the name and the language', async () => {
-    await setDefaultLocale(ctx, admin, 'nl-NL');
+    await setLanguages(ctx, admin, { defaultLocale: 'nl-NL', offered: ['en-US', 'es-ES'] });
 
     await expect(setRequestPrefix(ctx, admin, ' help ')).resolves.toBe('HELP');
 
     expect(await getStaffSettings(ctx, admin)).toEqual({
       name: 'Adiutor Tests',
       defaultLocale: 'nl-NL',
+      offeredLocales: ['en-US', 'nl-NL', 'es-ES'],
       defaultTimeZone: 'UTC',
       requestPrefix: 'HELP',
     });
@@ -182,6 +207,7 @@ describe('staff settings and people', () => {
     expect(await getStaffSettings(ctx, admin)).toEqual({
       name: 'Adiutor',
       defaultLocale: 'en-US',
+      offeredLocales: ['en-US', 'nl-NL', 'es-ES'],
       defaultTimeZone: 'UTC',
       requestPrefix: 'REQ',
     });

@@ -34,8 +34,8 @@ import { EMAIL_CODE_MINUTES, TWO_FACTOR_LOCK_ATTEMPTS, TWO_FACTOR_LOCK_MINUTES }
 import { PLATFORM_ROLES } from './authz/roles';
 import { sendEmail, sendFailureOf } from './email';
 import { appUrl, env } from './env';
-import { localeFromHeaders } from './i18n/default-locale';
-import { isLocale, type Locale, LOCALES } from './i18n/locales';
+import { loadLanguageSettings, localeFromHeaders } from './i18n/default-locale';
+import { type Locale, LOCALES, offeredLocale } from './i18n/locales';
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from './input-rules';
 import ipAddressOptions from './request/ip-address-options';
 import { LAST_USED_LOGIN_METHOD_COOKIE } from './sign-in/auth-cookies';
@@ -97,8 +97,9 @@ function runInBackground(task: Promise<unknown>): void {
 
 /**
  * The language of an email to a Better Auth user: the one they saved
- * (`user.locale`), else the request's (`localeFromHeaders`: the language
- * cookie, else Adiutor's default language). See "Which language" in
+ * (`user.locale`) while Adiutor offers it, else the request's
+ * (`localeFromHeaders`: the language cookie, else Adiutor's default
+ * language). See "Which language" in
  * docs/email.md.
  *
  * @param user - The user, with the app's additional fields.
@@ -107,7 +108,8 @@ function runInBackground(task: Promise<unknown>): void {
  */
 async function emailLocale(user: object, headers: Headers | null | undefined): Promise<Locale> {
   const saved = (user as { locale?: unknown }).locale;
-  return isLocale(saved) ? saved : localeFromHeaders(headers, db);
+  const { offered } = await loadLanguageSettings(db);
+  return offeredLocale(saved, offered) ?? localeFromHeaders(headers, db);
 }
 
 /**
@@ -738,12 +740,13 @@ export const auth = betterAuth({
             return;
           }
           const saved = (found.user as { locale?: unknown }).locale;
+          const { offered } = await loadLanguageSettings(db);
           const { magicLinkEmail } = await import('../emails/magic-link');
           await sendEmail(
             await magicLinkEmail(found.user.email, {
               appUrl,
               url: emailLinkUrl(url, appUrl),
-              locale: isLocale(saved) ? saved : requestLocale,
+              locale: offeredLocale(saved, offered) ?? requestLocale,
             }),
           );
         };

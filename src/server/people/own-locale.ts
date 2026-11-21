@@ -11,13 +11,21 @@
 import { eq } from 'drizzle-orm';
 
 import { user } from '@/db/schema';
-import { FOLLOW_DEFAULT, isLocale, type LanguageChoice, type Locale } from '@/lib/i18n/locales';
+import { loadLanguageSettings } from '@/lib/i18n/default-locale';
+import {
+  DEFAULT_LOCALE,
+  FOLLOW_DEFAULT,
+  isLocale,
+  type LanguageChoice,
+  type Locale,
+  offeredLocale,
+} from '@/lib/i18n/locales';
 import { languageChoiceSchema } from '@/lib/validation';
 
 import { assertNotSignedInAs } from '../access';
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
-import { defaultLanguage } from '../recipient-locale';
+import assertLanguageOffered from '../offered-language';
 
 /**
  * Saves the user's own language choice. Anyone signed in may choose theirs,
@@ -28,6 +36,8 @@ import { defaultLanguage } from '../recipient-locale';
  * @param choice - A language, or `FOLLOW_DEFAULT`, as the form sent it.
  * @returns The saved language, or `null` for Default.
  * @throws {ZodError} When it's neither (`validation.locale`).
+ * @throws {ServiceError} `invalid` for a language that isn't offered
+ *   (`errors.language.notOffered`).
  */
 export default async function setOwnLocale(
   ctx: ServiceContext,
@@ -37,25 +47,41 @@ export default async function setOwnLocale(
   assertNotSignedInAs(actor);
   const chosen = languageChoiceSchema.parse(choice);
   const locale = chosen === FOLLOW_DEFAULT ? null : chosen;
+  await assertLanguageOffered(ctx.db, locale);
   await ctx.db.update(user).set({ locale }).where(eq(user.id, actor.id));
   return locale;
 }
 
 /**
  * The user's own language choice, for the account's Language card, with
- * Adiutor's default language so the card can name it.
+ * Adiutor's default language so the card can name it. A saved language
+ * that's turned off counts as Default, which is what they get meanwhile;
+ * it's named apart so the card can say so (decision 0029).
  *
  * @param ctx - Service context.
  * @param actor - The signed-in user.
- * @returns Their choice (a language, or `FOLLOW_DEFAULT`) and the default language.
+ * @returns Their choice (a language, or `FOLLOW_DEFAULT`), the default language, their saved
+ *   language when it's off (else `null`), and the languages offered.
  */
 export async function ownLanguage(
   ctx: ServiceContext,
   actor: Actor,
-): Promise<{ choice: LanguageChoice; defaultLocale: Locale }> {
-  const [[found], defaultLocale] = await Promise.all([
+): Promise<{
+  choice: LanguageChoice;
+  defaultLocale: Locale;
+  notOffered: Locale | null;
+  offered: readonly Locale[];
+}> {
+  const [[found], settings] = await Promise.all([
     ctx.db.select({ locale: user.locale }).from(user).where(eq(user.id, actor.id)),
-    defaultLanguage(ctx),
+    loadLanguageSettings(ctx.db),
   ]);
-  return { choice: isLocale(found?.locale) ? found.locale : FOLLOW_DEFAULT, defaultLocale };
+  const saved = isLocale(found?.locale) ? found.locale : null;
+  const choice = offeredLocale(saved, settings.offered);
+  return {
+    choice: choice ?? FOLLOW_DEFAULT,
+    defaultLocale: settings.defaultLocale ?? DEFAULT_LOCALE,
+    notOffered: saved && !choice ? saved : null,
+    offered: settings.offered,
+  };
 }

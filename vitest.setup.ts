@@ -11,7 +11,7 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 
-import { DEFAULT_LOCALE } from '@/lib/i18n/locales';
+import { DEFAULT_LOCALE, LOCALES } from '@/lib/i18n/locales';
 import { DEFAULT_TIME_ZONE } from '@/lib/i18n/time-zones';
 
 import {
@@ -90,6 +90,12 @@ vi.mock('@/lib/i18n/request-locale', () => ({
    * @returns `testLocale.current`.
    */
   default: async () => testLocale.current,
+  /**
+   * Adiutor's language settings in tests: every language offered.
+   *
+   * @returns The settings.
+   */
+  requestLanguageSettings: vi.fn(async () => ({ defaultLocale: DEFAULT_LOCALE, offered: LOCALES })),
 }));
 vi.mock('@/lib/i18n/request-time-zone', () => ({
   /**

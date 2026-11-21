@@ -1,14 +1,14 @@
 /**
  * @file Which language an email goes out in: the recipient's own saved
- * language, else Adiutor's default language (they're on Default), else
- * English (US). The language of whoever caused the email doesn't count: a
+ * language while Adiutor offers it, else Adiutor's default language (they're
+ * on Default, or chose a language that's turned off), else English (US). The language of whoever caused the email doesn't count: a
  * staff Admin browsing in Dutch doesn't send a user on Default a Dutch
  * notice. Only an email to the person making the request (an invite link's
  * confirmation) follows the language their browser shows. See "Which
  * language" in docs/email.md.
  */
-import { loadDefaultLocale } from '@/lib/i18n/default-locale';
-import { DEFAULT_LOCALE, isLocale, type Locale } from '@/lib/i18n/locales';
+import { loadDefaultLocale, loadLanguageSettings } from '@/lib/i18n/default-locale';
+import { DEFAULT_LOCALE, type Locale, offeredLocale } from '@/lib/i18n/locales';
 
 import type { ServiceContext } from './context';
 
@@ -23,17 +23,22 @@ export async function defaultLanguage(ctx: Pick<ServiceContext, 'db'>): Promise<
 }
 
 /**
- * Works out the language of an email to someone.
+ * Works out the language of an email to someone: the first of the languages
+ * it's given that Adiutor offers (their saved language, then e.g. the
+ * invitation's), else the default. A language that's turned off is skipped,
+ * so they get the default until it's on again (decision 0029).
  *
- * @param ctx - Service context; its database holds Adiutor's default language.
- * @param saved - The recipient's saved language (`user.locale`, or an invitation's), if any.
+ * @param ctx - Service context; its database holds Adiutor's language settings.
+ * @param saved - The recipient's languages in order (`user.locale`, an invitation's), if any.
  * @returns The locale to write the email in.
  */
 export default async function recipientLocale(
   ctx: Pick<ServiceContext, 'db'>,
-  saved?: string | null,
+  ...saved: (string | null | undefined)[]
 ): Promise<Locale> {
-  return isLocale(saved) ? saved : defaultLanguage(ctx);
+  const { defaultLocale, offered } = await loadLanguageSettings(ctx.db);
+  const chosen = saved.map((locale) => offeredLocale(locale, offered)).find(Boolean);
+  return chosen ?? defaultLocale ?? DEFAULT_LOCALE;
 }
 
 /**

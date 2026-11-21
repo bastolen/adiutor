@@ -1,5 +1,5 @@
 {
-  "id": "6e09be91-8771-43e0-b687-1c6e6cdd2fd4",
+  "id": "52b1a31a-a341-4d28-b11a-e1354d40647c",
   "prevId": "8a08403e-eae6-4b77-886f-0fc5b4510b92",
   "version": "7",
   "dialect": "postgresql",
@@ -628,12 +628,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "time_zone": {
-          "name": "time_zone",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "mfa_recommendation_dismissed_at": {
           "name": "mfa_recommendation_dismissed_at",
           "type": "timestamp with time zone",
@@ -905,12 +899,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'en-US'"
-        },
-        "time_zone": {
-          "name": "time_zone",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -3751,12 +3739,12 @@
           "notNull": true,
           "default": "'en-US'"
         },
-        "default_time_zone": {
-          "name": "default_time_zone",
-          "type": "text",
+        "offered_locales": {
+          "name": "offered_locales",
+          "type": "text[]",
           "primaryKey": false,
           "notNull": true,
-          "default": "'UTC'"
+          "default": "array['en-US', 'nl-NL', 'es-ES']::text[]"
         },
         "request_prefix": {
           "name": "request_prefix",
@@ -3816,6 +3804,14 @@
         "staff_settings_default_locale_valid": {
           "name": "staff_settings_default_locale_valid",
           "value": "\"staff_settings\".\"default_locale\" in ('en-US', 'nl-NL', 'es-ES')"
+        },
+        "staff_settings_offered_locales_known": {
+          "name": "staff_settings_offered_locales_known",
+          "value": "cardinality(\"staff_settings\".\"offered_locales\") > 0 and \"staff_settings\".\"offered_locales\" <@ array['en-US', 'nl-NL', 'es-ES']::text[]"
+        },
+        "staff_settings_default_locale_offered": {
+          "name": "staff_settings_default_locale_offered",
+          "value": "\"staff_settings\".\"default_locale\" = any(\"staff_settings\".\"offered_locales\")"
         }
       },
       "isRLSEnabled": false

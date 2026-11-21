@@ -1,6 +1,7 @@
 /**
  * @file Server actions for the staff page: changing the name shown to users,
- * Adiutor's default language and the prefix of request numbers. Staff roles
+ * Adiutor's languages (the default and the ones it offers) and the prefix of
+ * request numbers. Staff roles
  * use `src/app/(app)/_people/staff-actions.ts`, and invitations and invite
  * links `src/app/(app)/_people/invitation-actions.ts`.
  */
@@ -16,8 +17,8 @@ import appContext from '@/server/app-context';
 import { getActor } from '@/server/authz';
 import {
   renameStaff,
-  setDefaultLocale,
   setDefaultTimeZone,
+  setLanguages,
   setRequestPrefix,
 } from '@/server/people/staff';
 import {
@@ -49,23 +50,28 @@ export default async function renameStaffAction(
 }
 
 /**
- * Sets Adiutor's default language. Changes nothing for the person saving it,
- * whose own language comes first.
+ * Sets Adiutor's languages: its default and the ones it offers. Changes
+ * nothing for the person saving it while their own language stays on. The
+ * confirmation is in the request's language as it was when the action
+ * started.
  *
  * @param _previous - The previous result (unused).
- * @param formData - Field `defaultLocale`.
- * @returns A confirmation, in the request's language, or why it failed.
+ * @param formData - Fields `defaultLocale` and `offered` (one per language that's on).
+ * @returns A confirmation, or why it failed.
  */
-export async function saveDefaultLanguageAction(
+export async function saveLanguagesAction(
   _previous: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor();
-    await setDefaultLocale(appContext, actor, field(formData, 'defaultLocale'));
+    const t = await getTranslations('admin.staff.languages');
+    await setLanguages(appContext, actor, {
+      defaultLocale: field(formData, 'defaultLocale'),
+      offered: formData.getAll('offered').filter((value) => typeof value === 'string'),
+    });
     refresh();
-    const t = await getTranslations('common.language');
-    return { ok: true, message: t('defaultSaved') };
+    return { ok: true, message: t('saved') };
   });
 }
 
