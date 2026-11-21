@@ -5,7 +5,13 @@
 import { Editor } from '@tiptap/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { editorExtensions, pasteMarkdown, readMarkdown, writeMarkdown } from './editor-extensions';
+import {
+  editorExtensions,
+  pasteMarkdown,
+  readMarkdown,
+  withoutOwnLooks,
+  writeMarkdown,
+} from './editor-extensions';
 
 /** The editors made by a test, to take down after it. */
 const editors: Editor[] = [];
@@ -72,6 +78,61 @@ function paste(editor: Editor, data: Record<string, string>): boolean {
     },
   });
   return pasteMarkdown(editor, event);
+}
+
+/**
+ * Copies what's selected in an editor, as a browser does: the editor puts
+ * it on the clipboard in its own HTML and as plain text.
+ *
+ * @param editor - The editor.
+ * @returns What's on the clipboard, by type.
+ */
+function copyFrom(editor: Editor): Record<string, string> {
+  const copied = new Map<string, string>();
+  const event = new Event('copy', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'clipboardData', {
+    value: {
+      /** Empties the clipboard. */
+      clearData: () => {
+        copied.clear();
+      },
+      /**
+       * Puts something on the clipboard.
+       *
+       * @param type - Its type.
+       * @param value - It.
+       */
+      setData: (type: string, value: string) => {
+        copied.set(type, value);
+      },
+    },
+  });
+  editor.view.dom.dispatchEvent(event);
+  return Object.fromEntries(copied);
+}
+
+/**
+ * Pastes into an editor through the browser's paste event, so everything
+ * that takes a paste has its turn, as in a browser.
+ *
+ * @param editor - The editor.
+ * @param data - What's on the clipboard, by type.
+ */
+function pasteIn(editor: Editor, data: Record<string, string>) {
+  const event = new Event('paste', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'clipboardData', {
+    value: {
+      types: Object.keys(data),
+      /**
+       * Reads the clipboard.
+       *
+       * @param type - The type asked for.
+       * @returns What's there in that type.
+       */
+      getData: (type: string) => data[type] ?? '',
+    },
+  });
+  editor.view.dom.dispatchEvent(event);
 }
 
 /**
@@ -376,5 +437,103 @@ describe('pasting', () => {
 
     expect(editor.getText()).toBe('use <b>this</b>');
     expect(editor.view.dom.querySelector('b, strong')).toBeNull();
+  });
+});
+
+describe('pasting with formatting', () => {
+  /** The keys of two people who may be mentioned. */
+  const SAM = 'Sam0000000000000000000';
+  const CASEY = 'Casey00000000000000000';
+  /** The address of a person's page, as a browser copies a link to it: whole. */
+  const PERSON_PAGE = 'http://localhost:3000/admin/users/019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b';
+
+  it('keeps the mentions and images of what was copied in an editor', () => {
+    const markdown = `**Ask** [@Sam Support](mention:${SAM}) about ![The plan](https://adiutor.dev/plan.png "Plan").`;
+    const from = editorWith(markdown);
+    from.commands.selectAll();
+    const copied = copyFrom(from);
+    // The editor's own HTML carries what it reads them back from.
+    expect(copied['text/html']).toContain(`data-mention-key="${SAM}"`);
+    expect(copied['text/html']).toContain('data-markdown=');
+
+    const to = editorWith('');
+    pasteIn(to, copied);
+
+    expect(writeMarkdown(to)).toBe(markdown);
+    expect(to.view.dom.querySelector('img')).toBeNull();
+  });
+
+  it('reads a mention back from where a text is read, by the key a writer gets there', () => {
+    const editor = editorWith('');
+
+    pasteIn(editor, {
+      'text/plain': 'Ask @Sam Support and @Casey Client.',
+      // Someone at a company gets a span; the staff get a link to the person's page. A browser
+      // copies each with the weight it's shown in, which isn't bold someone gave it.
+      'text/html': `<p style="font-weight: 400">Ask <span data-mention="" data-mention-key="${SAM}" class="border" style="font-weight: 500">@Sam Support</span> and <a data-mention="" data-mention-key="${CASEY}" href="${PERSON_PAGE}" style="font-weight: 600">@Casey Client</a>.</p>`,
+    });
+
+    expect(writeMarkdown(editor)).toBe(
+      `Ask [@Sam Support](mention:${SAM}) and [@Casey Client](mention:${CASEY}).`,
+    );
+    expect(editor.view.dom.querySelector('a, strong')).toBeNull();
+  });
+
+  it('takes the look off mentions and images only, also in cells without their table', () => {
+    expect(withoutOwnLooks('<p style="color: red"><b>bold</b></p>')).toBe(
+      '<p style="color: red"><b>bold</b></p>',
+    );
+    expect(
+      withoutOwnLooks(
+        '<td style="font-weight: 600"><span data-mention="" style="font-weight: 500">@Sam</span><span data-written-image="" style="color: blue">The plan</span></td>',
+      ),
+    ).toBe(
+      '<td style="font-weight: 600"><span data-mention="">@Sam</span><span data-written-image="">The plan</span></td>',
+    );
+  });
+
+  it('pastes a mention without a key as its text, never as a link to the person’s page', () => {
+    const editor = editorWith('');
+
+    pasteIn(editor, {
+      'text/plain': 'Ask @Sam Support, @Casey Client, @Wim and Fenna.',
+      'text/html': [
+        '<p>Ask <span data-mention="">@Sam Support</span>, ',
+        `<a data-mention="" href="${PERSON_PAGE}">@Casey Client</a>, `,
+        '<span data-mention="" data-mention-key="not-a-key">@Wim</span> and ',
+        `<span data-mention="" data-mention-key="${SAM}">Fenna</span>.</p>`,
+      ].join(''),
+    });
+
+    expect(writeMarkdown(editor)).toBe('Ask @Sam Support, @Casey Client, @Wim and Fenna.');
+    expect(editor.view.dom.querySelector('a, [data-mention]')).toBeNull();
+  });
+
+  it('links a pasted address only when it’s a whole http or https address', () => {
+    const editor = editorWith('');
+
+    pasteIn(editor, {
+      'text/plain': 'the docs, a request and this',
+      'text/html':
+        '<p><a href="https://adiutor.dev/docs">the docs</a>, <a href="/requests/12">a request</a> and <a href="javascript:alert(1)">this</a></p>',
+    });
+
+    expect(writeMarkdown(editor)).toBe('[the docs](https://adiutor.dev/docs), a request and this');
+  });
+
+  it('takes an image only when its Markdown is one image, and never loads one', () => {
+    const editor = editorWith('');
+
+    pasteIn(editor, {
+      'text/plain': 'bold two images a picture',
+      'text/html': [
+        '<p><span data-written-image="" data-markdown="**bold**">bold</span> ',
+        '<span data-written-image="" data-markdown="![a](https://adiutor.dev/a.png) ![b](https://adiutor.dev/b.png)">two images</span> ',
+        '<img src="https://adiutor.dev/picture.png" alt="a picture"></p>',
+      ].join(''),
+    });
+
+    expect(writeMarkdown(editor)).toBe('bold two images');
+    expect(editor.view.dom.querySelector('img, [data-written-image], strong')).toBeNull();
   });
 });

@@ -7,7 +7,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { request, requestEntry, requestMention, user } from '@/db/schema';
+import { company as companyTable, request, requestEntry, requestMention, user } from '@/db/schema';
 import {
   MAX_MENTIONS_PER_TEXT,
   MENTION_KEY_LENGTH,
@@ -376,8 +376,10 @@ describe('reading a request with mentions', () => {
 
     const forStaff = await getRequest(ctx, support, raised.id);
     const forCasey = await getRequest(ctx, casey, raised.id);
+    const forWim = await getRequest(ctx, wim, raised.id);
 
-    // The staff get the IDs their links to a user's page need.
+    // The staff get the IDs their links to a user's page need. Whoever may write in the request
+    // gets each person's key there, so a mention they copy into a text stays one.
     expect(forStaff.description.mentions).toEqual({
       [inDescription?.id ?? '']: {
         userId: wim.id,
@@ -385,6 +387,7 @@ describe('reading a request with mentions', () => {
         side: 'company',
         isViewer: false,
         picture: null,
+        key: mentionKey(company.id, wim.id),
       },
     });
     // Someone at the company gets names, and whether it's them: never an ID.
@@ -395,6 +398,7 @@ describe('reading a request with mentions', () => {
         side: 'company',
         isViewer: false,
         picture: null,
+        key: mentionKey(company.id, wim.id),
       },
     });
     expect(forCasey.entries[0]?.body?.mentions).toEqual({
@@ -404,6 +408,7 @@ describe('reading a request with mentions', () => {
         side: 'company',
         isViewer: true,
         picture: null,
+        key: mentionKey(company.id, casey.id),
       },
       [toWim?.id ?? '']: {
         userId: null,
@@ -411,6 +416,26 @@ describe('reading a request with mentions', () => {
         side: 'company',
         isViewer: false,
         picture: null,
+        key: mentionKey(company.id, wim.id),
+      },
+    });
+    // A Watcher writes nothing, so gets no keys.
+    expect(forWim.entries[0]?.body?.mentions).toEqual({
+      [toCasey?.id ?? '']: {
+        userId: null,
+        name: 'casey',
+        side: 'company',
+        isViewer: false,
+        picture: null,
+        key: null,
+      },
+      [toWim?.id ?? '']: {
+        userId: null,
+        name: 'wim',
+        side: 'company',
+        isViewer: true,
+        picture: null,
+        key: null,
       },
     });
   });
@@ -440,14 +465,17 @@ describe('reading a request with mentions', () => {
         side: 'company',
         isViewer: false,
         picture: null,
+        key: mentionKey(company.id, wim.id),
       },
-      // The mention stays, on the staff's side, without the name the account took with it.
+      // The mention stays, on the staff's side, without the name the account took with it, and
+      // without a key: nobody can mention them any more.
       [toFenna?.id ?? '']: {
         userId: null,
         name: null,
         side: 'staff',
         isViewer: false,
         picture: null,
+        key: null,
       },
     });
     expect((await mentionsIn(raised.id))[1]).toMatchObject({ userId: null, side: 'staff' });
@@ -474,5 +502,27 @@ describe('reading a request with mentions', () => {
 
     expect(Object.keys(detail.entries[0]?.body?.mentions ?? {})).toEqual([first?.id]);
     expect(detail.entries[1]?.body?.mentions).toBeUndefined();
+  });
+
+  it('gives no keys for a deactivated company, where nothing is written', async () => {
+    await createStaffSettings(db);
+    const company = await createCompany(db);
+    const casey = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    const raised = await storeRequest(company.id);
+    await replyToRequest(ctx, support, {
+      request: raised.id,
+      body: `Hello ${marker(company.id, casey.id, 'casey')}.`,
+    });
+    await db
+      .update(companyTable)
+      .set({ deactivatedAt: new Date() })
+      .where(eq(companyTable.id, company.id));
+
+    const detail = await getRequest(ctx, support, raised.id);
+
+    expect(Object.values(detail.entries[0]?.body?.mentions ?? {})).toEqual([
+      expect.objectContaining({ name: 'casey', key: null }),
+    ]);
   });
 });

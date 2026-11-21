@@ -84,7 +84,9 @@ function PlainText({ text, className }: { text: string; className: string }) {
  * The people a text mentions, as the text shows them: by the name the page
  * gives them (their own, or their side's), set apart when it's the reader,
  * and linked to the user's page for a reader who got their ID (the staff).
- * Someone shown by their side's name is never a link, as elsewhere.
+ * Someone shown by their side's name is never a link, as elsewhere. A reader
+ * who may write in the request got each person's key, which the mention
+ * carries for the editor.
  *
  * @param mentions - The text's mentions, as the request's service gave them.
  * @param names - The names of the two sides.
@@ -102,6 +104,7 @@ function shownMentions(
         isViewer: person.isViewer,
         href:
           person.userId !== null && person.name !== null ? `/admin/users/${person.userId}` : null,
+        key: person.key,
       },
     ]),
   );

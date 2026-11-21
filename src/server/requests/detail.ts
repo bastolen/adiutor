@@ -38,6 +38,7 @@ import getRequestPrefix from '../people/request-prefix';
 import getStaffName from '../people/staff-name';
 import { getRequestAccess, requestAudienceIn, type RequestPerson, requestPerson } from './access';
 import { editableText, type TextMention } from './edits';
+import mentionKey from './mention-key';
 import { loadSubscribers } from './participants';
 import { requestTypeNames } from './types';
 
@@ -64,6 +65,20 @@ export const THREAD_CHUNK = 50;
 /** How many earlier chunks a reader can add to the latest one. */
 export const MAX_EARLIER_CHUNKS = 19;
 
+/** Someone a text mentions, as its reader sees them. */
+export interface MentionedPerson extends RequestPerson {
+  /**
+   * Their key in the request's company (`mentionKey`), the one a text that's
+   * being written names them with, for a reader who may write in the request
+   * (`requests:contribute`, the readers the list at "@" is for): a mention
+   * they copy into a text stays one. `null` for every other reader, and for
+   * someone without an account or a name to show. On its own a key says
+   * nothing about who someone is; who a writer may mention is checked when
+   * the text is sent.
+   */
+  key: string | null;
+}
+
 /** A text someone wrote in a request, with the format it's written in. */
 export interface RequestText {
   /** The text as it was written. */
@@ -75,7 +90,7 @@ export interface RequestText {
    * (`storedMentionId`). Only the text's own: a marker with another text's
    * ID names nobody. Left out for a text that mentions nobody.
    */
-  mentions?: Record<string, RequestPerson>;
+  mentions?: Record<string, MentionedPerson>;
   /** When it was last edited; `null` or left out while it's as it was written. */
   editedAt?: Date | null;
   /**
@@ -415,11 +430,18 @@ export async function getRequest(
   ]);
 
   // Each text's own mentions: the description's under no entry, a reply's under its entry. A
-  // mention shows a name, never a picture.
-  const mentionsOf = new Map<string | null, Record<string, RequestPerson>>();
+  // mention shows a name, never a picture. A reader who may write here gets each person's key
+  // too, so a mention they copy into a text stays one (nothing is written for a deactivated
+  // company); someone without an account or a name to show can't be mentioned, so has none.
+  const writes = permissions.has('requests:contribute') && company.deactivatedAt === null;
+  const mentionsOf = new Map<string | null, Record<string, MentionedPerson>>();
   mentioned.forEach(({ id, entryId, side, person }) => {
     const ofText = mentionsOf.get(entryId) ?? {};
-    ofText[id] = requestPerson(person ?? { id: null, name: null }, side, actor);
+    const asShown = requestPerson(person ?? { id: null, name: null }, side, actor);
+    ofText[id] = {
+      ...asShown,
+      key: writes && person?.id && asShown.name !== null ? mentionKey(company.id, person.id) : null,
+    };
     mentionsOf.set(entryId, ofText);
   });
 

@@ -401,6 +401,14 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
   `http` and `https` addresses are links, and an image is kept as it was written and shown by its
   description. It's still never trusted: the server cleans, limits and renders what it sends like
   any other text.
+- **Pasting with formatting** (copied from the editor, or from a text where it's read) keeps the
+  formatting, by the same rules: a pasted link stays one only for a whole `http` or `https`
+  address, and nothing pasted loads. Mentions and images stay what they are, because their
+  elements carry what the editor reads them back from: a mention its person's key
+  (`data-mention-key`, see [Mentions](#mentions)), an image in the editor the Markdown it was
+  written as (`data-markdown`, taken only when it reads as one image). A mention's element is
+  never a link, also where it links to the person's page, and the styles a browser copies with
+  a mention or an image are dropped first (`withoutOwnLooks`), so a mention doesn't come in bold.
 - **What the editor doesn't have:** footnotes (one typed in it is sent as plain text) and a way to
   build a table from scratch (a pasted Markdown table stays a table, with cells to edit).
 - **Its size:** a reply's field starts eight lines high and a description's fourteen. It grows
@@ -498,13 +506,18 @@ A description, a reply or a note can mention people. Why it's built this way is 
   company's key, a key nobody has, a marker typed with a row's ID): nothing is refused.
 - **Reading** (`getRequest`): each text comes with the people it mentions, by the ID its markers
   name, as the reader may see them (`requestPerson`: a name, their side, whether it's the reader,
-  and an ID for the staff only). A text gets its own mentions only, so a marker with another
-  text's row names nobody. Someone whose account is gone stays mentioned, by their side.
+  and an ID for the staff only). A reader who may write in the request (`requests:contribute`,
+  and not in a deactivated company) also gets each person's key (`MentionedPerson.key`), so a
+  mention they copy into a text stays one ([decision 0035](decisions/0035-mention-keys-on-posted-texts.md));
+  nobody gets one for someone without an account or a name to show. A text gets its own mentions
+  only, so a marker with another text's row names nobody. Someone whose account is gone stays
+  mentioned, by their side.
 - **Showing** (`RequestText`, which hands `MarkdownText` its `mentions`): a mention is the
   person's name after an "@", as the page names them (their own name, or their side's), with a
   line around it and in a heavier weight, so it's set apart by more than a colour, also in
   forced-colours mode. A mention of the reader has the line and the name in the colour of
-  highlights. For the staff the name links to the user's page; a side's name never does. The
+  highlights. For the staff the name links to the user's page; a side's name never does. For a
+  reader who got the key, the mention's element carries it (`data-mention-key`). The
   marker reaches the link's element through the allow-list's `mention` scheme, and that element
   shows the person, or, for a marker that isn't one of the text's, the link's text: it never
   links to such an address. A text shown as it was written, because formatting it would cost too
@@ -530,6 +543,11 @@ A description, a reply or a note can mention people. Why it's built this way is 
   deleted as a whole. Its Markdown is the marker with the person's key, so a text the page kept
   still shows its mentions, and a marker of any other shape is the text of its link, as where a
   text is read. A staff member is listed with the staff's name as their label.
+- **Pasted** (copied from the editor, or from a text where it's read by someone who may write), a
+  mention stays one: the editor reads it back from its element's key (`data-mention-key`) and the
+  name after its "@". Without a key of the right shape it's that text, and never a link, also
+  where it linked to the person's page. Whether the writer may mention them is checked when the
+  text is sent, as for one picked from the list.
 
 ### Cleaning, limits and names
 
