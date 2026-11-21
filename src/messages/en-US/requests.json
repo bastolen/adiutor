@@ -15,6 +15,7 @@
       "typeFilter": "Type",
       "typeMenu": "Filter by type",
       "allTypes": "All",
+      "archivedType": "{name} (archived)",
       "priorityFilter": "Priority",
       "priorityMenu": "Filter by priority",
       "allPriorities": "All",
@@ -85,8 +86,6 @@
     },
     "status": "{status, select, open {Open} todo {To do} in_progress {In progress} waiting {{audience, select, contributor {Waiting for your reply} follower {Waiting for your company} other {Waiting for the company}}} done {Done} cancelled {Cancelled} other {Unknown}}",
     "reopened": "Reopened",
-    "type": "{type, select, hotfix {Hotfix} bug {Bug} support {Support} new_feature {New feature} other {Unknown}}",
-    "typeDescription": "{type, select, hotfix {Something is broken and needs fixing right away.} bug {Something doesn’t work as it should.} support {A question, or help with something.} new_feature {Something new, or a change to how things work.} other {Another kind of request.}}",
     "priority": "{priority, select, low {Low} normal {Normal} high {High} other {Unknown}}",
     "priorityBadge": "{priority, select, low {Low priority} normal {Normal priority} high {High priority} other {Unknown priority}}",
     "entry": {
@@ -164,6 +163,24 @@
       "versionLine": "{name} changed this on {time}.",
       "editNote": "Edit note",
       "noteLabel": "Note"
+    },
+    "builtInTypes": {
+      "hotfix": {
+        "name": "Hotfix",
+        "description": "Something is broken and needs fixing right away."
+      },
+      "bug": {
+        "name": "Bug",
+        "description": "Something doesn’t work as it should."
+      },
+      "support": {
+        "name": "Support",
+        "description": "A question, or help with something."
+      },
+      "new_feature": {
+        "name": "New feature",
+        "description": "Something new, or a change to how things work."
+      }
     }
   }
 }

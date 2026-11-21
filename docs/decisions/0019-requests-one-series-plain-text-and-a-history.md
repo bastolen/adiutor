@@ -1,6 +1,6 @@
 # 0019. Requests: one number series, plain text and a history in one table
 
-- **Status:** Accepted; its rule that texts are final is replaced by [0024](0024-edit-replies-and-descriptions.md)
+- **Status:** Accepted; its rule that texts are final is replaced by [0024](0024-edit-replies-and-descriptions.md), and its built-in types by [0027](0027-request-types-the-staff-manage.md)
 - **Date:** 2026-11-13
 
 ## Context

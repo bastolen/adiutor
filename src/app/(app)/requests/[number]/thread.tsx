@@ -16,7 +16,6 @@ import {
   isReopening,
   isRequestPriority,
   isRequestStatus,
-  isRequestType,
   type RequestAudience,
   type WrittenEntryKind,
 } from '@/lib/requests';
@@ -122,10 +121,8 @@ function ChangeText({ entry, audience }: { entry: RequestEntryView; audience: Re
       return t('entry.status', { change, from: statusLabel(from), to: statusLabel(to) });
     }
     case 'type':
-      return t('entry.type', {
-        from: isRequestType(from) ? t('type', { type: from }) : from,
-        to: isRequestType(to) ? t('type', { type: to }) : to,
-      });
+      // The service gives the types' names.
+      return t('entry.type', { from, to });
     case 'priority':
       return t('entry.priority', {
         from: isRequestPriority(from) ? t('priority', { priority: from }) : from,

@@ -25,7 +25,6 @@ import {
   type RequestPriority,
   type RequestStatus,
   type RequestTextFormat,
-  type RequestType,
   STAFF_ONLY_ENTRY_KINDS,
 } from '@/lib/requests';
 
@@ -37,6 +36,7 @@ import getRequestPrefix from '../people/request-prefix';
 import getStaffName from '../people/staff-name';
 import { getRequestAccess, requestAudienceIn, type RequestPerson, requestPerson } from './access';
 import { editableText, type TextMention } from './edits';
+import { requestTypeNames } from './types';
 
 /** The account an `assignee` entry is about, joined next to its author's. */
 const subjectUser = alias(user, 'subject_user');
@@ -100,11 +100,12 @@ export interface RequestEntryView {
   createdAt: Date;
   /** A reply's or a note's text; `null` for a change. */
   body: RequestText | null;
-  /** What a change replaced, or `null`. */
+  /** What a change replaced, or `null`. For a `type` entry, the type's name. */
   from: string | null;
   /**
-   * What a change set; `null` for a reply. For an `assignee` entry, whether
-   * its subject was assigned or removed (`ASSIGNMENT_CHANGES`).
+   * What a change set; `null` for a reply. For a `type` entry, the type's
+   * name; for an `assignee` entry, whether its subject was assigned or
+   * removed (`ASSIGNMENT_CHANGES`).
    */
   to: string | null;
   /**
@@ -132,8 +133,10 @@ export interface RequestDetail {
   title: string;
   /** What was asked. */
   description: RequestText;
-  /** Its type. */
-  type: RequestType;
+  /** Its type's key. */
+  type: string;
+  /** Its type's name. */
+  typeName: string;
   /** Its status. */
   status: RequestStatus;
   /** When it was last reopened, while it's open again; `null` otherwise. */
@@ -257,6 +260,7 @@ export async function getRequest(
     firstResponse,
     total,
     latest,
+    typeNames,
   ] = await Promise.all([
     found.createdBy
       ? ctx.db
@@ -330,6 +334,7 @@ export async function getRequest(
       .where(shown)
       .orderBy(desc(requestEntry.id))
       .limit(THREAD_CHUNK * (earlier + 1)),
+    requestTypeNames(ctx.db),
   ]);
 
   // Each text's own mentions: the description's under no entry, a reply's under its entry. A
@@ -399,6 +404,11 @@ export async function getRequest(
     .reverse()
     .map(({ author, authorSide, body, bodyFormat, subject, editedAt, ...entry }) => ({
       ...entry,
+      // A type change names the types as they're called now: a type is never deleted.
+      ...(entry.kind === 'type' && {
+        from: entry.from && (typeNames.get(entry.from) ?? entry.from),
+        to: entry.to && (typeNames.get(entry.to) ?? entry.to),
+      }),
       author: requestPerson(author ?? { id: null, name: null }, authorSide, actor, pictures),
       body:
         body === null
@@ -443,6 +453,7 @@ export async function getRequest(
       ),
     },
     type: found.type,
+    typeName: typeNames.get(found.type) ?? found.type,
     status: found.status,
     reopenedAt: found.reopenedAt,
     priority: internal ? found.priority : null,

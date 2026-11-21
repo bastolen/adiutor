@@ -48,6 +48,7 @@ import {
   findRequestNumber,
   getRequest,
   listAssignableStaff,
+  listRequestTypes,
   MAX_EARLIER_CHUNKS,
   type RequestDetail,
 } from '@/server/requests';
@@ -56,7 +57,7 @@ import PersonLine, { PersonAvatar, personName } from '../../_requests/request-pe
 import RequestText from '../../_requests/request-text';
 import { changeAssigneesAction, changeStatusAction } from './actions';
 import ChangeAssignees, { type AssigneeChoice } from './change-assignees';
-import EditDetails from './edit-details';
+import EditDetails, { type EditableType } from './edit-details';
 import EditableText from './editable-text';
 import EditedNote from './edited-note';
 import ReplyForm from './reply-form';
@@ -150,8 +151,18 @@ async function RequestContent({
   // be (gone meanwhile), so the dialog can still remove them.
   const assigned = detail.assignees.flatMap(({ userId }) => (userId ? [userId] : []));
   const assigneeChoices: AssigneeChoice[] = [];
+  // The types the request can be given: the active ones, and the one it has, archived or not.
+  const typeChoices: EditableType[] = [];
   if (manages) {
-    const staff = await listAssignableStaff(appContext, actor);
+    const [staff, types] = await Promise.all([
+      listAssignableStaff(appContext, actor),
+      listRequestTypes(appContext, actor),
+    ]);
+    types.forEach(({ key, name, startingPriority, archived }) => {
+      if (startingPriority && (!archived || key === detail.type)) {
+        typeChoices.push({ key, name, startingPriority });
+      }
+    });
     assigneeChoices.push(...staff.map(({ id, name }) => ({ id, name, isViewer: id === actor.id })));
     detail.assignees.forEach(({ userId, name, isViewer }) => {
       if (userId && !staff.some(({ id }) => id === userId)) {
@@ -281,6 +292,7 @@ async function RequestContent({
                         type: detail.type,
                         priority: detail.priority,
                       }}
+                      types={typeChoices}
                     />
                   )}
                   {choices.includes('done') && (

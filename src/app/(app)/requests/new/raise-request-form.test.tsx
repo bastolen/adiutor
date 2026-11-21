@@ -23,6 +23,22 @@ afterEach(() => {
 /** One company to raise a request in. */
 const ALPHA = [{ slug: 'adiutor-tests-alpha', name: 'Adiutor Tests Alpha' }];
 
+/** The types to choose from, as the page gives them: the ones that aren't archived. */
+const TYPES = [
+  {
+    key: 'hotfix',
+    name: 'Hotfix',
+    description: 'Something is broken and needs fixing right away.',
+  },
+  { key: 'bug', name: 'Bug', description: 'Something doesn’t work as it should.' },
+  { key: 'support', name: 'Support', description: 'A question, or help with something.' },
+  {
+    key: 'new_feature',
+    name: 'New feature',
+    description: 'Something new, or a change to how things work.',
+  },
+];
+
 /** Two companies to choose from. */
 const BOTH = [...ALPHA, { slug: 'adiutor-tests-beta', name: 'Adiutor Tests Beta' }];
 
@@ -48,7 +64,7 @@ async function pick(user: ReturnType<typeof userEvent.setup>, select: string, op
 
 describe('RaiseRequestForm', () => {
   it('asks someone with one company for a title, a type and a description only', () => {
-    render(<RaiseRequestForm companies={ALPHA} choosesPriority={false} />);
+    render(<RaiseRequestForm types={TYPES} companies={ALPHA} choosesPriority={false} />);
 
     expect(screen.queryByRole('combobox', { name: 'Company' })).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Priority' })).not.toBeInTheDocument();
@@ -66,7 +82,7 @@ describe('RaiseRequestForm', () => {
 
   it('says what each type is for', async () => {
     const user = userEvent.setup();
-    render(<RaiseRequestForm companies={ALPHA} choosesPriority={false} />);
+    render(<RaiseRequestForm types={TYPES} companies={ALPHA} choosesPriority={false} />);
 
     await user.click(screen.getByRole('combobox', { name: 'Type' }));
 
@@ -82,7 +98,7 @@ describe('RaiseRequestForm', () => {
 
   it('raises the request in the only company there is', async () => {
     const user = userEvent.setup();
-    render(<RaiseRequestForm companies={ALPHA} choosesPriority={false} />);
+    render(<RaiseRequestForm types={TYPES} companies={ALPHA} choosesPriority={false} />);
 
     await user.type(screen.getByRole('textbox', { name: 'Title' }), 'The printer is broken');
     await pick(user, 'Type', 'Bug');
@@ -101,7 +117,12 @@ describe('RaiseRequestForm', () => {
   it('lets someone with several companies choose one, starting with the one they came from', async () => {
     const user = userEvent.setup();
     render(
-      <RaiseRequestForm companies={BOTH} company="adiutor-tests-beta" choosesPriority={false} />,
+      <RaiseRequestForm
+        types={TYPES}
+        companies={BOTH}
+        company="adiutor-tests-beta"
+        choosesPriority={false}
+      />,
     );
 
     const company = screen.getByRole('combobox', { name: 'Company' });
@@ -123,7 +144,7 @@ describe('RaiseRequestForm', () => {
       { slug: 'adiutor-tests-north', name: 'Adiutor Tests' },
       ...ALPHA,
     ];
-    render(<RaiseRequestForm companies={twins} choosesPriority={false} />);
+    render(<RaiseRequestForm types={TYPES} companies={twins} choosesPriority={false} />);
 
     await user.click(screen.getByRole('combobox', { name: 'Company' }));
 
@@ -135,7 +156,7 @@ describe('RaiseRequestForm', () => {
   });
 
   it('asks for a company when none was chosen for them', () => {
-    render(<RaiseRequestForm companies={BOTH} choosesPriority={false} />);
+    render(<RaiseRequestForm types={TYPES} companies={BOTH} choosesPriority={false} />);
 
     expect(screen.getByRole('combobox', { name: 'Company' })).toHaveTextContent('Choose a company');
   });
@@ -146,7 +167,7 @@ describe('RaiseRequestForm', () => {
       message: 'Choose which company this request is for.',
     });
     const user = userEvent.setup();
-    render(<RaiseRequestForm companies={BOTH} choosesPriority={false} />);
+    render(<RaiseRequestForm types={TYPES} companies={BOTH} choosesPriority={false} />);
 
     await user.type(screen.getByRole('textbox', { name: 'Title' }), 'A question');
     await pick(user, 'Type', 'Support');
@@ -164,7 +185,7 @@ describe('RaiseRequestForm', () => {
 
   it('lets the staff leave the priority to the type, or choose one', async () => {
     const user = userEvent.setup();
-    render(<RaiseRequestForm companies={ALPHA} choosesPriority />);
+    render(<RaiseRequestForm types={TYPES} companies={ALPHA} choosesPriority />);
 
     const priority = screen.getByRole('combobox', { name: 'Priority' });
     expect(priority).toHaveTextContent('Set by the type');
@@ -190,7 +211,7 @@ describe('RaiseRequestForm', () => {
       message: 'Choose what kind of request this is.',
     });
     const user = userEvent.setup();
-    render(<RaiseRequestForm companies={ALPHA} choosesPriority={false} />);
+    render(<RaiseRequestForm types={TYPES} companies={ALPHA} choosesPriority={false} />);
 
     const title = screen.getByRole('textbox', { name: 'Title' });
     await user.type(title, 'The printer is broken');
@@ -210,7 +231,10 @@ describe('RaiseRequestForm', () => {
     ['nl-NL', 'Titel', 'Beschrijving', 'Verzoek indienen', 'Kies een type'],
     ['es-ES', 'Título', 'Descripción', 'Crear solicitud', 'Elige un tipo'],
   ] as const)('speaks %s', (locale, title, description, submit, type) => {
-    renderInLocale(locale, <RaiseRequestForm companies={ALPHA} choosesPriority={false} />);
+    renderInLocale(
+      locale,
+      <RaiseRequestForm types={TYPES} companies={ALPHA} choosesPriority={false} />,
+    );
 
     expect(screen.getByRole('textbox', { name: title })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: description })).toBeInTheDocument();

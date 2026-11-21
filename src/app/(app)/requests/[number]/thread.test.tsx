@@ -80,6 +80,7 @@ function detailOf(detail: Partial<RequestDetail> = {}): RequestDetail {
     title: 'Update the opening hours on the website',
     description: { text: 'Our opening hours change next month.', format: 'plain' },
     type: 'support',
+    typeName: 'Support',
     status: 'open',
     reopenedAt: null,
     priority: null,
@@ -175,8 +176,9 @@ describe('Thread', () => {
     ],
     [
       'a new type',
-      { kind: 'type', from: 'bug', to: 'new_feature' },
-      'Changed the type from Bug to New feature.',
+      // The service gives the types' names.
+      { kind: 'type', from: 'Bug', to: 'Printers' },
+      'Changed the type from Bug to Printers.',
     ],
     [
       'a new priority',

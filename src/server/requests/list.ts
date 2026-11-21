@@ -5,21 +5,20 @@
  */
 import { and, count, eq, ilike, inArray, isNull, like, not, or, type SQL, sql } from 'drizzle-orm';
 
-import { company, request, requestAssignee, user } from '@/db/schema';
+import { company, request, requestAssignee, requestType, user } from '@/db/schema';
 import { getPermissions } from '@/lib/authz/permissions';
 import { firstRow } from '@/lib/defined';
 import {
   DEFAULT_REQUEST_STATUS_FILTER,
   isRequestPriority,
   isRequestStatusFilter,
-  isRequestType,
+  isRequestTypeKey,
   REQUEST_PRIORITIES,
   type RequestAudience,
   requestNumberStartInSearch,
   type RequestPriority,
   type RequestStatus,
   type RequestStatusFilter,
-  type RequestType,
   statusesOfFilter,
 } from '@/lib/requests';
 import { type Paged, resolveTableState, type TableState } from '@/lib/tables/table-state';
@@ -109,7 +108,7 @@ export interface ListRequestsOptions extends Partial<TableState<StaffRequestSort
   status?: string;
   /** One company's requests only: its ID or URL name. */
   company?: string;
-  /** One type only (`REQUEST_TYPES`); anything else shows every type. */
+  /** One type only, by its key; a key no type has, or anything else, shows every type. */
   type?: string;
   /** One priority only (`REQUEST_PRIORITIES`), for those who see priorities; ignored otherwise. */
   priority?: string;
@@ -133,8 +132,10 @@ export interface RequestListItem {
   status: RequestStatus;
   /** Whether it was done or cancelled before and is open again. */
   reopened: boolean;
-  /** Its type. */
-  type: RequestType;
+  /** Its type's key. */
+  type: string;
+  /** Its type's name. */
+  typeName: string;
   /** Its priority, or `null` for readers who don't see priorities. */
   priority: RequestPriority | null;
   /** Its company. */
@@ -308,8 +309,14 @@ export async function listRequests(
   if (statuses) {
     conditions.push(inArray(request.status, [...statuses]));
   }
-  if (isRequestType(type)) {
-    conditions.push(eq(request.type, type));
+  if (isRequestTypeKey(type)) {
+    // A key no type has shows every type, as anything else does.
+    conditions.push(
+      or(
+        eq(request.type, type),
+        sql`not exists (select 1 from ${requestType} where ${requestType.key} = ${type})`,
+      ),
+    );
   }
   if (scope.internal && isRequestPriority(priority)) {
     conditions.push(eq(request.priority, priority));
@@ -344,6 +351,7 @@ export async function listRequests(
           status: request.status,
           reopenedAt: request.reopenedAt,
           type: request.type,
+          typeName: requestType.name,
           priority: request.priority,
           lastActivityAt: request.lastActivityAt,
           company: { id: company.id, name: company.name, slug: company.slug },
@@ -351,6 +359,7 @@ export async function listRequests(
         })
         .from(request)
         .innerJoin(company, eq(request.companyId, company.id))
+        .innerJoin(requestType, eq(request.type, requestType.key))
         .where(where)
         .orderBy(...order)
         .limit(limit)

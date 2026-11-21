@@ -27,7 +27,6 @@ import {
   REQUEST_SIDES,
   REQUEST_STATUSES,
   REQUEST_TEXT_FORMATS,
-  REQUEST_TYPES,
   WRITTEN_ENTRY_KINDS,
   WRITTEN_TEXT_FORMAT,
 } from '../../lib/requests';
@@ -37,6 +36,50 @@ import { company } from './companies';
 
 /** The kinds of entry that hold a text, as a list for a check constraint. */
 const WRITTEN_KINDS = WRITTEN_ENTRY_KINDS.map((kind) => `'${kind}'`).join(', ');
+
+/**
+ * A kind of request the staff offer, which whoever raises a request picks:
+ * the four built-in ones (Hotfix, Bug, Support, New feature) to begin with,
+ * then whatever staff Admins add on the Staff page (decision 0027). A type is
+ * never deleted: archived, it can't be picked any more, and the requests that
+ * have it keep it.
+ */
+export const requestType = pgTable(
+  'request_type',
+  {
+    id: id(),
+    /**
+     * What requests, their history and the list's `?type=` filter hold
+     * (`REQUEST_TYPE_KEY_PATTERN`). Made from the name when the type is added
+     * (`requestTypeKeyFromName`), and never changed or reused.
+     */
+    key: text('key').notNull(),
+    /** Its name, one text for every language, like the staff name. */
+    name: text('name').notNull(),
+    /** What it's for, shown with it when a request is raised. */
+    description: text('description').notNull(),
+    /** The priority a request of this type starts with, until the staff change it. */
+    startingPriority: text('starting_priority', { enum: REQUEST_PRIORITIES }).notNull(),
+    /** Its place in every list of types, from 1. */
+    position: integer('position').notNull(),
+    /** When it was archived, or `null` while it can be picked. */
+    archivedAt: timestampTz('archived_at'),
+    createdAt: createdAt(),
+    /**
+     * When the staff last changed it, or `null` while it's as it was added
+     * (setup names an unchanged built-in type in its language).
+     */
+    updatedAt: timestampTz('updated_at'),
+  },
+  (table) => [
+    /** One type per key, which requests point at. */
+    uniqueIndex('request_type_key_idx').on(table.key),
+    /** One type per place, in the order every list shows. */
+    uniqueIndex('request_type_position_idx').on(table.position),
+    check('request_type_key_form', sql`${table.key} ~ '^[a-z0-9_]{1,40}$'`),
+    oneOf('request_type_starting_priority_valid', table.startingPriority, REQUEST_PRIORITIES),
+  ],
+);
 
 /** A request a company raised with the staff, or the staff raised for it. */
 export const request = pgTable(
@@ -66,8 +109,13 @@ export const request = pgTable(
       .default(WRITTEN_TEXT_FORMAT),
     /** When the description was last edited, or `null` while it's as it was written. */
     descriptionEditedAt: timestampTz('description_edited_at'),
-    /** What kind of request it is, chosen by whoever raised it. The staff can change it. */
-    type: text('type', { enum: REQUEST_TYPES }).notNull(),
+    /**
+     * What kind of request it is, chosen by whoever raised it: a type's key.
+     * The staff can change it.
+     */
+    type: text('type')
+      .notNull()
+      .references(() => requestType.key),
     /**
      * How urgent it is: the type's starting priority until the staff change
      * it. Only staff see it.
@@ -97,7 +145,8 @@ export const request = pgTable(
     /** Every company's requests by their last activity, for the staff. */
     index('request_activity_idx').on(table.lastActivityAt, table.id),
     index('request_created_by_idx').on(table.createdBy),
-    oneOf('request_type_valid', table.type, REQUEST_TYPES),
+    /** The requests of a type; also serves the type foreign key. */
+    index('request_type_idx').on(table.type),
     oneOf('request_priority_valid', table.priority, REQUEST_PRIORITIES),
     oneOf('request_status_valid', table.status, REQUEST_STATUSES),
     oneOf('request_created_by_side_valid', table.createdBySide, REQUEST_SIDES),

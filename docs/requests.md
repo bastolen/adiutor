@@ -10,8 +10,7 @@ text in [decision 0021](decisions/0021-markdown-for-request-text.md).
 
 Not built yet, each for a later change: emails about requests (also to the staff assigned to one
 and to the people a text mentions, never about an internal note to someone at the company),
-an approval step, attachments, types the staff manage themselves, and
-working on a request while signed in as a user.
+an approval step, attachments, and working on a request while signed in as a user.
 
 ## Words
 
@@ -80,12 +79,30 @@ the closed statuses.
 
 ## Types and priorities
 
-- **Types:** Hotfix, Bug, Support and New feature (`REQUEST_TYPES`). They're built in and
-  translated, and stored as plain keys, so a later change can turn them into a list the staff
-  manage without touching existing requests.
-- **Priorities:** Low, Normal and High. A request starts with its type's priority (Hotfix: High;
-  Bug and Support: Normal; New feature: Low; `startingPriority`). Only the staff set one, when
-  they raise a request for a company or later.
+- **Types** are the staff's own (`request_type`, decision
+  [0027](decisions/0027-request-types-the-staff-manage.md)). A fresh install has the four that were
+  built in: Hotfix, Bug, Support and New feature, named in the language it's set up in. Each type
+  has a name and what it's for (one text for every language, like the staff name), the priority a
+  new request of it starts with, and a place in the order every list shows.
+- **Keys:** a request, its history and the list's `?type=` filter hold a type's key
+  (`request.type` points at `request_type.key`). A new type gets its key from its name
+  (`requestTypeKeyFromName`: "Printers" becomes `printers`, then `printers_2`); a rename keeps
+  it, and no key is reused, since types are never deleted.
+- **Managing them** (Staff page, Request types; staff Admins, `staff:manage`): add a type, edit its
+  name, what it's for and its starting priority, move it up or down, archive or restore it
+  (`addRequestType`, `updateRequestType`, `moveRequestType`, `archiveRequestType`,
+  `restoreRequestType` in `src/server/requests/types.ts`). Each change but a move is in the audit
+  log (`request_type_added`, `_changed`, `_archived`, `_restored`).
+- **Archived types** aren't offered when a request is raised or its details are edited
+  (`errors.requestTypes.unavailable`), but the requests that have one keep it, Edit details still
+  shows it for them, and the list's filter and the history still name it. The last type that
+  isn't archived can't be (`errors.requestTypes.lastActive`).
+- **Names everywhere:** the services give each request's type name, and the names in a type
+  change, as they're called now (`listRequests`, `getRequest`); every reader gets the types
+  (`listRequestTypes`), the starting priorities only the staff.
+- **Priorities:** Low, Normal and High. A request starts with its type's starting priority. Only
+  the staff set one, when they raise a request for a company or later; a type's new starting
+  priority is for requests raised from then on.
 - **Company users never see a priority:** no label, filter, sort or line in the conversation. The
   services leave it out of what they return to anyone without `requests:view-internal`, so no page
   can show it by accident, and a change of priority doesn't count as the request's last activity.

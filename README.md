@@ -23,8 +23,8 @@ come next.
 ## Features
 
 - **Requests.** Companies raise requests, and both sides work each one through in one
-  conversation: replies, a status from Open to Done (or Cancelled), and a type that sets a
-  priority only the staff see. Descriptions and replies are written in an editor that turns
+  conversation: replies, a status from Open to Done (or Cancelled), and a type (the staff's
+  own list) that sets a priority only the staff see. Descriptions and replies are written in an editor that turns
   Markdown into formatting as it's typed, with lists, tables and highlighted code, and can mention
   people, picked from a list at "@". Authors can edit their replies, and the description can be
   edited while the request is open; the staff can read what a text said before, and write

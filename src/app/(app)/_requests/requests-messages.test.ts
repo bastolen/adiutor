@@ -1,12 +1,13 @@
 /**
  * @file Tests for the messages of the request list that choose their text
- * from several values: the table's caption and the status filters.
+ * from several values (the table's caption and the status filters), and the
+ * texts setup names the built-in request types with.
  */
 import { describe, expect, it } from 'vitest';
 
 import { LOCALES } from '@/lib/i18n/locales';
 import translator from '@/lib/i18n/translator';
-import { REQUEST_STATUS_FILTERS, REQUEST_TYPES } from '@/lib/requests';
+import { REQUEST_STATUS_FILTERS } from '@/lib/requests';
 
 describe('the request list’s caption', () => {
   it.each([
@@ -41,12 +42,15 @@ describe('the request list’s filters', () => {
   });
 });
 
-describe('the request types', () => {
-  it.each(LOCALES)('each say what they are for in %s', (locale) => {
-    const t = translator(locale, 'requests');
-    const unknown = t('typeDescription', { type: 'nonsense' });
-    const explanations = REQUEST_TYPES.map((type) => t('typeDescription', { type }));
-    expect(new Set(explanations).size).toBe(REQUEST_TYPES.length);
-    explanations.forEach((explanation) => expect(explanation).not.toBe(unknown));
+describe('the built-in request types', () => {
+  it.each(LOCALES)('each have a name and say what they are for in %s', (locale) => {
+    const t = translator(locale, 'requests.builtInTypes');
+    const texts = (['hotfix', 'bug', 'support', 'new_feature'] as const).map((type) => [
+      t(`${type}.name`),
+      t(`${type}.description`),
+    ]);
+    // Setup names the built-in types with these: each its own name and explanation.
+    expect(new Set(texts.map(([name]) => name)).size).toBe(4);
+    expect(new Set(texts.map(([, description]) => description)).size).toBe(4);
   });
 });

@@ -41,3 +41,13 @@ export {
 export type { AssignableStaffMember } from './assignees';
 export { listMentionable } from './mentions';
 export type { MentionablePerson } from './mentions';
+export {
+  addRequestType,
+  archiveRequestType,
+  listRequestTypes,
+  moveRequestType,
+  nameBuiltInRequestTypes,
+  restoreRequestType,
+  updateRequestType,
+} from './types';
+export type { RequestTypeView } from './types';

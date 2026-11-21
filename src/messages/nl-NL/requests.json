@@ -15,6 +15,7 @@
       "typeFilter": "Type",
       "typeMenu": "Filteren op type",
       "allTypes": "Alle",
+      "archivedType": "{name} (gearchiveerd)",
       "priorityFilter": "Prioriteit",
       "priorityMenu": "Filteren op prioriteit",
       "allPriorities": "Alle",
@@ -85,8 +86,6 @@
     },
     "status": "{status, select, open {Open} todo {Te doen} in_progress {In behandeling} waiting {{audience, select, contributor {Wacht op jouw reactie} follower {Wacht op je bedrijf} other {Wacht op het bedrijf}}} done {Afgerond} cancelled {Geannuleerd} other {Onbekend}}",
     "reopened": "Heropend",
-    "type": "{type, select, hotfix {Hotfix} bug {Bug} support {Support} new_feature {Nieuwe functie} other {Onbekend}}",
-    "typeDescription": "{type, select, hotfix {Er is iets kapot dat meteen moet worden opgelost.} bug {Iets werkt niet zoals het hoort.} support {Een vraag, of hulp bij iets.} new_feature {Iets nieuws, of een wijziging in hoe iets werkt.} other {Een ander soort verzoek.}}",
     "priority": "{priority, select, low {Laag} normal {Normaal} high {Hoog} other {Onbekend}}",
     "priorityBadge": "{priority, select, low {Lage prioriteit} normal {Normale prioriteit} high {Hoge prioriteit} other {Onbekende prioriteit}}",
     "entry": {
@@ -164,6 +163,24 @@
       "versionLine": "{name} heeft dit gewijzigd op {time}.",
       "editNote": "Notitie bewerken",
       "noteLabel": "Notitie"
+    },
+    "builtInTypes": {
+      "hotfix": {
+        "name": "Hotfix",
+        "description": "Er is iets kapot dat meteen moet worden opgelost."
+      },
+      "bug": {
+        "name": "Bug",
+        "description": "Iets werkt niet zoals het hoort."
+      },
+      "support": {
+        "name": "Support",
+        "description": "Een vraag, of hulp bij iets."
+      },
+      "new_feature": {
+        "name": "Nieuwe functie",
+        "description": "Iets nieuws, of een wijziging in hoe iets werkt."
+      }
     }
   }
 }

@@ -19,6 +19,39 @@ import { getTableConfig, PgTable } from 'drizzle-orm/pg-core';
 import * as schema from '../../src/db/schema';
 
 /**
+ * The request types a fresh install has: the four that were built in, as the
+ * migration that made types a table adds them before setup (in English, with
+ * the keys and starting priorities they always had). Requests need a type
+ * that exists, so emptying the database puts these back.
+ */
+export const BUILT_IN_REQUEST_TYPES = [
+  {
+    key: 'hotfix',
+    name: 'Hotfix',
+    description: 'Something is broken and needs fixing right away.',
+    startingPriority: 'high',
+  },
+  {
+    key: 'bug',
+    name: 'Bug',
+    description: 'Something doesn’t work as it should.',
+    startingPriority: 'normal',
+  },
+  {
+    key: 'support',
+    name: 'Support',
+    description: 'A question, or help with something.',
+    startingPriority: 'normal',
+  },
+  {
+    key: 'new_feature',
+    name: 'New feature',
+    description: 'Something new, or a change to how things work.',
+    startingPriority: 'low',
+  },
+] as const;
+
+/**
  * Anything that runs a SQL statement: a Drizzle database client, or the open
  * transaction of one (the development seed empties the database inside its
  * transaction).
@@ -73,20 +106,27 @@ const TABLES_REFERENCING_FIRST = referencedFirst(
 ).reverse();
 
 /**
- * Deletes every row of every table, in one statement: a `DO` block is a
- * single statement however the driver sends it, so it takes one round trip
- * and happens all at once or not at all.
+ * Deletes every row of every table, then adds the built-in request types
+ * again, in one statement: a `DO` block is a single statement however the
+ * driver sends it, so it takes one round trip and happens all at once or not
+ * at all.
  */
 const DELETE_EVERY_ROW = sql`do $$ begin ${sql.join(
   TABLES_REFERENCING_FIRST.map((table) => sql`delete from ${table};`),
   sql` `,
-)} end $$`;
+)} insert into ${schema.requestType} (key, name, description, starting_priority, position) values ${sql.raw(
+  BUILT_IN_REQUEST_TYPES.map(
+    ({ key, name, description, startingPriority }, index) =>
+      `('${key}', '${name}', '${description}', '${startingPriority}', ${index + 1})`,
+  ).join(', '),
+)}; end $$`;
 
 /**
  * Empties the database as on a fresh install: every table in the schema,
  * including users, companies, the staff settings, rate limits, jobs and the
- * request counter. A new table is emptied too, since the tables come from the
- * schema. Nothing needs restarting: no ID or default comes from a sequence
+ * request counter, and leaves the built-in request types
+ * (`BUILT_IN_REQUEST_TYPES`), which a fresh install has. A new table is
+ * emptied too, since the tables come from the schema. Nothing needs restarting: no ID or default comes from a sequence
  * (`src/db/schema.int.test.ts` checks it), and the request numbers come from
  * `request_counter` rows, which go with the rest.
  *
