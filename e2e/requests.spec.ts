@@ -131,10 +131,11 @@ test('the staff find every company’s requests, and narrow them down', async ({
   await expect(page).toHaveTitle('Requests · Adiutor');
   await expect(page.getByRole('heading', { level: 1, name: 'Requests' })).toBeVisible();
 
-  // What still needs something, the latest activity on top; nothing closed.
+  // What still needs something, the latest activity on top; nothing closed. How many pages it has
+  // depends on what other specs stored.
   const table = main(page).getByRole('table');
   await expect(table).toHaveAccessibleName(
-    /^Active requests, sorted by Last activity, most recent first, page 1 of 2$/,
+    /^Active requests, sorted by Last activity, most recent first, page 1 of \d+$/,
   );
   // The staff see each request's priority.
   await expect(table.getByRole('columnheader', { name: 'Priority' })).toBeVisible();
@@ -317,29 +318,34 @@ test('the number as people see it, and the short links, open the request', async
 
 test('someone at a company sees its requests only, without priorities', async ({ page }) => {
   await signIn(page, REQUESTS_CLIENT);
-  await page.goto('/requests?status=all');
-
+  // The seeded requests, found by their titles: other specs store newer ones in this company.
+  await page.goto(`/requests?status=all&q=${encodeURIComponent(SEEDED_REQUESTS.waiting.title)}`);
   await expect(requestRows(page).filter({ hasText: SEEDED_REQUESTS.waiting.title })).toContainText(
     'Waiting for your reply',
   );
-  await expect(main(page).getByText(SEEDED_REQUESTS.done.title)).toBeVisible();
+  await page.goto(`/requests?status=all&q=${encodeURIComponent(SEEDED_REQUESTS.done.title)}`);
+  await expect(requestRows(page).filter({ hasText: SEEDED_REQUESTS.done.title })).toBeVisible();
+  await page.goto('/requests?status=all');
   // Nothing of other companies, and no way to ask for it.
   await expect(main(page).getByText('Paged request')).toHaveCount(0);
   await expect(main(page).getByText(SEEDED_REQUESTS.closedCompany.title)).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Company', exact: true })).toHaveCount(0);
+  const waitingTitle = encodeURIComponent(SEEDED_REQUESTS.waiting.title);
   await page.goto(`/requests?status=all&company=${PAGING_COMPANY_SLUG}`);
   await expect(main(page).getByText('Paged request')).toHaveCount(0);
-  await expect(main(page).getByText(SEEDED_REQUESTS.waiting.title)).toBeVisible();
+  await page.goto(`/requests?status=all&company=${PAGING_COMPANY_SLUG}&q=${waitingTitle}`);
+  await expect(requestRows(page).filter({ hasText: SEEDED_REQUESTS.waiting.title })).toBeVisible();
 
   // No priority: no column, no filter, no sort, and asking for one changes nothing.
   await expect(main(page).getByText(/priority/i)).toHaveCount(0);
   await page.getByRole('button', { name: /^Sort\s*requests/ }).click();
   await expect(page.getByRole('menuitemradio', { name: /Priority/ })).toHaveCount(0);
   await page.keyboard.press('Escape');
-  await page.goto('/requests?status=all&priority=low&sort=priority');
-  await expect(main(page).getByText(SEEDED_REQUESTS.waiting.title)).toBeVisible();
+  await page.goto(`/requests?status=all&priority=low&sort=priority&q=${waitingTitle}`);
+  await expect(requestRows(page).filter({ hasText: SEEDED_REQUESTS.waiting.title })).toBeVisible();
+  // Sorted by last activity, not by priority, whatever the address asks.
   await expect(main(page).getByRole('table')).toHaveAccessibleName(
-    /^All requests, sorted by Last activity, most recent first$/,
+    /^All requests matching “.+”, sorted by Last activity, most recent first$/,
   );
 });
 
@@ -498,8 +504,9 @@ test('nobody raises a request who may not: a Watcher and Finance get no form', a
     }),
   );
   await createAccountFromInvitation(page, 'Reads Only Tester', 'reads-only-tester-password');
-  await page.goto('/requests');
-  await expect(main(page).getByText(SEEDED_REQUESTS.waiting.title)).toBeVisible();
+  // The seeded request, found by its title: other specs store newer ones in this company.
+  await page.goto(`/requests?q=${encodeURIComponent(SEEDED_REQUESTS.waiting.title)}`);
+  await expect(requestRows(page).filter({ hasText: SEEDED_REQUESTS.waiting.title })).toBeVisible();
   // The list words it as the request's page does: it waits for their company, not for them.
   const waiting = requestRows(page).filter({ hasText: SEEDED_REQUESTS.waiting.title });
   await expect(waiting).toContainText('Waiting for your company');
