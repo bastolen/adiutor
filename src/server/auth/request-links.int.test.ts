@@ -355,14 +355,19 @@ describe('the link in an email about a request', () => {
     expect(await browser.open(token, CLICK_IN_EMAIL, { entry })).toBe(
       `${REQUEST_PAGE}?entry=${entry}`,
     );
-    // Past its sign-ins for the hour, the sign-in page returns to it.
-    const [link] = await db.select({ id: requestSignInLink.id }).from(requestSignInLink);
+    // Past its sign-ins for the hour (a link of its own, so no click counted yet), the sign-in page
+    // returns to it.
+    const limited = await createRequestLink(db, { userId: client, requestId });
+    const [link] = await db
+      .select({ id: requestSignInLink.id })
+      .from(requestSignInLink)
+      .where(eq(requestSignInLink.tokenHash, hashToken(limited)));
     await fillRateLimitBucket(
       db,
       `request-link-sign-in:link:${defined(link, 'the link').id}`,
       RATE_LIMITS.requestLinkSignInsPerLink.limit,
     );
-    expect(await newBrowser().open(token, CLICK_IN_EMAIL, { entry })).toBe(
+    expect(await newBrowser().open(limited, CLICK_IN_EMAIL, { entry })).toBe(
       `/auth?${new URLSearchParams({ callbackURL: `${REQUEST_PAGE}?entry=${entry}` })}`,
     );
   });
