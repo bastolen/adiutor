@@ -311,7 +311,7 @@ describe('staff-made changes', () => {
   });
 
   it('tells someone on a request what happened to it, with the reply in full', async () => {
-    // The reader's own link, which signs them in (decision 0035).
+    // The reader's own link, which signs them in (decision 0036).
     const url = `${appUrl}/api/auth/request-link/sign-in?token=adiutor-tests-token`;
     const email = await requestUpdateEmail('jane@adiutor.test', {
       ...english,

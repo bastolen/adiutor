@@ -1,6 +1,6 @@
 /**
  * @file End-to-end tests for the link in an email about a request (decision
- * 0035): a click on it signs its recipient in and opens the request, past
+ * 0036): a click on it signs its recipient in and opens the request, past
  * the second step, while a change that needs a recent confirmation still
  * asks for one; someone else signed in in the browser and a link that no
  * longer works get its confirmation page first.

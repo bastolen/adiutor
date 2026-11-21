@@ -251,9 +251,12 @@ load or mislead in a reader's browser:
 - **A mention never carries an ID or a name.** While a text is written, a person is a key that's
   only valid in the request's company (`mentionKey`, a keyed hash); the stored text points at a
   row in `request_mention`. Who it is, is looked up on the server when the text is read, per text,
-  with the names the reader may see. A marker the writer may not use for a mention (another
-  company's key, a guessed one, a typed row ID) stays text. See
-  [Mentions](requests.md#mentions).
+  with the names the reader may see. A reader who may write in the request also gets the key of
+  each person a text mentions, on the mention's element, so a pasted mention stays one; readers
+  who can't write get none. A marker the writer may not use for a mention (another company's key,
+  a guessed one, a typed row ID) stays text, pasted or typed. A mention pasted into the editor is
+  never a link, so the address of a person's page, which the staff's mention links to, doesn't
+  end up in a text. See [Mentions](requests.md#mentions).
 - **Nothing in a copied note becomes code.** The button on a block of code copies it below a
   comment that names the request and who wrote the text (`withCodeNote` in
   `src/components/ui/markdown/code-note.ts`), and a name is something a person typed. Every line

@@ -1,6 +1,6 @@
 /**
  * @file The Continue step of the link in an email about a request (decision
- * 0035): it names the account the link signs in to and the request it
+ * 0036): it names the account the link signs in to and the request it
  * opens, and only its click signs in, so a mail scanner that opens the link
  * gets no session.
  */

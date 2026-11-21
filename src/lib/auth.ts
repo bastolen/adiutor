@@ -529,7 +529,7 @@ export const auth = betterAuth({
       mfaVerifiedAt: { type: 'date', required: false, input: false },
       /**
        * Whether the link in an email about a request started this session
-       * (decision 0035): it isn't sent to the step-up page, but opens no
+       * (decision 0036): it isn't sent to the step-up page, but opens no
        * window for changing sign-in methods and never counts as a fresh
        * sign-in (`SessionMfa.fromRequestLink`). Set by `beforeSessionCreate`.
        */
@@ -855,7 +855,7 @@ export const auth = betterAuth({
     }),
     /**
      * The link in an email about a request, which signs its recipient in
-     * (decision 0035, `src/lib/sign-in/request-link-plugin.ts`).
+     * (decision 0036, `src/lib/sign-in/request-link-plugin.ts`).
      */
     requestLinkSignIn(),
     /**

@@ -76,6 +76,22 @@ export function storedMentionMarker(id: string): string {
   return `[@](${MENTION_SCHEME}${id})`;
 }
 
+/** A person's key in a text that's being written, on its own. */
+const KEY = new RegExp(`^[A-Za-z0-9_-]{${MENTION_KEY_LENGTH}}$`);
+
+/**
+ * Whether a value has the shape of a person's key, as a text that's being
+ * written names them with (`mentionKey` on the server). The shape only: who
+ * a key stands for, and whether the writer may mention them, is settled when
+ * the text is sent.
+ *
+ * @param key - The value, e.g. a mention's `data-mention-key` on a page.
+ * @returns Whether it's shaped like a key.
+ */
+export function isMentionKey(key: string): boolean {
+  return KEY.test(key);
+}
+
 /**
  * Reads the person a link's address names in a text that's being written.
  *

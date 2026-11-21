@@ -1,6 +1,6 @@
 /**
  * @file Drizzle schema for the links in emails about requests that sign
- * their recipient in (decision 0035, `src/server/auth/request-links.ts`).
+ * their recipient in (decision 0036, `src/server/auth/request-links.ts`).
  */
 import { index, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 

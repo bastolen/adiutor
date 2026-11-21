@@ -103,7 +103,7 @@ const freshAdmin = async () =>
 
 /**
  * A staff Admin with an authenticator app, signed in just now with the link
- * in an email about a request (decision 0035): no second step at all.
+ * in an email about a request (decision 0036): no second step at all.
  *
  * @returns The actor.
  */

@@ -37,7 +37,7 @@ export interface UserSession {
   mfaVerified: boolean;
   /**
    * Whether the link in an email about a request signed it in (shown as
-   * "Email link", decision 0035), so a session from a forwarded email is easy
+   * "Email link", decision 0036), so a session from a forwarded email is easy
    * to spot.
    */
   fromRequestLink: boolean;

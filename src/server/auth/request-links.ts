@@ -1,6 +1,6 @@
 /**
  * @file The links in emails about requests that sign their recipient in
- * (decision 0035). The job that sends such an email makes a link for its
+ * (decision 0036). The job that sends such an email makes a link for its
  * recipient ({@link createRequestLink}); a person's click on it signs them in
  * and opens the request ({@link followRequestLink}, from Better Auth's endpoint
  * in `src/lib/sign-in/request-link-plugin.ts`), as often as they click it,

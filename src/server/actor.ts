@@ -102,7 +102,7 @@ export interface Actor {
   sessionMfaVerified: boolean;
   /**
    * Whether the link in an email about a request started the current session
-   * (decision 0035): it isn't sent to the step-up page (`mustStepUp`), but it
+   * (decision 0036): it isn't sent to the step-up page (`mustStepUp`), but it
    * never opens the window for changing sign-in methods or counts as a fresh
    * sign-in.
    */

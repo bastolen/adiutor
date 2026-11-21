@@ -132,7 +132,7 @@ describe('the emails about requests', () => {
       'casey changed the status from Waiting for your company to In progress.',
     );
     // The first link is the reader's own link that signs them in and opens the request (decision
-    // 0035), and nothing names an address or a person's ID.
+    // 0036), and nothing names an address or a person's ID.
     const watcherLink = new URL(toWatcher?.text.match(/https?:\/\/\S+/)?.[0] ?? '');
     expect(`${watcherLink.origin}${watcherLink.pathname}`).toBe(
       'https://adiutor.test/api/auth/request-link/sign-in',

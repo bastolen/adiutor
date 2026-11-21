@@ -1,6 +1,6 @@
 /**
  * @file The link in an email about a request that signs its recipient in
- * (decision 0035). The email links straight to Better Auth's endpoint
+ * (decision 0036). The email links straight to Better Auth's endpoint
  * ({@link REQUEST_LINK_URL_PATH}), which signs a person's click in and opens
  * the request; anything else (a mail scanner, a browser that doesn't say a
  * person clicked, someone else signed in in that browser, a link that no

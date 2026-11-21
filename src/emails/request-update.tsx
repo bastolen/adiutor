@@ -90,7 +90,7 @@ export interface RequestUpdateEmailProps extends EmailBaseProps {
   companyName: string;
   /**
    * The reader's link that signs them in to Adiutor and opens the request
-   * (`requestLinkPath`, decision 0035).
+   * (`requestLinkPath`, decision 0036).
    */
   url: string;
   /** Why the reader gets the email: the request is assigned to them, or they're subscribed. */
@@ -264,7 +264,7 @@ function UpdateItem({
  * on the request's page (`EmailMarkdown`); a status change, an assignment
  * and a subscription in a sentence, with the statuses worded for the reader.
  * A button opens the request, and a note says replies to the email aren't
- * read. The links to the request sign the reader in (`url`, decision 0035),
+ * read. The links to the request sign the reader in (`url`, decision 0036),
  * so a last note says so, and not to forward the email.
  *
  * @param props - Template props.

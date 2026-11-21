@@ -1,4 +1,4 @@
-# 0035. Links in emails about requests sign the recipient in
+# 0036. Links in emails about requests sign the recipient in
 
 - **Status:** Accepted
 - **Date:** 2026-11-21

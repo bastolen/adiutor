@@ -9,7 +9,7 @@
  * address, never for a page's own fetches, prefetches, or programs that
  * fetch a link without a browser. Used by the links in emails that act on a
  * click: the link in an email about a request signs its recipient in only
- * on one (decision 0035). A program that drives a whole browser can still
+ * on one (decision 0036). A program that drives a whole browser can still
  * look like a person, which those links accept.
  *
  * @param headers - The request's headers.

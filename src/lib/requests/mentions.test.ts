@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   editStoredMentions,
+  isMentionKey,
   MENTION_KEY_LENGTH,
   nameStoredMentions,
   storedMentionId,
@@ -60,6 +61,24 @@ describe('a mention in a text that’s being written', () => {
     expect(writtenMentionKeys(`[Sam](mention:${SAM})`)).toEqual([]);
     expect(writtenMentionKeys(`[@Sam\nSupport](mention:${SAM})`)).toEqual([]);
     expect(writtenMentionKeys(storedMentionMarker(FIRST))).toEqual([]);
+  });
+});
+
+describe('a person’s key on its own', () => {
+  it('has the shape of a key the list gives', () => {
+    expect(isMentionKey(SAM)).toBe(true);
+    expect(isMentionKey('a-B_c'.padEnd(MENTION_KEY_LENGTH, '9'))).toBe(true);
+  });
+
+  it.each([
+    ['nothing', ''],
+    ['one character short', SAM.slice(1)],
+    ['one character long', `${SAM}0`],
+    ['a character a key never has', `${SAM.slice(1)}=`],
+    ['a row’s ID', FIRST],
+    ['a marker’s address', `mention:${SAM}`],
+  ])('isn’t %s', (_what, value) => {
+    expect(isMentionKey(value)).toBe(false);
   });
 });
 

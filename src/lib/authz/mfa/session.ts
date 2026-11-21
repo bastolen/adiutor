@@ -30,7 +30,7 @@ export interface SessionMfa {
   mfaVerifiedAt: Date | string | null;
   /**
    * Whether it was started from the link in an email about a request
-   * (decision 0035): it isn't sent to the step-up page (`mustStepUp`), but
+   * (decision 0036): it isn't sent to the step-up page (`mustStepUp`), but
    * it proved no second factor, so it opens no window for changing sign-in
    * methods, and it never counts as a fresh sign-in ({@link signedInAtOf}).
    * Missing or `null` counts as `false`; the rules about second steps don't

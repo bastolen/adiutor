@@ -470,7 +470,7 @@ export async function storeSignInLink(email: string): Promise<string> {
 /**
  * Stores the link in an email about a request the way the job that sends
  * the email does (only the token's hash, for 14 days), without sending an
- * email, for tests that open it (decision 0035).
+ * email, for tests that open it (decision 0036).
  *
  * @param email - The address of the person it signs in.
  * @param number - The number of the request it opens.

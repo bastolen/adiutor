@@ -56,7 +56,7 @@ export interface SignedSession {
   mfaMethod: string | null;
   /** When it was proven, if known. */
   mfaVerifiedAt: Date | null;
-  /** Whether the link in an email about a request started it (decision 0035). */
+  /** Whether the link in an email about a request started it (decision 0036). */
   fromRequestLink: boolean | null;
 }
 

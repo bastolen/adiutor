@@ -2,7 +2,7 @@
  * @file Forgets what lets a browser past a user's second step without
  * proving it: trusted devices ("Trust this device" at the code step,
  * `./trusted-devices.ts`) and the links in emails about requests (decision
- * 0035, `./request-links.ts`). Both are forgotten together, whenever the
+ * 0036, `./request-links.ts`). Both are forgotten together, whenever the
  * user's sessions are ended (signing out everywhere or one device, an
  * Admin's sign-out, an MFA reset, a deactivation, the command line), their
  * password is changed or reset, two-step verification is turned off, or an

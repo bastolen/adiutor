@@ -216,15 +216,24 @@ describe('RequestText', () => {
               side: 'staff',
               isViewer: false,
               picture: null,
+              key: null,
             },
             // Someone whose account is gone is their side, as next to what they wrote.
-            [GONE]: { userId: null, name: null, side: 'company', isViewer: false, picture: null },
+            [GONE]: {
+              userId: null,
+              name: null,
+              side: 'company',
+              isViewer: false,
+              picture: null,
+              key: null,
+            },
             [CASEY]: {
               userId: null,
               name: 'Casey Client',
               side: 'company',
               isViewer: true,
               picture: null,
+              key: null,
             },
           },
         }}
@@ -254,6 +263,7 @@ describe('RequestText', () => {
               side: 'staff',
               isViewer: false,
               picture: null,
+              key: null,
             },
             [GONE]: {
               userId: 'nameless-id',
@@ -261,6 +271,7 @@ describe('RequestText', () => {
               side: 'staff',
               isViewer: false,
               picture: null,
+              key: null,
             },
           },
         }}
@@ -275,6 +286,46 @@ describe('RequestText', () => {
     );
     expect(screen.getAllByRole('link')).toHaveLength(1);
     expect(screen.getByText('@Adiutor Tests').tagName).toBe('SPAN');
+  });
+
+  it('puts the key a writer got on the mention, for the editor to read back', () => {
+    render(
+      <RequestText
+        id="text"
+        text={{
+          text: `[@](mention:${SAM}) and [@](mention:${CASEY})`,
+          format: 'markdown',
+          mentions: {
+            [SAM]: {
+              userId: 'sam-id',
+              name: 'Sam Support',
+              side: 'staff',
+              isViewer: false,
+              picture: null,
+              key: 'samsKeyInThisCompany01',
+            },
+            [CASEY]: {
+              userId: 'casey-id',
+              name: 'Casey Client',
+              side: 'company',
+              isViewer: false,
+              picture: null,
+              key: null,
+            },
+          },
+        }}
+        source={SOURCE}
+        names={NAMES}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: '@Sam Support' })).toHaveAttribute(
+      'data-mention-key',
+      'samsKeyInThisCompany01',
+    );
+    expect(screen.getByRole('link', { name: '@Casey Client' })).not.toHaveAttribute(
+      'data-mention-key',
+    );
   });
 
   it('names the people a text mentions also where it’s shown as it was written', () => {
@@ -292,6 +343,7 @@ describe('RequestText', () => {
               side: 'staff',
               isViewer: false,
               picture: null,
+              key: null,
             },
           },
         }}

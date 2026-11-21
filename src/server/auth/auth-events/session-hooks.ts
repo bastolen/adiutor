@@ -129,7 +129,7 @@ async function reverifiedSession(ctx: AuthHookContext | null, marker: ReverifyMa
  * whether (and how, and when: `mfaVerifiedAt`, which starts the 15 minutes
  * for changing sign-in methods) the sign-in had a second factor, and whether
  * the link in an email about a request started it (`fromRequestLink`,
- * decision 0035: no second factor, but no step-up page either). A session
+ * decision 0036: no second factor, but no step-up page either). A session
  * that replaces the signed-in one for the same sign-in
  * ({@link SESSION_REPLACING_PATHS}) keeps its facts. Such a session, and one
  * a code that turns two-step verification on replaces
@@ -227,7 +227,7 @@ export async function beforeSessionCreate(
       mfaVerified: method !== null,
       mfaMethod: method,
       mfaVerifiedAt: method !== null ? new Date() : null,
-      // Only the link in an email about a request starts such a session (decision 0035).
+      // Only the link in an email about a request starts such a session (decision 0036).
       fromRequestLink: ctx?.path === REQUEST_LINK_ENDPOINT,
       ...age,
     },

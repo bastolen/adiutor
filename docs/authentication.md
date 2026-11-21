@@ -79,7 +79,7 @@ account's stored address, not the address as typed (the lookup ignores case).
 ## Links in emails about requests
 
 The links in an email about a request (see [Requests](requests.md#emails)) sign its recipient in
-and open the request ([decision 0035](decisions/0035-sign-in-links-in-request-emails.md)). Each
+and open the request ([decision 0036](decisions/0036-sign-in-links-in-request-emails.md)). Each
 email gets its own link, made by the job that sends it (`createRequestLink` in
 `src/server/auth/request-links.ts`): a token whose SHA-256 hash is stored in
 `request_sign_in_link`, with the person, the request and an end 14 days later

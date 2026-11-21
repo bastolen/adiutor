@@ -54,7 +54,7 @@ export function mustSetUpMfa(
  * a password), so whoever set that password can't set MFA up for them.
  *
  * Never a session started from the link in an email about a request
- * (decision 0035): that link signs its recipient in for normal use, whatever
+ * (decision 0036): that link signs its recipient in for normal use, whatever
  * their role. It proved no second factor, so every change that needs a
  * recent confirmation still asks for one straight away
  * ({@link needsRecentConfirmation}, `mfaConfirmedUntil`), and so does

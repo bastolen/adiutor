@@ -1,5 +1,5 @@
 /**
- * @file Runs the link in an email about a request (decision 0035) through
+ * @file Runs the link in an email about a request (decision 0036) through
  * Better Auth's real endpoint (`auth.handler`, with the app's guards and
  * reactions), to check what only a whole request shows:
  * - a person's click signs the recipient in, as often as they click it, and

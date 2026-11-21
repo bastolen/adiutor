@@ -10,6 +10,11 @@
  * - A mention is the marker of someone picked from the list at "@": a link
  *   to their key, shown as their name. A marker of any other shape is the
  *   text of its link, as where a text is read.
+ * - What's pasted with its formatting keeps its mentions and images: their
+ *   elements carry what the editor reads them back from (a mention's key,
+ *   an image's Markdown), in the editor and, for a mention, where a text is
+ *   read. A mention's element is never a link, also when it links to the
+ *   person's page.
  * - Tab and Shift+Tab are never taken: they leave the editor, like any field.
  */
 import { Link } from '@tiptap/extension-link';
@@ -28,7 +33,7 @@ import {
 import StarterKit from '@tiptap/starter-kit';
 import { exitSuggestion, Suggestion } from '@tiptap/suggestion';
 
-import { linkTarget, writtenMentionKey, writtenMentionMarker } from '@/lib/requests';
+import { isMentionKey, linkTarget, writtenMentionKey, writtenMentionMarker } from '@/lib/requests';
 
 import { writtenLinkClasses } from '../external-link';
 import editorCodeBlock from './editor-code-block';
@@ -173,13 +178,38 @@ function plainText(tokens: readonly InlineToken[]): string {
 }
 
 /**
- * A link. When Markdown is read, an address that isn't a whole `http` or
- * `https` address gives no link, only its text: what the server does too.
+ * A link. When Markdown is read or HTML is pasted, an address that isn't a
+ * whole `http` or `https` address gives no link, only its text: what the
+ * server does too.
  * The marker of a mention is the exception: a link whose text starts with
  * "@" and whose address is someone's key becomes the mention of them
  * ({@link WrittenMention}).
  */
 const WrittenLink = Link.extend({
+  /**
+   * Which elements of pasted HTML are links: an `<a>` whose address is a
+   * whole `http` or `https` address, as when Markdown is read. A mention's
+   * element never is, though for the staff it links to the person's page
+   * (which a browser copies as a whole address): it's the mention
+   * ({@link WrittenMention}), or else its text.
+   *
+   * @returns The rule.
+   */
+  parseHTML() {
+    return [
+      {
+        tag: 'a[href]:not([data-mention])',
+        /**
+         * Takes the element when its address may be a link.
+         *
+         * @param element - The `<a>`.
+         * @returns Nothing to add (the address is read by the link's attribute), or `false`.
+         */
+        getAttrs: (element) =>
+          linkTarget(element.getAttribute('href') ?? '') !== null ? null : false,
+      },
+    ];
+  },
   /**
    * Reads a link from Markdown.
    *
@@ -200,11 +230,32 @@ const WrittenLink = Link.extend({
 });
 
 /**
+ * Reads a mention from its element in pasted HTML: one this editor wrote,
+ * or one where a text is read for someone who may write in the request
+ * (`MarkdownMention`). Both carry the person's key (`data-mention-key`) and
+ * show their name after an "@".
+ *
+ * @param element - The element.
+ * @returns The mention's key and name, or `false` when the element isn't a
+ *   mention (no key of the right shape, or no name after an "@").
+ */
+function pastedMention(element: HTMLElement): { key: string; name: string } | false {
+  const key = element.getAttribute('data-mention-key') ?? '';
+  const shown = (element.textContent ?? '').replace(/\s+/g, ' ').trim();
+  if (!isMentionKey(key) || !shown.startsWith('@') || shown.length < 2) {
+    return false;
+  }
+  return { key, name: shown.slice(1) };
+}
+
+/**
  * A mention of someone, picked from the list at "@": their name after an
  * "@", as one piece that's deleted as a whole. In Markdown it's the marker
  * the server takes for a mention (`writtenMentionMarker`): the name, linked
  * to the key that stands for the person. It's read back from that marker by
- * {@link WrittenLink}, so a text that was kept still shows its mentions.
+ * {@link WrittenLink}, so a text that was kept still shows its mentions, and
+ * from its element with the key when it's pasted ({@link pastedMention}).
+ * Who the writer may mention is still settled when the text is sent.
  */
 const WrittenMention = Node.create({
   name: 'writtenMention',
@@ -220,16 +271,29 @@ const WrittenMention = Node.create({
     return { key: { default: '' }, name: { default: '' } };
   },
   /**
-   * How the node looks in the editor.
+   * Which elements of pasted HTML are mentions.
+   *
+   * @returns The rule: an element marked as a mention, with a key.
+   */
+  parseHTML() {
+    return [{ tag: '[data-mention][data-mention-key]', getAttrs: pastedMention }];
+  },
+  /**
+   * How the node looks in the editor, and what's copied of it.
    *
    * @param props - What's rendered.
    * @param props.node - The mention.
-   * @returns A span with the name after an "@", as where a text is read.
+   * @returns A span with the name after an "@", as where a text is read, and
+   *   the person's key, which a paste reads the mention back from.
    */
   renderHTML({ node }) {
     return [
       'span',
-      { class: markdownStyles.mention, 'data-mention': '' },
+      {
+        class: markdownStyles.mention,
+        'data-mention': '',
+        'data-mention-key': String(node.attrs.key),
+      },
       `@${String(node.attrs.name)}`,
     ];
   },
@@ -383,75 +447,6 @@ const MentionTrigger = Extension.create<{ list: MentionList | null }>({
   },
 });
 
-/**
- * An image someone wrote (`![description](address)`). The editor keeps the
- * Markdown as it was written and shows the image by its description, as a
- * word that can't be edited in place: it's never loaded, here or where the
- * text is read.
- */
-const WrittenImage = Node.create<Pick<EditorLabels, 'image'>>({
-  name: 'writtenImage',
-  group: 'inline',
-  inline: true,
-  atom: true,
-  /**
-   * The node's options.
-   *
-   * @returns A label that shows the description as it is, until one is given.
-   */
-  addOptions() {
-    return {
-      /**
-       * Shows an image by its description.
-       *
-       * @param description - The description.
-       * @returns It.
-       */
-      image: (description: string) => description,
-    };
-  },
-  /**
-   * What the node remembers.
-   *
-   * @returns The Markdown it was written as, and its description.
-   */
-  addAttributes() {
-    return { raw: { default: '' }, description: { default: '' } };
-  },
-  /**
-   * How the node looks in the editor.
-   *
-   * @param props - What's rendered.
-   * @param props.node - The image.
-   * @returns A span with the image's label.
-   */
-  renderHTML({ node }) {
-    return [
-      'span',
-      { class: writtenLinkClasses, 'data-written-image': '' },
-      this.options.image(String(node.attrs.description)),
-    ];
-  },
-  markdownTokenName: 'image',
-  /**
-   * Reads an image from Markdown.
-   *
-   * @param token - The parser's image.
-   * @returns The node.
-   */
-  parseMarkdown: (token) => ({
-    type: 'writtenImage',
-    attrs: { raw: token.raw ?? '', description: token.text ?? '' },
-  }),
-  /**
-   * Writes the image back as Markdown.
-   *
-   * @param node - The node.
-   * @returns The Markdown it was written as.
-   */
-  renderMarkdown: (node) => String(node.attrs?.raw ?? ''),
-});
-
 /** Whether the Markdown reader was told to leave HTML alone (once is enough: all editors share it). */
 let htmlIsOff = false;
 
@@ -484,6 +479,134 @@ function turnHtmlOff(editor: Editor) {
   });
   htmlIsOff = true;
 }
+
+/**
+ * Reads an image from its element in pasted HTML, which this editor wrote:
+ * the Markdown it was written as (`data-markdown`), read as Markdown is. It
+ * counts only when that's one image and nothing else, so a paste can't turn
+ * into anything a writer couldn't have typed.
+ *
+ * @param editor - The editor, whose Markdown reader reads it; none while there's no editor.
+ * @param element - The element.
+ * @returns The image's Markdown and description, or `false` when it isn't one image.
+ */
+function pastedImage(
+  editor: Editor | undefined,
+  element: HTMLElement,
+): { raw: string; description: string } | false {
+  const written = element.getAttribute('data-markdown') ?? '';
+  if (!editor?.markdown || !written || written.includes('\n')) {
+    return false;
+  }
+  turnHtmlOff(editor);
+  // A lone image is read as the text's only node, anything more inside a paragraph.
+  const read = editor.markdown.parse(written).content ?? [];
+  const [first] = read;
+  const [image, ...rest] =
+    read.length === 1 && first?.type === 'paragraph' ? (first.content ?? []) : read;
+  if (image?.type !== 'writtenImage' || rest.length > 0) {
+    return false;
+  }
+  return {
+    raw: String(image.attrs?.raw ?? ''),
+    description: String(image.attrs?.description ?? ''),
+  };
+}
+
+/**
+ * An image someone wrote (`![description](address)`). The editor keeps the
+ * Markdown as it was written and shows the image by its description, as a
+ * word that can't be edited in place: it's never loaded, here or where the
+ * text is read. Copied and pasted, it's read back from that Markdown.
+ */
+const WrittenImage = Node.create<Pick<EditorLabels, 'image'>>({
+  name: 'writtenImage',
+  group: 'inline',
+  inline: true,
+  atom: true,
+  /**
+   * The node's options.
+   *
+   * @returns A label that shows the description as it is, until one is given.
+   */
+  addOptions() {
+    return {
+      /**
+       * Shows an image by its description.
+       *
+       * @param description - The description.
+       * @returns It.
+       */
+      image: (description: string) => description,
+    };
+  },
+  /**
+   * What the node remembers.
+   *
+   * @returns The Markdown it was written as, and its description.
+   */
+  addAttributes() {
+    return { raw: { default: '' }, description: { default: '' } };
+  },
+  /**
+   * Which elements of pasted HTML are images: one this editor wrote, with
+   * the Markdown it was written as ({@link pastedImage}).
+   *
+   * @returns The rule.
+   */
+  parseHTML() {
+    const { editor } = this;
+    return [
+      {
+        tag: 'span[data-written-image][data-markdown]',
+        /**
+         * Reads the image back from its Markdown.
+         *
+         * @param element - The span.
+         * @returns The image's attributes, or `false` when it isn't one image.
+         */
+        getAttrs: (element) => pastedImage(editor, element),
+      },
+    ];
+  },
+  /**
+   * How the node looks in the editor, and what's copied of it.
+   *
+   * @param props - What's rendered.
+   * @param props.node - The image.
+   * @returns A span with the image's label, and the Markdown it was written
+   *   as, which a paste reads the image back from.
+   */
+  renderHTML({ node }) {
+    return [
+      'span',
+      {
+        class: writtenLinkClasses,
+        'data-written-image': '',
+        'data-markdown': String(node.attrs.raw),
+      },
+      this.options.image(String(node.attrs.description)),
+    ];
+  },
+  markdownTokenName: 'image',
+  /**
+   * Reads an image from Markdown.
+   *
+   * @param token - The parser's image.
+   * @returns The node.
+   */
+  parseMarkdown: (token) => ({
+    type: 'writtenImage',
+    attrs: { raw: token.raw ?? '', description: token.text ?? '' },
+  }),
+  /**
+   * Writes the image back as Markdown.
+   *
+   * @param node - The node.
+   * @returns The Markdown it was written as.
+   */
+  renderMarkdown: (node) => String(node.attrs?.raw ?? ''),
+});
 
 /**
  * Puts a Markdown text in the editor, in place of what it holds. It's where
@@ -538,9 +661,46 @@ export function pasteMarkdown(editor: Editor, event: ClipboardEvent): boolean {
   return true;
 }
 
-/** Pastes plain text as the Markdown it is ({@link pasteMarkdown}). */
+/** The elements of a text whose look is their own, not formatting: mentions and images. */
+const OWN_LOOKS = '[data-mention], [data-written-image]';
+
+/**
+ * Takes the styles off the mentions and images in pasted HTML. A browser
+ * copies every element with the styles it was shown in, and the editor
+ * reads some styles as formatting (a weight from 500 up as bold), so a
+ * mention copied from where a text is read would come in bold: its look
+ * isn't formatting anyone gave it. Read in a template, where nothing runs
+ * or loads, and which keeps table cells and rows that come without their
+ * table.
+ *
+ * @param html - The pasted HTML.
+ * @returns The HTML, with its mentions and images unstyled.
+ */
+export function withoutOwnLooks(html: string): string {
+  if (!html.includes('data-mention') && !html.includes('data-written-image')) {
+    return html;
+  }
+  const template = document.createElement('template');
+  template.innerHTML = html;
+  template.content.querySelectorAll(OWN_LOOKS).forEach((element) => {
+    element.removeAttribute('style');
+  });
+  return template.innerHTML;
+}
+
+/**
+ * Pastes plain text as the Markdown it is ({@link pasteMarkdown}), and
+ * takes the look of mentions and images off pasted HTML ({@link withoutOwnLooks}).
+ */
 const MarkdownPaste = Extension.create({
   name: 'markdownPaste',
+  /**
+   * Prepares pasted HTML before the editor reads it.
+   *
+   * @param html - The pasted HTML.
+   * @returns The HTML to read.
+   */
+  transformPastedHTML: (html) => withoutOwnLooks(html),
   /**
    * The editor plugin that takes a paste.
    *

@@ -131,7 +131,7 @@ async function checkSignedInRequest(
   if (settingUp && hasSecondStep && !confirmed) {
     throw new APIError('FORBIDDEN', refusalBody(ctx, MFA_VERIFICATION_REQUIRED.code));
   }
-  // A session the link in an email about a request started never counts as fresh (decision 0035).
+  // A session the link in an email about a request started never counts as fresh (decision 0036).
   const signedInAt = signedInAtOf(session.session);
   // Without a second step, a sign-in from the last hour instead (`needsFreshSignIn`), so an old
   // (stolen) session can't add the first way in. (A first password is set through

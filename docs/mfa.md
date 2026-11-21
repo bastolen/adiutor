@@ -92,7 +92,7 @@ exist. A password without the code step, an email link, a provider that can't pr
 counting after that provider's sign-in is turned off. **Anyone with MFA** who has such a session is sent to the step-up page (`/auth/verify`)
 to confirm it before they continue, from every page (`isSessionMfaVerified`). The one exception
 is a session the link in an email about a request started (`fromRequestLink`, `mustStepUp`;
-[decision 0035](decisions/0035-sign-in-links-in-request-emails.md)), whatever the role: it isn't
+[decision 0036](decisions/0036-sign-in-links-in-request-emails.md)), whatever the role: it isn't
 sent there, but it doesn't count as confirmed either, so the next section's changes ask for the
 second step straight away. For roles that
 require MFA only strong factors count: not email codes, and not a trusted device. Wrong step-up

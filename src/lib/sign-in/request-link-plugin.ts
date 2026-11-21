@@ -1,6 +1,6 @@
 /**
  * @file Better Auth's endpoint for the link in an email about a request
- * (decision 0035, `src/lib/sign-in/request-link.ts`): `GET
+ * (decision 0036, `src/lib/sign-in/request-link.ts`): `GET
  * /request-link/sign-in?token=…`. What the link may do is decided by the app
  * (`followRequestLink` in `src/server/auth/request-links.ts`, loaded on first
  * use so `pnpm auth:schema` doesn't load it); this file only creates the

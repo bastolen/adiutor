@@ -305,7 +305,7 @@ describe('Thread', () => {
               body: {
                 text: `[@](mention:${toCasey}), ask [@](mention:${toSam}).`,
                 format: 'markdown',
-                mentions: { [toCasey]: CASEY, [toSam]: SAM },
+                mentions: { [toCasey]: { ...CASEY, key: null }, [toSam]: { ...SAM, key: null } },
               },
             }),
           ],

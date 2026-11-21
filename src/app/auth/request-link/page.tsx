@@ -1,6 +1,6 @@
 /**
  * @file The confirmation page of the link in an email about a request
- * (decision 0035), served at `/auth/request-link`. The link signs a person's
+ * (decision 0036), served at `/auth/request-link`. The link signs a person's
  * click in straight away (`src/lib/sign-in/request-link.ts`); it comes here
  * instead when it can't: a mail scanner or a browser that doesn't say a
  * person clicked, someone else signed in in this browser, or a link that no

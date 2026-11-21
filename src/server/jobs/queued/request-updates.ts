@@ -4,7 +4,7 @@
  * language. What the email may show is read when it's sent
  * (`readRequestUpdate`), so someone who is no longer on the request or can
  * no longer read it gets nothing, and their jobs are skipped. Its links sign
- * the reader in and open the request (`createRequestLink`, decision 0035),
+ * the reader in and open the request (`createRequestLink`, decision 0036),
  * with a link made for each email as it's sent. A mail problem throws, so the
  * batch is tried again later with whatever was queued for it meanwhile (and
  * a new link: the old one was never sent, and expires).

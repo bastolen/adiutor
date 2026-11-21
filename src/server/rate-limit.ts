@@ -46,7 +46,7 @@ export const RATE_LIMITS = {
    */
   emailLinkMissesPerIp: { limit: 20, windowSeconds: 15 * 60 },
   /**
-   * Request links (decision 0035) looked up from one IP address with a token
+   * Request links (decision 0036) looked up from one IP address with a token
    * that isn't one, by their endpoint or their confirmation page: looking
    * links up can't be used to guess them.
    */

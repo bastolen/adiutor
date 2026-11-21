@@ -327,7 +327,7 @@ export async function openSignInLink(page: Page, url: string): Promise<void> {
  * Opens a link from an email the way a click in a webmail tab does: a
  * navigation a person made from another site (`Sec-Fetch-Site: cross-site`,
  * `Sec-Fetch-User: ?1`), which the link in an email about a request needs to
- * sign in straight away (`isPersonsClick`, decision 0035).
+ * sign in straight away (`isPersonsClick`, decision 0036).
  *
  * @param page - The browser page.
  * @param url - The link, absolute or a path on the test server.
