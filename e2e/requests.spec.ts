@@ -10,8 +10,9 @@
  * staff's internal notes (which Finance reads and the company never sees),
  * the
  * prefix numbers are shown with, and
- * who only reads: Watchers, Finance, everyone for a
- * deactivated company's request, and a staff member signed in as a user.
+ * who only reads: Watchers, Finance, and everyone for a deactivated
+ * company's request; and a staff member signed in as a user, who replies for
+ * them.
  * The staff reach a person's user page from their name; nobody at a company
  * does.
  * Each test that changes a request stores its own (`storeRequest`); the
@@ -1616,24 +1617,49 @@ test('a deactivated company’s request can only be read, also by the staff', as
   await expectReadOnly(page);
 });
 
-test('nothing about a request can be changed while a staff member is signed in as a user', async ({
+test('a staff member signed in as a user replies for them, and only that user and Admins are told', async ({
   page,
 }) => {
   const number = await storeRequest({
     companySlug: COMPANY_SLUG,
     raisedBy: REQUESTS_CLIENT.email,
-    title: 'A request to look at',
+    title: 'A request to answer for the client',
   });
+  const reply = 'Sent on your behalf.';
   await signIn(page, PLATFORM_ADMIN);
   await signInAsUser(page, REQUESTS_CLIENT.name);
 
   await page.goto(`/requests/${number}`);
-  await expect(page.getByRole('heading', { level: 1, name: 'A request to look at' })).toBeVisible();
-  // They see what the user sees, and every control is off.
-  await expect(page.getByRole('textbox', { name: 'Your reply' })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Send reply' })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Mark as done' })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Cancel request' })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Edit description' })).toBeDisabled();
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'A request to answer for the client' }),
+  ).toBeVisible();
+  // They see what the user sees, without a priority, and can do the user's request work.
   await expect(main(page).getByText(/priority/i)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Mark as done' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Edit description' })).toBeEnabled();
+  await page.getByRole('textbox', { name: 'Your reply' }).fill(reply);
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  const sent = conversation(page).getByRole('listitem').filter({ hasText: reply });
+  // The reply is the client's, and says to them who sent it.
+  await expect(sent).toContainText(REQUESTS_CLIENT.name);
+  await expect(sent).toContainText(`${PLATFORM_ADMIN.name} did this while signed in as you`);
+
+  // Back in their own account, the Admin (who sees the audit log) reads whom it was for.
+  await page
+    .getByRole('region', { name: 'Signed in as someone else' })
+    .getByRole('button', { name: 'Back to my account' })
+    .click();
+  await expect(page.getByRole('region', { name: 'Signed in as someone else' })).toHaveCount(0);
+  await page.goto(`/requests/${number}`);
+  await expect(sent).toContainText(
+    `${PLATFORM_ADMIN.name} did this while signed in as ${REQUESTS_CLIENT.name}`,
+  );
+  await signOut(page);
+
+  // A colleague at the company reads it as the client's own reply.
+  await signIn(page, CLIENT_WATCHER);
+  await page.goto(`/requests/${number}`);
+  await expect(sent).toContainText(REQUESTS_CLIENT.name);
+  await expect(sent).not.toContainText('signed in as');
 });

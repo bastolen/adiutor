@@ -447,6 +447,9 @@ settings, and refused.
   (`signedInAs` on an entry or a version, `raisedSignedInAs`, `editedSignedInAs` for a text's last
   edit) with the staff member's name, or `null` once the account is gone, and leaves it out for
   everyone else.
+- **On the page:** `SignedInAsMark` after the time: "Ann did this while signed in as you" for the
+  user, "Ann did this while signed in as Pat" for Admins and Managers, and "A staff member" once
+  the account is gone. An edit says "made this edit", after "Edited" and under a version's line.
 - **Rate limits** count against the staff member (`actingUserId`), and the change's transaction
   checks again that the sign-in still holds (its row read `FOR SHARE`, code `signed_in_as` with
   `errors.impersonation.ended`).

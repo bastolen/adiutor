@@ -258,7 +258,7 @@
       },
       "staffSignIn": {
         "title": "Sign-ins by staff",
-        "description": "{minutes, plural, one {Adiutor staff can sign in as you for up to # minute, to see what you see and check what isn't working for you. They can't change anything while they do, and you get an email each time.} other {Adiutor staff can sign in as you for up to # minutes, to see what you see and check what isn't working for you. They can't change anything while they do, and you get an email each time.}}",
+        "description": "{minutes, plural, one {Adiutor staff can sign in as you for up to # minute, to see what you see and check what isn't working for you. They can work on your requests, and you'll see it was them; they can't change anything else. You get an email each time.} other {Adiutor staff can sign in as you for up to # minutes, to see what you see and check what isn't working for you. They can work on your requests, and you'll see it was them; they can't change anything else. You get an email each time.}}",
         "on": "On",
         "off": "Off",
         "turnOff": "Turn off",

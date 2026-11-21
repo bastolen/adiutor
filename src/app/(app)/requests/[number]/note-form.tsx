@@ -12,7 +12,6 @@ import { useCallback } from 'react';
 import Button from '@/components/ui/button';
 import MarkdownField from '@/components/ui/markdown/markdown-field';
 import ResultAlert from '@/components/ui/result-alert';
-import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import { REQUEST_TEXT_MAX_LENGTH } from '@/lib/input-rules';
 
@@ -32,8 +31,6 @@ import { noteAction } from './actions';
 export default function NoteForm({ request }: { request: number }) {
   const t = useTranslations('requests.note');
   const tReply = useTranslations('requests.reply');
-  // Changes are turned off while a staff member is signed in as the user.
-  const changesOff = useSignedInAs();
   const [result, formAction, pending, onSubmit] = useTransientActionState(noteAction, null);
   // Who the note can mention: asked for when someone types "@".
   const loadMentions = useCallback(
@@ -47,29 +44,26 @@ export default function NoteForm({ request }: { request: number }) {
       onSubmit={onSubmit}
       className="flex flex-col gap-4 rounded-lg bg-warning-soft p-4"
     >
-      <ChangesFieldset>
-        <input type="hidden" name="request" value={request} />
-        <p className="flex items-center gap-2 text-sm font-medium text-warning">
-          <Lock aria-hidden="true" className="size-4 shrink-0" />
-          {t('staffOnly')}
-        </p>
-        <ResultAlert result={result} />
-        <MarkdownField
-          label={t('label')}
-          description={tReply('hint')}
-          name="body"
-          rows={6}
-          maxLength={REQUEST_TEXT_MAX_LENGTH}
-          required
-          disabled={changesOff}
-          mentions={loadMentions}
-        />
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" loading={pending} disabled={changesOff}>
-            {t('add')}
-          </Button>
-        </div>
-      </ChangesFieldset>
+      <input type="hidden" name="request" value={request} />
+      <p className="flex items-center gap-2 text-sm font-medium text-warning">
+        <Lock aria-hidden="true" className="size-4 shrink-0" />
+        {t('staffOnly')}
+      </p>
+      <ResultAlert result={result} />
+      <MarkdownField
+        label={t('label')}
+        description={tReply('hint')}
+        name="body"
+        rows={6}
+        maxLength={REQUEST_TEXT_MAX_LENGTH}
+        required
+        mentions={loadMentions}
+      />
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" loading={pending}>
+          {t('add')}
+        </Button>
+      </div>
     </form>
   );
 }

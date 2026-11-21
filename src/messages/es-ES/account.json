@@ -258,7 +258,7 @@
       },
       "staffSignIn": {
         "title": "Inicio de sesión del personal",
-        "description": "{minutes, plural, one {El personal de Adiutor puede iniciar sesión como tú durante # minuto como máximo, para ver lo que ves y comprobar qué no te funciona. No puede cambiar nada mientras lo hace, y recibes un correo cada vez.} other {El personal de Adiutor puede iniciar sesión como tú durante # minutos como máximo, para ver lo que ves y comprobar qué no te funciona. No puede cambiar nada mientras lo hace, y recibes un correo cada vez.}}",
+        "description": "{minutes, plural, one {El personal de Adiutor puede iniciar sesión como tú durante # minuto como máximo, para ver lo que ves y comprobar qué no te funciona. Mientras tanto puede trabajar en tus solicitudes, y verás que fue el personal; no puede cambiar nada más. Recibes un correo cada vez.} other {El personal de Adiutor puede iniciar sesión como tú durante # minutos como máximo, para ver lo que ves y comprobar qué no te funciona. Mientras tanto puede trabajar en tus solicitudes, y verás que fue el personal; no puede cambiar nada más. Recibes un correo cada vez.}}",
         "on": "Activado",
         "off": "Desactivado",
         "turnOff": "Desactivar",

@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import Card from '@/components/ui/card';
+import { SignedInAsMarker } from '@/components/ui/signed-in-as';
 import { defined } from '@/lib/defined';
 import { REQUEST_TEXT_MAX_LENGTH } from '@/lib/input-rules';
 
@@ -56,6 +57,19 @@ describe('ReplyForm', () => {
     expect(sent()).toEqual({ request: '142', body: 'Monday to Friday.' });
     expect(await screen.findByText('Reply sent.')).toBeInTheDocument();
     await waitFor(() => expect(field).toHaveValue(''));
+  });
+
+  it('stays on while a staff member is signed in as the user: replying is their own work', () => {
+    render(
+      <>
+        <ReplyForm request={142} canWait />
+        <SignedInAsMarker />
+      </>,
+    );
+
+    expect(screen.getByRole('textbox', { name: 'Your reply' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Send reply' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Send and wait for the company' })).toBeEnabled();
   });
 
   it('offers no second button to those who cannot wait for the company', () => {
