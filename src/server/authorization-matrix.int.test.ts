@@ -114,7 +114,7 @@ import {
   listStaff,
   removeFromStaff,
   renameStaff,
-  setDefaultLocale,
+  setLanguages,
   setRequestPrefix,
 } from './people/staff';
 import {
@@ -510,7 +510,10 @@ function listOperations(): Operation[] {
       (w) => confirmConnectedProvider(ctx, { ...w.actor, signedInAt: new Date() }, w.othersAccount),
     ],
     ['rename staff', (w) => renameStaff(ctx, w.actor, 'Adiutor Tests')],
-    ['set default language', (w) => setDefaultLocale(ctx, w.actor, 'nl-NL')],
+    [
+      'set languages',
+      (w) => setLanguages(ctx, w.actor, { defaultLocale: 'nl-NL', offered: ['en-US', 'nl-NL'] }),
+    ],
     ['set request prefix', (w) => setRequestPrefix(ctx, w.actor, 'HELP')],
     ['list request types', (w) => listRequestTypes(ctx, w.actor)],
     [
@@ -941,7 +944,7 @@ const EXPECTED: Record<string, string> = {
   "sign out another user's device": 'NNNNNNN',
   "confirm another user's provider account": 'NNNNNNN',
   'rename staff': 'FFFFFFA',
-  'set default language': 'FFFFFFA',
+  'set languages': 'FFFFFFA',
   'set request prefix': 'FFFFFFA',
   // Everyone who reads requests sees the types; only staff Admins change them.
   'list request types': 'AAAAAAA',

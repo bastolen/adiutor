@@ -8,6 +8,7 @@
 import { cookies } from 'next/headers';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { requestLanguageSettings } from '@/lib/i18n/request-locale';
 import type { Actor } from '@/server/actor';
 import { getOptionalActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
@@ -103,6 +104,18 @@ describe('setLanguageAction', () => {
 
       expect(set).toHaveBeenCalledWith('adiutor.locale', 'es-ES', COOKIE_OPTIONS);
       expect(setOwnLocale).not.toHaveBeenCalled();
+    });
+
+    it('refuses a language that’s turned off, leaving the cookie as it was', async () => {
+      vi.mocked(getOptionalActor).mockResolvedValue(null);
+      vi.mocked(requestLanguageSettings).mockResolvedValueOnce({
+        defaultLocale: 'en-US',
+        offered: ['en-US', 'es-ES'],
+      });
+
+      await expect(setLanguageAction('nl-NL')).resolves.toBe(false);
+      expect(set).not.toHaveBeenCalled();
+      expect(remove).not.toHaveBeenCalled();
     });
   });
 

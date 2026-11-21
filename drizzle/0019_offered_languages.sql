@@ -1,0 +1,3 @@
+ALTER TABLE "staff_settings" ADD COLUMN "offered_locales" text[] DEFAULT array['en-US', 'nl-NL', 'es-ES']::text[] NOT NULL;--> statement-breakpoint
+ALTER TABLE "staff_settings" ADD CONSTRAINT "staff_settings_offered_locales_known" CHECK (cardinality("staff_settings"."offered_locales") > 0 and "staff_settings"."offered_locales" <@ array['en-US', 'nl-NL', 'es-ES']::text[]);--> statement-breakpoint
+ALTER TABLE "staff_settings" ADD CONSTRAINT "staff_settings_default_locale_offered" CHECK ("staff_settings"."default_locale" = any("staff_settings"."offered_locales"));

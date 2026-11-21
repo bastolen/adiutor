@@ -9,7 +9,13 @@
 import { randomUUID } from 'node:crypto';
 
 import { backdateMfaConfirmation, setDefaultLocale } from './support/db';
-import { COMPANY_SLUG, PLATFORM_ADMIN, REQUESTS_CLIENT, STAFF_NAME } from './support/fixtures';
+import {
+  COMPANY_SLUG,
+  E2E_BASE_URL,
+  PLATFORM_ADMIN,
+  REQUESTS_CLIENT,
+  STAFF_NAME,
+} from './support/fixtures';
 import {
   confirmWithAuthenticator,
   createAccountFromInvitation,
@@ -186,9 +192,9 @@ test("an Admin changes Adiutor's default language, which visitors without a choi
     await expect(select).toHaveText('English (US)');
     await select.click();
     await page.getByRole('option', { name: 'Español' }).click();
-    await page.getByRole('button', { name: 'Save default language' }).click();
+    await page.getByRole('button', { name: 'Save languages' }).click();
+    await expect(toasts(page)).toContainText('Languages saved.');
     // The Admin hasn't chosen a language of their own (they're on Default), so they follow it too.
-    await expect(toasts(page)).toContainText('Idioma predeterminado guardado.');
     await expect(page.locator('html')).toHaveAttribute('lang', 'es-ES');
     // The select shows the language just saved, not the one from before the save.
     await expect(page.getByRole('combobox', { name: 'Idioma predeterminado' })).toHaveText(
@@ -209,6 +215,63 @@ test("an Admin changes Adiutor's default language, which visitors without a choi
     }
   } finally {
     // Put it back for the other tests, even if a step failed.
+    await setDefaultLocale('en-US');
+  }
+});
+
+test('an Admin turns languages off, which nobody is offered or gets until they’re on again', async ({
+  browser,
+  page,
+}) => {
+  await signIn(page, PLATFORM_ADMIN);
+  await page.goto('/admin/staff');
+  // Someone who chose Spanish on the sign-in page.
+  const visitor = await browser.newContext({ locale: 'en-US' });
+  await visitor.addCookies([{ name: 'adiutor.locale', value: 'es-ES', url: E2E_BASE_URL }]);
+  /**
+   * Saves the Languages card, and waits until the save is through.
+   */
+  const save = async () => {
+    const saved = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' && response.url().includes('/admin/staff'),
+    );
+    await page.getByRole('button', { name: 'Save languages' }).click();
+    await saved;
+    await expect(toasts(page)).toContainText('Languages saved.');
+  };
+  try {
+    const other = await visitor.newPage();
+    await other.goto('/auth');
+    await expect(other.locator('html')).toHaveAttribute('lang', 'es-ES');
+
+    await page.getByRole('checkbox', { name: 'Español' }).uncheck();
+    await save();
+    // Their choice now counts as Default: the default language, and Spanish isn't offered.
+    await other.reload();
+    await expect(other.locator('html')).toHaveAttribute('lang', 'en-US');
+    await other.getByRole('button', { name: 'Theme and language: System, English (US)' }).click();
+    await expect(other.getByRole('menuitemradio', { name: 'Default' })).toBeChecked();
+    await expect(other.getByRole('menuitemradio', { name: 'Español' })).toHaveCount(0);
+    await other.keyboard.press('Escape');
+
+    // With only English left, there's no language to choose.
+    await expect(page.getByRole('checkbox', { name: 'English (US)' })).toBeDisabled();
+    await page.getByRole('checkbox', { name: 'Nederlands' }).uncheck();
+    await save();
+    await other.reload();
+    await other.getByRole('button', { name: 'Theme: System' }).click();
+    await expect(other.getByRole('menuitemradio', { name: 'English (US)' })).toHaveCount(0);
+    await other.keyboard.press('Escape');
+
+    // Back on, their choice counts again.
+    await page.getByRole('checkbox', { name: 'Español' }).check();
+    await save();
+    await other.reload();
+    await expect(other.locator('html')).toHaveAttribute('lang', 'es-ES');
+  } finally {
+    await visitor.close();
+    // Put them back for the other tests, even if a step failed.
     await setDefaultLocale('en-US');
   }
 });

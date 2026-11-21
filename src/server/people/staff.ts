@@ -10,12 +10,13 @@ import type { DatabaseTransaction } from '@/db';
 import { staffSettings, user } from '@/db/schema';
 import { isStaffRoleRaise, wouldLeaveNoAdmin } from '@/lib/authz/guards';
 import { PLATFORM_ADMIN_ROLE, type PlatformRole } from '@/lib/authz/roles';
-import type { Locale } from '@/lib/i18n/locales';
+import { loadLanguageSettings } from '@/lib/i18n/default-locale';
+import { DEFAULT_LOCALE, type Locale, LOCALES } from '@/lib/i18n/locales';
 import { mayBeAssigned } from '@/lib/requests';
 import { type Paged, resolveTableState, type TableState } from '@/lib/tables/table-state';
 import { type PeopleSort, STAFF_TABLE } from '@/lib/tables/tables';
 import {
-  localeSchema,
+  languageSettingsSchema,
   requestPrefixSchema,
   staffNameSchema,
   staffRoleSchema,
@@ -36,7 +37,6 @@ import type { ServiceContext } from '../context';
 import { forbiddenError, notFoundError, ServiceError, parseId } from '../errors';
 import { paginate, peopleOrder } from '../pagination';
 import { assertRoleChangeLimit } from '../rate-limit';
-import { defaultLanguage } from '../recipient-locale';
 import { unassignFrom, unsubscribeFrom } from '../requests';
 import { revokeInvitationsTo, revokeInvitesWithoutManager } from './invitations';
 import { loadPictures } from './pictures';
@@ -69,25 +69,39 @@ export interface StaffMember {
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `staff:manage`.
- * @returns The name, Adiutor's default language (English (US) if the settings row is missing)
- *   and the prefix request numbers are shown with ("AD" if it's missing).
+ * @returns The name, Adiutor's default language (English (US) if the settings row is missing),
+ *   the languages it offers (every language then) and the prefix request numbers are shown
+ *   with ("AD" if it's missing).
  */
 export async function getStaffSettings(
   ctx: ServiceContext,
   actor: Actor,
-): Promise<{ name: string; defaultLocale: Locale; requestPrefix: string }> {
+): Promise<{
+  name: string;
+  defaultLocale: Locale;
+  offeredLocales: readonly Locale[];
+  requestPrefix: string;
+}> {
   assertPermission(getGlobalPermissions(actor), 'staff:manage');
-  const [name, defaultLocale, requestPrefix] = await Promise.all([
+  const [name, languages, requestPrefix] = await Promise.all([
     getStaffName(ctx.db),
-    defaultLanguage(ctx),
+    loadLanguageSettings(ctx.db),
     getRequestPrefix(ctx.db),
   ]);
-  return { name, defaultLocale, requestPrefix };
+  return {
+    name,
+    defaultLocale: languages.defaultLocale ?? DEFAULT_LOCALE,
+    offeredLocales: languages.offered,
+    requestPrefix,
+  };
 }
 
 /** A change to the staff's settings: the values to set in the single `staff_settings` row. */
 type StaffSettingsChange = Partial<
-  Pick<typeof staffSettings.$inferInsert, 'name' | 'defaultLocale' | 'requestPrefix'>
+  Pick<
+    typeof staffSettings.$inferInsert,
+    'name' | 'defaultLocale' | 'offeredLocales' | 'requestPrefix'
+  >
 >;
 
 /**
@@ -143,28 +157,37 @@ export async function setRequestPrefix(
 }
 
 /**
- * Sets Adiutor's default language: the language of everyone who hasn't
- * chosen one (no language cookie), and of emails to people without a saved
- * language outside a request. If the settings row is missing (it was lost),
- * this creates it again, with the name users then see ("Adiutor"). Not a
- * security change, so no audit event, like a person's own language.
+ * Sets Adiutor's languages (decision 0029): its default language (the
+ * language of everyone who hasn't chosen one, and of emails to people
+ * without a saved language outside a request) and the languages it offers.
+ * The default is always offered: it's added when the form left it out. A
+ * language that's turned off isn't offered anywhere, and whoever chose it
+ * gets the default until it's on again. If the settings row is missing (it
+ * was lost), this creates it again, with the name users then see
+ * ("Adiutor"). Not a security change, so no audit event, like a person's own
+ * language.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `staff:manage`.
- * @param locale - The language, as the form sent it.
- * @returns The saved language.
- * @throws {ZodError} When it isn't one of the languages.
+ * @param input - Form input.
+ * @param input.defaultLocale - The default language, as the form sent it.
+ * @param input.offered - The languages to offer, as the form sent them.
+ * @returns The saved default and the languages offered, in the order of `LOCALES`.
+ * @throws {ZodError} When the default or an offered language isn't one of the languages.
  */
-export async function setDefaultLocale(
+export async function setLanguages(
   ctx: ServiceContext,
   actor: Actor,
-  locale: unknown,
-): Promise<Locale> {
+  input: { defaultLocale: unknown; offered: unknown },
+): Promise<{ defaultLocale: Locale; offeredLocales: Locale[] }> {
   assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'staff:manage');
-  const defaultLocale = localeSchema.parse(locale);
-  await ctx.db.transaction((tx) => saveStaffSettings(tx, { defaultLocale }));
-  return defaultLocale;
+  const { defaultLocale, offered } = languageSettingsSchema.parse(input);
+  const offeredLocales = LOCALES.filter(
+    (locale) => locale === defaultLocale || offered.includes(locale),
+  );
+  await ctx.db.transaction((tx) => saveStaffSettings(tx, { defaultLocale, offeredLocales }));
+  return { defaultLocale, offeredLocales };
 }
 
 /**

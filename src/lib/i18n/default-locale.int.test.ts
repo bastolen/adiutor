@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { createStaffSettings, setupTestContext } from '../../../tests/integration/helpers';
-import { loadDefaultLocale, localeFromHeaders } from './default-locale';
+import { loadDefaultLocale, loadLanguageSettings, localeFromHeaders } from './default-locale';
 
 const { db } = setupTestContext();
 
@@ -18,6 +18,24 @@ describe('loadDefaultLocale', () => {
 
   it('has none before setup', async () => {
     expect(await loadDefaultLocale(db)).toBeNull();
+  });
+});
+
+describe('loadLanguageSettings', () => {
+  it('reads the default and the languages offered, in menu order', async () => {
+    await createStaffSettings(db, 'Adiutor Tests', 'es-ES', ['es-ES', 'en-US']);
+
+    expect(await loadLanguageSettings(db)).toEqual({
+      defaultLocale: 'es-ES',
+      offered: ['en-US', 'es-ES'],
+    });
+  });
+
+  it('offers every language before setup', async () => {
+    expect(await loadLanguageSettings(db)).toEqual({
+      defaultLocale: null,
+      offered: ['en-US', 'nl-NL', 'es-ES'],
+    });
   });
 });
 
@@ -39,5 +57,16 @@ describe('localeFromHeaders', () => {
   it('follows the browser before setup, then English (US)', async () => {
     expect(await localeFromHeaders(new Headers({ 'accept-language': 'nl-BE' }), db)).toBe('nl-NL');
     expect(await localeFromHeaders(new Headers({ 'accept-language': 'fr-FR' }), db)).toBe('en-US');
+  });
+
+  it('ignores the cookie of a language that’s turned off', async () => {
+    await createStaffSettings(db, 'Adiutor Tests', 'es-ES', ['en-US', 'es-ES']);
+
+    expect(await localeFromHeaders(new Headers({ cookie: 'adiutor.locale=nl-NL' }), db)).toBe(
+      'es-ES',
+    );
+    expect(await localeFromHeaders(new Headers({ cookie: 'adiutor.locale=en-US' }), db)).toBe(
+      'en-US',
+    );
   });
 });

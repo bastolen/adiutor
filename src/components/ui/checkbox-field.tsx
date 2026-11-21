@@ -1,7 +1,7 @@
 /**
  * @file Labelled checkbox with optional help text.
  */
-import { type ComponentProps, useId } from 'react';
+import { type ComponentProps, type ReactNode, useId } from 'react';
 
 import cn from '@/lib/cn';
 
@@ -11,8 +11,8 @@ import { focusRing } from './styles';
  * Props for {@link CheckboxField}.
  */
 type CheckboxFieldProps = Omit<ComponentProps<'input'>, 'type'> & {
-  /** Visible label text. */
-  label: string;
+  /** Visible label: text, or text with an icon (a language's flag and its name). */
+  label: ReactNode;
   /** Help text below the label, read out with the checkbox. */
   description?: string;
 };

@@ -1,6 +1,7 @@
 # 0020. Save a language only when its owner picks it
 
-- **Status:** Accepted
+- **Status:** Accepted; a saved language counts only while it's offered
+  ([0029](0029-staff-choose-the-offered-languages.md))
 - **Date:** 2026-11-16
 
 ## Context

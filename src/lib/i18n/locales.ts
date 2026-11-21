@@ -105,3 +105,29 @@ export function isLocale(value: unknown): value is Locale {
 export function isLanguageChoice(value: unknown): value is LanguageChoice {
   return value === FOLLOW_DEFAULT || isLocale(value);
 }
+
+/**
+ * Adiutor's language settings (`staff_settings`): its default language, and
+ * the languages it offers, which staff Admins turn on and off (decision
+ * 0029). Before setup there's no default yet and every language is offered.
+ */
+export interface LanguageSettings {
+  /** The default language, or `null` before setup. */
+  defaultLocale: Locale | null;
+  /** The languages that are on, in the order of {@link LOCALES}; always holds the default. */
+  offered: readonly Locale[];
+}
+
+/**
+ * A language only while it's offered: a saved language, a cookie or an
+ * invitation's language that's turned off counts as none, so whoever chose
+ * it gets the default language (their choice is kept for when it's on
+ * again).
+ *
+ * @param value - The language, e.g. `user.locale` or the cookie's value.
+ * @param offered - The languages that are on ({@link LanguageSettings.offered}).
+ * @returns The locale, or `null` when it isn't one, or is off.
+ */
+export function offeredLocale(value: unknown, offered: readonly Locale[]): Locale | null {
+  return isLocale(value) && offered.includes(value) ? value : null;
+}

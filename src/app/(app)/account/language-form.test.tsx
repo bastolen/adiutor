@@ -102,4 +102,17 @@ describe('LanguageForm', () => {
     expect(loadFresh).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Save language' })).toBeEnabled();
   });
+
+  it('starts on Default for a saved language that’s turned off, and says so', () => {
+    renderInLocale(
+      'en-US',
+      <LanguageForm choice="default" defaultLocale="en-US" notOffered="nl-NL" />,
+    );
+
+    const select = screen.getByRole('combobox', { name: 'Language' });
+    expect(select).toHaveTextContent('Default');
+    expect(select).toHaveAccessibleDescription(
+      "You chose Nederlands, which isn't offered right now, so Adiutor uses the default language until it is.",
+    );
+  });
 });

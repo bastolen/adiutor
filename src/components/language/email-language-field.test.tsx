@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import renderInLocale from '../../../tests/i18n/render';
 import EmailLanguageField from './email-language-field';
+import { OfferedLanguagesProvider } from './offered-languages';
 
 describe('EmailLanguageField', () => {
   it('starts on Default when the form offers it, naming the language it stands for', async () => {
@@ -45,5 +46,29 @@ describe('EmailLanguageField', () => {
     expect(screen.getByText('Español')).toHaveAttribute('lang', 'es-ES');
     // Default is worded in the page's language.
     expect(screen.getAllByRole('option')[0]?.querySelector('[lang]')).toBeNull();
+  });
+
+  it('offers only the languages that are on, and goes with just one left', async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderInLocale(
+      'en-US',
+      <OfferedLanguagesProvider offered={['en-US', 'es-ES']}>
+        <EmailLanguageField purpose="invitation" />
+      </OfferedLanguagesProvider>,
+    );
+    await user.click(screen.getByRole('combobox', { name: 'Email language' }));
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'English (US)',
+      'Español',
+    ]);
+
+    unmount();
+    renderInLocale(
+      'en-US',
+      <OfferedLanguagesProvider offered={['en-US']}>
+        <EmailLanguageField purpose="invitation" />
+      </OfferedLanguagesProvider>,
+    );
+    expect(screen.queryByRole('combobox', { name: 'Email language' })).not.toBeInTheDocument();
   });
 });

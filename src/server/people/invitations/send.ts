@@ -17,6 +17,7 @@ import {
 import type { Actor } from '../../actor';
 import type { ServiceContext } from '../../context';
 import { concurrentChangeError, isDeadlock, ServiceError } from '../../errors';
+import assertLanguageOffered from '../../offered-language';
 import { createSentInvitation } from './record';
 import { assertCanManage, assertInvitable, assertInviteRateLimits, visibleStatus } from './rules';
 
@@ -35,8 +36,9 @@ import { assertCanManage, assertInvitable, assertInviteRateLimits, visibleStatus
  * @param input.companyId - The company, or `null` for staff.
  * @param input.email - The email address to invite.
  * @param input.role - The role to give.
- * @param input.locale - The invitation's language; by default Adiutor's default language, else
- *   English (US). An invitee who has an account with a saved language gets that instead.
+ * @param input.locale - The invitation's language, one Adiutor offers; by default Adiutor's
+ *   default language, else English (US). An invitee who has an account with a saved language
+ *   that's offered gets that instead.
  * @returns The status the actor may see (see {@link visibleStatus}).
  */
 export async function inviteByEmail(
@@ -47,6 +49,7 @@ export async function inviteByEmail(
   assertNotSignedInAs(actor);
   const email = emailSchema.parse(input.email);
   const role = roleSchema.parse(input.role);
+  await assertLanguageOffered(ctx.db, input.locale);
   const access = await getTargetAccess(ctx.db, actor, input.companyId);
   assertCanManage(access);
   assertInvitable(access, role);
@@ -121,6 +124,7 @@ export async function inviteManyByEmail(
       emails: invalid.join(', '),
     });
   }
+  await assertLanguageOffered(ctx.db, input.locale);
   if (emails.length === 0) {
     throw new ServiceError('invalid', 'validation.emailList.empty');
   }

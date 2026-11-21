@@ -47,6 +47,7 @@
       "verificationSent": "We've sent a verification link to {email}. It expires in 1 hour.",
       "languageTitle": "Language",
       "languageDescription": "Adiutor and the emails it sends you use this language.",
+      "languageNotOffered": "You chose {language}, which isn't offered right now, so Adiutor uses the default language until it is.",
       "languageLabel": "Language",
       "saveLanguage": "Save language",
       "languageSaved": "Language saved."

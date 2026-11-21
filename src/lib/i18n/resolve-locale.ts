@@ -1,15 +1,22 @@
 /**
  * @file Works out a request's language from the browser's choice (the
  * language cookie), Adiutor's own default language and what the browser asks
- * for (`Accept-Language`). Pure, so pages, server actions, the sign-in hooks
- * and tests share one rule; the default is read by the callers
- * (`default-locale.ts`). A signed-in user's saved language reaches the cookie
+ * for (`Accept-Language`), counting only the languages Adiutor offers. Pure,
+ * so pages, server actions, the sign-in hooks and tests share one rule; the
+ * settings are read by the callers (`default-locale.ts`). A signed-in user's saved language reaches the cookie
  * at sign-in. See docs/i18n.md.
  */
 import { match } from '@formatjs/intl-localematcher';
 import Negotiator from 'negotiator';
 
-import { DEFAULT_LOCALE, isLocale, languageCookieValue, LOCALES, type Locale } from './locales';
+import {
+  DEFAULT_LOCALE,
+  isLocale,
+  languageCookieValue,
+  LOCALES,
+  type Locale,
+  offeredLocale,
+} from './locales';
 
 /**
  * Reads the language cookie's value.
@@ -52,24 +59,27 @@ export function localeFromAcceptLanguage(header: string | null | undefined): Loc
 }
 
 /**
- * The request's language: the browser's choice (the cookie), else Adiutor's
- * default language (`staff_settings.default_locale`), else, before setup
- * (when there's no default yet), the best match for `Accept-Language`, else
- * {@link DEFAULT_LOCALE}.
+ * The request's language: the browser's choice (the cookie) while that
+ * language is offered, else Adiutor's default language
+ * (`staff_settings.default_locale`, always offered), else, before setup
+ * (when there's no default yet and every language is offered), the best
+ * match for `Accept-Language`, else {@link DEFAULT_LOCALE}.
  *
- * @param request - What the request says, and Adiutor's default.
+ * @param request - What the request says, and Adiutor's settings.
  * @param request.cookie - The language cookie's value, if any.
  * @param request.configured - Adiutor's default language, or `null` before setup.
+ * @param request.offered - The languages that are on; every language when left out.
  * @param request.acceptLanguage - The `Accept-Language` header, if any.
  * @returns The locale to use.
  */
 export function resolveLocale(request: {
   cookie?: string | null;
   configured?: Locale | null;
+  offered?: readonly Locale[];
   acceptLanguage?: string | null;
 }): Locale {
   return (
-    localeFromCookie(request.cookie) ??
+    offeredLocale(request.cookie, request.offered ?? LOCALES) ??
     request.configured ??
     localeFromAcceptLanguage(request.acceptLanguage) ??
     DEFAULT_LOCALE

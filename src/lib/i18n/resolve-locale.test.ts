@@ -62,6 +62,12 @@ describe('resolveLocale', () => {
     expect(resolveLocale({ acceptLanguage: 'de-DE' })).toBe('en-US');
     expect(resolveLocale({})).toBe('en-US');
   });
+
+  it('counts the browser’s choice only while that language is offered', () => {
+    const offered = ['en-US', 'es-ES'] as const;
+    expect(resolveLocale({ cookie: 'nl-NL', configured: 'es-ES', offered })).toBe('es-ES');
+    expect(resolveLocale({ cookie: 'en-US', configured: 'es-ES', offered })).toBe('en-US');
+  });
 });
 
 describe('localeCookieFromHeaders', () => {
