@@ -180,8 +180,15 @@
     {
       "idx": 25,
       "version": "7",
-      "when": 1795292992498,
-      "tag": "0025_request_sign_in_links",
+      "when": 1795293174261,
+      "tag": "0025_activity_view",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1795295555772,
+      "tag": "0026_request_sign_in_links",
       "breakpoints": true
     }
   ]

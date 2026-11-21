@@ -10,8 +10,9 @@ import {
   providerLinkedCookieValue,
   providerStepUpCookieValue,
 } from '../src/lib/sign-in/oauth-providers';
-import { forgetLimitsOf, storeRequest } from './support/db';
+import { forgetLimitsOf, resetActivityView, storeEntries, storeRequest } from './support/db';
 import {
+  ACTIVITY_CLIENT,
   CLIENT_WATCHER,
   COMPANY_NAME,
   COMPANY_SLUG,
@@ -1506,4 +1507,66 @@ test.describe('requests', () => {
       await expect(page.getByRole('heading', { level: 2, name: 'Details' })).toBeFocused();
     });
   });
+});
+
+test('a request’s activity view is chosen with the keyboard, focus staying on each menu’s button', async ({
+  page,
+}) => {
+  // The view is saved with the account: start from everything, oldest first, also on a retry.
+  await resetActivityView(ACTIVITY_CLIENT.email);
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: ACTIVITY_CLIENT.email,
+    title: 'Activity read with the keyboard',
+  });
+  await storeEntries(number, [
+    { kind: 'comment', by: ACTIVITY_CLIENT.email, side: 'company', text: 'Any news?' },
+    { kind: 'status', by: SUPPORT_STAFF.email, side: 'staff', from: 'open', to: 'in_progress' },
+  ]);
+  await signIn(page, ACTIVITY_CLIENT);
+  await page.goto(`/requests/${number}`);
+  const entries = page.getByRole('region', { name: 'Conversation' }).locator('ol > li');
+  await expect(entries).toHaveCount(2);
+
+  // Enter opens the Show menu on "Everything"; the arrow keys go down the groups.
+  const show = page.getByRole('button', { name: 'Show: Everything' });
+  expect(await cursorOf(show)).toBe('pointer');
+  await show.focus();
+  await expect(async () => {
+    await show.press('Enter');
+    await expect(page.getByRole('menu')).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  await expect(page.getByRole('menuitemcheckbox', { name: 'Everything' })).toBeFocused();
+  const status = page.getByRole('menuitemcheckbox', { name: 'Status changes' });
+  await expect(async () => {
+    await page.keyboard.press('ArrowDown');
+    await expect(status).toBeFocused({ timeout: 250 });
+  }).toPass();
+  expect(await cursorOf(status)).toBe('pointer');
+
+  // Space unticks it and the menu stays open, still on it.
+  await page.keyboard.press('Space');
+  await expect(status).not.toBeChecked();
+  await expect(status).toBeFocused();
+
+  // Escape closes it, and focus is back on its button, which says what's shown. (The open menu
+  // hides the rest of the page from screen readers, so the activity is read after it closes.)
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Show: Replies and Other changes' })).toBeFocused();
+  await expect(entries).toHaveCount(1);
+
+  // Tab goes on to the order; Enter picks the newest first and closes it, focus on its button.
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Oldest first' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menuitemradio', { name: 'Oldest first' })).toBeFocused();
+  const newest = page.getByRole('menuitemradio', { name: 'Newest first' });
+  await expect(async () => {
+    await page.keyboard.press('ArrowDown');
+    await expect(newest).toBeFocused({ timeout: 250 });
+  }).toPass();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menu')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Newest first' })).toBeFocused();
 });

@@ -23,6 +23,8 @@ import {
 import storeRequests from '../../tests/database/store-requests';
 import { withTestDatabase } from './db';
 import {
+  ACTIVITY_CLIENT,
+  ACTIVITY_SUPPORT,
   CLIENT_WATCHER,
   CLOSED_COMPANY_ADMIN,
   CLOSED_COMPANY_NAME,
@@ -166,6 +168,7 @@ export default async function seedTestDatabase(): Promise<void> {
     });
     await addPerson(FINANCE_STAFF, { platformRole: 'finance' });
     await addPerson(NAMELESS_SUPPORT, { platformRole: 'support' });
+    await addPerson(ACTIVITY_SUPPORT, { platformRole: 'support' });
 
     // The Admin has an authenticator app set up, as their role requires MFA.
     await addAuthenticator(PLATFORM_ADMIN);
@@ -195,6 +198,7 @@ export default async function seedTestDatabase(): Promise<void> {
       companyId: clientCompany.id,
       role: 'client',
     });
+    await addPerson(ACTIVITY_CLIENT, { companyId: clientCompany.id, role: 'client' });
 
     // Signs in only with GitHub (2FA on, no password), which doesn't count while GitHub is off.
     const githubManager = firstRow(

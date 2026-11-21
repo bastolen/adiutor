@@ -1,7 +1,8 @@
 /**
  * @file Tests for the menu parts: the row of icon choices (its names,
- * choosing an item, and moving through it with the arrow keys) and the radio
- * items that are links.
+ * choosing an item, and moving through it with the arrow keys), the radio
+ * items that are links, and the checkbox items (ticking several in a row,
+ * and one ticked along with another).
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -10,6 +11,7 @@ import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  MenuCheckboxItem,
   MenuContent,
   MenuIconRadioItem,
   MenuItem,
@@ -111,6 +113,103 @@ describe('MenuRadioRow', () => {
     // Down goes on through the rest of the row to the next item.
     await user.keyboard('{ArrowDown}{ArrowDown}');
     expect(screen.getByRole('menuitem', { name: 'After' })).toHaveFocus();
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+});
+
+/**
+ * A menu with two checkbox items, "Fruit" and "Apples": while "Fruit" is
+ * ticked, "Apples" is ticked along with it.
+ *
+ * @param props - Test props.
+ * @param props.onChange - Called with each item's name and new state.
+ * @returns The menu.
+ */
+function CheckboxMenu({ onChange }: { onChange: (item: string, checked: boolean) => void }) {
+  const [fruit, setFruit] = useState(true);
+  const [apples, setApples] = useState(false);
+  return (
+    <MenuRoot>
+      <MenuTrigger>Open</MenuTrigger>
+      <MenuContent>
+        <MenuCheckboxItem
+          label="Fruit"
+          hint="With apples"
+          checked={fruit}
+          onCheckedChange={(checked) => {
+            setFruit(checked);
+            onChange('fruit', checked);
+          }}
+        />
+        <MenuCheckboxItem
+          label="Apples"
+          hint={fruit ? 'Included in Fruit' : undefined}
+          checked={apples}
+          included={fruit}
+          onCheckedChange={(checked) => {
+            setApples(checked);
+            onChange('apples', checked);
+          }}
+        />
+      </MenuContent>
+    </MenuRoot>
+  );
+}
+
+describe('MenuCheckboxItem', () => {
+  it('is named by its label alone and described by its hint', async () => {
+    const user = userEvent.setup();
+    render(<CheckboxMenu onChange={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: 'Open' }));
+
+    const fruit = screen.getByRole('menuitemcheckbox', { name: 'Fruit' });
+    expect(fruit).toBeChecked();
+    expect(fruit).toHaveAccessibleDescription('With apples');
+    expect(fruit.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('toggles and keeps the menu open, so several can be ticked in a row', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<CheckboxMenu onChange={onChange} />);
+
+    await user.click(screen.getByRole('button', { name: 'Open' }));
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Fruit' }));
+
+    expect(onChange).toHaveBeenCalledWith('fruit', false);
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Fruit' })).not.toBeChecked();
+
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Apples' }));
+    expect(onChange).toHaveBeenLastCalledWith('apples', true);
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Apples' })).toBeChecked();
+  });
+
+  it('shows an item ticked along, focusable, and changes nothing when it is pressed', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<CheckboxMenu onChange={onChange} />);
+    const trigger = screen.getByRole('button', { name: 'Open' });
+
+    trigger.focus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Fruit' })).toHaveFocus();
+    await user.keyboard('{ArrowDown}');
+    const apples = screen.getByRole('menuitemcheckbox', { name: 'Apples' });
+    expect(apples).toHaveFocus();
+    expect(apples).toBeChecked();
+    expect(apples).toHaveAttribute('aria-disabled', 'true');
+    expect(apples).toHaveAccessibleDescription('Included in Fruit');
+
+    await user.keyboard(' ');
+    await user.keyboard('{Enter}');
+    expect(onChange).not.toHaveBeenCalled();
+    expect(apples).toBeChecked();
+    expect(screen.getByRole('menu')).toBeInTheDocument();
 
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();

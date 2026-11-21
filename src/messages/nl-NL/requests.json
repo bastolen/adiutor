@@ -66,6 +66,18 @@
       "deactivated": "Dit bedrijf is gedeactiveerd, dus de verzoeken kunnen alleen worden gelezen.",
       "conversation": "Gesprek",
       "showEarlier": "Eerdere activiteit tonen (nog {count, number})",
+      "activity": {
+        "showMenu": "Tonen",
+        "show": "Tonen: {groups}",
+        "everything": "Alles",
+        "group": "{group, select, replies {Reacties} notes {Interne notities} status {Statuswijzigingen} other {Overige wijzigingen}}",
+        "repliesWithNotes": "Met interne notities",
+        "includedInReplies": "Inbegrepen bij Reacties",
+        "orderMenu": "Volgorde",
+        "order": "{order, select, newest {Nieuwste eerst} other {Oudste eerst}}",
+        "nothingShown": "Niets in de activiteit past bij wat je wilt tonen.",
+        "showEverything": "Alles tonen"
+      },
       "description": "Beschrijving",
       "details": "Gegevens",
       "noReplies": "Nog geen reacties.",
