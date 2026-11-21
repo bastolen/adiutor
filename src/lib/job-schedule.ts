@@ -2,14 +2,16 @@
  * @file Reads a recurring job's schedule (a cron expression in UTC, see
  * docs/jobs.md) as one of the patterns the Jobs page puts in words: every few
  * minutes, every hour at a minute, or every day at a time. Other expressions
- * are shown as they're written.
+ * are shown as they're written. The page words the hour and minute in the
+ * reader's zone, from the schedule's next run ({@link nextRunOf}), so they
+ * stay right when the clocks change.
  */
 
 /** A schedule as the Jobs page words it (`admin.jobs.schedule`). */
 export type ScheduleWords =
   /** Every `minutes` minutes, from the hour (`*\/5 * * * *`). */
   | { kind: 'minutes'; minutes: number }
-  /** Every hour at `minute` past (`10 * * * *`). */
+  /** Every hour at `minute` past, in UTC (`10 * * * *`). */
   | { kind: 'hourly'; minute: number }
   /** Every day at `hour`:`minute` UTC (`15 3 * * *`). */
   | { kind: 'daily'; hour: number; minute: number }
@@ -60,4 +62,31 @@ export default function describeSchedule(expression: string): ScheduleWords {
     return { kind: 'daily', hour: atHour, minute: atMinute };
   }
   return { kind: 'cron', expression };
+}
+
+/** A schedule that runs at a set minute: every hour, or every day. */
+export type TimedSchedule = Extract<ScheduleWords, { kind: 'hourly' | 'daily' }>;
+
+/**
+ * The first moment after another that a schedule run at a set minute runs.
+ *
+ * @param words - The schedule, every hour at a minute or every day at a time (in UTC).
+ * @param after - The moment to look from, e.g. now.
+ * @returns The next run.
+ */
+export function nextRunOf(words: TimedSchedule, after: Date): Date {
+  const next = new Date(after.getTime());
+  next.setUTCSeconds(0, 0);
+  if (words.kind === 'hourly') {
+    next.setUTCMinutes(words.minute);
+    if (next <= after) {
+      next.setUTCHours(next.getUTCHours() + 1);
+    }
+    return next;
+  }
+  next.setUTCHours(words.hour, words.minute);
+  if (next <= after) {
+    next.setUTCDate(next.getUTCDate() + 1);
+  }
+  return next;
 }

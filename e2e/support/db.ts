@@ -126,6 +126,7 @@ export async function findUserId(email: string): Promise<string> {
  * @param event.targetEmail - Whom it was about.
  * @param event.companyId - Which company it was about.
  * @param event.details - What the entry's description reads from.
+ * @param event.at - When it happened; now when left out.
  */
 export async function storeAuditEvent({
   action,
@@ -133,12 +134,14 @@ export async function storeAuditEvent({
   targetEmail,
   companyId,
   details,
+  at = new Date(),
 }: {
   action: AuditAction;
   actorEmail: string;
   targetEmail: string;
   companyId: string;
   details: Record<string, unknown>;
+  at?: Date;
 }): Promise<void> {
   const [actorUserId, targetUserId] = await Promise.all([
     findUserId(actorEmail),
@@ -147,7 +150,7 @@ export async function storeAuditEvent({
   await withTestDatabase(async (db) => {
     await db
       .insert(schema.auditEvent)
-      .values({ action, actorUserId, targetUserId, companyId, details });
+      .values({ action, actorUserId, targetUserId, companyId, details, at });
   });
 }
 

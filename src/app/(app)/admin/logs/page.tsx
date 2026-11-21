@@ -3,11 +3,12 @@
  * about anyone, newest first, with who acted, whom it was about, the company
  * and the browser and IP address it came from. Staff who may see the audit
  * log (Admins and Managers) narrow it with a search (people's names and
- * emails, company names), a group of event types and a range of days.
+ * emails, company names), a group of event types and a range of days, which
+ * start and end at midnight in the reader's time zone.
  */
 import { ScrollText } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { getTranslations } from 'next-intl/server';
+import { getTimeZone, getTranslations } from 'next-intl/server';
 import { type ReactNode, Suspense } from 'react';
 
 import Alert from '@/components/ui/alert';
@@ -191,7 +192,8 @@ async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> 
   const group = isAuditGroup(groupParam) ? groupParam : undefined;
   const from = searchParam(params.from) ?? '';
   const to = searchParam(params.to) ?? '';
-  const dates = parseDayRange(from || undefined, to || undefined);
+  // The reader's days, as the page shows its times in their zone.
+  const dates = parseDayRange(from || undefined, to || undefined, await getTimeZone());
   const requested = parseTableState(AUDIT_LOG_TABLE, params);
   const events = await listAuditLog(appContext, actor, {
     search,

@@ -14,8 +14,9 @@ import Card from '@/components/ui/card';
 import RelativeTime from '@/components/ui/relative-time';
 import RowAction from '@/components/ui/row-action';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
-import { formatDateTime, formatRelative, formatTime } from '@/lib/format';
+import { formatDateTime, formatRelative, formatTime, isSameDay } from '@/lib/format';
 import type { Locale } from '@/lib/i18n/locales';
+import useReaderTimeZone from '@/lib/i18n/use-reader-time-zone';
 import type { RecurringJobOverview } from '@/server/jobs';
 
 import { runJobAction } from './actions';
@@ -28,12 +29,6 @@ import {
   ScheduleText,
 } from './job-parts';
 
-/** The zone this card shows times in: UTC, the zone schedules are written in, as it says. */
-const JOB_TIME_ZONE = 'UTC';
-
-/** Times on this card name their zone, since it isn't the reader's. */
-const NAMED = { zoneName: true } as const;
-
 /**
  * When a job runs next: at the next tick, at its next scheduled moment (only
  * the time when that's today in UTC), or not while it's paused.
@@ -45,6 +40,7 @@ const NAMED = { zoneName: true } as const;
 function NextRun({ job }: { job: RecurringJobOverview }) {
   const t = useTranslations('admin.jobs.recurring');
   const locale = useLocale();
+  const timeZone = useReaderTimeZone();
   if (job.paused || !job.nextRunAt) {
     return <span>{t('whilePaused')}</span>;
   }
@@ -52,16 +48,17 @@ function NextRun({ job }: { job: RecurringJobOverview }) {
     return <span>{t('atNextTick')}</span>;
   }
   const moment = job.nextRunAt.toISOString();
-  const today = moment.slice(0, 10) === new Date().toISOString().slice(0, 10);
+  // Today where the reader is: then the time alone says when.
+  const today = isSameDay(job.nextRunAt, new Date(), timeZone);
   return (
     <time
       dateTime={moment}
-      title={formatDateTime(job.nextRunAt, locale, JOB_TIME_ZONE, NAMED)}
+      title={formatDateTime(job.nextRunAt, locale, timeZone)}
       className="whitespace-nowrap"
     >
       {today
-        ? formatTime(job.nextRunAt, locale, JOB_TIME_ZONE, NAMED)
-        : formatDateTime(job.nextRunAt, locale, JOB_TIME_ZONE, NAMED)}
+        ? formatTime(job.nextRunAt, locale, timeZone)
+        : formatDateTime(job.nextRunAt, locale, timeZone)}
     </time>
   );
 }
@@ -72,12 +69,13 @@ function NextRun({ job }: { job: RecurringJobOverview }) {
  *
  * @param at - The moment.
  * @param locale - The reader's language.
+ * @param timeZone - The reader's time zone.
  * @returns The renderer `t.rich` takes for the tag.
  */
-function timeTag(at: Date, locale: Locale) {
+function timeTag(at: Date, locale: Locale, timeZone: string) {
   return function TimeTag(chunks: ReactNode) {
     return (
-      <time dateTime={at.toISOString()} title={formatDateTime(at, locale, JOB_TIME_ZONE, NAMED)}>
+      <time dateTime={at.toISOString()} title={formatDateTime(at, locale, timeZone)}>
         {chunks}
       </time>
     );
@@ -95,14 +93,15 @@ function LastTick({ at }: { at: Date | null }) {
   const t = useTranslations('admin.jobs.recurring');
   const tTime = useTranslations('common.relativeTime');
   const locale = useLocale();
+  const timeZone = useReaderTimeZone();
   if (!at) {
     return <span className="text-sm text-muted-foreground">{t('noTick')}</span>;
   }
   return (
     <span className="text-sm whitespace-nowrap text-muted-foreground">
       {t.rich('lastTick', {
-        time: formatRelative(at, locale, JOB_TIME_ZONE, { justNow: tTime('justNow') }),
-        when: timeTag(at, locale),
+        time: formatRelative(at, locale, timeZone, { justNow: tTime('justNow') }),
+        when: timeTag(at, locale, timeZone),
       })}
     </span>
   );

@@ -167,7 +167,9 @@ bury the rest; its job's state still says when it last ran. Runs started by hand
 
 Staff Admins and Managers (`jobs:view`) see the jobs under **Logs → Jobs** (`/admin/logs/jobs`): when
 the last tick started; the scheduled jobs with what each does, its schedule in words, its last and
-next run; the kinds of queued job with how many wait and failed; the failed queued jobs; and the
+next run, all in the reader's time zone (a schedule's hour and minute come from its next run,
+`nextRunOf`, so they stay right when the clocks change; one words can't say shows its cron
+expression, marked as UTC); the kinds of queued job with how many wait and failed; the failed queued jobs; and the
 runs of the last 30 days that did something, failed or were started by hand. Error references link
 to Logs → Errors for those who may see it (`errors:view`).
 

@@ -445,7 +445,7 @@
       },
       "recurring": {
         "title": "Scheduled jobs",
-        "description": "Each runs on its schedule, at the tick every few minutes. Times are in UTC.",
+        "description": "Each runs on its schedule, at the tick every few minutes.",
         "caption": "Scheduled jobs",
         "job": "Job",
         "lastRun": "Last run",

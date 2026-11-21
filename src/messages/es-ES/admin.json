@@ -445,7 +445,7 @@
       },
       "recurring": {
         "title": "Tareas programadas",
-        "description": "Cada una se ejecuta según su horario, en el tic que llega cada pocos minutos. Las horas están en UTC.",
+        "description": "Cada una se ejecuta según su horario, en el tic que llega cada pocos minutos.",
         "caption": "Tareas programadas",
         "job": "Tarea",
         "lastRun": "Última ejecución",

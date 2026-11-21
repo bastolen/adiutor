@@ -445,7 +445,7 @@
       },
       "recurring": {
         "title": "Geplande taken",
-        "description": "Elke taak draait volgens zijn schema, bij de tik die om de paar minuten komt. Tijden zijn in UTC.",
+        "description": "Elke taak draait volgens zijn schema, bij de tik die om de paar minuten komt.",
         "caption": "Geplande taken",
         "job": "Taak",
         "lastRun": "Laatst uitgevoerd",

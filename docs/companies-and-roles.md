@@ -137,8 +137,8 @@ Admins and Managers who aren't members can still add themselves with any role, a
   was about and which company (each a link), when, and the browser and IP address it came from. It
   can be searched by a person's name or email or a company's name, filtered to a group of events
   (Sign-ins, Sign-in methods, Accounts, People, Companies and staff, Background jobs; `AUDIT_GROUPS` in
-  `src/lib/audit-actions.ts`, named by `audit.groups.*`) and limited to a range of days (UTC, both
-  days included). Admins (`errors:view`) also get an **Errors** tab (`/admin/logs/errors`): look up
+  `src/lib/audit-actions.ts`, named by `audit.groups.*`) and limited to a range of days (the reader's
+  days, from midnight to midnight in their time zone, both days included; `parseDayRange`). Admins (`errors:view`) also get an **Errors** tab (`/admin/logs/errors`): look up
   the reference an error page showed, typed in any case, with or without the dash, and see the
   errors of the last 7 days, newest first (see [Looking up an error
   reference](deploying.md#looking-up-an-error-reference)). Admins and Managers (`jobs:view`) also get
