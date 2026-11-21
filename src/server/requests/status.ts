@@ -17,6 +17,7 @@ import { forbiddenError, ServiceError } from '../errors';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
 import { actingUserId } from '../signed-in-as';
 import { changeRequest, recordStatusChange, requestToChange, workingPermission } from './change';
+import { tellPeopleOnRequest } from './updates';
 
 /**
  * Changes a request's status. The staff who work on requests set any
@@ -26,6 +27,8 @@ import { changeRequest, recordStatusChange, requestToChange, workingPermission }
  *
  * A request that already has the status stays as it is, without an entry in
  * its history: two people marking it done at the same moment both succeed.
+ *
+ * Everyone else on the request is told by email (`tellPeopleOnRequest`).
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `requests:contribute` in the request's company, and
@@ -66,7 +69,10 @@ export default async function changeRequestStatus(
     if (!mayChangeStatus(permissions, locked.status, status)) {
       throw new ServiceError('conflict', 'errors.requests.statusChanged');
     }
-    await recordStatusChange(tx, locked, status, actor, requestSide(permissions));
+    const changed = await recordStatusChange(tx, locked, status, actor, requestSide(permissions));
+    await tellPeopleOnRequest(tx, { request: locked, actorId: actor.id }, [
+      { event: 'status', entryId: changed },
+    ]);
     return { changed: true, reopened: isReopening(locked.status, status), status };
   });
 }

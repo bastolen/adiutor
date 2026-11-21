@@ -23,6 +23,13 @@ One file per email in `src/emails/`:
   someone who claimed an invite link while their address already has an open invitation there that
   someone sent, which the claim keeps: it points to the earlier invitation email and links to the
   sign-in page)
+- `request-update.tsx` for the people on a request when someone replies to it or changes its
+  status, and for someone who is put on one (assigned, mentioned, or subscribed by someone
+  else): one email per person and request with everything that happened, each reply in full
+  (`EmailMarkdown`), the statuses in the reader's words, the request's number as its first link
+  and a subject without words of its own, the request's number and title, and a footer that links
+  to the account's setting that turns them off (the `request-update` jobs, batched; see
+  [Emails](requests.md#emails))
 - `added-to-company.tsx` for someone staff added to a company with a role (`addMember` queues an
   `added-to-company` job in the transaction that adds them, so it goes out at the next tick; see
   [Background jobs](jobs.md#queued-jobs))
@@ -45,6 +52,12 @@ see [Emails](i18n.md#emails). Templates share the frame and building blocks in
 - `EmailButton`, `EmailHeading`, `EmailParagraph`, `EmailNote`, `EmailCode` (a one-time code in
   a monospace box) and `LinkFallback`
 - `RoleSummary`, which names the role and what it can do from the `roles` catalogue
+- `EmailMarkdown`, which shows a request's description or reply formatted, from the tree the
+  request's page renders, so the rules for what someone else wrote hold in an email too (see
+  [Text people write](security-measures.md#text-people-write)): headings below the email's own,
+  lists, tables (in columns in the email's plain text), quotes and code without colours, images
+  as links, the people it mentions by name, and the plain text for a text stored as plain text or
+  too costly to format
 - the colours and fonts in `theme.ts` (`fontFamily`, `monoFontFamily`), which match the app's
   light theme as inline styles; the fonts are the device's own, not the Inter and JetBrains Mono the
   app ships, because many email clients block or strip web fonts
@@ -90,14 +103,14 @@ someone asks for themselves follow the language their browser shows: an invite l
 the sign-in link, password reset and verification (`emailLocale` in `src/lib/auth.ts`: the language
 cookie, else Adiutor's default).
 
-| Email                                                                  | Language                                                                                                                                          |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sign-in link, password reset, verification, code                       | The user's, else the request's (`emailLocale` in `src/lib/auth.ts`; the sign-in link works it out before the lookup that runs after the response) |
-| Security notices                                                       | The recipient's, looked up by ID or address; a deleted account's is read before the deletion and passed in (`locale`)                             |
-| Invitation, its resends and its reminder                               | The invitation's (`invitation.locale`), or the invitee's own when they have an account with a saved language                                      |
-| Invite-link confirmation, "already invited"                            | The language of whoever opened the link, which the invitation it turns into keeps                                                                 |
-| "Already a member", added to a company, staff Admin, job keeps failing | Each recipient's own                                                                                                                              |
-| Welcome (Add user)                                                     | The language given for the new user, which is saved as theirs; for Default, Adiutor's default language                                            |
+| Email                                                                                        | Language                                                                                                                                          |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sign-in link, password reset, verification, code                                             | The user's, else the request's (`emailLocale` in `src/lib/auth.ts`; the sign-in link works it out before the lookup that runs after the response) |
+| Security notices                                                                             | The recipient's, looked up by ID or address; a deleted account's is read before the deletion and passed in (`locale`)                             |
+| Invitation, its resends and its reminder                                                     | The invitation's (`invitation.locale`), or the invitee's own when they have an account with a saved language                                      |
+| Invite-link confirmation, "already invited"                                                  | The language of whoever opened the link, which the invitation it turns into keeps                                                                 |
+| "Already a member", added to a company, staff Admin, job keeps failing, news about a request | Each recipient's own                                                                                                                              |
+| Welcome (Add user)                                                                           | The language given for the new user, which is saved as theirs; for Default, Adiutor's default language                                            |
 
 `invitation.locale` (NOT NULL, `en-US` by default) is chosen when the invitation is sent: the
 invitation services (`inviteByEmail`, `inviteManyByEmail`, `registerCompany`, `createSentInvitation`)

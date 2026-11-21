@@ -57,7 +57,15 @@
       "browserTimeZone": "Este navegador usa la zona {zone}.",
       "useBrowserTimeZone": "Usar la zona de este navegador",
       "saveTimeZone": "Guardar zona horaria",
-      "timeZoneSaved": "Zona horaria guardada."
+      "timeZoneSaved": "Zona horaria guardada.",
+      "requestEmailsTitle": "Correos sobre solicitudes",
+      "requestEmailsDescription": "Un correo cuando alguien responde a una solicitud en la que participas o cambia su estado, y cuando alguien te añade a una. Cancelar la suscripción a una solicitud detiene sus correos; desactivarlos aquí los detiene todos, también los de las solicitudes asignadas a ti.",
+      "requestEmailsOn": "Activados",
+      "requestEmailsOff": "Desactivados",
+      "requestEmailsTurnOff": "Desactivar",
+      "requestEmailsTurnOn": "Activar",
+      "requestEmailsTurnedOff": "Correos sobre solicitudes desactivados.",
+      "requestEmailsTurnedOn": "Correos sobre solicitudes activados."
     },
     "messages": {
       "verificationExpired": "Este enlace de verificación ha caducado. Envía uno nuevo.",

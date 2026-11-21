@@ -27,6 +27,7 @@ export const QUEUED_JOB_NAMES = [
   'security-notice',
   'added-to-company',
   'staff-admin-added',
+  'request-update',
 ] as const;
 
 /** A recurring job or a kind of queued job. */

@@ -101,6 +101,42 @@ export async function waitForNewEmail(to: string, countBefore: number): Promise<
 }
 
 /**
+ * The emails to an address whose subject holds a text, oldest first, after
+ * sending what waits in the queue. For emails about a request, whose subject
+ * holds the request's title: a test gives its request a title of its own, so
+ * other emails to a seeded address can't pass for its email.
+ *
+ * @param to - The recipient address.
+ * @param subjectPart - A text the subject holds, e.g. the request's title.
+ * @returns The emails.
+ */
+export async function emailsAbout(to: string, subjectPart: string): Promise<OutboxEmail[]> {
+  await runJobs();
+  return (await readOutbox()).filter(
+    (email) => email.to === to && email.subject.includes(subjectPart),
+  );
+}
+
+/**
+ * Waits for an email to an address whose subject holds a text, and returns
+ * the newest (see {@link emailsAbout}).
+ *
+ * @param to - The recipient address.
+ * @param subjectPart - A text the subject holds.
+ * @returns The newest such email.
+ */
+export async function waitForEmailAbout(to: string, subjectPart: string): Promise<OutboxEmail> {
+  let found: OutboxEmail | undefined;
+  await expect
+    .poll(async () => {
+      found = (await emailsAbout(to, subjectPart)).at(-1);
+      return found;
+    })
+    .toBeDefined();
+  return defined(found, `an email to ${to} about ${subjectPart}`);
+}
+
+/**
  * Extracts the 6-digit code from a sign-in code email.
  *
  * @param email - The email.

@@ -56,11 +56,12 @@ a crash) leaves its claim behind: the link they have keeps working, and after 15
 (`REMINDER_LEASE_MINUTES`) the next run takes the invitation again. That costs a second reminder,
 and the first one's link, if it arrived, never works.
 
-| Kind of queued job  | What it does                                                                                                                                                       |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `security-notice`   | Emails a user about a security change on their account (see [Security emails](authentication.md#security-emails))                                                  |
-| `added-to-company`  | Emails a user that staff added them to a company; skipped when the membership is gone by then                                                                      |
-| `staff-admin-added` | Emails one staff Admin that someone became a staff Admin (one job per Admin, so a refusal for one never resends the others); skipped for an Admin who stepped down |
+| Kind of queued job  | What it does                                                                                                                                                                                                                                  |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `security-notice`   | Emails a user about a security change on their account (see [Security emails](authentication.md#security-emails))                                                                                                                             |
+| `added-to-company`  | Emails a user that staff added them to a company; skipped when the membership is gone by then                                                                                                                                                 |
+| `staff-admin-added` | Emails one staff Admin that someone became a staff Admin (one job per Admin, so a refusal for one never resends the others); skipped for an Admin who stepped down                                                                            |
+| `request-update`    | Emails someone on a request what happened to it: one job per person and piece of news, batched into one email per person and request (see [Emails](requests.md#emails)); skipped for someone who is no longer on the request or can't read it |
 
 ## The endpoint
 
@@ -98,8 +99,8 @@ transaction of the change it belongs to, so the job only exists if the change wa
   After its kind's last attempt (`maxAttempts`, 5 by default) it's given up. A job whose attempt
   died (see [Failures](#failures)) is taken again, as its next attempt.
 
-**Batches:** some jobs belong together, such as a status update and a comment on the same ticket
-for the same person, which should make one email. A kind declared with `batch: { group, key }` is
+**Batches:** some jobs belong together, such as a status update and a reply on the same request
+for the same person, which should make one email (the `request-update` jobs do exactly that). A kind declared with `batch: { group, key }` is
 queued with a batch key; when the tick takes one of its jobs, it takes every waiting job with the
 same key too, of any kind in the group, and hands them to the group's batch in one call (its
 kinds are handled with `batchedJobRunner`, and the batch, made with `defineJobBatch`, goes in

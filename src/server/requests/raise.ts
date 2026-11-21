@@ -25,6 +25,7 @@ import { assertStillMayChange } from './change';
 import { storeMentions } from './mentions';
 import { subscribeAutomatically } from './subscribers';
 import { typeToGive } from './types';
+import { tellMentioned } from './updates';
 
 /**
  * Takes the next request number: one more than the last, in the raising
@@ -138,12 +139,14 @@ export default async function raiseRequest(
     // Whoever raises a request follows it, and so do the people its description mentions.
     await subscribeAutomatically(tx, raised.id, [actor.id]);
     // The people the description mentions, once the request it belongs to is there.
-    await storeMentions(tx, actor, {
+    const mentioned = await storeMentions(tx, actor, {
       companyId: company.id,
       requestId: raised.id,
       entryId: null,
       written: description,
     });
+    // A new request emails nobody but the people its description mentions.
+    await tellMentioned(tx, { requestId: raised.id, entryId: null, actorId: actor.id }, mentioned);
     return raised;
   });
 }

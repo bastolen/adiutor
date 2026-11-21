@@ -30,6 +30,7 @@ import {
 } from './change';
 import { storeMentions } from './mentions';
 import { subscribeAutomatically } from './subscribers';
+import { tellPeopleOnRequest } from './updates';
 
 /**
  * Replies to a request, and may set its status with the reply: the staff
@@ -38,6 +39,8 @@ import { subscribeAutomatically } from './subscribers';
  * Without a status, a reply from the company to a request that was waiting
  * for it puts the request back in progress. No reply reopens a request that
  * is done or cancelled.
+ *
+ * Everyone else on the request is told by email (`tellPeopleOnRequest`).
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `requests:contribute` in the request's company.
@@ -90,7 +93,7 @@ export default async function replyToRequest(
     // Whoever replies follows the request from then on, and so do the people the reply mentions.
     await subscribeAutomatically(tx, locked.id, [actor.id]);
     // The people the reply mentions, once the reply they belong to is there.
-    await storeMentions(tx, actor, {
+    const mentioned = await storeMentions(tx, actor, {
       companyId: locked.companyId,
       requestId: locked.id,
       entryId: reply.id,
@@ -101,15 +104,27 @@ export default async function replyToRequest(
       asked && mayChangeStatus(permissions, locked.status, asked)
         ? asked
         : statusAfterReply(side, locked.status);
+    const told = { request: locked, actorId: actor.id };
     if (status === locked.status) {
       await tx
         .update(request)
         .set({ lastActivityAt: CHANGE_MOMENT })
         .where(eq(request.id, locked.id));
+      await tellPeopleOnRequest(tx, told, [{ event: 'reply', entryId: reply.id }], mentioned);
       return { status };
     }
     // After the reply, so the history reads: the reply, then what it did to the status.
-    await recordStatusChange(tx, locked, status, actor, side);
+    const changed = await recordStatusChange(tx, locked, status, actor, side);
+    // The people on the request hear of both, in one email.
+    await tellPeopleOnRequest(
+      tx,
+      told,
+      [
+        { event: 'reply', entryId: reply.id },
+        { event: 'status', entryId: changed },
+      ],
+      mentioned,
+    );
     return { status };
   });
 }

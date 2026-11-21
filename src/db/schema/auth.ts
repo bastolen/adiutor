@@ -45,6 +45,7 @@ export const user = pgTable('user', {
   avatarSource: text('avatar_source', {
     enum: ['initials', 'github', 'google'],
   }),
+  requestEmails: boolean('request_emails').default(true),
 });
 
 /** Better Auth's `session` table. */

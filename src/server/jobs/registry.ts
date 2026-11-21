@@ -4,6 +4,7 @@
  */
 import type { JobBatch, QueuedJobRunner, RecurringJob } from './define';
 import addedToCompanyJob from './queued/added-to-company';
+import { requestUpdateRunner, requestUpdatesBatch } from './queued/request-updates';
 import securityNoticeJob from './queued/security-notice';
 import staffAdminAddedJob from './queued/staff-admin-added';
 import expiredSignInData from './recurring/expired-sign-in-data';
@@ -36,6 +37,7 @@ export const QUEUED_JOBS: readonly QueuedJobRunner[] = [
   securityNoticeJob,
   addedToCompanyJob,
   staffAdminAddedJob,
+  requestUpdateRunner,
 ];
 
 /**
@@ -49,4 +51,4 @@ export function findQueuedKind(name: string): QueuedJobRunner | undefined {
 }
 
 /** The batches of the batch groups that kinds of queued job name in `batch.group`. */
-export const JOB_BATCHES: readonly JobBatch[] = [];
+export const JOB_BATCHES: readonly JobBatch[] = [requestUpdatesBatch];

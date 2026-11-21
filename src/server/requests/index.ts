@@ -2,7 +2,8 @@
  * @file Requests: what companies raise with the staff and work through with
  * them. Listing them, reading one with its conversation, raising one,
  * replying to it, changing its status, correcting its details, editing its
- * texts and assigning it to staff members.
+ * texts, assigning it to staff members, subscribing to it, and what an email
+ * about it may tell someone on it.
  *
  * Who sees what: the staff see every company's requests, a company's members
  * their own company's while it's active, and a request someone may not see
@@ -55,6 +56,8 @@ export {
   unsubscribeFrom,
 } from './subscribers';
 export type { SubscribablePerson } from './subscribers';
+export { readRequestUpdate } from './updates';
+export type { QueuedRequestNews, RequestUpdate, RequestUpdateItem } from './updates';
 export type { MentionablePerson } from './mentions';
 export {
   addRequestType,

@@ -8,7 +8,8 @@
       "retention": "Verwijdert auditgebeurtenissen na een jaar, fouten na 7 dagen en de geschiedenis van taken na 30 dagen.",
       "security-notice": "Laat mensen weten wanneer er iets aan de beveiliging van hun account verandert.",
       "added-to-company": "Laat mensen weten dat medewerkers ze aan een bedrijf hebben toegevoegd.",
-      "staff-admin-added": "Laat de beheerders van de medewerkers weten dat iemand beheerder is geworden."
+      "staff-admin-added": "Laat de beheerders van de medewerkers weten dat iemand beheerder is geworden.",
+      "request-update": "Laat de mensen bij een verzoek weten wat ermee is gebeurd."
     },
     "summary": {
       "done": "{count, number} klaar",

@@ -1,8 +1,8 @@
 /**
  * @file The Profile page of the account, served at `/account`: name, email
  * (with verification), picture (a connected account's, or initials),
- * language (one of the languages, or Default), time zone, a
- * summary of sign-in security and recent activity on
+ * language (one of the languages, or Default), time zone, whether emails
+ * about requests are on, a summary of sign-in security and recent activity on
  * the account (sign-ins and changes, from the audit log). Password, passkeys,
  * two-step verification and connected accounts are on the Security page. The
  * verification link comes back to the Email card (`#email`), which says
@@ -33,6 +33,7 @@ import { getActor } from '@/server/authz';
 import { ownLanguage } from '@/server/people/own-locale';
 import { ownTimeZone } from '@/server/people/own-time-zone';
 import { ownPictureChoices } from '@/server/people/pictures';
+import { ownRequestEmails } from '@/server/people/request-emails';
 
 import accountMessage, {
   type AccountParams,
@@ -45,6 +46,7 @@ import LanguageForm from './language-form';
 import NameForm from './name-form';
 import describeOwnActivity from './own-activity';
 import PictureForm from './picture-form';
+import RequestEmailsCard from './request-emails-card';
 import SignedInAsNote from './signed-in-as-note';
 import TimeZoneForm from './time-zone-form';
 
@@ -70,13 +72,14 @@ async function AccountSettings({ searchParams }: { searchParams: Promise<Account
   // A staff member signed in as the user sees the page read-only, with only the personal details
   // they see on the user's page.
   const shown = personalDataShown(actor);
-  const [params, ownActivity, language, zone, picture, t, tAuth, tAudit, tRoles] =
+  const [params, ownActivity, language, zone, picture, requestEmails, t, tAuth, tAudit, tRoles] =
     await Promise.all([
       searchParams,
       listOwnActivity(appContext, actor),
       ownLanguage(appContext, actor),
       ownTimeZone(appContext, actor),
       ownPictureChoices(appContext, actor),
+      ownRequestEmails(appContext, actor),
       getTranslations('account'),
       getTranslations('auth'),
       getTranslations('audit'),
@@ -191,6 +194,7 @@ async function AccountSettings({ searchParams }: { searchParams: Promise<Account
           />
         </ClientMessages>
       </Card>
+      <RequestEmailsCard on={requestEmails} />
       <Card
         title={t('profile.activityTitle')}
         description={

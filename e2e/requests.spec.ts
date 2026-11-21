@@ -59,6 +59,7 @@ import {
   signOut,
   toasts,
 } from './support/helpers';
+import { emailsAbout, linkIn, waitForEmailAbout } from './support/outbox';
 import { expect, test } from './support/test';
 
 /**
@@ -706,6 +707,10 @@ test('the staff assign a request, find it as theirs, and the company sees who wo
   await expect(conversation(page)).toContainText(
     `Assigned ${PLATFORM_MANAGER.name} to this request.`,
   );
+  // The colleague hears of it by email; taking a request yourself emails nobody.
+  const assignedEmail = await waitForEmailAbout(PLATFORM_MANAGER.email, title);
+  expect(assignedEmail.text).toContain(`${SUPPORT_STAFF.name} assigned this request to you.`);
+  expect(await emailsAbout(SUPPORT_STAFF.email, title)).toHaveLength(0);
 
   // The list's assignee filter finds it as theirs, and the dashboard leads there too.
   await page.goto('/requests');
@@ -852,6 +857,124 @@ test('people subscribe to a request, and the staff change who else follows it', 
   await expect(main(page)).not.toContainText(FINANCE_STAFF.name);
   await expect(subscribers().getByRole('button', { name: 'Unsubscribe' })).toBeVisible();
   await expect(subscribers().getByRole('button', { name: 'Change subscribers' })).toHaveCount(0);
+});
+
+test('a reply and the status it sets reach the other side’s inbox as one email', async ({
+  page,
+}) => {
+  // A title of the test's own, which the email's subject holds.
+  const title = `Email about this ${randomUUID().slice(0, 8)}`;
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title,
+  });
+
+  // The staff ask something and wait for the answer; whoever raised it follows the request.
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/${number}`);
+  await page.getByRole('textbox', { name: 'Your reply' }).fill('Is it **plugged in**?');
+  await page.getByRole('button', { name: 'Send and wait for the company' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+
+  const email = await waitForEmailAbout(REQUESTS_CLIENT.email, title);
+  expect(email.subject).toMatch(new RegExp(`^[A-Z]+-${number}: ${title}$`));
+  // One email with both: the reply in full and formatted, and the status in the reader's words.
+  expect(email.text).toContain(`${SUPPORT_STAFF.name} replied:`);
+  expect(email.html).toContain('<strong>plugged in</strong>');
+  expect(email.text).toContain(`${SUPPORT_STAFF.name} changed the status from Open to Waiting`);
+  expect(email.text).toContain('Waiting for your reply');
+  expect(await emailsAbout(REQUESTS_CLIENT.email, title)).toHaveLength(1);
+  // Whoever wrote it isn't told about it.
+  expect(await emailsAbout(SUPPORT_STAFF.email, title)).toHaveLength(0);
+
+  // The email's link opens the request, for the one it was sent to.
+  await signOut(page);
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto(linkIn(email));
+  await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+
+  // Their answer goes to the staff member, who replied and so follows it too.
+  await page.getByRole('textbox', { name: 'Your reply' }).fill('Yes, and the light is on.');
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  const answer = await waitForEmailAbout(SUPPORT_STAFF.email, title);
+  expect(answer.text).toContain(`${REQUESTS_CLIENT.name} replied:`);
+  expect(answer.text).toContain('Yes, and the light is on.');
+  expect(answer.text).toContain('from Waiting for the company to In progress');
+});
+
+test('turning emails about requests off stops them, and turning them on brings them back', async ({
+  page,
+}) => {
+  const title = `Quiet please ${randomUUID().slice(0, 8)}`;
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title,
+  });
+  // A Watcher of this test's own, so nothing else they do is changed by it.
+  const watcher = { email: freshAddress('quiet-watcher'), password: 'quiet-watcher-password' };
+  await page.goto(
+    await storeInvitation({
+      companyId: await findCompanyId(COMPANY_SLUG),
+      email: watcher.email,
+      role: 'watcher',
+    }),
+  );
+  await createAccountFromInvitation(page, 'Quiet Watcher Tester', watcher.password);
+  /**
+   * Sends a reply to the request as the staff, and waits until whoever raised it has the email
+   * about it: by then the emails about it have gone out.
+   *
+   * @param body - The reply.
+   */
+  const replyAsStaff = async (body: string) => {
+    await signIn(page, SUPPORT_STAFF);
+    await page.goto(`/requests/${number}`);
+    await page.getByRole('textbox', { name: 'Your reply' }).fill(body);
+    await page.getByRole('button', { name: 'Send reply' }).click();
+    await expect(toasts(page)).toContainText('Reply sent.');
+    await expect
+      .poll(async () =>
+        (await emailsAbout(REQUESTS_CLIENT.email, title)).some((email) =>
+          email.text.includes(body),
+        ),
+      )
+      .toBe(true);
+    await signOut(page);
+  };
+
+  // They follow the request, then turn emails about requests off in their account.
+  await page.goto(`/requests/${number}`);
+  await detail(page, 'Subscribers').getByRole('button', { name: 'Subscribe', exact: true }).click();
+  await expect(toasts(page)).toContainText('You’re subscribed to this request.');
+  await page.goto('/account');
+  const card = page.getByRole('region', { name: 'Emails about requests' });
+  await expect(card).toContainText('On');
+  await card.getByRole('button', { name: 'Turn off' }).click();
+  await expect(toasts(page)).toContainText('Emails about requests turned off.');
+  await expect(card).toContainText('Off');
+  // The button says what it does now, and keeps the keyboard's place.
+  await expect(card.getByRole('button', { name: 'Turn on' })).toBeFocused();
+  await signOut(page);
+
+  // A reply reaches the others, and not them.
+  await replyAsStaff('Is it plugged in?');
+  expect(await emailsAbout(watcher.email, title)).toHaveLength(0);
+
+  // Turned on again, the next reply reaches them, without the one they missed.
+  await signIn(page, watcher);
+  await page.goto('/account');
+  await card.getByRole('button', { name: 'Turn on' }).click();
+  await expect(toasts(page)).toContainText('Emails about requests turned on.');
+  await signOut(page);
+  await replyAsStaff('Does the light come on?');
+  const email = await waitForEmailAbout(watcher.email, title);
+  expect(email.text).toContain('Does the light come on?');
+  expect(email.text).not.toContain('Is it plugged in?');
+  // Its footer says where they turned it off.
+  expect(email.text).toContain('/account#request-emails');
 });
 
 test('a company’s Admin subscribes a colleague, and is offered nobody from the staff', async ({

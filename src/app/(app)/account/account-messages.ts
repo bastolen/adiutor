@@ -36,6 +36,13 @@ export const LANGUAGE_SECTION = 'language';
 export const TIME_ZONE_SECTION = 'time-zone';
 
 /**
+ * The anchor of the Profile page's card for emails about requests, which
+ * those emails' footers link to (`REQUEST_EMAILS_PATH` in
+ * `src/emails/request-update.tsx`).
+ */
+export const REQUEST_EMAILS_SECTION = 'request-emails';
+
+/**
  * Where the email verification link comes back to: the Email card on the
  * Profile page, saying it worked (Better Auth adds `error=<code>` before the
  * anchor when it didn't).

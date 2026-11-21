@@ -19,6 +19,7 @@ import { invitationReminderEmail } from './invitation-reminder';
 import { inviteLinkConfirmationEmail } from './invite-link-confirmation';
 import { jobFailingEmail } from './job-failing';
 import { magicLinkEmail } from './magic-link';
+import { requestUpdateEmail } from './request-update';
 import { resetPasswordEmail } from './reset-password';
 import { securityNoticeEmail } from './security-notice';
 import { staffAdminAddedEmail } from './staff-admin-added';
@@ -307,6 +308,102 @@ describe('staff-made changes', () => {
     expect(email.subject).toBe('You were added to Adiutor Tests on Adiutor');
     expect(email.text).toContain('Alex Admin added you to Adiutor Tests on Adiutor as Client.');
     expectBasics(email, url);
+  });
+
+  it('tells someone on a request what happened to it, with the reply in full', async () => {
+    const url = `${appUrl}/requests/142`;
+    const email = await requestUpdateEmail('jane@adiutor.test', {
+      ...english,
+      reference: 'AD-142',
+      title: 'The printer is broken',
+      companyName: 'Adiutor Tests',
+      url,
+      role: 'subscriber',
+      audience: 'contributor',
+      items: [
+        {
+          event: 'reply',
+          by: 'Sam Support',
+          text: {
+            text: 'Is it **plugged in**?\n\nSee https://adiutor.test/manual and ![a photo](https://adiutor.test/p.png).',
+            format: 'markdown',
+            mentions: {},
+          },
+        },
+        { event: 'status', by: 'Sam Support', from: 'in_progress', to: 'waiting' },
+        { event: 'status', by: 'Casey Client', from: 'waiting', to: 'done' },
+        { event: 'status', by: 'Casey Client', from: 'done', to: 'open' },
+        { event: 'assigned', by: 'Morgan Manager' },
+        { event: 'subscribed', by: 'Anna Admin' },
+        {
+          event: 'mentioned',
+          by: 'Casey Client',
+          where: 'description',
+          text: { text: 'It prints blank pages.', format: 'plain', mentions: {} },
+        },
+        {
+          event: 'mentioned',
+          by: 'Sam Support',
+          where: 'reply',
+          text: {
+            text: 'Ask [@](mention:019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b).',
+            format: 'markdown',
+            mentions: { '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b': 'Jane Tester' },
+          },
+        },
+      ],
+    });
+
+    // What put the reader on the request, each in a sentence of its own.
+    expect(email.text).toContain('Morgan Manager assigned this request to you.');
+    expect(email.text).toContain('Anna Admin subscribed you to this request.');
+    expect(email.text).toContain('Casey Client mentioned you in the description:');
+    expect(email.text).toContain('Sam Support mentioned you in a reply:');
+    expect(email.text).toContain('Ask @Jane Tester.');
+    // The number and the title, the same for every email about the request.
+    expect(email.subject).toBe('AD-142: The printer is broken');
+    expect(email.text).toContain('Sam Support replied:');
+    expect(email.html).toContain('<strong>plugged in</strong>');
+    // The status in the reader's words, and the changes that have a sentence of their own.
+    expect(email.text).toContain(
+      'Sam Support changed the status from In progress to Waiting for your reply.',
+    );
+    expect(email.text).toContain('Casey Client marked this request as done.');
+    expect(email.text).toContain('Casey Client reopened this request.');
+    expect(email.text).toContain('you’re subscribed to this request');
+    // The footer says where to stop them all: the account's card for them.
+    expect(email.html).toContain(`href="${appUrl}/account#request-emails"`);
+    expect(email.text).toContain(`your account ${appUrl}/account#request-emails`);
+    expect(email.text).toContain('Replies to this email aren’t read.');
+    // An image someone wrote is a link, never loaded: the logo is the email's only image.
+    expect(email.html.match(/<img /g)).toHaveLength(1);
+    // The request comes before any link someone wrote in a reply.
+    expectBasics(email, url);
+  });
+
+  it('says a request’s email is for its assignee, and escapes what people wrote', async () => {
+    const email = await requestUpdateEmail('jane@adiutor.test', {
+      ...english,
+      reference: 'AD-142',
+      title: '<b>Printer</b>',
+      companyName: 'Adiutor Tests',
+      url: `${appUrl}/requests/142`,
+      role: 'assignee',
+      audience: 'staff',
+      items: [
+        {
+          event: 'reply',
+          by: '<i>Casey</i>',
+          text: { text: '<script>alert(1)</script>', format: 'markdown', mentions: {} },
+        },
+      ],
+    });
+
+    expect(email.text).toContain('this request is assigned to you');
+    expect(email.html).not.toContain('<script>');
+    expect(email.html).not.toContain('<b>Printer</b>');
+    expect(email.html).not.toContain('<i>Casey</i>');
+    expect(email.html).toContain('&lt;script&gt;');
   });
 
   it('tells the staff Admins about a new staff Admin, and how they became one', async () => {
@@ -798,6 +895,42 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = 
     return { email, url };
   },
   /**
+   * The email about what happened to a request.
+   *
+   * @param locale - The language.
+   * @returns The email and its main link.
+   */
+  'news about a request': async (locale) => {
+    const url = `${appUrl}/requests/142`;
+    const email = await requestUpdateEmail('jane@adiutor.test', {
+      appUrl,
+      locale,
+      reference: 'AD-142',
+      title: 'Adiutor Tests',
+      companyName: 'Adiutor Tests',
+      url,
+      role: 'subscriber',
+      audience: 'follower',
+      items: [
+        {
+          event: 'reply',
+          by: 'Sam Support',
+          text: { text: 'https://adiutor.test/manual', format: 'markdown', mentions: {} },
+        },
+        { event: 'status', by: 'Sam Support', from: 'open', to: 'waiting' },
+        { event: 'assigned', by: 'Sam Support' },
+        { event: 'subscribed', by: 'Sam Support' },
+        {
+          event: 'mentioned',
+          by: 'Sam Support',
+          where: 'description',
+          text: { text: 'Adiutor Tests', format: 'plain', mentions: {} },
+        },
+      ],
+    });
+    return { email, url };
+  },
+  /**
    * The "job keeps failing" email.
    *
    * @param locale - The language.
@@ -837,6 +970,13 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = 
   },
 };
 
+/**
+ * The templates whose subject has no words of its own to translate: an email
+ * about a request has the request's number and title, the same in every
+ * language, so mail apps keep the emails about one request together.
+ */
+const SUBJECTS_WITHOUT_WORDS: readonly string[] = ['news about a request'];
+
 describe('every template in every language', () => {
   /** Every template in every language, as `[locale, template]`. */
   const cases = LOCALES.flatMap((locale) =>
@@ -859,7 +999,11 @@ describe('every template in every language', () => {
     expect(email.text).not.toMatch(/[{}]/);
     expect(email.text.match(/https?:\/\/\S+/)?.[0]).toBe(url);
     if (locale !== 'en-US') {
-      expect(email.subject).not.toBe(inEnglish.subject);
+      if (SUBJECTS_WITHOUT_WORDS.includes(name)) {
+        expect(email.subject).toBe(inEnglish.subject);
+      } else {
+        expect(email.subject).not.toBe(inEnglish.subject);
+      }
       expect(email.text).not.toBe(inEnglish.text);
     }
   });

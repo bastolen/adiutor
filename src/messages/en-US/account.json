@@ -57,7 +57,15 @@
       "browserTimeZone": "This browser is set to {zone}.",
       "useBrowserTimeZone": "Use this browser’s zone",
       "saveTimeZone": "Save time zone",
-      "timeZoneSaved": "Time zone saved."
+      "timeZoneSaved": "Time zone saved.",
+      "requestEmailsTitle": "Emails about requests",
+      "requestEmailsDescription": "An email when someone replies to a request you’re on or changes its status, and when someone puts you on one. Unsubscribing from a request stops its emails; turning these off stops all of them, also for requests assigned to you.",
+      "requestEmailsOn": "On",
+      "requestEmailsOff": "Off",
+      "requestEmailsTurnOff": "Turn off",
+      "requestEmailsTurnOn": "Turn on",
+      "requestEmailsTurnedOff": "Emails about requests turned off.",
+      "requestEmailsTurnedOn": "Emails about requests turned on."
     },
     "messages": {
       "verificationExpired": "This verification link has expired. Send a new one.",

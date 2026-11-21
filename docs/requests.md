@@ -7,10 +7,10 @@ sides work it through in one conversation until it's done or no longer needed. T
 requests behave and where the code is; why they're built this way is in
 [decision 0019](decisions/0019-requests-one-series-plain-text-and-a-history.md), for their
 text in [decision 0021](decisions/0021-markdown-for-request-text.md), and for the people on a
-request in [decision 0025](decisions/0025-people-on-a-request-one-table-with-roles.md).
+request in [decision 0025](decisions/0025-people-on-a-request-one-table-with-roles.md), and for
+the emails about it in [decision 0031](decisions/0031-emails-about-requests.md).
 
-Not built yet, each for a later change: emails about requests (to the people on one, its
-assignees and subscribers, and to the people a text mentions), an approval step, and attachments.
+Not built yet, each for a later change: an approval step, and attachments.
 
 ## Words
 
@@ -173,8 +173,8 @@ the closed statuses.
 
 ## Subscribing
 
-Someone subscribed to a request follows it. Nothing is sent yet: a request's assignees and
-subscribers are who emails about it will reach. Why it's built this way is in
+Someone subscribed to a request follows it: a request's assignees and subscribers are who the
+[emails about it](#emails) reach. Why it's built this way is in
 [decision 0025](decisions/0025-people-on-a-request-one-table-with-roles.md).
 
 - **One table for the people on a request:** `request_participant` has a row per person and role
@@ -227,6 +227,54 @@ subscribers are who emails about it will reach. Why it's built this way is in
   there too.
 - **The requests there were** got their subscribers from migration `0018_request_participants`:
   whoever raised them, replied to them or was mentioned in them, as far as they still read them.
+
+## Emails
+
+The people on a request, its assignees and subscribers, are told by email what happens to it. Why
+it's built this way is in [decision 0031](decisions/0031-emails-about-requests.md); how emails are
+written and sent is in [Email](email.md), and the jobs that send them in
+[Background jobs](jobs.md#queued-jobs).
+
+- **What is told:** a reply, a change of status (also the one a reply brings, and done, cancelled
+  and reopened), and being put on the request: assigned to it, mentioned in one of its texts, or
+  subscribed by someone else. A new request emails nobody but the people its description
+  mentions: it shows in the list and on the dashboard. A changed title, type or priority, an
+  edited text (unless the edit adds a mention) and being taken off a request email nobody.
+- **Who is told** (`src/server/requests/updates.ts`, the one place that decides it): a reply and
+  a status change go to everyone on the request, its assignees and its subscribers
+  (`tellPeopleOnRequest`, from `loadPeopleOn`), except whoever did it. Being put on a request goes
+  to the one it's about, unless they did it themselves: a staff member a colleague assigned
+  (`tellAssigned`), someone a description or a reply mentions, also when an edit adds the mention
+  (`tellMentioned`; a new reply that mentions someone is told to them once, as the mention), and
+  someone another person subscribed (`tellSubscribed`). A job per person and piece of news (`request-update`) is queued in the
+  transaction of the change, so the news exists exactly when the change was saved. Its payload
+  holds IDs only.
+- **One email per person and request per tick:** the jobs of one person about one request share a
+  batch key, so a reply and the status change that came with it, or three replies in five
+  minutes, are one email, in the order they happened.
+- **What the email shows** is read when it's sent (`readRequestUpdate`): the request's title, its
+  number as a link, its company, who did what, and each reply (and a text that mentions the
+  reader) in full, formatted as on the page
+  (`EmailMarkdown`; see [Text people write](security-measures.md#text-people-write)). People are
+  named as the request's page names them, their own name or their side's, never by an address or
+  an ID, and the people a reply mentions by name. The statuses are worded for the reader
+  ("Waiting for your reply" for someone at the company who takes part, "Waiting for the company"
+  for the staff). The subject is the number and the title ("AD-142: The printer is broken"), the
+  same for every email about the request, so mail apps keep them together. Replies to the email
+  aren't read, and it says so.
+- **Only who is still on the request is told:** when the email is sent, someone whose account is
+  deactivated, who can no longer read the request, or who is no longer on it (unsubscribed,
+  unassigned) gets nothing, and their jobs are skipped. News that's no longer true is left out
+  too: an assignment that was taken back, a mention an edit removed.
+- **Turning them off:** Unsubscribe on a request's page stops that request's emails. **Emails
+  about requests** on the account's Profile page (`user.request_emails`, on by default;
+  `setOwnRequestEmails`) stops all of them, also for the requests assigned to someone; it's
+  checked when an email is sent, so it also stops what's on its way. The footer says why the
+  reader gets the email (the request is assigned to them, or they're subscribed) and links to
+  both: Unsubscribe for a subscriber, and the account's card (`/account#request-emails`).
+- **In the reader's language** (`recipientLocale`), like every email.
+- **Nothing meant for the staff reaches a company:** replies, status changes and assignments are
+  what everyone on a request sees anyway; a change of priority is never queued.
 
 ## Numbers
 
@@ -564,7 +612,8 @@ settings, and refused.
 - `src/server/requests/` (a folder module): `listRequestCompanies`, `listRequests`, `findRequest`,
   `findRequestNumber`, `getRequest`, `raiseRequest`, `replyToRequest`, `addNote`, `changeRequestStatus`,
   `updateRequestDetails`, `changeAssignees`, `listAssignableStaff`, `countAssignedRequests`,
-  `listMentionable`, `subscribe`, `unsubscribe`, `changeSubscribers`, `listSubscribable`, and
+  `listMentionable`, `subscribe`, `unsubscribe`, `changeSubscribers`, `listSubscribable`,
+  `readRequestUpdate` (what one person's email about a request may show), and
   `unassignFrom` and `unsubscribeFrom` for the services that end someone's request work or their
   access.
   Every change checks the permission and that the company is active, validates, takes a rate

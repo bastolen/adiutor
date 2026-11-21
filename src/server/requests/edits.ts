@@ -40,6 +40,7 @@ import { actingUserId, signedInAsWork } from '../signed-in-as';
 import { CHANGE_MOMENT, changeRequest, requestToChange, workingPermission } from './change';
 import mentionKey from './mention-key';
 import { storeMentions } from './mentions';
+import { tellMentioned } from './updates';
 
 /** Someone a stored text mentions, as its mention row names them. */
 export interface TextMention {
@@ -218,7 +219,9 @@ async function applyEdit(
       .set({ body: written, bodyFormat: WRITTEN_TEXT_FORMAT, editedAt: CHANGE_MOMENT })
       .where(eq(requestEntry.id, text.entryId));
   }
-  await storeMentions(
+  // Whoever the text mentioned already isn't subscribed again for an edit, or told again.
+  const before = mentions.flatMap(({ person }) => (person?.id ? [person.id] : []));
+  const mentioned = await storeMentions(
     tx,
     actor,
     {
@@ -228,9 +231,16 @@ async function applyEdit(
       written,
       staffOnly: edit.staffOnly,
     },
-    // Whoever the text mentioned already isn't subscribed again for an edit.
-    mentions.flatMap(({ person }) => (person?.id ? [person.id] : [])),
+    before,
   );
+  // An internal note emails nobody: only the staff read it, and nothing about it is told.
+  if (!edit.staffOnly) {
+    await tellMentioned(
+      tx,
+      { requestId: text.requestId, entryId: text.entryId, actorId: actor.id },
+      mentioned.filter((userId) => !before.includes(userId)),
+    );
+  }
   return { changed: true };
 }
 

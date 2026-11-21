@@ -26,6 +26,7 @@ import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
 import { actingUserId, signedInAsWork } from '../signed-in-as';
 import { requestScope, visibleRequests } from './access';
 import { CHANGE_MOMENT, changeRequest, requestToChange } from './change';
+import { tellAssigned } from './updates';
 
 /**
  * The most people one change can add, and the most it can remove: more than
@@ -185,12 +186,27 @@ export async function changeAssignees(
             ),
           );
       }
-      await tx
+      const entries = await tx
         .insert(requestEntry)
         .values([
           ...adding.map((id) => assignmentEntry(locked.id, id, 'assigned', actor)),
           ...removing.map((id) => assignmentEntry(locked.id, id, 'unassigned', actor)),
-        ]);
+        ])
+        .returning({
+          id: requestEntry.id,
+          subjectUserId: requestEntry.subjectUserId,
+          change: requestEntry.toValue,
+        });
+      // Someone a colleague assigned it to hears of it; being taken off it emails nobody.
+      await tellAssigned(
+        tx,
+        { requestId: locked.id, actorId: actor.id },
+        entries.flatMap(({ id, subjectUserId, change }) =>
+          change === 'assigned' && subjectUserId !== null
+            ? [{ userId: subjectUserId, entryId: id }]
+            : [],
+        ),
+      );
       await tx
         .update(request)
         .set({ lastActivityAt: CHANGE_MOMENT })

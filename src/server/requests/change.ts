@@ -9,6 +9,7 @@ import { and, eq, gt, type SQL, sql } from 'drizzle-orm';
 import type { DatabaseTransaction } from '@/db';
 import { impersonation, request, requestEntry } from '@/db/schema';
 import type { Permission } from '@/lib/authz/permissions';
+import { firstRow } from '@/lib/defined';
 import { isClosedStatus, isReopening, type RequestSide, type RequestStatus } from '@/lib/requests';
 
 import { assertPermission, assertStillManages, type LockedUser } from '../access';
@@ -228,6 +229,7 @@ export function statusChange(
  * @param to - The status it gets.
  * @param actor - Who changes it (a staff member signed in as them is recorded too).
  * @param side - The side they take part on.
+ * @returns The ID of the entry in the request's history, for the news about it.
  */
 export async function recordStatusChange(
   tx: DatabaseTransaction,
@@ -235,16 +237,23 @@ export async function recordStatusChange(
   to: RequestStatus,
   actor: Actor,
   side: RequestSide,
-): Promise<void> {
-  await tx.insert(requestEntry).values({
-    requestId: locked.id,
-    kind: 'status',
-    authorId: actor.id,
-    authorSide: side,
-    ...signedInAsWork(actor),
-    fromValue: locked.status,
-    toValue: to,
-    createdAt: CHANGE_MOMENT,
-  });
+): Promise<string> {
+  const entry = firstRow(
+    await tx
+      .insert(requestEntry)
+      .values({
+        requestId: locked.id,
+        kind: 'status',
+        authorId: actor.id,
+        authorSide: side,
+        ...signedInAsWork(actor),
+        fromValue: locked.status,
+        toValue: to,
+        createdAt: CHANGE_MOMENT,
+      })
+      .returning({ id: requestEntry.id }),
+    'the status change',
+  );
   await tx.update(request).set(statusChange(locked.status, to)).where(eq(request.id, locked.id));
+  return entry.id;
 }

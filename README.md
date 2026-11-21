@@ -17,8 +17,8 @@ consultants: the companies raise requests, and the staff work them through with 
 manages its own users, and the staff see every company.
 
 **Status:** early development. Accounts, companies, roles, invitations, sign-in security and
-requests, with staff assigned and people subscribed to them, are built; emails about requests
-and approving the work come next.
+requests, with staff assigned and people subscribed to them and emails about what happens to
+them, are built; approving the work comes next.
 
 ## Features
 
@@ -31,7 +31,10 @@ and approving the work come next.
   internal notes the company never sees. Company Admins and Clients raise, reply, close and
   reopen; Watchers follow; the staff work on every company's requests and assign each to one or
   more of themselves, which everyone on the request sees. Everyone who reads a request can
-  subscribe to it, and whoever raises it, replies to it or is mentioned in it is subscribed. See
+  subscribe to it, and whoever raises it, replies to it or is mentioned in it is subscribed. The
+  people on a request get an email when someone replies or changes its status, and so does someone
+  who is assigned to one, mentioned in one or subscribed by someone else: one email with
+  everything, the reply in full, which they can turn off per request or in their account. See
   [Requests](docs/requests.md).
 - **Companies and staff.** Staff add companies and invite each company's first Admin. Users can
   belong to several companies, with a role in each (Admin, Client or Watcher), and staff have their
@@ -71,7 +74,7 @@ and approving the work come next.
   Profile. See
   [Time zones](docs/i18n.md#time-zones).
 
-**Coming next:** emails about requests, and an approval step for finished work.
+**Coming next:** an approval step for finished work.
 
 ## Tech stack
 

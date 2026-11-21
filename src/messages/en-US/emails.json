@@ -249,6 +249,19 @@
         "heading": "{name} signed in as you",
         "body": "{minutes, plural, one {{name} from {staff} signed in to Adiutor as you, to see what you see and check what isn't working. It ends after at most # minute. Meanwhile, nobody can change your sign-in methods, your account or anyone's access. If you'd rather staff didn't sign in as you, you can turn it off on your Security page.} other {{name} from {staff} signed in to Adiutor as you, to see what you see and check what isn't working. It ends after at most # minutes. Meanwhile, nobody can change your sign-in methods, your account or anyone's access. If you'd rather staff didn't sign in as you, you can turn it off on your Security page.}}"
       }
+    },
+    "requestUpdate": {
+      "subject": "{reference}: {title}",
+      "preview": "{event, select, reply {{name} replied.} status {{name} changed the status.} assigned {{name} assigned this request to you.} mentioned {{name} mentioned you.} other {{name} subscribed you to this request.}}",
+      "reason": "{role, select, assignee {You’re receiving this because this request is assigned to you. You can turn off emails about requests in <account>your account</account>.} other {You’re receiving this because you’re subscribed to this request. To stop, open the request and choose Unsubscribe, or turn off emails about requests in <account>your account</account>.}}",
+      "where": "<link>{reference}</link> · {company}",
+      "reply": "<strong>{name}</strong> replied:",
+      "status": "{change, select, reopened {<strong>{name}</strong> reopened this request.} done {<strong>{name}</strong> marked this request as done.} cancelled {<strong>{name}</strong> cancelled this request.} other {<strong>{name}</strong> changed the status from {from} to {to}.}}",
+      "assigned": "<strong>{name}</strong> assigned this request to you.",
+      "mentioned": "{where, select, description {<strong>{name}</strong> mentioned you in the description:} other {<strong>{name}</strong> mentioned you in a reply:}}",
+      "subscribed": "<strong>{name}</strong> subscribed you to this request.",
+      "button": "Open request",
+      "noReply": "Replies to this email aren’t read. To answer, open the request."
     }
   }
 }

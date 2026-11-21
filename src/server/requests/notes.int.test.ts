@@ -24,7 +24,7 @@ import { editReply } from './edits';
 import mentionKey from './mention-key';
 import { listMentionable } from './mentions';
 import addNote from './notes';
-import { loadSubscribers } from './subscribers';
+import { loadSubscribers } from './participants';
 import { ctx, db, storeEntry, storeRequest, storedRequest } from './test-helpers';
 
 /**
