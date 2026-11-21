@@ -39,6 +39,7 @@ import ToastOnArrival from '@/components/ui/toast-on-arrival';
 import cn from '@/lib/cn';
 import ClientMessages from '@/lib/i18n/client-messages';
 import {
+  DESCRIPTION_ANCHOR,
   formatRequestNumber,
   isClosedStatus,
   mayAnswerSolution,
@@ -278,7 +279,8 @@ async function RequestContent({
           the second, so no gap opens between the description and the conversation. */}
       <div className="flex flex-col gap-6 xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:grid-rows-[auto_1fr] xl:items-start">
         <div className="xl:col-start-1 xl:row-start-1">
-          <Card title={t('description')}>
+          {/* Its anchor is where an email about a mention in the description links to. */}
+          <Card id={DESCRIPTION_ANCHOR} title={t('description')}>
             {/* Who asked and when, then what they asked, across the card's full width. */}
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-3">

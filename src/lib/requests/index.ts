@@ -92,6 +92,13 @@ export {
   requestPath,
 } from './number';
 export { ANSWER_LINK_PATH, answerLinkPath } from './answer-link';
+export {
+  DESCRIPTION_ANCHOR,
+  ENTRY_PARAM,
+  entryAnchor,
+  isEntryAnchor,
+  requestPathAt,
+} from './anchors';
 export { cleanMultilineText, linkTarget, splitLinks } from './text';
 export type { TextPart } from './text';
 export {
