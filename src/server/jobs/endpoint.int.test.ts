@@ -11,7 +11,7 @@ import { randomUUID } from 'node:crypto';
 import { eq, sql } from 'drizzle-orm';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { invitation, jobState, jobTick, queuedJob } from '@/db/schema';
+import { invitation, jobState, queuedJob } from '@/db/schema';
 
 import {
   createCompany,
@@ -30,6 +30,7 @@ import {
   TICK_CONTINUATION_HEADER,
 } from './endpoint';
 import type { JobRunResult } from './run';
+import { readLastTick } from './tick-record';
 
 const { ctx, db } = setupTestContext();
 
@@ -131,7 +132,7 @@ describe('answerTickRequest', () => {
       afterAnswer: null,
     });
     // No tick started.
-    expect(await db.select().from(jobTick)).toEqual([]);
+    expect(await readLastTick(db)).toBeNull();
   });
 
   it('refuses a missing or wrong secret, without running anything', async () => {
@@ -148,7 +149,7 @@ describe('answerTickRequest', () => {
     });
 
     // No tick started.
-    expect(await db.select().from(jobTick)).toEqual([]);
+    expect(await readLastTick(db)).toBeNull();
   });
 
   it('answers 429 after too many wrong secrets, while the right one still runs the tick', async () => {
@@ -220,7 +221,7 @@ describe('continuing the tick', () => {
       }),
     );
     // No tick started.
-    expect(await db.select().from(jobTick)).toEqual([]);
+    expect(await readLastTick(db)).toBeNull();
   });
 
   it('continues a tick that stopped at its deadline with work left', async () => {
@@ -279,9 +280,9 @@ describe('continuing the tick', () => {
 
     expect(response).toEqual({ status: 202, body: { status: 'continuing', step: 3 } });
     // No tick started before the answer.
-    expect(await db.select().from(jobTick)).toEqual([]);
+    expect(await readLastTick(db)).toBeNull();
     await afterAnswer?.();
-    expect(await db.select().from(jobTick)).toHaveLength(1);
+    expect(await readLastTick(db)).toBeInstanceOf(Date);
     // Nothing is left once it ran, so it doesn't continue again.
     expect(continued.requests).toEqual([]);
   });

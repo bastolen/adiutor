@@ -61,7 +61,7 @@ export function localeFromAcceptLanguage(header: string | null | undefined): Loc
 /**
  * The request's language: the browser's choice (the cookie) while that
  * language is offered, else Adiutor's default language
- * (`staff_settings.default_locale`, always offered), else, before setup
+ * (the `staff.default_locale` setting, always offered), else, before setup
  * (when there's no default yet and every language is offered), the best
  * match for `Accept-Language`, else {@link DEFAULT_LOCALE}.
  *

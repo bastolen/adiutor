@@ -6,12 +6,9 @@
  */
 import { asc, eq, inArray, isNotNull, or } from 'drizzle-orm';
 
-import type { DatabaseTransaction } from '@/db';
-import { staffSettings, user } from '@/db/schema';
+import { user } from '@/db/schema';
 import { isStaffRoleRaise, wouldLeaveNoAdmin } from '@/lib/authz/guards';
 import { PLATFORM_ADMIN_ROLE, type PlatformRole } from '@/lib/authz/roles';
-import { loadLanguageSettings } from '@/lib/i18n/default-locale';
-import loadDefaultTimeZone from '@/lib/i18n/default-time-zone';
 import { DEFAULT_LOCALE, type Locale, LOCALES } from '@/lib/i18n/locales';
 import { mayBeAssigned } from '@/lib/requests';
 import { type Paged, resolveTableState, type TableState } from '@/lib/tables/table-state';
@@ -40,11 +37,10 @@ import { forbiddenError, notFoundError, ServiceError, parseId } from '../errors'
 import { paginate, peopleOrder } from '../pagination';
 import { assertRoleChangeLimit } from '../rate-limit';
 import { unassignFrom, unsubscribeFrom } from '../requests';
+import { readSettings, writeSettings } from '../settings';
 import { revokeInvitationsTo, revokeInvitesWithoutManager } from './invitations';
 import { loadPictures } from './pictures';
-import getRequestPrefix from './request-prefix';
 import notifyStaffAdminAdded from './staff-admin-notice';
-import getStaffName from './staff-name';
 
 /** A staff member, as shown on the staff page. */
 export interface StaffMember {
@@ -67,13 +63,14 @@ export interface StaffMember {
 }
 
 /**
- * Loads the staff's settings for the staff page.
+ * Loads the staff's settings for the staff page, in one query.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `staff:manage`.
- * @returns The name, Adiutor's default language (English (US) if the settings row is missing),
- *   the languages it offers (every language then), its default time zone (UTC if it's missing)
- *   and the prefix request numbers are shown with ("AD" if it's missing).
+ * @returns The name ("Adiutor" while it has none), Adiutor's default language (English (US)
+ *   while it has none), the languages it offers (every language while it has none), its default
+ *   time zone (UTC while it has none) and the prefix request numbers are shown with ("AD" while
+ *   it has none).
  */
 export async function getStaffSettings(
   ctx: ServiceContext,
@@ -86,62 +83,28 @@ export async function getStaffSettings(
   requestPrefix: string;
 }> {
   assertPermission(getGlobalPermissions(actor), 'staff:manage');
-  const [name, languages, defaultTimeZone, requestPrefix] = await Promise.all([
-    getStaffName(ctx.db),
-    loadLanguageSettings(ctx.db),
-    loadDefaultTimeZone(ctx.db),
-    getRequestPrefix(ctx.db),
+  const settings = await readSettings(ctx.db, [
+    'staff.name',
+    'staff.default_locale',
+    'staff.offered_locales',
+    'staff.default_time_zone',
+    'requests.prefix',
   ]);
+  const offered = settings['staff.offered_locales'];
   return {
-    name,
-    defaultLocale: languages.defaultLocale ?? DEFAULT_LOCALE,
-    offeredLocales: languages.offered,
-    defaultTimeZone,
-    requestPrefix,
+    name: settings['staff.name'],
+    defaultLocale: settings['staff.default_locale'] ?? DEFAULT_LOCALE,
+    offeredLocales: LOCALES.filter((locale) => offered.includes(locale)),
+    defaultTimeZone: settings['staff.default_time_zone'],
+    requestPrefix: settings['requests.prefix'],
   };
-}
-
-/** A change to the staff's settings: the values to set in the single `staff_settings` row. */
-type StaffSettingsChange = Partial<
-  Pick<
-    typeof staffSettings.$inferInsert,
-    'name' | 'defaultLocale' | 'offeredLocales' | 'defaultTimeZone' | 'requestPrefix'
-  >
->;
-
-/**
- * Saves a change to the staff's settings: locks the settings row
- * (`FOR UPDATE`, so two changes take turns) and updates it. When the row is
- * missing (it was lost), it's created again with the change, and with the
- * name users then see ("Adiutor", `getStaffName`) unless the change is the
- * name.
- *
- * @param tx - The change's transaction.
- * @param change - The values to set.
- * @returns The name before the change, or `null` when there was no row.
- */
-async function saveStaffSettings(
-  tx: DatabaseTransaction,
-  change: StaffSettingsChange,
-): Promise<string | null> {
-  const [before] = await tx.select({ name: staffSettings.name }).from(staffSettings).for('update');
-  if (before) {
-    await tx.update(staffSettings).set(change);
-  } else {
-    await tx
-      .insert(staffSettings)
-      .values({ name: change.name ?? (await getStaffName(tx)), ...change });
-  }
-  return before?.name ?? null;
 }
 
 /**
  * Sets the prefix request numbers are shown with ("AD" in "AD-142"). Only
  * how numbers look changes: a request keeps its number and its address, and
- * a number written with the earlier prefix still finds it. If the settings
- * row is missing (it was lost), this creates it again, with the name users
- * then see ("Adiutor"). Not a security change, so no audit event, like the
- * default language.
+ * a number written with the earlier prefix still finds it. Not a security
+ * change, so no audit event, like the default language.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `staff:manage`.
@@ -157,7 +120,7 @@ export async function setRequestPrefix(
   assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'staff:manage');
   const requestPrefix = requestPrefixSchema.parse(prefix);
-  await ctx.db.transaction((tx) => saveStaffSettings(tx, { requestPrefix }));
+  await ctx.db.transaction((tx) => writeSettings(tx, { 'requests.prefix': requestPrefix }));
   return requestPrefix;
 }
 
@@ -167,10 +130,9 @@ export async function setRequestPrefix(
  * without a saved language outside a request) and the languages it offers.
  * The default is always offered: it's added when the form left it out. A
  * language that's turned off isn't offered anywhere, and whoever chose it
- * gets the default until it's on again. If the settings row is missing (it
- * was lost), this creates it again, with the name users then see
- * ("Adiutor"). Not a security change, so no audit event, like a person's own
- * language.
+ * gets the default until it's on again. Both are written in one
+ * transaction, which checks that the default is offered (`writeSettings`).
+ * Not a security change, so no audit event, like a person's own language.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `staff:manage`.
@@ -191,7 +153,12 @@ export async function setLanguages(
   const offeredLocales = LOCALES.filter(
     (locale) => locale === defaultLocale || offered.includes(locale),
   );
-  await ctx.db.transaction((tx) => saveStaffSettings(tx, { defaultLocale, offeredLocales }));
+  await ctx.db.transaction((tx) =>
+    writeSettings(tx, {
+      'staff.default_locale': defaultLocale,
+      'staff.offered_locales': offeredLocales,
+    }),
+  );
   return { defaultLocale, offeredLocales };
 }
 
@@ -199,9 +166,8 @@ export async function setLanguages(
  * Sets Adiutor's default time zone: the zone of signed-out pages, of people
  * whose zone isn't known yet (before their first visit), and of emails to
  * people without one outside an invitation. Changes nothing for anyone who
- * has a zone. If the settings row is missing (it was lost), this creates it
- * again, with the name users then see ("Adiutor"). Not a security change, so
- * no audit event, like the default language.
+ * has a zone. Not a security change, so no audit event, like the default
+ * language.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `staff:manage`.
@@ -217,14 +183,16 @@ export async function setDefaultTimeZone(
   assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'staff:manage');
   const defaultTimeZone = timeZoneSchema.parse(zone);
-  await ctx.db.transaction((tx) => saveStaffSettings(tx, { defaultTimeZone }));
+  await ctx.db.transaction((tx) =>
+    writeSettings(tx, { 'staff.default_time_zone': defaultTimeZone }),
+  );
   return defaultTimeZone;
 }
 
 /**
- * Renames the staff. The name is shown to users and in invitations. If the
- * settings row is missing (it was lost; the app then shows "Adiutor"), this
- * creates it again.
+ * Renames the staff. The name is shown to users and in invitations. The
+ * audit event names the name it replaced, or none when there was none (the
+ * app showed "Adiutor").
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `staff:manage`.
@@ -239,7 +207,7 @@ export async function renameStaff(
   assertPermission(getGlobalPermissions(actor), 'staff:manage');
   const name = staffNameSchema.parse(rawName);
   await ctx.db.transaction(async (tx) => {
-    const from = await saveStaffSettings(tx, { name });
+    const { 'staff.name': from } = await writeSettings(tx, { 'staff.name': name });
     await recordEvent(
       ctx,
       {

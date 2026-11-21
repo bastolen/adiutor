@@ -6,7 +6,7 @@ import { eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
 
-import { membership, request, requestCounter } from '@/db/schema';
+import { membership, request, setting } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 
 import {
@@ -20,8 +20,17 @@ import {
   staffActor,
 } from '../../../tests/integration/helpers';
 import { RATE_LIMITS } from '../rate-limit';
+import { incrementSetting } from '../settings';
 import raiseRequest from './raise';
 import { ctx, db, deactivatedMeanwhile, storedRequest, storeRequestType } from './test-helpers';
+
+/**
+ * Reads the request counter's row, the `requests.last_number` setting.
+ *
+ * @returns Its value, in a list: empty while no request took a number.
+ */
+const counterRow = () =>
+  db.select({ value: setting.value }).from(setting).where(eq(setting.key, 'requests.last_number'));
 
 /** A request as a form sends it, without its company. */
 const INPUT = {
@@ -257,7 +266,7 @@ describe('raiseRequest', () => {
       reason: { code: 'invalid', key: 'errors.companyDeactivated' },
     });
     expect(await db.$count(request)).toBe(0);
-    expect(await db.select().from(requestCounter)).toEqual([]);
+    expect(await counterRow()).toEqual([]);
   });
 
   it('stops at the limit of requests one person raises', async () => {
@@ -306,9 +315,7 @@ describe('request numbers', () => {
     expect(raised.map(({ number }) => number).sort((a, b) => a - b)).toEqual([
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
     ]);
-    expect(await db.select({ last: requestCounter.lastNumber }).from(requestCounter)).toEqual([
-      { last: 10 },
-    ]);
+    expect(await counterRow()).toEqual([{ value: 10 }]);
   });
 
   it('are not used up by a request that is not raised after all', async () => {
@@ -327,7 +334,7 @@ describe('request numbers', () => {
 
     await expect(raiseRequest(ctx, client, { ...INPUT, companyId: company.id })).rejects.toThrow();
 
-    expect(await db.select().from(requestCounter)).toEqual([]);
+    expect(await counterRow()).toEqual([]);
   });
 
   it('time a request once, by when its number was taken: raised and last active at one moment', async () => {
@@ -338,7 +345,7 @@ describe('request numbers', () => {
     // Another request holds the counter, so this one starts and then waits for its number.
     const { second } = await atTheSameMoment(
       db,
-      (tx) => tx.insert(requestCounter).values({ lastNumber: 1 }),
+      (tx) => incrementSetting(tx, 'requests.last_number'),
       () => raiseRequest(ctx, client, { ...INPUT, companyId: company.id }),
       async (tx) => {
         const { rows } = await tx.execute<{ ms: number }>(

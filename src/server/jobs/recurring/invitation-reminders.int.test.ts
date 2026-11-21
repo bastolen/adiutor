@@ -7,7 +7,7 @@
 import { eq, isNull, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { company, invitation, staffSettings, user } from '@/db/schema';
+import { company, invitation, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 import type { Email } from '@/lib/email';
 import { hashToken } from '@/lib/sign-in/tokens';
@@ -15,6 +15,7 @@ import { hashToken } from '@/lib/sign-in/tokens';
 import {
   addMember,
   createCompany,
+  createStaffSettings,
   createUser,
   emailLanguage,
   later,
@@ -209,7 +210,7 @@ describe('invitation-reminders', () => {
       ).text;
     expect(textTo('new@adiutor.test')).toContain('GMT+5:30.');
     expect(textTo('known@adiutor.test')).toMatch(/ E[SD]T\./);
-    // No settings row in these tests: Adiutor's default is UTC.
+    // No settings in these tests: Adiutor's default is UTC.
     expect(textTo('nobody@adiutor.test')).toMatch(/ UTC\./);
   });
 
@@ -221,11 +222,7 @@ describe('invitation-reminders', () => {
       email: 'new@adiutor.test',
     });
     await age('new@adiutor.test', '1 day');
-    await db.insert(staffSettings).values({
-      name: 'Adiutor Tests',
-      defaultLocale: 'en-US',
-      offeredLocales: ['en-US', 'es-ES'],
-    });
+    await createStaffSettings(db, 'Adiutor Tests', 'en-US', ['en-US', 'es-ES']);
     sent.length = 0;
 
     await expect(remind(ctx)).resolves.toEqual({ sent: 1, failed: 0 });

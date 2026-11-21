@@ -21,7 +21,6 @@ import {
   requestParticipant,
   requestEntry,
   session,
-  staffSettings,
   twoFactor,
   user,
 } from '@/db/schema';
@@ -35,6 +34,7 @@ import { availableProviders, configuredProviders } from '@/lib/sign-in/providers
 import { type Actor, loadActor } from '@/server/actor';
 import type { ServiceContext } from '@/server/context';
 import { type JobRunResult, runQueue } from '@/server/jobs';
+import { addSetting, type SettingChange, writeSettings } from '@/server/settings';
 
 import emptyDatabase from '../database/empty-database';
 
@@ -284,7 +284,7 @@ export async function addPassword(db: Database, userId: string): Promise<void> {
 }
 
 /**
- * Creates the staff's settings row (which means "set up").
+ * Saves the staff's settings and marks Adiutor as set up, as setup does.
  *
  * @param db - Test database.
  * @param name - The name shown to users; defaults to "Adiutor Tests".
@@ -297,7 +297,25 @@ export async function createStaffSettings(
   defaultLocale: Locale = 'en-US',
   offeredLocales: Locale[] = [...LOCALES],
 ): Promise<void> {
-  await db.insert(staffSettings).values({ name, defaultLocale, offeredLocales });
+  await db.transaction(async (tx) => {
+    await addSetting(tx, 'setup.completed_at', new Date());
+    await writeSettings(tx, {
+      'staff.name': name,
+      'staff.default_locale': defaultLocale,
+      'staff.offered_locales': offeredLocales,
+    });
+  });
+}
+
+/**
+ * Saves settings directly (through `writeSettings`, so they're checked as
+ * the services check them), e.g. Adiutor's default language for a test.
+ *
+ * @param db - Test database.
+ * @param change - The values to write, by key.
+ */
+export async function saveSettings(db: Database, change: SettingChange): Promise<void> {
+  await db.transaction((tx) => writeSettings(tx, change));
 }
 
 /**

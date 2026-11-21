@@ -42,7 +42,7 @@ export const LOCALE_COOKIE = 'adiutor.locale';
 
 /**
  * The language choice "Default": follow Adiutor's default language (chosen on
- * the staff page, `staff_settings.default_locale`), now and after it changes.
+ * the staff page, the `staff.default_locale` setting), now and after it changes.
  * An account on Default has no saved language (`user.locale` is `null`), and a
  * browser on Default has no {@link LOCALE_COOKIE}. Form fields and the
  * language menu send it as their value.
@@ -107,7 +107,7 @@ export function isLanguageChoice(value: unknown): value is LanguageChoice {
 }
 
 /**
- * Adiutor's language settings (`staff_settings`): its default language, and
+ * Adiutor's language settings (the `staff.*` settings): its default language, and
  * the languages it offers, which staff Admins turn on and off (decision
  * 0029). Before setup there's no default yet and every language is offered.
  */

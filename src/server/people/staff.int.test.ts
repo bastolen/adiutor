@@ -6,7 +6,7 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { auditEvent, invitation, inviteLink, staffSettings, user } from '@/db/schema';
+import { auditEvent, invitation, inviteLink, setting, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
 import {
@@ -20,6 +20,7 @@ import {
   inSequence,
   memberActor,
   rateLimitHits,
+  saveSettings,
   sendQueuedEmails,
   setupTestContext,
   staffActor,
@@ -28,6 +29,7 @@ import {
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
 import { RATE_LIMITS } from '../rate-limit';
+import { isSetUp } from '../setup';
 import {
   acceptInvitation,
   acceptInvitationWithNewAccount,
@@ -95,8 +97,8 @@ describe('staff settings and people', () => {
     expect(entry.details).toMatchObject({ from: 'Adiutor Tests', to: 'Adiutor Support' });
   });
 
-  it('creates the settings again when they were lost', async () => {
-    await db.delete(staffSettings);
+  it('names the staff when nothing is saved, recording that there was no name', async () => {
+    await db.delete(setting);
     await renameStaff(ctx, admin, 'Adiutor Support');
     expect(await getStaffSettings(ctx, admin)).toEqual({
       name: 'Adiutor Support',
@@ -110,6 +112,8 @@ describe('staff settings and people', () => {
       'the audit event',
     );
     expect(entry.details).toMatchObject({ from: null, to: 'Adiutor Support' });
+    // Saving a setting never sets Adiutor up.
+    expect(await isSetUp(db)).toBe(false);
   });
 
   it("sets Adiutor's languages, keeping the name, and always offers the default", async () => {
@@ -159,13 +163,20 @@ describe('staff settings and people', () => {
     });
   });
 
-  it('keeps the default offered in the database too', async () => {
-    await expect(db.update(staffSettings).set({ offeredLocales: ['nl-NL'] })).rejects.toThrow();
-    await expect(db.update(staffSettings).set({ offeredLocales: [] })).rejects.toThrow();
+  it('keeps the default offered whatever saves the settings, and saves nothing then', async () => {
+    await expect(saveSettings(db, { 'staff.offered_locales': ['nl-NL'] })).rejects.toThrow(
+      'the default language must be one of the languages offered',
+    );
+    await expect(saveSettings(db, { 'staff.offered_locales': [] })).rejects.toThrow();
+    await expect(saveSettings(db, { 'staff.default_locale': 'nl-NL' })).resolves.toBeUndefined();
+    expect(await getStaffSettings(ctx, admin)).toMatchObject({
+      defaultLocale: 'nl-NL',
+      offeredLocales: ['en-US', 'nl-NL', 'es-ES'],
+    });
   });
 
-  it('creates the settings again with the languages when they were lost', async () => {
-    await db.delete(staffSettings);
+  it('saves the languages when nothing else is saved, without setting Adiutor up', async () => {
+    await db.delete(setting);
 
     await setLanguages(ctx, admin, { defaultLocale: 'es-ES', offered: ['en-US'] });
 
@@ -176,6 +187,7 @@ describe('staff settings and people', () => {
       defaultTimeZone: 'UTC',
       requestPrefix: 'AD',
     });
+    expect(await isSetUp(db)).toBe(false);
   });
 
   it('sets the prefix of request numbers, in capitals, keeping the name and the language', async () => {
@@ -199,8 +211,8 @@ describe('staff settings and people', () => {
     expect((await getStaffSettings(ctx, admin)).requestPrefix).toBe('AD');
   });
 
-  it('creates the settings again with the prefix when they were lost', async () => {
-    await db.delete(staffSettings);
+  it('saves the prefix when nothing else is saved, without setting Adiutor up', async () => {
+    await db.delete(setting);
 
     await setRequestPrefix(ctx, admin, 'REQ');
 
@@ -211,6 +223,7 @@ describe('staff settings and people', () => {
       defaultTimeZone: 'UTC',
       requestPrefix: 'REQ',
     });
+    expect(await isSetUp(db)).toBe(false);
   });
 
   it('lists the staff by name, with their role', async () => {

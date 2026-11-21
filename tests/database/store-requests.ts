@@ -20,6 +20,7 @@ import {
   type RequestTextFormat,
   storedMentionMarker,
 } from '../../src/lib/requests';
+import { writeSettings } from '../../src/server/settings';
 
 /** A Drizzle client on the app's schema, or the open transaction of one. */
 type Executor = PgDatabase<NodePgQueryResultHKT, typeof schema>;
@@ -151,7 +152,7 @@ function entryValues(
 
 /**
  * Stores example requests, numbered in the order given, and sets the request
- * counter to the last number.
+ * counter (the `requests.last_number` setting) to the last number.
  *
  * Each request's last activity is its latest entry the company sees (every
  * one but a change of priority), or the moment it was raised. Its assignees
@@ -256,10 +257,7 @@ export default async function storeRequests(
   }
   const lastNumber = numbers.at(-1);
   if (lastNumber !== undefined) {
-    await db
-      .insert(schema.requestCounter)
-      .values({ lastNumber })
-      .onConflictDoUpdate({ target: schema.requestCounter.singleton, set: { lastNumber } });
+    await db.transaction((tx) => writeSettings(tx, { 'requests.last_number': lastNumber }));
   }
   return numbers;
 }

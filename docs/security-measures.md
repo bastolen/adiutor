@@ -330,8 +330,9 @@ deadlocking:
    `revokeInvitesWithoutManager`). The invitations the person sent were revoked just before,
    without these locks; they could only cross an invitation to the same address if the person had
    invited their own address, which the deadlock backstop below covers.
-7. The `request_counter` row (`raiseRequest` in `src/server/requests/`, right before it stores the
-   request, so nothing waits for a number longer than the insert takes), then `request` rows,
+7. The `requests.last_number` row of `setting` (`incrementSetting`, which `raiseRequest` in
+   `src/server/requests/` calls right before it stores the request, so nothing waits for a number
+   longer than the insert takes), then `request` rows,
    `FOR NO KEY UPDATE`: the request a reply or a change is about (`changeRequest`). Every change
    to a request starts with `assertStillManages`, so it has its `user` and `membership` locks
    (steps 2 and 3) before the request's: deleting an account locks the user first and then
@@ -348,6 +349,11 @@ deadlocking:
    finds the company deactivated, which leaves the rest of its transaction for a deactivation to
    slip in before it.
 8. Sessions and audit events, last.
+
+The other rows of `setting` (the staff's settings and setup's) are locked by settings changes
+(`writeSettings`, `FOR UPDATE` in key order, with the rows a check compares them with) and by setup,
+which adds `setup.completed_at` before it touches any user row; no change locks them after anything
+above, so they take turns only with each other.
 
 What a change decides on (how many Admins are left, the acting user's own rights) is read in a new
 statement once the locks are held, so it sees whatever the transaction before it committed. The

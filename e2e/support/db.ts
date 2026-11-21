@@ -12,7 +12,7 @@
  * Each opens its own short connection to the test database (`withTestDatabase`).
  * Resetting and seeding the database is `seed.ts`.
  */
-import { and, eq, inArray, isNull, like, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, like, or, sql } from 'drizzle-orm';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Client } from 'pg';
 
@@ -29,6 +29,7 @@ import {
   generateToken,
   hashToken,
 } from '../../src/lib/sign-in/tokens';
+import { readSettings, writeSettings } from '../../src/server/settings';
 import getTestDatabaseUrl from '../../tests/database/database-url';
 import storeRequests from '../../tests/database/store-requests';
 
@@ -193,14 +194,8 @@ export async function resumeJob(name: string): Promise<void> {
  */
 export async function makeTickLate(): Promise<void> {
   await withTestDatabase(async (db) => {
-    const twoHoursAgo = sql`now() - interval '2 hours'`;
-    await db
-      .insert(schema.jobTick)
-      .values({ lastStartedAt: twoHoursAgo })
-      .onConflictDoUpdate({
-        target: schema.jobTick.singleton,
-        set: { lastStartedAt: twoHoursAgo },
-      });
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60_000);
+    await db.transaction((tx) => writeSettings(tx, { 'jobs.last_tick': twoHoursAgo }));
   });
 }
 
@@ -344,12 +339,14 @@ export async function endSignInAsSoon(staffEmail: string, seconds: number): Prom
 }
 
 /**
- * Deletes the staff settings row, as if it were lost, so nothing counts as set
- * up while the accounts still exist.
+ * Deletes the staff's settings and the mark that setup was done, as if they
+ * were lost, so nothing counts as set up while the accounts still exist.
  */
 export async function removeStaffSettings(): Promise<void> {
   await withTestDatabase(async (db) => {
-    await db.delete(schema.staffSettings);
+    await db
+      .delete(schema.setting)
+      .where(or(eq(schema.setting.key, 'setup.completed_at'), like(schema.setting.key, 'staff.%')));
   });
 }
 
@@ -365,7 +362,9 @@ export async function setDefaultLocale(
   offered: Locale[] = [...LOCALES],
 ): Promise<void> {
   await withTestDatabase(async (db) => {
-    await db.update(schema.staffSettings).set({ defaultLocale: locale, offeredLocales: offered });
+    await db.transaction((tx) =>
+      writeSettings(tx, { 'staff.default_locale': locale, 'staff.offered_locales': offered }),
+    );
   });
 }
 
@@ -377,22 +376,19 @@ export async function setDefaultLocale(
  */
 export async function setDefaultTimeZone(timeZone: string): Promise<void> {
   await withTestDatabase(async (db) => {
-    await db.update(schema.staffSettings).set({ defaultTimeZone: timeZone });
+    await db.transaction((tx) => writeSettings(tx, { 'staff.default_time_zone': timeZone }));
   });
 }
 
 /**
  * Reads Adiutor's default time zone.
  *
- * @returns The zone in the settings row.
+ * @returns The zone in its setting (UTC while it has none).
  */
 export async function defaultTimeZoneNow(): Promise<string> {
   return withTestDatabase(async (db) => {
-    const found = firstRow(
-      await db.select({ zone: schema.staffSettings.defaultTimeZone }).from(schema.staffSettings),
-      'the settings row',
-    );
-    return found.zone;
+    const settings = await readSettings(db, ['staff.default_time_zone']);
+    return settings['staff.default_time_zone'];
   });
 }
 
@@ -405,7 +401,7 @@ export async function defaultTimeZoneNow(): Promise<string> {
  */
 export async function setRequestPrefix(prefix: string): Promise<void> {
   await withTestDatabase(async (db) => {
-    await db.update(schema.staffSettings).set({ requestPrefix: prefix });
+    await db.transaction((tx) => writeSettings(tx, { 'requests.prefix': prefix }));
   });
 }
 
@@ -648,9 +644,7 @@ export async function storeRequest({
         .where(eq(schema.user.email, raisedBy)),
       'the member who raised it',
     );
-    const [counter] = await db
-      .select({ last: schema.requestCounter.lastNumber })
-      .from(schema.requestCounter);
+    const counter = await readSettings(db, ['requests.last_number']);
     const numbers = await storeRequests(
       db,
       [
@@ -665,7 +659,7 @@ export async function storeRequest({
           at,
         },
       ],
-      (counter?.last ?? 0) + 1,
+      counter['requests.last_number'] + 1,
     );
     return firstRow(numbers, 'the new request number');
   });

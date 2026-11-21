@@ -1,11 +1,12 @@
 /**
  * @file First-run setup: naming the staff and creating its first Admin.
  *
- * Setup works only while there's no settings row yet. Once it exists, setup is
- * refused, so `/setup` and `pnpm setup:platform` can't be used to take over
- * an installation. The web form (`/setup`) goes further: it only works on a
- * fresh install, with no accounts at all, so if the settings row were ever
- * lost, nobody can make their existing account staff Admin through it. The
+ * Setup works only while Adiutor isn't set up yet: the `setup.completed_at`
+ * setting, which setup writes, isn't there. Once it is, setup is refused, so
+ * `/setup` and `pnpm setup:platform` can't be used to take over an
+ * installation. The web form (`/setup`) goes further: it only works on a
+ * fresh install, with no accounts at all, so if that setting were ever lost,
+ * nobody can make their existing account staff Admin through it. The
  * command line (run by whoever runs the server) can still promote an existing
  * account, to recover such an installation.
  */
@@ -13,10 +14,10 @@ import { hashPassword } from 'better-auth/crypto';
 import { eq } from 'drizzle-orm';
 
 import type { DatabaseOrTransaction } from '@/db';
-import { staffSettings, user } from '@/db/schema';
+import { user } from '@/db/schema';
 import { PLATFORM_ADMIN_ROLE } from '@/lib/authz/roles';
 import { firstRow } from '@/lib/defined';
-import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/locales';
+import { DEFAULT_LOCALE, type Locale, LOCALES } from '@/lib/i18n/locales';
 import { DEFAULT_TIME_ZONE, isTimeZone } from '@/lib/i18n/time-zones';
 import {
   emailSchema,
@@ -32,6 +33,7 @@ import addPasswordCredential from './auth/password-credential';
 import type { ServiceContext } from './context';
 import { isUniqueViolation, ServiceError } from './errors';
 import { nameBuiltInRequestTypes } from './requests';
+import { addSetting, readSettings, writeSettings } from './settings';
 
 /**
  * The error for setting up an installation that's already set up.
@@ -43,14 +45,15 @@ function alreadySetUpError(): ServiceError {
 }
 
 /**
- * Checks whether the staff exists, which means setup is done.
+ * Checks whether setup is done: it wrote when (`setup.completed_at`). Saving
+ * any other setting never counts.
  *
  * @param db - Database client or transaction.
  * @returns Whether setup is done.
  */
 export async function isSetUp(db: DatabaseOrTransaction): Promise<boolean> {
-  const [found] = await db.select({ id: staffSettings.id }).from(staffSettings).limit(1);
-  return Boolean(found);
+  const settings = await readSettings(db, ['setup.completed_at']);
+  return settings['setup.completed_at'] !== null;
 }
 
 /**
@@ -104,7 +107,7 @@ export interface SetupInput {
 export interface SetupOptions {
   /**
    * May make an existing account the Admin, and runs whenever nothing is set
-   * up yet, even with accounts (to recover a lost settings row). Only the
+   * up yet, even with accounts (to recover a lost `setup.completed_at`). Only the
    * command line passes this; without it (the web form), setup only runs on a
    * fresh install (see {@link isWebSetupOpen}) and always creates a new
    * account.
@@ -139,8 +142,9 @@ export interface SetupResult {
  * A new Admin's account is recorded in the audit log (`account_created`, by
  * and about them, with its address and `setup: true`).
  *
- * Two simultaneous setups can't both succeed: the database allows only one
- * settings row, and the losing request gets the same "already set up" error.
+ * Two simultaneous setups can't both succeed: each first adds the
+ * `setup.completed_at` setting, whose key the database allows once, so the
+ * second waits for the first and gets the same "already set up" error.
  *
  * @param ctx - Service context.
  * @param input - The name shown to users, Adiutor's default language and zone, and the Admin's
@@ -183,9 +187,15 @@ export async function setUpPlatform(
       if (!(await isOpen(tx))) {
         throw alreadySetUpError();
       }
-      await tx
-        .insert(staffSettings)
-        .values({ name: staffName, defaultLocale, defaultTimeZone: timeZone ?? DEFAULT_TIME_ZONE });
+      // First, so a second setup at the same moment waits here and then fails on the key.
+      await addSetting(tx, 'setup.completed_at', new Date());
+      // Every language there is now, so one added later starts off (decision 0029).
+      await writeSettings(tx, {
+        'staff.name': staffName,
+        'staff.default_locale': defaultLocale,
+        'staff.offered_locales': [...LOCALES],
+        'staff.default_time_zone': timeZone ?? DEFAULT_TIME_ZONE,
+      });
       // The built-in request types were named before there was a language: name them in this one.
       await nameBuiltInRequestTypes(tx, defaultLocale);
 
