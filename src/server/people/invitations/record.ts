@@ -16,7 +16,8 @@ import { type Role } from '@/lib/authz/roles';
 import { firstRow } from '@/lib/defined';
 import displayName from '@/lib/display-name';
 import type { Email } from '@/lib/email';
-import { isLocale, type Locale } from '@/lib/i18n/locales';
+import { loadLanguageSettings } from '@/lib/i18n/default-locale';
+import { type Locale, offeredLocale } from '@/lib/i18n/locales';
 import { INVITATION_VALID_DAYS } from '@/lib/invitation-lifetimes';
 import type { InviteStatus } from '@/lib/invite-status';
 import { generateToken, hashToken } from '@/lib/sign-in/tokens';
@@ -179,8 +180,10 @@ export async function createInvitationRecord(
     .select({ id: user.id, platformRole: user.platformRole, locale: user.locale })
     .from(user)
     .where(eq(user.email, email));
-  // Someone with an account reads their own language; anyone else the invitation's.
-  const inviteeLocale = isLocale(existingUser?.locale) ? existingUser.locale : locale;
+  // Someone with an account reads their own language while it's offered; anyone else the
+  // invitation's.
+  const { offered } = await loadLanguageSettings(tx);
+  const inviteeLocale = offeredLocale(existingUser?.locale, offered) ?? locale;
 
   if (existingUser) {
     let alreadyIn = existingUser.platformRole !== null;

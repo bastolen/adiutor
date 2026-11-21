@@ -19,6 +19,7 @@ import { cookies } from 'next/headers';
 import { mustStepUp } from '@/lib/authz/mfa';
 import localeCookieOptions from '@/lib/i18n/locale-cookie';
 import { FOLLOW_DEFAULT, isLanguageChoice, LOCALE_COOKIE } from '@/lib/i18n/locales';
+import { requestLanguageSettings } from '@/lib/i18n/request-locale';
 import appContext from '@/server/app-context';
 import { assertNotSignedInAs, getOptionalActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
@@ -39,7 +40,10 @@ import setOwnLocale from '@/server/people/own-locale';
  *   either (`getActor` sends it to the step-up page). Its choice stays in the
  *   browser, as when signed out, so the step-up page can still be read.
  *
- * A session that can't be read counts as none.
+ * A session that can't be read counts as none. A language that's turned off
+ * isn't offered here either (decision 0029): it's refused before anything
+ * changes, unless the settings can't be read (the error page, with the
+ * database failing).
  *
  * @param choice - A language, or `FOLLOW_DEFAULT`, as the menu sent it.
  * @returns Whether it was one of those and wasn't refused.
@@ -47,6 +51,12 @@ import setOwnLocale from '@/server/people/own-locale';
 export default async function setLanguageAction(choice: unknown): Promise<boolean> {
   if (!isLanguageChoice(choice)) {
     return false;
+  }
+  if (choice !== FOLLOW_DEFAULT) {
+    const settings = await requestLanguageSettings().catch(() => null);
+    if (settings && !settings.offered.includes(choice)) {
+      return false;
+    }
   }
   // The error page has this menu too, and the database may be what's failing: a session that
   // can't be read counts as none, so the browser's own language still changes.

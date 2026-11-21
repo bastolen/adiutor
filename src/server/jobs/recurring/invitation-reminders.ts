@@ -12,11 +12,11 @@ import { invitationReminderEmail } from '@/emails/invitation-reminder';
 import displayName from '@/lib/display-name';
 import { sendFailureOf } from '@/lib/email';
 import { SMTP_MAX_CONNECTIONS } from '@/lib/email-limits';
-import { isLocale } from '@/lib/i18n/locales';
 import { generateToken, hashToken } from '@/lib/sign-in/tokens';
 
 import type { ServiceContext } from '../../context';
 import getStaffName from '../../people/staff-name';
+import recipientLocale from '../../recipient-locale';
 import { defineRecurringJob } from '../define';
 
 /** How long before an invitation expires its reminder is sent, in hours. */
@@ -183,7 +183,8 @@ async function remind(
     await ctx.sendEmail(
       await invitationReminderEmail(found.email, {
         appUrl: ctx.baseUrl,
-        locale: isLocale(found.recipientLocale) ? found.recipientLocale : found.locale,
+        // Their own language, else the invitation's, each only while it's offered.
+        locale: await recipientLocale(ctx, found.recipientLocale, found.locale),
         // The inviter's account may be gone since; the target's name stands in then.
         inviterName: found.inviterEmail
           ? displayName({ name: found.inviterName, email: found.inviterEmail })

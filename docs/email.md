@@ -77,9 +77,11 @@ can't use it. `impersonation_started` links to its "Sign-ins by staff" card (`#s
 
 ## Which language
 
-An email is written in its recipient's language: the one they saved (`user.locale`); for someone
-on Default (none saved) or without an account, Adiutor's default language
-(`staff_settings.default_locale`); failing that (before setup), English (US). `recipientLocale`
+An email is written in its recipient's language: the one they saved (`user.locale`) while Adiutor
+offers it; for someone on Default (none saved), someone whose language is turned off, or someone
+without an account, Adiutor's default language (`staff_settings.default_locale`); failing that
+(before setup), English (US). A language that's turned off counts as none everywhere below, an
+invitation's too ([Offered languages](i18n.md#offered-languages)). `recipientLocale`
 (`src/server/recipient-locale.ts`) is that rule. The language of whoever caused the email doesn't
 count: a staff Admin browsing in Dutch doesn't send a user on Default a Dutch notice. Only emails
 someone asks for themselves follow the language their browser shows: an invite link's confirmation
@@ -98,8 +100,8 @@ cookie, else Adiutor's default).
 
 `invitation.locale` (NOT NULL, `en-US` by default) is chosen when the invitation is sent: the
 invitation services (`inviteByEmail`, `inviteManyByEmail`, `registerCompany`, `createSentInvitation`)
-take an optional `locale`, by default Adiutor's default language, and a resend keeps the
-invitation's language. `registerUser` takes an optional `locale` too; without one the new account
+take an optional `locale` (one that's offered: they refuse another), by default Adiutor's default
+language, and a resend keeps the invitation's language. `registerUser` takes an optional `locale` too; without one the new account
 is on Default. The forms ask for it (**Email language**): Add user and Add company
 start on Default (no `locale`), the invite form on the sender's language.
 Scripts and the hourly job have no request: their emails use the recipient's or the invitation's

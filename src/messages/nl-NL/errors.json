@@ -1,5 +1,8 @@
 {
   "errors": {
+    "language": {
+      "notOffered": "Die taal wordt niet aangeboden. Kies een andere."
+    },
     "notFound": "Deze pagina bestaat niet, of je hebt er geen toegang toe.",
     "forbidden": "Je hebt geen toestemming om dat te doen.",
     "concurrentChange": "Iemand anders wijzigde dit op hetzelfde moment. Probeer het opnieuw.",

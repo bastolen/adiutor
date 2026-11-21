@@ -2,7 +2,8 @@
 
 - **Status:** Accepted. One rule is superseded by
   [0020](0020-save-a-language-only-when-its-owner-picks-it.md): a language picked in the signed-out
-  menu is no longer saved with an account at sign-in.
+  menu is no longer saved with an account at sign-in. A language counts only while it's offered
+  ([0029](0029-staff-choose-the-offered-languages.md)).
 - **Date:** 2026-11-08
 
 ## Context

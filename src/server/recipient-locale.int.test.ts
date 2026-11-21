@@ -49,6 +49,13 @@ describe('recipientLocale', () => {
     expect(await recipientLocale({ db }, null)).toBe('en-US');
     expect(await defaultLanguage({ db })).toBe('en-US');
   });
+
+  it('skips a language that’s turned off, for the next one or the default', async () => {
+    await createStaffSettings(db, 'Adiutor Tests', 'es-ES', ['en-US', 'es-ES']);
+
+    expect(await recipientLocale({ db }, 'nl-NL')).toBe('es-ES');
+    expect(await recipientLocale({ db }, 'nl-NL', 'en-US')).toBe('en-US');
+  });
 });
 
 describe('requesterLocale', () => {

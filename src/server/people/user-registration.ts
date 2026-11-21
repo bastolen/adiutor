@@ -19,6 +19,7 @@ import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
 import type { ServiceContext } from '../context';
 import { isUniqueViolation } from '../errors';
+import assertLanguageOffered from '../offered-language';
 import { assertInviteSenderLimit } from '../rate-limit';
 import recipientLocale from '../recipient-locale';
 import getStaffName from './staff-name';
@@ -53,11 +54,12 @@ export type RegisterResult =
  * @param actor - The acting user; needs `users:create` (staff Admins and Managers).
  * @param rawEmail - The email address.
  * @param options - How to set the account up.
- * @param options.locale - The new user's language: saved as theirs (`user.locale`) and used for
- *   the welcome email. Without it, nothing is saved and the email is in Adiutor's default
+ * @param options.locale - The new user's language, one Adiutor offers: saved as theirs
+ *   (`user.locale`) and used for the welcome email. Without it, nothing is saved and the email is in Adiutor's default
  *   language, else English (US).
  * @returns What happened.
- * @throws {ServiceError} `forbidden` without `users:create`, `rate_limited` when sending too many.
+ * @throws {ServiceError} `forbidden` without `users:create`, `rate_limited` when sending too many,
+ *   `invalid` for a language that isn't offered (`errors.language.notOffered`).
  */
 export async function registerUser(
   ctx: ServiceContext,
@@ -68,6 +70,7 @@ export async function registerUser(
   assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'users:create');
   const email = emailSchema.parse(rawEmail);
+  await assertLanguageOffered(ctx.db, options.locale);
 
   const [existing] = await ctx.db.select({ id: user.id }).from(user).where(eq(user.email, email));
   if (existing) {

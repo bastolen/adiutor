@@ -94,6 +94,16 @@ describe('registerUser', () => {
     expect(welcome.subject).toBe('Je Adiutor-account staat klaar');
   });
 
+  it('refuses a language that’s turned off, and creates nobody', async () => {
+    await db.update(staffSettings).set({ offeredLocales: ['en-US', 'es-ES'] });
+
+    await expect(
+      registerUser(ctx, manager, 'nl@adiutor.test', { locale: 'nl-NL' }),
+    ).rejects.toMatchObject({ key: 'errors.language.notOffered' });
+    expect(await db.select().from(user).where(eq(user.email, 'nl@adiutor.test'))).toEqual([]);
+    expect(sent).toEqual([]);
+  });
+
   it('on Default, saves no language and welcomes them in Adiutor’s default, not the sender’s', async () => {
     await db.update(staffSettings).set({ defaultLocale: 'nl-NL' });
     const { userId } = await registerUser(inLanguage(ctx, 'es-ES'), manager, 'nl@adiutor.test');

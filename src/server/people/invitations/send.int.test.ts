@@ -251,6 +251,20 @@ describe('the invitation’s language', () => {
     ]);
   });
 
+  it('refuses a language that’s turned off, and sends nothing', async () => {
+    await db.update(staffSettings).set({ offeredLocales: ['en-US', 'es-ES'] });
+
+    await expect(
+      inviteByEmail(ctx, companyAdmin, {
+        companyId: testCompany.id,
+        role: 'client',
+        email: 'nl@adiutor.test',
+        locale: 'nl-NL',
+      }),
+    ).rejects.toMatchObject({ key: 'errors.language.notOffered' });
+    expect(sent).toEqual([]);
+  });
+
   it('gives someone with an account their own language, a member’s “already a member” too', async () => {
     const [existing, member] = await Promise.all(
       ['existing@adiutor.test', 'member@adiutor.test'].map(async (address) =>

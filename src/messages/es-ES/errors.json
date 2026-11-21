@@ -1,5 +1,8 @@
 {
   "errors": {
+    "language": {
+      "notOffered": "Ese idioma no se ofrece. Elige otro."
+    },
     "notFound": "Esta página no existe o no tienes acceso a ella.",
     "forbidden": "No tienes permiso para hacer eso.",
     "concurrentChange": "Otra persona cambió esto en el mismo momento. Vuelve a intentarlo.",
