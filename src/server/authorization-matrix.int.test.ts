@@ -155,6 +155,7 @@ import {
   raiseRequest,
   replyToRequest,
   restoreRequestType,
+  setActivityView,
   subscribe,
   unsubscribe,
   updateRequestDetails,
@@ -507,6 +508,10 @@ function listOperations(): Operation[] {
     ['choose own time zone', (w) => setOwnTimeZone(ctx, w.actor, 'Europe/Amsterdam')],
     ['choose own picture', (w) => setOwnPicture(ctx, w.actor, 'initials')],
     ['turn off own emails about requests', (w) => setOwnRequestEmails(ctx, w.actor, false)],
+    [
+      'choose how own request activity reads',
+      (w) => setActivityView(ctx, w.actor, { order: 'newest', groups: ['replies'] }),
+    ],
     ['dismiss own MFA recommendation', (w) => dismissMfaRecommendation(ctx, w.actor)],
     ['turn off sign-ins by staff', (w) => setStaffSignInAllowed(ctx, w.actor, false)],
     ["sign out another user's device", (w) => revokeOwnSession(ctx, w.actor, w.othersSession)],
@@ -947,6 +952,8 @@ const EXPECTED: Record<string, string> = {
   'choose own picture': 'AAAAAAA',
   // Everyone chooses whether they get emails about requests, for themselves only.
   'turn off own emails about requests': 'AAAAAAA',
+  // Everyone chooses how they read a request's activity, for themselves only.
+  'choose how own request activity reads': 'AAAAAAA',
   // Everyone dismisses their own MFA recommendation, and nobody else's.
   'dismiss own MFA recommendation': 'AAAAAAA',
   // Everyone's own account, whatever their role.

@@ -55,6 +55,7 @@ function detailOf(detail: Partial<RequestDetail> = {}): RequestDetail {
     permissions: new Set(),
     audience: 'contributor',
     staffName: 'Adiutor Tests',
+    activity: { order: 'oldest', groups: null },
     entries: [],
     earlierEntries: 0,
     ...detail,

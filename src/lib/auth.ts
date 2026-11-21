@@ -38,6 +38,7 @@ import { loadLanguageSettings, localeFromHeaders } from './i18n/default-locale';
 import { type Locale, LOCALES, offeredLocale } from './i18n/locales';
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from './input-rules';
 import ipAddressOptions from './request/ip-address-options';
+import { ACTIVITY_ORDERS } from './requests';
 import { LAST_USED_LOGIN_METHOD_COOKIE } from './sign-in/auth-cookies';
 import { DISABLED_AUTH_PATHS } from './sign-in/auth-endpoints';
 import { parseAuthSecrets } from './sign-in/auth-secrets';
@@ -480,6 +481,18 @@ export const auth = betterAuth({
        * through Better Auth's endpoints (`setOwnRequestEmails`).
        */
       requestEmails: { type: 'boolean', required: false, defaultValue: true, input: false },
+      /**
+       * The order the user reads a request's activity in
+       * (`ACTIVITY_ORDERS`); empty for the oldest entry first. Never set
+       * through Better Auth's endpoints (`setActivityView`).
+       */
+      activityOrder: { type: [...ACTIVITY_ORDERS], required: false, input: false },
+      /**
+       * The groups of a request's activity the user shows (`ACTIVITY_GROUPS`,
+       * tidied by `normalizeActivityGroups`); empty for everything. Never set
+       * through Better Auth's endpoints (`setActivityView`).
+       */
+      activityGroups: { type: 'string[]', required: false, input: false },
     },
   },
 

@@ -162,6 +162,13 @@
       "when": 1795286322895,
       "tag": "0022_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1795290826543,
+      "tag": "0025_activity_view",
+      "breakpoints": true
     }
   ]
 }

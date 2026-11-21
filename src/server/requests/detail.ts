@@ -1,9 +1,10 @@
 /**
  * @file One request as its readers see it: its details, who it's assigned
  * to, the company it's in, what the reader may do with it, and its
- * conversation.
+ * conversation, filtered and ordered the way the reader reads it (their
+ * saved activity view).
  */
-import { and, count, desc, eq, isNull, min, notInArray, or } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNull, min, notInArray, or } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
 import {
@@ -18,6 +19,9 @@ import { getGlobalPermissions, type Permission } from '@/lib/authz/permissions';
 import { firstRow } from '@/lib/defined';
 import { visibleName } from '@/lib/display-name';
 import {
+  type ActivityView,
+  activityKinds,
+  effectiveActivityGroups,
   mayEditDescription,
   mayEditNote,
   mayEditReply,
@@ -29,6 +33,7 @@ import {
   type RequestTextFormat,
   STAFF_ONLY_ENTRY_KINDS,
 } from '@/lib/requests';
+import { idSchema } from '@/lib/validation';
 
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
@@ -37,6 +42,7 @@ import { loadPictures } from '../people/pictures';
 import getRequestPrefix from '../people/request-prefix';
 import getStaffName from '../people/staff-name';
 import { getRequestAccess, requestAudienceIn, type RequestPerson, requestPerson } from './access';
+import { readActivityView } from './activity-view';
 import { editableText, type TextMention } from './edits';
 import mentionKey from './mention-key';
 import { loadSubscribers } from './participants';
@@ -214,9 +220,15 @@ export interface RequestDetail {
   audience: RequestAudience;
   /** The name the staff are shown with, for the staff's label next to their names. */
   staffName: string;
-  /** The entries shown: the latest ones, oldest first. */
+  /**
+   * How the reader reads the activity: its order, and the groups shown
+   * (`null` for everything), as their saved choice applies to them (never a
+   * group they aren't offered).
+   */
+  activity: ActivityView;
+  /** The entries shown: the latest ones of the groups shown, in the reader's order. */
   entries: RequestEntryView[];
-  /** How many earlier entries there are that aren't shown. */
+  /** How many earlier entries of the groups shown there are that aren't shown. */
   earlierEntries: number;
 }
 
@@ -259,16 +271,22 @@ export async function findRequest(
 
 /**
  * Loads a request with its conversation: the latest {@link THREAD_CHUNK}
- * entries, and as many earlier chunks as asked for.
+ * entries, and as many earlier chunks as asked for, of the groups the reader
+ * shows and in their order (their saved activity view, `readActivityView`).
  *
  * Readers who don't see priorities get none: not the request's, and not the
- * history's entries about it.
+ * history's entries about it. Nor does a saved choice ever show them an
+ * internal note: the groups apply on top of what they may see. An entry a
+ * link points at (`options.entry`, from an email) is shown whatever groups
+ * the reader chose, as long as they may see it.
  *
  * @param ctx - Service context.
  * @param actor - The acting user.
  * @param ref - The request's number or ID.
  * @param options - Options.
  * @param options.earlier - How many earlier chunks to add (at most {@link MAX_EARLIER_CHUNKS}).
+ * @param options.entry - The ID of the entry a link points at, shown whatever groups the reader
+ *   chose; anything that isn't an ID is left out.
  * @returns The request.
  * @throws {ServiceError} `not_found` if it doesn't exist or isn't visible.
  */
@@ -276,18 +294,32 @@ export async function getRequest(
   ctx: ServiceContext,
   actor: Actor,
   ref: string,
-  options: { earlier?: number } = {},
+  options: { earlier?: number; entry?: string | null } = {},
 ): Promise<RequestDetail> {
-  const { request: found, company, permissions } = await getRequestAccess(ctx.db, actor, ref);
+  const [{ request: found, company, permissions }, saved] = await Promise.all([
+    getRequestAccess(ctx.db, actor, ref),
+    readActivityView(ctx.db, actor.id),
+  ]);
   const internal = permissions.has('requests:view-internal');
   const earlier = Number.isSafeInteger(options.earlier)
     ? Math.min(Math.max(options.earlier ?? 0, 0), MAX_EARLIER_CHUNKS)
     : 0;
+  // The reader's choice, as it applies to them: never a group they aren't offered.
+  const activity: ActivityView = {
+    order: saved.order,
+    groups: effectiveActivityGroups(saved.groups, permissions),
+  };
+  const kinds = activityKinds(activity.groups, permissions);
+  const linked = idSchema.safeParse(options.entry);
   // What only the staff see (a change of priority, an internal note) is left out for everyone
   // else: of the entries, of the count of earlier ones, and of the texts' mentions and versions.
+  // The reader's groups narrow the entries and the count further, never widen them; the entry a
+  // link points at stays, within what the reader may see.
+  const ofGroups = kinds ? inArray(requestEntry.kind, kinds) : undefined;
   const shown = and(
     eq(requestEntry.requestId, found.id),
     internal ? undefined : notInArray(requestEntry.kind, [...STAFF_ONLY_ENTRY_KINDS]),
+    ofGroups && linked.success ? or(ofGroups, eq(requestEntry.id, linked.data)) : ofGroups,
   );
   /**
    * Leaves out the rows of a text the reader isn't shown: the description is
@@ -518,58 +550,57 @@ export async function getRequest(
     ...subscribers.map(({ id }) => id),
     ...latest.flatMap(({ author, subject }) => [author?.id ?? null, subject?.id ?? null]),
   ]);
-  const entries = latest
-    .reverse()
-    .map(
-      ({
-        author,
-        authorSide,
-        body,
-        bodyFormat,
-        subject,
-        editedAt,
-        signedInAs,
-        signedInAsStaff: staff,
-        ...entry
-      }) => {
-        const mark = signedInAsOf({ signedInAs, staff }, author?.id);
-        return {
-          ...entry,
-          ...(mark && { signedInAs: mark }),
-          // A type change names the types as they're called now: a type is never deleted.
-          ...(entry.kind === 'type' && {
-            from: entry.from && (typeNames.get(entry.from) ?? entry.from),
-            to: entry.to && (typeNames.get(entry.to) ?? entry.to),
-          }),
-          author: requestPerson(author ?? { id: null, name: null }, authorSide, actor, pictures),
-          body:
-            body === null
-              ? null
-              : {
-                  text: body,
-                  format: bodyFormat,
-                  mentions: mentionsOf.get(entry.id),
-                  ...editsOf(
-                    entry.id,
-                    body,
-                    editedAt,
-                    (entry.kind === 'note' ? mayEditNote : mayEditReply)(
-                      permissions,
-                      found.status,
-                      author?.id === actor.id,
-                    ),
+  // Loaded newest first; turned around for a reader who reads the oldest first.
+  const entries = (activity.order === 'oldest' ? latest.reverse() : latest).map(
+    ({
+      author,
+      authorSide,
+      body,
+      bodyFormat,
+      subject,
+      editedAt,
+      signedInAs,
+      signedInAsStaff: staff,
+      ...entry
+    }) => {
+      const mark = signedInAsOf({ signedInAs, staff }, author?.id);
+      return {
+        ...entry,
+        ...(mark && { signedInAs: mark }),
+        // A type change names the types as they're called now: a type is never deleted.
+        ...(entry.kind === 'type' && {
+          from: entry.from && (typeNames.get(entry.from) ?? entry.from),
+          to: entry.to && (typeNames.get(entry.to) ?? entry.to),
+        }),
+        author: requestPerson(author ?? { id: null, name: null }, authorSide, actor, pictures),
+        body:
+          body === null
+            ? null
+            : {
+                text: body,
+                format: bodyFormat,
+                mentions: mentionsOf.get(entry.id),
+                ...editsOf(
+                  entry.id,
+                  body,
+                  editedAt,
+                  (entry.kind === 'note' ? mayEditNote : mayEditReply)(
+                    permissions,
+                    found.status,
+                    author?.id === actor.id,
                   ),
-                },
-          // An assignment's subject is always on the staff's side, also once their account is gone.
-          subject:
-            entry.kind === 'assignee'
-              ? requestPerson(subject ?? { id: null, name: null }, 'staff', actor, pictures)
-              : null,
-          subjectIsAuthor:
-            entry.kind === 'assignee' && Boolean(subject?.id) && subject?.id === author?.id,
-        };
-      },
-    );
+                ),
+              },
+        // An assignment's subject is always on the staff's side, also once their account is gone.
+        subject:
+          entry.kind === 'assignee'
+            ? requestPerson(subject ?? { id: null, name: null }, 'staff', actor, pictures)
+            : null,
+        subjectIsAuthor:
+          entry.kind === 'assignee' && Boolean(subject?.id) && subject?.id === author?.id,
+      };
+    },
+  );
   const raisedSignedInAs = signedInAsOf(
     { signedInAs: found.createdSignedInAs, staff: raisedByStaff[0] ?? null },
     found.createdBy,
@@ -620,6 +651,7 @@ export async function getRequest(
     permissions,
     audience: requestAudienceIn(actor, company),
     staffName,
+    activity,
     entries,
     earlierEntries: firstRow(total, 'the entry count').total - entries.length,
   };

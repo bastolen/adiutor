@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import { company as companyTable, user } from '@/db/schema';
+import { defined } from '@/lib/defined';
 
 import {
   actorFor,
@@ -20,6 +21,7 @@ import {
   staffActor,
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
+import { setActivityView } from './activity-view';
 import { findRequest, findRequestNumber, getRequest, THREAD_CHUNK } from './detail';
 import { ctx, db, storeAssignees, storeEntry, storeRequest } from './test-helpers';
 
@@ -372,6 +374,167 @@ describe('getRequest: the conversation', () => {
     expect(await shown(-3)).toEqual(['Reply 56', 'Reply 105', THREAD_CHUNK, 55]);
     expect(await shown(Number.NaN)).toEqual(['Reply 56', 'Reply 105', THREAD_CHUNK, 55]);
     expect(await shown(1.5)).toEqual(['Reply 56', 'Reply 105', THREAD_CHUNK, 55]);
+  });
+});
+
+describe('getRequest: the reader’s activity view', () => {
+  /**
+   * Stores a request with a reply, an internal note, a status change and a
+   * change of priority, in that order.
+   *
+   * @returns The company, the request and its entries.
+   */
+  const storeMixedRequest = async () => {
+    const company = await createCompany(db);
+    const stored = await storeRequest(company.id);
+    const entries = await inSequence(
+      [
+        { body: 'A reply' },
+        { kind: 'note' as const, authorSide: 'staff' as const, body: 'A note' },
+        {
+          kind: 'status' as const,
+          authorSide: 'staff' as const,
+          fromValue: 'open',
+          toValue: 'todo',
+        },
+        {
+          kind: 'priority' as const,
+          authorSide: 'staff' as const,
+          fromValue: 'normal',
+          toValue: 'high',
+        },
+      ],
+      (values) => storeEntry(stored.id, values),
+    );
+    return { company, stored, entries };
+  };
+
+  /**
+   * The kinds of entry a reader gets, in the order they get them.
+   *
+   * @param actor - The reader.
+   * @returns The kinds.
+   */
+  const kindsFor = async (actor: Actor) =>
+    (await getRequest(ctx, actor, '1')).entries.map(({ kind }) => kind);
+
+  it('shows everything, oldest first, until the reader chooses', async () => {
+    await storeMixedRequest();
+    const support = await staffActor(db, 'support');
+
+    const detail = await getRequest(ctx, support, '1');
+    expect(detail.activity).toEqual({ order: 'oldest', groups: null });
+    expect(detail.entries.map(({ kind }) => kind)).toEqual([
+      'comment',
+      'note',
+      'status',
+      'priority',
+    ]);
+  });
+
+  it('shows the newest first, and earlier entries below them a chunk at a time', async () => {
+    const company = await createCompany(db);
+    const stored = await storeRequest(company.id);
+    await inSequence(
+      Array.from({ length: THREAD_CHUNK + 5 }, (_, index) => index + 1),
+      (n) => storeEntry(stored.id, { body: `Reply ${n}` }),
+    );
+    const client = await memberActor(db, company.id, 'client');
+    await setActivityView(ctx, client, { order: 'newest' });
+
+    const latest = await getRequest(ctx, client, '1');
+    expect(latest.activity.order).toBe('newest');
+    expect([latest.entries.at(0)?.body?.text, latest.entries.at(-1)?.body?.text]).toEqual([
+      `Reply ${THREAD_CHUNK + 5}`,
+      'Reply 6',
+    ]);
+    expect(latest.earlierEntries).toBe(5);
+
+    const all = await getRequest(ctx, client, '1', { earlier: 1 });
+    expect(all.entries.at(-1)?.body?.text).toBe('Reply 1');
+    expect(all.earlierEntries).toBe(0);
+  });
+
+  it('gives the staff the notes with the replies, and the notes alone when they choose them', async () => {
+    await storeMixedRequest();
+    const support = await staffActor(db, 'support');
+
+    await setActivityView(ctx, support, { groups: ['replies'] });
+    expect(await kindsFor(support)).toEqual(['comment', 'note']);
+
+    await setActivityView(ctx, support, { groups: ['notes'] });
+    expect(await kindsFor(support)).toEqual(['note']);
+
+    await setActivityView(ctx, support, { groups: ['status', 'changes'] });
+    expect(await kindsFor(support)).toEqual(['status', 'priority']);
+  });
+
+  it('never shows someone at the company a note, whatever they saved', async () => {
+    const { company } = await storeMixedRequest();
+    const client = await memberActor(db, company.id, 'client');
+    // Saved while they were on the staff: the notes aren't theirs to choose anymore.
+    await setActivityView(ctx, client, { groups: ['notes'] });
+
+    const detail = await getRequest(ctx, client, '1');
+    expect(detail.activity.groups).toBeNull();
+    expect(detail.entries.map(({ kind }) => kind)).toEqual(['comment', 'status']);
+
+    await setActivityView(ctx, client, { groups: ['notes', 'status'] });
+    expect((await getRequest(ctx, client, '1')).activity.groups).toEqual(['status']);
+    expect(await kindsFor(client)).toEqual(['status']);
+
+    await setActivityView(ctx, client, { groups: ['replies', 'changes'] });
+    expect(await kindsFor(client)).toEqual(['comment']);
+  });
+
+  it('keeps the entry a link points at, whatever the groups, within what the reader may see', async () => {
+    const { company, entries } = await storeMixedRequest();
+    const [reply, note] = entries;
+    const support = await staffActor(db, 'support');
+    const client = await memberActor(db, company.id, 'client');
+    await setActivityView(ctx, support, { groups: ['status'] });
+    await setActivityView(ctx, client, { groups: ['status'] });
+
+    /**
+     * The kinds of entry a reader gets when a link points at an entry.
+     *
+     * @param actor - The reader.
+     * @param entry - What the link names as the entry.
+     * @returns The kinds.
+     */
+    const linkedFor = async (actor: Actor, entry: string) =>
+      (await getRequest(ctx, actor, '1', { entry })).entries.map(({ kind }) => kind);
+
+    expect(await linkedFor(support, defined(note, 'the note').id)).toEqual(['note', 'status']);
+    expect(await linkedFor(client, defined(reply, 'the reply').id)).toEqual(['comment', 'status']);
+    // Never a note for someone at the company, and nothing for what isn't an entry's ID.
+    expect(await linkedFor(client, defined(note, 'the note').id)).toEqual(['status']);
+    expect(await linkedFor(client, 'not-an-id')).toEqual(['status']);
+  });
+
+  it('counts only the earlier entries of the groups shown', async () => {
+    const company = await createCompany(db);
+    const stored = await storeRequest(company.id);
+    await inSequence(
+      Array.from({ length: THREAD_CHUNK + 3 }, (_, index) => index + 1),
+      async (n) => {
+        await storeEntry(stored.id, { body: `Reply ${n}` });
+        await storeEntry(stored.id, {
+          kind: 'status',
+          authorSide: 'staff',
+          fromValue: 'open',
+          toValue: 'todo',
+        });
+      },
+    );
+    const client = await memberActor(db, company.id, 'client');
+
+    expect((await getRequest(ctx, client, '1')).earlierEntries).toBe(THREAD_CHUNK + 6);
+    await setActivityView(ctx, client, { groups: ['replies'] });
+    const replies = await getRequest(ctx, client, '1');
+    expect(replies.entries).toHaveLength(THREAD_CHUNK);
+    expect(replies.entries.every(({ kind }) => kind === 'comment')).toBe(true);
+    expect(replies.earlierEntries).toBe(3);
   });
 });
 

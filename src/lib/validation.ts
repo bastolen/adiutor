@@ -31,6 +31,8 @@ import {
   SLUG_MAX_LENGTH,
 } from './input-rules';
 import {
+  ACTIVITY_GROUPS,
+  ACTIVITY_ORDERS,
   cleanMultilineText,
   REQUEST_PREFIX_PATTERN,
   REQUEST_PRIORITIES,
@@ -459,6 +461,30 @@ export const requestPrioritySchema = z.enum(REQUEST_PRIORITIES, {
 export const requestStatusSchema = z.enum(REQUEST_STATUSES, {
   error: 'validation.requestStatus' satisfies ValidationMessageKey,
 });
+
+/**
+ * How someone reads a request's activity, from the menus on its page: its
+ * order, the groups it shows (`null` for everything), or both. The menus only
+ * send values they offer, so anything else is refused without a message of
+ * its own.
+ */
+export const activityViewSchema = z.object(
+  {
+    order: z
+      .enum(ACTIVITY_ORDERS, { error: 'validation.checkInput' satisfies ValidationMessageKey })
+      .optional(),
+    groups: z
+      .array(
+        z.enum(ACTIVITY_GROUPS, { error: 'validation.checkInput' satisfies ValidationMessageKey }),
+      )
+      .max(ACTIVITY_GROUPS.length, {
+        error: 'validation.checkInput' satisfies ValidationMessageKey,
+      })
+      .nullable()
+      .optional(),
+  },
+  { error: 'validation.checkInput' satisfies ValidationMessageKey },
+);
 
 /**
  * The prefix request numbers are shown with ("AD" in "AD-142"): one to five
