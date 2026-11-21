@@ -347,6 +347,29 @@ export const REQUESTS_CLIENT = {
 } as const;
 
 /**
+ * A Support member of the staff for the tests of a request's activity view:
+ * they change how they read the activity (which groups it shows, its
+ * order), which is saved with their account and holds on every request, so
+ * no other test signs in as them.
+ */
+export const ACTIVITY_SUPPORT = {
+  name: 'E2E Timeline Staff',
+  email: 'activity.support@adiutor.test',
+  password: 'e2e-activity-support-password',
+} as const;
+
+/**
+ * A Client of the test company ({@link COMPANY_NAME}) for the keyboard test
+ * of a request's activity view, which saves how they read it; no other test
+ * signs in as them.
+ */
+export const ACTIVITY_CLIENT = {
+  name: 'E2E Timeline Client',
+  email: 'activity.client@adiutor.test',
+  password: 'e2e-activity-client-password',
+} as const;
+
+/**
  * The seeded requests, by what they're for. No test changes them: a test
  * that changes a request raises its own. All but the fifth are the test
  * company's ({@link COMPANY_NAME}). The first one's description is plain

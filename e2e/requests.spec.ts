@@ -27,11 +27,14 @@ import {
   createCompany,
   findCompanyId,
   findUserId,
+  resetActivityView,
   setRequestPrefix,
+  storeEntries,
   storeInvitation,
   storeRequest,
 } from './support/db';
 import {
+  ACTIVITY_SUPPORT,
   CLIENT_WATCHER,
   CLOSED_COMPANY_NAME,
   COMPANY_NAME,
@@ -2223,4 +2226,99 @@ test('a staff member signed in as a user replies for them, and only that user an
   await page.goto(`/requests/${number}`);
   await expect(sent).toContainText(REQUESTS_CLIENT.name);
   await expect(sent).not.toContainText('signed in as');
+});
+
+test('the activity shows the groups and order its reader chose, on every visit', async ({
+  page,
+}) => {
+  // The view is saved with the account: start from everything, oldest first, also on a retry.
+  await resetActivityView(ACTIVITY_SUPPORT.email);
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'Activity read the way its reader chose',
+  });
+  await storeEntries(number, [
+    { kind: 'comment', by: REQUESTS_CLIENT.email, side: 'company', text: 'The first reply.' },
+    { kind: 'note', by: SUPPORT_STAFF.email, side: 'staff', text: 'A note for the staff.' },
+    { kind: 'status', by: SUPPORT_STAFF.email, side: 'staff', from: 'open', to: 'in_progress' },
+    { kind: 'comment', by: SUPPORT_STAFF.email, side: 'staff', text: 'The last reply.' },
+  ]);
+  const card = page.getByRole('region', { name: 'Conversation' });
+  const entries = conversation(page).getByRole('listitem');
+  const menu = page.getByRole('menu');
+
+  await signIn(page, ACTIVITY_SUPPORT);
+  await page.goto(`/requests/${number}`);
+  await expect(entries).toHaveCount(4);
+
+  // Only the replies, which for the staff bring the internal notes.
+  await card.getByRole('button', { name: 'Show: Everything' }).click();
+  await menu.getByRole('menuitemcheckbox', { name: 'Status changes' }).click();
+  await menu.getByRole('menuitemcheckbox', { name: 'Other changes' }).click();
+  await expect(menu.getByRole('menuitemcheckbox', { name: 'Internal notes' })).toHaveAttribute(
+    'aria-disabled',
+    'true',
+  );
+  await page.keyboard.press('Escape');
+  await expect(card.getByRole('button', { name: 'Show: Replies' })).toBeFocused();
+  await expect(entries).toHaveCount(3);
+  await expect(card).not.toContainText('Changed the status');
+  await expect(card).toContainText('A note for the staff.');
+
+  // Without Replies, the notes stay: only the notes.
+  await card.getByRole('button', { name: 'Show: Replies' }).click();
+  await menu.getByRole('menuitemcheckbox', { name: 'Replies' }).click();
+  await page.keyboard.press('Escape');
+  await expect(card.getByRole('button', { name: 'Show: Internal notes' })).toBeVisible();
+  await expect(entries).toHaveCount(1);
+  await expect(entries).toContainText('A note for the staff.');
+
+  // Only the status changes.
+  await card.getByRole('button', { name: 'Show: Internal notes' }).click();
+  await menu.getByRole('menuitemcheckbox', { name: 'Status changes' }).click();
+  await menu.getByRole('menuitemcheckbox', { name: 'Internal notes' }).click();
+  await page.keyboard.press('Escape');
+  await expect(card.getByRole('button', { name: 'Show: Status changes' })).toBeVisible();
+  await expect(entries).toHaveCount(1);
+  await expect(entries).toContainText('Changed the status from Open to In progress.');
+
+  // The newest first, everything again: the reply form comes before the activity, and a reply
+  // that's half written moves along with it.
+  const reply = await markdownEditor(page, 'Your reply');
+  await reply.click();
+  await page.keyboard.type('Half written.');
+  await card.getByRole('button', { name: 'Oldest first' }).click();
+  await menu.getByRole('menuitemradio', { name: 'Newest first' }).click();
+  await expect(card.getByRole('button', { name: 'Newest first' })).toBeFocused();
+  await expect(reply).toHaveText('Half written.');
+  await card.getByRole('button', { name: 'Show: Status changes' }).click();
+  await menu.getByRole('menuitemcheckbox', { name: 'Everything' }).click();
+  await page.keyboard.press('Escape');
+  await expect(entries).toHaveCount(4);
+  await expect(entries.first()).toContainText('The last reply.');
+  await expect(entries.last()).toContainText('The first reply.');
+  const tabs = card.getByRole('tablist');
+  const tabsBox = await tabs.boundingBox();
+  const firstBox = await entries.first().boundingBox();
+  expect(tabsBox?.y ?? Infinity).toBeLessThan(firstBox?.y ?? 0);
+
+  // Saved with the account: it reads the same way on the next visit.
+  await page.reload();
+  await expect(card.getByRole('button', { name: 'Newest first' })).toBeVisible();
+  await expect(entries.first()).toContainText('The last reply.');
+
+  // Someone at the company is never offered the internal notes; the menu is only opened.
+  await signOut(page);
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto(`/requests/${number}`);
+  await card.getByRole('button', { name: 'Show: Everything' }).click();
+  await expect(menu.getByRole('menuitemcheckbox')).toHaveText([
+    'Everything',
+    'Replies',
+    'Status changes',
+    'Other changes',
+  ]);
+  await page.keyboard.press('Escape');
+  await expect(entries).toHaveCount(3);
 });

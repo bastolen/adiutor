@@ -1,7 +1,8 @@
 /**
  * @file Requests: what companies raise with the staff and work through with
  * them. This is the module's public API: the values a request can have, the
- * rules of working on one, its number and its text. The code lives in the
+ * rules of working on one, how its activity is read, its number and its
+ * text. The code lives in the
  * files next to it, and nothing outside this folder imports them directly.
  *
  * Everything here is free of zod and of server code, so the database schema,
@@ -65,6 +66,22 @@ export {
   subscriberScope,
 } from './rules';
 export type { RequestAudience, SolutionAnswer, SubscriberScope } from './rules';
+export {
+  ACTIVITY_GROUPS,
+  ACTIVITY_ORDERS,
+  activityKinds,
+  DEFAULT_ACTIVITY_ORDER,
+  DEFAULT_ACTIVITY_VIEW,
+  effectiveActivityGroups,
+  isActivityGroup,
+  isActivityGroupShown,
+  isActivityOrder,
+  isIncludedActivityGroup,
+  normalizeActivityGroups,
+  offeredActivityGroups,
+  withActivityGroup,
+} from './activity';
+export type { ActivityGroup, ActivityOrder, ActivityView } from './activity';
 export {
   DEFAULT_REQUEST_PREFIX,
   formatRequestNumber,

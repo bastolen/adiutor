@@ -640,6 +640,43 @@ settings, and refused.
   about the user, with the request and who was subscribed or unsubscribed. Only staff who see the
   audit log read it; the user's own Recent activity leaves it out (`STAFF_ONLY_AUDIT_ACTIONS`).
 
+## Reading the activity
+
+Everyone who reads a request chooses how its conversation reads, with two menus in the
+Conversation card's heading (`activity-view.tsx`):
+
+- **Show** has a checkbox for each group the reader is offered, under "Everything", which is where
+  it starts: Replies, Internal notes (only the staff are offered it), Status changes, and Other
+  changes (who it's assigned to, its title, type and priority). Any mix works, and unticking the
+  last group shows everything again. For the staff, Replies includes the internal notes: while
+  it's ticked, Internal notes is ticked along with it ("Included in Replies", `aria-disabled` but
+  focusable) and pressing it changes nothing; unticking Replies leaves the notes alone. Ticking a
+  box keeps the menu open, so several can be changed in a row. The button says what's shown
+  ("Show: Replies and Status changes", the list joined the reader's way, `formatList`).
+- **Order**: oldest first, or newest first. With the newest first the reply form (and, for the
+  staff, the note tab) comes before the activity, set apart by a line, and the link to earlier
+  entries comes after the oldest one shown.
+
+The choice is saved with the reader's account (`user.activity_order` and
+`user.activity_groups`, empty for oldest first and everything), so it holds on every request and
+device; it changes nothing about the emails. The rules are pure functions in
+`src/lib/requests/activity.ts`: which groups a reader is offered (`offeredActivityGroups`), how a
+choice is tidied the one way it's saved (`normalizeActivityGroups`: the notes left out while
+Replies is chosen, nothing or everything saved as everything), how it applies to a reader
+(`effectiveActivityGroups`), what the menu does with a tick (`withActivityGroup`) and which kinds
+of entry it shows (`activityKinds`; every kind of entry has a group, or it doesn't compile).
+`setActivityView` saves it (refused while a staff member is signed in as the reader, whose
+menus are off then), and `getRequest` reads it with the request's access and applies it in the
+query: the groups narrow what the reader may see and never widen it, so a company reader whose
+saved choice holds the notes still gets none (`STAFF_ONLY_ENTRY_KINDS` applies first), and the
+count of earlier entries counts only the groups shown. An address that points at an entry
+(`?entry=<id>`, as a link from an email does, with `#entry-<id>`) shows that entry whatever groups
+the reader chose, within what they may see; the link to earlier entries keeps it. The menus show a choice at once and save
+it in a transition of their own (a spinner on the pressed menu's button, which stays focusable);
+there's no toast when it works, since the activity changing says it, and a failed save is shown
+above the activity and as a toast. When the groups chosen leave nothing to show, the conversation
+says so with a "Show everything" button.
+
 ## Pages
 
 - **`/requests`**, for everyone signed in: every request they may see. The status links (Active,
@@ -658,14 +695,16 @@ settings, and refused.
   the type. It opens the new request. A company that wasn't chosen is asked for like any other
   field (`requestCompanySchema`); "not found" is for a company the reader may not see.
 - **`/requests/<number>`**: what was asked (Description), the Conversation with every reply and
-  change (and, for the staff, every internal note), oldest first, and a Details bar: status, who
+  change (and, for the staff, every internal note), oldest first unless the reader chose otherwise
+  (see [Reading the activity](#reading-the-activity)), and a Details bar: status, who
   it's assigned to, who is subscribed, type, priority (staff),
   company, who raised it and when, the staff's first response and the last activity, with the
   controls. The bar is on
   the right on wide screens, and between the description and the conversation on narrower ones.
   On a screen wider than 1280px the page grows past the width other pages have, up to 1280px of
   content (`WidePage`), so the conversation and the reply's editor get the room.
-  The conversation loads its latest 50 entries, with a link for earlier ones (`?earlier=`).
+  The conversation loads its latest 50 entries of the groups the reader shows, with a link for
+  earlier ones (`?earlier=`): above them with the oldest first, below them with the newest first.
   Each entry has an anchor (`#entry-<entry ID>`, `entryAnchor`) and the description has one
   (`#request-description`), which the emails link to. Arriving with one, the page brings that
   entry into view below the sticky header and focuses it when focus is nowhere in particular
@@ -679,14 +718,15 @@ settings, and refused.
 ## In the code
 
 - `src/lib/requests/` (a folder module, free of zod and server code, so the database schema,
-  the services and client components all import it): the values, the rules above, the number
-  and the text. Not to be confused with `src/lib/request/`, which is about HTTP requests.
+  the services and client components all import it): the values, the rules above, how the
+  activity is read, the number and the text. Not to be confused with `src/lib/request/`, which is about HTTP requests.
 - `src/db/schema/requests.ts`: `request`, `request_participant` (who's assigned and who's
   subscribed), `request_entry`
   (the conversation, its internal notes and the history in one table, ordered by ID) and
   `request_mention` (who a text mentions). The counter is the `requests.last_number` setting.
 - `src/server/requests/` (a folder module): `listRequestCompanies`, `listRequests`, `findRequest`,
-  `findRequestNumber`, `getRequest`, `raiseRequest`, `replyToRequest`, `addNote`, `changeRequestStatus`,
+  `findRequestNumber`, `getRequest`, `setActivityView` (how the reader reads the activity),
+  `raiseRequest`, `replyToRequest`, `addNote`, `changeRequestStatus`,
   `updateRequestDetails`, `changeAssignees`, `listAssignableStaff`, `countAssignedRequests`,
   `listMentionable`, `subscribe`, `unsubscribe`, `changeSubscribers`, `listSubscribable`,
   `readRequestUpdate` (what one person's email about a request may show), and

@@ -11,6 +11,11 @@
  * of its company while it's active. Anyone else gets the 404 page, as for a
  * number no request has.
  *
+ * Everyone who reads it chooses which groups of its activity the
+ * conversation shows (replies, internal notes for the staff, status changes,
+ * other changes) and its order; that's saved with their account, and with
+ * the newest first the reply form comes before the activity.
+ *
  * Those who take part can reply. The staff who work on requests also pick
  * its status, assign it and edit its title, type and priority; people at the company
  * mark it done, cancel it or reopen it. Everyone who reads it can subscribe
@@ -40,6 +45,7 @@ import {
   mayAnswerSolution,
   mayProposeSolution,
   mayWriteNote,
+  offeredActivityGroups,
   parseRequestNumber,
   REQUEST_STATUSES,
   requestPath,
@@ -66,6 +72,7 @@ import PersonLine, { PersonAvatar, personName } from '../../_requests/request-pe
 import RequestText from '../../_requests/request-text';
 import SignedInAsMark from '../../_requests/signed-in-as-mark';
 import { changeAssigneesAction, changeStatusAction, changeSubscriptionAction } from './actions';
+import { ActivityControls, ActivityError, ActivityViewProvider } from './activity-view';
 import ChangeAssignees, { type AssigneeChoice } from './change-assignees';
 import ChangeSubscribers from './change-subscribers';
 import EditDetails, { type EditableType } from './edit-details';
@@ -113,7 +120,8 @@ const EARLIER_PATTERN = /^[1-9]\d?$/;
  * @param props - Component props.
  * @param props.params - Route parameters: the request's number.
  * @param props.searchParams - Query parameters: `earlier`, how many earlier chunks of the
- *   conversation to show besides the latest.
+ *   conversation to show besides the latest, and `entry`, the entry a link (from an email)
+ *   points at, which the conversation shows whatever groups the reader chose.
  * @returns The page content.
  */
 async function RequestContent({
@@ -137,9 +145,11 @@ async function RequestContent({
   const asked = searchParam(query.earlier);
   const earlier =
     asked && EARLIER_PATTERN.test(asked) ? Math.min(Number(asked), MAX_EARLIER_CHUNKS) : 0;
+  // The entry a link points at (`?entry=<id>#entry-<id>`): shown whatever groups the reader chose.
+  const entry = searchParam(query.entry);
   let detail: RequestDetail;
   try {
-    detail = await getRequest(appContext, actor, number, { earlier });
+    detail = await getRequest(appContext, actor, number, { earlier, entry });
   } catch (error) {
     // A request the viewer may not see ends on the 404 page, like one that doesn't exist.
     if (error instanceof ServiceError) {
@@ -149,7 +159,10 @@ async function RequestContent({
   }
   const earlierHref =
     detail.earlierEntries > 0 && earlier < MAX_EARLIER_CHUNKS
-      ? `${requestPath(detail.number)}?earlier=${earlier + 1}`
+      ? `${requestPath(detail.number)}?${new URLSearchParams({
+          earlier: String(earlier + 1),
+          ...(entry && { entry }),
+        })}`
       : null;
   // Nobody changes the requests of a deactivated company; the services refuse it too.
   const contributes = !detail.company.deactivated && detail.permissions.has('requests:contribute');
@@ -194,6 +207,33 @@ async function RequestContent({
   const names = { company: detail.company.name, staff: detail.staffName };
   // The request's whole address, for the note above code copied from its texts.
   const address = `${appContext.baseUrl}${requestPath(detail.number)}`;
+
+  // What the reader writes: at the end of the activity, or before it with the newest first, set
+  // apart from it by a line. Both are keyed, so a change of order moves them rather than starting
+  // the reply form again: a reply that's half written stays.
+  const newestFirst = detail.activity.order === 'newest';
+  const thread = (
+    <Thread key="thread" detail={detail} address={address} earlierHref={earlierHref} />
+  );
+  const writing = contributes && (
+    <div
+      key="writing"
+      className={cn(
+        'flex flex-col gap-6',
+        detail.entries.length > 0 &&
+          (newestFirst ? 'border-b border-border pb-6' : 'border-t border-border pt-6'),
+      )}
+    >
+      {/* A solution that waits for the reader's answer: above the form, wherever it stands. */}
+      {answers && <SolutionNotice request={detail.number} />}
+      {mayWriteNote(detail.permissions) ? (
+        // The staff who work on requests also write internal notes, on a tab of their own.
+        <WriteTabs request={detail.number} canWait={canWait} canPropose={canPropose} />
+      ) : (
+        <ReplyForm request={detail.number} canWait={canWait} canPropose={canPropose} />
+      )}
+    </div>
+  );
 
   const descriptionSource = {
     url: address,
@@ -392,27 +432,17 @@ async function RequestContent({
         </div>
 
         <div className="xl:col-start-1 xl:row-start-2">
-          <Card title={t('conversation')}>
-            <div className="flex flex-col gap-6">
-              <Thread detail={detail} address={address} earlierHref={earlierHref} />
-              {contributes && (
-                <div
-                  className={cn(
-                    'flex flex-col gap-6',
-                    detail.entries.length > 0 && 'border-t border-border pt-6',
-                  )}
-                >
-                  {answers && <SolutionNotice request={detail.number} />}
-                  {mayWriteNote(detail.permissions) ? (
-                    // The staff who work on requests also write internal notes, on a tab of their own.
-                    <WriteTabs request={detail.number} canWait={canWait} canPropose={canPropose} />
-                  ) : (
-                    <ReplyForm request={detail.number} canWait={canWait} canPropose={canPropose} />
-                  )}
-                </div>
-              )}
-            </div>
-          </Card>
+          <ActivityViewProvider
+            view={detail.activity}
+            offered={offeredActivityGroups(detail.permissions)}
+          >
+            <Card title={t('conversation')} actions={<ActivityControls />}>
+              <div className="flex flex-col gap-6">
+                <ActivityError />
+                {newestFirst ? [writing, thread] : [thread, writing]}
+              </div>
+            </Card>
+          </ActivityViewProvider>
         </div>
       </div>
     </ClientMessages>

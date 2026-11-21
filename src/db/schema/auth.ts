@@ -46,6 +46,8 @@ export const user = pgTable('user', {
     enum: ['initials', 'github', 'google'],
   }),
   requestEmails: boolean('request_emails').default(true),
+  activityOrder: text('activity_order', { enum: ['oldest', 'newest'] }),
+  activityGroups: text('activity_groups').array(),
 });
 
 /** Better Auth's `session` table. */

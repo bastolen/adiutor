@@ -150,6 +150,105 @@ export function MenuRadioLinkItem({
   );
 }
 
+/**
+ * Props for {@link MenuCheckboxItem}.
+ */
+interface MenuCheckboxItemProps extends Omit<
+  ComponentProps<typeof DropdownMenu.CheckboxItem>,
+  'children' | 'textValue' | 'checked' | 'onCheckedChange' | 'onSelect'
+> {
+  /** The item's name. */
+  label: string;
+  /** A line below the name, e.g. what the choice includes; it describes the item. */
+  hint?: string;
+  /** Whether it's ticked. */
+  checked: boolean;
+  /**
+   * Whether it's ticked because another choice includes it ("ticked along"):
+   * it shows ticked, in a muted box, and stays focusable, but it's marked
+   * `aria-disabled` and pressing it changes nothing. Its `hint` says why.
+   */
+  included?: boolean;
+  /** Called with the new state when it's pressed; never while it's `included`. */
+  onCheckedChange: (checked: boolean) => void;
+}
+
+/**
+ * A checkbox item: a box on the left, ticked or not, then its name and an
+ * optional hint below it. Pressing it (a click, Enter or Space) toggles it
+ * and keeps the menu open, so several can be ticked in a row; Escape or Tab
+ * closes the menu. The item's name is its label alone, and the hint
+ * describes it.
+ *
+ * @param props - Item props.
+ * @param props.label - The item's name.
+ * @param props.hint - A line below the name.
+ * @param props.checked - Whether it's ticked.
+ * @param props.included - Whether it's ticked along with another choice.
+ * @param props.onCheckedChange - Called when it's toggled.
+ * @param props.className - Extra classes.
+ * @returns The checkbox item.
+ */
+export function MenuCheckboxItem({
+  label,
+  hint = undefined,
+  checked,
+  included = false,
+  onCheckedChange,
+  className = '',
+  ...props
+}: MenuCheckboxItemProps) {
+  const labelId = useId();
+  const hintId = useId();
+  const ticked = checked || included;
+  return (
+    <DropdownMenu.CheckboxItem
+      {...props}
+      checked={ticked}
+      textValue={label}
+      aria-labelledby={labelId}
+      aria-describedby={hint ? hintId : undefined}
+      aria-disabled={included || undefined}
+      onCheckedChange={(next) => {
+        if (!included) {
+          onCheckedChange(next === true);
+        }
+      }}
+      // Keeps the menu open; Radix still calls `onCheckedChange`.
+      onSelect={(event) => {
+        event.preventDefault();
+      }}
+      className={cn(itemClasses, 'h-auto min-h-9 items-start py-2', className)}
+    >
+      <span
+        aria-hidden="true"
+        className={cn(
+          'mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-sm border',
+          // Ticked along: the same check, in a muted box, since it's ticked by another choice.
+          checked && !included ? 'border-primary bg-primary' : 'border-border-strong bg-surface',
+        )}
+      >
+        <DropdownMenu.ItemIndicator className="inline-flex">
+          <Check
+            className={cn(
+              'size-3!',
+              checked && !included ? 'text-primary-foreground!' : 'text-muted-foreground!',
+            )}
+          />
+        </DropdownMenu.ItemIndicator>
+      </span>
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span id={labelId}>{label}</span>
+        {hint && (
+          <span id={hintId} className="text-xs text-muted-foreground">
+            {hint}
+          </span>
+        )}
+      </span>
+    </DropdownMenu.CheckboxItem>
+  );
+}
+
 /** How far ArrowLeft and ArrowRight move focus inside a {@link MenuRadioRow}. */
 const ROW_STEPS: Partial<Record<string, number>> = { ArrowLeft: -1, ArrowRight: 1 };
 

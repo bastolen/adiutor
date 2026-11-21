@@ -732,3 +732,83 @@ export async function storeRequest({
     return firstRow(numbers, 'the new request number');
   });
 }
+
+/** One entry {@link storeEntries} adds to a request's history. */
+type StoredEntry = {
+  /** The email address of who wrote or changed it. */
+  by: string;
+  /** The side they act as. */
+  side: 'company' | 'staff';
+} & (
+  | {
+      /** A reply, or an internal note (staff). */
+      kind: 'comment' | 'note';
+      /** Its text. */
+      text: string;
+    }
+  | {
+      /** A change of the status. */
+      kind: 'status';
+      /** What it was. */
+      from: RequestStatus;
+      /** What it became. */
+      to: RequestStatus;
+    }
+);
+
+/**
+ * Adds entries to a test's own request without going through the app:
+ * replies, internal notes and status changes, in the order given (entries
+ * are read in ID order). The request itself isn't changed, so its status
+ * stays as it was stored.
+ *
+ * @param number - The request's number.
+ * @param entries - The entries, oldest first.
+ */
+export async function storeEntries(number: number, entries: readonly StoredEntry[]): Promise<void> {
+  await withTestDatabase(async (db) => {
+    const found = firstRow(
+      await db
+        .select({ id: schema.request.id })
+        .from(schema.request)
+        .where(eq(schema.request.number, number)),
+      'the request',
+    );
+    // One after another: IDs are time-ordered, and a request's entries are read in ID order.
+    for (const entry of entries) {
+      const author = firstRow(
+        // eslint-disable-next-line no-await-in-loop -- Each entry must be stored after the one before it.
+        await db
+          .select({ id: schema.user.id })
+          .from(schema.user)
+          .where(eq(schema.user.email, entry.by)),
+        'the entry’s author',
+      );
+      // eslint-disable-next-line no-await-in-loop -- Each entry must be stored after the one before it.
+      await db.insert(schema.requestEntry).values({
+        requestId: found.id,
+        authorId: author.id,
+        authorSide: entry.side,
+        kind: entry.kind,
+        ...(entry.kind === 'status'
+          ? { fromValue: entry.from, toValue: entry.to }
+          : { body: entry.text }),
+      });
+    }
+  });
+}
+
+/**
+ * Forgets how a user reads a request's activity, so a test starts from
+ * everything, oldest first, also when it runs again.
+ *
+ * @param email - The user's email address.
+ */
+export async function resetActivityView(email: string): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db
+      .update(schema.user)
+      .set({ activityOrder: null, activityGroups: null })
+      .where(eq(schema.user.email, email));
+  });
+}

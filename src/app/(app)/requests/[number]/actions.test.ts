@@ -4,8 +4,9 @@
  * started from, and refreshes the page also when a colleague changed the
  * same detail meanwhile, so the dialog starts from the request as it is when
  * it's opened again. The assignees and subscribers actions add and remove
- * only what their dialog's checkboxes changed. The services' own rules are
- * in `src/server/requests`.
+ * only what their dialog's checkboxes changed. The activity view's action
+ * passes the menus' choice on and refreshes the page. The services' own
+ * rules are in `src/server/requests`.
  */
 import { refresh } from 'next/cache';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -15,6 +16,7 @@ import { ServiceError } from '@/server/errors';
 import {
   changeAssignees,
   changeSubscribers,
+  setActivityView,
   subscribe,
   unsubscribe,
   updateRequestDetails,
@@ -24,6 +26,7 @@ import {
   changeAssigneesAction,
   changeSubscribersAction,
   changeSubscriptionAction,
+  saveActivityViewAction,
   updateDetailsAction,
 } from './actions';
 
@@ -35,6 +38,7 @@ vi.mock('@/server/requests', () => ({
   changeRequestStatus: vi.fn(),
   changeSubscribers: vi.fn(),
   replyToRequest: vi.fn(),
+  setActivityView: vi.fn(),
   subscribe: vi.fn(),
   unsubscribe: vi.fn(),
   updateRequestDetails: vi.fn(),
@@ -276,6 +280,31 @@ describe('changeSubscribersAction', () => {
       ok: false,
       message:
         'Only active people who can read this request can be subscribed. Check who you chose and try again.',
+    });
+    expect(refresh).not.toHaveBeenCalled();
+  });
+});
+
+describe('saveActivityViewAction', () => {
+  it('saves what the menus chose and refreshes the page, without a message', async () => {
+    vi.mocked(setActivityView).mockResolvedValue({ order: 'newest', groups: ['replies'] });
+
+    expect(await saveActivityViewAction({ order: 'newest', groups: ['replies'] })).toEqual({
+      ok: true,
+    });
+    expect(setActivityView).toHaveBeenCalledWith({ name: 'app context' }, support, {
+      order: 'newest',
+      groups: ['replies'],
+    });
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('says why when the service refuses, and refreshes nothing', async () => {
+    vi.mocked(setActivityView).mockRejectedValue(new ServiceError('forbidden', 'errors.forbidden'));
+
+    expect(await saveActivityViewAction({ order: 'newest' })).toEqual({
+      ok: false,
+      message: "You don't have permission to do that.",
     });
     expect(refresh).not.toHaveBeenCalled();
   });
