@@ -5,7 +5,7 @@
  * `db.ts`.
  */
 import { hashPassword } from 'better-auth/crypto';
-import { eq } from 'drizzle-orm';
+import { eq, isNull } from 'drizzle-orm';
 
 import * as schema from '../../src/db/schema';
 import type { CompanyRole, PlatformRole } from '../../src/lib/authz/roles';
@@ -32,6 +32,7 @@ import {
   DEACTIVATE_CLIENT,
   DELETE_CLIENT,
   E2E_AUTH_SECRET,
+  E2E_TIME_ZONE,
   FINANCE_STAFF,
   GITHUB_ONLY_MANAGER,
   MFA_CLIENT,
@@ -139,7 +140,9 @@ export default async function seedTestDatabase(): Promise<void> {
       await storeAuthenticator(db, found.id, person.totpSecret, E2E_AUTH_SECRET);
     };
 
-    await db.insert(schema.staffSettings).values({ name: STAFF_NAME });
+    await db
+      .insert(schema.staffSettings)
+      .values({ name: STAFF_NAME, defaultTimeZone: E2E_TIME_ZONE });
     // A tick just ran, so pages don't warn that background jobs aren't running.
     await db.insert(schema.jobTick).values({ lastStartedAt: new Date() });
     const platformAdmin = await addPerson(PLATFORM_ADMIN, { platformRole: 'platform_admin' });
@@ -406,5 +409,11 @@ export default async function seedTestDatabase(): Promise<void> {
         at: new Date(joinedFrom + index * 60_000),
       })),
     ]);
+
+    // Every seeded account has the zone the test browsers show, so no first visit saves one.
+    await db
+      .update(schema.user)
+      .set({ timeZone: E2E_TIME_ZONE })
+      .where(isNull(schema.user.timeZone));
   });
 }

@@ -26,6 +26,7 @@ import TextLink from '@/components/ui/text-link';
 import { COMPANY_ROLES, roleOptions } from '@/lib/authz/roles';
 import { companyChoiceLabels } from '@/lib/company-choices';
 import formatDate from '@/lib/format';
+import useReaderTimeZone from '@/lib/i18n/use-reader-time-zone';
 import { type TableLinks } from '@/lib/tables/page-url';
 import { type Paged } from '@/lib/tables/table-state';
 import type { UserCompanySort } from '@/lib/tables/tables';
@@ -94,6 +95,7 @@ export default function CompaniesCard({
   addable,
 }: CompaniesCardProps) {
   const locale = useLocale();
+  const timeZone = useReaderTimeZone();
   const t = useTranslations('admin.user.companies');
   const tRoles = useTranslations('roles');
   const tCommon = useTranslations('common');
@@ -209,14 +211,16 @@ export default function CompaniesCard({
                           </span>
                           {/* Below tablet width, when they joined goes here. */}
                           <span className="text-xs text-muted-foreground md:hidden">
-                            {t('joinedOn', { date: formatDate(membership.joinedAt, locale) })}
+                            {t('joinedOn', {
+                              date: formatDate(membership.joinedAt, locale, timeZone),
+                            })}
                           </span>
                           <div className="sm:hidden">{role}</div>
                         </div>
                       </Td>
                       <Td className="hidden sm:table-cell">{role}</Td>
                       <Td className="hidden text-muted-foreground md:table-cell">
-                        {formatDate(membership.joinedAt, locale)}
+                        {formatDate(membership.joinedAt, locale, timeZone)}
                       </Td>
                       {hasActions && (
                         <Td className="text-right">

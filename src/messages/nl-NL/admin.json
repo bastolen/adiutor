@@ -259,6 +259,13 @@
         "save": "Talen opslaan",
         "saved": "Talen opgeslagen."
       },
+      "timeZone": {
+        "title": "Standaardtijdzone",
+        "description": "Adiutor gebruikt deze zone op pagina’s voor wie niet is ingelogd, in e-mails aan mensen zonder zone, en voor iedereen tot hun browser hun eigen zone instelt.",
+        "label": "Standaardtijdzone",
+        "save": "Standaardtijdzone opslaan",
+        "saved": "Standaardtijdzone opgeslagen."
+      },
       "requestNumbers": {
         "title": "Verzoeknummers",
         "description": "Elk verzoek heeft een nummer waarnaar mensen kunnen verwijzen. Het staat achter een voorvoegsel dat jij kiest.",
@@ -482,7 +489,7 @@
       },
       "recurring": {
         "title": "Geplande taken",
-        "description": "Elke taak draait volgens zijn schema, bij de tik die om de paar minuten komt. Tijden zijn in UTC.",
+        "description": "Elke taak draait volgens zijn schema, bij de tik die om de paar minuten komt.",
         "caption": "Geplande taken",
         "job": "Taak",
         "lastRun": "Laatst uitgevoerd",

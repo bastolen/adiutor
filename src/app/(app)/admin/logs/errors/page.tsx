@@ -24,6 +24,7 @@ import { Table, Td, Th, Tr } from '@/components/ui/table';
 import TextLink from '@/components/ui/text-link';
 import displayName from '@/lib/display-name';
 import { formatDateTime } from '@/lib/format';
+import useReaderTimeZone from '@/lib/i18n/use-reader-time-zone';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import { createPageUrl } from '@/lib/tables/page-url';
 import { parseTableState } from '@/lib/tables/table-state';
@@ -82,10 +83,13 @@ function summary(error: RecordedError, noMessage: string): string {
  */
 function ErrorDetails({ error }: { error: RecordedError }) {
   const locale = useLocale();
+  const timeZone = useReaderTimeZone();
   const t = useTranslations('admin.errors');
   return (
     <DescriptionList>
-      <DescriptionRow term={t('details.when')}>{formatDateTime(error.at, locale)}</DescriptionRow>
+      <DescriptionRow term={t('details.when')}>
+        {formatDateTime(error.at, locale, timeZone)}
+      </DescriptionRow>
       <DescriptionRow term={t('details.kind')}>
         <KindBadge error={error} />
       </DescriptionRow>

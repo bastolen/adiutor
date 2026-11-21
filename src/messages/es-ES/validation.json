@@ -88,6 +88,7 @@
     "requestPriority": "Elige una prioridad.",
     "requestStatus": "Elige un estado.",
     "requestPrefix": "Usa de una a cinco letras o cifras para el prefijo, empezando por una letra, por ejemplo AD.",
-    "locale": "Elige uno de los idiomas."
+    "locale": "Elige uno de los idiomas.",
+    "timeZone": "Elige una de las zonas horarias."
   }
 }

@@ -21,6 +21,7 @@ import TextField from '@/components/ui/text-field';
 import { useToast } from '@/components/ui/toast';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import formatDate from '@/lib/format';
+import useReaderTimeZone from '@/lib/i18n/use-reader-time-zone';
 import { PASSKEY_NAME_MAX_LENGTH } from '@/lib/input-rules';
 import { signInErrorText } from '@/lib/sign-in/auth-error-messages';
 import loadAuthClient from '@/lib/sign-in/load-auth-client';
@@ -143,6 +144,7 @@ function NameDialog({
 export default function PasskeysCard({ passkeys, removeLastBlockedReason }: PasskeysCardProps) {
   const t = useTranslations('account');
   const locale = useLocale();
+  const timeZone = useReaderTimeZone();
   const defaultName = t('security.passkeys.defaultName');
   const router = useRouter();
   const { askToConfirm, askToConfirmOnRefusal } = useRecentConfirmation(SECTION);
@@ -285,7 +287,9 @@ export default function PasskeysCard({ passkeys, removeLastBlockedReason }: Pass
               {passkey.createdAt && (
                 <>
                   {' · '}
-                  {t('security.passkeys.added', { date: formatDate(passkey.createdAt, locale) })}
+                  {t('security.passkeys.added', {
+                    date: formatDate(passkey.createdAt, locale, timeZone),
+                  })}
                 </>
               )}
             </IconRow>

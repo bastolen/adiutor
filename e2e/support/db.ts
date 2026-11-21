@@ -126,6 +126,7 @@ export async function findUserId(email: string): Promise<string> {
  * @param event.targetEmail - Whom it was about.
  * @param event.companyId - Which company it was about.
  * @param event.details - What the entry's description reads from.
+ * @param event.at - When it happened; now when left out.
  */
 export async function storeAuditEvent({
   action,
@@ -133,12 +134,14 @@ export async function storeAuditEvent({
   targetEmail,
   companyId,
   details,
+  at = new Date(),
 }: {
   action: AuditAction;
   actorEmail: string;
   targetEmail: string;
   companyId: string;
   details: Record<string, unknown>;
+  at?: Date;
 }): Promise<void> {
   const [actorUserId, targetUserId] = await Promise.all([
     findUserId(actorEmail),
@@ -147,7 +150,7 @@ export async function storeAuditEvent({
   await withTestDatabase(async (db) => {
     await db
       .insert(schema.auditEvent)
-      .values({ action, actorUserId, targetUserId, companyId, details });
+      .values({ action, actorUserId, targetUserId, companyId, details, at });
   });
 }
 
@@ -263,6 +266,25 @@ export async function addMembership(
 }
 
 /**
+ * Reads the time zone saved with an account (`user.time_zone`).
+ *
+ * @param email - The account's address.
+ * @returns The zone, or `null` when none is saved.
+ */
+export async function savedTimeZoneOf(email: string): Promise<string | null> {
+  return withTestDatabase(async (db) => {
+    const found = firstRow(
+      await db
+        .select({ timeZone: schema.user.timeZone })
+        .from(schema.user)
+        .where(eq(schema.user.email, email)),
+      'the account',
+    );
+    return found.timeZone;
+  });
+}
+
+/**
  * Makes the MFA confirmation of every session of a user that many minutes
  * old (`session.mfa_verified_at`), as if they had signed in or confirmed
  * with their second step back then. Changing how they sign in needs one
@@ -344,6 +366,33 @@ export async function setDefaultLocale(
 ): Promise<void> {
   await withTestDatabase(async (db) => {
     await db.update(schema.staffSettings).set({ defaultLocale: locale, offeredLocales: offered });
+  });
+}
+
+/**
+ * Sets Adiutor's default time zone directly, e.g. to put it back after a test
+ * changed it on the staff page.
+ *
+ * @param timeZone - The zone, e.g. `UTC`.
+ */
+export async function setDefaultTimeZone(timeZone: string): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.update(schema.staffSettings).set({ defaultTimeZone: timeZone });
+  });
+}
+
+/**
+ * Reads Adiutor's default time zone.
+ *
+ * @returns The zone in the settings row.
+ */
+export async function defaultTimeZoneNow(): Promise<string> {
+  return withTestDatabase(async (db) => {
+    const found = firstRow(
+      await db.select({ zone: schema.staffSettings.defaultTimeZone }).from(schema.staffSettings),
+      'the settings row',
+    );
+    return found.zone;
   });
 }
 
@@ -562,6 +611,7 @@ export async function findSignInError(
  * @param request.type - Its type; a bug when left out.
  * @param request.priority - Its priority; normal when left out.
  * @param request.status - Its status; open when left out.
+ * @param request.at - When it was raised; now when left out.
  * @returns The request's number.
  */
 export async function storeRequest({
@@ -572,6 +622,7 @@ export async function storeRequest({
   type = 'bug',
   priority = 'normal',
   status = 'open',
+  at = new Date(),
 }: {
   companySlug: string;
   raisedBy: string;
@@ -580,6 +631,7 @@ export async function storeRequest({
   type?: string;
   priority?: RequestPriority;
   status?: RequestStatus;
+  at?: Date;
 }): Promise<number> {
   return withTestDatabase(async (db) => {
     const company = firstRow(
@@ -610,7 +662,7 @@ export async function storeRequest({
           priority,
           status,
           raisedBy: { id: author.id, side: 'company' },
-          at: new Date(),
+          at,
         },
       ],
       (counter?.last ?? 0) + 1,

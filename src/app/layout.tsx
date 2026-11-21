@@ -3,7 +3,7 @@
  */
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
-import { getLocale, getMessages, getTranslations } from 'next-intl/server';
+import { getLocale, getMessages, getTimeZone, getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import { OfferedLanguagesProvider } from '@/components/language/offered-languages';
@@ -67,10 +67,11 @@ export const instant = false;
  * @returns The document shell.
  */
 export default async function RootLayout({ children }: LayoutProps<'/'>) {
-  const [nonce, locale, messages, languages] = await Promise.all([
+  const [nonce, locale, messages, timeZone, languages] = await Promise.all([
     headers().then((list) => list.get(NONCE_HEADER) ?? undefined),
     getLocale(),
     getMessages(),
+    getTimeZone(),
     requestLanguageSettings(),
   ]);
   return (
@@ -85,7 +86,11 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="bg-background text-foreground antialiased">
-        <IntlClientProvider locale={locale} messages={pickMessages(messages, ['common'])}>
+        <IntlClientProvider
+          locale={locale}
+          messages={pickMessages(messages, ['common'])}
+          timeZone={timeZone}
+        >
           <OfferedLanguagesProvider offered={languages.offered}>
             {children}
           </OfferedLanguagesProvider>

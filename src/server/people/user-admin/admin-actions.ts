@@ -336,7 +336,7 @@ export async function deleteUser(
 ): Promise<void> {
   assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'users:delete');
-  const { email, locale } = await ctx.db.transaction(async (tx) => {
+  const { email, locale, timeZone } = await ctx.db.transaction(async (tx) => {
     const target = await loadTarget(tx, actor, userId);
     if (normalizeEmail(confirmEmail) !== target.email.toLowerCase()) {
       throw new ServiceError('invalid', 'errors.users.confirmEmail');
@@ -344,9 +344,9 @@ export async function deleteUser(
     // Locks their row first, so nothing they create meanwhile escapes the revoke below.
     await assertNotSoleAdmin(tx, target.id, 'user');
     // Their address as it is now that the row is locked (a new statement): it can't change
-    // before the deletion commits, and the security email goes to it, in their language.
+    // before the deletion commits, and the security email goes to it, in their language and zone.
     const [locked] = await tx
-      .select({ email: user.email, locale: user.locale })
+      .select({ email: user.email, locale: user.locale, timeZone: user.timeZone })
       .from(user)
       .where(eq(user.id, target.id));
     if (!locked) {
@@ -369,9 +369,9 @@ export async function deleteUser(
       tx,
     );
     await tx.delete(user).where(eq(user.id, target.id));
-    return { email: locked.email, locale: locked.locale };
+    return { email: locked.email, locale: locked.locale, timeZone: locked.timeZone };
   });
   // Only once the deletion has committed: a refused one sends nothing. The account is gone, so its
-  // language comes along.
-  await sendAccountDeletedNotice(ctx, email, locale);
+  // language and zone come along.
+  await sendAccountDeletedNotice(ctx, email, locale, timeZone);
 }

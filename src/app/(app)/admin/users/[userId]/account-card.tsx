@@ -10,6 +10,7 @@ import Card from '@/components/ui/card';
 import { DescriptionList, DescriptionRow } from '@/components/ui/description-list';
 import RelativeTime from '@/components/ui/relative-time';
 import formatDate from '@/lib/format';
+import useReaderTimeZone from '@/lib/i18n/use-reader-time-zone';
 import type { UserDetail } from '@/server/people/user-admin';
 
 /**
@@ -39,6 +40,7 @@ export default function AccountCard({
   createdAt,
 }: AccountCardProps) {
   const locale = useLocale();
+  const timeZone = useReaderTimeZone();
   const t = useTranslations('admin.user.account');
   return (
     <Card title={t('title')}>
@@ -57,7 +59,9 @@ export default function AccountCard({
         <DescriptionRow term={t('lastActive')}>
           <RelativeTime date={lastActiveAt} />
         </DescriptionRow>
-        <DescriptionRow term={t('created')}>{formatDate(createdAt, locale)}</DescriptionRow>
+        <DescriptionRow term={t('created')}>
+          {formatDate(createdAt, locale, timeZone)}
+        </DescriptionRow>
       </DescriptionList>
     </Card>
   );

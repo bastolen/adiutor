@@ -8,6 +8,7 @@
 import { useLocale, useTranslations } from 'next-intl';
 
 import { formatDateTime } from '@/lib/format';
+import useReaderTimeZone from '@/lib/i18n/use-reader-time-zone';
 import type { RequestText as RequestTextValue } from '@/server/requests';
 
 import { personName, type SideNames } from '../../_requests/request-person';
@@ -43,6 +44,7 @@ export default function EditedNote({
 }) {
   const t = useTranslations('requests.edit');
   const locale = useLocale();
+  const timeZone = useReaderTimeZone();
   if (!text.editedAt) {
     return null;
   }
@@ -54,7 +56,7 @@ export default function EditedNote({
           <p className="text-xs text-muted-foreground">
             {t('versionLine', {
               name: personName(version.editedBy, names),
-              time: formatDateTime(version.at, locale),
+              time: formatDateTime(version.at, locale, timeZone),
             })}
           </p>
           {version.signedInAs && (

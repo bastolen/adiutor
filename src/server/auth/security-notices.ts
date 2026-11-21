@@ -66,23 +66,27 @@ export async function queueSecurityNotice(
  * straight away: the account's row is gone, so the notice can't wait for the
  * queue, whose job looks the user up. It's written in the language the
  * account saved (read before the deletion), else Adiutor's default language,
- * else English (US) (`recipientLocale`), and never names a device: the
- * account was deleted by a staff Admin.
+ * else English (US) (`recipientLocale`), with its time in the zone the
+ * account saved, else Adiutor's default zone (`recipientTimeZone`), and never
+ * names a device: the account was deleted by a staff Admin.
  *
  * @param ctx - Service context (database, email, app URL).
  * @param email - The deleted account's address.
  * @param savedLocale - The language the account saved, read before the deletion.
+ * @param savedTimeZone - The time zone the account saved, read before the deletion.
  * @returns Whether it was sent (never throws: a failure is logged).
  */
 export async function sendAccountDeletedNotice(
   ctx: Pick<ServiceContext, 'db' | 'sendEmail' | 'baseUrl'>,
   email: string,
   savedLocale: Locale | null,
+  savedTimeZone: string | null,
 ): Promise<boolean> {
   try {
     const message = await buildSecurityNotice(ctx, {
       email,
       savedLocale,
+      savedTimeZone,
       kind: 'account_deleted',
       when: new Date(),
     });

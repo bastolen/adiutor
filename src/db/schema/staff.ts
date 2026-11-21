@@ -8,6 +8,7 @@ import { sql } from 'drizzle-orm';
 import { boolean, check, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
 
 import { DEFAULT_LOCALE, LOCALES } from '../../lib/i18n/locales';
+import { DEFAULT_TIME_ZONE } from '../../lib/i18n/time-zones';
 import { DEFAULT_REQUEST_PREFIX } from '../../lib/requests';
 import { createdAt, id, oneOf, timestampTz } from './columns';
 
@@ -23,6 +24,13 @@ export const staffSettings = pgTable(
      * cookie): chosen at setup, changeable on the staff page. See docs/i18n.md.
      */
     defaultLocale: text('default_locale', { enum: LOCALES }).notNull().default(DEFAULT_LOCALE),
+    /**
+     * Adiutor's own time zone (an IANA name, `isTimeZone`): for signed-out
+     * pages, for people whose zone isn't known yet, and for emails to them.
+     * Taken from the first Admin's browser at setup, changeable on the staff
+     * page. See docs/i18n.md, "Time zones".
+     */
+    defaultTimeZone: text('default_time_zone').notNull().default(DEFAULT_TIME_ZONE),
     /**
      * The languages Adiutor offers, which staff Admins turn on and off on the
      * staff page: only these are offered and used, and whoever chose one

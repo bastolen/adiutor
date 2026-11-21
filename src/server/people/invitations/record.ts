@@ -72,6 +72,13 @@ interface InvitationRecordInput {
    * saved language.
    */
   locale: Locale;
+  /**
+   * The sender's time zone (`invitation.time_zone`), or `null` when nobody
+   * sent it or theirs isn't known: the reminder's expiry is shown in it,
+   * unless the invitee has an account with a saved zone, else in Adiutor's
+   * default zone (`recipientTimeZone`).
+   */
+  timeZone: string | null;
 }
 
 /** An invitation someone sends by email: the recipient gets an invitation naming them. */
@@ -172,7 +179,7 @@ export async function createInvitationRecord(
   tx: DatabaseTransaction,
   input: SentInvitationInput | LinkInvitationInput,
 ): Promise<CreatedInvitation<LinkClaimStatus>> {
-  const { target, email, role, invitedBy, baseUrl, locale } = input;
+  const { target, email, role, invitedBy, baseUrl, locale, timeZone } = input;
   // One request per target and address at a time, until its transaction ends (see above).
   await lockInvitationsOf(tx, target.companyId, email);
 
@@ -275,6 +282,7 @@ export async function createInvitationRecord(
         tokenHash: hashToken(token),
         invitedBy,
         locale,
+        timeZone,
         expiresAt: sql`now() + make_interval(days => ${INVITATION_VALID_DAYS})`,
       })
       .returning({ id: invitation.id }),
@@ -343,6 +351,7 @@ export async function createSentInvitation(
     inviterName: displayName(actor),
     baseUrl: ctx.baseUrl,
     locale: input.locale ?? (await recipientLocale(ctx)),
+    timeZone: actor.timeZone,
   });
   await recordEvent(
     ctx,

@@ -11,12 +11,14 @@ import { staffSettings, user } from '@/db/schema';
 import { isStaffRoleRaise, wouldLeaveNoAdmin } from '@/lib/authz/guards';
 import { PLATFORM_ADMIN_ROLE, type PlatformRole } from '@/lib/authz/roles';
 import { loadLanguageSettings } from '@/lib/i18n/default-locale';
+import loadDefaultTimeZone from '@/lib/i18n/default-time-zone';
 import { DEFAULT_LOCALE, type Locale, LOCALES } from '@/lib/i18n/locales';
 import { mayBeAssigned } from '@/lib/requests';
 import { type Paged, resolveTableState, type TableState } from '@/lib/tables/table-state';
 import { type PeopleSort, STAFF_TABLE } from '@/lib/tables/tables';
 import {
   languageSettingsSchema,
+  timeZoneSchema,
   requestPrefixSchema,
   staffNameSchema,
   staffRoleSchema,
@@ -70,8 +72,8 @@ export interface StaffMember {
  * @param ctx - Service context.
  * @param actor - The acting user; needs `staff:manage`.
  * @returns The name, Adiutor's default language (English (US) if the settings row is missing),
- *   the languages it offers (every language then) and the prefix request numbers are shown
- *   with ("AD" if it's missing).
+ *   the languages it offers (every language then), its default time zone (UTC if it's missing)
+ *   and the prefix request numbers are shown with ("AD" if it's missing).
  */
 export async function getStaffSettings(
   ctx: ServiceContext,
@@ -80,18 +82,21 @@ export async function getStaffSettings(
   name: string;
   defaultLocale: Locale;
   offeredLocales: readonly Locale[];
+  defaultTimeZone: string;
   requestPrefix: string;
 }> {
   assertPermission(getGlobalPermissions(actor), 'staff:manage');
-  const [name, languages, requestPrefix] = await Promise.all([
+  const [name, languages, defaultTimeZone, requestPrefix] = await Promise.all([
     getStaffName(ctx.db),
     loadLanguageSettings(ctx.db),
+    loadDefaultTimeZone(ctx.db),
     getRequestPrefix(ctx.db),
   ]);
   return {
     name,
     defaultLocale: languages.defaultLocale ?? DEFAULT_LOCALE,
     offeredLocales: languages.offered,
+    defaultTimeZone,
     requestPrefix,
   };
 }
@@ -100,7 +105,7 @@ export async function getStaffSettings(
 type StaffSettingsChange = Partial<
   Pick<
     typeof staffSettings.$inferInsert,
-    'name' | 'defaultLocale' | 'offeredLocales' | 'requestPrefix'
+    'name' | 'defaultLocale' | 'offeredLocales' | 'defaultTimeZone' | 'requestPrefix'
   >
 >;
 
@@ -188,6 +193,32 @@ export async function setLanguages(
   );
   await ctx.db.transaction((tx) => saveStaffSettings(tx, { defaultLocale, offeredLocales }));
   return { defaultLocale, offeredLocales };
+}
+
+/**
+ * Sets Adiutor's default time zone: the zone of signed-out pages, of people
+ * whose zone isn't known yet (before their first visit), and of emails to
+ * people without one outside an invitation. Changes nothing for anyone who
+ * has a zone. If the settings row is missing (it was lost), this creates it
+ * again, with the name users then see ("Adiutor"). Not a security change, so
+ * no audit event, like the default language.
+ *
+ * @param ctx - Service context.
+ * @param actor - The acting user; needs `staff:manage`.
+ * @param zone - The zone, as the form sent it.
+ * @returns The saved zone.
+ * @throws {ZodError} When it isn't a zone Adiutor accepts.
+ */
+export async function setDefaultTimeZone(
+  ctx: ServiceContext,
+  actor: Actor,
+  zone: unknown,
+): Promise<string> {
+  assertNotSignedInAs(actor);
+  assertPermission(getGlobalPermissions(actor), 'staff:manage');
+  const defaultTimeZone = timeZoneSchema.parse(zone);
+  await ctx.db.transaction((tx) => saveStaffSettings(tx, { defaultTimeZone }));
+  return defaultTimeZone;
 }
 
 /**

@@ -25,6 +25,7 @@ import {
   type Locale,
   localeForLanguages,
 } from '@/lib/i18n/locales';
+import { browserTimeZone, DEFAULT_TIME_ZONE } from '@/lib/i18n/time-zones';
 import { applyStoredTheme, THEME_STORAGE_KEY } from '@/lib/theme';
 import enUsCommon from '@/messages/en-US/common.json';
 import esEsCommon from '@/messages/es-ES/common.json';
@@ -78,6 +79,25 @@ function serverLocale(): Locale {
 }
 
 /**
+ * The time zone on the server, which knows nobody's zone here.
+ *
+ * @returns The default zone.
+ */
+function serverTimeZone(): string {
+  return DEFAULT_TIME_ZONE;
+}
+
+/**
+ * The browser's own time zone: the root layout, which knows the account's,
+ * is what failed.
+ *
+ * @returns The browser's zone, or the default one.
+ */
+function savedTimeZone(): string {
+  return browserTimeZone() ?? DEFAULT_TIME_ZONE;
+}
+
+/**
  * The document's title, inside the provider.
  *
  * @returns The `<title>` element.
@@ -98,6 +118,8 @@ function ErrorTitle() {
 export default function GlobalError({ error, retry }: ErrorPageProps) {
   // English while hydrating (what the server rendered), then the cookie's language.
   const locale = useSyncExternalStore(subscribeToNothing, savedLocale, serverLocale);
+  // UTC while hydrating, then the browser's own zone.
+  const timeZone = useSyncExternalStore(subscribeToNothing, savedTimeZone, serverTimeZone);
 
   useEffect(() => {
     applyStoredTheme(THEME_STORAGE_KEY);
@@ -106,7 +128,7 @@ export default function GlobalError({ error, retry }: ErrorPageProps) {
   return (
     <html lang={locale} className={fontVariables}>
       <body className="bg-background text-foreground antialiased">
-        <IntlClientProvider locale={locale} messages={COMMON_MESSAGES[locale]}>
+        <IntlClientProvider locale={locale} messages={COMMON_MESSAGES[locale]} timeZone={timeZone}>
           <ErrorTitle />
           <RootError error={error} retry={retry} />
         </IntlClientProvider>

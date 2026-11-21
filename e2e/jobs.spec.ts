@@ -15,7 +15,7 @@ import {
   resumeJob,
   storeFailedQueuedJob,
 } from './support/db';
-import { PLATFORM_ADMIN, STEP_UP_MANAGER } from './support/fixtures';
+import { E2E_BASE_URL, PLATFORM_ADMIN, STEP_UP_MANAGER } from './support/fixtures';
 import { adminStorageState, signIn, type StorageState, toasts } from './support/helpers';
 import { runJobs } from './support/outbox';
 import { expect, test } from './support/test';
@@ -36,7 +36,8 @@ async function expectJobs(page: Page) {
   const scheduled = page.getByRole('table', { name: 'Scheduled jobs' });
   await expect(scheduled.getByText('retention', { exact: true })).toBeVisible();
   await expect(scheduled.getByText(/^Deletes audit events after a year/)).toBeVisible();
-  await expect(scheduled.getByText(/^Every day at 3:15\sAM UTC$/)).toBeVisible();
+  // In the reader's zone, UTC in the tests.
+  await expect(scheduled.getByText(/^Every day at 3:15\sAM$/)).toBeVisible();
   await expect(scheduled.getByText('Every 5 minutes').first()).toBeVisible();
 
   // The tick ran them: a run that did nothing stays out of the history, but its job's last run shows.
@@ -61,6 +62,20 @@ test('a staff Admin finds the jobs under Logs, with how the tick ran them', asyn
   await expect(page).toHaveURL('/admin/logs/jobs');
   await expect(page).toHaveTitle('Jobs · Adiutor');
   await expectJobs(page);
+});
+
+test('a staff Admin elsewhere reads when jobs run in their own zone', async ({ context, page }) => {
+  // The cookie that mirrors the account's zone, as if the Admin's were Tokyo's (no daylight saving).
+  await context.addCookies([
+    ...adminState.cookies,
+    { name: 'adiutor.time-zone', value: 'Asia/Tokyo', url: E2E_BASE_URL },
+  ]);
+  await page.goto('/admin/logs/jobs');
+
+  const scheduled = page.getByRole('table', { name: 'Scheduled jobs' });
+  // 3:15 in UTC is 12:15 in Tokyo.
+  await expect(scheduled.getByText(/^Every day at 12:15\sPM$/)).toBeVisible();
+  await expect(page.getByText('Times are in UTC.')).toHaveCount(0);
 });
 
 test('a Manager sees the jobs too, without the controls', async ({ page }) => {

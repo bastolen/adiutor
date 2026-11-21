@@ -21,6 +21,7 @@ import {
 } from '@/lib/authz/mfa';
 import type { Permission } from '@/lib/authz/permissions';
 import { COMPANY_ADMIN_ROLE, type CompanyRole, type PlatformRole } from '@/lib/authz/roles';
+import { isTimeZone } from '@/lib/i18n/time-zones';
 import { availableProviders } from '@/lib/sign-in/providers';
 
 import { loadMfaStates } from './auth/mfa-state';
@@ -135,6 +136,13 @@ export interface Actor {
    */
   allowStaffSignIn: boolean;
   /**
+   * Their saved time zone (`user.time_zone`), e.g. `Europe/Amsterdam`, or
+   * `null` until their browser saved one on their first visit. Pages read the
+   * reader's zone from next-intl instead (the cookie that mirrors this); this
+   * is for services, such as an invitation keeping its sender's zone.
+   */
+  timeZone: string | null;
+  /**
    * The staff member signed in as this user in the current session, or
    * `null` when the user signed in themselves. While it's set, every change
    * is refused (`assertNotSignedInAs`), and the session facts above
@@ -178,6 +186,7 @@ export async function loadActor(
         deactivatedAt: user.deactivatedAt,
         platformRole: user.platformRole,
         allowStaffSignIn: user.allowStaffSignIn,
+        timeZone: user.timeZone,
       })
       .from(user)
       .where(eq(user.id, userId)),
@@ -207,6 +216,8 @@ export async function loadActor(
     ...found,
     // On unless turned off (a row from before the setting existed counts as on).
     allowStaffSignIn: found.allowStaffSignIn !== false,
+    // Only a zone the runtime still knows (one can be renamed or dropped from its data).
+    timeZone: isTimeZone(found.timeZone) ? found.timeZone : null,
     platformRole,
     memberships: Object.fromEntries(rows.map((row) => [row.companyId, row.role])),
     mfaRole,

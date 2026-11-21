@@ -3,7 +3,7 @@
  * browser gets only the text the page needs (CLAUDE.md, "Ship only the code
  * a page needs"). Server only: it reads the request's messages.
  */
-import { getLocale, getMessages } from 'next-intl/server';
+import { getLocale, getMessages, getTimeZone } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
 import IntlClientProvider from './intl-client-provider';
@@ -31,11 +31,16 @@ interface ClientMessagesProps {
  * @returns The provider around the children.
  */
 export default async function ClientMessages({ namespaces, children }: ClientMessagesProps) {
-  const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
+  const [locale, messages, timeZone] = await Promise.all([
+    getLocale(),
+    getMessages(),
+    getTimeZone(),
+  ]);
   return (
     <IntlClientProvider
       locale={locale}
       messages={pickMessages(messages, ['common', ...namespaces])}
+      timeZone={timeZone}
     >
       {children}
     </IntlClientProvider>

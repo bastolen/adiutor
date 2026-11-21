@@ -1,10 +1,12 @@
 /**
  * @file Shows when something happened as relative time ("5 minutes ago"),
- * with the exact moment for assistive technology and on hover.
+ * with the exact moment, in the reader's time zone, for assistive technology
+ * and on hover.
  */
 import { useLocale, useTranslations } from 'next-intl';
 
 import { formatDateTime, formatRelative } from '@/lib/format';
+import useReaderTimeZone from '@/lib/i18n/use-reader-time-zone';
 
 /**
  * Props for {@link RelativeTime}.
@@ -32,14 +34,15 @@ interface RelativeTimeProps {
 export default function RelativeTime({ date, spokenExact = false }: RelativeTimeProps) {
   const t = useTranslations('common.relativeTime');
   const locale = useLocale();
+  const timeZone = useReaderTimeZone();
   if (!date) {
     return <span>{t('never')}</span>;
   }
-  const exact = formatDateTime(date, locale);
+  const exact = formatDateTime(date, locale, timeZone);
   return (
     <>
       <time dateTime={date.toISOString()} title={exact}>
-        {formatRelative(date, locale, { justNow: t('justNow') })}
+        {formatRelative(date, locale, timeZone, { justNow: t('justNow') })}
       </time>
       {spokenExact && <span className="sr-only">, {exact}</span>}
     </>

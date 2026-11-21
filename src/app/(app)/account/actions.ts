@@ -1,6 +1,6 @@
 /**
- * @file Server actions for the Profile page of the account (name, language
- * and email verification). They go through Better Auth, so its rules apply. Their
+ * @file Server actions for the Profile page of the account (name, language,
+ * time zone and email verification). They go through Better Auth, so its rules apply. Their
  * messages are in the request's language. The Security page's actions are in
  * `./security/actions.ts`.
  */
@@ -16,19 +16,25 @@ import { auth } from '@/lib/auth';
 import field from '@/lib/form-data';
 import localeCookieOptions from '@/lib/i18n/locale-cookie';
 import { LOCALE_COOKIE } from '@/lib/i18n/locales';
+import timeZoneCookieOptions from '@/lib/i18n/time-zone-cookie';
+import { TIME_ZONE_COOKIE } from '@/lib/i18n/time-zones';
 import { withSection } from '@/lib/redirect';
 import { nameSchema } from '@/lib/validation';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
 import { assertNotSignedInAs, getActor } from '@/server/authz';
 import setOwnLocale from '@/server/people/own-locale';
+import saveFirstTimeZone, { setOwnTimeZone } from '@/server/people/own-time-zone';
 import { setOwnPicture } from '@/server/people/pictures';
 import { assertRateLimit, RATE_LIMITS } from '@/server/rate-limit';
 
-import { LANGUAGE_SECTION, VERIFIED_RETURN_PATH } from './account-messages';
+import { LANGUAGE_SECTION, TIME_ZONE_SECTION, VERIFIED_RETURN_PATH } from './account-messages';
 
 /** Where the page reloads after the language changed, to say so in it (`?language=saved`). */
 const LANGUAGE_SAVED_PATH = withSection('/account?language=saved', LANGUAGE_SECTION);
+
+/** Where the page reloads after the time zone changed, to say so in it (`?timeZone=saved`). */
+const TIME_ZONE_SAVED_PATH = withSection('/account?timeZone=saved', TIME_ZONE_SECTION);
 
 /**
  * Saves the signed-in user's language choice with their account, so emails
@@ -56,6 +62,51 @@ export async function saveLanguageAction(
       cookieStore.delete(LOCALE_COOKIE);
     }
     return { ok: true, data: LANGUAGE_SAVED_PATH };
+  });
+}
+
+/**
+ * Saves the signed-in user's time zone with their account, so every page and
+ * email shows times in it, and in this browser's time zone cookie. The form
+ * then reloads the page (the path it gets back), so every page kept alive
+ * shows the new times at once; the page says it's saved.
+ *
+ * @param _previous - The previous result (unused).
+ * @param formData - Field `timeZone`: an IANA zone, e.g. `Europe/Amsterdam`.
+ * @returns Where to reload to, or why it failed.
+ */
+export async function saveTimeZoneAction(
+  _previous: ActionResult<string> | null,
+  formData: FormData,
+): Promise<ActionResult<string>> {
+  return runAction(async () => {
+    const actor = await getActor({ allowMissingMfa: true });
+    const timeZone = await setOwnTimeZone(appContext, actor, field(formData, 'timeZone'));
+    (await cookies()).set(TIME_ZONE_COOKIE, timeZone, timeZoneCookieOptions());
+    return { ok: true, data: TIME_ZONE_SAVED_PATH };
+  });
+}
+
+/**
+ * Saves the zone the browser shows as the signed-in user's, the first time
+ * they're signed in (`SaveBrowserTimeZone`, in the navigation), and makes this
+ * browser's time zone cookie mirror the account's zone: the one saved now, or
+ * one saved before (another browser may have been first). Never overwrites a
+ * saved zone. The page loads afresh afterwards when the zone it shows differs.
+ *
+ * @param browserZone - The browser's zone, e.g. `Europe/Amsterdam`.
+ * @returns The account's zone (`null` when it still has none), or why it failed.
+ */
+export async function saveBrowserTimeZoneAction(
+  browserZone: string,
+): Promise<ActionResult<string | null>> {
+  return runAction(async () => {
+    const actor = await getActor({ allowMissingMfa: true });
+    const timeZone = await saveFirstTimeZone(appContext, actor, browserZone);
+    if (timeZone) {
+      (await cookies()).set(TIME_ZONE_COOKIE, timeZone, timeZoneCookieOptions());
+    }
+    return { ok: true, data: timeZone };
   });
 }
 

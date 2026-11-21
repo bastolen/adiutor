@@ -29,8 +29,14 @@ export interface InvitationReminderEmailProps extends EmailBaseProps {
   role: Role;
   /** Link to accept the invitation (replaces the earlier one). */
   url: string;
-  /** When the invitation expires (shown in the recipient's language, in UTC). */
+  /** When the invitation expires (shown in the recipient's language and zone, naming the zone). */
   expiresAt: Date;
+  /**
+   * The recipient's time zone, e.g. `Europe/Amsterdam`: their own when they
+   * have an account with one, else the sender's, else Adiutor's default
+   * (`recipientTimeZone`).
+   */
+  timeZone: string;
 }
 
 /**
@@ -44,6 +50,7 @@ export interface InvitationReminderEmailProps extends EmailBaseProps {
  * @param props.role - The role.
  * @param props.url - Accept link.
  * @param props.expiresAt - When it expires.
+ * @param props.timeZone - The recipient's time zone.
  * @param props.locale - The recipient's language.
  * @param props.logoSrc - Logo URL override.
  * @returns The email.
@@ -55,6 +62,7 @@ export default function InvitationReminderEmail({
   role,
   url,
   expiresAt,
+  timeZone,
   locale,
   logoSrc = undefined,
 }: InvitationReminderEmailProps) {
@@ -63,7 +71,7 @@ export default function InvitationReminderEmail({
     inviter: inviterName,
     company: companyName,
     role: translator(locale, 'roles')(`${role}.label`),
-    expires: formatDateTime(expiresAt, locale),
+    expires: formatDateTime(expiresAt, locale, timeZone, { zoneName: true }),
   };
   return (
     <EmailLayout
@@ -90,6 +98,7 @@ InvitationReminderEmail.PreviewProps = {
   role: 'client',
   url: 'https://adiutor.dev/invite/example',
   expiresAt: new Date('2026-10-25T14:05:00Z'),
+  timeZone: 'Europe/Amsterdam',
 } satisfies InvitationReminderEmailProps;
 
 /**

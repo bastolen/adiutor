@@ -14,7 +14,7 @@
  * Text from `navigation.signedInAs`.
  */
 import { Eye } from 'lucide-react';
-import { getLocale, getTranslations } from 'next-intl/server';
+import { getLocale, getTimeZone, getTranslations } from 'next-intl/server';
 
 import { SignedInAsMarker } from '@/components/ui/signed-in-as';
 import displayName from '@/lib/display-name';
@@ -39,7 +39,11 @@ export default async function SignedInAsBanner() {
   // it's request-time work, which Cache Components allows.
   // eslint-disable-next-line react-hooks/purity -- a server component renders once per request: this is how long is left at that moment
   const endsInMs = actor.signedInAs.endsAt.getTime() - Date.now();
-  const [t, locale] = await Promise.all([getTranslations('navigation.signedInAs'), getLocale()]);
+  const [t, locale, timeZone] = await Promise.all([
+    getTranslations('navigation.signedInAs'),
+    getLocale(),
+    getTimeZone(),
+  ]);
   return (
     <section
       aria-label={t('label')}
@@ -51,7 +55,7 @@ export default async function SignedInAsBanner() {
           {t('text', {
             name: displayName(actor),
             email: actor.email,
-            time: formatTime(actor.signedInAs.endsAt, locale),
+            time: formatTime(actor.signedInAs.endsAt, locale, timeZone),
           })}
         </span>
       </p>

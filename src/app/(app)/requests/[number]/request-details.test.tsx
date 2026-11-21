@@ -97,7 +97,7 @@ describe('RequestDetails', () => {
     ).toHaveAttribute('href', '/companies/adiutor-tests-alpha');
     expect(valueOf('Raised by')).toHaveTextContent('Casey Client');
     expect(valueOf('Raised by')).toHaveTextContent('You');
-    expect(valueOf('Raised')).toHaveTextContent('Nov 13, 2026, 9:00 AM UTC');
+    expect(valueOf('Raised')).toHaveTextContent('Nov 13, 2026, 9:00 AM');
     expect(valueOf('Last activity')).toHaveTextContent('5 minutes ago');
     expect(screen.queryByText('Priority')).not.toBeInTheDocument();
   });
@@ -312,7 +312,7 @@ describe('RequestDetails', () => {
     });
 
     const response = within(valueOf('First response')).getByText('2 hours after it was raised');
-    expect(response).toHaveAttribute('title', 'Nov 13, 2026, 11:00 AM UTC');
+    expect(response).toHaveAttribute('title', 'Nov 13, 2026, 11:00 AM');
     expect(response).toHaveAttribute('datetime', '2026-11-13T11:00:00.000Z');
   });
 

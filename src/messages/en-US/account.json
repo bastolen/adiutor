@@ -50,7 +50,14 @@
       "languageNotOffered": "You chose {language}, which isn't offered right now, so Adiutor uses the default language until it is.",
       "languageLabel": "Language",
       "saveLanguage": "Save language",
-      "languageSaved": "Language saved."
+      "languageSaved": "Language saved.",
+      "timeZoneTitle": "Time zone",
+      "timeZoneDescription": "Adiutor shows times in this zone on every device you sign in on, and in the emails it sends you.",
+      "timeZoneLabel": "Time zone",
+      "browserTimeZone": "This browser is set to {zone}.",
+      "useBrowserTimeZone": "Use this browser’s zone",
+      "saveTimeZone": "Save time zone",
+      "timeZoneSaved": "Time zone saved."
     },
     "messages": {
       "verificationExpired": "This verification link has expired. Send a new one.",

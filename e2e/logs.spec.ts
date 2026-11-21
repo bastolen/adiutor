@@ -8,7 +8,14 @@
 import { type Page } from '@playwright/test';
 
 import { defined } from '../src/lib/defined';
-import { PLATFORM_ADMIN, STEP_UP_MANAGER } from './support/fixtures';
+import { findCompanyId, storeAuditEvent } from './support/db';
+import {
+  CLIENT_WATCHER,
+  COMPANY_SLUG,
+  E2E_BASE_URL,
+  PLATFORM_ADMIN,
+  STEP_UP_MANAGER,
+} from './support/fixtures';
 import { adminStorageState, signIn, type StorageState } from './support/helpers';
 import { expect, test } from './support/test';
 
@@ -66,7 +73,8 @@ test.describe('as a staff Admin', () => {
     await expect(page).toHaveURL(/[?&]q=admin%40adiutor\.test/);
     await expect(auditTable(page)).toBeVisible();
 
-    // Today, in UTC as the app shows times: the sign-in is still there, and the other filters stay.
+    // Today, in the reader's zone (UTC in the tests): the sign-in is still there, and the other
+    // filters stay.
     const today = new Date().toISOString().slice(0, 10);
     await page.getByLabel('From', { exact: true }).fill(today);
     await page.getByLabel('To', { exact: true }).fill(today);
@@ -79,6 +87,29 @@ test.describe('as a staff Admin', () => {
     await page.getByRole('link', { name: 'Clear', exact: true }).click();
     await expect(page).not.toHaveURL(/[?&]from=/);
     await expect(page).toHaveURL(/[?&]group=sign-ins/);
+  });
+
+  test('the days start and end at midnight where the reader is', async ({ context, page }) => {
+    // The cookie that mirrors the account's zone, as if the Admin's were Tokyo's (no daylight saving).
+    await context.addCookies([
+      { name: 'adiutor.time-zone', value: 'Asia/Tokyo', url: E2E_BASE_URL },
+    ]);
+    // 20:00 in UTC on March 4 is 5:00 on March 5 in Tokyo; nothing else is that old.
+    await storeAuditEvent({
+      action: 'role_changed',
+      actorEmail: PLATFORM_ADMIN.email,
+      targetEmail: CLIENT_WATCHER.email,
+      companyId: await findCompanyId(COMPANY_SLUG),
+      details: { from: 'client', to: 'watcher' },
+      at: new Date('2020-03-04T20:00:00Z'),
+    });
+
+    await page.goto('/admin/logs?from=2020-03-05&to=2020-03-05');
+    // The day in Tokyo, with the time there on hover (the row shows it once per screen width).
+    const shown = auditTable(page).getByText('Mar 5, 2020').filter({ visible: true }).first();
+    await expect(shown).toHaveAttribute('title', 'Mar 5, 2020, 5:00 AM');
+    await page.goto('/admin/logs?from=2020-03-04&to=2020-03-04');
+    await expect(page.getByText('Nothing in this selection')).toBeVisible();
   });
 
   test('a range with nothing in it, or the wrong way round, says so', async ({ page }) => {

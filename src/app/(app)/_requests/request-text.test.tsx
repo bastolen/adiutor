@@ -154,9 +154,30 @@ describe('RequestText', () => {
 
     await user.click(screen.getByRole('button', { name: 'Copy code' }));
 
-    // The day is the one it was in UTC, as every date in Adiutor.
+    // The tests read in UTC unless they say otherwise.
     expect(await navigator.clipboard.readText()).toBe(
       '# Source: https://adiutor.test/requests/142\n# Written by Sam Support on Nov 18, 2026\nnpm test',
+    );
+  });
+
+  it('gives the day it was in the reader’s zone in that note', async () => {
+    const user = userEvent.setup();
+    // 23:30 in UTC is half past midnight on the next day in Amsterdam.
+    renderInLocale(
+      'en-US',
+      <RequestText
+        id="text"
+        text={{ text: '```bash\nnpm test\n```', format: 'markdown' }}
+        source={SOURCE}
+        names={NAMES}
+      />,
+      'Europe/Amsterdam',
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Copy code' }));
+
+    expect(await navigator.clipboard.readText()).toContain(
+      'Written by Sam Support on Nov 19, 2026',
     );
   });
 

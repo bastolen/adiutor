@@ -1,7 +1,7 @@
 /**
  * @file next-intl's configuration for each request (loaded through the
  * plugin in `next.config.ts`): the request's language, its messages and
- * the time zone dates are shown in.
+ * the time zone dates are shown in (`requestTimeZone`).
  *
  * Reading the language reads the request's cookies. That costs nothing
  * extra: every page already renders per request for the Content Security
@@ -17,15 +17,18 @@ import { isLocale } from './locales';
 import { onMessageError } from './message-errors';
 import { messagesFor } from './messages';
 import requestLocale from './request-locale';
-import { TIME_ZONE } from './time-zone';
+import requestTimeZone from './request-time-zone';
 
 export default getRequestConfig(async ({ locale: asked }) => {
   // `getTranslations({ locale })` asks for a language explicitly; otherwise the request's.
-  const locale = isLocale(asked) ? asked : await requestLocale();
+  const [locale, timeZone] = await Promise.all([
+    isLocale(asked) ? asked : requestLocale(),
+    requestTimeZone(),
+  ]);
   return {
     locale,
     messages: messagesFor(locale),
-    timeZone: TIME_ZONE,
+    timeZone,
     onError: onMessageError,
   };
 });

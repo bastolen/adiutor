@@ -101,6 +101,13 @@ const DAY = 24 * 60 * 60 * 1000;
 /** The staff name in the seeded data. */
 const STAFF_NAME = 'Adiutor Tests';
 
+/**
+ * Adiutor's default time zone in the dev data, and the zone of every seeded
+ * account except the developer's own Admin, whose browser saves theirs on
+ * their first visit, as it would for anyone new.
+ */
+const DEV_TIME_ZONE = 'Europe/Amsterdam';
+
 /** The domain of the seeded test accounts, which `--admin-mail` can't use. */
 const TEST_DOMAIN = '@adiutor.test';
 
@@ -237,6 +244,7 @@ async function main(): Promise<number> {
        * @param options.twoFactor - Whether two-step verification is on.
        * @param options.lastActiveMinutesAgo - When they were last active, or `null` for never.
        * @param options.deactivated - Whether the account is deactivated.
+       * @param options.timeZone - Their saved time zone, or `null` for none yet.
        * @returns Their ID.
        */
       const addUser = async (
@@ -248,12 +256,14 @@ async function main(): Promise<number> {
           twoFactor = false,
           lastActiveMinutesAgo = 60,
           deactivated = false,
+          timeZone = DEV_TIME_ZONE,
         }: {
           password?: boolean;
           verified?: boolean;
           twoFactor?: boolean;
           lastActiveMinutesAgo?: number | null;
           deactivated?: boolean;
+          timeZone?: string | null;
         } = {},
       ) => {
         const created = firstRow(
@@ -270,6 +280,7 @@ async function main(): Promise<number> {
                   ? null
                   : new Date(Date.now() - lastActiveMinutesAgo * 60_000),
               deactivatedAt: deactivated ? daysFromNow(-5) : null,
+              timeZone,
             })
             .returning({ id: schema.user.id }),
           'the new user',
@@ -333,7 +344,9 @@ async function main(): Promise<number> {
       };
 
       // The staff name, and the companies.
-      await tx.insert(schema.staffSettings).values({ name: STAFF_NAME });
+      await tx
+        .insert(schema.staffSettings)
+        .values({ name: STAFF_NAME, defaultTimeZone: DEV_TIME_ZONE });
       const alpha = await addCompany('Adiutor Tests Alpha', 'adiutor-tests-alpha');
       const beta = await addCompany('Adiutor Tests Beta', 'adiutor-tests-beta');
       const gamma = await addCompany('Adiutor Tests Gamma', 'adiutor-tests-gamma', true);
@@ -345,6 +358,8 @@ async function main(): Promise<number> {
         const ownAdmin = await addUser(adminMail, nameFromEmail(adminMail), {
           password: false,
           lastActiveMinutesAgo: null,
+          // Their browser saves theirs the first time they sign in.
+          timeZone: null,
         });
         await addToStaff(ownAdmin, 'platform_admin');
       }

@@ -1,6 +1,6 @@
 /**
  * @file The staff page, served at `/admin/staff`: the staff name, Adiutor's
- * languages (the default and the ones it offers), the prefix of request numbers and its people (staff), with invitations and
+ * languages (the default and the ones it offers), its default time zone, the prefix of request numbers and its people (staff), with invitations and
  * invite links to join it, each sortable and paginated. Platform Admins only (`staff:manage`).
  */
 import { getTranslations } from 'next-intl/server';
@@ -18,6 +18,7 @@ import { Table, Td, Th, Tr } from '@/components/ui/table';
 import { PLATFORM_ROLES, roleOptions } from '@/lib/authz/roles';
 import displayName from '@/lib/display-name';
 import ClientMessages from '@/lib/i18n/client-messages';
+import { timeZoneOptions } from '@/lib/i18n/time-zones';
 import { INVITATION_VALID_DAYS } from '@/lib/invitation-lifetimes';
 import type { SearchParams } from '@/lib/search-params';
 import { confirmationWindow } from '@/lib/sign-in/confirm-url';
@@ -39,6 +40,7 @@ import InviteLinksCard from '../../_people/invite-links-card';
 import PersonCell from '../../_people/person-cell';
 import RoleSelect from '../../_people/role-select';
 import { changeStaffRoleAction, removeFromStaffAction } from '../../_people/staff-actions';
+import DefaultTimeZoneForm from './default-time-zone-form';
 import LanguagesForm from './languages-form';
 import RequestPrefixForm from './request-prefix-form';
 import RequestTypesCard from './request-types-card';
@@ -90,6 +92,7 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
       namespaces={[
         'admin.staff.name',
         'admin.staff.languages',
+        'admin.staff.timeZone',
         'admin.staff.requestNumbers',
         'admin.staff.requestTypes',
         'people',
@@ -109,6 +112,13 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
 
         <Card title={t('languages.title')} description={t('languages.description')}>
           <LanguagesForm defaultLocale={settings.defaultLocale} offered={settings.offeredLocales} />
+        </Card>
+
+        <Card title={t('timeZone.title')} description={t('timeZone.description')}>
+          <DefaultTimeZoneForm
+            defaultTimeZone={settings.defaultTimeZone}
+            options={timeZoneOptions(new Date(), settings.defaultTimeZone)}
+          />
         </Card>
 
         <Card title={t('requestNumbers.title')} description={t('requestNumbers.description')}>

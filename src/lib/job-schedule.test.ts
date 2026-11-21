@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import describeSchedule from './job-schedule';
+import describeSchedule, { nextRunOf } from './job-schedule';
 
 describe('describeSchedule', () => {
   it('reads every few minutes', () => {
@@ -34,5 +34,33 @@ describe('describeSchedule', () => {
     ].forEach((expression) => {
       expect(describeSchedule(expression)).toEqual({ kind: 'cron', expression });
     });
+  });
+});
+
+describe('nextRunOf', () => {
+  const now = new Date('2026-11-21T10:20:30Z');
+
+  it('gives the next run of an hourly schedule, this hour or the next', () => {
+    expect(nextRunOf({ kind: 'hourly', minute: 45 }, now)).toEqual(
+      new Date('2026-11-21T10:45:00Z'),
+    );
+    expect(nextRunOf({ kind: 'hourly', minute: 10 }, now)).toEqual(
+      new Date('2026-11-21T11:10:00Z'),
+    );
+  });
+
+  it('gives the next run of a daily schedule, today or tomorrow, in UTC', () => {
+    expect(nextRunOf({ kind: 'daily', hour: 22, minute: 0 }, now)).toEqual(
+      new Date('2026-11-21T22:00:00Z'),
+    );
+    expect(nextRunOf({ kind: 'daily', hour: 3, minute: 15 }, now)).toEqual(
+      new Date('2026-11-22T03:15:00Z'),
+    );
+  });
+
+  it('never gives the moment it looks from', () => {
+    expect(
+      nextRunOf({ kind: 'daily', hour: 3, minute: 15 }, new Date('2026-11-21T03:15:00Z')),
+    ).toEqual(new Date('2026-11-22T03:15:00Z'));
   });
 });

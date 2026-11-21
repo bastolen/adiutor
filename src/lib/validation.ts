@@ -17,6 +17,7 @@ import { COMPANY_ROLES, isRole, PLATFORM_ROLES } from './authz/roles';
 import { hasControlCharacter, hasHiddenCharacter, hasVisibleCharacter } from './character-rules';
 import { FOLLOW_DEFAULT, LOCALES } from './i18n/locales';
 import type { Messages } from './i18n/messages';
+import { isTimeZone } from './i18n/time-zones';
 import {
   IMPERSONATION_REASON_MAX_LENGTH,
   MAX_PASSWORD_LENGTH,
@@ -98,6 +99,15 @@ export const languageSettingsSchema = z.object({
 export const languageChoiceSchema = z.enum([FOLLOW_DEFAULT, ...LOCALES], {
   error: 'validation.locale' satisfies ValidationMessageKey,
 });
+
+/**
+ * A time zone Adiutor accepts (`isTimeZone`: an IANA name the runtime knows,
+ * or `UTC`), e.g. from the account's Time zone card or the staff page's
+ * default zone.
+ */
+export const timeZoneSchema = z
+  .string()
+  .refine(isTimeZone, { error: 'validation.timeZone' satisfies ValidationMessageKey });
 
 /** A company role (Admin, Client or Watcher), e.g. from a member's role select. */
 export const companyRoleSchema = z.enum(COMPANY_ROLES, { error: CHOOSE_COMPANY_ROLE_MESSAGE });

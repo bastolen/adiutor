@@ -22,6 +22,7 @@ import { mayUseInviteLinks } from '@/lib/authz/permissions';
 import { type PlatformRole, type Role } from '@/lib/authz/roles';
 import { firstRow } from '@/lib/defined';
 import { sendFailureOf } from '@/lib/email';
+import { isTimeZone } from '@/lib/i18n/time-zones';
 import { isInviteLinkValidity } from '@/lib/invitation-lifetimes';
 import { generateToken, hashToken } from '@/lib/sign-in/tokens';
 import { type Paged, resolveTableState, type TableState } from '@/lib/tables/table-state';
@@ -583,14 +584,15 @@ export async function claimInviteLink(
     if (!usable) {
       return null;
     }
-    // The creator before the link: user rows come before invite links in the lock order.
-    if (usable.createdBy) {
-      await tx
-        .select({ id: user.id })
-        .from(user)
-        .where(eq(user.id, usable.createdBy))
-        .for('key share');
-    }
+    // The creator before the link: user rows come before invite links in the lock order. Their
+    // zone is the invitation's (they sent it), for the reminder's expiry.
+    const [creator] = usable.createdBy
+      ? await tx
+          .select({ timeZone: user.timeZone })
+          .from(user)
+          .where(eq(user.id, usable.createdBy))
+          .for('key share')
+      : [];
     const used = await useLink(tx, token, email);
     if (!used) {
       return null;
@@ -618,6 +620,7 @@ export async function claimInviteLink(
       fromLink: true,
       baseUrl: ctx.baseUrl,
       locale,
+      timeZone: creator && isTimeZone(creator.timeZone) ? creator.timeZone : null,
     });
     // `null` when it created no invitation: the link is used up, pointing at nothing.
     await tx

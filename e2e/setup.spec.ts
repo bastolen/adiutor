@@ -5,17 +5,20 @@
  */
 
 import expectAccessible from './support/axe';
-import { removeStaffSettings } from './support/db';
+import { defaultTimeZoneNow, removeStaffSettings, savedTimeZoneOf } from './support/db';
 import { STAFF_NAME } from './support/fixtures';
 import seedTestDatabase, { emptyTestDatabase } from './support/seed';
 import { expect, test } from './support/test';
 
 test.describe('first run', () => {
+  /** Set up from a browser in Amsterdam, whose zone becomes Adiutor's default and the Admin's. */
+  test.use({ timezoneId: 'Europe/Amsterdam' });
+
   test.afterAll(async () => {
     await seedTestDatabase();
   });
 
-  test('sign-in redirects to setup, which names the staff, sets the default language and creates its Admin', async ({
+  test('sign-in redirects to setup, which names the staff, sets the default language and zone and creates its Admin', async ({
     browser,
     page,
   }) => {
@@ -60,6 +63,14 @@ test.describe('first run', () => {
     await expect(nav.getByRole('link', { name: 'Users' })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Companies' })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Staff' })).toHaveAttribute('href', '/admin/staff');
+
+    // The browser's zone is Adiutor's default zone and the Admin's own, which their Profile shows.
+    expect(await defaultTimeZoneNow()).toBe('Europe/Amsterdam');
+    expect(await savedTimeZoneOf('setup@adiutor.test')).toBe('Europe/Amsterdam');
+    await page.goto('/account');
+    await expect(page.getByRole('combobox', { name: 'Time zone' })).toContainText(
+      'Europe/Amsterdam',
+    );
 
     // Setup is now disabled.
     await page.goto('/setup');

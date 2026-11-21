@@ -47,10 +47,7 @@ describe('EditedNote', () => {
       editedAt: new Date('2026-11-14T10:30:00Z'),
     });
 
-    expect(screen.getByText('Edited')).toHaveAttribute(
-      'title',
-      'Edited Nov 14, 2026, 10:30 AM UTC',
-    );
+    expect(screen.getByText('Edited')).toHaveAttribute('title', 'Edited Nov 14, 2026, 10:30 AM');
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
@@ -86,12 +83,10 @@ describe('EditedNote', () => {
 
     const dialog = screen.getByRole('dialog', { name: 'Earlier versions' });
     const versions = [...dialog.querySelectorAll('li')].map((item) => item.textContent);
-    expect(versions[0]).toContain('Sam Support changed this on Nov 14, 2026, 10:30 AM UTC.');
+    expect(versions[0]).toContain('Sam Support changed this on Nov 14, 2026, 10:30 AM.');
     expect(versions[0]).toContain('Second.');
     // Someone without a name, or whose account is gone, is named by their side.
-    expect(versions[1]).toContain(
-      'Adiutor Tests Alpha changed this on Nov 13, 2026, 12:00 PM UTC.',
-    );
+    expect(versions[1]).toContain('Adiutor Tests Alpha changed this on Nov 13, 2026, 12:00 PM.');
     expect(versions[1]).toContain('First.');
   });
 

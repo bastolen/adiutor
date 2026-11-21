@@ -8,7 +8,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { backdateMfaConfirmation, setDefaultLocale } from './support/db';
+import { backdateMfaConfirmation, setDefaultLocale, setDefaultTimeZone } from './support/db';
 import {
   COMPANY_SLUG,
   E2E_BASE_URL,
@@ -216,6 +216,28 @@ test("an Admin changes Adiutor's default language, which visitors without a choi
   } finally {
     // Put it back for the other tests, even if a step failed.
     await setDefaultLocale('en-US');
+  }
+});
+
+test("an Admin changes Adiutor's default time zone", async ({ page }) => {
+  await signIn(page, PLATFORM_ADMIN);
+  await page.goto('/admin/staff');
+  try {
+    const select = page.getByRole('combobox', { name: 'Default time zone' });
+    await expect(select).toContainText('UTC');
+    await select.click();
+    await page.getByRole('option', { name: /^Asia\/Tokyo/ }).click();
+    await page.getByRole('button', { name: 'Save default time zone' }).click();
+    await expect(toasts(page)).toContainText('Default time zone saved.');
+    // The select shows the zone just saved, not the one from before the save.
+    await expect(select).toContainText('Asia/Tokyo');
+    await page.reload();
+    await expect(page.getByRole('combobox', { name: 'Default time zone' })).toContainText(
+      'Asia/Tokyo',
+    );
+  } finally {
+    // Put it back for the other tests, even if a step failed.
+    await setDefaultTimeZone('UTC');
   }
 });
 

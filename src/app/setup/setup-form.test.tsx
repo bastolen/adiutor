@@ -9,10 +9,14 @@ import { defined } from '@/lib/defined';
 
 import SetupForm from './setup-form';
 
-/** Mocked server action. */
-const { setupAction } = vi.hoisted(() => ({ setupAction: vi.fn() }));
+/** Mocked server action, and the browser's zone. */
+const { setupAction, useBrowserTimeZone } = vi.hoisted(() => ({
+  setupAction: vi.fn(),
+  useBrowserTimeZone: vi.fn<() => string | null>(),
+}));
 
 vi.mock('./actions', () => ({ default: setupAction }));
+vi.mock('@/lib/i18n/use-browser-time-zone', () => ({ default: useBrowserTimeZone }));
 
 /**
  * Fills in the form with test data and submits it.
@@ -30,9 +34,10 @@ function submitForm() {
 describe('SetupForm', () => {
   beforeEach(() => {
     setupAction.mockReset();
+    useBrowserTimeZone.mockReset().mockReturnValue('Europe/Amsterdam');
   });
 
-  it('submits the staff name and the first Admin', async () => {
+  it('submits the staff name and the first Admin, with the browser’s time zone', async () => {
     setupAction.mockResolvedValue({ ok: true });
     render(<SetupForm />);
     submitForm();
@@ -46,7 +51,19 @@ describe('SetupForm', () => {
       name: 'Setup Admin',
       email: 'setup@adiutor.test',
       password: 'setup-password-1',
+      timeZone: 'Europe/Amsterdam',
     });
+  });
+
+  it('sends no zone when the browser reports none it accepts', async () => {
+    useBrowserTimeZone.mockReturnValue(null);
+    setupAction.mockResolvedValue({ ok: true });
+    render(<SetupForm />);
+    submitForm();
+
+    await waitFor(() => expect(setupAction).toHaveBeenCalledTimes(1));
+    const formData = defined(setupAction.mock.calls[0], 'the first call')[1] as FormData;
+    expect(formData.get('timeZone')).toBe('');
   });
 
   it("asks for Adiutor's default language, the page's to begin with", async () => {

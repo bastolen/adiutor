@@ -20,6 +20,12 @@ configurations in VS Code, which turn the time limit off (see
   (word order, plurals), render with `renderInLocale(locale, ui)` from `tests/i18n/render.tsx`, or
   translate outside React with `translator(locale, namespace)`. End-to-end tests run in English
   (US) (`locale` in `playwright.config.ts`).
+- **Time zones:** unit tests show times in UTC: `getTimeZone()`, `useTimeZone()` and
+  `requestTimeZone()` give `testTimeZone`, and `renderInLocale(locale, ui, timeZone)` renders in
+  another zone. End-to-end browsers, every seeded account and Adiutor's default zone are in UTC too
+  (`E2E_TIME_ZONE`, the browsers' `timezoneId`), so an account a spec creates saves the zone its page
+  already shows and its first visit doesn't load the page again; a spec about zones sets its own
+  (`test.use({ timezoneId })`).
 - **The Markdown editor** never loads in a unit test (`vitest.setup.ts` makes its module fail to
   load), so a Markdown field stays the plain text field it starts as and a test types into it as
   into any field. Typing in the editor needs a real browser: the end-to-end tests do that, waiting

@@ -17,6 +17,7 @@ import IconRow from '@/components/ui/icon-row';
 import RowAction from '@/components/ui/row-action';
 import formatDate from '@/lib/format';
 import { type Locale } from '@/lib/i18n/locales';
+import useReaderTimeZone from '@/lib/i18n/use-reader-time-zone';
 import { type OAuthProvider, PROVIDER_LABELS, providerList } from '@/lib/sign-in/oauth-providers';
 import type { ConnectedProvider } from '@/server/auth/accounts';
 
@@ -35,14 +36,16 @@ const SECTION = 'connected-accounts';
  * @param t - Translates the `account` namespace.
  * @param link - The connected account.
  * @param locale - The reader's language, for the date.
+ * @param timeZone - The reader's time zone, for the date.
  * @returns The description.
  */
 function describeLink(
   t: ReturnType<typeof useTranslations<'account'>>,
   link: ConnectedProvider,
   locale: Locale,
+  timeZone: string,
 ): string {
-  const date = formatDate(link.connectedAt, locale);
+  const date = formatDate(link.connectedAt, locale, timeZone);
   if (link.confirmed) {
     return t('security.connected.connectedOn', { date });
   }
@@ -74,6 +77,7 @@ interface AccountRow {
  * @param link - The connected account.
  * @param dated - Whether to say when it was connected.
  * @param locale - The reader's language, for the date.
+ * @param timeZone - The reader's time zone, for the date.
  * @returns E.g. "GitHub (octocat)", "GitHub (connected Oct 23, 2026)", or "GitHub".
  */
 function accountLabel(
@@ -81,11 +85,12 @@ function accountLabel(
   link: ConnectedProvider,
   dated: boolean,
   locale: Locale,
+  timeZone: string,
 ): string {
   const provider = PROVIDER_LABELS[link.provider];
   const account = link.accountName;
   if (dated) {
-    const date = formatDate(link.connectedAt, locale);
+    const date = formatDate(link.connectedAt, locale, timeZone);
     return account
       ? t('security.connected.accountNamedDated', { provider, account, date })
       : t('security.connected.accountDated', { provider, date });
@@ -165,6 +170,7 @@ export default function ConnectedAccountsCard({
 }: ConnectedAccountsCardProps) {
   const t = useTranslations('account');
   const locale = useLocale();
+  const timeZone = useReaderTimeZone();
   const { askToConfirm } = useRecentConfirmation(SECTION);
 
   /**
@@ -239,7 +245,7 @@ export default function ConnectedAccountsCard({
           const label = PROVIDER_LABELS[provider];
           const Icon = PROVIDER_ICONS[provider];
           // Accounts are told apart by their name at the provider, and when needed by date.
-          const name = link ? accountLabel(t, link, dated, locale) : label;
+          const name = link ? accountLabel(t, link, dated, locale, timeZone) : label;
           // The row's Connect or Confirm button, when it has one.
           const addBlocked = connectOrConfirmBlocked(link);
           const addDescribedBy = connectNote && addBlocked ? connectNoteId : undefined;
@@ -295,7 +301,9 @@ export default function ConnectedAccountsCard({
                 )
               }
             >
-              {link ? describeLink(t, link, locale) : t('security.connected.notConnected')}
+              {link
+                ? describeLink(t, link, locale, timeZone)
+                : t('security.connected.notConnected')}
             </IconRow>
           );
         })}

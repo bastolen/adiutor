@@ -12,8 +12,9 @@ import RowAction from '@/components/ui/row-action';
 import TextLink from '@/components/ui/text-link';
 import type { JobRunStatus } from '@/db/schema';
 import { formatTime } from '@/lib/format';
+import useReaderTimeZone from '@/lib/i18n/use-reader-time-zone';
 import { isJobName, isJobSummaryKey } from '@/lib/job-names';
-import describeSchedule from '@/lib/job-schedule';
+import describeSchedule, { nextRunOf } from '@/lib/job-schedule';
 
 import { pauseJobAction, resumeJobAction } from './actions';
 
@@ -122,8 +123,22 @@ export function PauseToggle({
 }
 
 /**
- * A recurring job's schedule in words ("Every 5 minutes", "Every day at
- * 3:15 AM UTC"), or the cron expression when words can't say it.
+ * The minute past the hour of a moment in a zone, e.g. 40 for 3:40 in India
+ * when it's 10 past in UTC.
+ *
+ * @param at - The moment.
+ * @param timeZone - The zone.
+ * @returns The minute, 0 to 59.
+ */
+function minuteIn(at: Date, timeZone: string): number {
+  return Number(new Intl.DateTimeFormat('en-US', { timeZone, minute: 'numeric' }).format(at));
+}
+
+/**
+ * A recurring job's schedule in words, in the reader's zone ("Every 5
+ * minutes", "Every day at 4:15 AM"), or the cron expression, marked as UTC,
+ * when words can't say it. The hour and minute come from the schedule's next
+ * run, so they're right for the reader today, daylight saving included.
  *
  * @param props - Component props.
  * @param props.schedule - The cron expression, in UTC.
@@ -132,15 +147,18 @@ export function PauseToggle({
 export function ScheduleText({ schedule }: { schedule: string }) {
   const t = useTranslations('admin.jobs');
   const locale = useLocale();
+  const timeZone = useReaderTimeZone();
   const words = describeSchedule(schedule);
   const values = { kind: words.kind, minutes: 0, minute: 0, time: '', expression: '' };
   switch (words.kind) {
     case 'minutes':
       return <>{t('schedule', { ...values, minutes: words.minutes })}</>;
-    case 'hourly':
-      return <>{t('schedule', { ...values, minute: words.minute })}</>;
+    case 'hourly': {
+      const minute = minuteIn(nextRunOf(words, new Date()), timeZone);
+      return <>{t('schedule', { ...values, minute })}</>;
+    }
     case 'daily': {
-      const time = formatTime(new Date(Date.UTC(2026, 0, 1, words.hour, words.minute)), locale);
+      const time = formatTime(nextRunOf(words, new Date()), locale, timeZone);
       return <>{t('schedule', { ...values, time })}</>;
     }
     default:

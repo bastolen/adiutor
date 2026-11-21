@@ -14,6 +14,7 @@ import { type AuthHookContext, safely, auditContext } from './hook-context';
 import rememberLanguage from './language';
 import { recordSignIn } from './session-hooks';
 import { markSessionVerified } from './session-records';
+import rememberTimeZone from './time-zone';
 
 /**
  * Checks whether a password sign-in stopped to ask for a code: Better Auth's
@@ -74,6 +75,7 @@ export async function afterPasswordSignIn(ctx: AuthHookContext): Promise<void> {
       }
     });
     await safely('remember the language', () => rememberLanguage(ctx, created.userId));
+    await safely('remember the time zone', () => rememberTimeZone(ctx, created.userId));
     return;
   }
   if (!startedCodeStep(returned)) {

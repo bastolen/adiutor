@@ -5,7 +5,8 @@ invitations. Back to the [documentation](README.md).
 
 Adiutor is run by its **staff** (the people who handle requests), who add **companies** (the
 customers, who raise requests). Staff have a **platform role** on their account (`user.platform_role`),
-and the name users see and Adiutor's default language live in the single-row `staff_settings` table
+and the name users see and Adiutor's default language and time zone live in the single-row
+`staff_settings` table
 (`src/db/schema/staff.ts`).
 **Users** can belong to several companies, with one company role (Admin, Client or Watcher) in
 each. Staff can also be members of companies. What each role may do with requests is in
@@ -130,8 +131,9 @@ Admins and Managers who aren't members can still add themselves with any role, a
 - **Staff page** (`/admin/staff`, `staff:manage`, Admins): change the name shown to users (in
   invitations and wherever users see who's helping them), the languages Adiutor offers and its
   default language (for everyone who hasn't chosen one; see
-  [Offered languages](i18n.md#offered-languages)), the
-  prefix of request numbers and the request types (see
+  [Offered languages](i18n.md#offered-languages)), its time zone (for signed-out pages and
+  everyone whose zone isn't known yet; see [Time zones](i18n.md#time-zones)), the prefix of request
+  numbers and the request types (see
   [Requests](requests.md#types-and-priorities)), see the staff with their role, when
   they were last active and when their account was created ("Joined"), change roles, remove people from staff (their account stays), and invite
   staff by email or single-use invite link. Staff invitations and links have no company
@@ -142,8 +144,8 @@ Admins and Managers who aren't members can still add themselves with any role, a
   was about and which company (each a link), when, and the browser and IP address it came from. It
   can be searched by a person's name or email or a company's name, filtered to a group of events
   (Sign-ins, Sign-in methods, Accounts, People, Companies and staff, Background jobs; `AUDIT_GROUPS` in
-  `src/lib/audit-actions.ts`, named by `audit.groups.*`) and limited to a range of days (UTC, both
-  days included). Admins (`errors:view`) also get an **Errors** tab (`/admin/logs/errors`): look up
+  `src/lib/audit-actions.ts`, named by `audit.groups.*`) and limited to a range of days (the reader's
+  days, from midnight to midnight in their time zone, both days included; `parseDayRange`). Admins (`errors:view`) also get an **Errors** tab (`/admin/logs/errors`): look up
   the reference an error page showed, typed in any case, with or without the dash, and see the
   errors of the last 7 days, newest first (see [Looking up an error
   reference](deploying.md#looking-up-an-error-reference)). Admins and Managers (`jobs:view`) also get
@@ -259,7 +261,9 @@ email address; a first password chosen that way sends no security email.
 On a fresh install (no `staff_settings` row and no accounts), `/auth` redirects to
 `/setup`. There, the first person chooses the name users see and Adiutor's default language (the
 setup page's own to begin with) and becomes the first staff Admin, keeping the language they set up
-in for themselves, or starting on Default when it's the default they chose (or use `pnpm setup:platform`, with `--default-language`); a new account's email
+in for themselves, or starting on Default when it's the default they chose; the browser's time zone
+becomes Adiutor's default zone and the Admin's own (or use `pnpm setup:platform`, with
+`--default-language` and `--time-zone`); a new account's email
 address counts as verified. Until then `/setup` is
 open to anyone who can reach the site, so complete it right after deploying. Once set up, or once
 any account exists, `/setup` shows the not-found page, so it can never promote an existing account.

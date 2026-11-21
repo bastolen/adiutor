@@ -35,7 +35,7 @@ detail, one topic each.
 - [Design, accessibility and dark mode](design.md): the component library, tables, colours,
   keyboard support, dark mode and the brand assets.
 - [Languages](i18n.md): English (US), Dutch and Spanish, how the language is chosen, the
-  translation catalogues, writing messages, formatting, the checks and adding a language.
+  translation catalogues, writing messages, time zones, formatting, the checks and adding a language.
 
 ## Running it
 

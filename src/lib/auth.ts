@@ -446,6 +446,14 @@ export const auth = betterAuth({
        */
       locale: { type: [...LOCALES], required: false, input: false },
       /**
+       * The zone the user sees times in (an IANA name, `isTimeZone`): their
+       * browser's, saved the first time they're signed in
+       * (`saveFirstTimeZone`), then what they choose on their account's
+       * Profile page (`setOwnTimeZone`). Empty until that first visit. Never
+       * set through Better Auth's endpoints.
+       */
+      timeZone: { type: 'string', required: false, input: false },
+      /**
        * When the user dismissed the dashboard's recommendation to add a
        * passkey or two-step verification, so it stays hidden on every device.
        * Empty until then; never set through Better Auth's endpoints

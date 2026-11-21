@@ -4,7 +4,7 @@
  */
 import { Building2, ChevronRight, Plus } from 'lucide-react';
 import Link from 'next/link';
-import { getLocale, getTranslations } from 'next-intl/server';
+import { getLocale, getTimeZone, getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import Avatar from '@/components/ui/avatar';
@@ -46,7 +46,7 @@ export const generateMetadata = globalPermissionMetadata('company:view', 'admin.
  * @returns The page content.
  */
 async function CompanyList({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const locale = await getLocale();
+  const [locale, timeZone] = await Promise.all([getLocale(), getTimeZone()]);
   const t = await getTranslations('admin.companies');
   const actor = await requireGlobalPermission('company:view');
   const params = await searchParams;
@@ -136,7 +136,9 @@ async function CompanyList({ searchParams }: { searchParams: Promise<SearchParam
                           </span>
                           {/* Below tablet width, when it was added and the status go here. */}
                           <span className="text-xs text-muted-foreground md:hidden">
-                            {t('addedOn', { date: formatDate(company.createdAt, locale) })}
+                            {t('addedOn', {
+                              date: formatDate(company.createdAt, locale, timeZone),
+                            })}
                           </span>
                           <span className="mt-1 md:hidden">{status}</span>
                         </div>
@@ -144,7 +146,7 @@ async function CompanyList({ searchParams }: { searchParams: Promise<SearchParam
                     </Td>
                     <Td className="hidden md:table-cell">{status}</Td>
                     <Td className="hidden text-muted-foreground md:table-cell">
-                      {formatDate(company.createdAt, locale)}
+                      {formatDate(company.createdAt, locale, timeZone)}
                     </Td>
                     <Td className="w-10 text-right">
                       <ChevronRight

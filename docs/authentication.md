@@ -379,8 +379,10 @@ Account pages, two tabs:
 
 ### Profile (`/account`)
 
-Change your name and your language (saved with the account, so emails reach you in it and every
-browser you sign in on shows it; see [Languages](i18n.md#how-the-language-is-chosen)), and verify
+Change your name, your language (saved with the account, so emails reach you in it and every
+browser you sign in on shows it; see [Languages](i18n.md#how-the-language-is-chosen)) and your time
+zone (pick one, or this browser's, which set it the first time; see
+[Time zones](i18n.md#time-zones)), and verify
 your email with a link sent by email (registered accounts start unverified). A summary shows whether your sign-in is
 protected, and **Recent activity** lists the last 20 things that happened to your account
 (sign-ins and failed attempts, sign-in method and security changes, memberships and role

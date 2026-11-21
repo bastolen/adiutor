@@ -26,8 +26,13 @@ import renderEmail from './render';
 export interface SecurityNoticeEmailProps extends EmailBaseProps {
   /** What changed. */
   kind: SecurityNoticeKind;
-  /** When it changed (shown in the recipient's language, in UTC). */
+  /** When it changed (shown in the recipient's language and zone, naming the zone). */
   when: Date;
+  /**
+   * The recipient's time zone, e.g. `Europe/Amsterdam`: their own, else
+   * Adiutor's default (`recipientTimeZone`).
+   */
+  timeZone: string;
   /** The device it was done from, in the recipient's language, e.g. "Firefox on Windows", if known. */
   device?: string | null;
   /** The IP address it was done from, if known. */
@@ -137,6 +142,7 @@ function securityNoticeSubject(
  * @param props.appUrl - Public app URL.
  * @param props.kind - What changed.
  * @param props.when - When.
+ * @param props.timeZone - The recipient's time zone.
  * @param props.device - From which device.
  * @param props.ip - From which IP address.
  * @param props.provider - Provider name.
@@ -152,6 +158,7 @@ export default function SecurityNoticeEmail({
   appUrl,
   kind,
   when,
+  timeZone,
   device = null,
   ip = null,
   provider = undefined,
@@ -185,7 +192,7 @@ export default function SecurityNoticeEmail({
       <EmailHeading>{t(`${kind}.heading`, values)}</EmailHeading>
       <EmailParagraph>{t(`${kind}.body`, values)}</EmailParagraph>
       <EmailNote>
-        {t('when', { when: formatDateTime(when, locale) })}
+        {t('when', { when: formatDateTime(when, locale, timeZone, { zoneName: true }) })}
         {from && (
           <>
             <br />
@@ -208,6 +215,7 @@ SecurityNoticeEmail.PreviewProps = {
   ...PREVIEW_BASE,
   kind: 'two_factor_disabled',
   when: new Date('2026-10-23T14:05:00Z'),
+  timeZone: 'Europe/Amsterdam',
   device: 'Firefox on Windows',
   ip: '203.0.113.7',
 } satisfies SecurityNoticeEmailProps;

@@ -13,7 +13,9 @@ runtime errors still show in its overlay.
 For scripted deployments, `pnpm setup:platform --staff-name "Adiutor" --email you@adiutor.dev --name
 "Your Name"` does the same from the command line (the account then signs in with an email link).
 Add `--default-language nl-NL` (or `es-ES`) to choose Adiutor's default language; it's English (US)
-otherwise.
+otherwise. Add `--time-zone Europe/Amsterdam` to choose Adiutor's default time zone, which a new
+Admin gets as their own too; it's UTC otherwise, and the Admin's browser saves their zone on their
+first visit. The web form takes the zone from the setting-up browser.
 
 ## Migrations
 

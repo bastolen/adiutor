@@ -88,6 +88,7 @@
     "requestPriority": "Kies een prioriteit.",
     "requestStatus": "Kies een status.",
     "requestPrefix": "Gebruik één tot vijf letters of cijfers voor het voorvoegsel, beginnend met een letter, bijvoorbeeld AD.",
-    "locale": "Kies een van de talen."
+    "locale": "Kies een van de talen.",
+    "timeZone": "Kies een van de tijdzones."
   }
 }

@@ -15,7 +15,12 @@ import field from '@/lib/form-data';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
 import { getActor } from '@/server/authz';
-import { renameStaff, setLanguages, setRequestPrefix } from '@/server/people/staff';
+import {
+  renameStaff,
+  setDefaultTimeZone,
+  setLanguages,
+  setRequestPrefix,
+} from '@/server/people/staff';
 import {
   addRequestType,
   archiveRequestType,
@@ -66,6 +71,27 @@ export async function saveLanguagesAction(
       offered: formData.getAll('offered').filter((value) => typeof value === 'string'),
     });
     refresh();
+    return { ok: true, message: t('saved') };
+  });
+}
+
+/**
+ * Sets Adiutor's default time zone. Changes nothing for anyone who has a zone
+ * of their own, the person saving it included.
+ *
+ * @param _previous - The previous result (unused).
+ * @param formData - Field `defaultTimeZone`.
+ * @returns A confirmation, in the request's language, or why it failed.
+ */
+export async function saveDefaultTimeZoneAction(
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const actor = await getActor();
+    await setDefaultTimeZone(appContext, actor, field(formData, 'defaultTimeZone'));
+    refresh();
+    const t = await getTranslations('admin.staff.timeZone');
     return { ok: true, message: t('saved') };
   });
 }

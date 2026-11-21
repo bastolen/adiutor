@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import { formatDateTime } from '@/lib/format';
 
+import renderInLocale from '../../../tests/i18n/render';
 import RelativeTime from './relative-time';
 
 /** A moment long ago, so the wording is a date and the test never goes stale. */
@@ -18,7 +19,7 @@ describe('RelativeTime', () => {
 
     const time = container.querySelector('time');
     expect(time).toHaveAttribute('datetime', LONG_AGO.toISOString());
-    expect(time).toHaveAttribute('title', formatDateTime(LONG_AGO, 'en-US'));
+    expect(time).toHaveAttribute('title', formatDateTime(LONG_AGO, 'en-US', 'UTC'));
     expect(container.querySelector('.sr-only')).toBeNull();
   });
 
@@ -27,8 +28,14 @@ describe('RelativeTime', () => {
 
     const time = container.querySelector('time');
     const spoken = container.querySelector('span.sr-only');
-    expect(spoken).toHaveTextContent(`, ${formatDateTime(LONG_AGO, 'en-US')}`);
+    expect(spoken).toHaveTextContent(`, ${formatDateTime(LONG_AGO, 'en-US', 'UTC')}`);
     expect(time?.nextElementSibling).toBe(spoken);
+  });
+
+  it("gives the exact moment in the reader's zone", () => {
+    const { container } = renderInLocale('en-US', <RelativeTime date={LONG_AGO} />, 'Asia/Kolkata');
+
+    expect(container.querySelector('time')).toHaveAttribute('title', 'Mar 4, 2020, 3:45 PM');
   });
 
   it('says never for no date, with nothing added for screen readers', () => {

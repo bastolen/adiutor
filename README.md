@@ -66,6 +66,10 @@ and approving the work come next.
   account, without the address changing; emails reach them in it. Invitations go out in the
   language the sender picks. See
   [Languages](docs/i18n.md).
+- **Times in your own time zone.** Every page, email and copied note shows times in each person's
+  own zone, which their browser sets the first time they're signed in and they can change on their
+  Profile. See
+  [Time zones](docs/i18n.md#time-zones).
 
 **Coming next:** emails about requests, and an approval step for finished work.
 
@@ -140,7 +144,7 @@ The [docs](docs/README.md) go into detail, one topic each:
 | [Email](docs/email.md)                                    | Templates, previews, Mailpit, how emails are sent                               |
 | [Background jobs](docs/jobs.md)                           | The tick, recurring and queued jobs, the Jobs page, commands, adding a job      |
 | [Design, accessibility and dark mode](docs/design.md)     | Components, tables, colours, keyboard support, dark mode, brand                 |
-| [Languages](docs/i18n.md)                                 | Choosing a language, translation catalogues, formatting, checks                 |
+| [Languages](docs/i18n.md)                                 | Choosing a language, translation catalogues, time zones, formatting, checks     |
 | [Deploying and running](docs/deploying.md)                | Install and upgrade, Vercel, Docker, server setup, client IP, jobs, logs, leaks |
 | [Decision records](docs/decisions/README.md)              | Why Adiutor works the way it does, one decision per page                        |
 

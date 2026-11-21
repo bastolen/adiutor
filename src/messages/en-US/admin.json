@@ -259,6 +259,13 @@
         "save": "Save languages",
         "saved": "Languages saved."
       },
+      "timeZone": {
+        "title": "Default time zone",
+        "description": "Adiutor uses this zone on pages for people who aren’t signed in, for emails to people without a zone, and for everyone until their browser sets their own.",
+        "label": "Default time zone",
+        "save": "Save default time zone",
+        "saved": "Default time zone saved."
+      },
       "requestNumbers": {
         "title": "Request numbers",
         "description": "Every request has a number people can quote. It’s shown after a prefix you choose.",
@@ -482,7 +489,7 @@
       },
       "recurring": {
         "title": "Scheduled jobs",
-        "description": "Each runs on its schedule, at the tick every few minutes. Times are in UTC.",
+        "description": "Each runs on its schedule, at the tick every few minutes.",
         "caption": "Scheduled jobs",
         "job": "Job",
         "lastRun": "Last run",

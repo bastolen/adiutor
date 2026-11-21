@@ -1,10 +1,11 @@
 /**
- * @file Names the staff, sets Adiutor's default language and creates its
- * first Admin from the command line, for scripted deployments. The same can
+ * @file Names the staff, sets Adiutor's default language and time zone and
+ * creates its first Admin from the command line, for scripted deployments. The same can
  * be done in the browser at `/setup`.
  *
  * Usage: `pnpm setup:platform --staff-name "Adiutor" --email you@adiutor.dev --name "Your Name"
- * [--default-language nl-NL]` (the default language is English (US) unless given).
+ * [--default-language nl-NL] [--time-zone Europe/Amsterdam]` (the default language is English (US)
+ * and the default zone UTC unless given; the zone is a new Admin's own too).
  *
  * Works only once: if the staff already exists, it refuses. Unlike the web
  * form, it may make an existing account the Admin (to recover an
@@ -18,13 +19,14 @@ import { ZodError } from 'zod';
 
 import { db } from '../src/db';
 import { DEFAULT_LOCALE, isLocale, LOCALES } from '../src/lib/i18n/locales';
+import { isTimeZone } from '../src/lib/i18n/time-zones';
 import { installLogRedaction } from '../src/lib/log-redaction';
 import { ServiceError, serviceErrorMessage, validationErrorMessage } from '../src/server/errors';
 import { setUpPlatform } from '../src/server/setup';
 
 /** How to call the script. */
 const USAGE =
-  'Usage: pnpm setup:platform --staff-name <name> --email <email> --name <your name> [--default-language <language>]';
+  'Usage: pnpm setup:platform --staff-name <name> --email <email> --name <your name> [--default-language <language>] [--time-zone <zone>]';
 
 /**
  * Reads the options, runs setup and reports the result.
@@ -38,6 +40,7 @@ async function main(): Promise<number> {
       email: { type: 'string' },
       name: { type: 'string' },
       'default-language': { type: 'string' },
+      'time-zone': { type: 'string' },
     },
   });
   if (!values['staff-name'] || !values.email || !values.name) {
@@ -49,11 +52,22 @@ async function main(): Promise<number> {
     console.error(`--default-language must be one of: ${LOCALES.join(', ')}.`);
     return 1;
   }
+  const timeZone = values['time-zone'];
+  if (timeZone !== undefined && !isTimeZone(timeZone)) {
+    console.error('--time-zone must be a time zone such as Europe/Amsterdam, or UTC.');
+    return 1;
+  }
 
   try {
     const result = await setUpPlatform(
       { db },
-      { staffName: values['staff-name'], email: values.email, name: values.name, defaultLocale },
+      {
+        staffName: values['staff-name'],
+        email: values.email,
+        name: values.name,
+        defaultLocale,
+        timeZone,
+      },
       // Unlike the web form, may make an existing account the Admin (to recover).
       { allowExistingAccount: true },
     );
