@@ -25,7 +25,7 @@ import {
   TextQuote,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { type FormEvent, useEffect, useEffectEvent, useRef, useState } from 'react';
+import { type FormEvent, useRef, useState } from 'react';
 
 import { linkTarget } from '@/lib/requests';
 
@@ -188,9 +188,11 @@ function LinkForm({
  * something says whether it's on. Without a state (before the editor is
  * there, or while the field is switched off) every button is disabled.
  * What a menu and the link dialog ask for is passed on once they have
- * closed, so the text gets the focus afterwards, not their button: a menu
- * passes it on when it would give its button the focus back
- * (`onCloseAutoFocus`) and doesn't; the dialog a moment after it closed.
+ * closed, so the text gets the focus afterwards, not their button: each
+ * passes it on at the moment it would give its button the focus back
+ * (a menu's `onCloseAutoFocus`, the dialog's `finalFocus`) and doesn't. One
+ * moment, not a timer of its own: on a slow device a timer could run before
+ * the dialog hands the focus back, which then took it from the text.
  * Closing a menu without a choice (Escape) gives its button the focus back.
  *
  *
@@ -237,8 +239,7 @@ export default function FormattingToolbar({
   const codeName = written === null ? null : (languageName?.(written) ?? written);
   const codeChoice = languages?.find((choice) => choice.name === codeName)?.id ?? written ?? '';
   // What the link dialog asked for, until it has closed.
-  const [waiting, setWaiting] = useState<FormattingCommand | null>(null);
-  const pass = useEffectEvent(onCommand);
+  const linkChoice = useRef<FormattingCommand | null>(null);
   // What the heading or language menu asked for, until it closes.
   const chosen = useRef<FormattingCommand | null>(null);
 
@@ -258,18 +259,23 @@ export default function FormattingToolbar({
     }
   };
 
-  useEffect(() => {
-    if (waiting === null) {
-      return undefined;
+  /**
+   * Passes on what the link dialog asked for, at the moment it would give
+   * the Link button the focus back: the command gives the text the focus. A
+   * dialog closed without a choice (Escape, the close button) gives the
+   * button the focus back as usual.
+   *
+   * @returns `false` when the dialog asked for nothing.
+   */
+  const passLinkChoice = () => {
+    const command = linkChoice.current;
+    if (!command) {
+      return false;
     }
-    // The dialog gives the focus back to its button as it closes. The command goes out a moment
-    // later, so the editor then takes the focus for the text.
-    const timer = setTimeout(() => {
-      setWaiting(null);
-      pass(waiting);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [waiting]);
+    linkChoice.current = null;
+    onCommand(command);
+    return true;
+  };
 
   /**
    * The props of a button that switches a kind of formatting.
@@ -382,16 +388,17 @@ export default function FormattingToolbar({
         onOpenChange={setLinking}
         title={tLink('title')}
         description={tLink('description')}
+        finalFocus={passLinkChoice}
       >
         <LinkForm
           current={state?.link ?? null}
           onSave={(address) => {
+            linkChoice.current = { type: 'link', address };
             setLinking(false);
-            setWaiting({ type: 'link', address });
           }}
           onRemove={() => {
+            linkChoice.current = { type: 'link', address: null };
             setLinking(false);
-            setWaiting({ type: 'link', address: null });
           }}
         />
       </Modal>
