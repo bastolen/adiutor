@@ -1,12 +1,14 @@
 /**
  * @file Integration tests for the notice sent straight away to a deleted
  * account's address: in the language the account saved, else Adiutor's
- * default, else English (US); never naming a device; and never throwing.
+ * default, else English (US); its time in the zone the account saved, else
+ * Adiutor's default; never naming a device; and never throwing.
  * The queued notices are tested with their job
  * (`src/server/jobs/queued/security-notice.int.test.ts`).
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { staffSettings } from '@/db/schema';
 import { defined } from '@/lib/defined';
 
 import {
@@ -25,18 +27,29 @@ afterEach(() => {
 
 describe('sendAccountDeletedNotice', () => {
   it('writes in the language the account saved, not the request’s', async () => {
-    await sendAccountDeletedNotice(inLanguage(ctx, 'en-US'), 'gone@adiutor.test', 'es-ES');
+    await sendAccountDeletedNotice(inLanguage(ctx, 'en-US'), 'gone@adiutor.test', 'es-ES', null);
 
     expect(sent.map(({ to }) => to)).toEqual(['gone@adiutor.test']);
     expect(defined(sent[0], 'the notice').subject).toBe('Se ha eliminado tu cuenta de Adiutor');
   });
 
   it('uses Adiutor’s default language for an account on Default, else English (US) before setup', async () => {
-    await sendAccountDeletedNotice(ctx, 'gone@adiutor.test', null);
+    await sendAccountDeletedNotice(ctx, 'gone@adiutor.test', null, null);
     await createStaffSettings(db, 'Adiutor Tests', 'nl-NL');
-    await sendAccountDeletedNotice(ctx, 'gone@adiutor.test', null);
+    await sendAccountDeletedNotice(ctx, 'gone@adiutor.test', null, null);
 
     expect(sent.map(emailLanguage)).toEqual(['en-US', 'nl-NL']);
+  });
+
+  it('gives the time in the zone the account saved, else in Adiutor’s default zone', async () => {
+    await sendAccountDeletedNotice(ctx, 'gone@adiutor.test', 'en-US', 'America/New_York');
+    await createStaffSettings(db, 'Adiutor Tests', 'en-US');
+    await db.update(staffSettings).set({ defaultTimeZone: 'Asia/Kolkata' });
+    await sendAccountDeletedNotice(ctx, 'gone@adiutor.test', 'en-US', null);
+
+    const [inSaved, inDefault] = sent.map(({ text }) => text);
+    expect(inSaved).toMatch(/When: .+ (EST|EDT)/);
+    expect(inDefault).toContain('GMT+5:30');
   });
 
   it('never names a device, even when the request has one', async () => {
@@ -54,7 +67,7 @@ describe('sendAccountDeletedNotice', () => {
       }),
     };
 
-    await sendAccountDeletedNotice(fromBrowser, 'gone@adiutor.test', 'en-US');
+    await sendAccountDeletedNotice(fromBrowser, 'gone@adiutor.test', 'en-US', null);
 
     expect(defined(sent[0], 'the notice').text).not.toContain('203.0.113.9');
   });
@@ -71,7 +84,7 @@ describe('sendAccountDeletedNotice', () => {
       },
     };
 
-    expect(await sendAccountDeletedNotice(failing, 'gone@adiutor.test', 'en-US')).toBe(false);
+    expect(await sendAccountDeletedNotice(failing, 'gone@adiutor.test', 'en-US', null)).toBe(false);
     expect(logged).toHaveBeenCalledWith('Sending the "account_deleted" security notice failed', {
       code: 'ECONNECTION',
       responseCode: null,

@@ -198,9 +198,9 @@ describe('company emails', () => {
   it('invitation reminder says the invitation is still open until it expires', async () => {
     const url = `${appUrl}/invite/abc`;
     const expiresAt = new Date('2026-10-25T14:05:00Z');
-    const expires = formatDateTime(expiresAt, 'en-US');
     const email = await invitationReminderEmail('jane@adiutor.test', {
       ...english,
+      timeZone: 'UTC',
       inviterName: 'Sam Doe',
       companyName: 'Adiutor Tests',
       role: 'client',
@@ -211,7 +211,7 @@ describe('company emails', () => {
     expect(email.subject).toBe('Reminder: join Adiutor Tests on Adiutor');
     expect(email.html).toContain('Your invitation expires soon');
     expect(email.text).toContain(
-      `Sam Doe invited you to join Adiutor Tests on Adiutor as Client. The invitation is still open until ${expires}.`,
+      `Sam Doe invited you to join Adiutor Tests on Adiutor as Client. The invitation is still open until Oct 25, 2026, 2:05 PM UTC.`,
     );
     expect(email.text).toContain('replaces the one in the earlier email');
     expectBasics(email, url);
@@ -392,6 +392,7 @@ describe('security notices', () => {
   it('says what changed, when and from where, with a link to the Security page', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
       ...english,
+      timeZone: 'UTC',
       kind: 'two_factor_disabled',
       when,
       device: 'Firefox on Windows',
@@ -399,7 +400,7 @@ describe('security notices', () => {
     });
 
     expect(email.subject).toBe('Two-step verification was turned off on your Adiutor account');
-    expect(email.text).toContain(`When: ${formatDateTime(when, 'en-US')}`);
+    expect(email.text).toContain('When: Oct 23, 2026, 2:05 PM UTC');
     expect(email.text).toContain('From: Firefox on Windows, 203.0.113.7');
     expect(email.text).toContain("If this wasn't you, reset your password");
     expectBasics(email, `${appUrl}/account/security`);
@@ -408,6 +409,7 @@ describe('security notices', () => {
   it('names the provider', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
       ...english,
+      timeZone: 'UTC',
       kind: 'provider_connected',
       when,
       provider: 'GitHub',
@@ -420,6 +422,7 @@ describe('security notices', () => {
   it('has no Security page link for a deactivated account', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
       ...english,
+      timeZone: 'UTC',
       kind: 'account_deactivated',
       when,
     });
@@ -431,6 +434,7 @@ describe('security notices', () => {
   it('tells the owner that wrong passwords paused password sign-in, and what still works', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
       ...english,
+      timeZone: 'UTC',
       kind: 'password_sign_in_paused',
       when,
     });
@@ -449,6 +453,7 @@ describe('security notices', () => {
   it('has no Security page link for a deleted account', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
       ...english,
+      timeZone: 'UTC',
       kind: 'account_deleted',
       when,
     });
@@ -464,6 +469,7 @@ describe('security notices', () => {
   it('tells the owner that wrong codes paused signing in with a code, and to change the password', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
       ...english,
+      timeZone: 'UTC',
       kind: 'two_factor_locked',
       when,
     });
@@ -482,6 +488,7 @@ describe('security notices', () => {
   it('says that a reset of two-step verification also disconnected GitHub and Google', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
       ...english,
+      timeZone: 'UTC',
       kind: 'mfa_reset',
       when,
     });
@@ -499,7 +506,12 @@ describe('security notices', () => {
   it.each(ADMINISTRATOR_ONLY_KINDS)(
     'says to contact the administrator after %s, which the recipient can’t have done',
     async (kind) => {
-      const email = await securityNoticeEmail('jane@adiutor.test', { ...english, kind, when });
+      const email = await securityNoticeEmail('jane@adiutor.test', {
+        ...english,
+        timeZone: 'UTC',
+        kind,
+        when,
+      });
 
       expect(email.text).toContain("If you didn't expect this, contact your administrator.");
       expect(email.text).not.toContain("wasn't you");
@@ -508,7 +520,12 @@ describe('security notices', () => {
   );
 
   it.each(SECURITY_NOTICE_KINDS)('renders %s', async (kind) => {
-    const email = await securityNoticeEmail('jane@adiutor.test', { ...english, kind, when });
+    const email = await securityNoticeEmail('jane@adiutor.test', {
+      ...english,
+      timeZone: 'UTC',
+      kind,
+      when,
+    });
     expect(email.subject).toMatch(/Adiutor/);
     expect(email.subject).not.toMatch(/\{(provider|role|company)\}/);
     expect(email.html).not.toMatch(/\{(provider|role|company)\}/);
@@ -518,6 +535,7 @@ describe('security notices', () => {
   it('names the company and the role in a changed company role', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
       ...english,
+      timeZone: 'UTC',
       kind: 'company_role_changed',
       when,
       company: 'Adiutor Tests',
@@ -534,6 +552,7 @@ describe('security notices', () => {
   it('names the company in a removal from a company', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
       ...english,
+      timeZone: 'UTC',
       kind: 'removed_from_company',
       when,
       company: 'Adiutor Tests',
@@ -548,6 +567,7 @@ describe('security notices', () => {
   it('falls back to "your company" when the notice is built without a company name', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
       ...english,
+      timeZone: 'UTC',
       kind: 'removed_from_company',
       when,
     });
@@ -558,6 +578,7 @@ describe('security notices', () => {
   it('escapes the company name, so it cannot add HTML', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
       ...english,
+      timeZone: 'UTC',
       kind: 'removed_from_company',
       when,
       company: 'Adiutor <script>Tests</script>',
@@ -570,6 +591,7 @@ describe('security notices', () => {
   it('names the staff member who signed in as the user, and how long it lasts', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
       ...english,
+      timeZone: 'UTC',
       kind: 'impersonation_started',
       when,
       staffMember: 'Sam Lee',
@@ -592,6 +614,7 @@ describe('security notices', () => {
   it('says "a staff member" when the notice is built without a name', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
       ...english,
+      timeZone: 'UTC',
       kind: 'impersonation_started',
       when,
     });
@@ -602,6 +625,7 @@ describe('security notices', () => {
   it('names the staff role', async () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
       ...english,
+      timeZone: 'UTC',
       kind: 'staff_role_changed',
       when,
       role: 'manager',
@@ -680,6 +704,7 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = 
     const email = await invitationReminderEmail('jane@adiutor.test', {
       appUrl,
       locale,
+      timeZone: 'UTC',
       inviterName: 'Sam Doe',
       companyName: 'Adiutor Tests',
       role: 'watcher',
@@ -842,7 +867,7 @@ describe('every template in every language', () => {
   it.each(
     LOCALES.flatMap((locale) => SECURITY_NOTICE_KINDS.map((kind) => [locale, kind] as const)),
   )('%s: the %s security notice', async (locale, kind) => {
-    const props = { appUrl, kind, when: new Date('2026-10-23T14:05:00Z') };
+    const props = { appUrl, kind, when: new Date('2026-10-23T14:05:00Z'), timeZone: 'UTC' };
     const [email, inEnglish] = await Promise.all([
       securityNoticeEmail('jane@adiutor.test', { ...props, locale }),
       securityNoticeEmail('jane@adiutor.test', { ...props, locale: 'en-US' }),
@@ -850,7 +875,9 @@ describe('every template in every language', () => {
 
     expect(email.html).toContain(`lang="${locale}"`);
     expect(email.subject).not.toMatch(/[{}]/);
-    expect(email.text).toContain(formatDateTime(props.when, locale));
+    expect(email.text).toContain(
+      formatDateTime(props.when, locale, props.timeZone, { zoneName: true }),
+    );
     if (locale !== 'en-US') {
       expect(email.subject).not.toBe(inEnglish.subject);
     }
@@ -862,6 +889,7 @@ describe('every template in every language', () => {
     const email = await securityNoticeEmail('jane@adiutor.test', {
       appUrl,
       locale,
+      timeZone: 'UTC',
       kind,
       when: new Date('2026-10-23T14:05:00Z'),
     });
@@ -876,6 +904,7 @@ describe('every template in every language', () => {
       const email = await securityNoticeEmail('jane@adiutor.test', {
         appUrl,
         locale,
+        timeZone: 'UTC',
         kind: 'mfa_reset',
         when: new Date('2026-10-23T14:05:00Z'),
       });
@@ -892,6 +921,7 @@ describe('every template in every language', () => {
       const email = await securityNoticeEmail('jane@adiutor.test', {
         appUrl,
         locale,
+        timeZone: 'UTC',
         kind: 'two_factor_disabled',
         when: new Date('2026-10-23T14:05:00Z'),
       });
@@ -920,10 +950,32 @@ describe('every template in every language', () => {
     ).toBe('Sam Doe nodigt je uit voor Adiutor Tests op Adiutor');
   });
 
+  it('shows times in the recipient’s zone, and names it', async () => {
+    const notice = await securityNoticeEmail('jane@adiutor.test', {
+      ...english,
+      timeZone: 'America/New_York',
+      kind: 'password_changed',
+      when: new Date('2026-10-23T14:05:00Z'),
+    });
+    expect(notice.text).toContain('When: Oct 23, 2026, 10:05 AM EDT');
+
+    const reminder = await invitationReminderEmail('jane@adiutor.test', {
+      ...english,
+      timeZone: 'Asia/Kolkata',
+      inviterName: 'Sam Doe',
+      companyName: 'Adiutor Tests',
+      role: 'client',
+      url: `${appUrl}/invite/abc`,
+      expiresAt: new Date('2026-10-25T14:05:00Z'),
+    });
+    expect(reminder.text).toContain('still open until Oct 25, 2026, 7:35 PM GMT+5:30.');
+  });
+
   it('names roles, dates and the device in the recipient’s language', async () => {
     const reminder = await invitationReminderEmail('jane@adiutor.test', {
       appUrl,
       locale: 'nl-NL',
+      timeZone: 'Europe/Amsterdam',
       inviterName: 'Sam Doe',
       companyName: 'Adiutor Tests',
       role: 'watcher',
@@ -931,7 +983,7 @@ describe('every template in every language', () => {
       expiresAt: new Date('2026-10-25T14:05:00Z'),
     });
     expect(reminder.text).toContain(
-      'Sam Doe nodigt je uit om lid te worden van Adiutor Tests op Adiutor als Meekijker. De uitnodiging staat nog open tot 25 okt 2026, 14:05 UTC.',
+      'Sam Doe nodigt je uit om lid te worden van Adiutor Tests op Adiutor als Meekijker. De uitnodiging staat nog open tot 25 okt 2026, 15:05 CET.',
     );
     const invited = await invitationEmail('jane@adiutor.test', {
       appUrl,
@@ -948,6 +1000,7 @@ describe('every template in every language', () => {
     const notice = await securityNoticeEmail('jane@adiutor.test', {
       appUrl,
       locale: 'es-ES',
+      timeZone: 'UTC',
       kind: 'company_role_changed',
       when: new Date('2026-10-23T14:05:00Z'),
       device: 'Firefox en Windows',

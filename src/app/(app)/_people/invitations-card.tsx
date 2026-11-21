@@ -13,6 +13,7 @@ import RowAction from '@/components/ui/row-action';
 import SortMenu from '@/components/ui/sort-menu';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
 import formatDate from '@/lib/format';
+import useReaderTimeZone from '@/lib/i18n/use-reader-time-zone';
 import { type TableLinks } from '@/lib/tables/page-url';
 import { type Paged } from '@/lib/tables/table-state';
 import type { InvitationSort } from '@/lib/tables/tables';
@@ -57,6 +58,7 @@ export default function InvitationsCard({
   const t = useTranslations('people');
   const tRoles = useTranslations('roles');
   const locale = useLocale();
+  const timeZone = useReaderTimeZone();
   return (
     <Card
       id={table.section}
@@ -106,7 +108,9 @@ export default function InvitationsCard({
                     {/* Below tablet width, the role, date and expiry go here. */}
                     <span className="flex flex-wrap items-center gap-x-1 gap-y-1 text-xs text-muted-foreground md:hidden">
                       <span className="sm:hidden">{tRoles(`${invitation.role}.label`)} · </span>
-                      {t('invitations.sent', { date: formatDate(invitation.createdAt, locale) })}
+                      {t('invitations.sent', {
+                        date: formatDate(invitation.createdAt, locale, timeZone),
+                      })}
                       {invitation.expired && (
                         <Badge tone="warning">{t('invitations.expired')}</Badge>
                       )}
@@ -117,7 +121,7 @@ export default function InvitationsCard({
                   <Badge>{tRoles(`${invitation.role}.label`)}</Badge>
                 </Td>
                 <Td className="hidden whitespace-nowrap text-muted-foreground md:table-cell">
-                  {formatDate(invitation.createdAt, locale)}
+                  {formatDate(invitation.createdAt, locale, timeZone)}
                 </Td>
                 <Td className="hidden md:table-cell">
                   {invitation.expired ? (
@@ -125,7 +129,7 @@ export default function InvitationsCard({
                   ) : (
                     <span className="text-muted-foreground">
                       {t('invitations.expires', {
-                        date: formatDate(invitation.expiresAt, locale),
+                        date: formatDate(invitation.expiresAt, locale, timeZone),
                       })}
                     </span>
                   )}

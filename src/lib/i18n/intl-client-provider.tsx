@@ -12,7 +12,6 @@ import type { ReactNode } from 'react';
 import type { Locale } from './locales';
 import { onMessageError } from './message-errors';
 import type { Messages } from './messages';
-import { TIME_ZONE } from './time-zone';
 
 /** Props of {@link IntlClientProvider}. */
 interface IntlClientProviderProps {
@@ -20,31 +19,36 @@ interface IntlClientProviderProps {
   locale: Locale;
   /** The namespaces the client components below use (`pickMessages`). */
   messages: Partial<Messages>;
+  /** The request's time zone (`getTimeZone()`), for the times client components show. */
+  timeZone: string;
   /** The components that translate. */
   children: ReactNode;
 }
 
 /**
- * Provides a language and its messages to the client components below. An
+ * Provides a language, its messages and the time zone to the client
+ * components below. An
  * inner provider replaces the messages of an outer one, so each passes
  * `common` along with its own namespaces.
  *
  * @param props - The language, the messages and the children.
  * @param props.locale - The request's language.
  * @param props.messages - The namespaces the components below use.
+ * @param props.timeZone - The request's time zone.
  * @param props.children - The components that translate.
  * @returns The provider.
  */
 export default function IntlClientProvider({
   locale,
   messages,
+  timeZone,
   children,
 }: IntlClientProviderProps) {
   return (
     <NextIntlClientProvider
       locale={locale}
       messages={messages}
-      timeZone={TIME_ZONE}
+      timeZone={timeZone}
       onError={onMessageError}
     >
       {children}

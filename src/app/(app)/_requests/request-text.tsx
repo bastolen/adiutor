@@ -10,6 +10,7 @@ import type { ShownMention } from '@/components/ui/markdown/elements';
 import MarkdownText from '@/components/ui/markdown/markdown-text';
 import cn from '@/lib/cn';
 import formatDate from '@/lib/format';
+import useReaderTimeZone from '@/lib/i18n/use-reader-time-zone';
 import { nameStoredMentions, splitLinks, type TextPart } from '@/lib/requests';
 import type { RequestText as RequestTextValue } from '@/server/requests';
 
@@ -136,6 +137,7 @@ function FormattedText({
 }) {
   const t = useTranslations('requests.codeNote');
   const locale = useLocale();
+  const timeZone = useReaderTimeZone();
   const named = nameStoredMentions(text, (mention) =>
     Object.hasOwn(mentions, mention) ? (mentions[mention]?.name ?? null) : null,
   );
@@ -146,7 +148,7 @@ function FormattedText({
       className={className}
       codeNote={[
         t('source', { url: source.url }),
-        t('writtenBy', { name: source.writer, date: formatDate(source.at, locale) }),
+        t('writtenBy', { name: source.writer, date: formatDate(source.at, locale, timeZone) }),
       ]}
       mentions={mentions}
       fallback={<PlainText text={named} className={className} />}

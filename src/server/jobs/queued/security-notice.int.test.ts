@@ -8,7 +8,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { company, queuedJob } from '@/db/schema';
+import { company, queuedJob, user } from '@/db/schema';
 
 import {
   createCompany,
@@ -147,6 +147,16 @@ describe('the security-notice job', () => {
     await sendQueuedEmails(ctx, [securityNoticeJob]);
 
     expect(sent[0]?.subject).toContain('sam');
+  });
+
+  it('gives the time in the recipient’s zone, naming it', async () => {
+    const jane = await createUser(db, 'jane@adiutor.test');
+    await db.update(user).set({ timeZone: 'Asia/Kolkata' }).where(eq(user.id, jane));
+    await queueSecurityNotice(db, jane, 'mfa_reset');
+
+    await sendQueuedEmails(ctx, [securityNoticeJob]);
+
+    expect(sent[0]?.text).toMatch(/When: .+ GMT\+5:30/);
   });
 
   it('names the provider of a connected account', async () => {

@@ -7,7 +7,7 @@
 import { eq, isNull, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { company, invitation } from '@/db/schema';
+import { company, invitation, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 import type { Email } from '@/lib/email';
 import { hashToken } from '@/lib/sign-in/tokens';
@@ -169,6 +169,48 @@ describe('invitation-reminders', () => {
     expect(emailLanguage(defined(byAddress['known@adiutor.test'], 'the Spanish reminder'))).toBe(
       'es-ES',
     );
+  });
+
+  it('gives the expiry in the invitee’s zone, else the sender’s, else Adiutor’s default', async () => {
+    const input = { companyId: testCompany.id, role: 'client', locale: 'en-US' } as const;
+    const fromKolkata = { ...companyAdmin, timeZone: 'Asia/Kolkata' };
+    await inviteByEmail(ctx, fromKolkata, { ...input, email: 'new@adiutor.test' });
+    await inviteByEmail(ctx, fromKolkata, { ...input, email: 'known@adiutor.test' });
+    await inviteByEmail(
+      ctx,
+      { ...companyAdmin, timeZone: null },
+      {
+        ...input,
+        email: 'nobody@adiutor.test',
+      },
+    );
+    // Signed up meanwhile (without joining the company), with their own zone saved.
+    const known = await createUser(db, 'known@adiutor.test');
+    await db.update(user).set({ timeZone: 'America/New_York' }).where(eq(user.id, known));
+    await Promise.all(
+      ['new@adiutor.test', 'known@adiutor.test', 'nobody@adiutor.test'].map((email) =>
+        age(email, '1 day'),
+      ),
+    );
+    sent.length = 0;
+
+    await expect(remind(ctx)).resolves.toEqual({ sent: 3, failed: 0 });
+
+    /**
+     * The text of the reminder sent to an address.
+     *
+     * @param to - The address.
+     * @returns The email's plain text.
+     */
+    const textTo = (to: string) =>
+      defined(
+        sent.find((email) => email.to === to),
+        to,
+      ).text;
+    expect(textTo('new@adiutor.test')).toContain('GMT+5:30.');
+    expect(textTo('known@adiutor.test')).toMatch(/ E[SD]T\./);
+    // No settings row in these tests: Adiutor's default is UTC.
+    expect(textTo('nobody@adiutor.test')).toMatch(/ UTC\./);
   });
 
   it('skips fresh, revoked and deactivated-company invitations, but not a due one beside them', async () => {

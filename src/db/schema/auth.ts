@@ -37,6 +37,7 @@ export const user = pgTable('user', {
     enum: ['platform_admin', 'manager', 'finance', 'support'],
   }),
   locale: text('locale', { enum: ['en-US', 'nl-NL', 'es-ES'] }),
+  timeZone: text('time_zone'),
   mfaRecommendationDismissedAt: timestamp('mfa_recommendation_dismissed_at', {
     withTimezone: true,
   }),

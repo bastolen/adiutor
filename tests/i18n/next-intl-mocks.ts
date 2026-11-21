@@ -3,21 +3,26 @@
  * `vitest.setup.ts`), so components, pages and actions render in English
  * (US) without a request or a provider:
  *
- * - `next-intl/server` (`getTranslations`, `getLocale`, `getMessages`) reads
- *   {@link testLocale}, as if the request were in that language.
- * - `useTranslations` and `useLocale` use the nearest provider when there is
- *   one (`renderInLocale` in `tests/i18n/render.tsx`), and English (US)
- *   otherwise.
+ * - `next-intl/server` (`getTranslations`, `getLocale`, `getMessages`,
+ *   `getTimeZone`) reads {@link testLocale} and {@link testTimeZone}, as if
+ *   the request were in that language and zone.
+ * - `useTranslations`, `useLocale` and `useTimeZone` use the nearest provider
+ *   when there is one (`renderInLocale` in `tests/i18n/render.tsx`), and
+ *   English (US) and {@link testTimeZone} otherwise.
  * - `requestLocale()` returns {@link testLocale}.
  */
 import type * as NextIntl from 'next-intl';
 
 import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/locales';
 import { messagesFor } from '@/lib/i18n/messages';
+import { DEFAULT_TIME_ZONE } from '@/lib/i18n/time-zones';
 import translator, { type Namespace } from '@/lib/i18n/translator';
 
 /** The request's language in the next test; reset after each test. */
 export const testLocale: { current: Locale } = { current: DEFAULT_LOCALE };
+
+/** The request's time zone in the next test; reset after each test. UTC unless a test sets one. */
+export const testTimeZone: { current: string } = { current: DEFAULT_TIME_ZONE };
 
 /**
  * `next-intl/server` for tests: the request is in {@link testLocale}.
@@ -49,6 +54,12 @@ export function nextIntlServerMock() {
      * @returns Every message in {@link testLocale}.
      */
     getMessages: async () => messagesFor(testLocale.current),
+    /**
+     * The request's time zone.
+     *
+     * @returns The zone in {@link testTimeZone}.
+     */
+    getTimeZone: async () => testTimeZone.current,
   };
 }
 
@@ -86,6 +97,18 @@ export function nextIntlMock(actual: typeof NextIntl) {
         return actual.useLocale();
       } catch {
         return DEFAULT_LOCALE;
+      }
+    },
+    /**
+     * The provider's time zone, or {@link testTimeZone}.
+     *
+     * @returns The zone.
+     */
+    useTimeZone: () => {
+      try {
+        return actual.useTimeZone() ?? testTimeZone.current;
+      } catch {
+        return testTimeZone.current;
       }
     },
   };

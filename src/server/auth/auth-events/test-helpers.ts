@@ -13,6 +13,7 @@ import type { MfaMethod } from '@/lib/authz/mfa';
 import { firstRow } from '@/lib/defined';
 import { sendEmail } from '@/lib/email';
 import { LOCALE_COOKIE } from '@/lib/i18n/locales';
+import { TIME_ZONE_COOKIE } from '@/lib/i18n/time-zones';
 import { ACTING_AS_CHANGED_COOKIE } from '@/lib/sign-in/auth-cookies';
 
 import {
@@ -302,9 +303,43 @@ export function githubCallback(
 }
 
 /**
+ * The context of a password sign-in once Better Auth's two-step plugin has
+ * decided on its session, with the request's headers (cookies, language).
+ *
+ * @param headers - The request's headers (cookie, `Accept-Language`).
+ * @param newSession - The session that stayed, or `null` when the code step comes next.
+ * @param newSession.sessionId - Its ID.
+ * @param newSession.userId - Its user.
+ * @returns The context and its `setCookie` mock.
+ */
+export function passwordSignIn(
+  headers: Record<string, string>,
+  newSession: { sessionId: string; userId: string } | null,
+) {
+  const setCookie = vi.fn<NonNullable<AuthHookContext['setCookie']>>();
+  const ctx: AuthHookContext = {
+    path: '/sign-in/email',
+    headers: new Headers(headers),
+    setCookie,
+    body: { email: 'jane@adiutor.test', password: 'adiutor-tests-password' },
+    context: {
+      returned: newSession
+        ? { redirect: false, token: 'adiutor-tests-token' }
+        : { twoFactorRedirect: true, twoFactorMethods: ['otp'] },
+      session: null,
+      newSession: newSession && {
+        session: { id: newSession.sessionId },
+        user: { id: newSession.userId, twoFactorEnabled: false },
+      },
+    },
+  };
+  return { ctx, setCookie };
+}
+
+/**
  * The cookies a request set to tell the next page something of its own: all
- * but the language cookie, which every sign-in sets from the account's
- * language or removes (`rememberLanguage`), and the one that tells the other tabs, which
+ * but the language and time zone cookies, which every sign-in sets from the
+ * account or removes (`rememberLanguage`, `rememberTimeZone`), and the one that tells the other tabs, which
  * every provider sign-in sets when the browser acts as someone else now
  * (`ACTING_AS_CHANGED_COOKIE`). For tests about the other cookies.
  *
@@ -313,7 +348,8 @@ export function githubCallback(
  */
 export function noticeCookies(setCookie: ReturnType<typeof githubCallback>['setCookie']) {
   return setCookie.mock.calls.filter(
-    ([name]) => name !== LOCALE_COOKIE && name !== ACTING_AS_CHANGED_COOKIE,
+    ([name]) =>
+      name !== LOCALE_COOKIE && name !== TIME_ZONE_COOKIE && name !== ACTING_AS_CHANGED_COOKIE,
   );
 }
 

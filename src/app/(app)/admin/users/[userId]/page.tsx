@@ -17,7 +17,7 @@
  * its own component next to it (`*-card.tsx`), taking only what it shows.
  */
 import { notFound } from 'next/navigation';
-import { getLocale, getTranslations } from 'next-intl/server';
+import { getLocale, getTimeZone, getTranslations } from 'next-intl/server';
 import { type ReactNode, Suspense } from 'react';
 
 import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
@@ -110,7 +110,7 @@ async function UserDetailContent({
   params: Promise<{ userId: string }>;
   searchParams: Promise<SearchParams>;
 }) {
-  const locale = await getLocale();
+  const [locale, timeZone] = await Promise.all([getLocale(), getTimeZone()]);
   const t = await getTranslations('admin.user');
   const actor = await requireGlobalPermission('users:view');
   const [{ userId }, query] = await Promise.all([params, searchParams]);
@@ -189,7 +189,7 @@ async function UserDetailContent({
 
       {detail.deactivatedAt && (
         <Alert tone="error">
-          {t('deactivatedNotice', { date: formatDateTime(detail.deactivatedAt, locale) })}
+          {t('deactivatedNotice', { date: formatDateTime(detail.deactivatedAt, locale, timeZone) })}
         </Alert>
       )}
       {isSelf && (

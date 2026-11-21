@@ -18,9 +18,8 @@ import {
   setUserLocale,
 } from '../../../../tests/integration/helpers';
 import { afterAuthRequest } from './after-request';
-import type { AuthHookContext } from './hook-context';
 import { afterPasswordSignIn } from './password-sign-in';
-import { db, githubCallback } from './test-helpers';
+import { db, githubCallback, passwordSignIn } from './test-helpers';
 
 vi.mock('@/lib/email', () => ({ sendEmail: vi.fn() }));
 
@@ -50,40 +49,6 @@ async function savedLocale(userId: string) {
     await db.select({ locale: user.locale }).from(user).where(eq(user.id, userId)),
     'the user',
   ).locale;
-}
-
-/**
- * The context of a password sign-in once Better Auth's two-step plugin has
- * decided on its session, with the request's language headers.
- *
- * @param headers - The request's headers (cookie, `Accept-Language`).
- * @param newSession - The session that stayed, or `null` when the code step comes next.
- * @param newSession.sessionId - Its ID.
- * @param newSession.userId - Its user.
- * @returns The context and its `setCookie` mock.
- */
-function passwordSignIn(
-  headers: Record<string, string>,
-  newSession: { sessionId: string; userId: string } | null,
-) {
-  const setCookie = vi.fn<NonNullable<AuthHookContext['setCookie']>>();
-  const ctx: AuthHookContext = {
-    path: '/sign-in/email',
-    headers: new Headers(headers),
-    setCookie,
-    body: { email: 'jane@adiutor.test', password: 'adiutor-tests-password' },
-    context: {
-      returned: newSession
-        ? { redirect: false, token: 'adiutor-tests-token' }
-        : { twoFactorRedirect: true, twoFactorMethods: ['otp'] },
-      session: null,
-      newSession: newSession && {
-        session: { id: newSession.sessionId },
-        user: { id: newSession.userId, twoFactorEnabled: false },
-      },
-    },
-  };
-  return { ctx, setCookie };
 }
 
 /**

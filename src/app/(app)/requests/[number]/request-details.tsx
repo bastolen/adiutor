@@ -5,7 +5,7 @@
  * activity, with the controls its viewer may use. Its text comes from
  * `requests.detail`.
  */
-import { getLocale, getTranslations } from 'next-intl/server';
+import { getLocale, getTimeZone, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
 import Card from '@/components/ui/card';
@@ -74,7 +74,11 @@ export default async function RequestDetails({
   assigneeControls?: ReactNode;
   controls?: ReactNode;
 }) {
-  const [t, locale] = await Promise.all([getTranslations('requests.detail'), getLocale()]);
+  const [t, locale, timeZone] = await Promise.all([
+    getTranslations('requests.detail'),
+    getLocale(),
+    getTimeZone(),
+  ]);
   const names = { company: detail.company.name, staff: detail.staffName };
 
   return (
@@ -121,7 +125,7 @@ export default async function RequestDetails({
         </Detail>
         <Detail term={t('raised')}>
           <time dateTime={detail.createdAt.toISOString()}>
-            {formatDateTime(detail.createdAt, locale)}
+            {formatDateTime(detail.createdAt, locale, timeZone)}
           </time>
         </Detail>
         {/* The staff's own request has no first response to wait for. */}
@@ -130,7 +134,7 @@ export default async function RequestDetails({
             {detail.firstResponseAt ? (
               <time
                 dateTime={detail.firstResponseAt.toISOString()}
-                title={formatDateTime(detail.firstResponseAt, locale)}
+                title={formatDateTime(detail.firstResponseAt, locale, timeZone)}
               >
                 {t('firstResponseAfter', {
                   duration: formatDuration(

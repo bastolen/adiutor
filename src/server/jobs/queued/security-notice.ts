@@ -28,7 +28,7 @@ export default handleQueuedJob(
   async (ctx, job) => {
     const { userId, kind, auditEventId, providerId, role, companyId, staffUserId } = job.payload;
     const [recipient] = await ctx.db
-      .select({ email: user.email, locale: user.locale })
+      .select({ email: user.email, locale: user.locale, timeZone: user.timeZone })
       .from(user)
       .where(eq(user.id, userId));
     if (!recipient) {
@@ -63,6 +63,7 @@ export default handleQueuedJob(
       await buildSecurityNotice(ctx, {
         email: recipient.email,
         savedLocale: recipient.locale,
+        savedTimeZone: recipient.timeZone,
         kind,
         // The change's own time when its event says; else when it was queued, right after it.
         when: event?.at ?? job.queuedAt,

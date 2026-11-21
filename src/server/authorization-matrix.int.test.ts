@@ -107,6 +107,7 @@ import {
 } from './people/members';
 import { dismissMfaRecommendation } from './people/mfa-recommendation';
 import setOwnLocale from './people/own-locale';
+import saveFirstTimeZone from './people/own-time-zone';
 import { setOwnPicture } from './people/pictures';
 import {
   changeStaffRole,
@@ -489,6 +490,7 @@ function listOperations(): Operation[] {
     ['list staff', (w) => listStaff(ctx, w.actor)],
     ['view staff settings', (w) => getStaffSettings(ctx, w.actor)],
     ['choose own language', (w) => setOwnLocale(ctx, w.actor, 'nl-NL')],
+    ['save own first time zone', (w) => saveFirstTimeZone(ctx, w.actor, 'Europe/Amsterdam')],
     ['choose own picture', (w) => setOwnPicture(ctx, w.actor, 'initials')],
     ['dismiss own MFA recommendation', (w) => dismissMfaRecommendation(ctx, w.actor)],
     ['turn off sign-ins by staff', (w) => setStaffSignInAllowed(ctx, w.actor, false)],
@@ -824,8 +826,9 @@ const EXPECTED: Record<string, string> = {
   'list staff invitations': 'FFFFFFA',
   'list staff': 'FFFFFFA',
   'view staff settings': 'FFFFFFA',
-  // Everyone chooses their own language and picture, and nobody else's.
+  // Everyone chooses their own language, first time zone and picture, and nobody else's.
   'choose own language': 'AAAAAAA',
+  'save own first time zone': 'AAAAAAA',
   'choose own picture': 'AAAAAAA',
   // Everyone dismisses their own MFA recommendation, and nobody else's.
   'dismiss own MFA recommendation': 'AAAAAAA',

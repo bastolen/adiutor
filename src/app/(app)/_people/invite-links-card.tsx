@@ -17,6 +17,7 @@ import SortMenu from '@/components/ui/sort-menu';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
 import formatDate from '@/lib/format';
 import { type Locale } from '@/lib/i18n/locales';
+import useReaderTimeZone from '@/lib/i18n/use-reader-time-zone';
 import { type TableLinks } from '@/lib/tables/page-url';
 import { type Paged } from '@/lib/tables/table-state';
 import type { InviteLinkSort } from '@/lib/tables/tables';
@@ -61,25 +62,27 @@ type InviteLinksTranslator = (
  *
  * @param link - The link.
  * @param locale - The reader's language, for the date.
+ * @param timeZone - The reader's time zone, for the date.
  * @param t - Translates the `people.inviteLinks` group.
  * @returns The details, or `null` for a revoked link (its status says it all).
  */
 function linkDetails(
   link: InviteLinkSummary,
   locale: Locale,
+  timeZone: string,
   t: InviteLinksTranslator,
 ): string | null {
   // i18n-check t('people.inviteLinks.expires')
   // i18n-check t('people.inviteLinks.usedBy')
   // i18n-check t('people.inviteLinks.expired')
   if (link.status === 'active') {
-    return t('expires', { date: formatDate(link.expiresAt, locale) });
+    return t('expires', { date: formatDate(link.expiresAt, locale, timeZone) });
   }
   if (link.usedByEmail) {
     return t('usedBy', { email: link.usedByEmail });
   }
   if (link.status === 'expired') {
-    return t('expired', { date: formatDate(link.expiresAt, locale) });
+    return t('expired', { date: formatDate(link.expiresAt, locale, timeZone) });
   }
   return null;
 }
@@ -108,6 +111,7 @@ export default function InviteLinksCard({
   const tLinks = useTranslations('people.inviteLinks');
   const tRoles = useTranslations('roles');
   const locale = useLocale();
+  const timeZone = useReaderTimeZone();
   return (
     <Card
       id={table.section}
@@ -147,8 +151,8 @@ export default function InviteLinksCard({
           </thead>
           <tbody>
             {links.items.map((link) => {
-              const details = linkDetails(link, locale, tLinks);
-              const created = formatDate(link.createdAt, locale);
+              const details = linkDetails(link, locale, timeZone, tLinks);
+              const created = formatDate(link.createdAt, locale, timeZone);
               return (
                 <Tr key={link.id}>
                   <Td>

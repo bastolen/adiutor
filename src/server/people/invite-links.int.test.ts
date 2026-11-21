@@ -130,6 +130,7 @@ async function claimIn(tx: DatabaseTransaction, linkId: string, email: string) {
     fromLink: true,
     baseUrl: ctx.baseUrl,
     locale: 'en-US',
+    timeZone: null,
   });
   await tx.update(inviteLink).set({ invitationId }).where(eq(inviteLink.id, linkId));
   return defined(invitationId, 'the new invitation');
@@ -339,6 +340,18 @@ describe('invite links', () => {
       .from(invitation)
       .where(eq(invitation.email, 'new@adiutor.test'));
     expect(claimed?.locale).toBe('es-ES');
+  });
+
+  it('turn into an invitation with the zone of whoever created the link', async () => {
+    await db.update(user).set({ timeZone: 'Asia/Kolkata' }).where(eq(user.id, admin.id));
+
+    await claimInviteLink(ctx, await newLinkToken(), 'new@adiutor.test');
+
+    const [claimed] = await db
+      .select({ timeZone: invitation.timeZone })
+      .from(invitation)
+      .where(eq(invitation.email, 'new@adiutor.test'));
+    expect(claimed?.timeZone).toBe('Asia/Kolkata');
   });
 
   it('respond the same when the email is already a member', async () => {

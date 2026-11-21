@@ -140,7 +140,13 @@ export function ScheduleText({ schedule }: { schedule: string }) {
     case 'hourly':
       return <>{t('schedule', { ...values, minute: words.minute })}</>;
     case 'daily': {
-      const time = formatTime(new Date(Date.UTC(2026, 0, 1, words.hour, words.minute)), locale);
+      // In UTC, the zone schedules are written in, and named.
+      const time = formatTime(
+        new Date(Date.UTC(2026, 0, 1, words.hour, words.minute)),
+        locale,
+        'UTC',
+        { zoneName: true },
+      );
       return <>{t('schedule', { ...values, time })}</>;
     }
     default:

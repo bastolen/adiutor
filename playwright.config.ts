@@ -18,6 +18,7 @@ import {
   E2E_BASE_URL,
   E2E_CRON_SECRET,
   E2E_PORT,
+  E2E_TIME_ZONE,
   OUTBOX_DIR,
 } from './e2e/support/fixtures';
 import { buildIsCurrent } from './tests/build/build-state';
@@ -55,6 +56,12 @@ export default defineConfig({
      * find their text in English; a spec about other languages sets its own.
      */
     locale: 'en-US',
+    /**
+     * The browser's time zone: the seeded accounts' and the default zone
+     * (`E2E_TIME_ZONE`), so the specs know which times pages show; a spec
+     * about zones sets its own.
+     */
+    timezoneId: E2E_TIME_ZONE,
     /**
      * Record a trace when a test is retried, for debugging (in the HTML
      * report). `e2e/security.spec.ts` keeps one of its first failure instead.

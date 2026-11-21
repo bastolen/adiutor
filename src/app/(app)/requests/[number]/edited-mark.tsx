@@ -14,6 +14,7 @@ import { focusRing } from '@/components/ui/styles';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import cn from '@/lib/cn';
 import { formatDateTime } from '@/lib/format';
+import useReaderTimeZone from '@/lib/i18n/use-reader-time-zone';
 
 /**
  * "Edited", with when on hover. With `versions` (the staff's), it's a button
@@ -34,8 +35,9 @@ export default function EditedMark({
 }) {
   const t = useTranslations('requests.edit');
   const locale = useLocale();
+  const timeZone = useReaderTimeZone();
   const [open, setOpen] = useTransientState(false);
-  const when = t('editedAt', { time: formatDateTime(editedAt, locale) });
+  const when = t('editedAt', { time: formatDateTime(editedAt, locale, timeZone) });
 
   if (!versions) {
     return <span title={when}>{t('edited')}</span>;

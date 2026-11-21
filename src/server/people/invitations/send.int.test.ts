@@ -284,6 +284,37 @@ describe('the invitation’s language', () => {
   });
 });
 
+describe('the invitation’s time zone', () => {
+  it('keeps the zone of whoever sent it, and none when theirs isn’t known', async () => {
+    const input = { companyId: testCompany.id, role: 'client' };
+    await inviteByEmail(
+      ctx,
+      { ...companyAdmin, timeZone: 'Asia/Kolkata' },
+      {
+        ...input,
+        email: 'kolkata@adiutor.test',
+      },
+    );
+    await inviteByEmail(
+      ctx,
+      { ...companyAdmin, timeZone: null },
+      {
+        ...input,
+        email: 'unknown@adiutor.test',
+      },
+    );
+
+    const stored = await db
+      .select({ email: invitation.email, timeZone: invitation.timeZone })
+      .from(invitation)
+      .orderBy(invitation.email);
+    expect(stored).toEqual([
+      { email: 'kolkata@adiutor.test', timeZone: 'Asia/Kolkata' },
+      { email: 'unknown@adiutor.test', timeZone: null },
+    ]);
+  });
+});
+
 describe('inviteByEmail permissions', () => {
   it('refuses roles from the other kind of company', async () => {
     await expect(

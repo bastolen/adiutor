@@ -10,7 +10,7 @@ import { createTranslator, type NamespaceKeys, type NestedKeyOf } from 'use-intl
 import type { Locale } from './locales';
 import { onMessageError } from './message-errors';
 import { type Messages, messagesFor } from './messages';
-import { TIME_ZONE } from './time-zone';
+import { DEFAULT_TIME_ZONE } from './time-zones';
 
 /** A namespace of the catalogues, e.g. `common` or `emails.invitation`. */
 export type Namespace = NamespaceKeys<Messages, NestedKeyOf<Messages>>;
@@ -27,7 +27,9 @@ export default function translator<const N extends Namespace>(locale: Locale, na
     locale,
     messages: messagesFor(locale),
     namespace,
-    timeZone: TIME_ZONE,
+    // No message formats a date itself: times come in formatted, in the reader's zone
+    // (`src/lib/format.ts`), so the translator's own zone is never used.
+    timeZone: DEFAULT_TIME_ZONE,
     onError: onMessageError,
   });
 }

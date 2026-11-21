@@ -45,6 +45,15 @@ export const E2E_PORT = chosenPort();
 /** Base URL of that server. */
 export const E2E_BASE_URL = `http://localhost:${E2E_PORT}`;
 
+/**
+ * The time zone of the test browsers, of every seeded account and of
+ * Adiutor's default zone in the tests: UTC, so the specs know which times
+ * pages show, and an account a spec creates saves the zone the page already
+ * shows (its first visit doesn't load the page again). A spec about zones
+ * sets its own (`test.use({ timezoneId })`).
+ */
+export const E2E_TIME_ZONE = 'UTC';
+
 /** Folder the test server writes emails to instead of sending them. */
 export const OUTBOX_DIR = resolve('e2e/.outbox');
 

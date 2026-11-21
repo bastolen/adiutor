@@ -95,6 +95,12 @@ export const invitation = pgTable(
      * in (an invitee who has an account gets their own language instead).
      */
     locale: text('locale', { enum: LOCALES }).notNull().default(DEFAULT_LOCALE),
+    /**
+     * The zone of whoever sent it, when they sent it (`isTimeZone`): the
+     * reminder states its expiry in it. Empty when nobody sent it (setup,
+     * the seeds) or the sender had no zone yet; Adiutor's default zone then.
+     */
+    timeZone: text('time_zone'),
     createdAt: createdAt(),
   },
   (table) => [

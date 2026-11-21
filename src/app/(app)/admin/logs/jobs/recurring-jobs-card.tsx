@@ -28,6 +28,12 @@ import {
   ScheduleText,
 } from './job-parts';
 
+/** The zone this card shows times in: UTC, the zone schedules are written in, as it says. */
+const JOB_TIME_ZONE = 'UTC';
+
+/** Times on this card name their zone, since it isn't the reader's. */
+const NAMED = { zoneName: true } as const;
+
 /**
  * When a job runs next: at the next tick, at its next scheduled moment (only
  * the time when that's today in UTC), or not while it's paused.
@@ -50,10 +56,12 @@ function NextRun({ job }: { job: RecurringJobOverview }) {
   return (
     <time
       dateTime={moment}
-      title={formatDateTime(job.nextRunAt, locale)}
+      title={formatDateTime(job.nextRunAt, locale, JOB_TIME_ZONE, NAMED)}
       className="whitespace-nowrap"
     >
-      {today ? formatTime(job.nextRunAt, locale) : formatDateTime(job.nextRunAt, locale)}
+      {today
+        ? formatTime(job.nextRunAt, locale, JOB_TIME_ZONE, NAMED)
+        : formatDateTime(job.nextRunAt, locale, JOB_TIME_ZONE, NAMED)}
     </time>
   );
 }
@@ -69,7 +77,7 @@ function NextRun({ job }: { job: RecurringJobOverview }) {
 function timeTag(at: Date, locale: Locale) {
   return function TimeTag(chunks: ReactNode) {
     return (
-      <time dateTime={at.toISOString()} title={formatDateTime(at, locale)}>
+      <time dateTime={at.toISOString()} title={formatDateTime(at, locale, JOB_TIME_ZONE, NAMED)}>
         {chunks}
       </time>
     );
@@ -93,7 +101,7 @@ function LastTick({ at }: { at: Date | null }) {
   return (
     <span className="text-sm whitespace-nowrap text-muted-foreground">
       {t.rich('lastTick', {
-        time: formatRelative(at, locale, { justNow: tTime('justNow') }),
+        time: formatRelative(at, locale, JOB_TIME_ZONE, { justNow: tTime('justNow') }),
         when: timeTag(at, locale),
       })}
     </span>

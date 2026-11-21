@@ -17,6 +17,7 @@ import { generateToken, hashToken } from '@/lib/sign-in/tokens';
 
 import type { ServiceContext } from '../../context';
 import getStaffName from '../../people/staff-name';
+import recipientTimeZone from '../../recipient-time-zone';
 import { defineRecurringJob } from '../define';
 
 /** How long before an invitation expires its reminder is sent, in hours. */
@@ -89,6 +90,9 @@ async function loadDueInvitations(ctx: ServiceContext) {
       // The invitee's own language when they have an account and saved one, else the invitation's.
       recipientLocale: recipient.locale,
       locale: invitation.locale,
+      // The same for the zone: the invitee's own, else the sender's when they sent it.
+      recipientTimeZone: recipient.timeZone,
+      timeZone: invitation.timeZone,
     })
     .from(invitation)
     .leftJoin(company, eq(company.id, invitation.companyId))
@@ -192,6 +196,7 @@ async function remind(
         role: found.role,
         url: `${ctx.baseUrl}/invite/${token}`,
         expiresAt: found.expiresAt,
+        timeZone: await recipientTimeZone(ctx, found.recipientTimeZone, found.timeZone),
       }),
     );
   } catch (error) {

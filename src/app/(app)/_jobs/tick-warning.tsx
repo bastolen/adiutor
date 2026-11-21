@@ -11,6 +11,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import Banner from '@/components/ui/banner';
 import Button from '@/components/ui/button';
 import { formatRelative } from '@/lib/format';
+import useReaderTimeZone from '@/lib/i18n/use-reader-time-zone';
 
 /**
  * Props for {@link TickWarning}.
@@ -36,6 +37,7 @@ export default function TickWarning({ lastTickAt, linkToJobs = false }: TickWarn
   const t = useTranslations('admin.jobs.tickWarning');
   const tTime = useTranslations('common.relativeTime');
   const locale = useLocale();
+  const timeZone = useReaderTimeZone();
   return (
     <Banner
       label={t('label')}
@@ -44,7 +46,9 @@ export default function TickWarning({ lastTickAt, linkToJobs = false }: TickWarn
       title={t('title')}
       description={
         lastTickAt
-          ? t('late', { time: formatRelative(lastTickAt, locale, { justNow: tTime('justNow') }) })
+          ? t('late', {
+              time: formatRelative(lastTickAt, locale, timeZone, { justNow: tTime('justNow') }),
+            })
           : t('never')
       }
       actions={

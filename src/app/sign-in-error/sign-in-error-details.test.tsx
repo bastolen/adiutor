@@ -63,10 +63,7 @@ describe('SignInErrorDetails', () => {
 
     expect(screen.getByText(/send this reference to an administrator/)).toBeInTheDocument();
     expect(screen.getByText('7KQ2-M9XD')).toBeInTheDocument();
-    expect(screen.getByText('Oct 28, 2026, 6:40 PM UTC')).toHaveAttribute(
-      'datetime',
-      AT.toISOString(),
-    );
+    expect(screen.getByText('Oct 28, 2026, 6:40 PM')).toHaveAttribute('datetime', AT.toISOString());
     expect(screen.getByRole('button', { name: 'Copy reference' })).toBeInTheDocument();
   });
 

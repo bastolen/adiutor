@@ -263,6 +263,25 @@ export async function addMembership(
 }
 
 /**
+ * Reads the time zone saved with an account (`user.time_zone`).
+ *
+ * @param email - The account's address.
+ * @returns The zone, or `null` when none is saved.
+ */
+export async function savedTimeZoneOf(email: string): Promise<string | null> {
+  return withTestDatabase(async (db) => {
+    const found = firstRow(
+      await db
+        .select({ timeZone: schema.user.timeZone })
+        .from(schema.user)
+        .where(eq(schema.user.email, email)),
+      'the account',
+    );
+    return found.timeZone;
+  });
+}
+
+/**
  * Makes the MFA confirmation of every session of a user that many minutes
  * old (`session.mfa_verified_at`), as if they had signed in or confirmed
  * with their second step back then. Changing how they sign in needs one
@@ -558,6 +577,7 @@ export async function findSignInError(
  * @param request.type - Its type; a bug when left out.
  * @param request.priority - Its priority; normal when left out.
  * @param request.status - Its status; open when left out.
+ * @param request.at - When it was raised; now when left out.
  * @returns The request's number.
  */
 export async function storeRequest({
@@ -568,6 +588,7 @@ export async function storeRequest({
   type = 'bug',
   priority = 'normal',
   status = 'open',
+  at = new Date(),
 }: {
   companySlug: string;
   raisedBy: string;
@@ -576,6 +597,7 @@ export async function storeRequest({
   type?: RequestType;
   priority?: RequestPriority;
   status?: RequestStatus;
+  at?: Date;
 }): Promise<number> {
   return withTestDatabase(async (db) => {
     const company = firstRow(
@@ -606,7 +628,7 @@ export async function storeRequest({
           priority,
           status,
           raisedBy: { id: author.id, side: 'company' },
-          at: new Date(),
+          at,
         },
       ],
       (counter?.last ?? 0) + 1,

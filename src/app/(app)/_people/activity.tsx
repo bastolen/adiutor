@@ -8,6 +8,7 @@ import { useLocale, useTranslations } from 'next-intl';
 
 import cn from '@/lib/cn';
 import formatDate from '@/lib/format';
+import useReaderTimeZone from '@/lib/i18n/use-reader-time-zone';
 
 import { hiddenTag, timeTag } from './rich-tags';
 
@@ -32,13 +33,16 @@ interface ActivityProps {
 export function ActivityColumn({ lastActiveAt, joinedAt }: ActivityProps) {
   const t = useTranslations('people.activity');
   const locale = useLocale();
+  const timeZone = useReaderTimeZone();
   return (
     <>
       {t.rich('lastActive', {
         hidden: hiddenTag,
         time: timeTag(lastActiveAt),
       })}
-      <span className="block text-xs">{t('joined', { date: formatDate(joinedAt, locale) })}</span>
+      <span className="block text-xs">
+        {t('joined', { date: formatDate(joinedAt, locale, timeZone) })}
+      </span>
     </>
   );
 }
@@ -61,6 +65,7 @@ export function ActivityLine({
 }: ActivityProps & { className?: string }) {
   const t = useTranslations('people.activity');
   const locale = useLocale();
+  const timeZone = useReaderTimeZone();
   return (
     <span className={cn('contents', className)}>
       <span>
@@ -68,7 +73,7 @@ export function ActivityLine({
           ? t.rich('lastActiveShort', { time: timeTag(lastActiveAt) })
           : t('neverActive')}
       </span>
-      <span>{t('joined', { date: formatDate(joinedAt, locale) })}</span>
+      <span>{t('joined', { date: formatDate(joinedAt, locale, timeZone) })}</span>
     </span>
   );
 }

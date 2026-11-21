@@ -16,6 +16,7 @@ import RowAction from '@/components/ui/row-action';
 import SortMenu from '@/components/ui/sort-menu';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
 import { formatRelative } from '@/lib/format';
+import useReaderTimeZone from '@/lib/i18n/use-reader-time-zone';
 import type { TableLinks } from '@/lib/tables/page-url';
 import { type Paged } from '@/lib/tables/table-state';
 import type { FailedJobSort } from '@/lib/tables/tables';
@@ -38,9 +39,12 @@ function Controls({ job }: { job: FailedJobEntry }) {
   const t = useTranslations('admin.jobs.actions');
   const tTime = useTranslations('common.relativeTime');
   const locale = useLocale();
+  const timeZone = useReaderTimeZone();
   const labels = {
     job: job.kind,
-    time: formatRelative(job.failedAt ?? job.queuedAt, locale, { justNow: tTime('justNow') }),
+    time: formatRelative(job.failedAt ?? job.queuedAt, locale, timeZone, {
+      justNow: tTime('justNow'),
+    }),
   };
   return (
     <>

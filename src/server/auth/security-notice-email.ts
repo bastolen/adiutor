@@ -1,6 +1,6 @@
 /**
  * @file Building a security notice for a recipient (`src/emails/security-notice.tsx`),
- * in their language, with the device and IP address of the change when it
+ * in their language and time zone, with the device and IP address of the change when it
  * was their own. Shared by the notice sent straight away (`sendAccountDeletedNotice`)
  * and the queued one (the `security-notice` job).
  */
@@ -15,6 +15,7 @@ import type { SecurityNoticeKind } from '@/lib/security-notice-kinds';
 
 import type { ServiceContext } from '../context';
 import recipientLocale from '../recipient-locale';
+import recipientTimeZone from '../recipient-time-zone';
 
 /** What a security notice says, and to whom. */
 export interface SecurityNoticeContent {
@@ -22,6 +23,8 @@ export interface SecurityNoticeContent {
   email: string;
   /** The recipient's saved language, if any (else Adiutor's default, else English). */
   savedLocale: string | null;
+  /** The recipient's saved time zone, if any (else Adiutor's default). */
+  savedTimeZone: string | null;
   /** What changed. */
   kind: SecurityNoticeKind;
   /** When it changed. */
@@ -44,13 +47,14 @@ export interface SecurityNoticeContent {
 }
 
 /**
- * Builds a security notice in the recipient's language
- * (`recipientLocale`).
+ * Builds a security notice in the recipient's language and time zone
+ * (`recipientLocale`, `recipientTimeZone`).
  *
- * @param ctx - Service context (database, for Adiutor's default language, and the app URL).
+ * @param ctx - Service context (database, for Adiutor's default language and zone, and the app URL).
  * @param content - What it says, and to whom.
  * @param content.email - The recipient's address.
  * @param content.savedLocale - The recipient's saved language, if any.
+ * @param content.savedTimeZone - The recipient's saved time zone, if any.
  * @param content.kind - What changed.
  * @param content.when - When it changed.
  * @param content.origin - Where the change came from, only for the recipient's own change.
@@ -58,14 +62,18 @@ export interface SecurityNoticeContent {
  */
 export default async function buildSecurityNotice(
   ctx: Pick<ServiceContext, 'db' | 'baseUrl'>,
-  { email, savedLocale, kind, when, origin = null, ...names }: SecurityNoticeContent,
+  { email, savedLocale, savedTimeZone, kind, when, origin = null, ...names }: SecurityNoticeContent,
 ): Promise<Email> {
-  const language: Locale = await recipientLocale(ctx, savedLocale);
+  const [language, timeZone]: [Locale, string] = await Promise.all([
+    recipientLocale(ctx, savedLocale),
+    recipientTimeZone(ctx, savedTimeZone),
+  ]);
   return securityNoticeEmail(email, {
     appUrl: ctx.baseUrl,
     locale: language,
     kind,
     when,
+    timeZone,
     device: origin?.userAgent
       ? translator(language, 'common')('device', describeUserAgent(origin.userAgent))
       : null,
