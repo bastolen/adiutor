@@ -10,7 +10,7 @@ text in [decision 0021](decisions/0021-markdown-for-request-text.md).
 
 Not built yet, each for a later change: emails about requests (also to the staff assigned to one
 and to the people a text mentions, never about an internal note to someone at the company),
-an approval step, attachments, and working on a request while signed in as a user.
+an approval step, and attachments.
 
 ## Words
 
@@ -46,8 +46,9 @@ Four permissions in the request's company (`src/lib/authz/permissions.ts`):
   access, so its requests are "not found" to them (see
   [Companies and roles](companies-and-roles.md)). For the staff they stay on the company's own
   page and under All, and leave the Active and Waiting lists that cover several companies.
-- While a staff member is **signed in as a user**, request pages can be read and every change is
-  refused (`assertNotSignedInAs`, see [Signing in as a user](authentication.md#signing-in-as-a-user)).
+- While a staff member is **signed in as a user**, they can do that user's request work, which
+  records them (see [Signed in as a user](#signed-in-as-a-user)); managing request types stays
+  off.
 - The services check all of this themselves (`src/server/requests/`), and every operation has a
   row in `src/server/authorization-matrix.int.test.ts`.
 
@@ -313,8 +314,9 @@ Why it works this way is in [decision 0024](decisions/0024-edit-replies-and-desc
 - **Not activity:** an edit doesn't move the request's last activity, and it adds nothing to the
   conversation.
 - **In the code:** `editRequestDescription` and `editReply`, through `changeRequest` like every
-  change: refused while signed in as a user, for a deactivated company, past the rate limit of
-  request changes, and for a closed request (`errors.requests.closedNoEdit`).
+  change: refused for a deactivated company, past the rate limit of request changes, and for a
+  closed request (`errors.requests.closedNoEdit`). An edit a staff member makes while signed in
+  as the editor says so (see [Signed in as a user](#signed-in-as-a-user)).
 
 ### Internal notes
 
@@ -426,6 +428,29 @@ A description, a reply or a note can mention people. Why it's built this way is 
   from `requestPerson`), so it never reaches a company user's browser. A side's name is never a
   link.
 
+## Signed in as a user
+
+A staff member signed in as a user
+([decision 0028](decisions/0028-request-work-while-signed-in-as-a-user.md), and
+[Signing in as a user](authentication.md#signing-in-as-a-user)) can do the request work that user
+may do, with the user's rights: raise, reply, change the status, edit the user's texts and, signed
+in as a staff member, write notes, change details and assign. Managing request types is staff
+settings, and refused.
+
+- **The record:** the row that names the user as who did it (the request, the entry, the text
+  version) also holds a flag and the staff member (`created_signed_in_as` and
+  `created_signed_in_as_staff_id` on `request`, `signed_in_as` and `signed_in_as_staff_id` on
+  `request_entry` and `request_text_version`), from `signedInAsWork`. The author stays the user.
+  The flag outlives the staff member's account; the staff ID doesn't.
+- **Who's told:** only the user and the staff who see the audit log (`audit:view`:
+  `maySeeSignedInAsWork` in `src/lib/authz/impersonation.ts`). The service gives them a mark
+  (`signedInAs` on an entry or a version, `raisedSignedInAs`, `editedSignedInAs` for a text's last
+  edit) with the staff member's name, or `null` once the account is gone, and leaves it out for
+  everyone else.
+- **Rate limits** count against the staff member (`actingUserId`), and the change's transaction
+  checks again that the sign-in still holds (its row read `FOR SHARE`, code `signed_in_as` with
+  `errors.impersonation.ended`).
+
 ## Pages
 
 - **`/requests`**, for everyone signed in: every request they may see. The status links (Active,
@@ -467,9 +492,11 @@ A description, a reply or a note can mention people. Why it's built this way is 
   `findRequestNumber`, `getRequest`, `raiseRequest`, `replyToRequest`, `addNote`, `changeRequestStatus`,
   `updateRequestDetails`, `changeAssignees`, `listAssignableStaff`, `countAssignedRequests`,
   `listMentionable`, and `unassignFrom` for the services that end someone's request work.
-  Every change refuses someone signed in as a user, checks the permission and that the company is
-  active, validates, takes a rate limit (see [Rate limits](security-measures.md#rate-limits)), then
-  runs in a transaction that starts with `assertStillMayChange` (`assertStillManages`, then the company) and locks the request's row (see
+  Every change checks the permission and that the company is active, validates, takes a rate
+  limit keyed on who is acting (`actingUserId`; see
+  [Rate limits](security-measures.md#rate-limits)), then runs in a transaction that starts with
+  `assertStillMayChange` (`assertStillManages`, then the company, then a sign-in as the actor
+  still holding) and locks the request's row (see
   [Lock order](security-measures.md#lock-order)). That transaction refuses again when the company
   was deactivated meanwhile, which the staff's rights don't depend on; the company's row isn't
   locked (company rows come first in the lock order), so this narrows the moment in which a change

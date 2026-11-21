@@ -48,8 +48,9 @@ Each role can sign in as different users:
 - Managers: company users;
 - Support: company users who aren't an Admin in any company.
 
-Nobody can sign in as themselves or as a user who turned it off on their Security page, and nothing
-can be changed while signed in as someone. See
+Nobody can sign in as themselves or as a user who turned it off on their Security page. While
+signed in as someone, only their request work can be done, and it records the staff member
+([decision 0028](decisions/0028-request-work-while-signed-in-as-a-user.md)). See
 [Signing in as a user](authentication.md#signing-in-as-a-user).
 
 | Company                                      | Admin | Client | Watcher |

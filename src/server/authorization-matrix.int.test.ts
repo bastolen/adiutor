@@ -38,7 +38,7 @@ import { hashPassword } from 'better-auth/crypto';
 import { and, eq, isNull } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { account, invitation, inviteLink, membership, user } from '@/db/schema';
+import { account, impersonation, invitation, inviteLink, membership, user } from '@/db/schema';
 import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { defined, firstRow } from '@/lib/defined';
 import { hashToken } from '@/lib/sign-in/tokens';
@@ -769,8 +769,34 @@ const READS: ReadonlySet<string> = new Set([
   'count own assigned requests',
 ]);
 
-/** What a user may still change while a staff member is signed in as them: their own work. */
-const OWN_WORK: ReadonlySet<string> = new Set(['dismiss own MFA recommendation']);
+/**
+ * What a user may still change while a staff member is signed in as them:
+ * their own work, which then gets what it gets for the user. Their request
+ * work records the staff member (decision 0028); managing request types is
+ * staff settings, and refused.
+ */
+const OWN_WORK: ReadonlySet<string> = new Set([
+  'dismiss own MFA recommendation',
+  'raise request (own)',
+  'raise request (other)',
+  'reply to request (own)',
+  'reply to request (other)',
+  'reply and wait for the company (own)',
+  'mark request done (own)',
+  'cancel request (own)',
+  'reopen request (own)',
+  'set request status (own)',
+  'set request status (other)',
+  'edit request details (own)',
+  'edit request details (other)',
+  'assign request (own)',
+  'assign request (other)',
+  'edit request description (own)',
+  'edit request description (other)',
+  'edit a reply that is not your own (own)',
+  'add internal note (own)',
+  'add internal note (other)',
+]);
 
 /** What happens when a role tries an operation. */
 type Outcome = 'allowed' | 'forbidden' | 'not_found';
@@ -1195,9 +1221,16 @@ describe('authorization matrix', () => {
   });
 
   it.each(['client', 'company admin', 'platform admin'] as const)(
-    'refuses every change while a staff member is signed in as a %s, and still reads as them',
+    'refuses every change but their own work while a staff member is signed in as a %s, and still reads as them',
     async (role) => {
       const world = await createWorld(role);
+      // The sign-in itself, which request work checks again in its transaction.
+      await db.insert(impersonation).values({
+        staffUserId: world.outsider,
+        userId: world.actor.id,
+        returnTo: '/dashboard',
+        expiresAt: new Date(Date.now() + 30 * 60_000),
+      });
       const signedInAs: World = {
         ...world,
         actor: {
@@ -1219,14 +1252,13 @@ describe('authorization matrix', () => {
          * @returns What the operation returns.
          */
         const run = () => defined(OPERATIONS.get(name), `the ${name} operation`)(signedInAs);
-        return [name, READS.has(name) ? await outcome(name, run) : await outcomeCode(run)];
+        const asUser = READS.has(name) || OWN_WORK.has(name);
+        return [name, asUser ? await outcome(name, run) : await outcomeCode(run)];
       });
-      const expected = names.map((name) => {
-        if (READS.has(name)) {
-          return [name, expectedOutcome(name, role)];
-        }
-        return [name, OWN_WORK.has(name) ? 'done' : 'signed_in_as'];
-      });
+      const expected = names.map((name) => [
+        name,
+        READS.has(name) || OWN_WORK.has(name) ? expectedOutcome(name, role) : 'signed_in_as',
+      ]);
       expect(Object.fromEntries(results)).toEqual(Object.fromEntries(expected));
     },
   );

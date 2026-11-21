@@ -132,6 +132,16 @@ export const request = pgTable(
     createdBy: uuid('created_by').references(() => user.id, { onDelete: 'set null' }),
     /** Which side raised it: someone at the company, or the staff for the company. */
     createdBySide: text('created_by_side', { enum: REQUEST_SIDES }).notNull(),
+    /**
+     * Whether a staff member raised it while signed in as `createdBy`
+     * (decision 0028). Kept once the staff member's account is gone, so the
+     * request still says a staff member did it.
+     */
+    createdSignedInAs: boolean('created_signed_in_as').default(false).notNull(),
+    /** The staff member who was signed in as `createdBy`, while their account exists. */
+    createdSignedInAsStaffId: uuid('created_signed_in_as_staff_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
     /** When it was raised: the moment its number was taken (`raiseRequest`), not this default. */
     createdAt: createdAt(),
     /** When it was raised, replied to or changed last: what lists sort by. */
@@ -145,12 +155,18 @@ export const request = pgTable(
     /** Every company's requests by their last activity, for the staff. */
     index('request_activity_idx').on(table.lastActivityAt, table.id),
     index('request_created_by_idx').on(table.createdBy),
+    index('request_created_signed_in_as_staff_idx').on(table.createdSignedInAsStaffId),
     /** The requests of a type; also serves the type foreign key. */
     index('request_type_idx').on(table.type),
     oneOf('request_priority_valid', table.priority, REQUEST_PRIORITIES),
     oneOf('request_status_valid', table.status, REQUEST_STATUSES),
     oneOf('request_created_by_side_valid', table.createdBySide, REQUEST_SIDES),
     oneOf('request_description_format_valid', table.descriptionFormat, REQUEST_TEXT_FORMATS),
+    /** A staff member is named only for a request raised while signed in as someone. */
+    check(
+      'request_created_signed_in_as_fits',
+      sql`${table.createdSignedInAsStaffId} is null or ${table.createdSignedInAs}`,
+    ),
   ],
 );
 
@@ -205,6 +221,15 @@ export const requestEntry = pgTable(
     /** Which side they acted as, kept so the history still says so once the account is gone. */
     authorSide: text('author_side', { enum: REQUEST_SIDES }).notNull(),
     /**
+     * Whether a staff member wrote or changed it while signed in as the
+     * author (decision 0028). Kept once the staff member's account is gone.
+     */
+    signedInAs: boolean('signed_in_as').default(false).notNull(),
+    /** The staff member who was signed in as the author, while their account exists. */
+    signedInAsStaffId: uuid('signed_in_as_staff_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    /**
      * A reply's or a note's text; `null` for a change. Edited only by its
      * author, through `editReply`, while the request is open; each edit keeps
      * the text it replaced as a `request_text_version`.
@@ -242,6 +267,7 @@ export const requestEntry = pgTable(
     index('request_entry_request_idx').on(table.requestId, table.id),
     index('request_entry_author_idx').on(table.authorId),
     index('request_entry_subject_idx').on(table.subjectUserId),
+    index('request_entry_signed_in_as_staff_idx').on(table.signedInAsStaffId),
     /**
      * A reply or a note has a text and no new value; a change has a new value
      * and no text.
@@ -263,6 +289,11 @@ export const requestEntry = pgTable(
     oneOf('request_entry_kind_valid', table.kind, REQUEST_ENTRY_KINDS),
     oneOf('request_entry_author_side_valid', table.authorSide, REQUEST_SIDES),
     oneOf('request_entry_body_format_valid', table.bodyFormat, REQUEST_TEXT_FORMATS),
+    /** A staff member is named only for an entry made while signed in as someone. */
+    check(
+      'request_entry_signed_in_as_fits',
+      sql`${table.signedInAsStaffId} is null or ${table.signedInAs}`,
+    ),
   ],
 );
 
@@ -325,6 +356,15 @@ export const requestTextVersion = pgTable(
     editedBy: uuid('edited_by').references(() => user.id, { onDelete: 'set null' }),
     /** The side they edited it as, kept so the versions still say so once the account is gone. */
     editedBySide: text('edited_by_side', { enum: REQUEST_SIDES }).notNull(),
+    /**
+     * Whether a staff member made the edit while signed in as `editedBy`
+     * (decision 0028). Kept once the staff member's account is gone.
+     */
+    signedInAs: boolean('signed_in_as').default(false).notNull(),
+    /** The staff member who was signed in as `editedBy`, while their account exists. */
+    signedInAsStaffId: uuid('signed_in_as_staff_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
     /** When it was edited away: the moment of the edit (`CHANGE_MOMENT`). */
     createdAt: createdAt(),
   },
@@ -333,8 +373,14 @@ export const requestTextVersion = pgTable(
     index('request_text_version_request_idx').on(table.requestId, table.id),
     index('request_text_version_entry_idx').on(table.entryId),
     index('request_text_version_edited_by_idx').on(table.editedBy),
+    index('request_text_version_signed_in_as_staff_idx').on(table.signedInAsStaffId),
     oneOf('request_text_version_body_format_valid', table.bodyFormat, REQUEST_TEXT_FORMATS),
     oneOf('request_text_version_edited_by_side_valid', table.editedBySide, REQUEST_SIDES),
+    /** A staff member is named only for an edit made while signed in as someone. */
+    check(
+      'request_text_version_signed_in_as_fits',
+      sql`${table.signedInAsStaffId} is null or ${table.signedInAs}`,
+    ),
   ],
 );
 

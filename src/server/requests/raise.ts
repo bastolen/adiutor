@@ -15,11 +15,12 @@ import {
   requestTitleSchema,
 } from '@/lib/validation';
 
-import { assertNotSignedInAs, assertPermission, getCompanyAccess } from '../access';
+import { assertPermission, getCompanyAccess } from '../access';
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { companyDeactivatedError } from '../errors';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
+import { actingUserId, signedInAsWork } from '../signed-in-as';
 import { assertStillMayChange } from './change';
 import { storeMentions } from './mentions';
 import { typeToGive } from './types';
@@ -64,7 +65,8 @@ async function nextRequestNumber(
  *
  * The transaction first checks the actor's right and the company again as
  * they are by then (`assertStillMayChange`), so someone who lost the right
- * while the request was under way raises nothing.
+ * while the request was under way raises nothing. A staff member signed in
+ * as the actor may raise it for them, and is recorded (decision 0028).
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `requests:contribute` in the company.
@@ -76,11 +78,11 @@ async function nextRequestNumber(
  *   archived.
  * @param input.priority - A priority, from the staff (`REQUEST_PRIORITIES`); empty for the type's.
  * @returns The new request's ID and number.
- * @throws {ServiceError} `signed_in_as` while a staff member is signed in as the actor,
- *   `not_found` when the actor may not see the company, `forbidden` without
- *   `requests:contribute`, `invalid` when the company is deactivated or the type can't be
- *   chosen (`errors.requestTypes.unavailable`), `rate_limited` when the actor has raised too
- *   many requests (`RATE_LIMITS.requestsPerUser`).
+ * @throws {ServiceError} `not_found` when the actor may not see the company, `forbidden`
+ *   without `requests:contribute`, `invalid` when the company is deactivated or the type can't
+ *   be chosen (`errors.requestTypes.unavailable`), `rate_limited` when whoever acts has raised
+ *   too many requests (`RATE_LIMITS.requestsPerUser`), `signed_in_as` when the sign-in as the
+ *   actor ended meanwhile.
  * @throws {ZodError} When no company was chosen (asked first, like the form does), or the
  *   title, description, type or priority isn't valid.
  */
@@ -89,7 +91,6 @@ export default async function raiseRequest(
   actor: Actor,
   input: { companyId: string; title: string; description: string; type: string; priority?: string },
 ): Promise<{ id: string; number: number }> {
-  assertNotSignedInAs(actor);
   // A company that wasn't chosen is a field to fill in, not a page that doesn't exist.
   const companyRef = requestCompanySchema.parse(input.companyId);
   const { company, permissions } = await getCompanyAccess(ctx.db, actor, companyRef);
@@ -104,7 +105,9 @@ export default async function raiseRequest(
     permissions.has('requests:manage') && input.priority
       ? requestPrioritySchema.parse(input.priority)
       : startingPriority;
-  await assertRateLimit(ctx, `request:user:${actor.id}`, RATE_LIMITS.requestsPerUser);
+  await assertRateLimit(ctx, `request:user:${actingUserId(actor)}`, RATE_LIMITS.requestsPerUser);
+
+  const work = signedInAsWork(actor);
 
   return ctx.db.transaction(async (tx) => {
     await assertStillMayChange(tx, actor, company.id, 'requests:contribute');
@@ -122,6 +125,8 @@ export default async function raiseRequest(
           priority,
           createdBy: actor.id,
           createdBySide: requestSide(permissions),
+          createdSignedInAs: work.signedInAs,
+          createdSignedInAsStaffId: work.signedInAsStaffId,
           // Raised and last active at one moment: when its number was taken.
           createdAt: takenAt,
           lastActivityAt: takenAt,

@@ -321,7 +321,7 @@ does, to check what isn't working for them. The reasons are in
     message only says that something changed: no name, ID or address, and it isn't logged. A page
     the new person can't open says so as it would for anyone (a staff page is not found for a
     company user).
-- **Nothing changes in the user's name.**
+- **Nothing changes in the user's name, except their own work.**
   - Every service that changes something calls `assertNotSignedInAs` first (code `signed_in_as`:
     "This can't be changed while you're signed in as someone else."). The server actions that call
     Better Auth themselves, or send the user to confirm before a service would refuse, call it
@@ -329,12 +329,17 @@ does, to check what isn't working for them. The reasons are in
   - The auth guards refuse every Better Auth endpoint for such a session except reading the
     session and signing out (`refuseWhileSignedInAs`, code `SIGNED_IN_AS_SOMEONE`). Those
     endpoints would act on the staff member's own account.
-  - Only the user's own work stays allowed: today, hiding the dashboard's MFA tip. Requests can
-    be read but not changed ([Requests](requests.md)); working on them as the user is for a later
-    change, which then records the staff member, for staff with `audit:view` and the user to see.
-  - The authorization matrix tries every change with a staff member signed in as the acting user.
+  - Only the user's own work stays allowed: hiding the dashboard's MFA tip, and their request work
+    ([decision 0028](decisions/0028-request-work-while-signed-in-as-a-user.md)). The staff member
+    can do whatever the user may do on requests (managing request types is staff settings, and
+    refused). Each change records the staff member with its row (`signedInAsWork`), which the
+    request tells only the user and staff with `audit:view` (see
+    [Requests](requests.md#signed-in-as-a-user)). Its rate limits count against the staff member
+    (`actingUserId`), and its transaction checks again that the sign-in still holds.
+  - The authorization matrix tries every change with a staff member signed in as the acting user:
+    the user's own work (`OWN_WORK`) gets what the user would get, everything else is refused.
 - **The user's account pages** (Profile and Security) show as the user sees them, read-only, with a
-  note at the top. Their controls are off, like everywhere else. They show only the personal details
+  note at the top. Their controls are off, like everywhere outside requests. They show only the personal details
   the staff member sees on the user's page (`personalDataShown` in
   `src/lib/authz/impersonation.ts`, from `signedInAs.staffPermissions`):
   - the signed-in devices and the passkeys' names: staff Admins only (`users:manage`);

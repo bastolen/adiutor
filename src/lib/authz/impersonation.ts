@@ -14,8 +14,11 @@
  *   their own account (`hasStrongMfa`).
  * - The user's account pages then show only the personal details the staff
  *   member sees on the user's page ({@link personalDataShown}).
+ * - Request work done while signed in as someone is told only to that user
+ *   and to the staff who see the audit log ({@link maySeeSignedInAsWork}).
  *
- * See docs/decisions/0017-staff-sign-in-as-users.md.
+ * See docs/decisions/0017-staff-sign-in-as-users.md and
+ * 0028-request-work-while-signed-in-as-a-user.md.
  */
 import type { Permission } from './permissions';
 import {
@@ -210,4 +213,23 @@ export function personalDataShown(viewer: {
     accountNames: permissions.has('users:manage'),
     origins: permissions.has('audit:view'),
   };
+}
+
+/**
+ * Whether a reader is told that a staff member did a piece of request work
+ * (raised the request, wrote or changed something, made an edit) while
+ * signed in as the person it shows as its author: only that person
+ * themselves, and the staff who see the audit log (`audit:view`). Everyone
+ * else reads it as the person's own work (decision 0028).
+ *
+ * @param reader - The reader.
+ * @param reader.isAuthor - Whether the reader is the person the work shows as theirs.
+ * @param reader.globalPermissions - The reader's global (staff) permissions.
+ * @returns Whether they're told.
+ */
+export function maySeeSignedInAsWork(reader: {
+  isAuthor: boolean;
+  globalPermissions: ReadonlySet<Permission>;
+}): boolean {
+  return reader.isAuthor || reader.globalPermissions.has('audit:view');
 }

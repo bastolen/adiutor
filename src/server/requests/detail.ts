@@ -13,8 +13,10 @@ import {
   requestTextVersion,
   user,
 } from '@/db/schema';
-import type { Permission } from '@/lib/authz/permissions';
+import { maySeeSignedInAsWork } from '@/lib/authz/impersonation';
+import { getGlobalPermissions, type Permission } from '@/lib/authz/permissions';
 import { firstRow } from '@/lib/defined';
+import { visibleName } from '@/lib/display-name';
 import {
   mayEditDescription,
   mayEditNote,
@@ -41,6 +43,20 @@ import { requestTypeNames } from './types';
 /** The account an `assignee` entry is about, joined next to its author's. */
 const subjectUser = alias(user, 'subject_user');
 
+/** The staff member who did a piece of work while signed in as its author, joined for their name. */
+const signedInAsStaff = alias(user, 'signed_in_as_staff');
+
+/**
+ * That a staff member did a piece of request work while signed in as the
+ * person it shows as theirs (decision 0028). Only the readers who may know
+ * get it (`maySeeSignedInAsWork`): that person, and the staff who see the
+ * audit log.
+ */
+export interface SignedInAsMark {
+  /** The staff member's name, or `null` once their account is gone (or has no visible name). */
+  staffName: string | null;
+}
+
 /** How many entries of a request's history are loaded at a time: the latest ones first. */
 export const THREAD_CHUNK = 50;
 
@@ -62,6 +78,12 @@ export interface RequestText {
   /** When it was last edited; `null` or left out while it's as it was written. */
   editedAt?: Date | null;
   /**
+   * That its last edit was made while signed in as its editor, and who that
+   * editor is, for the readers who may know: the editor, and the staff who
+   * see the audit log.
+   */
+  editedSignedInAs?: SignedInAsMark & { editedBy: RequestPerson };
+  /**
    * For a reader who may edit it now (`mayEditDescription`, `mayEditReply`):
    * the text as its editor starts from it, with its mentions as ones that
    * are being written, and how many times it was edited, which the edit
@@ -80,6 +102,8 @@ export interface TextVersion {
   format: RequestTextFormat;
   /** Who edited it away. */
   editedBy: RequestPerson;
+  /** That the edit was made while signed in as `editedBy`, for the readers who may know. */
+  signedInAs?: SignedInAsMark;
   /** When. */
   at: Date;
 }
@@ -96,6 +120,8 @@ export interface RequestEntryView {
   kind: RequestEntryKind;
   /** Who wrote or changed it. */
   author: RequestPerson;
+  /** That it was done while signed in as `author`, for the readers who may know. */
+  signedInAs?: SignedInAsMark;
   /** When. */
   createdAt: Date;
   /** A reply's or a note's text; `null` for a change. */
@@ -145,6 +171,8 @@ export interface RequestDetail {
   priority: RequestPriority | null;
   /** Who raised it. */
   raisedBy: RequestPerson;
+  /** That it was raised while signed in as `raisedBy`, for the readers who may know. */
+  raisedSignedInAs?: SignedInAsMark;
   /** The staff members it's assigned to, by name; empty while nobody is. */
   assignees: RequestPerson[];
   /** When it was raised. */
@@ -249,9 +277,32 @@ export async function getRequest(
     internal
       ? undefined
       : or(isNull(entryId), notInArray(requestEntry.kind, [...STAFF_ONLY_ENTRY_KINDS]));
+  const globalPermissions = getGlobalPermissions(actor);
+  /**
+   * The mark of a piece of work done while signed in as its author, for a
+   * reader who may know (`maySeeSignedInAsWork`); nothing for anyone else.
+   *
+   * @param work - The work's row: whether it was done that way, and the staff member's name.
+   * @param work.signedInAs - Whether a staff member did it while signed in as its author.
+   * @param work.staff - The staff member, while their account exists.
+   * @param authorId - Who it shows as theirs, while their account exists.
+   * @returns The mark to spread into what the reader gets.
+   */
+  const signedInAsOf = (
+    work: { signedInAs: boolean; staff: { name: string | null } | null },
+    authorId: string | null | undefined,
+  ): SignedInAsMark | undefined =>
+    work.signedInAs &&
+    maySeeSignedInAsWork({
+      isAuthor: Boolean(authorId) && authorId === actor.id,
+      globalPermissions,
+    })
+      ? { staffName: visibleName(work.staff?.name) }
+      : undefined;
 
   const [
     raisedBy,
+    raisedByStaff,
     assignees,
     mentioned,
     versions,
@@ -267,6 +318,12 @@ export async function getRequest(
           .select({ id: user.id, name: user.name })
           .from(user)
           .where(eq(user.id, found.createdBy))
+      : [],
+    found.createdSignedInAsStaffId
+      ? ctx.db
+          .select({ name: user.name })
+          .from(user)
+          .where(eq(user.id, found.createdSignedInAsStaffId))
       : [],
     ctx.db
       .select({ id: user.id, name: user.name })
@@ -293,9 +350,12 @@ export async function getRequest(
         editedBySide: requestTextVersion.editedBySide,
         at: requestTextVersion.createdAt,
         editedBy: { id: user.id, name: user.name },
+        signedInAs: requestTextVersion.signedInAs,
+        signedInAsStaff: { name: signedInAsStaff.name },
       })
       .from(requestTextVersion)
       .leftJoin(user, eq(requestTextVersion.editedBy, user.id))
+      .leftJoin(signedInAsStaff, eq(requestTextVersion.signedInAsStaffId, signedInAsStaff.id))
       .leftJoin(requestEntry, eq(requestTextVersion.entryId, requestEntry.id))
       .where(
         and(eq(requestTextVersion.requestId, found.id), ofShownText(requestTextVersion.entryId)),
@@ -327,10 +387,13 @@ export async function getRequest(
         to: requestEntry.toValue,
         author: { id: user.id, name: user.name },
         subject: { id: subjectUser.id, name: subjectUser.name },
+        signedInAs: requestEntry.signedInAs,
+        signedInAsStaff: { name: signedInAsStaff.name },
       })
       .from(requestEntry)
       .leftJoin(user, eq(requestEntry.authorId, user.id))
       .leftJoin(subjectUser, eq(requestEntry.subjectUserId, subjectUser.id))
+      .leftJoin(signedInAsStaff, eq(requestEntry.signedInAsStaffId, signedInAsStaff.id))
       .where(shown)
       .orderBy(desc(requestEntry.id))
       .limit(THREAD_CHUNK * (earlier + 1)),
@@ -349,14 +412,18 @@ export async function getRequest(
   // What each text was before its edits: everyone gets how many there were (to edit it), only the
   // staff get the versions themselves.
   const versionsOf = new Map<string | null, TextVersion[]>();
-  versions.forEach(({ entryId, editedBy, editedBySide, ...version }) => {
-    const ofText = versionsOf.get(entryId) ?? [];
-    ofText.push({
-      ...version,
-      editedBy: requestPerson(editedBy ?? { id: null, name: null }, editedBySide, actor),
-    });
-    versionsOf.set(entryId, ofText);
-  });
+  versions.forEach(
+    ({ entryId, editedBy, editedBySide, signedInAs, signedInAsStaff: staff, ...version }) => {
+      const ofText = versionsOf.get(entryId) ?? [];
+      const mark = signedInAsOf({ signedInAs, staff }, editedBy?.id);
+      ofText.push({
+        ...version,
+        editedBy: requestPerson(editedBy ?? { id: null, name: null }, editedBySide, actor),
+        ...(mark && { signedInAs: mark }),
+      });
+      versionsOf.set(entryId, ofText);
+    },
+  );
   const textMentions = new Map<string | null, TextMention[]>();
   mentioned.forEach(({ entryId, ...mention }) => {
     textMentions.set(entryId, [...(textMentions.get(entryId) ?? []), mention]);
@@ -365,8 +432,10 @@ export async function getRequest(
   // Nothing of a deactivated company's request changes, so nothing of it is edited.
   const editable = company.deactivatedAt === null;
   /**
-   * What a text adds for its readers: when it was edited, what its editor
-   * starts from (for a reader who may edit it), and its versions (staff).
+   * What a text adds for its readers: when it was edited (and, for the
+   * readers who may know, whether that edit was made while signed in as its
+   * editor), what its editor starts from (for a reader who may edit it), and
+   * its versions (staff).
    *
    * @param entryId - The reply; `null` for the description.
    * @param stored - The text as it's stored.
@@ -379,10 +448,15 @@ export async function getRequest(
     stored: string,
     editedAt: Date | null,
     mayEdit: boolean,
-  ): Pick<RequestText, 'editedAt' | 'edit' | 'versions'> => {
+  ): Pick<RequestText, 'editedAt' | 'editedSignedInAs' | 'edit' | 'versions'> => {
     const ofText = versionsOf.get(entryId) ?? [];
+    // The newest version is the last edit's.
+    const lastEdit = ofText[0];
     return {
       editedAt,
+      ...(lastEdit?.signedInAs && {
+        editedSignedInAs: { ...lastEdit.signedInAs, editedBy: lastEdit.editedBy },
+      }),
       ...(editable &&
         mayEdit && {
           edit: {
@@ -402,40 +476,60 @@ export async function getRequest(
   ]);
   const entries = latest
     .reverse()
-    .map(({ author, authorSide, body, bodyFormat, subject, editedAt, ...entry }) => ({
-      ...entry,
-      // A type change names the types as they're called now: a type is never deleted.
-      ...(entry.kind === 'type' && {
-        from: entry.from && (typeNames.get(entry.from) ?? entry.from),
-        to: entry.to && (typeNames.get(entry.to) ?? entry.to),
-      }),
-      author: requestPerson(author ?? { id: null, name: null }, authorSide, actor, pictures),
-      body:
-        body === null
-          ? null
-          : {
-              text: body,
-              format: bodyFormat,
-              mentions: mentionsOf.get(entry.id),
-              ...editsOf(
-                entry.id,
-                body,
-                editedAt,
-                (entry.kind === 'note' ? mayEditNote : mayEditReply)(
-                  permissions,
-                  found.status,
-                  author?.id === actor.id,
-                ),
-              ),
-            },
-      // An assignment's subject is always on the staff's side, also once their account is gone.
-      subject:
-        entry.kind === 'assignee'
-          ? requestPerson(subject ?? { id: null, name: null }, 'staff', actor, pictures)
-          : null,
-      subjectIsAuthor:
-        entry.kind === 'assignee' && Boolean(subject?.id) && subject?.id === author?.id,
-    }));
+    .map(
+      ({
+        author,
+        authorSide,
+        body,
+        bodyFormat,
+        subject,
+        editedAt,
+        signedInAs,
+        signedInAsStaff: staff,
+        ...entry
+      }) => {
+        const mark = signedInAsOf({ signedInAs, staff }, author?.id);
+        return {
+          ...entry,
+          ...(mark && { signedInAs: mark }),
+          // A type change names the types as they're called now: a type is never deleted.
+          ...(entry.kind === 'type' && {
+            from: entry.from && (typeNames.get(entry.from) ?? entry.from),
+            to: entry.to && (typeNames.get(entry.to) ?? entry.to),
+          }),
+          author: requestPerson(author ?? { id: null, name: null }, authorSide, actor, pictures),
+          body:
+            body === null
+              ? null
+              : {
+                  text: body,
+                  format: bodyFormat,
+                  mentions: mentionsOf.get(entry.id),
+                  ...editsOf(
+                    entry.id,
+                    body,
+                    editedAt,
+                    (entry.kind === 'note' ? mayEditNote : mayEditReply)(
+                      permissions,
+                      found.status,
+                      author?.id === actor.id,
+                    ),
+                  ),
+                },
+          // An assignment's subject is always on the staff's side, also once their account is gone.
+          subject:
+            entry.kind === 'assignee'
+              ? requestPerson(subject ?? { id: null, name: null }, 'staff', actor, pictures)
+              : null,
+          subjectIsAuthor:
+            entry.kind === 'assignee' && Boolean(subject?.id) && subject?.id === author?.id,
+        };
+      },
+    );
+  const raisedSignedInAs = signedInAsOf(
+    { signedInAs: found.createdSignedInAs, staff: raisedByStaff[0] ?? null },
+    found.createdBy,
+  );
   return {
     id: found.id,
     number: found.number,
@@ -463,6 +557,7 @@ export async function getRequest(
       actor,
       pictures,
     ),
+    ...(raisedSignedInAs && { raisedSignedInAs }),
     assignees: assignees.map((person) => requestPerson(person, 'staff', actor, pictures)),
     createdAt: found.createdAt,
     firstResponseAt: firstResponse[0]?.at ?? null,
