@@ -15,6 +15,7 @@ import {
   isRequestStatus,
   isRequestType,
   type RequestAudience,
+  type WrittenEntryKind,
 } from '@/lib/requests';
 import type { RequestDetail, RequestEntryView, RequestPerson } from '@/server/requests';
 
@@ -29,7 +30,7 @@ import EditedNote from './edited-note';
 import ShowEarlierLink from './show-earlier-link';
 
 /** The icon of each kind of change. */
-const CHANGE_ICONS: Record<Exclude<RequestEntryView['kind'], 'comment'>, LucideIcon> = {
+const CHANGE_ICONS: Record<Exclude<RequestEntryView['kind'], WrittenEntryKind>, LucideIcon> = {
   status: CircleDot,
   title: Pencil,
   type: Tag,
@@ -176,7 +177,7 @@ export default function Thread({
         </li>
       )}
       {detail.entries.map((entry) => {
-        if (entry.kind === 'comment') {
+        if (entry.kind === 'comment' || entry.kind === 'note') {
           const source = {
             url: address,
             writer: personName(entry.author, names),

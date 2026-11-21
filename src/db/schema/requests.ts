@@ -28,11 +28,15 @@ import {
   REQUEST_STATUSES,
   REQUEST_TEXT_FORMATS,
   REQUEST_TYPES,
+  WRITTEN_ENTRY_KINDS,
   WRITTEN_TEXT_FORMAT,
 } from '../../lib/requests';
 import { user } from './auth';
 import { createdAt, id, oneOf, timestampTz } from './columns';
 import { company } from './companies';
+
+/** The kinds of entry that hold a text, as a list for a check constraint. */
+const WRITTEN_KINDS = WRITTEN_ENTRY_KINDS.map((kind) => `'${kind}'`).join(', ');
 
 /** A request a company raised with the staff, or the staff raised for it. */
 export const request = pgTable(
@@ -131,7 +135,8 @@ export const requestAssignee = pgTable(
 );
 
 /**
- * One entry in a request's history: a reply, a change of its status, title,
+ * One entry in a request's history: a reply, an internal note only the staff
+ * read, a change of its status, title,
  * type or priority, or a staff member assigned to it or removed from it. A
  * request's entries in ID order are its
  * conversation: IDs are time-ordered, and entries written in one change (a
@@ -151,16 +156,16 @@ export const requestEntry = pgTable(
     /** Which side they acted as, kept so the history still says so once the account is gone. */
     authorSide: text('author_side', { enum: REQUEST_SIDES }).notNull(),
     /**
-     * A reply's text; `null` for a change. Edited only by its author, through
-     * `editReply`, while the request is open; each edit keeps the text it
-     * replaced as a `request_text_version`.
+     * A reply's or a note's text; `null` for a change. Edited only by its
+     * author, through `editReply`, while the request is open; each edit keeps
+     * the text it replaced as a `request_text_version`.
      */
     body: text('body'),
     /** The format `body` is written in, so it's never read as another format. */
     bodyFormat: text('body_format', { enum: REQUEST_TEXT_FORMATS })
       .notNull()
       .default(WRITTEN_TEXT_FORMAT),
-    /** When a reply was last edited, or `null` while it's as it was written. */
+    /** When a reply or note was last edited, or `null` while it's as it was written. */
     editedAt: timestampTz('edited_at'),
     /** What a change replaced: a status, type or priority, or the earlier title. */
     fromValue: text('from_value'),
@@ -188,10 +193,13 @@ export const requestEntry = pgTable(
     index('request_entry_request_idx').on(table.requestId, table.id),
     index('request_entry_author_idx').on(table.authorId),
     index('request_entry_subject_idx').on(table.subjectUserId),
-    /** A reply has a text and no new value; a change has a new value and no text. */
+    /**
+     * A reply or a note has a text and no new value; a change has a new value
+     * and no text.
+     */
     check(
       'request_entry_kind_fits_values',
-      sql`(${table.kind} = 'comment') = (${table.body} is not null) and (${table.kind} = 'comment') = (${table.toValue} is null)`,
+      sql`(${table.kind} in (${sql.raw(WRITTEN_KINDS)})) = (${table.body} is not null) and (${table.kind} in (${sql.raw(WRITTEN_KINDS)})) = (${table.toValue} is null)`,
     ),
     /**
      * An assignment entry says whether its subject was assigned or removed;

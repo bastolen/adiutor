@@ -188,3 +188,33 @@ export function mayEditReply(
 ): boolean {
   return isAuthor && mayEditDescription(permissions, status);
 }
+
+/**
+ * Whether someone may write an internal note on a request: only the staff
+ * who work on requests (`requests:manage`). Finance reads notes
+ * (`requests:view-internal`) but doesn't write them, and nobody at a company
+ * ever sees one.
+ *
+ * @param permissions - Their permissions in the request's company.
+ * @returns Whether they may.
+ */
+export function mayWriteNote(permissions: ReadonlySet<Permission>): boolean {
+  return permissions.has('requests:manage');
+}
+
+/**
+ * Whether someone may edit an internal note: only the one who wrote it,
+ * while the request is open, and only while they still work on requests.
+ *
+ * @param permissions - Their permissions in the request's company.
+ * @param status - The request's status.
+ * @param isAuthor - Whether they wrote the note.
+ * @returns Whether they may.
+ */
+export function mayEditNote(
+  permissions: ReadonlySet<Permission>,
+  status: RequestStatus,
+  isAuthor: boolean,
+): boolean {
+  return isAuthor && !isClosedStatus(status) && mayWriteNote(permissions);
+}

@@ -26,8 +26,10 @@ export {
   REQUEST_STATUSES,
   REQUEST_TEXT_FORMATS,
   REQUEST_TYPES,
+  STAFF_ONLY_ENTRY_KINDS,
   startingPriority,
   statusesOfFilter,
+  WRITTEN_ENTRY_KINDS,
   WRITTEN_TEXT_FORMAT,
 } from './values';
 export type {
@@ -39,14 +41,17 @@ export type {
   RequestStatusFilter,
   RequestTextFormat,
   RequestType,
+  WrittenEntryKind,
 } from './values';
 export {
   isReopening,
   mayBeAssigned,
   mayEditDescription,
+  mayEditNote,
   mayEditReply,
   mayChangeStatus,
   maySetStatus,
+  mayWriteNote,
   requestAudience,
   requestSide,
   statusAfterReply,

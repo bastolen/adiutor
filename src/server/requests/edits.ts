@@ -11,7 +11,7 @@
  * written (`editableText`), and stores them afresh with the new text; the
  * version keeps them as plain "@Name" text.
  */
-import { and, count, eq, isNull } from 'drizzle-orm';
+import { and, count, eq, inArray, isNull } from 'drizzle-orm';
 
 import type { DatabaseTransaction } from '@/db';
 import { request, requestEntry, requestMention, requestTextVersion, user } from '@/db/schema';
@@ -20,10 +20,12 @@ import { visibleName } from '@/lib/display-name';
 import {
   editStoredMentions,
   mayEditDescription,
+  mayEditNote,
   mayEditReply,
   nameStoredMentions,
   type RequestSide,
   requestSide,
+  WRITTEN_ENTRY_KINDS,
   WRITTEN_TEXT_FORMAT,
   writtenMentionMarker,
 } from '@/lib/requests';
@@ -267,10 +269,11 @@ export async function editRequestDescription(
 }
 
 /**
- * Edits a reply: only the one who wrote it may, while the request is open
- * and they still take part or work on requests (`mayEditReply`). Someone
- * else's reply, or an entry that isn't a reply, is "not found". See
- * {@link applyEdit} for what an edit does.
+ * Edits a reply or an internal note: only the one who wrote it may, while
+ * the request is open and they still take part or work on requests
+ * (`mayEditReply`; for a note, while they still work on requests:
+ * `mayEditNote`). Someone else's reply or note, or an entry that holds no
+ * text, is "not found". See {@link applyEdit} for what an edit does.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `requests:contribute` in the request's company.
@@ -302,13 +305,17 @@ export async function editReply(
   const staff = await getStaffName(ctx.db);
   return changeRequest(ctx, actor, access, workingPermission(permissions), async (tx, locked) => {
     const [reply] = await tx
-      .select({ body: requestEntry.body, bodyFormat: requestEntry.bodyFormat })
+      .select({
+        kind: requestEntry.kind,
+        body: requestEntry.body,
+        bodyFormat: requestEntry.bodyFormat,
+      })
       .from(requestEntry)
       .where(
         and(
           eq(requestEntry.id, entryId.data),
           eq(requestEntry.requestId, locked.id),
-          eq(requestEntry.kind, 'comment'),
+          inArray(requestEntry.kind, [...WRITTEN_ENTRY_KINDS]),
           eq(requestEntry.authorId, actor.id),
         ),
       );
@@ -324,8 +331,12 @@ export async function editReply(
       },
       written,
       edits: input.edits,
-      // The query above found the reply only as the actor's own.
-      allowed: mayEditReply(permissions, locked.status, true),
+      // The query above found the reply or note only as the actor's own.
+      allowed: (reply.kind === 'note' ? mayEditNote : mayEditReply)(
+        permissions,
+        locked.status,
+        true,
+      ),
       companyId: locked.companyId,
       side: requestSide(permissions),
       names: { company: company.name, staff },

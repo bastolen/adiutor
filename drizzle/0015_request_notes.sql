@@ -1,0 +1,4 @@
+ALTER TABLE "request_entry" DROP CONSTRAINT "request_entry_kind_fits_values";--> statement-breakpoint
+ALTER TABLE "request_entry" DROP CONSTRAINT "request_entry_kind_valid";--> statement-breakpoint
+ALTER TABLE "request_entry" ADD CONSTRAINT "request_entry_kind_fits_values" CHECK (("request_entry"."kind" in ('comment', 'note')) = ("request_entry"."body" is not null) and ("request_entry"."kind" in ('comment', 'note')) = ("request_entry"."to_value" is null));--> statement-breakpoint
+ALTER TABLE "request_entry" ADD CONSTRAINT "request_entry_kind_valid" CHECK ("request_entry"."kind" in ('comment', 'note', 'status', 'title', 'type', 'priority', 'assignee'));

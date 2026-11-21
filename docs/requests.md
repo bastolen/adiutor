@@ -9,8 +9,8 @@ requests behave and where the code is; why they're built this way is in
 text in [decision 0021](decisions/0021-markdown-for-request-text.md).
 
 Not built yet, each for a later change: emails about requests (also to the staff assigned to one
-and to the people a text mentions),
-an approval step, internal staff notes, attachments, types the staff manage themselves, and
+and to the people a text mentions, never about an internal note to someone at the company),
+an approval step, attachments, types the staff manage themselves, and
 working on a request while signed in as a user.
 
 ## Words
@@ -35,11 +35,12 @@ Four permissions in the request's company (`src/lib/authz/permissions.ts`):
 | ------------------------ | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
 | `requests:view`          | See the company's requests and their conversations                                                              | Everyone in an active company; every staff role    |
 | `requests:contribute`    | Raise requests, reply, mark a request done, cancel it and reopen it, edit the description and their own replies | Company Admin and Client; staff who work on them   |
-| `requests:manage`        | Work on requests as the staff: any status, the title, the type, the priority, who's assigned                    | Staff Admin, Manager and Support                   |
-| `requests:view-internal` | See what only the staff see: today the priority                                                                 | Every staff role (Finance reads, but doesn't work) |
+| `requests:manage`        | Work on requests as the staff: any status, the title, the type, the priority, who's assigned, internal notes    | Staff Admin, Manager and Support                   |
+| `requests:view-internal` | See what only the staff see: the priority and internal notes                                                    | Every staff role (Finance reads, but doesn't work) |
 
 - Everyone in a company sees all of the company's requests. A **Watcher** only reads.
-- **Finance** reads every company's requests, with the priority, and changes nothing. A staff
+- **Finance** reads every company's requests, with the priority and the internal notes, and
+  changes nothing. A staff
   member who can't work on requests but is a Client of a company takes part there as the company.
 - A request someone may not see is "not found" to them, like a company they may not see.
 - A **deactivated company's** requests can only be read, and only by the staff: its members lose
@@ -298,9 +299,36 @@ Why it works this way is in [decision 0024](decisions/0024-edit-replies-and-desc
   change: refused while signed in as a user, for a deactivated company, past the rate limit of
   request changes, and for a closed request (`errors.requests.closedNoEdit`).
 
+### Internal notes
+
+What the staff write for each other on a request: a cause they suspect, a hand-over, a reminder.
+Why it's built this way is in [decision 0026](decisions/0026-internal-notes-as-a-kind-of-entry.md).
+
+- **A note is an entry of its own kind** (`note`), in the conversation with the replies. Only
+  readers with `requests:view-internal` get it: `getRequest` leaves out every kind in
+  `STAFF_ONLY_ENTRY_KINDS` (`src/lib/requests/values.ts`: a change of priority and a note) for
+  anyone else, from the entries, from the count of earlier ones, and from the mentions and
+  versions it loads. So nobody at the company learns that a note exists.
+- **Who writes them:** the staff who work on requests (`mayWriteNote`, `requests:manage`), with
+  `addNote` (`src/server/requests/notes.ts`), also on a done or cancelled request. Finance reads
+  them. A note counts towards the same limit as replies.
+- **Nothing changes for the company:** a note doesn't change the status, isn't the staff's first
+  response, and doesn't move the request's last activity, which company users see and the lists
+  sort by.
+- **Mentions:** a note can mention anyone a reply can. Someone at the company it mentions never
+  sees it; a later email about mentions must not tell them about a note, and a mention in a note
+  never subscribes them to the request.
+- **Editing:** like a reply, by its author while the request is open and while they still work on
+  requests (`mayEditNote`), through `editReply`, with its earlier versions kept.
+- **On the page:** for the staff who work on requests, the reply form has two tabs, Reply and
+  Internal note (`WriteTabs`, on the `Tabs` component), each with its own form and draft. The
+  note's form sits on the amber surface (`warning-soft`) and says only the staff see it. In the
+  conversation a note reads like a reply, on the amber surface, with an "Internal note" badge and
+  a lock.
+
 ### Mentions
 
-A description or a reply can mention people. Why it's built this way is in
+A description, a reply or a note can mention people. Why it's built this way is in
 [decision 0023](decisions/0023-mentions-as-markers-to-rows.md).
 
 - **A mention is a marker that looks like a link** (`src/lib/requests/mentions.ts`). While a text
@@ -317,11 +345,12 @@ A description or a reply can mention people. Why it's built this way is in
   `requests:contribute`): the staff can mention everyone at the request's company and every staff
   member who reads requests; someone at the company can mention their colleagues, and the staff
   members whose names the request already shows them (who raised it, replied, changed it, is or
-  was assigned; not who only changed the priority, which they don't see). For a request that isn't
+  was assigned; not who only changed the priority or wrote an internal note, which they don't
+  see). For a request that isn't
   raised yet, someone at the company gets their colleagues only. Never the writer themselves, a
   deactivated account, or someone without a name to show; someone on the staff who is also in the
   company is listed once. The list gives a key, a name and whether they're staff, by name.
-- **Storing** (`storeMentions`, in the transaction of `raiseRequest` and `replyToRequest`, right
+- **Storing** (`storeMentions`, in the transaction of `raiseRequest`, `replyToRequest` and `addNote`, right
   after the text's row): the markers of people the writer may mention there become rows, one per
   person however often the text names them, and the text's markers are pointed at them. At most
   20 people per text (`MAX_MENTIONS_PER_TEXT`). Every other marker stays as it was typed (another
@@ -398,7 +427,7 @@ A description or a reply can mention people. Why it's built this way is in
   the type. It opens the new request. A company that wasn't chosen is asked for like any other
   field (`requestCompanySchema`); "not found" is for a company the reader may not see.
 - **`/requests/<number>`**: what was asked (Description), the Conversation with every reply and
-  change, oldest first, and a Details bar: status, who it's assigned to, type, priority (staff),
+  change (and, for the staff, every internal note), oldest first, and a Details bar: status, who it's assigned to, type, priority (staff),
   company, who raised it and when, the staff's first response and the last activity, with the
   controls. The bar is on
   the right on wide screens, and between the description and the conversation on narrower ones.
@@ -415,10 +444,10 @@ A description or a reply can mention people. Why it's built this way is in
   the services and client components all import it): the values, the rules above, the number
   and the text. Not to be confused with `src/lib/request/`, which is about HTTP requests.
 - `src/db/schema/requests.ts`: `request`, `request_assignee` (who's assigned), `request_entry`
-  (the conversation and the history in one table, ordered by ID), `request_mention` (who a text
+  (the conversation, its internal notes and the history in one table, ordered by ID), `request_mention` (who a text
   mentions) and `request_counter`.
 - `src/server/requests/` (a folder module): `listRequestCompanies`, `listRequests`, `findRequest`,
-  `findRequestNumber`, `getRequest`, `raiseRequest`, `replyToRequest`, `changeRequestStatus`,
+  `findRequestNumber`, `getRequest`, `raiseRequest`, `replyToRequest`, `addNote`, `changeRequestStatus`,
   `updateRequestDetails`, `changeAssignees`, `listAssignableStaff`, `countAssignedRequests`,
   `listMentionable`, and `unassignFrom` for the services that end someone's request work.
   Every change refuses someone signed in as a user, checks the permission and that the company is

@@ -68,7 +68,7 @@ export async function storeEntry(
   requestId: string,
   values: Partial<typeof requestEntry.$inferInsert> = {},
 ) {
-  const change = values.kind !== undefined && values.kind !== 'comment';
+  const change = values.kind !== undefined && values.kind !== 'comment' && values.kind !== 'note';
   return firstRow(
     await db
       .insert(requestEntry)

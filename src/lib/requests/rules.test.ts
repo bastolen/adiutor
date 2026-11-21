@@ -10,8 +10,10 @@ import {
   mayBeAssigned,
   mayChangeStatus,
   mayEditDescription,
+  mayEditNote,
   mayEditReply,
   maySetStatus,
+  mayWriteNote,
   requestAudience,
   requestSide,
   statusAfterReply,
@@ -206,5 +208,27 @@ describe('mayEditReply', () => {
     expect(mayEditReply(client, 'done', true)).toBe(false);
     // Someone who no longer takes part (now a Watcher) can't edit what they wrote.
     expect(mayEditReply(watcher, 'open', true)).toBe(false);
+  });
+});
+
+describe('mayWriteNote', () => {
+  it('lets only the staff who work on requests write internal notes', () => {
+    expect(mayWriteNote(support)).toBe(true);
+    expect(mayWriteNote(permissionsOf('platform_admin', null))).toBe(true);
+    // Finance reads notes but doesn't write them; nobody at a company sees them.
+    expect(mayWriteNote(finance)).toBe(false);
+    expect(mayWriteNote(client)).toBe(false);
+    expect(mayWriteNote(permissionsOf(null, 'admin'))).toBe(false);
+    expect(mayWriteNote(watcher)).toBe(false);
+  });
+});
+
+describe('mayEditNote', () => {
+  it('lets only the one who wrote it edit it, while the request is open and they still work on it', () => {
+    expect(mayEditNote(support, 'in_progress', true)).toBe(true);
+    expect(mayEditNote(support, 'open', false)).toBe(false);
+    expect(mayEditNote(support, 'done', true)).toBe(false);
+    // A staff member who now only reads requests (Finance) can't edit what they wrote.
+    expect(mayEditNote(finance, 'open', true)).toBe(false);
   });
 });

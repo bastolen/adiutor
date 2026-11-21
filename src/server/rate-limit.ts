@@ -70,7 +70,7 @@ export const RATE_LIMITS = {
   impersonationsPerUser: { limit: 10, windowSeconds: 60 * 60 },
   /** Requests one user raises: far more than anyone raises by hand, few enough to stop a flood. */
   requestsPerUser: { limit: 60, windowSeconds: 60 * 60 },
-  /** Replies one user writes to requests. */
+  /** Replies and internal notes one user writes to requests. */
   requestRepliesPerUser: { limit: 200, windowSeconds: 60 * 60 },
   /** Changes one user makes to requests: their status, and their title, type and priority. */
   requestChangesPerUser: { limit: 300, windowSeconds: 60 * 60 },

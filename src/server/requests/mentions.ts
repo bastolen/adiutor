@@ -17,7 +17,7 @@
  */
 import { createHmac } from 'node:crypto';
 
-import { and, eq, inArray, isNotNull, isNull, ne, or } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, notInArray, or } from 'drizzle-orm';
 
 import type { Database, DatabaseTransaction } from '@/db';
 import {
@@ -36,6 +36,7 @@ import {
   MAX_MENTIONS_PER_TEXT,
   MENTION_KEY_LENGTH,
   type RequestSide,
+  STAFF_ONLY_ENTRY_KINDS,
   storeWrittenMentions,
   writtenMentionKeys,
 } from '@/lib/requests';
@@ -136,8 +137,8 @@ async function mentionable(
   if (getStaffPermissionsInCompanies(actor).has('requests:view-internal')) {
     staff = await db.select(person).from(user).where(and(readsRequests, active));
   } else if (place.requestId !== null) {
-    // The staff members the request shows someone at the company by name. A change of
-    // priority is the one entry they don't see.
+    // The staff members the request shows someone at the company by name: not the authors of
+    // what only the staff see (a change of priority, an internal note).
     const entries = eq(requestEntry.requestId, place.requestId);
     staff = await db
       .select(person)
@@ -156,7 +157,7 @@ async function mentionable(
                   and(
                     entries,
                     eq(requestEntry.authorSide, 'staff'),
-                    ne(requestEntry.kind, 'priority'),
+                    notInArray(requestEntry.kind, [...STAFF_ONLY_ENTRY_KINDS]),
                     isNotNull(requestEntry.authorId),
                   ),
                 ),

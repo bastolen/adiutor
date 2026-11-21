@@ -67,7 +67,7 @@ opened with a link that can't be used (20 per 15 minutes per IP address, so link
 guessed by looking them up; past it, the page offers no way to continue), wrong secrets sent to
 the background jobs' endpoint (20 per 15 minutes per IP address, `RATE_LIMITS.jobTickMissesPerIp`;
 past it the endpoint answers 429, while the right secret still works), work on requests (per
-user and hour: 60 requests raised, 200 replies and 300 changes of a status or of details;
+user and hour: 60 requests raised, 200 replies and notes, and 300 changes of a status or of details;
 `RATE_LIMITS.requestsPerUser`, `requestRepliesPerUser` and `requestChangesPerUser`, far more than
 anyone does by hand and few enough to stop a flood), and the errors stored for
 admins (see [Recorded errors](#recorded-errors)). All are kept in
