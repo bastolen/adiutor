@@ -1,7 +1,7 @@
 /**
  * @file The Profile page of the account, served at `/account`: name, email
  * (with verification), picture (a connected account's, or initials),
- * language (one of the languages, or Default), a
+ * language (one of the languages, or Default), time zone, a
  * summary of sign-in security and recent activity on
  * the account (sign-ins and changes, from the audit log). Password, passkeys,
  * two-step verification and connected accounts are on the Security page. The
@@ -26,16 +26,19 @@ import ToastOnArrival from '@/components/ui/toast-on-arrival';
 import { personalDataShown } from '@/lib/authz/impersonation';
 import displayName from '@/lib/display-name';
 import ClientMessages from '@/lib/i18n/client-messages';
+import { timeZoneOptions } from '@/lib/i18n/time-zones';
 import appContext from '@/server/app-context';
 import { listOwnActivity } from '@/server/audit';
 import { getActor } from '@/server/authz';
 import { ownLanguage } from '@/server/people/own-locale';
+import { ownTimeZone } from '@/server/people/own-time-zone';
 import { ownPictureChoices } from '@/server/people/pictures';
 
 import accountMessage, {
   type AccountParams,
   EMAIL_SECTION,
   LANGUAGE_SECTION,
+  TIME_ZONE_SECTION,
 } from './account-messages';
 import { sendVerificationAction } from './actions';
 import LanguageForm from './language-form';
@@ -43,6 +46,7 @@ import NameForm from './name-form';
 import describeOwnActivity from './own-activity';
 import PictureForm from './picture-form';
 import SignedInAsNote from './signed-in-as-note';
+import TimeZoneForm from './time-zone-form';
 
 /**
  * Page metadata: "Account", in the request's language.
@@ -66,16 +70,18 @@ async function AccountSettings({ searchParams }: { searchParams: Promise<Account
   // A staff member signed in as the user sees the page read-only, with only the personal details
   // they see on the user's page.
   const shown = personalDataShown(actor);
-  const [params, ownActivity, language, picture, t, tAuth, tAudit, tRoles] = await Promise.all([
-    searchParams,
-    listOwnActivity(appContext, actor),
-    ownLanguage(appContext, actor),
-    ownPictureChoices(appContext, actor),
-    getTranslations('account'),
-    getTranslations('auth'),
-    getTranslations('audit'),
-    getTranslations('roles'),
-  ]);
+  const [params, ownActivity, language, zone, picture, t, tAuth, tAudit, tRoles] =
+    await Promise.all([
+      searchParams,
+      listOwnActivity(appContext, actor),
+      ownLanguage(appContext, actor),
+      ownTimeZone(appContext, actor),
+      ownPictureChoices(appContext, actor),
+      getTranslations('account'),
+      getTranslations('auth'),
+      getTranslations('audit'),
+      getTranslations('roles'),
+    ]);
   const message = accountMessage(t, tAuth, params);
   const activity = shown.origins
     ? ownActivity
@@ -160,6 +166,22 @@ async function AccountSettings({ searchParams }: { searchParams: Promise<Account
         )}
         <ClientMessages namespaces={['account']}>
           <LanguageForm choice={language.choice} defaultLocale={language.defaultLocale} />
+        </ClientMessages>
+      </Card>
+      <Card
+        // The page reloads here after the time zone changed.
+        id={TIME_ZONE_SECTION}
+        title={t('profile.timeZoneTitle')}
+        description={t('profile.timeZoneDescription')}
+      >
+        {params.timeZone === 'saved' && (
+          <ToastOnArrival message={t('profile.timeZoneSaved')} param="timeZone" />
+        )}
+        <ClientMessages namespaces={['account']}>
+          <TimeZoneForm
+            timeZone={zone.timeZone ?? zone.defaultTimeZone}
+            options={timeZoneOptions(new Date(), zone.timeZone ?? zone.defaultTimeZone)}
+          />
         </ClientMessages>
       </Card>
       <Card

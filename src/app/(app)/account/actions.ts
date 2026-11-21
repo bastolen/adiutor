@@ -24,14 +24,17 @@ import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
 import { assertNotSignedInAs, getActor } from '@/server/authz';
 import setOwnLocale from '@/server/people/own-locale';
-import saveFirstTimeZone from '@/server/people/own-time-zone';
+import saveFirstTimeZone, { setOwnTimeZone } from '@/server/people/own-time-zone';
 import { setOwnPicture } from '@/server/people/pictures';
 import { assertRateLimit, RATE_LIMITS } from '@/server/rate-limit';
 
-import { LANGUAGE_SECTION, VERIFIED_RETURN_PATH } from './account-messages';
+import { LANGUAGE_SECTION, TIME_ZONE_SECTION, VERIFIED_RETURN_PATH } from './account-messages';
 
 /** Where the page reloads after the language changed, to say so in it (`?language=saved`). */
 const LANGUAGE_SAVED_PATH = withSection('/account?language=saved', LANGUAGE_SECTION);
+
+/** Where the page reloads after the time zone changed, to say so in it (`?timeZone=saved`). */
+const TIME_ZONE_SAVED_PATH = withSection('/account?timeZone=saved', TIME_ZONE_SECTION);
 
 /**
  * Saves the signed-in user's language choice with their account, so emails
@@ -59,6 +62,28 @@ export async function saveLanguageAction(
       cookieStore.delete(LOCALE_COOKIE);
     }
     return { ok: true, data: LANGUAGE_SAVED_PATH };
+  });
+}
+
+/**
+ * Saves the signed-in user's time zone with their account, so every page and
+ * email shows times in it, and in this browser's time zone cookie. The form
+ * then reloads the page (the path it gets back), so every page kept alive
+ * shows the new times at once; the page says it's saved.
+ *
+ * @param _previous - The previous result (unused).
+ * @param formData - Field `timeZone`: an IANA zone, e.g. `Europe/Amsterdam`.
+ * @returns Where to reload to, or why it failed.
+ */
+export async function saveTimeZoneAction(
+  _previous: ActionResult<string> | null,
+  formData: FormData,
+): Promise<ActionResult<string>> {
+  return runAction(async () => {
+    const actor = await getActor({ allowMissingMfa: true });
+    const timeZone = await setOwnTimeZone(appContext, actor, field(formData, 'timeZone'));
+    (await cookies()).set(TIME_ZONE_COOKIE, timeZone, timeZoneCookieOptions());
+    return { ok: true, data: TIME_ZONE_SAVED_PATH };
   });
 }
 

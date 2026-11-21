@@ -48,6 +48,7 @@ import {
   removeFromStaff,
   renameStaff,
   setDefaultLocale,
+  setDefaultTimeZone,
   setRequestPrefix,
 } from './staff';
 
@@ -83,6 +84,7 @@ describe('staff settings and people', () => {
     expect(await getStaffSettings(ctx, admin)).toEqual({
       name: 'Adiutor Support',
       defaultLocale: 'en-US',
+      defaultTimeZone: 'UTC',
       requestPrefix: 'AD',
     });
     const entry = firstRow(
@@ -98,6 +100,7 @@ describe('staff settings and people', () => {
     expect(await getStaffSettings(ctx, admin)).toEqual({
       name: 'Adiutor Support',
       defaultLocale: 'en-US',
+      defaultTimeZone: 'UTC',
       requestPrefix: 'AD',
     });
     const entry = firstRow(
@@ -113,10 +116,29 @@ describe('staff settings and people', () => {
     expect(await getStaffSettings(ctx, admin)).toEqual({
       name: 'Adiutor Tests',
       defaultLocale: 'nl-NL',
+      defaultTimeZone: 'UTC',
       requestPrefix: 'AD',
     });
     await expect(setDefaultLocale(ctx, admin, 'fr-FR')).rejects.toThrow('validation.locale');
     expect((await getStaffSettings(ctx, admin)).defaultLocale).toBe('nl-NL');
+  });
+
+  it("sets Adiutor's default time zone, keeping the rest, with nothing in the audit log", async () => {
+    await expect(setDefaultTimeZone(ctx, admin, 'Europe/Amsterdam')).resolves.toBe(
+      'Europe/Amsterdam',
+    );
+
+    expect(await getStaffSettings(ctx, admin)).toEqual({
+      name: 'Adiutor Tests',
+      defaultLocale: 'en-US',
+      defaultTimeZone: 'Europe/Amsterdam',
+      requestPrefix: 'AD',
+    });
+    await expect(setDefaultTimeZone(ctx, admin, 'Mars/Olympus_Mons')).rejects.toThrow(
+      'validation.timeZone',
+    );
+    expect((await getStaffSettings(ctx, admin)).defaultTimeZone).toBe('Europe/Amsterdam');
+    expect(await db.select().from(auditEvent)).toEqual([]);
   });
 
   it('creates the settings again with the default language when they were lost', async () => {
@@ -127,6 +149,7 @@ describe('staff settings and people', () => {
     expect(await getStaffSettings(ctx, admin)).toEqual({
       name: 'Adiutor',
       defaultLocale: 'es-ES',
+      defaultTimeZone: 'UTC',
       requestPrefix: 'AD',
     });
   });
@@ -139,6 +162,7 @@ describe('staff settings and people', () => {
     expect(await getStaffSettings(ctx, admin)).toEqual({
       name: 'Adiutor Tests',
       defaultLocale: 'nl-NL',
+      defaultTimeZone: 'UTC',
       requestPrefix: 'HELP',
     });
     // Not a security change: nothing in the audit log.
@@ -158,6 +182,7 @@ describe('staff settings and people', () => {
     expect(await getStaffSettings(ctx, admin)).toEqual({
       name: 'Adiutor',
       defaultLocale: 'en-US',
+      defaultTimeZone: 'UTC',
       requestPrefix: 'REQ',
     });
   });

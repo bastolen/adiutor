@@ -250,6 +250,13 @@
         "save": "Naam opslaan",
         "saved": "Naam opgeslagen."
       },
+      "timeZone": {
+        "title": "Standaardtijdzone",
+        "description": "Adiutor gebruikt deze zone op pagina’s voor wie niet is ingelogd, in e-mails aan mensen zonder zone, en voor iedereen tot hun browser hun eigen zone instelt.",
+        "label": "Standaardtijdzone",
+        "save": "Standaardtijdzone opslaan",
+        "saved": "Standaardtijdzone opgeslagen."
+      },
       "requestNumbers": {
         "title": "Verzoeknummers",
         "description": "Elk verzoek heeft een nummer waarnaar mensen kunnen verwijzen. Het staat achter een voorvoegsel dat jij kiest.",

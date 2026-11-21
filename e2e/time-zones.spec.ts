@@ -1,11 +1,12 @@
 /**
  * @file End-to-end tests for time zones: a new account takes its browser's
- * zone on its first visit, and pages and copied code show times and days in
- * it, without naming the zone on the page.
+ * zone on its first visit, pages and copied code show times and days in it,
+ * without naming the zone on the page, and the Profile page's Time zone card
+ * changes it.
  */
 import { findCompanyId, savedTimeZoneOf, storeInvitation, storeRequest } from './support/db';
 import { COMPANY_SLUG } from './support/fixtures';
-import { freshAddress } from './support/helpers';
+import { freshAddress, toasts } from './support/helpers';
 import { expect, test } from './support/test';
 
 /**
@@ -59,4 +60,54 @@ test("a new account takes its browser's zone, and pages show times in it", async
   await expect
     .poll(() => page.evaluate(() => navigator.clipboard.readText()))
     .toContain('Written by Adelaide Tester on Nov 19, 2026');
+});
+
+test('the Time zone card changes the zone every page shows, and offers the browser’s', async ({
+  page,
+}) => {
+  const email = freshAddress('tokyo');
+  const companyId = await findCompanyId(COMPANY_SLUG);
+  await page.goto(await storeInvitation({ companyId, email, role: 'client' }));
+  await page.getByLabel('Your name').fill('Tokyo Tester');
+  await page.getByLabel('Password', { exact: true }).fill('e2e-tokyo-password');
+  await page.getByRole('button', { name: 'Create account and join' }).click();
+  await expect(page).toHaveURL(/\/companies\/[0-9a-f-]{36}$/);
+  await expect.poll(() => savedTimeZoneOf(email)).toBe('Australia/Adelaide');
+
+  await page.goto('/account');
+  const card = page.getByRole('region', { name: 'Time zone' });
+  const select = card.getByRole('combobox', { name: 'Time zone' });
+  await expect(select).toContainText('Australia/Adelaide');
+  await expect(card).toContainText('This browser is set to Australia/Adelaide.');
+  await select.click();
+  await page.getByRole('option', { name: /^Asia\/Tokyo/ }).click();
+  await card.getByRole('button', { name: 'Save time zone' }).click();
+  // The page loads afresh in the new zone, and says so.
+  await expect(toasts(page)).toContainText('Time zone saved.');
+  await expect(page.getByRole('combobox', { name: 'Time zone' })).toContainText('Asia/Tokyo');
+  expect(await savedTimeZoneOf(email)).toBe('Asia/Tokyo');
+
+  // 23:30 in UTC is 8:30 the next morning in Tokyo.
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: email,
+    title: 'Times in my chosen zone',
+    at: new Date('2026-11-18T23:30:00Z'),
+  });
+  await page.goto(`/requests/${number}`);
+  await expect(page.getByRole('region', { name: 'Details' })).toContainText(
+    'Nov 19, 2026, 8:30 AM',
+  );
+
+  // Back to the browser's own zone in one press.
+  await page.goto('/account');
+  const useBrowser = page.getByRole('button', { name: 'Use this browser’s zone' });
+  await useBrowser.click();
+  await expect(useBrowser).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.getByRole('combobox', { name: 'Time zone' })).toContainText(
+    'Australia/Adelaide',
+  );
+  await page.getByRole('button', { name: 'Save time zone' }).click();
+  await expect(toasts(page)).toContainText('Time zone saved.');
+  await expect.poll(() => savedTimeZoneOf(email)).toBe('Australia/Adelaide');
 });

@@ -1,6 +1,6 @@
 /**
  * @file The staff page, served at `/admin/staff`: the staff name, Adiutor's
- * default language, the prefix of request numbers and its people (staff), with invitations and
+ * default language and time zone, the prefix of request numbers and its people (staff), with invitations and
  * invite links to join it, each sortable and paginated. Platform Admins only (`staff:manage`).
  */
 import { getTranslations } from 'next-intl/server';
@@ -18,6 +18,7 @@ import { Table, Td, Th, Tr } from '@/components/ui/table';
 import { PLATFORM_ROLES, roleOptions } from '@/lib/authz/roles';
 import displayName from '@/lib/display-name';
 import ClientMessages from '@/lib/i18n/client-messages';
+import { timeZoneOptions } from '@/lib/i18n/time-zones';
 import { INVITATION_VALID_DAYS } from '@/lib/invitation-lifetimes';
 import type { SearchParams } from '@/lib/search-params';
 import { confirmationWindow } from '@/lib/sign-in/confirm-url';
@@ -39,6 +40,7 @@ import PersonCell from '../../_people/person-cell';
 import RoleSelect from '../../_people/role-select';
 import { changeStaffRoleAction, removeFromStaffAction } from '../../_people/staff-actions';
 import DefaultLanguageForm from './default-language-form';
+import DefaultTimeZoneForm from './default-time-zone-form';
 import RequestPrefixForm from './request-prefix-form';
 import StaffNameForm from './staff-name-form';
 
@@ -84,7 +86,14 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
   const linksTable = url.table(INVITE_LINKS_TABLE, { ...linksRequested, page: links.page });
 
   return (
-    <ClientMessages namespaces={['admin.staff.name', 'admin.staff.requestNumbers', 'people']}>
+    <ClientMessages
+      namespaces={[
+        'admin.staff.name',
+        'admin.staff.timeZone',
+        'admin.staff.requestNumbers',
+        'people',
+      ]}
+    >
       <RecentConfirmationProvider
         required={actor.canConfirmSessions}
         // The page with its tables; each control adds its card's anchor.
@@ -99,6 +108,13 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
 
         <Card title={language('defaultLabel')} description={language('defaultDescription')}>
           <DefaultLanguageForm defaultLocale={settings.defaultLocale} />
+        </Card>
+
+        <Card title={t('timeZone.title')} description={t('timeZone.description')}>
+          <DefaultTimeZoneForm
+            defaultTimeZone={settings.defaultTimeZone}
+            options={timeZoneOptions(new Date(), settings.defaultTimeZone)}
+          />
         </Card>
 
         <Card title={t('requestNumbers.title')} description={t('requestNumbers.description')}>

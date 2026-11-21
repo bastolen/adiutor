@@ -32,6 +32,9 @@ export const EMAIL_SECTION = 'email';
 /** The anchor of the Profile page's Language card, where the page reloads after a change. */
 export const LANGUAGE_SECTION = 'language';
 
+/** The anchor of the Profile page's Time zone card, where the page reloads after a change. */
+export const TIME_ZONE_SECTION = 'time-zone';
+
 /**
  * Where the email verification link comes back to: the Email card on the
  * Profile page, saying it worked (Better Auth adds `error=<code>` before the
@@ -49,6 +52,8 @@ export interface AccountParams {
   error?: string | string[];
   /** Set by us after saving the language (`saved`), once the page reloaded in it. */
   language?: string | string[];
+  /** Set by us after saving the time zone (`saved`), once the page reloaded in it. */
+  timeZone?: string | string[];
 }
 
 /**

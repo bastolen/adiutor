@@ -17,6 +17,7 @@ import { staffSettings, user } from '@/db/schema';
 import { PLATFORM_ADMIN_ROLE } from '@/lib/authz/roles';
 import { firstRow } from '@/lib/defined';
 import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/locales';
+import { DEFAULT_TIME_ZONE, isTimeZone } from '@/lib/i18n/time-zones';
 import {
   emailSchema,
   localeSchema,
@@ -88,6 +89,14 @@ export interface SetupInput {
    * existing account (the command line) keeps its own.
    */
   adminLocale?: Locale;
+  /**
+   * The zone of the browser setup runs in: Adiutor's default zone, and a new
+   * Admin's own. Left out, empty or not a zone Adiutor accepts (the command
+   * line, or before the form hydrated), Adiutor starts in UTC and the Admin's
+   * browser saves theirs on their first visit. An existing account keeps its
+   * own.
+   */
+  timeZone?: string;
 }
 
 /** Options for {@link setUpPlatform}. */
@@ -113,8 +122,8 @@ export interface SetupResult {
 }
 
 /**
- * Names the staff, sets Adiutor's default language and makes the given person
- * its Admin, in one transaction. A
+ * Names the staff, sets Adiutor's default language and time zone and makes
+ * the given person its Admin, in one transaction. A
  * new Admin's email address counts as verified: whoever runs setup owns the
  * installation, and Better Auth would otherwise delete the password at their
  * first email-link sign-in (it removes sign-in methods of unverified accounts
@@ -133,7 +142,8 @@ export interface SetupResult {
  * settings row, and the losing request gets the same "already set up" error.
  *
  * @param ctx - Service context.
- * @param input - The name shown to users, Adiutor's default language and the Admin's details.
+ * @param input - The name shown to users, Adiutor's default language and zone, and the Admin's
+ *   details.
  * @param options - Whether it may use an existing account.
  * @returns What was created.
  * @throws {ServiceError} `conflict` if setup is already done or, without
@@ -151,6 +161,7 @@ export async function setUpPlatform(
   const email = emailSchema.parse(input.email);
   const defaultLocale =
     input.defaultLocale === undefined ? DEFAULT_LOCALE : localeSchema.parse(input.defaultLocale);
+  const timeZone = isTimeZone(input.timeZone) ? input.timeZone : null;
   /**
    * Checks whether setup may run now.
    *
@@ -171,7 +182,9 @@ export async function setUpPlatform(
       if (!(await isOpen(tx))) {
         throw alreadySetUpError();
       }
-      await tx.insert(staffSettings).values({ name: staffName, defaultLocale });
+      await tx
+        .insert(staffSettings)
+        .values({ name: staffName, defaultLocale, defaultTimeZone: timeZone ?? DEFAULT_TIME_ZONE });
 
       const [existing] = allowExisting
         ? await tx
@@ -223,6 +236,7 @@ export async function setUpPlatform(
             // Default when they set up in the default language; otherwise they keep theirs.
             locale:
               input.adminLocale && input.adminLocale !== defaultLocale ? input.adminLocale : null,
+            timeZone,
           })
           .returning({ id: user.id }),
         'the first staff Admin',

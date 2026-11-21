@@ -5,7 +5,8 @@ invitations. Back to the [documentation](README.md).
 
 Adiutor is run by its **staff** (the people who handle requests), who add **companies** (the
 customers, who raise requests). Staff have a **platform role** on their account (`user.platform_role`),
-and the name users see and Adiutor's default language live in the single-row `staff_settings` table
+and the name users see and Adiutor's default language and time zone live in the single-row
+`staff_settings` table
 (`src/db/schema/staff.ts`).
 **Users** can belong to several companies, with one company role (Admin, Client or Watcher) in
 each. Staff can also be members of companies. What each role may do with requests is in
@@ -124,7 +125,9 @@ Admins and Managers who aren't members can still add themselves with any role, a
 
 - **Staff page** (`/admin/staff`, `staff:manage`, Admins): change the name shown to users (in
   invitations and wherever users see who's helping them) and Adiutor's default language (for
-  everyone who hasn't chosen one; see [Languages](i18n.md#how-the-language-is-chosen)), see the staff with their role, when
+  everyone who hasn't chosen one; see [Languages](i18n.md#how-the-language-is-chosen)) and time zone
+  (for signed-out pages and everyone whose zone isn't known yet; see
+  [Time zones](i18n.md#time-zones)), see the staff with their role, when
   they were last active and when their account was created ("Joined"), change roles, remove people from staff (their account stays), and invite
   staff by email or single-use invite link. Staff invitations and links have no company
   (`company_id` is null) and give a platform role; a database check keeps staff rows on platform
@@ -251,7 +254,9 @@ email address; a first password chosen that way sends no security email.
 On a fresh install (no `staff_settings` row and no accounts), `/auth` redirects to
 `/setup`. There, the first person chooses the name users see and Adiutor's default language (the
 setup page's own to begin with) and becomes the first staff Admin, keeping the language they set up
-in for themselves, or starting on Default when it's the default they chose (or use `pnpm setup:platform`, with `--default-language`); a new account's email
+in for themselves, or starting on Default when it's the default they chose; the browser's time zone
+becomes Adiutor's default zone and the Admin's own (or use `pnpm setup:platform`, with
+`--default-language` and `--time-zone`); a new account's email
 address counts as verified. Until then `/setup` is
 open to anyone who can reach the site, so complete it right after deploying. Once set up, or once
 any account exists, `/setup` shows the not-found page, so it can never promote an existing account.

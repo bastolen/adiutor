@@ -63,7 +63,8 @@ come next.
   changing; emails reach them in it. Invitations go out in the language the sender picks. See
   [Languages](docs/i18n.md).
 - **Times in your own time zone.** Every page, email and copied note shows times in each person's
-  own zone, which their browser sets the first time they're signed in. See
+  own zone, which their browser sets the first time they're signed in and they can change on their
+  Profile. See
   [Time zones](docs/i18n.md#time-zones).
 
 **Coming next:** emails about requests, and an approval step for finished work.

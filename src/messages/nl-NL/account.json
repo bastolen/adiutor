@@ -49,7 +49,14 @@
       "languageDescription": "Adiutor en de e-mails die je ontvangt gebruiken deze taal.",
       "languageLabel": "Taal",
       "saveLanguage": "Taal opslaan",
-      "languageSaved": "Taal opgeslagen."
+      "languageSaved": "Taal opgeslagen.",
+      "timeZoneTitle": "Tijdzone",
+      "timeZoneDescription": "Adiutor toont tijden in deze zone op elk apparaat waarop je inlogt, en in de e-mails die je ontvangt.",
+      "timeZoneLabel": "Tijdzone",
+      "browserTimeZone": "Deze browser staat op {zone}.",
+      "useBrowserTimeZone": "Zone van deze browser gebruiken",
+      "saveTimeZone": "Tijdzone opslaan",
+      "timeZoneSaved": "Tijdzone opgeslagen."
     },
     "messages": {
       "verificationExpired": "Deze bevestigingslink is verlopen. Stuur een nieuwe.",

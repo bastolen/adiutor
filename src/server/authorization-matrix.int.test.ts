@@ -107,7 +107,7 @@ import {
 } from './people/members';
 import { dismissMfaRecommendation } from './people/mfa-recommendation';
 import setOwnLocale from './people/own-locale';
-import saveFirstTimeZone from './people/own-time-zone';
+import saveFirstTimeZone, { setOwnTimeZone } from './people/own-time-zone';
 import { setOwnPicture } from './people/pictures';
 import {
   changeStaffRole,
@@ -116,6 +116,7 @@ import {
   removeFromStaff,
   renameStaff,
   setDefaultLocale,
+  setDefaultTimeZone,
   setRequestPrefix,
 } from './people/staff';
 import {
@@ -491,6 +492,7 @@ function listOperations(): Operation[] {
     ['view staff settings', (w) => getStaffSettings(ctx, w.actor)],
     ['choose own language', (w) => setOwnLocale(ctx, w.actor, 'nl-NL')],
     ['save own first time zone', (w) => saveFirstTimeZone(ctx, w.actor, 'Europe/Amsterdam')],
+    ['choose own time zone', (w) => setOwnTimeZone(ctx, w.actor, 'Europe/Amsterdam')],
     ['choose own picture', (w) => setOwnPicture(ctx, w.actor, 'initials')],
     ['dismiss own MFA recommendation', (w) => dismissMfaRecommendation(ctx, w.actor)],
     ['turn off sign-ins by staff', (w) => setStaffSignInAllowed(ctx, w.actor, false)],
@@ -502,6 +504,7 @@ function listOperations(): Operation[] {
     ],
     ['rename staff', (w) => renameStaff(ctx, w.actor, 'Adiutor Tests')],
     ['set default language', (w) => setDefaultLocale(ctx, w.actor, 'nl-NL')],
+    ['set default time zone', (w) => setDefaultTimeZone(ctx, w.actor, 'Europe/Amsterdam')],
     ['set request prefix', (w) => setRequestPrefix(ctx, w.actor, 'HELP')],
     [
       'change staff role',
@@ -826,9 +829,10 @@ const EXPECTED: Record<string, string> = {
   'list staff invitations': 'FFFFFFA',
   'list staff': 'FFFFFFA',
   'view staff settings': 'FFFFFFA',
-  // Everyone chooses their own language, first time zone and picture, and nobody else's.
+  // Everyone chooses their own language, time zone and picture, and nobody else's.
   'choose own language': 'AAAAAAA',
   'save own first time zone': 'AAAAAAA',
+  'choose own time zone': 'AAAAAAA',
   'choose own picture': 'AAAAAAA',
   // Everyone dismisses their own MFA recommendation, and nobody else's.
   'dismiss own MFA recommendation': 'AAAAAAA',
@@ -839,6 +843,7 @@ const EXPECTED: Record<string, string> = {
   "confirm another user's provider account": 'NNNNNNN',
   'rename staff': 'FFFFFFA',
   'set default language': 'FFFFFFA',
+  'set default time zone': 'FFFFFFA',
   'set request prefix': 'FFFFFFA',
   'change staff role': 'FFFFFFA',
   'remove from staff': 'FFFFFFA',

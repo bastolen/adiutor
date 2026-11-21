@@ -1,18 +1,23 @@
 /**
- * @file Integration tests for the first visit's time zone: the browser's zone
- * is saved only while the account has none, a zone Adiutor doesn't accept
- * saves nothing, and nothing is saved while a staff member is signed in as
- * the user.
+ * @file Integration tests for a person's own time zone: the first visit saves
+ * the browser's zone only while the account has none, a zone Adiutor doesn't
+ * accept is never saved, the Time zone card saves another, and nothing is
+ * saved while a staff member is signed in as the user.
  */
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { user } from '@/db/schema';
+import { user, staffSettings } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 
-import { actorFor, createUser, setupTestContext } from '../../../tests/integration/helpers';
+import {
+  actorFor,
+  createStaffSettings,
+  createUser,
+  setupTestContext,
+} from '../../../tests/integration/helpers';
 import { loadActor } from '../actor';
-import saveFirstTimeZone from './own-time-zone';
+import saveFirstTimeZone, { ownTimeZone, setOwnTimeZone } from './own-time-zone';
 
 const { ctx, db } = setupTestContext();
 
@@ -78,5 +83,45 @@ describe('saveFirstTimeZone', () => {
       code: 'signed_in_as',
     });
     expect(await savedTimeZone(jane)).toBeNull();
+  });
+});
+
+describe('setOwnTimeZone', () => {
+  it('saves the chosen zone over the one the account had', async () => {
+    const jane = await createUser(db, 'jane@adiutor.test');
+    await db.update(user).set({ timeZone: 'Asia/Tokyo' }).where(eq(user.id, jane));
+
+    await expect(setOwnTimeZone(ctx, await actorFor(db, jane), 'America/New_York')).resolves.toBe(
+      'America/New_York',
+    );
+    expect(await savedTimeZone(jane)).toBe('America/New_York');
+  });
+
+  it('refuses a zone Adiutor doesn’t accept, keeping the saved one', async () => {
+    const jane = await createUser(db, 'jane@adiutor.test');
+    await db.update(user).set({ timeZone: 'Asia/Tokyo' }).where(eq(user.id, jane));
+
+    await expect(setOwnTimeZone(ctx, await actorFor(db, jane), 'europe/amsterdam')).rejects.toThrow(
+      'validation.timeZone',
+    );
+    expect(await savedTimeZone(jane)).toBe('Asia/Tokyo');
+  });
+});
+
+describe('ownTimeZone', () => {
+  it('gives the account’s zone and Adiutor’s default, which stands in while it has none', async () => {
+    await createStaffSettings(db);
+    await db.update(staffSettings).set({ defaultTimeZone: 'Europe/Amsterdam' });
+    const jane = await createUser(db, 'jane@adiutor.test');
+
+    expect(await ownTimeZone(ctx, await actorFor(db, jane))).toEqual({
+      timeZone: null,
+      defaultTimeZone: 'Europe/Amsterdam',
+    });
+    await setOwnTimeZone(ctx, await actorFor(db, jane), 'Asia/Tokyo');
+    expect(await ownTimeZone(ctx, await actorFor(db, jane))).toEqual({
+      timeZone: 'Asia/Tokyo',
+      defaultTimeZone: 'Europe/Amsterdam',
+    });
   });
 });

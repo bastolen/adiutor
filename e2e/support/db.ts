@@ -363,6 +363,33 @@ export async function setDefaultLocale(locale: Locale): Promise<void> {
 }
 
 /**
+ * Sets Adiutor's default time zone directly, e.g. to put it back after a test
+ * changed it on the staff page.
+ *
+ * @param timeZone - The zone, e.g. `UTC`.
+ */
+export async function setDefaultTimeZone(timeZone: string): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.update(schema.staffSettings).set({ defaultTimeZone: timeZone });
+  });
+}
+
+/**
+ * Reads Adiutor's default time zone.
+ *
+ * @returns The zone in the settings row.
+ */
+export async function defaultTimeZoneNow(): Promise<string> {
+  return withTestDatabase(async (db) => {
+    const found = firstRow(
+      await db.select({ zone: schema.staffSettings.defaultTimeZone }).from(schema.staffSettings),
+      'the settings row',
+    );
+    return found.zone;
+  });
+}
+
+/**
  * Sets the prefix request numbers are shown with directly, for tests about
  * the numbers (the staff page's own field is tested in `staff.spec.ts`), and
  * to put it back afterwards.

@@ -1,6 +1,7 @@
 /**
  * @file First-run form: the staff name, Adiutor's default language and its
- * first Admin.
+ * first Admin, with the browser's time zone, which becomes Adiutor's default
+ * zone and the Admin's own.
  */
 'use client';
 
@@ -11,6 +12,7 @@ import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
 import TextField from '@/components/ui/text-field';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
+import useBrowserTimeZone from '@/lib/i18n/use-browser-time-zone';
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, NAME_MAX_LENGTH } from '@/lib/input-rules';
 
 import setupAction from './actions';
@@ -18,6 +20,8 @@ import setupAction from './actions';
 /**
  * Name shown to users, default language (the page's to begin with), name,
  * email and password, with a button that sets everything up and signs in.
+ * The browser's zone goes along unseen; before the page has hydrated it's
+ * empty, and Adiutor starts in UTC.
  *
  * @returns The form.
  */
@@ -26,10 +30,12 @@ export default function SetupForm() {
   const [result, formAction, pending, onSubmit] = useTransientActionState(setupAction, null);
   const language = useTranslations('common.language');
   const locale = useLocale();
+  const timeZone = useBrowserTimeZone();
 
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-5">
       <ResultAlert result={result} errorsOnly />
+      <input type="hidden" name="timeZone" value={timeZone ?? ''} />
       <TextField
         label={t('setup.staffName')}
         name="staffName"

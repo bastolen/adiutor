@@ -74,6 +74,7 @@
     "requestPriority": "Choose a priority.",
     "requestStatus": "Choose a status.",
     "requestPrefix": "Use one to five letters or digits for the prefix, starting with a letter, e.g. AD.",
-    "locale": "Choose one of the languages."
+    "locale": "Choose one of the languages.",
+    "timeZone": "Choose one of the time zones."
   }
 }

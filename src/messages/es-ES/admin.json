@@ -250,6 +250,13 @@
         "save": "Guardar nombre",
         "saved": "Nombre guardado."
       },
+      "timeZone": {
+        "title": "Zona horaria predeterminada",
+        "description": "Adiutor usa esta zona en las páginas para quien no ha iniciado sesión, en los correos a quien no tiene zona, y para todos hasta que su navegador fije la suya.",
+        "label": "Zona horaria predeterminada",
+        "save": "Guardar zona horaria predeterminada",
+        "saved": "Zona horaria predeterminada guardada."
+      },
       "requestNumbers": {
         "title": "Números de solicitud",
         "description": "Cada solicitud tiene un número que la gente puede citar. Se muestra tras el prefijo que elijas.",

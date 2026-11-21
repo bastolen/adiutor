@@ -162,6 +162,43 @@ describe('setUpPlatform', () => {
     expect(admin.locale).toBeNull();
   });
 
+  it("takes the browser's zone as Adiutor's default zone and the new Admin's own", async () => {
+    const { userId } = await setUpPlatform({ db }, { ...input, timeZone: 'Europe/Amsterdam' });
+
+    expect(await db.select({ zone: staffSettings.defaultTimeZone }).from(staffSettings)).toEqual([
+      { zone: 'Europe/Amsterdam' },
+    ]);
+    const admin = firstRow(await db.select().from(user).where(eq(user.id, userId)), 'the Admin');
+    expect(admin.timeZone).toBe('Europe/Amsterdam');
+  });
+
+  it.each([undefined, '', 'Mars/Olympus_Mons'])(
+    'starts in UTC with the zone %j, leaving the Admin’s to their first visit',
+    async (timeZone) => {
+      const { userId } = await setUpPlatform({ db }, { ...input, timeZone });
+
+      expect(await db.select({ zone: staffSettings.defaultTimeZone }).from(staffSettings)).toEqual([
+        { zone: 'UTC' },
+      ]);
+      const admin = firstRow(await db.select().from(user).where(eq(user.id, userId)), 'the Admin');
+      expect(admin.timeZone).toBeNull();
+    },
+  );
+
+  it('keeps the zone of an existing account it makes the Admin', async () => {
+    const userId = await createUser(db, 'setup@adiutor.test');
+    await db.update(user).set({ timeZone: 'Asia/Tokyo' }).where(eq(user.id, userId));
+
+    await setUpPlatform(
+      { db },
+      { ...input, timeZone: 'Europe/Amsterdam' },
+      { allowExistingAccount: true },
+    );
+
+    const admin = firstRow(await db.select().from(user).where(eq(user.id, userId)), 'the Admin');
+    expect(admin.timeZone).toBe('Asia/Tokyo');
+  });
+
   it('refuses a default language it doesn’t know, and sets nothing up', async () => {
     await expect(setUpPlatform({ db }, { ...input, defaultLocale: 'fr-FR' })).rejects.toThrow(
       'validation.locale',

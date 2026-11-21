@@ -19,13 +19,15 @@ import { setUpPlatform } from '@/server/setup';
 /**
  * Names the staff, sets Adiutor's default language and creates its first
  * Admin, in the language the setup page was shown in (their browser's, as
- * nothing is set up yet), then signs them in and opens the dashboard, which
+ * nothing is set up yet), with their browser's time zone as Adiutor's default
+ * zone and their own, then signs them in and opens the dashboard, which
  * loads afresh in every tab of the browser (`markActingAsChanged`). Only on a
  * fresh install: refused once setup is done or any account exists, even if
  * the form is posted directly, so it never promotes an existing account.
  *
  * @param _previous - The previous result (unused).
- * @param formData - Fields `staffName`, `defaultLocale`, `name`, `email` and `password`.
+ * @param formData - Fields `staffName`, `defaultLocale`, `name`, `email`, `password` and
+ *   `timeZone` (the browser's, which may be empty).
  * @returns Why it failed; on success, redirects instead.
  */
 export default async function setupAction(
@@ -37,6 +39,7 @@ export default async function setupAction(
     const result = await setUpPlatform(appContext, {
       staffName: field(formData, 'staffName'),
       defaultLocale: field(formData, 'defaultLocale'),
+      timeZone: field(formData, 'timeZone'),
       adminLocale: await requestLocale(),
       name: field(formData, 'name'),
       email: field(formData, 'email'),
