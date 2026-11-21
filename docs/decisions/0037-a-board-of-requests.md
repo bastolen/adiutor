@@ -19,8 +19,12 @@ How it works is in [The board](../requests.md#the-board). The choices behind it:
   search, the filters and the sort. It shares the list's filters and query (`requestListCondition`),
   so the two never disagree on what someone may see.
 - **A Move menu on every card is the way to move it** (a Radix menu: keyboard, touch, screen
-  readers, and the single-pointer path 2.5.7 asks for). Dragging, from tablet width, comes as an
-  extra for the pointer; it never replaces the menu. A card without moves has no menu.
+  readers, and the single-pointer path 2.5.7 asks for). A card without moves has no menu.
+- **Dragging is an extra on top of the menu,** for the pointer from tablet width: Pragmatic drag
+  and drop (native drag and drop, no React or styles of its own, about 20 KB), loaded with
+  `import()` once the page is there, with a grip on each card, lanes that say "Can't move here",
+  and our own announcements in three languages. A drop takes the menu's path; a refused one sends
+  nothing and says why. It never replaces the menu.
 - **No order of their own:** cards sit in each lane in the list's sort. A manual order would need a
   rank column, a migration and a choice between one order for everyone and one per person.
 - **Lanes aren't tables,** so they have no pages: an open lane shows the first 25, 50 or 100 cards
@@ -44,6 +48,9 @@ How it works is in [The board](../requests.md#the-board). The choices behind it:
 
 - **`?view=board` on `/requests`:** one page, but the status links, pagination and empty states
   would each need a board case, and the page couldn't have its own title.
-- **Keyboard dragging from a library:** keyboard equivalence alone doesn't meet 2.5.7, so the menu
-  would still be needed, with a second keyboard model to explain and test.
+- **Keyboard dragging from a library** (`@dnd-kit/react`, before 1.0): keyboard equivalence alone
+  doesn't meet 2.5.7, so the menu would still be needed, with a second keyboard model to explain
+  and test, and its English announcements to replace.
+- **Dragging on phones:** a long press to drag fights scrolling the page; the stacked lanes and the
+  menu are simpler there.
 - **Paging each lane (Show more):** more state in the address for little gain over the list.

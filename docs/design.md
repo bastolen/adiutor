@@ -100,9 +100,19 @@ keyboard support.
   - **Moving without dragging:** every card the reader may move has a Move menu (a Radix menu)
     listing the lanes it may go to, which works with a single click or tap, the keyboard and
     screen readers alike. That's WCAG 2.5.7 Dragging Movements: whatever can be dragged can also
-    be done with a single pointer, and the keyboard alone doesn't count. Dragging, when it comes,
-    is an extra for the pointer on wider screens; the menu stays. Moves that email the company
-    (Done, Cancelled) ask first.
+    be done with a single pointer, and the keyboard alone doesn't count. Dragging is an extra for
+    the pointer from tablet width; the menu stays. Moves that email the company (Done,
+    Cancelled) ask first, however they're made.
+  - **Dragging:** a decorative grip (`aria-hidden`, `cursor-grab`) in the card's corner drags it,
+    never its title link (`draggable={false}`). The drag and drop library loads with `import()`
+    once the page is there, from tablet width only (`board-drag.ts`, the one file that imports
+    it). While a card is dragged, the lanes say whether it can go there by more than colour: a
+    lane it may go to has a border in the highlight colour, and under the pointer a ring and "Let
+    go to move it here"; a lane it can't go to has a dashed border, the not-allowed cursor and
+    "Can't move here", and doesn't take the card (so the browser shows it can't be dropped). The
+    card left behind is dashed and flat, its text as it was (never lighter through opacity). A
+    drop that's refused sends nothing and says why, inline and as a toast. A live region of the
+    board's own announces the drag in the reader's language (never a library's English).
   - **A busy card, not a busy board:** a moved card shows in its new lane at once
     (`useOptimistic`), and only its Move button is busy ("Moving…", focusable, presses ignored);
     every other card stays usable.

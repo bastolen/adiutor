@@ -1,16 +1,26 @@
 /**
  * @file A lane of the board of requests: its heading with its name and how
  * many requests it has, its cards, and a link to all of them in the list
- * when it holds more than it shows. Its text comes from `requests.board`.
+ * when it holds more than it shows; while a card is dragged, whether it can
+ * go there. Its text comes from `requests.board`.
  */
-import { ChevronDown } from 'lucide-react';
+import { Ban, ChevronDown, MoveDown } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { type ReactNode, useId } from 'react';
+import { type ReactNode, useEffect, useId, useRef } from 'react';
 
 import { focusRing } from '@/components/ui/styles';
 import cn from '@/lib/cn';
 import type { RequestStatus } from '@/lib/requests';
+
+import type { BoardDrag } from './board-drag';
+
+/**
+ * What a lane is while a card is dragged: the one it's in (`origin`), one it
+ * may go to (`allowed`, or `target` while the pointer is over it), or one it
+ * can't go to (`refused`).
+ */
+export type LaneDropState = 'origin' | 'allowed' | 'target' | 'refused';
 
 /**
  * Props for {@link BoardLane}.
@@ -30,6 +40,10 @@ interface BoardLaneProps {
   collapsed: boolean;
   /** Folds its cards away or shows them again, below tablet width. */
   onToggle: () => void;
+  /** What it is while a card is dragged; nothing while none is. */
+  drop?: LaneDropState;
+  /** The board's drag and drop, once it's loaded (from tablet width), to take cards with. */
+  drag?: BoardDrag | null;
   /** Its cards (`BoardCard`s). */
   children: ReactNode;
 }
@@ -45,6 +59,12 @@ interface BoardLaneProps {
  * lane with more requests than it shows ends in "See all 132", a link to the
  * list of them with the board's filters.
  *
+ * While a card is dragged (from tablet width), a lane it may go to has a
+ * border in the highlight colour, and a ring and "Let go to move it here"
+ * while the pointer is over it; a lane it can't go to has a dashed border,
+ * the not-allowed cursor and says "Can't move here", so its colour is never
+ * the only sign. Only the lanes it may go to take the card.
+ *
  * @param props - Lane props.
  * @param props.status - The lane's status.
  * @param props.name - Its name.
@@ -53,6 +73,8 @@ interface BoardLaneProps {
  * @param props.seeAllHref - The list of all its requests.
  * @param props.collapsed - Whether its cards are folded away.
  * @param props.onToggle - Folds them away or shows them.
+ * @param props.drop - What it is while a card is dragged.
+ * @param props.drag - The board's drag and drop, once loaded.
  * @param props.children - Its cards.
  * @returns The lane.
  */
@@ -64,11 +86,22 @@ export default function BoardLane({
   seeAllHref,
   collapsed,
   onToggle,
+  drop = undefined,
+  drag = null,
   children,
 }: BoardLaneProps) {
   const t = useTranslations('requests.board');
   const headingId = useId();
   const cardsId = useId();
+  const laneRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const element = laneRef.current;
+    if (!drag || !element) {
+      return undefined;
+    }
+    return drag.lane({ element, lane: status });
+  }, [drag, status]);
   const count = (
     <span
       aria-hidden="true"
@@ -81,13 +114,22 @@ export default function BoardLane({
 
   return (
     <section
+      ref={laneRef}
       aria-labelledby={headingId}
       // Where `restoreFocusIfLost` finds the heading, and the board finds the lane.
       data-card=""
       data-lane={status}
       // A step back from the cards in both modes: `muted` behind white cards, `surface` behind
       // `raised` ones in dark mode, where `surface` is the darker of the two.
-      className="flex flex-col gap-3 rounded-xl border border-border bg-muted p-2 md:min-w-60 md:flex-1 dark:bg-surface"
+      className={cn(
+        'flex flex-col gap-3 rounded-xl border bg-muted p-2 transition-[border-color,box-shadow] md:min-w-60 md:flex-1 dark:bg-surface',
+        !drop && 'border-border',
+        drop === 'origin' && 'border-border',
+        (drop === 'allowed' || drop === 'target') && 'border-highlight',
+        // Inside its border: the lanes' row would cut off a ring drawn outside it.
+        drop === 'target' && 'ring-2 ring-ring ring-inset',
+        drop === 'refused' && 'cursor-not-allowed border-dashed border-border-strong',
+      )}
     >
       <h2
         id={headingId}
@@ -128,6 +170,18 @@ export default function BoardLane({
           <span className="sr-only">{heading}</span>
         </span>
       </h2>
+      {drop === 'refused' && (
+        <p className="flex items-center gap-1.5 rounded-md border border-dashed border-border-strong px-2 py-1.5 text-sm font-medium text-foreground">
+          <Ban aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+          {t('cantMoveHere')}
+        </p>
+      )}
+      {drop === 'target' && (
+        <p className="flex items-center gap-1.5 rounded-md border border-highlight px-2 py-1.5 text-sm font-medium text-foreground">
+          <MoveDown aria-hidden="true" className="size-4 shrink-0 text-highlight" />
+          {t('dropHere')}
+        </p>
+      )}
       <div id={cardsId} className={cn('flex flex-col gap-2', collapsed && 'max-md:hidden')}>
         {shown === 0 ? (
           <p className="px-2 py-6 text-center text-sm text-muted-foreground">{t('emptyLane')}</p>

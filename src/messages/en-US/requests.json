@@ -64,7 +64,14 @@
       "moveTo": "Move to",
       "moved": "{status, select, open {{reference} moved to Open.} todo {{reference} moved to To do.} in_progress {{reference} moved to In progress.} waiting {{reference} moved to Waiting for the company.} proposed {{reference} moved to Waiting for approval.} done {{reference} moved to Done.} cancelled {{reference} moved to Cancelled.} other {{reference} moved.}}",
       "confirmTitle": "{to, select, done {Mark {reference} as done?} other {Cancel {reference}?}}",
-      "doneDescription": "Everyone on the request is told. It can be reopened later."
+      "doneDescription": "Everyone on the request is told. It can be reopened later.",
+      "cantMoveHere": "Can’t move here",
+      "dragStarted": "{reference} picked up. Let go over a lane to move it there.",
+      "dragOver": "{state, select, allowed {Over {lane}: let go to move {reference} there.} refused {Over {lane}: {reference} can’t move here.} other {Over {lane}, where {reference} is now.}}",
+      "dropped": "{reference} let go over {lane}.",
+      "putBack": "{reference} stays where it was.",
+      "refused": "{reason, select, readOnly {{reference} stays where it is: you can only read it.} proposedComesWithReply {{reference} waits for approval only once a reply is sent as its solution.} approveOnRequest {To close {reference}, approve or deny its solution on the request.} staffSetsThat {Only {staff} can move {reference} to that lane.} other {{reference} can’t move to that lane from where it is.}}",
+      "dropHere": "Let go to move it here"
     },
     "new": {
       "title": "New request",

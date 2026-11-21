@@ -707,8 +707,8 @@ says so with a "Show everything" button.
   A List | Board toggle under the heading switches to the board with the same search, filters
   and sort.
 - **`/requests/board`**, for everyone signed in: the same requests in a lane per status, with the
-  list's search, filter menus and sort, and a Move menu on each card the reader may move (see
-  [The board](#the-board)).
+  list's search, filter menus and sort, and a Move menu on each card the reader may move, or from
+  tablet width a drag (see [The board](#the-board)).
 - **`/companies/<URL name>`**: the same list for one company, the company's first page (no board
   there yet).
 - **`/requests/new`**: the company (only when there's more than one to choose from), a title, a
@@ -777,6 +777,23 @@ the sort and the size (`size`), and drops the status link, `?only=` and the page
   the lanes and as a toast, and the card goes back. Focus follows the card to its Move button in
   the new lane (found by `data-request` once the move is on screen), or to the lane's heading
   when the card isn't on the board anymore (`restoreFocusIfLost`).
+- **Dragging** (from tablet width): once the page is there, the board loads its drag and drop
+  (Pragmatic drag and drop, through `import()` in `board-drag.ts`, the one file that imports it;
+  `src/client-imports.test.ts` checks this, and phones never load it), and each card the reader
+  may move gets a grip in its corner (decorative, `aria-hidden`), which drags it; the title link
+  isn't draggable itself (`draggable={false}`), so the card moves, never its address. It's an extra
+  for the pointer: the Move menu stays the way for the keyboard, screen readers and a single tap
+  (WCAG 2.5.7). While a card is dragged, a lane it may go to has a border in the highlight colour,
+  and a ring and "Let go to move it here" under the pointer; a lane it can't go to has a dashed
+  border, the not-allowed cursor and says "Can't move here", and doesn't take it. A live region
+  says what happens, in the reader's language: picked up, which lane the pointer is over and
+  whether the card may go there, and where it was let go. A drop on a lane it may go to takes the
+  Move menu's path (moved at once, the same action, Done and Cancelled ask first, focus on its
+  Move button); a drop on a lane it can't go to sends nothing and says why, above the lanes and
+  as a toast (`moveRefusal`: the reader only reads, Waiting for approval comes with a solution, a
+  solution is approved on the request, only the staff set that status, or not from here); a drop
+  on its own lane, between lanes, or a drag given up leaves it where it was. The lanes' row scrolls
+  sideways by itself while a card is dragged near its edges (auto-scroll).
 - **Layout:** from tablet width the lanes sit side by side, at least 15rem each, in a row that
   scrolls sideways inside its own box ("Lanes", reachable and scrolled with the keyboard while it
   overflows); the page itself never does, and the board doesn't widen the page (no `WidePage`).
@@ -787,8 +804,8 @@ the sort and the size (`size`), and drops the status link, `?only=` and the page
   for the open lanes and one for the closed ones, then loads the cards' rows as the list does
   (`loadRequestListItems`); the page in `src/app/(app)/requests/board/`, and in
   `src/app/(app)/_requests/` the server part (`request-board.tsx`, which renders each card's
-  content), the browser part (`board.tsx`, `board-lane.tsx`, `board-card.tsx`, `move-menu.tsx`) and
-  the action (`board-actions.ts`).
+  content), the browser part (`board.tsx`, `board-lane.tsx`, `board-card.tsx`, `move-menu.tsx`),
+  the drag and drop (`board-drag.ts`) and the action (`board-actions.ts`).
 
 ## In the code
 

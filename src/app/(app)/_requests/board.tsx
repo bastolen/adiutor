@@ -1,16 +1,19 @@
 /**
  * @file The browser part of the board of requests: the lanes in a row that
  * scrolls sideways (stacked below tablet width), and moving cards between
- * them with each card's Move menu, which places the card in its new lane at
- * once and puts it where the server says once the move is saved. Its text
- * comes from `requests.board` and `requests.controls`, which the board's page
- * passes through `ClientMessages`.
+ * them with each card's Move menu or, from tablet width, by dragging them
+ * (`board-drag.ts`, loaded with `import()`), which places the card in its new
+ * lane at once and puts it where the server says once the move is saved. Its
+ * text comes from `requests.board` and `requests.controls`, which the board's
+ * page passes through `ClientMessages`.
  */
 'use client';
 
 import { useTranslations } from 'next-intl';
 import {
   useCallback,
+  useEffect,
+  useEffectEvent,
   useLayoutEffect,
   useMemo,
   useOptimistic,
@@ -26,11 +29,31 @@ import { focusRing } from '@/components/ui/styles';
 import { useToast } from '@/components/ui/toast';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import cn from '@/lib/cn';
-import { type BoardLaneState, placeMovedCard, type RequestStatus } from '@/lib/requests';
+import {
+  type BoardLaneState,
+  moveRefusal,
+  placeMovedCard,
+  type RequestStatus,
+} from '@/lib/requests';
 
 import { moveRequestAction } from './board-actions';
 import BoardCard, { type BoardCardView } from './board-card';
-import BoardLane from './board-lane';
+import type { BoardDrag, CardDrop, DraggedCard } from './board-drag';
+import BoardLane, { type LaneDropState } from './board-lane';
+
+/**
+ * From tablet width (Tailwind's `md`, 48rem), where the lanes sit side by
+ * side and cards can be dragged; below it the Move menu is the only way.
+ */
+const TABLET_UP = '(min-width: 48rem)';
+
+/** A card being dragged, and the lane under the pointer. */
+interface DragState {
+  /** The card. */
+  card: BoardCardView;
+  /** The lane under the pointer; `null` between lanes. */
+  over: RequestStatus | null;
+}
 
 /** A move that asks first: to Done or Cancelled. */
 interface ConfirmedMove {
@@ -97,6 +120,8 @@ interface BoardProps {
   names: Readonly<Record<RequestStatus, string>>;
   /** Each lane's link to the list of all its requests, with the board's filters. */
   seeAll: Readonly<Record<RequestStatus, string>>;
+  /** The name the staff are shown with, for a drop on a lane only they move cards to. */
+  staffName: string;
 }
 
 /**
@@ -121,18 +146,31 @@ interface BoardProps {
  *   card isn't on the board anymore (past the lane's size), to its lane's
  *   heading (`restoreFocusIfLost`). Focus is only moved when it would
  *   otherwise be lost.
+ * - **Dragging** (from tablet width, an extra for the pointer: the Move menu
+ *   stays the way for the keyboard, screen readers and a single tap, WCAG
+ *   2.5.7): once the page is there, `board-drag.ts` is loaded and each card
+ *   the reader may move gets a grip. While a card is dragged, every lane
+ *   shows whether it can go there (`LaneDropState`), and a live region
+ *   says what's happening: picked up, which lane the pointer is over and
+ *   whether it may go there, and where it was let go. A drop on a lane it
+ *   may go to takes the menu's path (Done and Cancelled ask first); a drop on
+ *   one it can't go to sends nothing and says why (`moveRefusal`) above the
+ *   lanes and as a toast; a drop on its own lane, between lanes or a drag
+ *   given up leaves it where it was.
  *
- * The error, the open dialog and the folded lanes reset when the reader
- * leaves the page (`useTransientState`), and the busy cards when the moves
- * end.
+ * The error, the open dialog, the folded lanes, the drag and what the live
+ * region last said reset when the reader leaves the page
+ * (`useTransientState`), and the busy cards when the moves end; the drag and
+ * drop's effects clean up then too.
  *
  * @param props - Board props.
  * @param props.lanes - The lanes as the server has them.
  * @param props.names - Each lane's name.
  * @param props.seeAll - Each lane's link to all its requests.
+ * @param props.staffName - The name the staff are shown with.
  * @returns The board.
  */
-export default function Board({ lanes, names, seeAll }: BoardProps) {
+export default function Board({ lanes, names, seeAll, staffName }: BoardProps) {
   const t = useTranslations('requests.board');
   const tControls = useTranslations('requests.controls');
   const showToast = useToast();
@@ -157,6 +195,44 @@ export default function Board({ lanes, names, seeAll }: BoardProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   // The card focus follows after a move, and the lane it went to, until the moves end.
   const following = useRef<{ id: string; lane: RequestStatus } | null>(null);
+  // The drag and drop, once loaded from tablet width.
+  const [dragKit, setDragKit] = useState<BoardDrag | null>(null);
+  const [dragged, setDragged] = useTransientState<DragState | null>(null);
+  // What the live region says about a drag.
+  const [announcement, setAnnouncement] = useTransientState('');
+
+  // Loads the drag and drop once the page is there, from tablet width only; below it (and on a
+  // window made narrower) there's none, and the Move menu is the way to move.
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') {
+      return undefined;
+    }
+    const wide = window.matchMedia(TABLET_UP);
+    let cancelled = false;
+    /** Loads it, or drops it, for the window's width now. */
+    const update = () => {
+      if (!wide.matches) {
+        setDragKit(null);
+        return;
+      }
+      import('./board-drag').then(
+        ({ default: kit }) => {
+          if (!cancelled && wide.matches) {
+            setDragKit(kit);
+          }
+        },
+        () => {
+          // Without it the cards can't be dragged; the Move menu still moves them.
+        },
+      );
+    };
+    update();
+    wide.addEventListener('change', update);
+    return () => {
+      cancelled = true;
+      wide.removeEventListener('change', update);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const row = rowRef.current;
@@ -244,11 +320,137 @@ export default function Board({ lanes, names, seeAll }: BoardProps) {
     move(card, to);
   };
 
+  /**
+   * Finds a card on the board as it's shown now.
+   *
+   * @param id - The card's request ID.
+   * @returns The card, or `undefined` when it isn't on the board.
+   */
+  const shownCard = (id: string) =>
+    shown.lanes.flatMap(({ items }) => items).find((card) => card.id === id);
+
+  /**
+   * Whether a lane is the dragged card's own, one it may go to, or one it can't.
+   *
+   * @param card - The dragged card.
+   * @param lane - The lane.
+   * @returns `origin`, `allowed` or `refused`.
+   */
+  const laneFor = (card: BoardCardView, lane: RequestStatus): Exclude<LaneDropState, 'target'> => {
+    if (lane === card.status) {
+      return 'origin';
+    }
+    return card.moves.includes(lane) ? 'allowed' : 'refused';
+  };
+
+  const dragStarted = useEffectEvent((source: DraggedCard) => {
+    const card = shownCard(source.id);
+    if (!card) {
+      return;
+    }
+    setError(null);
+    setDragged({ card, over: card.status });
+    setAnnouncement(t('dragStarted', { reference: card.reference }));
+  });
+
+  const dragMoved = useEffectEvent((lane: RequestStatus | null) => {
+    if (!dragged) {
+      return;
+    }
+    setDragged({ ...dragged, over: lane });
+    if (lane) {
+      setAnnouncement(
+        t('dragOver', {
+          state: laneFor(dragged.card, lane),
+          lane: names[lane],
+          reference: dragged.card.reference,
+        }),
+      );
+    }
+  });
+
+  const dragEnded = useEffectEvent((source: DraggedCard, drop: CardDrop) => {
+    setDragged(null);
+    const card = shownCard(source.id);
+    if (!card) {
+      return;
+    }
+    const { reference } = card;
+    if (drop.accepted && drop.accepted !== card.status) {
+      setAnnouncement(t('dropped', { reference, lane: names[drop.accepted] }));
+      choose(card, drop.accepted);
+      return;
+    }
+    const reason = drop.under ? moveRefusal(card, drop.under) : null;
+    if (reason) {
+      // Nothing is sent: the card stays where it is, and the board says why.
+      setAnnouncement('');
+      setError(t('refused', { reason, reference, staff: staffName }));
+      return;
+    }
+    setAnnouncement(t('putBack', { reference }));
+  });
+
+  useEffect(() => {
+    const row = rowRef.current;
+    if (!dragKit || !row) {
+      return undefined;
+    }
+    return dragKit.watch({
+      row,
+      events: {
+        /**
+         * A card was picked up.
+         *
+         * @param source - The card.
+         */
+        onStart: (source) => {
+          dragStarted(source);
+        },
+        /**
+         * The pointer is over another lane.
+         *
+         * @param lane - The lane, or `null` between lanes.
+         */
+        onOver: (lane) => {
+          dragMoved(lane);
+        },
+        /**
+         * The card was let go.
+         *
+         * @param source - The card.
+         * @param drop - Where.
+         */
+        onDrop: (source, drop) => {
+          dragEnded(source, drop);
+        },
+      },
+    });
+  }, [dragKit]);
+
+  /**
+   * What a lane is while a card is dragged.
+   *
+   * @param lane - The lane.
+   * @returns Its state, or nothing while no card is dragged.
+   */
+  const dropOf = (lane: RequestStatus): LaneDropState | undefined => {
+    if (!dragged) {
+      return undefined;
+    }
+    const state = laneFor(dragged.card, lane);
+    return state === 'allowed' && dragged.over === lane ? 'target' : state;
+  };
+
   return (
     <div ref={boardRef} className="flex flex-col gap-4">
       <Alert tone="error" alsoToast onDismiss={() => setError(null)}>
         {error}
       </Alert>
+      {/* What happens while a card is dragged, for screen readers. */}
+      <p role="status" className="sr-only">
+        {announcement}
+      </p>
       <div
         ref={rowRef}
         role="group"
@@ -269,6 +471,8 @@ export default function Board({ lanes, names, seeAll }: BoardProps) {
               shown={lane.items.length}
               seeAllHref={seeAll[lane.status]}
               collapsed={folded.has(lane.status)}
+              drop={dropOf(lane.status)}
+              drag={dragKit}
               onToggle={() =>
                 setFolded((current) => {
                   const next = new Set(current);
@@ -285,6 +489,7 @@ export default function Board({ lanes, names, seeAll }: BoardProps) {
                   card={card}
                   names={names}
                   busy={shown.moving.includes(card.id)}
+                  drag={dragKit}
                   onChoose={choose}
                 />
               ))}

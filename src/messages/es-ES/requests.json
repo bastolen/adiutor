@@ -64,7 +64,14 @@
       "moveTo": "Mover a",
       "moved": "{status, select, open {{reference} movida a Abierta.} todo {{reference} movida a Por hacer.} in_progress {{reference} movida a En curso.} waiting {{reference} movida a A la espera de la empresa.} proposed {{reference} movida a A la espera de aprobación.} done {{reference} movida a Resuelta.} cancelled {{reference} movida a Cancelada.} other {{reference} movida.}}",
       "confirmTitle": "{to, select, done {¿Marcar {reference} como resuelta?} other {¿Cancelar {reference}?}}",
-      "doneDescription": "Se avisa a todas las personas de la solicitud. Se puede reabrir más adelante."
+      "doneDescription": "Se avisa a todas las personas de la solicitud. Se puede reabrir más adelante.",
+      "cantMoveHere": "No se puede mover aquí",
+      "dragStarted": "{reference} recogida. Suéltala sobre una columna para moverla allí.",
+      "dragOver": "{state, select, allowed {Sobre {lane}: suelta para mover {reference} allí.} refused {Sobre {lane}: {reference} no se puede mover aquí.} other {Sobre {lane}, donde está ahora {reference}.}}",
+      "dropped": "{reference} soltada sobre {lane}.",
+      "putBack": "{reference} se queda donde estaba.",
+      "refused": "{reason, select, readOnly {{reference} se queda donde está: solo puedes leerla.} proposedComesWithReply {{reference} solo espera aprobación cuando se envía una respuesta como su solución.} approveOnRequest {Para cerrar {reference}, aprueba o rechaza su solución en la propia solicitud.} staffSetsThat {Solo {staff} puede mover {reference} a esa columna.} other {{reference} no se puede mover a esa columna desde donde está.}}",
+      "dropHere": "Suelta para moverla aquí"
     },
     "new": {
       "title": "Nueva solicitud",

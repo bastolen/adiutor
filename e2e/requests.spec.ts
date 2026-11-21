@@ -2506,3 +2506,52 @@ test('a lane of the board with more requests than it shows opens the list of the
   await expect(main(page)).toContainText('Only requests with this status:');
   await expect(requestRows(page)).toHaveCount(11);
 });
+
+test('a card dragged on the board to a lane it may go to moves there', async ({ page }) => {
+  const title = `A card to drag ${randomUUID().slice(0, 8)}`;
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title,
+  });
+
+  await signIn(page, SUPPORT_STAFF);
+  await openBoard(page, title);
+  const card = boardLane(page, 'Open').getByRole('listitem').filter({ hasText: title });
+  // The grip comes once the drag and drop has loaded.
+  const grip = card.locator('[data-drag-handle]');
+  await expect(grip).toBeVisible();
+  await grip.dragTo(boardLane(page, 'In progress'));
+
+  await expect(toasts(page)).toContainText(`AD-${number} moved to In progress.`);
+  await expect(boardLane(page, 'In progress').getByRole('link', { name: title })).toBeVisible();
+  await expect(boardLane(page, 'Open').getByRole('link', { name: title })).toHaveCount(0);
+});
+
+test('a card dragged on the board to a lane it can’t go to stays, and the board says why', async ({
+  page,
+}) => {
+  const title = `A card that can’t go there ${randomUUID().slice(0, 8)}`;
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title,
+  });
+
+  // A Client closes or cancels a request; the other lanes are the staff's.
+  await signIn(page, REQUESTS_CLIENT);
+  await openBoard(page, title);
+  const card = boardLane(page, 'Open').getByRole('listitem').filter({ hasText: title });
+  const grip = card.locator('[data-drag-handle]');
+  await expect(grip).toBeVisible();
+  await grip.dragTo(boardLane(page, 'To do'));
+
+  await expect(main(page).getByRole('alert')).toContainText(
+    `Only ${STAFF_NAME} can move AD-${number} to that lane.`,
+  );
+  await expect(toasts(page)).toContainText(`Only ${STAFF_NAME} can move AD-${number}`);
+  // Nothing was sent: it's still open, on the board and on its page.
+  await expect(boardLane(page, 'Open').getByRole('link', { name: title })).toBeVisible();
+  await page.goto(`/requests/${number}`);
+  await expect(detail(page, 'Status')).toHaveText('Open');
+});

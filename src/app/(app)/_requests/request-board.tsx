@@ -13,6 +13,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { PageSizeLinks } from '@/components/ui/pagination';
 import RelativeTime from '@/components/ui/relative-time';
 import RowLink from '@/components/ui/row-link';
+import cn from '@/lib/cn';
 import { formatList } from '@/lib/format';
 import type { Locale } from '@/lib/i18n/locales';
 import {
@@ -81,14 +82,23 @@ function CardBody({
   const ownWords = WORDED_STATUSES.includes(card.status) && card.audience !== audience;
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
-      <span className="flex flex-wrap items-center gap-x-2 text-xs wrap-anywhere text-muted-foreground">
+      <span
+        className={cn(
+          'flex flex-wrap items-center gap-x-2 text-xs wrap-anywhere text-muted-foreground',
+          // Room for the grip a card that can be dragged gets from tablet width, in its corner.
+          card.moves.length > 0 && 'md:pr-7',
+        )}
+      >
         <span className="font-mono">{reference}</span>
         <span aria-hidden="true">·</span>
         <span>{card.typeName}</span>
       </span>
-      {/* The link covers the whole card, so the card is one click target. */}
+      {/* The link covers the whole card, so the card is one click target. It isn't dragged
+          itself: a drag from the grip moves the card, never the link's address. */}
       <span className="text-sm">
-        <RowLink href={requestPath(card.number)}>{card.title}</RowLink>
+        <RowLink href={requestPath(card.number)} draggable={false}>
+          {card.title}
+        </RowLink>
       </span>
       {showsCompany && (
         <span className="text-xs wrap-anywhere text-muted-foreground">{card.company.name}</span>
@@ -126,6 +136,7 @@ function CardMeta({ card, names, locale }: { card: BoardCard; names: SideNames; 
             href={requestPath(card.number)}
             tabIndex={-1}
             aria-hidden="true"
+            draggable={false}
             className="relative z-10 inline-flex w-fit"
           >
             <PeopleAvatars people={card.assignees} names={names} />
@@ -232,6 +243,7 @@ export default async function RequestBoard({ searchParams, actor }: RequestBoard
         reference,
         status: card.status,
         moves: card.moves,
+        audience: card.audience,
         body: (
           <CardBody
             card={card}
@@ -275,7 +287,7 @@ export default async function RequestBoard({ searchParams, actor }: RequestBoard
           }))}
         />
       </RequestFilterBar>
-      <Board lanes={lanes} names={names} seeAll={seeAll} />
+      <Board lanes={lanes} names={names} seeAll={seeAll} staffName={settings.staffName} />
     </>
   );
 }

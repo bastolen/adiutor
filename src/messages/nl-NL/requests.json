@@ -64,7 +64,14 @@
       "moveTo": "Verplaatsen naar",
       "moved": "{status, select, open {{reference} verplaatst naar Open.} todo {{reference} verplaatst naar Te doen.} in_progress {{reference} verplaatst naar In behandeling.} waiting {{reference} verplaatst naar Wacht op het bedrijf.} proposed {{reference} verplaatst naar Wacht op goedkeuring.} done {{reference} verplaatst naar Afgerond.} cancelled {{reference} verplaatst naar Geannuleerd.} other {{reference} verplaatst.}}",
       "confirmTitle": "{to, select, done {{reference} markeren als afgerond?} other {{reference} annuleren?}}",
-      "doneDescription": "Iedereen op het verzoek krijgt het te horen. Het kan later worden heropend."
+      "doneDescription": "Iedereen op het verzoek krijgt het te horen. Het kan later worden heropend.",
+      "cantMoveHere": "Kan hier niet heen",
+      "dragStarted": "{reference} opgepakt. Laat los boven een kolom om het daarheen te verplaatsen.",
+      "dragOver": "{state, select, allowed {Boven {lane}: laat los om {reference} daarheen te verplaatsen.} refused {Boven {lane}: {reference} kan hier niet heen.} other {Boven {lane}, waar {reference} nu staat.}}",
+      "dropped": "{reference} losgelaten boven {lane}.",
+      "putBack": "{reference} blijft waar het was.",
+      "refused": "{reason, select, readOnly {{reference} blijft waar het is: je kunt het alleen lezen.} proposedComesWithReply {{reference} wacht pas op goedkeuring als er een reactie als oplossing is verstuurd.} approveOnRequest {Keur de oplossing van {reference} goed of af op het verzoek zelf om het af te ronden.} staffSetsThat {Alleen {staff} kan {reference} naar die kolom verplaatsen.} other {{reference} kan vanaf hier niet naar die kolom.}}",
+      "dropHere": "Laat los om het hierheen te verplaatsen"
     },
     "new": {
       "title": "Nieuw verzoek",

@@ -3,7 +3,10 @@
  * their counts, "See all" and an empty lane, the Move menu (none on a card
  * the reader can't move), moving a card at once and saving it from the lane
  * it was in, Done and Cancelled asking first, a refusal, and where focus goes
- * after a move.
+ * after a move; and dragging, with the drag and drop itself stood in for:
+ * what it's given, what the lanes say while a card is dragged, what's
+ * announced, and what each kind of drop does (refused ones worded per
+ * reason).
  */
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -11,13 +14,53 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Toaster } from '@/components/ui/toast';
 import type { ActionResult } from '@/lib/action-result';
+import { defined } from '@/lib/defined';
 import type { BoardLaneState, RequestStatus } from '@/lib/requests';
 
 import Board from './board';
 import { moveRequestAction } from './board-actions';
 import type { BoardCardView } from './board-card';
+import type { BoardDragEvents, DraggedCard } from './board-drag';
 
 vi.mock('./board-actions', () => ({ moveRequestAction: vi.fn() }));
+
+/** A stand-in for the drag and drop: it notes what the board gives it. */
+const dragKit = vi.hoisted(() => {
+  const given = {
+    /** The cards made draggable, by request ID. */
+    cards: new Map<string, { handle: HTMLElement; card: () => DraggedCard | null }>(),
+    /** The lanes that take cards. */
+    lanes: [] as string[],
+    /** What the board hears of a drag, while it's watched. */
+    events: null as BoardDragEvents | null,
+  };
+  return {
+    given,
+    kit: {
+      card: vi.fn(
+        (args: { element: HTMLElement; handle: HTMLElement; card: () => DraggedCard | null }) => {
+          const id = args.handle.dataset.dragHandle ?? '';
+          given.cards.set(id, args);
+          return () => given.cards.delete(id);
+        },
+      ),
+      lane: vi.fn(({ lane }: { lane: string }) => {
+        given.lanes.push(lane);
+        return () => {
+          given.lanes.splice(given.lanes.indexOf(lane), 1);
+        };
+      }),
+      watch: vi.fn(({ events }: { events: BoardDragEvents }) => {
+        given.events = events;
+        return () => {
+          given.events = null;
+        };
+      }),
+    },
+  };
+});
+
+vi.mock('./board-drag', () => ({ default: dragKit.kit }));
 
 /** Each lane's name, as the staff read it. */
 const NAMES: Record<RequestStatus, string> = {
@@ -50,6 +93,7 @@ function card(number: number, status: RequestStatus, moves: RequestStatus[]): Bo
     reference: `AD-${number}`,
     status,
     moves,
+    audience: moves.length > 2 ? 'staff' : 'contributor',
     body: <span>{`Request ${number}`}</span>,
     meta: null,
   };
@@ -101,7 +145,7 @@ function renderBoard() {
   render(
     <>
       <Toaster />
-      <Board lanes={lanes()} names={NAMES} seeAll={SEE_ALL} />
+      <Board lanes={lanes()} names={NAMES} seeAll={SEE_ALL} staffName="Adiutor Tests" />
     </>,
   );
 }
@@ -173,7 +217,7 @@ describe('Board', () => {
     const moved = within(lane('In progress')).getByRole('button', { name: 'Move AD-1' });
     expect(moved).toHaveAttribute('aria-busy', 'true');
     expect(moved).toHaveTextContent('Moving…');
-    expect(screen.getByRole('status', { name: '' })).toHaveTextContent('Moving AD-1…');
+    expect(screen.getByText('Moving AD-1…')).toHaveAttribute('role', 'status');
     expect(lane('In progress')).toHaveAccessibleName(/^In progress, 1 request/);
     expect(lane('Open')).toHaveAccessibleName(/^Open, 2 requests/);
     expect(screen.getByRole('button', { name: 'Move AD-2' })).not.toHaveAttribute('aria-busy');
@@ -242,5 +286,181 @@ describe('Board', () => {
     const back = await within(lane('Open')).findByRole('button', { name: 'Move AD-2' });
     await waitFor(() => expect(back).not.toHaveAttribute('aria-busy'));
     await waitFor(() => expect(back).toHaveFocus());
+  });
+});
+
+describe('Board, dragging', () => {
+  /**
+   * Makes the window as wide as a tablet or not, as the board asks.
+   *
+   * @param wide - Whether it's tablet width or wider.
+   */
+  function windowIsWide(wide: boolean) {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: wide,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    );
+  }
+
+  /**
+   * The live region that says what happens while a card is dragged.
+   *
+   * @returns It.
+   */
+  const announced = () =>
+    defined(
+      screen.getAllByRole('status').find((element) => element.tagName === 'P'),
+      'the live region',
+    );
+
+  /**
+   * What the board hears of a drag, once the drag and drop has loaded.
+   *
+   * @returns The events.
+   */
+  async function dragEvents(): Promise<BoardDragEvents> {
+    await waitFor(() => expect(dragKit.given.events).not.toBeNull());
+    return defined(dragKit.given.events, 'the drag events');
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('loads nowhere below tablet width, where the Move menu is the only way', async () => {
+    windowIsWide(false);
+    renderBoard();
+
+    await act(async () => {});
+    expect(dragKit.kit.watch).not.toHaveBeenCalled();
+    expect(document.querySelector('[data-drag-handle]')).toBeNull();
+  });
+
+  it('gives each card the reader may move a grip, and every lane a drop target', async () => {
+    windowIsWide(true);
+    renderBoard();
+    await dragEvents();
+
+    expect([...dragKit.given.cards.keys()].sort()).toEqual(['request-1', 'request-2']);
+    expect(document.querySelector('[data-drag-handle="request-3"]')).toBeNull();
+    expect(dragKit.given.cards.get('request-1')?.handle).toHaveAttribute('aria-hidden', 'true');
+    expect(dragKit.given.cards.get('request-1')?.card()).toEqual({
+      id: 'request-1',
+      status: 'open',
+      moves: ['todo', 'in_progress', 'done', 'cancelled'],
+    });
+    expect([...dragKit.given.lanes].sort()).toEqual(Object.keys(NAMES).sort());
+  });
+
+  it('says on each lane whether the card can go there, and announces where the pointer is', async () => {
+    windowIsWide(true);
+    renderBoard();
+    const events = await dragEvents();
+
+    act(() => events.onStart({ id: 'request-1', status: 'open', moves: ['todo', 'done'] }));
+    expect(announced()).toHaveTextContent('AD-1 picked up.');
+    expect(within(lane('Waiting for approval')).getByText('Can’t move here')).toBeInTheDocument();
+    expect(within(lane('To do')).queryByText('Can’t move here')).not.toBeInTheDocument();
+    expect(within(lane('Open')).queryByText('Can’t move here')).not.toBeInTheDocument();
+
+    act(() => events.onOver('todo'));
+    expect(within(lane('To do')).getByText('Let go to move it here')).toBeInTheDocument();
+    expect(announced()).toHaveTextContent('Over To do: let go to move AD-1 there.');
+    act(() => events.onOver('waiting'));
+    expect(announced()).toHaveTextContent('Over Waiting for the company: AD-1 can’t move here.');
+  });
+
+  it('moves a card dropped on a lane it may go to, as the Move menu does', async () => {
+    vi.mocked(moveRequestAction).mockResolvedValue({ ok: true, message: 'AD-1 moved to To do.' });
+    windowIsWide(true);
+    renderBoard();
+    const events = await dragEvents();
+    const dragged = { id: 'request-1', status: 'open' as const, moves: ['todo' as const] };
+
+    act(() => events.onStart(dragged));
+    act(() => events.onDrop(dragged, { accepted: 'todo', under: 'todo' }));
+
+    expect(moveRequestAction).toHaveBeenCalledWith({ request: 1, status: 'todo', from: 'open' });
+    expect(within(lane('To do')).getByRole('button', { name: 'Move AD-1' })).toBeInTheDocument();
+    expect(screen.queryByText('Can’t move here')).not.toBeInTheDocument();
+  });
+
+  it('asks before a card dropped on Done moves', async () => {
+    windowIsWide(true);
+    renderBoard();
+    const events = await dragEvents();
+    const dragged = { id: 'request-1', status: 'open' as const, moves: ['done' as const] };
+
+    act(() => events.onStart(dragged));
+    act(() => events.onDrop(dragged, { accepted: 'done', under: 'done' }));
+
+    expect(screen.getByRole('alertdialog', { name: 'Mark AD-1 as done?' })).toBeInTheDocument();
+    expect(moveRequestAction).not.toHaveBeenCalled();
+  });
+
+  it('sends nothing for a drop on a lane the card can’t go to, and says why', async () => {
+    windowIsWide(true);
+    renderBoard();
+    const events = await dragEvents();
+    const dragged = { id: 'request-1', status: 'open' as const, moves: ['todo' as const] };
+
+    act(() => events.onStart(dragged));
+    act(() => events.onDrop(dragged, { accepted: null, under: 'proposed' }));
+
+    expect(moveRequestAction).not.toHaveBeenCalled();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'AD-1 waits for approval only once a reply is sent as its solution.',
+    );
+    await waitFor(() =>
+      expect(toasts()).toHaveTextContent('AD-1 waits for approval only once a reply is sent'),
+    );
+    expect(within(lane('Open')).getByRole('button', { name: 'Move AD-1' })).toBeInTheDocument();
+  });
+
+  it('leaves a card dropped on its own lane, or between lanes, where it was', async () => {
+    windowIsWide(true);
+    renderBoard();
+    const events = await dragEvents();
+    const dragged = { id: 'request-2', status: 'open' as const, moves: ['todo' as const] };
+
+    act(() => events.onStart(dragged));
+    act(() => events.onDrop(dragged, { accepted: null, under: 'open' }));
+    act(() => events.onStart(dragged));
+    act(() => events.onDrop(dragged, { accepted: null, under: null }));
+
+    expect(moveRequestAction).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(announced()).toHaveTextContent('AD-2 stays where it was.');
+  });
+});
+
+describe('a refused drop', () => {
+  it.each([
+    ['readOnly', 'AD-9 stays where it is: you can only read it.'],
+    [
+      'proposedComesWithReply',
+      'AD-9 waits for approval only once a reply is sent as its solution.',
+    ],
+    ['approveOnRequest', 'To close AD-9, approve or deny its solution on the request.'],
+    ['staffSetsThat', 'Only Adiutor Tests can move AD-9 to that lane.'],
+    ['notFromHere', 'AD-9 can’t move to that lane from where it is.'],
+  ])('says why for %s', async (reason, sentence) => {
+    const { useTranslations } = await import('next-intl');
+    /**
+     * Words the refusal, as the board does.
+     *
+     * @returns The sentence.
+     */
+    function Refusal() {
+      const t = useTranslations('requests.board');
+      return <p>{t('refused', { reason, reference: 'AD-9', staff: 'Adiutor Tests' })}</p>;
+    }
+    render(<Refusal />);
+    expect(screen.getByText(sentence)).toBeInTheDocument();
   });
 });
