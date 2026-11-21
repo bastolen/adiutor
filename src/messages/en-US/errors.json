@@ -92,6 +92,10 @@
     },
     "account": {
       "pictureUnavailable": "Pick one of your connected accounts that has a picture, or your initials."
+    },
+    "requestTypes": {
+      "unavailable": "This type can’t be chosen any more. Pick another one.",
+      "lastActive": "Keep at least one type that isn’t archived, or no request can be raised."
     }
   }
 }

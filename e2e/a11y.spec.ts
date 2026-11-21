@@ -822,6 +822,20 @@ test.describe('in forced-colours mode', () => {
         await expectAccessible(page);
       });
 
+      test('the dialog that adds a request type', async ({ page }) => {
+        // Only opened and closed: nothing is added.
+        await page.goto('/admin/staff');
+        await page
+          .getByRole('region', { name: 'Request types' })
+          .getByRole('button', { name: 'Add type' })
+          .click();
+        const dialog = page.getByRole('dialog', { name: 'Add a request type' });
+        await expect(dialog).toBeVisible();
+        await expectAccessible(page, '[role="dialog"]');
+        await page.keyboard.press('Escape');
+        await expect(dialog).toHaveCount(0);
+      });
+
       test('a toast', async ({ page }) => {
         // Saving the staff name unchanged changes nothing, but shows its toast.
         await page.goto('/admin/staff');

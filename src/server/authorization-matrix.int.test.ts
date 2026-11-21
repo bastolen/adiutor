@@ -132,6 +132,8 @@ import { listUsers } from './people/users';
 import { findErrorReference, listRecentErrors } from './recorded-errors';
 import {
   addNote,
+  addRequestType,
+  archiveRequestType,
   changeAssignees,
   changeRequestStatus,
   countAssignedRequests,
@@ -143,9 +145,13 @@ import {
   listMentionable,
   listRequestCompanies,
   listRequests,
+  listRequestTypes,
+  moveRequestType,
   raiseRequest,
   replyToRequest,
+  restoreRequestType,
   updateRequestDetails,
+  updateRequestType,
 } from './requests';
 
 const { ctx, db, sent } = setupTestContext();
@@ -502,6 +508,29 @@ function listOperations(): Operation[] {
     ['rename staff', (w) => renameStaff(ctx, w.actor, 'Adiutor Tests')],
     ['set default language', (w) => setDefaultLocale(ctx, w.actor, 'nl-NL')],
     ['set request prefix', (w) => setRequestPrefix(ctx, w.actor, 'HELP')],
+    ['list request types', (w) => listRequestTypes(ctx, w.actor)],
+    [
+      'add request type',
+      (w) =>
+        addRequestType(ctx, w.actor, {
+          name: 'Printers',
+          description: 'A printer acts up.',
+          startingPriority: 'normal',
+        }),
+    ],
+    [
+      'edit request type',
+      (w) =>
+        updateRequestType(ctx, w.actor, {
+          type: 'support',
+          name: 'Help',
+          description: 'A question.',
+          startingPriority: 'normal',
+        }),
+    ],
+    ['move request type', (w) => moveRequestType(ctx, w.actor, { type: 'bug', direction: 'up' })],
+    ['archive request type', (w) => archiveRequestType(ctx, w.actor, { type: 'new_feature' })],
+    ['restore request type', (w) => restoreRequestType(ctx, w.actor, { type: 'new_feature' })],
     [
       'change staff role',
       (w) => changeStaffRole(ctx, w.actor, { userId: w.staffMember, role: 'finance' }),
@@ -711,6 +740,7 @@ const READS: ReadonlySet<string> = new Set([
   'list staff invitations',
   'list staff',
   'view staff settings',
+  'list request types',
   'list users',
   'view user',
   'check a user exists',
@@ -846,6 +876,13 @@ const EXPECTED: Record<string, string> = {
   'rename staff': 'FFFFFFA',
   'set default language': 'FFFFFFA',
   'set request prefix': 'FFFFFFA',
+  // Everyone who reads requests sees the types; only staff Admins change them.
+  'list request types': 'AAAAAAA',
+  'add request type': 'FFFFFFA',
+  'edit request type': 'FFFFFFA',
+  'move request type': 'FFFFFFA',
+  'archive request type': 'FFFFFFA',
+  'restore request type': 'FFFFFFA',
   'change staff role': 'FFFFFFA',
   'remove from staff': 'FFFFFFA',
   'list users': 'FFFAAAA',

@@ -104,7 +104,7 @@ export default async function RequestDetails({
           </div>
         </Detail>
         <Detail term={t('type')}>
-          <TypeBadge type={detail.type} />
+          <TypeBadge name={detail.typeName} />
         </Detail>
         {detail.priority && (
           <Detail term={t('priority')}>

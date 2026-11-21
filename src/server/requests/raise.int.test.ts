@@ -21,7 +21,7 @@ import {
 } from '../../../tests/integration/helpers';
 import { RATE_LIMITS } from '../rate-limit';
 import raiseRequest from './raise';
-import { ctx, db, deactivatedMeanwhile, storedRequest } from './test-helpers';
+import { ctx, db, deactivatedMeanwhile, storedRequest, storeRequestType } from './test-helpers';
 
 /** A request as a form sends it, without its company. */
 const INPUT = {
@@ -126,7 +126,7 @@ describe('raiseRequest', () => {
     ['no title', { title: ' ' }],
     ['a title of two lines', { title: 'The printer\nis broken' }],
     ['no description', { description: ' \r\n ' }],
-    ['an unknown type', { type: 'question' }],
+    ['a type that isn’t a key', { type: 'New feature' }],
   ])('refuses %s', async (_name, change) => {
     const company = await createCompany(db);
     const client = await memberActor(db, company.id, 'client');
@@ -134,6 +134,36 @@ describe('raiseRequest', () => {
     await expect(
       raiseRequest(ctx, client, { ...INPUT, ...change, companyId: company.id }),
     ).rejects.toBeInstanceOf(ZodError);
+    expect(await db.$count(request)).toBe(0);
+  });
+
+  it('takes the starting priority from a type the staff added', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client');
+    await storeRequestType({ key: 'printers', startingPriority: 'high' });
+
+    const raised = await raiseRequest(ctx, client, {
+      ...INPUT,
+      type: 'printers',
+      companyId: company.id,
+    });
+
+    expect(await storedRequest(raised.id)).toMatchObject({ type: 'printers', priority: 'high' });
+  });
+
+  it.each([
+    ['no type has', 'printers', null],
+    ['an archived type has', 'printers', new Date()],
+  ])('refuses a key %s', async (_name, key, archivedAt) => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client');
+    if (archivedAt) {
+      await storeRequestType({ key, archivedAt });
+    }
+
+    await expect(
+      raiseRequest(ctx, client, { ...INPUT, type: key, companyId: company.id }),
+    ).rejects.toMatchObject({ code: 'invalid', key: 'errors.requestTypes.unavailable' });
     expect(await db.$count(request)).toBe(0);
   });
 

@@ -12,14 +12,7 @@ import ActionDialog from '@/components/ui/action-dialog';
 import SelectField from '@/components/ui/select-field';
 import TextField from '@/components/ui/text-field';
 import { REQUEST_TITLE_MAX_LENGTH } from '@/lib/input-rules';
-import {
-  isRequestType,
-  REQUEST_PRIORITIES,
-  REQUEST_TYPES,
-  type RequestPriority,
-  type RequestType,
-  startingPriority,
-} from '@/lib/requests';
+import { REQUEST_PRIORITIES, type RequestPriority } from '@/lib/requests';
 
 import { updateDetailsAction } from './actions';
 
@@ -27,10 +20,20 @@ import { updateDetailsAction } from './actions';
 interface Details {
   /** The title. */
   title: string;
-  /** The type. */
-  type: RequestType;
+  /** The type's key. */
+  type: string;
   /** The priority. */
   priority: RequestPriority;
+}
+
+/** A type the request can be given, with the priority a request of it starts with. */
+export interface EditableType {
+  /** Its key. */
+  key: string;
+  /** Its name. */
+  name: string;
+  /** The priority a request of this type starts with. */
+  startingPriority: RequestPriority;
 }
 
 /**
@@ -47,9 +50,10 @@ interface Details {
  *
  * @param props - Component props.
  * @param props.details - The request's details as they are.
+ * @param props.types - The types to choose from: the active ones, and the request's own.
  * @returns The fields.
  */
-function DetailsFields({ details }: { details: Details }) {
+function DetailsFields({ details, types }: { details: Details; types: readonly EditableType[] }) {
   const t = useTranslations('requests');
   const [started] = useState(details);
   const [type, setType] = useState<string>(started.type);
@@ -72,12 +76,13 @@ function DetailsFields({ details }: { details: Details }) {
       <SelectField
         label={t('controls.typeLabel')}
         name="type"
-        options={REQUEST_TYPES.map((value) => ({ value, label: t('type', { type: value }) }))}
+        options={types.map(({ key, name }) => ({ value: key, label: name }))}
         value={type}
         onValueChange={(next) => {
           setType(next);
-          if (!priorityPicked && isRequestType(next)) {
-            setPriority(startingPriority(next));
+          const picked = types.find(({ key }) => key === next);
+          if (!priorityPicked && picked) {
+            setPriority(picked.startingPriority);
           }
         }}
       />
@@ -109,9 +114,18 @@ function DetailsFields({ details }: { details: Details }) {
  * @param props - Component props.
  * @param props.request - The request's number.
  * @param props.details - Its details as they are.
+ * @param props.types - The types to choose from: the active ones, and the request's own.
  * @returns The button and dialog.
  */
-export default function EditDetails({ request, details }: { request: number; details: Details }) {
+export default function EditDetails({
+  request,
+  details,
+  types,
+}: {
+  request: number;
+  details: Details;
+  types: readonly EditableType[];
+}) {
   const t = useTranslations('requests.controls');
   return (
     <ActionDialog
@@ -123,7 +137,7 @@ export default function EditDetails({ request, details }: { request: number; det
       confirmLabel={t('saveDetails')}
       tone="primary"
     >
-      <DetailsFields details={details} />
+      <DetailsFields details={details} types={types} />
     </ActionDialog>
   );
 }

@@ -22,7 +22,7 @@ import type { CompanyRole } from '../../src/lib/authz/roles';
 import { firstRow } from '../../src/lib/defined';
 import type { Locale } from '../../src/lib/i18n/locales';
 import { INVITATION_VALID_DAYS } from '../../src/lib/invitation-lifetimes';
-import type { RequestPriority, RequestStatus, RequestType } from '../../src/lib/requests';
+import type { RequestPriority, RequestStatus } from '../../src/lib/requests';
 import { EMAIL_LINK_MINUTES, EMAIL_LINK_PATH } from '../../src/lib/sign-in/email-link';
 import {
   emailLinkVerificationIdentifier,
@@ -573,7 +573,7 @@ export async function storeRequest({
   raisedBy: string;
   title: string;
   description?: string;
-  type?: RequestType;
+  type?: string;
   priority?: RequestPriority;
   status?: RequestStatus;
 }): Promise<number> {

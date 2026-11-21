@@ -44,6 +44,15 @@ export const REQUEST_TEXT_MAX_LENGTH = 10_000;
  */
 export const REQUEST_PREFIX_MAX_LENGTH = 5;
 
+/** The longest name of a request type (`requestTypeNameSchema`, and its field's `maxLength`). */
+export const REQUEST_TYPE_NAME_MAX_LENGTH = 40;
+
+/**
+ * The longest text that says what a request type is for
+ * (`requestTypeDescriptionSchema`, and its field's `maxLength`).
+ */
+export const REQUEST_TYPE_DESCRIPTION_MAX_LENGTH = 200;
+
 /** The longest URL name (`slugSchema`, `slugify`, and the URL name field's `maxLength`). */
 export const SLUG_MAX_LENGTH = 60;
 

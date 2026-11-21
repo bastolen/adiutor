@@ -42,6 +42,12 @@ interface ActionDialogProps {
   fields?: Record<string, string>;
   /** Text of the button that opens the dialog. */
   triggerLabel: string;
+  /**
+   * The opening button's name for screen readers when its text alone says too
+   * little, e.g. "Edit Printers" for one of several "Edit" buttons. It starts
+   * with the visible text, as WCAG 2.5.3 asks.
+   */
+  triggerAriaLabel?: string;
   /** Style of the button that opens the dialog. Defaults to `secondary`. */
   triggerVariant?: ButtonProps['variant'];
   /** The dialog's title, e.g. "Delete Jane's account?". */
@@ -180,6 +186,7 @@ function ActionDialogForm({
  * @param props.action - The server action.
  * @param props.fields - Hidden fields.
  * @param props.triggerLabel - Opening button text.
+ * @param props.triggerAriaLabel - The opening button's name for screen readers, when it differs.
  * @param props.triggerVariant - Opening button style.
  * @param props.title - Title.
  * @param props.description - What will happen.
@@ -199,6 +206,7 @@ export default function ActionDialog({
   action,
   fields = {},
   triggerLabel,
+  triggerAriaLabel = undefined,
   triggerVariant = 'secondary',
   title,
   description,
@@ -273,6 +281,7 @@ export default function ActionDialog({
         disabled={disabled || changesOff}
         // Signed in as a user, it's off for good: only its own disabling keeps focus.
         focusableWhenDisabled={focusableWhenDisabled && !changesOff}
+        aria-label={triggerAriaLabel}
         aria-describedby={describedBy}
         onClick={(event) => {
           onTriggerClick?.(event);

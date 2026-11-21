@@ -18,7 +18,7 @@ import TextField from '@/components/ui/text-field';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import { companyChoiceLabels } from '@/lib/company-choices';
 import { REQUEST_TEXT_MAX_LENGTH, REQUEST_TITLE_MAX_LENGTH } from '@/lib/input-rules';
-import { REQUEST_PRIORITIES, REQUEST_TYPES } from '@/lib/requests';
+import { REQUEST_PRIORITIES } from '@/lib/requests';
 
 import { mentionChoicesAction } from '../../_requests/mention-actions';
 import raiseRequestAction from './actions';
@@ -34,10 +34,22 @@ interface RaisableCompany {
   name: string;
 }
 
+/** A type a request can be raised with. */
+interface RaisableType {
+  /** Its key, which the form sends. */
+  key: string;
+  /** Its name. */
+  name: string;
+  /** What it's for. */
+  description: string;
+}
+
 /**
  * Props for {@link RaiseRequestForm}.
  */
 interface RaiseRequestFormProps {
+  /** The types to choose from, in order: the ones that aren't archived. */
+  types: readonly RaisableType[];
   /** The companies the viewer may raise a request in: at least one. */
   companies: readonly RaisableCompany[];
   /** The company to start with (its URL name), e.g. the one whose page the viewer came from. */
@@ -55,12 +67,14 @@ interface RaiseRequestFormProps {
  * a raised one opens its page.
  *
  * @param props - Form props.
+ * @param props.types - The types to choose from.
  * @param props.companies - The companies to choose from.
  * @param props.company - The company to start with.
  * @param props.choosesPriority - Whether to show the priority.
  * @returns The form.
  */
 export default function RaiseRequestForm({
+  types,
   companies,
   company = undefined,
   choosesPriority,
@@ -113,10 +127,10 @@ export default function RaiseRequestForm({
         <SelectField
           label={t('new.typeLabel')}
           name="type"
-          options={REQUEST_TYPES.map((value) => ({
-            value,
-            label: t('type', { type: value }),
-            description: t('typeDescription', { type: value }),
+          options={types.map(({ key, name, description }) => ({
+            value: key,
+            label: name,
+            description,
           }))}
           defaultValue=""
           placeholder={t('new.typePlaceholder')}
