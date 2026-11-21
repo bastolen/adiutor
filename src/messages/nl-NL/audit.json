@@ -24,6 +24,7 @@
       "sessions_revoked": "Overal uitgelogd",
       "impersonation_started": "Ingelogd als een gebruiker",
       "impersonation_ended": "Teruggegaan na inloggen als een gebruiker",
+      "request_subscribers_changed": "Abonnees van een verzoek gewijzigd terwijl ingelogd als een gebruiker",
       "account_deactivated": "Account gedeactiveerd",
       "account_reactivated": "Account opnieuw geactiveerd",
       "account_deleted": "Account verwijderd",

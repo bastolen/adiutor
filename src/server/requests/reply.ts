@@ -29,6 +29,7 @@ import {
   workingPermission,
 } from './change';
 import { storeMentions } from './mentions';
+import { subscribeAutomatically } from './subscribers';
 
 /**
  * Replies to a request, and may set its status with the reply: the staff
@@ -86,6 +87,8 @@ export default async function replyToRequest(
         .returning({ id: requestEntry.id }),
       'the new reply',
     );
+    // Whoever replies follows the request from then on, and so do the people the reply mentions.
+    await subscribeAutomatically(tx, locked.id, [actor.id]);
     // The people the reply mentions, once the reply they belong to is there.
     await storeMentions(tx, actor, {
       companyId: locked.companyId,

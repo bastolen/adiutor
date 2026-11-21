@@ -5,12 +5,12 @@ Back to the [documentation](README.md).
 A request is what a company raises with the staff: a problem, a question or something new. Both
 sides work it through in one conversation until it's done or no longer needed. This page says how
 requests behave and where the code is; why they're built this way is in
-[decision 0019](decisions/0019-requests-one-series-plain-text-and-a-history.md), and for their
-text in [decision 0021](decisions/0021-markdown-for-request-text.md).
+[decision 0019](decisions/0019-requests-one-series-plain-text-and-a-history.md), for their
+text in [decision 0021](decisions/0021-markdown-for-request-text.md), and for the people on a
+request in [decision 0025](decisions/0025-people-on-a-request-one-table-with-roles.md).
 
-Not built yet, each for a later change: emails about requests (also to the staff assigned to one
-and to the people a text mentions, never about an internal note to someone at the company),
-an approval step, and attachments.
+Not built yet, each for a later change: emails about requests (to the people on one, its
+assignees and subscribers, and to the people a text mentions), an approval step, and attachments.
 
 ## Words
 
@@ -25,6 +25,9 @@ an approval step, and attachments.
 - **Raise:** to create a request ("raise a request", never "ticket" or "issue" in the screens).
 - **Assignee:** a staff member assigned to a request, one of the people who work on it. A request
   can have several, or none (see [Assigning](#assigning)).
+- **Subscriber:** someone who follows a request: anyone on the staff or at its company who can
+  read it (see [Subscribing](#subscribing)). The assignees and the subscribers are the people on
+  a request, who an email about it will reach.
 
 ## Who may do what
 
@@ -41,6 +44,10 @@ Four permissions in the request's company (`src/lib/authz/permissions.ts`):
 - **Finance** reads every company's requests, with the priority and the internal notes, and
   changes nothing. A staff
   member who can't work on requests but is a Client of a company takes part there as the company.
+- **Subscribing** takes no more than reading: everyone who sees a request subscribes and
+  unsubscribes themselves. Other people's subscriptions are for the staff who work on requests
+  (`requests:manage`: anyone's) and for a company's Admins (`members:manage`: their colleagues');
+  see [Subscribing](#subscribing).
 - A request someone may not see is "not found" to them, like a company they may not see.
 - A **deactivated company's** requests can only be read, and only by the staff: its members lose
   access, so its requests are "not found" to them (see
@@ -127,7 +134,7 @@ the closed statuses.
   (`mayBeAssigned` in `src/lib/requests/rules.ts`, which takes their staff permissions in
   companies). Finance reads requests but works on none, and a company's own people take part as
   the company, so neither can be assigned. A request can have several assignees, or none; they're
-  stored in `request_assignee`.
+  the rows of `request_participant` with the role `assignee`.
 - **Who assigns:** any staff member who works on requests assigns a request to any of them,
   themselves included, and removes any of them. On a request's page, the Details have an
   **Assigned to** row with every assignee, one per line with their avatar, and under it two buttons: **Assign to me**
@@ -163,6 +170,63 @@ the closed statuses.
   hover; the avatars sit in a copy of the row's link that the keyboard and screen readers skip,
   so a click opens the request and screen readers read the names as text, and the staff who can be assigned get an **Assigned to you** tile on the
   dashboard with how many active requests are assigned to them (`countAssignedRequests`).
+
+## Subscribing
+
+Someone subscribed to a request follows it. Nothing is sent yet: a request's assignees and
+subscribers are who emails about it will reach. Why it's built this way is in
+[decision 0025](decisions/0025-people-on-a-request-one-table-with-roles.md).
+
+- **One table for the people on a request:** `request_participant` has a row per person and role
+  (`REQUEST_PARTICIPANT_ROLES`: `assignee` or `subscriber`). Someone can be both. An assignee gets
+  updates as an assignee, so a request lists them once, as that.
+- **Who can be subscribed:** an active account that can read the request: a staff member (Finance
+  too, who read requests without working on them) or someone at the request's company (Watchers
+  too, who follow without taking part).
+- **Who changes it** (`subscriberScope` in `src/lib/requests/rules.ts`): everyone subscribes and
+  unsubscribes themselves (`subscribe` and `unsubscribe` in `src/server/requests/subscribers.ts`).
+  The staff who work on requests do so for anyone who can be subscribed, and a company's Admins
+  for their colleagues (`changeSubscribers`, each person a change of their own, like assigning). A
+  company's Admin can't subscribe a staff member, and a staff member they ask to take off is left
+  alone without a word, so they learn nothing about which staff members follow a request.
+  `listSubscribable` lists who the actor can subscribe, each by name and by their key in the
+  request's company (`mentionKey`, the key a mention uses), and `changeSubscribers` takes those
+  keys: no user ID reaches a company's browser. It leaves out the people the request is assigned
+  to, who follow it as that.
+- **On a request's page,** the Details have a **Subscribers** row under Assigned to, kept small:
+  the avatars of the subscribers the reader may see, at most four, then a block that says how
+  many more there are ("+3"). Each avatar shows its name on hover, and the row is one button that
+  opens everyone's names in a small panel (`Popover`), by name only: nothing labels who is on the
+  staff. Under it is **Subscribe** or **Unsubscribe**: one button that stays where it is, so the
+  keyboard keeps its place when its text changes. Someone the request is assigned to gets no such
+  button. Whoever changes other people's subscriptions also gets **Change subscribers**, a dialog
+  with a checkbox per person, the subscribers ticked: the people at the company in one group and,
+  for the staff, the staff in another. Like the assignees' dialog it saves only what its editor
+  changed. A deactivated company's request has neither button.
+- **Automatically** (`subscribeAutomatically`, in the transaction of the change): whoever raises a
+  request, replies to it or is mentioned in it is subscribed. Someone who unsubscribes stays
+  unsubscribed until they reply or are mentioned again. Editing a text subscribes the people it
+  mentions newly, not the ones it mentioned already.
+- **Who sees the subscribers** (`getRequest`): the staff see everyone, each on their side. Someone
+  at the company sees the subscribers from their own company, by name and without an ID, and
+  never which staff members follow along; someone on the staff who is also in the company is a
+  colleague to them. Every reader is told whether they're subscribed themselves.
+- **Not work on the request:** subscribing leaves no entry in the history and doesn't count as the
+  request's last activity. It's still a change like the others: refused in a deactivated company,
+  and counted against the limit on changes to requests. A staff member signed in as the user may
+  change their subscriptions as the user could (see [Signed in as a user](#signed-in-as-a-user)).
+- **Losing access ends it** (`unsubscribeFrom`, in the transaction of the change, after it): being
+  removed from the company (`changeMembership`), a change of staff role or leaving the staff
+  (`setStaffRole`), and a deactivation (`deactivate`) take the person off the requests they can no
+  longer read; a staff role that still reads requests keeps them, and so does a company they're
+  in. A deleted account takes its rows with it. A company's deactivation ends nothing: nothing
+  happens in its requests meanwhile, and its members get their access back with it.
+- **Only who can read the request counts** (`loadSubscribers`): a subscriber is someone who can
+  read the request by now. A row left behind when someone loses access at the very moment they're
+  subscribed is never shown, and whatever tells subscribers something later must take them from
+  there too.
+- **The requests there were** got their subscribers from migration `0018_request_participants`:
+  whoever raised them, replied to them or was mentioned in them, as far as they still read them.
 
 ## Numbers
 
@@ -433,8 +497,8 @@ A description, a reply or a note can mention people. Why it's built this way is 
 A staff member signed in as a user
 ([decision 0028](decisions/0028-request-work-while-signed-in-as-a-user.md), and
 [Signing in as a user](authentication.md#signing-in-as-a-user)) can do the request work that user
-may do, with the user's rights: raise, reply, change the status, edit the user's texts and, signed
-in as a staff member, write notes, change details and assign. Managing request types is staff
+may do, with the user's rights: raise, reply, change the status, edit the user's texts, subscribe
+and unsubscribe and, signed in as a staff member, write notes, change details and assign. Managing request types is staff
 settings, and refused.
 
 - **The record:** the row that names the user as who did it (the request, the entry, the text
@@ -453,6 +517,10 @@ settings, and refused.
 - **Rate limits** count against the staff member (`actingUserId`), and the change's transaction
   checks again that the sign-in still holds (its row read `FOR SHARE`, code `signed_in_as` with
   `errors.impersonation.ended`).
+- **Subscriptions** leave no history, so a change of them made while signed in as the user goes to
+  the audit log instead (`request_subscribers_changed`, in the Sign-ins group): by the staff member,
+  about the user, with the request and who was subscribed or unsubscribed. Only staff who see the
+  audit log read it; the user's own Recent activity leaves it out (`STAFF_ONLY_AUDIT_ACTIONS`).
 
 ## Pages
 
@@ -472,7 +540,8 @@ settings, and refused.
   the type. It opens the new request. A company that wasn't chosen is asked for like any other
   field (`requestCompanySchema`); "not found" is for a company the reader may not see.
 - **`/requests/<number>`**: what was asked (Description), the Conversation with every reply and
-  change (and, for the staff, every internal note), oldest first, and a Details bar: status, who it's assigned to, type, priority (staff),
+  change (and, for the staff, every internal note), oldest first, and a Details bar: status, who
+  it's assigned to, who is subscribed, type, priority (staff),
   company, who raised it and when, the staff's first response and the last activity, with the
   controls. The bar is on
   the right on wide screens, and between the description and the conversation on narrower ones.
@@ -488,13 +557,16 @@ settings, and refused.
 - `src/lib/requests/` (a folder module, free of zod and server code, so the database schema,
   the services and client components all import it): the values, the rules above, the number
   and the text. Not to be confused with `src/lib/request/`, which is about HTTP requests.
-- `src/db/schema/requests.ts`: `request`, `request_assignee` (who's assigned), `request_entry`
+- `src/db/schema/requests.ts`: `request`, `request_participant` (who's assigned and who's
+  subscribed), `request_entry`
   (the conversation, its internal notes and the history in one table, ordered by ID), `request_mention` (who a text
   mentions) and `request_counter`.
 - `src/server/requests/` (a folder module): `listRequestCompanies`, `listRequests`, `findRequest`,
   `findRequestNumber`, `getRequest`, `raiseRequest`, `replyToRequest`, `addNote`, `changeRequestStatus`,
   `updateRequestDetails`, `changeAssignees`, `listAssignableStaff`, `countAssignedRequests`,
-  `listMentionable`, and `unassignFrom` for the services that end someone's request work.
+  `listMentionable`, `subscribe`, `unsubscribe`, `changeSubscribers`, `listSubscribable`, and
+  `unassignFrom` and `unsubscribeFrom` for the services that end someone's request work or their
+  access.
   Every change checks the permission and that the company is active, validates, takes a rate
   limit keyed on who is acting (`actingUserId`; see
   [Rate limits](security-measures.md#rate-limits)), then runs in a transaction that starts with
@@ -509,7 +581,9 @@ settings, and refused.
   to the same request is timed after it, as the conversation shows it. A new request's two times
   (raised, last activity) are one reading, taken with its number.
 - Request work writes **no audit events**: the request's own conversation is the record, and
-  nothing in it is a change of sign-in, role or account.
+  nothing in it is a change of sign-in, role or account. The one exception is a change of
+  subscriptions while signed in as a user, which the conversation doesn't show (see
+  [Signed in as a user](#signed-in-as-a-user)).
 - `src/app/(app)/_requests/`: what the request pages share (the list, the badges, the text, the
   people). `src/app/(app)/requests/`: the pages themselves.
 - `src/components/ui/markdown/`: what shows a Markdown text: the pipeline with its limits

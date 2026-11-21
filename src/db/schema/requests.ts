@@ -1,6 +1,6 @@
 /**
  * @file Drizzle schema for requests: what a company raises with the staff,
- * the staff members assigned to it, the entries of its history (replies and
+ * the people on it (assigned or subscribed), the entries of its history (replies and
  * changes), the earlier versions of its edited texts, the people its texts mention, and the counter that numbers requests. The values of the status,
  * type, priority, side, kind and format columns live in `src/lib/requests`.
  *
@@ -23,6 +23,7 @@ import {
 import {
   ASSIGNMENT_CHANGES,
   REQUEST_ENTRY_KINDS,
+  REQUEST_PARTICIPANT_ROLES,
   REQUEST_PRIORITIES,
   REQUEST_SIDES,
   REQUEST_STATUSES,
@@ -171,15 +172,24 @@ export const request = pgTable(
 );
 
 /**
- * A staff member assigned to a request: one of the people who work on it. A
- * request can have several, or none. Only staff who work on requests are
- * assigned (`mayBeAssigned`); someone who stops working on requests is
- * removed from theirs, with an entry in each history, before their role,
- * deactivation or deletion is saved (`unassignFrom`). The rows go with the
- * request or the account.
+ * Someone on a request, in one role: assigned to it, or subscribed to it
+ * (`REQUEST_PARTICIPANT_ROLES`). Someone with both roles has two rows.
+ * Everyone on a request is who a notification about it reaches.
+ *
+ * - **An assignee** is a staff member who works on the request. A request
+ *   can have several, or none. Only staff who work on requests are assigned
+ *   (`mayBeAssigned`); someone who stops working on requests is removed from
+ *   theirs, with an entry in each history, before their role, deactivation
+ *   or deletion is saved (`unassignFrom`).
+ * - **A subscriber** follows the request: anyone who can read it, from the
+ *   staff or from its company. Whoever raises a request, replies to it or is
+ *   mentioned in it is subscribed; someone who can no longer read it is taken
+ *   off (`unsubscribeFrom`). Subscribing leaves nothing in the history.
+ *
+ * The rows go with the request or the account.
  */
-export const requestAssignee = pgTable(
-  'request_assignee',
+export const requestParticipant = pgTable(
+  'request_participant',
   {
     id: id(),
     requestId: uuid('request_id')
@@ -188,14 +198,21 @@ export const requestAssignee = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    /** When they were assigned. */
+    /** What they're on the request as. */
+    role: text('role', { enum: REQUEST_PARTICIPANT_ROLES }).notNull(),
+    /** When they were assigned, or subscribed. */
     createdAt: createdAt(),
   },
   (table) => [
-    /** Someone is assigned to a request once; also serves the request foreign key. */
-    uniqueIndex('request_assignee_request_user_idx').on(table.requestId, table.userId),
-    /** The requests someone is assigned to; also serves the user foreign key. */
-    index('request_assignee_user_idx').on(table.userId, table.requestId),
+    /** Someone has a role on a request once; also serves the request foreign key. */
+    uniqueIndex('request_participant_request_user_role_idx').on(
+      table.requestId,
+      table.userId,
+      table.role,
+    ),
+    /** The requests someone is on, per role; also serves the user foreign key. */
+    index('request_participant_user_idx').on(table.userId, table.role, table.requestId),
+    oneOf('request_participant_role_valid', table.role, REQUEST_PARTICIPANT_ROLES),
   ],
 );
 

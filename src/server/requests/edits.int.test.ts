@@ -19,7 +19,7 @@ import {
 } from '../../../tests/integration/helpers';
 import { getRequest } from './detail';
 import { editReply, editRequestDescription } from './edits';
-import { mentionKey } from './mentions';
+import mentionKey from './mention-key';
 import { ctx, db, storeEntry, storeRequest, storedRequest } from './test-helpers';
 
 /**

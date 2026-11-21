@@ -1,8 +1,9 @@
 /**
  * @file A request's page, served at `/requests/[number]`: its description
  * (what was asked, by whom), its conversation, and next to them its details:
- * status, who it's assigned to, type and (for the staff) priority, company,
- * who raised it and when, the staff's first response and its last activity.
+ * status, who it's assigned to and who is subscribed, type and (for the
+ * staff) priority, company, who raised it and when, the staff's first
+ * response and its last activity.
  * The number as people see it, with the staff's current prefix
  * (`/requests/AD-142`), redirects here, as do the short links `/r/142` and
  * `/r/AD-142`.
@@ -12,8 +13,10 @@
  *
  * Those who take part can reply. The staff who work on requests also pick
  * its status, assign it and edit its title, type and priority; people at the company
- * mark it done, cancel it or reopen it. A deactivated company's requests
- * show no controls: they can only be read.
+ * mark it done, cancel it or reopen it. Everyone who reads it can subscribe
+ * to it, and the staff who work on requests and the company's Admins change
+ * who else is subscribed. A deactivated company's requests show no controls:
+ * they can only be read.
  */
 import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -37,6 +40,7 @@ import {
   REQUEST_STATUSES,
   requestPath,
   statusChoices,
+  subscriberScope,
 } from '@/lib/requests';
 import { searchParam, type SearchParams } from '@/lib/search-params';
 import appContext from '@/server/app-context';
@@ -49,6 +53,7 @@ import {
   getRequest,
   listAssignableStaff,
   listRequestTypes,
+  listSubscribable,
   MAX_EARLIER_CHUNKS,
   type RequestDetail,
 } from '@/server/requests';
@@ -56,8 +61,9 @@ import {
 import PersonLine, { PersonAvatar, personName } from '../../_requests/request-person';
 import RequestText from '../../_requests/request-text';
 import SignedInAsMark from '../../_requests/signed-in-as-mark';
-import { changeAssigneesAction, changeStatusAction } from './actions';
+import { changeAssigneesAction, changeStatusAction, changeSubscriptionAction } from './actions';
 import ChangeAssignees, { type AssigneeChoice } from './change-assignees';
+import ChangeSubscribers from './change-subscribers';
 import EditDetails, { type EditableType } from './edit-details';
 import EditableText from './editable-text';
 import EditedNote from './edited-note';
@@ -96,8 +102,8 @@ const EARLIER_PATTERN = /^[1-9]\d?$/;
  * Loads and shows a request, with the controls its viewer may use. An
  * address with the number as people see it (`AD-142`, the current prefix)
  * redirects to the digits first. The client components below (`ReplyForm`,
- * `StatusSelect`, `EditDetails`, `ChangeAssignees`) get `requests` through
- * `ClientMessages`.
+ * `StatusSelect`, `EditDetails`, `ChangeAssignees`, `ChangeSubscribers`) get
+ * `requests` through `ClientMessages`.
  *
  * @param props - Component props.
  * @param props.params - Route parameters: the request's number.
@@ -171,6 +177,10 @@ async function RequestContent({
       }
     });
   }
+  // Whose subscriptions the viewer changes besides their own, and who they can subscribe then.
+  const scope = detail.company.deactivated ? 'self' : subscriberScope(detail.permissions);
+  const subscriberChoices =
+    scope === 'self' ? [] : await listSubscribable(appContext, actor, String(detail.number));
 
   const names = { company: detail.company.name, staff: detail.staffName };
   // The request's whole address, for the note above code copied from its texts.
@@ -285,6 +295,34 @@ async function RequestContent({
                     choices={assigneeChoices}
                     assigned={assigned}
                   />
+                </>
+              )
+            }
+            subscriberControls={
+              !detail.company.deactivated && (
+                <>
+                  {/* Someone it's assigned to follows it as that. One button that stays where it
+                      is, so the keyboard keeps its place when its text changes. */}
+                  {!detail.assignees.some(({ isViewer }) => isViewer) && (
+                    <RowAction
+                      action={changeSubscriptionAction}
+                      allowedWhileSignedInAs
+                      fields={{ ...fields, subscribe: detail.subscribed ? 'no' : 'yes' }}
+                      label={
+                        detail.subscribed
+                          ? tRequests('controls.unsubscribe')
+                          : tRequests('controls.subscribe')
+                      }
+                    />
+                  )}
+                  {scope !== 'self' && (
+                    <ChangeSubscribers
+                      request={detail.number}
+                      choices={subscriberChoices}
+                      company={detail.company.name}
+                      scope={scope}
+                    />
+                  )}
                 </>
               )
             }

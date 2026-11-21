@@ -127,6 +127,13 @@
       "when": 1795250009088,
       "tag": "0017_request_signed_in_as",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1795267030788,
+      "tag": "0018_request_participants",
+      "breakpoints": true
     }
   ]
 }

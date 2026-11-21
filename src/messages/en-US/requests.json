@@ -82,7 +82,12 @@
       "back": "Requests",
       "justRaised": "Request raised.",
       "assignedTo": "Assigned to",
-      "notAssigned": "Not assigned yet"
+      "notAssigned": "Not assigned yet",
+      "subscribers": "Subscribers",
+      "noSubscribers": "Nobody yet",
+      "noSubscribersCompany": "Nobody at {company} yet",
+      "showSubscribers": "{count, plural, one {Show the # subscriber} other {Show the # subscribers}}",
+      "moreSubscribers": "+{count, number}"
     },
     "status": "{status, select, open {Open} todo {To do} in_progress {In progress} waiting {{audience, select, contributor {Waiting for your reply} follower {Waiting for your company} other {Waiting for the company}}} done {Done} cancelled {Cancelled} other {Unknown}}",
     "reopened": "Reopened",
@@ -138,15 +143,25 @@
       "assigneesTitle": "Change who’s assigned",
       "assigneesDescription": "Everyone on the request sees who’s assigned, the company too, and each change shows in its history.",
       "assigneesLabel": "Staff who work on requests",
-      "assigneeYou": "{name} (you)",
+      "personYou": "{name} (you)",
       "unnamedStaff": "A staff member without a name",
-      "saveAssignees": "Save assignees"
+      "saveAssignees": "Save assignees",
+      "subscribe": "Subscribe",
+      "unsubscribe": "Unsubscribe",
+      "changeSubscribers": "Change subscribers",
+      "subscribersTitle": "Change who’s subscribed",
+      "subscribersDescription": "{scope, select, everyone {Subscribers follow this request, and will get the emails about it once those are sent. The company sees which of its own people are subscribed, not which staff.} other {Subscribers follow this request, and will get the emails about it once those are sent. Everyone at your company sees who’s subscribed.}}",
+      "subscribersCompany": "People at {company}",
+      "subscribersStaff": "Staff",
+      "saveSubscribers": "Save subscribers"
     },
     "saved": {
       "status": "{change, select, reopened {Request reopened.} done {Request marked as done.} cancelled {Request cancelled.} other {Status saved.}}",
       "details": "{changed, plural, =0 {Nothing changed.} other {Details saved.}}",
       "assignees": "{changed, plural, =0 {Nothing changed.} other {Assignees saved.}}",
       "assignedYou": "You’re assigned to this request.",
+      "subscribers": "{changed, plural, =0 {Nothing changed.} other {Subscribers saved.}}",
+      "subscription": "{change, select, subscribed {You’re subscribed to this request.} other {You’re no longer subscribed to this request.}}",
       "text": "{changed, select, yes {Changes saved.} other {Nothing changed.}}"
     },
     "edit": {

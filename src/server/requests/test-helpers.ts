@@ -10,7 +10,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 import {
   company,
   request,
-  requestAssignee,
+  requestParticipant,
   requestCounter,
   requestEntry,
   requestType,
@@ -160,7 +160,9 @@ export async function changesOf(requestId: string) {
  * @param userIds - The staff members.
  */
 export async function storeAssignees(requestId: string, userIds: readonly string[]): Promise<void> {
-  await db.insert(requestAssignee).values(userIds.map((userId) => ({ requestId, userId })));
+  await db
+    .insert(requestParticipant)
+    .values(userIds.map((userId) => ({ requestId, userId, role: 'assignee' as const })));
 }
 
 /**
@@ -171,9 +173,11 @@ export async function storeAssignees(requestId: string, userIds: readonly string
  */
 export async function assigneesOf(requestId: string): Promise<string[]> {
   const rows = await db
-    .select({ userId: requestAssignee.userId })
-    .from(requestAssignee)
-    .where(eq(requestAssignee.requestId, requestId));
+    .select({ userId: requestParticipant.userId })
+    .from(requestParticipant)
+    .where(
+      and(eq(requestParticipant.requestId, requestId), eq(requestParticipant.role, 'assignee')),
+    );
   return rows.map(({ userId }) => userId).sort();
 }
 

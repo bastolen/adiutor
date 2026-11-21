@@ -24,6 +24,7 @@
       "sessions_revoked": "Sesión cerrada en todas partes",
       "impersonation_started": "Inició sesión como un usuario",
       "impersonation_ended": "Volvió tras iniciar sesión como un usuario",
+      "request_subscribers_changed": "Cambió los suscriptores de una solicitud con la sesión iniciada como un usuario",
       "account_deactivated": "Cuenta desactivada",
       "account_reactivated": "Cuenta reactivada",
       "account_deleted": "Cuenta eliminada",

@@ -27,6 +27,7 @@ export const AUDIT_ACTIONS = [
   'sessions_revoked',
   'impersonation_started',
   'impersonation_ended',
+  'request_subscribers_changed',
   'account_deactivated',
   'account_reactivated',
   'account_deleted',
@@ -60,6 +61,14 @@ export const AUDIT_ACTIONS = [
 /** One audit event type. */
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
+/**
+ * Actions only the staff who see the audit log read, never the user they're
+ * about in their own Recent activity: a subscription changed by a staff
+ * member signed in as them (decision 0025), which the request itself never
+ * shows.
+ */
+export const STAFF_ONLY_AUDIT_ACTIONS: readonly AuditAction[] = ['request_subscribers_changed'];
+
 /** The groups the staff audit log can be narrowed to, in the order they're offered. */
 export const AUDIT_GROUP_KEYS = [
   'sign-ins',
@@ -90,6 +99,7 @@ export const AUDIT_GROUPS: Record<AuditGroup, { actions: readonly AuditAction[] 
       'sessions_revoked',
       'impersonation_started',
       'impersonation_ended',
+      'request_subscribers_changed',
     ],
   },
   'sign-in-methods': {

@@ -88,6 +88,7 @@
       "statusChanged": "El estado de esta solicitud ha cambiado entretanto. Compruébalo y vuelve a intentarlo.",
       "detailsChanged": "Los datos de esta solicitud han cambiado entretanto. Compruébalos y vuelve a intentarlo.",
       "notAssignable": "Solo se puede asignar a personal activo que trabaje en solicitudes. Comprueba a quién has elegido y vuelve a intentarlo.",
+      "notSubscribable": "Solo se puede suscribir a personas activas que puedan leer esta solicitud. Comprueba a quién has elegido y vuelve a intentarlo.",
       "closedNoEdit": "Esta solicitud está cerrada, así que sus textos ya no se pueden editar.",
       "textChanged": "Alguien ha editado este texto entretanto. Compruébalo y vuelve a intentarlo."
     },

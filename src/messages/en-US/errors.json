@@ -88,6 +88,7 @@
       "statusChanged": "This request’s status changed in the meantime. Check it and try again.",
       "detailsChanged": "This request’s details changed in the meantime. Check them and try again.",
       "notAssignable": "Only active staff who work on requests can be assigned. Check who you chose and try again.",
+      "notSubscribable": "Only active people who can read this request can be subscribed. Check who you chose and try again.",
       "closedNoEdit": "This request is closed, so its texts can’t be edited anymore.",
       "textChanged": "Someone edited this text in the meantime. Check it and try again."
     },

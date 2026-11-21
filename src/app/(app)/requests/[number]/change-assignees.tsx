@@ -59,7 +59,7 @@ function AssigneeFields({
    */
   const labelOf = (choice: AssigneeChoice) => {
     const name = choice.name ?? t('unnamedStaff');
-    return choice.isViewer ? t('assigneeYou', { name }) : name;
+    return choice.isViewer ? t('personYou', { name }) : name;
   };
 
   return (
