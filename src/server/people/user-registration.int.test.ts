@@ -5,7 +5,7 @@
 import { eq, like } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { auditEvent, membership, staffSettings, user, verification } from '@/db/schema';
+import { auditEvent, membership, user, verification } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 import { hashVerificationIdentifier } from '@/lib/sign-in/tokens';
 
@@ -14,6 +14,7 @@ import {
   createUser,
   emailLanguage,
   inLanguage,
+  saveSettings,
   setupTestContext,
   staffActor,
 } from '../../../tests/integration/helpers';
@@ -95,7 +96,7 @@ describe('registerUser', () => {
   });
 
   it('refuses a language that’s turned off, and creates nobody', async () => {
-    await db.update(staffSettings).set({ offeredLocales: ['en-US', 'es-ES'] });
+    await saveSettings(db, { 'staff.offered_locales': ['en-US', 'es-ES'] });
 
     await expect(
       registerUser(ctx, manager, 'nl@adiutor.test', { locale: 'nl-NL' }),
@@ -105,7 +106,7 @@ describe('registerUser', () => {
   });
 
   it('on Default, saves no language and welcomes them in Adiutor’s default, not the sender’s', async () => {
-    await db.update(staffSettings).set({ defaultLocale: 'nl-NL' });
+    await saveSettings(db, { 'staff.default_locale': 'nl-NL' });
     const { userId } = await registerUser(inLanguage(ctx, 'es-ES'), manager, 'nl@adiutor.test');
 
     const created = firstRow(

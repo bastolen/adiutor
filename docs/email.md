@@ -93,7 +93,7 @@ can't use it. `impersonation_started` links to its "Sign-ins by staff" card (`#s
 
 An email is written in its recipient's language: the one they saved (`user.locale`) while Adiutor
 offers it; for someone on Default (none saved), someone whose language is turned off, or someone
-without an account, Adiutor's default language (`staff_settings.default_locale`); failing that
+without an account, Adiutor's default language (the `staff.default_locale` setting); failing that
 (before setup), English (US). A language that's turned off counts as none everywhere below, an
 invitation's too ([Offered languages](i18n.md#offered-languages)). `recipientLocale`
 (`src/server/recipient-locale.ts`) is that rule. The language of whoever caused the email doesn't
@@ -127,7 +127,7 @@ An email that shows a time (a security notice's "When", an invitation reminder's
 its recipient's zone and names the zone ("Oct 23, 2026, 4:05 PM CEST"), since the reader may be
 elsewhere by then: the zone they saved (`user.time_zone`); for an invitation to someone without one,
 the zone of whoever sent it (`invitation.time_zone`, the sender's zone when it was sent, or the link
-creator's for an invite link); else Adiutor's default zone (`staff_settings.default_time_zone`, UTC
+creator's for an invite link); else Adiutor's default zone (the `staff.default_time_zone` setting, UTC
 until it's chosen). `recipientTimeZone` (`src/server/recipient-time-zone.ts`) is that rule; an
 invitation nobody sent (setup, the seeds) has no zone of its own.
 

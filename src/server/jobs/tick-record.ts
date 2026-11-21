@@ -1,13 +1,12 @@
 /**
- * @file When the last tick started (`job_tick`), and whether that's late: no
- * job runs between ticks, and none can tell anyone that the ticks stopped, so
- * the Jobs page and the dashboard warn staff instead
- * (`getTickWarning` in `overview.ts`).
+ * @file When the last tick started (the `jobs.last_tick` setting), and
+ * whether that's late: no job runs between ticks, and none can tell anyone
+ * that the ticks stopped, so the Jobs page and the dashboard warn staff
+ * instead (`getTickWarning` in `overview.ts`).
  */
-import { sql } from 'drizzle-orm';
-
 import type { Database } from '@/db';
-import { jobTick } from '@/db/schema';
+
+import { readSettings, writeSettings } from '../settings';
 
 /**
  * How long after the last tick started it counts as late, in minutes: on
@@ -17,15 +16,13 @@ import { jobTick } from '@/db/schema';
 export const TICK_LATE_MINUTES = 45;
 
 /**
- * Notes that a tick starts now, in the database's clock.
+ * Notes that a tick starts now, by the app's clock, which {@link isTickLate}
+ * compares with.
  *
  * @param db - Database client.
  */
 export async function recordTick(db: Database): Promise<void> {
-  await db
-    .insert(jobTick)
-    .values({ lastStartedAt: sql`now()` })
-    .onConflictDoUpdate({ target: jobTick.singleton, set: { lastStartedAt: sql`now()` } });
+  await db.transaction((tx) => writeSettings(tx, { 'jobs.last_tick': new Date() }));
 }
 
 /**
@@ -35,8 +32,8 @@ export async function recordTick(db: Database): Promise<void> {
  * @returns The moment, or `null` when no tick ever ran.
  */
 export async function readLastTick(db: Database): Promise<Date | null> {
-  const [row] = await db.select({ at: jobTick.lastStartedAt }).from(jobTick).limit(1);
-  return row?.at ?? null;
+  const settings = await readSettings(db, ['jobs.last_tick']);
+  return settings['jobs.last_tick'];
 }
 
 /**

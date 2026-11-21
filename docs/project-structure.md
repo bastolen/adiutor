@@ -49,6 +49,11 @@ The folders of the repository and what belongs in each. Back to the [documentati
     history, with each recurring job in `recurring/` and every job listed in `registry.ts`.
   - `src/server/queue/`: declaring kinds of queued job and adding jobs to the queue (`queueJob`),
     apart from `src/server/jobs`, which imports the code it runs: so code anywhere can queue a job.
+  - `src/server/settings/`: Adiutor's settings, one row each in the `setting` table
+    ([decision 0034](decisions/0034-settings-in-one-key-value-table.md)): `registry.ts` declares
+    every setting (key, schema, fallback) and the checks between them, `store.ts` reads and writes
+    them. It imports no server-only code: the default language in `src/lib/i18n/` reads it, and
+    Better Auth's configuration reads that.
 - `src/lib/`: code shared by the server and the browser, with a few server-only exceptions below.
   General helpers (`env`, `format`, `search-params`, `validation`, ...) sit at its root; the rest
   is grouped by topic. `validation.ts` (zod schemas) is for the server; the limits client

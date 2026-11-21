@@ -5,9 +5,9 @@ invitations. Back to the [documentation](README.md).
 
 Adiutor is run by its **staff** (the people who handle requests), who add **companies** (the
 customers, who raise requests). Staff have a **platform role** on their account (`user.platform_role`),
-and the name users see and Adiutor's default language and time zone live in the single-row
-`staff_settings` table
-(`src/db/schema/staff.ts`).
+and the name users see and Adiutor's default language and time zone are settings (`staff.name`,
+`staff.default_locale`, `staff.default_time_zone`), rows of the `setting` table that
+`src/server/settings/` reads and writes ([decision 0034](decisions/0034-settings-in-one-key-value-table.md)).
 **Users** can belong to several companies, with one company role (Admin, Client or Watcher) in
 each. Staff can also be members of companies. What each role may do with requests is in
 [Requests](requests.md).
@@ -258,7 +258,7 @@ email address; a first password chosen that way sends no security email.
 
 ### First run
 
-On a fresh install (no `staff_settings` row and no accounts), `/auth` redirects to
+On a fresh install (not set up, the `setup.completed_at` setting, and no accounts), `/auth` redirects to
 `/setup`. There, the first person chooses the name users see and Adiutor's default language (the
 setup page's own to begin with) and becomes the first staff Admin, keeping the language they set up
 in for themselves, or starting on Default when it's the default they chose; the browser's time zone
@@ -267,9 +267,10 @@ becomes Adiutor's default zone and the Admin's own (or use `pnpm setup:platform`
 address counts as verified. Until then `/setup` is
 open to anyone who can reach the site, so complete it right after deploying. Once set up, or once
 any account exists, `/setup` shows the not-found page, so it can never promote an existing account.
-The command refuses once set up; if the settings row were ever lost, it can make an existing
-(active) account the Admin again, to recover, recorded in the audit log; renaming the staff on the
-staff page also recreates the row. A fresh setup itself isn't recorded in the audit log.
+The command refuses once set up; if `setup.completed_at` were ever lost, it can make an existing
+(active) account the Admin again, to recover, recorded in the audit log. Saving a setting on the
+staff page never counts as setting up: only setup writes `setup.completed_at`. A fresh setup
+itself isn't recorded in the audit log.
 
 ### Invitations
 

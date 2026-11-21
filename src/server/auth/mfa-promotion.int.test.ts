@@ -8,7 +8,7 @@
 import { asc, eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { auditEvent, membership, session, user } from '@/db/schema';
+import { auditEvent, membership, session, setting, user } from '@/db/schema';
 import { defined } from '@/lib/defined';
 
 import {
@@ -269,7 +269,7 @@ describe('changes that make a role require MFA', () => {
   it('the setup command making an existing account the staff Admin', async () => {
     await db.delete(session);
     await db.delete(user);
-    await db.execute('delete from staff_settings');
+    await db.delete(setting);
     const jane = await createUser(db, 'jane@adiutor.test');
     const kinds = await sessionsOfEachKind(jane);
 

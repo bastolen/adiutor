@@ -278,12 +278,13 @@ written and sent is in [Email](email.md), and the jobs that send them in
 
 ## Numbers
 
-- Requests are numbered in **one series** across Adiutor: 1, 2, 3. The number comes from a single
-  counter row (`request_counter`), raised inside the transaction that stores the request, so a
-  failed attempt uses no number and two requests raised at the same moment get consecutive ones.
+- Requests are numbered in **one series** across Adiutor: 1, 2, 3. The number comes from the
+  `requests.last_number` setting (`incrementSetting` in `src/server/settings/`), raised inside the
+  transaction that stores the request, so a failed attempt uses no number and two requests raised
+  at the same moment get consecutive ones.
 - Numbers are shown with a **prefix** the staff Admins choose on the Staff page (`AD` by default:
   `AD-142`; one to five letters or digits, starting with a letter, saved in capitals;
-  `staff_settings.request_prefix`).
+  the `requests.prefix` setting).
 - A request's address is `/requests/142`, without the prefix, so it doesn't change with it. The
   number as people see it, `/requests/AD-142`, redirects there, and so do the short links
   `/r/142` and `/r/AD-142`. Only the current prefix counts, in any case (`ad-142`): another prefix,
@@ -607,8 +608,8 @@ settings, and refused.
   and the text. Not to be confused with `src/lib/request/`, which is about HTTP requests.
 - `src/db/schema/requests.ts`: `request`, `request_participant` (who's assigned and who's
   subscribed), `request_entry`
-  (the conversation, its internal notes and the history in one table, ordered by ID), `request_mention` (who a text
-  mentions) and `request_counter`.
+  (the conversation, its internal notes and the history in one table, ordered by ID) and
+  `request_mention` (who a text mentions). The counter is the `requests.last_number` setting.
 - `src/server/requests/` (a folder module): `listRequestCompanies`, `listRequests`, `findRequest`,
   `findRequestNumber`, `getRequest`, `raiseRequest`, `replyToRequest`, `addNote`, `changeRequestStatus`,
   `updateRequestDetails`, `changeAssignees`, `listAssignableStaff`, `countAssignedRequests`,

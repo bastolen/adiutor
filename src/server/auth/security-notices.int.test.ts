@@ -8,13 +8,13 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { staffSettings } from '@/db/schema';
 import { defined } from '@/lib/defined';
 
 import {
   createStaffSettings,
   emailLanguage,
   inLanguage,
+  saveSettings,
   setupTestContext,
 } from '../../../tests/integration/helpers';
 import { sendAccountDeletedNotice } from './security-notices';
@@ -44,7 +44,7 @@ describe('sendAccountDeletedNotice', () => {
   it('gives the time in the zone the account saved, else in Adiutor’s default zone', async () => {
     await sendAccountDeletedNotice(ctx, 'gone@adiutor.test', 'en-US', 'America/New_York');
     await createStaffSettings(db, 'Adiutor Tests', 'en-US');
-    await db.update(staffSettings).set({ defaultTimeZone: 'Asia/Kolkata' });
+    await saveSettings(db, { 'staff.default_time_zone': 'Asia/Kolkata' });
     await sendAccountDeletedNotice(ctx, 'gone@adiutor.test', 'en-US', null);
 
     const [inSaved, inDefault] = sent.map(({ text }) => text);

@@ -5,20 +5,13 @@
  * assignment entries back, and one that deactivates a company while a change
  * is under way.
  */
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 
-import {
-  company,
-  request,
-  requestParticipant,
-  requestCounter,
-  requestEntry,
-  requestType,
-  user,
-} from '@/db/schema';
+import { company, request, requestParticipant, requestEntry, requestType, user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 
 import { atTheSameMoment, setupTestContext } from '../../../tests/integration/helpers';
+import { incrementSetting } from '../settings';
 
 /**
  * The test database context these tests share. Each test file imports this
@@ -32,37 +25,32 @@ type RequestValues = Partial<typeof request.$inferInsert>;
 
 /**
  * Stores a request without going through the service, with the next number
- * of the counter (so requests raised afterwards continue from it).
+ * (`requests.last_number`, so requests raised afterwards continue from it).
  *
  * @param companyId - The company it's in.
  * @param values - What to store instead of the defaults (a normal bug, open, raised by nobody at the company).
  * @returns The stored request.
  */
 export async function storeRequest(companyId: string, values: RequestValues = {}) {
-  const counted = await db
-    .insert(requestCounter)
-    .values({ lastNumber: 1 })
-    .onConflictDoUpdate({
-      target: requestCounter.singleton,
-      set: { lastNumber: sql`${requestCounter.lastNumber} + 1` },
-    })
-    .returning({ number: requestCounter.lastNumber });
-  return firstRow(
-    await db
-      .insert(request)
-      .values({
-        number: firstRow(counted, 'the request counter').number,
-        companyId,
-        title: 'The printer is broken',
-        description: 'It prints blank pages.',
-        type: 'bug',
-        priority: 'normal',
-        createdBySide: 'company',
-        ...values,
-      })
-      .returning(),
-    'the stored request',
-  );
+  return db.transaction(async (tx) => {
+    const { value: number } = await incrementSetting(tx, 'requests.last_number');
+    return firstRow(
+      await tx
+        .insert(request)
+        .values({
+          number,
+          companyId,
+          title: 'The printer is broken',
+          description: 'It prints blank pages.',
+          type: 'bug',
+          priority: 'normal',
+          createdBySide: 'company',
+          ...values,
+        })
+        .returning(),
+      'the stored request',
+    );
+  });
 }
 
 /**

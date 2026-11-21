@@ -6,4 +6,4 @@ export * from './companies';
 export * from './jobs';
 export * from './requests';
 export * from './security';
-export * from './staff';
+export * from './settings';

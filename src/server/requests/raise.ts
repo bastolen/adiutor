@@ -2,10 +2,8 @@
  * @file Raising a request: someone at a company asks the staff for
  * something, or the staff raise it for the company.
  */
-import { sql } from 'drizzle-orm';
-
 import type { DatabaseTransaction } from '@/db';
-import { request, requestCounter } from '@/db/schema';
+import { request } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { requestSide, WRITTEN_TEXT_FORMAT } from '@/lib/requests';
 import {
@@ -20,6 +18,7 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { companyDeactivatedError } from '../errors';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
+import { incrementSetting } from '../settings';
 import { actingUserId, signedInAsWork } from '../signed-in-as';
 import { assertStillMayChange } from './change';
 import { storeMentions } from './mentions';
@@ -28,11 +27,12 @@ import { typeToGive } from './types';
 import { tellMentioned } from './updates';
 
 /**
- * Takes the next request number: one more than the last, in the raising
- * transaction, so two requests never share a number and a request that
- * isn't raised after all uses none up. The first request makes the counter's
- * row. Whoever takes a number holds the row until their transaction ends, so
- * it's taken right before the request is stored.
+ * Takes the next request number: one more than the last (the
+ * `requests.last_number` setting), in the raising transaction, so two
+ * requests never share a number and a request that isn't raised after all
+ * uses none up. The first request makes the setting's row. Whoever takes a
+ * number holds the row until their transaction ends, so it's taken right
+ * before the request is stored.
  *
  * It also reads the database's clock once the number is taken, in the same
  * statement: the moment the request is raised. Not `now()`, which is when
@@ -46,18 +46,8 @@ import { tellMentioned } from './updates';
 async function nextRequestNumber(
   tx: DatabaseTransaction,
 ): Promise<{ number: number; takenAt: Date }> {
-  const counted = await tx
-    .insert(requestCounter)
-    .values({ lastNumber: 1 })
-    .onConflictDoUpdate({
-      target: requestCounter.singleton,
-      set: { lastNumber: sql`${requestCounter.lastNumber} + 1` },
-    })
-    .returning({
-      number: requestCounter.lastNumber,
-      takenAt: sql`clock_timestamp()`.mapWith(request.createdAt),
-    });
-  return firstRow(counted, 'the request counter');
+  const { value, takenAt } = await incrementSetting(tx, 'requests.last_number');
+  return { number: value, takenAt };
 }
 
 /**

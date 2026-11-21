@@ -5,18 +5,18 @@ import { verifyPassword } from 'better-auth/crypto';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import {
-  account,
-  auditEvent,
-  rateLimitBucket,
-  requestType,
-  staffSettings,
-  user,
-} from '@/db/schema';
+import { account, auditEvent, rateLimitBucket, requestType, setting, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
+import { LOCALES } from '@/lib/i18n/locales';
 
-import { createUser, setupTestContext } from '../../tests/integration/helpers';
+import {
+  createStaffSettings,
+  createUser,
+  saveSettings,
+  setupTestContext,
+} from '../../tests/integration/helpers';
 import { hitRateLimit } from './rate-limit';
+import { addSetting, readSettings } from './settings';
 import { isSetUp, isWebSetupOpen, setUpPlatform } from './setup';
 
 const { db } = setupTestContext();
@@ -36,8 +36,18 @@ describe('setUpPlatform', () => {
     const result = await setUpPlatform({ db }, input);
     expect(result).toMatchObject({ email: 'setup@adiutor.test', createdUser: true });
     expect(await isSetUp(db)).toBe(true);
-    expect(await db.select({ name: staffSettings.name }).from(staffSettings)).toEqual([
-      { name: 'Adiutor Tests' },
+    expect(await readSettings(db, ['staff.name', 'staff.offered_locales'])).toEqual({
+      'staff.name': 'Adiutor Tests',
+      'staff.offered_locales': [...LOCALES],
+    });
+    // Every language there is now is stored, so one added later starts off.
+    const stored = await db.select({ key: setting.key }).from(setting).orderBy(setting.key);
+    expect(stored.map(({ key }) => key)).toEqual([
+      'setup.completed_at',
+      'staff.default_locale',
+      'staff.default_time_zone',
+      'staff.name',
+      'staff.offered_locales',
     ]);
 
     const admin = firstRow(
@@ -108,12 +118,22 @@ describe('setUpPlatform', () => {
     expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
     const rejected = results.find((result) => result.status === 'rejected');
     expect(rejected?.reason).toMatchObject({ code: 'conflict' });
-    expect(await db.select().from(staffSettings)).toHaveLength(1);
+    expect(
+      await db.select().from(setting).where(eq(setting.key, 'setup.completed_at')),
+    ).toHaveLength(1);
   });
 
-  it('refuses a second settings row in the database itself', async () => {
-    await db.insert(staffSettings).values({ name: 'Adiutor Tests' });
-    await expect(db.insert(staffSettings).values({ name: 'Adiutor Tests Two' })).rejects.toThrow();
+  it('refuses marking it set up twice in the database itself', async () => {
+    await db.transaction((tx) => addSetting(tx, 'setup.completed_at', new Date()));
+    await expect(
+      db.transaction((tx) => addSetting(tx, 'setup.completed_at', new Date())),
+    ).rejects.toThrow();
+  });
+
+  it('counts as done only once setup marked it, whatever settings are saved', async () => {
+    await saveSettings(db, { 'staff.name': 'Adiutor Tests', 'requests.prefix': 'AT' });
+    expect(await isSetUp(db)).toBe(false);
+    expect(await isWebSetupOpen(db)).toBe(true);
   });
 
   it('uses an existing account without changing its password, making it an Admin', async () => {
@@ -133,9 +153,9 @@ describe('setUpPlatform', () => {
   it("sets Adiutor's default language, English (US) unless chosen", async () => {
     await setUpPlatform({ db }, input);
 
-    expect(
-      await db.select({ defaultLocale: staffSettings.defaultLocale }).from(staffSettings),
-    ).toEqual([{ defaultLocale: 'en-US' }]);
+    expect(await readSettings(db, ['staff.default_locale'])).toEqual({
+      'staff.default_locale': 'en-US',
+    });
   });
 
   it("keeps the Admin in the language they set up in, whatever Adiutor's default", async () => {
@@ -148,9 +168,9 @@ describe('setUpPlatform', () => {
       },
     );
 
-    expect(
-      await db.select({ defaultLocale: staffSettings.defaultLocale }).from(staffSettings),
-    ).toEqual([{ defaultLocale: 'nl-NL' }]);
+    expect(await readSettings(db, ['staff.default_locale'])).toEqual({
+      'staff.default_locale': 'nl-NL',
+    });
     const admin = firstRow(await db.select().from(user).where(eq(user.id, userId)), 'the Admin');
     expect(admin.locale).toBe('es-ES');
   });
@@ -193,9 +213,9 @@ describe('setUpPlatform', () => {
   it("takes the browser's zone as Adiutor's default zone and the new Admin's own", async () => {
     const { userId } = await setUpPlatform({ db }, { ...input, timeZone: 'Europe/Amsterdam' });
 
-    expect(await db.select({ zone: staffSettings.defaultTimeZone }).from(staffSettings)).toEqual([
-      { zone: 'Europe/Amsterdam' },
-    ]);
+    expect(await readSettings(db, ['staff.default_time_zone'])).toEqual({
+      'staff.default_time_zone': 'Europe/Amsterdam',
+    });
     const admin = firstRow(await db.select().from(user).where(eq(user.id, userId)), 'the Admin');
     expect(admin.timeZone).toBe('Europe/Amsterdam');
   });
@@ -205,9 +225,9 @@ describe('setUpPlatform', () => {
     async (timeZone) => {
       const { userId } = await setUpPlatform({ db }, { ...input, timeZone });
 
-      expect(await db.select({ zone: staffSettings.defaultTimeZone }).from(staffSettings)).toEqual([
-        { zone: 'UTC' },
-      ]);
+      expect(await readSettings(db, ['staff.default_time_zone'])).toEqual({
+        'staff.default_time_zone': 'UTC',
+      });
       const admin = firstRow(await db.select().from(user).where(eq(user.id, userId)), 'the Admin');
       expect(admin.timeZone).toBeNull();
     },
@@ -232,6 +252,7 @@ describe('setUpPlatform', () => {
       'validation.locale',
     );
     expect(await isSetUp(db)).toBe(false);
+    expect(await db.$count(setting)).toBe(0);
   });
 });
 
@@ -239,13 +260,13 @@ describe('the web setup form', () => {
   it('is open on a fresh install only', async () => {
     expect(await isWebSetupOpen(db)).toBe(true);
     await createUser(db, 'watcher@adiutor.test');
-    // E.g. the settings row was lost: nothing is set up, but accounts exist.
+    // E.g. `setup.completed_at` was lost: nothing is set up, but accounts exist.
     expect(await isSetUp(db)).toBe(false);
     expect(await isWebSetupOpen(db)).toBe(false);
   });
 
   it('is closed once set up', async () => {
-    await db.insert(staffSettings).values({ name: 'Adiutor Tests' });
+    await createStaffSettings(db);
     expect(await isWebSetupOpen(db)).toBe(false);
   });
 
@@ -307,7 +328,7 @@ describe('the command line', () => {
     ]);
   });
 
-  it('recovers a lost settings row while accounts exist', async () => {
+  it('recovers a lost setup while accounts exist', async () => {
     await createUser(db, 'watcher@adiutor.test');
     const result = await setUpPlatform(
       { db },

@@ -10,7 +10,9 @@ import { eq, isNull } from 'drizzle-orm';
 import * as schema from '../../src/db/schema';
 import type { CompanyRole, PlatformRole } from '../../src/lib/authz/roles';
 import { firstRow } from '../../src/lib/defined';
+import { DEFAULT_LOCALE, LOCALES } from '../../src/lib/i18n/locales';
 import { generateToken, hashToken } from '../../src/lib/sign-in/tokens';
+import { addSetting, writeSettings } from '../../src/server/settings';
 import { storeAuthenticator } from '../../tests/auth/authenticator';
 import emptyDatabase from '../../tests/database/empty-database';
 import {
@@ -140,11 +142,17 @@ export default async function seedTestDatabase(): Promise<void> {
       await storeAuthenticator(db, found.id, person.totpSecret, E2E_AUTH_SECRET);
     };
 
-    await db
-      .insert(schema.staffSettings)
-      .values({ name: STAFF_NAME, defaultTimeZone: E2E_TIME_ZONE });
-    // A tick just ran, so pages don't warn that background jobs aren't running.
-    await db.insert(schema.jobTick).values({ lastStartedAt: new Date() });
+    await db.transaction(async (tx) => {
+      await addSetting(tx, 'setup.completed_at', new Date());
+      await writeSettings(tx, {
+        'staff.name': STAFF_NAME,
+        'staff.default_locale': DEFAULT_LOCALE,
+        'staff.offered_locales': [...LOCALES],
+        'staff.default_time_zone': E2E_TIME_ZONE,
+        // A tick just ran, so pages don't warn that background jobs aren't running.
+        'jobs.last_tick': new Date(),
+      });
+    });
     const platformAdmin = await addPerson(PLATFORM_ADMIN, { platformRole: 'platform_admin' });
     await addPerson(PLATFORM_MANAGER, { platformRole: 'manager' });
     const support = await addPerson(SUPPORT_STAFF, { platformRole: 'support' });

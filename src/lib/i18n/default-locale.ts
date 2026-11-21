@@ -1,50 +1,42 @@
 /**
- * @file Adiutor's own default language (`staff_settings.default_locale`,
+ * @file Adiutor's own default language (the `staff.default_locale` setting,
  * chosen at setup and on the staff page) and the languages it offers
- * (`staff_settings.offered_locales`), and the language of a request known
- * only by its headers (Better Auth's hooks and callbacks), which needs them.
- * Takes the database as an argument, like the services. See docs/i18n.md,
- * "How the language is chosen".
+ * (`staff.offered_locales`), and the language of a request known only by its
+ * headers (Better Auth's hooks and callbacks), which needs them. Takes the
+ * database as an argument, like the services. See docs/i18n.md, "How the
+ * language is chosen".
  */
 import type { DatabaseOrTransaction } from '@/db';
-import { staffSettings } from '@/db/schema';
+import { readSettings } from '@/server/settings';
 
-import { isLocale, type LanguageSettings, type Locale, LOCALES } from './locales';
+import { type LanguageSettings, type Locale, LOCALES } from './locales';
 import { localeCookieFromHeaders, resolveLocale } from './resolve-locale';
 
 /**
  * Loads Adiutor's default language.
  *
  * @param db - Database client or transaction.
- * @returns The language, or `null` before setup (no settings row yet).
+ * @returns The language, or `null` before setup chose one.
  */
 export async function loadDefaultLocale(db: DatabaseOrTransaction): Promise<Locale | null> {
-  const [found] = await db
-    .select({ locale: staffSettings.defaultLocale })
-    .from(staffSettings)
-    .limit(1);
-  return found && isLocale(found.locale) ? found.locale : null;
+  const settings = await readSettings(db, ['staff.default_locale']);
+  return settings['staff.default_locale'];
 }
 
 /**
- * Loads Adiutor's language settings: its default language and the languages
- * it offers, in the order of `LOCALES`. Before setup (no settings row yet)
- * there's no default and every language is offered.
+ * Loads Adiutor's language settings, in one query: its default language and
+ * the languages it offers, in the order of `LOCALES`. Before setup there's
+ * no default and every language is offered.
  *
  * @param db - Database client or transaction.
  * @returns The settings.
  */
 export async function loadLanguageSettings(db: DatabaseOrTransaction): Promise<LanguageSettings> {
-  const [found] = await db
-    .select({ locale: staffSettings.defaultLocale, offered: staffSettings.offeredLocales })
-    .from(staffSettings)
-    .limit(1);
-  if (!found) {
-    return { defaultLocale: null, offered: LOCALES };
-  }
+  const settings = await readSettings(db, ['staff.default_locale', 'staff.offered_locales']);
+  const offered = settings['staff.offered_locales'];
   return {
-    defaultLocale: isLocale(found.locale) ? found.locale : null,
-    offered: LOCALES.filter((locale) => found.offered.includes(locale)),
+    defaultLocale: settings['staff.default_locale'],
+    offered: LOCALES.filter((locale) => offered.includes(locale)),
   };
 }
 

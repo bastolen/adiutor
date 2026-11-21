@@ -1,14 +1,15 @@
 /**
  * @file Integration tests for the record of the last tick, against the test
- * database: every tick notes when it started, in one row, and the ticks
- * count as late when none ran yet or the last started over 45 minutes ago.
+ * database: every tick notes when it started, in one setting
+ * (`jobs.last_tick`), and the ticks count as late when none ran yet or the
+ * last started over 45 minutes ago.
  */
-import { sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { jobTick } from '@/db/schema';
+import { setting } from '@/db/schema';
 
-import { later, setupTestContext } from '../../../tests/integration/helpers';
+import { later, saveSettings, setupTestContext } from '../../../tests/integration/helpers';
 import { runTick } from './tick';
 import { isTickLate, readLastTick, TICK_LATE_MINUTES } from './tick-record';
 
@@ -19,12 +20,12 @@ describe('the record of the last tick', () => {
     expect(await readLastTick(db)).toBeNull();
 
     await runTick(ctx, { trigger: 'tick', deadline: later, jobs: [], queuedJobs: [] });
-    await db.update(jobTick).set({ lastStartedAt: sql`now() - interval '1 hour'` });
+    await saveSettings(db, { 'jobs.last_tick': new Date(Date.now() - 60 * 60_000) });
     await runTick(ctx, { trigger: 'cli', deadline: later, jobs: [], queuedJobs: [] });
 
-    const rows = await db.select({ at: jobTick.lastStartedAt }).from(jobTick);
+    const rows = await db.select().from(setting).where(eq(setting.key, 'jobs.last_tick'));
     expect(rows).toHaveLength(1);
-    expect(isTickLate(rows[0]?.at ?? null)).toBe(false);
+    expect(isTickLate(await readLastTick(db))).toBe(false);
   });
 });
 
