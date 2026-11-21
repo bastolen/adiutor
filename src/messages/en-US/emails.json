@@ -258,11 +258,15 @@
       "reply": "<strong>{name}</strong> replied:",
       "note": "<strong>{name}</strong> wrote an internal note:",
       "noteOnlyStaff": "Internal note: only the staff see this.",
-      "status": "{change, select, reopened {<strong>{name}</strong> reopened this request.} done {<strong>{name}</strong> marked this request as done.} cancelled {<strong>{name}</strong> cancelled this request.} other {<strong>{name}</strong> changed the status from {from} to {to}.}}",
+      "status": "{change, select, reopened {<strong>{name}</strong> reopened this request.} done {<strong>{name}</strong> marked this request as done.} cancelled {<strong>{name}</strong> cancelled this request.} proposed {<strong>{name}</strong> proposed a solution.} approved {<strong>{name}</strong> approved the solution.} denied {<strong>{name}</strong> didn’t approve the solution.} other {<strong>{name}</strong> changed the status from {from} to {to}.}}",
       "assigned": "<strong>{name}</strong> assigned this request to you.",
       "mentioned": "{where, select, description {<strong>{name}</strong> mentioned you in the description:} note {<strong>{name}</strong> mentioned you in an internal note:} other {<strong>{name}</strong> mentioned you in a reply:}}",
       "subscribed": "<strong>{name}</strong> subscribed you to this request.",
       "button": "Open request",
+      "answerQuestion": "Does this solve your request?",
+      "approve": "Approve",
+      "deny": "Deny",
+      "answerNote": "Approving closes the request. Denying sends it back to the staff, and you can then tell them what’s still wrong. These buttons work only for you, and only once.",
       "noReply": "Replies to this email aren’t read. To answer, open the request.",
       "signInNote": "{days, plural, one {The links in this email sign you in to Adiutor for # day, so don’t forward it.} other {The links in this email sign you in to Adiutor for # days, so don’t forward it.}}"
     }

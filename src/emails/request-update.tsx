@@ -16,11 +16,11 @@ import type { Email } from '@/lib/email';
 import type { Locale } from '@/lib/i18n/locales';
 import translator from '@/lib/i18n/translator';
 import {
-  isClosedStatus,
-  isReopening,
   type RequestAudience,
   type RequestParticipantRole,
+  type RequestSide,
   type RequestStatus,
+  statusChangeKind,
 } from '@/lib/requests';
 import { REQUEST_LINK_DAYS } from '@/lib/sign-in/request-link';
 
@@ -50,6 +50,8 @@ export type RequestUpdateEmailItem =
       event: 'status';
       /** Who. */
       by: string;
+      /** The side they changed it as: the company's answer to a solution reads differently. */
+      bySide: RequestSide;
       /** The status it had. */
       from: RequestStatus;
       /** The status it got. */
@@ -99,6 +101,11 @@ export interface RequestUpdateEmailProps extends EmailBaseProps {
   audience: RequestAudience;
   /** What happened, in the order it happened. */
   items: readonly RequestUpdateEmailItem[];
+  /**
+   * The reader's links that approve or deny the solution the email tells of
+   * (decision 0033): only for someone at the company who may answer it.
+   */
+  answerLinks?: { approve: string; deny: string };
 }
 
 /**
@@ -147,22 +154,6 @@ function accountLinkTag(href: string) {
       </Link>
     );
   };
-}
-
-/**
- * What a status change did, as the sentence about it is chosen: it
- * reopened the request, marked it done or cancelled it, or moved it to
- * another status.
- *
- * @param from - The status it had.
- * @param to - The status it got.
- * @returns Which sentence tells it.
- */
-function changeOf(from: RequestStatus, to: RequestStatus): string {
-  if (isReopening(from, to)) {
-    return 'reopened';
-  }
-  return isClosedStatus(to) ? to : 'other';
 }
 
 /**
@@ -245,7 +236,7 @@ function UpdateItem({
       <EmailParagraph>
         {t.rich('status', {
           ...who,
-          change: changeOf(item.from, item.to),
+          change: statusChangeKind(item.from, item.to, item.bySide),
           // The statuses in the reader's words.
           from: tRequests('status', { status: item.from, audience }),
           to: tRequests('status', { status: item.to, audience }),
@@ -263,9 +254,11 @@ function UpdateItem({
  * one) and a text that mentions the reader are shown in full, formatted as
  * on the request's page (`EmailMarkdown`); a status change, an assignment
  * and a subscription in a sentence, with the statuses worded for the reader.
- * A button opens the request, and a note says replies to the email aren't
- * read. The links to the request sign the reader in (`url`, decision 0036),
- * so a last note says so, and not to forward the email.
+ * A button opens the request; for someone at the company who may answer a
+ * solution the email tells of, Approve and Deny buttons (`answerLinks`, links
+ * that work once and only for them) take its place. A note says replies to
+ * the email aren't read. The links to the request sign the reader in (`url`,
+ * decision 0036), so a last note says so, and not to forward the email.
  *
  * @param props - Template props.
  * @param props.appUrl - Public app URL.
@@ -276,6 +269,7 @@ function UpdateItem({
  * @param props.role - Why the reader gets the email.
  * @param props.audience - How to word the statuses.
  * @param props.items - What happened.
+ * @param props.answerLinks - The reader's links that answer the solution, if they may.
  * @param props.locale - The recipient's language.
  * @param props.logoSrc - Logo URL override.
  * @returns The email.
@@ -289,6 +283,7 @@ export default function RequestUpdateEmail({
   role,
   audience,
   items,
+  answerLinks = undefined,
   locale,
   logoSrc = undefined,
 }: RequestUpdateEmailProps) {
@@ -319,7 +314,18 @@ export default function RequestUpdateEmail({
           locale={locale}
         />
       ))}
-      <EmailButton href={url}>{t('button')}</EmailButton>
+      {answerLinks ? (
+        <Section>
+          <EmailParagraph>{t('answerQuestion')}</EmailParagraph>
+          <EmailButton href={answerLinks.approve}>{t('approve')}</EmailButton>
+          <EmailButton href={answerLinks.deny} variant="secondary">
+            {t('deny')}
+          </EmailButton>
+          <EmailNote>{t('answerNote')}</EmailNote>
+        </Section>
+      ) : (
+        <EmailButton href={url}>{t('button')}</EmailButton>
+      )}
       <EmailNote>{t('noReply')}</EmailNote>
       <EmailNote>{t('signInNote', { days: REQUEST_LINK_DAYS })}</EmailNote>
     </EmailLayout>
@@ -354,7 +360,7 @@ RequestUpdateEmail.PreviewProps = {
         mentions: {},
       },
     },
-    { event: 'status', by: 'Sam Doe', from: 'in_progress', to: 'waiting' },
+    { event: 'status', by: 'Sam Doe', bySide: 'staff', from: 'in_progress', to: 'waiting' },
     { event: 'assigned', by: 'Alex Doe' },
   ],
 } satisfies RequestUpdateEmailProps;

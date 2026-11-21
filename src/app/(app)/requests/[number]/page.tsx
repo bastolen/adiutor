@@ -31,10 +31,13 @@ import RowAction from '@/components/ui/row-action';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import TextLink from '@/components/ui/text-link';
 import ToastOnArrival from '@/components/ui/toast-on-arrival';
+import cn from '@/lib/cn';
 import ClientMessages from '@/lib/i18n/client-messages';
 import {
   formatRequestNumber,
   isClosedStatus,
+  mayAnswerSolution,
+  mayProposeSolution,
   mayWriteNote,
   parseRequestNumber,
   REQUEST_STATUSES,
@@ -69,6 +72,7 @@ import EditableText from './editable-text';
 import EditedNote from './edited-note';
 import ReplyForm from './reply-form';
 import RequestDetails from './request-details';
+import SolutionNotice from './solution-notice';
 import StatusSelect from './status-select';
 import Thread from './thread';
 import WriteTabs from './write-tabs';
@@ -154,6 +158,10 @@ async function RequestContent({
   const fields = { request: String(detail.number) };
   // "Send and wait for the company": only on a request that's worked on and doesn't wait already.
   const canWait = manages && !isClosedStatus(detail.status) && detail.status !== 'waiting';
+  // "Send as solution": the staff, on a request that's worked on and doesn't wait for approval.
+  const canPropose = manages && mayProposeSolution(detail.permissions, detail.status);
+  // The company's Admins and Clients answer a solution that waits for them.
+  const answers = contributes && mayAnswerSolution(detail.permissions, detail.status);
   // Who the staff may assign: everyone who can be, and anyone assigned now who no longer could
   // be (gone meanwhile), so the dialog can still remove them.
   const assigned = detail.assignees.flatMap(({ userId }) => (userId ? [userId] : []));
@@ -271,7 +279,11 @@ async function RequestContent({
                 <StatusSelect
                   request={detail.number}
                   status={detail.status}
-                  options={REQUEST_STATUSES.map((status) => ({
+                  // Waiting for approval comes only with "Send as solution", so the select only
+                  // shows it while the request has it.
+                  options={REQUEST_STATUSES.filter(
+                    (status) => status !== 'proposed' || detail.status === 'proposed',
+                  ).map((status) => ({
                     value: status,
                     label: tRequests('status', { status, audience: detail.audience }),
                   }))}
@@ -382,12 +394,18 @@ async function RequestContent({
             <div className="flex flex-col gap-6">
               <Thread detail={detail} address={address} earlierHref={earlierHref} />
               {contributes && (
-                <div className={detail.entries.length > 0 ? 'border-t border-border pt-6' : ''}>
+                <div
+                  className={cn(
+                    'flex flex-col gap-6',
+                    detail.entries.length > 0 && 'border-t border-border pt-6',
+                  )}
+                >
+                  {answers && <SolutionNotice request={detail.number} />}
                   {mayWriteNote(detail.permissions) ? (
                     // The staff who work on requests also write internal notes, on a tab of their own.
-                    <WriteTabs request={detail.number} canWait={canWait} />
+                    <WriteTabs request={detail.number} canWait={canWait} canPropose={canPropose} />
                   ) : (
-                    <ReplyForm request={detail.number} canWait={canWait} />
+                    <ReplyForm request={detail.number} canWait={canWait} canPropose={canPropose} />
                   )}
                 </div>
               )}

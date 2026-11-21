@@ -21,14 +21,16 @@ function isOneOf<T extends string>(values: readonly T[], value: unknown): value 
 /**
  * A request's statuses, in the order a request moves through them: raised
  * (`open`), accepted by the staff (`todo`), being worked on (`in_progress`),
- * waiting for the company's reply (`waiting`), and finished: `done`, or
- * `cancelled` when it isn't needed anymore.
+ * waiting for the company's reply (`waiting`), waiting for the company to
+ * approve the solution the staff sent (`proposed`, decision 0033), and
+ * finished: `done`, or `cancelled` when it isn't needed anymore.
  */
 export const REQUEST_STATUSES = [
   'open',
   'todo',
   'in_progress',
   'waiting',
+  'proposed',
   'done',
   'cancelled',
 ] as const;
@@ -239,7 +241,8 @@ export const WRITTEN_TEXT_FORMAT: RequestTextFormat = 'markdown';
 
 /**
  * The status filters of a request list: requests that still need something
- * (`active`), those waiting for the company's reply (`waiting`), those done
+ * (`active`), those waiting for the company (`waiting`: its reply, or its
+ * approval of a solution), those done
  * or cancelled (`closed`), and every request (`all`).
  */
 export const REQUEST_STATUS_FILTERS = ['active', 'waiting', 'closed', 'all'] as const;
@@ -263,7 +266,7 @@ export function isRequestStatusFilter(value: unknown): value is RequestStatusFil
 /** The statuses each filter shows; `null` shows every status. */
 const FILTER_STATUSES: Record<RequestStatusFilter, readonly RequestStatus[] | null> = {
   active: ACTIVE_REQUEST_STATUSES,
-  waiting: ['waiting'],
+  waiting: ['waiting', 'proposed'],
   closed: CLOSED_REQUEST_STATUSES,
   all: null,
 };

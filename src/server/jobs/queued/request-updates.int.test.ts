@@ -8,7 +8,14 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { queuedJob, request, requestParticipant, requestSignInLink, user } from '@/db/schema';
+import {
+  queuedJob,
+  request,
+  requestAnswerLink,
+  requestParticipant,
+  requestSignInLink,
+  user,
+} from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { writtenMentionMarker } from '@/lib/requests';
 import { hashToken } from '@/lib/sign-in/tokens';
@@ -96,6 +103,85 @@ describe('the emails about requests', () => {
     expect(toClient?.text).toContain('sam replied:');
     expect(toClient?.text).not.toContain('note');
     expect(toClient?.html).not.toContain('empty');
+  });
+
+  it('give the people who may answer a proposed solution Approve and Deny links of their own', async () => {
+    await createStaffSettings(db);
+    const company = await createCompany(db, { name: 'Adiutor Tests Client' });
+    const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const watcher = await memberActor(db, company.id, 'watcher', 'wim@adiutor.test');
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    const manager = await staffActor(db, 'manager', 'morgan@adiutor.test');
+    const raised = await storeWaitingRequest(company.id, [client, watcher, manager]);
+    await db.update(request).set({ status: 'in_progress' }).where(eq(request.id, raised.id));
+
+    await replyToRequest(ctx, support, {
+      request: raised.id,
+      body: 'The toner was empty; it prints again.',
+      status: 'proposed',
+    });
+    await sendQueuedEmails(ctx);
+
+    /**
+     * The text of the email to someone.
+     *
+     * @param to - Their address.
+     * @returns The text, or nothing when they got none.
+     */
+    const textTo = (to: string) => sent.find((email) => email.to === to)?.text ?? '';
+    /**
+     * The answer links in the email to someone.
+     *
+     * @param to - Their address.
+     * @returns The links, or `null` when there are none.
+     */
+    const links = (to: string) =>
+      textTo(to).match(/https:\/\/adiutor\.test\/answer\/[^\s/]+\/\w+/g);
+    // The client: their own two links, and still the request as the first link (their own link
+    // that signs them in, decision 0036).
+    expect(textTo('casey@adiutor.test')).toContain('sam proposed a solution.');
+    expect(textTo('casey@adiutor.test')).toContain('Does this solve your request?');
+    expect(textTo('casey@adiutor.test').match(/https?:\/\/\S+/)?.[0]).toMatch(
+      /^https:\/\/adiutor\.test\/api\/auth\/request-link\/sign-in\?token=[\w-]+$/,
+    );
+    const [approve, deny] = links('casey@adiutor.test') ?? [];
+    expect(approve).toMatch(/\/approve$/);
+    expect(deny).toMatch(/\/deny$/);
+    expect(approve?.replace(/\/approve$/, '')).toBe(deny?.replace(/\/deny$/, ''));
+    // A Watcher and the staff can't answer: no links, just the request.
+    expect(links('wim@adiutor.test')).toBeNull();
+    expect(links('morgan@adiutor.test')).toBeNull();
+    expect(textTo('wim@adiutor.test')).toContain('Open request');
+    // One link, for the client and that proposal, stored only as a hash.
+    const stored = await db
+      .select({ userId: requestAnswerLink.userId, tokenHash: requestAnswerLink.tokenHash })
+      .from(requestAnswerLink)
+      .where(eq(requestAnswerLink.requestId, raised.id));
+    expect(stored).toEqual([{ userId: client.id, tokenHash: expect.any(String) }]);
+    expect(approve).not.toContain(stored[0]?.tokenHash);
+  });
+
+  it('give no answer links in a later email while the solution still waits', async () => {
+    await createStaffSettings(db);
+    const company = await createCompany(db, { name: 'Adiutor Tests Client' });
+    const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    const raised = await storeWaitingRequest(company.id, [client]);
+    await db.update(request).set({ status: 'in_progress' }).where(eq(request.id, raised.id));
+    await replyToRequest(ctx, support, {
+      request: raised.id,
+      body: 'It prints again.',
+      status: 'proposed',
+    });
+    await sendQueuedEmails(ctx);
+    sent.length = 0;
+
+    await replyToRequest(ctx, support, { request: raised.id, body: 'Let us know.' });
+    await sendQueuedEmails(ctx);
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.text).not.toContain('/answer/');
+    expect(await db.select().from(requestAnswerLink)).toHaveLength(1);
   });
 
   it('send one email per person for a reply and the status change it brought, worded for each', async () => {

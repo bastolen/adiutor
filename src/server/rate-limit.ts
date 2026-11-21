@@ -57,6 +57,12 @@ export const RATE_LIMITS = {
    * Past it, the link goes to the sign-in page instead.
    */
   requestLinkSignInsPerLink: { limit: 10, windowSeconds: 60 * 60 },
+  /**
+   * Answer links (Approve or Deny in an email about a solution) opened from
+   * one IP address that don't exist: looking links up can't be used to guess
+   * them.
+   */
+  answerLinkMissesPerIp: { limit: 20, windowSeconds: 15 * 60 },
   /** Sign-in errors stored from one IP address (`recordSignInError`); more are only logged. */
   signInErrorsPerIp: { limit: 20, windowSeconds: 60 * 60 },
   /**

@@ -258,11 +258,15 @@
       "reply": "<strong>{name}</strong> ha respondido:",
       "note": "<strong>{name}</strong> ha escrito una nota interna:",
       "noteOnlyStaff": "Nota interna: solo la ve el personal.",
-      "status": "{change, select, reopened {<strong>{name}</strong> ha reabierto esta solicitud.} done {<strong>{name}</strong> ha marcado esta solicitud como resuelta.} cancelled {<strong>{name}</strong> ha cancelado esta solicitud.} other {<strong>{name}</strong> ha cambiado el estado de {from} a {to}.}}",
+      "status": "{change, select, reopened {<strong>{name}</strong> ha reabierto esta solicitud.} done {<strong>{name}</strong> ha marcado esta solicitud como resuelta.} cancelled {<strong>{name}</strong> ha cancelado esta solicitud.} proposed {<strong>{name}</strong> ha propuesto una solución.} approved {<strong>{name}</strong> ha aprobado la solución.} denied {<strong>{name}</strong> no ha aprobado la solución.} other {<strong>{name}</strong> ha cambiado el estado de {from} a {to}.}}",
       "assigned": "<strong>{name}</strong> te ha asignado esta solicitud.",
       "mentioned": "{where, select, description {<strong>{name}</strong> te ha mencionado en la descripción:} note {<strong>{name}</strong> te ha mencionado en una nota interna:} other {<strong>{name}</strong> te ha mencionado en una respuesta:}}",
       "subscribed": "<strong>{name}</strong> te ha suscrito a esta solicitud.",
       "button": "Abrir solicitud",
+      "answerQuestion": "¿Esto resuelve tu solicitud?",
+      "approve": "Aprobar",
+      "deny": "Rechazar",
+      "answerNote": "Si la apruebas, la solicitud se cierra. Si la rechazas, vuelve al personal y después puedes decirles qué sigue sin funcionar. Estos botones solo funcionan para ti, y solo una vez.",
       "noReply": "Nadie lee las respuestas a este correo. Para responder, abre la solicitud.",
       "signInNote": "{days, plural, one {Los enlaces de este correo inician tu sesión en Adiutor durante # día, así que no lo reenvíes.} other {Los enlaces de este correo inician tu sesión en Adiutor durante # días, así que no lo reenvíes.}}"
     }

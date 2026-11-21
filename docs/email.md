@@ -32,7 +32,11 @@ One file per email in `src/emails/`:
   to the account's setting that turns them off (the `request-update` jobs, batched; see
   [Emails](requests.md#emails)). Its links are the reader's own, which sign them in for 14 days
   (see [Links in emails about requests](authentication.md#links-in-emails-about-requests)), and a
-  note says not to forward it
+  note says not to forward it. When it tells an Admin or Client of a solution they may answer,
+  Approve (the main button) and Deny (`EmailButton`'s `secondary` variant) take the place of
+  "Open request": links of their own that answer once without signing in, made by the job as it
+  sends the email ([Solutions](requests.md#solutions),
+  [decision 0033](decisions/0033-solutions-the-company-approves.md))
 - `added-to-company.tsx` for someone staff added to a company with a role (`addMember` queues an
   `added-to-company` job in the transaction that adds them, so it goes out at the next tick; see
   [Background jobs](jobs.md#queued-jobs))

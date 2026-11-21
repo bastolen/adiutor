@@ -167,6 +167,11 @@ describe('Thread', () => {
     ['cancelling it', { kind: 'status', from: 'open', to: 'cancelled' }, 'Cancelled this request.'],
     ['reopening it', { kind: 'status', from: 'cancelled', to: 'open' }, 'Reopened this request.'],
     [
+      'proposing a solution',
+      { kind: 'status', from: 'in_progress', to: 'proposed' },
+      'Proposed a solution.',
+    ],
+    [
       'reopening it by picking a status',
       { kind: 'status', from: 'done', to: 'in_progress' },
       'Reopened this request.',
@@ -233,6 +238,23 @@ describe('Thread', () => {
 
     const [changed] = within(screen.getByRole('list')).getAllByRole('listitem');
     expect(changed).toHaveTextContent('Sam Support');
+    expect(changed).toHaveTextContent(sentence);
+  });
+
+  it.each<[string, Partial<RequestEntryView>, string]>([
+    ['approving', { from: 'proposed', to: 'done' }, 'Approved the solution.'],
+    ['denying', { from: 'proposed', to: 'in_progress' }, 'Didn’t approve the solution.'],
+  ])('says the company is %s a solution', (_what, change, sentence) => {
+    render(
+      <Thread
+        address={ADDRESS}
+        detail={detailOf({ entries: [entryOf('1', { kind: 'status', author: CASEY, ...change })] })}
+        earlierHref={null}
+      />,
+    );
+
+    const [changed] = within(screen.getByRole('list')).getAllByRole('listitem');
+    expect(changed).toHaveTextContent('Casey Client');
     expect(changed).toHaveTextContent(sentence);
   });
 
