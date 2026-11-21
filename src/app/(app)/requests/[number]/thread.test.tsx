@@ -315,6 +315,42 @@ describe('Thread', () => {
     expect(screen.getByText('@Sam Support')).not.toHaveClass('border-highlight');
   });
 
+  it('shows an internal note on the staff’s side as one, with its own Edit button', () => {
+    render(
+      <Thread
+        address={ADDRESS}
+        detail={detailOf({
+          audience: 'staff',
+          entries: [
+            entryOf('1', { author: CASEY, body: { text: 'Any news?', format: 'markdown' } }),
+            entryOf('2', {
+              kind: 'note',
+              body: {
+                text: 'Probably the toner.',
+                format: 'markdown',
+                edit: { markdown: 'Probably the toner.', edits: 0 },
+              },
+            }),
+          ],
+        })}
+        earlierHref={null}
+      />,
+    );
+
+    const [reply, note] = within(screen.getByRole('list')).getAllByRole('listitem');
+    expect(reply).not.toHaveTextContent('Internal note');
+    expect(note).toHaveTextContent('Sam Support');
+    expect(note).toHaveTextContent('Internal note');
+    expect(
+      within(note as HTMLElement)
+        .getByText('Probably the toner.')
+        .closest('.bg-warning-soft'),
+    ).not.toBeNull();
+    expect(
+      within(note as HTMLElement).getByRole('button', { name: 'Edit note' }),
+    ).toBeInTheDocument();
+  });
+
   it('offers the earlier entries first, when there are more', () => {
     render(
       <Thread

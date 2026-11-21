@@ -107,6 +107,16 @@
       "sendAndWait": "Enviar y esperar a la empresa",
       "sent": "Respuesta enviada."
     },
+    "note": {
+      "tabsLabel": "Escribir",
+      "replyTab": "Respuesta",
+      "noteTab": "Nota interna",
+      "staffOnly": "Solo el personal ve las notas internas.",
+      "label": "Tu nota",
+      "add": "Añadir nota",
+      "added": "Nota añadida.",
+      "badge": "Nota interna"
+    },
     "controls": {
       "status": "Estado",
       "saving": "Guardando…",
@@ -151,7 +161,9 @@
       "editedAt": "Editado el {time}",
       "versionsTitle": "Versiones anteriores",
       "versionsDescription": "Lo que decía este texto antes de editarlo, la más reciente primero. Solo el personal las ve.",
-      "versionLine": "{name} lo cambió el {time}."
+      "versionLine": "{name} lo cambió el {time}.",
+      "editNote": "Editar nota",
+      "noteLabel": "Nota"
     }
   }
 }

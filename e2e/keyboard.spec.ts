@@ -1297,6 +1297,44 @@ test.describe('requests', () => {
       await expect(sendAndWait).toHaveCount(0);
       await expect(page.getByRole('heading', { level: 2, name: 'Conversation' })).toBeFocused();
     });
+
+    test('a note is written on its tab with the keyboard, and focus stays on its button', async ({
+      page,
+    }) => {
+      await page.goto(await storeOwnRequest('A note written with the keyboard'));
+      const write = page.getByRole('tablist', { name: 'Write' });
+      const replyTab = write.getByRole('tab', { name: 'Reply' });
+      const noteTab = write.getByRole('tab', { name: 'Internal note' });
+      const add = page.getByRole('button', { name: 'Add note' });
+
+      // The arrow keys move between the tabs and open the one they reach; Tab goes on into it.
+      await replyTab.focus();
+      expect(await cursorOf(noteTab)).toBe('pointer');
+      await page.keyboard.press('ArrowRight');
+      await expect(noteTab).toBeFocused();
+      await expect(noteTab).toHaveAttribute('aria-selected', 'true');
+      await page.keyboard.press('ArrowLeft');
+      await expect(replyTab).toHaveAttribute('aria-selected', 'true');
+      await page.keyboard.press('End');
+      await expect(noteTab).toHaveAttribute('aria-selected', 'true');
+      const note = await markdownEditor(page, 'Your note');
+      // The toolbar is the first stop in the panel, then the text.
+      await page.keyboard.press('Tab');
+      await expect(
+        page.getByRole('toolbar', { name: 'Formatting' }).getByRole('button', { name: 'Bold' }),
+      ).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(note).toBeFocused();
+      await page.keyboard.type('Checked the cable.');
+
+      // Adding the note keeps focus on the button, which stays.
+      await page.keyboard.press('Tab');
+      await expect(add).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(toasts(page)).toContainText('Note added.');
+      await expect(note).toHaveText('');
+      await expect(add).toBeFocused();
+    });
   });
 
   test.describe('as someone at the company', () => {

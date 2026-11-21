@@ -107,6 +107,16 @@
       "sendAndWait": "Versturen en op het bedrijf wachten",
       "sent": "Reactie verstuurd."
     },
+    "note": {
+      "tabsLabel": "Schrijven",
+      "replyTab": "Reactie",
+      "noteTab": "Interne notitie",
+      "staffOnly": "Alleen medewerkers zien interne notities.",
+      "label": "Je notitie",
+      "add": "Notitie toevoegen",
+      "added": "Notitie toegevoegd.",
+      "badge": "Interne notitie"
+    },
     "controls": {
       "status": "Status",
       "saving": "Opslaan…",
@@ -151,7 +161,9 @@
       "editedAt": "Bewerkt op {time}",
       "versionsTitle": "Eerdere versies",
       "versionsDescription": "Wat deze tekst zei voor de bewerkingen, de nieuwste eerst. Alleen medewerkers zien deze.",
-      "versionLine": "{name} heeft dit gewijzigd op {time}."
+      "versionLine": "{name} heeft dit gewijzigd op {time}.",
+      "editNote": "Notitie bewerken",
+      "noteLabel": "Notitie"
     }
   }
 }
