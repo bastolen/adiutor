@@ -796,7 +796,8 @@ the sort and the size (`size`), and drops the status link, `?only=` and the page
   sideways by itself while a card is dragged near its edges (auto-scroll).
 - **Layout:** from tablet width the lanes sit side by side, at least 15rem each, in a row that
   scrolls sideways inside its own box ("Lanes", reachable and scrolled with the keyboard while it
-  overflows); the page itself never does, and the board doesn't widen the page (no `WidePage`).
+  overflows); the page itself never does. On a wide screen the board gets the room a request's
+  page gets (`WidePage`), so more lanes show before the row scrolls.
   Below tablet width the lanes are stacked, each folding away from its heading with its count.
 - **In the code:** the rules in `src/lib/requests/board.ts` (lanes, closed lanes, the lanes'
   words, why a drop is refused, placing a moved card); `listBoard` in

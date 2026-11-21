@@ -10,6 +10,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
+import WidePage from '@/components/layout/wide-page';
 import { BoardSkeleton } from '@/components/ui/skeleton';
 import ClientMessages from '@/lib/i18n/client-messages';
 import type { SearchParams } from '@/lib/search-params';
@@ -48,16 +49,20 @@ async function Board({ searchParams }: { searchParams: Promise<SearchParams> }) 
 }
 
 /**
- * The board page.
+ * The board page, as wide as a request's page on a wide screen (`WidePage`).
  *
  * @param props - Page props from Next.js.
  * @param props.searchParams - Query parameters.
  * @returns The page.
  */
 export default function RequestBoardPage({ searchParams }: PageProps<'/requests/board'>) {
+  // Lanes side by side: on a wide screen the board gets the room a request's page gets, so
+  // more lanes show before the row scrolls sideways.
   return (
-    <Suspense fallback={<BoardSkeleton />}>
-      <Board searchParams={searchParams} />
-    </Suspense>
+    <WidePage>
+      <Suspense fallback={<BoardSkeleton />}>
+        <Board searchParams={searchParams} />
+      </Suspense>
+    </WidePage>
   );
 }

@@ -34,6 +34,10 @@ How it works is in [The board](../requests.md#the-board). The choices behind it:
   out of date is refused rather than overwriting a colleague's change, and the board shows the
   card where it is.
 - **Done and Cancelled ask first,** since a move emails everyone on the request.
+- **As wide as a request's page:** the lanes sit side by side, so on a wide screen the board gets the
+  room a request's page gets (`WidePage`) and more lanes show before their row scrolls sideways.
+  The rule that a page with a table of records stays at the content's usual width still holds:
+  the board's lanes aren't a table.
 
 ## Consequences
 

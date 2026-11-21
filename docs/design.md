@@ -121,7 +121,8 @@ keyboard support.
     when the card isn't shown anymore; a lane is a `data-card` section for `restoreFocusIfLost`.
   - **Width:** the lanes, at least 15rem each, sit in a row that scrolls sideways inside a named
     group the keyboard reaches while it overflows (`tabIndex={0}`, like a wide code block), so
-    the page never scrolls sideways and isn't widened (no `WidePage`). Below tablet width the
+    the page never scrolls sideways. On a wide screen the board is as wide as a request's page
+    (`WidePage`), so more lanes fit before the row scrolls. Below tablet width the
     lanes are stacked, each folding away with its count (`aria-expanded` on its heading's button).
   - **Colours:** a lane is a step back from its cards in both modes (`muted` behind `surface`
     cards in light mode, `surface` behind `raised` ones in dark mode, where `surface` is the darker
@@ -250,7 +251,8 @@ keyboard support.
   The content of every page stops growing at 1280px of screen. A request's page may be wider
   (`WidePage` in `src/components/layout/wide-page.tsx`): from that width it grows with the room
   next to the menu, up to 1280px of content, so the
-  conversation and the editor of a reply get the room, with the details still beside them. It
+  conversation and the editor of a reply get the room, with the details still beside them. The
+  board of requests grows the same way, so more of its lanes show side by side. It
   measures that room in the content column (a container in the app layout), not the screen, so
   a scrollbar never makes it scroll sideways. Don't use it for a page with a table of records:
   those are laid out for the content's usual width.
