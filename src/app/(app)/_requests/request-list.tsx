@@ -170,6 +170,7 @@ export default async function RequestList({
   const requests = await listRequests(appContext, actor, {
     search,
     status,
+    only: filters.only,
     company: company ?? filters.company,
     type: filters.type,
     priority: filters.priority,

@@ -109,6 +109,8 @@ const APP_PATHS = [
   '/companies/{paging}',
   '/companies/{paging}?status=all&sort=raised&page=2',
   '/requests',
+  // One status instead of a link's group, as a lane of the board links to it.
+  '/requests?only=done',
   '/requests?status=all&q=no-such-request',
   // More requests than fit on a page: pagination, another sort, the last page.
   '/requests?company=adiutor-tests-paging&sort=raised&page=2',

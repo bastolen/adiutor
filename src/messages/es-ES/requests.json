@@ -9,6 +9,8 @@
       "searchPlaceholder": "Título o número",
       "statusLabel": "Filtrar solicitudes por estado",
       "statusOption": "{status, select, active {Activas} waiting {En espera} closed {Cerradas} other {Todas}}",
+      "onlyStatus": "Solo solicitudes con este estado:",
+      "everyStatus": "Mostrar todos los estados",
       "companyFilter": "Empresa",
       "companyMenu": "Filtrar por empresa",
       "allCompanies": "Todas",

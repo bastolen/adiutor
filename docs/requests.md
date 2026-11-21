@@ -692,6 +692,9 @@ says so with a "Show everything" button.
   and for the staff by priority, and pages like every table (see
   [Design and accessibility](design.md#design-and-accessibility)). The staff also filter by
   assignee and see who each request is assigned to (see [Assigning](#assigning)).
+  `?only=<status>` shows the requests of one status instead of a link's group (`ONLY_STATUS_PARAM`;
+  its own parameter, since `waiting` is both a group and a status): no status link is current
+  then, and a line names the status in the reader's words, with a link back to every status.
   A list without requests says why: nothing matches (a search, a filter menu, or the Waiting or
   Closed link), nothing is active, or, under All, which leaves nothing out, there are no requests
   yet. The last two offer "New request" to whoever may raise one.

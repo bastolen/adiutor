@@ -162,6 +162,7 @@ describe('parseRequestFilters', () => {
     });
     expect(Object.keys(filters.pageParams)).toEqual([
       'status',
+      'only',
       'company',
       'type',
       'priority',
@@ -180,6 +181,23 @@ describe('parseRequestFilters', () => {
 
   it('leaves the default status out of the page parameters', () => {
     expect(parse({ status: 'active' }).pageParams.status).toBeUndefined();
+  });
+
+  it('reads one status instead of a group, which narrows the view and keeps its parameter', () => {
+    const filters = parse({ status: 'closed', only: 'waiting' });
+    expect(filters).toMatchObject({ only: 'waiting', narrowed: true });
+    expect(filters.pageParams).toMatchObject({ status: undefined, only: 'waiting' });
+    expect(parse({ only: 'bogus' }).only).toBeUndefined();
+  });
+
+  it('words a status for the viewer’s strongest part', () => {
+    expect(parse({}).audience).toBe('follower');
+    vi.mocked(getStaffPermissionsInCompanies).mockReturnValue(new Set(['requests:contribute']));
+    expect(parse({}).audience).toBe('contributor');
+    vi.mocked(getStaffPermissionsInCompanies).mockReturnValue(
+      new Set(['requests:contribute', 'requests:view-internal']),
+    );
+    expect(parse({}).audience).toBe('staff');
   });
 
   it('reads the table state from the parameters', () => {

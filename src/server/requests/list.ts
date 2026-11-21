@@ -11,6 +11,7 @@ import { firstRow } from '@/lib/defined';
 import {
   DEFAULT_REQUEST_STATUS_FILTER,
   isRequestPriority,
+  isRequestStatus,
   isRequestStatusFilter,
   isClosedStatus,
   isRequestTypeKey,
@@ -107,6 +108,8 @@ export interface ListRequestsOptions extends Partial<TableState<StaffRequestSort
   search?: string;
   /** A status filter (`REQUEST_STATUS_FILTERS`); anything else shows the requests that are still worked on. */
   status?: string;
+  /** One status only (`REQUEST_STATUSES`), instead of `status`'s group; anything else is ignored. */
+  only?: string;
   /** One company's requests only: its ID or URL name. */
   company?: string;
   /** One type only, by its key; a key no type has, or anything else, shows every type. */
@@ -426,7 +429,7 @@ export async function listRequests(
   options: ListRequestsOptions = {},
 ): Promise<Paged<RequestListItem>> {
   const scope = requestScope(actor);
-  const { search, status, company: companyRef, type, priority, assignee, ...table } = options;
+  const { search, status, only, company: companyRef, type, priority, assignee, ...table } = options;
   const state: TableState<StaffRequestSort> = scope.internal
     ? resolveTableState(STAFF_REQUESTS_TABLE, table)
     : resolveTableState(REQUESTS_TABLE, {
@@ -438,7 +441,7 @@ export async function listRequests(
     : DEFAULT_REQUEST_STATUS_FILTER;
   const where = await requestListCondition(ctx, actor, {
     search,
-    statuses: statusesOfFilter(filter),
+    statuses: isRequestStatus(only) ? [only] : statusesOfFilter(filter),
     company: companyRef,
     type,
     priority,

@@ -20,6 +20,7 @@ export {
   isRequestStatus,
   isRequestStatusFilter,
   isRequestTypeKey,
+  ONLY_STATUS_PARAM,
   REQUEST_ENTRY_KINDS,
   REQUEST_PARTICIPANT_ROLES,
   REQUEST_PRIORITIES,

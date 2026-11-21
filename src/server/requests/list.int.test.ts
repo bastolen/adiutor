@@ -158,6 +158,27 @@ describe('listRequests: filters and search', () => {
     expect(await shown('nonsense')).toEqual(['in_progress', 'open', 'todo', 'waiting']);
   });
 
+  it('shows one status instead of a group when asked, and ignores one that isn’t a status', async () => {
+    const company = await createCompany(db);
+    await inSequence(['waiting', 'proposed', 'done', 'cancelled'] as const, (status) =>
+      storeRequest(company.id, { title: status, status }),
+    );
+    const support = await staffActor(db, 'support');
+
+    // The Waiting link's group holds both waiting statuses; one status is just that one.
+    expect(titles(await listRequests(ctx, support, { status: 'waiting' })).sort()).toEqual([
+      'proposed',
+      'waiting',
+    ]);
+    expect(titles(await listRequests(ctx, support, { only: 'waiting' }))).toEqual(['waiting']);
+    expect(titles(await listRequests(ctx, support, { status: 'all', only: 'done' }))).toEqual([
+      'done',
+    ]);
+    expect(
+      titles(await listRequests(ctx, support, { status: 'closed', only: 'bogus' })).sort(),
+    ).toEqual(['cancelled', 'done']);
+  });
+
   it('leaves a deactivated company’s requests out of what is still worked on, across companies', async () => {
     const [active, closed] = [
       await createCompany(db),

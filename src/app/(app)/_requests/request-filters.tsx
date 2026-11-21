@@ -13,15 +13,20 @@ import FilterMenu from '@/components/ui/filter-menu';
 import SearchForm from '@/components/ui/search-form';
 import SegmentedNav from '@/components/ui/segmented-nav';
 import SortMenu from '@/components/ui/sort-menu';
+import TextLink from '@/components/ui/text-link';
 import { companyChoiceLabels } from '@/lib/company-choices';
 import {
   DEFAULT_REQUEST_STATUS_FILTER,
   isRequestPriority,
+  isRequestStatus,
   isRequestStatusFilter,
   mayBeAssigned,
+  ONLY_STATUS_PARAM,
+  type RequestAudience,
   type RequestPriority,
   REQUEST_PRIORITIES,
   REQUEST_STATUS_FILTERS,
+  type RequestStatus,
   type RequestStatusFilter,
 } from '@/lib/requests';
 import { type SearchParams, searchParam } from '@/lib/search-params';
@@ -31,6 +36,8 @@ import { REQUESTS_TABLE, STAFF_REQUESTS_TABLE, type StaffRequestSort } from '@/l
 import type { Actor } from '@/server/actor';
 import { getStaffPermissionsInCompanies } from '@/server/authz';
 import type { AssignableStaffMember, RequestCompany } from '@/server/requests';
+
+import { StatusBadge } from './request-badges';
 
 /** A request type as the filters need it: its key, its name and whether it's archived. */
 interface FilterType {
@@ -68,6 +75,13 @@ export interface RequestFilters {
   search: string;
   /** The status link the view is on. */
   status: RequestStatusFilter;
+  /**
+   * The one status the view shows instead (`?only=`), as a lane of the
+   * board links to it; no status link is current then.
+   */
+  only: RequestStatus | undefined;
+  /** How the viewer takes part, at most: the words a status is shown in when the view names one. */
+  audience: RequestAudience;
   /** The key of the type filtered by, only when it's one the menu offers. */
   type: string | undefined;
   /** The priority filtered by; the staff only. */
@@ -93,6 +107,22 @@ export interface RequestFilters {
    * `createPageUrl`, so links and searches agree. Empty ones are left out.
    */
   pageParams: Record<string, string | undefined>;
+}
+
+/**
+ * How the viewer takes part, at most: the words a status is shown in when a
+ * view names one. The staff's, or the strongest a company reader takes part
+ * in anywhere (an Admin or Client somewhere reads "Waiting for your reply").
+ *
+ * @param internal - Whether the viewer is the staff.
+ * @param contributes - Whether they take part in requests in any company.
+ * @returns The audience.
+ */
+function viewerAudience(internal: boolean, contributes: boolean): RequestAudience {
+  if (internal) {
+    return 'staff';
+  }
+  return contributes ? 'contributor' : 'follower';
 }
 
 /**
@@ -130,6 +160,9 @@ export function parseRequestFilters({
   const search = searchParam(searchParams.q)?.trim() ?? '';
   const statusParam = searchParam(searchParams.status);
   const status = isRequestStatusFilter(statusParam) ? statusParam : DEFAULT_REQUEST_STATUS_FILTER;
+  // One status instead of a status link's group, as a board's lane links to it.
+  const onlyParam = searchParam(searchParams[ONLY_STATUS_PARAM]);
+  const only = isRequestStatus(onlyParam) ? onlyParam : undefined;
   const priorityParam = searchParam(searchParams.priority);
   const priority = internal && isRequestPriority(priorityParam) ? priorityParam : undefined;
   const parsed = parseTableState(definition, searchParams);
@@ -157,6 +190,8 @@ export function parseRequestFilters({
     canBeAssigned,
     search,
     status,
+    only,
+    audience: viewerAudience(internal, permissions.has('requests:contribute')),
     type,
     priority,
     assignee,
@@ -164,9 +199,10 @@ export function parseRequestFilters({
     showsCompany: !company && companies.length > 1,
     definition,
     requested,
-    narrowed: Boolean(search || chosenCompany || type || priority || assignee),
+    narrowed: Boolean(search || only || chosenCompany || type || priority || assignee),
     pageParams: {
-      status: status === DEFAULT_REQUEST_STATUS_FILTER ? undefined : status,
+      status: only || status === DEFAULT_REQUEST_STATUS_FILTER ? undefined : status,
+      [ONLY_STATUS_PARAM]: only,
       company: chosenCompany,
       type,
       priority,
@@ -238,7 +274,7 @@ export function RequestFilterBar({
   const t = useTranslations('requests.list');
   const tRequests = useTranslations('requests');
   const tCommon = useTranslations('common');
-  const { internal, canBeAssigned, search, status, type, priority, assignee } = filters;
+  const { internal, canBeAssigned, search, status, only, type, priority, assignee } = filters;
   /**
    * The options of a filter menu: "all" first (no value for the parameter),
    * then one per item, each linking to the view with that value, and the
@@ -282,11 +318,22 @@ export function RequestFilterBar({
           items={REQUEST_STATUS_FILTERS.map((value) => ({
             href: table.withParams({
               status: value === DEFAULT_REQUEST_STATUS_FILTER ? undefined : value,
+              [ONLY_STATUS_PARAM]: undefined,
             }),
             label: t('statusOption', { status: value }),
-            current: value === status,
+            current: !only && value === status,
           }))}
         />
+      )}
+      {showStatusTabs && only && (
+        // The one status the view shows, in the viewer's words, and the way back to the links.
+        <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <span>{t('onlyStatus')}</span>
+          <StatusBadge status={only} audience={filters.audience} />
+          <TextLink href={table.withParams({ [ONLY_STATUS_PARAM]: undefined })}>
+            {t('everyStatus')}
+          </TextLink>
+        </p>
       )}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <SearchForm

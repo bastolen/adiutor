@@ -9,6 +9,8 @@
       "searchPlaceholder": "Title or number",
       "statusLabel": "Filter requests by status",
       "statusOption": "{status, select, active {Active} waiting {Waiting} closed {Closed} other {All}}",
+      "onlyStatus": "Only requests with this status:",
+      "everyStatus": "Show every status",
       "companyFilter": "Company",
       "companyMenu": "Filter by company",
       "allCompanies": "All",

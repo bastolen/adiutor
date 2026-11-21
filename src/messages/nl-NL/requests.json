@@ -9,6 +9,8 @@
       "searchPlaceholder": "Titel of nummer",
       "statusLabel": "Verzoeken filteren op status",
       "statusOption": "{status, select, active {Actief} waiting {Wachtend} closed {Gesloten} other {Alle}}",
+      "onlyStatus": "Alleen verzoeken met deze status:",
+      "everyStatus": "Alle statussen tonen",
       "companyFilter": "Bedrijf",
       "companyMenu": "Filteren op bedrijf",
       "allCompanies": "Alle",
