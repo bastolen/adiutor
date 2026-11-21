@@ -1,7 +1,8 @@
 /**
  * @file The languages as select options, each named in itself with its flag,
  * for the Language card, Email language and Default language selects, and the
- * Default choice that follows Adiutor's default language.
+ * Default choice that follows Adiutor's default language. The choices offer
+ * only the languages Adiutor offers (`useOfferedLocales`).
  */
 import { Globe } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -10,6 +11,7 @@ import type { SelectOption } from '@/components/ui/select-field';
 import { FOLLOW_DEFAULT, type Locale, LOCALE_NAMES, LOCALES } from '@/lib/i18n/locales';
 
 import LanguageFlag from './language-flag';
+import { useOfferedLocales } from './offered-languages';
 
 /**
  * Every language, in menu order, named in itself (so people find their own)
@@ -38,10 +40,21 @@ export function FollowDefaultIcon() {
 }
 
 /**
+ * The languages Adiutor offers as options (`useOfferedLocales`), in menu
+ * order: a language that's turned off isn't offered (decision 0029).
+ *
+ * @returns The options.
+ */
+export function useOfferedLanguageOptions(): SelectOption[] {
+  const offered = useOfferedLocales();
+  return LANGUAGE_OPTIONS.filter((option) => offered.some((locale) => locale === option.value));
+}
+
+/**
  * The options for choosing someone's language: Default first, described with
  * the language it stands for now ("Follows Adiutor's default language, now
- * English (US)."), then every language. Reads `common.language` from the root
- * provider.
+ * English (US)."), then the languages Adiutor offers. Reads `common.language`
+ * from the root provider.
  *
  * @param defaultLocale - Adiutor's default language, as chosen on the staff page.
  * @returns The options.
@@ -55,7 +68,7 @@ export function useLanguageChoiceOptions(defaultLocale: Locale): SelectOption[] 
       description: t('followDefaultDescription', { language: LOCALE_NAMES[defaultLocale] }),
       icon: <FollowDefaultIcon />,
     },
-    ...LANGUAGE_OPTIONS,
+    ...useOfferedLanguageOptions(),
   ];
 }
 

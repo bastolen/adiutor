@@ -6,9 +6,11 @@ import { headers } from 'next/headers';
 import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
+import { OfferedLanguagesProvider } from '@/components/language/offered-languages';
 import fontVariables from '@/lib/fonts';
 import IntlClientProvider from '@/lib/i18n/intl-client-provider';
 import { pickMessages } from '@/lib/i18n/messages';
+import { requestLanguageSettings } from '@/lib/i18n/request-locale';
 import { NONCE_HEADER } from '@/lib/request/csp';
 import { themeScript } from '@/lib/theme';
 
@@ -45,7 +47,9 @@ export const instant = false;
  *
  * `<html lang>` is the request's language (docs/i18n.md), and the shared
  * `common` messages reach every client component through the provider;
- * pages pass their own namespaces with `ClientMessages`.
+ * pages pass their own namespaces with `ClientMessages`. The languages
+ * Adiutor offers come along too (`OfferedLanguagesProvider`), for the
+ * language choices.
  *
  * The inline theme script sets `data-theme` on `<html>` before the page
  * paints, so `suppressHydrationWarning` tells React that this attribute is
@@ -63,10 +67,11 @@ export const instant = false;
  * @returns The document shell.
  */
 export default async function RootLayout({ children }: LayoutProps<'/'>) {
-  const [nonce, locale, messages] = await Promise.all([
+  const [nonce, locale, messages, languages] = await Promise.all([
     headers().then((list) => list.get(NONCE_HEADER) ?? undefined),
     getLocale(),
     getMessages(),
+    requestLanguageSettings(),
   ]);
   return (
     <html
@@ -81,7 +86,9 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
       </head>
       <body className="bg-background text-foreground antialiased">
         <IntlClientProvider locale={locale} messages={pickMessages(messages, ['common'])}>
-          {children}
+          <OfferedLanguagesProvider offered={languages.offered}>
+            {children}
+          </OfferedLanguagesProvider>
         </IntlClientProvider>
         <Suspense fallback={null}>
           <ReloadWhenActingAsChanges />

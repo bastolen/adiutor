@@ -59,9 +59,10 @@ come next.
   Jobs, where staff Admins also run, pause and retry them. See [Background jobs](docs/jobs.md).
 - **Accessible, in light and dark mode.** Built to meet WCAG 2.2 AA, with full keyboard support.
   See [Design, accessibility and dark mode](docs/design.md).
-- **English, Dutch and Spanish.** The staff choose Adiutor's default language, which everyone
-  follows until they choose their own on the sign-in page or their account, without the address
-  changing; emails reach them in it. Invitations go out in the language the sender picks. See
+- **English, Dutch and Spanish.** The staff choose which of them Adiutor offers and its default
+  language, which everyone follows until they choose their own on the sign-in page or their
+  account, without the address changing; emails reach them in it. Invitations go out in the
+  language the sender picks. See
   [Languages](docs/i18n.md).
 
 **Coming next:** emails about requests, and an approval step for finished work.

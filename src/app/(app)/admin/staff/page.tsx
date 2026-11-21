@@ -1,6 +1,6 @@
 /**
  * @file The staff page, served at `/admin/staff`: the staff name, Adiutor's
- * default language, the prefix of request numbers and its people (staff), with invitations and
+ * languages (the default and the ones it offers), the prefix of request numbers and its people (staff), with invitations and
  * invite links to join it, each sortable and paginated. Platform Admins only (`staff:manage`).
  */
 import { getTranslations } from 'next-intl/server';
@@ -39,7 +39,7 @@ import InviteLinksCard from '../../_people/invite-links-card';
 import PersonCell from '../../_people/person-cell';
 import RoleSelect from '../../_people/role-select';
 import { changeStaffRoleAction, removeFromStaffAction } from '../../_people/staff-actions';
-import DefaultLanguageForm from './default-language-form';
+import LanguagesForm from './languages-form';
 import RequestPrefixForm from './request-prefix-form';
 import RequestTypesCard from './request-types-card';
 import StaffNameForm from './staff-name-form';
@@ -78,7 +78,6 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
     listRequestTypes(appContext, actor),
   ]);
   const url = createPageUrl('/admin/staff', {}, await getTranslations('tables'));
-  const language = await getTranslations('common.language');
   const table = url.table(STAFF_TABLE, { ...staffRequested, page: members.page });
   const invitationsTable = url.table(INVITATIONS_TABLE, {
     ...invitationsRequested,
@@ -90,6 +89,7 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
     <ClientMessages
       namespaces={[
         'admin.staff.name',
+        'admin.staff.languages',
         'admin.staff.requestNumbers',
         'admin.staff.requestTypes',
         'people',
@@ -107,8 +107,8 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
           <StaffNameForm name={settings.name} />
         </Card>
 
-        <Card title={language('defaultLabel')} description={language('defaultDescription')}>
-          <DefaultLanguageForm defaultLocale={settings.defaultLocale} />
+        <Card title={t('languages.title')} description={t('languages.description')}>
+          <LanguagesForm defaultLocale={settings.defaultLocale} offered={settings.offeredLocales} />
         </Card>
 
         <Card title={t('requestNumbers.title')} description={t('requestNumbers.description')}>

@@ -17,7 +17,6 @@ import { type Paged, resolveTableState, type TableState } from '@/lib/tables/tab
 import { type PeopleSort, STAFF_TABLE } from '@/lib/tables/tables';
 import {
   languageSettingsSchema,
-  localeSchema,
   requestPrefixSchema,
   staffNameSchema,
   staffRoleSchema,
@@ -155,31 +154,6 @@ export async function setRequestPrefix(
   const requestPrefix = requestPrefixSchema.parse(prefix);
   await ctx.db.transaction((tx) => saveStaffSettings(tx, { requestPrefix }));
   return requestPrefix;
-}
-
-/**
- * Sets Adiutor's default language: the language of everyone who hasn't
- * chosen one (no language cookie), and of emails to people without a saved
- * language outside a request. If the settings row is missing (it was lost),
- * this creates it again, with the name users then see ("Adiutor"). Not a
- * security change, so no audit event, like a person's own language.
- *
- * @param ctx - Service context.
- * @param actor - The acting user; needs `staff:manage`.
- * @param locale - The language, as the form sent it.
- * @returns The saved language.
- * @throws {ZodError} When it isn't one of the languages.
- */
-export async function setDefaultLocale(
-  ctx: ServiceContext,
-  actor: Actor,
-  locale: unknown,
-): Promise<Locale> {
-  assertNotSignedInAs(actor);
-  assertPermission(getGlobalPermissions(actor), 'staff:manage');
-  const defaultLocale = localeSchema.parse(locale);
-  await ctx.db.transaction((tx) => saveStaffSettings(tx, { defaultLocale }));
-  return defaultLocale;
 }
 
 /**
