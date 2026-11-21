@@ -28,10 +28,14 @@ function loadRequestLinks() {
   return import('../../server/auth/request-links');
 }
 
-/** The link's query: its token, and whether the confirmation page's Continue sent it. */
+/**
+ * The link's query: its token, whether the confirmation page's Continue sent
+ * it, and the entry it points at (checked as an entry's ID where it's used).
+ */
 const requestLinkQuerySchema = z.object({
   token: z.string().max(256),
   confirmed: z.string().max(8).optional(),
+  entry: z.string().max(64).optional(),
 });
 
 /**
@@ -60,6 +64,7 @@ export default function requestLinkSignIn() {
           const outcome = await links.followRequestLink(ctx, {
             token: ctx.query.token,
             confirmed: ctx.query.confirmed === '1',
+            entry: ctx.query.entry ?? null,
           });
           if (outcome.signIn) {
             const found = await ctx.context.internalAdapter.findUserById(outcome.signIn.userId);

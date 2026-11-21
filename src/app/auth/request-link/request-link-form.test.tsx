@@ -72,6 +72,30 @@ describe('RequestLinkForm', () => {
     expect(button).toHaveAttribute('aria-busy', 'true');
   });
 
+  it('passes the entry the link points at on with Continue, and drops anything else', () => {
+    const entry = '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b';
+    searchParams = new URLSearchParams({ token: 'abc', entry });
+    const { unmount } = render(<RequestLinkForm account={JANE} {...REQUEST} signedIn={null} />);
+
+    const form = defined(
+      screen.getByRole('button', { name: 'Continue to AD-142' }).closest('form'),
+      'the form',
+    );
+    expect(hiddenFields(form)).toEqual({ token: 'abc', confirmed: '1', entry });
+    unmount();
+
+    searchParams = new URLSearchParams({ token: 'abc', entry: '//adiutor.dev' });
+    render(<RequestLinkForm account={JANE} {...REQUEST} signedIn={null} />);
+    expect(
+      hiddenFields(
+        defined(
+          screen.getByRole('button', { name: 'Continue to AD-142' }).closest('form'),
+          'the form',
+        ),
+      ),
+    ).toEqual({ token: 'abc', confirmed: '1' });
+  });
+
   it("keeps the email's anchor when it names a part of the request, and drops others", () => {
     searchParams = new URLSearchParams({ token: 'abc' });
     window.location.hash = '#entry-1';

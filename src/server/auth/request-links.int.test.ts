@@ -107,15 +107,16 @@ function newBrowser() {
      * @param headers - The `Sec-Fetch-*` headers of how it was opened.
      * @param options - Options.
      * @param options.confirmed - Whether it's the confirmation page's Continue.
+     * @param options.entry - The entry the link names, if any.
      * @returns Where the response sends the browser, as a path and query.
      */
     async open(
       token: string,
       headers: Record<string, string>,
-      { confirmed = false } = {},
+      { confirmed = false, entry = null }: { confirmed?: boolean; entry?: string | null } = {},
     ): Promise<string> {
       const response = await auth.handler(
-        new Request(`${env.BETTER_AUTH_URL}${requestLinkPath(token, { confirmed })}`, {
+        new Request(`${env.BETTER_AUTH_URL}${requestLinkPath(token, { confirmed, entry })}`, {
           headers: { ...headers, cookie: cookie() },
         }),
       );
@@ -334,6 +335,50 @@ describe('the link in an email about a request', () => {
       `/auth/request-link?token=${token}`,
     );
     expect(await sessionsOf(client)).toEqual([]);
+  });
+
+  it('passes the entry it points at on to the request, the confirmation page and the sign-in page', async () => {
+    const { client, requestId } = await clientWithRequest();
+    const token = await createRequestLink(db, { userId: client, requestId });
+    const entry = '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b';
+
+    // A scanner's visit keeps it on the way to the confirmation page.
+    expect(await newBrowser().open(token, SCANNER, { entry })).toBe(
+      `/auth/request-link?token=${token}&entry=${entry}`,
+    );
+    // A click opens the request at it.
+    const browser = newBrowser();
+    expect(await browser.open(token, CLICK_IN_EMAIL, { entry })).toBe(
+      `${REQUEST_PAGE}?entry=${entry}`,
+    );
+    // Clicked again where it signed in, it still names it.
+    expect(await browser.open(token, CLICK_IN_EMAIL, { entry })).toBe(
+      `${REQUEST_PAGE}?entry=${entry}`,
+    );
+    // Past its sign-ins for the hour, the sign-in page returns to it.
+    const [link] = await db.select({ id: requestSignInLink.id }).from(requestSignInLink);
+    await fillRateLimitBucket(
+      db,
+      `request-link-sign-in:link:${defined(link, 'the link').id}`,
+      RATE_LIMITS.requestLinkSignInsPerLink.limit,
+    );
+    expect(await newBrowser().open(token, CLICK_IN_EMAIL, { entry })).toBe(
+      `/auth?${new URLSearchParams({ callbackURL: `${REQUEST_PAGE}?entry=${entry}` })}`,
+    );
+  });
+
+  it('leaves out an entry that isn’t an entry’s ID', async () => {
+    const { client, requestId } = await clientWithRequest();
+    const token = await createRequestLink(db, { userId: client, requestId });
+    const response = await auth.handler(
+      new Request(
+        `${env.BETTER_AUTH_URL}/api/auth/request-link/sign-in?token=${token}&entry=%2F%2Fadiutor.dev`,
+        { headers: CLICK_IN_EMAIL },
+      ),
+    );
+
+    const location = new URL(defined(response.headers.get('location'), 'the redirect'));
+    expect(`${location.pathname}${location.search}`).toBe(REQUEST_PAGE);
   });
 
   it('counts tokens that are no link against the IP address', async () => {

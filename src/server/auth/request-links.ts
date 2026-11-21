@@ -26,7 +26,7 @@ import { getPermissions } from '@/lib/authz/permissions';
 import ipAddressOptions from '@/lib/request/ip-address-options';
 import isPersonsClick from '@/lib/request/persons-click';
 import { requestInfoFromHeaders } from '@/lib/request/request-info';
-import { formatRequestNumber, requestPath } from '@/lib/requests';
+import { formatRequestNumber, requestPathWithEntry } from '@/lib/requests';
 import { REQUEST_LINK_DAYS, requestLinkPagePath } from '@/lib/sign-in/request-link';
 import { generateToken, hashToken } from '@/lib/sign-in/tokens';
 
@@ -206,14 +206,17 @@ export interface RequestLinkContext extends SessionCookieContext {
  * @param link - The link.
  * @param link.token - Its token (unvalidated input is fine).
  * @param link.confirmed - Whether the confirmation page's Continue sent it.
+ * @param link.entry - The entry the link points at, passed on wherever it goes (`?entry=`), so
+ *   the request's page shows it whatever the reader's activity filter; anything that isn't an
+ *   entry's ID is left out.
  * @returns Where to go, and whom to sign in first.
  */
 export async function followRequestLink(
   ctx: RequestLinkContext,
-  { token, confirmed }: { token: string; confirmed: boolean },
+  { token, confirmed, entry = null }: { token: string; confirmed: boolean; entry?: string | null },
 ): Promise<RequestLinkOutcome> {
   const headers = ctx.headers ?? new Headers();
-  const page = requestLinkPagePath(token);
+  const page = requestLinkPagePath(token, { entry });
   const toPage = { location: page, fallback: page };
   if (!isPersonsClick(headers)) {
     return toPage;
@@ -240,7 +243,7 @@ export async function followRequestLink(
   if (view.state !== 'usable') {
     return toPage;
   }
-  const location = requestPath(view.number);
+  const location = requestPathWithEntry(view.number, entry);
   const browser = await signedSession(ctx);
   if (browser?.userId === view.account.userId) {
     return { location, fallback: page };

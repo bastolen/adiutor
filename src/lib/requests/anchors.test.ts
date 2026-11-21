@@ -4,7 +4,15 @@
 import { describe, expect, it } from 'vitest';
 
 import { isSectionId } from '../redirect';
-import { DESCRIPTION_ANCHOR, entryAnchor, isEntryAnchor, requestPathAt } from './anchors';
+import {
+  DESCRIPTION_ANCHOR,
+  entryAnchor,
+  entryIdOf,
+  isEntryAnchor,
+  isEntryId,
+  requestPathAt,
+  requestPathWithEntry,
+} from './anchors';
 
 /** An entry's ID, as the database gives it. */
 const ENTRY_ID = '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b';
@@ -30,5 +38,16 @@ describe('anchors', () => {
     );
     expect(requestPathAt(142, DESCRIPTION_ANCHOR)).toBe('/requests/142#request-description');
     expect(requestPathAt(142, null)).toBe('/requests/142');
+  });
+
+  it('reads the entry an anchor names, and names it in a request’s address', () => {
+    expect(entryIdOf(entryAnchor(ENTRY_ID))).toBe(ENTRY_ID);
+    expect(entryIdOf(DESCRIPTION_ANCHOR)).toBeNull();
+    expect(entryIdOf(null)).toBeNull();
+    expect(isEntryId(ENTRY_ID)).toBe(true);
+    expect(isEntryId('//adiutor.dev')).toBe(false);
+    expect(requestPathWithEntry(142, ENTRY_ID)).toBe(`/requests/142?entry=${ENTRY_ID}`);
+    expect(requestPathWithEntry(142, 'junk')).toBe('/requests/142');
+    expect(requestPathWithEntry(142, null)).toBe('/requests/142');
   });
 });

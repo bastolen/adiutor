@@ -13,7 +13,7 @@ import Alert from '@/components/ui/alert';
 import AuthHeading from '@/components/ui/auth-heading';
 import Button from '@/components/ui/button';
 import IconTile from '@/components/ui/icon-tile';
-import { requestPath } from '@/lib/requests';
+import { requestPathWithEntry } from '@/lib/requests';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import { REQUEST_LINK_DAYS } from '@/lib/sign-in/request-link';
 import appContext from '@/server/app-context';
@@ -47,16 +47,18 @@ function SignedInAsSomeone() {
 }
 
 /**
- * The sign-in page, returning to the request when the link names one.
+ * The sign-in page, returning to the request (and the entry the link points
+ * at) when the link names one.
  *
  * @param view - What the link is.
+ * @param entry - The entry the link points at, if any.
  * @returns The address.
  */
-function signInHref(view: RequestLinkView | null): string {
+function signInHref(view: RequestLinkView | null, entry: string | null = null): string {
   if (view === null || view.state === 'unknown') {
     return '/auth';
   }
-  return `/auth?${new URLSearchParams({ callbackURL: requestPath(view.number) })}`;
+  return `/auth?${new URLSearchParams({ callbackURL: requestPathWithEntry(view.number, entry) })}`;
 }
 
 /**
@@ -76,6 +78,8 @@ export default async function RequestLinkStep({
 }) {
   const [params, t] = await Promise.all([searchParams, getTranslations('auth')]);
   const token = searchParam(params.token);
+  // The entry the link points at, passed on to the request (checked where it's used).
+  const entry = searchParam(params.entry) ?? null;
   const unusable = t('requestLink.unusable', { days: REQUEST_LINK_DAYS });
   if (!token) {
     return <UnusableLink description={unusable} href={signInHref(null)} />;
@@ -99,7 +103,7 @@ export default async function RequestLinkStep({
     throw error;
   }
   if (view.state !== 'usable') {
-    return <UnusableLink description={unusable} href={signInHref(view)} />;
+    return <UnusableLink description={unusable} href={signInHref(view, entry)} />;
   }
 
   const actor = await getOptionalActor();
@@ -110,7 +114,7 @@ export default async function RequestLinkStep({
     <RequestLinkForm
       account={{ name: view.account.name, email: view.account.email }}
       reference={view.reference}
-      requestHref={requestPath(view.number)}
+      requestHref={requestPathWithEntry(view.number, entry)}
       signedIn={
         actor && {
           name: actor.name,

@@ -20,6 +20,7 @@ import IconTile from '@/components/ui/icon-tile';
 import { usePageRestored } from '@/components/ui/use-page-restored';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import { sectionFromHash } from '@/lib/redirect';
+import { ENTRY_PARAM, isEntryId } from '@/lib/requests';
 import { REQUEST_LINK_CONFIRMED_PARAM, REQUEST_LINK_URL_PATH } from '@/lib/sign-in/request-link';
 
 /** Whoever is signed in in this browser, as the page names them. */
@@ -34,7 +35,7 @@ interface RequestLinkFormProps {
   account: NamedAccount;
   /** The request it opens, as people see its number, e.g. "AD-142". */
   reference: string;
-  /** The request's page. */
+  /** The request's page, naming the entry the link points at (`?entry=`), if any. */
   requestHref: string;
   /** Whoever is signed in in this browser, or `null`. */
   signedIn: SignedInAccount | null;
@@ -78,7 +79,7 @@ function sameName(first: NamedAccount, second: NamedAccount): boolean {
  * @param props - Component props.
  * @param props.account - The account the link signs in to.
  * @param props.reference - The request's number as people see it.
- * @param props.requestHref - The request's page.
+ * @param props.requestHref - The request's page, with the entry the link points at.
  * @param props.signedIn - Whoever is signed in in this browser.
  * @returns The form.
  */
@@ -102,6 +103,8 @@ export default function RequestLinkForm({
     () => null,
   );
   const token = searchParams.get('token') ?? '';
+  // The entry the link points at: Continue passes it on to the request.
+  const entry = searchParams.get(ENTRY_PARAM);
   const anchor = section ? `#${section}` : '';
 
   // Makes the button usable again when the browser shows the page from its
@@ -152,6 +155,7 @@ export default function RequestLinkForm({
           <>
             <input type="hidden" name="token" value={token} />
             <input type="hidden" name={REQUEST_LINK_CONFIRMED_PARAM} value="1" />
+            {isEntryId(entry) && <input type="hidden" name={ENTRY_PARAM} value={entry} />}
           </>
         )}
         <Button type="submit" fullWidth loading={pending} disabled={!inBrowser}>

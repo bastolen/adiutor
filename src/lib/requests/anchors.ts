@@ -46,6 +46,42 @@ export function isEntryAnchor(anchor: string | null): anchor is string {
 }
 
 /**
+ * Checks whether a value is an entry's ID (a UUID, in lowercase), as an
+ * address may name it (`?entry=<ID>`).
+ *
+ * @param value - The value, e.g. a query parameter.
+ * @returns Whether it is one.
+ */
+export function isEntryId(value: unknown): value is string {
+  return typeof value === 'string' && ENTRY_ID.test(value);
+}
+
+/**
+ * The ID of the entry an anchor names.
+ *
+ * @param anchor - The anchor, or `null`.
+ * @returns The entry's ID, or `null` for any other anchor.
+ */
+export function entryIdOf(anchor: string | null): string | null {
+  return isEntryAnchor(anchor) ? anchor.slice(ENTRY_ANCHOR_PREFIX.length) : null;
+}
+
+/**
+ * The address of a request's page, naming the entry a link points at in its
+ * query (`?entry=<ID>`), so the page shows it whatever the reader's activity
+ * filter. Anything that isn't an entry's ID is left out.
+ *
+ * @param number - The request's number.
+ * @param entryId - The entry's ID, or `null` for none.
+ * @returns The path, e.g. `/requests/142?entry=<ID>`.
+ */
+export function requestPathWithEntry(number: number, entryId: string | null | undefined): string {
+  return isEntryId(entryId)
+    ? `${requestPath(number)}?${ENTRY_PARAM}=${entryId}`
+    : requestPath(number);
+}
+
+/**
  * The address of a request's page opened at an anchor: an entry is named in
  * the query too (`?entry=<ID>#entry-<ID>`), the description by its anchor only.
  *
@@ -54,11 +90,6 @@ export function isEntryAnchor(anchor: string | null): anchor is string {
  * @returns The path, e.g. `/requests/142?entry=<ID>#entry-<ID>`.
  */
 export function requestPathAt(number: number, anchor: string | null): string {
-  if (anchor === null) {
-    return requestPath(number);
-  }
-  const query = isEntryAnchor(anchor)
-    ? `?${ENTRY_PARAM}=${anchor.slice(ENTRY_ANCHOR_PREFIX.length)}`
-    : '';
-  return `${requestPath(number)}${query}#${anchor}`;
+  const path = requestPathWithEntry(number, entryIdOf(anchor));
+  return anchor === null ? path : `${path}#${anchor}`;
 }

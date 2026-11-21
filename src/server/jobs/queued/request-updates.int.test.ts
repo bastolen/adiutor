@@ -143,7 +143,7 @@ describe('the emails about requests', () => {
     expect(textTo('casey@adiutor.test')).toContain('sam proposed a solution.');
     expect(textTo('casey@adiutor.test')).toContain('Does this solve your request?');
     expect(textTo('casey@adiutor.test').match(/https?:\/\/\S+/)?.[0]).toMatch(
-      /^https:\/\/adiutor\.test\/api\/auth\/request-link\/sign-in\?token=[\w-]+#entry-[0-9a-f-]{36}$/,
+      /^https:\/\/adiutor\.test\/api\/auth\/request-link\/sign-in\?token=[\w-]+&entry=([0-9a-f-]{36})#entry-\1$/,
     );
     const [approve, deny] = links('casey@adiutor.test') ?? [];
     expect(approve).toMatch(/\/approve$/);
@@ -229,6 +229,7 @@ describe('the emails about requests', () => {
       .select({ id: requestEntry.id })
       .from(requestEntry)
       .where(and(eq(requestEntry.requestId, raised.id), eq(requestEntry.kind, 'comment')));
+    expect(watcherLink.searchParams.get('entry')).toBe(reply?.id);
     expect(watcherLink.hash).toBe(`#entry-${reply?.id}`);
     const token = watcherLink.searchParams.get('token') ?? '';
     expect(

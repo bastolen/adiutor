@@ -35,4 +35,20 @@ describe('request links', () => {
   it('confirm on a page of the app', () => {
     expect(requestLinkPagePath('abc')).toBe('/auth/request-link?token=abc');
   });
+
+  it('pass the entry they point at on, and leave out anything else', () => {
+    const entry = '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b';
+    expect(requestLinkPath('abc', { entry })).toBe(
+      `/api/auth/request-link/sign-in?token=abc&entry=${entry}`,
+    );
+    expect(requestLinkPath('abc', { confirmed: true, entry })).toBe(
+      `/api/auth/request-link/sign-in?token=abc&entry=${entry}&confirmed=1`,
+    );
+    expect(requestLinkPagePath('abc', { entry })).toBe(
+      `/auth/request-link?token=abc&entry=${entry}`,
+    );
+    expect(requestLinkPath('abc', { entry: '//adiutor.dev' })).toBe(
+      '/api/auth/request-link/sign-in?token=abc',
+    );
+  });
 });

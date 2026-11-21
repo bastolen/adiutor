@@ -28,6 +28,11 @@ The choices behind it:
   the browser, or a link that no longer works gets the confirmation page.
 - **Anyone with the email can use it.** The email says so. A forwarded email lets the reader in as
   the recipient, as a forwarded sign-in link always did, now for longer.
+- **It opens the request at the news the email tells of.** The link names that entry
+  (`entry=<ID>`, an entry's ID or nothing) and passes it on to the request, also through the
+  confirmation page, so the reader's activity filter never hides it; the anchor
+  (`#entry-<ID>`) rides along. The entry decides nothing about signing in, isn't secret (its ID is
+  on the request's page), and the page still shows only what its reader may read.
 
 ## Consequences
 
