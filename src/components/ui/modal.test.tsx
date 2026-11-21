@@ -6,7 +6,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import Alert from './alert';
 import Modal from './modal';
@@ -120,6 +120,37 @@ describe('Modal', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Where it goes on' })).toHaveFocus(),
     );
+  });
+
+  it('gives the focus back to what opened it when what it was told has nothing to focus', async () => {
+    const user = userEvent.setup();
+    const finalFocus = vi.fn(() => false);
+    /**
+     * A page with a button that opens a dialog, which has nothing of its own to focus on closing.
+     *
+     * @returns The page.
+     */
+    function NothingToFocusPage() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Add a link
+          </button>
+          <Modal open={open} onOpenChange={setOpen} title="Link" finalFocus={finalFocus}>
+            <button type="button">Save</button>
+          </Modal>
+        </>
+      );
+    }
+    render(<NothingToFocusPage />);
+
+    await user.click(screen.getByRole('button', { name: 'Add a link' }));
+    await screen.findByRole('dialog');
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Add a link' })).toHaveFocus());
+    expect(finalFocus).toHaveBeenCalledOnce();
   });
 
   it('gives the focus back to what opened it when it’s told nothing else', async () => {
