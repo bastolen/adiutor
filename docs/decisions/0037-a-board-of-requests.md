@@ -25,10 +25,15 @@ How it works is in [The board](../requests.md#the-board). The choices behind it:
   `import()` once the page is there, with a grip on each card, lanes that say "Can't move here",
   and our own announcements in three languages. A drop takes the menu's path; a refused one sends
   nothing and says why. It never replaces the menu.
+- **Five columns, two with halves:** Open, To do and In progress each have a column; Waiting holds
+  Waiting for the company above Waiting for approval, and Closed holds Done above Cancelled. The
+  halves stay lanes of their own (a count, cards, "See all", a drop target each), so the service,
+  the moves and the counts stay per status, and the board fits a wide screen without hiding a
+  status. A drop on a half takes that status; Waiting for approval's half never takes one.
 - **No order of their own:** cards sit in each lane in the list's sort. A manual order would need a
   rank column, a migration and a choice between one order for everyone and one per person.
 - **Lanes aren't tables,** so they have no pages: an open lane shows the first 25, 50 or 100 cards
-  (one size for every lane), Done and Cancelled their latest 10 by last activity, and a lane that
+  (one size for every lane), Done and Cancelled their latest 5 each by last activity, and a lane that
   holds more links to the list of all of them (`?only=`). Each lane says its true count.
 - **A move names where it started** (`from`): a board stays open for long, so a move from one that's
   out of date is refused rather than overwriting a colleague's change, and the board shows the

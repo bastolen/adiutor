@@ -1571,7 +1571,7 @@ test.describe('the board of requests', () => {
   test('the lanes are reached and scrolled sideways with the keyboard', async ({ page }) => {
     await page.goto('/requests/board');
     const lanes = page.getByRole('group', { name: 'Lanes' });
-    // Seven lanes don't fit the content's width: the row scrolls, inside its own box.
+    // Five columns don’t fit the content’s width here: the row scrolls, inside its own box.
     await expect
       .poll(() => lanes.evaluate((element) => element.scrollWidth > element.clientWidth))
       .toBe(true);

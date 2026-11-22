@@ -30,6 +30,9 @@ import { useToast } from '@/components/ui/toast';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import cn from '@/lib/cn';
 import {
+  type BoardColumnKey,
+  boardColumnOf,
+  boardColumns,
   type BoardLaneState,
   moveRefusal,
   placeMovedCard,
@@ -39,7 +42,7 @@ import {
 import { moveRequestAction } from './board-actions';
 import BoardCard, { type BoardCardView } from './board-card';
 import type { BoardDrag, CardDrop, DraggedCard } from './board-drag';
-import BoardLane, { type LaneDropState } from './board-lane';
+import BoardColumn, { type LaneDropState } from './board-lane';
 
 /**
  * From tablet width (Tailwind's `md`, 48rem), where the lanes sit side by
@@ -127,11 +130,13 @@ interface BoardProps {
 /**
  * The lanes, each with its cards, and what moving one takes:
  *
- * - **The row:** from tablet width the lanes sit side by side in a box that
- *   scrolls sideways, named "Lanes", which the keyboard reaches (`tabIndex`)
- *   and scrolls with the arrow keys while it overflows, as a wide code block
- *   does; the page itself never scrolls sideways. Below tablet width they're
- *   stacked, and each folds away.
+ * - **The row:** five columns (`boardColumns`): Open, To do, In progress,
+ *   and Waiting and Closed with two lanes each, a half each. From tablet
+ *   width they sit side by side in a box that scrolls sideways, named
+ *   "Lanes", which the keyboard reaches (`tabIndex`) and scrolls with the
+ *   arrow keys while it overflows, as a wide code block does; the page itself
+ *   never scrolls sideways. Below tablet width they're stacked, and each
+ *   folds away. Moves, counts and drops stay per lane (per half).
  * - **Moving:** a card's Move menu lists the lanes it may go to. Done and
  *   Cancelled ask first (`ConfirmDialog`). The card moves to the top of its
  *   new lane at once (`useOptimistic` with `placeMovedCard`, counts too) and
@@ -158,7 +163,7 @@ interface BoardProps {
  *   lanes and as a toast; a drop on its own lane, between lanes or a drag
  *   given up leaves it where it was.
  *
- * The error, the open dialog, the folded lanes, the drag and what the live
+ * The error, the open dialog, the folded columns, the drag and what the live
  * region last said reset when the reader leaves the page
  * (`useTransientState`), and the busy cards when the moves end; the drag and
  * drop's effects clean up then too.
@@ -187,8 +192,8 @@ export default function Board({ lanes, names, seeAll, staffName }: BoardProps) {
   // The move that asks first, kept while its dialog closes so its words stay.
   const [asked, setAsked] = useTransientState<ConfirmedMove | null>(null);
   const [confirming, setConfirming] = useTransientState(false);
-  // The lanes folded away below tablet width.
-  const [folded, setFolded] = useTransientState<ReadonlySet<RequestStatus>>(new Set());
+  // The columns folded away below tablet width.
+  const [folded, setFolded] = useTransientState<ReadonlySet<BoardColumnKey>>(new Set());
   // Whether the row is wider than its box, so the keyboard needs to reach it to scroll it.
   const [scrolls, setScrolls] = useState(true);
   const boardRef = useRef<HTMLDivElement>(null);
@@ -287,8 +292,8 @@ export default function Board({ lanes, names, seeAll, staffName }: BoardProps) {
   const move = (card: BoardCardView, to: RequestStatus) => {
     setError(null);
     following.current = { id: card.id, lane: to };
-    // Below tablet width, a lane that's folded away opens to show the card arrive.
-    setFolded((current) => new Set([...current].filter((lane) => lane !== to)));
+    // Below tablet width, a column that's folded away opens to show the card arrive.
+    setFolded((current) => new Set([...current].filter((key) => key !== boardColumnOf(to))));
     startTransition(async () => {
       showMove({ card, to });
       const result = await moveRequestAction({
@@ -462,38 +467,43 @@ export default function Board({ lanes, names, seeAll, staffName }: BoardProps) {
         className={cn('relative rounded-xl md:overflow-x-auto', focusRing)}
       >
         <div className="flex flex-col gap-4 md:flex-row md:gap-3">
-          {shown.lanes.map((lane) => (
-            <BoardLane
-              key={lane.status}
-              status={lane.status}
-              name={names[lane.status]}
-              total={lane.total}
-              shown={lane.items.length}
-              seeAllHref={seeAll[lane.status]}
-              collapsed={folded.has(lane.status)}
-              drop={dropOf(lane.status)}
+          {boardColumns(shown.lanes).map(({ key, lanes: inColumn }) => (
+            <BoardColumn
+              key={key}
+              column={key}
+              name={
+                key === 'waiting' || key === 'closed' ? t('column', { column: key }) : names[key]
+              }
+              lanes={inColumn.map((lane) => ({
+                status: lane.status,
+                name: names[lane.status],
+                total: lane.total,
+                shown: lane.items.length,
+                seeAllHref: seeAll[lane.status],
+                drop: dropOf(lane.status),
+                cards: lane.items.map((card) => (
+                  <BoardCard
+                    key={card.id}
+                    card={card}
+                    names={names}
+                    busy={shown.moving.includes(card.id)}
+                    drag={dragKit}
+                    onChoose={choose}
+                  />
+                )),
+              }))}
+              collapsed={folded.has(key)}
               drag={dragKit}
               onToggle={() =>
                 setFolded((current) => {
                   const next = new Set(current);
-                  if (!next.delete(lane.status)) {
-                    next.add(lane.status);
+                  if (!next.delete(key)) {
+                    next.add(key);
                   }
                   return next;
                 })
               }
-            >
-              {lane.items.map((card) => (
-                <BoardCard
-                  key={card.id}
-                  card={card}
-                  names={names}
-                  busy={shown.moving.includes(card.id)}
-                  drag={dragKit}
-                  onChoose={choose}
-                />
-              ))}
-            </BoardLane>
+            />
           ))}
         </div>
       </div>

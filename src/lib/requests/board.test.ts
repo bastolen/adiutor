@@ -1,12 +1,14 @@
 /**
  * @file Tests for the board's rules: the lanes and their order, the closed
- * lanes, the audience a lane is worded for, why a drop is refused, and
- * placing a moved card.
+ * lanes, the columns they're grouped into, the audience a lane is worded
+ * for, why a drop is refused, and placing a moved card.
  */
 import { describe, expect, it } from 'vitest';
 
 import {
   BOARD_LANES,
+  boardColumnOf,
+  boardColumns,
   type BoardLaneState,
   isClosedLane,
   laneAudience,
@@ -100,5 +102,33 @@ describe('placing a moved card', () => {
   it('leaves the lanes as they are for a card that isn’t there, or a move to its own lane', () => {
     expect(placeMovedCard(lanes, 'missing', 'done')).toEqual(lanes);
     expect(placeMovedCard(lanes, 'a', 'in_progress')).toEqual(lanes);
+  });
+});
+
+describe('the board’s columns', () => {
+  it('group Waiting and Closed into two halves each, and give every other lane its own', () => {
+    const columns = boardColumns(BOARD_LANES.map((status) => ({ status, total: 0 })));
+
+    expect(columns.map(({ key, lanes }) => [key, lanes.map(({ status }) => status)])).toEqual([
+      ['open', ['open']],
+      ['todo', ['todo']],
+      ['in_progress', ['in_progress']],
+      ['waiting', ['waiting', 'proposed']],
+      ['closed', ['done', 'cancelled']],
+    ]);
+  });
+
+  it('keep each lane as it was, so counts and moves stay per half', () => {
+    const done = { status: 'done' as const, total: 7 };
+    const cancelled = { status: 'cancelled' as const, total: 2 };
+
+    expect(boardColumns([done, cancelled])).toEqual([{ key: 'closed', lanes: [done, cancelled] }]);
+  });
+
+  it('say which column a lane is in', () => {
+    expect(boardColumnOf('in_progress')).toBe('in_progress');
+    expect(boardColumnOf('proposed')).toBe('waiting');
+    expect(boardColumnOf('waiting')).toBe('waiting');
+    expect(boardColumnOf('cancelled')).toBe('closed');
   });
 });

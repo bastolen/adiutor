@@ -106,14 +106,17 @@ export {
 export {
   BOARD_LANES,
   BOARD_PATH,
+  boardColumnOf,
+  boardColumns,
   CLOSED_LANE_LIMIT,
+  GROUPED_LANES,
   isClosedLane,
   laneAudience,
   MOVE_REFUSALS,
   moveRefusal,
   placeMovedCard,
 } from './board';
-export type { BoardLaneState, MoveRefusal } from './board';
+export type { BoardColumn, BoardColumnKey, BoardLaneState, MoveRefusal } from './board';
 export { cleanMultilineText, linkTarget, splitLinks } from './text';
 export type { TextPart } from './text';
 export {

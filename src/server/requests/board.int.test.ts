@@ -2,7 +2,7 @@
  * @file Integration tests for the board of requests: who sees which cards,
  * the list's filters and sort on the lanes, priorities for the staff only,
  * the lanes each card may move to per role, the open lanes' size and every
- * lane's true count, the closed lanes' latest ten, and a deactivated
+ * lane's true count, the closed lanes' latest five each, and a deactivated
  * company's requests. Which roles may load the board is in the
  * authorization matrix.
  */
@@ -235,26 +235,35 @@ describe('listBoard: how many cards a lane shows', () => {
     expect(lane(larger, 'open').items).toHaveLength(27);
   });
 
-  it('shows the latest ten in Done and Cancelled, newest first, and counts them all', async () => {
+  it('shows the latest five in Done and in Cancelled, newest first, and counts them all', async () => {
     const company = await createCompany(db);
     const done = await inSequence(
-      Array.from({ length: 12 }, (_, index) => index),
+      Array.from({ length: 7 }, (_, index) => index),
       (index) => storeRequest(company.id, { title: `Done ${index}`, status: 'done' }),
     );
-    // Done 0 had activity last, Done 11 first.
+    const cancelled = await inSequence(
+      Array.from({ length: 6 }, (_, index) => index),
+      (index) => storeRequest(company.id, { title: `Cancelled ${index}`, status: 'cancelled' }),
+    );
+    // Done 0 and Cancelled 0 had activity last.
     await inSequence(
-      done.map((stored, index) => ({ id: stored.id, minutesAgo: index + 1 })),
+      [...done, ...cancelled].map((stored, index) => ({
+        id: stored.id,
+        minutesAgo: (index % 7) + 1 + (index >= 7 ? 100 : 0),
+      })),
       ({ id, minutesAgo }) => setActivity(id, minutesAgo),
     );
-    await storeRequest(company.id, { title: 'Cancelled', status: 'cancelled' });
     const support = await staffActor(db, 'support');
 
     const board = await listBoard(ctx, support, { size: 100 });
     expect(titlesIn(board, 'done')).toEqual(
-      Array.from({ length: 10 }, (_, index) => `Done ${index}`),
+      Array.from({ length: 5 }, (_, index) => `Done ${index}`),
     );
-    expect(lane(board, 'done').total).toBe(12);
-    expect(titlesIn(board, 'cancelled')).toEqual(['Cancelled']);
+    expect(lane(board, 'done').total).toBe(7);
+    expect(titlesIn(board, 'cancelled')).toEqual(
+      Array.from({ length: 5 }, (_, index) => `Cancelled ${index}`),
+    );
+    expect(lane(board, 'cancelled').total).toBe(6);
   });
 });
 

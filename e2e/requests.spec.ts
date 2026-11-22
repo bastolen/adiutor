@@ -2490,8 +2490,8 @@ test('a lane of the board with more requests than it shows opens the list of the
   page,
 }) => {
   const prefix = `Closed for the board ${randomUUID().slice(0, 8)}`;
-  // Eleven done requests: one more than the Done lane shows.
-  await Array.from({ length: 11 }, (_, index) => index).reduce(async (previous, index) => {
+  // Six done requests: one more than the Done half of the Closed column shows.
+  await Array.from({ length: 6 }, (_, index) => index).reduce(async (previous, index) => {
     await previous;
     await storeRequest({
       companySlug: COMPANY_SLUG,
@@ -2504,14 +2504,14 @@ test('a lane of the board with more requests than it shows opens the list of the
   await signIn(page, SUPPORT_STAFF);
   await openBoard(page, prefix);
   const done = boardLane(page, 'Done');
-  await expect(done.getByRole('link', { name: new RegExp(`^${prefix}`) })).toHaveCount(10);
-  await done.getByRole('link', { name: 'See all 11 requests in Done' }).click();
+  await expect(done.getByRole('link', { name: new RegExp(`^${prefix}`) })).toHaveCount(5);
+  await done.getByRole('link', { name: 'See all 6 requests in Done' }).click();
 
   await expect(page).toHaveURL(
     `/requests?only=done&q=${encodeURIComponent(prefix).replace(/%20/g, '+')}`,
   );
   await expect(main(page)).toContainText('Only requests with this status:');
-  await expect(requestRows(page)).toHaveCount(11);
+  await expect(requestRows(page)).toHaveCount(6);
 });
 
 test('a card dragged on the board to a lane it may go to moves there', async ({ page }) => {
@@ -2561,4 +2561,101 @@ test('a card dragged on the board to a lane it can’t go to stays, and the boar
   await expect(boardLane(page, 'Open').getByRole('link', { name: title })).toBeVisible();
   await page.goto(`/requests/${number}`);
   await expect(detail(page, 'Status')).toHaveText('Open');
+});
+
+test.describe('the board’s Waiting and Closed columns, on a wide screen', () => {
+  // Wide enough for all five columns side by side, so every half is on screen to drag to and
+  // the row doesn't scroll during a drag.
+  test.use({ viewport: { width: 1600, height: 1000 } });
+
+  /**
+   * Stores a request of the test's own and opens the board, signed in as
+   * the staff, narrowed down to it.
+   *
+   * @param page - The browser page.
+   * @param title - The request's title.
+   * @returns The request's number and its card's grip.
+   */
+  async function boardWith(page: Page, title: string) {
+    const number = await storeRequest({
+      companySlug: COMPANY_SLUG,
+      raisedBy: REQUESTS_CLIENT.email,
+      title,
+      status: 'in_progress',
+    });
+    await signIn(page, SUPPORT_STAFF);
+    await openBoard(page, title);
+    const grip = boardLane(page, 'In progress')
+      .getByRole('listitem')
+      .filter({ hasText: title })
+      .locator('[data-drag-handle]');
+    await expect(grip).toBeVisible();
+    return { number, grip };
+  }
+
+  test('a card dragged to Closed’s upper half is marked as done, after its question', async ({
+    page,
+  }) => {
+    const title = `A card to drag to Done ${randomUUID().slice(0, 8)}`;
+    const { number, grip } = await boardWith(page, title);
+    await expect(
+      page.getByRole('region', { name: /^Closed, \d+ requests?$/ }).getByRole('heading', {
+        level: 3,
+      }),
+    ).toHaveText([/^Done/, /^Cancelled/]);
+
+    await grip.dragTo(boardLane(page, 'Done'));
+    await page
+      .getByRole('alertdialog', { name: `Mark AD-${number} as done?` })
+      .getByRole('button', { name: 'Mark as done' })
+      .click();
+
+    await expect(toasts(page)).toContainText(`AD-${number} moved to Done.`);
+    await expect(boardLane(page, 'Done').getByRole('link', { name: title })).toBeVisible();
+  });
+
+  test('a card dragged to Closed’s lower half is cancelled, after its question', async ({
+    page,
+  }) => {
+    const title = `A card to drag to Cancelled ${randomUUID().slice(0, 8)}`;
+    const { number, grip } = await boardWith(page, title);
+
+    await grip.dragTo(boardLane(page, 'Cancelled'));
+    await page
+      .getByRole('alertdialog', { name: `Cancel AD-${number}?` })
+      .getByRole('button', { name: 'Cancel request' })
+      .click();
+
+    await expect(toasts(page)).toContainText(`AD-${number} moved to Cancelled.`);
+    await expect(boardLane(page, 'Cancelled').getByRole('link', { name: title })).toBeVisible();
+  });
+
+  test('a card dragged to Waiting’s upper half waits for the company', async ({ page }) => {
+    const title = `A card to drag to Waiting ${randomUUID().slice(0, 8)}`;
+    const { number, grip } = await boardWith(page, title);
+
+    await grip.dragTo(boardLane(page, 'Waiting for the company'));
+
+    await expect(toasts(page)).toContainText(`AD-${number} moved to Waiting for the company.`);
+    await expect(
+      boardLane(page, 'Waiting for the company').getByRole('link', { name: title }),
+    ).toBeVisible();
+  });
+
+  test('a card dragged to Waiting’s lower half stays, since approval comes with a solution', async ({
+    page,
+  }) => {
+    const title = `A card that can’t wait for approval ${randomUUID().slice(0, 8)}`;
+    const { number, grip } = await boardWith(page, title);
+
+    await grip.dragTo(boardLane(page, 'Waiting for approval'));
+
+    await expect(main(page).getByRole('alert')).toContainText(
+      `AD-${number} waits for approval only once a reply is sent as its solution.`,
+    );
+    await expect(boardLane(page, 'In progress').getByRole('link', { name: title })).toBeVisible();
+    await expect(
+      boardLane(page, 'Waiting for approval').getByRole('link', { name: title }),
+    ).toHaveCount(0);
+  });
 });

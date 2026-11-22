@@ -93,10 +93,12 @@ keyboard support.
   - **List services** take the table's state and return one page with the total
     (`Paged<T>`); each sort ends with the row's ID, so pages don't overlap and reversing is exact.
 - **The board** of requests (`/requests/board`, see [The board](requests.md#the-board)) is the one
-  view of records that isn't a table: a lane per status, each card a list item. Lanes have no
+  view of records that isn't a table: a lane per status, each card a list item, in five columns,
+  two of which (Waiting, Closed) hold two lanes as an upper and a lower half, each half with its
+  own heading (`h3` under the column's `h2`), count, "See all" and empty text. Lanes have no
   pagination footer (an open lane shows 25, 50 or 100 cards, chosen like rows per page with
-  `PageSizeLinks`; a lane with more links to the list), but they keep the list's sort, from its
-  Sort menu. The pattern:
+  `PageSizeLinks`; a closed one its latest 5; a lane with more links to the list), but they keep
+  the list's sort, from its Sort menu. The pattern:
   - **Moving without dragging:** every card the reader may move has a Move menu (a Radix menu)
     listing the lanes it may go to, which works with a single click or tap, the keyboard and
     screen readers alike. That's WCAG 2.5.7 Dragging Movements: whatever can be dragged can also
@@ -106,10 +108,12 @@ keyboard support.
   - **Dragging:** a decorative grip (`aria-hidden`, `cursor-grab`) in the card's corner drags it,
     never its title link (`draggable={false}`). The drag and drop library loads with `import()`
     once the page is there, from tablet width only (`board-drag.ts`, the one file that imports
-    it). While a card is dragged, the lanes say whether it can go there by more than colour: a
-    lane it may go to has a border in the highlight colour, and under the pointer a ring and "Let
-    go to move it here"; a lane it can't go to has a dashed border, the not-allowed cursor and
-    "Can't move here", and doesn't take the card (so the browser shows it can't be dropped). The
+    it). Each lane is a drop target, each half of a grouped column too. While a card is dragged,
+    the lanes say whether it can go there by more than colour: a lane it may go to has a border in
+    the highlight colour, and under the pointer a ring and what letting go does ("Let go to move it
+    here", "Let go to mark it as done", "Let go to cancel it"); a lane it can't go to has a dashed
+    border, the not-allowed cursor and "Can't move here", and doesn't take the card (so the browser
+    shows it can't be dropped). The
     card left behind is dashed and flat, its text as it was (never lighter through opacity). A
     drop that's refused sends nothing and says why, inline and as a toast. A live region of the
     board's own announces the drag in the reader's language (never a library's English).
@@ -119,11 +123,12 @@ keyboard support.
   - **Focus follows the card:** a card that changes lanes is removed and added again, so focus
     is put back on its Move button in the new lane (`data-request`), or on the lane's heading
     when the card isn't shown anymore; a lane is a `data-card` section for `restoreFocusIfLost`.
-  - **Width:** the lanes, at least 15rem each, sit in a row that scrolls sideways inside a named
-    group the keyboard reaches while it overflows (`tabIndex={0}`, like a wide code block), so
-    the page never scrolls sideways. On a wide screen the board is as wide as a request's page
-    (`WidePage`), so more lanes fit before the row scrolls. Below tablet width the
-    lanes are stacked, each folding away with its count (`aria-expanded` on its heading's button).
+  - **Width:** the columns, at least 14rem each, sit in a row that scrolls sideways inside a
+    named group the keyboard reaches while it overflows (`tabIndex={0}`, like a wide code block),
+    so the page never scrolls sideways. On a wide screen the board is as wide as a request's page
+    (`WidePage`), so all five columns fit side by side and the row doesn't scroll. Below tablet
+    width the columns are stacked, each folding away with its count (`aria-expanded` on its
+    heading's button), a grouped column with both its halves.
   - **Colours:** a lane is a step back from its cards in both modes (`muted` behind `surface`
     cards in light mode, `surface` behind `raised` ones in dark mode, where `surface` is the darker
     of the two); the count, the empty lane and the card's details use `muted-foreground`.

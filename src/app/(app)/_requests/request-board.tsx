@@ -174,8 +174,9 @@ interface RequestBoardProps {
  * header as the list (with the List | Board toggle), the list's filter bar
  * without its status links (the lanes are the statuses) and with "Cards per
  * lane" (25, 50 or 100, as links, like the list's rows per page), and the
- * lanes. Lanes aren't tables, so they have no pages: an open lane shows the
- * first cards in the list's sort, a closed one its latest ten, and a lane
+ * lanes, in five columns (Waiting and Closed hold two lanes each, a half
+ * each). Lanes aren't tables, so they have no pages: an open lane shows the
+ * first cards in the list's sort, a closed one its latest five, and a lane
  * with more links to the list of them all ("See all 132": `?only=` with the
  * board's filters and sort).
  *

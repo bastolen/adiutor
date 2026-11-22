@@ -52,6 +52,7 @@
       "cardsPerLane": "Tarjetas por columna",
       "cardsPerLaneOption": "{size, number} tarjetas por columna",
       "lanes": "Columnas",
+      "column": "{column, select, waiting {En espera} other {Cerradas}}",
       "laneHeading": "{lane}, {count, plural, one {# solicitud} other {# solicitudes}}",
       "emptyLane": "Ninguna solicitud",
       "seeAll": "Ver las {count, number}",
@@ -71,7 +72,7 @@
       "dropped": "{reference} soltada sobre {lane}.",
       "putBack": "{reference} se queda donde estaba.",
       "refused": "{reason, select, readOnly {{reference} se queda donde está: solo puedes leerla.} proposedComesWithReply {{reference} solo espera aprobación cuando se envía una respuesta como su solución.} approveOnRequest {Para cerrar {reference}, aprueba o rechaza su solución en la propia solicitud.} staffSetsThat {Solo {staff} puede mover {reference} a esa columna.} other {{reference} no se puede mover a esa columna desde donde está.}}",
-      "dropHere": "Suelta para moverla aquí"
+      "dropHere": "{status, select, done {Suelta para marcarla como resuelta} cancelled {Suelta para cancelarla} other {Suelta para moverla aquí}}"
     },
     "new": {
       "title": "Nueva solicitud",

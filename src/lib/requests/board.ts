@@ -1,6 +1,7 @@
 /**
  * @file The rules of the board of requests: a lane per status, in the order
- * a request moves through them, and cards that move between lanes. Which
+ * a request moves through them, in five columns (Waiting and Closed each hold
+ * two lanes, a half each), and cards that move between lanes. Which
  * moves a reader may make comes from the server with each card (`moves`,
  * from `statusChoices`); these rules only order the lanes, word them, say
  * why a drop is refused, and place a moved card until the server confirms.
@@ -15,8 +16,72 @@ export const BOARD_PATH = '/requests/board';
 /** The board's lanes, one per status, in the order a request moves through them. */
 export const BOARD_LANES: readonly RequestStatus[] = REQUEST_STATUSES;
 
-/** How many cards a closed lane (Done, Cancelled) shows: its latest; the list has the rest. */
-export const CLOSED_LANE_LIMIT = 10;
+/**
+ * How many cards a closed lane (Done, Cancelled, the halves of the Closed
+ * column) shows: its latest; the list has the rest.
+ */
+export const CLOSED_LANE_LIMIT = 5;
+
+/**
+ * The statuses that share a column of the board, a half each, the upper
+ * half first: Waiting (for the company, then for approval) and Closed (Done,
+ * then Cancelled). Every other status is a column of its own.
+ */
+export const GROUPED_LANES = {
+  waiting: ['waiting', 'proposed'],
+  closed: ['done', 'cancelled'],
+} as const satisfies Record<string, readonly [RequestStatus, RequestStatus]>;
+
+/** A column of the board: a status's own, or one of {@link GROUPED_LANES}. */
+export type BoardColumnKey =
+  | Exclude<RequestStatus, 'waiting' | 'proposed' | 'done' | 'cancelled'>
+  | keyof typeof GROUPED_LANES;
+
+/** A column of the board, with its lanes: one, or the two halves of a grouped column. */
+export interface BoardColumn<Lane> {
+  /** The column: a status, or `waiting` / `closed` for a grouped one. */
+  key: BoardColumnKey;
+  /** Its lanes, the upper half first. */
+  lanes: Lane[];
+}
+
+/**
+ * The column a status's lane is in: its own, or the grouped column it's a
+ * half of.
+ *
+ * @param status - The lane's status.
+ * @returns The column's key.
+ */
+export function boardColumnOf(status: RequestStatus): BoardColumnKey {
+  const grouped = (Object.keys(GROUPED_LANES) as (keyof typeof GROUPED_LANES)[]).find((key) =>
+    (GROUPED_LANES[key] as readonly RequestStatus[]).includes(status),
+  );
+  return grouped ?? (status as BoardColumnKey);
+}
+
+/**
+ * Groups the board's lanes into its columns, in the order of the lanes:
+ * Open, To do and In progress each on their own, then Waiting and Closed,
+ * each with two halves ({@link GROUPED_LANES}). The lanes stay what they
+ * were (a status each, with its count and cards), so moving a card, its
+ * counts and why a drop is refused all work per half.
+ *
+ * @param lanes - The lanes, in the board's order.
+ * @returns The columns.
+ */
+export function boardColumns<Lane extends { status: RequestStatus }>(
+  lanes: readonly Lane[],
+): BoardColumn<Lane>[] {
+  return lanes.reduce<BoardColumn<Lane>[]>((columns, lane) => {
+    const key = boardColumnOf(lane.status);
+    const column = columns.find((each) => each.key === key);
+    if (column) {
+      column.lanes.push(lane);
+      return columns;
+    }
+    return [...columns, { key, lanes: [lane] }];
+  }, []);
+}
 
 /**
  * Checks whether a lane holds closed requests, which show only their latest

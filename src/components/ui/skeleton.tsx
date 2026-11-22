@@ -120,7 +120,7 @@ export function BoardSkeleton() {
         {['first', 'second', 'third', 'fourth'].map((lane) => (
           <div
             key={lane}
-            className="flex flex-col gap-2 rounded-xl border border-border p-2 md:w-60 md:shrink-0"
+            className="flex flex-col gap-2 rounded-xl border border-border p-2 md:w-56 md:shrink-0"
           >
             <Skeleton className="h-6 w-32 max-w-full" />
             <Skeleton className="h-28 w-full rounded-lg" />

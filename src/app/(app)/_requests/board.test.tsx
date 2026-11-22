@@ -44,7 +44,7 @@ const dragKit = vi.hoisted(() => {
           return () => given.cards.delete(id);
         },
       ),
-      lane: vi.fn(({ lane }: { lane: string }) => {
+      lane: vi.fn(({ lane }: { lane: string; element: HTMLElement }) => {
         given.lanes.push(lane);
         return () => {
           given.lanes.splice(given.lanes.indexOf(lane), 1);
@@ -289,6 +289,42 @@ describe('Board', () => {
   });
 });
 
+describe('Board, its grouped columns', () => {
+  it('shows Waiting and Closed with two halves each, every half with its count, See all and empty text', () => {
+    const grouped = lanes().map((each) => {
+      if (each.status === 'waiting') {
+        return { ...each, total: 1, items: [card(4, 'waiting', ['open', 'todo'])] };
+      }
+      return each.status === 'done' ? { ...each, total: 7 } : each;
+    });
+    render(<Board lanes={grouped} names={NAMES} seeAll={SEE_ALL} staffName="Adiutor Tests" />);
+
+    const closed = screen.getByRole('region', { name: /^Closed, 7 requests/ });
+    const done = within(closed).getByRole('region', { name: 'Done, 7 requests' });
+    const cancelled = within(closed).getByRole('region', { name: 'Cancelled, 0 requests' });
+    // Done above Cancelled, each its own lane.
+    expect(done.compareDocumentPosition(cancelled)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(within(done).getByRole('heading', { level: 3 })).toBeInTheDocument();
+    expect(within(done).getByRole('link', { name: 'See all 7 requests in Done' })).toHaveAttribute(
+      'href',
+      '/requests?only=done',
+    );
+    expect(within(cancelled).getByText('No requests')).toBeInTheDocument();
+
+    const waiting = screen.getByRole('region', { name: /^Waiting, 1 request/ });
+    expect(
+      within(waiting).getByRole('region', { name: 'Waiting for the company, 1 request' }),
+    ).toHaveTextContent('Request 4');
+    expect(
+      within(
+        within(waiting).getByRole('region', { name: 'Waiting for approval, 0 requests' }),
+      ).getByText('No requests'),
+    ).toBeInTheDocument();
+    // Five columns in all.
+    expect(document.querySelectorAll('[data-column]')).toHaveLength(5);
+  });
+});
+
 describe('Board, dragging', () => {
   /**
    * Makes the window as wide as a tablet or not, as the board asks.
@@ -355,6 +391,28 @@ describe('Board, dragging', () => {
       moves: ['todo', 'in_progress', 'done', 'cancelled'],
     });
     expect([...dragKit.given.lanes].sort()).toEqual(Object.keys(NAMES).sort());
+    // Each half of a grouped column takes cards on its own; the column itself takes none.
+    const targets = dragKit.kit.lane.mock.calls.map(([args]) => args);
+    const done = targets.find(({ lane: status }) => status === 'done');
+    expect(done?.element).toHaveAttribute('data-lane', 'done');
+    expect(done?.element).not.toHaveAttribute('data-column');
+    expect(done?.element.closest('[data-column]')).toHaveAttribute('data-column', 'closed');
+  });
+
+  it('says what letting go over each Closed half does, and Waiting for approval never takes it', async () => {
+    windowIsWide(true);
+    renderBoard();
+    const events = await dragEvents();
+
+    act(() =>
+      events.onStart({ id: 'request-1', status: 'open', moves: ['todo', 'done', 'cancelled'] }),
+    );
+    act(() => events.onOver('done'));
+    expect(within(lane('Done')).getByText('Let go to mark it as done')).toBeInTheDocument();
+    act(() => events.onOver('cancelled'));
+    expect(within(lane('Cancelled')).getByText('Let go to cancel it')).toBeInTheDocument();
+    act(() => events.onOver('proposed'));
+    expect(within(lane('Waiting for approval')).getByText('Can’t move here')).toBeInTheDocument();
   });
 
   it('says on each lane whether the card can go there, and announces where the pointer is', async () => {

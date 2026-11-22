@@ -744,15 +744,19 @@ its search and filter menus (`parseRequestFilters`, `RequestFilterBar` without t
 and its sort. The List | Board toggle (`RequestViewToggle`) keeps the search, the filter menus,
 the sort and the size (`size`), and drops the status link, `?only=` and the page.
 
-- **Lanes:** one per status, in the order a request moves through them (`BOARD_LANES`), each named
-  in the words of the reader's strongest part (`laneAudience`: "Waiting for your reply" for
-  someone who takes part in any company) with its true count. A card whose company addresses its
-  reader otherwise (a Client of one company and a Watcher of another) says its status in its own
-  words. An empty lane says so.
+- **Lanes and columns:** a lane per status, in the order a request moves through them
+  (`BOARD_LANES`), in five columns (`boardColumns`): Open, To do and In progress each on their
+  own, then **Waiting**, with Waiting for the company in its upper half and Waiting for approval in
+  its lower half, and **Closed**, with Done above Cancelled (`GROUPED_LANES`). A grouped column's
+  heading says its total; each half is a lane of its own, with its heading, count, cards, "See all"
+  and empty text. Each lane is named in the words of the reader's strongest part (`laneAudience`:
+  "Waiting for your reply" for someone who takes part in any company) with its true count. A card
+  whose company addresses its reader otherwise (a Client of one company and a Watcher of another)
+  says its status in its own words. An empty lane says so.
 - **How many cards:** lanes aren't tables, so they have no pages. An open lane shows the first
   25, 50 or 100 cards in the list's sort ("Cards per lane", one size for every lane, as links like
-  the list's rows per page: `PageSizeLinks`); Done and Cancelled show their latest 10 by last
-  activity (`CLOSED_LANE_LIMIT`), whatever the sort. A lane that holds more ends in "See all 132",
+  the list's rows per page: `PageSizeLinks`), each half of Waiting too; Done and Cancelled show
+  their latest 5 each by last activity (`CLOSED_LANE_LIMIT`), whatever the sort. A lane that holds more ends in "See all 132",
   the list with `?only=<status>` and the board's filters and sort. Across companies, the open
   lanes leave out a deactivated company's requests, as the Active list does, and the closed lanes
   keep them.
@@ -783,9 +787,13 @@ the sort and the size (`size`), and drops the status link, `?only=` and the page
   may move gets a grip in its corner (decorative, `aria-hidden`), which drags it; the title link
   isn't draggable itself (`draggable={false}`), so the card moves, never its address. It's an extra
   for the pointer: the Move menu stays the way for the keyboard, screen readers and a single tap
-  (WCAG 2.5.7). While a card is dragged, a lane it may go to has a border in the highlight colour,
-  and a ring and "Let go to move it here" under the pointer; a lane it can't go to has a dashed
-  border, the not-allowed cursor and says "Can't move here", and doesn't take it. A live region
+  (WCAG 2.5.7). Each lane takes cards on its own, each half of Waiting and Closed too. While a
+  card is dragged, a lane it may go to has a border in the highlight colour, and a ring and what
+  letting go does under the pointer ("Let go to move it here"; on Closed's halves "Let go to mark
+  it as done" and "Let go to cancel it"); a lane it can't go to has a dashed border, the
+  not-allowed cursor and says "Can't move here", and doesn't take it. Waiting for approval's half
+  never takes a card: a request waits for approval only after a reply sent as its solution, so a
+  drop there says so. A live region
   says what happens, in the reader's language: picked up, which lane the pointer is over and
   whether the card may go there, and where it was let go. A drop on a lane it may go to takes the
   Move menu's path (moved at once, the same action, Done and Cancelled ask first, focus on its
@@ -794,13 +802,14 @@ the sort and the size (`size`), and drops the status link, `?only=` and the page
   solution is approved on the request, only the staff set that status, or not from here); a drop
   on its own lane, between lanes, or a drag given up leaves it where it was. The lanes' row scrolls
   sideways by itself while a card is dragged near its edges (auto-scroll).
-- **Layout:** from tablet width the lanes sit side by side, at least 15rem each, in a row that
+- **Layout:** from tablet width the columns sit side by side, at least 14rem each, in a row that
   scrolls sideways inside its own box ("Lanes", reachable and scrolled with the keyboard while it
   overflows); the page itself never does. On a wide screen the board gets the room a request's
-  page gets (`WidePage`), so more lanes show before the row scrolls.
-  Below tablet width the lanes are stacked, each folding away from its heading with its count.
-- **In the code:** the rules in `src/lib/requests/board.ts` (lanes, closed lanes, the lanes'
-  words, why a drop is refused, placing a moved card); `listBoard` in
+  page gets (`WidePage`), so all five columns fit side by side and the row doesn't scroll. Below tablet width
+  the columns are stacked, each folding away from its heading with its count (a grouped column
+  with both its halves).
+- **In the code:** the rules in `src/lib/requests/board.ts` (lanes, closed lanes, the columns
+  and their halves, the lanes' words, why a drop is refused, placing a moved card); `listBoard` in
   `src/server/requests/board.ts`, which picks and counts each status's cards in one windowed query
   for the open lanes and one for the closed ones, then loads the cards' rows as the list does
   (`loadRequestListItems`); the page in `src/app/(app)/requests/board/`, and in

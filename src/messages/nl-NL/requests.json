@@ -52,6 +52,7 @@
       "cardsPerLane": "Kaarten per kolom",
       "cardsPerLaneOption": "{size, number} kaarten per kolom",
       "lanes": "Kolommen",
+      "column": "{column, select, waiting {Wachtend} other {Gesloten}}",
       "laneHeading": "{lane}, {count, plural, one {# verzoek} other {# verzoeken}}",
       "emptyLane": "Geen verzoeken",
       "seeAll": "Bekijk alle {count, number}",
@@ -71,7 +72,7 @@
       "dropped": "{reference} losgelaten boven {lane}.",
       "putBack": "{reference} blijft waar het was.",
       "refused": "{reason, select, readOnly {{reference} blijft waar het is: je kunt het alleen lezen.} proposedComesWithReply {{reference} wacht pas op goedkeuring als er een reactie als oplossing is verstuurd.} approveOnRequest {Keur de oplossing van {reference} goed of af op het verzoek zelf om het af te ronden.} staffSetsThat {Alleen {staff} kan {reference} naar die kolom verplaatsen.} other {{reference} kan vanaf hier niet naar die kolom.}}",
-      "dropHere": "Laat los om het hierheen te verplaatsen"
+      "dropHere": "{status, select, done {Laat los om het als afgerond te markeren} cancelled {Laat los om het te annuleren} other {Laat los om het hierheen te verplaatsen}}"
     },
     "new": {
       "title": "Nieuw verzoek",

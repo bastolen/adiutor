@@ -52,6 +52,7 @@
       "cardsPerLane": "Cards per lane",
       "cardsPerLaneOption": "{size, number} cards per lane",
       "lanes": "Lanes",
+      "column": "{column, select, waiting {Waiting} other {Closed}}",
       "laneHeading": "{lane}, {count, plural, one {# request} other {# requests}}",
       "emptyLane": "No requests",
       "seeAll": "See all {count, number}",
@@ -71,7 +72,7 @@
       "dropped": "{reference} let go over {lane}.",
       "putBack": "{reference} stays where it was.",
       "refused": "{reason, select, readOnly {{reference} stays where it is: you can only read it.} proposedComesWithReply {{reference} waits for approval only once a reply is sent as its solution.} approveOnRequest {To close {reference}, approve or deny its solution on the request.} staffSetsThat {Only {staff} can move {reference} to that lane.} other {{reference} can’t move to that lane from where it is.}}",
-      "dropHere": "Let go to move it here"
+      "dropHere": "{status, select, done {Let go to mark it as done} cancelled {Let go to cancel it} other {Let go to move it here}}"
     },
     "new": {
       "title": "New request",
