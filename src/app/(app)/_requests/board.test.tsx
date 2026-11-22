@@ -128,9 +128,9 @@ function lanes(): BoardLaneState<BoardCardView>[] {
  * A lane on the screen.
  *
  * @param name - The start of its heading.
- * @returns The lane's section.
+ * @returns The lane's group.
  */
-const lane = (name: string) => screen.getByRole('region', { name: new RegExp(`^${name},`) });
+const lane = (name: string) => screen.getByRole('group', { name: new RegExp(`^${name},`) });
 
 /**
  * The toasts on the screen.
@@ -138,6 +138,18 @@ const lane = (name: string) => screen.getByRole('region', { name: new RegExp(`^$
  * @returns Their region.
  */
 const toasts = () => screen.getByRole('region', { name: /^Notifications/ });
+
+/**
+ * The board's live region, which says what happens while a card is dragged
+ * or moved.
+ *
+ * @returns It.
+ */
+const liveRegion = () =>
+  defined(
+    screen.getAllByRole('status').find((element) => element.tagName === 'P'),
+    'the live region',
+  );
 
 /**
  * Shows the board, with a place for toasts.
@@ -177,6 +189,19 @@ describe('Board', () => {
     expect(within(lane('Done')).queryByRole('link')).not.toBeInTheDocument();
   });
 
+  it('makes its columns groups, not landmarks, and says when a lane shows fewer cards than it holds', () => {
+    renderBoard();
+
+    // The only landmark here is the toasts': the lanes are groups named by their headings.
+    expect(screen.getAllByRole('region')).toEqual([toasts()]);
+    expect(
+      within(lane('Open')).getByRole('heading', { level: 2, name: /^Open, 3 requests/ }),
+    ).toBeInTheDocument();
+    // Open shows the first two of its three requests; Done shows all it has.
+    expect(within(lane('Open')).getByRole('list')).toHaveAccessibleName('First 2 of 3');
+    expect(within(lane('Done')).getByRole('list')).not.toHaveAttribute('aria-label');
+  });
+
   it('offers the lanes a card may go to, and no menu on a card the reader can’t move', async () => {
     const user = userEvent.setup();
     renderBoard();
@@ -205,6 +230,9 @@ describe('Board', () => {
     );
     const user = userEvent.setup();
     renderBoard();
+    // The live region is on the page before anything happens, so what it says next is read out.
+    const live = liveRegion();
+    expect(live).toBeEmptyDOMElement();
 
     await user.click(screen.getByRole('button', { name: 'Move AD-1' }));
     await user.click(screen.getByRole('menuitem', { name: 'In progress' }));
@@ -217,8 +245,11 @@ describe('Board', () => {
     // In its new lane straight away, with the counts, and busy there; the other card isn't.
     const moved = within(lane('In progress')).getByRole('button', { name: 'Move AD-1' });
     expect(moved).toHaveAttribute('aria-busy', 'true');
+    expect(moved).toHaveAttribute('aria-disabled', 'true');
     expect(moved).toHaveTextContent('Moving…');
-    expect(screen.getByText('Moving AD-1…')).toHaveAttribute('role', 'status');
+    // Said once, by the board's live region; the card adds no status of its own.
+    expect(live).toHaveTextContent('Moving AD-1 to In progress…');
+    expect(screen.getAllByText('Moving AD-1 to In progress…')).toEqual([live]);
     expect(lane('In progress')).toHaveAccessibleName(/^In progress, 1 request/);
     expect(lane('Open')).toHaveAccessibleName(/^Open, 2 requests/);
     expect(screen.getByRole('button', { name: 'Move AD-2' })).not.toHaveAttribute('aria-busy');
@@ -229,6 +260,9 @@ describe('Board', () => {
       answer({ ok: true, message: 'AD-1 moved to In progress.' });
     });
     await waitFor(() => expect(toasts()).toHaveTextContent('AD-1 moved to In progress.'));
+    // The toast says how it went; the live region has gone quiet, so nothing is said twice.
+    expect(live).toBeEmptyDOMElement();
+    expect(liveRegion()).toBe(live);
   });
 
   it('asks before a card goes to Done, and moves nothing when the reader keeps it', async () => {
@@ -283,6 +317,8 @@ describe('Board', () => {
     await waitFor(() =>
       expect(toasts()).toHaveTextContent('This request’s status changed in the meantime.'),
     );
+    // The alert says why; the live region no longer says it's moving.
+    expect(liveRegion()).toBeEmptyDOMElement();
     // Back where it was once the move has ended, and focus with it.
     const back = await within(lane('Open')).findByRole('button', { name: 'Move AD-2' });
     await waitFor(() => expect(back).not.toHaveAttribute('aria-busy'));
@@ -521,25 +557,27 @@ describe('Board, its grouped columns', () => {
     });
     render(<Board lanes={grouped} names={NAMES} seeAll={SEE_ALL} staffName="Adiutor Tests" />);
 
-    const closed = screen.getByRole('region', { name: /^Closed, 7 requests/ });
-    const done = within(closed).getByRole('region', { name: 'Done, 7 requests' });
-    const cancelled = within(closed).getByRole('region', { name: 'Cancelled, 0 requests' });
+    const closed = screen.getByRole('group', { name: /^Closed, 7 requests/ });
+    const done = within(closed).getByRole('group', { name: 'Done, 7 requests' });
+    const cancelled = within(closed).getByRole('group', { name: 'Cancelled, 0 requests' });
     // Done above Cancelled, each its own lane.
     expect(done.compareDocumentPosition(cancelled)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(within(done).getByRole('heading', { level: 3 })).toBeInTheDocument();
+    // A closed lane shows its latest cards, and says so.
+    expect(within(done).getByRole('list')).toHaveAccessibleName('Latest 1 of 7');
     expect(within(done).getByRole('link', { name: 'See all 7 requests in Done' })).toHaveAttribute(
       'href',
       '/requests?only=done',
     );
     expect(within(cancelled).getByText('No requests')).toBeInTheDocument();
 
-    const waiting = screen.getByRole('region', { name: /^Waiting, 1 request/ });
+    const waiting = screen.getByRole('group', { name: /^Waiting, 1 request/ });
     expect(
-      within(waiting).getByRole('region', { name: 'Waiting for the company, 1 request' }),
+      within(waiting).getByRole('group', { name: 'Waiting for the company, 1 request' }),
     ).toHaveTextContent('Request 4');
     expect(
       within(
-        within(waiting).getByRole('region', { name: 'Waiting for approval, 0 requests' }),
+        within(waiting).getByRole('group', { name: 'Waiting for approval, 0 requests' }),
       ).getByText('No requests'),
     ).toBeInTheDocument();
     // Five columns in all.
@@ -564,17 +602,6 @@ describe('Board, dragging', () => {
       })),
     );
   }
-
-  /**
-   * The live region that says what happens while a card is dragged.
-   *
-   * @returns It.
-   */
-  const announced = () =>
-    defined(
-      screen.getAllByRole('status').find((element) => element.tagName === 'P'),
-      'the live region',
-    );
 
   /**
    * What the board hears of a drag, once the drag and drop has loaded.
@@ -643,16 +670,16 @@ describe('Board, dragging', () => {
     const events = await dragEvents();
 
     act(() => events.onStart({ id: 'request-1', status: 'open', moves: ['todo', 'done'] }));
-    expect(announced()).toHaveTextContent('AD-1 picked up.');
+    expect(liveRegion()).toHaveTextContent('AD-1 picked up.');
     expect(within(lane('Waiting for approval')).getByText('Can’t move here')).toBeInTheDocument();
     expect(within(lane('To do')).queryByText('Can’t move here')).not.toBeInTheDocument();
     expect(within(lane('Open')).queryByText('Can’t move here')).not.toBeInTheDocument();
 
     act(() => events.onOver('todo'));
     expect(within(lane('To do')).getByText('Let go to move it here')).toBeInTheDocument();
-    expect(announced()).toHaveTextContent('Over To do: let go to move AD-1 there.');
+    expect(liveRegion()).toHaveTextContent('Over To do: let go to move AD-1 there.');
     act(() => events.onOver('waiting'));
-    expect(announced()).toHaveTextContent('Over Waiting for the company: AD-1 can’t move here.');
+    expect(liveRegion()).toHaveTextContent('Over Waiting for the company: AD-1 can’t move here.');
   });
 
   it('moves a card dropped on a lane it may go to, as the Move menu does', async () => {
@@ -668,6 +695,8 @@ describe('Board, dragging', () => {
     expect(moveRequestAction).toHaveBeenCalledWith({ request: 1, status: 'todo', from: 'open' });
     expect(within(lane('To do')).getByRole('button', { name: 'Move AD-1' })).toBeInTheDocument();
     expect(screen.queryByText('Can’t move here')).not.toBeInTheDocument();
+    // Where it went is said once, by the move itself.
+    expect(liveRegion()).toHaveTextContent('Moving AD-1 to To do…');
   });
 
   it('asks before a card dropped on Done moves', async () => {
@@ -681,6 +710,9 @@ describe('Board, dragging', () => {
 
     expect(screen.getByRole('alertdialog', { name: 'Mark AD-1 as done?' })).toBeInTheDocument();
     expect(moveRequestAction).not.toHaveBeenCalled();
+    // While its question is open (the dialog hides the rest of the page from screen readers),
+    // the live region says where it was let go.
+    expect(document.querySelector('p[role="status"]')).toHaveTextContent('AD-1 let go over Done.');
   });
 
   it('sends nothing for a drop on a lane the card can’t go to, and says why', async () => {
@@ -715,7 +747,7 @@ describe('Board, dragging', () => {
 
     expect(moveRequestAction).not.toHaveBeenCalled();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(announced()).toHaveTextContent('AD-2 stays where it was.');
+    expect(liveRegion()).toHaveTextContent('AD-2 stays where it was.');
   });
 });
 

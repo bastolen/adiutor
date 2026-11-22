@@ -1663,10 +1663,10 @@ test.describe('the board of requests', () => {
    *
    * @param page - The browser page, on the board.
    * @param name - The lane's name.
-   * @returns The lane's section.
+   * @returns The lane's group.
    */
   const lane = (page: Page, name: string) =>
-    page.getByRole('region', { name: new RegExp(`^${name}, \\d+ requests?$`) });
+    page.getByRole('group', { name: new RegExp(`^${name}, \\d+ requests?$`) });
 
   test('a card moves with its Move menu from the keyboard, and focus follows it to its new lane', async ({
     page,

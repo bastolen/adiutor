@@ -1,10 +1,10 @@
 /**
  * @file A card on the board of requests: what the server rendered of its
  * request (`BoardCardView.body` and `meta`), with its Move menu and, from
- * tablet width, a grip to drag it by. Its text comes from `requests.board`.
+ * tablet width, a grip to drag it by. Its text is the Move menu's
+ * (`requests.board`).
  */
 import { GripVertical } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { type ReactNode, useEffect, useEffectEvent, useRef } from 'react';
 
 import { useTransientState } from '@/components/ui/use-transient-state';
@@ -66,8 +66,10 @@ interface BoardCardProps {
  * One card: its content, and below it its footer next to the Move menu
  * (none for a card the reader can't move). The whole card is one click
  * target for the request, through the title's stretched link; the Move
- * button, the avatars and the grip sit above it. While it's being moved, a
- * status message says so to screen readers ("Moving AD-142…").
+ * button, the avatars and the grip sit above it. While it's being moved, its
+ * Move button is busy (`aria-busy`), and the board's live region says so to
+ * screen readers ("Moving AD-142 to In progress…"): a status added to the card already
+ * filled in would often go unread.
  *
  * Once the board's drag and drop has loaded, a card the reader may move
  * gets a grip in its top corner (`cursor-grab`), which drags it. The grip is
@@ -85,7 +87,6 @@ interface BoardCardProps {
  * @returns The card, as a list item.
  */
 export default function BoardCard({ card, names, busy, drag, onChoose }: BoardCardProps) {
-  const t = useTranslations('requests.board');
   const cardRef = useRef<HTMLLIElement>(null);
   const gripRef = useRef<HTMLSpanElement>(null);
   const [dragging, setDragging] = useTransientState(false);
@@ -149,11 +150,6 @@ export default function BoardCard({ card, names, busy, drag, onChoose }: BoardCa
           />
         )}
       </div>
-      {busy && (
-        <span role="status" className="sr-only">
-          {t('movingCard', { reference: card.reference })}
-        </span>
-      )}
     </li>
   );
 }

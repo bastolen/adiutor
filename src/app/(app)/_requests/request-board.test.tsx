@@ -108,9 +108,9 @@ async function renderBoard(searchParams: Record<string, string> = {}) {
  * A lane on the screen.
  *
  * @param name - The start of its heading.
- * @returns The lane's section.
+ * @returns The lane's group.
  */
-const lane = (name: string) => screen.getByRole('region', { name: new RegExp(`^${name},`) });
+const lane = (name: string) => screen.getByRole('group', { name: new RegExp(`^${name},`) });
 
 beforeEach(() => {
   vi.mocked(getStaffPermissionsInCompanies).mockReturnValue(

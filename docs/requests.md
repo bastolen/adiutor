@@ -752,12 +752,16 @@ the sort and the size (`size`), and drops the status link, `?only=` and the page
   and empty text. Each lane is named in the words of the reader's strongest part (`laneAudience`:
   "Waiting for your reply" for someone who takes part in any company) with its true count. A card
   whose company addresses its reader otherwise (a Client of one company and a Watcher of another)
-  says its status in its own words. An empty lane says so.
+  says its status in its own words. An empty lane says so. To screen readers, the columns and
+  their halves are groups named by their headings (`role="group"`, not sections, which would make
+  about nine landmarks); the headings stay for moving through the board by heading.
 - **How many cards:** lanes aren't tables, so they have no pages. An open lane shows the first
   25, 50 or 100 cards in the list's sort ("Cards per lane", one size for every lane, as links like
   the list's rows per page: `PageSizeLinks`), each half of Waiting too; Done and Cancelled show
   their latest 5 each by last activity (`CLOSED_LANE_LIMIT`), whatever the sort. A lane that holds more ends in "See all 132",
-  the list with `?only=<status>` and the board's filters and sort. Across companies, the open
+  the list with `?only=<status>` and the board's filters and sort, and its list of cards says so
+  in its name ("First 25 of 80", "Latest 5 of 132"), so a screen reader doesn't hear a count of
+  132 followed by a list of 5 without a word. Across companies, the open
   lanes leave out a deactivated company's requests, as the Active list does, and the closed lanes
   keep them.
 - **Cards:** the number, the type, the title (a link stretched over the card), the priority (the
@@ -777,8 +781,10 @@ the sort and the size (`size`), and drops the status link, `?only=` and the page
   allowed while signed in as a user.
 - **While a card moves** it's already at the top of its new lane, with both counts changed
   (`useOptimistic` with `placeMovedCard`), and its Move button alone is busy ("Moving…", still
-  focusable). A toast says where it went ("AD-142 moved to In progress."); a refusal shows above
-  the lanes and as a toast, and the card goes back. Focus follows the card to its Move button in
+  focusable, `aria-busy`). The board's live region, which is always on the page, says "Moving
+  AD-142 to In progress…" (a status added to the card already filled in would often go unread). A toast says
+  where it went ("AD-142 moved to In progress."); a refusal shows above the lanes and as a toast,
+  and the card goes back; the live region is emptied first, so nothing is said twice. Focus follows the card to its Move button in
   the new lane (found by `data-request` once the move is on screen), or to the lane's heading
   when the card isn't on the board anymore (`restoreFocusIfLost`).
 - **Dragging** (from tablet width): once the page is there, the board loads its drag and drop
@@ -795,7 +801,9 @@ the sort and the size (`size`), and drops the status link, `?only=` and the page
   never takes a card: a request waits for approval only after a reply sent as its solution, so a
   drop there says so. A live region
   says what happens, in the reader's language: picked up, which lane the pointer is over and
-  whether the card may go there, and where it was let go. A drop on a lane it may go to takes the
+  whether the card may go there, and then where it goes ("Moving AD-142 to In progress…", as for
+  the Move menu), or, for a drop on Done or Cancelled, where it was let go while their question
+  is open. A drop on a lane it may go to takes the
   Move menu's path (moved at once, the same action, Done and Cancelled ask first, focus on its
   Move button); a drop on a lane it can't go to sends nothing and says why, above the lanes and
   as a toast (`moveRefusal`: the reader only reads, Waiting for approval comes with a solution, a

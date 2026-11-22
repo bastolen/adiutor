@@ -122,7 +122,15 @@ keyboard support.
     every other card stays usable.
   - **Focus follows the card:** a card that changes lanes is removed and added again, so focus
     is put back on its Move button in the new lane (`data-request`), or on the lane's heading
-    when the card isn't shown anymore; a lane is a `data-card` section for `restoreFocusIfLost`.
+    when the card isn't shown anymore; a lane is a `data-card` element for `restoreFocusIfLost`.
+  - **Screen readers:** the columns and their halves are named groups (`role="group"` with
+    `aria-labelledby` on their heading), not sections: a named section is a landmark, and a board
+    of landmarks would bury the page's own. A lane's list of cards is named when it shows fewer
+    than the lane holds ("First 25 of 80", "Latest 5 of 132"). What happens to a card ("Moving
+    AD-142 to In progress…", and while dragging) goes through one live region the board keeps on the page from
+    the start, since a status inserted with its text already in it is often not read out; it
+    empties before the toast or the error says the outcome, so nothing is said twice. These are
+    checked in the markup and with axe, not yet with a real screen reader.
   - **Width:** the columns, at least 14rem each, sit in a row that scrolls sideways inside a
     named group the keyboard reaches while it overflows (`tabIndex={0}`, like a wide code block),
     so the page never scrolls sideways. While it overflows, a navigation above it ("Jump to a
