@@ -46,8 +46,8 @@
     },
     "sort": {
       "button": "Sorteren",
-      "trigger": "Sorteer {rows}",
-      "triggerSorted": "Sorteer {rows}: {sort}",
+      "trigger": "Sorteren van {rows}",
+      "triggerSorted": "Sorteren van {rows}: {sort}",
       "sortBy": "Sorteren op"
     },
     "filter": {

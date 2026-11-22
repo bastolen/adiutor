@@ -1,5 +1,7 @@
 /**
- * @file Tests for the account menu: it shows the stored theme in its theme
+ * @file Tests for the account menu: its menu is named by the words that name
+ * its button, without the avatar's initials, it shows the stored theme in
+ * its theme
  * row and keeps following the system while closed (choosing a theme is
  * tested with the theme and language button, which uses the same row), and
  * it signs out (saying so, inline and as a toast, when that fails, and
@@ -74,6 +76,30 @@ describe('AccountMenu', () => {
     );
 
     expect(container.querySelector('img')).toHaveAttribute('src', '/avatars/ada?v=1');
+  });
+
+  it('names its menu by the words that name its button, without the avatar’s initials', async () => {
+    const user = userEvent.setup();
+    render(<AccountMenu name="Ada Tester" email="ada@adiutor.test" signedInAs />);
+    // jsdom leaves out the spaces between the button's lines, which browsers put in.
+    const name = /^Account menu:\s*Signed in as\s*Ada Tester\s*ada@adiutor\.test$/;
+
+    const button = screen.getByRole('button', { name });
+    // The initials are shown, so the button is named by its content, not a label it'd have to
+    // repeat them in (WCAG 2.5.3).
+    expect(button).toHaveTextContent(/^AT/);
+    expect(button).not.toHaveAttribute('aria-label');
+    await user.click(button);
+
+    const menu = screen.getByRole('menu');
+    expect(menu).toHaveAccessibleName(name);
+    // Labelled by the button's words only: the whole button would bring in the initials, as it's
+    // hidden behind the open menu.
+    const label = document.getElementById(menu.getAttribute('aria-labelledby') ?? '');
+    const avatar = button.querySelector<HTMLElement>('span[aria-hidden="true"]');
+    expect(avatar).toHaveTextContent('AT');
+    expect(button).toContainElement(label);
+    expect(label).not.toContainElement(avatar);
   });
 
   it('shows the email address as the name for a user without a name', async () => {

@@ -62,7 +62,6 @@
       "seeAllLabel": "See all {count, number} requests in {lane}",
       "lastActivity": "Last activity",
       "move": "Move",
-      "moving": "Moving…",
       "moveCard": "Move {reference}",
       "movingCard": "Moving {reference} to {lane}…",
       "moveTo": "Move to",

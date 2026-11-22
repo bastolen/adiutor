@@ -261,10 +261,14 @@ test.describe('signed in', () => {
     await page.emulateMedia({ colorScheme: 'light' });
     await page.goto('/dashboard');
     const trigger = page.getByRole('button', { name: /^Account menu/ });
+    const name = `Account menu: ${PLATFORM_ADMIN.name} ${PLATFORM_ADMIN.email}`;
+    await expect(trigger).toHaveAccessibleName(name);
 
     await trigger.focus();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('menuitem', { name: 'Account settings' })).toBeFocused();
+    // Named by its button once, without the avatar's initials.
+    await expect(page.getByRole('menu')).toHaveAccessibleName(name);
     await page.keyboard.press('ArrowDown');
     await expect(page.getByRole('menuitemradio', { name: 'System' })).toBeFocused();
 
@@ -1065,11 +1069,14 @@ test.describe('tables', () => {
     const trigger = page.getByRole('button', { name: /^Sort members/ });
     expect(await cursorOf(trigger)).toBe('pointer');
 
+    await expect(trigger).toHaveAccessibleName('Sort members: Name, A to Z');
     await trigger.focus();
     await expect(async () => {
       await trigger.press('Enter');
       await expect(page.getByRole('menu')).toBeVisible({ timeout: 1000 });
     }).toPass();
+    // Named by its button once, not by what it shows and its name both.
+    await expect(page.getByRole('menu')).toHaveAccessibleName('Sort members: Name, A to Z');
     await page.keyboard.press('Escape');
     await expect(page.getByRole('menu')).toBeHidden();
     await expect(trigger).toBeFocused();

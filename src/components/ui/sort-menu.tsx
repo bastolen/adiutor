@@ -23,8 +23,9 @@ interface SortMenuProps {
 }
 
 /**
- * A button that says how the table is sorted (just "Sort" on phones; for
- * screen readers always e.g. "Sort members: Name, A to Z") and opens a menu
+ * A button that says how the table is sorted (just "Sort" on phones), named
+ * in full at every width (`aria-label`, e.g. "Sort members: Name, A to Z",
+ * which names its menu too), and opens a menu
  * with every way to sort it, the current one checked. Each choice is a link
  * (a `MenuRadioLinkItem`; the page doesn't scroll), and Radix's keyboard
  * behaviour (arrow keys, Escape, focus back on the button) comes with it.
@@ -45,23 +46,18 @@ export default function SortMenu({ label, options }: SortMenuProps) {
       align="end"
       menuLabel={t('sortBy')}
       options={options}
+      // Its name holds what it shows at every width ("Sort", or how it's sorted), and names the
+      // menu too.
+      triggerLabel={(current) =>
+        current
+          ? t('triggerSorted', { rows: label, sort: current.label })
+          : t('trigger', { rows: label })
+      }
       renderTrigger={(current) => (
         <>
-          {/* On phones the button says Sort; from 640px (`sm`), how the table is sorted. Both
-              are part of its name, which says what's sorted too. */}
-          <span aria-hidden="true" className={current ? 'sm:hidden' : undefined}>
-            {t('button')}
-          </span>
-          {current && (
-            <span aria-hidden="true" className="max-sm:hidden">
-              {current.label}
-            </span>
-          )}
-          <span className="sr-only">
-            {current
-              ? t('triggerSorted', { rows: label, sort: current.label })
-              : t('trigger', { rows: label })}
-          </span>
+          {/* On phones the button says Sort; from 640px (`sm`), how the table is sorted. */}
+          <span className={current ? 'sm:hidden' : undefined}>{t('button')}</span>
+          {current && <span className="max-sm:hidden">{current.label}</span>}
         </>
       )}
     />

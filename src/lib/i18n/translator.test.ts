@@ -18,11 +18,11 @@ describe('translator', () => {
   });
 
   it('lets a language put the arguments in its own order', () => {
-    expect(
-      translator('en-US', 'common.sort')('triggerSorted', { rows: 'users', sort: 'Name' }),
-    ).toBe('Sort users: Name');
-    expect(
-      translator('nl-NL', 'common.sort')('triggerSorted', { rows: 'gebruikers', sort: 'Naam' }),
-    ).toBe('Sorteer gebruikers: Naam');
+    expect(translator('en-US', 'requests.board')('moveCard', { reference: 'AD-142' })).toBe(
+      'Move AD-142',
+    );
+    expect(translator('nl-NL', 'requests.board')('moveCard', { reference: 'AD-142' })).toBe(
+      'AD-142 verplaatsen',
+    );
   });
 });

@@ -1,7 +1,7 @@
 /**
  * @file Tests for the browser part of the board of requests: the lanes with
- * their counts, "See all" and an empty lane, the Move menu (none on a card
- * the reader can't move), moving a card at once and saving it from the lane
+ * their counts, "See all" and an empty lane, the Move menu (named once by its
+ * button, none on a card the reader can't move), moving a card at once and saving it from the lane
  * it was in, Done and Cancelled asking first, a refusal, and where focus goes
  * after a move; the row that jumps to a column while the lanes scroll; and
  * dragging, with the drag and drop itself stood in for:
@@ -207,9 +207,16 @@ describe('Board', () => {
     renderBoard();
 
     expect(screen.queryByRole('button', { name: 'Move AD-3' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Move AD-1' }));
+    // It shows "Move" and names itself in full: no copy only screen readers get, which its open
+    // menu would read along with the word it shows ("Move Move AD-1").
+    const button = screen.getByRole('button', { name: 'Move AD-1' });
+    expect(button).toHaveAttribute('aria-label', 'Move AD-1');
+    expect(button).toHaveTextContent(/^Move$/);
+    expect(button.querySelector('.sr-only')).toBeNull();
+    await user.click(button);
 
     const menu = screen.getByRole('menu');
+    expect(menu).toHaveAccessibleName('Move AD-1');
     expect(
       within(menu)
         .getAllByRole('menuitem')
@@ -246,7 +253,9 @@ describe('Board', () => {
     const moved = within(lane('In progress')).getByRole('button', { name: 'Move AD-1' });
     expect(moved).toHaveAttribute('aria-busy', 'true');
     expect(moved).toHaveAttribute('aria-disabled', 'true');
-    expect(moved).toHaveTextContent('Moving…');
+    // It still says "Move", which its name holds (WCAG 2.5.3); the spinner shows it's busy.
+    expect(moved).toHaveTextContent(/^Move$/);
+    expect(moved.querySelector('svg')).toHaveClass('animate-spin');
     // Said once, by the board's live region; the card adds no status of its own.
     expect(live).toHaveTextContent('Moving AD-1 to In progress…');
     expect(screen.getAllByText('Moving AD-1 to In progress…')).toEqual([live]);

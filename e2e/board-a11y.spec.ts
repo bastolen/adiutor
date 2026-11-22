@@ -208,11 +208,10 @@ test('a card is named by its title and its Move button by its number, and the Mo
 
   const move = card.getByRole('button', { name: `Move AD-${number}` });
   await move.click();
-  // Its label, and the lanes a staff member may move an open request to. The menu's own name
-  // comes from its button (Radix's `aria-labelledby`), which Chromium reads with the button's
-  // hidden word too ("Move Move AD-…"), so it isn't pinned here.
+  // Named by its button once ("Move AD-n", never "Move Move AD-n"), its label, and the lanes a
+  // staff member may move an open request to.
   await expect(page.getByRole('menu')).toMatchAriaSnapshot(`
-    - menu:
+    - menu "Move AD-${number}":
       - /children: equal
       - text: Move to
       - menuitem "To do"

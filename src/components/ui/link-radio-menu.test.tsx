@@ -1,5 +1,6 @@
 /**
- * @file Tests for the menu that Sort and the filters share: choosing an
+ * @file Tests for the menu that Sort and the filters share: its button names
+ * it (by what it shows, or by its label when it shows less), choosing an
  * option navigates without scrolling, and the button is busy meanwhile.
  */
 import { act, render, screen } from '@testing-library/react';
@@ -79,6 +80,44 @@ describe('LinkRadioMenu', () => {
 
     const trigger = screen.getByRole('button', { name: 'Now: Alpha' });
     expect(trigger).not.toHaveAttribute('aria-busy');
+  });
+
+  it('is named by what it shows, and so is its menu', async () => {
+    const user = userEvent.setup();
+    render(
+      <LinkRadioMenu
+        icon={Check}
+        align="start"
+        menuLabel="Pick one"
+        options={OPTIONS}
+        renderTrigger={(current) => `Now: ${current?.label}`}
+      />,
+    );
+
+    const trigger = screen.getByRole('button', { name: 'Now: Alpha' });
+    expect(trigger).not.toHaveAttribute('aria-label');
+    await user.click(trigger);
+    expect(screen.getByRole('menu')).toHaveAccessibleName('Now: Alpha');
+  });
+
+  it('names its button, and so its menu, with its label when it shows less', async () => {
+    const user = userEvent.setup();
+    render(
+      <LinkRadioMenu
+        icon={Check}
+        align="start"
+        menuLabel="Pick one"
+        options={OPTIONS}
+        renderTrigger={(current) => current?.label}
+        triggerLabel={(current) => `Pick a letter: ${current?.label}`}
+      />,
+    );
+
+    const trigger = screen.getByRole('button', { name: 'Pick a letter: Alpha' });
+    expect(trigger).toHaveAttribute('aria-label', 'Pick a letter: Alpha');
+    expect(trigger).toHaveTextContent(/^Alpha$/);
+    await user.click(trigger);
+    expect(screen.getByRole('menu')).toHaveAccessibleName('Pick a letter: Alpha');
   });
 
   it('pushes the chosen link without scrolling and is busy until it settles', async () => {

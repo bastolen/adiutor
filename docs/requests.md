@@ -841,8 +841,8 @@ no Move menu.
   is one of the 300 changes an hour a person may make to requests, and is request work, so it's
   allowed while signed in as a user.
 - **While a card moves** it's already at the top of its new lane, with both counts changed
-  (`useOptimistic` with `placeMovedCard`), and its Move button alone is busy ("Moving…", still
-  focusable, `aria-busy`). The board's live region, which is always on the page, says "Moving
+  (`useOptimistic` with `placeMovedCard`), and its Move button alone is busy (a spinner, still
+  "Move" and named "Move AD-142", still focusable, `aria-busy`). The board's live region, which is always on the page, says "Moving
   AD-142 to In progress…" (a status added to the card already filled in would often go unread). A toast says
   where it went ("AD-142 moved to In progress."); a refusal shows above the lanes and as a toast,
   and the card goes back; the live region is emptied first, so nothing is said twice. Focus follows the card to its Move button in

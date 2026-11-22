@@ -62,7 +62,6 @@
       "seeAllLabel": "Bekijk alle {count, number} verzoeken in {lane}",
       "lastActivity": "Laatste activiteit",
       "move": "Verplaatsen",
-      "moving": "Verplaatsen…",
       "moveCard": "{reference} verplaatsen",
       "movingCard": "{reference} wordt verplaatst naar {lane}…",
       "moveTo": "Verplaatsen naar",
