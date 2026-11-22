@@ -1,6 +1,7 @@
 /**
  * @file The browser part of the board of requests: the lanes in a row that
- * scrolls sideways (stacked below tablet width), and moving cards between
+ * scrolls sideways (stacked below tablet width), with a row of buttons that
+ * jumps to a column while it does (`board-lane-jump.tsx`), and moving cards between
  * them with each card's Move menu or, from tablet width, by dragging them
  * (`board-drag.ts`, loaded with `import()`), which places the card in its new
  * lane at once and puts it where the server says once the move is saved. Its
@@ -43,6 +44,7 @@ import { moveRequestAction } from './board-actions';
 import BoardCard, { type BoardCardView } from './board-card';
 import type { BoardDrag, CardDrop, DraggedCard } from './board-drag';
 import BoardColumn, { type LaneDropState } from './board-lane';
+import BoardLaneJump from './board-lane-jump';
 
 /**
  * From tablet width (Tailwind's `md`, 48rem), where the lanes sit side by
@@ -135,7 +137,11 @@ interface BoardProps {
  *   width they sit side by side in a box that scrolls sideways, named
  *   "Lanes", which the keyboard reaches (`tabIndex`) and scrolls with the
  *   arrow keys while it overflows, as a wide code block does; the page itself
- *   never scrolls sideways. Below tablet width they're stacked, and each
+ *   never scrolls sideways. While it overflows, a row of buttons above it
+ *   jumps to a column (`BoardLaneJump`: each column's name and count, which
+ *   follow the moves under way), shown by a container query on the board's
+ *   width, so it's there from the first paint and nothing shifts once the
+ *   page runs. Below tablet width they're stacked, and each
  *   folds away. Moves, counts and drops stay per lane (per half).
  * - **Moving:** a card's Move menu lists the lanes it may go to. Done and
  *   Cancelled ask first (`ConfirmDialog`). The card moves to the top of its
@@ -447,8 +453,17 @@ export default function Board({ lanes, names, seeAll, staffName }: BoardProps) {
     return state === 'allowed' && dragged.over === lane ? 'target' : state;
   };
 
+  // The columns as the board shows them now, so the jump row's counts follow the moves under way.
+  const columns = boardColumns(shown.lanes).map(({ key, lanes: inColumn }) => ({
+    key,
+    name: key === 'waiting' || key === 'closed' ? t('column', { column: key }) : names[key],
+    lanes: inColumn,
+    total: inColumn.reduce((sum, lane) => sum + lane.total, 0),
+  }));
+
   return (
-    <div ref={boardRef} className="flex flex-col gap-4">
+    // A container: the jump row shows or hides by the board's own width (`BoardLaneJump`).
+    <div ref={boardRef} className="@container flex flex-col gap-4">
       <Alert tone="error" alsoToast onDismiss={() => setError(null)}>
         {error}
       </Alert>
@@ -456,6 +471,7 @@ export default function Board({ lanes, names, seeAll, staffName }: BoardProps) {
       <p role="status" className="sr-only">
         {announcement}
       </p>
+      <BoardLaneJump columns={columns} row={rowRef} />
       <div
         ref={rowRef}
         role="group"
@@ -467,13 +483,11 @@ export default function Board({ lanes, names, seeAll, staffName }: BoardProps) {
         className={cn('relative rounded-xl md:overflow-x-auto', focusRing)}
       >
         <div className="flex flex-col gap-4 md:flex-row md:gap-3">
-          {boardColumns(shown.lanes).map(({ key, lanes: inColumn }) => (
+          {columns.map(({ key, name, lanes: inColumn }) => (
             <BoardColumn
               key={key}
               column={key}
-              name={
-                key === 'waiting' || key === 'closed' ? t('column', { column: key }) : names[key]
-              }
+              name={name}
               lanes={inColumn.map((lane) => ({
                 status: lane.status,
                 name: names[lane.status],

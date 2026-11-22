@@ -993,6 +993,14 @@ test.describe('in forced-colours mode', () => {
         await page.getByRole('button', { name: 'Cancel' }).click();
       });
 
+      test('the board with its row of buttons that jumps to a lane', async ({ page }) => {
+        // Narrower than the five columns side by side, so the row shows.
+        await page.setViewportSize({ width: 1100, height: 900 });
+        await page.goto('/requests/board');
+        await expect(page.getByRole('navigation', { name: 'Jump to a lane' })).toBeVisible();
+        await expectAccessible(page);
+      });
+
       test.describe('on a phone', () => {
         test.use({ viewport: { width: 375, height: 812 } });
 

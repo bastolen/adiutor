@@ -3,12 +3,13 @@
  * their counts, "See all" and an empty lane, the Move menu (none on a card
  * the reader can't move), moving a card at once and saving it from the lane
  * it was in, Done and Cancelled asking first, a refusal, and where focus goes
- * after a move; and dragging, with the drag and drop itself stood in for:
+ * after a move; the row that jumps to a column while the lanes scroll; and
+ * dragging, with the drag and drop itself stood in for:
  * what it's given, what the lanes say while a card is dragged, what's
  * announced, and what each kind of drop does (refused ones worded per
  * reason).
  */
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -286,6 +287,227 @@ describe('Board', () => {
     const back = await within(lane('Open')).findByRole('button', { name: 'Move AD-2' });
     await waitFor(() => expect(back).not.toHaveAttribute('aria-busy'));
     await waitFor(() => expect(back).toHaveFocus());
+  });
+});
+
+describe('Board, its jump row', () => {
+  /**
+   * Stands in for `ResizeObserver`, which jsdom doesn't have: an element is
+   * measured as soon as it's observed, and again when the test resizes it.
+   *
+   * @returns A function that resizes an observed element.
+   */
+  function observeSizes(): (element: Element) => void {
+    const observed = new Map<Element, () => void>();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        /** What's called with the sizes. */
+        callback: ResizeObserverCallback;
+
+        /** The elements this observer measures. */
+        elements: Element[] = [];
+
+        /**
+         * Keeps the callback.
+         *
+         * @param callback - What's called with the sizes.
+         */
+        constructor(callback: ResizeObserverCallback) {
+          this.callback = callback;
+        }
+
+        /**
+         * Measures at once, as the browser does once the element is laid out.
+         *
+         * @param element - The element.
+         */
+        observe(element: Element) {
+          /**
+           * Measures the element.
+           *
+           * @returns Nothing.
+           */
+          const measure = () => this.callback([], this as unknown as ResizeObserver);
+          this.elements.push(element);
+          observed.set(element, measure);
+          measure();
+        }
+
+        /** Stops measuring: nothing is called anymore. */
+        disconnect() {
+          this.elements.forEach((element) => observed.delete(element));
+        }
+      },
+    );
+    return (element) => {
+      act(() => observed.get(element)?.());
+    };
+  }
+
+  /**
+   * Makes the lanes' row wider than its box or not, as the board measures
+   * it (jsdom has no layout).
+   *
+   * @param scrolls - Whether the row is wider than its box.
+   */
+  function rowScrolls(scrolls: boolean) {
+    observeSizes();
+    vi.spyOn(Element.prototype, 'scrollWidth', 'get').mockReturnValue(scrolls ? 1800 : 1000);
+    vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(1000);
+  }
+
+  /**
+   * The jump row on the screen.
+   *
+   * @returns Its navigation.
+   */
+  const jumpRow = () => screen.getByRole('navigation', { name: 'Jump to a lane' });
+
+  /**
+   * A column of the board.
+   *
+   * @param key - The column's key.
+   * @returns Its element.
+   */
+  const column = (key: string) =>
+    defined(document.querySelector<HTMLElement>(`[data-column="${key}"]`), `the ${key} column`);
+
+  /**
+   * Stands in for the row's scrolling and where the row and a column are,
+   * which jsdom doesn't lay out.
+   *
+   * @param key - The column that's 1200px to the right of the row's start.
+   * @returns The row's `scrollTo`.
+   */
+  function placeColumn(key: string) {
+    const row = screen.getByRole('group', { name: 'Lanes' });
+    const scrollTo = vi.fn();
+    row.scrollTo = scrollTo;
+    vi.spyOn(row, 'getBoundingClientRect').mockReturnValue({ left: 100 } as DOMRect);
+    vi.spyOn(column(key), 'getBoundingClientRect').mockReturnValue({ left: 1300 } as DOMRect);
+    return scrollTo;
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('is on the page from the start, shown by the board’s width from tablet width', () => {
+    renderBoard();
+    // CSS shows it while the board is narrower than its five columns side by side: no measuring,
+    // so nothing shifts once the page runs.
+    expect(jumpRow()).toHaveClass('hidden', 'md:flex', '@min-[73rem]:hidden');
+    expect(jumpRow().closest('.\\@container')).toBe(
+      screen.getByRole('group', { name: 'Lanes' }).parentElement,
+    );
+    // Before it's measured, the row stays reachable with the keyboard; once it fits, it's not.
+    expect(screen.getByRole('group', { name: 'Lanes' })).toHaveAttribute('tabindex', '0');
+    cleanup();
+
+    rowScrolls(false);
+    renderBoard();
+    expect(screen.getByRole('group', { name: 'Lanes' })).not.toHaveAttribute('tabindex');
+  });
+
+  it('has a button per column with its count', () => {
+    renderBoard();
+
+    expect(
+      within(jumpRow())
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual([
+      'Open3Open, 3 requests',
+      'To do0To do, 0 requests',
+      'In progress0In progress, 0 requests',
+      'Waiting0Waiting, 0 requests',
+      'Closed1Closed, 1 request',
+    ]);
+    // Named like the column's heading; the count beside the name is hidden from screen readers.
+    expect(within(jumpRow()).getByRole('button', { name: 'Closed, 1 request' })).toBeVisible();
+  });
+
+  it('writes a count as the reader’s language writes numbers, as the name says it', () => {
+    const many = lanes().map((each) => (each.status === 'open' ? { ...each, total: 1234 } : each));
+    render(<Board lanes={many} names={NAMES} seeAll={SEE_ALL} staffName="Adiutor Tests" />);
+
+    expect(
+      within(jumpRow()).getByRole('button', { name: 'Open, 1,234 requests' }),
+    ).toHaveTextContent(/^Open1,234/);
+  });
+
+  it('moves the focus to the main content when the row hides while it has it', async () => {
+    const resize = observeSizes();
+    render(
+      <main id="main">
+        <Board lanes={lanes()} names={NAMES} seeAll={SEE_ALL} staffName="Adiutor Tests" />
+      </main>,
+    );
+    const button = within(jumpRow()).getByRole('button', { name: 'Open, 3 requests' });
+    act(() => button.focus());
+
+    // A wider window: the board's lanes fit, and the container query hides the row.
+    const hidden = [] as unknown as DOMRectList;
+    vi.spyOn(jumpRow(), 'getClientRects').mockReturnValue(hidden);
+    vi.spyOn(button, 'getClientRects').mockReturnValue(hidden);
+    resize(jumpRow());
+
+    await waitFor(() => expect(screen.getByRole('main')).toHaveFocus());
+  });
+
+  it('scrolls the row to a column and puts the focus on its heading', async () => {
+    const user = userEvent.setup();
+    renderBoard();
+    const scrollTo = placeColumn('closed');
+
+    await user.click(within(jumpRow()).getByRole('button', { name: 'Closed, 1 request' }));
+
+    expect(scrollTo).toHaveBeenCalledWith({ left: 1200, behavior: 'smooth' });
+    // The column's own heading, not its halves'.
+    expect(within(column('closed')).getByRole('heading', { level: 2 })).toHaveFocus();
+  });
+
+  it('jumps without smooth scrolling for someone who asked for less motion', async () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === '(prefers-reduced-motion: reduce)',
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    );
+    const user = userEvent.setup();
+    renderBoard();
+    const scrollTo = placeColumn('in_progress');
+
+    await user.click(within(jumpRow()).getByRole('button', { name: 'In progress, 0 requests' }));
+
+    expect(scrollTo).toHaveBeenCalledWith({ left: 1200, behavior: 'instant' });
+    expect(within(column('in_progress')).getByRole('heading', { level: 2 })).toHaveFocus();
+  });
+
+  it('counts the cards as the board shows them, a move under way too', async () => {
+    /** Answers the move, once the test has looked at the row while it's under way. */
+    let answer: (result: ActionResult) => void = () => {};
+    vi.mocked(moveRequestAction).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const user = userEvent.setup();
+    renderBoard();
+
+    await user.click(screen.getByRole('button', { name: 'Move AD-1' }));
+    await user.click(screen.getByRole('menuitem', { name: 'In progress' }));
+
+    expect(within(jumpRow()).getByRole('button', { name: 'Open, 2 requests' })).toBeVisible();
+    expect(within(jumpRow()).getByRole('button', { name: 'In progress, 1 request' })).toBeVisible();
+    await act(async () => {
+      answer({ ok: true, message: 'AD-1 moved to In progress.' });
+    });
   });
 });
 
