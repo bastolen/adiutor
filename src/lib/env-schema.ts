@@ -100,7 +100,9 @@ const envSchema = z
     /**
      * The secret the tick's endpoint (`/api/jobs`) asks for, as
      * `Authorization: Bearer <secret>`; at least 32 characters. Unset, the
-     * endpoint is off (see "Background jobs" in `docs/deploying.md`).
+     * endpoint is off (see "Background jobs" in `docs/deploying.md`), and so
+     * are the jobs under `next dev`, whose tick calls the endpoint with it
+     * (`src/server/jobs/dev-tick.ts`).
      */
     CRON_SECRET: z.preprocess(emptyToUndefined, z.string().min(32).optional()),
     /**
