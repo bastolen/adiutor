@@ -263,6 +263,28 @@ export async function addMembership(
 }
 
 /**
+ * Sets a member's role in a company straight in the database, for a test
+ * that changes a role in the app to put it back whatever happens.
+ *
+ * @param companySlug - The URL name of the company.
+ * @param email - The member's email address.
+ * @param role - The role they get there.
+ */
+export async function setMembershipRole(
+  companySlug: string,
+  email: string,
+  role: CompanyRole,
+): Promise<void> {
+  const [companyId, userId] = await Promise.all([findCompanyId(companySlug), findUserId(email)]);
+  await withTestDatabase(async (db) => {
+    await db
+      .update(schema.membership)
+      .set({ role })
+      .where(and(eq(schema.membership.companyId, companyId), eq(schema.membership.userId, userId)));
+  });
+}
+
+/**
  * Reads the time zone saved with an account (`user.time_zone`).
  *
  * @param email - The account's address.
