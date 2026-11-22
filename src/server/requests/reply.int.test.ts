@@ -362,4 +362,20 @@ describe('replyToRequest: links to the staff’s pages', () => {
       'Sam Support looks at it, see [the docs](https://adiutor.dev/docs).',
     );
   });
+
+  it('keeps only the label of such a link in a reply too costly to read as Markdown', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const colleague = await staffActor(db, 'support');
+    const raised = await storeRequest(company.id);
+    // More runs of emphasis marks than the page formats: it's shown as it was written.
+    const runs = '*a '.repeat(2600);
+
+    await replyToRequest(ctx, support, {
+      request: raised.id,
+      body: `${runs}[Sam Support](${appUrl}/admin/users/${colleague.id}) looks at it.`,
+    });
+
+    expect((await history(raised.id))[0]?.body).toBe(`${runs}Sam Support looks at it.`);
+  });
 });

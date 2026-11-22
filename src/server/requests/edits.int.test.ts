@@ -270,6 +270,71 @@ describe('editing: links to the staff’s pages', () => {
     const [stored] = await db.select().from(requestEntry).where(eq(requestEntry.id, note.id));
     expect(stored?.body).toBe(text);
   });
+
+  it('gives the company a text to edit without links saved before, and the staff the text as it is', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client');
+    const support = await staffActor(db, 'support');
+    const userPage = `${appUrl}/admin/users/${support.id}`;
+    // Saved before links to the staff's pages were kept out of texts.
+    const description = `Ask [Sam Support](${userPage}), see [the docs](https://adiutor.dev/docs).`;
+    const raised = await storeRequest(company.id, { description, descriptionFormat: 'markdown' });
+    // One too costly to read as Markdown, by the Client.
+    const runs = '*a '.repeat(2600);
+    const costly = `${runs}Ask [Sam Support](<${userPage}> "Sam").`;
+    const reply = await storeEntry(raised.id, {
+      authorId: client.id,
+      body: costly,
+      bodyFormat: 'markdown',
+    });
+
+    const forClient = await getRequest(ctx, client, raised.id);
+    const forStaff = await getRequest(ctx, support, raised.id);
+
+    expect(forClient.description.edit?.markdown).toBe(
+      'Ask Sam Support, see [the docs](https://adiutor.dev/docs).',
+    );
+    expect(forClient.entries.find(({ id }) => id === reply.id)?.body?.edit?.markdown).toBe(
+      `${runs}Ask Sam Support.`,
+    );
+    expect(forStaff.description.edit?.markdown).toBe(description);
+  });
+
+  it('gives the company a text to edit without a link whose host is written another way', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client');
+    const support = await staffActor(db, 'support');
+    // Adiutor's host with its first letter percent-encoded: the text never names it as it is.
+    const { protocol, hostname, port } = new URL(appUrl);
+    const host = `%${hostname.charCodeAt(0).toString(16)}${hostname.slice(1)}${port ? `:${port}` : ''}`;
+    const description = `Ask [Sam Support](${protocol}//${host}/admin/users/${support.id}).`;
+    const raised = await storeRequest(company.id, { description, descriptionFormat: 'markdown' });
+
+    const forClient = await getRequest(ctx, client, raised.id);
+
+    expect(forClient.description.edit?.markdown).toBe('Ask Sam Support.');
+  });
+
+  it('costs a company’s reader little more to read than the staff, however links nest', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client');
+    const support = await staffActor(db, 'support');
+    // Links nested in links, which each time the text is read as Markdown takes out one level of.
+    const description = `${'['.repeat(300)}x${`](${appUrl}/admin)`.repeat(300)}`;
+    const raised = await storeRequest(company.id, { description, descriptionFormat: 'markdown' });
+    await getRequest(ctx, support, raised.id);
+
+    let started = performance.now();
+    await getRequest(ctx, support, raised.id);
+    const forStaff = performance.now() - started;
+    started = performance.now();
+    const forClient = await getRequest(ctx, client, raised.id);
+    const took = performance.now() - started;
+
+    expect(forClient.description.edit?.markdown).not.toContain('/admin');
+    // Read as Markdown twice, then by the rule that reads none: milliseconds, not ten readings.
+    expect(took - forStaff).toBeLessThan(250);
+  });
 });
 
 describe('getRequest: edited texts', () => {

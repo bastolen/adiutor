@@ -12,7 +12,13 @@ import cn from '@/lib/cn';
 import { appUrl as ownAddress } from '@/lib/env';
 import formatDate from '@/lib/format';
 import useReaderTimeZone from '@/lib/i18n/use-reader-time-zone';
-import { nameStoredMentions, splitLinks, type TextPart, textLinkTarget } from '@/lib/requests';
+import {
+  nameStoredMentions,
+  splitLinks,
+  staffLinksAsLabels,
+  type TextPart,
+  textLinkTarget,
+} from '@/lib/requests';
 import type { RequestText as RequestTextValue } from '@/server/requests';
 
 import { personName, type SideNames } from './request-person';
@@ -55,14 +61,29 @@ function placed(parts: TextPart[]): PlacedPart[] {
 }
 
 /**
- * A text as it was written: plain text with its line breaks, in its own
- * writing direction (`dir="auto"`, so a text in a right-to-left script can't
- * reorder the page around it). Web addresses written with `http://` or
- * `https://` are links ({@link ExternalLink}), but not one of the staff's
- * pages in a text the company reads (`textLinkTarget`).
+ * A stored text as it's shown as it was written: in a text the company
+ * reads, a link written in Markdown to one of the staff's pages keeps only
+ * its label (`staffLinksAsLabels`), so its address never shows. Done to the
+ * text as it's stored, before the people it mentions are named, so no name
+ * can change how its links read.
+ *
+ * @param text - The text as it's stored.
+ * @param appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
+ * @returns The text to show.
+ */
+function asWritten(text: string, appUrl: string | null): string {
+  return appUrl === null ? text : staffLinksAsLabels(text, appUrl);
+}
+
+/**
+ * A text as it was written ({@link asWritten}): plain text with its line
+ * breaks, in its own writing direction (`dir="auto"`, so a text in a
+ * right-to-left script can't reorder the page around it). Web addresses
+ * written with `http://` or `https://` are links ({@link ExternalLink}), but
+ * not one of the staff's pages in a text the company reads (`textLinkTarget`).
  *
  * @param props - Component props.
- * @param props.text - The text.
+ * @param props.text - The text, as {@link asWritten} gives it.
  * @param props.className - Extra classes for the paragraph.
  * @param props.appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
  * @returns The text.
@@ -123,6 +144,35 @@ function shownMentions(
 }
 
 /**
+ * A Markdown text shown as it was written, because formatting it would cost
+ * too much ({@link asWritten}), with the people it mentions named as the
+ * page names them. Only worked out when it's shown.
+ *
+ * @param props - Component props.
+ * @param props.text - The text as it's stored.
+ * @param props.className - Extra classes for the paragraph.
+ * @param props.mentions - The people the text mentions.
+ * @param props.appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
+ * @returns The text.
+ */
+function UnformattedText({
+  text,
+  className,
+  mentions,
+  appUrl,
+}: {
+  text: string;
+  className: string;
+  mentions: Record<string, ShownMention>;
+  appUrl: string | null;
+}) {
+  const named = nameStoredMentions(asWritten(text, appUrl), (mention) =>
+    Object.hasOwn(mentions, mention) ? (mentions[mention]?.name ?? null) : null,
+  );
+  return <PlainText text={named} className={className} appUrl={appUrl} />;
+}
+
+/**
  * A Markdown text, formatted ({@link MarkdownText}). Code copied from it
  * starts with a note of where it's from: the request's address, then who
  * wrote the text and on which day, in the reader's language. The people it
@@ -156,9 +206,6 @@ function FormattedText({
   const t = useTranslations('requests.codeNote');
   const locale = useLocale();
   const timeZone = useReaderTimeZone();
-  const named = nameStoredMentions(text, (mention) =>
-    Object.hasOwn(mentions, mention) ? (mentions[mention]?.name ?? null) : null,
-  );
   return (
     <MarkdownText
       text={text}
@@ -171,7 +218,12 @@ function FormattedText({
       mentions={mentions}
       staffOnly={staffOnly}
       fallback={
-        <PlainText text={named} className={className} appUrl={staffOnly ? null : ownAddress} />
+        <UnformattedText
+          text={text}
+          className={className}
+          mentions={mentions}
+          appUrl={staffOnly ? null : ownAddress}
+        />
       }
     />
   );
@@ -182,8 +234,8 @@ function FormattedText({
  * as it was written. A Markdown text is shown formatted ({@link MarkdownText}),
  * unless formatting it would cost too much (a text nested hundreds of levels
  * deep): then it's shown as it was written, too. Either way a link to one of
- * the staff's pages shows as its text, unless only the staff read the text
- * (an internal note, `staffOnly`).
+ * the staff's pages shows as its text, without its address, unless only the
+ * staff read the text (an internal note, `staffOnly`).
  *
  * @param props - Component props.
  * @param props.text - The text and its format.
@@ -221,7 +273,6 @@ export default function RequestText({
       />
     );
   }
-  return (
-    <PlainText text={text.text} className={className} appUrl={staffOnly ? null : ownAddress} />
-  );
+  const appUrl = staffOnly ? null : ownAddress;
+  return <PlainText text={asWritten(text.text, appUrl)} className={className} appUrl={appUrl} />;
 }

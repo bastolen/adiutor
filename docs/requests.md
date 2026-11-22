@@ -393,7 +393,7 @@ written and sent is in [Email](email.md), and the jobs that send them in
   to the user's page, which a browser copies as a whole address with the user's ID in it. A link
   to one of Adiutor's own pages for the staff (`/admin` and under it, on Adiutor's host, however
   the path is spelled: in capitals, percent-encoded, or on the host with a trailing dot;
-  `isStaffPage` in `src/lib/requests/text.ts`) is kept out of a description or reply three times
+  `isStaffPage` in `src/lib/requests/text.ts`) is kept out of a description or reply four times
   over; an internal note, which only the staff read, keeps such links each time:
   - **When it's saved** (`withoutStaffPageLinks` in `src/server/requests/staff-links.ts`, applied
     by `raiseRequest`, `replyToRequest`, `answerSolution` for a denial's reason,
@@ -404,16 +404,47 @@ written and sent is in [Email](email.md), and the jobs that send them in
     one becomes its text as it was written, an image of one its description, a link definition
     to one is taken out and a reference to it becomes its text. The text is read again until
     nothing changes, since taking a link out can make a new one of what's around it. Code is
-    never touched, and an address written out stays as written. Reading costs time, so only a
-    text that names Adiutor's host is read, and not one that would cost too much
-    (`MAX_EMPHASIS_RUNS`); what that leaves (a host hidden in a character reference, a text shown
-    as plain text) is shown as text where the text is shown.
+    never touched, and an address written out stays as written. Reading costs time, so a text is
+    only read when it may hold such a link (`mayHoldStaffLink`): it names Adiutor's host, or it
+    has a link or a link definition (`](` or `]:`) and could name the host another way (a `%`,
+    `&` or `\`, a character outside printable ASCII, or a host that's an IP address). It's read
+    at most 10 times; a text that would cost too much to read (`MAX_EMPHASIS_RUNS`), that's nested
+    too deeply for the reader, or that still changes after the last time keeps only the labels of
+    such links by a rule that reads no Markdown (`staffLinksAsLabels` in
+    `src/lib/requests/staff-link-labels.ts`, below).
   - **Where it's shown or emailed**, also a text saved before this rule: a link to one shows as
     its text, an image of one as its description, and an address written out isn't a link
     (`textLinkTarget`, used by `MarkdownText` with the app's public URL, by `RequestText` for a
-    plain text, and by `EmailMarkdown` with the email's `appUrl`). `RequestText`, `EditedNote`
-    and `EmailMarkdown` are told when the text is a note (`staffOnly`, or no `appUrl`).
+    plain text, and by `EmailMarkdown` with the email's `appUrl`). A text shown as it was written
+    (stored as plain text, or too costly to format) shows only the label of a link to one, never
+    its address (`staffLinksAsLabels` in `RequestText` and `EmailMarkdown`, on the text as it's
+    stored, before the people it mentions are named, so no name can change how its links read).
+    `RequestText`, `EditedNote` and `EmailMarkdown` are told when the text is a note
+    (`staffOnly`, or no `appUrl`).
+  - **In the editor's starting text:** a reader who may not open the staff's pages (without
+    `users:view`: everyone at a company, also a staff member signed in as one) gets a
+    description or reply to edit without them (`editableText` in `getRequest`, through
+    `withoutStaffPageLinksToEdit`), so a link saved before this rule never reaches their
+    browser. It's read on every view, so it's read as Markdown twice at most: enough for a text
+    with such links to keep its code as it is, while a text still changing the second time (links
+    made of links) goes through the rule that reads no Markdown. Saving it unchanged stores it
+    without the link; the staff, and anyone editing a note, get the text as it's stored.
   - **While it's written** (see [Writing a text](#writing-a-text)).
+- **The rule that reads no Markdown** (`staffLinksAsLabels`) turns `[label](address)` into
+  `label` when the address is a staff page, with the address in angle brackets or not and with a
+  title or not (`![description](address)` becomes the description), and takes out a link
+  definition to one (`[label]: address`, label and all). An address written out stays as it is,
+  also in angle brackets (an autolink), and so does one hidden in a character reference, as for
+  an address written out: the writer saw it. It matches a link's brackets within its paragraph
+  and reads escapes, balanced parentheses and titles as Markdown does, but it can't tell code
+  from text: a link in code loses its address too, and so does a staff page's address after a
+  `](` whose `[` it can't find (a `]` in code in the label takes it). An address is judged by
+  its first 256 characters after the spaces before it (`JUDGED_ADDRESS_LENGTH`), without the tabs
+  and line breaks a browser drops; a longer one counts as a staff page when
+  it's on Adiutor's host, or its host doesn't end within them. Its time grows in proportion to
+  the text's length, whatever the text holds: what it needs is worked out beforehand in a few
+  passes, the text is read once, no part is read again more than a few times, and no address
+  more than its judged part.
 - **Headings** in a text start right below the heading of the card they're in: a text's highest
   heading is an `h3` on a request's page (where cards are `h2`), whether it was written with one
   `#` or three, and the ones below it follow in order. So a text can't break the page's outline or
@@ -442,7 +473,8 @@ written and sent is in [Email](email.md), and the jobs that send them in
 - **A text that would cost too much to format is shown as plain text** (`markdownTree`): one
   nested more than 100 levels deep (`MAX_NESTING`; React renders a level per call, and the
   parser's own walk overflows the stack at a few thousand), or with more than 2,500 runs of `*`
-  or `_` (`MAX_EMPHASIS_RUNS`; the parser's time grows with their number squared).
+  or `_` (`MAX_EMPHASIS_RUNS`; the parser's time grows with their number squared). A link to one
+  of the staff's pages in it shows only its label (`staffLinksAsLabels`, see above).
 
 ### Writing a text
 

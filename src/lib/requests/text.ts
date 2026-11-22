@@ -5,7 +5,9 @@
  * text so they can be shown as links. A plain text is stored as typed, and
  * shown with its line breaks. Taking links to the staff's pages out of a
  * text that's saved reads its Markdown, so it's on the server
- * (`src/server/requests/staff-links.ts`).
+ * (`src/server/requests/staff-links.ts`); where a text is too costly to read
+ * that way, or is shown as it was written, a rule that reads no Markdown
+ * keeps only their labels (`staffLinksAsLabels` in `./staff-link-labels.ts`).
  */
 import { HIDDEN_CHARACTER } from '../character-rules';
 
@@ -151,7 +153,7 @@ const STAFF_PAGES_PATH = '/admin';
  * @param hostname - The host name, as a parsed address gives it.
  * @returns The host name without a trailing dot.
  */
-function hostOf(hostname: string): string {
+export function hostOf(hostname: string): string {
   return hostname.replace(/\.$/, '');
 }
 

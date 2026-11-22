@@ -386,4 +386,66 @@ describe('RequestText: links to the staff’s pages', () => {
       'https://adiutor.dev/docs',
     ]);
   });
+
+  it.each([
+    ['too costly to format', 'markdown', `${'*a '.repeat(3000)}ask`],
+    ['nested too deeply to format', 'markdown', `${'>'.repeat(500)} ask`],
+    ['stored as plain text', 'plain', 'Ask'],
+  ] as const)(
+    'shows only the label of a link to one in a text %s, but its address in a note',
+    (_what, format, start) => {
+      const text = {
+        text: `${start} [Sam](${USER_PAGE}) or see https://adiutor.dev/docs.`,
+        format,
+      };
+      const { container, unmount } = render(
+        <RequestText id="text" text={text} source={SOURCE} names={NAMES} />,
+      );
+      expect(container.textContent).toContain(' Sam or see https://adiutor.dev/docs');
+      expect(container.textContent).not.toContain('/admin/');
+      expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+        'https://adiutor.dev/docs',
+      ]);
+      unmount();
+
+      const note = render(
+        <RequestText id="note" text={text} source={SOURCE} names={NAMES} staffOnly />,
+      );
+
+      expect(note.container.textContent).toContain('[Sam](');
+      expect(
+        within(note.container)
+          .getAllByRole('link')
+          .map((link) => link.getAttribute('href')),
+      ).toEqual([USER_PAGE, 'https://adiutor.dev/docs']);
+    },
+  );
+
+  it('keeps the address out before naming the people a text mentions, whatever their names', () => {
+    // A name that ends in a backslash would escape the `]` after it, were it named first.
+    const text = `${'>'.repeat(500)} [see [@](mention:${SAM})](${USER_PAGE}) now`;
+    const { container } = render(
+      <RequestText
+        id="text"
+        text={{
+          text,
+          format: 'markdown',
+          mentions: {
+            [SAM]: {
+              userId: null,
+              name: 'Sam\\',
+              side: 'staff',
+              isViewer: false,
+              picture: null,
+              key: null,
+            },
+          },
+        }}
+        source={SOURCE}
+        names={NAMES}
+      />,
+    );
+
+    expect(container.querySelector('p')?.textContent).toBe(`${'>'.repeat(500)} see @Sam\\ now`);
+  });
 });

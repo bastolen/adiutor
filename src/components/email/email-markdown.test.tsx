@@ -352,6 +352,34 @@ describe('EmailMarkdown: links to the staff’s pages', () => {
     expect(links(container)).toEqual([USER_PAGE, USER_PAGE, 'https://adiutor.dev/docs']);
   });
 
+  it.each([
+    ['too costly to format', 'markdown', `${'*a '.repeat(3000)}Ask`],
+    ['nested too deeply to format', 'markdown', `${'> '.repeat(200)}Ask`],
+    ['stored as plain text', 'plain', 'Ask'],
+  ] as const)(
+    'shows only the label of a link to one in a text %s, but its address in a note',
+    (_what, format, start) => {
+      const text = `${start} [Sam](${USER_PAGE}) or see https://adiutor.dev/docs.`;
+
+      const container = show(text, { format });
+
+      expect(container.textContent).toContain('Ask Sam or see https://adiutor.dev/docs.');
+      expect(container.textContent).not.toContain('/admin/');
+      expect(links(container)).toEqual(['https://adiutor.dev/docs']);
+      expect(show(text, { format, appUrl: null }).textContent).toContain(`[Sam](${USER_PAGE})`);
+    },
+  );
+
+  it('keeps the address out before naming the people a text mentions, whatever their names', () => {
+    // A name that ends in a backslash would escape the `]` after it, were it named first.
+    const text = `${'> '.repeat(200)}[see ${storedMentionMarker(SAM)}](${USER_PAGE}) now`;
+
+    const container = show(text, { mentions: { [SAM]: 'Sam\\' } });
+
+    expect(container.textContent).toContain('see @Sam\\ now');
+    expect(container.textContent).not.toContain('/admin/');
+  });
+
   it('leaves no address of one in the email’s plain text', async () => {
     const email = await renderEmail(
       'jane@adiutor.test',
