@@ -6,7 +6,8 @@
  * combobox pattern: the closed field is a select-only combobox that opens
  * the panel, and the search field in it is an editable combobox that keeps
  * the focus while the arrow keys move through the list
- * (`aria-activedescendant`). Only `SelectField` renders it.
+ * (`aria-activedescendant`). Only `SelectField` renders it. What the keys
+ * do is in `searchable-select-keys.ts`.
  */
 'use client';
 
@@ -16,7 +17,6 @@ import { Popover } from 'radix-ui';
 import {
   type KeyboardEvent,
   type RefCallback,
-  type RefObject,
   useCallback,
   useEffect,
   useMemo,
@@ -26,7 +26,8 @@ import {
 
 import cn from '@/lib/cn';
 
-import { groupOptions, matchingOptions, movedIndex } from './select-option-list';
+import { onSearchKey, onTriggerKey, showOption } from './searchable-select-keys';
+import { groupOptions, matchingOptions } from './select-option-list';
 import {
   groupHeading,
   optionCheck,
@@ -78,75 +79,6 @@ interface SearchableSelectProps {
  */
 function keepFocus(event: { preventDefault: () => void }) {
   event.preventDefault();
-}
-
-/**
- * Whether a key press types a character (a letter, a digit, a sign), rather
- * than being a shortcut or a key like Enter or the arrows. Space opens the
- * field like a click, so it doesn't count.
- *
- * @param event - The key press.
- * @returns Whether it types.
- */
-function typesCharacter(event: KeyboardEvent): boolean {
-  return (
-    event.key.length === 1 && event.key !== ' ' && !event.ctrlKey && !event.metaKey && !event.altKey
-  );
-}
-
-/**
- * Where the list must scroll to show an option: just far enough to bring it
- * below the sticky heading of its group or above the list's bottom, or to
- * put it in the middle (when the list opens). Only the list scrolls, never
- * the page: the panel may not be in place yet.
- *
- * @param list - The list's scrolling element.
- * @param option - The option to show.
- * @param center - Whether to put it in the middle.
- * @returns The list's new `scrollTop`, or `undefined` when the option is in view already.
- */
-function scrollTopToShow(
-  list: HTMLElement,
-  option: HTMLElement,
-  center: boolean,
-): number | undefined {
-  const listBox = list.getBoundingClientRect();
-  const optionBox = option.getBoundingClientRect();
-  const top = list.scrollTop + optionBox.top - listBox.top;
-  const bottom = top + optionBox.height;
-  const heading =
-    option.closest('[role="group"]')?.querySelector<HTMLElement>('[data-group-heading]')
-      ?.offsetHeight ?? 0;
-  if (center) {
-    return top - (list.clientHeight - optionBox.height) / 2;
-  }
-  if (top - heading < list.scrollTop) {
-    return top - heading;
-  }
-  if (bottom > list.scrollTop + list.clientHeight) {
-    return bottom - list.clientHeight;
-  }
-  return undefined;
-}
-
-/**
- * Scrolls the list to show an option ({@link scrollTopToShow}).
- *
- * @param listRef - The list's element.
- * @param optionId - The option's ID.
- * @param center - Whether to put it in the middle.
- */
-function showOption(
-  listRef: RefObject<HTMLDivElement | null>,
-  optionId: string | undefined,
-  center: boolean,
-): void {
-  const list = listRef.current;
-  const option = optionId === undefined ? null : document.getElementById(optionId);
-  const top = list && option ? scrollTopToShow(list, option, center) : undefined;
-  if (list && top !== undefined) {
-    list.scrollTop = top;
-  }
 }
 
 /**
@@ -328,59 +260,55 @@ export default function SearchableSelect({
   };
 
   /**
-   * The closed field's keys: the arrow keys open it, and a typed character
-   * opens it with that character in the search (or, when it's open but the
-   * search hasn't taken the focus yet, adds it to the search).
+   * The closed field's keys ({@link onTriggerKey}).
    *
    * @param event - The key press.
    */
   const onTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    if (busy) {
-      return;
-    }
-    if (typesCharacter(event)) {
-      event.preventDefault();
-      if (open) {
-        setQuery((typed) => `${typed}${event.key}`);
+    onTriggerKey(event, {
+      busy,
+      open,
+      openList,
+      /**
+       * Adds a character to the search and gives it the focus.
+       *
+       * @param character - The character typed.
+       */
+      typeInSearch: (character) => {
+        setQuery((typed) => `${typed}${character}`);
         searchRef.current?.focus();
-      } else {
-        openList(event.key);
-      }
-    } else if (!open && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
-      event.preventDefault();
-      openList();
-    }
+      },
+    });
   };
 
   /**
-   * The search field's keys: the arrow, Page, Home and End keys move the
-   * active option, Enter picks it, and Tab closes the panel without a
-   * change (Escape does too, through Radix).
+   * The search field's keys ({@link onSearchKey}).
    *
    * @param event - The key press.
    */
   const onSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.nativeEvent.isComposing) {
-      return;
-    }
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      if (active) {
-        pick(active.value);
-      }
-      return;
-    }
-    if (event.key === 'Tab') {
-      event.preventDefault();
-      closeList();
-      return;
-    }
-    const next = movedIndex(event.key, activeIndex, shown.length);
-    const option = next === undefined ? undefined : shown[next];
-    if (option) {
-      event.preventDefault();
-      setPointer({ query, value: option.value });
-    }
+    onSearchKey(event, {
+      activeIndex,
+      count: shown.length,
+      /** Picks the active option, when there is one. */
+      pickActive: () => {
+        if (active) {
+          pick(active.value);
+        }
+      },
+      close: closeList,
+      /**
+       * Makes the option at a place the active one, in this search.
+       *
+       * @param index - Its place among the options shown.
+       */
+      moveTo: (index) => {
+        const option = shown[index];
+        if (option) {
+          setPointer({ query, value: option.value });
+        }
+      },
+    });
   };
 
   /**

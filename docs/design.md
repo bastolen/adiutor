@@ -218,7 +218,8 @@ keyboard support.
     Home and End go to the first and last. The active option is filled and outlined
     (`highlightedItem`), scrolled into view under its group's sticky heading, and pointed at with
     `aria-activedescendant`. Only Enter or a click picks; Escape, Tab, Shift+Tab or a click outside
-    close it without a change, and the focus goes back to the field.
+    close it without a change, and the focus goes back to the field. What the keys do, and the
+    scrolling that follows them, is in `searchable-select-keys.ts`.
   - **What it says:** a screen reader hears how many options match once typing pauses (a status,
     after 400ms), and "No options match your search." also shows on screen.
   - **Forms, busy and coming back:** the value goes in a hidden input, so forms submit it as before,
