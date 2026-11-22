@@ -768,7 +768,10 @@ says so with a "Show everything" button.
   (`FilterMenu`, a sibling of `SortMenu`). It sorts by last activity or the day it was raised,
   and for the staff by priority, and pages like every table (see
   [Design and accessibility](design.md#design-and-accessibility)). The staff also filter by
-  assignee and see who each request is assigned to (see [Assigning](#assigning)).
+  assignee and see who each request is assigned to (see [Assigning](#assigning)). From tablet
+  width the status, the priority, the assignees and the last activity have columns of their own;
+  a long status ("Waiting for the company"), a long row of avatars and the last activity wrap in
+  their columns, as on the board, so the table fits a tablet.
   `?only=<status>` shows the requests of one status instead of a link's group (`ONLY_STATUS_PARAM`;
   its own parameter, since `waiting` is both a group and a status): no status link is current
   then, and a line names the status in the reader's words, with a link back to every status.

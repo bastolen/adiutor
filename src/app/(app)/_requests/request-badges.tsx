@@ -37,7 +37,8 @@ const PRIORITY_TONES: Record<RequestPriority, BadgeTone> = {
  * @param props - Component props.
  * @param props.status - The status.
  * @param props.audience - Who reads it.
- * @param props.wrap - Let a long status wrap, in a narrow place like a card on the board.
+ * @param props.wrap - Let a long status wrap, in a narrow place like a card on the board or the
+ *   Status column of a list of requests at tablet width.
  * @returns The badge.
  */
 export function StatusBadge({

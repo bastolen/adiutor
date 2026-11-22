@@ -86,10 +86,18 @@ keyboard support.
       and the role from 768px in its own column.
     - **Companies:** the URL name always shows under the name, and the status and when it was
       added from 768px in their own columns, so on a phone the name keeps the room.
+    - **Requests:** the number, type and (across companies) company always show under the
+      title, and the status, priority, assignees and last activity from 768px in their own
+      columns. A long status ("Waiting for the company", `StatusBadge`'s `wrap`, as on the board)
+      and a long row of avatars (`PeopleAvatars`' `wrap`: side by side with a gap rather than
+      overlapping, so the rows line up) wrap in their columns, and so do the
+      Assigned to heading and the last activity ("59 minuten geleden") below 1280px, so the table
+      fits in every language at 768px and at 1024px, where the sidebar takes its room.
     - **Long values:** names, addresses and company names wrap (`wrap-anywhere`) rather than
       widening the table.
     - **Check:** `e2e/tables.spec.ts` checks every table at 640, 768, 1024, 1280, 1536 and
-      1920px, with a seeded staff member who has no name and a long address.
+      1920px, with a seeded staff member who has no name and a long address, and a request of its
+      own waiting for the company on the first page of the lists of requests.
   - **List services** take the table's state and return one page with the total
     (`Paged<T>`); each sort ends with the row's ID, so pages don't overlap and reversing is exact.
 - **The board** of requests (`/requests/board`, and a company's at `/companies/<URL name>/board`,
