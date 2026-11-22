@@ -420,3 +420,96 @@ describe('SelectField with many options', () => {
     expect(screen.getByText('Geen opties gevonden voor je zoekopdracht.')).toBeInTheDocument();
   });
 });
+
+describe('SelectField with many options: what matched', () => {
+  /**
+   * The marked parts of an element: what a search matched in it.
+   *
+   * @param element - The element.
+   * @returns The text of each `<mark>` in it.
+   */
+  const marked = (element: HTMLElement) =>
+    [...element.querySelectorAll('mark')].map((mark) => mark.textContent);
+
+  it('marks the part of each label that matches, accents and all, keeping its name', async () => {
+    const user = userEvent.setup();
+    render(<SelectField label="City" options={cities} defaultValue="UTC" />);
+    await user.click(screen.getByRole('combobox', { name: 'City' }));
+
+    await user.keyboard('sao p');
+    const option = screen.getByRole('option', { name: 'São Paulo (UTC−03:00)' });
+    expect(marked(option)).toEqual(['São P']);
+
+    await user.clear(searchField());
+    await user.keyboard('-05');
+    expect(screen.getAllByRole('option').map(marked)).toEqual([['−05'], ['−05']]);
+    expect(activeOption()).toHaveAccessibleName('Bogota (UTC−05:00)');
+  });
+
+  it('marks a match in a group’s heading there, and not in labels it doesn’t match', async () => {
+    const user = userEvent.setup();
+    render(<SelectField label="City" options={cities} defaultValue="UTC" />);
+    await user.click(screen.getByRole('combobox', { name: 'City' }));
+
+    await user.keyboard('afri');
+    const group = screen.getByRole('group', { name: 'Africa' });
+    const heading = defined(group.querySelector<HTMLElement>('[data-group-heading]'), 'a heading');
+    expect(marked(heading)).toEqual(['Afri']);
+    expect(within(group).getAllByRole('option').map(marked)).toEqual([[], []]);
+  });
+
+  it('sets the headings at normal weight while a search is on, so a match in one is semibold', async () => {
+    const user = userEvent.setup();
+    render(<SelectField label="City" options={cities} defaultValue="UTC" />);
+    await user.click(screen.getByRole('combobox', { name: 'City' }));
+    /**
+     * The heading of a group in the open list.
+     *
+     * @param name - The group's name.
+     * @returns Its heading.
+     */
+    const headingOf = (name: string) =>
+      defined(
+        screen.getByRole('group', { name }).querySelector<HTMLElement>('[data-group-heading]'),
+        'a heading',
+      );
+    expect(headingOf('Europe')).toHaveClass('font-semibold');
+
+    await user.keyboard('eur');
+
+    expect(headingOf('Europe')).toHaveClass('font-normal');
+    expect(headingOf('Europe')).not.toHaveClass('font-semibold');
+    expect(headingOf('Europe').querySelector('mark')).toHaveClass('font-semibold');
+
+    await user.clear(searchField());
+    expect(headingOf('Europe')).toHaveClass('font-semibold');
+  });
+
+  it('marks nothing before anything is typed, nor in the closed field', async () => {
+    const user = userEvent.setup();
+    render(<SelectField label="City" options={cities} defaultValue="Europe/Amsterdam" />);
+    const field = screen.getByRole('combobox', { name: 'City' });
+    await user.click(field);
+    expect(document.querySelectorAll('mark')).toHaveLength(0);
+
+    await user.keyboard('amst{Enter}');
+
+    expect(field).toHaveTextContent('Amsterdam (UTC+01:00)');
+    expect(document.querySelectorAll('mark')).toHaveLength(0);
+  });
+
+  it('keeps an option’s language on its label while a part of it is marked', async () => {
+    const user = userEvent.setup();
+    const options: SelectOption[] = [
+      ...cities.slice(1),
+      { value: 'nl-NL', label: 'Nederlands', lang: 'nl-NL' },
+    ];
+    render(<SelectField label="City" options={options} defaultValue="UTC" />);
+    await user.click(screen.getByRole('combobox', { name: 'City' }));
+
+    await user.keyboard('neder');
+
+    const option = screen.getByRole('option', { name: 'Nederlands' });
+    expect(within(option).getByText('Neder').closest('[lang]')).toHaveAttribute('lang', 'nl-NL');
+  });
+});

@@ -2,7 +2,7 @@
  * @file The searchable kind of {@link SelectField}, for a field with many
  * options: the closed field opens a panel with a search field above the
  * list, and the list shows only the options whose label (or group heading)
- * contains what's typed. Built on Radix Popover, following the WAI-ARIA 1.2
+ * contains what's typed, with that part marked. Built on Radix Popover, following the WAI-ARIA 1.2
  * combobox pattern: the closed field is a select-only combobox that opens
  * the panel, and the search field in it is an editable combobox that keeps
  * the focus while the arrow keys move through the list
@@ -30,9 +30,11 @@ import { onSearchKey, onTriggerKey, showOption } from './searchable-select-keys'
 import { groupOptions, matchingOptions } from './select-option-list';
 import {
   groupHeading,
+  MatchedText,
   optionCheck,
   optionItem,
   OptionLabel,
+  searchedGroupHeading,
   type SelectOption,
   selectTrigger,
 } from './select-options';
@@ -91,9 +93,12 @@ function keepFocus(event: { preventDefault: () => void }) {
  * Typing a character on the closed field opens it with that character in
  * the search.
  *
- * Typing filters the list at once, and the first option that matches
- * becomes the active one. The arrow keys move it one option, PageDown and
- * PageUp ten, Home and End to the first and the last; the active option is
+ * Typing filters the list at once, and shows the part of each option's
+ * label, or of its group's heading, that matches in semibold
+ * (`MatchedText`; the headings are at normal weight while a search is on).
+ * The first option that matches becomes the active one.
+ * The arrow keys move it one option, PageDown and PageUp ten, Home and End
+ * to the first and the last; the active option is
  * filled and outlined, like the short select's. Enter (or a click) picks it
  * and closes the panel with the focus back on the field. Escape, Tab,
  * Shift+Tab or a click outside close it without changing the choice. A
@@ -157,6 +162,8 @@ export default function SearchableSelect({
     [options],
   );
   const shown = useMemo(() => matchingOptions(options, query), [options, query]);
+  // While a search is on, the headings drop to normal weight, so what matches in them stands out.
+  const searching = query.trim() !== '';
   const groups = useMemo(() => groupOptions(shown), [shown]);
   const chosen = options.find((option) => option.value === current);
 
@@ -352,7 +359,7 @@ export default function SearchableSelect({
           </span>
         )}
         <span id={`${optionElementId}-label`}>
-          <OptionLabel option={option} />
+          <OptionLabel option={option} query={query} />
         </span>
         {/* A space between label and description in the text (not visible in the column layout). */}
         {option.description && ' '}
@@ -465,9 +472,12 @@ export default function SearchableSelect({
                       id={`${listId}-group-${place}`}
                       role="presentation"
                       data-group-heading=""
-                      className={cn(groupHeading, 'sticky top-0 z-10 bg-raised')}
+                      className={cn(
+                        searching ? searchedGroupHeading : groupHeading,
+                        'sticky top-0 z-10 bg-raised',
+                      )}
                     >
-                      {group.heading}
+                      <MatchedText text={group.heading} query={query} />
                     </div>
                     {group.options.map(renderOption)}
                   </div>
