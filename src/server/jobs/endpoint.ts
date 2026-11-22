@@ -24,8 +24,11 @@ import { REQUEST_RUN_SECONDS, runTick, type TickResult } from './tick';
  */
 const ENDPOINT_TICK_SECONDS = REQUEST_RUN_SECONDS;
 
-/** The endpoint's path, which a continuation calls on the app's own address. */
-const TICK_PATH = '/api/jobs';
+/**
+ * The endpoint's path, which a continuation calls on the app's own address,
+ * and so does the development tick (`dev-tick.ts`).
+ */
+export const TICK_PATH = '/api/jobs';
 
 /** The header a continued call carries: how many continuations came before it, plus one. */
 export const TICK_CONTINUATION_HEADER = 'x-adiutor-tick-continuation';
