@@ -62,7 +62,6 @@
       "seeAllLabel": "Ver las {count, number} solicitudes de {lane}",
       "lastActivity": "Última actividad",
       "move": "Mover",
-      "moving": "Moviendo…",
       "moveCard": "Mover {reference}",
       "movingCard": "Moviendo {reference} a {lane}…",
       "moveTo": "Mover a",

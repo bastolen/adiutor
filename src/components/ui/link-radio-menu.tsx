@@ -43,14 +43,28 @@ interface LinkRadioMenuProps {
    * @returns The button's content.
    */
   renderTrigger: (current: SortOption | undefined) => ReactNode;
+  /**
+   * The button's name, for a button that shows less than it says (it shows
+   * "Name, A to Z" and is named "Sort members: Name, A to Z"). It's the
+   * button's `aria-label`, so it must hold the words the button shows (WCAG
+   * 2.5.3), and it names the menu too. Left out, what the button shows names
+   * it. Never put a copy only screen readers get in the button's content
+   * instead: the open menu would read it along with what the button shows.
+   *
+   * @param current - The current choice, if any.
+   * @returns The button's name.
+   */
+  triggerLabel?: (current: SortOption | undefined) => string;
 }
 
 /**
  * A secondary small button that opens a menu with one link per choice, the
  * current one checked (Radix brings the keyboard behaviour). The menu closes
  * as soon as a choice is made, and until the new page arrives the button is
- * busy (a spinner and `aria-busy`). The menu's open state is transient, so it
- * isn't still open when the user comes back to the page.
+ * busy (a spinner and `aria-busy`). The menu is named by its button (Radix's
+ * `aria-labelledby`): by `triggerLabel` when there is one, else by what the
+ * button shows. The menu's open state is transient, so it isn't still open
+ * when the user comes back to the page.
  *
  * @param props - Menu props.
  * @param props.icon - The button's icon.
@@ -58,6 +72,7 @@ interface LinkRadioMenuProps {
  * @param props.menuLabel - The menu's heading.
  * @param props.options - The choices.
  * @param props.renderTrigger - The button's content after the icon.
+ * @param props.triggerLabel - The button's name, when it shows less than it says.
  * @returns The menu's button (the menu itself opens in a portal).
  */
 export default function LinkRadioMenu({
@@ -66,6 +81,7 @@ export default function LinkRadioMenu({
   menuLabel,
   options,
   renderTrigger,
+  triggerLabel = undefined,
 }: LinkRadioMenuProps) {
   const [open, setOpen] = useTransientState(false);
   const router = useRouter();
@@ -74,7 +90,12 @@ export default function LinkRadioMenu({
   return (
     <MenuRoot open={open} onOpenChange={setOpen}>
       <MenuTrigger asChild>
-        <Button variant="secondary" size="sm" aria-busy={pending || undefined}>
+        <Button
+          variant="secondary"
+          size="sm"
+          aria-label={triggerLabel?.(current)}
+          aria-busy={pending || undefined}
+        >
           {pending ? <Spinner /> : <Icon aria-hidden="true" />}
           {renderTrigger(current)}
         </Button>

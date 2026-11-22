@@ -127,8 +127,8 @@ keyboard support.
     drop that's refused sends nothing and says why, inline and as a toast. A live region of the
     board's own announces the drag in the reader's language (never a library's English).
   - **A busy card, not a busy board:** a moved card shows in its new lane at once
-    (`useOptimistic`), and only its Move button is busy ("Moving…", focusable, presses ignored);
-    every other card stays usable.
+    (`useOptimistic`), and only its Move button is busy (a spinner in its icon's place, its word
+    and name kept, focusable, presses ignored); every other card stays usable.
   - **Focus follows the card:** a card that changes lanes is removed and added again, so focus
     is put back on its Move button in the new lane (`data-request`), or on the lane's heading
     when the card isn't shown anymore; a lane is a `data-card` element for `restoreFocusIfLost`.
@@ -236,6 +236,17 @@ keyboard support.
   mode, and forced-colours mode drops it; the outline is 7.5:1 and 7.3:1 (WCAG 1.4.11) and is drawn
   in forced colours too. Items never take `outline-none` or `outline-hidden`: both switch
   Tailwind's outline style off for the element, so the outline would never show.
+- **A button that opens a menu and shows less than it says names itself with `aria-label`**,
+  which holds the words it shows (WCAG 2.5.3): the board's "Move" is "Move AD-142", and the Sort
+  menu's "Name, A to Z" is "Sort members: Name, A to Z" (`LinkRadioMenu`'s `triggerLabel`). Never
+  a copy only screen readers get next to `aria-hidden` text, as other buttons with a short label
+  have it ([Languages](i18n.md)): a Radix menu is named by its button (`aria-labelledby`), and
+  while it's open the rest of the page, its button included, is hidden, so the menu's name counts
+  all the button's text, hidden or not ("Move Move AD-142"). A button that shows text outside its
+  name, like the account menu's avatar initials, can't take a label (it would have to hold them):
+  it keeps its content as its name, and its menu is labelled by the part of it that names it
+  (`aria-labelledby` on `MenuContent`). `e2e/board-a11y.spec.ts` and `e2e/keyboard.spec.ts` check
+  those menus' names.
 - **Long selects can be searched.** A `SelectField` with more options than `SEARCH_THRESHOLD`
   (10, in `src/components/ui/select-field.tsx`; a field can pass its own `searchThreshold`) opens
   a panel with a search field above its list (`SearchableSelect`, on Radix Popover): the list shows

@@ -27,12 +27,8 @@ const OPTIONS: readonly SortOption[] = [
   },
 ];
 
-/**
- * The name of the menu's button as jsdom computes it: "Sort members: Name, A
- * to Z" without some spaces, as jsdom drops the space around the
- * screen-reader-only text (browsers keep it, see the text content check).
- */
-const TRIGGER_NAME = /^Sort\s*members:\s*Name, A to Z$/;
+/** The name of the menu's button, and of its menu. */
+const TRIGGER_NAME = 'Sort members: Name, A to Z';
 
 /**
  * Opens the menu with a click.
@@ -41,23 +37,25 @@ const TRIGGER_NAME = /^Sort\s*members:\s*Name, A to Z$/;
  * @returns The menu's button.
  */
 async function openMenu(user: ReturnType<typeof userEvent.setup>) {
-  const trigger = screen.getByRole('button', { name: /^Sort\s*members/ });
+  const trigger = screen.getByRole('button', { name: /^Sort members/ });
   await user.click(trigger);
   return trigger;
 }
 
 describe('SortMenu', () => {
   describe('button', () => {
-    it('says how the table is sorted, and for screen readers what it sorts', () => {
+    it('says how the table is sorted, and is named for what it sorts too', () => {
       render(<SortMenu label="members" options={OPTIONS} />);
 
       const trigger = screen.getByRole('button', { name: TRIGGER_NAME });
-      // "Sort" is only seen on phones; from 640px (`sm`) the current sort is. Both are part of
-      // the name, which screen readers hear whole.
+      // "Sort" is only seen on phones; from 640px (`sm`) the current sort is. The name holds
+      // both, and is the button's own label: no copy only screen readers get, which its open
+      // menu would read along with what the button shows.
+      expect(trigger).toHaveAttribute('aria-label', TRIGGER_NAME);
       expect(within(trigger).getByText('Sort')).toHaveClass('sm:hidden');
-      expect(within(trigger).getByText('Sort')).toHaveAttribute('aria-hidden', 'true');
       expect(within(trigger).getByText('Name, A to Z')).toHaveClass('max-sm:hidden');
-      expect(within(trigger).getByText('Sort members: Name, A to Z')).toHaveClass('sr-only');
+      expect(trigger).toHaveTextContent(/^SortName, A to Z$/);
+      expect(trigger.querySelector('.sr-only')).toBeNull();
       expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
       expect(trigger).toHaveAttribute('aria-expanded', 'false');
     });
@@ -66,7 +64,7 @@ describe('SortMenu', () => {
       render(<SortMenu label="invitations" options={OPTIONS} />);
 
       expect(
-        screen.getByRole('button', { name: /^Sort\s*invitations:\s*Name, A to Z$/ }),
+        screen.getByRole('button', { name: 'Sort invitations: Name, A to Z' }),
       ).toBeInTheDocument();
     });
 
@@ -78,7 +76,7 @@ describe('SortMenu', () => {
         />,
       );
 
-      const trigger = screen.getByRole('button', { name: /^Sort\s*members$/ });
+      const trigger = screen.getByRole('button', { name: 'Sort members' });
       expect(within(trigger).getByText('Sort')).not.toHaveClass('sm:hidden');
     });
 
@@ -164,7 +162,8 @@ describe('SortMenu', () => {
 
       const trigger = await openMenu(user);
 
-      expect(trigger).toHaveTextContent('Sort members: Joined, newest first');
+      expect(trigger).toHaveAttribute('aria-label', 'Sort members: Joined, newest first');
+      expect(screen.getByRole('menu')).toHaveAccessibleName('Sort members: Joined, newest first');
       expect(screen.getByRole('menuitemradio', { name: 'Joined, newest first' })).toHaveAttribute(
         'aria-checked',
         'true',

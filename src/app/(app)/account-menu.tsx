@@ -9,6 +9,7 @@
 import { ChevronsUpDown, LogOut, Undo2, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { useId } from 'react';
 
 import ThemeMenuRow from '@/components/theme/theme-menu-row';
 import useThemePreference from '@/components/theme/use-theme-preference';
@@ -62,6 +63,14 @@ interface AccountMenuProps {
  * right too within the theme row), Escape closes and returns focus to the
  * button.
  *
+ * The button is named by what it shows ("Account menu: Ada Tester
+ * ada@adiutor.test", with "Signed in as" while a staff member is), its
+ * avatar left out. It can't take that name as an `aria-label`: its avatar's
+ * initials are text it shows, which a label would have to hold (WCAG 2.5.3).
+ * So the menu is labelled by the same words (`aria-labelledby` on the part
+ * of the button that names it), not by the whole button, which the open
+ * menu hides, and whose every text, initials included, would count then.
+ *
  * Choosing "Account settings" also calls `onNavigate`, so the mobile menu it
  * sits in closes when the page changes, like after its other links. The other
  * items load a new page anyway (Sign out, "Back to my account") or keep the
@@ -101,6 +110,7 @@ export default function AccountMenu({
   const { goBack } = useBackToOwnAccount();
   const { preference, setPreference } = useThemePreference();
   const shownName = displayName({ name, email });
+  const nameId = useId();
   // Gone when the user leaves the page and comes back, like every status message.
   const [signOutFailed, setSignOutFailed] = useTransientState(false);
 
@@ -153,7 +163,8 @@ export default function AccountMenu({
           )}
         >
           <Avatar name={shownName} size="sm" src={picture} />
-          <span className="flex min-w-0 flex-1 flex-col">
+          {/* What names the button, and the menu too: everything it shows but the avatar. */}
+          <span id={nameId} className="flex min-w-0 flex-1 flex-col">
             {/* Part of the button's name, which then contains its visible text (WCAG 2.5.3). */}
             <span className="sr-only">{t('accountMenu')}</span>
             {signedInAs && (
@@ -166,7 +177,14 @@ export default function AccountMenu({
           </span>
           <ChevronsUpDown aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
         </MenuTrigger>
-        <MenuContent side="top" align="start" className="w-(--radix-dropdown-menu-trigger-width)">
+        <MenuContent
+          // Named by the button's words alone: by the whole button, which is hidden behind the
+          // open menu, it would count the avatar's initials too ("EA Account menu: …").
+          aria-labelledby={nameId}
+          side="top"
+          align="start"
+          className="w-(--radix-dropdown-menu-trigger-width)"
+        >
           <MenuLabel>{email}</MenuLabel>
           <MenuItem asChild onSelect={onNavigate}>
             <Link href="/account">
