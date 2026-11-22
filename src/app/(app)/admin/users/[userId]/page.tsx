@@ -11,7 +11,7 @@
  *
  * On your own page, your companies are managed like anyone's, but the staff
  * access and account controls aren't shown: your sign-in methods are on your
- * Security page, and stepping down from the staff is on the Staff page.
+ * Security page, and stepping down from the staff is in the staff settings.
  *
  * This file loads the user and decides what the viewer may do; each card is
  * its own component next to it (`*-card.tsx`), taking only what it shows.
@@ -83,13 +83,13 @@ function securityLink(chunks: ReactNode) {
 }
 
 /**
- * The link to the Staff page inside the "your own account" notice.
+ * The link to the staff settings inside the "your own account" notice.
  *
  * @param chunks - The link's text.
  * @returns The link.
  */
 function staffLink(chunks: ReactNode) {
-  return <TextLink href="/admin/staff">{chunks}</TextLink>;
+  return <TextLink href="/admin/settings/staff">{chunks}</TextLink>;
 }
 
 /**
@@ -142,7 +142,7 @@ async function UserDetailContent({
 
   const permissions = getGlobalPermissions(actor);
   const isSelf = detail.id === actor.id;
-  // Not on your own page: you can only step down, which the Staff page offers.
+  // Not on your own page: you can only step down, which the staff settings offer.
   const canManageStaff = permissions.has('staff:manage') && !isSelf;
   // Account actions on yourself go through the Security page and its checks (`loadTarget`).
   const canManage = permissions.has('users:manage') && !isSelf;

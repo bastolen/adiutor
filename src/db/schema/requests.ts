@@ -45,7 +45,7 @@ const WRITTEN_KINDS = WRITTEN_ENTRY_KINDS.map((kind) => `'${kind}'`).join(', ');
 /**
  * A kind of request the staff offer, which whoever raises a request picks:
  * the four built-in ones (Hotfix, Bug, Support, New feature) to begin with,
- * then whatever staff Admins add on the Staff page (decision 0027). A type is
+ * then whatever staff Admins add in Settings (decision 0027). A type is
  * never deleted: archived, it can't be picked any more, and the requests that
  * have it keep it.
  */

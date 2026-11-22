@@ -1,6 +1,6 @@
 /**
- * @file The dialog that adds a request type, or edits one, on the Staff page.
- * Its text comes from `admin.staff.requestTypes`, which the page passes
+ * @file The dialog that adds a request type, or edits one, on the Requests tab of Settings.
+ * Its text comes from `admin.settings.requests.requestTypes`, which the page passes
  * through `ClientMessages`.
  */
 'use client';
@@ -53,7 +53,7 @@ export default function RequestTypeDialog({
   type = undefined,
   priorities,
 }: RequestTypeDialogProps) {
-  const t = useTranslations('admin.staff.requestTypes');
+  const t = useTranslations('admin.settings.requests.requestTypes');
   const fields = (
     <>
       <TextField

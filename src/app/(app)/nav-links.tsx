@@ -57,7 +57,7 @@ export default function NavLinks({ sections, onNavigate = undefined }: NavLinksP
     requests: t('items.requests'),
     users: t('items.users'),
     companies: t('items.companies'),
-    staff: t('items.staff'),
+    settings: t('items.settings'),
     logs: t('items.logs'),
   };
   const items: NavItem[] = [

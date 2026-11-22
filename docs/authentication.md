@@ -168,8 +168,8 @@ lowercase letters, digits and hyphens, starting with a letter, at most 64 charac
   `URL` or `appendQueryParams`.
 
 The server never sees a URL's fragment. When the proxy sends a signed-out visitor from
-`/admin/staff#invitations` to the sign-in page, the browser keeps the anchor on the sign-in
-page's own address (`/auth?callbackURL=%2Fadmin%2Fstaff#invitations`). The sign-in form adds it
+`/admin/settings/staff#invitations` to the sign-in page, the browser keeps the anchor on the sign-in
+page's own address (`/auth?callbackURL=%2Fadmin%2Fsettings%2Fstaff#invitations`). The sign-in form adds it
 to `callbackURL` when that has none. `/auth` opened while signed in needs nothing: the browser
 carries the anchor over the redirect. Redirects to the step-up page from `getActor()` while a
 page renders keep only the page (`PATHNAME_HEADER`). They happen when a page is opened, not after

@@ -430,9 +430,9 @@ export async function signInAsUser(
 
 /**
  * Creates an invite link with the form on the Members page of a company or
- * the Staff page.
+ * in the staff settings.
  *
- * @param page - The browser page, signed in and on the Members or Staff page.
+ * @param page - The browser page, signed in and on the Members page or the staff settings.
  * @param role - The role's name in the menu, e.g. "Client".
  * @returns The link.
  */
@@ -448,10 +448,10 @@ export async function createInviteLink(page: Page, role: string): Promise<string
 }
 
 /**
- * Sends an invitation with the form on the Members page of a company or the
- * Staff page, without waiting for the result.
+ * Sends an invitation with the form on the Members page of a company or in
+ * the staff settings, without waiting for the result.
  *
- * @param page - The browser page, signed in and on the Members or Staff page.
+ * @param page - The browser page, signed in and on the Members page or the staff settings.
  * @param email - The address to invite.
  * @param role - The role's name in the menu, e.g. "Client".
  */

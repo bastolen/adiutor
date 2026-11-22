@@ -13,7 +13,7 @@ import { DEFAULT_LOCALE, type Locale, offeredLocale } from '@/lib/i18n/locales';
 import type { ServiceContext } from './context';
 
 /**
- * Adiutor's default language, as chosen on the staff page.
+ * Adiutor's default language, as chosen in Settings.
  *
  * @param ctx - Service context; its database holds the setting.
  * @returns The default language, or English (US) before setup.

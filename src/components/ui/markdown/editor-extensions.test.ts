@@ -271,7 +271,7 @@ describe('links', () => {
 
   it.each([
     ['a script address', '[click](javascript:alert(1))'],
-    ['a page of Adiutor itself', '[click](/admin/staff)'],
+    ['a page of Adiutor itself', '[click](/admin/settings/staff)'],
     ['an email address behind a text', '[click](mailto:user@adiutor.dev)'],
     ['an email address', 'write to user@adiutor.dev'],
   ])('links nothing for %s, as the server doesn’t either', (_what, markdown) => {

@@ -354,7 +354,7 @@ export async function removeStaffSettings(): Promise<void> {
 
 /**
  * Sets Adiutor's default language and the languages it offers directly, e.g.
- * to put them back after a test changed them on the staff page.
+ * to put them back after a test changed them in Settings.
  *
  * @param locale - The default language.
  * @param offered - The languages to offer; every language by default.
@@ -372,7 +372,7 @@ export async function setDefaultLocale(
 
 /**
  * Sets Adiutor's default time zone directly, e.g. to put it back after a test
- * changed it on the staff page.
+ * changed it in Settings.
  *
  * @param timeZone - The zone, e.g. `UTC`.
  */
@@ -396,7 +396,7 @@ export async function defaultTimeZoneNow(): Promise<string> {
 
 /**
  * Sets the prefix request numbers are shown with directly, for tests about
- * the numbers (the staff page's own field is tested in `staff.spec.ts`), and
+ * the numbers (the field in Settings is tested in `settings.spec.ts`), and
  * to put it back afterwards.
  *
  * @param prefix - The prefix, e.g. "AD".

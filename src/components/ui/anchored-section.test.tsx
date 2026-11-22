@@ -102,7 +102,7 @@ describe('Card with an anchor', () => {
   });
 
   it('lands on the card the URL names: in view, with focus on its heading', async () => {
-    window.history.replaceState(null, '', '/admin/staff?inv-page=2#invitations');
+    window.history.replaceState(null, '', '/admin/settings/staff?inv-page=2#invitations');
     render(<Page />);
     await nextFrame();
 
@@ -113,7 +113,7 @@ describe('Card with an anchor', () => {
   it.each(['', '#name', '#:~:text=Open', '#Invitations'])(
     'does nothing when the URL ends in %j',
     async (hash) => {
-      window.history.replaceState(null, '', `/admin/staff${hash}`);
+      window.history.replaceState(null, '', `/admin/settings/staff${hash}`);
       render(<Page />);
       await nextFrame();
 
@@ -123,7 +123,7 @@ describe('Card with an anchor', () => {
   );
 
   it('takes focus from a control that is no longer shown, like the page left behind', async () => {
-    window.history.replaceState(null, '', '/admin/staff#invitations');
+    window.history.replaceState(null, '', '/admin/settings/staff#invitations');
     render(<Page />);
     const above = screen.getByRole('button', { name: 'Above' });
     above.focus();
@@ -134,7 +134,7 @@ describe('Card with an anchor', () => {
   });
 
   it('never takes focus from a control the user is on', async () => {
-    window.history.replaceState(null, '', '/admin/staff#invitations');
+    window.history.replaceState(null, '', '/admin/settings/staff#invitations');
     render(<Page />);
     const above = screen.getByRole('button', { name: 'Above' });
     above.focus();
@@ -145,7 +145,7 @@ describe('Card with an anchor', () => {
   });
 
   it('only scrolls when something inside the card has focus already', async () => {
-    window.history.replaceState(null, '', '/admin/staff#invitations');
+    window.history.replaceState(null, '', '/admin/settings/staff#invitations');
     render(<Page />);
     const resend = screen.getByRole('button', { name: 'Resend' });
     resend.focus();

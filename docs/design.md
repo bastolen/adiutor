@@ -129,7 +129,7 @@ keyboard support.
   whatever the result. Forms pass both the action and the hook's `onSubmit`
   (`<form action={formAction} onSubmit={onSubmit}>`), which runs the action itself and clears the
   form only after a successful result (`resetOnSuccess`, on by default). Forms that edit a saved
-  setting with a select (the staff page's default language) pass `resetOnSuccess: false`: a
+  setting with a select (the default language in Settings) pass `resetOnSuccess: false`: a
   cleared `SelectField` goes back to the value it showed when the page loaded (Radix Select
   restores that on a form reset), not the one just saved. Forms that edit a saved setting in a
   text field (a name, the request prefix) keep the reset: it's what makes the field show the
@@ -316,8 +316,9 @@ keyboard support.
     give an element the top bar's height as its `scroll-margin-top`: it would count twice.
 
   Pages with section tabs (a company's Requests, Members and Settings; the account's Profile and
-  Security) get their header and tabs from a layout (`companies/[companyId]/layout.tsx`,
-  `account/layout.tsx`), which stays mounted while the page under it changes: the tab you chose
+  Security; the Logs; Settings' General, Staff and Requests) get their header and tabs from a
+  layout (`companies/[companyId]/layout.tsx`, `account/layout.tsx`, `admin/logs/layout.tsx`,
+  `admin/settings/layout.tsx`), which stays mounted while the page under it changes: the tab you chose
   keeps focus and the header doesn't reload. `SegmentTabNav` marks the current tab from the URL
   (`useSelectedLayoutSegment`), and each page still checks its own permission. Tabs that don't
   fit the width (long names on a phone, in some languages) wrap onto another row rather than

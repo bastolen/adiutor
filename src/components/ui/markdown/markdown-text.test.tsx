@@ -272,7 +272,7 @@ describe('MarkdownText: links', () => {
     ['a script address defined below the text', '[click][later]\n\n[later]: javascript:alert(1)'],
     ['a data address', '[click](data:text/html,<script>alert(1)</script>)'],
     ['a vbscript address', '[click](vbscript:msgbox(1))'],
-    ['a page of Adiutor itself', '[click](/admin/staff)'],
+    ['a page of Adiutor itself', '[click](/admin/settings/staff)'],
     ['an address without a scheme', '[click](//adiutor.dev/docs)'],
     ['an email address behind a text', '[click](mailto:user@adiutor.dev)'],
     ['an email address', 'Write to user@adiutor.dev today'],
@@ -298,7 +298,7 @@ describe('MarkdownText: what someone typed is shown, never run', () => {
     ['a style sheet', '<style>p { display: none }</style>', 'style'],
     ['a form', '<form action="https://adiutor.dev"><input name="password"></form>', 'form'],
     ['bold written as HTML', 'This is <b>bold</b>', 'b'],
-    ['a link written as HTML', '<a href="/admin/staff" onclick="alert(1)">here</a>', 'a'],
+    ['a link written as HTML', '<a href="/admin/settings/staff" onclick="alert(1)">here</a>', 'a'],
   ])('shows %s as the text it is', (_what, text, element) => {
     const container = show(text);
 

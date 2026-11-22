@@ -1,6 +1,6 @@
 /**
  * @file End-to-end tests for the dashboard and the main navigation: the
- * staff page from the dashboard and the menu, what staff who can't manage the
+ * Settings from the dashboard and the menu, what staff who can't manage the
  * staff see (and the tile of the requests assigned to them), the warning about users whose MFA came from a provider that is
  * off, and what company users get: Requests in the menu and on the
  * dashboard, and their companies.
@@ -18,7 +18,7 @@ import {
 import { signIn } from './support/helpers';
 import { expect, test } from './support/test';
 
-test('an Admin opens the staff page from the dashboard and the menu', async ({ page }) => {
+test('an Admin opens Settings from the dashboard and the menu', async ({ page }) => {
   await signIn(page, PLATFORM_ADMIN);
   await page.goto('/dashboard');
 
@@ -29,17 +29,22 @@ test('an Admin opens the staff page from the dashboard and the menu', async ({ p
     /^Assigned to you/,
     /^Users/,
     /^Companies/,
-    /^Staff/,
+    /^Settings/,
     /^Logs/,
   ]);
-  await main.getByRole('link', { name: /^Staff/ }).click();
-  await expect(page).toHaveURL('/admin/staff');
+  await main.getByRole('link', { name: /^Settings/ }).click();
+  await expect(page).toHaveURL('/admin/settings');
+  await page
+    .getByRole('navigation', { name: 'Settings sections' })
+    .getByRole('link', { name: 'Staff' })
+    .click();
+  await expect(page).toHaveURL('/admin/settings/staff');
   // The staff table shows each address under the name.
   await expect(
     page.getByRole('main').getByRole('row').filter({ hasText: PLATFORM_ADMIN.email }),
   ).toBeVisible();
   await expect(
-    page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Staff' }),
+    page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Settings' }),
   ).toHaveAttribute('aria-current', 'page');
 });
 

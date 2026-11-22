@@ -1,7 +1,8 @@
 /**
- * @file The staff page, served at `/admin/staff`: the staff name, Adiutor's
- * languages (the default and the ones it offers), its default time zone, the prefix of request numbers and its people (staff), with invitations and
- * invite links to join it, each sortable and paginated. Platform Admins only (`staff:manage`).
+ * @file The Staff tab of Settings, served at `/admin/settings/staff`: the
+ * people on the staff, with invitations and invite links to join it, each
+ * sortable and paginated. Platform Admins only (`staff:manage`). The heading
+ * and tabs come from the Settings layout.
  */
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
@@ -9,7 +10,6 @@ import { Suspense } from 'react';
 import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
 import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
-import PageHeader from '@/components/ui/page-header';
 import { paginationFooter } from '@/components/ui/pagination';
 import RowAction from '@/components/ui/row-action';
 import { PageSkeleton } from '@/components/ui/skeleton';
@@ -18,7 +18,6 @@ import { Table, Td, Th, Tr } from '@/components/ui/table';
 import { PLATFORM_ROLES, roleOptions } from '@/lib/authz/roles';
 import displayName from '@/lib/display-name';
 import ClientMessages from '@/lib/i18n/client-messages';
-import { timeZoneOptions } from '@/lib/i18n/time-zones';
 import { INVITATION_VALID_DAYS } from '@/lib/invitation-lifetimes';
 import type { SearchParams } from '@/lib/search-params';
 import { confirmationWindow } from '@/lib/sign-in/confirm-url';
@@ -30,33 +29,30 @@ import { requireGlobalPermission } from '@/server/authz';
 import { globalPermissionMetadata } from '@/server/page-metadata';
 import { listPendingInvitations } from '@/server/people/invitations';
 import { listInviteLinks } from '@/server/people/invite-links';
-import { getStaffSettings, listStaff } from '@/server/people/staff';
-import { listRequestTypes } from '@/server/requests';
+import { listStaff } from '@/server/people/staff';
 
-import { ActivityColumn } from '../../_people/activity';
-import InvitationsCard from '../../_people/invitations-card';
-import InviteForm from '../../_people/invite-form';
-import InviteLinksCard from '../../_people/invite-links-card';
-import PersonCell from '../../_people/person-cell';
-import RoleSelect from '../../_people/role-select';
-import { changeStaffRoleAction, removeFromStaffAction } from '../../_people/staff-actions';
-import DefaultTimeZoneForm from './default-time-zone-form';
-import LanguagesForm from './languages-form';
-import RequestPrefixForm from './request-prefix-form';
-import RequestTypesCard from './request-types-card';
-import StaffNameForm from './staff-name-form';
+import { ActivityColumn } from '../../../_people/activity';
+import InvitationsCard from '../../../_people/invitations-card';
+import InviteForm from '../../../_people/invite-form';
+import InviteLinksCard from '../../../_people/invite-links-card';
+import PersonCell from '../../../_people/person-cell';
+import RoleSelect from '../../../_people/role-select';
+import { changeStaffRoleAction, removeFromStaffAction } from '../../../_people/staff-actions';
 
 /**
- * Page metadata: "Staff · Adiutor" for those who may see the page (`staff:manage`), and
- * the 404 page's title for everyone else, who get the 404 page.
+ * Page metadata: "Staff · Settings · Adiutor" for those who may see the page
+ * (`staff:manage`), and the 404 page's title for everyone else, who get the 404 page.
  */
-// i18n-check t('admin.staff.title')
-export const generateMetadata = globalPermissionMetadata('staff:manage', 'admin.staff.title');
+// i18n-check t('admin.settings.staff.title')
+export const generateMetadata = globalPermissionMetadata(
+  'staff:manage',
+  'admin.settings.staff.title',
+);
 
 /**
- * Loads and shows the staff. Its text comes from `admin.staff`; the client
- * components below (`StaffNameForm`, `RequestPrefixForm`, `InviteForm`, `InviteLinksCard`'s form
- * and `RoleSelect`) get `admin` and `people` through `ClientMessages`.
+ * Loads and shows the staff. Its text comes from `admin.settings.staff`; the
+ * client components below (`InviteForm`, `InviteLinksCard`'s form and
+ * `RoleSelect`) get `people` through `ClientMessages`.
  *
  * @param props - Component props.
  * @param props.searchParams - Query parameters: each table's sort and page (see
@@ -64,7 +60,7 @@ export const generateMetadata = globalPermissionMetadata('staff:manage', 'admin.
  * @returns The page content.
  */
 async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const t = await getTranslations('admin.staff');
+  const t = await getTranslations('admin.settings.staff');
   const tRoles = await getTranslations('roles');
   const roles = roleOptions(PLATFORM_ROLES, tRoles);
   const actor = await requireGlobalPermission('staff:manage');
@@ -72,14 +68,12 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
   const staffRequested = parseTableState(STAFF_TABLE, query);
   const invitationsRequested = parseTableState(INVITATIONS_TABLE, query);
   const linksRequested = parseTableState(INVITE_LINKS_TABLE, query);
-  const [settings, members, invitations, links, types] = await Promise.all([
-    getStaffSettings(appContext, actor),
+  const [members, invitations, links] = await Promise.all([
     listStaff(appContext, actor, staffRequested),
     listPendingInvitations(appContext, actor, null, invitationsRequested),
     listInviteLinks(appContext, actor, null, linksRequested),
-    listRequestTypes(appContext, actor),
   ]);
-  const url = createPageUrl('/admin/staff', {}, await getTranslations('tables'));
+  const url = createPageUrl('/admin/settings/staff', {}, await getTranslations('tables'));
   const table = url.table(STAFF_TABLE, { ...staffRequested, page: members.page });
   const invitationsTable = url.table(INVITATIONS_TABLE, {
     ...invitationsRequested,
@@ -88,45 +82,13 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
   const linksTable = url.table(INVITE_LINKS_TABLE, { ...linksRequested, page: links.page });
 
   return (
-    <ClientMessages
-      namespaces={[
-        'admin.staff.name',
-        'admin.staff.languages',
-        'admin.staff.timeZone',
-        'admin.staff.requestNumbers',
-        'admin.staff.requestTypes',
-        'people',
-      ]}
-    >
+    <ClientMessages namespaces={['people']}>
       <RecentConfirmationProvider
         required={actor.canConfirmSessions}
         // The page with its tables; each control adds its card's anchor.
         returnTo={url.current()}
         {...confirmationWindow(actor.mfaConfirmedUntil)}
       >
-        <PageHeader title={t('title')} description={t('description')} />
-
-        <Card title={t('name.title')} description={t('name.description')}>
-          <StaffNameForm name={settings.name} />
-        </Card>
-
-        <Card title={t('languages.title')} description={t('languages.description')}>
-          <LanguagesForm defaultLocale={settings.defaultLocale} offered={settings.offeredLocales} />
-        </Card>
-
-        <Card title={t('timeZone.title')} description={t('timeZone.description')}>
-          <DefaultTimeZoneForm
-            defaultTimeZone={settings.defaultTimeZone}
-            options={timeZoneOptions(new Date(), settings.defaultTimeZone)}
-          />
-        </Card>
-
-        <Card title={t('requestNumbers.title')} description={t('requestNumbers.description')}>
-          <RequestPrefixForm prefix={settings.requestPrefix} />
-        </Card>
-
-        <RequestTypesCard types={types} />
-
         <Card
           id="people"
           title={t('people.title')}
@@ -273,15 +235,15 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
 }
 
 /**
- * The staff page.
+ * The Staff tab of Settings.
  *
  * @param props - Page props from Next.js.
  * @param props.searchParams - Query parameters.
  * @returns The page.
  */
-export default function StaffPage({ searchParams }: PageProps<'/admin/staff'>) {
+export default function StaffSettingsPage({ searchParams }: PageProps<'/admin/settings/staff'>) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
+    <Suspense fallback={<PageSkeleton header={false} />}>
       <Staff searchParams={searchParams} />
     </Suspense>
   );

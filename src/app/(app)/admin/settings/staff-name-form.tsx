@@ -1,5 +1,5 @@
 /**
- * @file Form to rename the staff. Its text comes from `admin.staff.name`, so
+ * @file Form to rename the staff. Its text comes from `admin.settings.general.name`, so
  * the page passes `admin` through `ClientMessages`.
  */
 'use client';
@@ -23,7 +23,7 @@ import renameStaffAction from './actions';
  * @returns The form.
  */
 export default function StaffNameForm({ name }: { name: string }) {
-  const t = useTranslations('admin.staff.name');
+  const t = useTranslations('admin.settings.general.name');
   // Changes are turned off while a staff member is signed in as the user.
   const changesOff = useSignedInAs();
   const [result, formAction, pending, onSubmit] = useTransientActionState(renameStaffAction, null);

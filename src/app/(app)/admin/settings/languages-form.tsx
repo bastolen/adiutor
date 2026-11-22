@@ -1,7 +1,7 @@
 /**
- * @file The staff page's Languages form: which languages Adiutor offers, and
+ * @file The Languages form on the General tab of Settings: which languages Adiutor offers, and
  * its default language (decision 0029). Its text comes from
- * `admin.staff.languages` (through `ClientMessages`) and `common.language`.
+ * `admin.settings.general.languages` (through `ClientMessages`) and `common.language`.
  */
 'use client';
 
@@ -44,7 +44,7 @@ export default function LanguagesForm({
   defaultLocale: Locale;
   offered: readonly Locale[];
 }) {
-  const t = useTranslations('admin.staff.languages');
+  const t = useTranslations('admin.settings.general.languages');
   // Changes are turned off while a staff member is signed in as the user.
   const changesOff = useSignedInAs();
   const [result, formAction, pending, onSubmit] = useTransientActionState(

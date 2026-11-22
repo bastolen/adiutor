@@ -34,9 +34,9 @@
         "title": "Companies",
         "description": "View and manage every company."
       },
-      "staff": {
-        "title": "Staff",
-        "description": "Invite staff and manage their roles."
+      "settings": {
+        "title": "Settings",
+        "description": "Manage the staff, languages, time zone and request types."
       },
       "logs": {
         "title": "Logs",

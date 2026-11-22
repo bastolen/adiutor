@@ -214,7 +214,7 @@ describe('InviteForm', () => {
      */
     const renderUnconfirmed = (companyId: string | null, formRoles = roles) =>
       render(
-        <ConfirmationWindow windowOpen={false} returnTo="/admin/staff">
+        <ConfirmationWindow windowOpen={false} returnTo="/admin/settings/staff">
           <InviteForm companyId={companyId} roles={formRoles} />
         </ConfirmationWindow>,
       );
@@ -228,7 +228,7 @@ describe('InviteForm', () => {
       expect(screen.queryByRole('button', { name: 'Send invitations' })).not.toBeInTheDocument();
       expect(screen.getByRole('link', { name: /^Confirm it.s you$/ })).toHaveAttribute(
         'href',
-        '/auth/verify?callbackURL=%2Fadmin%2Fstaff&for=change',
+        '/auth/verify?callbackURL=%2Fadmin%2Fsettings%2Fstaff&for=change',
       );
     });
 

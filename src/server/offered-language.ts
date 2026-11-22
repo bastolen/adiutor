@@ -1,7 +1,7 @@
 /**
  * @file The refusal of a language Adiutor doesn't offer, for the services
  * that take a chosen language (the account's own, an invitation's, a new
- * user's). Staff Admins turn languages on and off on the staff page; a
+ * user's). Staff Admins turn languages on and off in Settings; a
  * language that's off isn't offered anywhere (decision 0029).
  */
 import type { DatabaseOrTransaction } from '@/db';

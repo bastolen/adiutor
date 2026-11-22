@@ -175,18 +175,19 @@ export function messagesFor(locale: Locale): Messages {
 
 /**
  * A namespace, or a group of messages inside one, that a provider can pass to
- * the browser: `admin` or just `admin.staff.name`.
+ * the browser: `admin` or just `admin.settings.general.name`.
  */
 export type MessagesGroup = NamespaceKeys<Messages, NestedKeyOf<Messages>>;
 
 /**
  * Picks the namespaces (or groups inside them) a provider passes to the
  * browser, so a page ships only the text its client components use. A group
- * keeps its place, so `admin.staff.name` gives `{ admin: { staff: { name } } }`
- * and `useTranslations('admin.staff.name')` finds it.
+ * keeps its place, so `admin.settings.general.name` gives
+ * `{ admin: { settings: { general: { name } } } }` and
+ * `useTranslations('admin.settings.general.name')` finds it.
  *
  * @param messages - All messages in a language.
- * @param namespaces - The namespaces or groups to keep, e.g. `common` or `admin.staff.name`.
+ * @param namespaces - The namespaces or groups to keep, e.g. `common` or `admin.settings.general.name`.
  * @returns Just those messages.
  */
 export function pickMessages(

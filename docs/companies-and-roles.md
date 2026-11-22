@@ -107,8 +107,8 @@ Admins and Managers who aren't members can still add themselves with any role, a
   after Requests: how many active requests are assigned to them, linking to the list with its
   Assignee filter on Me (`/requests?assignee=me`; see [Assigning](requests.md#assigning)).
 - **Staff:** the menu also has Users and Companies, and the dashboard a tile for each. Admins
-  (`staff:manage`) also get **Staff** in the menu and as a tile on the dashboard, which opens the
-  staff page. Admins and Managers (`audit:view`) also get **Logs**, last in the menu and as a tile
+  (`staff:manage`) also get **Settings** in the menu and as a tile on the dashboard, which opens
+  its General tab. Admins and Managers (`audit:view`) also get **Logs**, last in the menu and as a tile
   on the dashboard, and a warning there when background jobs aren't running (see
   [When the ticks stop](jobs.md#failures)).
 - **Company users:** the dashboard also has a **Your companies** card ("Your company" for one):
@@ -128,17 +128,22 @@ Admins and Managers who aren't members can still add themselves with any role, a
 
 ## Staff screens
 
-- **Staff page** (`/admin/staff`, `staff:manage`, Admins): change the name shown to users (in
-  invitations and wherever users see who's helping them), the languages Adiutor offers and its
-  default language (for everyone who hasn't chosen one; see
-  [Offered languages](i18n.md#offered-languages)), its time zone (for signed-out pages and
-  everyone whose zone isn't known yet; see [Time zones](i18n.md#time-zones)), the prefix of request
-  numbers and the request types (see
-  [Requests](requests.md#types-and-priorities)), see the staff with their role, when
-  they were last active and when their account was created ("Joined"), change roles, remove people from staff (their account stays), and invite
-  staff by email or single-use invite link. Staff invitations and links have no company
-  (`company_id` is null) and give a platform role; a database check keeps staff rows on platform
-  roles and company rows on company roles.
+- **Settings** (`/admin/settings`, `staff:manage`, Admins): a heading with three tabs, each a page
+  of its own under one layout (`src/app/(app)/admin/settings/`), like the account and Logs pages.
+  Every tab is for staff Admins, so none is left out. The address before it had tabs,
+  `/admin/staff`, is gone (no redirect).
+  - **General** (`/admin/settings`): change the name shown to users (in invitations and wherever
+    users see who's helping them), the languages Adiutor offers and its default language (for
+    everyone who hasn't chosen one; see [Offered languages](i18n.md#offered-languages)), and its
+    time zone (for signed-out pages and everyone whose zone isn't known yet; see
+    [Time zones](i18n.md#time-zones)).
+  - **Staff** (`/admin/settings/staff`): see the staff with their role, when they were last active
+    and when their account was created ("Joined"), change roles, remove people from staff (their
+    account stays), and invite staff by email or single-use invite link. Staff invitations and
+    links have no company (`company_id` is null) and give a platform role; a database check keeps
+    staff rows on platform roles and company rows on company roles.
+  - **Requests** (`/admin/settings/requests`): the prefix of request numbers and the request types
+    (see [Requests](requests.md#types-and-priorities)).
 - **Logs** (`/admin/logs`, `audit:view`, Admins and Managers): the whole audit log, newest first
   until the Sort menu says otherwise, in pages. Each event says what happened, who did it, whom it
   was about and which company (each a link), when, and the browser and IP address it came from. It
@@ -205,7 +210,7 @@ Admins and Managers who aren't members can still add themselves with any role, a
     one. The address the account had gets an `account_deleted` security email once it's gone.
 
   None of these, nor the staff controls, work on your own account (use the Security page and the
-  Staff page), or on the last staff Admin or the last Admin of an active company who can still sign
+  staff settings), or on the last staff Admin or the last Admin of an active company who can still sign
   in. Your own companies are managed on your page like anyone's.
 
 - **The last Admin, at the same moment:** the last-Admin rule holds when two changes come at once
@@ -268,8 +273,8 @@ address counts as verified. Until then `/setup` is
 open to anyone who can reach the site, so complete it right after deploying. Once set up, or once
 any account exists, `/setup` shows the not-found page, so it can never promote an existing account.
 The command refuses once set up; if `setup.completed_at` were ever lost, it can make an existing
-(active) account the Admin again, to recover, recorded in the audit log. Saving a setting on the
-staff page never counts as setting up: only setup writes `setup.completed_at`. A fresh setup
+(active) account the Admin again, to recover, recorded in the audit log. Saving a setting in
+Settings never counts as setting up: only setup writes `setup.completed_at`. A fresh setup
 itself isn't recorded in the audit log.
 
 ### Invitations
@@ -289,7 +294,7 @@ itself isn't recorded in the audit log.
   naming them and who made it happen (`staff-admin-added`), so an unexpected one gets noticed.
 
 - **By email:** company admins (and staff Admins and Managers) invite people from a company's
-  Members page, and Admins invite staff from the staff page. Staff add a company
+  Members page, and Admins invite staff from the staff settings. Staff add a company
   (`/admin/companies/new`) by naming it and inviting its first Admin. The invitation, its resend and
   its reminder go out in the form's Email language (see [Which language](email.md#which-language)).
   The link works once and
@@ -342,10 +347,10 @@ itself isn't recorded in the audit log.
 ### Changing roles and removing people
 
 Company Admins (on the Members page) and staff Admins and Managers (also on the user detail page)
-change members' roles and remove them; staff Admins do the same for the staff on the staff page.
+change members' roles and remove them; staff Admins do the same for the staff in the staff settings.
 
 - **Your own row:** it speaks to you. Your role select asks before saving ("Step down to Manager?"
-  on the staff page, where you can't raise your role again yourself; "Change your own role to
+  in the staff settings, where you can't raise your role again yourself; "Change your own role to
   Client?" on the Members page), and "Leave" replaces "Remove", with "Leave the staff?" or "Leave
   {company}?".
 - **A role they already have:** choosing the role someone already has (e.g. on a page opened before

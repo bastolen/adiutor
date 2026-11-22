@@ -63,7 +63,7 @@ export const USERS_TABLE: TableDefinition<PeopleSort> = {
   sorts: PEOPLE_SORTS,
 };
 
-/** The staff (`/admin/staff`); Joined is when the account was created. */
+/** The staff (`/admin/settings/staff`); Joined is when the account was created. */
 export const STAFF_TABLE: TableDefinition<PeopleSort> = {
   prefix: '',
   defaultSort: 'name',
@@ -92,7 +92,7 @@ export const USER_COMPANIES_TABLE: TableDefinition<UserCompanySort> = {
   sorts: { name: textSort('company'), joined: dateSort('joined') },
 };
 
-/** Open invitations, on the members and staff pages. */
+/** Open invitations, on a company's Members page and the staff settings. */
 export const INVITATIONS_TABLE: TableDefinition<InvitationSort> = {
   prefix: 'inv-',
   section: 'invitations',
@@ -100,7 +100,7 @@ export const INVITATIONS_TABLE: TableDefinition<InvitationSort> = {
   sorts: { email: textSort('email'), sent: dateSort('sent') },
 };
 
-/** Invite links, on the members and staff pages. */
+/** Invite links, on a company's Members page and the staff settings. */
 export const INVITE_LINKS_TABLE: TableDefinition<InviteLinkSort> = {
   prefix: 'links-',
   section: 'invite-links',

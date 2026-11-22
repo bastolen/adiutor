@@ -157,12 +157,12 @@ test('an Admin resets two-step verification, deletes a user, and on their own pa
 }) => {
   await signIn(page, PLATFORM_ADMIN);
 
-  // Their own page has no staff access or account actions (those are on the Staff and Security
-  // pages), but their companies are managed as anyone's. Only looked at, never saved, so the
+  // Their own page has no staff access or account actions (those are in the staff settings and on the
+  // Security page), but their companies are managed as anyone's. Only looked at, never saved, so the
   // seeded memberships stay as they are.
   await openUser(page, PLATFORM_ADMIN.name);
   await expect(page.getByText('This is your own account.')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Staff page', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'staff settings', exact: true })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Staff access' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Account access' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Delete account' })).toHaveCount(0);

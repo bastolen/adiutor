@@ -1,5 +1,5 @@
 /**
- * @file Tests for the Staff page's card of request types.
+ * @file Tests for the card of request types in Settings.
  */
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';

@@ -130,7 +130,7 @@ export interface PageUrl {
    * (`RecentConfirmationProvider`'s `returnTo`), so the tables keep their
    * sort and page; add every table first.
    *
-   * @returns E.g. `/admin/staff?inv-page=2`.
+   * @returns E.g. `/admin/settings/staff?inv-page=2`.
    */
   current(): string;
 }

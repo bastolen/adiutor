@@ -57,7 +57,7 @@
       "deactivatedNotice": "Esta cuenta se desactivó el {date}. No puede iniciar sesión hasta que un administrador la reactive.",
       "self": {
         "signInOnly": "Esta es tu propia cuenta. Cambia tus métodos de inicio de sesión en tu <security>página de seguridad</security>.",
-        "signInAndStaff": "Esta es tu propia cuenta. Cambia tus métodos de inicio de sesión en tu <security>página de seguridad</security> y tu rol en el personal en la <staff>página del personal</staff>."
+        "signInAndStaff": "Esta es tu propia cuenta. Cambia tus métodos de inicio de sesión en tu <security>página de seguridad</security> y tu rol en el personal en los <staff>ajustes del personal</staff>."
       },
       "account": {
         "title": "Cuenta",
@@ -239,110 +239,124 @@
       "created": "Cuenta creada para {email}. Le hemos enviado un correo con un enlace para elegir una contraseña.",
       "existing": "{email} ya tiene una cuenta. No se ha cambiado nada."
     },
-    "staff": {
-      "title": "Personal",
-      "description": "Las personas que atienden las solicitudes de las empresas, y cómo os ven los usuarios.",
-      "name": {
-        "title": "Nombre que ven los usuarios",
-        "description": "Se usa en las invitaciones y en cualquier lugar donde los usuarios ven quién les está ayudando.",
-        "label": "Nombre",
-        "example": "Por ejemplo, “Adiutor Support”.",
-        "save": "Guardar nombre",
-        "saved": "Nombre guardado."
+    "settings": {
+      "title": "Ajustes",
+      "description": "Cómo os ven los usuarios, quién forma parte del personal y cómo se numeran y clasifican las solicitudes.",
+      "sections": "Secciones de los ajustes",
+      "tabs": {
+        "general": "General",
+        "staff": "Personal",
+        "requests": "Solicitudes"
       },
-      "languages": {
-        "title": "Idiomas",
-        "description": "Elige qué idiomas ofrece Adiutor y su idioma predeterminado para quien aún no haya elegido el suyo. Quien haya elegido un idioma que desactives recibe el predeterminado hasta que vuelva a estar activo.",
-        "offeredLabel": "Idiomas ofrecidos",
-        "alwaysOn": "Siempre activo: es el idioma predeterminado.",
-        "defaultHint": "Solo un idioma que se ofrece puede ser el predeterminado.",
-        "save": "Guardar idiomas",
-        "saved": "Idiomas guardados."
+      "general": {
+        "name": {
+          "title": "Nombre que ven los usuarios",
+          "description": "Se usa en las invitaciones y en cualquier lugar donde los usuarios ven quién les está ayudando.",
+          "label": "Nombre",
+          "example": "Por ejemplo, “Adiutor Support”.",
+          "save": "Guardar nombre",
+          "saved": "Nombre guardado."
+        },
+        "languages": {
+          "title": "Idiomas",
+          "description": "Elige qué idiomas ofrece Adiutor y su idioma predeterminado para quien aún no haya elegido el suyo. Quien haya elegido un idioma que desactives recibe el predeterminado hasta que vuelva a estar activo.",
+          "offeredLabel": "Idiomas ofrecidos",
+          "alwaysOn": "Siempre activo: es el idioma predeterminado.",
+          "defaultHint": "Solo un idioma que se ofrece puede ser el predeterminado.",
+          "save": "Guardar idiomas",
+          "saved": "Idiomas guardados."
+        },
+        "timeZone": {
+          "title": "Zona horaria predeterminada",
+          "description": "Adiutor usa esta zona en las páginas para quien no ha iniciado sesión, en los correos a quien no tiene zona, y para todos hasta que su navegador fije la suya.",
+          "label": "Zona horaria predeterminada",
+          "save": "Guardar zona horaria predeterminada",
+          "saved": "Zona horaria predeterminada guardada."
+        }
       },
-      "timeZone": {
-        "title": "Zona horaria predeterminada",
-        "description": "Adiutor usa esta zona en las páginas para quien no ha iniciado sesión, en los correos a quien no tiene zona, y para todos hasta que su navegador fije la suya.",
-        "label": "Zona horaria predeterminada",
-        "save": "Guardar zona horaria predeterminada",
-        "saved": "Zona horaria predeterminada guardada."
+      "staff": {
+        "title": "Personal · Ajustes",
+        "people": {
+          "title": "Personas",
+          "description": "{count, plural, one {# persona tiene} other {# personas tienen}} acceso como personal.",
+          "rows": "personal",
+          "caption": "Personal",
+          "name": "Nombre",
+          "role": "Rol",
+          "activity": "Actividad",
+          "actions": "Acciones",
+          "deactivated": "Desactivado"
+        },
+        "stepDown": {
+          "title": "¿Bajar al rol de {role}?",
+          "description": "No puedes volver a subir tu propio rol: tendría que hacerlo otro administrador del personal. Solo los administradores gestionan el personal, así que irás al panel.",
+          "confirmLabel": "Bajar de rol"
+        },
+        "leave": {
+          "label": "Salir",
+          "ariaLabel": "Salir del personal",
+          "title": "¿Salir del personal?",
+          "confirmLabel": "Salir del personal",
+          "description": "Pierdes el acceso como personal de inmediato, y solo otro administrador puede devolvértelo. Tu cuenta y tus membresías en empresas se mantienen."
+        },
+        "remove": {
+          "label": "Quitar",
+          "ariaLabel": "Quitar a {name} del personal",
+          "done": "{name} ya no forma parte del personal.",
+          "title": "¿Quitar a {name} del personal?",
+          "confirmLabel": "Quitar del personal",
+          "description": "Pierde el acceso como personal. Su cuenta se mantiene (con sus membresías en empresas) y podrás invitarle de nuevo más adelante."
+        },
+        "invite": {
+          "title": "Invitar por correo",
+          "description": "Recibirá un correo con un enlace para unirse como personal. El enlace funciona una vez y caduca en {days, plural, one {# día} other {# días}}."
+        }
       },
-      "requestNumbers": {
-        "title": "Números de solicitud",
-        "description": "Cada solicitud tiene un número que la gente puede citar. Se muestra tras el prefijo que elijas.",
-        "label": "Prefijo",
-        "example": "Las solicitudes se muestran como {example}.",
-        "save": "Guardar prefijo",
-        "saved": "Prefijo guardado."
-      },
-      "requestTypes": {
-        "title": "Tipos de solicitud",
-        "description": "Entre qué elige la gente al abrir una solicitud, en este orden. Cada tipo fija la prioridad con la que empieza una solicitud nueva. Un tipo archivado se queda en las solicitudes que lo tienen.",
-        "listLabel": "Tipos de solicitud",
-        "archived": "Archivado",
-        "add": "Añadir tipo",
-        "addTitle": "Añadir un tipo de solicitud",
-        "addDescription": "Se puede elegir para solicitudes nuevas enseguida, al final de la lista.",
-        "addConfirm": "Añadir tipo",
-        "added": "Tipo añadido.",
-        "edit": "Editar",
-        "editLabel": "Editar {name}",
-        "editTitle": "Editar {name}",
-        "editDescription": "Las solicitudes que lo tienen lo conservan. Una prioridad inicial nueva es para las solicitudes que se abran a partir de ahora.",
-        "save": "Guardar tipo",
-        "saved": "{changed, select, yes {Tipo guardado.} other {No ha cambiado nada.}}",
-        "nameLabel": "Nombre",
-        "descriptionLabel": "Para qué es",
-        "descriptionHint": "Se muestra con el tipo cuando alguien abre una solicitud.",
-        "priorityLabel": "Prioridad inicial",
-        "moveUp": "Subir",
-        "moveUpLabel": "Subir {name}",
-        "moveDown": "Bajar",
-        "moveDownLabel": "Bajar {name}",
-        "moved": "Orden guardado.",
-        "archive": "Archivar",
-        "archiveLabel": "Archivar {name}",
-        "archiveTitle": "¿Archivar {name}?",
-        "archiveDescription": "Ya no se puede elegir para solicitudes nuevas. Las solicitudes que lo tienen lo conservan, y puedes restaurarlo más adelante.",
-        "archiveConfirm": "Archivar tipo",
-        "archivedDone": "{name} archivado.",
-        "restore": "Restaurar",
-        "restoreLabel": "Restaurar {name}",
-        "restored": "{name} restaurado."
-      },
-      "people": {
-        "title": "Personas",
-        "description": "{count, plural, one {# persona tiene} other {# personas tienen}} acceso como personal.",
-        "rows": "personal",
-        "caption": "Personal",
-        "name": "Nombre",
-        "role": "Rol",
-        "activity": "Actividad",
-        "actions": "Acciones",
-        "deactivated": "Desactivado"
-      },
-      "stepDown": {
-        "title": "¿Bajar al rol de {role}?",
-        "description": "No puedes volver a subir tu propio rol: tendría que hacerlo otro administrador del personal. Solo los administradores gestionan el personal, así que irás al panel.",
-        "confirmLabel": "Bajar de rol"
-      },
-      "leave": {
-        "label": "Salir",
-        "ariaLabel": "Salir del personal",
-        "title": "¿Salir del personal?",
-        "confirmLabel": "Salir del personal",
-        "description": "Pierdes el acceso como personal de inmediato, y solo otro administrador puede devolvértelo. Tu cuenta y tus membresías en empresas se mantienen."
-      },
-      "remove": {
-        "label": "Quitar",
-        "ariaLabel": "Quitar a {name} del personal",
-        "done": "{name} ya no forma parte del personal.",
-        "title": "¿Quitar a {name} del personal?",
-        "confirmLabel": "Quitar del personal",
-        "description": "Pierde el acceso como personal. Su cuenta se mantiene (con sus membresías en empresas) y podrás invitarle de nuevo más adelante."
-      },
-      "invite": {
-        "title": "Invitar por correo",
-        "description": "Recibirá un correo con un enlace para unirse como personal. El enlace funciona una vez y caduca en {days, plural, one {# día} other {# días}}."
+      "requests": {
+        "title": "Solicitudes · Ajustes",
+        "requestNumbers": {
+          "title": "Números de solicitud",
+          "description": "Cada solicitud tiene un número que la gente puede citar. Se muestra tras el prefijo que elijas.",
+          "label": "Prefijo",
+          "example": "Las solicitudes se muestran como {example}.",
+          "save": "Guardar prefijo",
+          "saved": "Prefijo guardado."
+        },
+        "requestTypes": {
+          "title": "Tipos de solicitud",
+          "description": "Entre qué elige la gente al abrir una solicitud, en este orden. Cada tipo fija la prioridad con la que empieza una solicitud nueva. Un tipo archivado se queda en las solicitudes que lo tienen.",
+          "listLabel": "Tipos de solicitud",
+          "archived": "Archivado",
+          "add": "Añadir tipo",
+          "addTitle": "Añadir un tipo de solicitud",
+          "addDescription": "Se puede elegir para solicitudes nuevas enseguida, al final de la lista.",
+          "addConfirm": "Añadir tipo",
+          "added": "Tipo añadido.",
+          "edit": "Editar",
+          "editLabel": "Editar {name}",
+          "editTitle": "Editar {name}",
+          "editDescription": "Las solicitudes que lo tienen lo conservan. Una prioridad inicial nueva es para las solicitudes que se abran a partir de ahora.",
+          "save": "Guardar tipo",
+          "saved": "{changed, select, yes {Tipo guardado.} other {No ha cambiado nada.}}",
+          "nameLabel": "Nombre",
+          "descriptionLabel": "Para qué es",
+          "descriptionHint": "Se muestra con el tipo cuando alguien abre una solicitud.",
+          "priorityLabel": "Prioridad inicial",
+          "moveUp": "Subir",
+          "moveUpLabel": "Subir {name}",
+          "moveDown": "Bajar",
+          "moveDownLabel": "Bajar {name}",
+          "moved": "Orden guardado.",
+          "archive": "Archivar",
+          "archiveLabel": "Archivar {name}",
+          "archiveTitle": "¿Archivar {name}?",
+          "archiveDescription": "Ya no se puede elegir para solicitudes nuevas. Las solicitudes que lo tienen lo conservan, y puedes restaurarlo más adelante.",
+          "archiveConfirm": "Archivar tipo",
+          "archivedDone": "{name} archivado.",
+          "restore": "Restaurar",
+          "restoreLabel": "Restaurar {name}",
+          "restored": "{name} restaurado."
+        }
       }
     },
     "companies": {
