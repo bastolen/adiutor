@@ -7,16 +7,17 @@ import { useTranslations } from 'next-intl';
 import Avatar from '@/components/ui/avatar';
 import Badge from '@/components/ui/badge';
 import PageHeader from '@/components/ui/page-header';
-import SegmentTabNav from '@/components/ui/segment-tab-nav';
 import type { Permission } from '@/lib/authz/permissions';
 import type { Role } from '@/lib/authz/roles';
 import type { Company } from '@/server/authz';
 
 import { NewRequestButton } from '../../_requests/request-list';
+import CompanyTabs from './company-tabs';
 
 /**
  * The company page tabs, with the route segment each opens (`null` for the
- * company's requests, its first page) and the permission each one needs.
+ * company's requests, its first page, a tab that stays current on the
+ * company's board: `CompanyTabs`) and the permission each one needs.
  */
 const TABS: readonly {
   segment: 'members' | 'settings' | null;
@@ -82,7 +83,7 @@ export default function CompanyHeader({ company, permissions, role }: CompanyHea
       }
     >
       {tabs.length > 1 && (
-        <SegmentTabNav
+        <CompanyTabs
           label={t('header.sections')}
           items={tabs.map((tab) => ({
             href: `/companies/${company.slug}${tab.segment ? `/${tab.segment}` : ''}`,

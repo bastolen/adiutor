@@ -16,8 +16,9 @@
  * The staff reach a person's user page from their name; nobody at a company
  * does.
  * The board: switching to it, moving a card with its Move menu, Done and
- * Cancelled asking first, a move from a board that's out of date, and a
- * lane's link to the list of all its requests.
+ * Cancelled asking first, a move from a board that's out of date, a lane's
+ * link to the list of all its requests, and a company's own board on its
+ * page.
  * Each test that changes a request stores its own (`storeRequest`); the
  * seeded ones are only read.
  */
@@ -42,6 +43,7 @@ import {
   CLIENT_WATCHER,
   CLOSED_COMPANY_NAME,
   COMPANY_NAME,
+  COMPANY_OWNER,
   COMPANY_SLUG,
   E2E_BASE_URL,
   FINANCE_STAFF,
@@ -50,6 +52,7 @@ import {
   pagedRequestTitle,
   PAGING_COMPANY_NAME,
   PAGING_COMPANY_SLUG,
+  OWNED_COMPANY_SLUG,
   PLATFORM_ADMIN,
   PLATFORM_MANAGER,
   REQUESTS_CLIENT,
@@ -2560,6 +2563,55 @@ test('a card dragged on the board to a lane it can’t go to stays, and the boar
   await expect(boardLane(page, 'Open').getByRole('link', { name: title })).toBeVisible();
   await page.goto(`/requests/${number}`);
   await expect(detail(page, 'Status')).toHaveText('Open');
+});
+
+test('a company’s page shows its requests as a board too, that company’s only', async ({
+  page,
+}) => {
+  const prefix = `A card on a company board ${randomUUID().slice(0, 8)}`;
+  const ours = `${prefix}, ours`;
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: ours,
+  });
+  await storeRequest({
+    companySlug: OWNED_COMPANY_SLUG,
+    raisedBy: COMPANY_OWNER.email,
+    title: `${prefix}, another company’s`,
+  });
+
+  await signIn(page, SUPPORT_STAFF);
+  // Across companies, the board shows both.
+  await openBoard(page, prefix);
+  await expect(page.getByRole('link', { name: new RegExp(`^${prefix}`) })).toHaveCount(2);
+
+  // From the company's list, the toggle opens the company's board, with the search kept.
+  await page.goto(`/companies/${COMPANY_SLUG}?q=${encodeURIComponent(prefix)}`);
+  await page
+    .getByRole('navigation', { name: 'View requests as' })
+    .getByRole('link', { name: 'Board' })
+    .click();
+  await expect(page).toHaveURL(
+    `/companies/${COMPANY_SLUG}/board?q=${encodeURIComponent(prefix).replace(/%20/g, '+')}`,
+  );
+  await expect(page).toHaveTitle(`Request board · ${COMPANY_NAME} · Adiutor`);
+  // Still the company's Requests, as a board.
+  await expect(
+    page
+      .getByRole('navigation', { name: 'Company sections' })
+      .getByRole('link', { name: 'Requests' }),
+  ).toHaveAttribute('aria-current', 'page');
+  const open = boardLane(page, 'Open');
+  await expect(open.getByRole('link', { name: ours })).toBeVisible();
+  await expect(page.getByRole('link', { name: new RegExp(`^${prefix}`) })).toHaveCount(1);
+
+  // Its cards move as on the board across companies.
+  await open.getByRole('button', { name: `Move AD-${number}` }).click();
+  await page.getByRole('menuitem', { name: 'In progress' }).click();
+  await expect(toasts(page)).toContainText(`AD-${number} moved to In progress.`);
+  await expect(boardLane(page, 'In progress').getByRole('link', { name: ours })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/companies/${COMPANY_SLUG}/board\\?`));
 });
 
 test.describe('the board’s Waiting and Closed columns, on a wide screen', () => {

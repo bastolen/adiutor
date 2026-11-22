@@ -747,8 +747,11 @@ says so with a "Show everything" button.
 - **`/requests/board`**, for everyone signed in: the same requests in a lane per status, with the
   list's search, filter menus and sort, and a Move menu on each card the reader may move, or from
   tablet width a drag (see [The board](#the-board)).
-- **`/companies/<URL name>`**: the same list for one company, the company's first page (no board
-  there yet).
+- **`/companies/<URL name>`**: the same list for one company, the company's first page, with a
+  List | Board toggle above it.
+- **`/companies/<URL name>/board`**: that company's requests as a board, for everyone who may see
+  them (its people and the staff), under the company's header with its Requests tab still current
+  (see [The board](#the-board)).
 - **`/requests/new`**: the company (only when there's more than one to choose from), a title, a
   type with what each is for, and a description. The staff also choose a priority, or leave it to
   the type. It opens the new request. A company that wasn't chosen is asked for like any other
@@ -781,6 +784,16 @@ says so with a "Show everything" button.
 its search and filter menus (`parseRequestFilters`, `RequestFilterBar` without the status links)
 and its sort. The List | Board toggle (`RequestViewToggle`) keeps the search, the filter menus,
 the sort and the size (`size`), and drops the status link, `?only=` and the page.
+
+A company's page has the same board for that company's requests only, at
+`/companies/<URL name>/board` (`RequestBoard` with `company` and the company's `paths`,
+`companyViewPaths`), for everyone who may see the company's requests (`requests:view`, the same
+check as its list). It sits under the company's header, without a heading of its own, and its
+Requests tab stays current there (`CompanyTabs`, since the tab's own segment is the list's). The
+toggle above the company's list and board switches between the two, every link on the board (the
+filters, the cards per lane, "See all") stays on the company's page, and there's no company menu
+and no company on the cards. A deactivated company's board says so above it, and its cards have
+no Move menu.
 
 - **Lanes and columns:** a lane per status, in the order a request moves through them
   (`BOARD_LANES`), in five columns (`boardColumns`): Open, To do and In progress each on their
@@ -858,16 +871,19 @@ the sort and the size (`size`), and drops the status link, `?only=` and the page
   container, and the row is hidden once the board is 73rem wide (five columns of 14rem and their
   gaps), so it's in the page from the first paint and the lanes don't move down once the page
   runs. If it hides while it has focus (a wider window), focus moves to the main content. On a
-  wide screen the board gets the room a request's page gets (`WidePage`), so from about 1500px of
-  screen all five columns fit side by side, the row doesn't scroll and the buttons aren't
-  there. Below tablet width
+  wide screen `/requests/board` gets the room a request's page gets (`WidePage`), so from about
+  1500px of screen all five columns fit side by side, the row doesn't scroll and the buttons
+  aren't there. A company's board isn't widened: it stays as wide as the company's other pages
+  (about 944px of content), under the company's header and tabs, so from tablet width its row
+  always scrolls and the buttons are always there. Below tablet width
   the columns are stacked, each folding away from its heading with its count (a grouped column
   with both its halves).
 - **In the code:** the rules in `src/lib/requests/board.ts` (lanes, closed lanes, the columns
   and their halves, the lanes' words, why a drop is refused, placing a moved card); `listBoard` in
   `src/server/requests/board.ts`, which picks and counts each status's cards in one windowed query
   for the open lanes and one for the closed ones, then loads the cards' rows as the list does
-  (`loadRequestListItems`); the page in `src/app/(app)/requests/board/`, and in
+  (`loadRequestListItems`); the pages in `src/app/(app)/requests/board/` and
+  `src/app/(app)/companies/[companyId]/board/`, and in
   `src/app/(app)/_requests/` the server part (`request-board.tsx`, which renders each card's
   content), the browser part (`board.tsx`, `board-lane.tsx`, `board-lane-jump.tsx`,
   `board-card.tsx`, `move-menu.tsx`),

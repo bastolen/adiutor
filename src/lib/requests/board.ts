@@ -13,6 +13,12 @@ import { isClosedStatus, REQUEST_STATUSES, type RequestStatus } from './values';
 /** Where the board is: next to the list of requests (`/requests`), with the same filters. */
 export const BOARD_PATH = '/requests/board';
 
+/**
+ * Where a company's board is below its page (`/companies/<URL name>/board`),
+ * next to the company's list of requests, its first page.
+ */
+export const COMPANY_BOARD_SEGMENT = 'board';
+
 /** The board's lanes, one per status, in the order a request moves through them. */
 export const BOARD_LANES: readonly RequestStatus[] = REQUEST_STATUSES;
 

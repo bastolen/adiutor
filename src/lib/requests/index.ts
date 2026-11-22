@@ -109,6 +109,7 @@ export {
   boardColumnOf,
   boardColumns,
   CLOSED_LANE_LIMIT,
+  COMPANY_BOARD_SEGMENT,
   GROUPED_LANES,
   isClosedLane,
   laneAudience,

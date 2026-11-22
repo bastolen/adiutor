@@ -92,7 +92,8 @@ keyboard support.
       1920px, with a seeded staff member who has no name and a long address.
   - **List services** take the table's state and return one page with the total
     (`Paged<T>`); each sort ends with the row's ID, so pages don't overlap and reversing is exact.
-- **The board** of requests (`/requests/board`, see [The board](requests.md#the-board)) is the one
+- **The board** of requests (`/requests/board`, and a company's at `/companies/<URL name>/board`,
+  see [The board](requests.md#the-board)) is the one
   view of records that isn't a table: a lane per status, each card a list item, in five columns,
   two of which (Waiting, Closed) hold two lanes as an upper and a lower half, each half with its
   own heading (`h3` under the column's `h2`), count, "See all" and empty text. Lanes have no
@@ -141,9 +142,10 @@ keyboard support.
     away. A container query on the board's width shows it (`@container` on the board,
     `@min-[73rem]:hidden` on the row: five 14rem columns and their gaps), never a measurement after
     the page runs, so nothing shifts; focus on it when it hides goes to the main content. On a
-    wide screen the board is as wide as a request's page (`WidePage`), so from about 1500px of
-    screen all five columns fit side by side, the row doesn't scroll and the navigation isn't
-    there. Below tablet
+    wide screen the board across companies is as wide as a request's page (`WidePage`), so from
+    about 1500px of screen all five columns fit side by side, the row doesn't scroll and the
+    navigation isn't there; a company's board keeps the width of the company's pages, under its
+    header and tabs, so its row scrolls and the navigation shows from tablet width. Below tablet
     width the columns are stacked, each folding away with its count (`aria-expanded` on its
     heading's button), a grouped column with both its halves.
   - **Colours:** a lane is a step back from its cards in both modes (`muted` behind `surface`
@@ -315,7 +317,8 @@ keyboard support.
   (`WidePage` in `src/components/layout/wide-page.tsx`): from that width it grows with the room
   next to the menu, up to 1280px of content, so the
   conversation and the editor of a reply get the room, with the details still beside them. The
-  board of requests grows the same way, so more of its lanes show side by side. It
+  board of requests across companies grows the same way, so more of its lanes show side by side;
+  a company's board doesn't, so it lines up with the company's header and tabs. It
   measures that room in the content column (a container in the app layout), not the screen, so
   a scrollbar never makes it scroll sideways. Don't use it for a page with a table of records:
   those are laid out for the content's usual width.

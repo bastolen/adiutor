@@ -1,5 +1,6 @@
 /**
- * @file The board of requests across companies (`/requests/board`), on the
+ * @file The board of requests across companies (`/requests/board`), or of
+ * one company on its page (`/companies/<URL name>/board`), on the
  * server: it loads what the list loads (the companies, types, assignable
  * staff and settings), reads the same filters (`request-filters.tsx`), loads
  * the lanes (`listBoard`) and renders each card's content, then hands the
@@ -18,7 +19,6 @@ import { formatList } from '@/lib/format';
 import type { Locale } from '@/lib/i18n/locales';
 import {
   BOARD_LANES,
-  BOARD_PATH,
   type BoardLaneState,
   formatRequestNumber,
   laneAudience,
@@ -47,6 +47,10 @@ import type { BoardCardView } from './board-card';
 import { PriorityBadge, ReopenedBadge, StatusBadge } from './request-badges';
 import { parseRequestFilters, RequestFilterBar, viewParams } from './request-filters';
 import { PeopleAvatars, personName, type SideNames } from './request-person';
+import RequestViewToggle, {
+  REQUEST_VIEW_PATHS,
+  type RequestViewPaths,
+} from './request-view-toggle';
 import RequestsHeader from './requests-header';
 
 /** The statuses whose words depend on who reads them. */
@@ -167,18 +171,32 @@ interface RequestBoardProps {
   searchParams: SearchParams;
   /** The viewer. */
   actor: Actor;
+  /**
+   * The company whose board this is (its URL name), on a company's own page.
+   * Without it, the board covers every company the viewer sees, and can be
+   * filtered by one.
+   */
+  company?: string;
+  /**
+   * Where the board and its list are: what the board's links (the filters,
+   * the cards per lane, the toggle) and each lane's "See all" are built
+   * from. Defaults to the requests across companies'.
+   */
+  paths?: RequestViewPaths;
 }
 
 /**
- * The board of the requests the viewer may see across companies: the same
- * header as the list (with the List | Board toggle), the list's filter bar
- * without its status links (the lanes are the statuses) and with "Cards per
- * lane" (25, 50 or 100, as links, like the list's rows per page), and the
- * lanes, in five columns (Waiting and Closed hold two lanes each, a half
- * each). Lanes aren't tables, so they have no pages: an open lane shows the
- * first cards in the list's sort, a closed one its latest five, and a lane
- * with more links to the list of them all ("See all 132": `?only=` with the
- * board's filters and sort).
+ * The board of the requests the viewer may see across companies, or of one
+ * company's on its page: the same header as the list (with the List | Board
+ * toggle; on a company's page the company's header is above it, so only the
+ * toggle), the list's filter bar without its status links (the lanes are
+ * the statuses) and with "Cards per lane" (25, 50 or 100, as links, like the
+ * list's rows per page), and the lanes, in five columns (Waiting and Closed
+ * hold two lanes each, a half each). Lanes aren't tables, so they have no
+ * pages: an open lane shows the first cards in the list's sort, a closed one
+ * its latest five, and a lane with more links to the list of them all ("See
+ * all 132": `?only=` with the board's filters and sort, on the company's
+ * list for a company's board).
  *
  * Each lane is named in the words of the viewer's strongest part
  * (`laneAudience`: the staff's, or "Waiting for your reply" for someone who
@@ -188,9 +206,16 @@ interface RequestBoardProps {
  * @param props - Component props.
  * @param props.searchParams - The page's query parameters.
  * @param props.actor - The viewer.
- * @returns The header, the filters and the board.
+ * @param props.company - The company whose board this is, on its own page.
+ * @param props.paths - Where the board and its list are.
+ * @returns The header (or the toggle), the filters and the board.
  */
-export default async function RequestBoard({ searchParams, actor }: RequestBoardProps) {
+export default async function RequestBoard({
+  searchParams,
+  actor,
+  company = undefined,
+  paths = REQUEST_VIEW_PATHS,
+}: RequestBoardProps) {
   const [companies, settings, assignable, types, locale, t, tRequests, tTables] = await Promise.all(
     [
       listRequestCompanies(appContext, actor),
@@ -205,10 +230,17 @@ export default async function RequestBoard({ searchParams, actor }: RequestBoard
       getTranslations('tables'),
     ],
   );
-  const filters = parseRequestFilters({ searchParams, actor, companies, types, assignable });
+  const filters = parseRequestFilters({
+    searchParams,
+    actor,
+    company,
+    companies,
+    types,
+    assignable,
+  });
   const board = await listBoard(appContext, actor, {
     search: filters.search,
-    company: filters.company,
+    company: company ?? filters.company,
     type: filters.type,
     priority: filters.priority,
     assignee: filters.assignee,
@@ -219,9 +251,9 @@ export default async function RequestBoard({ searchParams, actor }: RequestBoard
 
   const params = viewParams(filters);
   const state = { ...filters.requested, page: 1 };
-  const boardTable = createPageUrl(BOARD_PATH, params, tTables).table(filters.definition, state);
+  const boardTable = createPageUrl(paths.board, params, tTables).table(filters.definition, state);
   // "See all" opens the list with the board's filters, sort and size, and the lane's status.
-  const listTable = createPageUrl('/requests', params, tTables).table(filters.definition, state);
+  const listTable = createPageUrl(paths.list, params, tTables).table(filters.definition, state);
   const audience = laneAudience([
     filters.audience,
     ...board.lanes.flatMap(({ items }) => items.map((card) => card.audience)),
@@ -261,13 +293,17 @@ export default async function RequestBoard({ searchParams, actor }: RequestBoard
 
   return (
     <>
-      <RequestsHeader
-        actor={actor}
-        staffName={settings.staffName}
-        canRaise={canRaise}
-        view="board"
-        filters={filters}
-      />
+      {company ? (
+        <RequestViewToggle view="board" filters={filters} paths={paths} />
+      ) : (
+        <RequestsHeader
+          actor={actor}
+          staffName={settings.staffName}
+          canRaise={canRaise}
+          view="board"
+          filters={filters}
+        />
+      )}
       <RequestFilterBar
         filters={filters}
         table={boardTable}

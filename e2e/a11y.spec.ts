@@ -116,6 +116,8 @@ const APP_PATHS = [
   // A company's own requests: more than fit on a page, and the last page of them.
   '/companies/{paging}',
   '/companies/{paging}?status=all&sort=raised&page=2',
+  // A company's own board, under its header.
+  '/companies/{company}/board',
   '/requests',
   // One status instead of a link's group, as a lane of the board links to it.
   '/requests?only=done',
@@ -140,7 +142,7 @@ const APP_PATHS = [
  * scanned as a Client: the dashboard with their companies, the requests
  * without priorities (as a list and as a board, with the Move menus a Client
  * gets), the form for a new one without a priority, a request with the
- * company's own controls, and their company's page.
+ * company's own controls, and their company's page and board.
  */
 const CLIENT_PATHS = [
   '/dashboard',
@@ -150,6 +152,7 @@ const CLIENT_PATHS = [
   '/requests/1',
   '/requests/6',
   '/companies/{company}',
+  '/companies/{company}/board',
 ];
 
 /** Pages scanned as a Watcher, who only reads: no form, no controls, no Move menus. */
