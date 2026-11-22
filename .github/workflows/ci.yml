@@ -3,13 +3,14 @@
 # (.github/rulesets/main.json, "Protecting main" in docs/ci-and-releases.md), so jobs and shards
 # can change without touching the rules.
 #
-# The static checks always run. The test jobs only run for code that hasn't passed them yet: the
-# first job works out a fingerprint of everything the tests can depend on and skips them when a
-# passing run of this repository recorded that fingerprint ("Skipping the tests" in
-# docs/ci-and-releases.md). So main skips them after merging a pull request that was tested against
-# the current main, and a change to docs or repository settings skips them once main's code passed.
-# Release Please's draft pull request never runs them (its code is main's); marked ready for review,
-# it always runs every test. Skipped jobs count as passed in "CI passed".
+# The test jobs only run for code that hasn't passed them yet: the first job works out a fingerprint
+# of everything the tests can depend on and skips them when a passing run of this repository
+# recorded that fingerprint ("Skipping the tests" in docs/ci-and-releases.md). So main skips them
+# after merging a pull request that was tested against the current main, and a change to docs or
+# repository settings skips them once main's code passed. Release Please's draft pull request never
+# runs them (its code is main's); marked ready for review, it always runs every test. The static
+# checks run on every pull request; on main they run when the tests do, since a record means that
+# run's static checks passed too (decision 0039). Skipped jobs count as passed in "CI passed".
 #
 # Actions and images are pinned to exact commits and digests (with the
 # version in a comment), so a moved tag can't change what runs; Dependabot
@@ -153,8 +154,14 @@ jobs:
             echo "tests=true" >> "$GITHUB_OUTPUT"
           fi
 
+  # Every pull request runs them: they also check what the fingerprint leaves out (docs and Markdown
+  # formatting) and audit the dependencies. On main they run only when the tests do: a record of a
+  # passing run is made only when every job passed, these included, so main's code passed them
+  # already when it skips the tests (decision 0039).
   checks:
     name: Static checks
+    needs: scope
+    if: ${{ github.event_name == 'pull_request' || needs.scope.outputs.tests == 'true' }}
     runs-on: ubuntu-latest
     # A normal run takes a few minutes; this only ends a hung step (GitHub's default is 6 hours).
     timeout-minutes: 15
