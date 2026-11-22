@@ -48,7 +48,7 @@ test('an Admin opens Settings from the dashboard and the menu', async ({ page })
   ).toHaveAttribute('aria-current', 'page');
 });
 
-test("staff who can't manage the staff get no Staff tile or menu item", async ({ page }) => {
+test("staff who can't manage the staff get no Settings tile or menu item", async ({ page }) => {
   await signIn(page, SUPPORT_STAFF);
   await page.goto('/dashboard');
 
