@@ -2350,10 +2350,10 @@ test('the activity shows the groups and order its reader chose, on every visit',
  *
  * @param page - The browser page, on the board.
  * @param name - The lane's name, in the reader's words.
- * @returns The lane's section.
+ * @returns The lane's group.
  */
 const boardLane = (page: Page, name: string) =>
-  page.getByRole('region', { name: new RegExp(`^${name}, \\d+ requests?$`) });
+  page.getByRole('group', { name: new RegExp(`^${name}, \\d+ requests?$`) });
 
 /**
  * Opens the board narrowed down to a test's own requests by their title.
@@ -2598,7 +2598,7 @@ test.describe('the board’s Waiting and Closed columns, on a wide screen', () =
     const title = `A card to drag to Done ${randomUUID().slice(0, 8)}`;
     const { number, grip } = await boardWith(page, title);
     await expect(
-      page.getByRole('region', { name: /^Closed, \d+ requests?$/ }).getByRole('heading', {
+      page.getByRole('group', { name: /^Closed, \d+ requests?$/ }).getByRole('heading', {
         level: 3,
       }),
     ).toHaveText([/^Done/, /^Cancelled/]);

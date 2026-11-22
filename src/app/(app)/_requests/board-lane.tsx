@@ -3,8 +3,9 @@
 /**
  * @file A column of the board of requests: one lane (Open, To do, In
  * progress), or the two halves of Waiting and Closed, each half a lane of its
- * own. A lane has a heading with its name and how many requests it has, its
- * cards, and a link to all of them in the list when it holds more than it
+ * own. A lane is a group with a heading with its name and how many requests
+ * it has, its cards (a list that says when it shows fewer than the lane
+ * holds), and a link to all of them in the list when it holds more than it
  * shows; while a card is dragged, it says whether the card can go there. Its
  * text comes from `requests.board`.
  */
@@ -15,7 +16,7 @@ import { type ReactNode, useEffect, useId, useRef } from 'react';
 
 import { focusRing } from '@/components/ui/styles';
 import cn from '@/lib/cn';
-import type { BoardColumnKey, RequestStatus } from '@/lib/requests';
+import { type BoardColumnKey, isClosedLane, type RequestStatus } from '@/lib/requests';
 
 import type { BoardDrag } from './board-drag';
 
@@ -72,7 +73,7 @@ function dropClasses(drop: LaneDropState | undefined): string {
  * @returns The ref for the lane's element.
  */
 function useLaneDrop(drag: BoardDrag | null, status: RequestStatus | null) {
-  const ref = useRef<HTMLElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const element = ref.current;
     if (!drag || !element || !status) {
@@ -138,7 +139,11 @@ function DropNote({ drop, status }: { drop: LaneDropState | undefined; status: R
 
 /**
  * A lane's cards, or that it has none, and "See all 132" when it holds more
- * than it shows: a link to the list of them with the board's filters.
+ * than it shows: a link to the list of them with the board's filters. A
+ * lane that shows fewer cards than it holds says so in its list's name, which
+ * screen readers say with the list ("First 25 of 80" for an open lane in the
+ * list's sort, "Latest 5 of 132" for a closed one), so the heading's count and
+ * the cards they hear don't seem to disagree.
  *
  * @param props - Component props.
  * @param props.lane - The lane.
@@ -146,14 +151,28 @@ function DropNote({ drop, status }: { drop: LaneDropState | undefined; status: R
  */
 function LaneCards({ lane }: { lane: ColumnLane }) {
   const t = useTranslations('requests.board');
+  const partial = lane.total > lane.shown;
   return (
     <>
       {lane.shown === 0 ? (
         <p className="px-2 py-6 text-center text-sm text-muted-foreground">{t('emptyLane')}</p>
       ) : (
-        <ul className="flex flex-col gap-2">{lane.cards}</ul>
+        <ul
+          aria-label={
+            partial
+              ? t('shownCards', {
+                  order: isClosedLane(lane.status) ? 'latest' : 'first',
+                  shown: lane.shown,
+                  total: lane.total,
+                })
+              : undefined
+          }
+          className="flex flex-col gap-2"
+        >
+          {lane.cards}
+        </ul>
       )}
-      {lane.total > lane.shown && (
+      {partial && (
         <Link
           href={lane.seeAllHref}
           className={cn(
@@ -173,9 +192,9 @@ function LaneCards({ lane }: { lane: ColumnLane }) {
 
 /**
  * A half of a grouped column (Waiting for the company above Waiting for
- * approval, Done above Cancelled): a lane of its own, named by its heading
- * ("Done, 2 requests" to screen readers), which takes the cards that may go
- * to it and can take focus from script, like a whole lane's.
+ * approval, Done above Cancelled): a lane of its own, a group named by its
+ * heading ("Done, 2 requests" to screen readers), which takes the cards that
+ * may go to it and can take focus from script, like a whole lane's.
  *
  * @param props - Component props.
  * @param props.lane - The lane.
@@ -187,8 +206,9 @@ function LaneHalf({ lane, drag }: { lane: ColumnLane; drag: BoardDrag | null }) 
   const headingId = useId();
   const ref = useLaneDrop(drag, lane.status);
   return (
-    <section
+    <div
       ref={ref}
+      role="group"
       aria-labelledby={headingId}
       // Where `restoreFocusIfLost` finds the heading, and the board finds the lane.
       data-card=""
@@ -213,7 +233,7 @@ function LaneHalf({ lane, drag }: { lane: ColumnLane; drag: BoardDrag | null }) 
       </h3>
       <DropNote drop={lane.drop} status={lane.status} />
       <LaneCards lane={lane} />
-    </section>
+    </div>
   );
 }
 
@@ -236,9 +256,12 @@ interface BoardColumnProps {
 }
 
 /**
- * A column of the board: a section named by its heading, which says its
+ * A column of the board: a group named by its heading, which says its
  * name and how many requests it has ("In progress, 12 requests", "Closed, 9
- * requests" to screen readers). From tablet width it sits in the board's
+ * requests" to screen readers). It's a group, not a section: a named section
+ * is a landmark, and the columns and their halves would make about nine of
+ * them, crowding the page's landmarks; the headings stay for moving through
+ * the board by heading. From tablet width it sits in the board's
  * row, at least 14rem wide (all five fit side by side on a wide screen);
  * below that the columns are stacked, and the
  * heading is a button that folds the column away and back (`aria-expanded`),
@@ -284,8 +307,9 @@ export default function BoardColumn({
   const heading = t('laneHeading', { lane: name, count: total });
 
   return (
-    <section
+    <div
       ref={ref}
+      role="group"
       aria-labelledby={headingId}
       // Where `restoreFocusIfLost` finds the heading, and the board finds the lane and column.
       data-card=""
@@ -345,6 +369,6 @@ export default function BoardColumn({
           lanes.map((lane) => <LaneHalf key={lane.status} lane={lane} drag={drag} />)
         )}
       </div>
-    </section>
+    </div>
   );
 }

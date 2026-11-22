@@ -1001,6 +1001,21 @@ test.describe('in forced-colours mode', () => {
         await expectAccessible(page);
       });
 
+      test('the board’s columns are groups, not landmarks, and a lane says it shows fewer cards', async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width: 1100, height: 900 });
+        await page.goto('/requests/board');
+        await expect(page.getByRole('navigation', { name: 'Jump to a lane' })).toBeVisible();
+        const open = page.getByRole('group', { name: /^Open, \d+ requests?$/ });
+        await expect(open).toBeVisible();
+        // No landmark for a column or a half: the page's landmarks stay few.
+        await expect(page.getByRole('main').getByRole('region')).toHaveCount(0);
+        // More open requests than the 25 cards a lane shows.
+        await expect(open.getByRole('list')).toHaveAccessibleName(/^First 25 of \d+$/);
+        await expectAccessible(page);
+      });
+
       test.describe('on a phone', () => {
         test.use({ viewport: { width: 375, height: 812 } });
 

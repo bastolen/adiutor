@@ -147,10 +147,12 @@ interface BoardProps {
  *   Cancelled ask first (`ConfirmDialog`). The card moves to the top of its
  *   new lane at once (`useOptimistic` with `placeMovedCard`, counts too) and
  *   is busy there, alone, until the server answers; then the board shows the
- *   lanes as they are. Several moves may run at once.
+ *   lanes as they are. Several moves may run at once. The board's live
+ *   region, always on the page, says "Moving AD-142 to In progress…" meanwhile.
  * - **The outcome:** a toast says the card moved; a refusal shows above the
  *   lanes and as a toast (`Alert`'s `alsoToast`), and the card goes back,
- *   or, when someone changed the request meanwhile, to where it is now.
+ *   or, when someone changed the request meanwhile, to where it is now. The
+ *   live region is emptied first, so the outcome is announced once.
  * - **Focus:** the card's Move button is removed and added again as the card
  *   changes lanes, so focus follows it: to its Move button in the new lane
  *   (found by its `data-request` once the change is on screen), or, when the
@@ -163,7 +165,9 @@ interface BoardProps {
  *   the reader may move gets a grip. While a card is dragged, every lane
  *   shows whether it can go there (`LaneDropState`), and a live region
  *   says what's happening: picked up, which lane the pointer is over and
- *   whether it may go there, and where it was let go. A drop on a lane it
+ *   whether it may go there, and where it goes ("Moving AD-142 to In
+ *   progress…"), or for a drop on Done or Cancelled, where it was let go
+ *   while the question is open. A drop on a lane it
  *   may go to takes the menu's path (Done and Cancelled ask first); a drop on
  *   one it can't go to sends nothing and says why (`moveRefusal`) above the
  *   lanes and as a toast; a drop on its own lane, between lanes or a drag
@@ -209,7 +213,7 @@ export default function Board({ lanes, names, seeAll, staffName }: BoardProps) {
   // The drag and drop, once loaded from tablet width.
   const [dragKit, setDragKit] = useState<BoardDrag | null>(null);
   const [dragged, setDragged] = useTransientState<DragState | null>(null);
-  // What the live region says about a drag.
+  // What the live region says about a drag or a card being moved.
   const [announcement, setAnnouncement] = useTransientState('');
 
   // Loads the drag and drop once the page is there, from tablet width only; below it (and on a
@@ -289,8 +293,12 @@ export default function Board({ lanes, names, seeAll, staffName }: BoardProps) {
   });
 
   /**
-   * Moves a card: places it in its new lane at once, saves the move from the
-   * lane the board showed it in, and says how it went.
+   * Moves a card: places it in its new lane at once, says it's moving and
+   * where in the board's live region ("Moving AD-142 to In progress…", which
+   * also tells someone who dropped it where it went), saves the move from the
+   * lane the board showed it in, and says how it went: a toast, or an error
+   * above the lanes, after the live region has gone quiet again, so it never
+   * repeats itself.
    *
    * @param card - The card.
    * @param to - The lane it goes to.
@@ -300,6 +308,8 @@ export default function Board({ lanes, names, seeAll, staffName }: BoardProps) {
     following.current = { id: card.id, lane: to };
     // Below tablet width, a column that's folded away opens to show the card arrive.
     setFolded((current) => new Set([...current].filter((key) => key !== boardColumnOf(to))));
+    const moving = t('movingCard', { reference: card.reference, lane: names[to] });
+    setAnnouncement(moving);
     startTransition(async () => {
       showMove({ card, to });
       const result = await moveRequestAction({
@@ -307,6 +317,8 @@ export default function Board({ lanes, names, seeAll, staffName }: BoardProps) {
         status: to,
         from: card.status,
       });
+      // Unless it already says something newer (another move, a drag).
+      setAnnouncement((current) => (current === moving ? '' : current));
       if (!result.ok) {
         setError(result.message);
       } else if (showToast && result.message) {
@@ -388,7 +400,11 @@ export default function Board({ lanes, names, seeAll, staffName }: BoardProps) {
     }
     const { reference } = card;
     if (drop.accepted && drop.accepted !== card.status) {
-      setAnnouncement(t('dropped', { reference, lane: names[drop.accepted] }));
+      // A move says where it goes ("Moving AD-142 to In progress…"); a drop that asks first
+      // (Done, Cancelled) says where it was let go while the question is open.
+      if (asksFirst(drop.accepted)) {
+        setAnnouncement(t('dropped', { reference, lane: names[drop.accepted] }));
+      }
       choose(card, drop.accepted);
       return;
     }
@@ -467,7 +483,8 @@ export default function Board({ lanes, names, seeAll, staffName }: BoardProps) {
       <Alert tone="error" alsoToast onDismiss={() => setError(null)}>
         {error}
       </Alert>
-      {/* What happens while a card is dragged, for screen readers. */}
+      {/* What happens while a card is dragged or moved, for screen readers: always on the page,
+          since a live region added with its text already in it is often not read out. */}
       <p role="status" className="sr-only">
         {announcement}
       </p>
