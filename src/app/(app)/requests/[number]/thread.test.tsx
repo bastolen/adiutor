@@ -108,6 +108,7 @@ function detailOf(detail: Partial<RequestDetail> = {}): RequestDetail {
     activity: { order: 'oldest', groups: null },
     entries: [],
     earlierEntries: 0,
+    earlierChunks: 0,
     ...detail,
   };
 }

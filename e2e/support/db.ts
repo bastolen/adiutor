@@ -854,6 +854,28 @@ export async function storeEntries(number: number, entries: readonly StoredEntry
 }
 
 /**
+ * Finds an entry of a test's own request by its text, for a test that links
+ * to it the way an email does (`?entry=<ID>#entry-<ID>`).
+ *
+ * @param number - The request's number.
+ * @param text - The entry's whole text.
+ * @returns The entry's ID.
+ */
+export async function findEntryId(number: number, text: string): Promise<string> {
+  return withTestDatabase(
+    async (db) =>
+      firstRow(
+        await db
+          .select({ id: schema.requestEntry.id })
+          .from(schema.requestEntry)
+          .innerJoin(schema.request, eq(schema.requestEntry.requestId, schema.request.id))
+          .where(and(eq(schema.request.number, number), eq(schema.requestEntry.body, text))),
+        'the entry',
+      ).id,
+  );
+}
+
+/**
  * Forgets how a user reads a request's activity, so a test starts from
  * everything, oldest first, also when it runs again.
  *

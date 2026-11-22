@@ -12,8 +12,9 @@ import { randomUUID } from 'node:crypto';
 
 import type { Page } from '@playwright/test';
 
+import { entryAnchor } from '../src/lib/requests';
 import { requestLinkPath } from '../src/lib/sign-in/request-link';
-import { storeEntries, storeRequest, storeRequestLink } from './support/db';
+import { findEntryId, storeEntries, storeRequest, storeRequestLink } from './support/db';
 import {
   COMPANY_SLUG,
   E2E_BASE_URL,
@@ -77,6 +78,33 @@ test('the link in an email about a request signs its reader in and opens the req
   await expect(page).toHaveURL(
     new RegExp(`/requests/${number}\\?entry=([0-9a-f-]{36})#entry-\\1$`),
   );
+});
+
+test('a link to a reply further back than the latest shows the conversation down to it', async ({
+  page,
+}) => {
+  // More replies than the conversation shows at first (50): the 30th has 90 newer ones.
+  const number = await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: STEP_UP_CLIENT.email,
+    title: `Far back ${randomUUID().slice(0, 8)}`,
+    earlierReplies: 120,
+  });
+  const reply = await findEntryId(number, 'Earlier reply 30, to make the conversation long.');
+  const token = await storeRequestLink(STEP_UP_CLIENT.email, number);
+  const entry = page.locator(`#${entryAnchor(reply)}`);
+
+  // The link names the reply with its anchor, as the email's does: the page shows it, and
+  // everything newer, and brings it into view with the focus on it.
+  await clickLinkInEmail(page, `${requestLinkPath(token, { entry: reply })}#${entryAnchor(reply)}`);
+  await expect(entry).toContainText('Earlier reply 30, to make the conversation long.');
+  await expect(entry).toBeInViewport();
+  await expect(entry).toBeFocused();
+
+  // What's older still is a link away, which goes on from there.
+  await page.getByRole('link', { name: 'Show earlier activity (20 more)' }).click();
+  await expect(page.getByText('Earlier reply 1, to make the conversation long.')).toBeVisible();
+  await expect(page.getByRole('link', { name: /^Show earlier activity/ })).toHaveCount(0);
 });
 
 test('a Manager is signed in without the second step, which a grant still asks for', async ({

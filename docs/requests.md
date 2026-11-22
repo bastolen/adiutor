@@ -721,7 +721,8 @@ query: the groups narrow what the reader may see and never widen it, so a compan
 saved choice holds the notes still gets none (`STAFF_ONLY_ENTRY_KINDS` applies first), and the
 count of earlier entries counts only the groups shown. An address that points at an entry
 (`?entry=<id>`, as a link from an email does, with `#entry-<id>`) shows that entry whatever groups
-the reader chose, within what they may see; the link to earlier entries keeps it. The menus show a choice at once and save
+the reader chose, within what they may see, and however far back it is (see
+[Pages](#pages)); the link to earlier entries keeps it. The menus show a choice at once and save
 it in a transition of their own (a spinner on the pressed menu's button, which stays focusable);
 there's no toast when it works, since the activity changing says it, and a failed save is shown
 above the activity and as a toast. When the groups chosen leave nothing to show, the conversation
@@ -765,14 +766,20 @@ says so with a "Show everything" button.
   the right on wide screens, and between the description and the conversation on narrower ones.
   On a screen wider than 1280px the page grows past the width other pages have, up to 1280px of
   content (`WidePage`), so the conversation and the reply's editor get the room.
-  The conversation loads its latest 50 entries of the groups the reader shows, with a link for
-  earlier ones (`?earlier=`): above them with the oldest first, below them with the newest first.
+  The conversation loads its latest 50 entries of the groups the reader shows (`THREAD_CHUNK`),
+  with a link for earlier ones a chunk of 50 at a time (`?earlier=`, up to 19 more,
+  `MAX_EARLIER_CHUNKS`): above them with the oldest first, below them with the newest first.
   Each entry has an anchor (`#entry-<entry ID>`, `entryAnchor`) and the description has one
   (`#request-description`), which the emails link to. Arriving with one, the page brings that
   entry into view below the sticky header and focuses it when focus is nowhere in particular
   (`EntryOnArrival`, like `AnchoredSection` for a card), and an outline marks it while the address
-  names it. An entry older than the 50 shown isn't on the page, which then opens as usual. Both
-  anchors are section IDs, so signing in on the way keeps them.
+  names it. An entry the address names (`?entry=`) that's older than the latest 50 is shown with
+  everything newer than it: `getRequest` counts the entries shown that are newer (only for an
+  entry the reader is shown, so a note never counts for someone at the company) and loads as many
+  chunks as reach it, without a gap, and the link to earlier entries goes on from there
+  (`earlierChunks`). Only an entry further back than every chunk a reader can add isn't on the
+  page, which then opens as usual, with the chunks asked for. Both anchors are section IDs, so
+  signing in on the way keeps them.
 - The **menu** has Requests for everyone, and the **dashboard** a Requests tile, and an Assigned
   to you tile for the staff who can be assigned; see
   [Navigation and dashboard](companies-and-roles.md#navigation-and-dashboard).

@@ -121,7 +121,8 @@ const EARLIER_PATTERN = /^[1-9]\d?$/;
  * @param props.params - Route parameters: the request's number.
  * @param props.searchParams - Query parameters: `earlier`, how many earlier chunks of the
  *   conversation to show besides the latest, and `entry`, the entry a link (from an email)
- *   points at, which the conversation shows whatever groups the reader chose.
+ *   points at, which the conversation shows whatever groups the reader chose, with everything
+ *   down to it.
  * @returns The page content.
  */
 async function RequestContent({
@@ -145,7 +146,8 @@ async function RequestContent({
   const asked = searchParam(query.earlier);
   const earlier =
     asked && EARLIER_PATTERN.test(asked) ? Math.min(Number(asked), MAX_EARLIER_CHUNKS) : 0;
-  // The entry a link points at (`?entry=<id>#entry-<id>`): shown whatever groups the reader chose.
+  // The entry a link points at (`?entry=<id>#entry-<id>`): shown whatever groups the reader chose,
+  // and with everything newer than it, however far back it is.
   const entry = searchParam(query.entry);
   let detail: RequestDetail;
   try {
@@ -157,10 +159,12 @@ async function RequestContent({
     }
     throw error;
   }
+  // One chunk more than the page shows: more than asked for when the entry a link points at is
+  // further back, since the conversation then shows everything down to it.
   const earlierHref =
-    detail.earlierEntries > 0 && earlier < MAX_EARLIER_CHUNKS
+    detail.earlierEntries > 0 && detail.earlierChunks < MAX_EARLIER_CHUNKS
       ? `${requestPath(detail.number)}?${new URLSearchParams({
-          earlier: String(earlier + 1),
+          earlier: String(detail.earlierChunks + 1),
           ...(entry && { entry }),
         })}`
       : null;
