@@ -804,8 +804,17 @@ the sort and the size (`size`), and drops the status link, `?only=` and the page
   sideways by itself while a card is dragged near its edges (auto-scroll).
 - **Layout:** from tablet width the columns sit side by side, at least 14rem each, in a row that
   scrolls sideways inside its own box ("Lanes", reachable and scrolled with the keyboard while it
-  overflows); the page itself never does. On a wide screen the board gets the room a request's
-  page gets (`WidePage`), so all five columns fit side by side and the row doesn't scroll. Below tablet width
+  overflows); the page itself never does. While it overflows, a row of buttons above it ("Jump to
+  a lane", `BoardLaneJump`) has one per column with its name and count (both halves together for
+  Waiting and Closed, counted as the board shows them, so a move under way counts at once); a
+  press scrolls the row to that column (smoothly, unless the reader asked for less motion) and
+  moves the focus to its heading. The row shows by CSS, not by measuring: the board is a
+  container, and the row is hidden once the board is 73rem wide (five columns of 14rem and their
+  gaps), so it's in the page from the first paint and the lanes don't move down once the page
+  runs. If it hides while it has focus (a wider window), focus moves to the main content. On a
+  wide screen the board gets the room a request's page gets (`WidePage`), so from about 1500px of
+  screen all five columns fit side by side, the row doesn't scroll and the buttons aren't
+  there. Below tablet width
   the columns are stacked, each folding away from its heading with its count (a grouped column
   with both its halves).
 - **In the code:** the rules in `src/lib/requests/board.ts` (lanes, closed lanes, the columns
@@ -814,7 +823,8 @@ the sort and the size (`size`), and drops the status link, `?only=` and the page
   for the open lanes and one for the closed ones, then loads the cards' rows as the list does
   (`loadRequestListItems`); the page in `src/app/(app)/requests/board/`, and in
   `src/app/(app)/_requests/` the server part (`request-board.tsx`, which renders each card's
-  content), the browser part (`board.tsx`, `board-lane.tsx`, `board-card.tsx`, `move-menu.tsx`),
+  content), the browser part (`board.tsx`, `board-lane.tsx`, `board-lane-jump.tsx`,
+  `board-card.tsx`, `move-menu.tsx`),
   the drag and drop (`board-drag.ts`) and the action (`board-actions.ts`).
 
 ## In the code

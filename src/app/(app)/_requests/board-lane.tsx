@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * @file A column of the board of requests: one lane (Open, To do, In
  * progress), or the two halves of Waiting and Closed, each half a lane of its
@@ -82,20 +84,23 @@ function useLaneDrop(drag: BoardDrag | null, status: RequestStatus | null) {
 }
 
 /**
- * How many requests a lane or column has, as a small round count. It's
- * hidden from screen readers, which hear it in the heading's sentence.
+ * How many requests a lane or column has, as a small round count, written
+ * in the reader's language ("1,234", "1.234") like the number in the
+ * sentence next to it, which screen readers hear instead (a heading's, or a
+ * button's in the row that jumps to a column).
  *
  * @param props - Component props.
  * @param props.total - The count.
  * @returns The count.
  */
-function Count({ total }: { total: number }) {
+export function LaneCount({ total }: { total: number }) {
+  const t = useTranslations('requests.board');
   return (
     <span
       aria-hidden="true"
       className="inline-flex min-w-6 items-center justify-center rounded-full border border-border bg-surface px-1.5 text-xs font-medium text-muted-foreground tabular-nums dark:bg-raised"
     >
-      {total}
+      {t('laneCount', { count: total })}
     </span>
   );
 }
@@ -203,7 +208,7 @@ function LaneHalf({ lane, drag }: { lane: ColumnLane; drag: BoardDrag | null }) 
         <span aria-hidden="true" className="min-w-0 flex-1 wrap-anywhere">
           {lane.name}
         </span>
-        <Count total={lane.total} />
+        <LaneCount total={lane.total} />
         <span className="sr-only">{t('laneHeading', { lane: lane.name, count: lane.total })}</span>
       </h3>
       <DropNote drop={lane.drop} status={lane.status} />
@@ -314,7 +319,7 @@ export default function BoardColumn({
           <span aria-hidden="true" className="min-w-0 flex-1 wrap-anywhere">
             {name}
           </span>
-          <Count total={total} />
+          <LaneCount total={total} />
           <ChevronDown
             aria-hidden="true"
             className={cn(
@@ -328,7 +333,7 @@ export default function BoardColumn({
           <span aria-hidden="true" className="min-w-0 flex-1 wrap-anywhere">
             {name}
           </span>
-          <Count total={total} />
+          <LaneCount total={total} />
           <span className="sr-only">{heading}</span>
         </span>
       </h2>

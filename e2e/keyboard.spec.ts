@@ -1731,6 +1731,74 @@ test.describe('the board of requests', () => {
       ),
     ).toBe(true);
   });
+
+  test('a button above the lanes jumps to a column, whose heading takes the focus', async ({
+    page,
+  }) => {
+    await page.goto('/requests/board');
+    const lanes = page.getByRole('group', { name: 'Lanes' });
+    await expect
+      .poll(() => lanes.evaluate((element) => element.scrollWidth > element.clientWidth))
+      .toBe(true);
+    const jump = page.getByRole('navigation', { name: 'Jump to a lane' });
+    /**
+     * Whether a column is in full view inside the lanes' row.
+     *
+     * @param key - The column's key.
+     * @returns Whether it is.
+     */
+    const inView = (key: string) =>
+      lanes.evaluate((row, column) => {
+        const box = row.getBoundingClientRect();
+        const shown = row.querySelector(`[data-column="${column}"]`)?.getBoundingClientRect();
+        return Boolean(shown && shown.left >= box.left - 1 && shown.right <= box.right + 1);
+      }, key);
+    /**
+     * A column's own heading.
+     *
+     * @param key - The column's key.
+     * @returns The heading.
+     */
+    const headingOf = (key: string) =>
+      page.locator(`[data-column="${key}"]`).getByRole('heading', { level: 2 });
+
+    // A button per column, each with its count.
+    await expect(jump.getByRole('button')).toHaveText([
+      /^Open\s*\d+/,
+      /^To do\s*\d+/,
+      /^In progress\s*\d+/,
+      /^Waiting\s*\d+/,
+      /^Closed\s*\d+/,
+    ]);
+    expect(await inView('closed')).toBe(false);
+    const closed = jump.getByRole('button', { name: /^Closed, \d+ requests?$/ });
+    expect(await cursorOf(closed)).toBe('pointer');
+    await closed.focus();
+    await page.keyboard.press('Enter');
+    await expect(headingOf('closed')).toBeFocused();
+    await expect
+      .poll(() => outlineOf(headingOf('closed')))
+      .toEqual({ style: 'solid', width: '2px' });
+    await expect.poll(() => inView('closed')).toBe(true);
+
+    // And back to the first column.
+    await jump.getByRole('button', { name: /^Open, \d+ requests?$/ }).press('Enter');
+    await expect(headingOf('open')).toBeFocused();
+    await expect.poll(() => lanes.evaluate((element) => element.scrollLeft)).toBe(0);
+
+    // The row of buttons comes before the lanes, which Tab reaches next.
+    await closed.focus();
+    await page.keyboard.press('Tab');
+    await expect(lanes).toBeFocused();
+
+    // On a screen where all five columns fit side by side, there's nothing to jump to: the row
+    // hides, and focus that was on it moves to the main content rather than <body>.
+    await closed.focus();
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await expect(jump).toBeHidden();
+    await expect(page.locator('#main')).toBeFocused();
+    await expect(lanes).not.toHaveAttribute('tabindex');
+  });
 });
 
 test('a request’s activity view is chosen with the keyboard, focus staying on each menu’s button', async ({

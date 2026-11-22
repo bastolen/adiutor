@@ -125,8 +125,17 @@ keyboard support.
     when the card isn't shown anymore; a lane is a `data-card` section for `restoreFocusIfLost`.
   - **Width:** the columns, at least 14rem each, sit in a row that scrolls sideways inside a
     named group the keyboard reaches while it overflows (`tabIndex={0}`, like a wide code block),
-    so the page never scrolls sideways. On a wide screen the board is as wide as a request's page
-    (`WidePage`), so all five columns fit side by side and the row doesn't scroll. Below tablet
+    so the page never scrolls sideways. While it overflows, a navigation above it ("Jump to a
+    lane", named by its visible label) has a small secondary button per column with its name and
+    count (`LaneCount`, a number in the reader's language, hidden from screen readers, which hear
+    the heading's sentence); a press scrolls only the row to the column, without smooth scrolling
+    under reduced motion, and focuses the column's heading, so a column out of sight is one press
+    away. A container query on the board's width shows it (`@container` on the board,
+    `@min-[73rem]:hidden` on the row: five 14rem columns and their gaps), never a measurement after
+    the page runs, so nothing shifts; focus on it when it hides goes to the main content. On a
+    wide screen the board is as wide as a request's page (`WidePage`), so from about 1500px of
+    screen all five columns fit side by side, the row doesn't scroll and the navigation isn't
+    there. Below tablet
     width the columns are stacked, each folding away with its count (`aria-expanded` on its
     heading's button), a grouped column with both its halves.
   - **Colours:** a lane is a step back from its cards in both modes (`muted` behind `surface`
@@ -497,7 +506,7 @@ while signed-in pages still show their loading placeholders, and that no field's
 The pages are scanned as the staff Admin, and the ones that look different to someone at a company
 (the dashboard, the requests) also as a Client and as a Watcher.
 `e2e/keyboard.spec.ts` checks the skip link, menus, selects (also a searchable one), dialogs, the mobile menu, the request
-controls and cursors using only the keyboard, that a button keeps focus while its form saves, and
+controls, the board (its Move menus, its row and the buttons that jump to a column) and cursors using only the keyboard, that a button keeps focus while its form saves, and
 that an error in a dialog takes focus each time it comes and leaves the dialog one Escape away.
 
 ## Dark mode
