@@ -139,7 +139,8 @@ keyboard support.
     AD-142 to In progress…", and while dragging) goes through one live region the board keeps on the page from
     the start, since a status inserted with its text already in it is often not read out; it
     empties before the toast or the error says the outcome, so nothing is said twice. These are
-    checked in the markup and with axe, not yet with a real screen reader.
+    checked with axe and with snapshots of the board's accessibility tree
+    (`e2e/board-a11y.spec.ts`); a pass with VoiceOver is manual.
   - **Width:** the columns, at least 14rem each, sit in a row that scrolls sideways inside a
     named group the keyboard reaches while it overflows (`tabIndex={0}`, like a wide code block),
     so the page never scrolls sideways. While it overflows, a navigation above it ("Jump to a
@@ -539,6 +540,12 @@ The pages are scanned as the staff Admin, and the ones that look different to so
 `e2e/keyboard.spec.ts` checks the skip link, menus, selects (also a searchable one), dialogs, the mobile menu, the request
 controls, the board (its Move menus, its row and the buttons that jump to a column) and cursors using only the keyboard, that a button keeps focus while its form saves, and
 that an error in a dialog takes focus each time it comes and leaves the dialog one Escape away.
+`e2e/board-a11y.spec.ts` pins down what the board tells assistive technology with snapshots of its
+accessibility tree (`toMatchAriaSnapshot`): the row that jumps to a lane, the columns and their
+halves with their names and counts, a lane that shows fewer cards than it holds and an empty one, a
+card and its Move menu, the status while a card is moved and the focus after it, and the phone's
+folding columns. Like axe, the snapshots read the markup, not what a screen reader says: a pass
+with VoiceOver on the board is manual.
 
 ## Dark mode
 
