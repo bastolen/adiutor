@@ -53,6 +53,11 @@
     "filter": {
       "chosen": "{filter}: {choice}"
     },
+    "select": {
+      "searchPlaceholder": "Typ om te zoeken",
+      "noMatches": "Geen opties gevonden voor je zoekopdracht.",
+      "results": "{count, plural, =0 {Geen opties gevonden} one {# optie gevonden} other {# opties gevonden}}"
+    },
     "dateRange": {
       "from": "Van",
       "to": "Tot en met"

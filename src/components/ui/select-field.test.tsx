@@ -1,5 +1,7 @@
 /**
- * @file Tests for the select field, including its busy state.
+ * @file Tests for the short select field (up to its search threshold),
+ * including its groups and its busy state. The searchable one has its own
+ * tests (`searchable-select.test.tsx`).
  */
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -91,6 +93,36 @@ describe('SelectField', () => {
     expect(within(spanish).getByText('Español')).toHaveAttribute('lang', 'es-ES');
     // A label in the page's own language carries none.
     expect(screen.getByRole('option', { name: 'Default' }).querySelector('[lang]')).toBeNull();
+  });
+
+  it('lists options with a group under its heading', async () => {
+    const user = userEvent.setup();
+    render(
+      <SelectField
+        label="Time zone"
+        options={[
+          { value: 'UTC', label: 'UTC' },
+          { value: 'Europe/Amsterdam', label: 'Amsterdam', group: 'Europe' },
+          { value: 'Europe/Paris', label: 'Paris', group: 'Europe' },
+          { value: 'Asia/Tokyo', label: 'Tokyo', group: 'Asia' },
+        ]}
+        defaultValue="UTC"
+      />,
+    );
+
+    await user.click(screen.getByRole('combobox', { name: 'Time zone' }));
+
+    const europe = screen.getByRole('group', { name: 'Europe' });
+    expect(
+      within(europe)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['Amsterdam', 'Paris']);
+    expect(
+      within(screen.getByRole('group', { name: 'Asia' })).getByRole('option'),
+    ).toHaveTextContent('Tokyo');
+    // Short: no search field.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('outlines the option the keyboard is on, as well as filling it', async () => {

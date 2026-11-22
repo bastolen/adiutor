@@ -53,6 +53,11 @@
     "filter": {
       "chosen": "{filter}: {choice}"
     },
+    "select": {
+      "searchPlaceholder": "Escribe para buscar",
+      "noMatches": "Ninguna opción coincide con tu búsqueda.",
+      "results": "{count, plural, =0 {Ninguna opción coincide} one {# opción coincide} other {# opciones coinciden}}"
+    },
     "dateRange": {
       "from": "Desde",
       "to": "Hasta"

@@ -53,6 +53,11 @@
     "filter": {
       "chosen": "{filter}: {choice}"
     },
+    "select": {
+      "searchPlaceholder": "Type to search",
+      "noMatches": "No options match your search.",
+      "results": "{count, plural, =0 {No options match} one {# option matches} other {# options match}}"
+    },
     "dateRange": {
       "from": "From",
       "to": "To"
