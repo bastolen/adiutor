@@ -99,13 +99,42 @@ plugin in `src/lib/sign-in/request-link-plugin.ts`; the app decides in `followRe
   request.
 - **Signed in as that person already**, it opens the request without a new session.
 - **Anything else goes to its confirmation page** (`/auth/request-link`, built like the email
-  link's): a program or a browser that doesn't say a person clicked (a mail scanner gets no
-  session and adds no device), someone else signed in in that browser (the page names the link's
-  account and says that continuing switches to it; only the page's own Continue, a same-origin
-  click marked `confirmed=1`, may switch), a staff member signed in as a user (the page asks them
-  to go back to their own account first), or a link that no longer works. The page looks the link
-  up without using it (`getRequestLinkView`); tokens that aren't links count against the IP address
+  link's): a program or a browser that doesn't say a person clicked (a mail scanner that only
+  fetches the link gets no session and adds no device), someone else signed in in that browser (the
+  page names the link's account and says that continuing switches to it; only the page's own
+  Continue may switch), a staff member signed in as a user (the page asks them to go back to their
+  own account first), or a link that no longer works. The page looks the link up without using it
+  (`getRequestLinkView`); tokens that aren't links count against the IP address
   (`requestLinkMissesPerIp`).
+
+The page's Continue posts the link to the same endpoint (a form `POST`, answered with a 303, so
+the browser opens the next page with a `GET`). A `POST` counts only as that Continue, and only
+when a page of the site started it (`fromConfirmationPage`: `Sec-Fetch-Site: same-origin`,
+`Sec-Fetch-Mode: navigate` and `Sec-Fetch-Dest: document`, which no other site, email or typed
+address can make), also without the click header; it never counts as a click: another site's
+form, clicked, says a person clicked too, and the browser sends it without the site's cookies
+(`SameSite=Lax`), so nobody would look signed in. Better Auth's check for sign-in forms
+(`formCsrfMiddleware`) refuses such a cross-site `POST` before that, and checks the origin of
+every other one a browser sends, with or without cookies (a `POST` with none of a browser's
+headers passes it, and the app's own rule, `fromConfirmationPage`, refuses it next); the page
+therefore sends the site's origin (`referrer: strict-origin`) where other secret-link pages send no
+referrer at all. A link is
+always a `GET`, so a link to the endpoint written in a reply, which is a same-origin click when
+someone clicks it on the request's page, never switches accounts, whatever its query says.
+
+Safari, and every browser on an iPhone or iPad, never says a person clicked (WebKit sends no
+`Sec-Fetch-User`), so there every link comes to the page. With a link that can still be used and
+nobody signed in in that browser, the page sends its Continue by itself once it has loaded
+([decision 0038](decisions/0038-request-links-continue-by-themselves.md), `RequestLinkForm`):
+once per page load, only for a page the browser opened fresh (not Back, Forward or a reload), and
+not while the browser prerenders it; Continue shows as busy meanwhile. That Continue is marked
+(`auto=1`) and never switches from someone signed in, so a page rendered while nobody was signed
+in, then shown after a sign-in in another tab, asks first. A `POST` that comes back to the page
+anyway (a browser that sends no `Sec-Fetch-Site`, a sign-in that failed, someone signed in
+meanwhile) adds `retry=1` to its address, and the page then waits for a click. Someone else signed
+in and a link that no longer works keep their button. Since anything that opens the page in the
+whole tab is enough, a page that redirects a signed-out visitor there with someone's link signs
+them in as that person without a click; the page can't be framed.
 
 A link no longer works once it expired, or when its person is deactivated or can no longer read the
 request (staff who read requests, or a member of its active company, decided when it's used). It

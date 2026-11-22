@@ -1,7 +1,8 @@
 /**
  * @file The content of the request link's confirmation page: it looks the
  * link up without using it, and shows the account to continue as, or why
- * the link can't be used here.
+ * the link can't be used here. With nobody signed in in this browser, it
+ * continues by itself (decision 0038).
  */
 import { UserRoundCheck } from 'lucide-react';
 import Link from 'next/link';
@@ -15,7 +16,7 @@ import Button from '@/components/ui/button';
 import IconTile from '@/components/ui/icon-tile';
 import { requestPathWithEntry } from '@/lib/requests';
 import { type SearchParams, searchParam } from '@/lib/search-params';
-import { REQUEST_LINK_DAYS } from '@/lib/sign-in/request-link';
+import { REQUEST_LINK_DAYS, REQUEST_LINK_RETRY_PARAM } from '@/lib/sign-in/request-link';
 import appContext from '@/server/app-context';
 import { getRequestLinkView, type RequestLinkView } from '@/server/auth/request-links';
 import { getOptionalActor } from '@/server/authz';
@@ -65,7 +66,11 @@ function signInHref(view: RequestLinkView | null, entry: string | null = null): 
  * Looks the link up and shows the step that fits: the account to continue
  * as, why a staff member signed in as someone can't use it, or why it can't
  * be used (every reason looks the same: expired, ended early, an account
- * that can't use it, or no such link).
+ * that can't use it, or no such link). Only a link that can be used, with
+ * nobody signed in in this browser, continues by itself, and not when its
+ * own Continue already came back here (`retry`, see
+ * `REQUEST_LINK_RETRY_PARAM`): switching accounts is always a person's
+ * choice.
  *
  * @param props - Component props.
  * @param props.searchParams - The page's query string.
@@ -80,6 +85,8 @@ export default async function RequestLinkStep({
   const token = searchParam(params.token);
   // The entry the link points at, passed on to the request (checked where it's used).
   const entry = searchParam(params.entry) ?? null;
+  // The page's own Continue came back here: it waits for a click.
+  const retry = searchParam(params[REQUEST_LINK_RETRY_PARAM]) === '1';
   const unusable = t('requestLink.unusable', { days: REQUEST_LINK_DAYS });
   if (!token) {
     return <UnusableLink description={unusable} href={signInHref(null)} />;
@@ -113,6 +120,7 @@ export default async function RequestLinkStep({
   return (
     <RequestLinkForm
       account={{ name: view.account.name, email: view.account.email }}
+      continueByItself={!actor && !retry}
       reference={view.reference}
       requestHref={requestPathWithEntry(view.number, entry)}
       signedIn={

@@ -118,7 +118,10 @@ The staff can say a request is fixed without closing it, for the company to conf
   only for them and that proposal, for 14 days (`createAnswerLink`, made by the email's job;
   `answerByLink`, with the same rules as the page). A person's click answers straight away
   (`Sec-Fetch-User: ?1`, `isPersonsClick`); any other visit, such as a mail scanner checking the
-  link, ends on the link's page (`/answer/<token>`), which asks for a button press first. The page
+  link, ends on the link's page (`/answer/<token>`), which asks for a button press first. Safari,
+  and every browser on an iPhone or iPad, never says a person clicked, so there the page always
+  asks: unlike the sign-in link, it never goes on by itself, since it changes the request
+  ([decision 0038](decisions/0038-request-links-continue-by-themselves.md)). The page
   then says what happened, and a link that can't answer any more says why: used, expired,
   overtaken (answered in the app, withdrawn, closed) or its person no longer able to answer.
   Only the email that tells of the proposal has the buttons; a later email while it still waits
@@ -319,7 +322,9 @@ written and sent is in [Email](email.md), and the jobs that send them in
 - **Its links sign the reader in:** the request's number and the button are the reader's own link,
   made as the email is sent (`createRequestLink`), which signs them in and opens the request for
   14 days, without the step-up page ([decision 0036](decisions/0036-sign-in-links-in-request-emails.md);
-  see [Links in emails about requests](authentication.md#links-in-emails-about-requests)). The
+  see [Links in emails about requests](authentication.md#links-in-emails-about-requests)). In
+  Safari it goes through its confirmation page, which continues by itself when nobody is signed
+  in there ([decision 0038](decisions/0038-request-links-continue-by-themselves.md)). The
   email says so, and not to forward it.
 - **Only who is still on the request is told:** when the email is sent, someone whose account is
   deactivated, who can no longer read the request, or who is no longer on it (unsubscribed,

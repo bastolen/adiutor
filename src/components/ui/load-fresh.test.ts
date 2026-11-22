@@ -3,7 +3,9 @@
  * `location.replace`, so the address changes when it arrives; the same page
  * (only the section differs, or the same address) replaces the address and
  * reloads; with `everyTab` it tells the browser's other tabs first, and only
- * then. Also the current page's address.
+ * then; and from then on the page knows it has started a fresh load, until
+ * the browser restores it from its back/forward cache. Also the current
+ * page's address.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -95,6 +97,33 @@ describe('loadFresh', () => {
     expect(tellOtherTabs.mock.invocationCallOrder[0]).toBeLessThan(
       replace.mock.invocationCallOrder[0] ?? 0,
     );
+  });
+});
+
+describe('freshLoadStarted', () => {
+  it('says whether this page has started to load a page afresh', async () => {
+    // A page that has just loaded: the module starts over.
+    vi.resetModules();
+    const fresh = await import('./load-fresh');
+    onPage('/dashboard');
+
+    expect(fresh.freshLoadStarted()).toBe(false);
+    fresh.default('/requests');
+    expect(fresh.freshLoadStarted()).toBe(true);
+  });
+
+  it('starts over when the browser restores the page from its back/forward cache', async () => {
+    vi.resetModules();
+    const fresh = await import('./load-fresh');
+    onPage('/dashboard');
+    fresh.default('/requests');
+
+    // Shown again without coming back from the cache (the first show): still on its way out.
+    window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: false }));
+    expect(fresh.freshLoadStarted()).toBe(true);
+    // Back after the load: the page is there again, with its scripts as they were.
+    window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+    expect(fresh.freshLoadStarted()).toBe(false);
   });
 });
 
