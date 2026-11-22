@@ -43,8 +43,12 @@ installing them again with `apt-get` would fail whenever Ubuntu's package server
 
 ### Skipping the tests
 
-The static checks always run. The unit, integration and end-to-end tests only run for code that
-hasn't passed them yet, and **CI passed** counts the skipped jobs as passed.
+The unit, integration and end-to-end tests only run for code that hasn't passed them yet, and
+**CI passed** counts the skipped jobs as passed. The static checks run on every pull request, where
+they also check what the fingerprint leaves out (the formatting of docs and Markdown) and audit the
+dependencies. On `main` they run only when the tests do: a record is made only when every job
+passed, the static checks included, so code that skips the tests passed those too
+([decision 0039](decisions/0039-static-checks-follow-the-tests-on-main.md)).
 
 - **The fingerprint:** the first job (Decide what runs) hashes every tracked file and its content
   (`git ls-tree -r HEAD`; on a pull request, GitHub's merge commit with `main`, so the code as it
@@ -60,8 +64,9 @@ hasn't passed them yet, and **CI passed** counts the skipped jobs as passed.
   counts (below). If the API can't answer, the tests run.
 - **What that skips:**
   - `main`'s run after merging a pull request whose last run was against the current `main`: the
-    squash merge lands exactly the code that pull request tested. A merge of a pull request that
-    fell behind `main` runs the tests on `main`.
+    squash merge lands exactly the code that pull request tested, so the static checks are skipped
+    too. A merge of a pull request that fell behind `main` runs the tests and the static checks on
+    `main`.
   - a change to docs or repository settings, once `main`'s code passed;
   - a re-run of code that passed;
   - the release commit that merging the release pull request puts on `main`.
