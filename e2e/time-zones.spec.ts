@@ -6,7 +6,7 @@
  */
 import { findCompanyId, savedTimeZoneOf, storeInvitation, storeRequest } from './support/db';
 import { COMPANY_SLUG } from './support/fixtures';
-import { freshAddress, searchSelect, toasts } from './support/helpers';
+import { createAccountFromInvitation, freshAddress, searchSelect, toasts } from './support/helpers';
 import { expect, test } from './support/test';
 
 /**
@@ -35,7 +35,9 @@ test("a new account takes its browser's zone, and pages show times in it", async
   await page.getByRole('button', { name: 'Create account and join' }).click();
   await expect(page).toHaveURL(/\/companies\/[0-9a-f-]{36}$/);
 
-  // The first page saves the browser's zone and loads again in it (the tests' default is UTC).
+  // The first page saves the browser's zone and loads again in it (the tests' default is UTC):
+  // not the page the sign-up lands on, which loads afresh as the new account first, but the one
+  // that replaces it, so the save is never cut off and the browser gets the zone's cookie.
   await expect.poll(() => savedTimeZoneOf(email)).toBe('Australia/Adelaide');
   await expect.poll(() => loads).toBe(2);
   // The cookie holds it encoded, as cookies are written ("Australia%2FAdelaide").
@@ -68,11 +70,14 @@ test('the Time zone card changes the zone every page shows, and offers the brows
   const email = freshAddress('tokyo');
   const companyId = await findCompanyId(COMPANY_SLUG);
   await page.goto(await storeInvitation({ companyId, email, role: 'client' }));
-  await page.getByLabel('Your name').fill('Tokyo Tester');
-  await page.getByLabel('Password', { exact: true }).fill('e2e-tokyo-password');
-  await page.getByRole('button', { name: 'Create account and join' }).click();
-  await expect(page).toHaveURL(/\/companies\/[0-9a-f-]{36}$/);
-  await expect.poll(() => savedTimeZoneOf(email)).toBe('Australia/Adelaide');
+  let loads = 0;
+  page.on('load', () => {
+    loads += 1;
+  });
+  await createAccountFromInvitation(page, 'Tokyo Tester', 'e2e-tokyo-password');
+  // The first visit's load in the browser's zone, before going anywhere: it would cut that off.
+  await expect.poll(() => loads).toBe(2);
+  expect(await savedTimeZoneOf(email)).toBe('Australia/Adelaide');
 
   await page.goto('/account/preferences');
   const card = page.getByRole('region', { name: 'Time zone' });
