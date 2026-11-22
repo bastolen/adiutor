@@ -109,10 +109,12 @@ export async function answerSolutionAction(
 
 /**
  * Changes a request's status: what the staff pick, or done, cancelled or
- * open again from the company's buttons.
+ * open again from the company's buttons. Both send the status the page showed (`from`), so a
+ * change that a colleague's came before is refused: the page is refreshed all the same, and then
+ * shows the request as it is.
  *
  * @param _previous - The previous result (unused).
- * @param formData - Fields `request` (its number) and `status`.
+ * @param formData - Fields `request` (its number), `status` and `from` (the status the page showed).
  * @returns A confirmation that says what happened, or why it failed.
  */
 export async function changeStatusAction(
@@ -124,6 +126,12 @@ export async function changeStatusAction(
     const { reopened, status } = await changeRequestStatus(appContext, actor, {
       request: field(formData, 'request'),
       status: field(formData, 'status'),
+      from: field(formData, 'from'),
+    }).catch((error: unknown) => {
+      if (error instanceof ServiceError && error.code === 'conflict') {
+        refresh();
+      }
+      throw error;
     });
     refresh();
     const t = await getTranslations('requests.saved');

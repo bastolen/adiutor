@@ -4,7 +4,14 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { isTimeZone, timeZoneOffset, timeZoneOptions } from './time-zones';
+import {
+  compareTimeZoneOptions,
+  isTimeZone,
+  TIME_ZONE_REGIONS,
+  timeZoneOffset,
+  timeZoneOption,
+  timeZoneOptions,
+} from './time-zones';
 
 describe('isTimeZone', () => {
   it.each(['UTC', 'Europe/Amsterdam', 'America/Port-au-Prince', 'Asia/Kolkata', 'Europe/Kyiv'])(
@@ -39,21 +46,60 @@ describe('timeZoneOffset', () => {
   });
 });
 
+describe('timeZoneOption', () => {
+  const at = new Date('2026-12-01T12:00:00Z');
+
+  it('names a zone by its place, with its region and its offset now', () => {
+    expect(timeZoneOption('Europe/Amsterdam', at)).toEqual({
+      value: 'Europe/Amsterdam',
+      label: 'Amsterdam (UTC+01:00)',
+      region: 'Europe',
+    });
+    expect(timeZoneOption('Europe/London', at).label).toBe('London (UTC)');
+  });
+
+  it('writes a place with spaces, the smallest place first', () => {
+    // The minus sign of an offset is written as the runtime writes it.
+    expect(timeZoneOption('America/New_York', at)).toEqual({
+      value: 'America/New_York',
+      label: `New York (${timeZoneOffset('America/New_York', at)})`,
+      region: 'America',
+    });
+    expect(timeZoneOption('America/Argentina/Rio_Gallegos', at).label).toBe(
+      `Rio Gallegos, Argentina (${timeZoneOffset('America/Argentina/Rio_Gallegos', at)})`,
+    );
+  });
+
+  it('lists UTC by its name, under no region', () => {
+    expect(timeZoneOption('UTC', at)).toEqual({ value: 'UTC', label: 'UTC', region: null });
+  });
+
+  it('lists a zone of another area under the other zones, by its whole name', () => {
+    expect(timeZoneOption('Etc/GMT+5', at)).toEqual({
+      value: 'Etc/GMT+5',
+      label: `Etc/GMT+5 (${timeZoneOffset('Etc/GMT+5', at)})`,
+      region: 'Other',
+    });
+  });
+});
+
 describe('timeZoneOptions', () => {
   const at = new Date('2026-12-01T12:00:00Z');
 
-  it('lists UTC and every zone the runtime knows, by name, with its offset', () => {
+  it('lists UTC first, then every zone the runtime knows by region and place', () => {
     const options = timeZoneOptions(at);
 
-    expect(options.find(({ value }) => value === 'UTC')?.label).toBe('UTC');
-    expect(options.find(({ value }) => value === 'Europe/London')?.label).toBe(
-      'Europe/London (UTC)',
-    );
+    expect(options[0]).toEqual({ value: 'UTC', label: 'UTC', region: null });
     expect(options.find(({ value }) => value === 'Europe/Amsterdam')?.label).toBe(
-      'Europe/Amsterdam (UTC+01:00)',
+      'Amsterdam (UTC+01:00)',
+    );
+    expect(options).toEqual([...options].sort(compareTimeZoneOptions));
+    // The regions come in their order, each in one piece.
+    const regions = options.slice(1).map(({ region }) => region);
+    expect([...new Set(regions)]).toEqual(
+      TIME_ZONE_REGIONS.filter((region) => regions.includes(region)),
     );
     const names = options.map(({ value }) => value);
-    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'en')));
     expect(new Set(names).size).toBe(names.length);
   });
 
@@ -62,6 +108,8 @@ describe('timeZoneOptions', () => {
       ({ value }) => value === 'Asia/Kolkata',
     );
 
-    expect(chosen).toHaveLength(1);
+    expect(chosen).toEqual([
+      { value: 'Asia/Kolkata', label: 'Kolkata (UTC+05:30)', region: 'Asia' },
+    ]);
   });
 });

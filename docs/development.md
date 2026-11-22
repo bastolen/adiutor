@@ -31,11 +31,22 @@ it: [deploying](deploying.md#installing-and-upgrading) migrates before every res
 
 ## Background jobs
 
-`pnpm dev` runs the [background jobs](jobs.md)' tick itself, right away and then every minute
-(`startDevTick` in `src/server/jobs/dev-tick.ts`, started from `src/instrumentation.ts`), so emails
-the app queues, such as security notices, reach Mailpit within a minute. `pnpm jobs:run` runs a tick
-at once, and `pnpm jobs:run <job>` one job. Production servers never tick themselves: see
-[Background jobs](deploying.md#background-jobs) in the deployment docs.
+`pnpm dev` calls the [background jobs](jobs.md)' endpoint itself, right away and then every minute,
+as a cron service would (`GET /api/jobs` at `BETTER_AUTH_URL` with `CRON_SECRET`; `startDevTick` in
+`src/server/jobs/dev-tick.ts`, started from `src/instrumentation.ts`), so emails the app queues,
+such as security notices, reach Mailpit within a minute. Going through the endpoint keeps the jobs'
+code current: Next.js recompiles the route after an edit or a branch switch, while code that
+`instrumentation.ts` loaded stays as it was when the server started. A backlog continues straight
+away, as in production ([The endpoint](jobs.md#the-endpoint)).
+
+- **`CRON_SECRET`** must be set in `.env` (`openssl rand -base64 32`). Without it the endpoint is
+  off, `pnpm dev` says so once as it starts, and only `pnpm jobs:run` runs the jobs.
+- **A second dev server** on another port (another checkout, say) sets `BETTER_AUTH_URL` to its own
+  address, or its ticks go to the first server.
+- **A failed call** is logged by its status or error, and the next minute tries again.
+
+`pnpm jobs:run` runs a tick at once, and `pnpm jobs:run <job>` one job. Production servers never
+tick themselves: see [Background jobs](deploying.md#background-jobs) in the deployment docs.
 
 ## Starting over
 

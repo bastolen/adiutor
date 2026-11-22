@@ -28,6 +28,7 @@ import {
   answerPictures,
   markdownEditor,
   openUser,
+  searchSelect,
   signIn,
   signInAsUser,
   type StorageState,
@@ -368,6 +369,70 @@ test.describe('signed in', () => {
     await expect(role).toHaveText('Admin');
     await page.reload();
     await expect(role).toHaveText('Admin');
+  });
+
+  test('a long select is searched by typing, and only Enter picks', async ({ page }) => {
+    // Nothing is saved: the zone is picked, never submitted.
+    await page.goto('/account');
+    const field = page
+      .getByRole('region', { name: 'Time zone' })
+      .getByRole('combobox', { name: 'Time zone' });
+    const before = (await field.textContent()) ?? '';
+
+    // A letter typed on the field opens it with the letter in the search, which has the focus
+    // and its ring; the list filters as the rest is typed, and a screen reader hears the count.
+    let panel = await searchSelect(field, 'tokyo');
+    const search = panel.getByRole('combobox', { name: 'Time zone' });
+    await expect.poll(() => outlineOf(search)).toEqual({ style: 'solid', width: '2px' });
+    await expect(panel.getByRole('option')).toHaveText([/^Tokyo/]);
+    await expect(panel.getByRole('status')).toHaveText('1 option matches');
+
+    // A region's name lists its zones. The arrow keys, Home and End move the outlined option
+    // (the search field keeps the focus and points at it); Escape closes it, nothing changed.
+    await search.fill('americas');
+    const options = panel.getByRole('option');
+    const first = options.first();
+    const second = options.nth(1);
+    const last = options.last();
+    await expect(first).toHaveAttribute('aria-selected', 'true');
+    await page.keyboard.press('ArrowDown');
+    await expect(second).toHaveAttribute('aria-selected', 'true');
+    await expect(first).toHaveAttribute('aria-selected', 'false');
+    await expect(search).toHaveAttribute(
+      'aria-activedescendant',
+      (await second.getAttribute('id')) ?? '',
+    );
+    await expect.poll(() => outlineOf(second)).toEqual({ style: 'solid', width: '2px' });
+    await expect.poll(async () => (await outlineOf(first)).style).toBe('none');
+    await page.keyboard.press('End');
+    await expect(last).toHaveAttribute('aria-selected', 'true');
+    await expect(last).toBeInViewport();
+    await page.keyboard.press('Home');
+    await expect(first).toHaveAttribute('aria-selected', 'true');
+    await expect(first).toBeInViewport();
+    await expect(search).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(panel).toHaveCount(0);
+    await expect(field).toBeFocused();
+    await expect(field).toHaveText(before);
+
+    // Tab closes it too, without a change, with focus back on the field.
+    await page.keyboard.press('Enter');
+    await expect(search).toBeFocused();
+    await expect(search).toHaveValue('');
+    await page.keyboard.type('lisbon');
+    await page.keyboard.press('Tab');
+    await expect(panel).toHaveCount(0);
+    await expect(field).toBeFocused();
+    await expect(field).toHaveText(before);
+
+    // Enter picks the match, and focus is back on the field.
+    panel = await searchSelect(field, 'new y');
+    await expect(panel.getByRole('option')).toHaveText([/^New York/]);
+    await page.keyboard.press('Enter');
+    await expect(panel).toHaveCount(0);
+    await expect(field).toBeFocused();
+    await expect(field).toHaveText(/^New York/);
   });
 
   test('the confirm dialog traps focus, cancels with Escape and confirms', async ({ page }) => {
@@ -1523,6 +1588,87 @@ test.describe('requests', () => {
       await expect(cancelRequest).toHaveCount(0);
       await expect(page.getByRole('heading', { level: 2, name: 'Details' })).toBeFocused();
     });
+  });
+});
+
+test.describe('the board of requests', () => {
+  test.use({ reducedMotion: 'reduce' });
+  test.beforeEach(async ({ context }) => {
+    await context.addCookies(adminState.cookies);
+  });
+
+  /**
+   * A lane of the board on the page.
+   *
+   * @param page - The browser page, on the board.
+   * @param name - The lane's name.
+   * @returns The lane's section.
+   */
+  const lane = (page: Page, name: string) =>
+    page.getByRole('region', { name: new RegExp(`^${name}, \\d+ requests?$`) });
+
+  test('a card moves with its Move menu from the keyboard, and focus follows it to its new lane', async ({
+    page,
+  }) => {
+    const title = `A card moved with the keyboard ${Date.now()}`;
+    const number = await storeRequest({
+      companySlug: COMPANY_SLUG,
+      raisedBy: REQUESTS_CLIENT.email,
+      title,
+    });
+    await page.goto(`/requests/board?q=${encodeURIComponent(title)}`);
+    const move = lane(page, 'Open').getByRole('button', { name: `Move AD-${number}` });
+    expect(await cursorOf(move)).toBe('pointer');
+
+    // From the card's link, Tab reaches its Move button (the avatars are left out).
+    await lane(page, 'Open').getByRole('link', { name: title }).focus();
+    await page.keyboard.press('Tab');
+    await expect(move).toBeFocused();
+
+    // Escape closes the menu and changes nothing.
+    await expect(async () => {
+      await move.press('Enter');
+      await expect(page.getByRole('menu')).toBeVisible({ timeout: 1000 });
+    }).toPass();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('menu')).toBeHidden();
+    await expect(move).toBeFocused();
+
+    // The arrow keys go through the lanes, and Enter moves the card to one.
+    await move.press('Enter');
+    await expect(page.getByRole('menu')).toBeVisible();
+    const inProgress = page.getByRole('menuitem', { name: 'In progress' });
+    await expect(async () => {
+      await page.keyboard.press('ArrowDown');
+      await expect(inProgress).toBeFocused({ timeout: 250 });
+    }).toPass();
+    await page.keyboard.press('Enter');
+    await expect(toasts(page)).toContainText(`AD-${number} moved to In progress.`);
+    const moved = lane(page, 'In progress').getByRole('button', { name: `Move AD-${number}` });
+    await expect(moved).toBeFocused();
+    await expect(moved).not.toHaveAttribute('aria-busy');
+    await expect(lane(page, 'Open').getByRole('link', { name: title })).toHaveCount(0);
+  });
+
+  test('the lanes are reached and scrolled sideways with the keyboard', async ({ page }) => {
+    await page.goto('/requests/board');
+    const lanes = page.getByRole('group', { name: 'Lanes' });
+    // Five columns don’t fit the content’s width here: the row scrolls, inside its own box.
+    await expect
+      .poll(() => lanes.evaluate((element) => element.scrollWidth > element.clientWidth))
+      .toBe(true);
+    await expect(lanes).toHaveAttribute('tabindex', '0');
+    await lanes.focus();
+    await expect(lanes).toBeFocused();
+    await expect.poll(() => outlineOf(lanes)).toEqual({ style: 'solid', width: '2px' });
+    await page.keyboard.press('ArrowRight');
+    await expect.poll(() => lanes.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+    // The page itself doesn't scroll sideways.
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
   });
 });
 

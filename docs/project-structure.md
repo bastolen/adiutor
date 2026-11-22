@@ -17,7 +17,7 @@ The folders of the repository and what belongs in each. Back to the [documentati
   - `theme/`: the light and dark options and the hook that reads and changes the preference.
 - `src/app/`: the routes. Components only one route uses sit next to its page (e.g. the user detail
   page's `*-card.tsx`); what several signed-in pages share is in `src/app/(app)/_people/`, and
-  what the request pages share (the list, the badges, the text, the people) in
+  what the request pages share (the list, the board, the badges, the text, the people) in
   `src/app/(app)/_requests/`. A
   company's pages and the account pages have a `layout.tsx` with their header and tabs (see
   [Design and accessibility](design.md#design-and-accessibility)).
@@ -43,8 +43,8 @@ The folders of the repository and what belongs in each. Back to the [documentati
     `invitations/` has one file per flow (the shared rules, the lock, creating the record, sending,
     managing, accepting, and revoking when someone loses access) and `user-admin/` the staff
     actions on a user (detail, sessions, own account, the sole Admin rule).
-  - `src/server/requests/`: listing, reading, raising and changing requests (see
-    [Requests](requests.md)), with the checks every change shares in `change.ts`.
+  - `src/server/requests/`: listing, showing as a board, reading, raising and changing requests
+    (see [Requests](requests.md)), with the checks every change shares in `change.ts`.
   - `src/server/jobs/`: background jobs (see [Background jobs](jobs.md)): the tick, leases and
     history, with each recurring job in `recurring/` and every job listed in `registry.ts`.
   - `src/server/queue/`: declaring kinds of queued job and adding jobs to the queue (`queueJob`),
@@ -80,8 +80,8 @@ The folders of the repository and what belongs in each. Back to the [documentati
   - `src/lib/request/`: the client IP address, user agent, request info, CSP and pathname header:
     HTTP requests, not the requests companies raise.
   - `src/lib/requests/`: the requests companies raise (see [Requests](requests.md)): their
-    values, the rules of working on one, their numbers and their text, free of zod and server
-    code, so the database schema, the services and client components can all import it.
+    values, the rules of working on one, the board's lanes, their numbers and their text, free of
+    zod and server code, so the database schema, the services and client components can all import it.
 - `src/emails/`: the email templates (see [Email](email.md)).
 - `src/messages/`: the translation catalogues, one folder per language and one JSON file per area
   (see [Languages](i18n.md)).

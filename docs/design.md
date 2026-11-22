@@ -16,7 +16,8 @@ keyboard support.
   panel to read that opens from a button, such as the names behind a row of avatars), `EmptyState`,
   `IconRow`, `IconTile` (a decorative icon on a tinted square), `RowLink` (the name in a table row
   or list item, stretched so the whole row is one click target), `DescriptionList` (labels and
-  values), `Skeleton`, `Pagination`, `SortMenu`, `FilterMenu`, ...). Menus, selects, dialogs and
+  values), `Skeleton`, `Pagination` (with `PageSizeLinks`, its choice of sizes, on its own for a
+  view without pages), `SortMenu`, `FilterMenu`, ...). Menus, selects, dialogs and
   sheets are
   built on [Radix UI](https://www.radix-ui.com), and only `src/components/ui/` imports it. Radix
   follows the WAI-ARIA patterns: arrow keys, typeahead, Escape to close, focus kept inside
@@ -91,6 +92,46 @@ keyboard support.
       1920px, with a seeded staff member who has no name and a long address.
   - **List services** take the table's state and return one page with the total
     (`Paged<T>`); each sort ends with the row's ID, so pages don't overlap and reversing is exact.
+- **The board** of requests (`/requests/board`, see [The board](requests.md#the-board)) is the one
+  view of records that isn't a table: a lane per status, each card a list item, in five columns,
+  two of which (Waiting, Closed) hold two lanes as an upper and a lower half, each half with its
+  own heading (`h3` under the column's `h2`), count, "See all" and empty text. Lanes have no
+  pagination footer (an open lane shows 25, 50 or 100 cards, chosen like rows per page with
+  `PageSizeLinks`; a closed one its latest 5; a lane with more links to the list), but they keep
+  the list's sort, from its Sort menu. The pattern:
+  - **Moving without dragging:** every card the reader may move has a Move menu (a Radix menu)
+    listing the lanes it may go to, which works with a single click or tap, the keyboard and
+    screen readers alike. That's WCAG 2.5.7 Dragging Movements: whatever can be dragged can also
+    be done with a single pointer, and the keyboard alone doesn't count. Dragging is an extra for
+    the pointer from tablet width; the menu stays. Moves that email the company (Done,
+    Cancelled) ask first, however they're made.
+  - **Dragging:** a decorative grip (`aria-hidden`, `cursor-grab`) in the card's corner drags it,
+    never its title link (`draggable={false}`). The drag and drop library loads with `import()`
+    once the page is there, from tablet width only (`board-drag.ts`, the one file that imports
+    it). Each lane is a drop target, each half of a grouped column too. While a card is dragged,
+    the lanes say whether it can go there by more than colour: a lane it may go to has a border in
+    the highlight colour, and under the pointer a ring and what letting go does ("Let go to move it
+    here", "Let go to mark it as done", "Let go to cancel it"); a lane it can't go to has a dashed
+    border, the not-allowed cursor and "Can't move here", and doesn't take the card (so the browser
+    shows it can't be dropped). The
+    card left behind is dashed and flat, its text as it was (never lighter through opacity). A
+    drop that's refused sends nothing and says why, inline and as a toast. A live region of the
+    board's own announces the drag in the reader's language (never a library's English).
+  - **A busy card, not a busy board:** a moved card shows in its new lane at once
+    (`useOptimistic`), and only its Move button is busy ("Moving…", focusable, presses ignored);
+    every other card stays usable.
+  - **Focus follows the card:** a card that changes lanes is removed and added again, so focus
+    is put back on its Move button in the new lane (`data-request`), or on the lane's heading
+    when the card isn't shown anymore; a lane is a `data-card` section for `restoreFocusIfLost`.
+  - **Width:** the columns, at least 14rem each, sit in a row that scrolls sideways inside a
+    named group the keyboard reaches while it overflows (`tabIndex={0}`, like a wide code block),
+    so the page never scrolls sideways. On a wide screen the board is as wide as a request's page
+    (`WidePage`), so all five columns fit side by side and the row doesn't scroll. Below tablet
+    width the columns are stacked, each folding away with its count (`aria-expanded` on its
+    heading's button), a grouped column with both its halves.
+  - **Colours:** a lane is a step back from its cards in both modes (`muted` behind `surface`
+    cards in light mode, `surface` behind `raised` ones in dark mode, where `surface` is the darker
+    of the two); the count, the empty lane and the card's details use `muted-foreground`.
 - **Cards** have 24px padding on every side. Settings with actions use full-width rows (what it does
   on the left, the button on the right). Destructive settings that can't be undone, like deleting or
   deactivating an account, get their own `Card` with `tone="danger"`.
@@ -130,8 +171,8 @@ keyboard support.
   (`<form action={formAction} onSubmit={onSubmit}>`), which runs the action itself and clears the
   form only after a successful result (`resetOnSuccess`, on by default). Forms that edit a saved
   setting with a select (the default language in Settings) pass `resetOnSuccess: false`: a
-  cleared `SelectField` goes back to the value it showed when the page loaded (Radix Select
-  restores that on a form reset), not the one just saved. Forms that edit a saved setting in a
+  cleared `SelectField` goes back to the value it showed when the page loaded (both kinds of
+  select restore that on a form reset), not the one just saved. Forms that edit a saved setting in a
   text field (a name, the request prefix) keep the reset: it's what makes the field show the
   value as it was saved (trimmed, the prefix in capitals) rather than as it was typed. A bulk invite that sent some
   invitations keeps just the addresses that weren't sent. The sign-in pages are the exception to keeping typed input: the sign-in form and the code step keep their
@@ -162,6 +203,30 @@ keyboard support.
   mode, and forced-colours mode drops it; the outline is 7.5:1 and 7.3:1 (WCAG 1.4.11) and is drawn
   in forced colours too. Items never take `outline-none` or `outline-hidden`: both switch
   Tailwind's outline style off for the element, so the outline would never show.
+- **Long selects can be searched.** A `SelectField` with more options than `SEARCH_THRESHOLD`
+  (10, in `src/components/ui/select-field.tsx`; a field can pass its own `searchThreshold`) opens
+  a panel with a search field above its list (`SearchableSelect`, on Radix Popover): the list shows
+  only the options whose label, or group heading, contains what's typed, ignoring case and accents,
+  in their order (`matchingOptions` in `select-option-list.ts`). A shorter one stays a Radix
+  Select. Both list options with a `group` under its heading (time zones by region), and look
+  alike: the same closed field, options, check and highlight (`select-options.tsx`).
+  - **Closed,** it's a combobox named by its label that shows the chosen option, like the short
+    select. Enter, Space, the arrow keys or a click open it, and typing a character opens it with
+    that character in the search.
+  - **Open,** the search field has the focus (WAI-ARIA's combobox pattern): typing filters at once
+    and makes the first match active, the arrow keys move one option, PageDown and PageUp ten, and
+    Home and End go to the first and last. The active option is filled and outlined
+    (`highlightedItem`), scrolled into view under its group's sticky heading, and pointed at with
+    `aria-activedescendant`. Only Enter or a click picks; Escape, Tab, Shift+Tab or a click outside
+    close it without a change, and the focus goes back to the field.
+  - **What it says:** a screen reader hears how many options match once typing pauses (a status,
+    after 400ms), and "No options match your search." also shows on screen.
+  - **Forms, busy and coming back:** the value goes in a hidden input, so forms submit it as before,
+    also before JavaScript loads. `busy` keeps it focusable but closed. The panel and what's typed
+    are gone when the user comes back to the page, and each opening starts with an empty search.
+  - **On a phone,** it's the same panel: as wide as the field (at least 16rem, within the 16px
+    gutter), above the field when there's no room below, with the list scrolling in the room left.
+
 - **The current item** of a navigation (`aria-current`: the page in the sidebar, a tab, a filter
   such as Active, a page number, the rows per page) stands out by a fill, a shadow or a coloured
   line, which forced-colours mode (Windows High Contrast) replaces with system colours. In that
@@ -215,7 +280,8 @@ keyboard support.
   The content of every page stops growing at 1280px of screen. A request's page may be wider
   (`WidePage` in `src/components/layout/wide-page.tsx`): from that width it grows with the room
   next to the menu, up to 1280px of content, so the
-  conversation and the editor of a reply get the room, with the details still beside them. It
+  conversation and the editor of a reply get the room, with the details still beside them. The
+  board of requests grows the same way, so more of its lanes show side by side. It
   measures that room in the content column (a container in the app layout), not the screen, so
   a scrollbar never makes it scroll sideways. Don't use it for a page with a table of records:
   those are laid out for the content's usual width.
@@ -424,7 +490,7 @@ screen, in every language (with the sign-in page's widest buttons, "Last used" b
 while signed-in pages still show their loading placeholders, and that no field's text is under 16px.
 The pages are scanned as the staff Admin, and the ones that look different to someone at a company
 (the dashboard, the requests) also as a Client and as a Watcher.
-`e2e/keyboard.spec.ts` checks the skip link, menus, selects, dialogs, the mobile menu, the request
+`e2e/keyboard.spec.ts` checks the skip link, menus, selects (also a searchable one), dialogs, the mobile menu, the request
 controls and cursors using only the keyboard, that a button keeps focus while its form saves, and
 that an error in a dialog takes focus each time it comes and leaves the dialog one Escape away.
 

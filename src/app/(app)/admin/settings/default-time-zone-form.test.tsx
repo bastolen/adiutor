@@ -33,7 +33,7 @@ describe('DefaultTimeZoneForm', () => {
     const select = screen.getByRole('combobox', { name: 'Default time zone' });
     expect(select).toHaveTextContent(/^UTC$/);
     await user.click(select);
-    await user.click(screen.getByRole('option', { name: /^Europe\/Amsterdam/ }));
+    await user.keyboard('amsterdam{Enter}');
     await user.click(screen.getByRole('button', { name: 'Save default time zone' }));
 
     await waitFor(() => expect(saveDefaultTimeZoneAction).toHaveBeenCalledTimes(1));
@@ -41,6 +41,6 @@ describe('DefaultTimeZoneForm', () => {
     expect(formData.get('defaultTimeZone')).toBe('Europe/Amsterdam');
     expect(await screen.findByText('Default time zone saved.')).toBeInTheDocument();
     // It edits a saved setting: the select keeps the zone just saved.
-    expect(select).toHaveTextContent('Europe/Amsterdam');
+    expect(select).toHaveTextContent('Amsterdam (UTC+01:00)');
   });
 });

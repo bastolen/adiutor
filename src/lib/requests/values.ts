@@ -250,6 +250,14 @@ export const REQUEST_STATUS_FILTERS = ['active', 'waiting', 'closed', 'all'] as 
 /** One status filter. */
 export type RequestStatusFilter = (typeof REQUEST_STATUS_FILTERS)[number];
 
+/**
+ * The query parameter that shows a request list's requests of one status
+ * (`?only=done`), instead of a status filter's group: where a lane of the
+ * board links to. Its own parameter, since `waiting` is both a group and a
+ * status.
+ */
+export const ONLY_STATUS_PARAM = 'only';
+
 /** The filter a request list opens with. */
 export const DEFAULT_REQUEST_STATUS_FILTER: RequestStatusFilter = 'active';
 

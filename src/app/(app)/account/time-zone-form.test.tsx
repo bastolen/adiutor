@@ -41,8 +41,22 @@ describe('TimeZoneForm', () => {
     renderInLocale('en-US', <TimeZoneForm timeZone="Europe/Amsterdam" options={OPTIONS} />);
 
     expect(screen.getByRole('combobox', { name: 'Time zone' })).toHaveTextContent(
-      'Europe/Amsterdam (UTC+01:00)',
+      'Amsterdam (UTC+01:00)',
     );
+  });
+
+  it('lists the zones under their regions, in the reader’s language, and finds a city', async () => {
+    const user = userEvent.setup();
+    renderInLocale('nl-NL', <TimeZoneForm timeZone="Europe/Amsterdam" options={OPTIONS} />);
+
+    await user.click(screen.getByRole('combobox', { name: 'Tijdzone' }));
+    expect(screen.getByRole('group', { name: 'Europa' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Stille Oceaan' })).toBeInTheDocument();
+    await user.keyboard('tokyo');
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Tokyo (UTC+09:00)',
+    ]);
+    expect(screen.getByRole('group', { name: 'Azië' })).toBeInTheDocument();
   });
 
   it('saves the chosen zone and loads the page afresh where the action says', async () => {
@@ -51,7 +65,7 @@ describe('TimeZoneForm', () => {
     renderInLocale('en-US', <TimeZoneForm timeZone="Europe/Amsterdam" options={OPTIONS} />);
 
     await user.click(screen.getByRole('combobox', { name: 'Time zone' }));
-    await user.click(screen.getByRole('option', { name: /^America\/New_York/ }));
+    await user.keyboard('new york{Enter}');
     await user.click(screen.getByRole('button', { name: 'Save time zone' }));
 
     await waitFor(() => expect(loadFresh).toHaveBeenCalledExactlyOnceWith(SAVED_PATH));
@@ -68,7 +82,7 @@ describe('TimeZoneForm', () => {
     const useBrowser = screen.getByRole('button', { name: 'Use this browser’s zone' });
     await user.click(useBrowser);
 
-    expect(screen.getByRole('combobox', { name: 'Time zone' })).toHaveTextContent('Asia/Tokyo');
+    expect(screen.getByRole('combobox', { name: 'Time zone' })).toHaveTextContent('Tokyo');
     expect(useBrowser).toHaveFocus();
     expect(useBrowser).toHaveAttribute('aria-disabled', 'true');
   });
@@ -82,7 +96,7 @@ describe('TimeZoneForm', () => {
     await user.click(screen.getByRole('button', { name: 'Use this browser’s zone' }));
 
     expect(screen.getByRole('combobox', { name: 'Time zone' })).toHaveTextContent(
-      'Asia/Kolkata (UTC+05:30)',
+      'Kolkata (UTC+05:30)',
     );
   });
 

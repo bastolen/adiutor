@@ -15,6 +15,7 @@ import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
 import {
   changeAssignees,
+  changeRequestStatus,
   changeSubscribers,
   setActivityView,
   subscribe,
@@ -25,6 +26,7 @@ import {
 import {
   changeAssigneesAction,
   changeSubscribersAction,
+  changeStatusAction,
   changeSubscriptionAction,
   saveActivityViewAction,
   updateDetailsAction,
@@ -303,6 +305,58 @@ describe('saveActivityViewAction', () => {
     vi.mocked(setActivityView).mockRejectedValue(new ServiceError('forbidden', 'errors.forbidden'));
 
     expect(await saveActivityViewAction({ order: 'newest' })).toEqual({
+      ok: false,
+      message: "You don't have permission to do that.",
+    });
+    expect(refresh).not.toHaveBeenCalled();
+  });
+});
+
+describe('changeStatusAction', () => {
+  /**
+   * Builds the form of a status change.
+   *
+   * @returns The form data: done, from what the page showed.
+   */
+  function statusForm(): FormData {
+    const data = new FormData();
+    data.set('request', '142');
+    data.set('status', 'done');
+    data.set('from', 'in_progress');
+    return data;
+  }
+
+  it('sends the status the page showed and refreshes the page', async () => {
+    vi.mocked(changeRequestStatus).mockResolvedValue({
+      changed: true,
+      reopened: false,
+      status: 'done',
+    });
+
+    expect(await changeStatusAction(null, statusForm())).toMatchObject({ ok: true });
+    expect(changeRequestStatus).toHaveBeenCalledWith({ name: 'app context' }, support, {
+      request: '142',
+      status: 'done',
+      from: 'in_progress',
+    });
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('refreshes the page and says why when a colleague changed the status first', async () => {
+    vi.mocked(changeRequestStatus).mockRejectedValue(
+      new ServiceError('conflict', 'errors.requests.statusChanged'),
+    );
+
+    expect(await changeStatusAction(null, statusForm())).toMatchObject({ ok: false });
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('refreshes nothing when the service refuses for another reason', async () => {
+    vi.mocked(changeRequestStatus).mockRejectedValue(
+      new ServiceError('forbidden', 'errors.forbidden'),
+    );
+
+    expect(await changeStatusAction(null, statusForm())).toEqual({
       ok: false,
       message: "You don't have permission to do that.",
     });

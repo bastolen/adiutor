@@ -4,8 +4,8 @@
  * line drop database values (`src/lib/log-redaction.ts`), including Next's
  * own logging of errors that pages, route handlers and server actions
  * throw, and in development it warns when the database is missing
- * migrations from `drizzle/` (`src/server/migration-check.ts`) and runs the
- * background jobs' tick every minute (`startDevTick`), and in production it
+ * migrations from `drizzle/` (`src/server/migration-check.ts`) and calls the
+ * background jobs' endpoint every minute (`startDevTick`), and in production it
  * warns when the server can't send email (`src/server/email-check.ts`);
  * `onRequestError` records each of those errors in `app_error`
  * (`src/server/request-errors.ts`), under the reference the error page shows.
@@ -36,7 +36,8 @@ export async function register(): Promise<void> {
         .catch(() => {
           // checkMigrations reports its own failures; nothing here may affect startup.
         });
-      // Nothing calls the jobs' endpoint locally: the dev server ticks itself, every minute.
+      // No cron service calls the jobs' endpoint locally: the dev server calls it itself, every
+      // minute, so each tick runs the route as Next.js last compiled it, not code loaded here.
       void import('./server/jobs')
         .then(({ startDevTick }) => startDevTick())
         .catch(() => {

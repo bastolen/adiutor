@@ -94,3 +94,40 @@ export function FormSkeleton() {
     </div>
   );
 }
+
+/**
+ * A loading board of requests: the page's heading, the List | Board toggle
+ * and the filters, then lanes of card placeholders, side by side from tablet
+ * width (where the row is cut off at the content's edge, as the board's own
+ * row scrolls) and stacked below it. Screen readers hear "Loading…" and the
+ * region is marked busy.
+ *
+ * @returns The loading state.
+ */
+export function BoardSkeleton() {
+  return (
+    <div aria-busy="true" className="flex flex-col gap-8">
+      <LoadingStatus />
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-8 w-56 max-w-full" />
+          <Skeleton className="h-4 w-80 max-w-full" />
+        </div>
+        <Skeleton className="h-10 w-40 max-w-full" />
+      </div>
+      <Skeleton className="h-10 w-full" />
+      <div className="flex flex-col gap-4 overflow-hidden md:flex-row md:gap-3">
+        {['first', 'second', 'third', 'fourth'].map((lane) => (
+          <div
+            key={lane}
+            className="flex flex-col gap-2 rounded-xl border border-border p-2 md:w-56 md:shrink-0"
+          >
+            <Skeleton className="h-6 w-32 max-w-full" />
+            <Skeleton className="h-28 w-full rounded-lg" />
+            <Skeleton className="h-28 w-full rounded-lg" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
