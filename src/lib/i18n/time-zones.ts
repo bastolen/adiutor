@@ -80,21 +80,114 @@ export function timeZoneOffset(timeZone: string, at: Date): string {
   return name.replace('GMT', 'UTC');
 }
 
+/**
+ * The areas of the IANA names (the part before the first `/`) that the list
+ * groups zones under, in the order it lists them. A zone in any other area
+ * (`Etc/…`) is listed under "Other zones", last.
+ */
+export const TIME_ZONE_REGIONS = [
+  'Africa',
+  'America',
+  'Antarctica',
+  'Arctic',
+  'Asia',
+  'Atlantic',
+  'Australia',
+  'Europe',
+  'Indian',
+  'Pacific',
+] as const;
+
+/** The group a zone is listed under: one of {@link TIME_ZONE_REGIONS}, or `Other`. */
+export type TimeZoneRegion = (typeof TIME_ZONE_REGIONS)[number] | 'Other';
+
 /** One zone to pick from. */
 export interface TimeZoneOption {
   /** The zone's name, e.g. `Europe/Amsterdam`: what's saved. */
   value: string;
   /**
-   * What the list shows: its name and its offset now, e.g. "Europe/Amsterdam
-   * (UTC+01:00)", or only the name when that's the offset ("UTC").
+   * What the list shows: the place and its offset now, e.g. "Amsterdam
+   * (UTC+01:00)", "Buenos Aires, Argentina (UTC−03:00)" for a name in three
+   * parts, or only "UTC". A zone in an area Adiutor doesn't group shows its
+   * whole name.
    */
   label: string;
+  /**
+   * The group it's listed under (its heading is `common.timeZoneRegion`), or
+   * `null` for UTC, which comes first, under no heading.
+   */
+  region: TimeZoneRegion | null;
 }
 
 /**
- * Every zone the runtime knows, and `UTC`, by name, each with its offset at
- * a moment. A zone that isn't in the runtime's list (an older name a browser
- * still reports, like `Asia/Calcutta`) is added when it's the one chosen.
+ * Whether an area is one the list groups zones under.
+ *
+ * @param area - The part of a zone's name before the first `/`.
+ * @returns Whether it's one of {@link TIME_ZONE_REGIONS}.
+ */
+function isRegion(area: string): area is (typeof TIME_ZONE_REGIONS)[number] {
+  return (TIME_ZONE_REGIONS as readonly string[]).includes(area);
+}
+
+/**
+ * A zone as the list offers it, with its offset at a moment: its region,
+ * and its place written out (`_` as a space, the smallest place first).
+ *
+ * @param zone - The zone's name, e.g. `America/Argentina/Buenos_Aires`.
+ * @param at - The moment the offset is for (now).
+ * @returns The option.
+ */
+export function timeZoneOption(zone: string, at: Date): TimeZoneOption {
+  if (zone === DEFAULT_TIME_ZONE) {
+    return { value: zone, label: zone, region: null };
+  }
+  const offset = timeZoneOffset(zone, at);
+  const [area = '', ...places] = zone.split('/');
+  if (isRegion(area) && places.length > 0) {
+    const place = [...places]
+      .reverse()
+      .map((part) => part.replaceAll('_', ' '))
+      .join(', ');
+    return { value: zone, label: `${place} (${offset})`, region: area };
+  }
+  return { value: zone, label: `${zone.replaceAll('_', ' ')} (${offset})`, region: 'Other' };
+}
+
+/**
+ * Where a zone's group comes in the list: UTC first, then the regions in
+ * their order, then the other zones.
+ *
+ * @param region - The zone's group.
+ * @returns Its place.
+ */
+function regionOrder(region: TimeZoneRegion | null): number {
+  if (region === null) {
+    return -1;
+  }
+  return region === 'Other' ? TIME_ZONE_REGIONS.length : TIME_ZONE_REGIONS.indexOf(region);
+}
+
+/**
+ * The order of the list: by group, then by place (in English, as the names
+ * are written), so every option of a group follows the one before it.
+ *
+ * @param a - One option.
+ * @param b - Another.
+ * @returns Negative when `a` comes first, positive when `b` does.
+ */
+export function compareTimeZoneOptions(a: TimeZoneOption, b: TimeZoneOption): number {
+  return (
+    regionOrder(a.region) - regionOrder(b.region) ||
+    a.label.localeCompare(b.label, 'en') ||
+    a.value.localeCompare(b.value, 'en')
+  );
+}
+
+/**
+ * Every zone the runtime knows, and `UTC`, each with its offset at a moment,
+ * grouped by region and by place within it ({@link compareTimeZoneOptions}).
+ * A zone that isn't in the runtime's list (an older name a browser still
+ * reports, like `Asia/Calcutta`) is added when it's the one chosen.
  *
  * @param at - The moment the offsets are for (now).
  * @param chosen - The zone chosen now, so it's always in the list.
@@ -105,12 +198,7 @@ export function timeZoneOptions(at: Date, chosen?: string): TimeZoneOption[] {
   if (chosen !== undefined && isTimeZone(chosen)) {
     zones.add(chosen);
   }
-  return [...zones]
-    .sort((a, b) => a.localeCompare(b, 'en'))
-    .map((value) => {
-      const offset = timeZoneOffset(value, at);
-      return { value, label: value === offset ? value : `${value} (${offset})` };
-    });
+  return [...zones].map((zone) => timeZoneOption(zone, at)).sort(compareTimeZoneOptions);
 }
 
 /**

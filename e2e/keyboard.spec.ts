@@ -28,6 +28,7 @@ import {
   answerPictures,
   markdownEditor,
   openUser,
+  searchSelect,
   signIn,
   signInAsUser,
   type StorageState,
@@ -368,6 +369,70 @@ test.describe('signed in', () => {
     await expect(role).toHaveText('Admin');
     await page.reload();
     await expect(role).toHaveText('Admin');
+  });
+
+  test('a long select is searched by typing, and only Enter picks', async ({ page }) => {
+    // Nothing is saved: the zone is picked, never submitted.
+    await page.goto('/account');
+    const field = page
+      .getByRole('region', { name: 'Time zone' })
+      .getByRole('combobox', { name: 'Time zone' });
+    const before = (await field.textContent()) ?? '';
+
+    // A letter typed on the field opens it with the letter in the search, which has the focus
+    // and its ring; the list filters as the rest is typed, and a screen reader hears the count.
+    let panel = await searchSelect(field, 'tokyo');
+    const search = panel.getByRole('combobox', { name: 'Time zone' });
+    await expect.poll(() => outlineOf(search)).toEqual({ style: 'solid', width: '2px' });
+    await expect(panel.getByRole('option')).toHaveText([/^Tokyo/]);
+    await expect(panel.getByRole('status')).toHaveText('1 option matches');
+
+    // A region's name lists its zones. The arrow keys, Home and End move the outlined option
+    // (the search field keeps the focus and points at it); Escape closes it, nothing changed.
+    await search.fill('americas');
+    const options = panel.getByRole('option');
+    const first = options.first();
+    const second = options.nth(1);
+    const last = options.last();
+    await expect(first).toHaveAttribute('aria-selected', 'true');
+    await page.keyboard.press('ArrowDown');
+    await expect(second).toHaveAttribute('aria-selected', 'true');
+    await expect(first).toHaveAttribute('aria-selected', 'false');
+    await expect(search).toHaveAttribute(
+      'aria-activedescendant',
+      (await second.getAttribute('id')) ?? '',
+    );
+    await expect.poll(() => outlineOf(second)).toEqual({ style: 'solid', width: '2px' });
+    await expect.poll(async () => (await outlineOf(first)).style).toBe('none');
+    await page.keyboard.press('End');
+    await expect(last).toHaveAttribute('aria-selected', 'true');
+    await expect(last).toBeInViewport();
+    await page.keyboard.press('Home');
+    await expect(first).toHaveAttribute('aria-selected', 'true');
+    await expect(first).toBeInViewport();
+    await expect(search).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(panel).toHaveCount(0);
+    await expect(field).toBeFocused();
+    await expect(field).toHaveText(before);
+
+    // Tab closes it too, without a change, with focus back on the field.
+    await page.keyboard.press('Enter');
+    await expect(search).toBeFocused();
+    await expect(search).toHaveValue('');
+    await page.keyboard.type('lisbon');
+    await page.keyboard.press('Tab');
+    await expect(panel).toHaveCount(0);
+    await expect(field).toBeFocused();
+    await expect(field).toHaveText(before);
+
+    // Enter picks the match, and focus is back on the field.
+    panel = await searchSelect(field, 'new y');
+    await expect(panel.getByRole('option')).toHaveText([/^New York/]);
+    await page.keyboard.press('Enter');
+    await expect(panel).toHaveCount(0);
+    await expect(field).toBeFocused();
+    await expect(field).toHaveText(/^New York/);
   });
 
   test('the confirm dialog traps focus, cancels with Escape and confirms', async ({ page }) => {

@@ -143,6 +143,7 @@
       "followDefault": "Standaard",
       "followDefaultDescription": "Volgt de standaardtaal van Adiutor, nu {language}."
     },
+    "timeZoneRegion": "{region, select, Africa {Afrika} America {Amerika} Antarctica {Antarctica} Arctic {Noordpoolgebied} Asia {Azië} Atlantic {Atlantische Oceaan} Australia {Australië} Europe {Europa} Indian {Indische Oceaan} Pacific {Stille Oceaan} other {Overige zones}}",
     "preferences": {
       "button": "Thema en taal: {theme, select, light {Licht} dark {Donker} other {Systeem}}, {language}",
       "themeOnly": "Thema: {theme, select, light {Licht} dark {Donker} other {Systeem}}"
