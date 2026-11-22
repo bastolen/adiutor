@@ -5,7 +5,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { company as companyTable, user } from '@/db/schema';
+import { company as companyTable, requestEntry, user } from '@/db/schema';
 import { defined } from '@/lib/defined';
 
 import {
@@ -22,7 +22,13 @@ import {
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
 import { setActivityView } from './activity-view';
-import { findRequest, findRequestNumber, getRequest, THREAD_CHUNK } from './detail';
+import {
+  findRequest,
+  findRequestNumber,
+  getRequest,
+  MAX_EARLIER_CHUNKS,
+  THREAD_CHUNK,
+} from './detail';
 import { ctx, db, storeAssignees, storeEntry, storeRequest } from './test-helpers';
 
 describe('getRequest', () => {
@@ -62,6 +68,7 @@ describe('getRequest', () => {
       staffName: 'Adiutor Tests',
       entries: [],
       earlierEntries: 0,
+      earlierChunks: 0,
     });
     expect(detail.createdAt).toEqual(stored.createdAt);
   });
@@ -374,6 +381,142 @@ describe('getRequest: the conversation', () => {
     expect(await shown(-3)).toEqual(['Reply 56', 'Reply 105', THREAD_CHUNK, 55]);
     expect(await shown(Number.NaN)).toEqual(['Reply 56', 'Reply 105', THREAD_CHUNK, 55]);
     expect(await shown(1.5)).toEqual(['Reply 56', 'Reply 105', THREAD_CHUNK, 55]);
+  });
+
+  it('shows the conversation down to the entry a link points at, and earlier chunks from there', async () => {
+    const company = await createCompany(db);
+    const stored = await storeRequest(company.id);
+    const replies = await inSequence(
+      Array.from({ length: THREAD_CHUNK * 2 + 20 }, (_, index) => index + 1),
+      (n) => storeEntry(stored.id, { body: `Reply ${n}` }),
+    );
+    const client = await memberActor(db, company.id, 'client');
+    /**
+     * What a reader gets when a link points at a reply: the first and last
+     * reply shown, how many are shown, how many are earlier, and how many
+     * earlier chunks are shown.
+     *
+     * @param reply - The number of the reply the link points at.
+     * @param earlier - How many earlier chunks the address asks for.
+     * @returns What's shown.
+     */
+    const linkedTo = async (reply: number, earlier?: number) => {
+      const linked = defined(replies[reply - 1], `reply ${reply}`);
+      const detail = await getRequest(ctx, client, '1', { entry: linked.id, earlier });
+      expect(detail.entries.some(({ id }) => id === linked.id)).toBe(true);
+      return [
+        detail.entries.at(0)?.body?.text,
+        detail.entries.at(-1)?.body?.text,
+        detail.entries.length,
+        detail.earlierEntries,
+        detail.earlierChunks,
+      ];
+    };
+
+    // The oldest of the latest chunk takes nothing more; the one before it takes a chunk.
+    expect(await linkedTo(71)).toEqual(['Reply 71', 'Reply 120', THREAD_CHUNK, 70, 0]);
+    expect(await linkedTo(70)).toEqual(['Reply 21', 'Reply 120', THREAD_CHUNK * 2, 20, 1]);
+    expect(await linkedTo(21)).toEqual(['Reply 21', 'Reply 120', THREAD_CHUNK * 2, 20, 1]);
+    expect(await linkedTo(20)).toEqual(['Reply 1', 'Reply 120', 120, 0, 2]);
+    // More chunks asked for than it takes are shown as asked.
+    expect(await linkedTo(30, 2)).toEqual(['Reply 1', 'Reply 120', 120, 0, 2]);
+
+    // With the newest first, the same entries, the other way around.
+    await setActivityView(ctx, client, { order: 'newest' });
+    expect(await linkedTo(30)).toEqual(['Reply 120', 'Reply 21', THREAD_CHUNK * 2, 20, 1]);
+  });
+
+  it('reaches down to an entry a link points at only when the reader is shown it', async () => {
+    const company = await createCompany(db);
+    // Another request's entry, older than every entry of this one.
+    const elsewhere = await storeEntry((await storeRequest(company.id)).id);
+    const stored = await storeRequest(company.id);
+    const note = await storeEntry(stored.id, {
+      kind: 'note',
+      authorSide: 'staff',
+      body: 'A note for the staff',
+    });
+    await inSequence(
+      Array.from({ length: THREAD_CHUNK + 10 }, (_, index) => index + 1),
+      (n) => storeEntry(stored.id, { body: `Reply ${n}` }),
+    );
+    const client = await memberActor(db, company.id, 'client');
+    const support = await staffActor(db, 'support');
+
+    // Someone at the company never gets the note, nor the chunk it would take.
+    const forClient = await getRequest(ctx, client, stored.id, { entry: note.id });
+    expect(forClient.entries).toHaveLength(THREAD_CHUNK);
+    expect(forClient.entries.some(({ kind }) => kind === 'note')).toBe(false);
+    expect([forClient.earlierEntries, forClient.earlierChunks]).toEqual([10, 0]);
+    const toElsewhere = await getRequest(ctx, client, stored.id, { entry: elsewhere.id });
+    expect([toElsewhere.entries.length, toElsewhere.earlierChunks]).toEqual([THREAD_CHUNK, 0]);
+
+    // The staff get it, with everything down to it.
+    const forStaff = await getRequest(ctx, support, stored.id, { entry: note.id });
+    expect(forStaff.entries.at(0)?.id).toBe(note.id);
+    expect([forStaff.earlierEntries, forStaff.earlierChunks]).toEqual([0, 1]);
+  });
+
+  it('reaches down to the oldest entry every earlier chunk holds, and opens as asked for one further back', async () => {
+    const company = await createCompany(db);
+    const stored = await storeRequest(company.id);
+    const first = await storeEntry(stored.id, { body: 'The first reply' });
+    const second = await storeEntry(stored.id, { body: 'The second reply' });
+    const shownAtMost = THREAD_CHUNK * (MAX_EARLIER_CHUNKS + 1);
+    // With the second reply, as many entries as every chunk holds.
+    await db.insert(requestEntry).values(
+      Array.from({ length: shownAtMost - 1 }, () => ({
+        requestId: stored.id,
+        kind: 'comment' as const,
+        authorSide: 'company' as const,
+        body: 'A later reply',
+      })),
+    );
+    const client = await memberActor(db, company.id, 'client');
+
+    // The second reply is the oldest every chunk holds: it's shown as the oldest, the first isn't.
+    const toSecond = await getRequest(ctx, client, stored.id, { entry: second.id });
+    expect(toSecond.entries).toHaveLength(shownAtMost);
+    expect(toSecond.entries.at(0)?.id).toBe(second.id);
+    expect(toSecond.entries.some(({ id }) => id === first.id)).toBe(false);
+    expect([toSecond.earlierEntries, toSecond.earlierChunks]).toEqual([1, MAX_EARLIER_CHUNKS]);
+
+    // The first is further back than every chunk reaches: the page opens as asked, not with them all.
+    const toFirst = await getRequest(ctx, client, stored.id, { entry: first.id });
+    expect(toFirst.entries).toHaveLength(THREAD_CHUNK);
+    expect([toFirst.earlierEntries, toFirst.earlierChunks]).toEqual([
+      shownAtMost + 1 - THREAD_CHUNK,
+      0,
+    ]);
+  });
+
+  it('counts only the newer entries of the groups the reader shows', async () => {
+    const company = await createCompany(db);
+    const stored = await storeRequest(company.id);
+    const linked = await storeEntry(stored.id, { body: 'The reply a link points at' });
+    await db.insert(requestEntry).values(
+      Array.from({ length: THREAD_CHUNK }, () => ({
+        requestId: stored.id,
+        kind: 'status' as const,
+        authorSide: 'staff' as const,
+        fromValue: 'open',
+        toValue: 'todo',
+      })),
+    );
+    await storeEntry(stored.id, { body: 'The latest reply' });
+    const client = await memberActor(db, company.id, 'client');
+
+    // Everything shown: 51 newer entries take a chunk more.
+    expect((await getRequest(ctx, client, stored.id, { entry: linked.id })).earlierChunks).toBe(1);
+
+    // Only the replies: one newer reply, so the latest chunk holds it.
+    await setActivityView(ctx, client, { groups: ['replies'] });
+    const replies = await getRequest(ctx, client, stored.id, { entry: linked.id });
+    expect(replies.entries.map(({ body }) => body?.text)).toEqual([
+      'The reply a link points at',
+      'The latest reply',
+    ]);
+    expect([replies.earlierEntries, replies.earlierChunks]).toEqual([0, 0]);
   });
 });
 

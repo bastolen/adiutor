@@ -4,7 +4,21 @@
  * conversation, filtered and ordered the way the reader reads it (their
  * saved activity view).
  */
-import { and, count, desc, eq, inArray, isNull, min, notInArray, or } from 'drizzle-orm';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNull,
+  min,
+  notInArray,
+  or,
+  type SQL,
+  sql,
+} from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
 import {
@@ -230,6 +244,12 @@ export interface RequestDetail {
   entries: RequestEntryView[];
   /** How many earlier entries of the groups shown there are that aren't shown. */
   earlierEntries: number;
+  /**
+   * How many earlier chunks of {@link THREAD_CHUNK} entries are shown besides
+   * the latest one: the ones asked for, or as many as reach the entry a link
+   * points at when that's further back. "Show earlier" goes on from there.
+   */
+  earlierChunks: number;
 }
 
 /**
@@ -270,6 +290,37 @@ export async function findRequest(
 }
 
 /**
+ * How many earlier chunks of a conversation it takes to reach the entry a
+ * link points at: its place among the entries the reader is shown, newest
+ * first, in chunks of {@link THREAD_CHUNK}. Only an entry the reader is
+ * shown counts, by the same condition as the entries themselves: for any
+ * other ID (another request's entry, or an internal note for someone at the
+ * company) it takes none.
+ *
+ * @param ctx - Service context.
+ * @param shown - The condition for the entries the reader is shown, the linked one among them.
+ * @param entryId - The linked entry's ID.
+ * @returns How many earlier chunks it takes besides the latest one, not yet capped.
+ */
+async function chunksDownTo(
+  ctx: ServiceContext,
+  shown: SQL | undefined,
+  entryId: string,
+): Promise<number> {
+  const counted = firstRow(
+    await ctx.db
+      .select({
+        linked: count(sql`case when ${eq(requestEntry.id, entryId)} then 1 end`),
+        newer: count(sql`case when ${gt(requestEntry.id, entryId)} then 1 end`),
+      })
+      .from(requestEntry)
+      .where(and(shown, gte(requestEntry.id, entryId))),
+    'the count of the entries down to the linked one',
+  );
+  return counted.linked > 0 ? Math.floor(counted.newer / THREAD_CHUNK) : 0;
+}
+
+/**
  * Loads a request with its conversation: the latest {@link THREAD_CHUNK}
  * entries, and as many earlier chunks as asked for, of the groups the reader
  * shows and in their order (their saved activity view, `readActivityView`).
@@ -278,7 +329,10 @@ export async function findRequest(
  * history's entries about it. Nor does a saved choice ever show them an
  * internal note: the groups apply on top of what they may see. An entry a
  * link points at (`options.entry`, from an email) is shown whatever groups
- * the reader chose, as long as they may see it.
+ * the reader chose, as long as they may see it, and with everything down to
+ * it: the conversation shows as many earlier chunks as reach it, without a
+ * gap, and says how many it shows (`earlierChunks`). An entry further back
+ * than {@link MAX_EARLIER_CHUNKS} reach leaves the chunks as asked.
  *
  * @param ctx - Service context.
  * @param actor - The acting user.
@@ -286,7 +340,7 @@ export async function findRequest(
  * @param options - Options.
  * @param options.earlier - How many earlier chunks to add (at most {@link MAX_EARLIER_CHUNKS}).
  * @param options.entry - The ID of the entry a link points at, shown whatever groups the reader
- *   chose; anything that isn't an ID is left out.
+ *   chose and with as many earlier chunks as reach it; anything that isn't an ID is left out.
  * @returns The request.
  * @throws {ServiceError} `not_found` if it doesn't exist or isn't visible.
  */
@@ -321,6 +375,15 @@ export async function getRequest(
     internal ? undefined : notInArray(requestEntry.kind, [...STAFF_ONLY_ENTRY_KINDS]),
     ofGroups && linked.success ? or(ofGroups, eq(requestEntry.id, linked.data)) : ofGroups,
   );
+  // The earlier chunks shown: the ones asked for, or as many as reach the entry a link points at
+  // when it's further back, so the conversation shows it without a gap. An entry further back than
+  // every chunk a reader can add leaves them as asked: loading them all wouldn't reach it either.
+  // Counted with the rest, and only then are the entries loaded.
+  const shownEarlier = linked.success
+    ? chunksDownTo(ctx, shown, linked.data).then((needed) =>
+        needed <= MAX_EARLIER_CHUNKS ? Math.max(earlier, needed) : earlier,
+      )
+    : Promise.resolve(earlier);
   /**
    * Leaves out the rows of a text the reader isn't shown: the description is
    * shown to every reader, an entry's text only when its entry is.
@@ -368,6 +431,7 @@ export async function getRequest(
     prefix,
     firstResponse,
     total,
+    earlierChunks,
     latest,
     typeNames,
   ] = await Promise.all([
@@ -435,29 +499,32 @@ export async function getRequest(
         ),
       ),
     ctx.db.select({ total: count() }).from(requestEntry).where(shown),
-    ctx.db
-      .select({
-        id: requestEntry.id,
-        kind: requestEntry.kind,
-        authorSide: requestEntry.authorSide,
-        createdAt: requestEntry.createdAt,
-        body: requestEntry.body,
-        bodyFormat: requestEntry.bodyFormat,
-        editedAt: requestEntry.editedAt,
-        from: requestEntry.fromValue,
-        to: requestEntry.toValue,
-        author: { id: user.id, name: user.name },
-        subject: { id: subjectUser.id, name: subjectUser.name },
-        signedInAs: requestEntry.signedInAs,
-        signedInAsStaff: { name: signedInAsStaff.name },
-      })
-      .from(requestEntry)
-      .leftJoin(user, eq(requestEntry.authorId, user.id))
-      .leftJoin(subjectUser, eq(requestEntry.subjectUserId, subjectUser.id))
-      .leftJoin(signedInAsStaff, eq(requestEntry.signedInAsStaffId, signedInAsStaff.id))
-      .where(shown)
-      .orderBy(desc(requestEntry.id))
-      .limit(THREAD_CHUNK * (earlier + 1)),
+    shownEarlier,
+    shownEarlier.then((chunks) =>
+      ctx.db
+        .select({
+          id: requestEntry.id,
+          kind: requestEntry.kind,
+          authorSide: requestEntry.authorSide,
+          createdAt: requestEntry.createdAt,
+          body: requestEntry.body,
+          bodyFormat: requestEntry.bodyFormat,
+          editedAt: requestEntry.editedAt,
+          from: requestEntry.fromValue,
+          to: requestEntry.toValue,
+          author: { id: user.id, name: user.name },
+          subject: { id: subjectUser.id, name: subjectUser.name },
+          signedInAs: requestEntry.signedInAs,
+          signedInAsStaff: { name: signedInAsStaff.name },
+        })
+        .from(requestEntry)
+        .leftJoin(user, eq(requestEntry.authorId, user.id))
+        .leftJoin(subjectUser, eq(requestEntry.subjectUserId, subjectUser.id))
+        .leftJoin(signedInAsStaff, eq(requestEntry.signedInAsStaffId, signedInAsStaff.id))
+        .where(shown)
+        .orderBy(desc(requestEntry.id))
+        .limit(THREAD_CHUNK * (chunks + 1)),
+    ),
     requestTypeNames(ctx.db),
   ]);
 
@@ -654,5 +721,6 @@ export async function getRequest(
     activity,
     entries,
     earlierEntries: firstRow(total, 'the entry count').total - entries.length,
+    earlierChunks,
   };
 }

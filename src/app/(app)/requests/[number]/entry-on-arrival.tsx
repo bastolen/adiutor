@@ -24,8 +24,11 @@ import { isEntryAnchor } from '@/lib/requests';
  * - with focus already inside it, it only scrolls it into view;
  * - with focus anywhere else, it leaves the page alone.
  *
- * An entry older than the ones the page shows isn't there, so the page opens
- * as usual.
+ * The page shows the conversation down to the entry an address names (the
+ * request's `?entry=`), so it's there however far back it is, up to every
+ * chunk a reader can add (`MAX_EARLIER_CHUNKS`). An entry further back than
+ * that, or one the reader may not see, isn't there, so the page opens as
+ * usual.
  *
  * @returns Nothing: it only acts.
  */
