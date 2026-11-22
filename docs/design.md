@@ -319,7 +319,9 @@ keyboard support.
   Security) get their header and tabs from a layout (`companies/[companyId]/layout.tsx`,
   `account/layout.tsx`), which stays mounted while the page under it changes: the tab you chose
   keeps focus and the header doesn't reload. `SegmentTabNav` marks the current tab from the URL
-  (`useSelectedLayoutSegment`), and each page still checks its own permission.
+  (`useSelectedLayoutSegment`), and each page still checks its own permission. Tabs that don't
+  fit the width (long names on a phone, in some languages) wrap onto another row rather than
+  widen the page.
 
 - **Results:** in the signed-in app every success is a toast and every error is shown inline and as
   a toast (`src/components/ui/toast.tsx`, on Radix UI's Toast; the app layout mounts its `Toaster`
