@@ -111,16 +111,21 @@ The page's Continue posts the link to the same endpoint (a form `POST`, answered
 the browser opens the next page with a `GET`). A `POST` counts only as that Continue, and only
 when a page of the site started it (`fromConfirmationPage`: `Sec-Fetch-Site: same-origin`,
 `Sec-Fetch-Mode: navigate` and `Sec-Fetch-Dest: document`, which no other site, email or typed
-address can make), also without the click header; it never counts as a click: another site's
-form, clicked, says a person clicked too, and the browser sends it without the site's cookies
-(`SameSite=Lax`), so nobody would look signed in. Better Auth's check for sign-in forms
-(`formCsrfMiddleware`) refuses such a cross-site `POST` before that, and checks the origin of
-every other one a browser sends, with or without cookies (a `POST` with none of a browser's
-headers passes it, and the app's own rule, `fromConfirmationPage`, refuses it next); the page
-therefore sends the site's origin (`referrer: strict-origin`) where other secret-link pages send no
-referrer at all. A link is
-always a `GET`, so a link to the endpoint written in a reply, which is a same-origin click when
-someone clicks it on the request's page, never switches accounts, whatever its query says.
+address can make), also without the click header. A browser that sends none of those three headers
+(Safari before 16.4, and every browser on plain `http` on a host other than `localhost`, where
+browsers send none) is checked by the `POST`'s `Origin` instead, which must be exactly the site's
+own (`new URL(appUrl).origin`, from `BETTER_AUTH_URL`;
+[decision 0040](decisions/0040-older-browsers-continue-by-origin.md)): no `Referer`, no
+`Origin: null`, no missing `Origin`, and as soon as any of the headers is sent, even empty, they
+decide alone. A `POST` never counts as a click: another site's form, clicked, says a person clicked
+too, and the browser sends it without the site's cookies (`SameSite=Lax`), so nobody would look
+signed in. Better Auth's check for sign-in forms (`formCsrfMiddleware`) refuses such a cross-site
+`POST` before that, and checks the origin of every other one a browser sends, with or without
+cookies (a `POST` with none of a browser's headers, `Origin` included, passes it, and the app's own
+rule, `fromConfirmationPage`, refuses it next); the page therefore sends the site's origin
+(`referrer: strict-origin`) where other secret-link pages send no referrer at all. A link is always
+a `GET`, so a link to the endpoint written in a reply, which is a same-origin click when someone
+clicks it on the request's page, never switches accounts, whatever its query says.
 
 Safari, and every browser on an iPhone or iPad, never says a person clicked (WebKit sends no
 `Sec-Fetch-User`), so there every link comes to the page. With a link that can still be used and
@@ -130,8 +135,9 @@ once per page load, only for a page the browser opened fresh (not Back, Forward 
 not while the browser prerenders it; Continue shows as busy meanwhile. That Continue is marked
 (`auto=1`) and never switches from someone signed in, so a page rendered while nobody was signed
 in, then shown after a sign-in in another tab, asks first. A `POST` that comes back to the page
-anyway (a browser that sends no `Sec-Fetch-Site`, a sign-in that failed, someone signed in
-meanwhile) adds `retry=1` to its address, and the page then waits for a click. Someone else signed
+anyway (a browser that sends neither the `Sec-Fetch-*` headers nor the site's `Origin`, a sign-in
+that failed, someone signed in meanwhile) adds `retry=1` to its address, and the page then waits
+for a click. Someone else signed
 in and a link that no longer works keep their button. Since anything that opens the page in the
 whole tab is enough, a page that redirects a signed-out visitor there with someone's link signs
 them in as that person without a click; the page can't be framed.

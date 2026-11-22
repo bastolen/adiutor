@@ -6,14 +6,16 @@
  * longer works get its confirmation page first, and only its Continue (a
  * POST) switches accounts, never a link to it written in a reply. Where the
  * browser doesn't say a person clicked (Safari), the page continues by itself
- * when nobody is signed in (decision 0038).
+ * when nobody is signed in (decision 0038), and where it doesn't say where a
+ * request came from (Safari before 16.4), the Continue counts by its origin
+ * (decision 0040).
  */
 import { randomUUID } from 'node:crypto';
 
 import type { Page } from '@playwright/test';
 
 import { entryAnchor } from '../src/lib/requests';
-import { requestLinkPath } from '../src/lib/sign-in/request-link';
+import { REQUEST_LINK_URL_PATH, requestLinkPath } from '../src/lib/sign-in/request-link';
 import { findEntryId, storeEntries, storeRequest, storeRequestLink } from './support/db';
 import {
   COMPANY_SLUG,
@@ -311,4 +313,49 @@ test('with someone else signed in, a link opened without a click still asks', as
   await button.click();
   await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
   expect(continued).toHaveLength(1);
+});
+
+test('a Continue from a browser that never says where it came from counts by its origin', async ({
+  page,
+}) => {
+  const { title, number } = await ownRequest(STEP_UP_CLIENT.email);
+  const token = await storeRequestLink(STEP_UP_CLIENT.email, number);
+  const { origin } = new URL(E2E_BASE_URL);
+  /**
+   * Posts the link as the page's Continue does in Safari before 16.4: a form with no `Sec-Fetch-*`
+   * headers, which Playwright's request API (no browser) doesn't send either. The browser's
+   * context keeps the cookies the response sets.
+   *
+   * @param headers - The headers it names its origin in, if any.
+   * @returns The response, not followed.
+   */
+  const postContinue = (headers: Record<string, string>) =>
+    page.request.post(REQUEST_LINK_URL_PATH, {
+      form: { token, auto: '1' },
+      headers,
+      maxRedirects: 0,
+    });
+
+  // Another site's origin, or none it will name (`null`): Better Auth's form check refuses it.
+  for (const other of ['https://mail.adiutor.test', 'null']) {
+    // eslint-disable-next-line no-await-in-loop -- one request at a time, each checked in turn
+    const forbidden = await postContinue({ origin: other });
+    expect(forbidden.status()).toBe(403);
+    expect(forbidden.headers()['set-cookie'] ?? '').not.toMatch(/session_token=/);
+  }
+
+  // Without its origin it's no Continue: back to the page, which then waits for a click.
+  const refused = await postContinue({});
+  expect(refused.status()).toBe(303);
+  expect(refused.headers().location).toMatch(/\/auth\/request-link\?token=.+&retry=1$/);
+  expect(refused.headers()['set-cookie'] ?? '').not.toMatch(/session_token=/);
+
+  // With the site's own origin, it signs in and opens the request.
+  const continued = await postContinue({ origin });
+  expect(continued.status()).toBe(303);
+  expect(new URL(continued.headers().location ?? '', E2E_BASE_URL).pathname).toBe(
+    `/requests/${number}`,
+  );
+  await page.goto(`/requests/${number}`);
+  await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
 });

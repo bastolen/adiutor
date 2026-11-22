@@ -153,7 +153,12 @@ an endpoint would act on their own account (see
 The link in an email about a request (`/request-link/sign-in`, an endpoint of the app's own
 plugin) takes no return address: it always opens its own request, by the number stored with the
 link. It signs in straight away only on a person's click; anything else gets its confirmation
-page, whose Continue, a same-origin form `POST`, signs in. The page sends it by itself only when
+page, whose Continue, a same-origin form `POST`, signs in. A `POST` is taken for that Continue by
+its `Sec-Fetch-*` headers, or, from a browser that sends none of them (Safari before 16.4, or
+any browser on plain `http` on a host other than `localhost`), by an
+`Origin` that is exactly the site's own, never by a `Referer`, `Origin: null` or a missing `Origin`
+([decision 0040](decisions/0040-older-browsers-continue-by-origin.md)); a program that isn't a
+browser could write either, but it has the link already. The page sends it by itself only when
 nobody is signed in in that browser, for Safari, which never says a person clicked
 ([decision 0038](decisions/0038-request-links-continue-by-themselves.md)). So a scanner that runs
 the page's scripts signs in too, as anyone with the email could, and merely visiting a page that

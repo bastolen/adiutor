@@ -9,8 +9,10 @@
  *   can't be used) goes to the confirmation page without a session, and the
  *   page's own Continue (a same-origin POST) signs in, also where the browser
  *   never says a person clicked (Safari, decision 0038), and is the only way
- *   to switch accounts, never a link marked as one; a POST that comes back to
- *   the page marks it to wait for a click;
+ *   to switch accounts, never a link marked as one; a browser that never says
+ *   where a request came from (Safari before 16.4) has its Continue checked by
+ *   its Origin, which must be exactly the site's (decision 0040); a POST that
+ *   comes back to the page marks it to wait for a click;
  * - a link ends with the user's trusted devices, and is capped per hour.
  */
 import { and, eq, like } from 'drizzle-orm';
@@ -100,6 +102,15 @@ const CONTINUE_WITHOUT_CLICK = {
 
 /** A mail scanner that opens the link to check it: no browser, so no `Sec-Fetch-*` headers. */
 const SCANNER = {};
+
+/**
+ * The confirmation page's Continue in Safari before 16.4, which sends no
+ * `Sec-Fetch-*` headers at all: only its form's `Origin`, the site's.
+ */
+const CONTINUE_WITHOUT_FETCH_METADATA = { origin: SITE_ORIGIN };
+
+/** Another site, whose form or link names it as its origin. */
+const OTHER_ORIGIN = 'https://mail.adiutor.test';
 
 /**
  * A browser talking to Better Auth: it keeps the cookies responses set and
@@ -430,6 +441,58 @@ describe('the link in an email about a request', () => {
     expect((await actorIn(theirs))?.id).toBe(client);
   });
 
+  it("signs in with the page's Continue checked by its origin where the browser never says where it came from", async () => {
+    const { client, requestId, companyId } = await clientWithRequest();
+    const token = await createRequestLink(db, { userId: client, requestId });
+
+    // Nobody signed in: the link opens the page (a GET carries no origin), whose Continue, sent by
+    // itself with the site's origin and nothing else, signs in.
+    const browser = newBrowser();
+    expect(await browser.open(token, SCANNER)).toBe(`/auth/request-link?token=${token}`);
+    expect(
+      await browser.open(token, CONTINUE_WITHOUT_FETCH_METADATA, { posted: true, auto: true }),
+    ).toBe(REQUEST_PAGE);
+    expect(await sessionsOf(client)).toEqual([
+      expect.objectContaining({ fromRequestLink: true, mfaVerified: false }),
+    ]);
+    expect((await actorIn(browser))?.id).toBe(client);
+
+    // Someone else signed in: the Continue the page sends by itself never switches; pressed, it does.
+    const colleague = await createUser(db, 'colin@adiutor.test');
+    await addMember(db, companyId, colleague, 'client');
+    const theirs = newBrowser();
+    await theirs.open(
+      await createRequestLink(db, { userId: colleague, requestId }),
+      CLICK_IN_EMAIL,
+    );
+    expect(
+      await theirs.open(token, CONTINUE_WITHOUT_FETCH_METADATA, { posted: true, auto: true }),
+    ).toBe(`/auth/request-link?token=${token}&retry=1`);
+    expect((await actorIn(theirs))?.id).toBe(colleague);
+    expect(await sessionsOf(client)).toHaveLength(1);
+    expect(await theirs.open(token, CONTINUE_WITHOUT_FETCH_METADATA, { posted: true })).toBe(
+      REQUEST_PAGE,
+    );
+    expect(await sessionsOf(colleague)).toEqual([]);
+    expect((await actorIn(theirs))?.id).toBe(client);
+  });
+
+  it('judges a Continue by its headers whenever the browser sends them, whatever its origin', async () => {
+    const { client, requestId } = await clientWithRequest();
+    const token = await createRequestLink(db, { userId: client, requestId });
+
+    // The headers say the site's own page sent it, so the origin isn't what decides here (outside
+    // tests, Better Auth's form check, `formCsrfMiddleware`, refuses this origin first).
+    expect(
+      await newBrowser().open(
+        token,
+        { ...CONTINUE_WITHOUT_CLICK, origin: OTHER_ORIGIN },
+        { posted: true },
+      ),
+    ).toBe(REQUEST_PAGE);
+    expect(await sessionsOf(client)).toHaveLength(1);
+  });
+
   it.each([
     ['from another site', { ...CONTINUE_WITHOUT_CLICK, 'sec-fetch-site': 'cross-site' }],
     ['typed in', { ...CONTINUE_WITHOUT_CLICK, 'sec-fetch-site': 'none' }],
@@ -439,6 +502,31 @@ describe('the link in an email about a request', () => {
     ],
     ['in a frame', { ...CONTINUE_WITHOUT_CLICK, 'sec-fetch-dest': 'iframe' }],
     ["by a browser that doesn't say where it came from", SCANNER],
+    // Without `Sec-Fetch-*` headers, only the site's own origin counts, written exactly.
+    ['from another site, without the headers', { origin: OTHER_ORIGIN }],
+    ['with an origin of null, without the headers', { origin: 'null' }],
+    [
+      'with only a referrer from the page, without the headers',
+      { referer: `${SITE_ORIGIN}/auth/request-link` },
+    ],
+    ["with the site's origin and a path, without the headers", { origin: `${SITE_ORIGIN}/` }],
+    [
+      "from a site whose address starts with the site's, without the headers",
+      { origin: `${SITE_ORIGIN}.mail.adiutor.test` },
+    ],
+    // Any of the headers decides, even with the site's origin.
+    [
+      "with the site's origin, from another site by the headers",
+      { ...CONTINUE_WITHOUT_FETCH_METADATA, 'sec-fetch-site': 'cross-site' },
+    ],
+    [
+      "with the site's origin and only one of the headers",
+      { ...CONTINUE_WITHOUT_FETCH_METADATA, 'sec-fetch-dest': 'iframe' },
+    ],
+    [
+      "with the site's origin and an empty header",
+      { ...CONTINUE_WITHOUT_FETCH_METADATA, 'sec-fetch-site': '' },
+    ],
   ])(
     "sends a Continue that isn't the page's back to it without a session, marked to wait for a click (%s)",
     async (_case, headers) => {
