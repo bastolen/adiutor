@@ -9,7 +9,9 @@
  * browser starts acting as someone else (signing in or out, starting or
  * ending a sign-in as a user), so no page shows the previous person's values.
  * Those changes reach the browser's other tabs too (`everyTab`), which load
- * their own page afresh.
+ * their own page afresh. Whether this page has started such a load is
+ * {@link freshLoadStarted}, for work that only the page replacing it should
+ * do.
  */
 'use client';
 
@@ -25,6 +27,37 @@ export interface LoadFreshOptions {
    * only this tab made.
    */
   everyTab?: boolean;
+}
+
+/**
+ * Whether {@link loadFresh} has started loading a page afresh in this tab.
+ * Module state, so the page that loads starts with it unset.
+ */
+let started = false;
+
+// A page the browser restores from its back/forward cache comes back with its scripts' state, this
+// flag included: it's there again, not on its way out, so it starts without it like a new page.
+if (typeof window !== 'undefined') {
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+      started = false;
+    }
+  });
+}
+
+/**
+ * Whether this page has started to load a page afresh (`loadFresh`), so it's
+ * on its way out: work that would be cut off by the load, or that the page
+ * replacing it does again, is better left to that page (like saving the
+ * browser's time zone, `SaveBrowserTimeZone`). It stays set should the load
+ * be stopped (the page stays, and the next full load starts without it), and
+ * it's unset again when the browser restores the page from its back/forward
+ * cache (Back after the load), since the page is there again then.
+ *
+ * @returns Whether a fresh load has started.
+ */
+export function freshLoadStarted(): boolean {
+  return started;
 }
 
 /**
@@ -48,7 +81,7 @@ export function currentPage(): string {
  * the browser would only scroll: there the address is replaced (keeping the
  * router's history state) and the page reloads. With `everyTab`, the
  * browser's other tabs are told first, once the change is made, so they
- * load as the new person.
+ * load as the new person. From then on {@link freshLoadStarted} says so.
  *
  * It returns at once, while the page is still there: a caller that shows a
  * busy button keeps it busy with state of its own until the page goes. (A
@@ -60,6 +93,7 @@ export function currentPage(): string {
  * @param options.everyTab - Whether the browser's other tabs load their page afresh too.
  */
 export default function loadFresh(url: string, { everyTab = false }: LoadFreshOptions = {}): void {
+  started = true;
   if (everyTab) {
     tellOtherTabs();
   }
