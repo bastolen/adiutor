@@ -100,8 +100,8 @@ function LastUsedBadge({ show, onPrimary = false }: { show: boolean; onPrimary?:
  * two-step verification on continues on the code step first.
  *
  * The browser keeps the anchor of the address the user first opened when the
- * proxy sends them here (`/admin/staff#invitations` becomes
- * `/auth?callbackURL=%2Fadmin%2Fstaff#invitations`); the server never sees
+ * proxy sends them here (`/admin/settings/staff#invitations` becomes
+ * `/auth?callbackURL=%2Fadmin%2Fsettings%2Fstaff#invitations`); the server never sees
  * it. When `callbackURL` has no anchor of its own, that one is added, if it
  * names a section, so they land on that card.
  *
@@ -135,7 +135,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
    * page's own anchor when it has none. Read when signing in, not while
    * rendering (the server has no anchor).
    *
-   * @returns The page, e.g. `/admin/staff#invitations`.
+   * @returns The page, e.g. `/admin/settings/staff#invitations`.
    */
   const destination = () =>
     callbackURL.includes('#')

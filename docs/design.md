@@ -135,6 +135,11 @@ keyboard support.
 - **Cards** have 24px padding on every side. Settings with actions use full-width rows (what it does
   on the left, the button on the right). Destructive settings that can't be undone, like deleting or
   deactivating an account, get their own `Card` with `tone="danger"`.
+- **Ids stay unique across pages kept alive:** components that make ids with `useId` (`Card`,
+  `TextField`, `TextareaField`, `CheckboxField`, `RadioField`) are client components. In a
+  server component `useId` starts again in every request, so a page kept alive and the tab
+  loaded next would share ids, and a label or a card's name would point at the wrong element.
+  A new component that calls `useId` gets `'use client'` too.
 - **Messages don't outlive the page:** with Cache Components, Next.js keeps the last few pages alive
   (hidden with React's `<Activity>`) instead of unmounting them, so their state survives navigation.
   Typed input should, but a "Saved" or error message, or an open dialog, shouldn't still be there when
@@ -170,7 +175,7 @@ keyboard support.
   whatever the result. Forms pass both the action and the hook's `onSubmit`
   (`<form action={formAction} onSubmit={onSubmit}>`), which runs the action itself and clears the
   form only after a successful result (`resetOnSuccess`, on by default). Forms that edit a saved
-  setting with a select (the staff page's default language) pass `resetOnSuccess: false`: a
+  setting with a select (the default language in Settings) pass `resetOnSuccess: false`: a
   cleared `SelectField` goes back to the value it showed when the page loaded (both kinds of
   select restore that on a form reset), not the one just saved. Forms that edit a saved setting in a
   text field (a name, the request prefix) keep the reset: it's what makes the field show the
@@ -381,11 +386,15 @@ keyboard support.
     5rem from the top below `lg` and 2.5rem from `lg` up, and lower while the banner shows. Don't
     give an element the top bar's height as its `scroll-margin-top`: it would count twice.
 
-  Pages with section tabs (a company's Requests, Members and Settings; the account's Profile and
-  Security) get their header and tabs from a layout (`companies/[companyId]/layout.tsx`,
-  `account/layout.tsx`), which stays mounted while the page under it changes: the tab you chose
+  Pages with section tabs (a company's Requests, Members and Settings; the account's Profile,
+  Preferences, Security and Activity; a user's Overview, Companies, Activity and Manage; the Logs;
+  Settings' General, Staff and Requests) get their header and tabs from a layout
+  (`companies/[companyId]/layout.tsx`, `account/layout.tsx`, `admin/users/[userId]/layout.tsx`,
+  `admin/logs/layout.tsx`, `admin/settings/layout.tsx`), which stays mounted while the page under it changes: the tab you chose
   keeps focus and the header doesn't reload. `SegmentTabNav` marks the current tab from the URL
-  (`useSelectedLayoutSegment`), and each page still checks its own permission.
+  (`useSelectedLayoutSegment`), and each page still checks its own permission. Tabs that don't
+  fit the width (long names on a phone, in some languages) wrap onto another row rather than
+  widen the page.
 
 - **Results:** in the signed-in app every success is a toast and every error is shown inline and as
   a toast (`src/components/ui/toast.tsx`, on Radix UI's Toast; the app layout mounts its `Toaster`

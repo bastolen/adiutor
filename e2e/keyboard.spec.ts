@@ -10,7 +10,13 @@ import {
   providerLinkedCookieValue,
   providerStepUpCookieValue,
 } from '../src/lib/sign-in/oauth-providers';
-import { forgetLimitsOf, resetActivityView, storeEntries, storeRequest } from './support/db';
+import {
+  findUserId,
+  forgetLimitsOf,
+  resetActivityView,
+  storeEntries,
+  storeRequest,
+} from './support/db';
 import {
   ACTIVITY_CLIENT,
   CLIENT_WATCHER,
@@ -27,7 +33,7 @@ import {
   adminStorageState,
   answerPictures,
   markdownEditor,
-  openUser,
+  openUserTab,
   searchSelect,
   signIn,
   signInAsUser,
@@ -104,6 +110,24 @@ async function chooseTab(page: Page, section: string, tab: string, heading: stri
 }
 
 /**
+ * The ids more than one element in the page has. Next keeps the pages it
+ * showed last alive (hidden), so two tabs' pages are in the document at once,
+ * and an id they share would point a label or a card's name at the wrong one.
+ *
+ * @param page - The browser page.
+ * @returns The ids that aren't unique.
+ */
+function duplicateIds(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const counts = new Map<string, number>();
+    document.querySelectorAll('[id]').forEach((element) => {
+      counts.set(element.id, (counts.get(element.id) ?? 0) + 1);
+    });
+    return [...counts].filter(([, count]) => count > 1).map(([id]) => id);
+  });
+}
+
+/**
  * The mouse cursor shown over an element.
  *
  * @param locator - The element.
@@ -156,7 +180,7 @@ async function stickyLayersBottom(page: Page): Promise<number> {
 /**
  * Checks that a control the keyboard goes back to comes out from under the
  * sticky layers. On the account's Security page, with focus on the Security
- * tab, it scrolls the Profile tab before it to just under the top of the
+ * tab, it scrolls the Preferences tab before it to just under the top of the
  * screen (where the layers cover it, but the browser counts it as visible)
  * and presses Shift+Tab.
  *
@@ -164,26 +188,26 @@ async function stickyLayersBottom(page: Page): Promise<number> {
  */
 async function expectShiftTabClearsStickyLayers(page: Page): Promise<void> {
   const tabs = page.getByRole('navigation', { name: 'Account sections' });
-  const profile = tabs.getByRole('link', { name: 'Profile' });
+  const previous = tabs.getByRole('link', { name: 'Preferences' });
   const security = tabs.getByRole('link', { name: 'Security' });
   await security.focus();
 
   // Retried while the page's cards stream in: it has to be long enough to scroll that far.
   await expect(async () => {
-    await profile.evaluate((element) =>
+    await previous.evaluate((element) =>
       window.scrollBy(0, element.getBoundingClientRect().top - 8),
     );
-    const top = (await profile.boundingBox())?.y ?? -1;
-    expect(top, 'the Profile tab is on screen').toBeGreaterThanOrEqual(0);
-    expect(top, 'the Profile tab is under the sticky layers').toBeLessThan(
+    const top = (await previous.boundingBox())?.y ?? -1;
+    expect(top, 'the Preferences tab is on screen').toBeGreaterThanOrEqual(0);
+    expect(top, 'the Preferences tab is under the sticky layers').toBeLessThan(
       await stickyLayersBottom(page),
     );
   }).toPass();
 
   await page.keyboard.press('Shift+Tab');
-  await expect(profile).toBeFocused();
+  await expect(previous).toBeFocused();
   await expect(async () => {
-    const top = (await profile.boundingBox())?.y ?? -1;
+    const top = (await previous.boundingBox())?.y ?? -1;
     expect(top, 'the focused tab is below the sticky layers').toBeGreaterThanOrEqual(
       await stickyLayersBottom(page),
     );
@@ -348,7 +372,7 @@ test.describe('signed in', () => {
   test('your own role asks first, and Escape puts it back with focus on the select', async ({
     page,
   }) => {
-    await page.goto('/admin/staff');
+    await page.goto('/admin/settings/staff');
     const role = page
       .getByRole('row')
       .filter({ has: page.getByText('You', { exact: true }) })
@@ -373,7 +397,7 @@ test.describe('signed in', () => {
 
   test('a long select is searched by typing, and only Enter picks', async ({ page }) => {
     // Nothing is saved: the zone is picked, never submitted.
-    await page.goto('/account');
+    await page.goto('/account/preferences');
     const field = page
       .getByRole('region', { name: 'Time zone' })
       .getByRole('combobox', { name: 'Time zone' });
@@ -473,7 +497,7 @@ test.describe('signed in', () => {
   });
 
   test('a button keeps focus while its form saves, and after', async ({ page }) => {
-    await page.goto('/admin/staff');
+    await page.goto('/admin/settings');
     const save = page.getByRole('button', { name: 'Save name' });
 
     // Saving the name unchanged changes nothing, but runs the action.
@@ -685,7 +709,7 @@ test.describe('signed in', () => {
   });
 
   test('an action dialog keeps focus inside and returns it on Escape', async ({ page }) => {
-    await openUser(page, CLIENT_WATCHER.name);
+    await openUserTab(page, CLIENT_WATCHER.name, 'Manage');
     const trigger = page.getByRole('button', { name: 'Delete', exact: true });
 
     await trigger.focus();
@@ -746,6 +770,8 @@ test.describe('signed in', () => {
     await chooseTab(page, 'Company sections', 'Requests', COMPANY_NAME);
     await expect(page).toHaveURL(`/companies/${COMPANY_SLUG}`);
     await expect(page).toHaveTitle(`Requests · ${COMPANY_NAME} · Adiutor`);
+    // Both pages are in the document now (Next keeps the one before alive), sharing no id.
+    expect(await duplicateIds(page)).toEqual([]);
 
     // The account's tabs, reached from the account menu without reloading.
     await accountMenu.click();
@@ -754,6 +780,58 @@ test.describe('signed in', () => {
     await expect(accountMenu).toBeFocused();
     await chooseTab(page, 'Account sections', 'Security', 'Account');
     await expect(page).toHaveURL('/account/security');
+    await chooseTab(page, 'Account sections', 'Preferences', 'Account');
+    await expect(page).toHaveURL('/account/preferences');
+    await expect(page).toHaveTitle('Preferences · Account · Adiutor');
+    await chooseTab(page, 'Account sections', 'Activity', 'Account');
+    await expect(page).toHaveURL('/account/activity');
+    await expect(page).toHaveTitle('Activity · Account · Adiutor');
+
+    // The Settings tabs, reached from the menu: each one's title is its own.
+    const settingsLink = page
+      .getByRole('navigation', { name: 'Main' })
+      .getByRole('link', { name: 'Settings' });
+    await settingsLink.focus();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL('/admin/settings');
+    await chooseTab(page, 'Settings sections', 'Staff', 'Settings');
+    await expect(page).toHaveURL('/admin/settings/staff');
+    await expect(page).toHaveTitle('Staff · Settings · Adiutor');
+    await chooseTab(page, 'Settings sections', 'Requests', 'Settings');
+    await expect(page).toHaveURL('/admin/settings/requests');
+    await expect(page).toHaveTitle('Requests · Settings · Adiutor');
+    await chooseTab(page, 'Settings sections', 'General', 'Settings');
+    await expect(page).toHaveURL('/admin/settings');
+    await expect(page).toHaveTitle('Settings · Adiutor');
+  });
+
+  test('choosing a tab of a user’s page keeps focus on it, now the current one', async ({
+    page,
+  }) => {
+    const userId = await findUserId(CLIENT_WATCHER.email);
+    const base = `/admin/users/${userId}`;
+    await page.goto(base);
+    // Once the account menu opens, the page has hydrated: Enter on a tab is a client-side move.
+    const accountMenu = page.getByRole('button', { name: /^Account menu/ });
+    await accountMenu.click();
+    await expect(page.getByRole('menu')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(accountMenu).toBeFocused();
+
+    await chooseTab(page, 'User sections', 'Companies', CLIENT_WATCHER.name);
+    await expect(page).toHaveURL(`${base}/companies`);
+    await expect(page).toHaveTitle('Companies · User · Adiutor');
+    await chooseTab(page, 'User sections', 'Activity', CLIENT_WATCHER.name);
+    await expect(page).toHaveURL(`${base}/activity`);
+    await expect(page).toHaveTitle('Activity · User · Adiutor');
+    await chooseTab(page, 'User sections', 'Manage', CLIENT_WATCHER.name);
+    await expect(page).toHaveURL(`${base}/manage`);
+    await expect(page).toHaveTitle('Manage · User · Adiutor');
+    await chooseTab(page, 'User sections', 'Overview', CLIENT_WATCHER.name);
+    await expect(page).toHaveURL(base);
+    await expect(page).toHaveTitle('User · Adiutor');
+    // Every tab's page is kept alive now, and none shares an id with another.
+    expect(await duplicateIds(page)).toEqual([]);
   });
 
   test('the date range form goes From, To, Apply, and Enter applies it', async ({ page }) => {
@@ -856,7 +934,7 @@ test.describe('signed in as a user', () => {
     await expect(back).toBeFocused();
 
     await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/#sign-in-as$/);
+    await expect(page).toHaveURL(/\/manage#sign-in-as$/);
     await expect(page.getByRole('heading', { name: 'Sign in as user' })).toBeFocused();
   });
 });

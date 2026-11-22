@@ -18,7 +18,7 @@ import {
 import {
   answerPictures,
   fillAndSubmitSignIn,
-  openUser,
+  openUserTab,
   signIn,
   submitPassword,
   toasts,
@@ -104,7 +104,9 @@ test('verify your email from the account page, keeping your password', async ({
   await expect(page.getByText('Verified', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Send verification email' })).toHaveCount(0);
 
-  // The account's recent activity shows the sign-in and the verification, newest first.
+  // The account's recent activity (its Activity tab) shows the sign-in and the verification, newest
+  // first.
+  await page.goto('/account/activity');
   const activity = page.getByRole('list', { name: 'Your recent activity' });
   await expect(activity.getByRole('listitem').first()).toContainText('Verified your email address');
   await expect(activity).toContainText('Signed in with a password');
@@ -151,7 +153,7 @@ test('a user deactivates their account and an Admin reactivates it', async ({ pa
   await expect(
     admin.getByRole('main').getByRole('cell', { name: DEACTIVATE_CLIENT.email, exact: true }),
   ).toBeVisible();
-  await openUser(admin, DEACTIVATE_CLIENT.name);
+  await openUserTab(admin, DEACTIVATE_CLIENT.name, 'Manage');
   await admin.getByRole('button', { name: 'Reactivate' }).click();
   await admin.getByRole('alertdialog').getByRole('button', { name: 'Reactivate' }).click();
   await expect(toasts(admin)).toContainText('Account reactivated.');
@@ -179,7 +181,7 @@ test('a user signs out their other devices, which also forgets trusted browsers'
   await expect(other).toHaveURL('/dashboard');
   await signIn(page, SESSIONS_CLIENT);
 
-  await page.goto('/account/security');
+  await page.goto('/account/activity');
   const devices = page.getByRole('table', { name: 'Your signed-in devices' });
   await expect(devices.getByRole('row')).toHaveCount(3);
   await expect(devices.getByText('This device')).toBeVisible();

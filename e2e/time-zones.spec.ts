@@ -1,7 +1,7 @@
 /**
  * @file End-to-end tests for time zones: a new account takes its browser's
  * zone on its first visit, pages and copied code show times and days in it,
- * without naming the zone on the page, and the Profile page's Time zone card
+ * without naming the zone on the page, and the Preferences tab's Time zone card
  * changes it, found by typing its city.
  */
 import { findCompanyId, savedTimeZoneOf, storeInvitation, storeRequest } from './support/db';
@@ -74,7 +74,7 @@ test('the Time zone card changes the zone every page shows, and offers the brows
   await expect(page).toHaveURL(/\/companies\/[0-9a-f-]{36}$/);
   await expect.poll(() => savedTimeZoneOf(email)).toBe('Australia/Adelaide');
 
-  await page.goto('/account');
+  await page.goto('/account/preferences');
   const card = page.getByRole('region', { name: 'Time zone' });
   const select = card.getByRole('combobox', { name: 'Time zone' });
   // Zones are named by their place, and the browser's by its full name.
@@ -107,7 +107,7 @@ test('the Time zone card changes the zone every page shows, and offers the brows
   );
 
   // Back to the browser's own zone in one press.
-  await page.goto('/account');
+  await page.goto('/account/preferences');
   const useBrowser = page.getByRole('button', { name: 'Use this browser’s zone' });
   await useBrowser.click();
   await expect(useBrowser).toHaveAttribute('aria-disabled', 'true');

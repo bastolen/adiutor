@@ -11,8 +11,8 @@ import confirmChangeUrl, { confirmChangeUrlFor, confirmStrongUrlFor } from './co
 
 describe('confirmChangeUrl', () => {
   it('opens the step-up page in change mode, returning to the page', () => {
-    expect(confirmChangeUrl('/admin/staff')).toBe(
-      '/auth/verify?callbackURL=%2Fadmin%2Fstaff&for=change',
+    expect(confirmChangeUrl('/admin/settings/staff')).toBe(
+      '/auth/verify?callbackURL=%2Fadmin%2Fsettings%2Fstaff&for=change',
     );
     expect(confirmChangeUrl('/companies/x/members?sort=email')).toBe(
       '/auth/verify?callbackURL=%2Fcompanies%2Fx%2Fmembers%3Fsort%3Demail&for=change',
@@ -20,8 +20,8 @@ describe('confirmChangeUrl', () => {
   });
 
   it('keeps the query and the anchor inside callbackURL', () => {
-    expect(confirmChangeUrl('/admin/staff?inv-page=2#invitations')).toBe(
-      '/auth/verify?callbackURL=%2Fadmin%2Fstaff%3Finv-page%3D2%23invitations&for=change',
+    expect(confirmChangeUrl('/admin/settings/staff?inv-page=2#invitations')).toBe(
+      '/auth/verify?callbackURL=%2Fadmin%2Fsettings%2Fstaff%3Finv-page%3D2%23invitations&for=change',
     );
   });
 });
@@ -29,24 +29,26 @@ describe('confirmChangeUrl', () => {
 describe('confirmChangeUrlFor', () => {
   it("returns to the form's page, with its tables and section", () => {
     expect(
-      confirmChangeUrlFor(form({ returnTo: '/admin/staff?inv-page=2#invitations' }), '/x'),
-    ).toBe(confirmChangeUrl('/admin/staff?inv-page=2#invitations'));
+      confirmChangeUrlFor(form({ returnTo: '/admin/settings/staff?inv-page=2#invitations' }), '/x'),
+    ).toBe(confirmChangeUrl('/admin/settings/staff?inv-page=2#invitations'));
   });
 
   it('returns to the fallback without a returnTo', () => {
-    expect(confirmChangeUrlFor(form({}), '/admin/staff')).toBe(confirmChangeUrl('/admin/staff'));
+    expect(confirmChangeUrlFor(form({}), '/admin/settings/staff')).toBe(
+      confirmChangeUrl('/admin/settings/staff'),
+    );
   });
 
   it('drops an anchor that names no section', () => {
-    expect(confirmChangeUrlFor(form({ returnTo: '/admin/staff#:~:text=x' }), '/x')).toBe(
-      confirmChangeUrl('/admin/staff'),
+    expect(confirmChangeUrlFor(form({ returnTo: '/admin/settings/staff#:~:text=x' }), '/x')).toBe(
+      confirmChangeUrl('/admin/settings/staff'),
     );
   });
 
   it.each(['https://evil.adiutor.test', '//evil.adiutor.test', '/api/auth/x'])(
     'never returns to %j',
     (returnTo) => {
-      expect(confirmChangeUrlFor(form({ returnTo }), '/admin/staff')).toBe(
+      expect(confirmChangeUrlFor(form({ returnTo }), '/admin/settings/staff')).toBe(
         confirmChangeUrl(DEFAULT_SIGNED_IN_PATH),
       );
     },

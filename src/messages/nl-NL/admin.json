@@ -53,11 +53,21 @@
     },
     "user": {
       "title": "Gebruiker",
+      "companiesTitle": "Bedrijven · Gebruiker",
+      "activityTitle": "Activiteit · Gebruiker",
+      "manageTitle": "Beheer · Gebruiker",
       "back": "Gebruikers",
+      "tabs": {
+        "label": "Onderdelen van de gebruiker",
+        "overview": "Overzicht",
+        "companies": "Bedrijven",
+        "activity": "Activiteit",
+        "manage": "Beheer"
+      },
       "deactivatedNotice": "Dit account is gedeactiveerd op {date}. Er kan niet mee worden ingelogd tot een beheerder het weer activeert.",
       "self": {
         "signInOnly": "Dit is je eigen account. Wijzig je inlogmethoden op je <security>beveiligingspagina</security>.",
-        "signInAndStaff": "Dit is je eigen account. Wijzig je inlogmethoden op je <security>beveiligingspagina</security> en je rol als medewerker op de <staff>pagina Medewerkers</staff>."
+        "signInAndStaff": "Dit is je eigen account. Wijzig je inlogmethoden op je <security>beveiligingspagina</security> en je rol als medewerker in de <staff>instellingen voor medewerkers</staff>."
       },
       "account": {
         "title": "Account",
@@ -239,110 +249,124 @@
       "created": "Account aangemaakt voor {email}. We hebben diegene een e-mail gestuurd met een link om een wachtwoord te kiezen.",
       "existing": "{email} heeft al een account. Er is niets gewijzigd."
     },
-    "staff": {
-      "title": "Medewerkers",
-      "description": "De mensen die verzoeken van bedrijven afhandelen, en hoe gebruikers jullie zien.",
-      "name": {
-        "title": "Naam die gebruikers zien",
-        "description": "Gebruikt in uitnodigingen en overal waar gebruikers zien wie hen helpt.",
-        "label": "Naam",
-        "example": "Bijvoorbeeld “Adiutor Support”.",
-        "save": "Naam opslaan",
-        "saved": "Naam opgeslagen."
+    "settings": {
+      "title": "Instellingen",
+      "description": "Hoe gebruikers jullie zien, wie er medewerker is, en hoe verzoeken worden genummerd en ingedeeld.",
+      "sections": "Onderdelen van de instellingen",
+      "tabs": {
+        "general": "Algemeen",
+        "staff": "Medewerkers",
+        "requests": "Verzoeken"
       },
-      "languages": {
-        "title": "Talen",
-        "description": "Kies welke talen Adiutor aanbiedt, en de standaardtaal voor iedereen die nog geen eigen taal heeft gekozen. Wie een taal heeft gekozen die je uitzet, krijgt de standaardtaal tot die weer aan staat.",
-        "offeredLabel": "Aangeboden talen",
-        "alwaysOn": "Staat altijd aan: dit is de standaardtaal.",
-        "defaultHint": "Alleen een taal die wordt aangeboden kan de standaardtaal zijn.",
-        "save": "Talen opslaan",
-        "saved": "Talen opgeslagen."
+      "general": {
+        "name": {
+          "title": "Naam die gebruikers zien",
+          "description": "Gebruikt in uitnodigingen en overal waar gebruikers zien wie hen helpt.",
+          "label": "Naam",
+          "example": "Bijvoorbeeld “Adiutor Support”.",
+          "save": "Naam opslaan",
+          "saved": "Naam opgeslagen."
+        },
+        "languages": {
+          "title": "Talen",
+          "description": "Kies welke talen Adiutor aanbiedt, en de standaardtaal voor iedereen die nog geen eigen taal heeft gekozen. Wie een taal heeft gekozen die je uitzet, krijgt de standaardtaal tot die weer aan staat.",
+          "offeredLabel": "Aangeboden talen",
+          "alwaysOn": "Staat altijd aan: dit is de standaardtaal.",
+          "defaultHint": "Alleen een taal die wordt aangeboden kan de standaardtaal zijn.",
+          "save": "Talen opslaan",
+          "saved": "Talen opgeslagen."
+        },
+        "timeZone": {
+          "title": "Standaardtijdzone",
+          "description": "Adiutor gebruikt deze zone op pagina’s voor wie niet is ingelogd, in e-mails aan mensen zonder zone, en voor iedereen tot hun browser hun eigen zone instelt.",
+          "label": "Standaardtijdzone",
+          "save": "Standaardtijdzone opslaan",
+          "saved": "Standaardtijdzone opgeslagen."
+        }
       },
-      "timeZone": {
-        "title": "Standaardtijdzone",
-        "description": "Adiutor gebruikt deze zone op pagina’s voor wie niet is ingelogd, in e-mails aan mensen zonder zone, en voor iedereen tot hun browser hun eigen zone instelt.",
-        "label": "Standaardtijdzone",
-        "save": "Standaardtijdzone opslaan",
-        "saved": "Standaardtijdzone opgeslagen."
+      "staff": {
+        "title": "Medewerkers · Instellingen",
+        "people": {
+          "title": "Mensen",
+          "description": "{count, plural, one {# persoon heeft} other {# mensen hebben}} toegang als medewerker.",
+          "rows": "medewerkers",
+          "caption": "Medewerkers",
+          "name": "Naam",
+          "role": "Rol",
+          "activity": "Activiteit",
+          "actions": "Acties",
+          "deactivated": "Gedeactiveerd"
+        },
+        "stepDown": {
+          "title": "Terugstappen naar {role}?",
+          "description": "Je kunt je eigen rol niet weer verhogen: daarvoor is een andere beheerder van de medewerkers nodig. Alleen beheerders beheren de medewerkers, dus je gaat naar het dashboard.",
+          "confirmLabel": "Terugstappen"
+        },
+        "leave": {
+          "label": "Stoppen",
+          "ariaLabel": "Stoppen als medewerker",
+          "title": "Stoppen als medewerker?",
+          "confirmLabel": "Stoppen als medewerker",
+          "description": "Je verliest meteen je toegang als medewerker, en alleen een andere beheerder kan die teruggeven. Je account en je lidmaatschappen van bedrijven blijven bestaan."
+        },
+        "remove": {
+          "label": "Verwijderen",
+          "ariaLabel": "{name} verwijderen als medewerker",
+          "done": "{name} is verwijderd als medewerker.",
+          "title": "{name} verwijderen als medewerker?",
+          "confirmLabel": "Verwijderen als medewerker",
+          "description": "Diegene verliest de toegang als medewerker. Het account blijft bestaan (met eventuele lidmaatschappen van bedrijven), en je kunt diegene later opnieuw uitnodigen."
+        },
+        "invite": {
+          "title": "Uitnodigen per e-mail",
+          "description": "Diegene krijgt een e-mail met een link om als medewerker mee te doen. De link werkt één keer en verloopt na {days, plural, one {# dag} other {# dagen}}."
+        }
       },
-      "requestNumbers": {
-        "title": "Verzoeknummers",
-        "description": "Elk verzoek heeft een nummer waarnaar mensen kunnen verwijzen. Het staat achter een voorvoegsel dat jij kiest.",
-        "label": "Voorvoegsel",
-        "example": "Verzoeken worden getoond als {example}.",
-        "save": "Voorvoegsel opslaan",
-        "saved": "Voorvoegsel opgeslagen."
-      },
-      "requestTypes": {
-        "title": "Verzoektypes",
-        "description": "Waaruit mensen kiezen als ze een verzoek indienen, in deze volgorde. Elk type bepaalt met welke prioriteit een nieuw verzoek begint. Een gearchiveerd type blijft bij de verzoeken die het hebben.",
-        "listLabel": "Verzoektypes",
-        "archived": "Gearchiveerd",
-        "add": "Type toevoegen",
-        "addTitle": "Een verzoektype toevoegen",
-        "addDescription": "Het kan meteen worden gekozen voor nieuwe verzoeken, onderaan de lijst.",
-        "addConfirm": "Type toevoegen",
-        "added": "Type toegevoegd.",
-        "edit": "Bewerken",
-        "editLabel": "{name} bewerken",
-        "editTitle": "{name} bewerken",
-        "editDescription": "De verzoeken die het hebben, houden het. Een nieuwe beginprioriteit geldt voor verzoeken die vanaf nu worden ingediend.",
-        "save": "Type opslaan",
-        "saved": "{changed, select, yes {Type opgeslagen.} other {Er is niets gewijzigd.}}",
-        "nameLabel": "Naam",
-        "descriptionLabel": "Waar het voor is",
-        "descriptionHint": "Staat bij het type als iemand een verzoek indient.",
-        "priorityLabel": "Beginprioriteit",
-        "moveUp": "Omhoog",
-        "moveUpLabel": "{name} omhoog",
-        "moveDown": "Omlaag",
-        "moveDownLabel": "{name} omlaag",
-        "moved": "Volgorde opgeslagen.",
-        "archive": "Archiveren",
-        "archiveLabel": "{name} archiveren",
-        "archiveTitle": "{name} archiveren?",
-        "archiveDescription": "Het kan niet meer worden gekozen voor nieuwe verzoeken. De verzoeken die het hebben, houden het, en je kunt het later terugzetten.",
-        "archiveConfirm": "Type archiveren",
-        "archivedDone": "{name} gearchiveerd.",
-        "restore": "Terugzetten",
-        "restoreLabel": "{name} terugzetten",
-        "restored": "{name} teruggezet."
-      },
-      "people": {
-        "title": "Mensen",
-        "description": "{count, plural, one {# persoon heeft} other {# mensen hebben}} toegang als medewerker.",
-        "rows": "medewerkers",
-        "caption": "Medewerkers",
-        "name": "Naam",
-        "role": "Rol",
-        "activity": "Activiteit",
-        "actions": "Acties",
-        "deactivated": "Gedeactiveerd"
-      },
-      "stepDown": {
-        "title": "Terugstappen naar {role}?",
-        "description": "Je kunt je eigen rol niet weer verhogen: daarvoor is een andere beheerder van de medewerkers nodig. Alleen beheerders beheren de medewerkers, dus je gaat naar het dashboard.",
-        "confirmLabel": "Terugstappen"
-      },
-      "leave": {
-        "label": "Stoppen",
-        "ariaLabel": "Stoppen als medewerker",
-        "title": "Stoppen als medewerker?",
-        "confirmLabel": "Stoppen als medewerker",
-        "description": "Je verliest meteen je toegang als medewerker, en alleen een andere beheerder kan die teruggeven. Je account en je lidmaatschappen van bedrijven blijven bestaan."
-      },
-      "remove": {
-        "label": "Verwijderen",
-        "ariaLabel": "{name} verwijderen als medewerker",
-        "done": "{name} is verwijderd als medewerker.",
-        "title": "{name} verwijderen als medewerker?",
-        "confirmLabel": "Verwijderen als medewerker",
-        "description": "Diegene verliest de toegang als medewerker. Het account blijft bestaan (met eventuele lidmaatschappen van bedrijven), en je kunt diegene later opnieuw uitnodigen."
-      },
-      "invite": {
-        "title": "Uitnodigen per e-mail",
-        "description": "Diegene krijgt een e-mail met een link om als medewerker mee te doen. De link werkt één keer en verloopt na {days, plural, one {# dag} other {# dagen}}."
+      "requests": {
+        "title": "Verzoeken · Instellingen",
+        "requestNumbers": {
+          "title": "Verzoeknummers",
+          "description": "Elk verzoek heeft een nummer waarnaar mensen kunnen verwijzen. Het staat achter een voorvoegsel dat jij kiest.",
+          "label": "Voorvoegsel",
+          "example": "Verzoeken worden getoond als {example}.",
+          "save": "Voorvoegsel opslaan",
+          "saved": "Voorvoegsel opgeslagen."
+        },
+        "requestTypes": {
+          "title": "Verzoektypes",
+          "description": "Waaruit mensen kiezen als ze een verzoek indienen, in deze volgorde. Elk type bepaalt met welke prioriteit een nieuw verzoek begint. Een gearchiveerd type blijft bij de verzoeken die het hebben.",
+          "listLabel": "Verzoektypes",
+          "archived": "Gearchiveerd",
+          "add": "Type toevoegen",
+          "addTitle": "Een verzoektype toevoegen",
+          "addDescription": "Het kan meteen worden gekozen voor nieuwe verzoeken, onderaan de lijst.",
+          "addConfirm": "Type toevoegen",
+          "added": "Type toegevoegd.",
+          "edit": "Bewerken",
+          "editLabel": "{name} bewerken",
+          "editTitle": "{name} bewerken",
+          "editDescription": "De verzoeken die het hebben, houden het. Een nieuwe beginprioriteit geldt voor verzoeken die vanaf nu worden ingediend.",
+          "save": "Type opslaan",
+          "saved": "{changed, select, yes {Type opgeslagen.} other {Er is niets gewijzigd.}}",
+          "nameLabel": "Naam",
+          "descriptionLabel": "Waar het voor is",
+          "descriptionHint": "Staat bij het type als iemand een verzoek indient.",
+          "priorityLabel": "Beginprioriteit",
+          "moveUp": "Omhoog",
+          "moveUpLabel": "{name} omhoog",
+          "moveDown": "Omlaag",
+          "moveDownLabel": "{name} omlaag",
+          "moved": "Volgorde opgeslagen.",
+          "archive": "Archiveren",
+          "archiveLabel": "{name} archiveren",
+          "archiveTitle": "{name} archiveren?",
+          "archiveDescription": "Het kan niet meer worden gekozen voor nieuwe verzoeken. De verzoeken die het hebben, houden het, en je kunt het later terugzetten.",
+          "archiveConfirm": "Type archiveren",
+          "archivedDone": "{name} gearchiveerd.",
+          "restore": "Terugzetten",
+          "restoreLabel": "{name} terugzetten",
+          "restored": "{name} teruggezet."
+        }
       }
     },
     "companies": {

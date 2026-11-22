@@ -122,7 +122,7 @@ test('a company user turns on email codes and can trust the device until signing
   // Recent activity shows each sign-in once, newest first. Turning email codes on isn't one, and
   // the password typed before the code step is shown without a device or IP address: whoever
   // typed it may be someone else.
-  await page.goto('/account');
+  await page.goto('/account/activity');
   const activity = page.getByRole('list', { name: 'Your recent activity' }).getByRole('listitem');
   await Promise.all(
     [
@@ -182,7 +182,7 @@ test('a company user adds a passkey and is offered it when signing in', async ({
   await expect(page).toHaveURL(/\/auth\/verify/);
   await page.getByRole('button', { name: 'Confirm with a passkey' }).click();
   await expect(page).toHaveURL('/dashboard');
-  await page.goto('/account');
+  await page.goto('/account/activity');
   const activity = page.getByRole('list', { name: 'Your recent activity' }).getByRole('listitem');
   await Promise.all(
     [

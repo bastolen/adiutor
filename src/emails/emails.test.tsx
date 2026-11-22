@@ -373,8 +373,8 @@ describe('staff-made changes', () => {
     expect(email.text).toContain('Casey Client reopened this request.');
     expect(email.text).toContain('you’re subscribed to this request');
     // The footer says where to stop them all: the account's card for them.
-    expect(email.html).toContain(`href="${appUrl}/account#request-emails"`);
-    expect(email.text).toContain(`your account ${appUrl}/account#request-emails`);
+    expect(email.html).toContain(`href="${appUrl}/account/preferences#request-emails"`);
+    expect(email.text).toContain(`your account ${appUrl}/account/preferences#request-emails`);
     expect(email.text).toContain('Replies to this email aren’t read.');
     // Its links sign the reader in, so it says not to forward it.
     expect(email.text).toContain(
@@ -486,7 +486,7 @@ describe('staff-made changes', () => {
   });
 
   it('tells the staff Admins about a new staff Admin, and how they became one', async () => {
-    const url = `${appUrl}/admin/staff`;
+    const url = `${appUrl}/admin/settings/staff`;
     const made = await staffAdminAddedEmail('alex@adiutor.test', {
       ...english,
       newAdminName: 'Sam Tester',
@@ -497,7 +497,7 @@ describe('staff-made changes', () => {
     });
     expect(made.subject).toBe('Sam Tester is now a staff Admin on Adiutor');
     expect(made.text).toContain('Jane Admin made Sam Tester (sam@adiutor.test) a staff Admin');
-    expect(made.text).toContain('remove their staff access on the staff page');
+    expect(made.text).toContain('remove their staff access in the staff settings');
     expect(made.text).not.toMatch(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
     expectBasics(made, url);
 
@@ -1073,7 +1073,7 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = 
    * @returns The email and its main link.
    */
   'new staff Admin': async (locale) => {
-    const url = `${appUrl}/admin/staff`;
+    const url = `${appUrl}/admin/settings/staff`;
     const email = await staffAdminAddedEmail('alex@adiutor.test', {
       appUrl,
       locale,

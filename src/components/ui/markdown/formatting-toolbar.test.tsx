@@ -271,7 +271,7 @@ describe('FormattingToolbar: the link dialog', () => {
     'adiutor.dev',
     // eslint-disable-next-line no-script-url -- An address the dialog must refuse.
     'javascript:alert(1)',
-    '/admin/staff',
+    '/admin/settings/staff',
     'mailto:user@adiutor.dev',
     '',
   ])('refuses "%s", which a text may not link to, and says why', async (address) => {

@@ -66,7 +66,10 @@ export default function Shortcuts({ sections, assigned = null }: ShortcutsProps)
       title: t('shortcuts.companies.title'),
       description: t('shortcuts.companies.description'),
     },
-    staff: { title: t('shortcuts.staff.title'), description: t('shortcuts.staff.description') },
+    settings: {
+      title: t('shortcuts.settings.title'),
+      description: t('shortcuts.settings.description'),
+    },
     logs: { title: t('shortcuts.logs.title'), description: t('shortcuts.logs.description') },
   };
 

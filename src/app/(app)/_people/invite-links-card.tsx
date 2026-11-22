@@ -1,6 +1,6 @@
 /**
  * @file The "Invite links" card, shared by a company's Members page and the
- * staff page. Text from the `people` namespace, role names from `roles`; its
+ * staff settings. Text from the `people` namespace, role names from `roles`; its
  * form is a client component, so the page passes `people` with
  * `ClientMessages`.
  */

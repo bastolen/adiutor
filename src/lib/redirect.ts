@@ -53,9 +53,9 @@ export function sectionFromHash(hash: string | null | undefined): string | null 
  * had. A value that isn't a section ID ({@link isSectionId}) leaves the path
  * as it is.
  *
- * @param path - A page of the app, e.g. `/admin/staff?inv-page=2`.
+ * @param path - A page of the app, e.g. `/admin/settings/staff?inv-page=2`.
  * @param section - The section, e.g. `invitations`.
- * @returns The path, e.g. `/admin/staff?inv-page=2#invitations`.
+ * @returns The path, e.g. `/admin/settings/staff?inv-page=2#invitations`.
  */
 export function withSection(path: string, section: string | null | undefined): string {
   if (!isSectionId(section)) {

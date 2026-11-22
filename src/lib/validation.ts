@@ -80,13 +80,13 @@ export const CHOOSE_COMPANY_ROLE_MESSAGE = 'validation.companyRole' satisfies Va
  */
 export const CHOOSE_STAFF_ROLE_MESSAGE = 'validation.staffRole' satisfies ValidationMessageKey;
 
-/** A language (one of `LOCALES`), e.g. from an invite form or the staff page's default language. */
+/** A language (one of `LOCALES`), e.g. from an invite form or the default language in Settings. */
 export const localeSchema = z.enum(LOCALES, {
   error: 'validation.locale' satisfies ValidationMessageKey,
 });
 
 /**
- * Adiutor's languages from the staff page: the default language and the
+ * Adiutor's languages from Settings: the default language and the
  * languages to offer (any of `LOCALES`; the service adds the default).
  */
 export const languageSettingsSchema = z.object({
@@ -104,8 +104,8 @@ export const languageChoiceSchema = z.enum([FOLLOW_DEFAULT, ...LOCALES], {
 
 /**
  * A time zone Adiutor accepts (`isTimeZone`: an IANA name the runtime knows,
- * or `UTC`), e.g. from the account's Time zone card or the staff page's
- * default zone.
+ * or `UTC`), e.g. from the account's Time zone card or the default zone
+ * in Settings.
  */
 export const timeZoneSchema = z
   .string()
@@ -114,7 +114,7 @@ export const timeZoneSchema = z
 /** A company role (Admin, Client or Watcher), e.g. from a member's role select. */
 export const companyRoleSchema = z.enum(COMPANY_ROLES, { error: CHOOSE_COMPANY_ROLE_MESSAGE });
 
-/** A staff role, e.g. from the staff page's role select. */
+/** A staff role, e.g. from the role select in the staff settings. */
 export const staffRoleSchema = z.enum(PLATFORM_ROLES, { error: CHOOSE_STAFF_ROLE_MESSAGE });
 
 /** Every format character (`\p{Cf}`), removed from the copy the web-address check reads. */

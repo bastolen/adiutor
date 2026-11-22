@@ -1,5 +1,5 @@
 /**
- * @file Server actions for the user detail page's account actions
+ * @file Server actions for the account actions on a user's page
  * (two-step verification, sign-out, deactivating and deleting) and for
  * signing in as the user; memberships
  * use `src/app/(app)/_people/member-actions.ts` and the staff role
@@ -51,8 +51,8 @@ export async function resetMfaAction(
     assertNotSignedInAs(actor);
     const userId = field(formData, 'userId');
     if (needsRecentConfirmation(actor)) {
-      // Back to the form's page and card; without one, to the user's page (only an ID goes in).
-      redirect(confirmChangeUrlFor(formData, `/admin/users/${parseId(userId)}`));
+      // Back to the form's page and card; without one, to the user's Manage tab (only an ID goes in).
+      redirect(confirmChangeUrlFor(formData, `/admin/users/${parseId(userId)}/manage`));
     }
     await resetUserMfa(appContext, actor, userId, {
       removePasskeys: formData.get('removePasskeys') === 'on',
@@ -174,7 +174,7 @@ export async function signInAsAction(
     const userId = field(formData, 'userId');
     // Only an account with strong MFA can confirm; without it, the service says what's missing.
     if (actor.strongMfa && !isMfaConfirmedRecently(actor.strongMfaConfirmedUntil)) {
-      redirect(confirmStrongUrlFor(formData, `/admin/users/${parseId(userId)}`));
+      redirect(confirmStrongUrlFor(formData, `/admin/users/${parseId(userId)}/manage`));
     }
     await startImpersonation(appContext, actor, {
       userId,

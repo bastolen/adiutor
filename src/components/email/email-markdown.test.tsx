@@ -194,7 +194,7 @@ describe('EmailMarkdown: links', () => {
 
   it.each([
     ['a script address', '[here](javascript:alert(1))'],
-    ['an address in the app', '[here](/admin/staff)'],
+    ['an address in the app', '[here](/admin/settings/staff)'],
     ['an address without a scheme', '[here](adiutor.dev)'],
     ['a mail address', '[here](mailto:user@adiutor.test)'],
   ])('keeps the text of %s, and links nowhere', (_what, text) => {
@@ -213,7 +213,7 @@ describe('EmailMarkdown: what someone typed is shown, never run', () => {
     ['a style sheet', '<style>p { display: none }</style>', 'style'],
     ['a form', '<form action="https://adiutor.dev"><input name="password"></form>', 'form'],
     ['bold written as HTML', 'This is <b>bold</b>', 'b'],
-    ['a link written as HTML', '<a href="/admin/staff" onclick="alert(1)">here</a>', 'a'],
+    ['a link written as HTML', '<a href="/admin/settings/staff" onclick="alert(1)">here</a>', 'a'],
   ])('shows %s as the text it is', (_what, text, element) => {
     const container = show(text);
 

@@ -1,6 +1,7 @@
 /**
  * @file Server actions for the Security page of the account: passwords,
- * connected accounts, signed-in devices and deactivating the account. They go
+ * connected accounts, sign-ins by staff and deactivating the account (signing
+ * out devices is on the Activity tab, `activity/actions.ts`). They go
  * through Better Auth or the services, so the guards' rules (session
  * freshness, recent confirmation, the MFA a role requires) apply. When one
  * needs a recent confirmation the user doesn't have, it sends them to the
@@ -34,7 +35,6 @@ import {
   setFirstPassword,
 } from '@/server/auth/accounts';
 import { setStaffSignInAllowed } from '@/server/auth/impersonation';
-import { revokeOtherOwnSessions, revokeOwnSession } from '@/server/auth/sessions';
 import { assertNotSignedInAs, getActor } from '@/server/authz';
 import { deactivateOwnAccount } from '@/server/people/user-admin';
 
@@ -215,41 +215,6 @@ export async function deactivateAccountAction(
     // The sessions are gone already; this clears the cookies in the browser too.
     await auth.api.signOut({ headers: await headers() }).catch(() => undefined);
     return { ok: true };
-  });
-}
-
-/**
- * Signs the user out on one of their other devices.
- *
- * @param _previous - The previous result (unused).
- * @param formData - Field `sessionId`.
- * @returns A confirmation, or why it failed.
- */
-export async function revokeSessionAction(
-  _previous: ActionResult | null,
-  formData: FormData,
-): Promise<ActionResult> {
-  return runAction(async () => {
-    const actor = await getActor({ allowMissingMfa: true });
-    await revokeOwnSession(appContext, actor, field(formData, 'sessionId'));
-    refresh();
-    const t = await getTranslations('account');
-    return { ok: true, message: t('security.sessions.signedOut') };
-  });
-}
-
-/**
- * Signs the user out on every device except this one.
- *
- * @returns A confirmation.
- */
-export async function revokeOtherSessionsAction(): Promise<ActionResult> {
-  return runAction(async () => {
-    const actor = await getActor({ allowMissingMfa: true });
-    const count = await revokeOtherOwnSessions(appContext, actor);
-    refresh();
-    const t = await getTranslations('account');
-    return { ok: true, message: t('security.sessions.signedOutOthers', { count }) };
   });
 }
 

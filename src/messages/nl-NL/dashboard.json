@@ -34,9 +34,9 @@
         "title": "Bedrijven",
         "description": "Bekijk en beheer elk bedrijf."
       },
-      "staff": {
-        "title": "Medewerkers",
-        "description": "Nodig medewerkers uit en beheer hun rollen."
+      "settings": {
+        "title": "Instellingen",
+        "description": "Beheer de medewerkers, talen, tijdzone en verzoektypes."
       },
       "logs": {
         "title": "Logs",

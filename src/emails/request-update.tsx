@@ -135,10 +135,10 @@ function requestLinkTag(href: string) {
 }
 
 /**
- * Where someone turns emails about requests off: their account's Profile
- * page, at its card for them.
+ * Where someone turns emails about requests off: their account's Preferences
+ * tab, at its card for them.
  */
-export const REQUEST_EMAILS_PATH = '/account#request-emails';
+export const REQUEST_EMAILS_PATH = '/account/preferences#request-emails';
 
 /**
  * The link to the account's setting, for the `<account>` tag of the footer.

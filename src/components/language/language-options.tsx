@@ -56,7 +56,7 @@ export function useOfferedLanguageOptions(): SelectOption[] {
  * English (US)."), then the languages Adiutor offers. Reads `common.language`
  * from the root provider.
  *
- * @param defaultLocale - Adiutor's default language, as chosen on the staff page.
+ * @param defaultLocale - Adiutor's default language, as chosen in Settings.
  * @returns The options.
  */
 export function useLanguageChoiceOptions(defaultLocale: Locale): SelectOption[] {

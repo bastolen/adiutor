@@ -14,19 +14,13 @@ import { auth } from '@/lib/auth';
 import confirmChangeUrl from '@/lib/sign-in/confirm-url';
 import { changeOwnPassword, hasPassword, setFirstPassword } from '@/server/auth/accounts';
 import { setStaffSignInAllowed } from '@/server/auth/impersonation';
-import { revokeOtherOwnSessions } from '@/server/auth/sessions';
 import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
 import { deactivateOwnAccount } from '@/server/people/user-admin';
 
 import { testLocale } from '../../../../../tests/i18n/next-intl-mocks';
 import form from '../../../../../tests/ui/form';
-import {
-  deactivateAccountAction,
-  passwordAction,
-  revokeOtherSessionsAction,
-  staffSignInAction,
-} from './actions';
+import { deactivateAccountAction, passwordAction, staffSignInAction } from './actions';
 
 vi.mock('next/headers', () => ({ headers: vi.fn(async () => new Headers()) }));
 vi.mock('next/cache', () => ({ refresh: vi.fn() }));
@@ -58,7 +52,6 @@ vi.mock('@/server/auth/accounts', () => ({
   listConnectedProviders: vi.fn(),
   setFirstPassword: vi.fn(),
 }));
-vi.mock('@/server/auth/sessions', () => ({ revokeOtherOwnSessions: vi.fn() }));
 vi.mock('@/server/auth/impersonation', () => ({ setStaffSignInAllowed: vi.fn() }));
 vi.mock('@/server/people/user-admin', () => ({ deactivateOwnAccount: vi.fn() }));
 
@@ -287,21 +280,6 @@ describe('deactivateAccountAction', () => {
       message: 'For your security, sign out and in again before changing this.',
     });
     expect(redirect).not.toHaveBeenCalled();
-  });
-});
-
-describe('revokeOtherSessionsAction', () => {
-  it.each([
-    ['en-US', 1, 'Signed out on 1 other device.'],
-    ['en-US', 3, 'Signed out on 3 other devices.'],
-    ['nl-NL', 1, 'Uitgelogd op 1 ander apparaat.'],
-    ['nl-NL', 3, 'Uitgelogd op 3 andere apparaten.'],
-    ['es-ES', 3, 'Sesión cerrada en 3 dispositivos más.'],
-  ] as const)('counts the devices in %s (%i)', async (locale, count, message) => {
-    testLocale.current = locale;
-    vi.mocked(revokeOtherOwnSessions).mockResolvedValue(count);
-
-    expect(await revokeOtherSessionsAction()).toEqual({ ok: true, message });
   });
 });
 

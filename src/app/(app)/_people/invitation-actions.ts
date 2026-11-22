@@ -1,6 +1,6 @@
 /**
  * @file Server actions for invitations and invite links, shared by a
- * company's Members page and the staff page. The `companyId` field is empty
+ * company's Members page and the staff settings. The `companyId` field is empty
  * for staff. Each action checks the session and lets the service check
  * permissions (`members:manage` or `staff:manage`), then refreshes the page.
  * Messages are in the request's language (`people`).
@@ -35,13 +35,15 @@ function targetField(formData: FormData): string | null {
 
 /**
  * The page the invitations of a target are managed on, to come back to after
- * confirming it's you: the staff page, or the company's Members page.
+ * confirming it's you: the staff settings, or the company's Members page.
  *
  * @param companyId - The company, or `null` for the staff.
  * @returns The page's path.
  */
 function targetPage(companyId: string | null): string {
-  return companyId ? `/companies/${encodeURIComponent(companyId)}/members` : '/admin/staff';
+  return companyId
+    ? `/companies/${encodeURIComponent(companyId)}/members`
+    : '/admin/settings/staff';
 }
 
 /** One address in the result of {@link inviteAction}. */

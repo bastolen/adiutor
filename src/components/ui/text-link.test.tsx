@@ -50,12 +50,12 @@ describe('TextLink', () => {
     'keeps the highlight colour, the focus ring and its tap height (standalone: %s)',
     (standalone) => {
       render(
-        <TextLink standalone={standalone} href="/admin/staff">
-          Staff page
+        <TextLink standalone={standalone} href="/admin/settings/staff">
+          Staff settings
         </TextLink>,
       );
 
-      expect(screen.getByRole('link', { name: 'Staff page' })).toHaveClass(
+      expect(screen.getByRole('link', { name: 'Staff settings' })).toHaveClass(
         'text-highlight',
         'font-medium',
         'underline-offset-4',

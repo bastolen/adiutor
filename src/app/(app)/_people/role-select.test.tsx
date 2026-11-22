@@ -274,7 +274,7 @@ describe('RoleSelect', () => {
      */
     const renderUnconfirmed = (currentRole: string) =>
       render(
-        <ConfirmationWindow windowOpen={false} returnTo="/admin/staff">
+        <ConfirmationWindow windowOpen={false} returnTo="/admin/settings/staff">
           <Card id="people" title="People">
             <RoleSelect
               action={changeRoleAction}
@@ -305,7 +305,7 @@ describe('RoleSelect', () => {
 
       // Back to the card the select is in.
       expect(push).toHaveBeenCalledWith(
-        '/auth/verify?callbackURL=%2Fadmin%2Fstaff%23people&for=change',
+        '/auth/verify?callbackURL=%2Fadmin%2Fsettings%2Fstaff%23people&for=change',
       );
       expect(changeRoleAction).not.toHaveBeenCalled();
       expect(screen.getByRole('combobox', { name: 'Role of Sam' })).toHaveTextContent('Support');
@@ -323,7 +323,7 @@ describe('RoleSelect', () => {
       expect(push).not.toHaveBeenCalled();
       // Where to come back to, should the server ask to confirm after all.
       const formData = defined(changeRoleAction.mock.calls[0], 'the first call')[1] as FormData;
-      expect(formData.get('returnTo')).toBe('/admin/staff#people');
+      expect(formData.get('returnTo')).toBe('/admin/settings/staff#people');
     });
   });
 });

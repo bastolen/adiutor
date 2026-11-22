@@ -108,8 +108,8 @@
       "made": "{who} ha pasado a ser administrador del personal en Adiutor.",
       "acceptedFrom": "{who} ha aceptado la invitación de {by} y ahora es administrador del personal en Adiutor.",
       "accepted": "{who} ha aceptado una invitación al personal y ahora es administrador del personal en Adiutor.",
-      "advice": "Los administradores del personal pueden gestionarlo todo en Adiutor, incluido el personal. Si no reconoces este cambio, quítale el acceso al personal en la página del personal y revisa el registro de auditoría.",
-      "button": "Abrir la página del personal"
+      "advice": "Los administradores del personal pueden gestionarlo todo en Adiutor, incluido el personal. Si no reconoces este cambio, quítale el acceso al personal en los ajustes del personal y revisa el registro de auditoría.",
+      "button": "Abrir los ajustes del personal"
     },
     "jobFailing": {
       "subject": "La tarea en segundo plano {job} sigue fallando en Adiutor",

@@ -1,54 +1,36 @@
 /**
- * @file The Profile page of the account, served at `/account`: name, email
- * (with verification), picture (a connected account's, or initials),
- * language (one of the languages, or Default), time zone, whether emails
- * about requests are on, a summary of sign-in security and recent activity on
- * the account (sign-ins and changes, from the audit log). Password, passkeys,
- * two-step verification and connected accounts are on the Security page. The
- * verification link comes back to the Email card (`#email`), which says
- * whether it worked. A staff member signed in as the user sees it read-only,
- * with a note, and the activity's IP addresses and browsers only when they see
- * the audit log (`personalDataShown`).
+ * @file The Profile tab of the account, served at `/account`: a summary of
+ * sign-in security, the email address (with verification), name and picture
+ * (a connected account's, or initials). Language, time zone and emails about
+ * requests are on the Preferences tab; password, passkeys, two-step
+ * verification and connected accounts on the Security tab; devices and
+ * recent activity on the Activity tab. The verification link comes back to
+ * the Email card (`#email`), which says whether it worked. A staff member
+ * signed in as the user sees it read-only, with a note.
  */
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
-import ActivityList from '@/components/ui/activity-list';
 import Alert from '@/components/ui/alert';
 import Badge from '@/components/ui/badge';
 import Button from '@/components/ui/button';
 import Card from '@/components/ui/card';
 import RowAction from '@/components/ui/row-action';
 import { PageSkeleton } from '@/components/ui/skeleton';
-import ToastOnArrival from '@/components/ui/toast-on-arrival';
 import { personalDataShown } from '@/lib/authz/impersonation';
 import displayName from '@/lib/display-name';
 import ClientMessages from '@/lib/i18n/client-messages';
-import { timeZoneOptions } from '@/lib/i18n/time-zones';
 import appContext from '@/server/app-context';
-import { listOwnActivity } from '@/server/audit';
 import { getActor } from '@/server/authz';
-import { ownLanguage } from '@/server/people/own-locale';
-import { ownTimeZone } from '@/server/people/own-time-zone';
 import { ownPictureChoices } from '@/server/people/pictures';
-import { ownRequestEmails } from '@/server/people/request-emails';
 
-import accountMessage, {
-  type AccountParams,
-  EMAIL_SECTION,
-  LANGUAGE_SECTION,
-  TIME_ZONE_SECTION,
-} from './account-messages';
+import accountMessage, { type AccountParams, EMAIL_SECTION } from './account-messages';
 import { sendVerificationAction } from './actions';
-import LanguageForm from './language-form';
 import NameForm from './name-form';
-import describeOwnActivity from './own-activity';
 import PictureForm from './picture-form';
-import RequestEmailsCard from './request-emails-card';
 import SignedInAsNote from './signed-in-as-note';
-import TimeZoneForm from './time-zone-form';
 
 /**
  * Page metadata: "Account", in the request's language.
@@ -69,30 +51,18 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 async function AccountSettings({ searchParams }: { searchParams: Promise<AccountParams> }) {
   const actor = await getActor({ allowMissingMfa: true });
-  // A staff member signed in as the user sees the page read-only, with only the personal details
-  // they see on the user's page.
-  const shown = personalDataShown(actor);
-  const [params, ownActivity, language, zone, picture, requestEmails, t, tAuth, tAudit, tRoles] =
-    await Promise.all([
-      searchParams,
-      listOwnActivity(appContext, actor),
-      ownLanguage(appContext, actor),
-      ownTimeZone(appContext, actor),
-      ownPictureChoices(appContext, actor),
-      ownRequestEmails(appContext, actor),
-      getTranslations('account'),
-      getTranslations('auth'),
-      getTranslations('audit'),
-      getTranslations('roles'),
-    ]);
+  const [params, picture, t, tAuth] = await Promise.all([
+    searchParams,
+    ownPictureChoices(appContext, actor),
+    getTranslations('account'),
+    getTranslations('auth'),
+  ]);
   const message = accountMessage(t, tAuth, params);
-  const activity = shown.origins
-    ? ownActivity
-    : ownActivity.map((event) => ({ ...event, ip: null, userAgent: null }));
 
   return (
     <>
-      {actor.signedInAs && <SignedInAsNote actor={actor} shown={shown} />}
+      {/* A staff member signed in as the user sees the page read-only. */}
+      {actor.signedInAs && <SignedInAsNote actor={actor} shown={personalDataShown(actor)} />}
       <Card
         title={t('profile.securityTitle')}
         description={
@@ -158,79 +128,12 @@ async function AccountSettings({ searchParams }: { searchParams: Promise<Account
           />
         </ClientMessages>
       </Card>
-      {/* With only one language offered there's nothing to choose. */}
-      {language.offered.length > 1 && (
-        <Card
-          // The page reloads here after the language changed.
-          id={LANGUAGE_SECTION}
-          title={t('profile.languageTitle')}
-          description={t('profile.languageDescription')}
-        >
-          {params.language === 'saved' && (
-            <ToastOnArrival message={t('profile.languageSaved')} param="language" />
-          )}
-          <ClientMessages namespaces={['account']}>
-            <LanguageForm
-              choice={language.choice}
-              defaultLocale={language.defaultLocale}
-              notOffered={language.notOffered}
-            />
-          </ClientMessages>
-        </Card>
-      )}
-      <Card
-        // The page reloads here after the time zone changed.
-        id={TIME_ZONE_SECTION}
-        title={t('profile.timeZoneTitle')}
-        description={t('profile.timeZoneDescription')}
-      >
-        {params.timeZone === 'saved' && (
-          <ToastOnArrival message={t('profile.timeZoneSaved')} param="timeZone" />
-        )}
-        <ClientMessages namespaces={['account']}>
-          <TimeZoneForm
-            timeZone={zone.timeZone ?? zone.defaultTimeZone}
-            options={timeZoneOptions(new Date(), zone.timeZone ?? zone.defaultTimeZone)}
-          />
-        </ClientMessages>
-      </Card>
-      <RequestEmailsCard on={requestEmails} />
-      <Card
-        title={t('profile.activityTitle')}
-        description={
-          activity.length === 0 ? t('profile.activityEmpty') : t('profile.activityDescription')
-        }
-        actions={
-          activity.length > 0 ? (
-            <Button asChild variant="secondary" size="sm">
-              <Link href="/account/security">{t('profile.reviewSecurity')}</Link>
-            </Button>
-          ) : undefined
-        }
-      >
-        {activity.length > 0 && (
-          <ActivityList
-            label={t('profile.activityLabel')}
-            items={activity.map((event) => ({
-              id: event.id,
-              at: event.at,
-              userAgent: event.userAgent,
-              ip: event.ip,
-              description: describeOwnActivity(event, actor.id, {
-                account: t,
-                audit: tAudit,
-                roles: tRoles,
-              }),
-            }))}
-          />
-        )}
-      </Card>
     </>
   );
 }
 
 /**
- * The Profile page of the account.
+ * The Profile tab of the account.
  *
  * @param props - Page props from Next.js.
  * @param props.searchParams - Query parameters.
