@@ -2,8 +2,8 @@
  * @file Tests for what a request list says when it has nothing to show:
  * nothing matches a search or a filter, nothing is active, or (under All,
  * which leaves nothing out) there are no requests yet, and whether it then
- * offers to raise one; its filter menus; and what the staff see of who each
- * request is assigned to.
+ * offers to raise one; its filter menus; what the staff see of who each
+ * request is assigned to; and a long status that wraps in its column.
  */
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -323,6 +323,24 @@ describe('a request list for the staff', () => {
     expect(cell).toHaveTextContent('Morgan Manager and Sam Support');
     expect(shared).toHaveTextContent('Assigned to Morgan Manager and Sam Support');
     expect(nobody).toHaveTextContent('Not assigned');
+  });
+
+  it('lets a long status wrap in its column, so the table fits a tablet', async () => {
+    vi.mocked(listRequests).mockResolvedValue({
+      items: [{ ...itemOf('Waiting', []), status: 'waiting' }],
+      total: 1,
+      page: 1,
+      size: 25,
+    });
+
+    await renderForStaff({ status: 'all' });
+
+    const [row] = screen.getAllByRole('row').slice(1);
+    // Request, then Status.
+    const cell = within(row ?? document.body).getAllByRole('cell')[1];
+    const status = within(cell ?? document.body).getByText('Waiting for the company');
+    expect(status).not.toHaveClass('whitespace-nowrap');
+    expect(status).toHaveClass('max-w-full');
   });
 
   it('filters by Me, Not assigned or a staff member, with "anyone" first', async () => {

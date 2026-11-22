@@ -10,6 +10,7 @@ import type { ReactNode } from 'react';
 import Avatar from '@/components/ui/avatar';
 import Badge from '@/components/ui/badge';
 import TextLink from '@/components/ui/text-link';
+import cn from '@/lib/cn';
 import type { RequestPerson } from '@/server/requests';
 
 import YouBadge from '../_people/you-badge';
@@ -69,25 +70,32 @@ export function PersonAvatar({
  * the person's name on hover (where the names don't fit, as in a table).
  * The avatars are hidden from screen readers: whoever uses this gives the
  * names as text too. Where only the first few people are shown, a block of
- * the same size after them says how many more there are (`more`).
+ * the same size after them says how many more there are (`more`). In a
+ * narrow place, a long row can wrap onto more rows (`wrap`): then they sit
+ * side by side with a small gap instead of overlapping, so the rows line up
+ * (an overlap's negative margin would push each row's first avatar out).
  *
  * @param props - Component props.
  * @param props.people - The people, in the order to show them.
  * @param props.names - The names of the two sides.
  * @param props.more - What the block after the avatars says, e.g. "+3"; no block when left out.
+ * @param props.wrap - Let a long row wrap, as in a table's Assigned to column at tablet width,
+ *   which would otherwise widen the table.
  * @returns The row of avatars.
  */
 export function PeopleAvatars({
   people,
   names,
   more = null,
+  wrap = false,
 }: {
   people: readonly RequestPerson[];
   names: SideNames;
   more?: string | null;
+  wrap?: boolean;
 }) {
   return (
-    <span className="flex -space-x-1">
+    <span className={cn('flex', wrap ? 'flex-wrap gap-1' : '-space-x-1')}>
       {people.map((person, index) => {
         const name = personName(person, names);
         return (

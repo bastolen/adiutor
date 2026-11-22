@@ -129,7 +129,10 @@ function emptyKindOf(status: RequestStatusFilter, narrowed: boolean): EmptyKind 
  * last activity have columns of their own, and the staff get a Priority
  * column, and an Assigned to column with an avatar per person (the name on
  * hover, and as text for screen readers); below that they go under the
- * title. Company users
+ * title. A long status ("Waiting for the company") and a long row of avatars
+ * wrap in their columns, as on the board, and so do the Assigned to heading
+ * and the last activity ("59 minutes ago") below 1280px, where the content is
+ * narrowest, so the table fits a tablet in every language. Company users
  * never get a priority: the service leaves it out. They see who a request
  * is assigned to on its page.
  *
@@ -198,7 +201,8 @@ export default async function RequestList({
    * hover. They sit in a copy of the row's link, above the link that covers
    * the row, so hovering one shows its name and clicking one still opens the
    * request; the copy is left out of the keyboard's and screen readers' way,
-   * which get the names as text next to it.
+   * which get the names as text next to it. A long row of them wraps, so the
+   * Assigned to column never widens the table past a tablet's width.
    *
    * @param request - The request.
    * @returns The linked avatars.
@@ -210,7 +214,7 @@ export default async function RequestList({
       aria-hidden="true"
       className="relative z-10 inline-flex w-fit"
     >
-      <PeopleAvatars people={request.assignees} names={names} />
+      <PeopleAvatars people={request.assignees} names={names} wrap />
     </Link>
   );
   const mayRaise = { canRaise: canRaise ? 'yes' : 'no' };
@@ -265,8 +269,10 @@ export default async function RequestList({
                     {t('columns.priority')}
                   </Th>
                 )}
+                {/* Below 1280px, where the content is narrowest, this heading and the last
+                    activity may wrap, so the table fits; from there on they stay on one line. */}
                 {internal && (
-                  <Th className="hidden whitespace-nowrap md:table-cell">
+                  <Th className="hidden md:table-cell xl:whitespace-nowrap">
                     {t('columns.assignees')}
                   </Th>
                 )}
@@ -281,10 +287,10 @@ export default async function RequestList({
             <tbody>
               {requests.items.map((request) => {
                 // Worded as on the request's own page: the service says how this reader is
-                // addressed in each request's company.
+                // addressed in each request's company. A long status wraps, as on the board.
                 const labels = (
                   <>
-                    <StatusBadge status={request.status} audience={request.audience} />
+                    <StatusBadge status={request.status} audience={request.audience} wrap />
                     {request.reopened && <ReopenedBadge />}
                   </>
                 );
@@ -350,7 +356,7 @@ export default async function RequestList({
                         )}
                       </Td>
                     )}
-                    <Td className="hidden whitespace-nowrap text-muted-foreground md:table-cell">
+                    <Td className="hidden text-muted-foreground md:table-cell xl:whitespace-nowrap">
                       <RelativeTime date={request.lastActivityAt} />
                     </Td>
                     <Td className="w-10 text-right">

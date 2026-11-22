@@ -39,7 +39,8 @@ interface BadgeProps {
   children: ReactNode;
   /**
    * Let a long label wrap onto more lines in a narrow place (a card on the
-   * board) instead of running past its edge. Badges stay on one line otherwise.
+   * board, a table's column at tablet width) instead of running past its edge
+   * or widening the table. Badges stay on one line otherwise.
    */
   wrap?: boolean;
 }

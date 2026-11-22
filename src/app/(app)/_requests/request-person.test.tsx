@@ -4,6 +4,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import type { RequestPerson } from '@/server/requests';
+
 import PersonLine, { PeopleAvatars, PersonAvatar, personName } from './request-person';
 
 /** The names of the two sides of a request. */
@@ -255,5 +257,21 @@ describe('PeopleAvatars', () => {
     // Like the avatars: for the eye, with the names given as text elsewhere.
     expect(more).toHaveAttribute('aria-hidden', 'true');
     expect(container.querySelectorAll('[title]')).toHaveLength(1);
+  });
+
+  it('keeps its row on one line, overlapping, unless asked to wrap it into aligned rows', () => {
+    const people: RequestPerson[] = [
+      { userId: null, name: 'Morgan Manager', side: 'staff', isViewer: false, picture: null },
+      { userId: null, name: 'Sam Support', side: 'staff', isViewer: false, picture: null },
+    ];
+    const { container, rerender } = render(<PeopleAvatars people={people} names={NAMES} />);
+    expect(container.firstElementChild).toHaveClass('-space-x-1');
+    expect(container.firstElementChild).not.toHaveClass('flex-wrap');
+
+    rerender(<PeopleAvatars people={people} names={NAMES} wrap />);
+
+    // Side by side with a gap: an overlap's negative margin would shift each wrapped row.
+    expect(container.firstElementChild).toHaveClass('flex-wrap', 'gap-1');
+    expect(container.firstElementChild).not.toHaveClass('-space-x-1');
   });
 });

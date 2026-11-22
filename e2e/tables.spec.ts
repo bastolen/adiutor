@@ -8,9 +8,10 @@
  */
 import { type Page } from '@playwright/test';
 
-import { findUserId } from './support/db';
+import { findUserId, storeRequest } from './support/db';
 import {
   CLIENT_WATCHER,
+  COMPANY_SLUG,
   NAMELESS_SUPPORT,
   PAGED_LINK_COUNT,
   PAGED_MEMBER_COUNT,
@@ -19,6 +20,7 @@ import {
   PAGING_COMPANY_NAME,
   PAGING_COMPANY_SLUG,
   PLATFORM_ADMIN,
+  REQUESTS_CLIENT,
 } from './support/fixtures';
 import { adminStorageState, type StorageState } from './support/helpers';
 import { expect, test } from './support/test';
@@ -212,11 +214,19 @@ test.describe('on a phone', () => {
 });
 
 test('no table scrolls sideways from tablet to desktop widths', async ({ page }) => {
-  // Ten pages at six widths, one after another.
+  // Twelve pages at six widths, one after another.
   test.setTimeout(150_000);
   const userId = await findUserId(CLIENT_WATCHER.email);
   // The Admin is signed in, so their own page lists at least one device.
   const adminId = await findUserId(PLATFORM_ADMIN.email);
+  // The longest status the staff see, "Waiting for the company", on the first page of every list
+  // of requests below: stored now, so its activity is the latest, whatever other specs stored.
+  await storeRequest({
+    companySlug: COMPANY_SLUG,
+    raisedBy: REQUESTS_CLIENT.email,
+    title: 'Waiting while the tables are measured',
+    status: 'waiting',
+  });
   // The staff member with no name and a long address is the widest row.
   const paths = [
     '/admin/users',
@@ -229,8 +239,12 @@ test('no table scrolls sideways from tablet to desktop widths', async ({ page })
     '/account/activity',
     // Every request, with the staff's Priority column and the longest status.
     '/requests?status=all',
-    // A company's own requests, under its header and tabs.
+    // A lane's link from the board: only the requests that wait for the company.
+    '/requests?only=waiting',
+    // A company's own requests, under its header and tabs: a full page of 25, and the company
+    // with the waiting request.
     `/companies/${PAGING_COMPANY_SLUG}`,
+    `/companies/${COMPANY_SLUG}`,
   ];
 
   // From 1280px the content stops getting wider, so wider screens must fit the same columns.
