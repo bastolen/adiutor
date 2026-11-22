@@ -1,6 +1,7 @@
 /**
  * @file What the two kinds of {@link SelectField} share: the option type,
- * how an option's label is drawn, and the classes of the closed field, the
+ * how an option's label is drawn (with what matches a search marked, in a
+ * searchable one's open list), and the classes of the closed field, the
  * options and the group headings, so a short select and a searchable one
  * look and read the same.
  */
@@ -8,6 +9,7 @@ import type { ReactNode } from 'react';
 
 import cn from '@/lib/cn';
 
+import { matchRange } from './select-option-list';
 import { fieldControl, highlightedItem } from './styles';
 
 /** One option in a {@link SelectField}. */
@@ -66,15 +68,61 @@ export const optionCheck = 'absolute top-2.5 left-2 inline-flex';
 export const groupHeading = 'px-3 pt-2 pb-1 text-xs font-semibold text-muted-foreground';
 
 /**
+ * A group's heading while a search is on: at normal weight, so the part of
+ * it that matches can be semibold, as in an option's label. It keeps its
+ * size and muted colour, so it still reads as a heading.
+ */
+export const searchedGroupHeading = cn(groupHeading, 'font-normal');
+
+/**
+ * The part of a label or a group's heading that matches the search:
+ * semibold, in the text's own colour (a heading is muted around it) and
+ * without a fill of its own, so it reads the same on the active option's
+ * fill, in both modes. In forced colours it takes the system's colours for
+ * a mark, which the person's theme chooses: left to itself, a `<mark>` would
+ * keep the mark's text colour on no fill there, which can't be read.
+ */
+const matchMark =
+  'bg-transparent font-semibold text-foreground forced-colors:bg-[Mark] forced-colors:text-[MarkText]';
+
+/**
+ * A text with the part that matches a search marked (`<mark>`), as the open
+ * list shows it while something is typed (`matchRange`). Its text, and so
+ * the name of the option or group it's in, stays the same.
+ *
+ * @param props - Component props.
+ * @param props.text - The text: a label or a group's heading.
+ * @param props.query - What's typed in the search.
+ * @returns The text, with its match marked when it has one.
+ */
+export function MatchedText({ text, query }: { text: string; query: string }) {
+  const range = matchRange(text, query);
+  if (range === null) {
+    return text;
+  }
+  return (
+    <>
+      {text.slice(0, range.start)}
+      <mark className={matchMark}>{text.slice(range.start, range.end)}</mark>
+      {text.slice(range.end)}
+    </>
+  );
+}
+
+/**
  * An option's label as the list and the closed select show it: its icon
  * first, if any, and the label marked with its language when it has one.
+ * In the open list of a searchable select, the part that matches what's
+ * typed is marked too ({@link MatchedText}); the closed select never marks it.
  *
  * @param props - Component props.
  * @param props.option - The option.
+ * @param props.query - What's typed in the search, to mark the part of the label it matches.
  * @returns The label.
  */
-export function OptionLabel({ option }: { option: SelectOption }) {
-  const label = option.lang ? <span lang={option.lang}>{option.label}</span> : option.label;
+export function OptionLabel({ option, query = '' }: { option: SelectOption; query?: string }) {
+  const text = query ? <MatchedText text={option.label} query={query} /> : option.label;
+  const label = option.lang ? <span lang={option.lang}>{text}</span> : text;
   if (!option.icon) {
     return label;
   }

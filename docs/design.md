@@ -223,7 +223,19 @@ keyboard support.
     Home and End go to the first and last. The active option is filled and outlined
     (`highlightedItem`), scrolled into view under its group's sticky heading, and pointed at with
     `aria-activedescendant`. Only Enter or a click picks; Escape, Tab, Shift+Tab or a click outside
-    close it without a change, and the focus goes back to the field.
+    close it without a change, and the focus goes back to the field. What the keys do, and the
+    scrolling that follows them, is in `searchable-select-keys.ts`.
+  - **What matched** is marked in each option's label, or in its group's heading when that's what
+    matched (`<mark>`, `MatchedText` in `select-options.tsx`): semibold in the text's own colour
+    (`foreground`), with no fill of its own, so it reads the same on the active option's fill and
+    in both modes. While a search is on, the headings, semibold otherwise, are at normal weight
+    (`searchedGroupHeading`) with their size and muted colour, so a match in one is semibold like
+    a match in a label, not set apart by its colour alone. In forced colours a match takes the
+    system's colours for a mark (`Mark`, `MarkText`), which the person's theme chooses: a `<mark>`
+    left to itself keeps the mark's text colour on no fill there, which can't be read. The match
+    is found as the search finds it and mapped back onto the text as it's written (`matchRange` in
+    `select-option-list.ts`), so it covers whole letters with their accents ("sao" marks "São").
+    The text, and so the option's name, stays the same, and the closed field never marks anything.
   - **What it says:** a screen reader hears how many options match once typing pauses (a status,
     after 400ms), and "No options match your search." also shows on screen.
   - **Forms, busy and coming back:** the value goes in a hidden input, so forms submit it as before,

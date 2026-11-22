@@ -8,6 +8,7 @@ import {
   foldForSearch,
   groupOptions,
   matchingOptions,
+  matchRange,
   movedIndex,
   PAGE_STEP,
 } from './select-option-list';
@@ -119,5 +120,102 @@ describe('movedIndex', () => {
     expect(movedIndex('ArrowLeft', 1, 3)).toBeUndefined();
     expect(movedIndex('a', 1, 3)).toBeUndefined();
     expect(movedIndex('ArrowDown', -1, 0)).toBeUndefined();
+  });
+});
+
+describe('matchRange', () => {
+  /** An acute accent written as a character of its own, after its letter (U+0301). */
+  const COMBINING_ACUTE = String.fromCodePoint(0x301);
+  /** The second letter of the Korean syllable 서, as the syllable folds into its letters. */
+  const KOREAN_EO = String.fromCodePoint(0x1165);
+
+  /**
+   * The part of a text a search matches.
+   *
+   * @param text - The text.
+   * @param query - What's typed.
+   * @returns The matched part as it's written, or `null` for no match.
+   */
+  const matched = (text: string, query: string) => {
+    const range = matchRange(text, query);
+    return range && text.slice(range.start, range.end);
+  };
+
+  it('finds the first match, case and the spaces around what’s typed aside', () => {
+    expect(matchRange('Amsterdam (UTC+01:00)', 'AMST')).toEqual({ start: 0, end: 4 });
+    expect(matched('Amsterdam (UTC+01:00)', '  dam ')).toBe('dam');
+    expect(matched('Europe', 'e')).toBe('E');
+  });
+
+  it('covers the letters as they’re written, with their accents', () => {
+    expect(matched('São Paulo (UTC−03:00)', 'sao p')).toBe('São P');
+    expect(matched('Sao Paulo', 'são')).toBe('Sao');
+    expect(matched('İstanbul', 'ist')).toBe('İst');
+  });
+
+  it('keeps an accent written as a character of its own with its letter', () => {
+    const cafe = `Cafe${COMBINING_ACUTE} Paris`;
+    expect(matched(cafe, 'cafe')).toBe(`Cafe${COMBINING_ACUTE}`);
+    expect(matched(cafe, 'é p')).toBe(`e${COMBINING_ACUTE} P`);
+    expect(matched(cafe, 'paris')).toBe('Paris');
+  });
+
+  it('keeps any other character that folds to nothing out of the match’s end', () => {
+    // A middle dot and a spacing accent fold to nothing, but aren't part of the letter before.
+    expect(matched('l·l', 'l')).toBe('l');
+    expect(matched('a^b', 'a')).toBe('a');
+  });
+
+  it('reads the minus sign of an offset as a hyphen', () => {
+    expect(matched('New York (UTC−05:00)', '-05')).toBe('−05');
+  });
+
+  it('keeps a character whose folded form is longer whole', () => {
+    // A Korean syllable folds into its letters: a match of one letter covers the syllable.
+    expect(matched('서울', '서')).toBe('서');
+    expect(matched('서울', KOREAN_EO)).toBe('서');
+  });
+
+  it('matches a word that ends in a capital sigma, which lower-cases to a final sigma', () => {
+    expect(matched('ΟΔΟΣ', 'ος')).toBe('ΟΣ');
+    expect(matched('ΑΣ ΑΘΗΝΑ', 'ας')).toBe('ΑΣ');
+  });
+
+  it('counts a character outside the first plane as the two it’s stored as', () => {
+    expect(matched('Ice 🧊 Cave', 'cave')).toBe('Cave');
+    expect(matched('Ice 🧊 Cave', '🧊')).toBe('🧊');
+    expect(matched('🏳️‍🌈 Pride (UTC)', 'pride')).toBe('Pride');
+    // A capital of the Deseret alphabet, two characters long, lower-cases to another two.
+    expect(matched('𐐀𐐁 Deseret', '𐐩')).toBe('𐐁');
+  });
+
+  it('finds nothing for an empty search or a text that doesn’t match', () => {
+    expect(matchRange('Europe', '')).toBeNull();
+    expect(matchRange('Europe', '   ')).toBeNull();
+    expect(matchRange('Europe', 'asia')).toBeNull();
+  });
+
+  it('marks the label or the heading wherever matchingOptions shows an option, and nowhere else', () => {
+    const options = [
+      ...zones,
+      { label: `Cafe${COMBINING_ACUTE} Paris`, group: 'Europe' },
+      { label: 'ΟΔΟΣ', group: 'Ελλάδα' },
+      { label: 'Ice 🧊 Cave', group: 'Arctic' },
+      { label: '서울', group: 'Asia' },
+    ];
+    const queries = ['a', 'eur', 'ος', 'cafe', 'é', 'cave', '-05', 'zur', '서', 'λλα'];
+    queries.forEach((query) => {
+      options.forEach((option) => {
+        const inLabel = matchRange(option.label, query) !== null;
+        const inHeading = option.group !== undefined && matchRange(option.group, query) !== null;
+        expect(inLabel || inHeading).toBe(matchingOptions([option], query).length === 1);
+        expect(inLabel).toBe(foldForSearch(option.label).includes(foldForSearch(query)));
+      });
+    });
+    // One shown for its heading only: the heading is marked, the label isn't.
+    const amsterdam = { label: 'Amsterdam (UTC+01:00)', group: 'Europe' };
+    expect(matchingOptions([amsterdam], 'eur')).toEqual([amsterdam]);
+    expect(matchRange(amsterdam.label, 'eur')).toBeNull();
+    expect(matched(amsterdam.group, 'eur')).toBe('Eur');
   });
 });
