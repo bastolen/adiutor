@@ -103,6 +103,24 @@ async function chooseTab(page: Page, section: string, tab: string, heading: stri
 }
 
 /**
+ * The ids more than one element in the page has. Next keeps the pages it
+ * showed last alive (hidden), so two tabs' pages are in the document at once,
+ * and an id they share would point a label or a card's name at the wrong one.
+ *
+ * @param page - The browser page.
+ * @returns The ids that aren't unique.
+ */
+function duplicateIds(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const counts = new Map<string, number>();
+    document.querySelectorAll('[id]').forEach((element) => {
+      counts.set(element.id, (counts.get(element.id) ?? 0) + 1);
+    });
+    return [...counts].filter(([, count]) => count > 1).map(([id]) => id);
+  });
+}
+
+/**
  * The mouse cursor shown over an element.
  *
  * @param locator - The element.
@@ -681,6 +699,8 @@ test.describe('signed in', () => {
     await chooseTab(page, 'Company sections', 'Requests', COMPANY_NAME);
     await expect(page).toHaveURL(`/companies/${COMPANY_SLUG}`);
     await expect(page).toHaveTitle(`Requests · ${COMPANY_NAME} · Adiutor`);
+    // Both pages are in the document now (Next keeps the one before alive), sharing no id.
+    expect(await duplicateIds(page)).toEqual([]);
 
     // The account's tabs, reached from the account menu without reloading.
     await accountMenu.click();
