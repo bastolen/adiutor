@@ -1,5 +1,5 @@
 /**
- * @file The "Account" card on the user detail page: the user's email address
+ * @file The "Account" card on the Overview tab of a user's page: the user's email address
  * and whether it's verified, whether the account is active, when they were
  * last active and when the account was created. Text from `admin.user.account`.
  */

@@ -27,7 +27,7 @@ import {
 } from './support/fixtures';
 import {
   openAccountSettings,
-  openUser,
+  openUserTab,
   signIn,
   signInAsUser,
   toasts,
@@ -90,7 +90,7 @@ test('a staff Admin signs in as a Manager, changes nothing, and goes back', asyn
 
   // Back to the Admin's own account, on the card they started from.
   await banner.getByRole('button', { name: 'Back to my account' }).click();
-  await expect(page).toHaveURL(`/admin/users/${managerId}#sign-in-as`);
+  await expect(page).toHaveURL(`/admin/users/${managerId}/manage#sign-in-as`);
   await expect(toasts(page)).toContainText("You're back in your own account.");
   await expect(page.getByRole('region', { name: 'Signed in as someone else' })).toHaveCount(0);
 
@@ -112,7 +112,7 @@ test('the account pages show whoever the Admin is signed in as, also when Next k
   const banner = page.getByRole('region', { name: 'Signed in as someone else' });
   const name = page.getByRole('textbox', { name: 'Name', exact: true });
   await signIn(page, PLATFORM_ADMIN);
-  await openUser(page, STEP_UP_MANAGER.name);
+  await openUserTab(page, STEP_UP_MANAGER.name, 'Manage');
   // The Admin's own Profile page, opened with a click, so Next keeps it alive with its fields.
   await openAccountSettings(page);
   await expect(name).toHaveValue(PLATFORM_ADMIN.name);
@@ -130,7 +130,7 @@ test('the account pages show whoever the Admin is signed in as, also when Next k
 
   // Back in their own account, the Admin's Profile page shows the Admin again, not the Manager.
   await banner.getByRole('button', { name: 'Back to my account' }).click();
-  await expect(page).toHaveURL(`/admin/users/${managerId}#sign-in-as`);
+  await expect(page).toHaveURL(`/admin/users/${managerId}/manage#sign-in-as`);
   await expect(toasts(page)).toContainText("You're back in your own account.");
   await openAccountSettings(page);
   await expect(name).toHaveValue(PLATFORM_ADMIN.name);
@@ -231,12 +231,12 @@ test('signed in as a company Admin who must set up MFA, the Admin sees what they
 test('Support is told why they can’t sign in as someone', async ({ page }) => {
   await signIn(page, SUPPORT_STAFF);
 
-  await openUser(page, COMPANY_OWNER.name);
+  await openUserTab(page, COMPANY_OWNER.name, 'Manage');
   await expect(page.getByText("Support can't sign in as a company Admin.")).toBeVisible();
   await expect(page.getByRole('button', { name: 'Sign in as user' })).toBeDisabled();
 
   // A Watcher is within Support's reach, but this Support member has no strong MFA yet.
-  await openUser(page, CLIENT_WATCHER.name);
+  await openUserTab(page, CLIENT_WATCHER.name, 'Manage');
   await expect(page.getByRole('link', { name: 'Security page' })).toHaveAttribute(
     'href',
     '/account/security#passkeys',
@@ -275,7 +275,7 @@ test('a user turns sign-ins by staff off, which ends one under way and keeps sta
       PLATFORM_ADMIN.name,
     );
 
-    await openUser(admin, CLIENT_WATCHER.name);
+    await openUserTab(admin, CLIENT_WATCHER.name, 'Manage');
     await expect(admin.getByText('This user has turned off sign-ins by staff.')).toBeVisible();
     await expect(admin.getByRole('button', { name: 'Sign in as user' })).toBeDisabled();
   } finally {

@@ -18,6 +18,7 @@ import {
   pagedMemberName,
   PAGING_COMPANY_NAME,
   PAGING_COMPANY_SLUG,
+  PLATFORM_ADMIN,
 } from './support/fixtures';
 import { adminStorageState, type StorageState } from './support/helpers';
 import { expect, test } from './support/test';
@@ -211,9 +212,11 @@ test.describe('on a phone', () => {
 });
 
 test('no table scrolls sideways from tablet to desktop widths', async ({ page }) => {
-  // Nine pages at six widths, one after another.
-  test.setTimeout(120_000);
+  // Ten pages at six widths, one after another.
+  test.setTimeout(150_000);
   const userId = await findUserId(CLIENT_WATCHER.email);
+  // The Admin is signed in, so their own page lists at least one device.
+  const adminId = await findUserId(PLATFORM_ADMIN.email);
   // The staff member with no name and a long address is the widest row.
   const paths = [
     '/admin/users',
@@ -221,7 +224,8 @@ test('no table scrolls sideways from tablet to desktop widths', async ({ page })
     '/admin/settings/staff',
     '/admin/companies',
     membersPath,
-    `/admin/users/${userId}`,
+    `/admin/users/${userId}/companies`,
+    `/admin/users/${adminId}/activity`,
     '/account/security',
     // Every request, with the staff's Priority column and the longest status.
     '/requests?status=all',

@@ -10,7 +10,13 @@ import {
   providerLinkedCookieValue,
   providerStepUpCookieValue,
 } from '../src/lib/sign-in/oauth-providers';
-import { forgetLimitsOf, resetActivityView, storeEntries, storeRequest } from './support/db';
+import {
+  findUserId,
+  forgetLimitsOf,
+  resetActivityView,
+  storeEntries,
+  storeRequest,
+} from './support/db';
 import {
   ACTIVITY_CLIENT,
   CLIENT_WATCHER,
@@ -27,7 +33,7 @@ import {
   adminStorageState,
   answerPictures,
   markdownEditor,
-  openUser,
+  openUserTab,
   signIn,
   signInAsUser,
   type StorageState,
@@ -638,7 +644,7 @@ test.describe('signed in', () => {
   });
 
   test('an action dialog keeps focus inside and returns it on Escape', async ({ page }) => {
-    await openUser(page, CLIENT_WATCHER.name);
+    await openUserTab(page, CLIENT_WATCHER.name, 'Manage');
     const trigger = page.getByRole('button', { name: 'Delete', exact: true });
 
     await trigger.focus();
@@ -726,6 +732,35 @@ test.describe('signed in', () => {
     await chooseTab(page, 'Settings sections', 'General', 'Settings');
     await expect(page).toHaveURL('/admin/settings');
     await expect(page).toHaveTitle('Settings · Adiutor');
+  });
+
+  test('choosing a tab of a user’s page keeps focus on it, now the current one', async ({
+    page,
+  }) => {
+    const userId = await findUserId(CLIENT_WATCHER.email);
+    const base = `/admin/users/${userId}`;
+    await page.goto(base);
+    // Once the account menu opens, the page has hydrated: Enter on a tab is a client-side move.
+    const accountMenu = page.getByRole('button', { name: /^Account menu/ });
+    await accountMenu.click();
+    await expect(page.getByRole('menu')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(accountMenu).toBeFocused();
+
+    await chooseTab(page, 'User sections', 'Companies', CLIENT_WATCHER.name);
+    await expect(page).toHaveURL(`${base}/companies`);
+    await expect(page).toHaveTitle('Companies · User · Adiutor');
+    await chooseTab(page, 'User sections', 'Activity', CLIENT_WATCHER.name);
+    await expect(page).toHaveURL(`${base}/activity`);
+    await expect(page).toHaveTitle('Activity · User · Adiutor');
+    await chooseTab(page, 'User sections', 'Manage', CLIENT_WATCHER.name);
+    await expect(page).toHaveURL(`${base}/manage`);
+    await expect(page).toHaveTitle('Manage · User · Adiutor');
+    await chooseTab(page, 'User sections', 'Overview', CLIENT_WATCHER.name);
+    await expect(page).toHaveURL(base);
+    await expect(page).toHaveTitle('User · Adiutor');
+    // Every tab's page is kept alive now, and none shares an id with another.
+    expect(await duplicateIds(page)).toEqual([]);
   });
 
   test('the date range form goes From, To, Apply, and Enter applies it', async ({ page }) => {
@@ -828,7 +863,7 @@ test.describe('signed in as a user', () => {
     await expect(back).toBeFocused();
 
     await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/#sign-in-as$/);
+    await expect(page).toHaveURL(/\/manage#sign-in-as$/);
     await expect(page.getByRole('heading', { name: 'Sign in as user' })).toBeFocused();
   });
 });

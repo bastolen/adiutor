@@ -1,5 +1,5 @@
 /**
- * @file Tests for the "Sign in as user" card on the user detail page: it
+ * @file Tests for the "Sign in as user" card on the Manage tab of a user's page: it
  * opens a dialog with an optional reason when the rules allow it, says why
  * and keeps the button disabled when they don't, sends a staff member
  * without a recent strong confirmation to the step-up page in strong mode,
@@ -18,7 +18,7 @@ const { signInAsAction, push, loadFresh } = vi.hoisted(() => ({
   loadFresh: vi.fn(),
 }));
 
-vi.mock('./actions', () => ({ signInAsAction }));
+vi.mock('../actions', () => ({ signInAsAction }));
 
 vi.mock('@/components/ui/load-fresh', () => ({ default: loadFresh }));
 

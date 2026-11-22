@@ -316,7 +316,7 @@ does, to check what isn't working for them. The reasons are in
   [Security](#security-accountsecurity)).
 
 - **Starting** (`startImpersonation` in `src/server/auth/impersonation.ts`):
-  - It starts from the **Sign in as user** card on the user's page (see
+  - It starts from the **Sign in as user** card on the Manage tab of the user's page (see
     [Staff screens](companies-and-roles.md#staff-screens)). Its dialog asks for an optional reason,
     then loads the dashboard afresh as the user (`signInAsAction`, then the dialog's
     `loadOnSuccess`). The card says why when it isn't possible.
@@ -355,7 +355,7 @@ does, to check what isn't working for them. The reasons are in
   - The account menu shows the user, labelled "Signed in as". **Back to my account** takes Sign
     out's place there, since signing out would end the staff member's own session.
   - Back to my account (`backToOwnAccountAction`, `stopSigningInAs`) records `impersonation_ended`
-    with `stopped`. It returns to where the staff member started (the user's page, at the card),
+    with `stopped`. It returns to where the staff member started (the user's Manage tab, at the card),
     with a toast (`showToastAfterLoad`).
   - Starting and going back both end with a full page load (`loadFresh`), never a navigation
     within the app: Next keeps the last few pages alive with what's in their fields, so a Profile

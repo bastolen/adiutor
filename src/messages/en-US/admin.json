@@ -53,7 +53,17 @@
     },
     "user": {
       "title": "User",
+      "companiesTitle": "Companies · User",
+      "activityTitle": "Activity · User",
+      "manageTitle": "Manage · User",
       "back": "Users",
+      "tabs": {
+        "label": "User sections",
+        "overview": "Overview",
+        "companies": "Companies",
+        "activity": "Activity",
+        "manage": "Manage"
+      },
       "deactivatedNotice": "This account was deactivated on {date}. It can't sign in until an Admin reactivates it.",
       "self": {
         "signInOnly": "This is your own account. Change your sign-in methods on your <security>Security page</security>.",

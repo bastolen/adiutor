@@ -79,7 +79,7 @@ export function confirmChangeUrlFor(formData: FormData, fallback: string): strin
  * (`strongStepUpMethods`), returning to a page of the app once confirmed.
  *
  * @param returnTo - The page to come back to, already a safe app path, e.g.
- *   `/admin/users/<id>#sign-in-as`.
+ *   `/admin/users/<id>/manage#sign-in-as`.
  * @returns The step-up page's address.
  */
 export function confirmStrongUrl(returnTo: string): string {

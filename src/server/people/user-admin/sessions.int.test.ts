@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { company, session } from '@/db/schema';
 import type { Paged } from '@/lib/tables/table-state';
 
-import { getUserDetail, listUserSessions, type UserSession } from '.';
+import { listUserDevices, listUserSessions, type UserSession } from '.';
 import { addMember, createSession, createUser } from '../../../../tests/integration/helpers';
 import { admin, createSessionsOnJanuaryDays, ctx, db, jane, testCompany } from './test-helpers';
 
@@ -55,8 +55,8 @@ describe('which sessions count as MFA verified', () => {
     });
   });
 
-  it('decides it with the user’s role now on the user detail page', async () => {
-    expect(byBrowser((await getUserDetail(ctx, admin, anna)).sessions)).toEqual({
+  it('decides it with the user’s role now on their page (listUserDevices)', async () => {
+    expect(byBrowser(await listUserDevices(ctx, admin, anna))).toEqual({
       Firefox: false,
       Safari: true,
     });
@@ -65,7 +65,7 @@ describe('which sessions count as MFA verified', () => {
       .update(company)
       .set({ deactivatedAt: new Date() })
       .where(eq(company.id, testCompany.id));
-    expect(byBrowser((await getUserDetail(ctx, admin, anna)).sessions)).toEqual({
+    expect(byBrowser(await listUserDevices(ctx, admin, anna))).toEqual({
       Firefox: true,
       Safari: true,
     });

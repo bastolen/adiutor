@@ -7,6 +7,7 @@
  */
 import { type Page } from '@playwright/test';
 
+import { findUserId } from './support/db';
 import {
   CLIENT_WATCHER,
   COMPANY_NAME,
@@ -198,6 +199,10 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
       ],
       (path) => expectNotFound(page, path),
     );
+    // A user's page, but not its Activity tab: Support see neither devices nor the audit log.
+    const watcher = `/admin/users/${await findUserId(CLIENT_WATCHER.email)}`;
+    await expectTitle(page, `${watcher}/companies`, 'Companies · User · Adiutor');
+    await expectNotFound(page, `${watcher}/activity`);
     await expectTitle(page, '/admin/users', 'Users · Adiutor');
     await expectTitle(page, '/admin/companies', 'Companies · Adiutor');
     await expectTitle(page, companyPage('members'), `Members · ${COMPANY_NAME} · Adiutor`);
@@ -212,6 +217,17 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
 
     await openUser(page, PLATFORM_ADMIN.name);
     await expect(page).toHaveTitle('User · Adiutor');
+    // Every tab of someone else's page, each with its title; your own page has no Manage tab.
+    const watcher = `/admin/users/${await findUserId(CLIENT_WATCHER.email)}`;
+    await eachInTurn(
+      [
+        { path: `${watcher}/companies`, title: 'Companies · User · Adiutor' },
+        { path: `${watcher}/activity`, title: 'Activity · User · Adiutor' },
+        { path: `${watcher}/manage`, title: 'Manage · User · Adiutor' },
+      ],
+      ({ path, title }) => expectTitle(page, path, title),
+    );
+    await expectNotFound(page, `/admin/users/${await findUserId(PLATFORM_ADMIN.email)}/manage`);
 
     await expectNotFound(page, `/admin/users/${UNKNOWN_USER_ID}`);
     await expectNotFound(page, '/admin/users/not-an-id');

@@ -1,5 +1,5 @@
 /**
- * @file The "Sign in as user" card on the user detail page, for staff who may
+ * @file The "Sign in as user" card on the Manage tab of a user's page, for staff who may
  * sign in as someone (staff Admins, Managers and Support) on someone else's
  * page: what it does, and a dialog that starts it, with an optional reason.
  * When the rules don't allow it for this user (`mayImpersonate`), the card
@@ -26,7 +26,7 @@ import { IMPERSONATION_REASON_MAX_LENGTH } from '@/lib/input-rules';
 import { DEFAULT_SIGNED_IN_PATH } from '@/lib/redirect';
 import { confirmationWindow } from '@/lib/sign-in/confirm-url';
 
-import { signInAsAction } from './actions';
+import { signInAsAction } from '../actions';
 
 /**
  * Props for {@link SignInAsCard}.

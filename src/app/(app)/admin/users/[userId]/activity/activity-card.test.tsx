@@ -1,5 +1,5 @@
 /**
- * @file Tests for the "Recent activity" card on the user detail page: the
+ * @file Tests for the "Recent activity" card on the Activity tab of a user's page: the
  * empty state, naming who acted only when it was someone else, and the
  * company or staff change an event was about.
  */

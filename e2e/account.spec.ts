@@ -18,7 +18,7 @@ import {
 import {
   answerPictures,
   fillAndSubmitSignIn,
-  openUser,
+  openUserTab,
   signIn,
   submitPassword,
   toasts,
@@ -151,7 +151,7 @@ test('a user deactivates their account and an Admin reactivates it', async ({ pa
   await expect(
     admin.getByRole('main').getByRole('cell', { name: DEACTIVATE_CLIENT.email, exact: true }),
   ).toBeVisible();
-  await openUser(admin, DEACTIVATE_CLIENT.name);
+  await openUserTab(admin, DEACTIVATE_CLIENT.name, 'Manage');
   await admin.getByRole('button', { name: 'Reactivate' }).click();
   await admin.getByRole('alertdialog').getByRole('button', { name: 'Reactivate' }).click();
   await expect(toasts(admin)).toContainText('Account reactivated.');
