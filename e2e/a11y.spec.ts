@@ -103,7 +103,9 @@ const APP_PATHS = [
   '/admin/logs/errors?q=not-a-reference',
   '/admin/logs/jobs',
   '/account',
+  '/account/preferences',
   '/account/security',
+  '/account/activity',
   '/companies/{company}',
   '/companies/{company}/members',
   // More members and invite links than fit on a page: pagination, a sorted column, the last page.

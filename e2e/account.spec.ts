@@ -104,7 +104,9 @@ test('verify your email from the account page, keeping your password', async ({
   await expect(page.getByText('Verified', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Send verification email' })).toHaveCount(0);
 
-  // The account's recent activity shows the sign-in and the verification, newest first.
+  // The account's recent activity (its Activity tab) shows the sign-in and the verification, newest
+  // first.
+  await page.goto('/account/activity');
   const activity = page.getByRole('list', { name: 'Your recent activity' });
   await expect(activity.getByRole('listitem').first()).toContainText('Verified your email address');
   await expect(activity).toContainText('Signed in with a password');
@@ -179,7 +181,7 @@ test('a user signs out their other devices, which also forgets trusted browsers'
   await expect(other).toHaveURL('/dashboard');
   await signIn(page, SESSIONS_CLIENT);
 
-  await page.goto('/account/security');
+  await page.goto('/account/activity');
   const devices = page.getByRole('table', { name: 'Your signed-in devices' });
   await expect(devices.getByRole('row')).toHaveCount(3);
   await expect(devices.getByText('This device')).toBeVisible();

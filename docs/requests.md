@@ -324,7 +324,7 @@ written and sent is in [Email](email.md), and the jobs that send them in
   `setOwnRequestEmails`) stops all of them, also for the requests assigned to someone; it's
   checked when an email is sent, so it also stops what's on its way. The footer says why the
   reader gets the email (the request is assigned to them, or they're subscribed) and links to
-  both: Unsubscribe for a subscriber, and the account's card (`/account#request-emails`).
+  both: Unsubscribe for a subscriber, and the account's card (`/account/preferences#request-emails`).
 - **In the reader's language** (`recipientLocale`), like every email.
 - **Nothing meant for the staff reaches a company:** replies, status changes and assignments are
   what everyone on a request sees anyway; a change of priority is never queued. An internal note,

@@ -1,6 +1,6 @@
 /**
  * @file Messages of the account pages: after coming back from an email
- * verification link (shown in the Profile page's Email card) or from
+ * verification link (shown in the Profile tab's Email card) or from
  * connecting GitHub/Google (in the Security page's Connected accounts card),
  * and for a refused disconnect, in the reader's language (`account.messages`).
  */
@@ -29,14 +29,14 @@ export interface AccountMessage {
 /** The anchor of the Profile page's Email card, where verifying the address starts and ends. */
 export const EMAIL_SECTION = 'email';
 
-/** The anchor of the Profile page's Language card, where the page reloads after a change. */
+/** The anchor of the Preferences tab's Language card, where the page reloads after a change. */
 export const LANGUAGE_SECTION = 'language';
 
-/** The anchor of the Profile page's Time zone card, where the page reloads after a change. */
+/** The anchor of the Preferences tab's Time zone card, where the page reloads after a change. */
 export const TIME_ZONE_SECTION = 'time-zone';
 
 /**
- * The anchor of the Profile page's card for emails about requests, which
+ * The anchor of the Preferences tab's card for emails about requests, which
  * those emails' footers link to (`REQUEST_EMAILS_PATH` in
  * `src/emails/request-update.tsx`).
  */

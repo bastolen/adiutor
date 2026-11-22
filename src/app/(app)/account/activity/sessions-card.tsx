@@ -1,5 +1,5 @@
 /**
- * @file The "Signed-in devices" card on the Security page: where the user
+ * @file The "Signed-in devices" card on the Activity tab: where the user
  * is signed in, with sign-out per device and for every other device. Both
  * also forget every browser the user trusted at the code step. A server
  * component: the texts it gives the table and the buttons are translated

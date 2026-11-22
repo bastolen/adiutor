@@ -10,8 +10,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SignedInAsMarker } from '@/components/ui/signed-in-as';
 import { timeZoneOptions } from '@/lib/i18n/time-zones';
 
-import renderInLocale from '../../../../tests/i18n/render';
-import { saveTimeZoneAction } from './actions';
+import renderInLocale from '../../../../../tests/i18n/render';
+import { saveTimeZoneAction } from '../actions';
 import TimeZoneForm from './time-zone-form';
 
 /** The full page load and the browser's zone, mocked. */
@@ -20,12 +20,12 @@ const { loadFresh, useBrowserTimeZone } = vi.hoisted(() => ({
   useBrowserTimeZone: vi.fn<() => string | null>(() => null),
 }));
 
-vi.mock('./actions', () => ({ saveTimeZoneAction: vi.fn() }));
+vi.mock('../actions', () => ({ saveTimeZoneAction: vi.fn() }));
 vi.mock('@/components/ui/load-fresh', () => ({ default: loadFresh }));
 vi.mock('@/lib/i18n/use-browser-time-zone', () => ({ default: useBrowserTimeZone }));
 
 /** Where the action sends the page once the zone is saved. */
-const SAVED_PATH = '/account?timeZone=saved#time-zone';
+const SAVED_PATH = '/account/preferences?timeZone=saved#time-zone';
 
 /** The zones to pick from, as the page makes them. */
 const OPTIONS = timeZoneOptions(new Date('2026-12-01T12:00:00Z'), 'Europe/Amsterdam');

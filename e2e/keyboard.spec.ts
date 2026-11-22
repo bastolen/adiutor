@@ -179,7 +179,7 @@ async function stickyLayersBottom(page: Page): Promise<number> {
 /**
  * Checks that a control the keyboard goes back to comes out from under the
  * sticky layers. On the account's Security page, with focus on the Security
- * tab, it scrolls the Profile tab before it to just under the top of the
+ * tab, it scrolls the Preferences tab before it to just under the top of the
  * screen (where the layers cover it, but the browser counts it as visible)
  * and presses Shift+Tab.
  *
@@ -187,26 +187,26 @@ async function stickyLayersBottom(page: Page): Promise<number> {
  */
 async function expectShiftTabClearsStickyLayers(page: Page): Promise<void> {
   const tabs = page.getByRole('navigation', { name: 'Account sections' });
-  const profile = tabs.getByRole('link', { name: 'Profile' });
+  const previous = tabs.getByRole('link', { name: 'Preferences' });
   const security = tabs.getByRole('link', { name: 'Security' });
   await security.focus();
 
   // Retried while the page's cards stream in: it has to be long enough to scroll that far.
   await expect(async () => {
-    await profile.evaluate((element) =>
+    await previous.evaluate((element) =>
       window.scrollBy(0, element.getBoundingClientRect().top - 8),
     );
-    const top = (await profile.boundingBox())?.y ?? -1;
-    expect(top, 'the Profile tab is on screen').toBeGreaterThanOrEqual(0);
-    expect(top, 'the Profile tab is under the sticky layers').toBeLessThan(
+    const top = (await previous.boundingBox())?.y ?? -1;
+    expect(top, 'the Preferences tab is on screen').toBeGreaterThanOrEqual(0);
+    expect(top, 'the Preferences tab is under the sticky layers').toBeLessThan(
       await stickyLayersBottom(page),
     );
   }).toPass();
 
   await page.keyboard.press('Shift+Tab');
-  await expect(profile).toBeFocused();
+  await expect(previous).toBeFocused();
   await expect(async () => {
-    const top = (await profile.boundingBox())?.y ?? -1;
+    const top = (await previous.boundingBox())?.y ?? -1;
     expect(top, 'the focused tab is below the sticky layers').toBeGreaterThanOrEqual(
       await stickyLayersBottom(page),
     );
@@ -715,6 +715,12 @@ test.describe('signed in', () => {
     await expect(accountMenu).toBeFocused();
     await chooseTab(page, 'Account sections', 'Security', 'Account');
     await expect(page).toHaveURL('/account/security');
+    await chooseTab(page, 'Account sections', 'Preferences', 'Account');
+    await expect(page).toHaveURL('/account/preferences');
+    await expect(page).toHaveTitle('Preferences · Account · Adiutor');
+    await chooseTab(page, 'Account sections', 'Activity', 'Account');
+    await expect(page).toHaveURL('/account/activity');
+    await expect(page).toHaveTitle('Activity · Account · Adiutor');
 
     // The Settings tabs, reached from the menu: each one's title is its own.
     const settingsLink = page

@@ -1,5 +1,5 @@
 /**
- * @file Form to choose the user's language, on the account's Profile page.
+ * @file Form to choose the user's language, on the account's Preferences tab.
  */
 'use client';
 
@@ -15,7 +15,7 @@ import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import { type LanguageChoice, type Locale, LOCALE_NAMES } from '@/lib/i18n/locales';
 
-import { saveLanguageAction } from './actions';
+import { saveLanguageAction } from '../actions';
 
 /** Props for {@link LanguageForm}. */
 interface LanguageFormProps {

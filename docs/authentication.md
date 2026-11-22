@@ -133,7 +133,7 @@ the sort and page of its tables, and the anchor of the card where they clicked. 
   asks for it, e.g. **Resend** on a staff invitation goes to
   `/auth/verify?callbackURL=%2Fadmin%2Fstaff%3Finv-page%3D2%23invitations&for=change`;
 - connecting GitHub or Google from the Security page, which returns to `#connected-accounts`;
-- the email verification link, which returns to the Profile page's Email card
+- the email verification link, which returns to the Profile tab's Email card
   (`/account?verified=1#email`);
 - signing in again, with every method (password and its code step, passkey, email link,
   provider).
@@ -387,7 +387,7 @@ does, to check what isn't working for them. The reasons are in
     (`actingUserId`), and its transaction checks again that the sign-in still holds.
   - The authorization matrix tries every change with a staff member signed in as the acting user:
     the user's own work (`OWN_WORK`) gets what the user would get, everything else is refused.
-- **The user's account pages** (Profile and Security) show as the user sees them, read-only, with a
+- **The user's account pages** (Profile, Preferences, Security and Activity) show as the user sees them, read-only, with a
   note at the top. Their controls are off, like everywhere outside requests. They show only the personal details
   the staff member sees on the user's page (`personalDataShown` in
   `src/lib/authz/impersonation.ts`, from `signedInAs.staffPermissions`):
@@ -423,28 +423,23 @@ does, to check what isn't working for them. The reasons are in
 
 ## Account pages
 
-Account pages, two tabs:
+Account pages, four tabs, each a page of its own under the account layout (`src/app/(app)/account/`):
 
 ### Profile (`/account`)
 
-Change your name, your language (saved with the account, so emails reach you in it and every
-browser you sign in on shows it; see [Languages](i18n.md#how-the-language-is-chosen)) and your time
-zone (pick one, or this browser's, which set it the first time; see
-[Time zones](i18n.md#time-zones)), turn **Emails about requests** off or on (`#request-emails`,
-which those emails' footers link to; `setOwnRequestEmails` in `src/server/people/request-emails.ts`,
-see [Emails](requests.md#emails)), and verify
-your email with a link sent by email (registered accounts start unverified). A summary shows whether your sign-in is
-protected, and **Recent activity** lists the last 20 things that happened to your account
-(sign-ins and failed attempts, sign-in method and security changes, memberships and role
-changes, saying who made changes for you, and staff signing in as you and ending it, naming
-them), with when, and the device and IP address of your
-own actions only: not of an admin's changes, nor of passwords typed for your address (wrong
-ones, or right ones whose sign-in then asked for the code) and wrong codes typed at that code step
-("Wrong two-step verification code entered at sign-in", see
-[Two-step verification](mfa.md#two-step-verification)), which may be anyone's (staff see
-those in the audit log) (`listOwnActivity` in
-`src/server/audit.ts`, worded in your language by `src/app/(app)/account/own-activity.ts`: one
-whole sentence per event, with who made the change, if not you, where each language puts it).
+Change your name and picture, and verify your email with a link sent by email (registered
+accounts start unverified; the link comes back to the Email card, `#email`). A summary shows
+whether your sign-in is protected, with a link to the Security tab.
+
+### Preferences (`/account/preferences`)
+
+Change your language (saved with the account, so emails reach you in it and every browser you sign
+in on shows it; see [Languages](i18n.md#how-the-language-is-chosen)) and your time zone (pick one,
+or this browser's, which set it the first time; see [Time zones](i18n.md#time-zones)); either
+reloads the page at its card, saying it's saved (`?language=saved#language`,
+`?timeZone=saved#time-zone`). Turn **Emails about requests** off or on (`#request-emails`, which
+those emails' footers link to; `setOwnRequestEmails` in `src/server/people/request-emails.ts`, see
+[Emails](requests.md#emails)).
 
 ### Security (`/account/security`)
 
@@ -497,12 +492,6 @@ whole sentence per event, with who made the change, if not you, where each langu
   for its calls from server actions. Setting a first one needs a recent confirmation next to a
   second step, or without one a sign-in from the last hour, like the changes above
   (`setFirstPassword`).
-- **Signed-in devices:** every browser where you're signed in (browser and system, IP address,
-  when, an "MFA Verified" badge when that sign-in had MFA, and an "Email link" badge when the link
-  in an email about a request signed it in), with "Sign out" per device and "Sign out other
-  devices". Both also forget every browser you trusted at the code step, this one included, and
-  end the links in your emails about requests (see [Signing out](#signing-out) and
-  [Links in emails about requests](#links-in-emails-about-requests)).
 - **Sign-ins by staff:** whether staff may sign in as you (see
   [Signing in as a user](#signing-in-as-a-user)): on by default, with **Turn off** and **Turn on**
   (`setStaffSignInAllowed`, recorded as `staff_sign_in_turned_off` or `staff_sign_in_turned_on`).
@@ -517,6 +506,26 @@ whole sentence per event, with who made the change, if not you, where each langu
   company, and the card says so with the service's own refusal ("You are the only staff Admin.
   Make someone else an Admin first.", `soleAdminError`); that's checked before the password, so
   the refusal is the same with a right or a wrong one. Only Admins delete accounts.
+
+### Activity (`/account/activity`)
+
+- **Signed-in devices:** every browser where you're signed in (browser and system, IP address,
+  when, an "MFA Verified" badge when that sign-in had MFA, and an "Email link" badge when the link
+  in an email about a request signed it in), with "Sign out" per device and "Sign out other
+  devices". Both also forget every browser you trusted at the code step, this one included, and
+  end the links in your emails about requests (see [Signing out](#signing-out) and
+  [Links in emails about requests](#links-in-emails-about-requests)).
+- **Recent activity** lists the last 20 things that happened to your account
+  (sign-ins and failed attempts, sign-in method and security changes, memberships and role
+  changes, saying who made changes for you, and staff signing in as you and ending it, naming
+  them), with when, and the device and IP address of your
+  own actions only: not of an admin's changes, nor of passwords typed for your address (wrong
+  ones, or right ones whose sign-in then asked for the code) and wrong codes typed at that code step
+  ("Wrong two-step verification code entered at sign-in", see
+  [Two-step verification](mfa.md#two-step-verification)), which may be anyone's (staff see
+  those in the audit log) (`listOwnActivity` in
+  `src/server/audit.ts`, worded in your language by `src/app/(app)/account/activity/own-activity.ts`: one
+  whole sentence per event, with who made the change, if not you, where each language puts it).
 
 ## Security emails
 

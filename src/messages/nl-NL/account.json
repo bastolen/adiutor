@@ -3,10 +3,12 @@
     "title": "Account",
     "header": {
       "title": "Account",
-      "description": "Je profiel, inlogmethoden en beveiliging.",
+      "description": "Je profiel, voorkeuren, inlogmethoden en activiteit.",
       "sections": "Onderdelen van je account",
       "profile": "Profiel",
-      "security": "Beveiliging"
+      "preferences": "Voorkeuren",
+      "security": "Beveiliging",
+      "activity": "Activiteit"
     },
     "profile": {
       "securityTitle": "Beveiliging van het inloggen",
@@ -66,6 +68,9 @@
       "requestEmailsTurnOn": "Aanzetten",
       "requestEmailsTurnedOff": "E-mails over verzoeken uitgezet.",
       "requestEmailsTurnedOn": "E-mails over verzoeken aangezet."
+    },
+    "preferences": {
+      "title": "Voorkeuren · Account"
     },
     "messages": {
       "verificationExpired": "Deze bevestigingslink is verlopen. Stuur een nieuwe.",
@@ -282,6 +287,9 @@
         "turnedOff": "Inloggen door medewerkers staat uit.",
         "turnedOn": "Inloggen door medewerkers staat aan."
       }
+    },
+    "activity": {
+      "title": "Activiteit · Account"
     },
     "signedInAs": {
       "note": "Je bekijkt de accountpagina's van {name} zoals die persoon ze ziet. Je kunt hier niets wijzigen terwijl je als die persoon bent ingelogd.",

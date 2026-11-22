@@ -78,11 +78,13 @@ test('a staff Admin signs in as a Manager, changes nothing, and goes back', asyn
   await expect(page.getByRole('heading', { name: 'Passkeys' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Add passkey' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'New backup codes' })).toBeDisabled();
+  await page.goto('/account/activity');
   await expect(page.getByRole('heading', { name: 'Signed-in devices' })).toBeVisible();
+  await page.goto('/account/preferences');
+  await expect(page.getByRole('combobox', { name: 'Language' })).toBeDisabled();
   await page.goto('/account');
   await expect(page.getByRole('button', { name: 'Save name' })).toBeDisabled();
   await expect(page.getByRole('textbox', { name: 'Name', exact: true })).toBeDisabled();
-  await expect(page.getByRole('combobox', { name: 'Language' })).toBeDisabled();
   // A click on the disabled field leaves focus where it was: if it went to the main content,
   // Chrome would draw a text cursor in the field.
   await page.getByRole('textbox', { name: 'Name', exact: true }).click({ force: true });
@@ -209,6 +211,8 @@ test('a Manager signed in as a Watcher sees their account pages without devices'
   );
   // Only staff Admins see a user's devices; Managers see the rest, read-only.
   await expect(page.getByRole('heading', { name: 'Passkeys' })).toBeVisible();
+  await page.goto('/account/activity');
+  await expect(page.getByRole('heading', { name: 'Recent activity' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Signed-in devices' })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Back to my account' }).click();

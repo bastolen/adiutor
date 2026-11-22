@@ -8,18 +8,18 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { SignedInAsMarker } from '@/components/ui/signed-in-as';
 
-import renderInLocale from '../../../../tests/i18n/render';
-import { saveLanguageAction } from './actions';
+import renderInLocale from '../../../../../tests/i18n/render';
+import { saveLanguageAction } from '../actions';
 import LanguageForm from './language-form';
 
 /** The full page load, mocked. */
 const { loadFresh } = vi.hoisted(() => ({ loadFresh: vi.fn() }));
 
-vi.mock('./actions', () => ({ saveLanguageAction: vi.fn() }));
+vi.mock('../actions', () => ({ saveLanguageAction: vi.fn() }));
 vi.mock('@/components/ui/load-fresh', () => ({ default: loadFresh }));
 
 /** Where the action sends the page once the language is saved. */
-const SAVED_PATH = '/account?language=saved#language';
+const SAVED_PATH = '/account/preferences?language=saved#language';
 
 afterEach(() => {
   vi.restoreAllMocks();

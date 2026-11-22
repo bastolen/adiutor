@@ -1,5 +1,5 @@
 /**
- * @file Form to choose the user's time zone, on the account's Profile page.
+ * @file Form to choose the user's time zone, on the account's Preferences tab.
  */
 'use client';
 
@@ -15,7 +15,7 @@ import { useTransientActionState, useTransientState } from '@/components/ui/use-
 import { type TimeZoneOption, timeZoneOffset } from '@/lib/i18n/time-zones';
 import useBrowserTimeZone from '@/lib/i18n/use-browser-time-zone';
 
-import { saveTimeZoneAction } from './actions';
+import { saveTimeZoneAction } from '../actions';
 
 /** Props for {@link TimeZoneForm}. */
 interface TimeZoneFormProps {

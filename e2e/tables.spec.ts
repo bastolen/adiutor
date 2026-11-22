@@ -226,7 +226,7 @@ test('no table scrolls sideways from tablet to desktop widths', async ({ page })
     membersPath,
     `/admin/users/${userId}/companies`,
     `/admin/users/${adminId}/activity`,
-    '/account/security',
+    '/account/activity',
     // Every request, with the staff's Priority column and the longest status.
     '/requests?status=all',
     // A company's own requests, under its header and tabs.
