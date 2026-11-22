@@ -8,6 +8,7 @@
 import type { DatabaseTransaction } from '@/db';
 import { requestEntry } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
+import { appUrl } from '@/lib/env';
 import {
   mayAnswerSolution,
   requestSide,
@@ -26,6 +27,7 @@ import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
 import { actingUserId, signedInAsWork } from '../signed-in-as';
 import { CHANGE_MOMENT, changeRequest, recordStatusChange, requestToChange } from './change';
 import { storeMentions } from './mentions';
+import withoutStaffPageLinks from './staff-links';
 import { subscribeAutomatically } from './subscribers';
 import { type RequestNews, tellPeopleOnRequest } from './updates';
 
@@ -73,13 +75,16 @@ export default async function answerSolution(
   if (!answer || !mayAnswerSolution(permissions, 'proposed')) {
     throw forbiddenError();
   }
-  const reason =
+  const written =
     answer === 'deny' && input.body?.trim() ? requestReplySchema.parse(input.body) : null;
   await assertRateLimit(
     ctx,
     `request-change:user:${actingUserId(actor)}`,
     RATE_LIMITS.requestChangesPerUser,
   );
+  // A reply like any other, without links to the staff's pages. Past the limit, as reading the
+  // text costs time.
+  const reason = written === null ? null : withoutStaffPageLinks(written, appUrl);
 
   const side = requestSide(permissions);
   return changeRequest(ctx, actor, access, 'requests:contribute', async (tx, locked) => {

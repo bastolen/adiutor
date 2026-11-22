@@ -22,7 +22,8 @@ import { noteAction } from './actions';
  * A text field on the amber surface notes are shown on, saying that only
  * the staff see it, with a button that adds the note. After a note is added
  * the field is empty again, and the button keeps focus; a refused one keeps
- * what was typed. A note can mention anyone a reply can.
+ * what was typed. A note can mention anyone a reply can, and unlike a reply
+ * it may link to the staff's pages (`staffOnly`).
  *
  * @param props - Form props.
  * @param props.request - The request's number.
@@ -58,6 +59,7 @@ export default function NoteForm({ request }: { request: number }) {
         maxLength={REQUEST_TEXT_MAX_LENGTH}
         required
         mentions={loadMentions}
+        staffOnly
       />
       <div className="flex flex-wrap gap-2">
         <Button type="submit" loading={pending}>

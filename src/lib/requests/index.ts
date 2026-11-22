@@ -117,7 +117,7 @@ export {
   placeMovedCard,
 } from './board';
 export type { BoardColumn, BoardColumnKey, BoardLaneState, MoveRefusal } from './board';
-export { cleanMultilineText, linkTarget, splitLinks } from './text';
+export { cleanMultilineText, isStaffPage, linkTarget, splitLinks, textLinkTarget } from './text';
 export type { TextPart } from './text';
 export {
   editStoredMentions,

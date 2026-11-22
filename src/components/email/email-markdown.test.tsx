@@ -22,6 +22,7 @@ const SAM = '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b';
  * @param options.format - The format it was stored in.
  * @param options.mentions - The names of the people it mentions.
  * @param options.locale - The email's language.
+ * @param options.appUrl - Adiutor's own address for a text the company reads, `null` for a note.
  * @returns The rendered element.
  */
 function show(
@@ -30,6 +31,7 @@ function show(
     format?: 'markdown' | 'plain';
     mentions?: Record<string, string>;
     locale?: 'en-US' | 'nl-NL' | 'es-ES';
+    appUrl?: string | null;
   } = {},
 ) {
   return render(
@@ -37,6 +39,7 @@ function show(
       value={{ text, format: options.format ?? 'markdown', mentions: options.mentions ?? {} }}
       id="text"
       locale={options.locale ?? 'en-US'}
+      appUrl={options.appUrl === undefined ? 'https://adiutor.dev' : options.appUrl}
     />,
   ).container;
 }
@@ -136,6 +139,7 @@ describe('EmailMarkdown: formatting', () => {
         }}
         id="text"
         locale="en-US"
+        appUrl="https://adiutor.dev"
       />,
     );
 
@@ -311,5 +315,56 @@ describe('EmailMarkdown: mentions', () => {
     const container = show(`\`${marker}\``, { mentions: { [SAM]: 'Sam Support' } });
 
     expect(container.querySelector('code')?.textContent).toBe(marker);
+  });
+});
+
+describe('EmailMarkdown: links to the staff’s pages', () => {
+  /** A user's page for the staff, on Adiutor's own address. */
+  const USER_PAGE = `https://adiutor.dev/admin/users/${SAM}`;
+  /** A text saved before links to the staff's pages were kept out of texts. */
+  const SAVED_BEFORE = `Ask [Sam Support](${USER_PAGE}), ![Sam](${USER_PAGE}) and [the docs](https://adiutor.dev/docs).`;
+
+  /**
+   * The addresses a rendered text links to.
+   *
+   * @param container - The rendered text.
+   * @returns Each link's address, in order.
+   */
+  const links = (container: HTMLElement) =>
+    [...container.querySelectorAll('a')].map((link) => link.getAttribute('href'));
+
+  it('shows a link to one, and an image of one, as text in a text the company reads', () => {
+    const container = show(SAVED_BEFORE);
+
+    expect(links(container)).toEqual(['https://adiutor.dev/docs']);
+    expect(container).toHaveTextContent('Ask Sam Support, Sam (image) and the docs.');
+  });
+
+  it('links no address of one in a plain text either', () => {
+    const container = show(`See ${USER_PAGE} and https://adiutor.dev/docs`, { format: 'plain' });
+
+    expect(links(container)).toEqual(['https://adiutor.dev/docs']);
+  });
+
+  it('keeps those links in an internal note, which only the staff read', () => {
+    const container = show(SAVED_BEFORE, { appUrl: null });
+
+    expect(links(container)).toEqual([USER_PAGE, USER_PAGE, 'https://adiutor.dev/docs']);
+  });
+
+  it('leaves no address of one in the email’s plain text', async () => {
+    const email = await renderEmail(
+      'jane@adiutor.test',
+      'A reply',
+      <EmailMarkdown
+        value={{ text: SAVED_BEFORE, format: 'markdown', mentions: {} }}
+        id="text"
+        locale="en-US"
+        appUrl="https://adiutor.dev"
+      />,
+    );
+
+    expect(email.text).not.toContain('/admin/');
+    expect(email.text).toContain('Ask Sam Support');
   });
 });

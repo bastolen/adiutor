@@ -9,9 +9,10 @@ import ExternalLink from '@/components/ui/external-link';
 import type { ShownMention } from '@/components/ui/markdown/elements';
 import MarkdownText from '@/components/ui/markdown/markdown-text';
 import cn from '@/lib/cn';
+import { appUrl as ownAddress } from '@/lib/env';
 import formatDate from '@/lib/format';
 import useReaderTimeZone from '@/lib/i18n/use-reader-time-zone';
-import { nameStoredMentions, splitLinks, type TextPart } from '@/lib/requests';
+import { nameStoredMentions, splitLinks, type TextPart, textLinkTarget } from '@/lib/requests';
 import type { RequestText as RequestTextValue } from '@/server/requests';
 
 import { personName, type SideNames } from './request-person';
@@ -57,25 +58,36 @@ function placed(parts: TextPart[]): PlacedPart[] {
  * A text as it was written: plain text with its line breaks, in its own
  * writing direction (`dir="auto"`, so a text in a right-to-left script can't
  * reorder the page around it). Web addresses written with `http://` or
- * `https://` are links ({@link ExternalLink}).
+ * `https://` are links ({@link ExternalLink}), but not one of the staff's
+ * pages in a text the company reads (`textLinkTarget`).
  *
  * @param props - Component props.
  * @param props.text - The text.
  * @param props.className - Extra classes for the paragraph.
+ * @param props.appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
  * @returns The text.
  */
-function PlainText({ text, className }: { text: string; className: string }) {
+function PlainText({
+  text,
+  className,
+  appUrl,
+}: {
+  text: string;
+  className: string;
+  appUrl: string | null;
+}) {
   return (
     <p dir="auto" className={cn('wrap-anywhere whitespace-pre-wrap', className)}>
-      {placed(splitLinks(text)).map((part) =>
-        part.href === null ? (
+      {placed(splitLinks(text)).map((part) => {
+        const href = part.href === null ? null : textLinkTarget(part.href, appUrl);
+        return href === null ? (
           part.text
         ) : (
-          <ExternalLink key={part.offset} href={part.href}>
+          <ExternalLink key={part.offset} href={href}>
             {part.text}
           </ExternalLink>
-        ),
-      )}
+        );
+      })}
     </p>
   );
 }
@@ -123,6 +135,7 @@ function shownMentions(
  * @param props.className - Extra classes for the element around the text.
  * @param props.source - Where the text is from.
  * @param props.mentions - The people the text mentions.
+ * @param props.staffOnly - Whether only the staff read the text, which then links to their pages.
  * @returns The text.
  */
 function FormattedText({
@@ -131,12 +144,14 @@ function FormattedText({
   className,
   source,
   mentions,
+  staffOnly,
 }: {
   text: string;
   id: string;
   className: string;
   source: TextSource;
   mentions: Record<string, ShownMention>;
+  staffOnly: boolean;
 }) {
   const t = useTranslations('requests.codeNote');
   const locale = useLocale();
@@ -154,7 +169,10 @@ function FormattedText({
         t('writtenBy', { name: source.writer, date: formatDate(source.at, locale, timeZone) }),
       ]}
       mentions={mentions}
-      fallback={<PlainText text={named} className={className} />}
+      staffOnly={staffOnly}
+      fallback={
+        <PlainText text={named} className={className} appUrl={staffOnly ? null : ownAddress} />
+      }
     />
   );
 }
@@ -163,7 +181,9 @@ function FormattedText({
  * A request's text, in the format it was stored with. A plain text is shown
  * as it was written. A Markdown text is shown formatted ({@link MarkdownText}),
  * unless formatting it would cost too much (a text nested hundreds of levels
- * deep): then it's shown as it was written, too.
+ * deep): then it's shown as it was written, too. Either way a link to one of
+ * the staff's pages shows as its text, unless only the staff read the text
+ * (an internal note, `staffOnly`).
  *
  * @param props - Component props.
  * @param props.text - The text and its format.
@@ -171,6 +191,7 @@ function FormattedText({
  * @param props.className - Extra classes for the element around the text.
  * @param props.source - Where the text is from, for the note above code copied from it.
  * @param props.names - The names of the two sides, for the people the text mentions.
+ * @param props.staffOnly - Whether only the staff read the text (an internal note).
  * @returns The text.
  */
 export default function RequestText({
@@ -179,12 +200,14 @@ export default function RequestText({
   className = '',
   source,
   names,
+  staffOnly = false,
 }: {
   text: RequestTextValue;
   id: string;
   className?: string;
   source: TextSource;
   names: SideNames;
+  staffOnly?: boolean;
 }) {
   if (text.format === 'markdown') {
     return (
@@ -194,8 +217,11 @@ export default function RequestText({
         className={className}
         source={source}
         mentions={shownMentions(text.mentions, names)}
+        staffOnly={staffOnly}
       />
     );
   }
-  return <PlainText text={text.text} className={className} />;
+  return (
+    <PlainText text={text.text} className={className} appUrl={staffOnly ? null : ownAddress} />
+  );
 }

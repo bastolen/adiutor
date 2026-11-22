@@ -4,11 +4,14 @@
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { RequestText } from '@/server/requests';
 
 import EditedNote from './edited-note';
+
+// The texts are shown with Adiutor's own address, whose staff pages they don't link to.
+vi.mock('@/lib/env', () => ({ appUrl: 'https://adiutor.dev' }));
 
 /** The names of the two sides. */
 const NAMES = { company: 'Adiutor Tests Alpha', staff: 'Adiutor Tests' };

@@ -29,6 +29,8 @@ import EditedMark from './edited-mark';
  * @param props.id - A name no other text on the page has, for the versions' own IDs.
  * @param props.source - Where the text is from, for the versions' notes on copied code.
  * @param props.names - The names of the two sides.
+ * @param props.staffOnly - Whether the text is an internal note, whose versions link to the
+ *   staff's pages as it does.
  * @returns The note, or nothing.
  */
 export default function EditedNote({
@@ -36,11 +38,13 @@ export default function EditedNote({
   id,
   source,
   names,
+  staffOnly = false,
 }: {
   text: RequestTextValue;
   id: string;
   source: TextSource;
   names: SideNames;
+  staffOnly?: boolean;
 }) {
   const t = useTranslations('requests.edit');
   const locale = useLocale();
@@ -76,6 +80,7 @@ export default function EditedNote({
             className="rounded-lg bg-muted px-3 py-2 text-sm text-foreground"
             source={source}
             names={names}
+            staffOnly={staffOnly}
           />
         </li>
       ))}

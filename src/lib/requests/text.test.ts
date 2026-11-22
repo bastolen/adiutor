@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { cleanMultilineText, linkTarget, splitLinks } from './text';
+import { cleanMultilineText, isStaffPage, linkTarget, splitLinks, textLinkTarget } from './text';
 
 describe('cleanMultilineText', () => {
   it('turns every line ending into a line break', () => {
@@ -192,5 +192,72 @@ describe('linkTarget', () => {
     '',
   ])('gives nothing for %s', (address) => {
     expect(linkTarget(address)).toBeNull();
+  });
+});
+
+/** Adiutor's own address, as the server has it. */
+const APP = 'https://adiutor.dev';
+
+/** A user's page for the staff, as a browser copies a link to it: whole, with the user's ID. */
+const USER_PAGE = 'https://adiutor.dev/admin/users/019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b';
+
+describe('isStaffPage', () => {
+  it.each([
+    USER_PAGE,
+    'https://adiutor.dev/admin',
+    'https://adiutor.dev/admin/companies?page=2#list',
+    'http://adiutor.dev/admin/logs',
+    'https://ADIUTOR.dev:8443/Admin/users',
+    'https://adiutor.dev/requests/../admin/users',
+  ])('takes %s for a page for the staff', (address) => {
+    expect(isStaffPage(address, APP)).toBe(true);
+  });
+
+  it.each([
+    'https://adiutor.dev/requests/AD-142',
+    'https://adiutor.dev/administration',
+    'https://adiutor.dev/account?from=/admin/users',
+    'https://help.adiutor.dev/admin/users',
+    'https://adiutor.test/admin/users',
+    '/admin/users',
+    'mailto:admin@adiutor.dev',
+    '',
+  ])('takes %s for no page for the staff', (address) => {
+    expect(isStaffPage(address, APP)).toBe(false);
+  });
+
+  it('knows no page for the staff without an address of Adiutor’s own', () => {
+    expect(isStaffPage(USER_PAGE, '')).toBe(false);
+  });
+
+  it.each([
+    ['its letters percent-encoded', 'https://adiutor.dev/%61dmin/users/1'],
+    ['its slash percent-encoded', 'https://adiutor.dev/admin%2Fusers/1'],
+    ['Adiutor’s host with a trailing dot', 'https://adiutor.dev./admin/users/1'],
+    ['a path that can’t be decoded, on Adiutor’s host', 'https://adiutor.dev/%E0%A4%A/admin'],
+  ])('takes a page for the staff with %s for one', (_how, address) => {
+    expect(isStaffPage(address, APP)).toBe(true);
+    expect(isStaffPage('https://adiutor.dev/admin', 'https://adiutor.dev.')).toBe(true);
+  });
+
+  it('takes a path that can’t be decoded on another site for no page for the staff', () => {
+    expect(isStaffPage('https://adiutor.test/%E0%A4%A/admin', APP)).toBe(false);
+  });
+});
+
+describe('textLinkTarget', () => {
+  it('links a page for the staff only in a text only the staff read', () => {
+    expect(textLinkTarget(USER_PAGE, APP)).toBeNull();
+    expect(textLinkTarget('https://ADIUTOR.dev/Admin', APP)).toBeNull();
+    expect(textLinkTarget(USER_PAGE, null)).toBe(USER_PAGE);
+  });
+
+  it('links any other whole web address, and nothing else, as linkTarget does', () => {
+    expect(textLinkTarget('https://adiutor.dev/docs', APP)).toBe('https://adiutor.dev/docs');
+    expect(textLinkTarget('https://adiutor.test/admin/users/1', APP)).toBe(
+      'https://adiutor.test/admin/users/1',
+    );
+    expect(textLinkTarget('/admin/users/1', APP)).toBeNull();
+    expect(textLinkTarget('mailto:user@adiutor.dev', null)).toBeNull();
   });
 });

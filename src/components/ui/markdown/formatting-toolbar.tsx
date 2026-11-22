@@ -27,7 +27,7 @@ import {
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useRef, useState } from 'react';
 
-import { linkTarget } from '@/lib/requests';
+import { isStaffPage, linkTarget } from '@/lib/requests';
 
 import Alert from '../alert';
 import Button from '../button';
@@ -121,26 +121,31 @@ const HEADING_CHOICES = [0, 1, 2, LOWEST_OFFERED_HEADING];
 
 /**
  * The dialog that asks for a link's address. Only a whole `http` or `https`
- * address is taken, as that's all a text may link to.
+ * address is taken, as that's all a text may link to, and in a text the
+ * company reads never one of the staff's pages (`isStaffPage`).
  *
  * @param props - Component props.
  * @param props.current - The address of the link at the cursor, or `null`.
+ * @param props.appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
  * @param props.onSave - Called with the address to link to.
  * @param props.onRemove - Called to remove the link.
  * @returns The dialog's content.
  */
 function LinkForm({
   current,
+  appUrl,
   onSave,
   onRemove,
 }: {
   current: string | null;
+  appUrl: string | null;
   onSave: (address: string) => void;
   onRemove: () => void;
 }) {
   const t = useTranslations('common.markdown.linkDialog');
   const [address, setAddress] = useState(current ?? '');
-  const [refused, setRefused] = useState(false);
+  // Why the address was refused: not a whole web address, or a page for the staff.
+  const [refused, setRefused] = useState<'invalid' | 'staffPage' | null>(null);
 
   /**
    * Takes the address, if it's one a text may link to.
@@ -154,7 +159,11 @@ function LinkForm({
     event.stopPropagation();
     const target = linkTarget(address.trim());
     if (target === null) {
-      setRefused(true);
+      setRefused('invalid');
+      return;
+    }
+    if (appUrl !== null && isStaffPage(target, appUrl)) {
+      setRefused('staffPage');
       return;
     }
     onSave(target);
@@ -162,7 +171,7 @@ function LinkForm({
 
   return (
     <form onSubmit={save} noValidate className="flex flex-col gap-4">
-      {refused && <Alert tone="error">{t('invalid')}</Alert>}
+      {refused && <Alert tone="error">{t(refused)}</Alert>}
       <TextField
         label={t('address')}
         type="url"
@@ -211,6 +220,8 @@ function LinkForm({
  * @param props.languageName - Gives a language's name as people know it, once the languages have loaded.
  * @param props.large - Whether the editor is open large.
  * @param props.onLarge - Called to open the editor large, or to bring it back; without it the button is switched off.
+ * @param props.appUrl - Adiutor's own address, for a text the company reads: the link dialog
+ *   refuses a page for the staff there. `null` (the default) for a text only the staff read.
  * @returns The toolbar.
  */
 export default function FormattingToolbar({
@@ -220,6 +231,7 @@ export default function FormattingToolbar({
   languageName = undefined,
   large = false,
   onLarge = undefined,
+  appUrl = null,
 }: {
   state: FormattingState | null;
   onCommand: (command: FormattingCommand) => void;
@@ -227,6 +239,7 @@ export default function FormattingToolbar({
   languageName?: (language: string) => string | null;
   large?: boolean;
   onLarge?: () => void;
+  appUrl?: string | null;
 }) {
   const t = useTranslations('common.markdown.toolbar');
   const tLink = useTranslations('common.markdown.linkDialog');
@@ -392,6 +405,7 @@ export default function FormattingToolbar({
       >
         <LinkForm
           current={state?.link ?? null}
+          appUrl={appUrl}
           onSave={(address) => {
             linkChoice.current = { type: 'link', address };
             setLinking(false);

@@ -119,6 +119,19 @@ function withoutHtml(this: Processor) {
 }
 
 /**
+ * What reads a text: CommonMark with GitHub Flavored Markdown's additions,
+ * HTML left as text. The text's tree is rendered from what it reads
+ * ({@link markdownTree}), and a text the company reads is checked with it
+ * before it's saved (`withoutStaffPageLinks` in `src/server/requests/`),
+ * so both see the same links.
+ *
+ * @returns The reader, ready to parse or to take the renderer's steps.
+ */
+export function markdownReader() {
+  return unified().use(remarkParse).use(withoutHtml).use(remarkGfm);
+}
+
+/**
  * Builds what colours the code of the blocks that name a language we know.
  * It never guesses a language.
  *
@@ -177,10 +190,7 @@ export default function markdownTree(text: string, options: MarkdownTreeOptions)
   if (emphasisRuns(text) > MAX_EMPHASIS_RUNS) {
     return null;
   }
-  const processor = unified()
-    .use(remarkParse)
-    .use(withoutHtml)
-    .use(remarkGfm)
+  const processor = markdownReader()
     .use(remarkBreaks)
     .use(remarkRehype, {
       clobberPrefix: `${options.id}-`,

@@ -5,6 +5,7 @@
 import type { DatabaseTransaction } from '@/db';
 import { request } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
+import { appUrl } from '@/lib/env';
 import { requestSide, WRITTEN_TEXT_FORMAT } from '@/lib/requests';
 import {
   requestCompanySchema,
@@ -22,6 +23,7 @@ import { incrementSetting } from '../settings';
 import { actingUserId, signedInAsWork } from '../signed-in-as';
 import { assertStillMayChange } from './change';
 import { storeMentions } from './mentions';
+import withoutStaffPageLinks from './staff-links';
 import { subscribeAutomatically } from './subscribers';
 import { typeToGive } from './types';
 import { tellMentioned } from './updates';
@@ -58,7 +60,9 @@ async function nextRequestNumber(
  * The transaction first checks the actor's right and the company again as
  * they are by then (`assertStillMayChange`), so someone who lost the right
  * while the request was under way raises nothing. A staff member signed in
- * as the actor may raise it for them, and is recorded (decision 0028).
+ * as the actor may raise it for them, and is recorded (decision 0028). The
+ * description is stored without links to the staff's pages
+ * (`withoutStaffPageLinks`): the company reads it.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `requests:contribute` in the company.
@@ -91,13 +95,16 @@ export default async function raiseRequest(
     throw companyDeactivatedError();
   }
   const title = requestTitleSchema.parse(input.title);
-  const description = requestDescriptionSchema.parse(input.description);
+  const written = requestDescriptionSchema.parse(input.description);
   const { key: type, startingPriority } = await typeToGive(ctx.db, input.type);
   const priority =
     permissions.has('requests:manage') && input.priority
       ? requestPrioritySchema.parse(input.priority)
       : startingPriority;
   await assertRateLimit(ctx, `request:user:${actingUserId(actor)}`, RATE_LIMITS.requestsPerUser);
+  // The company reads it: a link to one of the staff's pages is kept as its text. Past the limit,
+  // as reading the text costs time.
+  const description = withoutStaffPageLinks(written, appUrl);
 
   const work = signedInAsWork(actor);
 

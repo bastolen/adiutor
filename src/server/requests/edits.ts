@@ -10,6 +10,10 @@
  * 0023). An edit gives them back to the editor as mentions that are being
  * written (`editableText`), and stores them afresh with the new text; the
  * version keeps them as plain "@Name" text.
+ *
+ * A description or reply is stored without links to the staff's pages
+ * (`withoutStaffPageLinks`), as when it was written: the company reads it.
+ * An internal note keeps them.
  */
 import { and, count, eq, inArray, isNull } from 'drizzle-orm';
 
@@ -17,6 +21,7 @@ import type { DatabaseTransaction } from '@/db';
 import { request, requestEntry, requestMention, requestTextVersion, user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { visibleName } from '@/lib/display-name';
+import { appUrl } from '@/lib/env';
 import {
   editStoredMentions,
   mayEditDescription,
@@ -40,6 +45,7 @@ import { actingUserId, signedInAsWork } from '../signed-in-as';
 import { CHANGE_MOMENT, changeRequest, requestToChange, workingPermission } from './change';
 import mentionKey from './mention-key';
 import { storeMentions } from './mentions';
+import withoutStaffPageLinks from './staff-links';
 import { staffWhoReadNotes, tellMentioned } from './updates';
 
 /** Someone a stored text mentions, as its mention row names them. */
@@ -268,12 +274,15 @@ export async function editRequestDescription(
   input: { request: string; text: string; edits: number },
 ): Promise<{ changed: boolean }> {
   const access = await requestToChange(ctx, actor, input.request, 'requests:contribute');
-  const written = requestDescriptionSchema.parse(input.text);
+  const typed = requestDescriptionSchema.parse(input.text);
   await assertRateLimit(
     ctx,
     `request-change:user:${actingUserId(actor)}`,
     RATE_LIMITS.requestChangesPerUser,
   );
+  // The company reads it: a link to one of the staff's pages is kept as its text. Past the limit,
+  // as reading the text costs time.
+  const written = withoutStaffPageLinks(typed, appUrl);
   const { permissions, company } = access;
   const staff = await getStaffName(ctx.db);
   return changeRequest(ctx, actor, access, workingPermission(permissions), async (tx, locked) =>
@@ -332,6 +341,10 @@ export async function editReply(
     `request-change:user:${actingUserId(actor)}`,
     RATE_LIMITS.requestChangesPerUser,
   );
+  // The company reads a reply: a link to one of the staff's pages is kept as its text. Read before
+  // the request is locked, as reading the text costs time; whether it's a note is known once the
+  // entry is read, in the lock.
+  const forCompany = withoutStaffPageLinks(written, appUrl);
   const { permissions, company } = access;
   const staff = await getStaffName(ctx.db);
   return changeRequest(ctx, actor, access, workingPermission(permissions), async (tx, locked) => {
@@ -360,7 +373,8 @@ export async function editReply(
         stored: reply.body,
         format: reply.bodyFormat,
       },
-      written,
+      // A note, which only the staff read, keeps its links to the staff's pages.
+      written: reply.kind === 'note' ? written : forCompany,
       edits: input.edits,
       // The query above found the reply or note only as the actor's own.
       allowed: (reply.kind === 'note' ? mayEditNote : mayEditReply)(

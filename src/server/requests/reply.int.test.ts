@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
 
 import { membership, request, requestEntry } from '@/db/schema';
+import { appUrl } from '@/lib/env';
 import { REQUEST_TEXT_MAX_LENGTH } from '@/lib/input-rules';
 
 import {
@@ -342,5 +343,23 @@ describe('replyToRequest', () => {
       replyToRequest(ctx, client, { request: raised.id, body: 'Any news?' }),
     ).rejects.toMatchObject({ code: 'rate_limited' });
     expect(await history(raised.id)).toEqual([]);
+  });
+});
+
+describe('replyToRequest: links to the staff’s pages', () => {
+  it('keeps a link to a page for the staff as its text, and other links as they are', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const colleague = await staffActor(db, 'support');
+    const raised = await storeRequest(company.id);
+
+    await replyToRequest(ctx, support, {
+      request: raised.id,
+      body: `[Sam Support](${appUrl}/admin/users/${colleague.id}) looks at it, see [the docs](https://adiutor.dev/docs).`,
+    });
+
+    expect((await history(raised.id))[0]?.body).toBe(
+      'Sam Support looks at it, see [the docs](https://adiutor.dev/docs).',
+    );
   });
 });

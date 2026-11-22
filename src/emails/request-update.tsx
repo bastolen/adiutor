@@ -164,9 +164,21 @@ function accountLinkTag(href: string) {
  * @param props.text - The text.
  * @param props.id - A name no other text in the email has.
  * @param props.locale - The email's language.
+ * @param props.appUrl - Adiutor's own address, for a text the company reads (its links to the
+ *   staff's pages show as text); `null` for an internal note.
  * @returns The text.
  */
-function WrittenText({ text, id, locale }: { text: EmailText; id: string; locale: Locale }) {
+function WrittenText({
+  text,
+  id,
+  locale,
+  appUrl,
+}: {
+  text: EmailText;
+  id: string;
+  locale: Locale;
+  appUrl: string | null;
+}) {
   return (
     <Section
       style={{
@@ -175,7 +187,7 @@ function WrittenText({ text, id, locale }: { text: EmailText; id: string; locale
         padding: '0 0 0 16px',
       }}
     >
-      <EmailMarkdown value={text} id={id} locale={locale} />
+      <EmailMarkdown value={text} id={id} locale={locale} appUrl={appUrl} />
     </Section>
   );
 }
@@ -189,6 +201,7 @@ function WrittenText({ text, id, locale }: { text: EmailText; id: string; locale
  * @param props.id - A name no other piece of news in the email has, for its text.
  * @param props.audience - How to word the request's statuses for the reader.
  * @param props.locale - The email's language.
+ * @param props.appUrl - Adiutor's own address.
  * @returns The news.
  */
 function UpdateItem({
@@ -196,11 +209,13 @@ function UpdateItem({
   id,
   audience,
   locale,
+  appUrl,
 }: {
   item: RequestUpdateEmailItem;
   id: string;
   audience: RequestAudience;
   locale: Locale;
+  appUrl: string;
 }) {
   const t = translator(locale, 'emails.requestUpdate');
   const tRequests = translator(locale, 'requests');
@@ -209,15 +224,16 @@ function UpdateItem({
     return (
       <Section>
         <EmailParagraph>{t.rich('reply', who)}</EmailParagraph>
-        <WrittenText text={item.text} id={id} locale={locale} />
+        <WrittenText text={item.text} id={id} locale={locale} appUrl={appUrl} />
       </Section>
     );
   }
   if (item.event === 'note') {
+    // Only the staff read a note: its links to their pages stay links.
     return (
       <Section>
         <EmailParagraph>{t.rich('note', who)}</EmailParagraph>
-        <WrittenText text={item.text} id={id} locale={locale} />
+        <WrittenText text={item.text} id={id} locale={locale} appUrl={null} />
         <EmailNote>{t('noteOnlyStaff')}</EmailNote>
       </Section>
     );
@@ -226,7 +242,12 @@ function UpdateItem({
     return (
       <Section>
         <EmailParagraph>{t.rich('mentioned', { ...who, where: item.where })}</EmailParagraph>
-        <WrittenText text={item.text} id={id} locale={locale} />
+        <WrittenText
+          text={item.text}
+          id={id}
+          locale={locale}
+          appUrl={item.where === 'note' ? null : appUrl}
+        />
         {item.where === 'note' && <EmailNote>{t('noteOnlyStaff')}</EmailNote>}
       </Section>
     );
@@ -312,6 +333,7 @@ export default function RequestUpdateEmail({
           id={`text-${index}`}
           audience={audience}
           locale={locale}
+          appUrl={appUrl}
         />
       ))}
       {answerLinks ? (

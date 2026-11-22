@@ -16,6 +16,8 @@ import Thread from './thread';
 // An editable reply's editor sends its text through a server action, and so does the view.
 vi.mock('./actions', () => ({ editTextAction: vi.fn(), saveActivityViewAction: vi.fn() }));
 vi.mock('../../_requests/mention-actions', () => ({ mentionChoicesAction: vi.fn() }));
+// The texts are shown with Adiutor's own address, whose staff pages they don't link to.
+vi.mock('@/lib/env', () => ({ appUrl: 'https://adiutor.dev' }));
 
 /** Someone at the company, who reads the page. */
 const CASEY: RequestPerson = {

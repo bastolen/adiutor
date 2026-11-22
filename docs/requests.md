@@ -384,6 +384,31 @@ written and sent is in [Email](email.md), and the jobs that send them in
   [Text people write](security-measures.md#text-people-write)): HTML stays the text it was typed
   as; only whole `http` and `https` addresses become links (`linkTarget`), which open in a new
   tab; and an image is a link to it, named by its description, and is never loaded.
+- **No links to the staff's pages in a text the company reads.** For the staff a name is a link
+  to the user's page, which a browser copies as a whole address with the user's ID in it. A link
+  to one of Adiutor's own pages for the staff (`/admin` and under it, on Adiutor's host, however
+  the path is spelled: in capitals, percent-encoded, or on the host with a trailing dot;
+  `isStaffPage` in `src/lib/requests/text.ts`) is kept out of a description or reply three times
+  over; an internal note, which only the staff read, keeps such links each time:
+  - **When it's saved** (`withoutStaffPageLinks` in `src/server/requests/staff-links.ts`, applied
+    by `raiseRequest`, `replyToRequest`, `answerSolution` for a denial's reason,
+    `editRequestDescription` and `editReply` once the text is cleaned and the rate limit taken,
+    and before the request is locked). The text is read as the page reads it (`markdownReader`
+    in `tree.ts`), so every link the page would show is found, however it's written (character
+    references, a definition in a quotation or a list, brackets in code in its text): a link to
+    one becomes its text as it was written, an image of one its description, a link definition
+    to one is taken out and a reference to it becomes its text. The text is read again until
+    nothing changes, since taking a link out can make a new one of what's around it. Code is
+    never touched, and an address written out stays as written. Reading costs time, so only a
+    text that names Adiutor's host is read, and not one that would cost too much
+    (`MAX_EMPHASIS_RUNS`); what that leaves (a host hidden in a character reference, a text shown
+    as plain text) is shown as text where the text is shown.
+  - **Where it's shown or emailed**, also a text saved before this rule: a link to one shows as
+    its text, an image of one as its description, and an address written out isn't a link
+    (`textLinkTarget`, used by `MarkdownText` with the app's public URL, by `RequestText` for a
+    plain text, and by `EmailMarkdown` with the email's `appUrl`). `RequestText`, `EditedNote`
+    and `EmailMarkdown` are told when the text is a note (`staffOnly`, or no `appUrl`).
+  - **While it's written** (see [Writing a text](#writing-a-text)).
 - **Headings** in a text start right below the heading of the card they're in: a text's highest
   heading is an `h3` on a request's page (where cards are `h2`), whether it was written with one
   `#` or three, and the ones below it follow in order. So a text can't break the page's outline or
@@ -463,6 +488,12 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
   written as (`data-markdown`, taken only when it reads as one image). A mention's element is
   never a link, also where it links to the person's page, and the styles a browser copies with
   a mention or an image are dropped first (`withoutOwnLooks`), so a mention doesn't come in bold.
+- **Links to the staff's pages:** in the field for a description or reply, a link to one of the
+  staff's pages is its text however it comes in: pasted with its formatting (an entry's author,
+  a row of the list of users) or as Markdown, typed, or pasted over a selection, and the link
+  dialog refuses one and says why. An image of one is its description, as when the text is
+  saved. The page's own address is the one checked, as a browser copies a link from it. The
+  note's field keeps such links (`MarkdownField`'s `staffOnly`).
 - **What the editor doesn't have:** footnotes (one typed in it is sent as plain text) and a way to
   build a table from scratch (a pasted Markdown table stays a table, with cells to edit).
 - **Its size:** a reply's field starts eight lines high and a description's fourteen. It grows
@@ -523,6 +554,8 @@ Why it's built this way is in [decision 0026](decisions/0026-internal-notes-as-a
   marked as an internal note, and never to anyone at the company (see [Emails](#emails)).
 - **Editing:** like a reply, by its author while the request is open and while they still work on
   requests (`mayEditNote`), through `editReply`, with its earlier versions kept.
+- **Links:** a note may link to the staff's pages (a user's, a company's), written, edited, shown
+  and emailed, which a reply keeps as its text (see [Text](#text)).
 - **On the page:** for the staff who work on requests, the reply form has two tabs, Reply and
   Internal note (`WriteTabs`, on the `Tabs` component), each with its own form and draft. The
   note's form sits on the amber surface (`warning-soft`) and says only the staff see it. In the

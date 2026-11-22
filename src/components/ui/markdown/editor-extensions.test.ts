@@ -537,3 +537,130 @@ describe('pasting with formatting', () => {
     expect(editor.view.dom.querySelector('img, [data-written-image], strong')).toBeNull();
   });
 });
+
+describe('links to the staff’s pages', () => {
+  /** The page's own address, which the editor of a text the company reads is given. */
+  const APP = window.location.origin;
+  /** A user's page for the staff, as a browser copies a link to it: whole, with the user's ID. */
+  const USER_PAGE = `${APP}/admin/users/019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b`;
+
+  /**
+   * Makes an editor for a text, with the extensions its field gives it.
+   *
+   * @param appUrl - Adiutor's address, for a text the company reads; `null` for an internal note.
+   * @param markdown - The text it starts with.
+   * @returns The editor.
+   */
+  function fieldEditor(appUrl: string | null, markdown = ''): Editor {
+    const editor = new Editor({
+      element: document.createElement('div'),
+      extensions: editorExtensions(
+        {
+          /**
+           * Labels an image.
+           *
+           * @param description - Its description.
+           * @returns The label.
+           */
+          image: (description) => description,
+          /**
+           * Names a task's checkbox.
+           *
+           * @param task - The task.
+           * @returns The name.
+           */
+          task: (task) => task,
+          code: 'Code',
+        },
+        null,
+        appUrl,
+      ),
+    });
+    editors.push(editor);
+    readMarkdown(editor, markdown);
+    return editor;
+  }
+
+  /** An entry's author line as the staff see it, copied from a request's activity. */
+  const AUTHOR_LINE = {
+    'text/plain': 'Sam Support Adiutor Tests 2 hours ago',
+    'text/html': `<p class="flex flex-wrap"><a class="font-medium wrap-anywhere" href="${USER_PAGE}">Sam Support</a> <span>Adiutor Tests</span> <time datetime="2026-11-22T08:00:00Z">2 hours ago</time></p>`,
+  };
+
+  it('pastes an entry’s author line in a reply as its text', () => {
+    const editor = fieldEditor(APP);
+
+    pasteIn(editor, AUTHOR_LINE);
+
+    expect(writeMarkdown(editor)).toBe('Sam Support Adiutor Tests 2 hours ago');
+    expect(editor.view.dom.querySelector('a')).toBeNull();
+  });
+
+  it('pastes a row of the list of users as its text, and keeps an ordinary link', () => {
+    const editor = fieldEditor(APP);
+
+    pasteIn(editor, {
+      'text/plain': 'Casey Client casey@adiutor.test Adiutor Tests the docs',
+      'text/html': [
+        `<p><a href="${USER_PAGE}">Casey Client</a> casey@adiutor.test `,
+        `<a href="${APP}/admin/companies/019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7c">Adiutor Tests</a> `,
+        '<a href="https://adiutor.dev/docs">the docs</a></p>',
+      ].join(''),
+    });
+
+    expect(writeMarkdown(editor)).toBe(
+      'Casey Client casey@adiutor.test Adiutor Tests [the docs](https://adiutor.dev/docs)',
+    );
+  });
+
+  it('keeps a link to a request, which isn’t a page for the staff', () => {
+    const editor = fieldEditor(APP);
+
+    pasteIn(editor, {
+      'text/plain': 'AD-142',
+      'text/html': `<p><a href="${APP}/requests/AD-142">AD-142</a></p>`,
+    });
+
+    expect(writeMarkdown(editor)).toBe(`[AD-142](${APP}/requests/AD-142)`);
+  });
+
+  it('reads such a link as its text, from Markdown and from a paste of Markdown', () => {
+    const editor = fieldEditor(APP, `Ask [Sam Support](${USER_PAGE}).`);
+    editor.commands.focus('end');
+
+    paste(editor, { 'text/plain': ` And [Casey](${USER_PAGE}).` });
+
+    expect(writeMarkdown(editor)).toBe('Ask Sam Support. And Casey.');
+    expect(editor.view.dom.querySelector('a')).toBeNull();
+  });
+
+  it('never links the address itself: pasted over a selection, or set as a link', () => {
+    const editor = fieldEditor(APP, 'Ask Sam about it.');
+    // "Sam", after the paragraph's start and "Ask ".
+    editor.commands.setTextSelection({ from: 5, to: 8 });
+
+    expect(editor.commands.setLink({ href: USER_PAGE })).toBe(false);
+    pasteIn(editor, { 'text/plain': USER_PAGE });
+
+    expect(editor.getText()).toBe(`Ask ${USER_PAGE} about it.`);
+    expect(editor.view.dom.querySelector('a')).toBeNull();
+  });
+
+  it('keeps such a link in an internal note, which only the staff read', () => {
+    const editor = fieldEditor(null);
+
+    pasteIn(editor, AUTHOR_LINE);
+
+    expect(writeMarkdown(editor)).toBe(`[Sam Support](${USER_PAGE}) Adiutor Tests 2 hours ago`);
+  });
+
+  it('reads an image of such a page as its description, as when the text is saved', () => {
+    const markdown = `See ![Sam](${USER_PAGE}), ![](${USER_PAGE})and ![the plan](https://adiutor.dev/plan.png).`;
+    const reply = fieldEditor(APP, markdown);
+    const note = fieldEditor(null, markdown);
+
+    expect(writeMarkdown(reply)).toBe('See Sam, and ![the plan](https://adiutor.dev/plan.png).');
+    expect(reply.view.dom.querySelectorAll('[data-written-image]')).toHaveLength(1);
+    expect(writeMarkdown(note)).toBe(markdown);
+  });
+});

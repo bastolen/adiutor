@@ -235,6 +235,7 @@ export default function Thread({
               )}
               source={source}
               names={names}
+              staffOnly={note}
             />
           );
           return (
@@ -255,7 +256,13 @@ export default function Thread({
                   )}
                   <SignedInAsMark mark={entry.signedInAs} author={entry.author} names={names} />
                   {entry.body && (
-                    <EditedNote text={entry.body} id={entry.id} source={source} names={names} />
+                    <EditedNote
+                      text={entry.body}
+                      id={entry.id}
+                      source={source}
+                      names={names}
+                      staffOnly={note}
+                    />
                   )}
                 </>
               }

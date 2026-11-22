@@ -270,6 +270,13 @@ load or mislead in a reader's browser:
   a guessed one, a typed row ID) stays text, pasted or typed. A mention pasted into the editor is
   never a link, so the address of a person's page, which the staff's mention links to, doesn't
   end up in a text. See [Mentions](requests.md#mentions).
+- **No link to a staff page in a text the company reads.** A name the staff see links to the
+  user's page, and a copied link carries the user's ID. A link to one of Adiutor's own staff
+  pages (`/admin` and under it, on Adiutor's host) is kept as its text in a description or reply
+  when it's saved (`withoutStaffPageLinks`, which reads the text with the page's own Markdown
+  reader, so no way of writing a link slips past), where it's shown or emailed, also in texts
+  saved before (`textLinkTarget`), and in the editor while it's written; only an internal note
+  keeps them. See [Text](requests.md#text).
 - **Nothing in a copied note becomes code.** The button on a block of code copies it below a
   comment that names the request and who wrote the text (`withCodeNote` in
   `src/components/ui/markdown/code-note.ts`), and a name is something a person typed. Every line

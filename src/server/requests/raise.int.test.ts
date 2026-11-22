@@ -8,6 +8,7 @@ import { ZodError } from 'zod';
 
 import { membership, request, setting } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
+import { appUrl } from '@/lib/env';
 
 import {
   actorFor,
@@ -278,6 +279,23 @@ describe('raiseRequest', () => {
       raiseRequest(ctx, client, { ...INPUT, companyId: company.id }),
     ).rejects.toMatchObject({ code: 'rate_limited' });
     expect(await db.$count(request)).toBe(0);
+  });
+});
+
+describe('raiseRequest: links to the staff’s pages', () => {
+  it('keeps a link to a page for the staff in the description as its text', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+
+    const raised = await raiseRequest(ctx, support, {
+      ...INPUT,
+      companyId: company.id,
+      description: `Reported to [Adiutor Tests](${appUrl}/admin/companies/${company.id}) by phone.`,
+    });
+
+    expect((await storedRequest(raised.id))?.description).toBe(
+      'Reported to Adiutor Tests by phone.',
+    );
   });
 });
 

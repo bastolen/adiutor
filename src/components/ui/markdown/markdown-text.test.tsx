@@ -4,9 +4,12 @@
  */
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import MarkdownText from './markdown-text';
+
+// The texts are shown with Adiutor's own address, whose staff pages they don't link to.
+vi.mock('@/lib/env', () => ({ appUrl: 'https://adiutor.dev' }));
 
 /**
  * Renders a Markdown text as a page would.
@@ -505,5 +508,48 @@ describe('MarkdownText: mentions', () => {
 
     expect(screen.getByRole('link')).toHaveAttribute('href', 'https://adiutor.dev/docs');
     expect(container.querySelector('[data-mention]')).not.toBeInTheDocument();
+  });
+});
+
+describe('MarkdownText: links to the staff’s pages', () => {
+  /** A user's page for the staff, on Adiutor's own address (the mocked `appUrl`). */
+  const USER_PAGE = 'https://adiutor.dev/admin/users/019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b';
+  /** A text saved before links to the staff's pages were kept out of texts. */
+  const SAVED_BEFORE = `Ask [Sam Support](${USER_PAGE}), see ${USER_PAGE}, ![Sam](${USER_PAGE}) and [the docs](https://adiutor.dev/docs).`;
+
+  it('shows a link to one, and an image of one, as text in a text the company reads', () => {
+    const container = show(SAVED_BEFORE);
+
+    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+      'https://adiutor.dev/docs',
+    ]);
+    expect(container).toHaveTextContent(`Ask Sam Support, see ${USER_PAGE}, Sam (image) and`);
+  });
+
+  it('shows a link to one as text however its address is written', () => {
+    show(
+      [
+        '[a](https://adiutor&#46;dev/admin/users/1)',
+        '[b](https://ａｄｉｕｔｏｒ.dev/admin)',
+        '[c](https://adiutor.dev/%61dmin/users/1)',
+        '[d](https://adiutor.dev./admin)',
+      ].join(' '),
+    );
+
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('keeps those links in an internal note, which only the staff read', () => {
+    render(
+      <MarkdownText
+        text={SAVED_BEFORE}
+        id="note"
+        staffOnly
+        fallback={<p>shown as plain text</p>}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: /Sam Support/ })).toHaveAttribute('href', USER_PAGE);
+    expect(screen.getAllByRole('link')).toHaveLength(4);
   });
 });

@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
 
 import { requestEntry, requestMention } from '@/db/schema';
+import { appUrl } from '@/lib/env';
 import { storedMentionMarker, writtenMentionMarker } from '@/lib/requests';
 
 import {
@@ -319,5 +320,18 @@ describe('internal notes for their readers', () => {
 
     const mentionable = await listMentionable(ctx, client, { request: raised.id });
     expect(mentionable.filter(({ staff }) => staff)).toEqual([]);
+  });
+});
+
+describe('addNote: links to the staff’s pages', () => {
+  it('keeps a link to a page for the staff, which a reply keeps as its text', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const raised = await storeRequest(company.id);
+    const body = `Ask [Sam Support](${appUrl}/admin/users/${support.id}) about the toner.`;
+
+    await addNote(ctx, support, { request: raised.id, body });
+
+    expect((await history(raised.id))[0]?.body).toBe(body);
   });
 });
