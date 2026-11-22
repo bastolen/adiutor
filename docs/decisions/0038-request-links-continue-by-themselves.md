@@ -1,6 +1,8 @@
 # 0038. Request links continue by themselves where the browser can't tell a click
 
-- **Status:** Accepted
+- **Status:** Accepted. One consequence is replaced by
+  [0040](0040-older-browsers-continue-by-origin.md): browsers that send none of the
+  `Sec-Fetch-*` headers (Safari before 16.4) have their Continue checked by its `Origin`.
 - **Date:** 2026-11-22
 
 ## Context
@@ -35,7 +37,9 @@ This supersedes 0036's "Only a person's click signs in".
 - Merely visiting a page that sends the whole tab to `/auth/request-link?token=…` with someone's
   link signs a signed-out visitor in as that person, without a click (frames are refused). A link
   someone sends you for their own account does the same.
-- Browsers that send no `Sec-Fetch-Site` (Safari before 16.4) still can't use the Continue.
+- Browsers that send no `Sec-Fetch-Site` (Safari before 16.4) still can't use the Continue
+  (replaced by [0040](0040-older-browsers-continue-by-origin.md): a Continue with none of the
+  `Sec-Fetch-*` headers counts by its `Origin`).
 
 ## Alternatives considered
 

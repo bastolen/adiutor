@@ -18,13 +18,17 @@
  * page first (`/auth/request-link`), which looks the link up without using
  * it ({@link getRequestLinkView}). Its Continue signs in like a click; with
  * nobody signed in in that browser, the page sends it by itself, since some
- * browsers (Safari) never say a person clicked (decision 0038).
+ * browsers (Safari) never say a person clicked (decision 0038). Browsers
+ * that don't say where a request came from (Safari before 16.4, and every
+ * browser on an address that isn't secure) have their Continue checked by
+ * its `Origin` instead (decision 0040).
  */
 import { and, eq, sql } from 'drizzle-orm';
 
 import { db as appDb, type DatabaseOrTransaction } from '@/db';
 import { company, membership, request, requestSignInLink, user } from '@/db/schema';
 import { getPermissions } from '@/lib/authz/permissions';
+import { appUrl } from '@/lib/env';
 import ipAddressOptions from '@/lib/request/ip-address-options';
 import isPersonsClick from '@/lib/request/persons-click';
 import { requestInfoFromHeaders } from '@/lib/request/request-info';
@@ -188,6 +192,17 @@ export interface RequestLinkContext extends SessionCookieContext {
 }
 
 /**
+ * The headers in which a browser says where a request came from (Fetch
+ * Metadata). Safari before 16.4 sends none of them, and no browser sends
+ * them to an address that isn't secure (plain `http` on any host but
+ * `localhost`).
+ */
+const FETCH_METADATA = ['sec-fetch-site', 'sec-fetch-mode', 'sec-fetch-dest'] as const;
+
+/** The site's own origin, as a browser names it in a `POST` from one of its pages (`Origin`). */
+const SITE_ORIGIN = new URL(appUrl).origin;
+
+/**
  * Checks whether a request link was sent by its confirmation page's Continue:
  * its form's `POST`, which no link can make (a link, even one written in a
  * reply on a page of this site, is a `GET`), as a page load that a page of
@@ -197,17 +212,29 @@ export interface RequestLinkContext extends SessionCookieContext {
  * signed in in that browser (decision 0038), so it needn't say a person
  * clicked (`Sec-Fetch-User`, which Safari never sends).
  *
+ * A browser that sends none of those headers (Safari before 16.4, and
+ * every browser when Adiutor runs on plain `http` on a host other than
+ * `localhost`) is checked by the `POST`'s `Origin` instead (decision 0040):
+ * it must be exactly the site's own, which no other site's form can send. A
+ * missing `Origin`, `null` or a `Referer` never counts, and as soon as any of
+ * the headers is there, even empty, they decide alone.
+ *
  * @param headers - The request's headers.
  * @param posted - Whether the browser posted it.
  * @returns Whether the confirmation page sent it.
  */
 function fromConfirmationPage(headers: Headers, posted: boolean): boolean {
-  return (
-    posted &&
-    headers.get('sec-fetch-site') === 'same-origin' &&
-    headers.get('sec-fetch-mode') === 'navigate' &&
-    headers.get('sec-fetch-dest') === 'document'
-  );
+  if (!posted) {
+    return false;
+  }
+  if (FETCH_METADATA.some((name) => headers.has(name))) {
+    return (
+      headers.get('sec-fetch-site') === 'same-origin' &&
+      headers.get('sec-fetch-mode') === 'navigate' &&
+      headers.get('sec-fetch-dest') === 'document'
+    );
+  }
+  return headers.get('origin') === SITE_ORIGIN;
 }
 
 /**
@@ -216,8 +243,9 @@ function fromConfirmationPage(headers: Headers, posted: boolean): boolean {
  *
  * 1. A link (`GET`) that isn't a person's click (`isPersonsClick`), or a
  *    `POST` that isn't the confirmation page's Continue
- *    ({@link fromConfirmationPage}): to the confirmation page, so a mail
- *    scanner or link checker gets no session. A `POST` counts only as the
+ *    ({@link fromConfirmationPage}, by its `Sec-Fetch-*` headers, or by its
+ *    `Origin` where the browser sends none): to the confirmation page, so a
+ *    mail scanner or link checker gets no session. A `POST` counts only as the
  *    Continue, never as a click: another site's form, clicked, says a
  *    person clicked too, and the browser sends it without the cookies
  *    (`SameSite=Lax`) that would show someone is signed in.
