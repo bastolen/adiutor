@@ -106,7 +106,7 @@ the local database and mail viewer).
 
 ```bash
 pnpm install
-cp .env.example .env    # then set BETTER_AUTH_SECRET (openssl rand -base64 32)
+cp .env.example .env    # then set BETTER_AUTH_SECRET and CRON_SECRET (openssl rand -base64 32 each)
 pnpm services:up        # start PostgreSQL and Mailpit in Docker
 pnpm db:migrate         # create the tables
 pnpm dev

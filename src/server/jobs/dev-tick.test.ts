@@ -1,23 +1,30 @@
 /**
- * @file Tests for the tick in local development: it ticks right away and
- * then every minute, starts only once per process, skips a tick while the one
- * before it still runs, and logs a failure by its name only.
+ * @file Tests for the tick in local development: it calls the jobs' endpoint
+ * on the app's own address with the secret, right away and then every
+ * minute, starts only once per process, skips a tick while the call before it
+ * still runs, logs a failure by its status or name only, and without a secret
+ * warns once and calls nothing.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ServiceContext } from '../context';
 import { DEV_TICK_INTERVAL_MS, startDevTick } from './dev-tick';
-import { runTick } from './tick';
 
-// The tick is stood in for; the dev tick also reads how long a tick may start runs from it.
-vi.mock('./tick', () => ({ runTick: vi.fn(), REQUEST_RUN_SECONDS: 25 }));
+// Only the endpoint's path is needed; the endpoint itself would load the database.
+vi.mock('./endpoint', () => ({ TICK_PATH: '/api/jobs' }));
 
-/** The context the ticks get; the tick itself is mocked, so nothing in it is used. */
-const ctx = { baseUrl: 'https://adiutor.test' } as ServiceContext;
+/** The app's address the ticks call. */
+const baseUrl = 'http://localhost:3100';
+
+/** A secret of the length the endpoint asks for. */
+const secret = 'adiutor-tests-cron-secret-0123456789';
+
+/** Stands in for `fetch`, so no call leaves the test. */
+const send = vi.fn<typeof fetch>();
 
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.mocked(runTick).mockReset();
+  send.mockReset();
+  send.mockImplementation(() => Promise.resolve(new Response(null, { status: 200 })));
   // The flag lives on `globalThis` so it survives module reloads; each test starts afresh.
   delete (globalThis as Record<symbol, unknown>)[Symbol.for('adiutor.devTick')];
 });
@@ -28,43 +35,66 @@ afterEach(() => {
 });
 
 describe('startDevTick', () => {
-  it('ticks right away and every minute, and starts only once', async () => {
-    vi.mocked(runTick).mockResolvedValue({
-      runs: [],
-      leftForNextTick: [],
-      failed: false,
-      moreDue: false,
-    });
-
-    await expect(startDevTick(ctx)).resolves.toBe(true);
-    await expect(startDevTick(ctx)).resolves.toBe(false);
-    expect(runTick).toHaveBeenCalledTimes(1);
-    expect(runTick).toHaveBeenCalledWith(ctx, expect.objectContaining({ trigger: 'tick' }));
+  it('calls the endpoint with the secret right away and every minute, and starts only once', async () => {
+    await expect(startDevTick({ baseUrl, secret, fetch: send })).resolves.toBe(true);
+    await expect(startDevTick({ baseUrl, secret, fetch: send })).resolves.toBe(false);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledWith(
+      'http://localhost:3100/api/jobs',
+      expect.objectContaining({
+        headers: { authorization: `Bearer ${secret}` },
+        redirect: 'error',
+      }),
+    );
 
     await vi.advanceTimersByTimeAsync(DEV_TICK_INTERVAL_MS);
-    expect(runTick).toHaveBeenCalledTimes(2);
+    expect(send).toHaveBeenCalledTimes(2);
   });
 
-  it('skips a tick while the one before it still runs', async () => {
-    vi.mocked(runTick).mockReturnValue(new Promise(() => {}));
+  it('skips a tick while the call before it still runs', async () => {
+    send.mockReturnValue(new Promise(() => {}));
 
-    await startDevTick(ctx);
+    await startDevTick({ baseUrl, secret, fetch: send });
     await vi.advanceTimersByTimeAsync(DEV_TICK_INTERVAL_MS * 2);
 
-    expect(runTick).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledTimes(1);
   });
 
-  it('logs a failed tick by its name only, and tries again at the next', async () => {
+  it('logs a failed call by its name only, and tries again at the next tick', async () => {
     const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.mocked(runTick).mockRejectedValue(new TypeError('details that might be personal'));
+    send.mockRejectedValue(new TypeError('details that might be personal'));
 
-    await startDevTick(ctx);
+    await startDevTick({ baseUrl, secret, fetch: send });
     await vi.advanceTimersByTimeAsync(DEV_TICK_INTERVAL_MS);
 
     expect(logged).toHaveBeenCalledWith(
       'The development tick failed; the next one tries again in a minute',
       'TypeError',
     );
-    expect(runTick).toHaveBeenCalledTimes(2);
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it('logs an answer other than 200 by its status', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    send.mockResolvedValue(new Response(null, { status: 503 }));
+
+    await startDevTick({ baseUrl, secret, fetch: send });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(logged).toHaveBeenCalledWith(
+      'The development tick was answered with 503; the next one tries again in a minute',
+    );
+  });
+
+  it('warns once and calls nothing without a secret', async () => {
+    const warned = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await expect(startDevTick({ baseUrl, secret: undefined, fetch: send })).resolves.toBe(false);
+    await expect(startDevTick({ baseUrl, secret: undefined, fetch: send })).resolves.toBe(false);
+    await vi.advanceTimersByTimeAsync(DEV_TICK_INTERVAL_MS * 2);
+
+    expect(warned).toHaveBeenCalledTimes(1);
+    expect(warned).toHaveBeenCalledWith(expect.stringContaining('CRON_SECRET'));
+    expect(send).not.toHaveBeenCalled();
   });
 });

@@ -70,7 +70,8 @@ and the first one's link, if it arrived, never works.
 `CRON_SECRET`. A wrong secret answers 401 and counts against the sender's IP address, 429 past 20 in
 15 minutes, but the right secret always runs the tick. It answers 200, or 500 when a run failed,
 with each run's counts and whether the tick `continues`. It's public in the proxy, since it checks
-its own secret, and never cached.
+its own secret, and never cached. `pnpm dev` calls it too, every minute, so its ticks run the code as
+it is now (see [Development](development.md#background-jobs)).
 
 **Continuing a tick:** when a tick stops at its deadline with work still due and it ran something,
 the endpoint calls itself again after answering (`afterAnswer`, run with `after()`), so a backlog
