@@ -29,7 +29,8 @@ import { tellStaffOnRequest } from './updates';
  * the lists sort by. It can mention anyone a reply can; someone at the
  * company it mentions never sees it. A note can be added to a done or
  * cancelled request too, as a reply can. It counts towards the same limit as
- * replies: it's a text like one.
+ * replies: it's a text like one. Unlike a reply, it keeps its links to the
+ * staff's pages (`withoutStaffPageLinks` isn't for it): only the staff read it.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `requests:manage` in the request's company.

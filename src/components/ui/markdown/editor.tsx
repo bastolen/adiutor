@@ -102,6 +102,12 @@ export interface MarkdownEditorProps {
    * loader that comes later is ignored, one that's replaced is followed.
    */
   mentions?: MentionLoader;
+  /**
+   * Whether only the staff read the text (an internal note): it may link to
+   * the staff's pages. In any other text a link to one of them is kept as
+   * its text, as the server does. Settled when the editor starts.
+   */
+  staffOnly?: boolean;
 }
 
 /**
@@ -137,6 +143,7 @@ export interface MarkdownEditorProps {
  * @param props.focusOnStart - Whether to take focus once it's there.
  * @param props.below - What stands below the text while it's open large.
  * @param props.mentions - Gives the people the text can mention.
+ * @param props.staffOnly - Whether only the staff read the text.
  * @returns The editor.
  */
 export default function MarkdownEditor({
@@ -151,8 +158,12 @@ export default function MarkdownEditor({
   focusOnStart,
   below = null,
   mentions = undefined,
+  staffOnly = false,
 }: MarkdownEditorProps) {
   const t = useTranslations('common.markdown');
+  // Adiutor's own address, whose staff pages a text the company reads never links to: the page's,
+  // which is what a browser makes a copied link's address from. The editor only runs in a browser.
+  const [appUrl] = useState(() => (staffOnly ? null : window.location.origin));
   // The list of people at "@", for a text that can mention people. Made once: the editor's
   // extensions can't change after it started.
   const [mentionList] = useState(() => (mentions ? createMentionList(mentions) : null));
@@ -195,8 +206,9 @@ export default function MarkdownEditor({
           code: t('code'),
         },
         mentionList,
+        appUrl,
       ),
-    [t, mentionList],
+    [t, mentionList, appUrl],
   );
   // The editors that hold the text so far. A new editor reports a change while it's still empty
   // (when a page that was kept alive is shown again, the editor is made anew): that isn't
@@ -309,6 +321,7 @@ export default function MarkdownEditor({
       languages={languages?.choices ?? null}
       languageName={languages?.nameOf}
       state={disabled ? null : formatting}
+      appUrl={appUrl}
       onCommand={(command) => {
         if (editor) {
           format(editor, command);

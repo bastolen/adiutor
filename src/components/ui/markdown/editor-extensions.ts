@@ -4,7 +4,8 @@
  * the editor shows in step with what the server renders (`MarkdownText`).
  *
  * - HTML is never read: a tag stays the text it was typed as.
- * - Only whole `http` and `https` addresses are links.
+ * - Only whole `http` and `https` addresses are links, and in a text the
+ *   company reads never one of the staff's pages: such a link is its text.
  * - An image is kept as it was written and shown by its description; it's
  *   never loaded.
  * - A mention is the marker of someone picked from the list at "@": a link
@@ -17,7 +18,7 @@
  *   person's page.
  * - Tab and Shift+Tab are never taken: they leave the editor, like any field.
  */
-import { Link } from '@tiptap/extension-link';
+import { Link, type LinkOptions } from '@tiptap/extension-link';
 import { ListItem, ListKeymap, TaskItem, TaskList } from '@tiptap/extension-list';
 import { Table, TableKit } from '@tiptap/extension-table';
 import { Markdown } from '@tiptap/markdown';
@@ -33,7 +34,15 @@ import {
 import StarterKit from '@tiptap/starter-kit';
 import { exitSuggestion, Suggestion } from '@tiptap/suggestion';
 
-import { isMentionKey, linkTarget, writtenMentionKey, writtenMentionMarker } from '@/lib/requests';
+import { defined } from '@/lib/defined';
+import {
+  isMentionKey,
+  isStaffPage,
+  linkTarget,
+  textLinkTarget,
+  writtenMentionKey,
+  writtenMentionMarker,
+} from '@/lib/requests';
 
 import { writtenLinkClasses } from '../external-link';
 import editorCodeBlock from './editor-code-block';
@@ -177,25 +186,55 @@ function plainText(tokens: readonly InlineToken[]): string {
     .join('');
 }
 
+/** What a link in a text that's written may go to. */
+interface WrittenLinkOptions extends LinkOptions {
+  /**
+   * Whether an address may be a link here.
+   *
+   * @param address - The address.
+   * @returns Whether it may.
+   */
+  mayLink: (address: string) => boolean;
+}
+
 /**
- * A link. When Markdown is read or HTML is pasted, an address that isn't a
- * whole `http` or `https` address gives no link, only its text: what the
- * server does too.
+ * A link. When Markdown is read or HTML is pasted, an address that may not
+ * be a link here (`mayLink`: one that isn't a whole `http` or `https`
+ * address, and in a text the company reads one of the staff's pages) gives
+ * no link, only its text: what the server does too.
  * The marker of a mention is the exception: a link whose text starts with
  * "@" and whose address is someone's key becomes the mention of them
  * ({@link WrittenMention}).
  */
-const WrittenLink = Link.extend({
+const WrittenLink = Link.extend<WrittenLinkOptions>({
   /**
-   * Which elements of pasted HTML are links: an `<a>` whose address is a
-   * whole `http` or `https` address, as when Markdown is read. A mention's
-   * element never is, though for the staff it links to the person's page
-   * (which a browser copies as a whole address): it's the mention
-   * ({@link WrittenMention}), or else its text.
+   * The link's options.
+   *
+   * @returns The link's own, and links to whole `http` and `https` addresses, until told otherwise.
+   */
+  addOptions() {
+    return {
+      ...defined(this.parent, "the link's options")(),
+      /**
+       * Whether an address may be a link.
+       *
+       * @param address - The address.
+       * @returns Whether it's a whole `http` or `https` address.
+       */
+      mayLink: (address: string) => linkTarget(address) !== null,
+    };
+  },
+  /**
+   * Which elements of pasted HTML are links: an `<a>` whose address may be
+   * a link here, as when Markdown is read. A mention's element never is,
+   * though for the staff it links to the person's page (which a browser
+   * copies as a whole address): it's the mention ({@link WrittenMention}),
+   * or else its text.
    *
    * @returns The rule.
    */
   parseHTML() {
+    const { mayLink } = this.options;
     return [
       {
         tag: 'a[href]:not([data-mention])',
@@ -205,8 +244,7 @@ const WrittenLink = Link.extend({
          * @param element - The `<a>`.
          * @returns Nothing to add (the address is read by the link's attribute), or `false`.
          */
-        getAttrs: (element) =>
-          linkTarget(element.getAttribute('href') ?? '') !== null ? null : false,
+        getAttrs: (element) => (mayLink(element.getAttribute('href') ?? '') ? null : false),
       },
     ];
   },
@@ -217,7 +255,7 @@ const WrittenLink = Link.extend({
    * @param helpers - The Markdown reader's helpers.
    * @returns A mention, or the link's text, linked when its address may be.
    */
-  parseMarkdown: (token, helpers) => {
+  parseMarkdown(token, helpers) {
     const address = typeof token.href === 'string' ? token.href : '';
     const key = writtenMentionKey(address);
     const label = plainText(token.tokens ?? []);
@@ -225,7 +263,9 @@ const WrittenLink = Link.extend({
       return { type: 'writtenMention', attrs: { key, name: label.slice(1) } };
     }
     const text = helpers.parseInline(token.tokens ?? []);
-    return linkTarget(address) !== null ? helpers.applyMark('link', text, { href: address }) : text;
+    return this.options.mayLink(address)
+      ? helpers.applyMark('link', text, { href: address })
+      : text;
   },
 });
 
@@ -517,9 +557,21 @@ function pastedImage(
  * An image someone wrote (`![description](address)`). The editor keeps the
  * Markdown as it was written and shows the image by its description, as a
  * word that can't be edited in place: it's never loaded, here or where the
- * text is read. Copied and pasted, it's read back from that Markdown.
+ * text is read. Copied and pasted, it's read back from that Markdown. An
+ * image of one of the staff's pages, in a text the company reads
+ * (`toStaffPage`), is its description as text, as when the text is saved.
  */
-const WrittenImage = Node.create<Pick<EditorLabels, 'image'>>({
+const WrittenImage = Node.create<
+  Pick<EditorLabels, 'image'> & {
+    /**
+     * Whether an image's address is one of the staff's pages in a text the company reads.
+     *
+     * @param address - The image's address.
+     * @returns Whether the image is to be its description instead.
+     */
+    toStaffPage: (address: string) => boolean;
+  }
+>({
   name: 'writtenImage',
   group: 'inline',
   inline: true,
@@ -527,7 +579,8 @@ const WrittenImage = Node.create<Pick<EditorLabels, 'image'>>({
   /**
    * The node's options.
    *
-   * @returns A label that shows the description as it is, until one is given.
+   * @returns A label that shows the description as it is, and no address of a staff page, until
+   *   they're given.
    */
   addOptions() {
     return {
@@ -538,6 +591,12 @@ const WrittenImage = Node.create<Pick<EditorLabels, 'image'>>({
        * @returns It.
        */
       image: (description: string) => description,
+      /**
+       * Whether an image's address is one of the staff's pages.
+       *
+       * @returns Never, until told.
+       */
+      toStaffPage: () => false,
     };
   },
   /**
@@ -593,12 +652,15 @@ const WrittenImage = Node.create<Pick<EditorLabels, 'image'>>({
    * Reads an image from Markdown.
    *
    * @param token - The parser's image.
-   * @returns The node.
+   * @returns The node; for an image of a staff page, its description as text (nothing without one).
    */
-  parseMarkdown: (token) => ({
-    type: 'writtenImage',
-    attrs: { raw: token.raw ?? '', description: token.text ?? '' },
-  }),
+  parseMarkdown(token) {
+    const description = token.text ?? '';
+    if (this.options.toStaffPage(typeof token.href === 'string' ? token.href : '')) {
+      return description ? { type: 'text', text: description } : [];
+    }
+    return { type: 'writtenImage', attrs: { raw: token.raw ?? '', description } };
+  },
   /**
    * Writes the image back as Markdown.
    *
@@ -730,14 +792,32 @@ const MarkdownPaste = Extension.create({
  * links), with the same classes as where a text is read, and Markdown as
  * what the content is read from and written to.
  *
+ * In a text the company reads (`appUrl` given), a link to one of the
+ * staff's pages is kept as its text, however it comes in: pasted with its
+ * formatting or as Markdown, typed, or pasted over a selection; an image of
+ * one is its description. Only a text the staff alone read (an internal
+ * note) may link to them, as where the text is saved
+ * (`withoutStaffPageLinks`) and shown (`textLinkTarget`).
+ *
  * @param labels - The texts the content needs.
  * @param mentions - The list of people at "@", for a text that can mention people.
+ * @param appUrl - Adiutor's own address (the page's), for a text the company reads; `null` for a
+ *   text only the staff read.
  * @returns The extensions.
  */
 export function editorExtensions(
   labels: EditorLabels,
   mentions: MentionList | null = null,
+  appUrl: string | null = null,
 ): Extensions {
+  /**
+   * Whether an address may be a link in this text.
+   *
+   * @param address - The address.
+   * @returns Whether it's a whole `http` or `https` address, and not a page for the staff in a
+   *   text the company reads.
+   */
+  const mayLink = (address: string) => textLinkTarget(address, appUrl) !== null;
   return [
     StarterKit.configure({
       // These come in their own form below; Markdown has no underline.
@@ -777,23 +857,33 @@ export function editorExtensions(
       // A link in a text being written isn't followed; it's edited.
       openOnClick: false,
       autolink: true,
+      mayLink,
       /**
-       * Whether an address may be a link.
+       * Whether an address may be a link (a link that's set, and what's pasted or typed).
        *
        * @param address - The address.
-       * @returns Whether it's a whole `http` or `https` address.
+       * @returns Whether it may be one in this text.
        */
-      isAllowedUri: (address) => linkTarget(address) !== null,
+      isAllowedUri: (address) => mayLink(address),
       /**
-       * Whether an address that's typed becomes a link by itself.
+       * Whether an address that's typed, or pasted over a selection, becomes a link by itself.
        *
        * @param address - The address.
-       * @returns Whether it's a whole `http` or `https` address.
+       * @returns Whether it may be one in this text.
        */
-      shouldAutoLink: (address) => linkTarget(address) !== null,
+      shouldAutoLink: (address) => mayLink(address),
       HTMLAttributes: { class: writtenLinkClasses, rel: 'noopener noreferrer nofollow' },
     }),
-    WrittenImage.configure({ image: labels.image }),
+    WrittenImage.configure({
+      image: labels.image,
+      /**
+       * Whether an image's address is one of the staff's pages, in a text the company reads.
+       *
+       * @param address - The image's address.
+       * @returns Whether the image is to be its description.
+       */
+      toStaffPage: (address) => appUrl !== null && isStaffPage(address, appUrl),
+    }),
     WrittenMention,
     MentionTrigger.configure({ list: mentions }),
     MarkdownPaste,

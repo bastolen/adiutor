@@ -23,12 +23,12 @@ import markdownTree, { FOOTNOTE_LABEL_ID, highestHeading } from '@/components/ui
 import type { Locale } from '@/lib/i18n/locales';
 import translator from '@/lib/i18n/translator';
 import {
-  linkTarget,
   nameStoredMentions,
   type RequestTextFormat,
   splitLinks,
   storedMentionId,
   type TextPart,
+  textLinkTarget,
 } from '@/lib/requests';
 
 import { colors, monoFontFamily } from './theme';
@@ -211,16 +211,19 @@ type LinkProps = ComponentProps<'a'> & {
  * @param options.mentions - The names of the people the text mentions.
  * @param options.locale - The email's language, for what an image is called.
  * @param options.highest - How many `#` the text's highest heading was written with.
+ * @param options.appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
  * @returns The components to render the text's tree with.
  */
 function emailElements({
   mentions,
   locale,
   highest,
+  appUrl,
 }: {
   mentions: Readonly<Record<string, string>>;
   locale: Locale;
   highest: number;
+  appUrl: string | null;
 }): Components {
   const t = translator(locale, 'common.markdown');
 
@@ -258,7 +261,8 @@ function emailElements({
    * A link. The one from a text to its footnote is the note's number, and
    * the one back isn't shown: an email has nowhere to jump to. A mention's
    * marker shows the person's name. Any other is a link if it's a whole
-   * `http` or `https` address, and plain text if it isn't.
+   * `http` or `https` address, and plain text if it isn't, or if it's one of
+   * the staff's pages in a text the company reads (`textLinkTarget`).
    *
    * @param props - The link's attributes.
    * @param props.href - Where it points.
@@ -279,7 +283,7 @@ function emailElements({
       // The sign of a mention, the same in every language, then the name.
       return <span style={mention}>{`@${name}`}</span>;
     }
-    const target = typeof href === 'string' ? linkTarget(href) : null;
+    const target = typeof href === 'string' ? textLinkTarget(href, appUrl) : null;
     return target === null ? (
       <span>{children}</span>
     ) : (
@@ -292,7 +296,8 @@ function emailElements({
   /**
    * An image someone wrote into their text. It's never loaded: an image on
    * another site would tell that site who opened the email, and when. It
-   * becomes a link to the image, named by its description.
+   * becomes a link to the image, named by its description; an image of one
+   * of the staff's pages, in a text the company reads, only its description.
    *
    * @param props - The image's attributes.
    * @param props.src - The image's address.
@@ -300,7 +305,7 @@ function emailElements({
    * @returns A link to the image, or only its description when the address can't be linked.
    */
   function EmailTextImage({ src, alt }: ComponentProps<'img'>) {
-    const target = typeof src === 'string' ? linkTarget(src) : null;
+    const target = typeof src === 'string' ? textLinkTarget(src, appUrl) : null;
     const label = alt ? t('imageNamed', { description: alt }) : t('image');
     return target === null ? (
       <span>{label}</span>
@@ -502,24 +507,27 @@ function placed(parts: readonly TextPart[]): PlacedPart[] {
 /**
  * A text as it was written: plain text with its line breaks, in its own
  * writing direction. Web addresses written with `http://` or `https://` are
- * links, as on the page.
+ * links, as on the page, but not one of the staff's pages in a text the
+ * company reads.
  *
  * @param props - Component props.
  * @param props.text - The text.
+ * @param props.appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
  * @returns The text.
  */
-function PlainEmailText({ text }: { text: string }) {
+function PlainEmailText({ text, appUrl }: { text: string; appUrl: string | null }) {
   return (
     <p dir="auto" style={{ ...paragraph, whiteSpace: 'pre-wrap' }}>
-      {placed(splitLinks(text)).map((part) =>
-        part.href === null ? (
+      {placed(splitLinks(text)).map((part) => {
+        const href = part.href === null ? null : textLinkTarget(part.href, appUrl);
+        return href === null ? (
           <Fragment key={part.offset}>{part.text}</Fragment>
         ) : (
-          <a key={part.offset} href={part.href} rel="noopener noreferrer nofollow" style={link}>
+          <a key={part.offset} href={href} rel="noopener noreferrer nofollow" style={link}>
             {part.text}
           </a>
-        ),
-      )}
+        );
+      })}
     </p>
   );
 }
@@ -528,27 +536,33 @@ function PlainEmailText({ text }: { text: string }) {
  * Shows a request's text in an email, in the format it was stored in. A
  * Markdown text is formatted, with the people it mentions by name; a text
  * that would cost too much to format (`markdownTree` gives no tree) and a
- * text stored as plain text are shown as they were written.
+ * text stored as plain text are shown as they were written. In a text the
+ * company reads, a link to one of the staff's pages is its text, also in a
+ * text saved before such links were kept out of it.
  *
  * @param props - Component props.
  * @param props.value - The text, its format and the people it mentions.
  * @param props.id - A name no other text in the email has, for the IDs of its footnotes.
  * @param props.locale - The email's language.
+ * @param props.appUrl - Adiutor's own address (the email's `appUrl`), for a text the company
+ *   reads; `null` for an internal note, which links to the staff's pages.
  * @returns The text.
  */
 export default function EmailMarkdown({
   value,
   id,
   locale,
+  appUrl,
 }: {
   value: EmailText;
   id: string;
   locale: Locale;
+  appUrl: string | null;
 }) {
   if (value.format !== 'markdown') {
     return (
       <div style={root}>
-        <PlainEmailText text={value.text} />
+        <PlainEmailText text={value.text} appUrl={appUrl} />
       </div>
     );
   }
@@ -570,7 +584,7 @@ export default function EmailMarkdown({
     );
     return (
       <div style={root}>
-        <PlainEmailText text={named} />
+        <PlainEmailText text={named} appUrl={appUrl} />
       </div>
     );
   }
@@ -584,6 +598,7 @@ export default function EmailMarkdown({
           mentions: value.mentions,
           locale,
           highest: highestHeading(tree),
+          appUrl,
         }),
         // A block of code reads its code from its node.
         passNode: true,

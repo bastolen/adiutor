@@ -10,7 +10,7 @@ import { useTranslations } from 'next-intl';
 import type { ComponentProps } from 'react';
 
 import cn from '@/lib/cn';
-import { linkTarget, storedMentionId } from '@/lib/requests';
+import { storedMentionId, textLinkTarget } from '@/lib/requests';
 
 import CopyButton from '../copy-button';
 import ExternalLink, { writtenLinkClasses } from '../external-link';
@@ -59,6 +59,13 @@ export interface MarkdownElementsOptions {
    * that names none of them isn't a mention: it shows as its link's text.
    */
   mentions: Readonly<Record<string, ShownMention>>;
+  /**
+   * Adiutor's own address, for a text the company reads: a link to one of
+   * the staff's pages shows as its text, and an image of one as its
+   * description (`textLinkTarget`). `null` for a text only the staff read
+   * (an internal note), which links to them.
+   */
+  appUrl: string | null;
 }
 
 /**
@@ -77,16 +84,19 @@ function alignment(align: unknown): string {
 /**
  * An image someone wrote into their text. It's never loaded: an image on
  * another site would give that site the address of everyone who reads the
- * text. It becomes a link to the image, named by its description.
+ * text. It becomes a link to the image, named by its description; an image
+ * of one of the staff's pages, in a text the company reads, only its
+ * description (`textLinkTarget`).
  *
  * @param props - The image's attributes.
  * @param props.src - The image's address.
  * @param props.alt - Its description.
+ * @param props.appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
  * @returns A link to the image, or only its description when the address can't be linked.
  */
-function MarkdownImage({ src, alt }: ComponentProps<'img'>) {
+function MarkdownImage({ src, alt, appUrl }: ComponentProps<'img'> & { appUrl: string | null }) {
   const t = useTranslations('common.markdown');
-  const target = typeof src === 'string' ? linkTarget(src) : null;
+  const target = typeof src === 'string' ? textLinkTarget(src, appUrl) : null;
   const label = alt ? t('imageNamed', { description: alt }) : t('image');
   return target === null ? (
     <span>{label}</span>
@@ -447,6 +457,7 @@ type MarkdownLinkProps = ComponentProps<'a'> & {
  * @param options.highestHeading - How many `#` that heading was written with.
  * @param options.codeNote - What to say above a block's code when it's copied.
  * @param options.mentions - The people the text mentions.
+ * @param options.appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
  * @returns The components to render the text's tree with.
  */
 export default function markdownElements({
@@ -455,6 +466,7 @@ export default function markdownElements({
   highestHeading,
   codeNote,
   mentions,
+  appUrl,
 }: MarkdownElementsOptions): Components {
   /**
    * Builds the component of a heading written with `depth` marks. The text's
@@ -497,7 +509,9 @@ export default function markdownElements({
   /**
    * A link. One that a footnote and its reference point at each other with
    * stays on the page. Any other opens its address in a new tab if it's a
-   * whole `http` or `https` address, and is plain text if it isn't.
+   * whole `http` or `https` address, and is plain text if it isn't, or if
+   * it's one of the staff's pages in a text the company reads
+   * (`textLinkTarget`).
    *
    * @param props - The link's attributes.
    * @param props.href - Where it points.
@@ -530,12 +544,24 @@ export default function markdownElements({
     if (mention) {
       return <MarkdownMention mention={mention} />;
     }
-    const target = typeof href === 'string' ? linkTarget(href) : null;
+    const target = typeof href === 'string' ? textLinkTarget(href, appUrl) : null;
     return target === null ? (
       <span>{children}</span>
     ) : (
       <ExternalLink href={target}>{children}</ExternalLink>
     );
+  }
+
+  /**
+   * An image in this text ({@link MarkdownImage}).
+   *
+   * @param props - The image's attributes.
+   * @param props.src - The image's address.
+   * @param props.alt - Its description.
+   * @returns The image's link, or its description.
+   */
+  function TextImage({ src = undefined, alt = undefined }: ComponentProps<'img'>) {
+    return <MarkdownImage src={src} alt={alt} appUrl={appUrl} />;
   }
 
   /**
@@ -563,7 +589,7 @@ export default function markdownElements({
     h6: heading(6),
     p: MarkdownParagraph,
     a: MarkdownLink,
-    img: MarkdownImage,
+    img: TextImage,
     ul: MarkdownBulletList,
     ol: MarkdownOrderedList,
     li: MarkdownListItem,

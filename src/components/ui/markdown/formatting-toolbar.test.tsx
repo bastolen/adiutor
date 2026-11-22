@@ -327,6 +327,44 @@ describe('FormattingToolbar: the link dialog', () => {
   });
 });
 
+describe('FormattingToolbar: links to the staff’s pages', () => {
+  /** A user's page for the staff, on Adiutor's own address. */
+  const USER_PAGE = 'https://adiutor.dev/admin/users/019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b';
+
+  /**
+   * Saves an address in the link dialog of a toolbar.
+   *
+   * @param appUrl - Adiutor's address, for a text the company reads; `null` for an internal note.
+   * @returns What the toolbar asked the editor for.
+   */
+  async function saveLink(appUrl: string | null) {
+    const user = userEvent.setup();
+    const onCommand = vi.fn();
+    render(<FormattingToolbar state={PLAIN} onCommand={onCommand} appUrl={appUrl} />);
+    await user.click(screen.getByRole('button', { name: 'Link' }));
+    await user.type(screen.getByRole('textbox', { name: 'Web address' }), USER_PAGE);
+    await user.click(screen.getByRole('button', { name: 'Save link' }));
+    return onCommand;
+  }
+
+  it('refuses a page for the staff in a text the company reads, and says why', async () => {
+    const onCommand = await saveLink('https://adiutor.dev');
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      "The company reads this text, so it can't link to a page for the staff.",
+    );
+    expect(onCommand).not.toHaveBeenCalled();
+  });
+
+  it('links to it in an internal note, which only the staff read', async () => {
+    const onCommand = await saveLink(null);
+
+    await waitFor(() =>
+      expect(onCommand).toHaveBeenCalledExactlyOnceWith({ type: 'link', address: USER_PAGE }),
+    );
+  });
+});
+
 describe('FormattingToolbar: the language of a block of code', () => {
   /** Three languages to pick from. */
   const LANGUAGES = [

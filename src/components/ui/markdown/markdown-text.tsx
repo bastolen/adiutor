@@ -11,6 +11,7 @@ import type { ReactNode } from 'react';
 import { Fragment, jsx, jsxs } from 'react/jsx-runtime';
 
 import cn from '@/lib/cn';
+import { appUrl } from '@/lib/env';
 
 import markdownElements, { type ShownMention } from './elements';
 import { markdownStyles } from './styles';
@@ -50,6 +51,12 @@ interface MarkdownTextProps {
    * link's text.
    */
   mentions?: Readonly<Record<string, ShownMention>>;
+  /**
+   * Whether only the staff read the text (an internal note): it links to the
+   * staff's pages. Any other text shows a link to one of them as its text,
+   * also a text saved before such links were kept out of it.
+   */
+  staffOnly?: boolean;
   /** What to show for a text that costs too much to format: the text as plain text. */
   fallback: ReactNode;
 }
@@ -58,11 +65,12 @@ interface MarkdownTextProps {
  * A Markdown text as formatted text: headings, lists, tables, quotes, links
  * and code. What the writer typed is shown, never run: HTML stays text,
  * only `http` and `https` addresses are links (opened in a new tab), and an
- * image is a link to it. Headings start right below the page's own,
- * whatever number of `#` the highest was written with, so a text can't break
- * the outline. A block of code has a button that copies it, below the
- * text's note where it has one. A mention of a person shows their name
- * after an "@".
+ * image is a link to it; in a text the company reads, never to one of the
+ * staff's pages (Adiutor's own address is the app's public URL). Headings
+ * start right below the page's own, whatever number of `#` the highest was
+ * written with, so a text can't break the outline. A block of code has a
+ * button that copies it, below the text's note where it has one. A mention
+ * of a person shows their name after an "@".
  *
  * @param props - Component props.
  * @param props.text - The text.
@@ -71,6 +79,7 @@ interface MarkdownTextProps {
  * @param props.className - Extra classes.
  * @param props.codeNote - What to say above copied code.
  * @param props.mentions - The people the text mentions.
+ * @param props.staffOnly - Whether only the staff read the text, which then links to their pages.
  * @param props.fallback - What to show when the text can't be formatted.
  * @returns The formatted text, or the fallback.
  */
@@ -81,6 +90,7 @@ export default function MarkdownText({
   className = '',
   codeNote = NO_NOTE,
   mentions = NO_MENTIONS,
+  staffOnly = false,
   fallback,
 }: MarkdownTextProps) {
   const t = useTranslations('common.markdown');
@@ -110,6 +120,7 @@ export default function MarkdownText({
           highestHeading: highestHeading(tree),
           codeNote,
           mentions,
+          appUrl: staffOnly ? null : appUrl,
         }),
         // A block of code reads the language it names, and its code, from its node.
         passNode: true,

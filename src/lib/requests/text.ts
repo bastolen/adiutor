@@ -1,7 +1,11 @@
 /**
  * @file The text of a request: cleaning what people type into a description
- * or a reply, and finding the web addresses in it so they can be shown as
- * links. The text is plain: stored as typed, and shown with its line breaks.
+ * or a reply, knowing the addresses of the staff's pages (which a text the
+ * company reads never links to), and finding the web addresses in a plain
+ * text so they can be shown as links. A plain text is stored as typed, and
+ * shown with its line breaks. Taking links to the staff's pages out of a
+ * text that's saved reads its Markdown, so it's on the server
+ * (`src/server/requests/staff-links.ts`).
  */
 import { HIDDEN_CHARACTER } from '../character-rules';
 
@@ -131,6 +135,76 @@ export function linkTarget(address: string): string | null {
     return null;
   }
   return url.href;
+}
+
+/**
+ * Where the staff's pages are (Users, Companies, Logs and the rest): every
+ * page under this path is for the staff only, and its address can hold the
+ * ID of a person or a company.
+ */
+const STAFF_PAGES_PATH = '/admin';
+
+/**
+ * A host name as a browser goes to it: without the dot a fully qualified
+ * name may end in (`adiutor.dev.` is `adiutor.dev`).
+ *
+ * @param hostname - The host name, as a parsed address gives it.
+ * @returns The host name without a trailing dot.
+ */
+function hostOf(hostname: string): string {
+  return hostname.replace(/\.$/, '');
+}
+
+/**
+ * Whether an address is one of Adiutor's own pages for the staff: a whole
+ * `http` or `https` address on Adiutor's host, at `/admin` or under it.
+ * Whatever its scheme or port, so an `http://` address still counts for an
+ * Adiutor on `https://`, and however the path is spelled: in capitals, with
+ * its letters percent-encoded (`/%61dmin`), or on the host written with a
+ * trailing dot. A path that can't be decoded on Adiutor's host counts as
+ * one: it's shown as text rather than risk a link. An address of another
+ * site is never one, whatever its path.
+ *
+ * @param address - The address, as it was written or pasted.
+ * @param appUrl - Adiutor's own address: the app's public URL on the server, the page's in a
+ *   browser.
+ * @returns Whether it's a page for the staff.
+ */
+export function isStaffPage(address: string, appUrl: string): boolean {
+  const target = linkTarget(address);
+  const app = linkTarget(appUrl);
+  if (target === null || app === null) {
+    return false;
+  }
+  const url = new URL(target);
+  if (hostOf(url.hostname) !== hostOf(new URL(app).hostname)) {
+    return false;
+  }
+  let path: string;
+  try {
+    path = decodeURIComponent(url.pathname).toLowerCase();
+  } catch {
+    return true;
+  }
+  return path === STAFF_PAGES_PATH || path.startsWith(`${STAFF_PAGES_PATH}/`);
+}
+
+/**
+ * Where an address in a request's text links to, as the text is shown: a
+ * whole `http` or `https` address ({@link linkTarget}), but never one of
+ * Adiutor's own pages for the staff ({@link isStaffPage}) in a text the
+ * company reads. Such a link shows as its text, also in a text saved before
+ * links to the staff's pages were kept out of it; only an internal note,
+ * which only the staff read, links to them.
+ *
+ * @param address - The address, as it was written.
+ * @param appUrl - Adiutor's own address, for a text the company reads; `null` for a text
+ *   only the staff read.
+ * @returns The address to link to, or `null` when it isn't one to link to here.
+ */
+export function textLinkTarget(address: string, appUrl: string | null): string | null {
+  const target = linkTarget(address);
+  return target !== null && appUrl !== null && isStaffPage(target, appUrl) ? null : target;
 }
 
 /**

@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 
 import { impersonation, queuedJob, request, requestEntry } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
+import { appUrl } from '@/lib/env';
 
 import { createCompany, memberActor, staffActor } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
@@ -245,5 +246,23 @@ describe('answering a solution', () => {
     );
 
     expect(seen).toEqual(['done']);
+  });
+});
+
+describe('answerSolution: links to the staff’s pages', () => {
+  it('keeps a link to a page for the staff in a reason as its text, like any reply', async () => {
+    const { raised, client, support } = await aProposedSolution();
+
+    await answerSolution(ctx, client, {
+      request: raised.id,
+      answer: 'deny',
+      body: `[Sam](${appUrl}/admin/users/${support.id}) said so, see [the docs](https://adiutor.dev/docs).`,
+    });
+
+    const [reason] = await db
+      .select({ body: requestEntry.body })
+      .from(requestEntry)
+      .where(and(eq(requestEntry.requestId, raised.id), eq(requestEntry.authorId, client.id)));
+    expect(reason?.body).toBe('Sam said so, see [the docs](https://adiutor.dev/docs).');
   });
 });

@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 
 import { request, requestEntry } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
+import { appUrl } from '@/lib/env';
 import {
   maySetStatus,
   mayChangeStatus,
@@ -30,6 +31,7 @@ import {
   workingPermission,
 } from './change';
 import { storeMentions } from './mentions';
+import withoutStaffPageLinks from './staff-links';
 import { subscribeAutomatically } from './subscribers';
 import { tellPeopleOnRequest } from './updates';
 
@@ -42,6 +44,8 @@ import { tellPeopleOnRequest } from './updates';
  * is done or cancelled.
  *
  * Everyone else on the request is told by email (`tellPeopleOnRequest`).
+ * The reply is stored without links to the staff's pages
+ * (`withoutStaffPageLinks`): the company reads it.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `requests:contribute` in the request's company.
@@ -64,7 +68,7 @@ export default async function replyToRequest(
 ): Promise<{ status: RequestStatus }> {
   const access = await requestToChange(ctx, actor, input.request, 'requests:contribute');
   const { permissions } = access;
-  const body = requestReplySchema.parse(input.body);
+  const written = requestReplySchema.parse(input.body);
   const asked = input.status ? requestStatusSchema.parse(input.status) : null;
   if (asked && !maySetStatus(permissions, asked)) {
     throw forbiddenError();
@@ -74,6 +78,9 @@ export default async function replyToRequest(
     `request-reply:user:${actingUserId(actor)}`,
     RATE_LIMITS.requestRepliesPerUser,
   );
+  // The company reads it: a link to one of the staff's pages is kept as its text. Past the limit,
+  // as reading the text costs time.
+  const body = withoutStaffPageLinks(written, appUrl);
 
   const side = requestSide(permissions);
   return changeRequest(ctx, actor, access, workingPermission(permissions), async (tx, locked) => {

@@ -45,6 +45,12 @@ interface MarkdownFieldProps {
   defaultValue?: string;
   /** Whether the field takes focus when it appears (it opened because someone asked to edit). */
   autoFocus?: boolean;
+  /**
+   * Whether only the staff read the text (an internal note): it may link to
+   * the staff's pages. In any other text, which the company reads, the
+   * editor keeps such a link as its text, as the server does.
+   */
+  staffOnly?: boolean;
 }
 
 /**
@@ -78,6 +84,7 @@ interface MarkdownFieldProps {
  * @param props.mentions - Gives the people the text can mention.
  * @param props.defaultValue - The text the field starts with.
  * @param props.autoFocus - Whether the field takes focus when it appears.
+ * @param props.staffOnly - Whether only the staff read the text.
  * @returns The field.
  */
 export default function MarkdownField({
@@ -91,6 +98,7 @@ export default function MarkdownField({
   mentions = undefined,
   defaultValue = '',
   autoFocus = false,
+  staffOnly = false,
 }: MarkdownFieldProps) {
   const t = useTranslations('common.markdown');
   const id = useId();
@@ -207,6 +215,7 @@ export default function MarkdownField({
           focusOnStart={hadFocus}
           below={tooLong}
           mentions={mentions}
+          staffOnly={staffOnly}
         />
       </div>
       <input ref={sentField} type="hidden" name={name} value={markdown} disabled={disabled} />

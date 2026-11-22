@@ -1276,3 +1276,44 @@ describe('every template in every language', () => {
     expect(notice.text).toContain('Enviado por Adiutor');
   });
 });
+
+describe('request emails: links to the staff’s pages', () => {
+  it('shows a link to one as its text in a reply, and keeps it in an internal note', async () => {
+    const url = `${appUrl}/requests/142`;
+    const userPage = `${appUrl}/admin/users/019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b`;
+    const written = `Ask [Sam Support](${userPage}).`;
+    const email = await requestUpdateEmail('jane@adiutor.test', {
+      ...english,
+      reference: 'AD-142',
+      title: 'The printer is broken',
+      companyName: 'Adiutor Tests',
+      url,
+      role: 'assignee',
+      audience: 'staff',
+      items: [
+        {
+          event: 'reply',
+          by: 'Casey Client',
+          text: { text: written, format: 'markdown', mentions: {} },
+        },
+        {
+          event: 'mentioned',
+          by: 'Casey Client',
+          where: 'reply',
+          text: { text: written, format: 'markdown', mentions: {} },
+        },
+        {
+          event: 'note',
+          by: 'Morgan Manager',
+          text: { text: written, format: 'markdown', mentions: {} },
+        },
+      ],
+    });
+
+    // Only the note links to the user's page, also in the plain text, which shows its address.
+    expect(email.html.match(new RegExp(`href="${userPage}"`, 'g'))).toHaveLength(1);
+    expect(email.text.split(userPage)).toHaveLength(2);
+    expect(email.text.match(/Ask Sam Support\./g)).toHaveLength(2);
+    expectBasics(email, url);
+  });
+});

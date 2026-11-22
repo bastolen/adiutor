@@ -65,7 +65,8 @@ see [Emails](i18n.md#emails). Templates share the frame and building blocks in
   [Text people write](security-measures.md#text-people-write)): headings below the email's own,
   lists, tables (in columns in the email's plain text), quotes and code without colours, images
   as links, the people it mentions by name, and the plain text for a text stored as plain text or
-  too costly to format
+  too costly to format. Given the email's `appUrl`, it shows a link to one of the staff's pages as
+  its text, as the page does; an internal note, for the staff only, gets none and keeps them
 - the colours and fonts in `theme.ts` (`fontFamily`, `monoFontFamily`), which match the app's
   light theme as inline styles; the fonts are the device's own, not the Inter and JetBrains Mono the
   app ships, because many email clients block or strip web fonts

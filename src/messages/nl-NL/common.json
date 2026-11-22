@@ -196,7 +196,8 @@
         "address": "Webadres",
         "save": "Link opslaan",
         "remove": "Link verwijderen",
-        "invalid": "Vul een volledig webadres in dat begint met http:// of https://."
+        "invalid": "Vul een volledig webadres in dat begint met http:// of https://.",
+        "staffPage": "Het bedrijf leest deze tekst, dus die kan niet naar een pagina voor medewerkers linken."
       }
     }
   }

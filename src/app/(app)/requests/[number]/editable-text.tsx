@@ -122,6 +122,7 @@ export default function EditableText({
           defaultValue={edit.markdown}
           autoFocus
           mentions={loadMentions}
+          staffOnly={note}
         />
         <div className="flex flex-wrap gap-2">
           <Button type="submit" loading={pending}>

@@ -3,10 +3,13 @@
  */
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import renderInLocale from '../../../../tests/i18n/render';
 import RequestText, { type TextSource } from './request-text';
+
+// The texts are shown with Adiutor's own address, whose staff pages they don't link to.
+vi.mock('@/lib/env', () => ({ appUrl: 'https://adiutor.dev' }));
 
 /** The IDs the markers of three mentions name. */
 const SAM = '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b';
@@ -356,5 +359,31 @@ describe('RequestText', () => {
     expect(container.querySelector('p')?.textContent).toBe(
       `${'>'.repeat(500)} ask @Sam Support, not [@](mention:${CASEY})`,
     );
+  });
+});
+
+describe('RequestText: links to the staff’s pages', () => {
+  /** A user's page for the staff, on Adiutor's own address (the mocked `appUrl`). */
+  const USER_PAGE = `https://adiutor.dev/admin/users/${SAM}`;
+
+  it.each([
+    ['a plain text', { text: `Ask ${USER_PAGE} or see https://adiutor.dev/docs`, format: 'plain' }],
+    [
+      'a text in Markdown',
+      { text: `Ask [Sam](${USER_PAGE}) or see https://adiutor.dev/docs`, format: 'markdown' },
+    ],
+  ] as const)('links none in %s the company reads, but an internal note does', (_what, text) => {
+    const { unmount } = render(<RequestText id="text" text={text} source={SOURCE} names={NAMES} />);
+    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+      'https://adiutor.dev/docs',
+    ]);
+    unmount();
+
+    render(<RequestText id="note" text={text} source={SOURCE} names={NAMES} staffOnly />);
+
+    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+      USER_PAGE,
+      'https://adiutor.dev/docs',
+    ]);
   });
 });

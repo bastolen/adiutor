@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import { request, requestEntry, requestMention, requestTextVersion, user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
+import { appUrl } from '@/lib/env';
 import { storedMentionMarker, writtenMentionMarker } from '@/lib/requests';
 
 import {
@@ -218,6 +219,56 @@ describe('editReply', () => {
         editReply(ctx, support, { request: raised.id, entry, text: 'Mine now.', edits: 0 }),
       ).rejects.toMatchObject({ code: 'not_found' });
     }
+  });
+});
+
+describe('editing: links to the staff’s pages', () => {
+  it('keeps a link to a page for the staff as its text in a description and a reply', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const raised = await storeRequest(company.id);
+    const reply = await storeEntry(raised.id, {
+      authorId: support.id,
+      authorSide: 'staff',
+      body: 'On it.',
+    });
+    const userPage = `${appUrl}/admin/users/${support.id}`;
+
+    await editRequestDescription(ctx, support, {
+      request: raised.id,
+      text: `It prints blank pages, says [Sam Support](${userPage}).`,
+      edits: 0,
+    });
+    await editReply(ctx, support, {
+      request: raised.id,
+      entry: reply.id,
+      text: `On it, with [Sam Support](${userPage}).`,
+      edits: 0,
+    });
+
+    expect((await storedRequest(raised.id))?.description).toBe(
+      'It prints blank pages, says Sam Support.',
+    );
+    const [stored] = await db.select().from(requestEntry).where(eq(requestEntry.id, reply.id));
+    expect(stored?.body).toBe('On it, with Sam Support.');
+  });
+
+  it('keeps such a link in an internal note, which only the staff read', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const raised = await storeRequest(company.id);
+    const note = await storeEntry(raised.id, {
+      kind: 'note',
+      authorId: support.id,
+      authorSide: 'staff',
+      body: 'Ask Sam.',
+    });
+    const text = `Ask [Sam Support](${appUrl}/admin/users/${support.id}).`;
+
+    await editReply(ctx, support, { request: raised.id, entry: note.id, text, edits: 0 });
+
+    const [stored] = await db.select().from(requestEntry).where(eq(requestEntry.id, note.id));
+    expect(stored?.body).toBe(text);
   });
 });
 
