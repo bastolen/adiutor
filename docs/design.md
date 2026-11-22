@@ -395,6 +395,18 @@ keyboard support.
     card in its definition (`TableDefinition.section`, `table.section`), and its sort and page
     links end in that anchor too, which only matters in a new tab, since in the app they don't
     scroll.
+  - **One anchor, one card, across the app.** A card's `id` is unique across the app, not just its
+    page: Next keeps the pages shown last in the document, hidden in `<Activity>`, so the same id
+    on two pages repeats, and Next's own scroll to an anchor (`getElementById`) can find the
+    hidden card. A card shared by two pages takes its anchor from the page: the same table gets
+    a definition per page, with the same prefix (so the same address parameters) and its own
+    section (`DEVICES_TABLE` on your account's Activity page, `USER_DEVICES_TABLE` on a user's
+    Activity tab; `INVITATIONS_TABLE` and `INVITE_LINKS_TABLE` on the staff settings,
+    `COMPANY_INVITATIONS_TABLE` and `COMPANY_INVITE_LINKS_TABLE` on a company's Members page,
+    whose invite card is `company-invite`). `src/lib/tables/tables.test.ts` checks that no two
+    tables' sections and no two files' fixed `Card` ids (a string, or a constant declared as one)
+    are the same, and `e2e/keyboard.spec.ts` keeps such pages alive together and checks that no
+    id repeats in the document.
   - **Landing.** When the user comes back to the page with that anchor in the URL, the card
     (`AnchoredSection` in `src/components/ui/anchored-section.tsx`) lands them on it. That is on
     mount or when `<Activity>` shows the page again, one frame later, because Next.js scrolls to

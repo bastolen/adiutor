@@ -16,7 +16,7 @@ import type { SearchParams } from '@/lib/search-params';
 import { confirmationWindow } from '@/lib/sign-in/confirm-url';
 import { createPageUrl } from '@/lib/tables/page-url';
 import { parseTableState } from '@/lib/tables/table-state';
-import { DEVICES_TABLE } from '@/lib/tables/tables';
+import { USER_DEVICES_TABLE } from '@/lib/tables/tables';
 import appContext from '@/server/app-context';
 import { listAuditEvents } from '@/server/audit';
 import { requireGlobalPermission } from '@/server/authz';
@@ -48,7 +48,8 @@ export const generateMetadata = globalPermissionMetadata(
  *
  * @param props - Component props.
  * @param props.params - Route parameters.
- * @param props.searchParams - Query parameters: the devices table's sort and page (`DEVICES_TABLE`).
+ * @param props.searchParams - Query parameters: the devices table's sort and page
+ *   (`USER_DEVICES_TABLE`).
  * @returns The page content.
  */
 async function UserActivity({
@@ -61,7 +62,7 @@ async function UserActivity({
   const actor = await requireGlobalPermission('users:view');
   const [{ userId }, query] = await Promise.all([params, searchParams]);
   const { detail, access } = await loadUser(actor, userId, 'activity');
-  const requested = parseTableState(DEVICES_TABLE, query);
+  const requested = parseTableState(USER_DEVICES_TABLE, query);
   const [devices, activity] = await Promise.all([
     access.seesDevices ? listUserDevices(appContext, actor, detail.id, requested) : null,
     access.seesActivity ? listAuditEvents(appContext, actor, detail.id, RECENT_EVENTS) : null,
@@ -85,7 +86,7 @@ async function UserActivity({
           userId={detail.id}
           userName={userName}
           sessions={devices}
-          table={url.table(DEVICES_TABLE, { ...requested, page: devices.page })}
+          table={url.table(USER_DEVICES_TABLE, { ...requested, page: devices.page })}
           canSignOut={access.canManage}
         />
       )}

@@ -3,8 +3,12 @@
  * its default order and the prefix of its query parameters (see
  * `src/lib/tables/table-state.ts`). Tables that share a page have different
  * prefixes, and the ones that aren't a page's main table name the anchor of
- * their card (`section`). People and companies are sorted by name A to Z until the viewer
- * picks another order; invitations, invite links and devices newest first.
+ * their card (`section`). A card's anchor is unique across the app, not just
+ * its page: Next keeps the pages shown last in the document, hidden, so a
+ * table on two pages gets a definition per page, with the same prefix (the
+ * same address parameters) and its own section. People and companies are
+ * sorted by name A to Z until the viewer picks another order; invitations,
+ * invite links and devices newest first.
  */
 import { dateSort, type SortDefinition, type TableDefinition, textSort } from './table-state';
 
@@ -92,7 +96,7 @@ export const USER_COMPANIES_TABLE: TableDefinition<UserCompanySort> = {
   sorts: { name: textSort('company'), joined: dateSort('joined') },
 };
 
-/** Open invitations, on a company's Members page and the staff settings. */
+/** Open invitations, on the staff settings (`/admin/settings/staff`). */
 export const INVITATIONS_TABLE: TableDefinition<InvitationSort> = {
   prefix: 'inv-',
   section: 'invitations',
@@ -100,7 +104,13 @@ export const INVITATIONS_TABLE: TableDefinition<InvitationSort> = {
   sorts: { email: textSort('email'), sent: dateSort('sent') },
 };
 
-/** Invite links, on a company's Members page and the staff settings. */
+/** Open invitations on a company's Members page: {@link INVITATIONS_TABLE} with its own anchor. */
+export const COMPANY_INVITATIONS_TABLE: TableDefinition<InvitationSort> = {
+  ...INVITATIONS_TABLE,
+  section: 'company-invitations',
+};
+
+/** Invite links, on the staff settings (`/admin/settings/staff`). */
 export const INVITE_LINKS_TABLE: TableDefinition<InviteLinkSort> = {
   prefix: 'links-',
   section: 'invite-links',
@@ -108,12 +118,24 @@ export const INVITE_LINKS_TABLE: TableDefinition<InviteLinkSort> = {
   sorts: { created: dateSort('created') },
 };
 
-/** Signed-in devices, on a user's page and the Security page. */
+/** Invite links on a company's Members page: {@link INVITE_LINKS_TABLE} with its own anchor. */
+export const COMPANY_INVITE_LINKS_TABLE: TableDefinition<InviteLinkSort> = {
+  ...INVITE_LINKS_TABLE,
+  section: 'company-invite-links',
+};
+
+/** Your own signed-in devices, on your account's Activity page (`/account/activity`). */
 export const DEVICES_TABLE: TableDefinition<DeviceSort> = {
   prefix: 'devices-',
   section: 'devices',
   defaultSort: 'signed-in',
   sorts: { 'signed-in': dateSort('signedIn') },
+};
+
+/** A user's signed-in devices, on their Activity tab: {@link DEVICES_TABLE} with its own anchor. */
+export const USER_DEVICES_TABLE: TableDefinition<DeviceSort> = {
+  ...DEVICES_TABLE,
+  section: 'user-devices',
 };
 
 /** The audit log (`/admin/logs`): every recorded event, newest first. */

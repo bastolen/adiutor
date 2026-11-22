@@ -243,7 +243,7 @@ export async function listUserCompanies(
  * @param ctx - Service context.
  * @param actor - The acting user; needs `users:manage`.
  * @param userId - The user (unvalidated input is fine).
- * @param options - Sort and page of the table (`DEVICES_TABLE`).
+ * @param options - Sort and page of the table (`USER_DEVICES_TABLE`, sorted as `DEVICES_TABLE`).
  * @returns One page of their devices, with the total.
  * @throws {ServiceError} `forbidden` without `users:manage`, `not_found` for unknown users.
  */

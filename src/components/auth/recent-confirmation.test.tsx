@@ -350,7 +350,7 @@ describe('ReturnToField', () => {
         serverTime={Date.now()}
         returnTo="/companies/adiutor-tests/members?links-page=3"
       >
-        <Card id="invite-links" title="Invite links">
+        <Card id="company-invite-links" title="Invite links">
           <form aria-label="Create invite link">
             <ReturnToField />
           </form>
@@ -360,7 +360,7 @@ describe('ReturnToField', () => {
 
     expect(container.querySelector('input[name="returnTo"]')).toHaveAttribute(
       'value',
-      '/companies/adiutor-tests/members?links-page=3#invite-links',
+      '/companies/adiutor-tests/members?links-page=3#company-invite-links',
     );
   });
 

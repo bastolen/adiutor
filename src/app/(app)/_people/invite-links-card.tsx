@@ -1,6 +1,8 @@
 /**
  * @file The "Invite links" card, shared by a company's Members page and the
- * staff settings. Text from the `people` namespace, role names from `roles`; its
+ * staff settings. Its anchor is the page's own, from the table it's given
+ * (`invite-links` or `company-invite-links`), since both pages can be kept in
+ * the browser at once. Text from the `people` namespace, role names from `roles`; its
  * form is a client component, so the page passes `people` with
  * `ClientMessages`.
  */
@@ -40,7 +42,7 @@ const LINK_STATUS_TONE: Record<InviteLinkStatus, BadgeTone> = {
 interface InviteLinksCardProps {
   /** A page of the links. */
   links: Paged<InviteLinkSummary>;
-  /** The table's sort and page links. */
+  /** The table's sort and page links, with the anchor the page gives the card (`section`). */
   table: TableLinks<InviteLinkSort>;
   /** Whether the user may create and revoke links. */
   canManage: boolean;

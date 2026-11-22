@@ -24,7 +24,11 @@ import type { SearchParams } from '@/lib/search-params';
 import { confirmationWindow } from '@/lib/sign-in/confirm-url';
 import { createPageUrl } from '@/lib/tables/page-url';
 import { parseTableState } from '@/lib/tables/table-state';
-import { INVITATIONS_TABLE, INVITE_LINKS_TABLE, MEMBERS_TABLE } from '@/lib/tables/tables';
+import {
+  COMPANY_INVITATIONS_TABLE,
+  COMPANY_INVITE_LINKS_TABLE,
+  MEMBERS_TABLE,
+} from '@/lib/tables/tables';
 import appContext from '@/server/app-context';
 import { requireCompanyAccess } from '@/server/authz';
 import { companyPermissionMetadata } from '@/server/page-metadata';
@@ -60,7 +64,7 @@ export const generateMetadata = companyPermissionMetadata(
  * @param props - Component props.
  * @param props.params - Route parameters.
  * @param props.searchParams - Query parameters: each table's sort and page (see
- *   `MEMBERS_TABLE`, `INVITATIONS_TABLE` and `INVITE_LINKS_TABLE`).
+ *   `MEMBERS_TABLE`, `COMPANY_INVITATIONS_TABLE` and `COMPANY_INVITE_LINKS_TABLE`).
  * @returns The page content.
  */
 async function Members({
@@ -79,8 +83,8 @@ async function Members({
   const { company, permissions, actor } = await requireCompanyAccess(companyId, 'members:view');
   const canManage = permissions.has('members:manage') && !company.deactivatedAt;
   const membersRequested = parseTableState(MEMBERS_TABLE, query);
-  const invitationsRequested = parseTableState(INVITATIONS_TABLE, query);
-  const linksRequested = parseTableState(INVITE_LINKS_TABLE, query);
+  const invitationsRequested = parseTableState(COMPANY_INVITATIONS_TABLE, query);
+  const linksRequested = parseTableState(COMPANY_INVITE_LINKS_TABLE, query);
   const [members, invitations, links] = await Promise.all([
     listMembers(appContext, actor, company.id, membersRequested),
     listPendingInvitations(appContext, actor, company.id, invitationsRequested),
@@ -92,11 +96,16 @@ async function Members({
     await getTranslations('tables'),
   );
   const table = url.table(MEMBERS_TABLE, { ...membersRequested, page: members.page });
-  const invitationsTable = url.table(INVITATIONS_TABLE, {
+  // The cards' anchors are the company page's own (`company-…`): the staff settings have the same
+  // cards, and both pages can be kept in the browser at once.
+  const invitationsTable = url.table(COMPANY_INVITATIONS_TABLE, {
     ...invitationsRequested,
     page: invitations.page,
   });
-  const linksTable = url.table(INVITE_LINKS_TABLE, { ...linksRequested, page: links.page });
+  const linksTable = url.table(COMPANY_INVITE_LINKS_TABLE, {
+    ...linksRequested,
+    page: links.page,
+  });
   const roles = roleOptions(COMPANY_ROLES, tRoles);
 
   return (
@@ -239,7 +248,7 @@ async function Members({
 
         {canManage && (
           <Card
-            id="invite"
+            id="company-invite"
             title={t('invite.title')}
             description={t('invite.description', { days: INVITATION_VALID_DAYS })}
           >

@@ -161,7 +161,7 @@ test("keeps each table's sort and page in the address", async ({ page }) => {
   await page.getByRole('menuitemradio', { name: 'Created, oldest first' }).click();
   // Ends in the card's anchor (for a link opened in a new tab); here the page doesn't move, and
   // focus goes back to the Sort button.
-  await expect(page).toHaveURL(`${membersPath}?page=2&links-dir=asc#invite-links`);
+  await expect(page).toHaveURL(`${membersPath}?page=2&links-dir=asc#company-invite-links`);
   await expect(links.getByRole('columnheader', { name: 'Created' })).toHaveAttribute(
     'aria-sort',
     'ascending',

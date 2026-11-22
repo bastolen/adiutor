@@ -1,6 +1,8 @@
 /**
  * @file The "Open invitations" card, shared by a company's Members page and
- * the staff settings. Text from the `people` namespace, role names from `roles`.
+ * the staff settings. Its anchor is the page's own, from the table it's given
+ * (`invitations` or `company-invitations`), since both pages can be kept in
+ * the browser at once. Text from the `people` namespace, role names from `roles`.
  */
 import { MailPlus } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -27,7 +29,7 @@ import { resendInvitationAction, revokeInvitationAction } from './invitation-act
 interface InvitationsCardProps {
   /** A page of the open invitations. */
   invitations: Paged<PendingInvitation>;
-  /** The table's sort and page links. */
+  /** The table's sort and page links, with the anchor the page gives the card (`section`). */
   table: TableLinks<InvitationSort>;
   /** Whether the user may resend and revoke them. */
   canManage: boolean;
