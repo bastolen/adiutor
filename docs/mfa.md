@@ -249,7 +249,7 @@ get a security email, and the audit log names the providers whose accounts were 
 The Admin needs a confirmation with their own second step from the last 15 minutes, as for
 changing their own sign-in methods: without one, the Reset button sends them to the step-up page in
 its change mode before its dialog opens (`ActionDialog`'s `confirmFirst`), so what they choose in
-the dialog isn't lost on the way, and brings them back to the card on the user's page. The action
+the dialog isn't lost on the way, and brings them back to the card on the user's Manage tab. The action
 checks it again and sends them there itself if the window closed meanwhile. The reset holds the user's sign-in change
 lock (`withSignInChangeLock`), so it's refused while a change of theirs is being made, such as
 connecting an account, rather than crossing it. Admins can't reset their own account; they use

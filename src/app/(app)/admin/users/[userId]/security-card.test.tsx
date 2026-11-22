@@ -1,5 +1,5 @@
 /**
- * @file Tests for the "Sign-in security" card on the user detail page: how
+ * @file Tests for the "Sign-in security" card on the Overview tab of a user's page: how
  * two-step verification is described, and a provider account's name shown
  * only when the viewer may see it (staff Admins), with whether the account
  * has 2FA only for providers that can prove it.

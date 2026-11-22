@@ -1,5 +1,5 @@
 /**
- * @file Tests for the "Account access" card on the user detail page: Reset is
+ * @file Tests for the "Account access" card on the Manage tab of a user's page: Reset is
  * disabled (and says why) when there's nothing to reset, its dialog mentions
  * GitHub and Google only when accounts are connected and offers to remove
  * the passkeys, and the account can be deactivated or reactivated by its
@@ -13,7 +13,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import confirmChangeUrl from '@/lib/sign-in/confirm-url';
 import type { UserDetail } from '@/server/people/user-admin';
 
-import ConfirmationWindow from '../../../../../../tests/ui/confirmation-window';
+import ConfirmationWindow from '../../../../../../../tests/ui/confirmation-window';
 import AccountAccessCard from './account-access-card';
 
 /** The step-up page, coming back to this card on the user's page. */
@@ -27,7 +27,7 @@ const { deactivateUserAction, reactivateUserAction, resetMfaAction, push } = vi.
   push: vi.fn(),
 }));
 
-vi.mock('./actions', () => ({ deactivateUserAction, reactivateUserAction, resetMfaAction }));
+vi.mock('../actions', () => ({ deactivateUserAction, reactivateUserAction, resetMfaAction }));
 
 vi.mock('next/navigation', () => ({
   /**

@@ -1,5 +1,5 @@
 /**
- * @file The "Staff access" card on the user detail page, for staff Admins
+ * @file The "Staff access" card on the Overview tab of a user's page, for staff Admins
  * (`staff:manage`) on someone else's page: make the user staff, change their
  * staff role or remove their staff access. Giving a staff role needs the
  * Admin's recent confirmation, so the dialog and role select ask first, and

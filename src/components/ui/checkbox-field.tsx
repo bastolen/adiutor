@@ -1,6 +1,13 @@
 /**
  * @file Labelled checkbox with optional help text.
+ *
+ * A client component: its ids come from `useId`, and only the browser's one
+ * React tree keeps them unique. Rendered on the server, they would start
+ * again in every request, so a tab kept alive and the one loaded next could
+ * share them (labels and card names would point at the wrong element).
  */
+'use client';
+
 import { type ComponentProps, type ReactNode, useId } from 'react';
 
 import cn from '@/lib/cn';

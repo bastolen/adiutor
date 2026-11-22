@@ -1,5 +1,5 @@
 /**
- * @file The "Companies" card on the user detail page: the companies the user
+ * @file The "Companies" card on the Companies tab of a user's page: the companies the user
  * belongs to, sorted and paginated (`USER_COMPANIES_TABLE`). Staff who may
  * manage members (`members:manage`) also add them to a company, change their
  * role in one and remove them from one, on their own page too (worded for
@@ -37,8 +37,8 @@ import {
   addMemberAction,
   changeRoleAction,
   removeMemberAction,
-} from '../../../_people/member-actions';
-import RoleSelect from '../../../_people/role-select';
+} from '../../../../_people/member-actions';
+import RoleSelect from '../../../../_people/role-select';
 
 /**
  * Props for {@link CompaniesCard}.

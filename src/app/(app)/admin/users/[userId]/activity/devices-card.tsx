@@ -1,5 +1,5 @@
 /**
- * @file The "Signed-in devices" card on the user detail page: the browsers
+ * @file The "Signed-in devices" card on the Activity tab of a user's page: the browsers
  * where the account is signed in, sorted and paginated (`DEVICES_TABLE`).
  * Admins (`users:manage`) on someone else's page also sign them out
  * everywhere. Text from `admin.user.devices`.
@@ -15,8 +15,8 @@ import { type Paged } from '@/lib/tables/table-state';
 import type { DeviceSort } from '@/lib/tables/tables';
 import type { UserSession } from '@/server/people/user-admin';
 
-import DevicesTable from '../../../_people/devices-table';
-import { signOutEverywhereAction } from './actions';
+import DevicesTable from '../../../../_people/devices-table';
+import { signOutEverywhereAction } from '../actions';
 
 /**
  * Props for {@link DevicesCard}.

@@ -53,7 +53,17 @@
     },
     "user": {
       "title": "Gebruiker",
+      "companiesTitle": "Bedrijven · Gebruiker",
+      "activityTitle": "Activiteit · Gebruiker",
+      "manageTitle": "Beheer · Gebruiker",
       "back": "Gebruikers",
+      "tabs": {
+        "label": "Onderdelen van de gebruiker",
+        "overview": "Overzicht",
+        "companies": "Bedrijven",
+        "activity": "Activiteit",
+        "manage": "Beheer"
+      },
       "deactivatedNotice": "Dit account is gedeactiveerd op {date}. Er kan niet mee worden ingelogd tot een beheerder het weer activeert.",
       "self": {
         "signInOnly": "Dit is je eigen account. Wijzig je inlogmethoden op je <security>beveiligingspagina</security>.",

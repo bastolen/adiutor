@@ -402,7 +402,41 @@ export async function openUser(page: Page, name: string): Promise<void> {
 }
 
 /**
- * Signs in as a user from their detail page's "Sign in as user" card, with a
+ * Chooses a tab of the user's page that's open (Overview, Companies,
+ * Activity or Manage), and waits until it's the current one.
+ *
+ * @param page - The browser page, on a user's page.
+ * @param tab - The tab's name.
+ */
+export async function chooseUserTab(
+  page: Page,
+  tab: 'Overview' | 'Companies' | 'Activity' | 'Manage',
+): Promise<void> {
+  const link = page
+    .getByRole('navigation', { name: 'User sections' })
+    .getByRole('link', { name: tab, exact: true });
+  await link.click();
+  await expect(link).toHaveAttribute('aria-current', 'page');
+}
+
+/**
+ * Opens a tab of a user's page from the users list.
+ *
+ * @param page - The browser page, signed in as staff.
+ * @param name - The user's display name.
+ * @param tab - The tab's name.
+ */
+export async function openUserTab(
+  page: Page,
+  name: string,
+  tab: 'Companies' | 'Activity' | 'Manage',
+): Promise<void> {
+  await openUser(page, name);
+  await chooseUserTab(page, tab);
+}
+
+/**
+ * Signs in as a user from the "Sign in as user" card on their page's Manage tab, with a
  * reason, and waits for the banner where the user lands. The staff member
  * must have confirmed with a strong second step lately (a sign-in with an
  * authenticator code counts).
@@ -419,7 +453,7 @@ export async function signInAsUser(
   name: string,
   { reason = '', landsOn = '/dashboard' }: { reason?: string; landsOn?: string } = {},
 ): Promise<void> {
-  await openUser(page, name);
+  await openUserTab(page, name, 'Manage');
   await page.getByRole('button', { name: 'Sign in as user' }).click();
   const dialog = page.getByRole('dialog', { name: `Sign in as ${name}?` });
   await dialog.getByLabel('Reason (optional)').fill(reason);

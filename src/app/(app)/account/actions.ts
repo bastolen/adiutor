@@ -1,8 +1,9 @@
 /**
- * @file Server actions for the Profile page of the account (name, language,
- * time zone, picture, emails about requests and email verification). They go through Better Auth, so its rules apply. Their
- * messages are in the request's language. The Security page's actions are in
- * `./security/actions.ts`.
+ * @file Server actions for the Profile and Preferences tabs of the account
+ * (name, picture and email verification; language, time zone and emails about
+ * requests). They go through Better Auth, so its rules apply. Their messages
+ * are in the request's language. The Security tab's actions are in
+ * `./security/actions.ts`, and the Activity tab's in `./activity/actions.ts`.
  */
 'use server';
 
@@ -32,10 +33,10 @@ import { assertRateLimit, RATE_LIMITS } from '@/server/rate-limit';
 import { LANGUAGE_SECTION, TIME_ZONE_SECTION, VERIFIED_RETURN_PATH } from './account-messages';
 
 /** Where the page reloads after the language changed, to say so in it (`?language=saved`). */
-const LANGUAGE_SAVED_PATH = withSection('/account?language=saved', LANGUAGE_SECTION);
+const LANGUAGE_SAVED_PATH = withSection('/account/preferences?language=saved', LANGUAGE_SECTION);
 
 /** Where the page reloads after the time zone changed, to say so in it (`?timeZone=saved`). */
-const TIME_ZONE_SAVED_PATH = withSection('/account?timeZone=saved', TIME_ZONE_SECTION);
+const TIME_ZONE_SAVED_PATH = withSection('/account/preferences?timeZone=saved', TIME_ZONE_SECTION);
 
 /**
  * Saves the signed-in user's language choice with their account, so emails

@@ -1,5 +1,5 @@
 /**
- * @file The "Account access" card on the user detail page, for Admins
+ * @file The "Account access" card on the Manage tab of a user's page, for Admins
  * (`users:manage`) on someone else's page: reset two-step verification (which
  * also disconnects their GitHub and Google accounts, and can remove their
  * passkeys), and deactivate or reactivate the account. A reset needs the
@@ -16,7 +16,7 @@ import CheckboxField from '@/components/ui/checkbox-field';
 import RowAction from '@/components/ui/row-action';
 import type { UserDetail } from '@/server/people/user-admin';
 
-import { deactivateUserAction, reactivateUserAction, resetMfaAction } from './actions';
+import { deactivateUserAction, reactivateUserAction, resetMfaAction } from '../actions';
 
 /**
  * One action in the card: what it does on the left, its button on the right

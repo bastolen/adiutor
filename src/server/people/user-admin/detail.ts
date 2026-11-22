@@ -1,6 +1,10 @@
 /**
- * @file The user detail page's loader (`getUserDetail`) and the check of
- * whether a user exists, for the page's title. Staff only (`users:view`).
+ * @file The user page's loaders, one per tab's data: the user themself
+ * (`getUserDetail`, for the header, Overview and Manage), their companies
+ * (`listUserCompanies`) and their signed-in devices (`listUserDevices`),
+ * and the check of whether a user exists, for the pages' titles. Staff only
+ * (`users:view`); devices for staff Admins (`users:manage`). Their recent
+ * activity is `listAuditEvents`.
  */
 import { and, eq, inArray } from 'drizzle-orm';
 
@@ -16,7 +20,6 @@ import { idSchema } from '@/lib/validation';
 
 import { assertPermission, getGlobalPermissions } from '../../access';
 import type { Actor } from '../../actor';
-import { type AuditEntry, listAuditEvents } from '../../audit';
 import { listConnectedProviders } from '../../auth/accounts';
 import { loadMfaContext } from '../../auth/mfa-state';
 import type { ServiceContext } from '../../context';
@@ -43,7 +46,7 @@ export interface UserCompany {
   deactivated: boolean;
 }
 
-/** Everything the user detail page shows. */
+/** A user, as their page's header, Overview and Manage tabs show them. */
 export interface UserDetail {
   /** User ID. */
   id: string;
@@ -74,15 +77,6 @@ export interface UserDetail {
    * MFA reset disconnects them all ((`resetUserMfa`)).
    */
   connectedAccounts: number;
-  /** A page of their companies (by default by name). */
-  companies: Paged<UserCompany>;
-  /**
-   * A page of their signed-in devices (by default most recent first), or
-   * `null` without `users:manage` (IP addresses and devices are for Admins only).
-   */
-  sessions: Paged<UserSession> | null;
-  /** Their recent audit log entries, or `null` without `audit:view`. */
-  activity: AuditEntry[] | null;
   /** Their picture's address (`loadPictures`), or `null` for their initials. */
   picture: string | null;
   /**
@@ -109,34 +103,15 @@ async function loadAccountNames(
   return Object.fromEntries(accounts.map(({ id, accountName }) => [id, accountName]));
 }
 
-/** The tables of the user detail page, for {@link getUserDetail}. */
-export interface UserDetailOptions {
-  /** Sort and page of their companies. */
-  companies?: Partial<TableState<UserCompanySort>>;
-  /** Sort and page of their signed-in devices. */
-  sessions?: Partial<TableState<DeviceSort>>;
-}
-
 /**
- * Loads a user for the detail page. Staff only (`users:view`).
+ * Finds a user by ID for the loaders below.
  *
  * @param ctx - Service context.
- * @param actor - The acting user; needs `users:view`.
  * @param userId - The user (unvalidated input is fine).
- * @param options - Sort and page of the page's tables.
- * @returns The user's details.
- * @throws {ServiceError} `forbidden` for non-staff, `not_found` for unknown users.
+ * @returns Their row.
+ * @throws {ServiceError} `not_found` for unknown users and what isn't an ID.
  */
-export async function getUserDetail(
-  ctx: ServiceContext,
-  actor: Actor,
-  userId: string,
-  options: UserDetailOptions = {},
-): Promise<UserDetail> {
-  const permissions = getGlobalPermissions(actor);
-  assertPermission(permissions, 'users:view');
-  const id = parseId(userId);
-
+async function findUser(ctx: ServiceContext, userId: string) {
   const [found] = await ctx.db
     .select({
       id: user.id,
@@ -149,50 +124,41 @@ export async function getUserDetail(
       staffRole: user.platformRole,
     })
     .from(user)
-    .where(eq(user.id, id));
+    .where(eq(user.id, parseId(userId)));
   if (!found) {
     throw notFoundError();
   }
-  const staffRole = found.staffRole ?? null;
+  return found;
+}
 
-  const companiesState = resolveTableState(USER_COMPANIES_TABLE, options.companies);
-  const ofUser = eq(membership.userId, id);
-  const companyOrder =
-    companiesState.sort === 'joined'
-      ? orderTerms(companiesState.dir, membership.createdAt, membership.id)
-      : orderTerms(companiesState.dir, textOrder(company.name), company.id);
-  const [mfa, connectedAccounts, companies, sessions, activity, accountNames] = await Promise.all([
-    // The MFA role comes from all their memberships, not just the page of companies shown.
+/**
+ * Loads a user for their page's header and its Overview and Manage tabs.
+ * Staff only (`users:view`).
+ *
+ * @param ctx - Service context.
+ * @param actor - The acting user; needs `users:view`.
+ * @param userId - The user (unvalidated input is fine).
+ * @returns The user's details.
+ * @throws {ServiceError} `forbidden` for non-staff, `not_found` for unknown users.
+ */
+export async function getUserDetail(
+  ctx: ServiceContext,
+  actor: Actor,
+  userId: string,
+): Promise<UserDetail> {
+  const permissions = getGlobalPermissions(actor);
+  assertPermission(permissions, 'users:view');
+  const found = await findUser(ctx, userId);
+  const { id } = found;
+  const [mfa, connectedAccounts, accountNames, pictures] = await Promise.all([
+    // The MFA role comes from all their memberships.
     loadMfaContext(ctx.db, id),
     ctx.db.$count(
       account,
       and(eq(account.userId, id), inArray(account.providerId, [...OAUTH_PROVIDERS])),
     ),
-    paginate(
-      companiesState,
-      () => ctx.db.$count(membership, ofUser),
-      (limit, offset) =>
-        ctx.db
-          .select({
-            id: company.id,
-            membershipId: membership.id,
-            name: company.name,
-            slug: company.slug,
-            role: membership.role,
-            joinedAt: membership.createdAt,
-            deactivatedAt: company.deactivatedAt,
-          })
-          .from(membership)
-          .innerJoin(company, eq(company.id, membership.companyId))
-          .where(ofUser)
-          .orderBy(...companyOrder)
-          .limit(limit)
-          .offset(offset),
-    ),
-    // Judged once the MFA role above is in (`asSeenWith`), so both load in this one batch.
-    permissions.has('users:manage') ? loadSessionRows(ctx.db, id, options.sessions ?? {}) : null,
-    permissions.has('audit:view') ? listAuditEvents(ctx, actor, id, 25) : null,
     permissions.has('users:manage') ? loadAccountNames(ctx.db, id) : null,
+    loadPictures(ctx.db, [id]),
   ]);
   if (!mfa) {
     throw notFoundError();
@@ -201,25 +167,102 @@ export async function getUserDetail(
 
   return {
     ...found,
-    staffRole,
+    staffRole: found.staffRole ?? null,
     mfa: {
       ...state,
       status: mfaStatus(state, mfaRole, availableProviders),
       required: requiresMfa(mfaRole),
     },
     connectedAccounts,
-    companies: {
-      ...companies,
-      items: companies.items.map(({ deactivatedAt, ...row }) => ({
-        ...row,
-        deactivated: Boolean(deactivatedAt),
-      })),
-    },
-    sessions: sessions && asSeenWith(sessions, mfaRole),
-    activity,
     accountNames,
-    picture: (await loadPictures(ctx.db, [found.id])).get(found.id) ?? null,
+    picture: pictures.get(id) ?? null,
   };
+}
+
+/**
+ * Loads a page of a user's companies, for the Companies tab of their page
+ * (by default by name). Staff only (`users:view`).
+ *
+ * @param ctx - Service context.
+ * @param actor - The acting user; needs `users:view`.
+ * @param userId - The user (unvalidated input is fine).
+ * @param options - Sort and page of the table (`USER_COMPANIES_TABLE`).
+ * @returns One page of their companies, with the total.
+ * @throws {ServiceError} `forbidden` for non-staff, `not_found` for unknown users.
+ */
+export async function listUserCompanies(
+  ctx: ServiceContext,
+  actor: Actor,
+  userId: string,
+  options: Partial<TableState<UserCompanySort>> = {},
+): Promise<Paged<UserCompany>> {
+  assertPermission(getGlobalPermissions(actor), 'users:view');
+  const { id } = await findUser(ctx, userId);
+  const state = resolveTableState(USER_COMPANIES_TABLE, options);
+  const ofUser = eq(membership.userId, id);
+  const companyOrder =
+    state.sort === 'joined'
+      ? orderTerms(state.dir, membership.createdAt, membership.id)
+      : orderTerms(state.dir, textOrder(company.name), company.id);
+  const companies = await paginate(
+    state,
+    () => ctx.db.$count(membership, ofUser),
+    (limit, offset) =>
+      ctx.db
+        .select({
+          id: company.id,
+          membershipId: membership.id,
+          name: company.name,
+          slug: company.slug,
+          role: membership.role,
+          joinedAt: membership.createdAt,
+          deactivatedAt: company.deactivatedAt,
+        })
+        .from(membership)
+        .innerJoin(company, eq(company.id, membership.companyId))
+        .where(ofUser)
+        .orderBy(...companyOrder)
+        .limit(limit)
+        .offset(offset),
+  );
+  return {
+    ...companies,
+    items: companies.items.map(({ deactivatedAt, ...row }) => ({
+      ...row,
+      deactivated: Boolean(deactivatedAt),
+    })),
+  };
+}
+
+/**
+ * Loads a page of a user's signed-in devices, for the Activity tab of their
+ * page (by default most recent first). IP addresses and devices are for staff
+ * Admins only (`users:manage`). Whether each sign-in counts as MFA is judged
+ * with the MFA role their memberships give them now.
+ *
+ * @param ctx - Service context.
+ * @param actor - The acting user; needs `users:manage`.
+ * @param userId - The user (unvalidated input is fine).
+ * @param options - Sort and page of the table (`DEVICES_TABLE`).
+ * @returns One page of their devices, with the total.
+ * @throws {ServiceError} `forbidden` without `users:manage`, `not_found` for unknown users.
+ */
+export async function listUserDevices(
+  ctx: ServiceContext,
+  actor: Actor,
+  userId: string,
+  options: Partial<TableState<DeviceSort>> = {},
+): Promise<Paged<UserSession>> {
+  assertPermission(getGlobalPermissions(actor), 'users:manage');
+  const { id } = await findUser(ctx, userId);
+  const [mfa, sessions] = await Promise.all([
+    loadMfaContext(ctx.db, id),
+    loadSessionRows(ctx.db, id, options),
+  ]);
+  if (!mfa) {
+    throw notFoundError();
+  }
+  return asSeenWith(sessions, mfa.mfaRole);
 }
 
 /**
