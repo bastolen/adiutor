@@ -227,20 +227,22 @@ describe('useRecentConfirmation', () => {
       });
 
     it('adds the anchor of the card to the page and its tables', () => {
-      const hook = renderInCard('/admin/staff?inv-page=2');
+      const hook = renderInCard('/admin/settings/staff?inv-page=2');
 
-      expect(hook.result.current.returnTo).toBe('/admin/staff?inv-page=2#invitations');
+      expect(hook.result.current.returnTo).toBe('/admin/settings/staff?inv-page=2#invitations');
       expect(ask(hook)).toBe(true);
-      expect(push).toHaveBeenCalledWith(confirmChangeUrl('/admin/staff?inv-page=2#invitations'));
+      expect(push).toHaveBeenCalledWith(
+        confirmChangeUrl('/admin/settings/staff?inv-page=2#invitations'),
+      );
     });
 
     it('also after a refusal', () => {
-      const hook = renderInCard('/admin/staff');
+      const hook = renderInCard('/admin/settings/staff');
 
       act(() => {
         hook.result.current.askToConfirmOnRefusal(MFA_VERIFICATION_REQUIRED.code);
       });
-      expect(push).toHaveBeenCalledWith(confirmChangeUrl('/admin/staff#invitations'));
+      expect(push).toHaveBeenCalledWith(confirmChangeUrl('/admin/settings/staff#invitations'));
     });
 
     it('takes the anchor of the card a component renders itself', () => {
@@ -368,7 +370,7 @@ describe('ReturnToField', () => {
         required
         confirmedUntil={null}
         serverTime={Date.now()}
-        returnTo="/admin/staff"
+        returnTo="/admin/settings/staff"
       >
         <ReturnToField />
       </RecentConfirmationProvider>,
@@ -376,7 +378,7 @@ describe('ReturnToField', () => {
 
     expect(container.querySelector('input[name="returnTo"]')).toHaveAttribute(
       'value',
-      '/admin/staff',
+      '/admin/settings/staff',
     );
   });
 
@@ -398,7 +400,7 @@ describe('ConfirmFirstNote', () => {
         required
         confirmedUntil={null}
         serverTime={Date.now()}
-        returnTo="/admin/staff"
+        returnTo="/admin/settings/staff"
       >
         <Card id="invite" title="Invite by email">
           <ConfirmFirstNote>
@@ -410,7 +412,7 @@ describe('ConfirmFirstNote', () => {
 
     expect(screen.getByRole('link', { name: /^Confirm it.s you$/ })).toHaveAttribute(
       'href',
-      confirmChangeUrl('/admin/staff#invite'),
+      confirmChangeUrl('/admin/settings/staff#invite'),
     );
   });
 

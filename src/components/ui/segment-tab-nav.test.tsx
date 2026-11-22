@@ -45,4 +45,11 @@ describe('SegmentTabNav', () => {
     expect(screen.getByRole('link', { name: 'Overview' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Members' })).not.toHaveAttribute('aria-current');
   });
+
+  it('lets tabs that don’t fit wrap onto another row, rather than widen the page', () => {
+    useSelectedLayoutSegment.mockReturnValue(null);
+    render(<SegmentTabNav label="Company sections" items={TABS} />);
+
+    expect(screen.getByRole('list')).toHaveClass('flex-wrap');
+  });
 });

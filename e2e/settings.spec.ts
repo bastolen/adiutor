@@ -1,5 +1,5 @@
 /**
- * @file End-to-end tests for the staff page: renaming the staff, choosing the
+ * @file End-to-end tests for Settings: renaming the staff, choosing the
  * prefix of request numbers, managing request types (and raising a request
  * with one, until it's archived), inviting staff by email and by invite link, changing staff roles with the
  * last-Admin guard, a staff Admin stepping down themselves, and confirming
@@ -35,8 +35,8 @@ import { codeForSecret } from './support/totp';
 
 test('an Admin changes the name shown to users', async ({ page }) => {
   await signIn(page, PLATFORM_ADMIN);
-  await page.goto('/admin/staff');
-  await expect(page.getByRole('heading', { level: 1, name: 'Staff' })).toBeVisible();
+  await page.goto('/admin/settings');
+  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
 
   const name = page.getByRole('textbox', { name: 'Name', exact: true });
   await expect(name).toHaveValue(STAFF_NAME);
@@ -56,20 +56,20 @@ test('an Admin changes the name shown to users', async ({ page }) => {
   const nav = page.getByRole('navigation', { name: 'Main' });
   await nav.getByRole('link', { name: 'Dashboard' }).click();
   await expect(page).toHaveURL('/dashboard');
-  await nav.getByRole('link', { name: 'Staff' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Staff' })).toBeVisible();
+  await nav.getByRole('link', { name: 'Settings' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
   await expect(name).toHaveValue(STAFF_NAME);
   await expect(page.getByRole('main').getByText('Name saved.')).toHaveCount(0);
   await page.goBack();
   await expect(page).toHaveURL('/dashboard');
   await page.goForward();
-  await expect(page.getByRole('heading', { level: 1, name: 'Staff' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
   await expect(page.getByRole('main').getByText('Name saved.')).toHaveCount(0);
 });
 
 test('an Admin chooses the prefix request numbers are shown with', async ({ page }) => {
   await signIn(page, PLATFORM_ADMIN);
-  await page.goto('/admin/staff');
+  await page.goto('/admin/settings/requests');
 
   const prefix = page.getByRole('textbox', { name: 'Prefix' });
   await expect(prefix).toHaveValue('AD');
@@ -110,7 +110,7 @@ test('an Admin adds a request type, which a company raises requests with until i
   const types = card.getByRole('list', { name: 'Request types' }).getByRole('listitem');
 
   await signIn(page, PLATFORM_ADMIN);
-  await page.goto('/admin/staff');
+  await page.goto('/admin/settings/requests');
   await card.getByRole('button', { name: 'Add type' }).click();
   const dialog = page.getByRole('dialog', { name: 'Add a request type' });
   await dialog.getByRole('textbox', { name: 'Name' }).fill(added);
@@ -163,7 +163,7 @@ test('an Admin adds a request type, which a company raises requests with until i
 
   // Archived, it's no longer offered; the request keeps it.
   await signIn(page, PLATFORM_ADMIN);
-  await page.goto('/admin/staff');
+  await page.goto('/admin/settings/requests');
   await card.getByRole('button', { name: `Archive ${renamed}` }).click();
   const confirm = page.getByRole('alertdialog', { name: `Archive ${renamed}?` });
   await confirm.getByRole('button', { name: 'Archive type' }).click();
@@ -187,7 +187,7 @@ test("an Admin changes Adiutor's default language, which visitors without a choi
   page,
 }) => {
   await signIn(page, PLATFORM_ADMIN);
-  await page.goto('/admin/staff');
+  await page.goto('/admin/settings');
   try {
     const select = page.getByRole('combobox', { name: 'Default language' });
     await expect(select).toHaveText('English (US)');
@@ -222,7 +222,7 @@ test("an Admin changes Adiutor's default language, which visitors without a choi
 
 test("an Admin changes Adiutor's default time zone", async ({ page }) => {
   await signIn(page, PLATFORM_ADMIN);
-  await page.goto('/admin/staff');
+  await page.goto('/admin/settings');
   try {
     const select = page.getByRole('combobox', { name: 'Default time zone' });
     await expect(select).toContainText('UTC');
@@ -246,7 +246,7 @@ test('an Admin turns languages off, which nobody is offered or gets until they�
   page,
 }) => {
   await signIn(page, PLATFORM_ADMIN);
-  await page.goto('/admin/staff');
+  await page.goto('/admin/settings');
   // Someone who chose Spanish on the sign-in page.
   const visitor = await browser.newContext({ locale: 'en-US' });
   await visitor.addCookies([{ name: 'adiutor.locale', value: 'es-ES', url: E2E_BASE_URL }]);
@@ -256,7 +256,7 @@ test('an Admin turns languages off, which nobody is offered or gets until they�
   const save = async () => {
     const saved = page.waitForResponse(
       (response) =>
-        response.request().method() === 'POST' && response.url().includes('/admin/staff'),
+        response.request().method() === 'POST' && response.url().includes('/admin/settings'),
     );
     await page.getByRole('button', { name: 'Save languages' }).click();
     await saved;
@@ -304,7 +304,7 @@ test('an Admin invites a Manager by email, changes their role, and keeps an Admi
 }) => {
   const email = freshAddress('new.manager');
   await signIn(page, PLATFORM_ADMIN);
-  await page.goto('/admin/staff');
+  await page.goto('/admin/settings/staff');
 
   await sendInvitation(page, email, 'Manager');
   await expect(toasts(page)).toContainText(`Invitation sent to ${email}.`);
@@ -349,7 +349,7 @@ test('a second staff Admin steps down after a confirmation, and lands on the das
 }) => {
   const email = freshAddress('second.admin');
   await signIn(page, PLATFORM_ADMIN);
-  await page.goto('/admin/staff');
+  await page.goto('/admin/settings/staff');
   await sendInvitation(page, email, 'Admin');
   await expect(toasts(page)).toContainText(`Invitation sent to ${email}.`);
 
@@ -367,7 +367,7 @@ test('a second staff Admin steps down after a confirmation, and lands on the das
   await setUpAuthenticator(admin, 'second-admin-password');
 
   // On their own row, the select asks first, in their own words.
-  await admin.goto('/admin/staff');
+  await admin.goto('/admin/settings/staff');
   const ownRow = admin.getByRole('row').filter({ has: admin.getByText('You', { exact: true }) });
   await expect(ownRow.getByRole('button', { name: 'Leave the staff' })).toBeVisible();
   await ownRow.getByRole('combobox', { name: 'Role of Second Admin' }).click();
@@ -376,19 +376,19 @@ test('a second staff Admin steps down after a confirmation, and lands on the das
   await expect(dialog).toContainText("You can't raise your own role again");
   await dialog.getByRole('button', { name: 'Step down' }).click();
 
-  // Not the staff page's 404: the dashboard, saying what happened.
+  // Not the staff settings' 404: the dashboard, saying what happened.
   await expect(admin).toHaveURL('/dashboard?notice=stepped-down');
   await expect(
     admin.getByRole('status').filter({ hasText: 'You stepped down from staff Admin.' }),
   ).toBeVisible();
-  await admin.goto('/admin/staff');
+  await admin.goto('/admin/settings/staff');
   await expect(admin.getByRole('heading', { name: 'Page not found' })).toBeVisible();
   await admin.context().close();
 });
 
 test('an Admin creates a staff invite link that someone uses', async ({ page, browser }) => {
   await signIn(page, PLATFORM_ADMIN);
-  await page.goto('/admin/staff');
+  await page.goto('/admin/settings/staff');
 
   const inviteLink = await createInviteLink(page, 'Support');
   expect(inviteLink).toMatch(/\/join\/[A-Za-z0-9_-]{43}$/);
@@ -416,7 +416,7 @@ test('an Admin who confirmed long ago confirms it’s them before giving staff o
 
   // Confirmed just now: invite someone to the staff, to resend once the confirmation is old.
   const email = freshAddress('resend.support');
-  await page.goto('/admin/staff');
+  await page.goto('/admin/settings/staff');
   const staffInvite = page.locator('form').filter({ has: page.getByLabel('Email addresses') });
   await staffInvite.getByLabel('Email addresses').fill(email);
   await staffInvite.getByRole('combobox', { name: 'Role', exact: true }).click();
@@ -429,11 +429,11 @@ test('an Admin who confirmed long ago confirms it’s them before giving staff o
 
   // Every staff role needs it: the invite form asks before anything is typed, and the step-up
   // page comes back to the form's card.
-  await page.goto('/admin/staff');
+  await page.goto('/admin/settings/staff');
   await expect(staffInvite.getByRole('button', { name: 'Send invitations' })).toHaveCount(0);
   await expect(staffInvite.getByRole('link', { name: confirm })).toHaveAttribute(
     'href',
-    '/auth/verify?callbackURL=%2Fadmin%2Fstaff%23invite&for=change',
+    '/auth/verify?callbackURL=%2Fadmin%2Fsettings%2Fstaff%23invite&for=change',
   );
 
   // In a company only the Admin role does: Client and Watcher invitations can be sent.
@@ -454,11 +454,11 @@ test('an Admin who confirmed long ago confirms it’s them before giving staff o
   await expect(page.getByRole('heading', { name: confirm })).toBeVisible();
 
   // "Resend" asks only once the service refuses, and still comes back to the open invitations.
-  await page.goto('/admin/staff');
+  await page.goto('/admin/settings/staff');
   const resend = page.getByRole('button', { name: `Resend invitation to ${email}` });
   await resend.click();
   await expect(page).toHaveURL(
-    '/auth/verify?callbackURL=%2Fadmin%2Fstaff%23invitations&for=change',
+    '/auth/verify?callbackURL=%2Fadmin%2Fsettings%2Fstaff%23invitations&for=change',
   );
   // An authenticator code can't be used twice, so wait for the next one.
   await expect
@@ -467,7 +467,7 @@ test('an Admin who confirmed long ago confirms it’s them before giving staff o
   await confirmWithAuthenticator(page, PLATFORM_ADMIN.totpSecret);
 
   // Back on the card where they clicked: scrolled to, with focus on its heading.
-  await expect(page).toHaveURL('/admin/staff#invitations', { timeout: 15_000 });
+  await expect(page).toHaveURL('/admin/settings/staff#invitations', { timeout: 15_000 });
   const invitations = page.getByRole('heading', { name: 'Open invitations' });
   await expect(invitations).toBeFocused();
   await expect(invitations).toBeInViewport();

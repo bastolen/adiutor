@@ -184,7 +184,7 @@ describe('linkTarget', () => {
     'data:text/html,hello',
     'mailto:user@adiutor.dev',
     'ftp://adiutor.dev/file',
-    '/admin/staff',
+    '/admin/settings/staff',
     '//adiutor.dev/docs',
     '#top',
     'adiutor.dev',

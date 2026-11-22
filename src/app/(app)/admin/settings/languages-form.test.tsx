@@ -1,5 +1,5 @@
 /**
- * @file Tests for the staff page's Languages form: a checkbox per language,
+ * @file Tests for the Languages form in Settings: a checkbox per language,
  * the default always on, and the default select offering only the languages
  * that are on.
  */

@@ -29,7 +29,9 @@ const STAFF_PAGES = [
   { path: '/admin/users/new', title: 'Add user · Adiutor' },
   { path: '/admin/companies', title: 'Companies · Adiutor' },
   { path: '/admin/companies/new', title: 'Add company · Adiutor' },
-  { path: '/admin/staff', title: 'Staff · Adiutor' },
+  { path: '/admin/settings', title: 'Settings · Adiutor' },
+  { path: '/admin/settings/staff', title: 'Staff · Settings · Adiutor' },
+  { path: '/admin/settings/requests', title: 'Requests · Settings · Adiutor' },
   { path: '/admin/logs', title: 'Audit log · Adiutor' },
   { path: '/admin/logs/errors', title: 'Errors · Adiutor' },
   { path: '/admin/logs/jobs', title: 'Jobs · Adiutor' },
@@ -186,7 +188,9 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
       [
         '/admin/users/new',
         '/admin/companies/new',
-        '/admin/staff',
+        '/admin/settings',
+        '/admin/settings/staff',
+        '/admin/settings/requests',
         '/admin/logs',
         '/admin/logs/errors',
         '/admin/logs/jobs',
@@ -211,5 +215,7 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
 
     await expectNotFound(page, `/admin/users/${UNKNOWN_USER_ID}`);
     await expectNotFound(page, '/admin/users/not-an-id');
+    // The address Settings had before it had tabs is gone, without a redirect.
+    await expectNotFound(page, '/admin/staff');
   });
 });

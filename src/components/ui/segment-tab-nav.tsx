@@ -37,7 +37,9 @@ interface SegmentTabNavProps {
  * with `aria-current="page"` (and outlined in forced-colours mode, where every
  * link's line looks the same: `currentItem`). Each section is its own page, so these are
  * links, not ARIA tabs. Render it from the layout of the sections, not from
- * their pages.
+ * their pages. Tabs that don't fit the width (long names on a phone, in some
+ * languages) wrap onto another row, so every tab stays in sight and the page
+ * never scrolls sideways.
  *
  * @param props - Navigation props.
  * @param props.label - Landmark name.
@@ -48,7 +50,7 @@ export default function SegmentTabNav({ label, items }: SegmentTabNavProps) {
   const current = useSelectedLayoutSegment();
   return (
     <nav aria-label={label} className="-mb-px border-b border-border">
-      <ul className="flex gap-1">
+      <ul className="flex flex-wrap gap-1">
         {items.map((item) => {
           const isCurrent = item.segment === current;
           return (

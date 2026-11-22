@@ -200,7 +200,7 @@ describe('StepUpForm', () => {
     render(
       <StepUpForm
         methods={{ ...none, authenticator: true }}
-        callbackURL="/admin/staff?inv-page=2#invitations"
+        callbackURL="/admin/settings/staff?inv-page=2#invitations"
       />,
     );
 
@@ -208,7 +208,7 @@ describe('StepUpForm', () => {
     await user.click(screen.getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() =>
-      expect(replace).toHaveBeenCalledWith('/admin/staff?inv-page=2#invitations'),
+      expect(replace).toHaveBeenCalledWith('/admin/settings/staff?inv-page=2#invitations'),
     );
   });
 
@@ -472,7 +472,7 @@ describe('StepUpForm', () => {
       render(
         <StepUpForm
           methods={{ ...none, providers: ['github'] }}
-          callbackURL="/admin/staff#invitations"
+          callbackURL="/admin/settings/staff#invitations"
         />,
       );
 
@@ -480,9 +480,9 @@ describe('StepUpForm', () => {
 
       expect(social).toHaveBeenCalledWith(
         expect.objectContaining({
-          callbackURL: '/admin/staff#invitations',
+          callbackURL: '/admin/settings/staff#invitations',
           errorCallbackURL:
-            '/auth/verify?callbackURL=%2Fadmin%2Fstaff%23invitations&provider=github',
+            '/auth/verify?callbackURL=%2Fadmin%2Fsettings%2Fstaff%23invitations&provider=github',
         }),
       );
     });

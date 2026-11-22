@@ -1,6 +1,6 @@
 /**
  * @file Adiutor's own default language (the `staff.default_locale` setting,
- * chosen at setup and on the staff page) and the languages it offers
+ * chosen at setup and in Settings) and the languages it offers
  * (`staff.offered_locales`), and the language of a request known only by its
  * headers (Better Auth's hooks and callbacks), which needs them. Takes the
  * database as an argument, like the services. See docs/i18n.md, "How the

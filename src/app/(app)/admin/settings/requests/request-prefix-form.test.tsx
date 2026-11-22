@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { defined } from '@/lib/defined';
 
-import renderInLocale from '../../../../../tests/i18n/render';
+import renderInLocale from '../../../../../../tests/i18n/render';
 import { saveRequestPrefixAction } from './actions';
 import RequestPrefixForm from './request-prefix-form';
 

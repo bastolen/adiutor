@@ -23,14 +23,14 @@ describe('NavLinks', () => {
   });
 
   it('links to the dashboard and the requests, then each section', () => {
-    render(<NavLinks sections={['users', 'companies', 'staff', 'logs']} />);
+    render(<NavLinks sections={['users', 'companies', 'settings', 'logs']} />);
 
     expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
       '/dashboard',
       '/requests',
       '/admin/users',
       '/admin/companies',
-      '/admin/staff',
+      '/admin/settings',
       '/admin/logs',
     ]);
   });
@@ -39,7 +39,7 @@ describe('NavLinks', () => {
     render(<NavLinks sections={['users', 'companies', 'logs']} />);
 
     expect(screen.getByRole('link', { name: 'Logs' })).toHaveAttribute('href', '/admin/logs');
-    expect(screen.queryByRole('link', { name: 'Staff' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument();
   });
 
   it('gives company users, who have no staff sections, the dashboard and the requests', () => {
@@ -64,7 +64,7 @@ describe('NavLinks', () => {
 
   it('marks Logs as current on its Errors tab too', () => {
     usePathname.mockReturnValue('/admin/logs/errors');
-    render(<NavLinks sections={['users', 'companies', 'staff', 'logs']} />);
+    render(<NavLinks sections={['users', 'companies', 'settings', 'logs']} />);
 
     expect(screen.getByRole('link', { name: 'Logs' })).toHaveAttribute('aria-current', 'page');
   });

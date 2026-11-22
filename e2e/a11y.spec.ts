@@ -91,7 +91,9 @@ const APP_PATHS = [
   '/admin/users?filter=not_staff&q=no-such-user',
   '/admin/users/{user}',
   '/admin/users/new',
-  '/admin/staff',
+  '/admin/settings',
+  '/admin/settings/staff',
+  '/admin/settings/requests',
   '/admin/logs',
   '/admin/logs?group=people&q=no-such-person',
   '/admin/logs/errors',
@@ -910,7 +912,7 @@ test.describe('in forced-colours mode', () => {
 
       test('the dialog that adds a request type', async ({ page }) => {
         // Only opened and closed: nothing is added.
-        await page.goto('/admin/staff');
+        await page.goto('/admin/settings/requests');
         await page
           .getByRole('region', { name: 'Request types' })
           .getByRole('button', { name: 'Add type' })
@@ -940,7 +942,7 @@ test.describe('in forced-colours mode', () => {
 
       test('a toast', async ({ page }) => {
         // Saving the staff name unchanged changes nothing, but shows its toast.
-        await page.goto('/admin/staff');
+        await page.goto('/admin/settings');
         await page.getByRole('button', { name: 'Save name' }).click();
         await expect(toasts(page)).toContainText('Name saved.');
         await expectAccessible(page);

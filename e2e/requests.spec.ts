@@ -239,7 +239,7 @@ test('a changed prefix shows on every number, and the old one still finds a requ
   page,
 }) => {
   await signIn(page, SUPPORT_STAFF);
-  // Changed straight in the database (the staff page's field is tested in `staff.spec.ts`), and
+  // Changed straight in the database (the field in Settings is tested in `settings.spec.ts`), and
   // put back whatever happens: every other test reads "AD".
   await setRequestPrefix('HELP');
   try {

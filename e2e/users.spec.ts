@@ -22,7 +22,7 @@ test('an Admin finds users, recognises the staff and filters and searches the li
     'Requests',
     'Users',
     'Companies',
-    'Staff',
+    'Settings',
     'Logs',
   ]);
 

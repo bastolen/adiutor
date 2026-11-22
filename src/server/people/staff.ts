@@ -42,7 +42,7 @@ import { revokeInvitationsTo, revokeInvitesWithoutManager } from './invitations'
 import { loadPictures } from './pictures';
 import notifyStaffAdminAdded from './staff-admin-notice';
 
-/** A staff member, as shown on the staff page. */
+/** A staff member, as shown in the staff settings. */
 export interface StaffMember {
   /** User ID. */
   userId: string;
@@ -63,7 +63,7 @@ export interface StaffMember {
 }
 
 /**
- * Loads the staff's settings for the staff page, in one query.
+ * Loads the staff's settings for the Settings pages, in one query.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `staff:manage`.

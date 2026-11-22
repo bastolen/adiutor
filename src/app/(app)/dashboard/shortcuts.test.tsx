@@ -12,14 +12,14 @@ import Shortcuts from './shortcuts';
 
 describe('Shortcuts', () => {
   it('shows a tile for the requests, then one for each section', () => {
-    render(<Shortcuts sections={['users', 'companies', 'staff', 'logs']} />);
+    render(<Shortcuts sections={['users', 'companies', 'settings', 'logs']} />);
 
     const links = screen.getAllByRole('link');
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/requests',
       '/admin/users',
       '/admin/companies',
-      '/admin/staff',
+      '/admin/settings',
       '/admin/logs',
     ]);
     // Each tile is named by its title, followed by its description.
@@ -32,8 +32,8 @@ describe('Shortcuts', () => {
     expect(screen.getByRole('link', { name: /^Companies/ })).toHaveTextContent(
       'View and manage every company.',
     );
-    expect(screen.getByRole('link', { name: /^Staff/ })).toHaveTextContent(
-      'Invite staff and manage their roles.',
+    expect(screen.getByRole('link', { name: /^Settings/ })).toHaveTextContent(
+      'Manage the staff, languages, time zone and request types.',
     );
     expect(screen.getByRole('link', { name: /^Logs/ })).toHaveTextContent(
       'The audit log, the errors people ran into and the background jobs.',
@@ -85,11 +85,11 @@ describe('Shortcuts', () => {
     render(<Shortcuts sections={[]} />);
 
     // Other tests find the staff sections' links by these words.
-    expect(screen.getByRole('link')).not.toHaveTextContent(/users|companies|staff|logs/i);
+    expect(screen.getByRole('link')).not.toHaveTextContent(/users|companies|settings|staff|logs/i);
   });
 
   it('never uses more than two columns', () => {
-    render(<Shortcuts sections={['users', 'companies', 'staff', 'logs']} />);
+    render(<Shortcuts sections={['users', 'companies', 'settings', 'logs']} />);
 
     const list = screen.getByRole('list');
     expect(list).toHaveClass('sm:grid-cols-2');

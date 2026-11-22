@@ -1,6 +1,6 @@
 /**
  * @file Tests for the staff sections each role sees: Users and Companies for
- * every staff member, Staff for Admins, Logs for Admins and Managers, and
+ * every staff member, Settings for Admins, Logs for Admins and Managers, and
  * nothing for company users.
  */
 import { describe, expect, it } from 'vitest';
@@ -22,7 +22,7 @@ function permissionsOf(platformRole: PlatformRole | null) {
 
 describe('staffSectionKeys', () => {
   it.each<[PlatformRole | null, string[]]>([
-    ['platform_admin', ['users', 'companies', 'staff', 'logs']],
+    ['platform_admin', ['users', 'companies', 'settings', 'logs']],
     ['manager', ['users', 'companies', 'logs']],
     ['finance', ['users', 'companies']],
     ['support', ['users', 'companies']],

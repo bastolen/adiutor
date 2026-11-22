@@ -218,7 +218,7 @@ test('no table scrolls sideways from tablet to desktop widths', async ({ page })
   const paths = [
     '/admin/users',
     `/admin/users?${new URLSearchParams({ q: NAMELESS_SUPPORT.email })}`,
-    '/admin/staff',
+    '/admin/settings/staff',
     '/admin/companies',
     membersPath,
     `/admin/users/${userId}`,

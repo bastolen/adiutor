@@ -34,9 +34,9 @@
         "title": "Empresas",
         "description": "Consulta y gestiona todas las empresas."
       },
-      "staff": {
-        "title": "Personal",
-        "description": "Invita al personal y gestiona sus roles."
+      "settings": {
+        "title": "Ajustes",
+        "description": "Gestiona el personal, los idiomas, la zona horaria y los tipos de solicitud."
       },
       "logs": {
         "title": "Registros",

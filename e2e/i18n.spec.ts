@@ -166,7 +166,7 @@ test("an account on Default follows Adiutor's default language, also after it ch
     const cookies = await page.context().cookies();
     expect(cookies.find(({ name }) => name === LOCALE_COOKIE)).toBeUndefined();
 
-    // A staff Admin changes the default language on the staff page: the account follows.
+    // A staff Admin changes the default language in Settings: the account follows.
     await setDefaultLocale('es-ES');
     await page.goto('/account');
     await expect(page.locator('html')).toHaveAttribute('lang', 'es-ES');

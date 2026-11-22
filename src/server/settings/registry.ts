@@ -44,7 +44,7 @@ export const SETTINGS = {
   'staff.name': defineSetting(staffNameSchema, 'Adiutor'),
   /**
    * Adiutor's own language for everyone who hasn't chosen one, chosen at
-   * setup and on the staff page (docs/i18n.md). `null` before setup, when the
+   * setup and in Settings (docs/i18n.md). `null` before setup, when the
    * browser's language is used instead.
    */
   'staff.default_locale': defineSetting(localeSchema, null),
@@ -66,7 +66,7 @@ export const SETTINGS = {
   'staff.default_time_zone': defineSetting(timeZoneSchema, DEFAULT_TIME_ZONE as string),
   /**
    * What request numbers are shown with ("AD" in "AD-142"), changeable on the
-   * staff page. Only for display: a request's number and address don't change
+   * Requests tab of Settings. Only for display: a request's number and address don't change
    * with it.
    */
   'requests.prefix': defineSetting(requestPrefixSchema, DEFAULT_REQUEST_PREFIX as string),

@@ -57,7 +57,7 @@
       "deactivatedNotice": "This account was deactivated on {date}. It can't sign in until an Admin reactivates it.",
       "self": {
         "signInOnly": "This is your own account. Change your sign-in methods on your <security>Security page</security>.",
-        "signInAndStaff": "This is your own account. Change your sign-in methods on your <security>Security page</security>, and your staff role on the <staff>Staff page</staff>."
+        "signInAndStaff": "This is your own account. Change your sign-in methods on your <security>Security page</security>, and your staff role in the <staff>staff settings</staff>."
       },
       "account": {
         "title": "Account",
@@ -239,110 +239,124 @@
       "created": "Account created for {email}. We've emailed them a link to choose a password.",
       "existing": "{email} already has an account. Nothing was changed."
     },
-    "staff": {
-      "title": "Staff",
-      "description": "The people who handle requests from companies, and how users see you.",
-      "name": {
-        "title": "Name shown to users",
-        "description": "Used in invitations and wherever users see who's helping them.",
-        "label": "Name",
-        "example": "For example “Adiutor Support”.",
-        "save": "Save name",
-        "saved": "Name saved."
+    "settings": {
+      "title": "Settings",
+      "description": "How users see you, who’s on the staff, and how requests are numbered and typed.",
+      "sections": "Settings sections",
+      "tabs": {
+        "general": "General",
+        "staff": "Staff",
+        "requests": "Requests"
       },
-      "languages": {
-        "title": "Languages",
-        "description": "Choose which languages Adiutor offers, and its default for everyone who hasn't chosen their own. Whoever chose a language you turn off gets the default until it's on again.",
-        "offeredLabel": "Offered languages",
-        "alwaysOn": "Always on: it's the default language.",
-        "defaultHint": "Only a language that's offered can be the default.",
-        "save": "Save languages",
-        "saved": "Languages saved."
+      "general": {
+        "name": {
+          "title": "Name shown to users",
+          "description": "Used in invitations and wherever users see who's helping them.",
+          "label": "Name",
+          "example": "For example “Adiutor Support”.",
+          "save": "Save name",
+          "saved": "Name saved."
+        },
+        "languages": {
+          "title": "Languages",
+          "description": "Choose which languages Adiutor offers, and its default for everyone who hasn't chosen their own. Whoever chose a language you turn off gets the default until it's on again.",
+          "offeredLabel": "Offered languages",
+          "alwaysOn": "Always on: it's the default language.",
+          "defaultHint": "Only a language that's offered can be the default.",
+          "save": "Save languages",
+          "saved": "Languages saved."
+        },
+        "timeZone": {
+          "title": "Default time zone",
+          "description": "Adiutor uses this zone on pages for people who aren’t signed in, for emails to people without a zone, and for everyone until their browser sets their own.",
+          "label": "Default time zone",
+          "save": "Save default time zone",
+          "saved": "Default time zone saved."
+        }
       },
-      "timeZone": {
-        "title": "Default time zone",
-        "description": "Adiutor uses this zone on pages for people who aren’t signed in, for emails to people without a zone, and for everyone until their browser sets their own.",
-        "label": "Default time zone",
-        "save": "Save default time zone",
-        "saved": "Default time zone saved."
+      "staff": {
+        "title": "Staff · Settings",
+        "people": {
+          "title": "People",
+          "description": "{count, plural, one {# person has} other {# people have}} staff access.",
+          "rows": "staff",
+          "caption": "Staff",
+          "name": "Name",
+          "role": "Role",
+          "activity": "Activity",
+          "actions": "Actions",
+          "deactivated": "Deactivated"
+        },
+        "stepDown": {
+          "title": "Step down to {role}?",
+          "description": "You can't raise your own role again: another staff Admin would have to. Only staff Admins manage the staff, so you'll go to the dashboard.",
+          "confirmLabel": "Step down"
+        },
+        "leave": {
+          "label": "Leave",
+          "ariaLabel": "Leave the staff",
+          "title": "Leave the staff?",
+          "confirmLabel": "Leave the staff",
+          "description": "You lose staff access straight away, and only another staff Admin can give it back. Your account and company memberships stay."
+        },
+        "remove": {
+          "label": "Remove",
+          "ariaLabel": "Remove {name} from staff",
+          "done": "{name} was removed from staff.",
+          "title": "Remove {name} from staff?",
+          "confirmLabel": "Remove from staff",
+          "description": "They lose staff access. Their account stays (with any company memberships), and you can invite them again later."
+        },
+        "invite": {
+          "title": "Invite by email",
+          "description": "They'll get an email with a link to join as staff. The link works once and expires in {days, plural, one {# day} other {# days}}."
+        }
       },
-      "requestNumbers": {
-        "title": "Request numbers",
-        "description": "Every request has a number people can quote. It’s shown after a prefix you choose.",
-        "label": "Prefix",
-        "example": "Requests are shown as {example}.",
-        "save": "Save prefix",
-        "saved": "Prefix saved."
-      },
-      "requestTypes": {
-        "title": "Request types",
-        "description": "What people choose from when they raise a request, in this order. Each type sets the priority a new request starts with. An archived type stays on the requests that have it.",
-        "listLabel": "Request types",
-        "archived": "Archived",
-        "add": "Add type",
-        "addTitle": "Add a request type",
-        "addDescription": "It’s offered for new requests right away, at the end of the list.",
-        "addConfirm": "Add type",
-        "added": "Type added.",
-        "edit": "Edit",
-        "editLabel": "Edit {name}",
-        "editTitle": "Edit {name}",
-        "editDescription": "The requests that have it keep it. A new starting priority is for requests raised from now on.",
-        "save": "Save type",
-        "saved": "{changed, select, yes {Type saved.} other {Nothing changed.}}",
-        "nameLabel": "Name",
-        "descriptionLabel": "What it’s for",
-        "descriptionHint": "Shown with the type when someone raises a request.",
-        "priorityLabel": "Starting priority",
-        "moveUp": "Up",
-        "moveUpLabel": "Move {name} up",
-        "moveDown": "Down",
-        "moveDownLabel": "Move {name} down",
-        "moved": "Order saved.",
-        "archive": "Archive",
-        "archiveLabel": "Archive {name}",
-        "archiveTitle": "Archive {name}?",
-        "archiveDescription": "It’s no longer offered for new requests. The requests that have it keep it, and you can restore it later.",
-        "archiveConfirm": "Archive type",
-        "archivedDone": "{name} archived.",
-        "restore": "Restore",
-        "restoreLabel": "Restore {name}",
-        "restored": "{name} restored."
-      },
-      "people": {
-        "title": "People",
-        "description": "{count, plural, one {# person has} other {# people have}} staff access.",
-        "rows": "staff",
-        "caption": "Staff",
-        "name": "Name",
-        "role": "Role",
-        "activity": "Activity",
-        "actions": "Actions",
-        "deactivated": "Deactivated"
-      },
-      "stepDown": {
-        "title": "Step down to {role}?",
-        "description": "You can't raise your own role again: another staff Admin would have to. Only staff Admins manage the staff, so you'll go to the dashboard.",
-        "confirmLabel": "Step down"
-      },
-      "leave": {
-        "label": "Leave",
-        "ariaLabel": "Leave the staff",
-        "title": "Leave the staff?",
-        "confirmLabel": "Leave the staff",
-        "description": "You lose staff access straight away, and only another staff Admin can give it back. Your account and company memberships stay."
-      },
-      "remove": {
-        "label": "Remove",
-        "ariaLabel": "Remove {name} from staff",
-        "done": "{name} was removed from staff.",
-        "title": "Remove {name} from staff?",
-        "confirmLabel": "Remove from staff",
-        "description": "They lose staff access. Their account stays (with any company memberships), and you can invite them again later."
-      },
-      "invite": {
-        "title": "Invite by email",
-        "description": "They'll get an email with a link to join as staff. The link works once and expires in {days, plural, one {# day} other {# days}}."
+      "requests": {
+        "title": "Requests · Settings",
+        "requestNumbers": {
+          "title": "Request numbers",
+          "description": "Every request has a number people can quote. It’s shown after a prefix you choose.",
+          "label": "Prefix",
+          "example": "Requests are shown as {example}.",
+          "save": "Save prefix",
+          "saved": "Prefix saved."
+        },
+        "requestTypes": {
+          "title": "Request types",
+          "description": "What people choose from when they raise a request, in this order. Each type sets the priority a new request starts with. An archived type stays on the requests that have it.",
+          "listLabel": "Request types",
+          "archived": "Archived",
+          "add": "Add type",
+          "addTitle": "Add a request type",
+          "addDescription": "It’s offered for new requests right away, at the end of the list.",
+          "addConfirm": "Add type",
+          "added": "Type added.",
+          "edit": "Edit",
+          "editLabel": "Edit {name}",
+          "editTitle": "Edit {name}",
+          "editDescription": "The requests that have it keep it. A new starting priority is for requests raised from now on.",
+          "save": "Save type",
+          "saved": "{changed, select, yes {Type saved.} other {Nothing changed.}}",
+          "nameLabel": "Name",
+          "descriptionLabel": "What it’s for",
+          "descriptionHint": "Shown with the type when someone raises a request.",
+          "priorityLabel": "Starting priority",
+          "moveUp": "Up",
+          "moveUpLabel": "Move {name} up",
+          "moveDown": "Down",
+          "moveDownLabel": "Move {name} down",
+          "moved": "Order saved.",
+          "archive": "Archive",
+          "archiveLabel": "Archive {name}",
+          "archiveTitle": "Archive {name}?",
+          "archiveDescription": "It’s no longer offered for new requests. The requests that have it keep it, and you can restore it later.",
+          "archiveConfirm": "Archive type",
+          "archivedDone": "{name} archived.",
+          "restore": "Restore",
+          "restoreLabel": "Restore {name}",
+          "restored": "{name} restored."
+        }
       }
     },
     "companies": {

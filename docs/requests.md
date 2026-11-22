@@ -137,7 +137,7 @@ The staff can say a request is fixed without closing it, for the company to conf
   (`request.type` points at `request_type.key`). A new type gets its key from its name
   (`requestTypeKeyFromName`: "Printers" becomes `printers`, then `printers_2`); a rename keeps
   it, and no key is reused, since types are never deleted.
-- **Managing them** (Staff page, Request types; staff Admins, `staff:manage`): add a type, edit its
+- **Managing them** (Settings, Requests tab, Request types; staff Admins, `staff:manage`): add a type, edit its
   name, what it's for and its starting priority, move it up or down, archive or restore it
   (`addRequestType`, `updateRequestType`, `moveRequestType`, `archiveRequestType`,
   `restoreRequestType` in `src/server/requests/types.ts`). Each change but a move is in the audit
@@ -344,7 +344,7 @@ written and sent is in [Email](email.md), and the jobs that send them in
   `requests.last_number` setting (`incrementSetting` in `src/server/settings/`), raised inside the
   transaction that stores the request, so a failed attempt uses no number and two requests raised
   at the same moment get consecutive ones.
-- Numbers are shown with a **prefix** the staff Admins choose on the Staff page (`AD` by default:
+- Numbers are shown with a **prefix** the staff Admins choose on the Requests tab of Settings (`AD` by default:
   `AD-142`; one to five letters or digits, starting with a letter, saved in capitals;
   the `requests.prefix` setting).
 - A request's address is `/requests/142`, without the prefix, so it doesn't change with it. The

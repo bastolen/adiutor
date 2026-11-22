@@ -1,5 +1,5 @@
 /**
- * @file Form to choose Adiutor's default time zone, on the staff page.
+ * @file Form to choose Adiutor's default time zone, on the General tab of Settings.
  */
 'use client';
 
@@ -42,7 +42,7 @@ export default function DefaultTimeZoneForm({
   defaultTimeZone,
   options,
 }: DefaultTimeZoneFormProps) {
-  const t = useTranslations('admin.staff.timeZone');
+  const t = useTranslations('admin.settings.general.timeZone');
   // Changes are turned off while a staff member is signed in as the user.
   const changesOff = useSignedInAs();
   const [result, formAction, pending, onSubmit] = useTransientActionState(

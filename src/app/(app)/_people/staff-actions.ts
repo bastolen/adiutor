@@ -1,7 +1,7 @@
 /**
- * @file Server actions for staff roles, shared by the staff page and the user
+ * @file Server actions for staff roles, shared by the staff settings and the user
  * detail page: giving someone a staff role (or changing it) and taking them
- * off the staff. Renaming the staff stays with the staff page, and company
+ * off the staff. Renaming the staff stays with the General tab of Settings, and company
  * memberships use `member-actions.ts`. Messages are in the request's
  * language (`people.actions`).
  */
@@ -25,7 +25,7 @@ import confirmFirstIfNeeded from './confirm-grant';
  * Gives a user a staff role: makes them staff, or changes their role. They get
  * a security email. A staff Admin who steps down can't manage the staff any
  * more, so they're sent to the dashboard (with a notice, see
- * `src/app/(app)/access-notices.ts`) rather than to the staff page's 404.
+ * `src/app/(app)/access-notices.ts`) rather than to the staff settings' 404.
  *
  * @param _previous - The previous result (unused).
  * @param formData - Fields `userId` and `role`.
@@ -39,7 +39,7 @@ export async function changeStaffRoleAction(
     const actor = await getActor();
     const userId = field(formData, 'userId');
     // Making someone staff, or raising their role, sends the actor to confirm it's them first.
-    await confirmFirstIfNeeded(formData, '/admin/staff', () =>
+    await confirmFirstIfNeeded(formData, '/admin/settings/staff', () =>
       changeStaffRole(appContext, actor, { userId, role: field(formData, 'role') }),
     );
     if (

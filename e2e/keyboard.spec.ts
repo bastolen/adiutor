@@ -348,7 +348,7 @@ test.describe('signed in', () => {
   test('your own role asks first, and Escape puts it back with focus on the select', async ({
     page,
   }) => {
-    await page.goto('/admin/staff');
+    await page.goto('/admin/settings/staff');
     const role = page
       .getByRole('row')
       .filter({ has: page.getByText('You', { exact: true }) })
@@ -473,7 +473,7 @@ test.describe('signed in', () => {
   });
 
   test('a button keeps focus while its form saves, and after', async ({ page }) => {
-    await page.goto('/admin/staff');
+    await page.goto('/admin/settings');
     const save = page.getByRole('button', { name: 'Save name' });
 
     // Saving the name unchanged changes nothing, but runs the action.
@@ -754,6 +754,23 @@ test.describe('signed in', () => {
     await expect(accountMenu).toBeFocused();
     await chooseTab(page, 'Account sections', 'Security', 'Account');
     await expect(page).toHaveURL('/account/security');
+
+    // The Settings tabs, reached from the menu: each one's title is its own.
+    const settingsLink = page
+      .getByRole('navigation', { name: 'Main' })
+      .getByRole('link', { name: 'Settings' });
+    await settingsLink.focus();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL('/admin/settings');
+    await chooseTab(page, 'Settings sections', 'Staff', 'Settings');
+    await expect(page).toHaveURL('/admin/settings/staff');
+    await expect(page).toHaveTitle('Staff · Settings · Adiutor');
+    await chooseTab(page, 'Settings sections', 'Requests', 'Settings');
+    await expect(page).toHaveURL('/admin/settings/requests');
+    await expect(page).toHaveTitle('Requests · Settings · Adiutor');
+    await chooseTab(page, 'Settings sections', 'General', 'Settings');
+    await expect(page).toHaveURL('/admin/settings');
+    await expect(page).toHaveTitle('Settings · Adiutor');
   });
 
   test('the date range form goes From, To, Apply, and Enter applies it', async ({ page }) => {

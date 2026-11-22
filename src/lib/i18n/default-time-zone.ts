@@ -1,7 +1,7 @@
 /**
  * @file Adiutor's own default time zone (the `staff.default_time_zone`
  * setting, taken from the first Admin's browser at setup and changeable on
- * the Staff page), for signed-out pages, for people whose zone isn't known
+ * Settings), for signed-out pages, for people whose zone isn't known
  * yet, and for emails to them. Takes the database as an argument, like the
  * services. See docs/i18n.md, "Time zones".
  */

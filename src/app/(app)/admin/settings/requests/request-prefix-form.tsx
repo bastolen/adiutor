@@ -1,6 +1,6 @@
 /**
  * @file Form to choose the prefix request numbers are shown with ("AD" in
- * "AD-142"). Its text comes from `admin.staff.requestNumbers`, which the
+ * "AD-142"). Its text comes from `admin.settings.requests.requestNumbers`, which the
  * page passes through `ClientMessages`.
  */
 'use client';
@@ -29,7 +29,7 @@ const EXAMPLE_NUMBER = 142;
  * @returns The form.
  */
 export default function RequestPrefixForm({ prefix }: { prefix: string }) {
-  const t = useTranslations('admin.staff.requestNumbers');
+  const t = useTranslations('admin.settings.requests.requestNumbers');
   // Changes are turned off while a staff member is signed in as the user.
   const changesOff = useSignedInAs();
   const [result, formAction, pending, onSubmit] = useTransientActionState(

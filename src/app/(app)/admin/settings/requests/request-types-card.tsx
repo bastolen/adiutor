@@ -1,8 +1,8 @@
 /**
- * @file The Staff page's card for request types: each type in its order,
+ * @file The card for request types on the Requests tab of Settings: each type in its order,
  * with what it's for and its starting priority, and the buttons to add one,
  * edit, reorder, archive and restore. Its text comes from
- * `admin.staff.requestTypes` (the dialog's through `ClientMessages`).
+ * `admin.settings.requests.requestTypes` (the dialog's through `ClientMessages`).
  */
 import { useTranslations } from 'next-intl';
 
@@ -12,7 +12,7 @@ import RowAction from '@/components/ui/row-action';
 import { REQUEST_PRIORITIES } from '@/lib/requests';
 import type { RequestTypeView } from '@/server/requests';
 
-import { PriorityBadge } from '../../_requests/request-badges';
+import { PriorityBadge } from '../../../_requests/request-badges';
 import {
   archiveRequestTypeAction,
   moveRequestTypeAction,
@@ -34,7 +34,7 @@ import RequestTypeDialog from './request-type-dialog';
  * @returns The card.
  */
 export default function RequestTypesCard({ types }: { types: readonly RequestTypeView[] }) {
-  const t = useTranslations('admin.staff.requestTypes');
+  const t = useTranslations('admin.settings.requests.requestTypes');
   const tRequests = useTranslations('requests');
   const priorities = REQUEST_PRIORITIES.map((value) => ({
     value,

@@ -108,8 +108,8 @@
       "made": "{who} is beheerder van de medewerkers gemaakt op Adiutor.",
       "acceptedFrom": "{who} heeft de uitnodiging van {by} geaccepteerd en is nu beheerder van de medewerkers op Adiutor.",
       "accepted": "{who} heeft een uitnodiging voor de medewerkers geaccepteerd en is nu beheerder van de medewerkers op Adiutor.",
-      "advice": "Beheerders van de medewerkers kunnen alles beheren op Adiutor, ook de medewerkers. Herken je dit niet, haal dan hun toegang als medewerker weg op de medewerkerspagina en bekijk het auditlog.",
-      "button": "Medewerkerspagina openen"
+      "advice": "Beheerders van de medewerkers kunnen alles beheren op Adiutor, ook de medewerkers. Herken je dit niet, haal dan hun toegang als medewerker weg in de instellingen voor medewerkers en bekijk het auditlog.",
+      "button": "Instellingen voor medewerkers openen"
     },
     "jobFailing": {
       "subject": "Achtergrondtaak {job} blijft mislukken op Adiutor",

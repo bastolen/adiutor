@@ -32,11 +32,12 @@ describe('pickMessages', () => {
   });
 
   it('keeps just a group inside a namespace, in its place', () => {
-    const picked = pickMessages(messagesFor('nl-NL'), ['common', 'admin.staff.name']);
+    const picked = pickMessages(messagesFor('nl-NL'), ['common', 'admin.settings.general.name']);
     expect(Object.keys(picked)).toEqual(['common', 'admin']);
-    expect(Object.keys(picked.admin ?? {})).toEqual(['staff']);
-    expect(Object.keys(picked.admin?.staff ?? {})).toEqual(['name']);
-    expect(picked.admin?.staff.name.save).toBe('Naam opslaan');
+    expect(Object.keys(picked.admin ?? {})).toEqual(['settings']);
+    expect(Object.keys(picked.admin?.settings ?? {})).toEqual(['general']);
+    expect(Object.keys(picked.admin?.settings.general ?? {})).toEqual(['name']);
+    expect(picked.admin?.settings.general.name.save).toBe('Naam opslaan');
   });
 
   it('merges groups of the same namespace', () => {
