@@ -103,7 +103,11 @@ configurations in VS Code, which turn the time limit off (see
     share one. The test server reads that header with the
     default settings: `playwright.config.ts` blanks `CLIENT_IP_HEADERS` and `TRUSTED_PROXIES`, so
     your `.env` can't change whose address a test has. A test that uses up state (locks, deletes or
-    changes an account) has its own seeded account or a fresh address. The seed includes a
+    changes an account) has its own seeded account or a fresh address, and puts back what it
+    changed in a `finally` (like `setMembershipRole` in `e2e/support/db.ts`), with what it counted
+    towards a rate limit (`forgetLimitsOf`), so a failed, retried or repeated run leaves nothing
+    behind. A new seeded person's name mustn't push someone other specs look for off the first
+    page of a list sorted by name (the users list, a company's members). The seed includes a
     company, "Adiutor Tests Paging", with more members, invite links and requests than fit on a
     page, used by the pagination tests (`e2e/tables.spec.ts`) and the accessibility and keyboard
     checks of paginated tables (`e2e/a11y.spec.ts`, `e2e/keyboard.spec.ts`); no test changes its

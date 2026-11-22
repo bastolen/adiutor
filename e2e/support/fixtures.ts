@@ -370,6 +370,19 @@ export const ACTIVITY_CLIENT = {
 } as const;
 
 /**
+ * A Watcher of the test company ({@link COMPANY_NAME}) whose role only the
+ * keyboard test of the role select changes, and puts back whatever happens;
+ * no other test uses them. Their name sorts after every other seeded person's
+ * in the company, so the first pages of the users and members lists keep the
+ * people other specs look for there ("E2E Watcher" among them).
+ */
+export const ROLE_KEYS_WATCHER = {
+  name: 'E2E Yara Keys',
+  email: 'role.keys@adiutor.test',
+  password: 'e2e-role-keys-password',
+} as const;
+
+/**
  * The seeded requests, by what they're for. No test changes them: a test
  * that changes a request raises its own. All but the fifth are the test
  * company's ({@link COMPANY_NAME}). The first one's description is plain

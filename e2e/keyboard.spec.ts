@@ -14,6 +14,7 @@ import {
   findUserId,
   forgetLimitsOf,
   resetActivityView,
+  setMembershipRole,
   storeEntries,
   storeRequest,
 } from './support/db';
@@ -26,6 +27,7 @@ import {
   PAGING_COMPANY_SLUG,
   PLATFORM_ADMIN,
   REQUESTS_CLIENT,
+  ROLE_KEYS_WATCHER,
   SEEDED_REQUESTS,
   SUPPORT_STAFF,
 } from './support/fixtures';
@@ -78,14 +80,18 @@ async function storeOwnRequest(title: string): Promise<string> {
 /**
  * Opens a select with Enter and waits until an option has focus, so the
  * next key presses go to the list. Retries, because right after a (re)load
- * the page may still be hydrating and ignore the first key press.
+ * the page may still be hydrating and ignore the first key press, but presses
+ * Enter again only while the select is still closed: on a list that's
+ * opening, Enter would pick the option it lands on.
  *
  * @param select - The select's combobox.
  */
 async function openWithEnter(select: Locator): Promise<void> {
   const page = select.page();
   await expect(async () => {
-    await select.press('Enter');
+    if ((await select.getAttribute('aria-expanded')) !== 'true') {
+      await select.press('Enter');
+    }
     await expect(page.getByRole('listbox')).toBeVisible({ timeout: 1000 });
   }).toPass();
   await expect(page.locator('[role="option"]:focus')).toHaveCount(1);
@@ -334,39 +340,53 @@ test.describe('signed in', () => {
   });
 
   test('a role is only saved when picked with Enter, not while browsing', async ({ page }) => {
-    await page.goto(`/companies/${COMPANY_SLUG}/members`);
-    const role = page.getByRole('combobox', { name: `Role of ${CLIENT_WATCHER.name}` });
+    // A Watcher only this test changes, put back whatever happens, so a failed or retried run
+    // leaves nothing behind for the next one or for other tests.
+    try {
+      await page.goto(`/companies/${COMPANY_SLUG}/members`);
+      const role = page.getByRole('combobox', { name: `Role of ${ROLE_KEYS_WATCHER.name}` });
+      const watcher = page.getByRole('option', { name: 'Watcher' });
+      const client = page.getByRole('option', { name: 'Client' });
 
-    // Browse the roles and close: nothing changes.
-    await openWithEnter(role);
-    await expect(page.getByRole('option', { name: 'Watcher' })).toBeFocused();
-    await page.keyboard.press('ArrowUp');
-    await expect(page.getByRole('option', { name: 'Client' })).toBeFocused();
-    await page.keyboard.press('ArrowUp');
-    await expect(page.getByRole('option', { name: 'Admin' })).toBeFocused();
-    await page.keyboard.press('Escape');
-    await expect(role).toBeFocused();
-    await page.reload();
-    await expect(role).toHaveText('Watcher');
+      // Browse the roles and close: nothing changes. Radix moves focus to the current role on a
+      // timer, so every time the list opens, the first arrow key waits until it's there.
+      await openWithEnter(role);
+      await expect(watcher).toBeFocused();
+      await page.keyboard.press('ArrowUp');
+      await expect(client).toBeFocused();
+      await page.keyboard.press('ArrowUp');
+      await expect(page.getByRole('option', { name: 'Admin' })).toBeFocused();
+      await page.keyboard.press('Escape');
+      await expect(role).toBeFocused();
+      await page.reload();
+      await expect(role).toHaveText('Watcher');
 
-    // Pick Client with Enter: saved, and focus stays on the select. Then put it back.
-    await openWithEnter(role);
-    await page.keyboard.press('ArrowUp');
-    await expect(page.getByRole('option', { name: 'Client' })).toBeFocused();
-    await page.keyboard.press('Enter');
-    await expect(toasts(page)).toContainText('Role updated.');
-    await expect(role).toBeFocused();
-    await page.reload();
-    await expect(role).toHaveText('Client');
+      // Pick Client with Enter: saved, and focus stays on the select. Then put it back.
+      await openWithEnter(role);
+      await expect(watcher).toBeFocused();
+      await page.keyboard.press('ArrowUp');
+      await expect(client).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(toasts(page)).toContainText('Role updated.');
+      await expect(role).toBeFocused();
+      await page.reload();
+      await expect(role).toHaveText('Client');
 
-    await openWithEnter(role);
-    await page.keyboard.press('ArrowDown');
-    await expect(page.getByRole('option', { name: 'Watcher' })).toBeFocused();
-    await page.keyboard.press('Enter');
-    await expect(toasts(page)).toContainText('Role updated.');
-    await expect(role).toBeFocused();
-    await page.reload();
-    await expect(role).toHaveText('Watcher');
+      await openWithEnter(role);
+      await expect(client).toBeFocused();
+      await page.keyboard.press('ArrowDown');
+      await expect(watcher).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(toasts(page)).toContainText('Role updated.');
+      await expect(role).toBeFocused();
+      await page.reload();
+      await expect(role).toHaveText('Watcher');
+    } finally {
+      await setMembershipRole(COMPANY_SLUG, ROLE_KEYS_WATCHER.email, 'watcher');
+      // Its role changes count towards the Admin's 30 an hour: forgotten, so a repeated or
+      // retried run, and the specs after this one, have as many left as before.
+      await forgetLimitsOf(PLATFORM_ADMIN.email);
+    }
   });
 
   test('your own role asks first, and Escape puts it back with focus on the select', async ({

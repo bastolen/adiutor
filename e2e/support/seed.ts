@@ -59,6 +59,7 @@ import {
   RECENT_MFA_CLIENT,
   REQUESTS_CLIENT,
   RESET_CLIENT,
+  ROLE_KEYS_WATCHER,
   SEEDED_REQUESTS,
   STEP_UP_MANAGER,
   STEP_UP_CLIENT,
@@ -199,6 +200,7 @@ export default async function seedTestDatabase(): Promise<void> {
       role: 'client',
     });
     await addPerson(ACTIVITY_CLIENT, { companyId: clientCompany.id, role: 'client' });
+    await addPerson(ROLE_KEYS_WATCHER, { companyId: clientCompany.id, role: 'watcher' });
 
     // Signs in only with GitHub (2FA on, no password), which doesn't count while GitHub is off.
     const githubManager = firstRow(
