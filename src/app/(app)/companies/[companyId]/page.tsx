@@ -1,7 +1,8 @@
 /**
  * @file A company's requests, served at `/companies/[companyId]`: the
  * company's first page. The same list as `/requests`, for this company only,
- * for everyone who may see the company: its members, and the staff.
+ * for everyone who may see the company: its members, and the staff. A List |
+ * Board toggle above it leads to the company's board (`board/page.tsx`).
  */
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
@@ -13,6 +14,7 @@ import { requireCompanyAccess } from '@/server/authz';
 import { companyPermissionMetadata } from '@/server/page-metadata';
 
 import RequestList from '../../_requests/request-list';
+import RequestViewToggle, { companyViewPaths } from '../../_requests/request-view-toggle';
 import AccessNotice from '../../access-notice';
 
 /**
@@ -48,6 +50,7 @@ async function CompanyRequests({
   const [{ companyId }, query] = await Promise.all([params, searchParams]);
   const t = await getTranslations('companies.requests');
   const { company, actor } = await requireCompanyAccess(companyId, 'requests:view');
+  const paths = companyViewPaths(company.slug);
 
   return (
     <>
@@ -56,10 +59,13 @@ async function CompanyRequests({
       {company.deactivatedAt && <Alert tone="info">{t('deactivated')}</Alert>}
       <RequestList
         // Its links use the company's URL name, also when the page was opened by its ID.
-        path={`/companies/${company.slug}`}
+        path={paths.list}
         searchParams={query}
         actor={actor}
         company={company.slug}
+        renderHeader={({ filters }) => (
+          <RequestViewToggle view="list" filters={filters} paths={paths} />
+        )}
       />
     </>
   );

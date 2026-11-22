@@ -4,7 +4,8 @@
  * shows what each card says (the priority to the staff only, the company
  * when the reader sees several, a status in the card's own words), offers
  * the cards per lane instead of the status links, and links each lane to the
- * list of all its requests.
+ * list of all its requests; and one company's board on its page, whose links
+ * all stay on that page.
  */
 import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -23,6 +24,7 @@ import {
 } from '@/server/requests';
 
 import RequestBoard from './request-board';
+import { companyViewPaths } from './request-view-toggle';
 
 vi.mock('@/server/app-context', () => ({ default: { name: 'app context' } }));
 vi.mock('@/server/authz', () => ({ getStaffPermissionsInCompanies: vi.fn() }));
@@ -229,5 +231,56 @@ describe('the board of requests', () => {
       within(lane('Done')).getByRole('link', { name: 'See all 12 requests in Done' }),
     ).toHaveAttribute('href', '/requests?only=done&q=printer&sort=raised');
     expect(within(lane('Open')).queryByRole('link', { name: /^See all/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('a company’s board', () => {
+  it('loads that company’s lanes, under the toggle, with every link on the company’s page', async () => {
+    boardOf([card({ number: 5, title: 'Done there', status: 'done', moves: ['open'] })], {
+      done: 9,
+    });
+
+    render(
+      await RequestBoard({
+        // A company in the address means nothing on one company's board.
+        searchParams: { q: 'printer', company: 'adiutor-tests-paging' },
+        actor: viewer,
+        company: 'adiutor-tests',
+        paths: companyViewPaths('adiutor-tests'),
+      }),
+    );
+
+    expect(listBoard).toHaveBeenCalledWith(
+      { name: 'app context' },
+      viewer,
+      expect.objectContaining({ search: 'printer', company: 'adiutor-tests' }),
+    );
+    // The company's header is above the board: no heading of its own, only the toggle.
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
+    const toggle = screen.getByRole('navigation', { name: 'View requests as' });
+    expect(within(toggle).getByRole('link', { name: 'List' })).toHaveAttribute(
+      'href',
+      '/companies/adiutor-tests?q=printer',
+    );
+    expect(within(toggle).getByRole('link', { name: 'Board' })).toHaveAttribute(
+      'href',
+      '/companies/adiutor-tests/board?q=printer',
+    );
+    expect(within(toggle).getByRole('link', { name: 'Board' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    // One company: no company menu, and its cards don't name it.
+    expect(screen.queryByRole('button', { name: /^Company/ })).not.toBeInTheDocument();
+    expect(within(lane('Done')).getByText('Done there').closest('li')).not.toHaveTextContent(
+      'Adiutor Tests',
+    );
+    expect(
+      within(lane('Done')).getByRole('link', { name: 'See all 9 requests in Done' }),
+    ).toHaveAttribute('href', '/companies/adiutor-tests?only=done&q=printer');
+    expect(screen.getByRole('link', { name: '50 cards per lane' })).toHaveAttribute(
+      'href',
+      '/companies/adiutor-tests/board?q=printer&size=50',
+    );
   });
 });

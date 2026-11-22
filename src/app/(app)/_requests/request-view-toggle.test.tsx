@@ -1,7 +1,8 @@
 /**
  * @file Tests for the List | Board toggle: both links keep the search, the
  * filters, the sort and the size, drop the status link, `?only=` and the
- * page, and the current view is marked.
+ * page, and the current view is marked, across companies and on a
+ * company's page.
  */
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -10,7 +11,7 @@ import type { Actor } from '@/server/actor';
 import { getStaffPermissionsInCompanies } from '@/server/authz';
 
 import { parseRequestFilters } from './request-filters';
-import RequestViewToggle from './request-view-toggle';
+import RequestViewToggle, { companyViewPaths } from './request-view-toggle';
 
 vi.mock('@/server/authz', () => ({ getStaffPermissionsInCompanies: vi.fn() }));
 
@@ -65,5 +66,23 @@ describe('RequestViewToggle', () => {
     expect(screen.getByRole('link', { name: 'List' })).toHaveAttribute('href', '/requests');
     expect(screen.getByRole('link', { name: 'Board' })).toHaveAttribute('href', '/requests/board');
     expect(screen.getByRole('link', { name: 'Board' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('links to a company’s list and board on its page, with the filters kept', async () => {
+    const filters = filtersOf({ q: 'printer', status: 'all', sort: 'raised' });
+
+    render(
+      <RequestViewToggle view="list" filters={filters} paths={companyViewPaths('adiutor-tests')} />,
+    );
+
+    expect(screen.getByRole('link', { name: 'List' })).toHaveAttribute(
+      'href',
+      '/companies/adiutor-tests?q=printer&sort=raised',
+    );
+    expect(screen.getByRole('link', { name: 'List' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Board' })).toHaveAttribute(
+      'href',
+      '/companies/adiutor-tests/board?q=printer&sort=raised',
+    );
   });
 });

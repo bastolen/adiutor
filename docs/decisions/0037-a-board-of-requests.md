@@ -16,8 +16,10 @@ do the same with a single pointer and no drag, and the keyboard and screen reade
 How it works is in [The board](../requests.md#the-board). The choices behind it:
 
 - **Its own route,** `/requests/board`, with a List | Board toggle on both pages that keeps the
-  search, the filters and the sort. It shares the list's filters and query (`requestListCondition`),
-  so the two never disagree on what someone may see.
+  search, the filters and the sort, and one for each company on its page
+  (`/companies/<URL name>/board`, next to the company's list, with the same toggle). It shares the
+  list's filters and query (`requestListCondition`), so the two never disagree on what someone may
+  see.
 - **A Move menu on every card is the way to move it** (a Radix menu: keyboard, touch, screen
   readers, and the single-pointer path 2.5.7 asks for). A card without moves has no menu.
 - **Dragging is an extra on top of the menu,** for the pointer from tablet width: Pragmatic drag
@@ -42,7 +44,9 @@ How it works is in [The board](../requests.md#the-board). The choices behind it:
 - **As wide as a request's page:** the lanes sit side by side, so on a wide screen the board gets the
   room a request's page gets (`WidePage`) and more lanes show before their row scrolls sideways.
   The rule that a page with a table of records stays at the content's usual width still holds:
-  the board's lanes aren't a table.
+  the board's lanes aren't a table. A company's board is the exception: it keeps the width of the
+  company's pages, under their header and tabs, so its lanes always scroll from tablet width, with
+  the row of buttons that jumps to a lane.
 
 ## Consequences
 

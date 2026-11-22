@@ -1,6 +1,7 @@
 /**
  * @file Integration tests for the board of requests: who sees which cards,
- * the list's filters and sort on the lanes, priorities for the staff only,
+ * across companies and on one company's page, the list's filters and sort on
+ * the lanes, priorities for the staff only,
  * the lanes each card may move to per role, the open lanes' size and every
  * lane's true count, the closed lanes' latest five each, and a deactivated
  * company's requests. Which roles may load the board is in the
@@ -14,6 +15,8 @@ import { defined } from '@/lib/defined';
 import type { RequestStatus } from '@/lib/requests';
 
 import {
+  actorFor,
+  addMember,
   createCompany,
   inSequence,
   memberActor,
@@ -106,6 +109,30 @@ describe('listBoard: who sees what', () => {
     expect(titlesIn(forStaff, 'in_progress')).toEqual(['Beta’s request']);
     // Another company's lanes aren't even counted for its members.
     expect(lane(await listBoard(ctx, client), 'in_progress').total).toBe(0);
+  });
+
+  it('shows a company’s own board, as on its page, with its cards and counts only', async () => {
+    const [alpha, beta] = [await createCompany(db), await createCompany(db)];
+    await storeRequest(alpha.id, { title: 'Alpha, open' });
+    await storeRequest(alpha.id, { title: 'Alpha, done', status: 'done' });
+    await storeRequest(beta.id, { title: 'Beta, open' });
+    await storeRequest(beta.id, { title: 'Beta, in progress', status: 'in_progress' });
+    // A Client of one company and a Watcher of the other, and the staff.
+    const client = await memberActor(db, alpha.id, 'client');
+    await addMember(db, beta.id, client.id, 'watcher');
+    const [both, support] = [await actorFor(db, client.id), await staffActor(db, 'support')];
+
+    await inSequence([both, support], async (reader) => {
+      const board = await listBoard(ctx, reader, { company: beta.slug });
+      expect(allTitles(board)).toEqual(['Beta, in progress', 'Beta, open']);
+      expect(board.lanes.map(({ total }) => total)).toEqual([1, 0, 1, 0, 0, 0, 0]);
+    });
+    // Each card moves as its company allows the reader: a Watcher's not at all, a Client's to close.
+    const watched = await listBoard(ctx, both, { company: beta.slug });
+    expect(lane(watched, 'open').items.map(({ moves }) => moves)).toEqual([[]]);
+    const own = await listBoard(ctx, both, { company: alpha.slug });
+    expect(allTitles(own)).toEqual(['Alpha, done', 'Alpha, open']);
+    expect(lane(own, 'open').items.map(({ moves }) => moves)).toEqual([['done', 'cancelled']]);
   });
 
   it('gives the priority to the staff only, to read, filter and sort by', async () => {

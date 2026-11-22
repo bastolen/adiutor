@@ -102,17 +102,22 @@ export function FormSkeleton() {
  * row scrolls) and stacked below it. Screen readers hear "Loading…" and the
  * region is marked busy.
  *
+ * @param props - Component props.
+ * @param props.header - Whether to show the heading's placeholders: not on
+ *   a company's board, whose header the company's layout shows.
  * @returns The loading state.
  */
-export function BoardSkeleton() {
+export function BoardSkeleton({ header = true }: { header?: boolean } = {}) {
   return (
     <div aria-busy="true" className="flex flex-col gap-8">
       <LoadingStatus />
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-8 w-56 max-w-full" />
-          <Skeleton className="h-4 w-80 max-w-full" />
-        </div>
+        {header && (
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-8 w-56 max-w-full" />
+            <Skeleton className="h-4 w-80 max-w-full" />
+          </div>
+        )}
         <Skeleton className="h-10 w-40 max-w-full" />
       </div>
       <Skeleton className="h-10 w-full" />
