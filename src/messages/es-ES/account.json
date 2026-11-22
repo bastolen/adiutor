@@ -3,10 +3,12 @@
     "title": "Cuenta",
     "header": {
       "title": "Cuenta",
-      "description": "Tu perfil, tus métodos de inicio de sesión y tu seguridad.",
+      "description": "Tu perfil, tus preferencias, tus métodos de inicio de sesión y tu actividad.",
       "sections": "Secciones de la cuenta",
       "profile": "Perfil",
-      "security": "Seguridad"
+      "preferences": "Preferencias",
+      "security": "Seguridad",
+      "activity": "Actividad"
     },
     "profile": {
       "securityTitle": "Seguridad del inicio de sesión",
@@ -66,6 +68,9 @@
       "requestEmailsTurnOn": "Activar",
       "requestEmailsTurnedOff": "Correos sobre solicitudes desactivados.",
       "requestEmailsTurnedOn": "Correos sobre solicitudes activados."
+    },
+    "preferences": {
+      "title": "Preferencias · Cuenta"
     },
     "messages": {
       "verificationExpired": "Este enlace de verificación ha caducado. Envía uno nuevo.",
@@ -282,6 +287,9 @@
         "turnedOff": "Inicio de sesión del personal desactivado.",
         "turnedOn": "Inicio de sesión del personal activado."
       }
+    },
+    "activity": {
+      "title": "Actividad · Cuenta"
     },
     "signedInAs": {
       "note": "Estás viendo las páginas de cuenta de {name} tal como las ve. No se puede cambiar nada aquí mientras has iniciado sesión como esa persona.",

@@ -1,6 +1,7 @@
 /**
- * @file Integration tests for the user detail page's loader (`getUserDetail`)
- * and `userExists`, against the test database.
+ * @file Integration tests for the user page's loaders (`getUserDetail`,
+ * `listUserCompanies` and `listUserDevices`) and `userExists`, against the
+ * test database.
  */
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
@@ -8,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { membership, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
-import { getUserDetail, type UserDetailOptions, userExists } from '.';
+import { getUserDetail, listUserCompanies, listUserDevices, userExists } from '.';
 import {
   addMember,
   addPassword,
@@ -41,30 +42,31 @@ describe('getUserDetail', () => {
     });
   });
 
-  it('shows companies, sessions and activity to Admins', async () => {
+  it('shows the user, their companies and their devices to Admins', async () => {
     await createSession(db, jane, { userAgent: 'Firefox' });
     await createSession(db, jane, { expiresAt: new Date(Date.now() - 1000) });
 
     const detail = await getUserDetail(ctx, admin, jane);
-
     expect(detail).toMatchObject({ email: 'jane@adiutor.test', deactivatedAt: null });
-    expect(detail.companies).toMatchObject({ total: 1, page: 1 });
-    expect(detail.companies.items).toEqual([
+    expect(detail.mfa).toMatchObject({ status: 'optional', required: false });
+
+    const companies = await listUserCompanies(ctx, admin, jane);
+    expect(companies).toMatchObject({ total: 1, page: 1 });
+    expect(companies.items).toEqual([
       expect.objectContaining({ id: testCompany.id, role: 'client' }),
     ]);
     // The expired session isn't counted either.
-    expect(detail.sessions).toMatchObject({ total: 1 });
-    expect(detail.sessions?.items).toHaveLength(1);
-    expect(detail.mfa).toMatchObject({ status: 'optional', required: false });
-    expect(detail.activity).toEqual([]);
+    const devices = await listUserDevices(ctx, admin, jane);
+    expect(devices).toMatchObject({ total: 1 });
+    expect(devices.items).toHaveLength(1);
   });
 
-  it('hides activity and devices from staff without the rights', async () => {
+  it('shows staff without the right to manage users the companies, not the devices', async () => {
     const support = await staffActor(db, 'support');
     await createSession(db, jane, { userAgent: 'Firefox' });
-    await expect(getUserDetail(ctx, support, jane)).resolves.toMatchObject({
-      activity: null,
-      sessions: null,
+    await expect(listUserCompanies(ctx, support, jane)).resolves.toMatchObject({ total: 1 });
+    await expect(listUserDevices(ctx, support, jane)).rejects.toMatchObject({
+      code: 'forbidden',
     });
   });
 
@@ -97,7 +99,14 @@ describe('getUserDetail', () => {
   });
 
   it('is not found for unknown or malformed IDs', async () => {
-    await expect(getUserDetail(ctx, admin, 'nope')).rejects.toMatchObject({ code: 'not_found' });
+    const unknown = '01890a5d-ac96-774b-bcce-b302099a8057';
+    await Promise.all(
+      [getUserDetail, listUserCompanies, listUserDevices].flatMap((load) =>
+        ['nope', unknown].map((id) =>
+          expect(load(ctx, admin, id)).rejects.toMatchObject({ code: 'not_found' }),
+        ),
+      ),
+    );
   });
 });
 
@@ -117,7 +126,7 @@ describe('userExists', () => {
   });
 });
 
-describe('getUserDetail companies and devices', () => {
+describe('listUserCompanies and listUserDevices', () => {
   /**
    * Adds a user to companies named 'Adiutor Tests 01', 'Adiutor Tests 02' and so on.
    *
@@ -161,10 +170,8 @@ describe('getUserDetail companies and devices', () => {
      * @param companies - Sort and page of the companies.
      * @returns The company names, in order.
      */
-    const names = async (companies?: UserDetailOptions['companies']) =>
-      (await getUserDetail(ctx, admin, maya, { companies })).companies.items.map(
-        (listed) => listed.name,
-      );
+    const names = async (companies?: Parameters<typeof listUserCompanies>[3]) =>
+      (await listUserCompanies(ctx, admin, maya, companies)).items.map((listed) => listed.name);
 
     // Name A to Z is the default.
     const aToZ = ['Adiutor Tests alpha', 'Adiutor Tests Bravo', 'Adiutor Tests Charlie'];
@@ -175,7 +182,7 @@ describe('getUserDetail companies and devices', () => {
     expect(await names({ sort: 'joined' })).toEqual(newestFirst);
     expect(await names({ sort: 'joined', dir: 'asc' })).toEqual([...newestFirst].reverse());
     const newest = firstRow(
-      (await getUserDetail(ctx, admin, maya, { companies: { sort: 'joined' } })).companies.items,
+      (await listUserCompanies(ctx, admin, maya, { sort: 'joined' })).items,
       'the newest company',
     );
     expect(newest.joinedAt).toEqual(new Date(Date.UTC(2026, 0, 3)));
@@ -185,12 +192,12 @@ describe('getUserDetail companies and devices', () => {
     const maya = await createUser(db, 'maya@adiutor.test');
     await joinNumberedCompanies(maya, 30);
 
-    const first = (await getUserDetail(ctx, admin, maya)).companies;
+    const first = await listUserCompanies(ctx, admin, maya);
     expect(first).toMatchObject({ total: 30, page: 1, size: 25 });
     expect(first.items).toHaveLength(25);
     expect(defined(first.items[0], 'the first company').name).toBe('Adiutor Tests 01');
 
-    const second = (await getUserDetail(ctx, admin, maya, { companies: { page: 2 } })).companies;
+    const second = await listUserCompanies(ctx, admin, maya, { page: 2 });
     expect(second).toMatchObject({ total: 30, page: 2 });
     expect(second.items.map((listed) => listed.name)).toEqual([
       'Adiutor Tests 26',
@@ -200,11 +207,11 @@ describe('getUserDetail companies and devices', () => {
       'Adiutor Tests 30',
     ]);
 
-    const past = (await getUserDetail(ctx, admin, maya, { companies: { page: 99 } })).companies;
+    const past = await listUserCompanies(ctx, admin, maya, { page: 99 });
     expect(past.page).toBe(2);
     expect(past.items.map((listed) => listed.id)).toEqual(second.items.map((listed) => listed.id));
 
-    const fifty = (await getUserDetail(ctx, admin, maya, { companies: { size: 50 } })).companies;
+    const fifty = await listUserCompanies(ctx, admin, maya, { size: 50 });
     expect(fifty).toMatchObject({ total: 30, page: 1, size: 50 });
     expect(fifty.items).toHaveLength(30);
   });
@@ -216,17 +223,18 @@ describe('getUserDetail companies and devices', () => {
     const zulu = await createCompany(db, { name: 'Adiutor Tests Zulu' });
     await addMember(db, zulu.id, owner, 'admin');
 
-    const detail = await getUserDetail(ctx, admin, owner);
+    const companies = await listUserCompanies(ctx, admin, owner);
+    expect(companies).toMatchObject({ total: 26, page: 1, size: 25 });
+    expect(companies.items.map((listed) => listed.name)).not.toContain('Adiutor Tests Zulu');
+    expect((await getUserDetail(ctx, admin, owner)).mfa).toMatchObject({
+      status: 'required',
+      required: true,
+    });
 
-    expect(detail.companies).toMatchObject({ total: 26, page: 1, size: 25 });
-    expect(detail.companies.items.map((listed) => listed.name)).not.toContain('Adiutor Tests Zulu');
-    expect(detail.mfa).toMatchObject({ status: 'required', required: true });
-
-    const second = await getUserDetail(ctx, admin, owner, { companies: { page: 2 } });
-    expect(second.companies.items).toEqual([
+    const second = await listUserCompanies(ctx, admin, owner, { page: 2 });
+    expect(second.items).toEqual([
       expect.objectContaining({ id: zulu.id, role: 'admin', deactivated: false }),
     ]);
-    expect(second.mfa).toMatchObject({ status: 'required', required: true });
 
     // It's the Admin role that requires it: as a Client there, MFA is optional.
     await db.update(membership).set({ role: 'client' }).where(eq(membership.companyId, zulu.id));
@@ -236,35 +244,31 @@ describe('getUserDetail companies and devices', () => {
     });
   });
 
-  it('pages their devices, and shows none without the right to manage users', async () => {
+  it('pages their devices, and refuses them without the right to manage users', async () => {
     await createSessionsOnJanuaryDays(jane, 30);
 
-    const first = await getUserDetail(ctx, admin, jane, { sessions: { size: 25 } });
-    expect(first.sessions).toMatchObject({ total: 30, page: 1, size: 25 });
-    expect(first.sessions?.items).toHaveLength(25);
-    expect(defined(first.sessions?.items[0], 'the newest device').userAgent).toBe('Browser 30');
+    const first = await listUserDevices(ctx, admin, jane, { size: 25 });
+    expect(first).toMatchObject({ total: 30, page: 1, size: 25 });
+    expect(first.items).toHaveLength(25);
+    expect(defined(first.items[0], 'the newest device').userAgent).toBe('Browser 30');
 
-    const second = await getUserDetail(ctx, admin, jane, { sessions: { size: 25, page: 2 } });
-    expect(second.sessions).toMatchObject({ total: 30, page: 2 });
-    expect(second.sessions?.items.map((found) => found.userAgent)).toEqual([
+    const second = await listUserDevices(ctx, admin, jane, { size: 25, page: 2 });
+    expect(second).toMatchObject({ total: 30, page: 2 });
+    expect(second.items.map((found) => found.userAgent)).toEqual([
       'Browser 05',
       'Browser 04',
       'Browser 03',
       'Browser 02',
       'Browser 01',
     ]);
-    // The tables are paged on their own: the companies stay on their first page.
-    expect(second.companies).toMatchObject({ total: 1, page: 1, size: 25 });
 
-    const oldestFirst = await getUserDetail(ctx, admin, jane, { sessions: { dir: 'asc' } });
-    expect(defined(oldestFirst.sessions?.items[0], 'the oldest device').userAgent).toBe(
-      'Browser 01',
-    );
+    const oldestFirst = await listUserDevices(ctx, admin, jane, { dir: 'asc' });
+    expect(defined(oldestFirst.items[0], 'the oldest device').userAgent).toBe('Browser 01');
 
-    // Support can't see devices, whatever the page asks for; the companies still show.
+    // Support can't see devices, whatever the page asks for.
     const support = await staffActor(db, 'support');
-    const hidden = await getUserDetail(ctx, support, jane, { sessions: { size: 25 } });
-    expect(hidden.sessions).toBeNull();
-    expect(hidden.companies).toMatchObject({ total: 1, page: 1, size: 25 });
+    await expect(listUserDevices(ctx, support, jane, { size: 25 })).rejects.toMatchObject({
+      code: 'forbidden',
+    });
   });
 });

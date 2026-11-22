@@ -1,5 +1,5 @@
 /**
- * @file Tests for the "Emails about requests" card on the Profile page: it
+ * @file Tests for the "Emails about requests" card on the Preferences tab: it
  * says whether the user gets them and offers the switch the other way.
  */
 import { render, screen } from '@testing-library/react';
@@ -15,7 +15,7 @@ const { requestEmailsAction } = vi.hoisted(() => ({
   requestEmailsAction: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
-vi.mock('./actions', () => ({ requestEmailsAction }));
+vi.mock('../actions', () => ({ requestEmailsAction }));
 
 describe('RequestEmailsCard', () => {
   it('says they are on, what they are, and turns them off', async () => {

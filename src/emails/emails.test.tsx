@@ -373,8 +373,8 @@ describe('staff-made changes', () => {
     expect(email.text).toContain('Casey Client reopened this request.');
     expect(email.text).toContain('you’re subscribed to this request');
     // The footer says where to stop them all: the account's card for them.
-    expect(email.html).toContain(`href="${appUrl}/account#request-emails"`);
-    expect(email.text).toContain(`your account ${appUrl}/account#request-emails`);
+    expect(email.html).toContain(`href="${appUrl}/account/preferences#request-emails"`);
+    expect(email.text).toContain(`your account ${appUrl}/account/preferences#request-emails`);
     expect(email.text).toContain('Replies to this email aren’t read.');
     // Its links sign the reader in, so it says not to forward it.
     expect(email.text).toContain(

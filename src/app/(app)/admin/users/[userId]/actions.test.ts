@@ -1,5 +1,5 @@
 /**
- * @file Tests for the user detail page's MFA reset action (without the
+ * @file Tests for the MFA reset action on a user's page (without the
  * Admin's recent confirmation it sends them to the step-up page, which
  * returns to the user's page, and otherwise it resets through the service),
  * its sign-in as the user (the same, with a strong second step) and its
@@ -115,20 +115,20 @@ describe('resetMfaAction', () => {
     expect(resetUserMfa).not.toHaveBeenCalled();
   });
 
-  it("sends the Admin to confirm it's them first, coming back to the user's page", async () => {
+  it("sends the Admin to confirm it's them first, coming back to the user's Manage tab", async () => {
     signedInAs({ ...confirmedAdmin, mfaConfirmedUntil: null });
 
     await expect(resetMfaAction(null, form({ userId: USER_ID }))).rejects.toThrow('NEXT_REDIRECT');
 
     expect(redirect).toHaveBeenCalledWith(
-      `/auth/verify?callbackURL=%2Fadmin%2Fusers%2F${USER_ID}&for=change`,
+      `/auth/verify?callbackURL=%2Fadmin%2Fusers%2F${USER_ID}%2Fmanage&for=change`,
     );
     expect(resetUserMfa).not.toHaveBeenCalled();
   });
 
-  it('comes back to the card the form was in, with the tables as they were', async () => {
+  it('comes back to the card the form was in', async () => {
     signedInAs({ ...confirmedAdmin, mfaConfirmedUntil: null });
-    const returnTo = `/admin/users/${USER_ID}?companies-page=2#account-access`;
+    const returnTo = `/admin/users/${USER_ID}/manage#account-access`;
 
     await expect(resetMfaAction(null, form({ userId: USER_ID, returnTo }))).rejects.toThrow(
       'NEXT_REDIRECT',
@@ -186,7 +186,7 @@ describe('signInAsAction', () => {
     form({
       userId: USER_ID,
       reason: 'Ticket 12',
-      returnTo: `/admin/users/${USER_ID}#sign-in-as`,
+      returnTo: `/admin/users/${USER_ID}/manage#sign-in-as`,
     });
 
   beforeEach(() => {
@@ -201,7 +201,7 @@ describe('signInAsAction', () => {
     expect(startImpersonation).toHaveBeenCalledWith({ name: 'app context' }, confirmedSupport, {
       userId: USER_ID,
       reason: 'Ticket 12',
-      returnTo: `/admin/users/${USER_ID}#sign-in-as`,
+      returnTo: `/admin/users/${USER_ID}/manage#sign-in-as`,
     });
     // A redirect would be a navigation within the app, which keeps the pages Next kept alive.
     expect(redirect).not.toHaveBeenCalled();
@@ -213,7 +213,7 @@ describe('signInAsAction', () => {
     await expect(signInAsAction(null, signInForm())).rejects.toThrow('NEXT_REDIRECT');
 
     expect(redirect).toHaveBeenCalledWith(
-      `/auth/verify?callbackURL=${encodeURIComponent(`/admin/users/${USER_ID}#sign-in-as`)}&for=strong`,
+      `/auth/verify?callbackURL=${encodeURIComponent(`/admin/users/${USER_ID}/manage#sign-in-as`)}&for=strong`,
     );
     expect(startImpersonation).not.toHaveBeenCalled();
   });

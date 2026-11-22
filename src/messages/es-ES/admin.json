@@ -53,7 +53,17 @@
     },
     "user": {
       "title": "Usuario",
+      "companiesTitle": "Empresas · Usuario",
+      "activityTitle": "Actividad · Usuario",
+      "manageTitle": "Gestión · Usuario",
       "back": "Usuarios",
+      "tabs": {
+        "label": "Secciones del usuario",
+        "overview": "Resumen",
+        "companies": "Empresas",
+        "activity": "Actividad",
+        "manage": "Gestión"
+      },
       "deactivatedNotice": "Esta cuenta se desactivó el {date}. No puede iniciar sesión hasta que un administrador la reactive.",
       "self": {
         "signInOnly": "Esta es tu propia cuenta. Cambia tus métodos de inicio de sesión en tu <security>página de seguridad</security>.",

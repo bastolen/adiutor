@@ -1,5 +1,5 @@
 /**
- * @file Layout of the account pages (Profile, Security): the "Account"
+ * @file Layout of the account pages (Profile, Preferences, Security, Activity): the "Account"
  * header and tabs, then the page, in one column. Layouts stay mounted while
  * the pages under them change, so choosing a tab keeps focus on it and the
  * header doesn't reload.

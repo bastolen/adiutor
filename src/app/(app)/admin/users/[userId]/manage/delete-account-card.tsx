@@ -1,5 +1,5 @@
 /**
- * @file The "Delete account" card on the user detail page, for Admins
+ * @file The "Delete account" card on the Manage tab of a user's page, for Admins
  * (`users:delete`) on someone else's page: deletes the account for good,
  * after the Admin types its email address to confirm. Text from
  * `admin.user.deleteAccount`.
@@ -10,7 +10,7 @@ import ActionDialog from '@/components/ui/action-dialog';
 import Card from '@/components/ui/card';
 import TextField from '@/components/ui/text-field';
 
-import { deleteUserAction } from './actions';
+import { deleteUserAction } from '../actions';
 
 /**
  * Props for {@link DeleteAccountCard}.

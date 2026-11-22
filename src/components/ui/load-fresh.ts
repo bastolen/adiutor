@@ -55,7 +55,7 @@ export function currentPage(): string {
  * promise that never settles would hold up every other transition on the
  * page, which React runs together, should the load be stopped.)
  *
- * @param url - The page of the app to load, e.g. `/dashboard` or `/account#language`.
+ * @param url - The page of the app to load, e.g. `/dashboard` or `/account/preferences#language`.
  * @param options - See {@link LoadFreshOptions}.
  * @param options.everyTab - Whether the browser's other tabs load their page afresh too.
  */
