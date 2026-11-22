@@ -71,6 +71,8 @@ export default function StatusSelect({
       className="flex w-full flex-col gap-1"
     >
       <input type="hidden" name="request" value={request} />
+      {/* The status the page showed: the change is refused when a colleague changed it first. */}
+      <input type="hidden" name="from" value={status} />
       <div className="flex items-center gap-2">
         {/* As wide as its place; the longest status wraps rather than being cut off. */}
         <div className="min-w-0 flex-1">

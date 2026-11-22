@@ -16,7 +16,8 @@ keyboard support.
   panel to read that opens from a button, such as the names behind a row of avatars), `EmptyState`,
   `IconRow`, `IconTile` (a decorative icon on a tinted square), `RowLink` (the name in a table row
   or list item, stretched so the whole row is one click target), `DescriptionList` (labels and
-  values), `Skeleton`, `Pagination`, `SortMenu`, `FilterMenu`, ...). Menus, selects, dialogs and
+  values), `Skeleton`, `Pagination` (with `PageSizeLinks`, its choice of sizes, on its own for a
+  view without pages), `SortMenu`, `FilterMenu`, ...). Menus, selects, dialogs and
   sheets are
   built on [Radix UI](https://www.radix-ui.com), and only `src/components/ui/` imports it. Radix
   follows the WAI-ARIA patterns: arrow keys, typeahead, Escape to close, focus kept inside
@@ -91,6 +92,46 @@ keyboard support.
       1920px, with a seeded staff member who has no name and a long address.
   - **List services** take the table's state and return one page with the total
     (`Paged<T>`); each sort ends with the row's ID, so pages don't overlap and reversing is exact.
+- **The board** of requests (`/requests/board`, see [The board](requests.md#the-board)) is the one
+  view of records that isn't a table: a lane per status, each card a list item, in five columns,
+  two of which (Waiting, Closed) hold two lanes as an upper and a lower half, each half with its
+  own heading (`h3` under the column's `h2`), count, "See all" and empty text. Lanes have no
+  pagination footer (an open lane shows 25, 50 or 100 cards, chosen like rows per page with
+  `PageSizeLinks`; a closed one its latest 5; a lane with more links to the list), but they keep
+  the list's sort, from its Sort menu. The pattern:
+  - **Moving without dragging:** every card the reader may move has a Move menu (a Radix menu)
+    listing the lanes it may go to, which works with a single click or tap, the keyboard and
+    screen readers alike. That's WCAG 2.5.7 Dragging Movements: whatever can be dragged can also
+    be done with a single pointer, and the keyboard alone doesn't count. Dragging is an extra for
+    the pointer from tablet width; the menu stays. Moves that email the company (Done,
+    Cancelled) ask first, however they're made.
+  - **Dragging:** a decorative grip (`aria-hidden`, `cursor-grab`) in the card's corner drags it,
+    never its title link (`draggable={false}`). The drag and drop library loads with `import()`
+    once the page is there, from tablet width only (`board-drag.ts`, the one file that imports
+    it). Each lane is a drop target, each half of a grouped column too. While a card is dragged,
+    the lanes say whether it can go there by more than colour: a lane it may go to has a border in
+    the highlight colour, and under the pointer a ring and what letting go does ("Let go to move it
+    here", "Let go to mark it as done", "Let go to cancel it"); a lane it can't go to has a dashed
+    border, the not-allowed cursor and "Can't move here", and doesn't take the card (so the browser
+    shows it can't be dropped). The
+    card left behind is dashed and flat, its text as it was (never lighter through opacity). A
+    drop that's refused sends nothing and says why, inline and as a toast. A live region of the
+    board's own announces the drag in the reader's language (never a library's English).
+  - **A busy card, not a busy board:** a moved card shows in its new lane at once
+    (`useOptimistic`), and only its Move button is busy ("Moving…", focusable, presses ignored);
+    every other card stays usable.
+  - **Focus follows the card:** a card that changes lanes is removed and added again, so focus
+    is put back on its Move button in the new lane (`data-request`), or on the lane's heading
+    when the card isn't shown anymore; a lane is a `data-card` section for `restoreFocusIfLost`.
+  - **Width:** the columns, at least 14rem each, sit in a row that scrolls sideways inside a
+    named group the keyboard reaches while it overflows (`tabIndex={0}`, like a wide code block),
+    so the page never scrolls sideways. On a wide screen the board is as wide as a request's page
+    (`WidePage`), so all five columns fit side by side and the row doesn't scroll. Below tablet
+    width the columns are stacked, each folding away with its count (`aria-expanded` on its
+    heading's button), a grouped column with both its halves.
+  - **Colours:** a lane is a step back from its cards in both modes (`muted` behind `surface`
+    cards in light mode, `surface` behind `raised` ones in dark mode, where `surface` is the darker
+    of the two); the count, the empty lane and the card's details use `muted-foreground`.
 - **Cards** have 24px padding on every side. Settings with actions use full-width rows (what it does
   on the left, the button on the right). Destructive settings that can't be undone, like deleting or
   deactivating an account, get their own `Card` with `tone="danger"`.
@@ -239,7 +280,8 @@ keyboard support.
   The content of every page stops growing at 1280px of screen. A request's page may be wider
   (`WidePage` in `src/components/layout/wide-page.tsx`): from that width it grows with the room
   next to the menu, up to 1280px of content, so the
-  conversation and the editor of a reply get the room, with the details still beside them. It
+  conversation and the editor of a reply get the room, with the details still beside them. The
+  board of requests grows the same way, so more of its lanes show side by side. It
   measures that room in the content column (a container in the app layout), not the screen, so
   a scrollbar never makes it scroll sideways. Don't use it for a page with a table of records:
   those are laid out for the content's usual width.

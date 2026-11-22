@@ -11,7 +11,9 @@ import { firstRow } from '@/lib/defined';
 import {
   DEFAULT_REQUEST_STATUS_FILTER,
   isRequestPriority,
+  isRequestStatus,
   isRequestStatusFilter,
+  isClosedStatus,
   isRequestTypeKey,
   REQUEST_PRIORITIES,
   type RequestAudience,
@@ -106,6 +108,8 @@ export interface ListRequestsOptions extends Partial<TableState<StaffRequestSort
   search?: string;
   /** A status filter (`REQUEST_STATUS_FILTERS`); anything else shows the requests that are still worked on. */
   status?: string;
+  /** One status only (`REQUEST_STATUSES`), instead of `status`'s group; anything else is ignored. */
+  only?: string;
   /** One company's requests only: its ID or URL name. */
   company?: string;
   /** One type only, by its key; a key no type has, or anything else, shows every type. */
@@ -159,12 +163,13 @@ const PRIORITY_RANK = sql`case ${request.priority} ${sql.join(
 )} end`;
 
 /**
- * The ORDER BY terms of a request list.
+ * The ORDER BY terms of a request list, and of a lane of the board, which
+ * keeps the list's sort.
  *
  * @param state - The table's state.
  * @returns The terms, ending with the request's ID.
  */
-function requestOrder(state: TableState<StaffRequestSort>): SQL[] {
+export function requestListOrder(state: TableState<StaffRequestSort>): SQL[] {
   switch (state.sort) {
     case 'raised':
       return orderTerms(state.dir, request.createdAt, request.id);
@@ -173,6 +178,28 @@ function requestOrder(state: TableState<StaffRequestSort>): SQL[] {
     default:
       return orderTerms(state.dir, request.lastActivityAt, request.id);
   }
+}
+
+/**
+ * Completes and checks the sort, direction, page and size a list of
+ * requests (or the board) was asked for: the staff's table, which also
+ * sorts by priority, or everyone else's, for whom a priority sort is the
+ * default sort instead.
+ *
+ * @param actor - The reader.
+ * @param table - What was asked for (any part may be missing).
+ * @returns The state.
+ */
+export function requestTableState(
+  actor: Actor,
+  table: Partial<TableState<StaffRequestSort>>,
+): TableState<StaffRequestSort> {
+  return requestScope(actor).internal
+    ? resolveTableState(STAFF_REQUESTS_TABLE, table)
+    : resolveTableState(REQUESTS_TABLE, {
+        ...table,
+        sort: table.sort === 'priority' ? undefined : table.sort,
+      });
 }
 
 /**
@@ -263,6 +290,142 @@ function assignedTo(assignee: string, actor: Actor): SQL | undefined {
   return userId.success ? anyone(userId.data) : undefined;
 }
 
+/** What narrows a list of requests down: see {@link requestListCondition}. */
+export interface RequestListFilters {
+  /** Text to match against the title, or a request's number. */
+  search?: string;
+  /**
+   * The statuses to include, or `null` for every status. A set of statuses
+   * that are all still worked on leaves out a deactivated company's
+   * requests across companies.
+   */
+  statuses: readonly RequestStatus[] | null;
+  /** One company's requests only: its ID or URL name. */
+  company?: string;
+  /** One type only, by its key; a key no type has, or anything else, shows every type. */
+  type?: string;
+  /** One priority only, for readers who see priorities; ignored otherwise. */
+  priority?: string;
+  /** `me`, a staff member's user ID or `none`, for the staff; ignored otherwise. */
+  assignee?: string;
+}
+
+/**
+ * The WHERE of a list of requests, for a query on `request` joined with
+ * `company`: what the actor may see, narrowed by the filters. It's what
+ * {@link listRequests} and any other view of the requests (a board) share.
+ * (`visibleRequests` in `access.ts` is only the part that is about access.)
+ *
+ * Across companies, the requests of a deactivated company are left out when
+ * every status asked for is still worked on (they're in the other lists and
+ * in the company's own). Priority and assignee only narrow the list for
+ * readers with `requests:view-internal`.
+ *
+ * @param ctx - Service context.
+ * @param actor - The acting user.
+ * @param filters - What narrows the list down.
+ * @returns The condition; `undefined` when nothing narrows the list.
+ * @throws {ServiceError} `not_found` when asked for a company the actor may not see.
+ */
+export async function requestListCondition(
+  ctx: ServiceContext,
+  actor: Actor,
+  filters: RequestListFilters,
+): Promise<SQL | undefined> {
+  const scope = requestScope(actor);
+  const { search = '', statuses, company: companyRef, type, priority, assignee } = filters;
+  const conditions: (SQL | undefined)[] = [visibleRequests(scope)];
+  if (companyRef) {
+    const access = await getCompanyAccess(ctx.db, actor, companyRef);
+    if (!access.permissions.has('requests:view')) {
+      throw notFoundError();
+    }
+    conditions.push(eq(request.companyId, access.company.id));
+  } else if (statuses && statuses.every((status) => !isClosedStatus(status))) {
+    conditions.push(isNull(company.deactivatedAt));
+  }
+  if (statuses) {
+    conditions.push(inArray(request.status, [...statuses]));
+  }
+  if (isRequestTypeKey(type)) {
+    // A key no type has shows every type, as anything else does.
+    conditions.push(
+      or(
+        eq(request.type, type),
+        sql`not exists (select 1 from ${requestType} where ${requestType.key} = ${type})`,
+      ),
+    );
+  }
+  if (scope.internal && isRequestPriority(priority)) {
+    conditions.push(eq(request.priority, priority));
+  }
+  if (scope.internal && assignee) {
+    conditions.push(assignedTo(assignee, actor));
+  }
+  const term = search.trim();
+  if (term) {
+    conditions.push(matchesSearch(term));
+  }
+  return and(...conditions);
+}
+
+/** The columns {@link loadRequestListItems} needs of each request, from `request` joined with its company and type. */
+export const requestListColumns = {
+  id: request.id,
+  number: request.number,
+  title: request.title,
+  status: request.status,
+  reopenedAt: request.reopenedAt,
+  type: request.type,
+  typeName: requestType.name,
+  priority: request.priority,
+  lastActivityAt: request.lastActivityAt,
+  company: { id: company.id, name: company.name, slug: company.slug },
+  companyDeactivatedAt: company.deactivatedAt,
+};
+
+/** A request as {@link requestListColumns} selects it. */
+export type RequestListRow = Omit<RequestListItem, 'assignees' | 'reopened' | 'audience'> & {
+  /** When it was reopened, or `null`. */
+  reopenedAt: Date | null;
+  /** When its company was deactivated, or `null`. */
+  companyDeactivatedAt: Date | null;
+};
+
+/**
+ * Turns selected request rows into what a list shows: who each is assigned
+ * to (with pictures), how to address the reader per company, and no priority
+ * for readers who don't see priorities.
+ *
+ * @param ctx - Service context.
+ * @param actor - The reader.
+ * @param rows - Requests selected with {@link requestListColumns}.
+ * @returns The items, in the order of the rows.
+ */
+export async function loadRequestListItems(
+  ctx: ServiceContext,
+  actor: Actor,
+  rows: RequestListRow[],
+): Promise<RequestListItem[]> {
+  const { internal } = requestScope(actor);
+  const assigned = await assigneesOf(
+    ctx,
+    actor,
+    rows.map(({ id }) => id),
+  );
+  return rows.map(({ reopenedAt, companyDeactivatedAt, ...row }) => ({
+    ...row,
+    assignees: assigned.get(row.id) ?? [],
+    reopened: reopenedAt !== null,
+    priority: internal ? row.priority : null,
+    // Per company: someone can take part in one and only follow another.
+    audience: requestAudienceIn(actor, {
+      id: row.company.id,
+      deactivatedAt: companyDeactivatedAt,
+    }),
+  }));
+}
+
 /**
  * Lists the requests the actor sees, one page at a time: every company's for
  * the staff, their active companies' for everyone else, or one company's.
@@ -288,53 +451,20 @@ export async function listRequests(
   actor: Actor,
   options: ListRequestsOptions = {},
 ): Promise<Paged<RequestListItem>> {
-  const scope = requestScope(actor);
-  const { search = '', status, company: companyRef, type, priority, assignee, ...table } = options;
-  const state: TableState<StaffRequestSort> = scope.internal
-    ? resolveTableState(STAFF_REQUESTS_TABLE, table)
-    : resolveTableState(REQUESTS_TABLE, {
-        ...table,
-        sort: table.sort === 'priority' ? undefined : table.sort,
-      });
+  const { search, status, only, company: companyRef, type, priority, assignee, ...table } = options;
+  const state = requestTableState(actor, table);
   const filter: RequestStatusFilter = isRequestStatusFilter(status)
     ? status
     : DEFAULT_REQUEST_STATUS_FILTER;
-
-  const conditions: (SQL | undefined)[] = [visibleRequests(scope)];
-  if (companyRef) {
-    const access = await getCompanyAccess(ctx.db, actor, companyRef);
-    if (!access.permissions.has('requests:view')) {
-      throw notFoundError();
-    }
-    conditions.push(eq(request.companyId, access.company.id));
-  } else if (filter === 'active' || filter === 'waiting') {
-    conditions.push(isNull(company.deactivatedAt));
-  }
-  const statuses = statusesOfFilter(filter);
-  if (statuses) {
-    conditions.push(inArray(request.status, [...statuses]));
-  }
-  if (isRequestTypeKey(type)) {
-    // A key no type has shows every type, as anything else does.
-    conditions.push(
-      or(
-        eq(request.type, type),
-        sql`not exists (select 1 from ${requestType} where ${requestType.key} = ${type})`,
-      ),
-    );
-  }
-  if (scope.internal && isRequestPriority(priority)) {
-    conditions.push(eq(request.priority, priority));
-  }
-  if (scope.internal && assignee) {
-    conditions.push(assignedTo(assignee, actor));
-  }
-  const term = search.trim();
-  if (term) {
-    conditions.push(matchesSearch(term));
-  }
-  const where = and(...conditions);
-  const order = requestOrder(state);
+  const where = await requestListCondition(ctx, actor, {
+    search,
+    statuses: isRequestStatus(only) ? [only] : statusesOfFilter(filter),
+    company: companyRef,
+    type,
+    priority,
+    assignee,
+  });
+  const order = requestListOrder(state);
 
   const page = await paginate(
     state,
@@ -349,19 +479,7 @@ export async function listRequests(
       ).total,
     (limit, offset) =>
       ctx.db
-        .select({
-          id: request.id,
-          number: request.number,
-          title: request.title,
-          status: request.status,
-          reopenedAt: request.reopenedAt,
-          type: request.type,
-          typeName: requestType.name,
-          priority: request.priority,
-          lastActivityAt: request.lastActivityAt,
-          company: { id: company.id, name: company.name, slug: company.slug },
-          companyDeactivatedAt: company.deactivatedAt,
-        })
+        .select(requestListColumns)
         .from(request)
         .innerJoin(company, eq(request.companyId, company.id))
         .innerJoin(requestType, eq(request.type, requestType.key))
@@ -370,25 +488,7 @@ export async function listRequests(
         .limit(limit)
         .offset(offset),
   );
-  const assigned = await assigneesOf(
-    ctx,
-    actor,
-    page.items.map(({ id }) => id),
-  );
-  return {
-    ...page,
-    items: page.items.map(({ reopenedAt, companyDeactivatedAt, ...row }) => ({
-      ...row,
-      assignees: assigned.get(row.id) ?? [],
-      reopened: reopenedAt !== null,
-      priority: scope.internal ? row.priority : null,
-      // Per company: someone can take part in one and only follow another.
-      audience: requestAudienceIn(actor, {
-        id: row.company.id,
-        deactivatedAt: companyDeactivatedAt,
-      }),
-    })),
-  };
+  return { ...page, items: await loadRequestListItems(ctx, actor, page.items) };
 }
 
 /**

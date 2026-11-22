@@ -39,7 +39,9 @@ and solutions the company approves, are built; attachments come next.
   everything, the reply in full, which they can turn off per request or in their account. Its
   links sign the reader in, so one click opens the request. The staff can send a reply as the
   solution: the company's Admins and Clients approve it, which closes the request, or deny it, on
-  the request or with a button in the email. See [Requests](docs/requests.md).
+  the request or with a button in the email. Requests show as a list or as a board with a lane per
+  status, with the same search and filters; each card's Move menu, or on a wider screen a drag,
+  moves it to another lane, as far as the reader's role allows. See [Requests](docs/requests.md).
 - **Companies and staff.** Staff add companies and invite each company's first Admin. Users can
   belong to several companies, with a role in each (Admin, Client or Watcher), and staff have their
   own roles (Admin, Manager, Finance and Support). See

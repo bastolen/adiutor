@@ -2,7 +2,8 @@
  * @file Lets a page use more of a wide screen than the rest of the app does.
  * The signed-in app's content stops growing at 1280px of screen (944px of
  * content), which suits lists and settings. A page that's mostly text to
- * read and write, such as a request, has more room to give that text.
+ * read and write, such as a request, has more room to give that text, and
+ * so does the board of requests, whose lanes sit side by side.
  */
 import type { ReactNode } from 'react';
 

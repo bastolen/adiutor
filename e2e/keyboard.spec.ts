@@ -1574,6 +1574,87 @@ test.describe('requests', () => {
   });
 });
 
+test.describe('the board of requests', () => {
+  test.use({ reducedMotion: 'reduce' });
+  test.beforeEach(async ({ context }) => {
+    await context.addCookies(adminState.cookies);
+  });
+
+  /**
+   * A lane of the board on the page.
+   *
+   * @param page - The browser page, on the board.
+   * @param name - The lane's name.
+   * @returns The lane's section.
+   */
+  const lane = (page: Page, name: string) =>
+    page.getByRole('region', { name: new RegExp(`^${name}, \\d+ requests?$`) });
+
+  test('a card moves with its Move menu from the keyboard, and focus follows it to its new lane', async ({
+    page,
+  }) => {
+    const title = `A card moved with the keyboard ${Date.now()}`;
+    const number = await storeRequest({
+      companySlug: COMPANY_SLUG,
+      raisedBy: REQUESTS_CLIENT.email,
+      title,
+    });
+    await page.goto(`/requests/board?q=${encodeURIComponent(title)}`);
+    const move = lane(page, 'Open').getByRole('button', { name: `Move AD-${number}` });
+    expect(await cursorOf(move)).toBe('pointer');
+
+    // From the card's link, Tab reaches its Move button (the avatars are left out).
+    await lane(page, 'Open').getByRole('link', { name: title }).focus();
+    await page.keyboard.press('Tab');
+    await expect(move).toBeFocused();
+
+    // Escape closes the menu and changes nothing.
+    await expect(async () => {
+      await move.press('Enter');
+      await expect(page.getByRole('menu')).toBeVisible({ timeout: 1000 });
+    }).toPass();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('menu')).toBeHidden();
+    await expect(move).toBeFocused();
+
+    // The arrow keys go through the lanes, and Enter moves the card to one.
+    await move.press('Enter');
+    await expect(page.getByRole('menu')).toBeVisible();
+    const inProgress = page.getByRole('menuitem', { name: 'In progress' });
+    await expect(async () => {
+      await page.keyboard.press('ArrowDown');
+      await expect(inProgress).toBeFocused({ timeout: 250 });
+    }).toPass();
+    await page.keyboard.press('Enter');
+    await expect(toasts(page)).toContainText(`AD-${number} moved to In progress.`);
+    const moved = lane(page, 'In progress').getByRole('button', { name: `Move AD-${number}` });
+    await expect(moved).toBeFocused();
+    await expect(moved).not.toHaveAttribute('aria-busy');
+    await expect(lane(page, 'Open').getByRole('link', { name: title })).toHaveCount(0);
+  });
+
+  test('the lanes are reached and scrolled sideways with the keyboard', async ({ page }) => {
+    await page.goto('/requests/board');
+    const lanes = page.getByRole('group', { name: 'Lanes' });
+    // Five columns don’t fit the content’s width here: the row scrolls, inside its own box.
+    await expect
+      .poll(() => lanes.evaluate((element) => element.scrollWidth > element.clientWidth))
+      .toBe(true);
+    await expect(lanes).toHaveAttribute('tabindex', '0');
+    await lanes.focus();
+    await expect(lanes).toBeFocused();
+    await expect.poll(() => outlineOf(lanes)).toEqual({ style: 'solid', width: '2px' });
+    await page.keyboard.press('ArrowRight');
+    await expect.poll(() => lanes.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+    // The page itself doesn't scroll sideways.
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+  });
+});
+
 test('a request’s activity view is chosen with the keyboard, focus staying on each menu’s button', async ({
   page,
 }) => {
