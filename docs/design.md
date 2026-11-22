@@ -252,8 +252,9 @@ keyboard support.
   a panel with a search field above its list (`SearchableSelect`, on Radix Popover): the list shows
   only the options whose label, or group heading, contains what's typed, ignoring case and accents,
   in their order (`matchingOptions` in `select-option-list.ts`). A shorter one stays a Radix
-  Select. Both list options with a `group` under its heading (time zones by region), and look
-  alike: the same closed field, options, check and highlight (`select-options.tsx`).
+  Select. Both list options with a `group` under its heading (time zones by region), name their
+  open list by the field's label (`aria-labelledby`, so a screen reader says which list it is in),
+  and look alike: the same closed field, options, check and highlight (`select-options.tsx`).
   - **Closed,** it's a combobox named by its label that shows the chosen option, like the short
     select. Enter, Space, the arrow keys or a click open it, and typing a character opens it with
     that character in the search.

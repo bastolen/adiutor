@@ -816,7 +816,8 @@ test.describe('in forced-colours mode', () => {
         // The seeded request, which nothing here changes: the menus are only opened.
         await page.goto('/requests/1');
         await page.getByRole('combobox', { name: 'Status' }).click();
-        await expect(page.getByRole('listbox')).toBeVisible();
+        // The open list is named by the select's label, so a screen reader says which list it is.
+        await expect(page.getByRole('listbox', { name: 'Status' })).toBeVisible();
         await expectAccessible(page, '[role="listbox"]');
         await page.keyboard.press('Escape');
 

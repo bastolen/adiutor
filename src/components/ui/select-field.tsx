@@ -78,16 +78,21 @@ interface ShortSelectProps extends Omit<
 > {
   /** The trigger's ID, which the visible label points at. */
   id: string;
+  /** The label's ID, which names the open list. */
+  labelId: string;
   /** The help text's ID, if the field has one. */
   descriptionId?: string;
 }
 
 /**
  * The short select: a Radix Select. Options with a `group` are listed under
- * its heading.
+ * its heading. The open list is named by the field's label
+ * (`aria-labelledby`), as the searchable list is, so a screen reader says
+ * which list it is in.
  *
  * @param props - Select props.
  * @param props.id - The trigger's ID.
+ * @param props.labelId - The label's ID, which names the open list.
  * @param props.descriptionId - The help text's ID.
  * @param props.options - The choices.
  * @param props.name - Field name.
@@ -102,6 +107,7 @@ interface ShortSelectProps extends Omit<
  */
 function ShortSelect({
   id,
+  labelId,
   descriptionId = undefined,
   options,
   name = undefined,
@@ -178,6 +184,7 @@ function ShortSelect({
       </Select.Trigger>
       <Select.Portal>
         <Select.Content
+          aria-labelledby={labelId}
           position="popper"
           sideOffset={4}
           collisionPadding={SCREEN_GUTTER}
@@ -211,8 +218,9 @@ function ShortSelect({
  * search field above it that shows only the options whose label, or group
  * heading, contains what's typed; there too, only Enter or a click picks.
  *
- * In both, option descriptions are shown in the list and are part of the
- * option's name (label first); the closed select shows only the label. A
+ * In both, the open list is named by the field's label, and option
+ * descriptions are shown in the list and are part of the option's name
+ * (label first); the closed select shows only the label. A
  * label in another language than the page's carries its `lang`, in the list
  * and in the closed select. Options with a `group` are listed under its
  * heading. The option the keyboard or pointer is on is filled and outlined
@@ -279,7 +287,7 @@ export default function SelectField({
       {options.length > searchThreshold ? (
         <SearchableSelect labelId={labelId} {...field} />
       ) : (
-        <ShortSelect {...field} />
+        <ShortSelect labelId={labelId} {...field} />
       )}
       {description && (
         <p id={descriptionId} className="text-xs text-muted-foreground">
