@@ -21,12 +21,6 @@ describe('request links', () => {
     expect(requestLinkPath('abc-_123')).toBe('/api/auth/request-link/sign-in?token=abc-_123');
   });
 
-  it("mark the confirmation page's Continue", () => {
-    expect(requestLinkPath('abc', { confirmed: true })).toBe(
-      '/api/auth/request-link/sign-in?token=abc&confirmed=1',
-    );
-  });
-
   it('encode the token', () => {
     expect(requestLinkPath('a&b=c')).toBe('/api/auth/request-link/sign-in?token=a%26b%3Dc');
     expect(requestLinkPagePath('a&b')).toBe(`${REQUEST_LINK_PAGE}?token=a%26b`);
@@ -36,13 +30,19 @@ describe('request links', () => {
     expect(requestLinkPagePath('abc')).toBe('/auth/request-link?token=abc');
   });
 
+  it('mark the confirmation page when its own Continue came back to it', () => {
+    expect(requestLinkPagePath('abc', { retry: true })).toBe(
+      '/auth/request-link?token=abc&retry=1',
+    );
+    expect(
+      requestLinkPagePath('abc', { entry: '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b', retry: true }),
+    ).toBe('/auth/request-link?token=abc&entry=019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b&retry=1');
+  });
+
   it('pass the entry they point at on, and leave out anything else', () => {
     const entry = '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b';
     expect(requestLinkPath('abc', { entry })).toBe(
       `/api/auth/request-link/sign-in?token=abc&entry=${entry}`,
-    );
-    expect(requestLinkPath('abc', { confirmed: true, entry })).toBe(
-      `/api/auth/request-link/sign-in?token=abc&entry=${entry}&confirmed=1`,
     );
     expect(requestLinkPagePath('abc', { entry })).toBe(
       `/auth/request-link?token=abc&entry=${entry}`,

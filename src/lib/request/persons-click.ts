@@ -9,9 +9,14 @@
  * address, never for a page's own fetches, prefetches, or programs that
  * fetch a link without a browser. Used by the links in emails that act on a
  * click: an email's Approve and Deny buttons (decision 0033), and the link in
- * an email about a request, which signs its recipient in only on one
- * (decision 0036). A program that drives a whole browser can still look like
- * a person, which those links accept.
+ * an email about a request, which signs its recipient in straight away only
+ * on one (decision 0036). A program that drives a whole browser can still
+ * look like a person, which those links accept.
+ *
+ * WebKit never sends the header (Safari, and every browser on an iPhone or
+ * iPad), so there no click counts as one: Approve and Deny always ask for
+ * their page's button, and a request link always goes to its confirmation
+ * page, which continues by itself when nobody is signed in (decision 0038).
  *
  * @param headers - The request's headers.
  * @returns Whether a person clicked or typed the link.
