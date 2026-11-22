@@ -5,7 +5,8 @@
  * the request; anything else (a mail scanner, a browser that doesn't say a
  * person clicked, someone else signed in in that browser, a link that no
  * longer works) goes to the confirmation page ({@link REQUEST_LINK_PAGE})
- * first. The link may be used again and again while it lasts. It may name
+ * first, whose Continue posts the link to the same endpoint (a POST, which no
+ * link can make). The link may be used again and again while it lasts. It may name
  * the entry the email points at (`entry`), which it passes on to the
  * request's page (`?entry=<ID>`), so the reader's activity filter never
  * hides it.
@@ -28,14 +29,6 @@ export const REQUEST_LINK_URL_PATH = `/api/auth${REQUEST_LINK_ENDPOINT}`;
 export const REQUEST_LINK_PAGE = '/auth/request-link';
 
 /**
- * The query parameter the confirmation page's Continue adds: the click was
- * made there, so it may switch from someone else who is signed in. It only
- * counts with a same-origin click (`Sec-Fetch-Site: same-origin`), which
- * another site can't make.
- */
-export const REQUEST_LINK_CONFIRMED_PARAM = 'confirmed';
-
-/**
  * The query of a request link's addresses: its token, and the entry it
  * points at when that's an entry's ID (anything else is left out).
  *
@@ -56,20 +49,14 @@ function linkQuery(token: string, entry: string | null | undefined): URLSearchPa
  *
  * @param token - The link's token.
  * @param options - Options.
- * @param options.confirmed - Whether it's the confirmation page's Continue
- *   ({@link REQUEST_LINK_CONFIRMED_PARAM}).
  * @param options.entry - The ID of the entry the link points at, passed on to the request.
  * @returns The path and query, e.g. `/api/auth/request-link/sign-in?token=…&entry=…`.
  */
 export function requestLinkPath(
   token: string,
-  { confirmed = false, entry = null }: { confirmed?: boolean; entry?: string | null } = {},
+  { entry = null }: { entry?: string | null } = {},
 ): string {
-  const query = linkQuery(token, entry);
-  if (confirmed) {
-    query.set(REQUEST_LINK_CONFIRMED_PARAM, '1');
-  }
-  return `${REQUEST_LINK_URL_PATH}?${query}`;
+  return `${REQUEST_LINK_URL_PATH}?${linkQuery(token, entry)}`;
 }
 
 /**

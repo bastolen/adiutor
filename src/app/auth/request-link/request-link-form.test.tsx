@@ -1,8 +1,8 @@
 /**
  * @file Tests for the Continue step of the link in an email about a request:
- * it names the account and the request, passes the link back to Better
- * Auth's endpoint only when the user continues (marked as this page's
- * click), keeps the email's anchor, and warns before switching accounts.
+ * it names the account and the request, posts the link back to Better
+ * Auth's endpoint only when the user continues (a form `POST`, which no link
+ * can send), keeps the email's anchor, and warns before switching accounts.
  */
 import { fireEvent, render, screen } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
@@ -55,7 +55,7 @@ function hiddenFields(form: HTMLFormElement): Record<string, string> {
 }
 
 describe('RequestLinkForm', () => {
-  it("sends the link back to Better Auth only when the user continues, as this page's click", () => {
+  it('posts the link back to Better Auth only when the user continues, which no link can do', () => {
     searchParams = new URLSearchParams({ token: 'abc', other: 'ignored' });
     render(<RequestLinkForm account={JANE} {...REQUEST} signedIn={null} />);
 
@@ -64,9 +64,9 @@ describe('RequestLinkForm', () => {
     expect(screen.getByText('jane@adiutor.test')).toBeInTheDocument();
     const button = screen.getByRole('button', { name: 'Continue to AD-142' });
     const form = defined(button.closest('form'), 'the form');
-    expect(form).toHaveAttribute('method', 'get');
+    expect(form).toHaveAttribute('method', 'post');
     expect(form).toHaveAttribute('action', '/api/auth/request-link/sign-in');
-    expect(hiddenFields(form)).toEqual({ token: 'abc', confirmed: '1' });
+    expect(hiddenFields(form)).toEqual({ token: 'abc' });
 
     fireEvent.submit(form);
     expect(button).toHaveAttribute('aria-busy', 'true');
@@ -81,7 +81,7 @@ describe('RequestLinkForm', () => {
       screen.getByRole('button', { name: 'Continue to AD-142' }).closest('form'),
       'the form',
     );
-    expect(hiddenFields(form)).toEqual({ token: 'abc', confirmed: '1', entry });
+    expect(hiddenFields(form)).toEqual({ token: 'abc', entry });
     unmount();
 
     searchParams = new URLSearchParams({ token: 'abc', entry: '//adiutor.dev' });
@@ -93,7 +93,7 @@ describe('RequestLinkForm', () => {
           'the form',
         ),
       ),
-    ).toEqual({ token: 'abc', confirmed: '1' });
+    ).toEqual({ token: 'abc' });
   });
 
   it("keeps the email's anchor when it names a part of the request, and drops others", () => {

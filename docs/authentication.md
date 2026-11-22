@@ -101,11 +101,22 @@ plugin in `src/lib/sign-in/request-link-plugin.ts`; the app decides in `followRe
 - **Anything else goes to its confirmation page** (`/auth/request-link`, built like the email
   link's): a program or a browser that doesn't say a person clicked (a mail scanner gets no
   session and adds no device), someone else signed in in that browser (the page names the link's
-  account and says that continuing switches to it; only the page's own Continue, a same-origin
-  click marked `confirmed=1`, may switch), a staff member signed in as a user (the page asks them
-  to go back to their own account first), or a link that no longer works. The page looks the link
-  up without using it (`getRequestLinkView`); tokens that aren't links count against the IP address
-  (`requestLinkMissesPerIp`).
+  account and says that continuing switches to it; only the page's own Continue may switch), a
+  staff member signed in as a user (the page asks them to go back to their own account first), or
+  a link that no longer works. The page looks the link up without using it (`getRequestLinkView`);
+  tokens that aren't links count against the IP address (`requestLinkMissesPerIp`).
+
+The page's Continue posts the link to the same endpoint (a form `POST`, answered with a 303, so
+the browser opens the next page with a `GET`). A `POST` counts only as that Continue, from a page
+of the site (`Sec-Fetch-Site: same-origin`), and never as a click: another site's form, clicked,
+says a person clicked too, and the browser sends it without the site's cookies (`SameSite=Lax`),
+so nobody would look signed in. Better Auth's check for sign-in forms (`formCsrfMiddleware`)
+refuses such a cross-site `POST` before that, and checks the origin of every other one a browser
+sends, with or without cookies (a `POST` with none of a browser's headers passes it, and the app's
+own rule refuses it next); the page therefore sends the site's origin (`referrer: strict-origin`)
+where other secret-link pages send no referrer at all. A link is always a `GET`, so a link to the
+endpoint written in a reply, which is a same-origin click when someone clicks it on the request's
+page, never switches accounts, whatever its query says.
 
 A link no longer works once it expired, or when its person is deactivated or can no longer read the
 request (staff who read requests, or a member of its active company, decided when it's used). It

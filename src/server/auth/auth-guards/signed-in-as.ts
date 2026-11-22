@@ -59,7 +59,8 @@ export default async function refuseWhileSignedInAs(
   if (!found) {
     return;
   }
-  const token = path === REQUEST_LINK_ENDPOINT ? ctx.query?.token : undefined;
+  // The email's link has the token in its query, its confirmation page's Continue in its form.
+  const token = path === REQUEST_LINK_ENDPOINT ? (ctx.query?.token ?? ctx.body?.token) : undefined;
   if (typeof token === 'string') {
     throw new APIError('FOUND', undefined, new Headers({ location: requestLinkPagePath(token) }));
   }

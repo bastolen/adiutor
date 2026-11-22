@@ -25,7 +25,9 @@ The choices behind it:
 - **Used again and again, for 14 days,** like a trusted device: it ends whenever trusted devices
   are forgotten (`forgetSecondStepSkips`) and signs in only while its person can read the request.
 - **Only a person's click signs in** (`Sec-Fetch-User: ?1`); a scanner, someone else signed in in
-  the browser, or a link that no longer works gets the confirmation page.
+  the browser, or a link that no longer works gets the confirmation page. Only the page's own
+  Continue switches accounts: a form `POST` from the site (added 2026-11-22: a same-origin link
+  marked as the Continue, such as one written in a reply, switched them too).
 - **Anyone with the email can use it.** The email says so. A forwarded email lets the reader in as
   the recipient, as a forwarded sign-in link always did, now for longer.
 - **It opens the request at the news the email tells of.** The link names that entry

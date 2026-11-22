@@ -21,12 +21,16 @@ import RequestLinkStep from './request-link-step';
  * Page metadata: "Open the request", in the request's language. The page is
  * only reached through a personal link, so it's kept out of search engines,
  * and its address (with the link's token) isn't sent along to other pages.
+ * Unlike other such pages it sends the site's origin, never more
+ * (`strict-origin`): its Continue is a form `POST`, which Better Auth checks
+ * against the site's address (`Origin`), and with no referrer at all the
+ * browser would send `Origin: null`.
  *
  * @returns The metadata.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('auth');
-  return { ...secretLinkMetadata, title: t('requestLink.title') };
+  return { ...secretLinkMetadata, referrer: 'strict-origin', title: t('requestLink.title') };
 }
 
 /**

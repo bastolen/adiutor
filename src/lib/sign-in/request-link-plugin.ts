@@ -1,7 +1,9 @@
 /**
  * @file Better Auth's endpoint for the link in an email about a request
  * (decision 0036, `src/lib/sign-in/request-link.ts`): `GET
- * /request-link/sign-in?token=…`. What the link may do is decided by the app
+ * /request-link/sign-in?token=…`, the email's link, and `POST
+ * /request-link/sign-in`, its confirmation page's Continue (a form, which no
+ * link can send). What the link may do is decided by the app
  * (`followRequestLink` in `src/server/auth/request-links.ts`, loaded on first
  * use so `pnpm auth:schema` doesn't load it); this file only creates the
  * session the way Better Auth's own magic-link plugin does, so every session
@@ -11,8 +13,8 @@
  *
  * Like `src/lib/auth.ts`, it doesn't import `server-only`.
  */
-import type { BetterAuthPlugin } from 'better-auth';
-import { createAuthEndpoint } from 'better-auth/api';
+import type { BetterAuthPlugin, GenericEndpointContext } from 'better-auth';
+import { createAuthEndpoint, formCsrfMiddleware } from 'better-auth/api';
 import { setSessionCookie } from 'better-auth/cookies';
 import { z } from 'zod';
 
@@ -29,18 +31,74 @@ function loadRequestLinks() {
 }
 
 /**
- * The link's query: its token, whether the confirmation page's Continue sent
- * it, and the entry it points at (checked as an entry's ID where it's used).
+ * The link's fields: its token and the entry it points at (checked as an
+ * entry's ID where it's used); the email's link has them in its query, the
+ * confirmation page's Continue in its form.
  */
-const requestLinkQuerySchema = z.object({
+const requestLinkSchema = z.object({
   token: z.string().max(256),
-  confirmed: z.string().max(8).optional(),
   entry: z.string().max(64).optional(),
 });
 
+/** What the endpoints hand {@link followLink}. */
+interface FollowedLink {
+  /** The link's token. */
+  token: string;
+  /** The entry it points at, if any. */
+  entry?: string;
+  /** Whether the browser posted it: only the confirmation page's Continue does. */
+  posted: boolean;
+}
+
 /**
- * The plugin with the request link's endpoint. Better Auth's own rate limit
- * for it (per IP address) comes on top of the app's: a wrong token counts
+ * Signs the link's person in when the app says so, then sends the browser
+ * on: to the request, the confirmation page or the sign-in page. A link
+ * (`GET`) is redirected with a 302, as Better Auth does; the page's form
+ * (`POST`) with a 303, so the browser opens the next page with a `GET`.
+ *
+ * @param ctx - The endpoint context.
+ * @param link - The link, and how it came.
+ * @returns Nothing, for a POST (its 303 is set on the context).
+ * @throws {APIError} A link's redirect.
+ */
+async function followLink(ctx: GenericEndpointContext, link: FollowedLink): Promise<null> {
+  const links = await loadRequestLinks();
+  const outcome = await links.followRequestLink(ctx, {
+    token: link.token,
+    posted: link.posted,
+    entry: link.entry ?? null,
+  });
+  /**
+   * Sends the browser to a page of the app.
+   *
+   * @param path - The page.
+   * @returns Nothing, for a POST.
+   * @throws {APIError} A link's redirect.
+   */
+  const goTo = (path: string): null => {
+    const location = new URL(path, ctx.context.baseURL).toString();
+    if (!link.posted) {
+      throw ctx.redirect(location);
+    }
+    ctx.setHeader('location', location);
+    ctx.setStatus(303);
+    return null;
+  };
+  if (outcome.signIn) {
+    const found = await ctx.context.internalAdapter.findUserById(outcome.signIn.userId);
+    const session = found ? await ctx.context.internalAdapter.createSession(found.id) : null;
+    if (!found || !session) {
+      return goTo(outcome.fallback);
+    }
+    await setSessionCookie(ctx, { session, user: found });
+    await links.noteRequestLinkUsed(outcome.signIn.linkId);
+  }
+  return goTo(outcome.location);
+}
+
+/**
+ * The plugin with the request link's endpoints. Better Auth's own rate limit
+ * for them (per IP address) comes on top of the app's: a wrong token counts
  * against the IP address, and sign-ins against the link.
  *
  * @returns The plugin.
@@ -51,40 +109,42 @@ export default function requestLinkSignIn() {
     endpoints: {
       requestLinkSignIn: createAuthEndpoint(
         REQUEST_LINK_ENDPOINT,
-        { method: 'GET', query: requestLinkQuerySchema, requireHeaders: true },
+        { method: 'GET', query: requestLinkSchema, requireHeaders: true },
         /**
-         * Signs the link's person in when the app says so, then sends the
-         * browser on: to the request, or to the confirmation page.
+         * The email's link. Anything else in its query, such as a `confirmed`
+         * written into it, is ignored: only the page's form is its Continue.
          *
          * @param ctx - The endpoint context.
          * @returns Never: it always redirects.
          */
-        async (ctx) => {
-          const links = await loadRequestLinks();
-          const outcome = await links.followRequestLink(ctx, {
-            token: ctx.query.token,
-            confirmed: ctx.query.confirmed === '1',
-            entry: ctx.query.entry ?? null,
-          });
-          if (outcome.signIn) {
-            const found = await ctx.context.internalAdapter.findUserById(outcome.signIn.userId);
-            const session = found
-              ? await ctx.context.internalAdapter.createSession(found.id)
-              : null;
-            if (!found || !session) {
-              throw ctx.redirect(new URL(outcome.fallback, ctx.context.baseURL).toString());
-            }
-            await setSessionCookie(ctx, { session, user: found });
-            await links.noteRequestLinkUsed(outcome.signIn.linkId);
-          }
-          throw ctx.redirect(new URL(outcome.location, ctx.context.baseURL).toString());
+        async (ctx) => followLink(ctx, { ...ctx.query, posted: false }),
+      ),
+      requestLinkContinue: createAuthEndpoint(
+        REQUEST_LINK_ENDPOINT,
+        {
+          method: 'POST',
+          body: requestLinkSchema,
+          requireHeaders: true,
+          // Better Auth's check for sign-in forms: it refuses another site's form (a cross-site
+          // navigation) and checks the origin also when the browser sends no cookies, which it
+          // doesn't with another site's POST.
+          use: [formCsrfMiddleware],
+          // The confirmation page's plain form.
+          metadata: { allowedMediaTypes: ['application/x-www-form-urlencoded'] },
         },
+        /**
+         * The confirmation page's Continue.
+         *
+         * @param ctx - The endpoint context.
+         * @returns Nothing: the response is a 303 to the next page.
+         */
+        async (ctx) => followLink(ctx, { ...ctx.body, posted: true }),
       ),
     },
     rateLimit: [
       {
         /**
-         * Only this endpoint.
+         * Only this endpoint, whichever method.
          *
          * @param path - The endpoint path.
          * @returns Whether it's the request link's.

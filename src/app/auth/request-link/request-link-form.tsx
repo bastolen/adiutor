@@ -2,7 +2,7 @@
  * @file The Continue step of the link in an email about a request (decision
  * 0036): it names the account the link signs in to and the request it
  * opens, and only its click signs in, so a mail scanner that opens the link
- * gets no session.
+ * gets no session. Continue is a form `POST`, which no link can send.
  */
 'use client';
 
@@ -21,7 +21,7 @@ import { usePageRestored } from '@/components/ui/use-page-restored';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import { sectionFromHash } from '@/lib/redirect';
 import { ENTRY_PARAM, isEntryId } from '@/lib/requests';
-import { REQUEST_LINK_CONFIRMED_PARAM, REQUEST_LINK_URL_PATH } from '@/lib/sign-in/request-link';
+import { REQUEST_LINK_URL_PATH } from '@/lib/sign-in/request-link';
 
 /** Whoever is signed in in this browser, as the page names them. */
 export interface SignedInAccount extends NamedAccount {
@@ -63,14 +63,15 @@ function sameName(first: NamedAccount, second: NamedAccount): boolean {
 }
 
 /**
- * Sends the link back to Better Auth's endpoint with a plain form submit, a
- * same-origin navigation the user made, marked as this page's Continue
- * ({@link REQUEST_LINK_CONFIRMED_PARAM}), which may switch from someone else
- * signed in here. The form only gets the link's token once it runs in the
- * browser, so tools that only fetch the page find no form that would use
- * it. The email's link may point at a part of the request (`#…`): the
- * browser kept it on this page's address, and the form's address passes it
- * on, when it names a section, so the request opens there.
+ * Sends the link back to Better Auth's endpoint with a plain form `POST`, a
+ * same-origin navigation the user made, which only this page's Continue
+ * makes (a link, even one on a page of this site, is always a `GET`), so it
+ * may switch from someone else signed in here. The form only gets the
+ * link's token once it runs in the browser, so tools that only fetch the
+ * page find no form that would use it. The email's link may point at a part
+ * of the request (`#…`): the browser kept it on this page's address, and the
+ * form's address passes it on, when it names a section, so the request opens
+ * there.
  *
  * When someone else is signed in in this browser, the page says that
  * continuing switches to the link's account, and points out when both have
@@ -147,14 +148,13 @@ export default function RequestLinkForm({
         </Alert>
       )}
       <form
-        method="get"
+        method="post"
         action={`${REQUEST_LINK_URL_PATH}${anchor}`}
         onSubmit={() => setPending(true)}
       >
         {inBrowser && (
           <>
             <input type="hidden" name="token" value={token} />
-            <input type="hidden" name={REQUEST_LINK_CONFIRMED_PARAM} value="1" />
             {isEntryId(entry) && <input type="hidden" name={ENTRY_PARAM} value={entry} />}
           </>
         )}

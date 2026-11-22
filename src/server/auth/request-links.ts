@@ -189,15 +189,23 @@ export interface RequestLinkContext extends SessionCookieContext {
  * Decides what a request link does, for Better Auth's endpoint, which then
  * signs in (when `signIn` is set) and redirects:
  *
- * 1. Not a person's click (`isPersonsClick`): to the confirmation page, so
- *    a mail scanner or link checker gets no session.
+ * 1. A link (`GET`) that isn't a person's click (`isPersonsClick`), or a
+ *    `POST` that isn't the confirmation page's Continue (`fromPage`): to the
+ *    confirmation page, so a mail scanner or link checker gets no session. A
+ *    `POST` counts only as the Continue, never as a click: another site's
+ *    form, clicked, says a person clicked too, and the browser sends it
+ *    without the cookies (`SameSite=Lax`) that would show someone is signed
+ *    in.
  * 2. A link that isn't usable ({@link getRequestLinkView}): to the
  *    confirmation page, which says so.
  * 3. That person signed in in this browser already: straight to the
  *    request, without a new session.
  * 4. Someone else signed in: to the confirmation page, which says that
- *    continuing switches accounts, unless this is its Continue (`confirmed`
- *    with a same-origin click, which another site can't make).
+ *    continuing switches accounts, unless this is its Continue: its form's
+ *    POST (`posted`), which no link can make, from a page of this site
+ *    (`Sec-Fetch-Site: same-origin`), which another site can't make. A link
+ *    on one of the site's pages (one written in a reply) is a same-origin
+ *    click too, but never a POST.
  * 5. Past the link's sign-ins for the hour: to the sign-in page, returning
  *    to the request.
  * 6. Otherwise: sign the person in and open the request.
@@ -205,7 +213,8 @@ export interface RequestLinkContext extends SessionCookieContext {
  * @param ctx - The endpoint context (headers and the signed session cookie).
  * @param link - The link.
  * @param link.token - Its token (unvalidated input is fine).
- * @param link.confirmed - Whether the confirmation page's Continue sent it.
+ * @param link.posted - Whether the browser posted it: only the confirmation page's Continue
+ *   does, never a link.
  * @param link.entry - The entry the link points at, passed on wherever it goes (`?entry=`), so
  *   the request's page shows it whatever the reader's activity filter; anything that isn't an
  *   entry's ID is left out.
@@ -213,12 +222,13 @@ export interface RequestLinkContext extends SessionCookieContext {
  */
 export async function followRequestLink(
   ctx: RequestLinkContext,
-  { token, confirmed, entry = null }: { token: string; confirmed: boolean; entry?: string | null },
+  { token, posted, entry = null }: { token: string; posted: boolean; entry?: string | null },
 ): Promise<RequestLinkOutcome> {
   const headers = ctx.headers ?? new Headers();
   const page = requestLinkPagePath(token, { entry });
   const toPage = { location: page, fallback: page };
-  if (!isPersonsClick(headers)) {
+  const fromPage = posted && headers.get('sec-fetch-site') === 'same-origin';
+  if (posted ? !fromPage : !isPersonsClick(headers)) {
     return toPage;
   }
   const service = {
@@ -248,7 +258,6 @@ export async function followRequestLink(
   if (browser?.userId === view.account.userId) {
     return { location, fallback: page };
   }
-  const fromPage = confirmed && headers.get('sec-fetch-site') === 'same-origin';
   if (browser && !fromPage) {
     return toPage;
   }

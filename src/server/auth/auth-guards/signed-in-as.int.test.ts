@@ -125,6 +125,15 @@ describe('refusing Better Auth while signed in as someone', () => {
     expect(refusal instanceof APIError ? new Headers(refusal.headers).get('location') : null).toBe(
       '/auth/request-link?token=link-token',
     );
+
+    // Its confirmation page's Continue too, which posts the token in a form.
+    const posted = await beforeAuthRequest({
+      ...requestWith('/request-link/sign-in', token),
+      body: { token: 'link-token' },
+    }).catch((error: unknown) => error);
+    expect(posted instanceof APIError ? new Headers(posted.headers).get('location') : null).toBe(
+      '/auth/request-link?token=link-token',
+    );
   });
 
   it('leaves reading the session and signing out open', async () => {

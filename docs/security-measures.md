@@ -153,7 +153,10 @@ an endpoint would act on their own account (see
 The link in an email about a request (`/request-link/sign-in`, an endpoint of the app's own
 plugin) takes no return address: it always opens its own request, by the number stored with the
 link. It signs in only on a person's click and never switches from someone else signed in in that
-browser without its confirmation page's same-origin Continue (see
+browser without its confirmation page's Continue, a same-origin form `POST`: a link to it, even one
+written in a reply and clicked on the request's page, is a `GET` and can't switch, and a `POST`
+never counts as a click, so another site's form (which the browser sends without the site's
+cookies) signs nobody in; Better Auth's `formCsrfMiddleware` refuses it first (see
 [Links in emails about requests](authentication.md#links-in-emails-about-requests)).
 
 Return addresses must be pages of the app (`isSafeAppRedirect` in `src/lib/redirect.ts`): a path
