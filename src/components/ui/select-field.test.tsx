@@ -30,6 +30,21 @@ describe('SelectField', () => {
     expect(select).not.toHaveTextContent('Raises requests');
   });
 
+  it('names its open list by the field label, also when the label is hidden', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(
+      <SelectField label="Status" options={options} defaultValue="client" />,
+    );
+
+    await user.click(screen.getByRole('combobox', { name: 'Status' }));
+    expect(screen.getByRole('listbox', { name: 'Status' })).toBeInTheDocument();
+    unmount();
+
+    render(<SelectField label="Role" options={options} defaultValue="client" hideLabel />);
+    await user.click(screen.getByRole('combobox', { name: 'Role' }));
+    expect(screen.getByRole('listbox', { name: 'Role' })).toBeInTheDocument();
+  });
+
   it('reads out option descriptions after the label, as part of the option name', async () => {
     const user = userEvent.setup();
     render(<SelectField label="Role" options={options} defaultValue="watcher" />);
