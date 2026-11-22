@@ -449,7 +449,7 @@ test('an Admin who confirmed long ago confirms it’s them before giving staff o
   // The step-up page, in change mode, coming back to the Members page's invite form.
   await companyInvite.getByRole('link', { name: confirm }).click();
   await expect(page).toHaveURL(
-    `/auth/verify?callbackURL=${encodeURIComponent(`${membersPath}#invite`)}&for=change`,
+    `/auth/verify?callbackURL=${encodeURIComponent(`${membersPath}#company-invite`)}&for=change`,
   );
   await expect(page.getByRole('heading', { name: confirm })).toBeVisible();
 

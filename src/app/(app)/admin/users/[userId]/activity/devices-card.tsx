@@ -1,6 +1,7 @@
 /**
  * @file The "Signed-in devices" card on the Activity tab of a user's page: the browsers
- * where the account is signed in, sorted and paginated (`DEVICES_TABLE`).
+ * where the account is signed in, sorted and paginated (`USER_DEVICES_TABLE`, whose
+ * anchor, `user-devices`, isn't the one your own Activity page's card has).
  * Admins (`users:manage`) on someone else's page also sign them out
  * everywhere. Text from `admin.user.devices`.
  */

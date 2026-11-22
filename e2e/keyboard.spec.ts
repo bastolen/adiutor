@@ -834,6 +834,51 @@ test.describe('signed in', () => {
     expect(await duplicateIds(page)).toEqual([]);
   });
 
+  test('pages with the same kind of card, kept alive together, give their cards their own anchors', async ({
+    page,
+  }) => {
+    const accountMenu = page.getByRole('button', { name: /^Account menu/ });
+    const mainMenu = page.getByRole('navigation', { name: 'Main' });
+
+    // A user's devices, then your own, reached from the account menu without reloading.
+    const userId = await findUserId(CLIENT_WATCHER.email);
+    await page.goto(`/admin/users/${userId}/activity`);
+    // Each page's cards stream in after its header: they must be there before moving on.
+    const devicesHeading = page.getByRole('heading', { name: 'Signed-in devices' });
+    await expect(devicesHeading).toBeVisible();
+    // Once the account menu opens, the page has hydrated: the links below are client-side moves.
+    await accountMenu.click();
+    await page.getByRole('menuitem', { name: 'Account settings' }).click();
+    await expect(page).toHaveURL('/account');
+    await chooseTab(page, 'Account sections', 'Activity', 'Account');
+    await expect(page).toHaveURL('/account/activity');
+    await expect(devicesHeading).toBeVisible();
+    // Both devices cards are in the document (Next keeps the user's page alive, hidden).
+    await expect(page.locator('#devices')).toHaveCount(1);
+    await expect(page.locator('#user-devices')).toHaveCount(1);
+    expect(await duplicateIds(page)).toEqual([]);
+
+    // A company's invitations, then the staff's, reached from the menu without reloading.
+    await page.goto(`/companies/${COMPANY_SLUG}/members`);
+    const linksHeading = page.getByRole('heading', { name: 'Invite links' });
+    await expect(linksHeading).toBeVisible();
+    await accountMenu.click();
+    await expect(page.getByRole('menu')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(accountMenu).toBeFocused();
+    await mainMenu.getByRole('link', { name: 'Settings' }).click();
+    await expect(page).toHaveURL('/admin/settings');
+    await chooseTab(page, 'Settings sections', 'Staff', 'Settings');
+    await expect(page).toHaveURL('/admin/settings/staff');
+    await expect(linksHeading).toBeVisible();
+    // Both pages' invitation cards are in the document (Next keeps the company's page alive).
+    await expect(page.locator('#invite, #invitations, #invite-links')).toHaveCount(3);
+    await expect(
+      page.locator('#company-invite, #company-invitations, #company-invite-links'),
+    ).toHaveCount(3);
+    expect(await duplicateIds(page)).toEqual([]);
+  });
+
   test('the date range form goes From, To, Apply, and Enter applies it', async ({ page }) => {
     await page.goto('/admin/logs?group=people');
     const from = page.getByLabel('From', { exact: true });

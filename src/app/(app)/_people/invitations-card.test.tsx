@@ -1,6 +1,7 @@
 /**
  * @file Tests for the "Open invitations" card: a row per invitation, the
- * note on invitations that came from an invite link, and the empty state.
+ * note on invitations that came from an invite link, the empty state, and
+ * the anchor it takes from its page.
  */
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -9,7 +10,7 @@ import { defined } from '@/lib/defined';
 import translator from '@/lib/i18n/translator';
 import { createPageUrl } from '@/lib/tables/page-url';
 import { type Paged } from '@/lib/tables/table-state';
-import { INVITATIONS_TABLE } from '@/lib/tables/tables';
+import { COMPANY_INVITATIONS_TABLE, INVITATIONS_TABLE } from '@/lib/tables/tables';
 import type { PendingInvitation } from '@/server/people/invitations';
 
 import renderInLocale from '../../../../tests/i18n/render';
@@ -42,17 +43,15 @@ function pending(overrides: Partial<PendingInvitation>): PendingInvitation {
   };
 }
 
-/** The table's links in its default state. */
+/** The table's default state. */
+const DEFAULT_STATE = { sort: 'sent', dir: 'desc', page: 1, size: 25 } as const;
+
+/** The table's links in its default state, on a company's Members page. */
 const TABLE = createPageUrl(
   '/companies/company-1/members',
   {},
   translator('en-US', 'tables'),
-).table(INVITATIONS_TABLE, {
-  sort: 'sent',
-  dir: 'desc',
-  page: 1,
-  size: 25,
-});
+).table(COMPANY_INVITATIONS_TABLE, DEFAULT_STATE);
 
 describe('InvitationsCard', () => {
   it('says which invitations came from an invite link', () => {
@@ -125,5 +124,24 @@ describe('InvitationsCard', () => {
     );
     expect(screen.getByText('No open invitations')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  it("takes its anchor from its page's table, so the two pages that show it never share one", () => {
+    const empty: Paged<PendingInvitation> = { items: [], total: 0, page: 1, size: 25 };
+    const staffTable = createPageUrl(
+      '/admin/settings/staff',
+      {},
+      translator('en-US', 'tables'),
+    ).table(INVITATIONS_TABLE, DEFAULT_STATE);
+    const { container, unmount } = render(
+      <InvitationsCard invitations={empty} table={TABLE} canManage={false} companyId="company-1" />,
+    );
+    expect(container.querySelector('section')).toHaveAttribute('id', 'company-invitations');
+    unmount();
+
+    const staff = render(
+      <InvitationsCard invitations={empty} table={staffTable} canManage={false} companyId={null} />,
+    );
+    expect(staff.container.querySelector('section')).toHaveAttribute('id', 'invitations');
   });
 });

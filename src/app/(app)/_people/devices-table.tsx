@@ -28,7 +28,7 @@ import { timeTag } from './rich-tags';
 interface DevicesTableProps {
   /** A page of the signed-in devices. */
   devices: Paged<UserSession>;
-  /** The table's sort and page links (`DEVICES_TABLE`). */
+  /** The table's sort and page links (`DEVICES_TABLE`, or `USER_DEVICES_TABLE` on a user's page). */
   table: TableLinks<DeviceSort>;
   /**
    * What the table shows, for screen readers, in the reader's language, e.g.
