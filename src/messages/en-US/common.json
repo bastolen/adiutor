@@ -53,6 +53,11 @@
     "filter": {
       "chosen": "{filter}: {choice}"
     },
+    "select": {
+      "searchPlaceholder": "Type to search",
+      "noMatches": "No options match your search.",
+      "results": "{count, plural, =0 {No options match} one {# option matches} other {# options match}}"
+    },
     "dateRange": {
       "from": "From",
       "to": "To"
@@ -138,6 +143,7 @@
       "followDefault": "Default",
       "followDefaultDescription": "Follows Adiutor's default language, now {language}."
     },
+    "timeZoneRegion": "{region, select, Africa {Africa} America {Americas} Antarctica {Antarctica} Arctic {Arctic} Asia {Asia} Atlantic {Atlantic Ocean} Australia {Australia} Europe {Europe} Indian {Indian Ocean} Pacific {Pacific Ocean} other {Other zones}}",
     "preferences": {
       "button": "Theme and language: {theme, select, light {Light} dark {Dark} other {System}}, {language}",
       "themeOnly": "Theme: {theme, select, light {Light} dark {Dark} other {System}}"

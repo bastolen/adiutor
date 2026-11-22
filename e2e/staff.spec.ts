@@ -21,6 +21,7 @@ import {
   createAccountFromInvitation,
   createInviteLink,
   freshAddress,
+  searchSelect,
   sendInvitation,
   setUpAuthenticator,
   signIn,
@@ -225,16 +226,15 @@ test("an Admin changes Adiutor's default time zone", async ({ page }) => {
   try {
     const select = page.getByRole('combobox', { name: 'Default time zone' });
     await expect(select).toContainText('UTC');
-    await select.click();
-    await page.getByRole('option', { name: /^Asia\/Tokyo/ }).click();
+    await searchSelect(select, 'tokyo');
+    await page.keyboard.press('Enter');
+    await expect(select).toContainText('Tokyo');
     await page.getByRole('button', { name: 'Save default time zone' }).click();
     await expect(toasts(page)).toContainText('Default time zone saved.');
     // The select shows the zone just saved, not the one from before the save.
-    await expect(select).toContainText('Asia/Tokyo');
+    await expect(select).toContainText('Tokyo');
     await page.reload();
-    await expect(page.getByRole('combobox', { name: 'Default time zone' })).toContainText(
-      'Asia/Tokyo',
-    );
+    await expect(page.getByRole('combobox', { name: 'Default time zone' })).toContainText('Tokyo');
   } finally {
     // Put it back for the other tests, even if a step failed.
     await setDefaultTimeZone('UTC');

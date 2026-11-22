@@ -130,8 +130,8 @@ keyboard support.
   (`<form action={formAction} onSubmit={onSubmit}>`), which runs the action itself and clears the
   form only after a successful result (`resetOnSuccess`, on by default). Forms that edit a saved
   setting with a select (the staff page's default language) pass `resetOnSuccess: false`: a
-  cleared `SelectField` goes back to the value it showed when the page loaded (Radix Select
-  restores that on a form reset), not the one just saved. Forms that edit a saved setting in a
+  cleared `SelectField` goes back to the value it showed when the page loaded (both kinds of
+  select restore that on a form reset), not the one just saved. Forms that edit a saved setting in a
   text field (a name, the request prefix) keep the reset: it's what makes the field show the
   value as it was saved (trimmed, the prefix in capitals) rather than as it was typed. A bulk invite that sent some
   invitations keeps just the addresses that weren't sent. The sign-in pages are the exception to keeping typed input: the sign-in form and the code step keep their
@@ -162,6 +162,30 @@ keyboard support.
   mode, and forced-colours mode drops it; the outline is 7.5:1 and 7.3:1 (WCAG 1.4.11) and is drawn
   in forced colours too. Items never take `outline-none` or `outline-hidden`: both switch
   Tailwind's outline style off for the element, so the outline would never show.
+- **Long selects can be searched.** A `SelectField` with more options than `SEARCH_THRESHOLD`
+  (10, in `src/components/ui/select-field.tsx`; a field can pass its own `searchThreshold`) opens
+  a panel with a search field above its list (`SearchableSelect`, on Radix Popover): the list shows
+  only the options whose label, or group heading, contains what's typed, ignoring case and accents,
+  in their order (`matchingOptions` in `select-option-list.ts`). A shorter one stays a Radix
+  Select. Both list options with a `group` under its heading (time zones by region), and look
+  alike: the same closed field, options, check and highlight (`select-options.tsx`).
+  - **Closed,** it's a combobox named by its label that shows the chosen option, like the short
+    select. Enter, Space, the arrow keys or a click open it, and typing a character opens it with
+    that character in the search.
+  - **Open,** the search field has the focus (WAI-ARIA's combobox pattern): typing filters at once
+    and makes the first match active, the arrow keys move one option, PageDown and PageUp ten, and
+    Home and End go to the first and last. The active option is filled and outlined
+    (`highlightedItem`), scrolled into view under its group's sticky heading, and pointed at with
+    `aria-activedescendant`. Only Enter or a click picks; Escape, Tab, Shift+Tab or a click outside
+    close it without a change, and the focus goes back to the field.
+  - **What it says:** a screen reader hears how many options match once typing pauses (a status,
+    after 400ms), and "No options match your search." also shows on screen.
+  - **Forms, busy and coming back:** the value goes in a hidden input, so forms submit it as before,
+    also before JavaScript loads. `busy` keeps it focusable but closed. The panel and what's typed
+    are gone when the user comes back to the page, and each opening starts with an empty search.
+  - **On a phone,** it's the same panel: as wide as the field (at least 16rem, within the 16px
+    gutter), above the field when there's no room below, with the list scrolling in the room left.
+
 - **The current item** of a navigation (`aria-current`: the page in the sidebar, a tab, a filter
   such as Active, a page number, the rows per page) stands out by a fill, a shadow or a coloured
   line, which forced-colours mode (Windows High Contrast) replaces with system colours. In that
@@ -421,7 +445,7 @@ screen, in every language (with the sign-in page's widest buttons, "Last used" b
 while signed-in pages still show their loading placeholders, and that no field's text is under 16px.
 The pages are scanned as the staff Admin, and the ones that look different to someone at a company
 (the dashboard, the requests) also as a Client and as a Watcher.
-`e2e/keyboard.spec.ts` checks the skip link, menus, selects, dialogs, the mobile menu, the request
+`e2e/keyboard.spec.ts` checks the skip link, menus, selects (also a searchable one), dialogs, the mobile menu, the request
 controls and cursors using only the keyboard, that a button keeps focus while its form saves, and
 that an error in a dialog takes focus each time it comes and leaves the dialog one Escape away.
 

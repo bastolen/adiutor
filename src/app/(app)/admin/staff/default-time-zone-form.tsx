@@ -11,6 +11,7 @@ import SelectField from '@/components/ui/select-field';
 import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import type { TimeZoneOption } from '@/lib/i18n/time-zones';
+import useTimeZoneChoices from '@/lib/i18n/use-time-zone-choices';
 
 import { saveDefaultTimeZoneAction } from './actions';
 
@@ -18,13 +19,15 @@ import { saveDefaultTimeZoneAction } from './actions';
 interface DefaultTimeZoneFormProps {
   /** Adiutor's default zone now. */
   defaultTimeZone: string;
-  /** Every zone to pick from, with its offset now (`timeZoneOptions`, made on the server). */
+  /** Every zone to pick from, by region, with its offset now (`timeZoneOptions`, made on the server). */
   options: readonly TimeZoneOption[];
 }
 
 /**
- * The default time zone select with a save button. Saving says so in a toast;
- * errors stay in the form, as alert and toast.
+ * The default time zone select with a save button. The zones are listed
+ * under their regions' headings (`useTimeZoneChoices`), with a search field,
+ * the list being long. Saving says so in a toast; errors stay in the form,
+ * as alert and toast.
  *
  * The form isn't cleared after a save (`resetOnSuccess: false`): it edits a
  * saved setting, and clearing would put the select back on the zone it
@@ -47,6 +50,7 @@ export default function DefaultTimeZoneForm({
     null,
     { resetOnSuccess: false },
   );
+  const choices = useTimeZoneChoices(options);
 
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -55,7 +59,7 @@ export default function DefaultTimeZoneForm({
         <SelectField
           label={t('label')}
           name="defaultTimeZone"
-          options={options}
+          options={choices}
           defaultValue={defaultTimeZone}
           className="sm:max-w-sm"
           disabled={changesOff}

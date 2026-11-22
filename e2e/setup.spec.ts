@@ -68,9 +68,7 @@ test.describe('first run', () => {
     expect(await defaultTimeZoneNow()).toBe('Europe/Amsterdam');
     expect(await savedTimeZoneOf('setup@adiutor.test')).toBe('Europe/Amsterdam');
     await page.goto('/account');
-    await expect(page.getByRole('combobox', { name: 'Time zone' })).toContainText(
-      'Europe/Amsterdam',
-    );
+    await expect(page.getByRole('combobox', { name: 'Time zone' })).toContainText('Amsterdam');
 
     // Setup is now disabled.
     await page.goto('/setup');

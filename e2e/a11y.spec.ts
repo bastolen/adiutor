@@ -50,6 +50,7 @@ import {
   freshAddress,
   markdownEditor,
   openSignInLink,
+  searchSelect,
   signIn,
   signInAsUser,
   type StorageState,
@@ -885,6 +886,22 @@ test.describe('in forced-colours mode', () => {
         await expectAccessible(page, '[role="dialog"]');
         await page.keyboard.press('Escape');
         await expect(dialog).toHaveCount(0);
+      });
+
+      test('the time zone select, open, searched and with nothing found', async ({ page }) => {
+        // Only opened and searched: nothing is saved.
+        await page.goto('/account');
+        const field = page
+          .getByRole('region', { name: 'Time zone' })
+          .getByRole('combobox', { name: 'Time zone' });
+        const panel = await searchSelect(field, 'am');
+        await expect(panel.getByRole('group', { name: 'Americas' })).toBeVisible();
+        // Not a modal layer: the page around it stays reachable, so it's scanned too.
+        await expectAccessible(page);
+
+        await page.keyboard.type('xyz');
+        await expect(panel).toContainText('No options match your search.');
+        await expectAccessible(page);
       });
 
       test('a toast', async ({ page }) => {

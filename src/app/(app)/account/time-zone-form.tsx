@@ -12,8 +12,9 @@ import ResultAlert from '@/components/ui/result-alert';
 import SelectField from '@/components/ui/select-field';
 import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
 import { useTransientActionState, useTransientState } from '@/components/ui/use-transient-state';
-import { type TimeZoneOption, timeZoneOffset } from '@/lib/i18n/time-zones';
+import { compareTimeZoneOptions, type TimeZoneOption, timeZoneOption } from '@/lib/i18n/time-zones';
 import useBrowserTimeZone from '@/lib/i18n/use-browser-time-zone';
+import useTimeZoneChoices from '@/lib/i18n/use-time-zone-choices';
 
 import { saveTimeZoneAction } from './actions';
 
@@ -21,7 +22,7 @@ import { saveTimeZoneAction } from './actions';
 interface TimeZoneFormProps {
   /** The account's zone, or Adiutor's default while it has none: what the select starts on. */
   timeZone: string;
-  /** Every zone to pick from, with its offset now (`timeZoneOptions`, made on the server). */
+  /** Every zone to pick from, by region, with its offset now (`timeZoneOptions`, made on the server). */
   options: readonly TimeZoneOption[];
 }
 
@@ -33,9 +34,11 @@ interface TimeZoneFormProps {
  * new times, and the page says it's saved. Errors stay in the form, as alert
  * and toast.
  *
- * The list comes from the server, so the page and the browser agree on it. A
- * browser may name its zone in a way the server's list doesn't (an older or
- * a newer name, like `Asia/Kolkata`): that zone is added to the list.
+ * The list comes from the server, so the page and the browser agree on it,
+ * with each zone under its region's heading (`useTimeZoneChoices`); it has
+ * a search field, being long. A browser may name its zone in a way the
+ * server's list doesn't (an older or a newer name, like `Asia/Kolkata`):
+ * that zone is added to the list, in its place.
  *
  * @param props - Component props.
  * @param props.timeZone - The zone the select starts on.
@@ -53,9 +56,9 @@ export default function TimeZoneForm({ timeZone, options }: TimeZoneFormProps) {
     if (!browser || options.some(({ value }) => value === browser)) {
       return options;
     }
-    const own = { value: browser, label: `${browser} (${timeZoneOffset(browser, new Date())})` };
-    return [...options, own].sort((a, b) => a.value.localeCompare(b.value, 'en'));
+    return [...options, timeZoneOption(browser, new Date())].sort(compareTimeZoneOptions);
   }, [browser, options]);
+  const choices = useTimeZoneChoices(zones);
 
   useEffect(() => {
     if (result?.ok && result.data) {
@@ -70,7 +73,7 @@ export default function TimeZoneForm({ timeZone, options }: TimeZoneFormProps) {
         <SelectField
           label={t('profile.timeZoneLabel')}
           name="timeZone"
-          options={zones}
+          options={choices}
           value={chosen}
           onValueChange={setChosen}
           className="sm:max-w-sm"

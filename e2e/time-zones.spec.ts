@@ -2,11 +2,11 @@
  * @file End-to-end tests for time zones: a new account takes its browser's
  * zone on its first visit, pages and copied code show times and days in it,
  * without naming the zone on the page, and the Profile page's Time zone card
- * changes it.
+ * changes it, found by typing its city.
  */
 import { findCompanyId, savedTimeZoneOf, storeInvitation, storeRequest } from './support/db';
 import { COMPANY_SLUG } from './support/fixtures';
-import { freshAddress, toasts } from './support/helpers';
+import { freshAddress, searchSelect, toasts } from './support/helpers';
 import { expect, test } from './support/test';
 
 /**
@@ -77,14 +77,21 @@ test('the Time zone card changes the zone every page shows, and offers the brows
   await page.goto('/account');
   const card = page.getByRole('region', { name: 'Time zone' });
   const select = card.getByRole('combobox', { name: 'Time zone' });
-  await expect(select).toContainText('Australia/Adelaide');
+  // Zones are named by their place, and the browser's by its full name.
+  await expect(select).toContainText('Adelaide');
   await expect(card).toContainText('This browser is set to Australia/Adelaide.');
-  await select.click();
-  await page.getByRole('option', { name: /^Asia\/Tokyo/ }).click();
+  // Typing on the field searches the zones by city; Enter picks the match.
+  const panel = await searchSelect(select, 'tokyo');
+  await expect(panel.getByRole('option')).toHaveText([/^Tokyo \(UTC\+09:00\)/]);
+  await expect(panel.getByRole('group', { name: 'Asia' })).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(panel).toHaveCount(0);
+  await expect(select).toBeFocused();
+  await expect(select).toContainText('Tokyo');
   await card.getByRole('button', { name: 'Save time zone' }).click();
   // The page loads afresh in the new zone, and says so.
   await expect(toasts(page)).toContainText('Time zone saved.');
-  await expect(page.getByRole('combobox', { name: 'Time zone' })).toContainText('Asia/Tokyo');
+  await expect(page.getByRole('combobox', { name: 'Time zone' })).toContainText('Tokyo');
   expect(await savedTimeZoneOf(email)).toBe('Asia/Tokyo');
 
   // 23:30 in UTC is 8:30 the next morning in Tokyo.
@@ -104,9 +111,7 @@ test('the Time zone card changes the zone every page shows, and offers the brows
   const useBrowser = page.getByRole('button', { name: 'Use this browser’s zone' });
   await useBrowser.click();
   await expect(useBrowser).toHaveAttribute('aria-disabled', 'true');
-  await expect(page.getByRole('combobox', { name: 'Time zone' })).toContainText(
-    'Australia/Adelaide',
-  );
+  await expect(page.getByRole('combobox', { name: 'Time zone' })).toContainText('Adelaide');
   await page.getByRole('button', { name: 'Save time zone' }).click();
   await expect(toasts(page)).toContainText('Time zone saved.');
   await expect.poll(() => savedTimeZoneOf(email)).toBe('Australia/Adelaide');
