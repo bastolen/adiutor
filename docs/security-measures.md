@@ -152,11 +152,18 @@ an endpoint would act on their own account (see
 
 The link in an email about a request (`/request-link/sign-in`, an endpoint of the app's own
 plugin) takes no return address: it always opens its own request, by the number stored with the
-link. It signs in only on a person's click and never switches from someone else signed in in that
-browser without its confirmation page's Continue, a same-origin form `POST`: a link to it, even one
-written in a reply and clicked on the request's page, is a `GET` and can't switch, and a `POST`
-never counts as a click, so another site's form (which the browser sends without the site's
-cookies) signs nobody in; Better Auth's `formCsrfMiddleware` refuses it first (see
+link. It signs in straight away only on a person's click; anything else gets its confirmation
+page, whose Continue, a same-origin form `POST`, signs in. The page sends it by itself only when
+nobody is signed in in that browser, for Safari, which never says a person clicked
+([decision 0038](decisions/0038-request-links-continue-by-themselves.md)). So a scanner that runs
+the page's scripts signs in too, as anyone with the email could, and merely visiting a page that
+sends the whole tab to `/auth/request-link?token=…` with someone's link signs a signed-out visitor
+in as that person without a click (the page refuses frames). It never switches from someone else
+signed in in that browser without a press on that Continue (the one it sends by itself, `auto=1`,
+never switches): a link to the endpoint, even one written in a reply and clicked on the request's
+page, is a `GET` and can't switch, and a `POST` never counts as a click, so another site's form
+(which the browser sends without the site's cookies) signs nobody in; Better Auth's
+`formCsrfMiddleware` refuses it first (see
 [Links in emails about requests](authentication.md#links-in-emails-about-requests)).
 
 Return addresses must be pages of the app (`isSafeAppRedirect` in `src/lib/redirect.ts`): a path
@@ -196,7 +203,8 @@ the person the email went to, once, for 14 days, and only while that proposal st
 the person may still answer it (an active account, a member with `requests:contribute`, an active
 company), all checked again when it's used, with the same service as the request's page. It
 answers on a `GET` only for a person's click (`Sec-Fetch-User: ?1`); a mail scanner's visit
-changes nothing and gets a page with a button. The link can't read the request, sign anyone in or
+changes nothing and gets a page with a button, which also waits for its press in Safari, where no
+click counts as one. The link can't read the request, sign anyone in or
 do anything else, and its token is never logged or stored in recorded errors.
 
 Emails are sent after the response, so no answer waits for the mail server, whether or not the

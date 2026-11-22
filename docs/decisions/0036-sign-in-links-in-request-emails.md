@@ -1,6 +1,8 @@
 # 0036. Links in emails about requests sign the recipient in
 
-- **Status:** Accepted
+- **Status:** Accepted. One rule is superseded by
+  [0038](0038-request-links-continue-by-themselves.md): where the browser can't tell a click
+  (Safari), the confirmation page continues by itself when nobody is signed in in that browser.
 - **Date:** 2026-11-21
 
 ## Context

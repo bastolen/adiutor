@@ -4,9 +4,13 @@
  * the second step, while a change that needs a recent confirmation still
  * asks for one; someone else signed in in the browser and a link that no
  * longer works get its confirmation page first, and only its Continue (a
- * POST) switches accounts, never a link to it written in a reply.
+ * POST) switches accounts, never a link to it written in a reply. Where the
+ * browser doesn't say a person clicked (Safari), the page continues by itself
+ * when nobody is signed in (decision 0038).
  */
 import { randomUUID } from 'node:crypto';
+
+import type { Page } from '@playwright/test';
 
 import { requestLinkPath } from '../src/lib/sign-in/request-link';
 import { storeEntries, storeRequest, storeRequestLink } from './support/db';
@@ -200,13 +204,83 @@ test('a link that no longer works says so, and signing in returns to the request
   await expect(page).toHaveURL(/\/auth\?callbackURL=%2Fdashboard/);
 });
 
-test('a link opened without a click gets the confirmation page', async ({ page }) => {
-  const { number } = await ownRequest(STEP_UP_CLIENT.email);
+/**
+ * Opens a link the way a browser that never says a person clicked does
+ * (Safari sends no `Sec-Fetch-User`): a mail app's page that forwards to it
+ * by itself, so Chromium sends no `Sec-Fetch-User` either.
+ *
+ * @param page - The page.
+ * @param url - The link, a path of the app.
+ */
+async function openLinkWithoutClick(page: Page, url: string): Promise<void> {
+  const mail = 'http://mail.adiutor.test/';
+  const href = new URL(url, E2E_BASE_URL).toString();
+  await page.route(mail, (route) =>
+    route.fulfill({
+      contentType: 'text/html',
+      body: `<meta http-equiv="refresh" content="0;url=${href.replaceAll('"', '&quot;')}">`,
+    }),
+  );
+  await page.goto(mail);
+}
+
+test('a link opened without a click goes on from its confirmation page by itself', async ({
+  page,
+}) => {
+  const { title, number } = await ownRequest(STEP_UP_CLIENT.email);
   const link = requestLinkPath(await storeRequestLink(STEP_UP_CLIENT.email, number));
 
-  // Typing the address doesn't say a person clicked a link in an email the way a click does.
+  // A program that only fetches the link (a mail scanner) gets the page, which has no form for it.
   const response = await page.request.get(link, { maxRedirects: 0 });
   expect(response.status()).toBe(302);
   expect(response.headers().location).toMatch(/\/auth\/request-link\?token=/);
   expect(response.headers()['set-cookie'] ?? '').not.toMatch(/session_token=/);
+
+  // A browser that doesn't say a person clicked gets the page too, which continues by itself to the
+  // request, without a press on Continue.
+  const pages: string[] = [];
+  page.on('framenavigated', (frame) => {
+    if (frame === page.mainFrame()) {
+      pages.push(new URL(frame.url()).pathname);
+    }
+  });
+  await openLinkWithoutClick(page, link);
+  await expect(page).toHaveURL(`/requests/${number}`);
+  await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+  expect(pages).toContain('/auth/request-link');
+  await page.goto('/account/activity');
+  const devices = page.getByRole('region', { name: 'Signed-in devices' });
+  await expect(devices.getByRole('row', { name: /This device Email link/ })).toBeVisible();
+});
+
+test('with someone else signed in, a link opened without a click still asks', async ({ page }) => {
+  const { title, number } = await ownRequest(STEP_UP_CLIENT.email);
+  const link = requestLinkPath(await storeRequestLink(STEP_UP_CLIENT.email, number));
+  await signIn(page, PLATFORM_ADMIN);
+  // Every Continue the page sends.
+  const continued: string[] = [];
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().includes('/api/auth/request-link/')) {
+      continued.push(request.url());
+    }
+  });
+
+  await openLinkWithoutClick(page, link);
+  await expect(page).toHaveURL(/\/auth\/request-link\?token=/);
+  await expect(page.getByText(`You're signed in as ${PLATFORM_ADMIN.name}`)).toBeVisible();
+  // Once the page runs (Continue is enabled) and its effects have run, it still waits for a click.
+  const button = page.getByRole('button', { name: /^Continue to [A-Z]+-\d+$/ });
+  await expect(button).toBeEnabled();
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => setTimeout(resolve, 0));
+      }),
+  );
+  expect(continued).toEqual([]);
+  await expect(button).not.toHaveAttribute('aria-busy', 'true');
+
+  await button.click();
+  await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+  expect(continued).toHaveLength(1);
 });

@@ -1,8 +1,11 @@
 /**
  * @file The Continue step of the link in an email about a request (decision
  * 0036): it names the account the link signs in to and the request it
- * opens, and only its click signs in, so a mail scanner that opens the link
- * gets no session. Continue is a form `POST`, which no link can send.
+ * opens, and only its Continue signs in, so a mail scanner that only fetches
+ * the link gets no session. Continue is a form `POST`, which no link can
+ * send. With nobody signed in in this browser, Continue goes by itself once
+ * the page has loaded (decision 0038), since some browsers (Safari) never
+ * say a person clicked the email's link.
  */
 'use client';
 
@@ -10,7 +13,7 @@ import { MailCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useSyncExternalStore } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 
 import AccountSummary, { accountLabel, type NamedAccount } from '@/components/auth/account-summary';
 import Alert from '@/components/ui/alert';
@@ -33,6 +36,11 @@ export interface SignedInAccount extends NamedAccount {
 interface RequestLinkFormProps {
   /** The account the link signs in to. */
   account: NamedAccount;
+  /**
+   * Whether Continue goes by itself once the page has loaded: a link that can be used, with
+   * nobody signed in in this browser, whose Continue didn't come back to the page already.
+   */
+  continueByItself: boolean;
   /** The request it opens, as people see its number, e.g. "AD-142". */
   reference: string;
   /** The request's page, naming the entry the link points at (`?entry=`), if any. */
@@ -48,6 +56,39 @@ interface RequestLinkFormProps {
  * @returns A no-op unsubscribe function.
  */
 const noSubscription = () => () => {};
+
+/**
+ * Whether Continue went by itself in this page load. It lives outside React,
+ * so it holds however often the form mounts: a page kept alive in
+ * `<Activity>` runs its effects again when it's shown, React's Strict Mode
+ * runs them twice, and the back/forward cache brings the page back as it
+ * was. Only a new page load starts afresh, and only one the browser opened
+ * fresh goes by itself ({@link openedFresh}).
+ */
+let continuedByItself = false;
+
+/**
+ * Checks whether the browser opened this page fresh (from a link, a redirect
+ * or a typed address), not with Back or Forward or a reload: coming back to
+ * the page is never a reason to sign in again. A browser that can't tell
+ * counts as not.
+ *
+ * @returns Whether the page load was a fresh navigation.
+ */
+function openedFresh(): boolean {
+  const [navigation] = performance.getEntriesByType('navigation');
+  return navigation !== undefined && 'type' in navigation && navigation.type === 'navigate';
+}
+
+/**
+ * Checks whether the browser is preparing the page before anyone opened it
+ * (prerendering, e.g. for an address it guesses while one is being typed).
+ *
+ * @returns Whether the page is being prerendered.
+ */
+function prerendering(): boolean {
+  return 'prerendering' in document && document.prerendering === true;
+}
 
 /**
  * Checks whether two accounts have the same name (anyone can give themselves
@@ -73,12 +114,23 @@ function sameName(first: NamedAccount, second: NamedAccount): boolean {
  * form's address passes it on, when it names a section, so the request opens
  * there.
  *
- * When someone else is signed in in this browser, the page says that
- * continuing switches to the link's account, and points out when both have
- * the same name; when it's that account already, it just opens the request.
+ * With nobody signed in in this browser (`continueByItself`), the form
+ * sends itself once the page has loaded (decision 0038): Safari never says a
+ * person clicked the email's link, so the link always comes here there. It
+ * does so once per page load, only for a page the browser opened fresh (not
+ * Back, Forward or a reload), and only once the page is shown, not while the
+ * browser prerenders it; Continue shows as busy meanwhile. It's marked as
+ * sent by itself (`auto=1`, through a hidden submit button), so it never
+ * switches from someone who signed in in another tab after the page was
+ * rendered. If the server sends it back here, the page waits for a click
+ * (`retry`). When someone else
+ * is signed in in this browser, the page says that continuing switches to the
+ * link's account, and points out when both have the same name, and waits for
+ * a click; when it's that account already, it just opens the request.
  *
  * @param props - Component props.
  * @param props.account - The account the link signs in to.
+ * @param props.continueByItself - Whether Continue goes by itself once the page has loaded.
  * @param props.reference - The request's number as people see it.
  * @param props.requestHref - The request's page, with the entry the link points at.
  * @param props.signedIn - Whoever is signed in in this browser.
@@ -86,6 +138,7 @@ function sameName(first: NamedAccount, second: NamedAccount): boolean {
  */
 export default function RequestLinkForm({
   account,
+  continueByItself,
   reference,
   requestHref,
   signedIn,
@@ -108,9 +161,40 @@ export default function RequestLinkForm({
   const entry = searchParams.get(ENTRY_PARAM);
   const anchor = section ? `#${section}` : '';
 
+  const form = useRef<HTMLFormElement>(null);
+  // Sends Continue when the page sends it by itself, marked so (`auto=1`): the server never lets
+  // that one switch from someone signed in meanwhile (a page prerendered before a sign-in).
+  const autoSubmitter = useRef<HTMLInputElement>(null);
+  // Whether to send Continue by itself: once the form has the link, which it only gets in the
+  // browser, and never while someone is signed in here.
+  const goesByItself = continueByItself && signedIn === null && inBrowser && token !== '';
+
   // Makes the button usable again when the browser shows the page from its
   // back/forward cache (e.g. Back after signing in).
   usePageRestored(() => setPending(false));
+
+  useEffect(() => {
+    const shown = form.current;
+    const submitter = autoSubmitter.current;
+    // A browser without `requestSubmit` (before 2022) keeps the button.
+    if (!goesByItself || continuedByItself || !shown || !submitter || !('requestSubmit' in shown)) {
+      return undefined;
+    }
+    if (!openedFresh()) {
+      return undefined;
+    }
+    /** Sends Continue, marked as sent by itself, which marks the button busy. */
+    const send = () => {
+      continuedByItself = true;
+      shown.requestSubmit(submitter);
+    };
+    if (prerendering()) {
+      document.addEventListener('prerenderingchange', send, { once: true });
+      return () => document.removeEventListener('prerenderingchange', send);
+    }
+    send();
+    return undefined;
+  }, [goesByItself]);
 
   const icon = <IconTile icon={MailCheck} size="lg" />;
 
@@ -148,6 +232,7 @@ export default function RequestLinkForm({
         </Alert>
       )}
       <form
+        ref={form}
         method="post"
         action={`${REQUEST_LINK_URL_PATH}${anchor}`}
         onSubmit={() => setPending(true)}
@@ -157,6 +242,9 @@ export default function RequestLinkForm({
             <input type="hidden" name="token" value={token} />
             {isEntryId(entry) && <input type="hidden" name={ENTRY_PARAM} value={entry} />}
           </>
+        )}
+        {goesByItself && (
+          <input ref={autoSubmitter} type="submit" name="auto" value="1" hidden tabIndex={-1} />
         )}
         <Button type="submit" fullWidth loading={pending} disabled={!inBrowser}>
           {t('requestLink.submit', { reference })}

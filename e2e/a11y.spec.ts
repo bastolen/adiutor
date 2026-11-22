@@ -711,7 +711,8 @@ test.describe('in forced-colours mode', () => {
       page,
     }) => {
       const token = await storeRequestLink(CLIENT_WATCHER.email, SEEDED_REQUESTS.open.number);
-      await page.goto(requestLinkPagePath(token));
+      // As after its Continue came back (`retry`), so it waits for a click instead of going on.
+      await page.goto(requestLinkPagePath(token, { retry: true }));
       await expect(page.getByText(CLIENT_WATCHER.name, { exact: true })).toBeVisible();
       await expectAccessible(page);
     });

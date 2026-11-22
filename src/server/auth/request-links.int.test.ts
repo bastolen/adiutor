@@ -6,9 +6,11 @@
  *   opens the request; the session skips the step-up page but has no second
  *   step, so changes that need a confirmation ask for one straight away;
  * - anything else (no person's click, someone else signed in, a link that
- *   can't be used) goes to the confirmation page without a session, and only
- *   the page's own Continue (a same-origin POST) may switch accounts, never a
- *   link marked as one;
+ *   can't be used) goes to the confirmation page without a session, and the
+ *   page's own Continue (a same-origin POST) signs in, also where the browser
+ *   never says a person clicked (Safari, decision 0038), and is the only way
+ *   to switch accounts, never a link marked as one; a POST that comes back to
+ *   the page marks it to wait for a click;
  * - a link ends with the user's trusted devices, and is capped per hour.
  */
 import { and, eq, like } from 'drizzle-orm';
@@ -85,6 +87,17 @@ const CLICK_ON_PAGE = { ...CLICK_IN_EMAIL, 'sec-fetch-site': 'same-origin' };
 /** The site's origin, which a POST from its pages names (`Origin`). */
 const SITE_ORIGIN = new URL(env.BETTER_AUTH_URL).origin;
 
+/**
+ * The confirmation page's Continue in Safari, or sent by the page itself: a
+ * same-origin page load without `Sec-Fetch-User`, which WebKit never sends.
+ */
+const CONTINUE_WITHOUT_CLICK = {
+  'sec-fetch-site': 'same-origin',
+  'sec-fetch-mode': 'navigate',
+  'sec-fetch-dest': 'document',
+  origin: SITE_ORIGIN,
+};
+
 /** A mail scanner that opens the link to check it: no browser, so no `Sec-Fetch-*` headers. */
 const SCANNER = {};
 
@@ -115,6 +128,7 @@ function newBrowser() {
      * @param headers - The `Sec-Fetch-*` headers (and `Origin`) of how it was sent.
      * @param options - Options.
      * @param options.posted - Whether it's posted, as the confirmation page's Continue is.
+     * @param options.auto - Whether the page posted it by itself (`auto=1`).
      * @param options.entry - The entry the link names, if any.
      * @param options.query - Anything else written into the link's query.
      * @returns The response.
@@ -124,13 +138,17 @@ function newBrowser() {
       headers: Record<string, string>,
       {
         posted = false,
+        auto = false,
         entry = null,
         query = '',
-      }: { posted?: boolean; entry?: string | null; query?: string } = {},
+      }: { posted?: boolean; auto?: boolean; entry?: string | null; query?: string } = {},
     ): Promise<Response> {
       const form = new URLSearchParams({ token });
       if (entry) {
         form.set('entry', entry);
+      }
+      if (auto) {
+        form.set('auto', '1');
       }
       // `SameSite=Lax`: another site's POST carries none of the site's cookies.
       const sent: Record<string, string> =
@@ -172,6 +190,7 @@ function newBrowser() {
      * @param headers - The `Sec-Fetch-*` headers (and `Origin`) of how it was sent.
      * @param options - As for `send`.
      * @param options.posted - Whether it's posted, as the confirmation page's Continue is.
+     * @param options.auto - Whether the page posted it by itself (`auto=1`).
      * @param options.entry - The entry the link names, if any.
      * @param options.query - Anything else written into the link's query.
      * @returns Where the response sends the browser, as a path and query.
@@ -179,7 +198,7 @@ function newBrowser() {
     async open(
       token: string,
       headers: Record<string, string>,
-      options: { posted?: boolean; entry?: string | null; query?: string } = {},
+      options: { posted?: boolean; auto?: boolean; entry?: string | null; query?: string } = {},
     ): Promise<string> {
       const response = await this.send(token, headers, options);
       expect(response.status).toBe(options.posted ? 303 : 302);
@@ -346,16 +365,16 @@ describe('the link in an email about a request', () => {
     // A link on a page of the site (written in a reply) is no Continue, whatever its query says.
     expect(await browser.open(token, CLICK_ON_PAGE, { query: '&confirmed=1' })).toBe(page);
     // Another site's form, clicked here: it says a person clicked, and comes without the
-    // browser's cookies, so nobody looks signed in. A POST is never a click, though: it's sent to
-    // the page, and the browser stays the colleague's (outside tests Better Auth's form check,
-    // `formCsrfMiddleware`, refuses it first).
+    // browser's cookies, so nobody looks signed in. A POST is never a click, though: it's sent back
+    // to the page, which then waits for a click, and the browser stays the colleague's (outside
+    // tests Better Auth's form check, `formCsrfMiddleware`, refuses it first).
     expect(
       await browser.open(
         token,
         { ...CLICK_IN_EMAIL, origin: 'https://mail.adiutor.test' },
         { posted: true },
       ),
-    ).toBe(page);
+    ).toBe(`${page}&retry=1`);
     expect(await sessionsOf(client)).toEqual([]);
     expect(await sessionsOf(colleague)).toHaveLength(1);
     expect((await actorIn(browser))?.id).toBe(colleague);
@@ -369,6 +388,69 @@ describe('the link in an email about a request', () => {
     expect(await sessionsOf(colleague)).toEqual([]);
     expect((await actorIn(browser))?.id).toBe(client);
   });
+
+  it("signs in with the page's own Continue where the browser never says a person clicked", async () => {
+    const { client, requestId, companyId } = await clientWithRequest();
+    const token = await createRequestLink(db, { userId: client, requestId });
+
+    // Nobody signed in: Safari's first visit gets the page, whose Continue (sent by itself) signs in.
+    const browser = newBrowser();
+    expect(await browser.open(token, CONTINUE_WITHOUT_CLICK)).toBe(
+      `/auth/request-link?token=${token}`,
+    );
+    // A link marked as the Continue is still only a link.
+    expect(await browser.open(token, CONTINUE_WITHOUT_CLICK, { query: '&confirmed=1' })).toBe(
+      `/auth/request-link?token=${token}`,
+    );
+    expect(await sessionsOf(client)).toEqual([]);
+    expect(await browser.open(token, CONTINUE_WITHOUT_CLICK, { posted: true, auto: true })).toBe(
+      REQUEST_PAGE,
+    );
+    expect(await sessionsOf(client)).toEqual([
+      expect.objectContaining({ fromRequestLink: true, mfaVerified: false }),
+    ]);
+    expect((await actorIn(browser))?.id).toBe(client);
+
+    // Someone else signed in: the Continue the page sends by itself (rendered before they signed
+    // in in another tab) never switches; pressed in Safari, it does.
+    const colleague = await createUser(db, 'colin@adiutor.test');
+    await addMember(db, companyId, colleague, 'client');
+    const theirs = newBrowser();
+    await theirs.open(
+      await createRequestLink(db, { userId: colleague, requestId }),
+      CLICK_IN_EMAIL,
+    );
+    expect(await theirs.open(token, CONTINUE_WITHOUT_CLICK, { posted: true, auto: true })).toBe(
+      `/auth/request-link?token=${token}&retry=1`,
+    );
+    expect((await actorIn(theirs))?.id).toBe(colleague);
+    expect(await sessionsOf(client)).toHaveLength(1);
+    expect(await theirs.open(token, CONTINUE_WITHOUT_CLICK, { posted: true })).toBe(REQUEST_PAGE);
+    expect(await sessionsOf(colleague)).toEqual([]);
+    expect((await actorIn(theirs))?.id).toBe(client);
+  });
+
+  it.each([
+    ['from another site', { ...CONTINUE_WITHOUT_CLICK, 'sec-fetch-site': 'cross-site' }],
+    ['typed in', { ...CONTINUE_WITHOUT_CLICK, 'sec-fetch-site': 'none' }],
+    [
+      "from the site's own script, not a page load",
+      { ...CONTINUE_WITHOUT_CLICK, 'sec-fetch-mode': 'cors', 'sec-fetch-dest': 'empty' },
+    ],
+    ['in a frame', { ...CONTINUE_WITHOUT_CLICK, 'sec-fetch-dest': 'iframe' }],
+    ["by a browser that doesn't say where it came from", SCANNER],
+  ])(
+    "sends a Continue that isn't the page's back to it without a session, marked to wait for a click (%s)",
+    async (_case, headers) => {
+      const { client, requestId } = await clientWithRequest();
+      const token = await createRequestLink(db, { userId: client, requestId });
+
+      expect(await newBrowser().open(token, headers, { posted: true })).toBe(
+        `/auth/request-link?token=${token}&retry=1`,
+      );
+      expect(await sessionsOf(client)).toEqual([]);
+    },
+  );
 
   it.each([
     [
@@ -414,7 +496,7 @@ describe('the link in an email about a request', () => {
         { ...CLICK_IN_EMAIL, origin: 'https://mail.adiutor.test' },
         { posted: true },
       ),
-    ).toBe(`/auth/request-link?token=${token}`);
+    ).toBe(`/auth/request-link?token=${token}&retry=1`);
     expect(await sessionsOf(client)).toEqual([]);
   });
 

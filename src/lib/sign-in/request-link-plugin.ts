@@ -40,6 +40,12 @@ const requestLinkSchema = z.object({
   entry: z.string().max(64).optional(),
 });
 
+/**
+ * The confirmation page's Continue: the link's fields, and `auto=1` when the
+ * page sent it by itself (decision 0038).
+ */
+const continueSchema = requestLinkSchema.extend({ auto: z.string().max(8).optional() });
+
 /** What the endpoints hand {@link followLink}. */
 interface FollowedLink {
   /** The link's token. */
@@ -48,6 +54,8 @@ interface FollowedLink {
   entry?: string;
   /** Whether the browser posted it: only the confirmation page's Continue does. */
   posted: boolean;
+  /** Whether the page sent its Continue by itself. */
+  auto?: boolean;
 }
 
 /**
@@ -66,6 +74,7 @@ async function followLink(ctx: GenericEndpointContext, link: FollowedLink): Prom
   const outcome = await links.followRequestLink(ctx, {
     token: link.token,
     posted: link.posted,
+    auto: link.auto ?? false,
     entry: link.entry ?? null,
   });
   /**
@@ -123,7 +132,7 @@ export default function requestLinkSignIn() {
         REQUEST_LINK_ENDPOINT,
         {
           method: 'POST',
-          body: requestLinkSchema,
+          body: continueSchema,
           requireHeaders: true,
           // Better Auth's check for sign-in forms: it refuses another site's form (a cross-site
           // navigation) and checks the origin also when the browser sends no cookies, which it
@@ -138,7 +147,13 @@ export default function requestLinkSignIn() {
          * @param ctx - The endpoint context.
          * @returns Nothing: the response is a 303 to the next page.
          */
-        async (ctx) => followLink(ctx, { ...ctx.body, posted: true }),
+        async (ctx) =>
+          followLink(ctx, {
+            token: ctx.body.token,
+            entry: ctx.body.entry,
+            posted: true,
+            auto: ctx.body.auto === '1',
+          }),
       ),
     },
     rateLimit: [

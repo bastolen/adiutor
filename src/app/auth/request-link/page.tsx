@@ -5,7 +5,9 @@
  * instead when it can't: a mail scanner or a browser that doesn't say a
  * person clicked, someone else signed in in this browser, or a link that no
  * longer works. The page names the account the link signs in to (looked up
- * without using it, `getRequestLinkView`) and asks for a click.
+ * without using it, `getRequestLinkView`) and asks for a click, or, with
+ * nobody signed in in this browser, continues by itself once it has loaded
+ * (decision 0038).
  */
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';

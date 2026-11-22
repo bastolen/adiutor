@@ -30,6 +30,15 @@ describe('request links', () => {
     expect(requestLinkPagePath('abc')).toBe('/auth/request-link?token=abc');
   });
 
+  it('mark the confirmation page when its own Continue came back to it', () => {
+    expect(requestLinkPagePath('abc', { retry: true })).toBe(
+      '/auth/request-link?token=abc&retry=1',
+    );
+    expect(
+      requestLinkPagePath('abc', { entry: '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b', retry: true }),
+    ).toBe('/auth/request-link?token=abc&entry=019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b&retry=1');
+  });
+
   it('pass the entry they point at on, and leave out anything else', () => {
     const entry = '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b';
     expect(requestLinkPath('abc', { entry })).toBe(

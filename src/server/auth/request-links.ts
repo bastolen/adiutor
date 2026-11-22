@@ -16,7 +16,9 @@
  * Anything that isn't a person's click on a link that can still be used, or
  * that would sign someone else out in that browser, goes to the confirmation
  * page first (`/auth/request-link`), which looks the link up without using
- * it ({@link getRequestLinkView}).
+ * it ({@link getRequestLinkView}). Its Continue signs in like a click; with
+ * nobody signed in in that browser, the page sends it by itself, since some
+ * browsers (Safari) never say a person clicked (decision 0038).
  */
 import { and, eq, sql } from 'drizzle-orm';
 
@@ -186,35 +188,65 @@ export interface RequestLinkContext extends SessionCookieContext {
 }
 
 /**
+ * Checks whether a request link was sent by its confirmation page's Continue:
+ * its form's `POST`, which no link can make (a link, even one written in a
+ * reply on a page of this site, is a `GET`), as a page load that a page of
+ * this site started (`Sec-Fetch-Site: same-origin`, `Sec-Fetch-Mode:
+ * navigate`, `Sec-Fetch-Dest: document`), which no other site, email or
+ * address typed in can make. The page sends it by itself when nobody is
+ * signed in in that browser (decision 0038), so it needn't say a person
+ * clicked (`Sec-Fetch-User`, which Safari never sends).
+ *
+ * @param headers - The request's headers.
+ * @param posted - Whether the browser posted it.
+ * @returns Whether the confirmation page sent it.
+ */
+function fromConfirmationPage(headers: Headers, posted: boolean): boolean {
+  return (
+    posted &&
+    headers.get('sec-fetch-site') === 'same-origin' &&
+    headers.get('sec-fetch-mode') === 'navigate' &&
+    headers.get('sec-fetch-dest') === 'document'
+  );
+}
+
+/**
  * Decides what a request link does, for Better Auth's endpoint, which then
  * signs in (when `signIn` is set) and redirects:
  *
  * 1. A link (`GET`) that isn't a person's click (`isPersonsClick`), or a
- *    `POST` that isn't the confirmation page's Continue (`fromPage`): to the
- *    confirmation page, so a mail scanner or link checker gets no session. A
- *    `POST` counts only as the Continue, never as a click: another site's
- *    form, clicked, says a person clicked too, and the browser sends it
- *    without the cookies (`SameSite=Lax`) that would show someone is signed
- *    in.
+ *    `POST` that isn't the confirmation page's Continue
+ *    ({@link fromConfirmationPage}): to the confirmation page, so a mail
+ *    scanner or link checker gets no session. A `POST` counts only as the
+ *    Continue, never as a click: another site's form, clicked, says a
+ *    person clicked too, and the browser sends it without the cookies
+ *    (`SameSite=Lax`) that would show someone is signed in.
  * 2. A link that isn't usable ({@link getRequestLinkView}): to the
  *    confirmation page, which says so.
  * 3. That person signed in in this browser already: straight to the
  *    request, without a new session.
  * 4. Someone else signed in: to the confirmation page, which says that
- *    continuing switches accounts, unless this is its Continue: its form's
- *    POST (`posted`), which no link can make, from a page of this site
- *    (`Sec-Fetch-Site: same-origin`), which another site can't make. A link
- *    on one of the site's pages (one written in a reply) is a same-origin
- *    click too, but never a POST.
+ *    continuing switches accounts, unless this is its Continue
+ *    ({@link fromConfirmationPage}), pressed: the one the page sends by
+ *    itself (`auto`) never switches, since the page may have been rendered
+ *    before someone signed in in another tab. A link on one of the site's
+ *    pages (one written in a reply) is a same-origin click too, but never a
+ *    POST.
  * 5. Past the link's sign-ins for the hour: to the sign-in page, returning
  *    to the request.
  * 6. Otherwise: sign the person in and open the request.
+ *
+ * Whenever a POST ends on the page again (or the sign-in fails), the page's
+ * address says so (`retry`), so the page waits for a click instead of
+ * continuing by itself in a loop.
  *
  * @param ctx - The endpoint context (headers and the signed session cookie).
  * @param link - The link.
  * @param link.token - Its token (unvalidated input is fine).
  * @param link.posted - Whether the browser posted it: only the confirmation page's Continue
  *   does, never a link.
+ * @param link.auto - Whether the page sent its Continue by itself (decision 0038), which never
+ *   switches from someone else signed in.
  * @param link.entry - The entry the link points at, passed on wherever it goes (`?entry=`), so
  *   the request's page shows it whatever the reader's activity filter; anything that isn't an
  *   entry's ID is left out.
@@ -222,12 +254,17 @@ export interface RequestLinkContext extends SessionCookieContext {
  */
 export async function followRequestLink(
   ctx: RequestLinkContext,
-  { token, posted, entry = null }: { token: string; posted: boolean; entry?: string | null },
+  {
+    token,
+    posted,
+    auto = false,
+    entry = null,
+  }: { token: string; posted: boolean; auto?: boolean; entry?: string | null },
 ): Promise<RequestLinkOutcome> {
   const headers = ctx.headers ?? new Headers();
-  const page = requestLinkPagePath(token, { entry });
+  const page = requestLinkPagePath(token, { entry, retry: posted });
   const toPage = { location: page, fallback: page };
-  const fromPage = posted && headers.get('sec-fetch-site') === 'same-origin';
+  const fromPage = fromConfirmationPage(headers, posted);
   if (posted ? !fromPage : !isPersonsClick(headers)) {
     return toPage;
   }
@@ -258,7 +295,7 @@ export async function followRequestLink(
   if (browser?.userId === view.account.userId) {
     return { location, fallback: page };
   }
-  if (browser && !fromPage) {
+  if (browser && (!fromPage || auto)) {
     return toPage;
   }
   const { allowed } = await hitRateLimit(

@@ -1117,11 +1117,10 @@ test('an email’s link signs its reader in and opens the request at the reply i
   await expect(entry).toBeInViewport();
   await expect(entry).toBeFocused();
 
-  // A browser that doesn't say a person clicked (an app's own browser) gets the confirmation page
-  // first; its Continue still lands on the reply.
+  // A browser that doesn't say a person clicked (Safari, an app's own browser) gets the
+  // confirmation page first, which goes on to the reply by itself.
   await signOut(page);
   await page.goto(link.replace('/api/auth/request-link/sign-in', '/auth/request-link'));
-  await page.getByRole('button', { name: /^Continue to / }).click();
   await expect(page).toHaveURL(atReply);
   await expect(entry).toBeInViewport();
   await expect(entry).toBeFocused();

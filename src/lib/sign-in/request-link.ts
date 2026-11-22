@@ -6,10 +6,11 @@
  * person clicked, someone else signed in in that browser, a link that no
  * longer works) goes to the confirmation page ({@link REQUEST_LINK_PAGE})
  * first, whose Continue posts the link to the same endpoint (a POST, which no
- * link can make). The link may be used again and again while it lasts. It may name
- * the entry the email points at (`entry`), which it passes on to the
- * request's page (`?entry=<ID>`), so the reader's activity filter never
- * hides it.
+ * link can make); with nobody signed in in that browser, the page sends it
+ * by itself (decision 0038). The link may be used again and again while it
+ * lasts. It may name the entry the email points at (`entry`), which it
+ * passes on to the request's page (`?entry=<ID>`), so the reader's activity
+ * filter never hides it.
  */
 import { ENTRY_PARAM, isEntryId } from '@/lib/requests';
 
@@ -27,6 +28,15 @@ export const REQUEST_LINK_URL_PATH = `/api/auth${REQUEST_LINK_ENDPOINT}`;
 
 /** The confirmation page a request link goes to when it doesn't sign in straight away. */
 export const REQUEST_LINK_PAGE = '/auth/request-link';
+
+/**
+ * The query parameter on the confirmation page's address when its own
+ * Continue came back to it: the browser didn't show that the page sent it
+ * (no `Sec-Fetch-Site`, as in browsers before 2023), or the sign-in failed.
+ * The page then waits for a click instead of continuing by itself again, so
+ * it never goes round in a loop (decision 0038).
+ */
+export const REQUEST_LINK_RETRY_PARAM = 'retry';
 
 /**
  * The query of a request link's addresses: its token, and the entry it
@@ -65,11 +75,17 @@ export function requestLinkPath(
  * @param token - The link's token.
  * @param options - Options.
  * @param options.entry - The ID of the entry the link points at, passed on to the request.
+ * @param options.retry - Whether the page's own Continue came back to it
+ *   ({@link REQUEST_LINK_RETRY_PARAM}), so it waits for a click.
  * @returns The path and query, e.g. `/auth/request-link?token=…&entry=…`.
  */
 export function requestLinkPagePath(
   token: string,
-  { entry = null }: { entry?: string | null } = {},
+  { entry = null, retry = false }: { entry?: string | null; retry?: boolean } = {},
 ): string {
-  return `${REQUEST_LINK_PAGE}?${linkQuery(token, entry)}`;
+  const query = linkQuery(token, entry);
+  if (retry) {
+    query.set(REQUEST_LINK_RETRY_PARAM, '1');
+  }
+  return `${REQUEST_LINK_PAGE}?${query}`;
 }
