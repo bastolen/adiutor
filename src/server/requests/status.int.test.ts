@@ -2,9 +2,11 @@
  * @file Integration tests for changing a request's status. Which roles may
  * change it is in the authorization matrix.
  */
+import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
 
+import { queuedJob } from '@/db/schema';
 import { REQUEST_STATUSES } from '@/lib/requests';
 
 import {
@@ -25,6 +27,15 @@ import {
   storeRequest,
   storedRequest,
 } from './test-helpers';
+
+/**
+ * How many emails about requests wait in the queue.
+ *
+ * @returns The number of queued `request-update` jobs.
+ */
+async function queuedUpdates(): Promise<number> {
+  return (await db.select().from(queuedJob).where(eq(queuedJob.kind, 'request-update'))).length;
+}
 
 describe('changeRequestStatus: the staff', () => {
   it('move a request through every status, each change in its history', async () => {
@@ -238,6 +249,82 @@ describe('changeRequestStatus: refusals and no-ops', () => {
     await expect(
       changeRequestStatus(ctx, support, { request: raised.id, status: 'todo' }),
     ).rejects.toMatchObject({ code: 'rate_limited' });
+    expect(await storedRequest(raised.id)).toMatchObject({ status: 'open' });
+  });
+});
+
+describe('changeRequestStatus: the status the reader saw', () => {
+  it.each(['staff', 'client'] as const)(
+    'refuses a change from %s when the status is not the one they saw, and changes nothing',
+    async (side) => {
+      const company = await createCompany(db);
+      const actor =
+        side === 'staff'
+          ? await staffActor(db, 'support')
+          : await memberActor(db, company.id, 'client');
+      const at = minutesAgo(60);
+      // A colleague closed it after the page showed it in progress.
+      const raised = await storeRequest(company.id, { status: 'done', lastActivityAt: at });
+      const queued = await queuedUpdates();
+
+      await expect(
+        changeRequestStatus(ctx, actor, {
+          request: raised.id,
+          status: side === 'staff' ? 'todo' : 'done',
+          from: 'in_progress',
+        }),
+      ).rejects.toMatchObject({ code: 'conflict', key: 'errors.requests.statusChanged' });
+
+      expect(await storedRequest(raised.id)).toMatchObject({ status: 'done', lastActivityAt: at });
+      expect(await changesOf(raised.id)).toEqual([]);
+      expect(await queuedUpdates()).toBe(queued);
+    },
+  );
+
+  it('makes the change when the status is still the one the reader saw', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const client = await memberActor(db, company.id, 'client');
+    const raised = await storeRequest(company.id, { status: 'in_progress' });
+
+    expect(
+      await changeRequestStatus(ctx, support, {
+        request: raised.id,
+        status: 'waiting',
+        from: 'in_progress',
+      }),
+    ).toEqual({ changed: true, reopened: false, status: 'waiting' });
+    expect(
+      await changeRequestStatus(ctx, client, {
+        request: raised.id,
+        status: 'cancelled',
+        from: 'waiting',
+      }),
+    ).toEqual({ changed: true, reopened: false, status: 'cancelled' });
+    expect(await changesOf(raised.id)).toEqual([
+      ['status', 'in_progress', 'waiting', 'staff'],
+      ['status', 'waiting', 'cancelled', 'company'],
+    ]);
+  });
+
+  it('overwrites whatever the status is without it, as before', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const raised = await storeRequest(company.id, { status: 'done' });
+
+    expect(await changeRequestStatus(ctx, support, { request: raised.id, status: 'todo' })).toEqual(
+      { changed: true, reopened: true, status: 'todo' },
+    );
+  });
+
+  it('refuses a status it does not know', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const raised = await storeRequest(company.id);
+
+    await expect(
+      changeRequestStatus(ctx, support, { request: raised.id, status: 'todo', from: 'closed' }),
+    ).rejects.toBeInstanceOf(ZodError);
     expect(await storedRequest(raised.id)).toMatchObject({ status: 'open' });
   });
 });

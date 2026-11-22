@@ -774,6 +774,20 @@ export async function storeRequest({
   });
 }
 
+/**
+ * Changes a test's own request's status without going through the app, as a
+ * colleague would have meanwhile: for the test of a board that's out of date.
+ * Nothing else about the request changes, and its history doesn't say so.
+ *
+ * @param number - The request's number.
+ * @param status - Its new status.
+ */
+export async function setStoredRequestStatus(number: number, status: RequestStatus): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.update(schema.request).set({ status }).where(eq(schema.request.number, number));
+  });
+}
+
 /** One entry {@link storeEntries} adds to a request's history. */
 type StoredEntry = {
   /** The email address of who wrote or changed it. */

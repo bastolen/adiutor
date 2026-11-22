@@ -1,8 +1,8 @@
 /**
  * @file Shared steps for the end-to-end tests: signing in and out, the
  * authenticator and sign-in link steps, a signed-in Admin's cookies for specs
- * that only read, signing in as a user, and steps on the staff screens that
- * more than one spec uses.
+ * that only read, signing in as a user, searching a long select, and steps on
+ * the staff screens that more than one spec uses.
  */
 import { randomInt, randomUUID } from 'node:crypto';
 
@@ -460,6 +460,33 @@ export async function signInAsUser(
   await dialog.getByRole('button', { name: `Sign in as ${name}` }).click();
   await expect(page).toHaveURL(landsOn);
   await expect(page.getByRole('region', { name: 'Signed in as someone else' })).toBeVisible();
+}
+
+/**
+ * Searches a long select (one with more options than its search threshold)
+ * by typing on it, as people do: the first character opens it with that
+ * character in its search, and the rest are typed into the search field,
+ * which has the focus. The first one is retried, because right after a
+ * (re)load the page may still be hydrating and ignore it.
+ *
+ * @param select - The select's combobox: the closed field.
+ * @param typed - What to type, at least one character.
+ * @returns The open panel, with the search field and the list of what matches.
+ */
+export async function searchSelect(select: Locator, typed: string): Promise<Locator> {
+  const page = select.page();
+  const panel = page.locator(`[id="${await select.getAttribute('aria-controls')}"]`);
+  await expect(async () => {
+    if ((await panel.count()) === 0) {
+      await select.press(typed.charAt(0));
+    }
+    await expect(panel).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  const search = panel.getByRole('combobox');
+  await expect(search).toBeFocused();
+  await page.keyboard.type(typed.slice(1));
+  await expect(search).toHaveValue(typed);
+  return panel;
 }
 
 /**

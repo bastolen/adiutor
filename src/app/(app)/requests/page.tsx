@@ -2,18 +2,19 @@
  * @file The requests list, served at `/requests`: every request the viewer
  * may see, across companies. For the staff that's every company's; for
  * everyone else, the requests of the companies they're in. Everyone signed
- * in may open it; someone in no company finds it empty.
+ * in may open it; someone in no company finds it empty. A toggle shows the
+ * same requests as a board (`/requests/board`).
  */
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
-import PageHeader from '@/components/ui/page-header';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import type { SearchParams } from '@/lib/search-params';
-import { getActor, getStaffPermissionsInCompanies } from '@/server/authz';
+import { getActor } from '@/server/authz';
 
-import RequestList, { NewRequestButton } from '../_requests/request-list';
+import RequestList from '../_requests/request-list';
+import RequestsHeader from '../_requests/requests-header';
 
 /**
  * Page metadata: "Requests · Adiutor", for everyone signed in.
@@ -27,8 +28,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /**
  * Shows the list under its header, which has a button to raise a request for
- * those who may raise one somewhere. The list loads the companies and settings
- * the header needs and hands them to it.
+ * those who may raise one somewhere, and the List | Board toggle. The list
+ * loads the companies, settings and filters the header needs and hands them
+ * to it.
  *
  * @param props - Component props.
  * @param props.searchParams - Query parameters: the search, the filters, and the table's sort and
@@ -36,26 +38,15 @@ export async function generateMetadata(): Promise<Metadata> {
  * @returns The page content.
  */
 async function Requests({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const t = await getTranslations('requests.list');
   const actor = await getActor();
   const params = await searchParams;
-  const staff = getStaffPermissionsInCompanies(actor).has('requests:view');
 
   return (
     <RequestList
       path="/requests"
       searchParams={params}
       actor={actor}
-      renderHeader={({ staffName, canRaise }) => (
-        <PageHeader
-          title={t('title')}
-          description={t('description', {
-            audience: staff ? 'staff' : 'company',
-            staff: staffName,
-          })}
-          actions={canRaise && <NewRequestButton label={t('new')} />}
-        />
-      )}
+      renderHeader={(loaded) => <RequestsHeader actor={actor} view="list" {...loaded} />}
     />
   );
 }

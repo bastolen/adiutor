@@ -37,6 +37,11 @@ interface BadgeProps {
   tone?: BadgeTone;
   /** The label. */
   children: ReactNode;
+  /**
+   * Let a long label wrap onto more lines in a narrow place (a card on the
+   * board) instead of running past its edge. Badges stay on one line otherwise.
+   */
+  wrap?: boolean;
 }
 
 /**
@@ -45,13 +50,15 @@ interface BadgeProps {
  * @param props - Badge props.
  * @param props.tone - Colour meaning.
  * @param props.children - The label.
+ * @param props.wrap - Let a long label wrap.
  * @returns The badge.
  */
-export default function Badge({ tone = 'neutral', children }: BadgeProps) {
+export default function Badge({ tone = 'neutral', children, wrap = false }: BadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium whitespace-nowrap',
+        'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium',
+        wrap ? 'max-w-full text-left' : 'whitespace-nowrap',
         toneClasses[tone],
       )}
     >

@@ -62,6 +62,16 @@ const MARKDOWN_EDITOR = [
   'highlight.js',
 ];
 
+/**
+ * The board's drag and drop. Only from tablet width, and only once the page
+ * is there: the board loads `board-drag.ts` with `import()`, the one file
+ * that imports these.
+ */
+const BOARD_DRAG = [
+  '@atlaskit/pragmatic-drag-and-drop',
+  '@atlaskit/pragmatic-drag-and-drop-auto-scroll',
+];
+
 /** The modules client components must not load with the page, and why. */
 const RULES: ImportRule[] = [
   {
@@ -129,6 +139,16 @@ const RULES: ImportRule[] = [
     module: 'src/components/ui/markdown/editor.tsx',
     instead: 'use `MarkdownField`, which loads the editor with `import()` once the page is there.',
     allowedFrom: ['src/components/ui/markdown/editor'],
+  },
+  ...BOARD_DRAG.map((module) => ({
+    module,
+    instead:
+      'the board loads its drag and drop with `import()` from tablet width; only `board-drag.ts` imports it.',
+    allowedFrom: ['src/app/(app)/_requests/board-drag.ts'],
+  })),
+  {
+    module: 'src/app/(app)/_requests/board-drag.ts',
+    instead: 'the board loads it with `import()` once the page is there, from tablet width only.',
   },
 ];
 

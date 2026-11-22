@@ -1,6 +1,6 @@
 /**
  * @file Requests: what companies raise with the staff and work through with
- * them. Listing them, reading one with its conversation, raising one,
+ * them. Listing them, showing them as a board, reading one with its conversation, raising one,
  * replying to it, changing its status, correcting its details, editing its
  * texts, assigning it to staff members, subscribing to it, what an email
  * about it may tell someone on it, and how each reader reads its activity.
@@ -17,8 +17,23 @@
  */
 export type { RequestPerson } from './access';
 export { setActivityView } from './activity-view';
-export { getRequestSettings, listRequestCompanies, listRequests } from './list';
-export type { ListRequestsOptions, RequestCompany, RequestListItem } from './list';
+export {
+  getRequestSettings,
+  listRequestCompanies,
+  listRequests,
+  loadRequestListItems,
+  requestListColumns,
+  requestListCondition,
+} from './list';
+export { listBoard } from './board';
+export type { BoardCard, BoardLane, ListBoardOptions } from './board';
+export type {
+  ListRequestsOptions,
+  RequestCompany,
+  RequestListFilters,
+  RequestListItem,
+  RequestListRow,
+} from './list';
 export {
   findRequest,
   findRequestNumber,

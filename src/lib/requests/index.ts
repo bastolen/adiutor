@@ -1,8 +1,8 @@
 /**
  * @file Requests: what companies raise with the staff and work through with
  * them. This is the module's public API: the values a request can have, the
- * rules of working on one, how its activity is read, its number and its
- * text. The code lives in the
+ * rules of working on one, how its activity is read, the board's lanes, its
+ * number and its text. The code lives in the
  * files next to it, and nothing outside this folder imports them directly.
  *
  * Everything here is free of zod and of server code, so the database schema,
@@ -20,6 +20,7 @@ export {
   isRequestStatus,
   isRequestStatusFilter,
   isRequestTypeKey,
+  ONLY_STATUS_PARAM,
   REQUEST_ENTRY_KINDS,
   REQUEST_PARTICIPANT_ROLES,
   REQUEST_PRIORITIES,
@@ -102,6 +103,20 @@ export {
   requestPathAt,
   requestPathWithEntry,
 } from './anchors';
+export {
+  BOARD_LANES,
+  BOARD_PATH,
+  boardColumnOf,
+  boardColumns,
+  CLOSED_LANE_LIMIT,
+  GROUPED_LANES,
+  isClosedLane,
+  laneAudience,
+  MOVE_REFUSALS,
+  moveRefusal,
+  placeMovedCard,
+} from './board';
+export type { BoardColumn, BoardColumnKey, BoardLaneState, MoveRefusal } from './board';
 export { cleanMultilineText, linkTarget, splitLinks } from './text';
 export type { TextPart } from './text';
 export {
