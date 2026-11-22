@@ -90,6 +90,9 @@ const APP_PATHS = [
   '/admin/users',
   '/admin/users?filter=not_staff&q=no-such-user',
   '/admin/users/{user}',
+  '/admin/users/{user}/companies',
+  '/admin/users/{user}/activity',
+  '/admin/users/{user}/manage',
   '/admin/users/new',
   '/admin/settings',
   '/admin/settings/staff',
@@ -101,7 +104,9 @@ const APP_PATHS = [
   '/admin/logs/errors?q=not-a-reference',
   '/admin/logs/jobs',
   '/account',
+  '/account/preferences',
   '/account/security',
+  '/account/activity',
   '/companies/{company}',
   '/companies/{company}/members',
   // More members and invite links than fit on a page: pagination, a sorted column, the last page.
@@ -926,7 +931,7 @@ test.describe('in forced-colours mode', () => {
 
       test('the time zone select, open, searched and with nothing found', async ({ page }) => {
         // Only opened and searched: nothing is saved.
-        await page.goto('/account');
+        await page.goto('/account/preferences');
         const field = page
           .getByRole('region', { name: 'Time zone' })
           .getByRole('combobox', { name: 'Time zone' });

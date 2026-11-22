@@ -1,5 +1,5 @@
 /**
- * @file Tests for the "Companies" card on the user detail page: the empty
+ * @file Tests for the "Companies" card on the Companies tab of a user's page: the empty
  * state, the membership controls for staff who may manage members (with
  * "Add to company" disabled once no company is left), the wording on the
  * viewer's own page, and role badges without the controls for everyone else.
@@ -19,7 +19,7 @@ import { USER_COMPANIES_TABLE } from '@/lib/tables/tables';
 import type { AddableCompany } from '@/server/people/members';
 import type { UserCompany } from '@/server/people/user-admin';
 
-import renderInLocale from '../../../../../../tests/i18n/render';
+import renderInLocale from '../../../../../../../tests/i18n/render';
 import CompaniesCard from './companies-card';
 
 /** Mocked server actions. */
@@ -29,7 +29,7 @@ const { addMemberAction, changeRoleAction, removeMemberAction } = vi.hoisted(() 
   removeMemberAction: vi.fn(),
 }));
 
-vi.mock('../../../_people/member-actions', () => ({
+vi.mock('../../../../_people/member-actions', () => ({
   addMemberAction,
   changeRoleAction,
   removeMemberAction,

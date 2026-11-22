@@ -125,6 +125,8 @@ import {
   deactivateUser,
   deleteUser,
   getUserDetail,
+  listUserCompanies,
+  listUserDevices,
   reactivateUser,
   resetUserMfa,
   signOutUserEverywhere,
@@ -559,6 +561,8 @@ function listOperations(): Operation[] {
     ['remove from staff', (w) => removeFromStaff(ctx, w.actor, w.staffToRemove)],
     ['list users', (w) => listUsers(ctx, w.actor)],
     ['view user', (w) => getUserDetail(ctx, w.actor, w.outsider)],
+    ["list a user's companies", (w) => listUserCompanies(ctx, w.actor, w.outsider)],
+    ["list a user's devices", (w) => listUserDevices(ctx, w.actor, w.outsider)],
     ['check a user exists', (w) => userExists(ctx, w.actor, w.outsider)],
     ['check signing in as a user', (w) => impersonationVerdictFor(ctx, w.actor, w.outsider)],
     ['list addable companies', (w) => listAddableCompanies(ctx, w.actor, w.outsider)],
@@ -810,6 +814,8 @@ const READS: ReadonlySet<string> = new Set([
   'list request types',
   'list users',
   'view user',
+  "list a user's companies",
+  "list a user's devices",
   'check a user exists',
   'check signing in as a user',
   'list addable companies',
@@ -1004,6 +1010,10 @@ const EXPECTED: Record<string, string> = {
   'remove from staff': 'FFFFFFA',
   'list users': 'FFFAAAA',
   'view user': 'FFFAAAA',
+  // The user page's Companies tab, for the staff who see users.
+  "list a user's companies": 'FFFAAAA',
+  // The user page's devices (IP addresses and browsers): staff Admins only.
+  "list a user's devices": 'FFFFFFA',
   // The user page's title: whether the user in its URL exists, for the staff who may see users.
   'check a user exists': 'FFFAAAA',
   'check signing in as a user': 'FFFAAAA',

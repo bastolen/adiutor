@@ -1,5 +1,5 @@
 /**
- * @file The "Emails about requests" card on the Profile page: whether the
+ * @file The "Emails about requests" card on the Preferences tab: whether the
  * user gets emails about requests at all, and a button to turn them off or
  * back on. Those emails' footers link here (`#request-emails`). Text from
  * `account.profile`.
@@ -10,8 +10,8 @@ import Badge from '@/components/ui/badge';
 import Card from '@/components/ui/card';
 import RowAction from '@/components/ui/row-action';
 
-import { REQUEST_EMAILS_SECTION } from './account-messages';
-import { requestEmailsAction } from './actions';
+import { REQUEST_EMAILS_SECTION } from '../account-messages';
+import { requestEmailsAction } from '../actions';
 
 /**
  * Says what the emails about requests are and whether they're on, with the

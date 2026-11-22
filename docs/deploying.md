@@ -286,7 +286,7 @@ traffic from Cloudflare's addresses.
 
 **Check after deploying:**
 
-1. Sign in and open the Security page: under "Signed-in devices", this device shows your own
+1. Sign in and open your account's Activity tab: under "Signed-in devices", this device shows your own
    public address (compare with `curl https://icanhazip.com`).
 2. Try a forged address, with a wrong password for your own account:
 

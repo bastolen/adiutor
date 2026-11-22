@@ -22,8 +22,9 @@ interface AccountHeaderProps {
 }
 
 /**
- * The "Account" heading with the user's avatar, and tabs for Profile and
- * Security, the current one (from the URL) marked `aria-current="page"`.
+ * The "Account" heading with the user's avatar, and tabs for Profile,
+ * Preferences, Security and Activity, the current one (from the URL) marked
+ * `aria-current="page"`.
  *
  * @param props - Header props.
  * @param props.name - The user's name.
@@ -43,7 +44,13 @@ export default function AccountHeader({ name, email, picture = null }: AccountHe
         label={t('header.sections')}
         items={[
           { href: '/account', label: t('header.profile'), segment: null },
+          {
+            href: '/account/preferences',
+            label: t('header.preferences'),
+            segment: 'preferences',
+          },
           { href: '/account/security', label: t('header.security'), segment: 'security' },
+          { href: '/account/activity', label: t('header.activity'), segment: 'activity' },
         ]}
       />
     </PageHeader>

@@ -1,5 +1,5 @@
 /**
- * @file Tests for the "Staff access" card on the user detail page: someone
+ * @file Tests for the "Staff access" card on the Overview tab of a user's page: someone
  * who isn't staff can be made staff; a staff member's role can be changed
  * and their staff access removed.
  */

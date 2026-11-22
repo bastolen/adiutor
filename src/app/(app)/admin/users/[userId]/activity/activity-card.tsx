@@ -1,5 +1,5 @@
 /**
- * @file The "Recent activity" card on the user detail page, for staff who
+ * @file The "Recent activity" card on the Activity tab of a user's page, for staff who
  * may see the audit log: security events by or about the user, newest first,
  * naming who acted when it was someone else and the company or staff change
  * it was about. Text from `admin.user.activity` and the `audit` namespace.

@@ -1172,7 +1172,7 @@ test('turning emails about requests off stops them, and turning them on brings t
   await page.goto(`/requests/${number}`);
   await detail(page, 'Subscribers').getByRole('button', { name: 'Subscribe', exact: true }).click();
   await expect(toasts(page)).toContainText('You’re subscribed to this request.');
-  await page.goto('/account');
+  await page.goto('/account/preferences');
   const card = page.getByRole('region', { name: 'Emails about requests' });
   await expect(card).toContainText('On');
   await card.getByRole('button', { name: 'Turn off' }).click();
@@ -1188,7 +1188,7 @@ test('turning emails about requests off stops them, and turning them on brings t
 
   // Turned on again, the next reply reaches them, without the one they missed.
   await signIn(page, watcher);
-  await page.goto('/account');
+  await page.goto('/account/preferences');
   await card.getByRole('button', { name: 'Turn on' }).click();
   await expect(toasts(page)).toContainText('Emails about requests turned on.');
   await signOut(page);
@@ -1197,7 +1197,7 @@ test('turning emails about requests off stops them, and turning them on brings t
   expect(email.text).toContain('Does the light come on?');
   expect(email.text).not.toContain('Is it plugged in?');
   // Its footer says where they turned it off.
-  expect(email.text).toContain('/account#request-emails');
+  expect(email.text).toContain('/account/preferences#request-emails');
 });
 
 test('a company’s Admin subscribes a colleague, and is offered nobody from the staff', async ({

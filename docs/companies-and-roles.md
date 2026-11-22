@@ -171,11 +171,20 @@ Admins and Managers who aren't members can still add themselves with any role, a
   with a link to choose a password, valid for 7 days (a Better Auth password reset token, so the reset
   page sets the first password), and can always sign in with an email link instead. An address that
   already has an account is reported, with a link to it.
-- **User detail page** (`/admin/users/[id]`, staff): the account, its sign-in security (two-step
-  verification, passkeys, password, connected provider accounts and, for providers that can prove
-  MFA, whether they have 2FA; staff Admins also see each account's name at its provider, a GitHub
-  username or Google email address), companies and roles,
-  signed-in devices and, for Admins and Managers, recent activity from the audit log.
+- **User page** (`/admin/users/[id]`, staff): the user's name, address and badges, and tabs, each a
+  page of its own under one layout (`src/app/(app)/admin/users/[userId]/`). A tab with nothing for
+  the viewer isn't shown, and its address shows the 404 page (`userPageAccess` in `user-access.ts`):
+  - **Overview** (`/admin/users/[id]`): the account, its sign-in security (two-step verification,
+    passkeys, password, connected provider accounts and, for providers that can prove MFA,
+    whether they have 2FA; staff Admins also see each account's name at its provider, a GitHub
+    username or Google email address), and the staff access.
+  - **Companies** (`…/companies`): their companies and roles.
+  - **Activity** (`…/activity`, Admins and Managers): the signed-in devices (Admins) and the
+    recent activity from the audit log.
+  - **Manage** (`…/manage`): signing in as the user, and for Admins the account access and
+    deleting the account. Not on your own page.
+
+  Its cards:
   - **Companies:** Admins and Managers (`members:manage` in companies) add the user to a company
     right away with a role (they get an email), change their role there, and remove them, with the
     same last-Admin rule and the same security emails as a company's Members page (see
@@ -187,13 +196,14 @@ Admins and Managers who aren't members can still add themselves with any role, a
     it, with the last-staff-Admin rule; the user gets a security email. Removing it also revokes the
     open staff invitations addressed to them. Admins and Managers must set up a second sign-in step
     at their next sign-in.
-  - **Sign in as user** (staff Admins, Managers and Support, not on your own page): see Adiutor as
+  - **Sign in as user** (Manage tab; staff Admins, Managers and Support, not on your own page): see Adiutor as
     the user does for up to 30 minutes, with an optional reason (`SignInAsCard`). The card says why
     when the rules don't allow it for this user (`impersonationVerdictFor`). Without a recent
     strong confirmation, the button goes to the step-up page in its strong mode first, and comes
     back to the card. See [Signing in as a user](authentication.md#signing-in-as-a-user).
 
-  Admins can also (each confirmed in a dialog, logged and emailed to the user):
+  Admins can also (each confirmed in a dialog, logged and emailed to the user; signing out
+  everywhere on the Activity tab, the rest on the Manage tab):
   - **reset two-step verification** for a lost phone (optionally removing passkeys too), which
     also disconnects their GitHub and Google accounts and needs the Admin's confirmation with
     their own second step from the last 15 minutes, which the button asks for before its dialog
@@ -346,7 +356,7 @@ itself isn't recorded in the audit log.
 
 ### Changing roles and removing people
 
-Company Admins (on the Members page) and staff Admins and Managers (also on the user detail page)
+Company Admins (on the Members page) and staff Admins and Managers (also on the Companies tab of the user's page)
 change members' roles and remove them; staff Admins do the same for the staff in the staff settings.
 
 - **Your own row:** it speaks to you. Your role select asks before saving ("Step down to Manager?"
