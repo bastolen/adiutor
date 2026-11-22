@@ -13,7 +13,7 @@ import { type MessagesGroup, pickMessages } from './messages';
 interface ClientMessagesProps {
   /**
    * The namespaces the client components below use, or just the groups
-   * inside them they use (`admin.staff.name`); `common` always comes along.
+   * inside them they use (`admin.settings.general.name`); `common` always comes along.
    */
   namespaces: readonly MessagesGroup[];
   /** The part of the page with those client components. */

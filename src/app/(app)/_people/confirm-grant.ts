@@ -18,7 +18,7 @@ import { ServiceError } from '@/server/errors';
  * safe; otherwise `fallback`).
  *
  * @param formData - The submitted form, with an optional `returnTo` path.
- * @param fallback - Where to come back to without a `returnTo`, e.g. `/admin/staff`.
+ * @param fallback - Where to come back to without a `returnTo`, e.g. `/admin/settings/staff`.
  * @param work - The action's work.
  * @returns What the work returned.
  */

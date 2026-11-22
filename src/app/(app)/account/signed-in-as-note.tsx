@@ -1,5 +1,5 @@
 /**
- * @file The note at the top of the Profile and Security pages while a staff
+ * @file The note at the top of the account pages while a staff
  * member is signed in as the user: they see the pages as the user does, but
  * read-only (the controls are off, `useSignedInAs`), and without the personal
  * details they don't see on the user's page (`personalDataShown`). On the

@@ -1,16 +1,16 @@
 /**
- * @file The staff sections of the app (Users, Companies, Staff and Logs),
+ * @file The staff sections of the app (Users, Companies, Settings and Logs),
  * declared once for the sidebar (`NavLinks`) and the dashboard's tiles
  * (`Shortcuts`), with the permission each needs. A new section goes
  * here, and gets its text in `navigation.items` and `dashboard.shortcuts`.
  * Requests, which everyone gets, is in `requests-section.ts`.
  */
-import { Building2, type LucideIcon, ScrollText, UserCog, Users } from 'lucide-react';
+import { Building2, type LucideIcon, ScrollText, Settings, Users } from 'lucide-react';
 
 import type { Permission } from '@/lib/authz/permissions';
 
 /** A staff section, by the key of its text in `navigation.items` and `dashboard.shortcuts`. */
-export type StaffSectionKey = 'users' | 'companies' | 'staff' | 'logs';
+export type StaffSectionKey = 'users' | 'companies' | 'settings' | 'logs';
 
 /** A staff section. */
 export interface StaffSection {
@@ -28,13 +28,13 @@ export interface StaffSection {
 const STAFF_SECTIONS: readonly StaffSection[] = [
   { key: 'users', href: '/admin/users', icon: Users, permission: 'users:view' },
   { key: 'companies', href: '/admin/companies', icon: Building2, permission: 'company:view' },
-  { key: 'staff', href: '/admin/staff', icon: UserCog, permission: 'staff:manage' },
+  { key: 'settings', href: '/admin/settings', icon: Settings, permission: 'staff:manage' },
   { key: 'logs', href: '/admin/logs', icon: ScrollText, permission: 'audit:view' },
 ];
 
 /**
  * The sections a user may see: every staff member gets Users and Companies,
- * Admins also Staff, and Admins and Managers Logs. Company users get none.
+ * Admins also Settings, and Admins and Managers Logs. Company users get none.
  *
  * @param permissions - The user's global permissions (`getGlobalPermissions`).
  * @returns The keys of their sections, in order.

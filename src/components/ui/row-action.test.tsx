@@ -61,7 +61,7 @@ describe('RowAction', () => {
         required
         confirmedUntil={null}
         serverTime={Date.now()}
-        returnTo="/admin/staff?inv-page=2"
+        returnTo="/admin/settings/staff?inv-page=2"
       >
         <Card id="invitations" title="Open invitations">
           <RowAction action={action} fields={{ invitationId: 'invitation-1' }} label="Resend" />
@@ -76,7 +76,7 @@ describe('RowAction', () => {
       Object.fromEntries(defined(action.mock.calls[0], 'the first call')[1] as FormData),
     ).toEqual({
       invitationId: 'invitation-1',
-      returnTo: '/admin/staff?inv-page=2#invitations',
+      returnTo: '/admin/settings/staff?inv-page=2#invitations',
     });
   });
 

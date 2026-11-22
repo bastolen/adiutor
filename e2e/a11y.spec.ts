@@ -90,8 +90,13 @@ const APP_PATHS = [
   '/admin/users',
   '/admin/users?filter=not_staff&q=no-such-user',
   '/admin/users/{user}',
+  '/admin/users/{user}/companies',
+  '/admin/users/{user}/activity',
+  '/admin/users/{user}/manage',
   '/admin/users/new',
-  '/admin/staff',
+  '/admin/settings',
+  '/admin/settings/staff',
+  '/admin/settings/requests',
   '/admin/logs',
   '/admin/logs?group=people&q=no-such-person',
   '/admin/logs/errors',
@@ -99,7 +104,9 @@ const APP_PATHS = [
   '/admin/logs/errors?q=not-a-reference',
   '/admin/logs/jobs',
   '/account',
+  '/account/preferences',
   '/account/security',
+  '/account/activity',
   '/companies/{company}',
   '/companies/{company}/members',
   // More members and invite links than fit on a page: pagination, a sorted column, the last page.
@@ -910,7 +917,7 @@ test.describe('in forced-colours mode', () => {
 
       test('the dialog that adds a request type', async ({ page }) => {
         // Only opened and closed: nothing is added.
-        await page.goto('/admin/staff');
+        await page.goto('/admin/settings/requests');
         await page
           .getByRole('region', { name: 'Request types' })
           .getByRole('button', { name: 'Add type' })
@@ -924,7 +931,7 @@ test.describe('in forced-colours mode', () => {
 
       test('the time zone select, open, searched and with nothing found', async ({ page }) => {
         // Only opened and searched: nothing is saved.
-        await page.goto('/account');
+        await page.goto('/account/preferences');
         const field = page
           .getByRole('region', { name: 'Time zone' })
           .getByRole('combobox', { name: 'Time zone' });
@@ -940,7 +947,7 @@ test.describe('in forced-colours mode', () => {
 
       test('a toast', async ({ page }) => {
         // Saving the staff name unchanged changes nothing, but shows its toast.
-        await page.goto('/admin/staff');
+        await page.goto('/admin/settings');
         await page.getByRole('button', { name: 'Save name' }).click();
         await expect(toasts(page)).toContainText('Name saved.');
         await expectAccessible(page);

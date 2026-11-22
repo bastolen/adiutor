@@ -26,13 +26,13 @@ export interface StaffAdminAddedEmailProps extends EmailBaseProps {
   how: 'role' | 'invitation';
   /** Who gave the role or sent the invitation (name or email), if their account still exists. */
   byName: string | null;
-  /** Link to the staff page. */
+  /** Link to the staff settings. */
   url: string;
 }
 
 /**
  * Names the new staff Admin and how they became one, says what to do if the
- * recipient doesn't recognise it, and links to the staff page. Without the
+ * recipient doesn't recognise it, and links to the staff settings. Without the
  * device or IP address of whoever made the change.
  *
  * @param props - Template props.
@@ -41,7 +41,7 @@ export interface StaffAdminAddedEmailProps extends EmailBaseProps {
  * @param props.newAdminEmail - The new Admin's email address.
  * @param props.how - How they became one.
  * @param props.byName - Who gave the role or sent the invitation, if known.
- * @param props.url - Link to the staff page.
+ * @param props.url - Link to the staff settings.
  * @param props.locale - The recipient's language.
  * @param props.logoSrc - Logo URL override.
  * @returns The email.
@@ -91,7 +91,7 @@ StaffAdminAddedEmail.PreviewProps = {
   newAdminEmail: 'sam@adiutor.dev',
   how: 'role',
   byName: 'Alex Doe',
-  url: 'https://adiutor.dev/admin/staff',
+  url: 'https://adiutor.dev/admin/settings/staff',
 } satisfies StaffAdminAddedEmailProps;
 
 /**

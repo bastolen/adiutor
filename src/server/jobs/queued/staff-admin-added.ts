@@ -57,7 +57,7 @@ export default handleQueuedJob(
         newAdminEmail: newAdmin.email,
         how,
         byName: by ? displayName(by) : null,
-        url: `${ctx.baseUrl}/admin/staff`,
+        url: `${ctx.baseUrl}/admin/settings/staff`,
       }),
     );
     return 'done';

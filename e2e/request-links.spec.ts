@@ -58,10 +58,11 @@ test('the link in an email about a request signs its reader in and opens the req
   await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
 
   // The rest of the app is open too, but adding a way in asks for the second step first.
-  await page.goto('/account/security');
   // The device list marks the session the link started.
+  await page.goto('/account/activity');
   const devices = page.getByRole('region', { name: 'Signed-in devices' });
   await expect(devices.getByRole('row', { name: /This device Email link/ })).toBeVisible();
+  await page.goto('/account/security');
   await page.getByRole('button', { name: 'Add passkey' }).click();
   await expect(page).toHaveURL(/\/auth\/verify\?callbackURL=%2Faccount%2Fsecurity%23passkeys/);
   await expect(page.getByRole('heading', { name: /^Confirm it.s you$/ })).toBeVisible();

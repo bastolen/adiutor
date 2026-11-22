@@ -74,7 +74,7 @@ const guardedRoutes: GuardedRoute[] = routeFiles(path.join(ROOT, 'src', 'app'))
 
 describe('titles of pages someone may not see', () => {
   it('finds the pages that require a permission', () => {
-    // The staff pages, the Logs layout, and a company's Members and Settings pages.
+    // The staff pages, the Logs and Settings layouts, and a company's Members and Settings pages.
     expect(guardedRoutes.length).toBeGreaterThanOrEqual(11);
   });
 

@@ -438,7 +438,7 @@ export const auth = betterAuth({
       lastActiveAt: { type: 'date', required: false, input: false },
       /**
        * Their staff role (staff), or empty for company users. Set by
-       * setup, staff invitations and the staff page; never by the user.
+       * setup, staff invitations and the staff settings; never by the user.
        */
       platformRole: { type: [...PLATFORM_ROLES], required: false, input: false },
       /**

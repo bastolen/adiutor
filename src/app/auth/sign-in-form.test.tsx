@@ -209,22 +209,32 @@ describe('SignInForm', () => {
     });
 
     it('goes on to that card after signing in', async () => {
-      // The proxy sent `/admin/staff#invitations` here; the browser kept the anchor.
-      searchParams = new URLSearchParams({ callbackURL: '/admin/staff' });
-      window.history.replaceState(null, '', '/auth?callbackURL=%2Fadmin%2Fstaff#invitations');
+      // The proxy sent `/admin/settings/staff#invitations` here; the browser kept the anchor.
+      searchParams = new URLSearchParams({ callbackURL: '/admin/settings/staff' });
+      window.history.replaceState(
+        null,
+        '',
+        '/auth?callbackURL=%2Fadmin%2Fsettings%2Fstaff#invitations',
+      );
       signInPasskey.mockResolvedValue({ data: {}, error: null });
       render(<SignInForm providers={[]} />);
 
       fireEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }));
 
       await vi.waitFor(() =>
-        expect(loadFresh).toHaveBeenCalledWith('/admin/staff#invitations', { everyTab: true }),
+        expect(loadFresh).toHaveBeenCalledWith('/admin/settings/staff#invitations', {
+          everyTab: true,
+        }),
       );
     });
 
     it('keeps it through the code step, an email link and a provider', async () => {
-      searchParams = new URLSearchParams({ callbackURL: '/admin/staff' });
-      window.history.replaceState(null, '', '/auth?callbackURL=%2Fadmin%2Fstaff#invitations');
+      searchParams = new URLSearchParams({ callbackURL: '/admin/settings/staff' });
+      window.history.replaceState(
+        null,
+        '',
+        '/auth?callbackURL=%2Fadmin%2Fsettings%2Fstaff#invitations',
+      );
       signInEmail.mockResolvedValue({
         data: { twoFactorRedirect: true, twoFactorMethods: ['totp'] },
         error: null,
@@ -238,7 +248,7 @@ describe('SignInForm', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
       await vi.waitFor(() =>
         expect(push).toHaveBeenCalledWith(
-          '/auth/two-factor?callbackURL=%2Fadmin%2Fstaff%23invitations&methods=totp',
+          '/auth/two-factor?callbackURL=%2Fadmin%2Fsettings%2Fstaff%23invitations&methods=totp',
         ),
       );
       first.unmount();
@@ -250,8 +260,8 @@ describe('SignInForm', () => {
       await vi.waitFor(() =>
         expect(signInMagicLink).toHaveBeenCalledWith({
           email: 'jane@adiutor.test',
-          callbackURL: '/admin/staff#invitations',
-          errorCallbackURL: '/auth?callbackURL=%2Fadmin%2Fstaff%23invitations',
+          callbackURL: '/admin/settings/staff#invitations',
+          errorCallbackURL: '/auth?callbackURL=%2Fadmin%2Fsettings%2Fstaff%23invitations',
         }),
       );
       second.unmount();
@@ -261,14 +271,14 @@ describe('SignInForm', () => {
       await vi.waitFor(() =>
         expect(signInSocial).toHaveBeenCalledWith({
           provider: 'github',
-          callbackURL: '/admin/staff#invitations',
-          errorCallbackURL: '/auth?callbackURL=%2Fadmin%2Fstaff%23invitations',
+          callbackURL: '/admin/settings/staff#invitations',
+          errorCallbackURL: '/auth?callbackURL=%2Fadmin%2Fsettings%2Fstaff%23invitations',
         }),
       );
     });
 
     it("leaves a callbackURL's own anchor alone", async () => {
-      searchParams = new URLSearchParams({ callbackURL: '/admin/staff#invite' });
+      searchParams = new URLSearchParams({ callbackURL: '/admin/settings/staff#invite' });
       window.history.replaceState(null, '', '/auth#invitations');
       signInPasskey.mockResolvedValue({ data: {}, error: null });
       render(<SignInForm providers={[]} />);
@@ -276,14 +286,14 @@ describe('SignInForm', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }));
 
       await vi.waitFor(() =>
-        expect(loadFresh).toHaveBeenCalledWith('/admin/staff#invite', { everyTab: true }),
+        expect(loadFresh).toHaveBeenCalledWith('/admin/settings/staff#invite', { everyTab: true }),
       );
     });
 
     it.each(['#:~:text=secret', '#100%', '#top'])(
       'ignores %j, which names no section',
       async (hash) => {
-        searchParams = new URLSearchParams({ callbackURL: '/admin/staff' });
+        searchParams = new URLSearchParams({ callbackURL: '/admin/settings/staff' });
         window.history.replaceState(null, '', `/auth${hash}`);
         signInPasskey.mockResolvedValue({ data: {}, error: null });
         render(<SignInForm providers={[]} />);
@@ -291,7 +301,7 @@ describe('SignInForm', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }));
 
         await vi.waitFor(() =>
-          expect(loadFresh).toHaveBeenCalledWith('/admin/staff', { everyTab: true }),
+          expect(loadFresh).toHaveBeenCalledWith('/admin/settings/staff', { everyTab: true }),
         );
       },
     );

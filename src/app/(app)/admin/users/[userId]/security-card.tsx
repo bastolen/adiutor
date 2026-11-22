@@ -1,5 +1,5 @@
 /**
- * @file The "Sign-in security" card on the user detail page: the user's MFA
+ * @file The "Sign-in security" card on the Overview tab of a user's page: the user's MFA
  * status, two-step verification, passkeys, password and connected provider
  * accounts. Which account it is at a provider is shown only when the viewer
  * may see it (staff Admins). Text from `admin.user.security`.

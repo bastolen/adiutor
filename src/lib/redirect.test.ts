@@ -112,9 +112,11 @@ describe('getSafeRedirectPath', () => {
   });
 
   it('keeps the anchor of a section, after the query', () => {
-    expect(getSafeRedirectPath('/admin/staff#invitations')).toBe('/admin/staff#invitations');
-    expect(getSafeRedirectPath('/admin/staff?inv-page=2#invitations')).toBe(
-      '/admin/staff?inv-page=2#invitations',
+    expect(getSafeRedirectPath('/admin/settings/staff#invitations')).toBe(
+      '/admin/settings/staff#invitations',
+    );
+    expect(getSafeRedirectPath('/admin/settings/staff?inv-page=2#invitations')).toBe(
+      '/admin/settings/staff?inv-page=2#invitations',
     );
     expect(getSafeRedirectPath('/auth/verify?callbackURL=%2Fx%23invite-links')).toBe(
       '/auth/verify?callbackURL=%2Fx%23invite-links',
@@ -122,11 +124,13 @@ describe('getSafeRedirectPath', () => {
   });
 
   it.each(UNSAFE_HASHES)('keeps the page but drops %j, which is no section', (hash) => {
-    expect(getSafeRedirectPath(`/admin/staff?inv-page=2${hash}`)).toBe('/admin/staff?inv-page=2');
+    expect(getSafeRedirectPath(`/admin/settings/staff?inv-page=2${hash}`)).toBe(
+      '/admin/settings/staff?inv-page=2',
+    );
   });
 
   it('drops an empty fragment', () => {
-    expect(getSafeRedirectPath('/admin/staff#')).toBe('/admin/staff');
+    expect(getSafeRedirectPath('/admin/settings/staff#')).toBe('/admin/settings/staff');
   });
 
   it.each([
@@ -136,9 +140,9 @@ describe('getSafeRedirectPath', () => {
     '/api/x#invitations',
     '/%61pi/x#invitations',
     // Unsafe characters count anywhere, the fragment too.
-    '/admin/staff#a b',
-    '/admin/staff#a\tb',
-    '/admin/staff#\\evil',
+    '/admin/settings/staff#a b',
+    '/admin/settings/staff#a\tb',
+    '/admin/settings/staff#\\evil',
   ])('still rejects %j with a section anchor', (value) => {
     expect(getSafeRedirectPath(value)).toBe(DEFAULT_SIGNED_IN_PATH);
   });
@@ -179,20 +183,26 @@ describe('sectionFromHash', () => {
 
 describe('withSection', () => {
   it('points a path at a section, after its query', () => {
-    expect(withSection('/admin/staff', 'invitations')).toBe('/admin/staff#invitations');
-    expect(withSection('/admin/staff?inv-page=2', 'invitations')).toBe(
-      '/admin/staff?inv-page=2#invitations',
+    expect(withSection('/admin/settings/staff', 'invitations')).toBe(
+      '/admin/settings/staff#invitations',
+    );
+    expect(withSection('/admin/settings/staff?inv-page=2', 'invitations')).toBe(
+      '/admin/settings/staff?inv-page=2#invitations',
     );
   });
 
   it('replaces the fragment the path had', () => {
-    expect(withSection('/admin/staff#invite', 'invitations')).toBe('/admin/staff#invitations');
+    expect(withSection('/admin/settings/staff#invite', 'invitations')).toBe(
+      '/admin/settings/staff#invitations',
+    );
   });
 
   it.each([null, undefined, '', 'top', ':~:text=x', 'Invitations'])(
     'leaves the path alone for %j',
     (section) => {
-      expect(withSection('/admin/staff#invite', section)).toBe('/admin/staff#invite');
+      expect(withSection('/admin/settings/staff#invite', section)).toBe(
+        '/admin/settings/staff#invite',
+      );
     },
   );
 });
@@ -204,7 +214,7 @@ describe('isSafeAppRedirect', () => {
     '/companies/x#y',
     '/companies/x?q=a%20b#members',
     '/account?verified=1#email',
-    '/admin/staff#',
+    '/admin/settings/staff#',
     '/auth?callbackURL=%2Fdashboard',
     '/auth?callbackURL=%2Fx%23%3A~%3Atext%3Dy',
     '/auth/email-link?token=abc&callbackURL=%2Fdashboard',
@@ -224,10 +234,10 @@ describe('isSafeAppRedirect', () => {
     '/.//evil.adiutor.test',
     '/%2F%2Fevil.adiutor.test',
     '/100%',
-    '/admin/staff#a b',
+    '/admin/settings/staff#a b',
     '/api/x#invitations',
     ...API_PATHS,
-    ...UNSAFE_HASHES.map((hash) => `/admin/staff${hash}`),
+    ...UNSAFE_HASHES.map((hash) => `/admin/settings/staff${hash}`),
   ])('refuses %j', (value) => {
     expect(isSafeAppRedirect(value)).toBe(false);
   });
@@ -255,7 +265,9 @@ describe('isSafeAppRedirect', () => {
 describe('signedInPath', () => {
   it('goes on to the requested page, with its query string and section', () => {
     expect(signedInPath('/account?tab=security')).toBe('/account?tab=security');
-    expect(signedInPath('/admin/staff#invitations')).toBe('/admin/staff#invitations');
+    expect(signedInPath('/admin/settings/staff#invitations')).toBe(
+      '/admin/settings/staff#invitations',
+    );
     expect(signedInPath('/auth/verify?callbackURL=%2Faccount')).toBe(
       '/auth/verify?callbackURL=%2Faccount',
     );

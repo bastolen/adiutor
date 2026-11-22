@@ -14,7 +14,16 @@ import {
   RESET_CLIENT,
   SUPPORT_STAFF,
 } from './support/fixtures';
-import { freshAddress, openUser, signIn, signOut, toasts, useOwnClientIp } from './support/helpers';
+import {
+  chooseUserTab,
+  freshAddress,
+  openUser,
+  openUserTab,
+  signIn,
+  signOut,
+  toasts,
+  useOwnClientIp,
+} from './support/helpers';
 import { countEmails, linkIn, waitForEmail, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
 
@@ -106,6 +115,7 @@ test('an Admin adds a user to a company and gives them staff access from their p
 
   // Add them to a company, change the role, then remove them. The address already has its welcome
   // email, so each email after it is counted first.
+  await chooseUserTab(page, 'Companies');
   const companies = page.getByRole('region', { name: 'Companies' });
   let before = await countEmails(email);
   await companies.getByRole('button', { name: 'Add to company' }).click();
@@ -129,6 +139,7 @@ test('an Admin adds a user to a company and gives them staff access from their p
   await expect(companies.getByRole('heading', { name: 'Companies' })).toBeFocused();
 
   // Make them staff, change the role, then remove staff access.
+  await chooseUserTab(page, 'Overview');
   const staff = page.getByRole('region', { name: 'Staff access' });
   before = await countEmails(email);
   await staff.getByRole('button', { name: 'Make staff' }).click();
@@ -157,16 +168,20 @@ test('an Admin resets two-step verification, deletes a user, and on their own pa
 }) => {
   await signIn(page, PLATFORM_ADMIN);
 
-  // Their own page has no staff access or account actions (those are on the Staff and Security
-  // pages), but their companies are managed as anyone's. Only looked at, never saved, so the
+  // Their own page has no staff access or account actions (those are in the staff settings and on the
+  // Security page), but their companies are managed as anyone's. Only looked at, never saved, so the
   // seeded memberships stay as they are.
   await openUser(page, PLATFORM_ADMIN.name);
   await expect(page.getByText('This is your own account.')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Staff page', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'staff settings', exact: true })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Staff access' })).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Account access' })).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Delete account' })).toHaveCount(0);
+  // No Manage tab (account access, deleting), and their devices without "Sign out everywhere".
+  const tabs = page.getByRole('navigation', { name: 'User sections' });
+  await expect(tabs.getByRole('link', { name: 'Manage' })).toHaveCount(0);
+  await chooseUserTab(page, 'Activity');
+  await expect(page.getByRole('heading', { name: 'Signed-in devices' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Sign out everywhere' })).toHaveCount(0);
+  await chooseUserTab(page, 'Companies');
   await page
     .getByRole('region', { name: 'Companies' })
     .getByRole('button', { name: 'Add to company' })
@@ -176,19 +191,21 @@ test('an Admin resets two-step verification, deletes a user, and on their own pa
   await page.keyboard.press('Escape');
   await expect(addSelf).toHaveCount(0);
 
-  await openUser(page, RESET_CLIENT.name);
+  await openUserTab(page, RESET_CLIENT.name, 'Manage');
   const before = await countEmails(RESET_CLIENT.email);
   await page.getByRole('button', { name: 'Reset', exact: true }).click();
   const reset = page.getByRole('dialog', { name: /^Reset two-step verification/ });
   await reset.getByRole('button', { name: 'Reset two-step verification' }).click();
   await expect(reset).toHaveCount(0);
   await expect(toasts(page)).toContainText('Two-step verification was reset.');
+  // Its sign-in security, on the Overview, says so.
+  await chooseUserTab(page, 'Overview');
   await expect(page.getByText('Off', { exact: true })).toBeVisible();
   expect((await waitForNewEmail(RESET_CLIENT.email, before)).subject).toBe(
     'Your Adiutor two-step verification was reset',
   );
 
-  await openUser(page, DELETE_CLIENT.name);
+  await openUserTab(page, DELETE_CLIENT.name, 'Manage');
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   const remove = page.getByRole('dialog', { name: /^Delete .*account\?$/ });
   await remove.getByLabel('Email address').fill('someone@adiutor.test');

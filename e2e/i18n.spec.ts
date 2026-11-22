@@ -41,7 +41,7 @@ async function chooseLanguage(page: Page, current: string, language: string, lan
 /**
  * Chooses a language on the account's Language card and saves it.
  *
- * @param page - The browser page, on the account page.
+ * @param page - The browser page, on the account's Preferences tab.
  * @param label - The select's label, in the page's language now.
  * @param language - The language to choose, named in itself (or Default, by a pattern, as its
  *   name includes its description).
@@ -100,7 +100,7 @@ test("an account's language: saved on the account page, kept at sign-out, winnin
   await page.goto(await storeInvitation({ companyId, email, role: 'client' }));
   await createAccountFromInvitation(page, 'Language Tester', password);
 
-  await page.goto('/account');
+  await page.goto('/account/preferences');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
   // A new account follows Adiutor's default language until it chooses one.
   await expect(page.getByRole('combobox', { name: 'Language', exact: true })).toHaveText('Default');
@@ -111,7 +111,7 @@ test("an account's language: saved on the account page, kept at sign-out, winnin
   await expect(page.locator('html')).toHaveAttribute('lang', 'nl-NL');
   await expect(page.getByRole('heading', { name: 'Taal', exact: true })).toBeVisible();
   await expect(toasts(page)).toContainText('Taal opgeslagen.');
-  await expect(page).toHaveURL(/\/account#language$/);
+  await expect(page).toHaveURL(/\/account\/preferences#language$/);
 
   // A second change reloads just the same, the button usable again.
   await saveAccountLanguage(page, 'Taal', 'Español', 'Taal opslaan');
@@ -152,7 +152,7 @@ test("an account on Default follows Adiutor's default language, also after it ch
   await createAccountFromInvitation(page, 'Default Tester', 'default-language-password');
 
   try {
-    await page.goto('/account');
+    await page.goto('/account/preferences');
     await saveAccountLanguage(page, 'Language', 'Nederlands', 'Save language');
     await expect(page.locator('html')).toHaveAttribute('lang', 'nl-NL');
 
@@ -166,9 +166,9 @@ test("an account on Default follows Adiutor's default language, also after it ch
     const cookies = await page.context().cookies();
     expect(cookies.find(({ name }) => name === LOCALE_COOKIE)).toBeUndefined();
 
-    // A staff Admin changes the default language on the staff page: the account follows.
+    // A staff Admin changes the default language in Settings: the account follows.
     await setDefaultLocale('es-ES');
-    await page.goto('/account');
+    await page.goto('/account/preferences');
     await expect(page.locator('html')).toHaveAttribute('lang', 'es-ES');
     await expect(page.getByRole('combobox', { name: 'Idioma', exact: true })).toHaveText(
       'Predeterminado',
@@ -205,7 +205,7 @@ test('a language left in the browser is not saved with an account on Default, an
     await expect(other.locator('html')).toHaveAttribute('lang', 'en-US');
     const cookies = await shared.cookies();
     expect(cookies.find(({ name }) => name === LOCALE_COOKIE)).toBeUndefined();
-    await other.goto('/account');
+    await other.goto('/account/preferences');
     await expect(other.getByRole('combobox', { name: 'Language', exact: true })).toHaveText(
       'Default',
     );
@@ -228,14 +228,14 @@ test('the theme and language menu on a page reached signed in saves the language
   await expect(page.getByRole('heading', { level: 1, name: 'Pagina niet gevonden' })).toBeVisible();
 
   // Saved with the account, not only in the cookie: the Language card agrees with the screens.
-  await page.goto('/account');
+  await page.goto('/account/preferences');
   await expect(page.locator('html')).toHaveAttribute('lang', 'nl-NL');
   await expect(page.getByRole('combobox', { name: 'Taal', exact: true })).toHaveText('Nederlands');
 
   // Default in that menu saves none again, and the browser follows Adiutor's default language.
   await page.goto('/does-not-exist');
   await chooseLanguage(page, 'Thema en taal: Systeem, Nederlands', 'Standaard', 'en-US');
-  await page.goto('/account');
+  await page.goto('/account/preferences');
   await expect(page.getByRole('combobox', { name: 'Language', exact: true })).toHaveText('Default');
 });
 

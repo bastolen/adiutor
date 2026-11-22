@@ -1,6 +1,6 @@
 /**
  * @file Request types: the kinds of request the staff offer, which staff
- * Admins add, edit, reorder, archive and restore on the Staff page
+ * Admins add, edit, reorder, archive and restore in Settings
  * (decision 0027). Requests hold a type's key; the request services look a
  * type up here when it's picked.
  */

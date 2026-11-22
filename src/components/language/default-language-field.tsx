@@ -1,7 +1,7 @@
 /**
  * @file The "Default language" select: Adiutor's own language for everyone
  * who hasn't chosen one (the `staff.default_locale` setting), on the setup form
- * and the staff page's Languages card. Read it with
+ * and the Languages card in Settings. Read it with
  * `field(formData, 'defaultLocale')`.
  */
 'use client';
@@ -17,7 +17,7 @@ import LANGUAGE_OPTIONS from './language-options';
 interface DefaultLanguageFieldProps {
   /** The language chosen to begin with, uncontrolled: the page's language at setup. */
   defaultValue?: Locale;
-  /** The language chosen, controlled: the staff page follows it for the offered languages. */
+  /** The language chosen, controlled: Settings follows it for the offered languages. */
   value?: Locale;
   /** Called with the language once one is chosen (with `value`). */
   onValueChange?: (locale: Locale) => void;

@@ -62,12 +62,15 @@ test.describe('first run', () => {
     const nav = page.getByRole('navigation', { name: 'Main' });
     await expect(nav.getByRole('link', { name: 'Users' })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Companies' })).toBeVisible();
-    await expect(nav.getByRole('link', { name: 'Staff' })).toHaveAttribute('href', '/admin/staff');
+    await expect(nav.getByRole('link', { name: 'Settings' })).toHaveAttribute(
+      'href',
+      '/admin/settings',
+    );
 
     // The browser's zone is Adiutor's default zone and the Admin's own, which their Profile shows.
     expect(await defaultTimeZoneNow()).toBe('Europe/Amsterdam');
     expect(await savedTimeZoneOf('setup@adiutor.test')).toBe('Europe/Amsterdam');
-    await page.goto('/account');
+    await page.goto('/account/preferences');
     await expect(page.getByRole('combobox', { name: 'Time zone' })).toContainText('Amsterdam');
 
     // Setup is now disabled.

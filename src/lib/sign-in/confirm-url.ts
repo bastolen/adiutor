@@ -26,7 +26,7 @@ type ConfirmMode = 'change' | 'strong';
  * `callbackURL`.
  *
  * @param returnTo - The page to come back to, already a safe app path, e.g.
- *   `/admin/staff?inv-page=2#invitations`.
+ *   `/admin/settings/staff?inv-page=2#invitations`.
  * @param mode - Which methods to offer ({@link ConfirmMode}).
  * @returns The step-up page's address.
  */
@@ -39,7 +39,7 @@ function confirmUrl(returnTo: string, mode: ConfirmMode): string {
  * made safe with `getSafeRedirectPath`, or `fallback` when the form has none.
  *
  * @param formData - The submitted form, with an optional `returnTo` path.
- * @param fallback - Where to come back to without a `returnTo`, e.g. `/admin/staff`.
+ * @param fallback - Where to come back to without a `returnTo`, e.g. `/admin/settings/staff`.
  * @returns The page, a safe app path.
  */
 function returnToOf(formData: FormData, fallback: string): string {
@@ -53,7 +53,7 @@ function returnToOf(formData: FormData, fallback: string): string {
  * of the app once confirmed.
  *
  * @param returnTo - The page to come back to, already a safe app path, e.g.
- *   `/admin/staff?inv-page=2#invitations`.
+ *   `/admin/settings/staff?inv-page=2#invitations`.
  * @returns The step-up page's address.
  */
 export default function confirmChangeUrl(returnTo: string): string {
@@ -66,7 +66,7 @@ export default function confirmChangeUrl(returnTo: string): string {
  * `fallback`).
  *
  * @param formData - The submitted form, with an optional `returnTo` path.
- * @param fallback - Where to come back to without a `returnTo`, e.g. `/admin/staff`.
+ * @param fallback - Where to come back to without a `returnTo`, e.g. `/admin/settings/staff`.
  * @returns The step-up page's address.
  */
 export function confirmChangeUrlFor(formData: FormData, fallback: string): string {
@@ -79,7 +79,7 @@ export function confirmChangeUrlFor(formData: FormData, fallback: string): strin
  * (`strongStepUpMethods`), returning to a page of the app once confirmed.
  *
  * @param returnTo - The page to come back to, already a safe app path, e.g.
- *   `/admin/users/<id>#sign-in-as`.
+ *   `/admin/users/<id>/manage#sign-in-as`.
  * @returns The step-up page's address.
  */
 export function confirmStrongUrl(returnTo: string): string {

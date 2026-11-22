@@ -1,6 +1,6 @@
 /**
  * @file The "Open invitations" card, shared by a company's Members page and
- * the staff page. Text from the `people` namespace, role names from `roles`.
+ * the staff settings. Text from the `people` namespace, role names from `roles`.
  */
 import { MailPlus } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';

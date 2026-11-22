@@ -1,61 +1,26 @@
 /**
- * @file The user detail page, served at `/admin/users/[userId]`: a user's
- * account, sign-in security, companies, signed-in devices and recent
- * activity. Staff can view it; Admins and Managers also add the user to
- * companies and change or remove their memberships, and Admins change their
- * staff access, reset two-step verification (which also disconnects their
- * GitHub and Google accounts, and needs the Admin's recent confirmation: the
- * action sends them to the step-up page first), sign them out everywhere,
- * deactivate, reactivate and delete the account. Staff Admins, Managers and
- * Support can sign in as the user, when the rules allow it for this user.
- *
- * On your own page, your companies are managed like anyone's, but the staff
- * access and account controls aren't shown: your sign-in methods are on your
- * Security page, and stepping down from the staff is on the Staff page.
+ * @file The Overview tab of a user's page, served at `/admin/users/[userId]`:
+ * their account and sign-in security, and, for staff Admins on someone else's
+ * page, their staff access. Staff can view it (`users:view`). The header,
+ * notices and tabs come from the layout; the other tabs are Companies,
+ * Activity and Manage, next to this file, each with its own cards.
  *
  * This file loads the user and decides what the viewer may do; each card is
  * its own component next to it (`*-card.tsx`), taking only what it shows.
  */
-import { notFound } from 'next/navigation';
-import { getLocale, getTimeZone, getTranslations } from 'next-intl/server';
-import { type ReactNode, Suspense } from 'react';
+import { Suspense } from 'react';
 
 import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
-import Alert from '@/components/ui/alert';
-import Avatar from '@/components/ui/avatar';
-import PageHeader from '@/components/ui/page-header';
 import { PageSkeleton } from '@/components/ui/skeleton';
-import TextLink from '@/components/ui/text-link';
-import type { ImpersonationVerdict } from '@/lib/authz/impersonation';
 import displayName from '@/lib/display-name';
-import { formatDateTime } from '@/lib/format';
 import ClientMessages from '@/lib/i18n/client-messages';
-import type { SearchParams } from '@/lib/search-params';
 import { confirmationWindow } from '@/lib/sign-in/confirm-url';
-import { createPageUrl } from '@/lib/tables/page-url';
-import { parseTableState } from '@/lib/tables/table-state';
-import { DEVICES_TABLE, USER_COMPANIES_TABLE } from '@/lib/tables/tables';
-import appContext from '@/server/app-context';
-import { impersonationVerdictFor } from '@/server/auth/impersonation';
-import {
-  getGlobalPermissions,
-  getStaffPermissionsInCompanies,
-  requireGlobalPermission,
-} from '@/server/authz';
-import { ServiceError } from '@/server/errors';
+import { requireGlobalPermission } from '@/server/authz';
 import { globalPermissionMetadata } from '@/server/page-metadata';
-import { type AddableCompany, listAddableCompanies } from '@/server/people/members';
-import { getUserDetail, type UserDetail, userExists } from '@/server/people/user-admin';
 
-import { AccountStateBadges, StaffBadge } from '../user-badges';
-import AccountAccessCard from './account-access-card';
 import AccountCard from './account-card';
-import ActivityCard from './activity-card';
-import CompaniesCard from './companies-card';
-import DeleteAccountCard from './delete-account-card';
-import DevicesCard from './devices-card';
+import loadUser, { offersUserTab } from './load-user';
 import SecurityCard from './security-card';
-import SignInAsCard from './sign-in-as-card';
 import StaffAccessCard from './staff-access-card';
 
 /**
@@ -69,137 +34,29 @@ export const generateMetadata = globalPermissionMetadata(
   'users:view',
   'admin.user.title',
   async (actor, { params }: PageProps<'/admin/users/[userId]'>) =>
-    userExists(appContext, actor, (await params).userId),
+    offersUserTab(actor, (await params).userId, 'overview'),
 );
 
 /**
- * The link to the viewer's Security page inside the "your own account" notice.
- *
- * @param chunks - The link's text.
- * @returns The link.
- */
-function securityLink(chunks: ReactNode) {
-  return <TextLink href="/account/security">{chunks}</TextLink>;
-}
-
-/**
- * The link to the Staff page inside the "your own account" notice.
- *
- * @param chunks - The link's text.
- * @returns The link.
- */
-function staffLink(chunks: ReactNode) {
-  return <TextLink href="/admin/staff">{chunks}</TextLink>;
-}
-
-/**
- * Loads and shows a user. On the viewer's own page it shows the companies
- * controls (worded for themselves) but not the staff access, account access
- * or delete controls.
+ * Loads the user and shows their Overview.
  *
  * @param props - Component props.
  * @param props.params - Route parameters.
- * @param props.searchParams - Query parameters: the sort and page of their companies and
- *   signed-in devices (see `USER_COMPANIES_TABLE` and `DEVICES_TABLE`).
  * @returns The page content.
  */
-async function UserDetailContent({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ userId: string }>;
-  searchParams: Promise<SearchParams>;
-}) {
-  const [locale, timeZone] = await Promise.all([getLocale(), getTimeZone()]);
-  const t = await getTranslations('admin.user');
+async function UserOverview({ params }: { params: Promise<{ userId: string }> }) {
   const actor = await requireGlobalPermission('users:view');
-  const [{ userId }, query] = await Promise.all([params, searchParams]);
-  const companiesRequested = parseTableState(USER_COMPANIES_TABLE, query);
-  const devicesRequested = parseTableState(DEVICES_TABLE, query);
-  // Your own companies too, as on a company's Members page: the services allow it, and the staff
-  // Admins and Managers who may do it need MFA already, so becoming a company Admin ends no sessions.
-  const canManageMembers = getStaffPermissionsInCompanies(actor).has('members:manage');
-  let detail: UserDetail;
-  let addable: AddableCompany[];
-  let signInAs: ImpersonationVerdict;
-  try {
-    // Independent reads, so they run together; an unknown user ends on the 404 page either way.
-    [detail, addable, signInAs] = await Promise.all([
-      getUserDetail(appContext, actor, userId, {
-        companies: companiesRequested,
-        sessions: devicesRequested,
-      }),
-      canManageMembers ? listAddableCompanies(appContext, actor, userId) : [],
-      impersonationVerdictFor(appContext, actor, userId),
-    ]);
-  } catch (error) {
-    if (error instanceof ServiceError) {
-      notFound();
-    }
-    throw error;
-  }
-  const url = createPageUrl(`/admin/users/${detail.id}`, {}, await getTranslations('tables'));
-
-  const permissions = getGlobalPermissions(actor);
-  const isSelf = detail.id === actor.id;
-  // Not on your own page: you can only step down, which the Staff page offers.
-  const canManageStaff = permissions.has('staff:manage') && !isSelf;
-  // Account actions on yourself go through the Security page and its checks (`loadTarget`).
-  const canManage = permissions.has('users:manage') && !isSelf;
-  const canDelete = permissions.has('users:delete') && !isSelf;
+  const { userId } = await params;
+  const { detail, access } = await loadUser(actor, userId, 'overview');
   const userName = displayName(detail);
-  const { sessions } = detail;
-  // Every table first, so each link (and the return address) keeps the others' state.
-  const companiesTable = url.table(USER_COMPANIES_TABLE, {
-    ...companiesRequested,
-    page: detail.companies.page,
-  });
-  const devicesTable = sessions
-    ? url.table(DEVICES_TABLE, { ...devicesRequested, page: sessions.page })
-    : null;
 
   return (
     <RecentConfirmationProvider
       required={actor.canConfirmSessions}
-      // The page with its tables; each control adds its card's anchor.
-      returnTo={url.current()}
+      // Each control adds its card's anchor.
+      returnTo={`/admin/users/${detail.id}`}
       {...confirmationWindow(actor.mfaConfirmedUntil)}
     >
-      <PageHeader
-        back={{ href: '/admin/users', label: t('back') }}
-        leading={
-          <Avatar
-            name={userName}
-            size="lg"
-            brand={detail.staffRole !== null}
-            src={detail.picture}
-          />
-        }
-        title={userName}
-        description={detail.email}
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          {detail.staffRole && <StaffBadge role={detail.staffRole} />}
-          <AccountStateBadges
-            deactivated={detail.deactivatedAt !== null}
-            emailVerified={detail.emailVerified}
-          />
-        </div>
-      </PageHeader>
-
-      {detail.deactivatedAt && (
-        <Alert tone="error">
-          {t('deactivatedNotice', { date: formatDateTime(detail.deactivatedAt, locale, timeZone) })}
-        </Alert>
-      )}
-      {isSelf && (
-        <Alert tone="info">
-          {permissions.has('staff:manage')
-            ? t.rich('self.signInAndStaff', { security: securityLink, staff: staffLink })
-            : t.rich('self.signInOnly', { security: securityLink })}
-        </Alert>
-      )}
-
       <AccountCard
         email={detail.email}
         emailVerified={detail.emailVerified}
@@ -210,82 +67,27 @@ async function UserDetailContent({
 
       <SecurityCard mfa={detail.mfa} accountNames={detail.accountNames} />
 
-      {/* The role selects in both cards translate with `people`. */}
-      <ClientMessages namespaces={['people.roleSelect']}>
-        {canManageStaff && (
+      {access.canManageStaff && (
+        // The role select translates with `people`.
+        <ClientMessages namespaces={['people.roleSelect']}>
           <StaffAccessCard userId={detail.id} userName={userName} staffRole={detail.staffRole} />
-        )}
-
-        <CompaniesCard
-          userId={detail.id}
-          userName={userName}
-          isSelf={isSelf}
-          userDeactivated={detail.deactivatedAt !== null}
-          companies={detail.companies}
-          table={companiesTable}
-          canManageMembers={canManageMembers}
-          addable={addable}
-        />
-      </ClientMessages>
-
-      {sessions && devicesTable && (
-        <DevicesCard
-          userId={detail.id}
-          userName={userName}
-          sessions={sessions}
-          table={devicesTable}
-          canSignOut={canManage}
-        />
-      )}
-
-      {detail.activity && (
-        <ActivityCard userId={detail.id} userName={userName} activity={detail.activity} />
-      )}
-
-      {/* Not for roles that can't sign in as anyone, nor on your own page. */}
-      {signInAs !== 'role' && signInAs !== 'self' && (
-        <SignInAsCard
-          userId={detail.id}
-          userName={userName}
-          verdict={signInAs}
-          strongMfa={actor.strongMfa}
-          strongMfaConfirmedUntil={actor.strongMfaConfirmedUntil}
-          returnTo={url.current()}
-        />
-      )}
-
-      {canManage && (
-        <AccountAccessCard
-          userId={detail.id}
-          userName={userName}
-          mfa={detail.mfa}
-          connectedAccounts={detail.connectedAccounts}
-          deactivatedAt={detail.deactivatedAt}
-        />
-      )}
-
-      {canDelete && (
-        <DeleteAccountCard userId={detail.id} userName={userName} email={detail.email} />
+        </ClientMessages>
       )}
     </RecentConfirmationProvider>
   );
 }
 
 /**
- * The user detail page.
+ * The Overview tab of a user's page.
  *
  * @param props - Page props from Next.js.
  * @param props.params - Route parameters.
- * @param props.searchParams - Query parameters.
  * @returns The page.
  */
-export default function UserDetailPage({
-  params,
-  searchParams,
-}: PageProps<'/admin/users/[userId]'>) {
+export default function UserOverviewPage({ params }: PageProps<'/admin/users/[userId]'>) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
-      <UserDetailContent params={params} searchParams={searchParams} />
+    <Suspense fallback={<PageSkeleton header={false} />}>
+      <UserOverview params={params} />
     </Suspense>
   );
 }

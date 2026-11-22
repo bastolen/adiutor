@@ -1,8 +1,8 @@
 /**
  * @file The Security page of the account, served at `/account/security`:
  * passkeys, two-step verification, connected provider accounts,
- * password, signed-in devices, whether staff may sign in as the user, and
- * deactivating the account. Users whose role
+ * password, whether staff may sign in as the user, and deactivating the
+ * account (signed-in devices are on the Activity tab). Users whose role
  * requires MFA are sent here until they've set it up (a passkey or an
  * authenticator app; email codes don't count for them). Changing how they
  * sign in, and deactivating the account, needs a confirmation with their
@@ -11,8 +11,8 @@
  * back to the card they started in (its anchor, e.g. `#passkeys`), as does
  * connecting GitHub or Google (`#connected-accounts`, where the card says how
  * it went). A staff member signed in as the user sees it read-only, with a
- * note, and the devices and the passkeys' and provider accounts' names only
- * when they're a staff Admin (`personalDataShown`).
+ * note, and the passkeys' and provider accounts' names only when they're a
+ * staff Admin (`personalDataShown`).
  */
 import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -30,19 +30,17 @@ import {
   mustSetUpMfa,
 } from '@/lib/authz/mfa';
 import ClientMessages from '@/lib/i18n/client-messages';
+import { SECURITY_PAGE } from '@/lib/redirect';
 import type { SearchParams } from '@/lib/search-params';
 import { confirmationWindow } from '@/lib/sign-in/confirm-url';
 import { providerList } from '@/lib/sign-in/oauth-providers';
 import { availableProviders, signInProviders } from '@/lib/sign-in/providers';
-import { createPageUrl } from '@/lib/tables/page-url';
-import { parseTableState } from '@/lib/tables/table-state';
-import { DEVICES_TABLE } from '@/lib/tables/tables';
 import appContext from '@/server/app-context';
 import { listConnectedProviders } from '@/server/auth/accounts';
 import { getSecurityOverview } from '@/server/auth/security';
 import { getActor } from '@/server/authz';
 import { serviceErrorMessage } from '@/server/errors';
-import { listUserSessions, soleAdminError, soleAdminOf } from '@/server/people/user-admin';
+import { soleAdminError, soleAdminOf } from '@/server/people/user-admin';
 
 import accountMessage from '../account-messages';
 import SignedInAsNote from '../signed-in-as-note';
@@ -50,7 +48,6 @@ import ConnectedAccountsCard from './connected-accounts-card';
 import DeactivateCard from './deactivate-card';
 import PasskeysCard from './passkeys-card';
 import PasswordForm from './password-form';
-import SessionsCard from './sessions-card';
 import StaffSignInCard from './staff-sign-in-card';
 import TwoFactorCard from './two-factor-card';
 
@@ -69,7 +66,7 @@ export async function generateMetadata(): Promise<Metadata> {
  *
  * @param props - Component props.
  * @param props.searchParams - Query parameters: set after connecting GitHub or Google
- *   (`AccountParams`), and the signed-in devices' sort and page (see `DEVICES_TABLE`).
+ *   (`AccountParams`).
  * @returns The page content.
  */
 async function Security({ searchParams }: { searchParams: Promise<SearchParams> }) {
@@ -83,20 +80,12 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
     getTranslations('auth'),
     getLocale(),
   ]);
-  const devicesRequested = parseTableState(DEVICES_TABLE, params);
-  const [overview, connected, sessions, lastAdminOf] = await Promise.all([
+  const [overview, connected, lastAdminOf] = await Promise.all([
     getSecurityOverview(appContext, actor),
     listConnectedProviders(appContext, actor.id),
-    listUserSessions(appContext, actor.id, actor.mfaRole, devicesRequested),
     // Only shown: deactivating checks again, with locks, in its own transaction.
     soleAdminOf(appContext.db, actor.id, { lock: false }),
   ]);
-  // Built from the table's own state only, so a sort doesn't bring back `?connected=…`.
-  const url = createPageUrl('/account/security', {}, await getTranslations('tables'));
-  const devicesTable = url.table(DEVICES_TABLE, {
-    ...devicesRequested,
-    page: sessions.page,
-  });
   const message = accountMessage(t, tAuth, params);
   // The same check that sent them here (`getActor`).
   const mustSetUp = mustSetUpMfa(actor);
@@ -153,8 +142,8 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
       )}
       <RecentConfirmationProvider
         required={actor.canConfirmSessions}
-        // The page with its devices table; each control adds its card's anchor.
-        returnTo={url.current()}
+        // The page without its one-off messages (`?connected=…`); each control adds its card's anchor.
+        returnTo={SECURITY_PAGE}
         {...confirmationWindow(actor.mfaConfirmedUntil)}
       >
         <PasskeysCard
@@ -195,13 +184,6 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
             blockedReason={blocked.setPassword ? providerMfaOnly : null}
           />
         </Card>
-        {shown.devices && (
-          <SessionsCard
-            sessions={sessions}
-            table={devicesTable}
-            currentSessionId={actor.sessionId}
-          />
-        )}
         <StaffSignInCard allowed={actor.allowStaffSignIn} />
         <DeactivateCard
           hasPassword={overview.mfaState.hasPassword}
