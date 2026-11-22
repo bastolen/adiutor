@@ -12,7 +12,8 @@
  * What an email leaves out: colours in code, the button that copies it, and
  * the links between a footnote and its reference (an email has no page to
  * jump around in). A text that would cost too much to format, and one stored
- * as plain text, is shown as the plain text it is.
+ * as plain text, is shown as the plain text it is, with only the label of a
+ * link to one of the staff's pages.
  */
 import type { Element, ElementContent } from 'hast';
 import { type Components, type ExtraProps, toJsxRuntime } from 'hast-util-to-jsx-runtime';
@@ -26,6 +27,7 @@ import {
   nameStoredMentions,
   type RequestTextFormat,
   splitLinks,
+  staffLinksAsLabels,
   storedMentionId,
   type TextPart,
   textLinkTarget,
@@ -505,13 +507,28 @@ function placed(parts: readonly TextPart[]): PlacedPart[] {
 }
 
 /**
- * A text as it was written: plain text with its line breaks, in its own
- * writing direction. Web addresses written with `http://` or `https://` are
- * links, as on the page, but not one of the staff's pages in a text the
- * company reads.
+ * A stored text as it's shown as it was written: in a text the company
+ * reads, a link written in Markdown to one of the staff's pages keeps only
+ * its label (`staffLinksAsLabels`), so its address never shows. Done to the
+ * text as it's stored, before the people it mentions are named, so no name
+ * can change how its links read.
+ *
+ * @param text - The text as it's stored.
+ * @param appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
+ * @returns The text to show.
+ */
+function asWritten(text: string, appUrl: string | null): string {
+  return appUrl === null ? text : staffLinksAsLabels(text, appUrl);
+}
+
+/**
+ * A text as it was written ({@link asWritten}): plain text with its line
+ * breaks, in its own writing direction. Web addresses written with `http://`
+ * or `https://` are links, as on the page, but not one of the staff's pages
+ * in a text the company reads.
  *
  * @param props - Component props.
- * @param props.text - The text.
+ * @param props.text - The text, as {@link asWritten} gives it.
  * @param props.appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
  * @returns The text.
  */
@@ -537,8 +554,8 @@ function PlainEmailText({ text, appUrl }: { text: string; appUrl: string | null 
  * Markdown text is formatted, with the people it mentions by name; a text
  * that would cost too much to format (`markdownTree` gives no tree) and a
  * text stored as plain text are shown as they were written. In a text the
- * company reads, a link to one of the staff's pages is its text, also in a
- * text saved before such links were kept out of it.
+ * company reads, a link to one of the staff's pages is its text, without its
+ * address, also in a text saved before such links were kept out of it.
  *
  * @param props - Component props.
  * @param props.value - The text, its format and the people it mentions.
@@ -562,7 +579,7 @@ export default function EmailMarkdown({
   if (value.format !== 'markdown') {
     return (
       <div style={root}>
-        <PlainEmailText text={value.text} appUrl={appUrl} />
+        <PlainEmailText text={asWritten(value.text, appUrl)} appUrl={appUrl} />
       </div>
     );
   }
@@ -579,7 +596,7 @@ export default function EmailMarkdown({
     footnoteBackLabel: (number) => t('backToReference', { number }),
   });
   if (tree === null) {
-    const named = nameStoredMentions(value.text, (mentionId) =>
+    const named = nameStoredMentions(asWritten(value.text, appUrl), (mentionId) =>
       Object.hasOwn(value.mentions, mentionId) ? (value.mentions[mentionId] ?? null) : null,
     );
     return (

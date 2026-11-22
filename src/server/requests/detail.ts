@@ -32,6 +32,7 @@ import { maySeeSignedInAsWork } from '@/lib/authz/impersonation';
 import { getGlobalPermissions, type Permission } from '@/lib/authz/permissions';
 import { firstRow } from '@/lib/defined';
 import { visibleName } from '@/lib/display-name';
+import { appUrl } from '@/lib/env';
 import {
   type ActivityView,
   activityKinds,
@@ -60,6 +61,7 @@ import { readActivityView } from './activity-view';
 import { editableText, type TextMention } from './edits';
 import mentionKey from './mention-key';
 import { loadSubscribers } from './participants';
+import { withoutStaffPageLinksToEdit } from './staff-links';
 import { requestTypeNames } from './types';
 
 /** The account an `assignee` entry is about, joined next to its author's. */
@@ -123,7 +125,12 @@ export interface RequestText {
    * For a reader who may edit it now (`mayEditDescription`, `mayEditReply`):
    * the text as its editor starts from it, with its mentions as ones that
    * are being written, and how many times it was edited, which the edit
-   * sends back so an edit someone made meanwhile isn't overwritten.
+   * sends back so an edit someone made meanwhile isn't overwritten. A reader
+   * who may not open the staff's pages (without `users:view`: everyone at a
+   * company) gets a description or reply without links to them
+   * (`withoutStaffPageLinksToEdit`), as the page shows it, so a link saved
+   * before they were kept out of texts never reaches their browser; an
+   * internal note keeps them.
    */
   edit?: { markdown: string; edits: number };
   /** Its earlier versions, newest first, for the staff (`requests:view-internal`) only. */
@@ -566,16 +573,21 @@ export async function getRequest(
   const names = { company: company.name, staff: staffName };
   // Nothing of a deactivated company's request changes, so nothing of it is edited.
   const editable = company.deactivatedAt === null;
+  // Only a reader who may open the staff's pages gets a text to edit with links to them (and a
+  // note keeps them for whoever edits it).
+  const opensStaffPages = globalPermissions.has('users:view');
   /**
    * What a text adds for its readers: when it was edited (and, for the
    * readers who may know, whether that edit was made while signed in as its
-   * editor), what its editor starts from (for a reader who may edit it), and
-   * its versions (staff).
+   * editor), what its editor starts from (for a reader who may edit it,
+   * without links to the staff's pages unless they may open them or it's an
+   * internal note), and its versions (staff).
    *
    * @param entryId - The reply; `null` for the description.
    * @param stored - The text as it's stored.
    * @param editedAt - When it was last edited.
    * @param mayEdit - Whether the reader may edit it now.
+   * @param staffOnly - Whether it's an internal note, which keeps its links to the staff's pages.
    * @returns The text's extra fields.
    */
   const editsOf = (
@@ -583,6 +595,7 @@ export async function getRequest(
     stored: string,
     editedAt: Date | null,
     mayEdit: boolean,
+    staffOnly = false,
   ): Pick<RequestText, 'editedAt' | 'editedSignedInAs' | 'edit' | 'versions'> => {
     const ofText = versionsOf.get(entryId) ?? [];
     // The newest version is the last edit's.
@@ -595,7 +608,12 @@ export async function getRequest(
       ...(editable &&
         mayEdit && {
           edit: {
-            markdown: editableText(stored, textMentions.get(entryId) ?? [], company.id, names),
+            markdown: editableText(
+              opensStaffPages || staffOnly ? stored : withoutStaffPageLinksToEdit(stored, appUrl),
+              textMentions.get(entryId) ?? [],
+              company.id,
+              names,
+            ),
             edits: ofText.length,
           },
         }),
@@ -656,6 +674,7 @@ export async function getRequest(
                     found.status,
                     author?.id === actor.id,
                   ),
+                  entry.kind === 'note',
                 ),
               },
         // An assignment's subject is always on the staff's side, also once their account is gone.

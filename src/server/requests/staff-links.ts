@@ -5,22 +5,41 @@
  * audit log) copies a name as a link to that person's page, with their ID in
  * its address; pasted into a reply, the company would get it. The text is
  * read as the page reads it (`markdownReader`), so every link the page would
- * show is found, however it's written, and code is left as it is. Where a
- * text is shown or emailed, a link to a staff page shows as its text too
- * (`textLinkTarget`), also in texts saved before.
+ * show is found, however it's written, and code is left as it is. A text too
+ * costly to read that way keeps only its links' labels by a rule that reads
+ * no Markdown (`staffLinksAsLabels`). Where a text is shown or emailed, a
+ * link to a staff page shows as its text too (`textLinkTarget`, and
+ * `staffLinksAsLabels` for a text shown as it was written), also in texts
+ * saved before; the text a company's reader starts an edit from goes
+ * through {@link withoutStaffPageLinksToEdit}.
  */
 import type { Nodes, Root } from 'mdast';
 
 import { emphasisRuns, MAX_EMPHASIS_RUNS, markdownReader } from '@/components/ui/markdown/tree';
-import { isStaffPage } from '@/lib/requests';
+import { isStaffPage, staffLinksAsLabels } from '@/lib/requests';
 
 /**
- * The most times a text is gone through. Taking a link out can make a new
- * one of what's around it (`[A [x](…) Z](…)`), so the text is gone through
- * again until nothing changes; nobody nests links deeper than this, and what
- * might be left is still shown as text (`textLinkTarget`).
+ * The most times a text is gone through when it's saved. Taking a link out
+ * can make a new one of what's around it (`[A [x](…) Z](…)`), so the text is
+ * gone through again until nothing changes; nobody nests links deeper than
+ * this, and what might be left keeps only its labels by the rule that reads
+ * no Markdown (`staffLinksAsLabels`).
  */
 const MAX_PASSES = 10;
+
+/**
+ * A host written as an IP address, which a browser also reads written other
+ * ways (`3232235786` for `192.168.1.10`), so a text needn't name it as it is.
+ */
+const IP_HOST = /^(?:[\d.]+|\[.*\])$/;
+
+/**
+ * What a text needs to name Adiutor's host without writing it as it is: a
+ * percent sign, a character reference, a backslash escape, or a character
+ * outside printable ASCII (letters a browser maps to ASCII ones, a tab it
+ * drops).
+ */
+const HIDES_HOST = /[%&\\]|[^ -~\n]/;
 
 /** A piece of a text to replace: where it starts and ends, and what takes its place. */
 interface Cut {
@@ -152,8 +171,69 @@ function onePass(text: string, appUrl: string): string {
 }
 
 /**
+ * Whether a text may hold a link to one of Adiutor's pages for the staff,
+ * so that it's worth reading: it names Adiutor's host, or it has a link or
+ * a link definition (`](` or `]:`; an address on its own is no link to hide)
+ * and could name the host without writing it as it is ({@link HIDES_HOST},
+ * or a host that's an IP address).
+ *
+ * @param text - The text.
+ * @param host - Adiutor's host name, in lower case and without a trailing dot.
+ * @returns Whether to read it.
+ */
+function mayHoldStaffLink(text: string, host: string): boolean {
+  if (text.toLowerCase().includes(host)) {
+    return true;
+  }
+  if (!text.includes('](') && !text.includes(']:')) {
+    return false;
+  }
+  return IP_HOST.test(host) || HIDES_HOST.test(text);
+}
+
+/**
+ * Takes the links to Adiutor's pages for the staff out of a text, going
+ * through it as Markdown at most a number of times, and through the rule
+ * that reads no Markdown (`staffLinksAsLabels`) where that isn't enough: a
+ * text that would cost too much to read (`MAX_EMPHASIS_RUNS`), one nested
+ * too deeply for the reader, and one still changing after the last time.
+ *
+ * @param text - The text.
+ * @param appUrl - Adiutor's own address.
+ * @param passes - The most times to go through it as Markdown.
+ * @returns The text without such links.
+ */
+function withoutStaffLinksIn(text: string, appUrl: string, passes: number): string {
+  const host = URL.canParse(appUrl) ? new URL(appUrl).hostname.replace(/\.$/, '') : '';
+  if (!host || !mayHoldStaffLink(text, host)) {
+    return text;
+  }
+  if (emphasisRuns(text) > MAX_EMPHASIS_RUNS) {
+    return staffLinksAsLabels(text, appUrl);
+  }
+  let kept = text;
+  try {
+    for (let pass = 0; pass < passes; pass += 1) {
+      const next = onePass(kept, appUrl);
+      if (next === kept) {
+        return kept;
+      }
+      kept = next;
+    }
+  } catch (error) {
+    // Nested so deeply that the reader's own walk overflowed the stack: the page can't format it
+    // either, and shows it as it was written, so it keeps only its staff links' labels as such.
+    if (!(error instanceof RangeError)) {
+      throw error;
+    }
+  }
+  return staffLinksAsLabels(kept, appUrl);
+}
+
+/**
  * Keeps links to Adiutor's own staff pages (`isStaffPage`: `/admin` and under
- * it, on Adiutor's host) out of a Markdown text the company reads:
+ * it, on Adiutor's host) out of a Markdown text the company reads, before
+ * it's saved:
  *
  * - a link to one becomes its text, as it was written, formatting and all;
  *   an address written out (`https://…` on its own, or in angle brackets)
@@ -166,37 +246,39 @@ function onePass(text: string, appUrl: string): string {
  * internal note, which only the staff read, keeps its links: it's never
  * passed here.
  *
- * Reading a text costs time, so it's only read when it names Adiutor's host
- * (in any case), which most texts don't, and not when it would cost too much
- * to read (`MAX_EMPHASIS_RUNS`). A link that hides the host (a character
- * reference in it) is left to where the text is shown and emailed, which
- * shows it as text (`textLinkTarget`); so is a text too costly to read,
- * which is shown as plain text, where an address of a staff page isn't a link.
+ * Reading a text costs time, so it's only read when it may hold such a link
+ * ({@link mayHoldStaffLink}: it names Adiutor's host, or has a link and could
+ * name the host another way), which most texts don't. It's gone through
+ * until nothing changes, at most {@link MAX_PASSES} times. A text that would
+ * cost too much to read (`MAX_EMPHASIS_RUNS`), that's nested too deeply for
+ * the reader, or that still changes after the last time, keeps only the
+ * labels of its links to staff pages by a rule that reads no Markdown
+ * (`staffLinksAsLabels`); the page shows a text it can't format as it was
+ * written, through the same rule.
  *
  * @param text - The text, cleaned.
  * @param appUrl - Adiutor's own address (the app's public URL).
  * @returns The text to save.
  */
 export default function withoutStaffPageLinks(text: string, appUrl: string): string {
-  const host = URL.canParse(appUrl) ? new URL(appUrl).hostname.replace(/\.$/, '') : '';
-  if (!host || !text.toLowerCase().includes(host) || emphasisRuns(text) > MAX_EMPHASIS_RUNS) {
-    return text;
-  }
-  let kept = text;
-  try {
-    for (let pass = 0; pass < MAX_PASSES; pass += 1) {
-      const next = onePass(kept, appUrl);
-      if (next === kept) {
-        return kept;
-      }
-      kept = next;
-    }
-  } catch (error) {
-    // Nested so deeply that the reader's own walk overflowed the stack: the page can't format it
-    // either, and shows it as plain text, where a staff page isn't linked.
-    if (!(error instanceof RangeError)) {
-      throw error;
-    }
-  }
-  return kept;
+  return withoutStaffLinksIn(text, appUrl, MAX_PASSES);
+}
+
+/**
+ * The text a reader who may not open the staff's pages starts an edit from
+ * (`getRequest`, for everyone at a company): as {@link withoutStaffPageLinks}
+ * would save it, so a link saved before such links were kept out never
+ * reaches their browser, but read as Markdown twice at most, since it's read
+ * on every view of the request. Twice, so a text with such a link (one time
+ * takes it out, the second finds nothing more) keeps its code as it is; only
+ * a text still changing then (links made of links) keeps only its labels by
+ * the rule that reads no Markdown, whose time is in proportion to the text's
+ * length, and which can't tell code from text.
+ *
+ * @param text - The text as it's stored.
+ * @param appUrl - Adiutor's own address (the app's public URL).
+ * @returns The text to edit.
+ */
+export function withoutStaffPageLinksToEdit(text: string, appUrl: string): string {
+  return withoutStaffLinksIn(text, appUrl, 2);
 }

@@ -1,11 +1,47 @@
 /**
  * @file Tests for keeping links to the staff's pages out of a text the
  * company reads, as it's saved: every link the page would show is found, and
- * code is left as it is.
+ * code is left as it is; and out of the text a company's reader starts an
+ * edit from, which reads the text as Markdown twice at most.
  */
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import withoutStaffPageLinks from './staff-links';
+import withoutStaffPageLinks, { withoutStaffPageLinksToEdit } from './staff-links';
+
+/** How many times a text was read as Markdown. */
+const reads = vi.hoisted(() => ({ count: 0 }));
+
+// The real reader, counting how often it reads.
+vi.mock('@/components/ui/markdown/tree', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/ui/markdown/tree')>();
+  return {
+    ...actual,
+    /**
+     * The real reader, counting each text it reads.
+     *
+     * @returns A reader with the real one's `parse`.
+     */
+    markdownReader: () => {
+      const reader = actual.markdownReader();
+      return {
+        /**
+         * Reads a text, as the real reader does.
+         *
+         * @param text - The text.
+         * @returns Its tree.
+         */
+        parse: (text: string) => {
+          reads.count += 1;
+          return reader.parse(text);
+        },
+      };
+    },
+  };
+});
+
+beforeEach(() => {
+  reads.count = 0;
+});
 
 /** Adiutor's own address, as the server has it. */
 const APP = 'https://adiutor.dev';
@@ -41,19 +77,31 @@ describe('withoutStaffPageLinks', () => {
   });
 
   it.each([
+    ['a character reference', '[Sam](https://adiutor&#46;dev/admin)'],
+    ['full-width letters', '[Sam](https://ａｄｉｕｔｏｒ.dev/admin)'],
+    ['a dot percent-encoded', '[Sam](https://adiutor%2Edev/admin/users/1)'],
+    ['a dot escaped', '[Sam](https://adiutor\\.dev/admin/users/1)'],
+    ['a tab in it', '[Sam](<https://adiu\ttor.dev/admin/users/1>)'],
+    ['an ideographic full stop', '[Sam](https://adiutor。dev/admin/users/1)'],
+  ])('finds a link that names Adiutor’s host with %s', (_how, text) => {
+    expect(saved(text)).toBe('Sam');
+  });
+
+  it.each([
     ['a text without links', 'The printer on the second floor is broken.'],
-    ['a link whose host is a character reference', '[Sam](https://adiutor&#46;dev/admin)'],
-    [
-      'a link whose host is written in full-width letters',
-      '[Sam](https://ａｄｉｕｔｏｒ.dev/admin)',
-    ],
-  ])(
-    'leaves %s as it is, without reading it, when it doesn’t name Adiutor’s host',
-    (_what, text) => {
-      // Where the text is shown or emailed, such a link is text all the same (`textLinkTarget`).
-      expect(saved(text)).toBe(text);
-    },
-  );
+    ['a link to another site', '[the docs](https://adiutor.test/docs)'],
+    ['an encoded address on its own', 'See https://adiutor%2Edev/admin, café.'],
+  ])('leaves %s as it is, without reading it, when it can’t hold such a link', (_what, text) => {
+    expect(saved(text)).toBe(text);
+    expect(reads.count).toBe(0);
+  });
+
+  it('reads a text with a link on another site when it could name the host another way', () => {
+    const text = '[the docs](https://adiutor.test/docs), café.';
+
+    expect(saved(text)).toBe(text);
+    expect(reads.count).toBe(1);
+  });
 
   it('reads a link’s text as the page does, with brackets in code', () => {
     expect(saved(`[the \`]\` key](${USER_PAGE})`)).toBe('the `]` key');
@@ -112,15 +160,79 @@ describe('withoutStaffPageLinks', () => {
     expect(saved(`See <${USER_PAGE}>.`)).toBe(`See ${USER_PAGE}.`);
   });
 
-  it('leaves a text that would cost too much to read as it is: the page shows it as plain text', () => {
-    const costly = `${'*a'.repeat(2600)} [Sam](${USER_PAGE})`;
+  it('keeps only the labels of a text that would cost too much to read, without reading it', () => {
+    const runs = '*a'.repeat(2600);
 
-    expect(saved(costly)).toBe(costly);
+    expect(saved(`${runs} [Sam](${USER_PAGE}) and [the docs](${APP}/docs), ${USER_PAGE}`)).toBe(
+      `${runs} Sam and [the docs](${APP}/docs), ${USER_PAGE}`,
+    );
+    // Without Adiutor's host in it, it isn't read at all.
+    const elsewhere = `${runs} [Sam](https://adiutor.test/admin/users/1)`;
+    expect(saved(elsewhere)).toBe(elsewhere);
   });
 
   it('changes nothing more when a saved text is saved again', () => {
     const once = saved(`[Sam](${USER_PAGE}), ![x](${USER_PAGE}) and <${USER_PAGE}>`);
 
     expect(saved(once)).toBe(once);
+  });
+});
+
+describe('withoutStaffPageLinksToEdit', () => {
+  /**
+   * The text a company's reader starts an edit from.
+   *
+   * @param text - The text as it's stored.
+   * @returns The text to edit.
+   */
+  const toEdit = (text: string) => withoutStaffPageLinksToEdit(text, APP);
+
+  it('gives a stored text without links to a page for the staff, as it would be saved', () => {
+    expect(toEdit(`Ask [Sam](${USER_PAGE}), see [the docs](${APP}/docs).`)).toBe(
+      `Ask Sam, see [the docs](${APP}/docs).`,
+    );
+    expect(toEdit('[Sam](https://adiutor%2Edev/admin/users/1)')).toBe('Sam');
+    expect(toEdit(`\`[a](${USER_PAGE})\` stays code`)).toBe(`\`[a](${USER_PAGE})\` stays code`);
+  });
+
+  it('reads a text as Markdown twice at most, and takes what that leaves by the rule that reads none', () => {
+    // Links nested in links: each time it's read as Markdown takes out only the innermost.
+    const nested = `${'['.repeat(300)}x${`](${APP}/admin)`.repeat(300)}`;
+
+    const started = performance.now();
+    const text = toEdit(nested);
+    const took = performance.now() - started;
+
+    expect(text).not.toContain('/admin');
+    expect(reads.count).toBe(2);
+    expect(took).toBeLessThan(1000);
+    // Saved, it's read as often as it takes, up to the limit.
+    reads.count = 0;
+    expect(saved(nested)).not.toContain('/admin');
+    expect(reads.count).toBe(10);
+  });
+
+  it('keeps code in an old text as it is, as when the text is saved', () => {
+    const text = [
+      `See [Sam](${APP}/admin/users/1).`,
+      '',
+      '```',
+      `curl [x](${APP}/admin/users/2)`,
+      '```',
+      '',
+      `\`[y]: ${APP}/admin/z\``,
+    ].join('\n');
+    const expected = text.replace(`[Sam](${APP}/admin/users/1)`, 'Sam');
+
+    expect(toEdit(text)).toBe(expected);
+    expect(reads.count).toBe(2);
+    expect(saved(text)).toBe(expected);
+  });
+
+  it('reads a text that can’t hold such a link not at all', () => {
+    expect(toEdit('The printer on the second floor is broken.')).toBe(
+      'The printer on the second floor is broken.',
+    );
+    expect(reads.count).toBe(0);
   });
 });

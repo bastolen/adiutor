@@ -287,7 +287,14 @@ load or mislead in a reader's browser:
   when it's saved (`withoutStaffPageLinks`, which reads the text with the page's own Markdown
   reader, so no way of writing a link slips past), where it's shown or emailed, also in texts
   saved before (`textLinkTarget`), and in the editor while it's written; only an internal note
-  keeps them. See [Text](requests.md#text).
+  keeps them. A text too costly to read as Markdown, and any text shown as it was written, keeps
+  only such a link's label by a rule that reads no Markdown (`staffLinksAsLabels`), so its
+  address never shows; its time grows in proportion to the text's length, since no address is
+  judged by more than its first 256 characters. The text a company's reader starts an edit from
+  comes without them, read as Markdown twice at most on each view, so one saved before never
+  reaches their browser. A text is read whenever it could name Adiutor's host, also written
+  another way (percent-encoded, a character reference, letters a browser maps to ASCII). See
+  [Text](requests.md#text).
 - **Nothing in a copied note becomes code.** The button on a block of code copies it below a
   comment that names the request and who wrote the text (`withCodeNote` in
   `src/components/ui/markdown/code-note.ts`), and a name is something a person typed. Every line
