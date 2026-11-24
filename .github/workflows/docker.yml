@@ -90,8 +90,11 @@ jobs:
             type=semver,pattern={{version}},value=${{ env.TAG }}
             type=semver,pattern={{major}}.{{minor}},value=${{ env.TAG }}
 
-      # From the checked-out release, so .dockerignore applies. The build cache lives in GitHub
-      # Actions' cache; provenance and an SBOM are attached to the image.
+      # From the checked-out release, so .dockerignore applies. The build cache lives in the
+      # registry (the `buildcache` tag), not in GitHub Actions' cache: a release runs on its tag,
+      # and Actions caches are only readable from the ref that wrote them (and the default
+      # branch), so no later release could use what an earlier one wrote. Provenance and an SBOM
+      # are attached to the image.
       - name: Build and push
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
@@ -101,7 +104,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=ghcr.io/bastolen/adiutor:buildcache
+          cache-to: type=registry,ref=ghcr.io/bastolen/adiutor:buildcache,mode=max,image-manifest=true,oci-mediatypes=true
           provenance: mode=max
           sbom: true
