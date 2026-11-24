@@ -5,8 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { getPermissions, type Permission } from '../authz/permissions';
-import type { CompanyRole, PlatformRole } from '../authz/roles';
+import permissionsOf from '../../../tests/permissions';
 import {
   ACTIVITY_GROUPS,
   activityKinds,
@@ -20,20 +19,6 @@ import {
   withActivityGroup,
 } from './activity';
 import { REQUEST_ENTRY_KINDS } from './values';
-
-/**
- * The permissions of someone in an active company.
- *
- * @param platformRole - Their staff role, or `null`.
- * @param companyRole - Their role in the company, or `null` when they aren't a member.
- * @returns The permissions.
- */
-function permissionsOf(
-  platformRole: PlatformRole | null,
-  companyRole: CompanyRole | null,
-): Set<Permission> {
-  return getPermissions({ platformRole, companyRole, company: { deactivated: false } });
-}
 
 /** A staff member who works on requests. */
 const support = permissionsOf('support', null);
