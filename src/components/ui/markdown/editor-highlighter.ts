@@ -73,14 +73,22 @@ export const editorHighlighter = {
 /**
  * Loads the languages, once for the page.
  *
+ * A download that fails isn't kept: the next call tries again.
+ *
  * @returns A promise that settles when code can be coloured and languages named.
  */
 export function loadCodeLanguages(): Promise<void> {
-  loading ??= import('./languages').then((languages) => {
-    lowlight.register(languages.CODE_LANGUAGES);
-    known = { choices: languages.CODE_LANGUAGE_CHOICES, nameOf: languages.codeLanguageName };
-    listeners.forEach((listener) => listener());
-  });
+  loading ??= import('./languages').then(
+    (languages) => {
+      lowlight.register(languages.CODE_LANGUAGES);
+      known = { choices: languages.CODE_LANGUAGE_CHOICES, nameOf: languages.codeLanguageName };
+      listeners.forEach((listener) => listener());
+    },
+    (error: unknown) => {
+      loading = null;
+      throw error;
+    },
+  );
   return loading;
 }
 

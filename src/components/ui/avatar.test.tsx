@@ -27,6 +27,13 @@ describe('initialsOf', () => {
     expect(initialsOf('a.b')).toBe('AB');
   });
 
+  it('never cuts a character in half', () => {
+    expect(initialsOf('𝒜da 𝒝ob')).toBe('𝒜𝒝');
+    expect(initialsOf('😀smile')).toBe('😀S');
+    expect(initialsOf('Éva')).toBe('ÉV');
+    expect(initialsOf('e\u0301va')).toBe('ÉV');
+  });
+
   it('gives a question mark when there is nothing to take letters from', () => {
     expect(initialsOf('')).toBe('?');
     expect(initialsOf('   ')).toBe('?');

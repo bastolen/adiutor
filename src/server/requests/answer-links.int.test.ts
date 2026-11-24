@@ -9,7 +9,7 @@
 import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { membership, request, requestAnswerLink, user } from '@/db/schema';
+import { company as companyTable, membership, request, requestAnswerLink, user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 
 import {
@@ -209,6 +209,34 @@ describe('an answer link', () => {
       state: 'unavailable',
     });
     expect(await statusOf(raised.id)).toBe('proposed');
+  });
+
+  it('shows its page as unavailable once its person left the company', async () => {
+    const { token, client, company } = await aLinkToAnswer();
+    await db
+      .delete(membership)
+      .where(and(eq(membership.userId, client.id), eq(membership.companyId, company.id)));
+
+    await expect(readAnswerLink(ctx, token)).resolves.toMatchObject({ state: 'unavailable' });
+  });
+
+  it('shows its page as unavailable for a Watcher, and once the company is deactivated', async () => {
+    const { raised, company, proposalEntryId, token } = await aLinkToAnswer();
+    const watcher = await memberActor(db, company.id, 'watcher', 'wim@adiutor.test');
+    const watcherToken = await createAnswerLink(db, {
+      requestId: raised.id,
+      userId: watcher.id,
+      proposalEntryId,
+    });
+
+    await expect(readAnswerLink(ctx, watcherToken)).resolves.toMatchObject({
+      state: 'unavailable',
+    });
+    await db
+      .update(companyTable)
+      .set({ deactivatedAt: new Date() })
+      .where(eq(companyTable.id, company.id));
+    await expect(readAnswerLink(ctx, token)).resolves.toMatchObject({ state: 'unavailable' });
   });
 
   it('is unknown when there’s no such link, which counts against the visitor', async () => {

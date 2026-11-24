@@ -11,14 +11,15 @@ import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 
 import type { DatabaseOrTransaction } from '@/db';
 import { request, requestAnswerLink } from '@/db/schema';
-import { formatRequestNumber, type SolutionAnswer } from '@/lib/requests';
+import { formatRequestNumber, mayAnswerSolution, type SolutionAnswer } from '@/lib/requests';
 import { generateToken, hashToken } from '@/lib/sign-in/tokens';
 
-import { loadActor } from '../actor';
+import { type Actor, loadActor } from '../actor';
 import type { ServiceContext } from '../context';
 import { ServiceError } from '../errors';
 import getRequestPrefix from '../people/request-prefix';
 import { assertRateLimit, ipRateLimitKey, RATE_LIMITS } from '../rate-limit';
+import { getRequestAccess } from './access';
 import currentProposalEntryId from './proposals';
 import answerSolution from './solutions';
 
@@ -123,6 +124,33 @@ async function noteMiss(ctx: ServiceContext): Promise<void> {
 }
 
 /**
+ * Whether a link's person may answer its request now, by the rules
+ * `answerSolution` applies: they still see the request, its company isn't
+ * deactivated and they take part in it as a client (not a Watcher or staff).
+ *
+ * @param ctx - Service context.
+ * @param person - The link's person.
+ * @param found - The link's row.
+ * @param found.requestId - The request.
+ * @returns Whether they may.
+ */
+async function mayStillAnswer(
+  ctx: ServiceContext,
+  person: Actor,
+  found: { requestId: string },
+): Promise<boolean> {
+  try {
+    const { company, permissions } = await getRequestAccess(ctx.db, person, found.requestId);
+    return company.deactivatedAt === null && mayAnswerSolution(permissions, 'proposed');
+  } catch (error) {
+    if (error instanceof ServiceError) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+/**
  * Reads what an answer link is, for its page, without using it. A link that
  * doesn't exist counts against the visitor's limit of misses.
  *
@@ -154,7 +182,7 @@ export async function readAnswerLink(ctx: ServiceContext, token: string): Promis
     return { state: 'overtaken', ...named };
   }
   const person = await loadActor(ctx.db, found.userId);
-  if (!person || person.deactivatedAt !== null) {
+  if (!person || person.deactivatedAt !== null || !(await mayStillAnswer(ctx, person, found))) {
     return { state: 'unavailable', ...named };
   }
   return { state: 'usable', ...named };

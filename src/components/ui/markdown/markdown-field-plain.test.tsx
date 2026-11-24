@@ -3,8 +3,8 @@
  * stays the plain text field it started as. (In unit tests the editor never
  * loads, see `vitest.setup.ts`.)
  */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 
 import MarkdownField from './markdown-field';
 
@@ -18,9 +18,8 @@ describe('MarkdownField, when the editor can’t be loaded', () => {
     const field = screen.getByRole('textbox', { name: 'Your reply' });
 
     fireEvent.change(field, { target: { value: 'Still **Markdown**.' } });
-    // Give the failed load its moment: nothing changes.
-    await waitFor(() => expect(field).toBeInTheDocument());
-    await Promise.resolve();
+    // Wait for the editor's import to fail: nothing changes.
+    await vi.dynamicImportSettled();
 
     expect(screen.getByRole('textbox', { name: 'Your reply' }).tagName).toBe('TEXTAREA');
     const form = container.querySelector('form') as HTMLFormElement;
