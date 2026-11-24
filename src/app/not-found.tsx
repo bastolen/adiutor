@@ -15,10 +15,8 @@ import notFoundMetadata from '@/lib/not-found-metadata';
 import { getOptionalActor } from '@/server/authz';
 
 /**
- * Page metadata: the title pages the user may not see give them too.
- */
-/**
- * The page's title: "Not found · Adiutor", in the request's language.
+ * The page's title: "Not found · Adiutor", in the request's language, the same
+ * title pages the user may not see give them.
  *
  * @returns The metadata.
  */
