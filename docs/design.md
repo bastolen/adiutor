@@ -164,7 +164,7 @@ keyboard support.
   on the left, the button on the right). Destructive settings that can't be undone, like deleting or
   deactivating an account, get their own `Card` with `tone="danger"`.
 - **Ids stay unique across pages kept alive:** components that make ids with `useId` (`Card`,
-  `TextField`, `TextareaField`, `CheckboxField`, `RadioField`) are client components. In a
+  `TextField`, `TextAreaField`, `CheckboxField`, `RadioField`) are client components. In a
   server component `useId` starts again in every request, so a page kept alive and the tab
   loaded next would share ids, and a label or a card's name would point at the wrong element.
   A new component that calls `useId` gets `'use client'` too.

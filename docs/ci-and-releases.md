@@ -173,7 +173,7 @@ was checked and can't be reached from the app is listed under `auditConfig.ignor
 ## Pinned actions
 
 Every action is pinned to a full commit SHA with its version in a comment
-(`uses: actions/checkout@<commit SHA> # vX.Y.Z`), and the PostgreSQL image to its digest, so a moved
+(`uses: actions/checkout@<commit SHA> # vX.Y.Z`), and the container images (the Dockerfile's base image and the PostgreSQL image) to their digests, so a moved
 or hijacked tag can't change what runs. Pin new actions the same way, also inside the local actions
 in `.github/actions/`, which Dependabot updates along with the workflows.
 
@@ -277,7 +277,7 @@ package's settings → Change visibility).
 Weekly on Monday morning, a few days after a release at the earliest:
 
 - Renovate (`renovate.json5`, needs the Renovate GitHub app installed on the repository) updates
-  the npm packages, the container images (in the workflows and `compose.yaml`), `.nvmrc` and the
+  the npm packages, the container images (in the workflows, `compose.yaml` and the `Dockerfile`), `.nvmrc` and the
   pnpm version in `packageManager`. It uses pnpm like local development: the lockfile, that pnpm
   version and the settings in `pnpm-workspace.yaml`.
 - Renovate waits 3 days after a release before proposing it (`minimumReleaseAge`), in case the
