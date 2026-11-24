@@ -9,27 +9,13 @@
  * that way, or is shown as it was written, a rule that reads no Markdown
  * keeps only their labels (`staffLinksAsLabels` in `./staff-link-labels.ts`).
  */
-import { HIDDEN_CHARACTER } from '../character-rules';
+import { HIDDEN_CHARACTER, withoutControlCharacters } from '../character-rules';
 
 /** Every way a line can end, including the Unicode line and paragraph separators. */
 const LINE_BREAKS = /\r\n|[\r\u{2028}\u{2029}]/gu;
 
 /** Every character that hides or reorders text ({@link HIDDEN_CHARACTER}), to remove them all. */
 const HIDDEN_CHARACTERS = new RegExp(HIDDEN_CHARACTER.source, 'gu');
-
-/**
- * Whether a character is a control character that text doesn't need: every
- * C0 and C1 control except the line break and the tab.
- *
- * @param code - The character's code.
- * @returns Whether to drop it.
- */
-function isUnwantedControl(code: number): boolean {
-  if (code === 0x09 || code === 0x0a) {
-    return false;
-  }
-  return code <= 0x1f || (code >= 0x7f && code <= 0x9f);
-}
 
 /**
  * Cleans a text of several lines, as a form sent it: every line ending
@@ -43,13 +29,8 @@ function isUnwantedControl(code: number): boolean {
  */
 export function cleanMultilineText(value: string): string {
   const text = value.replace(LINE_BREAKS, '\n').replace(HIDDEN_CHARACTERS, '');
-  let cleaned = '';
-  for (let i = 0; i < text.length; i += 1) {
-    if (!isUnwantedControl(text.charCodeAt(i))) {
-      cleaned += text.charAt(i);
-    }
-  }
-  return cleaned.trim();
+  // Every C0 and C1 control but the tab and the line break.
+  return withoutControlCharacters(text, '', '\t\n').trim();
 }
 
 /** A piece of a text: plain text, or a web address to show as a link. */
