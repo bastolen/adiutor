@@ -225,8 +225,6 @@ export async function loadActor(
   const sessionMfa = sessionMfaOf(session);
   return {
     ...found,
-    // On unless turned off (a row from before the setting existed counts as on).
-    allowStaffSignIn: found.allowStaffSignIn !== false,
     // Only a zone the runtime still knows (one can be renamed or dropped from its data).
     timeZone: isTimeZone(found.timeZone) ? found.timeZone : null,
     platformRole,

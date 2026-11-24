@@ -15,8 +15,7 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 
 /**
- * Whether the user gets emails about requests, for the account's card. A row
- * from before the setting existed (`null`) counts as on.
+ * Whether the user gets emails about requests, for the account's card.
  *
  * @param ctx - Service context.
  * @param actor - The signed-in user.

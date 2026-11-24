@@ -171,7 +171,7 @@ export async function startImpersonation(
         platformRole: target.platformRole ?? null,
         companyRoles: companyRoles.map((row) => row.role),
         deactivated: target.deactivatedAt !== null,
-        allowsStaffSignIn: target.allowStaffSignIn !== false,
+        allowsStaffSignIn: target.allowStaffSignIn,
       },
     );
     if (verdict !== 'allowed') {
@@ -249,7 +249,7 @@ export async function impersonationVerdictFor(
       platformRole: target.platformRole ?? null,
       companyRoles: companyRoles.map((row) => row.role),
       deactivated: target.deactivatedAt !== null,
-      allowsStaffSignIn: target.allowStaffSignIn !== false,
+      allowsStaffSignIn: target.allowStaffSignIn,
     },
   );
 }
@@ -474,11 +474,8 @@ export async function setStaffSignInAllowed(
       .where(
         and(
           eq(user.id, actor.id),
-          // Only when it changes, so choosing the same again records nothing. A row from before the
-          // setting existed (`null`) counts as on.
-          allowed
-            ? eq(user.allowStaffSignIn, false)
-            : or(isNull(user.allowStaffSignIn), eq(user.allowStaffSignIn, true)),
+          // Only when it changes, so choosing the same again records nothing.
+          eq(user.allowStaffSignIn, !allowed),
         ),
       )
       .returning({ id: user.id });

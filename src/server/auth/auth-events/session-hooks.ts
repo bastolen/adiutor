@@ -202,11 +202,7 @@ export async function beforeSessionCreate(
   const mfa = method ? await loadMfaContext(db, data.userId) : null;
   const mfaRole = mfa?.mfaRole ?? null;
   const previousVerified =
-    previous !== undefined &&
-    isSessionMfaVerified(
-      { mfaVerified: previous.mfaVerified ?? false, mfaMethod: previous.mfaMethod ?? null },
-      mfaRole,
-    );
+    previous !== undefined && isSessionMfaVerified(sessionMfaOf(previous), mfaRole);
   if (method && previous && !previousVerified) {
     const hadMfa =
       mfa !== null &&

@@ -47,11 +47,9 @@ export interface UserSession {
 }
 
 /** A session row as stored, before it's judged against the MFA rules (see {@link asSeenWith}). */
-export type StoredSession = Omit<UserSession, 'mfaVerified' | 'fromRequestLink'> & {
+export type StoredSession = Omit<UserSession, 'mfaVerified'> & {
   /** Whether a second step was recorded for it. */
-  mfaVerified: boolean | null;
-  /** Whether the link in an email about a request signed it in, if recorded. */
-  fromRequestLink: boolean | null;
+  mfaVerified: boolean;
   /** How that second step was taken, if recorded. */
   mfaMethod: string | null;
 };
@@ -112,11 +110,7 @@ export function asSeenWith(
     ...rows,
     items: rows.items.map(({ mfaMethod, ...row }) => ({
       ...row,
-      fromRequestLink: row.fromRequestLink ?? false,
-      mfaVerified: isSessionMfaVerified(
-        { mfaVerified: row.mfaVerified ?? false, mfaMethod },
-        mfaRole,
-      ),
+      mfaVerified: isSessionMfaVerified({ mfaVerified: row.mfaVerified, mfaMethod }, mfaRole),
     })),
   };
 }

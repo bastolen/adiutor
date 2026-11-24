@@ -238,7 +238,6 @@ export async function refreshProviderMfa(
   if (!found?.accessToken) {
     return null;
   }
-  const confirmed = found.confirmed !== false;
   let enabled: boolean | null = null;
   try {
     enabled = await PROVIDER_MFA_CHECKS[provider](found.accessToken);
@@ -247,10 +246,10 @@ export async function refreshProviderMfa(
     console.error(`Checking ${PROVIDER_LABELS[provider]} two-factor authentication failed`, error);
   }
   if (enabled === null) {
-    return { enabled: null, confirmed };
+    return { enabled: null, confirmed: found.confirmed };
   }
   await db.update(account).set({ mfaVerified: enabled }).where(eq(account.id, found.id));
-  return { enabled, confirmed };
+  return { enabled, confirmed: found.confirmed };
 }
 
 /**
@@ -321,14 +320,7 @@ async function withConfirmation<T extends { userId: string; providerId: string }
     return data;
   }
   const confirmedRecently =
-    current !== null &&
-    isMfaConfirmedRecently(
-      mfaConfirmedUntil(
-        { ...current, mfaVerified: current.mfaVerified ?? false },
-        mfa.mfaRole,
-        mfa.state,
-      ),
-    );
+    current !== null && isMfaConfirmedRecently(mfaConfirmedUntil(current, mfa.mfaRole, mfa.state));
   // Nor when counting it would take away the MFA the user's role requires (`wouldRemoveRequiredMfa`).
   const keepsMfa = !wouldRemoveRequiredMfa(
     mfa.state,

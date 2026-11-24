@@ -141,17 +141,15 @@ export async function listConnectedProviders(
     .from(account)
     .where(and(eq(account.userId, userId), inArray(account.providerId, [...OAUTH_PROVIDERS])))
     .orderBy(asc(account.createdAt));
-  return rows.map(({ mfaVerified, accountName, ...row }) => ({
+  return rows.map((row) => ({
     ...row,
     provider: row.provider as OAuthProvider,
-    confirmed: row.confirmed !== false,
     // Cleaned again when shown, like when it was stored.
-    accountName: cleanAccountName(accountName),
+    accountName: cleanAccountName(row.accountName),
     givesMfa: givesMfa(
-      { providerId: row.provider, mfaVerified: mfaVerified === true },
+      { providerId: row.provider, mfaVerified: row.mfaVerified },
       availableProviders,
     ),
-    mfaVerified: mfaVerified === true,
   }));
 }
 
@@ -201,10 +199,7 @@ export async function confirmConnectedProvider(
     // every provider account has it).
     const mfa = await loadMfaContext(ctx.db, actor.id);
     // Judged with its own provider and MFA, as the Security page judges it (`mfaDowngradeBlocks`).
-    const change = confirmProviderChange({
-      providerId: found.providerId,
-      mfaVerified: found.mfaVerified === true,
-    });
+    const change = confirmProviderChange(found);
     if (mfa && wouldRemoveRequiredMfa(mfa.state, mfa.mfaRole, change, availableProviders)) {
       throw new ServiceError('forbidden', 'errors.signIn.mfaRequiredForRole');
     }

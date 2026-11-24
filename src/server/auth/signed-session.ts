@@ -51,13 +51,13 @@ export interface SignedSession {
   /** Its user. */
   userId: string;
   /** Whether its sign-in, or a later step-up, had a second factor. */
-  mfaVerified: boolean | null;
+  mfaVerified: boolean;
   /** Which second factor, if known. */
   mfaMethod: string | null;
   /** When it was proven, if known. */
   mfaVerifiedAt: Date | null;
   /** Whether the link in an email about a request started it (decision 0036). */
-  fromRequestLink: boolean | null;
+  fromRequestLink: boolean;
 }
 
 /**

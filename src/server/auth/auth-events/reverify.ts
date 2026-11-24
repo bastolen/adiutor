@@ -117,7 +117,7 @@ export async function checkReverify(
     sessionLive: await hasReverifySession(ctx, marker),
     connected: info.source.action === 'sign-in',
     ownAccount: info.user.id === marker.userId && own !== undefined,
-    confirmed: own !== undefined && own.confirmed !== false,
+    confirmed: own?.confirmed === true,
   });
   if (allowed) {
     return undefined;

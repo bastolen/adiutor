@@ -5,7 +5,7 @@
  * them (their staff role, or Admin of an active company), in a fixed number of
  * queries for any number of users.
  */
-import { and, count, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, count, eq, inArray, isNull } from 'drizzle-orm';
 
 import type { Database, DatabaseOrTransaction } from '@/db';
 import { account, company, membership, passkey, twoFactor, user } from '@/db/schema';
@@ -76,12 +76,8 @@ async function loadSetup(db: Database, userIds: readonly string[]): Promise<Load
           hasPassword: own.some((row) => row.providerId === 'credential' && Boolean(row.password)),
           // A provider account connected at sign-in and not confirmed yet doesn't count either way.
           providerAccounts: own
-            .filter((row) => row.providerId !== 'credential' && row.confirmed !== false)
-            .map((row) => ({
-              id: row.id,
-              providerId: row.providerId,
-              mfaVerified: row.mfaVerified ?? false,
-            })),
+            .filter((row) => row.providerId !== 'credential' && row.confirmed)
+            .map(({ id, providerId, mfaVerified }) => ({ id, providerId, mfaVerified })),
         },
       ];
     }),
@@ -112,8 +108,8 @@ export async function loadMfaStates(
 /**
  * Finds the active (not deactivated) users with a counting, MFA-verified
  * account at one of these providers. A provider account counts unless it was
- * connected at sign-in and isn't confirmed yet (`confirmed IS DISTINCT FROM
- * false`, the rule {@link loadMfaStates} applies).
+ * connected at sign-in and isn't confirmed yet (`account.confirmed`, the rule
+ * {@link loadMfaStates} applies).
  *
  * @param db - Database client.
  * @param providers - The providers' IDs, e.g. `['github']`.
@@ -134,7 +130,7 @@ export async function loadUsersWithProviderMfa(
       and(
         inArray(account.providerId, [...providers]),
         eq(account.mfaVerified, true),
-        sql`${account.confirmed} is distinct from false`,
+        eq(account.confirmed, true),
         isNull(user.deactivatedAt),
       ),
     );
