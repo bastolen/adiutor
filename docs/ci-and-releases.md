@@ -248,14 +248,14 @@ Weekly on Monday morning, a few days after a release at the earliest:
   forever. Digest pull requests still wait: Renovate opens or updates them only 3 days after Docker
   Hub pushed the image. If the check stays pending on another kind of update, Renovate's job log
   (developer.mend.io) says why.
-- Renovate's pull requests come in groups: all minor and patch updates together (Next.js and React
-  included), and the major updates of Next.js, React and their types together.
-- Major updates wait for approval: Renovate lists them under "Pending Approval" in the Dependency
-  Dashboard issue and opens the pull request once you tick its box. A major often waits on the
-  tools around it (typescript-eslint for TypeScript, plugins for ESLint), and an open pull request
-  that can't pass yet runs CI again every time a merge changes the lockfile. Security fixes don't
-  wait. Closing a pull request makes Renovate skip that version; the dashboard lists it with a box
-  to open it again.
+- Renovate's pull requests come in groups: all other minor and patch updates together, and
+  Next.js, React and their types together, in a pull request of their own for every kind of
+  update (decision 0042).
+- Each other major update arrives in a pull request of its own. A major often waits on the tools
+  around it (typescript-eslint for TypeScript, plugins for ESLint): its pull request stays open,
+  and runs CI again on each update, until they're ready. Closing a pull request makes Renovate
+  skip that version; the Dependency Dashboard issue lists every update, with a box to open a closed
+  one again or to retry one.
 - Dependabot (`.github/dependabot.yml`, built into GitHub) updates the GitHub Actions, SHA and
   version comment together, in one pull request. Leave the repository's "Dependabot security
   updates" off, or it opens npm pull requests next to Renovate's.

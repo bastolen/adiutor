@@ -22,8 +22,11 @@ standard runners cost a public repository nothing.
 - **The Docker image's arm64 half builds on GitHub's Arm runner**, also free here, instead of
   under emulation (`.github/workflows/docker.yml`, see
   [Docker image](../ci-and-releases.md#docker-image)).
-- **Kept from 0015:** Renovate's majors wait for approval, and edits that leave a pull request's
-  title alone skip the title check. They spare pull requests runs that can't pass or check nothing.
+- **Renovate opens its majors itself**, without waiting for a tick in the Dependency Dashboard, and
+  Next.js and React get a pull request of their own again for every kind of update
+  (`renovate.json5`). Both rules of 0015 only saved runs.
+- **Kept from 0015:** edits that leave a pull request's title alone skip the title check. They check
+  nothing, so skipping them loses nothing.
 
 ## Consequences
 
