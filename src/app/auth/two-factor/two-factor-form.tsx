@@ -19,7 +19,7 @@ import TextLink from '@/components/ui/text-link';
 import { usePageRestored } from '@/components/ui/use-page-restored';
 import { useOncePerVisit, useTransientState } from '@/components/ui/use-transient-state';
 import { EMAIL_CODE_MINUTES } from '@/lib/authz/mfa';
-import { getSafeRedirectPath } from '@/lib/redirect';
+import { getSafeRedirectPath, signInPath } from '@/lib/redirect';
 import authClient from '@/lib/sign-in/auth-client';
 import { authCodeText, authErrorText } from '@/lib/sign-in/auth-error-messages';
 import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
@@ -176,7 +176,7 @@ export default function TwoFactorForm() {
       </Alert>
       {expired && (
         <Button asChild variant="secondary">
-          <TextLink standalone href={`/auth?callbackURL=${encodeURIComponent(callbackURL)}`}>
+          <TextLink standalone href={signInPath(callbackURL)}>
             {t('actions.startAgain')}
           </TextLink>
         </Button>

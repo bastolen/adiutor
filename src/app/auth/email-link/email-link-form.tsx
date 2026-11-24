@@ -9,23 +9,22 @@ import { MailCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useSyncExternalStore } from 'react';
 
-import AccountSummary, { accountLabel, type NamedAccount } from '@/components/auth/account-summary';
+import AccountSummary, {
+  accountLabel,
+  type NamedAccount,
+  sameName,
+  type SignedInAccount,
+} from '@/components/auth/account-summary';
 import Alert from '@/components/ui/alert';
 import AuthHeading from '@/components/ui/auth-heading';
 import Button from '@/components/ui/button';
 import IconTile from '@/components/ui/icon-tile';
 import { usePageRestored } from '@/components/ui/use-page-restored';
 import { useTransientState } from '@/components/ui/use-transient-state';
-import { getSafeRedirectPath } from '@/lib/redirect';
+import useInBrowser from '@/lib/in-browser';
+import { getSafeRedirectPath, signInPath } from '@/lib/redirect';
 import { MAGIC_LINK_VERIFY_PATH } from '@/lib/sign-in/email-link';
-
-/** Whoever is signed in in this browser, as the page names them. */
-export interface SignedInAccount extends NamedAccount {
-  /** Whether it's the account the link signs in to. */
-  same: boolean;
-}
 
 /**
  * Props for {@link EmailLinkForm}.
@@ -35,27 +34,6 @@ interface EmailLinkFormProps {
   account: NamedAccount;
   /** Whoever is signed in in this browser, or `null`. */
   signedIn: SignedInAccount | null;
-}
-
-/**
- * Nothing to subscribe to: whether the page runs in the browser never
- * changes after hydration.
- *
- * @returns A no-op unsubscribe function.
- */
-const noSubscription = () => () => {};
-
-/**
- * Checks whether two accounts have the same name (anyone can give themselves
- * someone else's), ignoring case and surrounding spaces.
- *
- * @param first - One account.
- * @param second - The other.
- * @returns Whether both have a name, and it's the same.
- */
-function sameName(first: NamedAccount, second: NamedAccount): boolean {
-  const name = first.name.trim().toLowerCase();
-  return name !== '' && name === second.name.trim().toLowerCase();
 }
 
 /**
@@ -85,16 +63,12 @@ export default function EmailLinkForm({ account, signedIn }: EmailLinkFormProps)
   const t = useTranslations('auth');
   const searchParams = useSearchParams();
   const [pending, setPending] = useTransientState(false);
-  const inBrowser = useSyncExternalStore(
-    noSubscription,
-    () => true,
-    () => false,
-  );
+  const inBrowser = useInBrowser();
   const token = searchParams.get('token') ?? '';
   const callbackURL = getSafeRedirectPath(searchParams.get('callbackURL'));
   const errorCallbackURL = searchParams.get('errorCallbackURL');
   const newUserCallbackURL = searchParams.get('newUserCallbackURL');
-  let errorPage = `/auth?callbackURL=${encodeURIComponent(callbackURL)}`;
+  let errorPage = signInPath(callbackURL);
   if (signedIn && !signedIn.same) {
     // The sign-in page would send the browser on to the account that's still signed in.
     errorPage = `/auth/email-link?${new URLSearchParams({ token, callbackURL })}`;

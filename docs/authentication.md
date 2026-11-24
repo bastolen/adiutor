@@ -198,7 +198,8 @@ lowercase letters, digits and hyphens, starting with a letter, at most 64 charac
   fragment included, still send the user to the dashboard.
 - `isSafeAppRedirect` refuses such fragments at Better Auth's endpoints.
 - The return address is always encoded inside `callbackURL` (`%23`), so its query and anchor
-  stay together.
+  stay together: the sign-in page's address is built in one place, `signInPath` in
+  `src/lib/redirect.ts`.
 - Better Auth puts what it adds (`error=…`, `token=…`) in the query, before the anchor, with
   `URL` or `appendQueryParams`.
 

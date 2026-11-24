@@ -22,7 +22,8 @@ import TextField from '@/components/ui/text-field';
 import TextLink from '@/components/ui/text-link';
 import { usePageRestored } from '@/components/ui/use-page-restored';
 import { useTransientState } from '@/components/ui/use-transient-state';
-import { getSafeRedirectPath, sectionFromHash, withSection } from '@/lib/redirect';
+import { noSubscription } from '@/lib/in-browser';
+import { getSafeRedirectPath, sectionFromHash, signInPath, withSection } from '@/lib/redirect';
 import authClient from '@/lib/sign-in/auth-client';
 import {
   authErrorText,
@@ -50,16 +51,10 @@ type SignInAction = 'passkey' | 'form' | OAuthProvider;
 const lastUsedName: Record<Method, string> = { password: 'email', 'magic-link': 'magic-link' };
 
 /**
- * Nothing to subscribe to: the cookie only changes when signing in, which
- * leaves the page.
- *
- * @returns A no-op unsubscribe function.
- */
-const noSubscription = () => () => {};
-
-/**
  * Reads the method of the last sign-in in this browser from Better Auth's
- * cookie, after hydration (the server never knows it).
+ * cookie, after hydration (the server never knows it). The cookie only
+ * changes when signing in, which leaves the page, so there's nothing to
+ * subscribe to.
  *
  * @returns `email` (password), `magic-link`, `passkey`, a provider ID (e.g. `github`), or `null`.
  */
@@ -149,7 +144,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
    * @param target - Where to go after signing in.
    * @returns The sign-in page's address.
    */
-  const errorPageFor = (target: string) => `/auth?callbackURL=${encodeURIComponent(target)}`;
+  const errorPageFor = (target: string) => signInPath(target);
 
   const [method, setMethod] = useTransientState<Method>('password');
   const [email, setEmail] = useTransientState('');

@@ -6,6 +6,9 @@
  * redirect would call with the browser's cookies (e.g. a second
  * `/api/auth/magic-link/verify` that signs the browser in to another account).
  *
+ * The sign-in page's own address with such a target is built in one place
+ * ({@link signInPath}).
+ *
  * A target may end in the anchor of a section of its page (`#invitations`,
  * the `id` of a `Card`), so whoever comes back lands on the card where they
  * clicked. Only section IDs count ({@link isSectionId}): other fragments are
@@ -168,6 +171,25 @@ export function isSafeAppRedirect(value: unknown): value is string {
   return url !== null && (url.hash === '' || sectionHash(url) !== '');
 }
 
+/** The sign-in page. */
+const SIGN_IN_PAGE = '/auth';
+
+/**
+ * Builds the sign-in page's address that goes on to a page afterwards, with
+ * that page encoded, so it can't break out of its parameter. The sign-in
+ * page itself only goes on to a safe page ({@link signedInPath}).
+ *
+ * @param callbackURL - Where to go after signing in, e.g. `/requests/142?entry=…`.
+ * @param options - Options.
+ * @param options.notice - A note for the sign-in page to show (`?notice=<code>`, before
+ *   `callbackURL`), e.g. `joined-mfa-required`.
+ * @returns The address, e.g. `/auth?callbackURL=%2Frequests%2F142`.
+ */
+export function signInPath(callbackURL: string, { notice }: { notice?: string } = {}): string {
+  const noticeParam = notice ? `notice=${encodeURIComponent(notice)}&` : '';
+  return `${SIGN_IN_PAGE}?${noticeParam}callbackURL=${encodeURIComponent(callbackURL)}`;
+}
+
 /**
  * Returns where to send someone who opens the sign-in page while signed in:
  * the requested page when it's safe ({@link getSafeRedirectPath}), but never
@@ -180,5 +202,7 @@ export function isSafeAppRedirect(value: unknown): value is string {
 export function signedInPath(value: string | null | undefined): string {
   const path = getSafeRedirectPath(value);
   const { pathname } = new URL(path, BASE);
-  return pathname === '/auth' || pathname === '/auth/' ? DEFAULT_SIGNED_IN_PATH : path;
+  return pathname === SIGN_IN_PAGE || pathname === `${SIGN_IN_PAGE}/`
+    ? DEFAULT_SIGNED_IN_PATH
+    : path;
 }

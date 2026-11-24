@@ -11,7 +11,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import UnusableLink from '@/components/auth/unusable-link';
 import Alert from '@/components/ui/alert';
 import Button from '@/components/ui/button';
-import { getSafeRedirectPath } from '@/lib/redirect';
+import { getSafeRedirectPath, signInPath } from '@/lib/redirect';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import { type AuthTranslator, knownAuthErrorText } from '@/lib/sign-in/auth-error-messages';
 import { EMAIL_LINK_MINUTES } from '@/lib/sign-in/email-link';
@@ -73,9 +73,7 @@ export default async function EmailLinkStep({
   const [params, t] = await Promise.all([searchParams, getTranslations('auth')]);
   const token = searchParam(params.token);
   // A new link asked for from there goes to the same page as this one would have.
-  const signInHref = `/auth?callbackURL=${encodeURIComponent(
-    getSafeRedirectPath(searchParam(params.callbackURL)),
-  )}`;
+  const signInHref = signInPath(getSafeRedirectPath(searchParam(params.callbackURL)));
   if (!token) {
     return <LinkProblem message={t('emailLink.incomplete')} signInHref={signInHref} />;
   }

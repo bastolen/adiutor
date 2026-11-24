@@ -1,7 +1,8 @@
 /**
  * @file The account a sign-in link from an email signs in to, as its
  * confirmation page shows it (`/auth/email-link`, `/auth/request-link`): its
- * avatar, name and email address.
+ * avatar, name and email address, and whoever is signed in in that browser
+ * instead, as the page names them.
  */
 import Avatar from '@/components/ui/avatar';
 import displayName from '@/lib/display-name';
@@ -12,6 +13,26 @@ export interface NamedAccount {
   name: string;
   /** Its email address, in full (the part that tells accounts apart: names can be copied). */
   email: string;
+}
+
+/** Whoever is signed in in this browser, as a sign-in link's confirmation page names them. */
+export interface SignedInAccount extends NamedAccount {
+  /** Whether it's the account the link signs in to. */
+  same: boolean;
+}
+
+/**
+ * Checks whether two accounts have the same name (anyone can give themselves
+ * someone else's), ignoring case and surrounding spaces, so the page can
+ * point out that only the address tells them apart.
+ *
+ * @param first - One account.
+ * @param second - The other.
+ * @returns Whether both have a name, and it's the same.
+ */
+export function sameName(first: NamedAccount, second: NamedAccount): boolean {
+  const name = first.name.trim().toLowerCase();
+  return name !== '' && name === second.name.trim().toLowerCase();
 }
 
 /**

@@ -7,10 +7,11 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { SignedInAccount } from '@/components/auth/account-summary';
 import { defined } from '@/lib/defined';
 
 import renderInLocale from '../../../../tests/i18n/render';
-import EmailLinkForm, { type SignedInAccount } from './email-link-form';
+import EmailLinkForm from './email-link-form';
 
 /** The account the test link signs in to. */
 const JANE = { name: 'Jane Tester', email: 'jane@adiutor.test' };

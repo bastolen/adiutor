@@ -9,6 +9,7 @@ import { getTranslations } from 'next-intl/server';
 
 import type { ActionResult } from '@/lib/action-result';
 import field from '@/lib/form-data';
+import { signInPath } from '@/lib/redirect';
 import { emailSchema } from '@/lib/validation';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
@@ -60,8 +61,7 @@ export async function joinAction(
     if (result.status === 'joined' && result.signedOut) {
       // The new role requires MFA, and a link proves no inbox: this session ended.
       await markActingAsChanged();
-      const next = encodeURIComponent(joinedPath(result.companyId));
-      redirect(`/auth?notice=joined-mfa-required&callbackURL=${next}`);
+      redirect(signInPath(joinedPath(result.companyId), { notice: 'joined-mfa-required' }));
     }
     if (result.status === 'joined') {
       redirect(joinedPath(result.companyId));

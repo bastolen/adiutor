@@ -29,6 +29,7 @@ import { db as appDb, type DatabaseOrTransaction } from '@/db';
 import { company, membership, request, requestSignInLink, user } from '@/db/schema';
 import { getPermissions } from '@/lib/authz/permissions';
 import { appUrl } from '@/lib/env';
+import { signInPath } from '@/lib/redirect';
 import ipAddressOptions from '@/lib/request/ip-address-options';
 import isPersonsClick from '@/lib/request/persons-click';
 import { requestInfoFromHeaders } from '@/lib/request/request-info';
@@ -332,7 +333,7 @@ export async function followRequestLink(
     RATE_LIMITS.requestLinkSignInsPerLink,
   );
   if (!allowed) {
-    return { location: `/auth?${new URLSearchParams({ callbackURL: location })}`, fallback: page };
+    return { location: signInPath(location), fallback: page };
   }
   return { location, fallback: page, signIn: { userId: view.account.userId, linkId: view.linkId } };
 }
