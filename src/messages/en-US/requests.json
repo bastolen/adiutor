@@ -30,6 +30,7 @@
       "caption": "{status, select, active {{matching, select, yes {Active requests matching “{search}”} other {Active requests}}} waiting {{matching, select, yes {Requests that wait for the company matching “{search}”} other {Requests that wait for the company}}} closed {{matching, select, yes {Closed requests matching “{search}”} other {Closed requests}}} other {{matching, select, yes {All requests matching “{search}”} other {All requests}}}}",
       "columns": {
         "request": "Request",
+        "company": "Company",
         "status": "Status",
         "priority": "Priority",
         "activity": "Last activity",

@@ -782,7 +782,8 @@ says so with a "Show everything" button.
   width the status, the priority, the assignees and the last activity have columns of their own;
   a long status ("Waiting for the company"), a long row of avatars and the last activity wrap in
   their columns, as on the board, so the table fits a tablet. On a wide screen the list is as
-  wide as the board (`WidePage`), so they stop wrapping.
+  wide as the board (`WidePage`), so they stop wrapping, and from 1536px of screen the company has
+  a column of its own rather than a place under the title.
   `?only=<status>` shows the requests of one status instead of a link's group (`ONLY_STATUS_PARAM`;
   its own parameter, since `waiting` is both a group and a status): no status link is current
   then, and a line names the status in the reader's words, with a link back to every status.

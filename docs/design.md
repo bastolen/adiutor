@@ -75,7 +75,10 @@ keyboard support.
     menu does. It needs JavaScript, unlike the search and the status links.
   - **Widths:** no table scrolls sideways. The content area stops growing at 1280px (`xl`,
     `max-w-5xl` in the app layout), so a table gets no more columns past that, unless its page is
-    wide (`WidePage`, see "Layout" below). Columns that don't fit move under the name instead:
+    wide (`WidePage`, see "Layout" below): a wide page has its full 1200px from 1536px of screen
+    (`2xl`), where what sits under the name may get a column of its own (`hidden 2xl:table-cell`,
+    and `2xl:hidden` under the name). Only a table on a wide page gets `2xl:` columns. Columns
+    that don't fit move under the name instead:
     - **Activity:** people tables show when someone was last active and when they joined in
       one Activity column from 1280px, and under the name below that
       (`src/app/(app)/_people/activity.tsx`).
@@ -85,9 +88,10 @@ keyboard support.
       and the role from 768px in its own column.
     - **Companies:** the URL name always shows under the name, and the status and when it was
       added from 768px in their own columns, so on a phone the name keeps the room.
-    - **Requests:** the number, type and (across companies) company always show under the
-      title, and the status, priority, assignees and last activity from 768px in their own
-      columns. A long status ("Waiting for the company", `StatusBadge`'s `wrap`, as on the board)
+    - **Requests:** the number and type always show under the title, and the status, priority,
+      assignees and last activity from 768px in their own columns. Across companies, the company
+      shows under the title too, and in its own column from 1536px, where the page (a wide one)
+      has its full 1200px. A long status ("Waiting for the company", `StatusBadge`'s `wrap`, as on the board)
       and a long row of avatars (`PeopleAvatars`' `wrap`: side by side with a gap rather than
       overlapping, so the rows line up) wrap in their columns, and so do the
       Assigned to heading and the last activity ("59 minuten geleden") below 1280px, so the table

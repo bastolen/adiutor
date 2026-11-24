@@ -30,6 +30,7 @@
       "caption": "{status, select, active {{matching, select, yes {Solicitudes activas que coinciden con «{search}»} other {Solicitudes activas}}} waiting {{matching, select, yes {Solicitudes a la espera de la empresa que coinciden con «{search}»} other {Solicitudes a la espera de la empresa}}} closed {{matching, select, yes {Solicitudes cerradas que coinciden con «{search}»} other {Solicitudes cerradas}}} other {{matching, select, yes {Todas las solicitudes que coinciden con «{search}»} other {Todas las solicitudes}}}}",
       "columns": {
         "request": "Solicitud",
+        "company": "Empresa",
         "status": "Estado",
         "priority": "Prioridad",
         "activity": "Última actividad",

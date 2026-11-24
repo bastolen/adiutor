@@ -343,6 +343,57 @@ describe('a request list for the staff', () => {
     expect(status).toHaveClass('max-w-full');
   });
 
+  describe('across companies', () => {
+    beforeEach(() => {
+      vi.mocked(listRequestCompanies).mockResolvedValue([
+        { id: 'company', name: 'Adiutor Tests', slug: 'adiutor-tests', canRaise: true },
+        {
+          id: 'paging',
+          name: 'Adiutor Tests Paging',
+          slug: 'adiutor-tests-paging',
+          canRaise: true,
+        },
+      ]);
+      vi.mocked(listRequests).mockResolvedValue({
+        items: [itemOf('Shared', [])],
+        total: 1,
+        page: 1,
+        size: 25,
+      });
+    });
+
+    it('gives the company a column of its own on a wide page, and keeps it under the title until then', async () => {
+      await renderForStaff();
+
+      // From 1536px of screen, where a wide page has its full 1200px.
+      expect(screen.getByRole('columnheader', { name: 'Company' })).toHaveClass(
+        'hidden',
+        '2xl:table-cell',
+      );
+      const [row] = screen.getAllByRole('row').slice(1);
+      // Request, then Company.
+      const [request, company] = within(row ?? document.body).getAllByRole('cell');
+      expect(company).toHaveTextContent('Adiutor Tests');
+      expect(company).toHaveClass('hidden', '2xl:table-cell');
+      expect(within(request ?? document.body).getByText('Adiutor Tests')).toHaveClass('2xl:hidden');
+    });
+
+    it("names no company on one company's list", async () => {
+      render(
+        await RequestList({
+          path: '/companies/adiutor-tests',
+          searchParams: {},
+          actor: sam,
+          company: 'adiutor-tests',
+        }),
+      );
+
+      expect(screen.queryByRole('columnheader', { name: 'Company' })).not.toBeInTheDocument();
+      const [row] = screen.getAllByRole('row').slice(1);
+      expect(row).not.toHaveTextContent('Adiutor Tests');
+    });
+  });
+
   it('filters by Me, Not assigned or a staff member, with "anyone" first', async () => {
     await renderForStaff({ status: 'all', assignee: 'morgan' });
 

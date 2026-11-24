@@ -262,6 +262,9 @@ export default async function RequestList({
             <thead>
               <tr>
                 <Th aria-sort={table.ariaSort('raised')}>{t('columns.request')}</Th>
+                {/* Across companies, the company has a column of its own on a wide page, from the
+                    width at which it has its full 1200px; below that it's under the title. */}
+                {showsCompany && <Th className="hidden 2xl:table-cell">{t('columns.company')}</Th>}
                 {/* Below tablet width the status, priority and activity go under the title. */}
                 <Th className="hidden md:table-cell">{t('columns.status')}</Th>
                 {internal && (
@@ -310,8 +313,10 @@ export default async function RequestList({
                           <span>{request.typeName}</span>
                           {showsCompany && (
                             <>
-                              <span aria-hidden="true">·</span>
-                              <span>{request.company.name}</span>
+                              <span aria-hidden="true" className="2xl:hidden">
+                                ·
+                              </span>
+                              <span className="2xl:hidden">{request.company.name}</span>
                             </>
                           )}
                         </span>
@@ -333,6 +338,11 @@ export default async function RequestList({
                         </span>
                       </div>
                     </Td>
+                    {showsCompany && (
+                      <Td className="hidden wrap-anywhere text-muted-foreground 2xl:table-cell">
+                        {request.company.name}
+                      </Td>
+                    )}
                     <Td className="hidden md:table-cell">
                       <span className="flex flex-wrap items-center gap-2">{labels}</span>
                     </Td>
