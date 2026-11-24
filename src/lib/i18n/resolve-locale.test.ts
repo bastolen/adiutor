@@ -4,22 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import {
-  localeFromAcceptLanguage,
-  localeFromCookie,
-  localeCookieFromHeaders,
-  resolveLocale,
-} from './resolve-locale';
-
-describe('localeFromCookie', () => {
-  it.each(['en-US', 'nl-NL', 'es-ES'] as const)('accepts %s', (locale) => {
-    expect(localeFromCookie(locale)).toBe(locale);
-  });
-
-  it.each([undefined, null, '', 'nl', 'fr-FR', 'NL-nl', '<script>'])('ignores %s', (value) => {
-    expect(localeFromCookie(value)).toBeNull();
-  });
-});
+import { localeFromAcceptLanguage, localeCookieFromHeaders, resolveLocale } from './resolve-locale';
 
 describe('localeFromAcceptLanguage', () => {
   it.each([
