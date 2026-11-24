@@ -30,8 +30,6 @@ interface PopoverProps {
    * (a label over visible text would have to repeat that text).
    */
   triggerLabel: string;
-  /** Extra classes for the button. */
-  triggerClassName?: string;
   /** The panel's accessible name, e.g. "Subscribers". */
   label: string;
   /** What the panel shows. */
@@ -48,18 +46,11 @@ interface PopoverProps {
  * @param props - Popover props.
  * @param props.trigger - What the button shows.
  * @param props.triggerLabel - The button's name, for screen readers.
- * @param props.triggerClassName - Extra classes for the button.
  * @param props.label - The panel's accessible name.
  * @param props.children - What the panel shows.
  * @returns The button, and the panel while it's open.
  */
-export default function Popover({
-  trigger,
-  triggerLabel,
-  triggerClassName = '',
-  label,
-  children,
-}: PopoverProps) {
+export default function Popover({ trigger, triggerLabel, label, children }: PopoverProps) {
   const [open, setOpen] = useTransientState(false);
   return (
     <RadixPopover.Root open={open} onOpenChange={setOpen}>
@@ -69,7 +60,6 @@ export default function Popover({
           className={cn(
             'inline-flex max-w-full cursor-pointer rounded-lg hover:outline-2 hover:outline-offset-2 hover:outline-border-strong',
             focusRing,
-            triggerClassName,
           )}
         >
           <span className="sr-only">{triggerLabel}</span>

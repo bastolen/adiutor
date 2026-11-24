@@ -64,24 +64,6 @@ describe('SelectField with many options', () => {
     expect(searchField()).toHaveAttribute('placeholder', 'Type to search');
   });
 
-  it('takes its own threshold', async () => {
-    const user = userEvent.setup();
-    render(
-      <SelectField
-        label="Role"
-        options={[
-          { value: 'client', label: 'Client' },
-          { value: 'watcher', label: 'Watcher' },
-        ]}
-        defaultValue="client"
-        searchThreshold={1}
-      />,
-    );
-
-    await user.click(screen.getByRole('combobox', { name: 'Role' }));
-    expect(screen.getByRole('dialog', { name: 'Role' })).toBeInTheDocument();
-  });
-
   it('is a combobox named by its label that shows the chosen option and its help text', () => {
     render(
       <SelectField

@@ -15,19 +15,13 @@ vi.mock('@/lib/env', () => ({ appUrl: 'https://adiutor.dev' }));
  * Renders a Markdown text as a page would.
  *
  * @param text - The text.
- * @param props - Other props: the text's name and the level its headings start at.
+ * @param props - Other props: the text's name.
  * @param props.id - The text's name on the page.
- * @param props.headingLevel - The level of its highest heading.
  * @returns The rendered element.
  */
-function show(text: string, props: { id?: string; headingLevel?: number } = {}) {
+function show(text: string, props: { id?: string } = {}) {
   return render(
-    <MarkdownText
-      text={text}
-      id={props.id ?? 'text'}
-      headingLevel={props.headingLevel}
-      fallback={<p>shown as plain text</p>}
-    />,
+    <MarkdownText text={text} id={props.id ?? 'text'} fallback={<p>shown as plain text</p>} />,
   ).container;
 }
 
@@ -54,12 +48,6 @@ describe('MarkdownText: formatting', () => {
 
     expect(screen.getByRole('heading', { level: 3, name: 'Only a small heading' })).toBeVisible();
     expect(screen.getByRole('heading', { level: 3, name: 'Footnotes' })).toBeInTheDocument();
-  });
-
-  it('starts headings where the page says', () => {
-    show('# First', { headingLevel: 2 });
-
-    expect(screen.getByRole('heading', { level: 2, name: 'First' })).toBeInTheDocument();
   });
 
   it('keeps every line break, and each paragraph in its own direction', () => {

@@ -27,8 +27,7 @@ export type { SelectOption } from './select-options';
 
 /**
  * How many options a select lists before it becomes searchable: a field with
- * more options than this gets a search field above its list. A field can
- * pass its own number (`searchThreshold`).
+ * more options than this gets a search field above its list.
  */
 export const SEARCH_THRESHOLD = 10;
 
@@ -62,20 +61,12 @@ interface SelectFieldProps {
   busy?: boolean;
   /** Help text under the field, linked to it for screen readers (`aria-describedby`). */
   description?: string;
-  /**
-   * With more options than this, the list can be searched. Defaults to
-   * {@link SEARCH_THRESHOLD}.
-   */
-  searchThreshold?: number;
   /** Extra classes for the trigger. */
   className?: string;
 }
 
 /** Props for {@link ShortSelect}: the field's, with the IDs the label and help text use. */
-interface ShortSelectProps extends Omit<
-  SelectFieldProps,
-  'label' | 'hideLabel' | 'description' | 'searchThreshold'
-> {
+interface ShortSelectProps extends Omit<SelectFieldProps, 'label' | 'hideLabel' | 'description'> {
   /** The trigger's ID, which the visible label points at. */
   id: string;
   /** The label's ID, which names the open list. */
@@ -209,8 +200,8 @@ function ShortSelect({
 }
 
 /**
- * A select with a visible label. A short list (up to `searchThreshold`
- * options, {@link SEARCH_THRESHOLD} unless the field says otherwise) is a
+ * A select with a visible label. A short list (up to {@link SEARCH_THRESHOLD}
+ * options) is a
  * Radix Select following the WAI-ARIA listbox pattern: the choice only
  * changes when an option is picked (Enter, Space or click); arrow keys and
  * typing just move through the list, so nothing is saved by accident. A
@@ -239,7 +230,6 @@ function ShortSelect({
  * @param props.disabled - Disabled state.
  * @param props.busy - Busy state: focusable, but doesn't open.
  * @param props.description - Help text under the field.
- * @param props.searchThreshold - With more options than this, the list can be searched.
  * @param props.className - Extra trigger classes.
  * @returns The labelled select.
  */
@@ -255,7 +245,6 @@ export default function SelectField({
   disabled = false,
   busy = false,
   description = '',
-  searchThreshold = SEARCH_THRESHOLD,
   className = '',
 }: SelectFieldProps) {
   const id = useId();
@@ -284,7 +273,7 @@ export default function SelectField({
       >
         {label}
       </label>
-      {options.length > searchThreshold ? (
+      {options.length > SEARCH_THRESHOLD ? (
         <SearchableSelect labelId={labelId} {...field} />
       ) : (
         <ShortSelect labelId={labelId} {...field} />

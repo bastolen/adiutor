@@ -6,7 +6,6 @@
  */
 import type { ReactNode } from 'react';
 
-import cn from '@/lib/cn';
 import type { Locale } from '@/lib/i18n/locales';
 
 /** The canton of the US flag: 7 of its 13 stripes high, 12 of 30 wide. */
@@ -60,26 +59,16 @@ const FLAGS: Record<Locale, ReactNode> = {
  *
  * @param props - Flag props.
  * @param props.locale - The language.
- * @param props.className - Extra classes, e.g. another size.
  * @returns The flag.
  */
-export default function LanguageFlag({
-  locale,
-  className = '',
-}: {
-  locale: Locale;
-  className?: string;
-}) {
+export default function LanguageFlag({ locale }: { locale: Locale }) {
   return (
     <svg
       viewBox="0 0 30 20"
       aria-hidden="true"
       focusable="false"
       preserveAspectRatio="none"
-      className={cn(
-        'h-3.5 w-5 shrink-0 overflow-hidden rounded-[3px] ring-1 ring-border',
-        className,
-      )}
+      className="h-3.5 w-5 shrink-0 overflow-hidden rounded-[3px] ring-1 ring-border"
     >
       {FLAGS[locale]}
     </svg>

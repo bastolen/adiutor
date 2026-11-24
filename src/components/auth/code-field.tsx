@@ -23,11 +23,11 @@ interface CodeFieldProps {
   /** Whether it takes focus when it appears. */
   autoFocus?: boolean;
   /**
-   * Help text read out with the field. By default (`null`) "The 6-digit code
-   * shown in your authenticator app." for an authenticator app code and none
-   * otherwise; an empty string leaves it out.
+   * Whether an authenticator app code gets its help text, "The 6-digit code
+   * shown in your authenticator app." Defaults to true; a form that says it
+   * already turns it off. Other codes have none.
    */
-  description?: string | null;
+  hint?: boolean;
 }
 
 /**
@@ -40,7 +40,7 @@ interface CodeFieldProps {
  * @param props.value - The code as typed.
  * @param props.onChange - Called as the user types.
  * @param props.autoFocus - Whether it takes focus when it appears.
- * @param props.description - Help text; see {@link CodeFieldProps.description}.
+ * @param props.hint - Whether an authenticator app code has help text.
  * @returns The field.
  */
 export default function CodeField({
@@ -48,11 +48,11 @@ export default function CodeField({
   value,
   onChange,
   autoFocus = false,
-  description = null,
+  hint = true,
 }: CodeFieldProps) {
   const t = useTranslations('common');
   const backup = kind === 'backup';
-  const help = description ?? (kind === 'totp' ? t('codeField.authenticatorHint') : '');
+  const help = hint && kind === 'totp' ? t('codeField.authenticatorHint') : '';
   return (
     <TextField
       label={backup ? t('codeField.backupCode') : t('codeField.code')}

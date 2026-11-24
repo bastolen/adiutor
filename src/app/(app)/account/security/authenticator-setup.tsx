@@ -199,7 +199,7 @@ function AuthenticatorSteps({
           </ol>
           <CodeField
             kind="totp"
-            description=""
+            hint={false}
             value={code}
             onChange={(event) => setCode(event.target.value)}
           />

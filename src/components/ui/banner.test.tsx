@@ -16,6 +16,7 @@ describe('Banner', () => {
       <Banner
         label="Account security"
         icon={ShieldCheck}
+        tone="success"
         title="Protect your account"
         description="Add a passkey or two-step verification."
       />,
@@ -42,18 +43,12 @@ describe('Banner', () => {
     expect(icon?.parentElement).toHaveClass('bg-danger-soft', 'text-danger');
   });
 
-  it('is neutral by default', () => {
-    render(<Banner label="Note" icon={ShieldCheck} title="Title" description="Description" />);
-
-    const icon = screen.getByRole('region').querySelector('svg');
-    expect(icon?.parentElement).toHaveClass('bg-muted', 'text-muted-foreground');
-  });
-
   it('shows the actions, and no dismiss button unless it can be dismissed', () => {
     render(
       <Banner
         label="Users without MFA"
         icon={ShieldAlert}
+        tone="success"
         title="Title"
         description="Description"
         actions={<Link href="/admin/users?filter=without_mfa">See users without MFA</Link>}
@@ -71,6 +66,7 @@ describe('Banner', () => {
       <Banner
         label="Account security"
         icon={ShieldCheck}
+        tone="success"
         title="Title"
         description="Description"
         onDismiss={onDismiss}
