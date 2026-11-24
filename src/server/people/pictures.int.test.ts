@@ -35,12 +35,27 @@ const GITHUB_PICTURE = 'https://avatars.githubusercontent.com/u/1?v=4';
 const GOOGLE_PICTURE = 'https://lh3.googleusercontent.com/a/adiutor=s96-c';
 
 /**
- * The address a picture of an account is served from, whatever its fingerprint.
+ * The unkeyed 32-bit FNV-1a of {@link GITHUB_PICTURE}, which picture addresses
+ * once held: anyone could work it out for every GitHub account number.
+ */
+const UNKEYED_FINGERPRINT = '907fda90';
+
+/**
+ * The address a picture of an account is served from, whatever its version.
  *
  * @param accountId - The account.
  * @returns A pattern that matches the address.
  */
-const servedFrom = (accountId: string) => new RegExp(`^/avatars/${accountId}\\?v=[0-9a-f]{8}$`);
+const servedFrom = (accountId: string) => new RegExp(`^/avatars/${accountId}\\?v=[0-9a-f]{16}$`);
+
+/**
+ * The version in a picture's address (`?v=`).
+ *
+ * @param address - The address, e.g. `/avatars/0198…?v=…`.
+ * @returns The version, or `null` without one.
+ */
+const versionOf = (address: string | null | undefined) =>
+  address ? new URL(address, 'https://adiutor.test').searchParams.get('v') : null;
 
 /**
  * A user with a GitHub account connected first and a Google account second,
@@ -67,6 +82,7 @@ async function personWithTwoPictures() {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 describe('loadPictures', () => {
@@ -119,6 +135,31 @@ describe('loadPictures', () => {
     const after = (await loadPictures(db, [userId])).get(userId);
     expect(after).toMatch(servedFrom(github));
     expect(after).not.toBe(before);
+  });
+
+  it('keeps the address while the provider’s picture stays the same', async () => {
+    const { userId } = await personWithTwoPictures();
+    const first = (await loadPictures(db, [userId])).get(userId);
+
+    expect((await loadPictures(db, [userId])).get(userId)).toBe(first);
+    const { choices } = await ownPictureChoices(ctx, await actorFor(db, userId));
+    expect(choices[0]?.picture).toBe(first);
+  });
+
+  it('versions the address with the app’s secret, so nobody can work it out from a guess', async () => {
+    const { userId } = await personWithTwoPictures();
+    const version = versionOf((await loadPictures(db, [userId])).get(userId));
+    expect(version).not.toBeNull();
+    expect(version).not.toContain(UNKEYED_FINGERPRINT);
+
+    // The same picture, in an app started with another secret.
+    vi.resetModules();
+    vi.stubEnv('BETTER_AUTH_SECRET', 'adiutor-tests-another-secret-0123456789');
+    const elsewhere = await import('./pictures');
+    const otherVersion = versionOf((await elsewhere.loadPictures(db, [userId])).get(userId));
+
+    expect(otherVersion).toMatch(/^[0-9a-f]{16}$/);
+    expect(otherVersion).not.toBe(version);
   });
 });
 

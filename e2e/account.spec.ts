@@ -57,7 +57,7 @@ test('a user shows the picture of an account they connected, or their initials',
   ).toBeVisible();
   await expect(accountMenu.locator('img')).toHaveAttribute(
     'src',
-    /^\/avatars\/[0-9a-f-]+\?v=[0-9a-f]{8}$/,
+    /^\/avatars\/[0-9a-f-]+\?v=[0-9a-f]{16}$/,
   );
 
   await choice.getByRole('radio', { name: 'Initials' }).check();

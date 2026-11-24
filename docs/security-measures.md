@@ -332,6 +332,13 @@ keeps images to `img-src 'self'` and viewers never contact GitHub or Google.
   company user nothing about who someone is beyond the picture they show next to their name.
 - **In the browser:** the image comes with its type, `X-Content-Type-Options: nosniff`, and
   `Cache-Control: private, max-age=86400`; its address changes when the provider's does.
+- **The version in the address** (`?v=`, `pictureVersion` in `src/server/people/pictures.ts`) is
+  a keyed MAC of the provider's address (HMAC-SHA-256, 64 bits of it), with a secret of its own
+  worked out from `BETTER_AUTH_SECRET` (`derivedSecret` in `src/server/derived-secret.ts`). A
+  GitHub picture's address holds the account's number, so an unkeyed hash would let anyone who
+  sees the version try every number until one matched; without the secret, a version can't be
+  checked against a guess. The route doesn't read it: it's only there for browsers' caches, so a
+  new secret only means each picture is fetched once more.
 
 ## Provider tokens aren't kept
 

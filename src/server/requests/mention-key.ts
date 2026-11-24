@@ -9,14 +9,15 @@
  */
 import { createHmac } from 'node:crypto';
 
-import { env } from '@/lib/env';
 import { MENTION_KEY_LENGTH } from '@/lib/requests';
 
+import derivedSecret from '../derived-secret';
+
 /**
- * The secret the keys are made with: its own, worked out from the app's
- * secret once, so a key is never a signature of anything else.
+ * The purpose the keys' secret is worked out for (`derivedSecret`): their
+ * own, so a key is never a signature of anything else.
  */
-let keySecret: Buffer | undefined;
+const KEY_PURPOSE = 'adiutor mention keys';
 
 /**
  * The key that stands for a person in a company. It's the same every time,
@@ -30,10 +31,7 @@ let keySecret: Buffer | undefined;
  * @returns Their key there.
  */
 export default function mentionKey(companyId: string, userId: string): string {
-  keySecret ??= createHmac('sha256', env.BETTER_AUTH_SECRET)
-    .update('adiutor mention keys')
-    .digest();
-  return createHmac('sha256', keySecret)
+  return createHmac('sha256', derivedSecret(KEY_PURPOSE))
     .update(`${companyId}:${userId}`)
     .digest('base64url')
     .slice(0, MENTION_KEY_LENGTH);

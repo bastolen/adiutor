@@ -15,7 +15,9 @@ import { loadPicture } from '@/server/people/pictures';
 
 /**
  * Serves a picture. Browsers keep it for a day; its address changes when
- * the picture does (`?v=`), so a new one is fetched right away.
+ * the picture does (`?v=`), so a new one is fetched right away. The version
+ * is only for browsers' caches: whatever it says, the account's ID alone
+ * picks what's served.
  *
  * @param _request - The request (unused).
  * @param context - The route's parameters: the account's ID.
