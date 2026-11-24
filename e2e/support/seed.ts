@@ -161,7 +161,8 @@ export default async function seedTestDatabase(): Promise<void> {
     const platformAdmin = await addPerson(PLATFORM_ADMIN, { platformRole: 'platform_admin' });
     await addPerson(PLATFORM_MANAGER, { platformRole: 'manager' });
     const support = await addPerson(SUPPORT_STAFF, { platformRole: 'support' });
-    // A Google account with a picture, so avatars show one (Google never counts as MFA).
+    // A Google account with a picture (Google never counts as MFA), which they've chosen not to
+    // show: no page fetches it from Google. The tests about pictures choose it.
     await db.insert(schema.account).values({
       userId: support,
       accountId: 'e2e-support-google',
@@ -169,6 +170,10 @@ export default async function seedTestDatabase(): Promise<void> {
       accountName: SUPPORT_STAFF.email,
       accountImage: SUPPORT_STAFF_PICTURE,
     });
+    await db
+      .update(schema.user)
+      .set({ avatarSource: 'initials' })
+      .where(eq(schema.user.id, support));
     await addPerson(FINANCE_STAFF, { platformRole: 'finance' });
     // Deactivated, keeping its staff role, for the Admin to reactivate.
     const returning = await addPerson(RETURNING_FINANCE, { platformRole: 'finance' });

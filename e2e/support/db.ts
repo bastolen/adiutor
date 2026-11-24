@@ -548,14 +548,20 @@ export async function markEmailUnverified(email: string): Promise<void> {
 }
 
 /**
- * Forgets which picture an account chose, so it shows the picture of the
- * account it connected first again, as the seed leaves it.
+ * Sets which picture an account shows (`user.avatar_source`): `null` for none
+ * chosen yet, which shows the picture of the account connected first. The
+ * seed gives the Support member initials, so no page fetches their Google
+ * picture; the tests about pictures choose `null` and put initials back.
  *
  * @param email - The account's address.
+ * @param source - What they chose.
  */
-export async function forgetPictureChoiceOf(email: string): Promise<void> {
+export async function choosePictureOf(
+  email: string,
+  source: 'initials' | 'github' | 'google' | null,
+): Promise<void> {
   await withTestDatabase(async (db) => {
-    await db.update(schema.user).set({ avatarSource: null }).where(eq(schema.user.email, email));
+    await db.update(schema.user).set({ avatarSource: source }).where(eq(schema.user.email, email));
   });
 }
 

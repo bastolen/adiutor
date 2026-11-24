@@ -92,8 +92,12 @@ const TINY_PNG = Buffer.from(
 
 /**
  * Answers every request for a person's picture (`/avatars/*`) in the
- * browser with a tiny PNG, so no test makes Adiutor fetch it from GitHub or
- * Google.
+ * browser with a tiny PNG, so the test server never fetches it from GitHub
+ * or Google. For the tests about pictures: they choose the Google account's
+ * picture, which the seed doesn't (see `SUPPORT_STAFF_PICTURE`). Answering
+ * means intercepting every request of the page, which turns the browser's
+ * cache off and hides the `Sec-Fetch-*` headers from Playwright, so only
+ * these tests do it.
  *
  * @param page - The browser page.
  */

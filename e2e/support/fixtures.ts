@@ -102,8 +102,9 @@ export const SUPPORT_STAFF = {
 
 /**
  * The picture of {@link SUPPORT_STAFF}'s Google account, which the seed
- * connects: what their avatars show until they choose otherwise. Tests answer
- * `/avatars/*` in the browser, so nothing ever fetches it.
+ * connects but gives initials (`avatarSource`), so no page fetches it from
+ * Google. The tests about pictures choose it (`choosePictureOf`) and answer
+ * `/avatars/*` in the browser (`answerPictures`), then put initials back.
  */
 export const SUPPORT_STAFF_PICTURE = 'https://lh3.googleusercontent.com/a/e2e-support=s96-c';
 

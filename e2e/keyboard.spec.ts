@@ -17,6 +17,7 @@ import {
   setMembershipRole,
   storeEntries,
   storeRequest,
+  choosePictureOf,
 } from './support/db';
 import {
   ACTIVITY_CLIENT,
@@ -1062,19 +1063,25 @@ test.describe('the picture choice', () => {
   test('the arrow keys move between the pictures, and Tab leaves them as one stop', async ({
     page,
   }) => {
-    await answerPictures(page);
-    await signIn(page, SUPPORT_STAFF);
-    await page.goto('/account');
-    const google = page.getByRole('radio', { name: `Google · ${SUPPORT_STAFF.email}` });
-    const initials = page.getByRole('radio', { name: 'Initials' });
+    // The seed shows initials; this test starts from no choice, and leaves initials behind.
+    await choosePictureOf(SUPPORT_STAFF.email, null);
+    try {
+      await answerPictures(page);
+      await signIn(page, SUPPORT_STAFF);
+      await page.goto('/account');
+      const google = page.getByRole('radio', { name: `Google · ${SUPPORT_STAFF.email}` });
+      const initials = page.getByRole('radio', { name: 'Initials' });
 
-    await google.focus();
-    await page.keyboard.press('ArrowDown');
-    await expect(initials).toBeFocused();
-    await expect(initials).toBeChecked();
-    await page.keyboard.press('Tab');
-    // Nothing is saved: the choice only changes with Save picture.
-    await expect(page.getByRole('button', { name: 'Save picture' })).toBeFocused();
+      await google.focus();
+      await page.keyboard.press('ArrowDown');
+      await expect(initials).toBeFocused();
+      await expect(initials).toBeChecked();
+      await page.keyboard.press('Tab');
+      // Nothing is saved: the choice only changes with Save picture.
+      await expect(page.getByRole('button', { name: 'Save picture' })).toBeFocused();
+    } finally {
+      await choosePictureOf(SUPPORT_STAFF.email, 'initials');
+    }
   });
 });
 

@@ -130,6 +130,11 @@ configurations in VS Code, which turn the time limit off (see
   - **Signing in once:** specs that only read as one account (scans, keyboard checks, tables)
     sign it in once (`storageStateFor(browser, account)`, or `adminStorageState` for the staff
     Admin) and open each test with those cookies, which keeps them clear of the sign-in limits.
+  - **Pictures:** the seeded Support member has a Google account with a picture but shows
+    initials (`avatarSource`), so no page asks the test server to fetch it from Google. The two
+    tests about pictures choose it (`choosePictureOf`), answer `/avatars/*` in the browser
+    (`answerPictures`, which intercepts the page's requests, so only they do it) and put initials
+    back in a `finally`.
   - **A laptop that sleeps** stops the browser but not the clock: tests time out all over, and a
     run takes hours instead of minutes. Keep the lid open while they run.
   - **Tokens:** the invitation and invite-link pages are scanned with real tokens stored straight
