@@ -74,9 +74,8 @@ keyboard support.
     ("Type: Bug"), with the choices as links in a menu, "All" first. It keeps focus like the Sort
     menu does. It needs JavaScript, unlike the search and the status links.
   - **Widths:** no table scrolls sideways. The content area stops growing at 1280px (`xl`,
-    `max-w-5xl` in the app layout), so a table gets no more columns past that. (Only a page that's
-    mostly text to read and write, a request, grows further: see "Layout" below.) Columns that
-    don't fit move under the name instead:
+    `max-w-5xl` in the app layout), so a table gets no more columns past that, unless its page is
+    wide (`WidePage`, see "Layout" below). Columns that don't fit move under the name instead:
     - **Activity:** people tables show when someone was last active and when they joined in
       one Activity column from 1280px, and under the name below that
       (`src/app/(app)/_people/activity.tsx`).
@@ -151,10 +150,9 @@ keyboard support.
     away. A container query on the board's width shows it (`@container` on the board,
     `@min-[73rem]:hidden` on the row: five 14rem columns and their gaps), never a measurement after
     the page runs, so nothing shifts; focus on it when it hides goes to the main content. On a
-    wide screen the board across companies is as wide as a request's page (`WidePage`), so from
-    about 1500px of screen all five columns fit side by side, the row doesn't scroll and the
-    navigation isn't there; a company's board keeps the width of the company's pages, under its
-    header and tabs, so its row scrolls and the navigation shows from tablet width. Below tablet
+    wide screen the board is as wide as a request's page (`WidePage`; a company's board through
+    the company's layout, with its header and tabs), so from about 1500px of screen all five
+    columns fit side by side, the row doesn't scroll and the navigation isn't there. Below tablet
     width the columns are stacked, each folding away with its count (`aria-expanded` on its
     heading's button), a grouped column with both its halves.
   - **Colours:** a lane is a step back from its cards in both modes (`muted` behind `surface`
@@ -334,15 +332,18 @@ keyboard support.
   leaves it: with a lasting `tabIndex={-1}`, a click in the content on something that can't take
   focus, like a disabled field, would hand focus to it, and Chrome then draws a blinking text
   cursor in the field.
-  The content of every page stops growing at 1280px of screen. A request's page may be wider
-  (`WidePage` in `src/components/layout/wide-page.tsx`): from that width it grows with the room
-  next to the menu, up to 1280px of content, so the
-  conversation and the editor of a reply get the room, with the details still beside them. The
-  board of requests across companies grows the same way, so more of its lanes show side by side;
-  a company's board doesn't, so it lines up with the company's header and tabs. It
-  measures that room in the content column (a container in the app layout), not the screen, so
-  a scrollbar never makes it scroll sideways. Don't use it for a page with a table of records:
-  those are laid out for the content's usual width.
+  The content of every page stops growing at 1280px of screen. A page with more to show in the
+  room may be wider (`WidePage` in `src/components/layout/wide-page.tsx`,
+  [decision 0043](decisions/0043-wider-pages-for-lists-of-requests-and-people.md)): from that
+  width it grows with the room next to the menu, up to 1200px of content, which it always has
+  from 1536px of screen. A request's page grows, so the conversation and the editor of a reply
+  get the room, with the details still beside them; so do the boards of requests, so more of
+  their lanes show side by side, and the lists of requests, whose titles and statuses stop
+  wrapping. A company's pages are wide on every tab, through the company's layout, so its list
+  and board get the room and its header and tabs stay in one place from tab to tab. It measures
+  that room in the content column (a container in the app layout), not the screen, so a
+  scrollbar never makes it scroll sideways. Other pages keep the content's usual width: a short
+  table (the companies, the logs), a form or a page of details gains only empty space.
 - **Errors:** when a page or server action fails unexpectedly, an error page takes the page's
   place, built like the 404 pages: "Something went wrong", "This page couldn't load. Try again, or
   go to your dashboard.", **Try again** (busy while the page loads again), **Go to your dashboard**
@@ -456,7 +457,8 @@ keyboard support.
   Settings' General, Staff and Requests) get their header and tabs from a layout
   (`companies/[companyId]/layout.tsx`, `account/layout.tsx`, `admin/users/[userId]/layout.tsx`,
   `admin/logs/layout.tsx`, `admin/settings/layout.tsx`), which stays mounted while the page under it changes: the tab you chose
-  keeps focus and the header doesn't reload. `SegmentTabNav` marks the current tab from the URL
+  keeps focus and the header doesn't reload. A company's layout makes every one of its tabs wide
+  (`WidePage`, see "Layout"), so the header and tabs don't move when the tab changes. `SegmentTabNav` marks the current tab from the URL
   (`useSelectedLayoutSegment`), and each page still checks its own permission. Tabs that don't
   fit the width (long names on a phone, in some languages) wrap onto another row rather than
   widen the page.

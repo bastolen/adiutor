@@ -1,6 +1,8 @@
 # 0037. A board of requests, with a Move menu on every card
 
-- **Status:** Accepted
+- **Status:** Accepted. One choice is superseded by
+  [0043](0043-wider-pages-for-lists-of-requests-and-people.md): a company's board, and its other
+  pages, are as wide as the board across companies.
 - **Date:** 2026-11-21
 
 ## Context

@@ -6,7 +6,8 @@
  * tab current. Each card's Move menu moves it to another lane, as far as the
  * viewer's role allows; a deactivated company's requests can only be read.
  * Everyone who may see the company's requests may open it: its people, and
- * the staff.
+ * the staff. The company's layout makes it as wide as the board across
+ * companies on a wide screen, header and tabs included.
  */
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
