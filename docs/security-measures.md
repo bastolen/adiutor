@@ -36,72 +36,90 @@ are only for staff Admins (`errors:view`), under **Logs → Errors** (`src/serve
 
 ## Rate limits
 
-Better Auth's own limits (per IP address) are stored in the database
-(`rate_limit`), so they hold across restarts and instances. On top of those, per email address
-whether or not it has an account: 10 wrong passwords per 15 minutes, 5 email links and 5 password
-resets per hour, and per user 5 emailed codes and 5 wrong step-up codes per 15 minutes
-(`src/server/auth/auth-guards/`). Only a plausible address is counted (at most 320 characters, and
-an address by `emailSchema`: `plausibleEmail` in `src/lib/validation.ts`): anything else a client
-sends as one becomes no rate limit key, and a failed sign-in with it is recorded without it, so
-arbitrary text (a password typed into the wrong field, kilobytes of anything) stays out of the
-audit log. Better Auth refuses a value that isn't an address before it checks a password or sends
-an email, an address longer than any that can receive mail has no account to guess or inbox to
-fill, and Better Auth's per-IP limits still apply. Emailed codes also wait for each other: one
-per sign-in or
-session every 2.5 minutes, half a code's lifetime (`EMAIL_CODE_RESEND_SECONDS`), as Better Auth
-keeps the code with the sign-in or session it was asked for, checked first so a refused one
-doesn't count, and ended once a session's code is used (the 5 per 15 minutes per user still cap
-what a password can send). Setting
-up email codes waits too, but isn't counted
-towards the 5, so it doesn't eat into the sign-in budget. Each password sign-in takes one of the address's attempts before
-its password is checked and gives it back unless the password was wrong, and each step-up code
-takes one of the user's attempts the same way, so requests sent at the same moment can't all get
-through and successful ones don't count. Since anyone can type wrong
-passwords for an address, reaching the limit only pauses password sign-in: the message (the same
-for every address) points to email links, passkeys and a password reset, and proving the inbox
-lifts the pause (a completed reset, or creating an account from an invitation). The owner gets a
-security email if the account has a password. Wrong current passwords typed while signed in
-(changing the password, deactivating the account, and turning two-step verification on or off or
-getting new backup codes, where Better Auth checks the password itself) are limited to 5 per 15
-minutes per user, in a bucket of their own (`checkCurrentPassword` in
-`src/server/auth/current-password.ts`, and the guards for Better Auth's endpoints,
-`CURRENT_PASSWORD_PATHS`): Better Auth's per-IP limiter doesn't run for its calls from server
-actions, and a client can get around it by changing its IP address, so a signed-in (possibly
-stolen) session can't guess the password without limit, and since the bucket isn't the address's
-sign-in one, it can't pause the owner's password sign-in either. Each check takes an attempt first
-and gives it back unless the password was wrong, and each wrong one is recorded. The app also
-limits invitations (per user and per company),
-role changes (30 an hour per user, company and staff roles together; each one emails the member,
-and removals aren't counted, see
-[Changing roles](companies-and-roles.md#changing-roles-and-removing-people)),
-invite-link claims (per IP address), verification emails (per user), starting to sign in as a user
-(10 an hour per staff member, `RATE_LIMITS.impersonationsPerUser`, since each start emails the
-user), sign-in link pages
-opened with a link that can't be used (20 per 15 minutes per IP address, so links can't be
-guessed by looking them up; past it, the page offers no way to continue), answer links of an
-email about a solution that don't exist (20 per 15 minutes per IP address,
-`RATE_LIMITS.answerLinkMissesPerIp`, for the same reason), tokens that aren't links in emails
-about requests, opened at their endpoint or their confirmation page (20 per 15 minutes per IP
-address, `RATE_LIMITS.requestLinkMissesPerIp`), sign-ins with one such link (10 an hour,
-`requestLinkSignInsPerLink`, so a forwarded or leaked link can't pile up devices; past it the link
-goes to the sign-in page), wrong secrets sent to
-the background jobs' endpoint (20 per 15 minutes per IP address, `RATE_LIMITS.jobTickMissesPerIp`;
-past it the endpoint answers 429, while the right secret still works), work on requests (per
-user and hour: 60 requests raised, 200 replies and notes, and 300 changes of a status, of
-details or of the people on a request;
-`RATE_LIMITS.requestsPerUser`, `requestRepliesPerUser` and `requestChangesPerUser`, far more than
-anyone does by hand and few enough to stop a flood; work a staff member does while signed in as a
-user counts against the staff member, `actingUserId`), and the errors stored for
-admins (see [Recorded errors](#recorded-errors)). All are kept in
-`rate_limit_bucket` (`src/server/rate-limit.ts`), with a clear "Try again in N minutes" message.
-The limits per IP address build their key in one place (`ipRateLimitKey` there); requests whose
-address isn't known share one bucket per limit.
-A claimed invite link also counts as an invitation its creator sends, against their limit and
-the company's (or the staff's), in the claim's transaction once the link is used up
-(`assertClaimLimits` in `src/server/people/invite-links.ts`): past either, the claim is refused
-with "This invite link can't be used right now. Try again later." and rolls back, so the link
-stays unused and nothing is counted. Invite links therefore can't send more invitation emails
-than the limits allow, however many IP addresses claim them.
+Better Auth's own limits (per IP address) are stored in the database (`rate_limit`), so they hold
+across restarts and instances. On top of those, the app counts hits in `rate_limit_bucket`. Every
+limit is a number of hits per window and a key, and answers with "Try again in N minutes". The
+numbers below are the ones in the code: `RATE_LIMITS` in `src/server/rate-limit.ts` for the app's
+actions and `AUTH_GUARD_LIMITS` in `src/server/auth/auth-guards/attempts.ts` for sign-in; the
+code is the source if they ever differ.
+
+| What is limited                                                 | Limit | Window      | Keyed on              |
+| --------------------------------------------------------------- | ----- | ----------- | --------------------- |
+| Wrong passwords (`failedSignInsPerEmail`)                       | 10    | 15 minutes  | email address         |
+| Email links and password resets (`emailsPerAddress`)            | 5     | 1 hour      | email address         |
+| Wrong step-up codes (`failedStepUpsPerUser`)                    | 5     | 15 minutes  | user                  |
+| Emailed codes sent (`emailCodesPerUser`)                        | 5     | 15 minutes  | user                  |
+| An emailed code again (`emailCodeCooldown`)                     | 1     | 2.5 minutes | sign-in or session    |
+| Wrong current passwords (`wrongCurrentPasswordsPerUser`)        | 5     | 15 minutes  | user                  |
+| Invitations sent (`invitesPerUser`)                             | 30    | 1 hour      | user                  |
+| Invitations to one company or the staff (`invitesPerCompany`)   | 60    | 1 hour      | company, or the staff |
+| Role changes (`roleChangesPerUser`)                             | 30    | 1 hour      | user                  |
+| Invite links claimed (`linkClaimsPerIp`)                        | 10    | 1 hour      | IP address            |
+| Verification emails (`verificationEmailsPerUser`)               | 3     | 15 minutes  | user                  |
+| Sign-in link pages opened with a link that can't be used        | 20    | 15 minutes  | IP address            |
+| (`emailLinkMissesPerIp`)                                        |       |             |                       |
+| Request links that aren't links (`requestLinkMissesPerIp`)      | 20    | 15 minutes  | IP address            |
+| Sign-ins with one request link (`requestLinkSignInsPerLink`)    | 10    | 1 hour      | link                  |
+| Answer links that don't exist (`answerLinkMissesPerIp`)         | 20    | 15 minutes  | IP address            |
+| Wrong secrets sent to the jobs' endpoint (`jobTickMissesPerIp`) | 20    | 15 minutes  | IP address            |
+| Starting to sign in as a user (`impersonationsPerUser`)         | 10    | 1 hour      | staff member          |
+| Requests raised (`requestsPerUser`)                             | 60    | 1 hour      | user                  |
+| Replies and internal notes (`requestRepliesPerUser`)            | 200   | 1 hour      | user                  |
+| Other changes to requests (`requestChangesPerUser`)             | 300   | 1 hour      | user                  |
+| Sign-in errors stored (`signInErrorsPerIp`)                     | 20    | 1 hour      | IP address            |
+| App errors stored (`appErrorsPerIp`)                            | 20    | 1 hour      | IP address            |
+
+What a limit does beyond refusing, and why:
+
+- **Per email address.** The limits at the top count whether or not the address has an account. Only a
+  plausible address is counted (at most 320 characters, and an address by `emailSchema`:
+  `plausibleEmail` in `src/lib/validation.ts`): anything else a client sends as one becomes no rate
+  limit key, and a failed sign-in with it is recorded without it, so arbitrary text (a password
+  typed into the wrong field, kilobytes of anything) stays out of the audit log. Better Auth
+  refuses a value that isn't an address before it checks a password or sends an email, and its
+  per-IP limits still apply.
+- **Take first, give back.** Each password sign-in takes one of the address's attempts before its
+  password is checked and gives it back unless the password was wrong, and each step-up code takes
+  one of the user's attempts the same way, so requests sent at the same moment can't all get
+  through and successful ones don't count.
+- **A pause, not a lock.** Since anyone can type wrong passwords for an address, reaching the limit
+  only pauses password sign-in: the message (the same for every address) points to email links,
+  passkeys and a password reset, and proving the inbox lifts the pause (a completed reset, or
+  creating an account from an invitation). The owner gets a security email if the account has a
+  password.
+- **Emailed codes** also wait for each other: one per sign-in or session every 2.5 minutes, half a
+  code's lifetime (`EMAIL_CODE_RESEND_SECONDS`), as Better Auth keeps the code with the sign-in or
+  session it was asked for. The wait is checked first, so a refused code doesn't count, and it
+  ends once a session's code is used. Setting up email codes waits too, but isn't counted towards
+  the 5, so it doesn't eat into the sign-in budget.
+- **Wrong current passwords** typed while signed in (changing the password, deactivating the
+  account, and turning two-step verification on or off or getting new backup codes, where Better
+  Auth checks the password itself: `checkCurrentPassword` in `src/server/auth/current-password.ts`
+  and `CURRENT_PASSWORD_PATHS` in the guards) have a bucket of their own. Better Auth's per-IP
+  limiter doesn't run for its calls from server actions, and a client can get around it by
+  changing its IP address, so a signed-in (possibly stolen) session couldn't otherwise guess the
+  password without limit; and since the bucket isn't the address's sign-in one, it can't pause the
+  owner's password sign-in either. Each check takes an attempt first and gives it back unless the
+  password was wrong, and each wrong one is recorded.
+- **Invitations.** A claimed invite link also counts as an invitation its creator sends, against
+  their limit and the company's (or the staff's), in the claim's transaction once the link is used
+  up (`assertClaimLimits` in `src/server/people/invite-links.ts`): past either, the claim is
+  refused with "This invite link can't be used right now. Try again later." and rolls back, so the
+  link stays unused and nothing is counted. Invite links therefore can't send more invitation
+  emails than the limits allow, however many IP addresses claim them. Added members, registered
+  users and companies count as invitations too. Role changes (company and staff roles together;
+  removals aren't counted) each email the member, see
+  [Changing roles](companies-and-roles.md#changing-roles-and-removing-people).
+- **Links that can't be guessed by looking them up.** Past its limit, a sign-in link page offers no
+  way to continue and the jobs' endpoint answers 429 (the right secret still works). A request
+  link's sign-ins are capped so a forwarded or leaked link can't pile up devices; past it the link
+  goes to the sign-in page (see
+  [Links in emails about requests](authentication.md#links-in-emails-about-requests)).
+- **Work on requests** is far more than anyone does by hand and few enough to stop a flood; work a
+  staff member does while signed in as a user counts against the staff member (`actingUserId`).
+- **Recorded errors** past the limit are only logged (see [Recorded errors](#recorded-errors)).
+- **Per IP address.** The key is built in one place (`ipRateLimitKey`); requests whose address isn't
+  known share one bucket per limit.
 
 ## Recorded errors
 
@@ -164,25 +182,10 @@ an endpoint would act on their own account (see
 [Signing in as a user](authentication.md#signing-in-as-a-user)).
 
 The link in an email about a request (`/request-link/sign-in`, an endpoint of the app's own
-plugin) takes no return address: it always opens its own request, by the number stored with the
-link. It signs in straight away only on a person's click; anything else gets its confirmation
-page, whose Continue, a same-origin form `POST`, signs in. A `POST` is taken for that Continue by
-its `Sec-Fetch-*` headers, or, from a browser that sends none of them (Safari before 16.4, or
-any browser on plain `http` on a host other than `localhost`), by an
-`Origin` that is exactly the site's own, never by a `Referer`, `Origin: null` or a missing `Origin`
-([decision 0040](decisions/0040-older-browsers-continue-by-origin.md)); a program that isn't a
-browser could write either, but it has the link already. The page sends it by itself only when
-nobody is signed in in that browser, for Safari, which never says a person clicked
-([decision 0038](decisions/0038-request-links-continue-by-themselves.md)). So a scanner that runs
-the page's scripts signs in too, as anyone with the email could, and merely visiting a page that
-sends the whole tab to `/auth/request-link?token=…` with someone's link signs a signed-out visitor
-in as that person without a click (the page refuses frames). It never switches from someone else
-signed in in that browser without a press on that Continue (the one it sends by itself, `auto=1`,
-never switches): a link to the endpoint, even one written in a reply and clicked on the request's
-page, is a `GET` and can't switch, and a `POST` never counts as a click, so another site's form
-(which the browser sends without the site's cookies) signs nobody in; Better Auth's
-`formCsrfMiddleware` refuses it first (see
-[Links in emails about requests](authentication.md#links-in-emails-about-requests)).
+plugin) takes no return address: it always opens its own request. It signs in straight away only
+on a person's click, and a `POST` never counts as one, so another site's form signs nobody in. How
+it tells a click from anything else, and what it does then, is in
+[Links in emails about requests](authentication.md#links-in-emails-about-requests).
 
 A sign-in email's link (`/magic-link/verify`) signs in only with its confirmation page's Continue,
 a form `POST` taken by the same rule (`isOwnPagePost`), with Better Auth's own handler behind it;
