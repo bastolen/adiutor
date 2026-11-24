@@ -8,6 +8,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
+import { LOCALE_COOKIE } from '../src/lib/i18n/locales';
 import {
   backdateMfaConfirmation,
   setDefaultLocale,
@@ -262,7 +263,7 @@ test('an Admin turns languages off, which nobody is offered or gets until theyâ€
   await page.goto('/admin/settings');
   // Someone who chose Spanish on the sign-in page.
   const visitor = await browser.newContext({ locale: 'en-US' });
-  await visitor.addCookies([{ name: 'adiutor.locale', value: 'es-ES', url: E2E_BASE_URL }]);
+  await visitor.addCookies([{ name: LOCALE_COOKIE, value: 'es-ES', url: E2E_BASE_URL }]);
   /**
    * Saves the Languages card, and waits until the save is through.
    */
@@ -368,7 +369,7 @@ test('a second staff Admin steps down after a confirmation, and lands on the das
 
   // They join and set up MFA, as staff Admins must.
   const admin = await (await browser.newContext()).newPage();
-  // Its own client IP, so Better Auth's per-IP limits don't carry over from the tests before it.
+  // Its own client IP, so its sign-in doesn't count towards the limits of the page's.
   await useOwnClientIp(admin);
   await admin.goto(linkIn(await waitForEmail(email)));
   await createAccountFromInvitation(

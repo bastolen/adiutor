@@ -79,8 +79,11 @@ export async function emptyTestDatabase(): Promise<void> {
 }
 
 /**
- * Empties the database and creates the staff (its name, Admin and Manager),
- * plus a company with the users the tests use. Both are named "Adiutor Tests".
+ * Empties the database and seeds what the tests start from: the staff (its
+ * name, setup done, and the staff accounts of each role), the test company
+ * with the accounts the specs use (`fixtures.ts` lists them), more companies
+ * (a paging company, an owned one, a closed one), and the requests no test
+ * changes (`SEEDED_REQUESTS`).
  */
 export default async function seedTestDatabase(): Promise<void> {
   await emptyTestDatabase();
@@ -227,7 +230,7 @@ export default async function seedTestDatabase(): Promise<void> {
       accountName: GITHUB_ONLY_MANAGER.githubLogin,
     });
 
-    // This user has an authenticator app, which the Admin resets.
+    // These accounts have an authenticator app. RESET_CLIENT's is the one the Admin resets.
     await addAuthenticator(RESET_CLIENT);
     await addAuthenticator(STEP_UP_MANAGER);
     await addAuthenticator(STEP_UP_CLIENT);
@@ -300,7 +303,7 @@ export default async function seedTestDatabase(): Promise<void> {
       })),
     );
 
-    // Requests no test changes (see `SEEDED_REQUESTS`): four in the test company, one in the
+    // Requests no test changes (see `SEEDED_REQUESTS`): five in the test company, one in the
     // deactivated company, and more than a page of them in the paging company, raised a minute
     // apart by its first member.
     const HOUR = 60 * 60_000;

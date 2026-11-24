@@ -144,7 +144,7 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
     await expectTitle(
       page,
       `/requests/${SEEDED_REQUESTS.waiting.number}`,
-      'Request AD-1 · Adiutor',
+      `Request AD-${SEEDED_REQUESTS.waiting.number} · Adiutor`,
     );
     await expect(
       page.getByRole('heading', { level: 1, name: SEEDED_REQUESTS.waiting.title }),

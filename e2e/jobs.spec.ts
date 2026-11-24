@@ -8,6 +8,7 @@
  */
 import { type Page } from '@playwright/test';
 
+import { TIME_ZONE_COOKIE } from '../src/lib/i18n/time-zones';
 import expectAccessible from './support/axe';
 import {
   discardFailedQueuedJobs,
@@ -68,7 +69,7 @@ test('a staff Admin elsewhere reads when jobs run in their own zone', async ({ c
   // The cookie that mirrors the account's zone, as if the Admin's were Tokyo's (no daylight saving).
   await context.addCookies([
     ...adminState.cookies,
-    { name: 'adiutor.time-zone', value: 'Asia/Tokyo', url: E2E_BASE_URL },
+    { name: TIME_ZONE_COOKIE, value: 'Asia/Tokyo', url: E2E_BASE_URL },
   ]);
   await page.goto('/admin/logs/jobs');
 

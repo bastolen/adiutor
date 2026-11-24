@@ -150,7 +150,7 @@ test('the staff find every company’s requests, and narrow them down', async ({
   await filters.getByRole('link', { name: 'Waiting' }).click();
   await expect(page).toHaveURL('/requests?status=waiting');
   const waiting = requestRows(page).filter({ hasText: SEEDED_REQUESTS.waiting.title });
-  await expect(waiting).toContainText('AD-1');
+  await expect(waiting).toContainText(`AD-${SEEDED_REQUESTS.waiting.number}`);
   await expect(waiting).toContainText(COMPANY_NAME);
   await expect(waiting).toContainText('Waiting for the company');
   await filters.getByRole('link', { name: 'Active' }).click();
@@ -173,7 +173,7 @@ test('the staff find every company’s requests, and narrow them down', async ({
   await page.getByRole('button', { name: 'Search' }).click();
   await expect(page).toHaveURL('/requests?status=all&q=ad-3');
   const third = requestRows(page).filter({ hasText: SEEDED_REQUESTS.done.title });
-  await expect(third).toContainText('AD-3');
+  await expect(third).toContainText(`AD-${SEEDED_REQUESTS.done.number}`);
   await expect(third).toContainText('Done');
   await expect(
     requestRows(page).filter({ hasText: pagedRequestTitle(30 - FIRST_PAGED_REQUEST_NUMBER + 1) }),

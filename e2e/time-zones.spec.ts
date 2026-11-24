@@ -4,6 +4,7 @@
  * without naming the zone on the page, and the Preferences tab's Time zone card
  * changes it, found by typing its city.
  */
+import { TIME_ZONE_COOKIE } from '../src/lib/i18n/time-zones';
 import { findCompanyId, savedTimeZoneOf, storeInvitation, storeRequest } from './support/db';
 import { COMPANY_SLUG } from './support/fixtures';
 import { createAccountFromInvitation, freshAddress, searchSelect, toasts } from './support/helpers';
@@ -41,7 +42,7 @@ test("a new account takes its browser's zone, and pages show times in it", async
   await expect.poll(() => savedTimeZoneOf(email)).toBe('Australia/Adelaide');
   await expect.poll(() => loads).toBe(2);
   // The cookie holds it encoded, as cookies are written ("Australia%2FAdelaide").
-  const cookie = (await context.cookies()).find(({ name }) => name === 'adiutor.time-zone');
+  const cookie = (await context.cookies()).find(({ name }) => name === TIME_ZONE_COOKIE);
   expect(decodeURIComponent(cookie?.value ?? '')).toBe('Australia/Adelaide');
 
   // 23:30 in UTC is 10:00 the next morning in Adelaide (summer time there, UTC+10:30).

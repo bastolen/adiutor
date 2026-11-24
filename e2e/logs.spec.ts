@@ -8,6 +8,7 @@
 import { type Page } from '@playwright/test';
 
 import { defined } from '../src/lib/defined';
+import { TIME_ZONE_COOKIE } from '../src/lib/i18n/time-zones';
 import { findCompanyId, storeAuditEvent } from './support/db';
 import {
   CLIENT_WATCHER,
@@ -91,9 +92,7 @@ test.describe('as a staff Admin', () => {
 
   test('the days start and end at midnight where the reader is', async ({ context, page }) => {
     // The cookie that mirrors the account's zone, as if the Admin's were Tokyo's (no daylight saving).
-    await context.addCookies([
-      { name: 'adiutor.time-zone', value: 'Asia/Tokyo', url: E2E_BASE_URL },
-    ]);
+    await context.addCookies([{ name: TIME_ZONE_COOKIE, value: 'Asia/Tokyo', url: E2E_BASE_URL }]);
     // 20:00 in UTC on March 4 is 5:00 on March 5 in Tokyo; nothing else is that old.
     await storeAuditEvent({
       action: 'role_changed',

@@ -36,10 +36,6 @@ import {
 import { countEmails, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
 
-test.beforeEach(async ({ page }) => {
-  await useOwnClientIp(page);
-});
-
 test('a staff Admin signs in as a Manager, changes nothing, and goes back', async ({ page }) => {
   const managerId = await findUserId(STEP_UP_MANAGER.email);
   const emailsBefore = await countEmails(STEP_UP_MANAGER.email);

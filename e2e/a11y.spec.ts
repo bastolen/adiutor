@@ -123,16 +123,16 @@ const APP_PATHS = [
   '/requests?only=done',
   '/requests?status=all&q=no-such-request',
   // More requests than fit on a page: pagination, another sort, the last page.
-  '/requests?company=adiutor-tests-paging&sort=raised&page=2',
+  `/requests?company=${PAGING_COMPANY_SLUG}&sort=raised&page=2`,
   // The board: a lane per status, the open ones fuller than they show, and empty ones.
   '/requests/board',
   '/requests/board?q=no-such-request',
   '/requests/new',
   // A request with a conversation: replies from both sides, a link, and changes.
-  '/requests/1',
+  `/requests/${SEEDED_REQUESTS.waiting.number}`,
   // A request written in Markdown: headings, lists, a table, a quotation, an image as a link,
   // a footnote, and highlighted code, whose colours have to be readable in both modes.
-  '/requests/6',
+  `/requests/${SEEDED_REQUESTS.formatted.number}`,
   '/companies/does-not-exist',
   '/does-not-exist',
 ];
@@ -149,14 +149,18 @@ const CLIENT_PATHS = [
   '/requests',
   '/requests/board',
   '/requests/new',
-  '/requests/1',
-  '/requests/6',
+  `/requests/${SEEDED_REQUESTS.waiting.number}`,
+  `/requests/${SEEDED_REQUESTS.formatted.number}`,
   '/companies/{company}',
   '/companies/{company}/board',
 ];
 
 /** Pages scanned as a Watcher, who only reads: no form, no controls, no Move menus. */
-const WATCHER_PATHS = ['/dashboard', '/requests/board', '/requests/1'];
+const WATCHER_PATHS = [
+  '/dashboard',
+  '/requests/board',
+  `/requests/${SEEDED_REQUESTS.waiting.number}`,
+];
 
 /** Sign-in cookies of the staff Admin, shared by the signed-in scans. */
 let adminState: StorageState;
@@ -814,7 +818,7 @@ test.describe('in forced-colours mode', () => {
         await page.keyboard.press('Escape');
 
         // The seeded request, which nothing here changes: the menus are only opened.
-        await page.goto('/requests/1');
+        await page.goto(`/requests/${SEEDED_REQUESTS.waiting.number}`);
         await page.getByRole('combobox', { name: 'Status' }).click();
         // The open list is named by the select's label, so a screen reader says which list it is.
         await expect(page.getByRole('listbox', { name: 'Status' })).toBeVisible();
@@ -850,7 +854,7 @@ test.describe('in forced-colours mode', () => {
 
       test('a request’s reply, with the list of people at @ open', async ({ page }) => {
         // The seeded request, which nothing here changes: nothing is sent.
-        await page.goto('/requests/1');
+        await page.goto(`/requests/${SEEDED_REQUESTS.waiting.number}`);
         const reply = page.getByRole('textbox', { name: 'Your reply' });
         await expect(reply).toHaveAttribute('contenteditable', 'true');
         await reply.click();
@@ -861,7 +865,7 @@ test.describe('in forced-colours mode', () => {
 
       test('a request’s reply, with its editor opened large', async ({ page }) => {
         // The seeded request, which nothing here changes: nothing is written or sent.
-        await page.goto('/requests/1');
+        await page.goto(`/requests/${SEEDED_REQUESTS.waiting.number}`);
         const large = page.getByRole('button', { name: 'Large view' });
         // The button waits for the editor to load.
         await expect(large).toBeEnabled();
@@ -1195,9 +1199,9 @@ test.describe('in forced-colours mode', () => {
 
     test.describe('signed in', () => {
       test.beforeEach(async ({ context }) => {
-        await context.addCookies(adminState.cookies);
-        // Over the cookie the Admin's sign-in set, which says English.
-        await context.addCookies([languageCookie]);
+        // The Admin is on Adiutor's default language, so their sign-in has no language cookie of its
+        // own: this one is what the pages read.
+        await context.addCookies([...adminState.cookies, languageCookie]);
       });
 
       APP_PATHS.forEach((path) => {
