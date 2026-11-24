@@ -26,8 +26,9 @@ import { REQUEST_RUN_SECONDS, runJobNow } from './tick';
 
 /**
  * How long a run started from the Jobs page may keep starting new work, in
- * seconds (40), so it ends within the request's 60 (see
- * {@link REQUEST_RUN_SECONDS}); what's left waits for the next tick.
+ * seconds (25), so it ends within the request's 60 (see
+ * {@link REQUEST_RUN_SECONDS}, which leaves room for a last email and the
+ * alert of a failure); what's left waits for the next tick.
  */
 const PAGE_RUN_SECONDS = REQUEST_RUN_SECONDS;
 

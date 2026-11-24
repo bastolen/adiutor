@@ -175,7 +175,7 @@ expression, marked as UTC); the kinds of queued job with how many wait and faile
 runs of the last 30 days that did something, failed or were started by hand. Error references link
 to Logs → Errors for those who may see it (`errors:view`).
 
-Staff Admins (`jobs:manage`) also run a recurring job now (for at most 40 seconds of new work; the
+Staff Admins (`jobs:manage`) also run a recurring job now (for at most 25 seconds of new work; the
 page's `maxDuration` is 60), pause and resume jobs, and retry or discard failed queued jobs, one or
 all of a kind (`controls.ts`). Each is recorded in the audit log, never allowed while signed in as
 someone, and discarding asks first. A failed job of a kind the registry no longer lists can only be
