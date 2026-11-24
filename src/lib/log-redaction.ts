@@ -275,11 +275,7 @@ export function installLogRedaction(target: Console = console): void {
   }
   CONSOLE_METHODS.forEach((method) => {
     const original = target[method].bind(target);
-    /**
-     * Logs like the original method, without database values.
-     *
-     * @param args - What to log.
-     */
+    /** Logs like the original method, without database values. */
     const redacted = (...args: unknown[]): void => {
       original(...args.map((arg) => redactLogValue(arg)));
     };

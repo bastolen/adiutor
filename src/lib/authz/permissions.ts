@@ -168,11 +168,7 @@ export function getPermissions({
   company,
 }: PermissionInput): Set<Permission> {
   const allowed = new Set<Permission>();
-  /**
-   * Adds permissions to the result.
-   *
-   * @param permissions - The permissions to allow.
-   */
+  /** Adds permissions to the result. */
   const add = (permissions: Permission[]) => {
     permissions.forEach((permission) => allowed.add(permission));
   };
