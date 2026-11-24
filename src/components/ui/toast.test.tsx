@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import renderInLocale from '../../../tests/i18n/render';
+import toastRegion from '../../../tests/ui/toast-region';
 import { showToastAfterLoad, Toaster, type ToastTone, useToast } from './toast';
 
 /**
@@ -107,7 +108,7 @@ describe('Toasts', () => {
 
     await user.click(screen.getByRole('button', { name: 'Show' }));
 
-    const region = screen.getByRole('region', { name: /^Notifications/ });
+    const region = toastRegion();
     expect(region).toHaveTextContent('That password is incorrect.');
     // Radix waits a frame before announcing: the label and the one word, nothing of the error.
     await waitFor(() => expect(announced()).toBe('Notification Error'));
@@ -168,7 +169,7 @@ describe('Toasts', () => {
       await user.click(screen.getByRole('button', { name: 'More' }));
     }
 
-    const region = screen.getByRole('region', { name: /^Notifications/ });
+    const region = toastRegion();
     expect(region).not.toHaveTextContent('Toast 1');
     expect(region).toHaveTextContent('Toast 4');
   });
@@ -185,7 +186,7 @@ describe('Toasts', () => {
 
       const { unmount } = render(<Toaster />);
 
-      const region = screen.getByRole('region', { name: /^Notifications/ });
+      const region = toastRegion();
       await waitFor(() => expect(region).toHaveTextContent("You're back in your own account."));
       expect(window.sessionStorage.length).toBe(0);
       unmount();
@@ -195,7 +196,7 @@ describe('Toasts', () => {
       act(() => {
         vi.runAllTimers();
       });
-      expect(screen.getByRole('region', { name: /^Notifications/ })).toHaveTextContent('');
+      expect(toastRegion()).toHaveTextContent('');
     });
 
     it('are dropped when the next page comes more than 30 seconds later', async () => {
@@ -210,7 +211,7 @@ describe('Toasts', () => {
         vi.runAllTimers();
       });
 
-      expect(screen.getByRole('region', { name: /^Notifications/ })).toHaveTextContent('');
+      expect(toastRegion()).toHaveTextContent('');
       expect(window.sessionStorage.length).toBe(0);
     });
   });

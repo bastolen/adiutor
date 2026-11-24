@@ -14,17 +14,11 @@ import { defined } from '@/lib/defined';
 
 import ConfirmationWindow from '../../../tests/ui/confirmation-window';
 import nextFrames from '../../../tests/ui/next-frames';
+import toastRegion from '../../../tests/ui/toast-region';
 import Card from './card';
 import RowAction from './row-action';
 import { SignedInAsMarker } from './signed-in-as';
 import { Toaster } from './toast';
-
-/**
- * The toasts on screen.
- *
- * @returns The notifications region.
- */
-const toasts = () => screen.getByRole('region', { name: /^Notifications/ });
 
 describe('RowAction', () => {
   it('runs straight away without a confirmation', async () => {
@@ -363,7 +357,7 @@ describe('RowAction', () => {
       await user.click(screen.getByRole('button', { name: 'Revoke' }));
 
       await waitFor(() =>
-        expect(toasts()).toHaveTextContent('Invitation to jane@adiutor.test revoked.'),
+        expect(toastRegion()).toHaveTextContent('Invitation to jane@adiutor.test revoked.'),
       );
       expect(screen.queryByText('Invitation revoked.')).not.toBeInTheDocument();
     });
@@ -381,7 +375,7 @@ describe('RowAction', () => {
       await user.click(screen.getByRole('button', { name: 'Revoke' }));
 
       expect(await screen.findByRole('alert')).toHaveTextContent('Only Admins can do that.');
-      expect(toasts()).toHaveTextContent('Only Admins can do that.');
+      expect(toastRegion()).toHaveTextContent('Only Admins can do that.');
     });
 
     it('moves focus to the card’s heading when the action removes its row', async () => {
@@ -419,10 +413,10 @@ describe('RowAction', () => {
 
       await user.click(screen.getByRole('button', { name: 'Revoke' }));
 
-      await waitFor(() => expect(toasts()).toHaveTextContent('Invite link revoked.'));
+      await waitFor(() => expect(toastRegion()).toHaveTextContent('Invite link revoked.'));
       await nextFrames();
       expect(screen.getByRole('heading', { name: 'Invite links' })).toHaveFocus();
-      expect(within(toasts()).getByText('Invite link revoked.')).toBeInTheDocument();
+      expect(within(toastRegion()).getByText('Invite link revoked.')).toBeInTheDocument();
     });
   });
 });

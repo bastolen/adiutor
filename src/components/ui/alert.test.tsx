@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import nextFrames from '../../../tests/ui/next-frames';
+import toastRegion from '../../../tests/ui/toast-region';
 import Alert from './alert';
 import { InsideDialog } from './inside-dialog';
 import { Toaster } from './toast';
@@ -109,7 +110,7 @@ describe('Alert', () => {
         </Alert>
       </>,
     );
-    const toasts = screen.getByRole('region', { name: /^Notifications/ });
+    const toasts = toastRegion();
     await waitFor(() => expect(toasts).toHaveTextContent('That code didn’t work.'));
 
     rerender(
@@ -138,7 +139,7 @@ describe('Alert', () => {
     expect(screen.getByRole('alert')).toHaveFocus();
     // Let the effects and what they queue run: a toast would be raised by now.
     await act(async () => {});
-    const toasts = screen.getByRole('region', { name: /^Notifications/ });
+    const toasts = toastRegion();
     expect(toasts).not.toHaveTextContent('That code didn’t work.');
     expect(toasts.querySelectorAll('li')).toHaveLength(0);
   });

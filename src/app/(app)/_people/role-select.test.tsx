@@ -12,6 +12,7 @@ import { defined } from '@/lib/defined';
 
 import renderInLocale from '../../../../tests/i18n/render';
 import ConfirmationWindow from '../../../../tests/ui/confirmation-window';
+import toastRegion from '../../../../tests/ui/toast-region';
 import RoleSelect from './role-select';
 
 /** Mocked router. */
@@ -191,7 +192,7 @@ describe('RoleSelect', () => {
         />
       </>,
     );
-    const toasts = screen.getByRole('region', { name: /^Notifications/ });
+    const toasts = toastRegion();
 
     await user.click(screen.getByRole('combobox', { name: 'Role of Jane' }));
     await user.click(screen.getByRole('option', { name: 'Watcher' }));

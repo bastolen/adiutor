@@ -7,16 +7,10 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import toastRegion from '../../../tests/ui/toast-region';
 import { InsideDialog } from './inside-dialog';
 import ResultAlert from './result-alert';
 import { Toaster } from './toast';
-
-/**
- * The toasts on screen.
- *
- * @returns The notifications region.
- */
-const toasts = () => screen.getByRole('region', { name: /^Notifications/ });
 
 describe('ResultAlert', () => {
   it('renders nothing without a result', () => {
@@ -118,7 +112,7 @@ describe('ResultAlert', () => {
         </>,
       );
 
-      await waitFor(() => expect(toasts()).toHaveTextContent('Name saved.'));
+      await waitFor(() => expect(toastRegion()).toHaveTextContent('Name saved.'));
       expect(screen.queryByRole('status', { name: 'Name saved.' })).not.toBeInTheDocument();
       expect(document.querySelectorAll('[role="status"]:not(li)').length).toBeLessThanOrEqual(1);
     });
@@ -132,7 +126,7 @@ describe('ResultAlert', () => {
       );
 
       expect(screen.getByRole('alert')).toHaveFocus();
-      await waitFor(() => expect(toasts()).toHaveTextContent('Name is required.'));
+      await waitFor(() => expect(toastRegion()).toHaveTextContent('Name is required.'));
     });
 
     it('toasts the same error again when it comes a second time', async () => {
@@ -142,7 +136,7 @@ describe('ResultAlert', () => {
           <ResultAlert result={{ ok: false, message: 'Name is required.' }} />
         </>,
       );
-      await waitFor(() => expect(toasts().querySelectorAll('li')).toHaveLength(1));
+      await waitFor(() => expect(toastRegion().querySelectorAll('li')).toHaveLength(1));
 
       rerender(
         <>
@@ -151,7 +145,7 @@ describe('ResultAlert', () => {
         </>,
       );
 
-      await waitFor(() => expect(toasts().querySelectorAll('li')).toHaveLength(2));
+      await waitFor(() => expect(toastRegion().querySelectorAll('li')).toHaveLength(2));
     });
 
     it('keeps an error inside a dialog inline, without a toast, and still toasts a success', async () => {
@@ -168,8 +162,8 @@ describe('ResultAlert', () => {
       // Let the effects and what they queue run: a toast would be raised by now,
       // and it would take the first Escape.
       await act(async () => {});
-      expect(toasts()).not.toHaveTextContent('That password is incorrect.');
-      expect(toasts().querySelectorAll('li')).toHaveLength(0);
+      expect(toastRegion()).not.toHaveTextContent('That password is incorrect.');
+      expect(toastRegion().querySelectorAll('li')).toHaveLength(0);
 
       // A success isn't shown inline with toasts, so it's a toast in a dialog too.
       rerender(
@@ -180,7 +174,7 @@ describe('ResultAlert', () => {
           </InsideDialog>
         </>,
       );
-      await waitFor(() => expect(toasts()).toHaveTextContent('Name saved.'));
+      await waitFor(() => expect(toastRegion()).toHaveTextContent('Name saved.'));
     });
 
     it('toasts each result once, and not a success errorsOnly leaves out', async () => {
@@ -191,14 +185,14 @@ describe('ResultAlert', () => {
           <ResultAlert result={result} />
         </>,
       );
-      await waitFor(() => expect(toasts()).toHaveTextContent('Name is required.'));
+      await waitFor(() => expect(toastRegion()).toHaveTextContent('Name is required.'));
       rerender(
         <>
           <Toaster />
           <ResultAlert result={result} />
         </>,
       );
-      expect(toasts().querySelectorAll('li')).toHaveLength(1);
+      expect(toastRegion().querySelectorAll('li')).toHaveLength(1);
 
       rerender(
         <>
@@ -206,7 +200,7 @@ describe('ResultAlert', () => {
           <ResultAlert result={{ ok: true, message: 'Company added.' }} errorsOnly />
         </>,
       );
-      expect(toasts()).not.toHaveTextContent('Company added.');
+      expect(toastRegion()).not.toHaveTextContent('Company added.');
     });
   });
 });

@@ -8,6 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import Page from '../../../tests/ui/page';
+import toastRegion from '../../../tests/ui/toast-region';
 import CopyButton from './copy-button';
 import { Toaster } from './toast';
 
@@ -80,7 +81,7 @@ describe('CopyButton', () => {
 
     await user.click(screen.getByRole('button', { name: 'Copy codes' }));
 
-    const region = screen.getByRole('region', { name: /^Notifications/ });
+    const region = toastRegion();
     await waitFor(() => expect(region).toHaveTextContent("Couldn't copy"));
     expect(region.querySelector('[data-tone="error"]')).toHaveTextContent("Couldn't copy");
     // The button says it too, and that's what screen readers hear.
@@ -99,9 +100,7 @@ describe('CopyButton', () => {
     await user.click(screen.getByRole('button', { name: 'Copy codes' }));
 
     expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument();
-    expect(
-      screen.getByRole('region', { name: /^Notifications/ }).querySelector('[data-tone]'),
-    ).toBeNull();
+    expect(toastRegion().querySelector('[data-tone]')).toBeNull();
   });
 
   it('goes back to its label after a moment, later for a refusal', async () => {

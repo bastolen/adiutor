@@ -19,6 +19,7 @@ import { defined } from '@/lib/defined';
 import type { BoardLaneState, RequestStatus } from '@/lib/requests';
 
 import stubLayout from '../../../../tests/ui/layout';
+import toastRegion from '../../../../tests/ui/toast-region';
 import Board from './board';
 import { moveRequestAction } from './board-actions';
 import type { BoardCardView } from './board-card';
@@ -134,13 +135,6 @@ function lanes(): BoardLaneState<BoardCardView>[] {
 const lane = (name: string) => screen.getByRole('group', { name: new RegExp(`^${name},`) });
 
 /**
- * The toasts on the screen.
- *
- * @returns Their region.
- */
-const toasts = () => screen.getByRole('region', { name: /^Notifications/ });
-
-/**
  * The board's live region, which says what happens while a card is dragged
  * or moved.
  *
@@ -193,7 +187,7 @@ describe('Board', () => {
     renderBoard();
 
     // The only landmark here is the toasts': the lanes are groups named by their headings.
-    expect(screen.getAllByRole('region')).toEqual([toasts()]);
+    expect(screen.getAllByRole('region')).toEqual([toastRegion()]);
     expect(
       within(lane('Open')).getByRole('heading', { level: 2, name: /^Open, 3 requests/ }),
     ).toBeInTheDocument();
@@ -268,7 +262,7 @@ describe('Board', () => {
     await act(async () => {
       answer({ ok: true, message: 'AD-1 moved to In progress.' });
     });
-    await waitFor(() => expect(toasts()).toHaveTextContent('AD-1 moved to In progress.'));
+    await waitFor(() => expect(toastRegion()).toHaveTextContent('AD-1 moved to In progress.'));
     // The toast says how it went; the live region has gone quiet, so nothing is said twice.
     expect(live).toBeEmptyDOMElement();
     expect(liveRegion()).toBe(live);
@@ -324,7 +318,7 @@ describe('Board', () => {
       'This request’s status changed in the meantime.',
     );
     await waitFor(() =>
-      expect(toasts()).toHaveTextContent('This request’s status changed in the meantime.'),
+      expect(toastRegion()).toHaveTextContent('This request’s status changed in the meantime.'),
     );
     // The alert says why; the live region no longer says it's moving.
     expect(liveRegion()).toBeEmptyDOMElement();
@@ -738,7 +732,7 @@ describe('Board, dragging', () => {
       'AD-1 waits for approval only once a reply is sent as its solution.',
     );
     await waitFor(() =>
-      expect(toasts()).toHaveTextContent('AD-1 waits for approval only once a reply is sent'),
+      expect(toastRegion()).toHaveTextContent('AD-1 waits for approval only once a reply is sent'),
     );
     expect(within(lane('Open')).getByRole('button', { name: 'Move AD-1' })).toBeInTheDocument();
   });
