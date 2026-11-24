@@ -15,7 +15,7 @@ for a code from an authenticator app, or one sent by email (it works for 5 minut
 for once half the last one's lifetime has passed (2.5 minutes, `EMAIL_CODE_RESEND_SECONDS`): "Send
 a new code" counts down until then, at the code step, on the step-up page and while setting up
 email codes, and the guards refuse an earlier one (`EMAIL_CODE_SENT_RECENTLY`, shown as a notice,
-since the last code still works). The wait is per sign-in or session, as the code is: Better Auth
+since the last code still works; the code step and the step-up page share this in `useEmailCode`). The wait is per sign-in or session, as the code is: Better Auth
 keeps an emailed code with the sign-in it was asked for (its two-factor cookie), or with the
 signed-in session (the step-up page, setting up email codes). So after going back and signing in
 again, or in another browser, a code that works is sent at once, instead of a pointer to one that

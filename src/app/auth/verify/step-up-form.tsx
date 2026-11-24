@@ -19,7 +19,6 @@ import ProviderStepUpNotice, {
   clearProviderStepUpNotice,
 } from '@/components/auth/provider-step-up-notice';
 import ResendCodeButton from '@/components/auth/resend-code-button';
-import useResendCooldown from '@/components/auth/use-resend-cooldown';
 import PROVIDER_ICONS from '@/components/brand/provider-icons';
 import Alert from '@/components/ui/alert';
 import AuthDivider from '@/components/ui/auth-divider';
@@ -28,18 +27,18 @@ import Button, { whileRunning } from '@/components/ui/button';
 import loadFresh from '@/components/ui/load-fresh';
 import { useOncePerVisit, useTransientState } from '@/components/ui/use-transient-state';
 import type { StepUpMethods } from '@/lib/authz/mfa';
-import { EMAIL_CODE_MINUTES } from '@/lib/authz/mfa';
 import authClient from '@/lib/sign-in/auth-client';
-import { authCodeText, authErrorText } from '@/lib/sign-in/auth-error-messages';
+import { authErrorText } from '@/lib/sign-in/auth-error-messages';
 import {
   type MfaProvider,
   PROVIDER_LABELS,
   providerList,
   REVERIFY_HINT,
 } from '@/lib/sign-in/oauth-providers';
-import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 import type { TwoFactorMethod } from '@/lib/sign-in/two-factor-path';
 import verifyCode, { type CodeKind } from '@/lib/sign-in/verify-code';
+
+import useEmailCode from '../use-email-code';
 
 /** A way of confirming that a button starts: a passkey, the code form, or a provider. */
 type StepUpAction = 'passkey' | 'code' | MfaProvider;
@@ -153,10 +152,26 @@ export default function StepUpForm({
   const [codeSent, setCodeSent] = useState(false);
   /** The way of confirming that's running: its button is busy, the others wait (`whileRunning`). */
   const [running, setRunning] = useState<StepUpAction | null>(null);
-  const [sending, setSending] = useState(false);
-  const cooldown = useResendCooldown();
   const [error, setError] = useTransientState(initialError);
-  const [notice, setNotice] = useTransientState<string | null>(null);
+  // A code sent a moment ago still works: the code field shows, with the notice to use that one.
+  const emailCode = useEmailCode({
+    /** Clears the last error as a code is asked for. */
+    onStart: () => {
+      setError(null);
+    },
+    /**
+     * Says why no code was sent.
+     *
+     * @param failure - Better Auth's error.
+     */
+    onFailure: (failure) => {
+      setError(authErrorText(t, failure));
+    },
+    /** Shows the code field. */
+    onSent: () => {
+      setCodeSent(true);
+    },
+  });
 
   /**
    * Continues to the page the user came for. The form starts over, since the
@@ -172,68 +187,25 @@ export default function StepUpForm({
     setCodeSent(false);
     setMode(codeMethod);
     // A used code ends the guards' wait for a new one too.
-    cooldown.reset();
+    emailCode.cooldown.reset();
     router.replace(callbackURL);
     router.refresh();
-  };
-
-  /**
-   * Shows the message for a failed request.
-   *
-   * @param failure - Better Auth's error.
-   * @param failure.status - HTTP status.
-   * @param failure.code - Error code, if any.
-   * @param failure.message - The server's message, shown only for refusals it words itself.
-   */
-  const showError = (failure: { status: number; code?: string; message?: string }) => {
-    setError(authErrorText(t, failure));
-  };
-
-  /**
-   * Emails a code, then counts down until a new one may be asked for. A code
-   * sent a moment ago still works, so that refusal shows the code field with
-   * its message as the notice, not as an error.
-   *
-   * @param again - Whether it's a new code after an earlier one.
-   */
-  const sendCode = async (again = false) => {
-    setError(null);
-    setNotice(null);
-    setSending(true);
-    const result = await authClient.twoFactor.sendOtp();
-    setSending(false);
-    if (result.error?.code === EMAIL_CODE_SENT_RECENTLY.code) {
-      setCodeSent(true);
-      setNotice(authCodeText(t, EMAIL_CODE_SENT_RECENTLY.code));
-      cooldown.start();
-      return;
-    }
-    if (result.error) {
-      showError(result.error);
-      return;
-    }
-    setCodeSent(true);
-    cooldown.start();
-    setNotice(
-      again
-        ? t('emailCode.sentAgain', { minutes: EMAIL_CODE_MINUTES })
-        : t('emailCode.sent', { minutes: EMAIL_CODE_MINUTES }),
-    );
   };
 
   // With email codes as the only option, send one straight away: once per visit (also in Strict
   // Mode), so again when the page is shown again, whether or not the last visit confirmed. The
   // last code may have run out, or belong to a session since replaced; when the server says it
-  // still works, `sendCode` says to use that one.
+  // still works, the notice says to use that one.
   useOncePerVisit(() => {
     if (emailOnly) {
       // It shows its own errors.
-      void sendCode();
+      void emailCode.send();
     }
   });
 
   /**
-   * Switches between the code and backup codes.
+   * Switches between the code and backup codes. Only an authenticator app
+   * offers that, so there's no emailed code's notice to clear.
    *
    * @param next - The mode to switch to.
    */
@@ -241,7 +213,6 @@ export default function StepUpForm({
     setMode(next);
     setCode('');
     setError(null);
-    setNotice(null);
   };
 
   /**
@@ -259,7 +230,7 @@ export default function StepUpForm({
     setError(null);
     const result = await verifyCode(mode, { code });
     if (result.error) {
-      showError(result.error);
+      setError(authErrorText(t, result.error));
       setRunning(null);
       return;
     }
@@ -397,7 +368,7 @@ export default function StepUpForm({
 
       {mode && (
         <div className="flex flex-col gap-5">
-          {mode === 'otp' && <Alert tone="info">{notice}</Alert>}
+          {mode === 'otp' && <Alert tone="info">{emailCode.notice}</Alert>}
           {showCodeForm ? (
             <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
               <CodeField
@@ -416,8 +387,8 @@ export default function StepUpForm({
               variant="secondary"
               fullWidth
               disabled={running !== null}
-              loading={sending}
-              onClick={() => sendCode()}
+              loading={emailCode.sending}
+              onClick={() => emailCode.send()}
             >
               {t('stepUp.emailMe')}
             </Button>
@@ -428,9 +399,9 @@ export default function StepUpForm({
       <div className="flex flex-col items-center gap-3 text-sm">
         {mode === 'otp' && codeSent && (
           <ResendCodeButton
-            onClick={() => sendCode(true)}
-            sending={sending}
-            waitSeconds={cooldown.waitSeconds}
+            onClick={() => emailCode.send(true)}
+            sending={emailCode.sending}
+            waitSeconds={emailCode.cooldown.waitSeconds}
           />
         )}
         {methods.authenticator && (
