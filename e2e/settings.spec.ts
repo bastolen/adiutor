@@ -1,10 +1,8 @@
 /**
- * @file End-to-end tests for Settings: renaming the staff, choosing the
- * prefix of request numbers, managing request types (and raising a request
- * with one, until it's archived), inviting staff by email and by invite link, changing staff roles with the
- * last-Admin guard, a staff Admin stepping down themselves, and confirming
- * it's you before giving a staff role or a company's Admin role, coming back
- * to the card where you clicked.
+ * @file End-to-end tests for Settings: the staff's name, the request number
+ * prefix, request types, inviting staff, staff roles and the last-Admin
+ * guard, and confirming it's you before giving a staff role or a company's
+ * Admin role. A test that changes a setting puts it back.
  */
 import { randomUUID } from 'node:crypto';
 

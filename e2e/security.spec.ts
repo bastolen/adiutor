@@ -1,14 +1,8 @@
 /**
- * @file End-to-end tests for the security hardening: response headers,
- * closed Better Auth endpoints, email codes that can't get past an
- * authenticator app, sessions that must have been confirmed with MFA in the
- * last 15 minutes before they can change sign-in methods, roles that require
- * MFA keeping their only method, limited step-up attempts, wrong passwords
- * pausing password sign-in until a reset, sign-in redirects that stay on
- * the site, sign-in links that can't go on to another account's link, and
- * authenticator-code guessing at sign-in locking the account (and telling
- * the owner).
- * Runs in order: the accounts carry state from test to test.
+ * @file End-to-end tests for the security hardening: response headers, closed
+ * Better Auth endpoints, MFA at sign-in and for sign-in changes, limits on
+ * guessing, sign-in redirects and links. Runs in order, without retries: the
+ * accounts carry state from test to test.
  */
 import { type Locator, type Page } from '@playwright/test';
 

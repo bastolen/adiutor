@@ -1,19 +1,7 @@
 /**
- * @file End-to-end tests for signing in as a user: a staff Admin signs in as a
- * Manager from their page, sees Adiutor as them with the banner, can't change
- * anything (the controls are off, the user's account pages read-only), and
- * goes back to the card; the user is emailed and the audit log has the
- * reason. The account pages show whoever the Admin is signed in as, also
- * when Next kept them alive from before. The Admin's other tabs load afresh
- * as the user when it starts, and as the Admin when they go back, without a
- * click. Once its time is up, the tab loads afresh as the Admin, without a
- * click. A Manager signed in as a Watcher
- * doesn't see the Watcher's devices. Signed in as a company Admin who must
- * set up MFA, the Admin sees the Security page that user would see. Support
- * is told why they can't sign in as a company Admin, or without strong MFA.
- * A user who turns sign-ins by staff off ends one under way (the Admin's tab
- * loads afresh at their next page) and keeps staff out until they turn it
- * back on.
+ * @file End-to-end tests for staff signing in as a user: what the banner, the
+ * account pages and the other tabs show, who may do it, and a user turning it
+ * off.
  */
 import { allowStaffSignInOf, endSignInAsSoon, findUserId } from './support/db';
 import {

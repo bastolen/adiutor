@@ -1,16 +1,11 @@
 /**
  * @file Database helpers for end-to-end tests that need to look at or change
- * the test database in the middle of a test: finding a seeded company or user, ageing
- * a session's MFA confirmation, deactivating an account, deleting the staff settings, storing a
- * sign-in link without sending an email (and using one up), checking whether
- * a browser's session still exists, reading a stored sign-in error, adding
- * someone to a company directly, storing an invitation or an invite link
- * without sending anything, making a staff member's sign-in as a user end in a
- * few seconds, the background jobs' state (resuming a job, discarding or
- * storing failed queued jobs, making the last tick late), and storing a
- * request for a test to change.
- * Each opens its own short connection to the test database (`withTestDatabase`).
- * Resetting and seeding the database is `seed.ts`.
+ * the test database in the middle of a test: finding seeded rows, storing what
+ * the app would (requests, invitations, links, audit events) without sending
+ * anything, ageing or ending what a test needs to see end, and putting a
+ * seeded account or setting back to its seeded state. Each opens its own
+ * short connection to the test database (`withTestDatabase`). Resetting and
+ * seeding the database is `seed.ts`.
  */
 import { and, eq, inArray, isNull, like, or, sql } from 'drizzle-orm';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';

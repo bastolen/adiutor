@@ -1,9 +1,6 @@
 /**
- * @file End-to-end tests for the dashboard and the main navigation: the
- * Settings from the dashboard and the menu, what staff who can't manage the
- * staff see (and the tile of the requests assigned to them), the warning about users whose MFA came from a provider that is
- * off, and what company users get: Requests in the menu and on the
- * dashboard, and their companies.
+ * @file End-to-end tests for the dashboard and the main navigation, for staff
+ * and for company users.
  */
 
 import {

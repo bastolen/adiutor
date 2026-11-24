@@ -1,26 +1,9 @@
 /**
- * @file End-to-end tests for requests: the list with its filters, search,
- * sorting and pages, and what it says without requests, raising a request
- * (someone at a company, and the staff
- * for a company), and a request's page: its description, details and
- * conversation, the staff and a company working a request through (status,
- * replies, done, reopened, cancelled), the staff editing its details and
- * assigning it (and finding what's assigned to them), editing a
- * description or a reply (and the earlier versions the staff read), the
- * staff's internal notes (which Finance reads and the company never sees),
- * the
- * prefix numbers are shown with, and
- * who only reads: Watchers, Finance, and everyone for a deactivated
- * company's request; and a staff member signed in as a user, who replies for
- * them.
- * The staff reach a person's user page from their name; nobody at a company
- * does.
- * The board: switching to it, moving a card with its Move menu, Done and
- * Cancelled asking first, a move from a board that's out of date, a lane's
- * link to the list of all its requests, and a company's own board on its
- * page.
- * Each test that changes a request stores its own (`storeRequest`); the
- * seeded ones are only read.
+ * @file End-to-end tests for requests: the list, raising a request, a
+ * request's page (its text, details and conversation), the staff and a
+ * company working a request through, who may change what, subscribing, emails
+ * about a request and the board. Each test that changes a request stores its
+ * own (`storeOwnRequest`); the seeded ones (`SEEDED_REQUESTS`) are only read.
  */
 import { randomUUID } from 'node:crypto';
 
