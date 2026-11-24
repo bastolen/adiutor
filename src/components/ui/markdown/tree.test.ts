@@ -1,7 +1,9 @@
 /**
- * @file Tests for turning a Markdown text into a tree, and for the texts
- * that get none because they'd cost too much to render.
+ * @file Tests for turning a Markdown text into a tree, for the texts that
+ * get none because they'd cost too much to render, and for the helpers both
+ * renderers read the tree with.
  */
+import type { Element } from 'hast';
 import { describe, expect, it } from 'vitest';
 
 import markdownTree, {
@@ -9,7 +11,10 @@ import markdownTree, {
   highestHeading,
   MAX_EMPHASIS_RUNS,
   MAX_NESTING,
+  mentionOf,
   nestingDepth,
+  textOf,
+  writtenCode,
 } from './tree';
 
 /** What a page gives with a text. */
@@ -106,5 +111,57 @@ describe('highestHeading', () => {
   it('is 1 for a text without headings, and leaves the footnotes’ label out', () => {
     expect(of('No headings here.')).toBe(1);
     expect(of('### Three\n\nChecked[^1].\n\n[^1]: On Monday.')).toBe(3);
+  });
+});
+
+describe('textOf and writtenCode', () => {
+  /** A block of code as the highlighter leaves it: its code split into coloured parts. */
+  const block: Element = {
+    type: 'element',
+    tagName: 'pre',
+    properties: {},
+    children: [
+      {
+        type: 'element',
+        tagName: 'code',
+        properties: {},
+        children: [
+          {
+            type: 'element',
+            tagName: 'span',
+            properties: { className: ['hljs-keyword'] },
+            children: [{ type: 'text', value: 'echo' }],
+          },
+          { type: 'text', value: ' hello\n' },
+        ],
+      },
+    ],
+  };
+
+  it('reads the text of every part', () => {
+    expect(textOf(block)).toBe('echo hello\n');
+    expect(textOf({ type: 'comment', value: 'not text' })).toBe('');
+  });
+
+  it('gives a block’s code without the line break the parser ends it with', () => {
+    expect(writtenCode(block)).toBe('echo hello');
+    expect(writtenCode(undefined)).toBe('');
+  });
+});
+
+describe('mentionOf', () => {
+  /** The ID of a stored mention's row. */
+  const id = '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b';
+
+  it('finds the person a stored mention’s marker names', () => {
+    expect(mentionOf(`mention:${id}`, { [id]: 'Sam Lee' })).toBe('Sam Lee');
+  });
+
+  it('finds nobody for a marker of someone the text doesn’t mention, or another address', () => {
+    expect(mentionOf(`mention:${id}`, {})).toBeUndefined();
+    expect(mentionOf('https://adiutor.dev', { [id]: 'Sam Lee' })).toBeUndefined();
+    expect(mentionOf(undefined, { [id]: 'Sam Lee' })).toBeUndefined();
+    // Only the text's own mentions, never what every object has.
+    expect(mentionOf('mention:toString', {})).toBeUndefined();
   });
 });

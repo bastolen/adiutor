@@ -3,10 +3,13 @@
  * CommonMark with GitHub Flavored Markdown's additions, every line break
  * kept, HTML left as text, and only allowed elements let through. A text
  * that would cost too much to render gets no tree, and is shown as the plain
- * text it is.
+ * text it is. Also the helpers both renderers of the tree read it with, the
+ * page's (`elements.tsx`) and the email's (`EmailMarkdown`), so they read a
+ * text the same way.
  */
-import type { Root } from 'hast';
+import type { Element, ElementContent, Root } from 'hast';
 import type { Nodes } from 'mdast';
+import type { ComponentProps } from 'react';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeSanitize from 'rehype-sanitize';
 import remarkBreaks from 'remark-breaks';
@@ -14,6 +17,8 @@ import remarkGfm from 'remark-gfm';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import { type Processor, unified } from 'unified';
+
+import { storedMentionId } from '@/lib/requests';
 
 import { CODE_LANGUAGES } from './languages';
 import SANITIZE_SCHEMA from './sanitize';
@@ -102,6 +107,58 @@ export function highestHeading(tree: Root): number {
     }
   }
   return highest ?? 1;
+}
+
+/** The lowest heading HTML has: a text's headings go no lower, however many `#` they have. */
+export const LOWEST_HEADING = 6;
+
+/**
+ * The text of a part of a text's tree: its own, or that of everything in it
+ * (the highlighter splits a block's code into coloured parts).
+ *
+ * @param node - The part.
+ * @returns Its text.
+ */
+export function textOf(node: ElementContent): string {
+  if (node.type === 'text') {
+    return node.value;
+  }
+  return node.type === 'element' ? node.children.map(textOf).join('') : '';
+}
+
+/**
+ * A block's code as it was written, without the line break the parser ends
+ * it with: pasted in a terminal, a command mustn't run by itself.
+ *
+ * @param block - The block's node in the text's tree.
+ * @returns The code.
+ */
+export function writtenCode(block: Element | undefined): string {
+  const code = block === undefined ? '' : textOf(block);
+  return code.endsWith('\n') ? code.slice(0, -1) : code;
+}
+
+/** The attributes of a link in a text, with the two that mark a footnote's links. */
+export type MarkdownLinkProps = ComponentProps<'a'> & {
+  /** Set on the link from a text to its footnote. */
+  'data-footnote-ref'?: unknown;
+  /** Set on the link from a footnote back to the text. */
+  'data-footnote-backref'?: unknown;
+};
+
+/**
+ * The person a link in a stored text mentions: a mention's marker is a link
+ * whose address names the mention (`storedMentionId`). A marker that names
+ * nobody the text mentions isn't a mention, and is shown as its link's text,
+ * like any address that's no place.
+ *
+ * @param href - The link's address.
+ * @param mentions - The people the text mentions, by the ID its markers name.
+ * @returns The person, as the renderer shows them, or `undefined` when the link mentions nobody.
+ */
+export function mentionOf<T>(href: unknown, mentions: Readonly<Record<string, T>>): T | undefined {
+  const mentionId = typeof href === 'string' ? storedMentionId(href) : null;
+  return mentionId !== null && Object.hasOwn(mentions, mentionId) ? mentions[mentionId] : undefined;
 }
 
 /**

@@ -309,7 +309,8 @@ load or mislead in a reader's browser:
   time in proportion to its length (`splitLinks`), and leaves an address longer than 2,048
   characters as text.
 - **In an email, the same tree and the same rules.** A text an email shows is rendered from that
-  tree with inline styles (`EmailMarkdown` in `src/components/email/email-markdown.tsx`): what was
+  tree with inline styles (`EmailMarkdown` in `src/components/email/email-markdown.tsx`), which
+  reads it with the page's own helpers (`textOf`, `writtenCode`, `mentionOf` in `tree.ts`): what was
   typed as HTML is text, only whole `http` and `https` addresses link, and an image is a link,
   which matters as much in a mail app, where a loaded image tells its host who opened the email
   and when. Nothing gets a class or an ID, code has no colours, and a text too costly to format

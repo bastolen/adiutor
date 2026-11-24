@@ -3,14 +3,14 @@
  * for links, images, lists, tables, quotes and code, so formatted text looks
  * like the rest of Adiutor and follows its rules for what someone else wrote.
  */
-import type { Element, ElementContent } from 'hast';
+import type { Element } from 'hast';
 import type { Components, ExtraProps } from 'hast-util-to-jsx-runtime';
 import { Square, SquareCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ComponentProps } from 'react';
 
 import cn from '@/lib/cn';
-import { storedMentionId, textLinkTarget } from '@/lib/requests';
+import { textLinkTarget } from '@/lib/requests';
 
 import CopyButton from '../copy-button';
 import ExternalLink, { writtenLinkClasses } from '../external-link';
@@ -20,10 +20,13 @@ import TextLink from '../text-link';
 import withCodeNote from './code-note';
 import { codeLanguageName } from './languages';
 import { headingSize, markdownStyles } from './styles';
-import { FOOTNOTE_LABEL_ID } from './tree';
-
-/** The lowest heading HTML has. */
-const LOWEST_HEADING = 6;
+import {
+  FOOTNOTE_LABEL_ID,
+  LOWEST_HEADING,
+  type MarkdownLinkProps,
+  mentionOf,
+  writtenCode,
+} from './tree';
 
 /** A mention of a person, as a text shows it. */
 export interface ShownMention {
@@ -265,32 +268,6 @@ function namedLanguage(block: Element | undefined): string | null {
 }
 
 /**
- * The text of a part of the text's tree: its own, or that of everything in
- * it (the highlighter splits a block's code into coloured parts).
- *
- * @param node - The part.
- * @returns Its text.
- */
-function textOf(node: ElementContent): string {
-  if (node.type === 'text') {
-    return node.value;
-  }
-  return node.type === 'element' ? node.children.map(textOf).join('') : '';
-}
-
-/**
- * A block's code as it was written, without the line break the parser ends
- * it with: pasted in a terminal, a command mustn't run by itself.
- *
- * @param block - The block's node in the text's tree.
- * @returns The code.
- */
-function writtenCode(block: Element | undefined): string {
-  const code = block === undefined ? '' : textOf(block);
-  return code.endsWith('\n') ? code.slice(0, -1) : code;
-}
-
-/**
  * A block of code, with the language it's in as its caption: the language's
  * name where we know it ("TypeScript" for `ts`), else as it was written, and
  * "Code" for a block that names none. The code is always written left to
@@ -440,14 +417,6 @@ function MarkdownFootnotes({ children = null }: ComponentProps<'section'>) {
   return <section className={markdownStyles.footnotes}>{children}</section>;
 }
 
-/** The attributes of a link in a text, with the two that mark a footnote's links. */
-type MarkdownLinkProps = ComponentProps<'a'> & {
-  /** Set on the link from a text to its footnote. */
-  'data-footnote-ref'?: unknown;
-  /** Set on the link from a footnote back to the text. */
-  'data-footnote-backref'?: unknown;
-};
-
 /**
  * Builds the elements for one text.
  *
@@ -536,11 +505,8 @@ export default function markdownElements({
         </a>
       );
     }
-    // A mention's marker is a link whose address names the mention. One that names nobody the
-    // text mentions falls through, and is shown as its text like any address that's no place.
-    const mentionId = typeof href === 'string' ? storedMentionId(href) : null;
-    const mention =
-      mentionId !== null && Object.hasOwn(mentions, mentionId) ? mentions[mentionId] : undefined;
+    // A marker that names nobody the text mentions falls through, and is shown as its text.
+    const mention = mentionOf(href, mentions);
     if (mention) {
       return <MarkdownMention mention={mention} />;
     }
