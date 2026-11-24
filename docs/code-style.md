@@ -47,7 +47,8 @@ The linters and formatters, the JSDoc rule, the editor setup and the Git hooks. 
   (as `lint:fix` inserts) fails until it's written (`jsdoc/require-description`). A function whose
   one parameter is a destructured object with a named type, such as a component and its props
   interface, needs no `@param` lines: the type's own comments describe each field
-  (`interfaceExemptsParamsCheck`). A parameter with an inline type keeps its `@param` lines.
+  (`interfaceExemptsParamsCheck`). A parameter with an inline type keeps its `@param` lines. In a
+  `.tsx` file `@returns` is optional, so a component's comment doesn't end with "@returns The card."
   `eslint-plugin-jsdoc` enforces this for JS/TS. In CSS, Stylelint rejects any comment that is not
   `/** */`, but cannot check that a file header or a comment exists. The translation catalogues
   (`src/messages/**/*.json`) are the one exception: JSON can't hold comments, so

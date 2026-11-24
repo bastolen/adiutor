@@ -267,6 +267,18 @@ const jsdocConfig = [
       'jsdoc/require-param': ['error', { interfaceExemptsParamsCheck: true }],
     },
   },
+  {
+    name: 'adiutor/jsdoc-components',
+    files: ['**/*.tsx'],
+    rules: {
+      /**
+       * A component returns what its name and description say (the card, the
+       * page), so it needs no `@returns` line that only repeats them. One
+       * that says more is still welcome.
+       */
+      'jsdoc/require-returns': 'off',
+    },
+  },
 ];
 
 /**
