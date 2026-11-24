@@ -110,6 +110,21 @@ const STAYS_FIRST = /^(?:#!|<\?xml\b|<!doctype\b|#\s*(?:syntax|escape|check)\s*=
 const LINE_BREAKS = /[\n\v\f\r\u0085\u2028\u2029]+/g;
 
 /**
+ * What a line of the note may never hold, whatever the language, because
+ * some language reads it before or outside its comments, and what follows it
+ * could then leave the comment:
+ * - a backslash: Java turns `\u000a` and `\u000d` (also written `\uu000a`)
+ *   into a line end before it reads anything else, and C, C++ and Makefiles
+ *   join a line that ends in one to the next;
+ * - `??/`, which C before C23 and C++ before C++17 read as a backslash (a
+ *   trigraph);
+ * - an encoding declaration (`coding:` or `coding=`), which Python and Ruby
+ *   read from a comment on a file's first two lines, where the note goes: in
+ *   UTF-7, `+AAo-` is a line break.
+ */
+const READ_OUTSIDE_COMMENTS = /\\|\?\?\/|coding[:=]/i;
+
+/**
  * How a block's language writes a comment.
  *
  * @param language - The language as the block names it, or `null` for none.
@@ -134,7 +149,9 @@ function commentSigns(language: string | null): CommentSigns | null {
  * there's nothing to say, and when a line of the note holds what would end
  * the comment it's in (a name with a star-slash in it, say): what someone typed as
  * their name must never become code in what a reader pastes. For the same
- * reason every line of the note stays one line. Lines that have to stay
+ * reason every line of the note stays one line, and a line that holds what a
+ * language reads before or outside its comments ({@link READ_OUTSIDE_COMMENTS}:
+ * a backslash, say) is left out, in every language. Lines that have to stay
  * first ({@link STAYS_FIRST}) keep their place, with the note below them.
  *
  * @param code - The code, as it was written.
@@ -148,7 +165,9 @@ export default function withCodeNote(
   note: readonly string[],
 ): string {
   const signs = commentSigns(language);
-  const lines = note.map((line) => line.replace(LINE_BREAKS, ' ').trim()).filter(Boolean);
+  const lines = note
+    .map((line) => line.replace(LINE_BREAKS, ' ').trim())
+    .filter((line) => line !== '' && !READ_OUTSIDE_COMMENTS.test(line));
   if (signs === null || lines.length === 0) {
     return code;
   }

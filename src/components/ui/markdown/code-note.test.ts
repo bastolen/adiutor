@@ -145,6 +145,61 @@ describe('withCodeNote', () => {
     );
   });
 
+  it.each([
+    [
+      'java',
+      'a Unicode escape for a line feed',
+      String.raw`Written by \u000aRuntime.getRuntime().exec("calc");// on Nov 18, 2026`,
+    ],
+    [
+      'java',
+      'a Unicode escape for a carriage return',
+      String.raw`Written by \u000DRuntime.getRuntime().exec("calc");// on Nov 18, 2026`,
+    ],
+    [
+      'java',
+      'a Unicode escape with more than one u',
+      String.raw`Written by \uuu000aRuntime.getRuntime().exec("calc");// on Nov 18, 2026`,
+    ],
+    ['c', 'a backslash at its end, which joins the next line to it', 'Written by Sam \\'],
+    ['cpp', 'a backslash at its end, which joins the next line to it', 'Written by Sam \\'],
+    ['c', 'a trigraph that stands for a backslash', 'Written by Sam ??/'],
+    ['cpp', 'a trigraph that stands for a backslash', 'Written by Sam ??/'],
+  ])('leaves out a line of the note for %s with %s in it', (language, _what, line) => {
+    expect(withCodeNote('run();', language, [NOTE[0] ?? '', line])).toBe(
+      '// Source: https://adiutor.test/requests/11\nrun();',
+    );
+  });
+
+  it.each([
+    ['coding: utf_7', 'Written by Sam coding: utf_7 +AAo-import os on Nov 18, 2026'],
+    ['coding=utf-7', 'Written by Sam -*- coding=utf-7 -*- on Nov 18, 2026'],
+    ['Coding: in capitals', 'Written by Sam Coding: UTF-7 on Nov 18, 2026'],
+  ])('leaves out a line of the note for Python that declares an encoding (%s)', (_what, line) => {
+    expect(withCodeNote('print(1)', 'python', [NOTE[0] ?? '', line])).toBe(
+      '# Source: https://adiutor.test/requests/11\nprint(1)',
+    );
+  });
+
+  it('copies the code alone when every line of the note is left out', () => {
+    expect(withCodeNote('run();', 'java', [String.raw`Written by \u000a`])).toBe('run();');
+  });
+
+  it.each([...Object.keys(COMMENT_SIGNS), 'toml', 'jsonc', 'json5'])(
+    'never copies a line of the note that a language could read outside its comment, in %s',
+    (language) => {
+      expect(
+        withCodeNote('the code', language, [
+          String.raw`Written by \u000aSam`,
+          'Written by Sam\\',
+          'Written by Sam??/',
+          'Written by Sam coding: utf_7',
+          'Written by Sam coding=latin-1',
+        ]),
+      ).toBe('the code');
+    },
+  );
+
   it('has a choice for every language code is highlighted in', () => {
     expect(Object.keys(COMMENT_SIGNS).sort()).toEqual(Object.keys(CODE_LANGUAGES).sort());
   });
