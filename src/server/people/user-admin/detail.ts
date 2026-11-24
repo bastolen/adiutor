@@ -176,7 +176,7 @@ export async function getUserDetail(
 
   return {
     ...found,
-    staffRole: found.staffRole ?? null,
+    staffRole: found.staffRole,
     mfa: {
       ...state,
       status: mfaStatus(state, mfaRole, availableProviders),

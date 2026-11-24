@@ -92,7 +92,7 @@ async function lockSoleAdminRows(
   if (!self) {
     throw notFoundError();
   }
-  return { companyIds, staffAdmins, platformRole: self.platformRole ?? null };
+  return { companyIds, staffAdmins, platformRole: self.platformRole };
 }
 
 /**

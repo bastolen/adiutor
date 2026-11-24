@@ -262,7 +262,7 @@ async function changeMembership(
       !self ||
       self.deactivatedAt !== null ||
       !getPermissions({
-        platformRole: self.platformRole ?? null,
+        platformRole: self.platformRole,
         companyRole: ownRole,
         company: { deactivated: false },
       }).has('members:manage')
