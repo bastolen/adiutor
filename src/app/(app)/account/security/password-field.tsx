@@ -13,7 +13,6 @@ import TextField from '@/components/ui/text-field';
  * @param props - Field props.
  * @param props.value - The password typed so far.
  * @param props.onChange - Called with the new value.
- * @returns The field.
  */
 export default function PasswordField({
   value,

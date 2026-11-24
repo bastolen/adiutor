@@ -16,8 +16,6 @@ import ResetPasswordForm from './reset-password-form';
  * Page metadata: "Reset password", in the request's language. The address
  * holds the reset token, so it isn't sent along to other pages, and the page
  * is kept out of search engines.
- *
- * @returns The metadata.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('auth');
@@ -27,8 +25,6 @@ export async function generateMetadata(): Promise<Metadata> {
 /**
  * The reset-password page. The form reads the token from the URL, so it
  * renders at request time behind a Suspense boundary, with its text (`auth`).
- *
- * @returns The page.
  */
 export default function ResetPasswordPage() {
   return (

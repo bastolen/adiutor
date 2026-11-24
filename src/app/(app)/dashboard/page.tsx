@@ -34,8 +34,6 @@ import YourCompanies from './your-companies';
 
 /**
  * Page metadata, with the title in the request's language.
- *
- * @returns The metadata.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('dashboard');
@@ -46,8 +44,6 @@ export async function generateMetadata(): Promise<Metadata> {
  * Greets the user and shows the shortcuts and, for company users, their
  * companies. Its text comes from the `dashboard` namespace; the
  * recommendation (a client component) gets it through `ClientMessages`.
- *
- * @returns The dashboard content.
  */
 async function Dashboard() {
   const t = await getTranslations('dashboard');
@@ -116,8 +112,6 @@ async function Dashboard() {
 
 /**
  * The dashboard page.
- *
- * @returns The page.
  */
 export default function DashboardPage() {
   return (

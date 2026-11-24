@@ -24,7 +24,6 @@ import useReaderTimeZone from '@/lib/i18n/use-reader-time-zone';
  * @param props - Component props.
  * @param props.editedAt - When the text was last edited.
  * @param props.versions - The earlier versions, rendered, for the staff only.
- * @returns The mark.
  */
 export default function EditedMark({
   editedAt,

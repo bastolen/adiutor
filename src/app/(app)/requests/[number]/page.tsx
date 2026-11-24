@@ -128,7 +128,6 @@ const EARLIER_PATTERN = /^[1-9]\d?$/;
  *   conversation to show besides the latest, and `entry`, the entry a link (from an email)
  *   points at, which the conversation shows whatever groups the reader chose, with everything
  *   down to it.
- * @returns The page content.
  */
 async function RequestContent({
   params,
@@ -463,8 +462,6 @@ async function RequestContent({
 
 /**
  * The request page.
- *
- * @returns The page.
  */
 export default function RequestPage({ params, searchParams }: PageProps<'/requests/[number]'>) {
   // A request is text to read and write: on a wide screen it gets more room than other pages.

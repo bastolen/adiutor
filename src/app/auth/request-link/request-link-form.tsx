@@ -106,8 +106,6 @@ function prerendering(): boolean {
  * is signed in in this browser, the page says that continuing switches to the
  * link's account, and points out when both have the same name, and waits for
  * a click; when it's that account already, it just opens the request.
- *
- * @returns The form.
  */
 export default function RequestLinkForm({
   account,

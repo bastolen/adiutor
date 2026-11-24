@@ -90,8 +90,6 @@ interface BoardLaneJumpProps {
  *
  * When the board comes to fit (a wider window) and hides the row while focus
  * is in it, focus moves to the main content rather than `<body>`.
- *
- * @returns The navigation.
  */
 export default function BoardLaneJump({ columns, row }: BoardLaneJumpProps) {
   const t = useTranslations('requests.board');

@@ -19,7 +19,6 @@ import { updateNameAction } from './actions';
  *
  * @param props - Form props.
  * @param props.name - The current name.
- * @returns The form.
  */
 export default function NameForm({ name }: { name: string }) {
   const t = useTranslations('account');

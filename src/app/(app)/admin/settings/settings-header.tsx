@@ -13,8 +13,6 @@ import SegmentTabNav from '@/components/ui/segment-tab-nav';
  * their invitations and invite links) and Requests (request numbers and
  * types). Every tab is for staff Admins, who are the only ones to see the
  * settings, so none is left out. Its text comes from `admin.settings`.
- *
- * @returns The header.
  */
 export default function SettingsHeader() {
   const t = useTranslations('admin.settings');

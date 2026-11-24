@@ -19,7 +19,6 @@ import JoinForm from './join-form';
  *
  * @param props - Component props.
  * @param props.params - Route parameters.
- * @returns The page content.
  */
 async function Join({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -40,8 +39,6 @@ async function Join({ params }: { params: Promise<{ token: string }> }) {
 
 /**
  * The invite link page. Its form's text comes with it (`auth`).
- *
- * @returns The page.
  */
 export default function JoinPage({ params }: PageProps<'/join/[token]'>) {
   return (

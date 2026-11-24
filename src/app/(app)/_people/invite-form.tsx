@@ -46,8 +46,6 @@ interface InviteFormProps {
  * A refused send keeps the list as typed (one bad address refuses them all).
  * When some invitations went out and others didn't, the list is refilled
  * with just the addresses that weren't sent; when all went out, it clears.
- *
- * @returns The form.
  */
 export default function InviteForm({ companyId, roles }: InviteFormProps) {
   const t = useTranslations('people');

@@ -38,8 +38,6 @@ interface SessionsCardProps {
  * one by one or all at once; either also forgets every browser trusted at
  * the code step ("Trust this device", this one included), so a lost device
  * asks for the code again (`revokeOwnSession`, `revokeOtherOwnSessions`).
- *
- * @returns The card.
  */
 export default function SessionsCard({ sessions, table, currentSessionId }: SessionsCardProps) {
   const t = useTranslations('account');

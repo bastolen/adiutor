@@ -42,8 +42,6 @@ interface LanguageFormProps {
  * The reload is `useLoadFreshOnSuccess`, which also works when the page is
  * already at that address after an earlier change (going to the same address
  * with a `#section` would only scroll, and leave the button busy).
- *
- * @returns The form.
  */
 export default function LanguageForm({
   choice,

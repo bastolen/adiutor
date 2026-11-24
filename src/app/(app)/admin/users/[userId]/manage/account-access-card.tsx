@@ -27,7 +27,6 @@ import { deactivateUserAction, reactivateUserAction, resetMfaAction } from '../a
  * @param props.title - What the action is.
  * @param props.description - What it does.
  * @param props.children - The button.
- * @returns The row.
  */
 function ManageRow({
   title,
@@ -78,8 +77,6 @@ interface AccountAccessCardProps {
  * the passkeys too, was lost on the way. "Reactivate" asks the same before
  * its confirmation opens when the account gets a staff role or a company's
  * Admin role back.
- *
- * @returns The card.
  */
 export default function AccountAccessCard({
   userId,

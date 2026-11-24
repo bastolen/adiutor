@@ -74,8 +74,6 @@ interface PeopleTableProps {
  * column from 768px and the activity from 1280px; below those widths they go
  * under the name (`PersonCell`). With an actions column, each row's action is
  * at its end.
- *
- * @returns The table.
  */
 export default function PeopleTable({ caption, table, headings, rows }: PeopleTableProps) {
   const withActions = headings.actions !== undefined;

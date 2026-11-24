@@ -42,7 +42,6 @@ export const generateMetadata = globalPermissionMetadata(
  *
  * @param props - Component props.
  * @param props.params - Route parameters.
- * @returns The page content.
  */
 async function UserOverview({ params }: { params: Promise<{ userId: string }> }) {
   const actor = await requireGlobalPermission('users:view');
@@ -79,8 +78,6 @@ async function UserOverview({ params }: { params: Promise<{ userId: string }> })
 
 /**
  * The Overview tab of a user's page.
- *
- * @returns The page.
  */
 export default function UserOverviewPage({ params }: PageProps<'/admin/users/[userId]'>) {
   return (

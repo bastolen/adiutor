@@ -43,8 +43,6 @@ interface NavLinksProps {
  * The navigation list. The current page's link is marked with
  * `aria-current="page"` and highlighted (outlined in forced-colours mode,
  * `currentItem`).
- *
- * @returns The list.
  */
 export default function NavLinks({ sections, onNavigate = undefined }: NavLinksProps) {
   const t = useTranslations('navigation');

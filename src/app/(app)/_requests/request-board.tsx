@@ -63,7 +63,6 @@ const WORDED_STATUSES: readonly RequestStatus[] = ['waiting', 'proposed'];
  * @param props.reference - Its number as people see it.
  * @param props.showsCompany - Whether to name its company.
  * @param props.audience - The words its lane is in.
- * @returns The content.
  */
 function CardBody({
   card,
@@ -121,7 +120,6 @@ function CardBody({
  * @param props.card - The card's request.
  * @param props.names - The names that stand in for someone without one.
  * @param props.locale - The reader's language, to list the names.
- * @returns The footer.
  */
 function CardMeta({ card, names, locale }: { card: BoardCard; names: SideNames; locale: Locale }) {
   const t = useTranslations('requests');

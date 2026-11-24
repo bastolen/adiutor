@@ -114,8 +114,6 @@ function LastUsedBadge({ show, onPrimary = false }: { show: boolean; onPrimary?:
  * (`authErrorText`), never Better Auth's English message, except the
  * refusals the server words itself (a paused password sign-in, too many
  * attempts with how long to wait).
- *
- * @returns The sign-in form.
  */
 export default function SignInForm({ providers }: SignInFormProps) {
   const t = useTranslations('auth');
@@ -140,7 +138,6 @@ export default function SignInForm({ providers }: SignInFormProps) {
    * this page, still going on to the same place.
    *
    * @param target - Where to go after signing in.
-   * @returns The sign-in page's address.
    */
   const errorPageFor = (target: string) => signInPath(target);
 

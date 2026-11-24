@@ -177,8 +177,6 @@ interface BoardProps {
  * region last said reset when the reader leaves the page
  * (`useTransientState`), and the busy cards when the moves end; the drag and
  * drop's effects clean up then too.
- *
- * @returns The board.
  */
 export default function Board({ lanes, names, seeAll, staffName }: BoardProps) {
   const t = useTranslations('requests.board');

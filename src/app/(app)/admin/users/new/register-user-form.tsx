@@ -34,7 +34,6 @@ import registerUserAction from './actions';
  *
  * @param props - Component props.
  * @param props.defaultLocale - Adiutor's default language, named in the Default option.
- * @returns The form.
  */
 export default function RegisterUserForm({ defaultLocale }: { defaultLocale: Locale }) {
   const t = useTranslations('admin.addUser.form');

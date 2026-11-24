@@ -28,7 +28,6 @@ import { ErrorReference, JobName, RunStatusBadge, RunSummary } from './job-parts
  *
  * @param props - Component props.
  * @param props.run - The run.
- * @returns The wording.
  */
 function Trigger({ run }: { run: JobRunEntry }) {
   const t = useTranslations('admin.jobs.runs');
@@ -57,8 +56,6 @@ interface JobRunsCardProps {
 
 /**
  * The recent runs, or that there are none yet.
- *
- * @returns The card.
  */
 export default function JobRunsCard({ runs, table, canLookUp }: JobRunsCardProps) {
   const t = useTranslations('admin.jobs.runs');

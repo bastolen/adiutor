@@ -47,7 +47,6 @@ export const generateMetadata = globalPermissionMetadata('errors:view', 'admin.e
  *
  * @param props - Component props.
  * @param props.error - The error.
- * @returns The badge.
  */
 function KindBadge({ error }: { error: RecordedError }) {
   const t = useTranslations('admin.errors.kinds');
@@ -64,7 +63,6 @@ function KindBadge({ error }: { error: RecordedError }) {
  *
  * @param error - The error.
  * @param noMessage - What to show when the error has no message.
- * @returns The summary.
  */
 function summary(error: RecordedError, noMessage: string): string {
   if (error.kind === 'sign-in') {
@@ -148,7 +146,6 @@ function ErrorDetails({ error }: { error: RecordedError }) {
  * @param props - Component props.
  * @param props.input - The reference as typed.
  * @param props.lookup - What looking it up found.
- * @returns The result card.
  */
 function LookupResult({
   input,
@@ -201,7 +198,6 @@ function LookupResult({
  *
  * @param props - Component props.
  * @param props.searchParams - Query parameters: `q` (a reference) and the table's state.
- * @returns The page content.
  */
 async function Errors({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const t = await getTranslations('admin.errors');
@@ -302,8 +298,6 @@ async function Errors({ searchParams }: { searchParams: Promise<SearchParams> })
 
 /**
  * The errors page.
- *
- * @returns The page.
  */
 export default function ErrorsPage({ searchParams }: PageProps<'/admin/logs/errors'>) {
   return (

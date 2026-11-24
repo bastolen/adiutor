@@ -49,7 +49,6 @@ interface PlacedPart extends TextPart {
  * Notes where each piece of a text starts.
  *
  * @param parts - The pieces, in order.
- * @returns The pieces with their offsets.
  */
 function placed(parts: TextPart[]): PlacedPart[] {
   let offset = 0;
@@ -69,7 +68,6 @@ function placed(parts: TextPart[]): PlacedPart[] {
  *
  * @param text - The text as it's stored.
  * @param appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
- * @returns The text to show.
  */
 function asWritten(text: string, appUrl: string | null): string {
   return appUrl === null ? text : staffLinksAsLabels(text, appUrl);
@@ -87,7 +85,6 @@ function asWritten(text: string, appUrl: string | null): string {
  * @param props.text - The text, as {@link asWritten} gives it.
  * @param props.className - Extra classes for the paragraph.
  * @param props.appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
- * @returns The text.
  */
 function PlainText({
   text,
@@ -154,7 +151,6 @@ function shownMentions(
  * @param props.className - Extra classes for the paragraph.
  * @param props.mentions - The people the text mentions.
  * @param props.appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
- * @returns The text.
  */
 function UnformattedText({
   text,
@@ -187,7 +183,6 @@ function UnformattedText({
  * @param props.source - Where the text is from.
  * @param props.mentions - The people the text mentions.
  * @param props.staffOnly - Whether only the staff read the text, which then links to their pages.
- * @returns The text.
  */
 function FormattedText({
   text,
@@ -245,7 +240,6 @@ function FormattedText({
  * @param props.source - Where the text is from, for the note above code copied from it.
  * @param props.names - The names of the two sides, for the people the text mentions.
  * @param props.staffOnly - Whether only the staff read the text (an internal note).
- * @returns The text.
  */
 export default function RequestText({
   text,

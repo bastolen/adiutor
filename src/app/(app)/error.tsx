@@ -25,8 +25,6 @@ import useErrorReference from '../use-error-reference';
  * Explains the page couldn't load, in a card in the app layout, with "Try
  * again", the way to the dashboard and the reference (once it's known).
  * Focus moves to the heading, so screen readers announce what happened.
- *
- * @returns The error content.
  */
 export default function AppError({ error, retry }: ErrorPageProps) {
   const t = useTranslations('common');

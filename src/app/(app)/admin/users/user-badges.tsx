@@ -21,7 +21,6 @@ const MFA_TONES: Record<MfaStatus, BadgeTone> = {
  *
  * @param props - Component props.
  * @param props.status - The MFA status.
- * @returns The badge.
  */
 export function MfaBadge({ status }: { status: MfaStatus }) {
   const t = useTranslations('admin.users.badges');
@@ -33,7 +32,6 @@ export function MfaBadge({ status }: { status: MfaStatus }) {
  *
  * @param props - Component props.
  * @param props.role - Their staff role.
- * @returns The badge.
  */
 export function StaffBadge({ role }: { role: PlatformRole }) {
   const t = useTranslations('admin.users.badges');

@@ -64,8 +64,6 @@ interface RaiseRequestFormProps {
  * for. The staff also get a priority, which the type sets unless they choose
  * one; nobody else sees a priority. A refused request keeps what was typed;
  * a raised one opens its page.
- *
- * @returns The form.
  */
 export default function RaiseRequestForm({
   types,

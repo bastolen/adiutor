@@ -55,7 +55,6 @@ export const generateMetadata = globalPermissionMetadata(
  * @param props - Component props.
  * @param props.searchParams - Query parameters: each table's sort and page (see
  *   `STAFF_TABLE`, `INVITATIONS_TABLE` and `INVITE_LINKS_TABLE`).
- * @returns The page content.
  */
 async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const t = await getTranslations('admin.settings.staff');
@@ -209,8 +208,6 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
 
 /**
  * The Staff tab of Settings.
- *
- * @returns The page.
  */
 export default function StaffSettingsPage({ searchParams }: PageProps<'/admin/settings/staff'>) {
   return (

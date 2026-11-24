@@ -22,8 +22,6 @@ import setupAction from './actions';
  * email and password, with a button that sets everything up and signs in.
  * The browser's zone goes along unseen; before the page has hydrated it's
  * empty, and Adiutor starts in UTC.
- *
- * @returns The form.
  */
 export default function SetupForm() {
   const t = useTranslations('auth');

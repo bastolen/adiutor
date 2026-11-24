@@ -17,8 +17,6 @@ import AccountHeader from './account-header';
  * Loads the signed-in user and shows the header. Like the account pages, it
  * lets users whose role requires MFA through before they have it: the
  * Security page is where they set it up.
- *
- * @returns The header.
  */
 async function AccountHeaderLoader() {
   const actor = await getActor({ allowMissingMfa: true });
@@ -30,8 +28,6 @@ async function AccountHeaderLoader() {
 
 /**
  * The account header above the account pages.
- *
- * @returns The layout.
  */
 export default function AccountLayout({ children }: LayoutProps<'/account'>) {
   return (

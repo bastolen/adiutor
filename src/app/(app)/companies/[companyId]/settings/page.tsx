@@ -36,7 +36,6 @@ export const generateMetadata = companyPermissionMetadata(
  * @param props - Component props.
  * @param props.params - Route parameters: the company's ID or URL name.
  * @param props.searchParams - Query parameters: `saved=1` after a new URL name moved the page here.
- * @returns The page content.
  */
 async function Settings({
   params,
@@ -100,8 +99,6 @@ async function Settings({
 
 /**
  * The company settings page.
- *
- * @returns The page.
  */
 export default function SettingsPage({
   params,

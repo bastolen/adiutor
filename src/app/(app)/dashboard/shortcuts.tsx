@@ -44,8 +44,6 @@ interface ShortcutsProps {
  * tiles there are: an odd last tile keeps the others' width, and so does the
  * single Requests tile of a company user. Its text comes from the `dashboard`
  * namespace.
- *
- * @returns The list of tiles.
  */
 export default function Shortcuts({ sections, assigned = null }: ShortcutsProps) {
   const t = useTranslations('dashboard');

@@ -39,7 +39,6 @@ const PRIORITY_TONES: Record<RequestPriority, BadgeTone> = {
  * @param props.audience - Who reads it.
  * @param props.wrap - Let a long status wrap, in a narrow place like a card on the board or the
  *   Status column of a list of requests at tablet width.
- * @returns The badge.
  */
 export function StatusBadge({
   status,
@@ -60,8 +59,6 @@ export function StatusBadge({
 
 /**
  * Says that a request was done or cancelled before and is worked on again.
- *
- * @returns The badge.
  */
 export function ReopenedBadge() {
   const t = useTranslations('requests');
@@ -73,7 +70,6 @@ export function ReopenedBadge() {
  *
  * @param props - Component props.
  * @param props.name - The type's name.
- * @returns The badge.
  */
 export function TypeBadge({ name }: { name: string }) {
   return <Badge>{name}</Badge>;
@@ -87,7 +83,6 @@ export function TypeBadge({ name }: { name: string }) {
  * @param props - Component props.
  * @param props.priority - The priority.
  * @param props.short - Leave "priority" out of the label.
- * @returns The badge.
  */
 export function PriorityBadge({
   priority,

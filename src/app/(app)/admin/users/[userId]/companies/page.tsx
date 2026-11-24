@@ -46,7 +46,6 @@ export const generateMetadata = globalPermissionMetadata(
  * @param props - Component props.
  * @param props.params - Route parameters.
  * @param props.searchParams - Query parameters: the table's sort and page (`USER_COMPANIES_TABLE`).
- * @returns The page content.
  */
 async function UserCompanies({
   params,
@@ -99,8 +98,6 @@ async function UserCompanies({
 
 /**
  * The Companies tab of a user's page.
- *
- * @returns The page.
  */
 export default function UserCompaniesPage({
   params,

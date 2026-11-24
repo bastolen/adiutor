@@ -37,8 +37,6 @@ interface DevicesCardProps {
 
 /**
  * The user's signed-in devices.
- *
- * @returns The card.
  */
 export default function DevicesCard({
   userId,

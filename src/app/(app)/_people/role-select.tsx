@@ -84,8 +84,6 @@ interface RoleSelectProps {
  *
  * Its own text comes from the `people` namespace: the page passes it with
  * `ClientMessages`.
- *
- * @returns The form.
  */
 export default function RoleSelect({
   action,

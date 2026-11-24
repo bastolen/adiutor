@@ -21,7 +21,6 @@ import cn from '@/lib/cn';
  * @param props - Component props.
  * @param props.href - The page with more of the conversation.
  * @param props.children - The link's text.
- * @returns The link.
  */
 export default function ShowEarlierLink({ href, children }: { href: string; children: ReactNode }) {
   const linkRef = useRef<HTMLAnchorElement>(null);

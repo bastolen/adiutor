@@ -35,8 +35,6 @@ export interface ErrorPageProps {
  * the ways out: try again, the dashboard (which sends signed-out visitors to
  * sign in) and, when there's a previous page in this tab, back to it. Focus
  * moves to the heading, so screen readers announce what happened.
- *
- * @returns The error page.
  */
 export default function RootError({ error, retry }: ErrorPageProps) {
   const t = useTranslations('common');

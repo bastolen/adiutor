@@ -48,8 +48,6 @@ interface SignInAsCardProps {
 
 /**
  * Offers signing in as the user, or says why it isn't possible.
- *
- * @returns The card.
  */
 export default function SignInAsCard({
   userId,

@@ -27,7 +27,6 @@ import { noteAction } from './actions';
  *
  * @param props - Form props.
  * @param props.request - The request's number.
- * @returns The form.
  */
 export default function NoteForm({ request }: { request: number }) {
   const t = useTranslations('requests.note');

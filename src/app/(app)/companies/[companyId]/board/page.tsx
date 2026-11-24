@@ -40,7 +40,6 @@ export const generateMetadata = companyPermissionMetadata('requests:view', 'requ
  * @param props.params - Route parameters.
  * @param props.searchParams - Query parameters: the search, the filters, the sort and the cards
  *   per lane (see `RequestBoard`).
- * @returns The page content.
  */
 async function CompanyBoard({
   params,
@@ -71,8 +70,6 @@ async function CompanyBoard({
 
 /**
  * The company's board page.
- *
- * @returns The page.
  */
 export default function CompanyBoardPage({
   params,

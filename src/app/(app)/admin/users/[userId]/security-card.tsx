@@ -21,7 +21,6 @@ import { MfaBadge } from '../user-badges';
  * @param props.mfa - The user's MFA details.
  * @param props.accountNames - Their provider accounts' names at the providers, by account ID, or
  *   `null` when the viewer may not see them (only staff Admins may).
- * @returns The card.
  */
 export default function SecurityCard({
   mfa,

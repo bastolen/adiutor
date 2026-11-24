@@ -20,7 +20,6 @@ import { requestEmailsAction } from '../actions';
  *
  * @param props - Component props.
  * @param props.on - Whether the user gets them now.
- * @returns The card.
  */
 export default function RequestEmailsCard({ on }: { on: boolean }) {
   const t = useTranslations('account.profile');

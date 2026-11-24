@@ -72,8 +72,6 @@ interface CompaniesCardProps {
  * services refuse every change there until the company is reactivated, as
  * the company's own Members page shows. "Add to company" is turned off for a
  * deactivated account, staying focusable with its reason below the table.
- *
- * @returns The card.
  */
 export default function CompaniesCard({
   userId,

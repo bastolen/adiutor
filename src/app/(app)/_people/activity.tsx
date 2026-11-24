@@ -24,8 +24,6 @@ interface ActivityProps {
  * The Activity column's content: when they were last active (labelled for
  * screen readers, as the header only says "Activity"), with when they joined
  * below in smaller text.
- *
- * @returns The cell's content.
  */
 export function ActivityColumn({ lastActiveAt, joinedAt }: ActivityProps) {
   const t = useTranslations('people.activity');
@@ -48,8 +46,6 @@ export function ActivityColumn({ lastActiveAt, joinedAt }: ActivityProps) {
  * The same facts as two short phrases, for the line under the name: they sit
  * in that line's flex row (`display: contents`), and `className` hides them
  * from the width where the Activity column shows, e.g. `xl:hidden`.
- *
- * @returns The phrases.
  */
 export function ActivityLine({
   lastActiveAt,

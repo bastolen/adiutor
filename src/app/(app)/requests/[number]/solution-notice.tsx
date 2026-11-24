@@ -24,7 +24,6 @@ import { answerSolutionAction } from './actions';
  *
  * @param props - Component props.
  * @param props.request - The request's number.
- * @returns The notice.
  */
 export default function SolutionNotice({ request }: { request: number }) {
   const t = useTranslations('requests.solution');

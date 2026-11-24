@@ -93,8 +93,6 @@ function linkDetails(
  * The form to create a single-use invite link (for people who manage them)
  * and the list of links with their status, sortable by when they were
  * created and paginated.
- *
- * @returns The card.
  */
 export default function InviteLinksCard({
   links,

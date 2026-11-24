@@ -33,8 +33,6 @@ interface JoinFormProps {
  * Once it has gone through, a confirmation takes the form's place and takes
  * keyboard focus: the button that had it is gone, and focus would otherwise
  * fall to `<body>`.
- *
- * @returns The form.
  */
 export default function JoinForm({ token, signedInEmail }: JoinFormProps) {
   const t = useTranslations('auth');

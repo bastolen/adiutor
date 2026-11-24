@@ -42,8 +42,6 @@ interface PersonCellProps {
  * their own row, any other badges, and their address unless it is the name.
  * Below 768px the role follows, and below 1280px their activity, where the
  * table has no column for them. Long names and addresses break anywhere.
- *
- * @returns The cell.
  */
 export default function PersonCell({
   name,

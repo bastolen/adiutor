@@ -17,8 +17,6 @@ import { getOptionalActor } from '@/server/authz';
 /**
  * The page's title: "Not found · Adiutor", in the request's language, the same
  * title pages the user may not see give them.
- *
- * @returns The metadata.
  */
 export function generateMetadata(): Promise<Metadata> {
   return notFoundMetadata();
@@ -42,8 +40,6 @@ function DashboardLink() {
 /**
  * The way out: the dashboard when someone is signed in, and signing in when
  * nobody is.
- *
- * @returns The page's main button.
  */
 async function MainAction() {
   if (await getOptionalActor()) {

@@ -34,7 +34,6 @@ interface AcceptInvitationProps {
  * @param props - Component props.
  * @param props.token - The token from the link.
  * @param props.email - The signed-in user's email.
- * @returns The form.
  */
 function JoinAsSignedInUser({ token, email }: { token: string; email: string }) {
   const t = useTranslations('auth');
@@ -58,7 +57,6 @@ function JoinAsSignedInUser({ token, email }: { token: string; email: string }) 
  *
  * @param props - Component props.
  * @param props.token - The token from the link.
- * @returns The options.
  */
 function SignInOrCreateAccount({ token }: { token: string }) {
   const t = useTranslations('auth');
@@ -110,8 +108,6 @@ function SignInOrCreateAccount({ token }: { token: string }) {
 
 /**
  * Shows the right way to accept for the visitor.
- *
- * @returns The accept options.
  */
 export default function AcceptInvitation({ token, signedInEmail }: AcceptInvitationProps) {
   return signedInEmail ? (

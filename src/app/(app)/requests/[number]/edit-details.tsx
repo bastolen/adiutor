@@ -51,7 +51,6 @@ export interface EditableType {
  * @param props - Component props.
  * @param props.details - The request's details as they are.
  * @param props.types - The types to choose from: the active ones, and the request's own.
- * @returns The fields.
  */
 function DetailsFields({ details, types }: { details: Details; types: readonly EditableType[] }) {
   const t = useTranslations('requests');
@@ -115,7 +114,6 @@ function DetailsFields({ details, types }: { details: Details; types: readonly E
  * @param props.request - The request's number.
  * @param props.details - Its details as they are.
  * @param props.types - The types to choose from: the active ones, and the request's own.
- * @returns The button and dialog.
  */
 export default function EditDetails({
   request,

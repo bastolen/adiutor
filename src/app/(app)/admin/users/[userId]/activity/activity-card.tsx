@@ -26,8 +26,6 @@ interface ActivityCardProps {
 
 /**
  * The user's recent security events.
- *
- * @returns The card.
  */
 export default function ActivityCard({ userId, userName, activity }: ActivityCardProps) {
   const t = useTranslations('admin.user.activity');

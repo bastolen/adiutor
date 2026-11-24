@@ -33,7 +33,6 @@ import { ErrorReference, JobName } from './job-parts';
  *
  * @param props - Component props.
  * @param props.job - The job.
- * @returns The buttons.
  */
 function Controls({ job }: { job: FailedJobEntry }) {
   const t = useTranslations('admin.jobs.actions');
@@ -88,8 +87,6 @@ interface FailedJobsCardProps {
 
 /**
  * The failed queued jobs, or that there are none.
- *
- * @returns The card.
  */
 export default function FailedJobsCard({ jobs, table, canLookUp, canManage }: FailedJobsCardProps) {
   const t = useTranslations('admin.jobs.failed');

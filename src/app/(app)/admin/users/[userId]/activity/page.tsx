@@ -50,7 +50,6 @@ export const generateMetadata = globalPermissionMetadata(
  * @param props.params - Route parameters.
  * @param props.searchParams - Query parameters: the devices table's sort and page
  *   (`USER_DEVICES_TABLE`).
- * @returns The page content.
  */
 async function UserActivity({
   params,
@@ -98,8 +97,6 @@ async function UserActivity({
 
 /**
  * The Activity tab of a user's page.
- *
- * @returns The page.
  */
 export default function UserActivityPage({
   params,

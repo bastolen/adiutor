@@ -35,7 +35,6 @@ export type SubscriberChoice = SubscribablePerson;
  * @param props - Component props.
  * @param props.choices - The people to offer.
  * @param props.company - The name of the request's company.
- * @returns The fields.
  */
 function SubscriberFields({
   choices,
@@ -93,7 +92,6 @@ function SubscriberFields({
  * @param props.company - The name of the request's company.
  * @param props.scope - Whose subscriptions the viewer changes: `everyone` (the staff) or
  *   `colleagues` (a company's Admin); it words the explanation.
- * @returns The button and dialog.
  */
 export default function ChangeSubscribers({
   request,

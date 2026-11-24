@@ -51,7 +51,6 @@ export interface ColumnLane {
  * and the not-allowed cursor where it can't.
  *
  * @param drop - What the lane is while a card is dragged.
- * @returns The classes.
  */
 function dropClasses(drop: LaneDropState | undefined): string {
   return cn(
@@ -92,7 +91,6 @@ function useLaneDrop(drag: BoardDrag | null, status: RequestStatus | null) {
  *
  * @param props - Component props.
  * @param props.total - The count.
- * @returns The count.
  */
 export function LaneCount({ total }: { total: number }) {
   const t = useTranslations('requests.board');
@@ -147,7 +145,6 @@ function DropNote({ drop, status }: { drop: LaneDropState | undefined; status: R
  *
  * @param props - Component props.
  * @param props.lane - The lane.
- * @returns The cards.
  */
 function LaneCards({ lane }: { lane: ColumnLane }) {
   const t = useTranslations('requests.board');
@@ -199,7 +196,6 @@ function LaneCards({ lane }: { lane: ColumnLane }) {
  * @param props - Component props.
  * @param props.lane - The lane.
  * @param props.drag - The board's drag and drop, once loaded.
- * @returns The half.
  */
 function LaneHalf({ lane, drag }: { lane: ColumnLane; drag: BoardDrag | null }) {
   const t = useTranslations('requests.board');
@@ -280,8 +276,6 @@ interface BoardColumnProps {
  * the pointer is over it; a lane it can't go to has a dashed border, the
  * not-allowed cursor and says "Can't move here", so its colour is never the
  * only sign.
- *
- * @returns The column.
  */
 export default function BoardColumn({
   column,

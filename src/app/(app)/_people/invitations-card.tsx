@@ -43,8 +43,6 @@ interface InvitationsCardProps {
  * manage them. Invitations sent by claiming an invite link say so under the
  * address (they stay that way when resent), so whoever resends one knows
  * where it came from.
- *
- * @returns The card.
  */
 export default function InvitationsCard({
   invitations,

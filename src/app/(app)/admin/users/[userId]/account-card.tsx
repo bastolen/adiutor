@@ -23,8 +23,6 @@ type AccountCardProps = Pick<
 
 /**
  * The user's account details.
- *
- * @returns The card.
  */
 export default function AccountCard({
   email,

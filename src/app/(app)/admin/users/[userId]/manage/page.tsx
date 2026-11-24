@@ -41,7 +41,6 @@ export const generateMetadata = globalPermissionMetadata(
  *
  * @param props - Component props.
  * @param props.params - Route parameters.
- * @returns The page content.
  */
 async function ManageUser({ params }: { params: Promise<{ userId: string }> }) {
   const actor = await requireGlobalPermission('users:view');
@@ -88,8 +87,6 @@ async function ManageUser({ params }: { params: Promise<{ userId: string }> }) {
 
 /**
  * The Manage tab of a user's page.
- *
- * @returns The page.
  */
 export default function ManageUserPage({ params }: PageProps<'/admin/users/[userId]/manage'>) {
   return (

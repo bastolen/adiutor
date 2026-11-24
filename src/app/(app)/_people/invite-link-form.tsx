@@ -36,8 +36,6 @@ interface InviteLinkFormProps {
  * staff role, or a company's Admin role, needs a recent confirmation: while
  * the user doesn't have one, a note with a link to confirm replaces the
  * create button.
- *
- * @returns The form.
  */
 export default function InviteLinkForm({ companyId, roles }: InviteLinkFormProps) {
   const t = useTranslations('people');

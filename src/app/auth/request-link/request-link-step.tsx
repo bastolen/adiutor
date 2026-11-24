@@ -29,8 +29,6 @@ import RequestLinkForm from './request-link-form';
  * Says that a staff member signed in as someone must go back to their own
  * account before a link signs anyone in: switching here would end that
  * sign-in without recording its end.
- *
- * @returns The message.
  */
 function SignedInAsSomeone() {
   const t = useTranslations('auth');
@@ -54,7 +52,6 @@ function SignedInAsSomeone() {
  *
  * @param view - What the link is.
  * @param entry - The entry the link points at, if any.
- * @returns The address.
  */
 function signInHref(view: RequestLinkView | null, entry: string | null = null): string {
   if (view === null || view.state === 'unknown') {
@@ -75,7 +72,6 @@ function signInHref(view: RequestLinkView | null, entry: string | null = null): 
  *
  * @param props - Component props.
  * @param props.searchParams - The page's query string.
- * @returns The page content.
  */
 export default async function RequestLinkStep({
   searchParams,

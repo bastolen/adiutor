@@ -48,8 +48,6 @@ interface PictureFormProps {
  * only the initials are offered, with where to connect one. The choice
  * stays as saved after saving (`resetOnSuccess: false`), and the page shows
  * the new picture wherever the user appears.
- *
- * @returns The form.
  */
 export default function PictureForm({ name, options, shown, chosen }: PictureFormProps) {
   const t = useTranslations('account');

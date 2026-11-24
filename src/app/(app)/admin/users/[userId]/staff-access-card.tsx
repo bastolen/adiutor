@@ -32,8 +32,6 @@ interface StaffAccessCardProps {
 
 /**
  * The user's staff access, with the controls to change it.
- *
- * @returns The card.
  */
 export default function StaffAccessCard({ userId, userName, staffRole }: StaffAccessCardProps) {
   const t = useTranslations('admin.user.staffAccess');

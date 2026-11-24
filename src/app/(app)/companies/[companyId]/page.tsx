@@ -38,7 +38,6 @@ export const generateMetadata = companyPermissionMetadata(
  * @param props.params - Route parameters.
  * @param props.searchParams - Query parameters: the search, the filters, and the table's sort and
  *   page (see `RequestList`).
- * @returns The page content.
  */
 async function CompanyRequests({
   params,
@@ -73,8 +72,6 @@ async function CompanyRequests({
 
 /**
  * The company's requests page.
- *
- * @returns The page.
  */
 export default function CompanyPage({ params, searchParams }: PageProps<'/companies/[companyId]'>) {
   return (

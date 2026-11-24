@@ -28,7 +28,6 @@ import { pauseJobAction, resumeJobAction } from './actions';
  * @param props.name - The recurring job or kind of queued job.
  * @param props.badges - Badges to show next to the name, e.g. "Paused".
  * @param props.describe - Whether to say what it does; the history leaves it out, as it repeats on every run.
- * @returns The name and description.
  */
 export function JobName({
   name,
@@ -64,7 +63,6 @@ const STATUS_TONES: Record<JobRunStatus, BadgeTone> = {
  *
  * @param props - Component props.
  * @param props.status - How it ended.
- * @returns The badge.
  */
 export function RunStatusBadge({ status }: { status: JobRunStatus }) {
   const t = useTranslations('admin.jobs.status');
@@ -77,8 +75,6 @@ export function RunStatusBadge({ status }: { status: JobRunStatus }) {
 
 /**
  * "Paused", as a badge next to a job's name.
- *
- * @returns The badge.
  */
 export function PausedBadge() {
   const t = useTranslations('admin.jobs.status');
@@ -142,7 +138,6 @@ function minuteIn(at: Date, timeZone: string): number {
  *
  * @param props - Component props.
  * @param props.schedule - The cron expression, in UTC.
- * @returns The schedule.
  */
 export function ScheduleText({ schedule }: { schedule: string }) {
   const t = useTranslations('admin.jobs');
@@ -212,7 +207,6 @@ export function RunSummary({
  * @param props - Component props.
  * @param props.reference - The reference, e.g. `7KQ2-M9XD`.
  * @param props.canLookUp - Whether the viewer may see recorded errors.
- * @returns The reference.
  */
 export function ErrorReference({
   reference,

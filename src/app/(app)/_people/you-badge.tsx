@@ -9,8 +9,6 @@ import Badge from '@/components/ui/badge';
 /**
  * Says which row is the viewer's own, in the accent tone, so it stands apart
  * from roles and statuses.
- *
- * @returns The badge.
  */
 export default function YouBadge() {
   const t = useTranslations('people');

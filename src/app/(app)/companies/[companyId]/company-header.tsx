@@ -46,8 +46,6 @@ interface CompanyHeaderProps {
  * they may open. The tabs are a navigation landmark, with the
  * current one (from the URL) marked `aria-current="page"`. Its text comes
  * from the `companies` and `roles` namespaces.
- *
- * @returns The header.
  */
 export default function CompanyHeader({ company, permissions, role }: CompanyHeaderProps) {
   const t = useTranslations('companies');

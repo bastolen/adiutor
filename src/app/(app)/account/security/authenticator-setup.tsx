@@ -38,7 +38,6 @@ interface AuthenticatorSetupProps {
  * Formats a setup key in groups of four, for typing it into an app by hand.
  *
  * @param secret - The key.
- * @returns The grouped key.
  */
 function groupKey(secret: string): string {
   return secret.replace(/(.{4})/g, '$1 ').trim();
@@ -64,7 +63,6 @@ function codeTag(chunks: ReactNode) {
  * @param props.hasPassword - Ask for the password first.
  * @param props.onStepChange - Reports the current step (for the dialog's title).
  * @param props.onFinish - Called after the backup codes are saved.
- * @returns The current step.
  */
 function AuthenticatorSteps({
   hasPassword,
@@ -218,8 +216,6 @@ function AuthenticatorSteps({
  * the browser from the setup link, which never leaves the page; the key is
  * also shown as text for entering by hand. The app is only switched on once
  * a code from it has been checked.
- *
- * @returns The dialog.
  */
 export default function AuthenticatorSetup({
   open,

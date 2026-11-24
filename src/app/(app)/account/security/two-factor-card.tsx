@@ -60,8 +60,6 @@ interface TwoFactorCardProps {
  * the inbox alone can't get past the app. For roles that require MFA (staff
  * Admins and Managers, company Admins) email codes don't count, so they're
  * not offered.
- *
- * @returns The card.
  */
 export default function TwoFactorCard({
   email,

@@ -90,8 +90,6 @@ interface AccountMenuProps {
  * while it's open: this way the theme keeps following the system on every app
  * page. The sidebar's copy is always mounted, even while hidden on small
  * screens.
- *
- * @returns The account menu.
  */
 export default function AccountMenu({
   name,

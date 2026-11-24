@@ -26,8 +26,6 @@ export const generateMetadata = globalPermissionMetadata('staff:manage');
 /**
  * Checks the viewer may see the settings (the 404 page otherwise) and shows
  * the header with its tabs.
- *
- * @returns The header.
  */
 async function SettingsHeaderLoader() {
   await requireGlobalPermission('staff:manage');
@@ -38,8 +36,6 @@ async function SettingsHeaderLoader() {
  * The Settings header above its pages, all of them as wide as the lists of
  * requests on a wide screen: Staff has the room, and a tab that widened on
  * its own would move the header and tabs from tab to tab.
- *
- * @returns The layout.
  */
 export default function SettingsLayout({ children }: LayoutProps<'/admin/settings'>) {
   return (

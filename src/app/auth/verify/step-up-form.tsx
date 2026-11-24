@@ -117,8 +117,6 @@ export interface StepUpFormProps {
  * Errors are worded in the reader's language from their code
  * (`authErrorText`), except the refusals the server words itself (too many
  * attempts, with how long to wait).
- *
- * @returns The form.
  */
 export default function StepUpForm({
   methods,

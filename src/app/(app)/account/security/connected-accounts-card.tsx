@@ -37,7 +37,6 @@ const SECTION = 'connected-accounts';
  * @param link - The connected account.
  * @param locale - The reader's language, for the date.
  * @param timeZone - The reader's time zone, for the date.
- * @returns The description.
  */
 function describeLink(
   t: ReturnType<typeof useTranslations<'account'>>,
@@ -146,8 +145,6 @@ interface ConnectedAccountsCardProps {
  * the MFA the user's role requires are disabled, with the reason below (only
  * while a disabled control it explains is shown, and pointed at only by those
  * controls).
- *
- * @returns The card.
  */
 export default function ConnectedAccountsCard({
   message,

@@ -48,7 +48,6 @@ interface DevicesTableProps {
    * @param device - The device.
    * @param label - The device's browser and system in the reader's language, for the button's
    *   accessible name.
-   * @returns The action.
    */
   renderAction?: (device: UserSession, label: string) => ReactNode;
 }
@@ -57,8 +56,6 @@ interface DevicesTableProps {
  * A sortable table of signed-in devices. The IP address and the sign-in time
  * have their own columns from tablet width and move under the device name
  * before that, so the table never scrolls sideways.
- *
- * @returns The table.
  */
 export default function DevicesTable({
   devices,

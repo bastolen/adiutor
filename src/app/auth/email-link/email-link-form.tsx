@@ -57,8 +57,6 @@ interface EmailLinkFormProps {
  * this browser, the page says that continuing switches to the link's
  * account, and points out when both have the same name; when it's that
  * account already, it just goes on without using the link.
- *
- * @returns The form.
  */
 export default function EmailLinkForm({ account, signedIn }: EmailLinkFormProps) {
   const t = useTranslations('auth');

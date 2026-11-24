@@ -52,8 +52,6 @@ import TwoFactorCard from './two-factor-card';
 
 /**
  * Page metadata: "Security", in the request's language.
- *
- * @returns The metadata.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('account');
@@ -66,7 +64,6 @@ export async function generateMetadata(): Promise<Metadata> {
  * @param props - Component props.
  * @param props.searchParams - Query parameters: set after connecting GitHub or Google
  *   (`AccountParams`).
- * @returns The page content.
  */
 async function Security({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const actor = await getActor({ allowMissingMfa: true });
@@ -192,8 +189,6 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
 /**
  * The Security page of the account. Its cards' text comes with it
  * (`account`, and `auth` for the messages of refused sign-in changes).
- *
- * @returns The page.
  */
 export default function SecurityPage({ searchParams }: PageProps<'/account/security'>) {
   return (

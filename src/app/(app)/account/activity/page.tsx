@@ -33,8 +33,6 @@ import SessionsCard from './sessions-card';
 
 /**
  * Page metadata: "Activity · Account", in the request's language.
- *
- * @returns The metadata.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('account');
@@ -46,7 +44,6 @@ export async function generateMetadata(): Promise<Metadata> {
  *
  * @param props - Component props.
  * @param props.searchParams - Query parameters: the devices table's sort and page (`DEVICES_TABLE`).
- * @returns The page content.
  */
 async function Activity({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const actor = await getActor({ allowMissingMfa: true });
@@ -111,8 +108,6 @@ async function Activity({ searchParams }: { searchParams: Promise<SearchParams> 
 
 /**
  * The Activity tab of the account.
- *
- * @returns The page.
  */
 export default function AccountActivityPage({ searchParams }: PageProps<'/account/activity'>) {
   return (

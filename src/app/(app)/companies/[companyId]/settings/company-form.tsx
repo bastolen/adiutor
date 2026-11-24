@@ -29,8 +29,6 @@ interface CompanyFormProps {
 /**
  * Name and URL name fields with a save button. Its text comes from the
  * `companies` namespace, which the settings page passes with `ClientMessages`.
- *
- * @returns The form.
  */
 export default function CompanyForm({ companyId, name, slug }: CompanyFormProps) {
   const t = useTranslations('companies.settings.form');

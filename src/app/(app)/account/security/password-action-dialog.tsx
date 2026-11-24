@@ -58,8 +58,6 @@ type PasswordActionFormProps = Pick<
  * (such as a wrong password), Cancel and the confirm button. It's the
  * dialog's content, which Radix unmounts when the dialog closes, so each
  * opening starts with an empty field and no error.
- *
- * @returns The form.
  */
 function PasswordActionForm({
   confirmLabel,
@@ -118,8 +116,6 @@ function PasswordActionForm({
  * A short form in a dialog: the password field (for users who have one) and a
  * confirm button. Errors such as a wrong password are shown in the dialog,
  * and the form starts afresh each time it opens ({@link PasswordActionForm}).
- *
- * @returns The dialog.
  */
 export default function PasswordActionDialog({
   open,

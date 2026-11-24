@@ -26,8 +26,6 @@ interface DeleteAccountCardProps {
 
 /**
  * Deletes the user's account.
- *
- * @returns The card.
  */
 export default function DeleteAccountCard({ userId, userName, email }: DeleteAccountCardProps) {
   const t = useTranslations('admin.user.deleteAccount');

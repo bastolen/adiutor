@@ -33,8 +33,6 @@ interface RequestsHeaderProps {
 /**
  * The page's title ("Requests") and description, a "New request" button for
  * those who may raise one, and below them the List | Board toggle.
- *
- * @returns The header.
  */
 export default function RequestsHeader({
   actor,

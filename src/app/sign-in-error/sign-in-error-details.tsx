@@ -22,7 +22,6 @@ import signInErrorMessage from './messages';
  *
  * @param props - Component props.
  * @param props.searchParams - Query parameters: Better Auth's `error` and `error_description`.
- * @returns The message and the reference.
  */
 export default async function SignInErrorDetails({
   searchParams,

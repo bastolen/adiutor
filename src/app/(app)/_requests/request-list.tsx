@@ -37,7 +37,6 @@ import { PeopleAvatars, personName } from './request-person';
  * @param props - Component props.
  * @param props.company - The URL name of the company to raise it in, when the list is one company's.
  * @param props.label - The button's text.
- * @returns The button.
  */
 export function NewRequestButton({
   company = undefined,
@@ -179,7 +178,6 @@ export default async function RequestList({
    * Assigned to column never widens the table past a tablet's width.
    *
    * @param request - The request.
-   * @returns The linked avatars.
    */
   const avatarsOf = (request: RequestListItem) => (
     <Link

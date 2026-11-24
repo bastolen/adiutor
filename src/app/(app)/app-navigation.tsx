@@ -40,8 +40,6 @@ interface AppNavigationProps {
 /**
  * Logo, main navigation and account menu, used in both the sidebar and the
  * mobile menu.
- *
- * @returns The panel content.
  */
 function NavigationPanel({
   name,
@@ -81,8 +79,6 @@ function NavigationPanel({
  * top bar with a menu button opens it in a side `Sheet`: focus stays inside
  * while it's open, Escape closes it (focus goes back to the menu button), and
  * choosing a link closes it, also "Account settings" in its account menu.
- *
- * @returns The navigation.
  */
 export default function AppNavigation({
   name,

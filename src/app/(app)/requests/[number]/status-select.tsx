@@ -25,7 +25,6 @@ import { changeStatusAction } from './actions';
  * @param props.request - The request's number.
  * @param props.status - Its saved status.
  * @param props.options - The statuses to choose from, named for the staff.
- * @returns The form.
  */
 export default function StatusSelect({
   request,

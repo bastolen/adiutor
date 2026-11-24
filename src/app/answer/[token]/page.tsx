@@ -15,8 +15,6 @@ import AnswerLinkStep from './answer-link-step';
  * The answer link's page. It reads the link from its address, so it renders
  * at request time behind a Suspense boundary, with its form's text
  * (`requests.answerLink`).
- *
- * @returns The page.
  */
 export default function AnswerLinkPage({ params, searchParams }: PageProps<'/answer/[token]'>) {
   return (

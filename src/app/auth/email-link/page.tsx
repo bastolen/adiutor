@@ -25,8 +25,6 @@ import EmailLinkStep from './email-link-step';
  * more (`strict-origin`): its Continue is a form `POST`, which the guards
  * and Better Auth check against the site's address (`Origin`), and with no
  * referrer at all the browser would send `Origin: null`.
- *
- * @returns The metadata.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('auth');
@@ -36,8 +34,6 @@ export async function generateMetadata(): Promise<Metadata> {
 /**
  * The email-link page. It reads the link from the URL, so it renders at
  * request time behind a Suspense boundary, with its form's text (`auth`).
- *
- * @returns The page.
  */
 export default function EmailLinkPage({ searchParams }: PageProps<'/auth/email-link'>) {
   return (

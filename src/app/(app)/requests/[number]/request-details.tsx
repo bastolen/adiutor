@@ -32,7 +32,6 @@ const MAX_SUBSCRIBER_AVATARS = 4;
  * @param props - Component props.
  * @param props.term - What it is, e.g. "Status".
  * @param props.children - Its value.
- * @returns The term and its value.
  */
 function Detail({ term, children }: { term: string; children: ReactNode }) {
   return (
@@ -72,7 +71,6 @@ function Detail({ term, children }: { term: string; children: ReactNode }) {
  * @param props.subscriberControls - "Subscribe" or "Unsubscribe", and "Change subscribers".
  * @param props.controls - The buttons under the details: Edit details, or Mark as done, Cancel
  *   request and Reopen.
- * @returns The card.
  */
 export default async function RequestDetails({
   detail,

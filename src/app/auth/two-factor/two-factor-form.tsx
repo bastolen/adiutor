@@ -45,8 +45,6 @@ import useEmailCode from '../use-email-code';
  * Once a code is accepted, the page the user came for loads afresh
  * (`loadFresh`), which keeps no page alive. A page the browser restores from
  * its back/forward cache is made usable again too.
- *
- * @returns The form.
  */
 export default function TwoFactorForm() {
   const t = useTranslations('auth');

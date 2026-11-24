@@ -40,7 +40,6 @@ interface EmailCodesSetupProps {
  * @param props - Step props.
  * @param props.email - Where codes are sent.
  * @param props.onDone - Called once email codes are on.
- * @returns The steps.
  */
 function EmailCodesSteps({ email, onDone }: { email: string; onDone: () => void }) {
   const t = useTranslations('account');
@@ -140,8 +139,6 @@ function EmailCodesSteps({ email, onDone }: { email: string; onDone: () => void 
 /**
  * Turns on two-step verification with email codes. Entering a code sent to
  * the user's address proves the codes arrive before relying on them.
- *
- * @returns The dialog.
  */
 export default function EmailCodesSetup({ open, onOpenChange, email }: EmailCodesSetupProps) {
   const t = useTranslations('account');

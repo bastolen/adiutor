@@ -20,7 +20,6 @@ import renameStaffAction from './actions';
  *
  * @param props - Form props.
  * @param props.name - The current name.
- * @returns The form.
  */
 export default function StaffNameForm({ name }: { name: string }) {
   const t = useTranslations('admin.settings.general.name');

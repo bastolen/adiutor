@@ -49,7 +49,6 @@ export const generateMetadata = checkedPageMetadata('requests.new.title', async 
  *
  * @param props - Component props.
  * @param props.searchParams - Query parameters: `company`, a company's URL name.
- * @returns The page content.
  */
 async function NewRequest({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const t = await getTranslations('requests.new');
@@ -95,8 +94,6 @@ async function NewRequest({ searchParams }: { searchParams: Promise<SearchParams
 
 /**
  * The new request page.
- *
- * @returns The page.
  */
 export default function NewRequestPage({ searchParams }: PageProps<'/requests/new'>) {
   return (
