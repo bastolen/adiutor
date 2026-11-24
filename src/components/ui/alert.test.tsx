@@ -139,10 +139,8 @@ describe('Alert', () => {
     );
 
     expect(screen.getByRole('alert')).toHaveFocus();
-    // Give the toast the moment it would take to show.
-    await new Promise((resolve) => {
-      setTimeout(resolve, 50);
-    });
+    // Let the effects and what they queue run: a toast would be raised by now.
+    await act(async () => {});
     const toasts = screen.getByRole('region', { name: /^Notifications/ });
     expect(toasts).not.toHaveTextContent('That code didn’t work.');
     expect(toasts.querySelectorAll('li')).toHaveLength(0);

@@ -6,6 +6,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import afterFocusCleanup from '../../../../tests/ui/after-focus-cleanup';
 import FormattingToolbar, { type FormattingState } from './formatting-toolbar';
 
 /** A cursor in plain text: nothing is on. */
@@ -193,9 +194,7 @@ describe('FormattingToolbar', () => {
       expect(onCommand).toHaveBeenCalledExactlyOnceWith({ type: 'heading', level: 2 }),
     );
     // Whatever the menu would still do on its way out, the text keeps the focus.
-    await new Promise((resolve) => {
-      setTimeout(resolve, 50);
-    });
+    await afterFocusCleanup();
     expect(screen.getByRole('textbox', { name: 'Text' })).toHaveFocus();
   });
 
@@ -238,9 +237,7 @@ describe('FormattingToolbar: the link dialog', () => {
     );
     // The command went out as the dialog handed the focus back: nothing takes it from the text
     // afterwards, however late the dialog's own clean-up runs.
-    await new Promise((resolve) => {
-      setTimeout(resolve, 50);
-    });
+    await afterFocusCleanup();
     expect(screen.getByRole('textbox', { name: 'Text' })).toHaveFocus();
   });
 

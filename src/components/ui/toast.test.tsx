@@ -5,7 +5,7 @@
  * "Error". A toast left for the next page shows there once, unless that page
  * comes too late.
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -175,6 +175,7 @@ describe('Toasts', () => {
 
   describe('left for the next page', () => {
     afterEach(() => {
+      vi.useRealTimers();
       vi.restoreAllMocks();
       window.sessionStorage.clear();
     });
@@ -188,21 +189,25 @@ describe('Toasts', () => {
       await waitFor(() => expect(region).toHaveTextContent("You're back in your own account."));
       expect(window.sessionStorage.length).toBe(0);
       unmount();
+      vi.useFakeTimers();
       render(<Toaster />);
-      await new Promise((resolve) => {
-        setTimeout(resolve, 20);
+      // The moment the toaster waits before showing what the last page left.
+      act(() => {
+        vi.runAllTimers();
       });
       expect(screen.getByRole('region', { name: /^Notifications/ })).toHaveTextContent('');
     });
 
     it('are dropped when the next page comes more than 30 seconds later', async () => {
+      vi.useFakeTimers();
       const past = Date.now() - 31_000;
       vi.spyOn(Date, 'now').mockReturnValueOnce(past);
       showToastAfterLoad("You're back in your own account.");
 
       render(<Toaster />);
-      await new Promise((resolve) => {
-        setTimeout(resolve, 20);
+      // The moment the toaster waits before showing what the last page left.
+      act(() => {
+        vi.runAllTimers();
       });
 
       expect(screen.getByRole('region', { name: /^Notifications/ })).toHaveTextContent('');

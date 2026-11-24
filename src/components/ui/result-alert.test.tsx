@@ -4,7 +4,7 @@
  * except inside a dialog, where it stays inline. Each new result gets an
  * alert of its own, so the same error twice is announced and focused twice.
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { InsideDialog } from './inside-dialog';
@@ -165,10 +165,9 @@ describe('ResultAlert', () => {
       );
 
       expect(screen.getByRole('alert')).toHaveFocus();
-      // Give the toast the moment it would take to show; a toast would take the first Escape.
-      await new Promise((resolve) => {
-        setTimeout(resolve, 50);
-      });
+      // Let the effects and what they queue run: a toast would be raised by now,
+      // and it would take the first Escape.
+      await act(async () => {});
       expect(toasts()).not.toHaveTextContent('That password is incorrect.');
       expect(toasts().querySelectorAll('li')).toHaveLength(0);
 
