@@ -112,7 +112,7 @@ export interface BoardDrag {
  * @param data - The drag's data.
  * @returns The card, or `null` when it isn't one.
  */
-export function draggedCard(data: Record<string | symbol, unknown>): DraggedCard | null {
+function draggedCard(data: Record<string | symbol, unknown>): DraggedCard | null {
   const { id, status, moves } = data;
   if (
     typeof id !== 'string' ||
