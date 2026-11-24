@@ -130,6 +130,13 @@ configurations in VS Code, which turn the time limit off (see
   - **Signing in once:** specs that only read as one account (scans, keyboard checks, tables)
     sign it in once (`storageStateFor(browser, account)`, or `adminStorageState` for the staff
     Admin) and open each test with those cookies, which keeps them clear of the sign-in limits.
+  - **Shared steps:** the steps more than one spec needs live in `e2e/support/`, not in the specs:
+    `helpers.ts` (signing in, `createFreshAccount` for an account of a test's own, the invitation
+    form, the board's `openBoard` and `boardLane`, `openWithEnter`, `pressUntilFocused` and
+    `whenHydrated` for key presses and hydration), `db.ts` (`storeOwnRequest` for a request in the
+    seeded company, `userIdOf` and `requestIdOf` on an open connection, and the reset helpers)
+    and `sequence.ts` (`inOrder`, `repeatInOrder`: steps that run one after another, instead of a
+    `no-await-in-loop` disable or a chain of promises).
   - **Pictures:** the seeded Support member has a Google account with a picture but shows
     initials (`avatarSource`), so no page asks the test server to fetch it from Google. The two
     tests about pictures choose it (`choosePictureOf`), answer `/avatars/*` in the browser

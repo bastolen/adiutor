@@ -20,10 +20,9 @@ import { randomUUID } from 'node:crypto';
 
 import type { Page } from '@playwright/test';
 
-import type { RequestStatus } from '../src/lib/requests';
-import { storeRequest } from './support/db';
-import { COMPANY_NAME, COMPANY_SLUG, REQUESTS_CLIENT, SUPPORT_STAFF } from './support/fixtures';
-import { type StorageState, storageStateFor, toasts } from './support/helpers';
+import { storeOwnRequest } from './support/db';
+import { COMPANY_NAME, SUPPORT_STAFF } from './support/fixtures';
+import { type StorageState, storageStateFor, toasts, openBoard } from './support/helpers';
 import { repeatInOrder } from './support/sequence';
 import { expect, test } from './support/test';
 
@@ -37,17 +36,6 @@ test.beforeAll(async ({ browser }) => {
 test.beforeEach(async ({ context }) => {
   await context.addCookies(staffState.cookies);
 });
-
-/**
- * Stores a request of the test's own in the seeded company, raised by its
- * Client.
- *
- * @param title - Its title.
- * @param status - Its status; open when left out.
- * @returns Its number.
- */
-const storeOwn = (title: string, status: RequestStatus = 'open') =>
-  storeRequest({ companySlug: COMPANY_SLUG, raisedBy: REQUESTS_CLIENT.email, title, status });
 
 /** A board of a test's own requests. */
 interface OwnBoard {
@@ -70,23 +58,13 @@ interface OwnBoard {
 async function storeBoard(): Promise<OwnBoard> {
   const search = `A board to snapshot ${randomUUID().slice(0, 8)}`;
   const board = { search, openTitle: `${search}, open`, waitingTitle: `${search}, waiting` };
-  await storeOwn(board.openTitle);
-  await storeOwn(board.waitingTitle, 'waiting');
+  await storeOwnRequest({ title: board.openTitle });
+  await storeOwnRequest({ title: board.waitingTitle, status: 'waiting' });
   // One after another: each request gets the next number.
   await repeatInOrder(6, async (index) => {
-    await storeOwn(`${search}, done ${index + 1}`, 'done');
+    await storeOwnRequest({ title: `${search}, done ${index + 1}`, status: 'done' });
   });
   return board;
-}
-
-/**
- * Opens the board searched down to a test's own requests.
- *
- * @param page - The browser page, signed in.
- * @param search - What their titles have in common.
- */
-async function openBoard(page: Page, search: string): Promise<void> {
-  await page.goto(`/requests/board?q=${encodeURIComponent(search)}`);
 }
 
 /**
@@ -189,7 +167,7 @@ test('a card is named by its title and its Move button by its number, and the Mo
   page,
 }) => {
   const title = `A card to snapshot ${randomUUID().slice(0, 8)}`;
-  const number = await storeOwn(title);
+  const number = await storeOwnRequest({ title });
   await openBoard(page, title);
 
   // The number and type, the title's link, the company, the priority (the staff's), when it last
@@ -228,7 +206,7 @@ test('a move is said in the board’s status while it runs, and focus stays on t
   page,
 }) => {
   const title = `A card to move and snapshot ${randomUUID().slice(0, 8)}`;
-  const number = await storeOwn(title);
+  const number = await storeOwnRequest({ title });
   // The move's request (the server action, a POST to the board) waits until the board has been
   // read in the middle of the move.
   const { promise: held, resolve: release } = Promise.withResolvers<void>();

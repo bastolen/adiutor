@@ -35,7 +35,12 @@ import { readSettings, writeSettings } from '../../src/server/settings';
 import { storeAuthenticator } from '../../tests/auth/authenticator';
 import getTestDatabaseUrl from '../../tests/database/database-url';
 import storeRequests from '../../tests/database/store-requests';
-import { E2E_AUTH_SECRET, INVITE_LINK_LIFETIME_MS } from './fixtures';
+import {
+  COMPANY_SLUG,
+  E2E_AUTH_SECRET,
+  INVITE_LINK_LIFETIME_MS,
+  REQUESTS_CLIENT,
+} from './fixtures';
 import { inOrder } from './sequence';
 
 /** A Drizzle client on the test database. */
@@ -923,6 +928,21 @@ export async function storeRequest({
     );
     return firstRow(numbers, 'the new request number');
   });
+}
+
+/**
+ * Stores a request of the test's own in the seeded company, raised by
+ * {@link REQUESTS_CLIENT} unless someone else is named: {@link storeRequest}
+ * with that company and member as its defaults.
+ *
+ * @param request - The request, see {@link storeRequest}.
+ * @returns The request's number.
+ */
+export async function storeOwnRequest(
+  request: Omit<Parameters<typeof storeRequest>[0], 'companySlug' | 'raisedBy'> &
+    Partial<Pick<Parameters<typeof storeRequest>[0], 'companySlug' | 'raisedBy'>>,
+): Promise<number> {
+  return storeRequest({ companySlug: COMPANY_SLUG, raisedBy: REQUESTS_CLIENT.email, ...request });
 }
 
 /**

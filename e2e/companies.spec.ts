@@ -11,7 +11,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { addMembership, createCompany, findCompanyId, storeInvitation } from './support/db';
+import { addMembership, createCompany, findCompanyId } from './support/db';
 import {
   CLIENT_WATCHER,
   COMPANY_NAME,
@@ -22,11 +22,12 @@ import {
 import {
   createAccountFromInvitation,
   createInviteLink,
-  freshAddress,
   setUpAuthenticator,
   signIn,
   toasts,
   useOwnClientIp,
+  APP_HOME_URL,
+  createFreshAccount,
 } from './support/helpers';
 import { countEmails, linkIn, waitForEmail, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
@@ -113,14 +114,10 @@ test("creating an account from an invitation loads the browser's other tabs afre
   await expect(other.getByRole('heading', { name: 'Sign in to Adiutor' })).toBeVisible();
 
   // The new account is signed in by a server action that redirects, which tells the other tab.
-  const companyId = await findCompanyId(COMPANY_SLUG);
-  await page.goto(
-    await storeInvitation({ companyId, email: freshAddress('other-tabs'), role: 'client' }),
-  );
-  await createAccountFromInvitation(page, 'Other Tabs Tester', 'other-tabs-password');
+  await createFreshAccount(page, { name: 'Other Tabs Tester', password: 'other-tabs-password' });
 
   // Without a click, the other tab goes on, signed in as the new account.
-  await expect(other).toHaveURL(/\/(dashboard|companies\/)/);
+  await expect(other).toHaveURL(APP_HOME_URL);
 });
 
 test('an Admin invites several people at once', async ({ page }) => {

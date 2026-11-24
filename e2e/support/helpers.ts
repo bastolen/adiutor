@@ -14,7 +14,9 @@ import {
   type Page,
 } from '@playwright/test';
 
-import { E2E_BASE_URL, PLATFORM_ADMIN } from './fixtures';
+import type { CompanyRole } from '../../src/lib/authz/roles';
+import { findCompanyId, storeInvitation } from './db';
+import { COMPANY_SLUG, E2E_BASE_URL, PLATFORM_ADMIN } from './fixtures';
 import { codeForSecret, codeForSetupKey } from './totp';
 
 /** How long Better Auth's sign-in rate limit window lasts (3 attempts per 10 seconds). */
@@ -106,6 +108,9 @@ export async function answerPictures(page: Page): Promise<void> {
     route.fulfill({ status: 200, contentType: 'image/png', body: TINY_PNG }),
   );
 }
+
+/** Where a sign-in lands someone: the dashboard, or a company's page (not the account's own). */
+export const APP_HOME_URL = /\/(dashboard|companies\/)/;
 
 /** Pages a signed-in user can land on. */
 const SIGNED_IN_URL = /\/(dashboard|companies\/|account)/;
@@ -261,6 +266,51 @@ export async function createAccountFromInvitation(
   await page.getByRole('button', { name: 'Create account and join' }).click();
   await expect(page).toHaveURL(landsOn);
   await loadedAfresh;
+}
+
+/**
+ * Makes an account of the test's own: stores an invitation to a company (the
+ * seeded one unless a company is given), opens it and creates the account
+ * from it ({@link createAccountFromInvitation}), so the browser is signed in
+ * as the new person.
+ *
+ * @param page - The browser page.
+ * @param account - The account.
+ * @param account.name - The new account's name.
+ * @param account.password - Its password.
+ * @param account.email - Its address; a fresh one when left out.
+ * @param account.role - The company role the invitation gives; Client when left out.
+ * @param account.companyId - The company; the seeded one when left out.
+ * @param account.landsOn - Where they should end up, see {@link createAccountFromInvitation}.
+ * @returns The new account's address.
+ */
+export async function createFreshAccount(
+  page: Page,
+  {
+    name,
+    password,
+    email = freshAddress('fresh'),
+    role = 'client',
+    companyId,
+    landsOn,
+  }: {
+    name: string;
+    password: string;
+    email?: string;
+    role?: CompanyRole;
+    companyId?: string;
+    landsOn?: string | RegExp;
+  },
+): Promise<string> {
+  await page.goto(
+    await storeInvitation({
+      companyId: companyId ?? (await findCompanyId(COMPANY_SLUG)),
+      email,
+      role,
+    }),
+  );
+  await createAccountFromInvitation(page, name, password, landsOn);
+  return email;
 }
 
 /**
@@ -512,6 +562,19 @@ export async function createInviteLink(page: Page, role: string): Promise<string
 }
 
 /**
+ * The form that sends invitations by email, on the Members page of a company
+ * or in the staff settings (not the invite link form next to it, which has a
+ * role select of its own). Found by its address field, so it's still there
+ * when its button is replaced by a link to confirm first.
+ *
+ * @param page - The browser page, on the Members page or the staff settings.
+ * @returns The form.
+ */
+export function invitationForm(page: Page): Locator {
+  return page.locator('form').filter({ has: page.getByLabel('Email addresses') });
+}
+
+/**
  * Sends an invitation with the form on the Members page of a company or in
  * the staff settings, without waiting for the result.
  *
@@ -520,9 +583,7 @@ export async function createInviteLink(page: Page, role: string): Promise<string
  * @param role - The role's name in the menu, e.g. "Client".
  */
 export async function sendInvitation(page: Page, email: string, role: string): Promise<void> {
-  const inviteForm = page
-    .locator('form')
-    .filter({ has: page.getByRole('button', { name: 'Send invitations' }) });
+  const inviteForm = invitationForm(page);
   await inviteForm.getByLabel('Email addresses').fill(email);
   await inviteForm.getByRole('combobox', { name: 'Role', exact: true }).click();
   // Each option's name also holds its description ("Client Raises requests …").
@@ -606,4 +667,26 @@ export async function pressUntilFocused(
   throw new Error(`${key} pressed ${presses} times never reached ${String(target)}.`, {
     cause: lastError,
   });
+}
+
+/**
+ * Opens the requests board narrowed down to a test's own requests by their
+ * title.
+ *
+ * @param page - The browser page, signed in.
+ * @param search - What their titles have in common.
+ */
+export async function openBoard(page: Page, search: string): Promise<void> {
+  await page.goto(`/requests/board?q=${encodeURIComponent(search)}`);
+}
+
+/**
+ * A lane of the board on the page.
+ *
+ * @param page - The browser page, on the board.
+ * @param name - The lane's name, in the reader's words.
+ * @returns The lane's group.
+ */
+export function boardLane(page: Page, name: string): Locator {
+  return page.getByRole('group', { name: new RegExp(`^${name}, \\d+ requests?$`) });
 }

@@ -11,14 +11,16 @@
 import { type Page } from '@playwright/test';
 
 import { LOCALE_COOKIE } from '../src/lib/i18n/locales';
-import { findCompanyId, setDefaultLocale, storeInvitation } from './support/db';
+import { setDefaultLocale } from './support/db';
 import { COMPANY_NAME, COMPANY_SLUG, E2E_BASE_URL, PLATFORM_ADMIN } from './support/fixtures';
 import {
-  createAccountFromInvitation,
   freshAddress,
   signIn,
   toasts,
   useOwnClientIp,
+  invitationForm,
+  APP_HOME_URL,
+  createFreshAccount,
 } from './support/helpers';
 import { waitForEmail } from './support/outbox';
 import { expect, test } from './support/test';
@@ -96,9 +98,7 @@ test("an account's language: saved on the account page, kept at sign-out, winnin
 }) => {
   const email = freshAddress('language');
   const password = 'language-test-password';
-  const companyId = await findCompanyId(COMPANY_SLUG);
-  await page.goto(await storeInvitation({ companyId, email, role: 'client' }));
-  await createAccountFromInvitation(page, 'Language Tester', password);
+  await createFreshAccount(page, { email, name: 'Language Tester', password });
 
   await page.goto('/account/preferences');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
@@ -147,9 +147,11 @@ test("an account on Default follows Adiutor's default language, also after it ch
   page,
 }) => {
   const email = freshAddress('default-language');
-  const companyId = await findCompanyId(COMPANY_SLUG);
-  await page.goto(await storeInvitation({ companyId, email, role: 'client' }));
-  await createAccountFromInvitation(page, 'Default Tester', 'default-language-password');
+  await createFreshAccount(page, {
+    email,
+    name: 'Default Tester',
+    password: 'default-language-password',
+  });
 
   try {
     await page.goto('/account/preferences');
@@ -184,9 +186,7 @@ test('a language left in the browser is not saved with an account on Default, an
 }) => {
   const email = freshAddress('leftover-language');
   const password = 'leftover-language-password';
-  const companyId = await findCompanyId(COMPANY_SLUG);
-  await page.goto(await storeInvitation({ companyId, email, role: 'client' }));
-  await createAccountFromInvitation(page, 'Leftover Tester', password);
+  await createFreshAccount(page, { email, name: 'Leftover Tester', password });
 
   // A shared browser where the last person left Dutch behind: signing out keeps the language.
   const shared = await browser.newContext();
@@ -199,7 +199,7 @@ test('a language left in the browser is not saved with an account on Default, an
     await other.getByLabel('E-mailadres').fill(email);
     await other.getByLabel('Wachtwoord').fill(password);
     await other.getByRole('button', { name: 'Inloggen', exact: true }).click();
-    await expect(other).toHaveURL(/\/(dashboard|companies\/)/);
+    await expect(other).toHaveURL(APP_HOME_URL);
 
     // The account still follows Adiutor's default language, and now the browser does too.
     await expect(other.locator('html')).toHaveAttribute('lang', 'en-US');
@@ -218,9 +218,11 @@ test('the theme and language menu on a page reached signed in saves the language
   page,
 }) => {
   const email = freshAddress('corner-language');
-  const companyId = await findCompanyId(COMPANY_SLUG);
-  await page.goto(await storeInvitation({ companyId, email, role: 'client' }));
-  await createAccountFromInvitation(page, 'Corner Tester', 'corner-language-password');
+  await createFreshAccount(page, {
+    email,
+    name: 'Corner Tester',
+    password: 'corner-language-password',
+  });
 
   // The not-found page has no account menu, so it has the theme and language button.
   await page.goto('/does-not-exist');
@@ -244,7 +246,7 @@ test('an invitation sent in Dutch arrives in Dutch', async ({ page }) => {
   const email = freshAddress('dutch-invitation');
   await page.goto(`/companies/${COMPANY_SLUG}/members`);
   // The invite link form next to it has a role select of its own.
-  const inviteForm = page.locator('form').filter({ has: page.getByLabel('Email addresses') });
+  const inviteForm = invitationForm(page);
   await inviteForm.getByLabel('Email addresses').fill(email);
   await inviteForm.getByRole('combobox', { name: 'Role', exact: true }).click();
   await page.getByRole('option', { name: /^Client/ }).click();

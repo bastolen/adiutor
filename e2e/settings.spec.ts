@@ -35,6 +35,7 @@ import {
   signOut,
   toasts,
   useOwnClientIp,
+  invitationForm,
 } from './support/helpers';
 import { linkIn, waitForEmail } from './support/outbox';
 import { expect, test } from './support/test';
@@ -427,11 +428,8 @@ test('an Admin who confirmed long ago confirms it’s them before giving staff o
   // Confirmed just now: invite someone to the staff, to resend once the confirmation is old.
   const email = freshAddress('resend.support');
   await page.goto('/admin/settings/staff');
-  const staffInvite = page.locator('form').filter({ has: page.getByLabel('Email addresses') });
-  await staffInvite.getByLabel('Email addresses').fill(email);
-  await staffInvite.getByRole('combobox', { name: 'Role', exact: true }).click();
-  await page.getByRole('option', { name: 'Support' }).click();
-  await staffInvite.getByRole('button', { name: 'Send invitations' }).click();
+  const staffInvite = invitationForm(page);
+  await sendInvitation(page, email, 'Support');
   await expect(toasts(page)).toContainText(`Invitation sent to ${email}.`);
 
   // Signed in 20 minutes ago, as far as the confirmation window goes.
@@ -450,7 +448,7 @@ test('an Admin who confirmed long ago confirms it’s them before giving staff o
   // At the address the app links to (its URL name), which the step-up page returns to.
   const membersPath = `/companies/${COMPANY_SLUG}/members`;
   await page.goto(membersPath);
-  const companyInvite = page.locator('form').filter({ has: page.getByLabel('Email addresses') });
+  const companyInvite = invitationForm(page);
   await expect(companyInvite.getByRole('button', { name: 'Send invitations' })).toBeVisible();
   await companyInvite.getByRole('combobox', { name: 'Role', exact: true }).click();
   await page.getByRole('option', { name: /^Admin/ }).click();

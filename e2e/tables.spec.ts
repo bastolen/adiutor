@@ -8,7 +8,7 @@
  */
 import { type Page } from '@playwright/test';
 
-import { findUserId, storeRequest } from './support/db';
+import { findUserId, storeOwnRequest } from './support/db';
 import {
   CLIENT_WATCHER,
   COMPANY_NAME,
@@ -21,7 +21,6 @@ import {
   PAGING_COMPANY_NAME,
   PAGING_COMPANY_SLUG,
   PLATFORM_ADMIN,
-  REQUESTS_CLIENT,
 } from './support/fixtures';
 import { adminStorageState, type StorageState } from './support/helpers';
 import { inOrder } from './support/sequence';
@@ -263,12 +262,7 @@ test('no table scrolls sideways from tablet to desktop widths', async ({ page })
   const adminId = await findUserId(PLATFORM_ADMIN.email);
   // The longest status the staff see, "Waiting for the company", on the first page of every list
   // of requests below: stored now, so its activity is the latest, whatever other specs stored.
-  await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title: 'Waiting while the tables are measured',
-    status: 'waiting',
-  });
+  await storeOwnRequest({ title: 'Waiting while the tables are measured', status: 'waiting' });
   // The staff member with no name and a long address is the widest row.
   const paths = [
     '/admin/users',

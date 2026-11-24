@@ -31,9 +31,9 @@ import {
   storeInvitation,
   storeAnswerLink,
   storeInviteLink,
-  storeRequest,
   storeRequestLink,
   storeSignInLink,
+  storeOwnRequest,
 } from './support/db';
 import {
   CLIENT_WATCHER,
@@ -56,6 +56,7 @@ import {
   type StorageState,
   storageStateFor,
   toasts,
+  boardLane,
 } from './support/helpers';
 import { expect, test } from './support/test';
 
@@ -695,9 +696,7 @@ test.describe('in forced-colours mode', () => {
 
     test('an email’s answer link that asks for a button press, signed out', async ({ page }) => {
       // A request of the test's own, waiting for the client's approval; the link isn't used.
-      const number = await storeRequest({
-        companySlug: COMPANY_SLUG,
-        raisedBy: REQUESTS_CLIENT.email,
+      const number = await storeOwnRequest({
         title: 'A solution to answer by email',
         status: 'proposed',
       });
@@ -878,9 +877,7 @@ test.describe('in forced-colours mode', () => {
         page,
       }) => {
         // A request of the test's own: the description is edited and saved.
-        const number = await storeRequest({
-          companySlug: COMPANY_SLUG,
-          raisedBy: REQUESTS_CLIENT.email,
+        const number = await storeOwnRequest({
           title: 'A description edited for the scan',
           description: 'As it was first written.',
         });
@@ -903,11 +900,7 @@ test.describe('in forced-colours mode', () => {
         page,
       }) => {
         // A request of the test's own: a note is added to it.
-        const number = await storeRequest({
-          companySlug: COMPANY_SLUG,
-          raisedBy: REQUESTS_CLIENT.email,
-          title: 'A note added for the scan',
-        });
+        const number = await storeOwnRequest({ title: 'A note added for the scan' });
         await page.goto(`/requests/${number}`);
         await page
           .getByRole('tablist', { name: 'Write' })
@@ -1015,7 +1008,7 @@ test.describe('in forced-colours mode', () => {
         await page.setViewportSize({ width: 1100, height: 900 });
         await page.goto('/requests/board');
         await expect(page.getByRole('navigation', { name: 'Jump to a lane' })).toBeVisible();
-        const open = page.getByRole('group', { name: /^Open, \d+ requests?$/ });
+        const open = boardLane(page, 'Open');
         await expect(open).toBeVisible();
         // No landmark for a column or a half: the page's landmarks stay few.
         await expect(page.getByRole('main').getByRole('region')).toHaveCount(0);
@@ -1143,9 +1136,7 @@ test.describe('in forced-colours mode', () => {
       }) => {
         await context.addCookies(clientState.cookies);
         // A request of the test's own, waiting for approval: the dialog is closed without answering.
-        const number = await storeRequest({
-          companySlug: COMPANY_SLUG,
-          raisedBy: REQUESTS_CLIENT.email,
+        const number = await storeOwnRequest({
           title: 'A solution for the scan',
           status: 'proposed',
         });

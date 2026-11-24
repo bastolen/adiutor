@@ -18,6 +18,7 @@ import {
   storeEntries,
   storeRequest,
   choosePictureOf,
+  storeOwnRequest,
 } from './support/db';
 import {
   ACTIVITY_CLIENT,
@@ -46,6 +47,7 @@ import {
   storageStateFor,
   toasts,
   whenHydrated,
+  boardLane,
 } from './support/helpers';
 import { inOrder, repeatInOrder } from './support/sequence';
 import { expect, test } from './support/test';
@@ -71,12 +73,8 @@ test.beforeAll(async ({ browser }) => {
  * @param title - The request's title.
  * @returns The path of the request's page.
  */
-async function storeOwnRequest(title: string): Promise<string> {
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title,
-  });
+async function ownRequestPath(title: string): Promise<string> {
+  const number = await storeOwnRequest({ title });
   return `/requests/${number}`;
 }
 
@@ -1220,7 +1218,7 @@ test.describe('requests', () => {
     });
 
     test('a status is only saved when picked with Enter, not while browsing', async ({ page }) => {
-      await page.goto(await storeOwnRequest('A status picked with the keyboard'));
+      await page.goto(await ownRequestPath('A status picked with the keyboard'));
       const status = page.getByRole('combobox', { name: 'Status' });
       await expect(status).toHaveText('Open');
 
@@ -1248,7 +1246,7 @@ test.describe('requests', () => {
     test('the editor opens large and comes back with the keyboard, the cursor in its place', async ({
       page,
     }) => {
-      await page.goto(await storeOwnRequest('A reply written large with the keyboard'));
+      await page.goto(await ownRequestPath('A reply written large with the keyboard'));
       const reply = await markdownEditor(page, 'Your reply');
       await reply.focus();
       await page.keyboard.type('one four');
@@ -1309,7 +1307,7 @@ test.describe('requests', () => {
     test('someone is mentioned with the keyboard, and Escape closes the list before the large view', async ({
       page,
     }) => {
-      await page.goto(await storeOwnRequest('A mention made with the keyboard'));
+      await page.goto(await ownRequestPath('A mention made with the keyboard'));
       const reply = await markdownEditor(page, 'Your reply');
       const list = page.getByRole('listbox', { name: 'People to mention' });
       /**
@@ -1386,7 +1384,7 @@ test.describe('requests', () => {
     });
 
     test('a reply is sent with the keyboard, and focus is never lost', async ({ page }) => {
-      await page.goto(await storeOwnRequest('A reply sent with the keyboard'));
+      await page.goto(await ownRequestPath('A reply sent with the keyboard'));
       const reply = await markdownEditor(page, 'Your reply');
       const send = page.getByRole('button', { name: 'Send reply' });
       const sendAndWait = page.getByRole('button', { name: 'Send and wait for the company' });
@@ -1470,7 +1468,7 @@ test.describe('requests', () => {
     test('a note is written on its tab with the keyboard, and focus stays on its button', async ({
       page,
     }) => {
-      await page.goto(await storeOwnRequest('A note written with the keyboard'));
+      await page.goto(await ownRequestPath('A note written with the keyboard'));
       const write = page.getByRole('tablist', { name: 'Write' });
       const replyTab = write.getByRole('tab', { name: 'Reply' });
       const noteTab = write.getByRole('tab', { name: 'Internal note' });
@@ -1514,7 +1512,7 @@ test.describe('requests', () => {
     test('the subscribers dialog is worked with the keyboard, and returns focus', async ({
       page,
     }) => {
-      await page.goto(await storeOwnRequest('Subscribers changed with the keyboard'));
+      await page.goto(await ownRequestPath('Subscribers changed with the keyboard'));
       const details = page.getByRole('region', { name: 'Details' });
       const change = details.getByRole('button', { name: 'Change subscribers' });
       const dialog = page.getByRole('dialog', { name: 'Change who’s subscribed' });
@@ -1554,7 +1552,7 @@ test.describe('requests', () => {
     test('the subscribers’ names open from their avatars, and Escape returns focus', async ({
       page,
     }) => {
-      await page.goto(await storeOwnRequest('Subscribers read with the keyboard'));
+      await page.goto(await ownRequestPath('Subscribers read with the keyboard'));
       // Whoever raised a request follows it.
       const avatars = page
         .getByRole('region', { name: 'Details' })
@@ -1581,7 +1579,7 @@ test.describe('requests', () => {
     });
 
     test('unsubscribing and subscribing again keep focus on the one button', async ({ page }) => {
-      await page.goto(await storeOwnRequest('A request followed with the keyboard'));
+      await page.goto(await ownRequestPath('A request followed with the keyboard'));
       const details = page.getByRole('region', { name: 'Details' });
       // Whoever raised a request follows it.
       const unsubscribe = details.getByRole('button', { name: 'Unsubscribe' });
@@ -1601,7 +1599,7 @@ test.describe('requests', () => {
     test('a description is edited with the keyboard, and focus returns to its Edit button', async ({
       page,
     }) => {
-      await page.goto(await storeOwnRequest('A description edited with the keyboard'));
+      await page.goto(await ownRequestPath('A description edited with the keyboard'));
       const description = page.getByRole('region', { name: 'Description' });
       const edit = description.getByRole('button', { name: 'Edit description' });
       const editor = description.getByRole('textbox', { name: 'Description' });
@@ -1637,7 +1635,7 @@ test.describe('requests', () => {
     });
 
     test('cancelling a request asks first, keeps focus inside and returns it', async ({ page }) => {
-      await page.goto(await storeOwnRequest('A request cancelled with the keyboard'));
+      await page.goto(await ownRequestPath('A request cancelled with the keyboard'));
       const cancelRequest = page
         .getByRole('region', { name: 'Details' })
         .getByRole('button', { name: 'Cancel request' });
@@ -1683,31 +1681,17 @@ test.describe('the board of requests', () => {
     await context.addCookies(adminState.cookies);
   });
 
-  /**
-   * A lane of the board on the page.
-   *
-   * @param page - The browser page, on the board.
-   * @param name - The lane's name.
-   * @returns The lane's group.
-   */
-  const lane = (page: Page, name: string) =>
-    page.getByRole('group', { name: new RegExp(`^${name}, \\d+ requests?$`) });
-
   test('a card moves with its Move menu from the keyboard, and focus follows it to its new lane', async ({
     page,
   }) => {
     const title = `A card moved with the keyboard ${Date.now()}`;
-    const number = await storeRequest({
-      companySlug: COMPANY_SLUG,
-      raisedBy: REQUESTS_CLIENT.email,
-      title,
-    });
+    const number = await storeOwnRequest({ title });
     await page.goto(`/requests/board?q=${encodeURIComponent(title)}`);
-    const move = lane(page, 'Open').getByRole('button', { name: `Move AD-${number}` });
+    const move = boardLane(page, 'Open').getByRole('button', { name: `Move AD-${number}` });
     expect(await cursorOf(move)).toBe('pointer');
 
     // From the card's link, Tab reaches its Move button (the avatars are left out).
-    await lane(page, 'Open').getByRole('link', { name: title }).focus();
+    await boardLane(page, 'Open').getByRole('link', { name: title }).focus();
     await page.keyboard.press('Tab');
     await expect(move).toBeFocused();
 
@@ -1724,10 +1708,10 @@ test.describe('the board of requests', () => {
     await pressUntilFocused(page, 'ArrowDown', inProgress);
     await page.keyboard.press('Enter');
     await expect(toasts(page)).toContainText(`AD-${number} moved to In progress.`);
-    const moved = lane(page, 'In progress').getByRole('button', { name: `Move AD-${number}` });
+    const moved = boardLane(page, 'In progress').getByRole('button', { name: `Move AD-${number}` });
     await expect(moved).toBeFocused();
     await expect(moved).not.toHaveAttribute('aria-busy');
-    await expect(lane(page, 'Open').getByRole('link', { name: title })).toHaveCount(0);
+    await expect(boardLane(page, 'Open').getByRole('link', { name: title })).toHaveCount(0);
   });
 
   test('the lanes are reached and scrolled sideways with the keyboard', async ({ page }) => {

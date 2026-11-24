@@ -29,6 +29,7 @@ import {
   submitPassword,
   toasts,
   useOwnClientIp,
+  APP_HOME_URL,
 } from './support/helpers';
 import { countEmails, linkIn, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
@@ -148,7 +149,7 @@ test('a user deactivates their account and an Admin reactivates it', async ({ pa
     // Another tab of the same browser has the dashboard open.
     const other = await page.context().newPage();
     await other.goto('/dashboard');
-    await expect(other).toHaveURL(/\/(dashboard|companies\/)/);
+    await expect(other).toHaveURL(APP_HOME_URL);
     await dialog.getByLabel('Current password').fill(DEACTIVATE_CLIENT.password);
     await dialog.getByRole('button', { name: 'Deactivate my account' }).click();
 

@@ -16,7 +16,13 @@ import type { Page } from '@playwright/test';
 
 import { entryAnchor } from '../src/lib/requests';
 import { REQUEST_LINK_URL_PATH, requestLinkPath } from '../src/lib/sign-in/request-link';
-import { findEntryId, storeEntries, storeRequest, storeRequestLink } from './support/db';
+import {
+  findEntryId,
+  storeEntries,
+  storeRequest,
+  storeRequestLink,
+  storeOwnRequest,
+} from './support/db';
 import {
   COMPANY_SLUG,
   E2E_BASE_URL,
@@ -25,7 +31,7 @@ import {
   STEP_UP_MANAGER,
   SUPPORT_STAFF,
 } from './support/fixtures';
-import { clickLinkInEmail, signIn, signOut, toasts } from './support/helpers';
+import { clickLinkInEmail, signIn, signOut, toasts, invitationForm } from './support/helpers';
 import { linkIn, waitForEmailAbout } from './support/outbox';
 import { inOrder } from './support/sequence';
 import { expect, test } from './support/test';
@@ -38,7 +44,7 @@ import { expect, test } from './support/test';
  */
 async function ownRequest(raisedBy: string): Promise<{ title: string; number: number }> {
   const title = `Link sign-in ${randomUUID().slice(0, 8)}`;
-  const number = await storeRequest({ companySlug: COMPANY_SLUG, raisedBy, title });
+  const number = await storeOwnRequest({ title, raisedBy });
   return { title, number };
 }
 
@@ -121,7 +127,7 @@ test('a Manager is signed in without the second step, which a grant still asks f
 
   // A company's Admin role gives a lasting way in: the invite form asks for a confirmation first.
   await page.goto(`/companies/${COMPANY_SLUG}/members`);
-  const invite = page.locator('form').filter({ has: page.getByLabel('Email addresses') });
+  const invite = invitationForm(page);
   await expect(invite.getByRole('button', { name: 'Send invitations' })).toBeVisible();
   await invite.getByRole('combobox', { name: 'Role', exact: true }).click();
   await page.getByRole('option', { name: /^Admin/ }).click();
