@@ -105,14 +105,12 @@ keyboard support.
       own waiting for the company on the first page of the lists of requests.
   - **List services** take the table's state and return one page with the total
     (`Paged<T>`); each sort ends with the row's ID, so pages don't overlap and reversing is exact.
-- **The board** of requests (`/requests/board`, and a company's at `/companies/<URL name>/board`,
-  see [The board](requests.md#the-board)) is the one
-  view of records that isn't a table: a lane per status, each card a list item, in five columns,
-  two of which (Waiting, Closed) hold two lanes as an upper and a lower half, each half with its
-  own heading (`h3` under the column's `h2`), count, "See all" and empty text. Lanes have no
-  pagination footer (an open lane shows 25, 50 or 100 cards, chosen like rows per page with
-  `PageSizeLinks`; a closed one its latest 5; a lane with more links to the list), but they keep
-  the list's sort, from its Sort menu. The pattern:
+- **The board** of requests is the one view of records that isn't a table: a lane per status, each
+  card a list item, in columns, two of which (Waiting, Closed) hold two lanes as an upper and a
+  lower half, each half with its own heading (`h3` under the column's `h2`). What it shows, who may
+  move what and how the lanes are laid out is in [The board](requests.md#the-board); this is the
+  pattern, for any board of cards. Lanes have no pagination footer but keep the list's sort, from
+  its Sort menu.
   - **Moving without dragging:** every card the reader may move has a Move menu (a Radix menu)
     listing the lanes it may go to, which works with a single click or tap, the keyboard and
     screen readers alike. That's WCAG 2.5.7 Dragging Movements: whatever can be dragged can also
@@ -122,15 +120,13 @@ keyboard support.
   - **Dragging:** a decorative grip (`aria-hidden`, `cursor-grab`) in the card's corner drags it,
     never its title link (`draggable={false}`). The drag and drop library loads with `import()`
     once the page is there, from tablet width only (`board-drag.ts`, the one file that imports
-    it). Each lane is a drop target, each half of a grouped column too. While a card is dragged,
-    the lanes say whether it can go there by more than colour: a lane it may go to has a border in
-    the highlight colour, and under the pointer a ring and what letting go does ("Let go to move it
-    here", "Let go to mark it as done", "Let go to cancel it"); a lane it can't go to has a dashed
-    border, the not-allowed cursor and "Can't move here", and doesn't take the card (so the browser
-    shows it can't be dropped). The
-    card left behind is dashed and flat, its text as it was (never lighter through opacity). A
-    drop that's refused sends nothing and says why, inline and as a toast. A live region of the
-    board's own announces the drag in the reader's language (never a library's English).
+    it). While a card is dragged, the lanes say whether it can go there by more than colour: a
+    lane it may go to has a border in the highlight colour, and under the pointer a ring and what
+    letting go does; a lane it can't go to has a dashed border, the not-allowed cursor and "Can't
+    move here", and doesn't take the card. The card left behind is dashed and flat, its text as it
+    was (never lighter through opacity). A drop that's refused sends nothing and says why, inline
+    and as a toast. A live region of the board's own announces the drag in the reader's language
+    (never a library's English).
   - **A busy card, not a busy board:** a moved card shows in its new lane at once
     (`useOptimistic`), and only its Move button is busy (a spinner in its icon's place, its word
     and name kept, focusable, presses ignored); every other card stays usable.
@@ -140,27 +136,16 @@ keyboard support.
   - **Screen readers:** the columns and their halves are named groups (`role="group"` with
     `aria-labelledby` on their heading), not sections: a named section is a landmark, and a board
     of landmarks would bury the page's own. A lane's list of cards is named when it shows fewer
-    than the lane holds ("First 25 of 80", "Latest 5 of 132"). What happens to a card ("Moving
-    AD-142 to In progress…", and while dragging) goes through one live region the board keeps on the page from
-    the start, since a status inserted with its text already in it is often not read out; it
-    empties before the toast or the error says the outcome, so nothing is said twice. These are
-    checked with axe and with snapshots of the board's accessibility tree
-    (`e2e/board-a11y.spec.ts`); a pass with VoiceOver is manual.
-  - **Width:** the columns, at least 14rem each, sit in a row that scrolls sideways inside a
-    named group the keyboard reaches while it overflows (`tabIndex={0}`, like a wide code block),
-    so the page never scrolls sideways. While it overflows, a navigation above it ("Jump to a
-    lane", named by its visible label) has a small secondary button per column with its name and
-    count (`LaneCount`, a number in the reader's language, hidden from screen readers, which hear
-    the heading's sentence); a press scrolls only the row to the column, without smooth scrolling
-    under reduced motion, and focuses the column's heading, so a column out of sight is one press
-    away. A container query on the board's width shows it (`@container` on the board,
-    `@min-[73rem]:hidden` on the row: five 14rem columns and their gaps), never a measurement after
-    the page runs, so nothing shifts; focus on it when it hides goes to the main content. On a
-    wide screen the board is as wide as a request's page (`WidePage`; a company's board through
-    the company's layout, with its header and tabs), so from about 1500px of screen all five
-    columns fit side by side, the row doesn't scroll and the navigation isn't there. Below tablet
-    width the columns are stacked, each folding away with its count (`aria-expanded` on its
-    heading's button), a grouped column with both its halves.
+    than the lane holds ("First 25 of 80", "Latest 5 of 132"). What happens to a card goes
+    through one live region the board keeps on the page from the start, since a status inserted
+    with its text already in it is often not read out; it empties before the toast or the error
+    says the outcome, so nothing is said twice. These are checked with axe and with snapshots of
+    the board's accessibility tree (`e2e/board-a11y.spec.ts`); a pass with VoiceOver is manual.
+  - **Width:** the columns sit in a row that scrolls sideways inside a named group the keyboard
+    reaches while it overflows (`tabIndex={0}`, like a wide code block), so the page never
+    scrolls sideways. A row of "Jump to a lane" buttons above it, shown by a container query
+    (never a measurement after the page runs, so nothing shifts), brings a column out of sight
+    one press away; the sizes are in [The board](requests.md#the-board).
   - **Colours:** a lane is a step back from its cards in both modes (`muted` behind `surface`
     cards in light mode, `surface` behind `raised` ones in dark mode, where `surface` is the darker
     of the two); the count, the empty lane and the card's details use `muted-foreground`.
