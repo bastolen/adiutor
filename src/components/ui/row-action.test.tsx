@@ -9,10 +9,10 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
 import type { ActionResult } from '@/lib/action-result';
 import { defined } from '@/lib/defined';
 
+import ConfirmationWindow from '../../../tests/ui/confirmation-window';
 import Card from './card';
 import RowAction from './row-action';
 import { SignedInAsMarker } from './signed-in-as';
@@ -58,16 +58,11 @@ describe('RowAction', () => {
     const user = userEvent.setup();
     const action = vi.fn().mockResolvedValue({ ok: true, message: 'Sent again.' });
     render(
-      <RecentConfirmationProvider
-        required
-        confirmedUntil={null}
-        serverTime={Date.now()}
-        returnTo="/admin/settings/staff?inv-page=2"
-      >
+      <ConfirmationWindow windowOpen={false} returnTo="/admin/settings/staff?inv-page=2">
         <Card id="invitations" title="Open invitations">
           <RowAction action={action} fields={{ invitationId: 'invitation-1' }} label="Resend" />
         </Card>
-      </RecentConfirmationProvider>,
+      </ConfirmationWindow>,
     );
 
     await user.click(screen.getByRole('button', { name: 'Resend' }));
@@ -316,21 +311,15 @@ describe('RowAction', () => {
      */
     function renderAsking(windowOpen: boolean) {
       const action = vi.fn().mockResolvedValue({ ok: true });
-      const serverTime = Date.now();
       render(
-        <RecentConfirmationProvider
-          required
-          confirmedUntil={windowOpen ? serverTime + 10 * 60_000 : null}
-          serverTime={serverTime}
-          returnTo="/admin/users/user-1/manage"
-        >
+        <ConfirmationWindow windowOpen={windowOpen} returnTo="/admin/users/user-1/manage">
           <RowAction
             action={action}
             label="Reactivate"
             confirmFirst
             confirm={{ title: 'Reactivate Ada?', description: 'They can sign in again.' }}
           />
-        </RecentConfirmationProvider>,
+        </ConfirmationWindow>,
       );
       return action;
     }

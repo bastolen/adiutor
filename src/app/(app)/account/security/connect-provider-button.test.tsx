@@ -11,10 +11,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
 import Card from '@/components/ui/card';
 import confirmChangeUrl from '@/lib/sign-in/confirm-url';
 
+import ConfirmationWindow from '../../../../../tests/ui/confirmation-window';
 import Page from '../../../../../tests/ui/page';
 import ConnectProviderButton from './connect-provider-button';
 
@@ -38,9 +38,6 @@ vi.mock('next/navigation', () => ({
 /** The props that disable nothing, spread into each render so it states only what differs. */
 const NOTHING_BLOCKED = { disabled: false };
 
-/** The server's time when the Security page rendered. */
-const SERVER_TIME = new Date('2026-10-26T12:00:00Z').getTime();
-
 /**
  * Wraps the button in a Security page without a confirmation window.
  *
@@ -50,14 +47,9 @@ const SERVER_TIME = new Date('2026-10-26T12:00:00Z').getTime();
  */
 function NotConfirmedRecently({ children }: { children: ReactNode }) {
   return (
-    <RecentConfirmationProvider
-      required
-      confirmedUntil={null}
-      serverTime={SERVER_TIME}
-      returnTo="/account/security"
-    >
+    <ConfirmationWindow windowOpen={false} returnTo="/account/security">
       {children}
-    </RecentConfirmationProvider>
+    </ConfirmationWindow>
   );
 }
 
@@ -86,16 +78,11 @@ describe('ConnectProviderButton', () => {
   it('comes back to its card on the Security page, with the devices table as it was', async () => {
     linkSocial.mockResolvedValue({ error: null });
     render(
-      <RecentConfirmationProvider
-        required
-        confirmedUntil={SERVER_TIME + 60_000}
-        serverTime={SERVER_TIME}
-        returnTo="/account/security?devices-page=2"
-      >
+      <ConfirmationWindow windowOpen returnTo="/account/security?devices-page=2">
         <Card id="connected-accounts" title="Connected accounts">
           <ConnectProviderButton {...NOTHING_BLOCKED} provider="github" label="GitHub" />
         </Card>
-      </RecentConfirmationProvider>,
+      </ConfirmationWindow>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Connect GitHub' }));
@@ -154,14 +141,9 @@ describe('ConnectProviderButton', () => {
       error: { code: 'MFA_VERIFICATION_REQUIRED', message: 'Confirm it’s you first' },
     });
     render(
-      <RecentConfirmationProvider
-        required
-        confirmedUntil={SERVER_TIME + 60_000}
-        serverTime={SERVER_TIME}
-        returnTo="/account/security"
-      >
+      <ConfirmationWindow windowOpen returnTo="/account/security">
         <ConnectProviderButton {...NOTHING_BLOCKED} provider="github" label="GitHub" />
-      </RecentConfirmationProvider>,
+      </ConfirmationWindow>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Connect GitHub' }));
