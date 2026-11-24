@@ -26,6 +26,7 @@ import {
 
 import cn from '@/lib/cn';
 
+import { keepFocus } from './focus-fallback';
 import { onSearchKey, onTriggerKey, showOption } from './searchable-select-keys';
 import { groupOptions, matchingOptions } from './select-option-list';
 import {
@@ -70,17 +71,6 @@ interface SearchableSelectProps {
   busy: boolean;
   /** Extra classes for the closed field. */
   className: string;
-}
-
-/**
- * Keeps the focus where it is: a press on an option must not take it from
- * the search field.
- *
- * @param event - The press.
- * @param event.preventDefault - Stops the focus moving.
- */
-function keepFocus(event: { preventDefault: () => void }) {
-  event.preventDefault();
 }
 
 /**

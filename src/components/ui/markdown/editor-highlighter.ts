@@ -6,6 +6,7 @@
  * colours its code with them, and can name the languages.
  */
 import { createLowlight } from 'lowlight';
+import { useSyncExternalStore } from 'react';
 
 import type { CodeLanguageChoice } from './languages';
 
@@ -110,4 +111,14 @@ export function subscribeToCodeLanguages(listener: () => void): () => void {
  */
 export function knownCodeLanguages(): KnownLanguages | null {
   return known;
+}
+
+/**
+ * The languages as far as they're known, which a component follows: the
+ * toolbar's language menu and the blocks' captions.
+ *
+ * @returns The choices and the names, or `null` before they've loaded (and on the server).
+ */
+export function useCodeLanguages(): KnownLanguages | null {
+  return useSyncExternalStore(subscribeToCodeLanguages, knownCodeLanguages, () => null);
 }

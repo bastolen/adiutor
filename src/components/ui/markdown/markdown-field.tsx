@@ -11,12 +11,9 @@ import { type ComponentType, useEffect, useId, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 
 import type { MarkdownEditorProps } from './editor';
-import FormattingToolbar from './formatting-toolbar';
+import FormattingToolbar, { ignoreCommand } from './formatting-toolbar';
 import type { MentionLoader } from './mentions';
 import { markdownStyles } from './styles';
-
-/** What the toolbar's buttons do before the editor is there: nothing (they're disabled). */
-function ignore() {}
 
 /** Props for {@link MarkdownField}. */
 interface MarkdownFieldProps {
@@ -165,7 +162,7 @@ export default function MarkdownField({
           {label}
         </label>
         <div className={markdownStyles.editorFrame}>
-          <FormattingToolbar state={null} onCommand={ignore} />
+          <FormattingToolbar state={null} onCommand={ignoreCommand} />
           <textarea
             ref={plainField}
             id={id}
