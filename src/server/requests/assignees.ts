@@ -22,10 +22,10 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { ServiceError } from '../errors';
 import { orderTerms, textOrder } from '../pagination';
-import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
-import { actingUserId, signedInAsWork } from '../signed-in-as';
+import { signedInAsWork } from '../signed-in-as';
 import { requestScope, visibleRequests } from './access';
-import { CHANGE_MOMENT, changeRequest, requestToChange } from './change';
+import { assertChangeLimit, CHANGE_MOMENT, changeRequest, requestToChange } from './change';
+import { ASSIGNED } from './participants';
 import { tellAssigned } from './updates';
 
 /**
@@ -36,9 +36,6 @@ export const MAX_ASSIGNEE_CHANGES = 50;
 
 /** The people a change adds or removes: user IDs, at most {@link MAX_ASSIGNEE_CHANGES}. */
 const assigneeIdsSchema = z.array(idSchema).max(MAX_ASSIGNEE_CHANGES);
-
-/** The rows of the people a request is assigned to, among everyone on it. */
-const ASSIGNED = eq(requestParticipant.role, 'assignee');
 
 /** The staff roles whose members can be assigned: those who work on requests. */
 const ASSIGNABLE_ROLES = PLATFORM_ROLES.filter((platformRole) =>
@@ -137,11 +134,7 @@ export async function changeAssignees(
   const remove = [...new Set(assigneeIdsSchema.parse(input.remove))].filter(
     (id) => !add.includes(id),
   );
-  await assertRateLimit(
-    ctx,
-    `request-change:user:${actingUserId(actor)}`,
-    RATE_LIMITS.requestChangesPerUser,
-  );
+  await assertChangeLimit(ctx, actor);
 
   return changeRequest(
     ctx,

@@ -11,9 +11,8 @@ import { requestReplySchema } from '@/lib/validation';
 
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
-import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
-import { actingUserId, signedInAsWork } from '../signed-in-as';
-import { CHANGE_MOMENT, changeRequest, requestToChange } from './change';
+import { signedInAsWork } from '../signed-in-as';
+import { assertReplyLimit, CHANGE_MOMENT, changeRequest, requestToChange } from './change';
 import { storeMentions } from './mentions';
 import { subscribeAutomatically } from './subscribers';
 import { tellStaffOnRequest } from './updates';
@@ -50,11 +49,7 @@ export default async function addNote(
 ): Promise<void> {
   const access = await requestToChange(ctx, actor, input.request, 'requests:manage');
   const body = requestReplySchema.parse(input.body);
-  await assertRateLimit(
-    ctx,
-    `request-reply:user:${actingUserId(actor)}`,
-    RATE_LIMITS.requestRepliesPerUser,
-  );
+  await assertReplyLimit(ctx, actor);
 
   await changeRequest(ctx, actor, access, 'requests:manage', async (tx, locked) => {
     const note = firstRow(

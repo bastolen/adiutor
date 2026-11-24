@@ -41,13 +41,15 @@ The folders of the repository and what belongs in each. Back to the [documentati
     Auth itself is configured in `src/lib/auth.ts`, whose hooks call these two folders.
   - `src/server/people/`: users, staff, memberships, invitations, invite links and companies.
     `invitations/` has one file per flow (the shared rules, the lock, creating the record, sending,
-    managing, accepting, and revoking when someone loses access) and `user-admin/` the staff
-    actions on a user (detail, sessions, own account, the sole Admin rule).
+    managing, accepting, and revoking when someone loses access), `invite-links/` one for each
+    part of an invite link's life (managing links, the usable link, claiming one with its undo,
+    joining with one) and `user-admin/` the staff actions on a user (detail, sessions, own
+    account, the sole Admin rule).
   - `src/server/requests/`: listing, showing as a board, reading, raising and changing requests
     (see [Requests](requests.md)), with the checks every change shares in `change.ts`.
   - `src/server/jobs/`: background jobs (see [Background jobs](jobs.md)): the tick, leases and
     history, with each recurring job in `recurring/` and every job listed in `registry.ts`.
-  - `src/server/queue/`: declaring kinds of queued job and adding jobs to the queue (`queueJob`),
+  - `src/server/queue/`: declaring kinds of queued job and adding jobs to the queue (`queueJob`, `queueJobs`),
     apart from `src/server/jobs`, which imports the code it runs: so code anywhere can queue a job.
   - `src/server/settings/`: Adiutor's settings, one row each in the `setting` table
     ([decision 0034](decisions/0034-settings-in-one-key-value-table.md)): `registry.ts` declares

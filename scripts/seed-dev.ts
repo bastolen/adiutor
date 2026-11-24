@@ -58,7 +58,7 @@ import { parseArgs } from 'node:util';
 import { hashPassword, symmetricEncrypt } from 'better-auth/crypto';
 import { eq } from 'drizzle-orm';
 
-import { db } from '../src/db';
+import { db, type DatabaseTransaction } from '../src/db';
 import * as schema from '../src/db/schema';
 import { type InvitationEmailProps, invitationEmail } from '../src/emails/invitation';
 import type { CompanyRole, PlatformRole, Role } from '../src/lib/authz/roles';
@@ -68,13 +68,13 @@ import { sendEmail } from '../src/lib/email';
 import { appUrl, env } from '../src/lib/env';
 import { DEFAULT_LOCALE, LOCALES } from '../src/lib/i18n/locales';
 import { INVITATION_VALID_DAYS } from '../src/lib/invitation-lifetimes';
-import { installLogRedaction } from '../src/lib/log-redaction';
 import { encryptionKey, parseAuthSecrets } from '../src/lib/sign-in/auth-secrets';
 import { generateToken, hashToken } from '../src/lib/sign-in/tokens';
 import { emailSchema } from '../src/lib/validation';
 import { addSetting, writeSettings } from '../src/server/settings';
 import emptyDatabase from '../tests/database/empty-database';
 import storeRequests from '../tests/database/store-requests';
+import runScript from './run-script';
 import { sampleErrors } from './sample-errors';
 import sampleRequests from './sample-requests';
 
@@ -153,12 +153,20 @@ function daysFromNow(days: number): Date {
   return new Date(Date.now() + days * DAY);
 }
 
+/** What the seed was asked for, once every check passed. */
+interface SeedOptions {
+  /** The developer's own address for a staff Admin without a password (`--admin-mail`), if given. */
+  adminMail: string | null;
+}
+
 /**
- * Seeds the database.
+ * Reads the options and runs every check before anything is written: the
+ * guard against seeding anything but a local development database, a usable
+ * `--admin-mail`, and `--yes`.
  *
- * @returns The process exit code.
+ * @returns The options, or `null` (with the reason printed) when the seed mustn't run.
  */
-async function main(): Promise<number> {
+function readOptions(): SeedOptions | null {
   const { values } = parseArgs({
     options: {
       yes: { type: 'boolean', default: false },
@@ -167,7 +175,6 @@ async function main(): Promise<number> {
   });
   const databaseUrl = new URL(env.DATABASE_URL);
 
-  // Every check runs before anything is written.
   const refusal = devSeedRefusal({
     nodeEnv: env.NODE_ENV,
     databaseUrl: env.DATABASE_URL,
@@ -175,20 +182,20 @@ async function main(): Promise<number> {
   });
   if (refusal) {
     console.error(refusal);
-    return 1;
+    return null;
   }
   let adminMail: string | null = null;
   if (values['admin-mail'] !== undefined) {
     const parsed = emailSchema.safeParse(values['admin-mail']);
     if (!parsed.success) {
       console.error('--admin-mail needs a valid email address, e.g. --admin-mail you@adiutor.dev.');
-      return 1;
+      return null;
     }
     if (parsed.data.endsWith(TEST_DOMAIN)) {
       console.error(
         `--admin-mail is for your own address; ${TEST_DOMAIN} addresses belong to the seeded accounts.`,
       );
-      return 1;
+      return null;
     }
     adminMail = parsed.data;
   }
@@ -196,437 +203,620 @@ async function main(): Promise<number> {
     console.error(
       `This deletes ALL data in ${databaseUrl.pathname.slice(1)}. Run again with --yes.`,
     );
-    return 1;
+    return null;
   }
-  // Encrypt the way the app will decrypt, including rotated secrets.
-  const encryptionSecret = encryptionKey(
-    env.BETTER_AUTH_SECRET,
-    parseAuthSecrets(env.BETTER_AUTH_SECRETS),
+  return { adminMail };
+}
+
+/** Where the seed writes, and the secrets it writes accounts with. */
+interface Seeding {
+  /** The seed's transaction. */
+  tx: DatabaseTransaction;
+  /** The hash of {@link PASSWORD}, for every account that has a password. */
+  passwordHash: string;
+  /** The key authenticator secrets are encrypted with, as the app will decrypt them. */
+  encryptionSecret: ReturnType<typeof encryptionKey>;
+}
+
+/**
+ * Creates a company.
+ *
+ * @param tx - The seed's transaction.
+ * @param name - Company name.
+ * @param slug - URL name.
+ * @param deactivated - Whether it's deactivated.
+ * @returns Its ID.
+ */
+async function addCompany(
+  tx: DatabaseTransaction,
+  name: string,
+  slug: string,
+  deactivated = false,
+): Promise<string> {
+  const created = firstRow(
+    await tx
+      .insert(schema.company)
+      .values({ name, slug, deactivatedAt: deactivated ? daysFromNow(-3) : null })
+      .returning({ id: schema.company.id }),
+    'the new company',
+  );
+  return created.id;
+}
+
+/**
+ * Creates a user, optionally with a password.
+ *
+ * @param seeding - Where to write, and the password's hash.
+ * @param email - Email address.
+ * @param name - Display name.
+ * @param options - Extras.
+ * @param options.password - Give them the shared test password.
+ * @param options.verified - Whether their email counts as verified.
+ * @param options.twoFactor - Whether two-step verification is on.
+ * @param options.lastActiveMinutesAgo - When they were last active, or `null` for never.
+ * @param options.deactivated - Whether the account is deactivated.
+ * @param options.timeZone - Their saved time zone, or `null` for none yet.
+ * @returns Their ID.
+ */
+async function addUser(
+  seeding: Seeding,
+  email: string,
+  name: string,
+  {
+    password = true,
+    verified = true,
+    twoFactor = false,
+    lastActiveMinutesAgo = 60,
+    deactivated = false,
+    timeZone = DEV_TIME_ZONE,
+  }: {
+    password?: boolean;
+    verified?: boolean;
+    twoFactor?: boolean;
+    lastActiveMinutesAgo?: number | null;
+    deactivated?: boolean;
+    timeZone?: string | null;
+  } = {},
+): Promise<string> {
+  const { tx } = seeding;
+  const created = firstRow(
+    await tx
+      .insert(schema.user)
+      .values({
+        email,
+        name,
+        emailVerified: verified,
+        twoFactorEnabled: twoFactor,
+        createdAt: daysFromNow(-30),
+        lastActiveAt:
+          lastActiveMinutesAgo === null
+            ? null
+            : new Date(Date.now() - lastActiveMinutesAgo * 60_000),
+        deactivatedAt: deactivated ? daysFromNow(-5) : null,
+        timeZone,
+      })
+      .returning({ id: schema.user.id }),
+    'the new user',
+  );
+  if (password) {
+    await tx.insert(schema.account).values({
+      userId: created.id,
+      accountId: created.id,
+      providerId: 'credential',
+      password: seeding.passwordHash,
+    });
+  }
+  return created.id;
+}
+
+/**
+ * Sets up an authenticator app for a user, storing its secret and backup
+ * codes encrypted, as Better Auth does.
+ *
+ * @param seeding - Where to write, and the key to encrypt with.
+ * @param userId - The user.
+ * @param rawSecret - The authenticator's setup key.
+ * @param backupCodes - The backup codes they hold.
+ */
+async function addAuthenticator(
+  seeding: Seeding,
+  userId: string,
+  rawSecret: string,
+  backupCodes: string[] = [],
+): Promise<void> {
+  const key = seeding.encryptionSecret;
+  await seeding.tx.insert(schema.twoFactor).values({
+    userId,
+    secret: await symmetricEncrypt({ key, data: rawSecret }),
+    backupCodes: await symmetricEncrypt({ key, data: JSON.stringify(backupCodes) }),
+    verified: true,
+  });
+}
+
+/**
+ * Puts a user on the staff with a platform role.
+ *
+ * @param tx - The seed's transaction.
+ * @param userId - The user.
+ * @param role - Their role on the staff.
+ */
+async function addToStaff(
+  tx: DatabaseTransaction,
+  userId: string,
+  role: PlatformRole,
+): Promise<void> {
+  await tx.update(schema.user).set({ platformRole: role }).where(eq(schema.user.id, userId));
+}
+
+/**
+ * Gives a user a role in a company.
+ *
+ * @param tx - The seed's transaction.
+ * @param companyId - The company.
+ * @param userId - The user.
+ * @param role - Their role there.
+ */
+async function addMember(
+  tx: DatabaseTransaction,
+  companyId: string,
+  userId: string,
+  role: CompanyRole,
+): Promise<void> {
+  await tx
+    .insert(schema.membership)
+    .values({ companyId, userId, role, createdAt: daysFromNow(-25) });
+}
+
+/** The seeded companies' IDs. */
+interface SeededCompanies {
+  /** Adiutor Tests Alpha: every company role. */
+  alpha: string;
+  /** Adiutor Tests Beta: an email-link-only Admin and an unverified Client. */
+  beta: string;
+  /** Adiutor Tests Gamma, deactivated. */
+  gamma: string;
+  /** Adiutor Tests Delta, just added: no members yet. */
+  delta: string;
+}
+
+/**
+ * Sets Adiutor up, as setup would: the staff name and the other settings
+ * setup writes, then the companies.
+ *
+ * @param tx - The seed's transaction.
+ * @returns The companies' IDs.
+ */
+async function seedSetup(tx: DatabaseTransaction): Promise<SeededCompanies> {
+  await addSetting(tx, 'setup.completed_at', new Date());
+  await writeSettings(tx, {
+    'staff.name': STAFF_NAME,
+    'staff.default_locale': DEFAULT_LOCALE,
+    'staff.offered_locales': [...LOCALES],
+    'staff.default_time_zone': DEV_TIME_ZONE,
+  });
+  return {
+    alpha: await addCompany(tx, 'Adiutor Tests Alpha', 'adiutor-tests-alpha'),
+    beta: await addCompany(tx, 'Adiutor Tests Beta', 'adiutor-tests-beta'),
+    gamma: await addCompany(tx, 'Adiutor Tests Gamma', 'adiutor-tests-gamma', true),
+    delta: await addCompany(tx, 'Adiutor Tests Delta', 'adiutor-tests-delta'),
+  };
+}
+
+/** The staff members the later steps name. */
+interface SeededStaff {
+  /** Alex Admin (`admin@adiutor.test`). */
+  admin: string;
+  /** Morgan Manager (`manager@adiutor.test`). */
+  manager: string;
+  /** Sam Support (`support@adiutor.test`), also a Client in Alpha. */
+  support: string;
+}
+
+/**
+ * Adds the staff, in every role and sign-in setup: first the developer's own
+ * Admin (`--admin-mail`), for signing in with an email link or a GitHub or
+ * Google account that has that address verified.
+ *
+ * @param seeding - Where to write.
+ * @param adminMail - The developer's own address, if given.
+ * @returns The IDs of the staff members the later steps name.
+ */
+async function seedStaff(seeding: Seeding, adminMail: string | null): Promise<SeededStaff> {
+  const { tx } = seeding;
+  if (adminMail) {
+    const ownAdmin = await addUser(seeding, adminMail, nameFromEmail(adminMail), {
+      password: false,
+      lastActiveMinutesAgo: null,
+      // Their browser saves theirs the first time they sign in.
+      timeZone: null,
+    });
+    await addToStaff(tx, ownAdmin, 'platform_admin');
+  }
+
+  const admin = await addUser(seeding, 'admin@adiutor.test', 'Alex Admin', {
+    twoFactor: true,
+    lastActiveMinutesAgo: 3,
+  });
+  await addToStaff(tx, admin, 'platform_admin');
+  await addAuthenticator(seeding, admin, ADMIN_TOTP_SECRET, ADMIN_BACKUP_CODES);
+
+  const manager = await addUser(seeding, 'manager@adiutor.test', 'Morgan Manager', {
+    twoFactor: true,
+  });
+  await addToStaff(tx, manager, 'manager');
+  await addAuthenticator(seeding, manager, MANAGER_TOTP_SECRET);
+  await addToStaff(
+    tx,
+    await addUser(seeding, 'manager.email@adiutor.test', 'Mel Manager', { twoFactor: true }),
+    'manager',
+  );
+  await addToStaff(
+    tx,
+    await addUser(seeding, 'manager.nomfa@adiutor.test', 'Max Manager'),
+    'manager',
+  );
+  await addToStaff(
+    tx,
+    await addUser(seeding, 'finance@adiutor.test', 'Frankie Finance', {
+      lastActiveMinutesAgo: 3 * 24 * 60,
+    }),
+    'finance',
   );
 
-  const passwordHash = await hashPassword(PASSWORD);
-  const openLinks: string[] = [];
-  /** Open invitations to email once the data is saved. */
-  const invitationEmails: (Omit<InvitationEmailProps, 'appUrl' | 'validDays' | 'locale'> & {
-    to: string;
-  })[] = [];
+  // An Admin who only signs in with GitHub, whose GitHub account has 2FA: protected without
+  // setting anything up in Adiutor, while GitHub sign-in is configured (otherwise their GitHub
+  // MFA doesn't count: they show as "Needs MFA", and staff Admins see a dashboard warning).
+  const githubAdmin = await addUser(seeding, 'github.admin@adiutor.test', 'Gita GitHub', {
+    password: false,
+    lastActiveMinutesAgo: 26 * 60,
+  });
+  await addToStaff(tx, githubAdmin, 'platform_admin');
+  await tx.insert(schema.account).values({
+    userId: githubAdmin,
+    accountId: '1000001',
+    providerId: 'github',
+    mfaVerified: true,
+    // Its GitHub username, shown next to the account (`accountName`).
+    accountName: 'gita-github',
+  });
+  const support = await addUser(seeding, 'support@adiutor.test', 'Sam Support');
+  await addToStaff(tx, support, 'support');
+  return { admin, manager, support };
+}
 
-  try {
-    await db.transaction(async (tx) => {
-      await emptyDatabase(tx);
+/** The company members the later steps name. */
+interface SeededMembers {
+  /** Avery Alpha, Alpha's Admin. */
+  alphaAdmin: string;
+  /** Casey Client, a Client in Alpha. */
+  alphaClient: string;
+  /** Mika Multi, a Watcher in Alpha and Beta's Admin. */
+  multi: string;
+  /** Gale Gamma, the deactivated Gamma's Admin. */
+  gammaAdmin: string;
+  /** Fran Former, a Client in Alpha whose account is deactivated. */
+  former: string;
+}
 
-      /**
-       * Creates a company.
-       *
-       * @param name - Company name.
-       * @param slug - URL name.
-       * @param deactivated - Whether it's deactivated.
-       * @returns Its ID.
-       */
-      const addCompany = async (name: string, slug: string, deactivated = false) => {
-        const created = firstRow(
-          await tx
-            .insert(schema.company)
-            .values({ name, slug, deactivatedAt: deactivated ? daysFromNow(-3) : null })
-            .returning({ id: schema.company.id }),
-          'the new company',
-        );
-        return created.id;
-      };
+/**
+ * Adds the companies' members, and the accounts in no company: every
+ * company role, a staff member who's also a company member, someone in two
+ * companies, someone without a company and a deactivated account.
+ *
+ * @param seeding - Where to write.
+ * @param companies - The companies.
+ * @param staff - The staff ({@link seedStaff}).
+ * @returns The IDs of the members the later steps name.
+ */
+async function seedMembers(
+  seeding: Seeding,
+  companies: SeededCompanies,
+  staff: SeededStaff,
+): Promise<SeededMembers> {
+  const { tx } = seeding;
+  const { alpha, beta, gamma } = companies;
 
-      /**
-       * Creates a user, optionally with a password.
-       *
-       * @param email - Email address.
-       * @param name - Display name.
-       * @param options - Extras.
-       * @param options.password - Give them the shared test password.
-       * @param options.verified - Whether their email counts as verified.
-       * @param options.twoFactor - Whether two-step verification is on.
-       * @param options.lastActiveMinutesAgo - When they were last active, or `null` for never.
-       * @param options.deactivated - Whether the account is deactivated.
-       * @param options.timeZone - Their saved time zone, or `null` for none yet.
-       * @returns Their ID.
-       */
-      const addUser = async (
-        email: string,
-        name: string,
-        {
-          password = true,
-          verified = true,
-          twoFactor = false,
-          lastActiveMinutesAgo = 60,
-          deactivated = false,
-          timeZone = DEV_TIME_ZONE,
-        }: {
-          password?: boolean;
-          verified?: boolean;
-          twoFactor?: boolean;
-          lastActiveMinutesAgo?: number | null;
-          deactivated?: boolean;
-          timeZone?: string | null;
-        } = {},
-      ) => {
-        const created = firstRow(
-          await tx
-            .insert(schema.user)
-            .values({
-              email,
-              name,
-              emailVerified: verified,
-              twoFactorEnabled: twoFactor,
-              createdAt: daysFromNow(-30),
-              lastActiveAt:
-                lastActiveMinutesAgo === null
-                  ? null
-                  : new Date(Date.now() - lastActiveMinutesAgo * 60_000),
-              deactivatedAt: deactivated ? daysFromNow(-5) : null,
-              timeZone,
-            })
-            .returning({ id: schema.user.id }),
-          'the new user',
-        );
-        if (password) {
-          await tx.insert(schema.account).values({
-            userId: created.id,
-            accountId: created.id,
-            providerId: 'credential',
-            password: passwordHash,
-          });
-        }
-        return created.id;
-      };
+  // Alpha: every company role, a staff member who's also a company member, and someone in two companies.
+  const alphaAdmin = await addUser(seeding, 'alpha.admin@adiutor.test', 'Avery Alpha', {
+    twoFactor: true,
+  });
+  await addAuthenticator(seeding, alphaAdmin, ALPHA_ADMIN_TOTP_SECRET);
+  await addMember(tx, alpha, alphaAdmin, 'admin');
+  const alphaClient = await addUser(seeding, 'alpha.client@adiutor.test', 'Casey Client', {
+    twoFactor: true,
+  });
+  await addMember(tx, alpha, alphaClient, 'client');
+  await addMember(
+    tx,
+    alpha,
+    await addUser(seeding, 'alpha.watcher@adiutor.test', 'Wren Watcher'),
+    'watcher',
+  );
+  await addMember(tx, alpha, staff.support, 'client');
+  const multi = await addUser(seeding, 'multi@adiutor.test', 'Mika Multi');
+  await addMember(tx, alpha, multi, 'watcher');
 
-      /**
-       * Sets up an authenticator app for a user, storing its secret and backup
-       * codes encrypted, as Better Auth does.
-       *
-       * @param userId - The user.
-       * @param rawSecret - The authenticator's setup key.
-       * @param backupCodes - The backup codes they hold.
-       */
-      const addAuthenticator = async (
-        userId: string,
-        rawSecret: string,
-        backupCodes: string[] = [],
-      ) => {
-        await tx.insert(schema.twoFactor).values({
-          userId,
-          secret: await symmetricEncrypt({ key: encryptionSecret, data: rawSecret }),
-          backupCodes: await symmetricEncrypt({
-            key: encryptionSecret,
-            data: JSON.stringify(backupCodes),
-          }),
-          verified: true,
-        });
-      };
+  // Beta: an email-link-only Admin, an unverified Client, and the multi-company user as Admin.
+  await addMember(
+    tx,
+    beta,
+    await addUser(seeding, 'beta.admin@adiutor.test', 'Blake Beta', { password: false }),
+    'admin',
+  );
+  await addMember(
+    tx,
+    beta,
+    await addUser(seeding, 'beta.client@adiutor.test', 'Unverified Uma', { verified: false }),
+    'client',
+  );
+  await addMember(tx, beta, multi, 'admin');
 
-      /**
-       * Puts a user on the staff with a platform role.
-       *
-       * @param userId - The user.
-       * @param role - Their role on the staff.
-       */
-      const addToStaff = async (userId: string, role: PlatformRole) => {
-        await tx.update(schema.user).set({ platformRole: role }).where(eq(schema.user.id, userId));
-      };
+  // Gamma: deactivated, so its members can't open it (staff still can).
+  const gammaAdmin = await addUser(seeding, 'gamma.admin@adiutor.test', 'Gale Gamma');
+  await addMember(tx, gamma, gammaAdmin, 'admin');
+  await addMember(
+    tx,
+    gamma,
+    await addUser(seeding, 'gamma.client@adiutor.test', 'Gus Gamma'),
+    'client',
+  );
 
-      /**
-       * Gives a user a role in a company.
-       *
-       * @param companyId - The company.
-       * @param userId - The user.
-       * @param role - Their role there.
-       */
-      const addMember = async (companyId: string, userId: string, role: CompanyRole) => {
-        await tx
-          .insert(schema.membership)
-          .values({ companyId, userId, role, createdAt: daysFromNow(-25) });
-      };
+  // Someone without a company (e.g. removed from one).
+  await addUser(seeding, 'drifter@adiutor.test', 'Dana Drifter', { lastActiveMinutesAgo: null });
 
-      // Set up: the staff name and the other settings setup writes, then the companies.
-      await addSetting(tx, 'setup.completed_at', new Date());
-      await writeSettings(tx, {
-        'staff.name': STAFF_NAME,
-        'staff.default_locale': DEFAULT_LOCALE,
-        'staff.offered_locales': [...LOCALES],
-        'staff.default_time_zone': DEV_TIME_ZONE,
-      });
-      const alpha = await addCompany('Adiutor Tests Alpha', 'adiutor-tests-alpha');
-      const beta = await addCompany('Adiutor Tests Beta', 'adiutor-tests-beta');
-      const gamma = await addCompany('Adiutor Tests Gamma', 'adiutor-tests-gamma', true);
-      const delta = await addCompany('Adiutor Tests Delta', 'adiutor-tests-delta');
+  // A deactivated account: it can't sign in until an Admin reactivates it.
+  const former = await addUser(seeding, 'former@adiutor.test', 'Fran Former', {
+    deactivated: true,
+    lastActiveMinutesAgo: 9 * 24 * 60,
+  });
+  await addMember(tx, alpha, former, 'client');
+  return { alphaAdmin, alphaClient, multi, gammaAdmin, former };
+}
 
-      // Staff. First, the developer's own Admin (`--admin-mail`), for signing in with an email
-      // link or a GitHub or Google account that has that address verified.
-      if (adminMail) {
-        const ownAdmin = await addUser(adminMail, nameFromEmail(adminMail), {
-          password: false,
-          lastActiveMinutesAgo: null,
-          // Their browser saves theirs the first time they sign in.
-          timeZone: null,
-        });
-        await addToStaff(ownAdmin, 'platform_admin');
-      }
+/** Everyone the seed's later steps name: the staff and the company members. */
+type SeededPeople = SeededStaff & SeededMembers;
 
-      const admin = await addUser('admin@adiutor.test', 'Alex Admin', {
-        twoFactor: true,
-        lastActiveMinutesAgo: 3,
-      });
-      await addToStaff(admin, 'platform_admin');
-      await addAuthenticator(admin, ADMIN_TOTP_SECRET, ADMIN_BACKUP_CODES);
+/**
+ * Adds what has happened so far: sample audit events (so the user detail
+ * page has a history), sample errors (so Logs → Errors has references to look
+ * up) and sample requests (so the request pages have every status, type and
+ * kind of history).
+ *
+ * @param tx - The seed's transaction.
+ * @param companies - The companies.
+ * @param people - The people.
+ */
+async function seedHistory(
+  tx: DatabaseTransaction,
+  companies: SeededCompanies,
+  people: SeededPeople,
+): Promise<void> {
+  const { alpha, beta, gamma } = companies;
+  const { admin, manager, support, alphaAdmin, alphaClient, multi, gammaAdmin, former } = people;
+  await tx.insert(schema.auditEvent).values([
+    {
+      action: 'sign_in_failed',
+      targetUserId: admin,
+      ip: '203.0.113.7',
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Firefox/144.0',
+      details: { method: 'password', email: 'admin@adiutor.test' },
+      at: daysFromNow(-2),
+    },
+    {
+      action: 'sign_in',
+      actorUserId: admin,
+      targetUserId: admin,
+      ip: '198.51.100.24',
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/141.0.0.0 Safari/537.36',
+      details: { method: 'password_and_authenticator' },
+      at: daysFromNow(-1),
+    },
+    {
+      action: 'role_changed',
+      actorUserId: alphaAdmin,
+      targetUserId: multi,
+      companyId: alpha,
+      details: { from: 'client', to: 'watcher' },
+      at: daysFromNow(-4),
+    },
+    {
+      action: 'account_deactivated',
+      actorUserId: former,
+      targetUserId: former,
+      details: { self: true },
+      at: daysFromNow(-5),
+    },
+  ]);
 
-      const manager = await addUser('manager@adiutor.test', 'Morgan Manager', { twoFactor: true });
-      await addToStaff(manager, 'manager');
-      await addAuthenticator(manager, MANAGER_TOTP_SECRET);
-      await addToStaff(
-        await addUser('manager.email@adiutor.test', 'Mel Manager', { twoFactor: true }),
-        'manager',
-      );
-      await addToStaff(await addUser('manager.nomfa@adiutor.test', 'Max Manager'), 'manager');
-      await addToStaff(
-        await addUser('finance@adiutor.test', 'Frankie Finance', {
-          lastActiveMinutesAgo: 3 * 24 * 60,
-        }),
-        'finance',
-      );
+  const errors = sampleErrors({ admin, manager, support, alphaAdmin, multi });
+  await tx.insert(schema.appError).values(errors.appErrors);
+  await tx.insert(schema.signInError).values(errors.signInErrors);
 
-      // An Admin who only signs in with GitHub, whose GitHub account has 2FA: protected without
-      // setting anything up in Adiutor, while GitHub sign-in is configured (otherwise their GitHub
-      // MFA doesn't count: they show as "Needs MFA", and staff Admins see a dashboard warning).
-      const githubAdmin = await addUser('github.admin@adiutor.test', 'Gita GitHub', {
-        password: false,
-        lastActiveMinutesAgo: 26 * 60,
-      });
-      await addToStaff(githubAdmin, 'platform_admin');
-      await tx.insert(schema.account).values({
-        userId: githubAdmin,
-        accountId: '1000001',
-        providerId: 'github',
-        mfaVerified: true,
-        // Its GitHub username, shown next to the account (`accountName`).
-        accountName: 'gita-github',
-      });
-      const support = await addUser('support@adiutor.test', 'Sam Support');
-      await addToStaff(support, 'support');
+  await storeRequests(
+    tx,
+    sampleRequests({
+      alpha,
+      beta,
+      gamma,
+      alphaAdmin,
+      alphaClient,
+      multi,
+      gammaAdmin,
+      support,
+      manager,
+    }),
+  );
+}
 
-      // Alpha: every company role, a staff member who's also a company member, and someone in two companies.
-      const alphaAdmin = await addUser('alpha.admin@adiutor.test', 'Avery Alpha', {
-        twoFactor: true,
-      });
-      await addAuthenticator(alphaAdmin, ALPHA_ADMIN_TOTP_SECRET);
-      await addMember(alpha, alphaAdmin, 'admin');
-      const alphaClient = await addUser('alpha.client@adiutor.test', 'Casey Client', {
-        twoFactor: true,
-      });
-      await addMember(alpha, alphaClient, 'client');
-      await addMember(
-        alpha,
-        await addUser('alpha.watcher@adiutor.test', 'Wren Watcher'),
-        'watcher',
-      );
-      await addMember(alpha, support, 'client');
-      const multi = await addUser('multi@adiutor.test', 'Mika Multi');
-      await addMember(alpha, multi, 'watcher');
+/** An open invitation to email once the data is saved. */
+type InvitationToEmail = Omit<InvitationEmailProps, 'appUrl' | 'validDays' | 'locale'> & {
+  /** Who's invited. */
+  to: string;
+};
 
-      // Beta: an email-link-only Admin, an unverified Client, and the multi-company user as Admin.
-      await addMember(
-        beta,
-        await addUser('beta.admin@adiutor.test', 'Blake Beta', { password: false }),
-        'admin',
-      );
-      await addMember(
-        beta,
-        await addUser('beta.client@adiutor.test', 'Unverified Uma', { verified: false }),
-        'client',
-      );
-      await addMember(beta, multi, 'admin');
+/** The invitations and invite links the seed added, as the steps after it need them. */
+interface SeededInvites {
+  /** A line for each link that can still be used, to print. */
+  openLinks: string[];
+  /** The open invitations, to email. */
+  emails: InvitationToEmail[];
+}
 
-      // Gamma: deactivated, so its members can't open it (staff still can).
-      const gammaAdmin = await addUser('gamma.admin@adiutor.test', 'Gale Gamma');
-      await addMember(gamma, gammaAdmin, 'admin');
-      await addMember(gamma, await addUser('gamma.client@adiutor.test', 'Gus Gamma'), 'client');
-
-      // Someone without a company (e.g. removed from one).
-      await addUser('drifter@adiutor.test', 'Dana Drifter', { lastActiveMinutesAgo: null });
-
-      // A deactivated account: it can't sign in until an Admin reactivates it.
-      const former = await addUser('former@adiutor.test', 'Fran Former', {
-        deactivated: true,
-        lastActiveMinutesAgo: 9 * 24 * 60,
-      });
-      await addMember(alpha, former, 'client');
-
-      // Sample audit log entries, so the user detail page has a history.
-      await tx.insert(schema.auditEvent).values([
-        {
-          action: 'sign_in_failed',
-          targetUserId: admin,
-          ip: '203.0.113.7',
-          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Firefox/144.0',
-          details: { method: 'password', email: 'admin@adiutor.test' },
-          at: daysFromNow(-2),
-        },
-        {
-          action: 'sign_in',
-          actorUserId: admin,
-          targetUserId: admin,
-          ip: '198.51.100.24',
-          userAgent:
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/141.0.0.0 Safari/537.36',
-          details: { method: 'password_and_authenticator' },
-          at: daysFromNow(-1),
-        },
-        {
-          action: 'role_changed',
-          actorUserId: alphaAdmin,
-          targetUserId: multi,
-          companyId: alpha,
-          details: { from: 'client', to: 'watcher' },
-          at: daysFromNow(-4),
-        },
-        {
-          action: 'account_deactivated',
-          actorUserId: former,
-          targetUserId: former,
-          details: { self: true },
-          at: daysFromNow(-5),
-        },
-      ]);
-
-      // Sample errors, so Logs → Errors has references to look up.
-      const errors = sampleErrors({ admin, manager, support, alphaAdmin, multi });
-      await tx.insert(schema.appError).values(errors.appErrors);
-      await tx.insert(schema.signInError).values(errors.signInErrors);
-
-      // Sample requests, so the request pages have every status, type and kind of history.
-      await storeRequests(
-        tx,
-        sampleRequests({
-          alpha,
-          beta,
-          gamma,
-          alphaAdmin,
-          alphaClient,
-          multi,
-          gammaAdmin,
-          support,
-          manager,
-        }),
-      );
-
-      /**
-       * Creates an invitation and returns its accept link. Open ones are
-       * also queued to be emailed.
-       *
-       * @param company - The company.
-       * @param company.id - Its ID.
-       * @param company.name - Its name, for the email.
-       * @param email - Who's invited.
-       * @param role - The role they'll get.
-       * @param inviter - Who sent it.
-       * @param inviter.id - Their user ID.
-       * @param inviter.name - Their name, for the email.
-       * @param state - Open, open but expiring within a day (due for its reminder), expired or revoked.
-       * @returns The accept link.
-       */
-      const addInvitation = async (
-        company: { id: string | null; name: string },
-        email: string,
-        role: Role,
-        inviter: { id: string; name: string },
-        state: 'open' | 'due' | 'expired' | 'revoked' = 'open',
-      ) => {
-        const companyId = company.id;
-        const invitedBy = inviter.id;
-        const token = generateToken();
-        await tx.insert(schema.invitation).values({
-          companyId,
-          email,
-          role,
-          invitedBy,
-          tokenHash: hashToken(token),
-          expiresAt: daysFromNow(
-            { open: INVITATION_VALID_DAYS, due: 1, expired: -1, revoked: INVITATION_VALID_DAYS }[
-              state
-            ],
-          ),
-          revokedAt: state === 'revoked' ? daysFromNow(-1) : null,
-          // Due ones were sent so long ago that one day of their lifetime is left.
-          createdAt: daysFromNow(state === 'due' ? 1 - INVITATION_VALID_DAYS : 0),
-        });
-        const url = `${appUrl}/invite/${token}`;
-        if (state === 'open' || state === 'due') {
-          invitationEmails.push({
-            to: email,
-            companyName: company.name,
-            inviterName: inviter.name,
-            role,
-            url,
-          });
-        }
-        return url;
-      };
-
-      const alphaCompany = { id: alpha, name: 'Adiutor Tests Alpha' };
-      const alphaInviter = { id: alphaAdmin, name: 'Avery Alpha' };
-      openLinks.push(
-        `Invitation to Alpha as Client for newcomer@adiutor.test: ${await addInvitation(alphaCompany, 'newcomer@adiutor.test', 'client', alphaInviter)}`,
-        `Invitation to Delta as Admin for delta.admin@adiutor.test: ${await addInvitation({ id: delta, name: 'Adiutor Tests Delta' }, 'delta.admin@adiutor.test', 'admin', { id: manager, name: 'Morgan Manager' })}`,
-        `Invitation to Alpha as Client for drifter@adiutor.test (existing account): ${await addInvitation(alphaCompany, 'drifter@adiutor.test', 'client', alphaInviter)}`,
-      );
-      openLinks.push(
-        `Invitation to Alpha as Watcher for soon@adiutor.test (expires tomorrow; \`pnpm jobs:run\` reminds): ${await addInvitation(alphaCompany, 'soon@adiutor.test', 'watcher', alphaInviter, 'due')}`,
-      );
-      await addInvitation(alphaCompany, 'late@adiutor.test', 'watcher', alphaInviter, 'expired');
-      await addInvitation(alphaCompany, 'revoked@adiutor.test', 'client', alphaInviter, 'revoked');
-      openLinks.push(
-        `Staff invitation as Support for newstaff@adiutor.test: ${await addInvitation({ id: null, name: STAFF_NAME }, 'newstaff@adiutor.test', 'support', { id: admin, name: 'Alex Admin' })}`,
-      );
-
-      /**
-       * Creates an invite link and returns it.
-       *
-       * @param role - The role it gives.
-       * @param state - Active, used, expired or revoked.
-       * @param companyId - The company (Alpha by default), or `null` for staff.
-       * @returns The link.
-       */
-      const addInviteLink = async (
-        role: Role,
-        state: 'active' | 'used' | 'expired' | 'revoked',
-        companyId: string | null = alpha,
-      ) => {
-        const token = generateToken();
-        await tx.insert(schema.inviteLink).values({
-          companyId,
-          role,
-          createdBy: companyId === null ? admin : alphaAdmin,
-          tokenHash: hashToken(token),
-          expiresAt: daysFromNow(state === 'expired' ? -1 : 7),
-          usedAt: state === 'used' ? daysFromNow(-1) : null,
-          usedByEmail: state === 'used' ? 'linked@adiutor.test' : null,
-          revokedAt: state === 'revoked' ? daysFromNow(-1) : null,
-        });
-        return `${appUrl}/join/${token}`;
-      };
-
-      openLinks.push(
-        `Invite link to Alpha as Watcher: ${await addInviteLink('watcher', 'active')}`,
-        `Staff invite link as Finance: ${await addInviteLink('finance', 'active', null)}`,
-      );
-      await addInviteLink('client', 'used');
-      await addInviteLink('client', 'expired');
-      await addInviteLink('watcher', 'revoked');
+/**
+ * Creates an invitation and returns its accept link. Open ones are also
+ * noted to be emailed.
+ *
+ * @param tx - The seed's transaction.
+ * @param invites - Where open ones are noted.
+ * @param company - The company.
+ * @param company.id - Its ID, or `null` for the staff.
+ * @param company.name - Its name, for the email.
+ * @param email - Who's invited.
+ * @param role - The role they'll get.
+ * @param inviter - Who sent it.
+ * @param inviter.id - Their user ID.
+ * @param inviter.name - Their name, for the email.
+ * @param state - Open, open but expiring within a day (due for its reminder), expired or revoked.
+ * @returns The accept link.
+ */
+async function addInvitation(
+  tx: DatabaseTransaction,
+  invites: SeededInvites,
+  company: { id: string | null; name: string },
+  email: string,
+  role: Role,
+  inviter: { id: string; name: string },
+  state: 'open' | 'due' | 'expired' | 'revoked' = 'open',
+): Promise<string> {
+  const token = generateToken();
+  await tx.insert(schema.invitation).values({
+    companyId: company.id,
+    email,
+    role,
+    invitedBy: inviter.id,
+    tokenHash: hashToken(token),
+    expiresAt: daysFromNow(
+      { open: INVITATION_VALID_DAYS, due: 1, expired: -1, revoked: INVITATION_VALID_DAYS }[state],
+    ),
+    revokedAt: state === 'revoked' ? daysFromNow(-1) : null,
+    // Due ones were sent so long ago that one day of their lifetime is left.
+    createdAt: daysFromNow(state === 'due' ? 1 - INVITATION_VALID_DAYS : 0),
+  });
+  const url = `${appUrl}/invite/${token}`;
+  if (state === 'open' || state === 'due') {
+    invites.emails.push({
+      to: email,
+      companyName: company.name,
+      inviterName: inviter.name,
+      role,
+      url,
     });
-  } finally {
-    await db.$client.end();
   }
+  return url;
+}
 
-  // Email the open invitations like the app would. A failing mail server doesn't undo the seeding.
+/**
+ * Creates an invite link and returns it.
+ *
+ * @param tx - The seed's transaction.
+ * @param createdBy - Who created it.
+ * @param role - The role it gives.
+ * @param state - Active, used, expired or revoked.
+ * @param companyId - The company, or `null` for staff.
+ * @returns The link.
+ */
+async function addInviteLink(
+  tx: DatabaseTransaction,
+  createdBy: string,
+  role: Role,
+  state: 'active' | 'used' | 'expired' | 'revoked',
+  companyId: string | null,
+): Promise<string> {
+  const token = generateToken();
+  await tx.insert(schema.inviteLink).values({
+    companyId,
+    role,
+    createdBy,
+    tokenHash: hashToken(token),
+    expiresAt: daysFromNow(state === 'expired' ? -1 : 7),
+    usedAt: state === 'used' ? daysFromNow(-1) : null,
+    usedByEmail: state === 'used' ? 'linked@adiutor.test' : null,
+    revokedAt: state === 'revoked' ? daysFromNow(-1) : null,
+  });
+  return `${appUrl}/join/${token}`;
+}
+
+/**
+ * Adds invitations in every state (open, due for its reminder, expired,
+ * revoked; to Alpha, to the just-added Delta and to the staff) and invite
+ * links in every state (Alpha's, and one to the staff).
+ *
+ * @param tx - The seed's transaction.
+ * @param companies - The companies.
+ * @param people - The people.
+ * @returns The links that still work, and the open invitations to email.
+ */
+async function seedInvites(
+  tx: DatabaseTransaction,
+  companies: SeededCompanies,
+  people: SeededPeople,
+): Promise<SeededInvites> {
+  const { alpha, delta } = companies;
+  const { admin, manager, alphaAdmin } = people;
+  const invites: SeededInvites = { openLinks: [], emails: [] };
+  const { openLinks } = invites;
+  const alphaCompany = { id: alpha, name: 'Adiutor Tests Alpha' };
+  const alphaInviter = { id: alphaAdmin, name: 'Avery Alpha' };
+  openLinks.push(
+    `Invitation to Alpha as Client for newcomer@adiutor.test: ${await addInvitation(tx, invites, alphaCompany, 'newcomer@adiutor.test', 'client', alphaInviter)}`,
+    `Invitation to Delta as Admin for delta.admin@adiutor.test: ${await addInvitation(tx, invites, { id: delta, name: 'Adiutor Tests Delta' }, 'delta.admin@adiutor.test', 'admin', { id: manager, name: 'Morgan Manager' })}`,
+    `Invitation to Alpha as Client for drifter@adiutor.test (existing account): ${await addInvitation(tx, invites, alphaCompany, 'drifter@adiutor.test', 'client', alphaInviter)}`,
+  );
+  openLinks.push(
+    `Invitation to Alpha as Watcher for soon@adiutor.test (expires tomorrow; \`pnpm jobs:run\` reminds): ${await addInvitation(tx, invites, alphaCompany, 'soon@adiutor.test', 'watcher', alphaInviter, 'due')}`,
+  );
+  await addInvitation(
+    tx,
+    invites,
+    alphaCompany,
+    'late@adiutor.test',
+    'watcher',
+    alphaInviter,
+    'expired',
+  );
+  await addInvitation(
+    tx,
+    invites,
+    alphaCompany,
+    'revoked@adiutor.test',
+    'client',
+    alphaInviter,
+    'revoked',
+  );
+  openLinks.push(
+    `Staff invitation as Support for newstaff@adiutor.test: ${await addInvitation(tx, invites, { id: null, name: STAFF_NAME }, 'newstaff@adiutor.test', 'support', { id: admin, name: 'Alex Admin' })}`,
+  );
+
+  openLinks.push(
+    `Invite link to Alpha as Watcher: ${await addInviteLink(tx, alphaAdmin, 'watcher', 'active', alpha)}`,
+    `Staff invite link as Finance: ${await addInviteLink(tx, admin, 'finance', 'active', null)}`,
+  );
+  await addInviteLink(tx, alphaAdmin, 'client', 'used', alpha);
+  await addInviteLink(tx, alphaAdmin, 'client', 'expired', alpha);
+  await addInviteLink(tx, alphaAdmin, 'watcher', 'revoked', alpha);
+  return invites;
+}
+
+/**
+ * Emails the open invitations like the app would. A failing mail server
+ * doesn't undo the seeding.
+ *
+ * @param emails - The open invitations.
+ */
+async function emailInvitations(emails: readonly InvitationToEmail[]): Promise<void> {
   try {
     await Promise.all(
-      invitationEmails.map(async ({ to, ...props }) =>
+      emails.map(async ({ to, ...props }) =>
         sendEmail(
           // In English (US), the language seeded invitations have (`invitation.locale`'s default).
           await invitationEmail(to, {
@@ -638,11 +828,20 @@ async function main(): Promise<number> {
         ),
       ),
     );
-    console.info(`Emailed ${invitationEmails.length} open invitations (see Mailpit).`);
+    console.info(`Emailed ${emails.length} open invitations (see Mailpit).`);
   } catch (error) {
     console.warn('Seeded, but emailing the invitations failed. Is Mailpit running?', error);
   }
+}
 
+/**
+ * Tells the developer how to sign in: where, the password, the
+ * authenticator setup keys and backup codes, and the links that still work.
+ *
+ * @param adminMail - The developer's own Admin, if one was added.
+ * @param openLinks - A line for each link that can still be used.
+ */
+function printSignInHelp(adminMail: string | null, openLinks: readonly string[]): void {
   console.info(`Seeded the database. Sign in at ${appUrl}/auth; emails arrive in Mailpit.`);
   if (adminMail) {
     console.info(
@@ -661,16 +860,41 @@ async function main(): Promise<number> {
     `Authenticator setup key for alpha.admin@adiutor.test: ${toSetupKey(ALPHA_ADMIN_TOTP_SECRET)}`,
   );
   console.info(`\nLinks that still work:\n${openLinks.map((line) => `- ${line}`).join('\n')}`);
+}
+
+/**
+ * Seeds the database: checks the options, then empties it and writes every
+ * step in one transaction, then emails the open invitations and prints how to
+ * sign in.
+ *
+ * @returns The process exit code.
+ */
+async function main(): Promise<number> {
+  // Every check runs before anything is written.
+  const options = readOptions();
+  if (!options) {
+    return 1;
+  }
+  // Encrypt the way the app will decrypt, including rotated secrets.
+  const encryptionSecret = encryptionKey(
+    env.BETTER_AUTH_SECRET,
+    parseAuthSecrets(env.BETTER_AUTH_SECRETS),
+  );
+  const passwordHash = await hashPassword(PASSWORD);
+
+  const invites = await db.transaction(async (tx) => {
+    await emptyDatabase(tx);
+    const seeding: Seeding = { tx, passwordHash, encryptionSecret };
+    const companies = await seedSetup(tx);
+    const staff = await seedStaff(seeding, options.adminMail);
+    const people = { ...staff, ...(await seedMembers(seeding, companies, staff)) };
+    await seedHistory(tx, companies, people);
+    return seedInvites(tx, companies, people);
+  });
+
+  await emailInvitations(invites.emails);
+  printSignInHelp(options.adminMail, invites.openLinks);
   return 0;
 }
 
-// Database errors are logged without the values they were sent.
-installLogRedaction();
-
-main().then(
-  (code) => process.exit(code),
-  (error: unknown) => {
-    console.error(error);
-    process.exit(1);
-  },
-);
+runScript(main);

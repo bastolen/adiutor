@@ -138,6 +138,30 @@ export async function getRequestAccess(
 }
 
 /**
+ * The actor's permissions in a company whose requests they read, from their
+ * staff role and their role there, as the company's row says (a company
+ * that's deactivated keeps the staff's rights and takes its members').
+ * The one place a list, the board and a request's page work them out from
+ * a row they selected, so they never disagree with {@link getCompanyAccess}.
+ *
+ * @param actor - The reader.
+ * @param inCompany - The company.
+ * @param inCompany.id - Its ID.
+ * @param inCompany.deactivatedAt - When it was deactivated, or `null` while it's active.
+ * @returns The permissions.
+ */
+export function permissionsIn(
+  actor: Actor,
+  inCompany: { id: string; deactivatedAt: Date | null },
+): Set<Permission> {
+  return getPermissions({
+    platformRole: actor.platformRole,
+    companyRole: actor.memberships[inCompany.id] ?? null,
+    company: { deactivated: inCompany.deactivatedAt !== null },
+  });
+}
+
+/**
  * How the screens address the actor about a company's requests: as the
  * staff, as someone who takes part, or as a follower (`requestAudience`).
  * It's worked out from their permissions in that company, by the rules
@@ -156,13 +180,10 @@ export function requestAudienceIn(
   actor: Actor,
   inCompany: { id: string; deactivatedAt: Date | null },
 ): RequestAudience {
-  const companyRole = actor.memberships[inCompany.id] ?? null;
-  const permissions = getPermissions({
-    platformRole: actor.platformRole,
-    companyRole,
-    company: { deactivated: inCompany.deactivatedAt !== null },
-  });
-  return requestAudience(permissions, companyRole !== null);
+  return requestAudience(
+    permissionsIn(actor, inCompany),
+    actor.memberships[inCompany.id] !== undefined,
+  );
 }
 
 /** Someone in a request, as its readers see them: their name and side, never their address. */

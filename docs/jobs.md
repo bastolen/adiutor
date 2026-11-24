@@ -87,7 +87,9 @@ the queue is empty or its time is up.
 ## Queued jobs
 
 The app queues a job with `queueJob(tx, kind, payload)` from `src/server/queue`, inside the
-transaction of the change it belongs to, so the job only exists if the change was saved.
+transaction of the change it belongs to, so the job only exists if the change was saved. Several
+jobs of one kind go in one statement with `queueJobs(tx, kind, payloads)` (the news about a request
+for everyone on it), in the order given.
 
 - **Payload:** IDs and small settings only, such as `{ userId, kind: 'password_changed' }`. Never
   names, addresses or other personal data: the job reads what it needs when it runs. Each kind checks

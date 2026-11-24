@@ -21,7 +21,7 @@
  */
 import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 
-import type { DatabaseTransaction } from '@/db';
+import type { Database, DatabaseTransaction } from '@/db';
 import {
   company,
   membership,
@@ -31,7 +31,11 @@ import {
   requestParticipant,
   user,
 } from '@/db/schema';
-import { getPermissions, getStaffPermissionsInCompanies } from '@/lib/authz/permissions';
+import {
+  getPermissions,
+  getStaffPermissionsInCompanies,
+  type Permission,
+} from '@/lib/authz/permissions';
 import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { visibleName } from '@/lib/display-name';
 import {
@@ -52,7 +56,7 @@ import {
 import type { ServiceContext } from '../context';
 import getRequestPrefix from '../people/request-prefix';
 import getStaffName from '../people/staff-name';
-import { queueJob, requestUpdateJob, type RequestUpdateEvent } from '../queue';
+import { queueJobs, requestUpdateJob, type RequestUpdateEvent } from '../queue';
 import { loadPeopleOn } from './participants';
 import currentProposalEntryId from './proposals';
 
@@ -79,16 +83,15 @@ interface NewsJob {
 }
 
 /**
- * Queues news, one job after another: a transaction runs one statement at a time.
+ * Queues news, in the order given, in one statement: the change's transaction
+ * holds the request's row lock meanwhile, and a request many people follow
+ * would otherwise take one statement for each of them.
  *
  * @param tx - The change's transaction.
  * @param jobs - The jobs.
  */
 async function queueNews(tx: DatabaseTransaction, jobs: readonly NewsJob[]): Promise<void> {
-  await jobs.reduce<Promise<void>>(async (queued, job) => {
-    await queued;
-    await queueJob(tx, requestUpdateJob, job);
-  }, Promise.resolve());
+  await queueJobs(tx, requestUpdateJob, jobs);
 }
 
 /**
@@ -423,6 +426,435 @@ export interface RequestUpdate {
 }
 
 /**
+ * Loads the request an email is about, with its company.
+ *
+ * @param db - Database client.
+ * @param requestId - The request.
+ * @returns The request, or `undefined` when it's gone.
+ */
+async function loadNewsRequest(db: Database, requestId: string) {
+  const [found] = await db
+    .select({
+      number: request.number,
+      title: request.title,
+      description: request.description,
+      descriptionFormat: request.descriptionFormat,
+      companyId: request.companyId,
+      status: request.status,
+      companyName: company.name,
+      companyDeactivatedAt: company.deactivatedAt,
+    })
+    .from(request)
+    .innerJoin(company, eq(company.id, request.companyId))
+    .where(eq(request.id, requestId));
+  return found;
+}
+
+/** The request an email is about, as {@link loadNewsRequest} loads it. */
+type NewsRequest = NonNullable<Awaited<ReturnType<typeof loadNewsRequest>>>;
+
+/**
+ * Loads the reader of an email about a request, and whoever did something
+ * no entry names them for, each with their role in the request's company.
+ *
+ * @param db - Database client.
+ * @param companyId - The request's company.
+ * @param userIds - The reader's ID, then the others'.
+ * @returns Their rows, in no order; nobody whose account is gone.
+ */
+function loadNewsPeople(db: Database, companyId: string, userIds: readonly string[]) {
+  return db
+    .select({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      locale: user.locale,
+      requestEmails: user.requestEmails,
+      platformRole: user.platformRole,
+      deactivatedAt: user.deactivatedAt,
+      companyRole: membership.role,
+    })
+    .from(user)
+    .leftJoin(membership, and(eq(membership.userId, user.id), eq(membership.companyId, companyId)))
+    .where(inArray(user.id, [...userIds]));
+}
+
+/** Someone an email about a request names or goes to, as {@link loadNewsPeople} loads them. */
+type NewsPerson = Awaited<ReturnType<typeof loadNewsPeople>>[number];
+
+/**
+ * Someone's permissions in a request's company, as they are now.
+ *
+ * @param person - Their roles.
+ * @param person.platformRole - Their staff role, if they have one.
+ * @param person.companyRole - Their role in the company, if they're in it.
+ * @param found - The request.
+ * @param found.companyDeactivatedAt - When its company was deactivated, or `null`.
+ * @returns The permissions.
+ */
+function permissionsInCompanyOf(
+  person: { platformRole: PlatformRole | null; companyRole: CompanyRole | null },
+  found: { companyDeactivatedAt: Date | null },
+): Set<Permission> {
+  return getPermissions({
+    platformRole: person.platformRole,
+    companyRole: person.companyRole,
+    company: { deactivated: found.companyDeactivatedAt !== null },
+  });
+}
+
+/** Who an email about a request goes to, and what they may be told. */
+interface NewsReader {
+  /** The reader. */
+  reader: NewsPerson;
+  /** Their permissions in the request's company, as they are now. */
+  permissions: Set<Permission>;
+  /** Whether they read internal notes (`requests:view-internal`): only the staff do. */
+  readsNotes: boolean;
+  /** Whether the request is assigned to them. */
+  assigned: boolean;
+  /** Whether they're subscribed to it. */
+  subscribed: boolean;
+  /** The reader, and whoever did something no entry names them for. */
+  people: NewsPerson[];
+}
+
+/**
+ * Works out whether someone gets an email about a request now: not when
+ * their account is deactivated, they turned emails about requests off in
+ * their account (a row from before the setting existed counts as on), they
+ * can no longer read the request, or they're no longer on it.
+ *
+ * @param db - Database client.
+ * @param found - The request.
+ * @param about - Whose email, about which request.
+ * @param about.requestId - The request.
+ * @param about.userId - The person.
+ * @param news - Their queued news about it.
+ * @returns The reader, or `null` when they get no email.
+ */
+async function newsReader(
+  db: Database,
+  found: NewsRequest,
+  about: { requestId: string; userId: string },
+  news: readonly QueuedRequestNews[],
+): Promise<NewsReader | null> {
+  const byUserIds = [...new Set(news.flatMap(({ byUserId }) => (byUserId ? [byUserId] : [])))];
+  const [people, roles] = await Promise.all([
+    loadNewsPeople(db, found.companyId, [about.userId, ...byUserIds]),
+    db
+      .select({ role: requestParticipant.role })
+      .from(requestParticipant)
+      .where(
+        and(
+          eq(requestParticipant.requestId, about.requestId),
+          eq(requestParticipant.userId, about.userId),
+        ),
+      ),
+  ]);
+  const reader = people.find(({ id }) => id === about.userId);
+  // Turned off in their account (a row from before the setting existed counts as on).
+  if (
+    !reader ||
+    reader.deactivatedAt !== null ||
+    reader.requestEmails === false ||
+    roles.length === 0
+  ) {
+    return null;
+  }
+  const permissions = permissionsInCompanyOf(reader, found);
+  if (!permissions.has('requests:view')) {
+    return null;
+  }
+  return {
+    reader,
+    permissions,
+    // Only the staff read internal notes: for anyone else a note, or a mention in one, is left out.
+    readsNotes: permissions.has('requests:view-internal'),
+    assigned: roles.some(({ role }) => role === 'assignee'),
+    subscribed: roles.some(({ role }) => role === 'subscriber'),
+    people,
+  };
+}
+
+/**
+ * Loads the entries of a request's history that news is about, with their
+ * authors' names.
+ *
+ * @param db - Database client.
+ * @param requestId - The request.
+ * @param entryIds - The entries; none is loaded for none.
+ * @returns Their rows, in no order; none that's gone.
+ */
+function loadNewsEntries(db: Database, requestId: string, entryIds: readonly string[]) {
+  return entryIds.length === 0
+    ? []
+    : db
+        .select({
+          id: requestEntry.id,
+          kind: requestEntry.kind,
+          body: requestEntry.body,
+          bodyFormat: requestEntry.bodyFormat,
+          from: requestEntry.fromValue,
+          to: requestEntry.toValue,
+          subjectUserId: requestEntry.subjectUserId,
+          authorSide: requestEntry.authorSide,
+          authorName: user.name,
+        })
+        .from(requestEntry)
+        .leftJoin(user, eq(requestEntry.authorId, user.id))
+        .where(and(eq(requestEntry.requestId, requestId), inArray(requestEntry.id, [...entryIds])));
+}
+
+/**
+ * Loads the mentions of the texts news is about: the description's, which
+ * have no entry, and those of the entries.
+ *
+ * @param db - Database client.
+ * @param requestId - The request.
+ * @param entryIds - The entries.
+ * @returns Their rows, with the names of the people mentioned.
+ */
+function loadNewsMentions(db: Database, requestId: string, entryIds: readonly string[]) {
+  return db
+    .select({
+      id: requestMention.id,
+      entryId: requestMention.entryId,
+      userId: requestMention.userId,
+      side: requestMention.side,
+      name: user.name,
+    })
+    .from(requestMention)
+    .leftJoin(user, eq(requestMention.userId, user.id))
+    .where(
+      and(
+        eq(requestMention.requestId, requestId),
+        entryIds.length === 0
+          ? isNull(requestMention.entryId)
+          : or(isNull(requestMention.entryId), inArray(requestMention.entryId, [...entryIds])),
+      ),
+    );
+}
+
+/** What the items of one person's email about a request are read from. */
+interface NewsContext {
+  /** The request. */
+  found: NewsRequest;
+  /** Who the email goes to, and what they may be told. */
+  told: NewsReader;
+  /** The entries the news is about, by ID. */
+  entries: Map<string, Awaited<ReturnType<typeof loadNewsEntries>>[number]>;
+  /** The mentions of the texts the news is about. */
+  mentions: Awaited<ReturnType<typeof loadNewsMentions>>;
+  /** The names that stand in for someone without one: the company's, and the staff's. */
+  sideNames: Record<RequestSide, string>;
+}
+
+/**
+ * The name the request's page gives someone: their own, or their side's.
+ *
+ * @param context - What the email is read from.
+ * @param name - Their name, or `null` when their account is gone.
+ * @param side - The side they acted as.
+ * @returns The name to show.
+ */
+function pageName(context: NewsContext, name: string | null, side: RequestSide): string {
+  return visibleName(name) ?? context.sideNames[side];
+}
+
+/**
+ * The name of whoever did something no entry names them for. Someone whose
+ * account is gone since is named as the company: only the staff's side is
+ * something an account has to prove.
+ *
+ * @param context - What the email is read from.
+ * @param userId - Their user ID.
+ * @returns The name to show.
+ */
+function pageNameById(context: NewsContext, userId: string | null): string {
+  const person = context.told.people.find(({ id }) => id === userId);
+  return person
+    ? pageName(context, person.name, requestSide(permissionsInCompanyOf(person, context.found)))
+    : context.sideNames.company;
+}
+
+/**
+ * A text of the request with the people it mentions by name.
+ *
+ * @param context - What the email is read from.
+ * @param text - The text, as it's stored.
+ * @param format - The format it's stored in.
+ * @param entryId - The reply the text is; `null` for the description.
+ * @returns The text for the email.
+ */
+function updateText(
+  context: NewsContext,
+  text: string,
+  format: RequestTextFormat,
+  entryId: string | null,
+): RequestUpdateText {
+  return {
+    text,
+    format,
+    mentions: Object.fromEntries(
+      context.mentions
+        .filter((mention) => mention.entryId === entryId)
+        .map((mention) => [mention.id, pageName(context, mention.name, mention.side)]),
+    ),
+  };
+}
+
+/**
+ * Whether a text still mentions the reader: an edit may have taken the mention out.
+ *
+ * @param context - What the email is read from.
+ * @param entryId - The reply the text is; `null` for the description.
+ * @returns Whether it does.
+ */
+function mentionsReader(context: NewsContext, entryId: string | null): boolean {
+  return context.mentions.some(
+    (mention) => mention.entryId === entryId && mention.userId === context.told.reader.id,
+  );
+}
+
+/**
+ * What one piece of news tells, as it is by now.
+ *
+ * @param context - What the email is read from.
+ * @param piece - The news.
+ * @param piece.event - What happened.
+ * @param piece.entryId - The entry it's about, if it has one.
+ * @param piece.byUserId - Who did it, where no entry says so.
+ * @returns The item for the email, or `null` when it's no longer true.
+ */
+function itemOf(
+  context: NewsContext,
+  { event, entryId, byUserId }: QueuedRequestNews,
+): RequestUpdateItem | null {
+  const { found, told } = context;
+  const entry = entryId === null ? undefined : context.entries.get(entryId);
+  const by = entry
+    ? pageName(context, entry.authorName, entry.authorSide)
+    : pageNameById(context, byUserId);
+  if (event === 'reply' && entry?.kind === 'comment' && entry.body !== null) {
+    return { event, by, text: updateText(context, entry.body, entry.bodyFormat, entry.id) };
+  }
+  if (event === 'note' && told.readsNotes && entry?.kind === 'note' && entry.body !== null) {
+    return { event, by, text: updateText(context, entry.body, entry.bodyFormat, entry.id) };
+  }
+  if (
+    event === 'status' &&
+    entry?.kind === 'status' &&
+    isRequestStatus(entry.from) &&
+    isRequestStatus(entry.to)
+  ) {
+    return { event, by, bySide: entry.authorSide, from: entry.from, to: entry.to };
+  }
+  if (
+    event === 'assigned' &&
+    told.assigned &&
+    entry?.kind === 'assignee' &&
+    entry.to === 'assigned' &&
+    entry.subjectUserId === told.reader.id
+  ) {
+    return { event, by };
+  }
+  if (event === 'mentioned' && mentionsReader(context, entryId)) {
+    if (entryId === null) {
+      return {
+        event,
+        by,
+        where: 'description',
+        text: updateText(context, found.description, found.descriptionFormat, null),
+      };
+    }
+    if (entry?.kind === 'comment' && entry.body !== null) {
+      return {
+        event,
+        by,
+        where: 'reply',
+        text: updateText(context, entry.body, entry.bodyFormat, entry.id),
+      };
+    }
+    if (told.readsNotes && entry?.kind === 'note' && entry.body !== null) {
+      return {
+        event,
+        by,
+        where: 'note',
+        text: updateText(context, entry.body, entry.bodyFormat, entry.id),
+      };
+    }
+  }
+  if (event === 'subscribed' && told.subscribed) {
+    return { event, by };
+  }
+  return null;
+}
+
+/**
+ * Where a piece of news has its place on the request's page.
+ *
+ * @param piece - The news.
+ * @param item - What the email tells of it.
+ * @returns Its anchor, or `null` when it has none.
+ */
+function anchorOf(piece: QueuedRequestNews, item: RequestUpdateItem): string | null {
+  if (item.event === 'mentioned' && item.where === 'description') {
+    return DESCRIPTION_ANCHOR;
+  }
+  return item.event === 'subscribed' || piece.entryId === null ? null : entryAnchor(piece.entryId);
+}
+
+/**
+ * Turns one person's queued news into what their email tells, in the order
+ * it was queued. The same news queued twice (a job that ran but couldn't be
+ * noted as done) is told once, a reply or note that's told as a mention of
+ * the reader isn't told again on its own, and news that's no longer true is
+ * left out.
+ *
+ * @param context - What the email is read from.
+ * @param news - The queued news.
+ * @returns The items, the anchor of the first that has a place on the page, and the jobs of
+ *   the news left out.
+ */
+function tellNews(
+  context: NewsContext,
+  news: readonly QueuedRequestNews[],
+): Pick<RequestUpdate, 'items' | 'anchor' | 'skipped'> {
+  // A reply that mentions the reader is told as the mention.
+  const mentionedIn = new Set(
+    news.flatMap(({ event, entryId }) => (event === 'mentioned' && entryId ? [entryId] : [])),
+  );
+  const told = new Set<string>();
+  const skipped: string[] = [];
+  const items: RequestUpdateItem[] = [];
+  let anchor: string | null = null;
+  // Job IDs are in the order the news was queued.
+  [...news]
+    .sort((a, b) => a.jobId.localeCompare(b.jobId))
+    .forEach((piece) => {
+      const key = `${piece.event}:${piece.entryId ?? ''}`;
+      if (
+        told.has(key) ||
+        ((piece.event === 'reply' || piece.event === 'note') &&
+          piece.entryId !== null &&
+          mentionedIn.has(piece.entryId))
+      ) {
+        return;
+      }
+      const item = itemOf(context, piece);
+      if (item === null) {
+        skipped.push(piece.jobId);
+        return;
+      }
+      told.add(key);
+      items.push(item);
+      anchor ??= anchorOf(piece, item);
+    });
+  return { items, anchor, skipped };
+}
+
+/**
  * Reads what one person's email about a request may show, when it's sent.
  * They get nothing when their account is deactivated, they turned emails
  * about requests off in their account, they can no longer read the request,
@@ -452,303 +884,45 @@ export async function readRequestUpdate(
   news: readonly QueuedRequestNews[],
 ): Promise<RequestUpdate | null> {
   const { db } = ctx;
-  const [found] = await db
-    .select({
-      number: request.number,
-      title: request.title,
-      description: request.description,
-      descriptionFormat: request.descriptionFormat,
-      companyId: request.companyId,
-      status: request.status,
-      companyName: company.name,
-      companyDeactivatedAt: company.deactivatedAt,
-    })
-    .from(request)
-    .innerJoin(company, eq(company.id, request.companyId))
-    .where(eq(request.id, about.requestId));
+  const found = await loadNewsRequest(db, about.requestId);
   if (!found) {
     return null;
   }
-  const byUserIds = [...new Set(news.flatMap(({ byUserId }) => (byUserId ? [byUserId] : [])))];
-  const [people, roles] = await Promise.all([
-    // The reader, and whoever did something no entry names them for.
-    db
-      .select({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        locale: user.locale,
-        requestEmails: user.requestEmails,
-        platformRole: user.platformRole,
-        deactivatedAt: user.deactivatedAt,
-        companyRole: membership.role,
-      })
-      .from(user)
-      .leftJoin(
-        membership,
-        and(eq(membership.userId, user.id), eq(membership.companyId, found.companyId)),
-      )
-      .where(inArray(user.id, [about.userId, ...byUserIds])),
-    db
-      .select({ role: requestParticipant.role })
-      .from(requestParticipant)
-      .where(
-        and(
-          eq(requestParticipant.requestId, about.requestId),
-          eq(requestParticipant.userId, about.userId),
-        ),
-      ),
-  ]);
-  /**
-   * Someone's permissions in the request's company, as they are now.
-   *
-   * @param person - Their roles.
-   * @param person.platformRole - Their staff role, if they have one.
-   * @param person.companyRole - Their role in the company, if they're in it.
-   * @returns The permissions.
-   */
-  const permissionsOf = (person: {
-    platformRole: PlatformRole | null;
-    companyRole: CompanyRole | null;
-  }) =>
-    getPermissions({
-      platformRole: person.platformRole,
-      companyRole: person.companyRole,
-      company: { deactivated: found.companyDeactivatedAt !== null },
-    });
-  const reader = people.find(({ id }) => id === about.userId);
-  // Turned off in their account (a row from before the setting existed counts as on).
-  if (
-    !reader ||
-    reader.deactivatedAt !== null ||
-    reader.requestEmails === false ||
-    roles.length === 0
-  ) {
+  const told = await newsReader(db, found, about, news);
+  if (!told) {
     return null;
   }
-  const permissions = permissionsOf(reader);
-  if (!permissions.has('requests:view')) {
-    return null;
-  }
-  // Only the staff read internal notes: for anyone else a note, or a mention in one, is left out.
-  const readsNotes = permissions.has('requests:view-internal');
-  const assigned = roles.some(({ role }) => role === 'assignee');
-  const subscribed = roles.some(({ role }) => role === 'subscriber');
-
   const entryIds = [...new Set(news.flatMap(({ entryId }) => (entryId ? [entryId] : [])))];
   const [entries, mentions, staffName, prefix] = await Promise.all([
-    entryIds.length === 0
-      ? []
-      : db
-          .select({
-            id: requestEntry.id,
-            kind: requestEntry.kind,
-            body: requestEntry.body,
-            bodyFormat: requestEntry.bodyFormat,
-            from: requestEntry.fromValue,
-            to: requestEntry.toValue,
-            subjectUserId: requestEntry.subjectUserId,
-            authorSide: requestEntry.authorSide,
-            authorName: user.name,
-          })
-          .from(requestEntry)
-          .leftJoin(user, eq(requestEntry.authorId, user.id))
-          .where(
-            and(eq(requestEntry.requestId, about.requestId), inArray(requestEntry.id, entryIds)),
-          ),
-    // The mentions of the texts the news is about: the description's have no entry.
-    db
-      .select({
-        id: requestMention.id,
-        entryId: requestMention.entryId,
-        userId: requestMention.userId,
-        side: requestMention.side,
-        name: user.name,
-      })
-      .from(requestMention)
-      .leftJoin(user, eq(requestMention.userId, user.id))
-      .where(
-        and(
-          eq(requestMention.requestId, about.requestId),
-          entryIds.length === 0
-            ? isNull(requestMention.entryId)
-            : or(isNull(requestMention.entryId), inArray(requestMention.entryId, entryIds)),
-        ),
-      ),
+    loadNewsEntries(db, about.requestId, entryIds),
+    loadNewsMentions(db, about.requestId, entryIds),
     getStaffName(db),
     getRequestPrefix(db),
   ]);
-  const sideNames: Record<RequestSide, string> = { company: found.companyName, staff: staffName };
-  /**
-   * The name the request's page gives someone: their own, or their side's.
-   *
-   * @param name - Their name, or `null` when their account is gone.
-   * @param side - The side they acted as.
-   * @returns The name to show.
-   */
-  const named = (name: string | null, side: RequestSide) => visibleName(name) ?? sideNames[side];
-  /**
-   * The name of whoever did something no entry names them for. Someone whose
-   * account is gone since is named as the company: only the staff's side
-   * is something an account has to prove.
-   *
-   * @param userId - Their user ID.
-   * @returns The name to show.
-   */
-  const namedById = (userId: string | null) => {
-    const person = people.find(({ id }) => id === userId);
-    return person ? named(person.name, requestSide(permissionsOf(person))) : sideNames.company;
-  };
-  /**
-   * A text of the request with the people it mentions by name.
-   *
-   * @param text - The text, as it's stored.
-   * @param format - The format it's stored in.
-   * @param entryId - The reply the text is; `null` for the description.
-   * @returns The text for the email.
-   */
-  const textOf = (
-    text: string,
-    format: RequestTextFormat,
-    entryId: string | null,
-  ): RequestUpdateText => ({
-    text,
-    format,
-    mentions: Object.fromEntries(
-      mentions
-        .filter((mention) => mention.entryId === entryId)
-        .map((mention) => [mention.id, named(mention.name, mention.side)]),
-    ),
-  });
-  /**
-   * Whether a text still mentions the reader: an edit may have taken the mention out.
-   *
-   * @param entryId - The reply the text is; `null` for the description.
-   * @returns Whether it does.
-   */
-  const mentionsReader = (entryId: string | null) =>
-    mentions.some((mention) => mention.entryId === entryId && mention.userId === about.userId);
-  const entryOf = new Map(entries.map((entry) => [entry.id, entry]));
-  // A reply that mentions the reader is told as the mention.
-  const mentionedIn = new Set(
-    news.flatMap(({ event, entryId }) => (event === 'mentioned' && entryId ? [entryId] : [])),
+  const { items, anchor, skipped } = tellNews(
+    {
+      found,
+      told,
+      entries: new Map(entries.map((entry) => [entry.id, entry])),
+      mentions,
+      sideNames: { company: found.companyName, staff: staffName },
+    },
+    news,
   );
-
-  /**
-   * What one piece of news tells, as it is by now.
-   *
-   * @param piece - The news.
-   * @param piece.event - What happened.
-   * @param piece.entryId - The entry it's about, if it has one.
-   * @param piece.byUserId - Who did it, where no entry says so.
-   * @returns The item for the email, or `null` when it's no longer true.
-   */
-  const itemOf = ({ event, entryId, byUserId }: QueuedRequestNews): RequestUpdateItem | null => {
-    const entry = entryId === null ? undefined : entryOf.get(entryId);
-    const by = entry ? named(entry.authorName, entry.authorSide) : namedById(byUserId);
-    if (event === 'reply' && entry?.kind === 'comment' && entry.body !== null) {
-      return { event, by, text: textOf(entry.body, entry.bodyFormat, entry.id) };
-    }
-    if (event === 'note' && readsNotes && entry?.kind === 'note' && entry.body !== null) {
-      return { event, by, text: textOf(entry.body, entry.bodyFormat, entry.id) };
-    }
-    if (
-      event === 'status' &&
-      entry?.kind === 'status' &&
-      isRequestStatus(entry.from) &&
-      isRequestStatus(entry.to)
-    ) {
-      return { event, by, bySide: entry.authorSide, from: entry.from, to: entry.to };
-    }
-    if (
-      event === 'assigned' &&
-      assigned &&
-      entry?.kind === 'assignee' &&
-      entry.to === 'assigned' &&
-      entry.subjectUserId === about.userId
-    ) {
-      return { event, by };
-    }
-    if (event === 'mentioned' && mentionsReader(entryId)) {
-      if (entryId === null) {
-        return {
-          event,
-          by,
-          where: 'description',
-          text: textOf(found.description, found.descriptionFormat, null),
-        };
-      }
-      if (entry?.kind === 'comment' && entry.body !== null) {
-        return { event, by, where: 'reply', text: textOf(entry.body, entry.bodyFormat, entry.id) };
-      }
-      if (readsNotes && entry?.kind === 'note' && entry.body !== null) {
-        return { event, by, where: 'note', text: textOf(entry.body, entry.bodyFormat, entry.id) };
-      }
-    }
-    if (event === 'subscribed' && subscribed) {
-      return { event, by };
-    }
-    return null;
-  };
-
-  /**
-   * Where a piece of news has its place on the request's page.
-   *
-   * @param piece - The news.
-   * @param item - What the email tells of it.
-   * @returns Its anchor, or `null` when it has none.
-   */
-  const anchorOf = (piece: QueuedRequestNews, item: RequestUpdateItem): string | null => {
-    if (item.event === 'mentioned' && item.where === 'description') {
-      return DESCRIPTION_ANCHOR;
-    }
-    return item.event === 'subscribed' || piece.entryId === null
-      ? null
-      : entryAnchor(piece.entryId);
-  };
-
-  const told = new Set<string>();
-  const skipped: string[] = [];
-  const items: RequestUpdateItem[] = [];
-  let anchor: string | null = null;
-  // Job IDs are in the order the news was queued.
-  [...news]
-    .sort((a, b) => a.jobId.localeCompare(b.jobId))
-    .forEach((piece) => {
-      const key = `${piece.event}:${piece.entryId ?? ''}`;
-      // The same news queued twice (a job that ran but couldn't be noted as done) is told once,
-      // and a reply or note that's told as a mention isn't told again on its own.
-      if (
-        told.has(key) ||
-        ((piece.event === 'reply' || piece.event === 'note') &&
-          piece.entryId !== null &&
-          mentionedIn.has(piece.entryId))
-      ) {
-        return;
-      }
-      const item = itemOf(piece);
-      if (item === null) {
-        skipped.push(piece.jobId);
-        return;
-      }
-      told.add(key);
-      items.push(item);
-      anchor ??= anchorOf(piece, item);
-    });
   if (items.length === 0) {
     return null;
   }
   // The email answers a proposal it tells of, while the request still waits for that one.
-  const proposalEntryId = mayAnswerSolution(permissions, found.status)
+  const proposalEntryId = mayAnswerSolution(told.permissions, found.status)
     ? await currentProposalEntryId(db, about.requestId)
     : null;
   const tellsProposal = news.some(
     ({ event, entryId }) => event === 'status' && entryId !== null && entryId === proposalEntryId,
   );
   return {
-    recipient: { email: reader.email, locale: reader.locale },
-    role: assigned ? 'assignee' : 'subscriber',
-    audience: requestAudience(permissions, reader.companyRole !== null),
+    recipient: { email: told.reader.email, locale: told.reader.locale },
+    role: told.assigned ? 'assignee' : 'subscriber',
+    audience: requestAudience(told.permissions, told.reader.companyRole !== null),
     request: {
       number: found.number,
       reference: formatRequestNumber(prefix, found.number),

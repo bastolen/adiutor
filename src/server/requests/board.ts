@@ -10,7 +10,6 @@
 import { desc, eq, inArray, lte, type SQL, sql } from 'drizzle-orm';
 
 import { company, request, requestType } from '@/db/schema';
-import { getPermissions } from '@/lib/authz/permissions';
 import {
   ACTIVE_REQUEST_STATUSES,
   BOARD_LANES,
@@ -24,6 +23,7 @@ import type { StaffRequestSort } from '@/lib/tables/tables';
 
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
+import { permissionsIn } from './access';
 import {
   type ListRequestsOptions,
   loadRequestListItems,
@@ -117,10 +117,9 @@ function movesOf(actor: Actor, row: RequestListRow): RequestStatus[] {
   if (row.companyDeactivatedAt !== null) {
     return [];
   }
-  const permissions = getPermissions({
-    platformRole: actor.platformRole,
-    companyRole: actor.memberships[row.company.id] ?? null,
-    company: { deactivated: false },
+  const permissions = permissionsIn(actor, {
+    id: row.company.id,
+    deactivatedAt: row.companyDeactivatedAt,
   });
   return statusChoices(permissions, row.status);
 }

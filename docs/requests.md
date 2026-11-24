@@ -963,7 +963,8 @@ no Move menu.
   `unassignFrom` and `unsubscribeFrom` for the services that end someone's request work or their
   access.
   Every change checks the permission and that the company is active, validates, takes a rate
-  limit keyed on who is acting (`actingUserId`; see
+  limit keyed on who is acting (`assertChangeLimit`, or `assertReplyLimit` for a reply or a note,
+  both in `change.ts` and keyed on `actingUserId`; see
   [Rate limits](security-measures.md#rate-limits)), then runs in a transaction that starts with
   `assertStillMayChange` (`assertStillManages`, then the company, then a sign-in as the actor
   still holding) and locks the request's row (see

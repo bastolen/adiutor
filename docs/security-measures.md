@@ -103,7 +103,7 @@ What a limit does beyond refusing, and why:
   password was wrong, and each wrong one is recorded.
 - **Invitations.** A claimed invite link also counts as an invitation its creator sends, against
   their limit and the company's (or the staff's), in the claim's transaction once the link is used
-  up (`assertClaimLimits` in `src/server/people/invite-links.ts`): past either, the claim is
+  up (`assertClaimLimits` in `src/server/people/invite-links/claim.ts`): past either, the claim is
   refused with "This invite link can't be used right now. Try again later." and rolls back, so the
   link stays unused and nothing is counted. Invite links therefore can't send more invitation
   emails than the limits allow, however many IP addresses claim them. Added members, registered
@@ -416,7 +416,7 @@ deadlocking:
    a request (`changeAssignees`, so a role change, deactivation or deletion of one of them takes
    turns with being assigned) and the people a change subscribes to one (`changeSubscribers`, for
    the same reason); the link's creator `FOR KEY SHARE`
-   (`claimInviteLink` in `src/server/people/invite-links.ts`, before it uses the link up), or
+   (`claimInviteLink` in `src/server/people/invite-links/claim.ts`, before it uses the link up), or
    `FOR SHARE` with their rights checked again when a claim is undone because its email couldn't
    be sent (`undoClaim` there, so a link is never freed for a creator who lost their rights
    meanwhile); the staff

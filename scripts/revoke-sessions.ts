@@ -12,9 +12,9 @@ import { parseArgs } from 'node:util';
 
 import { db } from '../src/db';
 import { DEFAULT_LOCALE } from '../src/lib/i18n/locales';
-import { installLogRedaction } from '../src/lib/log-redaction';
 import { revokeAllSessions } from '../src/server/auth/sessions';
 import { ServiceError, serviceErrorMessage } from '../src/server/errors';
+import runScript from './run-script';
 
 /** How to call the script. */
 const USAGE =
@@ -58,15 +58,4 @@ async function main(): Promise<number> {
   }
 }
 
-// Database errors are logged without the values they were sent.
-installLogRedaction();
-
-main()
-  .then(async (code) => {
-    await db.$client.end();
-    process.exit(code);
-  })
-  .catch((error: unknown) => {
-    console.error(error);
-    process.exit(1);
-  });
+runScript(main);

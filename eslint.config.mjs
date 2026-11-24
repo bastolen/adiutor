@@ -338,6 +338,7 @@ const FOLDER_MODULES = [
   'server/auth/auth-guards',
   'server/jobs',
   'server/people/invitations',
+  'server/people/invite-links',
   'server/people/user-admin',
   'server/queue',
   'server/requests',
