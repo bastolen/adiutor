@@ -1,6 +1,7 @@
 /**
  * @file Integration tests for marking "Confirm with GitHub" on the step-up page
- * as a re-verify of the browser's session.
+ * as a re-verify of the browser's session, and for reading the session, which
+ * nothing refuses.
  */
 import { addOAuthServerContext, getSessionFromCtx } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
@@ -9,11 +10,12 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { session } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { REVERIFY_HINT } from '@/lib/sign-in/oauth-providers';
+import { readSettings } from '@/server/settings';
 
 import { createSession, createUser, inSequence } from '../../../../tests/integration/helpers';
 import { beforeAuthRequest } from './before-request';
 import type { AuthGuardContext } from './paths';
-import { db, refusedWith } from './test-helpers';
+import { db, refusedWith, request } from './test-helpers';
 
 vi.mock('better-auth/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('better-auth/api')>()),
@@ -28,6 +30,13 @@ vi.mock('../mfa-state', async (importOriginal) => {
   return { ...actual, loadMfaContext: vi.fn(actual.loadMfaContext) };
 });
 
+// Watched, to check when the checks read Adiutor's settings (for a refusal's language); it still
+// reads them.
+vi.mock('@/server/settings', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/server/settings')>();
+  return { ...actual, readSettings: vi.fn(actual.readSettings) };
+});
+
 afterAll(async () => {
   const app = await import('@/db');
   await app.db.$client.end();
@@ -36,6 +45,23 @@ afterAll(async () => {
 beforeEach(() => {
   vi.mocked(getSessionFromCtx).mockReset().mockResolvedValue(null);
   vi.mocked(addOAuthServerContext).mockReset();
+  vi.mocked(readSettings).mockClear();
+});
+
+describe('reading the session', () => {
+  it('runs no query for a refusal’s language, as nothing refuses it', async () => {
+    await expect(beforeAuthRequest(request('/get-session'))).resolves.toBeUndefined();
+
+    expect(readSettings).not.toHaveBeenCalled();
+  });
+
+  it('still words the refusals of other requests in the language Adiutor offers', async () => {
+    await expect(
+      beforeAuthRequest(request('/sign-in/email', { email: 'jane@adiutor.test' })),
+    ).resolves.toBeUndefined();
+
+    expect(readSettings).toHaveBeenCalledOnce();
+  });
 });
 
 describe('marking "Confirm with GitHub" as a re-verify', () => {

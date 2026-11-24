@@ -251,8 +251,9 @@ for developers, never reaches the user:
    pause or a limit lasts, `PASSWORD_SIGN_IN_PAUSED` and `TOO_MANY_ATTEMPTS`; which providers to
    sign in with, `RESET_ENDS_PROVIDER_MFA`) is worded by the auth guards in the request's language
    (its language cookie, else Adiutor's default language, noted once as the guards start:
-   `noteRefusalLocale` in `src/server/auth/auth-guards/refusal-messages.ts`), and the form
-   shows it as it comes, e.g. "Too many attempts. Try again in 12 minutes."
+   `noteRefusalLocale` in `src/server/auth/auth-guards/refusal-messages.ts`, which reads Adiutor's
+   language settings; not for reading the session behind every page, which nothing refuses), and
+   the form shows it as it comes, e.g. "Too many attempts. Try again in 12 minutes."
 2. Any other code with a message of its own gets that message.
 3. Any other rate limit, such as Better Auth's per-IP limit, gets "Too many requests. Wait a few
    seconds and try again."

@@ -45,7 +45,10 @@ function emailOf(ctx: AuthGuardContext): string | null {
  */
 export async function beforeAuthRequest(ctx: AuthGuardContext): Promise<void> {
   const { path } = ctx;
-  if (!path) {
+  // Reading the session (`auth.api.getSession`, behind every page) is never refused, even while
+  // signed in as someone, so nothing below runs for it: not even the settings query that words a
+  // refusal.
+  if (!path || path === '/get-session') {
     return;
   }
   // Any refusal below is worded in the request's language, with Adiutor's default for a
