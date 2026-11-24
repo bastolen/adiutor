@@ -1,6 +1,6 @@
 /**
  * @file Integration tests for the user page's loaders (`getUserDetail`,
- * `listUserCompanies` and `listUserDevices`) and `userExists`, against the
+ * `listUserCompanies` and `listUserDevices`), against the
  * test database.
  */
 import { eq, inArray } from 'drizzle-orm';
@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { membership, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
-import { getUserDetail, listUserCompanies, listUserDevices, userExists } from '.';
+import { getUserDetail, listUserCompanies, listUserDevices } from '.';
 import {
   addMember,
   addPassword,
@@ -131,22 +131,6 @@ describe('getUserDetail', () => {
         ),
       ),
     );
-  });
-});
-
-describe('userExists', () => {
-  it('finds users, deactivated ones too', async () => {
-    await expect(userExists(ctx, admin, jane)).resolves.toBe(true);
-
-    await db.update(user).set({ deactivatedAt: new Date() }).where(eq(user.id, jane));
-    await expect(userExists(ctx, admin, jane)).resolves.toBe(true);
-  });
-
-  it("doesn't find unknown IDs or what isn't an ID", async () => {
-    await expect(userExists(ctx, admin, '01890a5d-ac96-774b-bcce-b302099a8057')).resolves.toBe(
-      false,
-    );
-    await expect(userExists(ctx, admin, 'not-an-id')).resolves.toBe(false);
   });
 });
 
