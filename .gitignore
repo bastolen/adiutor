@@ -2,16 +2,8 @@
 
 # dependencies
 /node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
 
 # testing
-/coverage
 # Vitest's JSON reporter output (e.g. from the editor extension)
 /.vitest/
 
@@ -28,12 +20,11 @@
 
 # debug
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files (the example one is committed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -45,9 +36,6 @@ next-env.d.ts
 # testing (Vitest and Playwright output)
 /test-results/
 /playwright-report/
-/blob-report/
-/playwright/.cache/
-!.env.example
 
 # local database files (the docker folder itself is committed)
 /docker/*
