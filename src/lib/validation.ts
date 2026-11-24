@@ -149,9 +149,22 @@ function webAddressForm(value: string): string {
  * in the plain-text emails that quote the name: a phishing aid. Initials and
  * abbreviations (`J.R.R. Tolkien`, `Adiutor B.V.`) pass, as no two letters
  * follow a dot.
+ *
+ * Written so its time grows in proportion to the text, whatever it holds: no
+ * part of it can be tried again from every character of a long run.
+ * - A scheme is found at its `://` and only then read backwards (the
+ *   lookbehind): a word that starts with a letter, of letters, digits, `+`,
+ *   `.` and `-`. Read forwards, from every word, a long run without a `://`
+ *   would be read to its end once per word in it.
+ * - A domain is matched from the end of the label before its dot: a letter
+ *   or digit, any accents (marks) and dashes after it as long as the last
+ *   isn't a dash, the dot and two letters. What comes before that in the
+ *   label doesn't change whether there's a match, and reading the whole
+ *   label from every letter of a long word without a dot would read the
+ *   rest of the word each time.
  */
 const WEB_ADDRESS =
-  /\b[a-z][a-z0-9+.-]*:\/\/|\bwww\.|[\p{L}\p{N}](?:[\p{L}\p{M}\p{N}-]*[\p{L}\p{M}\p{N}])?\.\p{L}[\p{L}\p{M}]+/iu;
+  /:\/\/(?<=\b[a-z][a-z0-9+.-]*:\/\/)|\bwww\.|[\p{L}\p{N}][\p{M}-]*(?<!-)\.\p{L}[\p{L}\p{M}]/iu;
 
 /** An IPv4 address in a name (`203.0.113.7`), which mail clients turn into a link too. */
 const IPV4_ADDRESS = /\d{1,3}(?:\.\d{1,3}){3}/;
@@ -159,13 +172,18 @@ const IPV4_ADDRESS = /\d{1,3}(?:\.\d{1,3}){3}/;
 /**
  * Whether a name contains a web address or an IPv4 address, also when it's
  * written with look-alike dots, full-width characters or invisible
- * characters inside it ({@link webAddressForm}).
+ * characters inside it ({@link webAddressForm}). A name with neither a dot
+ * nor a `://` in that form can't hold one, so most names are let through
+ * without running the patterns. Exported for its unit test.
  *
  * @param value - The name.
  * @returns Whether it contains one.
  */
-function containsWebAddress(value: string): boolean {
+export function containsWebAddress(value: string): boolean {
   const form = webAddressForm(value);
+  if (!form.includes('.') && !form.includes('://')) {
+    return false;
+  }
   return WEB_ADDRESS.test(form) || IPV4_ADDRESS.test(form);
 }
 
@@ -190,7 +208,8 @@ type NameField =
  * and nothing that hides or reorders text. For every name people choose
  * (display names, company names, the staff name and passkey names).
  *
- * @param schema - The length-checked schema.
+ * @param schema - The length-checked schema, whose length check ends the check when it refuses
+ *   (`abort`, as {@link lengthLimited} does), so these rules never read a text that's too long.
  * @param field - Which name it is, for the messages (e.g. `companyName`).
  * @returns The schema with the extra checks.
  */
@@ -211,7 +230,8 @@ function withCharacterSafety<T extends z.ZodType<string>>(schema: T, field: Name
  * nothing in lists and emails) and no web addresses, since these names are
  * quoted in emails.
  *
- * @param schema - The length-checked name schema.
+ * @param schema - The length-checked name schema ({@link lengthLimited}), so these rules never
+ *   read a text that's too long.
  * @param field - Which name it is, for the messages (e.g. `name`).
  * @returns The schema with the extra checks.
  */
@@ -236,6 +256,11 @@ function withNameSafety<T extends z.ZodType<string>>(
  * "Use at most 100 characters for the company name."). The messages get the
  * limit from the issue (`{minimum}`, `{maximum}`).
  *
+ * A length it refuses ends the check there (`abort`): the rules added after
+ * it ({@link withCharacterSafety}, {@link withNameSafety}) never read a text
+ * of the wrong length. A form or an action can send up to a megabyte, and
+ * zod would otherwise run every later rule on all of it.
+ *
  * @param limits - The lengths and their messages.
  * @param limits.min - The shortest allowed.
  * @param limits.max - The longest allowed.
@@ -252,8 +277,8 @@ function lengthLimited(limits: {
   return z
     .string()
     .trim()
-    .min(limits.min, { error: limits.tooShort })
-    .max(limits.max, { error: limits.tooLong });
+    .min(limits.min, { error: limits.tooShort, abort: true })
+    .max(limits.max, { error: limits.tooLong, abort: true });
 }
 
 /** A person's display name. */
@@ -325,7 +350,8 @@ export const passkeyNameSchema = withCharacterSafety(
  * names (no line breaks or control characters, nothing that hides or
  * reorders text). Only staff see it, in the audit log, and it's never quoted
  * in emails, so web addresses (a link to a ticket) are fine. Empty means no
- * reason (`null`).
+ * reason (`null`). A reason that's too long is refused before the character
+ * rules read it (`abort`, as in `lengthLimited`).
  */
 export const impersonationReasonSchema = withCharacterSafety(
   z
@@ -333,6 +359,7 @@ export const impersonationReasonSchema = withCharacterSafety(
     .trim()
     .max(IMPERSONATION_REASON_MAX_LENGTH, {
       error: 'validation.impersonationReason.tooLong' satisfies ValidationMessageKey,
+      abort: true,
     }),
   'impersonationReason',
 ).transform((value) => value || null);

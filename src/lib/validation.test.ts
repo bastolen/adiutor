@@ -19,6 +19,7 @@ import {
   CHOOSE_STAFF_ROLE_MESSAGE,
   companyNameSchema,
   companyRoleSchema,
+  containsWebAddress,
   emailSchema,
   idSchema,
   impersonationReasonSchema,
@@ -276,6 +277,77 @@ describe('display names (person and company)', () => {
       expect(nameSchema.safeParse(name).success, name).toBe(false);
       expect(companyNameSchema.safeParse(name).success, name).toBe(false);
     });
+  });
+});
+
+describe('a name far too long', () => {
+  /** A megabyte, what a form or an action can send, with a line break halfway that a later rule refuses. */
+  const megabyte = `${'a'.repeat(500_000)}\n${'a'.repeat(500_000)}`;
+
+  it.each([
+    ['nameSchema', nameSchema, 'validation.name.tooLong'],
+    ['companyNameSchema', companyNameSchema, 'validation.companyName.tooLong'],
+    ['staffNameSchema', staffNameSchema, 'validation.staffName.tooLong'],
+    ['requestTypeNameSchema', requestTypeNameSchema, 'validation.requestTypeName.tooLong'],
+    ['passkeyNameSchema', passkeyNameSchema, 'validation.passkeyName.tooLong'],
+    ['requestTitleSchema', requestTitleSchema, 'validation.requestTitle.tooLong'],
+    [
+      'requestTypeDescriptionSchema',
+      requestTypeDescriptionSchema,
+      'validation.requestTypeDescription.tooLong',
+    ],
+    [
+      'impersonationReasonSchema',
+      impersonationReasonSchema,
+      'validation.impersonationReason.tooLong',
+    ],
+  ] as const)('is refused by %s for its length alone, quickly', (_name, schema, tooLong) => {
+    const started = performance.now();
+    const issues = schema.safeParse(megabyte).error?.issues.map((issue) => issue.message);
+    const took = performance.now() - started;
+
+    // The rules after the length never read it: the web-address check alone would take minutes.
+    expect(issues).toEqual([tooLong]);
+    expect(took).toBeLessThan(1000);
+  });
+});
+
+describe('containsWebAddress', () => {
+  it.each([
+    ['a long word, then a dot', `${'a'.repeat(1_000_000)}.`],
+    ['words joined by dashes, then a dot', `${'a-'.repeat(500_000)}.`],
+    [
+      'letters with accents and dashes, then a dot',
+      `${`a${'\u{301}'.repeat(50)}-`.repeat(19_000)}.`,
+    ],
+    ['initials, then slashes after something else', `${'a.'.repeat(500_000)}#://`],
+    ['a scheme of digits', `${'1'.repeat(1_000_000)}://`],
+    ['many schemes of digits', `${'1'.repeat(100)}://`.repeat(9_700)],
+  ])('reads %s in time in proportion to its length', (_what, text) => {
+    const started = performance.now();
+    const found = containsWebAddress(text);
+    const took = performance.now() - started;
+
+    expect(found).toBe(false);
+    // Reading on from each character to the end would take minutes; reading once, milliseconds.
+    expect(took).toBeLessThan(1000);
+  });
+
+  it('still finds an address after a long run of letters', () => {
+    const run = 'a'.repeat(1_000_000);
+    expect(containsWebAddress(`${run} adiutor.dev`)).toBe(true);
+    expect(containsWebAddress(`${run} https://x`)).toBe(true);
+    expect(containsWebAddress(`${run}-${'\u{301}'.repeat(3)}.dev`)).toBe(true);
+    expect(containsWebAddress(`${run} www.x`)).toBe(true);
+  });
+
+  it('finds a scheme only in a word that starts with a letter, and no label ending in a dash', () => {
+    expect(containsWebAddress('adiutor-.dev')).toBe(false);
+    expect(containsWebAddress('1http://')).toBe(false);
+    expect(containsWebAddress('_http://')).toBe(false);
+    expect(containsWebAddress('+http://')).toBe(true);
+    expect(containsWebAddress('1a://')).toBe(false);
+    expect(containsWebAddress('1.a://')).toBe(true);
   });
 });
 
