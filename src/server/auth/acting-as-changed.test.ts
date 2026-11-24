@@ -13,7 +13,6 @@ import markActingAsChanged from './acting-as-changed';
 /** The mocked cookies of the response. */
 const { cookieStore } = vi.hoisted(() => ({ cookieStore: { set: vi.fn() } }));
 
-vi.mock('server-only', () => ({}));
 vi.mock('@/lib/env', () => ({ secureCookies: true }));
 vi.mock('next/headers', () => ({ cookies: vi.fn(async () => cookieStore) }));
 

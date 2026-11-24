@@ -22,6 +22,7 @@ import {
   lastActiveAt,
   memberActor,
   turnOffGitHubSignIn,
+  minutesAgo,
 } from '../../../../tests/integration/helpers';
 import type { AuthHookContext } from './hook-context';
 import { afterSessionCreate, beforeSessionCreate } from './session-hooks';
@@ -34,7 +35,6 @@ import {
   COOKIE_SECRET,
   signedInHeaders,
   addPasskey,
-  minutesAgo,
 } from './test-helpers';
 
 vi.mock('@/lib/email', () => ({ sendEmail: vi.fn() }));

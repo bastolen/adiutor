@@ -17,7 +17,6 @@ import {
   createStaffSettings,
   createUser,
   enableTwoFactor,
-  minutesAgo,
   setupTestContext,
   staffActor,
 } from '../../../../tests/integration/helpers';
@@ -91,9 +90,6 @@ export async function signedIn(
   }
   return actor;
 }
-
-/** A time a number of minutes ago (shared with the other integration tests). */
-export { minutesAgo };
 
 /** A request from a known browser and IP address, for the security emails' device line. */
 export const fromKnownDevice = {

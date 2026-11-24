@@ -17,6 +17,7 @@ import {
   createUser,
   inSequence,
   queuedJobKinds,
+  minutesAgo,
 } from '../../../../tests/integration/helpers';
 import { afterAuthRequest } from './after-request';
 import { checkIncomingUser, checkReverify, type IncomingUserInfo } from './reverify';
@@ -29,7 +30,6 @@ import {
   events,
   mockGitHubApi,
   sessionMfa,
-  minutesAgo,
   storeSessionMfa,
 } from './test-helpers';
 

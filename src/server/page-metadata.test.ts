@@ -23,7 +23,6 @@ const NOT_FOUND_METADATA = {
   title: { absolute: 'Not found · Adiutor', template: 'Not found · Adiutor' },
 };
 
-vi.mock('server-only', () => ({}));
 vi.mock('./authz', async () => {
   const { getPermissions } = await import('@/lib/authz/permissions');
   return {
