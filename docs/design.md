@@ -496,7 +496,8 @@ keyboard support.
   swiped away. A success toast is announced, after the word "Notification"; an error toast's text
   isn't announced again, because the inline error already is (or takes focus), so it announces
   "Notification" and the one word "Error" in its place, politely, so it waits for the inline
-  error being read out instead of cutting it off. `RowAction`, `ActionDialog` and `RoleSelect` toast
+  error being read out instead of cutting it off. `RowAction`, `ActionDialog` and the selects that
+  save when a value is picked (`useSaveOnPick`: `RoleSelect`, the request's `StatusSelect`) toast
   as soon as their action returns, so the toast outlasts a row the refresh removes (`RowAction`'s
   `doneMessage` names the row, e.g. "Invitation to jane@adiutor.dev revoked."); `ResultAlert`
   toasts a form's result, `Alert`'s `alsoToast` an error a component shows itself, and

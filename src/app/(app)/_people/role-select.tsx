@@ -6,15 +6,15 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { startTransition, useCallback, useRef } from 'react';
+import { useRef } from 'react';
 
 import { ReturnToField, useRecentConfirmation } from '@/components/auth/recent-confirmation';
 import ConfirmDialog from '@/components/ui/confirm-dialog';
 import SelectField, { type SelectOption } from '@/components/ui/select-field';
 import { useSignedInAs } from '@/components/ui/signed-in-as';
 import Spinner from '@/components/ui/spinner';
-import { useToast } from '@/components/ui/toast';
-import { useTransientActionState, useTransientState } from '@/components/ui/use-transient-state';
+import useSaveOnPick from '@/components/ui/use-save-on-pick';
+import { useTransientState } from '@/components/ui/use-transient-state';
 import type { ActionResult } from '@/lib/action-result';
 import { grantNeedsConfirmation } from '@/lib/authz/guards';
 import { isRole } from '@/lib/authz/roles';
@@ -66,7 +66,7 @@ interface RoleSelectProps {
 }
 
 /**
- * A role select that saves when a role is picked. The select only commits on
+ * A role select that saves when a role is picked (`useSaveOnPick`). The select only commits on
  * Enter, Space or click, so moving through the options with the arrow keys
  * never saves by accident. The outcome is shown and announced; after an error
  * (e.g. removing the last admin) the select goes back to the saved role. It
@@ -108,46 +108,22 @@ export default function RoleSelect({
   // Roles don't change while a staff member is signed in as the user.
   const changesOff = useSignedInAs();
   const { askToConfirm } = useRecentConfirmation();
-  const showToast = useToast();
-  // Toasts as soon as the action returns, like `RowAction`.
-  const run = useCallback(
-    async (previous: ActionResult | null, formData: FormData) => {
-      const next = await action(previous, formData);
-      if (showToast && next.message) {
-        showToast(next.message, { tone: next.ok ? 'success' : 'error' });
-      }
-      return next;
-    },
-    [action, showToast],
-  );
-  const [result, formAction, pending, onSubmit] = useTransientActionState(run, null);
-  const formRef = useRef<HTMLFormElement>(null);
-  // The role the user picked (being confirmed or saved), with the result it was picked after:
-  // once a newer result arrives, the select shows the saved role again (the new one after a
-  // success, which arrives with the result; the old one after a refusal).
-  const [picked, setPicked] = useTransientState<{
-    role: string;
-    after: ActionResult | null;
-  } | null>(null);
+  const {
+    formRef,
+    formAction,
+    onSubmit,
+    result,
+    pending,
+    showsToast,
+    shown,
+    picked,
+    pick,
+    unpick,
+    save,
+  } = useSaveOnPick(action, { name: 'role', saved: currentRole });
   const [confirming, setConfirming] = useTransientState(false);
   // Set by "Confirm", so the dialog closing after it doesn't count as cancelling.
   const confirmedRef = useRef(false);
-  const shownRole = picked && picked.after === result ? picked.role : currentRole;
-
-  /**
-   * Saves a role: the form's fields with the role.
-   *
-   * @param role - The role to save.
-   */
-  const save = (role: string) => {
-    const form = formRef.current;
-    if (!form) {
-      return;
-    }
-    const formData = new FormData(form);
-    formData.set('role', role);
-    startTransition(() => formAction(formData));
-  };
 
   /**
    * Opens or closes the dialog; closing without confirming puts the select back.
@@ -157,7 +133,7 @@ export default function RoleSelect({
   const changeConfirming = (open: boolean) => {
     setConfirming(open);
     if (!open && !confirmedRef.current) {
-      setPicked(null);
+      unpick();
     }
     confirmedRef.current = false;
   };
@@ -186,7 +162,7 @@ export default function RoleSelect({
             hideLabel
             name="role"
             options={roles}
-            value={shownRole}
+            value={shown}
             busy={pending}
             disabled={changesOff}
             onValueChange={(role) => {
@@ -202,7 +178,7 @@ export default function RoleSelect({
               ) {
                 return;
               }
-              setPicked({ role, after: result });
+              pick(role);
               if (confirmChange) {
                 // On the next frame: opened while Enter is still being handled, the dialog would
                 // take focus before the key press ends, and the browser would press "Cancel".
@@ -228,7 +204,7 @@ export default function RoleSelect({
           {result.message}
         </span>
       )}
-      {result?.ok && !pending && !showToast && (
+      {result?.ok && !pending && !showsToast && (
         <span role="status" className="text-xs text-success">
           {result.message}
         </span>
@@ -238,13 +214,13 @@ export default function RoleSelect({
           open={confirming}
           onOpenChange={changeConfirming}
           onCloseAutoFocus={focusSelect}
-          title={(picked && confirmChange.titles[picked.role]) ?? ''}
+          title={(picked === null ? undefined : confirmChange.titles[picked]) ?? ''}
           description={confirmChange.description}
           confirmLabel={confirmChange.confirmLabel}
           onConfirm={() => {
             confirmedRef.current = true;
-            if (picked) {
-              save(picked.role);
+            if (picked !== null) {
+              save(picked);
             }
           }}
         />
