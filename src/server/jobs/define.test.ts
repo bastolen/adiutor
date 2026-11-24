@@ -18,11 +18,11 @@ describe('defineRecurringJob', () => {
     expect(defineRecurringJob({ name: 'adiutor-tests', schedule: '0 * * * *', run }).name).toBe(
       'adiutor-tests',
     );
-    expect(() =>
-      defineRecurringJob({ name: 'Adiutor_Tests', schedule: '0 * * * *', run }),
-    ).toThrow();
+    expect(() => defineRecurringJob({ name: 'Adiutor_Tests', schedule: '0 * * * *', run })).toThrow(
+      'The recurring job "Adiutor_Tests" needs a kebab-case name and a valid schedule',
+    );
     expect(() =>
       defineRecurringJob({ name: 'adiutor-tests', schedule: 'every hour', run }),
-    ).toThrow();
+    ).toThrow('The recurring job "adiutor-tests" needs a kebab-case name and a valid schedule');
   });
 });

@@ -121,7 +121,7 @@ describe('setUpPlatform', () => {
     await db.transaction((tx) => addSetting(tx, 'setup.completed_at', new Date()));
     await expect(
       db.transaction((tx) => addSetting(tx, 'setup.completed_at', new Date())),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({ cause: { code: '23505', constraint: 'setting_key_idx' } });
   });
 
   it('counts as done only once setup marked it, whatever settings are saved', async () => {

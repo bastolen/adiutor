@@ -350,7 +350,9 @@ describe('request numbers', () => {
       createdBySide: 'company',
     });
 
-    await expect(raiseRequest(ctx, client, { ...INPUT, companyId: company.id })).rejects.toThrow();
+    await expect(
+      raiseRequest(ctx, client, { ...INPUT, companyId: company.id }),
+    ).rejects.toMatchObject({ cause: { code: '23505', constraint: 'request_number_idx' } });
 
     expect(await counterRow()).toEqual([]);
   });

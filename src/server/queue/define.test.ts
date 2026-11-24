@@ -12,6 +12,8 @@ describe('defineQueuedKind', () => {
     const payload = z.object({ userId: z.uuid() });
 
     expect(defineQueuedKind({ name: 'adiutor-tests', payload }).name).toBe('adiutor-tests');
-    expect(() => defineQueuedKind({ name: 'adiutor tests', payload })).toThrow();
+    expect(() => defineQueuedKind({ name: 'adiutor tests', payload })).toThrow(
+      'The kind of queued job "adiutor tests" needs a kebab-case name',
+    );
   });
 });

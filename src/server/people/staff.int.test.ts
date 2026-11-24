@@ -5,6 +5,7 @@
  */
 import { and, eq, isNull } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { ZodError } from 'zod';
 
 import { invitation, inviteLink, setting, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
@@ -153,7 +154,7 @@ describe('staff settings and people', () => {
     ['an unknown language to offer', { defaultLocale: 'en-US', offered: ['fr-FR'] }],
     ['no list of languages', { defaultLocale: 'en-US', offered: 'nl-NL' }],
   ])('refuses %s', async (_name, input) => {
-    await expect(setLanguages(ctx, admin, input)).rejects.toThrow();
+    await expect(setLanguages(ctx, admin, input)).rejects.toBeInstanceOf(ZodError);
     expect(await getStaffSettings(ctx, admin)).toMatchObject({
       defaultLocale: 'en-US',
       offeredLocales: ['en-US', 'nl-NL', 'es-ES'],
@@ -164,7 +165,9 @@ describe('staff settings and people', () => {
     await expect(saveSettings(db, { 'staff.offered_locales': ['nl-NL'] })).rejects.toThrow(
       'the default language must be one of the languages offered',
     );
-    await expect(saveSettings(db, { 'staff.offered_locales': [] })).rejects.toThrow();
+    await expect(saveSettings(db, { 'staff.offered_locales': [] })).rejects.toBeInstanceOf(
+      ZodError,
+    );
     await expect(saveSettings(db, { 'staff.default_locale': 'nl-NL' })).resolves.toBeUndefined();
     expect(await getStaffSettings(ctx, admin)).toMatchObject({
       defaultLocale: 'nl-NL',

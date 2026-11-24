@@ -161,7 +161,7 @@ describe('addSetting', () => {
 
     await expect(
       db.transaction((tx) => addSetting(tx, 'setup.completed_at', new Date())),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({ cause: { code: '23505', constraint: 'setting_key_idx' } });
     expect(await readSettings(db, ['setup.completed_at'])).toEqual({
       'setup.completed_at': moment,
     });
@@ -186,7 +186,7 @@ describe('incrementSetting', () => {
 
     await expect(
       db.transaction((tx) => incrementSetting(tx, 'requests.last_number')),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({ cause: { code: '22023' } });
     expect((await storedRow('requests.last_number'))?.value).toBe('many');
   });
 });

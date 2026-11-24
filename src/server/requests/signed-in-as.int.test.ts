@@ -236,7 +236,9 @@ describe('request work while a staff member is signed in as a user', () => {
 
     await expect(
       storeRequest(company.id, { createdSignedInAsStaffId: admin.id }),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({
+      cause: { code: '23514', constraint: 'request_created_signed_in_as_fits' },
+    });
   });
 });
 
