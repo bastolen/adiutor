@@ -37,8 +37,8 @@ export interface JobState {
 
 /**
  * Whether a job is paused: a pause is set and the job can be paused. A pause
- * only counts for a job that can be paused (so one from before the job
- * became unpausable doesn't stop it).
+ * only counts for a job that can be paused (so a pause stored for a job that
+ * can't be paused doesn't stop it).
  *
  * @param state - The job's state, or `undefined` when it never ran.
  * @param pausable - Whether the job can be paused.

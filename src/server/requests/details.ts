@@ -1,7 +1,7 @@
 /**
  * @file Changing a request's details: its title, type and priority, which
- * the staff who work on requests can correct. What was asked (the
- * description) and the replies are never changed.
+ * the staff who work on requests can correct. The description and
+ * the replies are edited in `edits.ts` (decision 0024).
  */
 import { eq } from 'drizzle-orm';
 import type { z } from 'zod';

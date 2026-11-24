@@ -22,13 +22,13 @@ export type JobPayload = Readonly<Record<string, JobPayloadValue>>;
 /**
  * How a kind's jobs are coupled: kinds with the same `group` run together,
  * through that group's batch (`defineJobBatch` in `src/server/jobs`), and
- * jobs with the same key go into one call of it; say, a status update and a
- * comment for the same person on the same ticket, so they get one email.
+ * jobs with the same key go into one call of it; say, a status change and a
+ * reply for the same person on the same request, so they get one email.
  */
 export interface JobBatching<P extends JobPayload> {
   /** The batch group. */
   group: string;
-  /** Which jobs go together, from a job's payload; e.g. the ticket's and the person's IDs. */
+  /** Which jobs go together, from a job's payload; e.g. the request's and the person's IDs. */
   key: (payload: P) => string;
 }
 

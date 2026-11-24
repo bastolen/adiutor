@@ -246,7 +246,8 @@ function alreadyDeactivatedError(): ServiceError {
  * @param ctx - Service context.
  * @param actor - The acting user; needs `users:manage`.
  * @param userId - The user.
- * @throws {ServiceError} `conflict` when already deactivated or the last Admin of a company.
+ * @throws {ServiceError} `conflict` when already deactivated or the last Admin of the staff or a
+ *   company.
  */
 export async function deactivateUser(
   ctx: ServiceContext,
@@ -358,7 +359,7 @@ export async function reactivateUser(
  * @param userId - The user.
  * @param confirmEmail - The user's email address, typed to confirm.
  * @throws {ServiceError} `invalid` when the email doesn't match, `conflict`
- *   when they're the last Admin of a company.
+ *   when they're the last Admin of the staff or a company.
  */
 export async function deleteUser(
   ctx: ServiceContext,

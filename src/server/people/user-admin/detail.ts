@@ -74,7 +74,7 @@ export interface UserDetail {
   /**
    * How many GitHub or Google accounts are connected to theirs, confirmed or
    * not (`mfa.providerAccounts` leaves out the unconfirmed ones). An Admin's
-   * MFA reset disconnects them all ((`resetUserMfa`)).
+   * MFA reset disconnects them all (`resetUserMfa`).
    */
   connectedAccounts: number;
   /** Their picture's address (`loadPictures`), or `null` for their initials. */

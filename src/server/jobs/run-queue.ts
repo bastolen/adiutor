@@ -1,15 +1,15 @@
 /**
  * @file Running the queue at a tick: due jobs one at a time, with the kinds
  * taking turns (each kind's oldest first), until the deadline or until
- * nothing is due. A job with a batch key
- * runs with the rest of its batch, in one call of its group's batch. A job
- * that fails is tried again later, up to its kind's `maxAttempts`, and each
- * failure is recorded as an error with a reference. A job that ran but
- * couldn't be noted as done fails on its own, without the rest of its batch
- * (jobs run at least once). A run that dies (its
- * lease runs out) counts as an attempt too, and a job whose last attempt died
- * is given up. When jobs are given up, the staff Admins are told. Every kind that ran jobs gets one run in the
- * history, with how many were done, skipped, retried and failed.
+ * nothing is due. A job with a batch key runs with the rest of its batch, in
+ * one call of its group's batch. A job that fails is tried again later, up to
+ * its kind's `maxAttempts`, and each failure is recorded as an error with a
+ * reference. A job that ran but couldn't be noted as done fails on its own,
+ * without the rest of its batch (jobs run at least once). A run that dies
+ * (its lease runs out) counts as an attempt too, and a job whose last attempt
+ * died is given up. When jobs are given up, the staff Admins are told. Every
+ * kind that ran jobs gets one run in the history, with how many were done,
+ * skipped, retried and failed.
  */
 import type { JobTrigger } from '@/db/schema';
 import { defined } from '@/lib/defined';

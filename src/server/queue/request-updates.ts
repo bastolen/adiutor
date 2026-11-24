@@ -44,8 +44,7 @@ export const requestUpdateJob = defineQueuedKind({
     /**
      * The entry of the request's history it's about: the reply, the note,
      * the status change, the assignment, or the reply or note that mentions
-     * them. `null` for a
-     * mention in the description, and for being subscribed.
+     * them. `null` for a mention in the description, and for being subscribed.
      */
     entryId: z.uuid().nullable(),
     /**
