@@ -23,8 +23,6 @@ export interface TwoFactorCodeEmailProps extends EmailBaseProps {
 /**
  * Shows the code in a large box (`EmailCode`). It expires in
  * `EMAIL_CODE_MINUTES` minutes.
- *
- * @returns The email.
  */
 export default function TwoFactorCodeEmail({
   appUrl,

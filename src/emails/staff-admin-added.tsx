@@ -38,8 +38,6 @@ export interface StaffAdminAddedEmailProps extends EmailBaseProps {
  * Names the new staff Admin and how they became one, says what to do if the
  * recipient doesn't recognise it, and links to the staff settings. Without the
  * device or IP address of whoever made the change.
- *
- * @returns The email.
  */
 export default function StaffAdminAddedEmail({
   appUrl,

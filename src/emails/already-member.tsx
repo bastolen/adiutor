@@ -23,8 +23,6 @@ export interface AlreadyMemberEmailProps extends EmailBaseProps {
 
 /**
  * Tells the recipient nothing needs doing, with a button to open the company.
- *
- * @returns The email.
  */
 export default function AlreadyMemberEmail({
   appUrl,

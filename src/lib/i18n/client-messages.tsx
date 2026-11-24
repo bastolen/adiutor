@@ -24,8 +24,6 @@ interface ClientMessagesProps {
  * Wraps client components that translate with their namespaces. Use it
  * inside the page's `<Suspense>` (it reads the request's language), around
  * the smallest part that needs it.
- *
- * @returns The provider around the children.
  */
 export default async function ClientMessages({ namespaces, children }: ClientMessagesProps) {
   const [locale, messages, timeZone] = await Promise.all([

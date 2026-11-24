@@ -42,8 +42,6 @@ export interface InvitationReminderEmailProps extends EmailBaseProps {
 /**
  * Reminds the recipient of an invitation they haven't accepted yet, before
  * it expires. The link is new; the one in the first email stops working.
- *
- * @returns The email.
  */
 export default function InvitationReminderEmail({
   appUrl,

@@ -34,8 +34,6 @@ export interface JobFailingEmailProps extends EmailBaseProps {
 /**
  * Names the job and what went wrong, gives the error's reference and links
  * to it under Logs → Errors.
- *
- * @returns The email.
  */
 export default function JobFailingEmail({
   appUrl,

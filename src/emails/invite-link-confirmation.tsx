@@ -34,8 +34,6 @@ export interface InviteLinkConfirmationEmailProps extends EmailBaseProps {
 /**
  * Sent after someone opens a single-use invite link and enters their email
  * address: joining proves they own it.
- *
- * @returns The email.
  */
 export default function InviteLinkConfirmationEmail({
   appUrl,

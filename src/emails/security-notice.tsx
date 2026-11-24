@@ -107,7 +107,6 @@ function noticeValues(
  * @param locale - The recipient's language.
  * @param kind - What changed.
  * @param names - The provider, role or company, where the change has one.
- * @returns The subject.
  */
 function securityNoticeSubject(
   locale: Locale,
@@ -123,8 +122,6 @@ function securityNoticeSubject(
 /**
  * Tells the recipient what changed, when and from where, and what to do if
  * it wasn't them.
- *
- * @returns The email.
  */
 export default function SecurityNoticeEmail({
   appUrl,

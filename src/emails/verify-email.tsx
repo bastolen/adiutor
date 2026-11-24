@@ -21,8 +21,6 @@ export interface VerifyEmailEmailProps extends EmailBaseProps {
 /**
  * Asks the recipient to confirm the address is theirs. The link expires in 1
  * hour.
- *
- * @returns The email.
  */
 export default function VerifyEmailEmail({
   appUrl,

@@ -22,8 +22,6 @@ export interface MagicLinkEmailProps extends EmailBaseProps {
 /**
  * Asks the recipient to sign in with the button. The link works once and
  * expires in 5 minutes.
- *
- * @returns The email.
  */
 export default function MagicLinkEmail({
   appUrl,

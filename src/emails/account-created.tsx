@@ -33,8 +33,6 @@ export interface AccountCreatedEmailProps extends EmailBaseProps {
 /**
  * Says who created the account and lets the recipient choose a password.
  * Signing in with an email link always works too.
- *
- * @returns The email.
  */
 export default function AccountCreatedEmail({
   appUrl,

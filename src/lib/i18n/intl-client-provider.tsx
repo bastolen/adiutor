@@ -30,8 +30,6 @@ interface IntlClientProviderProps {
  * components below. An
  * inner provider replaces the messages of an outer one, so each passes
  * `common` along with its own namespaces.
- *
- * @returns The provider.
  */
 export default function IntlClientProvider({
   locale,

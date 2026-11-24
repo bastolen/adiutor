@@ -25,8 +25,6 @@ export interface AlreadyInvitedEmailProps extends EmailBaseProps {
  * to ask whoever invited them for a new one if it expired. The button opens
  * the sign-in page; it doesn't carry an invitation, so a stranger who typed
  * the address can't use this email to join.
- *
- * @returns The email.
  */
 export default function AlreadyInvitedEmail({
   appUrl,

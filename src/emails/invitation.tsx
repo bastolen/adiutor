@@ -36,8 +36,6 @@ export interface InvitationEmailProps extends EmailBaseProps {
 /**
  * Says who invited the recipient, to which company and in which role (with
  * what that role can do), with a button to accept.
- *
- * @returns The email.
  */
 export default function InvitationEmail({
   appUrl,

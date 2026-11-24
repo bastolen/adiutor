@@ -20,8 +20,6 @@ export interface ResetPasswordEmailProps extends EmailBaseProps {
 
 /**
  * Lets the recipient choose a new password. The link expires in 1 hour.
- *
- * @returns The email.
  */
 export default function ResetPasswordEmail({
   appUrl,

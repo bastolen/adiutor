@@ -29,8 +29,6 @@ export interface AddedToCompanyEmailProps extends EmailBaseProps {
 /**
  * Says who added the recipient to which company and in which role (with
  * what that role can do), with a button to open it.
- *
- * @returns The email.
  */
 export default function AddedToCompanyEmail({
   appUrl,
