@@ -781,7 +781,9 @@ says so with a "Show everything" button.
   assignee and see who each request is assigned to (see [Assigning](#assigning)). From tablet
   width the status, the priority, the assignees and the last activity have columns of their own;
   a long status ("Waiting for the company"), a long row of avatars and the last activity wrap in
-  their columns, as on the board, so the table fits a tablet.
+  their columns, as on the board, so the table fits a tablet. On a wide screen the list is as
+  wide as the board (`WidePage`), so they stop wrapping, and from 1536px of screen the company has
+  a column of its own rather than a place under the title.
   `?only=<status>` shows the requests of one status instead of a link's group (`ONLY_STATUS_PARAM`;
   its own parameter, since `waiting` is both a group and a status): no status link is current
   then, and a line names the status in the reader's words, with a link back to every status.
@@ -794,7 +796,7 @@ says so with a "Show everything" button.
   list's search, filter menus and sort, and a Move menu on each card the reader may move, or from
   tablet width a drag (see [The board](#the-board)).
 - **`/companies/<URL name>`**: the same list for one company, the company's first page, with a
-  List | Board toggle above it.
+  List | Board toggle above it. Like every tab of a company's pages, it's wide on a wide screen.
 - **`/companies/<URL name>/board`**: that company's requests as a board, for everyone who may see
   them (its people and the staff), under the company's header with its Requests tab still current
   (see [The board](#the-board)).
@@ -809,7 +811,7 @@ says so with a "Show everything" button.
   company, who raised it and when, the staff's first response and the last activity, with the
   controls. The bar is on
   the right on wide screens, and between the description and the conversation on narrower ones.
-  On a screen wider than 1280px the page grows past the width other pages have, up to 1280px of
+  On a screen wider than 1280px the page grows past the width other pages have, up to 1200px of
   content (`WidePage`), so the conversation and the reply's editor get the room.
   The conversation loads its latest 50 entries of the groups the reader shows (`THREAD_CHUNK`),
   with a link for earlier ones a chunk of 50 at a time (`?earlier=`, up to 19 more,
@@ -923,11 +925,10 @@ no Move menu.
   container, and the row is hidden once the board is 73rem wide (five columns of 14rem and their
   gaps), so it's in the page from the first paint and the lanes don't move down once the page
   runs. If it hides while it has focus (a wider window), focus moves to the main content. On a
-  wide screen `/requests/board` gets the room a request's page gets (`WidePage`), so from about
+  wide screen the board gets the room a request's page gets (`WidePage`; a company's board
+  through the company's layout, whose header and tabs widen with it on every tab), so from about
   1500px of screen all five columns fit side by side, the row doesn't scroll and the buttons
-  aren't there. A company's board isn't widened: it stays as wide as the company's other pages
-  (about 944px of content), under the company's header and tabs, so from tablet width its row
-  always scrolls and the buttons are always there. Below tablet width
+  aren't there. Below tablet width
   the columns are stacked, each folding away from its heading with its count (a grouped column
   with both its halves).
 - **In the code:** the rules in `src/lib/requests/board.ts` (lanes, closed lanes, the columns

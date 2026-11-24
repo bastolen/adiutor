@@ -1385,7 +1385,7 @@ test('a request uses the room of a wide screen, with its details still beside it
   expect(details?.x).toBeGreaterThan((thread?.x ?? 0) + (thread?.width ?? 0));
   expect(await scrollsSideways()).toBe(false);
 
-  // It stops growing at 1280px of content, however wide the screen.
+  // It stops growing at 1200px of content, however wide the screen.
   await page.setViewportSize({ width: 2560, height: 1300 });
   await expect.poll(async () => (await reply.boundingBox())?.width).toBeLessThanOrEqual(810);
   expect(await scrollsSideways()).toBe(false);

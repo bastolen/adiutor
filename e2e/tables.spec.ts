@@ -4,13 +4,14 @@
  * sizes, sorting from the Sort menu (with `aria-sort` on the headers), each
  * table keeping its own state in the address, and query parameters it doesn't
  * know. Also checks that no table scrolls sideways from tablet to desktop
- * widths.
+ * widths, and that a wide page's tables have more columns from 1536px.
  */
 import { type Page } from '@playwright/test';
 
 import { findUserId, storeRequest } from './support/db';
 import {
   CLIENT_WATCHER,
+  COMPANY_NAME,
   COMPANY_SLUG,
   NAMELESS_SUPPORT,
   PAGED_LINK_COUNT,
@@ -213,6 +214,46 @@ test.describe('on a phone', () => {
   });
 });
 
+test('a wide page gives what sits under the name a column of its own from 1536px', async ({
+  page,
+}) => {
+  const table = page.getByRole('main').getByRole('table');
+  const firstRow = table.locator('tbody tr').first();
+  const company = table.getByRole('columnheader', { name: 'Company', exact: true });
+
+  // At 1280px a wide page is as wide as every page, so the company sits under the title.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/requests?status=all');
+  await expect(firstRow).toBeVisible();
+  await expect(company).toBeHidden();
+
+  // From 1536px it has its full 1200px, and the company has a column of its own instead.
+  await page.setViewportSize({ width: 1536, height: 900 });
+  await expect(company).toBeVisible();
+  const name = await firstRow.getByRole('cell').nth(1).innerText();
+  expect(name).toMatch(/^Adiutor Tests/);
+  await expect(firstRow.getByRole('cell').first()).not.toContainText(name, { useInnerText: true });
+
+  // The users list gives a user's companies and MFA status their own columns the same way.
+  const companies = table.getByRole('columnheader', { name: 'Companies', exact: true });
+  const mfa = table.getByRole('columnheader', { name: 'MFA', exact: true });
+  const watcher = table.locator('tbody tr').filter({ hasText: CLIENT_WATCHER.name });
+  await page.goto(`/admin/users?${new URLSearchParams({ q: CLIENT_WATCHER.email })}`);
+  await expect(companies).toBeVisible();
+  await expect(mfa).toBeVisible();
+  // Name, Companies, MFA, Email, Activity.
+  await expect(watcher.getByRole('cell').nth(1)).toContainText(COMPANY_NAME);
+  await expect(watcher.getByRole('cell').first()).not.toContainText('Companies:', {
+    useInnerText: true,
+  });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(companies).toBeHidden();
+  await expect(mfa).toBeHidden();
+  await expect(watcher.getByRole('cell').first()).toContainText('Companies:', {
+    useInnerText: true,
+  });
+});
+
 test('no table scrolls sideways from tablet to desktop widths', async ({ page }) => {
   // Twelve pages at six widths, one after another.
   test.setTimeout(150_000);
@@ -247,7 +288,8 @@ test('no table scrolls sideways from tablet to desktop widths', async ({ page })
     `/companies/${COMPANY_SLUG}`,
   ];
 
-  // From 1280px the content stops getting wider, so wider screens must fit the same columns.
+  // From 1280px the content stops getting wider, so wider screens must fit the same columns, and
+  // a wide page (the requests, the users, a company's pages) its more columns from 1536px.
   await [640, 768, 1024, 1280, 1536, 1920].reduce(async (previousWidth, width) => {
     await previousWidth;
     await page.setViewportSize({ width, height: 900 });

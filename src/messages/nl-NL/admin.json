@@ -39,6 +39,8 @@
       },
       "columns": {
         "name": "Naam",
+        "companies": "Bedrijven",
+        "mfa": "MFA",
         "email": "E-mail",
         "activity": "Activiteit"
       },

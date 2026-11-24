@@ -3,12 +3,15 @@
  * may see, across companies. For the staff that's every company's; for
  * everyone else, the requests of the companies they're in. Everyone signed
  * in may open it; someone in no company finds it empty. A toggle shows the
- * same requests as a board (`/requests/board`).
+ * same requests as a board (`/requests/board`). On a wide screen it's as wide
+ * as the board (`WidePage`), so its table has room for the company in a
+ * column of its own.
  */
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
+import WidePage from '@/components/layout/wide-page';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import type { SearchParams } from '@/lib/search-params';
 import { getActor } from '@/server/authz';
@@ -52,7 +55,7 @@ async function Requests({ searchParams }: { searchParams: Promise<SearchParams> 
 }
 
 /**
- * The requests page.
+ * The requests page, as wide as the board on a wide screen (`WidePage`).
  *
  * @param props - Page props from Next.js.
  * @param props.searchParams - Query parameters.
@@ -60,8 +63,10 @@ async function Requests({ searchParams }: { searchParams: Promise<SearchParams> 
  */
 export default function RequestsPage({ searchParams }: PageProps<'/requests'>) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
-      <Requests searchParams={searchParams} />
-    </Suspense>
+    <WidePage>
+      <Suspense fallback={<PageSkeleton />}>
+        <Requests searchParams={searchParams} />
+      </Suspense>
+    </WidePage>
   );
 }

@@ -3,10 +3,13 @@
  * heading and tabs, then the page. Layouts stay mounted while the pages under
  * them change, so choosing a tab keeps focus on it and the header doesn't
  * reload. Only staff Admins (`staff:manage`) get here, and each page checks
- * the permission again for itself.
+ * the permission again for itself. On a wide screen every tab is wide
+ * (`WidePage`), so the staff table gets the room, and the header and tabs
+ * stay in one place from tab to tab.
  */
 import { Suspense } from 'react';
 
+import WidePage from '@/components/layout/wide-page';
 import { PageHeaderSkeleton } from '@/components/ui/skeleton';
 import { requireGlobalPermission } from '@/server/authz';
 import { globalPermissionMetadata } from '@/server/page-metadata';
@@ -32,7 +35,9 @@ async function SettingsHeaderLoader() {
 }
 
 /**
- * The Settings header above its pages.
+ * The Settings header above its pages, all of them as wide as the lists of
+ * requests on a wide screen: Staff has the room, and a tab that widened on
+ * its own would move the header and tabs from tab to tab.
  *
  * @param props - Layout props from Next.js.
  * @param props.children - The page.
@@ -40,11 +45,11 @@ async function SettingsHeaderLoader() {
  */
 export default function SettingsLayout({ children }: LayoutProps<'/admin/settings'>) {
   return (
-    <>
+    <WidePage>
       <Suspense fallback={<PageHeaderSkeleton />}>
         <SettingsHeaderLoader />
       </Suspense>
       {children}
-    </>
+    </WidePage>
   );
 }

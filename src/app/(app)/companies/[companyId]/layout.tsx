@@ -4,12 +4,15 @@
  * pages under them change, so choosing a tab keeps focus on it and the
  * header doesn't reload. Each page still checks the permission it needs.
  * The pages' titles name the company too ("Members · Adiutor Tests ·
- * Adiutor").
+ * Adiutor"). On a wide screen every tab is wide (`WidePage`), so the
+ * company's list and board get the room, and the header and tabs stay in
+ * one place from tab to tab.
  */
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
+import WidePage from '@/components/layout/wide-page';
 import { PageHeaderSkeleton } from '@/components/ui/skeleton';
 import notFoundMetadata from '@/lib/not-found-metadata';
 import { findCompanyAccess, requireCompanyAccess } from '@/server/authz';
@@ -71,7 +74,9 @@ async function CompanyHeaderLoader({ params }: { params: Promise<{ companyId: st
 }
 
 /**
- * The company's header above its pages.
+ * The company's header above its pages, all of them as wide as a request's
+ * page on a wide screen: the list and the board have the room, and a tab
+ * that widened on its own would move the header and tabs from tab to tab.
  *
  * @param props - Layout props from Next.js.
  * @param props.children - The page.
@@ -80,11 +85,11 @@ async function CompanyHeaderLoader({ params }: { params: Promise<{ companyId: st
  */
 export default function CompanyLayout({ children, params }: LayoutProps<'/companies/[companyId]'>) {
   return (
-    <>
+    <WidePage>
       <Suspense fallback={<PageHeaderSkeleton />}>
         <CompanyHeaderLoader params={params} />
       </Suspense>
       {children}
-    </>
+    </WidePage>
   );
 }

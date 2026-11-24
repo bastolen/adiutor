@@ -6,7 +6,8 @@
  * company themselves, a company's address (its URL name or its ID) and its
  * settings: renaming it (a taken URL name is refused) and deactivating it,
  * which cuts its people off until it's reactivated. Creating an account from
- * an invitation loads the browser's other tabs afresh, signed in.
+ * an invitation loads the browser's other tabs afresh, signed in. On a wide
+ * screen every tab of a company's pages is wide, its board included.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -260,6 +261,46 @@ test('a company opens by its URL name or its ID, and moves with a new URL name',
   await expect(page).toHaveURL(new RegExp(`/companies/${slug}-moved/settings$`));
   await page.goto(`/companies/${slug}`);
   await expect(page.getByRole('heading', { level: 1, name })).toHaveCount(0);
+});
+
+test("a company's pages are wide on every tab, so its board shows every lane and the tabs stay put", async ({
+  page,
+}) => {
+  await signIn(page, PLATFORM_ADMIN);
+  const tabs = page.getByRole('navigation', { name: 'Company sections' });
+  const jump = page.getByRole('navigation', { name: 'Jump to a lane' });
+  /**
+   * Opens one of the company's tabs and measures its row of tabs.
+   *
+   * @param name - The tab's name.
+   * @returns Where the row of tabs starts, and how wide it is.
+   */
+  const openTab = async (name: string) => {
+    await tabs.getByRole('link', { name, exact: true }).click();
+    await expect(tabs.getByRole('link', { name, exact: true })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    const box = await tabs.boundingBox();
+    return { x: box?.x, width: box?.width };
+  };
+
+  // At 1280px, where the app's content stops growing, the board's five columns don't fit.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(`/companies/${COMPANY_SLUG}/board`);
+  await expect(jump).toBeVisible();
+
+  // On a wider screen they do, as on the board across companies, under a header as wide.
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await expect(jump).toBeHidden();
+  const onBoard = await tabs.boundingBox();
+  expect(onBoard?.width).toBeGreaterThan(1100);
+
+  // Every other tab is as wide, so the header and its tabs don't move.
+  const expected = { x: onBoard?.x, width: onBoard?.width };
+  expect(await openTab('Members')).toEqual(expected);
+  expect(await openTab('Settings')).toEqual(expected);
+  expect(await openTab('Requests')).toEqual(expected);
 });
 
 test("staff deactivate a company from its settings, which cuts its people off until it's reactivated", async ({

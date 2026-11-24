@@ -2,7 +2,9 @@
  * @file The users list, served at `/admin/users`: every account, with your
  * staff marked, their MFA status and when they were last active; searchable,
  * filterable, sortable and paginated. Each name links to the user's detail
- * page. Staff only (`users:view`).
+ * page. Staff only (`users:view`). On a wide screen it's as wide as the lists
+ * of requests (`WidePage`), and from 1536px a user's companies and MFA status
+ * have columns of their own rather than a place under the name.
  */
 import { Plus, Users } from 'lucide-react';
 import Link from 'next/link';
@@ -10,6 +12,7 @@ import { useTranslations } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import { Fragment, Suspense } from 'react';
 
+import WidePage from '@/components/layout/wide-page';
 import Avatar from '@/components/ui/avatar';
 import Button from '@/components/ui/button';
 import Card from '@/components/ui/card';
@@ -193,6 +196,10 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
             <thead>
               <tr>
                 <Th aria-sort={table.ariaSort('name')}>{t('columns.name')}</Th>
+                {/* On a wide page, from the width at which it has its full 1200px: what sits
+                    under the name at the usual width. */}
+                <Th className="hidden 2xl:table-cell">{t('columns.companies')}</Th>
+                <Th className="hidden 2xl:table-cell">{t('columns.mfa')}</Th>
                 <Th aria-sort={table.ariaSort('email')} className="hidden md:table-cell">
                   {t('columns.email')}
                 </Th>
@@ -238,13 +245,14 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
                           <span className="text-xs wrap-anywhere text-muted-foreground md:hidden">
                             {listed.email}
                           </span>
-                          <span className="mt-1 text-xs">
+                          {/* The companies and MFA go here below the width where they get their
+                              columns, and so does the activity (with an earlier column), so the
+                              table never scrolls. */}
+                          <span className="mt-1 text-xs 2xl:hidden">
                             <span className="text-muted-foreground">{t('companies')} </span>
                             <CompanyLinks companies={listed.companies} />
                           </span>
-                          {/* MFA always goes here, and the activity below the width where it gets
-                              its column, so the table never scrolls. */}
-                          <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                          <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground 2xl:hidden">
                             <MfaBadge status={listed.mfa} />
                             <ActivityLine
                               lastActiveAt={listed.lastActiveAt}
@@ -254,6 +262,12 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
                           </span>
                         </div>
                       </div>
+                    </Td>
+                    <Td className="hidden 2xl:table-cell">
+                      <CompanyLinks companies={listed.companies} />
+                    </Td>
+                    <Td className="hidden whitespace-nowrap 2xl:table-cell">
+                      <MfaBadge status={listed.mfa} />
                     </Td>
                     <Td className="hidden wrap-anywhere text-muted-foreground md:table-cell">
                       {listed.email}
@@ -276,7 +290,8 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
 }
 
 /**
- * The users page.
+ * The users page, as wide as the lists of requests on a wide screen
+ * (`WidePage`).
  *
  * @param props - Page props from Next.js.
  * @param props.searchParams - Query parameters.
@@ -284,8 +299,10 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
  */
 export default function UsersPage({ searchParams }: PageProps<'/admin/users'>) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
-      <UserList searchParams={searchParams} />
-    </Suspense>
+    <WidePage>
+      <Suspense fallback={<PageSkeleton />}>
+        <UserList searchParams={searchParams} />
+      </Suspense>
+    </WidePage>
   );
 }
