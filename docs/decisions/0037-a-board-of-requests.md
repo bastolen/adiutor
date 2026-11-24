@@ -26,19 +26,17 @@ How it works is in [The board](../requests.md#the-board). The choices behind it:
   readers, and the single-pointer path 2.5.7 asks for). A card without moves has no menu.
 - **Dragging is an extra on top of the menu,** for the pointer from tablet width: Pragmatic drag
   and drop (native drag and drop, no React or styles of its own, about 20 KB), loaded with
-  `import()` once the page is there, with a grip on each card, lanes that say "Can't move here",
-  and our own announcements in three languages. A drop takes the menu's path; a refused one sends
-  nothing and says why. It never replaces the menu.
-- **Five columns, two with halves:** Open, To do and In progress each have a column; Waiting holds
-  Waiting for the company above Waiting for approval, and Closed holds Done above Cancelled. The
-  halves stay lanes of their own (a count, cards, "See all", a drop target each), so the service,
-  the moves and the counts stay per status, and the board fits a wide screen without hiding a
-  status. A drop on a half takes that status; Waiting for approval's half never takes one.
+  `import()` once the page is there, and our own announcements in three languages. A drop takes the
+  menu's path; a refused one sends nothing and says why. It never replaces the menu.
+- **Five columns, two with halves:** Waiting holds Waiting for the company above Waiting for
+  approval, and Closed holds Done above Cancelled. The halves stay lanes of their own, so the
+  service, the moves and the counts stay per status, and the board fits a wide screen without
+  hiding a status. Waiting for approval's half never takes a drop.
 - **No order of their own:** cards sit in each lane in the list's sort. A manual order would need a
   rank column, a migration and a choice between one order for everyone and one per person.
-- **Lanes aren't tables,** so they have no pages: an open lane shows the first 25, 50 or 100 cards
-  (one size for every lane), Done and Cancelled their latest 5 each by last activity, and a lane that
-  holds more links to the list of all of them (`?only=`). Each lane says its true count.
+- **Lanes aren't tables,** so they have no pages: an open lane shows a chosen number of cards, Done
+  and Cancelled their latest 5 each, and a lane that holds more links to the list of all of them.
+  Each lane says its true count.
 - **A move names where it started** (`from`): a board stays open for long, so a move from one that's
   out of date is refused rather than overwriting a colleague's change, and the board shows the
   card where it is.
@@ -47,8 +45,7 @@ How it works is in [The board](../requests.md#the-board). The choices behind it:
   room a request's page gets (`WidePage`) and more lanes show before their row scrolls sideways.
   The rule that a page with a table of records stays at the content's usual width still holds:
   the board's lanes aren't a table. A company's board is the exception: it keeps the width of the
-  company's pages, under their header and tabs, so its lanes always scroll from tablet width, with
-  the row of buttons that jumps to a lane.
+  company's pages, under their header and tabs.
 
 ## Consequences
 

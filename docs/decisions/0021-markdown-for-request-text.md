@@ -14,26 +14,21 @@ Descriptions and replies are never edited, so a writer has to see what they send
 
 ## Decision
 
-How it works is in [Requests](../requests.md). The choices behind it:
+How it works is in [Requests](../requests.md#text). The choices behind it:
 
-- **Every new text is Markdown; older texts stay plain.** New descriptions and replies are stored
-  with the `markdown` marker, which is also the columns' default. Nobody chooses a format. Texts
-  stored before keep `plain` and their own renderer, so no stored text is read as something it
-  wasn't written as.
-- **Markdown means CommonMark with GitHub Flavored Markdown's additions** (tables, strikethrough,
-  task lists, addresses that link themselves, footnotes), and a line break stays a line break.
-- **Rendered on the server from a tree, never from HTML.** The unified libraries (`unified`,
-  `remark-parse`, `remark-gfm`, `remark-breaks`, `remark-rehype`, `rehype-sanitize`,
-  `rehype-highlight`, `hast-util-to-jsx-runtime`) turn a text into React elements of our own
-  components. None of them reaches the browser.
-- **What the writer typed is shown, never run.** HTML in a text shows as the text it is. Only
-  `http` and `https` addresses become links, opened in a new tab without a referrer. An image is a
-  link to it and is never loaded. An allow-list of elements and attributes runs before the
-  highlighter, whose markup is the only markup added after it.
-- **A text that would cost too much is shown as plain text:** one nested deeper than a page can
-  render, or with more runs of `*` and `_` than the parser handles quickly.
-- **Code is highlighted by highlight.js,** through class names coloured by theme tokens, for the
-  languages a block names.
+- **Every new text is Markdown; older texts stay plain.** Nobody chooses a format. Texts stored
+  before keep their `plain` marker and their own renderer, so no stored text is read as something
+  it wasn't written as.
+- **Markdown means CommonMark with GitHub Flavored Markdown's additions,** and a line break stays a
+  line break.
+- **Rendered on the server from a tree, never from HTML,** with the unified libraries, into React
+  elements of our own components. None of them reaches the browser.
+- **What the writer typed is shown, never run.** HTML in a text shows as the text it is, only
+  `http` and `https` addresses become links, and an image is a link to it and is never loaded. An
+  allow-list of elements and attributes runs before the highlighter, whose markup is the only
+  markup added after it.
+- **A text that would cost too much is shown as plain text.**
+- **Code is highlighted by highlight.js,** through class names coloured by theme tokens.
 - **Written in an editor that formats while typing** (Tiptap), loaded only where the field is, with
   the plain text field as its fallback. The editor only produces Markdown, which the server cleans,
   limits and renders like any other text.
@@ -43,21 +38,16 @@ How it works is in [Requests](../requests.md). The choices behind it:
 - Two renderers stay: the plain one for texts stored before, the Markdown one for the rest.
 - The rendering libraries must stay out of client components, and the editor's libraries load only
   with the field (`src/client-imports.test.ts` enforces both).
-- Headings in a text start below the heading of the card they're in, so a text can't break the
-  page's outline.
-- `pnpm audit` has to stay clean for two more families of packages. Known when this was written:
-  `mdast-util-to-hast` before 13.2.1 and `prosemirror-view` before 1.42.3.
+- `pnpm audit` has to stay clean for two more families of packages.
 - The editor reads Markdown with its own parser, so in rare cases a text looks different while
   typing than after it's sent. The server's rendering is the one that counts.
-- The editor has no footnotes and builds no table from scratch: a footnote typed in it is sent as
-  plain text, and a pasted table stays a table. Both are still shown when a text has them.
-- The editor is about 165 kB of JavaScript, gzipped, and the languages of highlighted code another
-  40 kB. Neither comes with a page: the field loads the editor once the page is there, and
-  the editor the languages once a text has a block of code.
-- Mentions come later. Markdown has no syntax for one, so the stored text will need a marker for a
-  person; the format marker leaves room for that, and the editor has an extension for it.
-- Emails about requests come later too. Their plain-text part can carry a text as it was written:
-  Markdown reads as plain text.
+- The editor has no footnotes and builds no table from scratch, though both are still shown when a
+  text has them.
+- The editor and the languages of highlighted code are large, so neither comes with a page: the
+  field loads the editor once the page is there, and the editor the languages once a text has a
+  block of code.
+- Mentions and emails about requests come later. The format marker leaves room for a marker for a
+  person, and Markdown reads as plain text in an email's plain-text part.
 
 ## Alternatives considered
 
