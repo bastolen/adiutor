@@ -37,10 +37,8 @@ import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
 import type { ServiceContext } from '../context';
 import { forbiddenError, ServiceError } from '../errors';
-import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
-import { actingUserId } from '../signed-in-as';
 import { getRequestAccess, READING_STAFF_ROLES } from './access';
-import { CHANGE_MOMENT, changeRequest, requestToChange } from './change';
+import { assertChangeLimit, CHANGE_MOMENT, changeRequest, requestToChange } from './change';
 import mentionKey from './mention-key';
 import { subscribable, type Subscribable, SUBSCRIBED } from './participants';
 import { tellSubscribed } from './updates';
@@ -139,11 +137,7 @@ export async function subscribe(
   input: { request: string },
 ): Promise<{ subscribed: boolean }> {
   const access = await requestToChange(ctx, actor, input.request, 'requests:view');
-  await assertRateLimit(
-    ctx,
-    `request-change:user:${actingUserId(actor)}`,
-    RATE_LIMITS.requestChangesPerUser,
-  );
+  await assertChangeLimit(ctx, actor);
   return changeRequest(ctx, actor, access, 'requests:view', async (tx, locked) => {
     const added = await tx
       .insert(requestParticipant)
@@ -179,11 +173,7 @@ export async function unsubscribe(
   input: { request: string },
 ): Promise<{ unsubscribed: boolean }> {
   const access = await requestToChange(ctx, actor, input.request, 'requests:view');
-  await assertRateLimit(
-    ctx,
-    `request-change:user:${actingUserId(actor)}`,
-    RATE_LIMITS.requestChangesPerUser,
-  );
+  await assertChangeLimit(ctx, actor);
   return changeRequest(ctx, actor, access, 'requests:view', async (tx, locked) => {
     const removed = await tx
       .delete(requestParticipant)
@@ -259,11 +249,7 @@ export async function changeSubscribers(
   const removeKeys = [...new Set(subscriberKeysSchema.parse(input.remove))].filter(
     (key) => !addKeys.includes(key),
   );
-  await assertRateLimit(
-    ctx,
-    `request-change:user:${actingUserId(actor)}`,
-    RATE_LIMITS.requestChangesPerUser,
-  );
+  await assertChangeLimit(ctx, actor);
 
   // Who the keys stand for, among the people whose subscription is the actor's to change.
   const companyId = access.company.id;

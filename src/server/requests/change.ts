@@ -16,7 +16,8 @@ import { assertPermission, assertStillManages, type LockedUser } from '../access
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { companyDeactivatedError, notFoundError, ServiceError } from '../errors';
-import { signedInAsWork } from '../signed-in-as';
+import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
+import { actingUserId, signedInAsWork } from '../signed-in-as';
 import { getRequestAccess, type RequestAccess, type RequestRow } from './access';
 
 /**
@@ -57,6 +58,49 @@ export async function requestToChange(
     throw companyDeactivatedError();
   }
   return access;
+}
+
+/**
+ * Counts a change to a request (anything but a reply or a note: a status, details, assignees,
+ * subscribers, an edit, an answer to a solution) against the limit of the one who is really
+ * acting (`actingUserId`): a staff member signed in as the actor uses up their own allowance,
+ * never the user's. Taken before the change's transaction starts.
+ *
+ * @param ctx - Service context, or just a database client.
+ * @param ctx.db - Where to count it.
+ * @param actor - The acting user.
+ * @throws {ServiceError} `rate_limited` past `RATE_LIMITS.requestChangesPerUser`.
+ */
+export async function assertChangeLimit(
+  ctx: Pick<ServiceContext, 'db'>,
+  actor: Actor,
+): Promise<void> {
+  await assertRateLimit(
+    ctx,
+    `request-change:user:${actingUserId(actor)}`,
+    RATE_LIMITS.requestChangesPerUser,
+  );
+}
+
+/**
+ * Counts a reply or an internal note against the limit of the one who is really acting
+ * (`actingUserId`), like {@link assertChangeLimit} but on the limit for written text. Taken
+ * before the change's transaction starts.
+ *
+ * @param ctx - Service context, or just a database client.
+ * @param ctx.db - Where to count it.
+ * @param actor - The acting user.
+ * @throws {ServiceError} `rate_limited` past `RATE_LIMITS.requestRepliesPerUser`.
+ */
+export async function assertReplyLimit(
+  ctx: Pick<ServiceContext, 'db'>,
+  actor: Actor,
+): Promise<void> {
+  await assertRateLimit(
+    ctx,
+    `request-reply:user:${actingUserId(actor)}`,
+    RATE_LIMITS.requestRepliesPerUser,
+  );
 }
 
 /**

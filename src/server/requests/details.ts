@@ -12,10 +12,9 @@ import { requestPrioritySchema, requestTitleSchema, requestTypeSchema } from '@/
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { ServiceError } from '../errors';
-import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
-import { actingUserId, signedInAsWork } from '../signed-in-as';
+import { signedInAsWork } from '../signed-in-as';
 import type { RequestRow } from './access';
-import { CHANGE_MOMENT, changeRequest, requestToChange } from './change';
+import { assertChangeLimit, CHANGE_MOMENT, changeRequest, requestToChange } from './change';
 import { typeToGive } from './types';
 
 /** The details the staff can change, in the order their changes show in the history. */
@@ -122,11 +121,7 @@ export default async function updateRequestDetails(
   if (edits.type) {
     await typeToGive(ctx.db, edits.type.to);
   }
-  await assertRateLimit(
-    ctx,
-    `request-change:user:${actingUserId(actor)}`,
-    RATE_LIMITS.requestChangesPerUser,
-  );
+  await assertChangeLimit(ctx, actor);
 
   return changeRequest(ctx, actor, access, 'requests:manage', async (tx, locked) => {
     const values: Partial<DetailValues> = {};

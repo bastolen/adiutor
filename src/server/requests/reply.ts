@@ -20,9 +20,9 @@ import { requestReplySchema, requestStatusSchema } from '@/lib/validation';
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { forbiddenError } from '../errors';
-import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
-import { actingUserId, signedInAsWork } from '../signed-in-as';
+import { signedInAsWork } from '../signed-in-as';
 import {
+  assertReplyLimit,
   CHANGE_MOMENT,
   changeRequest,
   recordStatusChange,
@@ -74,11 +74,7 @@ export default async function replyToRequest(
   if (asked && !maySetStatus(permissions, asked)) {
     throw forbiddenError();
   }
-  await assertRateLimit(
-    ctx,
-    `request-reply:user:${actingUserId(actor)}`,
-    RATE_LIMITS.requestRepliesPerUser,
-  );
+  await assertReplyLimit(ctx, actor);
   // The company reads it: a link to one of the staff's pages is kept as its text. Past the limit,
   // as reading the text costs time.
   const body = withoutStaffPageLinks(written, appUrl);

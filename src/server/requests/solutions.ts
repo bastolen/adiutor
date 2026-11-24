@@ -23,9 +23,14 @@ import { requestReplySchema } from '@/lib/validation';
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { forbiddenError, ServiceError } from '../errors';
-import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
-import { actingUserId, signedInAsWork } from '../signed-in-as';
-import { CHANGE_MOMENT, changeRequest, recordStatusChange, requestToChange } from './change';
+import { signedInAsWork } from '../signed-in-as';
+import {
+  assertChangeLimit,
+  CHANGE_MOMENT,
+  changeRequest,
+  recordStatusChange,
+  requestToChange,
+} from './change';
 import { storeMentions } from './mentions';
 import withoutStaffPageLinks from './staff-links';
 import { subscribeAutomatically } from './subscribers';
@@ -77,11 +82,7 @@ export default async function answerSolution(
   }
   const written =
     answer === 'deny' && input.body?.trim() ? requestReplySchema.parse(input.body) : null;
-  await assertRateLimit(
-    ctx,
-    `request-change:user:${actingUserId(actor)}`,
-    RATE_LIMITS.requestChangesPerUser,
-  );
+  await assertChangeLimit(ctx, actor);
   // A reply like any other, without links to the staff's pages. Past the limit, as reading the
   // text costs time.
   const reason = written === null ? null : withoutStaffPageLinks(written, appUrl);

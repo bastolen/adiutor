@@ -40,9 +40,14 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { notFoundError, ServiceError } from '../errors';
 import getStaffName from '../people/staff-name';
-import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
-import { actingUserId, signedInAsWork } from '../signed-in-as';
-import { CHANGE_MOMENT, changeRequest, requestToChange, workingPermission } from './change';
+import { signedInAsWork } from '../signed-in-as';
+import {
+  assertChangeLimit,
+  CHANGE_MOMENT,
+  changeRequest,
+  requestToChange,
+  workingPermission,
+} from './change';
 import mentionKey from './mention-key';
 import { storeMentions } from './mentions';
 import withoutStaffPageLinks from './staff-links';
@@ -275,11 +280,7 @@ export async function editRequestDescription(
 ): Promise<{ changed: boolean }> {
   const access = await requestToChange(ctx, actor, input.request, 'requests:contribute');
   const typed = requestDescriptionSchema.parse(input.text);
-  await assertRateLimit(
-    ctx,
-    `request-change:user:${actingUserId(actor)}`,
-    RATE_LIMITS.requestChangesPerUser,
-  );
+  await assertChangeLimit(ctx, actor);
   // The company reads it: a link to one of the staff's pages is kept as its text. Past the limit,
   // as reading the text costs time.
   const written = withoutStaffPageLinks(typed, appUrl);
@@ -336,11 +337,7 @@ export async function editReply(
     throw notFoundError();
   }
   const written = requestReplySchema.parse(input.text);
-  await assertRateLimit(
-    ctx,
-    `request-change:user:${actingUserId(actor)}`,
-    RATE_LIMITS.requestChangesPerUser,
-  );
+  await assertChangeLimit(ctx, actor);
   // The company reads a reply: a link to one of the staff's pages is kept as its text. Read before
   // the request is locked, as reading the text costs time; whether it's a note is known once the
   // entry is read, in the lock.

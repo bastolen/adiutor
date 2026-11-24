@@ -14,9 +14,13 @@ import { requestStatusSchema } from '@/lib/validation';
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { forbiddenError, ServiceError } from '../errors';
-import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
-import { actingUserId } from '../signed-in-as';
-import { changeRequest, recordStatusChange, requestToChange, workingPermission } from './change';
+import {
+  assertChangeLimit,
+  changeRequest,
+  recordStatusChange,
+  requestToChange,
+  workingPermission,
+} from './change';
 import { tellPeopleOnRequest } from './updates';
 
 /**
@@ -66,11 +70,7 @@ export default async function changeRequestStatus(
   if (status === 'proposed' || !maySetStatus(permissions, status)) {
     throw forbiddenError();
   }
-  await assertRateLimit(
-    ctx,
-    `request-change:user:${actingUserId(actor)}`,
-    RATE_LIMITS.requestChangesPerUser,
-  );
+  await assertChangeLimit(ctx, actor);
 
   return changeRequest(ctx, actor, access, workingPermission(permissions), async (tx, locked) => {
     if (from !== undefined && locked.status !== from) {

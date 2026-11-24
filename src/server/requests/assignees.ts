@@ -22,10 +22,9 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { ServiceError } from '../errors';
 import { orderTerms, textOrder } from '../pagination';
-import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
-import { actingUserId, signedInAsWork } from '../signed-in-as';
+import { signedInAsWork } from '../signed-in-as';
 import { requestScope, visibleRequests } from './access';
-import { CHANGE_MOMENT, changeRequest, requestToChange } from './change';
+import { assertChangeLimit, CHANGE_MOMENT, changeRequest, requestToChange } from './change';
 import { tellAssigned } from './updates';
 
 /**
@@ -137,11 +136,7 @@ export async function changeAssignees(
   const remove = [...new Set(assigneeIdsSchema.parse(input.remove))].filter(
     (id) => !add.includes(id),
   );
-  await assertRateLimit(
-    ctx,
-    `request-change:user:${actingUserId(actor)}`,
-    RATE_LIMITS.requestChangesPerUser,
-  );
+  await assertChangeLimit(ctx, actor);
 
   return changeRequest(
     ctx,
