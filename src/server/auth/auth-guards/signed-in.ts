@@ -1,7 +1,7 @@
 /**
  * @file The checks on signed-in requests: the second step and recent confirmation
- * a change needs, the MFA a role requires, and turning two-step
- * verification on or off.
+ * a change needs, the MFA a role requires, turning two-step verification on
+ * or off, and the limits on wrong codes and current passwords.
  */
 import { APIError } from 'better-auth/api';
 
@@ -29,7 +29,12 @@ import {
 
 import { loadMfaContext } from '../mfa-state';
 import { requestState } from '../request-state';
-import { limitEmailCode, reserveStepUpAttempt, sessionCodeChallenge } from './attempts';
+import {
+  limitEmailCode,
+  reserveCurrentPasswordAttempt,
+  reserveStepUpAttempt,
+  sessionCodeChallenge,
+} from './attempts';
 import { checkUnderSignInChangeLock, signInChangeOf } from './change-lock';
 import {
   type AuthGuardContext,
@@ -40,6 +45,7 @@ import {
   EMAIL_CODE_PATHS,
   refuseEmailCodes,
   CODE_PATHS,
+  CURRENT_PASSWORD_PATHS,
 } from './paths';
 import { refusalBody } from './refusal-messages';
 
@@ -162,6 +168,11 @@ async function checkSignedInRequest(
   if (path === '/two-factor/verify-otp') {
     // So the reactions after the request end this session's wait once the code was used.
     requestState(ctx.context).emailCodeChallenge = challenge;
+  }
+  // Last for these (they're all setting up, so nothing below runs for them), so no check after it
+  // can refuse the request and leave the attempt taken.
+  if (CURRENT_PASSWORD_PATHS.has(path)) {
+    await reserveCurrentPasswordAttempt(ctx, session.user.id);
   }
   if (settingUp) {
     return;

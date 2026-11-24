@@ -1,6 +1,7 @@
 /**
- * @file The reactions to a refused request: wrong passwords and wrong codes are
- * recorded, and the owner is told when they pause signing in.
+ * @file The reactions to a refused request: wrong passwords, wrong current
+ * passwords and wrong codes are recorded, and the owner is told when they
+ * pause signing in.
  */
 import { APIError, isAPIError } from 'better-auth/api';
 import { and, eq, gt, isNull } from 'drizzle-orm';
@@ -12,9 +13,13 @@ import { mfaMethodFromPath, TWO_FACTOR_LOCK_MINUTES } from '@/lib/authz/mfa';
 import { recordEvent } from '../../audit';
 import { hitRateLimit, peekRateLimit, releaseRateLimitHit } from '../../rate-limit';
 import { hasPassword } from '../accounts';
-import { CODE_PATHS, pendingCodeSignInOf } from '../auth-guards';
+import { CODE_PATHS, CURRENT_PASSWORD_PATHS, pendingCodeSignInOf } from '../auth-guards';
 import { queueSecurityNotice } from '../security-notices';
-import { type FinishedRequest, isWrongCodeWithSession } from './finished-request';
+import {
+  type FinishedRequest,
+  isWrongCodeWithSession,
+  isWrongCurrentPassword,
+} from './finished-request';
 import { type AuthHookContext, auditContext, runAfterResponse, audit } from './hook-context';
 
 /** How often a user is told that their password sign-in was paused, at most. */
@@ -156,10 +161,12 @@ async function reactToRefusedSignInCode(
 
 /**
  * Reacts to a request that failed: records a failed password sign-in (and
- * tells the owner when wrong passwords paused password sign-in), a wrong code
- * on the step-up page (only a code that was compared and refused,
- * `isWrongCodeWithSession`: not an expired one or another refusal), or a code
- * refused at a password sign-in's code step.
+ * tells the owner when wrong passwords paused password sign-in), a wrong
+ * current password where Better Auth checked one (`password_check_failed`,
+ * with what it was typed for, as the password forms record it:
+ * `isWrongCurrentPassword`), a wrong code on the step-up page (only a code
+ * that was compared and refused, `isWrongCodeWithSession`: not an expired one
+ * or another refusal), or a code refused at a password sign-in's code step.
  *
  * @param ctx - The endpoint context, with its response.
  * @param request - The facts about the request.
@@ -187,6 +194,15 @@ export async function reactToFailure(
     if (paused && target && !target.deactivatedAt) {
       // After the response, so it takes as long whether or not the address has an account.
       await runAfterResponse(ctx, notifyPasswordSignInPaused(target.id));
+    }
+    return true;
+  }
+
+  const passwordPurpose = CURRENT_PASSWORD_PATHS.get(path);
+  if (failed && sessionUser && passwordPurpose) {
+    // Only a wrong current password: the same answer as what was counted above.
+    if (isWrongCurrentPassword(request)) {
+      await audit(ctx, 'password_check_failed', sessionUser.id, { purpose: passwordPurpose });
     }
     return true;
   }

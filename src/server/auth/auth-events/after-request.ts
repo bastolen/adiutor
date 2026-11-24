@@ -16,8 +16,10 @@ import { availableProviders } from '@/lib/sign-in/providers';
 
 import {
   CODE_PATHS,
+  CURRENT_PASSWORD_PATHS,
   finishesAuthenticatorSetup,
   releaseSignInChangeLockOf,
+  settleCurrentPasswordAttempt,
   settlePasswordAttempt,
   settleStepUpAttempt,
   endEmailCodeCooldown,
@@ -34,7 +36,12 @@ import {
   replacePreviousSession,
 } from './browser-cleanup';
 import { setNextPageCookie } from './cookies';
-import { type FinishedRequest, finishedRequest, isWrongCodeWithSession } from './finished-request';
+import {
+  type FinishedRequest,
+  finishedRequest,
+  isWrongCodeWithSession,
+  isWrongCurrentPassword,
+} from './finished-request';
 import { type AuthHookContext, safely, audit, auditAndNotify } from './hook-context';
 import rememberLanguage from './language';
 import { refreshProviderMfa, stepUpOutcomeOf, forgetProviderTokens } from './provider-accounts';
@@ -74,7 +81,8 @@ async function settleRequest(ctx: AuthHookContext, path: string): Promise<void> 
 
 /**
  * Settles the attempts the guards took before the request (`auth-guards/`):
- * a password sign-in's and a step-up code check's.
+ * a password sign-in's, a current-password check's and a step-up code
+ * check's.
  *
  * @param ctx - The endpoint context, with its response.
  * @param request - The facts about the request.
@@ -90,6 +98,15 @@ async function settleAttempts(ctx: AuthHookContext, request: FinishedRequest): P
       const wrongPassword = isAPIError(returned) && returned.statusCode === 401;
       paused = await settlePasswordAttempt(ctx, email, wrongPassword);
     });
+  }
+  if (sessionUser && CURRENT_PASSWORD_PATHS.has(path)) {
+    // Better Auth checked the current password (two-step verification, backup codes): a wrong one
+    // keeps the attempt it took (`auth-guards/`); anything else gives it back. The same answer
+    // decides what's recorded as a wrong password (`reactToFailure`).
+    const wrongPassword = isWrongCurrentPassword(request);
+    await safely('settle current password attempt', () =>
+      settleCurrentPasswordAttempt(ctx, sessionUser.id, wrongPassword),
+    );
   }
   if (sessionUser && CODE_PATHS.has(path)) {
     // A code checked with a session (the step-up page, or setting up two-step verification): a
@@ -322,9 +339,10 @@ async function finishProviderCallback(
 }
 
 /**
- * After every Better Auth request: records security changes and failed
- * sign-ins and confirmations (a wrong code on the step-up page with the user
- * as its actor; one at a password sign-in's code step without an actor, and
+ * After every Better Auth request: records security changes, failed
+ * sign-ins and confirmations, and wrong current passwords (a wrong code on
+ * the step-up page with the user as its actor; one at a password sign-in's
+ * code step without an actor, and
  * a notice once wrong codes pause signing in with a code:
  * {@link reactToRefusedSignInCode}), marks sessions verified after a step-up, a
  * first MFA setup or a provider account with 2FA, checks the MFA of

@@ -29,12 +29,9 @@ import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
 import type { ServiceContext } from '../context';
 import { notFoundError, parseId, ServiceError } from '../errors';
-import { checkCurrentPassword } from './current-password';
+import { checkCurrentPassword, INVALID_PASSWORD_CODE } from './current-password';
 import { loadMfaContext } from './mfa-state';
 import { withSignInChangeLock } from './sign-in-change-lock';
-
-/** Better Auth's error code for a wrong current password (`changePassword`). */
-const INVALID_PASSWORD_CODE = 'INVALID_PASSWORD';
 
 /**
  * Refuses a change to how the user signs in that their session may not make

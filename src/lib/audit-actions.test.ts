@@ -61,6 +61,15 @@ describe('describeAuditEvent', () => {
     expect(t(describeAuditEvent('password_check_failed', { purpose: 'deactivate' }))).toBe(
       'Wrong current password entered when deactivating the account',
     );
+    expect(t(describeAuditEvent('password_check_failed', { purpose: 'enable_two_factor' }))).toBe(
+      'Wrong current password entered when turning on two-step verification',
+    );
+    expect(t(describeAuditEvent('password_check_failed', { purpose: 'disable_two_factor' }))).toBe(
+      'Wrong current password entered when turning off two-step verification',
+    );
+    expect(
+      t(describeAuditEvent('password_check_failed', { purpose: 'generate_backup_codes' })),
+    ).toBe('Wrong current password entered when creating new backup codes');
     expect(t(describeAuditEvent('password_check_failed', {}))).toBe(
       'Wrong current password entered',
     );

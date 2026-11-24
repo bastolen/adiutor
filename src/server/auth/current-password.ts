@@ -2,12 +2,14 @@
  * @file Checking the signed-in user's current password before a change that
  * asks for it (changing the password, deactivating the account). Better
  * Auth's per-IP limiter only runs for requests over HTTP, not for its
- * `auth.api` calls from server actions, and the app's own wrong-password
- * limit only covers sign-ins (`auth-guards/`): without this, a signed-in
- * (possibly stolen) session could guess the password without limit or trace.
- * Each check takes one of the user's attempts first and gives it back unless
- * the password was wrong, so checks sent at the same moment can't all get
- * through; each wrong one is recorded in the audit log.
+ * `auth.api` calls from server actions, and a client can get around it by
+ * changing its IP address: without this, a signed-in (possibly stolen)
+ * session could guess the password without limit or trace. Each check takes
+ * one of the user's attempts first and gives it back unless the password was
+ * wrong, so checks sent at the same moment can't all get through; each wrong
+ * one is recorded in the audit log. Better Auth's two-step endpoints that
+ * check the password themselves count against the same limit, through the
+ * guards (`CURRENT_PASSWORD_PATHS` in `auth-guards/`).
  */
 import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
@@ -16,10 +18,23 @@ import { ServiceError } from '../errors';
 import { assertRateLimit, RATE_LIMITS, releaseRateLimitHit } from '../rate-limit';
 
 /**
- * What a current password is checked for, recorded with a wrong one
- * (`password_check_failed`'s `purpose`).
+ * What a form of the app checks a current password for
+ * ({@link checkCurrentPassword}), each with its own wording of a wrong one
+ * (`errors.wrongPassword.<purpose>`).
  */
-export type PasswordCheckPurpose = 'change_password' | 'deactivate';
+type FormPasswordCheckPurpose = 'change_password' | 'deactivate';
+
+/**
+ * What a current password is checked for, recorded with a wrong one
+ * (`password_check_failed`'s `purpose`): a form of the app's, or a Better
+ * Auth endpoint that checks it itself (turning two-step verification on or
+ * off, new backup codes: `CURRENT_PASSWORD_PATHS` in `auth-guards/`).
+ */
+export type PasswordCheckPurpose =
+  FormPasswordCheckPurpose | 'enable_two_factor' | 'disable_two_factor' | 'generate_backup_codes';
+
+/** Better Auth's error code for a wrong current password (`changePassword`, the two-step endpoints). */
+export const INVALID_PASSWORD_CODE = 'INVALID_PASSWORD';
 
 /**
  * The key counting a user's wrong current passwords
@@ -53,7 +68,7 @@ export function wrongCurrentPasswordsKey(userId: string): string {
 export async function checkCurrentPassword(
   ctx: ServiceContext,
   actor: Pick<Actor, 'id'>,
-  purpose: PasswordCheckPurpose,
+  purpose: FormPasswordCheckPurpose,
   check: () => Promise<boolean>,
 ): Promise<void> {
   const key = wrongCurrentPasswordsKey(actor.id);

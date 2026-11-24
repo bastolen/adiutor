@@ -1,7 +1,7 @@
 /**
- * @file Limits on attempts: wrong passwords per address, wrong step-up codes per
- * user and emailed codes per address or user, counted before the check and
- * settled by the reactions after the request.
+ * @file Limits on attempts: wrong passwords per address, wrong current passwords
+ * and wrong step-up codes per user, and emailed codes per address or user,
+ * counted before the check and settled by the reactions after the request.
  */
 import { createHash } from 'node:crypto';
 
@@ -13,10 +13,13 @@ import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 
 import {
   hitRateLimit,
+  RATE_LIMITS,
   type RateLimitRule,
   releaseRateLimitHit,
   resetRateLimit,
 } from '../../rate-limit';
+import { hasPassword } from '../accounts';
+import { wrongCurrentPasswordsKey } from '../current-password';
 import { failedSignInsKey } from '../failed-sign-ins';
 import { requestState, takeRequestState } from '../request-state';
 import type { AuthGuardContext } from './paths';
@@ -45,9 +48,9 @@ export const AUTH_GUARD_LIMITS = {
 } as const satisfies Record<string, RateLimitRule>;
 
 /**
- * Rate limit keys. Other modules settle failures through `settlePasswordAttempt` and
- * `settleStepUpAttempt` (and lift a pause with `clearFailedSignIns`) rather than using the keys
- * directly.
+ * Rate limit keys. Other modules settle failures through `settlePasswordAttempt`,
+ * `settleCurrentPasswordAttempt` and `settleStepUpAttempt` (and lift a pause with
+ * `clearFailedSignIns`) rather than using the keys directly.
  */
 const KEYS = {
   /**
@@ -57,6 +60,14 @@ const KEYS = {
    * @returns The key.
    */
   failedSignIns: failedSignInsKey,
+  /**
+   * Wrong current passwords of a user, the password forms' bucket
+   * (`checkCurrentPassword`).
+   *
+   * @param userId - The user.
+   * @returns The key.
+   */
+  wrongCurrentPasswords: wrongCurrentPasswordsKey,
   /**
    * Wrong step-up codes of a user.
    *
@@ -305,5 +316,68 @@ export async function settleStepUpAttempt(
   }
   if (!wrongCode) {
     await releaseRateLimitHit({ db }, KEYS.failedStepUps(reserved));
+  }
+}
+
+/**
+ * Takes one of a user's wrong-current-password attempts before Better Auth
+ * checks their current password (`CURRENT_PASSWORD_PATHS`: turning two-step
+ * verification on or off, new backup codes), from the same bucket as the
+ * password forms (`checkCurrentPassword`, `RATE_LIMITS.wrongCurrentPasswordsPerUser`):
+ * one atomic count, so checks sent at the same moment can't all get past the
+ * limit. Refuses the request once they're used up. A user without a password
+ * isn't asked for one (`allowPasswordless`), so takes none.
+ *
+ * @param ctx - The endpoint context.
+ * @param userId - The signed-in user.
+ * @throws {APIError} `TOO_MANY_REQUESTS` with code `TOO_MANY_ATTEMPTS`.
+ */
+export async function reserveCurrentPasswordAttempt(
+  ctx: AuthGuardContext,
+  userId: string,
+): Promise<void> {
+  if (!(await hasPassword(db, userId))) {
+    return;
+  }
+  const { allowed, retryAfterSeconds } = await hitRateLimit(
+    { db },
+    KEYS.wrongCurrentPasswords(userId),
+    RATE_LIMITS.wrongCurrentPasswordsPerUser,
+  );
+  if (!allowed) {
+    tooManyAttempts(ctx, retryAfterSeconds);
+  }
+  requestState(ctx.context).reservedCurrentPasswordAttempt = userId;
+}
+
+/**
+ * Settles the attempt a current-password check through Better Auth took
+ * (called after it): a wrong password keeps it; anything else gives it back
+ * (the right password, or a request Better Auth refused before checking
+ * one). A wrong password that took none (it shouldn't happen) is counted now.
+ *
+ * @param ctx - The endpoint context (its `context` is shared with the checks before).
+ * @param ctx.context - Better Auth's request state.
+ * @param userId - The signed-in user.
+ * @param wrongPassword - Whether Better Auth refused the current password (`INVALID_PASSWORD`).
+ */
+export async function settleCurrentPasswordAttempt(
+  ctx: { context: object },
+  userId: string,
+  wrongPassword: boolean,
+): Promise<void> {
+  const reserved = takeRequestState(ctx.context, 'reservedCurrentPasswordAttempt');
+  if (!reserved) {
+    if (wrongPassword) {
+      await hitRateLimit(
+        { db },
+        KEYS.wrongCurrentPasswords(userId),
+        RATE_LIMITS.wrongCurrentPasswordsPerUser,
+      );
+    }
+    return;
+  }
+  if (!wrongPassword) {
+    await releaseRateLimitHit({ db }, KEYS.wrongCurrentPasswords(reserved));
   }
 }

@@ -75,7 +75,9 @@ export const RATE_LIMITS = {
   jobTickMissesPerIp: { limit: 20, windowSeconds: 15 * 60 },
   /**
    * Wrong current passwords typed by one signed-in user, when changing the
-   * password or deactivating the account (`checkCurrentPassword`): a session
+   * password or deactivating the account (`checkCurrentPassword`), and where
+   * Better Auth checks it (turning two-step verification on or off, new
+   * backup codes: `CURRENT_PASSWORD_PATHS` in `auth/auth-guards/`): a session
    * can't be used to guess the password. A bucket of its own, not the
    * address's sign-in one, so a stolen session can't pause the owner's
    * password sign-in.

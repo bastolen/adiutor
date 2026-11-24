@@ -1,11 +1,12 @@
 /**
  * @file Integration tests for the limits on attempts: wrong passwords, wrong
- * step-up codes and emailed codes.
+ * current passwords, wrong step-up codes and emailed codes.
  */
 import { addOAuthServerContext, getSessionFromCtx } from 'better-auth/api';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  addPassword,
   createCompany,
   createUser,
   enableTwoFactor,
@@ -13,16 +14,19 @@ import {
   memberActor,
   staffActor,
 } from '../../../../tests/integration/helpers';
+import { wrongCurrentPasswordsKey } from '../current-password';
 import { clearFailedSignIns } from '../failed-sign-ins';
 import {
   countFailedSignIn,
   endEmailCodeCooldown,
   sessionCodeChallenge,
+  settleCurrentPasswordAttempt,
   settlePasswordAttempt,
   settleStepUpAttempt,
   signInCodeChallenge,
 } from './attempts';
 import { beforeAuthRequest } from './before-request';
+import { releaseSignInChangeLockOf } from './change-lock';
 import {
   request,
   refusedWith,
@@ -283,6 +287,113 @@ describe('confirming a session (step-up)', () => {
     await settleStepUpAttempt(ctx, support.id, false);
 
     expect(await hits(`step-up-failed:user:${support.id}`)).toBe(1);
+  });
+});
+
+describe('current passwords Better Auth checks', () => {
+  /** The endpoints that check the current password, as the Security page sends them. */
+  const PASSWORD_CHECKS = [
+    ['/two-factor/enable', { method: 'totp', password: 'adiutor-tests-guess' }],
+    ['/two-factor/disable', { password: 'adiutor-tests-guess' }],
+    ['/two-factor/generate-backup-codes', { password: 'adiutor-tests-guess' }],
+  ] as const;
+
+  /**
+   * Creates a user with a password, signed in as each endpoint needs: a fresh
+   * sign-in to turn two-step verification on, a confirmed session with an
+   * authenticator app for the others.
+   *
+   * @param path - The endpoint.
+   * @returns The user's ID.
+   */
+  const signedInWithPassword = async (path: string) => {
+    const jane = await createUser(db, 'jane@adiutor.test');
+    await addPassword(db, jane);
+    if (path === '/two-factor/enable') {
+      await signedIn(jane);
+    } else {
+      await enableTwoFactor(db, jane);
+      await signedIn(jane, { verifiedWith: 'authenticator' });
+    }
+    return jane;
+  };
+
+  /**
+   * Sends a current password through the checks before the request, and
+   * settles its attempt and gives back the lock as the reactions after it would.
+   *
+   * @param path - The endpoint.
+   * @param body - What the Security page sends.
+   * @param userId - The signed-in user.
+   * @param wrong - Whether Better Auth refuses the password.
+   */
+  const checkPassword = async (
+    path: string,
+    body: Record<string, unknown>,
+    userId: string,
+    wrong: boolean,
+  ) => {
+    const ctx = request(path, { body });
+    await beforeAuthRequest(ctx);
+    await releaseSignInChangeLockOf({ context: ctx.context });
+    await settleCurrentPasswordAttempt(ctx, userId, wrong);
+  };
+
+  it.each(PASSWORD_CHECKS)(
+    'counts wrong ones on %s per user, in the password forms’ bucket, and refuses once they’re used up',
+    async (path, body) => {
+      const jane = await signedInWithPassword(path);
+
+      await inSequence(Array.from({ length: 5 }), () => checkPassword(path, body, jane, true));
+
+      expect(await hits(wrongCurrentPasswordsKey(jane))).toBe(5);
+      await expect(beforeAuthRequest(request(path, { body }))).rejects.toEqual(
+        refusedWith('TOO_MANY_ATTEMPTS'),
+      );
+    },
+  );
+
+  it.each(PASSWORD_CHECKS)("doesn't count right ones on %s", async (path, body) => {
+    const jane = await signedInWithPassword(path);
+
+    await inSequence(Array.from({ length: 2 }), () => checkPassword(path, body, jane, true));
+    await inSequence(Array.from({ length: 6 }), () => checkPassword(path, body, jane, false));
+
+    expect(await hits(wrongCurrentPasswordsKey(jane))).toBe(2);
+  });
+
+  it('lets at most five checks sent at the same moment through', async () => {
+    const [path, body] = PASSWORD_CHECKS[0];
+    await signedInWithPassword(path);
+
+    const outcomes = await Promise.allSettled(
+      Array.from({ length: 25 }, () => beforeAuthRequest(request(path, { body }))),
+    );
+
+    expect(outcomes.filter(({ status }) => status === 'fulfilled')).toHaveLength(5);
+  });
+
+  it('takes no attempt from a user without a password, who is asked for none', async () => {
+    const newcomer = await createUser(db, 'newcomer@adiutor.test');
+    await signedIn(newcomer);
+
+    await repeat(8, request('/two-factor/enable', { body: { method: 'totp' } }));
+
+    expect(await hits(wrongCurrentPasswordsKey(newcomer))).toBeNull();
+  });
+
+  it('takes no attempt when an earlier check refuses the request', async () => {
+    const jane = await createUser(db, 'jane@adiutor.test');
+    await addPassword(db, jane);
+    await enableTwoFactor(db, jane);
+    // Not confirmed with the second step: the change is refused before the password is checked.
+    await signedIn(jane);
+
+    await expect(
+      beforeAuthRequest(request('/two-factor/disable', { body: { password: 'guess' } })),
+    ).rejects.toEqual(refusedWith('MFA_VERIFICATION_REQUIRED'));
+
+    expect(await hits(wrongCurrentPasswordsKey(jane))).toBeNull();
   });
 });
 

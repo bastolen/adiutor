@@ -502,8 +502,10 @@ those emails' footers link to; `setOwnRequestEmails` in `src/server/people/reque
 - **Passkeys:** add, rename and remove.
 - **Two-step verification:** set it up with an authenticator app (QR code drawn in the browser,
   plus the key as text) or email codes (not offered to roles that require MFA); get new backup
-  codes; turn it off. Users with a password confirm these changes with it. New passwords need at
-  least 12 characters.
+  codes; turn it off. Users with a password confirm these changes with it: Better Auth checks it,
+  and the guards limit and record wrong ones as for changing the password (`CURRENT_PASSWORD_PATHS`
+  in `src/server/auth/auth-guards/`, see [Rate limits](security-measures.md#rate-limits)). New
+  passwords need at least 12 characters.
 - **Keeping MFA:** for roles that require MFA, a change that would take it away is refused, on
   the page (disabled, with the reason) and on the server, also from a page opened before another
   change (`wouldRemoveRequiredMfa`): removing the last passkey, turning off the only

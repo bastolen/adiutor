@@ -180,11 +180,27 @@ type AuditEventDescription =
   | 'mfaFailedAtSignIn'
   | 'passwordCheckFailedChangePassword'
   | 'passwordCheckFailedDeactivate'
+  | 'passwordCheckFailedEnableTwoFactor'
+  | 'passwordCheckFailedDisableTwoFactor'
+  | 'passwordCheckFailedBackupCodes'
   | 'impersonationExpired'
   | 'impersonationNoLongerAllowed'
   | 'impersonationSessionEnded'
   | 'inviteLinkClaimUndone'
   | 'memberJoinedKept';
+
+/**
+ * The more precise descriptions of `password_check_failed`, by what the
+ * current password was typed for (`PasswordCheckPurpose` in
+ * `src/server/auth/current-password.ts`).
+ */
+const PASSWORD_CHECK_DESCRIPTIONS = new Map<unknown, AuditEventDescription>([
+  ['change_password', 'passwordCheckFailedChangePassword'],
+  ['deactivate', 'passwordCheckFailedDeactivate'],
+  ['enable_two_factor', 'passwordCheckFailedEnableTwoFactor'],
+  ['disable_two_factor', 'passwordCheckFailedDisableTwoFactor'],
+  ['generate_backup_codes', 'passwordCheckFailedBackupCodes'],
+]);
 
 /**
  * The more precise descriptions of `impersonation_ended`, by why it ended
@@ -231,12 +247,12 @@ export function describeAuditEvent(
   if (action === 'mfa_failed' && details.atSignIn === true) {
     return 'events.mfaFailedAtSignIn';
   }
-  // Recorded by `checkCurrentPassword`, with what the password was asked for.
-  if (action === 'password_check_failed' && details.purpose === 'change_password') {
-    return 'events.passwordCheckFailedChangePassword';
-  }
-  if (action === 'password_check_failed' && details.purpose === 'deactivate') {
-    return 'events.passwordCheckFailedDeactivate';
+  // Recorded by `checkCurrentPassword` and the reactions to Better Auth's two-step endpoints, with
+  // what the password was asked for.
+  const checkDescription =
+    action === 'password_check_failed' ? PASSWORD_CHECK_DESCRIPTIONS.get(details.purpose) : null;
+  if (checkDescription) {
+    return `events.${checkDescription}`;
   }
   // Recorded with why it ended, unless the staff member went back to their own account.
   const endDescription =
