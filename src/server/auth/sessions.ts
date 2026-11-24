@@ -1,13 +1,8 @@
 /**
  * @file Ending sessions: the signed-in user's own (one device, or every other
  * device, from the Security page), and everyone's or one user's from the
- * command line after a suspected leak (`pnpm sessions:revoke-all`). Each also
- * forgets the trusted devices of whoever it signs out, so a stolen browser
- * that was trusted can't skip the code step at its next sign-in, and ends
- * the links in their emails about requests (`forgetSecondStepSkips`), so an
- * old email can't sign them in again.
- * {@link endSessionsOf} does both in one call, for every path that signs a
- * user out (also an Admin's sign-out, MFA reset and deactivation).
+ * command line after a suspected leak (`pnpm sessions:revoke-all`). Whoever
+ * is signed out also loses what skips their second step ({@link endSessionsOf}).
  */
 import { and, eq, ne } from 'drizzle-orm';
 
@@ -24,13 +19,13 @@ import { forgetAllSecondStepSkips, forgetSecondStepSkips } from './second-step-s
 import { queueSecurityNotice } from './security-notices';
 
 /**
- * Ends a user's sessions (all of them, or all but one), forgets every
- * device they trusted at the code step ("Trust this device") and ends the
- * links in their emails about requests, in one call, so no way of signing
- * someone out can leave a trusted browser able to skip the code step, or an
- * old email able to sign them in, later. Every path that signs a user out uses it, except
- * signing out one device by ID ({@link revokeOwnSession}) and signing out
- * everyone at once.
+ * Ends a user's sessions (all of them, or all but one) and forgets what
+ * skips their second step: the devices they trusted at the code step and the
+ * links in their emails about requests (`forgetSecondStepSkips`). No way of
+ * signing someone out leaves a trusted browser or an old email able to get
+ * back in, so every path that signs a user out uses it, except signing out
+ * one device by ID ({@link revokeOwnSession}) and signing out everyone at
+ * once.
  *
  * @param db - Database client or transaction (the change's own).
  * @param userId - The user.
@@ -52,12 +47,9 @@ export async function endSessionsOf(
 }
 
 /**
- * Signs the user out on one of their other devices, forgets every device
- * they trusted at the code step ("Trust this device"), this one included, and
- * ends the links in their emails about requests: a session doesn't say which
- * trusted device or link is its browser's, and a device the user signs out
- * may be one they lost, which mustn't skip the code step or sign in from an
- * old email at its next sign-in.
+ * Signs the user out on one of their other devices and forgets what skips
+ * their second step, on this device too: a session doesn't say which trusted
+ * device or link is its browser's (see {@link endSessionsOf}).
  *
  * @param ctx - Service context.
  * @param actor - The signed-in user.
@@ -93,10 +85,8 @@ export async function revokeOwnSession(
 }
 
 /**
- * Signs the user out on every device except this one, forgets every device
- * they trusted at the code step ("Trust this device"), this one included, and
- * ends the links in their emails about requests, so none of the others skips
- * the code step or signs in from an old email at its next sign-in.
+ * Signs the user out on every device except this one (see
+ * {@link endSessionsOf} for what is forgotten with it).
  *
  * @param ctx - Service context.
  * @param actor - The signed-in user.
@@ -137,9 +127,9 @@ export interface RevokeAllResult {
  * Signs everyone out, or one user, on every device: for the command line
  * after a suspected leak of the database or a session (`pnpm
  * sessions:revoke-all`), so no stolen session keeps working. Trusted devices
- * are forgotten too, so a stolen one can't skip the code step at its next
- * sign-in, and links in emails about requests are ended. Records it in the audit log; one user also gets a security email,
- * queued for the next tick (everyone doesn't: tell them yourself if needed).
+ * and request links are forgotten too. Records it in the audit log; one user
+ * also gets a security email, queued for the next tick (everyone doesn't: tell
+ * them yourself if needed).
  *
  * @param ctx - Service context (the database; there's no request).
  * @param options - Options.

@@ -96,8 +96,8 @@ export interface ConnectedProvider {
   givesMfa: boolean;
   /**
    * The account's name at its provider (a GitHub username, a Google email
-   * address), so the user can tell which account it is; `null` until it has
-   * signed in since names were added.
+   * address), so the user can tell which account it is; `null` when the
+   * provider's profile gave no usable name.
    */
   accountName: string | null;
 }
@@ -176,8 +176,6 @@ export async function confirmConnectedProvider(
   accountId: string,
 ): Promise<void> {
   assertNotSignedInAs(actor);
-  // Without a second step there's nothing to confirm with, as for adding a first one: a recent
-  // sign-in instead.
   assertMayChangeSignIn(actor);
   const id = parseId(accountId);
   const ownUnconfirmed = and(
@@ -245,8 +243,6 @@ export async function setFirstPassword(
   setPassword: () => Promise<unknown>,
 ): Promise<void> {
   assertNotSignedInAs(actor);
-  // Without a second step there's nothing to confirm with, as for adding a first one: a recent
-  // sign-in instead.
   assertMayChangeSignIn(actor);
   await withSignInChangeLock(ctx, actor.id, async () => {
     if (await hasPassword(ctx.db, actor.id)) {

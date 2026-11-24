@@ -343,26 +343,14 @@ async function finishProviderCallback(
 }
 
 /**
- * After every Better Auth request: records security changes, failed
- * sign-ins and confirmations, and wrong current passwords (a wrong code on
- * the step-up page with the user as its actor; one at a password sign-in's
- * code step without an actor, and
- * a notice once wrong codes pause signing in with a code:
- * {@link reactToRefusedSignInCode}), marks sessions verified after a step-up, a
- * first MFA setup or a provider account with 2FA, checks the MFA of
- * provider accounts after signing in with or connecting them, and forgets
- * trusted devices: every one of the user's when two-step verification is
- * turned off, the password is changed or an authenticator app is set up next
- * to email codes, and the browser's own when it signs out. A re-verify
- * ("Confirm with GitHub" on the step-up page) is recorded only once that
- * check decided whether it confirmed the new session
- * ({@link recordProviderSession}): `mfa_verified` when it did, a sign-in with
- * the provider when it didn't, and then the next page says why
- * (`PROVIDER_STEP_UP_COOKIE`). One refused for another account than the
- * user's own confirmed one ({@link checkReverify}) is recorded once as a
- * failed confirmation of the user who started it (`mfa_failed` with
- * `reason: 'different_account'`), and the provider isn't asked about it. It
- * runs before the plugins' own reactions, so password sign-ins that went
+ * After every Better Auth request: records security changes, failed sign-ins
+ * and confirmations (wrong codes: {@link reactToRefusedSignInCode}), marks
+ * sessions verified, checks the MFA of provider accounts and forgets trusted
+ * devices. A re-verify ("Confirm with GitHub" on the step-up page) is recorded
+ * only once the provider check decided whether it confirmed the new session
+ * ({@link recordProviderSession}), and one refused for another account than
+ * the user's own ({@link checkReverify}) is recorded once as `mfa_failed`.
+ * It runs before the plugins' own reactions, so password sign-ins that went
  * through are recorded by {@link afterPasswordSignIn} instead.
  *
  * It runs in phases, each its own function: {@link settleRequest},

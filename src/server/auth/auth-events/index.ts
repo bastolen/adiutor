@@ -1,27 +1,17 @@
 /**
- * @file Reacts to Better Auth activity: records it in the audit log, sets
- * each session's MFA level and method, keeps the sign-in time and end of a
- * session Better Auth replaces for the same sign-in (so a replacement never
- * renews it), refuses deactivated accounts, refuses "Confirm with GitHub" on
- * the step-up page with any other account than the user's own confirmed
- * one, forgets trusted devices ("Trust this device" at the code step) when
- * two-step verification is turned off, the password is changed or reset, an
- * authenticator app is set up next to email codes, or the browser signs out
- * (that browser's own), counts wrong passwords (telling the owner when they
- * pause password sign-in), records wrong codes at a password sign-in's code
- * step (telling the owner when they pause signing in with a code), keeps the
- * MFA status of provider accounts up to date (for providers that can prove
- * MFA; a sign-in is judged by the account that signed in, never another of
- * the user's), tells the next page when a
- * provider account was connected at sign-in or didn't confirm a session on
- * the step-up page, ends the session a browser had when someone signs in
- * there (as signing out would, also another user's), and tracks when users
- * were last active.
+ * @file Reacts to Better Auth activity (`hooks.after` and the database hooks in
+ * `src/lib/auth.ts`): records it in the audit log, sets each session's MFA
+ * level and method, keeps a replaced session's sign-in time and end,
+ * refuses deactivated accounts and a "Confirm with GitHub" that isn't the
+ * user's own confirmed account, forgets trusted devices, counts wrong
+ * passwords and codes (telling the owner when they pause signing in), keeps
+ * the MFA status of provider accounts up to date, tells the next page what
+ * happened (a provider account connected, a step-up that didn't confirm), and
+ * tracks when users were last active. The reactions run in named phases
+ * (see `afterAuthRequest`); each file's own comment says what it reacts to.
  *
  * What one hook of a request passes on to the next (with the guards in
  * `auth-guards`) is kept in the request's typed state (`request-state.ts`).
- * The reactions after a request run in named phases (see `afterAuthRequest`).
- *
  * `src/lib/auth.ts` loads this module inside its hooks, so code that only
  * loads the auth config (like `pnpm auth:schema`) doesn't load it.
  * Problems in the reactions are logged, never shown to the user, except the

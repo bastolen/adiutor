@@ -10,9 +10,7 @@
  *
  * A link only signs in while its person can still read the request, and
  * ends early whenever the user's trusted devices are forgotten
- * (`forgetSecondStepSkips` in `./second-step-skips.ts`): signing out everywhere or one device, a
- * password change or reset, two-step verification turned off, an
- * authenticator set up next to email codes, an MFA reset, a deactivation.
+ * (`forgetSecondStepSkips` in `./second-step-skips.ts`).
  * Anything that isn't a person's click on a link that can still be used, or
  * that would sign someone else out in that browser, goes to the confirmation
  * page first (`/auth/request-link`), which looks the link up without using
