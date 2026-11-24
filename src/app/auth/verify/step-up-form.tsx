@@ -19,12 +19,12 @@ import ProviderStepUpNotice, {
   clearProviderStepUpNotice,
 } from '@/components/auth/provider-step-up-notice';
 import ResendCodeButton from '@/components/auth/resend-code-button';
+import signOutAndLeave from '@/components/auth/sign-out';
 import PROVIDER_ICONS from '@/components/brand/provider-icons';
 import Alert from '@/components/ui/alert';
 import AuthDivider from '@/components/ui/auth-divider';
 import AuthHeading from '@/components/ui/auth-heading';
 import Button, { whileRunning } from '@/components/ui/button';
-import loadFresh from '@/components/ui/load-fresh';
 import { useOncePerVisit, useTransientState } from '@/components/ui/use-transient-state';
 import type { StepUpMethods } from '@/lib/authz/mfa';
 import authClient from '@/lib/sign-in/auth-client';
@@ -282,27 +282,15 @@ export default function StepUpForm({
   };
 
   /**
-   * Ends the session and loads the sign-in page afresh (`loadFresh`), so no
-   * page Next kept alive is left for the next person on this browser, in
-   * this tab or the browser's others (`everyTab`), which go to the sign-in
-   * page too. When signing out fails (the client resolves with an `error`
-   * when the server refuses, and rejects when the request never gets there),
-   * the session hasn't ended: the form says so and nothing loads, since the
-   * sign-in page would only send the user back here.
+   * Ends the session and loads the sign-in page afresh in every tab
+   * (`signOutAndLeave`). When the session didn't end, the form says so and
+   * nothing loads, since the sign-in page would only send the user back here.
    */
   const signOut = async () => {
     setError(null);
-    try {
-      const result = await authClient.signOut();
-      if (result.error) {
-        setError(t('stepUp.signOutFailed'));
-        return;
-      }
-    } catch {
+    if (!(await signOutAndLeave())) {
       setError(t('stepUp.signOutFailed'));
-      return;
     }
-    loadFresh('/auth', { everyTab: true });
   };
 
   const showCodeForm = mode === 'totp' || mode === 'backup' || (mode === 'otp' && codeSent);

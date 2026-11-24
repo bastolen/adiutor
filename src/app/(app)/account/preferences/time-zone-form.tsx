@@ -4,13 +4,13 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import Button from '@/components/ui/button';
-import loadFresh from '@/components/ui/load-fresh';
 import ResultAlert from '@/components/ui/result-alert';
 import SelectField from '@/components/ui/select-field';
 import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
+import useLoadFreshOnSuccess from '@/components/ui/use-load-fresh-on-success';
 import { useTransientActionState, useTransientState } from '@/components/ui/use-transient-state';
 import { compareTimeZoneOptions, type TimeZoneOption, timeZoneOption } from '@/lib/i18n/time-zones';
 import useBrowserTimeZone from '@/lib/i18n/use-browser-time-zone';
@@ -59,12 +59,7 @@ export default function TimeZoneForm({ timeZone, options }: TimeZoneFormProps) {
     return [...options, timeZoneOption(browser, new Date())].sort(compareTimeZoneOptions);
   }, [browser, options]);
   const choices = useTimeZoneChoices(zones);
-
-  useEffect(() => {
-    if (result?.ok && result.data) {
-      loadFresh(result.data);
-    }
-  }, [result]);
+  const leaving = useLoadFreshOnSuccess(result);
 
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -82,7 +77,7 @@ export default function TimeZoneForm({ timeZone, options }: TimeZoneFormProps) {
         />
         <div className="flex flex-wrap gap-3">
           {/* Busy until the page has reloaded, so nobody presses it twice. */}
-          <Button type="submit" loading={pending || Boolean(result?.ok)} disabled={changesOff}>
+          <Button type="submit" loading={pending || leaving} disabled={changesOff}>
             {t('profile.saveTimeZone')}
           </Button>
           {browser && (
