@@ -1,16 +1,24 @@
 /**
  * @file Integration tests for the signed-in devices of a user
- * (`listUserSessions`) and for which sessions count as MFA verified, against
- * the test database.
+ * (`listUserSessions`, and `listOwnSessions` for the user's own, which a
+ * staff member signed in as them sees only as a staff Admin) and for which
+ * sessions count as MFA verified, against the test database.
  */
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { company, session } from '@/db/schema';
+import type { Permission } from '@/lib/authz/permissions';
 import type { Paged } from '@/lib/tables/table-state';
 
-import { listUserDevices, listUserSessions, type UserSession } from '.';
-import { addMember, createSession, createUser } from '../../../../tests/integration/helpers';
+import { listOwnSessions, listUserDevices, listUserSessions, type UserSession } from '.';
+import {
+  actorFor,
+  addMember,
+  createSession,
+  createUser,
+} from '../../../../tests/integration/helpers';
+import type { Actor } from '../../actor';
 import { admin, createSessionsOnJanuaryDays, ctx, db, jane, testCompany } from './test-helpers';
 
 describe('which sessions count as MFA verified', () => {
@@ -69,6 +77,42 @@ describe('which sessions count as MFA verified', () => {
       Firefox: true,
       Safari: true,
     });
+  });
+});
+
+describe('listOwnSessions', () => {
+  it('lists the user’s own devices, and to a staff member signed in as them only for a staff Admin', async () => {
+    await createSession(db, jane, { userAgent: 'Firefox' });
+    const own = await actorFor(db, jane);
+    /**
+     * Jane as the actor while a staff member with these permissions is signed in as her.
+     *
+     * @param staffPermissions - The staff member's own global permissions.
+     * @returns The actor.
+     */
+    const signedInAsBy = (staffPermissions: Permission[]) => ({
+      ...own,
+      signedInAs: {
+        staffId: admin.id,
+        staffName: admin.name,
+        endsAt: new Date(Date.now() + 30 * 60_000),
+        returnTo: '/dashboard',
+        staffPermissions,
+      },
+    });
+    /**
+     * The browsers of the devices an actor gets.
+     *
+     * @param actor - Who reads them.
+     * @returns The user agents, or `null` when the devices aren't shown.
+     */
+    const browsersFor = async (actor: Actor) =>
+      (await listOwnSessions({ db }, actor))?.items.map(({ userAgent }) => userAgent) ?? null;
+
+    expect(await browsersFor(own)).toEqual(['Firefox']);
+    expect(await browsersFor(signedInAsBy(['users:view', 'users:manage']))).toEqual(['Firefox']);
+    // Support and Managers don't see a user's devices on their page either.
+    expect(await browsersFor(signedInAsBy(['users:view', 'audit:view']))).toBeNull();
   });
 });
 

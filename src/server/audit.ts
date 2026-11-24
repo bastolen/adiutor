@@ -14,6 +14,7 @@ import {
   AUDIT_GROUPS,
   STAFF_ONLY_AUDIT_ACTIONS,
 } from '@/lib/audit-actions';
+import { personalDataShown } from '@/lib/authz/impersonation';
 import { firstRow } from '@/lib/defined';
 import {
   type Paged,
@@ -281,9 +282,11 @@ export async function listAuditLog(
  * actor was deleted, or passwords typed for their address (wrong ones, and
  * right ones whose sign-in then asked for a code) and wrong codes typed at
  * that code step, which may be anyone's (all stay in the staff audit log).
+ * A staff member signed in as the user gets them only when they see the
+ * audit log (`personalDataShown`), as on the user's page.
  *
  * @param ctx - Service context.
- * @param actor - The signed-in user.
+ * @param actor - The signed-in user, or a staff member signed in as them.
  * @param limit - How many to return. Defaults to 20.
  * @returns The events about them.
  */
@@ -292,6 +295,7 @@ export async function listOwnActivity(
   actor: Actor,
   limit = 20,
 ): Promise<AuditEntry[]> {
+  const { origins } = personalDataShown(actor);
   const entries = await queryAuditEntries(
     ctx.db,
     [
@@ -305,6 +309,6 @@ export async function listOwnActivity(
   // send them), nor do passwords waiting for their code and wrong codes at that step (anyone with
   // the password can). The IP address and browser of anyone else are theirs.
   return entries.map((entry) =>
-    entry.actor?.id === actor.id ? entry : { ...entry, ip: null, userAgent: null },
+    origins && entry.actor?.id === actor.id ? entry : { ...entry, ip: null, userAgent: null },
   );
 }

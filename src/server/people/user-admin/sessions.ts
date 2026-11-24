@@ -1,17 +1,20 @@
 /**
  * @file The signed-in devices of a user (their sessions that haven't
- * expired), as the user detail page and the Security page list them: one page
- * at a time, with each session judged against the MFA rules of the user's role
- * now.
+ * expired), as the user detail page and the account's Activity tab list them:
+ * one page at a time, with each session judged against the MFA rules of the
+ * user's role now. A staff member signed in as the user sees the user's own
+ * only when the user's page shows them the devices (`listOwnSessions`).
  */
 import { and, eq, gt, sql } from 'drizzle-orm';
 
 import type { Database } from '@/db';
 import { session } from '@/db/schema';
+import { personalDataShown } from '@/lib/authz/impersonation';
 import { isSessionMfaVerified, type MfaRole } from '@/lib/authz/mfa';
 import { type Paged, resolveTableState, type TableState } from '@/lib/tables/table-state';
 import { DEVICES_TABLE, type DeviceSort } from '@/lib/tables/tables';
 
+import type { Actor } from '../../actor';
 import type { ServiceContext } from '../../context';
 import { orderTerms, paginate } from '../../pagination';
 
@@ -137,4 +140,27 @@ export async function listUserSessions(
   options: Partial<TableState<DeviceSort>> = {},
 ): Promise<Paged<UserSession>> {
   return asSeenWith(await loadSessionRows(ctx.db, userId, options), mfaRole);
+}
+
+/**
+ * Lists the signed-in user's own devices, one page at a time, judged against
+ * the MFA rules of their role as loaded in this request (`actor.mfaRole`). A
+ * staff member signed in as the user gets them only when the user's page
+ * shows them the devices (`personalDataShown`: staff Admins), and nothing
+ * otherwise.
+ *
+ * @param ctx - Service context.
+ * @param actor - The signed-in user, or a staff member signed in as them.
+ * @param options - Sort and page (by default most recently signed in first, the first page).
+ * @returns The page of sessions, or `null` when they're not shown to the actor.
+ */
+export async function listOwnSessions(
+  ctx: Pick<ServiceContext, 'db'>,
+  actor: Pick<Actor, 'id' | 'mfaRole' | 'signedInAs'>,
+  options: Partial<TableState<DeviceSort>> = {},
+): Promise<Paged<UserSession> | null> {
+  if (!personalDataShown(actor).devices) {
+    return null;
+  }
+  return listUserSessions(ctx, actor.id, actor.mfaRole, options);
 }

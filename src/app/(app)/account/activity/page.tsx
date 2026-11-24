@@ -5,7 +5,8 @@
  * (sign-ins and changes, from the audit log). A staff member signed in as the
  * user sees it read-only, with a note, the devices only when they're a staff
  * Admin, and the activity's IP addresses and browsers only when they see the
- * audit log (`personalDataShown`).
+ * audit log (`personalDataShown`, which the services apply: `listOwnSessions`
+ * and `listOwnActivity`).
  */
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -24,7 +25,7 @@ import { DEVICES_TABLE } from '@/lib/tables/tables';
 import appContext from '@/server/app-context';
 import { listOwnActivity } from '@/server/audit';
 import { getActor } from '@/server/authz';
-import { listUserSessions } from '@/server/people/user-admin';
+import { listOwnSessions } from '@/server/people/user-admin';
 
 import SignedInAsNote from '../signed-in-as-note';
 import describeOwnActivity from './own-activity';
@@ -49,8 +50,6 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 async function Activity({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const actor = await getActor({ allowMissingMfa: true });
-  // A staff member signed in as the user sees only the personal details they see on the user's page.
-  const shown = personalDataShown(actor);
   const [params, t, tAudit, tRoles] = await Promise.all([
     searchParams,
     getTranslations('account'),
@@ -58,18 +57,17 @@ async function Activity({ searchParams }: { searchParams: Promise<SearchParams> 
     getTranslations('roles'),
   ]);
   const devicesRequested = parseTableState(DEVICES_TABLE, params);
-  const [sessions, ownActivity] = await Promise.all([
-    shown.devices ? listUserSessions(appContext, actor.id, actor.mfaRole, devicesRequested) : null,
+  // A staff member signed in as the user gets only the personal details they see on the user's
+  // page: the services leave the rest out.
+  const [sessions, activity] = await Promise.all([
+    listOwnSessions(appContext, actor, devicesRequested),
     listOwnActivity(appContext, actor),
   ]);
   const url = createPageUrl('/account/activity', {}, await getTranslations('tables'));
-  const activity = shown.origins
-    ? ownActivity
-    : ownActivity.map((event) => ({ ...event, ip: null, userAgent: null }));
 
   return (
     <>
-      {actor.signedInAs && <SignedInAsNote actor={actor} shown={shown} />}
+      {actor.signedInAs && <SignedInAsNote actor={actor} shown={personalDataShown(actor)} />}
       {sessions && (
         <SessionsCard
           sessions={sessions}

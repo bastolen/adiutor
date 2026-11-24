@@ -1,11 +1,12 @@
 /**
- * @file The signed-in user's sign-in security: two-step verification and
- * passkeys, for the Security page, and the ways they can confirm a session
- * on the step-up page.
+ * @file The signed-in user's sign-in security: two-step verification,
+ * passkeys and connected provider accounts, for the Security page, and the
+ * ways they can confirm a session on the step-up page.
  */
 import { asc, eq } from 'drizzle-orm';
 
 import { passkey } from '@/db/schema';
+import { personalDataShown } from '@/lib/authz/impersonation';
 import {
   type MfaState,
   NO_STEP_UP_METHODS,
@@ -18,12 +19,16 @@ import { availableProviders } from '@/lib/sign-in/providers';
 
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
+import { type ConnectedProviderDetails, listConnectedProviders } from './accounts';
 
 /** A passkey as shown on the Security page. */
 export interface PasskeySummary {
   /** Passkey ID. */
   id: string;
-  /** The name the user gave it. */
+  /**
+   * The name the user gave it; `null` without one, and for a staff member
+   * signed in as the user who doesn't see it (`personalDataShown`).
+   */
   name: string | null;
   /** Whether it's backed up or synced by the provider. */
   backedUp: boolean;
@@ -36,6 +41,13 @@ export interface SecurityOverview {
   /** Their passkeys, oldest first. */
   passkeys: PasskeySummary[];
   /**
+   * Their connected provider accounts, oldest first, with what the MFA rules
+   * need on the server (give the browser only the `ConnectedProvider` part).
+   * An account's name is `null` for a staff member signed in as the user who
+   * doesn't see it (`personalDataShown`).
+   */
+  connected: ConnectedProviderDetails[];
+  /**
    * Their setup as the MFA rules see it: whether two-step verification is on
    * (`twoFactorEnabled`), an authenticator app is set up (`authenticator`, and
    * so backup codes exist), they have a password (`hasPassword`), and more.
@@ -46,28 +58,36 @@ export interface SecurityOverview {
 /**
  * Loads the signed-in user's sign-in security settings. Their setup comes
  * from the actor, which loaded it in this request (`loadActor`), so only
- * their passkeys are queried here.
+ * their passkeys and connected provider accounts are queried here. A staff
+ * member signed in as the user gets only the names the user's page shows
+ * them (`personalDataShown`): the passkeys' names and the provider accounts'
+ * names for staff Admins (`users:manage`), none for anyone else.
  *
  * @param ctx - Service context.
- * @param actor - The signed-in user.
+ * @param actor - The signed-in user, or a staff member signed in as them.
  * @param actor.id - Their ID.
  * @param actor.mfaState - Their sign-in setup, as loaded with them.
- * @returns Their passkeys and sign-in setup.
+ * @param actor.signedInAs - The staff member signed in as them, if any.
+ * @returns Their passkeys, connected accounts and sign-in setup.
  */
 export async function getSecurityOverview(
   ctx: Pick<ServiceContext, 'db'>,
-  actor: Pick<Actor, 'id' | 'mfaState'>,
+  actor: Pick<Actor, 'id' | 'mfaState' | 'signedInAs'>,
 ): Promise<SecurityOverview> {
-  const passkeys = await ctx.db
-    .select({
-      id: passkey.id,
-      name: passkey.name,
-      backedUp: passkey.backedUp,
-      createdAt: passkey.createdAt,
-    })
-    .from(passkey)
-    .where(eq(passkey.userId, actor.id))
-    .orderBy(asc(passkey.createdAt));
+  const shown = personalDataShown(actor);
+  const [passkeys, connected] = await Promise.all([
+    ctx.db
+      .select({
+        id: passkey.id,
+        name: passkey.name,
+        backedUp: passkey.backedUp,
+        createdAt: passkey.createdAt,
+      })
+      .from(passkey)
+      .where(eq(passkey.userId, actor.id))
+      .orderBy(asc(passkey.createdAt)),
+    listConnectedProviders(ctx, actor.id),
+  ]);
   const mfaState = actor.mfaState ?? {
     twoFactorEnabled: false,
     authenticator: false,
@@ -75,7 +95,13 @@ export async function getSecurityOverview(
     hasPassword: false,
     providerAccounts: [],
   };
-  return { passkeys, mfaState };
+  return {
+    passkeys: shown.devices ? passkeys : passkeys.map((found) => ({ ...found, name: null })),
+    connected: shown.accountNames
+      ? connected
+      : connected.map((link) => ({ ...link, accountName: null })),
+    mfaState,
+  };
 }
 
 /**

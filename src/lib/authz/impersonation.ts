@@ -12,8 +12,8 @@
  * - Nobody signs in as themselves, as a deactivated account, or as a user who
  *   turned sign-ins by staff off, and the staff member needs strong MFA on
  *   their own account (`hasStrongMfa`).
- * - The user's account pages then show only the personal details the staff
- *   member sees on the user's page ({@link personalDataShown}).
+ * - The services behind the user's account pages then give only the personal
+ *   details the staff member sees on the user's page ({@link personalDataShown}).
  * - Request work done while signed in as someone is told only to that user
  *   and to the staff who see the audit log ({@link maySeeSignedInAsWork}).
  *
@@ -175,7 +175,10 @@ export function mayImpersonate(
 /**
  * Which of the user's personal sign-in details their own account pages show:
  * all of them to the user, and to a staff member signed in as them only what
- * that staff member sees on the user's page (see `getUserDetail`):
+ * that staff member sees on the user's page (see `getUserDetail`). The
+ * services that load them for the actor leave the rest out
+ * (`listOwnActivity`, `getSecurityOverview`, `listOwnSessions`); the pages
+ * use it only for the note that says what's left out:
  * - `devices`: the signed-in devices and the passkeys' names, for staff
  *   Admins (`users:manage`);
  * - `accountNames`: the provider accounts' names (a GitHub username, a Google
