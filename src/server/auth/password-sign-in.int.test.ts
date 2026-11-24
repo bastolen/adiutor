@@ -680,15 +680,16 @@ describe('wrong codes at the code step', () => {
     };
 
     // Better Auth allows 5 codes per sign-in, so the 10 in a row that pause it take two sign-ins.
-    const answers: unknown[] = [];
-    for (let attempt = 0; attempt < TWO_FACTOR_LOCK_ATTEMPTS; attempt += 1) {
-      if (attempt % 5 === 0) {
-        // eslint-disable-next-line no-await-in-loop -- Sign-ins and guesses must happen in order.
-        await signInWithPassword(browser, 'jane@adiutor.test');
-      }
-      // eslint-disable-next-line no-await-in-loop -- Same.
-      answers.push(await guess());
-    }
+    // Sign-ins and guesses must happen in order.
+    const answers = await inSequence(
+      Array.from({ length: TWO_FACTOR_LOCK_ATTEMPTS }, (_, attempt) => attempt),
+      async (attempt) => {
+        if (attempt % 5 === 0) {
+          await signInWithPassword(browser, 'jane@adiutor.test');
+        }
+        return guess();
+      },
+    );
     await backgroundWork();
 
     expect(answers).toEqual(

@@ -24,6 +24,7 @@ import {
   fillRateLimitBucket,
   memberActor,
   staffActor,
+  inSequence,
 } from '../../../tests/integration/helpers';
 import { removeMember } from '../people/members';
 import { changeStaffRole, removeFromStaff } from '../people/staff';
@@ -284,8 +285,7 @@ describe('changeSubscribers', () => {
     const finance = await staffActor(db, 'finance');
     const raised = await storeRequest(company.id);
 
-    for (const actor of [client, watcher, finance]) {
-      // eslint-disable-next-line no-await-in-loop -- One after another, on one connection.
+    await inSequence([client, watcher, finance], async (actor) => {
       await expect(
         changeSubscribers(ctx, actor, {
           request: raised.id,
@@ -293,7 +293,7 @@ describe('changeSubscribers', () => {
           remove: [],
         }),
       ).rejects.toMatchObject({ code: 'forbidden' });
-    }
+    });
     expect(await subscribersOf(raised.id)).toEqual([]);
   });
 
@@ -305,8 +305,7 @@ describe('changeSubscribers', () => {
     const stranger = await createUser(db, 'stranger@adiutor.test');
     const raised = await storeRequest(company.id);
 
-    for (const id of [left.id, stranger, '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b']) {
-      // eslint-disable-next-line no-await-in-loop -- One after another, on one connection.
+    await inSequence([left.id, stranger, '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b'], async (id) => {
       await expect(
         changeSubscribers(ctx, support, {
           request: raised.id,
@@ -314,7 +313,7 @@ describe('changeSubscribers', () => {
           remove: [],
         }),
       ).rejects.toMatchObject({ code: 'invalid', key: 'errors.requests.notSubscribable' });
-    }
+    });
     expect(await subscribersOf(raised.id)).toEqual([]);
   });
 

@@ -17,6 +17,7 @@ import {
   memberActor,
   minutesAgo,
   staffActor,
+  inSequence,
 } from '../../../tests/integration/helpers';
 import { getRequest } from './detail';
 import { editReply, editRequestDescription } from './edits';
@@ -213,12 +214,12 @@ describe('editReply', () => {
       toValue: 'todo',
     });
 
-    for (const entry of [theirs.id, change.id, 'not-an-id']) {
-      // eslint-disable-next-line no-await-in-loop -- One refusal after another, on one request.
+    // One refusal after another, on one request.
+    await inSequence([theirs.id, change.id, 'not-an-id'], async (entry) => {
       await expect(
         editReply(ctx, support, { request: raised.id, entry, text: 'Mine now.', edits: 0 }),
       ).rejects.toMatchObject({ code: 'not_found' });
-    }
+    });
   });
 });
 

@@ -23,6 +23,7 @@ import {
   createUser,
   memberActor,
   staffActor,
+  inSequence,
 } from '../../../tests/integration/helpers';
 import { getRequest } from './detail';
 import mentionKey from './mention-key';
@@ -309,12 +310,12 @@ describe('a reply that mentions people', () => {
     const company = await createCompany(db);
     const support = await staffActor(db, 'support');
     const raised = await storeRequest(company.id);
-    const members: string[] = [];
-    for (let index = 0; index <= MAX_MENTIONS_PER_TEXT; index += 1) {
-      // One after another: each needs its own row.
-      // eslint-disable-next-line no-await-in-loop -- The members are made in order, on one connection.
-      members.push((await memberActor(db, company.id, 'client')).id);
-    }
+    // One after another: each needs its own row.
+    const members = (
+      await inSequence(Array.from({ length: MAX_MENTIONS_PER_TEXT + 1 }), () =>
+        memberActor(db, company.id, 'client'),
+      )
+    ).map(({ id }) => id);
     const last = marker(company.id, members[MAX_MENTIONS_PER_TEXT] ?? '', 'last');
 
     await replyToRequest(ctx, support, {
