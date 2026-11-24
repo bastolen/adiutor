@@ -33,14 +33,23 @@ COPY . .
 RUN DATABASE_URL=postgresql://build:build@localhost:5432/build \
     BETTER_AUTH_SECRET=build-only-placeholder-not-a-secret-0123456789 \
     BETTER_AUTH_URL=http://localhost:3000 \
-    pnpm build
+    pnpm build \
+    # Turbopack's build cache is only read by a later build, which this image never does. The
+    # folders next to it (fetch and image caches) are what `next start` uses, so they stay.
+    && rm -rf .next/cache/turbopack \
+    # `.next` is the one folder the app writes to at run time, so it travels on its own below.
+    && mv .next /next
 
 # The image: the built app, its source, scripts and migrations, run as the unprivileged `node` user.
+# The files belong to root, so a flaw that lets the server write files can't change the
+# application's own code or dependencies; only `.next` (Next.js's image and data caches) belongs to
+# `node`. The scripts the image runs (migrations, jobs) write nothing under /app.
 FROM base AS app
 ENV NODE_ENV=production
 # npm only installed pnpm (which stays); without it, the image doesn't carry npm's own packages.
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
-COPY --from=build --chown=node:node /app /app
+COPY --from=build /app /app
+COPY --from=build --chown=node:node /next /app/.next
 USER node
 EXPOSE 3000
 # Healthy when the database answers and every migration is applied (src/app/api/health/route.ts).

@@ -125,8 +125,9 @@ image is in [decision 0013](decisions/0013-one-docker-image-with-the-whole-appli
 docker build -t adiutor .
 ```
 
-`.dockerignore` keeps your `node_modules`, builds, test output, database files and `.env` out of
-the image; the build uses placeholder settings and connects to nothing. Give the real settings when
+`.dockerignore` keeps your `node_modules`, builds, test output, database files, `.env` files and
+other checkouts of the repository (`.claude/`, which have their own `.env` files) out of the
+image, wherever they are in the folder; the build uses placeholder settings and connects to nothing. Give the real settings when
 you run it, never at build time, so they don't end up in the image:
 
 ```bash
@@ -134,9 +135,21 @@ docker run -d --name adiutor --env-file .env -p 127.0.0.1:3000:3000 adiutor
 ```
 
 The image sets `NODE_ENV=production` and runs as the unprivileged `node` user on port 3000 (`PORT`
-changes it). The settings are the same as without Docker (see the checklist below); when the
+changes it). The application's files belong to root and only `.next`, where Next.js keeps its
+caches, is writable by that user, so a flaw that lets the server write files can't change the
+application's own code. The settings are the same as without Docker (see the checklist below); when the
 database runs on the host, `DATABASE_URL` points at the host's address (such as
 `host.docker.internal` on Docker Desktop), not `localhost`.
+
+**Give your own Server Functions key.** Next.js encrypts what Server Functions carry between the
+browser and the server with a key that `pnpm build` generates and embeds in the build, so every
+copy of a published image has the same one, readable by anyone who pulls it. Adiutor's actions don't
+rely on that key (they never close over secrets, and each checks permissions itself), but pass your
+own so that a future change can't depend on a key everyone knows: generate it once with
+`openssl rand -base64 32`, set it as `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` in the `.env` file you
+give `docker run`, and keep the same value on every instance and every release, or a page left open
+across a deploy or served by another instance can't use its actions. Next.js reads it at run time
+ahead of the built-in one, so the image needs no rebuild.
 
 **The database is yours to provide and look after**: the image contains no database, and it never
 migrates on its own. Migrate as part of each release, before the new image serves traffic, with

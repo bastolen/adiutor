@@ -28,7 +28,7 @@ GitHub. When a job in `ci.yml` changes, change the script in `package.json` too.
 
 **CI passed** is the one check protecting `main` requires (see [Protecting main](#protecting-main)),
 so jobs and shards can change without touching the rules. Each job has its own time limit (15 to 30
-minutes), so a hung step can't hold a runner for GitHub's default of 6 hours.
+minutes; Release Please's is 5), so a hung step can't hold a runner for GitHub's default of 6 hours.
 
 The end-to-end specs run in two shards, split by spec file, so a file whose tests build on each other
 (like `e2e/security.spec.ts`) stays together. Each shard has its own PostgreSQL service, which the
@@ -244,6 +244,10 @@ token, so they start this workflow (events made with the built-in token don't st
   GitHub also has arm64 runners for private repositories, should that ever need to be faster.
 - **Tags:** the version (`0.1.0`), its minor line (`0.1`, which moves to `0.1.1` when that's out)
   and `latest`. There's no `0` tag while Adiutor is below 1.0.0, since a new minor can break things.
+- **Build cache:** kept in GitHub's registry, as the `buildcache` tag of `ghcr.io/bastolen/adiutor`
+  (not in GitHub Actions' cache, which a release run on a tag can only read from its own tag), so
+  each release starts from the layers the last one built. It's a cache, not a release: nothing
+  pulls it.
 - **What's attached:** build provenance and an SBOM (the list of what's in the image), and the
   standard labels (source, version, commit).
 - **Pull requests** don't build the image; build it locally after changing the `Dockerfile`, the
