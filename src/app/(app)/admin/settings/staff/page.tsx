@@ -14,7 +14,6 @@ import { paginationFooter } from '@/components/ui/pagination';
 import RowAction from '@/components/ui/row-action';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import SortMenu from '@/components/ui/sort-menu';
-import { Table, Td, Th, Tr } from '@/components/ui/table';
 import { PLATFORM_ROLES, roleOptions } from '@/lib/authz/roles';
 import displayName from '@/lib/display-name';
 import ClientMessages from '@/lib/i18n/client-messages';
@@ -31,11 +30,10 @@ import { listPendingInvitations } from '@/server/people/invitations';
 import { listInviteLinks } from '@/server/people/invite-links';
 import { listStaff } from '@/server/people/staff';
 
-import { ActivityColumn } from '../../../_people/activity';
 import InvitationsCard from '../../../_people/invitations-card';
 import InviteForm from '../../../_people/invite-form';
 import InviteLinksCard from '../../../_people/invite-links-card';
-import PersonCell from '../../../_people/person-cell';
+import PeopleTable from '../../../_people/people-table';
 import RoleSelect from '../../../_people/role-select';
 import { changeStaffRoleAction, removeFromStaffAction } from '../../../_people/staff-actions';
 
@@ -97,28 +95,32 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
           flush
           footer={paginationFooter(table, members, t('people.rows'))}
         >
-          <Table caption={table.caption(t('people.caption'), members)}>
-            <thead>
-              <tr>
-                <Th aria-sort={table.ariaSort('name', 'email')}>{t('people.name')}</Th>
-                <Th className="hidden md:table-cell">{t('people.role')}</Th>
-                <Th
-                  aria-sort={table.ariaSort('last-active', 'joined')}
-                  className="hidden xl:table-cell"
-                >
-                  {t('people.activity')}
-                </Th>
-                <Th className="text-right">
-                  <span className="sr-only">{t('people.actions')}</span>
-                </Th>
-              </tr>
-            </thead>
-            <tbody>
-              {members.items.map((member) => {
-                const shownName = displayName(member);
-                const isSelf = member.userId === actor.id;
-                // Shown in its own column from tablet width, and below the name before that.
-                const role = (
+          <PeopleTable
+            caption={table.caption(t('people.caption'), members)}
+            table={table}
+            headings={{
+              name: t('people.name'),
+              role: t('people.role'),
+              activity: t('people.activity'),
+              actions: t('people.actions'),
+            }}
+            rows={members.items.map((member) => {
+              const shownName = displayName(member);
+              const isSelf = member.userId === actor.id;
+              return {
+                key: member.userId,
+                name: shownName,
+                email: member.email,
+                isSelf,
+                brand: true,
+                picture: member.picture,
+                href: `/admin/users/${member.userId}`,
+                badges: member.deactivatedAt && (
+                  <Badge tone="danger">{t('people.deactivated')}</Badge>
+                ),
+                lastActiveAt: member.lastActiveAt,
+                joinedAt: member.createdAt,
+                role: (
                   <RoleSelect
                     action={changeStaffRoleAction}
                     fields={{ userId: member.userId }}
@@ -143,68 +145,39 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
                         : undefined
                     }
                   />
-                );
-                return (
-                  <Tr key={member.userId}>
-                    <PersonCell
-                      name={shownName}
-                      email={member.email}
-                      isSelf={isSelf}
-                      brand
-                      picture={member.picture}
-                      href={`/admin/users/${member.userId}`}
-                      badges={
-                        member.deactivatedAt && (
-                          <Badge tone="danger">{t('people.deactivated')}</Badge>
-                        )
-                      }
-                      role={role}
-                      lastActiveAt={member.lastActiveAt}
-                      joinedAt={member.createdAt}
-                    />
-                    <Td className="hidden md:table-cell">{role}</Td>
-                    <Td className="hidden whitespace-nowrap text-muted-foreground xl:table-cell">
-                      <ActivityColumn
-                        lastActiveAt={member.lastActiveAt}
-                        joinedAt={member.createdAt}
-                      />
-                    </Td>
-                    <Td className="text-right">
-                      {isSelf ? (
-                        <RowAction
-                          action={removeFromStaffAction}
-                          fields={{ userId: member.userId }}
-                          label={t('leave.label')}
-                          // Contains the visible text, as WCAG 2.5.3 asks.
-                          ariaLabel={t('leave.ariaLabel')}
-                          variant="danger-subtle"
-                          confirm={{
-                            title: t('leave.title'),
-                            confirmLabel: t('leave.confirmLabel'),
-                            description: t('leave.description'),
-                          }}
-                        />
-                      ) : (
-                        <RowAction
-                          action={removeFromStaffAction}
-                          fields={{ userId: member.userId }}
-                          label={t('remove.label')}
-                          ariaLabel={t('remove.ariaLabel', { name: shownName })}
-                          doneMessage={t('remove.done', { name: shownName })}
-                          variant="danger-subtle"
-                          confirm={{
-                            title: t('remove.title', { name: shownName }),
-                            confirmLabel: t('remove.confirmLabel'),
-                            description: t('remove.description'),
-                          }}
-                        />
-                      )}
-                    </Td>
-                  </Tr>
-                );
-              })}
-            </tbody>
-          </Table>
+                ),
+                action: isSelf ? (
+                  <RowAction
+                    action={removeFromStaffAction}
+                    fields={{ userId: member.userId }}
+                    label={t('leave.label')}
+                    // Contains the visible text, as WCAG 2.5.3 asks.
+                    ariaLabel={t('leave.ariaLabel')}
+                    variant="danger-subtle"
+                    confirm={{
+                      title: t('leave.title'),
+                      confirmLabel: t('leave.confirmLabel'),
+                      description: t('leave.description'),
+                    }}
+                  />
+                ) : (
+                  <RowAction
+                    action={removeFromStaffAction}
+                    fields={{ userId: member.userId }}
+                    label={t('remove.label')}
+                    ariaLabel={t('remove.ariaLabel', { name: shownName })}
+                    doneMessage={t('remove.done', { name: shownName })}
+                    variant="danger-subtle"
+                    confirm={{
+                      title: t('remove.title', { name: shownName }),
+                      confirmLabel: t('remove.confirmLabel'),
+                      description: t('remove.description'),
+                    }}
+                  />
+                ),
+              };
+            })}
+          />
         </Card>
 
         <Card

@@ -55,7 +55,9 @@ keyboard support.
     `src/app/(app)/_people/you-badge.tsx`, in the `accent` tone) and a bar in the accent colour
     on its left edge (`ownRowCell` in `src/components/ui/table.tsx`), so you can spot yourself
     while scrolling. The bar is decorative: the badge says it in words. The staff and members
-    tables build their first cell with `PersonCell` (`src/app/(app)/_people/person-cell.tsx`).
+    tables are one component, `PeopleTable` (`src/app/(app)/_people/people-table.tsx`), which
+    builds the first cell with `PersonCell` (`person-cell.tsx`); each page words its texts and
+    builds each row's role and action.
   - **Pages:** 25, 50 or 100 rows per page, chosen in the table's footer (`Pagination`: "Showing
     26–50 of 132", Previous, the page numbers and Next). The footer only shows with more than 10
     rows: a card gets it from `paginationFooter`, which gives nothing for a table that fits on
