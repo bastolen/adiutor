@@ -339,7 +339,9 @@ run tries again. `pnpm jobs:list` shows every job with its last and next run, an
 
 The server and the scripts in `scripts/` log to standard output and error. Before anything is
 written, database values are taken out (`src/lib/log-redaction.ts`, installed by
-`src/instrumentation.ts` and at the start of each script): a failed query is logged with its SQL,
+`src/instrumentation.ts`, and at the start of each script by `runScript` in
+`scripts/run-script.ts`, which every script that uses the database runs through): a failed query
+is logged with its SQL,
 its SQL state and constraint, and Next's `digest` of the error, but `params: [redacted]` instead
 of the values it was sent, and without
 Postgres's `detail` (e.g. `Key (email)=(…)`). What Postgres quotes in its own message is

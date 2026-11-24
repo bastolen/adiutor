@@ -21,7 +21,6 @@ import { z } from 'zod';
 import { db } from '../src/db';
 import { sendEmail } from '../src/lib/email';
 import { appUrl } from '../src/lib/env';
-import { installLogRedaction } from '../src/lib/log-redaction';
 import {
   discardFailedQueuedJobs,
   type FailedJobsSelection,
@@ -34,6 +33,7 @@ import {
   runJobNow,
   runTick,
 } from '../src/server/jobs';
+import runScript from './run-script';
 
 /** How long one tick from the command line may keep starting runs: less than cron's 5 minutes. */
 const TICK_MINUTES = 4;
@@ -234,15 +234,4 @@ async function main(): Promise<number> {
   return 2;
 }
 
-// Database errors are logged without the values they were sent.
-installLogRedaction();
-
-main()
-  .then(async (code) => {
-    await db.$client.end();
-    process.exit(code);
-  })
-  .catch((error: unknown) => {
-    console.error(error);
-    process.exit(1);
-  });
+runScript(main);
