@@ -17,7 +17,6 @@ import { TIME_ZONE_COOKIE } from '@/lib/i18n/time-zones';
 import { ACTING_AS_CHANGED_COOKIE } from '@/lib/sign-in/auth-cookies';
 
 import {
-  addPasskey as addStoredPasskey,
   connectProvider,
   sendQueuedEmails,
   setupTestContext,
@@ -436,16 +435,6 @@ export async function storedGitHubMfa(accountId: string): Promise<boolean | null
     'the account',
   );
   return found.mfaVerified;
-}
-
-/**
- * Adds a passkey to a user, as Better Auth stores it when registration is
- * verified (before the after hook runs).
- *
- * @param userId - The user.
- */
-export async function addPasskey(userId: string): Promise<void> {
-  await addStoredPasskey(db, userId);
 }
 
 /**

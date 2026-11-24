@@ -24,17 +24,10 @@ import {
   startAuthenticatorSetup,
   turnOffGitHubSignIn,
   minutesAgo,
+  rateLimitHits,
 } from '../../../../tests/integration/helpers';
 import { beforeAuthRequest } from './before-request';
-import {
-  outcomeOf,
-  db,
-  signedIn,
-  request,
-  refusedWith,
-  hits,
-  sendCodesOverTime,
-} from './test-helpers';
+import { outcomeOf, db, signedIn, request, refusedWith, sendCodesOverTime } from './test-helpers';
 
 vi.mock('better-auth/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('better-auth/api')>()),
@@ -89,7 +82,7 @@ describe('changing sign-in methods', () => {
       refusedWith('EMAIL_CODES_NOT_ALLOWED'),
     );
     // Setting up isn't counted towards the email code limit.
-    expect(await hits(`email-code:user:${manager.id}`)).toBeNull();
+    expect(await rateLimitHits(db, `email-code:user:${manager.id}`)).toBeNull();
   });
 
   it('lets a company user without MFA set up email codes without counting, once per wait', async () => {
@@ -102,7 +95,7 @@ describe('changing sign-in methods', () => {
       refusedWith('EMAIL_CODE_SENT_RECENTLY'),
     );
     await sendCodesOverTime(6, sendCode);
-    expect(await hits(`email-code:user:${newcomer}`)).toBeNull();
+    expect(await rateLimitHits(db, `email-code:user:${newcomer}`)).toBeNull();
   });
 });
 

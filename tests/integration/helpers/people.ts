@@ -213,3 +213,31 @@ export async function lastActiveAt(db: Database, userId: string): Promise<Date |
   );
   return found.lastActiveAt;
 }
+
+/**
+ * Reads a user's saved language.
+ *
+ * @param db - Test database.
+ * @param userId - The user.
+ * @returns Their `user.locale`.
+ */
+export async function savedLocale(db: Database, userId: string): Promise<Locale | null> {
+  return firstRow(
+    await db.select({ locale: user.locale }).from(user).where(eq(user.id, userId)),
+    'the user',
+  ).locale;
+}
+
+/**
+ * Reads a user's saved time zone.
+ *
+ * @param db - Test database.
+ * @param userId - The user.
+ * @returns Their `user.time_zone`.
+ */
+export async function savedTimeZone(db: Database, userId: string): Promise<string | null> {
+  return firstRow(
+    await db.select({ timeZone: user.timeZone }).from(user).where(eq(user.id, userId)),
+    'the user',
+  ).timeZone;
+}

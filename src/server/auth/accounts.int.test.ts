@@ -56,25 +56,6 @@ const { loadMfaContext: realLoadMfaContext } =
 const { ctx, db } = setupTestContext();
 
 /**
- * Connects a provider account to a user, as Better Auth stores it.
- *
- * @param userId - The user.
- * @param providerId - `github`, `google` or `credential`.
- * @param confirmed - Whether it counts yet (see `beforeAccountCreate`).
- * @returns The account row's ID.
- */
-async function connect(userId: string, providerId: string, confirmed = true): Promise<string> {
-  const created = firstRow(
-    await db
-      .insert(account)
-      .values({ userId, accountId: `${providerId}-${userId}`, providerId, confirmed })
-      .returning({ id: account.id }),
-    'the new account',
-  );
-  return created.id;
-}
-
-/**
  * Reads whether an account counts yet.
  *
  * @param accountId - The account row.
@@ -118,8 +99,8 @@ describe('sign-in methods', () => {
 
   it('tells which connected accounts wait for confirmation', async () => {
     const userId = await createUser(db, 'user@adiutor.test');
-    const github = await connect(userId, 'github', false);
-    const google = await connect(userId, 'google');
+    const github = await connectProvider(db, userId, { confirmed: false, mfaVerified: false });
+    const google = await connectProvider(db, userId, { providerId: 'google', mfaVerified: false });
 
     const connected = await listConnectedProviders({ db }, userId);
 
@@ -187,7 +168,7 @@ describe('confirmConnectedProvider', () => {
   it('confirms the user’s own account connected at sign-in, and records it', async () => {
     const userId = await createUser(db, 'user@adiutor.test');
     await enableTwoFactor(db, userId);
-    const github = await connect(userId, 'github', false);
+    const github = await connectProvider(db, userId, { confirmed: false, mfaVerified: false });
 
     await confirmConnectedProvider(
       ctx,
@@ -228,7 +209,7 @@ describe('confirmConnectedProvider', () => {
   it('is refused while another change to how the user signs in is made, and reads under the lock', async () => {
     const userId = await createUser(db, 'user@adiutor.test');
     await enableTwoFactor(db, userId);
-    const github = await connect(userId, 'github', false);
+    const github = await connectProvider(db, userId, { confirmed: false, mfaVerified: false });
     const held = await takeSignInChangeLock({ db }, userId);
     vi.mocked(loadMfaContext).mockClear();
 
@@ -262,7 +243,7 @@ describe('confirmConnectedProvider', () => {
   it('needs a session confirmed with the account’s second step', async () => {
     const userId = await createUser(db, 'user@adiutor.test');
     await enableTwoFactor(db, userId);
-    const github = await connect(userId, 'github', false);
+    const github = await connectProvider(db, userId, { confirmed: false, mfaVerified: false });
 
     await expect(
       confirmConnectedProvider(ctx, await actorFor(db, userId, {}), github),
@@ -275,7 +256,7 @@ describe('confirmConnectedProvider', () => {
   it('goes ahead without a second step left to confirm with, as for adding a first one', async () => {
     // E.g. two-step verification was turned off after GitHub was connected at sign-in.
     const userId = await createUser(db, 'user@adiutor.test');
-    const github = await connect(userId, 'github', false);
+    const github = await connectProvider(db, userId, { confirmed: false, mfaVerified: false });
 
     await confirmConnectedProvider(ctx, await actorFor(db, userId, {}), github);
 
@@ -291,7 +272,7 @@ describe('confirmConnectedProvider', () => {
 
   it('needs a sign-in from the last hour without a second step', async () => {
     const userId = await createUser(db, 'user@adiutor.test');
-    const github = await connect(userId, 'github', false);
+    const github = await connectProvider(db, userId, { confirmed: false, mfaVerified: false });
 
     await expect(
       confirmConnectedProvider(
@@ -314,7 +295,7 @@ describe('confirmConnectedProvider', () => {
   it('needs that confirmation to be from the last 15 minutes', async () => {
     const userId = await createUser(db, 'user@adiutor.test');
     await enableTwoFactor(db, userId);
-    const github = await connect(userId, 'github', false);
+    const github = await connectProvider(db, userId, { confirmed: false, mfaVerified: false });
     const sixteenMinutesAgo = new Date(Date.now() - 16 * 60_000);
 
     await expect(
@@ -332,9 +313,21 @@ describe('confirmConnectedProvider', () => {
   it('only confirms the user’s own unconfirmed provider accounts', async () => {
     const userId = await createUser(db, 'user@adiutor.test');
     const otherId = await createUser(db, 'other@adiutor.test');
-    const othersGitHub = await connect(otherId, 'github', false);
-    const ownPassword = await connect(userId, 'credential', false);
-    const ownGoogle = await connect(userId, 'google');
+    const othersGitHub = await connectProvider(db, otherId, {
+      confirmed: false,
+      mfaVerified: false,
+    });
+    const ownPassword = firstRow(
+      await db
+        .insert(account)
+        .values({ userId, accountId: userId, providerId: 'credential', confirmed: false })
+        .returning({ id: account.id }),
+      'the new account',
+    ).id;
+    const ownGoogle = await connectProvider(db, userId, {
+      providerId: 'google',
+      mfaVerified: false,
+    });
     const actor = await actorFor(db, userId, { confirmedAt: new Date() });
 
     await expect(confirmConnectedProvider(ctx, actor, othersGitHub)).rejects.toMatchObject({

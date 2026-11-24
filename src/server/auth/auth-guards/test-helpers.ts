@@ -10,7 +10,7 @@ import { rateLimitBucket, user } from '@/db/schema';
 import type { MfaMethod } from '@/lib/authz/mfa';
 import { firstRow } from '@/lib/defined';
 
-import { inSequence, rateLimitHits, setupTestContext } from '../../../../tests/integration/helpers';
+import { inSequence, setupTestContext } from '../../../../tests/integration/helpers';
 import { beforeAuthRequest } from './before-request';
 import { releaseSignInChangeLockOf } from './change-lock';
 import type { AuthGuardContext } from './paths';
@@ -148,16 +148,6 @@ export async function outcomeOf(path: string, body: Record<string, unknown> = {}
   // The reactions after a request get their own context object; only `context` is shared.
   await releaseSignInChangeLockOf({ context: ctx.context });
   return 'allowed';
-}
-
-/**
- * Reads how often a limit was hit.
- *
- * @param key - The limit's key.
- * @returns The count, or `null` when it was never hit.
- */
-export async function hits(key: string): Promise<number | null> {
-  return rateLimitHits(db, key);
 }
 
 /**

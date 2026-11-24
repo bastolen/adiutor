@@ -1,12 +1,8 @@
 /**
  * @file Integration tests for saving the signed-in user's own language.
  */
-import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
-
-import { user } from '@/db/schema';
-import { firstRow } from '@/lib/defined';
 
 import {
   actorFor,
@@ -15,23 +11,11 @@ import {
   setupTestContext,
   setUserLocale,
   staffActor,
+  savedLocale,
 } from '../../../tests/integration/helpers';
 import setOwnLocale, { ownLanguage } from './own-locale';
 
 const { ctx, db } = setupTestContext();
-
-/**
- * Reads a user's saved language.
- *
- * @param userId - The user.
- * @returns Their `user.locale`.
- */
-async function savedLocale(userId: string) {
-  return firstRow(
-    await db.select({ locale: user.locale }).from(user).where(eq(user.id, userId)),
-    'the user',
-  ).locale;
-}
 
 describe('setOwnLocale', () => {
   it("saves the user's own language, and only theirs", async () => {
@@ -41,8 +25,8 @@ describe('setOwnLocale', () => {
 
     await expect(setOwnLocale(ctx, actor, 'es-ES')).resolves.toBe('es-ES');
 
-    expect(await savedLocale(jane)).toBe('es-ES');
-    expect(await savedLocale(sam)).toBeNull();
+    expect(await savedLocale(db, jane)).toBe('es-ES');
+    expect(await savedLocale(db, sam)).toBeNull();
   });
 
   it('saves Default as no language, so the account follows Adiutor’s default', async () => {
@@ -52,7 +36,7 @@ describe('setOwnLocale', () => {
 
     await expect(setOwnLocale(ctx, actor, 'default')).resolves.toBeNull();
 
-    expect(await savedLocale(jane)).toBeNull();
+    expect(await savedLocale(db, jane)).toBeNull();
   });
 
   it('refuses anything but one of the languages or Default', async () => {
@@ -60,7 +44,7 @@ describe('setOwnLocale', () => {
 
     await expect(setOwnLocale(ctx, admin, 'fr-FR')).rejects.toThrow(ZodError);
     await expect(setOwnLocale(ctx, admin, 'fr-FR')).rejects.toThrow('validation.locale');
-    expect(await savedLocale(admin.id)).toBeNull();
+    expect(await savedLocale(db, admin.id)).toBeNull();
   });
 
   it('refuses a language that’s turned off, but not Default', async () => {
@@ -73,7 +57,7 @@ describe('setOwnLocale', () => {
       key: 'errors.language.notOffered',
     });
     await expect(setOwnLocale(ctx, actor, 'default')).resolves.toBeNull();
-    expect(await savedLocale(jane)).toBeNull();
+    expect(await savedLocale(db, jane)).toBeNull();
   });
 });
 

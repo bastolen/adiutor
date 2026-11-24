@@ -45,6 +45,7 @@ import {
   tokenFrom,
   minutesAgo,
   auditEvents,
+  addPasskey,
 } from '../../../../tests/integration/helpers';
 import { listOwnActivity, recordEvent } from '../../audit';
 import { releaseSignInChangeLock, takeSignInChangeLock } from '../../auth/sign-in-change-lock';
@@ -73,16 +74,8 @@ describe('admin actions', () => {
         expiresAt: new Date(Date.now() + 1e6),
       },
     ]);
-    await db.update(user).set({ twoFactorEnabled: true }).where(eq(user.id, jane));
-    await db.insert(twoFactor).values({ userId: jane, secret: 'x', backupCodes: 'y' });
-    await db.insert(passkey).values({
-      userId: jane,
-      publicKey: 'key',
-      credentialID: 'credential',
-      counter: 0,
-      deviceType: 'multiDevice',
-      backedUp: true,
-    });
+    await enableTwoFactor(db, jane);
+    await addPasskey(db, jane);
 
     await resetUserMfa(ctx, await adminConfirmedAt(), jane, { removePasskeys: true });
 

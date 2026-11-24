@@ -6,14 +6,18 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { rateLimitBucket } from '@/db/schema';
 
-import { enableTwoFactor, inSequence, staffActor } from '../../../../tests/integration/helpers';
+import {
+  enableTwoFactor,
+  inSequence,
+  staffActor,
+  rateLimitHits,
+} from '../../../../tests/integration/helpers';
 import { requestState } from '../request-state';
 import { beforeAuthRequest } from './before-request';
 import {
   db,
   request,
   refusedWith,
-  hits,
   sendCodesOverTime,
   waitForNextCode,
   signedIn,
@@ -53,7 +57,7 @@ describe('a password sign-in waiting for its code step', () => {
     await expect(
       beforeAuthRequest(request('/two-factor/verify-totp', pending)),
     ).resolves.toBeUndefined();
-    expect(await hits(`email-code:user:${support.id}`)).toBeNull();
+    expect(await rateLimitHits(db, `email-code:user:${support.id}`)).toBeNull();
   });
 
   it('lets Managers finish signing in with email codes, within the limit', async () => {
@@ -64,7 +68,7 @@ describe('a password sign-in waiting for its code step', () => {
     await sendCodesOverTime(5, sendCode);
     await waitForNextCode();
     await expect(beforeAuthRequest(sendCode)).rejects.toEqual(refusedWith('TOO_MANY_ATTEMPTS'));
-    expect(await hits(`email-code:user:${manager.id}`)).toBe(6);
+    expect(await rateLimitHits(db, `email-code:user:${manager.id}`)).toBe(6);
   });
 
   it('hands the user of each code it lets through to the reactions after the request', async () => {
@@ -112,7 +116,7 @@ describe('a password sign-in waiting for its code step', () => {
     await beforeAuthRequest(ctx);
 
     expect(pendingCodeSignIn(ctx)).toBeUndefined();
-    expect(await hits(`step-up-failed:user:${support.id}`)).toBe(1);
+    expect(await rateLimitHits(db, `step-up-failed:user:${support.id}`)).toBe(1);
   });
 
   it('leaves requests without a session or pending sign-in to Better Auth', async () => {

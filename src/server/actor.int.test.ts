@@ -4,7 +4,7 @@
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { company, membership, passkey, user } from '@/db/schema';
+import { company, membership, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
 import {
@@ -72,15 +72,7 @@ describe('loadActor MFA state', () => {
     await enableTwoFactor(db, withAuthenticator.id);
 
     const withPasskey = await staffActor(db, 'manager');
-    await db.insert(passkey).values({
-      userId: withPasskey.id,
-      name: 'Work laptop',
-      publicKey: 'test-public-key',
-      credentialID: 'test-credential',
-      counter: 0,
-      deviceType: 'multiDevice',
-      backedUp: true,
-    });
+    await addPasskey(db, withPasskey.id);
 
     const managerWithEmailCodes = await staffActor(db, 'manager');
     await enableTwoFactor(db, managerWithEmailCodes.id, 'email');

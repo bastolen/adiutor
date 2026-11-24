@@ -14,6 +14,7 @@ import {
   inSequence,
   memberActor,
   staffActor,
+  rateLimitHits,
 } from '../../../../tests/integration/helpers';
 import { wrongCurrentPasswordsKey } from '../current-password';
 import { clearFailedSignIns } from '../failed-sign-ins';
@@ -31,7 +32,6 @@ import { releaseSignInChangeLockOf } from './change-lock';
 import {
   request,
   refusedWith,
-  hits,
   db,
   repeat,
   signedIn,
@@ -85,7 +85,7 @@ describe('sign-in limits', () => {
       signInWithPassword('jane@adiutor.test', false),
     );
 
-    expect(await hits('sign-in-failed:email:jane@adiutor.test')).toBe(9);
+    expect(await rateLimitHits(db, 'sign-in-failed:email:jane@adiutor.test')).toBe(9);
     expect(await signInWithPassword('jane@adiutor.test', true)).toBe(true);
   });
 
@@ -105,7 +105,7 @@ describe('sign-in limits', () => {
     await settlePasswordAttempt(ctx, 'jane@adiutor.test', true);
     await settlePasswordAttempt(ctx, 'jane@adiutor.test', false);
 
-    expect(await hits('sign-in-failed:email:jane@adiutor.test')).toBe(1);
+    expect(await rateLimitHits(db, 'sign-in-failed:email:jane@adiutor.test')).toBe(1);
   });
 
   it('says the same for every address, pointing to the other ways in', async () => {
@@ -165,8 +165,8 @@ describe('sign-in limits', () => {
     await expect(
       beforeAuthRequest(request('/request-password-reset', { email: 'jane@adiutor.test' })),
     ).resolves.toBeUndefined();
-    expect(await hits('/sign-in/magic-link:email:jane@adiutor.test')).toBe(6);
-    expect(await hits('/request-password-reset:email:jane@adiutor.test')).toBe(1);
+    expect(await rateLimitHits(db, '/sign-in/magic-link:email:jane@adiutor.test')).toBe(6);
+    expect(await rateLimitHits(db, '/request-password-reset:email:jane@adiutor.test')).toBe(1);
   });
 });
 
@@ -182,7 +182,7 @@ describe('confirming a session (step-up)', () => {
     await expect(beforeAuthRequest(request('/two-factor/verify-otp'))).rejects.toEqual(
       refusedWith('EMAIL_CODES_NOT_ALLOWED'),
     );
-    expect(await hits(`email-code:user:${support.id}`)).toBeNull();
+    expect(await rateLimitHits(db, `email-code:user:${support.id}`)).toBeNull();
   });
 
   it('refuses email codes for Managers with only email codes', async () => {
@@ -218,7 +218,7 @@ describe('confirming a session (step-up)', () => {
     );
     // Checking a code doesn't count as sending one.
     await expect(beforeAuthRequest(request('/two-factor/verify-otp'))).resolves.toBeUndefined();
-    expect(await hits(`email-code:user:${support.id}`)).toBe(6);
+    expect(await rateLimitHits(db, `email-code:user:${support.id}`)).toBe(6);
   });
 
   /**
@@ -259,7 +259,7 @@ describe('confirming a session (step-up)', () => {
     await inSequence(Array.from({ length: 4 }), () => checkCode(support.id, true));
     await inSequence(Array.from({ length: 6 }), () => checkCode(support.id, false));
 
-    expect(await hits(`step-up-failed:user:${support.id}`)).toBe(4);
+    expect(await rateLimitHits(db, `step-up-failed:user:${support.id}`)).toBe(4);
     await expect(checkCode(support.id, true)).resolves.toBeUndefined();
   });
 
@@ -282,7 +282,7 @@ describe('confirming a session (step-up)', () => {
     await settleStepUpAttempt(ctx, support.id, true);
     await settleStepUpAttempt(ctx, support.id, false);
 
-    expect(await hits(`step-up-failed:user:${support.id}`)).toBe(1);
+    expect(await rateLimitHits(db, `step-up-failed:user:${support.id}`)).toBe(1);
   });
 });
 
@@ -342,7 +342,7 @@ describe('current passwords Better Auth checks', () => {
 
       await inSequence(Array.from({ length: 5 }), () => checkPassword(path, body, jane, true));
 
-      expect(await hits(wrongCurrentPasswordsKey(jane))).toBe(5);
+      expect(await rateLimitHits(db, wrongCurrentPasswordsKey(jane))).toBe(5);
       await expect(beforeAuthRequest(request(path, { body }))).rejects.toEqual(
         refusedWith('TOO_MANY_ATTEMPTS'),
       );
@@ -355,7 +355,7 @@ describe('current passwords Better Auth checks', () => {
     await inSequence(Array.from({ length: 2 }), () => checkPassword(path, body, jane, true));
     await inSequence(Array.from({ length: 6 }), () => checkPassword(path, body, jane, false));
 
-    expect(await hits(wrongCurrentPasswordsKey(jane))).toBe(2);
+    expect(await rateLimitHits(db, wrongCurrentPasswordsKey(jane))).toBe(2);
   });
 
   it('lets at most five checks sent at the same moment through', async () => {
@@ -375,7 +375,7 @@ describe('current passwords Better Auth checks', () => {
 
     await repeat(8, request('/two-factor/enable', { body: { method: 'totp' } }));
 
-    expect(await hits(wrongCurrentPasswordsKey(newcomer))).toBeNull();
+    expect(await rateLimitHits(db, wrongCurrentPasswordsKey(newcomer))).toBeNull();
   });
 
   it('takes no attempt when an earlier check refuses the request', async () => {
@@ -389,7 +389,7 @@ describe('current passwords Better Auth checks', () => {
       beforeAuthRequest(request('/two-factor/disable', { body: { password: 'guess' } })),
     ).rejects.toEqual(refusedWith('MFA_VERIFICATION_REQUIRED'));
 
-    expect(await hits(wrongCurrentPasswordsKey(jane))).toBeNull();
+    expect(await rateLimitHits(db, wrongCurrentPasswordsKey(jane))).toBeNull();
   });
 });
 
@@ -402,7 +402,7 @@ describe('the wait for a new emailed code', () => {
     await expect(beforeAuthRequest(codeStep)).rejects.toEqual(
       refusedWith('EMAIL_CODE_SENT_RECENTLY'),
     );
-    expect(await hits(`email-code:user:${atSignIn.id}`)).toBe(1);
+    expect(await rateLimitHits(db, `email-code:user:${atSignIn.id}`)).toBe(1);
 
     const stepUp = await staffActor(db, 'support');
     await enableTwoFactor(db, stepUp.id, 'email');
@@ -411,7 +411,7 @@ describe('the wait for a new emailed code', () => {
     await expect(beforeAuthRequest(request('/two-factor/send-otp'))).rejects.toEqual(
       refusedWith('EMAIL_CODE_SENT_RECENTLY'),
     );
-    expect(await hits(`email-code:user:${stepUp.id}`)).toBe(1);
+    expect(await rateLimitHits(db, `email-code:user:${stepUp.id}`)).toBe(1);
   });
 
   it('lets a new code through once the wait is over, or, signed in, once a code was used', async () => {
@@ -450,9 +450,9 @@ describe('the wait for a new emailed code', () => {
       refusedWith('EMAIL_CODE_SENT_RECENTLY'),
     );
     // The wait's key doesn't hold the sign-in's identifier, which lets the sign-in finish.
-    expect(await hits('email-code-cooldown:sign-in:first-sign-in')).toBeNull();
+    expect(await rateLimitHits(db, 'email-code-cooldown:sign-in:first-sign-in')).toBeNull();
     expect(
-      await hits(`email-code-cooldown:${signInCodeChallenge('first-sign-in')}`),
+      await rateLimitHits(db, `email-code-cooldown:${signInCodeChallenge('first-sign-in')}`),
     ).not.toBeNull();
   });
 
@@ -486,6 +486,6 @@ describe('the wait for a new emailed code', () => {
 
     await inSequence(['a', 'b', 'c', 'd', 'e'], sendCodeIn);
     await expect(sendCodeIn('f')).rejects.toEqual(refusedWith('TOO_MANY_ATTEMPTS'));
-    expect(await hits(`email-code:user:${support.id}`)).toBe(6);
+    expect(await rateLimitHits(db, `email-code:user:${support.id}`)).toBe(6);
   });
 });

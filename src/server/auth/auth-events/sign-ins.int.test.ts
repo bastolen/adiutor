@@ -19,6 +19,7 @@ import {
   memberActor,
   staffActor,
   auditEvents,
+  addPasskey,
 } from '../../../../tests/integration/helpers';
 import { loadActor } from '../../actor';
 import { listOwnActivity } from '../../audit';
@@ -37,7 +38,6 @@ import {
   githubCallback,
   gitHubAccountIdOf,
   storedGitHubMfa,
-  addPasskey,
   signedInHeaders,
   trustDevice,
   withTrustedDevice,
@@ -247,7 +247,7 @@ describe('signing in with GitHub', () => {
     mockGitHubApi({ 'john-token': true });
     const john = await createUser(db, 'john@adiutor.test');
     await connectGitHubWithToken(john, 'john-token');
-    await addPasskey(john);
+    await addPasskey(db, john);
     const johnSession = await createSession(db, john);
     const start = new Date();
 

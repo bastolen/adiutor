@@ -23,12 +23,13 @@ import {
   staffActor,
   storeSignInLink,
   auditEvents,
+  rateLimitHits,
 } from '../../../../tests/integration/helpers';
 import { loadMfaContext } from '../mfa-state';
 import { beforeAuthRequest } from './before-request';
 import { releaseSignInChangeLockOf } from './change-lock';
 import type { AuthGuardContext } from './paths';
-import { request, refusedWith, hits, db, signedIn, outcomeOf } from './test-helpers';
+import { request, refusedWith, db, signedIn, outcomeOf } from './test-helpers';
 
 vi.mock('better-auth/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('better-auth/api')>()),
@@ -437,8 +438,8 @@ describe('return addresses', () => {
       ),
     ).rejects.toEqual(refusedWith('UNSAFE_RETURN_ADDRESS'));
 
-    expect(await hits('/sign-in/magic-link:email:jane@adiutor.test')).toBeNull();
-    expect(await hits('/request-password-reset:email:jane@adiutor.test')).toBeNull();
+    expect(await rateLimitHits(db, '/sign-in/magic-link:email:jane@adiutor.test')).toBeNull();
+    expect(await rateLimitHits(db, '/request-password-reset:email:jane@adiutor.test')).toBeNull();
   });
 
   it("refuses connecting a provider before taking the user's lock", async () => {

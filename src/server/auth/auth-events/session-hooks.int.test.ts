@@ -21,6 +21,7 @@ import {
   memberActor,
   turnOffGitHubSignIn,
   minutesAgo,
+  addPasskey,
 } from '../../../../tests/integration/helpers';
 import type { AuthHookContext } from './hook-context';
 import { afterSessionCreate, beforeSessionCreate } from './session-hooks';
@@ -32,7 +33,6 @@ import {
   SESSION_COOKIE,
   COOKIE_SECRET,
   signedInHeaders,
-  addPasskey,
 } from './test-helpers';
 
 vi.mock('@/lib/email', () => ({ sendEmail: vi.fn() }));
@@ -240,7 +240,7 @@ describe('creating a session', () => {
 
   it('records no time when a code step replaces an unconfirmed session of an account with MFA', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
-    await addPasskey(jane);
+    await addPasskey(db, jane);
     const unconfirmed = await createSession(db, jane);
 
     // Turning on email codes from a session that didn't confirm with the passkey.

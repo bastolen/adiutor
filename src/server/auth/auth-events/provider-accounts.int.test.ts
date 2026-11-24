@@ -21,6 +21,7 @@ import {
   staffActor,
   turnOffGitHubSignIn,
   minutesAgo,
+  addPasskey,
 } from '../../../../tests/integration/helpers';
 import { holdSignInChangeLock, releaseSignInChangeLockOf } from '../auth-guards';
 import { releaseSignInChangeLock, takeSignInChangeLock } from '../sign-in-change-lock';
@@ -34,7 +35,6 @@ import {
   githubCallback,
   storeSessionMfa,
   signedInHeaders,
-  addPasskey,
   mockGitHubApi,
   connectGitHubWithToken,
 } from './test-helpers';
@@ -273,7 +273,7 @@ describe('connecting a provider account', () => {
     await storeSessionMfa(clientSession, 'email_code');
     const admin = await memberActor(db, testCompany.id, 'admin');
     await enableTwoFactor(db, admin.id, 'email');
-    await addPasskey(admin.id);
+    await addPasskey(db, admin.id);
     const adminSession = await createSession(db, admin.id);
     await storeSessionMfa(adminSession, 'email_code');
 
@@ -323,7 +323,7 @@ describe('connecting a provider account', () => {
       staffActor(db, 'support'),
       staffActor(db, 'support'),
     ]);
-    await addPasskey(withPasskey.id);
+    await addPasskey(db, withPasskey.id);
     const results = await inSequence([withPasskey.id, githubOnly.id], async (userId) => {
       await connectGitHub(db, userId);
       const viaGitHub = await createSession(db, userId, {
