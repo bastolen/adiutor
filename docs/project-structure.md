@@ -25,7 +25,9 @@ The folders of the repository and what belongs in each. Back to the [documentati
   auto-increment), and every foreign key has an index. A text column that only allows certain values
   has a CHECK constraint built from the same list as its type (`oneOf` in
   `src/db/schema/columns.ts`), except audit actions, which grow with almost every feature, and
-  Better Auth's generated user table. Migrations are in `drizzle/`.
+  Better Auth's generated user table. A yes-or-no column is NOT NULL with a default (in Better
+  Auth's tables, `required: true` with a `defaultValue` in `src/lib/auth.ts`), except the two that
+  Better Auth's two-step plugin declares. Migrations are in `drizzle/`.
 - `src/server/`: services. Each takes an explicit context and checks permissions itself, so it can
   be tested against a real database. The services every topic shares (access and permission checks,
   actor and context, the metadata of pages someone may not see, audit log, recorded errors, rate

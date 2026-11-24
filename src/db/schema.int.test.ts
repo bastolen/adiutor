@@ -1,7 +1,8 @@
 /**
  * @file Tests that the database follows the project's rules: UUIDv7 IDs, no
- * auto-increment columns, an index for every foreign key, and a CHECK
- * constraint on every text column that only allows certain values.
+ * auto-increment columns, an index for every foreign key, a CHECK
+ * constraint on every text column that only allows certain values, and no
+ * empty yes-or-no columns.
  */
 import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
@@ -114,5 +115,45 @@ describe('database rules', () => {
     expect(await store('nowhere', null)).toBe('23514');
     expect(await store('server', 'somewhere')).toBe('23514');
     expect(await store('job', null)).toBe('stored');
+  });
+
+  it("keeps every yes-or-no column to yes or no, except Better Auth's own", async () => {
+    const { rows } = await db.execute<{ name: string }>(sql`
+      select table_name || '.' || column_name as name from information_schema.columns
+      where table_schema = 'public' and data_type = 'boolean' and is_nullable = 'YES'
+      order by name
+    `);
+    // Better Auth's two-step plugin declares these; the app's own are required, with a default.
+    expect(rows.map(({ name }) => name)).toEqual([
+      'two_factor.verified',
+      'user.two_factor_enabled',
+    ]);
+  });
+
+  it('refuses an empty yes-or-no and fills in its default', async () => {
+    const userId = await createUser(db, 'jane@adiutor.test');
+    /**
+     * Empties one of the user's yes-or-no columns.
+     *
+     * @param column - The column.
+     * @returns The database's error code, or `stored`.
+     */
+    const empty = async (column: string) => {
+      try {
+        await db.execute(
+          sql`update "user" set ${sql.identifier(column)} = null where id = ${userId}`,
+        );
+        return 'stored';
+      } catch (error) {
+        return (error as { cause?: { code?: string } }).cause?.code ?? String(error);
+      }
+    };
+
+    expect(await empty('allow_staff_sign_in')).toBe('23502');
+    expect(await empty('request_emails')).toBe('23502');
+    const { rows } = await db.execute<{ allow: boolean; emails: boolean }>(
+      sql`select allow_staff_sign_in as allow, request_emails as emails from "user" where id = ${userId}`,
+    );
+    expect(rows).toEqual([{ allow: true, emails: true }]);
   });
 });

@@ -75,8 +75,8 @@ interface AuthRequestState {
   /**
    * Set by the guards when this request's code finishes setting up an
    * authenticator app next to email codes (Better Auth treats it like a
-   * step-up); `afterAuthRequest` reads it (`finishesAuthenticatorSetup`) to
-   * record a new method instead of a step-up.
+   * step-up); `afterAuthRequest` reads it to record a new method instead of
+   * a step-up.
    */
   finishingAuthenticatorSetup?: boolean;
   /**
@@ -100,7 +100,8 @@ interface AuthRequestState {
   /**
    * The user of a password sign-in whose code step checks a code (no session
    * yet), found by the guards from Better Auth's two-factor cookie; read
-   * after the request (`pendingCodeSignInOf`) to record a wrong code for them.
+   * after the request (`reactToRefusedSignInCode`) to record a wrong code for
+   * them.
    */
   pendingCodeSignIn?: string;
   /**

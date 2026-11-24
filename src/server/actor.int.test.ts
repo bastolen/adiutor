@@ -2,7 +2,7 @@
  * @file Integration tests for loading the acting user's MFA state.
  */
 import { eq } from 'drizzle-orm';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { company, membership, passkey, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
@@ -23,6 +23,11 @@ import {
 } from '../../tests/integration/helpers';
 import { loadActor, touchLastActive } from './actor';
 import { loadMfaStates } from './auth/mfa-state';
+
+vi.mock('./auth/mfa-state', async (importOriginal) => {
+  const original = await importOriginal<typeof import('./auth/mfa-state')>();
+  return { ...original, loadMfaStates: vi.fn(original.loadMfaStates) };
+});
 
 const { db } = setupTestContext();
 
@@ -309,6 +314,14 @@ describe('loadActor sign-in time', () => {
 describe('loadActor for an unknown user', () => {
   it('gives null, though its queries all ran at once', async () => {
     expect(await loadActor(db, '01900000-0000-7000-8000-000000000000')).toBeNull();
+  });
+
+  it('gives null for a user deleted between its queries, rather than one without a setup', async () => {
+    const support = await staffActor(db, 'support');
+    // The user's row was read, and they were gone by the time their setup was.
+    vi.mocked(loadMfaStates).mockResolvedValueOnce(new Map());
+
+    expect(await loadActor(db, support.id)).toBeNull();
   });
 });
 

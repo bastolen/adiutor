@@ -70,7 +70,8 @@ configurations in VS Code, which turn the time limit off (see
   moment (`atTheSameMoment` in `tests/integration/helpers.ts`), whole sign-in flows through Better
   Auth (`src/server/auth/password-sign-in.int.test.ts`, and email links in
   `src/server/auth/email-link-chain.int.test.ts`) and the database rules (UUIDv7 IDs, indexed
-  foreign keys, a check on every text column with a fixed set of values). Run them with `pnpm test:integration`. For the [background jobs](jobs.md),
+  foreign keys, a check on every text column with a fixed set of values, no empty yes-or-no
+  column). Run them with `pnpm test:integration`. For the [background jobs](jobs.md),
   `tests/integration/helpers.ts` also runs the queue as the next tick would (`sendQueuedEmails`),
   stores a queued job directly (`storeQueuedJob`), gives a context whose mail server is down
   (`mailDown`) and a deadline no test reaches (`later`): use them rather than a copy.

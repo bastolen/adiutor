@@ -14,11 +14,13 @@ import type { Database } from '@/db';
 import { auditEvent, impersonation, membership, user } from '@/db/schema';
 import {
   IMPERSONATION_MINUTES,
+  type ImpersonatingStaff,
   type ImpersonationVerdict,
   mayImpersonate,
   mayImpersonateAnyone,
 } from '@/lib/authz/impersonation';
 import { isMfaConfirmedRecently, mustSetUpMfa, mustStepUp } from '@/lib/authz/mfa';
+import type { CompanyRole } from '@/lib/authz/roles';
 import displayName from '@/lib/display-name';
 import { getSafeRedirectPath, isSafeAppRedirect } from '@/lib/redirect';
 import { impersonationReasonSchema } from '@/lib/validation';
@@ -72,6 +74,31 @@ function refusalError(verdict: Exclude<ImpersonationVerdict, 'allowed'>): Servic
   return verdict === 'role'
     ? forbiddenError()
     : new ServiceError('forbidden', REFUSAL_MESSAGES[verdict]);
+}
+
+/**
+ * Asks the rules (`mayImpersonate`) whether a staff member may sign in as a
+ * user, with the user's facts read from their row or their actor. Every
+ * check builds the rules' input here, so a new input can't be left out of one.
+ *
+ * @param staff - The staff member, as the rules see them.
+ * @param target - The user: their ID, staff role, deactivation and whether they allow it.
+ * @param companyRoles - Their role in every company they're in, active or not: a company Admin
+ *   is out of Support's reach either way.
+ * @returns `allowed`, or the reason it isn't.
+ */
+function verdictFor(
+  staff: ImpersonatingStaff,
+  target: Pick<Actor, 'id' | 'platformRole' | 'deactivatedAt' | 'allowStaffSignIn'>,
+  companyRoles: readonly CompanyRole[],
+): ImpersonationVerdict {
+  return mayImpersonate(staff, {
+    id: target.id,
+    platformRole: target.platformRole,
+    companyRoles,
+    deactivated: target.deactivatedAt !== null,
+    allowsStaffSignIn: target.allowStaffSignIn,
+  });
 }
 
 /** What {@link startImpersonation} takes. */
@@ -159,20 +186,15 @@ export async function startImpersonation(
     if (!target) {
       throw notFoundError();
     }
-    // Every company they're in, active or not: a company Admin is out of Support's reach either way.
     const companyRoles = await tx
       .select({ role: membership.role })
       .from(membership)
       .where(eq(membership.userId, userId));
-    const verdict = mayImpersonate(
-      { id: actor.id, platformRole: staff.platformRole ?? null, strongMfa: actor.strongMfa },
-      {
-        id: userId,
-        platformRole: target.platformRole ?? null,
-        companyRoles: companyRoles.map((row) => row.role),
-        deactivated: target.deactivatedAt !== null,
-        allowsStaffSignIn: target.allowStaffSignIn !== false,
-      },
+    // The staff member's role as the locked row has it.
+    const verdict = verdictFor(
+      { ...actor, platformRole: staff.platformRole },
+      target,
+      companyRoles.map((row) => row.role),
     );
     if (verdict !== 'allowed') {
       throw refusalError(verdict);
@@ -231,6 +253,7 @@ export async function impersonationVerdictFor(
   const [[target], companyRoles] = await Promise.all([
     ctx.db
       .select({
+        id: user.id,
         platformRole: user.platformRole,
         deactivatedAt: user.deactivatedAt,
         allowStaffSignIn: user.allowStaffSignIn,
@@ -242,15 +265,10 @@ export async function impersonationVerdictFor(
   if (!target) {
     throw notFoundError();
   }
-  return mayImpersonate(
-    { id: actor.id, platformRole: actor.platformRole, strongMfa: actor.strongMfa },
-    {
-      id,
-      platformRole: target.platformRole ?? null,
-      companyRoles: companyRoles.map((row) => row.role),
-      deactivated: target.deactivatedAt !== null,
-      allowsStaffSignIn: target.allowStaffSignIn !== false,
-    },
+  return verdictFor(
+    actor,
+    target,
+    companyRoles.map((row) => row.role),
   );
 }
 
@@ -418,19 +436,8 @@ export async function actorSignedInAs(
     return { end: 'no_longer_allowed' };
   }
   const target = await loadActor(db, found.userId);
-  const verdict = target
-    ? mayImpersonate(
-        { id: staff.id, platformRole: staff.platformRole, strongMfa: staff.strongMfa },
-        {
-          id: target.id,
-          platformRole: target.platformRole,
-          companyRoles: Object.values(target.memberships),
-          deactivated: target.deactivatedAt !== null,
-          allowsStaffSignIn: target.allowStaffSignIn,
-        },
-      )
-    : 'deactivated';
-  if (!target || verdict !== 'allowed') {
+  // `memberships` holds every company they're in, active or not, as the rules need.
+  if (!target || verdictFor(staff, target, Object.values(target.memberships)) !== 'allowed') {
     return { end: 'no_longer_allowed' };
   }
   return {
@@ -474,11 +481,8 @@ export async function setStaffSignInAllowed(
       .where(
         and(
           eq(user.id, actor.id),
-          // Only when it changes, so choosing the same again records nothing. A row from before the
-          // setting existed (`null`) counts as on.
-          allowed
-            ? eq(user.allowStaffSignIn, false)
-            : or(isNull(user.allowStaffSignIn), eq(user.allowStaffSignIn, true)),
+          // Only when it changes, so choosing the same again records nothing.
+          eq(user.allowStaffSignIn, !allowed),
         ),
       )
       .returning({ id: user.id });

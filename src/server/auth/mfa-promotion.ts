@@ -87,9 +87,9 @@ export async function withMfaPromotion<T>(
   );
   const counts = new Map<string, number>();
   weaker.forEach((found) => counts.set(found.userId, (counts.get(found.userId) ?? 0) + 1));
-  // Caused by the change (recorded with its actor), on each user's own account, in turn.
-  await [...counts].reduce(async (previous, [userId, count]) => {
-    await previous;
+  // Caused by the change (recorded with its actor), on each user's own account.
+  for (const [userId, count] of counts) {
+    // eslint-disable-next-line no-await-in-loop -- One at a time on the change's transaction, whose connection runs one query at once.
     await recordEvent(
       ctx,
       {
@@ -100,6 +100,6 @@ export async function withMfaPromotion<T>(
       },
       tx,
     );
-  }, Promise.resolve());
+  }
   return result;
 }

@@ -15,6 +15,8 @@ import { type Messages, messagesFor } from '@/lib/i18n/messages';
 import translator from '@/lib/i18n/translator';
 import { idSchema, type ValidationMessageKey } from '@/lib/validation';
 
+import errorCode from './error-code';
+
 /**
  * Kinds of expected problems. `confirmation_required` is a change that needs
  * the actor's second step from the last 15 minutes first (e.g. giving a staff
@@ -265,38 +267,14 @@ export function companyDeactivatedError(): ServiceError {
 }
 
 /**
- * Reads the `code` property of a value, if it has one.
- *
- * @param value - Any value, typically an error.
- * @returns The code, or `undefined`.
- */
-function errorCode(value: unknown): unknown {
-  return typeof value === 'object' && value !== null && 'code' in value ? value.code : undefined;
-}
-
-/**
- * Checks whether a database error has a SQLSTATE code, on the error itself or
- * on its `cause` (Drizzle wraps the driver's error).
- *
- * @param error - The error thrown by a query.
- * @param code - The SQLSTATE code.
- * @returns Whether the error has that code.
- */
-function hasSqlState(error: unknown, code: string): boolean {
-  return (
-    errorCode(error) === code ||
-    (error instanceof Error && 'cause' in error && errorCode(error.cause) === code)
-  );
-}
-
-/**
- * Checks whether a database error is a unique-constraint violation.
+ * Checks whether a database error is a unique-constraint violation (SQLSTATE
+ * `23505`, on the error or a cause: Drizzle wraps the driver's error).
  *
  * @param error - The error thrown by a query.
  * @returns Whether a unique index rejected the write.
  */
 export function isUniqueViolation(error: unknown): boolean {
-  return hasSqlState(error, '23505');
+  return errorCode(error) === '23505';
 }
 
 /**
@@ -310,5 +288,5 @@ export function isUniqueViolation(error: unknown): boolean {
  * @returns Whether Postgres ended the transaction to break a deadlock.
  */
 export function isDeadlock(error: unknown): boolean {
-  return hasSqlState(error, '40P01');
+  return errorCode(error) === '40P01';
 }

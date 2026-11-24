@@ -2,7 +2,7 @@
  * @file The signed-in user's own time zone, saved with their account, so
  * every page, email and copied note shows times in it, on every browser they
  * sign in on (the time zone cookie mirrors it: set at sign-in,
- * `rememberTimeZone`, and whenever it's saved). Their browser saves the first
+ * `rememberLanguageAndTimeZone`, and whenever it's saved). Their browser saves the first
  * one, the first time they're signed in; after that they choose it on the
  * account's Time zone card. Not a security change: no audit event or notice.
  * See docs/i18n.md, "Time zones".

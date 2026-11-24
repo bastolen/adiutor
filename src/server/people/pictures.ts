@@ -134,9 +134,7 @@ async function accountsOf(
       .where(inArray(user.id, [...userIds])),
   ]);
   return {
-    rows: rows
-      .filter(({ providerId }) => isOAuthProvider(providerId))
-      .map((row) => ({ ...row, confirmed: row.confirmed ?? true })),
+    rows: rows.filter(({ providerId }) => isOAuthProvider(providerId)),
     sources: new Map(users.map(({ id, avatarSource }) => [id, avatarSource ?? null])),
   };
 }

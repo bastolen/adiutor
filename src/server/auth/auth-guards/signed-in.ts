@@ -50,18 +50,6 @@ import {
 import { refusalBody } from './refusal-messages';
 
 /**
- * Checks whether a request's code finished setting up an authenticator app
- * (`finishingAuthenticatorSetup` in `request-state.ts`, set by the guards).
- *
- * @param ctx - The endpoint context, as passed to the hooks.
- * @param ctx.context - Better Auth's request state.
- * @returns Whether it did, as far as the checks before it could tell.
- */
-export function finishesAuthenticatorSetup(ctx: { context: object }): boolean {
-  return requestState(ctx.context).finishingAuthenticatorSetup === true;
-}
-
-/**
  * Refuses a change that would leave a role that requires MFA without it.
  *
  * @param ctx - The endpoint context, for the request's language.

@@ -64,7 +64,7 @@
  *   (`checkCurrentPassword`), and the reactions record each wrong one. A
  *   code checked at a password sign-in's code step (without a session yet)
  *   hands its user, from Better Auth's two-factor cookie, to `auth-events`,
- *   which records a wrong one (`pendingCodeSignInOf`).
+ *   which records a wrong one (`pendingCodeSignIn` in `request-state.ts`).
  * - "Confirm with GitHub" on the step-up page is marked as a re-verify of
  *   the browser's session (`markReverify` in `reverify-marker.ts`), so only
  *   the user's own confirmed account of the provider can answer it
@@ -107,6 +107,4 @@ export {
   settleStepUpAttempt,
 } from './attempts';
 export { holdSignInChangeLock, releaseSignInChangeLockOf } from './change-lock';
-export { finishesAuthenticatorSetup } from './signed-in';
-export { pendingCodeSignInOf } from './code-step';
 export { beforeAuthRequest } from './before-request';

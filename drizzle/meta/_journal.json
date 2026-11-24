@@ -190,6 +190,13 @@
       "when": 1795295555772,
       "tag": "0026_request_sign_in_links",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1795525416906,
+      "tag": "0027_required_auth_booleans",
+      "breakpoints": true
     }
   ]
 }

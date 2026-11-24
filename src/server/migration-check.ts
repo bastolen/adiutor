@@ -20,6 +20,7 @@ import { sql } from 'drizzle-orm';
 import type { DatabaseOrTransaction } from '@/db';
 
 import journal from '../../drizzle/meta/_journal.json';
+import errorCode from './error-code';
 
 /** A migration in `drizzle/meta/_journal.json`. */
 export interface JournalEntry {
@@ -153,26 +154,6 @@ export async function readAppliedMigrations(
 async function readFromAppDatabase(): Promise<AppliedMigrations | null> {
   const { db } = await import('@/db');
   return readAppliedMigrations(db);
-}
-
-/**
- * Finds the code of an error (a Node.js code such as `ECONNREFUSED`, or a
- * Postgres SQL state), looking through its causes since Drizzle wraps the
- * driver's errors. Safe to log, unlike the message, which could hold
- * connection details. Also used by the health check (`src/server/health.ts`).
- *
- * @param error - The thrown value.
- * @param depth - How many causes deep this is.
- * @returns The code, or `null` when there's none.
- */
-export function errorCode(error: unknown, depth = 0): string | null {
-  if (typeof error !== 'object' || error === null || depth > 3) {
-    return null;
-  }
-  if ('code' in error && typeof error.code === 'string') {
-    return error.code;
-  }
-  return 'cause' in error ? errorCode(error.cause, depth + 1) : null;
 }
 
 /**

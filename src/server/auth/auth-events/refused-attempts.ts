@@ -13,7 +13,8 @@ import { mfaMethodFromPath, TWO_FACTOR_LOCK_MINUTES } from '@/lib/authz/mfa';
 import { recordEvent } from '../../audit';
 import { hitRateLimit, releaseRateLimitHit } from '../../rate-limit';
 import { hasPassword } from '../accounts';
-import { CODE_PATHS, CURRENT_PASSWORD_PATHS, pendingCodeSignInOf } from '../auth-guards';
+import { CODE_PATHS, CURRENT_PASSWORD_PATHS } from '../auth-guards';
+import { requestState } from '../request-state';
 import { queueSecurityNotice } from '../security-notices';
 import {
   type FinishedRequest,
@@ -118,7 +119,8 @@ const TWO_FACTOR_LOCKED_ERROR = 'ACCOUNT_TEMPORARILY_LOCKED';
 
 /**
  * After a code Better Auth refused at the code step of a password sign-in
- * (no session yet; the guards found its user: `pendingCodeSignInOf`).
+ * (no session yet; the guards found its user: `pendingCodeSignIn` in the
+ * request's state).
  *
  * - A wrong code is recorded as `mfa_failed` with `atSignIn: true`, without
  *   an actor, like the password before it (`sign_in_code_pending`): whoever
@@ -140,7 +142,7 @@ async function reactToRefusedSignInCode(
   path: string,
   refusal: APIError,
 ): Promise<void> {
-  const userId = pendingCodeSignInOf(ctx);
+  const userId = requestState(ctx.context).pendingCodeSignIn;
   if (!userId) {
     return;
   }

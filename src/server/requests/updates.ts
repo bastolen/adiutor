@@ -553,13 +553,8 @@ async function newsReader(
       ),
   ]);
   const reader = people.find(({ id }) => id === about.userId);
-  // Turned off in their account (a row from before the setting existed counts as on).
-  if (
-    !reader ||
-    reader.deactivatedAt !== null ||
-    reader.requestEmails === false ||
-    roles.length === 0
-  ) {
+  // Turned off in their account.
+  if (!reader || reader.deactivatedAt !== null || !reader.requestEmails || roles.length === 0) {
     return null;
   }
   const permissions = permissionsInCompanyOf(reader, found);

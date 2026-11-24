@@ -17,7 +17,6 @@ import { availableProviders } from '@/lib/sign-in/providers';
 import {
   CODE_PATHS,
   CURRENT_PASSWORD_PATHS,
-  finishesAuthenticatorSetup,
   releaseSignInChangeLockOf,
   settleCurrentPasswordAttempt,
   settlePasswordAttempt,
@@ -43,7 +42,7 @@ import {
   isWrongCurrentPassword,
 } from './finished-request';
 import { type AuthHookContext, safely, audit, auditAndNotify } from './hook-context';
-import rememberLanguage from './language';
+import rememberLanguageAndTimeZone from './language-and-time-zone';
 import {
   refreshSignedInProviderMfa,
   stepUpOutcomeOf,
@@ -53,7 +52,6 @@ import { reactToFailure } from './refused-attempts';
 import { recordRefusedReverify } from './reverify';
 import { type ProviderCheckResult, recordProviderSession } from './session-hooks';
 import { markSessionVerified } from './session-records';
-import rememberTimeZone from './time-zone';
 
 /**
  * First phase of {@link afterAuthRequest}: gives back the request's sign-in
@@ -159,7 +157,7 @@ async function reactToSignInChange(
         break;
       }
       const method = mfaMethodFromPath(path);
-      if (sessionUser.twoFactorEnabled && finishesAuthenticatorSetup(ctx)) {
+      if (sessionUser.twoFactorEnabled && requestState(ctx.context).finishingAuthenticatorSetup) {
         // Not a step-up: this code finished setting up an authenticator app next to email codes
         // (the guard checked this request), so it's a new way to sign in. Email codes no longer
         // count, so neither does a browser trusted after one: every trusted device is forgotten,
@@ -280,8 +278,9 @@ async function reactToSuccess(
     // The browser gets the account's language and zone. A password sign-in's session may still be
     // deleted for the code step, so `afterPasswordSignIn` does it once the session stays.
     if (path !== '/sign-in/email') {
-      await safely('remember the language', () => rememberLanguage(ctx, newSession.user.id));
-      await safely('remember the time zone', () => rememberTimeZone(ctx, newSession.user.id));
+      await safely('remember the language and time zone', () =>
+        rememberLanguageAndTimeZone(ctx, newSession.user.id),
+      );
     }
   }
 

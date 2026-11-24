@@ -6,7 +6,7 @@
  * also forgets "Trust this device", and anything that names someone (e.g. the
  * provider-linked notice), so the next person on the browser starts clean;
  * their own sign-in gives the browser their account's language, or removes
- * the language cookie when their account is on Default (`rememberLanguage`),
+ * the language cookie when their account is on Default (`rememberLanguageAndTimeZone`),
  * and never saves the one left here. Safe for Client Components.
  */
 import { LOCALE_COOKIE } from '@/lib/i18n/locales';

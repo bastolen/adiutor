@@ -47,6 +47,7 @@ import {
   RATE_LIMITS,
   releaseRateLimitHit,
 } from '../rate-limit';
+import type { LinkAccount } from './email-links';
 import { type SessionCookieContext, signedSession } from './signed-session';
 
 /**
@@ -73,16 +74,6 @@ export async function createRequestLink(
   return token;
 }
 
-/** The account a request link signs in to, as its confirmation page names it. */
-interface RequestLinkAccount {
-  /** Its ID, to compare with whoever is signed in (not for the page to show). */
-  userId: string;
-  /** Its name; may be empty. */
-  name: string;
-  /** Its email address, in full (names can be copied, addresses can't). */
-  email: string;
-}
-
 /**
  * What a request link is, for its endpoint and its confirmation page:
  *
@@ -107,7 +98,7 @@ export type RequestLinkView =
       /** The request's number as people see it, e.g. "AD-142". */
       reference: string;
       /** Whom it signs in. */
-      account: RequestLinkAccount;
+      account: LinkAccount;
     };
 
 /**

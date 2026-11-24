@@ -37,19 +37,6 @@ async function pendingSignIn(
 }
 
 /**
- * Finds the user whose sign-in a code was checked for at the code step (see
- * `pendingCodeSignIn` in `request-state.ts`).
- *
- * @param ctx - The endpoint context (its `context` is shared with the checks before).
- * @param ctx.context - Better Auth's request state.
- * @returns The user's ID, or `null` when the request didn't check a code of a
- *   pending sign-in (a code checked with a session, or no valid two-factor cookie).
- */
-export function pendingCodeSignInOf(ctx: { context: object }): string | null {
-  return requestState(ctx.context).pendingCodeSignIn ?? null;
-}
-
-/**
  * The checks for the code step of a password sign-in, which has no session
  * yet: backup codes only once their authenticator app is set up, email codes
  * only where they're accepted at sign-in (`allowsEmailCodesAtSignIn`), and
@@ -57,8 +44,8 @@ export function pendingCodeSignInOf(ctx: { context: object }): string | null {
  * Auth itself (5 per sign-in or emailed code, and a pause after
  * `TWO_FACTOR_LOCK_ATTEMPTS` in a row). An emailed code waits for the last one
  * of this sign-in only, the code Better Auth keeps with it. Each code it goes on to check hands
- * its user to the reactions after the request ({@link pendingCodeSignInOf}),
- * which record a wrong one. A request without a (valid) pending sign-in is
+ * its user to the reactions after the request (`pendingCodeSignIn` in
+ * `request-state.ts`), which record a wrong one. A request without a (valid) pending sign-in is
  * left to Better Auth, which refuses it.
  *
  * @param ctx - The endpoint context.
