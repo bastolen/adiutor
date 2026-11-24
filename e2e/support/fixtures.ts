@@ -169,6 +169,18 @@ export const DEACTIVATE_CLIENT = {
   password: 'e2e-leaver-password',
 } as const;
 
+/**
+ * A deactivated Finance member of the staff the Admin reactivates: the
+ * account kept its staff role, so reactivating it needs the Admin's recent
+ * confirmation. Finance works on no requests, so it never shows among the
+ * people a request can be assigned to.
+ */
+export const RETURNING_FINANCE = {
+  name: 'E2E Returning Finance',
+  email: 'returning.finance@adiutor.test',
+  password: 'e2e-returning-finance-password',
+} as const;
+
 /** A Client the Admin deletes. */
 export const DELETE_CLIENT = {
   name: 'E2E Deleted',

@@ -1,12 +1,14 @@
 /**
  * @file Integration tests for the audit log (`audit.ts`): recording events
  * with the request origin, and listing them for staff and for the user
- * themselves, against the test database.
+ * themselves (or a staff member signed in as them, who sees where they came
+ * from only with the audit log), against the test database.
  */
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { auditEvent, user } from '@/db/schema';
+import type { Permission } from '@/lib/authz/permissions';
 
 import {
   createCompany,
@@ -202,6 +204,56 @@ describe('own activity', () => {
       ip: '203.0.113.7',
       userAgent: 'Firefox',
     });
+  });
+
+  it('shows a staff member signed in as the user where it came from only when they see the audit log', async () => {
+    const jane = await staffActor(db, 'support', 'jane@adiutor.test');
+    const withRequest = {
+      ...ctx,
+      /**
+       * A fixed request origin.
+       *
+       * @returns The IP address and browser.
+       */
+      requestInfo: async () => ({ ip: '203.0.113.7', userAgent: 'Firefox' }),
+    };
+    await recordEvent(withRequest, {
+      action: 'sign_in',
+      actorUserId: jane.id,
+      targetUserId: jane.id,
+    });
+    /**
+     * Jane as the actor while a staff member with these permissions is signed in as her.
+     *
+     * @param staffPermissions - The staff member's own global permissions.
+     * @returns The actor.
+     */
+    const signedInAsBy = (staffPermissions: Permission[]): Actor => ({
+      ...jane,
+      signedInAs: {
+        staffId: admin.id,
+        staffName: admin.name,
+        endsAt: new Date(Date.now() + 30 * 60_000),
+        returnTo: '/dashboard',
+        staffPermissions,
+      },
+    });
+    /**
+     * Where the activity came from, as an actor reads it.
+     *
+     * @param actor - Who reads it.
+     * @returns Each event's IP address and browser.
+     */
+    const originsFor = async (actor: Actor) =>
+      (await listOwnActivity(ctx, actor)).map(({ ip, userAgent }) => ({ ip, userAgent }));
+
+    const shown = [{ ip: '203.0.113.7', userAgent: 'Firefox' }];
+    expect(await originsFor(jane)).toEqual(shown);
+    expect(await originsFor(signedInAsBy(['users:view', 'audit:view']))).toEqual(shown);
+    // Without the audit log, the event shows without where it came from.
+    expect(await originsFor(signedInAsBy(['users:view', 'users:manage']))).toEqual([
+      { ip: null, userAgent: null },
+    ]);
   });
 });
 

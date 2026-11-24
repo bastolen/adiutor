@@ -3,7 +3,7 @@
  * `listUserCompanies` and `listUserDevices`) and `userExists`, against the
  * test database.
  */
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import { membership, user } from '@/db/schema';
@@ -96,6 +96,30 @@ describe('getUserDetail', () => {
     expect(detail.connectedAccounts).toBe(2);
     // The unconfirmed one doesn't count for MFA, so it isn't among the provider accounts there.
     expect(detail.mfa.providerAccounts).toHaveLength(1);
+  });
+
+  it('says whether reactivating the account gives back a role that needs a recent confirmation', async () => {
+    const owner = await createUser(db, 'owner@adiutor.test');
+    await addMember(db, testCompany.id, owner, 'admin');
+    const support = await staffActor(db, 'support', 'support@adiutor.test');
+    /**
+     * Reads whether reactivating a user needs a recent confirmation.
+     *
+     * @param userId - The user.
+     * @returns What their page says.
+     */
+    const needs = async (userId: string) =>
+      (await getUserDetail(ctx, admin, userId)).reactivationNeedsConfirmation;
+
+    // Nothing to reactivate while they're active.
+    expect(await inSequence([owner, support.id, jane], needs)).toEqual([false, false, false]);
+
+    await db
+      .update(user)
+      .set({ deactivatedAt: new Date() })
+      .where(inArray(user.id, [owner, support.id, jane]));
+    // A company Admin and a staff member get their role back; a Client needs nothing.
+    expect(await inSequence([owner, support.id, jane], needs)).toEqual([true, true, false]);
   });
 
   it('is not found for unknown or malformed IDs', async () => {

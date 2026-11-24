@@ -10,6 +10,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 
 import type { Database } from '@/db';
 import { account, company, membership, user } from '@/db/schema';
+import { reactivationNeedsConfirmation } from '@/lib/authz/guards';
 import { type MfaState, type MfaStatus, mfaStatus, requiresMfa } from '@/lib/authz/mfa';
 import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { OAUTH_PROVIDERS } from '@/lib/sign-in/oauth-providers';
@@ -26,6 +27,7 @@ import type { ServiceContext } from '../../context';
 import { notFoundError, parseId } from '../../errors';
 import { orderTerms, paginate, textOrder } from '../../pagination';
 import { loadPictures } from '../pictures';
+import loadKeptRoles from './kept-roles';
 import { asSeenWith, loadSessionRows, type UserSession } from './sessions';
 
 /** A company the user belongs to, on the detail page. */
@@ -85,6 +87,13 @@ export interface UserDetail {
    * (Admins only). A name is `null` while it isn't known yet.
    */
   accountNames: Record<string, string | null> | null;
+  /**
+   * Whether reactivating the account gives back a role that needs the
+   * Admin's confirmation with their second step from the last 15 minutes
+   * (`reactivationNeedsConfirmation`): a staff role or a company's Admin
+   * role it kept. Always `false` while the account is active.
+   */
+  reactivationNeedsConfirmation: boolean;
 }
 
 /**
@@ -150,7 +159,7 @@ export async function getUserDetail(
   assertPermission(permissions, 'users:view');
   const found = await findUser(ctx, userId);
   const { id } = found;
-  const [mfa, connectedAccounts, accountNames, pictures] = await Promise.all([
+  const [mfa, connectedAccounts, accountNames, pictures, keptRoles] = await Promise.all([
     // The MFA role comes from all their memberships.
     loadMfaContext(ctx.db, id),
     ctx.db.$count(
@@ -159,6 +168,8 @@ export async function getUserDetail(
     ),
     permissions.has('users:manage') ? loadAccountNames(ctx.db, id) : null,
     loadPictures(ctx.db, [id]),
+    // What reactivating gives back, only while there's something to reactivate.
+    found.deactivatedAt ? loadKeptRoles(ctx.db, id) : null,
   ]);
   if (!mfa) {
     throw notFoundError();
@@ -176,6 +187,7 @@ export async function getUserDetail(
     connectedAccounts,
     accountNames,
     picture: pictures.get(id) ?? null,
+    reactivationNeedsConfirmation: keptRoles ? reactivationNeedsConfirmation(keptRoles) : false,
   };
 }
 

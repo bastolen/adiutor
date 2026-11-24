@@ -20,11 +20,15 @@ export interface StaffAdminAddedEmailProps extends EmailBaseProps {
   /** The new staff Admin's email address. */
   newAdminEmail: string;
   /**
-   * How they became one: a staff Admin gave them the role (`role`), or they
-   * accepted an invitation or used an invite link (`invitation`).
+   * How they became one: a staff Admin gave them the role (`role`), they
+   * accepted an invitation or used an invite link (`invitation`), or a staff
+   * Admin reactivated their account, which had kept the role (`reactivation`).
    */
-  how: 'role' | 'invitation';
-  /** Who gave the role or sent the invitation (name or email), if their account still exists. */
+  how: 'role' | 'invitation' | 'reactivation';
+  /**
+   * Who gave the role, sent the invitation or reactivated the account (name
+   * or email), if their account still exists.
+   */
   byName: string | null;
   /** Link to the staff settings. */
   url: string;
@@ -40,7 +44,8 @@ export interface StaffAdminAddedEmailProps extends EmailBaseProps {
  * @param props.newAdminName - The new Admin's name.
  * @param props.newAdminEmail - The new Admin's email address.
  * @param props.how - How they became one.
- * @param props.byName - Who gave the role or sent the invitation, if known.
+ * @param props.byName - Who gave the role, sent the invitation or reactivated the account, if
+ *   known.
  * @param props.url - Link to the staff settings.
  * @param props.locale - The recipient's language.
  * @param props.logoSrc - Logo URL override.
@@ -65,6 +70,8 @@ export default function StaffAdminAddedEmail({
   let what = t('accepted', { who });
   if (how === 'role') {
     what = byName ? t('madeBy', { by: byName, who }) : t('made', { who });
+  } else if (how === 'reactivation') {
+    what = byName ? t('reactivatedBy', { by: byName, who }) : t('reactivated', { who });
   } else if (byName) {
     what = t('acceptedFrom', { by: byName, who });
   }

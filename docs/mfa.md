@@ -168,8 +168,9 @@ authenticator app, see [Confirm with GitHub](#confirm-with-github)). So a stolen
 long ago it was confirmed. This is refused also when Better Auth's endpoints are called
 directly (`src/server/auth/auth-guards/`); renaming a passkey only needs a confirmed session.
 The same window guards giving someone else a lasting way in: any staff role (or a higher one) and
-a company's Admin role, by invitation, invite link, role change, adding a member or registering a
-company (`grantNeedsConfirmation`, enforced in the services by `assertConfirmedForGrant`; see
+a company's Admin role, by invitation, invite link, role change, adding a member, registering a
+company or reactivating an account that kept one (`grantNeedsConfirmation`,
+`reactivationNeedsConfirmation`, enforced in the services by `assertConfirmedForGrant`; see
 [Invitations](companies-and-roles.md#invitations)), since an account a stolen session creates for
 itself outlasts signing the victim out.
 Better Auth's own `freshAge` check is off (a code step-up doesn't renew it); accounts without a

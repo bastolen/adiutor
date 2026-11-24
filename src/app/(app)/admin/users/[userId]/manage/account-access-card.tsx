@@ -2,10 +2,11 @@
  * @file The "Account access" card on the Manage tab of a user's page, for Admins
  * (`users:manage`) on someone else's page: reset two-step verification (which
  * also disconnects their GitHub and Google accounts, and can remove their
- * passkeys), and deactivate or reactivate the account. A reset needs the
- * Admin's confirmation with their own second step from the last 15 minutes,
- * so its button sends them to confirm before its dialog opens. Text from
- * `admin.user.accountAccess`.
+ * passkeys), and deactivate or reactivate the account. A reset, and
+ * reactivating an account that gets a staff role or a company's Admin role
+ * back, need the Admin's confirmation with their own second step from the
+ * last 15 minutes, so their buttons send them to confirm before their dialog
+ * opens. Text from `admin.user.accountAccess`.
  */
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
@@ -62,6 +63,11 @@ interface AccountAccessCardProps {
   connectedAccounts: number;
   /** When the account was deactivated, if it is. */
   deactivatedAt: Date | null;
+  /**
+   * Whether reactivating it gives back a role that needs the Admin's recent
+   * confirmation (`UserDetail.reactivationNeedsConfirmation`).
+   */
+  reactivationNeedsConfirmation: boolean;
 }
 
 /**
@@ -69,7 +75,9 @@ interface AccountAccessCardProps {
  * confirm it's them first when they haven't lately (`confirmFirst`), before
  * its dialog opens: asked only once the dialog is submitted (the action's
  * own check, which stays as the backstop), the choice made in it, removing
- * the passkeys too, was lost on the way.
+ * the passkeys too, was lost on the way. "Reactivate" asks the same before
+ * its confirmation opens when the account gets a staff role or a company's
+ * Admin role back.
  *
  * @param props - Component props.
  * @param props.userId - The user's ID.
@@ -77,6 +85,7 @@ interface AccountAccessCardProps {
  * @param props.mfa - Their MFA details.
  * @param props.connectedAccounts - How many provider accounts they have connected.
  * @param props.deactivatedAt - When the account was deactivated, if it is.
+ * @param props.reactivationNeedsConfirmation - Whether reactivating needs a recent confirmation.
  * @returns The card.
  */
 export default function AccountAccessCard({
@@ -85,6 +94,7 @@ export default function AccountAccessCard({
   mfa,
   connectedAccounts,
   deactivatedAt,
+  reactivationNeedsConfirmation,
 }: AccountAccessCardProps) {
   const t = useTranslations('admin.user.accountAccess');
   const fields = { userId };
@@ -133,6 +143,8 @@ export default function AccountAccessCard({
             <RowAction
               action={reactivateUserAction}
               fields={fields}
+              // A staff role or a company's Admin role it gets back needs a recent confirmation.
+              confirmFirst={reactivationNeedsConfirmation}
               label={t('reactivate.label')}
               confirm={{
                 title: t('reactivate.confirmTitle', { name: userName }),

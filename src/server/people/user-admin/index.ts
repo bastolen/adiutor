@@ -1,7 +1,8 @@
 /**
  * @file User administration: the user page's loaders (the user, their
  * companies and their devices, and whether they
- * exist, for its titles), the signed-in devices of a user, the last-Admin
+ * exist, for its titles), the signed-in devices of a user (and the signed-in
+ * user's own, as far as a staff member signed in as them may see them), the last-Admin
  * rule, what Admins can do to an account (reset two-step verification, which
  * also disconnects GitHub and Google accounts, sign out everywhere,
  * deactivate, reactivate, delete), and deactivating your own account.
@@ -12,12 +13,12 @@
  * (`soleAdminOf` locks before it counts).
  *
  * This is the module's public API: the code lives in the files next to it
- * (`detail`, `sessions`, `sole-admin`, `admin-actions`, `own-account`), and
+ * (`detail`, `sessions`, `sole-admin`, `kept-roles`, `admin-actions`, `own-account`), and
  * nothing outside this folder imports them directly.
  */
 export { getUserDetail, listUserCompanies, listUserDevices, userExists } from './detail';
 export type { UserCompany, UserDetail } from './detail';
-export { listUserSessions } from './sessions';
+export { listOwnSessions, listUserSessions } from './sessions';
 export type { UserSession } from './sessions';
 export { soleAdminError, soleAdminOf } from './sole-admin';
 export type { SoleAdminOf, SoleAdminSubject } from './sole-admin';

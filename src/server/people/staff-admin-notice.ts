@@ -1,7 +1,8 @@
 /**
  * @file Tells the other staff Admins when someone becomes a staff Admin
- * (given the role, or by accepting an invitation or using an invite link),
- * so an account a stolen session leaves behind gets noticed. Queued once the
+ * (given the role, by accepting an invitation or using an invite link, or by
+ * the reactivation of an account that kept the role), so an account a stolen
+ * session leaves behind gets noticed. Queued once the
  * change has committed (sent at the next tick); a failure is logged and
  * never undoes it.
  */
@@ -17,23 +18,30 @@ import { queueJob, staffAdminAddedJob } from '../queue';
 export interface StaffAdminAdded {
   /** The new staff Admin. */
   newAdminId: string;
-  /** Given the role by a staff Admin (`role`), or joined from an invitation or link (`invitation`). */
-  how: 'role' | 'invitation';
-  /** Who gave the role, sent the invitation or created the link, if their account still exists. */
+  /**
+   * Given the role by a staff Admin (`role`), joined from an invitation or
+   * link (`invitation`), or a staff Admin reactivated their account, which
+   * kept the role (`reactivation`).
+   */
+  how: 'role' | 'invitation' | 'reactivation';
+  /**
+   * Who gave the role, sent the invitation, created the link or reactivated
+   * the account, if their account still exists.
+   */
   byUserId: string | null;
 }
 
 /**
  * Queues an email to every other active staff Admin that someone became a
- * staff Admin: not the new Admin, and not whoever gave the role or sent the
- * invitation. One job each (`staffAdminAddedJob`), so a refusal for one
+ * staff Admin: not the new Admin, and not whoever gave the role, sent the
+ * invitation or reactivated the account. One job each (`staffAdminAddedJob`), so a refusal for one
  * Admin never sends the others theirs twice; each is written in that Admin's
  * language when it's sent. Never throws: a failure is logged.
  *
  * @param ctx - Service context (only the database is used).
  * @param added - Who became a staff Admin, and how.
  * @param added.newAdminId - The new staff Admin.
- * @param added.how - Given the role, or joined from an invitation or link.
+ * @param added.how - Given the role, joined from an invitation or link, or reactivated.
  * @param added.byUserId - Who made it happen, if known.
  * @returns How many emails were queued.
  */

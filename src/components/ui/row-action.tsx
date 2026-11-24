@@ -4,13 +4,14 @@
  * (errors are also shown next to the button), so they're seen and announced
  * even when the action removes the row. On a page that may send the user to
  * confirm it's them, it also sends where to come back to (`ReturnToField`),
- * e.g. for "Resend", whose action asks only once the service refuses.
+ * e.g. for "Resend", whose action asks only once the service refuses, and
+ * with `confirmFirst` it sends them there before the action starts.
  */
 'use client';
 
 import { type MouseEvent, useCallback, useLayoutEffect, useRef } from 'react';
 
-import { ReturnToField } from '@/components/auth/recent-confirmation';
+import { ReturnToField, useRecentConfirmation } from '@/components/auth/recent-confirmation';
 import type { ActionResult } from '@/lib/action-result';
 
 import Button, { type ButtonProps } from './button';
@@ -59,6 +60,13 @@ interface RowActionProps {
    * user to confirm it's them first).
    */
   onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
+  /**
+   * Send the user to confirm it's them before the action or its confirmation
+   * dialog starts, when they haven't lately (`useRecentConfirmation`), e.g.
+   * for "Reactivate" on an account that gets a staff role back. A server
+   * page can pass it, unlike `onClick`.
+   */
+  confirmFirst?: boolean;
   /** ID of the text that explains the button, e.g. why it's disabled. */
   describedBy?: string;
   /**
@@ -93,6 +101,7 @@ interface RowActionProps {
  * @param props.disabled - Disable the button.
  * @param props.focusableWhenDisabled - Keep it focusable while disabled.
  * @param props.onClick - Runs on click, before the action starts.
+ * @param props.confirmFirst - Send the user to confirm it's them first when needed.
  * @param props.describedBy - ID of the text that explains the button.
  * @param props.doneMessage - The toast after it worked; defaults to the action's message.
  * @param props.allowedWhileSignedInAs - Keep it enabled while signed in as the user (their own work).
@@ -108,10 +117,12 @@ export default function RowAction({
   disabled = false,
   focusableWhenDisabled = false,
   onClick = undefined,
+  confirmFirst = false,
   describedBy = undefined,
   doneMessage = undefined,
   allowedWhileSignedInAs = false,
 }: RowActionProps) {
+  const { askToConfirm } = useRecentConfirmation();
   const showToast = useToast();
   const changesOff = useSignedInAs() && !allowedWhileSignedInAs;
   // Set once the action worked, so the row going away afterwards can move focus.
@@ -157,7 +168,13 @@ export default function RowAction({
       focusableWhenDisabled={focusableWhenDisabled && !changesOff}
       aria-label={ariaLabel}
       aria-describedby={describedBy}
-      onClick={onClick}
+      onClick={(event) => {
+        onClick?.(event);
+        // Stopped, the action doesn't start and its confirmation dialog doesn't open.
+        if (!event.defaultPrevented && confirmFirst && askToConfirm()) {
+          event.preventDefault();
+        }
+      }}
     >
       {label}
     </Button>

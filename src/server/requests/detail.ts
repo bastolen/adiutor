@@ -37,6 +37,7 @@ import {
   type ActivityView,
   activityKinds,
   effectiveActivityGroups,
+  mayContribute,
   mayEditDescription,
   mayEditNote,
   mayEditReply,
@@ -539,7 +540,7 @@ export async function getRequest(
   // mention shows a name, never a picture. A reader who may write here gets each person's key
   // too, so a mention they copy into a text stays one (nothing is written for a deactivated
   // company); someone without an account or a name to show can't be mentioned, so has none.
-  const writes = permissions.has('requests:contribute') && company.deactivatedAt === null;
+  const writes = mayContribute(permissions, { deactivated: company.deactivatedAt !== null });
   const mentionsOf = new Map<string | null, Record<string, MentionedPerson>>();
   mentioned.forEach(({ id, entryId, side, person }) => {
     const ofText = mentionsOf.get(entryId) ?? {};

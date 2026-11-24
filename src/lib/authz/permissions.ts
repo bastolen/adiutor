@@ -8,7 +8,7 @@
  * Every page and server action checks permissions through this module (via
  * `src/server/authz.ts`); never compare roles directly elsewhere.
  */
-import type { CompanyRole, PlatformRole, Role } from './roles';
+import { type CompanyRole, isCompanyRole, type PlatformRole, type Role } from './roles';
 
 /** Everything that can be allowed. */
 export const PERMISSIONS = [
@@ -191,8 +191,9 @@ export function getPermissions({
   if (platformRole) {
     add(STAFF_IN_COMPANY[platformRole]);
   }
-  if (companyRole && companyRole in COMPANY_MEMBER && !company.deactivated) {
-    add(COMPANY_MEMBER[companyRole as CompanyRole]);
+  // Only a company role counts here, never a name `COMPANY_MEMBER` inherits (such as `constructor`).
+  if (isCompanyRole(companyRole) && !company.deactivated) {
+    add(COMPANY_MEMBER[companyRole]);
   }
   return allowed;
 }

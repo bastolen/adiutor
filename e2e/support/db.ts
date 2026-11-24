@@ -1,7 +1,7 @@
 /**
  * @file Database helpers for end-to-end tests that need to look at or change
  * the test database in the middle of a test: finding a seeded company or user, ageing
- * a session's MFA confirmation, deleting the staff settings, storing a
+ * a session's MFA confirmation, deactivating an account, deleting the staff settings, storing a
  * sign-in link without sending an email (and using one up), checking whether
  * a browser's session still exists, reading a stored sign-in error, adding
  * someone to a company directly, storing an invitation or an invite link
@@ -468,6 +468,24 @@ export async function resetMfaOf(email: string): Promise<void> {
       );
   });
   await forgetLimitsOf(email);
+}
+
+/**
+ * Deactivates an account straight in the database, keeping its roles, as a
+ * deactivation does: for a test that reactivates it, so a retry starts where
+ * the first attempt did. The account must have no sessions (deactivating
+ * ends them; this doesn't).
+ *
+ * @param email - The account's address.
+ */
+export async function deactivateAccount(email: string): Promise<void> {
+  const userId = await findUserId(email);
+  await withTestDatabase(async (db) => {
+    await db
+      .update(schema.user)
+      .set({ deactivatedAt: new Date() })
+      .where(eq(schema.user.id, userId));
+  });
 }
 
 /**

@@ -9,8 +9,7 @@ import { firstRow } from '@/lib/defined';
 import { appUrl } from '@/lib/env';
 import {
   maySetStatus,
-  mayChangeStatus,
-  mayProposeSolution,
+  mayReplyWithStatus,
   requestSide,
   statusAfterReply,
   WRITTEN_TEXT_FORMAT,
@@ -40,8 +39,10 @@ import { tellPeopleOnRequest } from './updates';
  * ask the company something and wait for its answer ("waiting").
  *
  * Without a status, a reply from the company to a request that was waiting
- * for it puts the request back in progress. No reply reopens a request that
- * is done or cancelled.
+ * for it puts the request back in progress. No such reply reopens a request
+ * that is done or cancelled, and neither does one sent to wait for the
+ * company: whether a reply sets the status asked for is `mayReplyWithStatus`,
+ * the rules the request page offers its buttons by.
  *
  * Everyone else on the request is told by email (`tellPeopleOnRequest`).
  * The reply is stored without links to the staff's pages
@@ -109,10 +110,7 @@ export default async function replyToRequest(
     });
     // A status the request can't move to as it is by now is left alone: the reply still counts. A
     // reply sent as the solution makes it wait for the company's approval (decision 0033).
-    const allowed =
-      asked === 'proposed'
-        ? mayProposeSolution(permissions, locked.status)
-        : asked !== null && mayChangeStatus(permissions, locked.status, asked);
+    const allowed = asked !== null && mayReplyWithStatus(permissions, locked.status, asked);
     const status = asked && allowed ? asked : statusAfterReply(side, locked.status);
     const told = { request: locked, actorId: actor.id };
     if (status === locked.status) {

@@ -1,7 +1,7 @@
 /**
  * @file Tests for the guards on role changes: the last-admin rule, raising
  * your own staff or company role, and which grants need a recent
- * confirmation.
+ * confirmation, reactivating an account that kept its roles included.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -10,6 +10,9 @@ import {
   grantNeedsConfirmation,
   isCompanyRoleRaise,
   isStaffRoleRaise,
+  type KeptRoles,
+  reactivationGrants,
+  reactivationNeedsConfirmation,
   type RoleGrant,
   wouldLeaveNoAdmin,
 } from './guards';
@@ -117,5 +120,30 @@ describe('grantNeedsConfirmation', () => {
     ['stepping an Admin down to Client', { target: company, role: 'client', from: 'admin' }, false],
   ])('%s: %s', (_case, grant, expected) => {
     expect(grantNeedsConfirmation(grant)).toBe(expected);
+  });
+});
+
+describe('reactivationGrants', () => {
+  it('gives back the staff role and every membership, as if given anew', () => {
+    expect(
+      reactivationGrants({ staffRole: 'support', companyRoles: ['admin', 'watcher'] }),
+    ).toEqual([
+      { target: { type: 'staff' }, role: 'support' },
+      { target: { type: 'company' }, role: 'admin' },
+      { target: { type: 'company' }, role: 'watcher' },
+    ]);
+    expect(reactivationGrants({ staffRole: null, companyRoles: [] })).toEqual([]);
+  });
+});
+
+describe('reactivationNeedsConfirmation', () => {
+  it.each<[string, KeptRoles, boolean]>([
+    ['a staff Admin', { staffRole: 'platform_admin', companyRoles: [] }, true],
+    ['a staff Finance member', { staffRole: 'finance', companyRoles: [] }, true],
+    ['a company Admin', { staffRole: null, companyRoles: ['client', 'admin'] }, true],
+    ['a Client and a Watcher', { staffRole: null, companyRoles: ['client', 'watcher'] }, false],
+    ['an account without roles', { staffRole: null, companyRoles: [] }, false],
+  ])('%s: %s', (_case, kept, expected) => {
+    expect(reactivationNeedsConfirmation(kept)).toBe(expected);
   });
 });

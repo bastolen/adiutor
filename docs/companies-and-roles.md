@@ -212,7 +212,11 @@ Admins and Managers who aren't members can still add themselves with any role, a
   - **deactivate or reactivate** the account (deactivating one that's deactivated already, or
     reactivating one that's active, is refused, also when two Admins do it at the same moment: the
     second waits for the account's row and finds the first one's change, so it's recorded and
-    emailed once);
+    emailed once). A deactivated account keeps its staff role and memberships, so reactivating
+    gives them back: for an account that kept a staff role or a company's Admin role, that's a
+    grant like any other (see [Invitations](#invitations)), which needs the Admin's confirmation
+    with their own second step from the last 15 minutes (the button asks for it before its
+    dialog opens), and a reactivated staff Admin is emailed to the other staff Admins;
   - **delete** the account, after typing its email address. Memberships, sign-in methods and
     sessions go with it, the open invitations and invite links they sent are revoked (used
     ones stay in the history, without an inviter), and so are the open invitations addressed to
@@ -294,14 +298,16 @@ itself isn't recorded in the audit log.
   [Changing sign-in methods needs a recent confirmation](mfa.md#changing-sign-in-methods-needs-a-recent-confirmation)):
   any staff role (inviting, an invite link, making someone staff or raising their staff role) and a
   company's Admin role (inviting an Admin, an Admin invite link, making a member Admin, adding
-  someone as Admin, or adding a company with its first Admin). Stepping down, removing someone, and
+  someone as Admin, or adding a company with its first Admin), and reactivating an account that
+  kept either (`reactivationNeedsConfirmation`). Stepping down, removing someone, and
   the Client and Watcher roles need nothing. The services refuse without it
   (`assertConfirmedForGrant`); the forms show "Confirm it's you" instead of their submit button as
-  soon as such a role is chosen, a role select sends you to the step-up page before saving, and
-  you come back to the same page. A stolen session therefore can't leave an account of its own
-  behind, which signing the victim out wouldn't remove.
-- **New staff Admins:** when someone becomes a staff Admin, every other staff Admin gets an email
-  naming them and who made it happen (`staff-admin-added`), so an unexpected one gets noticed.
+  soon as such a role is chosen, a role select and "Reactivate" send you to the step-up page
+  before saving, and you come back to the same page. A stolen session therefore can't leave an
+  account of its own behind, which signing the victim out wouldn't remove.
+- **New staff Admins:** when someone becomes a staff Admin, also by the reactivation of an account
+  that kept the role, every other staff Admin gets an email naming them and who made it happen
+  (`staff-admin-added`), so an unexpected one gets noticed.
 
 - **By email:** company admins (and staff Admins and Managers) invite people from a company's
   Members page, and Admins invite staff from the staff settings. Staff add a company

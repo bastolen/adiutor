@@ -1,12 +1,16 @@
 /**
- * @file Integration tests for the Security page's overview and the step-up
- * methods, against the test database.
+ * @file Integration tests for the Security page's overview (with the names a
+ * staff member signed in as the user doesn't see left out, while the user's
+ * page still shows them to staff Admins) and the step-up methods, against the
+ * test database.
  */
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import { passkey, twoFactor, user } from '@/db/schema';
 import type { MfaRole, MfaState } from '@/lib/authz/mfa';
+import type { Permission } from '@/lib/authz/permissions';
+import { defined } from '@/lib/defined';
 
 import {
   addPassword,
@@ -15,12 +19,14 @@ import {
   createUser,
   enableTwoFactor,
   setupTestContext,
+  staffActor,
   turnOffGitHubSignIn,
 } from '../../../tests/integration/helpers';
-import { loadActor } from '../actor';
+import { type Actor, loadActor } from '../actor';
+import { getUserDetail } from '../people/user-admin';
 import { getSecurityOverview, getStepUpMethods } from './security';
 
-const { db } = setupTestContext();
+const { ctx, db } = setupTestContext();
 
 /** An unknown user's ID. */
 const UNKNOWN_USER = '01900000-0000-7000-8000-000000000000';
@@ -64,7 +70,7 @@ async function addPasskey(userId: string, name: string, createdAt: Date): Promis
 async function overviewOf(userId: string) {
   return getSecurityOverview(
     { db },
-    (await loadActor(db, userId)) ?? { id: userId, mfaState: null },
+    (await loadActor(db, userId)) ?? { id: userId, mfaState: null, signedInAs: null },
   );
 }
 
@@ -90,7 +96,11 @@ async function stepUpMethodsOf(
 describe('getSecurityOverview', () => {
   it('shows nothing set up for a new account', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
-    expect(await overviewOf(jane)).toEqual({ passkeys: [], mfaState: NOTHING_SET_UP });
+    expect(await overviewOf(jane)).toEqual({
+      passkeys: [],
+      connected: [],
+      mfaState: NOTHING_SET_UP,
+    });
   });
 
   it('tells email codes from an authenticator app', async () => {
@@ -173,14 +183,14 @@ describe('getSecurityOverview', () => {
     });
   });
 
-  it('takes the setup from the actor, querying only the passkeys', async () => {
+  it('takes the setup from the actor, querying only the passkeys and connected accounts', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
     await addPasskey(jane, 'Laptop', new Date('2026-01-01T10:00:00Z'));
     // What the actor brings is shown, even though the database says otherwise.
     const loadedWithActor: MfaState = { ...NOTHING_SET_UP, hasPassword: true };
 
     expect(
-      await getSecurityOverview({ db }, { id: jane, mfaState: loadedWithActor }),
+      await getSecurityOverview({ db }, { id: jane, mfaState: loadedWithActor, signedInAs: null }),
     ).toMatchObject({
       passkeys: [expect.objectContaining({ name: 'Laptop' })],
       mfaState: loadedWithActor,
@@ -188,7 +198,74 @@ describe('getSecurityOverview', () => {
   });
 
   it('shows nothing for an unknown user', async () => {
-    expect(await overviewOf(UNKNOWN_USER)).toEqual({ passkeys: [], mfaState: NOTHING_SET_UP });
+    expect(await overviewOf(UNKNOWN_USER)).toEqual({
+      passkeys: [],
+      connected: [],
+      mfaState: NOTHING_SET_UP,
+    });
+  });
+});
+
+describe('getSecurityOverview while a staff member is signed in as the user', () => {
+  /**
+   * The user as the actor while a staff member with these global
+   * permissions is signed in as them.
+   *
+   * @param own - The user, as their own actor.
+   * @param staffPermissions - The staff member's own global permissions.
+   * @returns The actor.
+   */
+  const signedInAsBy = (own: Actor, staffPermissions: Permission[]): Actor => ({
+    ...own,
+    signedInAs: {
+      staffId: '01900000-0000-7000-8000-000000000001',
+      staffName: 'Sam Support',
+      endsAt: new Date(Date.now() + 30 * 60_000),
+      returnTo: '/dashboard',
+      staffPermissions,
+    },
+  });
+
+  /**
+   * The names the overview gives.
+   *
+   * @param actor - Who reads it.
+   * @returns The passkeys' names and the connected accounts' names.
+   */
+  const namesFor = async (actor: Actor) => {
+    const overview = await getSecurityOverview({ db }, actor);
+    return {
+      passkeys: overview.passkeys.map(({ name }) => name),
+      accounts: overview.connected.map(({ accountName }) => accountName),
+    };
+  };
+
+  it('leaves out the names the staff member doesn’t see on the user’s page', async () => {
+    const jane = await createUser(db, 'jane@adiutor.test');
+    await addPasskey(jane, 'Laptop', new Date('2026-01-01T10:00:00Z'));
+    await connectProvider(db, jane, { accountName: 'jane-at-github' });
+    const own = defined(await loadActor(db, jane), 'the actor');
+
+    // The user themselves, and a staff Admin (`users:manage`), see every name.
+    const all = { passkeys: ['Laptop'], accounts: ['jane-at-github'] };
+    expect(await namesFor(own)).toEqual(all);
+    expect(await namesFor(signedInAsBy(own, ['users:view', 'users:manage']))).toEqual(all);
+    // Support or a Manager sees the passkey and the account, without their names.
+    expect(await namesFor(signedInAsBy(own, ['users:view', 'audit:view']))).toEqual({
+      passkeys: [null],
+      accounts: [null],
+    });
+    // Whatever is left out, the rest stays: what the MFA rules need.
+    const overview = await getSecurityOverview({ db }, signedInAsBy(own, ['users:view']));
+    expect(overview.connected).toEqual([
+      expect.objectContaining({ provider: 'github', confirmed: true, mfaVerified: true }),
+    ]);
+    expect(overview.mfaState).toEqual(own.mfaState);
+
+    // The user's page, which loads them by ID, still names the account for a staff Admin.
+    const admin = await staffActor(db, 'platform_admin', 'admin@adiutor.test');
+    const detail = await getUserDetail(ctx, admin, jane);
+    expect(Object.values(detail.accountNames ?? {})).toEqual(['jane-at-github']);
   });
 });
 

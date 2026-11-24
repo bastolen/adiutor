@@ -19,6 +19,12 @@ describe('sign-in paths', () => {
     expect(mfaMethodFromPath(undefined)).toBeNull();
   });
 
+  it('finds no second factor for a name every object inherits', () => {
+    ['constructor', 'toString', '__proto__', 'hasOwnProperty'].forEach((path) => {
+      expect(mfaMethodFromPath(path)).toBeNull();
+    });
+  });
+
   it('names the sign-in method', () => {
     expect(signInMethodFromPath('/sign-in/email')).toBe('password');
     expect(signInMethodFromPath('/two-factor/verify-totp')).toBe('password_and_authenticator');

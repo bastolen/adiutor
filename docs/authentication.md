@@ -350,7 +350,11 @@ re-verify check so a refused "Confirm with GitHub" says nothing about another us
 account can't be planted while the account is deactivated, to sign in once an Admin reactivates
 it. They get no sign-in or reset emails. The invitations and invite links they sent are revoked, as
 for anyone who loses the right to manage (see
-[Rights checked when the change is made](companies-and-roles.md#staff-screens)).
+[Rights checked when the change is made](companies-and-roles.md#staff-screens)). Their staff role
+and memberships stay, so reactivating an account that kept a staff role or a company's Admin role
+gives a lasting way in back and needs the Admin's recent confirmation, like giving that role anew
+(`reactivateUser`; see [Invitations](companies-and-roles.md#invitations)). Reactivating ends no
+sessions: deactivating ended them, and none start while the account is deactivated.
 
 ## Signing in as a user
 
@@ -440,7 +444,9 @@ does, to check what isn't working for them. The reasons are in
 - **The user's account pages** (Profile, Preferences, Security and Activity) show as the user sees them, read-only, with a
   note at the top. Their controls are off, like everywhere outside requests. They show only the personal details
   the staff member sees on the user's page (`personalDataShown` in
-  `src/lib/authz/impersonation.ts`, from `signedInAs.staffPermissions`):
+  `src/lib/authz/impersonation.ts`, from `signedInAs.staffPermissions`), which the services that
+  load them for the actor leave out, not the pages (`listOwnActivity`, `getSecurityOverview` and
+  `listOwnSessions`; the user's page loads the same details by ID, for staff Admins):
   - the signed-in devices and the passkeys' names: staff Admins only (`users:manage`);
   - the provider accounts' names: staff Admins only (`users:manage`);
   - the IP address and browser in the recent activity: staff who see the audit log

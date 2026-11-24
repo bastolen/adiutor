@@ -21,7 +21,10 @@
  * mark it done, cancel it or reopen it. Everyone who reads it can subscribe
  * to it, and the staff who work on requests and the company's Admins change
  * who else is subscribed. A deactivated company's requests show no controls:
- * they can only be read.
+ * they can only be read. Who may do what comes from the rules in
+ * `src/lib/requests/rules.ts` (`mayContribute`, `statusChoices`,
+ * `mayChangeStatus`, `mayWaitWithReply`, `mayProposeSolution`, ...), which the
+ * services apply too.
  */
 import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -41,9 +44,11 @@ import ClientMessages from '@/lib/i18n/client-messages';
 import {
   DESCRIPTION_ANCHOR,
   formatRequestNumber,
-  isClosedStatus,
   mayAnswerSolution,
+  mayChangeStatus,
+  mayContribute,
   mayProposeSolution,
+  mayWaitWithReply,
   mayWriteNote,
   offeredActivityGroups,
   parseRequestNumber,
@@ -169,13 +174,13 @@ async function RequestContent({
         })}`
       : null;
   // Nobody changes the requests of a deactivated company; the services refuse it too.
-  const contributes = !detail.company.deactivated && detail.permissions.has('requests:contribute');
+  const contributes = mayContribute(detail.permissions, detail.company);
   const manages = contributes && detail.permissions.has('requests:manage');
   // What someone at the company may do with the request as it is: close it, or reopen it.
   const choices = contributes && !manages ? statusChoices(detail.permissions, detail.status) : [];
   const fields = { request: String(detail.number) };
   // "Send and wait for the company": only on a request that's worked on and doesn't wait already.
-  const canWait = manages && !isClosedStatus(detail.status) && detail.status !== 'waiting';
+  const canWait = manages && mayWaitWithReply(detail.permissions, detail.status);
   // "Send as solution": the staff, on a request that's worked on and doesn't wait for approval.
   const canPropose = manages && mayProposeSolution(detail.permissions, detail.status);
   // The company's Admins and Clients answer a solution that waits for them.
@@ -325,10 +330,13 @@ async function RequestContent({
                 <StatusSelect
                   request={detail.number}
                   status={detail.status}
-                  // Waiting for approval comes only with "Send as solution", so the select only
-                  // shows it while the request has it.
+                  // The status it has and the ones the staff may move it to: waiting for
+                  // approval comes only with "Send as solution", so the select only shows it
+                  // while the request has it.
                   options={REQUEST_STATUSES.filter(
-                    (status) => status !== 'proposed' || detail.status === 'proposed',
+                    (status) =>
+                      status === detail.status ||
+                      mayChangeStatus(detail.permissions, detail.status, status),
                   ).map((status) => ({
                     value: status,
                     label: tRequests('status', { status, audience: detail.audience }),

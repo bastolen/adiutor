@@ -140,6 +140,19 @@ describe('members of a company', () => {
     ).toBe(0);
   });
 
+  it('get nothing from a name every object inherits passed as their company role', () => {
+    ['constructor', 'toString', '__proto__', 'hasOwnProperty'].forEach((name) => {
+      expect(
+        getPermissions({
+          platformRole: null,
+          // A value from outside the type, as a lookup by an unchecked key would see it.
+          companyRole: name as CompanyRole,
+          company: activeClient,
+        }).size,
+      ).toBe(0);
+    });
+  });
+
   it('combine with staff permissions', () => {
     // Finance only reads requests; being a Client of this company lets them take part in it.
     const permissions = getPermissions({

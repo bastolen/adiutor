@@ -5,17 +5,26 @@
  *
  * Every change is recorded in the audit log, emails the user, and refuses
  * anything that would leave a company or the staff without an Admin who can
- * sign in (`assertNotSoleAdmin`).
+ * sign in (`assertNotSoleAdmin`). Resetting two-step verification, and
+ * reactivating an account that kept a staff role or a company's Admin role,
+ * need the Admin's recent confirmation with their own second step.
  */
 import { and, eq, inArray } from 'drizzle-orm';
 
 import type { DatabaseOrTransaction, DatabaseTransaction } from '@/db';
 import { account, passkey, twoFactor, user } from '@/db/schema';
+import { reactivationGrants } from '@/lib/authz/guards';
 import { needsRecentConfirmation } from '@/lib/authz/mfa';
+import { PLATFORM_ADMIN_ROLE } from '@/lib/authz/roles';
 import { normalizeEmail } from '@/lib/email-address';
 import { OAUTH_PROVIDERS } from '@/lib/sign-in/oauth-providers';
 
-import { assertNotSignedInAs, assertPermission, getGlobalPermissions } from '../../access';
+import {
+  assertConfirmedForGrant,
+  assertNotSignedInAs,
+  assertPermission,
+  getGlobalPermissions,
+} from '../../access';
 import type { Actor } from '../../actor';
 import { recordEvent } from '../../audit';
 import { queueSecurityNotice, sendAccountDeletedNotice } from '../../auth/security-notices';
@@ -25,6 +34,8 @@ import type { ServiceContext } from '../../context';
 import { notFoundError, ServiceError, parseId } from '../../errors';
 import { unassignFrom, unsubscribeFrom } from '../../requests';
 import { revokeInvitationsTo, revokeInvitesWithoutManager } from '../invitations';
+import notifyStaffAdminAdded from '../staff-admin-notice';
+import loadKeptRoles from './kept-roles';
 import { assertNotSoleAdmin } from './sole-admin';
 
 /**
@@ -269,15 +280,27 @@ export async function deactivateUser(
 /**
  * Reactivates a deactivated account, so it can sign in again.
  *
+ * Deactivating kept the account's staff role and memberships, so this gives
+ * them back: a lasting way in, like giving those roles anew (decision 0004).
+ * When it kept a staff role or a company's Admin role, the Admin needs a
+ * confirmation with their second step from the last 15 minutes
+ * (`assertConfirmedForGrant` for each of `reactivationGrants`), and a
+ * reactivated staff Admin is emailed to the other staff Admins
+ * (`notifyStaffAdminAdded`), as a new one is. The account has no sessions
+ * to end: deactivating ended them, and none start while it's deactivated.
+ *
  * The account's row is locked as it's read, before whether it's deactivated
- * is checked. Of two reactivations at the same moment the second waits for
- * that lock and then finds the account active, so the audit log records the
- * reactivation once and the user gets one email about it.
+ * is checked and its roles are read. Of two reactivations at the same moment
+ * the second waits for that lock and then finds the account active, so the
+ * audit log records the reactivation once and the user gets one email about
+ * it.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `users:manage`.
  * @param userId - The user.
- * @throws {ServiceError} `conflict` when the account is active.
+ * @throws {ServiceError} `conflict` when the account is active, `confirmation_required`
+ *   (`errors.grantConfirmationRequired`) when it kept a staff role or a company's Admin role and
+ *   the actor hasn't confirmed it's them in the last 15 minutes.
  */
 export async function reactivateUser(
   ctx: ServiceContext,
@@ -286,20 +309,29 @@ export async function reactivateUser(
 ): Promise<void> {
   assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'users:manage');
-  const { targetId } = await ctx.db.transaction(async (tx) => {
+  const { targetId, staffAdmin } = await ctx.db.transaction(async (tx) => {
     const target = await loadTarget(tx, actor, userId, { lock: true });
     if (!target.deactivatedAt) {
       throw new ServiceError('conflict', 'errors.users.alreadyActive');
     }
+    const kept = await loadKeptRoles(tx, target.id);
+    reactivationGrants(kept).forEach((grant) => assertConfirmedForGrant(actor, grant));
     await tx.update(user).set({ deactivatedAt: null }).where(eq(user.id, target.id));
     await recordEvent(
       ctx,
       { action: 'account_reactivated', actorUserId: actor.id, targetUserId: target.id },
       tx,
     );
-    return { targetId: target.id };
+    return { targetId: target.id, staffAdmin: kept.staffRole === PLATFORM_ADMIN_ROLE };
   });
   await queueSecurityNotice(ctx.db, targetId, 'account_reactivated');
+  if (staffAdmin) {
+    await notifyStaffAdminAdded(ctx, {
+      newAdminId: targetId,
+      how: 'reactivation',
+      byUserId: actor.id,
+    });
+  }
 }
 
 /**

@@ -5,8 +5,9 @@
  * when the rules allow it for this user, or saying why not), and, for staff
  * Admins on someone else's page, the account access (reset two-step
  * verification, which also disconnects their GitHub and Google accounts and
- * needs the Admin's recent confirmation, deactivate, reactivate) and
- * deleting the account. Staff who may do none of these, and everyone on
+ * needs the Admin's recent confirmation, deactivate, and reactivate, which
+ * needs it too when the account gets a staff role or a company's Admin role
+ * back) and deleting the account. Staff who may do none of these, and everyone on
  * their own page, don't get the tab. The header and tabs come from the layout.
  */
 import { Suspense } from 'react';
@@ -74,6 +75,7 @@ async function ManageUser({ params }: { params: Promise<{ userId: string }> }) {
           mfa={detail.mfa}
           connectedAccounts={detail.connectedAccounts}
           deactivatedAt={detail.deactivatedAt}
+          reactivationNeedsConfirmation={detail.reactivationNeedsConfirmation}
         />
       )}
 

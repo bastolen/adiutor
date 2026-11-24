@@ -11,8 +11,9 @@ One file per email in `src/emails/`:
 
 - `magic-link.tsx`, `reset-password.tsx`, `verify-email.tsx`, `two-factor-code.tsx`,
   `account-created.tsx` and `security-notice.tsx` for accounts
-- `staff-admin-added.tsx` for the staff Admins when someone else becomes one (given the role, or
-  by an invitation or invite link), naming the new Admin and who made it happen, without a device
+- `staff-admin-added.tsx` for the staff Admins when someone else becomes one (given the role, by
+  an invitation or invite link, or by the reactivation of an account that kept the role), naming
+  the new Admin and who made it happen, without a device
   or IP address (`notifyStaffAdminAdded` in `src/server/people/staff-admin-notice.ts` queues one
   `staff-admin-added` job per Admin; see [Background jobs](jobs.md#queued-jobs))
 - `job-failing.tsx` for the staff Admins when a background job keeps failing, with the error's

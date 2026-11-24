@@ -2,6 +2,7 @@
  * @file Whether a session counts as having had a second factor, and the
  * 15-minute window after a second step in which sign-in methods may change.
  */
+import ownValue from '../../own-value';
 import { isMfaProvider, MFA_PROVIDERS, type MfaProvider } from '../../sign-in/oauth-providers';
 import { type MfaRole, requiresMfa } from './requirement';
 import type { MfaState } from './state';
@@ -95,11 +96,14 @@ const MFA_METHOD_PATHS: Record<string, MfaMethod> = {
  * a provider that can prove MFA are upgraded afterwards when the provider
  * account has it, since that needs a call to the provider.
  *
+ * Only the table's own entries count, never a name it inherits (such as
+ * `constructor`).
+ *
  * @param path - The endpoint's path, e.g. `/two-factor/verify-totp`.
  * @returns The method, or `null` when the endpoint proves none.
  */
 export function mfaMethodFromPath(path: string | undefined): MfaMethod | null {
-  return (path && MFA_METHOD_PATHS[path]) || null;
+  return (path && ownValue(MFA_METHOD_PATHS, path)) || null;
 }
 
 /**

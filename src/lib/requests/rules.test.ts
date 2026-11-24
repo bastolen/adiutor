@@ -10,11 +10,14 @@ import {
   mayAnswerSolution,
   mayBeAssigned,
   mayChangeStatus,
+  mayContribute,
   mayEditDescription,
   mayEditNote,
   mayEditReply,
   mayProposeSolution,
+  mayReplyWithStatus,
   maySetStatus,
+  mayWaitWithReply,
   mayWriteNote,
   requestAudience,
   requestSide,
@@ -161,6 +164,15 @@ describe('statusChoices', () => {
       'cancelled',
     ]);
   });
+
+  it('with the status a request has, gives the staff every status but waiting for approval while it doesn’t wait for it', () => {
+    REQUEST_STATUSES.forEach((from) => {
+      // What the staff's status select offers.
+      expect(
+        REQUEST_STATUSES.filter((to) => to === from || statusChoices(support, from).includes(to)),
+      ).toEqual(REQUEST_STATUSES.filter((to) => to !== 'proposed' || from === 'proposed'));
+    });
+  });
 });
 
 describe('statusAfterReply', () => {
@@ -173,6 +185,58 @@ describe('statusAfterReply', () => {
     expect(statusAfterReply('company', 'open')).toBe('open');
     expect(statusAfterReply('company', 'done')).toBe('done');
     expect(statusAfterReply('company', 'cancelled')).toBe('cancelled');
+  });
+});
+
+describe('mayContribute', () => {
+  it('lets those who take part write while the company is active', () => {
+    const active = { deactivated: false };
+    expect(mayContribute(support, active)).toBe(true);
+    expect(mayContribute(client, active)).toBe(true);
+    expect(mayContribute(permissionsOf(null, 'admin'), active)).toBe(true);
+    // Finance and Watchers only read.
+    expect(mayContribute(finance, active)).toBe(false);
+    expect(mayContribute(watcher, active)).toBe(false);
+  });
+
+  it('lets nobody write on a deactivated company’s requests, the staff included', () => {
+    const deactivated = { deactivated: true };
+    expect(mayContribute(support, deactivated)).toBe(false);
+    expect(mayContribute(client, deactivated)).toBe(false);
+  });
+});
+
+describe('mayWaitWithReply', () => {
+  it('lets the staff who work on requests wait for the company on a request that’s worked on', () => {
+    (['open', 'todo', 'in_progress', 'proposed'] as const).forEach((from) => {
+      expect(mayWaitWithReply(support, from)).toBe(true);
+    });
+  });
+
+  it('refuses a request that waits already or is closed, and everyone else', () => {
+    (['waiting', 'done', 'cancelled'] as const).forEach((from) => {
+      expect(mayWaitWithReply(support, from)).toBe(false);
+    });
+    expect(mayWaitWithReply(finance, 'in_progress')).toBe(false);
+    expect(mayWaitWithReply(client, 'in_progress')).toBe(false);
+  });
+});
+
+describe('mayReplyWithStatus', () => {
+  it('sends a solution, or waits for the company, only as the page offers it', () => {
+    expect(mayReplyWithStatus(support, 'in_progress', 'proposed')).toBe(true);
+    expect(mayReplyWithStatus(support, 'proposed', 'proposed')).toBe(false);
+    expect(mayReplyWithStatus(support, 'in_progress', 'waiting')).toBe(true);
+    // A reply never reopens a closed request to wait for the company.
+    expect(mayReplyWithStatus(support, 'done', 'waiting')).toBe(false);
+    expect(mayReplyWithStatus(support, 'cancelled', 'waiting')).toBe(false);
+  });
+
+  it('allows any other status the person may change it to', () => {
+    expect(mayReplyWithStatus(support, 'open', 'in_progress')).toBe(true);
+    expect(mayReplyWithStatus(client, 'in_progress', 'done')).toBe(true);
+    expect(mayReplyWithStatus(client, 'in_progress', 'in_progress')).toBe(false);
+    expect(mayReplyWithStatus(client, 'in_progress', 'todo')).toBe(false);
   });
 });
 

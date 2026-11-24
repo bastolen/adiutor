@@ -7,8 +7,9 @@
  * written out by hand (not derived from `src/lib/authz/permissions.ts`), so a
  * change to the rules shows up here as a deliberate edit. Role refusals are
  * checked here, not in the service tests. The refusal of role grants without
- * a recent confirmation is in `people/grant-confirmation.int.test.ts`: it
- * needs actors with a second step, and these have none. The same goes for
+ * a recent confirmation (reactivating an account that kept a staff role or
+ * a company Admin role included) is in `people/grant-confirmation.int.test.ts`:
+ * it needs actors with a second step, and these have none. The same goes for
  * changing or first setting a password (`changeOwnPassword`,
  * `setFirstPassword`), which need a second step or a fresh sign-in and are
  * covered in `auth/accounts.int.test.ts`. Signing in as a user needs strong
@@ -212,7 +213,11 @@ interface World {
   linksToRevoke: { own: string; other: string };
   /** Another Client membership in each company, to remove. */
   membershipsToRemove: { own: string; other: string };
-  /** A deactivated user, to reactivate. */
+  /**
+   * A deactivated user without roles, to reactivate: one that kept a staff
+   * role or a company Admin role needs a recent confirmation, which these
+   * actors can't have (see `people/grant-confirmation.int.test.ts`).
+   */
   deactivated: string;
   /** Another staff member, to take off the staff. */
   staffToRemove: string;
