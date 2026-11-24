@@ -1,11 +1,11 @@
 /**
  * @file The board of requests across companies (`/requests/board`), or of
- * one company on its page (`/companies/<URL name>/board`), on the
- * server: it loads what the list loads (the companies, types, assignable
- * staff and settings), reads the same filters (`request-filters.tsx`), loads
- * the lanes (`listBoard`) and renders each card's content, then hands the
- * lanes to the browser part (`board.tsx`), which moves cards. Its text comes
- * from `requests` (the lanes' names, the cards' labels) and `requests.board`.
+ * one company on its page (`/companies/<URL name>/board`), on the server: it
+ * loads what the list loads and reads the same filters
+ * (`loadRequestFilters`), loads the lanes (`listBoard`) and renders each
+ * card's content, then hands the lanes to the browser part (`board.tsx`),
+ * which moves cards. Its text comes from `requests` (the lanes' names, the
+ * cards' labels) and `requests.board`.
  */
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -32,20 +32,13 @@ import { createPageUrl } from '@/lib/tables/page-url';
 import { PAGE_SIZES } from '@/lib/tables/table-state';
 import type { Actor } from '@/server/actor';
 import appContext from '@/server/app-context';
-import { getStaffPermissionsInCompanies } from '@/server/authz';
-import {
-  type BoardCard,
-  getRequestSettings,
-  listAssignableStaff,
-  listBoard,
-  listRequestCompanies,
-  listRequestTypes,
-} from '@/server/requests';
+import { type BoardCard, listBoard } from '@/server/requests';
 
 import Board from './board';
 import type { BoardCardView } from './board-card';
+import loadRequestFilters from './load-request-filters';
 import { PriorityBadge, ReopenedBadge, StatusBadge } from './request-badges';
-import { parseRequestFilters, RequestFilterBar, viewParams } from './request-filters';
+import { RequestFilterBar, viewParams } from './request-filters';
 import { PeopleAvatars, personName, type SideNames } from './request-person';
 import RequestViewToggle, {
   REQUEST_VIEW_PATHS,
@@ -216,28 +209,14 @@ export default async function RequestBoard({
   company = undefined,
   paths = REQUEST_VIEW_PATHS,
 }: RequestBoardProps) {
-  const [companies, settings, assignable, types, locale, t, tRequests, tTables] = await Promise.all(
-    [
-      listRequestCompanies(appContext, actor),
-      getRequestSettings(appContext),
-      getStaffPermissionsInCompanies(actor).has('requests:view-internal')
-        ? listAssignableStaff(appContext, actor)
-        : [],
-      listRequestTypes(appContext, actor),
+  const [{ companies, settings, assignable, types, filters }, locale, t, tRequests, tTables] =
+    await Promise.all([
+      loadRequestFilters(actor, searchParams, company),
       getLocale(),
       getTranslations('requests.board'),
       getTranslations('requests'),
       getTranslations('tables'),
-    ],
-  );
-  const filters = parseRequestFilters({
-    searchParams,
-    actor,
-    company,
-    companies,
-    types,
-    assignable,
-  });
+    ]);
   const board = await listBoard(appContext, actor, {
     search: filters.search,
     company: company ?? filters.company,
