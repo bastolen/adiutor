@@ -47,12 +47,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
   addOAuthServerContext: vi.fn(),
 }));
 
-// Watched, to check when the checks read a user's MFA state; it still reads it.
-vi.mock('../mfa-state', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../mfa-state')>();
-  return { ...actual, loadMfaContext: vi.fn(actual.loadMfaContext) };
-});
-
 afterAll(async () => {
   const app = await import('@/db');
   await app.db.$client.end();
