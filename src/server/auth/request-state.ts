@@ -37,7 +37,7 @@ export interface PendingProviderStepUp {
 }
 
 /** What one request carries between its hooks. */
-export interface AuthRequestState {
+interface AuthRequestState {
   /**
    * The provider account's name and picture noted from the provider's
    * profile (`noteProviderProfile`, from `user.validateUserInfo`), until an
@@ -163,7 +163,7 @@ export function takeRequestState<K extends keyof AuthRequestState>(
  * both receive, rather than the request's `ctx.context`: another update in
  * the same request mustn't see it.
  */
-export interface DatabaseHookState {
+interface DatabaseHookState {
   /**
    * Set before a user update when a GitHub or Google sign-in marks the email
    * address verified, for the update's after hook (`afterUserUpdate`).

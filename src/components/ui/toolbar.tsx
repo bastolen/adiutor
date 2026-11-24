@@ -19,7 +19,7 @@ import { focusRing } from './styles';
  * control borders: the fill alone is about 1.1:1 against the toolbar, the
  * line is 3:1 or more (WCAG 1.4.11).
  */
-export const toolbarButtonClasses = cn(
+const toolbarButtonClasses = cn(
   'inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-[background-color,color,box-shadow] select-none hover:bg-muted hover:text-foreground disabled:opacity-55 disabled:hover:bg-transparent disabled:hover:text-muted-foreground aria-pressed:bg-muted aria-pressed:text-foreground aria-pressed:shadow-[inset_0_0_0_1px_var(--color-border-strong)] data-[state=open]:bg-muted data-[state=open]:text-foreground [&_svg]:size-4 [&_svg]:shrink-0',
   focusRing,
 );

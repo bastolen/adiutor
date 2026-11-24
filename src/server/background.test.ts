@@ -8,8 +8,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import startInBackground from './background';
 
-vi.mock('server-only', () => ({}));
-
 afterEach(() => {
   vi.restoreAllMocks();
 });

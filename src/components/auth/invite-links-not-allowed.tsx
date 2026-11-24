@@ -16,11 +16,11 @@ import Button from '@/components/ui/button';
  * @returns The explanation.
  */
 export default function InviteLinksNotAllowed() {
-  const t = useTranslations('auth');
+  const t = useTranslations('errors');
   const tCommon = useTranslations('common');
   return (
     <div className="flex flex-col gap-5">
-      <Alert tone="info">{t('invitation.notAllowed')}</Alert>
+      <Alert tone="info">{t('inviteLinks.notAllowed')}</Alert>
       <Button variant="secondary" fullWidth asChild>
         <Link href="/dashboard">{tCommon('actions.goToDashboard')}</Link>
       </Button>

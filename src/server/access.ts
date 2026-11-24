@@ -256,7 +256,7 @@ export interface StillManaged {
 }
 
 /** Options for {@link assertStillManages}. */
-export interface StillManagesOptions {
+interface StillManagesOptions {
   /**
    * Check only the actor's staff rights in the company, leaving their own
    * membership out (and unlocked): for what only staff may do there, such as

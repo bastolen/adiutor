@@ -19,6 +19,7 @@ import {
   enableTwoFactor,
   inSequence,
   sendQueuedEmails,
+  minutesAgo,
 } from '../../../../tests/integration/helpers';
 import type { Actor } from '../../actor';
 import {
@@ -28,7 +29,6 @@ import {
   db,
   fromKnownDevice,
   jane,
-  minutesAgo,
   sent,
   signedIn,
   testCompany,

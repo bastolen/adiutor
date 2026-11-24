@@ -104,7 +104,7 @@ export interface SetupInput {
 }
 
 /** Options for {@link setUpPlatform}. */
-export interface SetupOptions {
+interface SetupOptions {
   /**
    * May make an existing account the Admin, and runs whenever nothing is set
    * up yet, even with accounts (to recover a lost `setup.completed_at`). Only the

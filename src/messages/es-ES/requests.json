@@ -92,8 +92,7 @@
       "priorityLabel": "Prioridad",
       "priorityFromType": "Según el tipo",
       "priorityHint": "Solo el personal ve la prioridad.",
-      "submit": "Crear solicitud",
-      "cancel": "Cancelar"
+      "submit": "Crear solicitud"
     },
     "detail": {
       "title": "Solicitud {reference}",
@@ -250,7 +249,6 @@
       "descriptionLabel": "Descripción",
       "replyLabel": "Respuesta",
       "save": "Guardar",
-      "cancel": "Cancelar",
       "edited": "Editado",
       "editedAt": "Editado el {time}",
       "versionsTitle": "Versiones anteriores",

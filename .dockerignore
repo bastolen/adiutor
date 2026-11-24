@@ -16,8 +16,6 @@
 
 # Dependencies and builds (the image installs and builds its own)
 **/node_modules
-.pnp
-.pnp.*
 **/.next
 .vercel
 out
@@ -33,18 +31,13 @@ next-env.d.ts
 docker
 
 # Test output
-coverage
 .vitest
 test-results
 playwright-report
-blob-report
-playwright/.cache
 e2e/.outbox
 
 # Logs and system files
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 .pnpm-debug.log*
 .DS_Store
 

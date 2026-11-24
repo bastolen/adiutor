@@ -91,7 +91,6 @@
     },
     "accountCreated": {
       "subject": "Tu cuenta de Adiutor está lista",
-      "preview": "Tu cuenta de Adiutor está lista",
       "reason": "Recibes esto porque {creator}, de {staff}, ha creado una cuenta de Adiutor para esta dirección de correo. Si no lo esperabas, puedes ignorar este correo.",
       "heading": "Tu cuenta de Adiutor está lista",
       "body": "{creator}, de {staff}, ha creado una cuenta de Adiutor para ti. Elige una contraseña para iniciar sesión.",
@@ -100,7 +99,6 @@
     },
     "staffAdminAdded": {
       "subject": "{name} ahora es administrador del personal en Adiutor",
-      "preview": "{name} ahora es administrador del personal en Adiutor",
       "reason": "Recibes esto porque eres administrador del personal en Adiutor: los administradores del personal reciben un aviso cada vez que alguien pasa a serlo.",
       "heading": "{name} ahora es administrador del personal",
       "nameWithEmail": "{name} ({email})",
@@ -115,7 +113,6 @@
     },
     "jobFailing": {
       "subject": "La tarea en segundo plano {job} sigue fallando en Adiutor",
-      "preview": "La tarea en segundo plano {job} sigue fallando en Adiutor",
       "reason": "Recibes esto porque eres administrador del personal en Adiutor: los administradores del personal reciben un aviso cuando una tarea en segundo plano sigue fallando, como mucho una vez al día por tarea.",
       "heading": "{job} sigue fallando",
       "recurring": "{count, plural, one {La tarea en segundo plano {job} falló en su última ejecución.} other {La tarea en segundo plano {job} falló en sus últimas # ejecuciones seguidas.}} Las demás tareas siguen funcionando, pero esta no hará su trabajo hasta que se resuelva el problema.",

@@ -74,7 +74,7 @@ export async function createRequestLink(
 }
 
 /** The account a request link signs in to, as its confirmation page names it. */
-export interface RequestLinkAccount {
+interface RequestLinkAccount {
   /** Its ID, to compare with whoever is signed in (not for the page to show). */
   userId: string;
   /** Its name; may be empty. */
@@ -187,7 +187,7 @@ export interface RequestLinkOutcome {
 }
 
 /** The parts of Better Auth's endpoint context {@link followRequestLink} reads. */
-export interface RequestLinkContext extends SessionCookieContext {
+interface RequestLinkContext extends SessionCookieContext {
   /** The request's headers. */
   headers?: Headers;
 }

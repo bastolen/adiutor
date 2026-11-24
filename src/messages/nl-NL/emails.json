@@ -91,7 +91,6 @@
     },
     "accountCreated": {
       "subject": "Je Adiutor-account staat klaar",
-      "preview": "Je Adiutor-account staat klaar",
       "reason": "Je ontvangt dit omdat {creator} van {staff} een Adiutor-account heeft gemaakt voor dit e-mailadres. Had je dit niet verwacht, dan kun je deze e-mail negeren.",
       "heading": "Je Adiutor-account staat klaar",
       "body": "{creator} van {staff} heeft een Adiutor-account voor je gemaakt. Kies een wachtwoord om in te loggen.",
@@ -100,7 +99,6 @@
     },
     "staffAdminAdded": {
       "subject": "{name} is nu beheerder van de medewerkers op Adiutor",
-      "preview": "{name} is nu beheerder van de medewerkers op Adiutor",
       "reason": "Je ontvangt dit omdat je beheerder van de medewerkers bent op Adiutor: beheerders horen het altijd wanneer iemand beheerder wordt.",
       "heading": "{name} is nu beheerder van de medewerkers",
       "nameWithEmail": "{name} ({email})",
@@ -115,7 +113,6 @@
     },
     "jobFailing": {
       "subject": "Achtergrondtaak {job} blijft mislukken op Adiutor",
-      "preview": "Achtergrondtaak {job} blijft mislukken op Adiutor",
       "reason": "Je ontvangt dit omdat je beheerder van de medewerkers bent op Adiutor: beheerders horen het wanneer een achtergrondtaak blijft mislukken, hooguit één keer per dag per taak.",
       "heading": "{job} blijft mislukken",
       "recurring": "{count, plural, one {De achtergrondtaak {job} is de laatste keer mislukt.} other {De achtergrondtaak {job} is de laatste # keer achter elkaar mislukt.}} De andere taken lopen door, maar deze doet zijn werk pas weer als het probleem is opgelost.",

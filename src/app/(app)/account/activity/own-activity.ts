@@ -208,7 +208,7 @@ function describeAction(
       // At a password sign-in's code step, recorded without an actor: whoever typed it may not be
       // the user.
       if (details.atSignIn === true) {
-        return t('ownActivity.mfaFailedAtSignIn');
+        return others.audit('events.mfaFailedAtSignIn');
       }
       return t('ownActivity.mfaFailedWrongCode');
     case 'password_changed':

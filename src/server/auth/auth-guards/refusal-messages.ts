@@ -24,7 +24,7 @@ import {
 import { waitMinutes } from '../../rate-limit';
 
 /** What a refusal's body says: the code forms react to, and the message. */
-export interface RefusalBody {
+interface RefusalBody {
   /** The error code (`error.code` in the browser). */
   code: string;
   /** The message, in the request's language. */
@@ -117,7 +117,7 @@ export function tooManyAttemptsBody(
 ): RefusalBody {
   return {
     code: TOO_MANY_ATTEMPTS.code,
-    message: translatorFor(request)('codes.server.tooManyAttempts', {
+    message: translator(localeOf(request), 'errors')('tooManyAttempts', {
       minutes: waitMinutes(retryAfterSeconds),
     }),
   };

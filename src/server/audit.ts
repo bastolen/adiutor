@@ -200,7 +200,7 @@ export async function listAuditEvents(
 }
 
 /** What {@link listAuditLog} can be asked for: filters, and the table's sort and page. */
-export interface ListAuditLogOptions extends Partial<TableState<AuditLogSort>> {
+interface ListAuditLogOptions extends Partial<TableState<AuditLogSort>> {
   /** Text to find in the name or email of who acted or whom it was about, or in the company's name. */
   search?: string;
   /** Only events of this group. */
@@ -272,6 +272,9 @@ export async function listAuditLog(
   );
 }
 
+/** How many events the signed-in user's own activity lists. */
+const OWN_ACTIVITY_LIMIT = 20;
+
 /**
  * Lists what happened to the signed-in user's own account (sign-ins, failed
  * attempts, sign-in method and security changes, memberships), newest
@@ -287,14 +290,9 @@ export async function listAuditLog(
  *
  * @param ctx - Service context.
  * @param actor - The signed-in user, or a staff member signed in as them.
- * @param limit - How many to return. Defaults to 20.
- * @returns The events about them.
+ * @returns The events about them (the latest 20).
  */
-export async function listOwnActivity(
-  ctx: ServiceContext,
-  actor: Actor,
-  limit = 20,
-): Promise<AuditEntry[]> {
+export async function listOwnActivity(ctx: ServiceContext, actor: Actor): Promise<AuditEntry[]> {
   const { origins } = personalDataShown(actor);
   const entries = await queryAuditEntries(
     ctx.db,
@@ -303,7 +301,7 @@ export async function listOwnActivity(
       // What a staff member did while signed in as them is for the staff who see the audit log.
       notInArray(auditEvent.action, [...STAFF_ONLY_AUDIT_ACTIONS]),
     ],
-    { limit },
+    { limit: OWN_ACTIVITY_LIMIT },
   );
   // Every event the user caused records them as its actor. Failed sign-ins have none (anyone can
   // send them), nor do passwords waiting for their code and wrong codes at that step (anyone with

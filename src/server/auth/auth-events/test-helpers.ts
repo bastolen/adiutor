@@ -19,7 +19,6 @@ import { ACTING_AS_CHANGED_COOKIE } from '@/lib/sign-in/auth-cookies';
 import {
   addPasskey as addStoredPasskey,
   connectProvider,
-  minutesAgo,
   sendQueuedEmails,
   setupTestContext,
 } from '../../../../tests/integration/helpers';
@@ -202,9 +201,6 @@ export async function storeSessionMfa(
     .set({ mfaVerified: true, mfaMethod, mfaVerifiedAt: verifiedAt })
     .where(eq(session.id, sessionId));
 }
-
-/** The time a number of minutes ago (shared with the other integration tests). */
-export { minutesAgo };
 
 /** The secret the test requests' cookies are signed with. */
 export const COOKIE_SECRET = 'adiutor-tests-cookie-secret';

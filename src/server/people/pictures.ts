@@ -14,7 +14,7 @@
  */
 import { createHmac } from 'node:crypto';
 
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { asc, eq, inArray } from 'drizzle-orm';
 
 import type { DatabaseOrTransaction } from '@/db';
 import { account, user } from '@/db/schema';
@@ -358,7 +358,7 @@ export async function loadPicture(
   const [owner] = await ctx.db
     .select({ userId: account.userId })
     .from(account)
-    .where(and(eq(account.id, id.data)));
+    .where(eq(account.id, id.data));
   if (!owner) {
     return null;
   }

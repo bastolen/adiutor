@@ -17,7 +17,6 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
-  useState,
 } from 'react';
 
 import { ReturnToField, useRecentConfirmation } from '@/components/auth/recent-confirmation';
@@ -225,8 +224,6 @@ export default function ActionDialog({
   const changesOff = useSignedInAs() && !allowedWhileSignedInAs;
   const [open, setOpen] = useTransientState(false);
   const [message, setMessage] = useTransientState<string | null>(null);
-  // A fresh form state per opening, so an old error doesn't show again.
-  const [attempt, setAttempt] = useState(0);
   const showToast = useToast();
   const containerRef = useRef<HTMLDivElement>(null);
   // Set once the action worked, so this button going away afterwards can move focus.
@@ -297,19 +294,9 @@ export default function ActionDialog({
       >
         {triggerLabel}
       </Button>
-      <Modal
-        open={open}
-        onOpenChange={(next) => {
-          setOpen(next);
-          if (next) {
-            setAttempt((value) => value + 1);
-          }
-        }}
-        title={title}
-        description={description}
-      >
+      <Modal open={open} onOpenChange={setOpen} title={title} description={description}>
+        {/* Closing unmounts the form, so each opening starts with a fresh form state. */}
         <ActionDialogForm
-          key={attempt}
           action={run}
           fields={fields}
           confirmLabel={confirmLabel}

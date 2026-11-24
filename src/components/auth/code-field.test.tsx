@@ -37,7 +37,7 @@ describe('CodeField', () => {
   );
 
   it('leaves the help text out when the form says it already', () => {
-    render(<CodeField kind="totp" value="" onChange={ignore} description="" />);
+    render(<CodeField kind="totp" value="" onChange={ignore} hint={false} />);
 
     expect(screen.getByRole('textbox', { name: 'Code' })).not.toHaveAttribute('aria-describedby');
   });

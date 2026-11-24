@@ -11,8 +11,6 @@
 import { parseArgs } from 'node:util';
 
 import { db } from '../src/db';
-import { sendEmail } from '../src/lib/email';
-import { appUrl } from '../src/lib/env';
 import { DEFAULT_LOCALE } from '../src/lib/i18n/locales';
 import { installLogRedaction } from '../src/lib/log-redaction';
 import { revokeAllSessions } from '../src/server/auth/sessions';
@@ -38,10 +36,7 @@ async function main(): Promise<number> {
   }
 
   try {
-    const result = await revokeAllSessions(
-      { db, sendEmail, baseUrl: appUrl },
-      { email: values.user },
-    );
+    const result = await revokeAllSessions({ db }, { email: values.user });
     if (!result.email) {
       console.info(`Signed everyone out: ended ${result.count} sessions.`);
     } else {

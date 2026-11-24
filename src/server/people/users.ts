@@ -258,7 +258,7 @@ export async function listUsers(
     ...page,
     items: page.items.map((row): UserListItem => ({
       ...row,
-      staffRole: row.staffRole ?? null,
+      staffRole: row.staffRole,
       companies: companies.get(row.id) ?? [],
       picture: pictures.get(row.id) ?? null,
     })),

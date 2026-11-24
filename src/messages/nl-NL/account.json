@@ -89,7 +89,6 @@
       "codePending": "Je wachtwoord ingevoerd; daarna vroeg het inloggen om je code",
       "mfaVerified": "Inloggen bevestigd met MFA",
       "mfaFailedDifferentAccount": "{provider, select, unknown {Mislukte MFA-bevestiging met een ander account} other {Mislukte MFA-bevestiging met een ander {provider}-account}}",
-      "mfaFailedAtSignIn": "Verkeerde code voor verificatie in twee stappen ingevoerd bij het inloggen",
       "mfaFailedWrongCode": "Mislukte MFA-bevestiging met een verkeerde code",
       "passwordSet": "Een wachtwoord ingesteld",
       "passwordChanged": "Je wachtwoord gewijzigd",

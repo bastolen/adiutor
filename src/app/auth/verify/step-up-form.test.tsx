@@ -13,6 +13,7 @@ import { Activity, StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EMAIL_CODE_RESEND_SECONDS, type StepUpMethods } from '@/lib/authz/mfa';
+import translator from '@/lib/i18n/translator';
 import {
   type MfaProvider,
   PROVIDER_STEP_UP_COOKIE,
@@ -22,6 +23,9 @@ import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 
 import renderInLocale from '../../../../tests/i18n/render';
 import StepUpForm, { type StepUpFormProps } from './step-up-form';
+
+/** What the form says for a code sent a moment ago, from the catalogue. */
+const SENT_RECENTLY_TEXT = translator('en-US', 'auth')('codes.errors.EMAIL_CODE_SENT_RECENTLY');
 
 /** Mocked Better Auth client methods, router and full page load. */
 const {
@@ -411,7 +415,7 @@ describe('StepUpForm', () => {
 
       await leaveAndReturn();
 
-      expect(await screen.findByText(EMAIL_CODE_SENT_RECENTLY.message)).toBeInTheDocument();
+      expect(await screen.findByText(SENT_RECENTLY_TEXT)).toBeInTheDocument();
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       expect(screen.getByLabelText('Code')).toBeInTheDocument();
       expect(sendOtp).toHaveBeenCalledTimes(2);

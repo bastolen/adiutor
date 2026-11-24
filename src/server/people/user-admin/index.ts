@@ -1,7 +1,6 @@
 /**
  * @file User administration: the user page's loaders (the user, their
- * companies and their devices, and whether they
- * exist, for its titles), the signed-in devices of a user (and the signed-in
+ * companies and their devices), the signed-in devices of a user (and the signed-in
  * user's own, as far as a staff member signed in as them may see them), the last-Admin
  * rule, what Admins can do to an account (reset two-step verification, which
  * also disconnects GitHub and Google accounts, sign out everywhere,
@@ -16,7 +15,7 @@
  * (`detail`, `sessions`, `sole-admin`, `kept-roles`, `admin-actions`, `own-account`), and
  * nothing outside this folder imports them directly.
  */
-export { getUserDetail, listUserCompanies, listUserDevices, userExists } from './detail';
+export { getUserDetail, listUserCompanies, listUserDevices } from './detail';
 export type { UserCompany, UserDetail } from './detail';
 export { listOwnSessions, listUserSessions } from './sessions';
 export type { UserSession } from './sessions';

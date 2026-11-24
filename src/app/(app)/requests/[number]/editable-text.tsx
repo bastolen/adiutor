@@ -63,6 +63,7 @@ export default function EditableText({
   children,
 }: EditableTextProps) {
   const t = useTranslations('requests.edit');
+  const tCommon = useTranslations('common');
   const showToast = useToast();
   const [editing, setEditing] = useTransientState(false);
   const button = useRef<HTMLButtonElement>(null);
@@ -136,7 +137,7 @@ export default function EditableText({
               setEditing(false);
             }}
           >
-            {t('cancel')}
+            {tCommon('actions.cancel')}
           </Button>
         </div>
       </form>

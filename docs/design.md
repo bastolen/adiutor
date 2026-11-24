@@ -252,7 +252,7 @@ keyboard support.
   (`aria-labelledby` on `MenuContent`). `e2e/board-a11y.spec.ts` and `e2e/keyboard.spec.ts` check
   those menus' names.
 - **Long selects can be searched.** A `SelectField` with more options than `SEARCH_THRESHOLD`
-  (10, in `src/components/ui/select-field.tsx`; a field can pass its own `searchThreshold`) opens
+  (10, in `src/components/ui/select-field.tsx`) opens
   a panel with a search field above its list (`SearchableSelect`, on Radix Popover): the list shows
   only the options whose label, or group heading, contains what's typed, ignoring case and accents,
   in their order (`matchingOptions` in `select-option-list.ts`). A shorter one stays a Radix

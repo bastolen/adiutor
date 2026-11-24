@@ -47,7 +47,7 @@ function prefersReducedMotion(): boolean {
  * @param row - The lanes' row.
  * @param key - The column.
  */
-export function jumpToColumn(row: HTMLElement | null, key: BoardColumnKey): void {
+function jumpToColumn(row: HTMLElement | null, key: BoardColumnKey): void {
   const column = row?.querySelector<HTMLElement>(`[data-column="${key}"]`);
   // The column's own heading comes before its halves' headings.
   const heading = column?.querySelector<HTMLElement>('[data-card-heading]');

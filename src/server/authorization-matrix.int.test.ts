@@ -131,7 +131,6 @@ import {
   reactivateUser,
   resetUserMfa,
   signOutUserEverywhere,
-  userExists,
 } from './people/user-admin';
 import { registerUser } from './people/user-registration';
 import { listUsers } from './people/users';
@@ -568,7 +567,6 @@ function listOperations(): Operation[] {
     ['view user', (w) => getUserDetail(ctx, w.actor, w.outsider)],
     ["list a user's companies", (w) => listUserCompanies(ctx, w.actor, w.outsider)],
     ["list a user's devices", (w) => listUserDevices(ctx, w.actor, w.outsider)],
-    ['check a user exists', (w) => userExists(ctx, w.actor, w.outsider)],
     ['check signing in as a user', (w) => impersonationVerdictFor(ctx, w.actor, w.outsider)],
     ['list addable companies', (w) => listAddableCompanies(ctx, w.actor, w.outsider)],
     [
@@ -821,7 +819,6 @@ const READS: ReadonlySet<string> = new Set([
   'view user',
   "list a user's companies",
   "list a user's devices",
-  'check a user exists',
   'check signing in as a user',
   'list addable companies',
   'view audit log',
@@ -1019,8 +1016,6 @@ const EXPECTED: Record<string, string> = {
   "list a user's companies": 'FFFAAAA',
   // The user page's devices (IP addresses and browsers): staff Admins only.
   "list a user's devices": 'FFFFFFA',
-  // The user page's title: whether the user in its URL exists, for the staff who may see users.
-  'check a user exists': 'FFFAAAA',
   'check signing in as a user': 'FFFAAAA',
   // The user page's "Add to company" list: staff who see companies.
   'list addable companies': 'FFFAAAA',

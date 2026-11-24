@@ -338,7 +338,7 @@ export function MenuRadioRow({
  */
 interface MenuIconRadioItemProps extends Omit<
   ComponentProps<typeof DropdownMenu.RadioItem>,
-  'children' | 'textValue' | 'aria-label'
+  'children' | 'textValue' | 'aria-label' | 'onSelect'
 > {
   /** The item's name, for screen readers and typeahead. */
   label: string;
@@ -355,14 +355,12 @@ interface MenuIconRadioItemProps extends Omit<
  * @param props.label - The item's name.
  * @param props.icon - The icon shown.
  * @param props.className - Extra classes.
- * @param props.onSelect - Called when the item is chosen.
  * @returns The item.
  */
 export function MenuIconRadioItem({
   label,
   icon: Icon,
   className = '',
-  onSelect = undefined,
   ...props
 }: MenuIconRadioItemProps) {
   return (
@@ -370,10 +368,8 @@ export function MenuIconRadioItem({
       {...props}
       aria-label={label}
       textValue={label}
-      onSelect={(event) => {
-        onSelect?.(event);
-        event.preventDefault();
-      }}
+      // Choosing an item keeps the menu open.
+      onSelect={(event) => event.preventDefault()}
       className={cn(
         'flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors select-none data-disabled:opacity-50 data-[state=checked]:bg-raised data-[state=checked]:text-highlight data-[state=checked]:shadow-xs data-[state=unchecked]:data-highlighted:bg-raised/60 data-[state=unchecked]:data-highlighted:text-foreground',
         focusRing,

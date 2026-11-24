@@ -14,8 +14,6 @@ import restoreFocusIfLost from './focus-fallback';
 
 /** Classes of the icon's tinted square, per tone. */
 const toneClasses = {
-  /** No particular meaning. */
-  neutral: 'bg-muted text-muted-foreground',
   /** Something good to do or that went well, e.g. a security recommendation. */
   success: 'bg-success-soft text-success',
   /** Something to look at soon. */
@@ -32,8 +30,8 @@ interface BannerProps {
   label: string;
   /** Decorative icon on the left. */
   icon: LucideIcon;
-  /** Colour of the icon's square. Defaults to `neutral`. */
-  tone?: keyof typeof toneClasses;
+  /** Colour of the icon's square. */
+  tone: keyof typeof toneClasses;
   /** The message in a few words. */
   title: ReactNode;
   /** What it means and what to do. */
@@ -71,7 +69,7 @@ interface BannerProps {
 export default function Banner({
   label,
   icon: Icon,
-  tone = 'neutral',
+  tone,
   title,
   description,
   actions = null,

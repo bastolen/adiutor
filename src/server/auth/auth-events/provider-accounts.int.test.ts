@@ -22,6 +22,7 @@ import {
   memberActor,
   staffActor,
   turnOffGitHubSignIn,
+  minutesAgo,
 } from '../../../../tests/integration/helpers';
 import { holdSignInChangeLock, releaseSignInChangeLockOf } from '../auth-guards';
 import { releaseSignInChangeLock, takeSignInChangeLock } from '../sign-in-change-lock';
@@ -35,7 +36,6 @@ import {
   githubCallback,
   storeSessionMfa,
   signedInHeaders,
-  minutesAgo,
   addPasskey,
   mockGitHubApi,
   connectGitHubWithToken,

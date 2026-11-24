@@ -12,30 +12,36 @@
  * reader's language (`auth.codes.errors` in the catalogues, through
  * `authErrorText`), except the refusals in {@link SERVER_WORDED_CODES},
  * whose message has details only the server knows (how long to wait, which
- * provider) and which the guards word in the request's language. Each
- * refusal's `message` is its English (US) text, for code that hasn't moved
- * to the catalogues yet. See docs/authentication.md, "How refusals reach the
- * user".
+ * provider) and which the guards word in the request's language. Only the
+ * refusals that Better Auth itself is given to throw ({@link ACCOUNT_DEACTIVATED},
+ * {@link REVERIFY_WRONG_ACCOUNT}) carry an English (US) `message`, for its error
+ * description. See docs/authentication.md, "How refusals reach the user".
  */
-import { PASSKEY_NAME_MAX_LENGTH } from '../input-rules';
 
-/** A refusal: the error code and the message that goes with it. */
+/** A refusal: the error code, which forms turn into the message in the reader's language. */
 export interface SignInRefusal {
   /** The error code, as Better Auth returns it in `error.code`. */
   readonly code: string;
-  /** What the user is told, in English (US); forms translate the code instead. */
+}
+
+/**
+ * A refusal that Better Auth throws itself (`new APIError(..., { ...refusal })`), so it has
+ * something to say in its error description: its English (US) text. Forms still translate the
+ * code, never show this.
+ */
+export interface SignInRefusalWithMessage extends SignInRefusal {
+  /** The error's description, in English (US). */
   readonly message: string;
 }
 
 /**
  * Too many sign-ins, emails or codes for this account or address. The
- * guards word their own message, which says how long to wait
- * ({@link SERVER_WORDED_CODES}); this one, without the wait, is for when
- * there's none.
+ * guards word their message, which says how long to wait
+ * ({@link SERVER_WORDED_CODES}); the catalogue's text, without the wait, is
+ * for when there's none.
  */
 export const TOO_MANY_ATTEMPTS = {
   code: 'TOO_MANY_ATTEMPTS',
-  message: 'Too many attempts. For your safety, wait 15 minutes and try again.',
 } as const satisfies SignInRefusal;
 
 /**
@@ -45,7 +51,6 @@ export const TOO_MANY_ATTEMPTS = {
  */
 export const EMAIL_CODE_SENT_RECENTLY = {
   code: 'EMAIL_CODE_SENT_RECENTLY',
-  message: 'We sent you a code a moment ago. Use that one, or ask for a new one in a few minutes.',
 } as const satisfies SignInRefusal;
 
 /**
@@ -54,20 +59,16 @@ export const EMAIL_CODE_SENT_RECENTLY = {
  */
 export const EMAIL_CODES_NOT_ALLOWED = {
   code: 'EMAIL_CODES_NOT_ALLOWED',
-  message: "Email codes can't be used for this account. Use your authenticator app or a passkey.",
 } as const satisfies SignInRefusal;
 
 /** The change would take away the MFA the user's role requires (`wouldRemoveRequiredMfa`). */
 export const MFA_REQUIRED_FOR_ROLE = {
   code: 'MFA_REQUIRED_FOR_ROLE',
-  message:
-    'Your role requires MFA, and this would leave you without it. Add a passkey first, then try again.',
 } as const satisfies SignInRefusal;
 
 /** Another change to how the user signs in is still being made (`withSignInChangeLock`). */
 export const SIGN_IN_CHANGE_IN_PROGRESS = {
   code: 'SIGN_IN_CHANGE_IN_PROGRESS',
-  message: 'Another change to how you sign in is still in progress. Try again in a moment.',
 } as const satisfies SignInRefusal;
 
 /**
@@ -77,7 +78,6 @@ export const SIGN_IN_CHANGE_IN_PROGRESS = {
  */
 export const MFA_VERIFICATION_REQUIRED = {
   code: 'MFA_VERIFICATION_REQUIRED',
-  message: 'Confirm it’s you with your second step before changing how you sign in.',
 } as const satisfies SignInRefusal;
 
 /**
@@ -89,8 +89,6 @@ export const MFA_VERIFICATION_REQUIRED = {
  */
 export const UNSAFE_RETURN_ADDRESS = {
   code: 'UNSAFE_RETURN_ADDRESS',
-  message:
-    "This link can't be used: it would send you somewhere outside Adiutor's pages. Nothing was changed. Start again from the sign-in page.",
 } as const satisfies SignInRefusal;
 
 /**
@@ -103,12 +101,10 @@ export const UNSAFE_RETURN_ADDRESS = {
  * password on the Security page, where it needs a recent confirmation; roles
  * that require MFA add a passkey or an authenticator app there first. The
  * guards' message names the providers and the reset page shows it as it is
- * ({@link SERVER_WORDED_CODES}); this one doesn't.
+ * ({@link SERVER_WORDED_CODES}).
  */
 export const RESET_ENDS_PROVIDER_MFA = {
   code: 'RESET_ENDS_PROVIDER_MFA',
-  message:
-    "This account signs in with a provider account as its second step, so a password can't be set from a reset link. Nothing was changed. Sign in with that account, then set a password on the Security page.",
 } as const satisfies SignInRefusal;
 
 /**
@@ -129,7 +125,6 @@ export const PASSWORD_SIGN_IN_PAUSED = {
  */
 export const TWO_FACTOR_ALREADY_OFF = {
   code: 'TWO_FACTOR_ALREADY_OFF',
-  message: 'Two-step verification is already off. Nothing was changed.',
 } as const satisfies SignInRefusal;
 
 /**
@@ -140,23 +135,21 @@ export const TWO_FACTOR_ALREADY_OFF = {
 export const ACCOUNT_DEACTIVATED = {
   code: 'ACCOUNT_DEACTIVATED',
   message: 'This account is deactivated. Contact an administrator.',
-} as const satisfies SignInRefusal;
+} as const satisfies SignInRefusalWithMessage;
 
 /**
  * A passkey name the guards refuse when a passkey is added or renamed
- * (`passkeyNameSchema`): empty, longer than {@link PASSKEY_NAME_MAX_LENGTH}
+ * (`passkeyNameSchema`): empty, longer than `PASSKEY_NAME_MAX_LENGTH`
  * characters, or with line breaks, control characters or characters that
  * hide or reorder text.
  */
 export const INVALID_PASSKEY_NAME = {
   code: 'INVALID_PASSKEY_NAME',
-  message: `Use a passkey name of 1 to ${PASSKEY_NAME_MAX_LENGTH} characters, without line breaks or invisible characters.`,
 } as const satisfies SignInRefusal;
 
 /** An account without a second step must have signed in within the last hour to add one. */
 export const SESSION_NOT_FRESH = {
   code: 'SESSION_NOT_FRESH',
-  message: 'For your security, sign out and in again before changing this.',
 } as const satisfies SignInRefusal;
 
 /**
@@ -165,14 +158,14 @@ export const SESSION_NOT_FRESH = {
  * with their email address, another user's account, or one of their own
  * that isn't confirmed as a second step (`mayReverifyWith`). It's refused
  * before anything is connected or any session is created
- * (`checkReverify` in `src/server/auth/auth-events/reverify.ts`). The message here
+ * (`checkReverify` in `src/server/auth/auth-events/reverify.ts`). The message
  * doesn't name the provider; the step-up page names it (`reverifyErrorText`).
  */
 export const REVERIFY_WRONG_ACCOUNT = {
   code: 'REVERIFY_WRONG_ACCOUNT',
   message:
     "The sign-in provider couldn't confirm it's you: you signed in with a different account than the one you set up as a second step. Nothing was changed. Sign in with that account and try again, or use another second step.",
-} as const satisfies SignInRefusal;
+} as const satisfies SignInRefusalWithMessage;
 
 /**
  * The session is a staff member's, signed in as a user ("Sign in as"): Better
@@ -182,8 +175,6 @@ export const REVERIFY_WRONG_ACCOUNT = {
  */
 export const SIGNED_IN_AS_SOMEONE = {
   code: 'SIGNED_IN_AS_SOMEONE',
-  message:
-    "This can't be changed while you're signed in as someone else. Go back to your own account first.",
 } as const satisfies SignInRefusal;
 
 /**

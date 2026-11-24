@@ -23,18 +23,18 @@ const NO_NOTE: readonly string[] = [];
 /** The mentions of a text that has none. */
 const NO_MENTIONS: Readonly<Record<string, ShownMention>> = {};
 
+/**
+ * The level the text's highest heading gets: one below the heading the text
+ * is shown under, for a text in a card (whose title is an `h2`).
+ */
+const TEXT_HEADING_LEVEL = 3;
+
 /** Props for {@link MarkdownText}. */
 interface MarkdownTextProps {
   /** The text, as it was stored. */
   text: string;
   /** A name no other text on the page has, for the IDs of the text's footnotes. */
   id: string;
-  /**
-   * The level the text's highest heading gets: one below the heading the
-   * text is shown under. Defaults to 3, for a text in a card (whose title is
-   * an `h2`).
-   */
-  headingLevel?: number;
   /** Extra classes for the element around the text. */
   className?: string;
   /**
@@ -75,7 +75,6 @@ interface MarkdownTextProps {
  * @param props - Component props.
  * @param props.text - The text.
  * @param props.id - The text's name on the page.
- * @param props.headingLevel - The level of the text's highest heading.
  * @param props.className - Extra classes.
  * @param props.codeNote - What to say above copied code.
  * @param props.mentions - The people the text mentions.
@@ -86,7 +85,6 @@ interface MarkdownTextProps {
 export default function MarkdownText({
   text,
   id,
-  headingLevel = 3,
   className = '',
   codeNote = NO_NOTE,
   mentions = NO_MENTIONS,
@@ -116,7 +114,7 @@ export default function MarkdownText({
         jsxs,
         components: markdownElements({
           id,
-          headingLevel,
+          headingLevel: TEXT_HEADING_LEVEL,
           highestHeading: highestHeading(tree),
           codeNote,
           mentions,

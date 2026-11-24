@@ -7,10 +7,14 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import translator from '@/lib/i18n/translator';
 import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 
 import renderInLocale from '../../../../../tests/i18n/render';
 import EmailCodesSetup from './email-codes-setup';
+
+/** What the form says for a code sent a moment ago, from the catalogue. */
+const SENT_RECENTLY_TEXT = translator('en-US', 'auth')('codes.errors.EMAIL_CODE_SENT_RECENTLY');
 
 /** The mocked auth client and router. */
 const { sendOtp, verifyOtp, push, refresh } = vi.hoisted(() => ({
@@ -74,7 +78,7 @@ describe('EmailCodesSetup', () => {
 
     await user.click(screen.getByRole('button', { name: 'Send a code to check it works' }));
 
-    expect(await screen.findByText(EMAIL_CODE_SENT_RECENTLY.message)).toBeInTheDocument();
+    expect(await screen.findByText(SENT_RECENTLY_TEXT)).toBeInTheDocument();
     expect(screen.getByLabelText('Code')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });

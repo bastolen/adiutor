@@ -75,7 +75,7 @@ function refusalError(verdict: Exclude<ImpersonationVerdict, 'allowed'>): Servic
 }
 
 /** What {@link startImpersonation} takes. */
-export interface StartImpersonationInput {
+interface StartImpersonationInput {
   /** The user to sign in as. */
   userId: string;
   /** Why, if the staff member said; empty for none. */
@@ -345,7 +345,7 @@ export async function endFinishedImpersonations(ctx: Pick<ServiceContext, 'db'>)
 }
 
 /** A session's sign-in as someone, as {@link findSessionImpersonation} reads it. */
-export interface SessionImpersonation {
+interface SessionImpersonation {
   /** The user the staff member signed in as. */
   userId: string;
   /** When it ends by itself (it may have passed already). */
@@ -404,16 +404,14 @@ export type SignedInAsOutcome =
  * @param db - Database client (the pool).
  * @param staff - The staff member, as their request loaded them.
  * @param found - The session's sign-in as someone.
- * @param now - The current time.
  * @returns The user as the actor, or why it ends.
  */
 export async function actorSignedInAs(
   db: Database,
   staff: Actor,
   found: SessionImpersonation,
-  now: Date = new Date(),
 ): Promise<SignedInAsOutcome> {
-  if (found.expiresAt.getTime() <= now.getTime()) {
+  if (found.expiresAt.getTime() <= Date.now()) {
     return { end: 'expired' };
   }
   if (mustStepUp(staff) || mustSetUpMfa(staff)) {

@@ -8,7 +8,7 @@
  * This is the module's public API: nothing outside this folder imports its
  * files directly.
  */
-export { SETTING_KEYS, SETTINGS } from './registry';
+export { SETTINGS } from './registry';
 export type {
   CounterKey,
   SettingChange,

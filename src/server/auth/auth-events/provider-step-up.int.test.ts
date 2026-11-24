@@ -15,6 +15,7 @@ import {
   createUser,
   inSequence,
   lastActiveAt,
+  minutesAgo,
 } from '../../../../tests/integration/helpers';
 import { afterAuthRequest } from './after-request';
 import type { AuthHookContext } from './hook-context';
@@ -32,7 +33,6 @@ import {
   sessionMfa,
   sessionExists,
   expectSetSince,
-  minutesAgo,
   storeSessionMfa,
   sessionVerifiedAt,
   noticeCookies,

@@ -11,13 +11,13 @@ import { user } from './auth';
 import { createdAt, id, oneOf, timestampTz } from './columns';
 
 /** How a run of a job ended. */
-export const JOB_RUN_STATUSES = ['succeeded', 'failed'] as const;
+const JOB_RUN_STATUSES = ['succeeded', 'failed'] as const;
 
 /** How a run of a job ended: it did its work, or it (partly) failed. */
 export type JobRunStatus = (typeof JOB_RUN_STATUSES)[number];
 
 /** What started a run. */
-export const JOB_TRIGGERS = ['tick', 'cli', 'page'] as const;
+const JOB_TRIGGERS = ['tick', 'cli', 'page'] as const;
 
 /**
  * What started a run: the tick from the endpoint (`tick`), the command line
@@ -98,7 +98,7 @@ export const jobRun = pgTable(
 );
 
 /** Where a queued job is. */
-export const QUEUED_JOB_STATUSES = [
+const QUEUED_JOB_STATUSES = [
   'queued',
   'running',
   'succeeded',

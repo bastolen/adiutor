@@ -21,7 +21,7 @@ interface EmptyStateProps {
   /** A button or link to get started. */
   action?: ReactNode;
   /** Element for the title; `h1` when the empty state is the whole page. Defaults to `p`. */
-  titleAs?: 'p' | 'h1' | 'h2' | 'h3';
+  titleAs?: 'p' | 'h1';
   /**
    * Ref to the title, to move focus to it (e.g. when an error replaces the
    * page). With it, the title can take focus from code (`tabIndex={-1}`),

@@ -746,7 +746,7 @@ export async function readRequestUpdate(
     ({ event, entryId }) => event === 'status' && entryId !== null && entryId === proposalEntryId,
   );
   return {
-    recipient: { email: reader.email, locale: reader.locale ?? null },
+    recipient: { email: reader.email, locale: reader.locale },
     role: assigned ? 'assignee' : 'subscriber',
     audience: requestAudience(permissions, reader.companyRole !== null),
     request: {

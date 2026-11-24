@@ -141,7 +141,7 @@ export interface RevokeAllResult {
  * sign-in, and links in emails about requests are ended. Records it in the audit log; one user also gets a security email,
  * queued for the next tick (everyone doesn't: tell them yourself if needed).
  *
- * @param ctx - Service context (database and email; there's no request).
+ * @param ctx - Service context (the database; there's no request).
  * @param options - Options.
  * @param options.email - Only this user's sessions; everyone's without it.
  * @returns How many sessions were ended, and whose.
@@ -149,7 +149,7 @@ export interface RevokeAllResult {
  *   mistake), `not_found` when no account has that address.
  */
 export async function revokeAllSessions(
-  ctx: Pick<ServiceContext, 'db' | 'sendEmail' | 'baseUrl'>,
+  ctx: Pick<ServiceContext, 'db'>,
   options: { email?: string } = {},
 ): Promise<RevokeAllResult> {
   const email = normalizeEmail(options.email);

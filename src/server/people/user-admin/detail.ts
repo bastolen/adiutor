@@ -1,8 +1,7 @@
 /**
  * @file The user page's loaders, one per tab's data: the user themself
  * (`getUserDetail`, for the header, Overview and Manage), their companies
- * (`listUserCompanies`) and their signed-in devices (`listUserDevices`),
- * and the check of whether a user exists, for the pages' titles. Staff only
+ * (`listUserCompanies`) and their signed-in devices (`listUserDevices`). Staff only
  * (`users:view`); devices for staff Admins (`users:manage`). Their recent
  * activity is `listAuditEvents`.
  */
@@ -17,7 +16,6 @@ import { OAUTH_PROVIDERS } from '@/lib/sign-in/oauth-providers';
 import { availableProviders } from '@/lib/sign-in/providers';
 import { type Paged, resolveTableState, type TableState } from '@/lib/tables/table-state';
 import { type DeviceSort, USER_COMPANIES_TABLE, type UserCompanySort } from '@/lib/tables/tables';
-import { idSchema } from '@/lib/validation';
 
 import { assertPermission, getGlobalPermissions } from '../../access';
 import type { Actor } from '../../actor';
@@ -178,7 +176,7 @@ export async function getUserDetail(
 
   return {
     ...found,
-    staffRole: found.staffRole ?? null,
+    staffRole: found.staffRole,
     mfa: {
       ...state,
       status: mfaStatus(state, mfaRole, availableProviders),
@@ -275,29 +273,4 @@ export async function listUserDevices(
     throw notFoundError();
   }
   return asSeenWith(sessions, mfa.mfaRole);
-}
-
-/**
- * Whether a user account exists (deactivated or not), for the title of their
- * detail page, which is "Not found · Adiutor" when it doesn't. Staff only
- * (`users:view`), checked before the lookup like {@link getUserDetail}.
- *
- * @param ctx - Service context.
- * @param actor - The acting user; needs `users:view`.
- * @param userId - The user (unvalidated input is fine).
- * @returns Whether they exist; `false` for something that isn't an ID.
- * @throws {ServiceError} `forbidden` for non-staff.
- */
-export async function userExists(
-  ctx: ServiceContext,
-  actor: Actor,
-  userId: string,
-): Promise<boolean> {
-  assertPermission(getGlobalPermissions(actor), 'users:view');
-  const id = idSchema.safeParse(userId);
-  if (!id.success) {
-    return false;
-  }
-  const [found] = await ctx.db.select({ id: user.id }).from(user).where(eq(user.id, id.data));
-  return Boolean(found);
 }

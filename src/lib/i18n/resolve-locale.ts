@@ -19,16 +19,6 @@ import {
 } from './locales';
 
 /**
- * Reads the language cookie's value.
- *
- * @param value - The cookie's value, if the browser sent one.
- * @returns The locale, or `null` when it's missing or not one we speak.
- */
-export function localeFromCookie(value: string | null | undefined): Locale | null {
-  return isLocale(value) ? value : null;
-}
-
-/**
  * Picks the language we speak that best matches an `Accept-Language`
  * header, in the browser's order of preference: `nl-BE` gets Dutch,
  * `es-MX` Spanish and `en-GB` English (US).

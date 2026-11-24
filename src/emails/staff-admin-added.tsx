@@ -77,7 +77,7 @@ export default function StaffAdminAddedEmail({
   }
   return (
     <EmailLayout
-      preview={t('preview', { name: newAdminName })}
+      preview={t('subject', { name: newAdminName })}
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}

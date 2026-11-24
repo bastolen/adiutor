@@ -58,7 +58,7 @@ export interface RecordedError {
 }
 
 /** What {@link findErrorReference} found. */
-export interface ReferenceLookup {
+interface ReferenceLookup {
   /** The reference as stored, or `null` when the input can't be a reference. */
   reference: string | null;
   /** The errors recorded under it, newest first (a server error's reference can repeat). */
