@@ -36,6 +36,9 @@ jobs:
     # Skipped (not failed) until the release app is set up.
     if: ${{ vars.RELEASE_APP_CLIENT_ID != '' }}
     runs-on: ubuntu-latest
+    # Release Please only calls GitHub's API; a hung call shouldn't hold the release queue (the
+    # concurrency group above) for GitHub's default of 6 hours.
+    timeout-minutes: 5
     steps:
       - name: Get a token for the release app
         id: app-token
