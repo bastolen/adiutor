@@ -47,11 +47,24 @@ working before JavaScript has loaded.
 
 A magic link email opens a confirmation page (`/auth/email-link`, `src/lib/sign-in/email-link.ts`); only
 its "Continue signing in" button uses the link, so business mail scanners that open links to check
-them don't use it up or get a session. Better Auth's own link (`/api/auth/magic-link/verify`)
-opened any other way in a browser (an old email, another site, a script) is sent to that page
-first, unused (`src/server/auth/auth-guards/`, from the browser's `Sec-Fetch-Site` and
-`Sec-Fetch-User` headers), so a crafted link can't sign someone into another account without a
-click. The page names the account the link signs in to, looked up without using the link
+them don't use it up or get a session
+([decision 0041](decisions/0041-email-links-continue-by-post.md)). The button is a form `POST` to
+Better Auth's link address (`/api/auth/magic-link/verify`), an endpoint of the app's own plugin
+(`src/lib/sign-in/email-link-plugin.ts`) that uses the link with Better Auth's own handler, so the
+link is used up, the session created and the sign-in recorded as Better Auth always did, and
+answers with a 303, so the browser opens the next page with a `GET`. The guards take a `POST` for
+that Continue only when the page sent it (`confirmSignInLinkFirst` in
+`src/server/auth/auth-guards/`, with the request link's rule, `isOwnPagePost` in
+`src/lib/request/own-page-post.ts`: `Sec-Fetch-Site: same-origin`, `Sec-Fetch-Mode: navigate` and
+`Sec-Fetch-Dest: document`, or, from a browser that sends none of them, an `Origin` that is exactly
+the site's). It needn't say a person clicked, which Safari and every browser on an iPhone or iPad
+never do, and the page sends the site's origin (`referrer: strict-origin`). Everything else goes to
+the page first, unused: every `GET` of Better Auth's link, whatever its headers (an old email,
+another site, a script, a browser that sends no Fetch Metadata, or a link to it written in a
+request's text, which is a same-origin click on the request's page), and any other `POST`. So a
+crafted link can't sign someone into another account without the page that names it. Unlike a
+request link's page, this one never continues by itself: it always waits for the click. The page
+names the account the link signs in to, looked up without using the link
 (`getEmailLinkPreview` in `src/server/auth/email-links.ts`), so a link someone sent you for their own
 account is easy to spot: its name, and its full address, which users can't choose or change
 (anyone can give themselves someone else's name). That tells nobody more than the link already
@@ -72,8 +85,9 @@ of the app: never another site, and never an endpoint under `/api`. Otherwise a 
 your own account could go on to `/api/auth/magic-link/verify` with someone else's token, which the
 browser opens as part of the same click, signing you in to their account past the confirmation
 page. The guards refuse such addresses when the link is asked for and again when it's used
-(`isSafeAppRedirect`, see [Auth endpoints](security-measures.md#auth-endpoints)), and the
-confirmation page only passes pages of the app on (`getSafeRedirectPath`). The email goes to the
+(`isSafeAppRedirect`, see [Auth endpoints](security-measures.md#auth-endpoints)): a Continue
+with one goes to the sign-in error page instead. The confirmation page only passes pages of the
+app on (`getSafeRedirectPath`). The email goes to the
 account's stored address, not the address as typed (the lookup ignores case).
 
 ## Links in emails about requests
@@ -109,7 +123,7 @@ plugin in `src/lib/sign-in/request-link-plugin.ts`; the app decides in `followRe
 
 The page's Continue posts the link to the same endpoint (a form `POST`, answered with a 303, so
 the browser opens the next page with a `GET`). A `POST` counts only as that Continue, and only
-when a page of the site started it (`fromConfirmationPage`: `Sec-Fetch-Site: same-origin`,
+when a page of the site started it (`isOwnPagePost`: `Sec-Fetch-Site: same-origin`,
 `Sec-Fetch-Mode: navigate` and `Sec-Fetch-Dest: document`, which no other site, email or typed
 address can make), also without the click header. A browser that sends none of those three headers
 (Safari before 16.4, and every browser on plain `http` on a host other than `localhost`, where
@@ -122,7 +136,7 @@ too, and the browser sends it without the site's cookies (`SameSite=Lax`), so no
 signed in. Better Auth's check for sign-in forms (`formCsrfMiddleware`) refuses such a cross-site
 `POST` before that, and checks the origin of every other one a browser sends, with or without
 cookies (a `POST` with none of a browser's headers, `Origin` included, passes it, and the app's own
-rule, `fromConfirmationPage`, refuses it next); the page therefore sends the site's origin
+rule, `isOwnPagePost`, refuses it next); the page therefore sends the site's origin
 (`referrer: strict-origin`) where other secret-link pages send no referrer at all. A link is always
 a `GET`, so a link to the endpoint written in a reply, which is a same-origin click when someone
 clicks it on the request's page, never switches accounts, whatever its query says.

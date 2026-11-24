@@ -171,6 +171,15 @@ page, is a `GET` and can't switch, and a `POST` never counts as a click, so anot
 `formCsrfMiddleware` refuses it first (see
 [Links in emails about requests](authentication.md#links-in-emails-about-requests)).
 
+A sign-in email's link (`/magic-link/verify`) signs in only with its confirmation page's Continue,
+a form `POST` taken by the same rule (`isOwnPagePost`), with Better Auth's own handler behind it;
+every `GET` of the link, whatever its headers, and any other `POST` go to that page first, unused
+([decision 0041](decisions/0041-email-links-continue-by-post.md)). So neither a browser that sends
+no Fetch Metadata nor a link to it written in a request's text (a same-origin click on the
+request's page) signs anyone in without the page that names the account, and Safari, which never
+says a person clicked, can use the Continue (see
+[Email links](authentication.md#email-links)).
+
 Return addresses must be pages of the app (`isSafeAppRedirect` in `src/lib/redirect.ts`): a path
 that starts with a single `/`, has no control characters, spaces or backslashes, stays on the site
 once resolved, and isn't `/api` or below it, in any case, also once its path is decoded (so
@@ -181,16 +190,18 @@ fragment `#:~:text=…`; see
 A redirect to an endpoint would call it with the browser's cookies, e.g. a second sign-in
 link that signs the browser in to another account. The guards (`src/server/auth/auth-guards/`)
 check `callbackURL`, `errorCallbackURL` and `newUserCallbackURL` on `/sign-in/magic-link`,
-`/magic-link/verify` (after the confirmation page) and `/sign-in/social`; `callbackURL` and
-`errorCallbackURL` on `/link-social`; `redirectTo` on `/request-password-reset`; and `callbackURL`
-on `/reset-password/:token` (the link in a reset email, which Better Auth sends on to it with the
-token or an error), `/verify-email` and `/send-verification-email`. A test walks the endpoints the
-browser can reach (`BROWSER_AUTH_PATHS`) and fails when one takes a return address that isn't
-checked (`request-checks.test.ts`); the two it lets through, `/sign-in/email` and `/sign-out`, take
-a `callbackURL` that Better Auth never sends the browser to here. Fields that aren't sent are fine. A refused
-request gets `UNSAFE_RETURN_ADDRESS` (`src/lib/sign-in/sign-in-refusals.ts`); a refused link the
-browser opened goes to the sign-in error page, which explains it. The app's own pages only send
-relative paths that pass: the redirect targets they read from the URL go through
+`/magic-link/verify` (in the form of the confirmation page's Continue) and `/sign-in/social`;
+`callbackURL` and `errorCallbackURL` on `/link-social`; `redirectTo` on `/request-password-reset`;
+and `callbackURL` on `/reset-password/:token` (the link in a reset email, which Better Auth sends on
+to it with the token or an error), `/verify-email` and `/send-verification-email`. A test walks the
+endpoints the browser can reach (`BROWSER_AUTH_PATHS`) and fails when one takes a return address
+that isn't checked (`request-checks.test.ts`); the ones it lets through, `/sign-in/email` and `/sign-out`,
+take a `callbackURL` that Better Auth never sends the browser to here, and the query of
+`/magic-link/verify`'s `GET` never reaches Better Auth (the guards send every one to the
+confirmation page). Fields that aren't sent are fine. A refused request gets
+`UNSAFE_RETURN_ADDRESS` (`src/lib/sign-in/sign-in-refusals.ts`); a refused link the browser opened,
+or a refused Continue it posted, goes to the sign-in error page, which explains it. The app's own
+pages only send relative paths that pass: the redirect targets they read from the URL go through
 `getSafeRedirectPath`, which applies the same rules and falls back to the dashboard.
 
 ## Tokens
