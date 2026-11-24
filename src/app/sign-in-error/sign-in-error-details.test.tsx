@@ -49,6 +49,19 @@ describe('SignInErrorDetails', () => {
     });
   });
 
+  it('records the staff member, not the user, while signed in as a user', async () => {
+    vi.mocked(getOptionalActor).mockResolvedValue({
+      id: 'jane-id',
+      signedInAs: { staffId: 'sam-id' },
+    } as Actor);
+    await renderDetails({ error: 'state_mismatch' });
+
+    expect(recordSignInError).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ userId: 'sam-id' }),
+    );
+  });
+
   it('explains the error without its code', async () => {
     vi.mocked(getOptionalActor).mockResolvedValue(null);
     await renderDetails({ error: 'state_mismatch' });

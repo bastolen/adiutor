@@ -11,6 +11,7 @@ import { type SearchParams, searchParam } from '@/lib/search-params';
 import appContext from '@/server/app-context';
 import { cleanErrorCode, recordSignInError } from '@/server/auth/sign-in-errors';
 import { getOptionalActor } from '@/server/authz';
+import { actingUserId } from '@/server/signed-in-as';
 
 import signInErrorMessage from './messages';
 
@@ -37,7 +38,8 @@ export default async function SignInErrorDetails({
   const { reference, at } = await recordSignInError(appContext, {
     code,
     description: searchParam(params.error_description) ?? null,
-    userId: actor?.id ?? null,
+    // The person at the browser: a staff member signed in as someone is recorded as themselves.
+    userId: actor ? actingUserId(actor) : null,
   });
 
   return (

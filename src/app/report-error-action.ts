@@ -18,6 +18,7 @@ import {
 import appContext from '@/server/app-context';
 import { type RecordedAppError, recordAppError } from '@/server/app-errors';
 import { getOptionalActor } from '@/server/authz';
+import { actingUserId } from '@/server/signed-in-as';
 
 /**
  * What the error page sends: the error's class name (if it was an `Error`)
@@ -69,7 +70,7 @@ export default async function reportErrorAction(
       path,
       // The person at the browser: a staff member signed in as someone is recorded as themselves,
       // like errors on the server (`recordRequestError`).
-      userId: actor?.signedInAs?.staffId ?? actor?.id ?? null,
+      userId: actor ? actingUserId(actor) : null,
     });
     return recorded.stored ? { reference: recorded.reference, at: recorded.at } : null;
   } catch {
