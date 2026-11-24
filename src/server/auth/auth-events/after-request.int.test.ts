@@ -212,73 +212,88 @@ describe('confirming a session with a code', () => {
   });
 });
 
+/**
+ * Builds a request made with a stored session, as both the checks before it
+ * (`auth-guards/`) and the reactions after it see it, and makes the checks
+ * find that session.
+ *
+ * @param path - The endpoint path.
+ * @param sessionId - The session.
+ * @param userId - Its user.
+ * @param body - The request body; empty by default.
+ * @returns The context; set `context.returned` before the reactions run.
+ */
+async function requestWithStoredSession(
+  path: string,
+  sessionId: string,
+  userId: string,
+  body: Record<string, unknown> = {},
+): Promise<AuthGuardContext & AuthHookContext> {
+  const found = firstRow(
+    await db
+      .select({
+        mfaVerified: session.mfaVerified,
+        mfaMethod: session.mfaMethod,
+        mfaVerifiedAt: session.mfaVerifiedAt,
+        createdAt: session.createdAt,
+        twoFactorEnabled: user.twoFactorEnabled,
+      })
+      .from(session)
+      .innerJoin(user, eq(user.id, session.userId))
+      .where(eq(session.id, sessionId)),
+    'the session',
+  );
+  const { twoFactorEnabled, ...facts } = found;
+  const signedIn = {
+    session: { id: sessionId, ...facts },
+    user: { id: userId, twoFactorEnabled },
+  };
+  vi.mocked(getSessionFromCtx).mockResolvedValue(
+    signedIn as unknown as Awaited<ReturnType<typeof getSessionFromCtx>>,
+  );
+  return {
+    path,
+    headers: new Headers(),
+    body,
+    /**
+     * Reads a signed cookie; there's no pending sign-in.
+     *
+     * @returns Nothing.
+     */
+    getSignedCookie: async () => null,
+    context: {
+      secret: 'adiutor-tests-secret',
+      /**
+       * Builds a cookie name.
+       *
+       * @param name - The cookie's short name.
+       * @returns The cookie.
+       */
+      createAuthCookie: (name) => ({ name: `adiutor-tests.${name}` }),
+      internalAdapter: {
+        /**
+         * Looks up a verification value; there are none.
+         *
+         * @returns Nothing.
+         */
+        findVerificationValue: async () => null,
+      },
+      session: signedIn,
+    },
+  };
+}
+
 describe('an authenticator code checked with a session', () => {
   /**
-   * Builds a request that checks an authenticator code with a session, as
-   * both the checks before it (`auth-guards/`) and the reactions after it
-   * see it, and makes the checks find that session.
+   * Builds a request that checks an authenticator code with a session
+   * ({@link requestWithStoredSession}).
    *
    * @param sessionId - The session.
    * @param userId - Its user.
    * @returns The context; set `context.returned` before the reactions run.
    */
-  async function authenticatorCode(
-    sessionId: string,
-    userId: string,
-  ): Promise<AuthGuardContext & AuthHookContext> {
-    const found = firstRow(
-      await db
-        .select({
-          mfaVerified: session.mfaVerified,
-          mfaMethod: session.mfaMethod,
-          mfaVerifiedAt: session.mfaVerifiedAt,
-          createdAt: session.createdAt,
-          twoFactorEnabled: user.twoFactorEnabled,
-        })
-        .from(session)
-        .innerJoin(user, eq(user.id, session.userId))
-        .where(eq(session.id, sessionId)),
-      'the session',
-    );
-    const { twoFactorEnabled, ...facts } = found;
-    const signedIn = {
-      session: { id: sessionId, ...facts },
-      user: { id: userId, twoFactorEnabled },
-    };
-    vi.mocked(getSessionFromCtx).mockResolvedValue(
-      signedIn as unknown as Awaited<ReturnType<typeof getSessionFromCtx>>,
-    );
-    return {
-      path: '/two-factor/verify-totp',
-      headers: new Headers(),
-      body: {},
-      /**
-       * Reads a signed cookie; there's no pending sign-in.
-       *
-       * @returns Nothing.
-       */
-      getSignedCookie: async () => null,
-      context: {
-        secret: 'adiutor-tests-secret',
-        /**
-         * Builds a cookie name.
-         *
-         * @param name - The cookie's short name.
-         * @returns The cookie.
-         */
-        createAuthCookie: (name) => ({ name: `adiutor-tests.${name}` }),
-        internalAdapter: {
-          /**
-           * Looks up a verification value; there are none.
-           *
-           * @returns Nothing.
-           */
-          findVerificationValue: async () => null,
-        },
-        session: signedIn,
-      },
-    };
-  }
+  const authenticatorCode = (sessionId: string, userId: string) =>
+    requestWithStoredSession('/two-factor/verify-totp', sessionId, userId);
 
   it('records a new method when it finishes setting up the app next to email codes', async () => {
     const support = await staffActor(db, 'support');
@@ -419,6 +434,126 @@ describe('an authenticator code checked with a session', () => {
 
     expect(await wrongStepUps(support.id)).toBe(1);
     expect((await events()).map(({ action }) => action)).toEqual(['mfa_failed']);
+  });
+});
+
+describe('a current password Better Auth checks', () => {
+  /**
+   * Better Auth's refusal of a wrong current password.
+   *
+   * @returns The refusal.
+   */
+  const wrongPassword = () =>
+    new APIError('BAD_REQUEST', { message: 'Invalid password', code: 'INVALID_PASSWORD' });
+
+  /**
+   * Reads how many wrong current passwords count against a user now.
+   *
+   * @param userId - The user.
+   * @returns The count, or `null` when none were counted.
+   */
+  async function wrongPasswords(userId: string): Promise<number | null> {
+    return rateLimitHits(db, `current-password-failed:user:${userId}`);
+  }
+
+  /**
+   * Sends a request that checks the current password through the checks
+   * before it and the reactions after it, sharing Better Auth's request state.
+   *
+   * @param path - The endpoint.
+   * @param userId - The signed-in user, with an authenticator app and a password.
+   * @param returned - What Better Auth answered.
+   */
+  async function checkPassword(path: string, userId: string, returned: unknown): Promise<void> {
+    const sessionId = await createSession(db, userId, {
+      mfaMethod: 'authenticator',
+      mfaVerifiedAt: new Date(),
+    });
+    await storeSessionMfa(sessionId, 'authenticator');
+    const ctx = await requestWithStoredSession(path, sessionId, userId, {
+      password: 'adiutor-tests-guess',
+    });
+    await beforeAuthRequest(ctx);
+    ctx.context.returned = returned;
+    // Better Auth gives the hooks after the endpoint their own copy of `ctx`, sharing `context`.
+    await afterAuthRequest({ ...ctx, context: ctx.context });
+  }
+
+  /**
+   * Creates a user with a password and an authenticator app.
+   *
+   * @returns Their ID.
+   */
+  async function userWithPassword(): Promise<string> {
+    const jane = await createUser(db, 'jane@adiutor.test');
+    await addPassword(db, jane);
+    await enableTwoFactor(db, jane);
+    return jane;
+  }
+
+  it.each([
+    ['/two-factor/disable', 'disable_two_factor'],
+    ['/two-factor/generate-backup-codes', 'generate_backup_codes'],
+  ])('keeps the attempt of a wrong one on %s and records it', async (path, purpose) => {
+    const jane = await userWithPassword();
+
+    await checkPassword(path, jane, wrongPassword());
+
+    expect(await wrongPasswords(jane)).toBe(1);
+    expect(await events()).toEqual([
+      {
+        action: 'password_check_failed',
+        actorUserId: jane,
+        targetUserId: jane,
+        details: { purpose },
+      },
+    ]);
+  });
+
+  it('keeps the attempt of a wrong one when turning two-step verification on, and records it', async () => {
+    const jane = await createUser(db, 'jane@adiutor.test');
+    await addPassword(db, jane);
+    const sessionId = await createSession(db, jane);
+    const ctx = await requestWithStoredSession('/two-factor/enable', sessionId, jane, {
+      method: 'totp',
+      password: 'adiutor-tests-guess',
+    });
+
+    await beforeAuthRequest(ctx);
+    ctx.context.returned = wrongPassword();
+    await afterAuthRequest({ ...ctx, context: ctx.context });
+
+    expect(await wrongPasswords(jane)).toBe(1);
+    expect(await events()).toEqual([
+      {
+        action: 'password_check_failed',
+        actorUserId: jane,
+        targetUserId: jane,
+        details: { purpose: 'enable_two_factor' },
+      },
+    ]);
+  });
+
+  it.each([
+    ['the right password', { status: true }],
+    [
+      'two-step verification that is off, before any password is checked',
+      new APIError('BAD_REQUEST', {
+        message: 'Two factor is not enabled',
+        code: 'TWO_FACTOR_NOT_ENABLED',
+      }),
+    ],
+    [
+      'an error of the server',
+      new APIError('INTERNAL_SERVER_ERROR', { message: 'Internal server error' }),
+    ],
+  ])('gives back the attempt and records no wrong password for %s', async (_name, returned) => {
+    const jane = await userWithPassword();
+
+    await checkPassword('/two-factor/generate-backup-codes', jane, returned);
+
+    expect(await wrongPasswords(jane)).toBe(0);
+    expect((await events()).map(({ action }) => action)).not.toContain('password_check_failed');
   });
 });
 

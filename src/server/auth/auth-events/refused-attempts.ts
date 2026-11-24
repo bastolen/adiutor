@@ -1,6 +1,7 @@
 /**
- * @file The reactions to a refused request: wrong passwords and wrong codes are
- * recorded, and the owner is told when they pause signing in.
+ * @file The reactions to a refused request: wrong passwords, wrong current
+ * passwords and wrong codes are recorded, and the owner is told when they
+ * pause signing in.
  */
 import { APIError, isAPIError } from 'better-auth/api';
 import { and, eq, gt, isNull } from 'drizzle-orm';
@@ -10,11 +11,15 @@ import { twoFactor, user } from '@/db/schema';
 import { mfaMethodFromPath, TWO_FACTOR_LOCK_MINUTES } from '@/lib/authz/mfa';
 
 import { recordEvent } from '../../audit';
-import { hitRateLimit, peekRateLimit, releaseRateLimitHit } from '../../rate-limit';
+import { hitRateLimit, releaseRateLimitHit } from '../../rate-limit';
 import { hasPassword } from '../accounts';
-import { CODE_PATHS, pendingCodeSignInOf } from '../auth-guards';
+import { CODE_PATHS, CURRENT_PASSWORD_PATHS, pendingCodeSignInOf } from '../auth-guards';
 import { queueSecurityNotice } from '../security-notices';
-import { type FinishedRequest, isWrongCodeWithSession } from './finished-request';
+import {
+  type FinishedRequest,
+  isWrongCodeWithSession,
+  isWrongCurrentPassword,
+} from './finished-request';
 import { type AuthHookContext, auditContext, runAfterResponse, audit } from './hook-context';
 
 /** How often a user is told that their password sign-in was paused, at most. */
@@ -22,25 +27,27 @@ const PAUSED_NOTICE_LIMIT = { limit: 1, windowSeconds: 24 * 60 * 60 };
 
 /**
  * Tells a user that wrong passwords paused their password sign-in, at most
- * once a day (a notice that couldn't be queued doesn't count; one the mail
- * server refuses is retried by the queue), and only if
- * they have a password: for anyone else nothing was paused. Without the
- * device and IP address: they may be someone else's (staff see them in the
- * audit log).
+ * once a day, and only if they have a password: for anyone else nothing was
+ * paused. Like {@link notifyTwoFactorLocked}, the notice is counted before
+ * it's queued (one atomic statement), so a pause while one is on its way
+ * sends no second, and one that couldn't be queued gives its count back (one
+ * the mail server refuses is retried by the queue). Without the device and
+ * IP address: they may be someone else's (staff see them in the audit log).
  *
  * @param userId - The user.
  */
 async function notifyPasswordSignInPaused(userId: string): Promise<void> {
-  const key = `sign-in-paused-notice:user:${userId}`;
   if (!(await hasPassword(db, userId))) {
     return;
   }
-  if ((await peekRateLimit({ db }, key, PAUSED_NOTICE_LIMIT)).limited) {
+  const key = `sign-in-paused-notice:user:${userId}`;
+  const { allowed } = await hitRateLimit({ db }, key, PAUSED_NOTICE_LIMIT);
+  if (!allowed) {
     return;
   }
   const queued = await queueSecurityNotice(db, userId, 'password_sign_in_paused');
-  if (queued) {
-    await hitRateLimit({ db }, key, PAUSED_NOTICE_LIMIT);
+  if (!queued) {
+    await releaseRateLimitHit({ db }, key);
   }
 }
 
@@ -155,11 +162,14 @@ async function reactToRefusedSignInCode(
 }
 
 /**
- * Reacts to a request that failed: records a failed password sign-in (and
- * tells the owner when wrong passwords paused password sign-in), a wrong code
- * on the step-up page (only a code that was compared and refused,
- * `isWrongCodeWithSession`: not an expired one or another refusal), or a code
- * refused at a password sign-in's code step.
+ * Reacts to a request that failed: records a failed password sign-in, with
+ * its address when it's a plausible one (and tells the owner when wrong
+ * passwords paused password sign-in), a wrong
+ * current password where Better Auth checked one (`password_check_failed`,
+ * with what it was typed for, as the password forms record it:
+ * `isWrongCurrentPassword`), a wrong code on the step-up page (only a code
+ * that was compared and refused, `isWrongCodeWithSession`: not an expired one
+ * or another refusal), or a code refused at a password sign-in's code step.
  *
  * @param ctx - The endpoint context, with its response.
  * @param request - The facts about the request.
@@ -179,14 +189,25 @@ export async function reactToFailure(
           .from(user)
           .where(eq(user.email, email))
       : [];
+    // Without the address when the client sent no plausible one: arbitrary text (a password typed
+    // into the wrong field, kilobytes of anything) stays out of the audit log.
     await recordEvent(auditContext(ctx.headers), {
       action: 'sign_in_failed',
       targetUserId: target?.id ?? null,
-      details: { method: 'password', email },
+      details: email ? { method: 'password', email } : { method: 'password' },
     });
     if (paused && target && !target.deactivatedAt) {
       // After the response, so it takes as long whether or not the address has an account.
       await runAfterResponse(ctx, notifyPasswordSignInPaused(target.id));
+    }
+    return true;
+  }
+
+  const passwordPurpose = CURRENT_PASSWORD_PATHS.get(path);
+  if (failed && sessionUser && passwordPurpose) {
+    // Only a wrong current password: the same answer as what was counted above.
+    if (isWrongCurrentPassword(request)) {
+      await audit(ctx, 'password_check_failed', sessionUser.id, { purpose: passwordPurpose });
     }
     return true;
   }

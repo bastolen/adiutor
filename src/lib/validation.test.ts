@@ -20,12 +20,14 @@ import {
   companyNameSchema,
   companyRoleSchema,
   containsWebAddress,
+  EMAIL_MAX_LENGTH,
   emailSchema,
   idSchema,
   impersonationReasonSchema,
   nameSchema,
   passkeyNameSchema,
   passwordSchema,
+  plausibleEmail,
   requestCompanySchema,
   requestDescriptionSchema,
   requestPrefixSchema,
@@ -43,12 +45,42 @@ import {
 } from './validation';
 
 describe('emailSchema', () => {
+  it('takes an address up to 320 characters and refuses a longer one as no address', () => {
+    const longest = `${'a'.repeat(EMAIL_MAX_LENGTH - '@adiutor.test'.length)}@adiutor.test`;
+
+    expect(emailSchema.safeParse(longest).success).toBe(true);
+    const tooLong = emailSchema.safeParse(`a${longest}`);
+    expect(tooLong.success).toBe(false);
+    expect(tooLong.error?.issues.map(({ message }) => message)).toEqual(['validation.email']);
+  });
+
   it('normalizes emails so they match stored addresses', () => {
     expect(emailSchema.parse('  Jane.Doe@Adiutor.TEST ')).toBe('jane.doe@adiutor.test');
   });
 
   it('rejects invalid emails', () => {
     expect(emailSchema.safeParse('not-an-email').success).toBe(false);
+  });
+});
+
+describe('plausibleEmail', () => {
+  it('gives an address as it is compared and keyed', () => {
+    expect(plausibleEmail('  Jane.Doe@Adiutor.TEST ')).toBe('jane.doe@adiutor.test');
+  });
+
+  it('takes an address up to the longest one', () => {
+    const longest = `${'a'.repeat(EMAIL_MAX_LENGTH - '@adiutor.test'.length)}@adiutor.test`;
+
+    expect(plausibleEmail(longest)).toBe(longest);
+    expect(plausibleEmail(`a${longest}`)).toBeNull();
+  });
+
+  it('takes nothing else a client may send as one', () => {
+    expect(plausibleEmail('adiutor-tests password typed into the wrong field')).toBeNull();
+    expect(plausibleEmail(`${'a'.repeat(10_000)}@adiutor.test`)).toBeNull();
+    expect(plausibleEmail('   ')).toBeNull();
+    expect(plausibleEmail(undefined)).toBeNull();
+    expect(plausibleEmail(['jane@adiutor.test'])).toBeNull();
   });
 });
 

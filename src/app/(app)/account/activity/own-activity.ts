@@ -216,14 +216,22 @@ function describeAction(
     case 'password_reset':
       return t('ownActivity.passwordReset');
     case 'password_check_failed':
-      // Typed in a signed-in session (`checkCurrentPassword`), for what it was asked for.
-      if (details.purpose === 'change_password') {
-        return t('ownActivity.passwordCheckChanging');
+      // Typed in a signed-in session (`checkCurrentPassword`, or Better Auth's two-step endpoints),
+      // for what it was asked for.
+      switch (details.purpose) {
+        case 'change_password':
+          return t('ownActivity.passwordCheckChanging');
+        case 'deactivate':
+          return t('ownActivity.passwordCheckDeactivating');
+        case 'enable_two_factor':
+          return t('ownActivity.passwordCheckEnablingTwoFactor');
+        case 'disable_two_factor':
+          return t('ownActivity.passwordCheckDisablingTwoFactor');
+        case 'generate_backup_codes':
+          return t('ownActivity.passwordCheckBackupCodes');
+        default:
+          return t('ownActivity.passwordCheck');
       }
-      if (details.purpose === 'deactivate') {
-        return t('ownActivity.passwordCheckDeactivating');
-      }
-      return t('ownActivity.passwordCheck');
     case 'provider_connected':
       return details.atSignIn
         ? t('ownActivity.providerConnectedAtSignIn', { provider })

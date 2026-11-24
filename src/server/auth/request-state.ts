@@ -83,6 +83,13 @@ export interface AuthRequestState {
    */
   reservedStepUpAttempt?: string;
   /**
+   * The user a request that checks their current password through Better
+   * Auth (`CURRENT_PASSWORD_PATHS`) took a wrong-password attempt for before
+   * the password was checked (the guards), until
+   * `settleCurrentPasswordAttempt` takes it.
+   */
+  reservedCurrentPasswordAttempt?: string;
+  /**
    * The user of a password sign-in whose code step checks a code (no session
    * yet), found by the guards from Better Auth's two-factor cookie; read
    * after the request (`pendingCodeSignInOf`) to record a wrong code for them.

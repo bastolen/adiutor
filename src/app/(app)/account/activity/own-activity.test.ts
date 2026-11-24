@@ -208,6 +208,24 @@ describe('describeOwnActivity', () => {
         ME,
       ),
     ).toBe('Wrong password entered when deactivating your account');
+    expect(
+      describeInEnglish(
+        event({ action: 'password_check_failed', details: { purpose: 'enable_two_factor' } }),
+        ME,
+      ),
+    ).toBe('Wrong password entered when turning on two-step verification');
+    expect(
+      describeInEnglish(
+        event({ action: 'password_check_failed', details: { purpose: 'disable_two_factor' } }),
+        ME,
+      ),
+    ).toBe('Wrong password entered when turning off two-step verification');
+    expect(
+      describeInEnglish(
+        event({ action: 'password_check_failed', details: { purpose: 'generate_backup_codes' } }),
+        ME,
+      ),
+    ).toBe('Wrong password entered when creating new backup codes');
     expect(describeInEnglish(event({ action: 'password_check_failed' }), ME)).toBe(
       'Wrong password entered',
     );

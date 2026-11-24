@@ -58,10 +58,13 @@
  *   app is set up, and to confirm sessions of roles that require MFA (staff
  *   Admins and Managers, company Admins).
  * - Wrong codes on the step-up page are limited per user; Better Auth only
- *   limits codes at sign-in. A code checked at a password sign-in's code step
- *   (without a session yet) hands its user, from Better Auth's two-factor
- *   cookie, to `auth-events`, which records a wrong one
- *   (`pendingCodeSignInOf`).
+ *   limits codes at sign-in. So are wrong current passwords where Better
+ *   Auth checks one (turning two-step verification on or off, new backup
+ *   codes: `CURRENT_PASSWORD_PATHS`), in the password forms' bucket
+ *   (`checkCurrentPassword`), and the reactions record each wrong one. A
+ *   code checked at a password sign-in's code step (without a session yet)
+ *   hands its user, from Better Auth's two-factor cookie, to `auth-events`,
+ *   which records a wrong one (`pendingCodeSignInOf`).
  * - "Confirm with GitHub" on the step-up page is marked as a re-verify of
  *   the browser's session (`markReverify` in `reverify-marker.ts`), so only
  *   the user's own confirmed account of the provider can answer it
@@ -75,9 +78,10 @@
  *   it (`clearFailedSignIns` in `failed-sign-ins.ts`): a completed password reset
  *   or an accepted invitation.
  *
- * Wrong passwords and wrong step-up codes are counted before the check, and
- * given back by `auth-events` after the request unless the password or
- * code was wrong (`settlePasswordAttempt`, `settleStepUpAttempt`),
+ * Wrong passwords, wrong current passwords and wrong step-up codes are
+ * counted before the check, and given back by `auth-events` after the
+ * request unless the password or code was wrong (`settlePasswordAttempt`,
+ * `settleCurrentPasswordAttempt`, `settleStepUpAttempt`),
  * so requests sent at the same moment can't all get past the limit, and
  * successful ones (or ones Better Auth refused before checking) don't count.
  *
@@ -92,12 +96,13 @@
  * This is the module's public API: the checks live in the files next to it,
  * and nothing outside this folder imports them directly.
  */
-export { CODE_PATHS } from './paths';
+export { CODE_PATHS, CURRENT_PASSWORD_PATHS } from './paths';
 export type { AuthGuardContext } from './paths';
 export {
   endEmailCodeCooldown,
   countFailedSignIn,
   sessionCodeChallenge,
+  settleCurrentPasswordAttempt,
   settlePasswordAttempt,
   settleStepUpAttempt,
 } from './attempts';
