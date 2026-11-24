@@ -316,9 +316,10 @@ itself isn't recorded in the audit log.
   the [role table](#roles-and-permissions)).
 - **Several at once:** the invite form takes up to 20 addresses (one per line or separated by
   commas) with one role, and lists what happened per address. Whether you may invite there at all
-  is checked once, before the first address (`inviteManyByEmail`): someone who may not gets the same
-  refusal as for one address (not found for another company, not allowed otherwise), and nothing is
-  sent. If one address crosses another change at that moment (Postgres breaks a deadlock), only
+  is checked once, before the list is read (`inviteManyByEmail`): someone who may not gets the same
+  refusal as for one address (not found for another company, not allowed otherwise), whatever they
+  typed, and nothing is sent. The list is read only until it holds more entries than that
+  (`parseEmailList`), since a longer one is refused anyway. If one address crosses another change at that moment (Postgres breaks a deadlock), only
   that address fails, with "Someone changed this at the same moment. Try again.", and the others
   still go through.
 - **Claims and limits:** claiming a link counts as an invitation sent by whoever created it, against

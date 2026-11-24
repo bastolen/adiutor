@@ -1,12 +1,13 @@
 /**
  * @file Integration tests for accepting an invitation, signed in or by creating
- * an account (which hashes the password only for an invitation that can be
- * used), and for what the audit log records when whoever accepts it was in
- * already and keeps their role.
+ * an account (which reads the name and password, and hashes the password,
+ * only for an invitation that can be used), and for what the audit log
+ * records when whoever accepts it was in already and keeps their role.
  */
 import { hashPassword, verifyPassword } from 'better-auth/crypto';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
+import { ZodError } from 'zod';
 
 import {
   account,
@@ -18,6 +19,7 @@ import {
   user,
 } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
+import { NAME_MAX_LENGTH } from '@/lib/input-rules';
 
 import {
   actorFor,
@@ -243,6 +245,38 @@ describe('accepting', () => {
     // A loop of made-up tokens costs a lookup each, not a hash.
     expect(hashPassword).not.toHaveBeenCalled();
     expect(await db.$count(user)).toBe(users);
+  });
+
+  it('answers a token nobody was sent before it reads the name and password', async () => {
+    vi.mocked(hashPassword).mockClear();
+
+    // Both far too long or short to take; a name like this one is what a form can send at most.
+    expect(
+      await acceptInvitationWithNewAccount(ctx, 'adiutor-tests-made-up-token', {
+        name: 'a'.repeat(1_000_000),
+        password: 'short',
+      }),
+    ).toEqual({ status: 'invalid' });
+    expect(hashPassword).not.toHaveBeenCalled();
+  });
+
+  it('refuses a name or password it can’t take for an invitation that can be used, before hashing', async () => {
+    const token = await invite('new@adiutor.test');
+    vi.mocked(hashPassword).mockClear();
+
+    await expect(
+      acceptInvitationWithNewAccount(ctx, token, {
+        name: 'a'.repeat(NAME_MAX_LENGTH + 1),
+        password: 'correct-horse-1',
+      }),
+    ).rejects.toMatchObject({ issues: [{ message: 'validation.name.tooLong' }] });
+    await expect(
+      acceptInvitationWithNewAccount(ctx, token, { name: 'New Person', password: 'short' }),
+    ).rejects.toBeInstanceOf(ZodError);
+
+    expect(hashPassword).not.toHaveBeenCalled();
+    expect(await db.$count(user, eq(user.email, 'new@adiutor.test'))).toBe(0);
+    expect(await getInvitationPreview(ctx, token)).not.toBeNull();
   });
 
   it('still decides in the transaction: an account made while the password was hashed is found', async () => {

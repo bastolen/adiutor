@@ -218,10 +218,11 @@ a password reset request: it stores the link's token for an address with an acco
 lookup in its place for one without, a few milliseconds either way.
 
 Creating an account from an invitation (`acceptInvitationWithNewAccount`, open to anyone who is
-signed out) looks the invitation up, and an account for its address, before it hashes the
-password: the hash is slow on purpose, and a loop of made-up tokens would otherwise cost one
-each. Both are checked again in the transaction, with the invitation locked, as first-run setup
-does (`src/server/setup.ts`).
+signed out) looks the invitation up before it reads the name and password, and an account for
+its address before it hashes the password: the hash is slow on purpose, and a loop of made-up
+tokens would otherwise cost one each, or have what was typed into a form checked for nothing.
+Both are checked again in the transaction, with the invitation locked, as first-run setup does
+(`src/server/setup.ts`).
 
 Session cookies are signed, so the database alone gives no usable session; see
 [Sessions](authentication.md#sessions).
@@ -244,6 +245,13 @@ a copy without format characters, normalised with NFKC and with look-alike full 
 address (`adiutor-login dot com`); it stops the ones mail clients turn into links. Passkey names
 follow the same character rules and are at most 64 characters (`passkeyNameSchema`), checked by the
 auth guards where Better Auth's passkey plugin takes them.
+
+A name's length is checked first, and a name of the wrong length is refused without any other
+rule reading it (`abort` in `lengthLimited`, and on the reason for signing in as a user): a form
+or an action can send up to a megabyte, which zod would otherwise run every rule on. The
+web-address check also takes time in proportion to the text, whatever it holds: its patterns never
+read a long run of letters again from each letter in it, and a name with neither a dot nor `://`
+skips them.
 
 ## Text people write
 
@@ -270,7 +278,9 @@ load or mislead in a reader's browser:
 - **No text that costs too much.** A text nested deeper than a page can render, or with more
   emphasis marks than the parser pairs quickly, is shown as plain text (`MAX_NESTING`,
   `MAX_EMPHASIS_RUNS`). The limit of 10,000 characters bounds the rest: the parser and the
-  highlighter's patterns never run on more.
+  highlighter's patterns never run on more. A text shown as it was written finds its links in
+  time in proportion to its length (`splitLinks`), and leaves an address longer than 2,048
+  characters as text.
 - **In an email, the same tree and the same rules.** A text an email shows is rendered from that
   tree with inline styles (`EmailMarkdown` in `src/components/email/email-markdown.tsx`): what was
   typed as HTML is text, only whole `http` and `https` addresses link, and an image is a link,

@@ -3,7 +3,14 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { cleanMultilineText, isStaffPage, linkTarget, splitLinks, textLinkTarget } from './text';
+import {
+  cleanMultilineText,
+  isStaffPage,
+  LINKED_ADDRESS_MAX_LENGTH,
+  linkTarget,
+  splitLinks,
+  textLinkTarget,
+} from './text';
 
 describe('cleanMultilineText', () => {
   it('turns every line ending into a line break', () => {
@@ -165,6 +172,45 @@ describe('splitLinks', () => {
         .map((part) => part.text)
         .join(''),
     ).toBe(text);
+  });
+
+  it('links an address up to the longest it links, and leaves a longer one as text', () => {
+    const longest = `https://adiutor.dev/${'a'.repeat(LINKED_ADDRESS_MAX_LENGTH - 20)}`;
+    expect(splitLinks(`${longest}.`)).toEqual([
+      { text: longest, href: longest },
+      { text: '.', href: null },
+    ]);
+    const text = `See ${longest}a.`;
+    expect(splitLinks(text)).toEqual([{ text, href: null }]);
+  });
+
+  it('takes a long run of punctuation and closing brackets off an address in time in proportion to it', () => {
+    const address = `https://x${'.'.repeat(2000)}x`;
+    const brackets = ')'.repeat(2000);
+
+    const started = performance.now();
+    const parts = splitLinks(`${address}${brackets}`);
+    const took = performance.now() - started;
+
+    expect(parts).toEqual([
+      { text: address, href: `https://x${'.'.repeat(2000)}x/` },
+      { text: brackets, href: null },
+    ]);
+    // Looking for the punctuation again after each bracket took seconds; reading once, milliseconds.
+    expect(took).toBeLessThan(1000);
+  });
+
+  it('reads a text that is shown as written because it nests too deep, quickly', () => {
+    // The most a reply holds: nested deeper than a page formats, so it's shown as it was written.
+    const text = `${'>'.repeat(101)} https://x${'.'.repeat(6600)}x${')'.repeat(3300)}`;
+
+    const started = performance.now();
+    const parts = splitLinks(text);
+    const took = performance.now() - started;
+
+    // Far longer than any address it links, so it's text, as it was written.
+    expect(parts).toEqual([{ text, href: null }]);
+    expect(took).toBeLessThan(1000);
   });
 });
 

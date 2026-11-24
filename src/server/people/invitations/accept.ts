@@ -401,12 +401,13 @@ export type CreateAccountResult =
  * in the same transaction as joining (`member_joined`).
  *
  * The invitation and the address's account are looked up twice: first
- * without a lock, before the password is hashed, and again in the
- * transaction with the invitation locked, which is what decides. The page is
- * open to anyone, signed out, and the hash is slow on purpose, so a token
- * that can't be used (or an address that has an account) is answered before
- * it costs one. Only someone holding the emailed token can get the
- * `account_exists` answer, as before.
+ * without a lock, before the name and password are read and the password is
+ * hashed, and again in the transaction with the invitation locked, which is
+ * what decides. The page is open to anyone, signed out, and the hash is slow
+ * on purpose, so a token that can't be used (or an address that has an
+ * account) is answered before it costs one; nor does anyone without a usable
+ * token get the name and password they sent checked. Only someone holding
+ * the emailed token can get the `account_exists` answer, as before.
  *
  * @param ctx - Service context.
  * @param token - The token from the link.
@@ -420,13 +421,14 @@ export async function acceptInvitationWithNewAccount(
   token: string,
   input: { name: string; password: string },
 ): Promise<CreateAccountResult> {
-  const name = nameSchema.parse(input.name);
-  const password = passwordSchema.parse(input.password);
-  // Refuse before the (deliberately slow) password hash; checked again in the transaction.
+  // Refuse before reading what was typed and before the (deliberately slow) password hash;
+  // checked again in the transaction.
   const candidate = await findUsableInvitation(ctx.db, token);
   if (!candidate) {
     return { status: 'invalid' };
   }
+  const name = nameSchema.parse(input.name);
+  const password = passwordSchema.parse(input.password);
   const [taken] = await ctx.db
     .select({ id: user.id })
     .from(user)
