@@ -4,7 +4,7 @@
  */
 import { isAPIError } from 'better-auth/api';
 
-import { normalizeEmail } from '@/lib/email-address';
+import { plausibleEmail } from '@/lib/validation';
 
 import { CODE_PATHS, CURRENT_PASSWORD_PATHS } from '../auth-guards';
 import { INVALID_PASSWORD_CODE } from '../current-password';
@@ -22,7 +22,11 @@ export interface FinishedRequest {
   sessionUser: NonNullable<AuthHookContext['context']['session']>['user'] | null;
   /** That user, or the user of the session the request created. */
   userId: string | null;
-  /** The address a password sign-in was for, normalized. */
+  /**
+   * The address a password sign-in was for, trimmed and lower-cased, or
+   * `null` when the client sent no plausible one (`plausibleEmail`), which
+   * is then neither counted nor recorded.
+   */
   email: string | null;
 }
 
@@ -43,7 +47,7 @@ export function finishedRequest(ctx: AuthHookContext, path: string): FinishedReq
     failed: isAPIError(returned) && returned.statusCode >= 400,
     sessionUser,
     userId: sessionUser?.id ?? ctx.context.newSession?.user.id ?? null,
-    email: path === '/sign-in/email' ? normalizeEmail(ctx.body?.email) : null,
+    email: path === '/sign-in/email' ? plausibleEmail(ctx.body?.email) : null,
   };
 }
 

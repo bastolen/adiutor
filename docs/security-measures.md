@@ -40,7 +40,14 @@ Better Auth's own limits (per IP address) are stored in the database
 (`rate_limit`), so they hold across restarts and instances. On top of those, per email address
 whether or not it has an account: 10 wrong passwords per 15 minutes, 5 email links and 5 password
 resets per hour, and per user 5 emailed codes and 5 wrong step-up codes per 15 minutes
-(`src/server/auth/auth-guards/`). Emailed codes also wait for each other: one per sign-in or
+(`src/server/auth/auth-guards/`). Only a plausible address is counted (at most 320 characters, and
+an address by `emailSchema`: `plausibleEmail` in `src/lib/validation.ts`): anything else a client
+sends as one becomes no rate limit key, and a failed sign-in with it is recorded without it, so
+arbitrary text (a password typed into the wrong field, kilobytes of anything) stays out of the
+audit log. Better Auth refuses a value that isn't an address before it checks a password or sends
+an email, an address longer than any that can receive mail has no account to guess or inbox to
+fill, and Better Auth's per-IP limits still apply. Emailed codes also wait for each other: one
+per sign-in or
 session every 2.5 minutes, half a code's lifetime (`EMAIL_CODE_RESEND_SECONDS`), as Better Auth
 keeps the code with the sign-in or session it was asked for, checked first so a refused one
 doesn't count, and ended once a session's code is used (the 5 per 15 minutes per user still cap

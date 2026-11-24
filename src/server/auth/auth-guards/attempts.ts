@@ -200,7 +200,7 @@ export async function endEmailCodeCooldown(challenge: string): Promise<void> {
  * Counts a wrong password for an address, for a failed sign-in that took no
  * attempt beforehand (and for tests).
  *
- * @param email - The address, as typed.
+ * @param email - The address, a plausible one (`plausibleEmail`).
  * @returns Whether this one paused password sign-in for the address.
  */
 export async function countFailedSignIn(email: string): Promise<boolean> {
@@ -221,7 +221,8 @@ export async function countFailedSignIn(email: string): Promise<boolean> {
  * that still work.
  *
  * @param ctx - The endpoint context.
- * @param email - The normalized address.
+ * @param email - The address, trimmed and lower-cased, and a plausible one (`plausibleEmail`):
+ *   whatever else a client sends never becomes a key.
  * @throws {APIError} `TOO_MANY_REQUESTS` with code `PASSWORD_SIGN_IN_PAUSED`.
  */
 export async function reservePasswordAttempt(ctx: AuthGuardContext, email: string): Promise<void> {
@@ -241,7 +242,7 @@ export async function reservePasswordAttempt(ctx: AuthGuardContext, email: strin
  *
  * @param ctx - The endpoint context (its `context` is shared with the checks before).
  * @param ctx.context - Better Auth's request state.
- * @param email - The normalized address, if any.
+ * @param email - The plausible address (`plausibleEmail`), if any.
  * @param wrongPassword - Whether Better Auth refused the email and password.
  * @returns Whether this sign-in paused password sign-in for the address:
  *   once per window, as sign-ins refused while paused never get that far.

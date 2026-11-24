@@ -160,8 +160,9 @@ async function reactToRefusedSignInCode(
 }
 
 /**
- * Reacts to a request that failed: records a failed password sign-in (and
- * tells the owner when wrong passwords paused password sign-in), a wrong
+ * Reacts to a request that failed: records a failed password sign-in, with
+ * its address when it's a plausible one (and tells the owner when wrong
+ * passwords paused password sign-in), a wrong
  * current password where Better Auth checked one (`password_check_failed`,
  * with what it was typed for, as the password forms record it:
  * `isWrongCurrentPassword`), a wrong code on the step-up page (only a code
@@ -186,10 +187,12 @@ export async function reactToFailure(
           .from(user)
           .where(eq(user.email, email))
       : [];
+    // Without the address when the client sent no plausible one: arbitrary text (a password typed
+    // into the wrong field, kilobytes of anything) stays out of the audit log.
     await recordEvent(auditContext(ctx.headers), {
       action: 'sign_in_failed',
       targetUserId: target?.id ?? null,
-      details: { method: 'password', email },
+      details: email ? { method: 'password', email } : { method: 'password' },
     });
     if (paused && target && !target.deactivatedAt) {
       // After the response, so it takes as long whether or not the address has an account.

@@ -5,6 +5,8 @@
 import { addOAuthServerContext, getSessionFromCtx } from 'better-auth/api';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { rateLimitBucket } from '@/db/schema';
+
 import {
   addPassword,
   createCompany,
@@ -160,6 +162,17 @@ describe('sign-in limits', () => {
     await expect(
       beforeAuthRequest(request('/sign-in/email', { email: 'john@adiutor.test' })),
     ).rejects.toEqual(refusedWith('PASSWORD_SIGN_IN_PAUSED'));
+  });
+
+  it.each([
+    ['ten kilobytes of an address', `${'a'.repeat(10_000)}@adiutor.test`],
+    ['text that isn’t an address', 'adiutor-tests password typed into the wrong field'],
+  ])('takes no attempt and keeps no key for %s', async (_name, email) => {
+    await repeat(12, request('/sign-in/email', { email }));
+    await repeat(6, request('/sign-in/magic-link', { email }));
+    await repeat(6, request('/request-password-reset', { email }));
+
+    expect(await db.select({ key: rateLimitBucket.key }).from(rateLimitBucket)).toEqual([]);
   });
 
   it('limits email links and password reset emails per address and endpoint', async () => {

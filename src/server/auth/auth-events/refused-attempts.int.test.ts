@@ -165,6 +165,22 @@ describe('wrong passwords', () => {
     expect((await events()).every(({ targetUserId }) => targetUserId === jane)).toBe(true);
   });
 
+  it('records a failed sign-in without what the client sent when it isn’t a plausible address, and counts nothing for it', async () => {
+    await signInWithPassword(`${'a'.repeat(10_000)}@adiutor.test`);
+    await signInWithPassword('adiutor-tests password typed into the wrong field', {
+      returned: new APIError('BAD_REQUEST', { code: 'INVALID_EMAIL' }),
+    });
+
+    const failed = {
+      action: 'sign_in_failed',
+      actorUserId: null,
+      targetUserId: null,
+      details: { method: 'password' },
+    };
+    expect(await events()).toEqual([failed, failed]);
+    expect(await db.select({ key: rateLimitBucket.key }).from(rateLimitBucket)).toEqual([]);
+  });
+
   it('tells the owner at most once a day', async () => {
     await createUserWithPassword('jane@adiutor.test');
     await failSignIns(10, 'jane@adiutor.test');
