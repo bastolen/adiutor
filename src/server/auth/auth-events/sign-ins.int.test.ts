@@ -6,7 +6,7 @@ import { APIError, getOAuthState } from 'better-auth/api';
 import { eq, inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
 
-import { auditEvent, session } from '@/db/schema';
+import { session } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { sendEmail } from '@/lib/email';
 import { ACTING_AS_CHANGED_COOKIE } from '@/lib/sign-in/auth-cookies';
@@ -19,6 +19,7 @@ import {
   lastActiveAt,
   memberActor,
   staffActor,
+  auditEvents,
 } from '../../../../tests/integration/helpers';
 import { loadActor } from '../../actor';
 import { listOwnActivity } from '../../audit';
@@ -135,10 +136,7 @@ describe('a password sign-in', () => {
         details: { method: 'password' },
       },
     ]);
-    const recorded = firstRow(
-      await db.select({ userAgent: auditEvent.userAgent }).from(auditEvent),
-      'the audit event',
-    );
+    const recorded = firstRow(await auditEvents(db, { fields: ['userAgent'] }), 'the audit event');
     expect(recorded.userAgent).toBe(FIREFOX);
     expectSetSince(await lastActiveAt(db, jane), start);
     expect(await sessionMfa(sessionId)).toEqual({ mfaVerified: false, mfaMethod: null });
@@ -186,10 +184,7 @@ describe('a password sign-in', () => {
     // Whoever typed it may be someone else: the user's own activity leaves out their IP and browser.
     const [own] = await listOwnActivity(services, client);
     expect(own).toMatchObject({ action: 'sign_in_code_pending', ip: null, userAgent: null });
-    const recorded = firstRow(
-      await db.select({ userAgent: auditEvent.userAgent }).from(auditEvent),
-      'the audit event',
-    );
+    const recorded = firstRow(await auditEvents(db, { fields: ['userAgent'] }), 'the audit event');
     expect(recorded.userAgent).toBe(FIREFOX);
   });
 

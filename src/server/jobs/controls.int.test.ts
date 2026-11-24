@@ -7,12 +7,17 @@
  * rows retrying and discarding change is in `manage-queue.int.test.ts`, who
  * may do them in the authorization matrix.
  */
-import { asc, eq, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { auditEvent, jobRun, jobState, queuedJob } from '@/db/schema';
+import { jobRun, jobState, queuedJob } from '@/db/schema';
 
-import { setupTestContext, staffActor, storeQueuedJob } from '../../../tests/integration/helpers';
+import {
+  setupTestContext,
+  staffActor,
+  storeQueuedJob,
+  auditEvents,
+} from '../../../tests/integration/helpers';
 import {
   discardFailedJobs,
   pauseJob,
@@ -29,14 +34,8 @@ const { ctx, db } = setupTestContext();
  * @returns Each event's action, actor and details, oldest first.
  */
 async function events() {
-  return db
-    .select({
-      action: auditEvent.action,
-      actor: auditEvent.actorUserId,
-      details: auditEvent.details,
-    })
-    .from(auditEvent)
-    .orderBy(asc(auditEvent.at), asc(auditEvent.id));
+  const rows = await auditEvents(db, { fields: ['action', 'actorUserId', 'details'] });
+  return rows.map(({ action, actorUserId, details }) => ({ action, actor: actorUserId, details }));
 }
 
 describe('pauseJob and resumeJob', () => {

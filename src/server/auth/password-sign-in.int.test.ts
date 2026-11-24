@@ -30,10 +30,10 @@
  *   one sign-in, other users' waits and the 5 codes per 15 minutes stay.
  */
 import { hashPassword } from 'better-auth/crypto';
-import { asc, desc, eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { account, auditEvent, session, user } from '@/db/schema';
+import { account, session, user } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { TWO_FACTOR_LOCK_ATTEMPTS } from '@/lib/authz/mfa';
 import { defined, firstRow } from '@/lib/defined';
@@ -53,6 +53,7 @@ import {
   sendQueuedEmails,
   setUserLocale,
   setupTestContext,
+  auditEvents,
 } from '../../../tests/integration/helpers';
 import { getOptionalActor } from '../authz';
 
@@ -311,15 +312,9 @@ async function emailedCode(browser: Browser): Promise<string> {
  * @returns Each event's action, actor, target and details.
  */
 async function events() {
-  const rows = await db
-    .select({
-      action: auditEvent.action,
-      actorUserId: auditEvent.actorUserId,
-      targetUserId: auditEvent.targetUserId,
-      details: auditEvent.details,
-    })
-    .from(auditEvent)
-    .orderBy(asc(auditEvent.id));
+  const rows = await auditEvents(db, {
+    fields: ['action', 'actorUserId', 'targetUserId', 'details'],
+  });
   return rows.map(({ action, actorUserId, targetUserId, details }) => [
     action,
     actorUserId,

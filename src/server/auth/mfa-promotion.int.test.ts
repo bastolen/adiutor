@@ -5,10 +5,10 @@
  * a member, accepting an invitation or invite link, reactivating a company
  * and the setup command's promotion.
  */
-import { asc, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { auditEvent, membership, session, setting, user } from '@/db/schema';
+import { membership, session, setting, user } from '@/db/schema';
 import { defined } from '@/lib/defined';
 
 import {
@@ -21,6 +21,7 @@ import {
   setupTestContext,
   staffActor,
   tokenFrom,
+  auditEvents,
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
 import { setCompanyActive } from '../people/companies';
@@ -77,12 +78,12 @@ async function sessionsLeft(userId: string): Promise<string[]> {
  * @returns Their details, oldest first.
  */
 async function signOutsOf(userId: string) {
-  const rows = await db
-    .select({ action: auditEvent.action, details: auditEvent.details })
-    .from(auditEvent)
-    .where(eq(auditEvent.targetUserId, userId))
-    .orderBy(asc(auditEvent.id));
-  return rows.filter(({ action }) => action === 'sessions_revoked').map(({ details }) => details);
+  const rows = await auditEvents(db, {
+    action: 'sessions_revoked',
+    targetUserId: userId,
+    fields: ['details'],
+  });
+  return rows.map(({ details }) => details);
 }
 
 describe('withMfaPromotion', () => {
@@ -238,10 +239,7 @@ describe('changes that make a role require MFA', () => {
       }),
     ).resolves.toEqual({ status: 'joined', companyId: testCompany.id, signedOut: false });
     // The sign-out names the company it was about.
-    const [signOut] = await db
-      .select({ companyId: auditEvent.companyId })
-      .from(auditEvent)
-      .where(eq(auditEvent.action, 'sessions_revoked'));
+    const [signOut] = await auditEvents(db, { action: 'sessions_revoked', fields: ['companyId'] });
     expect(signOut).toEqual({ companyId: testCompany.id });
   });
 

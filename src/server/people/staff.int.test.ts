@@ -6,7 +6,7 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { auditEvent, invitation, inviteLink, setting, user } from '@/db/schema';
+import { invitation, inviteLink, setting, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
 import {
@@ -26,6 +26,7 @@ import {
   staffActor,
   storeAssignedRequest,
   tokenFrom,
+  auditEvents,
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
 import { RATE_LIMITS } from '../rate-limit';
@@ -90,10 +91,7 @@ describe('staff settings and people', () => {
       defaultTimeZone: 'UTC',
       requestPrefix: 'AD',
     });
-    const entry = firstRow(
-      await db.select().from(auditEvent).where(eq(auditEvent.action, 'staff_renamed')),
-      'the audit event',
-    );
+    const entry = firstRow(await auditEvents(db, { action: 'staff_renamed' }), 'the audit event');
     expect(entry.details).toMatchObject({ from: 'Adiutor Tests', to: 'Adiutor Support' });
   });
 
@@ -107,10 +105,7 @@ describe('staff settings and people', () => {
       defaultTimeZone: 'UTC',
       requestPrefix: 'AD',
     });
-    const entry = firstRow(
-      await db.select().from(auditEvent).where(eq(auditEvent.action, 'staff_renamed')),
-      'the audit event',
-    );
+    const entry = firstRow(await auditEvents(db, { action: 'staff_renamed' }), 'the audit event');
     expect(entry.details).toMatchObject({ from: null, to: 'Adiutor Support' });
     // Saving a setting never sets Adiutor up.
     expect(await isSetUp(db)).toBe(false);
@@ -129,7 +124,7 @@ describe('staff settings and people', () => {
       requestPrefix: 'AD',
     });
     // Not a security change: nothing in the audit log.
-    expect(await db.select().from(auditEvent)).toEqual([]);
+    expect(await auditEvents(db)).toEqual([]);
   });
 
   it("sets Adiutor's default time zone, keeping the rest, with nothing in the audit log", async () => {
@@ -148,7 +143,7 @@ describe('staff settings and people', () => {
       'validation.timeZone',
     );
     expect((await getStaffSettings(ctx, admin)).defaultTimeZone).toBe('Europe/Amsterdam');
-    expect(await db.select().from(auditEvent)).toEqual([]);
+    expect(await auditEvents(db)).toEqual([]);
   });
 
   it.each([
@@ -203,7 +198,7 @@ describe('staff settings and people', () => {
       requestPrefix: 'HELP',
     });
     // Not a security change: nothing in the audit log.
-    expect(await db.select().from(auditEvent)).toEqual([]);
+    expect(await auditEvents(db)).toEqual([]);
   });
 
   it.each(['', '1AD', 'A-D', 'TOOLONG', 'ÄD'])('refuses %j as a prefix', async (prefix) => {
@@ -310,9 +305,7 @@ describe('staff settings and people', () => {
       }),
     });
     expect(await platformRoleOf(manager.id)).toBe('manager');
-    expect(await db.select().from(auditEvent).where(eq(auditEvent.action, 'role_changed'))).toEqual(
-      [],
-    );
+    expect(await auditEvents(db, { action: 'role_changed' })).toEqual([]);
   });
 
   it('refuses an Admin taken off the staff while their request was under way', async () => {
@@ -358,11 +351,7 @@ describe('granting staff access', () => {
       'Your Adiutor staff role changed',
       'Your Adiutor staff access was removed',
     ]);
-    const actions = await db
-      .select({ action: auditEvent.action })
-      .from(auditEvent)
-      .where(eq(auditEvent.targetUserId, userId))
-      .orderBy(auditEvent.at);
+    const actions = await auditEvents(db, { targetUserId: userId, fields: ['action'] });
     expect(actions.map(({ action }) => action)).toEqual([
       'member_added',
       'role_changed',
@@ -622,10 +611,7 @@ describe('losing staff rights', () => {
     ).toEqual({ status: 'invalid' });
     expect(await platformRoleOf(erin)).toBeNull();
     const revoked = firstRow(
-      await db
-        .select({ details: auditEvent.details })
-        .from(auditEvent)
-        .where(eq(auditEvent.action, 'invitation_revoked')),
+      await auditEvents(db, { action: 'invitation_revoked', fields: ['details'] }),
       'the audit event',
     );
     expect(revoked.details).toEqual({

@@ -8,9 +8,14 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
 
-import { auditEvent, requestType } from '@/db/schema';
+import { requestType } from '@/db/schema';
 
-import { createCompany, memberActor, staffActor } from '../../../tests/integration/helpers';
+import {
+  createCompany,
+  memberActor,
+  staffActor,
+  auditEvents,
+} from '../../../tests/integration/helpers';
 import { getRequest } from './detail';
 import updateRequestDetails from './details';
 import { listRequests } from './list';
@@ -43,11 +48,7 @@ async function order() {
  * @returns Each event.
  */
 async function events() {
-  const rows = await db
-    .select({ action: auditEvent.action, details: auditEvent.details })
-    .from(auditEvent)
-    .orderBy(auditEvent.id);
-  return rows;
+  return auditEvents(db, { fields: ['action', 'details'] });
 }
 
 describe('the request types to begin with', () => {

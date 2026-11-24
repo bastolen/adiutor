@@ -7,7 +7,7 @@ import { addOAuthServerContext, getSessionFromCtx } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { auditEvent, session, verification } from '@/db/schema';
+import { session, verification } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { env } from '@/lib/env';
 import {
@@ -22,6 +22,7 @@ import {
   inSequence,
   staffActor,
   storeSignInLink,
+  auditEvents,
 } from '../../../../tests/integration/helpers';
 import { loadMfaContext } from '../mfa-state';
 import { beforeAuthRequest } from './before-request';
@@ -254,12 +255,9 @@ describe("a sign-in link used through Better Auth's handler", () => {
     );
     expect(await sessionsOf(alex)).toBe(0);
     expect(await sessionsOf(jane)).toBe(1);
-    expect(
-      await db
-        .select({ action: auditEvent.action, details: auditEvent.details })
-        .from(auditEvent)
-        .where(eq(auditEvent.actorUserId, jane)),
-    ).toEqual([{ action: 'sign_in', details: { method: 'email_link' } }]);
+    expect(await auditEvents(db, { actorUserId: jane, fields: ['action', 'details'] })).toEqual([
+      { action: 'sign_in', details: { method: 'email_link' } },
+    ]);
   });
 
   it.each([

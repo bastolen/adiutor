@@ -11,7 +11,6 @@ import { and, eq, like } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import {
-  auditEvent,
   impersonation,
   rateLimitBucket,
   request,
@@ -21,7 +20,12 @@ import {
 } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 
-import { createCompany, memberActor, staffActor } from '../../../tests/integration/helpers';
+import {
+  createCompany,
+  memberActor,
+  staffActor,
+  auditEvents,
+} from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
 import { listOwnActivity } from '../audit';
 import { changeAssignees } from './assignees';
@@ -338,11 +342,7 @@ describe('subscriptions changed while signed in as someone', () => {
       unsubscribed: true,
     });
 
-    const events = await db
-      .select()
-      .from(auditEvent)
-      .where(eq(auditEvent.action, 'request_subscribers_changed'))
-      .orderBy(auditEvent.at);
+    const events = await auditEvents(db, { action: 'request_subscribers_changed' });
     expect(events).toHaveLength(2);
     expect(events[0]).toMatchObject({
       actorUserId: admin.id,
@@ -372,10 +372,10 @@ describe('subscriptions changed while signed in as someone', () => {
     expect(buckets.map(({ key }) => key).sort()).toEqual(
       [`request-change:user:${admin.id}`, `request-change:user:${client.id}`].sort(),
     );
-    const events = await db
-      .select({ actorUserId: auditEvent.actorUserId })
-      .from(auditEvent)
-      .where(eq(auditEvent.action, 'request_subscribers_changed'));
+    const events = await auditEvents(db, {
+      action: 'request_subscribers_changed',
+      fields: ['actorUserId'],
+    });
     expect(events).toEqual([{ actorUserId: admin.id }]);
   });
 });

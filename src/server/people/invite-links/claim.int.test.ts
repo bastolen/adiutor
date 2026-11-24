@@ -10,15 +10,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { DatabaseTransaction } from '@/db';
-import {
-  auditEvent,
-  company,
-  invitation,
-  inviteLink,
-  membership,
-  rateLimitBucket,
-  user,
-} from '@/db/schema';
+import { company, invitation, inviteLink, membership, rateLimitBucket, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 import type { Email } from '@/lib/email';
 import { hashToken } from '@/lib/sign-in/tokens';
@@ -34,6 +26,7 @@ import {
   rateLimitHits,
   staffActor,
   tokenFrom,
+  auditEvents,
 } from '../../../../tests/integration/helpers';
 import type { Actor } from '../../actor';
 import type { ServiceContext } from '../../context';
@@ -275,10 +268,7 @@ describe('invite links', () => {
       .from(inviteLink)
       .where(eq(inviteLink.usedByEmail, 'invited@adiutor.test'));
     expect(links).toEqual([{ usedByEmail: 'invited@adiutor.test', invitationId: null }]);
-    const claims = await db
-      .select({ details: auditEvent.details })
-      .from(auditEvent)
-      .where(eq(auditEvent.action, 'invite_link_claimed'));
+    const claims = await auditEvents(db, { action: 'invite_link_claimed', fields: ['details'] });
     expect(claims.map(({ details }) => details.status).sort()).toEqual(['already_invited', 'sent']);
   });
 
@@ -652,11 +642,7 @@ describe('an invite link claim whose email can’t be sent', () => {
     expect(await openInvitations()).toEqual([]);
     expect(await db.$count(invitation)).toBe(1);
     // The claim and its undoing are both in the audit log.
-    const claims = await db
-      .select({ details: auditEvent.details })
-      .from(auditEvent)
-      .where(eq(auditEvent.action, 'invite_link_claimed'))
-      .orderBy(auditEvent.id);
+    const claims = await auditEvents(db, { action: 'invite_link_claimed', fields: ['details'] });
     expect(claims.map(({ details }) => details)).toEqual([
       { email: 'new@adiutor.test', role: 'client', status: 'sent' },
       { email: 'new@adiutor.test', role: 'client', undone: true },

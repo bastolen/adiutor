@@ -6,7 +6,7 @@ import { APIError, getOAuthState, getSessionFromCtx } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
 
-import { auditEvent, queuedJob, rateLimitBucket, twoFactor, user } from '@/db/schema';
+import { queuedJob, rateLimitBucket, twoFactor, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 import { sendEmail } from '@/lib/email';
 
@@ -17,6 +17,7 @@ import {
   enableTwoFactor,
   inSequence,
   staffActor,
+  auditEvents,
 } from '../../../../tests/integration/helpers';
 import { listOwnActivity } from '../../audit';
 import { type AuthGuardContext, beforeAuthRequest } from '../auth-guards';
@@ -408,10 +409,7 @@ describe('a code at the code step of a password sign-in', () => {
       },
     ]);
     // Staff see who typed them in the audit log; the user's own activity leaves that out.
-    const recorded = firstRow(
-      await db.select({ userAgent: auditEvent.userAgent }).from(auditEvent),
-      'the audit event',
-    );
+    const recorded = firstRow(await auditEvents(db, { fields: ['userAgent'] }), 'the audit event');
     expect(recorded.userAgent).toBe(FIREFOX);
     const own = await listOwnActivity(services, support);
     expect(own.map(({ ip, userAgent }) => [ip, userAgent])).toEqual([

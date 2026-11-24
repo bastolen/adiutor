@@ -9,15 +9,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 import { ZodError } from 'zod';
 
-import {
-  account,
-  auditEvent,
-  company,
-  invitation,
-  membership,
-  rateLimitBucket,
-  user,
-} from '@/db/schema';
+import { account, company, invitation, membership, rateLimitBucket, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 import { NAME_MAX_LENGTH } from '@/lib/input-rules';
 
@@ -29,6 +21,7 @@ import {
   queuedJobKinds,
   staffActor,
   tokenFrom,
+  auditEvents,
 } from '../../../../tests/integration/helpers';
 import { hitRateLimit } from '../../rate-limit';
 import { claimInviteLink, createInviteLink } from '../invite-links';
@@ -126,16 +119,10 @@ describe('accepting', () => {
         'the new user',
       );
       expect(
-        await db
-          .select({
-            action: auditEvent.action,
-            actorUserId: auditEvent.actorUserId,
-            targetUserId: auditEvent.targetUserId,
-            details: auditEvent.details,
-          })
-          .from(auditEvent)
-          .where(eq(auditEvent.targetUserId, created.id))
-          .orderBy(auditEvent.id),
+        await auditEvents(db, {
+          targetUserId: created.id,
+          fields: ['action', 'actorUserId', 'targetUserId', 'details'],
+        }),
       ).toEqual([
         {
           action: 'account_created',
@@ -392,16 +379,10 @@ describe('accepting an invitation when already in', () => {
    * @returns Who joined, where, and the details.
    */
   async function joinedEvents() {
-    return db
-      .select({
-        actorUserId: auditEvent.actorUserId,
-        targetUserId: auditEvent.targetUserId,
-        companyId: auditEvent.companyId,
-        details: auditEvent.details,
-      })
-      .from(auditEvent)
-      .where(eq(auditEvent.action, 'member_joined'))
-      .orderBy(auditEvent.id);
+    return auditEvents(db, {
+      action: 'member_joined',
+      fields: ['actorUserId', 'targetUserId', 'companyId', 'details'],
+    });
   }
 
   /**

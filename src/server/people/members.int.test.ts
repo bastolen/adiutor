@@ -5,7 +5,7 @@
  * the email to someone added is queued with the change), and the limit on
  * role changes.
  */
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { DatabaseTransaction } from '@/db';
@@ -38,6 +38,7 @@ import {
   setUserLocale,
   staffActor,
   tokenFrom,
+  auditEvents,
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
 import { queueJob } from '../queue';
@@ -314,9 +315,7 @@ describe('rights taken away while the request is under way', () => {
    * @returns The actions, oldest first.
    */
   const auditActions = async () =>
-    (
-      await db.select({ action: auditEvent.action }).from(auditEvent).orderBy(asc(auditEvent.id))
-    ).map((row) => row.action);
+    (await auditEvents(db, { fields: ['action'] })).map((row) => row.action);
 
   it('refuses an Admin\'s "make me Admin" queued behind their demotion', async () => {
     await memberActor(db, testCompany.id, 'admin');
@@ -535,16 +534,10 @@ describe('adding existing users', () => {
       ).toEqual([{ role: 'admin' }]);
       // Recorded as their own doing, and nothing else: no sign-out.
       expect(
-        await db
-          .select({
-            action: auditEvent.action,
-            actorUserId: auditEvent.actorUserId,
-            companyId: auditEvent.companyId,
-            details: auditEvent.details,
-          })
-          .from(auditEvent)
-          .where(eq(auditEvent.targetUserId, staff.id))
-          .orderBy(asc(auditEvent.id)),
+        await auditEvents(db, {
+          targetUserId: staff.id,
+          fields: ['action', 'actorUserId', 'companyId', 'details'],
+        }),
       ).toEqual([
         {
           action: 'member_added',
@@ -710,10 +703,7 @@ describe('removed members and their invitations', () => {
       }),
     ).toEqual({ status: 'invalid' });
     expect(
-      await db
-        .select({ companyId: auditEvent.companyId, details: auditEvent.details })
-        .from(auditEvent)
-        .where(eq(auditEvent.action, 'invitation_revoked')),
+      await auditEvents(db, { action: 'invitation_revoked', fields: ['companyId', 'details'] }),
     ).toEqual([
       {
         companyId: testCompany.id,
@@ -850,9 +840,7 @@ describe('security emails to members', () => {
       role: 'admin',
     });
 
-    expect(await db.select().from(auditEvent).where(eq(auditEvent.action, 'role_changed'))).toEqual(
-      [],
-    );
+    expect(await auditEvents(db, { action: 'role_changed' })).toEqual([]);
     await sendQueuedEmails(ctx);
     expect(sent).toEqual([]);
   });

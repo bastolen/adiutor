@@ -18,14 +18,7 @@
 import { and, eq, like } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  auditEvent,
-  membership,
-  rateLimitBucket,
-  requestSignInLink,
-  session,
-  user,
-} from '@/db/schema';
+import { membership, rateLimitBucket, requestSignInLink, session, user } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { mustStepUp, needsFreshSignIn, needsRecentConfirmation } from '@/lib/authz/mfa';
 import { defined } from '@/lib/defined';
@@ -44,6 +37,7 @@ import {
   setupTestContext,
   staffActor,
   storeAssignedRequest,
+  auditEvents,
 } from '../../../tests/integration/helpers';
 import { getOptionalActor } from '../authz';
 import { RATE_LIMITS } from '../rate-limit';
@@ -296,10 +290,7 @@ describe('the link in an email about a request', () => {
     expect(needsRecentConfirmation(actor)).toBe(true);
     expect(actor.strongMfaConfirmedUntil).toBeNull();
     // Recorded as a sign-in with the link.
-    const events = await db
-      .select({ action: auditEvent.action, details: auditEvent.details })
-      .from(auditEvent)
-      .where(eq(auditEvent.actorUserId, client));
+    const events = await auditEvents(db, { actorUserId: client, fields: ['action', 'details'] });
     expect(events).toEqual([{ action: 'sign_in', details: { method: 'request_link' } }]);
     const [link] = await db.select().from(requestSignInLink);
     expect(link?.lastUsedAt).not.toBeNull();

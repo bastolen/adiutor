@@ -5,10 +5,10 @@
 import { createHmac } from 'node:crypto';
 
 import { getOAuthState } from 'better-auth/api';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { expect, vi } from 'vitest';
 
-import { account, auditEvent, session, user, verification } from '@/db/schema';
+import { account, session, user, verification } from '@/db/schema';
 import type { MfaMethod } from '@/lib/authz/mfa';
 import { firstRow } from '@/lib/defined';
 import { sendEmail } from '@/lib/email';
@@ -21,6 +21,7 @@ import {
   connectProvider,
   sendQueuedEmails,
   setupTestContext,
+  auditEvents,
 } from '../../../../tests/integration/helpers';
 import type { AuthHookContext } from './hook-context';
 import { noteProviderProfile } from './provider-accounts';
@@ -61,15 +62,7 @@ export function markReverify(userId: string, sessionId: string): void {
  * @returns The events' recorded fields.
  */
 export async function events() {
-  return db
-    .select({
-      action: auditEvent.action,
-      actorUserId: auditEvent.actorUserId,
-      targetUserId: auditEvent.targetUserId,
-      details: auditEvent.details,
-    })
-    .from(auditEvent)
-    .orderBy(asc(auditEvent.id));
+  return auditEvents(db, { fields: ['action', 'actorUserId', 'targetUserId', 'details'] });
 }
 
 /**

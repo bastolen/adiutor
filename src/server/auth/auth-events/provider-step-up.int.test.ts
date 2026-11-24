@@ -6,7 +6,7 @@ import { APIError, getOAuthState } from 'better-auth/api';
 import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
 
-import { auditEvent, session } from '@/db/schema';
+import { session } from '@/db/schema';
 import { sendEmail } from '@/lib/email';
 import { PROVIDER_STEP_UP_COOKIE } from '@/lib/sign-in/oauth-providers';
 
@@ -16,6 +16,7 @@ import {
   inSequence,
   lastActiveAt,
   minutesAgo,
+  auditEvents,
 } from '../../../../tests/integration/helpers';
 import { afterAuthRequest } from './after-request';
 import type { AuthHookContext } from './hook-context';
@@ -145,9 +146,9 @@ describe('confirming a session with GitHub on the step-up page', () => {
       afterRequest: [['mfa_verified', jane, { method: 'github' }]],
     });
     // From where the new session was created, like a passkey step-up.
-    expect(
-      await db.select({ ip: auditEvent.ip, userAgent: auditEvent.userAgent }).from(auditEvent),
-    ).toEqual([{ ip: BROWSER.ipAddress, userAgent: BROWSER.userAgent }]);
+    expect(await auditEvents(db, { fields: ['ip', 'userAgent'] })).toEqual([
+      { ip: BROWSER.ipAddress, userAgent: BROWSER.userAgent },
+    ]);
     expect(await sessionMfa(created.sessionId)).toEqual({ mfaVerified: true, mfaMethod: 'github' });
     expect(await sessionExists(previous)).toBe(false);
     expectSetSince(await lastActiveAt(db, jane), start);

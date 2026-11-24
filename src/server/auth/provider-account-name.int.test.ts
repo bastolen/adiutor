@@ -21,7 +21,7 @@ import { hashPassword } from 'better-auth/crypto';
 import { and, asc, eq, isNotNull } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { account, auditEvent, session as sessionTable, user } from '@/db/schema';
+import { account, session as sessionTable, user } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { firstRow } from '@/lib/defined';
 import { sendEmail } from '@/lib/email';
@@ -29,7 +29,12 @@ import { env } from '@/lib/env';
 import { REVERIFY_HINT } from '@/lib/sign-in/oauth-providers';
 import { ACCOUNT_DEACTIVATED } from '@/lib/sign-in/sign-in-refusals';
 
-import { createUser, queuedJobKinds, setupTestContext } from '../../../tests/integration/helpers';
+import {
+  createUser,
+  queuedJobKinds,
+  setupTestContext,
+  auditEvents,
+} from '../../../tests/integration/helpers';
 
 vi.mock('@/lib/email', () => ({ sendEmail: vi.fn() }));
 
@@ -260,7 +265,7 @@ describe('signing in with GitHub to a deactivated account', () => {
     );
     expect(found.emailVerified).toBe(false);
     expect(await db.select().from(sessionTable)).toEqual([]);
-    expect(await db.select({ action: auditEvent.action }).from(auditEvent)).toEqual([]);
+    expect(await auditEvents(db, { fields: ['action'] })).toEqual([]);
     expect(sendEmail).not.toHaveBeenCalled();
     expect(await queuedJobKinds(db)).toEqual([]);
   });
@@ -323,11 +328,7 @@ describe('confirming a session with GitHub on the step-up page', () => {
     mockGitHub({ id: 4242, login: 'adiutor-tests', email: 'jane@adiutor.test' });
     expectSucceeded(await githubFlow('sign-in/social', session, REVERIFY));
 
-    const recorded = await db
-      .select({ action: auditEvent.action, details: auditEvent.details })
-      .from(auditEvent)
-      .where(eq(auditEvent.actorUserId, jane))
-      .orderBy(asc(auditEvent.id));
+    const recorded = await auditEvents(db, { actorUserId: jane, fields: ['action', 'details'] });
     expect(recorded).toEqual([
       { action: 'sign_in', details: { method: 'password' } },
       { action: 'mfa_verified', details: { method: 'github' } },
@@ -437,14 +438,7 @@ describe('"Confirm with GitHub" with another GitHub account than her own confirm
    * @returns The events' action, user and details, oldest first.
    */
   async function recordedSinceSignIn() {
-    const rows = await db
-      .select({
-        action: auditEvent.action,
-        actorUserId: auditEvent.actorUserId,
-        details: auditEvent.details,
-      })
-      .from(auditEvent)
-      .orderBy(asc(auditEvent.id));
+    const rows = await auditEvents(db, { fields: ['action', 'actorUserId', 'details'] });
     return rows.filter((row) => row.action !== 'sign_in' || row.details.method !== 'password');
   }
 
