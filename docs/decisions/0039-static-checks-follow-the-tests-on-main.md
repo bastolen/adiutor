@@ -1,6 +1,6 @@
 # 0039. The static checks follow the tests on main
 
-- **Status:** Superseded by [0042](0042-every-ci-job-runs-every-time.md)
+- **Status:** Superseded by [0043](0043-every-ci-job-runs-every-time.md)
 - **Date:** 2026-11-22
 
 ## Context

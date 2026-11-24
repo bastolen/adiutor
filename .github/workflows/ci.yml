@@ -2,7 +2,7 @@
 # in one result, "CI passed". That's the check protecting main requires
 # (.github/rulesets/main.json, "Protecting main" in docs/ci-and-releases.md), so jobs and shards
 # can change without touching the rules. Every job runs every time: the repository is public, so
-# GitHub's standard runners cost nothing (decision 0042).
+# GitHub's standard runners cost nothing (decision 0043).
 #
 # Actions and images are pinned to exact commits and digests (with the
 # version in a comment), so a moved tag can't change what runs; Dependabot

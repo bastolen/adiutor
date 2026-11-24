@@ -5,7 +5,7 @@
 #
 # Each platform builds natively on a runner of its own, at the same time, and is pushed by its
 # digest only; a last job then joins the two into one multi-platform image under the tags, in each
-# registry. GitHub's Arm runners are free for public repositories (decision 0042).
+# registry. GitHub's Arm runners are free for public repositories (decision 0043).
 #
 # Release Please publishes releases with its app's token, and only events made with the built-in
 # GITHUB_TOKEN can't start other workflows, so its releases start this one. Running it by hand

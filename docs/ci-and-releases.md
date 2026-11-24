@@ -9,7 +9,7 @@ releases are published and how dependencies are kept up to date. Back to the
 CI (`.github/workflows/ci.yml`) runs every job on every pull request and push to `main`, at the
 same time, with test-only auth settings. Nothing is skipped for code that passed before: the
 repository is public, so GitHub's standard runners cost nothing
-([decision 0042](decisions/0042-every-ci-job-runs-every-time.md)). Its token is read-only, and
+([decision 0043](decisions/0043-every-ci-job-runs-every-time.md)). Its token is read-only, and
 checkout doesn't keep it in `.git`. Each job starts with the same setup, a local action
 (`.github/actions/setup/action.yml`, which the PR title check uses too): pnpm, Node from `.nvmrc`
 with pnpm's store cached, and `pnpm install --frozen-lockfile`.
@@ -253,7 +253,7 @@ Weekly on Monday morning, a few days after a release at the earliest:
   `minimumReleaseAgeExclude` until it's old enough.
 - Renovate's pull requests come in groups: all other minor and patch updates together, and
   Next.js, React and their types together, in a pull request of their own for every kind of
-  update (decision 0042).
+  update (decision 0043).
 - Each other major update arrives in a pull request of its own. A major often waits on the tools
   around it (typescript-eslint for TypeScript, plugins for ESLint): its pull request stays open,
   and runs CI again on each update, until they're ready. Closing a pull request makes Renovate
