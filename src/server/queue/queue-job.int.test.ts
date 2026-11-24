@@ -1,7 +1,8 @@
 /**
  * @file Integration tests for declaring a kind of queued job and queuing jobs
  * of it, against the test database: the payload is checked, a batched kind's
- * jobs get their batch key, and a kind reads only its own jobs.
+ * jobs get their batch key, several jobs are stored in order or not at all,
+ * and a kind reads only its own jobs.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -13,7 +14,7 @@ import { queuedJob } from '@/db/schema';
 
 import { setupTestContext } from '../../../tests/integration/helpers';
 import { defineQueuedKind } from './define';
-import { queueJob } from './queue-job';
+import { queueJob, queueJobs } from './queue-job';
 
 const { db } = setupTestContext();
 
@@ -71,6 +72,47 @@ describe('queueJob', () => {
     expect(
       await db.select({ batchKey: queuedJob.batchKey }).from(queuedJob).where(eq(queuedJob.id, id)),
     ).toEqual([{ batchKey: `adiutor-tests-ticket-email:${ticketId}:${userId}` }]);
+  });
+});
+
+describe('queueJobs', () => {
+  it('stores the jobs with their batch keys, their IDs ascending in the order given', async () => {
+    const ticketId = randomUUID();
+    const userIds = [randomUUID(), randomUUID(), randomUUID()];
+
+    const ids = await queueJobs(
+      db,
+      commented,
+      userIds.map((userId) => ({ ticketId, userId })),
+    );
+
+    expect(ids).toEqual([...ids].sort());
+    const stored = await db
+      .select({ id: queuedJob.id, payload: queuedJob.payload, batchKey: queuedJob.batchKey })
+      .from(queuedJob)
+      .orderBy(queuedJob.id);
+    expect(stored).toEqual(
+      userIds.map((userId, index) => ({
+        id: ids[index],
+        payload: { ticketId, userId },
+        batchKey: `adiutor-tests-ticket-email:${ticketId}:${userId}`,
+      })),
+    );
+  });
+
+  it('stores none when one payload does not fit', async () => {
+    await expect(
+      queueJobs(db, note, [
+        { userId: randomUUID(), note: 'hello' },
+        { userId: 'not-an-id', note: 'hello' },
+      ]),
+    ).rejects.toThrow(ZodError);
+    expect(await db.select().from(queuedJob)).toEqual([]);
+  });
+
+  it('stores nothing, and returns no IDs, for no payloads', async () => {
+    expect(await queueJobs(db, note, [])).toEqual([]);
+    expect(await db.select().from(queuedJob)).toEqual([]);
   });
 });
 

@@ -52,7 +52,7 @@ import {
 import type { ServiceContext } from '../context';
 import getRequestPrefix from '../people/request-prefix';
 import getStaffName from '../people/staff-name';
-import { queueJob, requestUpdateJob, type RequestUpdateEvent } from '../queue';
+import { queueJobs, requestUpdateJob, type RequestUpdateEvent } from '../queue';
 import { loadPeopleOn } from './participants';
 import currentProposalEntryId from './proposals';
 
@@ -79,16 +79,15 @@ interface NewsJob {
 }
 
 /**
- * Queues news, one job after another: a transaction runs one statement at a time.
+ * Queues news, in the order given, in one statement: the change's transaction
+ * holds the request's row lock meanwhile, and a request many people follow
+ * would otherwise take one statement for each of them.
  *
  * @param tx - The change's transaction.
  * @param jobs - The jobs.
  */
 async function queueNews(tx: DatabaseTransaction, jobs: readonly NewsJob[]): Promise<void> {
-  await jobs.reduce<Promise<void>>(async (queued, job) => {
-    await queued;
-    await queueJob(tx, requestUpdateJob, job);
-  }, Promise.resolve());
+  await queueJobs(tx, requestUpdateJob, jobs);
 }
 
 /**

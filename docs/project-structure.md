@@ -47,7 +47,7 @@ The folders of the repository and what belongs in each. Back to the [documentati
     (see [Requests](requests.md)), with the checks every change shares in `change.ts`.
   - `src/server/jobs/`: background jobs (see [Background jobs](jobs.md)): the tick, leases and
     history, with each recurring job in `recurring/` and every job listed in `registry.ts`.
-  - `src/server/queue/`: declaring kinds of queued job and adding jobs to the queue (`queueJob`),
+  - `src/server/queue/`: declaring kinds of queued job and adding jobs to the queue (`queueJob`, `queueJobs`),
     apart from `src/server/jobs`, which imports the code it runs: so code anywhere can queue a job.
   - `src/server/settings/`: Adiutor's settings, one row each in the `setting` table
     ([decision 0034](decisions/0034-settings-in-one-key-value-table.md)): `registry.ts` declares
