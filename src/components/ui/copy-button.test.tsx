@@ -5,9 +5,9 @@
  */
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Activity } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import Page from '../../../tests/ui/page';
 import CopyButton from './copy-button';
 import { Toaster } from './toast';
 
@@ -144,25 +144,17 @@ describe('CopyButton', () => {
 
   it('has forgotten its message when its page is shown again', async () => {
     const user = userEvent.setup();
-    const { rerender } = render(
-      <Activity mode="visible">
+    render(
+      <Page>
         <CopyButton value="1234-5678" label="Copy codes" />
-      </Activity>,
+      </Page>,
     );
 
     await user.click(screen.getByRole('button', { name: 'Copy codes' }));
     expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
 
-    rerender(
-      <Activity mode="hidden">
-        <CopyButton value="1234-5678" label="Copy codes" />
-      </Activity>,
-    );
-    rerender(
-      <Activity mode="visible">
-        <CopyButton value="1234-5678" label="Copy codes" />
-      </Activity>,
-    );
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    await user.click(screen.getByRole('button', { name: 'Return' }));
 
     expect(screen.getByRole('button', { name: 'Copy codes' })).toBeInTheDocument();
   });

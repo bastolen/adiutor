@@ -7,9 +7,9 @@
  * count until the session is confirmed, and that a failed sign-out says so
  * instead of loading the sign-in page.
  */
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Activity, StrictMode } from 'react';
+import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EMAIL_CODE_RESEND_SECONDS, type StepUpMethods } from '@/lib/authz/mfa';
@@ -22,6 +22,7 @@ import {
 import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 
 import renderInLocale from '../../../../tests/i18n/render';
+import Page from '../../../../tests/ui/page';
 import StepUpForm, { type StepUpFormProps } from './step-up-form';
 
 /** What the form says for a code sent a moment ago, from the catalogue. */
@@ -94,7 +95,7 @@ const GITLAB = 'gitlab' as MfaProvider;
 const none: StepUpMethods = { authenticator: false, email: false, passkey: false, providers: [] };
 
 /**
- * Renders the form inside React's `<Activity>`, the way Next.js keeps a page
+ * Renders the form inside the `Page` harness, the way Next.js keeps a page
  * alive between visits.
  *
  * @param props - The form's props.
@@ -102,24 +103,17 @@ const none: StepUpMethods = { authenticator: false, email: false, passkey: false
  *   later, like navigating away and coming back.
  */
 function renderOnPage(props: StepUpFormProps) {
-  /**
-   * The page with the form.
-   *
-   * @param mode - Whether the page is shown.
-   * @returns The page.
-   */
-  const page = (mode: 'visible' | 'hidden') => (
-    <Activity mode={mode}>
+  render(
+    <Page>
       <StepUpForm {...props} />
-    </Activity>
+    </Page>,
   );
-  const view = render(page('visible'));
   return {
     /** Hides the page, then shows it again once what it does on leaving has run. */
     leaveAndReturn: async () => {
-      view.rerender(page('hidden'));
+      fireEvent.click(screen.getByRole('button', { name: 'Leave' }));
       await act(async () => {});
-      view.rerender(page('visible'));
+      fireEvent.click(screen.getByRole('button', { name: 'Return' }));
     },
   };
 }
