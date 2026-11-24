@@ -30,7 +30,7 @@ export interface ReverifyMarker {
 }
 
 /** The parts of the `/sign-in/social` endpoint context {@link markReverify} reads. */
-export interface ReverifyStartContext extends SessionCookieContext {
+interface ReverifyStartContext extends SessionCookieContext {
   /** Request body: the provider, and the browser's `additionalData`. */
   body?: Record<string, unknown> | null;
 }

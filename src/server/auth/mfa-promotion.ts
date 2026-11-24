@@ -20,7 +20,7 @@ import type { ServiceContext } from '../context';
 import { loadMfaRoles } from './mfa-state';
 
 /** Options for {@link withMfaPromotion}. */
-export interface MfaPromotionOptions {
+interface MfaPromotionOptions {
   /**
    * A session to keep even so: the one a user accepts an emailed invitation
    * with themselves, having just proved its inbox (they're sent to set up

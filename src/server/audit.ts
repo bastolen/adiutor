@@ -200,7 +200,7 @@ export async function listAuditEvents(
 }
 
 /** What {@link listAuditLog} can be asked for: filters, and the table's sort and page. */
-export interface ListAuditLogOptions extends Partial<TableState<AuditLogSort>> {
+interface ListAuditLogOptions extends Partial<TableState<AuditLogSort>> {
   /** Text to find in the name or email of who acted or whom it was about, or in the company's name. */
   search?: string;
   /** Only events of this group. */

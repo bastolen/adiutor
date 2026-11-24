@@ -22,7 +22,7 @@ import buildSecurityNotice from './security-notice-email';
  * change: the email names its device, IP address and time, and anyone else's
  * device must never be shown to the user.
  */
-export type QueuedNoticeDetails = Partial<Omit<SecurityNoticePayload, 'userId' | 'kind'>>;
+type QueuedNoticeDetails = Partial<Omit<SecurityNoticePayload, 'userId' | 'kind'>>;
 
 /**
  * Queues a security notice for the next tick (the `security-notice` job),

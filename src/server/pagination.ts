@@ -71,7 +71,7 @@ function optionalDateOrder(dir: SortDirection, column: AnyColumn): SQL {
 }
 
 /** The columns a list of people is sorted by (see {@link peopleOrder}). */
-export interface PeopleColumns {
+interface PeopleColumns {
   /** The person's name. */
   name: AnyColumn;
   /** Their email address. */

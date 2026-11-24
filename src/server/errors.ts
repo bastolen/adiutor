@@ -48,7 +48,7 @@ export type ErrorMessageKey = `errors.${ErrorsKey}` | ValidationMessageKey;
  * {@link errorMessage} joins it as the reader's language does ("A, B and C",
  * "A, B y C"), which a service can't, as it doesn't know who reads the error.
  */
-export type ErrorMessageValues = Record<string, string | number | readonly string[]>;
+type ErrorMessageValues = Record<string, string | number | readonly string[]>;
 
 /**
  * An expected problem, such as a missing permission or invalid input. It
