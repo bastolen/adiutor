@@ -22,7 +22,13 @@ import type { Page } from '@playwright/test';
 
 import { storeOwnRequest } from './support/db';
 import { COMPANY_NAME, SUPPORT_STAFF } from './support/fixtures';
-import { type StorageState, storageStateFor, toasts, openBoard } from './support/helpers';
+import {
+  type StorageState,
+  storageStateFor,
+  toasts,
+  openBoard,
+  boardLane,
+} from './support/helpers';
 import { repeatInOrder } from './support/sequence';
 import { expect, test } from './support/test';
 
@@ -302,4 +308,19 @@ test.describe('on a phone', () => {
             - button "Closed, 6 requests" [expanded=false]
     `);
   });
+});
+
+test('the board’s columns are groups, not landmarks, and a lane says it shows fewer cards', async ({
+  page,
+}) => {
+  // Narrower than the five columns side by side, so the row of buttons shows.
+  await page.setViewportSize({ width: 1100, height: 900 });
+  await page.goto('/requests/board');
+  await expect(page.getByRole('navigation', { name: 'Jump to a lane' })).toBeVisible();
+  const open = boardLane(page, 'Open');
+  await expect(open).toBeVisible();
+  // No landmark for a column or a half: the page's landmarks stay few.
+  await expect(page.getByRole('main').getByRole('region')).toHaveCount(0);
+  // More open requests than the 25 cards a lane shows.
+  await expect(open.getByRole('list')).toHaveAccessibleName(/^First 25 of \d+$/);
 });

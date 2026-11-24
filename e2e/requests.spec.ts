@@ -80,6 +80,9 @@ import { expect, test } from './support/test';
 /** Gives the Support member's sign-in cookies, for the tests that act as them throughout. */
 const supportCookies = signedInOnce(SUPPORT_STAFF);
 
+/** Gives the Watcher's sign-in cookies, for the one test that reads the board as them. */
+const watcherCookies = signedInOnce(CLIENT_WATCHER);
+
 /** Gives the Client's sign-in cookies, for the tests that act as them throughout. */
 const clientCookies = signedInOnce(REQUESTS_CLIENT);
 
@@ -2508,6 +2511,13 @@ test('a company’s page shows its requests as a board too, that company’s onl
   await expect(toasts(page)).toContainText(`AD-${number} moved to In progress.`);
   await expect(boardLane(page, 'In progress').getByRole('link', { name: ours })).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/companies/${COMPANY_SLUG}/board\\?`));
+});
+
+test('the board has no Move menus for a Watcher', async ({ context, page }) => {
+  await context.addCookies(watcherCookies());
+  await openBoard(page, SEEDED_REQUESTS.open.title);
+  await expect(page.getByRole('link', { name: SEEDED_REQUESTS.open.title })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Move AD-/ })).toHaveCount(0);
 });
 
 test.describe('the board’s Waiting and Closed columns, on a wide screen', () => {
