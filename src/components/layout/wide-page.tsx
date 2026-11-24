@@ -8,7 +8,8 @@
 import type { ReactNode } from 'react';
 
 /**
- * A page that grows with the screen up to 1280px of content. From the width
+ * A page that grows with the screen up to 1200px of content (measured as
+ * the 944px above, without the page's gutters). From the width
  * at which the app's content would stop growing, it reaches past that
  * content's edges by the same amount on both sides, as far as the room next
  * to the menu allows, keeping the page's side gutter. Below that width, and

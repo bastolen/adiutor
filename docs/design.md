@@ -336,7 +336,7 @@ keyboard support.
   cursor in the field.
   The content of every page stops growing at 1280px of screen. A request's page may be wider
   (`WidePage` in `src/components/layout/wide-page.tsx`): from that width it grows with the room
-  next to the menu, up to 1280px of content, so the
+  next to the menu, up to 1200px of content, so the
   conversation and the editor of a reply get the room, with the details still beside them. The
   board of requests across companies grows the same way, so more of its lanes show side by side;
   a company's board doesn't, so it lines up with the company's header and tabs. It
