@@ -5,12 +5,15 @@
  * Which picture someone shows follows one rule (`pictureAccount` in
  * `src/lib/sign-in/pictures.ts`). The services that return people add its
  * address (`loadPictures`), for the readers who get the person's name. The
- * address is `/avatars/<account ID>`: it says nothing about who the person
- * is, and the provider's own address never reaches a browser. The route
+ * address is `/avatars/<account ID>?v=<version>`: it says nothing about who
+ * the person is, and the provider's own address never reaches a browser, not
+ * even as a fingerprint anyone could check a guess against. The route
  * there (`src/app/avatars/[account]/route.ts`) fetches the image from the
  * provider each time a browser asks for it (`loadPicture`), within limits,
  * and stores nothing. See decision 0022.
  */
+import { createHmac } from 'node:crypto';
+
 import { and, asc, eq, inArray } from 'drizzle-orm';
 
 import type { DatabaseOrTransaction } from '@/db';
@@ -32,6 +35,7 @@ import { idSchema } from '@/lib/validation';
 import { assertNotSignedInAs } from '../access';
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
+import derivedSecret from '../derived-secret';
 import { ServiceError } from '../errors';
 
 /** How long fetching a picture from its provider may take. */
@@ -50,34 +54,47 @@ interface AccountRow extends PictureAccount {
 }
 
 /**
- * A short, stable fingerprint of a provider's address, so a picture's
- * address in Adiutor changes when the provider's does, and browsers fetch
- * the new one instead of the one they kept. Not a secret: FNV-1a, 32 bits.
- *
- * @param value - The provider's address.
- * @returns Eight hexadecimal digits.
+ * The purpose the versions' secret is worked out for (`derivedSecret`): their
+ * own, so a version is never a signature of anything else.
  */
-function fingerprint(value: string): string {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < value.length; index += 1) {
-    // eslint-disable-next-line no-bitwise -- FNV-1a works on the bits of the hash.
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  // eslint-disable-next-line no-bitwise -- As an unsigned number, for its digits.
-  return (hash >>> 0).toString(16).padStart(8, '0');
+const VERSION_PURPOSE = 'adiutor picture versions';
+
+/** How many hexadecimal digits of its MAC a picture's version keeps: 64 bits. */
+const VERSION_LENGTH = 16;
+
+/**
+ * A picture's version in Adiutor: a keyed MAC (HMAC-SHA-256, cut short) of
+ * the provider's address, so the address in Adiutor changes when the
+ * provider's does, and browsers fetch the new picture instead of the one
+ * they kept, and stays the same otherwise. It's made with a secret, because
+ * the provider's address can be guessed: a GitHub picture's address holds its
+ * account's number (`https://avatars.githubusercontent.com/u/<number>?v=4`),
+ * and with an unkeyed hash of it anyone who sees the version could try every
+ * number until one matched. Without the app's secret, a version can't be
+ * checked against any guess.
+ *
+ * @param address - The provider's address.
+ * @returns Sixteen hexadecimal digits.
+ */
+function pictureVersion(address: string): string {
+  return createHmac('sha256', derivedSecret(VERSION_PURPOSE))
+    .update(address)
+    .digest('hex')
+    .slice(0, VERSION_LENGTH);
 }
 
 /**
- * The address a picture is served from in Adiutor.
+ * The address a picture is served from in Adiutor. Only the account's ID
+ * says what's served: the version (`?v=`) is for browsers' caches, and the
+ * route doesn't read it.
  *
  * @param picture - The account whose picture it is.
  * @param picture.id - Its ID.
  * @param picture.image - The picture's address at the provider.
- * @returns E.g. `/avatars/0198…?v=1a2b3c4d`.
+ * @returns E.g. `/avatars/0198…?v=1a2b3c4d5e6f7a8b`.
  */
 function picturePath({ id, image }: { id: string; image: string }): string {
-  return `/avatars/${id}?v=${fingerprint(image)}`;
+  return `/avatars/${id}?v=${pictureVersion(image)}`;
 }
 
 /**

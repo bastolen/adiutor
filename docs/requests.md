@@ -466,13 +466,15 @@ written and sent is in [Email](email.md), and the jobs that send them in
   the text and on which day (`TextSource`, in the reader's language, with the name the page shows
   next to the text). The note is a comment in the block's language (`withCodeNote` in
   `code-note.ts`: `#`, `//`, `--`, `;`, `'`, `;;`, `/* */` or `<!-- -->`, also for a language
-  written by an alias). A note must never break what's pasted, so the code is copied alone where
-  a comment can't go or could end up shown: JSON, plain text, a block without a language or in one
-  we don't highlight, Markdown, a diff, an HTTP message, PHP, and a shell or Python session. Lines
-  that have to stay first (a `#!` line, an XML declaration, a doctype, a Dockerfile's directives)
-  keep their place, with the note below them. A new language in `CODE_LANGUAGES` gets its choice in
-  `COMMENT_SIGNS`. Selecting code by hand copies it without a note, and a block has no button while
-  it's written.
+  written by an alias). A line of the note with a backslash, C's `??/` or an encoding declaration
+  (`coding:`) in it is left out, so a name can't leave its comment (see
+  [Security measures](security-measures.md#text-people-write)). A note must never break what's
+  pasted, so the code is copied alone where a comment can't go or could end up shown: JSON, plain
+  text, a block without a language or in one we don't highlight, Markdown, a diff, an HTTP message,
+  PHP, and a shell or Python session. Lines that have to stay first (a `#!` line, an XML
+  declaration, a doctype, a Dockerfile's directives) keep their place, with the note below them. A
+  new language in `CODE_LANGUAGES` gets its choice in `COMMENT_SIGNS`. Selecting code by hand copies
+  it without a note, and a block has no button while it's written.
 - **A text that would cost too much to format is shown as plain text** (`markdownTree`): one
   nested more than 100 levels deep (`MAX_NESTING`; React renders a level per call, and the
   parser's own walk overflows the stack at a few thousand), or with more than 2,500 runs of `*`

@@ -325,9 +325,13 @@ load or mislead in a reader's browser:
   comment that names the request and who wrote the text (`withCodeNote` in
   `src/components/ui/markdown/code-note.ts`), and a name is something a person typed. Every line
   of the note stays one line (each kind of line break becomes a space), so a name can't start a
-  line of its own in what a reader pastes into a terminal or a file. Where a comment has an end
-  (`*/`, `-->`), a note that holds what would end it isn't written at all: the code is copied
-  alone.
+  line of its own in what a reader pastes into a terminal or a file. A line of the note that holds
+  what a language reads before or outside its comments is left out, in every language: a
+  backslash (Java turns `\u000a` into a line end before anything else, C and C++ join a line that
+  ends in one to the next), `??/` (C's trigraph for a backslash) and an encoding declaration
+  (`coding:` or `coding=`, which Python reads from the first two lines, where the note goes; in
+  UTF-7, `+AAo-` is a line break). Where a comment has an end (`*/`, `-->`), a note that holds what
+  would end it isn't written at all: the code is copied alone.
 - **The editor is a convenience, never a check.** It follows the same rules while a text is
   written (HTML stays text, only whole `http` and `https` addresses are links, an image is never
   loaded; `src/components/ui/markdown/editor-extensions.ts`), but all it produces is Markdown,
@@ -353,6 +357,13 @@ keeps images to `img-src 'self'` and viewers never contact GitHub or Google.
   company user nothing about who someone is beyond the picture they show next to their name.
 - **In the browser:** the image comes with its type, `X-Content-Type-Options: nosniff`, and
   `Cache-Control: private, max-age=86400`; its address changes when the provider's does.
+- **The version in the address** (`?v=`, `pictureVersion` in `src/server/people/pictures.ts`) is
+  a keyed MAC of the provider's address (HMAC-SHA-256, 64 bits of it), with a secret of its own
+  worked out from `BETTER_AUTH_SECRET` (`derivedSecret` in `src/server/derived-secret.ts`). A
+  GitHub picture's address holds the account's number, so an unkeyed hash would let anyone who
+  sees the version try every number until one matched; without the secret, a version can't be
+  checked against a guess. The route doesn't read it: it's only there for browsers' caches, so a
+  new secret only means each picture is fetched once more.
 
 ## Provider tokens aren't kept
 
