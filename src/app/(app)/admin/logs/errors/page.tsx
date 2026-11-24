@@ -303,8 +303,6 @@ async function Errors({ searchParams }: { searchParams: Promise<SearchParams> })
 /**
  * The errors page.
  *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
  * @returns The page.
  */
 export default function ErrorsPage({ searchParams }: PageProps<'/admin/logs/errors'>) {

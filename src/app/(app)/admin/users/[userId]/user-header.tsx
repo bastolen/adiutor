@@ -30,9 +30,6 @@ interface UserHeaderProps {
  * with the current one (from the URL) marked `aria-current="page"`. Its text
  * comes from `admin.user`.
  *
- * @param props - Header props.
- * @param props.user - The user.
- * @param props.tabs - The tabs the viewer gets.
  * @returns The header.
  */
 export default function UserHeader({ user, tabs }: UserHeaderProps) {

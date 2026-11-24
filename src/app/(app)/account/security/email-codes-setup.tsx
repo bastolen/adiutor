@@ -141,10 +141,6 @@ function EmailCodesSteps({ email, onDone }: { email: string; onDone: () => void 
  * Turns on two-step verification with email codes. Entering a code sent to
  * the user's address proves the codes arrive before relying on them.
  *
- * @param props - Dialog props.
- * @param props.open - Open state.
- * @param props.onOpenChange - Open state handler.
- * @param props.email - Where codes are sent.
  * @returns The dialog.
  */
 export default function EmailCodesSetup({ open, onOpenChange, email }: EmailCodesSetupProps) {

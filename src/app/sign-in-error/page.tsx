@@ -49,8 +49,6 @@ function DetailsSkeleton() {
  * shell (`shell-text.tsx`); what went wrong and the reference come per
  * request.
  *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters: Better Auth's `error` and `error_description`.
  * @returns The page.
  */
 export default function SignInErrorPage({ searchParams }: PageProps<'/sign-in-error'>) {

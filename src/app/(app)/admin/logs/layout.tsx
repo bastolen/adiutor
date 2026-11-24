@@ -40,8 +40,6 @@ async function LogsHeaderLoader() {
 /**
  * The Logs header above its pages.
  *
- * @param props - Layout props from Next.js.
- * @param props.children - The page.
  * @returns The layout.
  */
 export default function LogsLayout({ children }: LayoutProps<'/admin/logs'>) {

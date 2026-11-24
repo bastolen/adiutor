@@ -34,8 +34,6 @@ async function ShortLink({ params }: { params: Promise<{ ref: string }> }): Prom
 /**
  * The short link's page, which only redirects.
  *
- * @param props - Page props.
- * @param props.params - Route parameters: the request's number, with or without the prefix.
  * @returns The page content, while it redirects.
  */
 export default function RequestShortLinkPage({ params }: PageProps<'/r/[ref]'>) {

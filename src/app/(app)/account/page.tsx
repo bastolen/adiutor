@@ -135,8 +135,6 @@ async function AccountSettings({ searchParams }: { searchParams: Promise<Account
 /**
  * The Profile tab of the account.
  *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
  * @returns The page.
  */
 export default function AccountPage({ searchParams }: PageProps<'/account'>) {

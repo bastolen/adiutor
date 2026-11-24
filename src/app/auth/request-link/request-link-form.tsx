@@ -107,12 +107,6 @@ function prerendering(): boolean {
  * link's account, and points out when both have the same name, and waits for
  * a click; when it's that account already, it just opens the request.
  *
- * @param props - Component props.
- * @param props.account - The account the link signs in to.
- * @param props.continueByItself - Whether Continue goes by itself once the page has loaded.
- * @param props.reference - The request's number as people see it.
- * @param props.requestHref - The request's page, with the entry the link points at.
- * @param props.signedIn - Whoever is signed in in this browser.
  * @returns The form.
  */
 export default function RequestLinkForm({

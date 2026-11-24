@@ -293,8 +293,6 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
  * The users page, as wide as the lists of requests on a wide screen
  * (`WidePage`).
  *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
  * @returns The page.
  */
 export default function UsersPage({ searchParams }: PageProps<'/admin/users'>) {

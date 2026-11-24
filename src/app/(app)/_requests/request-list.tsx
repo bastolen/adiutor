@@ -133,12 +133,6 @@ function emptyKindOf(status: RequestStatusFilter, narrowed: boolean): EmptyKind 
  * search or a filter emptied it, offers "New request" to whoever may raise
  * one.
  *
- * @param props - Component props.
- * @param props.path - The page the list is on.
- * @param props.searchParams - The page's query parameters.
- * @param props.actor - The viewer.
- * @param props.company - The company whose list this is, on its own page.
- * @param props.renderHeader - Renders what comes before the list, from what the list loaded.
  * @returns The header, if any, the filters and the table (or an empty state).
  */
 export default async function RequestList({

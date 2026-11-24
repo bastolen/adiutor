@@ -39,8 +39,6 @@ export async function generateMetadata(): Promise<Metadata> {
  * The request link's page. It reads the link from the URL, so it renders at
  * request time behind a Suspense boundary, with its form's text (`auth`).
  *
- * @param props - Page props from Next.js.
- * @param props.searchParams - The query string, with the link's token.
  * @returns The page.
  */
 export default function RequestLinkPage({ searchParams }: PageProps<'/auth/request-link'>) {

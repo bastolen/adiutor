@@ -49,11 +49,6 @@ interface PictureFormProps {
  * stays as saved after saving (`resetOnSuccess: false`), and the page shows
  * the new picture wherever the user appears.
  *
- * @param props - Component props.
- * @param props.name - The user's name.
- * @param props.options - The accounts whose picture can be chosen.
- * @param props.shown - What the user shows now.
- * @param props.chosen - Whether they chose.
  * @returns The form.
  */
 export default function PictureForm({ name, options, shown, chosen }: PictureFormProps) {

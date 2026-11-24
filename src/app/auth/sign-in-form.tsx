@@ -115,8 +115,6 @@ function LastUsedBadge({ show, onPrimary = false }: { show: boolean; onPrimary?:
  * refusals the server words itself (a paused password sign-in, too many
  * attempts with how long to wait).
  *
- * @param props - Which OAuth providers to offer.
- * @param props.providers - A "Continue with …" button for each.
  * @returns The sign-in form.
  */
 export default function SignInForm({ providers }: SignInFormProps) {

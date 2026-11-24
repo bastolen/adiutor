@@ -178,11 +178,6 @@ interface BoardProps {
  * (`useTransientState`), and the busy cards when the moves end; the drag and
  * drop's effects clean up then too.
  *
- * @param props - Board props.
- * @param props.lanes - The lanes as the server has them.
- * @param props.names - Each lane's name.
- * @param props.seeAll - Each lane's link to all its requests.
- * @param props.staffName - The name the staff are shown with.
  * @returns The board.
  */
 export default function Board({ lanes, names, seeAll, staffName }: BoardProps) {

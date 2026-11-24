@@ -39,10 +39,6 @@ interface SessionsCardProps {
  * the code step ("Trust this device", this one included), so a lost device
  * asks for the code again (`revokeOwnSession`, `revokeOtherOwnSessions`).
  *
- * @param props - Card props.
- * @param props.sessions - The sessions.
- * @param props.table - The table's links.
- * @param props.currentSessionId - This device's session.
  * @returns The card.
  */
 export default function SessionsCard({ sessions, table, currentSessionId }: SessionsCardProps) {

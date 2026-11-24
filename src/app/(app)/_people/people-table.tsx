@@ -75,11 +75,6 @@ interface PeopleTableProps {
  * under the name (`PersonCell`). With an actions column, each row's action is
  * at its end.
  *
- * @param props - Table props.
- * @param props.caption - The caption.
- * @param props.table - The table's links.
- * @param props.headings - The column headers.
- * @param props.rows - The people.
  * @returns The table.
  */
 export default function PeopleTable({ caption, table, headings, rows }: PeopleTableProps) {

@@ -147,15 +147,6 @@ interface ConnectedAccountsCardProps {
  * while a disabled control it explains is shown, and pointed at only by those
  * controls).
  *
- * @param props - Card props.
- * @param props.message - How connecting an account went, if the user just came back.
- * @param props.providers - Configured providers.
- * @param props.connected - Connected accounts.
- * @param props.disconnectBlocked - Accounts that can't be disconnected.
- * @param props.disconnectBlockedReason - Why.
- * @param props.connectBlocked - Whether connecting another account is refused.
- * @param props.confirmBlocked - Accounts connected at sign-in that can't be confirmed.
- * @param props.connectBlockedReason - Why those can't be connected or confirmed.
  * @returns The card.
  */
 export default function ConnectedAccountsCard({

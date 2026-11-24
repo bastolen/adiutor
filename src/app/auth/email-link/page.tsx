@@ -37,8 +37,6 @@ export async function generateMetadata(): Promise<Metadata> {
  * The email-link page. It reads the link from the URL, so it renders at
  * request time behind a Suspense boundary, with its form's text (`auth`).
  *
- * @param props - Page props from Next.js.
- * @param props.searchParams - The query string, with the link's token.
  * @returns The page.
  */
 export default function EmailLinkPage({ searchParams }: PageProps<'/auth/email-link'>) {

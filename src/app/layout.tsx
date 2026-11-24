@@ -62,8 +62,6 @@ export const instant = false;
  * dynamic parameters, so it waits behind its own `<Suspense>` (rendering
  * nothing meanwhile).
  *
- * @param props - Layout props from Next.js.
- * @param props.children - The page or nested layout to render.
  * @returns The document shell.
  */
 export default async function RootLayout({ children }: LayoutProps<'/'>) {

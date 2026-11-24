@@ -168,8 +168,6 @@ async function CompanyList({ searchParams }: { searchParams: Promise<SearchParam
 /**
  * The companies page.
  *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
  * @returns The page.
  */
 export default function CompaniesPage({ searchParams }: PageProps<'/admin/companies'>) {

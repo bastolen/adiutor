@@ -349,8 +349,6 @@ async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> 
 /**
  * The audit log page.
  *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
  * @returns The page.
  */
 export default function AuditLogPage({ searchParams }: PageProps<'/admin/logs'>) {

@@ -39,8 +39,6 @@ async function SettingsHeaderLoader() {
  * requests on a wide screen: Staff has the room, and a tab that widened on
  * its own would move the header and tabs from tab to tab.
  *
- * @param props - Layout props from Next.js.
- * @param props.children - The page.
  * @returns The layout.
  */
 export default function SettingsLayout({ children }: LayoutProps<'/admin/settings'>) {

@@ -24,12 +24,6 @@ type AccountCardProps = Pick<
 /**
  * The user's account details.
  *
- * @param props - Component props.
- * @param props.email - Their email address.
- * @param props.emailVerified - Whether they verified it.
- * @param props.deactivatedAt - When the account was deactivated, if it is.
- * @param props.lastActiveAt - When they were last active, if ever.
- * @param props.createdAt - When the account was created.
  * @returns The card.
  */
 export default function AccountCard({

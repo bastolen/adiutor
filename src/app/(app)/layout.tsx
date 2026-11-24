@@ -19,8 +19,6 @@ import SignedInAsBanner from './signed-in-as-banner';
  * it streams in behind a Suspense boundary; its placeholder reserves the same
  * space so nothing jumps.
  *
- * @param props - Layout props from Next.js.
- * @param props.children - The page.
  * @returns The app layout.
  */
 export default function AppLayout({ children }: LayoutProps<'/'>) {

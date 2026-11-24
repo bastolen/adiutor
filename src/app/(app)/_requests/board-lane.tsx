@@ -281,13 +281,6 @@ interface BoardColumnProps {
  * not-allowed cursor and says "Can't move here", so its colour is never the
  * only sign.
  *
- * @param props - Column props.
- * @param props.column - The column.
- * @param props.name - Its name.
- * @param props.lanes - Its lanes.
- * @param props.collapsed - Whether its cards are folded away.
- * @param props.onToggle - Folds them away or shows them.
- * @param props.drag - The board's drag and drop, once loaded.
  * @returns The column.
  */
 export default function BoardColumn({

@@ -57,8 +57,6 @@ async function Requests({ searchParams }: { searchParams: Promise<SearchParams> 
 /**
  * The requests page, as wide as the board on a wide screen (`WidePage`).
  *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
  * @returns The page.
  */
 export default function RequestsPage({ searchParams }: PageProps<'/requests'>) {

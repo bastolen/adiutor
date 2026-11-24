@@ -219,10 +219,6 @@ function AuthenticatorSteps({
  * also shown as text for entering by hand. The app is only switched on once
  * a code from it has been checked.
  *
- * @param props - Dialog props.
- * @param props.open - Open state.
- * @param props.onOpenChange - Open state handler.
- * @param props.hasPassword - Ask for the password first.
  * @returns The dialog.
  */
 export default function AuthenticatorSetup({

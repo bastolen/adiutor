@@ -27,10 +27,6 @@ interface ActivityCardProps {
 /**
  * The user's recent security events.
  *
- * @param props - Component props.
- * @param props.userId - The user's ID.
- * @param props.userName - The name shown for the user.
- * @param props.activity - Their recent events.
  * @returns The card.
  */
 export default function ActivityCard({ userId, userName, activity }: ActivityCardProps) {

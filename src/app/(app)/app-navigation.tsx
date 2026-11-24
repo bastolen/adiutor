@@ -41,13 +41,6 @@ interface AppNavigationProps {
  * Logo, main navigation and account menu, used in both the sidebar and the
  * mobile menu.
  *
- * @param props - Panel props.
- * @param props.name - The user's name.
- * @param props.email - Their email address.
- * @param props.sections - The staff sections to link to.
- * @param props.signedInAs - Whether a staff member is signed in as the user.
- * @param props.picture - Their picture.
- * @param props.onNavigate - Called after navigating.
  * @returns The panel content.
  */
 function NavigationPanel({
@@ -89,12 +82,6 @@ function NavigationPanel({
  * while it's open, Escape closes it (focus goes back to the menu button), and
  * choosing a link closes it, also "Account settings" in its account menu.
  *
- * @param props - Navigation props.
- * @param props.name - The user's name.
- * @param props.email - Their email address.
- * @param props.sections - The staff sections to link to.
- * @param props.signedInAs - Whether a staff member is signed in as the user.
- * @param props.picture - Their picture.
  * @returns The navigation.
  */
 export default function AppNavigation({

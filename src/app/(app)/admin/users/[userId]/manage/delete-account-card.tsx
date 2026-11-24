@@ -27,10 +27,6 @@ interface DeleteAccountCardProps {
 /**
  * Deletes the user's account.
  *
- * @param props - Component props.
- * @param props.userId - The user's ID.
- * @param props.userName - The name shown for the user.
- * @param props.email - Their email address.
  * @returns The card.
  */
 export default function DeleteAccountCard({ userId, userName, email }: DeleteAccountCardProps) {

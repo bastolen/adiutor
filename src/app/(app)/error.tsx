@@ -26,9 +26,6 @@ import useErrorReference from '../use-error-reference';
  * again", the way to the dashboard and the reference (once it's known).
  * Focus moves to the heading, so screen readers announce what happened.
  *
- * @param props - Props from Next.js.
- * @param props.error - What was thrown.
- * @param props.retry - Fetches and renders the page again.
  * @returns The error content.
  */
 export default function AppError({ error, retry }: ErrorPageProps) {

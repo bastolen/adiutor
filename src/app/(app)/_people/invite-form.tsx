@@ -47,9 +47,6 @@ interface InviteFormProps {
  * When some invitations went out and others didn't, the list is refilled
  * with just the addresses that weren't sent; when all went out, it clears.
  *
- * @param props - Form props.
- * @param props.companyId - The company, or `null` for staff.
- * @param props.roles - Roles to choose from.
  * @returns The form.
  */
 export default function InviteForm({ companyId, roles }: InviteFormProps) {

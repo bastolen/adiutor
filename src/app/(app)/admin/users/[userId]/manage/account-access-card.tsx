@@ -79,13 +79,6 @@ interface AccountAccessCardProps {
  * its confirmation opens when the account gets a staff role or a company's
  * Admin role back.
  *
- * @param props - Component props.
- * @param props.userId - The user's ID.
- * @param props.userName - The name shown for the user.
- * @param props.mfa - Their MFA details.
- * @param props.connectedAccounts - How many provider accounts they have connected.
- * @param props.deactivatedAt - When the account was deactivated, if it is.
- * @param props.reactivationNeedsConfirmation - Whether reactivating needs a recent confirmation.
  * @returns The card.
  */
 export default function AccountAccessCard({

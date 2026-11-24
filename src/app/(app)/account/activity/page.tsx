@@ -112,8 +112,6 @@ async function Activity({ searchParams }: { searchParams: Promise<SearchParams> 
 /**
  * The Activity tab of the account.
  *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
  * @returns The page.
  */
 export default function AccountActivityPage({ searchParams }: PageProps<'/account/activity'>) {

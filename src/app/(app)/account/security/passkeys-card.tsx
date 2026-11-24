@@ -136,9 +136,6 @@ function NameDialog({
  * face or PIN. Adding and removing need a recent confirmation with the second
  * step (see `useRecentConfirmation`); renaming only a confirmed session.
  *
- * @param props - Card props.
- * @param props.passkeys - The passkeys.
- * @param props.removeLastBlockedReason - Why the only passkey can't be removed, if so.
  * @returns The card.
  */
 export default function PasskeysCard({ passkeys, removeLastBlockedReason }: PasskeysCardProps) {

@@ -260,16 +260,6 @@ interface RequestFilterBarProps {
  * assigned, or one staff member), next to the Sort menu and whatever else
  * the view adds as children.
  *
- * @param props - Component props.
- * @param props.filters - The filters.
- * @param props.table - The links of the view's table.
- * @param props.actor - The viewer.
- * @param props.companies - The companies to choose from.
- * @param props.types - The types to choose from.
- * @param props.assignable - The staff to choose from.
- * @param props.showStatusTabs - Whether to show the status links.
- * @param props.sortable - Whether to show the Sort menu.
- * @param props.children - One more control.
  * @returns The bar.
  */
 export function RequestFilterBar({

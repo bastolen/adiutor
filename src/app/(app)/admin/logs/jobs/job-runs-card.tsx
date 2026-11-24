@@ -58,10 +58,6 @@ interface JobRunsCardProps {
 /**
  * The recent runs, or that there are none yet.
  *
- * @param props - Component props.
- * @param props.runs - The page of runs.
- * @param props.table - The table's links.
- * @param props.canLookUp - Whether the viewer may look up errors.
  * @returns The card.
  */
 export default function JobRunsCard({ runs, table, canLookUp }: JobRunsCardProps) {

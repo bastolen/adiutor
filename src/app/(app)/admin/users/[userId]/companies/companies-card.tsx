@@ -73,15 +73,6 @@ interface CompaniesCardProps {
  * the company's own Members page shows. "Add to company" is turned off for a
  * deactivated account, staying focusable with its reason below the table.
  *
- * @param props - Component props.
- * @param props.userId - The user's ID.
- * @param props.userName - The name shown for the user.
- * @param props.isSelf - Whether it's the viewer's own page.
- * @param props.userDeactivated - Whether the user's account is deactivated.
- * @param props.companies - The page of companies to show.
- * @param props.table - The table's links.
- * @param props.canManageMembers - Whether the viewer may manage memberships.
- * @param props.addable - The companies they can be added to.
  * @returns The card.
  */
 export default function CompaniesCard({

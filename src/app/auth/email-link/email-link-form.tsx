@@ -58,9 +58,6 @@ interface EmailLinkFormProps {
  * account, and points out when both have the same name; when it's that
  * account already, it just goes on without using the link.
  *
- * @param props - Component props.
- * @param props.account - The account the link signs in to.
- * @param props.signedIn - Whoever is signed in in this browser.
  * @returns The form.
  */
 export default function EmailLinkForm({ account, signedIn }: EmailLinkFormProps) {

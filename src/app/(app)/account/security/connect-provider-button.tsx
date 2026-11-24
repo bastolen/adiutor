@@ -58,11 +58,6 @@ function connectedUrl(returnTo: string, provider: OAuthProvider): string {
  * another change still running, too many requests. Only a failure without a
  * message of its own says "Connecting failed. Please try again."
  *
- * @param props - Button props.
- * @param props.provider - The provider.
- * @param props.label - Its display name.
- * @param props.disabled - Disable the button.
- * @param props.describedBy - ID of the text that explains the button.
  * @returns The button.
  */
 export default function ConnectProviderButton({

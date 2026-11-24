@@ -44,11 +44,6 @@ interface InvitationsCardProps {
  * address (they stay that way when resent), so whoever resends one knows
  * where it came from.
  *
- * @param props - Card props.
- * @param props.invitations - The invitations.
- * @param props.table - The table's links.
- * @param props.canManage - Show the actions.
- * @param props.companyId - The company, or `null` for staff.
  * @returns The card.
  */
 export default function InvitationsCard({

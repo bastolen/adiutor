@@ -196,11 +196,6 @@ interface RequestBoardProps {
  * takes part in a company), and a card whose company addresses them
  * otherwise says its status in its own words.
  *
- * @param props - Component props.
- * @param props.searchParams - The page's query parameters.
- * @param props.actor - The viewer.
- * @param props.company - The company whose board this is, on its own page.
- * @param props.paths - Where the board and its list are.
  * @returns The header (or the toggle), the filters and the board.
  */
 export default async function RequestBoard({

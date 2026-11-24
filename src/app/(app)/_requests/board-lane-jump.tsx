@@ -91,9 +91,6 @@ interface BoardLaneJumpProps {
  * When the board comes to fit (a wider window) and hides the row while focus
  * is in it, focus moves to the main content rather than `<body>`.
  *
- * @param props - Component props.
- * @param props.columns - The columns.
- * @param props.row - The lanes' row.
  * @returns The navigation.
  */
 export default function BoardLaneJump({ columns, row }: BoardLaneJumpProps) {

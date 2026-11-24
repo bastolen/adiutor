@@ -49,13 +49,6 @@ interface SignInAsCardProps {
 /**
  * Offers signing in as the user, or says why it isn't possible.
  *
- * @param props - Component props.
- * @param props.userId - The user's ID.
- * @param props.userName - The name shown for the user.
- * @param props.verdict - Whether it's allowed, and if not why.
- * @param props.strongMfa - Whether the staff member has strong MFA.
- * @param props.strongMfaConfirmedUntil - Until when their session is strongly confirmed.
- * @param props.returnTo - The page to come back to.
  * @returns The card.
  */
 export default function SignInAsCard({

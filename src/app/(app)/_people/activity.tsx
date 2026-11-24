@@ -25,9 +25,6 @@ interface ActivityProps {
  * screen readers, as the header only says "Activity"), with when they joined
  * below in smaller text.
  *
- * @param props - Component props.
- * @param props.lastActiveAt - When they were last active.
- * @param props.joinedAt - When they joined.
  * @returns The cell's content.
  */
 export function ActivityColumn({ lastActiveAt, joinedAt }: ActivityProps) {
@@ -52,10 +49,6 @@ export function ActivityColumn({ lastActiveAt, joinedAt }: ActivityProps) {
  * in that line's flex row (`display: contents`), and `className` hides them
  * from the width where the Activity column shows, e.g. `xl:hidden`.
  *
- * @param props - Component props.
- * @param props.lastActiveAt - When they were last active.
- * @param props.joinedAt - When they joined.
- * @param props.className - Classes for the wrapper, e.g. `xl:hidden`.
  * @returns The phrases.
  */
 export function ActivityLine({

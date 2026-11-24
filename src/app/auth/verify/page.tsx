@@ -122,8 +122,6 @@ async function StepUp({ searchParams }: { searchParams: Promise<SearchParams> })
 /**
  * The step-up page. The form's text comes with it (`auth`).
  *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
  * @returns The page.
  */
 export default function VerifyPage({ searchParams }: PageProps<'/auth/verify'>) {

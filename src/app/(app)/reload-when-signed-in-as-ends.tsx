@@ -57,10 +57,6 @@ export interface ReloadWhenSignedInAsEndsProps {
  *   comes back into view before the time is up. One question at a time,
  *   never on a timer; one that fails changes nothing.
  *
- * @param props - Component props.
- * @param props.endsAt - When it ends, as the server's ISO time.
- * @param props.endsInMs - How long until it ends, as the server measured it.
- * @param props.endedMessage - The toast for the page after the load.
  * @returns Nothing visible.
  */
 export default function ReloadWhenSignedInAsEnds({

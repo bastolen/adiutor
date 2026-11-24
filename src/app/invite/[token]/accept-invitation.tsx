@@ -111,9 +111,6 @@ function SignInOrCreateAccount({ token }: { token: string }) {
 /**
  * Shows the right way to accept for the visitor.
  *
- * @param props - Component props.
- * @param props.token - The token from the link.
- * @param props.signedInEmail - The signed-in user's email, or `null`.
  * @returns The accept options.
  */
 export default function AcceptInvitation({ token, signedInEmail }: AcceptInvitationProps) {

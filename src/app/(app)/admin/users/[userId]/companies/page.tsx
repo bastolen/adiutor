@@ -100,9 +100,6 @@ async function UserCompanies({
 /**
  * The Companies tab of a user's page.
  *
- * @param props - Page props from Next.js.
- * @param props.params - Route parameters.
- * @param props.searchParams - Query parameters.
  * @returns The page.
  */
 export default function UserCompaniesPage({

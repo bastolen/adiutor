@@ -78,9 +78,6 @@ async function CompanyHeaderLoader({ params }: { params: Promise<{ companyId: st
  * page on a wide screen: the list and the board have the room, and a tab
  * that widened on its own would move the header and tabs from tab to tab.
  *
- * @param props - Layout props from Next.js.
- * @param props.children - The page.
- * @param props.params - Route parameters.
  * @returns The layout.
  */
 export default function CompanyLayout({ children, params }: LayoutProps<'/companies/[companyId]'>) {

@@ -34,9 +34,6 @@ interface JoinFormProps {
  * keyboard focus: the button that had it is gone, and focus would otherwise
  * fall to `<body>`.
  *
- * @param props - Form props.
- * @param props.token - The token from the link.
- * @param props.signedInEmail - The signed-in user's email, or `null`.
  * @returns The form.
  */
 export default function JoinForm({ token, signedInEmail }: JoinFormProps) {

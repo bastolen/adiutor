@@ -62,8 +62,6 @@ async function SignInOptions({ searchParams }: { searchParams: Promise<SearchPar
 /**
  * The sign-in page. The form's text comes with it (`auth`).
  *
- * @param props - Page props from Next.js.
- * @param props.searchParams - The query string.
  * @returns The page.
  */
 export default function SignInPage({ searchParams }: PageProps<'/auth'>) {

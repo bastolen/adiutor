@@ -44,9 +44,6 @@ interface NavLinksProps {
  * `aria-current="page"` and highlighted (outlined in forced-colours mode,
  * `currentItem`).
  *
- * @param props - Links props.
- * @param props.sections - The staff sections to link to.
- * @param props.onNavigate - Called after navigating.
  * @returns The list.
  */
 export default function NavLinks({ sections, onNavigate = undefined }: NavLinksProps) {

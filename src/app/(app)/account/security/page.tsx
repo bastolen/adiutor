@@ -193,8 +193,6 @@ async function Security({ searchParams }: { searchParams: Promise<SearchParams> 
  * The Security page of the account. Its cards' text comes with it
  * (`account`, and `auth` for the messages of refused sign-in changes).
  *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
  * @returns The page.
  */
 export default function SecurityPage({ searchParams }: PageProps<'/account/security'>) {

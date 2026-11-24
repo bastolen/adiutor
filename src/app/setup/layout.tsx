@@ -33,8 +33,6 @@ export async function generateMetadata(): Promise<Metadata> {
 /**
  * Shows the page in the public layout (form column and brand panel).
  *
- * @param props - Layout props from Next.js.
- * @param props.children - The page.
  * @returns The layout.
  */
 export default function SetupLayout({ children }: LayoutProps<'/setup'>) {

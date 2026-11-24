@@ -36,9 +36,6 @@ export interface ErrorPageProps {
  * sign in) and, when there's a previous page in this tab, back to it. Focus
  * moves to the heading, so screen readers announce what happened.
  *
- * @param props - Props from Next.js.
- * @param props.error - What was thrown.
- * @param props.retry - Fetches and renders the page again.
  * @returns The error page.
  */
 export default function RootError({ error, retry }: ErrorPageProps) {

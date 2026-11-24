@@ -34,12 +34,6 @@ interface RequestsHeaderProps {
  * The page's title ("Requests") and description, a "New request" button for
  * those who may raise one, and below them the List | Board toggle.
  *
- * @param props - Component props.
- * @param props.actor - The viewer.
- * @param props.staffName - The name the staff are shown with.
- * @param props.canRaise - Whether the viewer may raise a request.
- * @param props.view - The view the page shows.
- * @param props.filters - The page's filters.
  * @returns The header.
  */
 export default function RequestsHeader({

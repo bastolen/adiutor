@@ -178,11 +178,6 @@ interface RecurringJobsCardProps {
 /**
  * The scheduled jobs.
  *
- * @param props - Component props.
- * @param props.jobs - The recurring jobs.
- * @param props.lastTickAt - When the last tick started, if one did.
- * @param props.canLookUp - Whether the viewer may look up errors.
- * @param props.canManage - Whether the viewer may run, pause and resume jobs.
  * @returns The card.
  */
 export default function RecurringJobsCard({

@@ -58,12 +58,6 @@ interface DevicesTableProps {
  * have their own columns from tablet width and move under the device name
  * before that, so the table never scrolls sideways.
  *
- * @param props - Table props.
- * @param props.devices - The devices.
- * @param props.table - The table's links.
- * @param props.caption - What the table shows.
- * @param props.currentSessionId - The current session, if the viewer's own.
- * @param props.renderAction - Renders a row's action.
  * @returns The table.
  */
 export default function DevicesTable({

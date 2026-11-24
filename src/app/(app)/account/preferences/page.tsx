@@ -101,8 +101,6 @@ async function Preferences({ searchParams }: { searchParams: Promise<AccountPara
 /**
  * The Preferences tab of the account.
  *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
  * @returns The page.
  */
 export default function PreferencesPage({ searchParams }: PageProps<'/account/preferences'>) {

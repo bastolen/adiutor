@@ -41,8 +41,6 @@ async function Join({ params }: { params: Promise<{ token: string }> }) {
 /**
  * The invite link page. Its form's text comes with it (`auth`).
  *
- * @param props - Page props from Next.js.
- * @param props.params - Route parameters.
  * @returns The page.
  */
 export default function JoinPage({ params }: PageProps<'/join/[token]'>) {

@@ -210,8 +210,6 @@ async function Staff({ searchParams }: { searchParams: Promise<SearchParams> }) 
 /**
  * The Staff tab of Settings.
  *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
  * @returns The page.
  */
 export default function StaffSettingsPage({ searchParams }: PageProps<'/admin/settings/staff'>) {

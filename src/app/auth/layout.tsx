@@ -6,8 +6,6 @@ import AuthLayout from '@/components/layout/auth-layout';
 /**
  * Shows the page in the public layout (form column and brand panel).
  *
- * @param props - Layout props from Next.js.
- * @param props.children - The auth page to render.
  * @returns The auth layout.
  */
 export default function AuthPagesLayout({ children }: LayoutProps<'/auth'>) {

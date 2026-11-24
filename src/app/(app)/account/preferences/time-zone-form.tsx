@@ -40,9 +40,6 @@ interface TimeZoneFormProps {
  * server's list doesn't (an older or a newer name, like `Asia/Kolkata`):
  * that zone is added to the list, in its place.
  *
- * @param props - Component props.
- * @param props.timeZone - The zone the select starts on.
- * @param props.options - The zones to pick from.
  * @returns The form.
  */
 export default function TimeZoneForm({ timeZone, options }: TimeZoneFormProps) {

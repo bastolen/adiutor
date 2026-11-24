@@ -249,9 +249,6 @@ async function Members({
 /**
  * The members page.
  *
- * @param props - Page props from Next.js.
- * @param props.params - Route parameters.
- * @param props.searchParams - Query parameters.
  * @returns The page.
  */
 export default function MembersPage({

@@ -77,9 +77,6 @@ async function UserHeaderLoader({ params }: { params: Promise<{ userId: string }
 /**
  * The user's header above the tab's page.
  *
- * @param props - Layout props from Next.js.
- * @param props.children - The page.
- * @param props.params - Route parameters.
  * @returns The layout.
  */
 export default function UserLayout({ children, params }: LayoutProps<'/admin/users/[userId]'>) {

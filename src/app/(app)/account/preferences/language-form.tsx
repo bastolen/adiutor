@@ -43,10 +43,6 @@ interface LanguageFormProps {
  * already at that address after an earlier change (going to the same address
  * with a `#section` would only scroll, and leave the button busy).
  *
- * @param props - Component props.
- * @param props.choice - The saved choice.
- * @param props.defaultLocale - Adiutor's default language.
- * @param props.notOffered - The saved language while it's turned off.
  * @returns The form.
  */
 export default function LanguageForm({
