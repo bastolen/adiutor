@@ -52,7 +52,7 @@ the text, the subject (from the same messages), dates (`formatDateTime` with the
 the document's `lang` follow it. A template that shows a time also takes the recipient's
 `timeZone` and names the zone ([Which time zone](#which-time-zone)). The text lives in the `emails` catalogue, one group per template
 (`emails.invitation.subject`, `.heading`, ...), and templates read it with
-`translator(locale, 'emails.<name>')`, so they render outside Next.js too (scripts, the hourly job);
+`translator(locale, 'emails.<name>')`, so they render outside Next.js too (scripts, background jobs);
 see [Emails](i18n.md#emails). Templates share the frame and building blocks in
 `src/components/email/`:
 
@@ -129,7 +129,7 @@ take an optional `locale` (one that's offered: they refuse another), by default 
 language, and a resend keeps the invitation's language. `registerUser` takes an optional `locale` too; without one the new account
 is on Default. The forms ask for it (**Email language**): Add user and Add company
 start on Default (no `locale`), the invite form on the sender's language.
-Scripts and the hourly job have no request: their emails use the recipient's or the invitation's
+Scripts and background jobs have no request: their emails use the recipient's or the invitation's
 language, else Adiutor's default language (`pnpm db:seed` sends its invitations in English (US)).
 
 ## Which time zone

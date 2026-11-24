@@ -371,7 +371,7 @@ Refresh and ID tokens are never stored, nor the access tokens of
 providers that can't prove MFA (Google). A provider that can (GitHub) keeps its access token only
 until the request that stored it has checked the account's two-factor authentication
 (`withoutKeptTokens` in `src/server/auth/auth-events/provider-accounts.ts`; when connecting from the Security page, the
-user comes from the signed session cookie; the hourly job clears any a refused sign-in left).
+user comes from the signed session cookie; the `leftover-provider-tokens` job, every 5 minutes, clears any a refused sign-in left).
 The app never calls their APIs later, so a leaked database holds no tokens for users' provider
 accounts.
 
