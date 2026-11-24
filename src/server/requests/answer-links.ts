@@ -24,7 +24,7 @@ import currentProposalEntryId from './proposals';
 import answerSolution from './solutions';
 
 /** How long an answer link works, in days, while it's unused and its proposal still waits. */
-export const ANSWER_LINK_DAYS = 14;
+const ANSWER_LINK_DAYS = 14;
 
 /**
  * Makes an answer link for someone an email about a proposal goes to. Only

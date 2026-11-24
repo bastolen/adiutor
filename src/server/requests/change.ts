@@ -208,7 +208,7 @@ export function changeRequest<T>(
  * @param to - The status it gets.
  * @returns The columns to set.
  */
-export function statusChange(
+function statusChange(
   from: RequestStatus,
   to: RequestStatus,
 ): { status: RequestStatus; reopenedAt?: SQL | null; lastActivityAt: SQL } {
