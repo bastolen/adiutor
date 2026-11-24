@@ -4,7 +4,7 @@
  * kept up to date, and the audit events and notices when one is connected
  * or disconnected.
  */
-import { and, desc, eq, isNotNull, ne, or } from 'drizzle-orm';
+import { and, eq, isNotNull, ne, or } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { account, passkey } from '@/db/schema';
@@ -15,6 +15,7 @@ import {
   wouldRemoveRequiredMfa,
 } from '@/lib/authz/mfa';
 import {
+  accountIdFromProfile,
   accountNameFromProfile,
   imageFromProfile,
   isMfaProvider,
@@ -60,8 +61,11 @@ export function withoutKeptTokens<T extends object>(data: T): T {
 }
 
 /**
- * Notes the name and the picture of the provider account a sign-in or
- * connection is about (a GitHub username, a Google email address:
+ * Notes the provider account a sign-in or connection is about: its ID at the
+ * provider (`accountIdFromProfile`, as Better Auth stores it in
+ * `account.accountId`), for the reactions after the request to check that
+ * account's MFA and no other ({@link refreshSignedInProviderMfa}), and its
+ * name and picture (a GitHub username, a Google email address:
  * `accountNameFromProfile`; the picture's address on the provider's own
  * hosts: `imageFromProfile`), for the account hooks of the same request to
  * store. Called from Better Auth's `user.validateUserInfo`, the one place it
@@ -85,9 +89,15 @@ export function noteProviderProfile(
     if (source.method !== 'oauth' || !ctx?.context || !isOAuthProvider(providerId)) {
       return;
     }
+    const state = requestState(ctx.context);
+    const accountId = accountIdFromProfile(providerId, source.oauth?.profile);
+    if (accountId) {
+      state.providerAccount = { providerId, accountId };
+    } else {
+      delete state.providerAccount;
+    }
     const name = accountNameFromProfile(providerId, source.oauth?.profile);
     const image = imageFromProfile(providerId, source.oauth?.profile);
-    const state = requestState(ctx.context);
     if (name || image) {
       state.providerProfile = { providerId, name, image };
     } else {
@@ -183,29 +193,35 @@ interface ProviderMfaCheck {
 }
 
 /**
- * Asks a provider that can prove MFA whether a connected account of it has
- * two-factor authentication (`PROVIDER_MFA_CHECKS`), and stores the answer on
- * it. Without a definite answer (the provider unreachable, rate limited, or
- * the response doesn't say), the stored value stays as it was, so an outage
- * can't take away an account's MFA, but this sign-in doesn't count as
- * confirmed with it; the result then says `enabled: null`, so the step-up
- * page can tell "couldn't check" from "2FA off". Without `accountId`, that's
- * the account whose token this request stored (Better Auth stores a fresh one
- * at every sign-in, and it's cleared after each request), so a sign-in is
- * checked against the account that signed in, not another one the user
- * connected.
+ * Which provider account {@link refreshProviderMfa} checks: its row
+ * (`account.id`), or its ID at the provider (`account.accountId`).
+ */
+type ProviderAccountKey = { rowId: string } | { accountId: string };
+
+/**
+ * Asks a provider that can prove MFA whether one connected account of it has
+ * two-factor authentication (`PROVIDER_MFA_CHECKS`), with the token this
+ * request stored on it (Better Auth stores a fresh one at every sign-in, and
+ * it's cleared after each request), and stores the answer on it. Without a
+ * definite answer (the provider unreachable, rate limited, or the response
+ * doesn't say), the stored value stays as it was, so an outage can't take
+ * away an account's MFA, but this sign-in doesn't count as confirmed with
+ * it; the result then says `enabled: null`, so the step-up page can tell
+ * "couldn't check" from "2FA off". The account is always named: never
+ * whichever of the user's accounts last stored a token, which a sign-in with
+ * another of them at the same moment may have done.
  *
  * @param provider - The provider.
  * @param userId - The user.
- * @param accountId - The account row, when it's known.
+ * @param which - The account: its row, or its ID at the provider.
  * @returns Whether that account has 2FA on (`null` without a definite answer)
- *   and whether the user confirmed it, or `null` when no account of the
- *   provider holds a token to ask with (nothing was checked).
+ *   and whether the user confirmed it, or `null` when the user has no such
+ *   account or it holds no token to ask with (nothing was checked).
  */
 export async function refreshProviderMfa(
   provider: MfaProvider,
   userId: string,
-  accountId?: string,
+  which: ProviderAccountKey,
 ): Promise<ProviderMfaCheck | null> {
   const [found] = await db
     .select({ id: account.id, accessToken: account.accessToken, confirmed: account.confirmed })
@@ -214,11 +230,10 @@ export async function refreshProviderMfa(
       and(
         eq(account.userId, userId),
         eq(account.providerId, provider),
+        'rowId' in which ? eq(account.id, which.rowId) : eq(account.accountId, which.accountId),
         isNotNull(account.accessToken),
-        accountId ? eq(account.id, accountId) : undefined,
       ),
     )
-    .orderBy(desc(account.updatedAt))
     .limit(1);
   if (!found?.accessToken) {
     return null;
@@ -236,6 +251,31 @@ export async function refreshProviderMfa(
   }
   await db.update(account).set({ mfaVerified: enabled }).where(eq(account.id, found.id));
   return { enabled, confirmed };
+}
+
+/**
+ * Checks the MFA of the provider account a callback signed in or connected
+ * with ({@link refreshProviderMfa}): the one noted from this request's
+ * profile (`providerAccount`, {@link noteProviderProfile}), looked up by the
+ * user, the provider and its ID at the provider. A session is only marked
+ * verified from this answer, so when the account can't be named (no profile
+ * noted, or one of another provider), nothing is checked.
+ *
+ * @param ctx - The callback's context, which the profile was noted for.
+ * @param provider - The provider of the callback.
+ * @param userId - The user.
+ * @returns The check's result, or `null` when nothing was checked.
+ */
+export async function refreshSignedInProviderMfa(
+  ctx: AuthHookContext,
+  provider: MfaProvider,
+  userId: string,
+): Promise<ProviderMfaCheck | null> {
+  const noted = requestState(ctx.context).providerAccount;
+  if (noted?.providerId !== provider) {
+    return null;
+  }
+  return refreshProviderMfa(provider, userId, { accountId: noted.accountId });
 }
 
 /**
@@ -398,8 +438,8 @@ export async function afterAccountCreate(
       },
       providerId: created.providerId,
     });
-    if (isMfaProvider(created.providerId)) {
-      await refreshProviderMfa(created.providerId, created.userId, created.id);
+    if (isMfaProvider(created.providerId) && created.id) {
+      await refreshProviderMfa(created.providerId, created.userId, { rowId: created.id });
     }
     if (atSignIn && isOAuthProvider(created.providerId)) {
       // The next page says so, naming the account (see `ProviderLinkedNotice`); the security email

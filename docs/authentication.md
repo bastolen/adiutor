@@ -251,8 +251,9 @@ for developers, never reaches the user:
    pause or a limit lasts, `PASSWORD_SIGN_IN_PAUSED` and `TOO_MANY_ATTEMPTS`; which providers to
    sign in with, `RESET_ENDS_PROVIDER_MFA`) is worded by the auth guards in the request's language
    (its language cookie, else Adiutor's default language, noted once as the guards start:
-   `noteRefusalLocale` in `src/server/auth/auth-guards/refusal-messages.ts`), and the form
-   shows it as it comes, e.g. "Too many attempts. Try again in 12 minutes."
+   `noteRefusalLocale` in `src/server/auth/auth-guards/refusal-messages.ts`, which reads Adiutor's
+   language settings; not for reading the session behind every page, which nothing refuses), and
+   the form shows it as it comes, e.g. "Too many attempts. Try again in 12 minutes."
 2. Any other code with a message of its own gets that message.
 3. Any other rate limit, such as Better Auth's per-IP limit, gets "Too many requests. Wait a few
    seconds and try again."
@@ -458,7 +459,7 @@ does, to check what isn't working for them. The reasons are in
 - **Ending:**
   - It ends after its 30 minutes, when the staff member's session ends (signing out included), or
     when either person's rights change.
-  - The hourly job ends and records those nobody came back to (see
+  - The `finished-sign-ins-as-users` job (every 5 minutes) ends and records those nobody came back to (see
     [Background jobs](deploying.md#background-jobs)).
   - Once its 30 minutes are up, the tab loads the page it's on afresh, as the staff member, with a
     toast (`ReloadWhenSignedInAsEnds`, mounted by the banner). Without that, the banner and the
@@ -502,8 +503,10 @@ those emails' footers link to; `setOwnRequestEmails` in `src/server/people/reque
 - **Passkeys:** add, rename and remove.
 - **Two-step verification:** set it up with an authenticator app (QR code drawn in the browser,
   plus the key as text) or email codes (not offered to roles that require MFA); get new backup
-  codes; turn it off. Users with a password confirm these changes with it. New passwords need at
-  least 12 characters.
+  codes; turn it off. Users with a password confirm these changes with it: Better Auth checks it,
+  and the guards limit and record wrong ones as for changing the password (`CURRENT_PASSWORD_PATHS`
+  in `src/server/auth/auth-guards/`, see [Rate limits](security-measures.md#rate-limits)). New
+  passwords need at least 12 characters.
 - **Keeping MFA:** for roles that require MFA, a change that would take it away is refused, on
   the page (disabled, with the reason) and on the server, also from a page opened before another
   change (`wouldRemoveRequiredMfa`): removing the last passkey, turning off the only

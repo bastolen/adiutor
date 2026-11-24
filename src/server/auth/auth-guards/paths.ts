@@ -10,6 +10,7 @@ import {
   SIGN_IN_CHANGE_IN_PROGRESS,
 } from '@/lib/sign-in/sign-in-refusals';
 
+import type { PasswordCheckPurpose } from '../current-password';
 import { refusalBody } from './refusal-messages';
 
 /** The parts of a Better Auth endpoint context the checks use. */
@@ -68,6 +69,21 @@ export const CREDENTIAL_PATHS = new Set([
  * they need a confirmed session, but not a recent confirmation.
  */
 export const RENAME_PATHS = new Set(['/passkey/update-passkey']);
+
+/**
+ * Endpoints in {@link CREDENTIAL_PATHS} where Better Auth checks the current
+ * password of a user who has one (`allowPasswordless`: without one, none is
+ * asked for), with what the password is typed for. Wrong ones count against
+ * the same per-user limit as the password forms' (`checkCurrentPassword`)
+ * and are recorded as `password_check_failed`, so a (stolen) session can't
+ * use them to guess the password either (`reserveCurrentPasswordAttempt`).
+ * Shared with `auth-events/`.
+ */
+export const CURRENT_PASSWORD_PATHS: ReadonlyMap<string, PasswordCheckPurpose> = new Map([
+  ['/two-factor/enable', 'enable_two_factor'],
+  ['/two-factor/disable', 'disable_two_factor'],
+  ['/two-factor/generate-backup-codes', 'generate_backup_codes'],
+]);
 
 /** Endpoints that check a code of the second step (shared with `auth-events/`). */
 export const CODE_PATHS = new Set([

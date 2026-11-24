@@ -14,8 +14,10 @@ right passwords whose sign-in then asked for the code, recorded without an actor
 codes (on the step-up page, and at the code step of a sign-in without an actor; only codes that
 were compared and refused, not an expired one or another refusal), MFA changes,
 password and provider changes, wrong current passwords typed in a signed-in session
-(`password_check_failed`), revoked sessions, account creation (by an Admin, by accepting an
-invitation, or at setup), deactivation, reactivation and deletion,
+(`password_check_failed`, with what it was typed for: changing the password, deactivating the
+account, turning two-step verification on or off, or new backup codes), revoked sessions,
+account creation (by an Admin, by accepting an invitation, or at setup), deactivation, reactivation
+and deletion,
 MFA resets, role changes, removed members, invitations and invite links, company changes, and staff
 signing in as a user (`impersonation_started`, with the optional reason the staff member gave, and
 `impersonation_ended`, with why it ended: going back, its time being up, no longer being allowed, or
@@ -38,7 +40,14 @@ Better Auth's own limits (per IP address) are stored in the database
 (`rate_limit`), so they hold across restarts and instances. On top of those, per email address
 whether or not it has an account: 10 wrong passwords per 15 minutes, 5 email links and 5 password
 resets per hour, and per user 5 emailed codes and 5 wrong step-up codes per 15 minutes
-(`src/server/auth/auth-guards/`). Emailed codes also wait for each other: one per sign-in or
+(`src/server/auth/auth-guards/`). Only a plausible address is counted (at most 320 characters, and
+an address by `emailSchema`: `plausibleEmail` in `src/lib/validation.ts`): anything else a client
+sends as one becomes no rate limit key, and a failed sign-in with it is recorded without it, so
+arbitrary text (a password typed into the wrong field, kilobytes of anything) stays out of the
+audit log. Better Auth refuses a value that isn't an address before it checks a password or sends
+an email, an address longer than any that can receive mail has no account to guess or inbox to
+fill, and Better Auth's per-IP limits still apply. Emailed codes also wait for each other: one
+per sign-in or
 session every 2.5 minutes, half a code's lifetime (`EMAIL_CODE_RESEND_SECONDS`), as Better Auth
 keeps the code with the sign-in or session it was asked for, checked first so a refused one
 doesn't count, and ended once a session's code is used (the 5 per 15 minutes per user still cap
@@ -52,12 +61,16 @@ passwords for an address, reaching the limit only pauses password sign-in: the m
 for every address) points to email links, passkeys and a password reset, and proving the inbox
 lifts the pause (a completed reset, or creating an account from an invitation). The owner gets a
 security email if the account has a password. Wrong current passwords typed while signed in
-(changing the password, deactivating the account) are limited to 5 per 15 minutes per user, in a
-bucket of their own (`checkCurrentPassword` in `src/server/auth/current-password.ts`): Better Auth's
-per-IP limiter doesn't run for its calls from server actions, so a signed-in (possibly stolen)
-session can't guess the password without limit, and since the bucket isn't the address's sign-in
-one, it can't pause the owner's password sign-in either. Each check takes an attempt first and
-gives it back unless the password was wrong, and each wrong one is recorded. The app also limits invitations (per user and per company),
+(changing the password, deactivating the account, and turning two-step verification on or off or
+getting new backup codes, where Better Auth checks the password itself) are limited to 5 per 15
+minutes per user, in a bucket of their own (`checkCurrentPassword` in
+`src/server/auth/current-password.ts`, and the guards for Better Auth's endpoints,
+`CURRENT_PASSWORD_PATHS`): Better Auth's per-IP limiter doesn't run for its calls from server
+actions, and a client can get around it by changing its IP address, so a signed-in (possibly
+stolen) session can't guess the password without limit, and since the bucket isn't the address's
+sign-in one, it can't pause the owner's password sign-in either. Each check takes an attempt first
+and gives it back unless the password was wrong, and each wrong one is recorded. The app also
+limits invitations (per user and per company),
 role changes (30 an hour per user, company and staff roles together; each one emails the member,
 and removals aren't counted, see
 [Changing roles](companies-and-roles.md#changing-roles-and-removing-people)),
@@ -371,7 +384,7 @@ Refresh and ID tokens are never stored, nor the access tokens of
 providers that can't prove MFA (Google). A provider that can (GitHub) keeps its access token only
 until the request that stored it has checked the account's two-factor authentication
 (`withoutKeptTokens` in `src/server/auth/auth-events/provider-accounts.ts`; when connecting from the Security page, the
-user comes from the signed session cookie; the hourly job clears any a refused sign-in left).
+user comes from the signed session cookie; the `leftover-provider-tokens` job, every 5 minutes, clears any a refused sign-in left).
 The app never calls their APIs later, so a leaked database holds no tokens for users' provider
 accounts.
 

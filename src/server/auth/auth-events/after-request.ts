@@ -16,8 +16,10 @@ import { availableProviders } from '@/lib/sign-in/providers';
 
 import {
   CODE_PATHS,
+  CURRENT_PASSWORD_PATHS,
   finishesAuthenticatorSetup,
   releaseSignInChangeLockOf,
+  settleCurrentPasswordAttempt,
   settlePasswordAttempt,
   settleStepUpAttempt,
   endEmailCodeCooldown,
@@ -34,10 +36,19 @@ import {
   replacePreviousSession,
 } from './browser-cleanup';
 import { setNextPageCookie } from './cookies';
-import { type FinishedRequest, finishedRequest, isWrongCodeWithSession } from './finished-request';
+import {
+  type FinishedRequest,
+  finishedRequest,
+  isWrongCodeWithSession,
+  isWrongCurrentPassword,
+} from './finished-request';
 import { type AuthHookContext, safely, audit, auditAndNotify } from './hook-context';
 import rememberLanguage from './language';
-import { refreshProviderMfa, stepUpOutcomeOf, forgetProviderTokens } from './provider-accounts';
+import {
+  refreshSignedInProviderMfa,
+  stepUpOutcomeOf,
+  forgetProviderTokens,
+} from './provider-accounts';
 import { reactToFailure } from './refused-attempts';
 import { recordRefusedReverify } from './reverify';
 import { type ProviderCheckResult, recordProviderSession } from './session-hooks';
@@ -74,7 +85,8 @@ async function settleRequest(ctx: AuthHookContext, path: string): Promise<void> 
 
 /**
  * Settles the attempts the guards took before the request (`auth-guards/`):
- * a password sign-in's and a step-up code check's.
+ * a password sign-in's, a current-password check's and a step-up code
+ * check's.
  *
  * @param ctx - The endpoint context, with its response.
  * @param request - The facts about the request.
@@ -90,6 +102,15 @@ async function settleAttempts(ctx: AuthHookContext, request: FinishedRequest): P
       const wrongPassword = isAPIError(returned) && returned.statusCode === 401;
       paused = await settlePasswordAttempt(ctx, email, wrongPassword);
     });
+  }
+  if (sessionUser && CURRENT_PASSWORD_PATHS.has(path)) {
+    // Better Auth checked the current password (two-step verification, backup codes): a wrong one
+    // keeps the attempt it took (`auth-guards/`); anything else gives it back. The same answer
+    // decides what's recorded as a wrong password (`reactToFailure`).
+    const wrongPassword = isWrongCurrentPassword(request);
+    await safely('settle current password attempt', () =>
+      settleCurrentPasswordAttempt(ctx, sessionUser.id, wrongPassword),
+    );
   }
   if (sessionUser && CODE_PATHS.has(path)) {
     // A code checked with a session (the step-up page, or setting up two-step verification): a
@@ -273,8 +294,9 @@ async function reactToSuccess(
     if (!isMfaProvider(provider)) {
       return;
     }
-    // The account that signed in counts only with 2FA, and once the user confirmed it.
-    const checked = await refreshProviderMfa(provider, userId);
+    // The account that signed in counts only with 2FA, and once the user confirmed it: that
+    // account, by its ID at the provider, never another of the user's that holds a token.
+    const checked = await refreshSignedInProviderMfa(ctx, provider, userId);
     if (newSession && checked?.enabled && checked.confirmed) {
       await markSessionVerified(newSession.session.id, provider);
       // eslint-disable-next-line no-param-reassign -- The caller reads the outcome from it.
@@ -314,7 +336,7 @@ async function finishProviderCallback(
     // refused re-verify updated nothing.)
     const provider = ctx.params?.id;
     if (!userId && !failed && !refusedReverify && isMfaProvider(provider)) {
-      await refreshProviderMfa(provider, owner);
+      await refreshSignedInProviderMfa(ctx, provider, owner);
     }
     // The request stored tokens for the provider's MFA check; nothing needs them now.
     await forgetProviderTokens(owner);
@@ -322,9 +344,10 @@ async function finishProviderCallback(
 }
 
 /**
- * After every Better Auth request: records security changes and failed
- * sign-ins and confirmations (a wrong code on the step-up page with the user
- * as its actor; one at a password sign-in's code step without an actor, and
+ * After every Better Auth request: records security changes, failed
+ * sign-ins and confirmations, and wrong current passwords (a wrong code on
+ * the step-up page with the user as its actor; one at a password sign-in's
+ * code step without an actor, and
  * a notice once wrong codes pause signing in with a code:
  * {@link reactToRefusedSignInCode}), marks sessions verified after a step-up, a
  * first MFA setup or a provider account with 2FA, checks the MFA of

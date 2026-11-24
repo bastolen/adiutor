@@ -6,12 +6,16 @@ migrations, test data, starting over, debugging, and every script. Back to the
 
 ## First run
 
+Open <http://localhost:3000>. On the first run it goes to `/setup`, where you choose the name users
+see and create your Admin account (see the [quick start](../README.md#quick-start)). After that,
+sign in at `/auth`.
+
 Next.js's development indicator (the round "N") is turned off in `next.config.ts`
 (`devIndicators: false`), because in every corner it covers one of the app's controls. Compile and
 runtime errors still show in its overlay.
 
 For scripted deployments, `pnpm setup:platform --staff-name "Adiutor" --email you@adiutor.dev --name
-"Your Name"` does the same from the command line (the account then signs in with an email link).
+"Your Name"` does what `/setup` does, from the command line (the account then signs in with an email link).
 Add `--default-language nl-NL` (or `es-ES`) to choose Adiutor's default language; it's English (US)
 otherwise. Add `--time-zone Europe/Amsterdam` to choose Adiutor's default time zone, which a new
 Admin gets as their own too; it's UTC otherwise, and the Admin's browser saves their zone on their

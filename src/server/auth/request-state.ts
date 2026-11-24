@@ -46,6 +46,14 @@ export interface AuthRequestState {
    */
   providerProfile?: { providerId: OAuthProvider; name: string | null; image: string | null };
   /**
+   * The provider account a callback signs in or connects with: its provider
+   * and its ID at the provider (`accountIdFromProfile`), noted from the same
+   * profile (`noteProviderProfile`). No account hook takes it:
+   * `afterAuthRequest` reads it to check the MFA of this account only
+   * (`refreshSignedInProviderMfa`), never another account of the user's.
+   */
+  providerAccount?: { providerId: OAuthProvider; accountId: string };
+  /**
    * A re-verify refused for another account than the user's own
    * (`checkReverify`, or the backstop in `beforeSessionCreate`): who started
    * it and with which provider. `afterAuthRequest` takes it and records it once.
@@ -82,6 +90,13 @@ export interface AuthRequestState {
    * code was checked (the guards), until `settleStepUpAttempt` takes it.
    */
   reservedStepUpAttempt?: string;
+  /**
+   * The user a request that checks their current password through Better
+   * Auth (`CURRENT_PASSWORD_PATHS`) took a wrong-password attempt for before
+   * the password was checked (the guards), until
+   * `settleCurrentPasswordAttempt` takes it.
+   */
+  reservedCurrentPasswordAttempt?: string;
   /**
    * The user of a password sign-in whose code step checks a code (no session
    * yet), found by the guards from Better Auth's two-factor cookie; read

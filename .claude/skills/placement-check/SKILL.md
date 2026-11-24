@@ -15,22 +15,22 @@ and docs) is `/app-review`'s job (`.claude/skills/app-review/SKILL.md`); leave i
 Run it as a workflow (the Workflow tool): one reviewer per area, then one skeptic per area
 who tries to disprove each of that reviewer's findings. Everyone stays read-only: no edits,
 moves or deletions, and no tests, builds, dev servers, Playwright or `pnpm install`/`dlx`
-while checking. Reading files, grep and one-off read-only scripts are fine. Most files may be
-untracked, so reviewers use the filesystem rather than `git diff`.
+while checking. Reading files, grep and one-off read-only scripts are fine.
 
 ## Areas
 
-1. `src/app`: the routes (`auth`, `invite`, `join`, `setup`, `sign-in-error`, `api`), the
-   `(app)` route group with its private `_people` folder, and server actions.
+1. `src/app`: every route under it, the `(app)` route group with every route and private folder
+   (`_people`, `_requests`, `_jobs`, ...) under it, and server actions.
 2. `src/components`: every folder under it (`ui`, `auth`, `brand`, `email`, `language`, `layout`,
    `theme`, and any added later).
-3. `src/lib`: every topic folder under it (`authz/`, `i18n/`, `request/`, `sign-in/`, `tables/`,
-   and any added later), and the shared files at its root.
-4. `src/server`: every topic folder under it (`auth/`, `people/`, and any added later), and the
+3. `src/lib`: every topic folder under it (`authz/`, `i18n/`, `request/`, `requests/`,
+   `sign-in/`, `tables/`, and any added later), and the shared files at its root.
+4. `src/server`: every topic folder under it (`auth/`, `jobs/`, `people/`, `queue/`, `requests/`,
+   `settings/`, and any added later), and the
    shared files at its root.
 5. `src/db`, `drizzle/`, `src/emails`, `src/messages`, `src/styles`, the root files of `src/`
    (`proxy.ts`, `instrumentation.ts` and their tests, `client-imports.test.ts`), `scripts/`,
-   `tests/` (every folder under it: `integration/`, `database/`, `auth/`, `i18n/`, `build/`) and
+   `tests/` (every folder under it: `integration/`, `database/`, `auth/`, `i18n/`, `build/`, `ui/`) and
    `public/`.
 6. `e2e/` (the specs, and `e2e/support/` for shared helpers) and everything at the repository
    root: `package.json`, `pnpm-workspace.yaml`, the lockfile, the Playwright, Vitest (and

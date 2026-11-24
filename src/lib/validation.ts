@@ -51,14 +51,47 @@ export type ValidationMessageKey = `validation.${MessageKeys<
 >}`;
 
 /**
+ * The longest text taken as an email address: 64 characters before the @
+ * and 255 after (RFC 5321), more than any address that can receive mail has
+ * (254). {@link emailSchema} refuses a longer one, so no stored address is
+ * longer, and {@link plausibleEmail} checks it before the pattern runs.
+ */
+export const EMAIL_MAX_LENGTH = 320;
+
+/**
  * An email address, trimmed and lower-cased so it matches stored addresses
- * (the same normalization as `normalizeEmail` in `email-address.ts`).
+ * (the same normalization as `normalizeEmail` in `email-address.ts`), and at
+ * most {@link EMAIL_MAX_LENGTH} characters: a longer one is refused as not
+ * an address, before the pattern runs.
  */
 export const emailSchema = z
   .string()
   .trim()
+  .max(EMAIL_MAX_LENGTH, { error: 'validation.email' satisfies ValidationMessageKey, abort: true })
   .toLowerCase()
   .pipe(z.email({ error: 'validation.email' satisfies ValidationMessageKey }));
+
+/**
+ * An email address a client sent without any check (the guards before Better
+ * Auth's requests, the reactions after them), as it's compared and keyed
+ * (trimmed and lower-cased, as {@link emailSchema} gives it), when it's a
+ * plausible one: at most {@link EMAIL_MAX_LENGTH} characters and an address
+ * by {@link emailSchema}. Anything else counts as no address, so it never
+ * becomes a rate limit key or lands in the audit log. Better Auth's own
+ * check of an address (zod's `z.email()`, the same pattern) refuses more,
+ * since it doesn't trim first, so every address it would take passes here
+ * as long as it's no longer than the limit.
+ *
+ * @param value - What the client sent as the address, unchecked.
+ * @returns The address, or `null` for anything that isn't a plausible one.
+ */
+export function plausibleEmail(value: unknown): string | null {
+  if (typeof value !== 'string' || value.length > EMAIL_MAX_LENGTH) {
+    return null;
+  }
+  const parsed = emailSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
 
 /** A database ID (UUID). */
 export const idSchema = z.uuid({ error: 'validation.id' satisfies ValidationMessageKey });

@@ -75,7 +75,9 @@ export const RATE_LIMITS = {
   jobTickMissesPerIp: { limit: 20, windowSeconds: 15 * 60 },
   /**
    * Wrong current passwords typed by one signed-in user, when changing the
-   * password or deactivating the account (`checkCurrentPassword`): a session
+   * password or deactivating the account (`checkCurrentPassword`), and where
+   * Better Auth checks it (turning two-step verification on or off, new
+   * backup codes: `CURRENT_PASSWORD_PATHS` in `auth/auth-guards/`): a session
    * can't be used to guess the password. A bucket of its own, not the
    * address's sign-in one, so a stolen session can't pause the owner's
    * password sign-in.
@@ -138,37 +140,11 @@ export async function hitRateLimit(
 }
 
 /**
- * Checks whether a limit is used up, without counting a hit. For limits on
- * failures: check before the attempt, count with {@link hitRateLimit} only
- * when it fails. Where attempts at the same moment must not all get through,
- * count before instead and give the hit back with {@link releaseRateLimitHit}
- * when it succeeds.
- *
- * @param ctx - Service context.
- * @param key - What's limited.
- * @param rule - The limit.
- * @returns Whether it's used up, and how many seconds until the window resets.
- */
-export async function peekRateLimit(
-  ctx: Pick<ServiceContext, 'db'>,
-  key: string,
-  rule: RateLimitRule,
-): Promise<{ limited: boolean; retryAfterSeconds: number }> {
-  const [row] = await ctx.db
-    .select({ count: rateLimitBucket.count, resetAt: rateLimitBucket.resetAt })
-    .from(rateLimitBucket)
-    .where(and(eq(rateLimitBucket.key, key), gt(rateLimitBucket.resetAt, sql`now()`)));
-  return {
-    limited: row !== undefined && row.count >= rule.limit,
-    retryAfterSeconds: row
-      ? Math.max(0, Math.ceil((row.resetAt.getTime() - Date.now()) / 1000))
-      : 0,
-  };
-}
-
-/**
  * Gives back one hit counted earlier in the current window (e.g. an attempt
- * taken before a check that then succeeded). Never below zero.
+ * taken before a check that then succeeded, or a notice counted before it
+ * couldn't be sent). Counting first and giving back is how a limit on
+ * failures holds for attempts at the same moment: they can't all get
+ * through. Never below zero.
  *
  * @param ctx - Service context.
  * @param key - What's limited.

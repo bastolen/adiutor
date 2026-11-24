@@ -118,7 +118,7 @@ a tag such as `v0.2.0`) to move production to an existing release.
 The `Dockerfile` builds one image with the whole application: the built app, its source, scripts
 and migrations, and every dependency (development ones included, for the reasons above). It runs
 the app by default and every command below as a one-off, so the same image serves the site, the
-hourly jobs and the first-run setup. Why one image instead of a small server image plus a tools
+background jobs and the first-run setup. Why one image instead of a small server image plus a tools
 image is in [decision 0013](decisions/0013-one-docker-image-with-the-whole-application.md).
 
 ```bash

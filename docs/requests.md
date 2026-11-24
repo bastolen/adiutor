@@ -11,7 +11,7 @@ request in [decision 0025](decisions/0025-people-on-a-request-one-table-with-rol
 the emails about it in [decision 0031](decisions/0031-emails-about-requests.md), and for the
 board in [decision 0037](decisions/0037-a-board-of-requests.md).
 
-Not built yet, each for a later change: an approval step, and attachments.
+Not built yet, for a later change: attachments.
 
 ## Words
 

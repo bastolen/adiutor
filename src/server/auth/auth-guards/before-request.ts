@@ -5,7 +5,7 @@
 import { APIError, getSessionFromCtx } from 'better-auth/api';
 
 import { db } from '@/db';
-import { normalizeEmail } from '@/lib/email-address';
+import { plausibleEmail } from '@/lib/validation';
 
 import { markReverify } from '../reverify-marker';
 import { reservePasswordAttempt, limit, AUTH_GUARD_LIMITS } from './attempts';
@@ -22,13 +22,19 @@ import { checkSignedIn } from './signed-in';
 import refuseWhileSignedInAs from './signed-in-as';
 
 /**
- * Reads the email address a request is about, lower-cased.
+ * Reads the email address a request is about, trimmed and lower-cased, when
+ * it's a plausible one (`plausibleEmail`): anything else a client sends,
+ * however long, counts as none, so it never becomes a rate limit key and the
+ * per-address limits take nothing for it. Better Auth refuses a value that
+ * isn't an address before it checks a password or sends an email, an address
+ * longer than any that can receive mail has no account to guess or inbox to
+ * fill, and Better Auth's per-IP limits apply to both.
  *
  * @param ctx - The endpoint context.
- * @returns The address, or `null` without one (Better Auth then refuses the request itself).
+ * @returns The address, or `null` without a plausible one.
  */
 function emailOf(ctx: AuthGuardContext): string | null {
-  return normalizeEmail(ctx.body?.email);
+  return plausibleEmail(ctx.body?.email);
 }
 
 /**
@@ -39,7 +45,10 @@ function emailOf(ctx: AuthGuardContext): string | null {
  */
 export async function beforeAuthRequest(ctx: AuthGuardContext): Promise<void> {
   const { path } = ctx;
-  if (!path) {
+  // Reading the session (`auth.api.getSession`, behind every page) is never refused, even while
+  // signed in as someone, so nothing below runs for it: not even the settings query that words a
+  // refusal.
+  if (!path || path === '/get-session') {
     return;
   }
   // Any refusal below is worded in the request's language, with Adiutor's default for a

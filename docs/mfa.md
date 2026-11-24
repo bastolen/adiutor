@@ -70,7 +70,12 @@ MFA only comes from providers that can prove it (`MFA_PROVIDERS` in `src/lib/sig
 GitHub, whose API says `two_factor_authentication`), checked at every sign-in with or connection
 of such an account (`src/server/auth/provider-mfa.ts`; without a definite answer, which includes
 GitHub not answering within 3 seconds, the stored value stays and that sign-in doesn't count as
-confirmed). Google can't, so a Google account never
+confirmed). A sign-in is judged by the account that signed in, found by its ID at the provider from
+the profile of that sign-in (`refreshSignedInProviderMfa` in
+`src/server/auth/auth-events/provider-accounts.ts`), never by another account of the user's that
+holds a token (a sign-in with it at the same moment would lend its 2FA); when that account can't
+be told, nothing is checked and the sign-in doesn't count as confirmed. Google can't, so a Google
+account never
 counts. A provider's MFA only counts while its sign-in is configured on the server
 (`availableProviders`). Until an account meets it, every app page sends them to the Security
 page (`getActor()` in `src/server/authz.ts`). When it stops meeting it (2FA turned off at the

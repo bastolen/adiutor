@@ -45,9 +45,12 @@ const requestLocales = new WeakMap<RefusedRequest, Locale>();
 
 /**
  * Works out the language a request's refusals are worded in, the same way as
- * its pages: the language cookie, else Adiutor's default language, else
- * (before setup) `Accept-Language`, else English (US). Called once at the
- * start of `beforeAuthRequest`; reads the database only without a cookie.
+ * its pages: the language cookie while Adiutor offers that language, else
+ * Adiutor's default language, else (before setup) `Accept-Language`, else
+ * English (US). Reads Adiutor's language settings every time
+ * (`localeFromHeaders`), cookie or not, so `beforeAuthRequest` calls it once
+ * per request it checks, and not for reading the session, which nothing
+ * refuses.
  *
  * @param request - The request the guards are about to check.
  * @param db - Database client, for Adiutor's default language.
@@ -60,8 +63,11 @@ export async function noteRefusalLocale(
 }
 
 /**
- * The language a refusal is worded in: the one noted for the request, else
- * what its headers alone say (the cookie, then `Accept-Language`).
+ * The language a refusal is worded in: the one noted for the request, which
+ * `beforeAuthRequest` always notes before any check that can refuse. Only a
+ * refusal worded without it (the unit tests of these bodies) falls back to
+ * what the headers alone say (the cookie, then `Accept-Language`), without
+ * Adiutor's settings.
  *
  * @param request - The refused request.
  * @returns The locale.
