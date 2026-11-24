@@ -17,6 +17,8 @@ import {
   setMembershipRole,
   storeEntries,
   storeRequest,
+  choosePictureOf,
+  storeOwnRequest,
 } from './support/db';
 import {
   ACTIVITY_CLIENT,
@@ -32,32 +34,34 @@ import {
   SUPPORT_STAFF,
 } from './support/fixtures';
 import {
-  adminStorageState,
   answerPictures,
   markdownEditor,
   openUserTab,
+  openWithEnter,
+  pressUntilFocused,
   searchSelect,
   signIn,
   signInAsUser,
   type StorageState,
   storageStateFor,
   toasts,
+  whenHydrated,
+  boardLane,
 } from './support/helpers';
+import { inOrder, repeatInOrder } from './support/sequence';
+import { signedInOnce } from './support/stored-sign-in';
 import { expect, test } from './support/test';
 
-/** Sign-in cookies of the staff Admin. */
-let adminState: StorageState;
+/** Gives the staff Admin's sign-in cookies, signed in once for the spec. */
+const adminCookies = signedInOnce(PLATFORM_ADMIN);
 
 /** Sign-in cookies of a Client of the seeded company, for the company's side of a request. */
 let clientState: StorageState;
 
-/** The members page of the seeded company with more members than fit on a page. */
-let pagingMembersPath: string;
+/** The members page of the seeded company with more members than fit on a page (at the address the app links to: its URL name). */
+const pagingMembersPath = `/companies/${PAGING_COMPANY_SLUG}/members`;
 
 test.beforeAll(async ({ browser }) => {
-  // At the address the app links to (its URL name).
-  pagingMembersPath = `/companies/${PAGING_COMPANY_SLUG}/members`;
-  adminState = await adminStorageState(browser);
   clientState = await storageStateFor(browser, REQUESTS_CLIENT);
 });
 
@@ -68,33 +72,9 @@ test.beforeAll(async ({ browser }) => {
  * @param title - The request's title.
  * @returns The path of the request's page.
  */
-async function storeOwnRequest(title: string): Promise<string> {
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title,
-  });
+async function ownRequestPath(title: string): Promise<string> {
+  const number = await storeOwnRequest({ title });
   return `/requests/${number}`;
-}
-
-/**
- * Opens a select with Enter and waits until an option has focus, so the
- * next key presses go to the list. Retries, because right after a (re)load
- * the page may still be hydrating and ignore the first key press, but presses
- * Enter again only while the select is still closed: on a list that's
- * opening, Enter would pick the option it lands on.
- *
- * @param select - The select's combobox.
- */
-async function openWithEnter(select: Locator): Promise<void> {
-  const page = select.page();
-  await expect(async () => {
-    if ((await select.getAttribute('aria-expanded')) !== 'true') {
-      await select.press('Enter');
-    }
-    await expect(page.getByRole('listbox')).toBeVisible({ timeout: 1000 });
-  }).toPass();
-  await expect(page.locator('[role="option"]:focus')).toHaveCount(1);
 }
 
 /**
@@ -247,7 +227,7 @@ async function expectCardLandsBelowStickyLayers(page: Page): Promise<void> {
 test.describe('signed in', () => {
   test.use({ reducedMotion: 'reduce' });
   test.beforeEach(async ({ context }) => {
-    await context.addCookies(adminState.cookies);
+    await context.addCookies(adminCookies());
   });
 
   test('the first Tab shows the skip link, which moves focus to the content', async ({ page }) => {
@@ -546,10 +526,7 @@ test.describe('signed in', () => {
     await page.keyboard.press('F8');
     await expect(toasts(page).getByRole('list')).toBeFocused();
     const dismiss = toasts(page).getByRole('button', { name: 'Dismiss notification' });
-    await expect(async () => {
-      await page.keyboard.press('Tab');
-      await expect(dismiss).toBeFocused({ timeout: 500 });
-    }).toPass({ timeout: 5000 });
+    await pressUntilFocused(page, 'Tab', dismiss);
     await page.keyboard.press('Enter');
     await expect(toasts(page)).not.toContainText('Invite link revoked.');
   });
@@ -636,12 +613,10 @@ test.describe('signed in', () => {
     // It starts on the current page's link, at the top, not on the account menu at the bottom.
     await expect(menu.getByRole('link', { name: 'Dashboard', exact: true })).toBeFocused();
     // Focus stays in the panel however far you tab.
-    for (let step = 0; step < 8; step += 1) {
-      // eslint-disable-next-line no-await-in-loop -- Key presses must happen in order.
+    await repeatInOrder(8, async () => {
       await page.keyboard.press('Tab');
-      // eslint-disable-next-line no-await-in-loop -- Checked after each press.
       expect(await menu.evaluate((element) => element.contains(document.activeElement))).toBe(true);
-    }
+    });
     await page.keyboard.press('Escape');
     await expect(menu).toHaveCount(0);
     await expect(open).toBeFocused();
@@ -741,14 +716,12 @@ test.describe('signed in', () => {
     const dialog = page.getByRole('dialog', { name: new RegExp(`^Delete ${CLIENT_WATCHER.name}`) });
     await expect(dialog).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Close' })).toBeFocused();
-    for (let step = 0; step < 6; step += 1) {
-      // eslint-disable-next-line no-await-in-loop -- Each Tab depends on the previous one.
+    await repeatInOrder(6, async () => {
       await page.keyboard.press('Tab');
-      // eslint-disable-next-line no-await-in-loop -- Checked after each press.
       expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(
         true,
       );
-    }
+    });
 
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
@@ -763,14 +736,12 @@ test.describe('signed in', () => {
     await page.keyboard.press('Enter');
     const dialog = page.getByRole('dialog', { name: 'Add a passkey' });
     await expect(dialog).toBeVisible();
-    for (let step = 0; step < 5; step += 1) {
-      // eslint-disable-next-line no-await-in-loop -- Key presses must happen in order.
+    await repeatInOrder(5, async () => {
       await page.keyboard.press('Tab');
-      // eslint-disable-next-line no-await-in-loop -- Checked after each press.
       expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(
         true,
       );
-    }
+    });
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
     await expect(add).toBeFocused();
@@ -778,13 +749,9 @@ test.describe('signed in', () => {
 
   test('choosing a section tab keeps focus on it, now the current one', async ({ page }) => {
     await page.goto(`/companies/${COMPANY_SLUG}`);
-    // Once the account menu opens, the page has hydrated: Enter on a tab is a client-side move.
-    // Closing it returns focus to its button a moment later: wait for that before choosing a tab.
+    // Enter on a tab is a client-side move, which needs the page hydrated.
+    await whenHydrated(page);
     const accountMenu = page.getByRole('button', { name: /^Account menu/ });
-    await accountMenu.click();
-    await expect(page.getByRole('menu')).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(accountMenu).toBeFocused();
 
     // A page shown for the first time, then one shown again (kept from before).
     // The title changes with the tab too: it's what the route announcer reads.
@@ -835,12 +802,8 @@ test.describe('signed in', () => {
     const userId = await findUserId(CLIENT_WATCHER.email);
     const base = `/admin/users/${userId}`;
     await page.goto(base);
-    // Once the account menu opens, the page has hydrated: Enter on a tab is a client-side move.
-    const accountMenu = page.getByRole('button', { name: /^Account menu/ });
-    await accountMenu.click();
-    await expect(page.getByRole('menu')).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(accountMenu).toBeFocused();
+    // Enter on a tab is a client-side move, which needs the page hydrated.
+    await whenHydrated(page);
 
     await chooseTab(page, 'User sections', 'Companies', CLIENT_WATCHER.name);
     await expect(page).toHaveURL(`${base}/companies`);
@@ -886,10 +849,7 @@ test.describe('signed in', () => {
     await page.goto(`/companies/${COMPANY_SLUG}/members`);
     const linksHeading = page.getByRole('heading', { name: 'Invite links' });
     await expect(linksHeading).toBeVisible();
-    await accountMenu.click();
-    await expect(page.getByRole('menu')).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(accountMenu).toBeFocused();
+    await whenHydrated(page);
     await mainMenu.getByRole('link', { name: 'Settings' }).click();
     await expect(page).toHaveURL('/admin/settings');
     await chooseTab(page, 'Settings sections', 'Staff', 'Settings');
@@ -1020,7 +980,7 @@ test.describe('on a phone, under the sticky layers', () => {
     context,
     page,
   }) => {
-    await context.addCookies(adminState.cookies);
+    await context.addCookies(adminCookies());
     await page.setViewportSize(PHONE);
     await page.goto('/account/security');
 
@@ -1073,12 +1033,10 @@ test.describe('signed out', () => {
     await page.keyboard.press('ArrowLeft');
     await expect(page.getByRole('menuitemradio', { name: 'System' })).toBeFocused();
     // Down goes through the row, then on to the languages, Default first.
-    for (const name of ['Light', 'Dark', 'Default', 'English (US)']) {
-      // eslint-disable-next-line no-await-in-loop -- Each key moves on from where the last one went.
+    await inOrder(['Light', 'Dark', 'Default', 'English (US)'], async (name) => {
       await page.keyboard.press('ArrowDown');
-      // eslint-disable-next-line no-await-in-loop -- Checked before the next key is pressed.
       await expect(page.getByRole('menuitemradio', { name })).toBeFocused();
-    }
+    });
     await page.keyboard.press('Escape');
     await expect(page.getByRole('menu')).toHaveCount(0);
     await expect(trigger).toBeFocused();
@@ -1086,12 +1044,10 @@ test.describe('signed out', () => {
     // Enter on another language reloads the page in it.
     await page.keyboard.press('Enter');
     await expect(page.getByRole('menuitemradio', { name: 'System' })).toBeFocused();
-    for (const name of ['Light', 'Dark', 'Default', 'English (US)', 'Nederlands']) {
-      // eslint-disable-next-line no-await-in-loop -- Each key moves on from where the last one went.
+    await inOrder(['Light', 'Dark', 'Default', 'English (US)', 'Nederlands'], async (name) => {
       await page.keyboard.press('ArrowDown');
-      // eslint-disable-next-line no-await-in-loop -- Checked before the next key is pressed.
       await expect(page.getByRole('menuitemradio', { name })).toBeFocused();
-    }
+    });
     await page.keyboard.press('Enter');
     await expect(page.locator('html')).toHaveAttribute('lang', 'nl-NL');
     await expect(
@@ -1104,26 +1060,32 @@ test.describe('the picture choice', () => {
   test('the arrow keys move between the pictures, and Tab leaves them as one stop', async ({
     page,
   }) => {
-    await answerPictures(page);
-    await signIn(page, SUPPORT_STAFF);
-    await page.goto('/account');
-    const google = page.getByRole('radio', { name: `Google · ${SUPPORT_STAFF.email}` });
-    const initials = page.getByRole('radio', { name: 'Initials' });
+    // The seed shows initials; this test starts from no choice, and leaves initials behind.
+    await choosePictureOf(SUPPORT_STAFF.email, null);
+    try {
+      await answerPictures(page);
+      await signIn(page, SUPPORT_STAFF);
+      await page.goto('/account');
+      const google = page.getByRole('radio', { name: `Google · ${SUPPORT_STAFF.email}` });
+      const initials = page.getByRole('radio', { name: 'Initials' });
 
-    await google.focus();
-    await page.keyboard.press('ArrowDown');
-    await expect(initials).toBeFocused();
-    await expect(initials).toBeChecked();
-    await page.keyboard.press('Tab');
-    // Nothing is saved: the choice only changes with Save picture.
-    await expect(page.getByRole('button', { name: 'Save picture' })).toBeFocused();
+      await google.focus();
+      await page.keyboard.press('ArrowDown');
+      await expect(initials).toBeFocused();
+      await expect(initials).toBeChecked();
+      await page.keyboard.press('Tab');
+      // Nothing is saved: the choice only changes with Save picture.
+      await expect(page.getByRole('button', { name: 'Save picture' })).toBeFocused();
+    } finally {
+      await choosePictureOf(SUPPORT_STAFF.email, 'initials');
+    }
   });
 });
 
 test.describe('tables', () => {
   test.use({ reducedMotion: 'reduce' });
   test.beforeEach(async ({ context }) => {
-    await context.addCookies(adminState.cookies);
+    await context.addCookies(adminCookies());
   });
 
   test('the Sort menu sorts with the keyboard and keeps focus on its button', async ({ page }) => {
@@ -1136,10 +1098,7 @@ test.describe('tables', () => {
 
     await expect(trigger).toHaveAccessibleName('Sort members: Name, A to Z');
     await trigger.focus();
-    await expect(async () => {
-      await trigger.press('Enter');
-      await expect(page.getByRole('menu')).toBeVisible({ timeout: 1000 });
-    }).toPass();
+    await openWithEnter(trigger, 'menu');
     // Named by its button once, not by what it shows and its name both.
     await expect(page.getByRole('menu')).toHaveAccessibleName('Sort members: Name, A to Z');
     await page.keyboard.press('Escape');
@@ -1149,10 +1108,7 @@ test.describe('tables', () => {
     await trigger.press('Enter');
     await expect(page.getByRole('menu')).toBeVisible();
     const zToA = page.getByRole('menuitemradio', { name: 'Name, Z to A' });
-    await expect(async () => {
-      await page.keyboard.press('ArrowDown');
-      await expect(zToA).toBeFocused({ timeout: 250 });
-    }).toPass();
+    await pressUntilFocused(page, 'ArrowDown', zToA);
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(`${pagingMembersPath}?dir=desc`);
     await expect(header).toHaveAttribute('aria-sort', 'descending');
@@ -1180,7 +1136,7 @@ test.describe('requests', () => {
 
   test.describe('as the staff', () => {
     test.beforeEach(async ({ context }) => {
-      await context.addCookies(adminState.cookies);
+      await context.addCookies(adminCookies());
     });
 
     test('a filter menu filters with the keyboard and keeps focus on its button', async ({
@@ -1192,10 +1148,7 @@ test.describe('requests', () => {
 
       // Escape closes it and changes nothing.
       await trigger.focus();
-      await expect(async () => {
-        await trigger.press('Enter');
-        await expect(page.getByRole('menu')).toBeVisible({ timeout: 1000 });
-      }).toPass();
+      await openWithEnter(trigger, 'menu');
       await page.keyboard.press('Escape');
       await expect(page.getByRole('menu')).toBeHidden();
       await expect(trigger).toBeFocused();
@@ -1205,10 +1158,7 @@ test.describe('requests', () => {
       await trigger.press('Enter');
       await expect(page.getByRole('menu')).toBeVisible();
       const hotfix = page.getByRole('menuitemradio', { name: 'Hotfix' });
-      await expect(async () => {
-        await page.keyboard.press('ArrowDown');
-        await expect(hotfix).toBeFocused({ timeout: 250 });
-      }).toPass();
+      await pressUntilFocused(page, 'ArrowDown', hotfix);
       await page.keyboard.press('Enter');
       await expect(page).toHaveURL('/requests?type=hotfix');
       // The button now says what's chosen, and still has focus.
@@ -1267,7 +1217,7 @@ test.describe('requests', () => {
     });
 
     test('a status is only saved when picked with Enter, not while browsing', async ({ page }) => {
-      await page.goto(await storeOwnRequest('A status picked with the keyboard'));
+      await page.goto(await ownRequestPath('A status picked with the keyboard'));
       const status = page.getByRole('combobox', { name: 'Status' });
       await expect(status).toHaveText('Open');
 
@@ -1295,7 +1245,7 @@ test.describe('requests', () => {
     test('the editor opens large and comes back with the keyboard, the cursor in its place', async ({
       page,
     }) => {
-      await page.goto(await storeOwnRequest('A reply written large with the keyboard'));
+      await page.goto(await ownRequestPath('A reply written large with the keyboard'));
       const reply = await markdownEditor(page, 'Your reply');
       await reply.focus();
       await page.keyboard.type('one four');
@@ -1356,7 +1306,7 @@ test.describe('requests', () => {
     test('someone is mentioned with the keyboard, and Escape closes the list before the large view', async ({
       page,
     }) => {
-      await page.goto(await storeOwnRequest('A mention made with the keyboard'));
+      await page.goto(await ownRequestPath('A mention made with the keyboard'));
       const reply = await markdownEditor(page, 'Your reply');
       const list = page.getByRole('listbox', { name: 'People to mention' });
       /**
@@ -1433,7 +1383,7 @@ test.describe('requests', () => {
     });
 
     test('a reply is sent with the keyboard, and focus is never lost', async ({ page }) => {
-      await page.goto(await storeOwnRequest('A reply sent with the keyboard'));
+      await page.goto(await ownRequestPath('A reply sent with the keyboard'));
       const reply = await markdownEditor(page, 'Your reply');
       const send = page.getByRole('button', { name: 'Send reply' });
       const sendAndWait = page.getByRole('button', { name: 'Send and wait for the company' });
@@ -1517,7 +1467,7 @@ test.describe('requests', () => {
     test('a note is written on its tab with the keyboard, and focus stays on its button', async ({
       page,
     }) => {
-      await page.goto(await storeOwnRequest('A note written with the keyboard'));
+      await page.goto(await ownRequestPath('A note written with the keyboard'));
       const write = page.getByRole('tablist', { name: 'Write' });
       const replyTab = write.getByRole('tab', { name: 'Reply' });
       const noteTab = write.getByRole('tab', { name: 'Internal note' });
@@ -1555,13 +1505,13 @@ test.describe('requests', () => {
 
   test.describe('as the staff, on a request’s subscribers', () => {
     test.beforeEach(async ({ context }) => {
-      await context.addCookies(adminState.cookies);
+      await context.addCookies(adminCookies());
     });
 
     test('the subscribers dialog is worked with the keyboard, and returns focus', async ({
       page,
     }) => {
-      await page.goto(await storeOwnRequest('Subscribers changed with the keyboard'));
+      await page.goto(await ownRequestPath('Subscribers changed with the keyboard'));
       const details = page.getByRole('region', { name: 'Details' });
       const change = details.getByRole('button', { name: 'Change subscribers' });
       const dialog = page.getByRole('dialog', { name: 'Change who’s subscribed' });
@@ -1601,7 +1551,7 @@ test.describe('requests', () => {
     test('the subscribers’ names open from their avatars, and Escape returns focus', async ({
       page,
     }) => {
-      await page.goto(await storeOwnRequest('Subscribers read with the keyboard'));
+      await page.goto(await ownRequestPath('Subscribers read with the keyboard'));
       // Whoever raised a request follows it.
       const avatars = page
         .getByRole('region', { name: 'Details' })
@@ -1628,7 +1578,7 @@ test.describe('requests', () => {
     });
 
     test('unsubscribing and subscribing again keep focus on the one button', async ({ page }) => {
-      await page.goto(await storeOwnRequest('A request followed with the keyboard'));
+      await page.goto(await ownRequestPath('A request followed with the keyboard'));
       const details = page.getByRole('region', { name: 'Details' });
       // Whoever raised a request follows it.
       const unsubscribe = details.getByRole('button', { name: 'Unsubscribe' });
@@ -1648,7 +1598,7 @@ test.describe('requests', () => {
     test('a description is edited with the keyboard, and focus returns to its Edit button', async ({
       page,
     }) => {
-      await page.goto(await storeOwnRequest('A description edited with the keyboard'));
+      await page.goto(await ownRequestPath('A description edited with the keyboard'));
       const description = page.getByRole('region', { name: 'Description' });
       const edit = description.getByRole('button', { name: 'Edit description' });
       const editor = description.getByRole('textbox', { name: 'Description' });
@@ -1684,7 +1634,7 @@ test.describe('requests', () => {
     });
 
     test('cancelling a request asks first, keeps focus inside and returns it', async ({ page }) => {
-      await page.goto(await storeOwnRequest('A request cancelled with the keyboard'));
+      await page.goto(await ownRequestPath('A request cancelled with the keyboard'));
       const cancelRequest = page
         .getByRole('region', { name: 'Details' })
         .getByRole('button', { name: 'Cancel request' });
@@ -1727,42 +1677,25 @@ test.describe('requests', () => {
 test.describe('the board of requests', () => {
   test.use({ reducedMotion: 'reduce' });
   test.beforeEach(async ({ context }) => {
-    await context.addCookies(adminState.cookies);
+    await context.addCookies(adminCookies());
   });
-
-  /**
-   * A lane of the board on the page.
-   *
-   * @param page - The browser page, on the board.
-   * @param name - The lane's name.
-   * @returns The lane's group.
-   */
-  const lane = (page: Page, name: string) =>
-    page.getByRole('group', { name: new RegExp(`^${name}, \\d+ requests?$`) });
 
   test('a card moves with its Move menu from the keyboard, and focus follows it to its new lane', async ({
     page,
   }) => {
     const title = `A card moved with the keyboard ${Date.now()}`;
-    const number = await storeRequest({
-      companySlug: COMPANY_SLUG,
-      raisedBy: REQUESTS_CLIENT.email,
-      title,
-    });
+    const number = await storeOwnRequest({ title });
     await page.goto(`/requests/board?q=${encodeURIComponent(title)}`);
-    const move = lane(page, 'Open').getByRole('button', { name: `Move AD-${number}` });
+    const move = boardLane(page, 'Open').getByRole('button', { name: `Move AD-${number}` });
     expect(await cursorOf(move)).toBe('pointer');
 
     // From the card's link, Tab reaches its Move button (the avatars are left out).
-    await lane(page, 'Open').getByRole('link', { name: title }).focus();
+    await boardLane(page, 'Open').getByRole('link', { name: title }).focus();
     await page.keyboard.press('Tab');
     await expect(move).toBeFocused();
 
     // Escape closes the menu and changes nothing.
-    await expect(async () => {
-      await move.press('Enter');
-      await expect(page.getByRole('menu')).toBeVisible({ timeout: 1000 });
-    }).toPass();
+    await openWithEnter(move, 'menu');
     await page.keyboard.press('Escape');
     await expect(page.getByRole('menu')).toBeHidden();
     await expect(move).toBeFocused();
@@ -1771,16 +1704,13 @@ test.describe('the board of requests', () => {
     await move.press('Enter');
     await expect(page.getByRole('menu')).toBeVisible();
     const inProgress = page.getByRole('menuitem', { name: 'In progress' });
-    await expect(async () => {
-      await page.keyboard.press('ArrowDown');
-      await expect(inProgress).toBeFocused({ timeout: 250 });
-    }).toPass();
+    await pressUntilFocused(page, 'ArrowDown', inProgress);
     await page.keyboard.press('Enter');
     await expect(toasts(page)).toContainText(`AD-${number} moved to In progress.`);
-    const moved = lane(page, 'In progress').getByRole('button', { name: `Move AD-${number}` });
+    const moved = boardLane(page, 'In progress').getByRole('button', { name: `Move AD-${number}` });
     await expect(moved).toBeFocused();
     await expect(moved).not.toHaveAttribute('aria-busy');
-    await expect(lane(page, 'Open').getByRole('link', { name: title })).toHaveCount(0);
+    await expect(boardLane(page, 'Open').getByRole('link', { name: title })).toHaveCount(0);
   });
 
   test('the lanes are reached and scrolled sideways with the keyboard', async ({ page }) => {
@@ -1896,16 +1826,10 @@ test('a request’s activity view is chosen with the keyboard, focus staying on 
   const show = page.getByRole('button', { name: 'Show: Everything' });
   expect(await cursorOf(show)).toBe('pointer');
   await show.focus();
-  await expect(async () => {
-    await show.press('Enter');
-    await expect(page.getByRole('menu')).toBeVisible({ timeout: 1000 });
-  }).toPass();
+  await openWithEnter(show, 'menu');
   await expect(page.getByRole('menuitemcheckbox', { name: 'Everything' })).toBeFocused();
   const status = page.getByRole('menuitemcheckbox', { name: 'Status changes' });
-  await expect(async () => {
-    await page.keyboard.press('ArrowDown');
-    await expect(status).toBeFocused({ timeout: 250 });
-  }).toPass();
+  await pressUntilFocused(page, 'ArrowDown', status);
   expect(await cursorOf(status)).toBe('pointer');
 
   // Space unticks it and the menu stays open, still on it.
@@ -1926,10 +1850,7 @@ test('a request’s activity view is chosen with the keyboard, focus staying on 
   await page.keyboard.press('Enter');
   await expect(page.getByRole('menuitemradio', { name: 'Oldest first' })).toBeFocused();
   const newest = page.getByRole('menuitemradio', { name: 'Newest first' });
-  await expect(async () => {
-    await page.keyboard.press('ArrowDown');
-    await expect(newest).toBeFocused({ timeout: 250 });
-  }).toPass();
+  await pressUntilFocused(page, 'ArrowDown', newest);
   await page.keyboard.press('Enter');
   await expect(page.getByRole('menu')).toBeHidden();
   await expect(page.getByRole('button', { name: 'Newest first' })).toBeFocused();

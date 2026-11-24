@@ -96,8 +96,16 @@ export async function countEmails(to: string): Promise<number> {
  * @returns The newest email to that address.
  */
 export async function waitForNewEmail(to: string, countBefore: number): Promise<OutboxEmail> {
-  await expect.poll(() => countEmails(to)).toBeGreaterThan(countBefore);
-  return waitForEmail(to);
+  let found: OutboxEmail | undefined;
+  await expect
+    .poll(async () => {
+      await runJobs();
+      const sent = (await readOutbox()).filter((email) => email.to === to);
+      found = sent.length > countBefore ? sent.at(-1) : undefined;
+      return found;
+    })
+    .toBeDefined();
+  return defined(found, `a new email to ${to}`);
 }
 
 /**

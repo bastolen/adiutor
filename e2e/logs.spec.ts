@@ -8,6 +8,7 @@
 import { type Page } from '@playwright/test';
 
 import { defined } from '../src/lib/defined';
+import { TIME_ZONE_COOKIE } from '../src/lib/i18n/time-zones';
 import { findCompanyId, storeAuditEvent } from './support/db';
 import {
   CLIENT_WATCHER,
@@ -16,15 +17,12 @@ import {
   PLATFORM_ADMIN,
   STEP_UP_MANAGER,
 } from './support/fixtures';
-import { adminStorageState, signIn, type StorageState } from './support/helpers';
+import { signIn } from './support/helpers';
+import { signedInOnce } from './support/stored-sign-in';
 import { expect, test } from './support/test';
 
-/** Sign-in cookies of the staff Admin. */
-let adminState: StorageState;
-
-test.beforeAll(async ({ browser }) => {
-  adminState = await adminStorageState(browser);
-});
+/** Gives the staff Admin's sign-in cookies, signed in once for the spec. */
+const adminCookies = signedInOnce(PLATFORM_ADMIN);
 
 /**
  * The audit log's table (named by its caption).
@@ -38,7 +36,7 @@ function auditTable(page: Page) {
 
 test.describe('as a staff Admin', () => {
   test.beforeEach(async ({ context }) => {
-    await context.addCookies(adminState.cookies);
+    await context.addCookies(adminCookies());
   });
 
   test('the audit log narrows by search, group and days, keeping the other filters', async ({
@@ -91,9 +89,7 @@ test.describe('as a staff Admin', () => {
 
   test('the days start and end at midnight where the reader is', async ({ context, page }) => {
     // The cookie that mirrors the account's zone, as if the Admin's were Tokyo's (no daylight saving).
-    await context.addCookies([
-      { name: 'adiutor.time-zone', value: 'Asia/Tokyo', url: E2E_BASE_URL },
-    ]);
+    await context.addCookies([{ name: TIME_ZONE_COOKIE, value: 'Asia/Tokyo', url: E2E_BASE_URL }]);
     // 20:00 in UTC on March 4 is 5:00 on March 5 in Tokyo; nothing else is that old.
     await storeAuditEvent({
       action: 'role_changed',

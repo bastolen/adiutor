@@ -24,6 +24,7 @@ import {
   useOwnClientIp,
 } from './support/helpers';
 import { countEmails, linkIn, waitForEmail, waitForNewEmail } from './support/outbox';
+import { inOrder } from './support/sequence';
 import { expect, test } from './support/test';
 
 test("a Support staff member sees why they can't use an invite link", async ({ page, browser }) => {
@@ -35,15 +36,14 @@ test("a Support staff member sees why they can't use an invite link", async ({ p
   const context = await browser.newContext({ reducedMotion: 'reduce' });
   const support = await context.newPage();
   await signIn(support, SUPPORT_STAFF);
-  await (['light', 'dark'] as const).reduce(async (previous, colorScheme) => {
-    await previous;
+  await inOrder(['light', 'dark'] as const, async (colorScheme) => {
     await support.emulateMedia({ colorScheme });
     await support.goto(inviteLink);
     await expect(support.getByText("Finance and Support can't use invite links.")).toBeVisible();
     await expect(support.getByRole('button', { name: 'Join' })).toHaveCount(0);
     await expect(support.getByRole('link', { name: 'Go to your dashboard' })).toBeVisible();
     await expectAccessible(support);
-  }, Promise.resolve());
+  });
   await context.close();
 });
 

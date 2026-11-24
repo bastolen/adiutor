@@ -20,6 +20,7 @@ import {
   signIn,
   signOut,
   submitPassword,
+  APP_HOME_URL,
 } from './support/helpers';
 import { expect, test } from './support/test';
 import { codeForSecret } from './support/totp';
@@ -87,7 +88,7 @@ test('the sign-in form is empty after signing out, for the next person to sign i
 
   // And the next person can sign in straight away.
   await fillAndSubmitSignIn(page, CLIENT_WATCHER);
-  await expect(page).toHaveURL(/\/(dashboard|companies\/)/);
+  await expect(page).toHaveURL(APP_HOME_URL);
 });
 
 test('the next person to sign in on this browser sees their own account, not the last one’s', async ({
@@ -101,9 +102,7 @@ test('the next person to sign in on this browser sees their own account, not the
   await signOut(page);
 
   // Someone else signs in on the same page, without loading it again.
-  await page.getByRole('textbox', { name: 'Email' }).fill(SUPPORT_STAFF.email);
-  await page.getByLabel('Password', { exact: true }).fill(SUPPORT_STAFF.password);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await fillAndSubmitSignIn(page, SUPPORT_STAFF);
   await expect(page).toHaveURL('/dashboard');
   await openAccountSettings(page);
   await expect(name).toHaveValue(SUPPORT_STAFF.name);
@@ -120,7 +119,7 @@ test("signing in or out in one tab loads the browser's other tabs afresh", async
 
   // Signing in in the first tab takes the other one on without a click, signed in.
   await signIn(page, CLIENT_WATCHER);
-  await expect(other).toHaveURL(/\/(dashboard|companies\/)/);
+  await expect(other).toHaveURL(APP_HOME_URL);
 
   // The other tab's Profile page, opened with a click, so Next would keep it alive with the name.
   const otherName = other.getByRole('textbox', { name: 'Name', exact: true });
@@ -143,8 +142,8 @@ test("an email-link sign-in loads the browser's other tabs afresh", async ({ pag
   // The link comes back through a redirect, so the page it lands on tells the other tab, which goes
   // on without a click, signed in.
   await openSignInLink(page, await storeSignInLink(CLIENT_WATCHER.email));
-  await expect(page).toHaveURL(/\/(dashboard|companies\/)/);
-  await expect(other).toHaveURL(/\/(dashboard|companies\/)/);
+  await expect(page).toHaveURL(APP_HOME_URL);
+  await expect(other).toHaveURL(APP_HOME_URL);
 });
 
 test('the code step starts over after signing out, with "Trust this device" unticked', async ({
@@ -167,7 +166,7 @@ test('the code step starts over after signing out, with "Trust this device" unti
   await trust.check();
   await code.fill(codeForSecret(SESSIONS_CLIENT.totpSecret));
   await page.getByRole('button', { name: 'Verify and sign in' }).click();
-  await expect(page).toHaveURL(/\/(dashboard|companies\/)/);
+  await expect(page).toHaveURL(APP_HOME_URL);
 
   // Signing out forgets the trusted device, so the code step comes back, and it starts over: the
   // next person mustn't trust this browser for the previous user without noticing.
@@ -181,7 +180,7 @@ test('the code step starts over after signing out, with "Trust this device" unti
 /** The cookie Better Auth sets with a passkey challenge (the sign-in page asks for one on load). */
 const PASSKEY_CHALLENGE_COOKIE = 'better-auth.better-auth-passkey';
 
-test('signing out leaves only the "Last used" sign-in method and the language in the browser', async ({
+test('signing out leaves only the "Last used" sign-in method and the language, which the sign-in page marks', async ({
   page,
   context,
 }) => {
@@ -201,20 +200,14 @@ test('signing out leaves only the "Last used" sign-in method and the language in
   expect(names.filter((name) => name !== PASSKEY_CHALLENGE_COOKIE).sort()).toEqual(
     [LAST_USED_LOGIN_METHOD_COOKIE, LOCALE_COOKIE].sort(),
   );
+  // The method used last, the password, is marked for sighted readers and screen readers; the
+  // passkey button isn't.
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toContainText(
     'Last used',
   );
-});
-
-test('the sign-in page marks the method used last', async ({ page }) => {
-  await signIn(page, SESSIONS_CLIENT);
-  await signOut(page);
   await expect(
     page.getByRole('button', { name: 'Sign in', exact: true }),
   ).toHaveAccessibleDescription('Last used');
-  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toContainText(
-    'Last used',
-  );
   await expect(page.getByRole('button', { name: 'Sign in with a passkey' })).not.toContainText(
     'Last used',
   );

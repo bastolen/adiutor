@@ -31,9 +31,9 @@ import {
   storeInvitation,
   storeAnswerLink,
   storeInviteLink,
-  storeRequest,
   storeRequestLink,
   storeSignInLink,
+  storeOwnRequest,
 } from './support/db';
 import {
   CLIENT_WATCHER,
@@ -46,7 +46,6 @@ import {
   SEEDED_REQUESTS,
 } from './support/fixtures';
 import {
-  adminStorageState,
   freshAddress,
   markdownEditor,
   openSignInLink,
@@ -57,6 +56,7 @@ import {
   storageStateFor,
   toasts,
 } from './support/helpers';
+import { signedInOnce } from './support/stored-sign-in';
 import { expect, test } from './support/test';
 
 /** Pages that work signed out. */
@@ -123,16 +123,16 @@ const APP_PATHS = [
   '/requests?only=done',
   '/requests?status=all&q=no-such-request',
   // More requests than fit on a page: pagination, another sort, the last page.
-  '/requests?company=adiutor-tests-paging&sort=raised&page=2',
+  `/requests?company=${PAGING_COMPANY_SLUG}&sort=raised&page=2`,
   // The board: a lane per status, the open ones fuller than they show, and empty ones.
   '/requests/board',
   '/requests/board?q=no-such-request',
   '/requests/new',
   // A request with a conversation: replies from both sides, a link, and changes.
-  '/requests/1',
+  `/requests/${SEEDED_REQUESTS.waiting.number}`,
   // A request written in Markdown: headings, lists, a table, a quotation, an image as a link,
   // a footnote, and highlighted code, whose colours have to be readable in both modes.
-  '/requests/6',
+  `/requests/${SEEDED_REQUESTS.formatted.number}`,
   '/companies/does-not-exist',
   '/does-not-exist',
 ];
@@ -149,17 +149,21 @@ const CLIENT_PATHS = [
   '/requests',
   '/requests/board',
   '/requests/new',
-  '/requests/1',
-  '/requests/6',
+  `/requests/${SEEDED_REQUESTS.waiting.number}`,
+  `/requests/${SEEDED_REQUESTS.formatted.number}`,
   '/companies/{company}',
   '/companies/{company}/board',
 ];
 
 /** Pages scanned as a Watcher, who only reads: no form, no controls, no Move menus. */
-const WATCHER_PATHS = ['/dashboard', '/requests/board', '/requests/1'];
+const WATCHER_PATHS = [
+  '/dashboard',
+  '/requests/board',
+  `/requests/${SEEDED_REQUESTS.waiting.number}`,
+];
 
-/** Sign-in cookies of the staff Admin, shared by the signed-in scans. */
-let adminState: StorageState;
+/** Gives the staff Admin's sign-in cookies, signed in once for the spec. */
+const adminCookies = signedInOnce(PLATFORM_ADMIN);
 
 /** Sign-in cookies of a Client of the seeded company, for the scans as someone at a company. */
 let clientState: StorageState;
@@ -221,7 +225,6 @@ test.beforeAll(async ({ browser }) => {
     details: { from: 'client', to: 'watcher' },
   });
   userId = await findUserId(CLIENT_WATCHER.email);
-  adminState = await adminStorageState(browser);
   clientState = await storageStateFor(browser, REQUESTS_CLIENT);
   watcherState = await storageStateFor(browser, CLIENT_WATCHER);
 });
@@ -475,7 +478,7 @@ test.describe('on a 320px wide screen', () => {
 
   test.describe('signed in', () => {
     test.beforeEach(async ({ context }) => {
-      await context.addCookies(adminState.cookies);
+      await context.addCookies(adminCookies());
     });
 
     test('the companies list shows each status under the name', async ({ page }) => {
@@ -602,7 +605,7 @@ test.describe('in forced-colours mode', () => {
   test.use({ forcedColors: 'active' });
 
   test.beforeEach(async ({ context }) => {
-    await context.addCookies(adminState.cookies);
+    await context.addCookies(adminCookies());
   });
 
   /**
@@ -691,9 +694,7 @@ test.describe('in forced-colours mode', () => {
 
     test('an email’s answer link that asks for a button press, signed out', async ({ page }) => {
       // A request of the test's own, waiting for the client's approval; the link isn't used.
-      const number = await storeRequest({
-        companySlug: COMPANY_SLUG,
-        raisedBy: REQUESTS_CLIENT.email,
+      const number = await storeOwnRequest({
         title: 'A solution to answer by email',
         status: 'proposed',
       });
@@ -785,7 +786,7 @@ test.describe('in forced-colours mode', () => {
 
     test.describe('signed in', () => {
       test.beforeEach(async ({ context }) => {
-        await context.addCookies(adminState.cookies);
+        await context.addCookies(adminCookies());
       });
 
       APP_PATHS.forEach((path) => {
@@ -814,7 +815,7 @@ test.describe('in forced-colours mode', () => {
         await page.keyboard.press('Escape');
 
         // The seeded request, which nothing here changes: the menus are only opened.
-        await page.goto('/requests/1');
+        await page.goto(`/requests/${SEEDED_REQUESTS.waiting.number}`);
         await page.getByRole('combobox', { name: 'Status' }).click();
         // The open list is named by the select's label, so a screen reader says which list it is.
         await expect(page.getByRole('listbox', { name: 'Status' })).toBeVisible();
@@ -850,7 +851,7 @@ test.describe('in forced-colours mode', () => {
 
       test('a request’s reply, with the list of people at @ open', async ({ page }) => {
         // The seeded request, which nothing here changes: nothing is sent.
-        await page.goto('/requests/1');
+        await page.goto(`/requests/${SEEDED_REQUESTS.waiting.number}`);
         const reply = page.getByRole('textbox', { name: 'Your reply' });
         await expect(reply).toHaveAttribute('contenteditable', 'true');
         await reply.click();
@@ -861,7 +862,7 @@ test.describe('in forced-colours mode', () => {
 
       test('a request’s reply, with its editor opened large', async ({ page }) => {
         // The seeded request, which nothing here changes: nothing is written or sent.
-        await page.goto('/requests/1');
+        await page.goto(`/requests/${SEEDED_REQUESTS.waiting.number}`);
         const large = page.getByRole('button', { name: 'Large view' });
         // The button waits for the editor to load.
         await expect(large).toBeEnabled();
@@ -874,9 +875,7 @@ test.describe('in forced-colours mode', () => {
         page,
       }) => {
         // A request of the test's own: the description is edited and saved.
-        const number = await storeRequest({
-          companySlug: COMPANY_SLUG,
-          raisedBy: REQUESTS_CLIENT.email,
+        const number = await storeOwnRequest({
           title: 'A description edited for the scan',
           description: 'As it was first written.',
         });
@@ -899,11 +898,7 @@ test.describe('in forced-colours mode', () => {
         page,
       }) => {
         // A request of the test's own: a note is added to it.
-        const number = await storeRequest({
-          companySlug: COMPANY_SLUG,
-          raisedBy: REQUESTS_CLIENT.email,
-          title: 'A note added for the scan',
-        });
+        const number = await storeOwnRequest({ title: 'A note added for the scan' });
         await page.goto(`/requests/${number}`);
         await page
           .getByRole('tablist', { name: 'Write' })
@@ -1005,21 +1000,6 @@ test.describe('in forced-colours mode', () => {
         await expectAccessible(page);
       });
 
-      test('the board’s columns are groups, not landmarks, and a lane says it shows fewer cards', async ({
-        page,
-      }) => {
-        await page.setViewportSize({ width: 1100, height: 900 });
-        await page.goto('/requests/board');
-        await expect(page.getByRole('navigation', { name: 'Jump to a lane' })).toBeVisible();
-        const open = page.getByRole('group', { name: /^Open, \d+ requests?$/ });
-        await expect(open).toBeVisible();
-        // No landmark for a column or a half: the page's landmarks stay few.
-        await expect(page.getByRole('main').getByRole('region')).toHaveCount(0);
-        // More open requests than the 25 cards a lane shows.
-        await expect(open.getByRole('list')).toHaveAccessibleName(/^First 25 of \d+$/);
-        await expectAccessible(page);
-      });
-
       test.describe('on a phone', () => {
         test.use({ viewport: { width: 375, height: 812 } });
 
@@ -1083,13 +1063,6 @@ test.describe('in forced-colours mode', () => {
         await expect(page.getByRole('alertdialog')).toBeHidden();
       });
 
-      test('the board has no Move menus for a Watcher', async ({ context, page }) => {
-        await context.addCookies(watcherState.cookies);
-        await page.goto(`/requests/board?q=${encodeURIComponent(SEEDED_REQUESTS.open.title)}`);
-        await expect(page.getByRole('link', { name: SEEDED_REQUESTS.open.title })).toBeVisible();
-        await expect(page.getByRole('button', { name: /^Move AD-/ })).toHaveCount(0);
-      });
-
       test('the editor of a reply, with formatted text in it', async ({ context, page }) => {
         await context.addCookies(clientState.cookies);
         // The seeded open request, which stays as it is: the reply is typed, never sent.
@@ -1139,9 +1112,7 @@ test.describe('in forced-colours mode', () => {
       }) => {
         await context.addCookies(clientState.cookies);
         // A request of the test's own, waiting for approval: the dialog is closed without answering.
-        const number = await storeRequest({
-          companySlug: COMPANY_SLUG,
-          raisedBy: REQUESTS_CLIENT.email,
+        const number = await storeOwnRequest({
           title: 'A solution for the scan',
           status: 'proposed',
         });
@@ -1195,9 +1166,9 @@ test.describe('in forced-colours mode', () => {
 
     test.describe('signed in', () => {
       test.beforeEach(async ({ context }) => {
-        await context.addCookies(adminState.cookies);
-        // Over the cookie the Admin's sign-in set, which says English.
-        await context.addCookies([languageCookie]);
+        // The Admin is on Adiutor's default language, so their sign-in has no language cookie of its
+        // own: this one is what the pages read.
+        await context.addCookies([...adminCookies(), languageCookie]);
       });
 
       APP_PATHS.forEach((path) => {

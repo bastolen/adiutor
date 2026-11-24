@@ -21,7 +21,7 @@ import {
   FORMATTED_STAFF_REPLY,
 } from '../../tests/database/formatted-request';
 import storeRequests from '../../tests/database/store-requests';
-import { withTestDatabase } from './db';
+import { userIdOf, withTestDatabase } from './db';
 import {
   ACTIVITY_CLIENT,
   ACTIVITY_SUPPORT,
@@ -34,9 +34,9 @@ import {
   COMPANY_OWNER,
   STAFF_NAME,
   DEACTIVATE_CLIENT,
-  DELETE_CLIENT,
   E2E_AUTH_SECRET,
   E2E_TIME_ZONE,
+  INVITE_LINK_LIFETIME_MS,
   FINANCE_STAFF,
   GITHUB_ONLY_MANAGER,
   MFA_CLIENT,
@@ -79,8 +79,11 @@ export async function emptyTestDatabase(): Promise<void> {
 }
 
 /**
- * Empties the database and creates the staff (its name, Admin and Manager),
- * plus a company with the users the tests use. Both are named "Adiutor Tests".
+ * Empties the database and seeds what the tests start from: the staff (its
+ * name, setup done, and the staff accounts of each role), the test company
+ * with the accounts the specs use (`fixtures.ts` lists them), more companies
+ * (a paging company, an owned one, a closed one), and the requests no test
+ * changes (`SEEDED_REQUESTS`).
  */
 export default async function seedTestDatabase(): Promise<void> {
   await emptyTestDatabase();
@@ -136,14 +139,12 @@ export default async function seedTestDatabase(): Promise<void> {
      * @param person.totpSecret - The raw secret.
      */
     const addAuthenticator = async (person: { email: string; totpSecret: string }) => {
-      const found = firstRow(
-        await db
-          .select({ id: schema.user.id })
-          .from(schema.user)
-          .where(eq(schema.user.email, person.email)),
-        'the user',
+      await storeAuthenticator(
+        db,
+        await userIdOf(db, person.email),
+        person.totpSecret,
+        E2E_AUTH_SECRET,
       );
-      await storeAuthenticator(db, found.id, person.totpSecret, E2E_AUTH_SECRET);
     };
 
     await db.transaction(async (tx) => {
@@ -160,7 +161,8 @@ export default async function seedTestDatabase(): Promise<void> {
     const platformAdmin = await addPerson(PLATFORM_ADMIN, { platformRole: 'platform_admin' });
     await addPerson(PLATFORM_MANAGER, { platformRole: 'manager' });
     const support = await addPerson(SUPPORT_STAFF, { platformRole: 'support' });
-    // A Google account with a picture, so avatars show one (Google never counts as MFA).
+    // A Google account with a picture (Google never counts as MFA), which they've chosen not to
+    // show: no page fetches it from Google. The tests about pictures choose it.
     await db.insert(schema.account).values({
       userId: support,
       accountId: 'e2e-support-google',
@@ -168,6 +170,10 @@ export default async function seedTestDatabase(): Promise<void> {
       accountName: SUPPORT_STAFF.email,
       accountImage: SUPPORT_STAFF_PICTURE,
     });
+    await db
+      .update(schema.user)
+      .set({ avatarSource: 'initials' })
+      .where(eq(schema.user.id, support));
     await addPerson(FINANCE_STAFF, { platformRole: 'finance' });
     // Deactivated, keeping its staff role, for the Admin to reactivate.
     const returning = await addPerson(RETURNING_FINANCE, { platformRole: 'finance' });
@@ -193,7 +199,6 @@ export default async function seedTestDatabase(): Promise<void> {
     await addPerson(MFA_CLIENT, { companyId: clientCompany.id, role: 'client' });
     await addPerson(PASSKEY_CLIENT, { companyId: clientCompany.id, role: 'client' });
     await addPerson(DEACTIVATE_CLIENT, { companyId: clientCompany.id, role: 'client' });
-    await addPerson(DELETE_CLIENT, { companyId: clientCompany.id, role: 'client' });
     await addPerson(SESSIONS_CLIENT, { companyId: clientCompany.id, role: 'client' });
     await addPerson(RESET_CLIENT, { companyId: clientCompany.id, role: 'client' });
 
@@ -230,7 +235,7 @@ export default async function seedTestDatabase(): Promise<void> {
       accountName: GITHUB_ONLY_MANAGER.githubLogin,
     });
 
-    // This user has an authenticator app, which the Admin resets.
+    // These accounts have an authenticator app. RESET_CLIENT's is the one the Admin resets.
     await addAuthenticator(RESET_CLIENT);
     await addAuthenticator(STEP_UP_MANAGER);
     await addAuthenticator(STEP_UP_CLIENT);
@@ -298,12 +303,12 @@ export default async function seedTestDatabase(): Promise<void> {
         companyId: pagingCompany.id,
         role: 'client' as const,
         tokenHash: hashToken(generateToken()),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60_000),
+        expiresAt: new Date(Date.now() + INVITE_LINK_LIFETIME_MS),
         createdAt: new Date(joinedFrom + index * 60_000),
       })),
     );
 
-    // Requests no test changes (see `SEEDED_REQUESTS`): four in the test company, one in the
+    // Requests no test changes (see `SEEDED_REQUESTS`): five in the test company, one in the
     // deactivated company, and more than a page of them in the paging company, raised a minute
     // apart by its first member.
     const HOUR = 60 * 60_000;

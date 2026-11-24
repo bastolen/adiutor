@@ -102,8 +102,9 @@ export const SUPPORT_STAFF = {
 
 /**
  * The picture of {@link SUPPORT_STAFF}'s Google account, which the seed
- * connects: what their avatars show until they choose otherwise. Tests answer
- * `/avatars/*` in the browser, so nothing ever fetches it.
+ * connects but gives initials (`avatarSource`), so no page fetches it from
+ * Google. The tests about pictures choose it (`choosePictureOf`) and answer
+ * `/avatars/*` in the browser (`answerPictures`), then put initials back.
  */
 export const SUPPORT_STAFF_PICTURE = 'https://lh3.googleusercontent.com/a/e2e-support=s96-c';
 
@@ -179,13 +180,6 @@ export const RETURNING_FINANCE = {
   name: 'E2E Returning Finance',
   email: 'returning.finance@adiutor.test',
   password: 'e2e-returning-finance-password',
-} as const;
-
-/** A Client the Admin deletes. */
-export const DELETE_CLIENT = {
-  name: 'E2E Deleted',
-  email: 'deleted@adiutor.test',
-  password: 'e2e-deleted-password',
 } as const;
 
 /**
@@ -439,3 +433,6 @@ export const FIRST_PAGED_REQUEST_NUMBER = Object.keys(SEEDED_REQUESTS).length + 
 export function pagedRequestTitle(number: number): string {
   return `Paged request ${String(number).padStart(2, '0')}`;
 }
+
+/** How long the invite links the seed and the tests store stay valid (7 days, one a link can have). */
+export const INVITE_LINK_LIFETIME_MS = 7 * 24 * 60 * 60_000;

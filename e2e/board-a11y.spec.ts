@@ -20,10 +20,16 @@ import { randomUUID } from 'node:crypto';
 
 import type { Page } from '@playwright/test';
 
-import type { RequestStatus } from '../src/lib/requests';
-import { storeRequest } from './support/db';
-import { COMPANY_NAME, COMPANY_SLUG, REQUESTS_CLIENT, SUPPORT_STAFF } from './support/fixtures';
-import { type StorageState, storageStateFor, toasts } from './support/helpers';
+import { storeOwnRequest } from './support/db';
+import { COMPANY_NAME, SUPPORT_STAFF } from './support/fixtures';
+import {
+  type StorageState,
+  storageStateFor,
+  toasts,
+  openBoard,
+  boardLane,
+} from './support/helpers';
+import { repeatInOrder } from './support/sequence';
 import { expect, test } from './support/test';
 
 /** Sign-in cookies of the staff member the board is read as. */
@@ -36,17 +42,6 @@ test.beforeAll(async ({ browser }) => {
 test.beforeEach(async ({ context }) => {
   await context.addCookies(staffState.cookies);
 });
-
-/**
- * Stores a request of the test's own in the seeded company, raised by its
- * Client.
- *
- * @param title - Its title.
- * @param status - Its status; open when left out.
- * @returns Its number.
- */
-const storeOwn = (title: string, status: RequestStatus = 'open') =>
-  storeRequest({ companySlug: COMPANY_SLUG, raisedBy: REQUESTS_CLIENT.email, title, status });
 
 /** A board of a test's own requests. */
 interface OwnBoard {
@@ -69,24 +64,13 @@ interface OwnBoard {
 async function storeBoard(): Promise<OwnBoard> {
   const search = `A board to snapshot ${randomUUID().slice(0, 8)}`;
   const board = { search, openTitle: `${search}, open`, waitingTitle: `${search}, waiting` };
-  await storeOwn(board.openTitle);
-  await storeOwn(board.waitingTitle, 'waiting');
+  await storeOwnRequest({ title: board.openTitle });
+  await storeOwnRequest({ title: board.waitingTitle, status: 'waiting' });
   // One after another: each request gets the next number.
-  await Array.from({ length: 6 }, (_, index) => index + 1).reduce(async (previous, index) => {
-    await previous;
-    await storeOwn(`${search}, done ${index}`, 'done');
-  }, Promise.resolve());
+  await repeatInOrder(6, async (index) => {
+    await storeOwnRequest({ title: `${search}, done ${index + 1}`, status: 'done' });
+  });
   return board;
-}
-
-/**
- * Opens the board searched down to a test's own requests.
- *
- * @param page - The browser page, signed in.
- * @param search - What their titles have in common.
- */
-async function openBoard(page: Page, search: string): Promise<void> {
-  await page.goto(`/requests/board?q=${encodeURIComponent(search)}`);
 }
 
 /**
@@ -189,7 +173,7 @@ test('a card is named by its title and its Move button by its number, and the Mo
   page,
 }) => {
   const title = `A card to snapshot ${randomUUID().slice(0, 8)}`;
-  const number = await storeOwn(title);
+  const number = await storeOwnRequest({ title });
   await openBoard(page, title);
 
   // The number and type, the title's link, the company, the priority (the staff's), when it last
@@ -228,7 +212,7 @@ test('a move is said in the board’s status while it runs, and focus stays on t
   page,
 }) => {
   const title = `A card to move and snapshot ${randomUUID().slice(0, 8)}`;
-  const number = await storeOwn(title);
+  const number = await storeOwnRequest({ title });
   // The move's request (the server action, a POST to the board) waits until the board has been
   // read in the middle of the move.
   const { promise: held, resolve: release } = Promise.withResolvers<void>();
@@ -324,4 +308,19 @@ test.describe('on a phone', () => {
             - button "Closed, 6 requests" [expanded=false]
     `);
   });
+});
+
+test('the board’s columns are groups, not landmarks, and a lane says it shows fewer cards', async ({
+  page,
+}) => {
+  // Narrower than the five columns side by side, so the row of buttons shows.
+  await page.setViewportSize({ width: 1100, height: 900 });
+  await page.goto('/requests/board');
+  await expect(page.getByRole('navigation', { name: 'Jump to a lane' })).toBeVisible();
+  const open = boardLane(page, 'Open');
+  await expect(open).toBeVisible();
+  // No landmark for a column or a half: the page's landmarks stay few.
+  await expect(page.getByRole('main').getByRole('region')).toHaveCount(0);
+  // More open requests than the 25 cards a lane shows.
+  await expect(open.getByRole('list')).toHaveAccessibleName(/^First 25 of \d+$/);
 });

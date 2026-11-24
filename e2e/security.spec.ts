@@ -1,14 +1,8 @@
 /**
- * @file End-to-end tests for the security hardening: response headers,
- * closed Better Auth endpoints, email codes that can't get past an
- * authenticator app, sessions that must have been confirmed with MFA in the
- * last 15 minutes before they can change sign-in methods, roles that require
- * MFA keeping their only method, limited step-up attempts, wrong passwords
- * pausing password sign-in until a reset, sign-in redirects that stay on
- * the site, sign-in links that can't go on to another account's link, and
- * authenticator-code guessing at sign-in locking the account (and telling
- * the owner).
- * Runs in order: the accounts carry state from test to test.
+ * @file End-to-end tests for the security hardening: response headers, closed
+ * Better Auth endpoints, MFA at sign-in and for sign-in changes, limits on
+ * guessing, sign-in redirects and links. Runs in order, without retries: the
+ * accounts carry state from test to test.
  */
 import { type Locator, type Page } from '@playwright/test';
 
@@ -45,12 +39,14 @@ import {
   submitPassword,
 } from './support/helpers';
 import { countEmails, linkIn, waitForNewEmail } from './support/outbox';
+import { inOrder, repeatInOrder } from './support/sequence';
 import { expect, test } from './support/test';
 import { codeForSecret } from './support/totp';
 
 // The tests use up state (step-up attempts, a password, a lockout), so a retry of the file could
-// only fail at an earlier test: no retries, and a trace of the first failure instead.
-test.describe.configure({ mode: 'serial', retries: 0 });
+// only fail at an earlier test: no retries, and a trace of the first failure instead. The file
+// still runs top to bottom on one worker, but a failure doesn't hide the tests after it.
+test.describe.configure({ retries: 0 });
 test.use({ trace: 'retain-on-failure' });
 
 /**
@@ -230,12 +226,11 @@ test('an email-link session gets only a few guesses at the authenticator code', 
   await expect(page).toHaveURL(/\/auth\/verify/);
   const right = codeForSecret(STEP_UP_CLIENT.totpSecret);
   const wrong = right === '000000' ? '111111' : '000000';
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    // eslint-disable-next-line no-await-in-loop -- Attempts must happen one after another.
+  await repeatInOrder(5, async () => {
     expect((await callAuth(page, 'POST', '/two-factor/verify-totp', { code: wrong })).status).toBe(
       401,
     );
-  }
+  });
   // Even the right code is refused now, for a while.
   expect(await callAuth(page, 'POST', '/two-factor/verify-totp', { code: right })).toEqual({
     status: 429,
@@ -299,11 +294,7 @@ async function clickUntil(button: Locator, reacted: () => Promise<void>): Promis
 }
 
 test('changing how you sign in needs a confirmation from the last 15 minutes', async ({ page }) => {
-  // Waits for the next authenticator code (up to 30 seconds) on top of the sign-in.
-  test.setTimeout(120_000);
   await signIn(page, RECENT_MFA_CLIENT);
-  // The code just used to sign in (or an earlier one); confirming again needs a later one.
-  const signInCode = codeForSecret(RECENT_MFA_CLIENT.totpSecret);
   await page.goto('/account/security');
   const newBackupCodes = page.getByRole('button', { name: 'New backup codes' });
   await expect(newBackupCodes).toBeVisible();
@@ -322,13 +313,6 @@ test('changing how you sign in needs a confirmation from the last 15 minutes', a
   );
   await expect(page.getByText('This needs a confirmation from the last 15 minutes.')).toBeVisible();
 
-  // An authenticator code can't be used twice, so wait for the next one.
-  await expect
-    .poll(() => codeForSecret(RECENT_MFA_CLIENT.totpSecret), {
-      timeout: 35_000,
-      intervals: [1_000],
-    })
-    .not.toBe(signInCode);
   await confirmWithAuthenticator(page, RECENT_MFA_CLIENT.totpSecret);
   // Checking the code and rendering the Security page again can take a while in a busy suite.
   // Back on the card where they started, with focus on its heading.
@@ -407,7 +391,6 @@ async function sessionCookieOf(page: Page): Promise<string> {
 }
 
 test('a sign-in link says when it switches this browser from another account', async ({ page }) => {
-  await page.goto('/auth');
   await signIn(page, SUPPORT_STAFF);
   const supportSession = await sessionCookieOf(page);
 
@@ -436,7 +419,6 @@ test('a sign-in link says when it switches this browser from another account', a
 test('a sign-in link that stopped working while another account is signed in says so on its own page', async ({
   page,
 }) => {
-  await page.goto('/auth');
   await signIn(page, SUPPORT_STAFF);
   const link = await storeSignInLink(CLIENT_WATCHER.email);
   await page.goto(link);
@@ -489,16 +471,13 @@ test("sign-in, reset and magic-link don't reveal whether an email has an account
     ['/request-password-reset', { redirectTo: '/dashboard' }],
     ['/sign-in/magic-link', { callbackURL: '/dashboard' }],
   ];
-  await probes.reduce(async (previous, [path, data]) => {
-    await previous;
+  await inOrder(probes, async ([path, data]) => {
     const real = await callAuth(page, 'POST', path, { ...data, email: CLIENT_WATCHER.email });
     const fake = await callAuth(page, 'POST', path, { ...data, email: absent });
     expect(real, path).toEqual(fake);
-  }, Promise.resolve());
+  });
 });
 
-// Runs after the 15-minute test, which waits for a new authenticator code: the Manager's code
-// from their email-link test can't be the one this sign-in uses.
 test("a role that requires MFA can't turn off its only method", async ({ page }) => {
   // The Manager's only method is the authenticator app (their earlier test asked for passkey
   // options but added none), and signing in with it confirms the session just now.
@@ -537,13 +516,12 @@ test('wrong passwords pause password sign-in for an address, and a password rese
    * @returns How the last try was answered.
    */
   const pauseAndTry = async (address: string, password: string) => {
-    for (let attempt = 0; attempt < 10; attempt += 1) {
+    await repeatInOrder(10, async () => {
       expect(
-        // eslint-disable-next-line no-await-in-loop -- Attempts must happen one after another.
         (await callAuth(page, 'POST', '/sign-in/email', { email: address, password: 'wrong-1234' }))
           .status,
       ).toBe(401);
-    }
+    });
     return callAuth(page, 'POST', '/sign-in/email', { email: address, password });
   };
   const emailsBefore = await countEmails(email);
@@ -587,19 +565,17 @@ test('authenticator-code guessing at sign-in locks the account, across fresh att
   const wrong = right === '000000' ? '111111' : '000000';
   const emailsBefore = await countEmails(STEP_UP_CLIENT.email);
   let lockedAt: number | null = null;
-  for (let attempt = 1; attempt <= 11; attempt += 1) {
+  await repeatInOrder(11, async (index) => {
     // Each pass starts a fresh password sign-in, so a new two-factor cookie can't reset the count.
-    // eslint-disable-next-line no-await-in-loop -- Attempts must happen one after another.
     await page.request.post('/api/auth/sign-in/email', {
       headers: apiHeaders(),
       data: { email: STEP_UP_CLIENT.email, password: STEP_UP_CLIENT.password },
     });
-    // eslint-disable-next-line no-await-in-loop -- Same.
     const r = await callAuth(page, 'POST', '/two-factor/verify-totp', { code: wrong });
     if (r.status !== 401 && lockedAt === null) {
-      lockedAt = attempt;
+      lockedAt = index + 1;
     }
-  }
+  });
   expect(lockedAt).not.toBeNull();
   // The owner is told, without the device or IP address that typed the codes (someone else's).
   const notice = await waitForNewEmail(STEP_UP_CLIENT.email, emailsBefore);

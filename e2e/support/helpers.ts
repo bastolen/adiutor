@@ -14,7 +14,9 @@ import {
   type Page,
 } from '@playwright/test';
 
-import { E2E_BASE_URL, PLATFORM_ADMIN } from './fixtures';
+import type { CompanyRole } from '../../src/lib/authz/roles';
+import { findCompanyId, storeInvitation } from './db';
+import { COMPANY_SLUG, E2E_BASE_URL, PLATFORM_ADMIN } from './fixtures';
 import { codeForSecret, codeForSetupKey } from './totp';
 
 /** How long Better Auth's sign-in rate limit window lasts (3 attempts per 10 seconds). */
@@ -92,8 +94,12 @@ const TINY_PNG = Buffer.from(
 
 /**
  * Answers every request for a person's picture (`/avatars/*`) in the
- * browser with a tiny PNG, so no test makes Adiutor fetch it from GitHub or
- * Google.
+ * browser with a tiny PNG, so the test server never fetches it from GitHub
+ * or Google. For the tests about pictures: they choose the Google account's
+ * picture, which the seed doesn't (see `SUPPORT_STAFF_PICTURE`). Answering
+ * means intercepting every request of the page, which turns the browser's
+ * cache off and hides the `Sec-Fetch-*` headers from Playwright, so only
+ * these tests do it.
  *
  * @param page - The browser page.
  */
@@ -102,6 +108,9 @@ export async function answerPictures(page: Page): Promise<void> {
     route.fulfill({ status: 200, contentType: 'image/png', body: TINY_PNG }),
   );
 }
+
+/** Where a sign-in lands someone: the dashboard, or a company's page (not the account's own). */
+export const APP_HOME_URL = /\/(dashboard|companies\/)/;
 
 /** Pages a signed-in user can land on. */
 const SIGNED_IN_URL = /\/(dashboard|companies\/|account)/;
@@ -222,8 +231,7 @@ export async function signIn(
 
 /**
  * Confirms it's the user on the "Confirm it's you" page: fills the current
- * authenticator code and presses Confirm. A caller that already used the
- * current code for something else waits for the next one first.
+ * authenticator code and presses Confirm.
  *
  * @param page - The browser page, on the confirmation page (`/auth/verify`).
  * @param totpSecret - The account's raw authenticator secret.
@@ -258,6 +266,51 @@ export async function createAccountFromInvitation(
   await page.getByRole('button', { name: 'Create account and join' }).click();
   await expect(page).toHaveURL(landsOn);
   await loadedAfresh;
+}
+
+/**
+ * Makes an account of the test's own: stores an invitation to a company (the
+ * seeded one unless a company is given), opens it and creates the account
+ * from it ({@link createAccountFromInvitation}), so the browser is signed in
+ * as the new person.
+ *
+ * @param page - The browser page.
+ * @param account - The account.
+ * @param account.name - The new account's name.
+ * @param account.password - Its password.
+ * @param account.email - Its address; a fresh one when left out.
+ * @param account.role - The company role the invitation gives; Client when left out.
+ * @param account.companyId - The company; the seeded one when left out.
+ * @param account.landsOn - Where they should end up, see {@link createAccountFromInvitation}.
+ * @returns The new account's address.
+ */
+export async function createFreshAccount(
+  page: Page,
+  {
+    name,
+    password,
+    email = freshAddress('fresh'),
+    role = 'client',
+    companyId,
+    landsOn,
+  }: {
+    name: string;
+    password: string;
+    email?: string;
+    role?: CompanyRole;
+    companyId?: string;
+    landsOn?: string | RegExp;
+  },
+): Promise<string> {
+  await page.goto(
+    await storeInvitation({
+      companyId: companyId ?? (await findCompanyId(COMPANY_SLUG)),
+      email,
+      role,
+    }),
+  );
+  await createAccountFromInvitation(page, name, password, landsOn);
+  return email;
 }
 
 /**
@@ -509,6 +562,19 @@ export async function createInviteLink(page: Page, role: string): Promise<string
 }
 
 /**
+ * The form that sends invitations by email, on the Members page of a company
+ * or in the staff settings (not the invite link form next to it, which has a
+ * role select of its own). Found by its address field, so it's still there
+ * when its button is replaced by a link to confirm first.
+ *
+ * @param page - The browser page, on the Members page or the staff settings.
+ * @returns The form.
+ */
+export function invitationForm(page: Page): Locator {
+  return page.locator('form').filter({ has: page.getByLabel('Email addresses') });
+}
+
+/**
  * Sends an invitation with the form on the Members page of a company or in
  * the staff settings, without waiting for the result.
  *
@@ -517,12 +583,110 @@ export async function createInviteLink(page: Page, role: string): Promise<string
  * @param role - The role's name in the menu, e.g. "Client".
  */
 export async function sendInvitation(page: Page, email: string, role: string): Promise<void> {
-  const inviteForm = page
-    .locator('form')
-    .filter({ has: page.getByRole('button', { name: 'Send invitations' }) });
+  const inviteForm = invitationForm(page);
   await inviteForm.getByLabel('Email addresses').fill(email);
   await inviteForm.getByRole('combobox', { name: 'Role', exact: true }).click();
   // Each option's name also holds its description ("Client Raises requests …").
   await page.getByRole('option', { name: new RegExp(`^${role}\\b`) }).click();
   await inviteForm.getByRole('button', { name: 'Send invitations' }).click();
+}
+
+/**
+ * Waits until the page has hydrated, so a key pressed or a client-side link
+ * clicked next isn't ignored: opening the account menu only works once React
+ * took the page over. Closes the menu again and waits for its button to get
+ * the focus back (it does a moment after Escape).
+ *
+ * @param page - The browser page, on an app page.
+ */
+export async function whenHydrated(page: Page): Promise<void> {
+  const accountMenu = page.getByRole('button', { name: /^Account menu/ });
+  await accountMenu.click();
+  await expect(page.getByRole('menu')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(accountMenu).toBeFocused();
+}
+
+/**
+ * Opens a menu or a select with Enter. Retries, because right after a
+ * (re)load the page may still be hydrating and ignore the first key press, but
+ * presses Enter again only while it's still closed: on a list that's opening,
+ * a second Enter would act on the item it lands on. For a select
+ * (`listbox`), it also waits until an option has focus, so the next key
+ * presses go to the list.
+ *
+ * @param trigger - The button or combobox that opens it (with `aria-expanded`).
+ * @param popup - What opens: a `listbox` (a select, the default) or a `menu`.
+ */
+export async function openWithEnter(
+  trigger: Locator,
+  popup: 'menu' | 'listbox' = 'listbox',
+): Promise<void> {
+  const page = trigger.page();
+  await expect(async () => {
+    if ((await trigger.getAttribute('aria-expanded')) !== 'true') {
+      await trigger.press('Enter');
+    }
+    await expect(page.getByRole(popup)).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 10_000 });
+  if (popup === 'listbox') {
+    await expect(page.locator('[role="option"]:focus')).toHaveCount(1);
+  }
+}
+
+/**
+ * Presses a key until an element has the focus, up to a number of times: the
+ * first press may be ignored while the page is still hydrating, but one that
+ * overshoots (a list that doesn't wrap) fails at once instead of spinning
+ * until the test's time runs out.
+ *
+ * @param page - The browser page.
+ * @param key - The key, e.g. `ArrowDown` or `Tab`.
+ * @param target - The element that should get the focus.
+ * @param options - Options.
+ * @param options.presses - The most times to press the key.
+ */
+export async function pressUntilFocused(
+  page: Page,
+  key: string,
+  target: Locator,
+  { presses = 5 }: { presses?: number } = {},
+): Promise<void> {
+  let lastError: unknown;
+  for (let press = 1; press <= presses; press += 1) {
+    // eslint-disable-next-line no-await-in-loop -- Each press moves on from where the last one went.
+    await page.keyboard.press(key);
+    try {
+      // eslint-disable-next-line no-await-in-loop -- Checked before the next press.
+      await expect(target).toBeFocused({ timeout: 250 });
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw new Error(`${key} pressed ${presses} times never reached ${String(target)}.`, {
+    cause: lastError,
+  });
+}
+
+/**
+ * Opens the requests board narrowed down to a test's own requests by their
+ * title.
+ *
+ * @param page - The browser page, signed in.
+ * @param search - What their titles have in common.
+ */
+export async function openBoard(page: Page, search: string): Promise<void> {
+  await page.goto(`/requests/board?q=${encodeURIComponent(search)}`);
+}
+
+/**
+ * A lane of the board on the page.
+ *
+ * @param page - The browser page, on the board.
+ * @param name - The lane's name, in the reader's words.
+ * @returns The lane's group.
+ */
+export function boardLane(page: Page, name: string): Locator {
+  return page.getByRole('group', { name: new RegExp(`^${name}, \\d+ requests?$`) });
 }

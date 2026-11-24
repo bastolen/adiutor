@@ -103,10 +103,12 @@ configurations in VS Code, which turn the time limit off (see
     share one. The test server reads that header with the
     default settings: `playwright.config.ts` blanks `CLIENT_IP_HEADERS` and `TRUSTED_PROXIES`, so
     your `.env` can't change whose address a test has. A test that uses up state (locks, deletes or
-    changes an account) has its own seeded account or a fresh address, and puts back what it
-    changed in a `finally` (like `setMembershipRole` in `e2e/support/db.ts`), with what it counted
-    towards a rate limit (`forgetLimitsOf`), so a failed, retried or repeated run leaves nothing
-    behind. A new seeded person's name mustn't push someone other specs look for off the first
+    changes an account) has its own seeded account or a fresh account it makes, starts from a
+    known state where it changes a seeded one (`resetMfaOf`, `restoreAuthenticatorOf`,
+    `removePasskeysOf`, `reactivateAccount` ... in `e2e/support/db.ts`), and puts back what it
+    changed in a `finally` (like `setMembershipRole`), with what it counted towards a rate limit
+    (`forgetLimitsOf`), so a failed, retried or repeated run leaves nothing behind (run a test
+    twice with `--repeat-each=2 --retries=0` to check). A new seeded person's name mustn't push someone other specs look for off the first
     page of a list sorted by name (the users list, a company's members). The seed includes a
     company, "Adiutor Tests Paging", with more members, invite links and requests than fit on a
     page, used by the pagination tests (`e2e/tables.spec.ts`) and the accessibility and keyboard
@@ -125,9 +127,24 @@ configurations in VS Code, which turn the time limit off (see
     dedicated seeded one such as `REQUESTS_CLIENT`, or a fresh one from an invitation) when it
     matters what else that account may do. A spec that passes alone can still fail in the full
     run, so run the specs a change touches together.
-  - **Signing in once:** specs that only read as one account (scans, keyboard checks, tables)
-    sign it in once (`storageStateFor(browser, account)`, or `adminStorageState` for the staff
-    Admin) and open each test with those cookies, which keeps them clear of the sign-in limits.
+  - **Signing in once:** specs, and the tests of a spec, that act as one account throughout (scans,
+    keyboard checks, tables, most of `e2e/requests.spec.ts`) sign it in once
+    (`signedInOnce(account)` in `e2e/support/stored-sign-in.ts`, or `storageStateFor(browser,
+account)` where a spec needs the state itself) and open each test with those cookies, which
+    keeps them clear of the sign-in limits. A test that signs out, ends sessions or switches
+    person signs in with `signIn` instead: signing out ends the session the cookies belong to.
+  - **Shared steps:** the steps more than one spec needs live in `e2e/support/`, not in the specs:
+    `helpers.ts` (signing in, `createFreshAccount` for an account of a test's own, the invitation
+    form, the board's `openBoard` and `boardLane`, `openWithEnter`, `pressUntilFocused` and
+    `whenHydrated` for key presses and hydration), `db.ts` (`storeOwnRequest` for a request in the
+    seeded company, `userIdOf` and `requestIdOf` on an open connection, and the reset helpers)
+    and `sequence.ts` (`inOrder`, `repeatInOrder`: steps that run one after another, instead of a
+    `no-await-in-loop` disable or a chain of promises).
+  - **Pictures:** the seeded Support member has a Google account with a picture but shows
+    initials (`avatarSource`), so no page asks the test server to fetch it from Google. The two
+    tests about pictures choose it (`choosePictureOf`), answer `/avatars/*` in the browser
+    (`answerPictures`, which intercepts the page's requests, so only they do it) and put initials
+    back in a `finally`.
   - **A laptop that sleeps** stops the browser but not the clock: tests time out all over, and a
     run takes hours instead of minutes. Keep the lid open while they run.
   - **Tokens:** the invitation and invite-link pages are scanned with real tokens stored straight

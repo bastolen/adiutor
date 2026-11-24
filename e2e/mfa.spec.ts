@@ -7,7 +7,12 @@
  * the recommendation for everyone else.
  */
 
-import { clearMfaRecommendationDismissal, resetMfaOf, storeSignInLink } from './support/db';
+import {
+  clearMfaRecommendationDismissal,
+  removePasskeysOf,
+  resetMfaOf,
+  storeSignInLink,
+} from './support/db';
 import {
   CLIENT_WATCHER,
   CLOSED_COMPANY_ADMIN,
@@ -34,6 +39,8 @@ import { expect, test } from './support/test';
 test('a Manager must set up MFA first, then signs in with an authenticator or a backup code', async ({
   page,
 }) => {
+  // The test sets up their authenticator: a retry or a repeat starts again without one.
+  await resetMfaOf(PLATFORM_MANAGER.email);
   await signIn(page, PLATFORM_MANAGER);
   await expect(page).toHaveURL('/account/security?setup=required');
   await expect(page.getByText(/^Your role requires MFA\./)).toBeVisible();
@@ -146,6 +153,8 @@ test('a company user adds a passkey and is offered it when signing in', async ({
   page,
   context,
 }) => {
+  // The test adds a passkey: a retry or a repeat starts again without one.
+  await removePasskeysOf(PASSKEY_CLIENT.email);
   // A virtual authenticator stands in for the device's fingerprint or PIN.
   const cdp = await context.newCDPSession(page);
   await cdp.send('WebAuthn.enable');

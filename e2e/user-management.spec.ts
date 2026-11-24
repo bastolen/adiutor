@@ -9,9 +9,13 @@
  */
 import { type Page } from '@playwright/test';
 
-import { backdateMfaConfirmation, deactivateAccount, findUserId } from './support/db';
 import {
-  DELETE_CLIENT,
+  backdateMfaConfirmation,
+  deactivateAccount,
+  findUserId,
+  restoreAuthenticatorOf,
+} from './support/db';
+import {
   GITHUB_ONLY_MANAGER,
   PLATFORM_ADMIN,
   RESET_CLIENT,
@@ -172,6 +176,10 @@ test('an Admin adds a user to a company and gives them staff access from their p
 test('an Admin resets two-step verification, deletes a user, and on their own page manages only their companies', async ({
   page,
 }) => {
+  // The test resets their authenticator app: a retry or a repeat starts again with one. The
+  // account it deletes is registered by the test itself.
+  await restoreAuthenticatorOf(RESET_CLIENT);
+  const deleted = freshAddress('delete');
   await signIn(page, PLATFORM_ADMIN);
 
   // Their own page has no staff access or account actions (those are in the staff settings and on the
@@ -211,22 +219,25 @@ test('an Admin resets two-step verification, deletes a user, and on their own pa
     'Your Adiutor two-step verification was reset',
   );
 
-  await openUserTab(page, DELETE_CLIENT.name, 'Manage');
+  await registerUser(page, deleted);
+  await page.getByRole('link', { name: 'Open user' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: deleted })).toBeVisible();
+  await chooseUserTab(page, 'Manage');
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   const remove = page.getByRole('dialog', { name: /^Delete .*account\?$/ });
   await remove.getByLabel('Email address').fill('someone@adiutor.test');
   await remove.getByRole('button', { name: 'Delete account' }).click();
   await expect(remove.getByRole('alert')).toHaveText('Type the email address exactly to confirm.');
-  await remove.getByLabel('Email address').fill(DELETE_CLIENT.email);
+  await remove.getByLabel('Email address').fill(deleted);
   await remove.getByRole('button', { name: 'Delete account' }).click();
   await expect(toasts(page)).toContainText('User deleted.');
   // Said once: what asked for it leaves the address.
   await expect(page).toHaveURL('/admin/users');
-  await expect(page.getByRole('row').filter({ hasText: DELETE_CLIENT.email })).toHaveCount(0);
+  await expect(page.getByRole('row').filter({ hasText: deleted })).toHaveCount(0);
   // Back doesn't show the deleted user's page as it was kept: there's nobody there anymore.
   await page.goBack();
   await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
-  await expect(page.getByRole('heading', { level: 1, name: DELETE_CLIENT.name })).toHaveCount(0);
+  await expect(page.getByRole('heading', { level: 1, name: deleted })).toHaveCount(0);
 
   // The reset user signs in with just their password now.
   await page.goto('/admin/users');

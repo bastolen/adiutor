@@ -1,14 +1,19 @@
 /**
- * @file End-to-end tests for Settings: renaming the staff, choosing the
- * prefix of request numbers, managing request types (and raising a request
- * with one, until it's archived), inviting staff by email and by invite link, changing staff roles with the
- * last-Admin guard, a staff Admin stepping down themselves, and confirming
- * it's you before giving a staff role or a company's Admin role, coming back
- * to the card where you clicked.
+ * @file End-to-end tests for Settings: the staff's name, the request number
+ * prefix, request types, inviting staff, staff roles and the last-Admin
+ * guard, and confirming it's you before giving a staff role or a company's
+ * Admin role. A test that changes a setting puts it back.
  */
 import { randomUUID } from 'node:crypto';
 
-import { backdateMfaConfirmation, setDefaultLocale, setDefaultTimeZone } from './support/db';
+import { LOCALE_COOKIE } from '../src/lib/i18n/locales';
+import {
+  backdateMfaConfirmation,
+  setDefaultLocale,
+  setDefaultTimeZone,
+  setRequestPrefix,
+  setStaffName,
+} from './support/db';
 import {
   COMPANY_SLUG,
   E2E_BASE_URL,
@@ -28,75 +33,83 @@ import {
   signOut,
   toasts,
   useOwnClientIp,
+  invitationForm,
 } from './support/helpers';
 import { linkIn, waitForEmail } from './support/outbox';
 import { expect, test } from './support/test';
-import { codeForSecret } from './support/totp';
 
 test('an Admin changes the name shown to users', async ({ page }) => {
-  await signIn(page, PLATFORM_ADMIN);
-  await page.goto('/admin/settings');
-  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+  try {
+    await signIn(page, PLATFORM_ADMIN);
+    await page.goto('/admin/settings');
+    await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
 
-  const name = page.getByRole('textbox', { name: 'Name', exact: true });
-  await expect(name).toHaveValue(STAFF_NAME);
-  await name.fill('Adiutor Tests Support');
-  await page.getByRole('button', { name: 'Save name' }).click();
-  await expect(toasts(page)).toContainText('Name saved.');
-  await page.reload();
-  await expect(name).toHaveValue('Adiutor Tests Support');
+    const name = page.getByRole('textbox', { name: 'Name', exact: true });
+    await expect(name).toHaveValue(STAFF_NAME);
+    await name.fill('Adiutor Tests Support');
+    await page.getByRole('button', { name: 'Save name' }).click();
+    await expect(toasts(page)).toContainText('Name saved.');
+    await page.reload();
+    await expect(name).toHaveValue('Adiutor Tests Support');
 
-  // Put it back for the other tests.
-  await name.fill(STAFF_NAME);
-  await page.getByRole('button', { name: 'Save name' }).click();
-  await expect(toasts(page)).toContainText('Name saved.');
+    // Put it back for the other tests.
+    await name.fill(STAFF_NAME);
+    await page.getByRole('button', { name: 'Save name' }).click();
+    await expect(toasts(page)).toContainText('Name saved.');
 
-  // Next.js keeps the page alive on navigation, but it shows no message of its own when you come
-  // back (the toast goes away on its own).
-  const nav = page.getByRole('navigation', { name: 'Main' });
-  await nav.getByRole('link', { name: 'Dashboard' }).click();
-  await expect(page).toHaveURL('/dashboard');
-  await nav.getByRole('link', { name: 'Settings' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
-  await expect(name).toHaveValue(STAFF_NAME);
-  await expect(page.getByRole('main').getByText('Name saved.')).toHaveCount(0);
-  await page.goBack();
-  await expect(page).toHaveURL('/dashboard');
-  await page.goForward();
-  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
-  await expect(page.getByRole('main').getByText('Name saved.')).toHaveCount(0);
+    // Next.js keeps the page alive on navigation, but it shows no message of its own when you come
+    // back (the toast goes away on its own).
+    const nav = page.getByRole('navigation', { name: 'Main' });
+    await nav.getByRole('link', { name: 'Dashboard' }).click();
+    await expect(page).toHaveURL('/dashboard');
+    await nav.getByRole('link', { name: 'Settings' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+    await expect(name).toHaveValue(STAFF_NAME);
+    await expect(page.getByRole('main').getByText('Name saved.')).toHaveCount(0);
+    await page.goBack();
+    await expect(page).toHaveURL('/dashboard');
+    await page.goForward();
+    await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+    await expect(page.getByRole('main').getByText('Name saved.')).toHaveCount(0);
+  } finally {
+    await setStaffName(STAFF_NAME);
+  }
 });
 
 test('an Admin chooses the prefix request numbers are shown with', async ({ page }) => {
-  await signIn(page, PLATFORM_ADMIN);
-  await page.goto('/admin/settings/requests');
+  try {
+    await signIn(page, PLATFORM_ADMIN);
+    await page.goto('/admin/settings/requests');
 
-  const prefix = page.getByRole('textbox', { name: 'Prefix' });
-  await expect(prefix).toHaveValue('AD');
-  await expect(prefix).toHaveAccessibleDescription('Requests are shown as AD-142.');
+    const prefix = page.getByRole('textbox', { name: 'Prefix' });
+    await expect(prefix).toHaveValue('AD');
+    await expect(prefix).toHaveAccessibleDescription('Requests are shown as AD-142.');
 
-  // Anything but letters and digits is refused, and what was typed stays.
-  await prefix.fill('a-d');
-  await page.getByRole('button', { name: 'Save prefix' }).click();
-  await expect(page.getByRole('main').getByRole('alert')).toContainText(
-    'Use one to five letters or digits for the prefix',
-  );
-  await expect(prefix).toHaveValue('a-d');
+    // Anything but letters and digits is refused, and what was typed stays.
+    await prefix.fill('a-d');
+    await page.getByRole('button', { name: 'Save prefix' }).click();
+    await expect(page.getByRole('main').getByRole('alert')).toContainText(
+      'Use one to five letters or digits for the prefix',
+    );
+    await expect(prefix).toHaveValue('a-d');
 
-  // Typed in lower case, saved in capitals.
-  await prefix.fill('help');
-  await page.getByRole('button', { name: 'Save prefix' }).click();
-  await expect(toasts(page)).toContainText('Prefix saved.');
-  await expect(prefix).toHaveValue('HELP');
-  await expect(prefix).toHaveAccessibleDescription('Requests are shown as HELP-142.');
-  await page.reload();
-  await expect(prefix).toHaveValue('HELP');
+    // Typed in lower case, saved in capitals.
+    await prefix.fill('help');
+    await page.getByRole('button', { name: 'Save prefix' }).click();
+    await expect(toasts(page)).toContainText('Prefix saved.');
+    await expect(prefix).toHaveValue('HELP');
+    await expect(prefix).toHaveAccessibleDescription('Requests are shown as HELP-142.');
+    await page.reload();
+    await expect(prefix).toHaveValue('HELP');
 
-  // Put it back for the other tests.
-  await prefix.fill('AD');
-  await page.getByRole('button', { name: 'Save prefix' }).click();
-  await expect(toasts(page)).toContainText('Prefix saved.');
-  await expect(prefix).toHaveValue('AD');
+    // Put it back for the other tests.
+    await prefix.fill('AD');
+    await page.getByRole('button', { name: 'Save prefix' }).click();
+    await expect(toasts(page)).toContainText('Prefix saved.');
+    await expect(prefix).toHaveValue('AD');
+  } finally {
+    await setRequestPrefix('AD');
+  }
 });
 
 test('an Admin adds a request type, which a company raises requests with until it’s archived', async ({
@@ -249,7 +262,7 @@ test('an Admin turns languages off, which nobody is offered or gets until they�
   await page.goto('/admin/settings');
   // Someone who chose Spanish on the sign-in page.
   const visitor = await browser.newContext({ locale: 'en-US' });
-  await visitor.addCookies([{ name: 'adiutor.locale', value: 'es-ES', url: E2E_BASE_URL }]);
+  await visitor.addCookies([{ name: LOCALE_COOKIE, value: 'es-ES', url: E2E_BASE_URL }]);
   /**
    * Saves the Languages card, and waits until the save is through.
    */
@@ -355,7 +368,7 @@ test('a second staff Admin steps down after a confirmation, and lands on the das
 
   // They join and set up MFA, as staff Admins must.
   const admin = await (await browser.newContext()).newPage();
-  // Its own client IP, so Better Auth's per-IP limits don't carry over from the tests before it.
+  // Its own client IP, so its sign-in doesn't count towards the limits of the page's.
   await useOwnClientIp(admin);
   await admin.goto(linkIn(await waitForEmail(email)));
   await createAccountFromInvitation(
@@ -407,21 +420,14 @@ test('an Admin creates a staff invite link that someone uses', async ({ page, br
 test('an Admin who confirmed long ago confirms it’s them before giving staff or Admin roles', async ({
   page,
 }) => {
-  // Waits for the next authenticator code (up to 30 seconds) on top of the sign-in.
-  test.setTimeout(120_000);
   await signIn(page, PLATFORM_ADMIN);
-  // The code just used to sign in (or an earlier one); confirming again needs a later one.
-  const signInCode = codeForSecret(PLATFORM_ADMIN.totpSecret);
   const confirm = /^Confirm it.s you$/;
 
   // Confirmed just now: invite someone to the staff, to resend once the confirmation is old.
   const email = freshAddress('resend.support');
   await page.goto('/admin/settings/staff');
-  const staffInvite = page.locator('form').filter({ has: page.getByLabel('Email addresses') });
-  await staffInvite.getByLabel('Email addresses').fill(email);
-  await staffInvite.getByRole('combobox', { name: 'Role', exact: true }).click();
-  await page.getByRole('option', { name: 'Support' }).click();
-  await staffInvite.getByRole('button', { name: 'Send invitations' }).click();
+  const staffInvite = invitationForm(page);
+  await sendInvitation(page, email, 'Support');
   await expect(toasts(page)).toContainText(`Invitation sent to ${email}.`);
 
   // Signed in 20 minutes ago, as far as the confirmation window goes.
@@ -440,7 +446,7 @@ test('an Admin who confirmed long ago confirms it’s them before giving staff o
   // At the address the app links to (its URL name), which the step-up page returns to.
   const membersPath = `/companies/${COMPANY_SLUG}/members`;
   await page.goto(membersPath);
-  const companyInvite = page.locator('form').filter({ has: page.getByLabel('Email addresses') });
+  const companyInvite = invitationForm(page);
   await expect(companyInvite.getByRole('button', { name: 'Send invitations' })).toBeVisible();
   await companyInvite.getByRole('combobox', { name: 'Role', exact: true }).click();
   await page.getByRole('option', { name: /^Admin/ }).click();
@@ -460,10 +466,6 @@ test('an Admin who confirmed long ago confirms it’s them before giving staff o
   await expect(page).toHaveURL(
     '/auth/verify?callbackURL=%2Fadmin%2Fsettings%2Fstaff%23invitations&for=change',
   );
-  // An authenticator code can't be used twice, so wait for the next one.
-  await expect
-    .poll(() => codeForSecret(PLATFORM_ADMIN.totpSecret), { timeout: 35_000, intervals: [1_000] })
-    .not.toBe(signInCode);
   await confirmWithAuthenticator(page, PLATFORM_ADMIN.totpSecret);
 
   // Back on the card where they clicked: scrolled to, with focus on its heading.

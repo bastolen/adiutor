@@ -8,7 +8,7 @@
  */
 import { type Page } from '@playwright/test';
 
-import { findUserId, storeRequest } from './support/db';
+import { findUserId, storeOwnRequest } from './support/db';
 import {
   CLIENT_WATCHER,
   COMPANY_NAME,
@@ -21,25 +21,21 @@ import {
   PAGING_COMPANY_NAME,
   PAGING_COMPANY_SLUG,
   PLATFORM_ADMIN,
-  REQUESTS_CLIENT,
 } from './support/fixtures';
-import { adminStorageState, type StorageState } from './support/helpers';
+import { inOrder } from './support/sequence';
+import { signedInOnce } from './support/stored-sign-in';
 import { expect, test } from './support/test';
 
-/** Sign-in cookies of the staff Admin. */
-let adminState: StorageState;
+/** Gives the staff Admin's sign-in cookies, signed in once for the spec. */
+const adminCookies = signedInOnce(PLATFORM_ADMIN);
 
 /** The paging company's members page, at the address the app links to (its URL name). */
 const membersPath = `/companies/${PAGING_COMPANY_SLUG}/members`;
 
-test.beforeAll(async ({ browser }) => {
-  adminState = await adminStorageState(browser);
-});
-
 test.use({ reducedMotion: 'reduce' });
 
 test.beforeEach(async ({ context }) => {
-  await context.addCookies(adminState.cookies);
+  await context.addCookies(adminCookies());
 });
 
 /**
@@ -262,12 +258,7 @@ test('no table scrolls sideways from tablet to desktop widths', async ({ page })
   const adminId = await findUserId(PLATFORM_ADMIN.email);
   // The longest status the staff see, "Waiting for the company", on the first page of every list
   // of requests below: stored now, so its activity is the latest, whatever other specs stored.
-  await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title: 'Waiting while the tables are measured',
-    status: 'waiting',
-  });
+  await storeOwnRequest({ title: 'Waiting while the tables are measured', status: 'waiting' });
   // The staff member with no name and a long address is the widest row.
   const paths = [
     '/admin/users',
@@ -290,11 +281,9 @@ test('no table scrolls sideways from tablet to desktop widths', async ({ page })
 
   // From 1280px the content stops getting wider, so wider screens must fit the same columns, and
   // a wide page (the requests, the users, a company's pages) its more columns from 1536px.
-  await [640, 768, 1024, 1280, 1536, 1920].reduce(async (previousWidth, width) => {
-    await previousWidth;
+  await inOrder([640, 768, 1024, 1280, 1536, 1920], async (width) => {
     await page.setViewportSize({ width, height: 900 });
-    await paths.reduce(async (previousPath, path) => {
-      await previousPath;
+    await inOrder(paths, async (path) => {
       await page.goto(path);
       await expect(page.getByRole('main').getByRole('table').first()).toBeVisible();
       const overflowing = await page.evaluate(() =>
@@ -307,6 +296,6 @@ test('no table scrolls sideways from tablet to desktop widths', async ({ page })
           .map((table) => table.querySelector('caption')?.textContent),
       );
       expect(overflowing, `${path} at ${width}px`).toEqual([]);
-    }, Promise.resolve());
-  }, Promise.resolve());
+    });
+  });
 });

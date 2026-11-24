@@ -1,16 +1,11 @@
 /**
  * @file Database helpers for end-to-end tests that need to look at or change
- * the test database in the middle of a test: finding a seeded company or user, ageing
- * a session's MFA confirmation, deactivating an account, deleting the staff settings, storing a
- * sign-in link without sending an email (and using one up), checking whether
- * a browser's session still exists, reading a stored sign-in error, adding
- * someone to a company directly, storing an invitation or an invite link
- * without sending anything, making a staff member's sign-in as a user end in a
- * few seconds, the background jobs' state (resuming a job, discarding or
- * storing failed queued jobs, making the last tick late), and storing a
- * request for a test to change.
- * Each opens its own short connection to the test database (`withTestDatabase`).
- * Resetting and seeding the database is `seed.ts`.
+ * the test database in the middle of a test: finding seeded rows, storing what
+ * the app would (requests, invitations, links, audit events) without sending
+ * anything, ageing or ending what a test needs to see end, and putting a
+ * seeded account or setting back to its seeded state. Each opens its own
+ * short connection to the test database (`withTestDatabase`). Resetting and
+ * seeding the database is `seed.ts`.
  */
 import { and, eq, inArray, isNull, like, or, sql } from 'drizzle-orm';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
@@ -32,11 +27,16 @@ import {
   hashToken,
 } from '../../src/lib/sign-in/tokens';
 import { readSettings, writeSettings } from '../../src/server/settings';
+import { storeAuthenticator } from '../../tests/auth/authenticator';
 import getTestDatabaseUrl from '../../tests/database/database-url';
 import storeRequests from '../../tests/database/store-requests';
-
-/** How long the invite links stored here stay valid (any of the lifetimes a link can have). */
-const INVITE_LINK_LIFETIME_MS = 7 * 24 * 60 * 60_000;
+import {
+  COMPANY_SLUG,
+  E2E_AUTH_SECRET,
+  INVITE_LINK_LIFETIME_MS,
+  REQUESTS_CLIENT,
+} from './fixtures';
+import { inOrder } from './sequence';
 
 /** A Drizzle client on the test database. */
 export type TestDatabase = NodePgDatabase<typeof schema>;
@@ -99,6 +99,49 @@ export async function findCompanyId(slug: string): Promise<string> {
 }
 
 /**
+ * Looks up a user's ID by their email address on a connection that's already
+ * open (a database or a transaction).
+ *
+ * @param db - The connection.
+ * @param email - The user's email address.
+ * @returns The user's ID.
+ * @throws {Error} When there is no such user.
+ */
+export async function userIdOf(db: Pick<TestDatabase, 'select'>, email: string): Promise<string> {
+  const [found] = await db
+    .select({ id: schema.user.id })
+    .from(schema.user)
+    .where(eq(schema.user.email, email));
+  if (!found) {
+    throw new Error(`No user ${email}`);
+  }
+  return found.id;
+}
+
+/**
+ * Looks up a request's ID by its number on a connection that's already open
+ * (a database or a transaction).
+ *
+ * @param db - The connection.
+ * @param number - The request's number.
+ * @returns The request's ID.
+ * @throws {Error} When there is no such request.
+ */
+export async function requestIdOf(
+  db: Pick<TestDatabase, 'select'>,
+  number: number,
+): Promise<string> {
+  const [found] = await db
+    .select({ id: schema.request.id })
+    .from(schema.request)
+    .where(eq(schema.request.number, number));
+  if (!found) {
+    throw new Error(`No request ${number}`);
+  }
+  return found.id;
+}
+
+/**
  * Looks up a seeded user's ID by their email address, for tests that open a
  * user's page directly.
  *
@@ -106,16 +149,7 @@ export async function findCompanyId(slug: string): Promise<string> {
  * @returns The user's ID.
  */
 export async function findUserId(email: string): Promise<string> {
-  return withTestDatabase(async (db) => {
-    const [found] = await db
-      .select({ id: schema.user.id })
-      .from(schema.user)
-      .where(eq(schema.user.email, email));
-    if (!found) {
-      throw new Error(`No user ${email}`);
-    }
-    return found.id;
-  });
+  return withTestDatabase((db) => userIdOf(db, email));
 }
 
 /**
@@ -146,11 +180,9 @@ export async function storeAuditEvent({
   details: Record<string, unknown>;
   at?: Date;
 }): Promise<void> {
-  const [actorUserId, targetUserId] = await Promise.all([
-    findUserId(actorEmail),
-    findUserId(targetEmail),
-  ]);
   await withTestDatabase(async (db) => {
+    const actorUserId = await userIdOf(db, actorEmail);
+    const targetUserId = await userIdOf(db, targetEmail);
     await db
       .insert(schema.auditEvent)
       .values({ action, actorUserId, targetUserId, companyId, details, at });
@@ -471,6 +503,108 @@ export async function resetMfaOf(email: string): Promise<void> {
 }
 
 /**
+ * Gives a seeded account its authenticator app back, as the seed set it up
+ * (two-step verification on, the secret, no backup codes left), whatever a
+ * test did to it, so a test that resets or replaces it can run again.
+ *
+ * @param person - The account.
+ * @param person.email - Its address.
+ * @param person.totpSecret - Its raw authenticator secret.
+ */
+export async function restoreAuthenticatorOf(person: {
+  email: string;
+  totpSecret: string;
+}): Promise<void> {
+  await resetMfaOf(person.email);
+  const userId = await findUserId(person.email);
+  await withTestDatabase((db) =>
+    storeAuthenticator(db, userId, person.totpSecret, E2E_AUTH_SECRET),
+  );
+}
+
+/**
+ * Removes the passkeys of an account, so a test that adds one starts from an
+ * account without any, also when it's retried or repeated.
+ *
+ * @param email - The account's address.
+ */
+export async function removePasskeysOf(email: string): Promise<void> {
+  const userId = await findUserId(email);
+  await withTestDatabase(async (db) => {
+    await db.delete(schema.passkey).where(eq(schema.passkey.userId, userId));
+  });
+}
+
+/**
+ * Marks an account's email address as not verified, as the seed leaves
+ * `UNVERIFIED_USER`, so a test that verifies it can run again.
+ *
+ * @param email - The account's address.
+ */
+export async function markEmailUnverified(email: string): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.update(schema.user).set({ emailVerified: false }).where(eq(schema.user.email, email));
+  });
+}
+
+/**
+ * Sets which picture an account shows (`user.avatar_source`): `null` for none
+ * chosen yet, which shows the picture of the account connected first. The
+ * seed gives the Support member initials, so no page fetches their Google
+ * picture; the tests about pictures choose `null` and put initials back.
+ *
+ * @param email - The account's address.
+ * @param source - What they chose.
+ */
+export async function choosePictureOf(
+  email: string,
+  source: 'initials' | 'github' | 'google' | null,
+): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.update(schema.user).set({ avatarSource: source }).where(eq(schema.user.email, email));
+  });
+}
+
+/**
+ * Lets staff sign in as an account again (the setting is on unless the user
+ * turns it off), for a test that turns it off.
+ *
+ * @param email - The account's address.
+ */
+export async function allowStaffSignInOf(email: string): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db
+      .update(schema.user)
+      .set({ allowStaffSignIn: true })
+      .where(eq(schema.user.email, email));
+  });
+}
+
+/**
+ * Sets the name Adiutor shows users directly, e.g. to put it back after a
+ * test changed it in Settings.
+ *
+ * @param name - The name.
+ */
+export async function setStaffName(name: string): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.transaction((tx) => writeSettings(tx, { 'staff.name': name }));
+  });
+}
+
+/**
+ * Reactivates an account straight in the database: the other way round of
+ * {@link deactivateAccount}, to put a deactivated account back.
+ *
+ * @param email - The account's address.
+ */
+export async function reactivateAccount(email: string): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.update(schema.user).set({ deactivatedAt: null }).where(eq(schema.user.email, email));
+  });
+}
+
+/**
  * Deactivates an account straight in the database, keeping its roles, as a
  * deactivation does: for a test that reactivates it, so a retry starts where
  * the first attempt did. The account must have no sessions (deactivating
@@ -528,17 +662,8 @@ export async function storeAnswerLink({
 }): Promise<string> {
   const token = generateToken();
   await withTestDatabase(async (db) => {
-    const stored = firstRow(
-      await db
-        .select({ id: schema.request.id })
-        .from(schema.request)
-        .where(eq(schema.request.number, requestNumber)),
-      'the request',
-    );
-    const member = firstRow(
-      await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, email)),
-      'the member',
-    );
+    const stored = { id: await requestIdOf(db, requestNumber) };
+    const member = { id: await userIdOf(db, email) };
     const proposal = firstRow(
       await db
         .insert(schema.requestEntry)
@@ -557,7 +682,8 @@ export async function storeAnswerLink({
       userId: member.id,
       proposalEntryId: proposal.id,
       tokenHash: hashToken(token),
-      expiresAt: new Date(Date.now() + 14 * 86_400_000),
+      // Answer links last as long as the links of emails about a request.
+      expiresAt: new Date(Date.now() + REQUEST_LINK_DAYS * 86_400_000),
     });
   });
   return answerLinkPath(token);
@@ -582,17 +708,8 @@ export async function storeRequestLink(
 ): Promise<string> {
   const token = generateToken();
   await withTestDatabase(async (db) => {
-    const person = firstRow(
-      await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, email)),
-      'the person',
-    );
-    const stored = firstRow(
-      await db
-        .select({ id: schema.request.id })
-        .from(schema.request)
-        .where(eq(schema.request.number, number)),
-      'the request',
-    );
+    const person = { id: await userIdOf(db, email) };
+    const stored = { id: await requestIdOf(db, number) };
     await db.insert(schema.requestSignInLink).values({
       userId: person.id,
       requestId: stored.id,
@@ -779,13 +896,7 @@ export async function storeRequest({
         .where(eq(schema.company.slug, companySlug)),
       'the company',
     );
-    const author = firstRow(
-      await db
-        .select({ id: schema.user.id })
-        .from(schema.user)
-        .where(eq(schema.user.email, raisedBy)),
-      'the member who raised it',
-    );
+    const author = { id: await userIdOf(db, raisedBy) };
     const counter = await readSettings(db, ['requests.last_number']);
     const numbers = await storeRequests(
       db,
@@ -812,6 +923,21 @@ export async function storeRequest({
     );
     return firstRow(numbers, 'the new request number');
   });
+}
+
+/**
+ * Stores a request of the test's own in the seeded company, raised by
+ * {@link REQUESTS_CLIENT} unless someone else is named: {@link storeRequest}
+ * with that company and member as its defaults.
+ *
+ * @param request - The request, see {@link storeRequest}.
+ * @returns The request's number.
+ */
+export async function storeOwnRequest(
+  request: Omit<Parameters<typeof storeRequest>[0], 'companySlug' | 'raisedBy'> &
+    Partial<Pick<Parameters<typeof storeRequest>[0], 'companySlug' | 'raisedBy'>>,
+): Promise<number> {
+  return storeRequest({ companySlug: COMPANY_SLUG, raisedBy: REQUESTS_CLIENT.email, ...request });
 }
 
 /**
@@ -862,24 +988,10 @@ type StoredEntry = {
  */
 export async function storeEntries(number: number, entries: readonly StoredEntry[]): Promise<void> {
   await withTestDatabase(async (db) => {
-    const found = firstRow(
-      await db
-        .select({ id: schema.request.id })
-        .from(schema.request)
-        .where(eq(schema.request.number, number)),
-      'the request',
-    );
+    const found = { id: await requestIdOf(db, number) };
     // One after another: IDs are time-ordered, and a request's entries are read in ID order.
-    for (const entry of entries) {
-      const author = firstRow(
-        // eslint-disable-next-line no-await-in-loop -- Each entry must be stored after the one before it.
-        await db
-          .select({ id: schema.user.id })
-          .from(schema.user)
-          .where(eq(schema.user.email, entry.by)),
-        'the entry’s author',
-      );
-      // eslint-disable-next-line no-await-in-loop -- Each entry must be stored after the one before it.
+    await inOrder(entries, async (entry) => {
+      const author = { id: await userIdOf(db, entry.by) };
       await db.insert(schema.requestEntry).values({
         requestId: found.id,
         authorId: author.id,
@@ -889,7 +1001,7 @@ export async function storeEntries(number: number, entries: readonly StoredEntry
           ? { fromValue: entry.from, toValue: entry.to }
           : { body: entry.text }),
       });
-    }
+    });
   });
 }
 

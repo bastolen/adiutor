@@ -1,26 +1,9 @@
 /**
- * @file End-to-end tests for requests: the list with its filters, search,
- * sorting and pages, and what it says without requests, raising a request
- * (someone at a company, and the staff
- * for a company), and a request's page: its description, details and
- * conversation, the staff and a company working a request through (status,
- * replies, done, reopened, cancelled), the staff editing its details and
- * assigning it (and finding what's assigned to them), editing a
- * description or a reply (and the earlier versions the staff read), the
- * staff's internal notes (which Finance reads and the company never sees),
- * the
- * prefix numbers are shown with, and
- * who only reads: Watchers, Finance, and everyone for a deactivated
- * company's request; and a staff member signed in as a user, who replies for
- * them.
- * The staff reach a person's user page from their name; nobody at a company
- * does.
- * The board: switching to it, moving a card with its Move menu, Done and
- * Cancelled asking first, a move from a board that's out of date, a lane's
- * link to the list of all its requests, and a company's own board on its
- * page.
- * Each test that changes a request stores its own (`storeRequest`); the
- * seeded ones are only read.
+ * @file End-to-end tests for requests: the list, raising a request, a
+ * request's page (its text, details and conversation), the staff and a
+ * company working a request through, who may change what, subscribing, emails
+ * about a request and the board. Each test that changes a request stores its
+ * own (`storeOwnRequest`); the seeded ones (`SEEDED_REQUESTS`) are only read.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -29,14 +12,13 @@ import type { Page } from '@playwright/test';
 import { defined } from '../src/lib/defined';
 import {
   createCompany,
-  findCompanyId,
   findUserId,
   resetActivityView,
   setRequestPrefix,
   setStoredRequestStatus,
   storeEntries,
-  storeInvitation,
   storeRequest,
+  storeOwnRequest,
 } from './support/db';
 import {
   ACTIVITY_SUPPORT,
@@ -62,7 +44,6 @@ import {
 } from './support/fixtures';
 import {
   clickLinkInEmail,
-  createAccountFromInvitation,
   freshAddress,
   markdownEditor,
   setUpAuthenticator,
@@ -70,9 +51,23 @@ import {
   signInAsUser,
   signOut,
   toasts,
+  boardLane,
+  openBoard,
+  createFreshAccount,
 } from './support/helpers';
 import { emailsAbout, linkIn, waitForEmailAbout } from './support/outbox';
+import { inOrder, repeatInOrder } from './support/sequence';
+import { signedInOnce } from './support/stored-sign-in';
 import { expect, test } from './support/test';
+
+/** Gives the Support member's sign-in cookies, for the tests that act as them throughout. */
+const supportCookies = signedInOnce(SUPPORT_STAFF);
+
+/** Gives the Watcher's sign-in cookies, for the one test that reads the board as them. */
+const watcherCookies = signedInOnce(CLIENT_WATCHER);
+
+/** Gives the Client's sign-in cookies, for the tests that act as them throughout. */
+const clientCookies = signedInOnce(REQUESTS_CLIENT);
 
 /**
  * The conversation of the request on the page.
@@ -128,8 +123,8 @@ async function expectReadOnly(page: Page) {
  */
 const requestRows = (page: Page) => main(page).getByRole('table').locator('tbody tr');
 
-test('the staff find every company’s requests, and narrow them down', async ({ page }) => {
-  await signIn(page, SUPPORT_STAFF);
+test('the staff find every company’s requests, and narrow them down', async ({ context, page }) => {
+  await context.addCookies(supportCookies());
   await page.goto('/requests');
   await expect(page).toHaveTitle('Requests · Adiutor');
   await expect(page.getByRole('heading', { level: 1, name: 'Requests' })).toBeVisible();
@@ -149,7 +144,7 @@ test('the staff find every company’s requests, and narrow them down', async ({
   await filters.getByRole('link', { name: 'Waiting' }).click();
   await expect(page).toHaveURL('/requests?status=waiting');
   const waiting = requestRows(page).filter({ hasText: SEEDED_REQUESTS.waiting.title });
-  await expect(waiting).toContainText('AD-1');
+  await expect(waiting).toContainText(`AD-${SEEDED_REQUESTS.waiting.number}`);
   await expect(waiting).toContainText(COMPANY_NAME);
   await expect(waiting).toContainText('Waiting for the company');
   await filters.getByRole('link', { name: 'Active' }).click();
@@ -172,7 +167,7 @@ test('the staff find every company’s requests, and narrow them down', async ({
   await page.getByRole('button', { name: 'Search' }).click();
   await expect(page).toHaveURL('/requests?status=all&q=ad-3');
   const third = requestRows(page).filter({ hasText: SEEDED_REQUESTS.done.title });
-  await expect(third).toContainText('AD-3');
+  await expect(third).toContainText(`AD-${SEEDED_REQUESTS.done.number}`);
   await expect(third).toContainText('Done');
   await expect(
     requestRows(page).filter({ hasText: pagedRequestTitle(30 - FIRST_PAGED_REQUEST_NUMBER + 1) }),
@@ -239,9 +234,10 @@ test('the staff find every company’s requests, and narrow them down', async ({
 });
 
 test('a changed prefix shows on every number, and the old one still finds a request', async ({
+  context,
   page,
 }) => {
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   // Changed straight in the database (the field in Settings is tested in `settings.spec.ts`), and
   // put back whatever happens: every other test reads "AD".
   await setRequestPrefix('HELP');
@@ -292,35 +288,34 @@ test('a changed prefix shows on every number, and the old one still finds a requ
   await expect(page).toHaveTitle(`Request AD-${SEEDED_REQUESTS.waiting.number} · Adiutor`);
 });
 
-test('the number as people see it, and the short links, open the request', async ({ page }) => {
-  await signIn(page, REQUESTS_CLIENT);
+test('the number as people see it, and the short links, open the request', async ({
+  context,
+  page,
+}) => {
+  await context.addCookies(clientCookies());
   const { number, title } = SEEDED_REQUESTS.waiting;
 
-  for (const address of [
-    `/requests/AD-${number}`,
-    `/requests/ad-${number}`,
-    `/r/AD-${number}`,
-    `/r/${number}`,
-  ]) {
-    // eslint-disable-next-line no-await-in-loop -- One address after another, in one browser.
-    await page.goto(address);
-    // eslint-disable-next-line no-await-in-loop -- Checked for each address.
-    await expect(page).toHaveURL(`/requests/${number}`);
-    // eslint-disable-next-line no-await-in-loop -- Checked for each address.
-    await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
-  }
+  await inOrder(
+    [`/requests/AD-${number}`, `/requests/ad-${number}`, `/r/AD-${number}`, `/r/${number}`],
+    async (address) => {
+      await page.goto(address);
+      await expect(page).toHaveURL(`/requests/${number}`);
+      await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+    },
+  );
 
   // Another prefix, or anything that isn't a request number, names no request.
-  for (const address of [`/r/XY-${number}`, '/r/abc', `/requests/XY-${number}`]) {
-    // eslint-disable-next-line no-await-in-loop -- One address after another, in one browser.
+  await inOrder([`/r/XY-${number}`, '/r/abc', `/requests/XY-${number}`], async (address) => {
     await page.goto(address);
-    // eslint-disable-next-line no-await-in-loop -- Checked for each address.
     await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
-  }
+  });
 });
 
-test('someone at a company sees its requests only, without priorities', async ({ page }) => {
-  await signIn(page, REQUESTS_CLIENT);
+test('someone at a company sees its requests only, without priorities', async ({
+  context,
+  page,
+}) => {
+  await context.addCookies(clientCookies());
   // The seeded requests, found by their titles: other specs store newer ones in this company.
   await page.goto(`/requests?status=all&q=${encodeURIComponent(SEEDED_REQUESTS.waiting.title)}`);
   await expect(requestRows(page).filter({ hasText: SEEDED_REQUESTS.waiting.title })).toContainText(
@@ -414,8 +409,11 @@ test('someone at a company raises a request, which the staff then find', async (
   await expect(detail(page, 'Raised by')).toContainText(REQUESTS_CLIENT.name);
 });
 
-test('the staff raise a request for a company and choose its priority', async ({ page }) => {
-  await signIn(page, SUPPORT_STAFF);
+test('the staff raise a request for a company and choose its priority', async ({
+  context,
+  page,
+}) => {
+  await context.addCookies(supportCookies());
   // Without a company it's a field to fill in, not a page that doesn't exist.
   await page.goto('/requests/new');
   await expect(page.getByRole('combobox', { name: 'Company' })).toHaveText('Choose a company');
@@ -468,11 +466,14 @@ test('the staff raise a request for a company and choose its priority', async ({
   await expect(toasts(page).getByText('Request raised.')).toHaveCount(0);
 });
 
-test('a company without requests invites its first one, under All too', async ({ page }) => {
+test('a company without requests invites its first one, under All too', async ({
+  context,
+  page,
+}) => {
   // A company of this test's own, so no other spec raises a request in it.
   const slug = `adiutor-tests-first-${randomUUID().slice(0, 8)}`;
   await createCompany({ name: 'Adiutor Tests First', slug });
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
 
   await page.goto(`/companies/${slug}`);
   await expect(main(page).getByText('No active requests')).toBeVisible();
@@ -499,14 +500,12 @@ test('a company without requests invites its first one, under All too', async ({
 test('nobody raises a request who may not: a Watcher and Finance get no form', async ({ page }) => {
   // A Watcher of this test's own, who is in no other company: other specs make the seeded
   // Watcher a Client elsewhere, where they may raise requests.
-  await page.goto(
-    await storeInvitation({
-      companyId: await findCompanyId(COMPANY_SLUG),
-      email: freshAddress('requests-watcher'),
-      role: 'watcher',
-    }),
-  );
-  await createAccountFromInvitation(page, 'Reads Only Tester', 'reads-only-tester-password');
+  await createFreshAccount(page, {
+    email: freshAddress('requests-watcher'),
+    name: 'Reads Only Tester',
+    password: 'reads-only-tester-password',
+    role: 'watcher',
+  });
   // The seeded request, found by its title: other specs store newer ones in this company.
   await page.goto(`/requests?q=${encodeURIComponent(SEEDED_REQUESTS.waiting.title)}`);
   await expect(requestRows(page).filter({ hasText: SEEDED_REQUESTS.waiting.title })).toBeVisible();
@@ -530,9 +529,7 @@ test('nobody raises a request who may not: a Watcher and Finance get no form', a
 test('the staff and a company work a request through, and close and reopen it', async ({
   page,
 }) => {
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
+  const number = await storeOwnRequest({
     title: 'The scanner on floor 3 is offline',
     description: 'It shows a red light since this morning.',
   });
@@ -635,11 +632,7 @@ test('the staff and a company work a request through, and close and reopen it', 
 test('the staff edit a request’s details, and the company never sees its priority', async ({
   page,
 }) => {
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title: 'Help',
-  });
+  const number = await storeOwnRequest({ title: 'Help' });
 
   await signIn(page, SUPPORT_STAFF);
   await page.goto(`/requests/${number}`);
@@ -685,11 +678,7 @@ test('the staff assign a request, find it as theirs, and the company sees who wo
   page,
 }) => {
   const title = `Assign this ${randomUUID().slice(0, 8)}`;
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title,
-  });
+  const number = await storeOwnRequest({ title });
   /**
    * The Assigned to detail of the request on the page.
    *
@@ -774,11 +763,7 @@ test('the staff assign a request, find it as theirs, and the company sees who wo
 test('people subscribe to a request, and the staff change who else follows it', async ({
   page,
 }) => {
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title: `Follow this ${randomUUID().slice(0, 8)}`,
-  });
+  const number = await storeOwnRequest({ title: `Follow this ${randomUUID().slice(0, 8)}` });
   /**
    * The Subscribers detail of the request on the page.
    *
@@ -883,11 +868,7 @@ test('a reply and the status it sets reach the other side’s inbox as one email
 }) => {
   // A title of the test's own, which the email's subject holds.
   const title = `Email about this ${randomUUID().slice(0, 8)}`;
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title,
-  });
+  const number = await storeOwnRequest({ title });
 
   // The staff ask something and wait for the answer; whoever raised it follows the request.
   await signIn(page, SUPPORT_STAFF);
@@ -926,11 +907,7 @@ test('an internal note reaches the staff on the request by email, and no one at 
   page,
 }) => {
   const title = `Note by email ${randomUUID().slice(0, 8)}`;
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title,
-  });
+  const number = await storeOwnRequest({ title });
 
   // A staff Admin replies, and so follows the request.
   await signIn(page, PLATFORM_ADMIN);
@@ -968,12 +945,7 @@ test('an internal note reaches the staff on the request by email, and no one at 
 
 test('the staff send a solution, and the client approves it on the request', async ({ page }) => {
   const title = `Solution to approve ${randomUUID().slice(0, 8)}`;
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title,
-    status: 'in_progress',
-  });
+  const number = await storeOwnRequest({ title, status: 'in_progress' });
 
   await signIn(page, SUPPORT_STAFF);
   await page.goto(`/requests/${number}`);
@@ -1004,12 +976,7 @@ test('the client denies a solution and says what’s still wrong, which goes bac
   page,
 }) => {
   const title = `Solution to deny ${randomUUID().slice(0, 8)}`;
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title,
-    status: 'in_progress',
-  });
+  const number = await storeOwnRequest({ title, status: 'in_progress' });
   await signIn(page, SUPPORT_STAFF);
   await page.goto(`/requests/${number}`);
   await page.getByRole('textbox', { name: 'Your reply' }).fill('Fixed, I think.');
@@ -1040,12 +1007,7 @@ test('the email’s Approve button answers on a click, and a mail scanner only g
   request: scanner,
 }) => {
   const title = `Solution by email ${randomUUID().slice(0, 8)}`;
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title,
-    status: 'in_progress',
-  });
+  const number = await storeOwnRequest({ title, status: 'in_progress' });
   await signIn(page, SUPPORT_STAFF);
   await page.goto(`/requests/${number}`);
   await page.getByRole('textbox', { name: 'Your reply' }).fill('Fixed: a new toner is in.');
@@ -1066,8 +1028,7 @@ test('the email’s Approve button answers on a click, and a mail scanner only g
   expect(await scanned.text()).toContain('Approve the solution for');
 
   // The client clicks it in their mail app: it answers straight away, without signing in.
-  await page.setContent(`<a href="${approve}">Approve</a>`);
-  await page.getByRole('link', { name: 'Approve' }).click();
+  await clickLinkInEmail(page, approve);
   await expect(page.getByRole('heading', { name: 'You approved the solution' })).toBeVisible();
   // The link worked once: opening it again only says what it did.
   await page.goto(approve.replace(/\/approve$/, ''));
@@ -1083,13 +1044,7 @@ test('an email’s link signs its reader in and opens the request at the reply i
   page,
 }) => {
   const title = `Long conversation ${randomUUID().slice(0, 8)}`;
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title,
-    status: 'in_progress',
-    earlierReplies: 15,
-  });
+  const number = await storeOwnRequest({ title, status: 'in_progress', earlierReplies: 15 });
   await signIn(page, SUPPORT_STAFF);
   await page.goto(`/requests/${number}`);
   await page.getByRole('textbox', { name: 'Your reply' }).fill('The reply the email links to.');
@@ -1133,21 +1088,15 @@ test('turning emails about requests off stops them, and turning them on brings t
   page,
 }) => {
   const title = `Quiet please ${randomUUID().slice(0, 8)}`;
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title,
-  });
+  const number = await storeOwnRequest({ title });
   // A Watcher of this test's own, so nothing else they do is changed by it.
   const watcher = { email: freshAddress('quiet-watcher'), password: 'quiet-watcher-password' };
-  await page.goto(
-    await storeInvitation({
-      companyId: await findCompanyId(COMPANY_SLUG),
-      email: watcher.email,
-      role: 'watcher',
-    }),
-  );
-  await createAccountFromInvitation(page, 'Quiet Watcher Tester', watcher.password);
+  await createFreshAccount(page, {
+    email: watcher.email,
+    name: 'Quiet Watcher Tester',
+    password: watcher.password,
+    role: 'watcher',
+  });
   /**
    * Sends a reply to the request as the staff, and waits until whoever raised it has the email
    * about it: by then the emails about it have gone out.
@@ -1209,17 +1158,23 @@ test('a company’s Admin subscribes a colleague, and is offered nobody from the
   const slug = `adiutor-tests-following-${randomUUID().slice(0, 8)}`;
   const companyId = await createCompany({ name: 'Adiutor Tests Following', slug });
   const colleagueEmail = freshAddress('following-watcher');
-  await page.goto(await storeInvitation({ companyId, email: colleagueEmail, role: 'watcher' }));
-  await createAccountFromInvitation(page, 'Follows Along Tester', 'follows-along-password');
+  await createFreshAccount(page, {
+    companyId,
+    email: colleagueEmail,
+    name: 'Follows Along Tester',
+    password: 'follows-along-password',
+    role: 'watcher',
+  });
   await signOut(page);
   const adminEmail = freshAddress('following-admin');
-  await page.goto(await storeInvitation({ companyId, email: adminEmail, role: 'admin' }));
-  await createAccountFromInvitation(
-    page,
-    'Subscribing Admin Tester',
-    'subscribing-admin-password',
-    '/account/security?setup=required',
-  );
+  await createFreshAccount(page, {
+    companyId,
+    email: adminEmail,
+    name: 'Subscribing Admin Tester',
+    password: 'subscribing-admin-password',
+    role: 'admin',
+    landsOn: '/account/security?setup=required',
+  });
   await setUpAuthenticator(page, 'subscribing-admin-password');
   const number = await storeRequest({
     companySlug: slug,
@@ -1282,14 +1237,11 @@ test('the staff reach a person’s page from a request, and nobody at the compan
 });
 
 test('a reply formats itself while it’s typed, and reads the same once it’s sent', async ({
+  context,
   page,
 }) => {
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title: 'A reply typed as Markdown',
-  });
-  await signIn(page, SUPPORT_STAFF);
+  const number = await storeOwnRequest({ title: 'A reply typed as Markdown' });
+  await context.addCookies(supportCookies());
   await page.goto(`/requests/${number}`);
   const editor = await markdownEditor(page, 'Your reply');
 
@@ -1327,8 +1279,11 @@ test('a reply formats itself while it’s typed, and reads the same once it’s 
   await expect(await markdownEditor(page, 'Your reply')).toHaveText('');
 });
 
-test('the editor is tall enough to write in, and can be dragged taller', async ({ page }) => {
-  await signIn(page, REQUESTS_CLIENT);
+test('the editor is tall enough to write in, and can be dragged taller', async ({
+  context,
+  page,
+}) => {
+  await context.addCookies(clientCookies());
 
   // A reply starts at eight lines, a description at fourteen; both grow with their text.
   await page.goto(`/requests/${SEEDED_REQUESTS.open.number}`);
@@ -1356,9 +1311,10 @@ test('the editor is tall enough to write in, and can be dragged taller', async (
 });
 
 test('a request uses the room of a wide screen, with its details still beside it', async ({
+  context,
   page,
 }) => {
-  await signIn(page, REQUESTS_CLIENT);
+  await context.addCookies(clientCookies());
   /**
    * Whether the page scrolls sideways.
    *
@@ -1398,13 +1354,12 @@ test('a request uses the room of a wide screen, with its details still beside it
   expect(await scrollsSideways()).toBe(false);
 });
 
-test('the toolbar formats a reply for someone who doesn’t type Markdown', async ({ page }) => {
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title: 'A reply formatted with the buttons',
-  });
-  await signIn(page, SUPPORT_STAFF);
+test('the toolbar formats a reply for someone who doesn’t type Markdown', async ({
+  context,
+  page,
+}) => {
+  const number = await storeOwnRequest({ title: 'A reply formatted with the buttons' });
+  await context.addCookies(supportCookies());
   await page.goto(`/requests/${number}`);
   const editor = await markdownEditor(page, 'Your reply');
   const toolbar = page.getByRole('toolbar', { name: 'Formatting' });
@@ -1461,14 +1416,11 @@ test('the toolbar formats a reply for someone who doesn’t type Markdown', asyn
 });
 
 test('a block of code is coloured while it’s written, in the language picked for it', async ({
+  context,
   page,
 }) => {
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title: 'A reply with a block of code',
-  });
-  await signIn(page, SUPPORT_STAFF);
+  const number = await storeOwnRequest({ title: 'A reply with a block of code' });
+  await context.addCookies(supportCookies());
   await page.goto(`/requests/${number}`);
   const editor = await markdownEditor(page, 'Your reply');
   const toolbar = page.getByRole('toolbar', { name: 'Formatting' });
@@ -1497,13 +1449,12 @@ test('a block of code is coloured while it’s written, in the language picked f
   await expect(sent.locator('[class*="hljs-keyword"]')).toHaveText('const');
 });
 
-test('Markdown that is pasted is formatted, and a tag stays the text it is', async ({ page }) => {
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title: 'A reply pasted as Markdown',
-  });
-  await signIn(page, SUPPORT_STAFF);
+test('Markdown that is pasted is formatted, and a tag stays the text it is', async ({
+  context,
+  page,
+}) => {
+  const number = await storeOwnRequest({ title: 'A reply pasted as Markdown' });
+  await context.addCookies(supportCookies());
   await page.goto(`/requests/${number}`);
   const editor = await markdownEditor(page, 'Your reply');
 
@@ -1536,18 +1487,14 @@ test('Markdown that is pasted is formatted, and a tag stays the text it is', asy
 });
 
 test('a mention that is copied and pasted is still a mention once it is sent', async ({
-  page,
   context,
+  page,
 }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title: 'A mention copied and pasted',
-  });
+  const number = await storeOwnRequest({ title: 'A mention copied and pasted' });
   const thread = page.getByRole('region', { name: 'Conversation' });
   const clientId = await findUserId(REQUESTS_CLIENT.email);
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   await page.goto(`/requests/${number}`);
   const editor = await markdownEditor(page, 'Your reply');
 
@@ -1604,11 +1551,7 @@ test('a mention that is copied and pasted is still a mention once it is sent', a
 });
 
 test('people are mentioned from the list at @, by what the writer may know', async ({ page }) => {
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title: 'A reply that mentions someone',
-  });
+  const number = await storeOwnRequest({ title: 'A reply that mentions someone' });
   const list = page.getByRole('listbox', { name: 'People to mention' });
   const thread = page.getByRole('region', { name: 'Conversation' });
 
@@ -1681,8 +1624,8 @@ test('people are mentioned from the list at @, by what the writer may know', asy
   expect(await page.content()).not.toContain(clientId);
 });
 
-test('a new request’s description mentions a colleague', async ({ page }) => {
-  await signIn(page, REQUESTS_CLIENT);
+test('a new request’s description mentions a colleague', async ({ context, page }) => {
+  await context.addCookies(clientCookies());
   await page.goto('/requests/new');
   await page.getByRole('textbox', { name: 'Title' }).fill('A request that mentions a colleague');
   await page.getByRole('combobox', { name: 'Type' }).click();
@@ -1706,13 +1649,12 @@ test('a new request’s description mentions a colleague', async ({ page }) => {
   await expect(asked).toContainText(`@${CLIENT_WATCHER.name} saw it first, not @e2e sup`);
 });
 
-test('a reply is written on in the large view, and sent from the page', async ({ page }) => {
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title: 'A reply written in the large view',
-  });
-  await signIn(page, SUPPORT_STAFF);
+test('a reply is written on in the large view, and sent from the page', async ({
+  context,
+  page,
+}) => {
+  const number = await storeOwnRequest({ title: 'A reply written in the large view' });
+  await context.addCookies(supportCookies());
   await page.goto(`/requests/${number}`);
   const editor = await markdownEditor(page, 'Your reply');
   await editor.click();
@@ -1767,14 +1709,11 @@ test('a reply is written on in the large view, and sent from the page', async ({
 });
 
 test('a reply that isn’t sent yet is still there after leaving the page and coming back', async ({
+  context,
   page,
 }) => {
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title: 'A reply left half written',
-  });
-  await signIn(page, SUPPORT_STAFF);
+  const number = await storeOwnRequest({ title: 'A reply left half written' });
+  await context.addCookies(supportCookies());
   await page.goto(`/requests/${number}`);
   const editor = await markdownEditor(page, 'Your reply');
   await editor.click();
@@ -1798,8 +1737,11 @@ test('a reply that isn’t sent yet is still there after leaving the page and co
   );
 });
 
-test('the editor isn’t sent with the page: it loads once the page is there', async ({ page }) => {
-  await signIn(page, REQUESTS_CLIENT);
+test('the editor isn’t sent with the page: it loads once the page is there', async ({
+  context,
+  page,
+}) => {
+  await context.addCookies(clientCookies());
 
   // The scripts the page itself asks for, as its HTML names them.
   const response = await page.request.get('/requests/new');
@@ -1828,9 +1770,10 @@ test('the editor isn’t sent with the page: it loads once the page is there', a
 });
 
 test('a request written in Markdown is shown formatted, and nothing in it loads', async ({
+  context,
   page,
 }) => {
-  await signIn(page, REQUESTS_CLIENT);
+  await context.addCookies(clientCookies());
   await page.goto(`/requests/${SEEDED_REQUESTS.formatted.number}`);
 
   // What was asked: a heading below the card's own, a list, a table, and an address that opens
@@ -1880,9 +1823,9 @@ test('a request written in Markdown is shown formatted, and nothing in it loads'
   await expect(page).toHaveURL(/-fnref-1$/);
 });
 
-test('a block of code is copied below a note of where it’s from', async ({ page, context }) => {
+test('a block of code is copied below a note of where it’s from', async ({ context, page }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-  await signIn(page, REQUESTS_CLIENT);
+  await context.addCookies(clientCookies());
   await page.goto(`/requests/${SEEDED_REQUESTS.formatted.number}`);
   const thread = page.getByRole('region', { name: 'Conversation' });
   /**
@@ -1937,9 +1880,7 @@ test('a block of code is copied below a note of where it’s from', async ({ pag
 test('someone at a company edits the description, and the staff read what it said before', async ({
   page,
 }) => {
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
+  const number = await storeOwnRequest({
     title: 'The printer on floor 2 jams',
     description: 'It jams on every page.',
   });
@@ -1992,11 +1933,7 @@ test('someone at a company edits the description, and the staff read what it sai
 });
 
 test('the staff edit their own reply, which the company sees was edited', async ({ page }) => {
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title: 'The VPN drops every hour',
-  });
+  const number = await storeOwnRequest({ title: 'The VPN drops every hour' });
 
   await signIn(page, SUPPORT_STAFF);
   await page.goto(`/requests/${number}`);
@@ -2050,15 +1987,10 @@ test('the staff edit their own reply, which the company sees was edited', async 
   ).toBeVisible();
 });
 
-test('nothing is edited once a request is done', async ({ page }) => {
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title: 'A printer that works again',
-    status: 'done',
-  });
+test('nothing is edited once a request is done', async ({ context, page }) => {
+  const number = await storeOwnRequest({ title: 'A printer that works again', status: 'done' });
 
-  await signIn(page, REQUESTS_CLIENT);
+  await context.addCookies(clientCookies());
   await page.goto(`/requests/${number}`);
   // A reply can still be sent, but neither it nor the description can be edited.
   await page.getByRole('textbox', { name: 'Your reply' }).fill('Thanks, it works now.');
@@ -2073,11 +2005,7 @@ test('nothing is edited once a request is done', async ({ page }) => {
 test('the staff write an internal note, which Finance reads and the company never sees', async ({
   page,
 }) => {
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title: 'The label printer prints blank labels',
-  });
+  const number = await storeOwnRequest({ title: 'The label printer prints blank labels' });
   const list = page.getByRole('listbox', { name: 'People to mention' });
   const write = page.getByRole('tablist', { name: 'Write' });
 
@@ -2178,8 +2106,11 @@ test('Finance reads a request with its priority, and changes nothing', async ({ 
   await expect(subscribers.getByRole('button', { name: 'Change subscribers' })).toHaveCount(0);
 });
 
-test('a deactivated company’s request can only be read, also by the staff', async ({ page }) => {
-  await signIn(page, SUPPORT_STAFF);
+test('a deactivated company’s request can only be read, also by the staff', async ({
+  context,
+  page,
+}) => {
+  await context.addCookies(supportCookies());
   await page.goto(`/requests/${SEEDED_REQUESTS.closedCompany.number}`);
 
   await expect(
@@ -2202,11 +2133,7 @@ test('a deactivated company’s request can only be read, also by the staff', as
 test('a staff member signed in as a user replies for them, and only that user and Admins are told', async ({
   page,
 }) => {
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title: 'A request to answer for the client',
-  });
+  const number = await storeOwnRequest({ title: 'A request to answer for the client' });
   const reply = 'Sent on your behalf.';
   await signIn(page, PLATFORM_ADMIN);
   await signInAsUser(page, REQUESTS_CLIENT.name);
@@ -2258,11 +2185,7 @@ test('the activity shows the groups and order its reader chose, on every visit',
 }) => {
   // The view is saved with the account: start from everything, oldest first, also on a retry.
   await resetActivityView(ACTIVITY_SUPPORT.email);
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title: 'Activity read the way its reader chose',
-  });
+  const number = await storeOwnRequest({ title: 'Activity read the way its reader chose' });
   await storeEntries(number, [
     { kind: 'comment', by: REQUESTS_CLIENT.email, side: 'company', text: 'The first reply.' },
     { kind: 'note', by: SUPPORT_STAFF.email, side: 'staff', text: 'A note for the staff.' },
@@ -2348,37 +2271,14 @@ test('the activity shows the groups and order its reader chose, on every visit',
   await expect(entries).toHaveCount(3);
 });
 
-/**
- * A lane of the board on the page.
- *
- * @param page - The browser page, on the board.
- * @param name - The lane's name, in the reader's words.
- * @returns The lane's group.
- */
-const boardLane = (page: Page, name: string) =>
-  page.getByRole('group', { name: new RegExp(`^${name}, \\d+ requests?$`) });
-
-/**
- * Opens the board narrowed down to a test's own requests by their title.
- *
- * @param page - The browser page, signed in.
- * @param search - What their titles have in common.
- */
-async function openBoard(page: Page, search: string): Promise<void> {
-  await page.goto(`/requests/board?q=${encodeURIComponent(search)}`);
-}
-
 test('the staff switch the requests to a board and move a card with its Move menu', async ({
+  context,
   page,
 }) => {
   const title = `A card for the board ${randomUUID().slice(0, 8)}`;
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title,
-  });
+  const number = await storeOwnRequest({ title });
 
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   // The List | Board toggle keeps the search.
   await page.goto(`/requests?q=${encodeURIComponent(title)}`);
   await page
@@ -2419,16 +2319,13 @@ test('the staff switch the requests to a board and move a card with its Move men
 });
 
 test('moving a card on the board to Done or Cancelled asks first, also for a Client', async ({
+  context,
   page,
 }) => {
   const title = `A card to close ${randomUUID().slice(0, 8)}`;
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title,
-  });
+  const number = await storeOwnRequest({ title });
 
-  await signIn(page, REQUESTS_CLIENT);
+  await context.addCookies(clientCookies());
   await openBoard(page, title);
   // A Client's lanes are worded for them.
   await expect(boardLane(page, 'Waiting for your reply')).toBeVisible();
@@ -2460,16 +2357,13 @@ test('moving a card on the board to Done or Cancelled asks first, also for a Cli
 });
 
 test('a move from a board that’s out of date is refused, and the board shows the card as it is', async ({
+  context,
   page,
 }) => {
   const title = `A card someone else moved ${randomUUID().slice(0, 8)}`;
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title,
-  });
+  const number = await storeOwnRequest({ title });
 
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   await openBoard(page, title);
   await expect(boardLane(page, 'Open').getByRole('link', { name: title })).toBeVisible();
   // A colleague moves it to To do meanwhile.
@@ -2489,21 +2383,16 @@ test('a move from a board that’s out of date is refused, and the board shows t
 });
 
 test('a lane of the board with more requests than it shows opens the list of them all', async ({
+  context,
   page,
 }) => {
   const prefix = `Closed for the board ${randomUUID().slice(0, 8)}`;
   // Six done requests: one more than the Done half of the Closed column shows.
-  await Array.from({ length: 6 }, (_, index) => index).reduce(async (previous, index) => {
-    await previous;
-    await storeRequest({
-      companySlug: COMPANY_SLUG,
-      raisedBy: REQUESTS_CLIENT.email,
-      title: `${prefix} ${index + 1}`,
-      status: 'done',
-    });
-  }, Promise.resolve());
+  await repeatInOrder(6, async (index) => {
+    await storeOwnRequest({ title: `${prefix} ${index + 1}`, status: 'done' });
+  });
 
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   await openBoard(page, prefix);
   const done = boardLane(page, 'Done');
   await expect(done.getByRole('link', { name: new RegExp(`^${prefix}`) })).toHaveCount(5);
@@ -2516,15 +2405,14 @@ test('a lane of the board with more requests than it shows opens the list of the
   await expect(requestRows(page)).toHaveCount(6);
 });
 
-test('a card dragged on the board to a lane it may go to moves there', async ({ page }) => {
+test('a card dragged on the board to a lane it may go to moves there', async ({
+  context,
+  page,
+}) => {
   const title = `A card to drag ${randomUUID().slice(0, 8)}`;
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title,
-  });
+  const number = await storeOwnRequest({ title });
 
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   await openBoard(page, title);
   const card = boardLane(page, 'Open').getByRole('listitem').filter({ hasText: title });
   // The grip comes once the drag and drop has loaded.
@@ -2538,17 +2426,14 @@ test('a card dragged on the board to a lane it may go to moves there', async ({ 
 });
 
 test('a card dragged on the board to a lane it can’t go to stays, and the board says why', async ({
+  context,
   page,
 }) => {
   const title = `A card that can’t go there ${randomUUID().slice(0, 8)}`;
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title,
-  });
+  const number = await storeOwnRequest({ title });
 
   // A Client closes or cancels a request; the other lanes are the staff's.
-  await signIn(page, REQUESTS_CLIENT);
+  await context.addCookies(clientCookies());
   await openBoard(page, title);
   const card = boardLane(page, 'Open').getByRole('listitem').filter({ hasText: title });
   const grip = card.locator('[data-drag-handle]');
@@ -2566,22 +2451,19 @@ test('a card dragged on the board to a lane it can’t go to stays, and the boar
 });
 
 test('a company’s page shows its requests as a board too, that company’s only', async ({
+  context,
   page,
 }) => {
   const prefix = `A card on a company board ${randomUUID().slice(0, 8)}`;
   const ours = `${prefix}, ours`;
-  const number = await storeRequest({
-    companySlug: COMPANY_SLUG,
-    raisedBy: REQUESTS_CLIENT.email,
-    title: ours,
-  });
+  const number = await storeOwnRequest({ title: ours });
   await storeRequest({
     companySlug: OWNED_COMPANY_SLUG,
     raisedBy: COMPANY_OWNER.email,
     title: `${prefix}, another company’s`,
   });
 
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   // Across companies, the board shows both.
   await openBoard(page, prefix);
   await expect(page.getByRole('link', { name: new RegExp(`^${prefix}`) })).toHaveCount(2);
@@ -2614,6 +2496,13 @@ test('a company’s page shows its requests as a board too, that company’s onl
   await expect(page).toHaveURL(new RegExp(`/companies/${COMPANY_SLUG}/board\\?`));
 });
 
+test('the board has no Move menus for a Watcher', async ({ context, page }) => {
+  await context.addCookies(watcherCookies());
+  await openBoard(page, SEEDED_REQUESTS.open.title);
+  await expect(page.getByRole('link', { name: SEEDED_REQUESTS.open.title })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Move AD-/ })).toHaveCount(0);
+});
+
 test.describe('the board’s Waiting and Closed columns, on a wide screen', () => {
   // Wide enough for all five columns side by side, so every half is on screen to drag to and
   // the row doesn't scroll during a drag.
@@ -2621,20 +2510,15 @@ test.describe('the board’s Waiting and Closed columns, on a wide screen', () =
 
   /**
    * Stores a request of the test's own and opens the board, signed in as
-   * the staff, narrowed down to it.
+   * the staff (by their stored cookies), narrowed down to it.
    *
    * @param page - The browser page.
    * @param title - The request's title.
    * @returns The request's number and its card's grip.
    */
   async function boardWith(page: Page, title: string) {
-    const number = await storeRequest({
-      companySlug: COMPANY_SLUG,
-      raisedBy: REQUESTS_CLIENT.email,
-      title,
-      status: 'in_progress',
-    });
-    await signIn(page, SUPPORT_STAFF);
+    const number = await storeOwnRequest({ title, status: 'in_progress' });
+    await page.context().addCookies(supportCookies());
     await openBoard(page, title);
     const grip = boardLane(page, 'In progress')
       .getByRole('listitem')
@@ -2650,7 +2534,7 @@ test.describe('the board’s Waiting and Closed columns, on a wide screen', () =
     const title = `A card to drag to Done ${randomUUID().slice(0, 8)}`;
     const { number, grip } = await boardWith(page, title);
     await expect(
-      page.getByRole('group', { name: /^Closed, \d+ requests?$/ }).getByRole('heading', {
+      boardLane(page, 'Closed').getByRole('heading', {
         level: 3,
       }),
     ).toHaveText([/^Done/, /^Cancelled/]);

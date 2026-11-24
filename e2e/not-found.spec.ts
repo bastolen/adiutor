@@ -18,7 +18,9 @@ import {
   STEP_UP_MANAGER,
   SUPPORT_STAFF,
 } from './support/fixtures';
-import { adminStorageState, openUser, signIn, type StorageState } from './support/helpers';
+import { openUser, signIn } from './support/helpers';
+import { inOrder } from './support/sequence';
+import { signedInOnce } from './support/stored-sign-in';
 import { expect, test } from './support/test';
 
 /** The 404 page's title, which pages someone may not see have too. */
@@ -50,19 +52,6 @@ const UNKNOWN_USER_ID = '01890a5d-ac96-774b-bcce-b302099a8057';
 const companyPage = (tab: string) => `/companies/${COMPANY_SLUG}/${tab}`;
 
 /**
- * Runs a check on each item, one after another (they share the tab).
- *
- * @param items - The items.
- * @param check - The check.
- */
-async function eachInTurn<T>(items: readonly T[], check: (item: T) => Promise<void>) {
-  await items.reduce(async (previous, item) => {
-    await previous;
-    await check(item);
-  }, Promise.resolve());
-}
-
-/**
  * Opens a page and checks it's the 404 page, with the 404 page's title.
  *
  * @param page - The browser page.
@@ -86,18 +75,14 @@ async function expectTitle(page: Page, path: string, title: string) {
   await expect(page, path).toHaveTitle(title);
 }
 
-/** Sign-in cookies of the staff Admin. */
-let adminState: StorageState;
-
-test.beforeAll(async ({ browser }) => {
-  adminState = await adminStorageState(browser);
-});
+/** Gives the staff Admin's sign-in cookies, signed in once for the spec. */
+const adminCookies = signedInOnce(PLATFORM_ADMIN);
 
 test('signed in, an unknown page offers the dashboard and going back', async ({
   context,
   page,
 }) => {
-  await context.addCookies(adminState.cookies);
+  await context.addCookies(adminCookies());
   await page.goto('/dashboard');
 
   const response = await page.goto('/does-not-exist');
@@ -133,7 +118,7 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
     page,
   }) => {
     await signIn(page, CLIENT_WATCHER);
-    await eachInTurn(
+    await inOrder(
       [
         ...STAFF_PAGES.map(({ path }) => path),
         `/admin/users/${UNKNOWN_USER_ID}`,
@@ -156,13 +141,13 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
     await expectTitle(
       page,
       `/requests/${SEEDED_REQUESTS.waiting.number}`,
-      'Request AD-1 · Adiutor',
+      `Request AD-${SEEDED_REQUESTS.waiting.number} · Adiutor`,
     );
     await expect(
       page.getByRole('heading', { level: 1, name: SEEDED_REQUESTS.waiting.title }),
     ).toBeVisible();
 
-    await eachInTurn(
+    await inOrder(
       [
         // The paging company's, the deactivated company's, numbers no request has, and a number
         // with another prefix than the current one (with "AD" it redirects to the number).
@@ -185,7 +170,7 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
     page,
   }) => {
     await signIn(page, SUPPORT_STAFF);
-    await eachInTurn(
+    await inOrder(
       [
         '/admin/users/new',
         '/admin/companies/new',
@@ -212,14 +197,14 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
     context,
     page,
   }) => {
-    await context.addCookies(adminState.cookies);
-    await eachInTurn(STAFF_PAGES, ({ path, title }) => expectTitle(page, path, title));
+    await context.addCookies(adminCookies());
+    await inOrder(STAFF_PAGES, ({ path, title }) => expectTitle(page, path, title));
 
     await openUser(page, PLATFORM_ADMIN.name);
     await expect(page).toHaveTitle('User · Adiutor');
     // Every tab of someone else's page, each with its title; your own page has no Manage tab.
     const watcher = `/admin/users/${await findUserId(CLIENT_WATCHER.email)}`;
-    await eachInTurn(
+    await inOrder(
       [
         { path: `${watcher}/companies`, title: 'Companies · User · Adiutor' },
         { path: `${watcher}/activity`, title: 'Activity · User · Adiutor' },
