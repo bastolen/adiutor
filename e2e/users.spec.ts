@@ -33,27 +33,32 @@ test('an Admin finds users, recognises the staff and filters and searches the li
   await expect(page).toHaveURL('/admin/users');
   await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible();
 
+  // Looked at in a search for the E2E people, so the users other specs add can't push the ones
+  // below off the first page.
+  await page.goto('/admin/users?q=E2E&size=50');
   const rows = page.getByRole('row');
   const adminRow = rows.filter({ hasText: PLATFORM_ADMIN.email });
   await expect(adminRow.getByText('Staff · Admin')).toBeVisible();
-  // Sorted by name, A to Z, until another order is chosen: E2E Admin before E2E Support. Other
-  // specs add users, so the Admin needn't be the first row.
+  // Sorted by name, A to Z, until another order is chosen: E2E Admin before E2E Support.
   await expect(page.getByRole('columnheader', { name: 'Name' })).toHaveAttribute(
     'aria-sort',
     'ascending',
   );
   const rowTexts = await rows.allInnerTexts();
   const adminRowIndex = rowTexts.findIndex((text) => text.includes(PLATFORM_ADMIN.email));
-  expect(adminRowIndex).toBeGreaterThan(0);
-  expect(adminRowIndex).toBeLessThan(
-    rowTexts.findIndex((text) => text.includes(SUPPORT_STAFF.email)),
+  const supportRowIndex = rowTexts.findIndex(
+    (text) => text.includes(SUPPORT_STAFF.name) && text.includes(SUPPORT_STAFF.email),
   );
+  expect(adminRowIndex).toBeGreaterThan(0);
+  expect(supportRowIndex).toBeGreaterThan(adminRowIndex);
   const watcherRow = rows.filter({ hasText: CLIENT_WATCHER.email });
   await expect(watcherRow.getByRole('link', { name: COMPANY_NAME })).toBeVisible();
   // The Admin's own row says so; nobody else's does.
   await expect(adminRow.getByText('You', { exact: true })).toBeVisible();
   await expect(watcherRow.getByText('You', { exact: true })).toHaveCount(0);
 
+  // The filters start from the whole list.
+  await page.goto('/admin/users');
   const filters = page.getByRole('navigation', { name: 'Filter users' });
   await filters.getByRole('link', { name: 'Not staff' }).click();
   await expect(page).toHaveURL('/admin/users?filter=not_staff');
