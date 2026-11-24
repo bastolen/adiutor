@@ -41,6 +41,7 @@ import {
 import { wrongCurrentPasswordsKey } from './current-password';
 import { loadMfaContext } from './mfa-state';
 import { releaseSignInChangeLock, takeSignInChangeLock } from './sign-in-change-lock';
+import { signInChangeLockFree } from './test-helpers';
 
 // Watched, to check when the services read a user's MFA state; it still reads it.
 vi.mock('./mfa-state', async (importOriginal) => {
@@ -53,21 +54,6 @@ const { loadMfaContext: realLoadMfaContext } =
   await vi.importActual<typeof import('./mfa-state')>('./mfa-state');
 
 const { ctx, db } = setupTestContext();
-
-/**
- * Reads whether a user's lock for sign-in changes is taken.
- *
- * @param userId - The user.
- * @returns Whether its row exists.
- */
-async function lockTaken(userId: string): Promise<boolean> {
-  const held = await takeSignInChangeLock({ db }, userId);
-  if (!held) {
-    return true;
-  }
-  await releaseSignInChangeLock({ db }, held);
-  return false;
-}
 
 /**
  * Connects a provider account to a user, as Better Auth stores it.
@@ -259,7 +245,7 @@ describe('confirmConnectedProvider', () => {
     await releaseSignInChangeLock({ db }, defined(held, 'the sign-in change lock'));
     const lockedWhileRead: boolean[] = [];
     vi.mocked(loadMfaContext).mockImplementationOnce(async (database, id) => {
-      lockedWhileRead.push(await lockTaken(id));
+      lockedWhileRead.push(!(await signInChangeLockFree(db, id)));
       return realLoadMfaContext(database, id);
     });
     await confirmConnectedProvider(
@@ -270,7 +256,7 @@ describe('confirmConnectedProvider', () => {
     expect(await isConfirmed(github)).toBe(true);
     expect(lockedWhileRead).toEqual([true]);
     // Given back afterwards.
-    expect(await lockTaken(userId)).toBe(false);
+    expect(await signInChangeLockFree(db, userId)).toBe(true);
   });
 
   it('needs a session confirmed with the account’s second step', async () => {
@@ -522,7 +508,7 @@ describe('setFirstPassword', () => {
       setPassword,
     );
     expect(setPassword).toHaveBeenCalledTimes(1);
-    expect(await lockTaken(manager.id)).toBe(false);
+    expect(await signInChangeLockFree(db, manager.id)).toBe(true);
   });
 
   it('needs a recent confirmation next to a second step, but not without one', async () => {
@@ -565,7 +551,7 @@ describe('setFirstPassword', () => {
       key: 'errors.signIn.sessionNotFresh',
     });
     expect(setPassword).not.toHaveBeenCalled();
-    expect(await lockTaken(newcomer)).toBe(false);
+    expect(await signInChangeLockFree(db, newcomer)).toBe(true);
 
     await setFirstPassword(
       ctx,

@@ -35,6 +35,7 @@ import {
   setupTestContext,
   auditEvents,
 } from '../../../tests/integration/helpers';
+import { authRequest, cookieJar } from './test-helpers';
 
 vi.mock('@/lib/email', () => ({ sendEmail: vi.fn() }));
 
@@ -90,10 +91,9 @@ function mockGitHub(profile: { id: number; login?: string; email: string }, twoF
  * @returns E.g. `a=1; b=2`.
  */
 function cookiesOf(response: Response): string {
-  return response.headers
-    .getSetCookie()
-    .map((set) => set.split(';')[0])
-    .join('; ');
+  const jar = cookieJar();
+  jar.keep(response);
+  return jar.cookie();
 }
 
 /** Where "Confirm with GitHub" on the step-up page comes back to when it fails. */
@@ -122,13 +122,10 @@ async function githubFlow(
   cookie = '',
   body: Record<string, unknown> = {},
 ): Promise<Response> {
-  const start = await auth.handler(
-    new Request(`${env.BETTER_AUTH_URL}/api/auth/${path}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', origin: env.BETTER_AUTH_URL, cookie },
-      body: JSON.stringify({ provider: 'github', callbackURL: '/dashboard', ...body }),
-    }),
-  );
+  const start = await authRequest(path, {
+    body: { provider: 'github', callbackURL: '/dashboard', ...body },
+    cookie,
+  });
   expect(start.ok).toBe(true);
   const { url } = (await start.json()) as { url: string };
   const state = new URL(url).searchParams.get('state');
@@ -149,13 +146,7 @@ async function githubFlow(
  * @returns The session cookie.
  */
 async function signInWithPassword(email: string, password: string): Promise<string> {
-  const response = await auth.handler(
-    new Request(`${env.BETTER_AUTH_URL}/api/auth/sign-in/email`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', origin: env.BETTER_AUTH_URL },
-      body: JSON.stringify({ email, password }),
-    }),
-  );
+  const response = await authRequest('sign-in/email', { body: { email, password } });
   expect(response.ok).toBe(true);
   return cookiesOf(response);
 }

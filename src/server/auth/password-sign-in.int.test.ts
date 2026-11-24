@@ -31,14 +31,13 @@
  */
 import { hashPassword } from 'better-auth/crypto';
 import { desc, eq } from 'drizzle-orm';
-import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { account, session, user } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { TWO_FACTOR_LOCK_ATTEMPTS } from '@/lib/authz/mfa';
 import { defined, firstRow } from '@/lib/defined';
 import { type Email, sendEmail } from '@/lib/email';
-import { env } from '@/lib/env';
 
 import {
   authenticatorCode as codeFromSecret,
@@ -56,6 +55,7 @@ import {
   auditEvents,
 } from '../../../tests/integration/helpers';
 import { getOptionalActor } from '../authz';
+import { newBrowser, sentEmail } from './test-helpers';
 
 /** The request a page renders for; tests set its headers (e.g. the browser's cookies). */
 const pageRequest = vi.hoisted(() => ({ headers: new Headers() }));
@@ -99,11 +99,6 @@ vi.mock('../background', () => ({
 
 const { ctx, db } = setupTestContext();
 
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
 /**
  * Waits for the background work so far: Better Auth's, already started, and
  * the app's own (functions such as recording last activity), which run now.
@@ -144,101 +139,6 @@ async function createUserWithPassword(email: string): Promise<string> {
   return id;
 }
 
-/**
- * A browser talking to Better Auth: it keeps the cookies responses set and
- * drops the ones they expire, and sends them with every request.
- *
- * @param headers - More headers it sends with every request, e.g. its `user-agent`.
- * @returns The browser.
- */
-function newBrowser(headers: Record<string, string> = {}) {
-  const cookies = new Map<string, string>();
-
-  /**
-   * The cookies it sends.
-   *
-   * @returns A `Cookie` header.
-   */
-  const cookie = () => [...cookies].map(([name, value]) => `${name}=${value}`).join('; ');
-
-  /**
-   * Keeps the cookies a response sets, and drops the ones it expires.
-   *
-   * @param response - The response.
-   */
-  const keep = (response: Response) => {
-    response.headers.getSetCookie().forEach((set) => {
-      const [first, ...attributes] = set.split(';');
-      const pair = defined(first, 'the cookie name and value');
-      const name = pair.slice(0, pair.indexOf('=')).trim();
-      const value = pair.slice(pair.indexOf('=') + 1);
-      const expired =
-        value === '' || attributes.some((attribute) => /^\s*max-age=0\s*$/i.test(attribute));
-      if (expired) {
-        cookies.delete(name);
-      } else {
-        cookies.set(name, value);
-      }
-    });
-  };
-
-  return {
-    cookie,
-
-    /**
-     * Sends a request to a Better Auth endpoint, as the app's pages do.
-     *
-     * @param path - The endpoint, e.g. `sign-in/email`.
-     * @param body - The JSON body.
-     * @returns The response.
-     */
-    async post(path: string, body: Record<string, unknown> = {}): Promise<Response> {
-      const response = await auth.handler(
-        new Request(`${env.BETTER_AUTH_URL}/api/auth/${path}`, {
-          method: 'POST',
-          headers: {
-            ...headers,
-            'content-type': 'application/json',
-            origin: env.BETTER_AUTH_URL,
-            cookie: cookie(),
-          },
-          body: JSON.stringify(body),
-        }),
-      );
-      keep(response);
-      return response;
-    },
-
-    /**
-     * Forgets cookies, as when a session cookie expires.
-     *
-     * @param name - Which cookies, by name.
-     */
-    forget(name: RegExp): void {
-      [...cookies.keys()].filter((key) => name.test(key)).forEach((key) => cookies.delete(key));
-    },
-
-    /**
-     * Copies cookies, as someone who got hold of them would.
-     *
-     * @param name - Which cookies, by name.
-     * @returns Their names and values.
-     */
-    copy(name: RegExp): [string, string][] {
-      return [...cookies].filter(([key]) => name.test(key));
-    },
-
-    /**
-     * Sends copied cookies again from now on, as a browser holding a copy would.
-     *
-     * @param copied - Cookies from `copy`.
-     */
-    restore(copied: [string, string][]): void {
-      copied.forEach(([key, value]) => cookies.set(key, value));
-    },
-  };
-}
-
 /** A browser from {@link newBrowser}. */
 type Browser = ReturnType<typeof newBrowser>;
 
@@ -266,16 +166,7 @@ async function signInWithPassword(
  * @returns The email.
  */
 async function codeEmailTo(to: string): Promise<Email> {
-  return vi.waitFor(() => {
-    const found = vi
-      .mocked(sendEmail)
-      .mock.calls.map(([sent]) => sent)
-      .find((sent) => sent.to === to && /\b\d{6}\b/.test(sent.text));
-    if (!found) {
-      throw new Error('The code email has not been sent yet');
-    }
-    return found;
-  }, 10_000);
+  return sentEmail('The code email', (sent) => sent.to === to && /\b\d{6}\b/.test(sent.text));
 }
 
 /**
@@ -288,17 +179,10 @@ async function codeEmailTo(to: string): Promise<Email> {
 async function emailedCode(browser: Browser): Promise<string> {
   vi.mocked(sendEmail).mockClear();
   expect((await browser.post('two-factor/send-otp')).status).toBe(200);
-  // Rendering the first email can take a moment.
-  const email = await vi.waitFor(() => {
-    const [found] = vi
-      .mocked(sendEmail)
-      .mock.calls.map(([sent]) => sent)
-      .filter((sent) => sent.subject === 'Your Adiutor sign-in code');
-    if (!found) {
-      throw new Error('The code email has not been sent yet');
-    }
-    return found;
-  }, 10_000);
+  const email = await sentEmail(
+    'The code email',
+    (sent) => sent.subject === 'Your Adiutor sign-in code',
+  );
   const code = email.text.match(/\b\d{6}\b/)?.[0];
   if (!code) {
     throw new Error('No code in the email');
