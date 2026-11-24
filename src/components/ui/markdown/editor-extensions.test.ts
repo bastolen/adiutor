@@ -5,6 +5,7 @@
 import { Editor } from '@tiptap/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import UNLINKED_CASES from '../../../../tests/ui/unlinked-markdown';
 import {
   editorExtensions,
   pasteMarkdown,
@@ -269,17 +270,16 @@ describe('links', () => {
     expect(links[0]).toHaveAttribute('rel', 'noopener noreferrer nofollow');
   });
 
-  it.each([
-    ['a script address', '[click](javascript:alert(1))'],
-    ['a page of Adiutor itself', '[click](/admin/settings/staff)'],
-    ['an email address behind a text', '[click](mailto:user@adiutor.dev)'],
-    ['an email address', 'write to user@adiutor.dev'],
-  ])('links nothing for %s, as the server doesn’t either', (_what, markdown) => {
-    const editor = editorWith(markdown);
+  it.each(UNLINKED_CASES)(
+    'links nothing for %s, as the server doesn’t either',
+    (_what, markdown, shown) => {
+      const editor = editorWith(markdown);
 
-    expect(editor.view.dom.querySelector('a')).toBeNull();
-    expect(editor.getText()).toContain(markdown.startsWith('[') ? 'click' : 'user@adiutor.dev');
-  });
+      expect(editor.view.dom.querySelector('a')).toBeNull();
+      expect(editor.view.dom.querySelector('[href]')).toBeNull();
+      expect(editor.getText()).toContain(shown);
+    },
+  );
 });
 
 describe('mentions', () => {
