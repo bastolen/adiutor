@@ -258,6 +258,13 @@ const jsdocConfig = [
        * it's written, like a stub `@param` line does.
        */
       'jsdoc/require-description': 'error',
+      /**
+       * A function whose one parameter is a destructured object with a named
+       * type (a component's props) needs no `@param` lines: the type's own
+       * comments describe each field, so the lines would only repeat them.
+       * A function that has `@param` lines still gets them checked.
+       */
+      'jsdoc/require-param': ['error', { interfaceExemptsParamsCheck: true }],
     },
   },
 ];
