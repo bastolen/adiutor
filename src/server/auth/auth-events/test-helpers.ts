@@ -24,6 +24,7 @@ import {
   setupTestContext,
 } from '../../../../tests/integration/helpers';
 import type { AuthHookContext } from './hook-context';
+import { noteProviderProfile } from './provider-accounts';
 
 /**
  * The test database context these tests share. Each test file imports this
@@ -269,11 +270,15 @@ export async function signedInHeaders(sessionId: string, secret = COOKIE_SECRET)
  * @param newSession - The session the callback created, if any.
  * @param newSession.sessionId - Its ID.
  * @param newSession.userId - Its user.
+ * @param signedInWith - The GitHub account the callback is for, by its ID at GitHub (e.g.
+ *   {@link gitHubAccountIdOf}): noted from its profile, as Better Auth's `user.validateUserInfo`
+ *   does before it creates or updates the account. Without it, none was noted.
  * @returns The context and its `setCookie` mock.
  */
 export function githubCallback(
   headers = new Headers(),
   newSession?: { sessionId: string; userId: string },
+  signedInWith?: string,
 ) {
   const setCookie = vi.fn<NonNullable<AuthHookContext['setCookie']>>();
   const ctx: AuthHookContext = {
@@ -299,6 +304,12 @@ export function githubCallback(
       },
     },
   };
+  if (signedInWith) {
+    noteProviderProfile(
+      { method: 'oauth', oauth: { providerId: 'github', profile: { id: signedInWith } } },
+      ctx,
+    );
+  }
   return { ctx, setCookie };
 }
 
@@ -354,6 +365,17 @@ export function noticeCookies(setCookie: ReturnType<typeof githubCallback>['setC
 }
 
 /**
+ * The ID at GitHub of a test GitHub account, which tells them apart by their
+ * access token ({@link connectGitHubWithToken} stores it so).
+ *
+ * @param accessToken - The account's GitHub access token.
+ * @returns Its `account.accountId`.
+ */
+export function gitHubAccountIdOf(accessToken: string): string {
+  return `github-${accessToken}`;
+}
+
+/**
  * Connects a GitHub account with an access token, as Better Auth stores it
  * after the OAuth flow.
  *
@@ -372,7 +394,7 @@ export async function connectGitHubWithToken(
   options: { confirmed?: boolean; updatedAt?: Date; mfaVerified?: boolean } = {},
 ): Promise<string> {
   return connectProvider(db, userId, {
-    accountId: `github-${accessToken}`,
+    accountId: gitHubAccountIdOf(accessToken),
     accessToken,
     mfaVerified: options.mfaVerified ?? false,
     confirmed: options.confirmed,

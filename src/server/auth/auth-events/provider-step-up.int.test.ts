@@ -23,6 +23,7 @@ import { afterSessionCreate, beforeSessionCreate } from './session-hooks';
 import {
   events,
   githubCallback,
+  gitHubAccountIdOf,
   mockGitHubApi,
   db,
   connectGitHubWithToken,
@@ -132,7 +133,11 @@ describe('confirming a session with GitHub on the step-up page', () => {
     const created = { sessionId: await createSession(db, jane), userId: jane };
     const start = new Date();
 
-    const { ctx, setCookie } = githubCallback(await signedInHeaders(previous), created);
+    const { ctx, setCookie } = githubCallback(
+      await signedInHeaders(previous),
+      created,
+      gitHubAccountIdOf('jane-token'),
+    );
 
     // Whether GitHub confirmed it is only known after the request, so nothing is recorded before.
     expect(await runCallback(ctx, created)).toEqual({
@@ -159,7 +164,7 @@ describe('confirming a session with GitHub on the step-up page', () => {
     const created = { sessionId: await createSession(db, jane), userId: jane };
 
     const headers = withStepUpCookie(await signedInHeaders(previous), 'github:unchecked');
-    const { ctx, setCookie } = githubCallback(headers, created);
+    const { ctx, setCookie } = githubCallback(headers, created, gitHubAccountIdOf('jane-token'));
     await runCallback(ctx, created);
 
     expect(stepUpCookies(setCookie)).toEqual(['']);
@@ -205,7 +210,11 @@ describe('confirming a session with GitHub on the step-up page', () => {
       markReverify(jane, previous);
       const created = { sessionId: await createSession(db, jane), userId: jane };
 
-      const { ctx, setCookie } = githubCallback(await signedInHeaders(previous), created);
+      const { ctx, setCookie } = githubCallback(
+        await signedInHeaders(previous),
+        created,
+        gitHubAccountIdOf('jane-token'),
+      );
 
       expect(await runCallback(ctx, created)).toEqual({
         atOnce: [],
@@ -248,7 +257,10 @@ describe('confirming a session with GitHub on the step-up page', () => {
       })
       .where(eq(session.id, sessionId));
     const created = { sessionId, userId: jane };
-    await runCallback(githubCallback(headers, created).ctx, created);
+    await runCallback(
+      githubCallback(headers, created, gitHubAccountIdOf('jane-token')).ctx,
+      created,
+    );
     return { previous, created: sessionId, confirmedAt };
   }
 
@@ -292,7 +304,7 @@ describe('confirming a session with GitHub on the step-up page', () => {
     const created = { sessionId: await createSession(db, jane), userId: jane };
 
     const headers = withStepUpCookie(await signedInHeaders(previous), 'github:unchecked');
-    const { ctx, setCookie } = githubCallback(headers, created);
+    const { ctx, setCookie } = githubCallback(headers, created, gitHubAccountIdOf('jane-token'));
     await runCallback(ctx, created);
 
     expect(stepUpCookies(setCookie)).toEqual(['github:mfa-off']);
@@ -365,7 +377,11 @@ describe('confirming a session with GitHub on the step-up page', () => {
     const created = { sessionId: await createSession(db, jane), userId: jane };
 
     // No re-verify marker: e.g. GitHub on a sign-in page opened before signing in (another tab).
-    const { ctx, setCookie } = githubCallback(await signedInHeaders(previous), created);
+    const { ctx, setCookie } = githubCallback(
+      await signedInHeaders(previous),
+      created,
+      gitHubAccountIdOf('jane-token'),
+    );
 
     const signIn = [['sign_in', jane, { method: 'github' }]];
     expect(await runCallback(ctx, created)).toEqual({ atOnce: signIn, afterRequest: signIn });

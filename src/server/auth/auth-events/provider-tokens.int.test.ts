@@ -12,13 +12,19 @@ import { PROVIDER_STEP_UP_COOKIE } from '@/lib/sign-in/oauth-providers';
 
 import { createSession, createUser } from '../../../../tests/integration/helpers';
 import { afterAuthRequest } from './after-request';
-import { afterAccountCreate, beforeAccountCreate, beforeAccountUpdate } from './provider-accounts';
+import {
+  afterAccountCreate,
+  beforeAccountCreate,
+  beforeAccountUpdate,
+  noteProviderProfile,
+} from './provider-accounts';
 import { afterSessionCreate } from './session-hooks';
 import {
   mockGitHubApi,
   db,
   connectGitHubWithToken,
   githubCallback,
+  gitHubAccountIdOf,
   sessionMfa,
   signedInHeaders,
   storedGitHubMfa,
@@ -128,7 +134,11 @@ describe('OAuth tokens', () => {
     const janeSession = await createSession(db, jane);
 
     await afterAuthRequest(
-      githubCallback(new Headers(), { sessionId: janeSession, userId: jane }).ctx,
+      githubCallback(
+        new Headers(),
+        { sessionId: janeSession, userId: jane },
+        gitHubAccountIdOf('jane-token'),
+      ).ctx,
     );
 
     expect(await sessionMfa(janeSession)).toEqual({ mfaVerified: true, mfaMethod: 'github' });
@@ -163,7 +173,13 @@ describe('OAuth tokens', () => {
     const janeSession = await createSession(db, jane);
     const reconnected = await connectGitHubWithToken(jane, 'fresh-token', { mfaVerified: false });
 
-    await afterAuthRequest(githubCallback(await signedInHeaders(janeSession)).ctx);
+    await afterAuthRequest(
+      githubCallback(
+        await signedInHeaders(janeSession),
+        undefined,
+        gitHubAccountIdOf('fresh-token'),
+      ).ctx,
+    );
 
     expect(githubApiTokens(fetchSpy)).toEqual(['Bearer fresh-token']);
     expect(await storedGitHubMfa(reconnected)).toBe(true);
@@ -224,7 +240,7 @@ describe('checking GitHub two-factor authentication', () => {
     expect(await storedGitHubMfa(used)).toBe(false);
   });
 
-  it('checks the GitHub account that signed in: the one Better Auth updated last', async () => {
+  it('checks the GitHub account that signed in, by its ID at GitHub', async () => {
     const fetchSpy = mockGitHubApi({ 'stale-token': false, 'fresh-token': true });
     const jane = await createUser(db, 'jane@adiutor.test');
     const stale = await connectGitHubWithToken(jane, 'stale-token', {
@@ -234,7 +250,11 @@ describe('checking GitHub two-factor authentication', () => {
     const newSession = await createSession(db, jane);
 
     await afterAuthRequest(
-      githubCallback(new Headers(), { sessionId: newSession, userId: jane }).ctx,
+      githubCallback(
+        new Headers(),
+        { sessionId: newSession, userId: jane },
+        gitHubAccountIdOf('fresh-token'),
+      ).ctx,
     );
 
     expect(githubApiTokens(fetchSpy)).toEqual(['Bearer fresh-token']);
@@ -259,12 +279,69 @@ describe('checking GitHub two-factor authentication', () => {
     const newSession = await createSession(db, jane);
 
     await afterAuthRequest(
-      githubCallback(new Headers(), { sessionId: newSession, userId: jane }).ctx,
+      githubCallback(
+        new Headers(),
+        { sessionId: newSession, userId: jane },
+        gitHubAccountIdOf('fresh-token'),
+      ).ctx,
     );
 
     expect(githubApiTokens(fetchSpy)).toEqual(['Bearer fresh-token']);
     expect(await storedGitHubMfa(signedIn)).toBe(true);
     expect(await sessionMfa(newSession)).toEqual({ mfaVerified: true, mfaMethod: 'github' });
+  });
+
+  it('judges a sign-in by the GitHub account that signed in, never another of the user’s that holds a token', async () => {
+    // Jane's own GitHub account is confirmed and has 2FA. Another one with her address, connected
+    // at sign-in and not confirmed, signs in, while a sign-in with hers stored a token at the same
+    // moment, the latest of the two.
+    const fetchSpy = mockGitHubApi({ 'jane-token': true, 'other-token': false });
+    const jane = await createUser(db, 'jane@adiutor.test');
+    const other = await connectGitHubWithToken(jane, 'other-token', {
+      confirmed: false,
+      updatedAt: new Date(Date.now() - 60_000),
+    });
+    const own = await connectGitHubWithToken(jane, 'jane-token', { mfaVerified: true });
+    const otherSession = await createSession(db, jane);
+
+    await afterAuthRequest(
+      githubCallback(
+        new Headers(),
+        { sessionId: otherSession, userId: jane },
+        gitHubAccountIdOf('other-token'),
+      ).ctx,
+    );
+
+    expect(githubApiTokens(fetchSpy)).toEqual(['Bearer other-token']);
+    expect(await sessionMfa(otherSession)).toEqual({ mfaVerified: false, mfaMethod: null });
+    expect(await storedGitHubMfa(other)).toBe(false);
+    expect(await storedGitHubMfa(own)).toBe(true);
+  });
+
+  it('checks nothing, and confirms no session, when the account that signed in isn’t known', async () => {
+    const fetchSpy = mockGitHubApi({ 'jane-token': true });
+    const jane = await createUser(db, 'jane@adiutor.test');
+    await connectGitHubWithToken(jane, 'jane-token');
+    const withoutProfile = await createSession(db, jane);
+    const withGoogleProfile = await createSession(db, jane);
+
+    // No profile noted for the callback, or one of another provider.
+    await afterAuthRequest(
+      githubCallback(new Headers(), { sessionId: withoutProfile, userId: jane }).ctx,
+    );
+    const { ctx } = githubCallback(new Headers(), { sessionId: withGoogleProfile, userId: jane });
+    noteProviderProfile(
+      {
+        method: 'oauth',
+        oauth: { providerId: 'google', profile: { sub: gitHubAccountIdOf('jane-token') } },
+      },
+      ctx,
+    );
+    await afterAuthRequest(ctx);
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(await sessionMfa(withoutProfile)).toEqual({ mfaVerified: false, mfaMethod: null });
+    expect(await sessionMfa(withGoogleProfile)).toEqual({ mfaVerified: false, mfaMethod: null });
   });
 
   it('stores a definite answer, and confirms the sign-in only when 2FA is on', async () => {
@@ -278,10 +355,18 @@ describe('checking GitHub two-factor authentication', () => {
     const johnSession = await createSession(db, john);
 
     await afterAuthRequest(
-      githubCallback(new Headers(), { sessionId: janeSession, userId: jane }).ctx,
+      githubCallback(
+        new Headers(),
+        { sessionId: janeSession, userId: jane },
+        gitHubAccountIdOf('jane-token'),
+      ).ctx,
     );
     await afterAuthRequest(
-      githubCallback(new Headers(), { sessionId: johnSession, userId: john }).ctx,
+      githubCallback(
+        new Headers(),
+        { sessionId: johnSession, userId: john },
+        gitHubAccountIdOf('john-token'),
+      ).ctx,
     );
 
     expect(await storedGitHubMfa(janeGitHub)).toBe(false);
@@ -310,10 +395,11 @@ describe('checking GitHub two-factor authentication', () => {
       const newSession = await createSession(db, jane);
       // "Confirm with GitHub" on the step-up page, so the next page says why it didn't count.
       markReverify(jane, previous);
-      const { ctx, setCookie } = githubCallback(await signedInHeaders(previous), {
-        sessionId: newSession,
-        userId: jane,
-      });
+      const { ctx, setCookie } = githubCallback(
+        await signedInHeaders(previous),
+        { sessionId: newSession, userId: jane },
+        gitHubAccountIdOf('jane-token'),
+      );
 
       await afterSessionCreate({ id: newSession, userId: jane }, ctx);
       await afterAuthRequest(ctx);

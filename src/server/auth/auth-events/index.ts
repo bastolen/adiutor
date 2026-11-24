@@ -10,8 +10,9 @@
  * (that browser's own), counts wrong passwords (telling the owner when they
  * pause password sign-in), records wrong codes at a password sign-in's code
  * step (telling the owner when they pause signing in with a code), keeps the
- * MFA status of provider accounts up to
- * date (for providers that can prove MFA), tells the next page when a
+ * MFA status of provider accounts up to date (for providers that can prove
+ * MFA; a sign-in is judged by the account that signed in, never another of
+ * the user's), tells the next page when a
  * provider account was connected at sign-in or didn't confirm a session on
  * the step-up page, ends the session a browser had when someone signs in
  * there (as signing out would, also another user's), and tracks when users
