@@ -1,4 +1,4 @@
-# 0043. Wider pages for the lists of requests and people
+# 0042. Wider pages for the lists of requests and people
 
 - **Status:** Accepted
 - **Date:** 2026-11-24

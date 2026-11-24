@@ -2,7 +2,7 @@
  * @file Lets a page use more of a wide screen than the rest of the app does.
  * The signed-in app's content stops growing at 1280px of screen (944px of
  * content), which suits settings, details and short tables. Some pages have
- * more to show in the room (decision 0043): a request, whose text gets it;
+ * more to show in the room (decision 0042): a request, whose text gets it;
  * the boards of requests, whose lanes sit side by side; and the lists of
  * requests and users, whose tables get columns of their own for what sits
  * under each name at the usual width. A section whose tabs hold such a page

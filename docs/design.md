@@ -340,7 +340,7 @@ keyboard support.
   cursor in the field.
   The content of every page stops growing at 1280px of screen. A page with more to show in the
   room may be wider (`WidePage` in `src/components/layout/wide-page.tsx`,
-  [decision 0043](decisions/0043-wider-pages-for-lists-of-requests-and-people.md)): from that
+  [decision 0042](decisions/0042-wider-pages-for-lists-of-requests-and-people.md)): from that
   width it grows with the room next to the menu, up to 1200px of content, which it always has
   from 1536px of screen. A request's page grows, so the conversation and the editor of a reply
   get the room, with the details still beside them; so do the boards of requests, so more of
