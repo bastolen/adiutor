@@ -19,7 +19,7 @@ import { requestState, takeRequestState } from '../request-state';
 import { currentReverify, type ReverifyMarker } from '../reverify-marker';
 import { expireCookieIfSent } from './cookies';
 import { type AuthHookContext, safely, audit } from './hook-context';
-import { hasReverifySession } from './session-records';
+import { reverifiedSession } from './session-records';
 
 /**
  * Notes that a request's re-verify was refused, for {@link afterAuthRequest}.
@@ -114,7 +114,7 @@ export async function checkReverify(
           .limit(1)
       : [];
   const allowed = mayReverifyWith({
-    sessionLive: await hasReverifySession(ctx, marker),
+    sessionLive: (await reverifiedSession(ctx, marker)) !== null,
     connected: info.source.action === 'sign-in',
     ownAccount: info.user.id === marker.userId && own !== undefined,
     confirmed: own?.confirmed === true,

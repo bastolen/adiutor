@@ -1,7 +1,7 @@
 /**
  * @file The session rows several hooks read or update: the request's own live
- * session, its MFA level, and whether the browser still has the session a
- * re-verify started from.
+ * session, its MFA level, and the session a re-verify started from, while the
+ * browser still has it.
  */
 import { eq } from 'drizzle-orm';
 
@@ -12,22 +12,6 @@ import { type MfaMethod } from '@/lib/authz/mfa';
 import { type ReverifyMarker } from '../reverify-marker';
 import { type SignedSession, signedSession } from '../signed-session';
 import type { AuthHookContext } from './hook-context';
-
-/**
- * Checks whether the browser still has the live session a re-verify started
- * from (`signedSession`, read from its validly signed session cookie).
- *
- * @param ctx - The endpoint context.
- * @param marker - The re-verify.
- * @returns Whether that session is the browser's, and hasn't expired.
- */
-export async function hasReverifySession(
-  ctx: AuthHookContext | null,
-  marker: ReverifyMarker,
-): Promise<boolean> {
-  const current = await signedSession(ctx);
-  return current?.id === marker.sessionId && current.userId === marker.userId;
-}
 
 /**
  * Finds the session a request was made with, if it belongs to this user and
@@ -45,6 +29,24 @@ export async function ownSession(
 ): Promise<SignedSession | null> {
   const current = await signedSession(ctx);
   return current?.userId === userId ? current : null;
+}
+
+/**
+ * Finds the session a re-verify confirms, when the browser still has it: the
+ * request's session ({@link ownSession}) is the one the re-verify was started
+ * from, of the user who started it. Not when the browser has another session
+ * (or none), or that one expired meanwhile.
+ *
+ * @param ctx - The endpoint context.
+ * @param marker - The re-verify.
+ * @returns The session (its ID, user and MFA facts), or `null`.
+ */
+export async function reverifiedSession(
+  ctx: AuthHookContext | null,
+  marker: ReverifyMarker,
+): Promise<SignedSession | null> {
+  const own = await ownSession(ctx, marker.userId);
+  return own?.id === marker.sessionId ? own : null;
 }
 
 /**

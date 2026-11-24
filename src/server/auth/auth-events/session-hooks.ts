@@ -36,11 +36,11 @@ import {
   type SessionData,
   takeRequestState,
 } from '../request-state';
-import { currentReverify, type ReverifyMarker } from '../reverify-marker';
+import { currentReverify } from '../reverify-marker';
 import { setNextPageCookie, expireCookieIfSent } from './cookies';
 import { type AuthHookContext, withRequestInfo, safely } from './hook-context';
 import { noteRefusedReverify } from './reverify';
-import { ownSession, hasReverifySession } from './session-records';
+import { ownSession, reverifiedSession } from './session-records';
 
 /**
  * Endpoints where Better Auth replaces the signed-in session with a new one
@@ -104,21 +104,6 @@ function keptAge(previous: SessionAge): { createdAt?: Date; expiresAt?: Date } {
     ...(previous.createdAt && { createdAt: new Date(previous.createdAt) }),
     ...(previous.expiresAt && { expiresAt: new Date(previous.expiresAt) }),
   };
-}
-
-/**
- * Finds the session a re-verify confirms, when the browser still has it:
- * the request's session ({@link ownSession}) is the one the re-verify was
- * started from. Not when the browser has another session (or none), or that
- * one expired meanwhile.
- *
- * @param ctx - The endpoint context.
- * @param marker - The re-verify.
- * @returns The session's MFA facts, or `null`.
- */
-async function reverifiedSession(ctx: AuthHookContext | null, marker: ReverifyMarker) {
-  const own = await ownSession(ctx, marker.userId);
-  return own?.id === marker.sessionId ? own : null;
 }
 
 /**
@@ -290,7 +275,7 @@ async function providerStepUpOf(
     return null;
   }
   const reverify = await currentReverify();
-  if (reverify?.userId !== created.userId || !(await hasReverifySession(ctx, reverify))) {
+  if (reverify?.userId !== created.userId || (await reverifiedSession(ctx, reverify)) === null) {
     return null;
   }
   return { created, path, providerId };
