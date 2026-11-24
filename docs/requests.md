@@ -461,7 +461,7 @@ written and sent is in [Email](email.md), and the jobs that send them in
   the language's name. The languages are highlight.js's common ones plus Dockerfile, nginx,
   PowerShell, Apache, HTTP and properties (`CODE_LANGUAGES`); a language is never guessed, and a
   block in any other language is shown without colours. The colours are the `code-*` tokens (see
-  [Design and accessibility](design.md#design-and-accessibility)). A block of code and a table
+  [Design and accessibility](design.md#colours-and-font)). A block of code and a table
   scroll sideways when they're wider than the text, can be reached and scrolled with the
   keyboard, and say what they hold.
 - **Copying code:** a block of code has a "Copy code" button next to its language (`CopyButton`),
@@ -777,7 +777,7 @@ says so with a "Show everything" button.
   the company (when there's more than one), the type and, for the staff, the priority
   (`FilterMenu`, a sibling of `SortMenu`). It sorts by last activity or the day it was raised,
   and for the staff by priority, and pages like every table (see
-  [Design and accessibility](design.md#design-and-accessibility)). The staff also filter by
+  [Design and accessibility](design.md#tables)). The staff also filter by
   assignee and see who each request is assigned to (see [Assigning](#assigning)). From tablet
   width the status, the priority, the assignees and the last activity have columns of their own;
   a long status ("Waiting for the company"), a long row of avatars and the last activity wrap in

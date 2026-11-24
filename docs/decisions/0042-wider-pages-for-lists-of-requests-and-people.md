@@ -16,8 +16,8 @@ showed.
 
 ## Decision
 
-How it looks is in [Design and accessibility](../design.md#design-and-accessibility) ("Widths" and
-"Layout").
+How it looks is in [Tables](../design.md#tables) ("Widths") and
+[Layout and error pages](../design.md#layout-and-error-pages) ("Layout").
 
 - **Wide where the room shows more:** a request, the boards and the lists of requests, and the
   list of users.

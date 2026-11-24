@@ -9,6 +9,8 @@ The interface aims to feel calm and trustworthy, and to meet
 [WCAG 2.2](https://www.w3.org/TR/WCAG22/) level AA everywhere, in light and dark mode, with full
 keyboard support.
 
+### Components
+
 - **Components:** build UI from `src/components/ui/` (`Button`, `TextField`, `SelectField`,
   `Card`, `PageHeader`, `AuthHeading`, `AuthDivider`, `Table`, `Badge`, `Alert` (optionally
   dismissible), `Banner` (a notice with an icon, title and actions, e.g. on the dashboard),
@@ -36,6 +38,9 @@ keyboard support.
   `{t('deactivated')}`, as its English text). Icons come from
   [Lucide](https://lucide.dev) and are hidden from screen readers; icon-only buttons have an
   `aria-label`. Join classes with `cn()` (`src/lib/cn.ts`).
+
+### Tables
+
 - **Tables** of records sort and paginate (`src/lib/tables/table-state.ts`, with their links built
   in `src/lib/tables/page-url.ts` and each table defined in `src/lib/tables/tables.ts`):
   - **Sorting:** every table sorts from its Sort menu (`SortMenu`) in the card header or next to
@@ -105,6 +110,9 @@ keyboard support.
       own waiting for the company on the first page of the lists of requests.
   - **List services** take the table's state and return one page with the total
     (`Paged<T>`); each sort ends with the row's ID, so pages don't overlap and reversing is exact.
+
+### The board
+
 - **The board** of requests is the one view of records that isn't a table: a lane per status, each
   card a list item, in columns, two of which (Waiting, Closed) hold two lanes as an upper and a
   lower half, each half with its own heading (`h3` under the column's `h2`). What it shows, who may
@@ -149,6 +157,9 @@ keyboard support.
   - **Colours:** a lane is a step back from its cards in both modes (`muted` behind `surface`
     cards in light mode, `surface` behind `raised` ones in dark mode, where `surface` is the darker
     of the two); the count, the empty lane and the card's details use `muted-foreground`.
+
+### Cards and pages kept alive
+
 - **Cards** have 24px padding on every side. Settings with actions use full-width rows (what it does
   on the left, the button on the right). Destructive settings that can't be undone, like deleting or
   deactivating an account, get their own `Card` with `tone="danger"`.
@@ -202,6 +213,9 @@ keyboard support.
   when someone goes back to them (from the code step to the sign-in page, say), and whoever does
   mustn't find the last user's details or a button still busy. They also reset a busy button when the browser restores them from its
   back/forward cache (`pageshow`, through `usePageRestored`).
+
+### Avatars, buttons and menus
+
 - **Avatars** (`Avatar`) show initials, or a person's picture over them (`src`, from
   `/avatars/<account>`, see [decision 0022](decisions/0022-profile-pictures-from-providers.md)). The
   picture (`AvatarPicture`) takes itself away when it can't load, also when it failed before the
@@ -236,6 +250,9 @@ keyboard support.
   it keeps its content as its name, and its menu is labelled by the part of it that names it
   (`aria-labelledby` on `MenuContent`). `e2e/board-a11y.spec.ts` and `e2e/keyboard.spec.ts` check
   those menus' names.
+
+### Selects and navigation
+
 - **Long selects can be searched.** A `SelectField` with more options than `SEARCH_THRESHOLD`
   (10, in `src/components/ui/select-field.tsx`; a field can pass its own `searchThreshold`) opens
   a panel with a search field above its list (`SearchableSelect`, on Radix Popover): the list shows
@@ -279,6 +296,9 @@ keyboard support.
   mode it gets the same inset 2px outline as a menu's highlighted item instead (`currentItem` in
   `src/components/ui/styles.ts`), except while it has keyboard focus, when the focus ring shows. A
   component that marks a current item adds `currentItem` to every item, next to `focusRing`.
+
+### Colours and font
+
 - **Colours:** semantic tokens in `src/styles/theme.css`, each checked for contrast (at least 4.5:1
   for text, 3:1 for input borders) in both modes:
 
@@ -311,6 +331,9 @@ keyboard support.
   ships (`src/lib/fonts.ts`, served from its own domain), so text looks and measures the same on
   every device and in CI; line height = font size + 8px. Emails use the device's own font, since
   email clients often block web fonts. See [decision 0016](decisions/0016-ship-inter-and-jetbrains-mono.md).
+
+### Layout and error pages
+
 - **Layout:** signed-in pages have a sidebar that becomes a menu button and slide-over panel
   (`Sheet`) on small screens, which opens with focus on the link to the current page; signed-out
   pages use `AuthLayout`, with a decorative brand panel on wide screens.
@@ -349,6 +372,9 @@ keyboard support.
   The reference appears once it's known: worked out from Next's digest for errors from the server,
   or returned by the report the page sends for errors in the browser; when that report fails, the
   page simply shows no reference.
+
+### Interaction and results
+
 - **Interaction:** every control has hover, pressed, focus-visible (a 2px ring), disabled and busy
   states. Clickable things show a pointer cursor, disabled ones a not-allowed cursor and busy ones
   a wait cursor (base rules in `src/app/globals.css`). While its action runs a button is busy
@@ -507,6 +533,9 @@ keyboard support.
   link that stands on its own takes `standalone` and is underlined on hover only: a name in a
   table, a value in a list of details, "Forgot password?" under its field, a link with a line to
   itself. When you add a `TextLink`, decide which of the two it is.
+
+### Text, forms and titles
+
 - **Markdown** is shown with `MarkdownText` (on the server only) and written in `MarkdownField`,
   both in `src/components/ui/markdown/`; see [Requests](requests.md#text). The field's editor
   loads after the page, in place of a plain text field under the same toolbar, so nothing moves.
@@ -547,6 +576,9 @@ keyboard support.
 - **Page headers:** `PageHeader` keeps its actions to the right of the title while the title has
   room to read (10rem), and moves them below it on narrower screens, rather than squeezing the
   title into a column.
+
+### Motion
+
 - **Motion:** short transitions only, and none at all when the device asks for reduced motion.
 
 Two end-to-end specs keep this true: `e2e/a11y.spec.ts` scans every page (and open menus, selects,
@@ -603,7 +635,7 @@ has a palette icon, apart from the options.
   there too.
 - **Colours:** each semantic colour is defined once in `src/styles/theme.css` as
   `light-dark(<light>, <dark>)`, so both values sit side by side when you check contrast.
-- **Styling:** use the semantic colours (see [Design and accessibility](#design-and-accessibility))
+- **Styling:** use the semantic colours (see [Design and accessibility](#colours-and-font))
   such as `bg-surface text-foreground` instead of fixed colours like `bg-white` or `text-ink`; they
   switch with the mode. For anything else, use the `dark:` variant (e.g. `dark:hidden`).
 - **Logo:** use the `Logo` component (`src/components/brand/logo.tsx`), which shows `logo.svg` in
@@ -628,7 +660,7 @@ the `.ico` again from the SVG.
 `src/styles/theme.css` is the Tailwind theme: the brand colours (`brand-teal`, `brand-green`,
 `brand-orange`, `ink`), the fonts (Inter and JetBrains Mono, then the system fonts as fallbacks),
 text sizes with line height = font size + 8px, short entrance animations, and the semantic colours
-described under [Design and accessibility](#design-and-accessibility). Use the brand colours for
+described under [Design and accessibility](#colours-and-font). Use the brand colours for
 brand moments only; UI uses the semantic colours.
 
 The brand assets aren't covered by the code's MIT License; see [License](../README.md#license).

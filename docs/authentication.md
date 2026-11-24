@@ -200,7 +200,7 @@ How it's built:
   `returnTo` field (`ReturnToField`: `RowAction`, `ActionDialog` and `RoleSelect` include it).
 - **Server actions.** An action that must send the user to confirm first reads that field with
   `confirmChangeUrlFor(formData, fallback)` (`src/lib/sign-in/confirm-url.ts`).
-- **Arriving.** The card lands the user on it (see [Design](design.md#design-and-accessibility)).
+- **Arriving.** The card lands the user on it (see [Design](design.md#interaction-and-results)).
 
 An anchor is kept only when it names a section, with `isSectionId` in `src/lib/redirect.ts`:
 lowercase letters, digits and hyphens, starting with a letter, at most 64 characters, and not
@@ -405,7 +405,7 @@ does, to check what isn't working for them. The reasons are in
   - The controls that change something render disabled meanwhile, and so do the fields and
     dropdowns of forms that change something (`useSignedInAs`, with `ChangesFieldset` as a safety
     net, see
-    [Design](design.md#design-and-accessibility)). The request forms and controls stay on: they
+    [Design](design.md#interaction-and-results)). The request forms and controls stay on: they
     don't use it, and `RowAction` and `ActionDialog` take `allowedWhileSignedInAs`.
   - The account menu shows the user, labelled "Signed in as". **Back to my account** takes Sign
     out's place there, since signing out would end the staff member's own session.
