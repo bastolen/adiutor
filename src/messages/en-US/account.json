@@ -89,7 +89,6 @@
       "codePending": "Entered your password; the sign-in then asked for your code",
       "mfaVerified": "Verified a sign-in with MFA",
       "mfaFailedDifferentAccount": "{provider, select, unknown {Failed MFA confirmation with a different account} other {Failed MFA confirmation with a different {provider} account}}",
-      "mfaFailedAtSignIn": "Wrong two-step verification code entered at sign-in",
       "mfaFailedWrongCode": "Failed MFA confirmation with a wrong code",
       "passwordSet": "Set a password",
       "passwordChanged": "Changed your password",

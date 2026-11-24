@@ -117,7 +117,7 @@ export function tooManyAttemptsBody(
 ): RefusalBody {
   return {
     code: TOO_MANY_ATTEMPTS.code,
-    message: translatorFor(request)('codes.server.tooManyAttempts', {
+    message: translator(localeOf(request), 'errors')('tooManyAttempts', {
       minutes: waitMinutes(retryAfterSeconds),
     }),
   };

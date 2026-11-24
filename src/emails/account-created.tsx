@@ -57,7 +57,7 @@ export default function AccountCreatedEmail({
   const values = { creator: creatorName, staff: staffName };
   return (
     <EmailLayout
-      preview={t('preview')}
+      preview={t('subject')}
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}

@@ -59,7 +59,7 @@ export default function JobFailingEmail({
   const t = translator(locale, 'emails.jobFailing');
   return (
     <EmailLayout
-      preview={t('preview', { job })}
+      preview={t('subject', { job })}
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}

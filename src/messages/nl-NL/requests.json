@@ -92,8 +92,7 @@
       "priorityLabel": "Prioriteit",
       "priorityFromType": "Bepaald door het type",
       "priorityHint": "Alleen medewerkers zien de prioriteit.",
-      "submit": "Verzoek indienen",
-      "cancel": "Annuleren"
+      "submit": "Verzoek indienen"
     },
     "detail": {
       "title": "Verzoek {reference}",
@@ -250,7 +249,6 @@
       "descriptionLabel": "Beschrijving",
       "replyLabel": "Reactie",
       "save": "Opslaan",
-      "cancel": "Annuleren",
       "edited": "Bewerkt",
       "editedAt": "Bewerkt op {time}",
       "versionsTitle": "Eerdere versies",

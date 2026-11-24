@@ -89,7 +89,6 @@
       "codePending": "Introdujiste tu contraseña; después, el inicio de sesión pidió tu código",
       "mfaVerified": "Inicio de sesión verificado con MFA",
       "mfaFailedDifferentAccount": "{provider, select, unknown {Confirmación de MFA fallida con otra cuenta} other {Confirmación de MFA fallida con otra cuenta de {provider}}}",
-      "mfaFailedAtSignIn": "Código de verificación en dos pasos incorrecto al iniciar sesión",
       "mfaFailedWrongCode": "Confirmación de MFA fallida con un código incorrecto",
       "passwordSet": "Estableciste una contraseña",
       "passwordChanged": "Cambiaste tu contraseña",

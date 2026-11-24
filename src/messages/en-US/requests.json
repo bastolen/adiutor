@@ -92,8 +92,7 @@
       "priorityLabel": "Priority",
       "priorityFromType": "Set by the type",
       "priorityHint": "Only staff see the priority.",
-      "submit": "Raise request",
-      "cancel": "Cancel"
+      "submit": "Raise request"
     },
     "detail": {
       "title": "Request {reference}",
@@ -250,7 +249,6 @@
       "descriptionLabel": "Description",
       "replyLabel": "Reply",
       "save": "Save",
-      "cancel": "Cancel",
       "edited": "Edited",
       "editedAt": "Edited {time}",
       "versionsTitle": "Earlier versions",

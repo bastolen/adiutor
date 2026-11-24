@@ -162,7 +162,7 @@ export default function RaiseRequestForm({
           {t('new.submit')}
         </Button>
         <Button asChild variant="secondary">
-          <Link href="/requests">{t('new.cancel')}</Link>
+          <Link href="/requests">{tCommon('actions.cancel')}</Link>
         </Button>
       </div>
     </form>
