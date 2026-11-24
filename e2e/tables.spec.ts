@@ -11,6 +11,7 @@ import { type Page } from '@playwright/test';
 import { findUserId, storeRequest } from './support/db';
 import {
   CLIENT_WATCHER,
+  COMPANY_NAME,
   COMPANY_SLUG,
   NAMELESS_SUPPORT,
   PAGED_LINK_COUNT,
@@ -232,6 +233,25 @@ test('a wide page gives what sits under the name a column of its own from 1536px
   const name = await firstRow.getByRole('cell').nth(1).innerText();
   expect(name).toMatch(/^Adiutor Tests/);
   await expect(firstRow.getByRole('cell').first()).not.toContainText(name, { useInnerText: true });
+
+  // The users list gives a user's companies and MFA status their own columns the same way.
+  const companies = table.getByRole('columnheader', { name: 'Companies', exact: true });
+  const mfa = table.getByRole('columnheader', { name: 'MFA', exact: true });
+  const watcher = table.locator('tbody tr').filter({ hasText: CLIENT_WATCHER.name });
+  await page.goto(`/admin/users?${new URLSearchParams({ q: CLIENT_WATCHER.email })}`);
+  await expect(companies).toBeVisible();
+  await expect(mfa).toBeVisible();
+  // Name, Companies, MFA, Email, Activity.
+  await expect(watcher.getByRole('cell').nth(1)).toContainText(COMPANY_NAME);
+  await expect(watcher.getByRole('cell').first()).not.toContainText('Companies:', {
+    useInnerText: true,
+  });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(companies).toBeHidden();
+  await expect(mfa).toBeHidden();
+  await expect(watcher.getByRole('cell').first()).toContainText('Companies:', {
+    useInnerText: true,
+  });
 });
 
 test('no table scrolls sideways from tablet to desktop widths', async ({ page }) => {

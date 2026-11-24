@@ -82,8 +82,9 @@ keyboard support.
     - **Activity:** people tables show when someone was last active and when they joined in
       one Activity column from 1280px, and under the name below that
       (`src/app/(app)/_people/activity.tsx`).
-    - **Users:** the MFA status and companies always show under the name, the address from
-      768px in its own column.
+    - **Users:** the MFA status and companies show under the name, and in their own columns from
+      1536px, where the page (a wide one) has its full 1200px; the address from 768px in its own
+      column.
     - **Staff and members:** the address always shows under the name (unless it is the name),
       and the role from 768px in its own column.
     - **Companies:** the URL name always shows under the name, and the status and when it was
@@ -342,8 +343,8 @@ keyboard support.
   width it grows with the room next to the menu, up to 1200px of content, which it always has
   from 1536px of screen. A request's page grows, so the conversation and the editor of a reply
   get the room, with the details still beside them; so do the boards of requests, so more of
-  their lanes show side by side, and the lists of requests, whose titles and statuses stop
-  wrapping. A company's pages are wide on every tab, through the company's layout, so its list
+  their lanes show side by side, the lists of requests, whose titles and statuses stop
+  wrapping, and the list of users, whose companies and MFA get columns of their own. A company's pages are wide on every tab, through the company's layout, so its list
   and board get the room and its header and tabs stay in one place from tab to tab. It measures
   that room in the content column (a container in the app layout), not the screen, so a
   scrollbar never makes it scroll sideways. Other pages keep the content's usual width: a short

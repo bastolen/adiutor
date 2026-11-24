@@ -39,6 +39,8 @@
       },
       "columns": {
         "name": "Nombre",
+        "companies": "Empresas",
+        "mfa": "MFA",
         "email": "Correo",
         "activity": "Actividad"
       },
