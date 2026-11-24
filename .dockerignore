@@ -2,27 +2,32 @@
 # file it would send this whole folder to the build and `COPY . .` would copy all of it: your
 # node_modules (built for your machine, over the image's own install), the database files in
 # docker/ and your .env with its secrets, into a layer anyone with the image can read. So this
-# follows .gitignore, plus git's own folder; keep the two in step.
+# follows .gitignore, plus git's own folder; keep the two in step. A pattern here only matches at
+# the root of the build context unless it starts with `**/`, so the ones that must also hold in
+# folders inside it (other checkouts of the repository live in .claude/worktrees, each with its
+# own .env and node_modules) start with `**/`.
 
-# Git and the editor
+# Git, the editor and Claude Code (its other checkouts, with their .env files)
 .git
+.claude
 .github
 .vscode
 .husky/_
 
 # Dependencies and builds (the image installs and builds its own)
-node_modules
+**/node_modules
 .pnp
 .pnp.*
-.next
+**/.next
+.vercel
 out
 build
 *.tsbuildinfo
 next-env.d.ts
 
 # Secrets and local configuration
-.env*
-*.pem
+**/.env*
+**/*.pem
 
 # Local database files
 docker
