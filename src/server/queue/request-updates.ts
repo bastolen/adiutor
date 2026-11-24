@@ -16,7 +16,7 @@ import { defineQueuedKind } from './define';
  * them (`assigned`), mentioned them in one of its texts (`mentioned`) or
  * subscribed them to it (`subscribed`).
  */
-export const REQUEST_UPDATE_EVENTS = [
+const REQUEST_UPDATE_EVENTS = [
   'reply',
   'note',
   'status',
