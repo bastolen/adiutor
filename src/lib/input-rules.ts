@@ -66,17 +66,30 @@ export const ERROR_MESSAGE_MAX_LENGTH = 500;
 export const ERROR_PATH_MAX_LENGTH = 300;
 
 /**
+ * A name's Latin letters and digits, for a key or a slug made from it:
+ * without accents (`NFKD`), in lower case, with one separator for every
+ * other run of characters and none at either end. A script without a Latin
+ * form leaves nothing.
+ *
+ * @param name - The name.
+ * @param separator - What goes between the words.
+ * @returns The words, e.g. `adiutor-b-v` for "Adiutor B.V." with `-`.
+ */
+export function latinWords(name: string, separator: '-' | '_'): string {
+  return name
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, separator)
+    .replace(new RegExp(`^${separator}+|${separator}+$`, 'g'), '');
+}
+
+/**
  * Turns a company name into a slug suggestion, e.g. "Adiutor B.V." → "adiutor-b-v".
  *
  * @param name - The company name.
  * @returns A slug made of lower-case letters, digits and dashes.
  */
 export function slugify(name: string): string {
-  return name
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, SLUG_MAX_LENGTH);
+  return latinWords(name, '-').slice(0, SLUG_MAX_LENGTH);
 }

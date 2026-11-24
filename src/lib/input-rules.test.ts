@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  latinWords,
   MAX_BULK_INVITES,
   MIN_PASSWORD_LENGTH,
   NAME_MAX_LENGTH,
@@ -36,6 +37,17 @@ describe('input limits', () => {
       REQUEST_TEXT_MAX_LENGTH: 10_000,
       REQUEST_PREFIX_MAX_LENGTH: 5,
     });
+  });
+});
+
+describe('latinWords', () => {
+  it('keeps the Latin letters and digits, without accents and in lower case', () => {
+    expect(latinWords('  Adiutor   Tésts & Co ', '-')).toBe('adiutor-tests-co');
+    expect(latinWords('Zoë’s Printers 2', '_')).toBe('zoe_s_printers_2');
+  });
+
+  it('leaves nothing of a name without them', () => {
+    expect(latinWords('علی ✨', '-')).toBe('');
   });
 });
 

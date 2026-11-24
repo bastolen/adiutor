@@ -3,9 +3,10 @@
  * the two sides of a request, the kinds of entry in its history and what an
  * assignment entry records, the formats
  * its text is stored in and the status filters of a request list. Free of
- * dependencies, so the database schema, the services and client components
- * can all import it.
+ * dependencies but the input rules (which have none), so the database schema,
+ * the services and client components can all import it.
  */
+import { latinWords } from '../input-rules';
 
 /**
  * Whether a value is one of a list's values.
@@ -104,14 +105,7 @@ export function isRequestTypeKey(value: unknown): value is string {
  */
 export function requestTypeKeyFromName(name: string, taken: (key: string) => boolean): string {
   const base =
-    name
-      .normalize('NFKD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '')
-      .slice(0, KEY_FROM_NAME_MAX_LENGTH)
-      .replace(/_+$/, '') || 'type';
+    latinWords(name, '_').slice(0, KEY_FROM_NAME_MAX_LENGTH).replace(/_+$/, '') || 'type';
   if (!taken(base)) {
     return base;
   }
