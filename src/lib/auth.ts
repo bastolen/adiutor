@@ -43,6 +43,7 @@ import { LAST_USED_LOGIN_METHOD_COOKIE } from './sign-in/auth-cookies';
 import { DISABLED_AUTH_PATHS } from './sign-in/auth-endpoints';
 import { parseAuthSecrets } from './sign-in/auth-secrets';
 import { EMAIL_LINK_MINUTES, emailLinkUrl } from './sign-in/email-link';
+import emailLinkContinue from './sign-in/email-link-plugin';
 import { AVATAR_SOURCES } from './sign-in/pictures';
 import { providerCredentials } from './sign-in/providers';
 import requestLinkSignIn from './sign-in/request-link-plugin';
@@ -156,6 +157,63 @@ function isDeactivated(user: object): boolean {
 async function storedEmailLinkToken(token: string): Promise<string> {
   return hashEmailLinkToken(token);
 }
+
+/**
+ * Passwordless sign-in with a link sent by email, for existing users only.
+ * Its link (`GET /magic-link/verify`) only goes to the confirmation page; that
+ * page's Continue uses it, through {@link emailLinkContinue} (decision 0041).
+ */
+const emailLinkSignIn = magicLink({
+  disableSignUp: true,
+  /** How long a link works, in seconds (what the email says). */
+  expiresIn: EMAIL_LINK_MINUTES * 60,
+  /**
+   * Store link tokens as hashes, like the other verification tokens. The
+   * app's own hasher (the same as Better Auth's `'hashed'`), so the page
+   * the email links to can look a link up without using it
+   * (`emailLinkVerificationIdentifier`).
+   */
+  storeToken: { type: 'custom-hasher', hash: storedEmailLinkToken },
+  /**
+   * Emails a magic sign-in link, but only to existing, active users:
+   * Better Auth would otherwise email any address typed into the form.
+   * The lookup and the sending happen after the response, so neither the
+   * response nor its timing reveals who has an account. The email links
+   * to a confirmation page rather than to Better Auth's link, so a mail
+   * scanner opening it doesn't use it up (`src/lib/sign-in/email-link.ts`).
+   * It goes to the account's stored address, not the address as typed
+   * (the lookup ignores case), so it only ever reaches the inbox the
+   * account was set up with.
+   *
+   * @param data - The address as typed and the sign-in link.
+   * @param data.email - The address the link was asked for, as typed.
+   * @param data.url - The sign-in link.
+   * @param context - The request context, used to look up the user and for the language
+   *   of a user who saved none.
+   */
+  sendMagicLink: async ({ email, url }, context) => {
+    // Worked out now, during the request: the background work may run after it.
+    const requestLocale = await localeFromHeaders(context?.headers, db);
+    /** Looks the user up and sends the link to their stored address. */
+    const send = async () => {
+      const found = await context?.context.internalAdapter.findUserByEmail(email);
+      if (!found || isDeactivated(found.user)) {
+        return;
+      }
+      const saved = (found.user as { locale?: unknown }).locale;
+      const { offered } = await loadLanguageSettings(db);
+      const { magicLinkEmail } = await import('../emails/magic-link');
+      await sendEmail(
+        await magicLinkEmail(found.user.email, {
+          appUrl,
+          url: emailLinkUrl(url, appUrl),
+          locale: offeredLocale(saved, offered) ?? requestLocale,
+        }),
+      );
+    };
+    runInBackground(send());
+  },
+});
 
 /**
  * Refuses passkeys used without user verification (a fingerprint, face or
@@ -728,58 +786,12 @@ export const auth = betterAuth({
   },
 
   plugins: [
-    /** Passwordless sign-in with a link sent by email, for existing users only. */
-    magicLink({
-      disableSignUp: true,
-      /** How long a link works, in seconds (what the email says). */
-      expiresIn: EMAIL_LINK_MINUTES * 60,
-      /**
-       * Store link tokens as hashes, like the other verification tokens. The
-       * app's own hasher (the same as Better Auth's `'hashed'`), so the page
-       * the email links to can look a link up without using it
-       * (`emailLinkVerificationIdentifier`).
-       */
-      storeToken: { type: 'custom-hasher', hash: storedEmailLinkToken },
-      /**
-       * Emails a magic sign-in link, but only to existing, active users:
-       * Better Auth would otherwise email any address typed into the form.
-       * The lookup and the sending happen after the response, so neither the
-       * response nor its timing reveals who has an account. The email links
-       * to a confirmation page rather than to Better Auth's link, so a mail
-       * scanner opening it doesn't use it up (`src/lib/sign-in/email-link.ts`).
-       * It goes to the account's stored address, not the address as typed
-       * (the lookup ignores case), so it only ever reaches the inbox the
-       * account was set up with.
-       *
-       * @param data - The address as typed and the sign-in link.
-       * @param data.email - The address the link was asked for, as typed.
-       * @param data.url - The sign-in link.
-       * @param context - The request context, used to look up the user and for the language
-       *   of a user who saved none.
-       */
-      sendMagicLink: async ({ email, url }, context) => {
-        // Worked out now, during the request: the background work may run after it.
-        const requestLocale = await localeFromHeaders(context?.headers, db);
-        /** Looks the user up and sends the link to their stored address. */
-        const send = async () => {
-          const found = await context?.context.internalAdapter.findUserByEmail(email);
-          if (!found || isDeactivated(found.user)) {
-            return;
-          }
-          const saved = (found.user as { locale?: unknown }).locale;
-          const { offered } = await loadLanguageSettings(db);
-          const { magicLinkEmail } = await import('../emails/magic-link');
-          await sendEmail(
-            await magicLinkEmail(found.user.email, {
-              appUrl,
-              url: emailLinkUrl(url, appUrl),
-              locale: offeredLocale(saved, offered) ?? requestLocale,
-            }),
-          );
-        };
-        runInBackground(send());
-      },
-    }),
+    emailLinkSignIn,
+    /**
+     * The confirmation page's Continue, which uses a sign-in link with the
+     * plugin's own handler (`src/lib/sign-in/email-link-plugin.ts`).
+     */
+    emailLinkContinue(emailLinkSignIn.endpoints.magicLinkVerify),
     /**
      * The second sign-in step after a password: codes from an authenticator
      * app (with backup codes) or sent by email. Users turn it on from the

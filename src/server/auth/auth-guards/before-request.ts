@@ -49,7 +49,8 @@ export async function beforeAuthRequest(ctx: AuthGuardContext): Promise<void> {
   await refuseWhileSignedInAs(ctx, path);
 
   if (path === '/magic-link/verify') {
-    // The confirmation page first: it passes only safe return addresses on.
+    // Only its confirmation page's Continue goes on; anything else goes to that page first, which
+    // passes only safe return addresses on.
     confirmSignInLinkFirst(ctx);
     refuseUnsafeReturnAddresses(ctx, path);
     return;

@@ -1,7 +1,7 @@
 /**
  * @file Tests for the "Continue signing in" step of a sign-in email: it names
- * the account, and only passes the link on to Better Auth when the user
- * submits it.
+ * the account, and only posts the link to Better Auth when the user submits
+ * it.
  */
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
@@ -51,7 +51,7 @@ function hiddenFields(form: HTMLFormElement): Record<string, string> {
 }
 
 describe('EmailLinkForm', () => {
-  it('sends the link on to Better Auth only when the user continues', () => {
+  it('posts the link to Better Auth only when the user continues', () => {
     searchParams = new URLSearchParams({
       token: 'abc',
       callbackURL: '/admin/users',
@@ -63,7 +63,8 @@ describe('EmailLinkForm', () => {
     expect(screen.getByRole('heading', { name: 'Continue signing in' })).toBeInTheDocument();
     const button = screen.getByRole('button', { name: 'Continue signing in' });
     const form = defined(button.closest('form'), 'the form');
-    expect(form).toHaveAttribute('method', 'get');
+    // A POST, which no link can make: the guards take only this page's for the Continue.
+    expect(form).toHaveAttribute('method', 'post');
     expect(form).toHaveAttribute('action', '/api/auth/magic-link/verify');
     expect(hiddenFields(form)).toEqual({
       token: 'abc',

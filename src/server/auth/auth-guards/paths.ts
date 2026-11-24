@@ -16,9 +16,14 @@ import { refusalBody } from './refusal-messages';
 export interface AuthGuardContext {
   /** The endpoint path, e.g. `/two-factor/verify-totp`. */
   path?: string;
+  /**
+   * The request's method, e.g. `POST`: two endpoints may share a path
+   * (`/magic-link/verify`'s link and its confirmation page's Continue).
+   */
+  method?: string;
   /** Request body. */
   body?: Record<string, unknown> | null;
-  /** Query parameters, for GET endpoints such as `/magic-link/verify`. */
+  /** Query parameters, for GET endpoints such as `/reset-password/:token`. */
   query?: Record<string, unknown> | null;
   /** Request headers. */
   headers?: Headers | null;

@@ -28,9 +28,9 @@ import { and, eq, sql } from 'drizzle-orm';
 import { db as appDb, type DatabaseOrTransaction } from '@/db';
 import { company, membership, request, requestSignInLink, user } from '@/db/schema';
 import { getPermissions } from '@/lib/authz/permissions';
-import { appUrl } from '@/lib/env';
 import { signInPath } from '@/lib/redirect';
 import ipAddressOptions from '@/lib/request/ip-address-options';
+import isOwnPagePost from '@/lib/request/own-page-post';
 import isPersonsClick from '@/lib/request/persons-click';
 import { requestInfoFromHeaders } from '@/lib/request/request-info';
 import { formatRequestNumber, requestPathWithEntry } from '@/lib/requests';
@@ -193,59 +193,15 @@ export interface RequestLinkContext extends SessionCookieContext {
 }
 
 /**
- * The headers in which a browser says where a request came from (Fetch
- * Metadata). Safari before 16.4 sends none of them, and no browser sends
- * them to an address that isn't secure (plain `http` on any host but
- * `localhost`).
- */
-const FETCH_METADATA = ['sec-fetch-site', 'sec-fetch-mode', 'sec-fetch-dest'] as const;
-
-/** The site's own origin, as a browser names it in a `POST` from one of its pages (`Origin`). */
-const SITE_ORIGIN = new URL(appUrl).origin;
-
-/**
- * Checks whether a request link was sent by its confirmation page's Continue:
- * its form's `POST`, which no link can make (a link, even one written in a
- * reply on a page of this site, is a `GET`), as a page load that a page of
- * this site started (`Sec-Fetch-Site: same-origin`, `Sec-Fetch-Mode:
- * navigate`, `Sec-Fetch-Dest: document`), which no other site, email or
- * address typed in can make. The page sends it by itself when nobody is
- * signed in in that browser (decision 0038), so it needn't say a person
- * clicked (`Sec-Fetch-User`, which Safari never sends).
- *
- * A browser that sends none of those headers (Safari before 16.4, and
- * every browser when Adiutor runs on plain `http` on a host other than
- * `localhost`) is checked by the `POST`'s `Origin` instead (decision 0040):
- * it must be exactly the site's own, which no other site's form can send. A
- * missing `Origin`, `null` or a `Referer` never counts, and as soon as any of
- * the headers is there, even empty, they decide alone.
- *
- * @param headers - The request's headers.
- * @param posted - Whether the browser posted it.
- * @returns Whether the confirmation page sent it.
- */
-function fromConfirmationPage(headers: Headers, posted: boolean): boolean {
-  if (!posted) {
-    return false;
-  }
-  if (FETCH_METADATA.some((name) => headers.has(name))) {
-    return (
-      headers.get('sec-fetch-site') === 'same-origin' &&
-      headers.get('sec-fetch-mode') === 'navigate' &&
-      headers.get('sec-fetch-dest') === 'document'
-    );
-  }
-  return headers.get('origin') === SITE_ORIGIN;
-}
-
-/**
  * Decides what a request link does, for Better Auth's endpoint, which then
  * signs in (when `signIn` is set) and redirects:
  *
  * 1. A link (`GET`) that isn't a person's click (`isPersonsClick`), or a
- *    `POST` that isn't the confirmation page's Continue
- *    ({@link fromConfirmationPage}, by its `Sec-Fetch-*` headers, or by its
- *    `Origin` where the browser sends none): to the confirmation page, so a
+ *    `POST` that isn't the confirmation page's Continue (`isOwnPagePost`:
+ *    a page load a page of this site started, by its `Sec-Fetch-*` headers,
+ *    or by its `Origin` where the browser sends none, decision 0040; it
+ *    needn't say a person clicked, which Safari never does, decision 0038):
+ *    to the confirmation page, so a
  *    mail scanner or link checker gets no session. A `POST` counts only as the
  *    Continue, never as a click: another site's form, clicked, says a
  *    person clicked too, and the browser sends it without the cookies
@@ -256,7 +212,7 @@ function fromConfirmationPage(headers: Headers, posted: boolean): boolean {
  *    request, without a new session.
  * 4. Someone else signed in: to the confirmation page, which says that
  *    continuing switches accounts, unless this is its Continue
- *    ({@link fromConfirmationPage}), pressed: the one the page sends by
+ *    (`isOwnPagePost`), pressed: the one the page sends by
  *    itself (`auto`) never switches, since the page may have been rendered
  *    before someone signed in in another tab. A link on one of the site's
  *    pages (one written in a reply) is a same-origin click too, but never a
@@ -293,7 +249,7 @@ export async function followRequestLink(
   const headers = ctx.headers ?? new Headers();
   const page = requestLinkPagePath(token, { entry, retry: posted });
   const toPage = { location: page, fallback: page };
-  const fromPage = fromConfirmationPage(headers, posted);
+  const fromPage = isOwnPagePost(headers, posted);
   if (posted ? !fromPage : !isPersonsClick(headers)) {
     return toPage;
   }

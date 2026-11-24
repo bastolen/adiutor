@@ -33,9 +33,16 @@ const RETURN_ADDRESS_NAME = /(url|uri)$|^(redirect|return)/i;
  * Endpoints the browser can reach that take a return address the guards
  * don't check, because Better Auth never sends the browser to it here. Each
  * says why; an endpoint only belongs here once that's read in Better Auth's
- * source.
+ * source (or the guards never let a request reach it).
  */
 const NEVER_FOLLOWED: ReadonlyMap<string, ReturnAddressFields> = new Map([
+  // Better Auth's own sign-in link (the `GET`). The guards send every `GET` of it to the
+  // confirmation page before Better Auth sees it (`confirmSignInLinkFirst`), and that page only
+  // passes pages of the app on, to its Continue (the `POST` of the same path, which is checked).
+  [
+    '/magic-link/verify',
+    { in: 'query', fields: ['callbackURL', 'errorCallbackURL', 'newUserCallbackURL'] },
+  ],
   // A password sign-in answers with JSON. Its `callbackURL` only comes back in that answer (and
   // in a `Location` header on a 200, which browsers ignore), for the caller's own script to
   // follow: the sign-in form sends none and goes to a page it checked itself
