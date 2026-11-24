@@ -278,7 +278,9 @@ load or mislead in a reader's browser:
 - **No text that costs too much.** A text nested deeper than a page can render, or with more
   emphasis marks than the parser pairs quickly, is shown as plain text (`MAX_NESTING`,
   `MAX_EMPHASIS_RUNS`). The limit of 10,000 characters bounds the rest: the parser and the
-  highlighter's patterns never run on more.
+  highlighter's patterns never run on more. A text shown as it was written finds its links in
+  time in proportion to its length (`splitLinks`), and leaves an address longer than 2,048
+  characters as text.
 - **In an email, the same tree and the same rules.** A text an email shows is rendered from that
   tree with inline styles (`EmailMarkdown` in `src/components/email/email-markdown.tsx`): what was
   typed as HTML is text, only whole `http` and `https` addresses link, and an image is a link,

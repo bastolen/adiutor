@@ -380,7 +380,10 @@ written and sent is in [Email](email.md), and the jobs that send them in
   (`splitLinks` in `src/lib/requests/text.ts`): full stops, commas, question and exclamation
   marks, the ellipsis, the full-width marks of Chinese and Japanese, closing quotation marks (”,
   ’, », ›), and a closing bracket the address didn't open itself. Brackets are counted, so
-  `(see https://adiutor.dev/wiki/Printer_(office))` links up to `(office)`.
+  `(see https://adiutor.dev/wiki/Printer_(office))` links up to `(office)`. An address longer
+  than 2,048 characters stays text (`LINKED_ADDRESS_MAX_LENGTH`), and the punctuation is taken
+  off in one pass from the end, so the time a text takes grows in proportion to its length,
+  whatever it holds.
 - Every text is shown through one component (`RequestText` in `src/app/(app)/_requests/`), which
   picks the renderer by the marker. The Markdown one is `MarkdownText` in
   `src/components/ui/markdown/`. It runs on the server only: the browser gets the finished

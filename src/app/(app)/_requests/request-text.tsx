@@ -80,7 +80,8 @@ function asWritten(text: string, appUrl: string | null): string {
  * breaks, in its own writing direction (`dir="auto"`, so a text in a
  * right-to-left script can't reorder the page around it). Web addresses
  * written with `http://` or `https://` are links ({@link ExternalLink}), but
- * not one of the staff's pages in a text the company reads (`textLinkTarget`).
+ * not one of the staff's pages in a text the company reads (`textLinkTarget`),
+ * nor one too long to be real (`splitLinks`).
  *
  * @param props - Component props.
  * @param props.text - The text, as {@link asWritten} gives it.

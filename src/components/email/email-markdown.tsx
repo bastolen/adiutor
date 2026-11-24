@@ -525,7 +525,7 @@ function asWritten(text: string, appUrl: string | null): string {
  * A text as it was written ({@link asWritten}): plain text with its line
  * breaks, in its own writing direction. Web addresses written with `http://`
  * or `https://` are links, as on the page, but not one of the staff's pages
- * in a text the company reads.
+ * in a text the company reads, nor one too long to be real (`splitLinks`).
  *
  * @param props - Component props.
  * @param props.text - The text, as {@link asWritten} gives it.

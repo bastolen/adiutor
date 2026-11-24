@@ -64,34 +64,33 @@ export interface TextPart {
 const WEB_ADDRESS = /https?:\/\/[^\s<>"'`]+/gi;
 
 /**
+ * The longest address a plain text links: a longer one stays text. No page
+ * people share has an address this long (2,048 characters has long been the
+ * most that browsers and search engines take), so a longer one is only a
+ * way to make a text slow to show, page after page and email after email.
+ * A link written in Markdown is read by the Markdown renderer instead.
+ */
+export const LINKED_ADDRESS_MAX_LENGTH = 2048;
+
+/**
  * What may follow a web address without being part of it: the punctuation
  * that ends or pauses a sentence (also the ellipsis and the full-width marks
  * of Chinese and Japanese), and the quotation marks that close what the
  * address was quoted in (”, ’, » and ›; the straight ones never get into an
- * address, see {@link WEB_ADDRESS}).
+ * address, see {@link WEB_ADDRESS}). Each is a single UTF-16 unit, so an
+ * address is read one unit at a time.
  */
-const TRAILING_PUNCTUATION = /[.,;:!?…。、！？”’»›]+$/u;
+const TRAILING_PUNCTUATION: ReadonlySet<string> = new Set('.,;:!?…。、！？”’»›');
 
 /** A closing bracket and the bracket that opens it, also the full-width and corner ones. */
-const BRACKETS: Record<string, string> = {
-  ')': '(',
-  ']': '[',
-  '}': '{',
-  '）': '（',
-  '」': '「',
-  '』': '『',
-};
-
-/**
- * Counts how often a character is in a text.
- *
- * @param text - The text.
- * @param character - The character.
- * @returns How many times it occurs.
- */
-function occurrences(text: string, character: string): number {
-  return text.split(character).length - 1;
-}
+const BRACKETS: ReadonlyMap<string, string> = new Map([
+  [')', '('],
+  [']', '['],
+  ['}', '{'],
+  ['）', '（'],
+  ['」', '「'],
+  ['』', '『'],
+]);
 
 /**
  * Takes the punctuation off the end of a web address that belongs to the
@@ -101,23 +100,36 @@ function occurrences(text: string, character: string): number {
  * two closing brackets and opened one, so the last one is the sentence's and
  * the one before it stays.
  *
+ * It reads the address once to count its characters, and once backwards from
+ * its end, so its time grows in proportion to the address's length, also
+ * for one that ends in a long run of punctuation and closing brackets.
+ *
  * @param address - The address as it was matched.
  * @returns The address without that punctuation.
  */
 function withoutTrailingPunctuation(address: string): string {
-  let trimmed = address;
-  let before = '';
-  while (trimmed !== before) {
-    before = trimmed;
-    trimmed = trimmed.replace(TRAILING_PUNCTUATION, '');
-    const last = trimmed.slice(-1);
-    const opening = BRACKETS[last];
+  const counts = new Map<string, number>();
+  for (let at = 0; at < address.length; at += 1) {
+    const char = address.charAt(at);
+    counts.set(char, (counts.get(char) ?? 0) + 1);
+  }
+  let end = address.length;
+  let tookBracket = true;
+  while (tookBracket) {
+    while (end > 0 && TRAILING_PUNCTUATION.has(address.charAt(end - 1))) {
+      end -= 1;
+    }
+    const last = address.charAt(end - 1);
+    const opening = BRACKETS.get(last);
+    const closed = counts.get(last) ?? 0;
     // One closing bracket at a time, so each is weighed against what's left of the address.
-    if (opening && occurrences(trimmed, last) > occurrences(trimmed, opening)) {
-      trimmed = trimmed.slice(0, -1);
+    tookBracket = opening !== undefined && closed > (counts.get(opening) ?? 0);
+    if (tookBracket) {
+      counts.set(last, closed - 1);
+      end -= 1;
     }
   }
-  return trimmed;
+  return address.slice(0, end);
 }
 
 /**
@@ -212,7 +224,9 @@ export function textLinkTarget(address: string, appUrl: string | null): string |
 /**
  * Splits a text into plain pieces and the web addresses in it. Only
  * addresses written with `http://` or `https://` count; everything else
- * stays text, so nothing becomes a link the writer didn't spell out.
+ * stays text, so nothing becomes a link the writer didn't spell out. An
+ * address longer than {@link LINKED_ADDRESS_MAX_LENGTH} stays text too. Its
+ * time grows in proportion to the text's length, whatever the text holds.
  *
  * @param text - The text.
  * @returns The pieces in order; joined, their texts are the text again.
@@ -222,7 +236,7 @@ export function splitLinks(text: string): TextPart[] {
   let end = 0;
   for (const match of text.matchAll(WEB_ADDRESS)) {
     const address = withoutTrailingPunctuation(match[0]);
-    const href = linkTarget(address);
+    const href = address.length > LINKED_ADDRESS_MAX_LENGTH ? null : linkTarget(address);
     if (href !== null) {
       if (match.index > end) {
         parts.push({ text: text.slice(end, match.index), href: null });
