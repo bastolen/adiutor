@@ -122,6 +122,25 @@ describe('inviteManyByEmail', () => {
     expect(sent).toEqual([]);
   });
 
+  it('refuses someone who may not invite there before it reads their list', async () => {
+    const watcher = await memberActor(db, testCompany.id, 'watcher');
+    const outsider = await memberActor(db, (await createCompany(db)).id, 'admin');
+    // An entry that isn't an address, then far more addresses than one invitation takes.
+    const emails = [
+      'nope',
+      ...Array.from({ length: 100_000 }, (_, index) => `u${index}@adiutor.test`),
+    ].join(',');
+
+    await expect(
+      inviteManyByEmail(ctx, watcher, { companyId: testCompany.id, emails, role: 'client' }),
+    ).rejects.toMatchObject({ code: 'forbidden' });
+    await expect(
+      inviteManyByEmail(ctx, outsider, { companyId: testCompany.id, emails, role: 'client' }),
+    ).rejects.toMatchObject({ code: 'not_found' });
+    expect(sent).toEqual([]);
+    expect(await db.$count(invitation)).toBe(0);
+  });
+
   it('hides another company from its users once, before the first address', async () => {
     const other = await createCompany(db);
     const outsider = await memberActor(db, other.id, 'admin');

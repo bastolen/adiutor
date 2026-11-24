@@ -87,16 +87,17 @@ export type BulkInviteResult =
  * limits apply per address. One failing address doesn't stop the others.
  *
  * Whether the actor may invite to the target at all is the same for every
- * address, so it's checked once, before the first one, as
+ * address, so it's checked once, before the list is even read, as
  * {@link inviteByEmail} checks it (`getTargetAccess` and
  * {@link assertCanManage}): a caller who may not invite there gets the same
- * `not_found` or `forbidden` as for one address, with no result per address
- * and no email sent. Other refusals are still reported per address (a limit
- * reached, for example), and so is a deadlock that ended an address's
- * transaction (nothing was sent to it), so the results of the addresses
- * already sent aren't lost. Each address still goes through `inviteByEmail`,
- * which checks the rights again in its transaction
- * (`assertStillManagesPeople`).
+ * `not_found` or `forbidden` as for one address, whatever they typed, with
+ * no result per address and no email sent. The list is read only as far as
+ * it takes to refuse one that's too long (`parseEmailList`). Other refusals
+ * are still reported per address (a limit reached, for example), and so is
+ * a deadlock that ended an address's transaction (nothing was sent to it),
+ * so the results of the addresses already sent aren't lost. Each address
+ * still goes through `inviteByEmail`, which checks the rights again in its
+ * transaction (`assertStillManagesPeople`).
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `members:manage`, or `staff:manage` for staff.
@@ -117,6 +118,10 @@ export async function inviteManyByEmail(
   input: { companyId: string | null; emails: string; role: string; locale?: Locale },
 ): Promise<BulkInviteResult[]> {
   assertNotSignedInAs(actor);
+  // The same for every address, so refused once, as for one address, not once per address; and
+  // before the list is read, so someone who may not invite there can't have it read for nothing.
+  const access = await getTargetAccess(ctx.db, actor, input.companyId);
+  assertCanManage(access);
   const { emails, invalid } = parseEmailList(input.emails);
   if (invalid.length > 0) {
     throw new ServiceError('invalid', 'validation.emailList.invalid', {
@@ -131,9 +136,6 @@ export async function inviteManyByEmail(
   if (emails.length > MAX_BULK_INVITES) {
     throw new ServiceError('invalid', 'validation.emailList.tooMany', { max: MAX_BULK_INVITES });
   }
-  // The same for every address, so refused once, as for one address, not once per address.
-  const access = await getTargetAccess(ctx.db, actor, input.companyId);
-  assertCanManage(access);
   assertConfirmedForGrant(actor, { target: access.target, role: roleSchema.parse(input.role) });
 
   const results: BulkInviteResult[] = [];
