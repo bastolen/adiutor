@@ -117,6 +117,45 @@ export function useSignedInAs(): boolean {
   );
 }
 
+/** What decides whether a button that starts a change is turned off (see {@link useChangeButtonState}). */
+export interface ChangeButtonOptions {
+  /** Whether the button is turned off for its own reasons, e.g. nothing left to act on. */
+  disabled: boolean;
+  /**
+   * Whether it stays focusable while it's turned off for its own reasons
+   * (`Button`'s `focusableWhenDisabled`), for a button that its own action
+   * turns off: a disabled button would lose keyboard focus after the refresh.
+   */
+  focusableWhenDisabled: boolean;
+  /** Whether its change is the user's own work, which stays allowed while signed in as them. */
+  allowedWhileSignedInAs: boolean;
+}
+
+/**
+ * The `disabled` and `focusableWhenDisabled` of a button that starts a
+ * change (`RowAction`'s, and the one that opens an `ActionDialog`). While a
+ * staff member is signed in as the user, it's disabled, unless its change is
+ * the user's own work; and since it's off for good then, it isn't focusable
+ * either: only a button that its own use turns off keeps focus.
+ *
+ * @param options - The button's own reasons, and whether its change is the user's own work.
+ * @param options.disabled - Whether it's turned off for its own reasons.
+ * @param options.focusableWhenDisabled - Whether it stays focusable while it is.
+ * @param options.allowedWhileSignedInAs - Whether its change is the user's own work.
+ * @returns The two props for `Button`.
+ */
+export function useChangeButtonState({
+  disabled,
+  focusableWhenDisabled,
+  allowedWhileSignedInAs,
+}: ChangeButtonOptions): { disabled: boolean; focusableWhenDisabled: boolean } {
+  const changesOff = useSignedInAs() && !allowedWhileSignedInAs;
+  return {
+    disabled: disabled || changesOff,
+    focusableWhenDisabled: focusableWhenDisabled && !changesOff,
+  };
+}
+
 /**
  * Wraps everything inside a form that changes something (its fields, selects
  * and submit button): while a staff member is signed in as the user, it's a

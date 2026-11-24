@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useId } from 'react';
 
+import signOutAndLeave from '@/components/auth/sign-out';
 import ThemeMenuRow from '@/components/theme/theme-menu-row';
 import useThemePreference from '@/components/theme/use-theme-preference';
 import Alert from '@/components/ui/alert';
@@ -23,7 +24,6 @@ import {
   MenuSeparator,
   MenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import loadFresh from '@/components/ui/load-fresh';
 import { focusRing } from '@/components/ui/styles';
 import { useTransientState } from '@/components/ui/use-transient-state';
 import cn from '@/lib/cn';
@@ -115,31 +115,14 @@ export default function AccountMenu({
   const [signOutFailed, setSignOutFailed] = useTransientState(false);
 
   /**
-   * Ends the session, then loads the sign-in page afresh (`loadFresh`): a
-   * navigation within the app would keep this person's pages alive for the
-   * next one to sign in on this browser. The browser's other tabs load
-   * their own page afresh too (`everyTab`), which takes them to the sign-in
-   * page, so none of them keeps showing this person's pages.
-   *
-   * Better Auth's client resolves with an `error` when the server refuses
-   * (a 5xx, a rate limit) and rejects when the request never gets there (as
-   * does loading the client): either way the session hasn't ended, so the
-   * message shows and nothing loads.
+   * Ends the session and loads the sign-in page afresh in every tab
+   * (`signOutAndLeave`); when the session didn't end, the message shows.
    */
   const signOut = async () => {
     setSignOutFailed(false);
-    try {
-      const authClient = await loadAuthClient();
-      const result = await authClient.signOut();
-      if (result.error) {
-        setSignOutFailed(true);
-        return;
-      }
-    } catch {
+    if (!(await signOutAndLeave())) {
       setSignOutFailed(true);
-      return;
     }
-    loadFresh('/auth', { everyTab: true });
   };
 
   return (

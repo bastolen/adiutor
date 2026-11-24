@@ -113,6 +113,13 @@ export type FormattingCommand =
       language: string | null;
     };
 
+/**
+ * What a toolbar without an editor does with a command: nothing. Its buttons
+ * are disabled then (its `state` is `null`), as in the field's place before
+ * the editor is there and in the editor's place while it's open large.
+ */
+export function ignoreCommand(): void {}
+
 /** The lowest heading the menu offers; a deeper one (typed with more `#`) shows as this one. */
 const LOWEST_OFFERED_HEADING = 3;
 

@@ -95,8 +95,9 @@ and Cancelled are the closed statuses.
   sees the request as it is, rather than overwriting it (`errors.requests.statusChanged`). The
   status select, the buttons and the board's Move menus send the status they showed (`from`), so
   the change is refused when the request has another status by now, also for the staff, who may
-  make any move; the action then refreshes the page. A change without `from` is refused only when
-  the move is no longer allowed.
+  make any move; the action then refreshes the page (`refreshOnConflict` in
+  `src/app/(app)/_requests/`, which the details and text edits use too). A change without `from` is
+  refused only when the move is no longer allowed.
 
 ### Solutions
 
@@ -835,8 +836,8 @@ says so with a "Show everything" button.
 
 `/requests/board` shows the requests the reader may see across companies in a lane per status
 ([decision 0037](decisions/0037-a-board-of-requests.md)), next to the list and with its header,
-its search and filter menus (`parseRequestFilters`, `RequestFilterBar` without the status links)
-and its sort. The List | Board toggle (`RequestViewToggle`) keeps the search, the filter menus,
+its search and filter menus (loaded and read as the list's, `loadRequestFilters`, and shown with
+`RequestFilterBar` without the status links) and its sort. The List | Board toggle (`RequestViewToggle`) keeps the search, the filter menus,
 the sort and the size (`size`), and drops the status link, `?only=` and the page.
 
 A company's page has the same board for that company's requests only, at
@@ -981,7 +982,8 @@ no Move menu.
   subscriptions while signed in as a user, which the conversation doesn't show (see
   [Signed in as a user](#signed-in-as-a-user)).
 - `src/app/(app)/_requests/`: what the request pages share (the list, its filters
-  (`parseRequestFilters` and `RequestFilterBar` in `request-filters.tsx`), the header and its
+  (`parseRequestFilters` and `RequestFilterBar` in `request-filters.tsx`, and
+  `loadRequestFilters`, which loads what they need for the list and the board), the header and its
   toggle between the list and the board, the board, the badges, the text, the people).
   `src/app/(app)/requests/`: the pages themselves.
 - `src/components/ui/markdown/`: what shows a Markdown text: the pipeline with its limits

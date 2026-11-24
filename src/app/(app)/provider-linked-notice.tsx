@@ -11,9 +11,9 @@
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
+import { securityLink } from '@/components/auth/security-links';
 import { clearNextPageCookie, useNextPageCookie } from '@/components/auth/use-next-page-cookie';
 import Alert from '@/components/ui/alert';
-import TextLink from '@/components/ui/text-link';
 import {
   parseProviderLinkedCookie,
   PROVIDER_LABELS,
@@ -28,16 +28,6 @@ import {
  */
 function nameTag(chunks: ReactNode) {
   return <span className="font-medium wrap-anywhere">{chunks}</span>;
-}
-
-/**
- * Links to the Security page in the sentence (its `<link>` tag).
- *
- * @param chunks - The link's text.
- * @returns The link.
- */
-function securityLink(chunks: ReactNode) {
-  return <TextLink href="/account/security">{chunks}</TextLink>;
 }
 
 /**

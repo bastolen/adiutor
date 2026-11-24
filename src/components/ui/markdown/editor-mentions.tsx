@@ -20,6 +20,8 @@ import { useMemo, useSyncExternalStore } from 'react';
 import cn from '@/lib/cn';
 
 import Badge from '../badge';
+import { keepFocus } from '../focus-fallback';
+import { foldForSearch } from '../select-option-list';
 import { SCREEN_GUTTER } from '../styles';
 import type { MentionChoice, MentionLoader } from './mentions';
 
@@ -115,25 +117,11 @@ export interface MentionList {
 }
 
 /**
- * A name as it's compared: without accents and in lower case, so "jose"
- * finds José.
- *
- * @param text - A name, or what was typed.
- * @returns The text to compare.
- */
-function folded(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase();
-}
-
-/**
  * How well a name matches what was typed: best when the name starts with
  * it, then when one of its words does, then when it's anywhere in the name.
  *
- * @param name - The name, folded.
- * @param typed - What was typed, folded.
+ * @param name - The name, folded for the search (`foldForSearch`: "jose" finds José).
+ * @param typed - What was typed, folded the same way.
  * @returns A rank from 0 (best), or `null` for a name that doesn't match.
  */
 function matchRank(name: string, typed: string): number | null {
@@ -155,10 +143,10 @@ function matchRank(name: string, typed: string): number | null {
  * @returns At most {@link MAX_SHOWN} people.
  */
 export function matchingChoices(people: readonly MentionChoice[], query: string): MentionChoice[] {
-  const typed = folded(query);
+  const typed = foldForSearch(query);
   return people
     .flatMap((person, place) => {
-      const rank = matchRank(folded(person.name), typed);
+      const rank = matchRank(foldForSearch(person.name), typed);
       return rank === null ? [] : [{ person, rank, place }];
     })
     .sort((a, b) => a.rank - b.rank || a.place - b.place)
@@ -362,16 +350,6 @@ export function createMentionList(firstLoader: MentionLoader): MentionList {
  */
 export function mentionOptionId(listId: string, index: number): string {
   return `${listId}-${index}`;
-}
-
-/**
- * Keeps the focus where it is: the list never takes it from the text.
- *
- * @param event - What would move the focus.
- * @param event.preventDefault - Stops it.
- */
-function keepFocus(event: { preventDefault: () => void }) {
-  event.preventDefault();
 }
 
 /**

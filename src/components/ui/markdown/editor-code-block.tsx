@@ -11,23 +11,9 @@ import {
   type ReactNodeViewProps,
   ReactNodeViewRenderer,
 } from '@tiptap/react';
-import { useSyncExternalStore } from 'react';
 
-import {
-  editorHighlighter,
-  knownCodeLanguages,
-  subscribeToCodeLanguages,
-} from './editor-highlighter';
+import { editorHighlighter, useCodeLanguages } from './editor-highlighter';
 import { markdownStyles } from './styles';
-
-/**
- * The languages as far as they're known, which the view follows.
- *
- * @returns The choices and names, or `null` before they've loaded.
- */
-function useCodeLanguages() {
-  return useSyncExternalStore(subscribeToCodeLanguages, knownCodeLanguages, () => null);
-}
 
 /**
  * The block as it's shown: a caption with the language's name (as it was

@@ -321,7 +321,8 @@ so the next person on that browser starts clean. The sign-in page it goes to loa
 same goes for every other change of who the browser acts as: signing in (see
 [Sign-in methods](#sign-in-methods)) and starting or ending a sign-in as a user (see
 [Signing in as a user](#signing-in-as-a-user)). Signing out from the account menu or the step-up
-page also makes the browser's other tabs load their page afresh (`everyTab`), which sends them to
+page (`signOutAndLeave` in `src/components/auth/sign-out.ts`, which both use) also makes the
+browser's other tabs load their page afresh (`everyTab`), which sends them to
 the sign-in page, so no tab keeps showing the pages of whoever signed out. So does deactivating
 your own account (the dialog's `loadOnSuccess`, to `/auth?error=ACCOUNT_DEACTIVATED`), and joining
 with an invite link when the new role ends the session (see

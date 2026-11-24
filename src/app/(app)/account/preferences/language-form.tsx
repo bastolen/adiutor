@@ -4,14 +4,13 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useEffect } from 'react';
 
 import { useLanguageChoiceOptions } from '@/components/language/language-options';
 import Button from '@/components/ui/button';
-import loadFresh from '@/components/ui/load-fresh';
 import ResultAlert from '@/components/ui/result-alert';
 import SelectField from '@/components/ui/select-field';
 import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
+import useLoadFreshOnSuccess from '@/components/ui/use-load-fresh-on-success';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import { type LanguageChoice, type Locale, LOCALE_NAMES } from '@/lib/i18n/locales';
 
@@ -40,9 +39,9 @@ interface LanguageFormProps {
  * alive in the old one), at the address the action gives, where the page says
  * it's saved. Errors stay in the form, as alert and toast.
  *
- * The reload is `loadFresh`, which also works when the page is already at
- * that address after an earlier change (going to the same address with a
- * `#section` would only scroll, and leave the button busy).
+ * The reload is `useLoadFreshOnSuccess`, which also works when the page is
+ * already at that address after an earlier change (going to the same address
+ * with a `#section` would only scroll, and leave the button busy).
  *
  * @param props - Component props.
  * @param props.choice - The saved choice.
@@ -60,12 +59,7 @@ export default function LanguageForm({
   const changesOff = useSignedInAs();
   const options = useLanguageChoiceOptions(defaultLocale);
   const [result, formAction, pending, onSubmit] = useTransientActionState(saveLanguageAction, null);
-
-  useEffect(() => {
-    if (result?.ok && result.data) {
-      loadFresh(result.data);
-    }
-  }, [result]);
+  const leaving = useLoadFreshOnSuccess(result);
 
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -86,7 +80,7 @@ export default function LanguageForm({
         />
         <div>
           {/* Busy until the page has reloaded, so nobody presses it twice. */}
-          <Button type="submit" loading={pending || Boolean(result?.ok)} disabled={changesOff}>
+          <Button type="submit" loading={pending || leaving} disabled={changesOff}>
             {t('profile.saveLanguage')}
           </Button>
         </div>

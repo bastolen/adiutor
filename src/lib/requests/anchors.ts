@@ -7,6 +7,7 @@
  * (`?entry=<entry ID>`): the anchor never reaches the server and the query
  * does, so the page can show that entry whatever the reader's activity filter.
  */
+import { UUID_SOURCE } from '../uuid';
 import { requestPath } from './number';
 
 /** The anchor of a request's description, the card at the top of its page. */
@@ -19,7 +20,7 @@ export const ENTRY_PARAM = 'entry';
 const ENTRY_ANCHOR_PREFIX = 'entry-';
 
 /** An entry's ID as its anchor holds it: a UUID, in lowercase. */
-const ENTRY_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const ENTRY_ID = new RegExp(`^${UUID_SOURCE}$`);
 
 /**
  * The anchor of an entry of a request's activity.

@@ -6,8 +6,10 @@
  * It renders the tree the page renders (`markdownTree`), so the same rules
  * hold for what someone else wrote: HTML stays text, only allowed elements
  * come through, only whole `http` and `https` addresses become links, and an
- * image is a link to it, never loaded. Keep it in step with the page's
- * elements (`src/components/ui/markdown/elements.tsx`) when either changes.
+ * image is a link to it, never loaded. It reads the tree with the page's
+ * helpers (`textOf`, `writtenCode`, `mentionOf` in `tree.ts`); keep its
+ * elements in step with the page's (`src/components/ui/markdown/elements.tsx`)
+ * when either changes.
  *
  * What an email leaves out: colours in code, the button that copies it, and
  * the links between a footnote and its reference (an email has no page to
@@ -15,12 +17,18 @@
  * as plain text, is shown as the plain text it is, with only the label of a
  * link to one of the staff's pages.
  */
-import type { Element, ElementContent } from 'hast';
 import { type Components, type ExtraProps, toJsxRuntime } from 'hast-util-to-jsx-runtime';
 import type { ComponentProps, CSSProperties } from 'react';
 import { Fragment, jsx, jsxs } from 'react/jsx-runtime';
 
-import markdownTree, { FOOTNOTE_LABEL_ID, highestHeading } from '@/components/ui/markdown/tree';
+import markdownTree, {
+  FOOTNOTE_LABEL_ID,
+  highestHeading,
+  LOWEST_HEADING,
+  type MarkdownLinkProps,
+  mentionOf,
+  writtenCode,
+} from '@/components/ui/markdown/tree';
 import type { Locale } from '@/lib/i18n/locales';
 import translator from '@/lib/i18n/translator';
 import {
@@ -28,7 +36,6 @@ import {
   type RequestTextFormat,
   splitLinks,
   staffLinksAsLabels,
-  storedMentionId,
   type TextPart,
   textLinkTarget,
 } from '@/lib/requests';
@@ -48,9 +55,6 @@ export interface EmailText {
    */
   mentions: Readonly<Record<string, string>>;
 }
-
-/** The lowest heading HTML has. */
-const LOWEST_HEADING = 6;
 
 /** The level a text's highest heading gets in an email: below the email's own headings. */
 const FIRST_HEADING_LEVEL = 3;
@@ -173,40 +177,6 @@ function alignment(align: unknown): CSSProperties['textAlign'] {
 }
 
 /**
- * The text of a part of the text's tree: its own, or that of everything in
- * it (the highlighter splits a block's code into parts).
- *
- * @param node - The part.
- * @returns Its text.
- */
-function textOf(node: ElementContent): string {
-  if (node.type === 'text') {
-    return node.value;
-  }
-  return node.type === 'element' ? node.children.map(textOf).join('') : '';
-}
-
-/**
- * A block's code as it was written, without the line break the parser ends
- * it with.
- *
- * @param block - The block's node in the text's tree.
- * @returns The code.
- */
-function writtenCode(block: Element | undefined): string {
-  const code = block === undefined ? '' : textOf(block);
-  return code.endsWith('\n') ? code.slice(0, -1) : code;
-}
-
-/** The attributes of a link in a text, with the two that mark a footnote's links. */
-type LinkProps = ComponentProps<'a'> & {
-  /** Set on the link from a text to its footnote. */
-  'data-footnote-ref'?: unknown;
-  /** Set on the link from a footnote back to the text. */
-  'data-footnote-backref'?: unknown;
-};
-
-/**
  * Builds the elements one text is rendered with in an email.
  *
  * @param options - What the elements need to know about the text.
@@ -271,16 +241,14 @@ function emailElements({
    * @param props.children - Its text.
    * @returns The link, or its text.
    */
-  function EmailTextLink({ href, children = null, ...props }: LinkProps) {
+  function EmailTextLink({ href, children = null, ...props }: MarkdownLinkProps) {
     if ('data-footnote-backref' in props) {
       return null;
     }
     if ('data-footnote-ref' in props) {
       return <span>{children}</span>;
     }
-    const mentionId = typeof href === 'string' ? storedMentionId(href) : null;
-    const name =
-      mentionId !== null && Object.hasOwn(mentions, mentionId) ? mentions[mentionId] : undefined;
+    const name = mentionOf(href, mentions);
     if (name !== undefined) {
       // The sign of a mention, the same in every language, then the name.
       return <span style={mention}>{`@${name}`}</span>;

@@ -359,9 +359,10 @@ test('someone at a company raises a request, which the staff then find', async (
 
   // Without a type it's refused, and what was typed stays.
   await page.getByRole('textbox', { name: 'Title' }).fill('The coffee machine app is offline');
-  await page
-    .getByRole('textbox', { name: 'Description' })
-    .fill('It says “no connection”.\nSee https://adiutor.test/coffee for the manual.');
+  // Typed in the editor once it has loaded, as the specs type into every Markdown field.
+  await (
+    await markdownEditor(page, 'Description')
+  ).fill('It says “no connection”.\nSee https://adiutor.test/coffee for the manual.');
   await page.getByRole('button', { name: 'Raise request' }).click();
   await expect(main(page).getByRole('alert')).toContainText('Choose what kind of request this is.');
   await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue(
@@ -418,7 +419,7 @@ test('the staff raise a request for a company and choose its priority', async ({
   await page.goto('/requests/new');
   await expect(page.getByRole('combobox', { name: 'Company' })).toHaveText('Choose a company');
   await page.getByRole('textbox', { name: 'Title' }).fill('Add a colleague to the mailing list');
-  await page.getByRole('textbox', { name: 'Description' }).fill('Asked by phone.');
+  await (await markdownEditor(page, 'Description')).fill('Asked by phone.');
   await page.getByRole('button', { name: 'Raise request' }).click();
   await expect(main(page).getByRole('alert')).toContainText(
     'Choose which company this request is for.',
@@ -440,7 +441,7 @@ test('the staff raise a request for a company and choose its priority', async ({
   await page.getByRole('textbox', { name: 'Title' }).fill('Add a colleague to the mailing list');
   await page.getByRole('combobox', { name: 'Type' }).click();
   await page.getByRole('option', { name: /^New feature/ }).click();
-  await page.getByRole('textbox', { name: 'Description' }).fill('Asked by phone.');
+  await (await markdownEditor(page, 'Description')).fill('Asked by phone.');
   await expect(page.getByRole('combobox', { name: 'Priority' })).toHaveText('Set by the type');
   await page.getByRole('combobox', { name: 'Priority' }).click();
   await page.getByRole('option', { name: 'High' }).click();

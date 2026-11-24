@@ -9,7 +9,6 @@ import type { FormEvent } from 'react';
 
 import CodeField from '@/components/auth/code-field';
 import ResendCodeButton from '@/components/auth/resend-code-button';
-import useResendCooldown from '@/components/auth/use-resend-cooldown';
 import Alert from '@/components/ui/alert';
 import AuthHeading from '@/components/ui/auth-heading';
 import Button from '@/components/ui/button';
@@ -18,13 +17,12 @@ import loadFresh from '@/components/ui/load-fresh';
 import TextLink from '@/components/ui/text-link';
 import { usePageRestored } from '@/components/ui/use-page-restored';
 import { useOncePerVisit, useTransientState } from '@/components/ui/use-transient-state';
-import { EMAIL_CODE_MINUTES } from '@/lib/authz/mfa';
 import { getSafeRedirectPath, signInPath } from '@/lib/redirect';
-import authClient from '@/lib/sign-in/auth-client';
-import { authCodeText, authErrorText } from '@/lib/sign-in/auth-error-messages';
-import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
+import { type AuthClientError, authErrorText } from '@/lib/sign-in/auth-error-messages';
 import { parseTwoFactorMethod } from '@/lib/sign-in/two-factor-path';
 import verifyCode, { type CodeKind } from '@/lib/sign-in/verify-code';
+
+import useEmailCode from '../use-email-code';
 
 /**
  * Asks for the second step: a code from the authenticator app (or a backup
@@ -62,59 +60,32 @@ export default function TwoFactorForm() {
   const [pending, setPending] = useTransientState(false);
   const [error, setError] = useTransientState<string | null>(null);
   const [expired, setExpired] = useTransientState(false);
-  const [notice, setNotice] = useTransientState<string | null>(null);
-  const [sending, setSending] = useTransientState(false);
-  const cooldown = useResendCooldown();
 
   /**
    * Shows the message for a failed request.
    *
    * @param failure - Better Auth's error.
-   * @param failure.status - HTTP status.
-   * @param failure.code - Error code, if any.
-   * @param failure.message - The server's message, shown only for refusals it words itself.
    */
-  const showError = (failure: { status: number; code?: string; message?: string }) => {
+  const showError = (failure: AuthClientError) => {
     setError(authErrorText(t, failure));
     setExpired(failure.code === 'INVALID_TWO_FACTOR_COOKIE');
   };
 
-  /**
-   * Emails a code, then counts down until a new one may be asked for. A code
-   * sent a moment ago (e.g. before a reload) still works, so that refusal is
-   * shown as the notice, not as an error.
-   *
-   * @param again - Whether it's a new code after an earlier one.
-   */
-  const sendCode = async (again = false) => {
-    setError(null);
-    setNotice(null);
-    setSending(true);
-    const result = await authClient.twoFactor.sendOtp();
-    setSending(false);
-    if (result.error?.code === EMAIL_CODE_SENT_RECENTLY.code) {
-      setNotice(authCodeText(t, EMAIL_CODE_SENT_RECENTLY.code));
-      cooldown.start();
-      return;
-    }
-    if (result.error) {
-      showError(result.error);
-      return;
-    }
-    cooldown.start();
-    setNotice(
-      again
-        ? t('emailCode.sentAgain', { minutes: EMAIL_CODE_MINUTES })
-        : t('emailCode.sent', { minutes: EMAIL_CODE_MINUTES }),
-    );
-  };
+  // A code sent a moment ago (e.g. before a reload) still works: the notice says to use that one.
+  const emailCode = useEmailCode({
+    /** Clears the last error as a code is asked for. */
+    onStart: () => {
+      setError(null);
+    },
+    onFailure: showError,
+  });
 
   // Send the emailed code straight away: once per visit (also in Strict Mode), so again when the
   // page is shown again, which is usually for a new sign-in.
   useOncePerVisit(() => {
     if (method === 'otp') {
       // It shows its own errors.
-      void sendCode();
+      void emailCode.send();
     }
   });
 
@@ -123,17 +94,8 @@ export default function TwoFactorForm() {
   usePageRestored(() => setPending(false));
 
   /**
-   * Loads the page the user came for afresh (`loadFresh`), the button busy
-   * until it goes. A full load leaves no page alive, this one included, for
-   * the next person to sign in on this browser. The browser's other tabs
-   * load their own page afresh too (`everyTab`), signed in.
-   */
-  const finish = () => {
-    loadFresh(callbackURL, { everyTab: true });
-  };
-
-  /**
-   * Switches between the authenticator code and backup codes.
+   * Switches between the authenticator code and backup codes. Only an
+   * authenticator app offers that, so there's no emailed code's notice to clear.
    *
    * @param next - The mode to switch to.
    */
@@ -141,7 +103,6 @@ export default function TwoFactorForm() {
     setMode(next);
     setCode('');
     setError(null);
-    setNotice(null);
   };
 
   /**
@@ -159,7 +120,10 @@ export default function TwoFactorForm() {
       setPending(false);
       return;
     }
-    finish();
+    // A full load, the button busy until it goes, leaves no page alive, this one included, for the
+    // next person to sign in on this browser. The browser's other tabs load their own page afresh
+    // too (`everyTab`), signed in.
+    loadFresh(callbackURL, { everyTab: true });
   };
 
   return (
@@ -183,7 +147,7 @@ export default function TwoFactorForm() {
       )}
 
       <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
-        {mode === 'otp' && <Alert tone="info">{notice}</Alert>}
+        {mode === 'otp' && <Alert tone="info">{emailCode.notice}</Alert>}
         <CodeField
           key={mode}
           kind={mode}
@@ -205,9 +169,9 @@ export default function TwoFactorForm() {
       <div className="flex flex-col items-center gap-3 text-sm">
         {mode === 'otp' && (
           <ResendCodeButton
-            onClick={() => sendCode(true)}
-            sending={sending}
-            waitSeconds={cooldown.waitSeconds}
+            onClick={() => emailCode.send(true)}
+            sending={emailCode.sending}
+            waitSeconds={emailCode.cooldown.waitSeconds}
           />
         )}
         {method === 'totp' && (

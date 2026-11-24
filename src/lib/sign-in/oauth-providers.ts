@@ -132,6 +132,21 @@ export function cleanAccountName(value: unknown): string | null {
 }
 
 /**
+ * Reads one claim of a provider's profile: only one of the profile's own
+ * keys, never one it inherits (`toString`, `__proto__`).
+ *
+ * @param profile - The provider's profile (user info or ID token claims), unchecked.
+ * @param claim - The claim, e.g. `login`.
+ * @returns Its value, unchecked, or `undefined` when the profile has no such claim of its own.
+ */
+function ownClaim(profile: unknown, claim: string): unknown {
+  if (!profile || typeof profile !== 'object' || !Object.hasOwn(profile, claim)) {
+    return undefined;
+  }
+  return (profile as Record<string, unknown>)[claim];
+}
+
+/**
  * Reads the account name from a provider's profile, from its claim in
  * {@link PROVIDER_ACCOUNT_NAME_CLAIMS} (the profile's own keys only).
  *
@@ -140,11 +155,7 @@ export function cleanAccountName(value: unknown): string | null {
  * @returns The name, cleaned (`cleanAccountName`), or `null` when there's no usable one.
  */
 export function accountNameFromProfile(provider: OAuthProvider, profile: unknown): string | null {
-  const claim = PROVIDER_ACCOUNT_NAME_CLAIMS[provider];
-  if (!profile || typeof profile !== 'object' || !Object.hasOwn(profile, claim)) {
-    return null;
-  }
-  return cleanAccountName((profile as Record<string, unknown>)[claim]);
+  return cleanAccountName(ownClaim(profile, PROVIDER_ACCOUNT_NAME_CLAIMS[provider]));
 }
 
 /**
@@ -211,11 +222,7 @@ export function isProviderImageUrl(provider: OAuthProvider, value: unknown): val
  * @returns The address, or `null` when there's no usable one.
  */
 export function imageFromProfile(provider: OAuthProvider, profile: unknown): string | null {
-  const claim = PROVIDER_IMAGE_CLAIMS[provider];
-  if (!profile || typeof profile !== 'object' || !Object.hasOwn(profile, claim)) {
-    return null;
-  }
-  const value = (profile as Record<string, unknown>)[claim];
+  const value = ownClaim(profile, PROVIDER_IMAGE_CLAIMS[provider]);
   return isProviderImageUrl(provider, value) ? value : null;
 }
 
@@ -242,14 +249,7 @@ export const PROVIDER_ACCOUNT_ID_CLAIMS: Record<OAuthProvider, string> = {
  * @returns The ID, or `null` without a usable one.
  */
 export function accountIdFromProfile(provider: OAuthProvider, profile: unknown): string | null {
-  if (!profile || typeof profile !== 'object') {
-    return null;
-  }
-  const claim = PROVIDER_ACCOUNT_ID_CLAIMS[provider];
-  if (!Object.hasOwn(profile, claim)) {
-    return null;
-  }
-  const value = (profile as Record<string, unknown>)[claim];
+  const value = ownClaim(profile, PROVIDER_ACCOUNT_ID_CLAIMS[provider]);
   if (typeof value === 'number') {
     return Number.isFinite(value) ? String(value) : null;
   }

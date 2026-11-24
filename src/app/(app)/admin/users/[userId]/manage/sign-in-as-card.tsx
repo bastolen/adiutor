@@ -17,10 +17,10 @@ import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
 import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
+import { passkeysLink } from '@/components/auth/security-links';
 import ActionDialog from '@/components/ui/action-dialog';
 import Card from '@/components/ui/card';
 import TextField from '@/components/ui/text-field';
-import TextLink from '@/components/ui/text-link';
 import { IMPERSONATION_MINUTES, type ImpersonationVerdict } from '@/lib/authz/impersonation';
 import { IMPERSONATION_REASON_MAX_LENGTH } from '@/lib/input-rules';
 import { DEFAULT_SIGNED_IN_PATH } from '@/lib/redirect';
@@ -44,17 +44,6 @@ interface SignInAsCardProps {
   strongMfaConfirmedUntil: Date | null;
   /** The page to come back to, with its tables' state (`PageUrl.current()`). */
   returnTo: string;
-}
-
-/**
- * The link to the staff member's own Security page, inside the note that
- * they need strong MFA first.
- *
- * @param chunks - The link's text.
- * @returns The link.
- */
-function securityLink(chunks: ReactNode) {
-  return <TextLink href="/account/security#passkeys">{chunks}</TextLink>;
 }
 
 /**
@@ -87,7 +76,7 @@ export default function SignInAsCard({
     company_admin: tRefused('companyAdmin'),
     deactivated: tRefused('deactivated'),
     opted_out: tRefused('optedOut'),
-    needs_mfa: t.rich('refused.needsMfa', { link: securityLink }),
+    needs_mfa: t.rich('refused.needsMfa', { link: passkeysLink }),
   };
   return (
     <RecentConfirmationProvider

@@ -39,17 +39,19 @@ export function hasControlCharacter(value: string): boolean {
 /**
  * Takes the control characters ({@link hasControlCharacter}) out of a string,
  * for text that goes where they do harm: Postgres refuses a NUL character in
- * a query, and a line break in a log line starts a line of its own.
+ * a query, and a line break in a log line starts a line of its own. Text of
+ * several lines keeps its line breaks and tabs (`keep`).
  *
  * @param value - The string.
  * @param replacement - What each run of control characters becomes; nothing by default.
+ * @param keep - Control characters to keep as they are, e.g. `'\t\n'`; none by default.
  * @returns The string without control characters.
  */
-export function withoutControlCharacters(value: string, replacement = ''): string {
+export function withoutControlCharacters(value: string, replacement = '', keep = ''): string {
   let cleaned = '';
   let inRun = false;
   for (let i = 0; i < value.length; i += 1) {
-    const control = isControlCode(value.charCodeAt(i));
+    const control = isControlCode(value.charCodeAt(i)) && !keep.includes(value.charAt(i));
     if (!control) {
       cleaned += value.charAt(i);
     } else if (!inRun) {

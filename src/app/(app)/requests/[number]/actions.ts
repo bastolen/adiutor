@@ -16,7 +16,6 @@ import field, { fieldValues } from '@/lib/form-data';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
 import { getActor } from '@/server/authz';
-import { ServiceError } from '@/server/errors';
 import {
   addNote,
   answerSolution,
@@ -31,6 +30,8 @@ import {
   unsubscribe,
   updateRequestDetails,
 } from '@/server/requests';
+
+import refreshOnConflict from '../../_requests/refresh-on-conflict';
 
 /**
  * Replies to a request. The staff's second button sends `status` with it, to
@@ -123,16 +124,13 @@ export async function changeStatusAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor();
-    const { reopened, status } = await changeRequestStatus(appContext, actor, {
-      request: field(formData, 'request'),
-      status: field(formData, 'status'),
-      from: field(formData, 'from'),
-    }).catch((error: unknown) => {
-      if (error instanceof ServiceError && error.code === 'conflict') {
-        refresh();
-      }
-      throw error;
-    });
+    const { reopened, status } = await refreshOnConflict(
+      changeRequestStatus(appContext, actor, {
+        request: field(formData, 'request'),
+        status: field(formData, 'status'),
+        from: field(formData, 'from'),
+      }),
+    );
     refresh();
     const t = await getTranslations('requests.saved');
     return { ok: true, message: t('status', { change: reopened ? 'reopened' : status }) };
@@ -160,22 +158,19 @@ export async function updateDetailsAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor();
-    const { changed } = await updateRequestDetails(appContext, actor, {
-      request: field(formData, 'request'),
-      title: field(formData, 'title'),
-      type: field(formData, 'type'),
-      priority: field(formData, 'priority'),
-      was: {
-        title: field(formData, 'was_title'),
-        type: field(formData, 'was_type'),
-        priority: field(formData, 'was_priority'),
-      },
-    }).catch((error: unknown) => {
-      if (error instanceof ServiceError && error.code === 'conflict') {
-        refresh();
-      }
-      throw error;
-    });
+    const { changed } = await refreshOnConflict(
+      updateRequestDetails(appContext, actor, {
+        request: field(formData, 'request'),
+        title: field(formData, 'title'),
+        type: field(formData, 'type'),
+        priority: field(formData, 'priority'),
+        was: {
+          title: field(formData, 'was_title'),
+          type: field(formData, 'was_type'),
+          priority: field(formData, 'was_priority'),
+        },
+      }),
+    );
     refresh();
     const t = await getTranslations('requests.saved');
     return { ok: true, message: t('details', { changed }) };
@@ -239,16 +234,11 @@ export async function editTextAction(
       // A count that isn't one can't match: the edit is refused as made meanwhile.
       edits: Number.isSafeInteger(counted) ? counted : -1,
     };
-    const { changed } = await (
+    const { changed } = await refreshOnConflict(
       entry
         ? editReply(appContext, actor, { ...input, entry })
-        : editRequestDescription(appContext, actor, input)
-    ).catch((error: unknown) => {
-      if (error instanceof ServiceError && error.code === 'conflict') {
-        refresh();
-      }
-      throw error;
-    });
+        : editRequestDescription(appContext, actor, input),
+    );
     refresh();
     const t = await getTranslations('requests.saved');
     return { ok: true, message: t('text', { changed: changed ? 'yes' : 'no' }) };

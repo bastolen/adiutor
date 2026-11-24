@@ -6,19 +6,16 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { startTransition, useCallback, useRef } from 'react';
 
 import SelectField, { type SelectOption } from '@/components/ui/select-field';
 import Spinner from '@/components/ui/spinner';
-import { useToast } from '@/components/ui/toast';
-import { useTransientActionState, useTransientState } from '@/components/ui/use-transient-state';
-import type { ActionResult } from '@/lib/action-result';
+import useSaveOnPick from '@/components/ui/use-save-on-pick';
 
 import { changeStatusAction } from './actions';
 
 /**
- * A status select that saves when a status is picked, like the role select
- * of a member. It only commits on Enter, Space or click, so moving through
+ * A status select that saves when a status is picked (`useSaveOnPick`), like
+ * the role select of a member. It only commits on Enter, Space or click, so moving through
  * the statuses with the arrow keys never saves one by accident. It stays
  * mounted and focusable while saving (busy, not disabled), so keyboard focus
  * stays on it; the outcome is a toast, and a refusal is also shown under the
@@ -40,28 +37,10 @@ export default function StatusSelect({
   options: readonly SelectOption[];
 }) {
   const t = useTranslations('requests.controls');
-  const showToast = useToast();
-  // Toasts as soon as the action returns, like `RowAction`.
-  const run = useCallback(
-    async (previous: ActionResult | null, formData: FormData) => {
-      const next = await changeStatusAction(previous, formData);
-      if (showToast && next.message) {
-        showToast(next.message, { tone: next.ok ? 'success' : 'error' });
-      }
-      return next;
-    },
-    [showToast],
+  const { formRef, formAction, onSubmit, result, pending, shown, pick, save } = useSaveOnPick(
+    changeStatusAction,
+    { name: 'status', saved: status },
   );
-  const [result, formAction, pending, onSubmit] = useTransientActionState(run, null);
-  const formRef = useRef<HTMLFormElement>(null);
-  // The status that was picked, with the result it was picked after: once a newer result
-  // arrives, the select shows the saved status again (the new one after a success, which
-  // arrives with the result; the old one after a refusal).
-  const [picked, setPicked] = useTransientState<{
-    status: string;
-    after: ActionResult | null;
-  } | null>(null);
-  const shown = picked && picked.after === result ? picked.status : status;
 
   return (
     <form
@@ -84,14 +63,11 @@ export default function StatusSelect({
             value={shown}
             busy={pending}
             onValueChange={(next) => {
-              const form = formRef.current;
-              if (!form || next === shown) {
+              if (next === shown) {
                 return;
               }
-              setPicked({ status: next, after: result });
-              const formData = new FormData(form);
-              formData.set('status', next);
-              startTransition(() => formAction(formData));
+              pick(next);
+              save(next);
             }}
             className="h-auto min-h-9 py-1.5"
           />

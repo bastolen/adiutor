@@ -29,13 +29,13 @@ import Modal from '../modal';
 import { useTransientState } from '../use-transient-state';
 import { editorExtensions, readMarkdown, writeMarkdown } from './editor-extensions';
 import { format, formattingOf, hasCode, highlightCode } from './editor-formatting';
-import { knownCodeLanguages, subscribeToCodeLanguages } from './editor-highlighter';
+import { useCodeLanguages } from './editor-highlighter';
 import MentionPopover, {
   createMentionList,
   type MentionListState,
   mentionOptionId,
 } from './editor-mentions';
-import FormattingToolbar, { type FormattingState } from './formatting-toolbar';
+import FormattingToolbar, { type FormattingState, ignoreCommand } from './formatting-toolbar';
 import type { MentionLoader } from './mentions';
 import { markdownStyles } from './styles';
 
@@ -46,16 +46,13 @@ import { markdownStyles } from './styles';
  */
 const LINE_HEIGHT = 1.5;
 
-/** What the buttons of the toolbar that keeps the editor's place do: nothing (they're switched off). */
-function ignore() {}
-
 /**
  * Follows the list of people of an editor that has none: nothing ever changes.
  *
  * @returns Stops following, which is nothing to do.
  */
 function followNothing() {
-  return ignore;
+  return () => {};
 }
 
 /**
@@ -286,7 +283,7 @@ export default function MarkdownEditor({
 
   // The languages of highlighted code are a download of their own, fetched once a text has a
   // block of code. The toolbar's language menu and the blocks' captions follow them.
-  const languages = useSyncExternalStore(subscribeToCodeLanguages, knownCodeLanguages, () => null);
+  const languages = useCodeLanguages();
   const withCode = useEditorState({
     editor,
     /**
@@ -343,7 +340,7 @@ export default function MarkdownEditor({
       {large ? (
         <>
           {/* The editor's place in the field: as it looks before the editor is there. */}
-          <FormattingToolbar state={null} onCommand={ignore} />
+          <FormattingToolbar state={null} onCommand={ignoreCommand} />
           <div aria-hidden="true" style={{ height: heldHeight }} />
         </>
       ) : (

@@ -10,6 +10,7 @@
 import { getLocale, getTimeZone, getTranslations } from 'next-intl/server';
 import { type ReactNode, Suspense } from 'react';
 
+import { securityLink } from '@/components/auth/security-links';
 import Alert from '@/components/ui/alert';
 import { PageHeaderSkeleton } from '@/components/ui/skeleton';
 import TextLink from '@/components/ui/text-link';
@@ -26,16 +27,6 @@ import UserHeader from './user-header';
  * page below it has the 404 page's title.
  */
 export const generateMetadata = globalPermissionMetadata('users:view');
-
-/**
- * The link to the viewer's Security page inside the "your own account" notice.
- *
- * @param chunks - The link's text.
- * @returns The link.
- */
-function securityLink(chunks: ReactNode) {
-  return <TextLink href="/account/security">{chunks}</TextLink>;
-}
 
 /**
  * The link to the staff settings inside the "your own account" notice.

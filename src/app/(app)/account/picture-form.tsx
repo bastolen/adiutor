@@ -6,14 +6,13 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import type { ReactNode } from 'react';
 
+import { securityLink } from '@/components/auth/security-links';
 import Avatar from '@/components/ui/avatar';
 import Button from '@/components/ui/button';
 import RadioField from '@/components/ui/radio-field';
 import ResultAlert from '@/components/ui/result-alert';
 import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
-import TextLink from '@/components/ui/text-link';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import { type OAuthProvider, PROVIDER_LABELS } from '@/lib/sign-in/oauth-providers';
 import type { AvatarSource } from '@/lib/sign-in/pictures';
@@ -28,17 +27,6 @@ export interface PictureOption {
   accountName: string | null;
   /** Its picture's address in Adiutor, or `null` while it has none yet. */
   picture: string | null;
-}
-
-/**
- * The link to the Security page, where accounts are connected, inside the
- * hint for someone without any.
- *
- * @param chunks - The link's text.
- * @returns The link.
- */
-function securityLink(chunks: ReactNode) {
-  return <TextLink href="/account/security">{chunks}</TextLink>;
 }
 
 /** Props for {@link PictureForm}. */

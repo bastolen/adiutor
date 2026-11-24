@@ -4,7 +4,8 @@
  * two-step verification is turned off, or a notice is dismissed. Without
  * this, focus falls to `<body>` and keyboard users start again at the top of
  * the page. Also moves focus to the main content for the skip link
- * ({@link focusMainContent}).
+ * ({@link focusMainContent}), and keeps it where it is when something else
+ * would take it ({@link keepFocus}).
  */
 
 /** How many frames to keep watching (about two seconds), e.g. while a dialog closes. */
@@ -31,6 +32,19 @@ export function isShown(element: Element): boolean {
 export function focusIsLost(): boolean {
   const active = document.activeElement;
   return !active || active === document.body || !active.isConnected || !isShown(active);
+}
+
+/**
+ * Keeps keyboard focus where it is: for a press on a list's option that
+ * must not take it from the field being typed in (a select's search field,
+ * the editor at "@"), and a layer that must not take it when it opens or
+ * give it back when it closes (the list of people at "@").
+ *
+ * @param event - What would move the focus.
+ * @param event.preventDefault - Stops it.
+ */
+export function keepFocus(event: { preventDefault: () => void }): void {
+  event.preventDefault();
 }
 
 /**

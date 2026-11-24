@@ -18,6 +18,7 @@
  * A marker in neither shape, or one that names nobody, is never a mention:
  * it shows as the text of its link.
  */
+import { UUID_SOURCE } from '../uuid';
 
 /** What the address of a mention's marker starts with. */
 const MENTION_SCHEME = 'mention:';
@@ -29,7 +30,7 @@ export const MENTION_KEY_LENGTH = 22;
 export const MAX_MENTIONS_PER_TEXT = 20;
 
 /** The address of a stored mention: the scheme and its row's ID. */
-const STORED_ADDRESS = /^mention:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
+const STORED_ADDRESS = new RegExp(`^mention:(${UUID_SOURCE})$`);
 
 /** The address of a mention in a text that's being written: the scheme and the person's key. */
 const WRITTEN_ADDRESS = new RegExp(`^mention:([A-Za-z0-9_-]{${MENTION_KEY_LENGTH}})$`);
@@ -47,10 +48,7 @@ const WRITTEN_MARKERS = new RegExp(
 );
 
 /** Every marker of a stored mention in a text; its group is the mention's ID. */
-const STORED_MARKERS = new RegExp(
-  String.raw`${LABEL}\(mention:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\)`,
-  'g',
-);
+const STORED_MARKERS = new RegExp(String.raw`${LABEL}\(mention:(${UUID_SOURCE})\)`, 'g');
 
 /** The characters of a name that would end the marker's link text, or escape something in it. */
 const LABEL_CHARACTERS = /[\\[\]]/g;

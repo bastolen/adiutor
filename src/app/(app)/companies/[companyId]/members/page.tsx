@@ -15,7 +15,6 @@ import { paginationFooter } from '@/components/ui/pagination';
 import RowAction from '@/components/ui/row-action';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import SortMenu from '@/components/ui/sort-menu';
-import { Table, Td, Th, Tr } from '@/components/ui/table';
 import { COMPANY_ROLES, roleOptions } from '@/lib/authz/roles';
 import displayName from '@/lib/display-name';
 import ClientMessages from '@/lib/i18n/client-messages';
@@ -36,12 +35,11 @@ import { listPendingInvitations } from '@/server/people/invitations';
 import { listInviteLinks } from '@/server/people/invite-links';
 import { listMembers } from '@/server/people/members';
 
-import { ActivityColumn } from '../../../_people/activity';
 import InvitationsCard from '../../../_people/invitations-card';
 import InviteForm from '../../../_people/invite-form';
 import InviteLinksCard from '../../../_people/invite-links-card';
 import { changeRoleAction, removeMemberAction } from '../../../_people/member-actions';
-import PersonCell from '../../../_people/person-cell';
+import PeopleTable from '../../../_people/people-table';
 import RoleSelect from '../../../_people/role-select';
 
 /**
@@ -133,30 +131,27 @@ async function Members({
               description={canManage ? t('empty.inviteDescription') : t('empty.waitDescription')}
             />
           ) : (
-            <Table caption={table.caption(t('caption', { company: company.name }), members)}>
-              <thead>
-                <tr>
-                  <Th aria-sort={table.ariaSort('name', 'email')}>{t('columns.name')}</Th>
-                  <Th className="hidden md:table-cell">{t('columns.role')}</Th>
-                  <Th
-                    aria-sort={table.ariaSort('last-active', 'joined')}
-                    className="hidden xl:table-cell"
-                  >
-                    {t('columns.activity')}
-                  </Th>
-                  {canManage && (
-                    <Th className="text-right">
-                      <span className="sr-only">{t('columns.actions')}</span>
-                    </Th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {members.items.map((member) => {
-                  const shownName = displayName(member);
-                  const isSelf = member.userId === actor.id;
-                  // Shown in its own column from tablet width, and below the name before that.
-                  const role = canManage ? (
+            <PeopleTable
+              caption={table.caption(t('caption', { company: company.name }), members)}
+              table={table}
+              headings={{
+                name: t('columns.name'),
+                role: t('columns.role'),
+                activity: t('columns.activity'),
+                actions: canManage ? t('columns.actions') : undefined,
+              }}
+              rows={members.items.map((member) => {
+                const shownName = displayName(member);
+                const isSelf = member.userId === actor.id;
+                return {
+                  key: member.id,
+                  name: shownName,
+                  email: member.email,
+                  isSelf,
+                  picture: member.picture,
+                  lastActiveAt: member.lastActiveAt,
+                  joinedAt: member.createdAt,
+                  role: canManage ? (
                     <RoleSelect
                       action={changeRoleAction}
                       fields={{ companyId: company.id, membershipId: member.id }}
@@ -184,65 +179,41 @@ async function Members({
                     />
                   ) : (
                     <Badge>{tRoles(`${member.role}.label`)}</Badge>
-                  );
-                  return (
-                    <Tr key={member.id}>
-                      <PersonCell
-                        name={shownName}
-                        email={member.email}
-                        isSelf={isSelf}
-                        picture={member.picture}
-                        role={role}
-                        lastActiveAt={member.lastActiveAt}
-                        joinedAt={member.createdAt}
-                      />
-                      <Td className="hidden md:table-cell">{role}</Td>
-                      <Td className="hidden whitespace-nowrap text-muted-foreground xl:table-cell">
-                        <ActivityColumn
-                          lastActiveAt={member.lastActiveAt}
-                          joinedAt={member.createdAt}
-                        />
-                      </Td>
-                      {canManage && (
-                        <Td className="text-right">
-                          {isSelf ? (
-                            <RowAction
-                              action={removeMemberAction}
-                              fields={{ companyId: company.id, membershipId: member.id }}
-                              label={t('leave.label')}
-                              ariaLabel={t('leave.ariaLabel', { company: company.name })}
-                              variant="danger-subtle"
-                              confirm={{
-                                title: t('leave.title', { company: company.name }),
-                                confirmLabel: t('leave.confirm'),
-                                description: t('leave.description', { company: company.name }),
-                              }}
-                            />
-                          ) : (
-                            <RowAction
-                              action={removeMemberAction}
-                              fields={{ companyId: company.id, membershipId: member.id }}
-                              label={t('remove.label')}
-                              ariaLabel={t('remove.ariaLabel', { user: shownName })}
-                              doneMessage={t('remove.done', {
-                                user: shownName,
-                                company: company.name,
-                              })}
-                              variant="danger-subtle"
-                              confirm={{
-                                title: t('remove.title', { user: shownName }),
-                                confirmLabel: t('remove.confirm'),
-                                description: t('remove.description', { company: company.name }),
-                              }}
-                            />
-                          )}
-                        </Td>
-                      )}
-                    </Tr>
-                  );
-                })}
-              </tbody>
-            </Table>
+                  ),
+                  action: isSelf ? (
+                    <RowAction
+                      action={removeMemberAction}
+                      fields={{ companyId: company.id, membershipId: member.id }}
+                      label={t('leave.label')}
+                      ariaLabel={t('leave.ariaLabel', { company: company.name })}
+                      variant="danger-subtle"
+                      confirm={{
+                        title: t('leave.title', { company: company.name }),
+                        confirmLabel: t('leave.confirm'),
+                        description: t('leave.description', { company: company.name }),
+                      }}
+                    />
+                  ) : (
+                    <RowAction
+                      action={removeMemberAction}
+                      fields={{ companyId: company.id, membershipId: member.id }}
+                      label={t('remove.label')}
+                      ariaLabel={t('remove.ariaLabel', { user: shownName })}
+                      doneMessage={t('remove.done', {
+                        user: shownName,
+                        company: company.name,
+                      })}
+                      variant="danger-subtle"
+                      confirm={{
+                        title: t('remove.title', { user: shownName }),
+                        confirmLabel: t('remove.confirm'),
+                        description: t('remove.description', { company: company.name }),
+                      }}
+                    />
+                  ),
+                };
+              })}
+            />
           )}
         </Card>
 

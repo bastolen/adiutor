@@ -88,31 +88,46 @@ function withoutTab(
 }
 
 /**
- * A list item. It nests and un-nests with Ctrl or Cmd and the square
- * brackets, since Tab is left to the browser.
+ * The shortcuts of a list item or a thing to do: its own without Tab and
+ * Shift+Tab, and nesting with Ctrl or Cmd and the square brackets instead,
+ * since Tab is left to the browser.
+ *
+ * @param editor - The editor.
+ * @param name - The item's node, e.g. `listItem`.
+ * @param own - The item's own shortcuts.
+ * @returns The shortcuts.
  */
+function nestingShortcuts(
+  editor: Editor,
+  name: string,
+  own: Record<string, KeyboardShortcutCommand>,
+): Record<string, KeyboardShortcutCommand> {
+  return {
+    ...withoutTab(own),
+    /**
+     * Nests the item under the one above it.
+     *
+     * @returns Whether it did.
+     */
+    'Mod-]': () => editor.commands.sinkListItem(name),
+    /**
+     * Lifts the item out of the list it's nested in.
+     *
+     * @returns Whether it did.
+     */
+    'Mod-[': () => editor.commands.liftListItem(name),
+  };
+}
+
+/** A list item, which nests with the square brackets ({@link nestingShortcuts}). */
 const EditorListItem = ListItem.extend({
   /**
    * The item's shortcuts.
    *
-   * @returns The list item's own, without Tab, and the two for nesting.
+   * @returns Its own without Tab, and the two for nesting.
    */
   addKeyboardShortcuts() {
-    return {
-      ...withoutTab(this.parent?.() ?? {}),
-      /**
-       * Nests the item under the one above it.
-       *
-       * @returns Whether it did.
-       */
-      'Mod-]': () => this.editor.commands.sinkListItem(this.name),
-      /**
-       * Lifts the item out of the list it's nested in.
-       *
-       * @returns Whether it did.
-       */
-      'Mod-[': () => this.editor.commands.liftListItem(this.name),
-    };
+    return nestingShortcuts(this.editor, this.name, this.parent?.() ?? {});
   },
 });
 
@@ -121,24 +136,10 @@ const EditorTaskItem = TaskItem.extend({
   /**
    * The task's shortcuts.
    *
-   * @returns The task item's own, without Tab, and the two for nesting.
+   * @returns Its own without Tab, and the two for nesting.
    */
   addKeyboardShortcuts() {
-    return {
-      ...withoutTab(this.parent?.() ?? {}),
-      /**
-       * Nests the task under the one above it.
-       *
-       * @returns Whether it did.
-       */
-      'Mod-]': () => this.editor.commands.sinkListItem(this.name),
-      /**
-       * Lifts the task out of the list it's nested in.
-       *
-       * @returns Whether it did.
-       */
-      'Mod-[': () => this.editor.commands.liftListItem(this.name),
-    };
+    return nestingShortcuts(this.editor, this.name, this.parent?.() ?? {});
   },
 });
 
@@ -756,13 +757,7 @@ export function withoutOwnLooks(html: string): string {
  */
 const MarkdownPaste = Extension.create({
   name: 'markdownPaste',
-  /**
-   * Prepares pasted HTML before the editor reads it.
-   *
-   * @param html - The pasted HTML.
-   * @returns The HTML to read.
-   */
-  transformPastedHTML: (html) => withoutOwnLooks(html),
+  transformPastedHTML: withoutOwnLooks,
   /**
    * The editor plugin that takes a paste.
    *
@@ -857,21 +852,11 @@ export function editorExtensions(
       // A link in a text being written isn't followed; it's edited.
       openOnClick: false,
       autolink: true,
+      // One rule for every way an address can become a link: a link that's set, what's pasted or
+      // typed, and an address typed or pasted over a selection that becomes one by itself.
       mayLink,
-      /**
-       * Whether an address may be a link (a link that's set, and what's pasted or typed).
-       *
-       * @param address - The address.
-       * @returns Whether it may be one in this text.
-       */
-      isAllowedUri: (address) => mayLink(address),
-      /**
-       * Whether an address that's typed, or pasted over a selection, becomes a link by itself.
-       *
-       * @param address - The address.
-       * @returns Whether it may be one in this text.
-       */
-      shouldAutoLink: (address) => mayLink(address),
+      isAllowedUri: mayLink,
+      shouldAutoLink: mayLink,
       HTMLAttributes: { class: writtenLinkClasses, rel: 'noopener noreferrer nofollow' },
     }),
     WrittenImage.configure({

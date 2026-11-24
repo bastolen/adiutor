@@ -16,8 +16,10 @@ import { formatRequestNumber } from '@/lib/requests';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
 import { getActor } from '@/server/authz';
-import { notFoundError, ServiceError } from '@/server/errors';
+import { notFoundError } from '@/server/errors';
 import { changeRequestStatus, getRequestSettings } from '@/server/requests';
+
+import refreshOnConflict from './refresh-on-conflict';
 
 /** What the board sends to move a card: which request, to which lane, and from which. */
 export interface MoveRequest {
@@ -70,16 +72,13 @@ export async function moveRequestAction(input: MoveRequest): Promise<ActionResul
       throw notFoundError();
     }
     const actor = await getActor();
-    const { status } = await changeRequestStatus(appContext, actor, {
-      request: String(move.request),
-      status: move.status,
-      from: move.from,
-    }).catch((error: unknown) => {
-      if (error instanceof ServiceError && error.code === 'conflict') {
-        refresh();
-      }
-      throw error;
-    });
+    const { status } = await refreshOnConflict(
+      changeRequestStatus(appContext, actor, {
+        request: String(move.request),
+        status: move.status,
+        from: move.from,
+      }),
+    );
     refresh();
     const [t, { prefix }] = await Promise.all([
       getTranslations('requests.board'),

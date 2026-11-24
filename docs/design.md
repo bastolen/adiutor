@@ -55,7 +55,9 @@ keyboard support.
     `src/app/(app)/_people/you-badge.tsx`, in the `accent` tone) and a bar in the accent colour
     on its left edge (`ownRowCell` in `src/components/ui/table.tsx`), so you can spot yourself
     while scrolling. The bar is decorative: the badge says it in words. The staff and members
-    tables build their first cell with `PersonCell` (`src/app/(app)/_people/person-cell.tsx`).
+    tables are one component, `PeopleTable` (`src/app/(app)/_people/people-table.tsx`), which
+    builds the first cell with `PersonCell` (`person-cell.tsx`); each page words its texts and
+    builds each row's role and action.
   - **Pages:** 25, 50 or 100 rows per page, chosen in the table's footer (`Pagination`: "Showing
     26–50 of 132", Previous, the page numbers and Next). The footer only shows with more than 10
     rows: a card gets it from `paginationFooter`, which gives nothing for a table that fits on
@@ -409,7 +411,8 @@ keyboard support.
   two-step verification off, a dismissed notice), focus moves to the heading of its card (card
   headings take focus from script, `tabIndex={-1}`) or, outside a card, to the main content
   (`restoreFocusIfLost` in `src/components/ui/focus-fallback.ts`, which focuses it with
-  `focusMainContent`), never to `<body>`. A form that gives way to its own confirmation (Add
+  `focusMainContent`; `RowAction` and `ActionDialog` call it through `useFocusAfterSuccess`), never
+  to `<body>`. A form that gives way to its own confirmation (Add
   user, Add company, an invite link's "Continue") moves focus to that confirmation (`Alert`'s
   `focusOnShow`), and a button that brings the form back ("Add another") moves it to the form's
   first field. Such a form remembers which result was dismissed and shows any other one, never a
@@ -420,8 +423,8 @@ keyboard support.
     something render disabled, except the request work the user may do, and the banner says so
     (see [Signing in as a user](authentication.md#signing-in-as-a-user)). The banner mounts
     `SignedInAsMarker`, and controls read `useSignedInAs` (`src/components/ui/signed-in-as.tsx`).
-    `RowAction`, `ActionDialog` and `RoleSelect` do it themselves; pass `allowedWhileSignedInAs`
-    for the user's own work. Forms that change something pass the hook's value as `disabled` to
+    `RowAction`, `ActionDialog` (both through `useChangeButtonState`) and `RoleSelect` do it
+    themselves; pass `allowedWhileSignedInAs` for the user's own work. Forms that change something pass the hook's value as `disabled` to
     each field, select and submit button, so the attribute is on the control itself (Radix selects
     read their own `disabled`). They also wrap their contents in `ChangesFieldset`, a disabled
     fieldset then, which turns off anything a form missed, without a box or a group of its own.
@@ -496,7 +499,8 @@ keyboard support.
   swiped away. A success toast is announced, after the word "Notification"; an error toast's text
   isn't announced again, because the inline error already is (or takes focus), so it announces
   "Notification" and the one word "Error" in its place, politely, so it waits for the inline
-  error being read out instead of cutting it off. `RowAction`, `ActionDialog` and `RoleSelect` toast
+  error being read out instead of cutting it off. `RowAction`, `ActionDialog` and the selects that
+  save when a value is picked (`useSaveOnPick`: `RoleSelect`, the request's `StatusSelect`) toast
   as soon as their action returns, so the toast outlasts a row the refresh removes (`RowAction`'s
   `doneMessage` names the row, e.g. "Invitation to jane@adiutor.dev revoked."); `ResultAlert`
   toasts a form's result, `Alert`'s `alsoToast` an error a component shows itself, and

@@ -40,6 +40,12 @@ describe('withoutControlCharacters', () => {
     expect(withoutControlCharacters('/dashboard\r\n\tApp error', ' ')).toBe('/dashboard App error');
     expect(withoutControlCharacters('one\ntwo\nthree', ' ')).toBe('one two three');
   });
+
+  it('keeps the control characters it is told to keep', () => {
+    expect(withoutControlCharacters('one\r\n\ttwo\u0000\u0085', '', '\t\n')).toBe('one\n\ttwo');
+    // A kept character ends a run: each side of it gets its own replacement.
+    expect(withoutControlCharacters('a\u0000\n\u0000b', ' ', '\n')).toBe('a \n b');
+  });
 });
 
 describe('hasHiddenCharacter', () => {

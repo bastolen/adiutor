@@ -1,7 +1,7 @@
 /**
- * @file A list of requests with its filters (`request-filters.tsx`), search,
- * sorting and pages: the
- * requests the viewer may see across companies (`/requests`), or one
+ * @file A list of requests with its filters (`request-filters.tsx`, loaded
+ * with `loadRequestFilters` as the board does), search, sorting and pages:
+ * the requests the viewer may see across companies (`/requests`), or one
  * company's on its own page. Its text comes from `requests.list`. The
  * Company filter names a company by its URL name too when another has the
  * same name (`companyChoiceLabels`).
@@ -24,18 +24,11 @@ import type { SearchParams } from '@/lib/search-params';
 import { createPageUrl } from '@/lib/tables/page-url';
 import type { Actor } from '@/server/actor';
 import appContext from '@/server/app-context';
-import { getStaffPermissionsInCompanies } from '@/server/authz';
-import {
-  getRequestSettings,
-  listAssignableStaff,
-  listRequestCompanies,
-  listRequestTypes,
-  listRequests,
-  type RequestListItem,
-} from '@/server/requests';
+import { listRequests, type RequestListItem } from '@/server/requests';
 
+import loadRequestFilters from './load-request-filters';
 import { PriorityBadge, ReopenedBadge, StatusBadge } from './request-badges';
-import { RequestFilterBar, type RequestFilters, parseRequestFilters } from './request-filters';
+import { RequestFilterBar, type RequestFilters } from './request-filters';
 import { PeopleAvatars, personName } from './request-person';
 
 /**
@@ -156,23 +149,10 @@ export default async function RequestList({
   renderHeader = undefined,
 }: RequestListProps) {
   const t = await getTranslations('requests.list');
-  const [companies, settings, assignable, types, locale] = await Promise.all([
-    listRequestCompanies(appContext, actor),
-    getRequestSettings(appContext),
-    getStaffPermissionsInCompanies(actor).has('requests:view-internal')
-      ? listAssignableStaff(appContext, actor)
-      : [],
-    listRequestTypes(appContext, actor),
+  const [{ companies, settings, assignable, types, filters }, locale] = await Promise.all([
+    loadRequestFilters(actor, searchParams, company),
     getLocale(),
   ]);
-  const filters = parseRequestFilters({
-    searchParams,
-    actor,
-    company,
-    companies,
-    types,
-    assignable,
-  });
   const { internal, search, status, requested, showsCompany } = filters;
   const requests = await listRequests(appContext, actor, {
     search,

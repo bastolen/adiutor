@@ -2,14 +2,15 @@
  * @file Tests for keeping focus when a control goes away: it moves to the
  * card's heading, or to the main content outside a card, and only when focus
  * fell to `<body>`. The main content is focusable only while it has focus
- * from script (`focusMainContent`).
+ * from script (`focusMainContent`). A press that mustn't move focus is
+ * stopped (`keepFocus`).
  */
 import { act, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Card from './card';
-import restoreFocusIfLost, { focusMainContent } from './focus-fallback';
+import restoreFocusIfLost, { focusMainContent, keepFocus } from './focus-fallback';
 
 /** Elements jsdom should treat as hidden, e.g. a page `<Activity>` keeps in the background. */
 const hidden = new Set<Element>();
@@ -192,5 +193,26 @@ describe('focusMainContent', () => {
 
     expect(() => focusMainContent()).not.toThrow();
     expect(document.body).toHaveFocus();
+  });
+});
+
+describe('keepFocus', () => {
+  it('keeps focus in the field when an option is pressed', () => {
+    render(
+      <>
+        <input aria-label="Search" />
+        <button type="button" onMouseDown={keepFocus}>
+          Option
+        </button>
+      </>,
+    );
+    const field = screen.getByRole('textbox', { name: 'Search' });
+    field.focus();
+
+    const press = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    screen.getByRole('button', { name: 'Option' }).dispatchEvent(press);
+
+    expect(press.defaultPrevented).toBe(true);
+    expect(field).toHaveFocus();
   });
 });

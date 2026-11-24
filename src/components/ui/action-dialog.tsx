@@ -10,25 +10,18 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import {
-  type MouseEvent,
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-} from 'react';
+import { type MouseEvent, type ReactNode, useCallback, useEffect, useRef } from 'react';
 
 import { ReturnToField, useRecentConfirmation } from '@/components/auth/recent-confirmation';
 import type { ActionResult } from '@/lib/action-result';
 
 import Button, { type ButtonProps } from './button';
-import restoreFocusIfLost from './focus-fallback';
 import loadFresh from './load-fresh';
 import Modal from './modal';
 import ResultAlert from './result-alert';
-import { useSignedInAs } from './signed-in-as';
+import { useChangeButtonState } from './signed-in-as';
 import { showToastAfterLoad, useToast } from './toast';
+import useFocusAfterSuccess from './use-focus-after-success';
 import { useTransientActionState, useTransientState } from './use-transient-state';
 
 /**
@@ -221,13 +214,17 @@ export default function ActionDialog({
   loadOnSuccess = undefined,
 }: ActionDialogProps) {
   const { askToConfirm } = useRecentConfirmation();
-  const changesOff = useSignedInAs() && !allowedWhileSignedInAs;
+  const buttonState = useChangeButtonState({
+    disabled,
+    focusableWhenDisabled,
+    allowedWhileSignedInAs,
+  });
   const [open, setOpen] = useTransientState(false);
   const [message, setMessage] = useTransientState<string | null>(null);
   const showToast = useToast();
   const containerRef = useRef<HTMLDivElement>(null);
   // Set once the action worked, so this button going away afterwards can move focus.
-  const succeeded = useRef(false);
+  const succeededRef = useFocusAfterSuccess(containerRef);
   // Set once the action worked with `loadOnSuccess`, so the dialog stays busy until the page goes.
   const [leaving, setLeaving] = useTransientState(false);
 
@@ -248,22 +245,12 @@ export default function ActionDialog({
         if (next.message) {
           showToast(next.message);
         }
-        succeeded.current = true;
+        succeededRef.current = true;
       }
       return next;
     },
-    [action, showToast, loadOnSuccess, setLeaving],
+    [action, showToast, loadOnSuccess, setLeaving, succeededRef],
   );
-
-  useLayoutEffect(() => {
-    const container = containerRef.current;
-    return () => {
-      if (succeeded.current) {
-        succeeded.current = false;
-        restoreFocusIfLost(container);
-      }
-    };
-  }, []);
 
   return (
     <div ref={containerRef} className="flex items-center justify-end gap-2">
@@ -275,9 +262,7 @@ export default function ActionDialog({
       <Button
         variant={triggerVariant}
         size="sm"
-        disabled={disabled || changesOff}
-        // Signed in as a user, it's off for good: only its own disabling keeps focus.
-        focusableWhenDisabled={focusableWhenDisabled && !changesOff}
+        {...buttonState}
         aria-label={triggerAriaLabel}
         aria-describedby={describedBy}
         onClick={(event) => {
