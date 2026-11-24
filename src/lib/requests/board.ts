@@ -8,7 +8,7 @@
  * Free of server code, so the board's client components use them too.
  */
 import type { RequestAudience } from './rules';
-import { isClosedStatus, REQUEST_STATUSES, type RequestStatus } from './values';
+import { REQUEST_STATUSES, type RequestStatus } from './values';
 
 /** Where the board is: next to the list of requests (`/requests`), with the same filters. */
 export const BOARD_PATH = '/requests/board';
@@ -87,17 +87,6 @@ export function boardColumns<Lane extends { status: RequestStatus }>(
     }
     return [...columns, { key, lanes: [lane] }];
   }, []);
-}
-
-/**
- * Checks whether a lane holds closed requests, which show only their latest
- * cards ({@link CLOSED_LANE_LIMIT}).
- *
- * @param lane - The lane's status.
- * @returns Whether it does.
- */
-export function isClosedLane(lane: RequestStatus): boolean {
-  return isClosedStatus(lane);
 }
 
 /** How strongly each audience takes part, to word a lane for the reader's strongest. */

@@ -16,7 +16,7 @@ import { type ReactNode, useEffect, useId, useRef } from 'react';
 
 import { focusRing } from '@/components/ui/styles';
 import cn from '@/lib/cn';
-import { type BoardColumnKey, isClosedLane, type RequestStatus } from '@/lib/requests';
+import { type BoardColumnKey, isClosedStatus, type RequestStatus } from '@/lib/requests';
 
 import type { BoardDrag } from './board-drag';
 
@@ -161,7 +161,7 @@ function LaneCards({ lane }: { lane: ColumnLane }) {
           aria-label={
             partial
               ? t('shownCards', {
-                  order: isClosedLane(lane.status) ? 'latest' : 'first',
+                  order: isClosedStatus(lane.status) ? 'latest' : 'first',
                   shown: lane.shown,
                   total: lane.total,
                 })

@@ -10,11 +10,11 @@ import {
   boardColumnOf,
   boardColumns,
   type BoardLaneState,
-  isClosedLane,
   laneAudience,
   moveRefusal,
   placeMovedCard,
 } from './board';
+import { isClosedStatus } from './values';
 
 describe('the board’s lanes', () => {
   it('are the statuses, in the order a request moves through them', () => {
@@ -30,7 +30,7 @@ describe('the board’s lanes', () => {
   });
 
   it('hold closed requests in Done and Cancelled only', () => {
-    expect(BOARD_LANES.filter(isClosedLane)).toEqual(['done', 'cancelled']);
+    expect(BOARD_LANES.filter(isClosedStatus)).toEqual(['done', 'cancelled']);
   });
 
   it('are worded for the reader’s strongest part in the companies on the board', () => {
