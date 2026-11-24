@@ -83,6 +83,54 @@ export type BulkInviteResult =
   | { email: string; ok: false; error: ServiceError };
 
 /**
+ * Invites one address of a list ({@link inviteManyByEmail}) and says how it
+ * went. A refusal about the address (a limit reached, an address that can't
+ * be invited) is its result, and so is a deadlock that ended its
+ * transaction; a refusal about the actor is thrown, and stops the list.
+ *
+ * @param ctx - Service context.
+ * @param actor - The acting user.
+ * @param input - The invitation, as for {@link inviteByEmail}.
+ * @param input.companyId - The company, or `null` for staff.
+ * @param input.email - The address.
+ * @param input.role - The role.
+ * @param input.locale - The invitation's language.
+ * @returns The address's result.
+ * @throws {ServiceError} `forbidden` or `confirmation_required`, and every error that isn't a
+ *   `ServiceError`.
+ */
+async function inviteListedAddress(
+  ctx: ServiceContext,
+  actor: Actor,
+  input: { companyId: string | null; email: string; role: string; locale?: Locale },
+): Promise<BulkInviteResult> {
+  const { email } = input;
+  try {
+    const { status } = await inviteByEmail(ctx, actor, input);
+    return { email, ok: true, status };
+  } catch (error) {
+    // Postgres ended this address's transaction to break a deadlock, so nothing was sent to it:
+    // it's reported with the others, keeping the results of those already sent.
+    if (isDeadlock(error)) {
+      // eslint-disable-next-line no-console -- As in `runAction`: a deadlock points at a transaction that doesn't follow the lock order; no request details.
+      console.warn(
+        'A bulk invitation hit a database deadlock; that address was reported as a conflict.',
+      );
+      return { email, ok: false, error: concurrentChangeError() };
+    }
+    // Refusals about the actor, not the address, stop the whole list.
+    if (
+      !(error instanceof ServiceError) ||
+      error.code === 'forbidden' ||
+      error.code === 'confirmation_required'
+    ) {
+      throw error;
+    }
+    return { email, ok: false, error };
+  }
+}
+
+/**
  * Invites several addresses with the same role, one after another, so rate
  * limits apply per address. One failing address doesn't stop the others.
  *
@@ -139,32 +187,9 @@ export async function inviteManyByEmail(
   assertConfirmedForGrant(actor, { target: access.target, role: roleSchema.parse(input.role) });
 
   const results: BulkInviteResult[] = [];
-  await emails.reduce(async (previous, email) => {
-    await previous;
-    try {
-      const { status } = await inviteByEmail(ctx, actor, { ...input, email });
-      results.push({ email, ok: true, status });
-    } catch (error) {
-      // Postgres ended this address's transaction to break a deadlock, so nothing was sent to it:
-      // it's reported with the others, keeping the results of those already sent.
-      if (isDeadlock(error)) {
-        // eslint-disable-next-line no-console -- As in `runAction`: a deadlock points at a transaction that doesn't follow the lock order; no request details.
-        console.warn(
-          'A bulk invitation hit a database deadlock; that address was reported as a conflict.',
-        );
-        results.push({ email, ok: false, error: concurrentChangeError() });
-        return;
-      }
-      // Refusals about the actor, not the address, stop the whole list.
-      if (
-        !(error instanceof ServiceError) ||
-        error.code === 'forbidden' ||
-        error.code === 'confirmation_required'
-      ) {
-        throw error;
-      }
-      results.push({ email, ok: false, error });
-    }
-  }, Promise.resolve());
+  for (const email of emails) {
+    // eslint-disable-next-line no-await-in-loop -- One address after another, in the order typed, so the rate limits count each in turn.
+    results.push(await inviteListedAddress(ctx, actor, { ...input, email }));
+  }
   return results;
 }

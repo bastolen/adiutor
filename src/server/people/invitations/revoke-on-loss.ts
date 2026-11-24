@@ -208,11 +208,10 @@ export async function revokeInvitationsTo(
       .where(open);
     keys = [...new Set(targets.map((row) => invitationLockKey(row.companyId, address)))].sort();
   }
-  // One at a time, in key order, so two transactions taking several of them can't deadlock.
-  await keys.reduce(async (previous, key) => {
-    await previous;
+  for (const key of keys) {
+    // eslint-disable-next-line no-await-in-loop -- One at a time, in key order, so two transactions taking several of them can't deadlock.
     await takeInvitationLock(tx, key);
-  }, Promise.resolve());
+  }
 
   // A new statement, once the locks are held.
   const revoked = await tx
