@@ -10,7 +10,7 @@
  * count: one linked at sign-in that the user hasn't confirmed never shows,
  * as it doesn't count for MFA either.
  */
-import { OAUTH_PROVIDERS, type OAuthProvider } from './oauth-providers';
+import { OAUTH_PROVIDERS, isOAuthProvider, type OAuthProvider } from './oauth-providers';
 
 /**
  * What someone can choose to show: their initials, or the picture of their
@@ -75,11 +75,8 @@ export function pictureProviders(accounts: readonly PictureAccount[]): OAuthProv
     ...new Set(
       accounts
         .filter(({ confirmed }) => confirmed)
-        .flatMap(({ providerId }) =>
-          (OAUTH_PROVIDERS as readonly string[]).includes(providerId)
-            ? [providerId as OAuthProvider]
-            : [],
-        ),
+        .map(({ providerId }) => providerId)
+        .filter(isOAuthProvider),
     ),
   ];
 }
