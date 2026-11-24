@@ -34,7 +34,6 @@ import {
   COMPANY_OWNER,
   STAFF_NAME,
   DEACTIVATE_CLIENT,
-  DELETE_CLIENT,
   E2E_AUTH_SECRET,
   E2E_TIME_ZONE,
   FINANCE_STAFF,
@@ -193,7 +192,6 @@ export default async function seedTestDatabase(): Promise<void> {
     await addPerson(MFA_CLIENT, { companyId: clientCompany.id, role: 'client' });
     await addPerson(PASSKEY_CLIENT, { companyId: clientCompany.id, role: 'client' });
     await addPerson(DEACTIVATE_CLIENT, { companyId: clientCompany.id, role: 'client' });
-    await addPerson(DELETE_CLIENT, { companyId: clientCompany.id, role: 'client' });
     await addPerson(SESSIONS_CLIENT, { companyId: clientCompany.id, role: 'client' });
     await addPerson(RESET_CLIENT, { companyId: clientCompany.id, role: 'client' });
 

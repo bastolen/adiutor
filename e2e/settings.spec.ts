@@ -8,7 +8,13 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { backdateMfaConfirmation, setDefaultLocale, setDefaultTimeZone } from './support/db';
+import {
+  backdateMfaConfirmation,
+  setDefaultLocale,
+  setDefaultTimeZone,
+  setRequestPrefix,
+  setStaffName,
+} from './support/db';
 import {
   COMPANY_SLUG,
   E2E_BASE_URL,
@@ -33,69 +39,77 @@ import { linkIn, waitForEmail } from './support/outbox';
 import { expect, test } from './support/test';
 
 test('an Admin changes the name shown to users', async ({ page }) => {
-  await signIn(page, PLATFORM_ADMIN);
-  await page.goto('/admin/settings');
-  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+  try {
+    await signIn(page, PLATFORM_ADMIN);
+    await page.goto('/admin/settings');
+    await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
 
-  const name = page.getByRole('textbox', { name: 'Name', exact: true });
-  await expect(name).toHaveValue(STAFF_NAME);
-  await name.fill('Adiutor Tests Support');
-  await page.getByRole('button', { name: 'Save name' }).click();
-  await expect(toasts(page)).toContainText('Name saved.');
-  await page.reload();
-  await expect(name).toHaveValue('Adiutor Tests Support');
+    const name = page.getByRole('textbox', { name: 'Name', exact: true });
+    await expect(name).toHaveValue(STAFF_NAME);
+    await name.fill('Adiutor Tests Support');
+    await page.getByRole('button', { name: 'Save name' }).click();
+    await expect(toasts(page)).toContainText('Name saved.');
+    await page.reload();
+    await expect(name).toHaveValue('Adiutor Tests Support');
 
-  // Put it back for the other tests.
-  await name.fill(STAFF_NAME);
-  await page.getByRole('button', { name: 'Save name' }).click();
-  await expect(toasts(page)).toContainText('Name saved.');
+    // Put it back for the other tests.
+    await name.fill(STAFF_NAME);
+    await page.getByRole('button', { name: 'Save name' }).click();
+    await expect(toasts(page)).toContainText('Name saved.');
 
-  // Next.js keeps the page alive on navigation, but it shows no message of its own when you come
-  // back (the toast goes away on its own).
-  const nav = page.getByRole('navigation', { name: 'Main' });
-  await nav.getByRole('link', { name: 'Dashboard' }).click();
-  await expect(page).toHaveURL('/dashboard');
-  await nav.getByRole('link', { name: 'Settings' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
-  await expect(name).toHaveValue(STAFF_NAME);
-  await expect(page.getByRole('main').getByText('Name saved.')).toHaveCount(0);
-  await page.goBack();
-  await expect(page).toHaveURL('/dashboard');
-  await page.goForward();
-  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
-  await expect(page.getByRole('main').getByText('Name saved.')).toHaveCount(0);
+    // Next.js keeps the page alive on navigation, but it shows no message of its own when you come
+    // back (the toast goes away on its own).
+    const nav = page.getByRole('navigation', { name: 'Main' });
+    await nav.getByRole('link', { name: 'Dashboard' }).click();
+    await expect(page).toHaveURL('/dashboard');
+    await nav.getByRole('link', { name: 'Settings' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+    await expect(name).toHaveValue(STAFF_NAME);
+    await expect(page.getByRole('main').getByText('Name saved.')).toHaveCount(0);
+    await page.goBack();
+    await expect(page).toHaveURL('/dashboard');
+    await page.goForward();
+    await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+    await expect(page.getByRole('main').getByText('Name saved.')).toHaveCount(0);
+  } finally {
+    await setStaffName(STAFF_NAME);
+  }
 });
 
 test('an Admin chooses the prefix request numbers are shown with', async ({ page }) => {
-  await signIn(page, PLATFORM_ADMIN);
-  await page.goto('/admin/settings/requests');
+  try {
+    await signIn(page, PLATFORM_ADMIN);
+    await page.goto('/admin/settings/requests');
 
-  const prefix = page.getByRole('textbox', { name: 'Prefix' });
-  await expect(prefix).toHaveValue('AD');
-  await expect(prefix).toHaveAccessibleDescription('Requests are shown as AD-142.');
+    const prefix = page.getByRole('textbox', { name: 'Prefix' });
+    await expect(prefix).toHaveValue('AD');
+    await expect(prefix).toHaveAccessibleDescription('Requests are shown as AD-142.');
 
-  // Anything but letters and digits is refused, and what was typed stays.
-  await prefix.fill('a-d');
-  await page.getByRole('button', { name: 'Save prefix' }).click();
-  await expect(page.getByRole('main').getByRole('alert')).toContainText(
-    'Use one to five letters or digits for the prefix',
-  );
-  await expect(prefix).toHaveValue('a-d');
+    // Anything but letters and digits is refused, and what was typed stays.
+    await prefix.fill('a-d');
+    await page.getByRole('button', { name: 'Save prefix' }).click();
+    await expect(page.getByRole('main').getByRole('alert')).toContainText(
+      'Use one to five letters or digits for the prefix',
+    );
+    await expect(prefix).toHaveValue('a-d');
 
-  // Typed in lower case, saved in capitals.
-  await prefix.fill('help');
-  await page.getByRole('button', { name: 'Save prefix' }).click();
-  await expect(toasts(page)).toContainText('Prefix saved.');
-  await expect(prefix).toHaveValue('HELP');
-  await expect(prefix).toHaveAccessibleDescription('Requests are shown as HELP-142.');
-  await page.reload();
-  await expect(prefix).toHaveValue('HELP');
+    // Typed in lower case, saved in capitals.
+    await prefix.fill('help');
+    await page.getByRole('button', { name: 'Save prefix' }).click();
+    await expect(toasts(page)).toContainText('Prefix saved.');
+    await expect(prefix).toHaveValue('HELP');
+    await expect(prefix).toHaveAccessibleDescription('Requests are shown as HELP-142.');
+    await page.reload();
+    await expect(prefix).toHaveValue('HELP');
 
-  // Put it back for the other tests.
-  await prefix.fill('AD');
-  await page.getByRole('button', { name: 'Save prefix' }).click();
-  await expect(toasts(page)).toContainText('Prefix saved.');
-  await expect(prefix).toHaveValue('AD');
+    // Put it back for the other tests.
+    await prefix.fill('AD');
+    await page.getByRole('button', { name: 'Save prefix' }).click();
+    await expect(toasts(page)).toContainText('Prefix saved.');
+    await expect(prefix).toHaveValue('AD');
+  } finally {
+    await setRequestPrefix('AD');
+  }
 });
 
 test('an Admin adds a request type, which a company raises requests with until it’s archived', async ({

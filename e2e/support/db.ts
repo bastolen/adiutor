@@ -32,8 +32,10 @@ import {
   hashToken,
 } from '../../src/lib/sign-in/tokens';
 import { readSettings, writeSettings } from '../../src/server/settings';
+import { storeAuthenticator } from '../../tests/auth/authenticator';
 import getTestDatabaseUrl from '../../tests/database/database-url';
 import storeRequests from '../../tests/database/store-requests';
+import { E2E_AUTH_SECRET } from './fixtures';
 
 /** How long the invite links stored here stay valid (any of the lifetimes a link can have). */
 const INVITE_LINK_LIFETIME_MS = 7 * 24 * 60 * 60_000;
@@ -468,6 +470,102 @@ export async function resetMfaOf(email: string): Promise<void> {
       );
   });
   await forgetLimitsOf(email);
+}
+
+/**
+ * Gives a seeded account its authenticator app back, as the seed set it up
+ * (two-step verification on, the secret, no backup codes left), whatever a
+ * test did to it, so a test that resets or replaces it can run again.
+ *
+ * @param person - The account.
+ * @param person.email - Its address.
+ * @param person.totpSecret - Its raw authenticator secret.
+ */
+export async function restoreAuthenticatorOf(person: {
+  email: string;
+  totpSecret: string;
+}): Promise<void> {
+  await resetMfaOf(person.email);
+  const userId = await findUserId(person.email);
+  await withTestDatabase((db) =>
+    storeAuthenticator(db, userId, person.totpSecret, E2E_AUTH_SECRET),
+  );
+}
+
+/**
+ * Removes the passkeys of an account, so a test that adds one starts from an
+ * account without any, also when it's retried or repeated.
+ *
+ * @param email - The account's address.
+ */
+export async function removePasskeysOf(email: string): Promise<void> {
+  const userId = await findUserId(email);
+  await withTestDatabase(async (db) => {
+    await db.delete(schema.passkey).where(eq(schema.passkey.userId, userId));
+  });
+}
+
+/**
+ * Marks an account's email address as not verified, as the seed leaves
+ * `UNVERIFIED_USER`, so a test that verifies it can run again.
+ *
+ * @param email - The account's address.
+ */
+export async function markEmailUnverified(email: string): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.update(schema.user).set({ emailVerified: false }).where(eq(schema.user.email, email));
+  });
+}
+
+/**
+ * Forgets which picture an account chose, so it shows the picture of the
+ * account it connected first again, as the seed leaves it.
+ *
+ * @param email - The account's address.
+ */
+export async function forgetPictureChoiceOf(email: string): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.update(schema.user).set({ avatarSource: null }).where(eq(schema.user.email, email));
+  });
+}
+
+/**
+ * Lets staff sign in as an account again (the setting is on unless the user
+ * turns it off), for a test that turns it off.
+ *
+ * @param email - The account's address.
+ */
+export async function allowStaffSignInOf(email: string): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db
+      .update(schema.user)
+      .set({ allowStaffSignIn: true })
+      .where(eq(schema.user.email, email));
+  });
+}
+
+/**
+ * Sets the name Adiutor shows users directly, e.g. to put it back after a
+ * test changed it in Settings.
+ *
+ * @param name - The name.
+ */
+export async function setStaffName(name: string): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.transaction((tx) => writeSettings(tx, { 'staff.name': name }));
+  });
+}
+
+/**
+ * Reactivates an account straight in the database: the other way round of
+ * {@link deactivateAccount}, to put a deactivated account back.
+ *
+ * @param email - The account's address.
+ */
+export async function reactivateAccount(email: string): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.update(schema.user).set({ deactivatedAt: null }).where(eq(schema.user.email, email));
+  });
 }
 
 /**

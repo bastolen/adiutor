@@ -181,13 +181,6 @@ export const RETURNING_FINANCE = {
   password: 'e2e-returning-finance-password',
 } as const;
 
-/** A Client the Admin deletes. */
-export const DELETE_CLIENT = {
-  name: 'E2E Deleted',
-  email: 'deleted@adiutor.test',
-  password: 'e2e-deleted-password',
-} as const;
-
 /**
  * A Client with an authenticator app who signs in on two devices, trusting
  * one at the code step, and signs the other one out.
