@@ -409,7 +409,8 @@ keyboard support.
   two-step verification off, a dismissed notice), focus moves to the heading of its card (card
   headings take focus from script, `tabIndex={-1}`) or, outside a card, to the main content
   (`restoreFocusIfLost` in `src/components/ui/focus-fallback.ts`, which focuses it with
-  `focusMainContent`), never to `<body>`. A form that gives way to its own confirmation (Add
+  `focusMainContent`; `RowAction` and `ActionDialog` call it through `useFocusAfterSuccess`), never
+  to `<body>`. A form that gives way to its own confirmation (Add
   user, Add company, an invite link's "Continue") moves focus to that confirmation (`Alert`'s
   `focusOnShow`), and a button that brings the form back ("Add another") moves it to the form's
   first field. Such a form remembers which result was dismissed and shows any other one, never a
@@ -420,8 +421,8 @@ keyboard support.
     something render disabled, except the request work the user may do, and the banner says so
     (see [Signing in as a user](authentication.md#signing-in-as-a-user)). The banner mounts
     `SignedInAsMarker`, and controls read `useSignedInAs` (`src/components/ui/signed-in-as.tsx`).
-    `RowAction`, `ActionDialog` and `RoleSelect` do it themselves; pass `allowedWhileSignedInAs`
-    for the user's own work. Forms that change something pass the hook's value as `disabled` to
+    `RowAction`, `ActionDialog` (both through `useChangeButtonState`) and `RoleSelect` do it
+    themselves; pass `allowedWhileSignedInAs` for the user's own work. Forms that change something pass the hook's value as `disabled` to
     each field, select and submit button, so the attribute is on the control itself (Radix selects
     read their own `disabled`). They also wrap their contents in `ChangesFieldset`, a disabled
     fieldset then, which turns off anything a form missed, without a box or a group of its own.

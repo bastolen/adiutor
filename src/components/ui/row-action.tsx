@@ -9,16 +9,16 @@
  */
 'use client';
 
-import { type MouseEvent, useCallback, useLayoutEffect, useRef } from 'react';
+import { type MouseEvent, useCallback, useRef } from 'react';
 
 import { ReturnToField, useRecentConfirmation } from '@/components/auth/recent-confirmation';
 import type { ActionResult } from '@/lib/action-result';
 
 import Button, { type ButtonProps } from './button';
 import ConfirmDialog from './confirm-dialog';
-import restoreFocusIfLost from './focus-fallback';
-import { useSignedInAs } from './signed-in-as';
+import { useChangeButtonState } from './signed-in-as';
 import { useToast } from './toast';
+import useFocusAfterSuccess from './use-focus-after-success';
 import { useTransientActionState } from './use-transient-state';
 
 /**
@@ -124,9 +124,14 @@ export default function RowAction({
 }: RowActionProps) {
   const { askToConfirm } = useRecentConfirmation();
   const showToast = useToast();
-  const changesOff = useSignedInAs() && !allowedWhileSignedInAs;
+  const buttonState = useChangeButtonState({
+    disabled,
+    focusableWhenDisabled,
+    allowedWhileSignedInAs,
+  });
+  const formRef = useRef<HTMLFormElement>(null);
   // Set once the action worked, so the row going away afterwards can move focus.
-  const succeeded = useRef(false);
+  const succeededRef = useFocusAfterSuccess(formRef);
 
   // Toasts as soon as the action returns: the refresh that comes with it may remove this row.
   const run = useCallback(
@@ -137,25 +142,13 @@ export default function RowAction({
         if (message) {
           showToast(message, { tone: next.ok ? 'success' : 'error' });
         }
-        succeeded.current = next.ok;
+        succeededRef.current = next.ok;
       }
       return next;
     },
-    [action, doneMessage, showToast],
+    [action, doneMessage, showToast, succeededRef],
   );
   const [result, formAction, pending, onSubmit] = useTransientActionState(run, null);
-  const formRef = useRef<HTMLFormElement>(null);
-
-  useLayoutEffect(() => {
-    const form = formRef.current;
-    return () => {
-      // The action removed this row (or swapped the button): don't leave focus on <body>.
-      if (succeeded.current) {
-        succeeded.current = false;
-        restoreFocusIfLost(form);
-      }
-    };
-  }, []);
 
   const button = (
     <Button
@@ -163,9 +156,7 @@ export default function RowAction({
       variant={variant}
       size="sm"
       loading={pending}
-      disabled={disabled || changesOff}
-      // Signed in as a user, it's off for good: only its own disabling keeps focus.
-      focusableWhenDisabled={focusableWhenDisabled && !changesOff}
+      {...buttonState}
       aria-label={ariaLabel}
       aria-describedby={describedBy}
       onClick={(event) => {
