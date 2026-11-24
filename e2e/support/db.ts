@@ -35,11 +35,8 @@ import { readSettings, writeSettings } from '../../src/server/settings';
 import { storeAuthenticator } from '../../tests/auth/authenticator';
 import getTestDatabaseUrl from '../../tests/database/database-url';
 import storeRequests from '../../tests/database/store-requests';
-import { E2E_AUTH_SECRET } from './fixtures';
+import { E2E_AUTH_SECRET, INVITE_LINK_LIFETIME_MS } from './fixtures';
 import { inOrder } from './sequence';
-
-/** How long the invite links stored here stay valid (any of the lifetimes a link can have). */
-const INVITE_LINK_LIFETIME_MS = 7 * 24 * 60 * 60_000;
 
 /** A Drizzle client on the test database. */
 export type TestDatabase = NodePgDatabase<typeof schema>;
@@ -102,6 +99,49 @@ export async function findCompanyId(slug: string): Promise<string> {
 }
 
 /**
+ * Looks up a user's ID by their email address on a connection that's already
+ * open (a database or a transaction).
+ *
+ * @param db - The connection.
+ * @param email - The user's email address.
+ * @returns The user's ID.
+ * @throws {Error} When there is no such user.
+ */
+export async function userIdOf(db: Pick<TestDatabase, 'select'>, email: string): Promise<string> {
+  const [found] = await db
+    .select({ id: schema.user.id })
+    .from(schema.user)
+    .where(eq(schema.user.email, email));
+  if (!found) {
+    throw new Error(`No user ${email}`);
+  }
+  return found.id;
+}
+
+/**
+ * Looks up a request's ID by its number on a connection that's already open
+ * (a database or a transaction).
+ *
+ * @param db - The connection.
+ * @param number - The request's number.
+ * @returns The request's ID.
+ * @throws {Error} When there is no such request.
+ */
+export async function requestIdOf(
+  db: Pick<TestDatabase, 'select'>,
+  number: number,
+): Promise<string> {
+  const [found] = await db
+    .select({ id: schema.request.id })
+    .from(schema.request)
+    .where(eq(schema.request.number, number));
+  if (!found) {
+    throw new Error(`No request ${number}`);
+  }
+  return found.id;
+}
+
+/**
  * Looks up a seeded user's ID by their email address, for tests that open a
  * user's page directly.
  *
@@ -109,16 +149,7 @@ export async function findCompanyId(slug: string): Promise<string> {
  * @returns The user's ID.
  */
 export async function findUserId(email: string): Promise<string> {
-  return withTestDatabase(async (db) => {
-    const [found] = await db
-      .select({ id: schema.user.id })
-      .from(schema.user)
-      .where(eq(schema.user.email, email));
-    if (!found) {
-      throw new Error(`No user ${email}`);
-    }
-    return found.id;
-  });
+  return withTestDatabase((db) => userIdOf(db, email));
 }
 
 /**
@@ -149,11 +180,9 @@ export async function storeAuditEvent({
   details: Record<string, unknown>;
   at?: Date;
 }): Promise<void> {
-  const [actorUserId, targetUserId] = await Promise.all([
-    findUserId(actorEmail),
-    findUserId(targetEmail),
-  ]);
   await withTestDatabase(async (db) => {
+    const actorUserId = await userIdOf(db, actorEmail);
+    const targetUserId = await userIdOf(db, targetEmail);
     await db
       .insert(schema.auditEvent)
       .values({ action, actorUserId, targetUserId, companyId, details, at });
@@ -627,17 +656,8 @@ export async function storeAnswerLink({
 }): Promise<string> {
   const token = generateToken();
   await withTestDatabase(async (db) => {
-    const stored = firstRow(
-      await db
-        .select({ id: schema.request.id })
-        .from(schema.request)
-        .where(eq(schema.request.number, requestNumber)),
-      'the request',
-    );
-    const member = firstRow(
-      await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, email)),
-      'the member',
-    );
+    const stored = { id: await requestIdOf(db, requestNumber) };
+    const member = { id: await userIdOf(db, email) };
     const proposal = firstRow(
       await db
         .insert(schema.requestEntry)
@@ -656,7 +676,8 @@ export async function storeAnswerLink({
       userId: member.id,
       proposalEntryId: proposal.id,
       tokenHash: hashToken(token),
-      expiresAt: new Date(Date.now() + 14 * 86_400_000),
+      // Answer links last as long as the links of emails about a request.
+      expiresAt: new Date(Date.now() + REQUEST_LINK_DAYS * 86_400_000),
     });
   });
   return answerLinkPath(token);
@@ -681,17 +702,8 @@ export async function storeRequestLink(
 ): Promise<string> {
   const token = generateToken();
   await withTestDatabase(async (db) => {
-    const person = firstRow(
-      await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, email)),
-      'the person',
-    );
-    const stored = firstRow(
-      await db
-        .select({ id: schema.request.id })
-        .from(schema.request)
-        .where(eq(schema.request.number, number)),
-      'the request',
-    );
+    const person = { id: await userIdOf(db, email) };
+    const stored = { id: await requestIdOf(db, number) };
     await db.insert(schema.requestSignInLink).values({
       userId: person.id,
       requestId: stored.id,
@@ -878,13 +890,7 @@ export async function storeRequest({
         .where(eq(schema.company.slug, companySlug)),
       'the company',
     );
-    const author = firstRow(
-      await db
-        .select({ id: schema.user.id })
-        .from(schema.user)
-        .where(eq(schema.user.email, raisedBy)),
-      'the member who raised it',
-    );
+    const author = { id: await userIdOf(db, raisedBy) };
     const counter = await readSettings(db, ['requests.last_number']);
     const numbers = await storeRequests(
       db,
@@ -961,22 +967,10 @@ type StoredEntry = {
  */
 export async function storeEntries(number: number, entries: readonly StoredEntry[]): Promise<void> {
   await withTestDatabase(async (db) => {
-    const found = firstRow(
-      await db
-        .select({ id: schema.request.id })
-        .from(schema.request)
-        .where(eq(schema.request.number, number)),
-      'the request',
-    );
+    const found = { id: await requestIdOf(db, number) };
     // One after another: IDs are time-ordered, and a request's entries are read in ID order.
     await inOrder(entries, async (entry) => {
-      const author = firstRow(
-        await db
-          .select({ id: schema.user.id })
-          .from(schema.user)
-          .where(eq(schema.user.email, entry.by)),
-        'the entry’s author',
-      );
+      const author = { id: await userIdOf(db, entry.by) };
       await db.insert(schema.requestEntry).values({
         requestId: found.id,
         authorId: author.id,

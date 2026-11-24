@@ -396,7 +396,6 @@ async function sessionCookieOf(page: Page): Promise<string> {
 }
 
 test('a sign-in link says when it switches this browser from another account', async ({ page }) => {
-  await page.goto('/auth');
   await signIn(page, SUPPORT_STAFF);
   const supportSession = await sessionCookieOf(page);
 
@@ -425,7 +424,6 @@ test('a sign-in link says when it switches this browser from another account', a
 test('a sign-in link that stopped working while another account is signed in says so on its own page', async ({
   page,
 }) => {
-  await page.goto('/auth');
   await signIn(page, SUPPORT_STAFF);
   const link = await storeSignInLink(CLIENT_WATCHER.email);
   await page.goto(link);

@@ -8,15 +8,10 @@ import { authenticatorCode } from '../../tests/auth/authenticator';
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
 /**
- * The current code for a raw secret, as Better Auth stores it (the seeded
- * Admin's secret).
- *
- * @param secret - The raw secret.
- * @returns The 6-digit code.
+ * The current code for a raw secret (`authenticatorCode`), as Better Auth
+ * stores it: the seeded accounts' secrets are given this way.
  */
-export function codeForSecret(secret: string): string {
-  return authenticatorCode(secret);
-}
+export const codeForSecret = authenticatorCode;
 
 /**
  * The current code for a setup key shown on the Security page (base32,

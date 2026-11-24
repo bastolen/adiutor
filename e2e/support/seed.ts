@@ -21,7 +21,7 @@ import {
   FORMATTED_STAFF_REPLY,
 } from '../../tests/database/formatted-request';
 import storeRequests from '../../tests/database/store-requests';
-import { withTestDatabase } from './db';
+import { userIdOf, withTestDatabase } from './db';
 import {
   ACTIVITY_CLIENT,
   ACTIVITY_SUPPORT,
@@ -36,6 +36,7 @@ import {
   DEACTIVATE_CLIENT,
   E2E_AUTH_SECRET,
   E2E_TIME_ZONE,
+  INVITE_LINK_LIFETIME_MS,
   FINANCE_STAFF,
   GITHUB_ONLY_MANAGER,
   MFA_CLIENT,
@@ -135,14 +136,12 @@ export default async function seedTestDatabase(): Promise<void> {
      * @param person.totpSecret - The raw secret.
      */
     const addAuthenticator = async (person: { email: string; totpSecret: string }) => {
-      const found = firstRow(
-        await db
-          .select({ id: schema.user.id })
-          .from(schema.user)
-          .where(eq(schema.user.email, person.email)),
-        'the user',
+      await storeAuthenticator(
+        db,
+        await userIdOf(db, person.email),
+        person.totpSecret,
+        E2E_AUTH_SECRET,
       );
-      await storeAuthenticator(db, found.id, person.totpSecret, E2E_AUTH_SECRET);
     };
 
     await db.transaction(async (tx) => {
@@ -296,7 +295,7 @@ export default async function seedTestDatabase(): Promise<void> {
         companyId: pagingCompany.id,
         role: 'client' as const,
         tokenHash: hashToken(generateToken()),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60_000),
+        expiresAt: new Date(Date.now() + INVITE_LINK_LIFETIME_MS),
         createdAt: new Date(joinedFrom + index * 60_000),
       })),
     );

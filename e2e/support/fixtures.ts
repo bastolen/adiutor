@@ -432,3 +432,6 @@ export const FIRST_PAGED_REQUEST_NUMBER = Object.keys(SEEDED_REQUESTS).length + 
 export function pagedRequestTitle(number: number): string {
   return `Paged request ${String(number).padStart(2, '0')}`;
 }
+
+/** How long the invite links the seed and the tests store stay valid (7 days, one a link can have). */
+export const INVITE_LINK_LIFETIME_MS = 7 * 24 * 60 * 60_000;

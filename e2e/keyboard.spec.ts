@@ -55,12 +55,10 @@ let adminState: StorageState;
 /** Sign-in cookies of a Client of the seeded company, for the company's side of a request. */
 let clientState: StorageState;
 
-/** The members page of the seeded company with more members than fit on a page. */
-let pagingMembersPath: string;
+/** The members page of the seeded company with more members than fit on a page (at the address the app links to: its URL name). */
+const pagingMembersPath = `/companies/${PAGING_COMPANY_SLUG}/members`;
 
 test.beforeAll(async ({ browser }) => {
-  // At the address the app links to (its URL name).
-  pagingMembersPath = `/companies/${PAGING_COMPANY_SLUG}/members`;
   adminState = await adminStorageState(browser);
   clientState = await storageStateFor(browser, REQUESTS_CLIENT);
 });
