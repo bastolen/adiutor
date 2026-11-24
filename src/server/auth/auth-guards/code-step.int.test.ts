@@ -8,8 +8,8 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { rateLimitBucket } from '@/db/schema';
 
 import { enableTwoFactor, inSequence, staffActor } from '../../../../tests/integration/helpers';
+import { requestState } from '../request-state';
 import { beforeAuthRequest } from './before-request';
-import { pendingCodeSignInOf } from './code-step';
 import {
   db,
   request,
@@ -37,6 +37,16 @@ beforeEach(() => {
   vi.mocked(getSessionFromCtx).mockReset().mockResolvedValue(null);
   vi.mocked(addOAuthServerContext).mockReset();
 });
+
+/**
+ * The user a request's checks handed to the reactions after it, which record
+ * a wrong code at the code step for them.
+ *
+ * @param ctx - The request.
+ * @param ctx.context - Better Auth's request state, which the reactions share.
+ * @returns The user's ID, if one was handed over.
+ */
+const pendingCodeSignIn = (ctx: { context: object }) => requestState(ctx.context).pendingCodeSignIn;
 
 describe('a password sign-in waiting for its code step', () => {
   it('refuses email codes once an authenticator app is set up', async () => {
@@ -91,15 +101,15 @@ describe('a password sign-in waiting for its code step', () => {
       refusedWith('EMAIL_CODES_NOT_ALLOWED'),
     );
 
-    expect(handedOver.map((ctx) => pendingCodeSignInOf(ctx))).toEqual([
+    expect(handedOver.map((ctx) => pendingCodeSignIn(ctx))).toEqual([
       support.id,
       support.id,
       manager.id,
     ]);
-    expect([...notHandedOver, refused].map((ctx) => pendingCodeSignInOf(ctx))).toEqual([
-      null,
-      null,
-      null,
+    expect([...notHandedOver, refused].map((ctx) => pendingCodeSignIn(ctx))).toEqual([
+      undefined,
+      undefined,
+      undefined,
     ]);
   });
 
@@ -112,7 +122,7 @@ describe('a password sign-in waiting for its code step', () => {
 
     await beforeAuthRequest(ctx);
 
-    expect(pendingCodeSignInOf(ctx)).toBeNull();
+    expect(pendingCodeSignIn(ctx)).toBeUndefined();
     expect(await hits(`step-up-failed:user:${support.id}`)).toBe(1);
   });
 

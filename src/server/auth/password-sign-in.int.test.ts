@@ -19,7 +19,7 @@
  *   when the user was last active is written in the background
  *   (`startInBackground`), so the page never waits for it;
  * - a wrong code at the code step (which has no session yet) is recorded
- *   without an actor (`pendingCodeSignInOf`, `reactToRefusedSignInCode`),
+ *   without an actor (`pendingCodeSignIn`, `reactToRefusedSignInCode`),
  *   and the owner is told once when wrong codes pause signing in with a
  *   code (Better Auth's account lockout), without the device that typed them;
  * - an emailed code is in the account's language, else the browser's, and so

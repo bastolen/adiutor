@@ -17,7 +17,6 @@ import { availableProviders } from '@/lib/sign-in/providers';
 import {
   CODE_PATHS,
   CURRENT_PASSWORD_PATHS,
-  finishesAuthenticatorSetup,
   releaseSignInChangeLockOf,
   settleCurrentPasswordAttempt,
   settlePasswordAttempt,
@@ -158,7 +157,7 @@ async function reactToSignInChange(
         break;
       }
       const method = mfaMethodFromPath(path);
-      if (sessionUser.twoFactorEnabled && finishesAuthenticatorSetup(ctx)) {
+      if (sessionUser.twoFactorEnabled && requestState(ctx.context).finishingAuthenticatorSetup) {
         // Not a step-up: this code finished setting up an authenticator app next to email codes
         // (the guard checked this request), so it's a new way to sign in. Email codes no longer
         // count, so neither does a browser trusted after one: every trusted device is forgotten,

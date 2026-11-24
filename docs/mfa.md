@@ -49,11 +49,11 @@ address that typed the codes, which may be someone else's. Every wrong code at t
 recorded as `mfa_failed` with `atSignIn: true` and without an actor, like the password before it:
 the user's Recent activity says "Wrong two-step verification code entered at sign-in" without a
 device or IP address, and staff see both in the audit log. The guards find the user from Better
-Auth's two-factor cookie (`pendingCodeSignInOf` in `src/server/auth/auth-guards/code-step.ts`), and
-`src/server/auth/auth-events/` records the code and sends the email after the response. Accounts
-with only email codes have no `two_factor` row, so Better Auth never pauses them: each emailed code
-takes 5 tries, and emailing a new one (at most 5 per 15 minutes per user) starts again, with each
-code reaching the owner's inbox.
+Auth's two-factor cookie (`checkCodeStep` in `src/server/auth/auth-guards/code-step.ts`) and leave
+it in the request's state (`pendingCodeSignIn`), and `src/server/auth/auth-events/` records the
+code and sends the email after the response. Accounts with only email codes have no `two_factor`
+row, so Better Auth never pauses them: each emailed code takes 5 tries, and emailing a new one (at
+most 5 per 15 minutes per user) starts again, with each code reaching the owner's inbox.
 
 ## Passkeys
 
