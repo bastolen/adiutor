@@ -216,6 +216,16 @@ function isSortKey<K extends string>(def: TableDefinition<K>, value: unknown): v
 }
 
 /**
+ * Checks whether a value is a sort direction.
+ *
+ * @param value - The value.
+ * @returns Whether it's `asc` or `desc`.
+ */
+function isSortDirection(value: unknown): value is SortDirection {
+  return value === 'asc' || value === 'desc';
+}
+
+/**
  * Checks whether a value is one of the page sizes.
  *
  * @param value - The value.
@@ -228,37 +238,14 @@ function isPageSize(value: unknown): value is PageSize {
 /** Pages a URL may ask for (up to 999,999; anything else is the first page). */
 const PAGE_PATTERN = /^[1-9]\d{0,5}$/;
 
-/**
- * Reads a table's state from the query string. A sort key, direction, page
- * or page size that isn't valid falls back to its default, each on its own.
- *
- * @param def - The table.
- * @param params - The page's query string.
- * @returns The state.
- */
-export function parseTableState<K extends string>(
-  def: TableDefinition<K>,
-  params: SearchParams,
-): TableState<K> {
-  const sortValue = searchParam(params[`${def.prefix}sort`]);
-  const sort = isSortKey(def, sortValue) ? sortValue : def.defaultSort;
-  const dirValue = searchParam(params[`${def.prefix}dir`]);
-  const dir = dirValue === 'asc' || dirValue === 'desc' ? dirValue : def.sorts[sort].first;
-  const pageValue = searchParam(params[`${def.prefix}page`]);
-  const page = pageValue && PAGE_PATTERN.test(pageValue) ? Number(pageValue) : 1;
-  // Only the sizes as links write them: `50`, not `050` or `5e1`.
-  const sizeValue = searchParam(params[`${def.prefix}size`]);
-  const size = PAGE_SIZES.find((option) => String(option) === sizeValue) ?? DEFAULT_PAGE_SIZE;
-  return { sort, dir, page, size };
-}
-
 /** The highest page a service is asked for; anything above is past any real list anyway. */
 const MAX_PAGE = 999_999;
 
 /**
  * Completes and checks the state a service was given, the same way as
  * {@link parseTableState}: services are called from pages, actions and
- * tests, and never trust it.
+ * tests, and never trust it. A sort key, direction, page or page size that
+ * isn't valid falls back to its default, each on its own.
  *
  * @param def - The table.
  * @param state - What the caller asked for (any part may be missing).
@@ -269,13 +256,38 @@ export function resolveTableState<K extends string>(
   state: Partial<TableState<K>> = {},
 ): TableState<K> {
   const sort = isSortKey(def, state.sort) ? state.sort : def.defaultSort;
-  const dir = state.dir === 'asc' || state.dir === 'desc' ? state.dir : def.sorts[sort].first;
+  const dir = isSortDirection(state.dir) ? state.dir : def.sorts[sort].first;
   const page =
     typeof state.page === 'number' && Number.isSafeInteger(state.page) && state.page >= 1
       ? Math.min(state.page, MAX_PAGE)
       : 1;
   const size = isPageSize(state.size) ? state.size : DEFAULT_PAGE_SIZE;
   return { sort, dir, page, size };
+}
+
+/**
+ * Reads a table's state from the query string: each part only as a link
+ * writes it, and completed with the defaults by {@link resolveTableState}.
+ *
+ * @param def - The table.
+ * @param params - The page's query string.
+ * @returns The state.
+ */
+export function parseTableState<K extends string>(
+  def: TableDefinition<K>,
+  params: SearchParams,
+): TableState<K> {
+  const sort = searchParam(params[`${def.prefix}sort`]);
+  const dir = searchParam(params[`${def.prefix}dir`]);
+  const page = searchParam(params[`${def.prefix}page`]);
+  const size = searchParam(params[`${def.prefix}size`]);
+  return resolveTableState(def, {
+    sort: isSortKey(def, sort) ? sort : undefined,
+    dir: isSortDirection(dir) ? dir : undefined,
+    page: page && PAGE_PATTERN.test(page) ? Number(page) : undefined,
+    // Only the sizes as links write them: `50`, not `050` or `5e1`.
+    size: PAGE_SIZES.find((option) => String(option) === size),
+  });
 }
 
 /**
