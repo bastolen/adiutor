@@ -73,7 +73,7 @@ export const signInError = pgTable(
  * Where an error in the app can happen: on the server, in the browser, or in
  * a background job (its name is the error's `route_path`).
  */
-export const APP_ERROR_SOURCES = ['server', 'browser', 'job'] as const;
+const APP_ERROR_SOURCES = ['server', 'browser', 'job'] as const;
 
 /** Where an error in the app happened (see {@link APP_ERROR_SOURCES}). */
 export type AppErrorSource = (typeof APP_ERROR_SOURCES)[number];
@@ -83,7 +83,7 @@ export type AppErrorSource = (typeof APP_ERROR_SOURCES)[number];
  * to `onRequestError`: rendering a page (`render`), running a server action
  * (`action`), a route handler (`route`) or the proxy (`proxy`).
  */
-export const APP_ERROR_ROUTE_TYPES = ['render', 'action', 'route', 'proxy'] as const;
+const APP_ERROR_ROUTE_TYPES = ['render', 'action', 'route', 'proxy'] as const;
 
 /** What the server was doing when an error happened (see {@link APP_ERROR_ROUTE_TYPES}). */
 export type AppErrorRouteType = (typeof APP_ERROR_ROUTE_TYPES)[number];

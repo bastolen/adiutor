@@ -24,7 +24,7 @@ import * as schema from '../../src/db/schema';
  * the keys and starting priorities they always had). Requests need a type
  * that exists, so emptying the database puts these back.
  */
-export const BUILT_IN_REQUEST_TYPES = [
+const BUILT_IN_REQUEST_TYPES = [
   {
     key: 'hotfix',
     name: 'Hotfix',
