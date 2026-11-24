@@ -189,7 +189,7 @@ export function formatRelative(
   return format.format(-Math.floor(seconds / length), name);
 }
 
-/** A minute, an hour and a day in milliseconds. */
+/** A minute in milliseconds. */
 const MINUTE = 60_000;
 
 /** The units a duration is said in, with how many minutes each one is. */

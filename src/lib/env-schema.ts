@@ -73,7 +73,7 @@ function isProductionSmtpUrl(url: URL): boolean {
  */
 const envSchema = z
   .object({
-    /** PostgreSQL connection string for accounts and sessions. */
+    /** PostgreSQL connection string for all of the app's data. */
     DATABASE_URL: z.url(),
     /**
      * Secret used by Better Auth to sign and encrypt; at least 32 characters.

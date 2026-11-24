@@ -238,8 +238,9 @@ type NameField =
 
 /**
  * Adds the shared character rules to a string schema: no control characters
- * and nothing that hides or reorders text. For every name people choose
- * (display names, company names, the staff name and passkey names).
+ * and nothing that hides or reorders text. For the names people choose
+ * (display, company, staff and passkey names) and other short texts: a request's title, a request
+ * type's description and a reason for signing in as a user.
  *
  * @param schema - The length-checked schema, whose length check ends the check when it refuses
  *   (`abort`, as {@link lengthLimited} does), so these rules never read a text that's too long.
@@ -455,13 +456,13 @@ function multilineText(messages: { empty: ValidationMessageKey; tooLong: Validat
     );
 }
 
-/** A request's description: plain text of several lines, at most `REQUEST_TEXT_MAX_LENGTH` characters. */
+/** A request's description: Markdown text of several lines, at most `REQUEST_TEXT_MAX_LENGTH` characters. */
 export const requestDescriptionSchema = multilineText({
   empty: 'validation.requestDescription.empty',
   tooLong: 'validation.requestDescription.tooLong',
 });
 
-/** A reply to a request: plain text of several lines, at most `REQUEST_TEXT_MAX_LENGTH` characters. */
+/** A reply to a request: Markdown text of several lines, at most `REQUEST_TEXT_MAX_LENGTH` characters. */
 export const requestReplySchema = multilineText({
   empty: 'validation.requestReply.empty',
   tooLong: 'validation.requestReply.tooLong',
