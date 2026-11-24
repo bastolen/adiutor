@@ -80,7 +80,10 @@ describe('updateCompanyAction', () => {
   it('says why a change was refused, without refreshing', async () => {
     vi.mocked(updateCompany).mockRejectedValue(new ServiceError('forbidden', 'errors.forbidden'));
 
-    expect(await updateCompanyAction(null, form('adiutor-tests'))).toMatchObject({ ok: false });
+    expect(await updateCompanyAction(null, form('adiutor-tests'))).toEqual({
+      ok: false,
+      message: "You don't have permission to do that.",
+    });
 
     expect(refresh).not.toHaveBeenCalled();
     expect(redirect).not.toHaveBeenCalled();

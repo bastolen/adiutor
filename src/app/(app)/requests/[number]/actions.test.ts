@@ -233,8 +233,9 @@ describe('changeSubscriptionAction', () => {
   it('says why when it is refused, and leaves the page as it is', async () => {
     vi.mocked(subscribe).mockRejectedValue(new ServiceError('forbidden', 'errors.forbidden'));
 
-    expect(await changeSubscriptionAction(null, formOf({ subscribe: ['yes'] }))).toMatchObject({
+    expect(await changeSubscriptionAction(null, formOf({ subscribe: ['yes'] }))).toEqual({
       ok: false,
+      message: "You don't have permission to do that.",
     });
 
     expect(refresh).not.toHaveBeenCalled();
@@ -347,7 +348,10 @@ describe('changeStatusAction', () => {
       new ServiceError('conflict', 'errors.requests.statusChanged'),
     );
 
-    expect(await changeStatusAction(null, statusForm())).toMatchObject({ ok: false });
+    expect(await changeStatusAction(null, statusForm())).toEqual({
+      ok: false,
+      message: 'This request’s status changed in the meantime. Check it and try again.',
+    });
     expect(refresh).toHaveBeenCalledOnce();
   });
 

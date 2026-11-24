@@ -71,7 +71,10 @@ describe('raiseRequestAction', () => {
   it('says why a request was refused, and stays on the form as it is', async () => {
     vi.mocked(raiseRequest).mockRejectedValue(new ServiceError('forbidden', 'errors.forbidden'));
 
-    expect(await raiseRequestAction(null, form())).toMatchObject({ ok: false });
+    expect(await raiseRequestAction(null, form())).toEqual({
+      ok: false,
+      message: "You don't have permission to do that.",
+    });
 
     expect(refresh).not.toHaveBeenCalled();
     expect(redirect).not.toHaveBeenCalled();

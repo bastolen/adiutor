@@ -71,7 +71,10 @@ describe('answerLinkAction', () => {
       new ServiceError('rate_limited', 'errors.tooManyAttempts', { minutes: 3 }),
     );
 
-    expect(await answerLinkAction(null, form('approve'))).toMatchObject({ ok: false });
+    expect(await answerLinkAction(null, form('approve'))).toEqual({
+      ok: false,
+      message: 'Too many attempts. Try again in 3 minutes.',
+    });
 
     expect(redirect).not.toHaveBeenCalled();
   });
