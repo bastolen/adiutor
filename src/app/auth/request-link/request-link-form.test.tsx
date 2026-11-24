@@ -14,6 +14,7 @@ import type { SignedInAccount } from '@/components/auth/account-summary';
 import { defined } from '@/lib/defined';
 
 import renderInLocale from '../../../../tests/i18n/render';
+import hiddenFields from '../../../../tests/ui/hidden-fields';
 import Page from '../../../../tests/ui/page';
 import RequestLinkForm from './request-link-form';
 
@@ -43,21 +44,6 @@ afterEach(() => {
   window.location.hash = '';
   vi.restoreAllMocks();
 });
-
-/**
- * Reads the hidden fields the form sends on.
- *
- * @param form - The form.
- * @returns Field names and values.
- */
-function hiddenFields(form: HTMLFormElement): Record<string, string> {
-  return Object.fromEntries(
-    Array.from(form.querySelectorAll<HTMLInputElement>('input[type="hidden"]')).map((input) => [
-      input.name,
-      input.value,
-    ]),
-  );
-}
 
 describe('RequestLinkForm', () => {
   it('posts the link back to Better Auth only when the user continues, which no link can do', () => {
