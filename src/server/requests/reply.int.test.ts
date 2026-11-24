@@ -202,6 +202,14 @@ describe('replyToRequest', () => {
       expect(await replyToRequest(ctx, support, { request: raised.id, body: 'Welcome.' })).toEqual({
         status,
       });
+      // Not even one sent to wait for the company, which the page doesn't offer on it.
+      expect(
+        await replyToRequest(ctx, support, {
+          request: raised.id,
+          body: 'One more thing?',
+          status: 'waiting',
+        }),
+      ).toEqual({ status });
       expect(await storedRequest(raised.id)).toMatchObject({ status, reopenedAt: null });
     },
   );

@@ -77,6 +77,11 @@ and Cancelled are the closed statuses.
 - **A reply from the company** to a request that waits for it puts the request back in progress
   (`statusAfterReply`). No other reply changes the status: a reply to a closed request doesn't
   reopen it.
+- **Send and wait for the company:** the staff can send a reply that makes the request wait for
+  the company, on a request that's still worked on and doesn't wait already (`mayWaitWithReply`).
+  The page offers it by that rule and the service applies it too (`mayReplyWithStatus`), so it
+  never reopens a closed request either. Nobody writes on a deactivated company's requests
+  (`mayContribute`).
 - **Reopening** from the company's side returns the request to Open. A reopened request shows a
   **Reopened** label, on the list and on its page, until it's done or cancelled again
   (`request.reopened_at`), and the conversation says who reopened it and when.

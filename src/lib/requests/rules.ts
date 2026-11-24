@@ -148,6 +148,43 @@ export function statusChangeKind(
 }
 
 /**
+ * Whether someone may write on a request and change it: they take part in
+ * its company's requests (`requests:contribute`, which the staff who work on
+ * requests have too), and only while the company is active. A deactivated
+ * company's requests can only be read; the services refuse every change to
+ * them (`requestToChange`).
+ *
+ * @param permissions - Their permissions in the request's company.
+ * @param company - The request's company.
+ * @param company.deactivated - Whether it's deactivated.
+ * @returns Whether they may.
+ */
+export function mayContribute(
+  permissions: ReadonlySet<Permission>,
+  company: { deactivated: boolean },
+): boolean {
+  return !company.deactivated && permissions.has('requests:contribute');
+}
+
+/**
+ * Whether someone may send a reply that makes the request wait for the
+ * company ("Send and wait"): a change to waiting they may make
+ * ({@link mayChangeStatus}: the staff who work on requests, on a request that
+ * doesn't wait already), on a request that's still worked on. A reply never
+ * reopens a closed request.
+ *
+ * @param permissions - Their permissions in the request's company.
+ * @param from - The status the request has.
+ * @returns Whether they may.
+ */
+export function mayWaitWithReply(
+  permissions: ReadonlySet<Permission>,
+  from: RequestStatus,
+): boolean {
+  return !isClosedStatus(from) && mayChangeStatus(permissions, from, 'waiting');
+}
+
+/**
  * Whether someone may send a reply as the solution, so the request waits for
  * the company's approval (`proposed`, decision 0033): the staff who work on
  * requests, on a request that's still worked on and doesn't wait for an
@@ -162,6 +199,32 @@ export function mayProposeSolution(
   from: RequestStatus,
 ): boolean {
   return permissions.has('requests:manage') && !isClosedStatus(from) && from !== 'proposed';
+}
+
+/**
+ * Whether a reply may give the request the status asked for with it, as the
+ * request is when the reply is stored: as the solution ({@link mayProposeSolution}),
+ * waiting for the company ({@link mayWaitWithReply}), or any other change
+ * they may make ({@link mayChangeStatus}). A status this refuses is left
+ * alone: the reply still counts.
+ *
+ * @param permissions - Their permissions in the request's company.
+ * @param from - The status the request has.
+ * @param to - The status asked for with the reply.
+ * @returns Whether the reply sets it.
+ */
+export function mayReplyWithStatus(
+  permissions: ReadonlySet<Permission>,
+  from: RequestStatus,
+  to: RequestStatus,
+): boolean {
+  if (to === 'proposed') {
+    return mayProposeSolution(permissions, from);
+  }
+  if (to === 'waiting') {
+    return mayWaitWithReply(permissions, from);
+  }
+  return mayChangeStatus(permissions, from, to);
 }
 
 /** How the company answers a solution the staff sent: it solves the request, or it doesn't. */
