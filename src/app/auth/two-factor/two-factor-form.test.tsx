@@ -6,7 +6,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StrictMode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EMAIL_CODE_RESEND_SECONDS } from '@/lib/authz/mfa';
 import translator from '@/lib/i18n/translator';
@@ -54,6 +54,11 @@ describe('TwoFactorForm', () => {
     vi.clearAllMocks();
     sendOtp.mockResolvedValue({ data: { status: true }, error: null });
     searchParams = new URLSearchParams({ callbackURL: '/companies/x', methods: 'totp,otp' });
+  });
+
+  afterEach(() => {
+    // Whether or not a test faked the clock, the next one starts on the real one.
+    vi.useRealTimers();
   });
 
   it('checks an authenticator code, trusting the device when asked, then continues', async () => {
@@ -117,7 +122,6 @@ describe('TwoFactorForm', () => {
     expect(resend).toHaveFocus();
     await user.click(resend);
     expect(sendOtp).toHaveBeenCalledTimes(2);
-    vi.useRealTimers();
   });
 
   it.each([

@@ -146,6 +146,11 @@ describe('StepUpForm', () => {
     );
   });
 
+  afterEach(() => {
+    // Whether or not a test faked the clock, the next one starts on the real one.
+    vi.useRealTimers();
+  });
+
   it('signs out and loads the sign-in page afresh, leaving no page alive for the next person', async () => {
     const user = userEvent.setup();
     render(<StepUpForm methods={{ ...none, authenticator: true }} callbackURL="/account" />);
@@ -258,7 +263,6 @@ describe('StepUpForm', () => {
     await user.click(screen.getByRole('button', { name: 'Confirm' }));
     expect(verifyOtp).toHaveBeenCalledWith({ code: '654321' });
     expect(verifyTotp).not.toHaveBeenCalled();
-    vi.useRealTimers();
   });
 
   it('offers a passkey first, and only emails a code on request', async () => {
