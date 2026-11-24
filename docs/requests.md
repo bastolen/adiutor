@@ -95,8 +95,9 @@ and Cancelled are the closed statuses.
   sees the request as it is, rather than overwriting it (`errors.requests.statusChanged`). The
   status select, the buttons and the board's Move menus send the status they showed (`from`), so
   the change is refused when the request has another status by now, also for the staff, who may
-  make any move; the action then refreshes the page. A change without `from` is refused only when
-  the move is no longer allowed.
+  make any move; the action then refreshes the page (`refreshOnConflict` in
+  `src/app/(app)/_requests/`, which the details and text edits use too). A change without `from` is
+  refused only when the move is no longer allowed.
 
 ### Solutions
 
