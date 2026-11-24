@@ -22,10 +22,6 @@ export interface CodeInput {
  * Checks a code with Better Auth's endpoint for its kind.
  *
  * @param kind - What the code is.
- * @param input - The code, and at sign-in whether to trust the browser.
- * @param input.code - The code as typed; it's trimmed before it's sent.
- * @param input.trustDevice - Whether to trust this browser (until 30 days after
- *   the last password sign-in there), when given.
  * @returns Better Auth's result, unchanged (`error` when the code was refused).
  */
 export default async function verifyCode(kind: CodeKind, { code, trustDevice }: CodeInput) {

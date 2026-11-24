@@ -21,11 +21,6 @@ export interface ResetPasswordEmailProps extends EmailBaseProps {
 /**
  * Lets the recipient choose a new password. The link expires in 1 hour.
  *
- * @param props - Template props.
- * @param props.appUrl - Public app URL.
- * @param props.url - The reset link.
- * @param props.locale - The recipient's language.
- * @param props.logoSrc - Logo URL override.
  * @returns The email.
  */
 export default function ResetPasswordEmail({

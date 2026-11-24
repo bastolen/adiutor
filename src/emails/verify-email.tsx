@@ -22,11 +22,6 @@ export interface VerifyEmailEmailProps extends EmailBaseProps {
  * Asks the recipient to confirm the address is theirs. The link expires in 1
  * hour.
  *
- * @param props - Template props.
- * @param props.appUrl - Public app URL.
- * @param props.url - The verification link.
- * @param props.locale - The recipient's language.
- * @param props.logoSrc - Logo URL override.
  * @returns The email.
  */
 export default function VerifyEmailEmail({

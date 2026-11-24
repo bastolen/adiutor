@@ -281,18 +281,6 @@ function UpdateItem({
  * the email aren't read. The links to the request sign the reader in (`url`,
  * decision 0036), so a last note says so, and not to forward the email.
  *
- * @param props - Template props.
- * @param props.appUrl - Public app URL.
- * @param props.reference - The request's number as people see it.
- * @param props.title - The request's title.
- * @param props.companyName - The request's company.
- * @param props.url - The reader's link that signs them in and opens the request.
- * @param props.role - Why the reader gets the email.
- * @param props.audience - How to word the statuses.
- * @param props.items - What happened.
- * @param props.answerLinks - The reader's links that answer the solution, if they may.
- * @param props.locale - The recipient's language.
- * @param props.logoSrc - Logo URL override.
  * @returns The email.
  */
 export default function RequestUpdateEmail({

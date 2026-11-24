@@ -34,10 +34,6 @@ interface DevSeedSettings {
  *   URL without a host;
  * - the test database (`…_test`), which the tests manage themselves.
  *
- * @param settings - The settings.
- * @param settings.nodeEnv - `NODE_ENV`, if set.
- * @param settings.databaseUrl - `DATABASE_URL`.
- * @param settings.authUrl - `BETTER_AUTH_URL`.
  * @returns What to tell the operator, or `null` when the seed may run.
  * @throws {Error} When the driver couldn't read `DATABASE_URL` either (see
  *   `databaseAddress`); nothing is seeded then.

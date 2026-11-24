@@ -160,10 +160,6 @@ const COMPANY_MEMBER: Record<CompanyRole, Permission[]> = {
  *   active.
  * - Managing the staff needs the platform Admin role (`staff:manage`).
  *
- * @param input - The user's roles and the company being checked.
- * @param input.platformRole - The user's platform role, or `null`.
- * @param input.companyRole - The user's role in the company, or `null`.
- * @param input.company - The company being checked, or `null`.
  * @returns The set of allowed permissions.
  */
 export function getPermissions({

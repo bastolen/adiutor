@@ -24,12 +24,6 @@ export interface AlreadyMemberEmailProps extends EmailBaseProps {
 /**
  * Tells the recipient nothing needs doing, with a button to open the company.
  *
- * @param props - Template props.
- * @param props.appUrl - Public app URL.
- * @param props.companyName - The company.
- * @param props.url - Link to the company.
- * @param props.locale - The recipient's language.
- * @param props.logoSrc - Logo URL override.
  * @returns The email.
  */
 export default function AlreadyMemberEmail({

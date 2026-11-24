@@ -31,11 +31,6 @@ interface IntlClientProviderProps {
  * inner provider replaces the messages of an outer one, so each passes
  * `common` along with its own namespaces.
  *
- * @param props - The language, the messages and the children.
- * @param props.locale - The request's language.
- * @param props.messages - The namespaces the components below use.
- * @param props.timeZone - The request's time zone.
- * @param props.children - The components that translate.
  * @returns The provider.
  */
 export default function IntlClientProvider({

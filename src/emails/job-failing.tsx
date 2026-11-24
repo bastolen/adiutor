@@ -35,15 +35,6 @@ export interface JobFailingEmailProps extends EmailBaseProps {
  * Names the job and what went wrong, gives the error's reference and links
  * to it under Logs → Errors.
  *
- * @param props - Template props.
- * @param props.appUrl - Public app URL.
- * @param props.job - The job's name.
- * @param props.failure - What went wrong.
- * @param props.count - How many runs or jobs.
- * @param props.reference - The error's reference, if any.
- * @param props.url - Link to the error.
- * @param props.locale - The recipient's language.
- * @param props.logoSrc - Logo URL override.
  * @returns The email.
  */
 export default function JobFailingEmail({

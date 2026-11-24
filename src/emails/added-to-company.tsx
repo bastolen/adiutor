@@ -30,14 +30,6 @@ export interface AddedToCompanyEmailProps extends EmailBaseProps {
  * Says who added the recipient to which company and in which role (with
  * what that role can do), with a button to open it.
  *
- * @param props - Template props.
- * @param props.appUrl - Public app URL.
- * @param props.adderName - Who added them.
- * @param props.companyName - The company.
- * @param props.role - Their role.
- * @param props.url - Link to the company.
- * @param props.locale - The recipient's language.
- * @param props.logoSrc - Logo URL override.
  * @returns The email.
  */
 export default function AddedToCompanyEmail({

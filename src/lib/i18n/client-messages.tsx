@@ -25,9 +25,6 @@ interface ClientMessagesProps {
  * inside the page's `<Suspense>` (it reads the request's language), around
  * the smallest part that needs it.
  *
- * @param props - The namespaces and the children.
- * @param props.namespaces - The namespaces (or groups) to pass, besides `common`.
- * @param props.children - The part of the page that uses them.
  * @returns The provider around the children.
  */
 export default async function ClientMessages({ namespaces, children }: ClientMessagesProps) {

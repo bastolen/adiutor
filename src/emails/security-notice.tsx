@@ -83,12 +83,6 @@ const FALLBACK_STAFF_NAME = 'Adiutor';
  * names it was given, and a stand-in for any that's missing.
  *
  * @param locale - The recipient's language.
- * @param names - The provider, role, company and staff member, where the change has them.
- * @param names.provider - The provider's name; "A provider" when missing.
- * @param names.role - The role, named in the recipient's language; "a new role" when missing.
- * @param names.company - The company's name; "your company" when missing.
- * @param names.staffMember - The staff member's name; "A staff member" when missing.
- * @param names.staffName - The staff's name; "Adiutor" when missing.
  * @returns The values for `{provider}`, `{role}`, `{company}`, `{name}`, `{staff}` and
  *   `{minutes}` (how long a sign-in as someone lasts).
  */
@@ -130,20 +124,6 @@ function securityNoticeSubject(
  * Tells the recipient what changed, when and from where, and what to do if
  * it wasn't them.
  *
- * @param props - Template props.
- * @param props.appUrl - Public app URL.
- * @param props.kind - What changed.
- * @param props.when - When.
- * @param props.timeZone - The recipient's time zone.
- * @param props.device - From which device.
- * @param props.ip - From which IP address.
- * @param props.provider - Provider name.
- * @param props.role - The role.
- * @param props.company - Company name.
- * @param props.staffMember - The staff member who signed in as the recipient.
- * @param props.staffName - The name the staff are shown with to users.
- * @param props.locale - The recipient's language.
- * @param props.logoSrc - Logo URL override.
  * @returns The email.
  */
 export default function SecurityNoticeEmail({

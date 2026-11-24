@@ -43,16 +43,6 @@ export interface InvitationReminderEmailProps extends EmailBaseProps {
  * Reminds the recipient of an invitation they haven't accepted yet, before
  * it expires. The link is new; the one in the first email stops working.
  *
- * @param props - Template props.
- * @param props.appUrl - Public app URL.
- * @param props.inviterName - Who sent the invitation.
- * @param props.companyName - The company.
- * @param props.role - The role.
- * @param props.url - Accept link.
- * @param props.expiresAt - When it expires.
- * @param props.timeZone - The recipient's time zone.
- * @param props.locale - The recipient's language.
- * @param props.logoSrc - Logo URL override.
  * @returns The email.
  */
 export default function InvitationReminderEmail({
